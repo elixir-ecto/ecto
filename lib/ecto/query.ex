@@ -32,7 +32,7 @@ defmodule Ecto.Query do
     vars = get_vars(expr)
     expr = Macro.escape(expr)
     quote do
-      bind = binding(unquote(vars))
+      bind = binding(unquote(vars), true)
       Ecto.Query.merge(unquote(query), :select, unquote(expr), bind)
     end
   end
@@ -41,7 +41,7 @@ defmodule Ecto.Query do
     vars = get_vars(expr)
     expr = Macro.escape(expr)
     quote do
-      bind = binding(unquote(vars))
+      bind = binding(unquote(vars), true)
       Ecto.Query.merge(unquote(query), :where, unquote(expr), bind)
     end
   end
@@ -50,7 +50,7 @@ defmodule Ecto.Query do
     # TODO: Do sanity checking here
     Query[ froms: left.froms ++ right.froms,
            wheres: left.wheres ++ right.wheres,
-           select: right.select || left.select ]
+           select: right.select ]
   end
 
   @doc false
@@ -72,7 +72,7 @@ defmodule Ecto.Query do
   def get_vars(ast), do: get_vars(ast, [])
 
   def get_vars({ var, _, scope }, acc) when is_atom(var) and is_atom(scope) do
-    [var|acc]
+    [{ var, scope }|acc]
   end
 
   def get_vars({ left, _, right }, acc) do

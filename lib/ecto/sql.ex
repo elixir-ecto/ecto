@@ -70,14 +70,14 @@ defmodule Ecto.SQL do
   end
 
   defp gen_expr({ var, _, atom }, bind) when is_atom(atom) do
-    gen_expr(var, bind)
-  end
-
-  defp gen_expr(atom, bind) when is_atom(atom) do
-    case bind[atom] do
-      nil -> gen_literal(atom)
+    case bind[{ var, atom }] do
+      nil -> gen_literal(var)
       val -> gen_literal(val)
     end
+  end
+
+  defp gen_expr(atom, _bind) when is_atom(atom) do
+    gen_literal(atom)
   end
 
   defp gen_expr(literal, _bind), do: gen_literal(literal)
@@ -123,10 +123,8 @@ defmodule Ecto.SQL do
   end
 
   defp escape_string(value) when is_binary(value) do
-    value = value
+    value
       |> :binary.replace("\\", "\\\\", [:global])
       |> :binary.replace("'", "''", [:global])
-
-    value
   end
 end
