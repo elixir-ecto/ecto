@@ -1,14 +1,9 @@
 defmodule Ecto.SQL do
 
-  # :===, :!==,
-  # :==, :!=, :<=, :>=,
-  # :&&, :||, :<>, :++, :--, :**, ://, :::, :<-, :.., :|>, :=~,
-  # :<, :>, :->,
-  # :+, :-, :*, :/, :=, :|, :.,
-  # :and, :or, :xor, :when, :in, :inlist, :inbits,
-  # :<<<, :>>>, :|||, :&&&, :^^^, :~~~
+  require Ecto.Query
+  alias Ecto.Query.QueryExpr
 
-  defmacrop bin_ops do
+  defmacrop binary_ops do
     [ ==: "=",
       !=: "!=",
       <=: "<=",
@@ -21,24 +16,15 @@ defmodule Ecto.SQL do
       -:  "-",
       *:  "*",
       /:  "/"
-    ]
-  end
-
-  defmacrop binary_ops_lookup do
-    HashDict.new(bin_ops) |> Macro.escape
-  end
-
-  defmacrop binary_ops do
-    bin_ops |> Dict.keys
+    ] |> HashDict.new |> Macro.escape
   end
 
   def compile(query) do
-    query = Ecto.Query.normalize(query)
     gen_sql(query)
   end
 
   defp gen_sql(query) do
-    select = gen_select(quotify(query.select))
+    select = gen_select(query.select)
     from = gen_from(query.froms)
     where = unless query.wheres == [], do: gen_where(query.wheres)
 
@@ -46,13 +32,13 @@ defmodule Ecto.SQL do
     Enum.join(list, "\n")
   end
 
-  defp gen_select(clause) do
-    "SELECT " <> select_clause(clause)
+  defp gen_select(QueryExpr[expr: expr, binding: bind]) do
+    "SELECT " <> select_clause(expr, bind)
   end
 
   defp gen_from(froms) do
-    binds = Enum.map_join(froms, ", ", fn(from) ->
-      { :in, _, [{var, _, _}, module] } = from
+    binds = Enum.map_join(froms, ", ", fn(QueryExpr[expr: expr, binding: []]) ->
+      { :in, _, [{var, _, _}, module] } = expr
       var = atom_to_binary(var)
       module = Macro.expand(module, __ENV__)
       table = Module.split(module) |> List.last |> String.downcase
@@ -63,68 +49,72 @@ defmodule Ecto.SQL do
   end
 
   defp gen_where(wheres) do
-    exprs = Enum.map_join(wheres, " AND ", fn(where) ->
-      "(#{gen_expr(where)})"
+    exprs = Enum.map_join(wheres, " AND ", fn(QueryExpr[expr: expr, binding: bind]) ->
+      "(#{gen_expr(expr, bind)})"
     end)
 
     "WHERE " <> exprs
   end
 
-  defp gen_expr({ expr, _, [] }) do
-    gen_expr(expr)
+  defp gen_expr({ expr, _, [] }, bind) do
+    gen_expr(expr, bind)
   end
 
-  defp gen_expr({ :., _, [left, right] }) do
-    "#{gen_expr(left)}.#{gen_expr(right)}"
+  defp gen_expr({ :., _, [left, right] }, bind) do
+    "#{gen_expr(left, bind)}.#{gen_expr(right, bind)}"
   end
 
-  defp gen_expr({ op, _, [expr] }) when op in [:!, :not] do
-    "NOT " <> gen_expr(expr)
+  defp gen_expr({ :!, _, [expr] }, bind) do
+    "NOT " <> gen_expr(expr, bind)
   end
 
-  defp gen_expr({ op, _, [left, right] }) when op in binary_ops do
-    op = Dict.fetch!(binary_ops_lookup, op)
-    "#{op_to_binary(left)} #{op} #{op_to_binary(right)}"
+  defp gen_expr({ op, _, [expr] }, bind) when op in [:+, :-] do
+    atom_to_binary(op) <> gen_expr(expr, bind)
   end
 
-  defp gen_expr({ var, _, atom }) when is_atom(atom) do
-    atom_to_binary(var)
+  defp gen_expr({ op, _, [left, right] }, bind) when op in Ecto.Query.binary_ops do
+    op = Dict.fetch!(binary_ops, op)
+    "#{op_to_binary(left, bind)} #{op} #{op_to_binary(right, bind)}"
   end
 
-  defp gen_expr(nil) do
+  defp gen_expr({ var, _, atom }, bind) when is_atom(atom) do
+    to_binary(bind[var] || var)
+  end
+
+  defp gen_expr(nil, _bind) do
     "NULL"
   end
 
-  defp gen_expr(expr) do
+  defp gen_expr(atom, bind) when is_atom(atom) do
+    to_binary(bind[atom] || atom)
+  end
+
+  defp gen_expr(expr, _bind) do
     to_binary(expr)
   end
 
-  defp op_to_binary({ op, _, [_, _] } = expr) when op in binary_ops do
-    "(" <> gen_expr(expr) <> ")"
+  defp op_to_binary({ op, _, [_, _] } = expr, bind) when op in Ecto.Query.binary_ops do
+    "(" <> gen_expr(expr, bind) <> ")"
   end
 
-  defp op_to_binary(expr) do
-    gen_expr(expr)
+  defp op_to_binary(expr, bind) do
+    gen_expr(expr, bind)
   end
 
   # TODO: Records (Kernel.access)
-  defp select_clause({ :"{}", _, elems }) do
-    Enum.map_join(elems, ", ", select_clause(&1))
+  defp select_clause({ :"{}", _, elems }, bind) do
+    Enum.map_join(elems, ", ", select_clause(&1, bind))
   end
 
-  defp select_clause(list) when is_list(list) do
-    Enum.map_join(list, ", ", select_clause(&1))
+  defp select_clause({ x, y }, bind) do
+    select_clause({ :"{}", [], [x, y] }, bind)
   end
 
-  defp select_clause(expr) do
-    gen_expr(expr)
+  defp select_clause(list, bind) when is_list(list) do
+    Enum.map_join(list, ", ", select_clause(&1, bind))
   end
 
-  defp quotify({ x, y }) do
-    { :"{}", [], [x, y] }
-  end
-
-  defp quotify(ast) do
-    ast
+  defp select_clause(expr, bind) do
+    gen_expr(expr, bind)
   end
 end

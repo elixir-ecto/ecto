@@ -1,66 +1,105 @@
 defmodule Ecto.Query do
 
-  defrecord QueryBuilder, exprs: []
-
   defrecord Query, froms: [], wheres: [], select: nil
+  defrecord QueryExpr, [:expr, :binding]
 
-  def normalize(query) do
-    exprs = Enum.reverse(query.exprs)
+  # :!, :@, :^, :not, :+, :-
 
-    unless match?({:from, _}, Enum.first(exprs)), do: throw :normalize_error
-
-    Enum.reduce(exprs, Query[], fn(expr, q) ->
-      unless !q.select, do: throw :normalize_error
-      case expr do
-        { :from, expr } ->
-          q.update_froms(&1 ++ [expr])
-        { :where, expr } ->
-          q.update_wheres(&1 ++ [expr])
-        { :select, expr } ->
-          q.select(expr)
-      end
-    end)
-  end
-end
-
-defmodule Ecto.Query.DSL do
-
-  defmacro from(expr) do
-    query = Ecto.Query.QueryBuilder[]
-    expr = Macro.escape(expr)
-    quote do
-      unquote(query).exprs([from: unquote(expr)])
-    end
+  defmacro unary_ops do
+    [ :!, :+, :- ]
   end
 
-  defmacro from(query, expr) do
-    expr = Macro.escape(expr)
+  # :===, :!==,
+  # :==, :!=, :<=, :>=,
+  # :&&, :||, :<>, :++, :--, :**, ://, :::, :<-, :.., :|>, :=~,
+  # :<, :>, :->,
+  # :+, :-, :*, :/, :=, :|, :.,
+  # :and, :or, :xor, :when, :in, :inlist, :inbits,
+  # :<<<, :>>>, :|||, :&&&, :^^^, :~~~
+
+  defmacro binary_ops do
+    [ :==, :!=, :<=, :>=, :&&, :||, :<, :>, :+, :-, :*, :/ ]
+  end
+
+  defmacro from(query // Macro.escape(Query[]), expr) do
+    expr = expand_in(expr, __CALLER__) |> Macro.escape
     quote do
-      unquote(query).update_exprs([from: unquote(expr)] ++ &1)
+      Ecto.Query.merge(unquote(query), :from, unquote(expr), [])
     end
   end
 
   defmacro select(query, expr) do
+    vars = get_vars(expr)
     expr = Macro.escape(expr)
     quote do
-      unquote(query).update_exprs([select: unquote(expr)] ++ &1)
+      bind = binding(unquote(vars))
+      Ecto.Query.merge(unquote(query), :select, unquote(expr), bind)
     end
   end
 
   defmacro where(query, expr) do
+    vars = get_vars(expr)
     expr = Macro.escape(expr)
     quote do
-      unquote(query).update_exprs([where: unquote(expr)] ++ &1)
+      bind = binding(unquote(vars))
+      Ecto.Query.merge(unquote(query), :where, unquote(expr), bind)
     end
   end
 
-  defp to_query({ :in, _, [_, { :__aliases__, _, _} = module] }, env) do
-    quote do
-      Ecto.Query.QueryBuilder[repo: unquote(Macro.expand(module, env))]
-    end
+  def merge(left, right) do
+    # TODO: Do sanity checking here
+    Query[ froms: left.froms ++ right.froms,
+           wheres: left.wheres ++ right.wheres,
+           select: right.select || left.select ]
   end
 
-  defp to_query(query, _env) do
-    query
+  @doc false
+  def merge(query, type, expr, binding) do
+    query_expr = QueryExpr[expr: expr, binding: binding]
+    query_right = case type do
+      :from   -> Query[froms: [query_expr]]
+      :where  -> Query[wheres: [query_expr]]
+      :select -> Query[select: query_expr]
+    end
+    merge(query, query_right)
   end
+
+  defp expand_in({ :in, meta, [left, right] }, env) do
+    right = Macro.expand(right, env)
+    { :in, meta, [left, right] }
+  end
+
+  defp get_vars({ :"{}", _, list }) do
+    Enum.map(list, get_vars(&1)) |> List.concat
+  end
+
+  defp get_vars({ left, right }) do
+    get_vars({ :"{}", [], [left, right] })
+  end
+
+  defp get_vars(list) when is_list(list) do
+    Enum.map(list, get_vars(&1)) |> List.concat
+  end
+
+  defp get_vars({ op, _, [arg] }) when op in unary_ops do
+    get_vars(arg)
+  end
+
+  defp get_vars({ op, _, [left, right] }) when op in binary_ops do
+    get_vars(left) ++ get_vars(right)
+  end
+
+  defp get_vars({ :., _, [left, _right] }) do
+    [left]
+  end
+
+  defp get_vars({ ast, _, [] }), do: get_vars(ast)
+
+  defp get_vars({ var, _, atom }) when is_atom(atom) do
+    [var]
+  end
+
+  defp get_vars(atom) when is_atom(atom), do: [atom]
+
+  defp get_vars(_), do: []
 end

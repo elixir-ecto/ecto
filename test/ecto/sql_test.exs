@@ -3,7 +3,7 @@ Code.require_file "../test_helper.exs", __DIR__
 defmodule Ecto.SQLTest do
   use ExUnit.Case
 
-  import Ecto.Query.DSL
+  import Ecto.Query
   alias Ecto.SQL
 
   test "from" do
@@ -28,6 +28,15 @@ defmodule Ecto.SQLTest do
 
     query = from(r in Repo) |> where(r.x) |> where(r.y) |> select(r.x)
     assert SQL.compile(query) == "SELECT r.x\nFROM repo AS r\nWHERE (r.x) AND (r.y)"
+  end
+
+  test "binding" do
+    x = 123
+    query = from(r in Repo) |> select(x)
+    assert SQL.compile(query) == "SELECT 123\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x + y)
+    assert SQL.compile(query) == "SELECT 123 + y\nFROM repo AS r"
   end
 
   # TODO: Test expression gen
