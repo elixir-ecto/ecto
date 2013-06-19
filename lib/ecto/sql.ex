@@ -3,21 +3,14 @@ defmodule Ecto.SQL do
   require Ecto.Query
   alias Ecto.Query.QueryExpr
 
-  defmacrop binary_ops do
-    [ ==: "=",
-      !=: "!=",
-      <=: "<=",
-      >=: ">=",
-      &&: "AND",
-      ||: "OR",
-      <:  "<",
-      >:  ">",
-      +:  "+",
-      -:  "-",
-      *:  "*",
-      /:  "/"
-    ] |> HashDict.new |> Macro.escape
-  end
+  binary_ops =
+    [ ==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
+      &&: "AND", ||: "OR",
+      +:  "+", -:  "-", *:  "*", /:  "/" ]
+
+  Enum.map(binary_ops, fn { op, str } ->
+    def binop_to_binary(unquote(op)), do: unquote(str)
+  end)
 
   def compile(query) do
     gen_sql(query)
@@ -73,8 +66,7 @@ defmodule Ecto.SQL do
   end
 
   defp gen_expr({ op, _, [left, right] }, bind) when op in Ecto.Query.binary_ops do
-    op = Dict.fetch!(binary_ops, op)
-    "#{op_to_binary(left, bind)} #{op} #{op_to_binary(right, bind)}"
+    "#{op_to_binary(left, bind)} #{binop_to_binary(op)} #{op_to_binary(right, bind)}"
   end
 
   defp gen_expr({ var, _, atom }, bind) when is_atom(atom) do
