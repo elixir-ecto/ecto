@@ -69,37 +69,23 @@ defmodule Ecto.Query do
     { :in, meta, [left, right] }
   end
 
-  defp get_vars({ :"{}", _, list }) do
-    Enum.map(list, get_vars(&1)) |> List.concat
+  def get_vars(ast), do: get_vars(ast, [])
+
+  def get_vars({ var, _, scope }, acc) when is_atom(var) and is_atom(scope) do
+    [var|acc]
   end
 
-  defp get_vars({ left, right }) do
-    get_vars({ :"{}", [], [left, right] })
+  def get_vars({ left, _, right }, acc) do
+    get_vars(right, get_vars(left, acc))
   end
 
-  defp get_vars(list) when is_list(list) do
-    Enum.map(list, get_vars(&1)) |> List.concat
+  def get_vars({ left, right }, acc) do
+    get_vars(right, get_vars(left, acc))
   end
 
-  defp get_vars({ op, _, [arg] }) when op in unary_ops do
-    get_vars(arg)
+  def get_vars(list, acc) when is_list(list) do
+    Enum.reduce list, acc, get_vars(&1, &2)
   end
 
-  defp get_vars({ op, _, [left, right] }) when op in binary_ops do
-    get_vars(left) ++ get_vars(right)
-  end
-
-  defp get_vars({ :., _, [left, _right] }) do
-    [left]
-  end
-
-  defp get_vars({ ast, _, [] }), do: get_vars(ast)
-
-  defp get_vars({ var, _, atom }) when is_atom(atom) do
-    [var]
-  end
-
-  defp get_vars(atom) when is_atom(atom), do: [atom]
-
-  defp get_vars(_), do: []
+  def get_vars(_, acc), do: acc
 end
