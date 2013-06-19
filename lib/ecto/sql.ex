@@ -70,20 +70,32 @@ defmodule Ecto.SQL do
   end
 
   defp gen_expr({ var, _, atom }, bind) when is_atom(atom) do
-    to_binary(bind[var] || var)
-  end
-
-  defp gen_expr(nil, _bind) do
-    "NULL"
+    gen_expr(var, bind)
   end
 
   defp gen_expr(atom, bind) when is_atom(atom) do
-    to_binary(bind[atom] || atom)
+    case bind[atom] do
+      nil -> gen_literal(atom)
+      val -> gen_literal(val)
+    end
   end
 
-  defp gen_expr(expr, _bind) do
-    to_binary(expr)
+  defp gen_expr(literal, _bind), do: gen_literal(literal)
+
+  defp gen_literal(nil), do: "NULL"
+
+  defp gen_literal(literal) when is_binary(literal) do
+    "'#{escape_string(literal)}'"
   end
+
+  defp gen_literal(literal) when is_list(literal) do
+    gen_literal(:unicode.characters_to_binary(literal))
+  end
+
+  defp gen_literal(literal), do: to_binary(literal)
+
+  # TODO: Make sure that Elixir's to_binary for numbers is compatible with PG
+  # http://www.postgresql.org/docs/9.2/interactive/sql-syntax-lexical.html
 
   defp op_to_binary({ op, _, [_, _] } = expr, bind) when op in Ecto.Query.binary_ops do
     "(" <> gen_expr(expr, bind) <> ")"
@@ -108,5 +120,13 @@ defmodule Ecto.SQL do
 
   defp select_clause(expr, bind) do
     gen_expr(expr, bind)
+  end
+
+  defp escape_string(value) when is_binary(value) do
+    value = value
+      |> :binary.replace("\\", "\\\\", [:global])
+      |> :binary.replace("'", "''", [:global])
+
+    value
   end
 end

@@ -30,13 +30,22 @@ defmodule Ecto.SQLTest do
     assert SQL.compile(query) == "SELECT r.x\nFROM repo AS r\nWHERE (r.x) AND (r.y)"
   end
 
-  test "binding" do
+  test "variable binding" do
     x = 123
     query = from(r in Repo) |> select(x)
     assert SQL.compile(query) == "SELECT 123\nFROM repo AS r"
 
     query = from(r in Repo) |> select(x + y)
     assert SQL.compile(query) == "SELECT 123 + y\nFROM repo AS r"
+  end
+
+  test "string escape" do
+    x = "'\\ \n"
+    query = from(r in Repo) |> select(x)
+    assert SQL.compile(query) == "SELECT '''\\\\ \n'\nFROM repo AS r"
+
+    query = from(r in Repo) |> select("'\\")
+    assert SQL.compile(query) == "SELECT '''\\\\'\nFROM repo AS r"
   end
 
   # TODO: Test expression gen
