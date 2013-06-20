@@ -17,6 +17,8 @@ defmodule Ecto.SQL do
   end
 
   defp gen_sql(query) do
+    Ecto.Query.validate(query)
+
     select = gen_select(query.select)
     from = gen_from(query.froms)
     where = unless query.wheres == [], do: gen_where(query.wheres)
