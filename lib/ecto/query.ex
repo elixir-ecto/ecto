@@ -71,6 +71,14 @@ defmodule Ecto.Query do
 
   # TODO: Check variable collision and make sure that all variables are bound
   def validate(query) do
+    if query.select == nil do
+      raise ArgumentError, message: "a query must have a select expression"
+    end
+
+    if query.froms == [] do
+      raise ArgumentError, message: "a query must have a from expression"
+    end
+
     _from_bound = Enum.reduce(query.froms, [], fn(from, acc) ->
       { :in, _, [var, _record] } = from.expr
       [var|acc]
@@ -111,10 +119,6 @@ defmodule Ecto.Query do
     check_select({ :"{}", [], [x, y] })
   end
 
-  defp check_select(list) when is_list(list) do
-    Enum.map(list, check_select(&1))
-  end
-
   defp check_select(ast) do
     check_expr(ast)
   end
@@ -142,7 +146,7 @@ defmodule Ecto.Query do
 
   defp check_expr({ op, _, [ast] }) do
     if not op in unary_ops do
-      raise ArgumentError, message: "binary expression `#{op}` is not allowed in query expressions"
+      raise ArgumentError, message: "unary expression `#{op}` is not allowed in query expressions"
     end
     check_expr(ast)
   end
@@ -158,7 +162,7 @@ defmodule Ecto.Query do
   defp check_expr({ left, _, right }) do
     check_expr(left)
     if not (is_atom(right) || right == []) do
-      raise ArgumentError, message: "function calls are not allowed in query exressions"
+      raise ArgumentError, message: "function calls are not allowed in query expressions"
     end
   end
 
@@ -167,7 +171,7 @@ defmodule Ecto.Query do
   end
 
 
-  defp get_vars(ast), do: get_vars(ast, [])
+  defp get_vars(ast), do: get_vars(ast, []) |> Enum.uniq
 
   defp get_vars({ var, _, scope }, acc) when is_atom(var) and is_atom(scope) do
     [{ var, scope }|acc]

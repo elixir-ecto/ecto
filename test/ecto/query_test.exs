@@ -5,6 +5,7 @@ defmodule Ecto.QueryTest do
 
   import Ecto.TestHelpers
   import Ecto.Query, warn: false
+  alias Ecto.Query.Query
 
   test "from check" do
     assert_raise ArgumentError, "from expressions must be in `var in Record` format", fn ->
@@ -39,10 +40,22 @@ defmodule Ecto.QueryTest do
   end
 
   test "select check" do
-    delay_compile select(Ecto.Query.Query[], {x, [y]})
+    assert_raise ArgumentError, "lists are not allowed in query expressions", fn ->
+      delay_compile select(Query[], [y])
+    end
 
     assert_raise ArgumentError, "tuples are not allowed in query expressions", fn ->
-      delay_compile select(Ecto.Query.Query[], x == {1, 2})
+      delay_compile select(Query[], x == {1, 2})
+    end
+
+    assert_raise ArgumentError, "function calls are not allowed in query expressions", fn ->
+      delay_compile select(Query[], f(x, y, z))
+    end
+
+    assert_raise ArgumentError, "binary expression `++` is not allowed in query expressions", fn ->
+      delay_compile select(Query[], x ++ y)
     end
   end
+
+  # TODO: test validate
 end

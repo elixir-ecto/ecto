@@ -18,7 +18,7 @@ defmodule Ecto.SQLTest do
     query = from(r in Repo) |> select({r.x, r.y})
     assert SQL.compile(query) == "SELECT r.x, r.y\nFROM repo AS r"
 
-    query = from(r in Repo) |> select({r.x, r.y, [{r.z}]})
+    query = from(r in Repo) |> select({r.x, r.y, {r.z}})
     assert SQL.compile(query) == "SELECT r.x, r.y, r.z\nFROM repo AS r"
   end
 
@@ -48,5 +48,78 @@ defmodule Ecto.SQLTest do
     assert SQL.compile(query) == "SELECT '''\\\\'\nFROM repo AS r"
   end
 
-  # TODO: Test expression gen
+  test "unary ops" do
+    query = from(r in Repo) |> select(!x)
+    assert SQL.compile(query) == "SELECT NOT (x)\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(+x)
+    assert SQL.compile(query) == "SELECT +x\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(-x)
+    assert SQL.compile(query) == "SELECT -x\nFROM repo AS r"
+  end
+
+  test "binary ops" do
+    query = from(r in Repo) |> select(x == y)
+    assert SQL.compile(query) == "SELECT x = y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x != y)
+    assert SQL.compile(query) == "SELECT x != y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x <= y)
+    assert SQL.compile(query) == "SELECT x <= y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x >= y)
+    assert SQL.compile(query) == "SELECT x >= y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x < y)
+    assert SQL.compile(query) == "SELECT x < y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x > y)
+    assert SQL.compile(query) == "SELECT x > y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x && y)
+    assert SQL.compile(query) == "SELECT x AND y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x || y)
+    assert SQL.compile(query) == "SELECT x OR y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x + y)
+    assert SQL.compile(query) == "SELECT x + y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x - y)
+    assert SQL.compile(query) == "SELECT x - y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x * y)
+    assert SQL.compile(query) == "SELECT x * y\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(x / y)
+    assert SQL.compile(query) == "SELECT x / y\nFROM repo AS r"
+  end
+
+  test "literals" do
+    query = from(r in Repo) |> select(:atom)
+    assert SQL.compile(query) == "SELECT atom\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(nil)
+    assert SQL.compile(query) == "SELECT NULL\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(true)
+    assert SQL.compile(query) == "SELECT true\nFROM repo AS r"
+
+    query = from(r in Repo) |> select(false)
+    assert SQL.compile(query) == "SELECT false\nFROM repo AS r"
+
+    query = from(r in Repo) |> select("abc")
+    assert SQL.compile(query) == "SELECT 'abc'\nFROM repo AS r"
+
+    # TODO: Test more numbers
+    query = from(r in Repo) |> select(123)
+    assert SQL.compile(query) == "SELECT 123\nFROM repo AS r"
+  end
+
+  test "nested expressions" do
+    query = from(r in Repo) |> select(x + (y + !z) - 3)
+    assert SQL.compile(query) == "SELECT (x + (y + NOT (z))) - 3\nFROM repo AS r"
+  end
 end
