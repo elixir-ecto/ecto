@@ -119,7 +119,7 @@ defmodule Ecto.SQLTest do
   end
 
   test "nested expressions" do
-    query = from(r in Repo) |> select(x + (y + !z) - 3)
-    assert SQL.compile(query) == "SELECT (x + (y + NOT (z))) - 3\nFROM repo AS r"
+    query = from(r in Repo) |> select(x + (y + -z) - 3)
+    assert SQL.compile(query) == "SELECT (x + (y + -z)) - 3\nFROM repo AS r"
   end
 end

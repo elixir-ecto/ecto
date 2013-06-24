@@ -40,7 +40,7 @@ defmodule Ecto.Query do
   end
 
   defmacro where(query // Macro.escape(Query[]), expr) do
-    check_expr(expr)
+    check_where(expr)
     vars = get_vars(expr)
     expr = Macro.escape(expr)
     quote do
@@ -69,7 +69,6 @@ defmodule Ecto.Query do
     end
   end
 
-  # TODO: Check variable collision and make sure that all variables are bound
   def validate(query) do
     if query.select == nil do
       raise ArgumentError, message: "a query must have a select expression"
@@ -79,6 +78,8 @@ defmodule Ecto.Query do
       raise ArgumentError, message: "a query must have a from expression"
     end
 
+    # TODO: Check variable collision and make sure that all variables are bound,
+    #       also check types when we know the types of bindings
     _from_bound = Enum.reduce(query.froms, [], fn(from, acc) ->
       { :in, _, [var, _record] } = from.expr
       [var|acc]
@@ -110,9 +111,16 @@ defmodule Ecto.Query do
     raise ArgumentError, message: "from expressions must be in `var in Record` format"
   end
 
+  defp check_where(expr) do
+    unless check_expr(expr) in [:boolean, :any] do
+      raise ArgumentError, message: "where expressions must be of boolean type"
+    end
+  end
+
   # TODO: Allow records
   defp check_select({ :"{}", _, elems }) do
     Enum.each(elems, check_select(&1))
+    :tuple
   end
 
   defp check_select({ x, y }) do
@@ -142,33 +150,77 @@ defmodule Ecto.Query do
   defp check_expr({ :., _, [left, right] }) do
     check_expr(left)
     check_expr(right)
+    :any
   end
 
-  defp check_expr({ op, _, [ast] }) do
-    if not op in unary_ops do
-      raise ArgumentError, message: "unary expression `#{op}` is not allowed in query expressions"
+  defp check_expr({ op, _, [left, right] }) when op in [:==, :!=] do
+    left_type = check_expr(left)
+    right_type = check_expr(right)
+    unless left_type == right_type or :any in [left_type, right_type] do
+      raise ArgumentError, message: "left and right operands' types must match for `#{op}`"
     end
+    :boolean
+  end
+
+  defp check_expr({ op, _, [left, right] }) when op in [:<=, :>=, :<, :>, :+, :-, :*, :/] do
+    left_type = check_expr(left)
+    right_type = check_expr(right)
+    unless left_type in [:number, :any] and right_type in [:number, :any] do
+      raise ArgumentError, message: "`#{op}` is only supported on number types"
+    end
+    :number
+  end
+
+  defp check_expr({ op, _, [left, right] }) when op in [:&&, :||] do
+    left_type = check_expr(left)
+    right_type = check_expr(right)
+    unless left_type in [:boolean, :any] and right_type in [:boolean, :any]  do
+      raise ArgumentError, message: "`#{op}` is only supported on boolean types"
+    end
+    :boolean
+  end
+
+  defp check_expr({ :!, _, [ast] }) do
+    unless check_expr(ast) in [:boolean, :any] do
+      raise ArgumentError, message: "`!` is only supported on boolean types"
+    end
+    :boolean
+  end
+
+  defp check_expr({ op, _, [ast] }) when op in [:+, :-] do
+    unless check_expr(ast) in [:number, :any] do
+      raise ArgumentError, message: "`#{op}` is only supported on number types"
+    end
+    :number
+  end
+
+  defp check_expr({ op, _, [_] }) do
+    raise ArgumentError, message: "unary expression `#{op}` is not allowed in query expressions"
+  end
+
+  defp check_expr({ op, _, [_, _] }) do
+    raise ArgumentError, message: "binary expression `#{op}` is not allowed in query expressions"
+  end
+
+  defp check_expr({ var, _, atom }) when is_atom(var) and is_atom(atom) do
+    :any
+  end
+
+  defp check_expr({ ast, _, [] }) when is_tuple(ast) do
     check_expr(ast)
   end
 
-  defp check_expr({ op, _, [left, right] }) do
-    if not op in binary_ops do
-      raise ArgumentError, message: "binary expression `#{op}` is not allowed in query expressions"
-    end
-    check_expr(left)
-    check_expr(right)
+  defp check_expr({ _ast, _, list }) when is_list(list) do
+    raise ArgumentError, message: "function calls are not allowed in query expressions"
   end
 
-  defp check_expr({ left, _, right }) do
-    check_expr(left)
-    if not (is_atom(right) || right == []) do
-      raise ArgumentError, message: "function calls are not allowed in query expressions"
-    end
-  end
-
-  defp check_expr(x) when is_binary(x) or is_number(x) or is_atom(x) do
-    :ok
-  end
+  defp check_expr(nil), do: :boolean
+  defp check_expr(true), do: :boolean
+  defp check_expr(false), do: :boolean
+  defp check_expr(atom) when is_atom(atom), do: :any
+  defp check_expr(number) when is_number(number), do: :number
+  defp check_expr(boolean) when is_boolean(boolean), do: :boolean
+  defp check_expr(string) when is_binary(string), do: :string
 
 
   defp get_vars(ast), do: get_vars(ast, []) |> Enum.uniq

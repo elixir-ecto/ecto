@@ -36,7 +36,11 @@ defmodule Ecto.QueryTest do
       delay_compile where([1, 2, 3])
     end
 
-    delay_compile where(x - y && x + y)
+    assert_raise ArgumentError, "where expressions must be of boolean type", fn ->
+      delay_compile where(1 + x)
+    end
+
+    delay_compile where(x || y && x || y)
   end
 
   test "select check" do
@@ -55,6 +59,37 @@ defmodule Ecto.QueryTest do
     assert_raise ArgumentError, "binary expression `++` is not allowed in query expressions", fn ->
       delay_compile select(Query[], x ++ y)
     end
+
+    delay_compile select(Query[], {x, y})
+  end
+
+  test "type checks" do
+    assert_raise ArgumentError, "left and right operands' types must match for `==`", fn ->
+      delay_compile select(Query[], true == 1)
+    end
+
+    assert_raise ArgumentError, "`<` is only supported on number types", fn ->
+      delay_compile select(Query[], x < "test")
+    end
+
+    assert_raise ArgumentError, "`&&` is only supported on boolean types", fn ->
+      delay_compile select(Query[], 2 && true)
+    end
+
+    assert_raise ArgumentError, "`!` is only supported on boolean types", fn ->
+      delay_compile select(Query[], !1)
+    end
+
+    assert_raise ArgumentError, "`-` is only supported on number types", fn ->
+      delay_compile select(Query[], -"abc")
+    end
+
+    delay_compile select(Query[], true != x)
+    delay_compile select(Query[], y < 3)
+    delay_compile select(Query[], (x || y) && true)
+    delay_compile select(Query[], !false)
+    delay_compile select(Query[], !x)
+    delay_compile select(Query[], +1 - -x)
   end
 
   # TODO: test validate
