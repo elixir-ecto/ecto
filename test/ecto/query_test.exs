@@ -45,22 +45,22 @@ defmodule Ecto.QueryTest do
 
   test "select check" do
     assert_raise ArgumentError, "lists are not allowed in query expressions", fn ->
-      delay_compile select(Query[], [y])
+      delay_compile select([y])
     end
 
     assert_raise ArgumentError, "tuples are not allowed in query expressions", fn ->
-      delay_compile select(Query[], x == {1, 2})
+      delay_compile select(x == {1, 2})
     end
 
     assert_raise ArgumentError, "function calls are not allowed in query expressions", fn ->
-      delay_compile select(Query[], f(x, y, z))
+      delay_compile select(f(x, y, z))
     end
 
     assert_raise ArgumentError, "binary expression `++` is not allowed in query expressions", fn ->
-      delay_compile select(Query[], x ++ y)
+      delay_compile select(x ++ y)
     end
 
-    delay_compile select(Query[], {x, y})
+    delay_compile select({x, y})
   end
 
   test "type checks" do

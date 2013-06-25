@@ -29,7 +29,7 @@ defmodule Ecto.Query do
     end
   end
 
-  defmacro select(query, expr) do
+  defmacro select(query // Macro.escape(Query[]), expr) do
     check_select(expr)
     vars = get_vars(expr)
     expr = Macro.escape(expr)
