@@ -10,6 +10,7 @@ defmodule Ecto.Query.WhereBuilder do
     { ast, vars.update_external(Enum.uniq(&1)).update_binding(Enum.uniq(&1)) }
   end
 
+  # var.x - dotted function call with no args where left side is var
   defp escape({ { :., _, [{ var, _, context}, _right] } = dot, meta, [] }, vars)
        when is_atom(var) and is_atom(context) do
     { dot_ast, _ } = escape(dot, vars)
@@ -17,10 +18,12 @@ defmodule Ecto.Query.WhereBuilder do
     { { :"{}", [], [dot_ast, meta, []] }, vars }
   end
 
+  # anything dotted that is a function call
   defp escape({ { :., _, [_, _] }, _, args } = ast, vars) when is_list(args) do
     { ast, vars.update_external(get_vars(ast) ++ &1) }
   end
 
+  # anything dotted that isnt a function call
   defp escape({ :., meta, [{ var, meta2, context } = left, right] }, vars)
       when is_atom(var) and is_atom(context) do
     vars = update_vars(vars, get_vars(left))
@@ -28,41 +31,49 @@ defmodule Ecto.Query.WhereBuilder do
     { { :"{}", [], [:., meta, [left, right]] }, vars }
   end
 
+  # variable
   defp escape({ var, _, context } = ast, vars) when is_atom(var) and is_atom(context) do
     { ast, vars.update_external(get_vars(ast) ++ &1) }
   end
 
+  # unary op
   defp escape({ op, meta, [arg] }, vars) when op in @unary_ops do
     { arg_ast, vars } = escape(arg, vars)
     { { :"{}", [], [op, meta, [arg_ast]] }, vars }
   end
 
+  # binary op
   defp escape({ op, meta, [left, right] }, vars) when op in @binary_ops do
     { left_ast, vars } = escape(left, vars)
     { right_ast, vars } = escape(right, vars)
     { { :"{}", [], [op, meta, [left_ast, right_ast]] }, vars }
   end
 
+  # function call on variable / operator
   defp escape({ fun, _, args } = ast, vars) when is_atom(fun) and is_list(args) do
     { ast, vars.update_external(get_vars(ast) ++ &1) }
   end
 
+  # the rest
   defp escape({ left, meta, right }, vars) do
     { left_ast, vars } = escape(left, vars)
     { right_ast, vars } = escape(right, vars)
     { { :"{}", [], [left_ast, meta, right_ast] }, vars }
   end
 
+  # 2-tuple
   defp escape({ left, right }, vars) do
     { left_ast, vars } = escape(left, vars)
     { right_ast, vars } = escape(right, vars)
     { { left_ast, right_ast }, vars }
   end
 
+  # list
   defp escape(list, vars) when is_list(list) do
     Enum.map_reduce(list, vars, escape(&1, &2))
   end
 
+  # literals
   defp escape(other, vars) do
     { other, vars }
   end
