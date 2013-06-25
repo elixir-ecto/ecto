@@ -162,13 +162,22 @@ defmodule Ecto.Query do
     :boolean
   end
 
-  defp check_expr({ op, _, [left, right] }) when op in [:<=, :>=, :<, :>, :+, :-, :*, :/] do
+  defp check_expr({ op, _, [left, right] }) when op in [:+, :-, :*, :/] do
     left_type = check_expr(left)
     right_type = check_expr(right)
     unless left_type in [:number, :any] and right_type in [:number, :any] do
       raise ArgumentError, message: "`#{op}` is only supported on number types"
     end
     :number
+  end
+
+  defp check_expr({ op, _, [left, right] }) when op in [:<=, :>=, :<, :>] do
+    left_type = check_expr(left)
+    right_type = check_expr(right)
+    unless left_type in [:number, :any] and right_type in [:number, :any] do
+      raise ArgumentError, message: "`#{op}` is only supported on number types"
+    end
+    :boolean
   end
 
   defp check_expr({ op, _, [left, right] }) when op in [:&&, :||] do
