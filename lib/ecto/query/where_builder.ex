@@ -11,75 +11,38 @@ defmodule Ecto.Query.WhereBuilder do
   end
 
   # var.x - dotted function call with no args where left side is var
-  defp escape({ { :., _, [{ var, _, context}, _right] } = dot, meta, [] }, vars)
+  defp escape({ { :., _, [{ var, _, context}, _right] } = dot, meta, [] }, state)
        when is_atom(var) and is_atom(context) do
-    { dot_ast, _ } = escape(dot, vars)
-    vars = update_vars(vars, [{var, context}])
-    { { :"{}", [], [dot_ast, meta, []] }, vars }
-  end
-
-  # anything dotted that is a function call
-  defp escape({ { :., _, [_, _] }, _, args } = ast, vars) when is_list(args) do
-    { ast, vars.update_external(get_vars(ast) ++ &1) }
+    { dot_ast, _ } = escape(dot, state)
+    state = update_vars(state, [{var, context}])
+    { { :{}, [], [dot_ast, meta, []] }, state }
   end
 
   # anything dotted that isnt a function call
-  defp escape({ :., meta, [{ var, meta2, context } = left, right] }, vars)
+  defp escape({ :., meta, [{ var, meta2, context } = left, right] }, state)
       when is_atom(var) and is_atom(context) do
-    vars = update_vars(vars, get_vars(left))
-    left = { :"{}", [], [var, meta2, context] }
-    { { :"{}", [], [:., meta, [left, right]] }, vars }
-  end
-
-  # variable
-  defp escape({ var, _, context } = ast, vars) when is_atom(var) and is_atom(context) do
-    { ast, vars.update_external(get_vars(ast) ++ &1) }
+    state = update_vars(state, get_vars(left, []))
+    left = { :{}, [], [var, meta2, context] }
+    { { :{}, [], [:., meta, [left, right]] }, state }
   end
 
   # unary op
-  defp escape({ op, meta, [arg] }, vars) when op in @unary_ops do
-    { arg_ast, vars } = escape(arg, vars)
-    { { :"{}", [], [op, meta, [arg_ast]] }, vars }
+  defp escape({ op, meta, [arg] }, state) when op in @unary_ops do
+    { arg_ast, state } = escape(arg, state)
+    { { :{}, [], [op, meta, [arg_ast]] }, state }
   end
 
   # binary op
-  defp escape({ op, meta, [left, right] }, vars) when op in @binary_ops do
-    { left_ast, vars } = escape(left, vars)
-    { right_ast, vars } = escape(right, vars)
-    { { :"{}", [], [op, meta, [left_ast, right_ast]] }, vars }
+  defp escape({ op, meta, [left, right] }, state) when op in @binary_ops do
+    { left_ast, state } = escape(left, state)
+    { right_ast, state } = escape(right, state)
+    { { :{}, [], [op, meta, [left_ast, right_ast]] }, state }
   end
 
-  # function call on variable / operator
-  defp escape({ fun, _, args } = ast, vars) when is_atom(fun) and is_list(args) do
-    { ast, vars.update_external(get_vars(ast) ++ &1) }
+  # everything else is unknown
+  defp escape(other, state) do
+    { other, state.update_external(get_vars(other, &1)) }
   end
-
-  # the rest
-  defp escape({ left, meta, right }, vars) do
-    { left_ast, vars } = escape(left, vars)
-    { right_ast, vars } = escape(right, vars)
-    { { :"{}", [], [left_ast, meta, right_ast] }, vars }
-  end
-
-  # 2-tuple
-  defp escape({ left, right }, vars) do
-    { left_ast, vars } = escape(left, vars)
-    { right_ast, vars } = escape(right, vars)
-    { { left_ast, right_ast }, vars }
-  end
-
-  # list
-  defp escape(list, vars) when is_list(list) do
-    Enum.map_reduce(list, vars, escape(&1, &2))
-  end
-
-  # literals
-  defp escape(other, vars) do
-    { other, vars }
-  end
-
-
-  defp get_vars(ast), do: get_vars(ast, [])
 
   defp get_vars({ var, _, context }, acc) when is_atom(var) and is_atom(context) do
     [{ var, context }|acc]
@@ -98,7 +61,6 @@ defmodule Ecto.Query.WhereBuilder do
   end
 
   defp get_vars(_, acc), do: acc
-
 
   defp validate(_ast) do
   end
