@@ -1,6 +1,8 @@
 defmodule Ecto.Query.WhereBuilder do
   @moduledoc false
 
+  alias Ecto.Query.BuilderUtil
+
   @unary_ops [ :not, :+, :- ]
   @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/ ]
 
@@ -30,7 +32,7 @@ defmodule Ecto.Query.WhereBuilder do
 
   # everything else is foreign or literals
   def escape(other, vars) do
-    case find_vars(other, vars) do
+    case BuilderUtil.find_vars(other, vars) do
       nil -> other
       var ->
         # TODO: Improve error message
@@ -38,25 +40,5 @@ defmodule Ecto.Query.WhereBuilder do
                   "or as argument to a query expression"
         raise ArgumentError, message: message
     end
-  end
-
-  defp find_vars({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
-    if var in vars, do: var
-  end
-
-  defp find_vars({ left, _, right }, vars) do
-    find_vars(left, vars) || find_vars(right, vars)
-  end
-
-  defp find_vars({ left, right }, vars) do
-    find_vars(left, vars) || find_vars(right, vars)
-  end
-
-  defp find_vars(list, vars) when is_list(list) do
-    Enum.find_value(list, find_vars(&1, vars))
-  end
-
-  defp find_vars(_, _vars) do
-    nil
   end
 end

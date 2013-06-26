@@ -6,6 +6,9 @@ defmodule Ecto.Query.SelectBuilderTest do
   import Ecto.Query.SelectBuilder
 
   test "escape" do
+    assert { :single, Macro.escape(quote do x end) } ==
+           escape(quote do x end, [:x])
+
     assert { :single, Macro.escape(quote do x.y end) } ==
            escape(quote do x.y end, [:x])
 
@@ -14,25 +17,24 @@ defmodule Ecto.Query.SelectBuilderTest do
 
     assert { :list, [Macro.escape(quote do x.y end), Macro.escape(quote do x.z end)] } ==
            escape(quote do [x.y, x.z] end, [:x])
+
+    assert { :tuple, [Macro.escape(quote do x.y end), 1] } ==
+            escape(quote do {x.y, 1} end, [:x])
+
+    assert { :single, Macro.escape(quote do 2 * x.y end) } ==
+            escape(quote do 2 * x.y end, [:x])
+
+    assert { :single, { :{}, _, [:+, _, [{ :x, _, _ }, {:y, _, _} ]] } } =
+            escape(quote do x + y end, [])
+
+    assert { :single, quote do x.y end } ==
+            escape(quote do x.y end, [])
   end
 
   test "escape raise" do
-    message = "only dotted expressions of bound vars are allowed `bound.field`"
-
+    message = "bound vars are only allowed in dotted expression `x.field` or as argument to a query expression"
     assert_raise ArgumentError, message, fn ->
-      escape(quote do 1+2 end, [])
-    end
-
-    assert_raise ArgumentError, message, fn ->
-      escape(quote do {x.y, 1} end, [:x])
-    end
-
-    assert_raise ArgumentError, message, fn ->
-      escape(quote do {x.y, {x.z}} end, [:x])
-    end
-
-    assert_raise ArgumentError, message, fn ->
-      escape(quote do x.y + x.z end, [:x])
+      escape(quote do foreign(x.y) end, [:x])
     end
   end
 end

@@ -14,7 +14,7 @@ defmodule Ecto.Query.FromBuilderTest do
   end
 
   test "escape raise" do
-    message = "only `in` expressions binding variables to records allowed"
+    message = "only `in` expressions binding variables to records allowed in from expressions"
 
     assert_raise ArgumentError, message, fn ->
       escape(quote do 1 end)
