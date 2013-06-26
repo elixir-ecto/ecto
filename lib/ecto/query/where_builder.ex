@@ -3,70 +3,58 @@ defmodule Ecto.Query.WhereBuilder do
   @unary_ops [ :not, :+, :- ]
   @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/ ]
 
-  defrecord State, external: [], binding: []
-
-  def escape(ast) do
-    { ast, vars } = escape(ast, State[])
-    { ast, vars.update_external(Enum.uniq(&1)).update_binding(Enum.uniq(&1)) }
-  end
-
-  # var.x - dotted function call with no args where left side is var
-  defp escape({ { :., _, [{ var, _, context}, _right] } = dot, meta, [] }, state)
-       when is_atom(var) and is_atom(context) do
-    { dot_ast, _ } = escape(dot, state)
-    state = update_vars(state, [{var, context}])
-    { { :{}, [], [dot_ast, meta, []] }, state }
-  end
-
-  # anything dotted that isnt a function call
-  defp escape({ :., meta, [{ var, meta2, context } = left, right] }, state)
-      when is_atom(var) and is_atom(context) do
-    state = update_vars(state, get_vars(left, []))
-    left = { :{}, [], [var, meta2, context] }
-    { { :{}, [], [:., meta, [left, right]] }, state }
+  # var.x - where var is bound
+  def escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] } = ast, vars) do
+    if { var, context } in vars do
+      left_escaped = { :{}, [], tuple_to_list(left) }
+      dot_escaped = { :{}, [], [:., meta2, [left_escaped, right]] }
+      { :{}, meta, [dot_escaped, meta, []] }
+    else
+      ast
+    end
   end
 
   # unary op
-  defp escape({ op, meta, [arg] }, state) when op in @unary_ops do
-    { arg_ast, state } = escape(arg, state)
-    { { :{}, [], [op, meta, [arg_ast]] }, state }
+  def escape({ op, meta, [arg] }, vars) when op in @unary_ops do
+    args = [escape(arg, vars)]
+    { :{}, [], [op, meta, args] }
   end
 
   # binary op
-  defp escape({ op, meta, [left, right] }, state) when op in @binary_ops do
-    { left_ast, state } = escape(left, state)
-    { right_ast, state } = escape(right, state)
-    { { :{}, [], [op, meta, [left_ast, right_ast]] }, state }
+  def escape({ op, meta, [left, right] }, vars) when op in @binary_ops do
+    args = [escape(left, vars), escape(right, vars)]
+    { :{}, [], [op, meta, args] }
   end
 
-  # everything else is unknown
-  defp escape(other, state) do
-    { other, state.update_external(get_vars(other, &1)) }
+  # everything else is foreign or literals
+  def escape(other, vars) do
+    case find_vars(other, vars) do
+      { var, _context } ->
+        # TODO: Improve error message
+        message = "bound vars are only allowed in dotted expression `#{var}.field` " <>
+                  "or as argument to a query expression"
+        raise ArgumentError, message: message
+      nil -> other
+    end
   end
 
-  defp get_vars({ var, _, context }, acc) when is_atom(var) and is_atom(context) do
-    [{ var, context }|acc]
+  defp find_vars({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
+    if { var, context } in vars, do: { var, context }
   end
 
-  defp get_vars({ left, _, right }, acc) do
-    get_vars(right, get_vars(left, acc))
+  defp find_vars({ left, _, right }, vars) do
+    find_vars(left, vars) || find_vars(right, vars)
   end
 
-  defp get_vars({ left, right }, acc) do
-    get_vars(right, get_vars(left, acc))
+  defp find_vars({ left, right }, vars) do
+    find_vars(left, vars) || find_vars(right, vars)
   end
 
-  defp get_vars(list, acc) when is_list(list) do
-    Enum.reduce list, acc, get_vars(&1, &2)
+  defp find_vars(list, vars) when is_list(list) do
+    Enum.find_value(list, find_vars(&1, vars))
   end
 
-  defp get_vars(_, acc), do: acc
-
-  defp validate(_ast) do
-  end
-
-
-  defp update_vars(State[external: external, binding: binding], vars) do
-    State[external: vars ++ external, binding: vars ++ binding]
+  defp find_vars(_, _vars) do
+    nil
   end
 end
