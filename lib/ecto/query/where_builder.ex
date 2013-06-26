@@ -1,4 +1,5 @@
 defmodule Ecto.Query.WhereBuilder do
+  @moduledoc false
 
   @unary_ops [ :not, :+, :- ]
   @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/ ]
