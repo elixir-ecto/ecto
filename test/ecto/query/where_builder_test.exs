@@ -19,7 +19,7 @@ defmodule Ecto.Query.WhereBuilderTest do
            escape(quote do x.y end, [])
 
     assert Macro.escape(quote do x.y end) ==
-           escape(quote do x.y end, [{:x, __MODULE__}])
+           escape(quote do x.y end, [:x])
   end
 
   test "escape raise" do
@@ -27,15 +27,15 @@ defmodule Ecto.Query.WhereBuilderTest do
               "or as argument to a query expression"
 
     assert_raise ArgumentError, message, fn ->
-      escape(quote do x end, [{:x, __MODULE__}])
+      escape(quote do x end, [:x])
     end
 
     assert_raise ArgumentError, message, fn ->
-      escape(quote do x.y(0) end, [{:x, __MODULE__}])
+      escape(quote do x.y(0) end, [:x])
     end
 
     assert_raise ArgumentError, message, fn ->
-      escape(quote do foreign(x.y) end, [{:x, __MODULE__}])
+      escape(quote do foreign(x.y) end, [:x])
     end
   end
 end

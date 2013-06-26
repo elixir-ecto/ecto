@@ -22,8 +22,9 @@ defmodule Ecto.Query.SelectBuilder do
   end
 
    # var.x - where var is bound
-  defp sub_escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] }, vars) do
-    if { var, context } in vars do
+  defp sub_escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] }, vars)
+      when is_atom(var) and is_atom(context) do
+    if var in vars do
       left_escaped = { :{}, [], tuple_to_list(left) }
       dot_escaped = { :{}, [], [:., meta2, [left_escaped, right]] }
       { :{}, meta, [dot_escaped, meta, []] }

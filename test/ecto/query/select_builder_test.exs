@@ -7,13 +7,13 @@ defmodule Ecto.Query.SelectBuilderTest do
 
   test "escape" do
     assert { :single, Macro.escape(quote do x.y end) } ==
-           escape(quote do x.y end, [{:x, __MODULE__}])
+           escape(quote do x.y end, [:x])
 
     assert { :tuple, [Macro.escape(quote do x.y end), Macro.escape(quote do x.z end)] } ==
-           escape(quote do {x.y, x.z} end, [{:x, __MODULE__}])
+           escape(quote do {x.y, x.z} end, [:x])
 
     assert { :list, [Macro.escape(quote do x.y end), Macro.escape(quote do x.z end)] } ==
-           escape(quote do [x.y, x.z] end, [{:x, __MODULE__}])
+           escape(quote do [x.y, x.z] end, [:x])
   end
 
   test "escape raise" do
@@ -24,15 +24,15 @@ defmodule Ecto.Query.SelectBuilderTest do
     end
 
     assert_raise ArgumentError, message, fn ->
-      escape(quote do {x.y, 1} end, [{:x, __MODULE__}])
+      escape(quote do {x.y, 1} end, [:x])
     end
 
     assert_raise ArgumentError, message, fn ->
-      escape(quote do {x.y, {x.z}} end, [{:x, __MODULE__}])
+      escape(quote do {x.y, {x.z}} end, [:x])
     end
 
     assert_raise ArgumentError, message, fn ->
-      escape(quote do x.y + x.z end, [{:x, __MODULE__}])
+      escape(quote do x.y + x.z end, [:x])
     end
   end
 end

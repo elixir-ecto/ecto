@@ -5,8 +5,9 @@ defmodule Ecto.Query.WhereBuilder do
   @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/ ]
 
   # var.x - where var is bound
-  def escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] } = ast, vars) do
-    if { var, context } in vars do
+  def escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] } = ast, vars)
+      when is_atom(var) and is_atom(context) do
+    if var in vars do
       left_escaped = { :{}, [], tuple_to_list(left) }
       dot_escaped = { :{}, [], [:., meta2, [left_escaped, right]] }
       { :{}, meta, [dot_escaped, meta, []] }
@@ -30,17 +31,17 @@ defmodule Ecto.Query.WhereBuilder do
   # everything else is foreign or literals
   def escape(other, vars) do
     case find_vars(other, vars) do
-      { var, _context } ->
+      nil -> other
+      var ->
         # TODO: Improve error message
         message = "bound vars are only allowed in dotted expression `#{var}.field` " <>
                   "or as argument to a query expression"
         raise ArgumentError, message: message
-      nil -> other
     end
   end
 
   defp find_vars({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
-    if { var, context } in vars, do: { var, context }
+    if var in vars, do: var
   end
 
   defp find_vars({ left, _, right }, vars) do
