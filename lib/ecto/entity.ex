@@ -70,7 +70,7 @@ defmodule Ecto.Entity.DSL do
 
   def check_defs(env) do
     if Module.get_attribute(env.module, :ecto_defs) do
-      raise ArgumentError, message: "Entity needs to be defined before any function " <>
+      raise ArgumentError, message: "entity needs to be defined before any function " <>
                                     "or macro definitions"
     end
   end

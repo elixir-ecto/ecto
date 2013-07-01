@@ -69,10 +69,6 @@ defmodule Ecto.Query do
     end
   end
 
-  defp escape_binding({ :__block__, _, [arg] }) do
-    escape_binding(arg)
-  end
-
   defp escape_binding(list) when is_list(list) do
     escape_binding(list)
   end

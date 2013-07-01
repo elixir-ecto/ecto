@@ -14,10 +14,6 @@ defmodule Ecto.Query.SelectBuilder do
     { :tuple, Enum.map(list, sub_escape(&1, vars)) }
   end
 
-  def escape({ :__block__, _, [ast] }, vars) do
-    escape(ast, vars)
-  end
-
   def escape(list, vars) when is_list(list) do
     { :list, Enum.map(list, sub_escape(&1, vars)) }
   end

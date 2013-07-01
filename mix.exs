@@ -4,7 +4,8 @@ defmodule Ecto.Mixfile do
   def project do
     [ app: :ecto,
       version: "0.0.1",
-      deps: deps ]
+      deps: deps,
+      elixir: "~> 0.9.4-dev" ]
   end
 
   # Configuration for the OTP application
