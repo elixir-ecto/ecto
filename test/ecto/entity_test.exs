@@ -1,11 +1,11 @@
 Code.require_file "../test_helper.exs", __DIR__
 
-defmodule Ecto.ModelTest do
+defmodule Ecto.EntityTest do
   use ExUnit.Case, async: true
 
-  defmodule MyModel do
-    use Ecto.Model
-    table_name :my_model
+  defmodule MyEntity do
+    use Ecto.Entity
+    table_name :my_Entity
 
     primary_key
     field :name, :string, default: "eric"
@@ -19,13 +19,13 @@ defmodule Ecto.ModelTest do
       { :email, [type: :string, uniq: true] }
     ]
 
-    assert MyModel.__ecto__(:table) == :my_model
-    assert MyModel.__ecto__(:fields) == fields
-    assert MyModel.__ecto__(:fields, :id) == fields[:id]
-    assert MyModel.__ecto__(:fields, :name) == fields[:name]
-    assert MyModel.__ecto__(:fields, :email) == fields[:email]
+    assert MyEntity.__ecto__(:table) == :my_Entity
+    assert MyEntity.__ecto__(:fields) == fields
+    assert MyEntity.__ecto__(:fields, :id) == fields[:id]
+    assert MyEntity.__ecto__(:fields, :name) == fields[:name]
+    assert MyEntity.__ecto__(:fields, :email) == fields[:email]
 
-    assert MyModel.__record__(:fields) ==
+    assert MyEntity.__record__(:fields) ==
            [id: nil, name: "eric", email: nil]
   end
 end

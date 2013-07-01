@@ -1,7 +1,7 @@
-defmodule Ecto.Model do
+defmodule Ecto.Entity do
   defmacro __using__(_opts) do
     quote do
-      import Ecto.Model.DSL
+      import Ecto.Entity.DSL
 
       @on_definition unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
@@ -44,7 +44,7 @@ defmodule Ecto.Model do
   end
 end
 
-defmodule Ecto.Model.DSL do
+defmodule Ecto.Entity.DSL do
   defmacro table_name(name) do
     check_defs(__CALLER__)
     quote do
@@ -70,7 +70,7 @@ defmodule Ecto.Model.DSL do
 
   def check_defs(env) do
     if Module.get_attribute(env.module, :ecto_defs) do
-      raise ArgumentError, message: "model needs to be defined before any function " <>
+      raise ArgumentError, message: "Entity needs to be defined before any function " <>
                                     "or macro definitions"
     end
   end
