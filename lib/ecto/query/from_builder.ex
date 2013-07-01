@@ -7,7 +7,7 @@ defmodule Ecto.Query.FromBuilder do
   end
 
   def escape(_other) do
-    raise ArgumentError, message: "only `in` expressions binding variables to " <>
-                                  "records allowed in from expressions"
+    message = "only `in` expressions binding variables to records allowed in from expressions"
+    raise Ecto.InvalidQuery, message: message
   end
 end

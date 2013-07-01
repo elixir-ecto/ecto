@@ -36,6 +36,7 @@ defmodule Ecto.Entity do
       def __ecto__(:table), do: unquote(table_name)
       def __ecto__(:fields), do: unquote(Macro.escape(fields))
       unquote_splicing(fields_quote)
+      def __ecto__(:fields, _), do: nil
     end
   end
 
@@ -58,7 +59,8 @@ defmodule Ecto.Entity.DSL do
     end
   end
 
-  defmacro field(name, type, opts) do
+  defmacro field(name, type, opts // []) do
+    # TODO: Check that the opts are valid for the given type
     check_defs(__CALLER__)
     quote do
       opts = unquote(opts)

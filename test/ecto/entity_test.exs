@@ -5,7 +5,7 @@ defmodule Ecto.EntityTest do
 
   defmodule MyEntity do
     use Ecto.Entity
-    table_name :my_Entity
+    table_name :my_entity
 
     primary_key
     field :name, :string, default: "eric"
@@ -19,7 +19,7 @@ defmodule Ecto.EntityTest do
       { :email, [type: :string, uniq: true] }
     ]
 
-    assert MyEntity.__ecto__(:table) == :my_Entity
+    assert MyEntity.__ecto__(:table) == :my_entity
     assert MyEntity.__ecto__(:fields) == fields
     assert MyEntity.__ecto__(:fields, :id) == fields[:id]
     assert MyEntity.__ecto__(:fields, :name) == fields[:name]

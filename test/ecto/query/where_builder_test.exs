@@ -26,15 +26,15 @@ defmodule Ecto.Query.WhereBuilderTest do
     message = "bound vars are only allowed in dotted expression `x.field` " <>
               "or as argument to a query expression"
 
-    assert_raise ArgumentError, message, fn ->
+    assert_raise Ecto.InvalidQuery, message, fn ->
       escape(quote do x end, [:x])
     end
 
-    assert_raise ArgumentError, message, fn ->
+    assert_raise Ecto.InvalidQuery, message, fn ->
       escape(quote do x.y(0) end, [:x])
     end
 
-    assert_raise ArgumentError, message, fn ->
+    assert_raise Ecto.InvalidQuery, message, fn ->
       escape(quote do foreign(x.y) end, [:x])
     end
   end

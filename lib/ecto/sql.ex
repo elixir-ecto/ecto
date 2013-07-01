@@ -66,6 +66,8 @@ defmodule Ecto.SQL do
     "#{gen_expr(left)}.#{gen_expr(right)}"
   end
 
+  # TODO: Translate entity to entity.*
+
   defp gen_expr({ :!, _, [expr] }) do
     "NOT (" <> gen_expr(expr) <> ")"
   end
@@ -74,6 +76,7 @@ defmodule Ecto.SQL do
     atom_to_binary(op) <> gen_expr(expr)
   end
 
+  # TODO: Translate x = nil to x IS NULL and x != nil to x IS NOT NULL
   defp gen_expr({ op, _, [left, right] }) when op in @binary_ops do
     "#{op_to_binary(left)} #{binop_to_binary(op)} #{op_to_binary(right)}"
   end

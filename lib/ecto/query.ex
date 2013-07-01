@@ -51,16 +51,7 @@ defmodule Ecto.Query do
   end
 
   def validate(query) do
-    if query.select == nil do
-      raise ArgumentError, message: "a query must have a select expression"
-    end
-
-    if query.froms == [] do
-      raise ArgumentError, message: "a query must have a from expression"
-    end
-
-    # TODO: Check variable collision and make sure that all variables are bound,
-    #       also check types when we know the types of bindings
+    Ecto.Query.Validator.validate(query)
   end
 
   defp check_merge(left, _right) do

@@ -38,7 +38,7 @@ defmodule Ecto.Query.WhereBuilder do
         # TODO: Improve error message
         message = "bound vars are only allowed in dotted expression `#{var}.field` " <>
                   "or as argument to a query expression"
-        raise ArgumentError, message: message
+        raise Ecto.InvalidQuery, message: message
     end
   end
 end
