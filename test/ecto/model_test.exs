@@ -1,7 +1,7 @@
 Code.require_file "../test_helper.exs", __DIR__
 
 defmodule Ecto.ModelTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   defmodule MyModel do
     use Ecto.Model
