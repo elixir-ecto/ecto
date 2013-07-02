@@ -3,17 +3,12 @@ defmodule Ecto.SQL do
   require Ecto.Query
   alias Ecto.Query.QueryExpr
 
-  # TODO: Figure out when we have to add parenthesis and when we dont.
-  #       Should we always do it as soon as we have a nested expression
-  #       and never when it's a single literal?
-  # WHERE (x) AND (y), NOT (x),
-
-  @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/ ]
-
   binary_ops =
     [ ==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
       &&: "AND", ||: "OR",
       +:  "+", -:  "-", *:  "*", /:  "/" ]
+
+  @binary_ops Dict.keys(binary_ops)
 
   Enum.map(binary_ops, fn { op, str } ->
     defp binop_to_binary(unquote(op)), do: unquote(str)
@@ -66,7 +61,7 @@ defmodule Ecto.SQL do
     "#{gen_expr(left)}.#{gen_expr(right)}"
   end
 
-  # TODO: Translate entity to entity.*
+  # TODO: Translate entity to explicitly fetch all fields on entity
 
   defp gen_expr({ :!, _, [expr] }) do
     "NOT (" <> gen_expr(expr) <> ")"
@@ -76,7 +71,7 @@ defmodule Ecto.SQL do
     atom_to_binary(op) <> gen_expr(expr)
   end
 
-  # TODO: Translate x = nil to x IS NULL and x != nil to x IS NOT NULL
+  # TODO: Translate x == nil to x IS NULL and x != nil to x IS NOT NULL
   defp gen_expr({ op, _, [left, right] }) when op in @binary_ops do
     "#{op_to_binary(left)} #{binop_to_binary(op)} #{op_to_binary(right)}"
   end

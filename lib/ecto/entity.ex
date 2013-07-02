@@ -6,10 +6,10 @@ defmodule Ecto.Entity do
       @on_definition unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
-      Module.register_attribute(__MODULE__, :ecto_defs, accumulate: false, persist: false)
-      Module.register_attribute(__MODULE__, :ecto_table_name, accumulate: false, persist: false)
-      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true, persist: false)
-      Module.register_attribute(__MODULE__, :ecto_record_fields, accumulate: true, persist: false)
+      Module.register_attribute(__MODULE__, :ecto_defs, [])
+      Module.register_attribute(__MODULE__, :ecto_table_name, [])
+      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :record_fields, accumulate: true)
     end
   end
 
@@ -17,7 +17,7 @@ defmodule Ecto.Entity do
     module        = env.module
     table_name    = Module.get_attribute(module, :ecto_table_name)
     fields        = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
-    record_fields = Module.get_attribute(module, :ecto_record_fields) |> Enum.reverse
+    record_fields = Module.get_attribute(module, :record_fields) |> Enum.reverse
 
     unless table_name do
       raise ArgumentError, message: "no support for dasherize and pluralize yet, " <>
@@ -55,7 +55,7 @@ defmodule Ecto.Entity.DSL do
 
   defmacro primary_key(name // :id) do
     quote do
-      field(unquote(name), :integer, primary_key: true, autoinc: true, uniq: true)
+      field(unquote(name), :integer, primary_key: true)
     end
   end
 
@@ -65,7 +65,7 @@ defmodule Ecto.Entity.DSL do
     quote do
       opts = unquote(opts)
       default = opts[:default]
-      @ecto_record_fields { unquote(name), default }
+      @record_fields { unquote(name), default }
       @ecto_fields { unquote(name), [type: unquote(type)] ++ opts }
     end
   end

@@ -14,7 +14,7 @@ defmodule Ecto.EntityTest do
 
   test "metadata" do
     fields = [
-      { :id, [type: :integer, primary_key: true, autoinc: true, uniq: true] },
+      { :id, [type: :integer, primary_key: true] },
       { :name, [type: :string, default: "eric"] },
       { :email, [type: :string, uniq: true] }
     ]
