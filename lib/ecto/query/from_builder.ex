@@ -1,7 +1,7 @@
 defmodule Ecto.Query.FromBuilder do
   @moduledoc false
 
-  def escape({ :in, _, [{ var, _, context}, {:__aliases__, _, _} = entity] }, env)
+  def escape({ :in, _, [{ var, _, context}, {:__aliases__, _, _} = entity] } = ast, env)
       when is_atom(var) and is_atom(context) do
 
     entity = Macro.expand(entity, env)
@@ -10,15 +10,15 @@ defmodule Ecto.Query.FromBuilder do
       function_exported?(entity, :__ecto__, 1)
 
     unless valid do
-      message = "`#{Module.to_binary(entity)}` is not an Ecto entity"
-      raise Ecto.InvalidQuery, message: message
+      reason = "`#{Module.to_binary(entity)}` is not an Ecto entity"
+      raise Ecto.InvalidQuery, reason: reason, type: :from, query: ast, file: env.file, line: env.line
     end
 
     { var, entity }
   end
 
-  def escape(_other, _env) do
-    message = "only `in` expressions binding variables to records allowed in from expressions"
-    raise Ecto.InvalidQuery, message: message
+  def escape(other, env) do
+    reason = "only `in` expressions binding variables to entities are allowed"
+    raise Ecto.InvalidQuery, reason: reason, type: :from, query: other, file: env.file, line: env.line
   end
 end

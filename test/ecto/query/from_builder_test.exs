@@ -19,7 +19,7 @@ defmodule Ecto.Query.FromBuilderTest do
   end
 
   test "escape raise" do
-    message = "only `in` expressions binding variables to records allowed in from expressions"
+    message = %r"only `in` expressions binding variables to entities are allowed"
 
     assert_raise Ecto.InvalidQuery, message, fn ->
       escape(quote do 1 end, __ENV__)
@@ -37,7 +37,7 @@ defmodule Ecto.Query.FromBuilderTest do
       escape(quote do x in y end, __ENV__)
     end
 
-    assert_raise Ecto.InvalidQuery, "`NotAnEntity` is not an Ecto entity", fn ->
+    assert_raise Ecto.InvalidQuery, %r"`NotAnEntity` is not an Ecto entity", fn ->
       escape(quote do p in NotAnEntity end, __ENV__)
     end
   end

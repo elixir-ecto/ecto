@@ -29,40 +29,40 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid query" do
     query = select([], 123)
-    assert_raise Ecto.InvalidQuery, "a query must have a from expression", fn ->
+    assert_raise Ecto.InvalidQuery, %r"a query must have a from expression", fn ->
       validate(query)
     end
 
     query = from(p in PostEntity)
-    assert_raise Ecto.InvalidQuery, "a query must have a select expression", fn ->
+    assert_raise Ecto.InvalidQuery, %r"a query must have a select expression", fn ->
       validate(query)
     end
   end
 
   test "where expression must be boolean" do
     query = from(p in PostEntity) |> where([p], p.title) |> select([], 123)
-    assert_raise Ecto.InvalidQuery, "where expression has to be of boolean type", fn ->
+    assert_raise Ecto.InvalidQuery, %r"where expression has to be of boolean type", fn ->
       validate(query)
     end
   end
 
   test "entity field types" do
     query = from(p in PostEntity) |> select([p], p.title + 2)
-    assert_raise Ecto.InvalidQuery, "both arguments of `+` must be of a number type", fn ->
+    assert_raise Ecto.InvalidQuery, %r"both arguments of `\+` must be of a number type", fn ->
       validate(query)
     end
   end
 
   test "unbound var" do
     query = from(p in PostEntity) |> select([q], q.title)
-    assert_raise Ecto.InvalidQuery, "`q` not bound in a from expression", fn ->
+    assert_raise Ecto.InvalidQuery, %r"`q` not bound in a from expression", fn ->
       validate(query)
     end
   end
 
   test "unknown field" do
     query = from(p in PostEntity) |> select([p], p.unknown)
-    assert_raise Ecto.InvalidQuery, "unknown field `p.unknown`", fn ->
+    assert_raise Ecto.InvalidQuery, %r"unknown field `p.unknown`", fn ->
       validate(query)
     end
   end
@@ -89,27 +89,27 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid expressions" do
     query = from(p in PostEntity) |> select([p], p.id + "abc")
-    assert_raise Ecto.InvalidQuery, "both arguments of `+` must be of a number type", fn ->
+    assert_raise Ecto.InvalidQuery, %r"both arguments of `\+` must be of a number type", fn ->
       validate(query)
     end
 
     query = from(p in PostEntity) |> select([p], p.id == "abc")
-    assert_raise Ecto.InvalidQuery, "both arguments of `==` types must match", fn ->
+    assert_raise Ecto.InvalidQuery, %r"both arguments of `==` types must match", fn ->
       validate(query)
     end
 
     query = from(p in PostEntity) |> select([], -"abc")
-    assert_raise Ecto.InvalidQuery, "argument of `-` must be of a number type", fn ->
+    assert_raise Ecto.InvalidQuery, %r"argument of `-` must be of a number type", fn ->
       validate(query)
     end
 
     query = from(p in PostEntity) |> select([], 1 < "123")
-    assert_raise Ecto.InvalidQuery, "both arguments of `<` must be of a number type", fn ->
+    assert_raise Ecto.InvalidQuery, %r"both arguments of `<` must be of a number type", fn ->
       validate(query)
     end
 
     query = from(p in PostEntity) |> where([], true or 123) |> select([], 0)
-    assert_raise Ecto.InvalidQuery, "both arguments of `or` must be of type boolean", fn ->
+    assert_raise Ecto.InvalidQuery, %r"both arguments of `or` must be of type boolean", fn ->
       validate(query)
     end
   end

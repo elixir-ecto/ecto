@@ -29,7 +29,7 @@ defmodule Ecto.SQL do
     Enum.join(list, "\n")
   end
 
-  defp gen_select({ _type, expr }) do
+  defp gen_select({ { _type, expr }, _file, _line }) do
     "SELECT " <> select_clause(expr)
   end
 
@@ -46,7 +46,7 @@ defmodule Ecto.SQL do
   defp gen_where([]), do: nil
 
   defp gen_where(wheres) do
-    exprs = Enum.map_join(wheres, " AND ", fn(expr) ->
+    exprs = Enum.map_join(wheres, " AND ", fn({ expr, _file, _line }) ->
       "(" <> gen_expr(expr) <> ")"
     end)
 

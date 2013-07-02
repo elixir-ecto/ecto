@@ -1,12 +1,23 @@
 defmodule Ecto.Query.Validator do
   @moduledoc false
 
+  defmacrop rescue_metadata(type, query, file, line, block) do
+    quote location: :keep do
+      try do
+        unquote(block)
+      rescue e in [Ecto.InvalidQuery] ->
+        raise Ecto.InvalidQuery, reason: e.reason, type: unquote(type),
+          file: unquote(file), line: unquote(line)
+      end
+    end
+  end
+
   def validate(query) do
     if query.select == nil do
-      raise Ecto.InvalidQuery, message: "a query must have a select expression"
+      raise Ecto.InvalidQuery, reason: "a query must have a select expression"
     end
     if query.froms == [] do
-      raise Ecto.InvalidQuery, message: "a query must have a from expression"
+      raise Ecto.InvalidQuery, reason: "a query must have a from expression"
     end
 
     validate_wheres(query.wheres, query.froms)
@@ -14,15 +25,19 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_wheres(wheres, vars) do
-    Enum.each(wheres, fn(expr) ->
-      unless type_expr(expr, vars) == :boolean do
-        raise Ecto.InvalidQuery, message: "where expression has to be of boolean type"
+    Enum.each(wheres, fn({ expr, file, line }) ->
+      rescue_metadata(:where, expr, file, line) do
+        unless type_expr(expr, vars) == :boolean do
+          raise Ecto.InvalidQuery, reason: "where expression has to be of boolean type"
+        end
       end
     end)
   end
 
-  defp validate_select({ _, expr }, vars) do
-    type_expr(expr, vars)
+  defp validate_select({ { _, expr }, file, line }, vars) do
+    rescue_metadata(:select, expr, file, line) do
+      type_expr(expr, vars)
+    end
   end
 
 
@@ -32,13 +47,13 @@ defmodule Ecto.Query.Validator do
     entity = vars[var]
 
     unless entity do
-      raise Ecto.InvalidQuery, message: "`#{var}` not bound in a from expression"
+      raise Ecto.InvalidQuery, reason: "`#{var}` not bound in a from expression"
     end
 
     field_opts = entity.__ecto__(:fields, field)
 
     unless field_opts do
-      raise Ecto.InvalidQuery, message: "unknown field `#{var}.#{field}`"
+      raise Ecto.InvalidQuery, reason: "unknown field `#{var}.#{field}`"
     end
 
     type = field_opts[:type]
@@ -54,7 +69,7 @@ defmodule Ecto.Query.Validator do
   defp type_expr({ :not, _, [arg] }, vars) do
     type_arg = type_expr(arg, vars)
     unless type_arg == :boolean do
-      raise Ecto.InvalidQuery, message: "argument of `not` must be of type boolean"
+      raise Ecto.InvalidQuery, reason: "argument of `not` must be of type boolean"
     end
     :boolean
   end
@@ -62,7 +77,7 @@ defmodule Ecto.Query.Validator do
   defp type_expr({ op, _, [arg] }, vars) when op in [:+, :-] do
     type_arg = type_expr(arg, vars)
     unless type_arg == :number do
-      raise Ecto.InvalidQuery, message: "argument of `#{op}` must be of a number type"
+      raise Ecto.InvalidQuery, reason: "argument of `#{op}` must be of a number type"
     end
     :number
   end
@@ -72,7 +87,7 @@ defmodule Ecto.Query.Validator do
     type_left = type_expr(left, vars)
     type_right = type_expr(right, vars)
     unless type_left == type_right or type_left == :nil or type_right == :nil do
-      raise Ecto.InvalidQuery, message: "both arguments of `#{op}` types must match"
+      raise Ecto.InvalidQuery, reason: "both arguments of `#{op}` types must match"
     end
     :boolean
   end
@@ -81,7 +96,7 @@ defmodule Ecto.Query.Validator do
     type_left = type_expr(left, vars)
     type_right = type_expr(right, vars)
     unless type_left == :boolean and type_right == :boolean do
-      raise Ecto.InvalidQuery, message: "both arguments of `#{op}` must be of type boolean"
+      raise Ecto.InvalidQuery, reason: "both arguments of `#{op}` must be of type boolean"
     end
     :boolean
   end
@@ -90,7 +105,7 @@ defmodule Ecto.Query.Validator do
     type_left = type_expr(left, vars)
     type_right = type_expr(right, vars)
     unless type_left == :number and type_right == :number do
-      raise Ecto.InvalidQuery, message: "both arguments of `#{op}` must be of a number type"
+      raise Ecto.InvalidQuery, reason: "both arguments of `#{op}` must be of a number type"
     end
     :boolean
   end
@@ -99,7 +114,7 @@ defmodule Ecto.Query.Validator do
     type_left = type_expr(left, vars)
     type_right = type_expr(right, vars)
     unless type_left == :number and type_right == :number do
-      raise Ecto.InvalidQuery, message: "both arguments of `#{op}` must be of a number type"
+      raise Ecto.InvalidQuery, reason: "both arguments of `#{op}` must be of a number type"
     end
     :number
   end
@@ -128,6 +143,6 @@ defmodule Ecto.Query.Validator do
 
   # unknown
   defp type_expr(expr, _vars) do
-    raise Ecto.InvalidQuery, message: "internal error on `#{inspect expr}"
+    raise Ecto.InvalidQuery, reason: "internal error on `#{inspect expr}"
   end
 end

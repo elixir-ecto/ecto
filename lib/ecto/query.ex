@@ -18,7 +18,8 @@ defmodule Ecto.Query do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
       select_expr = unquote(SelectBuilder.escape(expr, binding))
-      Ecto.Query.merge(unquote(query), :select, select_expr)
+      select = { select_expr, __ENV__.file, __ENV__.line }
+      Ecto.Query.merge(unquote(query), :select, select)
     end
   end
 
@@ -27,7 +28,8 @@ defmodule Ecto.Query do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
       where_expr = unquote(WhereBuilder.escape(expr, binding))
-      Ecto.Query.merge(unquote(query), :where, where_expr)
+      where = { where_expr, __ENV__.file, __ENV__.line }
+      Ecto.Query.merge(unquote(query), :where, where)
     end
   end
 

@@ -63,7 +63,7 @@ defmodule Ecto.Query.SelectBuilder do
         # TODO: Improve error message
         message = "bound vars are only allowed in dotted expression `#{var}.field` " <>
                   "or as argument to a query expression"
-        raise Ecto.InvalidQuery, message: message
+        raise Ecto.InvalidQuery, reason: message
     end
   end
 end
