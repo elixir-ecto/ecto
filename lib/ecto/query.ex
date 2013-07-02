@@ -7,9 +7,9 @@ defmodule Ecto.Query do
   alias Ecto.Query.SelectBuilder
 
   defmacro from(query // Macro.escape(Query[]), expr) do
+    from_expr = FromBuilder.escape(expr, __CALLER__)
     quote do
-      from_expr = unquote(FromBuilder.escape(expr))
-      Ecto.Query.merge(unquote(query), :from, from_expr)
+      Ecto.Query.merge(unquote(query), :from, unquote(from_expr))
     end
   end
 

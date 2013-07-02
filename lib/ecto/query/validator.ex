@@ -9,24 +9,8 @@ defmodule Ecto.Query.Validator do
       raise Ecto.InvalidQuery, message: "a query must have a from expression"
     end
 
-    validate_froms(query.froms)
     validate_wheres(query.wheres, query.froms)
     validate_select(query.select, query.froms)
-  end
-
-  defp validate_froms(froms) do
-    collisions = froms -- Enum.uniq(froms, elem(&1, 0))
-    unless collisions == [] do
-      { var, _ } = Enum.first(collisions)
-      message = "variable `#{var}` is already bound in a query expression"
-      raise Ecto.InvalidQuery, message: message
-    end
-
-    Enum.each(froms, fn({ _, entity }) ->
-      unless function_exported?(entity, :__ecto__, 1) do
-        raise Ecto.InvalidQuery, message: "`#{Module.to_binary(entity)}` is not an Ecto entity"
-      end
-    end)
   end
 
   defp validate_wheres(wheres, vars) do

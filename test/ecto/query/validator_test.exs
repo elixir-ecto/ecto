@@ -32,20 +32,9 @@ defmodule Ecto.Query.ValidatorTest do
     assert_raise Ecto.InvalidQuery, "a query must have a from expression", fn ->
       validate(query)
     end
+
     query = from(p in PostEntity)
     assert_raise Ecto.InvalidQuery, "a query must have a select expression", fn ->
-      validate(query)
-    end
-  end
-
-  test "invalid from query" do
-    query = from(p in PostEntity) |> from(p in CommentEntity) |> select([], 123)
-    assert_raise Ecto.InvalidQuery, "variable `p` is already bound in a query expression", fn ->
-      validate(query)
-    end
-
-    query = from(p in NotAnEntity) |> select([], 123)
-    assert_raise Ecto.InvalidQuery, "`NotAnEntity` is not an Ecto entity", fn ->
       validate(query)
     end
   end
