@@ -25,31 +25,29 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_wheres(wheres, vars) do
-    Enum.each(wheres, fn({ expr, file, line }) ->
-      rescue_metadata(:where, expr, file, line) do
-        unless type_expr(expr, vars) == :boolean do
+    Enum.each(wheres, fn(expr) ->
+      rescue_metadata(:where, expr.expr, expr.file, expr.line) do
+        vars = merge_binding_vars(expr.binding, vars)
+        unless type_expr(expr.expr, vars) == :boolean do
           raise Ecto.InvalidQuery, reason: "where expression has to be of boolean type"
         end
       end
     end)
   end
 
-  defp validate_select({ { _, expr }, file, line }, vars) do
-    rescue_metadata(:select, expr, file, line) do
-      type_expr(expr, vars)
+  defp validate_select(expr, vars) do
+    { _, select_expr } = expr.expr
+    rescue_metadata(:select, select_expr, expr.file, expr.line) do
+      vars = merge_binding_vars(expr.binding, vars)
+      type_expr(select_expr, vars)
     end
   end
 
 
-  # var.x - where var is bound
+  # var.x
   defp type_expr({ { :., _, [{ var, _, context }, field] }, _, [] }, vars)
       when is_atom(var) and is_atom(context) do
-    entity = vars[var]
-
-    unless entity do
-      raise Ecto.InvalidQuery, reason: "`#{var}` not bound in a from expression"
-    end
-
+    entity = Keyword.fetch!(vars, var)
     field_opts = entity.__ecto__(:fields, field)
 
     unless field_opts do
@@ -60,7 +58,7 @@ defmodule Ecto.Query.Validator do
     if type == :integer or type == :float, do: :number, else: type
   end
 
-  # var - where var is bound
+  # var
   defp type_expr({ var, _, context}, vars) when is_atom(var) and is_atom(context) do
     Keyword.fetch!(vars, var) # ?
   end
@@ -144,5 +142,13 @@ defmodule Ecto.Query.Validator do
   # unknown
   defp type_expr(expr, _vars) do
     raise Ecto.InvalidQuery, reason: "internal error on `#{inspect expr}"
+  end
+
+  # TODO: Move to some other place since SQL gen will need it
+  # Bindings are order dependent so merge binding with bound vars
+  # while preserving order
+  defp merge_binding_vars(binding, vars) do
+    Enum.zip(binding, vars)
+      |> Enum.map(fn ({ bound, { _var, entity } }) -> { bound, entity } end)
   end
 end

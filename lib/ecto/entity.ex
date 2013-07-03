@@ -45,6 +45,7 @@ defmodule Ecto.Entity do
   end
 end
 
+# TODO: Check field name clashes
 defmodule Ecto.Entity.DSL do
   defmacro table_name(name) do
     check_defs(__CALLER__)
@@ -54,6 +55,7 @@ defmodule Ecto.Entity.DSL do
   end
 
   defmacro primary_key(name // :id) do
+    # TODO: Check that only one primary key was given
     quote do
       field(unquote(name), :integer, primary_key: true)
     end

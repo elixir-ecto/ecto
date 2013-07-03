@@ -14,6 +14,8 @@ defmodule Ecto.SQL do
     defp binop_to_binary(unquote(op)), do: unquote(str)
   end)
 
+  # TODO: Use binding and vars when generating SQL
+
   def compile(query) do
     gen_sql(query)
   end
@@ -21,7 +23,7 @@ defmodule Ecto.SQL do
   defp gen_sql(query) do
     Ecto.Query.validate(query)
 
-    select = gen_select(query.select)
+    select = gen_select(query.select.expr)
     from = gen_from(query.froms)
     where = gen_where(query.wheres)
 
@@ -29,7 +31,7 @@ defmodule Ecto.SQL do
     Enum.join(list, "\n")
   end
 
-  defp gen_select({ { _type, expr }, _file, _line }) do
+  defp gen_select({ _type, expr }) do
     "SELECT " <> select_clause(expr)
   end
 
@@ -46,8 +48,8 @@ defmodule Ecto.SQL do
   defp gen_where([]), do: nil
 
   defp gen_where(wheres) do
-    exprs = Enum.map_join(wheres, " AND ", fn({ expr, _file, _line }) ->
-      "(" <> gen_expr(expr) <> ")"
+    exprs = Enum.map_join(wheres, " AND ", fn(expr) ->
+      "(" <> gen_expr(expr.expr) <> ")"
     end)
 
     "WHERE " <> exprs

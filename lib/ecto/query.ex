@@ -1,6 +1,7 @@
 defmodule Ecto.Query do
 
   defrecord Query, froms: [], wheres: [], select: nil
+  defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
@@ -18,7 +19,8 @@ defmodule Ecto.Query do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
       select_expr = unquote(SelectBuilder.escape(expr, binding))
-      select = { select_expr, __ENV__.file, __ENV__.line }
+      select = QueryExpr[expr: select_expr, binding: unquote(binding),
+                         file: __ENV__.file, line: __ENV__.line]
       Ecto.Query.merge(unquote(query), :select, select)
     end
   end
@@ -28,7 +30,8 @@ defmodule Ecto.Query do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
       where_expr = unquote(WhereBuilder.escape(expr, binding))
-      where = { where_expr, __ENV__.file, __ENV__.line }
+      where = QueryExpr[expr: where_expr, binding: unquote(binding),
+                        file: __ENV__.file, line: __ENV__.line]
       Ecto.Query.merge(unquote(query), :where, where)
     end
   end

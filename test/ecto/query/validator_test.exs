@@ -53,13 +53,6 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  test "unbound var" do
-    query = from(p in PostEntity) |> select([q], q.title)
-    assert_raise Ecto.InvalidQuery, %r"`q` not bound in a from expression", fn ->
-      validate(query)
-    end
-  end
-
   test "unknown field" do
     query = from(p in PostEntity) |> select([p], p.unknown)
     assert_raise Ecto.InvalidQuery, %r"unknown field `p.unknown`", fn ->

@@ -1,6 +1,10 @@
 defmodule Ecto.Query.FromBuilder do
   @moduledoc false
 
+  # For now we keep our bound var from (from x in X) as { var, entity }
+  # even though it can just be entity, since we are order dependent,
+  # not name dependent.
+  # Revisit this when we introduce the new syntax
   def escape({ :in, _, [{ var, _, context}, {:__aliases__, _, _} = entity] } = ast, env)
       when is_atom(var) and is_atom(context) do
 
