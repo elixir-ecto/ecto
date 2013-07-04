@@ -6,7 +6,7 @@ defmodule Ecto.Query.SelectBuilderTest do
   import Ecto.Query.SelectBuilder
 
   test "escape" do
-    assert { :single, Macro.escape(quote do x end) } ==
+    assert { :entity, Macro.escape(quote do x end) } ==
            escape(quote do x end, [:x])
 
     assert { :single, Macro.escape(quote do x.y end) } ==
@@ -35,6 +35,11 @@ defmodule Ecto.Query.SelectBuilderTest do
     message = "bound vars are only allowed in dotted expression `x.field` or as argument to a query expression"
     assert_raise Ecto.InvalidQuery, message, fn ->
       escape(quote do foreign(x.y) end, [:x])
+    end
+
+    message = "undotted vars are only allowed at the top level of a select expression"
+    assert_raise Ecto.InvalidQuery, message, fn ->
+      escape(quote do {x} end, [:x])
     end
   end
 end

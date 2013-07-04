@@ -37,7 +37,7 @@ defmodule Ecto.SQLTest do
 
   test "where" do
     query = from(r in Entity) |> where([r], r.x != nil) |> select([r], r.x)
-    assert SQL.compile(query) == "SELECT r.x\nFROM entity AS r\nWHERE (r.x != NULL)"
+    assert SQL.compile(query) == "SELECT r.x\nFROM entity AS r\nWHERE (r.x IS NOT NULL)"
 
     query = from(r in Entity) |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x)
     assert SQL.compile(query) == "SELECT r.x\nFROM entity AS r\nWHERE (r.x = 42) AND (r.y != 43)"
@@ -101,6 +101,20 @@ defmodule Ecto.SQLTest do
     assert SQL.compile(query) == "SELECT 1 / 2\nFROM entity AS r"
   end
 
+  test "binary op null check" do
+    query = from(r in Entity) |> select([r], r.x == nil)
+    assert SQL.compile(query) == "SELECT r.x IS NULL\nFROM entity AS r"
+
+    query = from(r in Entity) |> select([r], nil == r.x)
+    assert SQL.compile(query) == "SELECT r.x IS NULL\nFROM entity AS r"
+
+    query = from(r in Entity) |> select([r], r.x != nil)
+    assert SQL.compile(query) == "SELECT r.x IS NOT NULL\nFROM entity AS r"
+
+    query = from(r in Entity) |> select([r], nil != r.x)
+    assert SQL.compile(query) == "SELECT r.x IS NOT NULL\nFROM entity AS r"
+  end
+
   test "literals" do
     query = from(r in Entity) |> select([], :atom)
     assert SQL.compile(query) == "SELECT atom\nFROM entity AS r"
@@ -126,5 +140,10 @@ defmodule Ecto.SQLTest do
     z = 123
     query = from(r in Entity) |> select([r], r.x + (r.y + -z) - 3)
     assert SQL.compile(query) == "SELECT (r.x + (r.y + -123)) - 3\nFROM entity AS r"
+  end
+
+  test "use correct bindings" do
+    query = from(r in Entity) |> select([not_r], not_r.x)
+    assert SQL.compile(query) == "SELECT r.x\nFROM entity AS r"
   end
 end

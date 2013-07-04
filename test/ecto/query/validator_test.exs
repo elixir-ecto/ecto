@@ -23,7 +23,7 @@ defmodule Ecto.Query.ValidatorTest do
 
 
   test "valid query with bindings" do
-    query = from(p in PostEntity) |> from(c in CommentEntity) |> select([p, c], { p, c })
+    query = from(p in PostEntity) |> from(c in CommentEntity) |> select([p, c], { p.title, c.text })
     validate(query)
   end
 

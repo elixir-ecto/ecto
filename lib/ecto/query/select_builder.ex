@@ -6,6 +6,8 @@ defmodule Ecto.Query.SelectBuilder do
   @unary_ops [ :+, :- ]
   @binary_ops [ :==, :!=, :<=, :>=, :<, :>, :+, :-, :*, :/ ]
 
+  # Handle any top level tuples or lists
+
   def escape({ left, right }, vars) do
     { :tuple, [sub_escape(left, vars), sub_escape(right, vars)] }
   end
@@ -16,6 +18,15 @@ defmodule Ecto.Query.SelectBuilder do
 
   def escape(list, vars) when is_list(list) do
     { :list, Enum.map(list, sub_escape(&1, vars)) }
+  end
+
+  # var - where var is bound
+  def escape({ var, _, context} = ast, vars) when is_atom(var) and is_atom(context) do
+    if var in vars do
+      { :entity, { :{}, [], tuple_to_list(ast) } }
+    else
+      { :single, ast }
+    end
   end
 
   def escape(other, vars) do
@@ -37,7 +48,9 @@ defmodule Ecto.Query.SelectBuilder do
   # var - where var is bound
   defp sub_escape({ var, _, context} = ast, vars) when is_atom(var) and is_atom(context) do
     if var in vars do
-      { :{}, [], tuple_to_list(ast) }
+      message = "undotted vars are only allowed at the top level of a " <>
+                "select expression"
+      raise Ecto.InvalidQuery, reason: message
     else
       ast
     end
