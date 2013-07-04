@@ -18,6 +18,7 @@ defmodule Ecto.Entity do
     table_name    = Module.get_attribute(module, :ecto_table_name)
     fields        = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
     record_fields = Module.get_attribute(module, :record_fields) |> Enum.reverse
+    field_names   = Enum.map(fields, elem(&1, 0))
 
     unless table_name do
       raise ArgumentError, message: "no support for dasherize and pluralize yet, " <>
@@ -26,17 +27,21 @@ defmodule Ecto.Entity do
 
     Record.deffunctions(record_fields, env)
 
-    fields_quote = Enum.map(fields, fn({ key, value }) ->
+    fields_quote = Enum.map(fields, fn({ key, opts }) ->
       quote do
-        def __ecto__(:fields, unquote(key)), do: unquote(value)
+        opts = unquote(opts)
+        def __ecto__(:field, unquote(key)), do: unquote(opts)
+        def __ecto__(:field_type, unquote(key)), do: unquote(opts[:type])
       end
     end)
 
     quote do
       def __ecto__(:table), do: unquote(table_name)
       def __ecto__(:fields), do: unquote(Macro.escape(fields))
+      def __ecto__(:field_names), do: unquote(field_names)
       unquote_splicing(fields_quote)
-      def __ecto__(:fields, _), do: nil
+      def __ecto__(:field, _), do: nil
+      def __ecto__(:field_type, _), do: nil
     end
   end
 

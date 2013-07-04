@@ -76,8 +76,8 @@ defmodule Ecto.SQL do
   # Expression builders make sure that we only find undotted vars at the top level
   defp gen_expr({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
     { var, entity } = Keyword.fetch!(vars, var)
-    fields = entity.__ecto__(:fields)
-    Enum.map_join(fields, ", ", fn({ field, _ }) -> "#{var}.#{field}" end)
+    fields = entity.__ecto__(:field_names)
+    Enum.map_join(fields, ", ", fn(field) -> "#{var}.#{field}" end)
   end
 
   defp gen_expr({ op, _, [expr] }, vars) when op in [:+, :-] do

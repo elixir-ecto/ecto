@@ -21,9 +21,13 @@ defmodule Ecto.EntityTest do
 
     assert MyEntity.__ecto__(:table) == :my_entity
     assert MyEntity.__ecto__(:fields) == fields
-    assert MyEntity.__ecto__(:fields, :id) == fields[:id]
-    assert MyEntity.__ecto__(:fields, :name) == fields[:name]
-    assert MyEntity.__ecto__(:fields, :email) == fields[:email]
+    assert MyEntity.__ecto__(:field_names) == [:id, :name, :email]
+    assert MyEntity.__ecto__(:field, :id) == fields[:id]
+    assert MyEntity.__ecto__(:field, :name) == fields[:name]
+    assert MyEntity.__ecto__(:field, :email) == fields[:email]
+    assert MyEntity.__ecto__(:field_type, :id) == fields[:id][:type]
+    assert MyEntity.__ecto__(:field_type, :name) == fields[:name][:type]
+    assert MyEntity.__ecto__(:field_type, :email) == fields[:email][:type]
 
     assert MyEntity.__record__(:fields) ==
            [id: nil, name: "eric", email: nil]

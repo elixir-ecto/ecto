@@ -50,13 +50,12 @@ defmodule Ecto.Query.Validator do
   defp type_expr({ { :., _, [{ var, _, context }, field] }, _, [] }, vars)
       when is_atom(var) and is_atom(context) do
     { _, entity } = Keyword.fetch!(vars, var)
-    field_opts = entity.__ecto__(:fields, field)
+    type = entity.__ecto__(:field_type, field)
 
-    unless field_opts do
+    unless type do
       raise Ecto.InvalidQuery, reason: "unknown field `#{var}.#{field}`"
     end
 
-    type = field_opts[:type]
     if type == :integer or type == :float, do: :number, else: type
   end
 
