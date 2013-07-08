@@ -14,7 +14,7 @@ defmodule Ecto.Query.FromBuilder do
       function_exported?(entity, :__ecto__, 1)
 
     unless valid do
-      reason = "`#{Module.to_binary(entity)}` is not an Ecto entity"
+      reason = "`#{inspect entity}` is not an Ecto entity"
       raise Ecto.InvalidQuery, reason: reason, type: :from, query: ast, file: env.file, line: env.line
     end
 

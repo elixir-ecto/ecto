@@ -1,20 +1,33 @@
 defmodule Ecto.Repo do
   use Behaviour
 
-  defmacro __using__(_opts) do
+  defmacro __using__(opts) do
+    adapter = Keyword.fetch!(opts, :adapter)
+
     quote do
+      use unquote(adapter)
       @behaviour Ecto.Repo
+
+      def start do
+        unquote(adapter).start(__MODULE__)
+      end
+
+      def query(query) do
+        unquote(adapter).query(__MODULE__, query)
+      end
+
+      defp adapter do
+        unquote(adapter)
+      end
     end
   end
 
   defcallback url() :: String.t
 
-  # TODO: Add behaviour for default_port in Ecto.Adapter
-
-  def parse_url(url) do
+  def parse_url(url, default_port) do
     info = URI.parse(url)
 
-    unless String.starts_with?(info.scheme, "ecto+") do
+    unless info.scheme == "ecto" do
       raise Ecto.InvalidURL, url: url, reason: "not an ecto url"
     end
 
@@ -26,19 +39,21 @@ defmodule Ecto.Repo do
       raise Ecto.InvalidURL, url: url, reason: "path should be a database name"
     end
 
-    "ecto+" <> adapter = info.scheme
-    adapter_module = Module.concat([Ecto, Adapter, String.capitalize(adapter)])
     [username, password] = String.split(info.userinfo, ":")
     database = String.slice(info.path, 1, size(info.path))
-    opts = URI.decode_query(info.query || "")
-    port = info.port || adapter_module.default_port()
+    opts = URI.decode_query(info.query || "") |> bindict_to_kw
+    port = info.port || default_port
 
-    [ adapter: adapter_module,
-      username: username,
+    [ username: username,
       password: password,
       hostname: info.host,
       database: database,
-      port: port,
-      opts: opts ]
+      port: port ] ++ opts
+  end
+
+  defp bindict_to_kw(dict) do
+    Enum.reduce(dict, [], fn({ k, v }, acc) ->
+      [{ binary_to_atom(k), v } | acc]
+    end)
   end
 end
