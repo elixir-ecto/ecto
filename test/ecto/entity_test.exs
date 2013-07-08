@@ -32,4 +32,46 @@ defmodule Ecto.EntityTest do
     assert MyEntity.__record__(:fields) ==
            [id: nil, name: "eric", email: nil]
   end
+
+  test "no table name" do
+    message = "no support for dasherize and pluralize yet, a table name is required"
+    assert_raise ArgumentError, message, fn ->
+      defmodule EntityNoTableName do
+        use Ecto.Entity
+      end
+    end
+  end
+
+  test "multiple primary keys" do
+    assert_raise ArgumentError, "only one primary key can be set on an entity", fn ->
+      defmodule EntityMultiplePrimaryKeys do
+        use Ecto.Entity
+        table_name :entity
+        primary_key
+        field :name, :string
+        primary_key
+      end
+    end
+  end
+
+  test "field name clash" do
+    assert_raise ArgumentError, "field `name` was already set on entity", fn ->
+      defmodule EntityFieldNameClash do
+        use Ecto.Entity
+        table_name :entity
+        field :name, :string
+        field :name, :integer
+      end
+    end
+  end
+
+  test "invalid field type" do
+    assert_raise ArgumentError, "`apa` is not a valid field type", fn ->
+      defmodule EntitInvalidFieldType do
+        use Ecto.Entity
+        table_name :entity
+        field :name, :apa
+      end
+    end
+  end
 end

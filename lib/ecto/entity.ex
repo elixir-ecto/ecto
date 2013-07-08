@@ -6,8 +6,7 @@ defmodule Ecto.Entity do
       @on_definition unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
-      Module.register_attribute(__MODULE__, :ecto_defs, [])
-      Module.register_attribute(__MODULE__, :ecto_table_name, [])
+      @ecto_primary_key false
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :record_fields, accumulate: true)
     end
@@ -39,7 +38,7 @@ defmodule Ecto.Entity do
       def __ecto__(:table), do: unquote(table_name)
       def __ecto__(:fields), do: unquote(Macro.escape(fields))
       def __ecto__(:field_names), do: unquote(field_names)
-      unquote_splicing(fields_quote)
+      unquote(fields_quote)
       def __ecto__(:field, _), do: nil
       def __ecto__(:field_type, _), do: nil
     end
@@ -50,8 +49,9 @@ defmodule Ecto.Entity do
   end
 end
 
-# TODO: Check field name clashes
 defmodule Ecto.Entity.DSL do
+  @types [ :string, :integer, :float, :binary ]
+
   defmacro table_name(name) do
     check_defs(__CALLER__)
     quote do
@@ -60,8 +60,12 @@ defmodule Ecto.Entity.DSL do
   end
 
   defmacro primary_key(name // :id) do
-    # TODO: Check that only one primary key was given
     quote do
+      if @ecto_primary_key do
+        raise ArgumentError, message: "only one primary key can be set on an entity"
+      end
+
+      @ecto_primary_key true
       field(unquote(name), :integer, primary_key: true)
     end
   end
@@ -70,10 +74,22 @@ defmodule Ecto.Entity.DSL do
     # TODO: Check that the opts are valid for the given type
     check_defs(__CALLER__)
     quote do
+      name = unquote(name)
+      type = unquote(type)
+
+      clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> name == prev_name end)
+      if clash do
+        raise ArgumentError, message: "field `#{name}` was already set on entity"
+      end
+
+      unless type in unquote(@types) do
+        raise ArgumentError, message: "`#{type}` is not a valid field type"
+      end
+
       opts = unquote(opts)
       default = opts[:default]
-      @record_fields { unquote(name), default }
-      @ecto_fields { unquote(name), [type: unquote(type)] ++ opts }
+      @record_fields { name, default }
+      @ecto_fields { name, [type: type] ++ opts }
     end
   end
 
