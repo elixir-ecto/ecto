@@ -31,15 +31,15 @@ defmodule Ecto.Repo do
       raise Ecto.InvalidURL, url: url, reason: "not an ecto url"
     end
 
-    unless info.userinfo =~ ":" do
-      raise Ecto.InvalidURL, url: url, reason: "url has to contain username and password"
+    unless is_binary(info.userinfo) and size(info.userinfo) > 0  do
+      raise Ecto.InvalidURL, url: url, reason: "url has to contain a username"
     end
 
     unless info.path =~ %r"^/([^/])+$" do
       raise Ecto.InvalidURL, url: url, reason: "path should be a database name"
     end
 
-    [username, password] = String.split(info.userinfo, ":")
+    destructure [username, password], String.split(info.userinfo, ":")
     database = String.slice(info.path, 1, size(info.path))
     opts = URI.decode_query(info.query || "") |> bindict_to_kw
     port = info.port || default_port

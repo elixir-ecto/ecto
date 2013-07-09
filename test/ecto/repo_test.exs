@@ -25,8 +25,8 @@ defmodule Ecto.RepoTest do
       Repo.parse_url("http://eric:hunter2@host:123/mydb", 0)
     end
 
-    assert_raise Ecto.InvalidURL, %r"url has to contain username and password", fn ->
-      Repo.parse_url("ecto://eric@host:123/mydb", 0)
+    assert_raise Ecto.InvalidURL, %r"url has to contain a username", fn ->
+      Repo.parse_url("ecto://host:123/mydb", 0)
     end
 
     assert_raise Ecto.InvalidURL, %r"path should be a database name", fn ->
@@ -41,5 +41,10 @@ defmodule Ecto.RepoTest do
   test "default port" do
     settings = Repo.parse_url("ecto://eric:hunter2@host/mydb", 54321)
     assert settings[:port] == 54321
+  end
+
+  test "optional password" do
+    url = Repo.parse_url("ecto://eric@host:123/mydb", 0)
+    assert { :password, nil } in url
   end
 end
