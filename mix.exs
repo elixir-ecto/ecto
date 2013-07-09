@@ -9,9 +9,7 @@ defmodule Ecto.Mixfile do
   end
 
   def application do
-    [ applications: [ :poolboy ],
-      mod: { Ecto.App, [] },
-      registered: [ Ecto.Sup, Ecto.PoolSup ] ]
+    [ ]
   end
 
   defp deps(:prod) do

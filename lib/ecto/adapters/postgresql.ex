@@ -11,7 +11,7 @@ defmodule Ecto.Adapters.Postgresql do
     end
   end
 
-  def start(repo) do
+  def start_link(repo) do
     case :application.ensure_started(:pgsql) do
       :ok -> :ok
       { :error, reason } ->
@@ -27,7 +27,7 @@ defmodule Ecto.Adapters.Postgresql do
       worker_module: :pgsql_connection ]
     worker_opts = fix_worker_opts(worker_opts)
 
-    Ecto.PoolSup.start_child([pool_opts, worker_opts])
+    :poolboy.start_link(pool_opts, worker_opts)
   end
 
   def fetch(repo, sql) when is_binary(sql) do

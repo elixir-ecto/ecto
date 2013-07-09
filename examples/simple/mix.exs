@@ -10,8 +10,7 @@ defmodule Simple.Mixfile do
 
   # Configuration for the OTP application
   def application do
-    [ applications: [ :ecto ],
-      mod: { Simple.App, [] } ]
+    [ mod: { Simple.App, [] } ]
   end
 
   # Returns the list of dependencies in the format:

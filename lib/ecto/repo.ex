@@ -8,8 +8,8 @@ defmodule Ecto.Repo do
       use unquote(adapter)
       @behaviour Ecto.Repo
 
-      def start do
-        unquote(adapter).start(__MODULE__)
+      def start_link do
+        unquote(adapter).start_link(__MODULE__)
       end
 
       def fetch(query) do
