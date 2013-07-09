@@ -12,6 +12,12 @@ defmodule Ecto.Adapters.Postgresql do
   end
 
   def start(repo) do
+    case :application.ensure_started(:pgsql) do
+      :ok -> :ok
+      { :error, reason } ->
+        raise "could not start :pgsql application, reason: #{inspect reason}"
+    end
+
     pool_name = repo.__postgres__(:pool_name)
     opts      = Ecto.Repo.parse_url(repo.url, @default_port)
 
