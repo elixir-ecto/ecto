@@ -30,22 +30,28 @@ defmodule Ecto.Adapters.Postgresql do
     :poolboy.start_link(pool_opts, worker_opts)
   end
 
-  def fetch(repo, sql) when is_binary(sql) do
+  def fetch(repo, Ecto.Query.Query[] = query) do
+    sql = Ecto.SQL.compile(query)
     result = transaction(repo, fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
     end)
 
     case result do
-      { { :select, _nrows }, rows } ->
-        rows
-      { :error, _ } = err ->
-        err
+      { { :select, _nrows }, rows } -> rows
+      { :error, _ } = err -> err
     end
   end
 
-  def fetch(repo, Ecto.Query.Query[] = query) do
-    sql = Ecto.SQL.compile(query)
-    fetch(repo, sql)
+  def create(repo, entity) do
+    sql = Ecto.SQL.insert(entity)
+    result = transaction(repo, fn(conn) ->
+      :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
+    end)
+
+    case result do
+      { { :insert, _, _ }, _rows } -> :ok
+      { :error, _ } = err -> err
+    end
   end
 
   defp transaction(repo, fun) do

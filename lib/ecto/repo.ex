@@ -16,6 +16,10 @@ defmodule Ecto.Repo do
         unquote(adapter).fetch(__MODULE__, query)
       end
 
+      def create(entity) do
+        unquote(adapter).create(__MODULE__, entity)
+      end
+
       def adapter do
         unquote(adapter)
       end

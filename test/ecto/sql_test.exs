@@ -146,4 +146,9 @@ defmodule Ecto.SQLTest do
     query = from(r in Entity) |> select([not_r], not_r.x)
     assert SQL.compile(query) == "SELECT r.x\nFROM entity AS r"
   end
+
+  test "insert" do
+    query = SQL.insert(Entity[x: 123, y: "456"])
+    assert query == "INSERT INTO entity (x, y) VALUES (123, '456')"
+  end
 end

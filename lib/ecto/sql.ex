@@ -19,6 +19,16 @@ defmodule Ecto.SQL do
     gen_sql(query)
   end
 
+  def insert(entity) do
+    module = elem(entity, 0)
+    table = module.__ecto__(:table)
+    fields = module.__ecto__(:field_names)
+    [_|values] = tuple_to_list(entity)
+
+    "INSERT INTO #{table} (" <> Enum.join(fields, ", ") <> ") VALUES (" <>
+      Enum.map_join(values, ", ", gen_literal(&1)) <> ")"
+  end
+
   defp gen_sql(query) do
     Ecto.Query.validate(query)
 
