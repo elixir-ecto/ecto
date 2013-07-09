@@ -10,6 +10,20 @@ defmodule Ecto.EntityTest do
     primary_key
     field :name, :string, default: "eric"
     field :email, :string, uniq: true
+
+    def upcased_name(__MODULE__[name: name]) do
+      String.upcase(name)
+    end
+  end
+
+  test "works like a record" do
+    entity = MyEntity.new(email: "eric@example.com")
+    assert entity.name  == "eric"
+    assert entity.email == "eric@example.com"
+    assert entity.upcased_name  == "ERIC"
+
+    MyEntity[email: email] = entity.email("another@example.com")
+    assert email == "another@example.com"
   end
 
   test "metadata" do
