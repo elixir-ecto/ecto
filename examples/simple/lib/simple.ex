@@ -29,6 +29,6 @@ defmodule Simple do
 
   def sample_query do
     query = from(w in Simple.Weather) |> select([w], w)
-    Simple.MyRepo.query(query)
+    Simple.MyRepo.fetch(query)
   end
 end

@@ -30,7 +30,7 @@ defmodule Ecto.Adapters.Postgresql do
     Ecto.PoolSup.start_child([pool_opts, worker_opts])
   end
 
-  def query(repo, sql) when is_binary(sql) do
+  def fetch(repo, sql) when is_binary(sql) do
     result = transaction(repo, fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
     end)
@@ -43,9 +43,9 @@ defmodule Ecto.Adapters.Postgresql do
     end
   end
 
-  def query(repo, Ecto.Query.Query[] = query) do
+  def fetch(repo, Ecto.Query.Query[] = query) do
     sql = Ecto.SQL.compile(query)
-    query(repo, sql)
+    fetch(repo, sql)
   end
 
   defp transaction(repo, fun) do

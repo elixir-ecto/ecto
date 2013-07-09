@@ -12,11 +12,11 @@ defmodule Ecto.Repo do
         unquote(adapter).start(__MODULE__)
       end
 
-      def query(query) do
-        unquote(adapter).query(__MODULE__, query)
+      def fetch(query) do
+        unquote(adapter).fetch(__MODULE__, query)
       end
 
-      defp adapter do
+      def adapter do
         unquote(adapter)
       end
     end
