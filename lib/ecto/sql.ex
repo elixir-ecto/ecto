@@ -15,8 +15,6 @@ defmodule Ecto.SQL do
     defp binop_to_binary(unquote(op)), do: unquote(str)
   end)
 
-  # TODO: Use binding and vars when generating SQL
-
   def compile(query) do
     gen_sql(query)
   end

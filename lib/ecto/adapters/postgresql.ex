@@ -31,9 +31,16 @@ defmodule Ecto.Adapters.Postgresql do
   end
 
   def query(repo, sql) when is_binary(sql) do
-    transaction(repo, fn(conn) ->
+    result = transaction(repo, fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
     end)
+
+    case result do
+      { { :select, _nrows }, rows } ->
+        rows
+      { :error, _ } = err ->
+        err
+    end
   end
 
   def query(repo, Ecto.Query.Query[] = query) do
