@@ -6,7 +6,7 @@ defmodule Ecto.SQL do
 
   binary_ops =
     [ ==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
-      &&: "AND", ||: "OR",
+      and: "AND", or: "OR",
       +:  "+", -:  "-", *:  "*", /:  "/" ]
 
   @binary_ops Dict.keys(binary_ops)

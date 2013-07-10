@@ -4,7 +4,7 @@ defmodule Ecto.Query.SelectBuilder do
   alias Ecto.Query.BuilderUtil
 
   @unary_ops [ :+, :- ]
-  @binary_ops [ :==, :!=, :<=, :>=, :<, :>, :+, :-, :*, :/ ]
+  @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/ ]
 
   # Handle any top level tuples or lists
 
