@@ -1,6 +1,30 @@
 defmodule Ecto.Repo do
+  @moduledoc """
+  This module is used to define a repository. A repository will map to a data
+  store, for example an SQL database. A repository have to implement `url/0` and
+  set an adapter (see `Ecto.Adapter`) to be used for the repository. All
+  functions from the `Ecto.Adapter` module will be available on the repositoty
+  module but without the first parameter.
+
+  When used, it allows the following options:
+
+  * `:adapter` - the adapter to be used for the repository, it will be used to
+                 to handle connections to the data store and to compile queries
+
+  ## Example
+
+      defmodule MyRepo do
+        use Ecto.Repo, adapter: Ecto.Adapters.Postgresql
+
+        def url do
+          "ecto://postgres:postgres@localhost/postgres"
+        end
+      end
+  """
+
   use Behaviour
 
+  @doc false
   defmacro __using__(opts) do
     adapter = Keyword.fetch!(opts, :adapter)
 
@@ -26,8 +50,14 @@ defmodule Ecto.Repo do
     end
   end
 
+  @doc """
+  Should return the Ecto URL to be used for the repository. A URL is of the
+  following format: `ecto://username:password@hostname:port/database?opts=123`
+  where the password, port and options are optional.
+  """
   defcallback url() :: String.t
 
+  @doc false
   def parse_url(url, default_port) do
     info = URI.parse(url)
 

@@ -1,10 +1,38 @@
 defmodule Ecto.Adapter do
+  @moduledoc """
+  This module specifies the adapter API that an adapter is required to
+  implement.
+  """
+
   use Behaviour
 
-  # defcallback __using__(term()) :: term()
-  defcallback start_link(atom()) :: :ok | { :error, term() }
-  defcallback fetch(atom(), term()) :: { :ok, term() } | { :error, term() }
-  # defcallback fetch!(atom(), term()) :: term() | no_return
-  defcallback create(atom(), term()) :: :ok | { :error, term() }
-  # defcallback create!(atom(), term()) :: :ok | no_return
+  @doc """
+  Should start any connection pooling or supervision and return `{ :ok, pid }`
+  or just `:ok` if nothing needs to be done. Return `{ :error, error }` if
+  something went wrong.
+  """
+  defcallback start_link(atom) :: { :ok, pid } | :ok | { :error, term }
+
+  @doc """
+  Should fetch results from the data store based on the given query.
+
+  ## Example
+
+      # Fetch all post titles
+      query = from p in Post,
+           select: post.title
+      MyRepo.fetch(query)
+  """
+  defcallback fetch(atom, term) :: { :ok, term } | { :error, term }
+
+  @doc """
+  Stores a single new entity in the data store.
+
+  ## Example
+
+      # Fetch all post titles
+      post = Post.new(title: "Ecto is great", text: "really, it is")
+      MyRepo.create(post)
+  """
+  defcallback create(atom, term) :: :ok | { :error, term }
 end

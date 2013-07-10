@@ -1,4 +1,6 @@
 defmodule Ecto.Adapters.Postgresql do
+  @moduledoc false
+
   @behaviour Ecto.Adapter
 
   @default_port 5432

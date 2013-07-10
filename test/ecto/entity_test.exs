@@ -48,7 +48,7 @@ defmodule Ecto.EntityTest do
   end
 
   test "no table name" do
-    message = "no support for dasherize and pluralize yet, a table name is required"
+    message = "no support for dasherize or pluralize yet, a table name is required"
     assert_raise ArgumentError, message, fn ->
       defmodule EntityNoTableName do
         use Ecto.Entity

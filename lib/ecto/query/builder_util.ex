@@ -1,6 +1,7 @@
 defmodule Ecto.Query.BuilderUtil do
   @moduledoc false
 
+  # Returns all variables in the AST
   def find_vars({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
     if var in vars, do: var
   end

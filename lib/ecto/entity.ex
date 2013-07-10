@@ -1,4 +1,26 @@
 defmodule Ecto.Entity do
+  @moduledoc """
+  This module is used to define an entity. An entity is a record with associated
+  meta data that will be used when creating and running queries. See
+  `Ecto.Entity.DSL` for more information about the specific functions used to
+  specify an entity.
+
+  Every entity is also a record, that means that you work with entities just
+  like you would work with records, to set the default values for the record
+  fields the `default` option is set in the `field` options.
+
+  ## Example
+      defmodule User do
+        use Ecto.Entity
+        table_name :users
+
+        primary_key
+        field :name, :string
+        field :age, :integer
+      end
+  """
+
+  @doc false
   defmacro __using__(_opts) do
     quote do
       import Ecto.Entity.DSL
@@ -12,6 +34,7 @@ defmodule Ecto.Entity do
     end
   end
 
+  @doc false
   defmacro __before_compile__(env) do
     module        = env.module
     table_name    = Module.get_attribute(module, :ecto_table_name)
@@ -20,7 +43,7 @@ defmodule Ecto.Entity do
     field_names   = Enum.map(fields, elem(&1, 0))
 
     unless table_name do
-      raise ArgumentError, message: "no support for dasherize and pluralize yet, " <>
+      raise ArgumentError, message: "no support for dasherize or pluralize yet, " <>
                                     "a table name is required"
     end
 
@@ -44,21 +67,33 @@ defmodule Ecto.Entity do
     end
   end
 
+  @doc false
   def __on_definition__(env, _kind, _name, _args, _guards, _body) do
     Module.put_attribute(env.module, :ecto_defs, true)
   end
 end
 
 defmodule Ecto.Entity.DSL do
+  @moduledoc """
+  This module contains all macros used to define an entity.
+  """
+
   @types [ :string, :integer, :float, :binary ]
 
-  defmacro table_name(name) do
+  @doc """
+  Sets the entities table name. Can be an atom or a string.
+  """
+  defmacro table_name(name) when is_atom(name) or is_binary(name) do
     check_defs(__CALLER__)
     quote do
       @ecto_table_name unquote(name)
     end
   end
 
+  @doc """
+  Defines a primary key field of type integer. Only one primary key can be
+  defined. The default name is id.
+  """
   defmacro primary_key(name // :id) do
     quote do
       if @ecto_primary_key do
@@ -70,6 +105,14 @@ defmodule Ecto.Entity.DSL do
     end
   end
 
+  @doc """
+  Defines a field on the entity with given name and type, will also create a
+  record field.
+
+  ## Options
+
+    * `:default` - Sets the default value on the entity and the record
+  """
   defmacro field(name, type, opts // []) do
     # TODO: Check that the opts are valid for the given type
     check_defs(__CALLER__)
@@ -93,7 +136,7 @@ defmodule Ecto.Entity.DSL do
     end
   end
 
-  def check_defs(env) do
+  defp check_defs(env) do
     if Module.get_attribute(env.module, :ecto_defs) do
       raise ArgumentError, message: "entity needs to be defined before any function " <>
                                     "or macro definitions"

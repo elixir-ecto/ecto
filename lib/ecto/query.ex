@@ -1,6 +1,26 @@
 defmodule Ecto.Query do
   @moduledoc """
-  This module is the query DSL.
+  This module is the query DSL. Queries are used to fetch data from a repository
+  (see `Ecto.Repo`).
+
+  ## Example
+
+         from w in Weather,
+       where: w.prcp > 0,
+      select: w.city
+
+  The above example will create a query that can be run against a repository.
+  `from` will bind the variable `w` to the entity `Weather` (see `Ecto.Entity`).
+  If there are multiple from expressions the query will run for every
+  permutation of their combinations. `where` specifies a relation that will hold
+  all the results, multiple `where`s can be given. `select` selects which
+  results will be returned, a single variable can be given, that will return the
+  full entity, or a single field. Multiple fields can also be grouped in lists
+  or tuples. Only one `select` expression is allowed.
+
+  Every variable that isn't bound in a query expression and every function or
+  operator that aren't query operators or functions will be treated as elixir
+  code and their evaluated result will be inserted into the query.
   """
 
   defrecord Query, froms: [], wheres: [], select: nil
@@ -10,6 +30,10 @@ defmodule Ecto.Query do
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.SelectBuilder
 
+  @doc """
+  Creates a query. See the module documentation for more information and
+  examples.
+  """
   defmacro from(query // Macro.escape(Query[]), expr)
 
   defmacro from({ :in, _, [_, _] } = from, kw) when is_list(kw) do
@@ -60,6 +84,7 @@ defmodule Ecto.Query do
     end
   end
 
+  @doc false
   defmacro select(query // Macro.escape(Query[]), binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
@@ -71,6 +96,7 @@ defmodule Ecto.Query do
     end
   end
 
+  @doc false
   defmacro where(query // Macro.escape(Query[]), binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
