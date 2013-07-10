@@ -1,4 +1,7 @@
 defmodule Ecto.Query do
+  @moduledoc """
+  This module is the query DSL.
+  """
 
   defrecord Query, froms: [], wheres: [], select: nil
   defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
@@ -7,7 +10,50 @@ defmodule Ecto.Query do
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.SelectBuilder
 
-  defmacro from(query // Macro.escape(Query[]), expr) do
+  defmacro from(query // Macro.escape(Query[]), expr)
+
+  defmacro from({ :in, _, [_, _] } = from, kw) when is_list(kw) do
+    unless Keyword.keyword?(kw) do
+      raise ArgumentError, message: "second argument to from has to be a keyword list"
+    end
+
+    query = Macro.escape(Query[])
+    { var, _ } = from_expr = FromBuilder.escape(from, __CALLER__)
+    quoted = quote do
+      Ecto.Query.merge(unquote(query), :from, unquote(from_expr))
+    end
+
+    { quoted, _ } =
+      Enum.reduce(kw, { quoted, [var] }, fn({ type, expr }, { quoted, vars }) ->
+        case type do
+          :from ->
+            { var, _ } = from_expr = FromBuilder.escape(expr, __CALLER__)
+            quoted = quote do
+              Ecto.Query.merge(unquote(quoted), :from, unquote(from_expr))
+            end
+            if var in vars do
+              raise ArgumentError, message: "variable `#{var}` is already defined"
+            end
+            { quoted, vars ++ [var] }
+
+          :select ->
+            quoted = quote do
+              Ecto.Query.select(unquote(quoted), unquote(vars), unquote(expr))
+            end
+            { quoted, vars }
+
+          :where ->
+            quoted = quote do
+              Ecto.Query.where(unquote(quoted), unquote(vars), unquote(expr))
+            end
+            { quoted, vars }
+        end
+      end)
+    quoted
+  end
+
+  defmacro from(query, expr) do
+    # TODO: change syntax: x in X -> X
     from_expr = FromBuilder.escape(expr, __CALLER__)
     quote do
       Ecto.Query.merge(unquote(query), :from, unquote(from_expr))
@@ -36,6 +82,15 @@ defmodule Ecto.Query do
     end
   end
 
+  @doc """
+  Validates the query to check if it is correct. Should be called before
+  compilation by the query adapter.
+  """
+  def validate(query) do
+    Ecto.Query.Validator.validate(query)
+  end
+
+  @doc false
   def merge(left, right) do
     check_merge(left, right)
 
@@ -55,18 +110,14 @@ defmodule Ecto.Query do
     end
   end
 
-  def validate(query) do
-    Ecto.Query.Validator.validate(query)
-  end
-
-  defp check_merge(left, _right) do
-    if left.select do
-      raise ArgumentError, message: "cannot append to query where result is selected"
+  defp check_merge(left, right) do
+    if left.select && right.select do
+      raise ArgumentError, message: "only one select expression is allowed in query"
     end
   end
 
-  defp escape_binding(list) when is_list(list) do
-    escape_binding(list)
+  defp escape_binding(var) when is_atom(var) do
+    var
   end
 
   defp escape_binding({ var, _, context }) when is_atom(var) and is_atom(context) do
