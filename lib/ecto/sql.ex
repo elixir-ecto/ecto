@@ -15,7 +15,7 @@ defmodule Ecto.SQL do
     defp binop_to_binary(unquote(op)), do: unquote(str)
   end)
 
-  def compile(query) do
+  def select(query) do
     gen_sql(query)
   end
 

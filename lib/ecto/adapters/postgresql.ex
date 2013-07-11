@@ -33,7 +33,7 @@ defmodule Ecto.Adapters.Postgresql do
   end
 
   def fetch(repo, Ecto.Query.Query[] = query) do
-    sql = Ecto.SQL.compile(query)
+    sql = Ecto.SQL.select(query)
     result = transaction(repo, fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
     end)
