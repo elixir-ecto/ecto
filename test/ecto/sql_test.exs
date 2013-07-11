@@ -106,10 +106,10 @@ defmodule Ecto.SQLTest do
     assert SQL.compile(query) == "SELECT 1 / 2\nFROM entity AS r"
 
     query = from(r in Entity) |> select([], true and false)
-    assert SQL.compile(query) == "SELECT true AND false\nFROM entity AS r"
+    assert SQL.compile(query) == "SELECT TRUE AND FALSE\nFROM entity AS r"
 
     query = from(r in Entity) |> select([], true or false)
-    assert SQL.compile(query) == "SELECT true OR false\nFROM entity AS r"
+    assert SQL.compile(query) == "SELECT TRUE OR FALSE\nFROM entity AS r"
   end
 
   test "binary op null check" do
@@ -127,17 +127,14 @@ defmodule Ecto.SQLTest do
   end
 
   test "literals" do
-    query = from(r in Entity) |> select([], :atom)
-    assert SQL.compile(query) == "SELECT atom\nFROM entity AS r"
-
     query = from(r in Entity) |> select([], nil)
     assert SQL.compile(query) == "SELECT NULL\nFROM entity AS r"
 
     query = from(r in Entity) |> select([], true)
-    assert SQL.compile(query) == "SELECT true\nFROM entity AS r"
+    assert SQL.compile(query) == "SELECT TRUE\nFROM entity AS r"
 
     query = from(r in Entity) |> select([], false)
-    assert SQL.compile(query) == "SELECT false\nFROM entity AS r"
+    assert SQL.compile(query) == "SELECT FALSE\nFROM entity AS r"
 
     query = from(r in Entity) |> select([], "abc")
     assert SQL.compile(query) == "SELECT 'abc'\nFROM entity AS r"

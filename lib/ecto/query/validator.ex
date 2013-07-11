@@ -138,8 +138,11 @@ defmodule Ecto.Query.Validator do
   defp type_expr(false, _vars), do: :boolean
   defp type_expr(true, _vars), do: :boolean
   defp type_expr(literal, _vars) when is_number(literal), do: :number
-  defp type_expr(literal, _vars) when is_atom(literal),   do: :string
   defp type_expr(literal, _vars) when is_binary(literal), do: :string
+
+  defp type_expr(literal, _vars) when is_atom(literal) do
+    raise Ecto.InvalidQuery, reason: "atoms are not allowed"
+  end
 
   # unknown
   defp type_expr(expr, _vars) do

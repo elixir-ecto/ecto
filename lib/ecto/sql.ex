@@ -115,9 +115,9 @@ defmodule Ecto.SQL do
 
   defp gen_literal(nil), do: "NULL"
 
-  defp gen_literal(literal) when is_atom(literal) do
-    to_binary(literal)
-  end
+  defp gen_literal(true), do: "TRUE"
+
+  defp gen_literal(false), do: "FALSE"
 
   defp gen_literal(literal) when is_binary(literal) do
     "'#{escape_string(literal)}'"
