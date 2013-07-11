@@ -1,10 +1,10 @@
-Code.require_file "../test_helper.exs", __DIR__
+Code.require_file "../../../test_helper.exs", __DIR__
 
 defmodule Ecto.SQLTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.SQL
+  alias Ecto.Adapters.Postgresql.SQL
 
   defmodule Entity do
     use Ecto.Entity

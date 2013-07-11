@@ -5,6 +5,8 @@ defmodule Ecto.Adapters.Postgresql do
 
   @default_port 5432
 
+  alias Ecto.Adapters.Postgresql.SQL
+
   defmacro __using__(_opts) do
     quote do
       def __postgres__(:pool_name) do
@@ -33,7 +35,7 @@ defmodule Ecto.Adapters.Postgresql do
   end
 
   def fetch(repo, Ecto.Query.Query[] = query) do
-    sql = Ecto.SQL.select(query)
+    sql = SQL.select(query)
     result = transaction(repo, fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
     end)
@@ -45,7 +47,7 @@ defmodule Ecto.Adapters.Postgresql do
   end
 
   def create(repo, entity) do
-    sql = Ecto.SQL.insert(entity)
+    sql = SQL.insert(entity)
     result = transaction(repo, fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
     end)
