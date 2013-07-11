@@ -6,7 +6,7 @@ defmodule Ecto.SQLTest do
   import Ecto.Query
   alias Ecto.SQL
 
-   defmodule Entity do
+  defmodule Entity do
     use Ecto.Entity
     table_name :entity
 
@@ -14,9 +14,14 @@ defmodule Ecto.SQLTest do
     field :y, :integer
   end
 
-   defmodule Entity2 do
+  defmodule Entity2 do
     use Ecto.Entity
     table_name :entity2
+  end
+
+  defmodule SomeEntity do
+    use Ecto.Entity
+    table_name :weird_name_123
   end
 
   test "from" do
@@ -156,5 +161,10 @@ defmodule Ecto.SQLTest do
   test "insert" do
     query = SQL.insert(Entity[x: 123, y: "456"])
     assert query == "INSERT INTO entity (x, y) VALUES (123, '456')"
+  end
+
+  test "table name" do
+    query = from(e in SomeEntity, select: 0)
+    assert SQL.compile(query) == "SELECT 0\nFROM weird_name_123 AS e"
   end
 end

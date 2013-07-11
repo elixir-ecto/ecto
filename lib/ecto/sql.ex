@@ -47,9 +47,8 @@ defmodule Ecto.SQL do
   end
 
   defp gen_from(froms) do
-    binds = Enum.map_join(froms, ", ", fn({ var, record }) ->
-      var = atom_to_binary(var)
-      table = Module.split(record) |> List.last |> String.downcase
+    binds = Enum.map_join(froms, ", ", fn({ var, entity }) ->
+      table = entity.__ecto__(:table)
       "#{table} AS #{var}"
     end)
 
