@@ -8,16 +8,18 @@ defmodule Ecto.QueryTest do
 
   defmodule PostEntity do
     use Ecto.Entity
-    table_name :post_entity
 
-    field :title, :string
+    schema :post_entity do
+      field :title, :string
+    end
   end
 
   defmodule CommentEntity do
     use Ecto.Entity
-    table_name :comments
 
-    field :text, :string
+    schema :comments do
+      field :text, :string
+    end
   end
 
   test "vars are order dependent" do

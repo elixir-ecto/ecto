@@ -22,12 +22,13 @@ end
 
 defmodule Simple.Weather do
   use Ecto.Entity
-  table_name :weather
 
-  field :city, :string
-  field :temp_lo, :integer
-  field :temp_hi, :integer
-  field :prcp, :float
+  schema :weather do
+    field :city, :string
+    field :temp_lo, :integer
+    field :temp_hi, :integer
+    field :prcp, :float
+  end
 end
 
 defmodule Simple.MyRepo do

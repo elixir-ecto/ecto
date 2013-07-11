@@ -4,7 +4,7 @@ Ecto is a domain specific language for writing database queries in Elixir.
 
 ### Usage
 
-Add Ecto as a dependency in your `mix.exs` file. If you are using Postgresql you will also need the library that Ecto's adapter is using. 
+Add Ecto as a dependency in your `mix.exs` file. If you are using Postgresql you will also need the library that Ecto's adapter is using.
 
 ```elixir
 def deps do
@@ -22,7 +22,7 @@ Define a repository:
 ```elixir
 defmodule MyRepo do
   use Ecto.Repo, adapter: Ecto.Adapter.Postgresql
-  
+
   def url, do: "ecto://eric:hunter42@localhost/mydb"
 end
 ```
@@ -32,11 +32,11 @@ Create an entity:
 ```elixir
 defmodule Post do
   use Ecto.Entity
-  
-  table_name :posts
-  primary_key
-  field :title, :string
-  field :content, :string
+
+  schema :posts do
+    field :title, :string
+    field :content, :string
+  end
 end
 ```
 

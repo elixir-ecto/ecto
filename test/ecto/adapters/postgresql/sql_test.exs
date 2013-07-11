@@ -8,20 +8,24 @@ defmodule Ecto.SQLTest do
 
   defmodule Entity do
     use Ecto.Entity
-    table_name :entity
 
-    field :x, :integer
-    field :y, :integer
+    schema :entity, nil do
+      field :x, :integer
+      field :y, :integer
+    end
   end
 
   defmodule Entity2 do
     use Ecto.Entity
-    table_name :entity2
+    schema :entity2 do
+    end
   end
 
   defmodule SomeEntity do
     use Ecto.Entity
-    table_name :weird_name_123
+
+    schema :weird_name_123 do
+    end
   end
 
   test "from" do

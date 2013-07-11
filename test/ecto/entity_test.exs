@@ -5,11 +5,11 @@ defmodule Ecto.EntityTest do
 
   defmodule MyEntity do
     use Ecto.Entity
-    table_name :my_entity
 
-    primary_key
-    field :name, :string, default: "eric"
-    field :email, :string, uniq: true
+    schema :my_entity do
+      field :name, :string, default: "eric"
+      field :email, :string, uniq: true
+    end
 
     def upcased_name(__MODULE__[name: name]) do
       String.upcase(name)
@@ -47,34 +47,15 @@ defmodule Ecto.EntityTest do
            [id: nil, name: "eric", email: nil]
   end
 
-  test "no table name" do
-    message = "no support for dasherize or pluralize yet, a table name is required"
-    assert_raise ArgumentError, message, fn ->
-      defmodule EntityNoTableName do
-        use Ecto.Entity
-      end
-    end
-  end
-
-  test "multiple primary keys" do
-    assert_raise ArgumentError, "only one primary key can be set on an entity", fn ->
-      defmodule EntityMultiplePrimaryKeys do
-        use Ecto.Entity
-        table_name :entity
-        primary_key
-        field :name, :string
-        primary_key
-      end
-    end
-  end
-
   test "field name clash" do
     assert_raise ArgumentError, "field `name` was already set on entity", fn ->
       defmodule EntityFieldNameClash do
         use Ecto.Entity
-        table_name :entity
-        field :name, :string
-        field :name, :integer
+
+        schema :entity do
+          field :name, :string
+          field :name, :integer
+        end
       end
     end
   end
@@ -83,8 +64,10 @@ defmodule Ecto.EntityTest do
     assert_raise ArgumentError, "`apa` is not a valid field type", fn ->
       defmodule EntitInvalidFieldType do
         use Ecto.Entity
-        table_name :entity
-        field :name, :apa
+
+        schema :entity do
+          field :name, :apa
+        end
       end
     end
   end
