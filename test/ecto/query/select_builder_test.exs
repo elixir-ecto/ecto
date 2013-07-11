@@ -6,7 +6,7 @@ defmodule Ecto.Query.SelectBuilderTest do
   import Ecto.Query.SelectBuilder
 
   test "escape" do
-    assert { :entity, Macro.escape(quote do x end) } ==
+    assert { { :entity, :x }, Macro.escape(quote do x end) } ==
            escape(quote do x end, [:x])
 
     assert { :single, Macro.escape(quote do x.y end) } ==

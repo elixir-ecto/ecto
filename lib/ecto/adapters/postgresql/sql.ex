@@ -30,8 +30,6 @@ defmodule Ecto.Adapters.Postgresql.SQL do
   end
 
   defp gen_sql(query) do
-    Ecto.Query.validate(query)
-
     select = gen_select(query.select, query.froms)
     from = gen_from(query.froms)
     where = gen_where(query.wheres, query.froms)

@@ -6,6 +6,7 @@ defmodule Ecto.Adapters.Postgresql do
   @default_port 5432
 
   alias Ecto.Adapters.Postgresql.SQL
+  alias Ecto.Query.BuilderUtil
 
   defmacro __using__(_opts) do
     quote do
@@ -35,14 +36,19 @@ defmodule Ecto.Adapters.Postgresql do
   end
 
   def fetch(repo, Ecto.Query.Query[] = query) do
+    Ecto.Query.validate(query)
     sql = SQL.select(query)
     result = transaction(repo, fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
     end)
 
     case result do
-      { { :select, _nrows }, rows } -> rows
       { :error, _ } = err -> err
+      { { :select, _nrows }, rows } ->
+        { return_type, _ } = query.select.expr
+        binding = query.select.binding
+        vars = BuilderUtil.merge_binding_vars(binding, query.froms)
+        Enum.map(rows, transform_row(&1, return_type, vars))
     end
   end
 
@@ -68,5 +74,19 @@ defmodule Ecto.Adapters.Postgresql do
       { :hostname, v } -> { :host, binary_to_list(v) }
       rest -> rest
     end)
+  end
+
+  # TODO: Convert :null -> nil
+  # TODO: Test this !!!
+  defp transform_row(row, return_type, vars) do
+    case return_type do
+      :single -> elem(row, 0)
+      :list -> tuple_to_list(row)
+      :tuple -> row
+      { :entity, var } ->
+        { _, entity } = Dict.fetch!(vars, var)
+        row = tuple_to_list(row)
+        list_to_tuple([entity|row])
+    end
   end
 end
