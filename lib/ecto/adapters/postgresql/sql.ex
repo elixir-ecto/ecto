@@ -1,4 +1,4 @@
-defmodule Ecto.Adapters.Postgresql.SQL do
+defmodule Ecto.Adapters.Postgres.SQL do
 
   require Ecto.Query
   alias Ecto.Query.QueryExpr
