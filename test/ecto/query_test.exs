@@ -13,6 +13,13 @@ defmodule Ecto.QueryTest do
     field :title, :string
   end
 
+  defmodule CommentEntity do
+    use Ecto.Entity
+    table_name :comments
+
+    field :text, :string
+  end
+
   test "vars are order dependent" do
     query = from(p in PostEntity) |> select([q], q.title)
     validate(query)
@@ -51,5 +58,10 @@ defmodule Ecto.QueryTest do
     assert_raise ArgumentError, "variable `p` is already defined", fn ->
       delay_compile(from(p in PostEntity, from: p in PostEntity))
     end
+  end
+
+  test "extend keyword query" do
+    query = from(p in PostEntity)
+    assert (query |> select([p], p.title)) == extend(query, [p], select: p.title)
   end
 end
