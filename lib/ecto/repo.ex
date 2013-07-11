@@ -14,7 +14,7 @@ defmodule Ecto.Repo do
   ## Example
 
       defmodule MyRepo do
-        use Ecto.Repo, adapter: Ecto.Adapters.Postgresql
+        use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
         def url do
           "ecto://postgres:postgres@localhost/postgres"

@@ -1,11 +1,11 @@
-defmodule Ecto.Adapters.Postgresql do
+defmodule Ecto.Adapters.Postgres do
   @moduledoc false
 
   @behaviour Ecto.Adapter
 
   @default_port 5432
 
-  alias Ecto.Adapters.Postgresql.SQL
+  alias Ecto.Adapters.Postgres.SQL
   alias Ecto.Query.BuilderUtil
 
   defmacro __using__(_opts) do
