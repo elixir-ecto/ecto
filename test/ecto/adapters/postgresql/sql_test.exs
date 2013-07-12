@@ -4,7 +4,7 @@ defmodule Ecto.SQLTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.Adapters.Postgresql.SQL
+  alias Ecto.Adapters.Postgres.SQL
 
   defmodule Entity do
     use Ecto.Entity
