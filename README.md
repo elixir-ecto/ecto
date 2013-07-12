@@ -15,7 +15,7 @@ end
 
 After you are done, run `mix deps.get` in your shell to fetch and compile the dependencies.
 
-There are three key components that makes up Ecto: repositories, entities and, of course, queries. Repositories map to a database, you define an adapter to use and an Ecto URL so it knows how to connect to the database and the repository will handle the connections to the database. Entities are Elixir records that--with the specified metadata--map to a database table. Queries select data from an entity and are executed against a repository.
+There are three key components that makes up Ecto: repositories, entities and, of course, queries. Repositories map to a database, you define an adapter to use and an Ecto URL so it knows how to connect to the database and the repository will handle the connections to the database. Entities are Elixir records that, with the specified metadata, map to a database table. Queries select data from an entity and are executed against a repository.
 
 Define a repository:
 
