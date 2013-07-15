@@ -33,8 +33,9 @@ defmodule Ecto.Query.ValidatorTest do
       validate(query)
     end
 
-    query = from(p in PostEntity)
-    assert_raise Ecto.InvalidQuery, %r"a query must have a select expression", fn ->
+    query = from(p in PostEntity) |> from(c in CommentEntity)
+    message = %r"a query must have a select expression if querying from more than one entity"
+    assert_raise Ecto.InvalidQuery, message, fn ->
       validate(query)
     end
   end

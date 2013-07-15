@@ -125,6 +125,14 @@ defmodule Ecto.Query do
     Ecto.Query.Validator.validate(query)
   end
 
+  @doc """
+  Normalizes the query. Should be called before
+  compilation by the query adapter.
+  """
+  def normalize(query) do
+    Ecto.Query.Normalizer.normalize(query)
+  end
+
   @doc false
   def merge(left, right) do
     check_merge(left, right)

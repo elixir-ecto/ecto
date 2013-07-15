@@ -15,8 +15,9 @@ defmodule Ecto.Query.Validator do
   end
 
   def validate(query) do
-    if query.select == nil do
-      raise Ecto.InvalidQuery, reason: "a query must have a select expression"
+    if query.select == nil and length(query.froms) != 1 do
+      reason = "a query must have a select expression if querying from more than one entity"
+      raise Ecto.InvalidQuery, reason: reason
     end
     if query.froms == [] do
       raise Ecto.InvalidQuery, reason: "a query must have a from expression"

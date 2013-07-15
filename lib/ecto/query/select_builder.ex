@@ -23,7 +23,7 @@ defmodule Ecto.Query.SelectBuilder do
   # var - where var is bound
   def escape({ var, _, context} = ast, vars) when is_atom(var) and is_atom(context) do
     if var in vars do
-      { { :entity, var }, { :{}, [], tuple_to_list(ast) } }
+      { { :entity, var }, Macro.escape(ast) }
     else
       { :single, ast }
     end
