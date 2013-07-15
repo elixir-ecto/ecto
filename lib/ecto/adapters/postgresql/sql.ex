@@ -16,7 +16,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end)
 
   def select(query) do
-    gen_sql(query)
+    gen_select(query)
   end
 
   def insert(entity) do
@@ -26,26 +26,26 @@ defmodule Ecto.Adapters.Postgres.SQL do
     [_|values] = tuple_to_list(entity)
 
     "INSERT INTO #{table} (" <> Enum.join(fields, ", ") <> ") VALUES (" <>
-      Enum.map_join(values, ", ", gen_literal(&1)) <> ")"
+      Enum.map_join(values, ", ", literal(&1)) <> ")"
   end
 
-  defp gen_sql(query) do
-    select = gen_select(query.select, query.froms)
-    from = gen_from(query.froms)
-    where = gen_where(query.wheres, query.froms)
-    order_by = gen_order_by(query.order_bys, query.froms)
+  defp gen_select(query) do
+    select = select(query.select, query.froms)
+    from = from(query.froms)
+    where = where(query.wheres, query.froms)
+    order_by = order_by(query.order_bys, query.froms)
 
     list = [select, from, where, order_by] |> Enum.filter(fn x -> x != nil end)
     Enum.join(list, "\n")
   end
 
-  defp gen_select(expr, vars) do
+  defp select(expr, vars) do
     { _, clause } = expr.expr
     vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
     "SELECT " <> select_clause(clause, vars)
   end
 
-  defp gen_from(froms) do
+  defp from(froms) do
     binds = Enum.map_join(froms, ", ", fn({ var, entity }) ->
       table = entity.__ecto__(:table)
       "#{table} AS #{var}"
@@ -54,31 +54,31 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "FROM " <> binds
   end
 
-  defp gen_where([], _vars), do: nil
+  defp where([], _vars), do: nil
 
-  defp gen_where(wheres, vars) do
+  defp where(wheres, vars) do
     exprs = Enum.map_join(wheres, " AND ", fn(expr) ->
       rebound_vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
-      "(" <> gen_expr(expr.expr, rebound_vars) <> ")"
+      "(" <> expr(expr.expr, rebound_vars) <> ")"
     end)
 
     "WHERE " <> exprs
   end
 
-  defp gen_order_by([], _vars), do: nil
+  defp order_by([], _vars), do: nil
 
-  defp gen_order_by(order_bys, vars) do
+  defp order_by(order_bys, vars) do
     exprs = Enum.map_join(order_bys, ", ", fn(expr) ->
       rebound_vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
       Enum.map_join(expr.expr, ", ", fn(expr) ->
-        gen_order_by_expr(expr, rebound_vars)
+        order_by_expr(expr, rebound_vars)
       end)
     end)
 
     "ORDER BY " <> exprs
   end
 
-  defp gen_order_by_expr({ dir, var, field }, vars) do
+  defp order_by_expr({ dir, var, field }, vars) do
     { var, _ } = Keyword.fetch!(vars, var)
     str = "#{var}.#{field}"
     case dir do
@@ -88,64 +88,64 @@ defmodule Ecto.Adapters.Postgres.SQL do
     end
   end
 
-  defp gen_expr({ expr, _, [] }, vars) do
-    gen_expr(expr, vars)
+  defp expr({ expr, _, [] }, vars) do
+    expr(expr, vars)
   end
 
-  defp gen_expr({ :., _, [{ var, _, context }, field] }, vars)
+  defp expr({ :., _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
     { var, _ } = Keyword.fetch!(vars, var)
     "#{var}.#{field}"
   end
 
-  defp gen_expr({ :!, _, [expr] }, vars) do
-    "NOT (" <> gen_expr(expr, vars) <> ")"
+  defp expr({ :!, _, [expr] }, vars) do
+    "NOT (" <> expr(expr, vars) <> ")"
   end
 
   # Expression builders make sure that we only find undotted vars at the top level
-  defp gen_expr({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
+  defp expr({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
     { var, entity } = Keyword.fetch!(vars, var)
     fields = entity.__ecto__(:field_names)
     Enum.map_join(fields, ", ", fn(field) -> "#{var}.#{field}" end)
   end
 
-  defp gen_expr({ op, _, [expr] }, vars) when op in [:+, :-] do
-    atom_to_binary(op) <> gen_expr(expr, vars)
+  defp expr({ op, _, [expr] }, vars) when op in [:+, :-] do
+    atom_to_binary(op) <> expr(expr, vars)
   end
 
-  defp gen_expr({ :==, _, [nil, right] }, vars) do
+  defp expr({ :==, _, [nil, right] }, vars) do
     "#{op_to_binary(right, vars)} IS NULL"
   end
 
-  defp gen_expr({ :==, _, [left, nil] }, vars) do
+  defp expr({ :==, _, [left, nil] }, vars) do
     "#{op_to_binary(left, vars)} IS NULL"
   end
 
-  defp gen_expr({ :!=, _, [nil, right] }, vars) do
+  defp expr({ :!=, _, [nil, right] }, vars) do
     "#{op_to_binary(right, vars)} IS NOT NULL"
   end
 
-  defp gen_expr({ :!=, _, [left, nil] }, vars) do
+  defp expr({ :!=, _, [left, nil] }, vars) do
     "#{op_to_binary(left, vars)} IS NOT NULL"
   end
 
-  defp gen_expr({ op, _, [left, right] }, vars) when op in @binary_ops do
+  defp expr({ op, _, [left, right] }, vars) when op in @binary_ops do
     "#{op_to_binary(left, vars)} #{binop_to_binary(op)} #{op_to_binary(right, vars)}"
   end
 
-  defp gen_expr(literal, _vars), do: gen_literal(literal)
+  defp expr(literal, _vars), do: literal(literal)
 
-  defp gen_literal(nil), do: "NULL"
+  defp literal(nil), do: "NULL"
 
-  defp gen_literal(true), do: "TRUE"
+  defp literal(true), do: "TRUE"
 
-  defp gen_literal(false), do: "FALSE"
+  defp literal(false), do: "FALSE"
 
-  defp gen_literal(literal) when is_binary(literal) do
+  defp literal(literal) when is_binary(literal) do
     "'#{escape_string(literal)}'"
   end
 
-  defp gen_literal(literal) when is_number(literal) do
+  defp literal(literal) when is_number(literal) do
     to_binary(literal)
   end
 
@@ -153,11 +153,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # http://www.postgresql.org/docs/9.2/interactive/sql-syntax-lexical.html
 
   defp op_to_binary({ op, _, [_, _] } = expr, vars) when op in @binary_ops do
-    "(" <> gen_expr(expr, vars) <> ")"
+    "(" <> expr(expr, vars) <> ")"
   end
 
   defp op_to_binary(expr, vars) do
-    gen_expr(expr, vars)
+    expr(expr, vars)
   end
 
   # TODO: Records (Kernel.access)
@@ -174,7 +174,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp select_clause(expr, vars) do
-    gen_expr(expr, vars)
+    expr(expr, vars)
   end
 
   defp escape_string(value) when is_binary(value) do
