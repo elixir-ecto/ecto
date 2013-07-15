@@ -6,8 +6,8 @@ defmodule Ecto.Query.Normalizer do
 
   def normalize(Query[] = query) do
     if query.select == nil and length(query.froms) == 1 do
-      expr = { { :entity, :"$$0" }, { :{}, [], [:"$$0", [], nil] } }
-      QueryExpr[expr: expr, binding: [:"$$0"]]
+      expr = { { :entity, :entity }, { :{}, [], [:entity, [], nil] } }
+      QueryExpr[expr: expr, binding: [:entity]]
         |> query.select
     else
       query
