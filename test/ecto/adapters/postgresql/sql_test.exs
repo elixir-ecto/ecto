@@ -63,6 +63,17 @@ defmodule Ecto.SQLTest do
     assert SQL.select(query) == "SELECT r.x\nFROM entity AS r\nORDER BY r.x ASC, r.y DESC"
   end
 
+  test "limit and offset" do
+    query = from(r in Entity) |> limit([], 3) |> select([], 0)
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS r\nLIMIT 3"
+
+    query = from(r in Entity) |> offset([], 5) |> select([], 0)
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS r\nOFFSET 5"
+
+    query = from(r in Entity) |> offset([], 5) |> limit([], 3) |> select([], 0)
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS r\nLIMIT 3\nOFFSET 5"
+  end
+
   test "variable binding" do
     x = 123
     query = from(r in Entity) |> select([], x)

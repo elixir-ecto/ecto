@@ -5,7 +5,7 @@ defmodule Ecto.Mixfile do
     [ app: :ecto,
       version: "0.0.1",
       deps: deps(Mix.env),
-      elixir: "~> 0.9.4-dev" ]
+      elixir: "~> 0.10.0" ]
   end
 
   def application do

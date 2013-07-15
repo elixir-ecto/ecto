@@ -23,13 +23,15 @@ defmodule Ecto.Query do
   code and their evaluated result will be inserted into the query.
   """
 
-  defrecord Query, froms: [], wheres: [], select: nil, order_bys: []
+  defrecord Query, froms: [], wheres: [], select: nil, order_bys: [],
+                   limit: nil, offset: nil
   defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.SelectBuilder
   alias Ecto.Query.OrderByBuilder
+  alias Ecto.Query.LimitOffsetBuilder
 
   @doc """
   Extends an existing a query by appending the given expressions to it. Takes a
@@ -117,6 +119,30 @@ defmodule Ecto.Query do
     end
   end
 
+  @doc false
+  defmacro limit(query // Macro.escape(Query[]), binding, expr)
+      when is_list(binding) do
+    binding = Enum.map(binding, escape_binding(&1))
+    quote do
+      limit_expr = unquote(LimitOffsetBuilder.escape(expr, binding))
+      limit = QueryExpr[expr: limit_expr, binding: unquote(binding),
+                        file: __ENV__.file, line: __ENV__.line]
+      Ecto.Query.merge(unquote(query), :limit, limit)
+    end
+  end
+
+  @doc false
+  defmacro offset(query // Macro.escape(Query[]), binding, expr)
+      when is_list(binding) do
+    binding = Enum.map(binding, escape_binding(&1))
+    quote do
+      offset_expr = unquote(LimitOffsetBuilder.escape(expr, binding))
+      offset = QueryExpr[expr: offset_expr, binding: unquote(binding),
+                         file: __ENV__.file, line: __ENV__.line]
+      Ecto.Query.merge(unquote(query), :offset, offset)
+    end
+  end
+
   @doc """
   Validates the query to check if it is correct. Should be called before
   compilation by the query adapter.
@@ -140,7 +166,9 @@ defmodule Ecto.Query do
     Query[ froms:     left.froms ++ right.froms,
            wheres:    left.wheres ++ right.wheres,
            select:    right.select,
-           order_bys: left.order_bys ++ right.order_bys ]
+           order_bys: left.order_bys ++ right.order_bys,
+           limit:     right.limit,
+           offset:    right.offset ]
   end
 
   @doc false
@@ -152,6 +180,8 @@ defmodule Ecto.Query do
       :where    -> query.update_wheres(&1 ++ [expr])
       :select   -> query.select(expr)
       :order_by -> query.update_order_bys(&1 ++ [expr])
+      :limit    -> query.limit(expr)
+      :offset   -> query.offset(expr)
     end
   end
 
@@ -170,21 +200,9 @@ defmodule Ecto.Query do
             end
             { quoted, vars ++ [var] }
 
-          :select ->
+          type ->
             quoted = quote do
-              Ecto.Query.select(unquote(quoted), unquote(vars), unquote(expr))
-            end
-            { quoted, vars }
-
-          :where ->
-            quoted = quote do
-              Ecto.Query.where(unquote(quoted), unquote(vars), unquote(expr))
-            end
-            { quoted, vars }
-
-          :order_by ->
-            quoted = quote do
-              Ecto.Query.order_by(unquote(quoted), unquote(vars), unquote(expr))
+              Ecto.Query.unquote(type)(unquote(quoted), unquote(vars), unquote(expr))
             end
             { quoted, vars }
         end
@@ -195,6 +213,14 @@ defmodule Ecto.Query do
   defp check_merge(left, right) do
     if left.select && right.select do
       raise Ecto.InvalidQuery, reason: "only one select expression is allowed in query"
+    end
+
+    if left.limit && right.limit do
+      raise Ecto.InvalidQuery, reason: "only one limit expression is allowed in query"
+    end
+
+    if left.offset && right.offset do
+      raise Ecto.InvalidQuery, reason: "only one offset expression is allowed in query"
     end
   end
 

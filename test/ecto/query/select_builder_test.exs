@@ -36,10 +36,5 @@ defmodule Ecto.Query.SelectBuilderTest do
     assert_raise Ecto.InvalidQuery, message, fn ->
       escape(quote do foreign(x.y) end, [:x])
     end
-
-    message = "undotted vars are only allowed at the top level of a select expression"
-    assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do {x} end, [:x])
-    end
   end
 end

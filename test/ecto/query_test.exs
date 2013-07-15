@@ -38,6 +38,16 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  test "only one limit or offset is allowed" do
+    assert_raise Ecto.InvalidQuery, "only one limit expression is allowed in query", fn ->
+      from(p in PostEntity) |> limit([], 1) |> limit([], 2) |> select([], 3)
+    end
+
+    assert_raise Ecto.InvalidQuery, "only one offset expression is allowed in query", fn ->
+      from(p in PostEntity) |> offset([], 1) |> offset([], 2) |> select([], 3)
+    end
+  end
+
   test "binding should be list of variables" do
     assert_raise Ecto.InvalidQuery, "binding should be list of variables", fn ->
       delay_compile select([0], 1)

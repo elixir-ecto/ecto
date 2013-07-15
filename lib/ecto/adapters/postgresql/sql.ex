@@ -34,9 +34,12 @@ defmodule Ecto.Adapters.Postgres.SQL do
     from = from(query.froms)
     where = where(query.wheres, query.froms)
     order_by = order_by(query.order_bys, query.froms)
+    limit = if query.limit, do: limit(query.limit.expr)
+    offset = if query.offset, do: offset(query.offset.expr)
 
-    list = [select, from, where, order_by] |> Enum.filter(fn x -> x != nil end)
-    Enum.join(list, "\n")
+    [select, from, where, order_by, limit, offset]
+      |> Enum.filter(fn x -> x != nil end)
+      |> Enum.join("\n")
   end
 
   defp select(expr, vars) do
@@ -87,6 +90,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
       :desc -> str <> " DESC"
     end
   end
+
+  defp limit(num), do: "LIMIT " <> integer_to_binary(num)
+  defp offset(num), do: "OFFSET " <> integer_to_binary(num)
 
   defp expr({ expr, _, [] }, vars) do
     expr(expr, vars)

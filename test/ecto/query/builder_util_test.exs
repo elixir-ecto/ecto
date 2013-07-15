@@ -1,9 +1,9 @@
 Code.require_file "../../test_helper.exs", __DIR__
 
-defmodule Ecto.Query.WhereBuilderTest do
+defmodule Ecto.Query.BuilderUtilTest do
   use ExUnit.Case, async: true
 
-  import Ecto.Query.WhereBuilder
+  import Ecto.Query.BuilderUtil
 
   test "escape" do
     assert Macro.escape(quote do 1 == 2 end) ==
