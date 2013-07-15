@@ -11,7 +11,7 @@ defmodule Ecto.Adapters.Postgres do
   defmacro __using__(_opts) do
     quote do
       def __postgres__(:pool_name) do
-        unquote(Module.concat(__MODULE__, Pool))
+        __MODULE__.Pool
       end
     end
   end
