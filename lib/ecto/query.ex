@@ -23,12 +23,13 @@ defmodule Ecto.Query do
   code and their evaluated result will be inserted into the query.
   """
 
-  defrecord Query, froms: [], wheres: [], select: nil
+  defrecord Query, froms: [], wheres: [], select: nil, order_bys: []
   defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.SelectBuilder
+  alias Ecto.Query.OrderByBuilder
 
   @doc """
   Extends an existing a query by appending the given expressions to it. Takes a
@@ -41,16 +42,23 @@ defmodule Ecto.Query do
     build_query(original, bindings, kw, __CALLER__)
   end
 
+  @doc false
+  defmacro from(query, binding, expr) do
+    # TODO: change syntax: 'from(x in X)' -> 'from(X)'
+    from_expr = FromBuilder.escape(expr, binding, __CALLER__)
+    quote do
+      Ecto.Query.merge(unquote(query), :from, unquote(from_expr))
+    end
+  end
+
   @doc """
   Creates a query. See the module documentation for more information and
   examples.
   """
-  defmacro from(query // Macro.escape(Query[]), expr)
-
   defmacro from({ :in, _, [_, _] } = from, kw) when is_list(kw) do
     caller = __CALLER__
     query = Macro.escape(Query[])
-    { var, _ } = from_expr = FromBuilder.escape(from, caller)
+    { var, _ } = from_expr = FromBuilder.escape(from, [], caller)
     quoted = quote do
       Ecto.Query.merge(unquote(query), :from, unquote(from_expr))
     end
@@ -59,10 +67,15 @@ defmodule Ecto.Query do
   end
 
   defmacro from(query, expr) do
-    # TODO: change syntax: x in X -> X
-    from_expr = FromBuilder.escape(expr, __CALLER__)
     quote do
-      Ecto.Query.merge(unquote(query), :from, unquote(from_expr))
+      from(unquote(query), [], unquote(expr))
+    end
+  end
+
+  @doc false
+  defmacro from(expr) do
+    quote do
+      from(Query[], [], unquote(expr))
     end
   end
 
@@ -90,6 +103,20 @@ defmodule Ecto.Query do
     end
   end
 
+  @doc false
+  defmacro order_by(query // Macro.escape(Query[]), binding, expr)
+      when is_list(binding) do
+    binding = Enum.map(binding, escape_binding(&1))
+    quote do
+      order_by_expr = unquote(OrderByBuilder.escape(expr, binding))
+      # We probably don't have to save file and line since we don't
+      # runtime validate order by queries
+      order_by = QueryExpr[expr: order_by_expr, binding: unquote(binding),
+                           file: __ENV__.file, line: __ENV__.line]
+      Ecto.Query.merge(unquote(query), :order_by, order_by)
+    end
+  end
+
   @doc """
   Validates the query to check if it is correct. Should be called before
   compilation by the query adapter.
@@ -102,9 +129,10 @@ defmodule Ecto.Query do
   def merge(left, right) do
     check_merge(left, right)
 
-    Query[ froms: left.froms ++ right.froms,
-           wheres: left.wheres ++ right.wheres,
-           select: right.select ]
+    Query[ froms:     left.froms ++ right.froms,
+           wheres:    left.wheres ++ right.wheres,
+           select:    right.select,
+           order_bys: left.order_bys ++ right.order_bys ]
   end
 
   @doc false
@@ -112,27 +140,25 @@ defmodule Ecto.Query do
     check_merge(query, Query.new([{ type, expr }]))
 
     case type do
-      :from   -> query.update_froms(&1 ++ [expr])
-      :where  -> query.update_wheres(&1 ++ [expr])
-      :select -> query.select(expr)
+      :from     -> query.update_froms(&1 ++ [expr])
+      :where    -> query.update_wheres(&1 ++ [expr])
+      :select   -> query.select(expr)
+      :order_by -> query.update_order_bys(&1 ++ [expr])
     end
   end
 
   defp build_query(quoted, vars, kw, env) do
     unless Keyword.keyword?(kw) do
-      raise ArgumentError, message: "second argument to from has to be a keyword list"
+      raise Ecto.InvalidQuery, reason: "second argument to from has to be a keyword list"
     end
 
     { quoted, _ } =
       Enum.reduce(kw, { quoted, vars }, fn({ type, expr }, { quoted, vars }) ->
         case type do
           :from ->
-            { var, _ } = from_expr = FromBuilder.escape(expr, env)
+            { var, _ } = from_expr = FromBuilder.escape(expr, vars, env)
             quoted = quote do
               Ecto.Query.merge(unquote(quoted), :from, unquote(from_expr))
-            end
-            if var in vars do
-              raise ArgumentError, message: "variable `#{var}` is already defined"
             end
             { quoted, vars ++ [var] }
 
@@ -147,6 +173,12 @@ defmodule Ecto.Query do
               Ecto.Query.where(unquote(quoted), unquote(vars), unquote(expr))
             end
             { quoted, vars }
+
+          :order_by ->
+            quoted = quote do
+              Ecto.Query.order_by(unquote(quoted), unquote(vars), unquote(expr))
+            end
+            { quoted, vars }
         end
       end)
     quoted
@@ -154,7 +186,7 @@ defmodule Ecto.Query do
 
   defp check_merge(left, right) do
     if left.select && right.select do
-      raise ArgumentError, message: "only one select expression is allowed in query"
+      raise Ecto.InvalidQuery, reason: "only one select expression is allowed in query"
     end
   end
 
@@ -167,6 +199,6 @@ defmodule Ecto.Query do
   end
 
   defp escape_binding(_) do
-    raise ArgumentError, message: "binding should be list of variables"
+    raise Ecto.InvalidQuery, reason: "binding should be list of variables"
   end
 end

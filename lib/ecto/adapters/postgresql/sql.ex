@@ -33,8 +33,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
     select = gen_select(query.select, query.froms)
     from = gen_from(query.froms)
     where = gen_where(query.wheres, query.froms)
+    order_by = gen_order_by(query.order_bys, query.froms)
 
-    list = [select, from, where] |> Enum.filter(fn x -> x != nil end)
+    list = [select, from, where, order_by] |> Enum.filter(fn x -> x != nil end)
     Enum.join(list, "\n")
   end
 
@@ -62,6 +63,29 @@ defmodule Ecto.Adapters.Postgres.SQL do
     end)
 
     "WHERE " <> exprs
+  end
+
+  defp gen_order_by([], _vars), do: nil
+
+  defp gen_order_by(order_bys, vars) do
+    exprs = Enum.map_join(order_bys, ", ", fn(expr) ->
+      rebound_vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
+      Enum.map_join(expr.expr, ", ", fn(expr) ->
+        gen_order_by_expr(expr, rebound_vars)
+      end)
+    end)
+
+    "ORDER BY " <> exprs
+  end
+
+  defp gen_order_by_expr({ dir, var, field }, vars) do
+    { var, _ } = Keyword.fetch!(vars, var)
+    str = "#{var}.#{field}"
+    case dir do
+      nil   -> str
+      :asc  -> str <> " ASC"
+      :desc -> str <> " DESC"
+    end
   end
 
   defp gen_expr({ expr, _, [] }, vars) do

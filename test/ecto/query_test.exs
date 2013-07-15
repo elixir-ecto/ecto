@@ -33,13 +33,13 @@ defmodule Ecto.QueryTest do
   end
 
   test "only one select is allowed" do
-    assert_raise ArgumentError, "only one select expression is allowed in query", fn ->
+    assert_raise Ecto.InvalidQuery, "only one select expression is allowed in query", fn ->
       from(p in PostEntity) |> select([], 1) |> select([], 2)
     end
   end
 
   test "binding should be list of variables" do
-    assert_raise ArgumentError, "binding should be list of variables", fn ->
+    assert_raise Ecto.InvalidQuery, "binding should be list of variables", fn ->
       delay_compile select([0], 1)
     end
   end
@@ -57,7 +57,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "variable is already defined" do
-    assert_raise ArgumentError, "variable `p` is already defined", fn ->
+    assert_raise Ecto.InvalidQuery, "variable `p` is already defined in query", fn ->
       delay_compile(from(p in PostEntity, from: p in PostEntity))
     end
   end

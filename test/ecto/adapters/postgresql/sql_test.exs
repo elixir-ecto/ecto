@@ -52,6 +52,17 @@ defmodule Ecto.SQLTest do
     assert SQL.select(query) == "SELECT r.x\nFROM entity AS r\nWHERE (r.x = 42) AND (r.y != 43)"
   end
 
+  test "order by" do
+    query = from(r in Entity) |> order_by([r], r.x) |> select([r], r.x)
+    assert SQL.select(query) == "SELECT r.x\nFROM entity AS r\nORDER BY r.x"
+
+    query = from(r in Entity) |> order_by([r], [r.x, r.y]) |> select([r], r.x)
+    assert SQL.select(query) == "SELECT r.x\nFROM entity AS r\nORDER BY r.x, r.y"
+
+    query = from(r in Entity) |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x)
+    assert SQL.select(query) == "SELECT r.x\nFROM entity AS r\nORDER BY r.x ASC, r.y DESC"
+  end
+
   test "variable binding" do
     x = 123
     query = from(r in Entity) |> select([], x)
