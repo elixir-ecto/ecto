@@ -7,12 +7,6 @@ defmodule Ecto.Adapter do
   use Behaviour
 
   @doc """
-  All adapters are automatically used into the udnerlying repository
-  module.
-  """
-  defmacro __using__(Macro.t) :: Macro.
-
-  @doc """
   Should start any connection pooling or supervision and return `{ :ok, pid }`
   or just `:ok` if nothing needs to be done. Return `{ :error, error }` if
   something went wrong.
