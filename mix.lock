@@ -1,2 +1,3 @@
-[ "pgsql": {:git, "git://github.com/semiocast/pgsql.git", "2df33a2925e097aecf28eaefc5bb4c686f347c0e", []},
+[ "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "a9d0887edc71ca8ff1f58c26efc7416d6070e026", []},
+  "pgsql": {:git, "git://github.com/semiocast/pgsql.git", "2df33a2925e097aecf28eaefc5bb4c686f347c0e", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "91b68de43d49bcccf2631016febda70b20d7aa75", []} ]

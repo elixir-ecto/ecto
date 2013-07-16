@@ -18,6 +18,7 @@ defmodule Ecto.Mixfile do
 
   defp deps(_) do
     deps(:prod) ++
-      [ { :pgsql, github: "semiocast/pgsql" } ]
+      [ { :ex_doc, github: "elixir-lang/ex_doc" },
+        { :pgsql, github: "semiocast/pgsql" } ]
   end
 end
