@@ -37,6 +37,8 @@ defmodule Ecto.Repo do
       end
 
       def fetch(query) do
+        Ecto.Query.validate(query)
+        query = Ecto.Query.normalize(query)
         unquote(adapter).fetch(__MODULE__, query)
       end
 
