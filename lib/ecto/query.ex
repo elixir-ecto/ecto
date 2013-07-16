@@ -160,7 +160,7 @@ defmodule Ecto.Query do
   end
 
   @doc false
-  def merge(left, right) do
+  def merge(Query[] = left, Query[] = right) do
     check_merge(left, right)
 
     Query[ froms:     left.froms ++ right.froms,
@@ -172,7 +172,7 @@ defmodule Ecto.Query do
   end
 
   @doc false
-  def merge(query, type, expr) do
+  def merge(Query[] = query, type, expr) do
     check_merge(query, Query.new([{ type, expr }]))
 
     case type do
@@ -210,7 +210,7 @@ defmodule Ecto.Query do
     quoted
   end
 
-  defp check_merge(left, right) do
+  defp check_merge(Query[] = left, Query[] = right) do
     if left.select && right.select do
       raise Ecto.InvalidQuery, reason: "only one select expression is allowed in query"
     end
