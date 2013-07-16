@@ -2,10 +2,10 @@ defmodule Ecto.Adapters.Postgres do
   @moduledoc false
 
   @behaviour Ecto.Adapter
-
   @default_port 5432
 
   alias Ecto.Adapters.Postgres.SQL
+  alias Ecto.Query.Query
   alias Ecto.Query.BuilderUtil
 
   defmacro __using__(_opts) do
@@ -35,7 +35,7 @@ defmodule Ecto.Adapters.Postgres do
     :poolboy.start_link(pool_opts, worker_opts)
   end
 
-  def fetch(repo, Ecto.Query.Query[] = query) do
+  def fetch(repo, Query[] = query) do
     sql = SQL.select(query)
     result = transaction(repo, fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })

@@ -1,6 +1,7 @@
 defmodule Ecto.Adapters.Postgres.SQL do
 
   require Ecto.Query
+  alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.BuilderUtil
 
@@ -29,7 +30,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
       Enum.map_join(values, ", ", literal(&1)) <> ")"
   end
 
-  defp gen_select(query) do
+  defp gen_select(Query[] = query) do
     select = select(query.select, query.froms)
     from = from(query.froms)
     where = where(query.wheres, query.froms)
@@ -42,9 +43,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
       |> Enum.join("\n")
   end
 
-  defp select(expr, vars) do
-    { _, clause } = expr.expr
-    vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
+  defp select(QueryExpr[expr: expr, binding: binding], vars) do
+    { _, clause } = expr
+    vars = BuilderUtil.merge_binding_vars(binding, vars)
     "SELECT " <> select_clause(clause, vars)
   end
 
@@ -60,9 +61,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp where([], _vars), do: nil
 
   defp where(wheres, vars) do
-    exprs = Enum.map_join(wheres, " AND ", fn(expr) ->
-      rebound_vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
-      "(" <> expr(expr.expr, rebound_vars) <> ")"
+    exprs = Enum.map_join(wheres, " AND ", fn(QueryExpr[expr: expr, binding: binding]) ->
+      rebound_vars = BuilderUtil.merge_binding_vars(binding, vars)
+      "(" <> expr(expr, rebound_vars) <> ")"
     end)
 
     "WHERE " <> exprs
@@ -71,11 +72,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp order_by([], _vars), do: nil
 
   defp order_by(order_bys, vars) do
-    exprs = Enum.map_join(order_bys, ", ", fn(expr) ->
-      rebound_vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
-      Enum.map_join(expr.expr, ", ", fn(expr) ->
-        order_by_expr(expr, rebound_vars)
-      end)
+    exprs = Enum.map_join(order_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
+      rebound_vars = BuilderUtil.merge_binding_vars(binding, vars)
+      Enum.map_join(expr, ", ", order_by_expr(&1, rebound_vars))
     end)
 
     "ORDER BY " <> exprs

@@ -2,6 +2,8 @@ defmodule Ecto.Query.Validator do
   @moduledoc false
 
   alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Query
+  alias Ecto.Query.QueryExpr
 
   defmacrop rescue_metadata(type, query, file, line, block) do
     quote location: :keep do
@@ -14,7 +16,7 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  def validate(query) do
+  def validate(Query[] = query) do
     if query.select == nil and length(query.froms) != 1 do
       reason = "a query must have a select expression if querying from more than one entity"
       raise Ecto.InvalidQuery, reason: reason
@@ -30,7 +32,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_wheres(wheres, vars) do
-    Enum.each(wheres, fn(expr) ->
+    Enum.each(wheres, fn(QueryExpr[] = expr) ->
       rescue_metadata(:where, expr.expr, expr.file, expr.line) do
         vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
         unless type_expr(expr.expr, vars) == :boolean do
@@ -40,7 +42,7 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_select(expr, vars) do
+  defp validate_select(QueryExpr[] = expr, vars) do
     { _, select_expr } = expr.expr
     rescue_metadata(:select, select_expr, expr.file, expr.line) do
       vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
