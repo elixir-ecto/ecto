@@ -23,6 +23,8 @@ defmodule Ecto.Query do
   code and their evaluated result will be inserted into the query.
   """
 
+  # TODO: Add query operators (and functions?) to documentation
+
   defrecord Query, froms: [], wheres: [], select: nil, order_bys: [],
                    limit: nil, offset: nil
   defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
@@ -34,13 +36,20 @@ defmodule Ecto.Query do
   alias Ecto.Query.LimitOffsetBuilder
 
   @doc """
-  Extends an existing a query by appending the given expressions to it. Takes a
-  list of bound variables that will rebind the variables from the original query
-  to their new names. The bindings are order dependent, that means that each
-  variable will be bound to the variable in the original query that was defined
-  in the same order as the binding was in its list.
+  Extends an existing a query by appending the given expressions to it. Takes an
+  optional list of bound variables that will rebind the variables from the
+  original query to their new names. The bindings are order dependent, that
+  means that each variable will be bound to the variable in the original query
+  that was defined in the same order as the binding was in its list.
+
+  ## Example
+      def paginate(query, page, size) do
+        extend query,
+          limit: size,
+          offset: (page-1) * size
+      end
   """
-  defmacro extend(original, bindings, kw) when is_list(kw) do
+  defmacro extend(original, bindings // [], kw) when is_list(kw) do
     build_query(original, bindings, kw, __CALLER__)
   end
 
@@ -54,8 +63,18 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Creates a query. See the module documentation for more information and
-  examples.
+  Creates a query. It can either be a keyword query or a query expression. If it
+  is a keyword query the first argument should be an `in` expression and the
+  second argument a keyword query where they keys are expression types and the
+  values are expressions.
+
+  If it is a query expression the first argument is the original query and the
+  second argument the expression.
+
+  ## Examples
+      from(c in City, select: c)
+
+      from(c in City) |> select([c], c)
   """
   defmacro from({ :in, _, [_, _] } = from, kw) when is_list(kw) do
     caller = __CALLER__
@@ -74,14 +93,34 @@ defmodule Ecto.Query do
     end
   end
 
-  @doc false
+  @doc """
+  Creates a query with a from query expression. See `query/2` from more
+  information.
+  """
   defmacro from(expr) do
     quote do
       from(Query[], [], unquote(expr))
     end
   end
 
-  @doc false
+  @doc """
+  A select query expression. Selects which fields will be selected from the
+  entity and any transformations that should be performed on the fields, any
+  qexpression that is accepted in a query can be a slect field. There can only
+  be one select expression in a query, if the select expression is omitted, the
+  query will by default select the full entity (only works when there is a
+  single from expression and no group by).
+
+  The sub-expressions in the query can be wrapped in lists or tuples as shown in
+  the examples. A full entity can also be selected if the entity variable is the
+  only thing in the expression.
+
+  ## Examples
+      from(c in City, select: c) # selects the entire entity
+      from(c in City, select: { c.name, c.population })
+      from(c in City, select: [c.name, c.county])
+      from(c in City, select: { c.name, to_binary(40 + 2), 43 })
+  """
   defmacro select(query // Macro.escape(Query[]), binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
@@ -93,7 +132,14 @@ defmodule Ecto.Query do
     end
   end
 
-  @doc false
+  @doc """
+  A where query expression. Filters the rows from the entity. If there are more
+  than one where expressions they will be combined in conjunction. A where
+  expression have to evaluate to a boolean value.
+
+  ## Examples
+      from(c in City, where: c.state == "Sweden")
+  """
   defmacro where(query // Macro.escape(Query[]), binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
@@ -105,21 +151,35 @@ defmodule Ecto.Query do
     end
   end
 
-  @doc false
+  @doc """
+  An order by query expression. Orders the fields based on one or more entity
+  fields. It accepts a single field or a list field, the direction can be
+  specified in a keyword list as shown in the examples. There can be several
+  order by expressions in a query.
+
+  ## Examples
+      from(c in City, order_by: c.name, order_by: c.population)
+      from(c in City, order_by: [c.name, c.population])
+      from(c in City, order_by: [asc: c.name, desc: c.population])
+  """
   defmacro order_by(query // Macro.escape(Query[]), binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
       order_by_expr = unquote(OrderByBuilder.escape(expr, binding))
-      # We probably don't have to save file and line since we don't
-      # runtime validate order by queries
-      order_by = QueryExpr[expr: order_by_expr, binding: unquote(binding),
-                           file: __ENV__.file, line: __ENV__.line]
+      order_by = QueryExpr[expr: order_by_expr, binding: unquote(binding)]
       Ecto.Query.merge(unquote(query), :order_by, order_by)
     end
   end
 
-  @doc false
+  @doc """
+  A limit query expression. Limits the number of rows selected from the entity.
+  Can be any expression but have to evaluate to an integer value. Can't include
+  entity fields.
+
+  ## Examples
+      from(u in User, where: u.id == current_user, limit: 1)
+  """
   defmacro limit(query // Macro.escape(Query[]), binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
@@ -132,7 +192,15 @@ defmodule Ecto.Query do
     end
   end
 
-  @doc false
+  @doc """
+  An offset query expression. Limits the number of rows selected from the
+  entity. Can be any expression but have to evaluate to an integer value. Can't include
+  entity fields.
+
+  ## Examples
+      # Get all posts on page 4
+      from(p in Post, limit: 10, offset: 30)
+  """
   defmacro offset(query // Macro.escape(Query[]), binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
