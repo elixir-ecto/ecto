@@ -125,6 +125,7 @@ defmodule Ecto.Query do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
       limit_expr = unquote(LimitOffsetBuilder.escape(expr, binding))
+      LimitOffsetBuilder.validate(limit_expr)
       limit = QueryExpr[expr: limit_expr, binding: unquote(binding),
                         file: __ENV__.file, line: __ENV__.line]
       Ecto.Query.merge(unquote(query), :limit, limit)
@@ -137,6 +138,7 @@ defmodule Ecto.Query do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
       offset_expr = unquote(LimitOffsetBuilder.escape(expr, binding))
+      LimitOffsetBuilder.validate(offset_expr)
       offset = QueryExpr[expr: offset_expr, binding: unquote(binding),
                          file: __ENV__.file, line: __ENV__.line]
       Ecto.Query.merge(unquote(query), :offset, offset)

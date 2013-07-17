@@ -27,8 +27,6 @@ defmodule Ecto.Query.Validator do
 
     validate_wheres(query.wheres, query.froms)
     validate_select(query.select, query.froms)
-    if query.limit,  do: validate_limit_offset(query.limit.expr)
-    if query.offset, do: validate_limit_offset(query.offset.expr)
   end
 
   defp validate_wheres(wheres, vars) do
@@ -48,13 +46,6 @@ defmodule Ecto.Query.Validator do
       vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
       type_expr(select_expr, vars)
     end
-  end
-
-  defp validate_limit_offset(nil), do: :ok
-  defp validate_limit_offset(int) when is_integer(int), do: :ok
-
-  defp validate_limit_offset(_other) do
-    raise Ecto.InvalidQuery, reason: "limit and offset expressions must be a single integer value"
   end
 
 

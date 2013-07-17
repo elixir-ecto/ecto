@@ -112,15 +112,4 @@ defmodule Ecto.Query.ValidatorTest do
       validate(query)
     end
   end
-
-  test "limit and offset" do
-    x = 1
-    query = from(p in PostEntity) |> limit([], x * 3) |> offset([], 4 * 2) |> select([], 0)
-    validate(query)
-
-    query = from(p in PostEntity) |> limit([], "a") |> select([], 0)
-    assert_raise Ecto.InvalidQuery, %r"limit and offset expressions must be a single integer value", fn ->
-      validate(query)
-    end
-  end
 end
