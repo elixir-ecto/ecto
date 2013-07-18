@@ -37,6 +37,7 @@ defmodule Ecto.Entity do
       try do
         import Ecto.Entity.Schema
         @ecto_table_name unquote(table)
+        @primary_key unquote(primary_key)
         if primary_key do
           field(unquote(primary_key), :integer, primary_key: true)
         end
@@ -62,6 +63,7 @@ defmodule Ecto.Entity do
   defmacro __before_compile__(env) do
     module        = env.module
     table_name    = Module.get_attribute(module, :ecto_table_name)
+    primary_key   = Module.get_attribute(module, :primary_key)
     fields        = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
     record_fields = Module.get_attribute(module, :record_fields) |> Enum.reverse
     field_names   = Enum.map(fields, elem(&1, 0))
@@ -83,6 +85,7 @@ defmodule Ecto.Entity do
 
     quote do
       def __ecto__(:table), do: unquote(table_name)
+      def __ecto__(:primary_key), do: unquote(primary_key)
       def __ecto__(:fields), do: unquote(Macro.escape(fields))
       def __ecto__(:field_names), do: unquote(field_names)
       unquote(fields_quote)

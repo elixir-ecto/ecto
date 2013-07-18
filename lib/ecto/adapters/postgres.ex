@@ -42,12 +42,12 @@ defmodule Ecto.Adapters.Postgres do
     end)
 
     case result do
-      { :error, _ } = err -> err
       { { :select, _nrows }, rows } ->
         { return_type, _ } = query.select.expr
         binding = query.select.binding
         vars = BuilderUtil.merge_binding_vars(binding, query.froms)
         Enum.map(rows, transform_row(&1, return_type, vars))
+      { :error, _ } = err -> err
     end
   end
 
@@ -58,7 +58,9 @@ defmodule Ecto.Adapters.Postgres do
     end)
 
     case result do
-      { { :insert, _, _ }, _rows } -> :ok
+      { { :insert, _, _ }, [values] } ->
+        module = elem(entity, 0)
+        list_to_tuple([module|tuple_to_list(values)])
       { :error, _ } = err -> err
     end
   end

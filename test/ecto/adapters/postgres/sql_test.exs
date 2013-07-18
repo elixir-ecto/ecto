@@ -9,7 +9,7 @@ defmodule Ecto.Adapters.Postgre.SQLTest do
   defmodule Entity do
     use Ecto.Entity
 
-    schema :entity, nil do
+    schema :entity do
       field :x, :integer
       field :y, :integer
     end
@@ -183,7 +183,7 @@ defmodule Ecto.Adapters.Postgre.SQLTest do
 
   test "insert" do
     query = SQL.insert(Entity[x: 123, y: "456"])
-    assert query == "INSERT INTO entity (x, y) VALUES (123, '456')"
+    assert query == "INSERT INTO entity (x, y)\nVALUES (123, '456')\nRETURNING (id, x, y)"
   end
 
   test "table name" do

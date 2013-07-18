@@ -24,10 +24,19 @@ defmodule Ecto.Adapters.Postgres.SQL do
     module = elem(entity, 0)
     table = module.__ecto__(:table)
     fields = module.__ecto__(:field_names)
+
     [_|values] = tuple_to_list(entity)
 
-    "INSERT INTO #{table} (" <> Enum.join(fields, ", ") <> ") VALUES (" <>
-      Enum.map_join(values, ", ", literal(&1)) <> ")"
+    if module.__ecto__(:primary_key) do
+      [_|insert_fields] = fields
+      [_|values] = values
+    else
+      insert_fields = fields
+    end
+
+    "INSERT INTO #{table} (" <> Enum.join(insert_fields, ", ") <> ")\n" <>
+    "VALUES (" <> Enum.map_join(values, ", ", literal(&1)) <> ")\n" <>
+    "RETURNING (" <> Enum.join(fields, ", ") <> ")"
   end
 
   defp gen_select(Query[] = query) do
