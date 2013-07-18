@@ -5,6 +5,7 @@ defmodule Ecto.QueryTest do
 
   import Ecto.TestHelpers
   import Ecto.Query
+  alias Ecto.Query.Query
 
   defmodule PostEntity do
     use Ecto.Entity
@@ -50,7 +51,7 @@ defmodule Ecto.QueryTest do
 
   test "binding should be list of variables" do
     assert_raise Ecto.InvalidQuery, "binding should be list of variables", fn ->
-      delay_compile select([0], 1)
+      delay_compile select(Query[], [0], 1)
     end
   end
 

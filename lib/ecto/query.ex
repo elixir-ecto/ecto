@@ -134,7 +134,7 @@ defmodule Ecto.Query do
       from(c in City, select: [c.name, c.county])
       from(c in City, select: { c.name, to_binary(40 + 2), 43 })
   """
-  defmacro select(query // Macro.escape(Query[]), binding, expr)
+  defmacro select(query, binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
@@ -153,7 +153,7 @@ defmodule Ecto.Query do
   ## Examples
       from(c in City, where: c.state == "Sweden")
   """
-  defmacro where(query // Macro.escape(Query[]), binding, expr)
+  defmacro where(query, binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
@@ -175,7 +175,7 @@ defmodule Ecto.Query do
       from(c in City, order_by: [c.name, c.population])
       from(c in City, order_by: [asc: c.name, desc: c.population])
   """
-  defmacro order_by(query // Macro.escape(Query[]), binding, expr)
+  defmacro order_by(query, binding, expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
@@ -193,7 +193,7 @@ defmodule Ecto.Query do
   ## Examples
       from(u in User, where: u.id == current_user, limit: 1)
   """
-  defmacro limit(query // Macro.escape(Query[]), binding, expr)
+  defmacro limit(query, binding // [], expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
@@ -214,7 +214,7 @@ defmodule Ecto.Query do
       # Get all posts on page 4
       from(p in Post, limit: 10, offset: 30)
   """
-  defmacro offset(query // Macro.escape(Query[]), binding, expr)
+  defmacro offset(query, binding // [], expr)
       when is_list(binding) do
     binding = Enum.map(binding, escape_binding(&1))
     quote do
