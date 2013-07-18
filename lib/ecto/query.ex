@@ -21,6 +21,19 @@ defmodule Ecto.Query do
   Every variable that isn't bound in a query expression and every function or
   operator that aren't query operators or functions will be treated as elixir
   code and their evaluated result will be inserted into the query.
+
+  There are two ways to create a query. Either the keyword query syntax that is
+  seen above, or by using the macros that a keyword query will expand to. The
+  above query will be expanded to the following:
+
+      from(w in Weather) |> where([w], w.prcp > 0) |> select([w], w.city)
+
+      select(where(from(w in Weather), [w], w.prcp > 0), [w], w.city)
+
+  The first argument specifies the bound variables that can be used in the query
+  expression in the second argument. As can be seen, queries can be composed
+  dynamically in any way and in any order. Keyword queries can also be composed
+  with the `extend` macro.
   """
 
   # TODO: Add query operators (and functions?) to documentation
