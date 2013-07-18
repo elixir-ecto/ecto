@@ -36,10 +36,12 @@ defmodule Ecto.Entity do
 
       try do
         import Ecto.Entity.Schema
+
+        primary_key = unquote(primary_key)
         @ecto_table_name unquote(table)
-        @ecto_primary_key unquote(primary_key)
+        @ecto_primary_key primary_key
         if primary_key do
-          field(unquote(primary_key), :integer, primary_key: true)
+          field(primary_key, :integer, primary_key: true)
         end
         unquote(block)
       end
