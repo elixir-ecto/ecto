@@ -49,7 +49,7 @@ defmodule Ecto.Repo do
       def update(entity) do
         module = elem(entity, 0)
         unless module.__ecto__(:primary_key) do
-          raise Ecto.NoPrimaryKey
+          raise Ecto.NoPrimaryKey, entity: entity, reason: "can't be updated"
         end
         unquote(adapter).update(__MODULE__, entity)
       end
@@ -57,7 +57,7 @@ defmodule Ecto.Repo do
       def delete(entity) do
         module = elem(entity, 0)
         unless module.__ecto__(:primary_key) do
-          raise Ecto.NoPrimaryKey
+          raise Ecto.NoPrimaryKey, entity: entity, reason: "can't be deleted"
         end
         unquote(adapter).delete(__MODULE__, entity)
       end
