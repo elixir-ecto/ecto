@@ -23,7 +23,7 @@ end
 defmodule Simple.Weather do
   use Ecto.Entity
 
-  schema :weather do
+  schema :weather, nil do
     field :city, :string
     field :temp_lo, :integer
     field :temp_hi, :integer
