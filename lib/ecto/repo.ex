@@ -46,6 +46,22 @@ defmodule Ecto.Repo do
         unquote(adapter).create(__MODULE__, entity)
       end
 
+      def update(entity) do
+        module = elem(entity, 0)
+        unless module.__ecto__(:primary_key) do
+          raise Ecto.NoPrimaryKey
+        end
+        unquote(adapter).update(__MODULE__, entity)
+      end
+
+      def delete(entity) do
+        module = elem(entity, 0)
+        unless module.__ecto__(:primary_key) do
+          raise Ecto.NoPrimaryKey
+        end
+        unquote(adapter).delete(__MODULE__, entity)
+      end
+
       def adapter do
         unquote(adapter)
       end

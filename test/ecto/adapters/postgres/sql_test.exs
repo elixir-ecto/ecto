@@ -186,6 +186,16 @@ defmodule Ecto.Adapters.Postgre.SQLTest do
     assert query == "INSERT INTO entity (x, y)\nVALUES (123, '456')\nRETURNING (id, x, y)"
   end
 
+  test "update" do
+    query = SQL.update(Entity[id: 42, x: 123, y: "456"])
+    assert query == "UPDATE entity SET x = 123, y = '456'\nWHERE id = 42"
+  end
+
+  test "delete" do
+    query = SQL.delete(Entity[id: 42, x: 123, y: "456"])
+    assert query == "DELETE FROM entity WHERE id = 42"
+  end
+
   test "table name" do
     query = from(e in SomeEntity, select: 0)
     assert SQL.select(query) == "SELECT 0\nFROM weird_name_123 AS e"

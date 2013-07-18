@@ -68,6 +68,30 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  def update(repo, entity) do
+    sql = SQL.update(entity)
+    result = transaction(repo, fn(conn) ->
+      :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
+    end)
+
+    case result do
+      { { :update, _ }, _ } -> :ok
+      { :error, _ } = err -> err
+    end
+  end
+
+  def delete(repo, entity) do
+    sql = SQL.delete(entity)
+    result = transaction(repo, fn(conn) ->
+      :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
+    end)
+
+    case result do
+      { { :delete, _ }, _ } -> :ok
+      { :error, _ } = err -> err
+    end
+  end
+
   defp transaction(repo, fun) do
     :poolboy.transaction(repo.__postgres__(:pool_name), fun)
   end

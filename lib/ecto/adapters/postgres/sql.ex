@@ -24,12 +24,12 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a select statement
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
-    select = select(query.select, query.froms)
-    from = from(query.froms)
-    where = where(query.wheres, query.froms)
+    select   = select(query.select, query.froms)
+    from     = from(query.froms)
+    where    = where(query.wheres, query.froms)
     order_by = order_by(query.order_bys, query.froms)
-    limit = if query.limit, do: limit(query.limit.expr)
-    offset = if query.offset, do: offset(query.offset.expr)
+    limit    = if query.limit, do: limit(query.limit.expr)
+    offset   = if query.offset, do: offset(query.offset.expr)
 
     [select, from, where, order_by, limit, offset]
       |> Enum.filter(fn x -> x != nil end)
@@ -39,7 +39,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an insert statement
   def insert(entity) do
     module = elem(entity, 0)
-    table = module.__ecto__(:table)
+    table  = module.__ecto__(:table)
     fields = module.__ecto__(:field_names)
 
     [_|values] = tuple_to_list(entity)
@@ -55,6 +55,36 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "INSERT INTO #{table} (" <> Enum.join(insert_fields, ", ") <> ")\n" <>
     "VALUES (" <> Enum.map_join(values, ", ", literal(&1)) <> ")\n" <>
     "RETURNING (" <> Enum.join(fields, ", ") <> ")"
+  end
+
+  # Generate SQL for an update statement
+  def update(entity) do
+    module      = elem(entity, 0)
+    table       = module.__ecto__(:table)
+    fields      = module.__ecto__(:field_names)
+    primary_key = module.__ecto__(:primary_key)
+
+    # Remove primary key from fields and values
+    [_|fields] = fields
+    [_|[primary_key_value|values]] = tuple_to_list(entity)
+
+    zipped = Enum.zip(fields, values)
+    zipped_sql = Enum.map_join(zipped, ", ", fn({k, v}) ->
+      "#{k} = #{literal(v)}"
+    end)
+
+    "UPDATE #{table} SET " <> zipped_sql <> "\n" <>
+    "WHERE #{primary_key} = #{literal(primary_key_value)}"
+  end
+
+  # Generate SQL for a delete statement
+  def delete(entity) do
+    module            = elem(entity, 0)
+    table             = module.__ecto__(:table)
+    primary_key       = module.__ecto__(:primary_key)
+    primary_key_value = elem(entity, 1)
+
+    "DELETE FROM #{table} WHERE #{primary_key} = #{literal(primary_key_value)}"
   end
 
   defp select(QueryExpr[expr: expr, binding: binding], vars) do

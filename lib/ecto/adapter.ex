@@ -32,7 +32,19 @@ defmodule Ecto.Adapter do
 
       # Fetch all post titles
       post = Post.new(title: "Ecto is great", text: "really, it is")
-      MyRepo.create(post)
+        |> MyRepo.create
   """
-  defcallback create(atom, term) :: :ok | { :error, term }
+  defcallback create(atom, tuple) :: { :ok, tuple } | { :error, term }
+
+  @doc """
+  Updates an entity using the primary key as key, if the entity has no primary
+  key `Ecto.NoPrimaryKey` will be raised.
+  """
+  defcallback update(atom, tuple) :: { :ok, tuple } | { :error, term }
+
+  @doc """
+  Deletes an entity using the primary key as key, if the entity has no primary
+  key `Ecto.NoPrimaryKey` will be raised.
+  """
+  defcallback delete(atom, tuple) :: :ok | { :error, term }
 end
