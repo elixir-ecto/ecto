@@ -1,17 +1,22 @@
 defmodule Ecto.Query.Validator do
   @moduledoc false
 
+  # This module does validation on the query checking that it's in a correct
+  # format, raising if it's not.
+
   alias Ecto.Query.BuilderUtil
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
 
+  # Adds type, file and line metadata to the exception
   defmacrop rescue_metadata(type, query, file, line, block) do
     quote location: :keep do
       try do
         unquote(block)
       rescue e in [Ecto.InvalidQuery] ->
-        raise Ecto.InvalidQuery, reason: e.reason, type: unquote(type),
-          file: unquote(file), line: unquote(line)
+        stacktrace = System.stacktrace
+        raise Ecto.InvalidQuery, [reason: e.reason, type: unquote(type),
+          file: unquote(file), line: unquote(line)], stacktrace
       end
     end
   end

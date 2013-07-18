@@ -229,6 +229,7 @@ defmodule Ecto.Query do
     Ecto.Query.Normalizer.normalize(query)
   end
 
+  # Merges two keyword queries
   @doc false
   def merge(Query[] = left, Query[] = right) do
     check_merge(left, right)
@@ -241,6 +242,7 @@ defmodule Ecto.Query do
            offset:    right.offset ]
   end
 
+  # Merges a keyword query with a query expression
   @doc false
   def merge(Query[] = query, type, expr) do
     check_merge(query, Query.new([{ type, expr }]))
@@ -255,6 +257,7 @@ defmodule Ecto.Query do
     end
   end
 
+  # Builds the quoted code for creating a keyword query, used by extend and from
   defp build_query(quoted, vars, kw, env) do
     unless Keyword.keyword?(kw) do
       raise Ecto.InvalidQuery, reason: "second argument to from has to be a keyword list"
@@ -280,6 +283,7 @@ defmodule Ecto.Query do
     quoted
   end
 
+  # Checks if a keyword query merge can be done
   defp check_merge(Query[] = left, Query[] = right) do
     if left.select && right.select do
       raise Ecto.InvalidQuery, reason: "only one select expression is allowed in query"

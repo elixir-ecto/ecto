@@ -1,4 +1,9 @@
 defmodule Ecto.Adapters.Postgres.SQL do
+  @moduledoc false
+
+  # This module handles the generation of SQL code from queries and for create,
+  # update and delete. All queries has to be normalized and validated for
+  # correctness before given to this module.
 
   require Ecto.Query
   alias Ecto.Query.Query
@@ -16,30 +21,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
     defp binop_to_binary(unquote(op)), do: unquote(str)
   end)
 
-  def select(query) do
-    gen_select(query)
-  end
-
-  def insert(entity) do
-    module = elem(entity, 0)
-    table = module.__ecto__(:table)
-    fields = module.__ecto__(:field_names)
-
-    [_|values] = tuple_to_list(entity)
-
-    if module.__ecto__(:primary_key) do
-      [_|insert_fields] = fields
-      [_|values] = values
-    else
-      insert_fields = fields
-    end
-
-    "INSERT INTO #{table} (" <> Enum.join(insert_fields, ", ") <> ")\n" <>
-    "VALUES (" <> Enum.map_join(values, ", ", literal(&1)) <> ")\n" <>
-    "RETURNING (" <> Enum.join(fields, ", ") <> ")"
-  end
-
-  defp gen_select(Query[] = query) do
+  # Generate SQL for a select statement
+  def select(Query[] = query) do
+    # Generate SQL for every query expression type and combine to one string
     select = select(query.select, query.froms)
     from = from(query.froms)
     where = where(query.wheres, query.froms)
@@ -50,6 +34,27 @@ defmodule Ecto.Adapters.Postgres.SQL do
     [select, from, where, order_by, limit, offset]
       |> Enum.filter(fn x -> x != nil end)
       |> Enum.join("\n")
+  end
+
+  # Generate SQL for an insert statement
+  def insert(entity) do
+    module = elem(entity, 0)
+    table = module.__ecto__(:table)
+    fields = module.__ecto__(:field_names)
+
+    [_|values] = tuple_to_list(entity)
+
+    # Remove primary key from insert fields and values
+    if module.__ecto__(:primary_key) do
+      [_|insert_fields] = fields
+      [_|values] = values
+    else
+      insert_fields = fields
+    end
+
+    "INSERT INTO #{table} (" <> Enum.join(insert_fields, ", ") <> ")\n" <>
+    "VALUES (" <> Enum.map_join(values, ", ", literal(&1)) <> ")\n" <>
+    "RETURNING (" <> Enum.join(fields, ", ") <> ")"
   end
 
   defp select(QueryExpr[expr: expr, binding: binding], vars) do

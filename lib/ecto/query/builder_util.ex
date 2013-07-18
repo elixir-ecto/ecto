@@ -1,8 +1,15 @@
 defmodule Ecto.Query.BuilderUtil do
   @moduledoc false
 
+  # Common functions for the query builder modules.
+
   @unary_ops [ :not, :+, :- ]
   @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/ ]
+
+  # Smart escapes a query expression. Everything that is a query expression will
+  # be escaped, foreign (elixir) expressions will not be escaped so that they
+  # will be evaluated in their place. This means that everything will foreign
+  # will be inserted as-is into the query.
 
   # var.x - where var is bound
   def escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] } = ast, vars)

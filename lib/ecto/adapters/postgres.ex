@@ -1,6 +1,9 @@
 defmodule Ecto.Adapters.Postgres do
   @moduledoc false
 
+  # This module handles the connections to the Postgres database with poolboy.
+  # Each repository has their own pool.
+
   @behaviour Ecto.Adapter
   @default_port 5432
 

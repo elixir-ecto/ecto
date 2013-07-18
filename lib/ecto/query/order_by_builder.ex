@@ -1,6 +1,9 @@
 defmodule Ecto.Query.OrderByBuilder do
   @moduledoc false
 
+  # Escapes an order by query to a list of `{ direction, field }` pairs. See
+  # `Ecto.Query.order_by for the allowed formats for the expression.
+
   def escape(list, vars) when is_list(list) do
     Enum.map(list, escape_field(&1, vars))
   end

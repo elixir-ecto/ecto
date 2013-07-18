@@ -3,8 +3,11 @@ defmodule Ecto.Query.SelectBuilder do
 
   alias Ecto.Query.BuilderUtil
 
-  # Handle any top level tuples or lists
+  # Escapes a select query to `{ :single | :tuple | :list | { :entity, var },
+  # escaped_query }` The first element in the pair specifies the transformation
+  # the adapter should perform on the results from the data store.
 
+  # Handle any top level tuples or lists
   def escape({ left, right }, vars) do
     { :tuple, [BuilderUtil.escape(left, vars), BuilderUtil.escape(right, vars)] }
   end
