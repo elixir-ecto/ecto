@@ -3,7 +3,9 @@ defmodule Ecto.Query do
   This module is the query DSL. Queries are used to fetch data from a repository
   (see `Ecto.Repo`).
 
-  ## Example
+  ## Examples
+
+      import Ecto.Query
 
          from w in Weather,
        where: w.prcp > 0,
@@ -12,28 +14,68 @@ defmodule Ecto.Query do
   The above example will create a query that can be run against a repository.
   `from` will bind the variable `w` to the entity `Weather` (see `Ecto.Entity`).
   If there are multiple from expressions the query will run for every
-  permutation of their combinations. `where` specifies a relation that will hold
-  all the results, multiple `where`s can be given. `select` selects which
-  results will be returned, a single variable can be given, that will return the
-  full entity, or a single field. Multiple fields can also be grouped in lists
-  or tuples. Only one `select` expression is allowed.
+  permutation of their combinations. `where` is used to filter the results,
+  multiple `where`s can be given. `select` selects which results will be returned,
+  a single variable can be given, that will return the full entity, or a single
+  field. Multiple fields can also be grouped in lists or tuples. Only one
+  `select` expression is allowed.
 
   Every variable that isn't bound in a query expression and every function or
-  operator that aren't query operators or functions will be treated as elixir
+  operator that aren't query operators or functions will be treated as Elixir
   code and their evaluated result will be inserted into the query.
 
-  There are two ways to create a query. Either the keyword query syntax that is
-  seen above, or by using the macros that a keyword query will expand to. The
-  above query will be expanded to the following:
+  This allows one to create dynamic queries:
+
+      def with_minimum_age(age) do
+        from u in User, where: u.age > age
+      end
+
+  In the example above, we will compare against the `age` given as argument.
+  Notice the `select` clause is optional, Ecto will automatically infer and
+  returns the user record (similar to `select: u`) from the query above.
+
+  ## Extensions
+
+  Queries are composable and can be extend dynamically. This allows you to
+  create specific queries given a parameter:
+
+      query = from w in Weather, select: w.city
+      if filter_by_prcp do
+        query = extend w in query, where: w.prcp > 0
+      end
+      Repo.all(query)
+
+  Or even create functions that extend an existing query:
+
+      def paginate(query, page, size) do
+        extend query,
+          limit: size,
+          offset: (page-1) * size
+      end
+
+      query |> paginate |> Repo.all
+
+  ## Query expansion
+
+  In the examples above, we have used the so-called **keywords query syntax**
+  to create a query. Our first example:
+
+      import Ecto.Query
+
+         from w in Weather,
+       where: w.prcp > 0,
+      select: w.city
+
+  Simply expands to the following **query expressions**:
 
       from(w in Weather) |> where([w], w.prcp > 0) |> select([w], w.city)
 
+  Which then expands to:
+
       select(where(from(w in Weather), [w], w.prcp > 0), [w], w.city)
 
-  The first argument specifies the bound variables that can be used in the query
-  expression in the second argument. As can be seen, queries can be composed
-  dynamically in any way and in any order. Keyword queries can also be composed
-  with the `extend` macro.
+  This module documents each of those macros, providing examples both
+  in the keywords query and in the query expression formats.
   """
 
   # TODO: Add query operators (and functions?) to documentation
@@ -49,24 +91,53 @@ defmodule Ecto.Query do
   alias Ecto.Query.LimitOffsetBuilder
 
   @doc """
-  Extends an existing a query by appending the given expressions to it. Takes an
-  optional list of bound variables that will rebind the variables from the
-  original query to their new names. The bindings are order dependent, that
-  means that each variable will be bound to the variable in the original query
-  that was defined in the same order as the binding was in its list.
+  Extends an existing a query by appending the given expressions to it.
 
-  ## Example
+  It takes an optional list of bound variables that will rebind the
+  variables from the original query to their new names. The bindings
+  are order dependent, that means that each variable will be bound to
+  the variable in the original query that was defined in the same order
+  as the binding was in its list.
+
+  ## Examples
+
       def paginate(query, page, size) do
         extend query,
           limit: size,
           offset: (page-1) * size
       end
+
+  The example above does not rebinding any variable, as they are not
+  required for `limit` and `offset`. However, extending a query with
+  where expression would require so:
+
+      def published(query) do
+        extend p in query, where: p.published_at != nil
+      end
+
+  Notice we have rebound the term `p`. In case the given query has
+  more than one `from` expression, each of them must be given in
+  the order they were bound:
+
+      def published_multi(query) do
+        extend [p,o] in query,
+        where: p.published_at != nil and o.published_at != nil
+      end
+
   """
   defmacro extend(original, bindings // [], kw) when is_list(kw) do
     build_query(original, bindings, kw, __CALLER__)
   end
 
-  @doc false
+  @doc """
+  Support for adding `from` expresions from inside keywords query:
+
+         from w in Weather,
+        from: c in City,
+       where: w.city == c.name,
+      select: { w.pcrp, c.state }
+
+  """
   defmacro from(query, binding, expr) do
     # TODO: change syntax: 'from(x in X)' -> 'from(X)'
     from_expr = FromBuilder.escape(expr, binding, __CALLER__)
@@ -84,10 +155,14 @@ defmodule Ecto.Query do
   If it is a query expression the first argument is the original query and the
   second argument the expression.
 
-  ## Examples
+  ## Keywords examples
+
       from(c in City, select: c)
 
+  ## Expressions examples
+
       from(c in City) |> select([c], c)
+
   """
   defmacro from({ :in, _, [_, _] } = from, kw) when is_list(kw) do
     caller = __CALLER__
@@ -107,8 +182,12 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Creates a query with a from query expression. See `query/2` from more
-  information.
+  Creates a query with a from query expression.
+
+  ## Examples
+
+      from(c in City)
+
   """
   defmacro from(expr) do
     quote do
@@ -128,11 +207,18 @@ defmodule Ecto.Query do
   the examples. A full entity can also be selected if the entity variable is the
   only thing in the expression.
 
-  ## Examples
+  ## Keywords examples
+
       from(c in City, select: c) # selects the entire entity
       from(c in City, select: { c.name, c.population })
       from(c in City, select: [c.name, c.county])
       from(c in City, select: { c.name, to_binary(40 + 2), 43 })
+
+  ## Expressions examples
+
+      from(c in City) |> select([c], c)
+      from(c in City) |> select([c], { c.name, c.country })
+
   """
   defmacro select(query, binding, expr)
       when is_list(binding) do
@@ -150,8 +236,14 @@ defmodule Ecto.Query do
   than one where expressions they will be combined in conjunction. A where
   expression have to evaluate to a boolean value.
 
-  ## Examples
+  ## Keywords examples
+
       from(c in City, where: c.state == "Sweden")
+
+  ## Expressions examples
+
+      from(c in City) |> where([c], c.state == "Sweden")
+
   """
   defmacro where(query, binding, expr)
       when is_list(binding) do
@@ -170,10 +262,16 @@ defmodule Ecto.Query do
   specified in a keyword list as shown in the examples. There can be several
   order by expressions in a query.
 
-  ## Examples
+  ## Keywords examples
+
       from(c in City, order_by: c.name, order_by: c.population)
       from(c in City, order_by: [c.name, c.population])
       from(c in City, order_by: [asc: c.name, desc: c.population])
+
+  ## Expressions examples
+
+      from(c in City) |> order_by([c], asc: c.name, desc: c.population)
+
   """
   defmacro order_by(query, binding, expr)
       when is_list(binding) do
@@ -190,8 +288,14 @@ defmodule Ecto.Query do
   Can be any expression but have to evaluate to an integer value. Can't include
   entity fields.
 
-  ## Examples
+  ## Keywords examples
+
       from(u in User, where: u.id == current_user, limit: 1)
+
+  ## Expressions examples
+
+      from(u in User) |> where(u.id == current_user) |> limit(1)
+
   """
   defmacro limit(query, binding // [], expr)
       when is_list(binding) do
@@ -207,12 +311,18 @@ defmodule Ecto.Query do
 
   @doc """
   An offset query expression. Limits the number of rows selected from the
-  entity. Can be any expression but have to evaluate to an integer value. Can't include
-  entity fields.
+  entity. Can be any expression but have to evaluate to an integer value.
+  Can't include entity fields.
 
-  ## Examples
+  ## Keywords examples
+
       # Get all posts on page 4
       from(p in Post, limit: 10, offset: 30)
+
+  ## Expressions examples
+
+      from(p in Post) |> limit(10) |> offset(30)
+
   """
   defmacro offset(query, binding // [], expr)
       when is_list(binding) do
