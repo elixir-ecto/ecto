@@ -11,6 +11,13 @@ defmodule Ecto.Adapter do
   or just `:ok` if nothing needs to be done. Return `{ :error, error }` if
   something went wrong.
   """
+  defcallback start(atom) :: { :ok, pid } | :ok | { :error, term }
+
+  @doc """
+  Should start any connection pooling or supervision and return `{ :ok, pid }`
+  or just `:ok` if nothing needs to be done. Return `{ :error, error }` if
+  something went wrong.
+  """
   defcallback start_link(atom) :: { :ok, pid } | :ok | { :error, term }
 
   @doc """
