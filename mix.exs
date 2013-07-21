@@ -5,6 +5,7 @@ defmodule Ecto.Mixfile do
     [ app: :ecto,
       version: "0.0.1",
       deps: deps(Mix.env),
+      env: envs,
       elixir: "~> 0.10.0" ]
   end
 
@@ -20,5 +21,9 @@ defmodule Ecto.Mixfile do
     deps(:prod) ++
       [ { :ex_doc, github: "elixir-lang/ex_doc" },
         { :pgsql, github: "semiocast/pgsql" } ]
+  end
+
+  defp envs do
+    [ pg: [test_paths: ["integration_test/pg"] ] ]
   end
 end

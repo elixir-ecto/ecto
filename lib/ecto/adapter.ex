@@ -14,6 +14,11 @@ defmodule Ecto.Adapter do
   defcallback start_link(atom) :: { :ok, pid } | :ok | { :error, term }
 
   @doc """
+  Should stop any connection pooling started with `start_link/1`.
+  """
+  defcallback stop(atom) :: :ok
+
+  @doc """
   Should fetch results from the data store based on the given query.
 
   ## Example

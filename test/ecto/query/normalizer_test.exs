@@ -24,7 +24,7 @@ defmodule Ecto.Query.NormalizerTest do
 
   test "auto select entity" do
     query = from(p in PostEntity) |> normalize
-    assert { { :entity, :entity }, { :{}, _, [:entity, _, nil] } } = query.select.expr
+    assert { { :entity, :entity }, { :entity, [], nil } } = query.select.expr
     assert [:entity] == query.select.binding
   end
 

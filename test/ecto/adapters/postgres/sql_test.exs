@@ -183,7 +183,7 @@ defmodule Ecto.Adapters.Postgre.SQLTest do
 
   test "insert" do
     query = SQL.insert(Entity[x: 123, y: "456"])
-    assert query == "INSERT INTO entity (x, y)\nVALUES (123, '456')\nRETURNING (id, x, y)"
+    assert query == "INSERT INTO entity (x, y)\nVALUES (123, '456')\nRETURNING id, x, y"
   end
 
   test "update" do

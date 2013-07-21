@@ -54,7 +54,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
     "INSERT INTO #{table} (" <> Enum.join(insert_fields, ", ") <> ")\n" <>
     "VALUES (" <> Enum.map_join(values, ", ", literal(&1)) <> ")\n" <>
-    "RETURNING (" <> Enum.join(fields, ", ") <> ")"
+    "RETURNING " <> Enum.join(fields, ", ")
   end
 
   # Generate SQL for an update statement
