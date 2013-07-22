@@ -11,8 +11,8 @@ defmodule Ecto.RepoTest do
 
   test "parse url" do
     assert Repo.parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b", 0) == [
-           username: "eric",
            password: "hunter2",
+           username: "eric",
            hostname: "host",
            database: "mydb",
            port: 12345,
@@ -45,6 +45,6 @@ defmodule Ecto.RepoTest do
 
   test "optional password" do
     url = Repo.parse_url("ecto://eric@host:123/mydb", 0)
-    assert { :password, nil } in url
+    refute url[:password]
   end
 end

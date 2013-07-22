@@ -146,25 +146,27 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp prepare_start(repo) do
-    case :application.ensure_started(:pgsql) do
-        :ok -> :ok
-        { :error, reason } ->
-          raise "could not start :pgsql application, reason: #{inspect reason}"
-      end
-
-      pool_name = repo.__postgres__(:pool_name)
-      opts      = Ecto.Repo.parse_url(repo.url, @default_port)
-
-      { pool_opts, worker_opts } = Dict.split(opts, [:size, :max_overflow])
-      pool_opts = pool_opts
-        |> Keyword.update(:size, 5, binary_to_integer(&1))
-        |> Keyword.update(:max_overflow, 10, binary_to_integer(&1))
-
-      pool_opts = pool_opts ++ [
-        name: { :local, pool_name },
-        worker_module: :pgsql_connection ]
-      worker_opts = fix_worker_opts(worker_opts)
-
-      { pool_opts, worker_opts }
+    # Use :applcation.ensure_started for R16B01
+    case :application.start(:pgsql) do
+      :ok -> :ok
+      { :error, { :already_started, _ } } -> :ok
+      { :error, reason } ->
+        raise "could not start :pgsql application, reason: #{inspect reason}"
     end
+
+    pool_name = repo.__postgres__(:pool_name)
+    opts      = Ecto.Repo.parse_url(repo.url, @default_port)
+
+    { pool_opts, worker_opts } = Dict.split(opts, [:size, :max_overflow])
+    pool_opts = pool_opts
+      |> Keyword.update(:size, 5, binary_to_integer(&1))
+      |> Keyword.update(:max_overflow, 10, binary_to_integer(&1))
+
+    pool_opts = pool_opts ++ [
+      name: { :local, pool_name },
+      worker_module: :pgsql_connection ]
+    worker_opts = fix_worker_opts(worker_opts)
+
+    { pool_opts, worker_opts }
+  end
 end

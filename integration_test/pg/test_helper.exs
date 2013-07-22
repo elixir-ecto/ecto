@@ -7,7 +7,7 @@ defmodule Ecto.PgTest.TestRepo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def url do
-    "ecto://ecto_test:ecto_test@localhost/ecto_test?size=1&max_overflow=0"
+    "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
   end
 end
 
@@ -40,16 +40,22 @@ end
 
 
 setup_cmds = [
-  "dropdb ecto_test",
-  "createdb ecto_test -O ecto_test"
+  "psql -U postgres -c \"DROP DATABASE IF EXISTS ecto_test;\"",
+  "psql -U postgres -c \"CREATE DATABASE ecto_test;\""
 ]
 
 Enum.each(setup_cmds, fn(cmd) ->
-  output = System.cmd(cmd)
-  if output != "" do
-    IO.puts "Test setup command error'd: `#{cmd}`"
-    IO.puts output
-    System.halt
+  key = :ecto_setup_cmd_output
+  Process.put(key, "")
+  status = Mix.Shell.cmd(cmd, fn(data) ->
+    current = Process.get(key)
+    Process.put(key, current <> data)
+  end)
+
+  if status != 0 do
+    IO.puts("Test setup command error'd: `#{cmd}`")
+    IO.puts(Process.get(key))
+    System.halt(1)
   end
 end)
 
@@ -64,6 +70,6 @@ Enum.each(setup_database, fn(sql) ->
   if match?({ :error, _ }, result) do
     IO.puts "Test database setup SQL error'd: `#{sql}`"
     IO.inspect result
-    System.halt
+    System.halt(1)
   end
 end)

@@ -101,14 +101,17 @@ defmodule Ecto.Repo do
 
     destructure [username, password], String.split(info.userinfo, ":")
     database = String.slice(info.path, 1, size(info.path))
-    opts = URI.decode_query(info.query || "") |> bindict_to_kw
+    query = URI.decode_query(info.query || "") |> bindict_to_kw
     port = info.port || default_port
 
-    [ username: username,
-      password: password,
+    opts = [
+      username: username,
       hostname: info.host,
       database: database,
-      port: port ] ++ opts
+      port: port ]
+
+    if password, do: opts = [password: password] ++ opts
+    opts ++ query
   end
 
   defp bindict_to_kw(dict) do
