@@ -56,9 +56,9 @@ defmodule Ecto.Adapters.Postgres do
 
     case result do
       { { :insert, _, _ }, [{ primary_key }] } ->
-        { :ok, entity.primary_key(primary_key) }
+        { :ok, primary_key }
       { { :insert, _, _ }, _ } ->
-        { :ok, entity }
+        { :ok, nil }
       { :error, _ } = err -> err
     end
   end

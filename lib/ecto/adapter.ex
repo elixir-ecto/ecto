@@ -24,9 +24,10 @@ defmodule Ecto.Adapter do
   defcallback all(module, Ecto.Query.t) :: { :ok, [Record.t] } | { :error, term }
 
   @doc """
-  Should store a single new entity in the data store.
+  Should store a single new entity in the data store. And return a primary key
+  if one was created for the entity.
   """
-  defcallback create(module, Record.t) :: { :ok, Record.t } | { :error, term }
+  defcallback create(module, Record.t) :: nil | integer | { :error, term }
 
   @doc """
   Should update an entity using the primary key as key.
