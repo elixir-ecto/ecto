@@ -33,27 +33,27 @@ defmodule Ecto.Repo do
       @behaviour Ecto.Repo
 
       def start_link do
-        Ecto.Repo.start_link(__MODULE__)
+        Ecto.Repo.start_link(__MODULE__, unquote(adapter))
       end
 
       def stop do
-        Ecto.Repo.stop(__MODULE__)
+        Ecto.Repo.stop(__MODULE__, unquote(adapter))
       end
 
       def all(query) do
-        Ecto.Repo.all(__MODULE__, query)
+        Ecto.Repo.all(__MODULE__, unquote(adapter), query)
       end
 
       def create(entity) do
-        Ecto.Repo.create(__MODULE__, entity)
+        Ecto.Repo.create(__MODULE__, unquote(adapter), entity)
       end
 
       def update(entity) do
-        Ecto.Repo.update(__MODULE__, entity)
+        Ecto.Repo.update(__MODULE__, unquote(adapter), entity)
       end
 
       def delete(entity) do
-        Ecto.Repo.delete(__MODULE__, entity)
+        Ecto.Repo.delete(__MODULE__, unquote(adapter), entity)
       end
 
       def adapter do
@@ -72,18 +72,12 @@ defmodule Ecto.Repo do
   @doc """
   Starts any connection pooling or supervision if the adapter implements that.
   """
-  @spec start_link(atom) :: { :ok, pid } | :ok | { :error, term }
-  def start_link(module) do
-    module.adapter.start_link(module)
-  end
+  defcallback start_link() :: { :ok, pid } | :ok | { :error, term }
 
   @doc """
   Stops any connection pooling or supervision started with `start_link/1`.
   """
-  @spec stop(atom) :: :ok
-  def stop(module) do
-    module.adapter.stop(module)
-  end
+  defcallback stop() :: :ok
 
   @doc """
   Fetches all results from the data store based on the given query.
@@ -95,12 +89,7 @@ defmodule Ecto.Repo do
            select: post.title
       MyRepo.all(query)
   """
-  @spec all(atom, term) :: { :ok, term } | { :error, term }
-  def all(module, query) do
-    query = Ecto.Query.normalize(query)
-    Ecto.Query.validate(query)
-    module.adapter.all(module, query)
-  end
+  defcallback all(term) :: { :ok, term } | { :error, term }
 
   @doc """
   Stores a single new entity in the data store and returns its stored
@@ -111,35 +100,69 @@ defmodule Ecto.Repo do
       post = Post.new(title: "Ecto is great", text: "really, it is")
         |> MyRepo.create
   """
-  @spec create(atom, tuple) :: { :ok, tuple } | { :error, term }
-  def create(module, entity) do
-    module.adapter.create(module, entity)
-  end
+  defcallback create(Record.t) :: { :ok, Record.t } | { :error, term }
 
   @doc """
   Updates an entity using the primary key as key, if the entity has no primary
   key `Ecto.NoPrimaryKey` will be raised.
+
+  ## Example
+
+      [post] = from p in Post, where: p.id == 42
+      post = post.title("New title")
+      MyRepo.update(post)
   """
-  @spec update(atom, tuple) :: { :ok, tuple } | { :error, term }
-  def update(module, entity) do
-    entity_module = elem(entity, 0)
-    unless entity_module.__ecto__(:primary_key) do
-      raise Ecto.NoPrimaryKey, entity: entity, reason: "can't be updated"
-    end
-    module.adapter.update(module, entity)
-  end
+  defcallback update(Record.t) :: { :ok, Record.t } | { :error, term }
 
   @doc """
   Deletes an entity using the primary key as key, if the entity has no primary
   key `Ecto.NoPrimaryKey` will be raised.
+
+  ## Example
+
+      [post] = from p in Post, where: p.id == 42
+      MyRepo.delete(post)
   """
-  @spec delete(atom, tuple) :: :ok | { :error, term }
-  def delete(module, entity) do
+  defcallback delete(Record.t) :: :ok | { :error, term }
+
+  @doc false
+  def start_link(module, adapter) do
+    adapter.start_link(module)
+  end
+
+  @doc false
+  def stop(module, adapter) do
+    adapter.stop(module)
+  end
+
+  @doc false
+  def all(module, adapter, query) do
+    query = Ecto.Query.normalize(query)
+    Ecto.Query.validate(query)
+    adapter.all(module, query)
+  end
+
+  @doc false
+  def create(module, adapter, entity) do
+    adapter.create(module, entity)
+  end
+
+  @doc false
+  def update(module, adapter, entity) do
+    entity_module = elem(entity, 0)
+    unless entity_module.__ecto__(:primary_key) do
+      raise Ecto.NoPrimaryKey, entity: entity, reason: "can't be updated"
+    end
+    adapter.update(module, entity)
+  end
+
+  @doc false
+  def delete(module, adapter, entity) do
     entity_module = elem(entity, 0)
     unless entity_module.__ecto__(:primary_key) do
       raise Ecto.NoPrimaryKey, entity: entity, reason: "can't be deleted"
     end
-    module.adapter.delete(module, entity)
+    adapter.delete(module, entity)
   end
 
   @doc false
