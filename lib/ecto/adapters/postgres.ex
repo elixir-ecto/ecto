@@ -19,6 +19,7 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  @doc false
   def start(repo) do
     { pool_opts, worker_opts } = prepare_start(repo)
     :poolboy.start(pool_opts, worker_opts)

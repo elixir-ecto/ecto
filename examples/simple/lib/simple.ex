@@ -46,6 +46,6 @@ defmodule Simple do
     query = from w in Simple.Weather,
           where: w.prcp > 0 or w.prcp == nil,
          select: w
-    Simple.MyRepo.all(query)
+    Simple.MyRepo.fetch(query)
   end
 end
