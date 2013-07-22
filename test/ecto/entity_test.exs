@@ -47,6 +47,13 @@ defmodule Ecto.EntityTest do
            [id: nil, name: "eric", email: nil]
   end
 
+  test "primary_key accessor" do
+    entity = MyEntity[id: 123]
+    assert 123 == entity.primary_key
+    assert MyEntity[id: 124] = entity.primary_key(124)
+    assert MyEntity[id: 125] = entity.update_primary_key(&1 + 2)
+  end
+
   test "field name clash" do
     assert_raise ArgumentError, "field `name` was already set on entity", fn ->
       defmodule EntityFieldNameClash do

@@ -18,6 +18,10 @@ defmodule Ecto.Entity do
           field :age, :integer
         end
       end
+
+  Accessors and updater functions for the primary key will be generated on the
+  entity, specifically `primary_key/1`, `primary_key/2` and
+  `update_primary_key/2`.
   """
 
   @doc """
@@ -93,6 +97,10 @@ defmodule Ecto.Entity do
       unquote(fields_quote)
       def __ecto__(:field, _), do: nil
       def __ecto__(:field_type, _), do: nil
+
+      def primary_key(record), do: unquote(primary_key)(record)
+      def primary_key(value, record), do: unquote(primary_key)(value, record)
+      def update_primary_key(fun, record), do: unquote(:"update_#{primary_key}")(fun, record)
     end
   end
 
