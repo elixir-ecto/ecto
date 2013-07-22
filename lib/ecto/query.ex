@@ -1,6 +1,6 @@
 defmodule Ecto.Query do
   @moduledoc """
-  This module is the query DSL. Queries are used to fetch data from a repository
+  This module is the query DSL. Queries are used to all data from a repository
   (see `Ecto.Repo`).
 
   ## Examples

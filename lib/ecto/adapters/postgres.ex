@@ -34,7 +34,7 @@ defmodule Ecto.Adapters.Postgres do
     :poolboy.stop(pool_name)
   end
 
-  def fetch(repo, Query[] = query) do
+  def all(repo, Query[] = query) do
     sql = SQL.select(query)
     result = transaction(repo, sql)
 

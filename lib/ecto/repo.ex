@@ -44,10 +44,10 @@ defmodule Ecto.Repo do
         unquote(adapter).stop(__MODULE__)
       end
 
-      def fetch(query) do
+      def all(query) do
         query = Ecto.Query.normalize(query)
         Ecto.Query.validate(query)
-        unquote(adapter).fetch(__MODULE__, query)
+        unquote(adapter).all(__MODULE__, query)
       end
 
       def create(entity) do

@@ -26,16 +26,16 @@ defmodule Ecto.Adapter do
   defcallback stop(atom) :: :ok
 
   @doc """
-  Should fetch results from the data store based on the given query.
+  Should fetch all results from the data store based on the given query.
 
   ## Example
 
       # Fetch all post titles
       query = from p in Post,
            select: post.title
-      MyRepo.fetch(query)
+      MyRepo.all(query)
   """
-  defcallback fetch(atom, term) :: { :ok, term } | { :error, term }
+  defcallback all(atom, term) :: { :ok, term } | { :error, term }
 
   @doc """
   Stores a single new entity in the data store.

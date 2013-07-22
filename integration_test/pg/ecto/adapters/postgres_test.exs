@@ -7,15 +7,15 @@ defmodule Ecto.Adapters.PostgresTest do
   alias Ecto.PgTest.Post
   import Ecto.Query
 
-  test "fetch empty" do
-    assert [] == TestRepo.fetch(from p in Post)
+  test "all empty" do
+    assert [] == TestRepo.all(from p in Post)
   end
 
-  test "create and fetch single" do
+  test "create and all single" do
     post = Post[id: 1, title: "The shiny new Ecto", text: "coming soon..."]
 
     assert post == TestRepo.create(Post.new(title: post.title, text: post.text))
 
-    assert [post] == TestRepo.fetch(from p in Post)
+    assert [post] == TestRepo.all(from p in Post)
   end
 end
