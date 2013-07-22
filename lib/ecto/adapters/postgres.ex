@@ -44,7 +44,8 @@ defmodule Ecto.Adapters.Postgres do
         { return_type, _ } = query.select.expr
         binding = query.select.binding
         vars = BuilderUtil.merge_binding_vars(binding, query.froms)
-        Enum.map(rows, transform_row(&1, return_type, vars))
+        entities = Enum.map(rows, transform_row(&1, return_type, vars))
+        { :ok, entities }
       { :error, _ } = err -> err
     end
   end
@@ -54,9 +55,10 @@ defmodule Ecto.Adapters.Postgres do
     result = transaction(repo, sql)
 
     case result do
-      { { :insert, _, _ }, [values] } ->
-        module = elem(entity, 0)
-        list_to_tuple([module|tuple_to_list(values)])
+      { { :insert, _, _ }, [{ primary_key }] } ->
+        { :ok, entity.primary_key(primary_key) }
+      { { :insert, _, _ }, _ } ->
+        { :ok, entity }
       { :error, _ } = err -> err
     end
   end

@@ -1,9 +1,8 @@
 ExUnit.start
 
-alias Ecto.PgTest.TestRepo
 alias Ecto.Adapters.Postgres
 
-defmodule Ecto.PgTest.TestRepo do
+defmodule TestRepo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def url do
@@ -11,7 +10,7 @@ defmodule Ecto.PgTest.TestRepo do
   end
 end
 
-defmodule Ecto.PgTest.Post do
+defmodule Post do
   use Ecto.Entity
 
   schema "posts" do

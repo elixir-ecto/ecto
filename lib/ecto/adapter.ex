@@ -21,7 +21,7 @@ defmodule Ecto.Adapter do
   @doc """
   Should fetch all results from the data store based on the given query.
   """
-  defcallback all(module, term) :: { :ok, term } | { :error, term }
+  defcallback all(module, Ecto.Query.t) :: { :ok, [Record.t] } | { :error, term }
 
   @doc """
   Should store a single new entity in the data store.
@@ -31,7 +31,7 @@ defmodule Ecto.Adapter do
   @doc """
   Should update an entity using the primary key as key.
   """
-  defcallback update(module, Record.t) :: { :ok, Record.t } | { :error, term }
+  defcallback update(module, Record.t) :: :ok | { :error, term }
 
   @doc """
   Should delete an entity using the primary key as key.

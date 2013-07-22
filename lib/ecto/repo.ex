@@ -80,7 +80,9 @@ defmodule Ecto.Repo do
   defcallback stop() :: :ok
 
   @doc """
-  Fetches all results from the data store based on the given query.
+  Fetches all results from the data store based on the given query. May raise
+  `Ecto.InvalidQuery` if query validation fails or `Ecto.AdapterError` if there
+  is an adapter error.
 
   ## Example
 
@@ -89,22 +91,23 @@ defmodule Ecto.Repo do
            select: post.title
       MyRepo.all(query)
   """
-  defcallback all(term) :: { :ok, term } | { :error, term }
+  defcallback all(Ecto.Query.t) :: [Record.t] | no_return
 
   @doc """
   Stores a single new entity in the data store and returns its stored
-  representation.
+  representation. May raise `Ecto.AdapterError` if there is an adapter error.
 
   ## Example
 
       post = Post.new(title: "Ecto is great", text: "really, it is")
         |> MyRepo.create
   """
-  defcallback create(Record.t) :: { :ok, Record.t } | { :error, term }
+  defcallback create(Record.t) :: Record.t | no_return
 
   @doc """
-  Updates an entity using the primary key as key, if the entity has no primary
-  key `Ecto.NoPrimaryKey` will be raised.
+  Updates an entity using the primary key as key. If the entity has no primary
+  key `Ecto.NoPrimaryKey` will be raised or raise `Ecto.AdapterError` if there
+  is an adapter error.
 
   ## Example
 
@@ -112,57 +115,59 @@ defmodule Ecto.Repo do
       post = post.title("New title")
       MyRepo.update(post)
   """
-  defcallback update(Record.t) :: { :ok, Record.t } | { :error, term }
+  defcallback update(Record.t) :: :ok | no_return
 
   @doc """
-  Deletes an entity using the primary key as key, if the entity has no primary
-  key `Ecto.NoPrimaryKey` will be raised.
+  Deletes an entity using the primary key as key. If the entity has no primary
+  key `Ecto.NoPrimaryKey` will be raised or raise `Ecto.AdapterError` if there
+  is an adapter error.
 
   ## Example
 
       [post] = from p in Post, where: p.id == 42
       MyRepo.delete(post)
   """
-  defcallback delete(Record.t) :: :ok | { :error, term }
+  defcallback delete(Record.t) :: :ok | no_return
 
   @doc false
-  def start_link(module, adapter) do
-    adapter.start_link(module)
+  def start_link(repo, adapter) do
+    adapter.start_link(repo)
   end
 
   @doc false
-  def stop(module, adapter) do
-    adapter.stop(module)
+  def stop(repo, adapter) do
+    adapter.stop(repo)
   end
 
   @doc false
-  def all(module, adapter, query) do
+  def all(repo, adapter, query) do
     query = Ecto.Query.normalize(query)
     Ecto.Query.validate(query)
-    adapter.all(module, query)
+    reason = "fetching entities"
+    adapter.all(repo, query) |> check_result(adapter, reason)
   end
 
   @doc false
-  def create(module, adapter, entity) do
-    adapter.create(module, entity)
+  def create(repo, adapter, entity) do
+    reason = "creating an entity"
+    validate_entity(entity, reason)
+    adapter.create(repo, entity) |> check_result(adapter, reason)
   end
 
   @doc false
-  def update(module, adapter, entity) do
-    entity_module = elem(entity, 0)
-    unless entity_module.__ecto__(:primary_key) do
-      raise Ecto.NoPrimaryKey, entity: entity, reason: "can't be updated"
-    end
-    adapter.update(module, entity)
+  def update(repo, adapter, entity) do
+    reason = "updating an entity"
+    check_primary_key(entity, reason)
+    validate_entity(entity, reason)
+    adapter.update(repo, entity) |> check_result(adapter, reason)
   end
 
   @doc false
-  def delete(module, adapter, entity) do
-    entity_module = elem(entity, 0)
-    unless entity_module.__ecto__(:primary_key) do
-      raise Ecto.NoPrimaryKey, entity: entity, reason: "can't be deleted"
-    end
-    adapter.delete(module, entity)
+  def delete(repo, adapter, entity) do
+    reason = "deleting an entity"
+    check_primary_key(entity, reason)
+    validate_entity(entity, reason)
+    adapter.delete(repo, entity) |> check_result(adapter, reason)
   end
 
   @doc false
@@ -201,4 +206,46 @@ defmodule Ecto.Repo do
       [{ binary_to_atom(k), v } | acc]
     end)
   end
+
+  defp check_result(result, adapter, reason) do
+    case result do
+      :ok -> :ok
+      { :ok, res } -> res
+      { :error, err } ->
+        raise Ecto.AdapterError, adapter: adapter, reason: reason, internal: err
+    end
+  end
+
+  defp check_primary_key(entity, reason) do
+    module = elem(entity, 0)
+    unless module.__ecto__(:primary_key) do
+      raise Ecto.NoPrimaryKey, entity: entity, reason: reason
+    end
+  end
+
+  defp validate_entity(entity, reason) do
+    [module|values] = tuple_to_list(entity)
+    primary_key = module.__ecto__(:primary_key)
+    zipped = Enum.zip(values, module.__ecto__(:field_names))
+
+    Enum.each(zipped, fn({ value, field }) ->
+      type = module.__ecto__(:field_type, field)
+      unless field == primary_key or check_value_type(value, type) do
+        raise Ecto.ValidationError, entity: entity, field: field,
+          type: type(value), expected_type: type, reason: reason
+      end
+    end)
+  end
+
+  defp check_value_type(value, :boolean) when is_boolean(value), do: true
+  defp check_value_type(value, :string) when is_binary(value), do: true
+  defp check_value_type(value, :integer) when is_integer(value), do: true
+  defp check_value_type(value, :float) when is_float(value), do: true
+  defp check_value_type(_value, _type), do: false
+
+  defp type(value) when is_boolean(value), do: :boolean
+  defp type(value) when is_binary(value), do: :string
+  defp type(value) when is_integer(value), do: :integer
+  defp type(value) when is_float(value), do: :float
+  defp type(_value), do: :unknown
 end

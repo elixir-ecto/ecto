@@ -80,6 +80,8 @@ defmodule Ecto.Query do
 
   # TODO: Add query operators (and functions?) to documentation
 
+  @type t :: Query.t
+
   defrecord Query, froms: [], wheres: [], select: nil, order_bys: [],
                    limit: nil, offset: nil
   defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil

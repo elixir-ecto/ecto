@@ -38,14 +38,15 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for an insert statement
   def insert(entity) do
-    module = elem(entity, 0)
-    table  = module.__ecto__(:table)
-    fields = module.__ecto__(:field_names)
+    module      = elem(entity, 0)
+    table       = module.__ecto__(:table)
+    fields      = module.__ecto__(:field_names)
+    primary_key = module.__ecto__(:primary_key)
 
     [_|values] = tuple_to_list(entity)
 
     # Remove primary key from insert fields and values
-    if module.__ecto__(:primary_key) do
+    if primary_key do
       [_|insert_fields] = fields
       [_|values] = values
     else
@@ -53,8 +54,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
     end
 
     "INSERT INTO #{table} (" <> Enum.join(insert_fields, ", ") <> ")\n" <>
-    "VALUES (" <> Enum.map_join(values, ", ", literal(&1)) <> ")\n" <>
-    "RETURNING " <> Enum.join(fields, ", ")
+    "VALUES (" <> Enum.map_join(values, ", ", literal(&1)) <> ")" <>
+    if primary_key, do: "\nRETURNING #{primary_key}", else: ""
   end
 
   # Generate SQL for an update statement

@@ -3,19 +3,28 @@ Code.require_file "../../test_helper.exs", __DIR__
 defmodule Ecto.Adapters.PostgresTest do
   use Ecto.PgTest.Case
 
-  alias Ecto.PgTest.TestRepo
-  alias Ecto.PgTest.Post
   import Ecto.Query
 
-  test "all empty" do
+  test "fetch empty" do
     assert [] == TestRepo.all(from p in Post)
   end
 
-  test "create and all single" do
-    post = Post[id: 1, title: "The shiny new Ecto", text: "coming soon..."]
+  test "create and fetch single" do
+    assert Post[id: id] = TestRepo.create(Post[title: "The shiny new Ecto", text: "coming soon..."])
 
-    assert post == TestRepo.create(Post.new(title: post.title, text: post.text))
+    assert is_integer(id)
 
-    assert [post] == TestRepo.all(from p in Post)
+    assert [Post[id: ^id, title: "The shiny new Ecto", text: "coming soon..."]] =
+           TestRepo.all(from p in Post)
+  end
+
+  test "create and delete single, fetch empty" do
+    post = Post[title: "The shiny new Ecto", text: "coming soon..."]
+
+    assert Post[] = TestRepo.create(post)
+    assert Post[] = created = TestRepo.create(post)
+    assert :ok == TestRepo.delete(created)
+
+    assert [Post[]] = TestRepo.all(from p in Post)
   end
 end
