@@ -221,7 +221,7 @@ defmodule Ecto.Repo do
 
   defp check_primary_key(entity, reason) do
     module = elem(entity, 0)
-    unless module.__ecto__(:primary_key) do
+    unless module.__ecto__(:primary_key) && entity.primary_key do
       raise Ecto.NoPrimaryKey, entity: entity, reason: reason
     end
   end

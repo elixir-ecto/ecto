@@ -17,7 +17,7 @@ end
 
 defexception Ecto.NoPrimaryKey, [:entity, :reason] do
   def message(Ecto.NoPrimaryKey[entity: entity, reason: reason]) do
-    "entity `#{elem(entity, 0)}` #{reason} because it has no primary key"
+    "entity `#{elem(entity, 0)}` failed: #{reason} because it has no primary key"
   end
 end
 
