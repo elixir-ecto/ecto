@@ -38,7 +38,6 @@ defmodule Ecto.PgTest.Case do
   end
 end
 
-
 setup_cmds = [
   "psql -U postgres -c \"DROP DATABASE IF EXISTS ecto_test;\"",
   "psql -U postgres -c \"CREATE DATABASE ecto_test;\""
@@ -53,8 +52,19 @@ Enum.each(setup_cmds, fn(cmd) ->
   end)
 
   if status != 0 do
-    IO.puts("Test setup command error'd: `#{cmd}`")
-    IO.puts(Process.get(key))
+    IO.puts """
+    Test setup command error'd:
+
+        #{cmd}
+
+    With:
+
+        #{Process.get(key)}
+    Please verify the user "postgres" exists and it has permissions
+    to create databases. If not, you can create a new user with:
+
+        createuser postgres --no-password -d
+    """
     System.halt(1)
   end
 end)
@@ -68,8 +78,8 @@ setup_database = [
 Enum.each(setup_database, fn(sql) ->
   result = Postgres.query(TestRepo, sql)
   if match?({ :error, _ }, result) do
-    IO.puts "Test database setup SQL error'd: `#{sql}`"
-    IO.inspect result
+    IO.puts("Test database setup SQL error'd: `#{sql}`")
+    IO.inspect(result)
     System.halt(1)
   end
 end)
