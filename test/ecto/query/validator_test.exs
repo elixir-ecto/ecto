@@ -5,6 +5,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   import Ecto.Query
   alias Ecto.Query.Query
+  alias Ecto.Queryable
   alias Ecto.Query.QueryUtil
 
   defmodule PostEntity do

@@ -88,16 +88,15 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "DELETE FROM #{table} WHERE #{primary_key} = #{literal(primary_key_value)}"
   end
 
-  defp select(QueryExpr[expr: expr, binding: binding], vars) do
+  defp select(QueryExpr[expr: expr, binding: binding], entities) do
     { _, clause } = expr
-    vars = QueryUtil.merge_binding_vars(binding, vars)
+    vars = QueryUtil.merge_binding_vars(binding, entities)
     "SELECT " <> select_clause(clause, vars)
   end
 
-  defp from(froms) do
-    binds = Enum.map_join(froms, ", ", fn({ var, entity }) ->
-      table = entity.__ecto__(:dataset)
-      "#{table} AS #{var}"
+  defp from(entities) do
+    binds = Enum.map_join(entities, ", ", fn(entity) ->
+      entity.__ecto__(:dataset) |> to_binary
     end)
 
     "FROM " <> binds
@@ -105,10 +104,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp where([], _vars), do: nil
 
-  defp where(wheres, vars) do
+  defp where(wheres, entities) do
     exprs = Enum.map_join(wheres, " AND ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      rebound_vars = QueryUtil.merge_binding_vars(binding, vars)
-      "(" <> expr(expr, rebound_vars) <> ")"
+      vars = QueryUtil.merge_binding_vars(binding, entities)
+      "(" <> expr(expr, vars) <> ")"
     end)
 
     "WHERE " <> exprs
@@ -116,18 +115,19 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp order_by([], _vars), do: nil
 
-  defp order_by(order_bys, vars) do
+  defp order_by(order_bys, entities) do
     exprs = Enum.map_join(order_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      rebound_vars = QueryUtil.merge_binding_vars(binding, vars)
-      Enum.map_join(expr, ", ", order_by_expr(&1, rebound_vars))
+      vars = QueryUtil.merge_binding_vars(binding, entities)
+      Enum.map_join(expr, ", ", order_by_expr(&1, vars))
     end)
 
     "ORDER BY " <> exprs
   end
 
   defp order_by_expr({ dir, var, field }, vars) do
-    { var, _ } = Keyword.fetch!(vars, var)
-    str = "#{var}.#{field}"
+    entity = Keyword.fetch!(vars, var)
+    table = entity.__ecto__(:dataset)
+    str = "#{table}.#{field}"
     case dir do
       nil   -> str
       :asc  -> str <> " ASC"
@@ -144,8 +144,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp expr({ :., _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
-    { var, _ } = Keyword.fetch!(vars, var)
-    "#{var}.#{field}"
+    entity = Keyword.fetch!(vars, var)
+    table = entity.__ecto__(:dataset)
+    "#{table}.#{field}"
   end
 
   defp expr({ :!, _, [expr] }, vars) do
@@ -154,9 +155,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Expression builders make sure that we only find undotted vars at the top level
   defp expr({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
-    { var, entity } = Keyword.fetch!(vars, var)
+    entity = Keyword.fetch!(vars, var)
+    table = entity.__ecto__(:dataset)
     fields = entity.__ecto__(:field_names)
-    Enum.map_join(fields, ", ", fn(field) -> "#{var}.#{field}" end)
+    Enum.map_join(fields, ", ", fn(field) -> "#{table}.#{field}" end)
   end
 
   defp expr({ op, _, [expr] }, vars) when op in [:+, :-] do

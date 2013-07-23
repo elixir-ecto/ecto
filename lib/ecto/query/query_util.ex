@@ -3,6 +3,7 @@ defmodule Ecto.Query.QueryUtil do
   This module provide utility functions on queries.
   """
 
+  alias Ecto.Queryable
   alias Ecto.Query.Query
 
   @doc """
@@ -29,23 +30,15 @@ defmodule Ecto.Query.QueryUtil do
     Enum.zip(binding, vars)
   end
 
-  # Merges two keyword queries
+  # Merges a Queryable with a query expression
   @doc false
-  def merge(Query[] = left, Query[] = right) do
-    check_merge(left, right)
-
-    Query[ froms:     left.froms ++ right.froms,
-           wheres:    left.wheres ++ right.wheres,
-           select:    right.select,
-           order_bys: left.order_bys ++ right.order_bys,
-           limit:     right.limit,
-           offset:    right.offset ]
-  end
-
-  # Merges a keyword query with a query expression
-  @doc false
-  def merge(Query[] = query, type, expr) do
+  def merge(queryable, type, expr) do
+    query = Query[] = Queryable.to_query(queryable)
     check_merge(query, Query.new([{ type, expr }]))
+
+    if type != :from and length(expr.binding) > length(query.froms) do
+      raise Ecto.InvalidQuery, reason: "cannot bind more variables than there are from expressions"
+    end
 
     case type do
       :from     -> query.update_froms(&1 ++ [expr])
@@ -57,7 +50,7 @@ defmodule Ecto.Query.QueryUtil do
     end
   end
 
-  # Checks if a keyword query merge can be done
+  # Checks if a query merge can be done
   defp check_merge(Query[] = left, Query[] = right) do
     if left.select && right.select do
       raise Ecto.InvalidQuery, reason: "only one select expression is allowed in query"

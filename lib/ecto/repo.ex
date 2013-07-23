@@ -25,6 +25,7 @@ defmodule Ecto.Repo do
   use Behaviour
 
   alias Ecto.Query.QueryUtil
+  alias Ecto.Queryable
 
   @doc false
   defmacro __using__(opts) do
@@ -143,7 +144,8 @@ defmodule Ecto.Repo do
   end
 
   @doc false
-  def all(repo, adapter, query) do
+  def all(repo, adapter, queryable) do
+    query = Queryable.to_query(queryable)
     query = QueryUtil.normalize(query)
     QueryUtil.validate(query)
     reason = "fetching entities"

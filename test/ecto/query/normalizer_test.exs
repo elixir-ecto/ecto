@@ -4,6 +4,7 @@ defmodule Ecto.Query.NormalizerTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
+  alias Ecto.Queryable
   alias Ecto.Query.QueryUtil
 
   defmodule PostEntity do
@@ -24,7 +25,7 @@ defmodule Ecto.Query.NormalizerTest do
 
 
   test "auto select entity" do
-    query = from(p in PostEntity) |> QueryUtil.normalize
+    query = from(PostEntity) |> Queryable.to_query |> QueryUtil.normalize
     assert { { :entity, :entity }, { :entity, [], nil } } = query.select.expr
     assert [:entity] == query.select.binding
   end

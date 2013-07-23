@@ -94,62 +94,6 @@ defmodule Ecto.Query do
   alias Ecto.Query.QueryUtil
 
   @doc """
-  Extends an existing a query by appending the given expressions to it.
-
-  It takes an optional list of bound variables that will rebind the
-  variables from the original query to their new names. The bindings
-  are order dependent, that means that each variable will be bound to
-  the variable in the original query that was defined in the same order
-  as the binding was in its list.
-
-  ## Examples
-
-      def paginate(query, page, size) do
-        extend query,
-          limit: size,
-          offset: (page-1) * size
-      end
-
-  The example above does not rebinding any variable, as they are not
-  required for `limit` and `offset`. However, extending a query with
-  where expression would require so:
-
-      def published(query) do
-        extend p in query, where: p.published_at != nil
-      end
-
-  Notice we have rebound the term `p`. In case the given query has
-  more than one `from` expression, each of them must be given in
-  the order they were bound:
-
-      def published_multi(query) do
-        extend [p,o] in query,
-        where: p.published_at != nil and o.published_at != nil
-      end
-
-  """
-  defmacro extend(original, bindings // [], kw) when is_list(kw) do
-    build_query(original, bindings, kw, __CALLER__)
-  end
-
-  @doc """
-  Support for adding `from` expresions from inside keywords query:
-
-         from w in Weather,
-        from: c in City,
-       where: w.city == c.name,
-      select: { w.pcrp, c.state }
-
-  """
-  defmacro from(query, binding, expr) do
-    # TODO: change syntax: 'from(x in X)' -> 'from(X)'
-    from_expr = FromBuilder.escape(expr, binding, __CALLER__)
-    quote do
-      QueryUtil.merge(unquote(query), :from, unquote(from_expr))
-    end
-  end
-
-  @doc """
   Creates a query. It can either be a keyword query or a query expression. If it
   is a keyword query the first argument should be an `in` expression and the
   second argument a keyword query where they keys are expression types and the
@@ -160,27 +104,57 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      from(c in City, select: c)
+      from(City, select: c)
 
   ## Expressions examples
 
-      from(c in City) |> select([c], c)
+      from(City) |> select([c], c)
 
+  # Extending queries
+
+  An existing query can be extended with `from` by appending the given
+  expressions to it.
+
+  The existing variables from the original query can be rebound by
+  giving the variables on the left hand side of `in`. The bindings
+  are order dependent, that means that each variable will be bound to
+  the variable in the original query that was defined in the same order
+  as the binding was in its list.
+
+  ## Examples
+
+      def paginate(query, page, size) do
+        from query,
+          limit: size,
+          offset: (page-1) * size
+      end
+
+  The example above does not rebinding any variable, as they are not
+  required for `limit` and `offset`. However, extending a query with
+  where expression would require so:
+
+      def published(query) do
+        from p in query, where: p.published_at != nil
+      end
+
+  Notice we have rebound the term `p`. In case the given query has
+  more than one `from` expression, each of them must be given in
+  the order they were bound:
+
+      def published_multi(query) do
+        from [p,o] in query,
+        where: p.published_at != nil and o.published_at != nil
+      end
   """
-  defmacro from({ :in, _, [_, _] } = from, kw) when is_list(kw) do
-    caller = __CALLER__
-    query = Macro.escape(Query[])
-    { var, _ } = from_expr = FromBuilder.escape(from, [], caller)
-    quoted = quote do
-      QueryUtil.merge(unquote(query), :from, unquote(from_expr))
-    end
-
-    build_query(quoted, [var], kw, caller)
+  defmacro from(expr, kw) when is_list(kw) do
+    { binds, expr } = FromBuilder.escape(expr)
+    build_query(expr, binds, kw)
   end
 
   defmacro from(query, expr) do
+    { _binds, expr } = FromBuilder.escape(expr)
     quote do
-      from(unquote(query), [], unquote(expr))
+      QueryUtil.merge(unquote(query), :from, unquote(expr))
     end
   end
 
@@ -193,15 +167,14 @@ defmodule Ecto.Query do
 
   """
   defmacro from(expr) do
-    quote do
-      from(Query[], [], unquote(expr))
-    end
+    { _binds, expr } = FromBuilder.escape(expr)
+    expr
   end
 
   @doc """
   A select query expression. Selects which fields will be selected from the
   entity and any transformations that should be performed on the fields, any
-  qexpression that is accepted in a query can be a slect field. There can only
+  expression that is accepted in a query can be a select field. There can only
   be one select expression in a query, if the select expression is omitted, the
   query will by default select the full entity (only works when there is a
   single from expression and no group by).
@@ -339,27 +312,38 @@ defmodule Ecto.Query do
     end
   end
 
-  # Builds the quoted code for creating a keyword query, used by extend and from
-  defp build_query(quoted, vars, kw, env) do
+  # Builds the quoted code for creating a keyword query
+  defp build_query(quoted, binds, kw) do
     unless Keyword.keyword?(kw) do
       raise Ecto.InvalidQuery, reason: "second argument to from has to be a keyword list"
     end
 
     { quoted, _ } =
-      Enum.reduce(kw, { quoted, vars }, fn({ type, expr }, { quoted, vars }) ->
+      Enum.reduce(kw, { quoted, binds }, fn({ type, expr }, { quoted, binds }) ->
         case type do
           :from ->
-            { var, _ } = from_expr = FromBuilder.escape(expr, vars, env)
-            quoted = quote do
-              QueryUtil.merge(unquote(quoted), :from, unquote(from_expr))
+            { from_binds, expr } = FromBuilder.escape(expr)
+
+            case from_binds do
+              [] -> :ok
+              [bind] ->
+                if bind in binds do
+                  raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
+                end
+              _ ->
+                raise Ecto.InvalidQuery, reason: "cannot bind more than one variable keyword expression from"
             end
-            { quoted, vars ++ [var] }
+
+            quoted = quote do
+              QueryUtil.merge(unquote(quoted), :from, unquote(expr))
+            end
+            { quoted, binds ++ from_binds }
 
           type ->
             quoted = quote do
-              Ecto.Query.unquote(type)(unquote(quoted), unquote(vars), unquote(expr))
+              Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
             end
-            { quoted, vars }
+            { quoted, binds }
         end
       end)
     quoted

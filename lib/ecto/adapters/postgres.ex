@@ -142,7 +142,7 @@ defmodule Ecto.Adapters.Postgres do
       :list -> tuple_to_list(row)
       :tuple -> row
       { :entity, var } ->
-        { _, entity } = Dict.fetch!(vars, var)
+        entity = Keyword.fetch!(vars, var)
         row = tuple_to_list(row)
         list_to_tuple([entity|row])
     end

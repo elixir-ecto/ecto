@@ -10,39 +10,23 @@ defmodule Ecto.Query.FromBuilderTest do
     dataset :my_entity do end
   end
 
-  test "escape" do
-    assert { :x, MyEntity } ==
-           escape(quote do x in MyEntity end, [], __ENV__)
-
-    assert { :x, MyEntity } ==
-           escape(quote do x in Elixir.Ecto.Query.FromBuilderTest.MyEntity end, [], __ENV__)
+  test "invalid expression" do
+    assert_raise Ecto.InvalidQuery, "invalid `from` query expression", fn ->
+      escape(quote do 123 in MyEntity end)
+    end
   end
 
-  test "escape raise" do
-    message = %r"only `in` expressions binding variables to entities are allowed"
+  test "expressions" do
+    assert { [], quote do MyEntity end } ==
+           escape(quote do MyEntity end)
 
-    assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do 1 end, [], __ENV__)
-    end
+    assert { [:p], quote do MyEntity end } ==
+           escape(quote do p in MyEntity end)
 
-    assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do f() end, [], __ENV__)
-    end
+    assert { [:p,:q], quote do MyEntity end } ==
+           escape(quote do [p,q] in MyEntity end)
 
-    assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do x end, [], __ENV__)
-    end
-
-    assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do x in y end, [], __ENV__)
-    end
-
-    assert_raise Ecto.InvalidQuery, %r"`NotAnEntity` is not an Ecto entity", fn ->
-      escape(quote do p in NotAnEntity end, [], __ENV__)
-    end
-
-    assert_raise Ecto.InvalidQuery, "variable `x` is already defined in query", fn ->
-      escape(quote do x in MyEntity end, [:x], __ENV__)
-    end
+    assert { [], 123 } ==
+           escape(123)
   end
 end

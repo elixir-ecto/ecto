@@ -24,6 +24,11 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  test "atoms implement queryable" do
+    query = from(PostEntity) |> select([p], p.title)
+    QueryUtil.validate(query)
+  end
+
   test "vars are order dependent" do
     query = from(p in PostEntity) |> select([q], q.title)
     QueryUtil.validate(query)
@@ -76,6 +81,23 @@ defmodule Ecto.QueryTest do
 
   test "extend keyword query" do
     query = from(p in PostEntity)
-    assert (query |> select([p], p.title)) == extend(query, [p], select: p.title)
+    assert (query |> select([p], p.title)) == from(p in query, select: p.title)
+
+    query = from(p in PostEntity)
+    assert (query |> select([p], p.title)) == from([p] in query, select: p.title)
+
+    query = PostEntity
+    assert (query |> select([p], p.title)) == from([p] in query, select: p.title)
+  end
+
+  test "cannot bind too many vars" do
+    assert_raise Ecto.InvalidQuery, "cannot bind more variables than there are from expressions", fn ->
+      from(p in PostEntity) |> select([p, q], p.title)
+    end
+
+    assert_raise Ecto.InvalidQuery, "cannot bind more variables than there are from expressions", fn ->
+      query = from(p in PostEntity)
+      from([p, q] in query, select: p.title)
+    end
   end
 end

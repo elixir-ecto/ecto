@@ -30,14 +30,23 @@ defmodule Ecto.Query.Validator do
       raise Ecto.InvalidQuery, reason: "a query must have a from expression"
     end
 
+    validate_froms(query.froms)
     validate_wheres(query.wheres, query.froms)
     validate_select(query.select, query.froms)
   end
 
-  defp validate_wheres(wheres, vars) do
+  defp validate_froms(entities) do
+    Enum.each(entities, fn(entity) ->
+      unless function_exported?(entity, :__ecto__, 1) do
+        raise Ecto.InvalidQuery, reason: "a from query expression have to bind to an ecto entity"
+      end
+    end)
+  end
+
+  defp validate_wheres(wheres, entities) do
     Enum.each(wheres, fn(QueryExpr[] = expr) ->
       rescue_metadata(:where, expr.expr, expr.file, expr.line) do
-        vars = QueryUtil.merge_binding_vars(expr.binding, vars)
+        vars = QueryUtil.merge_binding_vars(expr.binding, entities)
         unless type_expr(expr.expr, vars) == :boolean do
           raise Ecto.InvalidQuery, reason: "where expression has to be of boolean type"
         end
@@ -45,10 +54,10 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_select(QueryExpr[] = expr, vars) do
+  defp validate_select(QueryExpr[] = expr, entities) do
     { _, select_expr } = expr.expr
     rescue_metadata(:select, select_expr, expr.file, expr.line) do
-      vars = QueryUtil.merge_binding_vars(expr.binding, vars)
+      vars = QueryUtil.merge_binding_vars(expr.binding, entities)
       type_expr(select_expr, vars)
     end
   end
@@ -57,7 +66,7 @@ defmodule Ecto.Query.Validator do
   # var.x
   defp type_expr({ { :., _, [{ var, _, context }, field] }, _, [] }, vars)
       when is_atom(var) and is_atom(context) do
-    { _, entity } = Keyword.fetch!(vars, var)
+    entity = Keyword.fetch!(vars, var)
     type = entity.__ecto__(:field_type, field)
 
     unless type do
@@ -69,8 +78,7 @@ defmodule Ecto.Query.Validator do
 
   # var
   defp type_expr({ var, _, context}, vars) when is_atom(var) and is_atom(context) do
-    { _, entity } = Keyword.fetch!(vars, var) # ?
-    entity
+    Keyword.fetch!(vars, var) # ?
   end
 
   # unary op
