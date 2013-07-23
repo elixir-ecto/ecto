@@ -24,10 +24,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a select statement
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
-    select   = select(query.select, query.froms)
-    from     = from(query.froms)
-    where    = where(query.wheres, query.froms)
-    order_by = order_by(query.order_bys, query.froms)
+    entities  = create_names(query.froms)
+    select   = select(query.select, entities)
+    from     = from(entities)
+    where    = where(query.wheres, entities)
+    order_by = order_by(query.order_bys, entities)
     limit    = if query.limit, do: limit(query.limit.expr)
     offset   = if query.offset, do: offset(query.offset.expr)
 
@@ -94,9 +95,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "SELECT " <> select_clause(clause, vars)
   end
 
-  defp from(entities) do
-    binds = Enum.map_join(entities, ", ", fn(entity) ->
-      entity.__ecto__(:dataset) |> to_binary
+  defp from(entites) do
+    binds = Enum.map_join(entites, ", ", fn({ entity, name }) ->
+      "#{entity.__ecto__(:dataset)} AS #{name}"
     end)
 
     "FROM " <> binds
@@ -125,9 +126,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp order_by_expr({ dir, var, field }, vars) do
-    entity = Keyword.fetch!(vars, var)
-    table = entity.__ecto__(:dataset)
-    str = "#{table}.#{field}"
+    { _entity, name } = Keyword.fetch!(vars, var)
+    str = "#{name}.#{field}"
     case dir do
       nil   -> str
       :asc  -> str <> " ASC"
@@ -144,9 +144,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp expr({ :., _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
-    entity = Keyword.fetch!(vars, var)
-    table = entity.__ecto__(:dataset)
-    "#{table}.#{field}"
+    { _entity, name } = Keyword.fetch!(vars, var)
+    "#{name}.#{field}"
   end
 
   defp expr({ :!, _, [expr] }, vars) do
@@ -155,10 +154,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Expression builders make sure that we only find undotted vars at the top level
   defp expr({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
-    entity = Keyword.fetch!(vars, var)
-    table = entity.__ecto__(:dataset)
+    { entity, name } = Keyword.fetch!(vars, var)
     fields = entity.__ecto__(:field_names)
-    Enum.map_join(fields, ", ", fn(field) -> "#{table}.#{field}" end)
+    Enum.map_join(fields, ", ", fn(field) -> "#{name}.#{field}" end)
   end
 
   defp expr({ op, _, [expr] }, vars) when op in [:+, :-] do
@@ -233,5 +231,23 @@ defmodule Ecto.Adapters.Postgres.SQL do
     value
       |> :binary.replace("\\", "\\\\", [:global])
       |> :binary.replace("'", "''", [:global])
+  end
+
+  defp create_names(entities) do
+    Enum.reduce(entities, [], fn(entity, names) ->
+      table = entity.__ecto__(:dataset) |> String.first
+      name = unique_name(names, table, 0)
+      [{ entity, name }|names]
+    end) |> Enum.reverse
+  end
+
+  # Brute force find unique name
+  defp unique_name(names, name, counter) do
+    cnt_name = name <> integer_to_binary(counter)
+    if Enum.any?(names, fn({ _, n }) -> n == cnt_name end) do
+      unique_name(names, name, counter+1)
+    else
+      cnt_name
+    end
   end
 end
