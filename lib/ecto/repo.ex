@@ -152,8 +152,11 @@ defmodule Ecto.Repo do
     reason = "creating an entity"
     validate_entity(entity, reason)
     primary_key = adapter.create(repo, entity) |> check_result(adapter, reason)
+
     if primary_key do
       entity.primary_key(primary_key)
+    else
+      entity
     end
   end
 

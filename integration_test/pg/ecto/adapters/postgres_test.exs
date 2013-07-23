@@ -40,7 +40,7 @@ defmodule Ecto.Adapters.PostgresTest do
   test "create and update single, fetch updated" do
     post = Post[title: "The shiny new Ecto", text: "coming soon..."]
 
-    assert post = TestRepo.create(post)
+    post = TestRepo.create(post)
     post = post.text("coming very soon...")
     assert :ok == TestRepo.update(post)
 
