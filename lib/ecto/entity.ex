@@ -32,21 +32,19 @@ defmodule Ecto.Entity do
     quote do
       primary_key = unquote(primary_key)
 
-      if Module.get_attribute(__MODULE__, :ecto_defs) do
-        message = "dataset needs to be defined before any function " <>
-                  "or macro definitions"
-        raise ArgumentError, message: message
-      end
-
       try do
         import Ecto.Entity.Dataset
 
+        table = unquote(table)
         primary_key = unquote(primary_key)
-        @ecto_table_name unquote(table)
+
+        @ecto_table_name table
         @ecto_primary_key primary_key
+
         if primary_key do
           field(primary_key, :integer, primary_key: true)
         end
+
         unquote(block)
       end
     end
@@ -57,7 +55,6 @@ defmodule Ecto.Entity do
     quote do
       import Ecto.Entity, only: [dataset: 2, dataset: 3]
 
-      @on_definition unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
 
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
@@ -83,7 +80,6 @@ defmodule Ecto.Entity do
 
     fields_quote = Enum.map(fields, fn({ key, opts }) ->
       quote do
-        opts = unquote(opts)
         def __ecto__(:field, unquote(key)), do: unquote(opts)
         def __ecto__(:field_type, unquote(key)), do: unquote(opts[:type])
       end
@@ -102,11 +98,6 @@ defmodule Ecto.Entity do
       def primary_key(value, record), do: unquote(primary_key)(value, record)
       def update_primary_key(fun, record), do: unquote(:"update_#{primary_key}")(fun, record)
     end
-  end
-
-  @doc false
-  def __on_definition__(env, _kind, _name, _args, _guards, _body) do
-    Module.put_attribute(env.module, :ecto_defs, true)
   end
 end
 
