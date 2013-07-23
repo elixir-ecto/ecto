@@ -11,7 +11,7 @@ defmodule Ecto.QueryTest do
   defmodule PostEntity do
     use Ecto.Entity
 
-    schema :post_entity do
+    dataset :post_entity do
       field :title, :string
     end
   end
@@ -19,7 +19,7 @@ defmodule Ecto.QueryTest do
   defmodule CommentEntity do
     use Ecto.Entity
 
-    schema :comments do
+    dataset :comments do
       field :text, :string
     end
   end

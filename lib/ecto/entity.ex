@@ -2,8 +2,8 @@ defmodule Ecto.Entity do
   @moduledoc """
   This module is used to define an entity. An entity is a record with associated
   meta data that will be used when creating and running queries. See
-  `Ecto.Entity.Schema` for more information about the specific functions used to
-  specify an entity.
+  `Ecto.Entity.Dataset` for more information about the specific functions used
+  to specify an entity.
 
   Every entity is also a record, that means that you work with entities just
   like you would work with records, to set the default values for the record
@@ -13,7 +13,7 @@ defmodule Ecto.Entity do
       defmodule User do
         use Ecto.Entity
 
-        schema :users do
+        dataset :users do
           field :name, :string
           field :age, :integer
         end
@@ -25,21 +25,21 @@ defmodule Ecto.Entity do
   """
 
   @doc """
-  Defines the entity schema. Takes an optional primary key name, if none is
+  Defines the entity dataset. Takes an optional primary key name, if none is
   given, defaults to `:id`, pass `nil` if there should be no primary key.
   """
-  defmacro schema(table, primary_key // :id, block) do
+  defmacro dataset(table, primary_key // :id, block) do
     quote do
       primary_key = unquote(primary_key)
 
       if Module.get_attribute(__MODULE__, :ecto_defs) do
-        message = "schema needs to be defined before any function " <>
+        message = "dataset needs to be defined before any function " <>
                   "or macro definitions"
         raise ArgumentError, message: message
       end
 
       try do
-        import Ecto.Entity.Schema
+        import Ecto.Entity.Dataset
 
         primary_key = unquote(primary_key)
         @ecto_table_name unquote(table)
@@ -55,7 +55,7 @@ defmodule Ecto.Entity do
   @doc false
   defmacro __using__(_opts) do
     quote do
-      import Ecto.Entity, only: [schema: 2, schema: 3]
+      import Ecto.Entity, only: [dataset: 2, dataset: 3]
 
       @on_definition unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
@@ -110,9 +110,9 @@ defmodule Ecto.Entity do
   end
 end
 
-defmodule Ecto.Entity.Schema do
+defmodule Ecto.Entity.Dataset do
   @moduledoc """
-  This module contains all macros used to define the schema for an entity.
+  This module contains all macros used to define the dataset for an entity.
   """
 
   @types [ :string, :integer, :float, :binary ]

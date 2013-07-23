@@ -13,7 +13,7 @@ end
 defmodule Post do
   use Ecto.Entity
 
-  schema "posts" do
+  dataset "posts" do
     field :title, :string
     field :text, :string
   end

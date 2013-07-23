@@ -33,7 +33,7 @@ Create an entity:
 defmodule Post do
   use Ecto.Entity
 
-  schema :posts do
+  dataset :posts do
     field :title, :string
     field :content, :string
   end

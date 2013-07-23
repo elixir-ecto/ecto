@@ -7,7 +7,7 @@ defmodule Ecto.Query.FromBuilderTest do
 
   defmodule MyEntity do
     use Ecto.Entity
-    schema :my_entity do end
+    dataset :my_entity do end
   end
 
   test "escape" do

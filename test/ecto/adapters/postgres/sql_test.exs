@@ -9,7 +9,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   defmodule Entity do
     use Ecto.Entity
 
-    schema :entity do
+    dataset :entity do
       field :x, :integer
       field :y, :integer
     end
@@ -17,14 +17,14 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   defmodule Entity2 do
     use Ecto.Entity
-    schema :entity2 do
+    dataset :entity2 do
     end
   end
 
   defmodule SomeEntity do
     use Ecto.Entity
 
-    schema :weird_name_123 do
+    dataset :weird_name_123 do
     end
   end
 

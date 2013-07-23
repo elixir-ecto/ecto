@@ -6,7 +6,7 @@ defmodule Ecto.EntityTest do
   defmodule MyEntity do
     use Ecto.Entity
 
-    schema :my_entity do
+    dataset :my_entity do
       field :name, :string, default: "eric"
       field :email, :string, uniq: true
     end
@@ -59,7 +59,7 @@ defmodule Ecto.EntityTest do
       defmodule EntityFieldNameClash do
         use Ecto.Entity
 
-        schema :entity do
+        dataset :entity do
           field :name, :string
           field :name, :integer
         end
@@ -72,7 +72,7 @@ defmodule Ecto.EntityTest do
       defmodule EntitInvalidFieldType do
         use Ecto.Entity
 
-        schema :entity do
+        dataset :entity do
           field :name, :apa
         end
       end

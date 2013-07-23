@@ -9,7 +9,7 @@ defmodule Ecto.Query.LimitOffsetBuilderTest do
   defmodule PostEntity do
     use Ecto.Entity
 
-    schema :post_entity do
+    dataset :post_entity do
       field :title, :string
     end
   end

@@ -9,7 +9,7 @@ defmodule Ecto.Query.NormalizerTest do
   defmodule PostEntity do
     use Ecto.Entity
 
-    schema :post_entity do
+    dataset :post_entity do
       field :title, :string
     end
   end
@@ -17,7 +17,7 @@ defmodule Ecto.Query.NormalizerTest do
   defmodule CommentEntity do
     use Ecto.Entity
 
-    schema :post_entity do
+    dataset :post_entity do
       field :text, :string
     end
   end
