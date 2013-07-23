@@ -8,7 +8,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   require Ecto.Query
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.QueryUtil
 
   binary_ops =
     [ ==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
@@ -90,7 +90,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp select(QueryExpr[expr: expr, binding: binding], vars) do
     { _, clause } = expr
-    vars = BuilderUtil.merge_binding_vars(binding, vars)
+    vars = QueryUtil.merge_binding_vars(binding, vars)
     "SELECT " <> select_clause(clause, vars)
   end
 
@@ -107,7 +107,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp where(wheres, vars) do
     exprs = Enum.map_join(wheres, " AND ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      rebound_vars = BuilderUtil.merge_binding_vars(binding, vars)
+      rebound_vars = QueryUtil.merge_binding_vars(binding, vars)
       "(" <> expr(expr, rebound_vars) <> ")"
     end)
 
@@ -118,7 +118,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp order_by(order_bys, vars) do
     exprs = Enum.map_join(order_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      rebound_vars = BuilderUtil.merge_binding_vars(binding, vars)
+      rebound_vars = QueryUtil.merge_binding_vars(binding, vars)
       Enum.map_join(expr, ", ", order_by_expr(&1, rebound_vars))
     end)
 

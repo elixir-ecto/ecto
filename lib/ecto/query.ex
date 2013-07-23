@@ -91,6 +91,7 @@ defmodule Ecto.Query do
   alias Ecto.Query.SelectBuilder
   alias Ecto.Query.OrderByBuilder
   alias Ecto.Query.LimitOffsetBuilder
+  alias Ecto.Query.QueryUtil
 
   @doc """
   Extends an existing a query by appending the given expressions to it.
@@ -144,7 +145,7 @@ defmodule Ecto.Query do
     # TODO: change syntax: 'from(x in X)' -> 'from(X)'
     from_expr = FromBuilder.escape(expr, binding, __CALLER__)
     quote do
-      Ecto.Query.merge(unquote(query), :from, unquote(from_expr))
+      QueryUtil.merge(unquote(query), :from, unquote(from_expr))
     end
   end
 
@@ -171,7 +172,7 @@ defmodule Ecto.Query do
     query = Macro.escape(Query[])
     { var, _ } = from_expr = FromBuilder.escape(from, [], caller)
     quoted = quote do
-      Ecto.Query.merge(unquote(query), :from, unquote(from_expr))
+      QueryUtil.merge(unquote(query), :from, unquote(from_expr))
     end
 
     build_query(quoted, [var], kw, caller)
@@ -229,7 +230,7 @@ defmodule Ecto.Query do
       select_expr = unquote(SelectBuilder.escape(expr, binding))
       select = QueryExpr[expr: select_expr, binding: unquote(binding),
                          file: __ENV__.file, line: __ENV__.line]
-      Ecto.Query.merge(unquote(query), :select, select)
+      QueryUtil.merge(unquote(query), :select, select)
     end
   end
 
@@ -254,7 +255,7 @@ defmodule Ecto.Query do
       where_expr = unquote(WhereBuilder.escape(expr, binding))
       where = QueryExpr[expr: where_expr, binding: unquote(binding),
                         file: __ENV__.file, line: __ENV__.line]
-      Ecto.Query.merge(unquote(query), :where, where)
+      QueryUtil.merge(unquote(query), :where, where)
     end
   end
 
@@ -281,7 +282,7 @@ defmodule Ecto.Query do
     quote do
       order_by_expr = unquote(OrderByBuilder.escape(expr, binding))
       order_by = QueryExpr[expr: order_by_expr, binding: unquote(binding)]
-      Ecto.Query.merge(unquote(query), :order_by, order_by)
+      QueryUtil.merge(unquote(query), :order_by, order_by)
     end
   end
 
@@ -307,7 +308,7 @@ defmodule Ecto.Query do
       LimitOffsetBuilder.validate(limit_expr)
       limit = QueryExpr[expr: limit_expr, binding: unquote(binding),
                         file: __ENV__.file, line: __ENV__.line]
-      Ecto.Query.merge(unquote(query), :limit, limit)
+      QueryUtil.merge(unquote(query), :limit, limit)
     end
   end
 
@@ -334,51 +335,7 @@ defmodule Ecto.Query do
       LimitOffsetBuilder.validate(offset_expr)
       offset = QueryExpr[expr: offset_expr, binding: unquote(binding),
                          file: __ENV__.file, line: __ENV__.line]
-      Ecto.Query.merge(unquote(query), :offset, offset)
-    end
-  end
-
-  @doc """
-  Validates the query to check if it is correct. Should be called before
-  compilation by the query adapter.
-  """
-  def validate(query) do
-    Ecto.Query.Validator.validate(query)
-  end
-
-  @doc """
-  Normalizes the query. Should be called before
-  compilation by the query adapter.
-  """
-  def normalize(query) do
-    Ecto.Query.Normalizer.normalize(query)
-  end
-
-  # Merges two keyword queries
-  @doc false
-  def merge(Query[] = left, Query[] = right) do
-    check_merge(left, right)
-
-    Query[ froms:     left.froms ++ right.froms,
-           wheres:    left.wheres ++ right.wheres,
-           select:    right.select,
-           order_bys: left.order_bys ++ right.order_bys,
-           limit:     right.limit,
-           offset:    right.offset ]
-  end
-
-  # Merges a keyword query with a query expression
-  @doc false
-  def merge(Query[] = query, type, expr) do
-    check_merge(query, Query.new([{ type, expr }]))
-
-    case type do
-      :from     -> query.update_froms(&1 ++ [expr])
-      :where    -> query.update_wheres(&1 ++ [expr])
-      :select   -> query.select(expr)
-      :order_by -> query.update_order_bys(&1 ++ [expr])
-      :limit    -> query.limit(expr)
-      :offset   -> query.offset(expr)
+      QueryUtil.merge(unquote(query), :offset, offset)
     end
   end
 
@@ -394,7 +351,7 @@ defmodule Ecto.Query do
           :from ->
             { var, _ } = from_expr = FromBuilder.escape(expr, vars, env)
             quoted = quote do
-              Ecto.Query.merge(unquote(quoted), :from, unquote(from_expr))
+              QueryUtil.merge(unquote(quoted), :from, unquote(from_expr))
             end
             { quoted, vars ++ [var] }
 
@@ -406,21 +363,6 @@ defmodule Ecto.Query do
         end
       end)
     quoted
-  end
-
-  # Checks if a keyword query merge can be done
-  defp check_merge(Query[] = left, Query[] = right) do
-    if left.select && right.select do
-      raise Ecto.InvalidQuery, reason: "only one select expression is allowed in query"
-    end
-
-    if left.limit && right.limit do
-      raise Ecto.InvalidQuery, reason: "only one limit expression is allowed in query"
-    end
-
-    if left.offset && right.offset do
-      raise Ecto.InvalidQuery, reason: "only one offset expression is allowed in query"
-    end
   end
 
   defp escape_binding(var) when is_atom(var) do

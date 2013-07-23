@@ -67,11 +67,4 @@ defmodule Ecto.Query.BuilderUtil do
   def find_vars(_, _vars) do
     nil
   end
-
-  # Move this QueryUtil? Both builders and adapters are using this.
-  # Bindings are order dependent so merge binding with bound vars
-  # while preserving order
-  def merge_binding_vars(binding, vars) do
-    Enum.zip(binding, vars)
-  end
 end

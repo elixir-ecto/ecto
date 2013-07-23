@@ -24,6 +24,8 @@ defmodule Ecto.Repo do
 
   use Behaviour
 
+  alias Ecto.Query.QueryUtil
+
   @doc false
   defmacro __using__(opts) do
     adapter = Keyword.fetch!(opts, :adapter)
@@ -141,8 +143,8 @@ defmodule Ecto.Repo do
 
   @doc false
   def all(repo, adapter, query) do
-    query = Ecto.Query.normalize(query)
-    Ecto.Query.validate(query)
+    query = QueryUtil.normalize(query)
+    QueryUtil.validate(query)
     reason = "fetching entities"
     adapter.all(repo, query) |> check_result(adapter, reason)
   end

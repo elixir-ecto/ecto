@@ -6,6 +6,7 @@ defmodule Ecto.QueryTest do
   import Ecto.TestHelpers
   import Ecto.Query
   alias Ecto.Query.Query
+  alias Ecto.Query.QueryUtil
 
   defmodule PostEntity do
     use Ecto.Entity
@@ -25,12 +26,12 @@ defmodule Ecto.QueryTest do
 
   test "vars are order dependent" do
     query = from(p in PostEntity) |> select([q], q.title)
-    validate(query)
+    QueryUtil.validate(query)
   end
 
   test "can append to selected query" do
     query = from(p in PostEntity) |> select([], 1) |> from(q in PostEntity)
-    validate(query)
+    QueryUtil.validate(query)
   end
 
   test "only one select is allowed" do

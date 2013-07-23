@@ -4,7 +4,7 @@ defmodule Ecto.Query.Validator do
   # This module does validation on the query checking that it's in a correct
   # format, raising if it's not.
 
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.QueryUtil
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
 
@@ -37,7 +37,7 @@ defmodule Ecto.Query.Validator do
   defp validate_wheres(wheres, vars) do
     Enum.each(wheres, fn(QueryExpr[] = expr) ->
       rescue_metadata(:where, expr.expr, expr.file, expr.line) do
-        vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
+        vars = QueryUtil.merge_binding_vars(expr.binding, vars)
         unless type_expr(expr.expr, vars) == :boolean do
           raise Ecto.InvalidQuery, reason: "where expression has to be of boolean type"
         end
@@ -48,7 +48,7 @@ defmodule Ecto.Query.Validator do
   defp validate_select(QueryExpr[] = expr, vars) do
     { _, select_expr } = expr.expr
     rescue_metadata(:select, select_expr, expr.file, expr.line) do
-      vars = BuilderUtil.merge_binding_vars(expr.binding, vars)
+      vars = QueryUtil.merge_binding_vars(expr.binding, vars)
       type_expr(select_expr, vars)
     end
   end
