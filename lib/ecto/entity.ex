@@ -13,7 +13,7 @@ defmodule Ecto.Entity do
       defmodule User do
         use Ecto.Entity
 
-        dataset :users do
+        dataset "users" do
           field :name, :string
           field :age, :integer
         end
