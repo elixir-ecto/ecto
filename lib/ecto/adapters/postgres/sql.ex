@@ -39,7 +39,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an insert statement
   def insert(entity) do
     module      = elem(entity, 0)
-    table       = module.__ecto__(:table)
+    table       = module.__ecto__(:dataset)
     fields      = module.__ecto__(:field_names)
     primary_key = module.__ecto__(:primary_key)
 
@@ -61,7 +61,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an update statement
   def update(entity) do
     module      = elem(entity, 0)
-    table       = module.__ecto__(:table)
+    table       = module.__ecto__(:dataset)
     fields      = module.__ecto__(:field_names)
     primary_key = module.__ecto__(:primary_key)
 
@@ -81,7 +81,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a delete statement
   def delete(entity) do
     module            = elem(entity, 0)
-    table             = module.__ecto__(:table)
+    table             = module.__ecto__(:dataset)
     primary_key       = module.__ecto__(:primary_key)
     primary_key_value = elem(entity, 1)
 
@@ -96,7 +96,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp from(froms) do
     binds = Enum.map_join(froms, ", ", fn({ var, entity }) ->
-      table = entity.__ecto__(:table)
+      table = entity.__ecto__(:dataset)
       "#{table} AS #{var}"
     end)
 

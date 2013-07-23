@@ -6,21 +6,21 @@ defmodule Ecto.EntityTest do
   defmodule MyEntity do
     use Ecto.Entity
 
-    dataset :my_entity do
+    dataset "my_entity" do
       field :name, :string, default: "eric"
       field :email, :string, uniq: true
     end
 
-    def upcased_name(__MODULE__[name: name]) do
-      String.upcase(name)
+    def inc_id(__MODULE__[id: id]) do
+      id + 1
     end
   end
 
   test "works like a record" do
-    entity = MyEntity.new(email: "eric@example.com")
+    entity = MyEntity.new(id: 0, email: "eric@example.com")
     assert entity.name  == "eric"
     assert entity.email == "eric@example.com"
-    assert entity.upcased_name  == "ERIC"
+    assert entity.inc_id  == 1
 
     MyEntity[email: email] = entity.email("another@example.com")
     assert email == "another@example.com"
@@ -33,7 +33,7 @@ defmodule Ecto.EntityTest do
       { :email, [type: :string, uniq: true] }
     ]
 
-    assert MyEntity.__ecto__(:table) == :my_entity
+    assert MyEntity.__ecto__(:dataset) == "my_entity"
     assert MyEntity.__ecto__(:fields) == fields
     assert MyEntity.__ecto__(:field_names) == [:id, :name, :email]
     assert MyEntity.__ecto__(:field, :id) == fields[:id]
@@ -77,5 +77,23 @@ defmodule Ecto.EntityTest do
         end
       end
     end
+  end
+
+  defmodule MyEntityNoPK do
+    use Ecto.Entity
+
+    dataset "my_entity", nil do
+      field :x, :string
+    end
+  end
+
+  test "no primary key" do
+    assert MyEntityNoPK.__record__(:fields) == [x: nil]
+    assert MyEntityNoPK.__ecto__(:field_names) == [:x]
+
+    entity = MyEntityNoPK[x: "123"]
+    assert entity.primary_key == nil
+    assert entity.primary_key("abc") == entity
+    assert entity.update_primary_key(&1 <> "abc") == entity
   end
 end

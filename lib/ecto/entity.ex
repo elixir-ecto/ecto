@@ -28,24 +28,36 @@ defmodule Ecto.Entity do
   Defines the entity dataset. Takes an optional primary key name, if none is
   given, defaults to `:id`, pass `nil` if there should be no primary key.
   """
-  defmacro dataset(table, primary_key // :id, block) do
+  defmacro dataset(name, primary_key // :id, block) do
     quote do
       primary_key = unquote(primary_key)
 
       try do
         import Ecto.Entity.Dataset
 
-        table = unquote(table)
         primary_key = unquote(primary_key)
 
-        @ecto_table_name table
+        if Module.get_attribute(__MODULE__, :ecto_dataset) do
+          raise ArgumentError, message: "dataset already defined"
+        end
+
+        @ecto_dataset unquote(name)
         @ecto_primary_key primary_key
 
         if primary_key do
           field(primary_key, :integer, primary_key: true)
         end
 
-        unquote(block)
+        result = unquote(block)
+
+        record_fields = @ecto_fields
+          |> Enum.reverse
+          |> Enum.map(fn({ field, opts }) -> { field, opts[:default] } end)
+
+        @record_fields record_fields
+        Record.deffunctions(record_fields, __ENV__)
+
+        result
       end
     end
   end
@@ -54,29 +66,23 @@ defmodule Ecto.Entity do
   defmacro __using__(_opts) do
     quote do
       import Ecto.Entity, only: [dataset: 2, dataset: 3]
-
       @before_compile unquote(__MODULE__)
-
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :record_fields, accumulate: true)
     end
   end
 
   @doc false
   defmacro __before_compile__(env) do
     module        = env.module
-    table_name    = Module.get_attribute(module, :ecto_table_name)
+    dataset_name  = Module.get_attribute(module, :ecto_dataset)
     primary_key   = Module.get_attribute(module, :ecto_primary_key)
     fields        = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
-    record_fields = Module.get_attribute(module, :record_fields) |> Enum.reverse
     field_names   = Enum.map(fields, elem(&1, 0))
 
-    unless table_name do
-      raise ArgumentError, message: "no support for dasherize or pluralize yet, " <>
-                                    "a table name is required"
+    unless dataset_name do
+      raise ArgumentError, message: "dataset not defined, an entity has " <>
+        "define a dataset, see `Ecto.Entity.Dataset`"
     end
-
-    Record.deffunctions(record_fields, env)
 
     fields_quote = Enum.map(fields, fn({ key, opts }) ->
       quote do
@@ -86,7 +92,7 @@ defmodule Ecto.Entity do
     end)
 
     quote do
-      def __ecto__(:table), do: unquote(table_name)
+      def __ecto__(:dataset), do: unquote(dataset_name)
       def __ecto__(:primary_key), do: unquote(primary_key)
       def __ecto__(:fields), do: unquote(Macro.escape(fields))
       def __ecto__(:field_names), do: unquote(field_names)
@@ -94,9 +100,15 @@ defmodule Ecto.Entity do
       def __ecto__(:field, _), do: nil
       def __ecto__(:field_type, _), do: nil
 
-      def primary_key(record), do: unquote(primary_key)(record)
-      def primary_key(value, record), do: unquote(primary_key)(value, record)
-      def update_primary_key(fun, record), do: unquote(:"update_#{primary_key}")(fun, record)
+      if unquote(primary_key) do
+        def primary_key(record), do: unquote(primary_key)(record)
+        def primary_key(value, record), do: unquote(primary_key)(value, record)
+        def update_primary_key(fun, record), do: unquote(:"update_#{primary_key}")(fun, record)
+      else
+        def primary_key(_record), do: nil
+        def primary_key(_value, record), do: record
+        def update_primary_key(_fun, record), do: record
+      end
     end
   end
 end
@@ -134,7 +146,6 @@ defmodule Ecto.Entity.Dataset do
 
       opts = unquote(opts)
       default = opts[:default]
-      @record_fields { name, default }
       @ecto_fields { name, [type: type] ++ opts }
     end
   end
