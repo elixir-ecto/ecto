@@ -67,7 +67,8 @@ defmodule Ecto.Repo do
   @doc """
   Should return the Ecto URL to be used for the repository. A URL is of the
   following format: `ecto://username:password@hostname:port/database?opts=123`
-  where the password, port and options are optional.
+  where the password, port and options are optional. This function has to be
+  implemented by the user.
   """
   defcallback url() :: String.t
 
