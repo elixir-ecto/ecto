@@ -100,4 +100,14 @@ defmodule Ecto.QueryTest do
       from([p, q] in query, select: p.title)
     end
   end
+
+  test "cannot bind non-Queryable in from" do
+    assert_raise Protocol.UndefinedError, fn ->
+      from(p in 123) |> select([p], p.title)
+    end
+
+    assert_raise Protocol.UndefinedError, fn ->
+      from(p in NotAnEntity) |> select([p], p.title)
+    end
+  end
 end

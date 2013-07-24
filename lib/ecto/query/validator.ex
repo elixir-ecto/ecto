@@ -30,17 +30,8 @@ defmodule Ecto.Query.Validator do
       raise Ecto.InvalidQuery, reason: "a query must have a from expression"
     end
 
-    validate_froms(query.froms)
     validate_wheres(query.wheres, query.froms)
     validate_select(query.select, query.froms)
-  end
-
-  defp validate_froms(entities) do
-    Enum.each(entities, fn(entity) ->
-      unless function_exported?(entity, :__ecto__, 1) do
-        raise Ecto.InvalidQuery, reason: "a from query expression have to bind to an ecto entity"
-      end
-    end)
   end
 
   defp validate_wheres(wheres, entities) do

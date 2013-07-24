@@ -9,7 +9,15 @@ end
 
 defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
-    # TODO: Should we check here if module is an Entity?
-    Ecto.Query.Query[froms: [module]]
+    try do
+      module.__ecto__(:dataset)
+      Ecto.Query.Query[froms: [module]]
+    rescue
+      UndefinedFunctionError ->
+        raise Protocol.UndefinedError,
+                 protocol: @protocol,
+                    value: module,
+              description: "the given atom is not an entity"
+    end
   end
 end

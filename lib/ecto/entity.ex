@@ -111,14 +111,6 @@ defmodule Ecto.Entity do
       end
     end
   end
-
-  # Check if an expression is an entity
-  @doc false
-  def is_entity(entity) do
-    is_atom(entity) and
-     Code.ensure_compiled?(entity) and
-     function_exported?(entity, :__ecto__, 1)
-  end
 end
 
 defmodule Ecto.Entity.Dataset do
