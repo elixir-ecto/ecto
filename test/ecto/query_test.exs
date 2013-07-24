@@ -24,9 +24,21 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  test "atoms implement queryable" do
+  test "call queryable on every merge" do
     query = from(PostEntity) |> select([p], p.title)
-    QueryUtil.validate(query)
+    query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = from(PostEntity) |> where([p], p.title == "42")
+    query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = from(PostEntity) |> order_by([p], p.title)
+    query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = from(PostEntity) |> limit(42)
+    query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = from(PostEntity) |> offset(43)
+    query |> QueryUtil.normalize |> QueryUtil.validate
   end
 
   test "vars are order dependent" do
