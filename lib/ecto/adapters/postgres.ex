@@ -135,7 +135,6 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   # TODO: Convert :null -> nil
-  # TODO: Test this !!!
   defp transform_row(row, return_type, vars) do
     case return_type do
       :single -> elem(row, 0)

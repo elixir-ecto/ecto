@@ -58,4 +58,16 @@ defmodule Ecto.Adapters.PostgresTest do
     assert [Post[title: "2"]] =
            TestRepo.all(from p in Post, where: p.title == "2")
   end
+
+  test "transform row" do
+    assert Post[] = TestRepo.create(Post[title: "1", text: "hai"])
+
+    assert ["1"] == TestRepo.all(from p in Post, select: p.title)
+
+    assert [{ "1", "hai" }] ==
+           TestRepo.all(from p in Post, select: { p.title, p.text })
+
+    assert [["1", "hai"]] ==
+           TestRepo.all(from p in Post, select: [p.title, p.text])
+  end
 end
