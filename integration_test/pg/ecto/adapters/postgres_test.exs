@@ -59,6 +59,15 @@ defmodule Ecto.Adapters.PostgresTest do
            TestRepo.all(from p in Post, where: p.title == "2")
   end
 
+  test "get entity" do
+    post1 = TestRepo.create(Post[title: "1", text: "hai"])
+    post2 = TestRepo.create(Post[title: "2", text: "hai"])
+
+    assert post1 == TestRepo.get(Post, post1.id)
+    assert post2 == TestRepo.get(Post, post2.id)
+    assert nil == TestRepo.get(Post, -1)
+  end
+
   test "transform row" do
     assert Post[] = TestRepo.create(Post[title: "1", text: "hai"])
 

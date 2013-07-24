@@ -27,10 +27,16 @@ defexception Ecto.AdapterError, [:adapter, :reason, :internal] do
   end
 end
 
-
 defexception Ecto.ValidationError, [:entity, :field, :type, :expected_type, :reason] do
   def message(Ecto.ValidationError[] = e) do
     "entity #{inspect e.entity} failed validation, field #{e.field} had " <>
     "type #{e.type} but type #{e.expected_type} was expected: #{e.reason}"
+  end
+end
+
+defexception Ecto.NotSingleResult, [:entity, :primary_key, :id] do
+  def message(Ecto.NotSingleResult[] = e) do
+    "the result set from `#{e.entity}` where `#{e.primary_key} == #{e.id}` " <>
+    "was too large"
   end
 end

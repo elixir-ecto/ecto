@@ -24,8 +24,10 @@ defmodule Ecto.Repo do
 
   use Behaviour
 
-  alias Ecto.Query.QueryUtil
   alias Ecto.Queryable
+  alias Ecto.Query.QueryUtil
+  alias Ecto.Query.WhereBuilder
+  alias Ecto.Query.QueryExpr
 
   @doc false
   defmacro __using__(opts) do
@@ -43,8 +45,12 @@ defmodule Ecto.Repo do
         Ecto.Repo.stop(__MODULE__, unquote(adapter))
       end
 
-      def all(query) do
-        Ecto.Repo.all(__MODULE__, unquote(adapter), query)
+      def get(queryable, id) do
+        Ecto.Repo.get(__MODULE__, unquote(adapter), queryable, id)
+      end
+
+      def all(queryable) do
+        Ecto.Repo.all(__MODULE__, unquote(adapter), queryable)
       end
 
       def create(entity) do
@@ -84,9 +90,17 @@ defmodule Ecto.Repo do
   defcallback stop() :: :ok
 
   @doc """
+  Fetches a single entity from the data store where the primary key matches the
+  given id. Returns `nil` if no result was found. If the entity in the queryable
+  has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
+  will be raised if there is an adapter error.
+  """
+  defcallback get(Ecto.Queryable.t, integer) :: Record.t | nil | no_return
+
+  @doc """
   Fetches all results from the data store based on the given query. May raise
-  `Ecto.InvalidQuery` if query validation fails or `Ecto.AdapterError` if there
-  is an adapter error.
+  `Ecto.InvalidQuery` if query validation fails. `Ecto.AdapterError` will be
+  raised if there is an adapter error.
 
   ## Example
 
@@ -110,8 +124,8 @@ defmodule Ecto.Repo do
 
   @doc """
   Updates an entity using the primary key as key. If the entity has no primary
-  key `Ecto.NoPrimaryKey` will be raised or raise `Ecto.AdapterError` if there
-  is an adapter error.
+  key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
+  there is an adapter error.
 
   ## Example
 
@@ -123,8 +137,8 @@ defmodule Ecto.Repo do
 
   @doc """
   Deletes an entity using the primary key as key. If the entity has no primary
-  key `Ecto.NoPrimaryKey` will be raised or raise `Ecto.AdapterError` if there
-  is an adapter error.
+  key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
+  there is an adapter error.
 
   ## Example
 
@@ -141,6 +155,35 @@ defmodule Ecto.Repo do
   @doc false
   def stop(repo, adapter) do
     adapter.stop(repo)
+  end
+
+  @doc false
+  def get(repo, adapter, queryable, id) when is_binary(id) do
+    get(repo, adapter, queryable, binary_to_integer(id))
+  end
+
+  def get(repo, adapter, queryable, id) when is_integer(id) do
+    reason = "getting entity"
+
+    query = Queryable.to_query(queryable)
+    query = QueryUtil.normalize(query)
+    QueryUtil.validate(query)
+
+    entity = Enum.first(query.froms)
+    check_primary_key(entity, reason)
+
+    primary_key = entity.__ecto__(:primary_key)
+    check_primary_key(entity, reason)
+
+    quoted = quote do x.unquote(primary_key) == unquote(id) end
+    expr = QueryExpr[expr: quoted, binding: [:x]]
+    query = QueryUtil.merge(query, :where, expr)
+
+    case adapter.all(repo, query) |> check_result(adapter, reason) do
+      [entity] -> entity
+      [] -> nil
+      _ -> raise Ecto.NotSingleResult, entity: entity, primary_key: primary_key, id: id
+    end
   end
 
   @doc false
@@ -227,7 +270,13 @@ defmodule Ecto.Repo do
     end
   end
 
-  defp check_primary_key(entity, reason) do
+  defp check_primary_key(entity, reason) when is_atom(entity) do
+    unless entity.__ecto__(:primary_key) do
+      raise Ecto.NoPrimaryKey, entity: entity, reason: reason
+    end
+  end
+
+  defp check_primary_key(entity, reason) when is_record(entity) do
     module = elem(entity, 0)
     unless module.__ecto__(:primary_key) && entity.primary_key do
       raise Ecto.NoPrimaryKey, entity: entity, reason: reason

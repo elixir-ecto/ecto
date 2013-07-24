@@ -95,6 +95,9 @@ defmodule Ecto.RepoTest do
     assert_raise Ecto.NoPrimaryKey, fn ->
       MyRepo.delete(entity)
     end
+    assert_raise Ecto.NoPrimaryKey, fn ->
+      MyRepo.get(MyEntityNoPK, 123)
+    end
   end
 
   test "needs entity with primary key value" do
@@ -113,6 +116,7 @@ defmodule Ecto.RepoTest do
 
     MyRepo.update(entity)
     MyRepo.delete(entity)
+    MyRepo.get(MyEntity, 123)
   end
 
   test "validate entity types" do
@@ -129,6 +133,19 @@ defmodule Ecto.RepoTest do
     end
     assert_raise Ecto.ValidationError, fn ->
       MyRepo.delete(entity)
+    end
+  end
+
+  test "get validation" do
+    MyRepo.get(MyEntity, 123)
+    MyRepo.get(MyEntity, "123")
+
+    assert_raise ArgumentError, fn ->
+      MyRepo.get(MyEntity, "abc")
+    end
+
+    assert_raise FunctionClauseError, fn ->
+      MyRepo.get(MyEntity, :atom)
     end
   end
 end
