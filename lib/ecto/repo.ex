@@ -91,7 +91,8 @@ defmodule Ecto.Repo do
 
   @doc """
   Fetches a single entity from the data store where the primary key matches the
-  given id. Returns `nil` if no result was found. If the entity in the queryable
+  given id. id should be an integer or a string that can be casted to an
+  integer. Returns `nil` if no result was found. If the entity in the queryable
   has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
   will be raised if there is an adapter error.
   """

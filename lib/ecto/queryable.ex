@@ -1,4 +1,10 @@
 defprotocol Ecto.Queryable do
+  @moduledoc """
+  The `Queryable` protocol is responsible for converting a structure to an
+  `Ecto.Query.Query` record. The only function required to implement is
+  `to_query` which does the conversion.
+  """
+
   @only [Record, Atom]
   def to_query(expr)
 end
@@ -15,9 +21,9 @@ defimpl Ecto.Queryable, for: Atom do
     rescue
       UndefinedFunctionError ->
         raise Protocol.UndefinedError,
-                 protocol: @protocol,
-                    value: module,
-              description: "the given atom is not an entity"
+             protocol: @protocol,
+                value: module,
+          description: "the given atom is not an entity"
     end
   end
 end
