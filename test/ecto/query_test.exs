@@ -39,6 +39,21 @@ defmodule Ecto.QueryTest do
 
     query = from(PostEntity) |> offset(43)
     query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = select(PostEntity, [p], p.title)
+    query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = where(PostEntity, [p], p.title == "42")
+    query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = order_by(PostEntity, [p], p.title)
+    query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = limit(PostEntity, 42)
+    query |> QueryUtil.normalize |> QueryUtil.validate
+
+    query = offset(PostEntity, 43)
+    query |> QueryUtil.normalize |> QueryUtil.validate
   end
 
   test "vars are order dependent" do
