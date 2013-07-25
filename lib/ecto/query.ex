@@ -147,11 +147,16 @@ defmodule Ecto.Query do
       end
   """
   defmacro from(expr, kw) when is_list(kw) do
+    unless Keyword.keyword?(kw) do
+      raise Ecto.InvalidQuery, reason: "second argument to from has to be a keyword list"
+    end
+
     { binds, expr } = FromBuilder.escape(expr)
     build_query(expr, binds, kw)
   end
 
   defmacro from(query, expr) do
+    FromBuilder.validate_query_from(expr)
     { _binds, expr } = FromBuilder.escape(expr)
     quote do
       QueryUtil.merge(unquote(query), :from, unquote(expr))
@@ -314,30 +319,20 @@ defmodule Ecto.Query do
 
   # Builds the quoted code for creating a keyword query
   defp build_query(quoted, binds, kw) do
-    unless Keyword.keyword?(kw) do
-      raise Ecto.InvalidQuery, reason: "second argument to from has to be a keyword list"
-    end
-
     { quoted, _ } =
       Enum.reduce(kw, { quoted, binds }, fn({ type, expr }, { quoted, binds }) ->
         case type do
           :from ->
-            { from_binds, expr } = FromBuilder.escape(expr)
+            { [bind], expr } = FromBuilder.escape(expr)
 
-            case from_binds do
-              [] -> :ok
-              [bind] ->
-                if bind in binds do
-                  raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
-                end
-              _ ->
-                raise Ecto.InvalidQuery, reason: "cannot bind more than one variable keyword expression from"
+            if bind != :_ and bind in binds do
+              raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
             end
 
             quoted = quote do
               QueryUtil.merge(unquote(quoted), :from, unquote(expr))
             end
-            { quoted, binds ++ from_binds }
+            { quoted, binds ++ [bind] }
 
           type ->
             quoted = quote do

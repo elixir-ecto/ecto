@@ -137,4 +137,16 @@ defmodule Ecto.QueryTest do
       from(p in NotAnEntity) |> select([p], p.title)
     end
   end
+
+  test "validate from expression" do
+    delay_compile(from(PostEntity, []))
+
+    assert_raise Ecto.InvalidQuery, fn ->
+      delay_compile(from(PostEntity, [123]))
+    end
+
+    assert_raise Ecto.InvalidQuery, fn ->
+      delay_compile(from(PostEntity, 123))
+    end
+  end
 end

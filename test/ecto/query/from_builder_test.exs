@@ -17,7 +17,7 @@ defmodule Ecto.Query.FromBuilderTest do
   end
 
   test "expressions" do
-    assert { [], quote do MyEntity end } ==
+    assert { [:_], quote do MyEntity end } ==
            escape(quote do MyEntity end)
 
     assert { [:p], quote do MyEntity end } ==
