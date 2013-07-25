@@ -24,7 +24,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a select statement
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
-    entities  = create_names(query.froms)
+    entities = create_names(query.froms)
     select   = select(query.select, entities)
     from     = from(entities)
     where    = where(query.wheres, entities)
@@ -79,6 +79,29 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "WHERE #{primary_key} = #{literal(primary_key_value)}"
   end
 
+  # Generate SQL for an update all statement
+  def update_all(module, binding, values) when is_atom(module) do
+    update_all(Query[froms: [module]], binding, values)
+  end
+
+  def update_all(Query[] = query, binding, values) do
+    module = Enum.first(query.froms)
+    entity = create_names(query.froms) |> Enum.first
+    name   = elem(entity, 1)
+    table  = module.__ecto__(:dataset)
+
+    vars = QueryUtil.merge_binding_vars(binding, [entity])
+    zipped_sql = Enum.map_join(values, ", ", fn({field, expr}) ->
+      "#{field} = #{expr(expr, vars)}"
+    end)
+
+    where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, [entity])
+
+    "UPDATE #{table} AS #{name}\n" <>
+    "SET " <> zipped_sql <>
+    where
+  end
+
   # Generate SQL for a delete statement
   def delete(entity) do
     module            = elem(entity, 0)
@@ -87,6 +110,22 @@ defmodule Ecto.Adapters.Postgres.SQL do
     primary_key_value = elem(entity, 1)
 
     "DELETE FROM #{table} WHERE #{primary_key} = #{literal(primary_key_value)}"
+  end
+
+  # Generate SQL for an delete all statement
+  def delete_all(module) when is_atom(module) do
+    delete_all(Query[froms: [module]])
+  end
+
+  def delete_all(Query[] = query) do
+    module = Enum.first(query.froms)
+    entity = create_names(query.froms) |> Enum.first
+    name   = elem(entity, 1)
+    table  = module.__ecto__(:dataset)
+
+    where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, [entity])
+
+    "DELETE FROM #{table} AS #{name}" <> where
   end
 
   defp select(QueryExpr[expr: expr, binding: binding], entities) do

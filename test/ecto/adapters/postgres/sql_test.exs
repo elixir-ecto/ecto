@@ -32,6 +32,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = from(r in Entity) |> select([r], r.x)
     assert SQL.select(query) == "SELECT e0.x\nFROM entity AS e0"
 
+    query = from(Entity) |> select([r], r.x)
+    assert SQL.select(query) == "SELECT e0.x\nFROM entity AS e0"
+
     query = from(r in Entity) |> from(r2 in Entity2) |> select([r1, r2], r2.x)
     assert SQL.select(query) == "SELECT e1.x\nFROM entity AS e0, entity2 AS e1"
   end
@@ -199,5 +202,26 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "table name" do
     query = from(SomeEntity, select: 0)
     assert SQL.select(query) == "SELECT 0\nFROM weird_name_123 AS w0"
+  end
+
+  test "update all" do
+    assert SQL.update_all(Entity, [:e], x: 0) == "UPDATE entity AS e0\nSET x = 0"
+
+    query = from(e in Entity, where: e.x == 123)
+    assert SQL.update_all(query, [:e], x: 0) ==
+           "UPDATE entity AS e0\nSET x = 0\nWHERE (e0.x = 123)"
+
+    assert SQL.update_all(Entity, [:e], x: quote do e.x + 1 end) ==
+           "UPDATE entity AS e0\nSET x = e0.x + 1"
+
+    assert SQL.update_all(Entity, [:e], x: 0, y: "123") ==
+           "UPDATE entity AS e0\nSET x = 0, y = '123'"
+  end
+
+  test "delete all" do
+    assert SQL.delete_all(Entity) == "DELETE FROM entity AS e0"
+
+    assert SQL.delete_all(from(e in Entity, where: e.x == 123)) ==
+           "DELETE FROM entity AS e0\nWHERE (e0.x = 123)"
   end
 end

@@ -25,6 +25,7 @@ defmodule Ecto.PgTest.Case do
   using do
     quote do
       import unquote(__MODULE__)
+      require TestRepo
     end
   end
 

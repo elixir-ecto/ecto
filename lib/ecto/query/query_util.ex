@@ -10,16 +10,32 @@ defmodule Ecto.Query.QueryUtil do
   Validates the query to check if it is correct. Should be called before
   compilation by the query adapter.
   """
-  def validate(query) do
-    Ecto.Query.Validator.validate(query)
+  def validate(query, opts // []) do
+    Ecto.Query.Validator.validate(query, opts)
+  end
+
+  @doc """
+  Validates an update query to check if it is correct. Should be called before
+  compilation by the query adapter.
+  """
+  def validate_update(query, binds, values) do
+    Ecto.Query.Validator.validate_update(query, binds, values)
+  end
+
+  @doc """
+  Validates a delete query to check if it is correct. Should be called before
+  compilation by the query adapter.
+  """
+  def validate_delete(query) do
+    Ecto.Query.Validator.validate_delete(query)
   end
 
   @doc """
   Normalizes the query. Should be called before
   compilation by the query adapter.
   """
-  def normalize(query) do
-    Ecto.Query.Normalizer.normalize(query)
+  def normalize(query, opts // []) do
+    Ecto.Query.Normalizer.normalize(query, opts)
   end
 
   @doc """

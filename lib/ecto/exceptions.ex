@@ -22,8 +22,9 @@ defexception Ecto.NoPrimaryKey, [:entity, :reason] do
 end
 
 defexception Ecto.AdapterError, [:adapter, :reason, :internal] do
-  def message(Ecto.AdapterError[adapter: adapter, reason: reason]) do
-    "adapter #{inspect adapter} failed: #{reason}"
+  def message(Ecto.AdapterError[adapter: adapter, reason: reason, internal: internal]) do
+    "adapter #{inspect adapter} failed: #{reason}" <>
+    if internal, do: "\ninternal error: #{inspect internal}", else: ""
   end
 end
 

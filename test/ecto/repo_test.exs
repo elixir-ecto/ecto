@@ -1,9 +1,52 @@
 Code.require_file "../test_helper.exs", __DIR__
 
+  defmodule Ecto.RepoTest.MockAdapter do
+    @behaviour Ecto.Adapter
+
+    defmacro __using__(_opts), do: :ok
+    def start_link(_repo), do: :ok
+    def stop(_repo), do: :ok
+    def all(_repo, _query), do: { :ok, [] }
+    def create(_repo, _record), do: 42
+    def update(_repo, _record), do: :ok
+    def update_all(_repo, _query, _binds, _values), do: { :ok, 1 }
+    def delete(_repo, _record), do: :ok
+    def delete_all(_repo, _query), do: { :ok, 1 }
+  end
+
+  defmodule Ecto.RepoTest.MyRepo do
+    use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter
+
+    def url, do: ""
+  end
+
+  defmodule Ecto.RepoTest.MyEntity do
+    use Ecto.Entity
+
+    dataset "my_entity" do
+      field :x, :string
+    end
+  end
+
+  defmodule Ecto.RepoTest.MyEntityNoPK do
+    use Ecto.Entity
+
+    dataset "my_entity", nil do
+      field :x, :string
+    end
+  end
+
 defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
+  import Ecto.Query
   alias Ecto.Repo
+
+  alias Ecto.RepoTest.MockAdapter
+  alias Ecto.RepoTest.MyRepo
+  alias Ecto.RepoTest.MyEntity
+  alias Ecto.RepoTest.MyEntityNoPK
+  require MyRepo
 
   test "parse url" do
     assert Repo.parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b", 0) == [
@@ -42,40 +85,6 @@ defmodule Ecto.RepoTest do
   test "optional password" do
     url = Repo.parse_url("ecto://eric@host:123/mydb", 0)
     refute url[:password]
-  end
-
-  defmodule MockAdapter do
-    @behaviour Ecto.Adapter
-
-    defmacro __using__(_opts), do: :ok
-    def start_link(_repo), do: :ok
-    def stop(_repo), do: :ok
-    def all(_repo, _query), do: { :ok, [] }
-    def create(_repo, _record), do: 42
-    def update(_repo, _record), do: :ok
-    def delete(_repo, _record), do: :ok
-  end
-
-  defmodule MyRepo do
-    use Repo, adapter: MockAdapter
-
-    def url, do: ""
-  end
-
-  defmodule MyEntity do
-    use Ecto.Entity
-
-    dataset "my_entity" do
-      field :x, :string
-    end
-  end
-
-  defmodule MyEntityNoPK do
-    use Ecto.Entity
-
-    dataset "my_entity", nil do
-      field :x, :string
-    end
   end
 
   test "repo validates query" do
@@ -147,5 +156,63 @@ defmodule Ecto.RepoTest do
     assert_raise FunctionClauseError, fn ->
       MyRepo.get(MyEntity, :atom)
     end
+  end
+
+  test "repo validates update_all" do
+    query = from(e in MyEntity, from: e2 in MyEntity)
+    assert_raise(Ecto.InvalidQuery, fn ->
+      MyRepo.update_all(query, [])
+    end)
+
+    query = from(e in MyEntity, select: e)
+    assert_raise Ecto.InvalidQuery, fn ->
+      MyRepo.update_all(query, [])
+    end
+
+    query = from(e in MyEntity, order_by: e.x)
+    assert_raise Ecto.InvalidQuery, fn ->
+      MyRepo.update_all(query, [])
+    end
+
+    assert_raise Ecto.InvalidQuery, fn ->
+      MyRepo.update_all(p in MyEntity, y: "123")
+    end
+
+    assert_raise Ecto.InvalidQuery, fn ->
+      MyRepo.update_all(p in MyEntity, x: 123)
+    end
+
+    assert_raise Ecto.InvalidQuery, fn ->
+      MyRepo.update_all(e in MyEntity, [])
+    end
+
+    MyRepo.update_all(e in MyEntity, x: e.x)
+    MyRepo.update_all(e in MyEntity, x: "123")
+    MyRepo.update_all(MyEntity, x: "123")
+
+    query = from(e in MyEntity, where: e.x == "123")
+    MyRepo.update_all(query, x: "")
+  end
+
+  test "repo validates delete_all" do
+    query = from(e in MyEntity, from: e2 in MyEntity)
+    assert_raise Ecto.InvalidQuery, fn ->
+      MyRepo.delete_all(query)
+    end
+
+    query = from(e in MyEntity, select: e)
+    assert_raise Ecto.InvalidQuery, fn ->
+      MyRepo.delete_all(query)
+    end
+
+    query = from(e in MyEntity, order_by: e.x)
+    assert_raise Ecto.InvalidQuery, fn ->
+      MyRepo.delete_all(query)
+    end
+
+    MyRepo.delete_all(MyEntity)
+
+    query = from(e in MyEntity, where: e.x == "123")
+    MyRepo.delete_all(query)
   end
 end

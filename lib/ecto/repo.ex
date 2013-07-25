@@ -28,6 +28,8 @@ defmodule Ecto.Repo do
   alias Ecto.Query.QueryUtil
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.QueryExpr
+  alias Ecto.Query.FromBuilder
+  alias Ecto.Query.BuilderUtil
 
   @doc false
   defmacro __using__(opts) do
@@ -61,8 +63,16 @@ defmodule Ecto.Repo do
         Ecto.Repo.update(__MODULE__, unquote(adapter), entity)
       end
 
+      defmacro update_all(queryable, values) do
+        Ecto.Repo.update_all(__MODULE__, unquote(adapter), queryable, values)
+      end
+
       def delete(entity) do
         Ecto.Repo.delete(__MODULE__, unquote(adapter), entity)
+      end
+
+      def delete_all(queryable) do
+        Ecto.Repo.delete_all(__MODULE__, unquote(adapter), queryable)
       end
 
       def adapter do
@@ -137,6 +147,21 @@ defmodule Ecto.Repo do
   defcallback update(Record.t) :: :ok | no_return
 
   @doc """
+  Updates all entities matching the given query with the given values.
+  `Ecto.AdapterError` will be raised if there is an adapter error.
+
+  ## Examples
+
+      MyRepo.update_all(Post, title: "New title")
+
+      MyRepo.update_all(p in Post, visits: p.visits + 1)
+
+      from(p in Post, where: p.id < 10) |>
+        MyRepo.update_all(visits: title: "New title")
+  """
+  defmacrocallback update_all(Macro.t, Keyword.t) :: integer | no_return
+
+  @doc """
   Deletes an entity using the primary key as key. If the entity has no primary
   key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
   there is an adapter error.
@@ -147,6 +172,18 @@ defmodule Ecto.Repo do
       MyRepo.delete(post)
   """
   defcallback delete(Record.t) :: :ok | no_return
+
+  @doc """
+  Deletes all entities matching the given query with the given values.
+  `Ecto.AdapterError` will be raised if there is an adapter error.
+
+  ## Examples
+
+      MyRepo.delete_all(Post)
+
+      from(p in Post, where: p.id < 10) |> MyRepo.delete_all
+  """
+  defcallback delete_all(Ecto.Queryable.t) :: integer | no_return
 
   @doc false
   def start_link(repo, adapter) do
@@ -218,11 +255,45 @@ defmodule Ecto.Repo do
   end
 
   @doc false
+  def update_all(repo, adapter, queryable, values) do
+    { binds, expr } = FromBuilder.escape(queryable)
+
+    values = Enum.map(values, fn({ field, expr }) ->
+      expr = BuilderUtil.escape(expr, binds)
+      { field, expr }
+    end)
+
+    quote do
+      values = unquote(values)
+      binds = unquote(binds)
+
+      query = Queryable.to_query(unquote(expr))
+      query = QueryUtil.normalize(query, skip_select: true)
+      QueryUtil.validate_update(query, binds, values)
+
+      reason = "updating entities"
+      adapter = unquote(adapter)
+      adapter.update_all(unquote(repo), query, binds, values)
+        |> Ecto.Repo.check_result(adapter, reason)
+    end
+  end
+
+  @doc false
   def delete(repo, adapter, entity) do
     reason = "deleting an entity"
     check_primary_key(entity, reason)
     validate_entity(entity, reason)
     adapter.delete(repo, entity) |> check_result(adapter, reason)
+  end
+
+  @doc false
+  def delete_all(repo, adapter, queryable) do
+    query = Queryable.to_query(queryable)
+    query = QueryUtil.normalize(query, skip_select: true)
+    QueryUtil.validate_delete(query)
+
+    reason = "deleting entities"
+    adapter.delete_all(repo, query) |> check_result(adapter, reason)
   end
 
   @doc false
@@ -262,7 +333,8 @@ defmodule Ecto.Repo do
     end)
   end
 
-  defp check_result(result, adapter, reason) do
+  @doc false
+  def check_result(result, adapter, reason) do
     case result do
       :ok -> :ok
       { :ok, res } -> res
@@ -291,6 +363,8 @@ defmodule Ecto.Repo do
 
     Enum.each(zipped, fn({ value, field }) ->
       type = module.__ecto__(:field_type, field)
+
+      # TODO: Check if entity field allows nil
       unless field == primary_key or check_value_type(value, type) do
         raise Ecto.ValidationError, entity: entity, field: field,
           type: type(value), expected_type: type, reason: reason

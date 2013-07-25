@@ -40,7 +40,7 @@ defmodule Ecto.Adapters.Postgres do
     result = transaction(repo, sql)
 
     case result do
-      { { :select, _nrows }, rows } ->
+      { { :select, _ }, rows } ->
         { return_type, _ } = query.select.expr
         binding = query.select.binding
         vars = QueryUtil.merge_binding_vars(binding, query.froms)
@@ -73,12 +73,32 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  def update_all(repo, query, binds, values) do
+    sql = SQL.update_all(query, binds, values)
+    result = transaction(repo, sql)
+
+    case result do
+      { { :update, nrows }, _ } -> { :ok, nrows }
+      { :error, _ } = err -> err
+    end
+  end
+
   def delete(repo, entity) do
     sql = SQL.delete(entity)
     result = transaction(repo, sql)
 
     case result do
       { { :delete, _ }, _ } -> :ok
+      { :error, _ } = err -> err
+    end
+  end
+
+  def delete_all(repo, query) do
+    sql = SQL.delete_all(query)
+    result = transaction(repo, sql)
+
+    case result do
+      { { :delete, nrows }, _ } -> { :ok, nrows }
       { :error, _ } = err -> err
     end
   end

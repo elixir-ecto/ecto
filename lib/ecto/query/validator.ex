@@ -21,8 +21,8 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  def validate(Query[] = query) do
-    if query.select == nil and length(query.froms) != 1 do
+  def validate(Query[] = query, opts) do
+    if !opts[:skip_select] and (query.select == nil and length(query.froms) != 1) do
       reason = "a query must have a select expression if querying from more than one entity"
       raise Ecto.InvalidQuery, reason: reason
     end
@@ -31,7 +31,50 @@ defmodule Ecto.Query.Validator do
     end
 
     validate_wheres(query.wheres, query.froms)
-    validate_select(query.select, query.froms)
+    unless opts[:skip_select], do: validate_select(query.select, query.froms)
+  end
+
+  def validate_update(Query[] = query, binds, values) do
+    # TODO: File and line metadata
+    unless match?({ Query, [_], _, nil, [], nil, nil }, query) do
+      raise Ecto.InvalidQuery, reason: "update query can only have a single `from` " <>
+        " and `where` expressions"
+    end
+
+    module = Enum.first(query.froms)
+    vars = QueryUtil.merge_binding_vars(binds, [module])
+
+    if values == [] do
+      raise Ecto.InvalidQuery, reason: "no values to update given"
+    end
+
+    Enum.each(values, fn({ field, expr }) ->
+      expected_type = module.__ecto__(:field_type, field)
+
+      unless expected_type do
+        raise Ecto.InvalidQuery, reason: "field `#{field}` is not on the " <>
+          "entity `#{module}`"
+      end
+
+      # TODO: Check if entity field allows nil
+      type = type_expr(expr, vars)
+      unless expected_type == type do
+        raise Ecto.InvalidQuery, reason: "expected_type `#{expected_type}` " <>
+        " on `#{module}.#{field}` doesn't match type `#{type}`"
+      end
+    end)
+
+    validate(query, skip_select: true)
+  end
+
+  def validate_delete(Query[] = query) do
+    # TODO: File and line metadata
+    unless match?({ Query, [_], _, nil, [], nil, nil }, query) do
+      raise Ecto.InvalidQuery, reason: "update query can only have a single `from` " <>
+        " and `where` expressions"
+    end
+
+    validate(query, skip_select: true)
   end
 
   defp validate_wheres(wheres, entities) do

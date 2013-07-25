@@ -27,7 +27,7 @@ defmodule Ecto.Adapter do
   Should store a single new entity in the data store. And return a primary key
   if one was created for the entity.
   """
-  defcallback create(module, Record.t) :: nil | integer | { :error, term }
+  defcallback create(module, Record.t) :: { :ok, nil | integer } | { :error, term }
 
   @doc """
   Should update an entity using the primary key as key.
@@ -35,7 +35,21 @@ defmodule Ecto.Adapter do
   defcallback update(module, Record.t) :: :ok | { :error, term }
 
   @doc """
+  Should update all entities matching the given query with the values given. The
+  query will only have where expressions and a single from expression. Returns
+  the number of affected entities.
+  """
+  defcallback update_all(module, Ecto.Query.t, [atom], Keyword.t) :: { :ok, :integer } | { :error, term }
+
+  @doc """
   Should delete an entity using the primary key as key.
   """
   defcallback delete(module, Record.t) :: :ok | { :error, term }
+
+  @doc """
+  Should delete all entities matching the given query. The query will only have
+  where expressions and a single from expression. Returns the number of affected
+  entities.
+  """
+  defcallback delete_all(module, Ecto.Query.t) :: { :ok, :integer } | { :error, term }
 end

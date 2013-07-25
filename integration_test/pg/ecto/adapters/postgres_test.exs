@@ -79,4 +79,70 @@ defmodule Ecto.Adapters.PostgresTest do
     assert [["1", "hai"]] ==
            TestRepo.all(from p in Post, select: [p.title, p.text])
   end
+
+  test "update some entites" do
+    assert Post[id: id1] = TestRepo.create(Post[title: "1", text: "hai"])
+    assert Post[id: id2] = TestRepo.create(Post[title: "2", text: "hai"])
+    assert Post[id: id3] = TestRepo.create(Post[title: "3", text: "hai"])
+
+    query = from(p in Post, where: p.title == "1" or p.title == "2")
+    assert 2 = TestRepo.update_all(query, title: "x")
+    assert Post[title: "x"] = TestRepo.get(Post, id1)
+    assert Post[title: "x"] = TestRepo.get(Post, id2)
+    assert Post[title: "3"] = TestRepo.get(Post, id3)
+  end
+
+  test "update all entites" do
+    assert Post[id: id1] = TestRepo.create(Post[title: "1", text: "hai"])
+    assert Post[id: id2] = TestRepo.create(Post[title: "2", text: "hai"])
+    assert Post[id: id3] = TestRepo.create(Post[title: "3", text: "hai"])
+
+    assert 3 = TestRepo.update_all(Post, title: "x")
+    assert Post[title: "x"] = TestRepo.get(Post, id1)
+    assert Post[title: "x"] = TestRepo.get(Post, id2)
+    assert Post[title: "x"] = TestRepo.get(Post, id3)
+  end
+
+  test "update no entites" do
+    assert Post[id: id1] = TestRepo.create(Post[title: "1", text: "hai"])
+    assert Post[id: id2] = TestRepo.create(Post[title: "2", text: "hai"])
+    assert Post[id: id3] = TestRepo.create(Post[title: "3", text: "hai"])
+
+    query = from(p in Post, where: p.title == "4")
+    assert 0 = TestRepo.update_all(query, title: "x")
+    assert Post[title: "1"] = TestRepo.get(Post, id1)
+    assert Post[title: "2"] = TestRepo.get(Post, id2)
+    assert Post[title: "3"] = TestRepo.get(Post, id3)
+  end
+
+  test "delete some entites" do
+    assert Post[] = TestRepo.create(Post[title: "1", text: "hai"])
+    assert Post[] = TestRepo.create(Post[title: "2", text: "hai"])
+    assert Post[] = TestRepo.create(Post[title: "3", text: "hai"])
+
+    query = from(p in Post, where: p.title == "1" or p.title == "2")
+    assert 2 = TestRepo.delete_all(query)
+    assert [Post[]] = TestRepo.all(Post)
+  end
+
+  test "delete all entites" do
+    assert Post[] = TestRepo.create(Post[title: "1", text: "hai"])
+    assert Post[] = TestRepo.create(Post[title: "2", text: "hai"])
+    assert Post[] = TestRepo.create(Post[title: "3", text: "hai"])
+
+    assert 3 = TestRepo.delete_all(Post)
+    assert [] = TestRepo.all(Post)
+  end
+
+  test "delete no entites" do
+    assert Post[id: id1] = TestRepo.create(Post[title: "1", text: "hai"])
+    assert Post[id: id2] = TestRepo.create(Post[title: "2", text: "hai"])
+    assert Post[id: id3] = TestRepo.create(Post[title: "3", text: "hai"])
+
+    query = from(p in Post, where: p.title == "4")
+    assert 0 = TestRepo.delete_all(query)
+    assert Post[title: "1"] = TestRepo.get(Post, id1)
+    assert Post[title: "2"] = TestRepo.get(Post, id2)
+    assert Post[title: "3"] = TestRepo.get(Post, id3)
+  end
 end
