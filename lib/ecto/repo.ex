@@ -159,7 +159,7 @@ defmodule Ecto.Repo do
       from(p in Post, where: p.id < 10) |>
         MyRepo.update_all(visits: title: "New title")
   """
-  defmacrocallback update_all(Macro.t, Keyword.t) :: integer | no_return
+  defcallback update_all(Macro.t, Keyword.t) :: integer | no_return
 
   @doc """
   Deletes an entity using the primary key as key. If the entity has no primary
