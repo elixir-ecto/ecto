@@ -115,4 +115,40 @@ defmodule Ecto.Query.ValidatorTest do
       QueryUtil.validate(query)
     end
   end
+
+  test "valid in expression" do
+    query = from(p in PostEntity) |> select([], 1 in [1,2,3])
+    QueryUtil.validate(query)
+
+    query = from(p in PostEntity) |> select([], '1' in [1,"2",'3'])
+    QueryUtil.validate(query)
+
+    query = from(p in PostEntity) |> select([], (2+2) in 1..5)
+    QueryUtil.validate(query)
+  end
+
+  test "invalid in expression" do
+    query = from(p in PostEntity) |> select([], 1 in 0)
+
+    assert_raise Ecto.InvalidQuery, %r"second argument of `in` must be of list type", fn ->
+      QueryUtil.validate(query)
+    end
+  end
+
+  test "valid .. expression" do
+    query = from(p in PostEntity) |> select([], 1 .. 3)
+    QueryUtil.validate(query)
+  end
+
+  test "invalid .. expression" do
+    query = from(p in PostEntity) |> select([], 1 .. '3')
+    assert_raise Ecto.InvalidQuery, %r"both arguments of `..` must be of a number type", fn ->
+      QueryUtil.validate(query)
+    end
+
+    query = from(p in PostEntity) |> select([], "1" .. 3)
+    assert_raise Ecto.InvalidQuery, %r"both arguments of `..` must be of a number type", fn ->
+      QueryUtil.validate(query)
+    end
+  end
 end

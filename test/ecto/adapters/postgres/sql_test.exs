@@ -224,4 +224,15 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.delete_all(from(e in Entity, where: e.x == 123)) ==
            "DELETE FROM entity AS e0\nWHERE (e0.x = 123)"
   end
+
+  test "in expression" do
+    query = from(e in Entity) |> select([], 1 in [1,2,3])
+    assert SQL.select(query) == "SELECT 1 = ANY (ARRAY[1, 2, 3])\nFROM entity AS e0"
+
+    query = from(e in Entity) |> select([], 1 in 1..3)
+    assert SQL.select(query) == "SELECT 1 BETWEEN 1 AND 3\nFROM entity AS e0"
+
+    query = from(e in Entity) |> select([e], 1 in 1..(e.x + 5))
+    assert SQL.select(query) == "SELECT 1 BETWEEN 1 AND e0.x + 5\nFROM entity AS e0"
+  end
 end

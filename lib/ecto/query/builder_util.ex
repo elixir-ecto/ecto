@@ -4,7 +4,7 @@ defmodule Ecto.Query.BuilderUtil do
   # Common functions for the query builder modules.
 
   @unary_ops [ :not, :+, :- ]
-  @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/ ]
+  @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/, :in, :.. ]
 
   # Smart escapes a query expression. Everything that is a query expression will
   # be escaped, foreign (elixir) expressions will not be escaped so that they

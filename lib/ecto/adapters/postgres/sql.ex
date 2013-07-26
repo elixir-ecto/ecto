@@ -218,8 +218,24 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "#{op_to_binary(left, vars)} IS NOT NULL"
   end
 
+  defp expr({ :in, _, [left, { :.., _, [from, to] }] }, vars) do
+    expr(left, vars) <> " BETWEEN " <> expr(from, vars) <> " AND " <> expr(to, vars)
+  end
+
+  defp expr({ :in, _, [left, right] }, vars) do
+    expr(left, vars) <> " = ANY (" <> expr(right, vars) <> ")"
+  end
+
+  defp expr({ :.., _, [left, right] }, vars) do
+    expr(Enum.to_list(left..right), vars)
+  end
+
   defp expr({ op, _, [left, right] }, vars) when op in @binary_ops do
     "#{op_to_binary(left, vars)} #{binop_to_binary(op)} #{op_to_binary(right, vars)}"
+  end
+
+  defp expr(list, vars) when is_list(list) do
+    "ARRAY[" <> Enum.map_join(list, ", ", expr(&1, vars)) <> "]"
   end
 
   defp expr(literal, _vars), do: literal(literal)

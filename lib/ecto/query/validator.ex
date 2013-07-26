@@ -170,6 +170,23 @@ defmodule Ecto.Query.Validator do
     :number
   end
 
+  defp type_expr({ :in, _, [_left, right] }, vars) do
+    type_right = type_expr(right, vars)
+    unless type_right == :list do
+      raise Ecto.InvalidQuery, reason: "second argument of `in` must be of list type"
+    end
+    :boolean
+  end
+
+  defp type_expr({ :.., _, [left, right] }, vars) do
+    type_left = type_expr(left, vars)
+    type_right = type_expr(right, vars)
+    unless type_left == :number and type_right == :number do
+      raise Ecto.InvalidQuery, reason: "both arguments of `..` must be of a number type"
+    end
+    :list
+  end
+
   defp type_expr(list, vars) when is_list(list) do
     Enum.each(list, type_expr(&1, vars))
     :list
