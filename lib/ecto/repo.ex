@@ -376,6 +376,7 @@ defmodule Ecto.Repo do
   defp check_value_type(value, :string) when is_binary(value), do: true
   defp check_value_type(value, :integer) when is_integer(value), do: true
   defp check_value_type(value, :float) when is_float(value), do: true
+  defp check_value_type(nil, _), do: true
   defp check_value_type(_value, _type), do: false
 
   defp type(value) when is_boolean(value), do: :boolean

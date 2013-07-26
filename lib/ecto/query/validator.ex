@@ -57,6 +57,7 @@ defmodule Ecto.Query.Validator do
       end
 
       # TODO: Check if entity field allows nil
+      if expected_type in [:integer, :float], do: expected_type = :number
       type = type_expr(expr, vars)
       unless expected_type == type do
         raise Ecto.InvalidQuery, reason: "expected_type `#{expected_type}` " <>
@@ -107,7 +108,7 @@ defmodule Ecto.Query.Validator do
       raise Ecto.InvalidQuery, reason: "unknown field `#{var}.#{field}`"
     end
 
-    if type == :integer or type == :float, do: :number, else: type
+    if type in [:integer, :float], do: :number, else: type
   end
 
   # var

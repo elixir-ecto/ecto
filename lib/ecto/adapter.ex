@@ -6,6 +6,8 @@ defmodule Ecto.Adapter do
 
   use Behaviour
 
+  defmacrocallback __using__(Keyword.t) :: Macro.t
+
   @doc """
   Should start any connection pooling or supervision and return `{ :ok, pid }`
   or just `:ok` if nothing needs to be done. Return `{ :error, error }` if

@@ -16,6 +16,7 @@ defmodule Post do
   dataset "posts" do
     field :title, :string
     field :text, :string
+    field :count, :integer
   end
 end
 
@@ -70,7 +71,7 @@ Enum.each(setup_cmds, fn(cmd) ->
 end)
 
 setup_database = [
-  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100))"
+  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), count integer)"
 ]
 
 { :ok, _pid } = Postgres.start(TestRepo)

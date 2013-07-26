@@ -115,6 +115,15 @@ defmodule Ecto.Adapters.PostgresTest do
     assert Post[title: "3"] = TestRepo.get(Post, id3)
   end
 
+  test "update expression syntax" do
+    assert Post[id: id1] = TestRepo.create(Post[title: "1", text: "hai", count: 1])
+    assert Post[id: id2] = TestRepo.create(Post[title: "2", text: "hai", count: 1])
+
+    assert 2 = TestRepo.update_all(p in Post, count: p.count + 41)
+    assert Post[count: 42] = TestRepo.get(Post, id1)
+    assert Post[count: 42] = TestRepo.get(Post, id2)
+  end
+
   test "delete some entites" do
     assert Post[] = TestRepo.create(Post[title: "1", text: "hai"])
     assert Post[] = TestRepo.create(Post[title: "2", text: "hai"])
