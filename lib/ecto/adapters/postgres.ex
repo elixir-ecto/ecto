@@ -136,13 +136,15 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def query(repo, sql), do: transaction(repo, sql)
 
-  defp transaction(repo, sql) when is_binary(sql) do
+  @doc false
+  def transaction(repo, sql) when is_binary(sql) do
     :poolboy.transaction(repo.__postgres__(:pool_name), fn(conn) ->
       :pgsql_connection.simple_query(sql, { :pgsql_connection, conn })
     end)
   end
 
-  defp transaction(repo, fun) when is_function(fun, 1) do
+  @doc false
+  def transaction(repo, fun) when is_function(fun, 1) do
     :poolboy.transaction(repo.__postgres__(:pool_name), fun)
   end
 

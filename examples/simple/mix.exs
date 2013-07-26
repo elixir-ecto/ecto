@@ -17,6 +17,6 @@ defmodule Simple.Mixfile do
   # { :foobar, "0.1", git: "https://github.com/elixir-lang/foobar.git" }
   defp deps do
     [ { :ecto, path: "../.."},
-      { :pgsql, github: "semiocast/pgsql" }]
+      { :pgsql, github: "ericmj/pgsql", branch: "elixir" } ]
   end
 end
