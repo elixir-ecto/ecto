@@ -20,7 +20,7 @@ defmodule Ecto.Mixfile do
   defp deps(_) do
     deps(:prod) ++
       [ { :ex_doc, github: "elixir-lang/ex_doc" },
-        { :pgsql, github: "semiocast/pgsql" } ]
+        { :pgsql, github: "ericmj/pgsql", branch: "elixir" } ]
   end
 
   defp envs do
