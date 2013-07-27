@@ -1,40 +1,38 @@
-Code.require_file "../test_helper.exs", __DIR__
+defmodule Ecto.RepoTest.MockAdapter do
+  @behaviour Ecto.Adapter
 
-  defmodule Ecto.RepoTest.MockAdapter do
-    @behaviour Ecto.Adapter
+  defmacro __using__(_opts), do: :ok
+  def start_link(_repo), do: :ok
+  def stop(_repo), do: :ok
+  def all(_repo, _query), do: { :ok, [] }
+  def create(_repo, _record), do: 42
+  def update(_repo, _record), do: :ok
+  def update_all(_repo, _query, _binds, _values), do: { :ok, 1 }
+  def delete(_repo, _record), do: :ok
+  def delete_all(_repo, _query), do: { :ok, 1 }
+end
 
-    defmacro __using__(_opts), do: :ok
-    def start_link(_repo), do: :ok
-    def stop(_repo), do: :ok
-    def all(_repo, _query), do: { :ok, [] }
-    def create(_repo, _record), do: 42
-    def update(_repo, _record), do: :ok
-    def update_all(_repo, _query, _binds, _values), do: { :ok, 1 }
-    def delete(_repo, _record), do: :ok
-    def delete_all(_repo, _query), do: { :ok, 1 }
+defmodule Ecto.RepoTest.MyRepo do
+  use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter
+
+  def url, do: ""
+end
+
+defmodule Ecto.RepoTest.MyEntity do
+  use Ecto.Entity
+
+  dataset "my_entity" do
+    field :x, :string
   end
+end
 
-  defmodule Ecto.RepoTest.MyRepo do
-    use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter
+defmodule Ecto.RepoTest.MyEntityNoPK do
+  use Ecto.Entity
 
-    def url, do: ""
+  dataset "my_entity", nil do
+    field :x, :string
   end
-
-  defmodule Ecto.RepoTest.MyEntity do
-    use Ecto.Entity
-
-    dataset "my_entity" do
-      field :x, :string
-    end
-  end
-
-  defmodule Ecto.RepoTest.MyEntityNoPK do
-    use Ecto.Entity
-
-    dataset "my_entity", nil do
-      field :x, :string
-    end
-  end
+end
 
 defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
