@@ -149,4 +149,14 @@ defmodule Ecto.Query.ValidatorTest do
       QueryUtil.validate(query)
     end
   end
+
+  test "list expression" do
+    query = from(p in PostEntity) |> where([p], [p.id, p.title] == nil) |> select([], 0)
+    QueryUtil.validate(query)
+
+    query = from(p in PostEntity) |> where([p], [p.id, p.title] == 1) |> select([], 0)
+    assert_raise Ecto.InvalidQuery, "both arguments of `==` types must match", fn ->
+      QueryUtil.validate(query)
+    end
+  end
 end

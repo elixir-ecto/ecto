@@ -35,6 +35,11 @@ defmodule Ecto.Query.BuilderUtil do
     { :{}, [], [op, meta, args] }
   end
 
+  # list
+  def escape(list, vars) when is_list(list) do
+    Enum.map(list, escape(&1, vars))
+  end
+
   # everything else is foreign or literals
   def escape(other, vars) do
     case find_vars(other, vars) do

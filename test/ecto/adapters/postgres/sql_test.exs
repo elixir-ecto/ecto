@@ -233,4 +233,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = from(e in Entity) |> select([e], 1 in 1..(e.x + 5))
     assert SQL.select(query) == "SELECT 1 BETWEEN 1 AND e0.x + 5\nFROM entity AS e0"
   end
+
+  test "list expression" do
+    query = from(e in Entity) |> where([e], [e.x, e.y] == nil) |> select([e], 0)
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nWHERE (ARRAY[e0.x, e0.y] IS NULL)"
+  end
 end
