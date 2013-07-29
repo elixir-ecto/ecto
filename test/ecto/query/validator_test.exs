@@ -98,17 +98,17 @@ defmodule Ecto.Query.ValidatorTest do
       QueryUtil.validate(query)
     end
 
-    query = from(p in PostEntity) |> select([], -"abc")
+    query = from(p in PostEntity) |> select([p], -p.title)
     assert_raise Ecto.InvalidQuery, %r"argument of `-` must be of a number type", fn ->
       QueryUtil.validate(query)
     end
 
-    query = from(p in PostEntity) |> select([], 1 < "123")
+    query = from(p in PostEntity) |> select([p], 1 < p.title)
     assert_raise Ecto.InvalidQuery, %r"both arguments of `<` must be of a number type", fn ->
       QueryUtil.validate(query)
     end
 
-    query = from(p in PostEntity) |> where([], true or 123) |> select([], 0)
+    query = from(p in PostEntity) |> where([p], true or p.title) |> select([], 0)
     assert_raise Ecto.InvalidQuery, %r"both arguments of `or` must be of type boolean", fn ->
       QueryUtil.validate(query)
     end
@@ -126,8 +126,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "invalid in expression" do
-    query = from(p in PostEntity) |> select([], 1 in 0)
-
+    query = from(p in PostEntity) |> select([p], 1 in p.title)
     assert_raise Ecto.InvalidQuery, %r"second argument of `in` must be of list type", fn ->
       QueryUtil.validate(query)
     end

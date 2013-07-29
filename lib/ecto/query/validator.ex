@@ -178,7 +178,7 @@ defmodule Ecto.Query.Validator do
     :boolean
   end
 
-  defp type_expr({ :.., _, [left, right] }, vars) do
+  defp type_expr(Range[first: left, last: right], vars) do
     type_left = type_expr(left, vars)
     type_right = type_expr(right, vars)
     unless type_left == :number and type_right == :number do
@@ -214,6 +214,6 @@ defmodule Ecto.Query.Validator do
 
   # unknown
   defp type_expr(expr, _vars) do
-    raise Ecto.InvalidQuery, reason: "internal error on `#{inspect expr}"
+    raise Ecto.InvalidQuery, reason: "internal error on `#{inspect expr}`"
   end
 end

@@ -218,16 +218,16 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "#{op_to_binary(left, vars)} IS NOT NULL"
   end
 
-  defp expr({ :in, _, [left, { :.., _, [from, to] }] }, vars) do
-    expr(left, vars) <> " BETWEEN " <> expr(from, vars) <> " AND " <> expr(to, vars)
+  defp expr({ :in, _, [left, Range[first: first, last: last]] }, vars) do
+    expr(left, vars) <> " BETWEEN " <> expr(first, vars) <> " AND " <> expr(last, vars)
   end
 
   defp expr({ :in, _, [left, right] }, vars) do
     expr(left, vars) <> " = ANY (" <> expr(right, vars) <> ")"
   end
 
-  defp expr({ :.., _, [left, right] }, vars) do
-    expr(Enum.to_list(left..right), vars)
+  defp expr(Range[] = range, vars) do
+    expr(Enum.to_list(range), vars)
   end
 
   defp expr({ op, _, [left, right] }, vars) when op in @binary_ops do

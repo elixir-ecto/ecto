@@ -22,7 +22,7 @@ defmodule Ecto.Query.SelectBuilderTest do
     assert { :single, Macro.escape(quote do 2 * x.y end) } ==
             escape(quote do 2 * x.y end, [:x])
 
-    assert { :single, { :{}, _, [:+, _, [{ :x, _, _ }, {:y, _, _} ]] } } =
+    assert { :single, { :+, _, [{ :x, _, _ }, { :y, _, _ }] } } =
             escape(quote do x + y end, [])
 
     assert { :single, quote do x.y end } ==

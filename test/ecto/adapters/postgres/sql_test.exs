@@ -103,41 +103,41 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "binary ops" do
-    query = from(r in Entity) |> select([], 1 == 2)
-    assert SQL.select(query) == "SELECT 1 = 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x == 2)
+    assert SQL.select(query) == "SELECT e0.x = 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 != 2)
-    assert SQL.select(query) == "SELECT 1 != 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x != 2)
+    assert SQL.select(query) == "SELECT e0.x != 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 <= 2)
-    assert SQL.select(query) == "SELECT 1 <= 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x <= 2)
+    assert SQL.select(query) == "SELECT e0.x <= 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 >= 2)
-    assert SQL.select(query) == "SELECT 1 >= 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x >= 2)
+    assert SQL.select(query) == "SELECT e0.x >= 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 < 2)
-    assert SQL.select(query) == "SELECT 1 < 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x < 2)
+    assert SQL.select(query) == "SELECT e0.x < 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 > 2)
-    assert SQL.select(query) == "SELECT 1 > 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x > 2)
+    assert SQL.select(query) == "SELECT e0.x > 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 + 2)
-    assert SQL.select(query) == "SELECT 1 + 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x + 2)
+    assert SQL.select(query) == "SELECT e0.x + 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 - 2)
-    assert SQL.select(query) == "SELECT 1 - 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x - 2)
+    assert SQL.select(query) == "SELECT e0.x - 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 * 2)
-    assert SQL.select(query) == "SELECT 1 * 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x * 2)
+    assert SQL.select(query) == "SELECT e0.x * 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], 1 / 2)
-    assert SQL.select(query) == "SELECT 1 / 2\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x / 2)
+    assert SQL.select(query) == "SELECT e0.x / 2\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], true and false)
-    assert SQL.select(query) == "SELECT TRUE AND FALSE\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x and false)
+    assert SQL.select(query) == "SELECT e0.x AND FALSE\nFROM entity AS e0"
 
-    query = from(r in Entity) |> select([], true or false)
-    assert SQL.select(query) == "SELECT TRUE OR FALSE\nFROM entity AS e0"
+    query = from(r in Entity) |> select([r], r.x or false)
+    assert SQL.select(query) == "SELECT e0.x OR FALSE\nFROM entity AS e0"
   end
 
   test "binary op null check" do
@@ -225,11 +225,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "in expression" do
-    query = from(e in Entity) |> select([], 1 in [1,2,3])
-    assert SQL.select(query) == "SELECT 1 = ANY (ARRAY[1, 2, 3])\nFROM entity AS e0"
+    query = from(e in Entity) |> select([e], 1 in [1,e.x,3])
+    assert SQL.select(query) == "SELECT 1 = ANY (ARRAY[1, e0.x, 3])\nFROM entity AS e0"
 
-    query = from(e in Entity) |> select([], 1 in 1..3)
-    assert SQL.select(query) == "SELECT 1 BETWEEN 1 AND 3\nFROM entity AS e0"
+    query = from(e in Entity) |> select([e], e.x in 1..3)
+    assert SQL.select(query) == "SELECT e0.x BETWEEN 1 AND 3\nFROM entity AS e0"
 
     query = from(e in Entity) |> select([e], 1 in 1..(e.x + 5))
     assert SQL.select(query) == "SELECT 1 BETWEEN 1 AND e0.x + 5\nFROM entity AS e0"
