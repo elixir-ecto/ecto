@@ -201,9 +201,8 @@ defmodule Ecto.Query do
       from(c in City) |> select([c], { c.name, c.country })
 
   """
-  defmacro select(query, binding, expr)
-      when is_list(binding) do
-    binding = Enum.map(binding, escape_binding(&1))
+  defmacro select(query, binding, expr) do
+    binding = QueryUtil.escape_binding(binding)
     quote do
       select_expr = unquote(SelectBuilder.escape(expr, binding))
       select = QueryExpr[expr: select_expr, binding: unquote(binding),
@@ -226,9 +225,8 @@ defmodule Ecto.Query do
       from(c in City) |> where([c], c.state == "Sweden")
 
   """
-  defmacro where(query, binding, expr)
-      when is_list(binding) do
-    binding = Enum.map(binding, escape_binding(&1))
+  defmacro where(query, binding, expr) do
+    binding = QueryUtil.escape_binding(binding)
     quote do
       where_expr = unquote(WhereBuilder.escape(expr, binding))
       where = QueryExpr[expr: where_expr, binding: unquote(binding),
@@ -254,9 +252,8 @@ defmodule Ecto.Query do
       from(c in City) |> order_by([c], asc: c.name, desc: c.population)
 
   """
-  defmacro order_by(query, binding, expr)
-      when is_list(binding) do
-    binding = Enum.map(binding, escape_binding(&1))
+  defmacro order_by(query, binding, expr)  do
+    binding = QueryUtil.escape_binding(binding)
     quote do
       order_by_expr = unquote(OrderByBuilder.escape(expr, binding))
       order_by = QueryExpr[expr: order_by_expr, binding: unquote(binding)]
@@ -278,9 +275,8 @@ defmodule Ecto.Query do
       from(u in User) |> where(u.id == current_user) |> limit(1)
 
   """
-  defmacro limit(query, binding // [], expr)
-      when is_list(binding) do
-    binding = Enum.map(binding, escape_binding(&1))
+  defmacro limit(query, binding // [], expr) do
+    binding = QueryUtil.escape_binding(binding)
     quote do
       limit_expr = unquote(LimitOffsetBuilder.escape(expr, binding))
       LimitOffsetBuilder.validate(limit_expr)
@@ -305,9 +301,8 @@ defmodule Ecto.Query do
       from(p in Post) |> limit(10) |> offset(30)
 
   """
-  defmacro offset(query, binding // [], expr)
-      when is_list(binding) do
-    binding = Enum.map(binding, escape_binding(&1))
+  defmacro offset(query, binding // [], expr) do
+    binding = QueryUtil.escape_binding(binding)
     quote do
       offset_expr = unquote(LimitOffsetBuilder.escape(expr, binding))
       LimitOffsetBuilder.validate(offset_expr)
@@ -342,17 +337,5 @@ defmodule Ecto.Query do
         end
       end)
     quoted
-  end
-
-  defp escape_binding(var) when is_atom(var) do
-    var
-  end
-
-  defp escape_binding({ var, _, context }) when is_atom(var) and is_atom(context) do
-    var
-  end
-
-  defp escape_binding(_) do
-    raise Ecto.InvalidQuery, reason: "binding should be list of variables"
   end
 end

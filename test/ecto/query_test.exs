@@ -147,4 +147,32 @@ defmodule Ecto.QueryTest do
       delay_compile(from(PostEntity, 123))
     end
   end
+
+  test "unbound _ var" do
+    assert_raise ErlangError, fn ->
+      delay_compile(from(PostEntity) |> select([], _.x))
+    end
+
+    query = from(PostEntity) |> select([_], 0)
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> from(CommentEntity) |> select([_, c], c.text)
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> from(CommentEntity) |> select([p, _], p.title)
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> from(CommentEntity) |> select([_, _], 0)
+    QueryUtil.validate(query)
+  end
+
+  test "binding collision" do
+    assert_raise Ecto.InvalidQuery, "variable `x` is already defined in query", fn ->
+      delay_compile(from(PostEntity) |> from(CommentEntity) |> select([x, x], x.id))
+    end
+
+    assert_raise Ecto.InvalidQuery, "variable `x` is already defined in query", fn ->
+      delay_compile(from(x in PostEntity, from: x in CommentEntity, select: x.id))
+    end
+  end
 end

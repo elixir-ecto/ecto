@@ -66,6 +66,42 @@ defmodule Ecto.Query.QueryUtil do
     end
   end
 
+  def escape_binding(binding) when is_list(binding) do
+    vars = Enum.map(binding, escape_var(&1))
+    if var = Enum.filter(vars, &1 != :_) |> not_uniq do
+      raise Ecto.InvalidQuery, reason: "variable `#{var}` is already defined in query"
+    end
+    vars
+  end
+
+  def escape_binding(_) do
+    raise Ecto.InvalidQuery, reason: "binding should be list of variables"
+  end
+
+  defp escape_var(var) when is_atom(var) do
+    var
+  end
+
+  defp escape_var({ var, _, context }) when is_atom(var) and is_atom(context) do
+    var
+  end
+
+  defp escape_var(_) do
+    raise Ecto.InvalidQuery, reason: "binding should be list of variables"
+  end
+
+  # Returns the if all elements in the collection are unique
+  defp not_uniq(collection) do
+    Enum.sort(collection) |> do_not_uniq
+  end
+
+  defp do_not_uniq([]), do: nil
+  defp do_not_uniq([_]), do: nil
+
+  defp do_not_uniq([x, y | rest]) do
+    if x == y, do: x, else: do_not_uniq([y|rest])
+  end
+
   # Checks if a query merge can be done
   defp check_merge(Query[] = left, Query[] = right) do
     if left.select && right.select do

@@ -36,4 +36,8 @@ defmodule Ecto.Query.BuilderUtilTest do
       escape(quote do foreign(x.y) end, [:x])
     end
   end
+
+  test "unbound wildcard var" do
+    assert { {:., _, [{ :_, _, _ }, :y] }, _, [] } = escape(quote do _.y end, [:_, :_])
+  end
 end

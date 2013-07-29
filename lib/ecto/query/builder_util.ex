@@ -8,13 +8,13 @@ defmodule Ecto.Query.BuilderUtil do
 
   # Smart escapes a query expression. Everything that is a query expression will
   # be escaped, foreign (elixir) expressions will not be escaped so that they
-  # will be evaluated in their place. This means that everything will foreign
-  # will be inserted as-is into the query.
+  # will be evaluated in their place. This means that everything foreign will be
+  # inserted as-is into the query.
 
   # var.x - where var is bound
   def escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] } = ast, vars)
       when is_atom(var) and is_atom(context) do
-    if var in vars do
+    if var != :_ and var in vars do
       left_escaped = { :{}, [], tuple_to_list(left) }
       dot_escaped = { :{}, [], [:., meta2, [left_escaped, right]] }
       { :{}, meta, [dot_escaped, meta, []] }
@@ -45,14 +45,13 @@ defmodule Ecto.Query.BuilderUtil do
     case find_vars(other, vars) do
       nil -> other
       var ->
-        # TODO: Improve error message
         reason = "bound vars are only allowed in dotted expression `#{var}.field` " <>
-                  "or as argument to a query expression"
+          "or as argument to a query expression"
         raise Ecto.InvalidQuery, reason: reason
     end
   end
 
-  # Returns all variables in the AST
+  # Return a variable in vars if found in AST, nil otherwise
   def find_vars({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
     if var in vars, do: var
   end
