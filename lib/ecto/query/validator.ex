@@ -75,8 +75,12 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_only_from_where(Query[] = query) do
+    # Update validation check if assertion fails
+    unquote(unless size(Query[]) == 7, do: raise "Ecto.Query.Query out of date")
+
     # TODO: File and line metadata
-    unless match?({ Query, [_], _, nil, [], nil, nil }, query) do
+    unless length(query.froms) == 1 and nil?(query.select) and query.order_bys == [] and
+        nil?(query.limit) and nil?(query.offset) do
       raise Ecto.InvalidQuery, reason: "update query can only have a single `from` " <>
         " and `where` expressions"
     end
