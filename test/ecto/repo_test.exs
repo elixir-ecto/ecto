@@ -47,14 +47,14 @@ defmodule Ecto.RepoTest do
   require MyRepo
 
   test "parse url" do
-    assert Repo.parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b", 0) == [
-           password: "hunter2",
-           username: "eric",
-           hostname: "host",
-           database: "mydb",
-           port: 12345,
-           size: "10",
-           a: "b" ]
+    url = Repo.parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b", 0)
+    assert { :password, "hunter2" } in url
+    assert { :username, "eric" } in url
+    assert { :hostname, "host" } in url
+    assert { :database, "mydb" } in url
+    assert { :port, 12345 } in url
+    assert { :size, "10" } in url
+    assert { :a, "b" } in url
   end
 
   test "parse invalid url" do

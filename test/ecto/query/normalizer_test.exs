@@ -21,7 +21,6 @@ defmodule Ecto.Query.NormalizerTest do
     end
   end
 
-
   test "auto select entity" do
     query = from(PostEntity) |> Queryable.to_query |> QueryUtil.normalize
     assert { { :entity, :entity }, { :entity, [], nil } } = query.select.expr
@@ -29,7 +28,7 @@ defmodule Ecto.Query.NormalizerTest do
   end
 
   test "dont auto select entity" do
-    query = from(p in PostEntity) |> from(c in CommentEntity) |> QueryUtil.normalize
+    query = from(PostEntity) |> from(CommentEntity) |> QueryUtil.normalize
     refute query.select
   end
 end

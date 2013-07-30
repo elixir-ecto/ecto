@@ -24,6 +24,9 @@ defmodule Ecto.Query.FromBuilderTest do
     assert { [:p,:q], quote do MyEntity end } ==
            escape(quote do [p,q] in MyEntity end)
 
+    assert { [:_,:_], quote do abc end } ==
+           escape(quote do [_,_] in abc end)
+
     assert { [], 123 } ==
            escape(123)
   end
