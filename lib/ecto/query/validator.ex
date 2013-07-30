@@ -35,11 +35,7 @@ defmodule Ecto.Query.Validator do
   end
 
   def validate_update(Query[] = query, binds, values) do
-    # TODO: File and line metadata
-    unless match?({ Query, [_], _, nil, [], nil, nil }, query) do
-      raise Ecto.InvalidQuery, reason: "update query can only have a single `from` " <>
-        " and `where` expressions"
-    end
+    validate_only_from_where(query)
 
     module = Enum.first(query.froms)
     vars = QueryUtil.merge_binding_vars(binds, [module])
@@ -68,14 +64,22 @@ defmodule Ecto.Query.Validator do
     validate(query, skip_select: true)
   end
 
-  def validate_delete(Query[] = query) do
+  def validate_delete(query) do
+    validate_only_from_where(query)
+    validate(query, skip_select: true)
+  end
+
+  def validate_get(query) do
+    validate_only_from_where(query)
+    validate(query, skip_select: true)
+  end
+
+  defp validate_only_from_where(Query[] = query) do
     # TODO: File and line metadata
     unless match?({ Query, [_], _, nil, [], nil, nil }, query) do
       raise Ecto.InvalidQuery, reason: "update query can only have a single `from` " <>
         " and `where` expressions"
     end
-
-    validate(query, skip_select: true)
   end
 
   defp validate_wheres(wheres, entities) do

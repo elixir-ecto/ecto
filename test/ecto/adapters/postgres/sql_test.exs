@@ -167,9 +167,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = from(Entity) |> select([], "abc")
     assert SQL.select(query) == "SELECT 'abc'\nFROM entity AS e0"
 
-    # TODO: Test more numbers
     query = from(Entity) |> select([], 123)
     assert SQL.select(query) == "SELECT 123\nFROM entity AS e0"
+
+    query = from(Entity) |> select([], 123.0)
+    assert SQL.select(query) == "SELECT 123.0\nFROM entity AS e0"
   end
 
   test "nested expressions" do

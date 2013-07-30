@@ -156,7 +156,6 @@ defmodule Ecto.Adapters.Postgres do
     end)
   end
 
-  # TODO: Convert :null -> nil
   defp transform_row(row, return_type, vars) do
     case return_type do
       :single -> elem(row, 0)
@@ -170,7 +169,7 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp prepare_start(repo) do
-    # Use :applcation.ensure_started for R16B01
+    # Use :application.ensure_started for R16B01
     case :application.start(:pgsql) do
       :ok -> :ok
       { :error, { :already_started, _ } } -> :ok

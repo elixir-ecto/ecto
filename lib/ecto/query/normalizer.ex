@@ -4,8 +4,6 @@ defmodule Ecto.Query.Normalizer do
   # Normalizes a query to that it is as consistent as possible.
   # For now it only does auto-selecting.
 
-  # TODO: Can we combine order by queries here?
-
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
 

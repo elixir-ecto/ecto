@@ -204,18 +204,16 @@ defmodule Ecto.Repo do
     reason = "getting entity"
 
     query = Queryable.to_query(queryable)
-    query = QueryUtil.normalize(query)
-    QueryUtil.validate(query)
+    QueryUtil.validate_get(query)
 
     entity = Enum.first(query.froms)
     check_primary_key(entity, reason)
-
     primary_key = entity.__ecto__(:primary_key)
-    check_primary_key(entity, reason)
 
     quoted = quote do x.unquote(primary_key) == unquote(id) end
     expr = QueryExpr[expr: quoted, binding: [:x]]
     query = QueryUtil.merge(query, :where, expr)
+    query = QueryUtil.normalize(query)
 
     case adapter.all(repo, query) |> check_result(adapter, reason) do
       [entity] -> entity

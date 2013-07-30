@@ -31,6 +31,14 @@ defmodule Ecto.Query.QueryUtil do
   end
 
   @doc """
+  Validates a get query to check if it is correct. Should be called before
+  compilation by the query adapter.
+  """
+  def validate_get(query) do
+    Ecto.Query.Validator.validate_get(query)
+  end
+
+  @doc """
   Normalizes the query. Should be called before
   compilation by the query adapter.
   """

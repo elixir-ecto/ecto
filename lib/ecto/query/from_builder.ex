@@ -34,7 +34,6 @@ defmodule Ecto.Query.FromBuilder do
   # of bindings and entities will fail because every entity doesn't have a
   # matching variable
   # `Entity` == `_ in Entity`
-  # TODO: Support this
   def escape({ :__aliases__, _, _ } = expr) do
     { [:_], expr }
   end
