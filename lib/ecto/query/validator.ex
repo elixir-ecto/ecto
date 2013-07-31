@@ -218,7 +218,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp type_expr(list, state) when is_list(list) do
-    Enum.each(list, type_expr(&1, state))
+    Enum.each(list, &type_expr(&1, state))
     :list
   end
 
@@ -227,7 +227,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp type_expr({ :{}, _, list }, state) do
-    Enum.each(list, type_expr(&1, state))
+    Enum.each(list, &type_expr(&1, state))
     :tuple
   end
 

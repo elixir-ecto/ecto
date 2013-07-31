@@ -77,7 +77,7 @@ defmodule Ecto.Entity do
     dataset_name  = Module.get_attribute(module, :ecto_dataset)
     primary_key   = Module.get_attribute(module, :ecto_primary_key)
     fields        = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
-    field_names   = Enum.map(fields, elem(&1, 0))
+    field_names   = Enum.map(fields, &elem(&1, 0))
 
     unless dataset_name do
       raise ArgumentError, message: "dataset not defined, an entity has " <>

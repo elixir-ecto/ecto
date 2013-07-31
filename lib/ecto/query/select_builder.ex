@@ -13,11 +13,11 @@ defmodule Ecto.Query.SelectBuilder do
   end
 
   def escape({ :{}, _, list }, vars) do
-    { :tuple, Enum.map(list, BuilderUtil.escape(&1, vars)) }
+    { :tuple, Enum.map(list, &BuilderUtil.escape(&1, vars)) }
   end
 
   def escape(list, vars) when is_list(list) do
-    { :list, Enum.map(list, BuilderUtil.escape(&1, vars)) }
+    { :list, Enum.map(list, &BuilderUtil.escape(&1, vars)) }
   end
 
   # var - where var is bound

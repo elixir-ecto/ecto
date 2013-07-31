@@ -35,7 +35,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     offset   = if query.offset, do: offset(query.offset.expr)
 
     [select, from, where, group_by, having, order_by, limit, offset]
-      |> Enum.filter(fn x -> x != nil end)
+      |> Enum.filter(&(&1 != nil))
       |> Enum.join("\n")
   end
 
@@ -57,7 +57,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     end
 
     "INSERT INTO #{table} (" <> Enum.join(insert_fields, ", ") <> ")\n" <>
-    "VALUES (" <> Enum.map_join(values, ", ", literal(&1)) <> ")" <>
+    "VALUES (" <> Enum.map_join(values, ", ", &literal(&1)) <> ")" <>
     if primary_key, do: "\nRETURNING #{primary_key}", else: ""
   end
 
@@ -171,7 +171,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp order_by(order_bys, entities) do
     exprs = Enum.map_join(order_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
       vars = QueryUtil.merge_binding_vars(binding, entities)
-      Enum.map_join(expr, ", ", order_by_expr(&1, vars))
+      Enum.map_join(expr, ", ", &order_by_expr(&1, vars))
     end)
 
     "ORDER BY " <> exprs
@@ -219,7 +219,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp expr({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
     { entity, name } = Keyword.fetch!(vars, var)
     fields = entity.__ecto__(:field_names)
-    Enum.map_join(fields, ", ", fn(field) -> "#{name}.#{field}" end)
+    Enum.map_join(fields, ", ", &"#{name}.#{&1}")
   end
 
   defp expr({ op, _, [expr] }, vars) when op in [:+, :-] do
@@ -259,7 +259,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp expr(list, vars) when is_list(list) do
-    "ARRAY[" <> Enum.map_join(list, ", ", expr(&1, vars)) <> "]"
+    "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, vars)) <> "]"
   end
 
   defp expr(literal, _vars), do: literal(literal)
@@ -291,7 +291,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # TODO: Records (Kernel.access)
   defp select_clause({ :{}, _, elems }, vars) do
-    Enum.map_join(elems, ", ", select_clause(&1, vars))
+    Enum.map_join(elems, ", ", &select_clause(&1, vars))
   end
 
   defp select_clause({ x, y }, vars) do
@@ -299,7 +299,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp select_clause(list, vars) when is_list(list) do
-    Enum.map_join(list, ", ", select_clause(&1, vars))
+    Enum.map_join(list, ", ", &select_clause(&1, vars))
   end
 
   defp select_clause(expr, vars) do

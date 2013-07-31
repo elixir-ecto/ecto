@@ -4,7 +4,7 @@ defmodule Ecto.Query.GroupByBuilder do
   # Escapes a group by query to a list of fields
 
   def escape(list, vars) when is_list(list) do
-    Enum.map(list, escape_field(&1, vars))
+    Enum.map(list, &escape_field(&1, vars))
   end
 
   def escape(field, vars) do

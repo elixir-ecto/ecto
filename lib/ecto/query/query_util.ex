@@ -65,20 +65,20 @@ defmodule Ecto.Query.QueryUtil do
     end
 
     case type do
-      :from     -> query.update_froms(&1 ++ [expr])
-      :where    -> query.update_wheres(&1 ++ [expr])
+      :from     -> query.update_froms(&(&1 ++ [expr]))
+      :where    -> query.update_wheres(&(&1 ++ [expr]))
       :select   -> query.select(expr)
-      :order_by -> query.update_order_bys(&1 ++ [expr])
+      :order_by -> query.update_order_bys(&(&1 ++ [expr]))
       :limit    -> query.limit(expr)
       :offset   -> query.offset(expr)
-      :group_by -> query.update_group_bys(&1 ++ [expr])
-      :having   -> query.update_havings(&1 ++ [expr])
+      :group_by -> query.update_group_bys(&(&1 ++ [expr]))
+      :having   -> query.update_havings(&(&1 ++ [expr]))
     end
   end
 
   def escape_binding(binding) when is_list(binding) do
-    vars = Enum.map(binding, escape_var(&1))
-    if var = Enum.filter(vars, &1 != :_) |> not_uniq do
+    vars = Enum.map(binding, &escape_var(&1))
+    if var = Enum.filter(vars, &(&1 != :_)) |> not_uniq do
       raise Ecto.InvalidQuery, reason: "variable `#{var}` is already defined in query"
     end
     vars

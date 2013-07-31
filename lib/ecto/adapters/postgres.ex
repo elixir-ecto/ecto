@@ -44,7 +44,7 @@ defmodule Ecto.Adapters.Postgres do
         { return_type, _ } = query.select.expr
         binding = query.select.binding
         vars = QueryUtil.merge_binding_vars(binding, query.froms)
-        entities = Enum.map(rows, transform_row(&1, return_type, vars))
+        entities = Enum.map(rows, &transform_row(&1, return_type, vars))
         { :ok, entities }
       { :error, _ } = err -> err
     end
@@ -182,8 +182,8 @@ defmodule Ecto.Adapters.Postgres do
 
     { pool_opts, worker_opts } = Dict.split(opts, [:size, :max_overflow])
     pool_opts = pool_opts
-      |> Keyword.update(:size, 5, binary_to_integer(&1))
-      |> Keyword.update(:max_overflow, 10, binary_to_integer(&1))
+      |> Keyword.update(:size, 5, &binary_to_integer(&1))
+      |> Keyword.update(:max_overflow, 10, &binary_to_integer(&1))
 
     pool_opts = pool_opts ++ [
       name: { :local, pool_name },

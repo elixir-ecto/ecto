@@ -340,7 +340,7 @@ defmodule Ecto.Query do
 
   # Builds the quoted code for creating a keyword query
   defp build_query(quoted, binds, kw) do
-    Enum.reduce(kw, { quoted, binds }, build_query_type(&1, &2))
+    Enum.reduce(kw, { quoted, binds }, &build_query_type(&1, &2))
       |> elem(0)
   end
 

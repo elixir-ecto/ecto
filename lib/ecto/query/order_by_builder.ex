@@ -5,7 +5,7 @@ defmodule Ecto.Query.OrderByBuilder do
   # `Ecto.Query.order_by for the allowed formats for the expression.
 
   def escape(list, vars) when is_list(list) do
-    Enum.map(list, escape_field(&1, vars))
+    Enum.map(list, &escape_field(&1, vars))
   end
 
   def escape(field, vars) do

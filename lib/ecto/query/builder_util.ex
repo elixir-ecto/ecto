@@ -92,7 +92,7 @@ defmodule Ecto.Query.BuilderUtil do
   end
 
   def find_vars(list, vars) when is_list(list) do
-    Enum.find_value(list, find_vars(&1, vars))
+    Enum.find_value(list, &find_vars(&1, vars))
   end
 
   def find_vars(_, _vars) do
