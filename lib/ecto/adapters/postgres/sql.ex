@@ -28,11 +28,13 @@ defmodule Ecto.Adapters.Postgres.SQL do
     select   = select(query.select, entities)
     from     = from(entities)
     where    = where(query.wheres, entities)
+    group_by = group_by(query.group_bys, entities)
+    having   = having(query.havings, entities)
     order_by = order_by(query.order_bys, entities)
     limit    = if query.limit, do: limit(query.limit.expr)
     offset   = if query.offset, do: offset(query.offset.expr)
 
-    [select, from, where, order_by, limit, offset]
+    [select, from, where, group_by, having, order_by, limit, offset]
       |> Enum.filter(fn x -> x != nil end)
       |> Enum.join("\n")
   end
@@ -142,15 +144,26 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "FROM " <> binds
   end
 
-  defp where([], _vars), do: nil
-
   defp where(wheres, entities) do
-    exprs = Enum.map_join(wheres, " AND ", fn(QueryExpr[expr: expr, binding: binding]) ->
+    boolean("WHERE", wheres, entities)
+  end
+
+  defp group_by([], _vars), do: nil
+
+  defp group_by(group_bys, entities) do
+    exprs = Enum.map_join(group_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
       vars = QueryUtil.merge_binding_vars(binding, entities)
-      "(" <> expr(expr, vars) <> ")"
+      Enum.map_join(expr, ", ", fn({ var, field }) ->
+        { _entity, name } = Keyword.fetch!(vars, var)
+        "#{name}.#{field}"
+      end)
     end)
 
-    "WHERE " <> exprs
+    "GROUP BY " <> exprs
+  end
+
+  defp having(havings, entities) do
+    boolean("HAVING", havings, entities)
   end
 
   defp order_by([], _vars), do: nil
@@ -176,6 +189,17 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp limit(num), do: "LIMIT " <> integer_to_binary(num)
   defp offset(num), do: "OFFSET " <> integer_to_binary(num)
+
+  defp boolean(_name, [], _vars), do: nil
+
+  defp boolean(name, query_exprs, entities) do
+    exprs = Enum.map_join(query_exprs, " AND ", fn(QueryExpr[expr: expr, binding: binding]) ->
+      vars = QueryUtil.merge_binding_vars(binding, entities)
+      "(" <> expr(expr, vars) <> ")"
+    end)
+
+    name <> " " <> exprs
+  end
 
   defp expr({ expr, _, [] }, vars) do
     expr(expr, vars)

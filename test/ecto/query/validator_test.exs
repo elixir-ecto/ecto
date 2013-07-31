@@ -48,6 +48,13 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "having expression must be boolean" do
+    query = from(PostEntity) |> having([], "abc") |> select([], 123)
+    assert_raise Ecto.InvalidQuery, %r"having expression has to be of boolean type", fn ->
+      QueryUtil.validate(query)
+    end
+  end
+
   test "entity field types" do
     query = from(PostEntity) |> select([p], p.title + 2)
     assert_raise Ecto.InvalidQuery, %r"both arguments of `\+` must be of a number type", fn ->
@@ -157,5 +164,40 @@ defmodule Ecto.Query.ValidatorTest do
     assert_raise Ecto.InvalidQuery, "both arguments of `==` types must match", fn ->
       QueryUtil.validate(query)
     end
+  end
+
+  test "having without group_by" do
+    query = from(PostEntity) |> having([], true) |> select([], 0)
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> having([p], p.id) |> select([], 0)
+    assert_raise Ecto.InvalidQuery, %r"`p.id` must appear in `group_by", fn ->
+      QueryUtil.validate(query)
+    end
+  end
+
+  test "having with group_by" do
+    query = from(PostEntity) |> group_by([p], p.id) |> having([p], p.id == 0) |> select([p], p.id)
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
+    assert_raise Ecto.InvalidQuery, %r"`p.title` must appear in `group_by", fn ->
+      QueryUtil.validate(query)
+    end
+  end
+
+  test "group_by groups expression" do
+    query = from(PostEntity) |> group_by([p], p.id) |> select([p], p.id)
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> group_by([p], p.id) |> select([p], p.title)
+    assert_raise Ecto.InvalidQuery, %r"`p.title` must appear in `group_by", fn ->
+      QueryUtil.validate(query)
+    end
+  end
+
+  test "group_by doesn't group where" do
+    query = from(PostEntity) |> group_by([p], p.id) |> where([p], p.title == "") |> select([p], p.id)
+    QueryUtil.validate(query)
   end
 end

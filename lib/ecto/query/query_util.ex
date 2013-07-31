@@ -71,6 +71,8 @@ defmodule Ecto.Query.QueryUtil do
       :order_by -> query.update_order_bys(&1 ++ [expr])
       :limit    -> query.limit(expr)
       :offset   -> query.offset(expr)
+      :group_by -> query.update_group_bys(&1 ++ [expr])
+      :having   -> query.update_havings(&1 ++ [expr])
     end
   end
 

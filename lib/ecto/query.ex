@@ -83,7 +83,7 @@ defmodule Ecto.Query do
   @type t :: Query.t
 
   defrecord Query, froms: [], wheres: [], select: nil, order_bys: [],
-                   limit: nil, offset: nil
+                   limit: nil, offset: nil, group_bys: [], havings: []
   defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
 
   alias Ecto.Query.FromBuilder
@@ -91,6 +91,8 @@ defmodule Ecto.Query do
   alias Ecto.Query.SelectBuilder
   alias Ecto.Query.OrderByBuilder
   alias Ecto.Query.LimitOffsetBuilder
+  alias Ecto.Query.GroupByBuilder
+  alias Ecto.Query.HavingBuilder
   alias Ecto.Query.QueryUtil
 
   @doc """
@@ -255,9 +257,9 @@ defmodule Ecto.Query do
   defmacro order_by(query, binding, expr)  do
     binding = QueryUtil.escape_binding(binding)
     quote do
-      order_by_expr = unquote(OrderByBuilder.escape(expr, binding))
-      order_by = QueryExpr[expr: order_by_expr, binding: unquote(binding)]
-      QueryUtil.merge(unquote(query), :order_by, order_by)
+      order_expr = unquote(OrderByBuilder.escape(expr, binding))
+      order = QueryExpr[expr: order_expr, binding: unquote(binding)]
+      QueryUtil.merge(unquote(query), :order_by, order)
     end
   end
 
@@ -312,30 +314,52 @@ defmodule Ecto.Query do
     end
   end
 
+  @doc """
+  TODO
+  """
+  defmacro group_by(query, binding, expr) do
+    binding = QueryUtil.escape_binding(binding)
+    quote do
+      group_expr = unquote(GroupByBuilder.escape(expr, binding))
+      order = QueryExpr[expr: group_expr, binding: unquote(binding)]
+      QueryUtil.merge(unquote(query), :group_by, order)
+    end
+  end
+
+  @doc """
+  TODO
+  """
+  defmacro having(query, binding, expr) do
+    binding = QueryUtil.escape_binding(binding)
+    quote do
+      having_expr = unquote(HavingBuilder.escape(expr, binding))
+      having = QueryExpr[expr: having_expr, binding: unquote(binding)]
+      QueryUtil.merge(unquote(query), :having, having)
+    end
+  end
+
   # Builds the quoted code for creating a keyword query
   defp build_query(quoted, binds, kw) do
-    { quoted, _ } =
-      Enum.reduce(kw, { quoted, binds }, fn({ type, expr }, { quoted, binds }) ->
-        case type do
-          :from ->
-            { [bind], expr } = FromBuilder.escape(expr)
+    Enum.reduce(kw, { quoted, binds }, build_query_type(&1, &2))
+      |> elem(0)
+  end
 
-            if bind != :_ and bind in binds do
-              raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
-            end
+  defp build_query_type({ :from, expr }, { quoted, binds }) do
+    { [bind], expr } = FromBuilder.escape(expr)
+    if bind != :_ and bind in binds do
+      raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
+    end
 
-            quoted = quote do
-              QueryUtil.merge(unquote(quoted), :from, unquote(expr))
-            end
-            { quoted, binds ++ [bind] }
+    quoted = quote do
+      QueryUtil.merge(unquote(quoted), :from, unquote(expr))
+    end
+    { quoted, binds ++ [bind] }
+  end
 
-          type ->
-            quoted = quote do
-              Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
-            end
-            { quoted, binds }
-        end
-      end)
-    quoted
+  defp build_query_type({ type, expr }, { quoted, binds }) do
+    quoted = quote do
+      Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
+    end
+    { quoted, binds }
   end
 end

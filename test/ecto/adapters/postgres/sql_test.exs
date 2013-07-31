@@ -252,4 +252,20 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = from(Entity) |> from(Entity2) |> select([_, _], 0)
     assert SQL.select(query) == "SELECT 0\nFROM entity AS e0, entity2 AS e1"
   end
+
+  test "having" do
+    query = from(Entity) |> having([p], p.x == p.x) |> select([], 0)
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nHAVING (e0.x = e0.x)"
+
+    query = from(Entity) |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0)
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nHAVING (e0.x = e0.x) AND (e0.y = e0.y)"
+  end
+
+  test "group by" do
+    query = from(Entity) |> group_by([r], r.x) |> select([r], r.x)
+    assert SQL.select(query) == "SELECT e0.x\nFROM entity AS e0\nGROUP BY e0.x"
+
+    query = from(Entity) |> group_by([r], [r.x, r.y]) |> select([r], r.x)
+    assert SQL.select(query) == "SELECT e0.x\nFROM entity AS e0\nGROUP BY e0.x, e0.y"
+  end
 end
