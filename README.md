@@ -35,7 +35,7 @@ Define a repository:
 
 ```elixir
 defmodule MyRepo do
-  use Ecto.Repo, adapter: Ecto.Adapter.Postgres
+  use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def url, do: "ecto://eric:hunter42@localhost/mydb"
 end
