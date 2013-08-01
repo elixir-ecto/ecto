@@ -15,19 +15,20 @@ defmodule Ecto.Query do
   `from` will bind the variable `w` to the entity `Weather` (see `Ecto.Entity`).
   If there are multiple from expressions the query will run for every
   permutation of their combinations. `where` is used to filter the results,
-  multiple `where`s can be given. `select` selects which results will be returned,
-  a single variable can be given, that will return the full entity, or a single
-  field. Multiple fields can also be grouped in lists or tuples. Only one
-  `select` expression is allowed.
+  multiple `where`s can be given. `select` selects which results will be
+  returned, a single variable can be given, that will return the full entity, or
+  a single field. Multiple fields can also be grouped in lists or tuples. Only
+  one `select` expression is allowed.
 
-  Every variable that isn't bound in a query expression and every function or
-  operator that aren't query operators or functions will be treated as Elixir
-  code and their evaluated result will be inserted into the query.
+  External variables and elixir expressions can be injected into a query
+  expression with `^`. Anything that isn't inside a `^` expression is treated
+  as a query expression.
 
   This allows one to create dynamic queries:
 
-      def with_minimum_age(age) do
-        from u in User, where: u.age > age
+      def with_minimum(age, height_ft) do
+        from u in User,
+        where: u.age > ^age and u.height > ^(height_ft * 3.28)
       end
 
   In the example above, we will compare against the `age` given as argument.
@@ -315,7 +316,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  TODO
+  TODO: Document when query functions are implemented
   """
   defmacro group_by(query, binding, expr) do
     binding = QueryUtil.escape_binding(binding)
@@ -327,7 +328,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  TODO
+  TODO: Document when query functions are implemented
   """
   defmacro having(query, binding, expr) do
     binding = QueryUtil.escape_binding(binding)
