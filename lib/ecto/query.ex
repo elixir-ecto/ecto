@@ -280,9 +280,9 @@ defmodule Ecto.Query do
   defmacro limit(query, binding // [], expr) do
     binding = QueryUtil.escape_binding(binding)
     quote do
-      limit_expr = unquote(LimitOffsetBuilder.escape(expr, binding))
-      LimitOffsetBuilder.validate(limit_expr)
-      limit = QueryExpr[expr: limit_expr, binding: unquote(binding),
+      expr = unquote(expr)
+      LimitOffsetBuilder.validate(expr)
+      limit = QueryExpr[expr: expr, binding: unquote(binding),
                         file: __ENV__.file, line: __ENV__.line]
       QueryUtil.merge(unquote(query), :limit, limit)
     end
@@ -306,9 +306,9 @@ defmodule Ecto.Query do
   defmacro offset(query, binding // [], expr) do
     binding = QueryUtil.escape_binding(binding)
     quote do
-      offset_expr = unquote(LimitOffsetBuilder.escape(expr, binding))
-      LimitOffsetBuilder.validate(offset_expr)
-      offset = QueryExpr[expr: offset_expr, binding: unquote(binding),
+      expr = unquote(expr)
+      LimitOffsetBuilder.validate(expr)
+      offset = QueryExpr[expr: expr, binding: unquote(binding),
                          file: __ENV__.file, line: __ENV__.line]
       QueryUtil.merge(unquote(query), :offset, offset)
     end

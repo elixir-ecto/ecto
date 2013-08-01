@@ -90,11 +90,6 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "invalid expressions" do
-    query = from(PostEntity) |> select([], :atom)
-    assert_raise Ecto.InvalidQuery, %r"atoms are not allowed", fn ->
-      QueryUtil.validate(query)
-    end
-
     query = from(PostEntity) |> select([p], p.id + "abc")
     assert_raise Ecto.InvalidQuery, %r"both arguments of `\+` must be of a number type", fn ->
       QueryUtil.validate(query)

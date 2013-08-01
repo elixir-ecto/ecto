@@ -78,16 +78,16 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "variable binding" do
     x = 123
-    query = from(Entity) |> select([], x)
+    query = from(Entity) |> select([], ^x)
     assert SQL.select(query) == "SELECT 123\nFROM entity AS e0"
 
-    query = from(Entity) |> select([r], x + r.y)
+    query = from(Entity) |> select([r], ^x + r.y)
     assert SQL.select(query) == "SELECT 123 + e0.y\nFROM entity AS e0"
   end
 
   test "string escape" do
     x = "'\\ \n"
-    query = from(Entity) |> select([], x)
+    query = from(Entity) |> select([], ^x)
     assert SQL.select(query) == "SELECT '''\\\\ \n'\nFROM entity AS e0"
 
     query = from(Entity) |> select([], "'\\")
@@ -176,7 +176,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "nested expressions" do
     z = 123
-    query = from(r in Entity) |> select([r], r.x + (r.y + -z) - 3)
+    query = from(r in Entity) |> select([r], r.x + (r.y + ^(-z)) - 3)
     assert SQL.select(query) == "SELECT (e0.x + (e0.y + -123)) - 3\nFROM entity AS e0"
   end
 
@@ -267,5 +267,18 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = from(Entity) |> group_by([r], [r.x, r.y]) |> select([r], r.x)
     assert SQL.select(query) == "SELECT e0.x\nFROM entity AS e0\nGROUP BY e0.x, e0.y"
+  end
+
+  defrecord Rec, [:x]
+
+  defp fun(x), do: x+x
+
+  test "query interpolation" do
+    r = Rec[x: 123]
+    query = from(Entity) |> select([r], r.x + ^(1 + 2 + 3) + ^r.x)
+    assert SQL.select(query) == "SELECT (e0.x + 6) + 123\nFROM entity AS e0"
+
+    query = from(Entity) |> select([r], r.x + ^fun(r.x))
+    assert SQL.select(query) == "SELECT e0.x + 246\nFROM entity AS e0"
   end
 end

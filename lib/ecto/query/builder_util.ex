@@ -11,91 +11,56 @@ defmodule Ecto.Query.BuilderUtil do
   # will be evaluated in their place. This means that everything foreign will be
   # inserted as-is into the query.
 
-  def escape(ast, vars), do: do_escape(ast, vars) |> elem(0)
-
   # var.x - where var is bound
-  defp do_escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] } = ast, vars)
+  def escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] }, vars)
       when is_atom(var) and is_atom(context) do
     if var != :_ and var in vars do
       left_escaped = { :{}, [], tuple_to_list(left) }
       dot_escaped = { :{}, [], [:., meta2, [left_escaped, right]] }
-      { { :{}, meta, [dot_escaped, meta, []] }, true }
+      { :{}, meta, [dot_escaped, meta, []] }
     else
-      { ast, false }
-    end
-  end
-
-  # unary op
-  defp do_escape({ op, meta, [arg] }, vars) when op in @unary_ops do
-    { arg, is_escaped } = do_escape(arg, vars)
-    if is_escaped do
-      { { :{}, [], [op, meta, [arg]] }, true }
-    else
-      { { op, meta, [arg] }, false }
-    end
-  end
-
-  # binary op
-  defp do_escape({ op, meta, [left, right] }, vars) when op in @binary_ops do
-    { left, is_escaped_left } = do_escape(left, vars)
-    { right, is_escaped_right } = do_escape(right, vars)
-
-    if is_escaped_left or is_escaped_right do
-      { { :{}, [], [op, meta, [left, right]] }, true }
-    else
-      { { op, meta, [left, right] }, false }
+      raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound in a from expression"
     end
   end
 
   # range
-  defp do_escape({ :.., meta, [left, right] }, vars) do
-    { left, is_escaped_left } = do_escape(left, vars)
-    { right, is_escaped_right } = do_escape(right, vars)
+  def escape({ :.., meta, [left, right] }, vars) do
+    left = escape(left, vars)
+    right = escape(right, vars)
+    { :.., meta, [left, right] }
+  end
 
-    if is_escaped_left or is_escaped_right do
-      { { :.., meta, [left, right] }, true }
-    else
-      { { :.., meta, [left, right] }, false }
-    end
+  # interpolation
+  def escape({ :^, _, [arg] }, _vars) do
+    arg
+  end
+
+  # unary op
+  def escape({ op, meta, [arg] }, vars) when op in @unary_ops do
+    arg = escape(arg, vars)
+    { :{}, [], [op, meta, [arg]] }
+  end
+
+  # binary op
+  def escape({ op, meta, [left, right] }, vars) when op in @binary_ops do
+    left = escape(left, vars)
+    right = escape(right, vars)
+    { :{}, [], [op, meta, [left, right]] }
   end
 
   # list
-  defp do_escape(list, vars) when is_list(list) do
-    Enum.map_reduce(list, false, fn(elem, acc) ->
-      { arg, is_escaped } = do_escape(elem, vars)
-      { arg, acc or is_escaped }
-    end)
+  def escape(list, vars) when is_list(list) do
+    Enum.map(list, &escape(&1, vars))
   end
 
-  # everything else is foreign or literals
-  defp do_escape(other, vars) do
-    case find_vars(other, vars) do
-      nil -> { other, false }
-      var ->
-        reason = "bound vars are only allowed in dotted expression `#{var}.field` " <>
-          "or as argument to a query expression"
-        raise Ecto.InvalidQuery, reason: reason
-    end
-  end
+  # literals
+  def escape(literal, _vars) when is_binary(literal), do: literal
+  def escape(literal, _vars) when is_boolean(literal), do: literal
+  def escape(literal, _vars) when is_number(literal), do: literal
+  def escape(nil, _vars), do: nil
 
-  # Return a variable in vars if found in AST, nil otherwise
-  def find_vars({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
-    if var in vars, do: var
-  end
-
-  def find_vars({ left, _, right }, vars) do
-    find_vars(left, vars) || find_vars(right, vars)
-  end
-
-  def find_vars({ left, right }, vars) do
-    find_vars(left, vars) || find_vars(right, vars)
-  end
-
-  def find_vars(list, vars) when is_list(list) do
-    Enum.find_value(list, &find_vars(&1, vars))
-  end
-
-  def find_vars(_, _vars) do
-    nil
+  # everything else is not allowed
+  def escape(other, _vars) do
+    raise Ecto.InvalidQuery, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 end

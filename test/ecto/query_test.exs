@@ -149,7 +149,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "unbound _ var" do
-    assert_raise ErlangError, fn ->
+    assert_raise Ecto.InvalidQuery, fn ->
       delay_compile(from(PostEntity) |> select([], _.x))
     end
 

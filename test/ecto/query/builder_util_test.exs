@@ -4,45 +4,49 @@ defmodule Ecto.Query.BuilderUtilTest do
   import Ecto.Query.BuilderUtil
 
   test "escape" do
-    assert (quote do x end) ==
-           escape(quote do x end, [])
-
-    assert (quote do x.y end) ==
-           escape(quote do x.y end, [])
-
     assert Macro.escape(quote do x.y end) ==
            escape(quote do x.y end, [:x])
+
+    assert Macro.escape(quote do x.y + x.z end) ==
+           escape(quote do x.y + x.z end, [:x])
   end
 
-  test "don't escape when no sub expressions are escaped" do
+  test "don't escape interpolation" do
     assert (quote do 1 == 2 end) ==
-           escape(quote do 1 == 2 end, [])
+           escape(quote do ^(1 == 2) end, [])
 
     assert (quote do [] ++ [] end) ==
-           escape(quote do [] ++ [] end, [])
+           escape(quote do ^([] ++ []) end, [])
 
     assert (quote do 1 + 2 + 3 + 4 end) ==
-           escape(quote do 1 + 2 + 3 + 4 end, [])
+           escape(quote do ^(1 + 2 + 3 + 4) end, [])
   end
 
   test "escape raise" do
-    message = "bound vars are only allowed in dotted expression `x.field` " <>
-      "or as argument to a query expression"
+    message = %r"is not a valid query expression"
 
     assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do x end, [:x])
+      escape(quote do x end, [])
     end
 
     assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do x.y(0) end, [:x])
+      escape(quote do :atom end, [])
     end
 
     assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do foreign(x.y) end, [:x])
+      escape(quote do funcy(123) end, [])
+    end
+
+    message = %r"needs to be bound in a from expression"
+
+    assert_raise Ecto.InvalidQuery, message, fn ->
+      escape(quote do x.y end, [])
     end
   end
 
   test "unbound wildcard var" do
-    assert { {:., _, [{ :_, _, _ }, :y] }, _, [] } = escape(quote do _.y end, [:_, :_])
+    assert_raise Ecto.InvalidQuery, fn ->
+      escape(quote do _.y end, [:_, :_])
+    end
   end
 end
