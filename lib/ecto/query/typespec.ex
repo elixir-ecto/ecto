@@ -75,15 +75,17 @@ defmodule Ecto.Query.Typespec do
 
     var_types =
       Enum.map(Stream.with_index(args), fn
-        { { :^, _, [var] }, _index } ->
+        { { :var, _, nil } = var, _index } ->
           { var, nil }
+        { { :_, _, nil }, index } ->
+          { { :"x#{index}", meta, __MODULE__ }, nil }
         { arg, index } ->
           types = arg |> extract_types([]) |> expand_types(deft, defa)
           { { :"x#{index}", meta, __MODULE__ }, types }
       end)
 
     right = case right do
-      { :^, _, [var] } -> var
+      { :var, _, nil } = var -> var
       _ -> extract_type(right)
     end
 

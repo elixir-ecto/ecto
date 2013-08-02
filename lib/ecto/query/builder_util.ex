@@ -28,7 +28,7 @@ defmodule Ecto.Query.BuilderUtil do
   # ops & functions
   def escape({ name, meta, args }, vars) when is_atom(name) and is_list(args) do
     args = Enum.map(args, &escape(&1, vars))
-    apply(Ecto.Query.API, name, args)
+    apply(Ecto.Query.API, name, args) # TODO: function_exported?
     { :{}, [], [name, meta, args] }
   end
 

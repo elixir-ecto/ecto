@@ -48,31 +48,31 @@ defmodule Ecto.Query.API do
 
   def left == right
   defs number == number :: boolean
-  defs ^var == ^var     :: boolean
-  defs nil == ^_var     :: boolean
-  defs ^_var == nil     :: boolean
+  defs var == var       :: boolean
+  defs nil == _         :: boolean
+  defs _ == nil         :: boolean
 
   def left != right
   defs number != number :: boolean
-  defs ^var != ^var     :: boolean
-  defs nil != ^_var     :: boolean
-  defs ^_var != nil     :: boolean
+  defs var != var       :: boolean
+  defs nil != _         :: boolean
+  defs _ != nil         :: boolean
 
   def left <= right
   defs number <= number :: boolean
-  defs ^var <= ^var     :: boolean
+  defs var <= var       :: boolean
 
   def left >= right
   defs number >= number :: boolean
-  defs ^var >= ^var     :: boolean
+  defs var >= var       :: boolean
 
   def left < right
   defs number < number :: boolean
-  defs ^var < ^var     :: boolean
+  defs var < var       :: boolean
 
   def left > right
   defs number > number :: boolean
-  defs ^var > ^var     :: boolean
+  defs var > var       :: boolean
 
   def left and right
   defs boolean and boolean :: boolean
@@ -81,7 +81,7 @@ defmodule Ecto.Query.API do
   defs boolean or boolean :: boolean
 
   def left in right
-  defs ^_var in list :: boolean
+  defs _ in list :: boolean
 
   def left .. right
   defs integer .. integer :: list

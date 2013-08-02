@@ -197,6 +197,7 @@ defmodule Ecto.Repo do
 
   @doc false
   def get(repo, adapter, queryable, id) when is_binary(id) do
+    # TODO: Check primary key type if we should do the casting
     get(repo, adapter, queryable, binary_to_integer(id))
   end
 
