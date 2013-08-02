@@ -47,7 +47,7 @@ Create an entity:
 defmodule Post do
   use Ecto.Entity
 
-  dataset :posts do
+  dataset "posts" do
     field :title, :string
     field :content, :string
   end
@@ -65,7 +65,7 @@ query = from p in Post,
      select: p.title
 
 # Run the query against the database to actually fetch the data
-titles = MyRepo.fetch(query)
+titles = MyRepo.all(query)
 ```
 
 ### Examples
