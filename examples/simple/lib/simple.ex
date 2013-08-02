@@ -23,7 +23,7 @@ end
 defmodule Simple.Weather do
   use Ecto.Entity
 
-  dataset :weather, nil do
+  dataset "weather", nil do
     field :city, :string
     field :temp_lo, :integer
     field :temp_hi, :integer
@@ -46,6 +46,6 @@ defmodule Simple do
     query = from w in Simple.Weather,
           where: w.prcp > 0 or w.prcp == nil,
          select: w
-    Simple.MyRepo.fetch(query)
+    Simple.MyRepo.all(query)
   end
 end
