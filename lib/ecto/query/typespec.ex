@@ -35,10 +35,17 @@ defmodule Ecto.Query.Typespec do
   defmacro defs({ :::, _, [head, _] } = expr) do
     quote bind_quoted: [expr: Macro.escape(expr), head: Macro.escape(head)] do
       { name, args, guards, return, catch_all } = Ecto.Query.Typespec.__defs__(__MODULE__, expr)
+      arity = length(args)
+
+      if @aggregate do
+        @ecto_aggregates [{ name, arity }|@ecto_aggregates]
+      end
+      @aggregate false
+
       if catch_all do
-        @ecto_defs Dict.delete(@ecto_defs, { name, length(args) })
+        @ecto_defs Dict.delete(@ecto_defs, { name, arity })
       else
-        @ecto_defs Dict.update(@ecto_defs, { name, length(args) }, [head], &[head|&1])
+        @ecto_defs Dict.update(@ecto_defs, { name, arity }, [head], &[head|&1])
       end
       def unquote(name)(unquote_splicing(args)) when unquote(guards), do: { :ok, unquote(return) }
     end
@@ -51,9 +58,11 @@ defmodule Ecto.Query.Typespec do
     quote do
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
+      @ecto_aggregates []
       @ecto_deft []
       @ecto_defs HashDict.new
       @ecto_defa HashDict.new
+      @aggregate false
     end
   end
 
@@ -65,13 +74,13 @@ defmodule Ecto.Query.Typespec do
     defa = Module.get_attribute(mod, :ecto_defa)
 
     var_types =
-      Enum.map Stream.with_index(args), fn
+      Enum.map(Stream.with_index(args), fn
         { { :^, _, [var] }, _index } ->
           { var, nil }
         { arg, index } ->
           types = arg |> extract_types([]) |> expand_types(deft, defa)
           { { :"x#{index}", meta, __MODULE__ }, types }
-      end
+      end)
 
     right = case right do
       { :^, _, [var] } -> var
@@ -99,8 +108,9 @@ defmodule Ecto.Query.Typespec do
   @doc false
   defmacro __before_compile__(env) do
     defs = Module.get_attribute(env.module, :ecto_defs)
+    aggregates = Module.get_attribute(env.module, :ecto_aggregates)
 
-    Enum.map defs, fn { { name, arity }, exprs } ->
+    defs_quote = Enum.map(defs, fn { { name, arity }, exprs } ->
       args  = Stream.repeatedly(fn -> { :_, [], __MODULE__ } end) |> Enum.take(arity)
       exprs = Macro.escape(Enum.reverse(exprs))
 
@@ -109,7 +119,15 @@ defmodule Ecto.Query.Typespec do
           { :error, unquote(exprs) }
         end
       end
-    end
+    end)
+
+    aggregates_quote = Enum.map(aggregates, fn({ name, arity }) ->
+      quote do
+        def aggregate?(unquote(name), unquote(arity)), do: true
+      end
+    end) ++ [quote do def aggregate?(_, _), do: false end]
+
+    defs_quote ++ aggregates_quote
   end
 
   ## Helpers
