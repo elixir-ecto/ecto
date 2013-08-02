@@ -3,9 +3,6 @@ defmodule Ecto.Query.BuilderUtil do
 
   # Common functions for the query builder modules.
 
-  @unary_ops [ :not, :+, :- ]
-  @binary_ops [ :==, :!=, :<=, :>=, :and, :or, :<, :>, :+, :-, :*, :/, :in ]
-
   # Smart escapes a query expression. Everything that is a query expression will
   # be escaped, foreign (elixir) expressions will not be escaped so that they
   # will be evaluated in their place. This means that everything foreign will be
@@ -23,29 +20,16 @@ defmodule Ecto.Query.BuilderUtil do
     end
   end
 
-  # range
-  def escape({ :.., meta, [left, right] }, vars) do
-    left = escape(left, vars)
-    right = escape(right, vars)
-    { :.., meta, [left, right] }
-  end
-
   # interpolation
   def escape({ :^, _, [arg] }, _vars) do
     arg
   end
 
-  # unary op
-  def escape({ op, meta, [arg] }, vars) when op in @unary_ops do
-    arg = escape(arg, vars)
-    { :{}, [], [op, meta, [arg]] }
-  end
-
-  # binary op
-  def escape({ op, meta, [left, right] }, vars) when op in @binary_ops do
-    left = escape(left, vars)
-    right = escape(right, vars)
-    { :{}, [], [op, meta, [left, right]] }
+  # ops & functions
+  def escape({ name, meta, args }, vars) when is_atom(name) and is_list(args) do
+    args = Enum.map(args, &escape(&1, vars))
+    apply(Ecto.Query.API, name, args)
+    { :{}, [], [name, meta, args] }
   end
 
   # list

@@ -61,9 +61,8 @@ defmodule Ecto.Query.Validator do
       # TODO: Check if entity field allows nil
       vars = QueryUtil.merge_binding_vars(binds, [module])
       state = State[froms: query.froms, vars: vars]
-      type = type_expr(expr, state)
+      type = type_check(expr, state)
 
-      if expected_type in [:integer, :float], do: expected_type = :number
       unless expected_type == type do
         raise Ecto.InvalidQuery, reason: "expected_type `#{expected_type}` " <>
         " on `#{module}.#{field}` doesn't match type `#{type}`"
@@ -109,8 +108,11 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(type, expr.expr, expr.file, expr.line) do
         vars = QueryUtil.merge_binding_vars(expr.binding, froms)
         state = state.vars(vars)
-        unless type_expr(expr.expr, state) == :boolean do
-          raise Ecto.InvalidQuery, reason: "#{type} expression has to be of boolean type"
+        expr_type = type_check(expr.expr, state)
+
+        unless expr_type == :boolean do
+          raise Ecto.InvalidQuery, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
+            "is of type `#{expr_type}`, has to be of boolean type"
         end
       end
     end)
@@ -121,129 +123,71 @@ defmodule Ecto.Query.Validator do
     rescue_metadata(:select, select_expr, expr.file, expr.line) do
       vars = QueryUtil.merge_binding_vars(expr.binding, froms)
       state = state.vars(vars)
-      type_expr(select_expr, state)
+      type_check(select_expr, state)
     end
   end
 
   # var.x
-  defp type_expr({ { :., _, [{ var, _, context }, field] }, _, [] }, State[] = state)
+  defp type_check({ { :., _, [{ var, _, context }, field] }, _, [] }, State[] = state)
       when is_atom(var) and is_atom(context) do
     entity = Keyword.fetch!(state.vars, var)
     check_grouped(var, { entity, field }, state)
 
     type = entity.__ecto__(:field_type, field)
-
     unless type do
       raise Ecto.InvalidQuery, reason: "unknown field `#{var}.#{field}`"
     end
-
-    if type in [:integer, :float], do: :number, else: type
+    type
   end
 
   # var
-  defp type_expr({ var, _, context}, State[] = state)
+  defp type_check({ var, _, context}, State[] = state)
       when is_atom(var) and is_atom(context) do
     Keyword.fetch!(state.vars, var) # ?
   end
 
-  # unary op
-  defp type_expr({ :not, _, [arg] }, state) do
-    type_arg = type_expr(arg, state)
-    unless type_arg == :boolean do
-      raise Ecto.InvalidQuery, reason: "argument of `not` must be of type boolean"
-    end
-    :boolean
+  # tuple
+  defp type_check({ left, right }, state) do
+    type_check({ :{}, [], [left, right] }, state)
   end
 
-  defp type_expr({ op, _, [arg] }, state) when op in [:+, :-] do
-    type_arg = type_expr(arg, state)
-    unless type_arg == :number do
-      raise Ecto.InvalidQuery, reason: "argument of `#{op}` must be of a number type"
-    end
-    :number
-  end
-
-  # binary op
-  defp type_expr({ op, _, [left, right] }, state) when op in [:==, :!=] do
-    type_left = type_expr(left, state)
-    type_right = type_expr(right, state)
-    unless type_left == type_right or type_left == :nil or type_right == :nil do
-      raise Ecto.InvalidQuery, reason: "both arguments of `#{op}` types must match"
-    end
-    :boolean
-  end
-
-  defp type_expr({ op, _, [left, right] }, state) when op in [:and, :or] do
-    type_left = type_expr(left, state)
-    type_right = type_expr(right, state)
-    unless type_left == :boolean and type_right == :boolean do
-      raise Ecto.InvalidQuery, reason: "both arguments of `#{op}` must be of type boolean"
-    end
-    :boolean
-  end
-
-  defp type_expr({ op, _, [left, right] }, state) when op in [:<=, :>=, :<, :>] do
-    type_left = type_expr(left, state)
-    type_right = type_expr(right, state)
-    unless type_left == :number and type_right == :number do
-      raise Ecto.InvalidQuery, reason: "both arguments of `#{op}` must be of a number type"
-    end
-    :boolean
-  end
-
-  defp type_expr({ op, _, [left, right] }, state) when op in [:+, :-, :*, :/] do
-    type_left = type_expr(left, state)
-    type_right = type_expr(right, state)
-    unless type_left == :number and type_right == :number do
-      raise Ecto.InvalidQuery, reason: "both arguments of `#{op}` must be of a number type"
-    end
-    :number
-  end
-
-  defp type_expr({ :in, _, [_left, right] }, state) do
-    type_right = type_expr(right, state)
-    unless type_right == :list do
-      raise Ecto.InvalidQuery, reason: "second argument of `in` must be of list type"
-    end
-    :boolean
-  end
-
-  defp type_expr(Range[first: left, last: right], state) do
-    type_left = type_expr(left, state)
-    type_right = type_expr(right, state)
-    unless type_left == :number and type_right == :number do
-      raise Ecto.InvalidQuery, reason: "both arguments of `..` must be of a number type"
-    end
-    :list
-  end
-
-  defp type_expr(list, state) when is_list(list) do
-    Enum.each(list, &type_expr(&1, state))
-    :list
-  end
-
-  defp type_expr({ left, right }, state) do
-    type_expr({ :{}, [], [left, right] }, state)
-  end
-
-  defp type_expr({ :{}, _, list }, state) do
-    Enum.each(list, &type_expr(&1, state))
+  # tuple
+  defp type_check({ :{}, _, list }, state) when is_list(list) do
+    Enum.each(list, &type_check(&1, state))
     :tuple
   end
 
-  # literals
-  defp type_expr(nil, _vars), do: :nil
-  defp type_expr(false, _vars), do: :boolean
-  defp type_expr(true, _vars), do: :boolean
-  defp type_expr(literal, _vars) when is_number(literal), do: :number
-  defp type_expr(literal, _vars) when is_binary(literal), do: :string
+  # ops & functions
+  defp type_check({ name, _, args } = expr, state) when is_atom(name) and is_list(args) do
+    arg_types = Enum.map(args, &type_check(&1, state))
+    case apply(Ecto.Query.API, name, arg_types) do
+      { :ok, type } -> type
+      { :error, allowed } ->
+        raise Ecto.TypeCheckError, name: name, expr: expr, types: arg_types, allowed: allowed
+    end
+  end
 
-  defp type_expr(literal, _vars) when is_atom(literal) do
-    raise Ecto.InvalidQuery, reason: "atoms are not allowed"
+  # list
+  defp type_check(list, state) when is_list(list) do
+    Enum.each(list, &type_check(&1, state))
+    :list
+  end
+
+  # literals
+  defp type_check(nil, _vars), do: :nil
+  defp type_check(false, _vars), do: :boolean
+  defp type_check(true, _vars), do: :boolean
+  defp type_check(literal, _vars) when is_integer(literal), do: :integer
+  defp type_check(literal, _vars) when is_float(literal), do: :float
+  defp type_check(literal, _vars) when is_binary(literal), do: :string
+
+  # atom
+  defp type_check(literal, _vars) when is_atom(literal) do
+    raise Ecto.InvalidQuery, reason: "atoms are not allowed in queries"
   end
 
   # unknown
-  defp type_expr(expr, _vars) do
+  defp type_check(expr, _vars) do
     raise Ecto.InvalidQuery, reason: "internal error on `#{inspect expr}`"
   end
 
@@ -259,7 +203,7 @@ defmodule Ecto.Query.Validator do
   defp check_grouped(var, entity_field, state) do
     if state.is_grouped and not (entity_field in state.grouped) do
       { _, field } = entity_field
-      raise Ecto.InvalidQuery, reason: "`#{var}.#{field}` must appear in `group_by` " <>
+      raise Ecto.InvalidQuery, reason: "expression `#{var}.#{field}` must appear in `group_by` " <>
         "or be used in an aggregate function"
     end
   end

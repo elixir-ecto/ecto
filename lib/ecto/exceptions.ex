@@ -41,3 +41,24 @@ defexception Ecto.NotSingleResult, [:entity, :primary_key, :id] do
     "was too large"
   end
 end
+
+defexception Ecto.TypeCheckError, [:name, :expr, :types, :allowed] do
+  def message(exception = Ecto.TypeCheckError[]) do
+    expected = Enum.map_join(exception.allowed, "\n    ", &Macro.to_string(&1))
+
+    types  = lc type inlist exception.types, do: { type, [], nil }
+    actual = Macro.to_string({ exception.name, [], types })
+
+    """
+    the following expression does not type check:
+
+        #{Macro.to_string(exception.expr)}
+
+    Allowed types for #{exception.name}/#{length(exception.types)}:
+
+        #{expected}
+
+    Got: #{actual}
+    """
+  end
+end

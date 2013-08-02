@@ -88,7 +88,7 @@ defmodule Ecto.RepoTest do
   test "repo validates query" do
     import Ecto.Query
 
-    assert_raise Ecto.InvalidQuery, fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       MyRepo.all(from(m in MyEntity, select: m.x + 1))
     end
   end

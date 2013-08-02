@@ -246,12 +246,20 @@ defmodule Ecto.Adapters.Postgres.SQL do
     expr(left, vars) <> " BETWEEN " <> expr(first, vars) <> " AND " <> expr(last, vars)
   end
 
+  defp expr({ :in, _, [left, { :.., _, [first, last] }] }, vars) do
+    expr(left, vars) <> " BETWEEN " <> expr(first, vars) <> " AND " <> expr(last, vars)
+  end
+
   defp expr({ :in, _, [left, right] }, vars) do
     expr(left, vars) <> " = ANY (" <> expr(right, vars) <> ")"
   end
 
   defp expr(Range[] = range, vars) do
     expr(Enum.to_list(range), vars)
+  end
+
+  defp expr({ :.., _, [first, last] }, vars) do
+    expr(Enum.to_list(first..last), vars)
   end
 
   defp expr({ op, _, [left, right] }, vars) when op in @binary_ops do

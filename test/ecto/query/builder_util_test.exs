@@ -33,8 +33,8 @@ defmodule Ecto.Query.BuilderUtilTest do
       escape(quote do :atom end, [])
     end
 
-    assert_raise Ecto.InvalidQuery, message, fn ->
-      escape(quote do funcy(123) end, [])
+    assert_raise UndefinedFunctionError, fn ->
+      escape(quote do not_in_query_api(123) end, [])
     end
 
     message = %r"needs to be bound in a from expression"

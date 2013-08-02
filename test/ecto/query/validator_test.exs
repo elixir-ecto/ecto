@@ -43,21 +43,21 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "where expression must be boolean" do
     query = from(PostEntity) |> where([p], p.title) |> select([], 123)
-    assert_raise Ecto.InvalidQuery, %r"where expression has to be of boolean type", fn ->
+    assert_raise Ecto.InvalidQuery, %r"where expression", fn ->
       QueryUtil.validate(query)
     end
   end
 
   test "having expression must be boolean" do
     query = from(PostEntity) |> having([], "abc") |> select([], 123)
-    assert_raise Ecto.InvalidQuery, %r"having expression has to be of boolean type", fn ->
+    assert_raise Ecto.InvalidQuery, %r"having expression", fn ->
       QueryUtil.validate(query)
     end
   end
 
   test "entity field types" do
     query = from(PostEntity) |> select([p], p.title + 2)
-    assert_raise Ecto.InvalidQuery, %r"both arguments of `\+` must be of a number type", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
   end
@@ -91,27 +91,27 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid expressions" do
     query = from(PostEntity) |> select([p], p.id + "abc")
-    assert_raise Ecto.InvalidQuery, %r"both arguments of `\+` must be of a number type", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
 
     query = from(PostEntity) |> select([p], p.id == "abc")
-    assert_raise Ecto.InvalidQuery, %r"both arguments of `==` types must match", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
 
     query = from(PostEntity) |> select([p], -p.title)
-    assert_raise Ecto.InvalidQuery, %r"argument of `-` must be of a number type", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
 
     query = from(PostEntity) |> select([p], 1 < p.title)
-    assert_raise Ecto.InvalidQuery, %r"both arguments of `<` must be of a number type", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
 
     query = from(PostEntity) |> where([p], true or p.title) |> select([], 0)
-    assert_raise Ecto.InvalidQuery, %r"both arguments of `or` must be of type boolean", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
   end
@@ -129,7 +129,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid in expression" do
     query = from(PostEntity) |> select([p], 1 in p.title)
-    assert_raise Ecto.InvalidQuery, %r"second argument of `in` must be of list type", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
   end
@@ -141,12 +141,12 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid .. expression" do
     query = from(PostEntity) |> select([], 1 .. '3')
-    assert_raise Ecto.InvalidQuery, %r"both arguments of `..` must be of a number type", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
 
     query = from(PostEntity) |> select([], "1" .. 3)
-    assert_raise Ecto.InvalidQuery, %r"both arguments of `..` must be of a number type", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
   end
@@ -156,7 +156,7 @@ defmodule Ecto.Query.ValidatorTest do
     QueryUtil.validate(query)
 
     query = from(PostEntity) |> where([p], [p.id, p.title] == 1) |> select([], 0)
-    assert_raise Ecto.InvalidQuery, "both arguments of `==` types must match", fn ->
+    assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
   end
