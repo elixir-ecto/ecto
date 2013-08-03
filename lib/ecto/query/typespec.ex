@@ -47,6 +47,7 @@ defmodule Ecto.Query.Typespec do
       else
         @ecto_defs Dict.update(@ecto_defs, { name, arity }, [head], &[head|&1])
       end
+
       def unquote(name)(unquote_splicing(args)) when unquote(guards), do: { :ok, unquote(return) }
     end
   end
@@ -72,27 +73,28 @@ defmodule Ecto.Query.Typespec do
 
     deft = Module.get_attribute(mod, :ecto_deft)
     defa = Module.get_attribute(mod, :ecto_defa)
+    meta = { meta, deft, defa }
 
-    var_types =
-      Enum.map(Stream.with_index(args), fn
-        { { :var, _, nil } = var, _index } ->
-          { var, nil }
-        { { :_, _, nil }, index } ->
-          { { :"x#{index}", meta, __MODULE__ }, nil }
-        { arg, index } ->
-          types = arg |> extract_types([]) |> expand_types(deft, defa)
-          { { :"x#{index}", meta, __MODULE__ }, types }
+    { args, var_types } =
+      Enum.reduce(Stream.with_index(args), { [], [] }, fn
+        { { arg, _, [inner] }, index }, { args, types } ->
+          { var1, var_types } = var_types(arg, index, meta)
+          types = types ++ [{ var1, var_types, true }]
+          { var2, var_types } = var_types(inner, index + 100, meta)
+          arg = { var1, var2 }
+          { args ++ [arg], types ++ [{ var2, var_types, false }] }
+
+        { arg, index }, { args, types } ->
+          { var, var_types } = var_types(arg, index, meta)
+          { args ++ [var], types ++ [{ var, var_types, false }] }
       end)
 
-    right = case right do
-      { :var, _, nil } = var -> var
-      _ -> extract_type(right)
-    end
+    right = extract_return_type(right)
 
     catch_all = Enum.all?(var_types, &match?({ _, nil }, &1)) and
                 Enum.uniq(var_types) == var_types
 
-    { name, Dict.keys(var_types), compile_guards(var_types), right, catch_all }
+    { name, args, compile_guards(var_types), right, catch_all }
   end
 
   @doc false
@@ -100,11 +102,6 @@ defmodule Ecto.Query.Typespec do
     deft = Module.get_attribute(mod, :ecto_deft)
     defa = Module.get_attribute(mod, :ecto_defa)
     { extract_type(left), right |> extract_types([]) |> expand_types(deft, defa) }
-  end
-
-  @doc false
-  def __args__(arity) do
-    tl(Enum.to_list(0..arity)) |> Enum.map(fn(i) -> { :"x#{i}", [], __MODULE__ } end)
   end
 
   @doc false
@@ -134,6 +131,23 @@ defmodule Ecto.Query.Typespec do
 
   ## Helpers
 
+  defp var_types({ :var, _, nil } = var, _index, _meta) do
+    { var, nil }
+  end
+
+  defp var_types({ :_, _, nil }, index, { meta, _, _ }) do
+    { { :"x#{index}", meta, __MODULE__ }, nil }
+  end
+
+  defp var_types(arg, index, { meta, deft, defa }) do
+    types = arg |> extract_types([]) |> expand_types(deft, defa)
+    { { :"x#{index}", meta, __MODULE__ }, types }
+  end
+
+  defp extract_type({ name, _, [{ var, _, nil}] }) when is_atom(name) and is_atom(var) do
+    name
+  end
+
   defp extract_type({ name, _, context }) when is_atom(name) and is_atom(context) do
     name
   end
@@ -154,6 +168,31 @@ defmodule Ecto.Query.Typespec do
     [extract_type(other)|acc]
   end
 
+  defp extract_return_type({ name, _, [{ :var, _, nil} = var] }) when is_atom(name) do
+    { name, var }
+  end
+
+  defp extract_return_type({ name, _, [{ var, _, nil}] }) when is_atom(name) and is_atom(var) do
+    { name, { var, nil } }
+  end
+
+  defp extract_return_type({ :var, _, nil } = var) do
+    { var, nil }
+  end
+
+  defp extract_return_type({ name, _, context }) when is_atom(name) and is_atom(context) do
+    { name, nil }
+  end
+
+  defp extract_return_type(name) when is_atom(name) do
+    { name, nil }
+  end
+
+  defp extract_return_type(expr) do
+    IO.inspect expr
+    raise "invalid type expression: #{Macro.to_string(expr)}"
+  end
+
   defp expand_types(types, deft, defa) do
     Enum.reduce types, [], fn type, acc ->
       cond do
@@ -168,7 +207,7 @@ defmodule Ecto.Query.Typespec do
   end
 
   defp compile_guards(var_types) do
-    guards = lc { var, types } inlist var_types, types != nil, do: { var, types }
+    guards = Enum.filter(var_types, fn({ _, types, _ }) -> types != nil end)
 
     case guards do
       []    -> true
@@ -181,7 +220,11 @@ defmodule Ecto.Query.Typespec do
     end
   end
 
-  defp compile_guard({ var, types }) do
-    quote do: unquote(var) in unquote(types)
+  defp compile_guard({ var, types, true }) do
+    quote do: unquote(var) in unquote(types) or unquote(var) == :any
+  end
+
+  defp compile_guard({ var, types, false }) do
+    quote do: elem(unquote(var), 0) in unquote(types) or elem(unquote(var), 0) == :any
   end
 end

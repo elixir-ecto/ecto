@@ -7,6 +7,7 @@ defmodule Ecto.EntityTest do
     dataset "my_entity" do
       field :name, :string, default: "eric"
       field :email, :string, uniq: true
+      field :array, { :list, :string }
     end
 
     def inc_id(__MODULE__[id: id]) do
@@ -26,23 +27,25 @@ defmodule Ecto.EntityTest do
 
   test "metadata" do
     fields = [
-      { :id, [type: :integer, primary_key: true] },
-      { :name, [type: :string, default: "eric"] },
-      { :email, [type: :string, uniq: true] }
+      { :id, [type: { :integer, nil }, primary_key: true] },
+      { :name, [type: { :string, nil }, default: "eric"] },
+      { :email, [type: { :string, nil }, uniq: true] },
+      { :array, [type: { :list, { :string, nil } }] }
     ]
 
     assert MyEntity.__ecto__(:dataset) == "my_entity"
     assert MyEntity.__ecto__(:fields) == fields
-    assert MyEntity.__ecto__(:field_names) == [:id, :name, :email]
+    assert MyEntity.__ecto__(:field_names) == [:id, :name, :email, :array]
     assert MyEntity.__ecto__(:field, :id) == fields[:id]
     assert MyEntity.__ecto__(:field, :name) == fields[:name]
     assert MyEntity.__ecto__(:field, :email) == fields[:email]
     assert MyEntity.__ecto__(:field_type, :id) == fields[:id][:type]
     assert MyEntity.__ecto__(:field_type, :name) == fields[:name][:type]
     assert MyEntity.__ecto__(:field_type, :email) == fields[:email][:type]
+    assert MyEntity.__ecto__(:field_type, :array) == fields[:array][:type]
 
     assert MyEntity.__record__(:fields) ==
-           [id: nil, name: "eric", email: nil]
+           [id: nil, name: "eric", email: nil, array: nil]
   end
 
   test "primary_key accessor" do
@@ -66,12 +69,12 @@ defmodule Ecto.EntityTest do
   end
 
   test "invalid field type" do
-    assert_raise ArgumentError, "`apa` is not a valid field type", fn ->
+    assert_raise ArgumentError, "`{:apa}` is not a valid field type", fn ->
       defmodule EntitInvalidFieldType do
         use Ecto.Entity
 
         dataset :entity do
-          field :name, :apa
+          field :name, { :apa }
         end
       end
     end
