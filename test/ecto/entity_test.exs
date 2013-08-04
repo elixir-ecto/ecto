@@ -27,10 +27,10 @@ defmodule Ecto.EntityTest do
 
   test "metadata" do
     fields = [
-      { :id, [type: { :integer, nil }, primary_key: true] },
-      { :name, [type: { :string, nil }, default: "eric"] },
-      { :email, [type: { :string, nil }, uniq: true] },
-      { :array, [type: { :list, { :string, nil } }] }
+      { :id, [type: :integer, primary_key: true] },
+      { :name, [type: :string, default: "eric"] },
+      { :email, [type: :string, uniq: true] },
+      { :array, [type: { :list, :string }] }
     ]
 
     assert MyEntity.__ecto__(:dataset) == "my_entity"

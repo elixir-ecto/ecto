@@ -112,7 +112,7 @@ defmodule Ecto.Query.Validator do
         state = state.vars(vars)
         expr_type = type_check(expr.expr, state)
 
-        unless expr_type == { :boolean, nil } do
+        unless expr_type == :boolean do
           format_expr_type = QueryUtil.type_to_ast(expr_type) |> Macro.to_string
           raise Ecto.InvalidQuery, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
             "is of type `#{format_expr_type}`, has to be of boolean type"
@@ -175,7 +175,7 @@ defmodule Ecto.Query.Validator do
 
     case types do
       [] ->
-        { :list, { :any, nil } }
+        { :list, :any }
       [type|rest] ->
         unless Enum.all?(rest, &QueryUtil.type_eq?(type, &1)) do
           raise Ecto.InvalidQuery, reason: "all elements in list has to be of same type"

@@ -1,9 +1,9 @@
 defmodule Ecto.Query.Typespec do
-  @doc """
-  A very simple type system to declare the operators and functions
-  available in Ecto with their types. At runtime, the type system
-  does no inference, it simply maps input types to output types.
-  """
+  @moduledoc false
+
+  # A very simple type system to declare the operators and functions
+  # available in Ecto with their types. At runtime, the type system
+  # does no inference, it simply maps input types to output types.
 
   @doc """
   Defines a new Ecto.Query type.
@@ -54,7 +54,6 @@ defmodule Ecto.Query.Typespec do
 
   ## Callbacks
 
-  @doc false
   defmacro __using__(_) do
     quote do
       import unquote(__MODULE__)
@@ -67,7 +66,6 @@ defmodule Ecto.Query.Typespec do
     end
   end
 
-  @doc false
   def __defs__(mod, { :::, meta, [left, right] })  do
     { name, args } = Macro.extract_args(left)
 
@@ -78,15 +76,15 @@ defmodule Ecto.Query.Typespec do
     { args, var_types } =
       Enum.reduce(Stream.with_index(args), { [], [] }, fn
         { { arg, _, [inner] }, index }, { args, types } ->
-          { var1, var_types } = var_types(arg, index, meta)
-          types = types ++ [{ var1, var_types, true }]
-          { var2, var_types } = var_types(inner, index + 100, meta)
+          { var1, var_types } = var_types(arg, index, "x", meta)
+          types = types ++ [{ var1, var_types }]
+          { var2, var_types } = var_types(inner, index, "y", meta)
           arg = { var1, var2 }
-          { args ++ [arg], types ++ [{ var2, var_types, false }] }
+          { args ++ [arg], types ++ [{ var2, var_types }] }
 
         { arg, index }, { args, types } ->
-          { var, var_types } = var_types(arg, index, meta)
-          { args ++ [var], types ++ [{ var, var_types, false }] }
+          { var, var_types } = var_types(arg, index, "x", meta)
+          { args ++ [var], types ++ [{ var, var_types }] }
       end)
 
     right = extract_return_type(right)
@@ -97,14 +95,12 @@ defmodule Ecto.Query.Typespec do
     { name, args, compile_guards(var_types), right, catch_all }
   end
 
-  @doc false
   def __defa__(mod, { :::, _, [left, right] }) do
     deft = Module.get_attribute(mod, :ecto_deft)
     defa = Module.get_attribute(mod, :ecto_defa)
     { extract_type(left), right |> extract_types([]) |> expand_types(deft, defa) }
   end
 
-  @doc false
   defmacro __before_compile__(env) do
     defs = Module.get_attribute(env.module, :ecto_defs)
     aggregates = Module.get_attribute(env.module, :ecto_aggregates)
@@ -131,20 +127,20 @@ defmodule Ecto.Query.Typespec do
 
   ## Helpers
 
-  defp var_types({ :var, _, nil } = var, _index, _meta) do
+  defp var_types({ :var, _, nil } = var, _index, _prefix, _meta) do
     { var, nil }
   end
 
-  defp var_types({ :_, _, nil }, index, { meta, _, _ }) do
-    { { :"x#{index}", meta, __MODULE__ }, nil }
+  defp var_types({ :_, _, nil }, index, prefix, { meta, _, _ }) do
+    { { :"#{prefix}#{index}", meta, __MODULE__ }, nil }
   end
 
-  defp var_types(arg, index, { meta, deft, defa }) do
+  defp var_types(arg, index, prefix, { meta, deft, defa }) do
     types = arg |> extract_types([]) |> expand_types(deft, defa)
-    { { :"x#{index}", meta, __MODULE__ }, types }
+    { { :"#{prefix}#{index}", meta, __MODULE__ }, types }
   end
 
-  defp extract_type({ name, _, [{ var, _, nil}] }) when is_atom(name) and is_atom(var) do
+  defp extract_type({ name, _, [_] }) when is_atom(name) do
     name
   end
 
@@ -173,19 +169,19 @@ defmodule Ecto.Query.Typespec do
   end
 
   defp extract_return_type({ name, _, [{ var, _, nil}] }) when is_atom(name) and is_atom(var) do
-    { name, { var, nil } }
+    { name, var }
   end
 
   defp extract_return_type({ :var, _, nil } = var) do
-    { var, nil }
+    var
   end
 
   defp extract_return_type({ name, _, context }) when is_atom(name) and is_atom(context) do
-    { name, nil }
+    name
   end
 
   defp extract_return_type(name) when is_atom(name) do
-    { name, nil }
+    name
   end
 
   defp extract_return_type(expr) do
@@ -207,7 +203,7 @@ defmodule Ecto.Query.Typespec do
   end
 
   defp compile_guards(var_types) do
-    guards = Enum.filter(var_types, fn({ _, types, _ }) -> types != nil end)
+    guards = Enum.filter(var_types, fn({ _, types }) -> types != nil end)
 
     case guards do
       []    -> true
@@ -220,11 +216,7 @@ defmodule Ecto.Query.Typespec do
     end
   end
 
-  defp compile_guard({ var, types, true }) do
+  defp compile_guard({ var, types }) do
     quote do: unquote(var) in unquote(types) or unquote(var) == :any
-  end
-
-  defp compile_guard({ var, types, false }) do
-    quote do: elem(unquote(var), 0) in unquote(types) or elem(unquote(var), 0) == :any
   end
 end
