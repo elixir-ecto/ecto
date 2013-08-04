@@ -63,9 +63,11 @@ defmodule Ecto.Query.Validator do
       state = State[froms: query.froms, vars: vars]
       type = type_check(expr, state)
 
+      format_expected_type = QueryUtil.type_to_ast(expected_type) |> Macro.to_string
+      format_type = QueryUtil.type_to_ast(type) |> Macro.to_string
       unless expected_type == type do
-        raise Ecto.InvalidQuery, reason: "expected_type `#{expected_type}` " <>
-        " on `#{module}.#{field}` doesn't match type `#{type}`"
+        raise Ecto.InvalidQuery, reason: "expected_type `#{format_expected_type}` " <>
+        " on `#{module}.#{field}` doesn't match type `#{format_type}`"
       end
     end)
 
@@ -110,9 +112,10 @@ defmodule Ecto.Query.Validator do
         state = state.vars(vars)
         expr_type = type_check(expr.expr, state)
 
-        unless expr_type == :boolean do
+        unless expr_type == { :boolean, nil } do
+          format_expr_type = QueryUtil.type_to_ast(expr_type) |> Macro.to_string
           raise Ecto.InvalidQuery, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
-            "is of type `#{expr_type}`, has to be of boolean type"
+            "is of type `#{format_expr_type}`, has to be of boolean type"
         end
       end
     end)
@@ -152,9 +155,8 @@ defmodule Ecto.Query.Validator do
   end
 
   # tuple
-  defp type_check({ :{}, _, list }, state) when is_list(list) do
-    Enum.each(list, &type_check(&1, state))
-    :tuple
+  defp type_check({ :{}, _, list }, _state) when is_list(list) do
+    raise Ecto.InvalidQuery, reason: "tuples are not allowed in queries"
   end
 
   # ops & functions
@@ -163,23 +165,32 @@ defmodule Ecto.Query.Validator do
     case apply(Ecto.Query.API, name, arg_types) do
       { :ok, type } -> type
       { :error, allowed } ->
-        raise Ecto.TypeCheckError, name: name, expr: expr, types: arg_types, allowed: allowed
+        raise Ecto.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
     end
   end
 
   # list
   defp type_check(list, state) when is_list(list) do
-    Enum.each(list, &type_check(&1, state))
-    :list
+    types = Enum.map(list, &type_check(&1, state))
+
+    case types do
+      [] ->
+        { :list, { :any, nil } }
+      [type|rest] ->
+        unless Enum.all?(rest, &QueryUtil.type_eq?(type, &1)) do
+          raise Ecto.InvalidQuery, reason: "all elements in list has to be of same type"
+        end
+        { :list, type }
+    end
   end
 
   # literals
-  defp type_check(nil, _vars), do: :nil
-  defp type_check(false, _vars), do: :boolean
-  defp type_check(true, _vars), do: :boolean
-  defp type_check(literal, _vars) when is_integer(literal), do: :integer
-  defp type_check(literal, _vars) when is_float(literal), do: :float
-  defp type_check(literal, _vars) when is_binary(literal), do: :string
+  defp type_check(nil, _state), do: { :any, nil }
+  defp type_check(false, _state), do: { :boolean, nil }
+  defp type_check(true, _state), do: { :boolean, nil }
+  defp type_check(literal, _state) when is_integer(literal), do: { :integer, nil }
+  defp type_check(literal, _state) when is_float(literal), do: { :float, nil }
+  defp type_check(literal, _state) when is_binary(literal), do: { :string, nil }
 
   # atom
   defp type_check(literal, _vars) when is_atom(literal) do
