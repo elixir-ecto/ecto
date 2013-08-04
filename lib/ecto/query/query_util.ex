@@ -88,6 +88,35 @@ defmodule Ecto.Query.QueryUtil do
     raise Ecto.InvalidQuery, reason: "binding should be list of variables"
   end
 
+  def type_to_ast({ type, nil }), do: { type, [], nil }
+  def type_to_ast({ type, inner }), do: { type, [], [type_to_ast(inner)] }
+
+  def value_to_type(nil), do: { :any, nil }
+  def value_to_type(value) when is_boolean(value), do: { :boolean, nil }
+  def value_to_type(value) when is_binary(value), do: { :string, nil }
+  def value_to_type(value) when is_integer(value), do: { :integer, nil }
+  def value_to_type(value) when is_float(value), do: { :float, nil }
+
+  def value_to_type(list) when is_list(list) do
+    types = Enum.map(list, &value_to_type/1)
+
+    case types do
+      [] ->
+        { :list, { :any, nil } }
+      [type|rest] ->
+        unless Enum.all?(rest, &type_eq?(type, &1)) do
+          raise Ecto.InvalidQuery, reason: "all elements in list has to be of same type"
+        end
+        { :list, type }
+    end
+  end
+
+  def type_eq?(_, { :any, nil }), do: true
+  def type_eq?({ :any, nil }, _), do: true
+  def type_eq?({ outer, inner1 }, { outer, inner2 }), do: type_eq?(inner1, inner2)
+  def type_eq?(nil, nil), do: true
+  def type_eq?(_, _), do: false
+
   defp escape_var(var) when is_atom(var) do
     var
   end
@@ -100,7 +129,8 @@ defmodule Ecto.Query.QueryUtil do
     raise Ecto.InvalidQuery, reason: "binding should be list of variables"
   end
 
-  # Returns the if all elements in the collection are unique
+  # Returns nil if all elements in the collection are unique or the first
+  # non-unqiue element
   defp not_uniq(collection) do
     Enum.sort(collection) |> do_not_uniq
   end

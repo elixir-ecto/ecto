@@ -7,7 +7,7 @@ defmodule Ecto.Query.API do
   deft float
   deft integer
   deft boolean
-  deft list
+  deft list(var)
   deft nil
 
   defa number :: float | integer
@@ -81,8 +81,8 @@ defmodule Ecto.Query.API do
   defs boolean or boolean :: boolean
 
   def left in right
-  defs _ in list :: boolean
+  defs var in list(var) :: boolean
 
   def left .. right
-  defs integer .. integer :: list
+  defs integer .. integer :: list(integer)
 end

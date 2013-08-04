@@ -1,3 +1,5 @@
+alias Ecto.Query.QueryUtil
+
 defexception Ecto.InvalidQuery, [:reason, :type, :query, :file, :line] do
   def message(Ecto.InvalidQuery[] = e) do
     if e.type && e.query && e.file && e.line do
@@ -30,8 +32,10 @@ end
 
 defexception Ecto.ValidationError, [:entity, :field, :type, :expected_type, :reason] do
   def message(Ecto.ValidationError[] = e) do
+    type = QueryUtil.type_to_ast(e.type) |> Macro.to_string
+    expected_type = QueryUtil.type_to_ast(e.expected_type) |> Macro.to_string
     "entity #{inspect e.entity} failed validation, field #{e.field} had " <>
-    "type #{e.type} but type #{e.expected_type} was expected: #{e.reason}"
+    "type #{type} but type #{expected_type} was expected: #{e.reason}"
   end
 end
 
@@ -42,19 +46,22 @@ defexception Ecto.NotSingleResult, [:entity, :primary_key, :id] do
   end
 end
 
-defexception Ecto.TypeCheckError, [:name, :expr, :types, :allowed] do
-  def message(exception = Ecto.TypeCheckError[]) do
-    expected = Enum.map_join(exception.allowed, "\n    ", &Macro.to_string(&1))
+defexception Ecto.TypeCheckError, [:expr, :types, :allowed] do
+  def message(Ecto.TypeCheckError[] = e) do
+    { name, _, _ } = e.expr
+    expected = Enum.map_join(e.allowed, "\n    ", &Macro.to_string(&1))
 
-    types  = lc type inlist exception.types, do: { type, [], nil }
-    actual = Macro.to_string({ exception.name, [], types })
+    types  = Enum.map(e.types, &QueryUtil.type_to_ast/1)
+    actual = Macro.to_string({ name, [], types })
+
+    IO.inspect e.types
 
     """
     the following expression does not type check:
 
-        #{Macro.to_string(exception.expr)}
+        #{Macro.to_string(e.expr)}
 
-    Allowed types for #{exception.name}/#{length(exception.types)}:
+    Allowed types for #{name}/#{length(e.types)}:
 
         #{expected}
 

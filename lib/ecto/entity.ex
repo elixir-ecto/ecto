@@ -133,20 +133,33 @@ defmodule Ecto.Entity.Dataset do
 
     quote do
       name = unquote(name)
-      type = unquote(type)
+      type = unquote(format_type(type))
 
       clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> name == prev_name end)
       if clash do
         raise ArgumentError, message: "field `#{name}` was already set on entity"
       end
 
-      unless type in unquote(@types) do
-        raise ArgumentError, message: "`#{type}` is not a valid field type"
-      end
-
       opts = unquote(opts)
       default = opts[:default]
       @ecto_fields { name, [type: type] ++ opts }
+    end
+  end
+
+  defp format_type(type) when is_atom(type), do: { type, nil }
+
+  defp format_type({ outer, inner }) when is_atom(outer) do
+    check_type(outer)
+    { outer, format_type(inner) }
+  end
+
+  defp format_type(other) do
+    raise ArgumentError, message: "`#{Macro.to_string(other)}` is not a valid field type"
+  end
+
+  defp check_type(type) do
+    unless type in @types do
+      raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
     end
   end
 end

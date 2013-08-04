@@ -362,25 +362,13 @@ defmodule Ecto.Repo do
 
     Enum.each(zipped, fn({ value, field }) ->
       type = module.__ecto__(:field_type, field)
+      value_type = QueryUtil.value_to_type(value)
 
       # TODO: Check if entity field allows nil
-      unless field == primary_key or check_value_type(value, type) do
+      unless field == primary_key or QueryUtil.type_eq?(value_type, type) do
         raise Ecto.ValidationError, entity: entity, field: field,
-          type: type(value), expected_type: type, reason: reason
+          type: value_type, expected_type: type, reason: reason
       end
     end)
   end
-
-  defp check_value_type(value, :boolean) when is_boolean(value), do: true
-  defp check_value_type(value, :string) when is_binary(value), do: true
-  defp check_value_type(value, :integer) when is_integer(value), do: true
-  defp check_value_type(value, :float) when is_float(value), do: true
-  defp check_value_type(nil, _), do: true
-  defp check_value_type(_value, _type), do: false
-
-  defp type(value) when is_boolean(value), do: :boolean
-  defp type(value) when is_binary(value), do: :string
-  defp type(value) when is_integer(value), do: :integer
-  defp type(value) when is_float(value), do: :float
-  defp type(_value), do: :unknown
 end

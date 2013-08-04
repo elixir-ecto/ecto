@@ -120,10 +120,13 @@ defmodule Ecto.Query.ValidatorTest do
     query = from(PostEntity) |> select([], 1 in [1,2,3])
     QueryUtil.validate(query)
 
-    query = from(PostEntity) |> select([], '1' in [1,"2",'3'])
+    query = from(PostEntity) |> select([], '1' in ['1','2','3'])
     QueryUtil.validate(query)
 
     query = from(PostEntity) |> select([], (2+2) in 1..5)
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> select([], [1] in [[1], [1, 2, 3], []])
     QueryUtil.validate(query)
   end
 
@@ -152,10 +155,10 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "list expression" do
-    query = from(PostEntity) |> where([p], [p.id, p.title] == nil) |> select([], 0)
+    query = from(PostEntity) |> where([p], [p.title, p.title] == nil) |> select([], 0)
     QueryUtil.validate(query)
 
-    query = from(PostEntity) |> where([p], [p.id, p.title] == 1) |> select([], 0)
+    query = from(PostEntity) |> where([p], [p.title, p.title] == 1) |> select([], 0)
     assert_raise Ecto.TypeCheckError, fn ->
       QueryUtil.validate(query)
     end
