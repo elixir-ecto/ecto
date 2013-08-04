@@ -185,7 +185,7 @@ defmodule Ecto.Query.Validator do
   end
 
   # atom
-  defp type_check(literal, _vars) when is_atom(literal) and literal != nil do
+  defp type_check(literal, _vars) when is_atom(literal) and not (literal in [true, false, nil]) do
     raise Ecto.InvalidQuery, reason: "atoms are not allowed in queries"
   end
 
