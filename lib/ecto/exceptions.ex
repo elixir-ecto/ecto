@@ -54,8 +54,6 @@ defexception Ecto.TypeCheckError, [:expr, :types, :allowed] do
     types  = Enum.map(e.types, &QueryUtil.type_to_ast/1)
     actual = Macro.to_string({ name, [], types })
 
-    IO.inspect e.types
-
     """
     the following expression does not type check:
 

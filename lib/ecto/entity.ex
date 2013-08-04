@@ -133,7 +133,8 @@ defmodule Ecto.Entity.Dataset do
 
     quote do
       name = unquote(name)
-      type = unquote(format_type(type))
+      type = unquote(type)
+      Ecto.Entity.Dataset.check_type(type)
 
       clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> name == prev_name end)
       if clash do
@@ -146,18 +147,13 @@ defmodule Ecto.Entity.Dataset do
     end
   end
 
-  defp format_type(type) when is_atom(type), do: { type, nil }
-
-  defp format_type({ outer, inner }) when is_atom(outer) do
+  @doc false
+  def check_type({ outer, inner }) when is_atom(outer) do
     check_type(outer)
-    { outer, format_type(inner) }
+    check_type(inner)
   end
 
-  defp format_type(other) do
-    raise ArgumentError, message: "`#{Macro.to_string(other)}` is not a valid field type"
-  end
-
-  defp check_type(type) do
+  def check_type(type) do
     unless type in @types do
       raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
     end
