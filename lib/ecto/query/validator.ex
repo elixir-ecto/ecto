@@ -184,23 +184,13 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  # literals
-  defp type_check(nil, _state), do: { :any, nil }
-  defp type_check(false, _state), do: { :boolean, nil }
-  defp type_check(true, _state), do: { :boolean, nil }
-  defp type_check(literal, _state) when is_integer(literal), do: { :integer, nil }
-  defp type_check(literal, _state) when is_float(literal), do: { :float, nil }
-  defp type_check(literal, _state) when is_binary(literal), do: { :string, nil }
-
   # atom
-  defp type_check(literal, _vars) when is_atom(literal) do
+  defp type_check(literal, _vars) when is_atom(literal) and literal != nil do
     raise Ecto.InvalidQuery, reason: "atoms are not allowed in queries"
   end
 
-  # unknown
-  defp type_check(expr, _vars) do
-    raise Ecto.InvalidQuery, reason: "internal error on `#{inspect expr}`"
-  end
+  # values
+  defp type_check(value, _state), do: QueryUtil.value_to_type(value)
 
   defp group_by_entities(group_bys, froms) do
     Enum.map(group_bys, fn(QueryExpr[] = group_by) ->
