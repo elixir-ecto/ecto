@@ -76,6 +76,8 @@ defmodule Ecto.Query.QueryUtil do
     end
   end
 
+  # Converts list of variables to list of atoms
+  @doc false
   def escape_binding(binding) when is_list(binding) do
     vars = Enum.map(binding, &escape_var(&1))
     if var = Enum.filter(vars, &(&1 != :_)) |> not_uniq do
@@ -88,21 +90,25 @@ defmodule Ecto.Query.QueryUtil do
     raise Ecto.InvalidQuery, reason: "binding should be list of variables"
   end
 
-  def type_to_ast({ type, nil }), do: { type, [], nil }
+  # Converts internal type format to "typespec" format
+  @doc false
   def type_to_ast({ type, inner }), do: { type, [], [type_to_ast(inner)] }
+  def type_to_ast(type) when is_atom(type), do: { type, [], nil }
 
-  def value_to_type(nil), do: { :any, nil }
-  def value_to_type(value) when is_boolean(value), do: { :boolean, nil }
-  def value_to_type(value) when is_binary(value), do: { :string, nil }
-  def value_to_type(value) when is_integer(value), do: { :integer, nil }
-  def value_to_type(value) when is_float(value), do: { :float, nil }
+  # Takes an elixir value an returns its ecto type
+  @doc false
+  def value_to_type(nil), do: :any
+  def value_to_type(value) when is_boolean(value), do: :boolean
+  def value_to_type(value) when is_binary(value), do: :string
+  def value_to_type(value) when is_integer(value), do: :integer
+  def value_to_type(value) when is_float(value), do: :float
 
   def value_to_type(list) when is_list(list) do
     types = Enum.map(list, &value_to_type/1)
 
     case types do
       [] ->
-        { :list, { :any, nil } }
+        { :list, :any }
       [type|rest] ->
         unless Enum.all?(rest, &type_eq?(type, &1)) do
           raise Ecto.InvalidQuery, reason: "all elements in list has to be of same type"
@@ -111,10 +117,12 @@ defmodule Ecto.Query.QueryUtil do
     end
   end
 
-  def type_eq?(_, { :any, nil }), do: true
-  def type_eq?({ :any, nil }, _), do: true
+  # Returns true if the two types are considered equal by the type system
+  @doc false
+  def type_eq?(_, :any), do: true
+  def type_eq?(:any, _), do: true
   def type_eq?({ outer, inner1 }, { outer, inner2 }), do: type_eq?(inner1, inner2)
-  def type_eq?(nil, nil), do: true
+  def type_eq?(x, x), do: true
   def type_eq?(_, _), do: false
 
   defp escape_var(var) when is_atom(var) do
@@ -130,7 +138,7 @@ defmodule Ecto.Query.QueryUtil do
   end
 
   # Returns nil if all elements in the collection are unique or the first
-  # non-unqiue element
+  # non-unique element
   defp not_uniq(collection) do
     Enum.sort(collection) |> do_not_uniq
   end
