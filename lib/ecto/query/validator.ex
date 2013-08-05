@@ -8,7 +8,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
 
-  defrecord State, froms: [], vars: [], grouped: [], is_grouped: false
+  defrecord State, froms: [], vars: [], grouped: [], grouped?: false, in_agg?: false
 
   # Adds type, file and line metadata to the exception
   defmacrop rescue_metadata(type, query, file, line, block) do
@@ -34,7 +34,7 @@ defmodule Ecto.Query.Validator do
 
     grouped = group_by_entities(query.group_bys, query.froms)
     is_grouped = query.group_bys != [] or query.havings != []
-    state = State[froms: query.froms, grouped: grouped, is_grouped: is_grouped]
+    state = State[froms: query.froms, grouped: grouped, grouped?: is_grouped]
 
     validate_havings(query.havings, state)
     validate_wheres(query.wheres, state)
@@ -97,7 +97,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_wheres(wheres, state) do
-    state = state.is_grouped(false)
+    state = state.grouped?(false)
     validate_booleans(:where, wheres, state)
   end
 
@@ -161,7 +161,15 @@ defmodule Ecto.Query.Validator do
 
   # ops & functions
   defp type_check({ name, _, args } = expr, state) when is_atom(name) and is_list(args) do
+    if Ecto.Query.API.aggregate?(name, length(args)) do
+      if state.in_agg? do
+        raise Ecto.InvalidQuery, reason: "aggregate function calls cannot be nested"
+      end
+      state = state.in_agg?(true)
+    end
+
     arg_types = Enum.map(args, &type_check(&1, state))
+
     case apply(Ecto.Query.API, name, arg_types) do
       { :ok, type } -> type
       { :error, allowed } ->
@@ -202,7 +210,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp check_grouped(var, entity_field, state) do
-    if state.is_grouped and not (entity_field in state.grouped) do
+    if state.grouped? and not state.in_agg? and not (entity_field in state.grouped) do
       { _, field } = entity_field
       raise Ecto.InvalidQuery, reason: "expression `#{var}.#{field}` must appear in `group_by` " <>
         "or be used in an aggregate function"

@@ -131,7 +131,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT e0.x * 2\nFROM entity AS e0"
 
     query = from(Entity) |> select([r], r.x / 2)
-    assert SQL.select(query) == "SELECT e0.x / 2\nFROM entity AS e0"
+    assert SQL.select(query) == "SELECT e0.x / 2::float\nFROM entity AS e0"
 
     query = from(Entity) |> select([r], r.x and false)
     assert SQL.select(query) == "SELECT e0.x AND FALSE\nFROM entity AS e0"
@@ -280,5 +280,19 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = from(Entity) |> select([r], r.x + ^fun(r.x))
     assert SQL.select(query) == "SELECT e0.x + 246\nFROM entity AS e0"
+  end
+
+  test "functions" do
+    query = from(Entity) |> select([], random())
+    assert SQL.select(query) == "SELECT random()\nFROM entity AS e0"
+
+    query = from(Entity) |> select([], round(12.34))
+    assert SQL.select(query) == "SELECT round(12.34)\nFROM entity AS e0"
+
+    query = from(Entity) |> select([], round(12.34, 1))
+    assert SQL.select(query) == "SELECT round(12.34, 1)\nFROM entity AS e0"
+
+    query = from(Entity) |> select([], pow(7, 2))
+    assert SQL.select(query) == "SELECT 7 ^ 2\nFROM entity AS e0"
   end
 end

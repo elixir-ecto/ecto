@@ -10,16 +10,36 @@ defmodule Ecto.Adapters.Postgres.SQL do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.QueryUtil
 
+  unary_ops = [ -: "-", +: "+" ]
+
   binary_ops =
     [ ==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
       and: "AND", or: "OR",
-      +:  "+", -:  "-", *:  "*", /:  "/" ]
+      +:  "+", -:  "-", *:  "*",
+      <>: "||", ++: "||",
+      pow: "^", div: "/", rem: "%" ]
+
+  functions =
+    [ { { :random, 0 }, "random" }, { { :round, 1 }, "round" }, { { :round, 2 }, "round" },
+      { { :downcase, 1 }, "lower" }, { { :upcase, 1 }, "upper" }, { { :avg, 1 }, "avg" },
+      { { :count, 1 }, "count" }, { { :max, 1 }, "max" }, { { :min, 1 }, "min" },
+      { { :sum, 1 }, "sum" } ]
 
   @binary_ops Dict.keys(binary_ops)
 
-  Enum.map(binary_ops, fn { op, str } ->
-    defp binop_to_binary(unquote(op)), do: unquote(str)
+  Enum.map(unary_ops, fn { op, str } ->
+    defp translate_name(unquote(op), 1), do: { :unary_op, unquote(str) }
   end)
+
+  Enum.map(binary_ops, fn { op, str } ->
+    defp translate_name(unquote(op), 2), do: { :binary_op, unquote(str) }
+  end)
+
+  Enum.map(functions, fn { { fun, arity }, str } ->
+    defp translate_name(unquote(fun), unquote(arity)), do: { :fun, unquote(str) }
+  end)
+
+  defp translate_name(_, _), do: nil
 
   # Generate SQL for a select statement
   def select(Query[] = query) do
@@ -201,10 +221,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
     name <> " " <> exprs
   end
 
-  defp expr({ expr, _, [] }, vars) do
-    expr(expr, vars)
-  end
-
   defp expr({ :., _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
     { _entity, name } = Keyword.fetch!(vars, var)
@@ -220,10 +236,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
     { entity, name } = Keyword.fetch!(vars, var)
     fields = entity.__ecto__(:field_names)
     Enum.map_join(fields, ", ", &"#{name}.#{&1}")
-  end
-
-  defp expr({ op, _, [expr] }, vars) when op in [:+, :-] do
-    atom_to_binary(op) <> expr(expr, vars)
   end
 
   defp expr({ :==, _, [nil, right] }, vars) do
@@ -262,8 +274,25 @@ defmodule Ecto.Adapters.Postgres.SQL do
     expr(Enum.to_list(first..last), vars)
   end
 
-  defp expr({ op, _, [left, right] }, vars) when op in @binary_ops do
-    "#{op_to_binary(left, vars)} #{binop_to_binary(op)} #{op_to_binary(right, vars)}"
+  defp expr({ :/, _, [left, right] }, vars) do
+    op_to_binary(left, vars) <> " / " <> op_to_binary(right, vars) <> "::float"
+  end
+
+  defp expr({ arg, _, [] }, vars) when is_tuple(arg) do
+    expr(arg, vars)
+  end
+
+  defp expr({ fun, _, args }, vars) when is_atom(fun) and is_list(args) do
+    case translate_name(fun, length(args)) do
+      { :unary_op, op } ->
+        arg = expr(Enum.first(args), vars)
+        op <> arg
+      { :binary_op, op } ->
+        [left, right] = args
+        op_to_binary(left, vars) <> " #{op} " <> op_to_binary(right, vars)
+      { :fun, fun } ->
+        "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, vars)) <> ")"
+    end
   end
 
   defp expr(list, vars) when is_list(list) do
@@ -285,9 +314,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp literal(literal) when is_number(literal) do
     to_binary(literal)
   end
-
-  # TODO: Make sure that Elixir's to_binary for numbers is compatible with PG
-  # http://www.postgresql.org/docs/9.2/interactive/sql-syntax-lexical.html
 
   defp op_to_binary({ op, _, [_, _] } = expr, vars) when op in @binary_ops do
     "(" <> expr(expr, vars) <> ")"

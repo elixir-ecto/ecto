@@ -169,7 +169,7 @@ defmodule Ecto.Query.ValidatorTest do
     QueryUtil.validate(query)
 
     query = from(PostEntity) |> having([p], p.id) |> select([], 0)
-    assert_raise Ecto.InvalidQuery, %r"`p.id` must appear in `group_by", fn ->
+    assert_raise Ecto.InvalidQuery, %r"`p.id` must appear in `group_by`", fn ->
       QueryUtil.validate(query)
     end
   end
@@ -179,7 +179,7 @@ defmodule Ecto.Query.ValidatorTest do
     QueryUtil.validate(query)
 
     query = from(PostEntity) |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
-    assert_raise Ecto.InvalidQuery, %r"`p.title` must appear in `group_by", fn ->
+    assert_raise Ecto.InvalidQuery, %r"`p.title` must appear in `group_by`", fn ->
       QueryUtil.validate(query)
     end
   end
@@ -189,7 +189,7 @@ defmodule Ecto.Query.ValidatorTest do
     QueryUtil.validate(query)
 
     query = from(PostEntity) |> group_by([p], p.id) |> select([p], p.title)
-    assert_raise Ecto.InvalidQuery, %r"`p.title` must appear in `group_by", fn ->
+    assert_raise Ecto.InvalidQuery, %r"`p.title` must appear in `group_by`", fn ->
       QueryUtil.validate(query)
     end
   end
@@ -197,5 +197,27 @@ defmodule Ecto.Query.ValidatorTest do
   test "group_by doesn't group where" do
     query = from(PostEntity) |> group_by([p], p.id) |> where([p], p.title == "") |> select([p], p.id)
     QueryUtil.validate(query)
+  end
+
+  test "allow functions" do
+    query = from(PostEntity) |> select([], avg(0))
+    QueryUtil.validate(query)
+  end
+
+  test "allow grouped fields in aggregate" do
+    query = from(PostEntity) |> group_by([p], p.id) |> select([p], avg(p.id))
+    QueryUtil.validate(query)
+  end
+
+  test "allow non-grouped fields in aggregate" do
+    query = from(PostEntity) |> group_by([p], p.title) |> select([p], count(p.id))
+    QueryUtil.validate(query)
+  end
+
+  test "don't allow nested aggregates" do
+    query = from(PostEntity) |> select([p], count(count(p.id)))
+    assert_raise Ecto.InvalidQuery, "aggregate function calls cannot be nested", fn ->
+      QueryUtil.validate(query)
+    end
   end
 end
