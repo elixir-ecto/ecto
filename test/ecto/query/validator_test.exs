@@ -220,4 +220,17 @@ defmodule Ecto.Query.ValidatorTest do
       QueryUtil.validate(query)
     end
   end
+
+  test "nils only allowed in == and !=" do
+    query = from(PostEntity) |> select([p], 1 == nil)
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> select([p], nil != "abc")
+    QueryUtil.validate(query)
+
+    query = from(PostEntity) |> select([p], 1 + nil)
+    assert_raise Ecto.TypeCheckError, fn ->
+      QueryUtil.validate(query)
+    end
+  end
 end

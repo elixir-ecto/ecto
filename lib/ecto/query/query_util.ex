@@ -97,7 +97,7 @@ defmodule Ecto.Query.QueryUtil do
 
   # Takes an elixir value an returns its ecto type
   @doc false
-  def value_to_type(nil), do: :any
+  def value_to_type(nil), do: nil
   def value_to_type(value) when is_boolean(value), do: :boolean
   def value_to_type(value) when is_binary(value), do: :string
   def value_to_type(value) when is_integer(value), do: :integer

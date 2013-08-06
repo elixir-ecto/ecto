@@ -185,7 +185,6 @@ defmodule Ecto.Query.Typespec do
   end
 
   defp extract_return_type(expr) do
-    IO.inspect expr
     raise "invalid type expression: #{Macro.to_string(expr)}"
   end
 
