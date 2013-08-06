@@ -24,6 +24,7 @@ defmodule Ecto.Mixfile do
   end
 
   defp envs do
-    [ pg: [test_paths: ["integration_test/pg"] ] ]
+    [ pg: [ test_paths: ["integration_test/pg"] ],
+      all: [ test_paths: ["test", "integration_test/pg"] ] ]
   end
 end

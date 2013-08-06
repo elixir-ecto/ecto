@@ -364,8 +364,12 @@ defmodule Ecto.Repo do
       type = module.__ecto__(:field_type, field)
       value_type = QueryUtil.value_to_type(value)
 
+      valid = field == primary_key or
+              value_type == nil or
+              QueryUtil.type_eq?(value_type, type)
+
       # TODO: Check if entity field allows nil
-      unless field == primary_key or QueryUtil.type_eq?(value_type, type) do
+      unless valid do
         raise Ecto.ValidationError, entity: entity, field: field,
           type: value_type, expected_type: type, reason: reason
       end

@@ -1,7 +1,9 @@
-defmodule Ecto.Adapters.PostgresTest do
-  use Ecto.PgTest.Case
+defmodule Ecto.Integration.PostgresTest do
+  use Ecto.Integration.Postgres.Case
 
   import Ecto.Query
+  alias Ecto.Integration.Postgres.TestRepo
+  alias Ecto.Integration.Postgres.Post
 
   test "fetch empty" do
     assert [] == TestRepo.all(from p in Post)

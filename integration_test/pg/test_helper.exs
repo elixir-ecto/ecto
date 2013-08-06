@@ -1,8 +1,9 @@
 ExUnit.start
 
 alias Ecto.Adapters.Postgres
+alias Ecto.Integration.Postgres.TestRepo
 
-defmodule TestRepo do
+defmodule Ecto.Integration.Postgres.TestRepo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def url do
@@ -10,7 +11,7 @@ defmodule TestRepo do
   end
 end
 
-defmodule Post do
+defmodule Ecto.Integration.Postgres.Post do
   use Ecto.Entity
 
   dataset "posts" do
@@ -20,7 +21,7 @@ defmodule Post do
   end
 end
 
-defmodule Ecto.PgTest.Case do
+defmodule Ecto.Integration.Postgres.Case do
   use ExUnit.CaseTemplate
 
   using do
