@@ -316,7 +316,23 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  TODO: Document when query functions are implemented
+  A group by query expression. Groups together rows from the entity that have
+  the same values in the given fields. Using `group_by` "groups" the query
+  giving it different semantics in the `select` expression. If a query is
+  grouped only fields that were referenced in the `group_by` can be used in the
+  `select` or if the field is given as an argument to an aggregate function.
+
+  ## Keywords examples
+
+      # Returns the number of posts in each category
+      from(p in Post,
+        group_by: p.category,
+        select: { p.category, count(p.id) })
+
+  ## Expressions examples
+
+      from(Post) |> group_by([p], p.category) |> select([p], count(p.id))
+
   """
   defmacro group_by(query, binding, expr) do
     binding = QueryUtil.escape_binding(binding)
@@ -328,7 +344,26 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  TODO: Document when query functions are implemented
+  A having query expression. Like `where` `having` filters rows from the entity,
+  but after the grouping is performed giving it the same semantics as `select`
+  for a grouped query (see `group_by/3`). `having` groups the query even if the
+  query has no `group_by` expression.
+
+  ## Keywords examples
+
+      # Returns the number of posts in each category where the
+      # average number of comments is above ten
+      from(p in Post,
+        group_by: p.category,
+        having: avg(p.num_comments) > 10,
+        select: { p.category, count(p.id) })
+
+  ## Expressions examples
+
+      from(Post)
+        |> group_by([p], p.category)
+        |> having([p], avg(p.num_comments) > 10)
+        |> select([p], count(p.id))
   """
   defmacro having(query, binding, expr) do
     binding = QueryUtil.escape_binding(binding)
