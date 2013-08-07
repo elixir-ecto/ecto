@@ -1,4 +1,4 @@
-defmodule Ecto.Query.QueryUtil do
+defmodule Ecto.Query.Util do
   @moduledoc """
   This module provide utility functions on queries.
   """

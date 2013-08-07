@@ -4,7 +4,7 @@ defmodule Ecto.Query.Validator do
   # This module does validation on the query checking that it's in a correct
   # format, raising if it's not.
 
-  alias Ecto.Query.QueryUtil
+  alias Ecto.Query.Util
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
 
@@ -59,12 +59,12 @@ defmodule Ecto.Query.Validator do
       end
 
       # TODO: Check if entity field allows nil
-      vars = QueryUtil.merge_binding_vars(binds, [module])
+      vars = Util.merge_binding_vars(binds, [module])
       state = State[froms: query.froms, vars: vars]
       type = type_check(expr, state)
 
-      format_expected_type = QueryUtil.type_to_ast(expected_type) |> Macro.to_string
-      format_type = QueryUtil.type_to_ast(type) |> Macro.to_string
+      format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
+      format_type = Util.type_to_ast(type) |> Macro.to_string
       unless expected_type == type do
         raise Ecto.InvalidQuery, reason: "expected_type `#{format_expected_type}` " <>
         " on `#{module}.#{field}` doesn't match type `#{format_type}`"
@@ -108,12 +108,12 @@ defmodule Ecto.Query.Validator do
   defp validate_booleans(type, query_exprs, State[froms: froms] = state) do
     Enum.each(query_exprs, fn(QueryExpr[] = expr) ->
       rescue_metadata(type, expr.expr, expr.file, expr.line) do
-        vars = QueryUtil.merge_binding_vars(expr.binding, froms)
+        vars = Util.merge_binding_vars(expr.binding, froms)
         state = state.vars(vars)
         expr_type = type_check(expr.expr, state)
 
         unless expr_type == :boolean do
-          format_expr_type = QueryUtil.type_to_ast(expr_type) |> Macro.to_string
+          format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
           raise Ecto.InvalidQuery, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
             "is of type `#{format_expr_type}`, has to be of boolean type"
         end
@@ -124,7 +124,7 @@ defmodule Ecto.Query.Validator do
   defp validate_select(QueryExpr[] = expr, State[froms: froms] = state) do
     { _, select_expr } = expr.expr
     rescue_metadata(:select, select_expr, expr.file, expr.line) do
-      vars = QueryUtil.merge_binding_vars(expr.binding, froms)
+      vars = Util.merge_binding_vars(expr.binding, froms)
       state = state.vars(vars)
       type_check(select_expr, state)
     end
@@ -185,7 +185,7 @@ defmodule Ecto.Query.Validator do
       [] ->
         { :list, :any }
       [type|rest] ->
-        unless Enum.all?(rest, &QueryUtil.type_eq?(type, &1)) do
+        unless Enum.all?(rest, &Util.type_eq?(type, &1)) do
           raise Ecto.InvalidQuery, reason: "all elements in list has to be of same type"
         end
         { :list, type }
@@ -198,11 +198,11 @@ defmodule Ecto.Query.Validator do
   end
 
   # values
-  defp type_check(value, _state), do: QueryUtil.value_to_type(value)
+  defp type_check(value, _state), do: Util.value_to_type(value)
 
   defp group_by_entities(group_bys, froms) do
     Enum.map(group_bys, fn(QueryExpr[] = group_by) ->
-      vars = QueryUtil.merge_binding_vars(group_by.binding, froms)
+      vars = Util.merge_binding_vars(group_by.binding, froms)
       Enum.map(group_by.expr, fn({ var, field }) ->
         { Keyword.fetch!(vars, var), field }
       end)

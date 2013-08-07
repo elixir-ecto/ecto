@@ -25,7 +25,7 @@ defmodule Ecto.Repo do
   use Behaviour
 
   alias Ecto.Queryable
-  alias Ecto.Query.QueryUtil
+  alias Ecto.Query.Util
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.FromBuilder
@@ -205,7 +205,7 @@ defmodule Ecto.Repo do
     reason = "getting entity"
 
     query = Queryable.to_query(queryable)
-    QueryUtil.validate_get(query)
+    Util.validate_get(query)
 
     entity = Enum.first(query.froms)
     check_primary_key(entity, reason)
@@ -213,8 +213,8 @@ defmodule Ecto.Repo do
 
     quoted = quote do x.unquote(primary_key) == unquote(id) end
     expr = QueryExpr[expr: quoted, binding: [:x]]
-    query = QueryUtil.merge(query, :where, expr)
-    query = QueryUtil.normalize(query)
+    query = Util.merge(query, :where, expr)
+    query = Util.normalize(query)
 
     case adapter.all(repo, query) |> check_result(adapter, reason) do
       [entity] -> entity
@@ -226,8 +226,8 @@ defmodule Ecto.Repo do
   @doc false
   def all(repo, adapter, queryable) do
     query = Queryable.to_query(queryable)
-    query = QueryUtil.normalize(query)
-    QueryUtil.validate(query)
+    query = Util.normalize(query)
+    Util.validate(query)
     reason = "fetching entities"
     adapter.all(repo, query) |> check_result(adapter, reason)
   end
@@ -267,8 +267,8 @@ defmodule Ecto.Repo do
       binds = unquote(binds)
 
       query = Queryable.to_query(unquote(expr))
-      query = QueryUtil.normalize(query, skip_select: true)
-      QueryUtil.validate_update(query, binds, values)
+      query = Util.normalize(query, skip_select: true)
+      Util.validate_update(query, binds, values)
 
       reason = "updating entities"
       adapter = unquote(adapter)
@@ -288,8 +288,8 @@ defmodule Ecto.Repo do
   @doc false
   def delete_all(repo, adapter, queryable) do
     query = Queryable.to_query(queryable)
-    query = QueryUtil.normalize(query, skip_select: true)
-    QueryUtil.validate_delete(query)
+    query = Util.normalize(query, skip_select: true)
+    Util.validate_delete(query)
 
     reason = "deleting entities"
     adapter.delete_all(repo, query) |> check_result(adapter, reason)
@@ -362,11 +362,11 @@ defmodule Ecto.Repo do
 
     Enum.each(zipped, fn({ value, field }) ->
       type = module.__ecto__(:field_type, field)
-      value_type = QueryUtil.value_to_type(value)
+      value_type = Util.value_to_type(value)
 
       valid = field == primary_key or
               value_type == nil or
-              QueryUtil.type_eq?(value_type, type)
+              Util.type_eq?(value_type, type)
 
       # TODO: Check if entity field allows nil
       unless valid do

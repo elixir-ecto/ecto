@@ -8,7 +8,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   require Ecto.Query
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
-  alias Ecto.Query.QueryUtil
+  alias Ecto.Query.Util
 
   unary_ops = [ -: "-", +: "+" ]
 
@@ -112,7 +112,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     name   = elem(entity, 1)
     table  = module.__ecto__(:dataset)
 
-    vars = QueryUtil.merge_binding_vars(binding, [entity])
+    vars = Util.merge_binding_vars(binding, [entity])
     zipped_sql = Enum.map_join(values, ", ", fn({field, expr}) ->
       "#{field} = #{expr(expr, vars)}"
     end)
@@ -152,7 +152,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp select(QueryExpr[expr: expr, binding: binding], entities) do
     { _, clause } = expr
-    vars = QueryUtil.merge_binding_vars(binding, entities)
+    vars = Util.merge_binding_vars(binding, entities)
     "SELECT " <> select_clause(clause, vars)
   end
 
@@ -172,7 +172,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp group_by(group_bys, entities) do
     exprs = Enum.map_join(group_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      vars = QueryUtil.merge_binding_vars(binding, entities)
+      vars = Util.merge_binding_vars(binding, entities)
       Enum.map_join(expr, ", ", fn({ var, field }) ->
         { _entity, name } = Keyword.fetch!(vars, var)
         "#{name}.#{field}"
@@ -190,7 +190,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp order_by(order_bys, entities) do
     exprs = Enum.map_join(order_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      vars = QueryUtil.merge_binding_vars(binding, entities)
+      vars = Util.merge_binding_vars(binding, entities)
       Enum.map_join(expr, ", ", &order_by_expr(&1, vars))
     end)
 
@@ -214,7 +214,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp boolean(name, query_exprs, entities) do
     exprs = Enum.map_join(query_exprs, " AND ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      vars = QueryUtil.merge_binding_vars(binding, entities)
+      vars = Util.merge_binding_vars(binding, entities)
       "(" <> expr(expr, vars) <> ")"
     end)
 

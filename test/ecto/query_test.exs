@@ -4,7 +4,7 @@ defmodule Ecto.QueryTest do
   import Ecto.TestHelpers
   import Ecto.Query
   alias Ecto.Query.Query
-  alias Ecto.Query.QueryUtil
+  alias Ecto.Query.Util
 
   defmodule PostEntity do
     use Ecto.Entity
@@ -24,44 +24,44 @@ defmodule Ecto.QueryTest do
 
   test "call queryable on every merge" do
     query = from(PostEntity) |> select([p], p.title)
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = from(PostEntity) |> where([p], p.title == "42")
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = from(PostEntity) |> order_by([p], p.title)
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = from(PostEntity) |> limit(42)
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = from(PostEntity) |> offset(43)
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = select(PostEntity, [p], p.title)
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = where(PostEntity, [p], p.title == "42")
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = order_by(PostEntity, [p], p.title)
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = limit(PostEntity, 42)
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
 
     query = offset(PostEntity, 43)
-    query |> QueryUtil.normalize |> QueryUtil.validate
+    query |> Util.normalize |> Util.validate
   end
 
   test "vars are order dependent" do
     query = from(p in PostEntity) |> select([q], q.title)
-    QueryUtil.validate(query)
+    Util.validate(query)
   end
 
   test "can append to selected query" do
     query = from(p in PostEntity) |> select([], 1) |> from(q in PostEntity)
-    QueryUtil.validate(query)
+    Util.validate(query)
   end
 
   test "only one select is allowed" do
@@ -154,16 +154,16 @@ defmodule Ecto.QueryTest do
     end
 
     query = from(PostEntity) |> select([_], 0)
-    QueryUtil.validate(query)
+    Util.validate(query)
 
     query = from(PostEntity) |> from(CommentEntity) |> select([_, c], c.text)
-    QueryUtil.validate(query)
+    Util.validate(query)
 
     query = from(PostEntity) |> from(CommentEntity) |> select([p, _], p.title)
-    QueryUtil.validate(query)
+    Util.validate(query)
 
     query = from(PostEntity) |> from(CommentEntity) |> select([_, _], 0)
-    QueryUtil.validate(query)
+    Util.validate(query)
   end
 
   test "binding collision" do

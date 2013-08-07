@@ -9,7 +9,7 @@ defmodule Ecto.Adapters.Postgres do
 
   alias Ecto.Adapters.Postgres.SQL
   alias Ecto.Query.Query
-  alias Ecto.Query.QueryUtil
+  alias Ecto.Query.Util
 
   defmacro __using__(_opts) do
     quote do
@@ -43,7 +43,7 @@ defmodule Ecto.Adapters.Postgres do
       { { :select, _ }, rows } ->
         { return_type, _ } = query.select.expr
         binding = query.select.binding
-        vars = QueryUtil.merge_binding_vars(binding, query.froms)
+        vars = Util.merge_binding_vars(binding, query.froms)
         entities = Enum.map(rows, &transform_row(&1, return_type, vars))
         { :ok, entities }
       { :error, _ } = err -> err

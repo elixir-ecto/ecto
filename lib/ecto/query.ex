@@ -94,7 +94,7 @@ defmodule Ecto.Query do
   alias Ecto.Query.LimitOffsetBuilder
   alias Ecto.Query.GroupByBuilder
   alias Ecto.Query.HavingBuilder
-  alias Ecto.Query.QueryUtil
+  alias Ecto.Query.Util
 
   @doc """
   Creates a query. It can either be a keyword query or a query expression. If it
@@ -162,7 +162,7 @@ defmodule Ecto.Query do
     FromBuilder.validate_query_from(expr)
     { _binds, expr } = FromBuilder.escape(expr)
     quote do
-      QueryUtil.merge(unquote(query), :from, unquote(expr))
+      Util.merge(unquote(query), :from, unquote(expr))
     end
   end
 
@@ -205,12 +205,12 @@ defmodule Ecto.Query do
 
   """
   defmacro select(query, binding, expr) do
-    binding = QueryUtil.escape_binding(binding)
+    binding = Util.escape_binding(binding)
     quote do
       select_expr = unquote(SelectBuilder.escape(expr, binding))
       select = QueryExpr[expr: select_expr, binding: unquote(binding),
                          file: __ENV__.file, line: __ENV__.line]
-      QueryUtil.merge(unquote(query), :select, select)
+      Util.merge(unquote(query), :select, select)
     end
   end
 
@@ -229,12 +229,12 @@ defmodule Ecto.Query do
 
   """
   defmacro where(query, binding, expr) do
-    binding = QueryUtil.escape_binding(binding)
+    binding = Util.escape_binding(binding)
     quote do
       where_expr = unquote(WhereBuilder.escape(expr, binding))
       where = QueryExpr[expr: where_expr, binding: unquote(binding),
                         file: __ENV__.file, line: __ENV__.line]
-      QueryUtil.merge(unquote(query), :where, where)
+      Util.merge(unquote(query), :where, where)
     end
   end
 
@@ -256,11 +256,11 @@ defmodule Ecto.Query do
 
   """
   defmacro order_by(query, binding, expr)  do
-    binding = QueryUtil.escape_binding(binding)
+    binding = Util.escape_binding(binding)
     quote do
       order_expr = unquote(OrderByBuilder.escape(expr, binding))
       order = QueryExpr[expr: order_expr, binding: unquote(binding)]
-      QueryUtil.merge(unquote(query), :order_by, order)
+      Util.merge(unquote(query), :order_by, order)
     end
   end
 
@@ -279,13 +279,13 @@ defmodule Ecto.Query do
 
   """
   defmacro limit(query, binding // [], expr) do
-    binding = QueryUtil.escape_binding(binding)
+    binding = Util.escape_binding(binding)
     quote do
       expr = unquote(expr)
       LimitOffsetBuilder.validate(expr)
       limit = QueryExpr[expr: expr, binding: unquote(binding),
                         file: __ENV__.file, line: __ENV__.line]
-      QueryUtil.merge(unquote(query), :limit, limit)
+      Util.merge(unquote(query), :limit, limit)
     end
   end
 
@@ -305,13 +305,13 @@ defmodule Ecto.Query do
 
   """
   defmacro offset(query, binding // [], expr) do
-    binding = QueryUtil.escape_binding(binding)
+    binding = Util.escape_binding(binding)
     quote do
       expr = unquote(expr)
       LimitOffsetBuilder.validate(expr)
       offset = QueryExpr[expr: expr, binding: unquote(binding),
                          file: __ENV__.file, line: __ENV__.line]
-      QueryUtil.merge(unquote(query), :offset, offset)
+      Util.merge(unquote(query), :offset, offset)
     end
   end
 
@@ -335,11 +335,11 @@ defmodule Ecto.Query do
 
   """
   defmacro group_by(query, binding, expr) do
-    binding = QueryUtil.escape_binding(binding)
+    binding = Util.escape_binding(binding)
     quote do
       group_expr = unquote(GroupByBuilder.escape(expr, binding))
       order = QueryExpr[expr: group_expr, binding: unquote(binding)]
-      QueryUtil.merge(unquote(query), :group_by, order)
+      Util.merge(unquote(query), :group_by, order)
     end
   end
 
@@ -366,11 +366,11 @@ defmodule Ecto.Query do
         |> select([p], count(p.id))
   """
   defmacro having(query, binding, expr) do
-    binding = QueryUtil.escape_binding(binding)
+    binding = Util.escape_binding(binding)
     quote do
       having_expr = unquote(HavingBuilder.escape(expr, binding))
       having = QueryExpr[expr: having_expr, binding: unquote(binding)]
-      QueryUtil.merge(unquote(query), :having, having)
+      Util.merge(unquote(query), :having, having)
     end
   end
 
@@ -387,7 +387,7 @@ defmodule Ecto.Query do
     end
 
     quoted = quote do
-      QueryUtil.merge(unquote(quoted), :from, unquote(expr))
+      Util.merge(unquote(quoted), :from, unquote(expr))
     end
     { quoted, binds ++ [bind] }
   end
