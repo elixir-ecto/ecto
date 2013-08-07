@@ -22,46 +22,49 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  def validate(query), do: Util.validate(query, [Ecto.Query.API])
+
+
   test "call queryable on every merge" do
     query = from(PostEntity) |> select([p], p.title)
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = from(PostEntity) |> where([p], p.title == "42")
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = from(PostEntity) |> order_by([p], p.title)
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = from(PostEntity) |> limit(42)
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = from(PostEntity) |> offset(43)
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = select(PostEntity, [p], p.title)
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = where(PostEntity, [p], p.title == "42")
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = order_by(PostEntity, [p], p.title)
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = limit(PostEntity, 42)
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
 
     query = offset(PostEntity, 43)
-    query |> Util.normalize |> Util.validate
+    query |> Util.normalize |> validate
   end
 
   test "vars are order dependent" do
     query = from(p in PostEntity) |> select([q], q.title)
-    Util.validate(query)
+    validate(query)
   end
 
   test "can append to selected query" do
     query = from(p in PostEntity) |> select([], 1) |> from(q in PostEntity)
-    Util.validate(query)
+    validate(query)
   end
 
   test "only one select is allowed" do
@@ -154,16 +157,16 @@ defmodule Ecto.QueryTest do
     end
 
     query = from(PostEntity) |> select([_], 0)
-    Util.validate(query)
+    validate(query)
 
     query = from(PostEntity) |> from(CommentEntity) |> select([_, c], c.text)
-    Util.validate(query)
+    validate(query)
 
     query = from(PostEntity) |> from(CommentEntity) |> select([p, _], p.title)
-    Util.validate(query)
+    validate(query)
 
     query = from(PostEntity) |> from(CommentEntity) |> select([_, _], 0)
-    Util.validate(query)
+    validate(query)
   end
 
   test "binding collision" do

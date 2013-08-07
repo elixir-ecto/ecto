@@ -8,7 +8,8 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
 
-  defrecord State, froms: [], vars: [], grouped: [], grouped?: false, in_agg?: false
+  defrecord State, froms: [], vars: [], grouped: [], grouped?: false,
+    in_agg?: false, apis: nil
 
   # Adds type, file and line metadata to the exception
   defmacrop rescue_metadata(type, query, file, line, block) do
@@ -23,7 +24,7 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  def validate(Query[] = query, opts) do
+  def validate(Query[] = query, apis, opts) do
     if !opts[:skip_select] and (query.select == nil and length(query.froms) != 1) do
       reason = "a query must have a select expression if querying from more than one entity"
       raise Ecto.InvalidQuery, reason: reason
@@ -34,14 +35,14 @@ defmodule Ecto.Query.Validator do
 
     grouped = group_by_entities(query.group_bys, query.froms)
     is_grouped = query.group_bys != [] or query.havings != []
-    state = State[froms: query.froms, grouped: grouped, grouped?: is_grouped]
+    state = State[froms: query.froms, grouped: grouped, grouped?: is_grouped, apis: apis]
 
     validate_havings(query.havings, state)
     validate_wheres(query.wheres, state)
     unless opts[:skip_select], do: validate_select(query.select, state)
   end
 
-  def validate_update(Query[] = query, binds, values) do
+  def validate_update(Query[] = query, apis, binds, values) do
     validate_only_from_where(query)
 
     module = Enum.first(query.froms)
@@ -60,7 +61,7 @@ defmodule Ecto.Query.Validator do
 
       # TODO: Check if entity field allows nil
       vars = Util.merge_binding_vars(binds, [module])
-      state = State[froms: query.froms, vars: vars]
+      state = State[froms: query.froms, vars: vars, apis: apis]
       type = type_check(expr, state)
 
       format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
@@ -71,17 +72,17 @@ defmodule Ecto.Query.Validator do
       end
     end)
 
-    validate(query, skip_select: true)
+    validate(query, apis, skip_select: true)
   end
 
-  def validate_delete(query) do
+  def validate_delete(query, apis) do
     validate_only_from_where(query)
-    validate(query, skip_select: true)
+    validate(query, apis, skip_select: true)
   end
 
-  def validate_get(query) do
+  def validate_get(query, apis) do
     validate_only_from_where(query)
-    validate(query, skip_select: true)
+    validate(query, apis, skip_select: true)
   end
 
   defp validate_only_from_where(query) do
@@ -161,20 +162,31 @@ defmodule Ecto.Query.Validator do
 
   # ops & functions
   defp type_check({ name, _, args } = expr, state) when is_atom(name) and is_list(args) do
-    if Ecto.Query.API.aggregate?(name, length(args)) do
-      if state.in_agg? do
-        raise Ecto.InvalidQuery, reason: "aggregate function calls cannot be nested"
+    length_args = length(args)
+
+    type = Enum.find_value(state.apis, fn(api) ->
+      if api.aggregate?(name, length_args) do
+        if state.in_agg? do
+          raise Ecto.InvalidQuery, reason: "aggregate function calls cannot be nested"
+        end
+        state = state.in_agg?(true)
       end
-      state = state.in_agg?(true)
-    end
 
-    arg_types = Enum.map(args, &type_check(&1, state))
+      arg_types = Enum.map(args, &type_check(&1, state))
 
-    case apply(Ecto.Query.API, name, arg_types) do
-      { :ok, type } -> type
-      { :error, allowed } ->
-        raise Ecto.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
+      if function_exported?(api, name, length_args) do
+        case apply(api, name, arg_types) do
+          { :ok, type } -> type
+          { :error, allowed } ->
+            raise Ecto.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
+        end
+      end
+    end)
+
+    unless type do
+      raise Ecto.InvalidQuery, reason: "function `#{name}/#{length_args}` not defined in query API"
     end
+    type
   end
 
   # list

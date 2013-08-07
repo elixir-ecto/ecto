@@ -20,10 +20,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
       pow: "^", div: "/", rem: "%" ]
 
   functions =
-    [ { { :random, 0 }, "random" }, { { :round, 1 }, "round" }, { { :round, 2 }, "round" },
-      { { :downcase, 1 }, "lower" }, { { :upcase, 1 }, "upper" }, { { :avg, 1 }, "avg" },
-      { { :count, 1 }, "count" }, { { :max, 1 }, "max" }, { { :min, 1 }, "min" },
-      { { :sum, 1 }, "sum" } ]
+    [ { { :downcase, 1 }, "lower" }, { { :upcase, 1 }, "upper" } ]
 
   @binary_ops Dict.keys(binary_ops)
 
@@ -39,7 +36,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     defp translate_name(unquote(fun), unquote(arity)), do: { :fun, unquote(str) }
   end)
 
-  defp translate_name(_, _), do: nil
+  defp translate_name(fun, _arity), do: { :fun, atom_to_binary(fun) }
 
   # Generate SQL for a select statement
   def select(Query[] = query) do

@@ -78,6 +78,12 @@ defmodule Ecto.Repo do
       def adapter do
         unquote(adapter)
       end
+
+      def query_apis do
+        [ Ecto.Query.API ]
+      end
+
+      defoverridable [query_apis: 0]
     end
   end
 
@@ -205,7 +211,7 @@ defmodule Ecto.Repo do
     reason = "getting entity"
 
     query = Queryable.to_query(queryable)
-    Util.validate_get(query)
+    Util.validate_get(query, repo.query_apis)
 
     entity = Enum.first(query.froms)
     check_primary_key(entity, reason)
@@ -227,7 +233,7 @@ defmodule Ecto.Repo do
   def all(repo, adapter, queryable) do
     query = Queryable.to_query(queryable)
     query = Util.normalize(query)
-    Util.validate(query)
+    Util.validate(query, repo.query_apis)
     reason = "fetching entities"
     adapter.all(repo, query) |> check_result(adapter, reason)
   end
@@ -265,14 +271,15 @@ defmodule Ecto.Repo do
     quote do
       values = unquote(values)
       binds = unquote(binds)
+      repo = unquote(repo)
 
       query = Queryable.to_query(unquote(expr))
       query = Util.normalize(query, skip_select: true)
-      Util.validate_update(query, binds, values)
+      Util.validate_update(query, repo.query_apis, binds, values)
 
       reason = "updating entities"
       adapter = unquote(adapter)
-      adapter.update_all(unquote(repo), query, binds, values)
+      adapter.update_all(repo, query, binds, values)
         |> Ecto.Repo.check_result(adapter, reason)
     end
   end
@@ -289,7 +296,7 @@ defmodule Ecto.Repo do
   def delete_all(repo, adapter, queryable) do
     query = Queryable.to_query(queryable)
     query = Util.normalize(query, skip_select: true)
-    Util.validate_delete(query)
+    Util.validate_delete(query, repo.query_apis)
 
     reason = "deleting entities"
     adapter.delete_all(repo, query) |> check_result(adapter, reason)
