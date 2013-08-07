@@ -38,7 +38,7 @@ defmodule Ecto.Query.Typespec do
       arity = length(args)
 
       if @aggregate do
-        @ecto_aggregates [{ name, arity }|@ecto_aggregates]
+        def aggregate?(unquote(name), unquote(arity)), do: true
       end
       @aggregate false
 
@@ -58,7 +58,6 @@ defmodule Ecto.Query.Typespec do
     quote do
       import unquote(__MODULE__)
       @before_compile unquote(__MODULE__)
-      @ecto_aggregates []
       @ecto_deft []
       @ecto_defs HashDict.new
       @ecto_defa HashDict.new
@@ -103,7 +102,6 @@ defmodule Ecto.Query.Typespec do
 
   defmacro __before_compile__(env) do
     defs = Module.get_attribute(env.module, :ecto_defs)
-    aggregates = Module.get_attribute(env.module, :ecto_aggregates)
 
     defs_quote = Enum.map(defs, fn { { name, arity }, exprs } ->
       args  = Stream.repeatedly(fn -> { :_, [], __MODULE__ } end) |> Enum.take(arity)
@@ -116,13 +114,7 @@ defmodule Ecto.Query.Typespec do
       end
     end)
 
-    aggregates_quote = Enum.map(aggregates, fn({ name, arity }) ->
-      quote do
-        def aggregate?(unquote(name), unquote(arity)), do: true
-      end
-    end) ++ [quote do def aggregate?(_, _), do: false end]
-
-    defs_quote ++ aggregates_quote
+    defs_quote ++ [quote do def aggregate?(_, _), do: false end]
   end
 
   ## Helpers
