@@ -154,4 +154,9 @@ defmodule Ecto.Integration.PostgresTest do
     assert Post[title: "2"] = TestRepo.get(Post, id2)
     assert Post[title: "3"] = TestRepo.get(Post, id3)
   end
+
+  test "custom functions" do
+    assert Post[id: id1] = TestRepo.create(Post[title: "hi"])
+    assert [id1*10] == TestRepo.all(from p in Post, select: custom(p.id))
+  end
 end

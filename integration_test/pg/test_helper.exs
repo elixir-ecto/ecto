@@ -3,11 +3,22 @@ ExUnit.start
 alias Ecto.Adapters.Postgres
 alias Ecto.Integration.Postgres.TestRepo
 
+defmodule Ecto.Integration.Postgres.CustomAPI do
+  use Ecto.Query.Typespec
+
+  deft integer
+  defs custom(integer) :: integer
+end
+
 defmodule Ecto.Integration.Postgres.TestRepo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def url do
     "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
+  end
+
+  def query_apis do
+    [Ecto.Integration.Postgres.CustomAPI, Ecto.Query.API]
   end
 end
 
@@ -72,7 +83,8 @@ Enum.each(setup_cmds, fn(cmd) ->
 end)
 
 setup_database = [
-  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), count integer)"
+  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), count integer)",
+  "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 
 { :ok, _pid } = Postgres.start(TestRepo)
