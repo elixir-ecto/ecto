@@ -44,6 +44,9 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "where expression must be boolean" do
+    query = from(PostEntity) |> where([p], p.title == "") |> select([], 123)
+    validate(query)
+
     query = from(PostEntity) |> where([p], p.title) |> select([], 123)
     assert_raise Ecto.InvalidQuery, %r"where expression", fn ->
       validate(query)
@@ -51,8 +54,21 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "having expression must be boolean" do
+    query = from(PostEntity) |> having([], "abc" == "") |> select([], 123)
+    validate(query)
+
     query = from(PostEntity) |> having([], "abc") |> select([], 123)
     assert_raise Ecto.InvalidQuery, %r"having expression", fn ->
+      validate(query)
+    end
+  end
+
+  test "join expression must be boolean" do
+    query = from(PostEntity) |> join([], CommentEntity, "abc" == "") |> select([], 123)
+    validate(query)
+
+    query = from(PostEntity) |> join([], CommentEntity, "abc") |> select([], 123)
+    assert_raise Ecto.InvalidQuery, %r"join expression", fn ->
       validate(query)
     end
   end

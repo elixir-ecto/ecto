@@ -83,7 +83,7 @@ defmodule Ecto.Query do
 
   @type t :: Query.t
 
-  defrecord Query, froms: [], wheres: [], select: nil, order_bys: [],
+  defrecord Query, froms: [], joins: [], wheres: [], select: nil, order_bys: [],
                    limit: nil, offset: nil, group_bys: [], havings: []
   defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
 
@@ -177,6 +177,28 @@ defmodule Ecto.Query do
   defmacro from(expr) do
     { _binds, expr } = FromBuilder.escape(expr)
     expr
+  end
+
+  @doc """
+  TODOZ
+  """
+  defmacro join(query, binding, expr, on) do
+    FromBuilder.validate_query_from(expr)
+    binding = Util.escape_binding(binding)
+    { expr_binding, join_expr } = FromBuilder.escape(expr)
+    if expr_binding in binding do
+      raise Ecto.InvalidQuery, reason: "variable `#{expr_binding}` is already defined in query"
+    end
+
+    binding = binding ++ expr_binding
+    on_expr = WhereBuilder.escape(on, binding)
+
+    quote do
+      expr = { unquote(join_expr), unquote(on_expr) }
+      join = QueryExpr[expr: expr, binding: unquote(binding),
+                       file: __ENV__.file, line: __ENV__.line]
+      Util.merge(unquote(query), :join, join)
+    end
   end
 
   @doc """
@@ -374,28 +396,68 @@ defmodule Ecto.Query do
     end
   end
 
+  defrecord KwState, [:quoted, :binds, :prev_join]
+
   # Builds the quoted code for creating a keyword query
   defp build_query(quoted, binds, kw) do
-    Enum.reduce(kw, { quoted, binds }, &build_query_type(&1, &2))
-      |> elem(0)
+    state = KwState[quoted: quoted, binds: binds]
+    Enum.reduce(kw, state, &build_query_type(&1, &2)).quoted
   end
 
-  defp build_query_type({ :from, expr }, { quoted, binds }) do
+  defp build_query_type({ :from, expr }, KwState[] = state) do
+    check_no_join(state)
+
     { [bind], expr } = FromBuilder.escape(expr)
-    if bind != :_ and bind in binds do
+    if bind != :_ and bind in state.binds do
       raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
     end
 
     quoted = quote do
-      Util.merge(unquote(quoted), :from, unquote(expr))
+      Util.merge(unquote(state.quoted), :from, unquote(expr))
     end
-    { quoted, binds ++ [bind] }
+    state.quoted(quoted).binds(state.binds ++ [bind])
   end
 
-  defp build_query_type({ type, expr }, { quoted, binds }) do
-    quoted = quote do
-      Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
+  defp build_query_type({ :join, expr }, KwState[] = state) do
+    check_no_join(state)
+    state.prev_join(expr)
+  end
+
+  defp build_query_type({ :on, expr }, KwState[] = state) do
+    unless state.prev_join do
+      raise Ecto.InvalidQuery, reason: "an `on` query expression must follow a `from`"
     end
-    { quoted, binds }
+
+    join = state.prev_join
+    { [bind], join_expr } = FromBuilder.escape(join)
+    if bind != :_ and bind in state.binds do
+      raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
+    end
+    binds = state.binds ++ [bind]
+
+    on_expr = WhereBuilder.escape(expr, binds)
+
+    quoted = quote do
+      expr = { unquote(join_expr), unquote(on_expr) }
+      join = QueryExpr[expr: expr, binding: unquote(binds),
+                       file: __ENV__.file, line: __ENV__.line]
+      Util.merge(unquote(state.quoted), :join, join)
+    end
+    state.prev_join(nil).quoted(quoted).binds(binds)
+  end
+
+  defp build_query_type({ type, expr }, KwState[] = state) do
+    check_no_join(state)
+
+    quoted = quote do
+      Ecto.Query.unquote(type)(unquote(state.quoted), unquote(state.binds), unquote(expr))
+    end
+    state.quoted(quoted)
+  end
+
+  def check_no_join(state) do
+    if state.prev_join do
+      raise Ecto.InvalidQuery, reason: "a `join` query expression have to be followed by `on`"
+    end
   end
 end

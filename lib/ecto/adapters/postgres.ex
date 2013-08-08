@@ -43,9 +43,9 @@ defmodule Ecto.Adapters.Postgres do
       { { :select, _ }, rows } ->
         { return_type, _ } = query.select.expr
         binding = query.select.binding
-        vars = Util.merge_binding_vars(binding, query.froms)
-        entities = Enum.map(rows, &transform_row(&1, return_type, vars))
-        { :ok, entities }
+        entities = Util.collect_entities(query)
+        vars = Util.merge_to_vars(binding, entities)
+        { :ok, Enum.map(rows, &transform_row(&1, return_type, vars)) }
       { :error, _ } = err -> err
     end
   end

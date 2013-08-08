@@ -8,7 +8,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
 
-  defrecord State, froms: [], vars: [], grouped: [], grouped?: false,
+  defrecord State, entities: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil
 
   # Adds type, file and line metadata to the exception
@@ -33,12 +33,14 @@ defmodule Ecto.Query.Validator do
       raise Ecto.InvalidQuery, reason: "a query must have a from expression"
     end
 
-    grouped = group_by_entities(query.group_bys, query.froms)
+    entities = Util.collect_entities(query)
+    grouped = group_by_entities(query.group_bys, entities)
     is_grouped = query.group_bys != [] or query.havings != []
-    state = State[froms: query.froms, grouped: grouped, grouped?: is_grouped, apis: apis]
+    state = State[entities: entities, grouped: grouped, grouped?: is_grouped, apis: apis]
 
-    validate_havings(query.havings, state)
+    validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
+    validate_havings(query.havings, state)
     unless opts[:skip_select], do: validate_select(query.select, state)
   end
 
@@ -60,8 +62,8 @@ defmodule Ecto.Query.Validator do
       end
 
       # TODO: Check if entity field allows nil
-      vars = Util.merge_binding_vars(binds, [module])
-      state = State[froms: query.froms, vars: vars, apis: apis]
+      vars = Util.merge_to_vars(binds, query.froms)
+      state = State[entities: query.froms, vars: vars, apis: apis]
       type = type_check(expr, state)
 
       format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
@@ -87,14 +89,21 @@ defmodule Ecto.Query.Validator do
 
   defp validate_only_from_where(query) do
     # Update validation check if assertion fails
-    unquote(unless size(Query[]) == 9, do: raise "Ecto.Query.Query out of date")
+    unquote(unless size(Query[]) == 10, do: raise "Ecto.Query.Query out of date")
 
     # TODO: File and line metadata
-    unless match?(Query[froms: [_], select: nil, order_bys: [], limit: nil,
-        offset: nil, group_bys: [], havings: []], query) do
+    unless match?(Query[froms: [_], joins: [], select: nil, order_bys: [],
+        limit: nil, offset: nil, group_bys: [], havings: []], query) do
       raise Ecto.InvalidQuery, reason: "update query can only have a single `from` " <>
         " and `where` expressions"
     end
+  end
+
+  defp validate_joins(joins, state) do
+    state = state.grouped?(false)
+    # Strip entity from query expr so we can reuse validate_booleans
+    joins = Enum.map(joins, fn (expr) -> expr.update_expr(&elem(&1, 1)) end)
+    validate_booleans(:join, joins, state)
   end
 
   defp validate_wheres(wheres, state) do
@@ -106,10 +115,10 @@ defmodule Ecto.Query.Validator do
     validate_booleans(:having, havings, state)
   end
 
-  defp validate_booleans(type, query_exprs, State[froms: froms] = state) do
+  defp validate_booleans(type, query_exprs, State[] = state) do
     Enum.each(query_exprs, fn(QueryExpr[] = expr) ->
       rescue_metadata(type, expr.expr, expr.file, expr.line) do
-        vars = Util.merge_binding_vars(expr.binding, froms)
+        vars = Util.merge_to_vars(expr.binding, state.entities)
         state = state.vars(vars)
         expr_type = type_check(expr.expr, state)
 
@@ -122,10 +131,10 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_select(QueryExpr[] = expr, State[froms: froms] = state) do
+  defp validate_select(QueryExpr[] = expr, State[] = state) do
     { _, select_expr } = expr.expr
     rescue_metadata(:select, select_expr, expr.file, expr.line) do
-      vars = Util.merge_binding_vars(expr.binding, froms)
+      vars = Util.merge_to_vars(expr.binding, state.entities)
       state = state.vars(vars)
       type_check(select_expr, state)
     end
@@ -212,9 +221,9 @@ defmodule Ecto.Query.Validator do
   # values
   defp type_check(value, _state), do: Util.value_to_type(value)
 
-  defp group_by_entities(group_bys, froms) do
+  defp group_by_entities(group_bys, entities) do
     Enum.map(group_bys, fn(QueryExpr[] = group_by) ->
-      vars = Util.merge_binding_vars(group_by.binding, froms)
+      vars = Util.merge_to_vars(group_by.binding, entities)
       Enum.map(group_by.expr, fn({ var, field }) ->
         { Keyword.fetch!(vars, var), field }
       end)

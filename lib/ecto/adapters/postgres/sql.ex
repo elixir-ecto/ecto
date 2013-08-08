@@ -41,9 +41,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a select statement
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
-    entities = create_names(query.froms)
+    entities = create_names(query)
+    { from, used_names } = from(query.froms, entities)
     select   = select(query.select, entities)
-    from     = from(entities)
+    join     = join(query.joins, entities, used_names)
     where    = where(query.wheres, entities)
     group_by = group_by(query.group_bys, entities)
     having   = having(query.havings, entities)
@@ -51,8 +52,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
     limit    = if query.limit, do: limit(query.limit.expr)
     offset   = if query.offset, do: offset(query.offset.expr)
 
-    [select, from, where, group_by, having, order_by, limit, offset]
+    [select, from, join, where, group_by, having, order_by, limit, offset]
       |> Enum.filter(&(&1 != nil))
+      |> List.flatten
       |> Enum.join("\n")
   end
 
@@ -105,11 +107,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   def update_all(Query[] = query, binding, values) do
     module = Enum.first(query.froms)
-    entity = create_names(query.froms) |> Enum.first
+    entity = create_names(query) |> Enum.first
     name   = elem(entity, 1)
     table  = module.__ecto__(:dataset)
 
-    vars = Util.merge_binding_vars(binding, [entity])
+    vars = Util.merge_to_vars(binding, [entity])
     zipped_sql = Enum.map_join(values, ", ", fn({field, expr}) ->
       "#{field} = #{expr(expr, vars)}"
     end)
@@ -138,7 +140,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   def delete_all(Query[] = query) do
     module = Enum.first(query.froms)
-    entity = create_names(query.froms) |> Enum.first
+    entity = create_names(query) |> Enum.first
     name   = elem(entity, 1)
     table  = module.__ecto__(:dataset)
 
@@ -149,16 +151,33 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp select(QueryExpr[expr: expr, binding: binding], entities) do
     { _, clause } = expr
-    vars = Util.merge_binding_vars(binding, entities)
+    vars = Util.merge_to_vars(binding, entities)
     "SELECT " <> select_clause(clause, vars)
   end
 
-  defp from(entites) do
-    binds = Enum.map_join(entites, ", ", fn({ entity, name }) ->
-      "#{entity.__ecto__(:dataset)} AS #{name}"
+  defp from(froms, entities) do
+    { froms, names } = Enum.map_reduce(froms, [], fn(from, names) ->
+      name = Keyword.fetch!(entities, from)
+      { "#{from.__ecto__(:dataset)} AS #{name}", [name|names] }
     end)
 
-    "FROM " <> binds
+    { "FROM " <> Enum.join(froms, ", "), names }
+  end
+
+  defp join(joins, entities, used_names) do
+    # We need to make sure that we get a unique name for each entity since
+    # the same entity can be referenced multiple times in joins
+    Enum.map_reduce(joins, used_names, fn(QueryExpr[expr: expr, binding: binding], names) ->
+      { join, on } = expr
+      { entity, name } = Enum.find(entities, fn({ entity, name }) ->
+        entity == join and not name in names
+      end)
+
+      vars = Util.merge_to_vars(binding, entities)
+      on_sql = expr(on, vars)
+
+      { "JOIN #{entity.__ecto__(:dataset)} AS #{name} ON " <> on_sql, [name|names] }
+    end) |> elem(0)
   end
 
   defp where(wheres, entities) do
@@ -169,7 +188,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp group_by(group_bys, entities) do
     exprs = Enum.map_join(group_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      vars = Util.merge_binding_vars(binding, entities)
+      vars = Util.merge_to_vars(binding, entities)
       Enum.map_join(expr, ", ", fn({ var, field }) ->
         { _entity, name } = Keyword.fetch!(vars, var)
         "#{name}.#{field}"
@@ -187,7 +206,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp order_by(order_bys, entities) do
     exprs = Enum.map_join(order_bys, ", ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      vars = Util.merge_binding_vars(binding, entities)
+      vars = Util.merge_to_vars(binding, entities)
       Enum.map_join(expr, ", ", &order_by_expr(&1, vars))
     end)
 
@@ -211,7 +230,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp boolean(name, query_exprs, entities) do
     exprs = Enum.map_join(query_exprs, " AND ", fn(QueryExpr[expr: expr, binding: binding]) ->
-      vars = Util.merge_binding_vars(binding, entities)
+      vars = Util.merge_to_vars(binding, entities)
       "(" <> expr(expr, vars) <> ")"
     end)
 
@@ -343,7 +362,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
       |> :binary.replace("'", "''", [:global])
   end
 
-  defp create_names(entities) do
+  defp create_names(query) do
+    entities = Util.collect_entities(query)
     Enum.reduce(entities, [], fn(entity, names) ->
       table = entity.__ecto__(:dataset) |> String.first
       name = unique_name(names, table, 0)

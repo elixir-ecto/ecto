@@ -295,4 +295,13 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = from(Entity) |> select([], pow(7, 2))
     assert SQL.select(query) == "SELECT 7 ^ 2\nFROM entity AS e0"
   end
+
+  test "join" do
+    query = from(Entity) |> join([p], q in Entity2, p.x == q.z) |> select([], 0)
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nJOIN entity2 AS e1 ON e0.x = e1.z"
+
+    query = from(Entity) |> join([p], q in Entity2, p.x == q.z) |> join([], Entity, true) |> select([], 0)
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nJOIN entity2 AS e1 ON e0.x = e1.z\n" <>
+      "JOIN entity AS e2 ON TRUE"
+  end
 end

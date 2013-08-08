@@ -47,11 +47,17 @@ defmodule Ecto.Query.Util do
   end
 
   @doc """
-  Merge a query expression's bindings with the bound vars from
-  `from` expressions.
+  Merge a query expression's bindings with the entities from a query.
   """
-  def merge_binding_vars(binding, vars) do
-    Enum.zip(binding, vars)
+  def merge_to_vars(binding, entities) do
+    Enum.zip(binding, entities)
+  end
+
+  @doc """
+  Collects all entities in order in a query
+  """
+  def collect_entities(Query[] = query) do
+    query.froms ++ Enum.map(query.joins, &(&1.expr |> elem(0)))
   end
 
   # Merges a Queryable with a query expression
@@ -60,12 +66,14 @@ defmodule Ecto.Query.Util do
     query = Query[] = Queryable.to_query(queryable)
     check_merge(query, Query.new([{ type, expr }]))
 
-    if type != :from and length(expr.binding) > length(query.froms) do
-      raise Ecto.InvalidQuery, reason: "cannot bind more variables than there are from expressions"
+    num_entities = count_entities(query) + if type == :join, do: 1, else: 0
+    if type != :from and length(expr.binding) > num_entities do
+      raise Ecto.InvalidQuery, reason: "cannot bind more variables than there are bindable entities"
     end
 
     case type do
       :from     -> query.update_froms(&(&1 ++ [expr]))
+      :join     -> query.update_joins(&(&1 ++ [expr]))
       :where    -> query.update_wheres(&(&1 ++ [expr]))
       :select   -> query.select(expr)
       :order_by -> query.update_order_bys(&(&1 ++ [expr]))
@@ -135,6 +143,11 @@ defmodule Ecto.Query.Util do
 
   defp escape_var(_) do
     raise Ecto.InvalidQuery, reason: "binding should be list of variables"
+  end
+
+  # Counts the number of entities in a query
+  defp count_entities(Query[froms: froms, joins: joins]) do
+    length(froms) + length(joins)
   end
 
   # Returns nil if all elements in the collection are unique or the first

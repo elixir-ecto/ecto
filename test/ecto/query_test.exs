@@ -119,11 +119,11 @@ defmodule Ecto.QueryTest do
   end
 
   test "cannot bind too many vars" do
-    assert_raise Ecto.InvalidQuery, "cannot bind more variables than there are from expressions", fn ->
+    assert_raise Ecto.InvalidQuery, "cannot bind more variables than there are bindable entities", fn ->
       from(p in PostEntity) |> select([p, q], p.title)
     end
 
-    assert_raise Ecto.InvalidQuery, "cannot bind more variables than there are from expressions", fn ->
+    assert_raise Ecto.InvalidQuery, "cannot bind more variables than there are bindable entities", fn ->
       query = from(p in PostEntity)
       from([p, q] in query, select: p.title)
     end
@@ -177,5 +177,21 @@ defmodule Ecto.QueryTest do
     assert_raise Ecto.InvalidQuery, "variable `x` is already defined in query", fn ->
       delay_compile(from(x in PostEntity, from: x in CommentEntity, select: x.id))
     end
+  end
+
+  test "join on keyword query" do
+    from(c in CommentEntity, join: p in PostEntity, on: c.text == "", select: c)
+
+    assert_raise Ecto.InvalidQuery, "an `on` query expression must follow a `from`", fn ->
+      delay_compile(from(c in CommentEntity, on: c.text == "", select: c))
+    end
+    assert_raise Ecto.InvalidQuery, "a `join` query expression have to be followed by `on`", fn ->
+      delay_compile(from(c in CommentEntity, join: p in PostEntity, select: c))
+    end
+  end
+
+  test "join queries adds binds" do
+    from(c in CommentEntity, join: p in PostEntity, on: true, select: { p.title, c.text })
+    from(CommentEntity) |> join([c], p in PostEntity, true) |> select([c,p], { p.title, c.text })
   end
 end
