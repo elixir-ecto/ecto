@@ -12,7 +12,6 @@ defmodule Ecto.Query.Typespec do
     name = extract_type(expr)
     quote do
       @ecto_deft [unquote(name)|@ecto_deft]
-      def unquote(name)(), do: unquote(name)
     end
   end
 

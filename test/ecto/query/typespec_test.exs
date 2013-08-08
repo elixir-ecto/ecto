@@ -4,12 +4,6 @@ defmodule Ecto.Query.TypespecTest do
   alias Ecto.Query.API
   alias Ecto.Query.Typespec
 
-  test "types" do
-    assert API.float == :float
-    assert API.list == :list
-    assert API.nil == nil
-  end
-
   test "functions" do
     assert API.-(:integer) == { :ok, :integer }
     assert API.-(:float) == { :ok, :float }
