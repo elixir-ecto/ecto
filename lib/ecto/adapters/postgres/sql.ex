@@ -62,20 +62,18 @@ defmodule Ecto.Adapters.Postgres.SQL do
   def insert(entity) do
     module      = elem(entity, 0)
     table       = module.__ecto__(:dataset)
-    fields      = module.__ecto__(:field_names)
     primary_key = module.__ecto__(:primary_key)
 
-    [_|values] = tuple_to_list(entity)
+    zipped = module.__ecto__(:entity_kw, entity)
 
-    # Remove primary key from insert fields and values
+    # Don't insert primary key
     if primary_key do
-      [_|insert_fields] = fields
-      [_|values] = values
-    else
-      insert_fields = fields
+      [_|zipped] = zipped
     end
 
-    "INSERT INTO #{table} (" <> Enum.join(insert_fields, ", ") <> ")\n" <>
+    [ fields, values ] = List.unzip(zipped)
+
+    "INSERT INTO #{table} (" <> Enum.join(fields, ", ") <> ")\n" <>
     "VALUES (" <> Enum.map_join(values, ", ", &literal(&1)) <> ")" <>
     if primary_key, do: "\nRETURNING #{primary_key}", else: ""
   end
@@ -84,20 +82,16 @@ defmodule Ecto.Adapters.Postgres.SQL do
   def update(entity) do
     module      = elem(entity, 0)
     table       = module.__ecto__(:dataset)
-    fields      = module.__ecto__(:field_names)
-    primary_key = module.__ecto__(:primary_key)
 
-    # Remove primary key from fields and values
-    [_|fields] = fields
-    [_|[primary_key_value|values]] = tuple_to_list(entity)
+    zipped = module.__ecto__(:entity_kw, entity)
+    [{ pk_field, pk_value }|zipped] = zipped
 
-    zipped = Enum.zip(fields, values)
     zipped_sql = Enum.map_join(zipped, ", ", fn({k, v}) ->
       "#{k} = #{literal(v)}"
     end)
 
     "UPDATE #{table} SET " <> zipped_sql <> "\n" <>
-    "WHERE #{primary_key} = #{literal(primary_key_value)}"
+    "WHERE #{pk_field} = #{literal(pk_value)}"
   end
 
   # Generate SQL for an update all statement
@@ -128,9 +122,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
     module            = elem(entity, 0)
     table             = module.__ecto__(:dataset)
     primary_key       = module.__ecto__(:primary_key)
-    primary_key_value = elem(entity, 1)
+    pk_value          = elem(entity, 1)
 
-    "DELETE FROM #{table} WHERE #{primary_key} = #{literal(primary_key_value)}"
+    "DELETE FROM #{table} WHERE #{primary_key} = #{literal(pk_value)}"
   end
 
   # Generate SQL for an delete all statement

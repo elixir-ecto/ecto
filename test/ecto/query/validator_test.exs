@@ -19,6 +19,7 @@ defmodule Ecto.Query.ValidatorTest do
 
     dataset :post_entity do
       field :text, :string
+      field :temp, :virtual
     end
   end
 
@@ -280,6 +281,13 @@ defmodule Ecto.Query.ValidatorTest do
   test "can only specify entity once in from" do
     query = from(PostEntity) |> from(PostEntity) |> select([], 0)
     assert_raise Ecto.InvalidQuery, "entity `#{inspect PostEntity}` specified more than once", fn ->
+      validate(query)
+    end
+  end
+
+  test "cannot reference virtual field" do
+    query = from(CommentEntity) |> select([c], c.temp)
+    assert_raise Ecto.InvalidQuery, fn ->
       validate(query)
     end
   end

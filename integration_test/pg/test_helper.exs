@@ -28,6 +28,7 @@ defmodule Ecto.Integration.Postgres.Post do
   dataset "posts" do
     field :title, :string
     field :text, :string
+    field :temp, :virtual, default: "temp"
     field :count, :integer
   end
 end

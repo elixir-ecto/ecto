@@ -76,13 +76,16 @@ defmodule Ecto.Entity do
     module        = env.module
     dataset_name  = Module.get_attribute(module, :ecto_dataset)
     primary_key   = Module.get_attribute(module, :ecto_primary_key)
-    fields        = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
-    field_names   = Enum.map(fields, &elem(&1, 0))
+    all_fields    = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
 
     unless dataset_name do
       raise ArgumentError, message: "dataset not defined, an entity has " <>
         "define a dataset, see `Ecto.Entity.Dataset`"
     end
+
+    fields = Enum.filter(all_fields, fn({ _, opts }) -> opts[:type] != :virtual end)
+    all_field_names = Enum.map(all_fields, &elem(&1, 0))
+    field_names = Enum.map(fields, &elem(&1, 0))
 
     fields_quote = Enum.map(fields, fn({ key, opts }) ->
       quote do
@@ -92,9 +95,10 @@ defmodule Ecto.Entity do
     end)
 
     quote do
+      field_names = unquote(field_names)
+
       def __ecto__(:dataset), do: unquote(dataset_name)
       def __ecto__(:primary_key), do: unquote(primary_key)
-      def __ecto__(:fields), do: unquote(Macro.escape(fields))
       def __ecto__(:field_names), do: unquote(field_names)
       unquote(fields_quote)
       def __ecto__(:field, _), do: nil
@@ -109,6 +113,22 @@ defmodule Ecto.Entity do
         def primary_key(_value, record), do: record
         def update_primary_key(_fun, record), do: record
       end
+
+      # TODO: This can be optimized
+      def __ecto__(:allocate, values) do
+        zip = Enum.zip(unquote(field_names), values)
+        __MODULE__.new(zip)
+      end
+
+      # def __ecto__(:zip_kw, values) do
+      #   Enum.zip(unquote(field_names), values)
+      # end
+
+      def __ecto__(:entity_kw, entity) do
+        [_module|values] = tuple_to_list(entity)
+        Enum.zip(unquote(all_field_names), values)
+          |> Enum.filter(fn({ field, _ }) -> __ecto__(:field, field) end)
+      end
     end
   end
 end
@@ -118,11 +138,11 @@ defmodule Ecto.Entity.Dataset do
   This module contains all macros used to define the dataset for an entity.
   """
 
-  @types [ :string, :integer, :float, :binary, :list ]
+  @types [ :string, :integer, :float, :binary, :list, :virtual ]
 
   @doc """
   Defines a field on the entity with given name and type, will also create a
-  record field.
+  record field. If the type is `:virtual` it wont be persisted.
 
   ## Options
 

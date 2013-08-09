@@ -7,6 +7,7 @@ defmodule Ecto.EntityTest do
     dataset "my_entity" do
       field :name, :string, default: "eric"
       field :email, :string, uniq: true
+      field :temp, :virtual, default: "temp"
       field :array, { :list, :string }
     end
 
@@ -34,7 +35,6 @@ defmodule Ecto.EntityTest do
     ]
 
     assert MyEntity.__ecto__(:dataset) == "my_entity"
-    assert MyEntity.__ecto__(:fields) == fields
     assert MyEntity.__ecto__(:field_names) == [:id, :name, :email, :array]
     assert MyEntity.__ecto__(:field, :id) == fields[:id]
     assert MyEntity.__ecto__(:field, :name) == fields[:name]
@@ -45,7 +45,7 @@ defmodule Ecto.EntityTest do
     assert MyEntity.__ecto__(:field_type, :array) == fields[:array][:type]
 
     assert MyEntity.__record__(:fields) ==
-           [id: nil, name: "eric", email: nil, array: nil]
+           [id: nil, name: "eric", email: nil, temp: "temp", array: nil]
   end
 
   test "primary_key accessor" do

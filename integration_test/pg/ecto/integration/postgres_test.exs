@@ -159,4 +159,9 @@ defmodule Ecto.Integration.PostgresTest do
     assert Post[id: id1] = TestRepo.create(Post[title: "hi"])
     assert [id1*10] == TestRepo.all(from p in Post, select: custom(p.id))
   end
+
+  test "virtual field" do
+    assert Post[id: id] = TestRepo.create(Post[title: "1", text: "hai"])
+    assert TestRepo.get(Post, id).temp == "temp"
+  end
 end

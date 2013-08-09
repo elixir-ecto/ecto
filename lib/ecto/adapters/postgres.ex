@@ -163,8 +163,7 @@ defmodule Ecto.Adapters.Postgres do
       :tuple -> row
       { :entity, var } ->
         entity = Keyword.fetch!(vars, var)
-        row = tuple_to_list(row)
-        list_to_tuple([entity|row])
+        entity.__ecto__(:allocate, tuple_to_list(row))
     end
   end
 

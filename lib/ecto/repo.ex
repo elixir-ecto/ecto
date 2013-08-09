@@ -363,11 +363,11 @@ defmodule Ecto.Repo do
   end
 
   defp validate_entity(entity, reason) do
-    [module|values] = tuple_to_list(entity)
+    module = elem(entity, 0)
     primary_key = module.__ecto__(:primary_key)
-    zipped = Enum.zip(values, module.__ecto__(:field_names))
+    zipped = module.__ecto__(:entity_kw, entity)
 
-    Enum.each(zipped, fn({ value, field }) ->
+    Enum.each(zipped, fn({ field, value }) ->
       type = module.__ecto__(:field_type, field)
       value_type = Util.value_to_type(value)
 
