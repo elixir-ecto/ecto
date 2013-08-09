@@ -180,7 +180,21 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  TODOZ
+  A join query expression. Receives an entity that is to be joined to the query
+  and a condition to do the joining on. The join condition can be any expression
+  that evaluates to a boolean value.
+
+  ## Keywords examples
+
+         from c in Comment,
+        join: p in Post, on: c.post_id == p.id,
+      select: { p.title, c.text }
+
+  ## Expressions examples
+
+      from(Comment)
+        |> join([c], p in Post, c.post_id == p.id)
+        |> select([c, p], { p.title, c.text })
   """
   defmacro join(query, binding, expr, on) do
     FromBuilder.validate_query_from(expr)
