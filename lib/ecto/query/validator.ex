@@ -38,6 +38,7 @@ defmodule Ecto.Query.Validator do
     is_grouped = query.group_bys != [] or query.havings != []
     state = State[entities: entities, grouped: grouped, grouped?: is_grouped, apis: apis]
 
+    validate_froms(query.froms)
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
     validate_havings(query.havings, state)
@@ -96,6 +97,13 @@ defmodule Ecto.Query.Validator do
         limit: nil, offset: nil, group_bys: [], havings: []], query) do
       raise Ecto.InvalidQuery, reason: "update query can only have a single `from` " <>
         " and `where` expressions"
+    end
+  end
+
+  defp validate_froms(froms) do
+    dup_entities = froms -- Enum.uniq(froms)
+    unless dup_entities == [] do
+      raise Ecto.InvalidQuery, reason: "entity `#{inspect hd(dup_entities)}` specified more than once"
     end
   end
 

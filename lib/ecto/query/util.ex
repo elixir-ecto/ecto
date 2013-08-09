@@ -88,9 +88,13 @@ defmodule Ecto.Query.Util do
   @doc false
   def escape_binding(binding) when is_list(binding) do
     vars = Enum.map(binding, &escape_var(&1))
-    if var = Enum.filter(vars, &(&1 != :_)) |> not_uniq do
-      raise Ecto.InvalidQuery, reason: "variable `#{var}` is already defined in query"
+
+    bound_vars = Enum.filter(vars, &(&1 != :_))
+    dup_vars = bound_vars -- Enum.uniq(bound_vars)
+    unless dup_vars == [] do
+      raise Ecto.InvalidQuery, reason: "variable `#{hd dup_vars}` is already defined in query"
     end
+
     vars
   end
 
@@ -148,19 +152,6 @@ defmodule Ecto.Query.Util do
   # Counts the number of entities in a query
   defp count_entities(Query[froms: froms, joins: joins]) do
     length(froms) + length(joins)
-  end
-
-  # Returns nil if all elements in the collection are unique or the first
-  # non-unique element
-  defp not_uniq(collection) do
-    Enum.sort(collection) |> do_not_uniq
-  end
-
-  defp do_not_uniq([]), do: nil
-  defp do_not_uniq([_]), do: nil
-
-  defp do_not_uniq([x, y | rest]) do
-    if x == y, do: x, else: do_not_uniq([y|rest])
   end
 
   # Checks if a query merge can be done

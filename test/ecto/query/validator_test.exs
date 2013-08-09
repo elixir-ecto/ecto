@@ -276,4 +276,11 @@ defmodule Ecto.Query.ValidatorTest do
     Util.validate(query, [CustomAPI])
     Util.validate(query, [Ecto.Query.API, CustomAPI])
   end
+
+  test "can only specify entity once in from" do
+    query = from(PostEntity) |> from(PostEntity) |> select([], 0)
+    assert_raise Ecto.InvalidQuery, "entity `#{inspect PostEntity}` specified more than once", fn ->
+      validate(query)
+    end
+  end
 end

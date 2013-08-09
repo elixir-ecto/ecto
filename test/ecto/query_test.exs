@@ -63,7 +63,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "can append to selected query" do
-    query = from(p in PostEntity) |> select([], 1) |> from(q in PostEntity)
+    query = from(p in PostEntity) |> select([], 1) |> from(q in CommentEntity)
     validate(query)
   end
 
