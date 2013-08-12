@@ -63,7 +63,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "can append to selected query" do
-    query = from(p in PostEntity) |> select([], 1) |> from(q in CommentEntity)
+    query = from(p in PostEntity) |> select([], 1) |> where([], true)
     validate(query)
   end
 
@@ -97,8 +97,6 @@ defmodule Ecto.QueryTest do
     assert from(p in PostEntity, select: 1+2) == from(p in PostEntity) |> select([p], 1+2)
 
     assert from(p in PostEntity, where: 1<2) == from(p in PostEntity) |> where([p], 1<2)
-
-    assert from(p in PostEntity, where: true, from: q in PostEntity, select: 1) == from(p in PostEntity) |> where([p], true) |> from(q in PostEntity) |> select([p, q], 1)
   end
 
   test "variable is already defined" do
@@ -159,13 +157,13 @@ defmodule Ecto.QueryTest do
     query = from(PostEntity) |> select([_], 0)
     validate(query)
 
-    query = from(PostEntity) |> from(CommentEntity) |> select([_, c], c.text)
+    query = from(PostEntity) |> join([], CommentEntity, true) |> select([_, c], c.text)
     validate(query)
 
-    query = from(PostEntity) |> from(CommentEntity) |> select([p, _], p.title)
+    query = from(PostEntity) |> join([], CommentEntity, true) |> select([p, _], p.title)
     validate(query)
 
-    query = from(PostEntity) |> from(CommentEntity) |> select([_, _], 0)
+    query = from(PostEntity) |> join([], CommentEntity, true) |> select([_, _], 0)
     validate(query)
   end
 

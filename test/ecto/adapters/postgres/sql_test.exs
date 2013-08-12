@@ -33,9 +33,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = from(Entity) |> select([r], r.x)
     assert SQL.select(query) == "SELECT e0.x\nFROM entity AS e0"
-
-    query = from(Entity) |> from(Entity2) |> select([r1, r2], r2.x)
-    assert SQL.select(query) == "SELECT e1.x\nFROM entity AS e0, entity2 AS e1"
   end
 
   test "select" do
@@ -240,17 +237,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "list expression" do
     query = from(e in Entity) |> where([e], [e.x, e.y] == nil) |> select([e], 0)
     assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nWHERE (ARRAY[e0.x, e0.y] IS NULL)"
-  end
-
-  test "unbound vars" do
-    query = from(Entity) |> from(Entity2) |> select([_, b], b.z)
-    assert SQL.select(query) == "SELECT e1.z\nFROM entity AS e0, entity2 AS e1"
-
-    query = from(Entity) |> from(Entity2) |> select([a, _], a.x)
-    assert SQL.select(query) == "SELECT e0.x\nFROM entity AS e0, entity2 AS e1"
-
-    query = from(Entity) |> from(Entity2) |> select([_, _], 0)
-    assert SQL.select(query) == "SELECT 0\nFROM entity AS e0, entity2 AS e1"
   end
 
   test "having" do

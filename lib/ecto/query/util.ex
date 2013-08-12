@@ -57,7 +57,8 @@ defmodule Ecto.Query.Util do
   Collects all entities in order in a query
   """
   def collect_entities(Query[] = query) do
-    query.froms ++ Enum.map(query.joins, &(&1.expr |> elem(0)))
+    (if query.from, do: [query.from], else: []) ++
+      Enum.map(query.joins, &(&1.expr |> elem(0)))
   end
 
   # Merges a Queryable with a query expression
@@ -72,7 +73,7 @@ defmodule Ecto.Query.Util do
     end
 
     case type do
-      :from     -> query.update_froms(&(&1 ++ [expr]))
+      :from     -> query.from(expr)
       :join     -> query.update_joins(&(&1 ++ [expr]))
       :where    -> query.update_wheres(&(&1 ++ [expr]))
       :select   -> query.select(expr)
@@ -150,22 +151,22 @@ defmodule Ecto.Query.Util do
   end
 
   # Counts the number of entities in a query
-  defp count_entities(Query[froms: froms, joins: joins]) do
-    length(froms) + length(joins)
+  defp count_entities(Query[from: from, joins: joins]) do
+    (if from, do: 1, else: 0) + length(joins)
+  end
+
+  defmacrop check_merge_dup(left, right, fields) do
+    Enum.map(fields, fn field ->
+      quote do
+        if unquote(left).unquote(field) && unquote(right).unquote(field) do
+          raise Ecto.InvalidQuery, reason: "only one #{unquote(field)} expression is allowed in query"
+        end
+      end
+    end)
   end
 
   # Checks if a query merge can be done
   defp check_merge(Query[] = left, Query[] = right) do
-    if left.select && right.select do
-      raise Ecto.InvalidQuery, reason: "only one select expression is allowed in query"
-    end
-
-    if left.limit && right.limit do
-      raise Ecto.InvalidQuery, reason: "only one limit expression is allowed in query"
-    end
-
-    if left.offset && right.offset do
-      raise Ecto.InvalidQuery, reason: "only one offset expression is allowed in query"
-    end
+    check_merge_dup(left, right, [:select, :from, :limit, :offset])
   end
 end

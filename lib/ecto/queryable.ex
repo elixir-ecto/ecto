@@ -17,7 +17,7 @@ defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
     try do
       module.__ecto__(:dataset)
-      Ecto.Query.Query[froms: [module]]
+      Ecto.Query.Query[from: module]
     rescue
       UndefinedFunctionError ->
         raise Protocol.UndefinedError,

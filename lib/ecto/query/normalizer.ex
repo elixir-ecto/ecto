@@ -8,10 +8,9 @@ defmodule Ecto.Query.Normalizer do
   alias Ecto.Query.QueryExpr
 
   def normalize(Query[] = query, opts) do
-    if !opts[:skip_select] && (query.select == nil and length(query.froms) == 1) do
+    if !opts[:skip_select] && query.select == nil do
       expr = { { :entity, :entity }, { :entity, [], nil } }
-      QueryExpr[expr: expr, binding: [:entity]]
-        |> query.select
+      query.select(QueryExpr[expr: expr, binding: [:entity]])
     else
       query
     end

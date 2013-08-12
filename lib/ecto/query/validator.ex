@@ -25,11 +25,7 @@ defmodule Ecto.Query.Validator do
   end
 
   def validate(Query[] = query, apis, opts) do
-    if !opts[:skip_select] and (query.select == nil and length(query.froms) != 1) do
-      reason = "a query must have a select expression if querying from more than one entity"
-      raise Ecto.InvalidQuery, reason: reason
-    end
-    if query.froms == [] do
+    if query.from == nil do
       raise Ecto.InvalidQuery, reason: "a query must have a from expression"
     end
 
@@ -38,7 +34,6 @@ defmodule Ecto.Query.Validator do
     is_grouped = query.group_bys != [] or query.havings != []
     state = State[entities: entities, grouped: grouped, grouped?: is_grouped, apis: apis]
 
-    validate_froms(query.froms)
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
     validate_havings(query.havings, state)
@@ -46,9 +41,9 @@ defmodule Ecto.Query.Validator do
   end
 
   def validate_update(Query[] = query, apis, binds, values) do
-    validate_only_from_where(query)
+    validate_only_where(query)
 
-    module = Enum.first(query.froms)
+    module = query.from
 
     if values == [] do
       raise Ecto.InvalidQuery, reason: "no values to update given"
@@ -63,8 +58,8 @@ defmodule Ecto.Query.Validator do
       end
 
       # TODO: Check if entity field allows nil
-      vars = Util.merge_to_vars(binds, query.froms)
-      state = State[entities: query.froms, vars: vars, apis: apis]
+      vars = Util.merge_to_vars(binds, [module])
+      state = State[entities: [module], vars: vars, apis: apis]
       type = type_check(expr, state)
 
       format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
@@ -79,31 +74,23 @@ defmodule Ecto.Query.Validator do
   end
 
   def validate_delete(query, apis) do
-    validate_only_from_where(query)
+    validate_only_where(query)
     validate(query, apis, skip_select: true)
   end
 
   def validate_get(query, apis) do
-    validate_only_from_where(query)
+    validate_only_where(query)
     validate(query, apis, skip_select: true)
   end
 
-  defp validate_only_from_where(query) do
+  defp validate_only_where(query) do
     # Update validation check if assertion fails
     unquote(unless size(Query[]) == 10, do: raise "Ecto.Query.Query out of date")
 
     # TODO: File and line metadata
-    unless match?(Query[froms: [_], joins: [], select: nil, order_bys: [],
-        limit: nil, offset: nil, group_bys: [], havings: []], query) do
-      raise Ecto.InvalidQuery, reason: "update query can only have a single `from` " <>
-        " and `where` expressions"
-    end
-  end
-
-  defp validate_froms(froms) do
-    dup_entities = froms -- Enum.uniq(froms)
-    unless dup_entities == [] do
-      raise Ecto.InvalidQuery, reason: "entity `#{inspect hd(dup_entities)}` specified more than once"
+    unless match?(Query[joins: [], select: nil, order_bys: [], limit: nil,
+        offset: nil, group_bys: [], havings: []], query) do
+      raise Ecto.InvalidQuery, reason: "update query can only have a single `where` expression"
     end
   end
 

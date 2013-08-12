@@ -157,11 +157,6 @@ defmodule Ecto.RepoTest do
   end
 
   test "repo validates update_all" do
-    query = from(e in MyEntity, from: e2 in MyEntity)
-    assert_raise(Ecto.InvalidQuery, fn ->
-      MyRepo.update_all(query, [])
-    end)
-
     query = from(e in MyEntity, select: e)
     assert_raise Ecto.InvalidQuery, fn ->
       MyRepo.update_all(query, [])
@@ -193,11 +188,6 @@ defmodule Ecto.RepoTest do
   end
 
   test "repo validates delete_all" do
-    query = from(e in MyEntity, from: e2 in MyEntity)
-    assert_raise Ecto.InvalidQuery, fn ->
-      MyRepo.delete_all(query)
-    end
-
     query = from(e in MyEntity, select: e)
     assert_raise Ecto.InvalidQuery, fn ->
       MyRepo.delete_all(query)

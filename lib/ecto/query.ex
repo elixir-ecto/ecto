@@ -83,7 +83,7 @@ defmodule Ecto.Query do
 
   @type t :: Query.t
 
-  defrecord Query, froms: [], joins: [], wheres: [], select: nil, order_bys: [],
+  defrecord Query, from: nil, joins: [], wheres: [], select: nil, order_bys: [],
                    limit: nil, offset: nil, group_bys: [], havings: []
   defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
 

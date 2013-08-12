@@ -27,19 +27,13 @@ defmodule Ecto.Query.ValidatorTest do
 
 
   test "valid query with bindings" do
-    query = from(PostEntity) |> from(CommentEntity) |> select([p, c], { p.title, c.text })
+    query = from(PostEntity) |> select([p], { p.title })
     validate(query)
   end
 
   test "invalid query" do
     query = select(Query[], [], 123)
     assert_raise Ecto.InvalidQuery, %r"a query must have a from expression", fn ->
-      validate(query)
-    end
-
-    query = from(PostEntity) |> from(c in CommentEntity)
-    message = %r"a query must have a select expression if querying from more than one entity"
-    assert_raise Ecto.InvalidQuery, message, fn ->
       validate(query)
     end
   end
@@ -276,13 +270,6 @@ defmodule Ecto.Query.ValidatorTest do
     query = from(PostEntity) |> select([p], custom(p.id))
     Util.validate(query, [CustomAPI])
     Util.validate(query, [Ecto.Query.API, CustomAPI])
-  end
-
-  test "can only specify entity once in from" do
-    query = from(PostEntity) |> from(PostEntity) |> select([], 0)
-    assert_raise Ecto.InvalidQuery, "entity `#{inspect PostEntity}` specified more than once", fn ->
-      validate(query)
-    end
   end
 
   test "cannot reference virtual field" do

@@ -213,7 +213,7 @@ defmodule Ecto.Repo do
     query = Queryable.to_query(queryable)
     Util.validate_get(query, repo.query_apis)
 
-    entity = Enum.first(query.froms)
+    entity = query.from
     check_primary_key(entity, reason)
     primary_key = entity.__ecto__(:primary_key)
 

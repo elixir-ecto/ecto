@@ -42,7 +42,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
     entities = create_names(query)
-    { from, used_names } = from(query.froms, entities)
+    { from, used_names } = from(query.from, entities)
     select   = select(query.select, entities)
     join     = join(query.joins, entities, used_names)
     where    = where(query.wheres, entities)
@@ -96,11 +96,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for an update all statement
   def update_all(module, binding, values) when is_atom(module) do
-    update_all(Query[froms: [module]], binding, values)
+    update_all(Query[from: module], binding, values)
   end
 
   def update_all(Query[] = query, binding, values) do
-    module = Enum.first(query.froms)
+    module = query.from
     entity = create_names(query) |> Enum.first
     name   = elem(entity, 1)
     table  = module.__ecto__(:dataset)
@@ -129,11 +129,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for an delete all statement
   def delete_all(module) when is_atom(module) do
-    delete_all(Query[froms: [module]])
+    delete_all(Query[from: module])
   end
 
   def delete_all(Query[] = query) do
-    module = Enum.first(query.froms)
+    module = query.from
     entity = create_names(query) |> Enum.first
     name   = elem(entity, 1)
     table  = module.__ecto__(:dataset)
@@ -149,13 +149,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "SELECT " <> select_clause(clause, vars)
   end
 
-  defp from(froms, entities) do
-    { froms, names } = Enum.map_reduce(froms, [], fn(from, names) ->
-      name = Keyword.fetch!(entities, from)
-      { "#{from.__ecto__(:dataset)} AS #{name}", [name|names] }
-    end)
-
-    { "FROM " <> Enum.join(froms, ", "), names }
+  defp from(from, entities) do
+    name = Keyword.fetch!(entities, from)
+    { "FROM #{from.__ecto__(:dataset)} AS #{name}", [name] }
   end
 
   defp join(joins, entities, used_names) do
