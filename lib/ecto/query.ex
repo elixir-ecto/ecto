@@ -314,14 +314,11 @@ defmodule Ecto.Query do
       from(u in User) |> where(u.id == current_user) |> limit(1)
 
   """
-  defmacro limit(query, binding // [], expr) do
-    binding = Util.escape_binding(binding)
+  defmacro limit(query, _binding // [], expr) do
     quote do
       expr = unquote(expr)
       LimitOffsetBuilder.validate(expr)
-      limit = QueryExpr[expr: expr, binding: unquote(binding),
-                        file: __ENV__.file, line: __ENV__.line]
-      Util.merge(unquote(query), :limit, limit)
+      Util.merge(unquote(query), :limit, expr)
     end
   end
 
@@ -340,14 +337,11 @@ defmodule Ecto.Query do
       from(p in Post) |> limit(10) |> offset(30)
 
   """
-  defmacro offset(query, binding // [], expr) do
-    binding = Util.escape_binding(binding)
+  defmacro offset(query, _binding // [], expr) do
     quote do
       expr = unquote(expr)
       LimitOffsetBuilder.validate(expr)
-      offset = QueryExpr[expr: expr, binding: unquote(binding),
-                         file: __ENV__.file, line: __ENV__.line]
-      Util.merge(unquote(query), :offset, offset)
+      Util.merge(unquote(query), :offset, expr)
     end
   end
 

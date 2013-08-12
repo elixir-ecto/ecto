@@ -49,8 +49,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
     group_by = group_by(query.group_bys, entities)
     having   = having(query.havings, entities)
     order_by = order_by(query.order_bys, entities)
-    limit    = if query.limit, do: limit(query.limit.expr)
-    offset   = if query.offset, do: offset(query.offset.expr)
+    limit    = limit(query.limit)
+    offset   = offset(query.offset)
 
     [select, from, join, where, group_by, having, order_by, limit, offset]
       |> Enum.filter(&(&1 != nil))
@@ -213,7 +213,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
     end
   end
 
+  defp limit(nil), do: nil
   defp limit(num), do: "LIMIT " <> integer_to_binary(num)
+
+  defp offset(nil), do: nil
   defp offset(num), do: "OFFSET " <> integer_to_binary(num)
 
   defp boolean(_name, [], _vars), do: nil

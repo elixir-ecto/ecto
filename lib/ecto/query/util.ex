@@ -67,8 +67,9 @@ defmodule Ecto.Query.Util do
     query = Query[] = Queryable.to_query(queryable)
     check_merge(query, Query.new([{ type, expr }]))
 
+    has_binding = not (type in [:from, :limit, :offset])
     num_entities = count_entities(query) + if type == :join, do: 1, else: 0
-    if type != :from and length(expr.binding) > num_entities do
+    if has_binding and length(expr.binding) > num_entities do
       raise Ecto.InvalidQuery, reason: "cannot bind more variables than there are bindable entities"
     end
 
