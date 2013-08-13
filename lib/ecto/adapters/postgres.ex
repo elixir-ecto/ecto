@@ -42,10 +42,7 @@ defmodule Ecto.Adapters.Postgres do
     case result do
       { { :select, _ }, rows } ->
         { return_type, _ } = query.select.expr
-        binding = query.select.binding
-        entities = Util.collect_entities(query)
-        vars = Util.merge_to_vars(binding, entities)
-        { :ok, Enum.map(rows, &transform_row(&1, return_type, vars)) }
+        { :ok, Enum.map(rows, &transform_row(&1, return_type, query.entities)) }
       { :error, _ } = err -> err
     end
   end
@@ -73,8 +70,8 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
-  def update_all(repo, query, binds, values) do
-    sql = SQL.update_all(query, binds, values)
+  def update_all(repo, query, values) do
+    sql = SQL.update_all(query, values)
     result = transaction(repo, sql)
 
     case result do
@@ -156,13 +153,13 @@ defmodule Ecto.Adapters.Postgres do
     end)
   end
 
-  defp transform_row(row, return_type, vars) do
+  defp transform_row(row, return_type, entities) do
     case return_type do
       :single -> elem(row, 0)
       :list -> tuple_to_list(row)
       :tuple -> row
       { :entity, var } ->
-        entity = Keyword.fetch!(vars, var)
+        entity = Util.find_entity(entities, var)
         entity.__ecto__(:allocate, tuple_to_list(row))
     end
   end

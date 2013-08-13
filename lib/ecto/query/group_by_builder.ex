@@ -18,10 +18,13 @@ defmodule Ecto.Query.GroupByBuilder do
   defp escape_field({ :., _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
 
-    unless var in vars do
+    ix = Enum.find_index(vars, &(&1 == var))
+    if var != :_ and ix do
+      var = { :{}, [], [:&, [], [ix]] }
+      { var, field }
+    else
       raise Ecto.InvalidQuery, reason: "unbound variable `#{var}` in query"
     end
-    { var, field }
   end
 
   defp escape_field(_other, _vars) do

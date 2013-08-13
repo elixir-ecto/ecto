@@ -22,39 +22,39 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  def validate(query), do: Util.validate(query, [Ecto.Query.API])
+  def validate(query), do: query |> Util.normalize |> Util.validate([Ecto.Query.API])
 
 
   test "call queryable on every merge" do
     query = from(PostEntity) |> select([p], p.title)
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = from(PostEntity) |> where([p], p.title == "42")
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = from(PostEntity) |> order_by([p], p.title)
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = from(PostEntity) |> limit(42)
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = from(PostEntity) |> offset(43)
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = select(PostEntity, [p], p.title)
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = where(PostEntity, [p], p.title == "42")
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = order_by(PostEntity, [p], p.title)
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = limit(PostEntity, 42)
-    query |> Util.normalize |> validate
+    validate(query)
 
     query = offset(PostEntity, 43)
-    query |> Util.normalize |> validate
+    validate(query)
   end
 
   test "vars are order dependent" do
@@ -114,17 +114,6 @@ defmodule Ecto.QueryTest do
 
     query = PostEntity
     assert (query |> select([p], p.title)) == from([p] in query, select: p.title)
-  end
-
-  test "cannot bind too many vars" do
-    assert_raise Ecto.InvalidQuery, "cannot bind more variables than there are bindable entities", fn ->
-      from(p in PostEntity) |> select([p, q], p.title)
-    end
-
-    assert_raise Ecto.InvalidQuery, "cannot bind more variables than there are bindable entities", fn ->
-      query = from(p in PostEntity)
-      from([p, q] in query, select: p.title)
-    end
   end
 
   test "cannot bind non-Queryable in from" do

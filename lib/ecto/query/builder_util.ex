@@ -9,12 +9,13 @@ defmodule Ecto.Query.BuilderUtil do
   # inserted as-is into the query.
 
   # var.x - where var is bound
-  def escape({ { :., meta2, [{var, _, context} = left, right] }, meta, [] }, vars)
+  def escape({ { :., _, [{ var, _, context}, right] }, _, [] }, vars)
       when is_atom(var) and is_atom(context) do
-    if var != :_ and var in vars do
-      left_escaped = { :{}, [], tuple_to_list(left) }
-      dot_escaped = { :{}, [], [:., meta2, [left_escaped, right]] }
-      { :{}, meta, [dot_escaped, meta, []] }
+    ix = Enum.find_index(vars, &(&1 == var))
+    if var != :_ and ix do
+      left_escaped = { :{}, [], [:&, [], [ix]] }
+      dot_escaped = { :{}, [], [:., [], [left_escaped, right]] }
+      { :{}, [], [dot_escaped, [], []] }
     else
       raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound in a from expression"
     end

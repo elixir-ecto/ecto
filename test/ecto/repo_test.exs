@@ -7,7 +7,7 @@ defmodule Ecto.RepoTest.MockAdapter do
   def all(_repo, _query), do: { :ok, [] }
   def create(_repo, _record), do: 42
   def update(_repo, _record), do: :ok
-  def update_all(_repo, _query, _binds, _values), do: { :ok, 1 }
+  def update_all(_repo, _query, _values), do: { :ok, 1 }
   def delete(_repo, _record), do: :ok
   def delete_all(_repo, _query), do: { :ok, 1 }
 end

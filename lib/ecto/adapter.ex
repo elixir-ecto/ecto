@@ -41,7 +41,7 @@ defmodule Ecto.Adapter do
   query will only have where expressions and a single from expression. Returns
   the number of affected entities.
   """
-  defcallback update_all(module, Ecto.Query.t, [atom], Keyword.t) :: { :ok, :integer } | { :error, term }
+  defcallback update_all(module, Ecto.Query.t, Keyword.t) :: { :ok, :integer } | { :error, term }
 
   @doc """
   Should delete an entity using the primary key as key.

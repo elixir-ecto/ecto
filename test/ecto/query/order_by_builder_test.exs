@@ -4,13 +4,15 @@ defmodule Ecto.Query.OrderByBuilderTest do
   import Ecto.Query.OrderByBuilder
 
   test "escape" do
-    assert [{ :{}, [], [nil, :x, :y] }] ==
+    varx = { :{}, [], [:&, [], [0]] }
+    vary = { :{}, [], [:&, [], [1]] }
+    assert [{ :{}, [], [nil, varx, :y] }] ==
            escape(quote do x.y end, [:x])
 
-    assert [{ :{}, [], [nil, :x, :x] }, { :{}, [], [nil, :y, :y] }] ==
+    assert [{ :{}, [], [nil, varx, :x] }, { :{}, [], [nil, vary, :y] }] ==
            escape(quote do [x.x, y.y] end, [:x, :y])
 
-    assert [{ :{}, [], [:asc, :x, :x] }, { :{}, [], [:desc, :y, :y] }] ==
+    assert [{ :{}, [], [:asc, varx, :x] }, { :{}, [], [:desc, vary, :y] }] ==
            escape(quote do [asc: x.x, desc: y.y] end, [:x, :y])
   end
 

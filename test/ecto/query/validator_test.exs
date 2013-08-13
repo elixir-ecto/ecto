@@ -23,7 +23,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  def validate(query), do: Util.validate(query, [Ecto.Query.API])
+  def validate(query), do: query |> Util.normalize |> Util.validate([Ecto.Query.API])
 
 
   test "valid query with bindings" do
@@ -77,7 +77,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "unknown field" do
     query = from(PostEntity) |> select([p], p.unknown)
-    assert_raise Ecto.InvalidQuery, %r"unknown field `p.unknown`", fn ->
+    assert_raise Ecto.InvalidQuery, %r"unknown field `unknown` on `Ecto.Query.ValidatorTest.PostEntity`", fn ->
       validate(query)
     end
   end
@@ -182,7 +182,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(PostEntity) |> having([p], p.id) |> select([], 0)
-    assert_raise Ecto.InvalidQuery, %r"`p.id` must appear in `group_by`", fn ->
+    assert_raise Ecto.InvalidQuery, %r"`Ecto.Query.ValidatorTest.PostEntity.id` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -192,7 +192,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(PostEntity) |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
-    assert_raise Ecto.InvalidQuery, %r"`p.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.InvalidQuery, %r"`Ecto.Query.ValidatorTest.PostEntity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -202,7 +202,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(PostEntity) |> group_by([p], p.id) |> select([p], p.title)
-    assert_raise Ecto.InvalidQuery, %r"`p.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.InvalidQuery, %r"`Ecto.Query.ValidatorTest.PostEntity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -267,7 +267,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "multiple query apis" do
-    query = from(PostEntity) |> select([p], custom(p.id))
+    query = from(PostEntity) |> select([p], custom(p.id)) |> Util.normalize
     Util.validate(query, [CustomAPI])
     Util.validate(query, [Ecto.Query.API, CustomAPI])
   end

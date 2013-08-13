@@ -15,7 +15,8 @@ defmodule Ecto.Query.OrderByBuilder do
   defp escape_field({ dir, { :., _, [{ var, _, context }, field] } }, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
 
-    unless var in vars do
+    ix = Enum.find_index(vars, &(&1 == var))
+    if var == :_ or nil?(ix) do
       raise Ecto.InvalidQuery, reason: "unbound variable `#{var}` in query"
     end
 
@@ -24,6 +25,7 @@ defmodule Ecto.Query.OrderByBuilder do
       raise Ecto.InvalidQuery, reason: reason
     end
 
+    var = { :&, [], [ix] }
     Macro.escape({ dir, var, field })
   end
 

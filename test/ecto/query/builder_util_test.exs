@@ -4,11 +4,14 @@ defmodule Ecto.Query.BuilderUtilTest do
   import Ecto.Query.BuilderUtil
 
   test "escape" do
-    assert Macro.escape(quote do x.y end) ==
+    assert Macro.escape(quote do &0.y end) ==
            escape(quote do x.y end, [:x])
 
-    assert Macro.escape(quote do x.y + x.z end) ==
+    assert Macro.escape(quote do &0.y + &0.z end) ==
            escape(quote do x.y + x.z end, [:x])
+
+    assert Macro.escape(quote do &0.y + &1.z end) ==
+           escape(quote do x.y + y.z end, [:x, :y])
 
     assert Macro.escape(quote do avg(0) end) ==
            escape(quote do avg(0) end, [])

@@ -29,10 +29,10 @@ defmodule Ecto.Query.Validator do
       raise Ecto.InvalidQuery, reason: "a query must have a from expression"
     end
 
-    entities = Util.collect_entities(query)
-    grouped = group_by_entities(query.group_bys, entities)
+    grouped = group_by_entities(query.group_bys, query.entities)
     is_grouped = query.group_bys != [] or query.havings != []
-    state = State[entities: entities, grouped: grouped, grouped?: is_grouped, apis: apis]
+    state = State[entities: query.entities, grouped: grouped,
+                  grouped?: is_grouped, apis: apis]
 
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
@@ -40,7 +40,7 @@ defmodule Ecto.Query.Validator do
     unless opts[:skip_select], do: validate_select(query.select, state)
   end
 
-  def validate_update(Query[] = query, apis, binds, values) do
+  def validate_update(Query[] = query, apis, values) do
     validate_only_where(query)
 
     module = query.from
@@ -58,8 +58,7 @@ defmodule Ecto.Query.Validator do
       end
 
       # TODO: Check if entity field allows nil
-      vars = Util.merge_to_vars(binds, [module])
-      state = State[entities: [module], vars: vars, apis: apis]
+      state = State[entities: query.entities, apis: apis]
       type = type_check(expr, state)
 
       format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
@@ -85,7 +84,7 @@ defmodule Ecto.Query.Validator do
 
   defp validate_only_where(query) do
     # Update validation check if assertion fails
-    unquote(unless size(Query[]) == 10, do: raise "Ecto.Query.Query out of date")
+    unquote(unless size(Query[]) == 11, do: raise "Ecto.Query.Query out of date")
 
     # TODO: File and line metadata
     unless match?(Query[joins: [], select: nil, order_bys: [], limit: nil,
@@ -113,8 +112,6 @@ defmodule Ecto.Query.Validator do
   defp validate_booleans(type, query_exprs, State[] = state) do
     Enum.each(query_exprs, fn(QueryExpr[] = expr) ->
       rescue_metadata(type, expr.expr, expr.file, expr.line) do
-        vars = Util.merge_to_vars(expr.binding, state.entities)
-        state = state.vars(vars)
         expr_type = type_check(expr.expr, state)
 
         unless expr_type == :boolean do
@@ -129,29 +126,25 @@ defmodule Ecto.Query.Validator do
   defp validate_select(QueryExpr[] = expr, State[] = state) do
     { _, select_expr } = expr.expr
     rescue_metadata(:select, select_expr, expr.file, expr.line) do
-      vars = Util.merge_to_vars(expr.binding, state.entities)
-      state = state.vars(vars)
       type_check(select_expr, state)
     end
   end
 
   # var.x
-  defp type_check({ { :., _, [{ var, _, context }, field] }, _, [] }, State[] = state)
-      when is_atom(var) and is_atom(context) do
-    entity = Keyword.fetch!(state.vars, var)
-    check_grouped(var, { entity, field }, state)
+  defp type_check({ { :., _, [{ :&, _, [_] } = var, field] }, _, [] }, State[] = state) do
+    entity = Util.find_entity(state.entities, var)
+    check_grouped({ entity, field }, state)
 
     type = entity.__ecto__(:field_type, field)
     unless type do
-      raise Ecto.InvalidQuery, reason: "unknown field `#{var}.#{field}`"
+      raise Ecto.InvalidQuery, reason: "unknown field `#{field}` on `#{inspect entity}`"
     end
     type
   end
 
   # var
-  defp type_check({ var, _, context}, State[] = state)
-      when is_atom(var) and is_atom(context) do
-    Keyword.fetch!(state.vars, var) # ?
+  defp type_check({ :&, _, [_] } = var, State[] = state) do
+    Util.find_entity(state.entities, var)
   end
 
   # tuple
@@ -217,18 +210,17 @@ defmodule Ecto.Query.Validator do
   defp type_check(value, _state), do: Util.value_to_type(value)
 
   defp group_by_entities(group_bys, entities) do
-    Enum.map(group_bys, fn(QueryExpr[] = group_by) ->
-      vars = Util.merge_to_vars(group_by.binding, entities)
-      Enum.map(group_by.expr, fn({ var, field }) ->
-        { Keyword.fetch!(vars, var), field }
+    Enum.map(group_bys, fn(expr) ->
+      Enum.map(expr, fn({ var, field }) ->
+        { Util.find_entity(entities, var), field }
       end)
     end) |> List.concat |> Enum.uniq
   end
 
-  defp check_grouped(var, entity_field, state) do
+  defp check_grouped(entity_field, state) do
     if state.grouped? and not state.in_agg? and not (entity_field in state.grouped) do
-      { _, field } = entity_field
-      raise Ecto.InvalidQuery, reason: "expression `#{var}.#{field}` must appear in `group_by` " <>
+      { entity, field } = entity_field
+      raise Ecto.InvalidQuery, reason: "`#{inspect entity}.#{field}` must appear in `group_by` " <>
         "or be used in an aggregate function"
     end
   end

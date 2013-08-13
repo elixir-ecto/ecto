@@ -83,9 +83,9 @@ defmodule Ecto.Query do
 
   @type t :: Query.t
 
-  defrecord Query, from: nil, joins: [], wheres: [], select: nil, order_bys: [],
-                   limit: nil, offset: nil, group_bys: [], havings: []
-  defrecord QueryExpr, expr: nil, binding: [], file: nil, line: nil
+  defrecord Query, entities: nil, from: nil, joins: [], wheres: [], select: nil,
+                   order_bys: [], limit: nil, offset: nil, group_bys: [], havings: []
+  defrecord QueryExpr, expr: nil, file: nil, line: nil
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
@@ -209,8 +209,7 @@ defmodule Ecto.Query do
 
     quote do
       expr = { unquote(join_expr), unquote(on_expr) }
-      join = QueryExpr[expr: expr, binding: unquote(binding),
-                       file: __ENV__.file, line: __ENV__.line]
+      join = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(unquote(query), :join, join)
     end
   end
@@ -244,8 +243,7 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       select_expr = unquote(SelectBuilder.escape(expr, binding))
-      select = QueryExpr[expr: select_expr, binding: unquote(binding),
-                         file: __ENV__.file, line: __ENV__.line]
+      select = QueryExpr[expr: select_expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(unquote(query), :select, select)
     end
   end
@@ -268,8 +266,7 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       where_expr = unquote(WhereBuilder.escape(expr, binding))
-      where = QueryExpr[expr: where_expr, binding: unquote(binding),
-                        file: __ENV__.file, line: __ENV__.line]
+      where = QueryExpr[expr: where_expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(unquote(query), :where, where)
     end
   end
@@ -294,9 +291,8 @@ defmodule Ecto.Query do
   defmacro order_by(query, binding, expr)  do
     binding = Util.escape_binding(binding)
     quote do
-      order_expr = unquote(OrderByBuilder.escape(expr, binding))
-      order = QueryExpr[expr: order_expr, binding: unquote(binding)]
-      Util.merge(unquote(query), :order_by, order)
+      expr = unquote(OrderByBuilder.escape(expr, binding))
+      Util.merge(unquote(query), :order_by, expr)
     end
   end
 
@@ -367,9 +363,8 @@ defmodule Ecto.Query do
   defmacro group_by(query, binding, expr) do
     binding = Util.escape_binding(binding)
     quote do
-      group_expr = unquote(GroupByBuilder.escape(expr, binding))
-      order = QueryExpr[expr: group_expr, binding: unquote(binding)]
-      Util.merge(unquote(query), :group_by, order)
+      expr = unquote(GroupByBuilder.escape(expr, binding))
+      Util.merge(unquote(query), :group_by, expr)
     end
   end
 
@@ -399,7 +394,7 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       having_expr = unquote(HavingBuilder.escape(expr, binding))
-      having = QueryExpr[expr: having_expr, binding: unquote(binding)]
+      having = QueryExpr[expr: having_expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(unquote(query), :having, having)
     end
   end
@@ -447,8 +442,7 @@ defmodule Ecto.Query do
 
     quoted = quote do
       expr = { unquote(join_expr), unquote(on_expr) }
-      join = QueryExpr[expr: expr, binding: unquote(binds),
-                       file: __ENV__.file, line: __ENV__.line]
+      join = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(unquote(state.quoted), :join, join)
     end
     state.prev_join(nil).quoted(quoted).binds(binds)

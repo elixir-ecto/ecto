@@ -21,11 +21,13 @@ defmodule Ecto.Query.SelectBuilder do
   end
 
   # var - where var is bound
-  def escape({ var, _, context} = ast, vars) when is_atom(var) and is_atom(context) do
-    if var in vars do
-      { { :entity, var }, Macro.escape(ast) }
+  def escape({ var, _, context}, vars) when is_atom(var) and is_atom(context) do
+    ix = Enum.find_index(vars, &(&1 == var))
+    if ix do
+      var = { :{}, [], [ :&, [], [ix] ] }
+      { { :entity, var }, var }
     else
-      { :single, ast }
+      # TODO: This should raise
     end
   end
 

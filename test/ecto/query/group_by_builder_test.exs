@@ -4,10 +4,13 @@ defmodule Ecto.Query.GroupByBuilderTest do
   import Ecto.Query.GroupByBuilder
 
   test "escape" do
-    assert [{ :x, :y }] ==
+    varx = { :{}, [], [:&, [], [0]] }
+    vary = { :{}, [], [:&, [], [1]] }
+
+    assert [{ varx, :y }] ==
            escape(quote do x.y end, [:x])
 
-    assert [{ :x, :x }, { :y, :y }] ==
+    assert [{ varx, :x }, { vary, :y }] ==
            escape(quote do [x.x, y.y] end, [:x, :y])
   end
 

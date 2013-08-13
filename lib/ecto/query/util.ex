@@ -18,8 +18,8 @@ defmodule Ecto.Query.Util do
   Validates an update query to check if it is correct. Should be called before
   compilation by the query adapter.
   """
-  def validate_update(query, query_apis, binds, values) do
-    Ecto.Query.Validator.validate_update(query, query_apis, binds, values)
+  def validate_update(query, query_apis, values) do
+    Ecto.Query.Validator.validate_update(query, query_apis, values)
   end
 
   @doc """
@@ -47,18 +47,10 @@ defmodule Ecto.Query.Util do
   end
 
   @doc """
-  Merge a query expression's bindings with the entities from a query.
+  Look up an entity with a variable.
   """
-  def merge_to_vars(binding, entities) do
-    Enum.zip(binding, entities)
-  end
-
-  @doc """
-  Collects all entities in order in a query
-  """
-  def collect_entities(Query[] = query) do
-    (if query.from, do: [query.from], else: []) ++
-      Enum.map(query.joins, &(&1.expr |> elem(0)))
+  def find_entity(entities, { :&, _, [ix] }) do
+    elem(entities, ix)
   end
 
   # Merges a Queryable with a query expression
@@ -66,12 +58,6 @@ defmodule Ecto.Query.Util do
   def merge(queryable, type, expr) do
     query = Query[] = Queryable.to_query(queryable)
     check_merge(query, Query.new([{ type, expr }]))
-
-    has_binding = not (type in [:from, :limit, :offset])
-    num_entities = count_entities(query) + if type == :join, do: 1, else: 0
-    if has_binding and length(expr.binding) > num_entities do
-      raise Ecto.InvalidQuery, reason: "cannot bind more variables than there are bindable entities"
-    end
 
     case type do
       :from     -> query.from(expr)
@@ -149,11 +135,6 @@ defmodule Ecto.Query.Util do
 
   defp escape_var(_) do
     raise Ecto.InvalidQuery, reason: "binding should be list of variables"
-  end
-
-  # Counts the number of entities in a query
-  defp count_entities(Query[from: from, joins: joins]) do
-    (if from, do: 1, else: 0) + length(joins)
   end
 
   defmacrop check_merge_dup(left, right, fields) do

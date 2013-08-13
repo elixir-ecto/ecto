@@ -217,8 +217,8 @@ defmodule Ecto.Repo do
     check_primary_key(entity, reason)
     primary_key = entity.__ecto__(:primary_key)
 
-    quoted = quote do x.unquote(primary_key) == unquote(id) end
-    expr = QueryExpr[expr: quoted, binding: [:x]]
+    quoted = quote do &0.unquote(primary_key) == unquote(id) end
+    expr = QueryExpr[expr: quoted]
     query = Util.merge(query, :where, expr)
     query = Util.normalize(query)
 
@@ -270,16 +270,15 @@ defmodule Ecto.Repo do
 
     quote do
       values = unquote(values)
-      binds = unquote(binds)
       repo = unquote(repo)
 
       query = Queryable.to_query(unquote(expr))
       query = Util.normalize(query, skip_select: true)
-      Util.validate_update(query, repo.query_apis, binds, values)
+      Util.validate_update(query, repo.query_apis, values)
 
       reason = "updating entities"
       adapter = unquote(adapter)
-      adapter.update_all(repo, query, binds, values)
+      adapter.update_all(repo, query, values)
         |> Ecto.Repo.check_result(adapter, reason)
     end
   end
