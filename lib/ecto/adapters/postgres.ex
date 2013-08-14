@@ -148,7 +148,7 @@ defmodule Ecto.Adapters.Postgres do
   defp fix_worker_opts(opts) do
     Enum.map(opts, fn
       { :username, v } -> { :user, v }
-      { :hostname, v } -> { :host, binary_to_list(v) }
+      { :hostname, v } -> { :host, String.to_char_list!(v) }
       rest -> rest
     end)
   end

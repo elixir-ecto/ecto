@@ -68,6 +68,7 @@ defmodule Ecto.Entity do
       import Ecto.Entity, only: [dataset: 2, dataset: 3]
       @before_compile unquote(__MODULE__)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
     end
   end
 
@@ -77,9 +78,10 @@ defmodule Ecto.Entity do
     dataset_name  = Module.get_attribute(module, :ecto_dataset)
     primary_key   = Module.get_attribute(module, :ecto_primary_key)
     all_fields    = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
+    assocs        = Module.get_attribute(module, :ecto_assocs) |> Enum.reverse
 
     unless dataset_name do
-      raise ArgumentError, message: "dataset not defined, an entity has " <>
+      raise ArgumentError, message: "dataset not defined, an entity has to " <>
         "define a dataset, see `Ecto.Entity.Dataset`"
     end
 
@@ -87,16 +89,37 @@ defmodule Ecto.Entity do
     all_field_names = Enum.map(all_fields, &elem(&1, 0))
     field_names = Enum.map(fields, &elem(&1, 0))
 
-    fields_quote = Enum.map(fields, fn({ key, opts }) ->
+    fields_quote = Enum.map(fields, fn({ name, opts }) ->
       quote do
-        def __ecto__(:field, unquote(key)), do: unquote(opts)
-        def __ecto__(:field_type, unquote(key)), do: unquote(opts[:type])
+        def __ecto__(:field, unquote(name)), do: unquote(opts)
+        def __ecto__(:field_type, unquote(name)), do: unquote(opts[:type])
+      end
+    end)
+
+    assocs_quote = Enum.map(assocs, fn({ name, opts, }) ->
+      quote location: :keep, bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
+        entity = opts[:entity]
+        module_name = __MODULE__ |> Module.split |> List.last |> String.downcase
+        foreign_key = opts[:foreign_key] || :"#{module_name}_#{primary_key}"
+        refl = Ecto.Reflections.HasMany[owner: __MODULE__, associated: entity,
+          foreign_key: foreign_key, field: :"__#{name}__"] |> Macro.escape
+
+        def __ecto__(:association, unquote(name)) do
+          unquote(refl)
+        end
+
+        def unquote(name)(self) do
+          assoc = self.unquote(:"__#{name}__")
+          assoc.__ecto__(:with_data, unquote(refl), self.primary_key)
+        end
+
+        def unquote(name)(assoc, self) do
+          self.unquote(:"__#{name}__")(assoc)
+        end
       end
     end)
 
     quote do
-      field_names = unquote(field_names)
-
       def __ecto__(:dataset), do: unquote(dataset_name)
       def __ecto__(:primary_key), do: unquote(primary_key)
       def __ecto__(:field_names), do: unquote(field_names)
@@ -113,6 +136,8 @@ defmodule Ecto.Entity do
         def primary_key(_value, record), do: record
         def update_primary_key(_fun, record), do: record
       end
+
+      unquote(assocs_quote)
 
       # TODO: This can be optimized
       def __ecto__(:allocate, values) do
@@ -152,18 +177,28 @@ defmodule Ecto.Entity.Dataset do
     # TODO: Check that the opts are valid for the given type
 
     quote do
-      name = unquote(name)
+      field_name = unquote(name)
       type = unquote(type)
       Ecto.Entity.Dataset.check_type(type)
 
-      clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> name == prev_name end)
+      clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> field_name == prev_name end)
       if clash do
-        raise ArgumentError, message: "field `#{name}` was already set on entity"
+        raise ArgumentError, message: "field `#{field_name}` was already set on entity"
       end
 
       opts = unquote(opts)
       default = opts[:default]
-      @ecto_fields { name, [type: type] ++ opts }
+      @ecto_fields { field_name, [type: type] ++ opts }
+    end
+  end
+
+  defmacro has_many(name, opts // []) do
+    # TODO: Check for :entity in opts
+    quote do
+      name = unquote(name)
+      assoc = Ecto.Associations.HasMany.__ecto__(:new)
+      field(:"__#{name}__", :virtual, default: assoc)
+      @ecto_assocs { name, unquote(opts) }
     end
   end
 

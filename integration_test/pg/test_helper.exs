@@ -30,6 +30,16 @@ defmodule Ecto.Integration.Postgres.Post do
     field :text, :string
     field :temp, :virtual, default: "temp"
     field :count, :integer
+    has_many :comments, entity: Ecto.Integration.Postgres.Comment
+  end
+end
+
+defmodule Ecto.Integration.Postgres.Comment do
+  use Ecto.Entity
+
+  dataset "comments" do
+    field :text, :string
+    field :post_id, :integer # TODO: belongs_to
   end
 end
 
@@ -85,6 +95,7 @@ end)
 
 setup_database = [
   "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), count integer)",
+  "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), post_id integer)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 

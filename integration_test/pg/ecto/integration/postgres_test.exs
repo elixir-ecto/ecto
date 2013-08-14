@@ -4,6 +4,7 @@ defmodule Ecto.Integration.PostgresTest do
   import Ecto.Query
   alias Ecto.Integration.Postgres.TestRepo
   alias Ecto.Integration.Postgres.Post
+  alias Ecto.Integration.Postgres.Comment
 
   test "fetch empty" do
     assert [] == TestRepo.all(from p in Post)
@@ -163,5 +164,21 @@ defmodule Ecto.Integration.PostgresTest do
   test "virtual field" do
     assert Post[id: id] = TestRepo.create(Post[title: "1", text: "hai"])
     assert TestRepo.get(Post, id).temp == "temp"
+  end
+
+  test "preload" do
+    p1 = TestRepo.create(Post[title: "1"])
+    p2 = TestRepo.create(Post[title: "2"])
+    p3 = TestRepo.create(Post[title: "3"])
+
+    Comment[id: cid1] = TestRepo.create(Comment[text: "1", post_id: p1.id])
+    Comment[id: cid2] = TestRepo.create(Comment[text: "2", post_id: p1.id])
+    Comment[id: cid3] = TestRepo.create(Comment[text: "3", post_id: p2.id])
+    Comment[id: cid4] = TestRepo.create(Comment[text: "4", post_id: p2.id])
+
+    assert [p1, p2, p3] = Ecto.Preloader.run(TestRepo, [p1, p2, p3], :comments)
+    assert [Comment[id: ^cid1], Comment[id: ^cid2]] = p1.comments.to_list
+    assert [Comment[id: ^cid3], Comment[id: ^cid4]] = p2.comments.to_list
+    assert [] = p3.comments.to_list
   end
 end
