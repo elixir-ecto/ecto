@@ -191,4 +191,11 @@ defmodule Ecto.Integration.PostgresTest do
     query = from(p in Post, select: { p.title, [ p, { p.text } ] })
     [{ "1", [ ^post, { "hi" } ] }] = TestRepo.all(query)
   end
+
+  test "join" do
+    post = TestRepo.create(Post[title: "1", text: "hi"])
+    comment = TestRepo.create(Comment[text: "hey"])
+    query = from(p in Post, join: c in Comment, on: true, select: { p, c })
+    [{ ^post, ^comment }] = TestRepo.all(query)
+  end
 end
