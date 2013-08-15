@@ -145,8 +145,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp select(QueryExpr[expr: expr], entities) do
-    { _, clause } = expr
-    "SELECT " <> select_clause(clause, entities)
+    "SELECT " <> select_clause(expr, entities)
   end
 
   defp from(from, entities) do

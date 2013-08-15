@@ -124,9 +124,8 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_select(QueryExpr[] = expr, State[] = state) do
-    { _, select_expr } = expr.expr
     rescue_metadata(:select, select_expr, expr.file, expr.line) do
-      type_check(select_expr, state)
+      select_clause(expr.expr, state)
     end
   end
 
@@ -145,16 +144,6 @@ defmodule Ecto.Query.Validator do
   # var
   defp type_check({ :&, _, [_] } = var, State[] = state) do
     Util.find_entity(state.entities, var)
-  end
-
-  # tuple
-  defp type_check({ left, right }, state) do
-    type_check({ :{}, [], [left, right] }, state)
-  end
-
-  # tuple
-  defp type_check({ :{}, _, list }, _state) when is_list(list) do
-    raise Ecto.InvalidQuery, reason: "tuples are not allowed in queries"
   end
 
   # ops & functions
@@ -203,11 +192,30 @@ defmodule Ecto.Query.Validator do
 
   # atom
   defp type_check(literal, _vars) when is_atom(literal) and not (literal in [true, false, nil]) do
-    raise Ecto.InvalidQuery, reason: "atoms are not allowed in queries"
+    raise Ecto.InvalidQuery, reason: "atoms are not allowed in queries `#{literal}`"
   end
 
   # values
   defp type_check(value, _state), do: Util.value_to_type(value)
+
+  # Handle top level select cases
+
+  defp select_clause({ left, right }, state) do
+    select_clause(left, state)
+    select_clause(right, state)
+  end
+
+  defp select_clause({ :{}, _, list }, state) do
+    Enum.each(list, &select_clause(&1, state))
+  end
+
+  defp select_clause(list, state) when is_list(list) do
+    Enum.each(list, &select_clause(&1, state))
+  end
+
+  defp select_clause(other, state) do
+    type_check(other, state)
+  end
 
   defp group_by_entities(group_bys, entities) do
     Enum.map(group_bys, fn(expr) ->

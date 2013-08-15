@@ -14,8 +14,7 @@ defmodule Ecto.Query.Normalizer do
   defp auto_select(Query[] = query, opts) do
     if !opts[:skip_select] && query.select == nil do
       var = { :&, [], [0] }
-      expr = { { :entity, var }, var }
-      query.select(QueryExpr[expr: expr])
+      query.select(QueryExpr[expr: var])
     else
       query
     end

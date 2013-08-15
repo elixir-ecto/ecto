@@ -41,8 +41,12 @@ defmodule Ecto.Adapters.Postgres do
 
     case result do
       { { :select, _ }, rows } ->
-        { return_type, _ } = query.select.expr
-        { :ok, Enum.map(rows, &transform_row(&1, return_type, query.entities)) }
+        expr = query.select.expr
+        transformed = Enum.map(rows, fn row ->
+          values = tuple_to_list(row)
+          transform_row(expr, values, query.entities) |> elem(0)
+        end)
+        { :ok, transformed }
       { :error, _ } = err -> err
     end
   end
@@ -153,15 +157,35 @@ defmodule Ecto.Adapters.Postgres do
     end)
   end
 
-  defp transform_row(row, return_type, entities) do
-    case return_type do
-      :single -> elem(row, 0)
-      :list -> tuple_to_list(row)
-      :tuple -> row
-      { :entity, var } ->
-        entity = Util.find_entity(entities, var)
-        entity.__ecto__(:allocate, tuple_to_list(row))
-    end
+  defp transform_row({ :{}, _, list }, values, entities) do
+    { result, values } = transform_row(list, values, entities)
+    { list_to_tuple(result), values }
+  end
+
+  defp transform_row({ _, _ } = tuple, values, entities) do
+    { result, values } = transform_row(tuple_to_list(tuple), values, entities)
+    { list_to_tuple(result), values }
+  end
+
+  defp transform_row(list, values, entities) when is_list(list) do
+    { result, values } = Enum.reduce(list, { [], values }, fn elem, { res, values } ->
+      { result, values } = transform_row(elem, values, entities)
+      { [result|res], values }
+    end)
+
+    { Enum.reverse(result), values }
+  end
+
+  defp transform_row({ :&, _, [_] } = var, values, entities) do
+    entity = Util.find_entity(entities, var)
+    entity_size = length(entity.__ecto__(:field_names))
+    { entity_values, values } = Enum.split(values, entity_size)
+    { entity.__ecto__(:allocate, entity_values), values }
+  end
+
+  defp transform_row(_, values, _entities) do
+    [value|values] = values
+    { value, values }
   end
 
   defp prepare_start(repo) do

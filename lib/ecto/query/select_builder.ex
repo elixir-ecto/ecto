@@ -3,35 +3,36 @@ defmodule Ecto.Query.SelectBuilder do
 
   alias Ecto.Query.BuilderUtil
 
-  # Escapes a select query to `{ :single | :tuple | :list | { :entity, var },
-  # escaped_query }` The first element in the pair specifies the transformation
-  # the adapter should perform on the results from the data store.
+  # Escapes a select query to. Allows tuples, lists and variables at the top
+  # level.
 
-  # Handle any top level tuples or lists
+  # Tuple
   def escape({ left, right }, vars) do
-    { :tuple, [BuilderUtil.escape(left, vars), BuilderUtil.escape(right, vars)] }
+    { escape(left, vars), escape(right, vars) }
   end
 
+  # Tuple
   def escape({ :{}, _, list }, vars) do
-    { :tuple, Enum.map(list, &BuilderUtil.escape(&1, vars)) }
+    list = Enum.map(list, &escape(&1, vars))
+    { :{}, [], [:{}, [], list] }
   end
 
+  # List
   def escape(list, vars) when is_list(list) do
-    { :list, Enum.map(list, &BuilderUtil.escape(&1, vars)) }
+    Enum.map(list, &escape(&1, vars))
   end
 
   # var - where var is bound
   def escape({ var, _, context}, vars) when is_atom(var) and is_atom(context) do
     ix = Enum.find_index(vars, &(&1 == var))
     if ix do
-      var = { :{}, [], [ :&, [], [ix] ] }
-      { { :entity, var }, var }
+      { :{}, [], [ :&, [], [ix] ] }
     else
       # TODO: This should raise
     end
   end
 
   def escape(other, vars) do
-    { :single, BuilderUtil.escape(other, vars) }
+    BuilderUtil.escape(other, vars)
   end
 end

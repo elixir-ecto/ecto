@@ -185,4 +185,10 @@ defmodule Ecto.Integration.PostgresTest do
     assert [Comment[id: ^cid3], Comment[id: ^cid4]] = p2.comments.to_list
     assert [] = p3.comments.to_list
   end
+
+  test "row transform" do
+    post = TestRepo.create(Post[title: "1", text: "hi"])
+    query = from(p in Post, select: { p.title, [ p, { p.text } ] })
+    [{ "1", [ ^post, { "hi" } ] }] = TestRepo.all(query)
+  end
 end
