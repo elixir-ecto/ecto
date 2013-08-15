@@ -1,4 +1,4 @@
-defrecord Ecto.Reflections.HasMany, [:field, :owner, :associated, :foreign_key]
+defrecord Ecto.Reflections.HasMany, [:field, :name, :owner, :associated, :foreign_key]
 
 defmodule Ecto.Associations.HasMany do
   defrecordp :assoc, __MODULE__, [:reflection, :loaded, :target]
@@ -8,8 +8,9 @@ defmodule Ecto.Associations.HasMany do
     refl.associated.new([{ fk, target }] ++ params)
   end
 
-  def to_list(assoc(loaded: nil)) do
-    raise nil # TODO
+  def to_list(assoc(loaded: nil, reflection: refl)) do
+    raise Ecto.AssociationNotLoadedError,
+      type: :has_many, owner: refl.owner, name: refl.name
   end
 
   def to_list(assoc(loaded: loaded)) do

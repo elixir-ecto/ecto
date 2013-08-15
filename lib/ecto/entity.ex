@@ -97,24 +97,20 @@ defmodule Ecto.Entity do
     end)
 
     assocs_quote = Enum.map(assocs, fn({ name, opts, }) ->
-      quote location: :keep, bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
+      quote bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
         entity = opts[:entity]
         module_name = __MODULE__ |> Module.split |> List.last |> String.downcase
         foreign_key = opts[:foreign_key] || :"#{module_name}_#{primary_key}"
         refl = Ecto.Reflections.HasMany[owner: __MODULE__, associated: entity,
-          foreign_key: foreign_key, field: :"__#{name}__"] |> Macro.escape
+          foreign_key: foreign_key, field: :"__#{name}__", name: name] |> Macro.escape
 
         def __ecto__(:association, unquote(name)) do
           unquote(refl)
         end
 
         def unquote(name)(self) do
-          assoc = self.unquote(:"__#{name}__")
+          assoc = unquote(:"__#{name}__")(self)
           assoc.__ecto__(:with_data, unquote(refl), self.primary_key)
-        end
-
-        def unquote(name)(assoc, self) do
-          self.unquote(:"__#{name}__")(assoc)
         end
       end
     end)
@@ -192,13 +188,12 @@ defmodule Ecto.Entity.Dataset do
     end
   end
 
-  defmacro has_many(name, opts // []) do
-    # TODO: Check for :entity in opts
+  defmacro has_many(name, entity, opts // []) do
     quote do
       name = unquote(name)
       assoc = Ecto.Associations.HasMany.__ecto__(:new)
       field(:"__#{name}__", :virtual, default: assoc)
-      @ecto_assocs { name, unquote(opts) }
+      @ecto_assocs { name, [entity: unquote(entity)] ++ unquote(opts) }
     end
   end
 

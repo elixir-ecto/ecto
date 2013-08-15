@@ -176,6 +176,10 @@ defmodule Ecto.Integration.PostgresTest do
     Comment[id: cid3] = TestRepo.create(Comment[text: "3", post_id: p2.id])
     Comment[id: cid4] = TestRepo.create(Comment[text: "4", post_id: p2.id])
 
+    assert_raise Ecto.AssociationNotLoadedError, fn ->
+      p1.comments.to_list
+    end
+
     assert [p1, p2, p3] = Ecto.Preloader.run(TestRepo, [p1, p2, p3], :comments)
     assert [Comment[id: ^cid1], Comment[id: ^cid2]] = p1.comments.to_list
     assert [Comment[id: ^cid3], Comment[id: ^cid4]] = p2.comments.to_list

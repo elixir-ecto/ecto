@@ -30,7 +30,7 @@ defmodule Ecto.Integration.Postgres.Post do
     field :text, :string
     field :temp, :virtual, default: "temp"
     field :count, :integer
-    has_many :comments, entity: Ecto.Integration.Postgres.Comment
+    has_many :comments, Ecto.Integration.Postgres.Comment
   end
 end
 
