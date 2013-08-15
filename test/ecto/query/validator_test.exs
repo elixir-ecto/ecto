@@ -177,6 +177,20 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "group_by invalid field" do
+    query = from(PostEntity) |> group_by([p], p.hai) |> select([], 0)
+    assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+  end
+
+  test "order_by invalid field" do
+    query = from(PostEntity) |> order_by([p], p.hai) |> select([], 0)
+    assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+  end
+
   test "having without group_by" do
     query = from(PostEntity) |> having([], true) |> select([], 0)
     validate(query)

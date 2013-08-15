@@ -12,7 +12,7 @@ defmodule Ecto.Query.Validator do
     in_agg?: false, apis: nil
 
   # Adds type, file and line metadata to the exception
-  defmacrop rescue_metadata(type, query, file, line, block) do
+  defmacrop rescue_metadata(type, file, line, block) do
     quote location: :keep do
       try do
         unquote(block)
@@ -36,6 +36,8 @@ defmodule Ecto.Query.Validator do
 
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
+    validate_order_bys(query.order_bys, state)
+    validate_group_bys(query.group_bys, state)
     validate_havings(query.havings, state)
     unless opts[:skip_select], do: validate_select(query.select, state)
   end
@@ -109,9 +111,9 @@ defmodule Ecto.Query.Validator do
     validate_booleans(:having, havings, state)
   end
 
-  defp validate_booleans(type, query_exprs, State[] = state) do
+  defp validate_booleans(type, query_exprs, state) do
     Enum.each(query_exprs, fn(QueryExpr[] = expr) ->
-      rescue_metadata(type, expr.expr, expr.file, expr.line) do
+      rescue_metadata(type, expr.file, expr.line) do
         expr_type = type_check(expr.expr, state)
 
         unless expr_type == :boolean do
@@ -123,8 +125,39 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
+  defp validate_order_bys(order_bys, state) do
+    # Remove the direction so we can validate the field
+    order_bys = Enum.map(order_bys, fn expr ->
+      expr.update_expr(&Enum.map(&1, fn { _, var, field } -> { var, field } end))
+    end)
+
+    validate_field_list(:order_by, order_bys, state)
+  end
+
+  defp validate_group_bys(group_bys, state) do
+    validate_field_list(:group_by, group_bys, state)
+  end
+
+  defp validate_field_list(type, query_exprs, state) do
+    Enum.each(query_exprs, fn(QueryExpr[] = expr) ->
+      rescue_metadata(type, expr.file, expr.line) do
+        Enum.map(expr.expr, fn expr ->
+          validate_field(expr, state)
+        end)
+      end
+    end)
+  end
+
+  defp validate_field({ var, field }, state) do
+    entity = Util.find_entity(state.entities, var)
+    type = entity.__ecto__(:field_type, field)
+    unless type do
+      raise Ecto.InvalidQuery, reason: "unknown field `#{field}` on `#{inspect entity}`"
+    end
+  end
+
   defp validate_select(QueryExpr[] = expr, State[] = state) do
-    rescue_metadata(:select, select_expr, expr.file, expr.line) do
+    rescue_metadata(:select, expr.file, expr.line) do
       select_clause(expr.expr, state)
     end
   end
@@ -219,7 +252,7 @@ defmodule Ecto.Query.Validator do
 
   defp group_by_entities(group_bys, entities) do
     Enum.map(group_bys, fn(expr) ->
-      Enum.map(expr, fn({ var, field }) ->
+      Enum.map(expr.expr, fn({ var, field }) ->
         { Util.find_entity(entities, var), field }
       end)
     end) |> List.concat |> Enum.uniq

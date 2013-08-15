@@ -177,7 +177,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp group_by(group_bys, entities) do
     exprs = Enum.map_join(group_bys, ", ", fn(expr) ->
-      Enum.map_join(expr, ", ", fn({ var, field }) ->
+      Enum.map_join(expr.expr, ", ", fn({ var, field }) ->
         { _entity, name } = Util.find_entity(entities, var)
         "#{name}.#{field}"
       end)
@@ -194,7 +194,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp order_by(order_bys, entities) do
     exprs = Enum.map_join(order_bys, ", ", fn(expr) ->
-      Enum.map_join(expr, ", ", &order_by_expr(&1, entities))
+      Enum.map_join(expr.expr, ", ", &order_by_expr(&1, entities))
     end)
 
     "ORDER BY " <> exprs

@@ -22,7 +22,7 @@ defmodule Ecto.Preloader do
 
     where_expr = quote do &0.unquote(refl.foreign_key) in unquote(ids) end
     where = QueryExpr[expr: where_expr]
-    order_bys = [ { nil, quote do &0 end, refl.foreign_key } ]
+    order_bys = QueryExpr[expr: [ { nil, quote do &0 end, refl.foreign_key } ]]
     query = Query[from: refl.associated, wheres: [where], order_bys: [order_bys]]
 
     assocs = repo.all(query)

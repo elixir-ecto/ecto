@@ -292,7 +292,8 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       expr = unquote(OrderByBuilder.escape(expr, binding))
-      Util.merge(unquote(query), :order_by, expr)
+      order_by = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
+      Util.merge(unquote(query), :order_by, order_by)
     end
   end
 
@@ -364,7 +365,8 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       expr = unquote(GroupByBuilder.escape(expr, binding))
-      Util.merge(unquote(query), :group_by, expr)
+      group_by = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
+      Util.merge(unquote(query), :group_by, group_by)
     end
   end
 
