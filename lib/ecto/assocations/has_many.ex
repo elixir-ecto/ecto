@@ -1,36 +1,22 @@
-defrecord Ecto.Reflections.HasMany, [:field, :name, :owner, :associated, :foreign_key]
+defrecord Ecto.Reflections.HasMany, [:field, :owner, :associated, :foreign_key]
 
-defmodule Ecto.Associations.HasMany do
-  defrecordp :assoc, __MODULE__, [:reflection, :loaded, :target]
+defrecord Ecto.Associations.HasMany, [:__loaded__, :__target__, :__name__] do
+  alias Ecto.Associations.HasMany
 
-  def new(params // [], assoc(reflection: refl, target: target)) do
+  def new(params // [], HasMany[__target__: target, __name__: name]) do
+    refl = elem(target, 0).__ecto__(:association, name)
     fk = refl.foreign_key
-    refl.associated.new([{ fk, target }] ++ params)
+    refl.associated.new([{ fk, target.primary_key }] ++ params)
   end
 
-  def to_list(assoc(loaded: nil, reflection: refl)) do
+  def to_list(HasMany[__loaded__: nil, __target__: target, __name__: name]) do
+    refl = elem(target, 0).__ecto__(:association, name)
     raise Ecto.AssociationNotLoadedError,
-      type: :has_many, owner: refl.owner, name: refl.name
+      type: :has_many, owner: refl.owner, name: name
   end
 
-  def to_list(assoc(loaded: loaded)) do
+  def to_list(HasMany[__loaded__: loaded]) do
     loaded
-  end
-
-  def __ecto__(:new) do
-    assoc()
-  end
-
-  def __ecto__(:with_data, reflection, target, association) do
-    assoc(association, reflection: reflection, target: target)
-  end
-
-  def __ecto__(:loaded, value, association) do
-    assoc(association, loaded: value)
-  end
-
-  def __ecto__(:update_loaded, fun, assoc(loaded: loaded)) do
-    assoc(loaded: fun.(loaded))
   end
 end
 

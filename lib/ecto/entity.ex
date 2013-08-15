@@ -102,7 +102,7 @@ defmodule Ecto.Entity do
         module_name = __MODULE__ |> Module.split |> List.last |> String.downcase
         foreign_key = opts[:foreign_key] || :"#{module_name}_#{primary_key}"
         refl = Ecto.Reflections.HasMany[owner: __MODULE__, associated: entity,
-          foreign_key: foreign_key, field: :"__#{name}__", name: name] |> Macro.escape
+          foreign_key: foreign_key, field: :"__#{name}__"] |> Macro.escape
 
         def __ecto__(:association, unquote(name)) do
           unquote(refl)
@@ -110,7 +110,7 @@ defmodule Ecto.Entity do
 
         def unquote(name)(self) do
           assoc = unquote(:"__#{name}__")(self)
-          assoc.__ecto__(:with_data, unquote(refl), self.primary_key)
+          assoc.__target__(self)
         end
       end
     end)
@@ -191,7 +191,7 @@ defmodule Ecto.Entity.Dataset do
   defmacro has_many(name, entity, opts // []) do
     quote do
       name = unquote(name)
-      assoc = Ecto.Associations.HasMany.__ecto__(:new)
+      assoc = Ecto.Associations.HasMany[__name__: name]
       field(:"__#{name}__", :virtual, default: assoc)
       @ecto_assocs { name, [entity: unquote(entity)] ++ unquote(opts) }
     end
