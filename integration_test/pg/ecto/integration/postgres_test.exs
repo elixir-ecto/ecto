@@ -180,7 +180,7 @@ defmodule Ecto.Integration.PostgresTest do
       p1.comments.to_list
     end
 
-    assert [p1, p2, p3] = Ecto.Preloader.run(TestRepo, [p1, p2, p3], :comments)
+    assert [p3, p1, p2] = Ecto.Preloader.run(TestRepo, [p3, p1, p2], :comments)
     assert [Comment[id: ^cid1], Comment[id: ^cid2]] = p1.comments.to_list
     assert [Comment[id: ^cid3], Comment[id: ^cid4]] = p2.comments.to_list
     assert [] = p3.comments.to_list
