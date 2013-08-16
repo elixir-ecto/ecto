@@ -69,6 +69,7 @@ defmodule Ecto.Query.Util do
       :offset   -> query.offset(expr)
       :group_by -> query.update_group_bys(&(&1 ++ [expr]))
       :having   -> query.update_havings(&(&1 ++ [expr]))
+      :preload  -> query.update_preloads(&(&1 ++ [expr]))
     end
   end
 

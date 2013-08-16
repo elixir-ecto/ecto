@@ -84,7 +84,8 @@ defmodule Ecto.Query do
   @type t :: Query.t
 
   defrecord Query, entities: nil, from: nil, joins: [], wheres: [], select: nil,
-                   order_bys: [], limit: nil, offset: nil, group_bys: [], havings: []
+                   order_bys: [], limit: nil, offset: nil, group_bys: [], havings: [],
+                   preloads: []
   defrecord QueryExpr, expr: nil, file: nil, line: nil
 
   alias Ecto.Query.FromBuilder
@@ -94,6 +95,7 @@ defmodule Ecto.Query do
   alias Ecto.Query.LimitOffsetBuilder
   alias Ecto.Query.GroupByBuilder
   alias Ecto.Query.HavingBuilder
+  alias Ecto.Query.PreloadBuilder
   alias Ecto.Query.Util
 
   @doc """
@@ -398,6 +400,16 @@ defmodule Ecto.Query do
       having_expr = unquote(HavingBuilder.escape(expr, binding))
       having = QueryExpr[expr: having_expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(unquote(query), :having, having)
+    end
+  end
+
+  defmacro preload(query, _binding // [], expr) do
+    expr = List.wrap(expr)
+    PreloadBuilder.validate(expr)
+    quote do
+      preload_expr = unquote(expr)
+      preload = QueryExpr[expr: preload_expr, file: __ENV__.file, line: __ENV__.line]
+      Util.merge(unquote(query), :preload, preload)
     end
   end
 

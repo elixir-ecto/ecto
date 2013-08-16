@@ -7,7 +7,13 @@ defmodule Ecto.Preloader do
   alias Ecto.Reflections.HasMany
 
   # TODO: Position in tuple
-  def run(repo, records, name) do
+  def run(repo, original, name, pos // []) do
+    if pos == [] do
+      records = original
+    else
+      records = Enum.map(original, &get_from_pos(&1, pos))
+    end
+
     record = Enum.first(records)
     module = elem(record, 0)
     refl = module.__ecto__(:association, name)
@@ -26,9 +32,17 @@ defmodule Ecto.Preloader do
     query = Query[from: refl.associated, wheres: [where], order_bys: [order_bys]]
 
     assocs = repo.all(query)
-    combine(records, assocs, refl, [], [])
+    records = combine(records, assocs, refl, [], [])
       |> Enum.sort(&cmp_prev_record/2)
       |> Enum.map(&elem(&1, 0))
+
+    if pos == [] do
+      records
+    else
+      records
+        |> Enum.zip(original)
+        |> Enum.map(fn { rec, orig } -> set_at_pos(orig, pos, rec) end)
+    end
   end
 
   defp combine(records, [], refl, acc1, acc2) do
@@ -64,5 +78,46 @@ defmodule Ecto.Preloader do
     association = apply(record, field, [])
     association = association.__loaded__(value)
     { apply(record, field, [association]), ix }
+  end
+
+  defp get_from_pos(value, []), do: value
+
+  defp get_from_pos(tuple, [ix|pos]) when is_tuple(tuple) do
+    elem(tuple, ix) |> get_from_pos(pos)
+  end
+
+  defp get_from_pos(list, [ix|pos]) when is_list(list) do
+    Enum.at(list, ix) |> get_from_pos(pos)
+  end
+
+  defp set_at_pos(_other, [], value) do
+    value
+  end
+
+  defp set_at_pos(tuple, [ix|pos], value) when is_tuple(tuple) do
+    elem = elem(tuple, ix)
+    set_elem(tuple, ix, set_at_pos(elem, pos, value))
+  end
+
+  defp set_at_pos(list, [ix|pos], value) when is_list(list) do
+    update_at(list, ix, &set_at_pos(&1, pos, value))
+  end
+
+
+  # TODO: Add to List module?
+  defp update_at(list, index, fun) do
+    if index < 0 do
+      do_update_at(list, length(list) + index, fun)
+    else
+      do_update_at(list, index, fun)
+    end
+  end
+
+  defp do_update_at([value|list], index, fun) when index <= 0 do
+    [ fun.(value) | list ]
+  end
+
+  defp do_update_at([h|t], index, fun) do
+    [ h | do_update_at(t, index - 1, fun) ]
   end
 end

@@ -134,6 +134,7 @@ defmodule Ecto.Entity do
       end
 
       unquote(assocs_quote)
+      def __ecto__(:association, _), do: nil
 
       # TODO: This can be optimized
       def __ecto__(:allocate, values) do

@@ -9,7 +9,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.QueryExpr
 
   defrecord State, entities: [], vars: [], grouped: [], grouped?: false,
-    in_agg?: false, apis: nil
+    in_agg?: false, apis: nil, from: nil
 
   # Adds type, file and line metadata to the exception
   defmacrop rescue_metadata(type, file, line, block) do
@@ -32,13 +32,14 @@ defmodule Ecto.Query.Validator do
     grouped = group_by_entities(query.group_bys, query.entities)
     is_grouped = query.group_bys != [] or query.havings != []
     state = State[entities: query.entities, grouped: grouped,
-                  grouped?: is_grouped, apis: apis]
+                  grouped?: is_grouped, apis: apis, from: query.from]
 
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
     validate_order_bys(query.order_bys, state)
     validate_group_bys(query.group_bys, state)
     validate_havings(query.havings, state)
+    validate_preloads(query.preloads, state)
     unless opts[:skip_select], do: validate_select(query.select, state)
   end
 
@@ -86,11 +87,11 @@ defmodule Ecto.Query.Validator do
 
   defp validate_only_where(query) do
     # Update validation check if assertion fails
-    unquote(unless size(Query[]) == 11, do: raise "Ecto.Query.Query out of date")
+    unquote(unless size(Query[]) == 12, do: raise "Ecto.Query.Query out of date")
 
     # TODO: File and line metadata
     unless match?(Query[joins: [], select: nil, order_bys: [], limit: nil,
-        offset: nil, group_bys: [], havings: []], query) do
+        offset: nil, group_bys: [], havings: [], preloads: []], query) do
       raise Ecto.InvalidQuery, reason: "update query can only have a single `where` expression"
     end
   end
@@ -126,11 +127,6 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_order_bys(order_bys, state) do
-    # Remove the direction so we can validate the field
-    order_bys = Enum.map(order_bys, fn expr ->
-      expr.update_expr(&Enum.map(&1, fn { _, var, field } -> { var, field } end))
-    end)
-
     validate_field_list(:order_by, order_bys, state)
   end
 
@@ -148,12 +144,36 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_field({ var, field }, state) do
+  # order_by field
+  defp validate_field({ _, var, field }, state) do
+    validate_field({ var, field }, state)
+  end
+
+  # group_by field
+  defp validate_field({ var, field }, State[] = state) do
     entity = Util.find_entity(state.entities, var)
+    do_validate_field(entity, field)
+  end
+
+  defp do_validate_field(entity, field) do
     type = entity.__ecto__(:field_type, field)
     unless type do
       raise Ecto.InvalidQuery, reason: "unknown field `#{field}` on `#{inspect entity}`"
     end
+  end
+
+  defp validate_preloads(preloads, State[] = state) do
+    Enum.each(preloads, fn(QueryExpr[] = expr) ->
+      rescue_metadata(:preload, expr.file, expr.line) do
+        Enum.map(expr.expr, fn field ->
+          entity = state.from
+          type = entity.__ecto__(:association, field)
+          unless type do
+            raise Ecto.InvalidQuery, reason: "`#{field}` is not an assocation field on `#{inspect entity}`"
+          end
+        end)
+      end
+    end)
   end
 
   defp validate_select(QueryExpr[] = expr, State[] = state) do

@@ -186,6 +186,32 @@ defmodule Ecto.Integration.PostgresTest do
     assert [] = p3.comments.to_list
   end
 
+  test "preload keyword query" do
+    p1 = TestRepo.create(Post[title: "1"])
+    p2 = TestRepo.create(Post[title: "2"])
+    TestRepo.create(Post[title: "3"])
+
+    Comment[id: cid1] = TestRepo.create(Comment[text: "1", post_id: p1.id])
+    Comment[id: cid2] = TestRepo.create(Comment[text: "2", post_id: p1.id])
+    Comment[id: cid3] = TestRepo.create(Comment[text: "3", post_id: p2.id])
+    Comment[id: cid4] = TestRepo.create(Comment[text: "4", post_id: p2.id])
+
+    query = from(p in Post, preload: [:comments], select: p)
+
+    assert [p1, p2, p3] = TestRepo.all(query)
+    assert [Comment[id: ^cid1], Comment[id: ^cid2]] = p1.comments.to_list
+    assert [Comment[id: ^cid3], Comment[id: ^cid4]] = p2.comments.to_list
+    assert [] = p3.comments.to_list
+
+    query = from(p in Post, preload: [:comments], select: { 0, [p] })
+    posts = TestRepo.all(query)
+    [p1, p2, p3] = Enum.map(posts, fn { 0, [p] } -> p end)
+
+    assert [Comment[id: ^cid1], Comment[id: ^cid2]] = p1.comments.to_list
+    assert [Comment[id: ^cid3], Comment[id: ^cid4]] = p2.comments.to_list
+    assert [] = p3.comments.to_list
+  end
+
   test "row transform" do
     post = TestRepo.create(Post[title: "1", text: "hi"])
     query = from(p in Post, select: { p.title, [ p, { p.text } ] })
