@@ -64,12 +64,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     table       = module.__ecto__(:dataset)
     primary_key = module.__ecto__(:primary_key)
 
-    zipped = module.__ecto__(:entity_kw, entity)
-
-    # Don't insert primary key
-    if primary_key do
-      [_|zipped] = zipped
-    end
+    zipped = module.__ecto__(:entity_kw, entity, primary_key: false)
 
     [ fields, values ] = List.unzip(zipped)
 

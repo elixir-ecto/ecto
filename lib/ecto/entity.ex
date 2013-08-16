@@ -146,10 +146,16 @@ defmodule Ecto.Entity do
       #   Enum.zip(unquote(field_names), values)
       # end
 
-      def __ecto__(:entity_kw, entity) do
+      def __ecto__(:entity_kw, entity, opts // []) do
+        filter_pk = opts[:primary_key] == false
+        primary_key = __ecto__(:primary_key)
+
         [_module|values] = tuple_to_list(entity)
-        Enum.zip(unquote(all_field_names), values)
-          |> Enum.filter(fn({ field, _ }) -> __ecto__(:field, field) end)
+        zipped = Enum.zip(unquote(all_field_names), values)
+        Enum.filter(zipped, fn { field, _ } ->
+          __ecto__(:field, field) &&
+            (not filter_pk || (filter_pk && field != primary_key))
+        end)
       end
     end
   end
