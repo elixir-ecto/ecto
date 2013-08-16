@@ -403,6 +403,23 @@ defmodule Ecto.Query do
     end
   end
 
+  @doc """
+    A preload query expression. Preloads the specified fields on the entity in the
+  from expression. Loads all associated records for each entity in the result
+  set based on the association. The fields have to be association fields and the
+  entity has to be in the select expression.
+
+  ## Keywords examples
+
+      # Returns all posts and their associated comments
+      from(p in Post,
+        preload: [:comments],
+        select: p)
+
+  ## Expressions examples
+
+      from(Post) |> preload(:comments) |> select([p], p)
+  """
   defmacro preload(query, _binding // [], expr) do
     expr = List.wrap(expr)
     PreloadBuilder.validate(expr)
