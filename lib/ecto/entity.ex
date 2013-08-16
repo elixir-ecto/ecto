@@ -42,7 +42,7 @@ defmodule Ecto.Entity do
         end
 
         @ecto_dataset unquote(name)
-        @ecto_primary_key primary_key
+        @ecto_primary_key nil
 
         if primary_key do
           field(primary_key, :integer, primary_key: true)
@@ -152,6 +152,7 @@ defmodule Ecto.Entity do
 
         [_module|values] = tuple_to_list(entity)
         zipped = Enum.zip(unquote(all_field_names), values)
+
         Enum.filter(zipped, fn { field, _ } ->
           __ecto__(:field, field) &&
             (not filter_pk || (filter_pk && field != primary_key))
@@ -174,7 +175,10 @@ defmodule Ecto.Entity.Dataset do
 
   ## Options
 
-    * `:default` - Sets the default value on the entity and the record
+    * `:default` - Sets the default value on the entity and the record;
+    * `:primary_key` - Sets the field to be the primary key, the default
+      primary key have to be overridden by setting its name to `nil`, see
+      `Ecto.Entity.dataset`;
   """
   defmacro field(name, type, opts // []) do
     # TODO: Check that the opts are valid for the given type
@@ -182,6 +186,7 @@ defmodule Ecto.Entity.Dataset do
     quote do
       field_name = unquote(name)
       type = unquote(type)
+      opts = unquote(opts)
       Ecto.Entity.Dataset.check_type(type)
 
       clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> field_name == prev_name end)
@@ -189,7 +194,15 @@ defmodule Ecto.Entity.Dataset do
         raise ArgumentError, message: "field `#{field_name}` was already set on entity"
       end
 
-      opts = unquote(opts)
+      if opts[:primary_key] do
+        if @ecto_primary_key do
+          message = "there can only be one primary key, a custom primary key " <>
+            "requires the default to be disabled, see `Ecto.Entity.dataset`"
+          raise ArgumentError, message: message
+        end
+        @ecto_primary_key field_name
+      end
+
       default = opts[:default]
       @ecto_fields { field_name, [type: type] ++ opts }
     end

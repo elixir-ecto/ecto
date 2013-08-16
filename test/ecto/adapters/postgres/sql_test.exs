@@ -297,4 +297,19 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nJOIN entity2 AS e1 ON e0.x = e1.z\n" <>
       "JOIN entity AS e2 ON TRUE"
   end
+
+  defmodule PKEntity do
+    use Ecto.Entity
+
+    dataset "entity", nil do
+      field :x, :integer
+      field :pk, :integer, primary_key: true
+      field :y, :integer
+    end
+  end
+
+  test "primary key any location" do
+    entity = PKEntity[x: 10, pk: 20, y: 30]
+    assert SQL.insert(entity) == "INSERT INTO entity (x, y)\nVALUES (10, 30)\nRETURNING pk"
+  end
 end

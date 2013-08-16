@@ -97,4 +97,39 @@ defmodule Ecto.EntityTest do
     assert entity.primary_key("abc") == entity
     assert entity.update_primary_key(&1 <> "abc") == entity
   end
+
+  defmodule EntityCustomPK do
+    use Ecto.Entity
+
+    dataset "my_entity", nil do
+      field :x, :string
+      field :pk, :integer, primary_key: true
+    end
+  end
+
+  test "custom primary key" do
+    assert EntityCustomPK.__record__(:fields) == [x: nil, pk: nil]
+    assert EntityCustomPK.__ecto__(:field_names) == [:x, :pk]
+
+    entity = EntityCustomPK[pk: "123"]
+    assert entity.primary_key == "123"
+    assert EntityCustomPK[pk: "abc"] = entity.primary_key("abc")
+    assert EntityCustomPK[pk: "123abc"] = entity.update_primary_key(&1 <> "abc")
+  end
+
+  test "fail custom primary key" do
+    message = "there can only be one primary key, a custom primary key " <>
+      "requires the default to be disabled, see `Ecto.Entity.dataset`"
+
+    assert_raise ArgumentError, message, fn ->
+      defmodule EntityFailCustomPK do
+        use Ecto.Entity
+
+        dataset "my_entity" do
+          field :x, :string
+          field :pk, :integer, primary_key: true
+        end
+      end
+    end
+  end
 end
