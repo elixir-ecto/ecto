@@ -196,7 +196,11 @@ defmodule Ecto.Query.Validator do
 
   # var
   defp type_check({ :&, _, [_] } = var, State[] = state) do
-    Util.find_entity(state.entities, var)
+    entity = Util.find_entity(state.entities, var)
+    fields = entity.__ecto__(:field_names)
+    Enum.each(fields, &check_grouped({ entity, &1 }, state))
+
+    entity
   end
 
   # ops & functions

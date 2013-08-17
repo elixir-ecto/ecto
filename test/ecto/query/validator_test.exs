@@ -221,6 +221,16 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "group_by groups entity expression" do
+    query = from(PostEntity) |> group_by([p], [p.id, p.title]) |> select([p], p)
+    validate(query)
+
+    query = from(PostEntity) |> group_by([p], p.id) |> select([p], p)
+    assert_raise Ecto.InvalidQuery, %r"`Ecto.Query.ValidatorTest.PostEntity.title` must appear in `group_by`", fn ->
+      validate(query)
+    end
+  end
+
   test "group_by doesn't group where" do
     query = from(PostEntity) |> group_by([p], p.id) |> where([p], p.title == "") |> select([p], p.id)
     validate(query)
