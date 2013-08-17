@@ -21,7 +21,21 @@ defrecord Ecto.Associations.HasMany, [:__loaded__, :__target__, :__name__] do
 end
 
 defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
-  def to_query(_), do: raise nil # TODO
+  alias Ecto.Associations.HasMany
+  alias Ecto.Query.Query
+  alias Ecto.Query.QueryExpr
+
+  def to_query(HasMany[__target__: target, __name__: name]) do
+    refl = elem(target, 0).__ecto__(:association, name)
+
+    pk = target.primary_key
+    fk = refl.foreign_key
+
+    from = refl.associated
+    where_expr = quote do &0.unquote(fk) == unquote(pk) end
+    where = QueryExpr[expr: where_expr]
+    Query[from: from, wheres: [where]]
+  end
 end
 
 defimpl Enumerable, for: Ecto.Associations.HasMany do

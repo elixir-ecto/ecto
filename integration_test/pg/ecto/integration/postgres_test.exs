@@ -224,4 +224,22 @@ defmodule Ecto.Integration.PostgresTest do
     query = from(p in Post, join: c in Comment, on: true, select: { p, c })
     [{ ^post, ^comment }] = TestRepo.all(query)
   end
+
+  test "has_many queryable" do
+    p1 = TestRepo.create(Post[title: "1"])
+    p2 = TestRepo.create(Post[title: "1"])
+
+    Comment[id: cid1] = TestRepo.create(Comment[text: "1", post_id: p1.id])
+    Comment[id: cid2] = TestRepo.create(Comment[text: "2", post_id: p1.id])
+    Comment[id: cid3] = TestRepo.create(Comment[text: "3", post_id: p2.id])
+
+    query = from(c in p1.comments)
+    assert [Comment[id: ^cid1], Comment[id: ^cid2]] = TestRepo.all(query)
+
+    query = from(c in p2.comments)
+    assert [Comment[id: ^cid3]] = TestRepo.all(query)
+
+    query = from(c in p1.comments, where: c.text == "1")
+    assert [Comment[id: ^cid1]] = TestRepo.all(query)
+  end
 end
