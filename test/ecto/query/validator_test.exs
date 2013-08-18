@@ -11,6 +11,7 @@ defmodule Ecto.Query.ValidatorTest do
 
     dataset :post_entity do
       field :title, :string
+      has_many :comments, CommentEntity
     end
   end
 
@@ -298,6 +299,26 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "cannot reference virtual field" do
     query = from(CommentEntity) |> select([c], c.temp)
+    assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+  end
+
+  test "can only preload association field" do
+    query = from(PostEntity) |> preload(:comments)
+    validate(query)
+
+    query = from(PostEntity) |> preload(:title)
+    assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+  end
+
+  test "entity have to be selected with preload" do
+    query = from(PostEntity) |> preload(:comments) |> select([p], p)
+    validate(query)
+
+    query = from(PostEntity) |> preload(:comments) |> select([p], 0)
     assert_raise Ecto.InvalidQuery, fn ->
       validate(query)
     end

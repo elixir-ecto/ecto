@@ -126,6 +126,39 @@ defmodule Ecto.Query.Util do
   def type_eq?(x, x), do: true
   def type_eq?(_, _), do: false
 
+  # Get query var from entity
+  def from_entity_var(Query[] = query) do
+    entities = tuple_to_list(query.entities)
+    pos = Enum.find_index(entities, &(&1 == query.from))
+    { :&, [], [pos] }
+  end
+
+  # Find var in select clause. Returns a list of tuple and list indicies to
+  # find the var.
+  def locate_var({ left, right }, var) do
+    locate_var({ :{}, [], [left, right] }, var)
+  end
+
+  def locate_var({ :{}, _, list }, var) do
+    locate_var(list, var)
+  end
+
+  def locate_var(list, var) when is_list(list) do
+    list = Stream.with_index(list)
+    { poss, pos } = Enum.find_value(list, fn { elem, ix } ->
+      if poss = locate_var(elem, var) do
+        { poss, ix }
+      else
+        nil
+      end
+    end)
+    [pos|poss]
+  end
+
+  def locate_var(expr, var) do
+    if expr == var, do: []
+  end
+
   defp escape_var(var) when is_atom(var) do
     var
   end

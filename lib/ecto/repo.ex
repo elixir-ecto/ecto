@@ -390,43 +390,13 @@ defmodule Ecto.Repo do
   end
 
   defp preload(repo, query, results) do
-    var = from_entity_var(query)
-    pos = locate_var(query.select.expr, var)
+    var = Util.from_entity_var(query)
+    pos = Util.locate_var(query.select.expr, var)
 
     Enum.reduce(query.preloads, results, fn preload, acc ->
       Enum.reduce(preload.expr, acc, fn field, acc ->
         Ecto.Preloader.run(repo, acc, field, pos)
       end)
     end)
-  end
-
-  defp from_entity_var(Query[] = query) do
-    entities = tuple_to_list(query.entities)
-    pos = Enum.find_index(entities, &(&1 == query.from))
-    { :&, [], [pos] }
-  end
-
-  defp locate_var({ left, right }, var) do
-    locate_var({ :{}, [], [left, right] }, var)
-  end
-
-  defp locate_var({ :{}, _, list }, var) do
-    locate_var(list, var)
-  end
-
-  defp locate_var(list, var) when is_list(list) do
-    list = Stream.with_index(list)
-    { poss, pos } = Enum.find_value(list, fn { elem, ix } ->
-      if poss = locate_var(elem, var) do
-        { poss, ix }
-      else
-        nil
-      end
-    end)
-    [pos|poss]
-  end
-
-  defp locate_var(expr, var) do
-    if expr == var, do: []
   end
 end

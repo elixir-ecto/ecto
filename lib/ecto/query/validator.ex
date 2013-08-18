@@ -40,7 +40,11 @@ defmodule Ecto.Query.Validator do
     validate_group_bys(query.group_bys, state)
     validate_havings(query.havings, state)
     validate_preloads(query.preloads, state)
-    unless opts[:skip_select], do: validate_select(query.select, state)
+
+    unless opts[:skip_select] do
+      validate_select(query.select, state)
+      preload_selected(query)
+    end
   end
 
   def validate_update(Query[] = query, apis, values) do
@@ -179,6 +183,19 @@ defmodule Ecto.Query.Validator do
   defp validate_select(QueryExpr[] = expr, State[] = state) do
     rescue_metadata(:select, expr.file, expr.line) do
       select_clause(expr.expr, state)
+    end
+  end
+
+  defp preload_selected(Query[select: select, preloads: preloads, from: from] = query) do
+    unless preloads == [] do
+      rescue_metadata(:select, select.file, select.line) do
+        var = Util.from_entity_var(query)
+        pos = Util.locate_var(select.expr, var)
+        if nil?(pos) do
+          raise Ecto.InvalidQuery, reason: "entity in from expression `#{from}` " <>
+            "needs to be selected with preload query"
+        end
+      end
     end
   end
 
