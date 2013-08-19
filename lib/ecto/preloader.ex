@@ -76,7 +76,7 @@ defmodule Ecto.Preloader do
 
   defp set_loaded({ record, ix }, HasMany[field: field], value) do
     association = apply(record, field, [])
-    association = association.__loaded__(value)
+    association = association.__ecto__(:loaded, value)
     { apply(record, field, [association]), ix }
   end
 

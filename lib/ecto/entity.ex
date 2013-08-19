@@ -110,7 +110,7 @@ defmodule Ecto.Entity do
 
         def unquote(name)(self) do
           assoc = unquote(:"__#{name}__")(self)
-          assoc.__target__(self)
+          assoc.__ecto__(:target, self)
         end
       end
     end)
@@ -141,10 +141,6 @@ defmodule Ecto.Entity do
         zip = Enum.zip(unquote(field_names), values)
         __MODULE__.new(zip)
       end
-
-      # def __ecto__(:zip_kw, values) do
-      #   Enum.zip(unquote(field_names), values)
-      # end
 
       def __ecto__(:entity_kw, entity, opts // []) do
         filter_pk = opts[:primary_key] == false
@@ -211,7 +207,7 @@ defmodule Ecto.Entity.Dataset do
   defmacro has_many(name, entity, opts // []) do
     quote do
       name = unquote(name)
-      assoc = Ecto.Associations.HasMany[__name__: name]
+      assoc = Ecto.Associations.HasMany.__ecto__(:new, name)
       field(:"__#{name}__", :virtual, default: assoc)
       @ecto_assocs { name, [entity: unquote(entity)] ++ unquote(opts) }
     end
