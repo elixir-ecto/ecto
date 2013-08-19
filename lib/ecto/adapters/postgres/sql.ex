@@ -158,7 +158,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
         entity == join and not name in names
       end)
 
-      on_sql = expr(on, entities)
+      on_sql = expr(on.expr, entities)
 
       { "JOIN #{entity.__ecto__(:dataset)} AS #{name} ON " <> on_sql, [name|names] }
     end) |> elem(0)

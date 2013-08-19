@@ -22,8 +22,13 @@ defmodule Ecto.Query.Normalizer do
 
   # Adds all entities to the query for fast access
   defp setup_entities(Query[] = query) do
-    entities = (if query.from, do: [query.from], else: []) ++
-      Enum.map(query.joins, &(&1.expr |> elem(0)))
-    query.entities(list_to_tuple(entities))
+    froms = if query.from, do: [query.from], else: []
+    joins = Enum.map(query.joins, fn join ->
+      case join.expr do
+        { entity, _ } -> entity
+        entity -> entity
+      end
+    end)
+    query.entities(list_to_tuple(froms ++ joins))
   end
 end

@@ -172,9 +172,6 @@ defmodule Ecto.QueryTest do
     assert_raise Ecto.InvalidQuery, "an `on` query expression must follow a `from`", fn ->
       delay_compile(from(c in CommentEntity, on: c.text == "", select: c))
     end
-    assert_raise Ecto.InvalidQuery, "a `join` query expression have to be followed by `on`", fn ->
-      delay_compile(from(c in CommentEntity, join: p in PostEntity, select: c))
-    end
   end
 
   test "join queries adds binds" do

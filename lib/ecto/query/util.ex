@@ -5,6 +5,7 @@ defmodule Ecto.Query.Util do
 
   alias Ecto.Queryable
   alias Ecto.Query.Query
+  alias Ecto.Query.QueryExpr
 
   @doc """
   Validates the query to check if it is correct. Should be called before
@@ -57,19 +58,35 @@ defmodule Ecto.Query.Util do
   @doc false
   def merge(queryable, type, expr) do
     query = Query[] = Queryable.to_query(queryable)
-    check_merge(query, Query.new([{ type, expr }]))
 
-    case type do
-      :from     -> query.from(expr)
-      :join     -> query.update_joins(&(&1 ++ [expr]))
-      :where    -> query.update_wheres(&(&1 ++ [expr]))
-      :select   -> query.select(expr)
-      :order_by -> query.update_order_bys(&(&1 ++ [expr]))
-      :limit    -> query.limit(expr)
-      :offset   -> query.offset(expr)
-      :group_by -> query.update_group_bys(&(&1 ++ [expr]))
-      :having   -> query.update_havings(&(&1 ++ [expr]))
-      :preload  -> query.update_preloads(&(&1 ++ [expr]))
+    if type == :on do
+      merge_on(query, expr)
+    else
+      check_merge(query, Query.new([{ type, expr }]))
+
+      case type do
+        :from     -> query.from(expr)
+        :join     -> query.update_joins(&(&1 ++ [expr]))
+        :where    -> query.update_wheres(&(&1 ++ [expr]))
+        :select   -> query.select(expr)
+        :order_by -> query.update_order_bys(&(&1 ++ [expr]))
+        :limit    -> query.limit(expr)
+        :offset   -> query.offset(expr)
+        :group_by -> query.update_group_bys(&(&1 ++ [expr]))
+        :having   -> query.update_havings(&(&1 ++ [expr]))
+        :preload  -> query.update_preloads(&(&1 ++ [expr]))
+      end
+    end
+  end
+
+  @doc false
+  def merge_on(Query[joins: joins] = query, expr) do
+    case Enum.split(joins, -1) do
+      { joins, [QueryExpr[expr: join_expr] = join] } when not is_tuple(join_expr) ->
+        joins = joins ++ [join.expr({ join_expr, expr })]
+        query.joins(joins)
+      _ ->
+        raise Ecto.InvalidQuery, reason: "an `on` query expression must follow a `from`"
     end
   end
 

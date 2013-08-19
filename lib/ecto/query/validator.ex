@@ -102,9 +102,14 @@ defmodule Ecto.Query.Validator do
 
   defp validate_joins(joins, state) do
     state = state.grouped?(false)
-    # Strip entity from query expr so we can reuse validate_booleans
-    joins = Enum.map(joins, fn (expr) -> expr.update_expr(&elem(&1, 1)) end)
-    validate_booleans(:join, joins, state)
+    # Get
+    ons = Enum.map(joins, fn join ->
+      case join.expr do
+        { _, on } -> on
+        _ -> raise Ecto.InvalidQuery, reason: "an `on` query expression have to follow a `from`"
+      end
+    end)
+    validate_booleans(:join_on, ons, state)
   end
 
   defp validate_wheres(wheres, state) do

@@ -64,7 +64,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(PostEntity) |> join([], CommentEntity, "abc") |> select([], 123)
-    assert_raise Ecto.InvalidQuery, %r"join expression", fn ->
+    assert_raise Ecto.InvalidQuery, %r"join_on expression", fn ->
       validate(query)
     end
   end
@@ -320,6 +320,13 @@ defmodule Ecto.Query.ValidatorTest do
 
     query = from(PostEntity) |> preload(:comments) |> select([p], 0)
     assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+  end
+
+  test "join have to be followed by on" do
+    query = from(c in CommentEntity, join: p in PostEntity, select: c)
+    assert_raise Ecto.InvalidQuery, "an `on` query expression have to follow a `from`", fn ->
       validate(query)
     end
   end
