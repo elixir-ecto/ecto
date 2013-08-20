@@ -3,7 +3,6 @@ defrecord Ecto.Reflections.HasMany, [:field, :owner, :associated, :foreign_key]
 defmodule Ecto.Associations.HasMany do
   # Needs to be defrecordp because we don't want pollute the module
   # with functions generated for the record
-
   defrecordp :assoc, __MODULE__, [:loaded, :target, :name]
 
   def new(params // [], assoc(target: target, name: name)) do

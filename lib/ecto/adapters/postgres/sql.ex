@@ -76,11 +76,12 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for an update statement
   def update(entity) do
-    module      = elem(entity, 0)
-    table       = module.__ecto__(:dataset)
+    module   = elem(entity, 0)
+    table    = module.__ecto__(:dataset)
+    pk_field = module.__ecto__(:primary_key)
+    pk_value = entity.primary_key
 
-    zipped = module.__ecto__(:entity_kw, entity)
-    [{ pk_field, pk_value }|zipped] = zipped
+    zipped = module.__ecto__(:entity_kw, entity, primary_key: false)
 
     zipped_sql = Enum.map_join(zipped, ", ", fn({k, v}) ->
       "#{k} = #{literal(v)}"
@@ -115,12 +116,12 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for a delete statement
   def delete(entity) do
-    module      = elem(entity, 0)
-    table       = module.__ecto__(:dataset)
-    primary_key = module.__ecto__(:primary_key)
-    pk_value    = elem(entity, 1)
+    module   = elem(entity, 0)
+    table    = module.__ecto__(:dataset)
+    pk_field = module.__ecto__(:primary_key)
+    pk_value = entity.primary_key
 
-    "DELETE FROM #{table} WHERE #{primary_key} = #{literal(pk_value)}"
+    "DELETE FROM #{table} WHERE #{pk_field} = #{literal(pk_value)}"
   end
 
   # Generate SQL for an delete all statement
