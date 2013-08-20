@@ -63,14 +63,15 @@ defmodule Ecto.Adapters.Postgres.SQL do
     module      = elem(entity, 0)
     table       = module.__ecto__(:dataset)
     primary_key = module.__ecto__(:primary_key)
+    pk_value    = entity.primary_key
 
-    zipped = module.__ecto__(:entity_kw, entity, primary_key: false)
+    zipped = module.__ecto__(:entity_kw, entity, primary_key: !!pk_value)
 
     [ fields, values ] = List.unzip(zipped)
 
     "INSERT INTO #{table} (" <> Enum.join(fields, ", ") <> ")\n" <>
     "VALUES (" <> Enum.map_join(values, ", ", &literal(&1)) <> ")" <>
-    if primary_key, do: "\nRETURNING #{primary_key}", else: ""
+    if primary_key && !pk_value, do: "\nRETURNING #{primary_key}", else: ""
   end
 
   # Generate SQL for an update statement

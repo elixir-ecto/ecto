@@ -309,7 +309,15 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "primary key any location" do
-    entity = PKEntity[x: 10, pk: 20, y: 30]
+    entity = PKEntity[x: 10, y: 30]
     assert SQL.insert(entity) == "INSERT INTO entity (x, y)\nVALUES (10, 30)\nRETURNING pk"
+
+    entity = PKEntity[x: 10, pk: 20, y: 30]
+    assert SQL.insert(entity) == "INSERT INTO entity (x, pk, y)\nVALUES (10, 20, 30)"
+  end
+
+  test "send explicit set primary key" do
+    entity = Entity[id: 123, x: 0, y: 1]
+    assert SQL.insert(entity) == "INSERT INTO entity (id, x, y)\nVALUES (123, 0, 1)"
   end
 end
