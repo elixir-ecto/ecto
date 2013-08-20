@@ -158,7 +158,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
       { entity, name } = Enum.find(entities_list, fn({ entity, name }) ->
         entity == join and not name in names
       end)
-
       on_sql = expr(on.expr, entities)
 
       { "JOIN #{entity.__ecto__(:dataset)} AS #{name} ON " <> on_sql, [name|names] }

@@ -225,6 +225,15 @@ defmodule Ecto.Integration.PostgresTest do
     [{ ^post, ^comment }] = TestRepo.all(query)
   end
 
+  test "association join" do
+    post = TestRepo.create(Post[title: "1", text: "hi"])
+    c1 = TestRepo.create(Comment[text: "hey", post_id: post.id])
+    c2 = TestRepo.create(Comment[text: "heya", post_id: post.id])
+
+    query = from(p in Post, join: c in p.comments, select: { p, c })
+    [{ ^post, ^c1 }, { ^post, ^c2 }] = TestRepo.all(query)
+  end
+
   test "has_many queryable" do
     p1 = TestRepo.create(Post[title: "1"])
     p2 = TestRepo.create(Post[title: "1"])

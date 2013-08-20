@@ -17,7 +17,7 @@ defmodule Ecto.Query.BuilderUtil do
       dot_escaped = { :{}, [], [:., [], [left_escaped, right]] }
       { :{}, [], [dot_escaped, [], []] }
     else
-      raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound in a from expression"
+      raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound"
     end
   end
 

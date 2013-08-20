@@ -102,14 +102,18 @@ defmodule Ecto.Query.Validator do
 
   defp validate_joins(joins, state) do
     state = state.grouped?(false)
-    # Get
-    ons = Enum.map(joins, fn join ->
+
+    { ons, assocs } = Enum.partition(joins, fn join ->
       case join.expr do
-        { _, on } -> on
+        { _, _ } -> true
+        { :., _, _ } -> false
         _ -> raise Ecto.InvalidQuery, reason: "an `on` query expression have to follow a `from`"
       end
     end)
+
+    ons = Enum.map(ons, &(elem(&1.expr, 1)))
     validate_booleans(:join_on, ons, state)
+    validate_assoc_joins(assocs, state)
   end
 
   defp validate_wheres(wheres, state) do
@@ -130,6 +134,20 @@ defmodule Ecto.Query.Validator do
           format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
           raise Ecto.InvalidQuery, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
             "is of type `#{format_expr_type}`, has to be of boolean type"
+        end
+      end
+    end)
+  end
+
+  defp validate_assoc_joins(joins, State[] = state) do
+    Enum.each(joins, fn QueryExpr[] = expr ->
+      rescue_metadata(:join, expr.file, expr.line) do
+        { :., _, [left, right] } = expr.expr
+        entity = Util.find_entity(state.entities, left)
+        refl = entity.__ecto__(:association, right)
+        unless refl do
+          raise Ecto.InvalidQuery, reason: "association join can only be performed " <>
+            "assocation fields"
         end
       end
     end)

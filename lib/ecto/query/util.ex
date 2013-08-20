@@ -40,18 +40,29 @@ defmodule Ecto.Query.Util do
   end
 
   @doc """
-  Normalizes the query. Should be called before
-  compilation by the query adapter.
+  Normalizes the query. Should be called before validation and compilation by
+  the query adapter.
   """
   def normalize(query, opts // []) do
     Ecto.Query.Normalizer.normalize(query, opts)
   end
 
   @doc """
+  Extra query normalization that needs to happen after validation.
+  """
+  def post_normalize(query) do
+    Ecto.Query.Normalizer.post_normalize(query)
+  end
+
+  @doc """
   Look up an entity with a variable.
   """
-  def find_entity(entities, { :&, _, [ix] }) do
+  def find_entity(entities, { :&, _, [ix] }) when is_tuple(entities) do
     elem(entities, ix)
+  end
+
+  def find_entity(entities, { :&, _, [ix] }) when is_list(entities) do
+    Enum.at(entities, ix)
   end
 
   # Merges a Queryable with a query expression
@@ -85,8 +96,10 @@ defmodule Ecto.Query.Util do
       { joins, [QueryExpr[expr: join_expr] = join] } when not is_tuple(join_expr) ->
         joins = joins ++ [join.expr({ join_expr, expr })]
         query.joins(joins)
+      { _, [QueryExpr[expr: { :., _, _}]] } ->
+        raise Ecto.InvalidQuery, reason: "an `on` query expression cannot follow an assocation join"
       _ ->
-        raise Ecto.InvalidQuery, reason: "an `on` query expression must follow a `from`"
+        raise Ecto.InvalidQuery, reason: "an `on` query expression must follow a `join`"
     end
   end
 
@@ -145,8 +158,13 @@ defmodule Ecto.Query.Util do
 
   # Get query var from entity
   def from_entity_var(Query[] = query) do
+    entity_var(query, query.from)
+  end
+
+  # Get var for given entity in query
+  def entity_var(Query[] = query, entity) do
     entities = tuple_to_list(query.entities)
-    pos = Enum.find_index(entities, &(&1 == query.from))
+    pos = Enum.find_index(entities, &(&1 == entity))
     { :&, [], [pos] }
   end
 

@@ -235,6 +235,7 @@ defmodule Ecto.Repo do
     query = Queryable.to_query(queryable)
     query = Util.normalize(query)
     Util.validate(query, repo.query_apis)
+    query = Util.post_normalize(query)
     reason = "fetching entities"
     result = adapter.all(repo, query) |> check_result(adapter, reason)
 
@@ -389,14 +390,13 @@ defmodule Ecto.Repo do
     end)
   end
 
-  defp preload(repo, query, results) do
+  defp preload(repo, Query[] = query, results) do
     var = Util.from_entity_var(query)
     pos = Util.locate_var(query.select.expr, var)
+    preloads = Enum.map(query.preloads, &(&1.expr)) |> List.concat
 
-    Enum.reduce(query.preloads, results, fn preload, acc ->
-      Enum.reduce(preload.expr, acc, fn field, acc ->
-        Ecto.Preloader.run(repo, acc, field, pos)
-      end)
+    Enum.reduce(preloads, results, fn field, acc ->
+      Ecto.Preloader.run(repo, acc, field, pos)
     end)
   end
 end

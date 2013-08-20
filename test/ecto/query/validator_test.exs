@@ -330,4 +330,14 @@ defmodule Ecto.Query.ValidatorTest do
       validate(query)
     end
   end
+
+  test "association join" do
+    query = from(p in PostEntity, join: p.comments)
+    validate(query)
+
+    query = from(p in PostEntity, join: p.title)
+    assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+  end
 end

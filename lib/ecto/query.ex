@@ -96,6 +96,7 @@ defmodule Ecto.Query do
   alias Ecto.Query.GroupByBuilder
   alias Ecto.Query.HavingBuilder
   alias Ecto.Query.PreloadBuilder
+  alias Ecto.Query.JoinBuilder
   alias Ecto.Query.Util
 
   @doc """
@@ -198,20 +199,32 @@ defmodule Ecto.Query do
         |> join([c], p in Post, c.post_id == p.id)
         |> select([c, p], { p.title, c.text })
   """
-  defmacro join(query, binding, expr, on) do
-    FromBuilder.validate_query_from(expr)
+  defmacro join(query, binding, expr, on // nil) do
     binding = Util.escape_binding(binding)
-    { [expr_binding], join_expr } = FromBuilder.escape(expr)
-    if expr_binding in binding do
-      raise Ecto.InvalidQuery, reason: "variable `#{expr_binding}` is already defined in query"
+    { expr_bindings, join_expr } = JoinBuilder.escape(expr, binding)
+
+    if JoinBuilder.assoc_join?(expr) and nil?(on) do
+      raise Ecto.InvalidQuery, reason: "`join` expression requires explicit `on` " <>
+        "expression unless association join expression"
+    end
+    if (bind = Enum.first(expr_bindings)) && bind in binding do
+      raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
     end
 
-    binding = binding ++ [expr_binding]
-    on_expr = WhereBuilder.escape(on, binding)
+    on_expr = if on do
+      binding = binding ++ expr_bindings
+      WhereBuilder.escape(on, binding)
+    end
 
     quote do
-      on = QueryExpr[expr: unquote(on_expr), file: __ENV__.file, line: __ENV__.line]
-      expr = { unquote(join_expr), on }
+      on_expr = unquote(on_expr)
+      join_expr = unquote(join_expr)
+      if on_expr do
+        on = QueryExpr[expr: unquote(on_expr), file: __ENV__.file, line: __ENV__.line]
+        expr = { join_expr, on }
+      else
+        expr = join_expr
+      end
       join = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(unquote(query), :join, join)
     end
@@ -453,9 +466,8 @@ defmodule Ecto.Query do
   end
 
   defp build_query_type({ :join, expr }, KwState[] = state) do
-    FromBuilder.validate_query_from(expr)
-    { [bind], expr } = FromBuilder.escape(expr)
-    if bind != :_ and bind in state.binds do
+    { binds, expr } = JoinBuilder.escape(expr, state.binds)
+    if (bind = Enum.first(binds)) && bind != :_ && bind in state.binds do
       raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
     end
 

@@ -39,7 +39,7 @@ defmodule Ecto.Query.BuilderUtilTest do
       escape(quote do :atom end, [])
     end
 
-    message = %r"needs to be bound in a from expression"
+    message = %r"needs to be bound"
 
     assert_raise Ecto.InvalidQuery, message, fn ->
       escape(quote do x.y end, [])
