@@ -226,7 +226,7 @@ defmodule Ecto.Repo do
     case adapter.all(repo, query) |> check_result(adapter, reason) do
       [entity] -> entity
       [] -> nil
-      _ -> raise Ecto.NotSingleResult, entity: entity, primary_key: primary_key, id: id
+      _ -> raise Ecto.NotSingleResult, entity: entity
     end
   end
 
@@ -264,7 +264,10 @@ defmodule Ecto.Repo do
     reason = "updating an entity"
     check_primary_key(entity, reason)
     validate_entity(entity, reason)
-    adapter.update(repo, entity) |> check_result(adapter, reason)
+
+    adapter.update(repo, entity)
+      |> check_result(adapter, reason)
+      |> check_single_result(entity)
   end
 
   @doc false
@@ -296,7 +299,10 @@ defmodule Ecto.Repo do
     reason = "deleting an entity"
     check_primary_key(entity, reason)
     validate_entity(entity, reason)
-    adapter.delete(repo, entity) |> check_result(adapter, reason)
+
+    adapter.delete(repo, entity)
+      |> check_result(adapter, reason)
+      |> check_single_result(entity)
   end
 
   @doc false
@@ -354,6 +360,16 @@ defmodule Ecto.Repo do
       { :error, err } ->
         raise Ecto.AdapterError, adapter: adapter, reason: reason, internal: err
     end
+  end
+
+  def check_single_result(result, entity) do
+    unless result == 1 do
+      module = elem(entity, 0)
+      pk_field = module.__ecto__(:primary_key)
+      pk_value = entity.primary_key
+      raise Ecto.NotSingleResult, entity: module, primary_key: pk_field, id: pk_value
+    end
+    :ok
   end
 
   defp check_primary_key(entity, reason) when is_atom(entity) do

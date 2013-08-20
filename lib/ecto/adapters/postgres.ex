@@ -69,7 +69,7 @@ defmodule Ecto.Adapters.Postgres do
     result = transaction(repo, sql)
 
     case result do
-      { { :update, _ }, _ } -> :ok
+      { { :update, nrows }, _ } -> { :ok, nrows }
       { :error, _ } = err -> err
     end
   end
@@ -89,7 +89,7 @@ defmodule Ecto.Adapters.Postgres do
     result = transaction(repo, sql)
 
     case result do
-      { { :delete, _ }, _ } -> :ok
+      { { :delete, nrows }, _ } -> { :ok, nrows }
       { :error, _ } = err -> err
     end
   end
