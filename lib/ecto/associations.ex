@@ -1,24 +1,60 @@
 defmodule Ecto.Associations do
-  @moduledoc false
+  @moduledoc """
+  Utilities on association.
+  """
 
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
 
-  def normalize(QueryExpr[expr: { _ , _ }] = expr, _query), do: expr
+  @doc """
+  Returns true if join expression is an assocation join.
+  """
+  def assoc_join?({ :., _, _ }), do: true
+  def assoc_join?(_), do: false
 
-  def normalize(QueryExpr[expr: { :., _, [left, right] }] = expr, Query[] = query) do
-    entity = Util.find_entity(query.entities, left)
-    refl = entity.__ecto__(:association, right)
-    associated = refl.associated
-    from = Util.from_entity_var(query)
+  @doc """
+  Returns true if select expression is an assoc selector.
+  """
+  def assoc_select?({ :assoc, _, [_, _] }), do: true
+  def assoc_select?(_), do: false
 
-    assoc_var = Util.entity_var(query, associated)
-    pk = query.from.__ecto__(:primary_key)
-    fk = refl.foreign_key
+  @doc """
+  Transforms a result set based on the assoc selector, combining the entities
+  specified in the assoc selector.
+  """
+  def transform_result(_expr, [], _query), do: true
 
-    on_expr = quote do unquote(assoc_var).unquote(fk) == unquote(from).unquote(pk) end
-    on = QueryExpr[expr: on_expr]
-    expr.expr({ associated, on })
+  def transform_result({ :assoc, _, [parent, child] }, results, Query[] = query) do
+    QueryExpr[expr: join_expr] = Util.find_expr(query, child)
+    { :., _, [^parent, field] } = join_expr
+    refl = query.from.__ecto__(:association, field)
+    field = refl.field
+
+    [{ parent, child }|results] = results
+    combine(results, field, parent, [], [child])
+  end
+
+  defp combine([], field, last_parent, parents, children) do
+    children = Enum.reverse(children)
+    last_parent = set_loaded(last_parent, field, children)
+    Enum.reverse([last_parent|parents])
+  end
+
+  defp combine([{ parent, child }|rows], field, last_parent, parents, children) do
+    if parent.primary_key == last_parent.primary_key do
+      combine(rows, field, parent, parents, [child|children])
+    else
+      children = Enum.reverse(children)
+      last_parent = set_loaded(last_parent, field, children)
+      parents = [last_parent|parents]
+      combine([{ parent, child }|rows], field, parent, parents, [])
+    end
+  end
+
+  defp set_loaded(record, field, loaded) do
+    association = apply(record, field, [])
+    association = association.__ecto__(:loaded, loaded)
+    apply(record, field, [association])
   end
 end

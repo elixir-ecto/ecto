@@ -9,7 +9,9 @@ defmodule Ecto.Adapters.Postgres do
 
   alias Ecto.Adapters.Postgres.SQL
   alias Ecto.Query.Query
+  alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
+  alias Ecto.Query.Normalizer
 
   defmacro __using__(_opts) do
     quote do
@@ -41,11 +43,19 @@ defmodule Ecto.Adapters.Postgres do
 
     case result do
       { { :select, _ }, rows } ->
-        expr = query.select.expr
+        # Transform each row based on select expression
         transformed = Enum.map(rows, fn row ->
           values = tuple_to_list(row)
+          QueryExpr[expr: expr] = Normalizer.normalize_select(query.select)
           transform_row(expr, values, query.entities) |> elem(0)
         end)
+
+        # Combine records in case of assoc selector
+        expr = query.select.expr
+        if Ecto.Associations.assoc_select?(expr) do
+          transformed = Ecto.Associations.transform_result(expr, transformed, query)
+        end
+
         { :ok, transformed }
       { :error, _ } = err -> err
     end

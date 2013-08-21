@@ -177,6 +177,12 @@ defmodule Ecto.Query do
       from(c in City)
 
   """
+  defmacro from(kw) when is_list(kw) do
+    quote do
+      Ecto.Query.from(Ecto.Query.Query[], unquote(kw))
+    end
+  end
+
   defmacro from(expr) do
     { _binds, expr } = FromBuilder.escape(expr)
     expr
@@ -203,7 +209,7 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     { expr_bindings, join_expr } = JoinBuilder.escape(expr, binding)
 
-    if JoinBuilder.assoc_join?(expr) and nil?(on) do
+    if Ecto.Associations.assoc_join?(expr) and nil?(on) do
       raise Ecto.InvalidQuery, reason: "`join` expression requires explicit `on` " <>
         "expression unless association join expression"
     end

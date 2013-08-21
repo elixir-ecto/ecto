@@ -9,7 +9,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.QueryExpr
 
   defrecord State, entities: [], vars: [], grouped: [], grouped?: false,
-    in_agg?: false, apis: nil, from: nil
+    in_agg?: false, apis: nil, from: nil, query: nil
 
   # Adds type, file and line metadata to the exception
   defmacrop rescue_metadata(type, file, line, block) do
@@ -31,8 +31,8 @@ defmodule Ecto.Query.Validator do
 
     grouped = group_by_entities(query.group_bys, query.entities)
     is_grouped = query.group_bys != [] or query.havings != []
-    state = State[entities: query.entities, grouped: grouped,
-                  grouped?: is_grouped, apis: apis, from: query.from]
+    state = State[entities: query.entities, grouped: grouped, grouped?: is_grouped,
+                  apis: apis, from: query.from, query: query]
 
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
@@ -296,6 +296,17 @@ defmodule Ecto.Query.Validator do
   defp type_check(value, _state), do: Util.value_to_type(value)
 
   # Handle top level select cases
+
+  defp select_clause({ :assoc, _, [parent, child] }, State[] = state) do
+    unless Util.find_entity(state.entities, parent) == state.from do
+      raise Ecto.InvalidQuery, reason: "can only associate on the from entity"
+    end
+
+    expr = Util.find_expr(state.query, child)
+    unless expr && Ecto.Associations.assoc_join?(expr.expr) do
+      raise Ecto.InvalidQuery, reason: "can only associate on an association join"
+    end
+  end
 
   defp select_clause({ left, right }, state) do
     select_clause(left, state)

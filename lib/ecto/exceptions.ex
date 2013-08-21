@@ -39,11 +39,9 @@ defexception Ecto.ValidationError, [:entity, :field, :type, :expected_type, :rea
   end
 end
 
-defexception Ecto.NotSingleResult, [:entity] do
-  def message(Ecto.NotSingleResult[entity: entity]) do
-    pk_field = elem(entity, 0).__ecto__(:primary_key)
-    pk_value = entity.primary_key
-    "the result set from `#{inspect entity}` where `#{pk_field} == #{pk_value}` " <>
+defexception Ecto.NotSingleResult, [:entity, :primary_key, :id] do
+  def message(Ecto.NotSingleResult[] = e) do
+    "the result set from `#{e.entity}` where `#{e.primary_key} == #{e.id}` " <>
     "was not a single value"
   end
 end

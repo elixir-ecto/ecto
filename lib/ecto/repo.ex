@@ -235,7 +235,6 @@ defmodule Ecto.Repo do
     query = Queryable.to_query(queryable)
     query = Util.normalize(query)
     Util.validate(query, repo.query_apis)
-    query = Util.post_normalize(query)
     reason = "fetching entities"
     result = adapter.all(repo, query) |> check_result(adapter, reason)
 

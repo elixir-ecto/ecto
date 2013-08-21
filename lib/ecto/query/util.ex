@@ -48,13 +48,6 @@ defmodule Ecto.Query.Util do
   end
 
   @doc """
-  Extra query normalization that needs to happen after validation.
-  """
-  def post_normalize(query) do
-    Ecto.Query.Normalizer.post_normalize(query)
-  end
-
-  @doc """
   Look up an entity with a variable.
   """
   def find_entity(entities, { :&, _, [ix] }) when is_tuple(entities) do
@@ -63,6 +56,17 @@ defmodule Ecto.Query.Util do
 
   def find_entity(entities, { :&, _, [ix] }) when is_list(entities) do
     Enum.at(entities, ix)
+  end
+
+  @doc """
+  Look up the expression where the variable was bound.
+  """
+  def find_expr(Query[from: from], { :&, _, [0] }) do
+    from
+  end
+
+  def find_expr(Query[joins: joins], { :&, _, [ix] }) do
+    Enum.at(joins, ix - 1)
   end
 
   # Merges a Queryable with a query expression

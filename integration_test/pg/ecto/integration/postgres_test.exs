@@ -251,4 +251,18 @@ defmodule Ecto.Integration.PostgresTest do
     query = from(c in p1.comments, where: c.text == "1")
     assert [Comment[id: ^cid1]] = TestRepo.all(query)
   end
+
+  test "assoc selector" do
+    p1 = TestRepo.create(Post[title: "1"])
+    p2 = TestRepo.create(Post[title: "1"])
+
+    Comment[id: cid1] = TestRepo.create(Comment[text: "1", post_id: p1.id])
+    Comment[id: cid2] = TestRepo.create(Comment[text: "2", post_id: p1.id])
+    Comment[id: cid3] = TestRepo.create(Comment[text: "3", post_id: p2.id])
+
+    query = from(p in Post, join: c in p.comments, select: assoc(p, c))
+    assert [post1, post2] = TestRepo.all(query)
+    assert [Comment[id: ^cid1], Comment[id: ^cid2]] = post1.comments.to_list
+    assert [Comment[id: ^cid3]] = post2.comments.to_list
+  end
 end

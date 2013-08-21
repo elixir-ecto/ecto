@@ -9,6 +9,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
+  alias Ecto.Query.Normalizer
 
   unary_ops = [ -: "-", +: "+" ]
 
@@ -44,7 +45,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     entities = create_names(query)
     { from, used_names } = from(query.from, entities)
     select   = select(query.select, entities)
-    join     = join(query.joins, entities, used_names)
+    join     = join(query, entities, used_names)
     where    = where(query.wheres, entities)
     group_by = group_by(query.group_bys, entities)
     having   = having(query.havings, entities)
@@ -141,7 +142,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "DELETE FROM #{table} AS #{name}" <> where
   end
 
-  defp select(QueryExpr[expr: expr], entities) do
+  defp select(expr, entities) do
+    QueryExpr[expr: expr] = Normalizer.normalize_select(expr)
     "SELECT " <> select_clause(expr, entities)
   end
 
@@ -150,12 +152,14 @@ defmodule Ecto.Adapters.Postgres.SQL do
     { "FROM #{from.__ecto__(:dataset)} AS #{name}", [name] }
   end
 
-  defp join(joins, entities, used_names) do
+  defp join(Query[] = query, entities, used_names) do
     # We need to make sure that we get a unique name for each entity since
     # the same entity can be referenced multiple times in joins
     entities_list = tuple_to_list(entities)
-    Enum.map_reduce(joins, used_names, fn(QueryExpr[expr: expr], names) ->
-      { join, on } = expr
+    Enum.map_reduce(query.joins, used_names, fn(expr, names) ->
+      expr = Normalizer.normalize_join(expr, query)
+
+      { join, on } = expr.expr
       { entity, name } = Enum.find(entities_list, fn({ entity, name }) ->
         entity == join and not name in names
       end)

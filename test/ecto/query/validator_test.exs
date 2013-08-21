@@ -340,4 +340,19 @@ defmodule Ecto.Query.ValidatorTest do
       validate(query)
     end
   end
+
+  test "assoc selector" do
+    query = from(p in PostEntity, join: c in p.comments, select: assoc(p, c))
+    validate(query)
+
+    query = from(p in PostEntity, join: c in p.comments, select: assoc(c, p))
+    assert_raise Ecto.InvalidQuery, "can only associate on the from entity", fn ->
+      validate(query)
+    end
+
+    query = from(p in PostEntity, join: c in Comment, on: true, select: assoc(p, c))
+    assert_raise Ecto.InvalidQuery, "can only associate on an association join", fn ->
+      validate(query)
+    end
+  end
 end

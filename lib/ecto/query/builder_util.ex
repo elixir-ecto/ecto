@@ -11,14 +11,9 @@ defmodule Ecto.Query.BuilderUtil do
   # var.x - where var is bound
   def escape({ { :., _, [{ var, _, context}, right] }, _, [] }, vars)
       when is_atom(var) and is_atom(context) do
-    ix = Enum.find_index(vars, &(&1 == var))
-    if var != :_ and ix do
-      left_escaped = { :{}, [], [:&, [], [ix]] }
-      dot_escaped = { :{}, [], [:., [], [left_escaped, right]] }
-      { :{}, [], [dot_escaped, [], []] }
-    else
-      raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound"
-    end
+    left_escaped = escape_var(var, vars)
+    dot_escaped = { :{}, [], [:., [], [left_escaped, right]] }
+    { :{}, [], [dot_escaped, [], []] }
   end
 
   # interpolation
@@ -46,5 +41,14 @@ defmodule Ecto.Query.BuilderUtil do
   # everything else is not allowed
   def escape(other, _vars) do
     raise Ecto.InvalidQuery, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
+  end
+
+  def escape_var(var, vars) do
+    ix = Enum.find_index(vars, &(&1 == var))
+    if var != :_ and ix do
+      { :{}, [], [:&, [], [ix]] }
+    else
+      raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound"
+    end
   end
 end
