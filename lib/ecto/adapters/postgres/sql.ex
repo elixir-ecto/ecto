@@ -316,7 +316,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp literal(literal) when is_number(literal) do
-    to_binary(literal)
+    to_string(literal)
   end
 
   defp op_to_binary({ op, _, [_, _] } = expr, vars) when op in @binary_ops do
