@@ -132,4 +132,34 @@ defmodule Ecto.EntityTest do
       end
     end
   end
+
+  defmodule EntityAssocs do
+    use Ecto.Entity
+
+    dataset "my_entity" do
+      has_many :posts, Post
+      has_one :author, User
+    end
+  end
+
+  test "associations" do
+    assert EntityAssocs.__ecto__(:association, :not_a_field) == nil
+
+    assert Ecto.Reflections.HasMany[field: :"__posts__", owner: EntityAssocs,
+                                    associated: Post, foreign_key: :entityassocs_id] =
+      EntityAssocs.__ecto__(:association, :posts)
+
+    assert Ecto.Reflections.HasOne[field: :"__author__", owner: EntityAssocs,
+                                    associated: User, foreign_key: :entityassocs_id] =
+      EntityAssocs.__ecto__(:association, :author)
+
+    r = EntityAssocs[]
+    assoc = r.posts
+    assert assoc.__ecto__(:name) == :posts
+    assert assoc.__ecto__(:target) == r
+
+    assoc = r.author
+    assert assoc.__ecto__(:name) == :author
+    assert assoc.__ecto__(:target) == r
+  end
 end

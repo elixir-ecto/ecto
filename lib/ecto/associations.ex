@@ -35,6 +35,15 @@ defmodule Ecto.Associations do
     combine(results, field, parent, [], [child])
   end
 
+  @doc false
+  def create_reflection(:has_many, values) do
+    Ecto.Reflections.HasMany.new(values)
+  end
+
+  def create_reflection(:has_one, values) do
+    Ecto.Reflections.HasOne.new(values)
+  end
+
   defp combine([], field, last_parent, parents, children) do
     children = Enum.reverse(children)
     last_parent = set_loaded(last_parent, field, children)
