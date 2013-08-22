@@ -5,6 +5,7 @@ defmodule Ecto.Integration.PostgresTest do
   alias Ecto.Integration.Postgres.TestRepo
   alias Ecto.Integration.Postgres.Post
   alias Ecto.Integration.Postgres.Comment
+  alias Ecto.Integration.Postgres.Permalink
 
   test "fetch empty" do
     assert [] == TestRepo.all(from p in Post)
@@ -166,7 +167,7 @@ defmodule Ecto.Integration.PostgresTest do
     assert TestRepo.get(Post, id).temp == "temp"
   end
 
-  test "preload" do
+  test "preload has_many" do
     p1 = TestRepo.create(Post[title: "1"])
     p2 = TestRepo.create(Post[title: "2"])
     p3 = TestRepo.create(Post[title: "3"])
@@ -184,6 +185,28 @@ defmodule Ecto.Integration.PostgresTest do
     assert [Comment[id: ^cid1], Comment[id: ^cid2]] = p1.comments.to_list
     assert [Comment[id: ^cid3], Comment[id: ^cid4]] = p2.comments.to_list
     assert [] = p3.comments.to_list
+  end
+
+  test "preload has_one" do
+    p1 = TestRepo.create(Post[title: "1"])
+    p2 = TestRepo.create(Post[title: "2"])
+    p3 = TestRepo.create(Post[title: "3"])
+
+    Permalink[id: pid1] = TestRepo.create(Permalink[url: "1", post_id: p1.id])
+    Permalink[]         = TestRepo.create(Permalink[url: "2", post_id: nil])
+    Permalink[id: pid3] = TestRepo.create(Permalink[url: "3", post_id: p3.id])
+
+    assert_raise Ecto.AssociationNotLoadedError, fn ->
+      p1.permalink.get
+    end
+    assert_raise Ecto.AssociationNotLoadedError, fn ->
+      p2.permalink.get
+    end
+
+    assert [p3, p1, p2] = Ecto.Preloader.run(TestRepo, [p3, p1, p2], :permalink)
+    assert Permalink[id: ^pid1] = p1.permalink.get
+    assert nil = p2.permalink.get
+    assert Permalink[id: ^pid3] = p3.permalink.get
   end
 
   test "preload keyword query" do

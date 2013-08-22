@@ -4,9 +4,9 @@ defmodule Ecto.Preloader do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
+  alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.HasMany
 
-  # TODO: Position in tuple
   def run(repo, original, name, pos // []) do
     if pos == [] do
       records = original
@@ -18,21 +18,21 @@ defmodule Ecto.Preloader do
     module = elem(record, 0)
     refl = module.__ecto__(:association, name)
 
-    # TODO: Make sure all records are the same entity
-    records = records
-      |> Stream.with_index
-      |> Enum.sort(&cmp_record/2)
-    ids = Enum.map(records, &primary_key/1)
-
-    # TODO: Check the type of association has_many / has_one / belongs_to
-
+    ids = Enum.map(records, &(&1.primary_key))
     where_expr = quote do &0.unquote(refl.foreign_key) in unquote(ids) end
     where = QueryExpr[expr: where_expr]
     order_bys = QueryExpr[expr: [ { nil, quote do &0 end, refl.foreign_key } ]]
     query = Query[from: refl.associated, wheres: [where], order_bys: [order_bys]]
 
-    assocs = repo.all(query)
-    records = combine(records, assocs, refl, [], [])
+    associated = repo.all(query)
+
+    # TODO: Make sure all records are the same entity
+    records = records
+      |> Stream.with_index
+      |> Enum.sort(&cmp_record/2)
+
+    # TODO: Check the type of association has_many / has_one / belongs_to
+    records = combine(records, associated, refl, [], [])
       |> Enum.sort(&cmp_prev_record/2)
       |> Enum.map(&elem(&1, 0))
 
@@ -74,7 +74,19 @@ defmodule Ecto.Preloader do
     ix1 < ix2
   end
 
-  defp set_loaded({ record, ix }, HasMany[field: field], value) do
+  defp set_loaded(rec, HasOne[field: field], value) do
+    value = case value do
+      [] -> nil
+      [elem] -> elem
+    end
+    set_loaded(rec, field, value)
+  end
+
+  defp set_loaded(rec, HasMany[field: field], value) do
+    set_loaded(rec, field, value)
+  end
+
+  defp set_loaded({ record, ix }, field, value) do
     association = apply(record, field, [])
     association = association.__ecto__(:loaded, value)
     { apply(record, field, [association]), ix }
@@ -103,8 +115,7 @@ defmodule Ecto.Preloader do
     update_at(list, ix, &set_at_pos(&1, pos, value))
   end
 
-
-  # TODO: Add to List module?
+  # TODO: Add to List/Enum module?
   defp update_at(list, index, fun) do
     if index < 0 do
       do_update_at(list, length(list) + index, fun)

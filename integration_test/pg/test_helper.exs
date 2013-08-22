@@ -31,6 +31,7 @@ defmodule Ecto.Integration.Postgres.Post do
     field :temp, :virtual, default: "temp"
     field :count, :integer
     has_many :comments, Ecto.Integration.Postgres.Comment
+    has_one :permalink, Ecto.Integration.Postgres.Permalink
   end
 end
 
@@ -39,6 +40,15 @@ defmodule Ecto.Integration.Postgres.Comment do
 
   dataset "comments" do
     field :text, :string
+    field :post_id, :integer # TODO: belongs_to
+  end
+end
+
+defmodule Ecto.Integration.Postgres.Permalink do
+  use Ecto.Entity
+
+  dataset "permalinks" do
+    field :url, :string
     field :post_id, :integer # TODO: belongs_to
   end
 end
@@ -96,6 +106,7 @@ end)
 setup_database = [
   "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), count integer)",
   "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), post_id integer)",
+  "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 

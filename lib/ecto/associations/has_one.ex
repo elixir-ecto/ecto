@@ -1,6 +1,8 @@
 defrecord Ecto.Reflections.HasOne, [:field, :owner, :associated, :foreign_key]
 
 defmodule Ecto.Associations.HasOne do
+  @not_loaded :not_loaded
+
   # Needs to be defrecordp because we don't want pollute the module
   # with functions generated for the record
   defrecordp :assoc, __MODULE__, [:loaded, :target, :name]
@@ -11,7 +13,7 @@ defmodule Ecto.Associations.HasOne do
     refl.associated.new([{ fk, target.primary_key }] ++ params)
   end
 
-  def get(assoc(loaded: nil, target: target, name: name)) do
+  def get(assoc(loaded: @not_loaded, target: target, name: name)) do
     refl = elem(target, 0).__ecto__(:association, name)
     raise Ecto.AssociationNotLoadedError,
       type: :has_one, owner: refl.owner, name: name
@@ -32,6 +34,6 @@ defmodule Ecto.Associations.HasOne do
   end
 
   def __ecto__(:new, name) do
-    assoc(name: name)
+    assoc(name: name, loaded: @not_loaded)
   end
 end
