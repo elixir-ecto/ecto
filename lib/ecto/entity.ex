@@ -30,8 +30,6 @@ defmodule Ecto.Entity do
   """
   defmacro dataset(name, primary_key // :id, block) do
     quote do
-      primary_key = unquote(primary_key)
-
       try do
         import Ecto.Entity.Dataset
 
@@ -86,17 +84,38 @@ defmodule Ecto.Entity do
     end
 
     fields = Enum.filter(all_fields, fn({ _, opts }) -> opts[:type] != :virtual end)
-    all_field_names = Enum.map(all_fields, &elem(&1, 0))
-    field_names = Enum.map(fields, &elem(&1, 0))
 
-    fields_quote = Enum.map(fields, fn({ name, opts }) ->
+    [ ecto_dataset(dataset_name),
+      ecto_fields(fields),
+      ecto_assocs(assocs, primary_key),
+      ecto_primary_key(primary_key),
+      ecto_helpers(fields, all_fields) ]
+  end
+
+  defp ecto_dataset(dataset_name) do
+    quote do
+      def __ecto__(:dataset), do: unquote(dataset_name)
+    end
+  end
+
+  defp ecto_fields(fields) do
+    quoted = Enum.map(fields, fn({ name, opts }) ->
       quote do
         def __ecto__(:field, unquote(name)), do: unquote(opts)
         def __ecto__(:field_type, unquote(name)), do: unquote(opts[:type])
       end
     end)
 
-    assocs_quote = Enum.map(assocs, fn({ name, opts, }) ->
+    field_names = Enum.map(fields, &elem(&1, 0))
+    quoted ++ [ quote do
+      def __ecto__(:field, _), do: nil
+      def __ecto__(:field_type, _), do: nil
+      def __ecto__(:field_names), do: unquote(field_names)
+    end ]
+  end
+
+  defp ecto_assocs(assocs, primary_key) do
+    quoted = Enum.map(assocs, fn({ name, opts, }) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
         entity = opts[:entity]
         module_name = __MODULE__ |> Module.split |> List.last |> String.downcase
@@ -115,13 +134,14 @@ defmodule Ecto.Entity do
       end
     end)
 
+    quoted ++ [ quote do
+      def __ecto__(:association, _), do: nil
+    end ]
+  end
+
+  defp ecto_primary_key(primary_key) do
     quote do
-      def __ecto__(:dataset), do: unquote(dataset_name)
       def __ecto__(:primary_key), do: unquote(primary_key)
-      def __ecto__(:field_names), do: unquote(field_names)
-      unquote(fields_quote)
-      def __ecto__(:field, _), do: nil
-      def __ecto__(:field_type, _), do: nil
 
       if unquote(primary_key) do
         def primary_key(record), do: unquote(primary_key)(record)
@@ -132,10 +152,14 @@ defmodule Ecto.Entity do
         def primary_key(_value, record), do: record
         def update_primary_key(_fun, record), do: record
       end
+    end
+  end
 
-      unquote(assocs_quote)
-      def __ecto__(:association, _), do: nil
+  defp ecto_helpers(fields, all_fields) do
+    field_names = Enum.map(fields, &elem(&1, 0))
+    all_field_names = Enum.map(all_fields, &elem(&1, 0))
 
+    quote do
       # TODO: This can be optimized
       def __ecto__(:allocate, values) do
         zip = Enum.zip(unquote(field_names), values)
