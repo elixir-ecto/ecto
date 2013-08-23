@@ -7,6 +7,8 @@ defmodule Ecto.Associations do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.AssocJoinExpr
   alias Ecto.Query.Util
+  alias Ecto.Reflections.HasOne
+  alias Ecto.Reflections.HasMany
 
   @doc """
   Returns true if join expression is an assocation join.
@@ -31,10 +33,9 @@ defmodule Ecto.Associations do
     AssocJoinExpr[expr: join_expr] = Util.find_expr(query, child)
     { :., _, [^parent, field] } = join_expr
     refl = query.from.__ecto__(:association, field)
-    field = refl.field
 
     [{ parent, child }|results] = results
-    combine(results, field, parent, [], [child])
+    combine(results, refl, parent, [], [child])
   end
 
   @doc false
@@ -46,21 +47,33 @@ defmodule Ecto.Associations do
     Ecto.Reflections.HasOne.new(values)
   end
 
-  defp combine([], field, last_parent, parents, children) do
+  defp combine([], refl, last_parent, parents, children) do
     children = Enum.reverse(children)
-    last_parent = set_loaded(last_parent, field, children)
+    last_parent = set_loaded(last_parent, refl, children)
     Enum.reverse([last_parent|parents])
   end
 
-  defp combine([{ parent, child }|rows], field, last_parent, parents, children) do
+  defp combine([{ parent, child }|rows], refl, last_parent, parents, children) do
     if parent.primary_key == last_parent.primary_key do
-      combine(rows, field, parent, parents, [child|children])
+      combine(rows, refl, parent, parents, [child|children])
     else
       children = Enum.reverse(children)
-      last_parent = set_loaded(last_parent, field, children)
+      last_parent = set_loaded(last_parent, refl, children)
       parents = [last_parent|parents]
-      combine([{ parent, child }|rows], field, parent, parents, [])
+      combine([{ parent, child }|rows], refl, parent, parents, [])
     end
+  end
+
+  defp set_loaded(record, HasOne[field: field], loaded) do
+    loaded = case loaded do
+      [] -> nil
+      [elem] -> elem
+    end
+    set_loaded(record, field, loaded)
+  end
+
+  defp set_loaded(record, HasMany[field: field], loaded) do
+    set_loaded(record, field, loaded)
   end
 
   defp set_loaded(record, field, loaded) do

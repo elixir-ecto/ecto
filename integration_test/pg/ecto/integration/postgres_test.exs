@@ -284,7 +284,7 @@ defmodule Ecto.Integration.PostgresTest do
     assert [Comment[id: ^cid1]] = TestRepo.all(query)
   end
 
-  test "assoc selector" do
+  test "has_many assoc selector" do
     p1 = TestRepo.create(Post[title: "1"])
     p2 = TestRepo.create(Post[title: "1"])
 
@@ -296,5 +296,20 @@ defmodule Ecto.Integration.PostgresTest do
     assert [post1, post2] = TestRepo.all(query)
     assert [Comment[id: ^cid1], Comment[id: ^cid2]] = post1.comments.to_list
     assert [Comment[id: ^cid3]] = post2.comments.to_list
+  end
+
+  test "has_one assoc selector" do
+    p1 = TestRepo.create(Post[title: "1"])
+    p2 = TestRepo.create(Post[title: "2"])
+    TestRepo.create(Post[title: "3"])
+
+    Permalink[id: pid1] = TestRepo.create(Permalink[url: "1", post_id: p1.id])
+    Permalink[]         = TestRepo.create(Permalink[url: "2"])
+    Permalink[id: pid3] = TestRepo.create(Permalink[url: "3", post_id: p2.id])
+
+    query = from(p in Post, join: c in p.permalink, select: assoc(p, c))
+    assert [post1, post3] = TestRepo.all(query)
+    assert Permalink[id: ^pid1] = post1.permalink.get
+    assert Permalink[id: ^pid3] = post3.permalink.get
   end
 end
