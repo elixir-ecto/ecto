@@ -7,6 +7,8 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.Util
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
+  alias Ecto.Query.JoinExpr
+  alias Ecto.Query.AssocJoinExpr
 
   defrecord State, entities: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil, from: nil, query: nil
@@ -103,15 +105,13 @@ defmodule Ecto.Query.Validator do
   defp validate_joins(joins, state) do
     state = state.grouped?(false)
 
-    { ons, assocs } = Enum.partition(joins, fn join ->
-      case join.expr do
-        { _, _ } -> true
-        { :., _, _ } -> false
-        _ -> raise Ecto.InvalidQuery, reason: "an `on` query expression have to follow a `from`"
-      end
+    { joins, assocs } = Enum.partition(joins, fn
+      JoinExpr[on: nil] -> raise Ecto.InvalidQuery, reason: "an `on` query expression have to follow a `from`"
+      JoinExpr[] -> true
+      AssocJoinExpr[] -> false
     end)
 
-    ons = Enum.map(ons, &(elem(&1.expr, 1)))
+    ons = Enum.map(joins, &(&1.on))
     validate_booleans(:join_on, ons, state)
     validate_assoc_joins(assocs, state)
   end
@@ -140,7 +140,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_assoc_joins(joins, State[] = state) do
-    Enum.each(joins, fn QueryExpr[] = expr ->
+    Enum.each(joins, fn AssocJoinExpr[] = expr ->
       rescue_metadata(:join, expr.file, expr.line) do
         { :., _, [left, right] } = expr.expr
         entity = Util.find_entity(state.entities, left)
@@ -303,7 +303,7 @@ defmodule Ecto.Query.Validator do
     end
 
     expr = Util.find_expr(state.query, child)
-    unless expr && Ecto.Associations.assoc_join?(expr.expr) do
+    unless match?(AssocJoinExpr[], expr) do
       raise Ecto.InvalidQuery, reason: "can only associate on an association join"
     end
   end

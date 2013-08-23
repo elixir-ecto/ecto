@@ -298,6 +298,27 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
       "JOIN entity AS e2 ON TRUE"
   end
 
+  defmodule Comment do
+    use Ecto.Entity
+
+    dataset "comments" do
+      field :post_id, :integer # TODO: belongs_to
+    end
+  end
+
+  defmodule Post do
+    use Ecto.Entity
+
+    dataset "posts" do
+      has_many :comments, Comment
+    end
+  end
+
+  test "association join" do
+    query = from(Post) |> join([p], c in p.comments) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM posts AS p0\nLEFT OUTER JOIN comments AS c0 ON c0.post_id = p0.id"
+  end
+
   defmodule PKEntity do
     use Ecto.Entity
 

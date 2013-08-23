@@ -5,15 +5,16 @@ defmodule Ecto.Query.Normalizer do
 
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
+  alias Ecto.Query.AssocJoinExpr
+  alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
 
   def normalize(Query[] = query, opts) do
     query |> auto_select(opts) |> setup_entities
   end
 
-  def normalize_join(QueryExpr[expr: { _ , _ }] = expr, _query), do: expr
-
-  def normalize_join(QueryExpr[expr: { :., _, [left, right] }] = expr, Query[] = query) do
+  def normalize_join(AssocJoinExpr[] = join, Query[] = query) do
+    { :., _, [left, right] } = join.expr
     entity = Util.find_entity(query.entities, left)
     refl = entity.__ecto__(:association, right)
     associated = refl.associated
@@ -22,11 +23,13 @@ defmodule Ecto.Query.Normalizer do
     assoc_var = Util.entity_var(query, associated)
     pk = query.from.__ecto__(:primary_key)
     fk = refl.foreign_key
-
     on_expr = quote do unquote(assoc_var).unquote(fk) == unquote(from).unquote(pk) end
-    on = QueryExpr[expr: on_expr]
-    expr.expr({ associated, on })
+    on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
+
+    JoinExpr[type: :left, entity: associated, on: on, file: join.file, line: join.line]
   end
+
+  def normalize_join(JoinExpr[] = expr, _query), do: expr
 
   def normalize_select(QueryExpr[expr: { :assoc, _, [fst, snd] }] = expr) do
     expr.expr({ fst, snd })
@@ -49,15 +52,13 @@ defmodule Ecto.Query.Normalizer do
     froms = if query.from, do: [query.from], else: []
 
     entities = Enum.reduce(query.joins, froms, fn join, acc ->
-      case join.expr do
-        { entity, _ } ->
-          [entity|acc]
-        { :., _, [left, right] } ->
+      case join do
+        AssocJoinExpr[expr: { :., _, [left, right] }] ->
           entity = Util.find_entity(Enum.reverse(acc), left)
           refl = entity.__ecto__(:association, right)
           assoc = if refl, do: refl.associated
           [ assoc | acc ]
-        entity ->
+        JoinExpr[entity: entity] ->
           [entity|acc]
       end
     end)

@@ -86,7 +86,10 @@ defmodule Ecto.Query do
   defrecord Query, entities: nil, from: nil, joins: [], wheres: [], select: nil,
                    order_bys: [], limit: nil, offset: nil, group_bys: [], havings: [],
                    preloads: []
-  defrecord QueryExpr, expr: nil, file: nil, line: nil
+
+  defrecord QueryExpr, [:expr, :file, :line]
+  defrecord AssocJoinExpr, [:expr, :file, :line]
+  defrecord JoinExpr, [:type, :entity, :on, :file, :line]
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
@@ -209,7 +212,8 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     { expr_bindings, join_expr } = JoinBuilder.escape(expr, binding)
 
-    if Ecto.Associations.assoc_join?(expr) and nil?(on) do
+    is_assoc = Ecto.Associations.assoc_join?(join_expr)
+    unless is_assoc == nil?(on) do
       raise Ecto.InvalidQuery, reason: "`join` expression requires explicit `on` " <>
         "expression unless association join expression"
     end
@@ -223,15 +227,13 @@ defmodule Ecto.Query do
     end
 
     quote do
-      on_expr = unquote(on_expr)
       join_expr = unquote(join_expr)
-      if on_expr do
-        on = QueryExpr[expr: unquote(on_expr), file: __ENV__.file, line: __ENV__.line]
-        expr = { join_expr, on }
+      if unquote(is_assoc) do
+        join = AssocJoinExpr[expr: join_expr, file: __ENV__.file, line: __ENV__.line]
       else
-        expr = join_expr
+        on = QueryExpr[expr: unquote(on_expr), file: __ENV__.file, line: __ENV__.line]
+        join = JoinExpr[entity: join_expr, on: on, file: __ENV__.file, line: __ENV__.line]
       end
-      join = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(unquote(query), :join, join)
     end
   end
@@ -477,8 +479,15 @@ defmodule Ecto.Query do
       raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
     end
 
+    is_assoc = Ecto.Associations.assoc_join?(expr)
+
     quoted = quote do
-      join = QueryExpr[expr: unquote(expr), file: __ENV__.file, line: __ENV__.line]
+      expr = unquote(expr)
+      if unquote(is_assoc) do
+        join = AssocJoinExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
+      else
+        join = JoinExpr[entity: expr, file: __ENV__.file, line: __ENV__.line]
+      end
       Util.merge(unquote(state.quoted), :join, join)
     end
     state.quoted(quoted).binds(state.binds ++ [bind])

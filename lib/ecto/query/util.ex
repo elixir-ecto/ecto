@@ -6,6 +6,8 @@ defmodule Ecto.Query.Util do
   alias Ecto.Queryable
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
+  alias Ecto.Query.JoinExpr
+  alias Ecto.Query.AssocJoinExpr
 
   @doc """
   Validates the query to check if it is correct. Should be called before
@@ -97,10 +99,10 @@ defmodule Ecto.Query.Util do
   @doc false
   def merge_on(Query[joins: joins] = query, expr) do
     case Enum.split(joins, -1) do
-      { joins, [QueryExpr[expr: join_expr] = join] } when not is_tuple(join_expr) ->
-        joins = joins ++ [join.expr({ join_expr, expr })]
+      { joins, [JoinExpr[] = join] } ->
+        joins = joins ++ [join.on(expr)]
         query.joins(joins)
-      { _, [QueryExpr[expr: { :., _, _}]] } ->
+      { _, [AssocJoinExpr[]] } ->
         raise Ecto.InvalidQuery, reason: "an `on` query expression cannot follow an assocation join"
       _ ->
         raise Ecto.InvalidQuery, reason: "an `on` query expression must follow a `join`"

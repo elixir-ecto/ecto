@@ -5,12 +5,14 @@ defmodule Ecto.Associations do
 
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
+  alias Ecto.Query.AssocJoinExpr
   alias Ecto.Query.Util
 
   @doc """
   Returns true if join expression is an assocation join.
   """
   def assoc_join?({ :., _, _ }), do: true
+  def assoc_join?({ :{}, _, [:., _, _] }), do: true
   def assoc_join?(_), do: false
 
   @doc """
@@ -26,7 +28,7 @@ defmodule Ecto.Associations do
   def transform_result(_expr, [], _query), do: true
 
   def transform_result({ :assoc, _, [parent, child] }, results, Query[] = query) do
-    QueryExpr[expr: join_expr] = Util.find_expr(query, child)
+    AssocJoinExpr[expr: join_expr] = Util.find_expr(query, child)
     { :., _, [^parent, field] } = join_expr
     refl = query.from.__ecto__(:association, field)
     field = refl.field

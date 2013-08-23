@@ -8,6 +8,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   require Ecto.Query
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
+  alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
   alias Ecto.Query.Normalizer
 
@@ -157,17 +158,23 @@ defmodule Ecto.Adapters.Postgres.SQL do
     # the same entity can be referenced multiple times in joins
     entities_list = tuple_to_list(entities)
     Enum.map_reduce(query.joins, used_names, fn(expr, names) ->
-      expr = Normalizer.normalize_join(expr, query)
+      JoinExpr[] = expr = Normalizer.normalize_join(expr, query)
 
-      { join, on } = expr.expr
       { entity, name } = Enum.find(entities_list, fn({ entity, name }) ->
-        entity == join and not name in names
+        entity == expr.entity and not name in names
       end)
-      on_sql = expr(on.expr, entities)
+      on_sql = expr(expr.on.expr, entities)
+      qual = join_qual(expr.type)
 
-      { "JOIN #{entity.__ecto__(:dataset)} AS #{name} ON " <> on_sql, [name|names] }
+      { "#{qual}JOIN #{entity.__ecto__(:dataset)} AS #{name} ON " <> on_sql, [name|names] }
     end) |> elem(0)
   end
+
+  defp join_qual(nil), do: ""
+  defp join_qual(:inner), do: "INNER "
+  defp join_qual(:left), do: "LEFT OUTER "
+  defp join_qual(:right), do: "RIGHT OUTER "
+  defp join_qual(:full), do: "FULL OUTER "
 
   defp where(wheres, entities) do
     boolean("WHERE", wheres, entities)
