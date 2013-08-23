@@ -88,8 +88,8 @@ defmodule Ecto.Query do
                    preloads: []
 
   defrecord QueryExpr, [:expr, :file, :line]
-  defrecord AssocJoinExpr, [:expr, :file, :line]
-  defrecord JoinExpr, [:type, :entity, :on, :file, :line]
+  defrecord AssocJoinExpr, [:qual, :expr, :file, :line]
+  defrecord JoinExpr, [:qual, :entity, :on, :file, :line]
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
@@ -208,7 +208,7 @@ defmodule Ecto.Query do
         |> join([c], p in Post, c.post_id == p.id)
         |> select([c, p], { p.title, c.text })
   """
-  defmacro join(query, binding, expr, on // nil) do
+  defmacro join(query, binding, qual // nil, expr, on // nil) do
     binding = Util.escape_binding(binding)
     { expr_bindings, join_expr } = JoinBuilder.escape(expr, binding)
 
@@ -227,12 +227,13 @@ defmodule Ecto.Query do
     end
 
     quote do
+      qual = unquote(qual)
       join_expr = unquote(join_expr)
       if unquote(is_assoc) do
-        join = AssocJoinExpr[expr: join_expr, file: __ENV__.file, line: __ENV__.line]
+        join = AssocJoinExpr[qual: qual, expr: join_expr, file: __ENV__.file, line: __ENV__.line]
       else
         on = QueryExpr[expr: unquote(on_expr), file: __ENV__.file, line: __ENV__.line]
-        join = JoinExpr[entity: join_expr, on: on, file: __ENV__.file, line: __ENV__.line]
+        join = JoinExpr[qual: qual, entity: join_expr, on: on, file: __ENV__.file, line: __ENV__.line]
       end
       Util.merge(unquote(query), :join, join)
     end
@@ -474,23 +475,23 @@ defmodule Ecto.Query do
   end
 
   defp build_query_type({ :join, expr }, KwState[] = state) do
-    { binds, expr } = JoinBuilder.escape(expr, state.binds)
-    if (bind = Enum.first(binds)) && bind != :_ && bind in state.binds do
-      raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
-    end
+    build_join(nil, expr, state)
+  end
 
-    is_assoc = Ecto.Associations.assoc_join?(expr)
+  defp build_query_type({ :inner_join, expr }, KwState[] = state) do
+    build_join(:inner, expr, state)
+  end
 
-    quoted = quote do
-      expr = unquote(expr)
-      if unquote(is_assoc) do
-        join = AssocJoinExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
-      else
-        join = JoinExpr[entity: expr, file: __ENV__.file, line: __ENV__.line]
-      end
-      Util.merge(unquote(state.quoted), :join, join)
-    end
-    state.quoted(quoted).binds(state.binds ++ [bind])
+  defp build_query_type({ :left_join, expr }, KwState[] = state) do
+    build_join(:left, expr, state)
+  end
+
+  defp build_query_type({ :right_join, expr }, KwState[] = state) do
+    build_join(:right, expr, state)
+  end
+
+  defp build_query_type({ :full_join, expr }, KwState[] = state) do
+    build_join(:full, expr, state)
   end
 
   defp build_query_type({ :on, expr }, KwState[] = state) do
@@ -507,5 +508,26 @@ defmodule Ecto.Query do
       Ecto.Query.unquote(type)(unquote(state.quoted), unquote(state.binds), unquote(expr))
     end
     state.quoted(quoted)
+  end
+
+  defp build_join(qual, expr, KwState[] = state) do
+    { binds, expr } = JoinBuilder.escape(expr, state.binds)
+    if (bind = Enum.first(binds)) && bind != :_ && bind in state.binds do
+      raise Ecto.InvalidQuery, reason: "variable `#{bind}` is already defined in query"
+    end
+
+    is_assoc = Ecto.Associations.assoc_join?(expr)
+
+    quoted = quote do
+      qual = unquote(qual)
+      expr = unquote(expr)
+      if unquote(is_assoc) do
+        join = AssocJoinExpr[qual: qual, expr: expr, file: __ENV__.file, line: __ENV__.line]
+      else
+        join = JoinExpr[qual: qual, entity: expr, file: __ENV__.file, line: __ENV__.line]
+      end
+      Util.merge(unquote(state.quoted), :join, join)
+    end
+    state.quoted(quoted).binds(state.binds ++ [bind])
   end
 end

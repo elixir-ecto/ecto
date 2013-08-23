@@ -60,10 +60,10 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "join expression must be boolean" do
-    query = from(PostEntity) |> join([], CommentEntity, "abc" == "") |> select([], 123)
+    query = from(PostEntity) |> join([], nil, CommentEntity, "abc" == "") |> select([], 123)
     validate(query)
 
-    query = from(PostEntity) |> join([], CommentEntity, "abc") |> select([], 123)
+    query = from(PostEntity) |> join([], nil, CommentEntity, "abc") |> select([], 123)
     assert_raise Ecto.InvalidQuery, %r"join_on expression", fn ->
       validate(query)
     end

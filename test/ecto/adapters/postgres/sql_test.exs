@@ -290,11 +290,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "join" do
-    query = from(Entity) |> join([p], q in Entity2, p.x == q.z) |> select([], 0) |> normalize
+    query = from(Entity) |> join([p], nil, q in Entity2, p.x == q.z) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nJOIN entity2 AS e1 ON e0.x = e1.z"
 
-    query = from(Entity) |> join([p], q in Entity2, p.x == q.z) |> join([], Entity, true) |> select([], 0) |> normalize
-    assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nJOIN entity2 AS e1 ON e0.x = e1.z\n" <>
+    query = from(Entity) |> join([p], :inner, q in Entity2, p.x == q.z) |> join([], nil, Entity, true) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM entity AS e0\nINNER JOIN entity2 AS e1 ON e0.x = e1.z\n" <>
       "JOIN entity AS e2 ON TRUE"
   end
 
@@ -312,11 +312,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     dataset "posts" do
       has_many :comments, Comment
     end
-  end
-
-  test "association join" do
-    query = from(Post) |> join([p], c in p.comments) |> select([], 0) |> normalize
-    assert SQL.select(query) == "SELECT 0\nFROM posts AS p0\nLEFT OUTER JOIN comments AS c0 ON c0.post_id = p0.id"
   end
 
   defmodule PKEntity do

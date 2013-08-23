@@ -164,7 +164,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
         entity == expr.entity and not name in names
       end)
       on_sql = expr(expr.on.expr, entities)
-      qual = join_qual(expr.type)
+      qual = join_qual(expr.qual)
 
       { "#{qual}JOIN #{entity.__ecto__(:dataset)} AS #{name} ON " <> on_sql, [name|names] }
     end) |> elem(0)

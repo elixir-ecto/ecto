@@ -26,7 +26,7 @@ defmodule Ecto.Query.Normalizer do
     on_expr = quote do unquote(assoc_var).unquote(fk) == unquote(from).unquote(pk) end
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
 
-    JoinExpr[type: :left, entity: associated, on: on, file: join.file, line: join.line]
+    JoinExpr[qual: join.qual, entity: associated, on: on, file: join.file, line: join.line]
   end
 
   def normalize_join(JoinExpr[] = expr, _query), do: expr

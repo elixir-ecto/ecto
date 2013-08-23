@@ -146,13 +146,13 @@ defmodule Ecto.QueryTest do
     query = from(PostEntity) |> select([_], 0)
     validate(query)
 
-    query = from(PostEntity) |> join([], CommentEntity, true) |> select([_, c], c.text)
+    query = from(PostEntity) |> join([], nil, CommentEntity, true) |> select([_, c], c.text)
     validate(query)
 
-    query = from(PostEntity) |> join([], CommentEntity, true) |> select([p, _], p.title)
+    query = from(PostEntity) |> join([], nil, CommentEntity, true) |> select([p, _], p.title)
     validate(query)
 
-    query = from(PostEntity) |> join([], CommentEntity, true) |> select([_, _], 0)
+    query = from(PostEntity) |> join([], nil, CommentEntity, true) |> select([_, _], 0)
     validate(query)
   end
 
@@ -176,6 +176,6 @@ defmodule Ecto.QueryTest do
 
   test "join queries adds binds" do
     from(c in CommentEntity, join: p in PostEntity, on: true, select: { p.title, c.text })
-    from(CommentEntity) |> join([c], p in PostEntity, true) |> select([c,p], { p.title, c.text })
+    from(CommentEntity) |> join([c], nil, p in PostEntity, true) |> select([c,p], { p.title, c.text })
   end
 end
