@@ -190,7 +190,11 @@ defmodule Ecto.Adapters.Postgres do
     entity = Util.find_entity(entities, var)
     entity_size = length(entity.__ecto__(:field_names))
     { entity_values, values } = Enum.split(values, entity_size)
-    { entity.__ecto__(:allocate, entity_values), values }
+    if Enum.all?(entity_values, &(nil?(&1))) do
+      { nil, values }
+    else
+      { entity.__ecto__(:allocate, entity_values), values }
+    end
   end
 
   defp transform_row(_, values, _entities) do

@@ -312,4 +312,13 @@ defmodule Ecto.Integration.PostgresTest do
     assert Permalink[id: ^pid1] = post1.permalink.get
     assert Permalink[id: ^pid3] = post3.permalink.get
   end
+
+  test "join qualifier" do
+    p1 = TestRepo.create(Post[title: "1"])
+    p2 = TestRepo.create(Post[title: "2"])
+    c1 = TestRepo.create(Permalink[url: "1", post_id: p2.id])
+
+    query = from(p in Post, left_join: c in p.permalink, order_by: p.id, select: {p, c})
+    assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
+  end
 end
