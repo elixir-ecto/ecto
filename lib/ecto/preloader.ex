@@ -26,13 +26,7 @@ defmodule Ecto.Preloader do
       |> Stream.with_index
       |> Enum.sort(&cmp_record/2)
 
-    if match?(BelongsTo[], refl) do
-      records = combine_belongs(records, associated, refl, [])
-    else
-      records = combine_has(records, associated, refl, [], [])
-    end
-
-    records = records
+    records = combine(records, associated, refl, [], [])
       |> Enum.sort(&cmp_prev_record/2)
       |> Enum.map(&elem(&1, 0))
 
@@ -45,7 +39,7 @@ defmodule Ecto.Preloader do
     end
   end
 
-  defp combine_has(records, [], refl, acc1, acc2) do
+  defp combine(records, [], refl, acc1, acc2) do
     [record|records] = records
     record = set_loaded(record, refl, Enum.reverse(acc2))
 
@@ -55,33 +49,23 @@ defmodule Ecto.Preloader do
     acc1 ++ [record|records]
   end
 
-  defp combine_has([record|records], [assoc|assocs], refl, acc1, acc2) do
-    if primary_key(record) == apply(assoc, refl.foreign_key, []) do
-      combine_has([record|records], assocs, refl, acc1, [assoc|acc2])
+  defp combine([record|records], [assoc|assocs], refl, acc1, acc2) do
+    if compare(record, assoc, refl) do
+      combine([record|records], assocs, refl, acc1, [assoc|acc2])
     else
       record = set_loaded(record, refl, Enum.reverse(acc2))
-      combine_has(records, [assoc|assocs], refl, [record|acc1], [])
+      combine(records, [assoc|assocs], refl, [record|acc1], [])
     end
   end
 
-  defp combine_belongs(records, [], _refl, acc) do
-    Enum.reverse(acc) ++ records
-  end
-
-  defp combine_belongs([record|records], [assoc|assocs], refl, acc) do
+  defp compare({ record, _ }, assoc, BelongsTo[] = refl) do
     pk = refl.associated.__ecto__(:primary_key)
-    if foreign_key(record, refl) == apply(assoc, pk, []) do
-      record = set_loaded(record, refl, assoc)
-      combine_belongs(records, assocs, refl, [record|acc])
-    else
-      record = set_loaded(record, refl, nil)
-      combine_belongs(records, [assoc|assocs], refl, [record|acc])
-    end
+    apply(record, refl.foreign_key, []) == apply(assoc, pk, [])
   end
 
-  defp primary_key({ record, _ }), do: record.primary_key
-
-  defp foreign_key({ record, _ }, refl), do: apply(record, refl.foreign_key, [])
+  defp compare({ record, _ }, assoc, refl) do
+    record.primary_key == apply(assoc, refl.foreign_key, [])
+  end
 
   defp cmp_record({ record1, _ }, { record2, _ }) do
     record1.primary_key < record2.primary_key
@@ -91,26 +75,19 @@ defmodule Ecto.Preloader do
     ix1 < ix2
   end
 
-  defp set_loaded(rec, HasOne[field: field], value) do
-    value = case value do
-      [] -> nil
-      [elem] -> elem
-    end
-    set_loaded(rec, field, value)
+  defp set_loaded({ record, ix }, field, value) when is_atom(field) do
+    association = apply(record, field, [])
+    association = association.__ecto__(:loaded, value)
+    { apply(record, field, [association]), ix }
   end
 
   defp set_loaded(rec, HasMany[field: field], value) do
     set_loaded(rec, field, value)
   end
 
-  defp set_loaded(rec, BelongsTo[field: field], value) do
-    set_loaded(rec, field, value)
-  end
-
-  defp set_loaded({ record, ix }, field, value) do
-    association = apply(record, field, [])
-    association = association.__ecto__(:loaded, value)
-    { apply(record, field, [association]), ix }
+  defp set_loaded(rec, refl, value) do
+    value = Enum.first(value)
+    set_loaded(rec, refl.field, value)
   end
 
   defp get_from_pos(value, []), do: value

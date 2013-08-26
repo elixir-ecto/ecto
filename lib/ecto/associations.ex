@@ -103,29 +103,18 @@ defmodule Ecto.Associations do
     end
   end
 
-  defp set_loaded(record, HasOne[field: field], loaded) do
-    loaded = case loaded do
-      [] -> nil
-      [elem] -> elem
-    end
-    set_loaded(record, field, loaded)
+  defp set_loaded(record, field, loaded) when is_atom(field) do
+    association = apply(record, field, [])
+    association = association.__ecto__(:loaded, loaded)
+    apply(record, field, [association])
   end
 
   defp set_loaded(record, HasMany[field: field], loaded) do
     set_loaded(record, field, loaded)
   end
 
-  defp set_loaded(record, BelongsTo[field: field], loaded) do
-    loaded = case loaded do
-      [] -> nil
-      [elem] -> elem
-    end
-    set_loaded(record, field, loaded)
-  end
-
-  defp set_loaded(record, field, loaded) do
-    association = apply(record, field, [])
-    association = association.__ecto__(:loaded, loaded)
-    apply(record, field, [association])
+  defp set_loaded(record, refl, loaded) do
+    loaded = Enum.first(loaded)
+    set_loaded(record, refl.field, loaded)
   end
 end
