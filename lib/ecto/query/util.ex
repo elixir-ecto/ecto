@@ -162,11 +162,6 @@ defmodule Ecto.Query.Util do
   def type_eq?(x, x), do: true
   def type_eq?(_, _), do: false
 
-  # Get query var from entity
-  def from_entity_var(Query[] = query) do
-    entity_var(query, query.from)
-  end
-
   # Get var for given entity in query
   def entity_var(Query[] = query, entity) do
     entities = tuple_to_list(query.entities)

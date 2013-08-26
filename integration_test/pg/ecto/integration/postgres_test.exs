@@ -285,6 +285,15 @@ defmodule Ecto.Integration.PostgresTest do
     [{ ^post, ^p1 }, { ^post, ^p2 }] = TestRepo.all(query)
   end
 
+  test "belongs_to association join" do
+    post = TestRepo.create(Post[title: "1", text: "hi"])
+    p1 = TestRepo.create(Permalink[url: "hey", post_id: post.id])
+    p2 = TestRepo.create(Permalink[url: "heya", post_id: post.id])
+
+    query = from(p in Permalink, join: c in p.post, select: { p, c })
+    [{ ^p1, ^post }, { ^p2, ^post }] = TestRepo.all(query)
+  end
+
   test "has_many queryable" do
     p1 = TestRepo.create(Post[title: "1"])
     p2 = TestRepo.create(Post[title: "1"])

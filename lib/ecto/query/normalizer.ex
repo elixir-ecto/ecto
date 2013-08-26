@@ -8,22 +8,23 @@ defmodule Ecto.Query.Normalizer do
   alias Ecto.Query.AssocJoinExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
+  alias Ecto.Reflections.BelongsTo
 
   def normalize(Query[] = query, opts) do
     query |> auto_select(opts) |> setup_entities
   end
 
+  # Transform an assocation join to an ordinary join
   def normalize_join(AssocJoinExpr[] = join, Query[] = query) do
     { :., _, [left, right] } = join.expr
     entity = Util.find_entity(query.entities, left)
     refl = entity.__ecto__(:association, right)
     associated = refl.associated
-    from = Util.from_entity_var(query)
 
     assoc_var = Util.entity_var(query, associated)
     pk = query.from.__ecto__(:primary_key)
     fk = refl.foreign_key
-    on_expr = quote do unquote(assoc_var).unquote(fk) == unquote(from).unquote(pk) end
+    on_expr = on_expr(refl, assoc_var, fk, pk)
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
 
     JoinExpr[qual: join.qual, entity: associated, on: on, file: join.file, line: join.line]
@@ -36,6 +37,14 @@ defmodule Ecto.Query.Normalizer do
   end
 
   def normalize_select(QueryExpr[expr: _] = expr), do: expr
+
+  defp on_expr(BelongsTo[], assoc_var, fk, pk) do
+    quote do unquote(assoc_var).unquote(pk) == &0.unquote(fk) end
+  end
+
+  defp on_expr(_refl, assoc_var, fk, pk) do
+    quote do unquote(assoc_var).unquote(fk) == &0.unquote(pk) end
+  end
 
   # Auto select the entity in the from expression
   defp auto_select(Query[] = query, opts) do

@@ -8,7 +8,7 @@ defmodule Ecto.Repo do
 
   When used, the following options are allowed:
 
-  * `:adapter` - the adapter to be used for the repository; it will be used 
+  * `:adapter` - the adapter to be used for the repository; it will be used
                  to handle connections to the data store and to compile queries
 
   ## Example
@@ -406,8 +406,7 @@ defmodule Ecto.Repo do
   end
 
   defp preload(repo, Query[] = query, results) do
-    var = Util.from_entity_var(query)
-    pos = Util.locate_var(query.select.expr, var)
+    pos = Util.locate_var(query.select.expr, { :&, [], [0] })
     preloads = Enum.map(query.preloads, &(&1.expr)) |> List.concat
 
     Enum.reduce(preloads, results, fn field, acc ->
