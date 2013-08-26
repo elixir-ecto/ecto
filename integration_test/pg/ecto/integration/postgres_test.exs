@@ -209,6 +209,25 @@ defmodule Ecto.Integration.PostgresTest do
     assert Permalink[id: ^pid3] = p3.permalink.get
   end
 
+  test "preload belongs_to" do
+    Post[id: pid1] = TestRepo.create(Post[title: "1"])
+    TestRepo.create(Post[title: "2"])
+    Post[id: pid3] = TestRepo.create(Post[title: "3"])
+
+    pl1 = TestRepo.create(Permalink[url: "1", post_id: pid1])
+    pl2 = TestRepo.create(Permalink[url: "2", post_id: nil])
+    pl3 = TestRepo.create(Permalink[url: "3", post_id: pid3])
+
+    assert_raise Ecto.AssociationNotLoadedError, fn ->
+      pl1.post.get
+    end
+
+    assert [pl3, pl1, pl2] = Ecto.Preloader.run(TestRepo, [pl3, pl1, pl2], :post)
+    assert Post[id: ^pid1] = pl1.post.get
+    assert nil = pl2.post.get
+    assert Post[id: ^pid3] = pl3.post.get
+  end
+
   test "preload keyword query" do
     p1 = TestRepo.create(Post[title: "1"])
     p2 = TestRepo.create(Post[title: "2"])

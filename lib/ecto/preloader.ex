@@ -6,6 +6,7 @@ defmodule Ecto.Preloader do
   alias Ecto.Query.Util
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.HasMany
+  alias Ecto.Reflections.BelongsTo
 
   def run(repo, original, name, pos // []) do
     if pos == [] do
@@ -17,13 +18,7 @@ defmodule Ecto.Preloader do
     record = Enum.first(records)
     module = elem(record, 0)
     refl = module.__ecto__(:association, name)
-
-    ids = Enum.map(records, &(&1.primary_key))
-    where_expr = quote do &0.unquote(refl.foreign_key) in unquote(ids) end
-    where = QueryExpr[expr: where_expr]
-    order_bys = QueryExpr[expr: [ { nil, quote do &0 end, refl.foreign_key } ]]
-    query = Query[from: refl.associated, wheres: [where], order_bys: [order_bys]]
-
+    query = Ecto.Associations.preload_query(refl, records)
     associated = repo.all(query)
 
     # TODO: Make sure all records are the same entity
@@ -31,8 +26,13 @@ defmodule Ecto.Preloader do
       |> Stream.with_index
       |> Enum.sort(&cmp_record/2)
 
-    # TODO: Check the type of association has_many / has_one / belongs_to
-    records = combine(records, associated, refl, [], [])
+    if match?(BelongsTo[], refl) do
+      records = combine_belongs(records, associated, refl, [])
+    else
+      records = combine_has(records, associated, refl, [], [])
+    end
+
+    records = records
       |> Enum.sort(&cmp_prev_record/2)
       |> Enum.map(&elem(&1, 0))
 
@@ -45,7 +45,7 @@ defmodule Ecto.Preloader do
     end
   end
 
-  defp combine(records, [], refl, acc1, acc2) do
+  defp combine_has(records, [], refl, acc1, acc2) do
     [record|records] = records
     record = set_loaded(record, refl, Enum.reverse(acc2))
 
@@ -55,16 +55,33 @@ defmodule Ecto.Preloader do
     acc1 ++ [record|records]
   end
 
-  defp combine([record|records], [assoc|assocs], refl, acc1, acc2) do
+  defp combine_has([record|records], [assoc|assocs], refl, acc1, acc2) do
     if primary_key(record) == apply(assoc, refl.foreign_key, []) do
-      combine([record|records], assocs, refl, acc1, [assoc|acc2])
+      combine_has([record|records], assocs, refl, acc1, [assoc|acc2])
     else
       record = set_loaded(record, refl, Enum.reverse(acc2))
-      combine(records, [assoc|assocs], refl, [record|acc1], [])
+      combine_has(records, [assoc|assocs], refl, [record|acc1], [])
+    end
+  end
+
+  defp combine_belongs(records, [], _refl, acc) do
+    Enum.reverse(acc) ++ records
+  end
+
+  defp combine_belongs([record|records], [assoc|assocs], refl, acc) do
+    pk = refl.associated.__ecto__(:primary_key)
+    if foreign_key(record, refl) == apply(assoc, pk, []) do
+      record = set_loaded(record, refl, assoc)
+      combine_belongs(records, assocs, refl, [record|acc])
+    else
+      record = set_loaded(record, refl, nil)
+      combine_belongs(records, [assoc|assocs], refl, [record|acc])
     end
   end
 
   defp primary_key({ record, _ }), do: record.primary_key
+
+  defp foreign_key({ record, _ }, refl), do: apply(record, refl.foreign_key, [])
 
   defp cmp_record({ record1, _ }, { record2, _ }) do
     record1.primary_key < record2.primary_key
@@ -83,6 +100,10 @@ defmodule Ecto.Preloader do
   end
 
   defp set_loaded(rec, HasMany[field: field], value) do
+    set_loaded(rec, field, value)
+  end
+
+  defp set_loaded(rec, BelongsTo[field: field], value) do
     set_loaded(rec, field, value)
   end
 
