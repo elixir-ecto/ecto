@@ -115,6 +115,14 @@ defmodule Ecto.Associations do
     set_loaded(record, field, loaded)
   end
 
+  defp set_loaded(record, BelongsTo[field: field], loaded) do
+    loaded = case loaded do
+      [] -> nil
+      [elem] -> elem
+    end
+    set_loaded(record, field, loaded)
+  end
+
   defp set_loaded(record, field, loaded) do
     association = apply(record, field, [])
     association = association.__ecto__(:loaded, loaded)

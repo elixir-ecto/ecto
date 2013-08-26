@@ -329,7 +329,6 @@ defmodule Ecto.Integration.PostgresTest do
   test "has_one assoc selector" do
     p1 = TestRepo.create(Post[title: "1"])
     p2 = TestRepo.create(Post[title: "2"])
-    TestRepo.create(Post[title: "3"])
 
     Permalink[id: pid1] = TestRepo.create(Permalink[url: "1", post_id: p1.id])
     Permalink[]         = TestRepo.create(Permalink[url: "2"])
@@ -339,6 +338,21 @@ defmodule Ecto.Integration.PostgresTest do
     assert [post1, post3] = TestRepo.all(query)
     assert Permalink[id: ^pid1] = post1.permalink.get
     assert Permalink[id: ^pid3] = post3.permalink.get
+  end
+
+  test "belongs_to assoc selector" do
+    Post[id: pid1] = TestRepo.create(Post[title: "1"])
+    Post[id: pid2] = TestRepo.create(Post[title: "2"])
+
+    TestRepo.create(Permalink[url: "1", post_id: pid1])
+    TestRepo.create(Permalink[url: "2"])
+    TestRepo.create(Permalink[url: "3", post_id: pid2])
+
+    query = from(p in Permalink, left_join: c in p.post, select: assoc(p, c))
+    assert [p1, p2, p3] = TestRepo.all(query)
+    assert Post[id: ^pid1] = p1.post.get
+    assert nil = p2.post.get
+    assert Post[id: ^pid2] = p3.post.get
   end
 
   test "join qualifier" do
