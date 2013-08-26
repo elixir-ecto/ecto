@@ -117,16 +117,11 @@ defmodule Ecto.Entity do
   defp ecto_assocs(assocs, primary_key) do
     quoted = Enum.map(assocs, fn({ name, opts, }) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
-        module_name = __MODULE__ |> Module.split |> List.last |> String.downcase
-        values = [
-          owner: __MODULE__,
-          associated: opts[:entity],
-          foreign_key: opts[:foreign_key] || :"#{module_name}_#{primary_key}",
-          field: :"__#{name}__" ]
-        refl = Ecto.Associations.create_reflection(opts[:type], values) |> Macro.escape
+        refl = Ecto.Associations.create_reflection(opts[:type], name, __MODULE__,
+          primary_key, opts[:entity], opts[:foreign_key])
 
         def __ecto__(:association, unquote(name)) do
-          unquote(refl)
+          unquote(refl |> Macro.escape)
         end
 
         def unquote(name)(self) do
@@ -208,7 +203,7 @@ defmodule Ecto.Entity.Dataset do
     quote do
       field_name = unquote(name)
       type = unquote(type)
-      opts = unquote(opts)
+      field_opts = unquote(opts)
       Ecto.Entity.Dataset.check_type(type)
 
       clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> field_name == prev_name end)
@@ -216,7 +211,7 @@ defmodule Ecto.Entity.Dataset do
         raise ArgumentError, message: "field `#{field_name}` was already set on entity"
       end
 
-      if opts[:primary_key] do
+      if field_opts[:primary_key] do
         if @ecto_primary_key do
           message = "there can only be one primary key, a custom primary key " <>
             "requires the default to be disabled, see `Ecto.Entity.dataset`"
@@ -225,8 +220,7 @@ defmodule Ecto.Entity.Dataset do
         @ecto_primary_key field_name
       end
 
-      default = opts[:default]
-      @ecto_fields { field_name, [type: type] ++ opts }
+      @ecto_fields { field_name, [type: type] ++ field_opts }
     end
   end
 
@@ -246,6 +240,24 @@ defmodule Ecto.Entity.Dataset do
       assoc = Ecto.Associations.HasOne.__ecto__(:new, name)
       field(:"__#{name}__", :virtual, default: assoc)
       opts = [type: :has_one, entity: unquote(entity)] ++ unquote(opts)
+      @ecto_assocs { name, opts }
+    end
+  end
+
+  defmacro belongs_to(name, entity, opts // []) do
+    quote do
+      name = unquote(name)
+      entity = unquote(entity)
+      opts = unquote(opts)
+
+      assoc_name = entity |> Module.split |> List.last |> String.downcase
+      primary_key = opts[:primary_key] || :id
+      foreign_key = :"#{assoc_name}_#{primary_key}"
+      field(foreign_key, :integer)
+
+      assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name)
+      field(:"__#{name}__", :virtual, default: assoc)
+      opts = [type: :belongs_to, entity: entity, foreign_key: foreign_key] ++ opts
       @ecto_assocs { name, opts }
     end
   end

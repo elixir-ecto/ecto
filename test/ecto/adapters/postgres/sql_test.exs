@@ -302,7 +302,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     use Ecto.Entity
 
     dataset "comments" do
-      field :post_id, :integer # TODO: belongs_to
+      belongs_to :post, Ecto.Adapters.Postgres.SQLTest.Post
     end
   end
 
@@ -310,7 +310,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     use Ecto.Entity
 
     dataset "posts" do
-      has_many :comments, Comment
+      has_many :comments, Ecto.Adapters.Postgres.SQLTest.Comment
     end
   end
 

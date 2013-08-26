@@ -39,12 +39,28 @@ defmodule Ecto.Associations do
   end
 
   @doc false
-  def create_reflection(:has_many, values) do
-    Ecto.Reflections.HasMany.new(values)
+  def create_reflection(type, name, module, pk, assoc, fk)
+      when type in [:has_many, :has_one] do
+    module_name = module |> Module.split |> List.last |> String.downcase
+    values = [
+      owner: module,
+      associated: assoc,
+      foreign_key: fk || :"#{module_name}_#{pk}",
+      field: :"__#{name}__" ]
+
+    case type do
+      :has_many -> Ecto.Reflections.HasMany.new(values)
+      :has_one  -> Ecto.Reflections.HasOne.new(values)
+    end
   end
 
-  def create_reflection(:has_one, values) do
-    Ecto.Reflections.HasOne.new(values)
+  def create_reflection(:belongs_to, name, module, _pk, assoc, fk) do
+    values = [
+      owner: module,
+      associated: assoc,
+      foreign_key: fk,
+      field: :"__#{name}__" ]
+    Ecto.Reflections.BelongsTo.new(values)
   end
 
   defp combine([], refl, last_parent, parents, children) do

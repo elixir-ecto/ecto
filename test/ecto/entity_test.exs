@@ -139,27 +139,49 @@ defmodule Ecto.EntityTest do
     dataset "my_entity" do
       has_many :posts, Post
       has_one :author, User
+      belongs_to :comment, Comment
     end
   end
 
   test "associations" do
     assert EntityAssocs.__ecto__(:association, :not_a_field) == nil
+    assert EntityAssocs.__record__(:fields) |> Keyword.keys ==
+      [:id, :__posts__, :__author__, :comment_id, :__comment__]
+    assert EntityAssocs.__ecto__(:field_names) == [:id, :comment_id]
+  end
 
+  test "has_many association" do
     assert Ecto.Reflections.HasMany[field: :"__posts__", owner: EntityAssocs,
                                     associated: Post, foreign_key: :entityassocs_id] =
       EntityAssocs.__ecto__(:association, :posts)
-
-    assert Ecto.Reflections.HasOne[field: :"__author__", owner: EntityAssocs,
-                                    associated: User, foreign_key: :entityassocs_id] =
-      EntityAssocs.__ecto__(:association, :author)
 
     r = EntityAssocs[]
     assoc = r.posts
     assert assoc.__ecto__(:name) == :posts
     assert assoc.__ecto__(:target) == r
+  end
 
+  test "has_one association" do
+    assert Ecto.Reflections.HasOne[field: :"__author__", owner: EntityAssocs,
+                                    associated: User, foreign_key: :entityassocs_id] =
+      EntityAssocs.__ecto__(:association, :author)
+
+    r = EntityAssocs[]
     assoc = r.author
     assert assoc.__ecto__(:name) == :author
+    assert assoc.__ecto__(:target) == r
+  end
+
+  test "belongs_to association" do
+    assert Ecto.Reflections.BelongsTo[field: :"__comment__", owner: EntityAssocs,
+                                    associated: Comment, foreign_key: :comment_id] =
+      EntityAssocs.__ecto__(:association, :comment)
+
+    assert EntityAssocs.__ecto__(:field, :comment_id) == [type: :integer]
+
+    r = EntityAssocs[]
+    assoc = r.comment
+    assert assoc.__ecto__(:name) == :comment
     assert assoc.__ecto__(:target) == r
   end
 end

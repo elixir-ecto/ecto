@@ -40,7 +40,7 @@ defmodule Ecto.Integration.Postgres.Comment do
 
   dataset "comments" do
     field :text, :string
-    field :post_id, :integer # TODO: belongs_to
+    belongs_to :post, Ecto.Integration.Postgres.Post
   end
 end
 
@@ -49,7 +49,7 @@ defmodule Ecto.Integration.Postgres.Permalink do
 
   dataset "permalinks" do
     field :url, :string
-    field :post_id, :integer # TODO: belongs_to
+    belongs_to :post, Ecto.Integration.Postgres.Post
   end
 end
 
