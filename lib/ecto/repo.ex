@@ -1,14 +1,14 @@
 defmodule Ecto.Repo do
   @moduledoc """
-  This module is used to define a repository. A repository will map to a data
-  store, for example an SQL database. A repository have to implement `url/0` and
+  This module is used to define a repository. A repository maps to a data
+  store, for example an SQL database. A repository must implement `url/0` and
   set an adapter (see `Ecto.Adapter`) to be used for the repository. All
-  functions from the `Ecto.Adapter` module will be available on the repositoty
+  functions from the `Ecto.Adapter` module will be available on the repository
   module but without the first parameter.
 
-  When used, it allows the following options:
+  When used, the following options are allowed:
 
-  * `:adapter` - the adapter to be used for the repository, it will be used to
+  * `:adapter` - the adapter to be used for the repository; it will be used 
                  to handle connections to the data store and to compile queries
 
   ## Example
@@ -91,13 +91,13 @@ defmodule Ecto.Repo do
   @doc """
   Should return the Ecto URL to be used for the repository. A URL is of the
   following format: `ecto://username:password@hostname:port/database?opts=123`
-  where the password, port and options are optional. This function has to be
+  where the `password`, `port` and `options` are optional. This function must be
   implemented by the user.
   """
   defcallback url() :: String.t
 
   @doc """
-  Starts any connection pooling or supervision if the adapter implements that.
+  Starts any connection pooling or supervision, if implemented by the adapter.
   """
   defcallback start_link() :: { :ok, pid } | :ok | { :error, term }
 
@@ -108,7 +108,7 @@ defmodule Ecto.Repo do
 
   @doc """
   Fetches a single entity from the data store where the primary key matches the
-  given id. id should be an integer or a string that can be casted to an
+  given id. id should be an integer or a string that can be cast to an
   integer. Returns `nil` if no result was found. If the entity in the queryable
   has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
   will be raised if there is an adapter error.
