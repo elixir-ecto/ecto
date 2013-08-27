@@ -1,6 +1,6 @@
 defmodule Ecto.Associations do
   @moduledoc """
-  Utilities on association.
+  Utilities on associations.
   """
 
   alias Ecto.Query.Query

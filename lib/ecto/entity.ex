@@ -16,6 +16,16 @@ defmodule Ecto.Entity do
         dataset "users" do
           field :name, :string
           field :age, :integer
+          has_many :posts, Post
+        end
+      end
+
+      defmodule Post do
+        use Ecto.Entity
+
+        dataset "posts" do
+          field :text, :string
+          belongs_to :author, User
         end
       end
 
@@ -224,6 +234,15 @@ defmodule Ecto.Entity.Dataset do
     end
   end
 
+  @doc """
+  Indicates a one-to-many association with another entity, this entity has zero
+  or more records of the other entity. The other entity often has a `belongs_to`
+  field to the current entity.
+
+  ## Options
+
+    * `:foreign_key` - Sets the foreign key that is used on the other entity;
+  """
   defmacro has_many(name, entity, opts // []) do
     quote do
       name = unquote(name)
@@ -234,6 +253,15 @@ defmodule Ecto.Entity.Dataset do
     end
   end
 
+  @doc """
+  Indicates a one-to-one association with another entity, this entity has zero
+  or one records of the other entity. The other entity often has a `belongs_to`
+  field to the current entity.
+
+  ## Options
+
+    * `:foreign_key` - Sets the foreign key that is used on the other entity;
+  """
   defmacro has_one(name, entity, opts // []) do
     quote do
       name = unquote(name)
@@ -244,6 +272,16 @@ defmodule Ecto.Entity.Dataset do
     end
   end
 
+  @doc """
+  Indiciates a one-to-one association with another entity, this entity belongs
+  to zero or one records of the other entity. The other entity often has a
+  `has_many` or `has_one` field to the current entity. Will also generate a
+  foreign key field.
+
+  ## Options
+
+    * `:foreign_key` - Sets the foreign key field name;
+  """
   defmacro belongs_to(name, entity, opts // []) do
     quote do
       name = unquote(name)
@@ -251,8 +289,7 @@ defmodule Ecto.Entity.Dataset do
       opts = unquote(opts)
 
       assoc_name = entity |> Module.split |> List.last |> String.downcase
-      primary_key = opts[:primary_key] || :id
-      foreign_key = :"#{assoc_name}_#{primary_key}"
+      foreign_key = opts[:foreign_key] || :"#{assoc_name}_id"
       field(foreign_key, :integer)
 
       assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name)

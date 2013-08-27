@@ -79,8 +79,6 @@ defmodule Ecto.Query do
   in the keywords query and in the query expression formats.
   """
 
-  # TODO: Add query operators (and functions?) to documentation
-
   @type t :: Query.t
 
   defrecord Query, entities: nil, from: nil, joins: [], wheres: [], select: nil,
@@ -194,7 +192,14 @@ defmodule Ecto.Query do
   @doc """
   A join query expression. Receives an entity that is to be joined to the query
   and a condition to do the joining on. The join condition can be any expression
-  that evaluates to a boolean value.
+  that evaluates to a boolean value. The join is by default an inner join, the
+  qualifier can be changed by giving the atoms: `:inner`, `:left`, `:right` or
+  `:full`. For a keyword query the `:join` keyword can be changed to:
+  `:inner_join`, `:left_join`, `:right_join` or `:full_join`.
+
+  The join condition can be automatically set when doing an association join. An
+  association join can be done on any association field (`has_many`, `has_one`,
+  `belong_to`).
 
   ## Keywords examples
 
@@ -202,11 +207,19 @@ defmodule Ecto.Query do
         join: p in Post, on: c.post_id == p.id,
       select: { p.title, c.text }
 
+         from p in Post,
+        left_join: c in p.comments,
+      select: { p, c }
+
   ## Expressions examples
 
       from(Comment)
         |> join([c], p in Post, c.post_id == p.id)
         |> select([c, p], { p.title, c.text })
+
+      from(Post)
+        |> join([p], :left, c in p.comments)
+        |> select([p, c], { p, c })
   """
   defmacro join(query, binding, qual // nil, expr, on // nil) do
     binding = Util.escape_binding(binding)
@@ -251,12 +264,19 @@ defmodule Ecto.Query do
   the examples. A full entity can also be selected if the entity variable is the
   only thing in the expression.
 
+  The `assoc/2` selector can be used to load an association on a parent entity
+  as shown in the examples below. The first argument to `assoc` has to be a
+  variable bound in the `from` query expression, the second has to be a variable
+  bound in an association join on the `from` variable.
+
   ## Keywords examples
 
       from(c in City, select: c) # selects the entire entity
       from(c in City, select: { c.name, c.population })
       from(c in City, select: [c.name, c.county])
       from(c in City, select: { c.name, to_binary(40 + 2), 43 })
+
+      from(p in Post, join: c in p.comments, select: assoc(p, c))
 
   ## Expressions examples
 
@@ -474,24 +494,16 @@ defmodule Ecto.Query do
     state.quoted(quoted).binds(state.binds ++ [bind])
   end
 
-  defp build_query_type({ :join, expr }, KwState[] = state) do
-    build_join(nil, expr, state)
-  end
+  @joins [:join, :inner_join, :left_join, :right_join, :full_join]
 
-  defp build_query_type({ :inner_join, expr }, KwState[] = state) do
-    build_join(:inner, expr, state)
-  end
-
-  defp build_query_type({ :left_join, expr }, KwState[] = state) do
-    build_join(:left, expr, state)
-  end
-
-  defp build_query_type({ :right_join, expr }, KwState[] = state) do
-    build_join(:right, expr, state)
-  end
-
-  defp build_query_type({ :full_join, expr }, KwState[] = state) do
-    build_join(:full, expr, state)
+  defp build_query_type({ join, expr }, state) when join in @joins do
+    case join do
+      :join       -> build_join(nil, expr, state)
+      :inner_join -> build_join(:inner, expr, state)
+      :left_join  -> build_join(:left, expr, state)
+      :right_join -> build_join(:right, expr, state)
+      :full_join  -> build_join(:full, expr, state)
+    end
   end
 
   defp build_query_type({ :on, expr }, KwState[] = state) do
