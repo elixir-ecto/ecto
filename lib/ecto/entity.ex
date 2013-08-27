@@ -235,6 +235,8 @@ defmodule Ecto.Entity.Dataset do
   end
 
   @doc """
+  Creates a virtual field with the default value `Ecto.Associations.HasMany`.
+
   Indicates a one-to-many association with another entity, this entity has zero
   or more records of the other entity. The other entity often has a `belongs_to`
   field to the current entity.
@@ -254,6 +256,8 @@ defmodule Ecto.Entity.Dataset do
   end
 
   @doc """
+  Creates a virtual field with the default value `Ecto.Associations.HasOne`.
+
   Indicates a one-to-one association with another entity, this entity has zero
   or one records of the other entity. The other entity often has a `belongs_to`
   field to the current entity.
@@ -273,6 +277,8 @@ defmodule Ecto.Entity.Dataset do
   end
 
   @doc """
+  Creates a virtual field with the default value `Ecto.Associations.BelongsTo`.
+
   Indiciates a one-to-one association with another entity, this entity belongs
   to zero or one records of the other entity. The other entity often has a
   `has_many` or `has_one` field to the current entity. Will also generate a

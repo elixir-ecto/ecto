@@ -1,18 +1,30 @@
 defrecord Ecto.Reflections.HasMany, [:field, :owner, :associated, :foreign_key]
 
 defmodule Ecto.Associations.HasMany do
-  @not_loaded :not_loaded
+  @moduledoc """
+  A has_many association.
+  """
+
+   @not_loaded :not_loaded
 
   # Needs to be defrecordp because we don't want pollute the module
   # with functions generated for the record
   defrecordp :assoc, __MODULE__, [:loaded, :target, :name]
 
+  @doc """
+  Creates a new record of the associated entity with the foreign key field set
+  to the primary key of the parent entity.
+  """
   def new(params // [], assoc(target: target, name: name)) do
     refl = elem(target, 0).__ecto__(:association, name)
     fk = refl.foreign_key
     refl.associated.new([{ fk, target.primary_key }] ++ params)
   end
 
+  @doc """
+  Returns a list of the associated records. Raises `AssociationNotLoadedError`
+  if the association was not loaded.
+  """
   def to_list(assoc(loaded: @not_loaded, target: target, name: name)) do
     refl = elem(target, 0).__ecto__(:association, name)
     raise Ecto.AssociationNotLoadedError,
@@ -23,6 +35,7 @@ defmodule Ecto.Associations.HasMany do
     loaded
   end
 
+  @doc false
   Enum.each [:loaded, :target, :name], fn field ->
     def __ecto__(unquote(field), record) do
       assoc(record, unquote(field))
