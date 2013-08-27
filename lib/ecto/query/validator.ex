@@ -302,8 +302,8 @@ defmodule Ecto.Query.Validator do
     end
 
     expr = Util.find_expr(state.query, child)
-    unless match?(AssocJoinExpr[], expr) do
-      raise Ecto.InvalidQuery, reason: "can only associate on an association join"
+    unless match?(AssocJoinExpr[qual: qual] when qual in [nil, :inner, :left], expr) do
+      raise Ecto.InvalidQuery, reason: "can only associate on an inner or left association join"
     end
   end
 

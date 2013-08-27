@@ -351,7 +351,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
 
     query = from(p in PostEntity, join: c in Comment, on: true, select: assoc(p, c))
-    assert_raise Ecto.InvalidQuery, "can only associate on an association join", fn ->
+    assert_raise Ecto.InvalidQuery, "can only associate on an inner or left association join", fn ->
       validate(query)
     end
   end
