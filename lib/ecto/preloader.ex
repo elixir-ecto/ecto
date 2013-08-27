@@ -44,17 +44,20 @@ defmodule Ecto.Preloader do
     record = set_loaded(record, refl, Enum.reverse(acc2))
 
     records = Enum.map(records, fn record ->
-      set_loaded(record, refl, [])
+      if elem(record, 0), do: set_loaded(record, refl, []), else: record
     end)
     acc1 ++ [record|records]
   end
 
   defp combine([record|records], [assoc|assocs], refl, acc1, acc2) do
-    if compare(record, assoc, refl) do
-      combine([record|records], assocs, refl, acc1, [assoc|acc2])
-    else
-      record = set_loaded(record, refl, Enum.reverse(acc2))
-      combine(records, [assoc|assocs], refl, [record|acc1], [])
+    cond do
+      nil?(elem(record, 0)) ->
+        combine(records, [assoc|assocs], refl, [nil|acc1], acc2)
+      compare(record, assoc, refl) ->
+        combine([record|records], assocs, refl, acc1, [assoc|acc2])
+      true ->
+        record = set_loaded(record, refl, Enum.reverse(acc2))
+        combine(records, [assoc|assocs], refl, [record|acc1], [])
     end
   end
 
@@ -68,7 +71,7 @@ defmodule Ecto.Preloader do
   end
 
   defp cmp_record({ record1, _ }, { record2, _ }) do
-    record1.primary_key < record2.primary_key
+    !!record1 and !!record2 and record1.primary_key < record2.primary_key
   end
 
   defp cmp_prev_record({ _, ix1 }, { _, ix2 }) do

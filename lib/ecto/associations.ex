@@ -67,7 +67,7 @@ defmodule Ecto.Associations do
   @doc false
   def preload_query(refl, records)
       when is_record(refl, HasMany) or is_record(refl, HasOne) do
-    ids = Enum.map(records, &(&1.primary_key))
+    ids = Enum.filter_map(records, &(&1), &(&1.primary_key))
 
     where_expr = quote do &0.unquote(refl.foreign_key) in unquote(ids) end
     where = QueryExpr[expr: where_expr]
@@ -93,13 +93,16 @@ defmodule Ecto.Associations do
   end
 
   defp combine([{ parent, child }|rows], refl, last_parent, parents, children) do
-    if parent.primary_key == last_parent.primary_key do
-      combine(rows, refl, parent, parents, [child|children])
-    else
-      children = Enum.reverse(children)
-      last_parent = set_loaded(last_parent, refl, children)
-      parents = [last_parent|parents]
-      combine([{ parent, child }|rows], refl, parent, parents, [])
+    cond do
+      nil?(parent) ->
+        combine(rows, refl, last_parent, [nil|parents], children)
+      parent.primary_key == last_parent.primary_key ->
+        combine(rows, refl, parent, parents, [child|children])
+      true ->
+        children = Enum.reverse(children)
+        last_parent = set_loaded(last_parent, refl, children)
+        parents = [last_parent|parents]
+        combine([{ parent, child }|rows], refl, parent, parents, [])
     end
   end
 

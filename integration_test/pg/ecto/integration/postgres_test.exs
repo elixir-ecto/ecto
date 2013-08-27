@@ -254,6 +254,13 @@ defmodule Ecto.Integration.PostgresTest do
     assert [] = p3.comments.to_list
   end
 
+  test "preload nils" do
+    p1 = TestRepo.create(Post[title: "1"])
+    p2 = TestRepo.create(Post[title: "2"])
+
+    assert [Post[], nil, Post[]] = Ecto.Preloader.run(TestRepo, [p1, nil, p2], :permalink)
+  end
+
   test "row transform" do
     post = TestRepo.create(Post[title: "1", text: "hi"])
     query = from(p in Post, select: { p.title, [ p, { p.text } ] })
