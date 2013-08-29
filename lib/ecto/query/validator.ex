@@ -329,7 +329,7 @@ defmodule Ecto.Query.Validator do
       Enum.map(expr.expr, fn({ var, field }) ->
         { Util.find_entity(entities, var), field }
       end)
-    end) |> List.concat |> Enum.uniq
+    end) |> Enum.concat |> Enum.uniq
   end
 
   defp check_grouped(entity_field, state) do
