@@ -34,11 +34,23 @@ defmodule Ecto.Entity do
   `update_primary_key/2`.
   """
 
+  @doc false
+  defmacro __using__(_opts) do
+    quote do
+      import Ecto.Entity
+      @before_compile unquote(__MODULE__)
+
+      @ecto_model nil
+      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+    end
+  end
+
   @doc """
   Defines the entity dataset. Takes an optional primary key name, if none is
   given, defaults to `:id`, pass `nil` if there should be no primary key.
   """
-  defmacro dataset(name, primary_key // :id, block) do
+  defmacro dataset(primary_key // :id, block) do
     quote do
       try do
         import Ecto.Entity.Dataset
@@ -49,8 +61,10 @@ defmodule Ecto.Entity do
           raise ArgumentError, message: "dataset already defined"
         end
 
-        @ecto_dataset unquote(name)
+        @ecto_dataset true
         @ecto_primary_key nil
+
+        field(:model, :virtual, default: @ecto_model)
 
         if primary_key do
           field(primary_key, :integer, primary_key: true)
@@ -71,41 +85,23 @@ defmodule Ecto.Entity do
   end
 
   @doc false
-  defmacro __using__(_opts) do
-    quote do
-      import Ecto.Entity, only: [dataset: 2, dataset: 3]
-      @before_compile unquote(__MODULE__)
-      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
-    end
-  end
-
-  @doc false
   defmacro __before_compile__(env) do
     module        = env.module
-    dataset_name  = Module.get_attribute(module, :ecto_dataset)
     primary_key   = Module.get_attribute(module, :ecto_primary_key)
     all_fields    = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
     assocs        = Module.get_attribute(module, :ecto_assocs) |> Enum.reverse
 
-    unless dataset_name do
+    unless Module.get_attribute(module, :ecto_dataset) do
       raise ArgumentError, message: "dataset not defined, an entity has to " <>
         "define a dataset, see `Ecto.Entity.Dataset`"
     end
 
     fields = Enum.filter(all_fields, fn({ _, opts }) -> opts[:type] != :virtual end)
 
-    [ ecto_dataset(dataset_name),
-      ecto_fields(fields),
+    [ ecto_fields(fields),
       ecto_assocs(assocs, primary_key),
       ecto_primary_key(primary_key),
       ecto_helpers(fields, all_fields) ]
-  end
-
-  defp ecto_dataset(dataset_name) do
-    quote do
-      def __ecto__(:dataset), do: unquote(dataset_name)
-    end
   end
 
   defp ecto_fields(fields) do
@@ -127,7 +123,8 @@ defmodule Ecto.Entity do
   defp ecto_assocs(assocs, primary_key) do
     quoted = Enum.map(assocs, fn({ name, opts, }) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
-        refl = Ecto.Associations.create_reflection(opts[:type], name, __MODULE__,
+        module = @ecto_model || __MODULE__
+        refl = Ecto.Associations.create_reflection(opts[:type], name, module,
           primary_key, opts[:entity], opts[:foreign_key])
 
         def __ecto__(:association, unquote(name)) do

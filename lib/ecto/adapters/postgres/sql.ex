@@ -43,14 +43,15 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a select statement
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
-    entities = create_names(query)
-    { from, used_names } = from(query.from, entities)
-    select   = select(query.select, entities)
-    join     = join(query, entities, used_names)
-    where    = where(query.wheres, entities)
-    group_by = group_by(query.group_bys, entities)
-    having   = having(query.havings, entities)
-    order_by = order_by(query.order_bys, entities)
+    models = create_names(query)
+    { from, used_names } = from(query.from, models)
+
+    select   = select(query.select, models)
+    join     = join(query, models, used_names)
+    where    = where(query.wheres, models)
+    group_by = group_by(query.group_bys, models)
+    having   = having(query.havings, models)
+    order_by = order_by(query.order_bys, models)
     limit    = limit(query.limit)
     offset   = offset(query.offset)
 
@@ -63,7 +64,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an insert statement
   def insert(entity) do
     module      = elem(entity, 0)
-    table       = module.__ecto__(:dataset)
+    table       = entity.model.__ecto__(:name)
     primary_key = module.__ecto__(:primary_key)
     pk_value    = entity.primary_key
 
@@ -79,7 +80,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an update statement
   def update(entity) do
     module   = elem(entity, 0)
-    table    = module.__ecto__(:dataset)
+    table    = entity.model.__ecto__(:name)
     pk_field = module.__ecto__(:primary_key)
     pk_value = entity.primary_key
 
@@ -99,11 +100,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   def update_all(Query[] = query, values) do
-    module = query.from
     names  = create_names(query)
     entity = elem(names, 0)
     name   = elem(entity, 1)
-    table  = module.__ecto__(:dataset)
+    table  = query.from.__ecto__(:name)
 
     zipped_sql = Enum.map_join(values, ", ", fn({field, expr}) ->
       "#{field} = #{expr(expr, names)}"
@@ -119,7 +119,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a delete statement
   def delete(entity) do
     module   = elem(entity, 0)
-    table    = module.__ecto__(:dataset)
+    table    = entity.model.__ecto__(:name)
     pk_field = module.__ecto__(:primary_key)
     pk_value = entity.primary_key
 
@@ -132,41 +132,43 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   def delete_all(Query[] = query) do
-    module = query.from
     names  = create_names(query)
     entity = elem(names, 0)
     name   = elem(entity, 1)
-    table  = module.__ecto__(:dataset)
+    table  = query.from.__ecto__(:name)
 
     where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, names)
 
     "DELETE FROM #{table} AS #{name}" <> where
   end
 
-  defp select(expr, entities) do
+  defp select(expr, models) do
     QueryExpr[expr: expr] = Normalizer.normalize_select(expr)
-    "SELECT " <> select_clause(expr, entities)
+    "SELECT " <> select_clause(expr, models)
   end
 
-  defp from(from, entities) do
-    name = tuple_to_list(entities) |> Keyword.fetch!(from)
-    { "FROM #{from.__ecto__(:dataset)} AS #{name}", [name] }
+  defp from(from, models) do
+    name = tuple_to_list(models) |> Dict.fetch!(from)
+    table = from.__ecto__(:name)
+    { "FROM #{table} AS #{name}", [name] }
   end
 
-  defp join(Query[] = query, entities, used_names) do
+  defp join(Query[] = query, models, used_names) do
     # We need to make sure that we get a unique name for each entity since
     # the same entity can be referenced multiple times in joins
-    entities_list = tuple_to_list(entities)
+    models_list = tuple_to_list(models)
     Enum.map_reduce(query.joins, used_names, fn(expr, names) ->
       JoinExpr[] = expr = Normalizer.normalize_join(expr, query)
 
-      { entity, name } = Enum.find(entities_list, fn({ entity, name }) ->
-        entity == expr.entity and not name in names
+      { model, name } = Enum.find(models_list, fn({ model, name }) ->
+        model == expr.model and not name in names
       end)
-      on_sql = expr(expr.on.expr, entities)
+
+      table = model.__ecto__(:name)
+      on_sql = expr(expr.on.expr, models)
       qual = join_qual(expr.qual)
 
-      { "#{qual}JOIN #{entity.__ecto__(:dataset)} AS #{name} ON " <> on_sql, [name|names] }
+      { "#{qual}JOIN #{table} AS #{name} ON " <> on_sql, [name|names] }
     end) |> elem(0)
   end
 
@@ -176,16 +178,16 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp join_qual(:right), do: "RIGHT OUTER "
   defp join_qual(:full), do: "FULL OUTER "
 
-  defp where(wheres, entities) do
-    boolean("WHERE", wheres, entities)
+  defp where(wheres, models) do
+    boolean("WHERE", wheres, models)
   end
 
-  defp group_by([], _entities), do: nil
+  defp group_by([], _models), do: nil
 
-  defp group_by(group_bys, entities) do
+  defp group_by(group_bys, models) do
     exprs = Enum.map_join(group_bys, ", ", fn(expr) ->
       Enum.map_join(expr.expr, ", ", fn({ var, field }) ->
-        { _entity, name } = Util.find_entity(entities, var)
+        { _model, name } = Util.find_model(models, var)
         "#{name}.#{field}"
       end)
     end)
@@ -193,22 +195,22 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "GROUP BY " <> exprs
   end
 
-  defp having(havings, entities) do
-    boolean("HAVING", havings, entities)
+  defp having(havings, models) do
+    boolean("HAVING", havings, models)
   end
 
   defp order_by([], _vars), do: nil
 
-  defp order_by(order_bys, entities) do
+  defp order_by(order_bys, models) do
     exprs = Enum.map_join(order_bys, ", ", fn(expr) ->
-      Enum.map_join(expr.expr, ", ", &order_by_expr(&1, entities))
+      Enum.map_join(expr.expr, ", ", &order_by_expr(&1, models))
     end)
 
     "ORDER BY " <> exprs
   end
 
   defp order_by_expr({ dir, var, field }, vars) do
-    { _entity, name } = Util.find_entity(vars, var)
+    { _model, name } = Util.find_model(vars, var)
     str = "#{name}.#{field}"
     case dir do
       nil   -> str
@@ -225,16 +227,16 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp boolean(_name, [], _vars), do: nil
 
-  defp boolean(name, query_exprs, entities) do
+  defp boolean(name, query_exprs, vars) do
     exprs = Enum.map_join(query_exprs, " AND ", fn(QueryExpr[expr: expr]) ->
-      "(" <> expr(expr, entities) <> ")"
+      "(" <> expr(expr, vars) <> ")"
     end)
 
     name <> " " <> exprs
   end
 
   defp expr({ :., _, [{ :&, _, [_] } = var, field] }, vars) when is_atom(field) do
-    { _entity, name } = Util.find_entity(vars, var)
+    { _model, name } = Util.find_model(vars, var)
     "#{name}.#{field}"
   end
 
@@ -244,7 +246,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Expression builders make sure that we only find undotted vars at the top level
   defp expr({ :&, _, [_] } = var, vars) do
-    { entity, name } = Util.find_entity(vars, var)
+    { model, name } = Util.find_model(vars, var)
+    entity = model.__ecto__(:entity)
     fields = entity.__ecto__(:field_names)
     Enum.map_join(fields, ", ", &"#{name}.#{&1}")
   end
@@ -358,11 +361,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp create_names(query) do
-    entities = query.entities |> tuple_to_list
-    Enum.reduce(entities, [], fn(entity, names) ->
-      table = entity.__ecto__(:dataset) |> String.first
+    models = query.models |> tuple_to_list
+    Enum.reduce(models, [], fn(model, names) ->
+      table = model.__ecto__(:name) |> String.first
       name = unique_name(names, table, 0)
-      [{ entity, name }|names]
+      [{ model, name }|names]
     end) |> Enum.reverse |> list_to_tuple
   end
 

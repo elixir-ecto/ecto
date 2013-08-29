@@ -214,7 +214,8 @@ defmodule Ecto.Repo do
     query = Queryable.to_query(queryable)
     Util.validate_get(query, repo.query_apis)
 
-    entity = query.from
+    model = query.from
+    entity = model.__ecto__(:entity)
     check_primary_key(entity, reason)
     primary_key = entity.__ecto__(:primary_key)
 
@@ -407,7 +408,7 @@ defmodule Ecto.Repo do
 
   defp preload(repo, Query[] = query, results) do
     pos = Util.locate_var(query.select.expr, { :&, [], [0] })
-    preloads = Enum.map(query.preloads, &(&1.expr)) |> List.concat
+    preloads = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
 
     Enum.reduce(preloads, results, fn field, acc ->
       Ecto.Preloader.run(repo, acc, field, pos)

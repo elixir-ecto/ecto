@@ -50,14 +50,14 @@ defmodule Ecto.Query.Util do
   end
 
   @doc """
-  Look up an entity with a variable.
+  Look up a model with a variable.
   """
-  def find_entity(entities, { :&, _, [ix] }) when is_tuple(entities) do
-    elem(entities, ix)
+  def find_model(models, { :&, _, [ix] }) when is_tuple(models) do
+    elem(models, ix)
   end
 
-  def find_entity(entities, { :&, _, [ix] }) when is_list(entities) do
-    Enum.at(entities, ix)
+  def find_model(models, { :&, _, [ix] }) when is_list(models) do
+    Enum.at(models, ix)
   end
 
   @doc """
@@ -162,10 +162,10 @@ defmodule Ecto.Query.Util do
   def type_eq?(x, x), do: true
   def type_eq?(_, _), do: false
 
-  # Get var for given entity in query
-  def entity_var(Query[] = query, entity) do
-    entities = tuple_to_list(query.entities)
-    pos = Enum.find_index(entities, &(&1 == entity))
+  # Get var for given model in query
+  def model_var(Query[] = query, model) do
+    models = tuple_to_list(query.models)
+    pos = Enum.find_index(models, &(&1 == model))
     { :&, [], [pos] }
   end
 

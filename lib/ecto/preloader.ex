@@ -62,7 +62,8 @@ defmodule Ecto.Preloader do
   end
 
   defp compare({ record, _ }, assoc, BelongsTo[] = refl) do
-    pk = refl.associated.__ecto__(:primary_key)
+    associated = refl.associated.__ecto__(:entity)
+    pk = associated.__ecto__(:primary_key)
     apply(record, refl.foreign_key, []) == apply(assoc, pk, [])
   end
 

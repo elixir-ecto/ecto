@@ -4,10 +4,10 @@ defmodule Ecto.Query.LimitOffsetBuilderTest do
   import Ecto.Query, warn: false
   import Ecto.TestHelpers
 
-  defmodule PostEntity do
-    use Ecto.Entity
+  defmodule Post do
+    use Ecto.Model
 
-    dataset :post_entity do
+    queryable :posts do
       field :title, :string
     end
   end
@@ -15,11 +15,11 @@ defmodule Ecto.Query.LimitOffsetBuilderTest do
   test "limit and offset" do
     delay_compile do
       x = 1
-      from(PostEntity) |> limit([], x * 3) |> offset([], 4 * 2) |> select([], 0)
+      from(Post) |> limit([], x * 3) |> offset([], 4 * 2) |> select([], 0)
     end
 
     assert_raise Ecto.InvalidQuery, %r"limit and offset expressions must be a single integer value", fn ->
-      delay_compile from(PostEntity) |> limit([], "a") |> select([], 0)
+      delay_compile from(Post) |> limit([], "a") |> select([], 0)
     end
   end
 end

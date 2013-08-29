@@ -33,7 +33,8 @@ defmodule Ecto.Associations do
   def transform_result({ :assoc, _, [parent, child] }, results, Query[] = query) do
     AssocJoinExpr[expr: join_expr] = Util.find_expr(query, child)
     { :., _, [^parent, field] } = join_expr
-    refl = query.from.__ecto__(:association, field)
+    entity = query.from.__ecto__(:entity)
+    refl = entity.__ecto__(:association, field)
 
     [{ parent, child }|results] = results
     combine(results, refl, parent, [], [child])
@@ -78,7 +79,8 @@ defmodule Ecto.Associations do
   def preload_query(BelongsTo[] = refl, records) do
     fun = &(apply(&1, refl.foreign_key, []))
     ids = Enum.filter_map(records, fun, fun)
-    pk = refl.associated.__ecto__(:primary_key)
+    associated = refl.associated.__ecto__(:entity)
+    pk = associated.__ecto__(:primary_key)
 
     where_expr = quote do &0.unquote(pk) in unquote(ids) end
     where = QueryExpr[expr: where_expr]

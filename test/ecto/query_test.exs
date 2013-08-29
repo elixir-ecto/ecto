@@ -6,18 +6,18 @@ defmodule Ecto.QueryTest do
   alias Ecto.Query.Query
   alias Ecto.Query.Util
 
-  defmodule PostEntity do
-    use Ecto.Entity
+  defmodule Post do
+    use Ecto.Model
 
-    dataset :post_entity do
+    queryable :posts do
       field :title, :string
     end
   end
 
-  defmodule CommentEntity do
-    use Ecto.Entity
+  defmodule Comment do
+    use Ecto.Model
 
-    dataset :comments do
+    queryable :comments do
       field :text, :string
     end
   end
@@ -26,60 +26,60 @@ defmodule Ecto.QueryTest do
 
 
   test "call queryable on every merge" do
-    query = from(PostEntity) |> select([p], p.title)
+    query = from(Post) |> select([p], p.title)
     validate(query)
 
-    query = from(PostEntity) |> where([p], p.title == "42")
+    query = from(Post) |> where([p], p.title == "42")
     validate(query)
 
-    query = from(PostEntity) |> order_by([p], p.title)
+    query = from(Post) |> order_by([p], p.title)
     validate(query)
 
-    query = from(PostEntity) |> limit(42)
+    query = from(Post) |> limit(42)
     validate(query)
 
-    query = from(PostEntity) |> offset(43)
+    query = from(Post) |> offset(43)
     validate(query)
 
-    query = select(PostEntity, [p], p.title)
+    query = select(Post, [p], p.title)
     validate(query)
 
-    query = where(PostEntity, [p], p.title == "42")
+    query = where(Post, [p], p.title == "42")
     validate(query)
 
-    query = order_by(PostEntity, [p], p.title)
+    query = order_by(Post, [p], p.title)
     validate(query)
 
-    query = limit(PostEntity, 42)
+    query = limit(Post, 42)
     validate(query)
 
-    query = offset(PostEntity, 43)
+    query = offset(Post, 43)
     validate(query)
   end
 
   test "vars are order dependent" do
-    query = from(p in PostEntity) |> select([q], q.title)
+    query = from(p in Post) |> select([q], q.title)
     validate(query)
   end
 
   test "can append to selected query" do
-    query = from(p in PostEntity) |> select([], 1) |> where([], true)
+    query = from(p in Post) |> select([], 1) |> where([], true)
     validate(query)
   end
 
   test "only one select is allowed" do
     assert_raise Ecto.InvalidQuery, "only one select expression is allowed in query", fn ->
-      from(p in PostEntity) |> select([], 1) |> select([], 2)
+      from(p in Post) |> select([], 1) |> select([], 2)
     end
   end
 
   test "only one limit or offset is allowed" do
     assert_raise Ecto.InvalidQuery, "only one limit expression is allowed in query", fn ->
-      from(p in PostEntity) |> limit([], 1) |> limit([], 2) |> select([], 3)
+      from(p in Post) |> limit([], 1) |> limit([], 2) |> select([], 3)
     end
 
     assert_raise Ecto.InvalidQuery, "only one offset expression is allowed in query", fn ->
-      from(p in PostEntity) |> offset([], 1) |> offset([], 2) |> select([], 3)
+      from(p in Post) |> offset([], 1) |> offset([], 2) |> select([], 3)
     end
   end
 
@@ -92,27 +92,27 @@ defmodule Ecto.QueryTest do
   test "keyword query" do
     # queries need to be on the same line or == wont work
 
-    assert from(p in PostEntity, []) == from(p in PostEntity)
+    assert from(p in Post, []) == from(p in Post)
 
-    assert from(p in PostEntity, select: 1+2) == from(p in PostEntity) |> select([p], 1+2)
+    assert from(p in Post, select: 1+2) == from(p in Post) |> select([p], 1+2)
 
-    assert from(p in PostEntity, where: 1<2) == from(p in PostEntity) |> where([p], 1<2)
+    assert from(p in Post, where: 1<2) == from(p in Post) |> where([p], 1<2)
   end
 
   test "variable is already defined" do
     assert_raise Ecto.InvalidQuery, "variable `p` is already defined in query", fn ->
-      delay_compile(from(p in PostEntity, from: p in PostEntity))
+      delay_compile(from(p in Post, from: p in Post))
     end
   end
 
   test "extend keyword query" do
-    query = from(p in PostEntity)
+    query = from(p in Post)
     assert (query |> select([p], p.title)) == from(p in query, select: p.title)
 
-    query = from(p in PostEntity)
+    query = from(p in Post)
     assert (query |> select([p], p.title)) == from([p] in query, select: p.title)
 
-    query = PostEntity
+    query = Post
     assert (query |> select([p], p.title)) == from([p] in query, select: p.title)
   end
 
@@ -127,55 +127,55 @@ defmodule Ecto.QueryTest do
   end
 
   test "validate from expression" do
-    delay_compile(from(PostEntity, []))
+    delay_compile(from(Post, []))
 
     assert_raise Ecto.InvalidQuery, fn ->
-      delay_compile(from(PostEntity, [123]))
+      delay_compile(from(Post, [123]))
     end
 
     assert_raise Ecto.InvalidQuery, fn ->
-      delay_compile(from(PostEntity, 123))
+      delay_compile(from(Post, 123))
     end
   end
 
   test "unbound _ var" do
     assert_raise Ecto.InvalidQuery, fn ->
-      delay_compile(from(PostEntity) |> select([], _.x))
+      delay_compile(from(Post) |> select([], _.x))
     end
 
-    query = from(PostEntity) |> select([_], 0)
+    query = from(Post) |> select([_], 0)
     validate(query)
 
-    query = from(PostEntity) |> join([], nil, CommentEntity, true) |> select([_, c], c.text)
+    query = from(Post) |> join([], nil, Comment, true) |> select([_, c], c.text)
     validate(query)
 
-    query = from(PostEntity) |> join([], nil, CommentEntity, true) |> select([p, _], p.title)
+    query = from(Post) |> join([], nil, Comment, true) |> select([p, _], p.title)
     validate(query)
 
-    query = from(PostEntity) |> join([], nil, CommentEntity, true) |> select([_, _], 0)
+    query = from(Post) |> join([], nil, Comment, true) |> select([_, _], 0)
     validate(query)
   end
 
   test "binding collision" do
     assert_raise Ecto.InvalidQuery, "variable `x` is already defined in query", fn ->
-      delay_compile(from(PostEntity) |> from(CommentEntity) |> select([x, x], x.id))
+      delay_compile(from(Post) |> from(Comment) |> select([x, x], x.id))
     end
 
     assert_raise Ecto.InvalidQuery, "variable `x` is already defined in query", fn ->
-      delay_compile(from(x in PostEntity, from: x in CommentEntity, select: x.id))
+      delay_compile(from(x in Post, from: x in Comment, select: x.id))
     end
   end
 
   test "join on keyword query" do
-    from(c in CommentEntity, join: p in PostEntity, on: c.text == "", select: c)
+    from(c in Comment, join: p in Post, on: c.text == "", select: c)
 
     assert_raise Ecto.InvalidQuery, "an `on` query expression must follow a `join`", fn ->
-      delay_compile(from(c in CommentEntity, on: c.text == "", select: c))
+      delay_compile(from(c in Comment, on: c.text == "", select: c))
     end
   end
 
   test "join queries adds binds" do
-    from(c in CommentEntity, join: p in PostEntity, on: true, select: { p.title, c.text })
-    from(CommentEntity) |> join([c], nil, p in PostEntity, true) |> select([c,p], { p.title, c.text })
+    from(c in Comment, join: p in Post, on: true, select: { p.title, c.text })
+    from(Comment) |> join([c], nil, p in Post, true) |> select([c,p], { p.title, c.text })
   end
 end

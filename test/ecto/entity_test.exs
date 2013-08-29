@@ -4,7 +4,7 @@ defmodule Ecto.EntityTest do
   defmodule MyEntity do
     use Ecto.Entity
 
-    dataset "my_entity" do
+    dataset do
       field :name, :string, default: "eric"
       field :email, :string, uniq: true
       field :temp, :virtual, default: "temp"
@@ -34,7 +34,6 @@ defmodule Ecto.EntityTest do
       { :array, [type: { :list, :string }] }
     ]
 
-    assert MyEntity.__ecto__(:dataset) == "my_entity"
     assert MyEntity.__ecto__(:field_names) == [:id, :name, :email, :array]
     assert MyEntity.__ecto__(:field, :id) == fields[:id]
     assert MyEntity.__ecto__(:field, :name) == fields[:name]
@@ -45,7 +44,7 @@ defmodule Ecto.EntityTest do
     assert MyEntity.__ecto__(:field_type, :array) == fields[:array][:type]
 
     assert MyEntity.__record__(:fields) ==
-           [id: nil, name: "eric", email: nil, temp: "temp", array: nil]
+           [model: nil, id: nil, name: "eric", email: nil, temp: "temp", array: nil]
   end
 
   test "primary_key accessor" do
@@ -83,13 +82,13 @@ defmodule Ecto.EntityTest do
   defmodule MyEntityNoPK do
     use Ecto.Entity
 
-    dataset "my_entity", nil do
+    dataset nil do
       field :x, :string
     end
   end
 
   test "no primary key" do
-    assert MyEntityNoPK.__record__(:fields) == [x: nil]
+    assert MyEntityNoPK.__record__(:fields) == [model: nil, x: nil]
     assert MyEntityNoPK.__ecto__(:field_names) == [:x]
 
     entity = MyEntityNoPK[x: "123"]
@@ -101,14 +100,14 @@ defmodule Ecto.EntityTest do
   defmodule EntityCustomPK do
     use Ecto.Entity
 
-    dataset "my_entity", nil do
+    dataset nil do
       field :x, :string
       field :pk, :integer, primary_key: true
     end
   end
 
   test "custom primary key" do
-    assert EntityCustomPK.__record__(:fields) == [x: nil, pk: nil]
+    assert EntityCustomPK.__record__(:fields) == [model: nil, x: nil, pk: nil]
     assert EntityCustomPK.__ecto__(:field_names) == [:x, :pk]
 
     entity = EntityCustomPK[pk: "123"]
@@ -136,7 +135,7 @@ defmodule Ecto.EntityTest do
   defmodule EntityAssocs do
     use Ecto.Entity
 
-    dataset "my_entity" do
+    dataset do
       has_many :posts, Post
       has_one :author, User
       belongs_to :comment, Comment
@@ -146,7 +145,7 @@ defmodule Ecto.EntityTest do
   test "associations" do
     assert EntityAssocs.__ecto__(:association, :not_a_field) == nil
     assert EntityAssocs.__record__(:fields) |> Keyword.keys ==
-      [:id, :__posts__, :__author__, :comment_id, :__comment__]
+      [:model, :id, :__posts__, :__author__, :comment_id, :__comment__]
     assert EntityAssocs.__ecto__(:field_names) == [:id, :comment_id]
   end
 

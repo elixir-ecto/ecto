@@ -23,9 +23,9 @@ defmodule Ecto.Integration.Postgres.TestRepo do
 end
 
 defmodule Ecto.Integration.Postgres.Post do
-  use Ecto.Entity
+  use Ecto.Model
 
-  dataset "posts" do
+  queryable "posts" do
     field :title, :string
     field :text, :string
     field :temp, :virtual, default: "temp"
@@ -36,18 +36,18 @@ defmodule Ecto.Integration.Postgres.Post do
 end
 
 defmodule Ecto.Integration.Postgres.Comment do
-  use Ecto.Entity
+  use Ecto.Model
 
-  dataset "comments" do
+  queryable "comments" do
     field :text, :string
     belongs_to :post, Ecto.Integration.Postgres.Post
   end
 end
 
 defmodule Ecto.Integration.Postgres.Permalink do
-  use Ecto.Entity
+  use Ecto.Model
 
-  dataset "permalinks" do
+  queryable "permalinks" do
     field :url, :string
     belongs_to :post, Ecto.Integration.Postgres.Post
   end

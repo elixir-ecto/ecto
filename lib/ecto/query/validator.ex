@@ -10,7 +10,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.AssocJoinExpr
 
-  defrecord State, entities: [], vars: [], grouped: [], grouped?: false,
+  defrecord State, models: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil, from: nil, query: nil
 
   # Adds type, file and line metadata to the exception
@@ -31,10 +31,11 @@ defmodule Ecto.Query.Validator do
       raise Ecto.InvalidQuery, reason: "a query must have a from expression"
     end
 
-    grouped = group_by_entities(query.group_bys, query.entities)
+    grouped = group_by_models(query.group_bys, query.models)
     is_grouped = query.group_bys != [] or query.havings != []
-    state = State[entities: query.entities, grouped: grouped, grouped?: is_grouped,
-                  apis: apis, from: query.from, query: query]
+    entity = query.from.__ecto__(:entity)
+    state = State[models: query.models, grouped: grouped, grouped?: is_grouped,
+                  apis: apis, from: entity, query: query]
 
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
@@ -52,29 +53,30 @@ defmodule Ecto.Query.Validator do
   def validate_update(Query[] = query, apis, values) do
     validate_only_where(query)
 
-    module = query.from
+    model = query.from
+    entity = model.__ecto__(:entity)
 
     if values == [] do
       raise Ecto.InvalidQuery, reason: "no values to update given"
     end
 
     Enum.each(values, fn({ field, expr }) ->
-      expected_type = module.__ecto__(:field_type, field)
+      expected_type = entity.__ecto__(:field_type, field)
 
       unless expected_type do
         raise Ecto.InvalidQuery, reason: "field `#{field}` is not on the " <>
-          "entity `#{module}`"
+          "entity `#{model}`"
       end
 
       # TODO: Check if entity field allows nil
-      state = State[entities: query.entities, apis: apis]
+      state = State[models: query.models, apis: apis]
       type = type_check(expr, state)
 
       format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
       format_type = Util.type_to_ast(type) |> Macro.to_string
       unless expected_type == type do
         raise Ecto.InvalidQuery, reason: "expected_type `#{format_expected_type}` " <>
-        " on `#{module}.#{field}` doesn't match type `#{format_type}`"
+        " on `#{model}.#{field}` doesn't match type `#{format_type}`"
       end
     end)
 
@@ -143,7 +145,8 @@ defmodule Ecto.Query.Validator do
     Enum.each(joins, fn AssocJoinExpr[] = expr ->
       rescue_metadata(:join, expr.file, expr.line) do
         { :., _, [left, right] } = expr.expr
-        entity = Util.find_entity(state.entities, left)
+        model = Util.find_model(state.models, left)
+        entity = model.__ecto__(:entity)
         refl = entity.__ecto__(:association, right)
         unless refl do
           raise Ecto.InvalidQuery, reason: "association join can only be performed " <>
@@ -178,7 +181,8 @@ defmodule Ecto.Query.Validator do
 
   # group_by field
   defp validate_field({ var, field }, State[] = state) do
-    entity = Util.find_entity(state.entities, var)
+    model = Util.find_model(state.models, var)
+    entity = model.__ecto__(:entity)
     do_validate_field(entity, field)
   end
 
@@ -223,7 +227,8 @@ defmodule Ecto.Query.Validator do
 
   # var.x
   defp type_check({ { :., _, [{ :&, _, [_] } = var, field] }, _, [] }, State[] = state) do
-    entity = Util.find_entity(state.entities, var)
+    model = Util.find_model(state.models, var)
+    entity = model.__ecto__(:entity)
     check_grouped({ entity, field }, state)
 
     type = entity.__ecto__(:field_type, field)
@@ -235,7 +240,8 @@ defmodule Ecto.Query.Validator do
 
   # var
   defp type_check({ :&, _, [_] } = var, State[] = state) do
-    entity = Util.find_entity(state.entities, var)
+    model = Util.find_model(state.models, var)
+    entity = model.__ecto__(:entity)
     fields = entity.__ecto__(:field_names)
     Enum.each(fields, &check_grouped({ entity, &1 }, state))
 
@@ -297,7 +303,9 @@ defmodule Ecto.Query.Validator do
   # Handle top level select cases
 
   defp select_clause({ :assoc, _, [parent, child] }, State[] = state) do
-    unless Util.find_entity(state.entities, parent) == state.from do
+    model = Util.find_model(state.models, parent)
+    entity = model.__ecto__(:entity)
+    unless entity == state.from do
       raise Ecto.InvalidQuery, reason: "can only associate on the from entity"
     end
 
@@ -324,12 +332,14 @@ defmodule Ecto.Query.Validator do
     type_check(other, state)
   end
 
-  defp group_by_entities(group_bys, entities) do
+  defp group_by_models(group_bys, models) do
     Enum.map(group_bys, fn(expr) ->
       Enum.map(expr.expr, fn({ var, field }) ->
-        { Util.find_entity(entities, var), field }
+        model = Util.find_model(models, var)
+        entity = model.__ecto__(:entity)
+        { entity, field }
       end)
-    end) |> List.concat |> Enum.uniq
+    end) |> Enum.concat |> Enum.uniq
   end
 
   defp check_grouped(entity_field, state) do

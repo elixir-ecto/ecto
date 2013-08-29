@@ -11,23 +11,25 @@ defmodule Ecto.Query.Normalizer do
   alias Ecto.Reflections.BelongsTo
 
   def normalize(Query[] = query, opts) do
-    query |> auto_select(opts) |> setup_entities
+    query |> auto_select(opts) |> setup_models
   end
 
   # Transform an assocation join to an ordinary join
   def normalize_join(AssocJoinExpr[] = join, Query[] = query) do
     { :., _, [left, right] } = join.expr
-    entity = Util.find_entity(query.entities, left)
+    model = Util.find_model(query.models, left)
+    entity = model.__ecto__(:entity)
     refl = entity.__ecto__(:association, right)
     associated = refl.associated
 
-    assoc_var = Util.entity_var(query, associated)
-    pk = query.from.__ecto__(:primary_key)
+    assoc_var = Util.model_var(query, associated)
+    entity = query.from.__ecto__(:entity)
+    pk = entity.__ecto__(:primary_key)
     fk = refl.foreign_key
     on_expr = on_expr(refl, assoc_var, fk, pk)
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
 
-    JoinExpr[qual: join.qual, entity: associated, on: on, file: join.file, line: join.line]
+    JoinExpr[qual: join.qual, model: associated, on: on, file: join.file, line: join.line]
   end
 
   def normalize_join(JoinExpr[] = expr, _query), do: expr
@@ -56,22 +58,23 @@ defmodule Ecto.Query.Normalizer do
     end
   end
 
-  # Adds all entities to the query for fast access
-  defp setup_entities(Query[] = query) do
+  # Adds all models to the query for fast access
+  defp setup_models(Query[] = query) do
     froms = if query.from, do: [query.from], else: []
 
-    entities = Enum.reduce(query.joins, froms, fn join, acc ->
+    models = Enum.reduce(query.joins, froms, fn join, acc ->
       case join do
         AssocJoinExpr[expr: { :., _, [left, right] }] ->
-          entity = Util.find_entity(Enum.reverse(acc), left)
+          model = Util.find_model(Enum.reverse(acc), left)
+          entity = model.__ecto__(:entity)
           refl = entity.__ecto__(:association, right)
           assoc = if refl, do: refl.associated
-          [ assoc | acc ]
-        JoinExpr[entity: entity] ->
-          [entity|acc]
+          [assoc|acc]
+        JoinExpr[model: model] ->
+          [model|acc]
       end
     end)
 
-    entities |> Enum.reverse |> list_to_tuple |> query.entities
+    models |> Enum.reverse |> list_to_tuple |> query.models
   end
 end

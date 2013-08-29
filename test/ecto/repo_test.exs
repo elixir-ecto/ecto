@@ -18,18 +18,18 @@ defmodule Ecto.RepoTest.MyRepo do
   def url, do: ""
 end
 
-defmodule Ecto.RepoTest.MyEntity do
-  use Ecto.Entity
+defmodule Ecto.RepoTest.MyModel do
+  use Ecto.Model
 
-  dataset "my_entity" do
+  queryable "my_entity" do
     field :x, :string
   end
 end
 
-defmodule Ecto.RepoTest.MyEntityNoPK do
-  use Ecto.Entity
+defmodule Ecto.RepoTest.MyModelNoPK do
+  use Ecto.Model
 
-  dataset "my_entity", nil do
+  queryable "my_entity", nil do
     field :x, :string
   end
 end
@@ -42,8 +42,8 @@ defmodule Ecto.RepoTest do
 
   alias Ecto.RepoTest.MockAdapter
   alias Ecto.RepoTest.MyRepo
-  alias Ecto.RepoTest.MyEntity
-  alias Ecto.RepoTest.MyEntityNoPK
+  alias Ecto.RepoTest.MyModel
+  alias Ecto.RepoTest.MyModelNoPK
   require MyRepo
 
   test "parse url" do
@@ -89,13 +89,12 @@ defmodule Ecto.RepoTest do
     import Ecto.Query
 
     assert_raise Ecto.TypeCheckError, fn ->
-      MyRepo.all(from(m in MyEntity, select: m.x + 1))
+      MyRepo.all(from(m in MyModel, select: m.x + 1))
     end
   end
 
   test "needs entity with primary key" do
-    entity = MyEntityNoPK[x: "abc"]
-
+    entity = MyModelNoPK.new(x: "abc")
     assert_raise Ecto.NoPrimaryKey, fn ->
       MyRepo.update(entity)
     end
@@ -103,12 +102,12 @@ defmodule Ecto.RepoTest do
       MyRepo.delete(entity)
     end
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.get(MyEntityNoPK, 123)
+      MyRepo.get(MyModelNoPK, 123)
     end
   end
 
   test "needs entity with primary key value" do
-    entity = MyEntity[x: "abc"]
+    entity = MyModel.new(x: "abc")
 
     assert_raise Ecto.NoPrimaryKey, fn ->
       MyRepo.update(entity)
@@ -119,21 +118,21 @@ defmodule Ecto.RepoTest do
   end
 
   test "works with primary key value" do
-    entity = MyEntity[id: 1, x: "abc"]
+    entity = MyModel.new(id: 1, x: "abc")
 
     MyRepo.update(entity)
     MyRepo.delete(entity)
-    MyRepo.get(MyEntity, 123)
+    MyRepo.get(MyModel, 123)
   end
 
   test "validate entity types" do
-    entity = MyEntity[x: 123]
+    entity = MyModel.new(x: 123)
 
     assert_raise Ecto.ValidationError, fn ->
       MyRepo.create(entity)
     end
 
-    entity = MyEntity[id: 1, x: 123]
+    entity = MyModel.new(id: 1, x: 123)
 
     assert_raise Ecto.ValidationError, fn ->
       MyRepo.update(entity)
@@ -144,63 +143,63 @@ defmodule Ecto.RepoTest do
   end
 
   test "get validation" do
-    MyRepo.get(MyEntity, 123)
-    MyRepo.get(MyEntity, "123")
+    MyRepo.get(MyModel, 123)
+    MyRepo.get(MyModel, "123")
 
     assert_raise ArgumentError, fn ->
-      MyRepo.get(MyEntity, "abc")
+      MyRepo.get(MyModel, "abc")
     end
 
     assert_raise FunctionClauseError, fn ->
-      MyRepo.get(MyEntity, :atom)
+      MyRepo.get(MyModel, :atom)
     end
   end
 
   test "repo validates update_all" do
-    query = from(e in MyEntity, select: e)
+    query = from(e in MyModel, select: e)
     assert_raise Ecto.InvalidQuery, fn ->
       MyRepo.update_all(query, [])
     end
 
-    query = from(e in MyEntity, order_by: e.x)
+    query = from(e in MyModel, order_by: e.x)
     assert_raise Ecto.InvalidQuery, fn ->
       MyRepo.update_all(query, [])
     end
 
     assert_raise Ecto.InvalidQuery, fn ->
-      MyRepo.update_all(p in MyEntity, y: "123")
+      MyRepo.update_all(p in MyModel, y: "123")
     end
 
     assert_raise Ecto.InvalidQuery, fn ->
-      MyRepo.update_all(p in MyEntity, x: 123)
+      MyRepo.update_all(p in MyModel, x: 123)
     end
 
     assert_raise Ecto.InvalidQuery, fn ->
-      MyRepo.update_all(e in MyEntity, [])
+      MyRepo.update_all(e in MyModel, [])
     end
 
-    MyRepo.update_all(e in MyEntity, x: e.x)
-    MyRepo.update_all(e in MyEntity, x: "123")
-    MyRepo.update_all(MyEntity, x: "123")
+    MyRepo.update_all(e in MyModel, x: e.x)
+    MyRepo.update_all(e in MyModel, x: "123")
+    MyRepo.update_all(MyModel, x: "123")
 
-    query = from(e in MyEntity, where: e.x == "123")
+    query = from(e in MyModel, where: e.x == "123")
     MyRepo.update_all(query, x: "")
   end
 
   test "repo validates delete_all" do
-    query = from(e in MyEntity, select: e)
+    query = from(e in MyModel, select: e)
     assert_raise Ecto.InvalidQuery, fn ->
       MyRepo.delete_all(query)
     end
 
-    query = from(e in MyEntity, order_by: e.x)
+    query = from(e in MyModel, order_by: e.x)
     assert_raise Ecto.InvalidQuery, fn ->
       MyRepo.delete_all(query)
     end
 
-    MyRepo.delete_all(MyEntity)
+    MyRepo.delete_all(MyModel)
 
-    query = from(e in MyEntity, where: e.x == "123")
+    query = from(e in MyModel, where: e.x == "123")
     MyRepo.delete_all(query)
   end
 end

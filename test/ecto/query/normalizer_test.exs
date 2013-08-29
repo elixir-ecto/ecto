@@ -6,24 +6,16 @@ defmodule Ecto.Query.NormalizerTest do
   alias Ecto.Query.Query
   alias Ecto.Query.Util
 
-  defmodule PostEntity do
-    use Ecto.Entity
+  defmodule Post do
+    use Ecto.Model
 
-    dataset :post_entity do
+    queryable :posts do
       field :title, :string
     end
   end
 
-  defmodule CommentEntity do
-    use Ecto.Entity
-
-    dataset :post_entity do
-      field :text, :string
-    end
-  end
-
   test "auto select entity" do
-    query = from(PostEntity) |> Queryable.to_query |> Util.normalize
+    query = from(Post) |> Queryable.to_query |> Util.normalize
     assert { :&, _, [0] } = query.select.expr
   end
 end
