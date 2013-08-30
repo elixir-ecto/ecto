@@ -202,4 +202,10 @@ defmodule Ecto.RepoTest do
     query = from(e in MyModel, where: e.x == "123")
     MyRepo.delete_all(query)
   end
+
+  test "unsupported type" do
+    assert_raise Ecto.ValidationError, fn ->
+      MyRepo.create(MyModel.Entity[x: {123}])
+    end
+  end
 end
