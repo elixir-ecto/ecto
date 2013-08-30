@@ -370,4 +370,11 @@ defmodule Ecto.Integration.PostgresTest do
     query = from(p in Post, left_join: c in p.permalink, order_by: p.id, select: {p, c})
     assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
   end
+
+  test "datetime type" do
+    now = :calendar.local_time
+    c = TestRepo.create(Comment.Entity[posted: now])
+
+    assert Comment.Entity[posted: ^now] = TestRepo.get(Comment, c.id)
+  end
 end

@@ -321,6 +321,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp literal(false), do: "FALSE"
 
+  defp literal({ {year,mon,day}, {hour,min,sec} }) do
+    "'#{year}-#{mon}-#{day} #{hour}:#{min}:#{sec}'"
+  end
+
   defp literal(literal) when is_binary(literal) do
     "'#{escape_string(literal)}'"
   end

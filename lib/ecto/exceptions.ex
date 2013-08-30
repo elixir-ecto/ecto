@@ -32,8 +32,11 @@ end
 
 defexception Ecto.ValidationError, [:entity, :field, :type, :expected_type, :reason] do
   def message(Ecto.ValidationError[] = e) do
-    type = Util.type_to_ast(e.type) |> Macro.to_string
     expected_type = Util.type_to_ast(e.expected_type) |> Macro.to_string
+    type = case e.type do
+      :unknown -> "unknown"
+      type -> type |> Util.type_to_ast |> Macro.to_string
+    end
     "entity #{inspect e.entity} failed validation, field #{e.field} had " <>
     "type #{type} but type #{expected_type} was expected: #{e.reason}"
   end

@@ -21,6 +21,7 @@ defmodule Ecto.Query.ValidatorTest do
     queryable :comments do
       field :text, :string
       field :temp, :virtual
+      field :posted, :datetime
     end
   end
 
@@ -352,6 +353,16 @@ defmodule Ecto.Query.ValidatorTest do
 
     query = from(p in Post, join: c in Comment, on: true, select: assoc(p, c))
     assert_raise Ecto.InvalidQuery, "can only associate on an inner or left association join", fn ->
+      validate(query)
+    end
+  end
+
+  test "datetime type" do
+    query = from(c in Comment, where: c.posted == ^:calendar.local_time, select: c)
+    validate(query)
+
+    query = from(c in Comment, where: c.posted == 123, select: c)
+    assert_raise Ecto.TypeCheckError, fn ->
       validate(query)
     end
   end

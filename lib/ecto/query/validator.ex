@@ -298,7 +298,13 @@ defmodule Ecto.Query.Validator do
   end
 
   # values
-  defp type_check(value, _state), do: Util.value_to_type(value)
+  defp type_check(value, _state) do
+    case Util.value_to_type(value) do
+      { :ok, type } -> type
+      :error ->
+        raise Ecto.InvalidQuery, reason: "unsupported type of value: `#{inspect value}`"
+    end
+  end
 
   # Handle top level select cases
 

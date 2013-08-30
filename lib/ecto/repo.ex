@@ -392,7 +392,11 @@ defmodule Ecto.Repo do
 
     Enum.each(zipped, fn({ field, value }) ->
       type = module.__ecto__(:field_type, field)
-      value_type = Util.value_to_type(value)
+
+      value_type = case Util.value_to_type(value) do
+        { :ok, vtype } -> vtype
+        :error -> :unknown
+      end
 
       valid = field == primary_key or
               value_type == nil or
