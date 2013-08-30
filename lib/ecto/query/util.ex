@@ -109,6 +109,14 @@ defmodule Ecto.Query.Util do
     end
   end
 
+  # Count the number of entities on the query
+  @doc false
+  def count_entities(queryable) do
+    Query[from: from, joins: joins] = Queryable.to_query(queryable)
+    count = if from, do: 1, else: 0
+    count + length(joins)
+  end
+
   # Converts list of variables to list of atoms
   @doc false
   def escape_binding(binding) when is_list(binding) do

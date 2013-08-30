@@ -9,46 +9,55 @@ defmodule Ecto.Query.BuilderUtil do
   # inserted as-is into the query.
 
   # var.x - where var is bound
-  def escape({ { :., _, [{ var, _, context}, right] }, _, [] }, vars)
+  def escape(expr, vars, join_var // nil)
+
+  def escape({ { :., _, [{ var, _, context}, right] }, _, [] }, vars, join_var)
       when is_atom(var) and is_atom(context) do
-    left_escaped = escape_var(var, vars)
+    left_escaped = escape_var(var, vars, join_var)
     dot_escaped = { :{}, [], [:., [], [left_escaped, right]] }
     { :{}, [], [dot_escaped, [], []] }
   end
 
   # interpolation
-  def escape({ :^, _, [arg] }, _vars) do
+  def escape({ :^, _, [arg] }, _vars, _join_var) do
     arg
   end
 
   # ops & functions
-  def escape({ name, meta, args }, vars) when is_atom(name) and is_list(args) do
-    args = Enum.map(args, &escape(&1, vars))
+  def escape({ name, meta, args }, vars, join_var)
+      when is_atom(name) and is_list(args) do
+    args = Enum.map(args, &escape(&1, vars, join_var))
     { :{}, [], [name, meta, args] }
   end
 
   # list
-  def escape(list, vars) when is_list(list) do
-    Enum.map(list, &escape(&1, vars))
+  def escape(list, vars, join_var) when is_list(list) do
+    Enum.map(list, &escape(&1, vars, join_var))
   end
 
   # literals
-  def escape(literal, _vars) when is_binary(literal), do: literal
-  def escape(literal, _vars) when is_boolean(literal), do: literal
-  def escape(literal, _vars) when is_number(literal), do: literal
-  def escape(nil, _vars), do: nil
+  def escape(literal, _vars, _join_var) when is_binary(literal), do: literal
+  def escape(literal, _vars, _join_var) when is_boolean(literal), do: literal
+  def escape(literal, _vars, _join_var) when is_number(literal), do: literal
+  def escape(nil, _vars, _join_var), do: nil
 
   # everything else is not allowed
-  def escape(other, _vars) do
+  def escape(other, _vars, _join_var) do
     raise Ecto.InvalidQuery, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
-  def escape_var(var, vars) do
-    ix = Enum.find_index(vars, &(&1 == var))
-    if var != :_ and ix do
+  def escape_var(var, vars, join_var // nil) do
+    if var == join_var do
+      # Get the variable bound in the join expression's actual position
+      ix = quote do var!(count_entities, Ecto.Query) end
       { :{}, [], [:&, [], [ix]] }
     else
-      raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound"
+      ix = Enum.find_index(vars, &(&1 == var))
+      if var != :_ and ix do
+        { :{}, [], [:&, [], [ix]] }
+      else
+        raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound"
+      end
     end
   end
 end

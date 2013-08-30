@@ -298,6 +298,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
       "JOIN model AS m2 ON TRUE"
   end
 
+  test "join with nothing bound" do
+    query = from(Model) |> join([], nil, q in Model2, q.z == q.z) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM model AS m0\nJOIN model2 AS m1 ON m1.z = m1.z"
+  end
+
   defmodule Comment do
     use Ecto.Model
 

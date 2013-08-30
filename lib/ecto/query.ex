@@ -236,19 +236,22 @@ defmodule Ecto.Query do
 
     on_expr = if on do
       binding = binding ++ expr_bindings
-      WhereBuilder.escape(on, binding)
+      WhereBuilder.escape(on, binding, bind)
     end
 
     quote do
+      query = unquote(query)
+      count_entities = Util.count_entities(query)
       qual = unquote(qual)
       join_expr = unquote(join_expr)
+
       if unquote(is_assoc) do
         join = AssocJoinExpr[qual: qual, expr: join_expr, file: __ENV__.file, line: __ENV__.line]
       else
         on = QueryExpr[expr: unquote(on_expr), file: __ENV__.file, line: __ENV__.line]
         join = JoinExpr[qual: qual, model: join_expr, on: on, file: __ENV__.file, line: __ENV__.line]
       end
-      Util.merge(unquote(query), :join, join)
+      Util.merge(query, :join, join)
     end
   end
 
