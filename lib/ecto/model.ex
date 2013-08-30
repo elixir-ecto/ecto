@@ -1,4 +1,9 @@
 defmodule Ecto.Model do
+  @moduledoc """
+  Used to define a model. See `Ecto.Model.Queryable`, that is imported when
+  `Ecto.Model` is used, for how to define a queryable model.
+  """
+
   defmacro __using__(_opts) do
     quote do
       import Ecto.Model.Queryable
@@ -7,13 +12,23 @@ defmodule Ecto.Model do
 end
 
 defmodule Ecto.Model.Queryable do
-  defmacro queryable(name, [do: _] = block) do
-    quote do
-      queryable(unquote(name), :id, unquote(block))
-    end
-  end
+  @moduledoc """
+  Macros for defining a queryable model. A name for the queryable is given (for
+  example the table name in a SQL database) and the `Ecto.Entity` to be used.
+  """
 
-  defmacro queryable(name, entity) do
+  @doc """
+  Defines a queryable name and the entity that defines the dataset.
+
+  ## Example
+
+      defmodule Post do
+        use Ecto.Model
+        queryable "posts", Post.Entity
+      end
+  """
+
+  defmacro queryable(name, { :__aliases__, _, _ } = entity) do
     quote bind_quoted: [name: name, entity: entity] do
       def new(params) do
         unquote(entity).new(params)
@@ -23,7 +38,34 @@ defmodule Ecto.Model.Queryable do
     end
   end
 
-  defmacro queryable(name, primary_key, [do: block]) do
+  @doc """
+  Defines a queryable name and the entity definition inline.
+
+  ## Examples
+
+      # The two following Model definitions are equivalent
+      defmodule Post do
+        use Ecto.Model
+
+        queryable "posts" do
+          field :text, :string
+        end
+      end
+
+      defmodule Post do
+        use Ecto.Model
+
+        defmodule Entity do
+          use Ecto.Entity
+          dataset do
+            field :text, :string
+          end
+        end
+
+        queryable "posts", Entity
+      end
+  """
+  defmacro queryable(name, primary_key // :id, [do: block]) do
     quote do
       name = unquote(name)
 

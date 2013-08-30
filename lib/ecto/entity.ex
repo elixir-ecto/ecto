@@ -10,10 +10,11 @@ defmodule Ecto.Entity do
   fields the `default` option is set in the `field` options.
 
   ## Example
+
       defmodule User do
         use Ecto.Entity
 
-        dataset "users" do
+        dataset do
           field :name, :string
           field :age, :integer
           has_many :posts, Post
@@ -23,7 +24,7 @@ defmodule Ecto.Entity do
       defmodule Post do
         use Ecto.Entity
 
-        dataset "posts" do
+        dataset do
           field :text, :string
           belongs_to :author, User
         end
