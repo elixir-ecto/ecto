@@ -117,17 +117,25 @@ defmodule Ecto.EntityTest do
   end
 
   test "fail custom primary key" do
-    message = "there can only be one primary key, a custom primary key " <>
-      "requires the default to be disabled, see `Ecto.Entity.dataset`"
-
-    assert_raise ArgumentError, message, fn ->
+    assert_raise ArgumentError, "there can only be one primary key", fn ->
       defmodule EntityFailCustomPK do
         use Ecto.Entity
 
-        dataset "my_entity" do
+        dataset :custom do
           field :x, :string
           field :pk, :integer, primary_key: true
         end
+      end
+    end
+  end
+
+  test "dont fail custom primary key" do
+    defmodule EntityDontFailCustomPK do
+      use Ecto.Entity
+
+      dataset do
+        field :x, :string
+        field :pk, :integer, primary_key: true
       end
     end
   end

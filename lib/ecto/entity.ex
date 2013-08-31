@@ -41,8 +41,10 @@ defmodule Ecto.Entity do
       import Ecto.Entity
       @before_compile unquote(__MODULE__)
 
+      @ecto_dataset false
+      @ecto_primary_key nil
       @ecto_model nil
-      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      @ecto_fields []
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
     end
   end
@@ -56,22 +58,19 @@ defmodule Ecto.Entity do
       try do
         import Ecto.Entity.Dataset
 
-        primary_key = unquote(primary_key)
-
-        if Module.get_attribute(__MODULE__, :ecto_dataset) do
+        if @ecto_dataset do
           raise ArgumentError, message: "dataset already defined"
         end
-
         @ecto_dataset true
-        @ecto_primary_key nil
 
         field(:model, :virtual, default: @ecto_model)
 
-        if primary_key do
-          field(primary_key, :integer, primary_key: true)
-        end
-
         result = unquote(block)
+
+        primary_key = unquote(primary_key)
+        if primary_key && (!@ecto_primary_key || (@ecto_primary_key && primary_key != :id)) do
+          field(primary_key, :integer, [primary_key: true], -2)
+        end
 
         record_fields = @ecto_fields
           |> Enum.reverse
@@ -206,30 +205,8 @@ defmodule Ecto.Entity.Dataset do
       `Ecto.Entity.dataset`;
   """
   defmacro field(name, type, opts // []) do
-    # TODO: Check that the opts are valid for the given type, especially check
-    # the default value
-
     quote do
-      field_name = unquote(name)
-      type = unquote(type)
-      field_opts = unquote(opts)
-      Ecto.Entity.Dataset.check_type(type)
-
-      clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> field_name == prev_name end)
-      if clash do
-        raise ArgumentError, message: "field `#{field_name}` was already set on entity"
-      end
-
-      if field_opts[:primary_key] do
-        if @ecto_primary_key do
-          message = "there can only be one primary key, a custom primary key " <>
-            "requires the default to be disabled, see `Ecto.Entity.dataset`"
-          raise ArgumentError, message: message
-        end
-        @ecto_primary_key field_name
-      end
-
-      @ecto_fields { field_name, [type: type] ++ field_opts }
+      field(unquote(name), unquote(type), unquote(opts), 0)
     end
   end
 
@@ -301,6 +278,34 @@ defmodule Ecto.Entity.Dataset do
       field(:"__#{name}__", :virtual, default: assoc)
       opts = [type: :belongs_to, entity: entity, foreign_key: foreign_key] ++ opts
       @ecto_assocs { name, opts }
+    end
+  end
+
+  @doc false
+  defmacro field(name, type, opts, pos) do
+    # TODO: Check that the opts are valid for the given type, especially check
+    # the default value
+
+    quote do
+      field_name = unquote(name)
+      type = unquote(type)
+      field_opts = unquote(opts)
+      Ecto.Entity.Dataset.check_type(type)
+
+      clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> field_name == prev_name end)
+      if clash do
+        raise ArgumentError, message: "field `#{field_name}` was already set on entity"
+      end
+
+      if field_opts[:primary_key] do
+        if @ecto_primary_key do
+          raise ArgumentError, message: "there can only be one primary key"
+        end
+        @ecto_primary_key field_name
+      end
+
+      pos = unquote(pos)
+      @ecto_fields List.insert_at(@ecto_fields, pos, { field_name, [type: type] ++ field_opts })
     end
   end
 
