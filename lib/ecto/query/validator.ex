@@ -218,7 +218,7 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(:select, select.file, select.line) do
         pos = Util.locate_var(select.expr, { :&, [], [0] })
         if nil?(pos) do
-          raise Ecto.InvalidQuery, reason: "entity in from expression `#{from}` " <>
+          raise Ecto.InvalidQuery, reason: "model in from expression `#{from}` " <>
             "needs to be selected with preload query"
         end
       end

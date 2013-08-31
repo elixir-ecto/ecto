@@ -178,4 +178,17 @@ defmodule Ecto.QueryTest do
     from(c in Comment, join: p in Post, on: true, select: { p.title, c.text })
     from(Comment) |> join([c], nil, p in Post, true) |> select([c,p], { p.title, c.text })
   end
+
+  test "cannot bind too many vars" do
+    from(a in Query[])
+    from([a] in Query[])
+
+    assert_raise Ecto.InvalidQuery, fn ->
+      from([a, b] in Comment)
+    end
+
+    assert_raise Ecto.InvalidQuery, fn ->
+      from(Comment) |> where([x, y], true)
+    end
+  end
 end
