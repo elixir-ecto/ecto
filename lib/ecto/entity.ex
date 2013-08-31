@@ -40,12 +40,8 @@ defmodule Ecto.Entity do
     quote do
       import Ecto.Entity
       @before_compile unquote(__MODULE__)
-
       @ecto_dataset false
-      @ecto_primary_key nil
       @ecto_model nil
-      @ecto_fields []
-      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
     end
   end
 
@@ -57,6 +53,10 @@ defmodule Ecto.Entity do
     quote do
       try do
         import Ecto.Entity.Dataset
+
+        @ecto_primary_key nil
+        @ecto_fields []
+        Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
 
         if @ecto_dataset do
           raise ArgumentError, message: "dataset already defined"
@@ -78,6 +78,7 @@ defmodule Ecto.Entity do
 
         @record_fields record_fields
         Record.deffunctions(record_fields, __ENV__)
+        Ecto.Entity.deffunctions(__ENV__)
 
         result
       end
@@ -86,22 +87,25 @@ defmodule Ecto.Entity do
 
   @doc false
   defmacro __before_compile__(env) do
-    module        = env.module
-    primary_key   = Module.get_attribute(module, :ecto_primary_key)
-    all_fields    = Module.get_attribute(module, :ecto_fields) |> Enum.reverse
-    assocs        = Module.get_attribute(module, :ecto_assocs) |> Enum.reverse
-
-    unless Module.get_attribute(module, :ecto_dataset) do
+    unless Module.get_attribute(env.module, :ecto_dataset) do
       raise ArgumentError, message: "dataset not defined, an entity has to " <>
         "define a dataset, see `Ecto.Entity.Dataset`"
     end
+  end
 
+  @doc false
+  def deffunctions(env) do
+    primary_key = Module.get_attribute(env.module, :ecto_primary_key)
+    all_fields  = Module.get_attribute(env.module, :ecto_fields) |> Enum.reverse
+    assocs      = Module.get_attribute(env.module, :ecto_assocs) |> Enum.reverse
     fields = Enum.filter(all_fields, fn({ _, opts }) -> opts[:type] != :virtual end)
 
-    [ ecto_fields(fields),
+    contents = [
+      ecto_fields(fields),
       ecto_assocs(assocs, primary_key),
       ecto_primary_key(primary_key),
       ecto_helpers(fields, all_fields) ]
+    Module.eval_quoted(env.module, contents, [], env)
   end
 
   defp ecto_fields(fields) do
