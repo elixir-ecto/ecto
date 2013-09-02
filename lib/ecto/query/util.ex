@@ -159,6 +159,17 @@ defmodule Ecto.Query.Util do
     end
   end
 
+  def value_to_type(Ecto.Interval[] = dt) do
+    valid = is_integer(dt.year) and is_integer(dt.month) and is_integer(dt.day) and
+            is_integer(dt.hour) and is_integer(dt.min)   and is_integer(dt.sec)
+
+    if valid do
+      { :ok, :interval }
+    else
+      { :error, "all interval elements has to be of integer type" }
+    end
+  end
+
   def value_to_type(list) when is_list(list) do
     types = Enum.map(list, &value_to_type/1)
 

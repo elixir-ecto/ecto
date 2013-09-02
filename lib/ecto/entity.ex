@@ -195,7 +195,8 @@ defmodule Ecto.Entity.Dataset do
   This module contains all macros used to define the dataset for an entity.
   """
 
-  @types [ :string, :integer, :float, :binary, :list, :datetime, :virtual ]
+  @types [ :string, :integer, :float, :binary, :list, :datetime, :interval,
+           :virtual ]
 
   @doc """
   Defines a field on the entity with given name and type, will also create a

@@ -325,6 +325,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "timestamp '#{dt.year}-#{dt.month}-#{dt.day} #{dt.hour}:#{dt.min}:#{dt.sec}'"
   end
 
+  defp literal(Ecto.Interval[] = i) do
+    "interval 'P#{i.year}-#{i.month}-#{i.day}T#{i.hour}:#{i.min}:#{i.sec}'"
+  end
+
   defp literal(literal) when is_binary(literal) do
     "'#{escape_string(literal)}'"
   end

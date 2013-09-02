@@ -8,6 +8,8 @@ defmodule Ecto.Query.API do
   deft boolean
   deft binary
   deft list(var)
+  deft datetime
+  deft interval
   deft nil
 
   defa number :: float | integer
@@ -28,17 +30,22 @@ defmodule Ecto.Query.API do
   def not(arg)
   defs not(boolean) :: boolean
 
-  @doc "Addition of numbers."
+  @doc "Addition of numbers or datetimes."
   def left + right
-  defs float + number    :: float
-  defs number + float    :: float
-  defs integer + integer :: integer
+  defs float + number      :: float
+  defs number + float      :: float
+  defs integer + integer   :: integer
+  defs datetime + interval :: datetime
+  defs interval + datetime :: datetime
+  defs interval + interval :: interval
 
-  @doc "Subtraction of numbers."
+  @doc "Subtraction of numbers or datetimes."
   def left - right
-  defs float - number    :: float
-  defs number - float    :: float
-  defs integer - integer :: integer
+  defs float - number      :: float
+  defs number - float      :: float
+  defs integer - integer   :: integer
+  defs datetime - interval :: datetime
+  defs interval - interval :: interval
 
   @doc "Multiplication of numbers."
   def left * right
@@ -140,6 +147,10 @@ defmodule Ecto.Query.API do
   @doc "Upcase string."
   def upcase(string)
   defs upcase(binary) :: binary
+
+  @doc "Returns the current date and time"
+  def now()
+  defs now() :: datetime
 
   ## Aggregate functions
 
