@@ -301,8 +301,8 @@ defmodule Ecto.Query.Validator do
   defp type_check(value, _state) do
     case Util.value_to_type(value) do
       { :ok, type } -> type
-      :error ->
-        raise Ecto.InvalidQuery, reason: "unsupported type of value: `#{inspect value}`"
+      { :error, reason } ->
+        raise Ecto.InvalidQuery, reason: reason
     end
   end
 

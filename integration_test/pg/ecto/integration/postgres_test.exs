@@ -372,7 +372,7 @@ defmodule Ecto.Integration.PostgresTest do
   end
 
   test "datetime type" do
-    now = :calendar.local_time
+    now = Ecto.DateTime[year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0]
     c = TestRepo.create(Comment.Entity[posted: now])
 
     assert Comment.Entity[posted: ^now] = TestRepo.get(Comment, c.id)

@@ -395,7 +395,7 @@ defmodule Ecto.Repo do
 
       value_type = case Util.value_to_type(value) do
         { :ok, vtype } -> vtype
-        :error -> :unknown
+        { :error, reason } -> raise ArgumentError, message: reason
       end
 
       valid = field == primary_key or

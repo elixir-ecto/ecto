@@ -148,6 +148,17 @@ defmodule Ecto.Query.Util do
   def value_to_type(value) when is_integer(value), do: { :ok, :integer }
   def value_to_type(value) when is_float(value), do: { :ok, :float }
 
+  def value_to_type(Ecto.DateTime[] = dt) do
+    valid = is_integer(dt.year) and is_integer(dt.month) and is_integer(dt.day) and
+            is_integer(dt.hour) and is_integer(dt.min)   and is_integer(dt.sec)
+
+    if valid do
+      { :ok, :datetime }
+    else
+      { :error, "all datetime elements has to be of integer type" }
+    end
+  end
+
   def value_to_type(list) when is_list(list) do
     types = Enum.map(list, &value_to_type/1)
 
@@ -155,20 +166,15 @@ defmodule Ecto.Query.Util do
       [] ->
         { :ok, { :list, :any } }
       [type|rest] ->
-        unless Enum.all?(rest, &type_eq?(type, &1)) do
-          raise Ecto.InvalidQuery, reason: "all elements in list has to be of same type"
+        if Enum.all?(rest, &type_eq?(type, &1)) do
+          { :ok, { :list, type } }
+        else
+          { :error, "all elements in list has to be of same type" }
         end
-        { :ok, { :list, type } }
     end
   end
 
-  def value_to_type({ { year, month, day }, { hour, min, sec } })
-      when is_integer(year) and is_integer(month) and is_integer(day) and
-           is_integer(hour) and is_integer(min) and is_number(sec) do
-    { :ok, :datetime }
-  end
-
-  def value_to_type(_), do: :error
+  def value_to_type(value), do: { :error, "`unknown type of value `#{inspect value}`" }
 
   # Returns true if the two types are considered equal by the type system
   @doc false

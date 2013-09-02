@@ -204,7 +204,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "unsupported type" do
-    assert_raise Ecto.ValidationError, fn ->
+    assert_raise ArgumentError, fn ->
       MyRepo.create(MyModel.Entity[x: {123}])
     end
   end

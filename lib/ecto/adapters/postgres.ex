@@ -191,16 +191,29 @@ defmodule Ecto.Adapters.Postgres do
     entity = model.__ecto__(:entity)
     entity_size = length(entity.__ecto__(:field_names))
     { entity_values, values } = Enum.split(values, entity_size)
+
     if Enum.all?(entity_values, &(nil?(&1))) do
       { nil, values }
     else
+      entity_values = transform_values(entity_values)
       { entity.__ecto__(:allocate, entity_values), values }
     end
   end
 
   defp transform_row(_, values, _entities) do
     [value|values] = values
+    [value] = transform_values([value])
     { value, values }
+  end
+
+  defp transform_values(values) do
+    Enum.map(values, fn
+      { { year, mon, day }, { hour, min, sec } } ->
+        Ecto.DateTime[year: year, month: mon, day: day,
+                      hour: hour, min: min, sec: sec]
+      value ->
+        value
+    end)
   end
 
   defp prepare_start(repo) do

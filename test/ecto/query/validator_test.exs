@@ -358,7 +358,8 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "datetime type" do
-    query = from(c in Comment, where: c.posted == ^:calendar.local_time, select: c)
+    datetime = Ecto.DateTime[year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0]
+    query = from(c in Comment, where: c.posted == ^datetime, select: c)
     validate(query)
 
     query = from(c in Comment, where: c.posted == 123, select: c)
