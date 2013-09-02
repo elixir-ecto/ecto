@@ -322,7 +322,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp literal(false), do: "FALSE"
 
   defp literal(Ecto.DateTime[] = dt) do
-    "'#{dt.year}-#{dt.month}-#{dt.day} #{dt.hour}:#{dt.min}:#{dt.sec}'"
+    "timestamp '#{dt.year}-#{dt.month}-#{dt.day} #{dt.hour}:#{dt.min}:#{dt.sec}'"
   end
 
   defp literal(literal) when is_binary(literal) do
