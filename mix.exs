@@ -6,7 +6,7 @@ defmodule Ecto.Mixfile do
       version: "0.0.1",
       deps: deps(Mix.env),
       env: envs,
-      elixir: "~> 0.10.0" ]
+      elixir: "~> 0.10.2" ]
   end
 
   def application do
