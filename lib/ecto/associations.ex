@@ -48,6 +48,7 @@ defmodule Ecto.Associations do
       owner: module,
       associated: assoc,
       foreign_key: fk || :"#{module_name}_#{pk}",
+      primary_key: pk,
       field: :"__#{name}__" ]
 
     case type do
@@ -56,11 +57,12 @@ defmodule Ecto.Associations do
     end
   end
 
-  def create_reflection(:belongs_to, name, module, _pk, assoc, fk) do
+  def create_reflection(:belongs_to, name, module, pk, assoc, fk) do
     values = [
       owner: module,
       associated: assoc,
       foreign_key: fk,
+      primary_key: pk,
       field: :"__#{name}__" ]
     Ecto.Reflections.BelongsTo.new(values)
   end
@@ -68,7 +70,8 @@ defmodule Ecto.Associations do
   @doc false
   def preload_query(refl, records)
       when is_record(refl, HasMany) or is_record(refl, HasOne) do
-    ids = Enum.filter_map(records, &(&1), &(&1.primary_key))
+    pk = refl.primary_key
+    ids = Enum.filter_map(records, &(&1), &apply(&1, pk, []))
 
     where_expr = quote do &0.unquote(refl.foreign_key) in unquote(ids) end
     where = QueryExpr[expr: where_expr]
@@ -79,8 +82,7 @@ defmodule Ecto.Associations do
   def preload_query(BelongsTo[] = refl, records) do
     fun = &(apply(&1, refl.foreign_key, []))
     ids = Enum.filter_map(records, fun, fun)
-    associated = refl.associated.__ecto__(:entity)
-    pk = associated.__ecto__(:primary_key)
+    pk = refl.primary_key
 
     where_expr = quote do &0.unquote(pk) in unquote(ids) end
     where = QueryExpr[expr: where_expr]
@@ -95,10 +97,11 @@ defmodule Ecto.Associations do
   end
 
   defp combine([{ parent, child }|rows], refl, last_parent, parents, children) do
+    pk = refl.primary_key
     cond do
       nil?(parent) ->
         combine(rows, refl, last_parent, [nil|parents], children)
-      parent.primary_key == last_parent.primary_key ->
+      apply(parent, pk, []) == apply(last_parent, pk, []) ->
         combine(rows, refl, parent, parents, [child|children])
       true ->
         children = Enum.reverse(children)

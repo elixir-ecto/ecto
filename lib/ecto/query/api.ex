@@ -152,6 +152,9 @@ defmodule Ecto.Query.API do
   def now()
   defs now() :: datetime
 
+  def localtimestamp()
+  defs localtimestamp() :: datetime
+
   ## Aggregate functions
 
   @doc "Aggregate function, averages the given field over the current group."

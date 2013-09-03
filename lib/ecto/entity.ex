@@ -128,8 +128,10 @@ defmodule Ecto.Entity do
     quoted = Enum.map(assocs, fn({ name, opts, }) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
         module = @ecto_model || __MODULE__
+        pk = opts[:primary_key] || primary_key
+
         refl = Ecto.Associations.create_reflection(opts[:type], name, module,
-          primary_key, opts[:entity], opts[:foreign_key])
+          pk, opts[:entity], opts[:foreign_key])
 
         def __ecto__(:association, unquote(name)) do
           unquote(refl |> Macro.escape)
@@ -225,6 +227,8 @@ defmodule Ecto.Entity.Dataset do
   ## Options
 
     * `:foreign_key` - Sets the foreign key that is used on the other entity;
+    * `:primary_key` - Sets the key on the current entity to be used for the
+                       association;
   """
   defmacro has_many(name, entity, opts // []) do
     quote do
@@ -246,6 +250,8 @@ defmodule Ecto.Entity.Dataset do
   ## Options
 
     * `:foreign_key` - Sets the foreign key that is used on the other entity;
+    * `:primary_key` - Sets the key on the current entity to be used for the
+                       association;
   """
   defmacro has_one(name, entity, opts // []) do
     quote do
@@ -268,6 +274,8 @@ defmodule Ecto.Entity.Dataset do
   ## Options
 
     * `:foreign_key` - Sets the foreign key field name;
+    * `:primary_key` - Sets the key on the other entity to be used for the
+                       association;
   """
   defmacro belongs_to(name, entity, opts // []) do
     quote do
@@ -276,12 +284,14 @@ defmodule Ecto.Entity.Dataset do
       opts = unquote(opts)
 
       assoc_name = entity |> Module.split |> List.last |> String.downcase
+      primary_key = opts[:primary_key] || :id
       foreign_key = opts[:foreign_key] || :"#{assoc_name}_id"
       field(foreign_key, :integer)
 
       assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name)
       field(:"__#{name}__", :virtual, default: assoc)
-      opts = [type: :belongs_to, entity: entity, foreign_key: foreign_key] ++ opts
+      opts = [ type: :belongs_to, entity: entity, foreign_key: foreign_key,
+               primary_key: primary_key ] ++ opts
       @ecto_assocs { name, opts }
     end
   end

@@ -1,9 +1,12 @@
-defrecord Ecto.Reflections.HasOne, [:field, :owner, :associated, :foreign_key]
+defrecord Ecto.Reflections.HasOne, [ :field, :owner, :associated,
+  :foreign_key, :primary_key ]
 
 defmodule Ecto.Associations.HasOne do
   @moduledoc """
   A has_one association.
   """
+
+  alias Ecto.Reflections.HasOne, as: Refl
 
   @not_loaded :not_loaded
 
@@ -16,9 +19,10 @@ defmodule Ecto.Associations.HasOne do
   to the primary key of the parent entity.
   """
   def new(params // [], assoc(target: target, name: name)) do
-    refl = elem(target, 0).__ecto__(:association, name)
+    refl = Refl[] = elem(target, 0).__ecto__(:association, name)
     fk = refl.foreign_key
-    refl.associated.new([{ fk, target.primary_key }] ++ params)
+    pk_value = apply(target, refl.primary_key, [])
+    refl.associated.new([{ fk, pk_value }] ++ params)
   end
 
   @doc """

@@ -24,7 +24,7 @@ defmodule Ecto.Preloader do
     # TODO: Make sure all records are the same entity
     records = records
       |> Stream.with_index
-      |> Enum.sort(&cmp_record/2)
+      |> Enum.sort(&cmp_record(&1, &2, refl))
 
     records = combine(records, associated, refl, [], [])
       |> Enum.sort(&cmp_prev_record/2)
@@ -62,17 +62,18 @@ defmodule Ecto.Preloader do
   end
 
   defp compare({ record, _ }, assoc, BelongsTo[] = refl) do
-    associated = refl.associated.__ecto__(:entity)
-    pk = associated.__ecto__(:primary_key)
+    pk = refl.primary_key
     apply(record, refl.foreign_key, []) == apply(assoc, pk, [])
   end
 
   defp compare({ record, _ }, assoc, refl) do
-    record.primary_key == apply(assoc, refl.foreign_key, [])
+    pk = refl.primary_key
+    apply(record, pk, []) == apply(assoc, refl.foreign_key, [])
   end
 
-  defp cmp_record({ record1, _ }, { record2, _ }) do
-    !!record1 and !!record2 and record1.primary_key < record2.primary_key
+  defp cmp_record({ record1, _ }, { record2, _ }, refl) do
+    pk = refl.primary_key
+    !!record1 and !!record2 and apply(record1, pk, []) < apply(record2, pk, [])
   end
 
   defp cmp_prev_record({ _, ix1 }, { _, ix2 }) do

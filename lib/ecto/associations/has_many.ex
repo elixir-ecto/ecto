@@ -1,11 +1,14 @@
-defrecord Ecto.Reflections.HasMany, [:field, :owner, :associated, :foreign_key]
+defrecord Ecto.Reflections.HasMany, [ :field, :owner, :associated,
+  :foreign_key, :primary_key ]
 
 defmodule Ecto.Associations.HasMany do
   @moduledoc """
   A has_many association.
   """
 
-   @not_loaded :not_loaded
+  alias Ecto.Reflections.HasMany, as: Refl
+
+  @not_loaded :not_loaded
 
   # Needs to be defrecordp because we don't want pollute the module
   # with functions generated for the record
@@ -16,9 +19,10 @@ defmodule Ecto.Associations.HasMany do
   to the primary key of the parent entity.
   """
   def new(params // [], assoc(target: target, name: name)) do
-    refl = elem(target, 0).__ecto__(:association, name)
+    refl = Refl[] = elem(target, 0).__ecto__(:association, name)
     fk = refl.foreign_key
-    refl.associated.new([{ fk, target.primary_key }] ++ params)
+    pk_value = apply(target, refl.primary_key, [])
+    refl.associated.new([{ fk, pk_value }] ++ params)
   end
 
   @doc """
@@ -54,17 +58,18 @@ end
 defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
+  alias Ecto.Associations.HasMany
 
   def to_query(assoc) do
     target = assoc.__ecto__(:target)
     name = assoc.__ecto__(:name)
     refl = elem(target, 0).__ecto__(:association, name)
 
-    pk = target.primary_key
+    pk_value = apply(target, refl.primary_key, [])
     fk = refl.foreign_key
 
     from = refl.associated
-    where_expr = quote do &0.unquote(fk) == unquote(pk) end
+    where_expr = quote do &0.unquote(fk) == unquote(pk_value) end
     where = QueryExpr[expr: where_expr]
     Query[from: from, wheres: [where]]
   end

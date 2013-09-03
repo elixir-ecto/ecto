@@ -304,6 +304,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
       { :binary_op, op } ->
         [left, right] = args
         op_to_binary(left, vars) <> " #{op} " <> op_to_binary(right, vars)
+      { :fun, "localtimestamp" } ->
+        "localtimestamp"
       { :fun, fun } ->
         "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, vars)) <> ")"
     end

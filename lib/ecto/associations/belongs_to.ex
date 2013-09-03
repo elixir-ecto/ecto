@@ -1,11 +1,12 @@
-defrecord Ecto.Reflections.BelongsTo, [:field, :owner, :associated, :foreign_key]
+defrecord Ecto.Reflections.BelongsTo, [ :field, :owner, :associated,
+  :foreign_key, :primary_key ]
 
 defmodule Ecto.Associations.BelongsTo do
   @moduledoc """
   A belongs_to association.
   """
 
-   @not_loaded :not_loaded
+  @not_loaded :not_loaded
 
   # Needs to be defrecordp because we don't want pollute the module
   # with functions generated for the record
