@@ -144,6 +144,7 @@ defmodule Ecto.EntityTest do
     use Ecto.Entity
 
     dataset do
+      @ecto_model Assocs
       has_many :posts, Post
       has_one :author, User
       belongs_to :comment, Comment
@@ -159,7 +160,7 @@ defmodule Ecto.EntityTest do
 
   test "has_many association" do
     assert Ecto.Reflections.HasMany[field: :"__posts__", owner: EntityAssocs,
-                                    associated: Post, foreign_key: :entityassocs_id] =
+                                    associated: Post, foreign_key: :assocs_id] =
       EntityAssocs.__ecto__(:association, :posts)
 
     r = EntityAssocs[]
@@ -170,7 +171,7 @@ defmodule Ecto.EntityTest do
 
   test "has_one association" do
     assert Ecto.Reflections.HasOne[field: :"__author__", owner: EntityAssocs,
-                                    associated: User, foreign_key: :entityassocs_id] =
+                                    associated: User, foreign_key: :assocs_id] =
       EntityAssocs.__ecto__(:association, :author)
 
     r = EntityAssocs[]
@@ -190,5 +191,27 @@ defmodule Ecto.EntityTest do
     assoc = r.comment
     assert assoc.__ecto__(:name) == :comment
     assert assoc.__ecto__(:target) == r
+  end
+
+  test "association needs foreign_key option if no model" do
+    assert_raise ArgumentError, fn ->
+      defmodule EntityAssocsNoModel do
+        use Ecto.Entity
+
+        dataset do
+          has_many :posts, Post
+          has_one :author, User
+        end
+      end
+    end
+
+    defmodule EntityAssocsNoModel do
+      use Ecto.Entity
+
+      dataset do
+        has_many :posts, Post, foreign_key: :"test"
+        has_one :author, User, foreign_key: :"test"
+      end
+    end
   end
 end

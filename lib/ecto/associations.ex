@@ -41,13 +41,16 @@ defmodule Ecto.Associations do
   end
 
   @doc false
-  def create_reflection(type, name, module, pk, assoc, fk)
+  def create_reflection(type, name, model, module, pk, assoc, fk)
       when type in [:has_many, :has_one] do
-    module_name = module |> Module.split |> List.last |> String.downcase
+    if model do
+      model_name = model |> Module.split |> List.last |> String.downcase
+    end
+
     values = [
       owner: module,
       associated: assoc,
-      foreign_key: fk || :"#{module_name}_#{pk}",
+      foreign_key: fk || :"#{model_name}_#{pk}",
       primary_key: pk,
       field: :"__#{name}__" ]
 
@@ -57,7 +60,7 @@ defmodule Ecto.Associations do
     end
   end
 
-  def create_reflection(:belongs_to, name, module, pk, assoc, fk) do
+  def create_reflection(:belongs_to, name, _model, module, pk, assoc, fk) do
     values = [
       owner: module,
       associated: assoc,

@@ -127,11 +127,10 @@ defmodule Ecto.Entity do
   defp ecto_assocs(assocs, primary_key) do
     quoted = Enum.map(assocs, fn({ name, opts, }) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
-        module = @ecto_model || __MODULE__
         pk = opts[:primary_key] || primary_key
 
-        refl = Ecto.Associations.create_reflection(opts[:type], name, module,
-          pk, opts[:entity], opts[:foreign_key])
+        refl = Ecto.Associations.create_reflection(opts[:type], name, @ecto_model,
+          __MODULE__, pk, opts[:entity], opts[:foreign_key])
 
         def __ecto__(:association, unquote(name)) do
           unquote(refl |> Macro.escape)
@@ -233,9 +232,12 @@ defmodule Ecto.Entity.Dataset do
   defmacro has_many(name, entity, opts // []) do
     quote do
       name = unquote(name)
+      opts = unquote(opts)
+      check_foreign_key(opts[:foreign_key], @ecto_model)
+
       assoc = Ecto.Associations.HasMany.__ecto__(:new, name)
       field(:"__#{name}__", :virtual, default: assoc)
-      opts = [type: :has_many, entity: unquote(entity)] ++ unquote(opts)
+      opts = [type: :has_many, entity: unquote(entity)] ++ opts
       @ecto_assocs { name, opts }
     end
   end
@@ -256,9 +258,12 @@ defmodule Ecto.Entity.Dataset do
   defmacro has_one(name, entity, opts // []) do
     quote do
       name = unquote(name)
+      opts = unquote(opts)
+      check_foreign_key(opts[:foreign_key], @ecto_model)
+
       assoc = Ecto.Associations.HasOne.__ecto__(:new, name)
       field(:"__#{name}__", :virtual, default: assoc)
-      opts = [type: :has_one, entity: unquote(entity)] ++ unquote(opts)
+      opts = [type: :has_one, entity: unquote(entity)] ++ opts
       @ecto_assocs { name, opts }
     end
   end
@@ -285,7 +290,7 @@ defmodule Ecto.Entity.Dataset do
 
       assoc_name = entity |> Module.split |> List.last |> String.downcase
       primary_key = opts[:primary_key] || :id
-      foreign_key = opts[:foreign_key] || :"#{assoc_name}_id"
+      foreign_key = opts[:foreign_key] || :"#{assoc_name}_#{primary_key}"
       field(foreign_key, :integer)
 
       assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name)
@@ -333,6 +338,13 @@ defmodule Ecto.Entity.Dataset do
   def check_type(type) do
     unless type in @types do
       raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
+    end
+  end
+
+  def check_foreign_key(foreign_key, model) do
+    if nil?(model) and nil?(foreign_key) do
+      raise ArgumentError, message: "need to set `foreign_key` option for
+        assocation when model name can't be infered"
     end
   end
 end
