@@ -4,12 +4,10 @@ defmodule Ecto.EntityTest do
   defmodule MyEntity do
     use Ecto.Entity
 
-    dataset do
-      field :name, :string, default: "eric"
-      field :email, :string, uniq: true
-      field :temp, :virtual, default: "temp"
-      field :array, { :list, :string }
-    end
+    field :name, :string, default: "eric"
+    field :email, :string, uniq: true
+    field :temp, :virtual, default: "temp"
+    field :array, { :list, :string }
 
     def inc_id(__MODULE__[id: id]) do
       id + 1
@@ -28,8 +26,8 @@ defmodule Ecto.EntityTest do
 
   test "metadata" do
     fields = [
-      { :id, [type: :integer, primary_key: true] },
-      { :name, [type: :string, default: "eric"] },
+      { :id, [type: :integer] },
+      { :name, [type: :string] },
       { :email, [type: :string, uniq: true] },
       { :array, [type: { :list, :string }] }
     ]
@@ -59,10 +57,8 @@ defmodule Ecto.EntityTest do
       defmodule EntityFieldNameClash do
         use Ecto.Entity
 
-        dataset :entity do
-          field :name, :string
-          field :name, :integer
-        end
+        field :name, :string
+        field :name, :integer
       end
     end
   end
@@ -72,19 +68,15 @@ defmodule Ecto.EntityTest do
       defmodule EntitInvalidFieldType do
         use Ecto.Entity
 
-        dataset :entity do
-          field :name, { :apa }
-        end
+        field :name, { :apa }
       end
     end
   end
 
   defmodule MyEntityNoPK do
-    use Ecto.Entity
+    use Ecto.Entity, primary_key: false
 
-    dataset nil do
-      field :x, :string
-    end
+    field :x, :string
   end
 
   test "no primary key" do
@@ -98,17 +90,13 @@ defmodule Ecto.EntityTest do
   end
 
   defmodule EntityCustomPK do
-    use Ecto.Entity
-
-    dataset nil do
-      field :x, :string
-      field :pk, :integer, primary_key: true
-    end
+    use Ecto.Entity, primary_key: { :pk, :integer }
+    field :x, :string
   end
 
   test "custom primary key" do
-    assert EntityCustomPK.__record__(:fields) == [model: nil, x: nil, pk: nil]
-    assert EntityCustomPK.__ecto__(:field_names) == [:x, :pk]
+    assert EntityCustomPK.__record__(:fields) == [model: nil, pk: nil, x: nil]
+    assert EntityCustomPK.__ecto__(:field_names) == [:pk, :x]
 
     entity = EntityCustomPK[pk: "123"]
     assert entity.primary_key == "123"
@@ -117,38 +105,31 @@ defmodule Ecto.EntityTest do
   end
 
   test "fail custom primary key" do
-    assert_raise ArgumentError, "there can only be one primary key", fn ->
+    assert_raise ArgumentError, "primary key already defined as `id`", fn ->
       defmodule EntityFailCustomPK do
         use Ecto.Entity
 
-        dataset :custom do
-          field :x, :string
-          field :pk, :integer, primary_key: true
-        end
-      end
-    end
-  end
-
-  test "dont fail custom primary key" do
-    defmodule EntityDontFailCustomPK do
-      use Ecto.Entity
-
-      dataset do
         field :x, :string
         field :pk, :integer, primary_key: true
       end
     end
   end
 
-  defmodule EntityAssocs do
-    use Ecto.Entity
+  test "dont fail custom primary key" do
+    defmodule EntityDontFailCustomPK do
+      use Ecto.Entity, primary_key: false
 
-    dataset do
-      @ecto_model Assocs
-      has_many :posts, Post
-      has_one :author, User
-      belongs_to :comment, Comment
+      field :x, :string
+      field :pk, :integer, primary_key: true
     end
+  end
+
+  defmodule EntityAssocs do
+    use Ecto.Entity, model: Assocs
+
+    has_many :posts, Post
+    has_one :author, User
+    belongs_to :comment, Comment
   end
 
   test "associations" do
@@ -198,20 +179,16 @@ defmodule Ecto.EntityTest do
       defmodule EntityAssocsNoModel do
         use Ecto.Entity
 
-        dataset do
-          has_many :posts, Post
-          has_one :author, User
-        end
+        has_many :posts, Post
+        has_one :author, User
       end
     end
 
     defmodule EntityAssocsNoModel do
       use Ecto.Entity
 
-      dataset do
-        has_many :posts, Post, foreign_key: :"test"
-        has_one :author, User, foreign_key: :"test"
-      end
+      has_many :posts, Post, foreign_key: :"test"
+      has_one :author, User, foreign_key: :"test"
     end
   end
 end

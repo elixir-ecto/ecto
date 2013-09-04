@@ -56,25 +56,21 @@ defmodule Ecto.Model.Queryable do
         use Ecto.Model
 
         defmodule Entity do
-          use Ecto.Entity
-          dataset do
-            field :text, :string
-          end
+          use Ecto.Entity          
+          field :text, :string
         end
 
         queryable "posts", Entity
       end
   """
-  defmacro queryable(name, primary_key // :id, [do: block]) do
+  defmacro queryable(name, opts // [], [do: block]) do
     quote do
       name = unquote(name)
+      opts = unquote(opts)
 
       defmodule Entity do
-        use Ecto.Entity
-        @ecto_model unquote(__CALLER__.module)
-        dataset unquote(primary_key) do
-          unquote(block)
-        end
+        use Ecto.Entity, Keyword.put(opts, :model, unquote(__CALLER__.module))
+        unquote(block)
       end
 
       queryable(name, Entity)

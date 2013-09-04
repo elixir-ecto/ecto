@@ -1,6 +1,7 @@
 defmodule Ecto.Adapters.Postgres do
   @moduledoc false
 
+  # TODO: Make this module public and document the adapter options
   # This module handles the connections to the Postgres database with poolboy.
   # Each repository has their own pool.
 

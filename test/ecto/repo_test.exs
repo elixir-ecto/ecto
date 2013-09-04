@@ -29,7 +29,7 @@ end
 defmodule Ecto.RepoTest.MyModelNoPK do
   use Ecto.Model
 
-  queryable "my_entity", nil do
+  queryable "my_entity", primary_key: false do
     field :x, :string
   end
 end

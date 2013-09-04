@@ -1,9 +1,7 @@
 defmodule Ecto.Entity do
   @moduledoc """
   This module is used to define an entity. An entity is a record with associated
-  meta data that will be used when creating and running queries. See
-  `Ecto.Entity.Dataset` for more information about the specific functions used
-  to specify an entity.
+  meta data that is persisted to a repository.
 
   Every entity is also a record, that means that you work with entities just
   like you would work with records, to set the default values for the record
@@ -14,20 +12,16 @@ defmodule Ecto.Entity do
       defmodule User do
         use Ecto.Entity
 
-        dataset do
-          field :name, :string
-          field :age, :integer
-          has_many :posts, Post
-        end
+        field :name, :string
+        field :age, :integer
+        has_many :posts, Post
       end
 
       defmodule Post do
         use Ecto.Entity
 
-        dataset do
-          field :text, :string
-          belongs_to :author, User
-        end
+        field :text, :string
+        belongs_to :author, User
       end
 
   Accessors and updater functions for the primary key will be generated on the
@@ -35,77 +29,216 @@ defmodule Ecto.Entity do
   `update_primary_key/2`.
   """
 
-  @doc false
-  defmacro __using__(_opts) do
+  ## API
+
+  @doc """
+  Defines a field on the entity with given name and type, will also create a
+  record field. If the type is `:virtual` it wont be persisted.
+
+  ## Options
+
+    * `:default` - Sets the default value on the entity and the record;
+    * `:primary_key` - Sets the field to be the primary key, the default
+      primary key have to be overridden by setting its name to `nil`, see
+      `Ecto.Entity.dataset`;
+  """
+  defmacro field(name, type, opts // []) do
     quote do
-      import Ecto.Entity
-      @before_compile unquote(__MODULE__)
-      @ecto_dataset false
-      @ecto_model nil
+      Ecto.Entity.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
   end
 
   @doc """
-  Defines the entity dataset. Takes an optional primary key name, if none is
-  given, defaults to `:id`, pass `nil` if there should be no primary key.
+  Creates a virtual field with the default value `Ecto.Associations.HasMany`.
+
+  Indicates a one-to-many association with another queryable, where this entity
+  has zero or more records of the queryable structure. The other queryable often
+  has a `belongs_to` field with the reverse association.
+
+  ## Options
+
+    * `:foreign_key` - Sets the foreign key that is used on the other entity;
+    * `:primary_key` - Sets the key on the current entity to be used for the
+                       association;
   """
-  defmacro dataset(primary_key // :id, block) do
+  defmacro has_many(name, queryable, opts // []) do
     quote do
-      try do
-        import Ecto.Entity.Dataset
+      Ecto.Entity.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+    end
+  end
 
-        @ecto_primary_key nil
-        @ecto_fields []
-        Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+  @doc """
+  Creates a virtual field with the default value `Ecto.Associations.HasOne`.
 
-        if @ecto_dataset do
-          raise ArgumentError, message: "dataset already defined"
-        end
-        @ecto_dataset true
+  Indicates a one-to-one association with another queryable, where this entity
+  has zero or one records of the queryable structure. The other queryable often
+  has a `belongs_to` field with the reverse association.
 
-        field(:model, :virtual, default: @ecto_model)
+  ## Options
 
-        result = unquote(block)
+    * `:foreign_key` - Sets the foreign key that is used on the other entity;
+    * `:primary_key` - Sets the key on the current entity to be used for the
+                       association;
+  """
+  defmacro has_one(name, queryable, opts // []) do
+    quote do
+      Ecto.Entity.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+    end
+  end
 
-        primary_key = unquote(primary_key)
-        if primary_key && (!@ecto_primary_key || (@ecto_primary_key && primary_key != :id)) do
-          field(primary_key, :integer, [primary_key: true], -2)
-        end
+  @doc """
+  Creates a virtual field with the default value `Ecto.Associations.BelongsTo`.
 
-        record_fields = @ecto_fields
-          |> Enum.reverse
-          |> Enum.map(fn({ field, opts }) -> { field, opts[:default] } end)
+  Indiciates a one-to-one association with another queryable, this entity
+  belongs to zero or one records of the queryable structure.
 
-        @record_fields record_fields
-        Record.deffunctions(record_fields, __ENV__)
-        Ecto.Entity.deffunctions(__ENV__)
+  This function will also generate a foreign key field.
 
-        result
+  ## Options
+
+    * `:foreign_key` - Sets the foreign key field name;
+    * `:primary_key` - Sets the key on the other entity to be used for the
+                       association;
+  """
+  defmacro belongs_to(name, queryable, opts // []) do
+    quote do
+      Ecto.Entity.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+    end
+  end
+
+  ## Callbacks
+
+  @types %w(string integer float binary list datetime interval virtual)a
+
+  @doc false
+  defmacro __using__(opts) do
+    quote bind_quoted: [opts: opts] do
+      import Ecto.Entity
+
+      @before_compile Ecto.Entity
+      @ecto_fields []
+      @record_fields []
+      @ecto_primary_key nil
+      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+
+      @ecto_model opts[:model]
+      field(:model, :virtual, default: opts[:model])
+
+      case opts[:primary_key] do
+        nil ->
+          field(:id, :integer, primary_key: true)
+        false ->
+          :ok
+        { name, type } ->
+          field(name, type, primary_key: true)
+        other ->
+          raise ArgumentError, message: ":primary_key must be false, nil or { name, type }"
       end
     end
   end
 
   @doc false
   defmacro __before_compile__(env) do
-    unless Module.get_attribute(env.module, :ecto_dataset) do
-      raise ArgumentError, message: "dataset not defined, an entity has to " <>
-        "define a dataset, see `Ecto.Entity.Dataset`"
-    end
-  end
+    mod = env.module
 
-  @doc false
-  def deffunctions(env) do
-    primary_key = Module.get_attribute(env.module, :ecto_primary_key)
-    all_fields  = Module.get_attribute(env.module, :ecto_fields) |> Enum.reverse
-    assocs      = Module.get_attribute(env.module, :ecto_assocs) |> Enum.reverse
+    primary_key = Module.get_attribute(mod, :ecto_primary_key)
+    all_fields  = Module.get_attribute(mod, :ecto_fields) |> Enum.reverse
+    assocs      = Module.get_attribute(mod, :ecto_assocs) |> Enum.reverse
+
+    record_fields = Module.get_attribute(mod, :record_fields)
+    Record.deffunctions(record_fields, env)
+
     fields = Enum.filter(all_fields, fn({ _, opts }) -> opts[:type] != :virtual end)
 
-    contents = [
-      ecto_fields(fields),
+    [ ecto_fields(fields),
       ecto_assocs(assocs, primary_key),
       ecto_primary_key(primary_key),
       ecto_helpers(fields, all_fields) ]
-    Module.eval_quoted(env.module, contents, [], env)
+  end
+
+  # TODO: Check that the opts are valid for the given type,
+  # especially check the default value
+  @doc false
+  def __field__(mod, name, type, opts) do
+    check_type!(type)
+    fields = Module.get_attribute(mod, :ecto_fields)
+
+    if opts[:primary_key] do
+      if pk = Module.get_attribute(mod, :ecto_primary_key) do
+        raise ArgumentError, message: "primary key already defined as `#{pk}`"
+      else
+        Module.put_attribute(mod, :ecto_primary_key, name)
+      end
+    end
+
+    clash = Enum.any?(fields, fn({ prev, _ }) -> name == prev end)
+    if clash do
+      raise ArgumentError, message: "field `#{name}` was already set on entity"
+    end
+
+    record_fields = Module.get_attribute(mod, :record_fields)
+    Module.put_attribute(mod, :record_fields, record_fields ++ [{ name, opts[:default] }])
+
+    opts = Enum.reduce([:default, :primary_key], opts, &Dict.delete(&2, &1))
+    Module.put_attribute(mod, :ecto_fields, [{ name, [type: type] ++ opts }|fields])
+  end
+
+  @doc false
+  def __has_many__(mod, name, queryable, opts) do
+    check_foreign_key!(mod, opts[:foreign_key])
+
+    assoc = Ecto.Associations.HasMany.__ecto__(:new, name)
+    __field__(mod, :"__#{name}__", :virtual, default: assoc)
+
+    opts = [type: :has_many, queryable: queryable]
+    Module.put_attribute(mod, :ecto_assocs, { name, opts })
+  end
+
+  @doc false
+  def __has_one__(mod, name, queryable, opts) do
+    check_foreign_key!(mod, opts[:foreign_key])
+
+    assoc = Ecto.Associations.HasOne.__ecto__(:new, name)
+    __field__(mod, :"__#{name}__", :virtual, default: assoc)
+
+    opts = [type: :has_one, queryable: queryable]
+    Module.put_attribute(mod, :ecto_assocs, { name, opts })
+  end
+
+  @doc false
+  def __belongs_to__(mod, name, queryable, opts) do
+    assoc_name  = queryable |> Module.split |> List.last |> String.downcase
+    primary_key = opts[:primary_key] || :id
+    foreign_key = opts[:foreign_key] || :"#{assoc_name}_#{primary_key}"
+    __field__(mod, foreign_key, :integer, [])
+
+    assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name)
+    __field__(mod, :"__#{name}__", :virtual, default: assoc)
+
+    opts = [ type: :belongs_to, queryable: queryable,
+             foreign_key: foreign_key, primary_key: primary_key ]
+    Module.put_attribute(mod, :ecto_assocs, { name, opts })
+  end
+
+  ## Helpers
+
+  defp check_type!({ outer, inner }) when is_atom(outer) do
+    check_type!(outer)
+    check_type!(inner)
+  end
+
+  defp check_type!(type) do
+    unless type in @types do
+      raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
+    end
+  end
+
+  defp check_foreign_key!(mod, foreign_key) do
+    model = Module.get_attribute(mod, :ecto_model)
+    if nil?(model) and nil?(foreign_key) do
+      raise ArgumentError, message: "need to set `foreign_key` option for
+        assocation when model name can't be infered"
+    end
   end
 
   defp ecto_fields(fields) do
@@ -130,7 +263,7 @@ defmodule Ecto.Entity do
         pk = opts[:primary_key] || primary_key
 
         refl = Ecto.Associations.create_reflection(opts[:type], name, @ecto_model,
-          __MODULE__, pk, opts[:entity], opts[:foreign_key])
+          __MODULE__, pk, opts[:queryable], opts[:foreign_key])
 
         def __ecto__(:association, unquote(name)) do
           unquote(refl |> Macro.escape)
@@ -187,164 +320,6 @@ defmodule Ecto.Entity do
             (not filter_pk || (filter_pk && field != primary_key))
         end)
       end
-    end
-  end
-end
-
-defmodule Ecto.Entity.Dataset do
-  @moduledoc """
-  This module contains all macros used to define the dataset for an entity.
-  """
-
-  @types [ :string, :integer, :float, :binary, :list, :datetime, :interval,
-           :virtual ]
-
-  @doc """
-  Defines a field on the entity with given name and type, will also create a
-  record field. If the type is `:virtual` it wont be persisted.
-
-  ## Options
-
-    * `:default` - Sets the default value on the entity and the record;
-    * `:primary_key` - Sets the field to be the primary key, the default
-      primary key have to be overridden by setting its name to `nil`, see
-      `Ecto.Entity.dataset`;
-  """
-  defmacro field(name, type, opts // []) do
-    quote do
-      field(unquote(name), unquote(type), unquote(opts), 0)
-    end
-  end
-
-  @doc """
-  Creates a virtual field with the default value `Ecto.Associations.HasMany`.
-
-  Indicates a one-to-many association with another entity, this entity has zero
-  or more records of the other entity. The other entity often has a `belongs_to`
-  field to the current entity.
-
-  ## Options
-
-    * `:foreign_key` - Sets the foreign key that is used on the other entity;
-    * `:primary_key` - Sets the key on the current entity to be used for the
-                       association;
-  """
-  defmacro has_many(name, entity, opts // []) do
-    quote do
-      name = unquote(name)
-      opts = unquote(opts)
-      check_foreign_key(opts[:foreign_key], @ecto_model)
-
-      assoc = Ecto.Associations.HasMany.__ecto__(:new, name)
-      field(:"__#{name}__", :virtual, default: assoc)
-      opts = [type: :has_many, entity: unquote(entity)] ++ opts
-      @ecto_assocs { name, opts }
-    end
-  end
-
-  @doc """
-  Creates a virtual field with the default value `Ecto.Associations.HasOne`.
-
-  Indicates a one-to-one association with another entity, this entity has zero
-  or one records of the other entity. The other entity often has a `belongs_to`
-  field to the current entity.
-
-  ## Options
-
-    * `:foreign_key` - Sets the foreign key that is used on the other entity;
-    * `:primary_key` - Sets the key on the current entity to be used for the
-                       association;
-  """
-  defmacro has_one(name, entity, opts // []) do
-    quote do
-      name = unquote(name)
-      opts = unquote(opts)
-      check_foreign_key(opts[:foreign_key], @ecto_model)
-
-      assoc = Ecto.Associations.HasOne.__ecto__(:new, name)
-      field(:"__#{name}__", :virtual, default: assoc)
-      opts = [type: :has_one, entity: unquote(entity)] ++ opts
-      @ecto_assocs { name, opts }
-    end
-  end
-
-  @doc """
-  Creates a virtual field with the default value `Ecto.Associations.BelongsTo`.
-
-  Indiciates a one-to-one association with another entity, this entity belongs
-  to zero or one records of the other entity. The other entity often has a
-  `has_many` or `has_one` field to the current entity. Will also generate a
-  foreign key field.
-
-  ## Options
-
-    * `:foreign_key` - Sets the foreign key field name;
-    * `:primary_key` - Sets the key on the other entity to be used for the
-                       association;
-  """
-  defmacro belongs_to(name, entity, opts // []) do
-    quote do
-      name = unquote(name)
-      entity = unquote(entity)
-      opts = unquote(opts)
-
-      assoc_name = entity |> Module.split |> List.last |> String.downcase
-      primary_key = opts[:primary_key] || :id
-      foreign_key = opts[:foreign_key] || :"#{assoc_name}_#{primary_key}"
-      field(foreign_key, :integer)
-
-      assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name)
-      field(:"__#{name}__", :virtual, default: assoc)
-      opts = [ type: :belongs_to, entity: entity, foreign_key: foreign_key,
-               primary_key: primary_key ] ++ opts
-      @ecto_assocs { name, opts }
-    end
-  end
-
-  @doc false
-  defmacro field(name, type, opts, pos) do
-    # TODO: Check that the opts are valid for the given type, especially check
-    # the default value
-
-    quote do
-      field_name = unquote(name)
-      type = unquote(type)
-      field_opts = unquote(opts)
-      Ecto.Entity.Dataset.check_type(type)
-
-      clash = Enum.any?(@ecto_fields, fn({ prev_name, _ }) -> field_name == prev_name end)
-      if clash do
-        raise ArgumentError, message: "field `#{field_name}` was already set on entity"
-      end
-
-      if field_opts[:primary_key] do
-        if @ecto_primary_key do
-          raise ArgumentError, message: "there can only be one primary key"
-        end
-        @ecto_primary_key field_name
-      end
-
-      pos = unquote(pos)
-      @ecto_fields List.insert_at(@ecto_fields, pos, { field_name, [type: type] ++ field_opts })
-    end
-  end
-
-  @doc false
-  def check_type({ outer, inner }) when is_atom(outer) do
-    check_type(outer)
-    check_type(inner)
-  end
-
-  def check_type(type) do
-    unless type in @types do
-      raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
-    end
-  end
-
-  def check_foreign_key(foreign_key, model) do
-    if nil?(model) and nil?(foreign_key) do
-      raise ArgumentError, message: "need to set `foreign_key` option for
-        assocation when model name can't be infered"
     end
   end
 end

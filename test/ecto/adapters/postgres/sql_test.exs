@@ -322,7 +322,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   defmodule PKModel do
     use Ecto.Model
 
-    queryable "model", nil do
+    queryable "model", primary_key: false do
       field :x, :integer
       field :pk, :integer, primary_key: true
       field :y, :integer
