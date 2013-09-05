@@ -41,7 +41,7 @@ Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, yo
 ```elixir
 def deps do
   [ { :ecto, github: "elixir-lang/ecto" },
-    { :pgsql, github: "semiocast/pgsql" } ]
+    { :pgsql, github: "ericmj/pgsql", branch: "elixir" } ]
 end
 ```
 
@@ -190,7 +190,7 @@ defmodule Weather do
 end
 ```
 
-This compact model/entity definition is the preferred format (unless you need a decoupled entity) and will be format used from now on. The model also defines both `Weather.new/1` and `Weather.assign/1` functions as shortcuts that simply delegate to `Weather.Entity`:
+This compact model/entity definition is the preferred format (unless you need a decoupled entity) and will be the format used from now on. The model also defines both `Weather.new/1` and `Weather.assign/1` functions as shortcuts that simply delegate to `Weather.Entity`:
 
 ```elixir
 weather = Weather.new(temp_lo: 0, temp_hi: 23)
@@ -226,7 +226,7 @@ Notice how the storage (repository), the data (entity) and the behaviour (model)
 * By providing behaviour in modules, they are easy to compose (it is a matter of composing functions). You can easily have different entities sharing the same set of validations. Or the same entity being controlled by a different set of validations and rules on different parts of the application. For example, a Weather entity may require a different set of validations and data integrity rules depending on the role of the user manipulating the data;
 * By concerning only with storage, operations on the repository are simple and fast. You control the steps your data pass through before entering the repository. We don't pollute the repository with unecessary overhead, providing straight-forward and performant access to storage;
 
-For example, after the remaining model functionality is added, this is how an `update` ection in a REST endpoint could look like:
+For example, after the remaining model functionality is added, this is how an `update` action in a REST endpoint could look like:
 
 ```elixir
 def update(id, params) do
