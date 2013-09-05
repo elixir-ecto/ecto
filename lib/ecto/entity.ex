@@ -9,24 +9,35 @@ defmodule Ecto.Entity do
 
   ## Example
 
-      defmodule User do
+      defmodule User.Entity do
         use Ecto.Entity
 
         field :name, :string
-        field :age, :integer
+        field :age, :integer, default: 0
         has_many :posts, Post
       end
 
-      defmodule Post do
-        use Ecto.Entity
+      User.Entity.new
+      #=> User.Entity[]
 
-        field :text, :string
-        belongs_to :author, User
+  In the majority of the cases though, an entity is defined inlined in a model:
+
+      defmodule User do
+        use Ecto.Model
+
+        queryable "users" do
+          field :name, :string
+          field :age, :integer, default: 0
+          has_many :posts, Post
+        end
       end
 
-  Accessors and updater functions for the primary key will be generated on the
-  entity, specifically `primary_key/1`, `primary_key/2` and
-  `update_primary_key/2`.
+      User.Entity.new
+      #=> User.Entity[]
+
+  In addition to the record functionality, Ecto also defines accessors and updater
+  functions for the primary key will be generated on the entity, specifically
+  `primary_key/1`, `primary_key/2` and `update_primary_key/2`.
   """
 
   ## API
@@ -79,14 +90,14 @@ defmodule Ecto.Entity do
 
       # The comments can come preloaded on the post record
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
-      post.comments.to_list #=> [ Comment[...], ... ]
+      post.comments.to_list #=> [ Comment.Entity[...], ... ]
 
       # Or via an association join
       [post] = Repo.all(from(p in Post,
                       where: p.id == 42,
                   left_join: c in p.comments,
                      select: assoc(p, c)))
-      post.comments.to_list #=> [ Comment[...], ... ]
+      post.comments.to_list #=> [ Comment.Entity[...], ... ]
   """
   defmacro has_many(name, queryable, opts // []) do
     quote do
@@ -121,14 +132,14 @@ defmodule Ecto.Entity do
 
       # The permalink can come preloaded on the post record
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :permalink))
-      post.permalink.get #=> Permalink[...]
+      post.permalink.get #=> Permalink.Entity[...]
 
       # Or via an association join
       [post] = Repo.all(from(p in Post,
                       where: p.id == 42,
                   left_join: pl in p.permalink,
                      select: assoc(p, pl)))
-      post.permalink.get #=> Permalink[...]
+      post.permalink.get #=> Permalink.Entity[...]
   """
   defmacro has_one(name, queryable, opts // []) do
     quote do
@@ -137,14 +148,12 @@ defmodule Ecto.Entity do
   end
 
   @doc %S"""
-  Creates a virtual field with the default value `Ecto.Associations.BelongsTo`.
-
   Indiciates a one-to-one association with another queryable, this entity
   belongs to zero or one records of the queryable structure. The other queryable
   often has a `has_one` or a `has_many` field with the reverse association.
 
   Creates a virtual field called `name`. The association can be accessed via
-  this field, see `Ecto.Associations.HasOne` for more information. Check the
+  this field, see `Ecto.Associations.BelongsTo` for more information. Check the
   examples to see how to perform queries on the association and
   `Ecto.Query.join/3` for joins. Will also generate a foreign key field.
 
@@ -165,14 +174,14 @@ defmodule Ecto.Entity do
 
       # The post can come preloaded on the comment record
       [comment] = Repo.all(from(c in Comment, where: c.id == 42, preload: :post))
-      comment.post.get #=> Post[...]
+      comment.post.get #=> Post.Entity[...]
 
       # Or via an association join
       [comment] = Repo.all(from(c in Comment,
                          where: c.id == 42,
                      left_join: p in c.post,
                         select: assoc(c, p)))
-      comment.post.get #=> Post[...]
+      comment.post.get #=> Post.Entity[...]
   """
   defmacro belongs_to(name, queryable, opts // []) do
     quote do

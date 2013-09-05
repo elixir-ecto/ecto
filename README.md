@@ -54,7 +54,7 @@ When using Ecto, we think about 4 main components:
 * Repositories: repositories are wrappers around the database. Via the repository, we can create, update, destroy and query existing entries. A repository needs an adapter and a URL to communicate to the database;
 * Entities: entities are data with an identity. They are Elixir records that represent a row in the database;
 * Models: models represent behaviour. Validations, callbacks and query handling are all behaviours tied to a model;
-* Queries: used to query the database. Queries are written in Elixir syntax and translated to the underlying database engine. Queries are also composable via the `Ecto.Queryable` protocol.
+* Queries: written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injetion, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
 
 Note how the storage (repositories), the data (entities) and behaviour (models) are decoupled in Ecto. In the following sections, we will describe those components and how they interact with each other. This README will follow the code outlined in the application at [examples/simple](https://github.com/elixir-lang/ecto/tree/master/examples/simple). Please follow the instructions outlined there to get it up and running.
 
@@ -79,6 +79,31 @@ Currently we just support the Postgres adapter. The repository is also responsib
 Besides, a set of options can be passed to the adatpter as:
 
     ecto://USERNAME:PASSWORD@HOST/DATABASE?KEY=VALUE
+
+Each repository in Ecto defines a `start_link/0` function that needs to be invoked before using the repository. In general, this function is not called directly, but via the supervisor chain, as shown [in the simple example](https://github.com/elixir-lang/ecto/tree/master/examples/simple):
+
+```elixir
+defmodule Simple.App do
+  use Application.Behaviour
+
+  def start(_type, _args) do
+    Simple.Sup.start_link
+  end
+end
+
+defmodule Simple.Sup do
+  use Supervisor.Behaviour
+
+  def start_link do
+    :supervisor.start_link({ :local, __MODULE__ }, __MODULE__, [])
+  end
+
+  def init([]) do
+    tree = [ worker(Repo, []) ]
+    supervise(tree, strategy: :one_for_all)
+  end
+end
+```
 
 ### Entities
 
@@ -119,6 +144,7 @@ As seen above, when defining each entity field, a type needs to be given. Those 
 
 * `:integer`
 * `:float`
+* `:boolean`
 * `:binary` - for binaries;
 * `:string` - for utf-8 encoded binaries;
 * `:list`
@@ -190,7 +216,7 @@ defmodule Weather do
 end
 ```
 
-This compact model/entity definition is the preferred format (unless you need a decoupled entity) and will be the format used from now on. The model also defines both `Weather.new/1` and `Weather.assign/1` functions as shortcuts that simply delegate to `Weather.Entity`:
+This compact model/entity definition is the preferred format (unless you need a decoupled entity) and will be format used from now on. The model also defines both `Weather.new/1` and `Weather.assign/1` functions as shortcuts that simply delegate to `Weather.Entity`:
 
 ```elixir
 weather = Weather.new(temp_lo: 0, temp_hi: 23)
@@ -249,17 +275,155 @@ To be implemented.
 
 ### Query
 
-To be written.
+Last but not least, Ecto allows you to write queries in Elixir and send them to the repository, which translates them to the underlying database. Let's see an example:
+
+```elixir
+import Ecto.Query, only: [from: 2]
+
+query = from w in Weather,
+      where: w.prcp > 0 or w.prcp == nil,
+     select: w
+
+Repo.all(query)
+```
+
+Queries are defined and extended via the `from` macro. The supported keywords are: `:where`, `:order_by`, `:offset`, `:limit`, `:group_by`, `:having`, `:join` and `:select`. For associations we support `:preload`. Although we used `:select` above, it is optional and it defaults to the entity associated to the model being queries.
+
+In the previous section, we have defined our model as queryable. This is what allows our model to be used in the query as: `from w in Weather`. The right-hand side of `in` must implement the `Ecto.Queryable`, which is done automatically for models that use the queryable feature.
+
+Since queries also implement `Ecto.Queryable`, we can compose queries:
+
+```elixir
+query = from w in Weather,
+      where: w.prcp > 0 or w.prcp == nil
+
+Repo.all(from q in query, limit: 30)
+```
+
+When writing a query, you are inside Ecto's query syntax. In order to access external values or invoke functions, you need to use the `^` operator, which is overloaded by Ecto:
+
+```elixir
+def min_prcp(min) do
+  from w in Weather, where: w.prcp > ^min or w.prcp == nil
+end
+```
+
+This comes with the extra benefit that queries in Ecto can easily access database functions. For example, `upcase`, `downcase`, `pow` are all available inside Ecto query syntax and are sent directly to the database. You can see the full list of supported functions at [`Ecto.Query.API`](http://elixir-lang.org/docs/ecto/Ecto.Query.API.html).
+
+Finally, notice that queries in Ecto must be type-safe. The following example will fail:
+
+```elixir
+Repo.all(from w in Weather, where: w.prcp == "oops")
+```
+
+with the following error message:
+
+```elixir
+** (Ecto.TypeCheckError) the following expression does not type check:
+
+    &0.prcp() == "foo"
+
+Allowed types for ==/2:
+
+    number == number
+    var == var
+    nil == _
+    _ == nil
+
+Got: float == string
+```
+
+The error message is saying that, the database operator `==/2` can compare numbers with numbers, be them integer or floats, it can compare any value with other value of the same type (`var == var`), and it can compare any other value with `nil`.
+
+You can find more about queries and the supported keywords in the [`Ecto.Query` module](http://elixir-lang.org/docs/ecto/Ecto.Query.html).
+
+With this, we finish our introduction. The next section goes into more details on how Ecto integrates with OTP, how to use associations and more.
 
 ## Other topics
 
 ### Associations
 
-To be written.
+Ecto supports defining associations on entities:
 
-### OTP integration
+```elixir
+defmodule Post do
+  use Ecto.Model
 
-To be written.
+  queryable "posts" do
+    has_many :comments, Comment
+  end
+end
+
+defmodule Comment do
+  use Ecto.Model
+
+  queryable "comments" do
+    field :title, :string
+    belongs_to :post, Post
+  end
+end
+```
+
+For each association, Ecto defines a function in `Post` to retrieve the association metadata with the associated entity. For example:
+
+```elixir
+post = Repo.get(Post, 42)
+post.comments #=> Ecto.Association.HasMany[...]
+```
+
+The association record above provides a couple conveniences. First of all, `post.comments` is a queryable structure, which means we can use it in queries:
+
+```elixir
+# Get all comments for the given post
+Repo.all(post.comments)
+
+# Build a query on top of the associated comments
+query = from c in post.comments, where: c.title != nil
+Repo.all(query)
+```
+
+Ecto also supports joins with associations:
+
+```elixir
+query = from p in Post,
+      where: p.id == 42,
+  left_join: c in p.comments,
+     select: assoc(p, c)
+
+[post] = Repo.all(query)
+
+post.comments.to_list #=> [Comment.Entity[...], Comment.Entity[...]]
+```
+
+Notice we used the `assoc` helper to associate the returned posts and comments while assembling the query results. In many cases, developers simply want to get all posts with all associated comments. For such, Ecto support preloads:
+
+```elixir
+posts = Repo.all(from p in Post, preload: [:comments])
+hd(posts).comments.to_list #=> [Comment.Entity[...], Comment.Entity[...]]
+```
+
+When preloading, differently from `join`, Ecto does a separate query to retrieve all comments associated with the returned posts.
+
+Notice that Ecto does not lazy load associations. While lazily loading associations may sound convenient at first, in the long run it becomes a source of confusion and performance issues. That said, if you call `to_list` in an association that is not currently loaded, Ecto will raise an error:
+
+```elixir
+post = Repo.get(Post, 42)
+post.comments.to_list #=> ** (Ecto.AssociationNotLoadedError)
+```
+
+Besides `has_many`, Ecto also supports `has_one` and `belongs_to` associations. They work similarly, except retrieve the association value is done via `get`, instead of `to_list`:
+
+```elixir
+query = from(c in Comment, where: c.id == 42, preload: :post)
+[comment] = Repo.all(query)
+comment.post.get #=> Post.Entity[...]
+```
+
+You can find more information about defining associations and each respective association module [in `Ecto.Entity` docs](http://elixir-lang.org/docs/ecto/Ecto.Entity.html).
+
+### Migrations
+
+To be implemented.
 
 ## Contributing
 
