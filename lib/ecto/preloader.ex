@@ -73,7 +73,7 @@ defmodule Ecto.Preloader do
 
   defp cmp_record({ record1, _ }, { record2, _ }, refl) do
     pk = refl.primary_key
-    !!record1 and !!record2 and apply(record1, pk, []) < apply(record2, pk, [])
+    !! (record1 && record2 && apply(record1, pk, []) < apply(record2, pk, []))
   end
 
   defp cmp_prev_record({ _, ix1 }, { _, ix2 }) do

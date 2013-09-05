@@ -220,8 +220,8 @@ defmodule Ecto.Repo do
     primary_key = entity.__ecto__(:primary_key)
 
     quoted = quote do &0.unquote(primary_key) == unquote(id) end
-    expr = QueryExpr[expr: quoted]
-    query = Util.merge(query, :where, expr)
+    where = QueryExpr[expr: quoted]
+    query = query |> Util.merge(:where, where) |> Util.merge(:limit, 1)
     query = Util.normalize(query)
 
     case adapter.all(repo, query) |> check_result(adapter, reason) do

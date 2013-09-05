@@ -48,18 +48,45 @@ defmodule Ecto.Entity do
     end
   end
 
-  @doc """
-  Creates a virtual field with the default value `Ecto.Associations.HasMany`.
-
+  @doc %S"""
   Indicates a one-to-many association with another queryable, where this entity
   has zero or more records of the queryable structure. The other queryable often
   has a `belongs_to` field with the reverse association.
 
+  Creates a virtual field called `name`. The association can be accessed via
+  this field, see `Ecto.Associations.HasMany` for more information. Check the
+  examples to see how to perform queries on the association and
+  `Ecto.Query.join/3` for joins.
+
   ## Options
 
-    * `:foreign_key` - Sets the foreign key that is used on the other entity;
+    * `:foreign_key` - Sets the foreign key that is used on the other entity,
+                       defaults to: `:"#{model}_id"`;
     * `:primary_key` - Sets the key on the current entity to be used for the
-                       association;
+                       association, defaults to the primary key on the entity;
+
+  ## Examples
+
+      defmodule Post do
+        queryable "posts" do
+          has_many :comments, Comment
+        end
+      end
+
+      # Get all comments for a given post
+      post = Repo.get(Post, 42)
+      comments = Repo.all(post.comments)
+
+      # The comments can come preloaded on the post record
+      [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
+      post.comments.to_list #=> [ Comment[...], ... ]
+
+      # Or via an association join
+      [post] = Repo.all(from(p in Post,
+                      where: p.id == 42,
+                  left_join: c in p.comments,
+                     select: assoc(p, c)))
+      post.comments.to_list #=> [ Comment[...], ... ]
   """
   defmacro has_many(name, queryable, opts // []) do
     quote do
@@ -67,18 +94,41 @@ defmodule Ecto.Entity do
     end
   end
 
-  @doc """
-  Creates a virtual field with the default value `Ecto.Associations.HasOne`.
-
+  @doc %S"""
   Indicates a one-to-one association with another queryable, where this entity
   has zero or one records of the queryable structure. The other queryable often
   has a `belongs_to` field with the reverse association.
 
+  Creates a virtual field called `name`. The association can be accessed via
+  this field, see `Ecto.Associations.HasOne` for more information. Check the
+  examples to see how to perform queries on the association and
+  `Ecto.Query.join/3` for joins.
+
   ## Options
 
-    * `:foreign_key` - Sets the foreign key that is used on the other entity;
+    * `:foreign_key` - Sets the foreign key that is used on the other entity,
+                       defaults to: `:"#{model}_id"`;
     * `:primary_key` - Sets the key on the current entity to be used for the
-                       association;
+                       association, defaults to the primary key on the entity;
+
+  ## Examples
+
+      defmodule Post do
+        queryable "posts" do
+          has_one :permalink, Permalink
+        end
+      end
+
+      # The permalink can come preloaded on the post record
+      [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :permalink))
+      post.permalink.get #=> Permalink[...]
+
+      # Or via an association join
+      [post] = Repo.all(from(p in Post,
+                      where: p.id == 42,
+                  left_join: pl in p.permalink,
+                     select: assoc(p, pl)))
+      post.permalink.get #=> Permalink[...]
   """
   defmacro has_one(name, queryable, opts // []) do
     quote do
@@ -86,19 +136,43 @@ defmodule Ecto.Entity do
     end
   end
 
-  @doc """
+  @doc %S"""
   Creates a virtual field with the default value `Ecto.Associations.BelongsTo`.
 
   Indiciates a one-to-one association with another queryable, this entity
-  belongs to zero or one records of the queryable structure.
+  belongs to zero or one records of the queryable structure. The other queryable
+  often has a `has_one` or a `has_many` field with the reverse association.
 
-  This function will also generate a foreign key field.
+  Creates a virtual field called `name`. The association can be accessed via
+  this field, see `Ecto.Associations.HasOne` for more information. Check the
+  examples to see how to perform queries on the association and
+  `Ecto.Query.join/3` for joins. Will also generate a foreign key field.
 
   ## Options
 
-    * `:foreign_key` - Sets the foreign key field name;
+    * `:foreign_key` - Sets the foreign key field name, defaults to:
+                       `:"#{other_entity}_id"`;
     * `:primary_key` - Sets the key on the other entity to be used for the
-                       association;
+                       association, defaults to: `:id`;
+
+  ## Examples
+
+      defmodule Comment do
+        queryable "comments" do
+          belongs_to :post, Post
+        end
+      end
+
+      # The post can come preloaded on the comment record
+      [comment] = Repo.all(from(c in Comment, where: c.id == 42, preload: :post))
+      comment.post.get #=> Post[...]
+
+      # Or via an association join
+      [comment] = Repo.all(from(c in Comment,
+                         where: c.id == 42,
+                     left_join: p in c.post,
+                        select: assoc(c, p)))
+      comment.post.get #=> Post[...]
   """
   defmacro belongs_to(name, queryable, opts // []) do
     quote do
@@ -261,6 +335,11 @@ defmodule Ecto.Entity do
     quoted = Enum.map(assocs, fn({ name, opts, }) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
         pk = opts[:primary_key] || primary_key
+
+        if nil?(pk) do
+          raise ArgumentError, message: "need to set `primary_key` option for
+            association when entity has no primary key"
+        end
 
         refl = Ecto.Associations.create_reflection(opts[:type], name, @ecto_model,
           __MODULE__, pk, opts[:queryable], opts[:foreign_key])
