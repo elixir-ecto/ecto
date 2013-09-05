@@ -14,28 +14,27 @@ defmodule Simple.Sup do
   end
 
   def init([]) do
-    tree = [ worker(Simple.MyRepo, []) ]
+    tree = [ worker(Repo, []) ]
     supervise(tree, strategy: :one_for_all)
   end
 end
 
-
-defmodule Simple.Weather do
-  use Ecto.Entity
-
-  dataset "weather", nil do
-    field :city, :string
-    field :temp_lo, :integer
-    field :temp_hi, :integer
-    field :prcp, :float
-  end
-end
-
-defmodule Simple.MyRepo do
+defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def url do
-    "ecto://postgres:postgres@localhost/postgres"
+    "ecto://postgres:postgres@localhost/ecto_simple"
+  end
+end
+
+defmodule Weather do
+  use Ecto.Model
+
+  queryable "weather" do
+    field :city, :string
+    field :temp_lo, :integer
+    field :temp_hi, :integer
+    field :prcp, :float, default: 0.0
   end
 end
 
@@ -43,9 +42,9 @@ defmodule Simple do
   import Ecto.Query
 
   def sample_query do
-    query = from w in Simple.Weather,
+    query = from w in Weather,
           where: w.prcp > 0 or w.prcp == nil,
          select: w
-    Simple.MyRepo.all(query)
+    Repo.all(query)
   end
 end

@@ -56,7 +56,7 @@ defmodule Ecto.Model.Queryable do
         use Ecto.Model
 
         defmodule Entity do
-          use Ecto.Entity          
+          use Ecto.Entity
           field :text, :string
         end
 
