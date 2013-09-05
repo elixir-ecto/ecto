@@ -113,7 +113,7 @@ defmodule Ecto.Repo do
   has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
   will be raised if there is an adapter error.
   """
-  defcallback get(Ecto.Queryable.t, integer) :: Record.t | nil | no_return
+  defcallback get(Ecto.Queryable.t, integer) :: Ecto.Entity.t | nil | no_return
 
   @doc """
   Fetches all results from the data store based on the given query. May raise
@@ -127,7 +127,7 @@ defmodule Ecto.Repo do
            select: post.title
       MyRepo.all(query)
   """
-  defcallback all(Ecto.Query.t) :: [Record.t] | no_return
+  defcallback all(Ecto.Query.t) :: [Ecto.Entity.t] | no_return
 
   @doc """
   Stores a single new entity in the data store and returns its stored
@@ -138,7 +138,7 @@ defmodule Ecto.Repo do
       post = Post.new(title: "Ecto is great", text: "really, it is")
         |> MyRepo.create
   """
-  defcallback create(Record.t) :: Record.t | no_return
+  defcallback create(Ecto.Entity.t) :: Ecto.Entity.t | no_return
 
   @doc """
   Updates an entity using the primary key as key. If the entity has no primary
@@ -151,7 +151,7 @@ defmodule Ecto.Repo do
       post = post.title("New title")
       MyRepo.update(post)
   """
-  defcallback update(Record.t) :: :ok | no_return
+  defcallback update(Ecto.Entity.t) :: :ok | no_return
 
   @doc """
   Updates all entities matching the given query with the given values.
@@ -178,7 +178,7 @@ defmodule Ecto.Repo do
       [post] = from p in Post, where: p.id == 42
       MyRepo.delete(post)
   """
-  defcallback delete(Record.t) :: :ok | no_return
+  defcallback delete(Ecto.Entity.t) :: :ok | no_return
 
   @doc """
   Deletes all entities matching the given query with the given values.
@@ -362,6 +362,7 @@ defmodule Ecto.Repo do
     end
   end
 
+  @doc false
   def check_single_result(result, entity) do
     unless result == 1 do
       module = elem(entity, 0)

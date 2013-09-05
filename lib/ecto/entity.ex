@@ -40,6 +40,8 @@ defmodule Ecto.Entity do
   `primary_key/1`, `primary_key/2` and `update_primary_key/2`.
   """
 
+  @type t :: Record.t
+
   ## API
 
   @doc """

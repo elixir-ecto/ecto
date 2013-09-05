@@ -57,10 +57,10 @@ After you are done, run `mix deps.get` in your shell to fetch and compile the de
 
 When using Ecto, we think about 4 main components:
 
-* Repositories: repositories are wrappers around the database. Via the repository, we can create, update, destroy and query existing entries. A repository needs an adapter and a URL to communicate to the database;
-* Entities: entities are data with an identity. They are Elixir records that represent a row in the database;
-* Models: models represent behaviour. Validations, callbacks and query handling are all behaviours tied to a model;
-* Queries: written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injetion, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
+* [Repositories](http://elixir-lang.org/docs/ecto/Ecto.Repo.html): repositories are wrappers around the database. Via the repository, we can create, update, destroy and query existing entries. A repository needs an adapter and a URL to communicate to the database;
+* [Entities](http://elixir-lang.org/docs/ecto/Ecto.Entity.html): entities are data with an identity. They are Elixir records that represent a row in the database;
+* [Models](http://elixir-lang.org/docs/ecto/Ecto.Model.html): models represent behaviour. Validations, callbacks and query handling are all behaviours tied to a model;
+* [Queries](http://elixir-lang.org/docs/ecto/Ecto.Query.html): written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injetion, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
 
 Note how the storage (repositories), the data (entities) and behaviour (models) are decoupled in Ecto. In the following sections, we will describe those components and how they interact with each other. This README will follow the code outlined in the application at [examples/simple](https://github.com/elixir-lang/ecto/tree/master/examples/simple). Please follow the instructions outlined there to get it up and running.
 
@@ -111,9 +111,11 @@ defmodule Simple.Sup do
 end
 ```
 
+You can read more about [the Repository API in the docs](http://elixir-lang.org/docs/ecto/Ecto.Repo.html).
+
 ### Entities
 
-Entities in Elixir are used to represent data. An entity can defined as follow:
+Entities in Ecto (docs) are used to represent data. An entity can defined as follow:
 
 ```elixir
 defmodule Weather.Entity do
@@ -188,7 +190,7 @@ The entity also supports associations. The supported associations macros are `be
 
 ### Models
 
-Entities in Ecto are simply data. All the behaviour exists in the model which is nothing more than an Elixir module. Ecto provides many convenience functions that makes it easy to implement common model functionality, like callbacks and validations. The functionalities provided by `Ecto.Model` are:
+Entities in Ecto are simply data. All the behaviour exists in models which is nothing more than an Elixir module. Ecto provides many convenience functions that makes it easy to implement common model functionality, like callbacks and validations. The functionalities provided by `Ecto.Model` are:
 
 * `Ecto.Model.Queryable` - provides the API necessary to generate queries;
 * `Ecto.Model.Callbacks` - to be implemented;
