@@ -182,7 +182,7 @@ defmodule Ecto.Entity do
 
   ## Callbacks
 
-  @types %w(string integer float binary list datetime interval virtual)a
+  @types %w(boolean string integer float binary list datetime interval virtual)a
 
   @doc false
   defmacro __using__(opts) do
