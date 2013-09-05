@@ -6,11 +6,13 @@ defmodule Ecto.Mixfile do
       version: "0.0.1",
       deps: deps(Mix.env),
       env: envs,
+      name: "Ecto",
+      source_url: "https://github.com/elixir-lang/ecto",
       elixir: "~> 0.10.2" ]
   end
 
   def application do
-    [ ]
+    []
   end
 
   defp deps(:prod) do
@@ -26,5 +28,17 @@ defmodule Ecto.Mixfile do
   defp envs do
     [ pg: [ test_paths: ["integration_test/pg"] ],
       all: [ test_paths: ["test", "integration_test/pg"] ] ]
+  end
+end
+
+defmodule Mix.Tasks.Release_docs do
+  @shortdoc "Releases docs"
+
+  def run(_) do
+    Mix.Task.run "docs"
+
+    File.rm_rf "../elixir-lang.github.com/docs/ecto"
+    File.cp_r "docs/.", "../elixir-lang.github.com/docs/ecto/"
+    File.rm_rf "docs"
   end
 end
