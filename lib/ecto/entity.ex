@@ -236,7 +236,7 @@ defmodule Ecto.Entity do
     fields = Enum.filter(all_fields, fn({ _, opts }) -> opts[:type] != :virtual end)
 
     [ ecto_fields(fields),
-      ecto_assocs(assocs, primary_key),
+      ecto_assocs(assocs, primary_key, fields),
       ecto_primary_key(primary_key),
       ecto_helpers(fields, all_fields) ]
   end
@@ -321,8 +321,8 @@ defmodule Ecto.Entity do
   defp check_foreign_key!(mod, foreign_key) do
     model = Module.get_attribute(mod, :ecto_model)
     if nil?(model) and nil?(foreign_key) do
-      raise ArgumentError, message: "need to set `foreign_key` option for
-        assocation when model name can't be infered"
+      raise ArgumentError, message: "need to set `foreign_key` option for " <>
+        "assocation when model name can't be infered"
     end
   end
 
@@ -342,14 +342,22 @@ defmodule Ecto.Entity do
     end ]
   end
 
-  defp ecto_assocs(assocs, primary_key) do
+  defp ecto_assocs(assocs, primary_key, fields) do
     quoted = Enum.map(assocs, fn({ name, opts, }) ->
-      quote bind_quoted: [name: name, opts: opts, primary_key: primary_key] do
+      quote bind_quoted: [name: name, opts: opts, primary_key: primary_key, fields: fields] do
         pk = opts[:primary_key] || primary_key
 
         if nil?(pk) do
-          raise ArgumentError, message: "need to set `primary_key` option for
-            association when entity has no primary key"
+          raise ArgumentError, message: "need to set `primary_key` option for " <>
+            "association when entity has no primary key"
+        end
+
+        if opts[:type] in [:has_many, :has_one] do
+          unless Enum.any?(fields, fn { name, _ } -> primary_key == name end) do
+            raise ArgumentError, message: "`primary_key` option on association " <>
+              "doesn't match any field on the entity"
+            end
+          end
         end
 
         refl = Ecto.Associations.create_reflection(opts[:type], name, @ecto_model,

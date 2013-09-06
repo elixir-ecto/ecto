@@ -68,6 +68,12 @@ defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
     fk       = refl.foreign_key
     from     = refl.associated
 
+    if nil?(pk_value) do
+      raise ArgumentError, "cannot create query when the association's primary " <>
+        "key is not set on the entity"
+      end
+    end
+
     where_expr = quote do &0.unquote(fk) == unquote(pk_value) end
     where = QueryExpr[expr: where_expr]
     Query[from: from, wheres: [where]]

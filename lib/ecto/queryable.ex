@@ -23,7 +23,7 @@ defimpl Ecto.Queryable, for: Atom do
         raise Protocol.UndefinedError,
              protocol: @protocol,
                 value: module,
-          description: "the given atom is not an entity"
+          description: "the given module/atom is not a model"
     end
   end
 end
