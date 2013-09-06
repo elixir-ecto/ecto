@@ -71,7 +71,6 @@ defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
     if nil?(pk_value) do
       raise ArgumentError, "cannot create query when the association's primary " <>
         "key is not set on the entity"
-      end
     end
 
     where_expr = quote do &0.unquote(fk) == unquote(pk_value) end

@@ -356,7 +356,6 @@ defmodule Ecto.Entity do
           unless Enum.any?(fields, fn { name, _ } -> primary_key == name end) do
             raise ArgumentError, message: "`primary_key` option on association " <>
               "doesn't match any field on the entity"
-            end
           end
         end
 
