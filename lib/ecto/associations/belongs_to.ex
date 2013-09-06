@@ -16,7 +16,7 @@ defmodule Ecto.Associations.BelongsTo do
   Creates a new record of the associated entity.
   """
   def new(params // [], assoc(target: target, name: name)) do
-    refl = elem(target, 0).__ecto__(:association, name)
+    refl = target.__ecto__(:association, name)
     refl.associated.new(params)
   end
 
@@ -25,7 +25,7 @@ defmodule Ecto.Associations.BelongsTo do
   association was not loaded.
   """
   def get(assoc(loaded: @not_loaded, target: target, name: name)) do
-    refl = elem(target, 0).__ecto__(:association, name)
+    refl = target.__ecto__(:association, name)
     raise Ecto.AssociationNotLoadedError,
       type: :belongs_to, owner: refl.owner, name: name
   end
@@ -45,7 +45,7 @@ defmodule Ecto.Associations.BelongsTo do
     end
   end
 
-  def __ecto__(:new, name) do
-    assoc(name: name, loaded: @not_loaded)
+  def __ecto__(:new, name, target) do
+    assoc(name: name, target: target, loaded: @not_loaded)
   end
 end

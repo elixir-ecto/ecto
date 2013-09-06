@@ -19,7 +19,7 @@ defmodule Ecto.Associations.HasOne do
   to the primary key of the parent entity.
   """
   def new(params // [], assoc(target: target, name: name)) do
-    refl = Refl[] = elem(target, 0).__ecto__(:association, name)
+    refl = Refl[] = target.__ecto__(:association, name)
     fk = refl.foreign_key
     pk_value = apply(target, refl.primary_key, [])
     refl.associated.new([{ fk, pk_value }] ++ params)
@@ -30,7 +30,7 @@ defmodule Ecto.Associations.HasOne do
   association was not loaded.
   """
   def get(assoc(loaded: @not_loaded, target: target, name: name)) do
-    refl = elem(target, 0).__ecto__(:association, name)
+    refl = target.__ecto__(:association, name)
     raise Ecto.AssociationNotLoadedError,
       type: :has_one, owner: refl.owner, name: name
   end
@@ -50,7 +50,7 @@ defmodule Ecto.Associations.HasOne do
     end
   end
 
-  def __ecto__(:new, name) do
-    assoc(name: name, loaded: @not_loaded)
+  def __ecto__(:new, name, target) do
+    assoc(name: name, target: target, loaded: @not_loaded)
   end
 end

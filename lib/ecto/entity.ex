@@ -272,7 +272,7 @@ defmodule Ecto.Entity do
   def __has_many__(mod, name, queryable, opts) do
     check_foreign_key!(mod, opts[:foreign_key])
 
-    assoc = Ecto.Associations.HasMany.__ecto__(:new, name)
+    assoc = Ecto.Associations.HasMany.__ecto__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [type: :has_many, queryable: queryable]
@@ -283,7 +283,7 @@ defmodule Ecto.Entity do
   def __has_one__(mod, name, queryable, opts) do
     check_foreign_key!(mod, opts[:foreign_key])
 
-    assoc = Ecto.Associations.HasOne.__ecto__(:new, name)
+    assoc = Ecto.Associations.HasOne.__ecto__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [type: :has_one, queryable: queryable]
@@ -297,7 +297,7 @@ defmodule Ecto.Entity do
     foreign_key = opts[:foreign_key] || :"#{assoc_name}_#{primary_key}"
     __field__(mod, foreign_key, :integer, [])
 
-    assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name)
+    assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [ type: :belongs_to, queryable: queryable,
@@ -359,9 +359,15 @@ defmodule Ecto.Entity do
           unquote(refl |> Macro.escape)
         end
 
-        def unquote(name)(self) do
-          assoc = unquote(:"__#{name}__")(self)
-          assoc.__ecto__(:target, self)
+        if opts[:type] == :has_many do
+          def unquote(name)(__MODULE__[[{unquote(pk), pk}]] = self) do
+            assoc = unquote(:"__#{name}__")(self)
+            assoc.__ecto__(:primary_key, pk)
+          end
+        else
+          def unquote(name)(self) do
+            unquote(:"__#{name}__")(self)
+          end
         end
       end
     end)

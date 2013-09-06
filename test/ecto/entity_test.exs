@@ -147,7 +147,8 @@ defmodule Ecto.EntityTest do
     r = EntityAssocs[]
     assoc = r.posts
     assert assoc.__ecto__(:name) == :posts
-    assert assoc.__ecto__(:target) == r
+    assert assoc.__ecto__(:target) == EntityAssocs
+    assert assoc.__ecto__(:primary_key) == r.id
   end
 
   test "has_one association" do
@@ -158,7 +159,7 @@ defmodule Ecto.EntityTest do
     r = EntityAssocs[]
     assoc = r.author
     assert assoc.__ecto__(:name) == :author
-    assert assoc.__ecto__(:target) == r
+    assert assoc.__ecto__(:target) == EntityAssocs
   end
 
   test "belongs_to association" do
@@ -171,7 +172,7 @@ defmodule Ecto.EntityTest do
     r = EntityAssocs[]
     assoc = r.comment
     assert assoc.__ecto__(:name) == :comment
-    assert assoc.__ecto__(:target) == r
+    assert assoc.__ecto__(:target) == EntityAssocs
   end
 
   test "association needs foreign_key option if no model" do
