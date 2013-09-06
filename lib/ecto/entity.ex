@@ -368,6 +368,10 @@ defmodule Ecto.Entity do
 
         if opts[:type] == :has_many do
           def unquote(name)(__MODULE__[[{unquote(pk), pk}]] = self) do
+            if nil?(pk) do
+              raise ArgumentError, message: "cannot access association when its " <>
+                "primary key is not set on the entity"
+            end
             assoc = unquote(:"__#{name}__")(self)
             assoc.__ecto__(:primary_key, pk)
           end
