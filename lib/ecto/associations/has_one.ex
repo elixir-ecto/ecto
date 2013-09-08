@@ -12,16 +12,15 @@ defmodule Ecto.Associations.HasOne do
 
   # Needs to be defrecordp because we don't want pollute the module
   # with functions generated for the record
-  defrecordp :assoc, __MODULE__, [:loaded, :target, :name]
+  defrecordp :assoc, __MODULE__, [:loaded, :target, :name, :primary_key]
 
   @doc """
   Creates a new record of the associated entity with the foreign key field set
   to the primary key of the parent entity.
   """
-  def new(params // [], assoc(target: target, name: name)) do
+  def new(params // [], assoc(target: target, name: name, primary_key: pk_value)) do
     refl = Refl[] = target.__ecto__(:association, name)
     fk = refl.foreign_key
-    pk_value = apply(target, refl.primary_key, [])
     refl.associated.new([{ fk, pk_value }] ++ params)
   end
 
@@ -40,7 +39,7 @@ defmodule Ecto.Associations.HasOne do
   end
 
   @doc false
-  Enum.each [:loaded, :target, :name], fn field ->
+  Enum.each [:loaded, :target, :name, :primary_key], fn field ->
     def __ecto__(unquote(field), record) do
       assoc(record, unquote(field))
     end

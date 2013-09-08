@@ -366,7 +366,7 @@ defmodule Ecto.Entity do
           unquote(refl |> Macro.escape)
         end
 
-        if opts[:type] == :has_many do
+        if opts[:type] in [:has_many, :has_one] do
           def unquote(name)(__MODULE__[[{unquote(pk), pk}]] = self) do
             if nil?(pk) do
               raise ArgumentError, message: "cannot access association when its " <>

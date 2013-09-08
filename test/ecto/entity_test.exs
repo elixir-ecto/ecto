@@ -162,10 +162,16 @@ defmodule Ecto.EntityTest do
                                     associated: User, foreign_key: :assocs_id] =
       EntityAssocs.__ecto__(:association, :author)
 
-    r = EntityAssocs[]
+    r = EntityAssocs[id: 2]
     assoc = r.author
     assert assoc.__ecto__(:name) == :author
     assert assoc.__ecto__(:target) == EntityAssocs
+
+    r = EntityAssocs[]
+    message = "cannot access association when its primary key is not set on the entity"
+    assert_raise ArgumentError, message, fn ->
+      r.author
+    end
   end
 
   test "belongs_to association" do
