@@ -30,9 +30,8 @@ defmodule Ecto.Model.Queryable do
 
   defmacro queryable(name, { :__aliases__, _, _ } = entity) do
     quote bind_quoted: [name: name, entity: entity] do
-      def new(params) do
-        unquote(entity).new(params)
-      end
+      def new(), do: unquote(entity).new()
+      def new(params), do: unquote(entity).new(params)
       def __model__(:name), do: unquote(name)
       def __model__(:entity), do: unquote(entity)
     end

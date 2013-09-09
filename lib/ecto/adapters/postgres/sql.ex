@@ -364,9 +364,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp escape_string(value) when is_binary(value) do
-    value
-      |> :binary.replace("\\", "\\\\", [:global])
-      |> :binary.replace("'", "''", [:global])
+    :binary.replace(value, "'", "''", [:global])
   end
 
   defp create_names(query) do

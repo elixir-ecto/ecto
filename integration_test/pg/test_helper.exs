@@ -61,6 +61,12 @@ defmodule Ecto.Integration.Postgres.Case do
     quote do
       import unquote(__MODULE__)
       require TestRepo
+
+      import Ecto.Query
+      alias Ecto.Integration.Postgres.TestRepo
+      alias Ecto.Integration.Postgres.Post
+      alias Ecto.Integration.Postgres.Comment
+      alias Ecto.Integration.Postgres.Permalink
     end
   end
 

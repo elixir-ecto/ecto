@@ -1,12 +1,6 @@
 defmodule Ecto.Integration.PostgresTest do
   use Ecto.Integration.Postgres.Case
 
-  import Ecto.Query
-  alias Ecto.Integration.Postgres.TestRepo
-  alias Ecto.Integration.Postgres.Post
-  alias Ecto.Integration.Postgres.Comment
-  alias Ecto.Integration.Postgres.Permalink
-
   test "fetch empty" do
     assert [] == TestRepo.all(from p in Post)
   end

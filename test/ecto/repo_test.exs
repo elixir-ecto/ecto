@@ -144,11 +144,6 @@ defmodule Ecto.RepoTest do
 
   test "get validation" do
     MyRepo.get(MyModel, 123)
-    MyRepo.get(MyModel, "123")
-
-    assert_raise ArgumentError, fn ->
-      MyRepo.get(MyModel, "abc")
-    end
 
     assert_raise FunctionClauseError, fn ->
       MyRepo.get(MyModel, :atom)

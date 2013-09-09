@@ -87,10 +87,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "string escape" do
     x = "'\\ \n"
     query = from(Model) |> select([], ^x) |> normalize
-    assert SQL.select(query) == "SELECT '''\\\\ \n'::text\nFROM model AS m0"
+    assert SQL.select(query) == "SELECT '''\\ \n'::text\nFROM model AS m0"
 
-    query = from(Model) |> select([], "'\\") |> normalize
-    assert SQL.select(query) == "SELECT '''\\\\'::text\nFROM model AS m0"
+    query = from(Model) |> select([], "'") |> normalize
+    assert SQL.select(query) == "SELECT ''''::text\nFROM model AS m0"
   end
 
   test "unary ops" do
