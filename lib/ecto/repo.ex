@@ -215,9 +215,9 @@ defmodule Ecto.Repo do
     Util.validate_get(query, repo.query_apis)
 
     model = query.from
-    entity = model.__ecto__(:entity)
+    entity = model.__model__(:entity)
     check_primary_key(entity, reason)
-    primary_key = entity.__ecto__(:primary_key)
+    primary_key = entity.__entity__(:primary_key)
 
     quoted = quote do &0.unquote(primary_key) == unquote(id) end
     where = QueryExpr[expr: quoted]
@@ -366,7 +366,7 @@ defmodule Ecto.Repo do
   def check_single_result(result, entity) do
     unless result == 1 do
       module = elem(entity, 0)
-      pk_field = module.__ecto__(:primary_key)
+      pk_field = module.__entity__(:primary_key)
       pk_value = entity.primary_key
       raise Ecto.NotSingleResult, entity: module, primary_key: pk_field, id: pk_value
     end
@@ -374,25 +374,25 @@ defmodule Ecto.Repo do
   end
 
   defp check_primary_key(entity, reason) when is_atom(entity) do
-    unless entity.__ecto__(:primary_key) do
+    unless entity.__entity__(:primary_key) do
       raise Ecto.NoPrimaryKey, entity: entity, reason: reason
     end
   end
 
   defp check_primary_key(entity, reason) when is_record(entity) do
     module = elem(entity, 0)
-    unless module.__ecto__(:primary_key) && entity.primary_key do
+    unless module.__entity__(:primary_key) && entity.primary_key do
       raise Ecto.NoPrimaryKey, entity: entity, reason: reason
     end
   end
 
   defp validate_entity(entity, reason) do
     module = elem(entity, 0)
-    primary_key = module.__ecto__(:primary_key)
-    zipped = module.__ecto__(:entity_kw, entity)
+    primary_key = module.__entity__(:primary_key)
+    zipped = module.__entity__(:entity_kw, entity)
 
     Enum.each(zipped, fn({ field, value }) ->
-      type = module.__ecto__(:field_type, field)
+      type = module.__entity__(:field_type, field)
 
       value_type = case Util.value_to_type(value) do
         { :ok, vtype } -> vtype

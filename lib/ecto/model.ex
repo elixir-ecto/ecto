@@ -33,8 +33,8 @@ defmodule Ecto.Model.Queryable do
       def new(params) do
         unquote(entity).new(params)
       end
-      def __ecto__(:name), do: unquote(name)
-      def __ecto__(:entity), do: unquote(entity)
+      def __model__(:name), do: unquote(name)
+      def __model__(:entity), do: unquote(entity)
     end
   end
 

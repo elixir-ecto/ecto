@@ -18,13 +18,13 @@ defmodule Ecto.Query.Normalizer do
   def normalize_join(AssocJoinExpr[] = join, Query[] = query) do
     { :., _, [left, right] } = join.expr
     model = Util.find_model(query.models, left)
-    entity = model.__ecto__(:entity)
-    refl = entity.__ecto__(:association, right)
+    entity = model.__model__(:entity)
+    refl = entity.__entity__(:association, right)
     associated = refl.associated
 
     assoc_var = Util.model_var(query, associated)
-    entity = query.from.__ecto__(:entity)
-    pk = entity.__ecto__(:primary_key)
+    entity = query.from.__model__(:entity)
+    pk = entity.__entity__(:primary_key)
     fk = refl.foreign_key
     on_expr = on_expr(refl, assoc_var, fk, pk)
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
@@ -66,8 +66,8 @@ defmodule Ecto.Query.Normalizer do
       case join do
         AssocJoinExpr[expr: { :., _, [left, right] }] ->
           model = Util.find_model(Enum.reverse(acc), left)
-          entity = model.__ecto__(:entity)
-          refl = entity.__ecto__(:association, right)
+          entity = model.__model__(:entity)
+          refl = entity.__entity__(:association, right)
           assoc = if refl, do: refl.associated
           [assoc|acc]
         JoinExpr[model: model] ->

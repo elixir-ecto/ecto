@@ -33,8 +33,8 @@ defmodule Ecto.Associations do
   def transform_result({ :assoc, _, [parent, child] }, results, Query[] = query) do
     AssocJoinExpr[expr: join_expr] = Util.find_expr(query, child)
     { :., _, [^parent, field] } = join_expr
-    entity = query.from.__ecto__(:entity)
-    refl = entity.__ecto__(:association, field)
+    entity = query.from.__model__(:entity)
+    refl = entity.__entity__(:association, field)
 
     [{ parent, child }|results] = results
     combine(results, refl, parent, [], [child])
@@ -116,7 +116,7 @@ defmodule Ecto.Associations do
 
   defp set_loaded(record, field, loaded) when is_atom(field) do
     association = apply(record, field, [])
-    association = association.__ecto__(:loaded, loaded)
+    association = association.__assoc__(:loaded, loaded)
     apply(record, field, [association])
   end
 

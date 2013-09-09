@@ -16,7 +16,7 @@ end
 defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
     try do
-      module.__ecto__(:name)
+      module.__model__(:name)
       Ecto.Query.Query[from: module]
     rescue
       UndefinedFunctionError ->

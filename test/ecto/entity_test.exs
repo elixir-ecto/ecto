@@ -32,14 +32,14 @@ defmodule Ecto.EntityTest do
       { :array, [type: { :list, :string }] }
     ]
 
-    assert MyEntity.__ecto__(:field_names) == [:id, :name, :email, :array]
-    assert MyEntity.__ecto__(:field, :id) == fields[:id]
-    assert MyEntity.__ecto__(:field, :name) == fields[:name]
-    assert MyEntity.__ecto__(:field, :email) == fields[:email]
-    assert MyEntity.__ecto__(:field_type, :id) == fields[:id][:type]
-    assert MyEntity.__ecto__(:field_type, :name) == fields[:name][:type]
-    assert MyEntity.__ecto__(:field_type, :email) == fields[:email][:type]
-    assert MyEntity.__ecto__(:field_type, :array) == fields[:array][:type]
+    assert MyEntity.__entity__(:field_names) == [:id, :name, :email, :array]
+    assert MyEntity.__entity__(:field, :id) == fields[:id]
+    assert MyEntity.__entity__(:field, :name) == fields[:name]
+    assert MyEntity.__entity__(:field, :email) == fields[:email]
+    assert MyEntity.__entity__(:field_type, :id) == fields[:id][:type]
+    assert MyEntity.__entity__(:field_type, :name) == fields[:name][:type]
+    assert MyEntity.__entity__(:field_type, :email) == fields[:email][:type]
+    assert MyEntity.__entity__(:field_type, :array) == fields[:array][:type]
 
     assert MyEntity.__record__(:fields) ==
            [model: nil, id: nil, name: "eric", email: nil, temp: "temp", array: nil]
@@ -81,7 +81,7 @@ defmodule Ecto.EntityTest do
 
   test "no primary key" do
     assert MyEntityNoPK.__record__(:fields) == [model: nil, x: nil]
-    assert MyEntityNoPK.__ecto__(:field_names) == [:x]
+    assert MyEntityNoPK.__entity__(:field_names) == [:x]
 
     entity = MyEntityNoPK[x: "123"]
     assert entity.primary_key == nil
@@ -96,7 +96,7 @@ defmodule Ecto.EntityTest do
 
   test "custom primary key" do
     assert EntityCustomPK.__record__(:fields) == [model: nil, pk: nil, x: nil]
-    assert EntityCustomPK.__ecto__(:field_names) == [:pk, :x]
+    assert EntityCustomPK.__entity__(:field_names) == [:pk, :x]
 
     entity = EntityCustomPK[pk: "123"]
     assert entity.primary_key == "123"
@@ -133,22 +133,22 @@ defmodule Ecto.EntityTest do
   end
 
   test "associations" do
-    assert EntityAssocs.__ecto__(:association, :not_a_field) == nil
+    assert EntityAssocs.__entity__(:association, :not_a_field) == nil
     assert EntityAssocs.__record__(:fields) |> Keyword.keys ==
       [:model, :id, :__posts__, :__author__, :comment_id, :__comment__]
-    assert EntityAssocs.__ecto__(:field_names) == [:id, :comment_id]
+    assert EntityAssocs.__entity__(:field_names) == [:id, :comment_id]
   end
 
   test "has_many association" do
     assert Ecto.Reflections.HasMany[field: :"__posts__", owner: EntityAssocs,
                                     associated: Post, foreign_key: :assocs_id] =
-      EntityAssocs.__ecto__(:association, :posts)
+      EntityAssocs.__entity__(:association, :posts)
 
     r = EntityAssocs[id: 1]
     assoc = r.posts
-    assert assoc.__ecto__(:name) == :posts
-    assert assoc.__ecto__(:target) == EntityAssocs
-    assert assoc.__ecto__(:primary_key) == r.id
+    assert assoc.__assoc__(:name) == :posts
+    assert assoc.__assoc__(:target) == EntityAssocs
+    assert assoc.__assoc__(:primary_key) == r.id
 
     r = EntityAssocs[]
     message = "cannot access association when its primary key is not set on the entity"
@@ -160,12 +160,12 @@ defmodule Ecto.EntityTest do
   test "has_one association" do
     assert Ecto.Reflections.HasOne[field: :"__author__", owner: EntityAssocs,
                                     associated: User, foreign_key: :assocs_id] =
-      EntityAssocs.__ecto__(:association, :author)
+      EntityAssocs.__entity__(:association, :author)
 
     r = EntityAssocs[id: 2]
     assoc = r.author
-    assert assoc.__ecto__(:name) == :author
-    assert assoc.__ecto__(:target) == EntityAssocs
+    assert assoc.__assoc__(:name) == :author
+    assert assoc.__assoc__(:target) == EntityAssocs
 
     r = EntityAssocs[]
     message = "cannot access association when its primary key is not set on the entity"
@@ -177,14 +177,14 @@ defmodule Ecto.EntityTest do
   test "belongs_to association" do
     assert Ecto.Reflections.BelongsTo[field: :"__comment__", owner: EntityAssocs,
                                     associated: Comment, foreign_key: :comment_id] =
-      EntityAssocs.__ecto__(:association, :comment)
+      EntityAssocs.__entity__(:association, :comment)
 
-    assert EntityAssocs.__ecto__(:field, :comment_id) == [type: :integer]
+    assert EntityAssocs.__entity__(:field, :comment_id) == [type: :integer]
 
     r = EntityAssocs[]
     assoc = r.comment
-    assert assoc.__ecto__(:name) == :comment
-    assert assoc.__ecto__(:target) == EntityAssocs
+    assert assoc.__assoc__(:name) == :comment
+    assert assoc.__assoc__(:target) == EntityAssocs
   end
 
   test "association needs foreign_key option if no model" do

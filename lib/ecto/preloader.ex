@@ -17,7 +17,7 @@ defmodule Ecto.Preloader do
 
     record = Enum.first(records)
     module = elem(record, 0)
-    refl = module.__ecto__(:association, name)
+    refl = module.__entity__(:association, name)
     query = Ecto.Associations.preload_query(refl, records)
     associated = repo.all(query)
 
@@ -82,7 +82,7 @@ defmodule Ecto.Preloader do
 
   defp set_loaded({ record, ix }, field, value) when is_atom(field) do
     association = apply(record, field, [])
-    association = association.__ecto__(:loaded, value)
+    association = association.__assoc__(:loaded, value)
     { apply(record, field, [association]), ix }
   end
 

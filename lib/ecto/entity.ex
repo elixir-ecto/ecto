@@ -272,7 +272,7 @@ defmodule Ecto.Entity do
   def __has_many__(mod, name, queryable, opts) do
     check_foreign_key!(mod, opts[:foreign_key])
 
-    assoc = Ecto.Associations.HasMany.__ecto__(:new, name, mod)
+    assoc = Ecto.Associations.HasMany.__assoc__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [type: :has_many, queryable: queryable]
@@ -283,7 +283,7 @@ defmodule Ecto.Entity do
   def __has_one__(mod, name, queryable, opts) do
     check_foreign_key!(mod, opts[:foreign_key])
 
-    assoc = Ecto.Associations.HasOne.__ecto__(:new, name, mod)
+    assoc = Ecto.Associations.HasOne.__assoc__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [type: :has_one, queryable: queryable]
@@ -297,7 +297,7 @@ defmodule Ecto.Entity do
     foreign_key = opts[:foreign_key] || :"#{assoc_name}_#{primary_key}"
     __field__(mod, foreign_key, :integer, [])
 
-    assoc = Ecto.Associations.BelongsTo.__ecto__(:new, name, mod)
+    assoc = Ecto.Associations.BelongsTo.__assoc__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [ type: :belongs_to, queryable: queryable,
@@ -329,16 +329,16 @@ defmodule Ecto.Entity do
   defp ecto_fields(fields) do
     quoted = Enum.map(fields, fn({ name, opts }) ->
       quote do
-        def __ecto__(:field, unquote(name)), do: unquote(opts)
-        def __ecto__(:field_type, unquote(name)), do: unquote(opts[:type])
+        def __entity__(:field, unquote(name)), do: unquote(opts)
+        def __entity__(:field_type, unquote(name)), do: unquote(opts[:type])
       end
     end)
 
     field_names = Enum.map(fields, &elem(&1, 0))
     quoted ++ [ quote do
-      def __ecto__(:field, _), do: nil
-      def __ecto__(:field_type, _), do: nil
-      def __ecto__(:field_names), do: unquote(field_names)
+      def __entity__(:field, _), do: nil
+      def __entity__(:field_type, _), do: nil
+      def __entity__(:field_names), do: unquote(field_names)
     end ]
   end
 
@@ -362,7 +362,7 @@ defmodule Ecto.Entity do
         refl = Ecto.Associations.create_reflection(opts[:type], name, @ecto_model,
           __MODULE__, pk, opts[:queryable], opts[:foreign_key])
 
-        def __ecto__(:association, unquote(name)) do
+        def __entity__(:association, unquote(name)) do
           unquote(refl |> Macro.escape)
         end
 
@@ -373,7 +373,7 @@ defmodule Ecto.Entity do
                 "primary key is not set on the entity"
             end
             assoc = unquote(:"__#{name}__")(self)
-            assoc.__ecto__(:primary_key, pk)
+            assoc.__assoc__(:primary_key, pk)
           end
         else
           def unquote(name)(self) do
@@ -384,13 +384,13 @@ defmodule Ecto.Entity do
     end)
 
     quoted ++ [ quote do
-      def __ecto__(:association, _), do: nil
+      def __entity__(:association, _), do: nil
     end ]
   end
 
   defp ecto_primary_key(primary_key) do
     quote do
-      def __ecto__(:primary_key), do: unquote(primary_key)
+      def __entity__(:primary_key), do: unquote(primary_key)
 
       if unquote(primary_key) do
         def primary_key(record), do: unquote(primary_key)(record)
@@ -410,20 +410,20 @@ defmodule Ecto.Entity do
 
     quote do
       # TODO: This can be optimized
-      def __ecto__(:allocate, values) do
+      def __entity__(:allocate, values) do
         zip = Enum.zip(unquote(field_names), values)
         __MODULE__.new(zip)
       end
 
-      def __ecto__(:entity_kw, entity, opts // []) do
+      def __entity__(:entity_kw, entity, opts // []) do
         filter_pk = opts[:primary_key] == false
-        primary_key = __ecto__(:primary_key)
+        primary_key = __entity__(:primary_key)
 
         [_module|values] = tuple_to_list(entity)
         zipped = Enum.zip(unquote(all_field_names), values)
 
         Enum.filter(zipped, fn { field, _ } ->
-          __ecto__(:field, field) &&
+          __entity__(:field, field) &&
             (not filter_pk || (filter_pk && field != primary_key))
         end)
       end

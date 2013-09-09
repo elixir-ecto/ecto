@@ -64,11 +64,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an insert statement
   def insert(entity) do
     module      = elem(entity, 0)
-    table       = entity.model.__ecto__(:name)
-    primary_key = module.__ecto__(:primary_key)
+    table       = entity.model.__model__(:name)
+    primary_key = module.__entity__(:primary_key)
     pk_value    = entity.primary_key
 
-    zipped = module.__ecto__(:entity_kw, entity, primary_key: !!pk_value)
+    zipped = module.__entity__(:entity_kw, entity, primary_key: !!pk_value)
 
     [ fields, values ] = List.unzip(zipped)
 
@@ -80,11 +80,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an update statement
   def update(entity) do
     module   = elem(entity, 0)
-    table    = entity.model.__ecto__(:name)
-    pk_field = module.__ecto__(:primary_key)
+    table    = entity.model.__model__(:name)
+    pk_field = module.__entity__(:primary_key)
     pk_value = entity.primary_key
 
-    zipped = module.__ecto__(:entity_kw, entity, primary_key: false)
+    zipped = module.__entity__(:entity_kw, entity, primary_key: false)
 
     zipped_sql = Enum.map_join(zipped, ", ", fn({k, v}) ->
       "#{k} = #{literal(v)}"
@@ -103,7 +103,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     names  = create_names(query)
     entity = elem(names, 0)
     name   = elem(entity, 1)
-    table  = query.from.__ecto__(:name)
+    table  = query.from.__model__(:name)
 
     zipped_sql = Enum.map_join(values, ", ", fn({field, expr}) ->
       "#{field} = #{expr(expr, names)}"
@@ -119,8 +119,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a delete statement
   def delete(entity) do
     module   = elem(entity, 0)
-    table    = entity.model.__ecto__(:name)
-    pk_field = module.__ecto__(:primary_key)
+    table    = entity.model.__model__(:name)
+    pk_field = module.__entity__(:primary_key)
     pk_value = entity.primary_key
 
     "DELETE FROM #{table} WHERE #{pk_field} = #{literal(pk_value)}"
@@ -135,7 +135,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     names  = create_names(query)
     entity = elem(names, 0)
     name   = elem(entity, 1)
-    table  = query.from.__ecto__(:name)
+    table  = query.from.__model__(:name)
 
     where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, names)
 
@@ -149,7 +149,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp from(from, models) do
     name = tuple_to_list(models) |> Dict.fetch!(from)
-    table = from.__ecto__(:name)
+    table = from.__model__(:name)
     { "FROM #{table} AS #{name}", [name] }
   end
 
@@ -164,7 +164,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
         model == expr.model and not name in names
       end)
 
-      table = model.__ecto__(:name)
+      table = model.__model__(:name)
       on_sql = expr(expr.on.expr, models)
       qual = join_qual(expr.qual)
 
@@ -247,8 +247,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Expression builders make sure that we only find undotted vars at the top level
   defp expr({ :&, _, [_] } = var, vars) do
     { model, name } = Util.find_model(vars, var)
-    entity = model.__ecto__(:entity)
-    fields = entity.__ecto__(:field_names)
+    entity = model.__model__(:entity)
+    fields = entity.__entity__(:field_names)
     Enum.map_join(fields, ", ", &"#{name}.#{&1}")
   end
 
@@ -373,7 +373,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp create_names(query) do
     models = query.models |> tuple_to_list
     Enum.reduce(models, [], fn(model, names) ->
-      table = model.__ecto__(:name) |> String.first
+      table = model.__model__(:name) |> String.first
       name = unique_name(names, table, 0)
       [{ model, name }|names]
     end) |> Enum.reverse |> list_to_tuple

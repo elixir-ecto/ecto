@@ -33,7 +33,7 @@ defmodule Ecto.Query.Validator do
 
     grouped = group_by_models(query.group_bys, query.models)
     is_grouped = query.group_bys != [] or query.havings != []
-    entity = query.from.__ecto__(:entity)
+    entity = query.from.__model__(:entity)
     state = State[models: query.models, grouped: grouped, grouped?: is_grouped,
                   apis: apis, from: entity, query: query]
 
@@ -54,14 +54,14 @@ defmodule Ecto.Query.Validator do
     validate_only_where(query)
 
     model = query.from
-    entity = model.__ecto__(:entity)
+    entity = model.__model__(:entity)
 
     if values == [] do
       raise Ecto.InvalidQuery, reason: "no values to update given"
     end
 
     Enum.each(values, fn({ field, expr }) ->
-      expected_type = entity.__ecto__(:field_type, field)
+      expected_type = entity.__entity__(:field_type, field)
 
       unless expected_type do
         raise Ecto.InvalidQuery, reason: "field `#{field}` is not on the " <>
@@ -146,8 +146,8 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(:join, expr.file, expr.line) do
         { :., _, [left, right] } = expr.expr
         model = Util.find_model(state.models, left)
-        entity = model.__ecto__(:entity)
-        refl = entity.__ecto__(:association, right)
+        entity = model.__model__(:entity)
+        refl = entity.__entity__(:association, right)
         unless refl do
           raise Ecto.InvalidQuery, reason: "association join can only be performed " <>
             "assocation fields"
@@ -182,12 +182,12 @@ defmodule Ecto.Query.Validator do
   # group_by field
   defp validate_field({ var, field }, State[] = state) do
     model = Util.find_model(state.models, var)
-    entity = model.__ecto__(:entity)
+    entity = model.__model__(:entity)
     do_validate_field(entity, field)
   end
 
   defp do_validate_field(entity, field) do
-    type = entity.__ecto__(:field_type, field)
+    type = entity.__entity__(:field_type, field)
     unless type do
       raise Ecto.InvalidQuery, reason: "unknown field `#{field}` on `#{inspect entity}`"
     end
@@ -198,7 +198,7 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(:preload, expr.file, expr.line) do
         Enum.map(expr.expr, fn field ->
           entity = state.from
-          type = entity.__ecto__(:association, field)
+          type = entity.__entity__(:association, field)
           unless type do
             raise Ecto.InvalidQuery, reason: "`#{field}` is not an assocation field on `#{inspect entity}`"
           end
@@ -228,10 +228,10 @@ defmodule Ecto.Query.Validator do
   # var.x
   defp type_check({ { :., _, [{ :&, _, [_] } = var, field] }, _, [] }, State[] = state) do
     model = Util.find_model(state.models, var)
-    entity = model.__ecto__(:entity)
+    entity = model.__model__(:entity)
     check_grouped({ entity, field }, state)
 
-    type = entity.__ecto__(:field_type, field)
+    type = entity.__entity__(:field_type, field)
     unless type do
       raise Ecto.InvalidQuery, reason: "unknown field `#{field}` on `#{inspect entity}`"
     end
@@ -241,8 +241,8 @@ defmodule Ecto.Query.Validator do
   # var
   defp type_check({ :&, _, [_] } = var, State[] = state) do
     model = Util.find_model(state.models, var)
-    entity = model.__ecto__(:entity)
-    fields = entity.__ecto__(:field_names)
+    entity = model.__model__(:entity)
+    fields = entity.__entity__(:field_names)
     Enum.each(fields, &check_grouped({ entity, &1 }, state))
 
     entity
@@ -310,7 +310,7 @@ defmodule Ecto.Query.Validator do
 
   defp select_clause({ :assoc, _, [parent, child] }, State[] = state) do
     model = Util.find_model(state.models, parent)
-    entity = model.__ecto__(:entity)
+    entity = model.__model__(:entity)
     unless entity == state.from do
       raise Ecto.InvalidQuery, reason: "can only associate on the from entity"
     end
@@ -342,7 +342,7 @@ defmodule Ecto.Query.Validator do
     Enum.map(group_bys, fn(expr) ->
       Enum.map(expr.expr, fn({ var, field }) ->
         model = Util.find_model(models, var)
-        entity = model.__ecto__(:entity)
+        entity = model.__model__(:entity)
         { entity, field }
       end)
     end) |> Enum.concat |> Enum.uniq
