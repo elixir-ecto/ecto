@@ -61,10 +61,10 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "join expression must be boolean" do
-    query = from(Post) |> join([], nil, Comment, "abc" == "") |> select([], 123)
+    query = from(Post) |> join(:inner, [], Comment, "abc" == "") |> select([], 123)
     validate(query)
 
-    query = from(Post) |> join([], nil, Comment, "abc") |> select([], 123)
+    query = from(Post) |> join(:inner, [], Comment, "abc") |> select([], 123)
     assert_raise Ecto.InvalidQuery, %r"join_on expression", fn ->
       validate(query)
     end

@@ -225,14 +225,14 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       from(Comment)
-        |> join([c], p in Post, c.post_id == p.id)
+        |> join(:inner, [c], p in Post, c.post_id == p.id)
         |> select([c, p], { p.title, c.text })
 
       from(Post)
-        |> join([p], :left, c in p.comments)
+        |> join(:left, [p], c in p.comments)
         |> select([p, c], { p, c })
   """
-  defmacro join(query, binding, qual // nil, expr, on // nil) do
+  defmacro join(query, qual, binding, expr, on // nil) do
     binding = Util.escape_binding(binding)
     { expr_bindings, join_expr } = JoinBuilder.escape(expr, binding)
 
@@ -252,10 +252,12 @@ defmodule Ecto.Query do
 
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-      count_entities = Util.count_entities(query)
       qual = unquote(qual)
       join_expr = unquote(join_expr)
+
+      Ecto.Query.check_binds(query, unquote(length(binding)))
+      JoinBuilder.validate_qual(qual)
+      count_entities = Util.count_entities(query)
 
       if unquote(is_assoc) do
         join = AssocJoinExpr[qual: qual, expr: join_expr, file: __ENV__.file, line: __ENV__.line]
@@ -545,7 +547,7 @@ defmodule Ecto.Query do
 
   defp build_query_type({ join, expr }, state) when join in @joins do
     case join do
-      :join       -> build_join(nil, expr, state)
+      :join       -> build_join(:inner, expr, state)
       :inner_join -> build_join(:inner, expr, state)
       :left_join  -> build_join(:left, expr, state)
       :right_join -> build_join(:right, expr, state)

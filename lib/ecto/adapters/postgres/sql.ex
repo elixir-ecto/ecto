@@ -172,7 +172,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
     end) |> elem(0)
   end
 
-  defp join_qual(nil), do: ""
   defp join_qual(:inner), do: "INNER "
   defp join_qual(:left), do: "LEFT OUTER "
   defp join_qual(:right), do: "RIGHT OUTER "

@@ -146,13 +146,13 @@ defmodule Ecto.QueryTest do
     query = from(Post) |> select([_], 0)
     validate(query)
 
-    query = from(Post) |> join([], nil, Comment, true) |> select([_, c], c.text)
+    query = from(Post) |> join(:inner, [], Comment, true) |> select([_, c], c.text)
     validate(query)
 
-    query = from(Post) |> join([], nil, Comment, true) |> select([p, _], p.title)
+    query = from(Post) |> join(:inner, [], Comment, true) |> select([p, _], p.title)
     validate(query)
 
-    query = from(Post) |> join([], nil, Comment, true) |> select([_, _], 0)
+    query = from(Post) |> join(:inner, [], Comment, true) |> select([_, _], 0)
     validate(query)
   end
 
@@ -176,7 +176,7 @@ defmodule Ecto.QueryTest do
 
   test "join queries adds binds" do
     from(c in Comment, join: p in Post, on: true, select: { p.title, c.text })
-    from(Comment) |> join([c], nil, p in Post, true) |> select([c,p], { p.title, c.text })
+    from(Comment) |> join(:inner, [c], p in Post, true) |> select([c,p], { p.title, c.text })
   end
 
   test "cannot bind too many vars" do

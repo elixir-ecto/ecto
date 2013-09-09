@@ -290,17 +290,17 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "join" do
-    query = from(Model) |> join([p], nil, q in Model2, p.x == q.z) |> select([], 0) |> normalize
-    assert SQL.select(query) == "SELECT 0\nFROM model AS m0\nJOIN model2 AS m1 ON m0.x = m1.z"
+    query = from(Model) |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM model AS m0\nINNER JOIN model2 AS m1 ON m0.x = m1.z"
 
-    query = from(Model) |> join([p], :inner, q in Model2, p.x == q.z) |> join([], nil, Model, true) |> select([], 0) |> normalize
+    query = from(Model) |> join(:inner, [p], q in Model2, p.x == q.z) |> join(:inner, [], Model, true) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM model AS m0\nINNER JOIN model2 AS m1 ON m0.x = m1.z\n" <>
-      "JOIN model AS m2 ON TRUE"
+      "INNER JOIN model AS m2 ON TRUE"
   end
 
   test "join with nothing bound" do
-    query = from(Model) |> join([], nil, q in Model2, q.z == q.z) |> select([], 0) |> normalize
-    assert SQL.select(query) == "SELECT 0\nFROM model AS m0\nJOIN model2 AS m1 ON m1.z = m1.z"
+    query = from(Model) |> join(:inner, [], q in Model2, q.z == q.z) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM model AS m0\nINNER JOIN model2 AS m1 ON m1.z = m1.z"
   end
 
   defmodule Comment do
