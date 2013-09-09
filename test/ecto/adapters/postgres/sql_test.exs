@@ -87,10 +87,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "string escape" do
     x = "'\\ \n"
     query = from(Model) |> select([], ^x) |> normalize
-    assert SQL.select(query) == "SELECT '''\\\\ \n'\nFROM model AS m0"
+    assert SQL.select(query) == "SELECT '''\\\\ \n'::text\nFROM model AS m0"
 
     query = from(Model) |> select([], "'\\") |> normalize
-    assert SQL.select(query) == "SELECT '''\\\\'\nFROM model AS m0"
+    assert SQL.select(query) == "SELECT '''\\\\'::text\nFROM model AS m0"
   end
 
   test "unary ops" do
@@ -164,7 +164,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT FALSE\nFROM model AS m0"
 
     query = from(Model) |> select([], "abc") |> normalize
-    assert SQL.select(query) == "SELECT 'abc'\nFROM model AS m0"
+    assert SQL.select(query) == "SELECT 'abc'::text\nFROM model AS m0"
 
     query = from(Model) |> select([], 123) |> normalize
     assert SQL.select(query) == "SELECT 123\nFROM model AS m0"
@@ -186,12 +186,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "insert" do
     query = SQL.insert(Model.Entity[x: 123, y: "456"])
-    assert query == "INSERT INTO model (x, y)\nVALUES (123, '456')\nRETURNING id"
+    assert query == "INSERT INTO model (x, y)\nVALUES (123, '456'::text)\nRETURNING id"
   end
 
   test "update" do
     query = SQL.update(Model.Entity[id: 42, x: 123, y: "456"])
-    assert query == "UPDATE model SET x = 123, y = '456'\nWHERE id = 42"
+    assert query == "UPDATE model SET x = 123, y = '456'::text\nWHERE id = 42"
   end
 
   test "delete" do
@@ -218,7 +218,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, x: 0, y: "123") ==
-           "UPDATE model AS m0\nSET x = 0, y = '123'"
+           "UPDATE model AS m0\nSET x = 0, y = '123'::text"
   end
 
   test "delete all" do
