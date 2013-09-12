@@ -55,21 +55,17 @@ defmodule Ecto.Associations.HasMany do
 end
 
 defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
-  alias Ecto.Query.Query
-  alias Ecto.Query.QueryExpr
-  alias Ecto.Associations.HasMany
+  require Ecto.Query
+  alias Ecto.Query, as: Q
 
   def to_query(assoc) do
     target   = assoc.__assoc__(:target)
     name     = assoc.__assoc__(:name)
     pk_value = assoc.__assoc__(:primary_key)
     refl     = target.__entity__(:association, name)
-    fk       = refl.foreign_key
-    from     = refl.associated
 
-    where_expr = quote do &0.unquote(fk) == unquote(pk_value) end
-    where = QueryExpr[expr: where_expr]
-    Query[from: from, wheres: [where]]
+    Q.from x in refl.associated,
+    where: field(x, refl.foreign_key) == ^pk_value
   end
 end
 

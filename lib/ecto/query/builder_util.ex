@@ -23,6 +23,12 @@ defmodule Ecto.Query.BuilderUtil do
     arg
   end
 
+  # field macro
+  def escape({ :field, _, [{ var, _, context }, field] }, vars, join_var)
+      when is_atom(var) and is_atom(context) do
+    escape_field(var, field, vars, join_var)
+  end
+
   # ops & functions
   def escape({ name, meta, args }, vars, join_var)
       when is_atom(name) and is_list(args) do
@@ -56,8 +62,14 @@ defmodule Ecto.Query.BuilderUtil do
       if var != :_ and ix do
         { :{}, [], [:&, [], [ix]] }
       else
-        raise Ecto.InvalidQuery, reason: "variable `#{var}` needs to be bound"
+        raise Ecto.InvalidQuery, reason: "unbound variable `#{var}` in query"
       end
     end
+  end
+
+  def escape_field(var, field, vars, join_var // nil) do
+    left_escaped = escape_var(var, vars, join_var)
+    dot_escaped = { :{}, [], [:., [], [left_escaped, field]] }
+    { :{}, [], [dot_escaped, [], []] }
   end
 end

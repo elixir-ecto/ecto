@@ -1,6 +1,8 @@
 defmodule Ecto.Query.GroupByBuilder do
   @moduledoc false
 
+  alias Ecto.Query.BuilderUtil
+
   # Escapes a group by query to a list of fields
 
   def escape(list, vars) when is_list(list) do
@@ -17,14 +19,12 @@ defmodule Ecto.Query.GroupByBuilder do
 
   defp escape_field({ :., _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
+    { BuilderUtil.escape_var(var, vars), field }
+  end
 
-    ix = Enum.find_index(vars, &(&1 == var))
-    if var != :_ and ix do
-      var = { :{}, [], [:&, [], [ix]] }
-      { var, field }
-    else
-      raise Ecto.InvalidQuery, reason: "unbound variable `#{var}` in query"
-    end
+  defp escape_field({ :field, _, [{ var, _, context }, field] }, vars)
+      when is_atom(var) and is_atom(context) do
+    { BuilderUtil.escape_var(var, vars), field }
   end
 
   defp escape_field(_other, _vars) do

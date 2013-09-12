@@ -28,9 +28,10 @@ defmodule Ecto.Repo do
   alias Ecto.Query.Query
   alias Ecto.Query.Util
   alias Ecto.Query.WhereBuilder
-  alias Ecto.Query.QueryExpr
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.BuilderUtil
+  require Ecto.Query
+  alias Ecto.Query, as: Q
 
   @doc false
   defmacro __using__(opts) do
@@ -205,18 +206,19 @@ defmodule Ecto.Repo do
   def get(repo, adapter, queryable, id) when is_integer(id) do
     reason = "getting entity"
 
-    query = Queryable.to_query(queryable)
-    Util.validate_get(query, repo.query_apis)
-
-    model = query.from
-    entity = model.__model__(:entity)
-    check_primary_key(entity, reason)
+    query       = Queryable.to_query(queryable)
+    model       = query.from
+    entity      = model.__model__(:entity)
     primary_key = entity.__entity__(:primary_key)
 
-    quoted = quote do &0.unquote(primary_key) == unquote(id) end
-    where = QueryExpr[expr: quoted]
-    query = query |> Util.merge(:where, where) |> Util.merge(:limit, 1)
-    query = Util.normalize(query)
+    Util.validate_get(query, repo.query_apis)
+    check_primary_key(entity, reason)
+
+    query = Q.from(x in query.from,
+            where: field(x, primary_key) == ^id,
+            limit: 1)
+      |> Util.normalize
+
 
     case adapter.all(repo, query) |> check_result(adapter, reason) do
       [entity] -> entity

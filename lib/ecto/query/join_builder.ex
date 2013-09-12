@@ -1,6 +1,8 @@
 defmodule Ecto.Query.JoinBuilder do
   @moduledoc false
 
+  alias Ecto.Query.BuilderUtil
+
   # Escapes a join expression (not including the on expression) returning a pair
   # of `{ binds, expr }`. `binds` is either an empty list or a list of single
   # atom binding. `expr` is either an alias or an association join of format
@@ -29,6 +31,11 @@ defmodule Ecto.Query.JoinBuilder do
     left_escaped = Ecto.Query.BuilderUtil.escape_var(var, vars)
     assoc = { :{}, [], [:., [], [left_escaped, field]] }
     { [], assoc }
+  end
+
+  def escape({ :field, _, [{ var, _, context }, field] }, vars)
+      when is_atom(var) and is_atom(context) do
+    { [], BuilderUtil.escape_field(var, field, vars) }
   end
 
   def escape(_other, _vars) do

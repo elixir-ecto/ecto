@@ -4,12 +4,13 @@ defmodule Ecto.Associations do
   """
 
   alias Ecto.Query.Query
-  alias Ecto.Query.QueryExpr
   alias Ecto.Query.AssocJoinExpr
   alias Ecto.Query.Util
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo
+  require Ecto.Query
+  alias Ecto.Query, as: Q
 
   @doc """
   Returns true if join expression is an assocation join.
@@ -73,13 +74,13 @@ defmodule Ecto.Associations do
   @doc false
   def preload_query(refl, records)
       when is_record(refl, HasMany) or is_record(refl, HasOne) do
-    pk = refl.primary_key
+    pk  = refl.primary_key
+    fk  = refl.foreign_key
     ids = Enum.filter_map(records, &(&1), &apply(&1, pk, []))
 
-    where_expr = quote do &0.unquote(refl.foreign_key) in unquote(ids) end
-    where = QueryExpr[expr: where_expr]
-    order_bys = QueryExpr[expr: [ { nil, quote do &0 end, refl.foreign_key } ]]
-    Query[from: refl.associated, wheres: [where], order_bys: [order_bys]]
+       Q.from x in refl.associated,
+       where: field(x, fk) in ^ids,
+    order_by: field(x, fk)
   end
 
   def preload_query(BelongsTo[] = refl, records) do
@@ -87,10 +88,9 @@ defmodule Ecto.Associations do
     ids = Enum.filter_map(records, fun, fun)
     pk = refl.primary_key
 
-    where_expr = quote do &0.unquote(pk) in unquote(ids) end
-    where = QueryExpr[expr: where_expr]
-    order_bys = QueryExpr[expr: [ { nil, quote do &0 end, pk } ]]
-    Query[from: refl.associated, wheres: [where], order_bys: [order_bys]]
+       Q.from x in refl.associated,
+       where: field(x, pk) in ^ids,
+    order_by: field(x, pk)
   end
 
   defp combine([], refl, last_parent, parents, children) do
