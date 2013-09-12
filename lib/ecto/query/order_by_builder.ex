@@ -25,7 +25,8 @@ defmodule Ecto.Query.OrderByBuilder do
       when is_atom(var) and is_atom(context) do
     check_dir(dir)
     var_escaped = BuilderUtil.escape_var(var, vars)
-    { :{}, [], [dir, var_escaped, field] }
+    field_escaped = BuilderUtil.escape(field, vars)
+    { :{}, [], [dir, var_escaped, field_escaped] }
   end
 
   defp escape_field({ dir, { { :., _, _ } = dot, _, [] } }, vars) do

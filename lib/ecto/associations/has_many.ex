@@ -55,8 +55,7 @@ defmodule Ecto.Associations.HasMany do
 end
 
 defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
-  require Ecto.Query
-  alias Ecto.Query, as: Q
+  require Ecto.Query, as: Q
 
   def to_query(assoc) do
     target   = assoc.__assoc__(:target)
@@ -65,7 +64,7 @@ defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
     refl     = target.__entity__(:association, name)
 
     Q.from x in refl.associated,
-    where: field(x, refl.foreign_key) == ^pk_value
+    where: field(x, ^refl.foreign_key) == ^pk_value
   end
 end
 

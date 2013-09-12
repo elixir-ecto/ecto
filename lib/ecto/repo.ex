@@ -30,8 +30,7 @@ defmodule Ecto.Repo do
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.BuilderUtil
-  require Ecto.Query
-  alias Ecto.Query, as: Q
+  require Ecto.Query, as: Q
 
   @doc false
   defmacro __using__(opts) do
@@ -215,7 +214,7 @@ defmodule Ecto.Repo do
     check_primary_key(entity, reason)
 
     query = Q.from(x in query.from,
-            where: field(x, primary_key) == ^id,
+            where: field(x, ^primary_key) == ^id,
             limit: 1)
       |> Util.normalize
 

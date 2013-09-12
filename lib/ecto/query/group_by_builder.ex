@@ -24,7 +24,7 @@ defmodule Ecto.Query.GroupByBuilder do
 
   defp escape_field({ :field, _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) do
-    { BuilderUtil.escape_var(var, vars), field }
+    { BuilderUtil.escape_var(var, vars), BuilderUtil.escape(field, vars) }
   end
 
   defp escape_field(_other, _vars) do

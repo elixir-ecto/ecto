@@ -26,7 +26,7 @@ defmodule Ecto.Query.BuilderUtil do
   # field macro
   def escape({ :field, _, [{ var, _, context }, field] }, vars, join_var)
       when is_atom(var) and is_atom(context) do
-    escape_field(var, field, vars, join_var)
+    escape_field(var, escape(field, vars, join_var), vars, join_var)
   end
 
   # ops & functions

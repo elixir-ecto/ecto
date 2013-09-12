@@ -9,8 +9,7 @@ defmodule Ecto.Associations do
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo
-  require Ecto.Query
-  alias Ecto.Query, as: Q
+  require Ecto.Query, as: Q
 
   @doc """
   Returns true if join expression is an assocation join.
@@ -79,8 +78,8 @@ defmodule Ecto.Associations do
     ids = Enum.filter_map(records, &(&1), &apply(&1, pk, []))
 
        Q.from x in refl.associated,
-       where: field(x, fk) in ^ids,
-    order_by: field(x, fk)
+       where: field(x, ^fk) in ^ids,
+    order_by: field(x, ^fk)
   end
 
   def preload_query(BelongsTo[] = refl, records) do
@@ -89,8 +88,8 @@ defmodule Ecto.Associations do
     pk = refl.primary_key
 
        Q.from x in refl.associated,
-       where: field(x, pk) in ^ids,
-    order_by: field(x, pk)
+       where: field(x, ^pk) in ^ids,
+    order_by: field(x, ^pk)
   end
 
   defp combine([], refl, last_parent, parents, children) do
