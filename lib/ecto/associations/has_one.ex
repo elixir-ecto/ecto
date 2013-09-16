@@ -53,3 +53,25 @@ defmodule Ecto.Associations.HasOne do
     assoc(name: name, target: target, loaded: @not_loaded)
   end
 end
+
+defimpl Inspect, for: Ecto.Associations.HasOne do
+  import Inspect.Algebra
+
+  def inspect(assoc, opts) do
+    name        = assoc.__assoc__(:name)
+    target      = assoc.__assoc__(:target)
+    refl        = target.__entity__(:association, name)
+    owner       = refl.owner
+    associated  = refl.associated
+    primary_key = refl.primary_key
+    foreign_key = refl.foreign_key
+    kw = [
+      name: name,
+      target: target,
+      associated: associated,
+      primary_key: primary_key,
+      foreign_key: foreign_key
+    ]
+    concat ["#Ecto.Associations.HasOne<", Kernel.inspect(kw, opts), ">"]
+  end
+end

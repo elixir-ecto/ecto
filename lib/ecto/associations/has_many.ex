@@ -73,3 +73,24 @@ defimpl Enumerable, for: Ecto.Associations.HasMany do
   def member?(assoc, value), do: value in assoc.to_list
   def reduce(assoc, acc, fun), do: Enum.reduce(assoc.to_list, acc, fun)
 end
+
+defimpl Inspect, for: Ecto.Associations.HasMany do
+  import Inspect.Algebra
+
+  def inspect(assoc, opts) do
+    name        = assoc.__assoc__(:name)
+    target      = assoc.__assoc__(:target)
+    refl        = target.__entity__(:association, name)
+    associated  = refl.associated
+    primary_key = refl.primary_key
+    foreign_key = refl.foreign_key
+    kw = [
+      name: name,
+      target: target,
+      associated: associated,
+      primary_key: primary_key,
+      foreign_key: foreign_key
+    ]
+    concat ["#Ecto.Associations.HasMany<", Kernel.inspect(kw, opts), ">"]
+  end
+end
