@@ -354,7 +354,7 @@ defmodule Ecto.Entity do
         end
 
         if opts[:type] in [:has_many, :has_one] do
-          unless Enum.any?(fields, fn { name, _ } -> primary_key == name end) do
+          unless Enum.any?(fields, fn { name, _ } -> pk == name end) do
             raise ArgumentError, message: "`primary_key` option on association " <>
               "doesn't match any field on the entity"
           end

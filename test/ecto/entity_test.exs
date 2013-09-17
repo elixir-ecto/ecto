@@ -235,4 +235,16 @@ defmodule Ecto.EntityTest do
     assert :pk == refl.primary_key
     assert :permalink_pk == refl.foreign_key
   end
+
+  test "primary_key option has to match a field on entity" do
+    message = "`primary_key` option on association doesn't match any field on the entity"
+    assert_raise ArgumentError, message, fn ->
+      defmodule EntityPkAssocMisMatch do
+        use Ecto.Entity, model: PkAssocMisMatch
+
+        has_many :posts, Post, primary_key: :pk
+        has_one :author, User, primary_key: :pk
+      end
+    end
+  end
 end
