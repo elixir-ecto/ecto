@@ -275,7 +275,7 @@ defmodule Ecto.Entity do
     assoc = Ecto.Associations.HasMany.__assoc__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
-    opts = [type: :has_many, queryable: queryable]
+    opts = [type: :has_many, queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, { name, opts })
   end
 
@@ -286,7 +286,7 @@ defmodule Ecto.Entity do
     assoc = Ecto.Associations.HasOne.__assoc__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
-    opts = [type: :has_one, queryable: queryable]
+    opts = [type: :has_one, queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, { name, opts })
   end
 
@@ -294,14 +294,15 @@ defmodule Ecto.Entity do
   def __belongs_to__(mod, name, queryable, opts) do
     assoc_name  = queryable |> Module.split |> List.last |> String.downcase
     primary_key = opts[:primary_key] || :id
-    foreign_key = opts[:foreign_key] || :"#{assoc_name}_#{primary_key}"
-    __field__(mod, foreign_key, :integer, [])
+    opts = opts
+      |> Keyword.put(:primary_key, primary_key)
+      |> Keyword.put_new(:foreign_key, :"#{assoc_name}_#{primary_key}")
+    __field__(mod, opts[:foreign_key], :integer, [])
 
     assoc = Ecto.Associations.BelongsTo.__assoc__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
-    opts = [ type: :belongs_to, queryable: queryable,
-             foreign_key: foreign_key, primary_key: primary_key ]
+    opts = [type: :belongs_to, queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, { name, opts })
   end
 

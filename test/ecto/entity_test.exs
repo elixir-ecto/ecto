@@ -204,4 +204,35 @@ defmodule Ecto.EntityTest do
       has_one :author, User, foreign_key: :"test"
     end
   end
+
+  defmodule EntityAssocOpts do
+    use Ecto.Entity, model: AssocOpts, primary_key: { :pk, :integer }
+
+    has_many :posts, Post, primary_key: :pk, foreign_key: :fk
+    has_one :author, User, primary_key: :pk, foreign_key: :fk
+    belongs_to :permalink, Permalink, primary_key: :pk, foreign_key: :fk
+    belongs_to :permalink2, Permalink, primary_key: :pk
+  end
+
+  test "has_many options" do
+    refl = EntityAssocOpts.__entity__(:association, :posts)
+    assert :pk == refl.primary_key
+    assert :fk == refl.foreign_key
+  end
+
+  test "has_one options" do
+    refl = EntityAssocOpts.__entity__(:association, :author)
+    assert :pk == refl.primary_key
+    assert :fk == refl.foreign_key
+  end
+
+  test "belongs_to options" do
+    refl = EntityAssocOpts.__entity__(:association, :permalink)
+    assert :pk == refl.primary_key
+    assert :fk == refl.foreign_key
+
+    refl = EntityAssocOpts.__entity__(:association, :permalink2)
+    assert :pk == refl.primary_key
+    assert :permalink_pk == refl.foreign_key
+  end
 end
