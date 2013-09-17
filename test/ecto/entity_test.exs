@@ -49,7 +49,7 @@ defmodule Ecto.EntityTest do
     entity = MyEntity[id: 123]
     assert 123 == entity.primary_key
     assert MyEntity[id: 124] = entity.primary_key(124)
-    assert MyEntity[id: 125] = entity.update_primary_key(&1 + 2)
+    assert MyEntity[id: 125] = entity.update_primary_key(&(&1 + 2))
   end
 
   test "field name clash" do
@@ -86,7 +86,7 @@ defmodule Ecto.EntityTest do
     entity = MyEntityNoPK[x: "123"]
     assert entity.primary_key == nil
     assert entity.primary_key("abc") == entity
-    assert entity.update_primary_key(&1 <> "abc") == entity
+    assert entity.update_primary_key(&(&1 <> "abc")) == entity
   end
 
   defmodule EntityCustomPK do
@@ -101,7 +101,7 @@ defmodule Ecto.EntityTest do
     entity = EntityCustomPK[pk: "123"]
     assert entity.primary_key == "123"
     assert EntityCustomPK[pk: "abc"] = entity.primary_key("abc")
-    assert EntityCustomPK[pk: "123abc"] = entity.update_primary_key(&1 <> "abc")
+    assert EntityCustomPK[pk: "123abc"] = entity.update_primary_key(&(&1 <> "abc"))
   end
 
   test "fail custom primary key" do

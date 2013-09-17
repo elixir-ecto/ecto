@@ -61,7 +61,6 @@ defimpl Inspect, for: Ecto.Associations.HasOne do
     name        = assoc.__assoc__(:name)
     target      = assoc.__assoc__(:target)
     refl        = target.__entity__(:association, name)
-    owner       = refl.owner
     associated  = refl.associated
     primary_key = refl.primary_key
     foreign_key = refl.foreign_key
