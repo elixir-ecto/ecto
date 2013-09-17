@@ -400,7 +400,7 @@ defmodule Ecto.Repo do
 
       # TODO: Check if entity field allows nil
       unless valid do
-        raise Ecto.ValidationError, entity: entity, field: field,
+        raise Ecto.InvalidEntity, entity: entity, field: field,
           type: value_type, expected_type: type, reason: reason
       end
     end)

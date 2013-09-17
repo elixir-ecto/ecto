@@ -128,16 +128,16 @@ defmodule Ecto.RepoTest do
   test "validate entity types" do
     entity = MyModel.new(x: 123)
 
-    assert_raise Ecto.ValidationError, fn ->
+    assert_raise Ecto.InvalidEntity, fn ->
       MyRepo.create(entity)
     end
 
     entity = MyModel.new(id: 1, x: 123)
 
-    assert_raise Ecto.ValidationError, fn ->
+    assert_raise Ecto.InvalidEntity, fn ->
       MyRepo.update(entity)
     end
-    assert_raise Ecto.ValidationError, fn ->
+    assert_raise Ecto.InvalidEntity, fn ->
       MyRepo.delete(entity)
     end
   end
