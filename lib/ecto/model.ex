@@ -18,7 +18,7 @@ defmodule Ecto.Model.Queryable do
   """
 
   @doc """
-  Defines a queryable name and the entity that defines the dataset.
+  Defines a queryable name and its entity.
 
   ## Example
 
@@ -38,7 +38,8 @@ defmodule Ecto.Model.Queryable do
   end
 
   @doc """
-  Defines a queryable name and the entity definition inline.
+  Defines a queryable name and the entity definition inline. `opts` will be
+  given to the `use Ecto.Entity` call, see `Ecto.Entity`.
 
   ## Examples
 
@@ -55,7 +56,7 @@ defmodule Ecto.Model.Queryable do
         use Ecto.Model
 
         defmodule Entity do
-          use Ecto.Entity
+          use Ecto.Entity, model: Post
           field :text, :string
         end
 

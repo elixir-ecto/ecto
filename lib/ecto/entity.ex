@@ -35,6 +35,14 @@ defmodule Ecto.Entity do
       User.Entity.new
       #=> User.Entity[]
 
+  When used, it allows the following options:
+
+    * `:model` - Sets the default associated model;
+    * `:primary_key` - Sets the primary key, if this option is not set a primary
+                       key named *id* of type *integer* will be generated. If
+                       set to `false` no primary key will be generated, to set
+                       a custom primary key give `{ name, type }` to the option.
+
   In addition to the record functionality, Ecto also defines accessors and updater
   functions for the primary key will be generated on the entity, specifically
   `primary_key/1`, `primary_key/2` and `update_primary_key/2`.
@@ -52,8 +60,7 @@ defmodule Ecto.Entity do
 
     * `:default` - Sets the default value on the entity and the record;
     * `:primary_key` - Sets the field to be the primary key, the default
-      primary key have to be overridden by setting its name to `nil`, see
-      `Ecto.Entity.dataset`;
+      primary key have to be overridden by setting its name to `nil`;
   """
   defmacro field(name, type, opts // []) do
     quote do
