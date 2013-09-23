@@ -431,7 +431,33 @@ You can find more information about defining associations and each respective as
 
 ### Migrations
 
-To be implemented.
+Ecto supports now migrations with plain sql.
+
+```elixir
+defmodule MyApp.MyMigration do
+
+  def up do
+    "CREATE TABLE user(id serial PRIMARY_KEY, username varchar(25))"
+  end
+
+  def down do
+    "DROP TABLE user"
+  end
+end
+```
+
+now you can execute migration:
+
+```elixir
+Ecto.Migrator.up(Repo, 20130906120000, MyApp.MyMigration) == :ok
+```
+
+Result must be:
+
+  * `:ok` - When the migrations is executed successfully
+  * `:already_up` - The migration is already in the table (returned by migrate_up)
+  * `:missing_up` - The migration is not in the table (returned by migrate_down)
+  * `{ :error, error :: term }` - Error from the database
 
 ## Contributing
 
