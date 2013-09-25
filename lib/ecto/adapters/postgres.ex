@@ -6,6 +6,8 @@ defmodule Ecto.Adapters.Postgres do
   # Each repository has their own pool.
 
   @behaviour Ecto.Adapter
+  @behaviour Ecto.Adapter.Migratable
+
   @default_port 5432
 
   alias Ecto.Adapters.Postgres.SQL
@@ -158,6 +160,49 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def transaction(repo, fun) when is_function(fun, 1) do
     :poolboy.transaction(repo.__postgres__(:pool_name), fun)
+  end
+  
+  defp create_migrations_table(repo) do
+    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal);")
+  end
+
+  defp check_migration_version(repo, version) do
+    case create_migrations_table(repo) do
+      {:error, err} -> {:error, err}
+      _ -> query(repo, "SELECT version FROM schema_migrations WHERE version = " <> integer_to_binary(version) <> ";")
+    end
+  end
+
+  defp new_migration_version(repo, version) do
+    query(repo, "INSERT INTO schema_migrations(version) VALUES(" <> integer_to_binary(version) <> ");")
+  end
+
+  @doc false
+  def migrate_up(repo, version, commands) do
+    case check_migration_version(repo, version) do
+      {_, []} ->
+        case query(repo, commands) do
+          {:error, err} -> {:error, err}
+          _ ->
+            new_migration_version(repo, version)
+            :ok
+        end
+      {_, [{_v}]} -> :already_up
+      { :error, err } -> { :error, err }
+    end
+  end
+ 
+  @doc false
+  def migrate_down(repo, version, commands) do
+    case check_migration_version(repo, version) do
+      {_, []} -> :missing_up
+      {_, [{_v}]} -> 
+        case query(repo, commands) do
+          { :error, err } -> { :error, err }
+          _ -> :ok
+        end
+      { :error, err } -> { :error, err }
+    end
   end
 
   defp fix_worker_opts(opts) do

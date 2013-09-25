@@ -371,4 +371,25 @@ defmodule Ecto.Integration.PostgresTest do
 
     assert Comment.Entity[posted: ^now] = TestRepo.get(Comment, c.id)
   end
+
+  test "migrations test" do
+    defmodule EctoMigrations do
+
+      def up do
+        "CREATE TABLE migrations_test(id serial primary key, name varchar(25));"
+      end
+
+      def down do
+        "DROP table migrations_test;"
+      end
+    end
+
+    import Ecto.Migrator
+
+    assert up(TestRepo, 20080906120000, EctoMigrations) == :ok
+    assert up(TestRepo, 20080906120000, EctoMigrations) == :already_up
+    assert down(TestRepo, 20080906120001, EctoMigrations) == :missing_up
+    assert down(TestRepo, 20080906120000, EctoMigrations) == :ok
+    
+  end
 end
