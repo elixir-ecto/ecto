@@ -431,7 +431,7 @@ You can find more information about defining associations and each respective as
 
 ### Migrations
 
-Ecto supports now migrations with plain sql.
+Ecto supports migrations with plain sql.
 
 ```elixir
 defmodule MyApp.MyMigration do
@@ -446,18 +446,18 @@ defmodule MyApp.MyMigration do
 end
 ```
 
-now you can execute migration:
+The migration can be ran with:
 
 ```elixir
 Ecto.Migrator.up(Repo, 20130906120000, MyApp.MyMigration) == :ok
 ```
 
-Result must be:
+The possible results from running a migration are:
 
   * `:ok` - When the migrations is executed successfully
-  * `:already_up` - The migration is already in the table (returned by migrate_up)
-  * `:missing_up` - The migration is not in the table (returned by migrate_down)
-  * `{ :error, error :: term }` - Error from the database
+  * `:already_up` - When the migration is already in the table (returned by migrate_up)
+  * `:missing_up` - When the migration is not in the table (returned by migrate_down)
+  * `{ :error, error :: term }` - When there is an error from the database
 
 ## Contributing
 
