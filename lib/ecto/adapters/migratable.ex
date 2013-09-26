@@ -7,7 +7,7 @@ defmodule Ecto.Adapter.Migratable  do
   use Behaviour
 
   @doc """
-  Running migrations with definite version.
+  Running a migration with a specific version.
   
   ## Examples
 
@@ -17,7 +17,7 @@ defmodule Ecto.Adapter.Migratable  do
   defcallback migrate_up(Ecto.Repo.t, integer, binary) :: :ok | :already_up | { :error, error :: term }
 
   @doc """
-  Running migrations with definite version.
+  Running a migration with a specific version.
 
   ## Examples
 
