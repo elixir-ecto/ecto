@@ -212,6 +212,10 @@ defmodule Ecto.Query.Util do
     locate_var(list, var)
   end
 
+  def locate_var({ :assoc, _, [left, _right] }, var) do
+    if left == var, do: []
+  end
+
   def locate_var(list, var) when is_list(list) do
     list = Stream.with_index(list)
     { poss, pos } = Enum.find_value(list, fn { elem, ix } ->

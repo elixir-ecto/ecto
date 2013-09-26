@@ -159,7 +159,7 @@ As seen above, when defining each entity field, a type needs to be given. Those 
 * `:datetime`
 * `:virtual` - virtual types can have any value and they are not sent to the database;
 
-When manipulating the entity via the record functions, it is responsobility of the developer to ensure the fields are cast to the proper value. For example:
+When manipulating the entity via the record functions, it is responsibility of the developer to ensure the fields are cast to the proper value. For example:
 
 ```elixir
 weather = Weather.Entity.new(temp_lo: "0")
