@@ -144,49 +144,7 @@ weather.id #=> 13
 weather.primary_key #=> 13
 ```
 
-Entities also provide casting shortcuts and support for associations which we are going to explore next.
-
-#### Types and casting
-
-As seen above, when defining each entity field, a type needs to be given. Those types are specific to Ecto and must be one of:
-
-* `:integer`
-* `:float`
-* `:boolean`
-* `:binary` - for binaries;
-* `:string` - for utf-8 encoded binaries;
-* `:list`
-* `:datetime`
-* `:virtual` - virtual types can have any value and they are not sent to the database;
-
-When manipulating the entity via the record functions, it is responsibility of the developer to ensure the fields are cast to the proper value. For example:
-
-```elixir
-weather = Weather.Entity.new(temp_lo: "0")
-weather.temp_lo #=> "0"
-```
-
-As we will see later, Ecto will only validate the types when a query is being prepared to be sent to the database. So if you attempt to persist the entity above, an error will be raised.
-
-**Yet to be implemented:** since in many applications it is common to receive attributes in a string format and then cast those attributes, Ecto adds an `assign` function to entities:
-
-```elixir
-weather = Weather.Entity.assign(temp_lo: "0")
-weather.temp_lo #=> 0.0
-```
-
-`assign` is also available for updates:
-
-```elixir
-weather = Weather.Entity.new(temp_lo: 23.0)
-weather = weather.assign(temp_lo: "25.2")
-weather.temp_lo #=> 25.2
-```
-In general, when receiving data from external sources, `assign` is the function recommended to be used.
-
-#### Associations
-
-The entity also supports associations. The supported associations macros are `belongs_to`, `has_one` and `has_many`. While those are defined in the entity, we need to understand a bit more about models in Ecto before going deep into associations.
+Entities also provide casting and associations, which are explored in later sections.
 
 ### Models
 
@@ -224,7 +182,7 @@ defmodule Weather do
 end
 ```
 
-This compact model/entity definition is the preferred format (unless you need a decoupled entity) and will be format used from now on. The model also defines both `Weather.new/1` and `Weather.assign/1` functions as shortcuts that simply delegate to `Weather.Entity`:
+This compact model/entity definition is the preferred format (unless you need a decoupled entity) and will be format used from now on. The model also defines `Weather.new/1` as shortcut that simply delegates to `Weather.Entity`:
 
 ```elixir
 weather = Weather.new(temp_lo: 0, temp_hi: 23)
@@ -295,9 +253,23 @@ query = from w in Weather,
 Repo.all(query)
 ```
 
-Queries are defined and extended via the `from` macro. The supported keywords are: `:where`, `:order_by`, `:offset`, `:limit`, `:group_by`, `:having`, `:join` and `:select`. For associations we support `:preload`. Although we used `:select` above, it is optional and it defaults to the entity associated to the model being queries.
+Queries are defined and extended with the `from` macro. The supported keywords are:
 
-In the previous section, we have defined our model as queryable. This is what allows our model to be used in the query as: `from w in Weather`. The right-hand side of `in` must implement the `Ecto.Queryable`, which is done automatically for models that use the queryable feature.
+* `:where`
+* `:order_by`
+* `:offset`
+* `:limit`
+* `:group_by`
+* `:having`
+* `:join`
+* `:select` - although we used `:select` above, it is optional and by default it simply returns the entity tied to the model being queried
+* `:preload` - used for preloading associations
+
+You can find more info about queries and the supported keywords in the [`Ecto.Query` module](http://elixir-lang.org/docs/ecto/Ecto.Query.html).
+
+#### Ecto.Queryable
+
+In the previous section, we have defined our model as queryable. This is what allows our model to be used in the query as: `from w in Weather`. The right-hand side of `in` must implement the `Ecto.Queryable` protocol, which is done automatically for models that use the queryable feature.
 
 Since queries also implement `Ecto.Queryable`, we can compose queries:
 
@@ -343,11 +315,47 @@ Got: float == string
 
 The error message is saying that, the database operator `==/2` can compare numbers with numbers, be them integer or floats, it can compare any value with other value of the same type (`var == var`), and it can compare any other value with `nil`.
 
-You can find more about queries and the supported keywords in the [`Ecto.Query` module](http://elixir-lang.org/docs/ecto/Ecto.Query.html).
-
 With this, we finish our introduction. The next section goes into more details on how Ecto integrates with OTP, how to use associations and more.
 
 ## Other topics
+
+### Types and casting
+
+When defining each entity field, a type needs to be given. Those types are specific to Ecto and must be one of:
+
+* `:integer`
+* `:float`
+* `:boolean`
+* `:binary` - for binaries;
+* `:string` - for utf-8 encoded binaries;
+* `:list`
+* `:datetime`
+* `:virtual` - virtual types can have any value and they are not sent to the database;
+
+When manipulating the entity via the record functions, it is responsibility of the developer to ensure the fields are cast to the proper value. For example:
+
+```elixir
+weather = Weather.Entity.new(temp_lo: "0")
+weather.temp_lo #=> "0"
+```
+
+As seen before, Ecto validates the types when a query is being prepared to be sent to the database. So if you attempt to persist the entity above, an error will be raised.
+
+**Yet to be implemented:** since in many applications it is common to receive attributes in a string format and then cast those attributes, Ecto adds an `assign` function to entities:
+
+```elixir
+weather = Weather.Entity.assign(temp_lo: "0")
+weather.temp_lo #=> 0.0
+```
+
+`assign` is also available for updates:
+
+```elixir
+weather = Weather.Entity.new(temp_lo: 23.0)
+weather = weather.assign(temp_lo: "25.2")
+weather.temp_lo #=> 25.2
+```
+In general, when receiving data from external sources, `assign` is the function recommended to be used.
 
 ### Associations
 
