@@ -1,7 +1,6 @@
 defmodule Ecto.Migrator do
   @moduledoc """
-  This module provides migrations API. Migrations module must implement `up/0`
-  and `down/0`.
+  This module provides the migration API.
 
   ## Example
 
@@ -19,10 +18,12 @@ defmodule Ecto.Migrator do
     Ecto.Migrator.up(Repo, 20080906120000, MyApp.MigrationExample)
   """
 
+  @doc "Runs an up migration on the given repository"
   def up(repo, version, module) do
     repo.adapter.migrate_up(repo, version, module.up)
   end
 
+  @doc "Runs a down migration on the given repository"
   def down(repo, version, module) do
     repo.adapter.migrate_down(repo, version, module.down)
   end
