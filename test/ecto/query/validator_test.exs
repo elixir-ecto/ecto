@@ -367,4 +367,14 @@ defmodule Ecto.Query.ValidatorTest do
       validate(query)
     end
   end
+
+  test "binary literals" do
+    query = from(Post, select: binary("abc") <> binary(<<0,1,2>>))
+    validate(query)
+
+    query = from(Post, select: binary("abc") <> "abc")
+    assert_raise Ecto.TypeCheckError, fn ->
+      validate(query)
+    end
+  end
 end

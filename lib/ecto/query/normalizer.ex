@@ -35,7 +35,7 @@ defmodule Ecto.Query.Normalizer do
   def normalize_join(JoinExpr[] = expr, _query), do: expr
 
   def normalize_select(QueryExpr[expr: { :assoc, _, [fst, snd] }] = expr) do
-    expr.expr({ fst, snd })
+    expr.expr({ :{}, [], [fst, snd] })
   end
 
   def normalize_select(QueryExpr[expr: _] = expr), do: expr

@@ -17,7 +17,7 @@ defmodule Ecto.Query.SelectBuilder do
 
   # Tuple
   defp do_escape({ left, right }, vars) do
-    { do_escape(left, vars), do_escape(right, vars) }
+    do_escape({ :{}, [], [left, right] }, vars)
   end
 
   # Tuple

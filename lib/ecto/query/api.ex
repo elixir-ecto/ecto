@@ -7,6 +7,7 @@ defmodule Ecto.Query.API do
   deft integer
   deft boolean
   deft binary
+  deft string
   deft list(var)
   deft datetime
   deft interval
@@ -110,12 +111,21 @@ defmodule Ecto.Query.API do
   @doc "Binary and string concatenation."
   def left <> right
   defs binary <> binary :: binary
+  defs string <> string :: string
 
   @doc "List concatenation."
   def left ++ right
   defs list(var) ++ list(var) :: list(var)
 
   ## Functions
+
+  @doc """
+  Casts a binary literal to a binary type. By default a
+  binary literal is of the string type.
+  """
+  def binary(binary)
+  defs binary(binary) :: binary
+  defs binary(string) :: binary
 
   @doc "base to the power of exp."
   def pow(base, exp)
@@ -142,11 +152,11 @@ defmodule Ecto.Query.API do
 
   @doc "Downcase string."
   def downcase(string)
-  defs downcase(binary) :: binary
+  defs downcase(string) :: string
 
   @doc "Upcase string."
   def upcase(string)
-  defs upcase(binary) :: binary
+  defs upcase(string) :: string
 
   @doc "Returns the current date and time"
   def now()

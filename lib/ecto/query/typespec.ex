@@ -37,6 +37,7 @@ defmodule Ecto.Query.Typespec do
       arity = length(args)
 
       if @aggregate do
+        @doc false
         def aggregate?(unquote(name), unquote(arity)), do: true
       end
       @aggregate false

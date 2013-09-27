@@ -155,7 +155,7 @@ defmodule Ecto.Query.Util do
     if valid do
       { :ok, :datetime }
     else
-      { :error, "all datetime elements has to be of integer type" }
+      { :error, "all datetime elements has to be a literal of integer type" }
     end
   end
 
@@ -166,7 +166,15 @@ defmodule Ecto.Query.Util do
     if valid do
       { :ok, :interval }
     else
-      { :error, "all interval elements has to be of integer type" }
+      { :error, "all interval elements has to be a literal of integer type" }
+    end
+  end
+
+  def value_to_type(Ecto.Binary[value: binary]) do
+    if is_binary(binary) do
+      { :ok, :binary }
+    else
+      { :error, "binary/1 argument has to be a literal of binary type" }
     end
   end
 

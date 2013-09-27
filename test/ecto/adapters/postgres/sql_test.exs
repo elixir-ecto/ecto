@@ -166,6 +166,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = from(Model) |> select([], "abc") |> normalize
     assert SQL.select(query) == "SELECT 'abc'::text\nFROM model AS m0"
 
+    query = from(Model) |> select([], <<?a,?b,?c>>) |> normalize
+    assert SQL.select(query) == "SELECT 'abc'::text\nFROM model AS m0"
+
+    query = from(Model) |> select([], binary(<<0,1,2>>)) |> normalize
+    assert SQL.select(query) == "SELECT '\\x000102'::bytea\nFROM model AS m0"
+
     query = from(Model) |> select([], 123) |> normalize
     assert SQL.select(query) == "SELECT 123\nFROM model AS m0"
 

@@ -23,11 +23,19 @@ defmodule Ecto.Query.BuilderUtil do
     arg
   end
 
+  def escape({ :binary, _, [arg] }, vars, join_var) do
+    arg_escaped = escape(arg, vars, join_var)
+    Ecto.Binary[value: arg_escaped]
+  end
+
   # field macro
   def escape({ :field, _, [{ var, _, context }, field] }, vars, join_var)
       when is_atom(var) and is_atom(context) do
     escape_field(var, escape(field, vars, join_var), vars, join_var)
   end
+
+  # binary literal
+  def escape({ :<<>>, _, _ } = bin, _vars, _join_var), do: bin
 
   # ops & functions
   def escape({ name, meta, args }, vars, join_var)

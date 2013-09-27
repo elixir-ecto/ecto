@@ -1,4 +1,6 @@
 defmodule Ecto.Query.PreloadBuilder do
+  @moduledoc false
+
   @reason "preload should be given a single atom or a list of atoms"
 
   def validate(list) when is_list(list) do

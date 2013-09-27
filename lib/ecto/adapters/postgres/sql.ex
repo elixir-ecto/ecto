@@ -330,6 +330,13 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "interval 'P#{i.year}-#{i.month}-#{i.day}T#{i.hour}:#{i.min}:#{i.sec}'"
   end
 
+  defp literal(Ecto.Binary[value: binary]) do
+    hex = lc << h :: [unsigned, 4], l :: [unsigned, 4] >> inbits binary do
+      integer_to_binary(h, 16) <> integer_to_binary(l, 16)
+    end
+    "'\\x#{hex}'::bytea"
+  end
+
   defp literal(literal) when is_binary(literal) do
     "'#{escape_string(literal)}'::text"
   end
@@ -349,10 +356,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # TODO: Records (Kernel.access)
   defp select_clause({ :{}, _, elems }, vars) do
     Enum.map_join(elems, ", ", &select_clause(&1, vars))
-  end
-
-  defp select_clause({ x, y }, vars) do
-    select_clause({ :{}, [], [x, y] }, vars)
   end
 
   defp select_clause(list, vars) when is_list(list) do
