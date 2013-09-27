@@ -332,7 +332,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp literal(Ecto.Binary[value: binary]) do
     hex = lc << h :: [unsigned, 4], l :: [unsigned, 4] >> inbits binary do
-      integer_to_binary(h, 16) <> integer_to_binary(l, 16)
+      fixed_integer_to_binary(h, 16) <> fixed_integer_to_binary(l, 16)
     end
     "'\\x#{hex}'::bytea"
   end
@@ -388,4 +388,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
       cnt_name
     end
   end
+
+  # This is fixed in R16B02, we can remove this fix when we stop supporting
+  # R16 and R16B01
+  defp fixed_integer_to_binary(0, _), do: "0"
+  defp fixed_integer_to_binary(value, base), do: integer_to_binary(value, base)
 end
