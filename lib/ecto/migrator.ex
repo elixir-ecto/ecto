@@ -10,7 +10,7 @@ defmodule Ecto.Migrator do
         end
 
         def down do
-        "DROP TABLE user;"
+          "DROP TABLE user;"
         end
       end
 
