@@ -4,18 +4,17 @@ defmodule Ecto.Migrator do
 
   ## Example
 
-    defmodule MyApp.MigrationExample do
-    
-      def up do
-        "CREATE TABLE user(id serial PRIMARY_KEY, username varchar(25));"
-      end
+      defmodule MyApp.MigrationExample do
+        def up do
+          "CREATE TABLE user(id serial PRIMARY_KEY, username varchar(25));"
+        end
 
-      def down do
+        def down do
         "DROP TABLE user;"
+        end
       end
-    end
 
-    Ecto.Migrator.up(Repo, 20080906120000, MyApp.MigrationExample)
+      Ecto.Migrator.up(Repo, 20080906120000, MyApp.MigrationExample)
   """
 
   @doc "Runs an up migration on the given repository"
@@ -27,5 +26,4 @@ defmodule Ecto.Migrator do
   def down(repo, version, module) do
     repo.adapter.migrate_down(repo, version, module.down)
   end
-
 end
