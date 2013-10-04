@@ -70,7 +70,7 @@ defexception Ecto.TypeCheckError, [:expr, :types, :allowed] do
 end
 
 defexception Ecto.AssociationNotLoadedError, [:type, :name, :owner] do
-  def message(Ecto.TypeCheckError[] = e) do
+  def message(Ecto.AssociationNotLoadedError[] = e) do
     "the #{e.type} association on #{e.owner}.#{e.name} was not loaded"
   end
 end
