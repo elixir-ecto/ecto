@@ -83,7 +83,7 @@ defmodule Ecto.Associations do
   end
 
   def preload_query(BelongsTo[] = refl, records) do
-    fun = &(apply(&1, refl.foreign_key, []))
+    fun = &apply(&1, refl.foreign_key, [])
     ids = Enum.filter_map(records, fun, fun)
     pk = refl.primary_key
 
@@ -99,11 +99,10 @@ defmodule Ecto.Associations do
   end
 
   defp combine([{ parent, child }|rows], refl, last_parent, parents, children) do
-    pk = refl.primary_key
     cond do
       nil?(parent) ->
         combine(rows, refl, last_parent, [nil|parents], children)
-      apply(parent, pk, []) == apply(last_parent, pk, []) ->
+      compare(parent, last_parent, refl) ->
         combine(rows, refl, parent, parents, [child|children])
       true ->
         children = Enum.reverse(children)
@@ -111,6 +110,11 @@ defmodule Ecto.Associations do
         parents = [last_parent|parents]
         combine([{ parent, child }|rows], refl, parent, parents, [])
     end
+  end
+
+  defp compare(record1, record2, refl) do
+    pk = refl.primary_key
+    apply(record1, pk, []) == apply(record2, pk, [])
   end
 
   defp set_loaded(record, field, loaded) when is_atom(field) do

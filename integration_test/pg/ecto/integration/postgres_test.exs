@@ -384,6 +384,36 @@ defmodule Ecto.Integration.PostgresTest do
     assert Post.Entity[id: ^pid2] = p3.post.get
   end
 
+  test "belongs_to assoc selector with shared assoc" do
+    Post.Entity[id: pid1] = TestRepo.create(Post.Entity[title: "1"])
+    Post.Entity[id: pid2] = TestRepo.create(Post.Entity[title: "2"])
+
+    c1 = TestRepo.create(Comment.Entity[text: "1", post_id: pid1])
+    c2 = TestRepo.create(Comment.Entity[text: "2", post_id: pid1])
+    c3 = TestRepo.create(Comment.Entity[text: "3", post_id: pid2])
+
+    query = from(c in Comment, join: p in c.post, select: assoc(c, p))
+    assert [c1, c2, c3] = TestRepo.all(query)
+    assert Post.Entity[id: ^pid1] = c1.post.get
+    assert Post.Entity[id: ^pid1] = c2.post.get
+    assert Post.Entity[id: ^pid2] = c3.post.get
+  end
+
+  test "belongs_to assoc selector with shared assoc 2" do
+    Post.Entity[id: pid1] = TestRepo.create(Post.Entity[title: "1"])
+    Post.Entity[id: pid2] = TestRepo.create(Post.Entity[title: "2"])
+
+    c1 = TestRepo.create(Comment.Entity[text: "1", post_id: pid1])
+    c2 = TestRepo.create(Comment.Entity[text: "2", post_id: pid2])
+    c3 = TestRepo.create(Comment.Entity[text: "3", post_id: nil])
+
+    query = from(c in Comment, left_join: p in c.post, select: assoc(c, p))
+    assert [c1, c2, c3] = TestRepo.all(query)
+    assert Post.Entity[id: ^pid1] = c1.post.get
+    assert Post.Entity[id: ^pid2] = c2.post.get
+    assert nil = c3.post.get
+  end
+
   test "join qualifier" do
     p1 = TestRepo.create(Post.Entity[title: "1"])
     p2 = TestRepo.create(Post.Entity[title: "2"])
