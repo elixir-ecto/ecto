@@ -222,6 +222,34 @@ defmodule Ecto.Integration.PostgresTest do
     assert Post.Entity[id: ^pid3] = pl3.post.get
   end
 
+  test "preload belongs_to with shared assocs 1" do
+    Post.Entity[id: pid1] = TestRepo.create(Post.Entity[title: "1"])
+    Post.Entity[id: pid2] = TestRepo.create(Post.Entity[title: "2"])
+
+    c1 = TestRepo.create(Comment.Entity[text: "1", post_id: pid1])
+    c2 = TestRepo.create(Comment.Entity[text: "2", post_id: pid1])
+    c3 = TestRepo.create(Comment.Entity[text: "3", post_id: pid2])
+
+    assert [c3, c1, c2] = Ecto.Preloader.run(TestRepo, [c3, c1, c2], :post)
+    assert Post.Entity[id: ^pid1] = c1.post.get
+    assert Post.Entity[id: ^pid1] = c2.post.get
+    assert Post.Entity[id: ^pid2] = c3.post.get
+  end
+
+  test "preload belongs_to with shared assocs 2" do
+    Post.Entity[id: pid1] = TestRepo.create(Post.Entity[title: "1"])
+    Post.Entity[id: pid2] = TestRepo.create(Post.Entity[title: "2"])
+
+    c1 = TestRepo.create(Comment.Entity[text: "1", post_id: pid1])
+    c2 = TestRepo.create(Comment.Entity[text: "2", post_id: pid2])
+    c3 = TestRepo.create(Comment.Entity[text: "3", post_id: nil])
+
+    assert [c3, c1, c2] = Ecto.Preloader.run(TestRepo, [c3, c1, c2], :post)
+    assert Post.Entity[id: ^pid1] = c1.post.get
+    assert Post.Entity[id: ^pid2] = c2.post.get
+    assert nil = c3.post.get
+  end
+
   test "preload keyword query" do
     p1 = TestRepo.create(Post.Entity[title: "1"])
     p2 = TestRepo.create(Post.Entity[title: "2"])
@@ -374,13 +402,12 @@ defmodule Ecto.Integration.PostgresTest do
 
   test "migrations test" do
     defmodule EctoMigrations do
-
       def up do
-        "CREATE TABLE migrations_test(id serial primary key, name varchar(25));"
+        "CREATE TABLE migrations_test(id serial primary key, name varchar(25))"
       end
 
       def down do
-        "DROP table migrations_test;"
+        "DROP table migrations_test"
       end
     end
 
@@ -390,6 +417,5 @@ defmodule Ecto.Integration.PostgresTest do
     assert up(TestRepo, 20080906120000, EctoMigrations) == :already_up
     assert down(TestRepo, 20080906120001, EctoMigrations) == :missing_up
     assert down(TestRepo, 20080906120000, EctoMigrations) == :ok
-    
   end
 end
