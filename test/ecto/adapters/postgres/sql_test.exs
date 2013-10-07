@@ -311,18 +311,46 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   defmodule Comment do
     use Ecto.Model
-
     queryable "comments" do
-      belongs_to :post, Ecto.Adapters.Postgres.SQLTest.Post
+      belongs_to :post, Ecto.Adapters.Postgres.SQLTest.Post,
+        primary_key: :a,
+        foreign_key: :b
     end
   end
 
   defmodule Post do
     use Ecto.Model
-
     queryable "posts" do
-      has_many :comments, Ecto.Adapters.Postgres.SQLTest.Comment
+      has_many :comments, Ecto.Adapters.Postgres.SQLTest.Comment,
+        primary_key: :c,
+        foreign_key: :d
+      has_one :permalink, Ecto.Adapters.Postgres.SQLTest.Permalink,
+        primary_key: :e,
+        foreign_key: :f
+      field :c, :integer
+      field :e, :integer
     end
+  end
+
+  defmodule Permalink do
+    use Ecto.Model
+    queryable "permalinks" do
+    end
+  end
+
+  test "association join belongs_to" do
+    query = from(Comment) |> join(:inner, [c], p in c.post) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM comments AS c0\nINNER JOIN posts AS p0 ON p0.a = c0.b"
+  end
+
+  test "association join has_many" do
+    query = from(Post) |> join(:inner, [p], c in p.comments) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM posts AS p0\nINNER JOIN comments AS c0 ON c0.d = p0.c"
+  end
+
+  test "association join has_one" do
+    query = from(Post) |> join(:inner, [p], pp in p.permalink) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM posts AS p0\nINNER JOIN permalinks AS p1 ON p1.f = p0.e"
   end
 
   defmodule PKModel do

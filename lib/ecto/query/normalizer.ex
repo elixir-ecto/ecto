@@ -23,8 +23,7 @@ defmodule Ecto.Query.Normalizer do
     associated = refl.associated
 
     assoc_var = Util.model_var(query, associated)
-    entity = query.from.__model__(:entity)
-    pk = entity.__entity__(:primary_key)
+    pk = refl.primary_key
     fk = refl.foreign_key
     on_expr = on_expr(refl, assoc_var, fk, pk)
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
