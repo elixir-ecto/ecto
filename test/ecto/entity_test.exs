@@ -233,7 +233,7 @@ defmodule Ecto.EntityTest do
 
     refl = EntityAssocOpts.__entity__(:association, :permalink2)
     assert :pk == refl.primary_key
-    assert :permalink_pk == refl.foreign_key
+    assert :permalink_id == refl.foreign_key
   end
 
   test "primary_key option has to match a field on entity" do
