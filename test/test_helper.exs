@@ -1,7 +1,6 @@
 ExUnit.start
 
 defmodule Ecto.TestHelpers do
-
   defmacro delay_compile(quoted) do
     quoted = Macro.escape(quoted)
     quote do
