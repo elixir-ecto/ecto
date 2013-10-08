@@ -6,9 +6,14 @@ Ecto is a domain specific language for writing queries and interacting with data
 defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
+  def priv do
+    "priv/my_app"
+  end
+
   def url do
     "ecto://postgres:postgres@localhost/ecto_simple"
   end
+
 end
 
 defmodule Weather do
@@ -71,6 +76,10 @@ A repository is a wrapper around the database. We can define a repository as fol
 ```elixir
 defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
+
+  def priv do
+    "priv/my_app"
+  end
 
   def url do
     "ecto://postgres:postgres@localhost/ecto_simple"
@@ -443,6 +452,8 @@ Ecto supports migrations with plain SQL.
 
 ```elixir
 defmodule MyApp.MyMigration do
+  use Ecto.Migration 
+
   def up do
     "CREATE TABLE user (id serial PRIMARY_KEY, username text)"
   end
@@ -465,6 +476,12 @@ The possible results from running a migration are:
   * `:already_up` - When the migration is already in the table (returned by migrate_up)
   * `:missing_up` - When the migration is not in the table (returned by migrate_down)
   * `{ :error, error :: term }` - When there is an error from the database
+
+Also you can run migrations with `mix` tool with:
+
+```
+mix ecto.migrate MyApp.Repo 
+```
 
 ## Contributing
 
