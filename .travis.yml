@@ -10,7 +10,7 @@ before_install:
   - cd elixir && make && cd ..
 before_script:
   - export PATH=`pwd`/elixir/bin:$PATH
-  - MIX_ENV=test mix do deps.get, compile
+  - MIX_ENV=test mix do deps.get
 script:
   - mix test
 env:
