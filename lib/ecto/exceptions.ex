@@ -74,3 +74,37 @@ defexception Ecto.AssociationNotLoadedError, [:type, :name, :owner] do
     "the #{e.type} association on #{e.owner}.#{e.name} was not loaded"
   end
 end
+
+defexception Ecto.MigrationDuplicationError, [:version] do
+  def message(Ecto.MigrationDuplicationError[] = e) do
+    """
+    Current migration can't be executed.
+
+    Versions are duplicated: #{e.version}
+    """
+  end
+end
+
+defexception Ecto.MigrationError, [:mod] do
+  def message(Ecto.MigrationError[] = e) do
+    """
+    Module #{e.mod} must export __migration__/0 from Ecto.Migration.
+    """
+  end
+end
+
+defexception Ecto.MigrationPrivError, [:repo] do
+  def message(Ecto.MigrationPrivError[] = e) do
+    """
+    A repository #{e.repo} needs to implement the priv/0 function.
+    """
+  end
+end
+
+defexception Ecto.MigrationCodeLoadError, [:err, :repo] do
+  def message(Ecto.MigrationCodeLoadError[] = e) do
+    """
+    Migration module `#{e.repo}` loading error: #{e.err}
+    """
+  end
+end

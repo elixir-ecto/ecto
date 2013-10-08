@@ -433,7 +433,7 @@ defmodule Ecto.Integration.PostgresTest do
   test "migrations test" do
     defmodule EctoMigrations do
       def up do
-        "CREATE TABLE migrations_test(id serial primary key, name varchar(25))"
+        "CREATE TABLE IF NOT EXISTS migrations_test(id serial primary key, name varchar(25))"
       end
 
       def down do
@@ -448,4 +448,10 @@ defmodule Ecto.Integration.PostgresTest do
     assert down(TestRepo, 20080906120001, EctoMigrations) == :missing_up
     assert down(TestRepo, 20080906120000, EctoMigrations) == :ok
   end
+
+  test "mix ecto.migrate test" do
+    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [1])
+    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [])
+  end
+
 end

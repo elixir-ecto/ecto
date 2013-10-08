@@ -13,6 +13,10 @@ end
 defmodule Ecto.Integration.Postgres.TestRepo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
+  def priv do
+    "integration_test/pg/ecto/priv"
+  end
+
   def url do
     "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
   end
