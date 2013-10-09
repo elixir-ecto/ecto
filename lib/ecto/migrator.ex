@@ -27,51 +27,54 @@ defmodule Ecto.Migrator do
     repo.adapter.migrate_down(repo, version, module.down)
   end
 
-  def run_up(repo, directory) do
-    all_files = :filelib.fold_files(directory, ".", true, fn(f, acc) -> [f | acc] end, [])
-    all_migrations_files = Enum.filter(all_files, Regex.match?(%r"\d+_.+\.exs", &1))
-    versions_list = Enum.map(all_migrations_files, 
-      fn(file) ->
-        [v | _] = String.split(Path.basename(file), "_")
-        binary_to_integer(v)
-      end)
+  defp get_all_migration_versions(files) do
+    Enum.map(files, fn(file) ->
+      [v | _] = String.split(Path.basename(file), "_")
+      binary_to_integer(v)
+    end)
+  end
 
-    pending_migrations = case has_duplications(versions_list) do
+  defp ensure_no_duplication(versions_list, repo) do
+    case has_duplications(versions_list) do
       false ->
         case repo.adapter.migrated_versions(repo) do
           {:error, err} -> {:error, err}
           [] -> versions_list
           versions ->
-            Enum.filter(versions_list, 
-              fn(migration_version) ->
-                not {migration_version} in versions
-              end)
+            Enum.filter(versions_list, fn(migration_version) ->
+              not {migration_version} in versions
+            end)
         end
       {true, version } ->
-        raise Ecto.MigrationDuplicationError, version: version
+        raise Ecto.MigrationError, message: 
+        """
+        Current migration can't be executed.
+      
+        Versions are duplicated: #{version}
+        """
     end
+  end
 
-    Enum.filter(pending_migrations, 
-      fn(migration_version) -> 
-        case execute_migration(repo, migration_version, all_migrations_files) do
-          {:success, _, _} -> true
-          _ -> false
-        end
-      end)
-
+  def run_up(repo, directory) do
+    all_files = :filelib.fold_files(directory, ".", true, fn(f, acc) -> [f | acc] end, [])
+    all_migrations_files = Enum.filter(all_files, fn(file) -> Regex.match?(%r"\d+_.+\.exs", file) end)
+    pending_migrations = all_migrations_files |> get_all_migration_versions |> ensure_no_duplication(repo)
+    Enum.filter(pending_migrations, fn(migration_version) -> 
+      case execute_migration(repo, migration_version, all_migrations_files) do
+        {:success, _, _} -> true
+        _ -> false
+      end
+    end)
   end
 
   defp execute_migration(repo, migration_version, migration_files) do
-    [migration_file_path] = Enum.filter(migration_files, 
-      fn(file) ->
-        [v | _] = String.split(Path.basename(file), "_")
-        binary_to_integer(v) == migration_version
-      end)
-
+    [migration_file_path] = Enum.filter(migration_files, fn(file) ->
+      [v | _] = String.split(Path.basename(file), "_")
+      binary_to_integer(v) == migration_version
+    end)
     [{migration_module, _}] = Code.load_file(migration_file_path)
-
-    case List.keyfind(migration_module.__info__(:functions), :__migration__, 0) do
-      {:__migration__, 0} ->
+    case function_exported?(migration_module, :__migration__, 0) do
+      true ->
         case repo.adapter.migrate_up(repo, migration_version, migration_module.up) do
           {:error, err} -> 
             {:error, err}
@@ -80,10 +83,12 @@ defmodule Ecto.Migrator do
           :ok ->
             {:success, migration_version, migration_file_path}
         end
-      _ -> 
-        raise Ecto.MigrationError, mod: migration_module
+      false ->
+        raise Ecto.MigrationError, message: 
+        """
+        Module #{migration_module} must export __migration__/0 from Ecto.Migration.
+        """
     end
-
   end
 
   defp has_duplications([]) do
@@ -96,5 +101,4 @@ defmodule Ecto.Migrator do
       false -> has_duplications(t)
     end
   end
-
 end

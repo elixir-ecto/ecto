@@ -452,6 +452,29 @@ defmodule Ecto.Integration.PostgresTest do
   test "mix ecto.migrate test" do
     assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [1])
     assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [])
-  end
 
+    #
+    # add new migration file
+    #
+    migration_content = 
+    """
+    defmodule MyApp.MyMigration2 do
+  
+      use Ecto.Migration
+
+      def up do
+        "ALTER TABLE products ADD count int NOT NULL;"
+      end
+
+      def down do
+        "DROP TABLE products;"
+      end
+    end
+    """
+    File.write("integration_test/pg/ecto/priv/migrations/002_mig.exs", migration_content)
+    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [2])
+    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [])
+    File.rm("integration_test/pg/ecto/priv/migrations/002_mig.exs")
+
+  end
 end

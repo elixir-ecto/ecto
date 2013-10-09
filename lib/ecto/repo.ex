@@ -16,10 +16,6 @@ defmodule Ecto.Repo do
       defmodule MyRepo do
         use Ecto.Repo, adapter: Ecto.Adapters.Postgres
         
-        def priv do
-          "priv/db"
-        end
-        
         def url do
           "ecto://postgres:postgres@localhost/postgres"
         end
@@ -99,12 +95,7 @@ defmodule Ecto.Repo do
   implemented by the user.
   """
   defcallback url() :: String.t
-
-  @doc """
-  Should return directory path with migrations modules.
-  """
-  defcallback priv() :: String.t
-
+  
   @doc """
   Starts any connection pooling or supervision, if implemented by the adapter.
   """

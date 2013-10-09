@@ -11,24 +11,28 @@ defmodule Mix.Tasks.Ecto.Migrate do
   """
 
   def run([repo]) do
-    repository = case is_atom(repo) do
-        true -> 
-            repo
-        false -> 
-            binary_to_atom(repo, :utf8)
+    repository = if is_atom(repo) do
+      repo
+    else 
+      binary_to_atom(repo, :utf8)
     end
 
     case Code.ensure_loaded(repository) do
       {:error, err} ->
-        raise Ecto.MigrationCodeLoadError, err: err, repo: repository
-      _ ->
-        case List.keyfind(repository.__info__(:functions), :priv, 0) do
-          {:priv, 0} ->
+        raise Mix.Error, message: 
+        """
+        Migration module `#{repository}` loading error: #{err}
+        """
+      _ ->   
+        case function_exported?(repository, :priv, 0) do
+          true ->
             Ecto.Migrator.run_up(repository, Path.absname(Path.join(repo.priv, "migrations")))
-          _ -> 
-            raise Ecto.MigrationPrivError, repo: repo
+          false -> 
+            raise Mix.Error, message: 
+            """
+            A repository #{repo} needs to implement the priv/0 function.
+            """
         end
     end
   end
-
 end
