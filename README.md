@@ -439,13 +439,12 @@ You can find more information about defining associations and each respective as
 
 ### Migrations
 
-Ecto supports migrations with plain sql.
+Ecto supports migrations with plain SQL.
 
 ```elixir
 defmodule MyApp.MyMigration do
-
   def up do
-    "CREATE TABLE user(id serial PRIMARY_KEY, username varchar(25))"
+    "CREATE TABLE user (id serial PRIMARY_KEY, username text)"
   end
 
   def down do
