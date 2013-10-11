@@ -433,7 +433,7 @@ defmodule Ecto.Integration.PostgresTest do
   test "migrations test" do
     defmodule EctoMigrations do
       def up do
-        "CREATE TABLE IF NOT EXISTS migrations_test(id serial primary key, name varchar(25))"
+        "CREATE TABLE migrations_test(id serial primary key, name varchar(25))"
       end
 
       def down do
