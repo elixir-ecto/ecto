@@ -327,7 +327,8 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "join have to be followed by on" do
     query = from(c in Comment, join: p in Post, select: c)
-    assert_raise Ecto.InvalidQuery, "an `on` query expression have to follow a `from`", fn ->
+    message = "an `on` query expression have to follow a `join` unless it's an association join"
+    assert_raise Ecto.InvalidQuery, message, fn ->
       validate(query)
     end
   end

@@ -108,7 +108,9 @@ defmodule Ecto.Query.Validator do
     state = state.grouped?(false)
 
     { joins, assocs } = Enum.partition(joins, fn
-      JoinExpr[on: nil] -> raise Ecto.InvalidQuery, reason: "an `on` query expression have to follow a `from`"
+      JoinExpr[on: nil] ->
+        raise Ecto.InvalidQuery, reason: "an `on` query expression have to " <>
+          "follow a `join` unless it's an association join"
       JoinExpr[] -> true
       AssocJoinExpr[] -> false
     end)
