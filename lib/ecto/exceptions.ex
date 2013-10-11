@@ -74,3 +74,9 @@ defexception Ecto.AssociationNotLoadedError, [:type, :name, :owner] do
     "the #{e.type} association on #{e.owner}.#{e.name} was not loaded"
   end
 end
+
+defexception Ecto.MigrationError, [:error_message] do
+  def message(Ecto.MigrationError[] = e) do
+    e.error_message
+  end
+end

@@ -448,4 +448,33 @@ defmodule Ecto.Integration.PostgresTest do
     assert down(TestRepo, 20080906120001, EctoMigrations) == :missing_up
     assert down(TestRepo, 20080906120000, EctoMigrations) == :ok
   end
+
+  test "mix ecto.migrate test" do
+    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [1])
+    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [])
+
+    #
+    # add new migration file
+    #
+    migration_content = 
+    """
+    defmodule MyApp.MyMigration2 do
+  
+      use Ecto.Migration
+
+      def up do
+        "ALTER TABLE products ADD count int NOT NULL;"
+      end
+
+      def down do
+        "DROP TABLE products;"
+      end
+    end
+    """
+    File.write("integration_test/pg/ecto/priv/migrations/002_mig.exs", migration_content)
+    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [2])
+    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [])
+    File.rm("integration_test/pg/ecto/priv/migrations/002_mig.exs")
+
+  end
 end

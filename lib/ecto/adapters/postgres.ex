@@ -173,6 +173,13 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  defp get_all_migration(repo) do
+    case create_migrations_table(repo) do
+      {:error, err} -> {:error, err}
+      _ -> query(repo, "SELECT version FROM schema_migrations;")
+    end
+  end
+
   defp new_migration_version(repo, version) do
     query(repo, "INSERT INTO schema_migrations(version) VALUES(" <> integer_to_binary(version) <> ");")
   end
@@ -187,8 +194,10 @@ defmodule Ecto.Adapters.Postgres do
             new_migration_version(repo, version)
             :ok
         end
-      {_, [{_v}]} -> :already_up
-      { :error, err } -> { :error, err }
+      {_, [{_v}]} ->
+        :already_up
+      { :error, err } -> 
+        { :error, err }
     end
   end
  
@@ -202,6 +211,14 @@ defmodule Ecto.Adapters.Postgres do
           _ -> :ok
         end
       { :error, err } -> { :error, err }
+    end
+  end
+
+  @doc false
+  def migrated_versions(repo) do
+    case get_all_migration(repo) do
+      {:error, err} -> {:error, err}
+      {{:select, _count}, versions} -> versions
     end
   end
 

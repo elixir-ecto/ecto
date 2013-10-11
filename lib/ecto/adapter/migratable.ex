@@ -26,4 +26,9 @@ defmodule Ecto.Adapter.Migratable  do
   """
   defcallback migrate_down(Ecto.Repo.t, integer, binary) :: :ok | :missing_up | { :error, error :: term } 
 
+  @doc """
+  Returns all versions migrated in the database.
+  """
+  defcallback migrated_versions(Ecto.Repo.t) :: {:ok, [integer]} | {:error, error :: term}
+
 end

@@ -443,6 +443,8 @@ Ecto supports migrations with plain sql.
 
 ```elixir
 defmodule MyApp.MyMigration do
+  
+  use Ecto.Migration 
 
   def up do
     "CREATE TABLE user(id serial PRIMARY_KEY, username varchar(25))"
@@ -451,6 +453,7 @@ defmodule MyApp.MyMigration do
   def down do
     "DROP TABLE user"
   end
+
 end
 ```
 
@@ -466,6 +469,36 @@ The possible results from running a migration are:
   * `:already_up` - When the migration is already in the table (returned by migrate_up)
   * `:missing_up` - When the migration is not in the table (returned by migrate_down)
   * `{ :error, error :: term }` - When there is an error from the database
+
+Also you can run migrations with `mix` tool with:
+
+```
+mix ecto.migrate MyApp.Repo 
+```
+
+In this way you repository must export `priv/0` function which will return path to directory with
+migrations modules like:
+
+```elixir
+defmodule Repo do
+  use Ecto.Repo, adapter: Ecto.Adapters.Postgres
+  
+  def priv do
+    "priv/db"
+  end
+
+  def url do
+    "ecto://postgres:postgres@localhost/ecto_simple"
+  end
+end
+```
+
+`priv/db` directory must have `migrations` directory with migrations files. Migration file is elixir module which name starts with integer number which is migraion version, like:
+
+```
+001_first_table.exs
+20130417140000_update_table.exs
+```
 
 ## Contributing
 
