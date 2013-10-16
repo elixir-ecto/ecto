@@ -4,7 +4,6 @@ defmodule Simple.Mixfile do
   def project do
     [ app: :simple,
       version: "0.0.1",
-      elixir: "~> 0.10.1-dev",
       deps: deps ]
   end
 
@@ -16,7 +15,7 @@ defmodule Simple.Mixfile do
   # Returns the list of dependencies in the format:
   # { :foobar, "0.1", git: "https://github.com/elixir-lang/foobar.git" }
   defp deps do
-    [ { :ecto, path: "../.."},
-      { :pgsql, github: "ericmj/pgsql", branch: "elixir" } ]
+    [ { :postgrex, github: "ericmj/postgrex" },
+      { :ecto, path: "../.."} ]
   end
 end

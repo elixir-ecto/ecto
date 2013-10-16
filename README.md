@@ -36,12 +36,12 @@ end
 
 ## Usage
 
-Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, you will also need the library that Ecto's adapter is using.
+Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, you will also need the library that Ecto's PostgreSQL adapter is using.
 
 ```elixir
 def deps do
-  [ { :ecto, github: "elixir-lang/ecto" },
-    { :pgsql, github: "ericmj/pgsql", branch: "elixir" } ]
+  [ { :postgrex, github: "ericmj/postgrex" },
+    { :ecto, github: "elixir-lang/ecto" } ]
 end
 ```
 
