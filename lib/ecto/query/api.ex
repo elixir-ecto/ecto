@@ -31,22 +31,17 @@ defmodule Ecto.Query.API do
   def not(arg)
   defs not(boolean) :: boolean
 
-  @doc "Addition of numbers or datetimes."
+  @doc "Addition of numbers."
   def left + right
   defs float + number      :: float
   defs number + float      :: float
   defs integer + integer   :: integer
-  defs datetime + interval :: datetime
-  defs interval + datetime :: datetime
-  defs interval + interval :: interval
 
-  @doc "Subtraction of numbers or datetimes."
+  @doc "Subtraction of numbers."
   def left - right
   defs float - number      :: float
   defs number - float      :: float
   defs integer - integer   :: integer
-  defs datetime - interval :: datetime
-  defs interval - interval :: interval
 
   @doc "Multiplication of numbers."
   def left * right
@@ -126,6 +121,18 @@ defmodule Ecto.Query.API do
   def binary(binary)
   defs binary(binary) :: binary
   defs binary(string) :: binary
+
+  @doc "Addition of datetime's with interval's"
+  def date_add(left, right)
+  defs date_add(datetime, interval) :: datetime
+  defs date_add(interval, datetime) :: datetime
+  defs date_add(interval, interval) :: interval
+
+  @doc "Subtraction of datetime's with interval's"
+  def date_sub(left, right)
+  defs date_sub(datetime, interval) :: datetime
+  defs date_sub(interval, datetime) :: datetime
+  defs date_sub(interval, interval) :: interval
 
   @doc "base to the power of exp."
   def pow(base, exp)

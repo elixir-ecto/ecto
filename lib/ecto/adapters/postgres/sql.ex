@@ -19,7 +19,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
       and: "AND", or: "OR",
       +:  "+", -:  "-", *:  "*",
       <>: "||", ++: "||",
-      pow: "^", div: "/", rem: "%" ]
+      pow: "^", div: "/", rem: "%",
+      date_add: "+", date_sub: "-" ]
 
   functions =
     [ { { :downcase, 1 }, "lower" }, { { :upcase, 1 }, "upper" } ]
