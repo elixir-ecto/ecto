@@ -26,7 +26,7 @@ defmodule Ecto.Associations.HasMany do
 
   @doc """
   Returns a list of the associated records. Raises `AssociationNotLoadedError`
-  if the association was not loaded.
+  if the association is not loaded.
   """
   def to_list(assoc(loaded: @not_loaded, target: target, name: name)) do
     refl = target.__entity__(:association, name)
@@ -37,6 +37,12 @@ defmodule Ecto.Associations.HasMany do
   def to_list(assoc(loaded: loaded)) do
     loaded
   end
+
+  @doc """
+  Returns `true` if the association is loaded.
+  """
+  def loaded?(assoc(loaded: @not_loaded)), do: false
+  def loaded?(_), do: true
 
   @doc false
   Enum.each [:loaded, :target, :name, :primary_key], fn field ->

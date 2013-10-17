@@ -174,11 +174,13 @@ defmodule Ecto.Integration.PostgresTest do
     assert_raise Ecto.AssociationNotLoadedError, fn ->
       p1.comments.to_list
     end
+    assert p1.comments.loaded? == false
 
     assert [p3, p1, p2] = Ecto.Preloader.run(TestRepo, [p3, p1, p2], :comments)
     assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = p1.comments.to_list
     assert [Comment.Entity[id: ^cid3], Comment.Entity[id: ^cid4]] = p2.comments.to_list
     assert [] = p3.comments.to_list
+    assert p1.comments.loaded? == true
   end
 
   test "preload has_one" do
@@ -196,11 +198,13 @@ defmodule Ecto.Integration.PostgresTest do
     assert_raise Ecto.AssociationNotLoadedError, fn ->
       p2.permalink.get
     end
+    assert p1.permalink.loaded? == false
 
     assert [p3, p1, p2] = Ecto.Preloader.run(TestRepo, [p3, p1, p2], :permalink)
     assert Permalink.Entity[id: ^pid1] = p1.permalink.get
     assert nil = p2.permalink.get
     assert Permalink.Entity[id: ^pid3] = p3.permalink.get
+    assert p1.permalink.loaded? == true
   end
 
   test "preload belongs_to" do
@@ -215,11 +219,13 @@ defmodule Ecto.Integration.PostgresTest do
     assert_raise Ecto.AssociationNotLoadedError, fn ->
       pl1.post.get
     end
+    assert pl1.post.loaded? == false
 
     assert [pl3, pl1, pl2] = Ecto.Preloader.run(TestRepo, [pl3, pl1, pl2], :post)
     assert Post.Entity[id: ^pid1] = pl1.post.get
     assert nil = pl2.post.get
     assert Post.Entity[id: ^pid3] = pl3.post.get
+    assert pl1.post.loaded? == true
   end
 
   test "preload belongs_to with shared assocs 1" do
@@ -353,6 +359,7 @@ defmodule Ecto.Integration.PostgresTest do
     assert [post1, post2] = TestRepo.all(query)
     assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = post1.comments.to_list
     assert [Comment.Entity[id: ^cid3]] = post2.comments.to_list
+    assert post1.comments.loaded? == true
   end
 
   test "has_one assoc selector" do
@@ -367,6 +374,7 @@ defmodule Ecto.Integration.PostgresTest do
     assert [post1, post3] = TestRepo.all(query)
     assert Permalink.Entity[id: ^pid1] = post1.permalink.get
     assert Permalink.Entity[id: ^pid3] = post3.permalink.get
+    assert post1.permalink.loaded? == true
   end
 
   test "belongs_to assoc selector" do
@@ -382,6 +390,8 @@ defmodule Ecto.Integration.PostgresTest do
     assert Post.Entity[id: ^pid1] = p1.post.get
     assert nil = p2.post.get
     assert Post.Entity[id: ^pid2] = p3.post.get
+    assert p1.post.loaded? == true
+    assert p2.post.loaded? == true
   end
 
   test "belongs_to assoc selector with shared assoc" do

@@ -22,7 +22,7 @@ defmodule Ecto.Associations.BelongsTo do
 
   @doc """
   Returns the associated record. Raises `AssociationNotLoadedError` if the
-  association was not loaded.
+  association is not loaded.
   """
   def get(assoc(loaded: @not_loaded, target: target, name: name)) do
     refl = target.__entity__(:association, name)
@@ -33,6 +33,12 @@ defmodule Ecto.Associations.BelongsTo do
   def get(assoc(loaded: loaded)) do
     loaded
   end
+
+  @doc """
+  Returns `true` if the association is loaded.
+  """
+  def loaded?(assoc(loaded: @not_loaded)), do: false
+  def loaded?(_), do: true
 
   @doc false
   Enum.each [:loaded, :target, :name], fn field ->
