@@ -8,7 +8,11 @@ defmodule Ecto.Preloader do
   alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo
 
-  def run(repo, original, name, pos // []) do
+  def run(repo, original, name, pos // [])
+
+  def run(repo, [], _name, _pos), do: []
+
+  def run(repo, original, name, pos) do
     # Extract records from their data structure, see get_from_pos
     if pos == [] do
       records = original

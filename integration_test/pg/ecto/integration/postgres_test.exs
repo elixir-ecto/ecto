@@ -161,6 +161,10 @@ defmodule Ecto.Integration.PostgresTest do
     assert TestRepo.get(Post, id).temp == "temp"
   end
 
+  test "preload empty" do
+    assert [] == Ecto.Preloader.run(TestRepo, [], :anything_goes)
+  end
+
   test "preload has_many" do
     p1 = TestRepo.create(Post.Entity[title: "1"])
     p2 = TestRepo.create(Post.Entity[title: "2"])
