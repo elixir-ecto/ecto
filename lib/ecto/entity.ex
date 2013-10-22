@@ -376,7 +376,9 @@ defmodule Ecto.Entity do
         end
 
         if opts[:type] in [:has_many, :has_one] do
-          def unquote(name)(__MODULE__[[{unquote(pk), pk}]] = self) do
+          # TODO: Simplify this once Elixir 0.11 is out
+          pk_args = quote do: [{unquote(pk), pk}]
+          def unquote(name)(__MODULE__[unquote_splicing(pk_args)] = self) do
             if nil?(pk) do
               raise ArgumentError, message: "cannot access association when its " <>
                 "primary key is not set on the entity"

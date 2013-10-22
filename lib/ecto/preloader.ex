@@ -10,7 +10,7 @@ defmodule Ecto.Preloader do
 
   def run(repo, original, name, pos // [])
 
-  def run(repo, [], _name, _pos), do: []
+  def run(_repo, [], _name, _pos), do: []
 
   def run(repo, original, name, pos) do
     # Extract records from their data structure, see get_from_pos
