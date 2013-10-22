@@ -37,19 +37,23 @@ defmodule Ecto.Migrator do
   @doc """
   Runs all migrations in the given directory.
   """
+  @spec run_up(Ecto.Repo.t, binary) :: [integer] | no_return
   def run_up(repo, directory) do
-    Path.join(directory, "*")
-    |> Path.wildcard
-    |> Enum.filter(&Regex.match?(%r"\d+_.+\.exs", &1))
-    |> attach_versions
-    |> ensure_no_duplication
+    migrations = Path.join(directory, "*")
+                 |> Path.wildcard
+                 |> Enum.filter(&Regex.match?(%r"\d+_.+\.exs$", &1))
+                 |> attach_versions
+
+    ensure_no_duplication(migrations)
+
+    migrations
     |> filter_migrated(repo)
     |> execute_migrations(repo)
   end
 
   defp attach_versions(files) do
     Enum.map(files, fn(file) ->
-      { integer, _ } = Integer.parse(file)
+      { integer, _ } = Integer.parse(Path.basename(file))
       { integer, file }
     end)
   end
@@ -76,7 +80,7 @@ defmodule Ecto.Migrator do
   end
 
   defp execute_migrations(migrations, repo) do
-    Enum.each migrations, fn { version, file } ->
+    Enum.map migrations, fn { version, file } ->
       { mod, _bin } =
         Enum.find(Code.load_file(file), fn { mod, _bin } ->
           function_exported?(mod, :__migration__, 0)
@@ -86,9 +90,9 @@ defmodule Ecto.Migrator do
         { :error, error } ->
           raise Ecto.MigrationError, message: "could not migrate, got: #{inspect error}"
         :already_up ->
-          :ok
+          version
         :ok ->
-          :ok
+          version
       end
     end
   end

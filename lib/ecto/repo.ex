@@ -23,6 +23,7 @@ defmodule Ecto.Repo do
   """
 
   use Behaviour
+  @type t :: module
 
   alias Ecto.Queryable
   alias Ecto.Query.Query
