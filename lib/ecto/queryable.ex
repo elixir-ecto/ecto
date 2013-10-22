@@ -4,8 +4,6 @@ defprotocol Ecto.Queryable do
   `Ecto.Query.Query` record. The only function required to implement is
   `to_query` which does the conversion.
   """
-  @only [Record, Atom]
-
 
   def to_query(expr)
 end
