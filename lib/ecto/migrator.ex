@@ -60,7 +60,7 @@ defmodule Ecto.Migrator do
 
   defp ensure_no_duplication([{ version, _ } | t]) do
     if List.keyfind(t, version, 0) do
-      raise Ecto.MigrationError, message: "current migration can't be executed, version #{version} is duplicated"
+      raise Ecto.MigrationError, message: "migrations can't be executed, version #{version} is duplicated"
     else
       ensure_no_duplication(t)
     end
@@ -98,6 +98,6 @@ defmodule Ecto.Migrator do
   end
 
   defp raise_no_migration_in_file(file) do
-    raise Ecto.MigrationError, message: "file #{file} does not contain any Ecto.Migration"
+    raise Ecto.MigrationError, message: "file #{Path.relative_to_cwd(file)} does not contain any Ecto.Migration"
   end
 end

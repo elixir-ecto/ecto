@@ -1,7 +1,6 @@
 defmodule Ecto.QueryTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
-  import Ecto.TestHelpers
   import Ecto.Query
   alias Ecto.Query.Query
   alias Ecto.Query.Util
@@ -23,7 +22,6 @@ defmodule Ecto.QueryTest do
   end
 
   def validate(query), do: query |> Util.normalize |> Util.validate([Ecto.Query.API])
-
 
   test "call queryable on every merge" do
     query = from(Post) |> select([p], p.title)

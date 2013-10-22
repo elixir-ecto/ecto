@@ -1,5 +1,5 @@
 defmodule EctoTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   test "the truth" do
     assert(true)

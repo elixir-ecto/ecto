@@ -1,5 +1,5 @@
 defmodule Ecto.Query.SelectBuilderTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   import Ecto.Query.SelectBuilder
 

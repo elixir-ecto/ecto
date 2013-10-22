@@ -1,5 +1,5 @@
 defmodule Ecto.Query.TypespecTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   alias Ecto.Query.API
   alias Ecto.Query.Typespec

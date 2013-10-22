@@ -1,5 +1,5 @@
 defmodule Ecto.Adapters.PostgresTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   defmodule Repo do
     use Ecto.Repo, adapter: Ecto.Adapters.Postgres

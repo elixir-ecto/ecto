@@ -1,5 +1,5 @@
 defmodule Ecto.Query.OrderByBuilderTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   import Ecto.Query.OrderByBuilder
 

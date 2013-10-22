@@ -1,5 +1,5 @@
 defmodule Ecto.EntityTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   defmodule MyEntity do
     use Ecto.Entity

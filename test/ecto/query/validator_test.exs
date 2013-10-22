@@ -1,5 +1,5 @@
 defmodule Ecto.Query.ValidatorTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   import Ecto.Query
   alias Ecto.Query.Query

@@ -1,5 +1,5 @@
 defmodule Ecto.Adapters.Postgres.SQLTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   import Ecto.Query
   import Ecto.Query.Util, only: [normalize: 1]

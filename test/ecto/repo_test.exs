@@ -35,7 +35,7 @@ defmodule Ecto.RepoTest.MyModelNoPK do
 end
 
 defmodule Ecto.RepoTest do
-  use ExUnit.Case, async: true
+  use Ecto.TestCase, async: true
 
   import Ecto.Query
   alias Ecto.Repo
