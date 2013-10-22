@@ -75,8 +75,4 @@ defexception Ecto.AssociationNotLoadedError, [:type, :name, :owner] do
   end
 end
 
-defexception Ecto.MigrationError, [:error_message] do
-  def message(Ecto.MigrationError[] = e) do
-    e.error_message
-  end
-end
+defexception Ecto.MigrationError, [:message]

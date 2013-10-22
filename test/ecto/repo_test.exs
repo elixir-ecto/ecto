@@ -15,7 +15,6 @@ end
 defmodule Ecto.RepoTest.MyRepo do
   use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter
 
-  def priv, do: ""
   def url, do: ""
 end
 

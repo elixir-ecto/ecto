@@ -1,5 +1,4 @@
 defmodule MyApp.MyMigration do
-  
   use Ecto.Migration
 
   def up do

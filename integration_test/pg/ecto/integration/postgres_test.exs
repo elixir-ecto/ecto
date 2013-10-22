@@ -446,6 +446,8 @@ defmodule Ecto.Integration.PostgresTest do
 
   test "migrations test" do
     defmodule EctoMigrations do
+      use Ecto.Migrations
+
       def up do
         "CREATE TABLE migrations_test(id serial primary key, name varchar(25))"
       end
@@ -470,10 +472,10 @@ defmodule Ecto.Integration.PostgresTest do
     #
     # add new migration file
     #
-    migration_content = 
+    migration_content =
     """
     defmodule MyApp.MyMigration2 do
-  
+
       use Ecto.Migration
 
       def up do

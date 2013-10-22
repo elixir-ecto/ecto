@@ -6,7 +6,7 @@ defmodule Ecto.Adapters.Postgres do
   # Each repository has their own pool.
 
   @behaviour Ecto.Adapter
-  @behaviour Ecto.Adapter.Migratable
+  @behaviour Ecto.Adapter.Migrations
 
   @default_port 5432
 
@@ -16,18 +16,14 @@ defmodule Ecto.Adapters.Postgres do
   alias Ecto.Query.Util
   alias Ecto.Query.Normalizer
 
+  ## Adapter API
+
   defmacro __using__(_opts) do
     quote do
       def __postgres__(:pool_name) do
         __MODULE__.Pool
       end
     end
-  end
-
-  @doc false
-  def start(repo) do
-    { pool_opts, worker_opts } = prepare_start(repo)
-    :poolboy.start(pool_opts, worker_opts)
   end
 
   def start_link(repo) do
@@ -41,8 +37,7 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   def all(repo, Query[] = query) do
-    sql = SQL.select(query)
-    result = transaction(repo, sql)
+    result = query(repo, SQL.select(query))
 
     case result do
       { :ok, Postgrex.Result[rows: rows] } ->
@@ -65,8 +60,7 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   def create(repo, entity) do
-    sql = SQL.insert(entity)
-    result = transaction(repo, sql)
+    result = query(repo, SQL.insert(entity))
 
     case result do
       { :ok, Postgrex.Result[rows: [{ primary_key }]] } ->
@@ -78,142 +72,43 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   def update(repo, entity) do
-    sql = SQL.update(entity)
-    case transaction(repo, sql) do
+    case query(repo, SQL.update(entity)) do
       { :ok, Postgrex.Result[num_rows: nrows] } -> { :ok, nrows }
       err -> err
     end
   end
 
   def update_all(repo, query, values) do
-    sql = SQL.update_all(query, values)
-    case transaction(repo, sql) do
+    case query(repo, SQL.update_all(query, values)) do
       { :ok, Postgrex.Result[num_rows: nrows] } -> { :ok, nrows }
       err -> err
     end
   end
 
   def delete(repo, entity) do
-    sql = SQL.delete(entity)
-    case transaction(repo, sql) do
+    case query(repo, SQL.delete(entity)) do
       { :ok, Postgrex.Result[num_rows: nrows] } -> { :ok, nrows }
       err -> err
     end
   end
 
   def delete_all(repo, query) do
-    sql = SQL.delete_all(query)
-    case transaction(repo, sql) do
+    case query(repo, SQL.delete_all(query)) do
       { :ok, Postgrex.Result[num_rows: nrows] } -> { :ok, nrows }
       err -> err
     end
   end
 
-  # Only use internally for now in tests
-  # Only works reliably with pool_size = 1
-
+  # We expose the querying function because we need it in tests.
   @doc false
-  def transaction_begin(repo) do
-    case transaction(repo, "BEGIN") do
-      { :ok, _ } -> :ok
-      err -> err
-    end
-  end
-
-  @doc false
-  def transaction_rollback(repo) do
-    case transaction(repo, "ROLLBACK") do
-      { :ok, _ } -> :ok
-      err -> err
-    end
-  end
-
-  @doc false
-  def transaction_commit(repo) do
-    case transaction(repo, "COMMIT") do
-      { :ok, _ } -> :ok
-      err -> err
-    end
-  end
-
-  @doc false
-  def query(repo, sql), do: transaction(repo, sql)
-
-  @doc false
-  def transaction(repo, sql) when is_binary(sql) do
+  def query(repo, sql) when is_binary(sql) do
     :poolboy.transaction(repo.__postgres__(:pool_name), fn conn ->
       Postgrex.Connection.query(conn, sql)
     end)
   end
 
-  @doc false
-  def transaction(repo, fun) when is_function(fun, 1) do
+  def query(repo, fun) when is_function(fun, 1) do
     :poolboy.transaction(repo.__postgres__(:pool_name), fun)
-  end
-
-  defp create_migrations_table(repo) do
-    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)")
-  end
-
-  defp check_migration_version(repo, version) do
-    case create_migrations_table(repo) do
-      { :ok, _ } -> query(repo, "SELECT version FROM schema_migrations WHERE version = #{integer_to_binary(version)}")
-      err -> err
-    end
-  end
-
-  defp get_all_migration(repo) do
-    case create_migrations_table(repo) do
-      {:error, err} -> {:error, err}
-      _ -> query(repo, "SELECT version FROM schema_migrations;")
-    end
-  end
-
-  defp new_migration_version(repo, version) do
-    query(repo, "INSERT INTO schema_migrations(version) VALUES(#{integer_to_binary(version)})")
-  end
-
-  @doc false
-  def migrate_up(repo, version, commands) do
-    case check_migration_version(repo, version) do
-      { :ok, Postgrex.Result[num_rows: 0] } ->
-        case query(repo, commands) do
-          { :ok, _ } ->
-            case new_migration_version(repo, version) do
-              { :ok, _ } -> :ok
-              err -> err
-            end
-          err ->
-            err
-        end
-      { :ok, _ } ->
-        :already_up
-      err ->
-        err
-    end
-  end
-
-  @doc false
-  def migrate_down(repo, version, commands) do
-    case check_migration_version(repo, version) do
-      { :ok, Postgrex.Result[num_rows: 0] } ->
-        :missing_up
-      { :ok, _ } ->
-        case query(repo, commands) do
-          { :ok, _ } -> :ok
-          err -> err
-        end
-      err ->
-        err
-    end
-  end
-
-  @doc false
-  def migrated_versions(repo) do
-    case get_all_migration(repo) do
-      {:error, err} -> {:error, err}
-      {{:select, _count}, versions} -> versions
-    end
   end
 
   defp transform_row({ :{}, _, list }, values, models) do
@@ -283,5 +178,109 @@ defmodule Ecto.Adapters.Postgres do
 
   defp decoder(_type, _sender, _oid, default, param) do
     default.(param)
+  end
+
+  ## Transaction API
+
+  # Only use internally for now in tests
+  # Only works reliably with pool_size = 1
+
+  @doc false
+  def transaction_begin(repo) do
+    case query(repo, "BEGIN") do
+      { :ok, _ } -> :ok
+      err -> err
+    end
+  end
+
+  @doc false
+  def transaction_rollback(repo) do
+    case query(repo, "ROLLBACK") do
+      { :ok, _ } -> :ok
+      err -> err
+    end
+  end
+
+  @doc false
+  def transaction_commit(repo) do
+    case query(repo, "COMMIT") do
+      { :ok, _ } -> :ok
+      err -> err
+    end
+  end
+
+  ## Migration API
+
+  def migrate_up(repo, version, commands) do
+    case check_migration_version(repo, version) do
+      { :ok, Postgrex.Result[num_rows: 0] } ->
+        # TODO: We need to wrap this inside a database transaction
+        case query(repo, commands) do
+          { :ok, _ } ->
+            case insert_migration_version(repo, version) do
+              { :ok, _ } -> :ok
+              err -> err
+            end
+          err ->
+            err
+        end
+      { :ok, _ } ->
+        :already_up
+      err ->
+        err
+    end
+  end
+
+  def migrate_down(repo, version, commands) do
+    case check_migration_version(repo, version) do
+      { :ok, Postgrex.Result[num_rows: 0] } ->
+        :missing_up
+      { :ok, _ } ->
+        # TODO: We need to wrap this inside a database transaction
+        case query(repo, commands) do
+          { :ok, _ } ->
+            case delete_migration_version(repo, version) do
+              { :ok, _ } -> :ok
+              err -> err
+            end
+          err ->
+            err
+        end
+      err ->
+        err
+    end
+  end
+
+  def migrated_versions(repo) do
+    case create_migrations_table(repo) do
+      { :ok, _ } ->
+        case query(repo, "SELECT version FROM schema_migrations;") do
+          { :ok, Postgrex.Result[rows: rows] } ->
+            { :ok, Enum.map(rows, &elem(&1, 0)) }
+          err ->
+            err
+        end
+      err ->
+        err
+    end
+  end
+
+  defp create_migrations_table(repo) do
+    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)")
+  end
+
+  defp check_migration_version(repo, version) do
+    case create_migrations_table(repo) do
+      { :ok, _ } -> query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}")
+      err -> err
+    end
+  end
+
+  defp insert_migration_version(repo, version) do
+    query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})")
+  end
+
+  defp delete_migration_version(repo, version) do
+    query(repo, "DELETE FROM schema_migrations WHERE version = #{version}")
   end
 end
