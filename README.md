@@ -439,64 +439,41 @@ You can find more information about defining associations and each respective as
 
 ### Migrations
 
-Ecto supports migrations with plain SQL.
-
-```elixir
-defmodule MyApp.MyMigration do
-  use Ecto.Migration 
-
-  def up do
-    "CREATE TABLE user (id serial PRIMARY_KEY, username text)"
-  end
-
-  def down do
-    "DROP TABLE user"
-  end
-end
-```
-
-The migration can be ran with:
-
-```elixir
-Ecto.Migrator.up(Repo, 20130906120000, MyApp.MyMigration) == :ok
-```
-
-The possible results from running a migration are:
-
-  * `:ok` - When the migrations is executed successfully
-  * `:already_up` - When the migration is already in the table (returned by migrate_up)
-  * `:missing_up` - When the migration is not in the table (returned by migrate_down)
-  * `{ :error, error :: term }` - When there is an error from the database
-
-Also you can run migrations with `mix` tool with:
-
-```
-mix ecto.migrate MyApp.Repo 
-```
-
-In this way you repository must export `priv/0` function which will return path to directory with
-migrations modules like:
+Ecto supports migrations with plain SQL. In order to generate a new migration you first need to a define a `priv/0` function inside your repository pointing to a directory that will keep repo data. We recommend it to be placed inside the `priv` directory:
 
 ```elixir
 defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
-  
-  def priv do
-    "priv/db"
-  end
 
-  def url do
-    "ecto://postgres:postgres@localhost/ecto_simple"
+  def priv do
+    "priv/repo"
   end
 end
 ```
 
-`priv/db` directory must have `migrations` directory with migrations files. Migration file is elixir module which name starts with integer number which is migraion version, like:
+Now a migration can be generated with:
 
+    $ mix ecto.gen.migration Repo create_posts
+
+This will create a new file inside `priv/repo/migrations` with the following contents:
+
+```elixir
+defmodule Repo.CreatePosts do
+  use Ecto.Migration
+
+  def up do
+    ""
+  end
+
+  def down do
+    ""
+  end
+end
 ```
-001_first_table.exs
-20130417140000_update_table.exs
-```
+
+Simply write the SQL commands for updating the database and to roll it back and you are ready to go!
+
+The generated file (and all migration files) starts with a timestamp, which identifies the migration version. By running migrations, a `schema_migrations` table will be created in your database to keep which migrations are "up" (already executed) and which ones are "down".
 
 ## Contributing
 
