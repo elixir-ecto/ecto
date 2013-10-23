@@ -1,5 +1,5 @@
 defmodule Ecto.MigratorTest do
-  use Ecto.TestCase, async: true
+  use Ecto.TestCase
 
   defmodule ProcessRepo do
     @behaviour Ecto.Adapter.Migrations

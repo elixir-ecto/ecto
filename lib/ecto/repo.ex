@@ -85,6 +85,10 @@ defmodule Ecto.Repo do
         [ Ecto.Query.API ]
       end
 
+      def __repo__ do
+        true
+      end
+
       defoverridable [query_apis: 0]
     end
   end
@@ -98,9 +102,15 @@ defmodule Ecto.Repo do
   defcallback url() :: String.t
   
   @doc """
-  Starts any connection pooling or supervision, if implemented by the adapter.
+  Starts any connection pooling or supervision and return `{ :ok, pid }`
+  or just `:ok` if nothing needs to be done.
+
+  Returns `{ :error, { :already_started, pid } }` if the repo already
+  started or `{ :error, term }` in case anything else goes wrong.
   """
-  defcallback start_link() :: { :ok, pid } | :ok | { :error, term }
+  defcallback start_link() :: { :ok, pid } | :ok |
+                              { :error, { :already_started, pid } } |
+                              { :error, term }
 
   @doc """
   Stops any connection pooling or supervision started with `start_link/1`.
