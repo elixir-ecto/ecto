@@ -166,14 +166,19 @@ defmodule Ecto.Adapters.Postgres do
     { pool_opts, worker_opts }
   end
 
-  defp decoder(_type, timestamp, _oid, default, param) when timestamp in [:timestamp, :timestamptz] do
-    { { year, mon, day }, { hour, min, sec } } = default.(param)
-    Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
+  defp decoder(_type, :bytea, _oid, default, param) do
+    value = default.(param)
+    Ecto.Binary[value: value]
   end
 
   defp decoder(_type, :interval, _oid, default, param) do
     { mon, day, sec } = default.(param)
     Ecto.Interval[month: mon, day: day, sec: sec]
+  end
+
+  defp decoder(_type, timestamp, _oid, default, param) when timestamp in [:timestamp, :timestamptz] do
+    { { year, mon, day }, { hour, min, sec } } = default.(param)
+    Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
   end
 
   defp decoder(_type, _sender, _oid, default, param) do
