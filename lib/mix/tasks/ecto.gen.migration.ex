@@ -17,6 +17,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   def run(args) do
     case parse_repo(args) do
       { repo, [file] } ->
+        ensure_repo(repo)
         path = migrations_path(repo)
         create_directory path
         create_file Path.join(path, "#{timestamp}_#{file}.exs"),

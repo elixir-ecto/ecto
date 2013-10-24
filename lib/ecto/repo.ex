@@ -41,6 +41,8 @@ defmodule Ecto.Repo do
       use unquote(adapter)
       @behaviour Ecto.Repo
 
+      import Ecto.Utils, only: [app_dir: 2]
+
       def start_link do
         Ecto.Repo.start_link(__MODULE__, unquote(adapter))
       end

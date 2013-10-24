@@ -7,12 +7,12 @@ defmodule Mix.Tasks.Ecto do
   and ensure the repository is loaded and available.
   """
   @spec parse_repo([term]) :: { Ecto.Repo.t, [term] } | no_return
-  def parse_repo([h|t]) when is_binary(h) do
-    { ensure_repo(Module.concat([h])), t }
+  def parse_repo([h|t]) when is_binary(h) and h != "" do
+    { Module.concat([h]), t }
   end
 
-  def parse_repo([h|t]) when is_atom(h) do
-    { ensure_repo(h), t }
+  def parse_repo([h|t]) when is_atom(h) and h != :"" do
+    { h, t }
   end
 
   def parse_repo(_) do

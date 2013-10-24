@@ -17,6 +17,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
   """
   def run(args, migrator // &Ecto.Migrator.run_up/2) do
     { repo, _ } = parse_repo(args)
+    ensure_repo(repo)
     ensure_started(repo)
     migrator.(repo, migrations_path(repo))
   end

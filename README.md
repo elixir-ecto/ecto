@@ -319,6 +319,10 @@ With this, we finish our introduction. The next section goes into more details o
 
 ## Other topics
 
+### Generators and other tasks
+
+Ecto provides many generators and tasks to help your workflow. Check them by typing `mix help` inside an application after Ecto is installed. All tasks are inside the `ecto.*` namespace.
+
 ### Types and casting
 
 When defining each entity field, a type needs to be given. Those types are specific to Ecto and must be one of:
@@ -439,19 +443,19 @@ You can find more information about defining associations and each respective as
 
 ### Migrations
 
-Ecto supports migrations with plain SQL. In order to generate a new migration you first need to a define a `priv/0` function inside your repository pointing to a directory that will keep repo data. We recommend it to be placed inside the `priv` directory:
+Ecto supports migrations with plain SQL. In order to generate a new migration you first need to a define a `priv/0` function inside your repository pointing to a directory that will keep repo data. We recommend it to be placed inside the `priv` in your application directory:
 
 ```elixir
 defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def priv do
-    "priv/repo"
+    app_dir(:YOUR_APP_NAME, "priv/repo")
   end
 end
 ```
 
-Now a migration can be generated with:
+Where `:YOUR_APP_NAME` is your application name (as in the `mix.exs` file). Now a migration can be generated with:
 
     $ mix ecto.gen.migration Repo create_posts
 

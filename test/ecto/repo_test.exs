@@ -15,7 +15,8 @@ end
 defmodule Ecto.RepoTest.MyRepo do
   use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter
 
-  def url, do: ""
+  def url,  do: ""
+  def priv, do: app_dir(:ecto, "priv/db")
 end
 
 defmodule Ecto.RepoTest.MyModel do
@@ -202,5 +203,9 @@ defmodule Ecto.RepoTest do
     assert_raise ArgumentError, fn ->
       MyRepo.create(MyModel.Entity[x: {123}])
     end
+  end
+
+  test "app_dir is available" do
+    assert MyRepo.priv == Path.expand("../../priv/db", __DIR__)
   end
 end

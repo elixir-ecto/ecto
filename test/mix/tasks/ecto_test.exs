@@ -22,10 +22,14 @@ defmodule Mix.Tasks.EctoTest do
     assert parse_repo([Repo, "foo"]) == { Repo, ["foo"] }
     assert parse_repo([inspect(Repo), "foo"]) == { Repo, ["foo"] }
     assert parse_repo([to_string(Repo), "foo"]) == { Repo, ["foo"] }
-
     assert_raise Mix.Error, fn -> parse_repo([]) end
-    assert_raise Mix.Error, fn -> parse_repo([String]) end
-    assert_raise Mix.Error, fn -> parse_repo([NotLoaded]) end
+    assert_raise Mix.Error, fn -> parse_repo([""]) end
+  end
+
+  test :ensure_repo do
+    assert ensure_repo(Repo) == Repo
+    assert_raise Mix.Error, fn -> parse_repo(String) end
+    assert_raise Mix.Error, fn -> parse_repo(NotLoaded) end
   end
 
   test :ensure_started do
