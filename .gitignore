@@ -1,5 +1,5 @@
 /ebin
 /deps
 /docs
-/test/tmp
+/tmp
 erl_crash.dump

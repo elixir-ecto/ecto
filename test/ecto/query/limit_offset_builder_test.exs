@@ -1,5 +1,7 @@
 defmodule Ecto.Query.LimitOffsetBuilderTest do
-  use Ecto.TestCase, async: true
+  use ExUnit.Case, async: true
+
+  import Support.CompileHelpers
   import Ecto.Query, warn: false
 
   defmodule Post do

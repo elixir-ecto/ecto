@@ -1,3 +1,3 @@
 defmodule EctoTest do
-  use Ecto.TestCase, async: true
+  use ExUnit.Case, async: true
 end

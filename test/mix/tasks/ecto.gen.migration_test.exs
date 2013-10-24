@@ -1,8 +1,10 @@
 defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
-  use Ecto.TestCase, async: true
+  use ExUnit.Case, async: true
+
+  import Support.FileHelpers
   import Mix.Tasks.Ecto.Gen.Migration, only: [run: 1]
 
-  tmp_path = Path.join(Ecto.TestCase.tmp_path, inspect(Ecto.Gen.Migration))
+  tmp_path = Path.join(tmp_path, inspect(Ecto.Gen.Migration))
   @migrations_path Path.join(tmp_path, "migrations")
 
   defmodule Repo do

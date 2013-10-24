@@ -1,5 +1,7 @@
 defmodule Ecto.MigratorTest do
-  use Ecto.TestCase
+  use ExUnit.Case
+
+  import Support.FileHelpers
 
   defmodule ProcessRepo do
     @behaviour Ecto.Adapter.Migrations

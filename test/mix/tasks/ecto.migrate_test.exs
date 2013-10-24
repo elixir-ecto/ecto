@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Ecto.MigrateTest do
-  use Ecto.TestCase, async: true
+  use ExUnit.Case, async: true
 
   import Mix.Tasks.Ecto.Migrate, only: [run: 2]
 

@@ -1,5 +1,9 @@
-defmodule Ecto.Integration.PostgresTest do
+defmodule Ecto.Integration.RepoTest do
   use Ecto.Integration.Postgres.Case
+
+  test "returns already started for started repos" do
+    assert { :error, { :already_started, _ } } = TestRepo.start_link
+  end
 
   test "fetch empty" do
     assert [] == TestRepo.all(from p in Post)
@@ -435,76 +439,5 @@ defmodule Ecto.Integration.PostgresTest do
 
     query = from(p in Post, left_join: c in p.permalink, order_by: p.id, select: {p, c})
     assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
-  end
-
-  test "datetime type" do
-    now = Ecto.DateTime[year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0]
-    c = TestRepo.create(Comment.Entity[posted: now])
-
-    assert Comment.Entity[posted: ^now] = TestRepo.get(Comment, c.id)
-  end
-
-  test "interval type" do
-    interval = Ecto.Interval[year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0]
-    c = TestRepo.create(Comment.Entity[interval: interval])
-
-    assert Comment.Entity[interval: Ecto.Interval[]] = TestRepo.get(Comment, c.id)
-  end
-
-  test "binary type" do
-    binary = Ecto.Binary[value: << 0, 1, 2, 3, 4 >>]
-    c = TestRepo.create(Comment.Entity[bytes: binary])
-
-    assert Comment.Entity[bytes: ^binary] = TestRepo.get(Comment, c.id)
-  end
-
-  test "migrations test" do
-    defmodule EctoMigrations do
-      use Ecto.Migration
-
-      def up do
-        "CREATE TABLE migrations_test(id serial primary key, name varchar(25))"
-      end
-
-      def down do
-        "DROP table migrations_test"
-      end
-    end
-
-    import Ecto.Migrator
-
-    assert up(TestRepo, 20080906120000, EctoMigrations) == :ok
-    assert up(TestRepo, 20080906120000, EctoMigrations) == :already_up
-    assert down(TestRepo, 20080906120001, EctoMigrations) == :missing_up
-    assert down(TestRepo, 20080906120000, EctoMigrations) == :ok
-  end
-
-  test "mix ecto.migrate test" do
-    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [1])
-    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [])
-
-    #
-    # add new migration file
-    #
-    migration_content =
-    """
-    defmodule MyApp.MyMigration2 do
-
-      use Ecto.Migration
-
-      def up do
-        "ALTER TABLE products ADD count int NOT NULL;"
-      end
-
-      def down do
-        "DROP TABLE products;"
-      end
-    end
-    """
-    File.write("integration_test/pg/ecto/priv/migrations/002_mig.exs", migration_content)
-    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [2])
-    assert (Mix.Tasks.Ecto.Migrate.run([Ecto.Integration.Postgres.TestRepo]) == [])
-    File.rm("integration_test/pg/ecto/priv/migrations/002_mig.exs")
-
   end
 end

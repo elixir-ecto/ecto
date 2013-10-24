@@ -1,5 +1,5 @@
 defmodule Ecto.AssociationsTest do
-  use Ecto.TestCase, async: true
+  use ExUnit.Case, async: true
 
   defmodule Post do
     use Ecto.Model

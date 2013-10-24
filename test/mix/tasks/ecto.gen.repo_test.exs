@@ -1,5 +1,7 @@
 defmodule Mix.Tasks.Ecto.Gen.RepoTest do
-  use Ecto.TestCase
+  use ExUnit.Case
+
+  import Support.FileHelpers
   import Mix.Tasks.Ecto.Gen.Repo, only: [run: 1]
 
   test "generates a new repo" do

@@ -1,7 +1,9 @@
 defmodule Ecto.QueryTest do
-  use Ecto.TestCase, async: true
+  use ExUnit.Case, async: true
 
+  import Support.CompileHelpers
   import Ecto.Query
+
   alias Ecto.Query.Query
   alias Ecto.Query.Util
 
