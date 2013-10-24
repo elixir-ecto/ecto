@@ -16,12 +16,16 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   """
   def run(args) do
     case parse_repo(args) do
-      { repo, [file] } ->
+      { repo, [name] } ->
         ensure_repo(repo)
         path = migrations_path(repo)
+        file = Path.join(path, "#{timestamp}_#{name}.exs")
         create_directory path
-        create_file Path.join(path, "#{timestamp}_#{file}.exs"),
-                    migration_template(mod: Module.concat(repo, camelize(file)))
+        create_file file, migration_template(mod: Module.concat([repo, Migrations, camelize(name)]))
+
+        if open?(file) && Mix.shell.yes?("Do you want to run this migration?") do
+          Mix.Task.run "ecto.migrate", [repo]
+        end
       { _repo, _ } ->
         raise Mix.Error, message:
               "expected ecto.gen.migration to receive the migration file name, got: #{inspect Enum.join(args, " ")}"

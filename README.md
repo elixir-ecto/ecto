@@ -319,9 +319,13 @@ With this, we finish our introduction. The next section goes into more details o
 
 ## Other topics
 
-### Generators and other tasks
+### Mix tasks and generators
 
-Ecto provides many generators and tasks to help your workflow. Check them by typing `mix help` inside an application after Ecto is installed. All tasks are inside the `ecto.*` namespace.
+Ecto provides many tasks to help your workflow as well as code generators. You can find all available tasks by typing `mix help` inside a project with Ecto.
+
+Ecto generators will automatically open the generator files if you have `ECTO_EDITOR` set in your environment variable. You can set this variable for different editors as follows:
+
+* Textmate: `mate -a`
 
 ### Types and casting
 

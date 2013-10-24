@@ -25,7 +25,7 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
     assert [name] = File.ls!(@migrations_path)
     assert name =~ %r/^\d{14}_my_migration\.exs$/
     assert_file Path.join(@migrations_path, name), fn file ->
-      assert file =~ "defmodule Mix.Tasks.Ecto.Gen.MigrationTest.Repo.MyMigration do"
+      assert file =~ "defmodule Mix.Tasks.Ecto.Gen.MigrationTest.Repo.Migrations.MyMigration do"
       assert file =~ "use Ecto.Migration"
       assert file =~ "def up do"
       assert file =~ "def down do"

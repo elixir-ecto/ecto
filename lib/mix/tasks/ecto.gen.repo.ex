@@ -26,6 +26,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     create_directory Path.dirname(file)
     create_file file, repo_template(mod: repo, app: app, base: base)
+    open?(file)
   end
 
   embed_template :repo, """

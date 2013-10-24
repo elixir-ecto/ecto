@@ -1,5 +1,6 @@
 Mix.start()
 Mix.shell(Mix.Shell.Process)
+System.put_env("ECTO_EDITOR", "")
 
 ExUnit.start()
 

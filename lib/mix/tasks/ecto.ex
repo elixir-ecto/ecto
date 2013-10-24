@@ -51,7 +51,7 @@ defmodule Mix.Tasks.Ecto do
   end
 
   @doc """
-  Get the migrations path from a repository.
+  Gets the migrations path from a repository.
   """
   @spec migrations_path(Ecto.Repo.T) :: String.t | no_return
   def migrations_path(repo) do
@@ -59,6 +59,19 @@ defmodule Mix.Tasks.Ecto do
       Path.join(repo.priv, "migrations")
     else
       raise Mix.Error, message: "expected repo #{inspect repo} to define priv/0 in order to use migrations"
+    end
+  end
+
+  @doc """
+  Asks if the user wants to open a file based on ECTO_EDITOR.
+  """
+  def open?(file) do
+    editor = System.get_env("ECTO_EDITOR") || ""
+    if editor != "" do
+      System.cmd editor <> " " <> inspect(file)
+      true
+    else
+      false
     end
   end
 end
