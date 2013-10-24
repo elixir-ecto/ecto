@@ -2,7 +2,7 @@ defmodule Ecto.RepoTest.MockAdapter do
   @behaviour Ecto.Adapter
 
   defmacro __using__(_opts), do: :ok
-  def start_link(_repo), do: :ok
+  def start_link(_repo, _opts), do: :ok
   def stop(_repo), do: :ok
   def all(_repo, _query), do: { :ok, [] }
   def create(_repo, _record), do: 42
@@ -46,45 +46,6 @@ defmodule Ecto.RepoTest do
   alias Ecto.RepoTest.MyModel
   alias Ecto.RepoTest.MyModelNoPK
   require MyRepo
-
-  test "parse url" do
-    url = Repo.parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b", 0)
-    assert { :password, "hunter2" } in url
-    assert { :username, "eric" } in url
-    assert { :hostname, "host" } in url
-    assert { :database, "mydb" } in url
-    assert { :port, 12345 } in url
-    assert { :size, "10" } in url
-    assert { :a, "b" } in url
-  end
-
-  test "parse invalid url" do
-    assert_raise Ecto.InvalidURL, %r"not an ecto url", fn ->
-      Repo.parse_url("http://eric:hunter2@host:123/mydb", 0)
-    end
-
-    assert_raise Ecto.InvalidURL, %r"url has to contain a username", fn ->
-      Repo.parse_url("ecto://host:123/mydb", 0)
-    end
-
-    assert_raise Ecto.InvalidURL, %r"path should be a database name", fn ->
-      Repo.parse_url("ecto://eric:hunter2@host:123/a/b/c", 0)
-    end
-
-    assert_raise Ecto.InvalidURL, %r"path should be a database name", fn ->
-      Repo.parse_url("ecto://eric:hunter2@host:123/", 0)
-    end
-  end
-
-  test "default port" do
-    settings = Repo.parse_url("ecto://eric:hunter2@host/mydb", 54321)
-    assert settings[:port] == 54321
-  end
-
-  test "optional password" do
-    url = Repo.parse_url("ecto://eric@host:123/mydb", 0)
-    refute url[:password]
-  end
 
   test "repo validates query" do
     import Ecto.Query

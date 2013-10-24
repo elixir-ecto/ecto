@@ -123,7 +123,7 @@ setup_database = [
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 
-{ :ok, _pid } = Postgres.start_link(TestRepo)
+{ :ok, _pid } = TestRepo.start_link
 
 Enum.each(setup_database, fn(sql) ->
   result = Postgres.query(TestRepo, sql)

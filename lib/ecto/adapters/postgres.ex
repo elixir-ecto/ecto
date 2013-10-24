@@ -26,8 +26,8 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
-  def start_link(repo) do
-    { pool_opts, worker_opts } = prepare_start(repo)
+  def start_link(repo, opts) do
+    { pool_opts, worker_opts } = prepare_start(repo, opts)
     :poolboy.start_link(pool_opts, worker_opts)
   end
 
@@ -148,20 +148,20 @@ defmodule Ecto.Adapters.Postgres do
     { value, values }
   end
 
-  defp prepare_start(repo) do
+  defp prepare_start(repo, opts) do
     pool_name = repo.__postgres__(:pool_name)
-    opts      = Ecto.Repo.parse_url(repo.url, @default_port)
-
     { pool_opts, worker_opts } = Dict.split(opts, [:size, :max_overflow])
+
     pool_opts = pool_opts
-      |> Keyword.update(:size, 5, &binary_to_integer(&1))
-      |> Keyword.update(:max_overflow, 10, &binary_to_integer(&1))
+                |> Keyword.update(:size, 5, &binary_to_integer(&1))
+                |> Keyword.update(:max_overflow, 10, &binary_to_integer(&1))
 
-    pool_opts = pool_opts ++ [
-      name: { :local, pool_name },
-      worker_module: Postgrex.Connection ]
+    pool_opts = [ name: { :local, pool_name },
+                  worker_module: Postgrex.Connection ] ++ pool_opts
 
-    worker_opts = worker_opts ++ [decoder: &decoder/5]
+    worker_opts = worker_opts
+                  |> Keyword.put(:decoder, &decoder/5)
+                  |> Keyword.put_new(:port, @default_port)
 
     { pool_opts, worker_opts }
   end
