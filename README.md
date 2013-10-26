@@ -128,11 +128,11 @@ defmodule Weather.Entity do
 end
 ```
 
-Since entities are records, all the record functionality is available:
+Since entities are records, they are equally immutable and all the record functionality is available:
 
 ```elixir
 weather = Weather.Entity.new
-weather.temp_lo = 30
+weather = weather.temp_lo(30
 weather.temp_lo #=> 30
 ```
 
@@ -158,7 +158,7 @@ By using `Ecto.Model` all the functionality above is included, but you can cherr
 
 #### Queryable
 
-The most basic functionality in a model is the queryable one. It connects an entity to a database table, allowing us to finally interact with a repository. Given the `Weather.Entity` defined above, we can integrate it into a model as follows:
+The most basic functionality in a model is the queryable one. It connects an entity to a database table, allowing us to finally interact with a repository. Given the `Weather.Entity` defined above, we can integrate it with a model as follows:
 
 ```elixir
 defmodule Weather do
@@ -186,7 +186,7 @@ This compact model/entity definition is the preferred format (unless you need a 
 
 ```elixir
 weather = Weather.new(temp_lo: 0, temp_hi: 23)
-Weather.Entity[temp_lo: 0, temp_hi: 23]
+#=> Weather.Entity[temp_lo: 0, temp_hi: 23]
 ```
 
 A repository in Elixir only works with queryable structures. Since we have defined our model as a queryable structure, we can finally interact with the repository:
@@ -214,7 +214,7 @@ Repo.delete(weather)
 
 Notice how the storage (repository), the data (entity) and the behaviour (model) are decoupled, with the model acting as a thin layer connecting the repository and the data. This provides many benefits:
 
-* By containing just data, we guarantee that entities are light-weight, serializable structures. In many languages, the entities are represented by large, complex objects, with entwined state transactions;
+* By containing just data, we guarantee that entities are light-weight, serializable structures. In many languages, the entities are represented by large, complex objects, with entwined state transactions, which makes serialization particularly hard;
 * By providing behaviour in modules, they are easy to compose (it is a matter of composing functions). You can easily have different entities sharing the same set of validations. Or the same entity being controlled by a different set of validations and rules on different parts of the application. For example, a Weather entity may require a different set of validations and data integrity rules depending on the role of the user manipulating the data;
 * By concerning only with storage, operations on the repository are simple and fast. You control the steps your data pass through before entering the repository. We don't pollute the repository with unecessary overhead, providing straight-forward and performant access to storage;
 
@@ -225,7 +225,7 @@ def update(id, params) do
   weather = Repo.get(Weather, id).update(params)
 
   case Weather.validate(weather) do
-    :ok    -> json weather: Repo.create(weather)
+    []     -> json weather: Repo.create(weather)
     errors -> json errors: errors
   end
 end
@@ -315,7 +315,7 @@ Got: float == string
 
 The error message is saying that, the database operator `==/2` can compare numbers with numbers, be them integer or floats, it can compare any value with other value of the same type (`var == var`), and it can compare any other value with `nil`.
 
-With this, we finish our introduction. The next section goes into more details on how Ecto integrates with OTP, how to use associations and more.
+With this, we finish our introduction. The next section goes into more details on other Ecto features, like generators, associations and more.
 
 ## Other topics
 
@@ -348,22 +348,6 @@ weather.temp_lo #=> "0"
 ```
 
 As seen before, Ecto validates the types when a query is being prepared to be sent to the database. So if you attempt to persist the entity above, an error will be raised.
-
-**Yet to be implemented:** since in many applications it is common to receive attributes in a string format and then cast those attributes, Ecto adds an `assign` function to entities:
-
-```elixir
-weather = Weather.Entity.assign(temp_lo: "0")
-weather.temp_lo #=> 0.0
-```
-
-`assign` is also available for updates:
-
-```elixir
-weather = Weather.Entity.new(temp_lo: 23.0)
-weather = weather.assign(temp_lo: "25.2")
-weather.temp_lo #=> 25.2
-```
-In general, when receiving data from external sources, `assign` is the function recommended to be used.
 
 ### Associations
 
@@ -419,14 +403,16 @@ query = from p in Post,
 post.comments.to_list #=> [Comment.Entity[...], Comment.Entity[...]]
 ```
 
-Notice we used the `assoc` helper to associate the returned posts and comments while assembling the query results. In many cases, developers simply want to get all posts with all associated comments. For such, Ecto support preloads:
+Notice we used the `assoc` helper to associate the returned posts and comments while assembling the query results.
+
+It is easy to see above though that a developer simply wants to get all comments associated to each post. There is no filtering based on the underlying comment. For such, Ecto support preloads:
 
 ```elixir
 posts = Repo.all(from p in Post, preload: [:comments])
 hd(posts).comments.to_list #=> [Comment.Entity[...], Comment.Entity[...]]
 ```
 
-When preloading, differently from `join`, Ecto does a separate query to retrieve all comments associated with the returned posts.
+When preloading, Ecto first fetches all posts and then Ecto does a separate query to retrieve all comments associated with the returned posts.
 
 Notice that Ecto does not lazy load associations. While lazily loading associations may sound convenient at first, in the long run it becomes a source of confusion and performance issues. That said, if you call `to_list` in an association that is not currently loaded, Ecto will raise an error:
 
@@ -435,7 +421,7 @@ post = Repo.get(Post, 42)
 post.comments.to_list #=> ** (Ecto.AssociationNotLoadedError)
 ```
 
-Besides `has_many`, Ecto also supports `has_one` and `belongs_to` associations. They work similarly, except retrieve the association value is done via `get`, instead of `to_list`:
+Besides `has_many`, Ecto also supports `has_one` and `belongs_to` associations. They work similarly, except retrieving the association value is done via `get`, instead of `to_list`:
 
 ```elixir
 query = from(c in Comment, where: c.id == 42, preload: :post)
@@ -479,9 +465,9 @@ defmodule Repo.CreatePosts do
 end
 ```
 
-Simply write the SQL commands for updating the database and to roll it back and you are ready to go!
+Simply write the SQL commands for updating the database (`up`) and for rolling it back (`down`) and you are ready to go!
 
-The generated file (and all migration files) starts with a timestamp, which identifies the migration version. By running migrations, a `schema_migrations` table will be created in your database to keep which migrations are "up" (already executed) and which ones are "down".
+Note the generated file (and all migration files) starts with a timestamp, which identifies the migration version. By running migrations, a `schema_migrations` table will be created in your database to keep which migrations are "up" (already executed) and which ones are "down".
 
 ## Contributing
 
