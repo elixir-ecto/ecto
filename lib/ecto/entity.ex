@@ -80,8 +80,8 @@ defmodule Ecto.Entity do
 
   ## Options
 
-    * `:foreign_key` - Sets the foreign key that is used on the other entity,
-                       defaults to: `:"#{model}_id"`;
+    * `:foreign_key` - Sets the foreign key, this should map to a field on the
+                       other entity, defaults to: `:"#{model}_id"`;
     * `:primary_key` - Sets the key on the current entity to be used for the
                        association, defaults to the primary key on the entity;
 
@@ -126,8 +126,8 @@ defmodule Ecto.Entity do
 
   ## Options
 
-    * `:foreign_key` - Sets the foreign key that is used on the other entity,
-                       defaults to: `:"#{model}_id"`;
+    * `:foreign_key` - Sets the foreign key, this should map to a field on the
+                       other entity, defaults to: `:"#{model}_id"`;
     * `:primary_key` - Sets the key on the current entity to be used for the
                        association, defaults to the primary key on the entity;
 
@@ -157,7 +157,7 @@ defmodule Ecto.Entity do
   end
 
   @doc %S"""
-  Indiciates a one-to-one association with another queryable, this entity
+  Indicates a one-to-one association with another queryable, this entity
   belongs to zero or one records of the queryable structure. The other queryable
   often has a `has_one` or a `has_many` field with the reverse association.
 
@@ -165,6 +165,9 @@ defmodule Ecto.Entity do
   this field, see `Ecto.Associations.BelongsTo` for more information. Check the
   examples to see how to perform queries on the association and
   `Ecto.Query.join/3` for joins. Will also generate a foreign key field.
+
+  Compared to `has_one` this association should be used where you would place
+  the foreign key on a SQL table.
 
   ## Options
 
