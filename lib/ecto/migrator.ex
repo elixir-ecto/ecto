@@ -24,14 +24,16 @@ defmodule Ecto.Migrator do
   Runs an up migration on the given repository.
   """
   def up(repo, version, module) do
-    repo.adapter.migrate_up(repo, version, module.up)
+    commands = List.wrap(module.up)
+    repo.adapter.migrate_up(repo, version, commands)
   end
 
   @doc """
   Runs a down migration on the given repository.
   """
   def down(repo, version, module) do
-    repo.adapter.migrate_down(repo, version, module.down)
+    commands = List.wrap(module.down)
+    repo.adapter.migrate_down(repo, version, commands)
   end
 
   @doc """
@@ -86,7 +88,8 @@ defmodule Ecto.Migrator do
           function_exported?(mod, :__migration__, 0)
         end) || raise_no_migration_in_file(file)
 
-      case repo.adapter.migrate_up(repo, version, mod.up) do
+      commands = List.wrap(mod.up)
+      case repo.adapter.migrate_up(repo, version, commands) do
         { :error, error } ->
           raise Ecto.MigrationError, message: "could not migrate, got: #{inspect error}"
         :already_up ->

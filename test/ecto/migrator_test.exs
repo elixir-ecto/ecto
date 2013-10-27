@@ -10,7 +10,7 @@ defmodule Ecto.MigratorTest do
       __MODULE__
     end
 
-    def migrate_up(__MODULE__, id, "up") do
+    def migrate_up(__MODULE__, id, ["up"]) do
       case migrated_versions(__MODULE__) do
         { :ok, versions } ->
           if id in versions, do: :already_up, else: :ok
@@ -19,7 +19,7 @@ defmodule Ecto.MigratorTest do
       end
     end
 
-    def migrate_down(__MODULE__, id, "down") do
+    def migrate_down(__MODULE__, id, ["down"]) do
       case migrated_versions(__MODULE__) do
         { :ok, versions } ->
           if id in versions, do: :ok, else: :already_down
@@ -115,7 +115,7 @@ defmodule Ecto.MigratorTest do
       def up do
         "up"
       end
-      
+
       def down do
         "down"
       end

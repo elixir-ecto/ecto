@@ -220,15 +220,9 @@ defmodule Ecto.Adapters.Postgres do
     case check_migration_version(repo, version) do
       { :ok, Postgrex.Result[num_rows: 0] } ->
         # TODO: We need to wrap this inside a database transaction
-        case query(repo, commands) do
-          { :ok, _ } ->
-            case insert_migration_version(repo, version) do
-              { :ok, _ } -> :ok
-              err -> err
-            end
-          err ->
-            err
-        end
+        run_commands(repo, commands, fn ->
+          insert_migration_version(repo, version)
+        end)
       { :ok, _ } ->
         :already_up
       err ->
@@ -242,18 +236,26 @@ defmodule Ecto.Adapters.Postgres do
         :missing_up
       { :ok, _ } ->
         # TODO: We need to wrap this inside a database transaction
-        case query(repo, commands) do
-          { :ok, _ } ->
-            case delete_migration_version(repo, version) do
-              { :ok, _ } -> :ok
-              err -> err
-            end
-          err ->
-            err
-        end
+        run_commands(repo, commands, fn ->
+          delete_migration_version(repo, version)
+        end)
       err ->
         err
     end
+  end
+
+  defp run_commands(repo, commands, fun) do
+    Enum.find_value(commands, :ok, fn command ->
+      case query(repo, command) do
+        { :ok, _ } ->
+          case fun.() do
+            { :ok, _ } -> nil
+            err -> err
+          end
+        err ->
+          err
+      end
+    end)
   end
 
   def migrated_versions(repo) do
