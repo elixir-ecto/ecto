@@ -9,6 +9,11 @@ defmodule Ecto.Query.GroupByBuilder do
     Enum.map(list, &escape_field(&1, vars))
   end
 
+  def escape({ var, _, context }, vars)
+      when is_atom(var) and is_atom(context) do
+    BuilderUtil.escape_var(var, vars)
+  end
+
   def escape(field, vars) do
     [ escape_field(field, vars) ]
   end

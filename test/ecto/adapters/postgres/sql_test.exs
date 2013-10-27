@@ -266,6 +266,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = from(Model) |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.x\nFROM model AS m0\nGROUP BY m0.x, m0.y"
+
+    query = from(Model) |> group_by([r], r) |> select([r], r.x) |> normalize
+    assert SQL.select(query) == "SELECT m0.x\nFROM model AS m0\nGROUP BY m0.id, m0.x, m0.y"
   end
 
   defrecord Rec, [:x]

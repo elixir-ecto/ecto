@@ -11,7 +11,10 @@ defmodule Ecto.Query.Normalizer do
   alias Ecto.Reflections.BelongsTo
 
   def normalize(Query[] = query, opts) do
-    query |> auto_select(opts) |> setup_models
+    query
+    |> setup_models
+    |> auto_select(opts)
+    |> normalize_group_by
   end
 
   # Transform an assocation join to an ordinary join
@@ -55,6 +58,19 @@ defmodule Ecto.Query.Normalizer do
     else
       query
     end
+  end
+
+  # Group by all fields
+  defp normalize_group_by(Query[] = query) do
+    Enum.map(query.group_bys, fn
+      QueryExpr[expr: { :&, _, _ } = var] = expr ->
+        model = Util.find_model(query.models, var)
+        entity = model.__model__(:entity)
+        fields = entity.__entity__(:field_names)
+        expr.expr(Enum.map(fields, &{ var, &1 }))
+      field ->
+        field
+    end) |> query.group_bys
   end
 
   # Adds all models to the query for fast access
