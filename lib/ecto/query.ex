@@ -440,6 +440,11 @@ defmodule Ecto.Query do
         group_by: p.category,
         select: { p.category, count(p.id) })
 
+      # Group on all fields on the Post entity
+      from(p in Post,
+        group_by: p,
+        select: p)
+
   ## Expressions examples
 
       from(Post) |> group_by([p], p.category) |> select([p], count(p.id))

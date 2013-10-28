@@ -10,7 +10,7 @@ defmodule Ecto.Validator do
 
   Validations are passed as the second argument in the attribute-predicate
   format. Each predicate can be filtered via the `when` operator. Note `when`
-  here is not limited only to guard expressions.
+  here is not limited to only guard expressions.
 
   The predicates above are going to receive the attribute being validated
   and its current value as argument. For example, the `present` predicate

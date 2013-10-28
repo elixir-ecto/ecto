@@ -41,7 +41,7 @@ defmodule Ecto.Validator.Predicates do
 
   ## Options
 
-  * `:message` - defaults to "must be blanke"
+  * `:message` - defaults to "must be blank"
 
   ## Examples
 
