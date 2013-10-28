@@ -6,7 +6,6 @@ defprotocol Ecto.Queryable do
   """
   @only [Record, Atom]
 
-
   def to_query(expr)
 end
 

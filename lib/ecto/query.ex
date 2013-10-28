@@ -100,6 +100,13 @@ defmodule Ecto.Query do
   alias Ecto.Query.JoinBuilder
   alias Ecto.Query.Util
 
+  @doc false
+  defmacro __using__(_) do
+    quote do
+      import unquote(__MODULE__), only: [from: 1, from: 2]
+    end
+  end
+
   @doc """
   Creates a query. It can either be a keyword query or a query expression. If it
   is a keyword query the first argument should be an `in` expression and the
