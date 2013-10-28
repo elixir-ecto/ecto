@@ -65,7 +65,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an insert statement
   def insert(entity) do
     module      = elem(entity, 0)
-    table       = entity.model.__model__(:name)
+    table       = entity.model.__model__(:source)
     primary_key = module.__entity__(:primary_key)
     pk_value    = entity.primary_key
 
@@ -81,7 +81,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for an update statement
   def update(entity) do
     module   = elem(entity, 0)
-    table    = entity.model.__model__(:name)
+    table    = entity.model.__model__(:source)
     pk_field = module.__entity__(:primary_key)
     pk_value = entity.primary_key
 
@@ -104,7 +104,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     names  = create_names(query)
     entity = elem(names, 0)
     name   = elem(entity, 1)
-    table  = query.from.__model__(:name)
+    table  = query.from.__model__(:source)
 
     zipped_sql = Enum.map_join(values, ", ", fn({field, expr}) ->
       "#{field} = #{expr(expr, names)}"
@@ -120,7 +120,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a delete statement
   def delete(entity) do
     module   = elem(entity, 0)
-    table    = entity.model.__model__(:name)
+    table    = entity.model.__model__(:source)
     pk_field = module.__entity__(:primary_key)
     pk_value = entity.primary_key
 
@@ -136,7 +136,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     names  = create_names(query)
     entity = elem(names, 0)
     name   = elem(entity, 1)
-    table  = query.from.__model__(:name)
+    table  = query.from.__model__(:source)
 
     where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, names)
 
@@ -150,7 +150,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp from(from, models) do
     name = tuple_to_list(models) |> Dict.fetch!(from)
-    table = from.__model__(:name)
+    table = from.__model__(:source)
     { "FROM #{table} AS #{name}", [name] }
   end
 
@@ -165,7 +165,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
         model == expr.model and not name in names
       end)
 
-      table = model.__model__(:name)
+      table = model.__model__(:source)
       on_sql = expr(expr.on.expr, models)
       qual = join_qual(expr.qual)
 
@@ -374,7 +374,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp create_names(query) do
     models = query.models |> tuple_to_list
     Enum.reduce(models, [], fn(model, names) ->
-      table = model.__model__(:name) |> String.first
+      table = model.__model__(:source) |> String.first
       name = unique_name(names, table, 0)
       [{ model, name }|names]
     end) |> Enum.reverse |> list_to_tuple

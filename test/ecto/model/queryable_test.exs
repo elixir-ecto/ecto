@@ -1,24 +1,29 @@
 defmodule Ecto.Model.QueryableTest do
   use ExUnit.Case, async: true
 
-  test "imports Ecto.Query functions" do
-    defmodule Import do
-      use Ecto.Model.Queryable
+  defmodule User do
+    use Ecto.Model.Queryable
 
-      queryable "imports" do
-        field :name, :string
-      end
-
-      def from_1 do
-        from(c in __MODULE__)
-      end
-
-      def from_2 do
-        from(c in __MODULE__, where: c.name == nil)
-      end
+    queryable "users" do
+      field :name, :string
     end
 
-    assert Import.from_1 == Import
-    assert is_record(Import.from_2, Ecto.Query.Query)
+    def from_1 do
+      from(c in __MODULE__)
+    end
+
+    def from_2 do
+      from(c in __MODULE__, where: c.name == nil)
+    end
+  end
+
+  test "imports Ecto.Query functions" do
+    assert User.from_1 == User
+    assert is_record(User.from_2, Ecto.Query.Query)
+  end
+
+  test "delegates to the given entity" do
+    assert is_record(User.new, User.Entity)
+    assert is_record(User.new(name: "jose"), User.Entity)
   end
 end

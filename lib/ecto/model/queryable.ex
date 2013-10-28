@@ -49,6 +49,9 @@ defmodule Ecto.Model.Queryable do
   @doc """
   Defines a queryable name and its entity.
 
+  The source and entity can be accessed during the model compilation
+  via `@ecto_source` and `@ecto_entity`.
+
   ## Example
 
       defmodule Post do
@@ -57,14 +60,7 @@ defmodule Ecto.Model.Queryable do
       end
 
   """
-  defmacro queryable(name, { :__aliases__, _, _ } = entity) do
-    quote bind_quoted: [name: name, entity: entity] do
-      def new(), do: unquote(entity).new()
-      def new(params), do: unquote(entity).new(params)
-      def __model__(:name), do: unquote(name)
-      def __model__(:entity), do: unquote(entity)
-    end
-  end
+  defmacro queryable(source, entity)
 
   @doc """
   Defines a queryable name and the entity definition inline. `opts` will be
@@ -93,9 +89,10 @@ defmodule Ecto.Model.Queryable do
       end
 
   """
-  defmacro queryable(name, opts // [], [do: block]) do
+  defmacro queryable(source, opts // [], do: block)
+
+  defmacro queryable(source, opts, [do: block]) do
     quote do
-      name = unquote(name)
       opts = unquote(opts)
 
       defmodule Entity do
@@ -103,7 +100,19 @@ defmodule Ecto.Model.Queryable do
         unquote(block)
       end
 
-      queryable(name, Entity)
+      queryable(unquote(source), Entity)
+    end
+  end
+
+  defmacro queryable(source, [], entity) do
+    quote do
+      @ecto_source unquote(source)
+      @ecto_entity unquote(entity)
+      def new(), do: @ecto_entity.new()
+      def new(params), do: @ecto_entity.new(params)
+      def __model__(:name),   do: __MODULE__
+      def __model__(:source), do: @ecto_source
+      def __model__(:entity), do: @ecto_entity
     end
   end
 end
