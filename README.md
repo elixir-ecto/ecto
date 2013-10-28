@@ -150,15 +150,13 @@ Entities also provide casting and associations, which are explored in later sect
 
 Entities in Ecto are simply data. All the behaviour exists in models which is nothing more than an Elixir module. Ecto provides many convenience functions that makes it easy to implement common model functionality, like callbacks and validations. The functionalities provided by `Ecto.Model` are:
 
-* `Ecto.Model.Queryable` - provides the API necessary to generate queries;
+* [`Ecto.Model.Queryable`](http://elixir-lang.org/docs/ecto/Ecto.Model.Queryable.html) - defines a model as queryable;
+* [`Ecto.Model.Validations`](http://elixir-lang.org/docs/ecto/Ecto.Model.Validations.html) - conveniences for defining module-level validations in models;
 * `Ecto.Model.Callbacks` - to be implemented;
-* `Ecto.Model.Validations` - to be implemented;
 
-By using `Ecto.Model` all the functionality above is included, but you can cherry pick the ones you want to use.
+By using `Ecto.Model` all the functionality above is included, but you can cherry pick the ones you want to use. For this introduction, we will explore only the queryable functionality as it is the basic functionality.
 
-#### Queryable
-
-The most basic functionality in a model is the queryable one. It connects an entity to a database table, allowing us to finally interact with a repository. Given the `Weather.Entity` defined above, we can integrate it with a model as follows:
+The queryable functionality connects an entity to a database table, allowing us to finally interact with a repository. Given the `Weather.Entity` defined above, we can integrate it with a model as follows:
 
 ```elixir
 defmodule Weather do
@@ -231,14 +229,6 @@ def update(id, params) do
 end
 ```
 
-#### Validations
-
-To be implemented.
-
-#### Callbacks
-
-To be implemented.
-
 ### Query
 
 Last but not least, Ecto allows you to write queries in Elixir and send them to the repository, which translates them to the underlying database. Let's see an example:
@@ -266,8 +256,6 @@ Queries are defined and extended with the `from` macro. The supported keywords a
 * `:preload` - used for preloading associations
 
 You can find more info about queries and the supported keywords in the [`Ecto.Query` module](http://elixir-lang.org/docs/ecto/Ecto.Query.html).
-
-#### Ecto.Queryable
 
 In the previous section, we have defined our model as queryable. This is what allows our model to be used in the query as: `from w in Weather`. The right-hand side of `in` must implement the `Ecto.Queryable` protocol, which is done automatically for models that use the queryable feature.
 

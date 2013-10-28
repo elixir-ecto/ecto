@@ -13,6 +13,11 @@ defmodule Ecto.ValidatorTest do
     assert record(User.new(name: nil), name: present()) == [name: "can't be blank"]
   end
 
+  test "record dispatches to a remote predicate" do
+    assert record(User.new, name: __MODULE__.present()) == []
+    assert record(User.new(name: nil), name: __MODULE__.present()) == [name: "can't be blank"]
+  end
+
   test "record dispatches to a local predicate" do
     present = &present/2
     assert record(User.new, name: present.()) == []
@@ -45,9 +50,9 @@ defmodule Ecto.ValidatorTest do
              also: validate_other) == [name: "can't be blank", age: "can't be blank"]
   end
 
-  defp present(attr, value, opts // [])
-  defp present(attr, nil, opts), do: [{ attr, opts[:message] || "can't be blank" }]
-  defp present(_attr, _value, _opts), do: []
+  def present(attr, value, opts // [])
+  def present(attr, nil, opts), do: [{ attr, opts[:message] || "can't be blank" }]
+  def present(_attr, _value, _opts), do: []
 
   defp validate_other(record) do
     Ecto.Validator.record(record, age: present())

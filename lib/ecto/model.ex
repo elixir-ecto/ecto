@@ -8,7 +8,7 @@ defmodule Ecto.Model do
 
   * `Ecto.Model.Queryable` - provides the API necessary to generate queries;
   * `Ecto.Model.Callbacks` - to be implemented;
-  * `Ecto.Model.Validations` - to be implemented;
+  * `Ecto.Model.Validations` - helpers for validations;
 
   By using `Ecto.Model` all the functionality above is included,
   but you can cherry pick the ones you want to use.
@@ -18,6 +18,7 @@ defmodule Ecto.Model do
   defmacro __using__(_opts) do
     quote do
       use Ecto.Model.Queryable
+      use Ecto.Model.Validations
     end
   end
 end
