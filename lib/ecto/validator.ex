@@ -1,6 +1,6 @@
 defmodule Ecto.Validator do
   @moduledoc """
-  Validates a given record or dict given a set of predicates:
+  Validates a given record or dict given a set of predicates.
 
       Ecto.Validator.record(user,
         name: present() when on_create?(user),
@@ -26,8 +26,10 @@ defmodule Ecto.Validator do
 
       validate_other(user)
 
-  Note all validators must return a keyword list, with the attribute error
+  Note all predicates must return a keyword list, with the attribute error
   as key and the validation message as value.
+
+  A handful of predicates can be found at `Ecto.Validator.Predicates`.
   """
 
   @doc """
