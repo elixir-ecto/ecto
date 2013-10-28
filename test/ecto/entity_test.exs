@@ -150,6 +150,13 @@ defmodule Ecto.EntityTest do
     assert assoc.__assoc__(:target) == EntityAssocs
     assert assoc.__assoc__(:primary_key) == r.id
 
+    assert_raise FunctionClauseError, fn ->
+      r.posts(:test)
+    end
+
+    r = r.posts([:test])
+    assert [:test] = r.posts.to_list
+
     r = EntityAssocs[]
     message = "cannot access association when its primary key is not set on the entity"
     assert_raise ArgumentError, message, fn ->
@@ -166,6 +173,13 @@ defmodule Ecto.EntityTest do
     assoc = r.author
     assert assoc.__assoc__(:name) == :author
     assert assoc.__assoc__(:target) == EntityAssocs
+
+    assert_raise FunctionClauseError, fn ->
+      r.author(:test)
+    end
+
+    r = r.author({ User })
+    assert { User } = r.author.get
 
     r = EntityAssocs[]
     message = "cannot access association when its primary key is not set on the entity"
@@ -185,6 +199,13 @@ defmodule Ecto.EntityTest do
     assoc = r.comment
     assert assoc.__assoc__(:name) == :comment
     assert assoc.__assoc__(:target) == EntityAssocs
+
+    assert_raise FunctionClauseError, fn ->
+      r.comment(:test)
+    end
+
+    r = r.comment({ Comment })
+    assert { Comment } = r.comment.get
   end
 
   test "association needs foreign_key option if no model" do

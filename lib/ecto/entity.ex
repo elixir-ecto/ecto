@@ -78,6 +78,11 @@ defmodule Ecto.Entity do
   examples to see how to perform queries on the association and
   `Ecto.Query.join/3` for joins.
 
+  A `field/2` function will be generated with the name of the field, this
+  function will update what is loaded on the association. Note that Ecto never
+  persists associations when an entity is persisted so this function should be
+  used with care.
+
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
@@ -124,6 +129,11 @@ defmodule Ecto.Entity do
   examples to see how to perform queries on the association and
   `Ecto.Query.join/3` for joins.
 
+  A `field/2` function will be generated with the name of the field, this
+  function will update what is loaded on the association. Note that Ecto never
+  persists associations when an entity is persisted so this function should be
+  used with care.
+
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
@@ -160,14 +170,18 @@ defmodule Ecto.Entity do
   Indicates a one-to-one association with another queryable, this entity
   belongs to zero or one records of the queryable structure. The other queryable
   often has a `has_one` or a `has_many` field with the reverse association.
+  Compared to `has_one` this association should be used where you would place
+  the foreign key on a SQL table.
 
   Creates a virtual field called `name`. The association can be accessed via
   this field, see `Ecto.Associations.BelongsTo` for more information. Check the
   examples to see how to perform queries on the association and
-  `Ecto.Query.join/3` for joins. Will also generate a foreign key field.
+  `Ecto.Query.join/3` for joins.
 
-  Compared to `has_one` this association should be used where you would place
-  the foreign key on a SQL table.
+  Will generate a foreign key field. A `field/2` function will be generated with
+  the name of the field, this function will update what is loaded on the
+  association. Note that Ecto never persists associations when an entity is
+  persisted so this function should be used with care.
 
   ## Options
 
@@ -358,6 +372,7 @@ defmodule Ecto.Entity do
     quoted = Enum.map(assocs, fn({ name, opts, }) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key, fields: fields] do
         pk = opts[:primary_key] || primary_key
+        virtual_name = :"__#{name}__"
 
         if nil?(pk) do
           raise ArgumentError, message: "need to set `primary_key` option for " <>
@@ -378,20 +393,35 @@ defmodule Ecto.Entity do
           unquote(refl |> Macro.escape)
         end
 
+        # TODO: Simplify this once Elixir 0.11 is out
+        record_args = quote do: [{unquote(virtual_name), assoc}]
+
         if opts[:type] in [:has_many, :has_one] do
-          # TODO: Simplify this once Elixir 0.11 is out
-          pk_args = quote do: [{unquote(pk), pk}]
-          def unquote(name)(__MODULE__[unquote_splicing(pk_args)] = self) do
+          record_args = quote(do: [{unquote(pk), pk}]) ++ record_args
+          def unquote(name)(__MODULE__[unquote_splicing(record_args)]) do
             if nil?(pk) do
               raise ArgumentError, message: "cannot access association when its " <>
                 "primary key is not set on the entity"
             end
-            assoc = unquote(:"__#{name}__")(self)
             assoc.__assoc__(:primary_key, pk)
           end
         else
-          def unquote(name)(self) do
-            unquote(:"__#{name}__")(self)
+          def unquote(name)(__MODULE__[unquote_splicing(record_args)]) do
+            assoc
+          end
+        end
+
+        if opts[:type] == :has_many do
+          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)])
+              when is_list(value) do
+            assoc = assoc.__assoc__(:loaded, value)
+            __MODULE__[unquote_splicing(record_args)]
+          end
+        else
+          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)])
+              when is_record(value, unquote(opts[:queryable])) do
+            assoc = assoc.__assoc__(:loaded, value)
+            __MODULE__[unquote_splicing(record_args)]
           end
         end
       end
