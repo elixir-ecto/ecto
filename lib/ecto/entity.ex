@@ -62,7 +62,7 @@ defmodule Ecto.Entity do
     * `:primary_key` - Sets the field to be the primary key, the default
       primary key have to be overridden by setting its name to `nil`;
   """
-  defmacro field(name, type, opts // []) do
+  defmacro field(name, type // :string, opts // []) do
     quote do
       Ecto.Entity.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end

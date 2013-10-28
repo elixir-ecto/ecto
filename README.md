@@ -15,7 +15,7 @@ defmodule Weather do
   use Ecto.Model
 
   queryable "weather" do
-    field :city,    :string
+    field :city     # Defaults to type :string
     field :temp_lo, :integer
     field :temp_hi, :integer
     field :prcp,    :float, default: 0.0

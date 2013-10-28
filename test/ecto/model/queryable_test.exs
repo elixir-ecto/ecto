@@ -5,7 +5,8 @@ defmodule Ecto.Model.QueryableTest do
     use Ecto.Model.Queryable
 
     queryable "users" do
-      field :name, :string
+      # Type defaults to string
+      field :name
     end
 
     def from_1 do
