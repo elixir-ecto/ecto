@@ -32,7 +32,7 @@ defmodule Ecto.ValidatorTest do
     assert record(user, age: present() when user.name != "jose") == [age: "can't be blank"]
   end
 
-  test "record keeps predicate arguments" do
+  test "record passes predicate arguments" do
     assert record(User.new(name: nil),
                    name: present(message: "must be present")) == [name: "must be present"]
   end
@@ -48,6 +48,12 @@ defmodule Ecto.ValidatorTest do
     assert record(User.new(name: nil, age: nil),
              name: present(),
              also: validate_other) == [name: "can't be blank", age: "can't be blank"]
+  end
+
+  test "validates dicts" do
+    assert dict([name: nil, age: 27],
+                name: present(),
+                 age: present()) == [name: "can't be blank"]
   end
 
   def present(attr, value, opts // [])

@@ -33,6 +33,16 @@ defmodule Ecto.Validator do
   """
 
   @doc """
+  Validates a given dict given a set of predicates.
+  """
+  @spec dict(Macro.t, Keyword.t) :: Macro.t
+  defmacro dict(value, opts) when is_list(opts) do
+    process opts, value, fn var, attr ->
+      quote do: Dict.get(unquote(var), unquote(attr))
+    end
+  end
+
+  @doc """
   Validates a given record given a set of predicates.
   """
   @spec record(Macro.t, Keyword.t) :: Macro.t
