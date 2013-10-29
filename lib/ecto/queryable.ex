@@ -4,7 +4,6 @@ defprotocol Ecto.Queryable do
   `Ecto.Query.Query` record. The only function required to implement is
   `to_query` which does the conversion.
   """
-  @only [Record, Atom]
 
   def to_query(expr)
 end
@@ -16,13 +15,16 @@ end
 defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
     try do
-      Ecto.Query.Query[from: module.__model__(:name)]
+      { module.__model__(:source), module.__model__(:entity) }
     rescue
       UndefinedFunctionError ->
         raise Protocol.UndefinedError,
              protocol: @protocol,
                 value: module,
-          description: "the given module/atom is not a model"
+          description: "the given module/atom is not a queryable model"
+    else
+      { source, entity } ->
+        Ecto.Query.Query[from: { source, entity, module }]
     end
   end
 end

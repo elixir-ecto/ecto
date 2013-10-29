@@ -50,14 +50,14 @@ defmodule Ecto.Query.Util do
   end
 
   @doc """
-  Look up a model with a variable.
+  Look up a source with a variable.
   """
-  def find_model(models, { :&, _, [ix] }) when is_tuple(models) do
-    elem(models, ix)
+  def find_source(sources, { :&, _, [ix] }) when is_tuple(sources) do
+    elem(sources, ix)
   end
 
-  def find_model(models, { :&, _, [ix] }) when is_list(models) do
-    Enum.at(models, ix)
+  def find_source(sources, { :&, _, [ix] }) when is_list(sources) do
+    Enum.at(sources, ix)
   end
 
   @doc """
@@ -71,10 +71,19 @@ defmodule Ecto.Query.Util do
     Enum.at(joins, ix - 1)
   end
 
+  @doc "Returns the source from a source tuple."
+  def source({ source, _entity, _model }), do: source
+
+  @doc "Returns entity from a source tuple or nil if there is none."
+  def entity({ _source, entity, _model }), do: entity
+
+  @doc "Returns model from a source tuple or nil if there is none."
+  def model({ _source, _entity, model }), do: model
+
   # Merges a Queryable with a query expression
   @doc false
   def merge(queryable, type, expr) do
-    query = Query[] = Queryable.to_query(queryable)
+    query = Queryable.to_query(queryable)
 
     if type == :on do
       merge_on(query, expr)
@@ -205,8 +214,8 @@ defmodule Ecto.Query.Util do
 
   # Get var for given model in query
   def model_var(Query[] = query, model) do
-    models = tuple_to_list(query.models)
-    pos = Enum.find_index(models, &(&1 == model))
+    sources = tuple_to_list(query.sources)
+    pos = Enum.find_index(sources, &(model(&1) == model))
     { :&, [], [pos] }
   end
 

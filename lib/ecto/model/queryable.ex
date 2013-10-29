@@ -110,7 +110,6 @@ defmodule Ecto.Model.Queryable do
       @ecto_entity unquote(entity)
       def new(), do: @ecto_entity.new()
       def new(params), do: @ecto_entity.new(params)
-      def __model__(:name),   do: __MODULE__
       def __model__(:source), do: @ecto_source
       def __model__(:entity), do: @ecto_entity
     end

@@ -10,7 +10,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.AssocJoinExpr
 
-  defrecord State, models: [], vars: [], grouped: [], grouped?: false,
+  defrecord State, sources: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil, from: nil, query: nil
 
   # Adds type, file and line metadata to the exception
@@ -31,11 +31,10 @@ defmodule Ecto.Query.Validator do
       raise Ecto.InvalidQuery, reason: "a query must have a from expression"
     end
 
-    grouped = group_by_models(query.group_bys, query.models)
+    grouped = group_by_sources(query.group_bys, query.sources)
     is_grouped = query.group_bys != [] or query.havings != []
-    entity = query.from.__model__(:entity)
-    state = State[models: query.models, grouped: grouped, grouped?: is_grouped,
-                  apis: apis, from: entity, query: query]
+    state = State[sources: query.sources, grouped: grouped, grouped?: is_grouped,
+                  apis: apis, from: query.from, query: query]
 
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
@@ -53,8 +52,7 @@ defmodule Ecto.Query.Validator do
   def validate_update(Query[] = query, apis, values) do
     validate_only_where(query)
 
-    model = query.from
-    entity = model.__model__(:entity)
+    entity = Util.entity(query.from)
 
     if values == [] do
       raise Ecto.InvalidQuery, reason: "no values to update given"
@@ -65,18 +63,18 @@ defmodule Ecto.Query.Validator do
 
       unless expected_type do
         raise Ecto.InvalidQuery, reason: "field `#{field}` is not on the " <>
-          "entity `#{model}`"
+          "entity `#{inspect entity}`"
       end
 
       # TODO: Check if entity field allows nil
-      state = State[models: query.models, apis: apis]
+      state = State[sources: query.sources, apis: apis]
       type = type_check(expr, state)
 
       format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
       format_type = Util.type_to_ast(type) |> Macro.to_string
       unless expected_type == type do
         raise Ecto.InvalidQuery, reason: "expected_type `#{format_expected_type}` " <>
-        " on `#{model}.#{field}` doesn't match type `#{format_type}`"
+        " on `#{inspect entity}.#{field}` doesn't match type `#{format_type}`"
       end
     end)
 
@@ -147,8 +145,7 @@ defmodule Ecto.Query.Validator do
     Enum.each(joins, fn AssocJoinExpr[] = expr ->
       rescue_metadata(:join, expr.file, expr.line) do
         { :., _, [left, right] } = expr.expr
-        model = Util.find_model(state.models, left)
-        entity = model.__model__(:entity)
+        entity = Util.find_source(state.sources, left) |> Util.entity
         refl = entity.__entity__(:association, right)
         unless refl do
           raise Ecto.InvalidQuery, reason: "association join can only be performed " <>
@@ -183,8 +180,7 @@ defmodule Ecto.Query.Validator do
 
   # group_by field
   defp validate_field({ var, field }, State[] = state) do
-    model = Util.find_model(state.models, var)
-    entity = model.__model__(:entity)
+    entity = Util.find_source(state.sources, var) |> Util.entity
     do_validate_field(entity, field)
   end
 
@@ -199,10 +195,10 @@ defmodule Ecto.Query.Validator do
     Enum.each(preloads, fn(QueryExpr[] = expr) ->
       rescue_metadata(:preload, expr.file, expr.line) do
         Enum.map(expr.expr, fn field ->
-          entity = state.from
+          entity = Util.entity(state.from)
           type = entity.__entity__(:association, field)
           unless type do
-            raise Ecto.InvalidQuery, reason: "`#{field}` is not an assocation field on `#{inspect entity}`"
+            raise Ecto.InvalidQuery, reason: "`#{inspect entity}.#{field}` is not an association field"
           end
         end)
       end
@@ -215,13 +211,13 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp preload_selected(Query[select: select, preloads: preloads, from: from]) do
+  defp preload_selected(Query[select: select, preloads: preloads]) do
     unless preloads == [] do
       rescue_metadata(:select, select.file, select.line) do
         pos = Util.locate_var(select.expr, { :&, [], [0] })
         if nil?(pos) do
-          raise Ecto.InvalidQuery, reason: "model in from expression `#{from}` " <>
-            "needs to be selected with preload query"
+          raise Ecto.InvalidQuery, reason: "source in from expression " <>
+            "needs to be selected when using preload query"
         end
       end
     end
@@ -229,8 +225,7 @@ defmodule Ecto.Query.Validator do
 
   # var.x
   defp type_check({ { :., _, [{ :&, _, [_] } = var, field] }, _, [] }, State[] = state) do
-    model = Util.find_model(state.models, var)
-    entity = model.__model__(:entity)
+    entity = Util.find_source(state.sources, var) |> Util.entity
     check_grouped({ entity, field }, state)
 
     type = entity.__entity__(:field_type, field)
@@ -242,8 +237,7 @@ defmodule Ecto.Query.Validator do
 
   # var
   defp type_check({ :&, _, [_] } = var, State[] = state) do
-    model = Util.find_model(state.models, var)
-    entity = model.__model__(:entity)
+    entity = Util.find_source(state.sources, var) |> Util.entity
     fields = entity.__entity__(:field_names)
     Enum.each(fields, &check_grouped({ entity, &1 }, state))
 
@@ -311,9 +305,8 @@ defmodule Ecto.Query.Validator do
   # Handle top level select cases
 
   defp select_clause({ :assoc, _, [parent, child] }, State[] = state) do
-    model = Util.find_model(state.models, parent)
-    entity = model.__model__(:entity)
-    unless entity == state.from do
+    entity = Util.find_source(state.sources, parent) |> Util.entity
+    unless entity == Util.entity(state.from) do
       raise Ecto.InvalidQuery, reason: "can only associate on the from entity"
     end
 
@@ -340,11 +333,10 @@ defmodule Ecto.Query.Validator do
     type_check(other, state)
   end
 
-  defp group_by_models(group_bys, models) do
+  defp group_by_sources(group_bys, sources) do
     Enum.map(group_bys, fn(expr) ->
       Enum.map(expr.expr, fn({ var, field }) ->
-        model = Util.find_model(models, var)
-        entity = model.__model__(:entity)
+        entity = Util.find_source(sources, var) |> Util.entity
         { entity, field }
       end)
     end) |> Enum.concat |> Enum.uniq

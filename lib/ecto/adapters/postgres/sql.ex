@@ -44,15 +44,15 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a select statement
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
-    models = create_names(query)
-    { from, used_names } = from(query.from, models)
+    sources = create_names(query)
+    { from, used_names } = from(query.from, sources)
 
-    select   = select(query.select, models)
-    join     = join(query, models, used_names)
-    where    = where(query.wheres, models)
-    group_by = group_by(query.group_bys, models)
-    having   = having(query.havings, models)
-    order_by = order_by(query.order_bys, models)
+    select   = select(query.select, sources)
+    join     = join(query, sources, used_names)
+    where    = where(query.wheres, sources)
+    group_by = group_by(query.group_bys, sources)
+    having   = having(query.havings, sources)
+    order_by = order_by(query.order_bys, sources)
     limit    = limit(query.limit)
     offset   = offset(query.offset)
 
@@ -96,15 +96,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for an update all statement
-  def update_all(module, values) when is_atom(module) do
-    update_all(Query[from: module], values)
-  end
-
   def update_all(Query[] = query, values) do
     names  = create_names(query)
-    entity = elem(names, 0)
-    name   = elem(entity, 1)
-    table  = query.from.__model__(:source)
+    from = elem(names, 0)
+    { table, name } = Util.source(from)
 
     zipped_sql = Enum.map_join(values, ", ", fn({field, expr}) ->
       "#{field} = #{expr(expr, names)}"
@@ -128,66 +123,62 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for an delete all statement
-  def delete_all(module) when is_atom(module) do
-    delete_all(Query[from: module])
-  end
-
   def delete_all(Query[] = query) do
     names  = create_names(query)
-    entity = elem(names, 0)
-    name   = elem(entity, 1)
-    table  = query.from.__model__(:source)
+    from   = elem(names, 0)
+    { table, name } = Util.source(from)
 
     where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, names)
-
     "DELETE FROM #{table} AS #{name}" <> where
   end
 
-  defp select(expr, models) do
+  defp select(expr, sources) do
     QueryExpr[expr: expr] = Normalizer.normalize_select(expr)
-    "SELECT " <> select_clause(expr, models)
+    "SELECT " <> select_clause(expr, sources)
   end
 
-  defp from(from, models) do
-    name = tuple_to_list(models) |> Dict.fetch!(from)
-    table = from.__model__(:source)
+  defp from(from, sources) do
+    from_model = Util.model(from)
+    source = tuple_to_list(sources) |> Enum.find(&(from_model == Util.model(&1)))
+    { table, name } = Util.source(source)
     { "FROM #{table} AS #{name}", [name] }
   end
 
-  defp join(Query[] = query, models, used_names) do
+  defp join(Query[] = query, sources, used_names) do
     # We need to make sure that we get a unique name for each entity since
     # the same entity can be referenced multiple times in joins
-    models_list = tuple_to_list(models)
+
+    sources_list = tuple_to_list(sources)
     Enum.map_reduce(query.joins, used_names, fn(expr, names) ->
       JoinExpr[] = expr = Normalizer.normalize_join(expr, query)
 
-      { model, name } = Enum.find(models_list, fn({ model, name }) ->
+      source = Enum.find(sources_list, fn({ { _, name }, _, model }) ->
         model == expr.model and not name in names
       end)
 
-      table = model.__model__(:source)
-      on_sql = expr(expr.on.expr, models)
+      { table, name } = Util.source(source)
+      on_sql = expr(expr.on.expr, sources)
       qual = join_qual(expr.qual)
 
-      { "#{qual}JOIN #{table} AS #{name} ON " <> on_sql, [name|names] }
+      { "#{qual} JOIN #{table} AS #{name} ON " <> on_sql, [name|names] }
     end) |> elem(0)
   end
 
-  defp join_qual(:inner), do: "INNER "
-  defp join_qual(:left), do: "LEFT OUTER "
-  defp join_qual(:right), do: "RIGHT OUTER "
-  defp join_qual(:full), do: "FULL OUTER "
+  defp join_qual(:inner), do: "INNER"
+  defp join_qual(:left), do: "LEFT OUTER"
+  defp join_qual(:right), do: "RIGHT OUTER"
+  defp join_qual(:full), do: "FULL OUTER"
 
-  defp where(wheres, models) do
-    boolean("WHERE", wheres, models)
+  defp where(wheres, sources) do
+    boolean("WHERE", wheres, sources)
   end
 
-  defp group_by([], _models), do: nil
+  defp group_by([], _sources), do: nil
 
-  defp group_by(group_bys, models) do
+  defp group_by(group_bys, sources) do
     exprs = Enum.map_join(group_bys, ", ", fn(expr) ->
       Enum.map_join(expr.expr, ", ", fn({ var, field }) ->
-        { _model, name } = Util.find_model(models, var)
+        { _, name } = Util.find_source(sources, var) |> Util.source
         "#{name}.#{field}"
       end)
     end)
@@ -195,22 +186,22 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "GROUP BY " <> exprs
   end
 
-  defp having(havings, models) do
-    boolean("HAVING", havings, models)
+  defp having(havings, sources) do
+    boolean("HAVING", havings, sources)
   end
 
-  defp order_by([], _vars), do: nil
+  defp order_by([], _sources), do: nil
 
-  defp order_by(order_bys, models) do
+  defp order_by(order_bys, sources) do
     exprs = Enum.map_join(order_bys, ", ", fn(expr) ->
-      Enum.map_join(expr.expr, ", ", &order_by_expr(&1, models))
+      Enum.map_join(expr.expr, ", ", &order_by_expr(&1, sources))
     end)
 
     "ORDER BY " <> exprs
   end
 
-  defp order_by_expr({ dir, var, field }, vars) do
-    { _model, name } = Util.find_model(vars, var)
+  defp order_by_expr({ dir, var, field }, sources) do
+    { _, name } = Util.find_source(sources, var) |> Util.source
     str = "#{name}.#{field}"
     case dir do
       nil   -> str
@@ -225,97 +216,101 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp offset(nil), do: nil
   defp offset(num), do: "OFFSET " <> integer_to_binary(num)
 
-  defp boolean(_name, [], _vars), do: nil
+  defp boolean(_name, [], _sources), do: nil
 
-  defp boolean(name, query_exprs, vars) do
+  defp boolean(name, query_exprs, sources) do
     exprs = Enum.map_join(query_exprs, " AND ", fn(QueryExpr[expr: expr]) ->
-      "(" <> expr(expr, vars) <> ")"
+      "(" <> expr(expr, sources) <> ")"
     end)
 
     name <> " " <> exprs
   end
 
-  defp expr({ :., _, [{ :&, _, [_] } = var, field] }, vars) when is_atom(field) do
-    { _model, name } = Util.find_model(vars, var)
+  defp expr({ :., _, [{ :&, _, [_] } = var, field] }, sources) when is_atom(field) do
+    { _, name } = Util.find_source(sources, var) |> Util.source
     "#{name}.#{field}"
   end
 
-  defp expr({ :!, _, [expr] }, vars) do
-    "NOT (" <> expr(expr, vars) <> ")"
+  defp expr({ :!, _, [expr] }, sources) do
+    "NOT (" <> expr(expr, sources) <> ")"
   end
 
-  # Expression builders make sure that we only find undotted vars at the top level
-  defp expr({ :&, _, [_] } = var, vars) do
-    { model, name } = Util.find_model(vars, var)
-    entity = model.__model__(:entity)
+  defp expr({ :&, _, [_] } = var, sources) do
+    source = Util.find_source(sources, var)
+    entity = Util.entity(source)
     fields = entity.__entity__(:field_names)
+    { _, name } = Util.source(source)
     Enum.map_join(fields, ", ", &"#{name}.#{&1}")
   end
 
-  defp expr({ :==, _, [nil, right] }, vars) do
-    "#{op_to_binary(right, vars)} IS NULL"
+  defp expr({ :==, _, [nil, right] }, sources) do
+    "#{op_to_binary(right, sources)} IS NULL"
   end
 
-  defp expr({ :==, _, [left, nil] }, vars) do
-    "#{op_to_binary(left, vars)} IS NULL"
+  defp expr({ :==, _, [left, nil] }, sources) do
+    "#{op_to_binary(left, sources)} IS NULL"
   end
 
-  defp expr({ :!=, _, [nil, right] }, vars) do
-    "#{op_to_binary(right, vars)} IS NOT NULL"
+  defp expr({ :!=, _, [nil, right] }, sources) do
+    "#{op_to_binary(right, sources)} IS NOT NULL"
   end
 
-  defp expr({ :!=, _, [left, nil] }, vars) do
-    "#{op_to_binary(left, vars)} IS NOT NULL"
+  defp expr({ :!=, _, [left, nil] }, sources) do
+    "#{op_to_binary(left, sources)} IS NOT NULL"
   end
 
-  defp expr({ :in, _, [left, Range[first: first, last: last]] }, vars) do
-    expr(left, vars) <> " BETWEEN " <> expr(first, vars) <> " AND " <> expr(last, vars)
+  defp expr({ :in, _, [left, Range[first: first, last: last]] }, sources) do
+    sqls = [ expr(left, sources), "BETWEEN", expr(first, sources), "AND",
+             expr(last, sources) ]
+    Enum.join(sqls, " ")
   end
 
-  defp expr({ :in, _, [left, { :.., _, [first, last] }] }, vars) do
-    expr(left, vars) <> " BETWEEN " <> expr(first, vars) <> " AND " <> expr(last, vars)
+  defp expr({ :in, _, [left, { :.., _, [first, last] }] }, sources) do
+    sqls = [ expr(left, sources), "BETWEEN", expr(first, sources), "AND",
+             expr(last, sources) ]
+    Enum.join(sqls, " ")
   end
 
-  defp expr({ :in, _, [left, right] }, vars) do
-    expr(left, vars) <> " = ANY (" <> expr(right, vars) <> ")"
+  defp expr({ :in, _, [left, right] }, sources) do
+    expr(left, sources) <> " = ANY (" <> expr(right, sources) <> ")"
   end
 
-  defp expr(Range[] = range, vars) do
-    expr(Enum.to_list(range), vars)
+  defp expr(Range[] = range, sources) do
+    expr(Enum.to_list(range), sources)
   end
 
-  defp expr({ :.., _, [first, last] }, vars) do
-    expr(Enum.to_list(first..last), vars)
+  defp expr({ :.., _, [first, last] }, sources) do
+    expr(Enum.to_list(first..last), sources)
   end
 
-  defp expr({ :/, _, [left, right] }, vars) do
-    op_to_binary(left, vars) <> " / " <> op_to_binary(right, vars) <> "::float"
+  defp expr({ :/, _, [left, right] }, sources) do
+    op_to_binary(left, sources) <> " / " <> op_to_binary(right, sources) <> "::float"
   end
 
-  defp expr({ arg, _, [] }, vars) when is_tuple(arg) do
-    expr(arg, vars)
+  defp expr({ arg, _, [] }, sources) when is_tuple(arg) do
+    expr(arg, sources)
   end
 
-  defp expr({ fun, _, args }, vars) when is_atom(fun) and is_list(args) do
+  defp expr({ fun, _, args }, sources) when is_atom(fun) and is_list(args) do
     case translate_name(fun, length(args)) do
       { :unary_op, op } ->
-        arg = expr(Enum.first(args), vars)
+        arg = expr(Enum.first(args), sources)
         op <> arg
       { :binary_op, op } ->
         [left, right] = args
-        op_to_binary(left, vars) <> " #{op} " <> op_to_binary(right, vars)
+        op_to_binary(left, sources) <> " #{op} " <> op_to_binary(right, sources)
       { :fun, "localtimestamp" } ->
         "localtimestamp"
       { :fun, fun } ->
-        "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, vars)) <> ")"
+        "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, sources)) <> ")"
     end
   end
 
-  defp expr(list, vars) when is_list(list) do
-    "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, vars)) <> "]"
+  defp expr(list, sources) when is_list(list) do
+    "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
   end
 
-  defp expr(literal, _vars), do: literal(literal)
+  defp expr(literal, _sources), do: literal(literal)
 
   defp literal(nil), do: "NULL"
 
@@ -346,25 +341,25 @@ defmodule Ecto.Adapters.Postgres.SQL do
     to_string(literal)
   end
 
-  defp op_to_binary({ op, _, [_, _] } = expr, vars) when op in @binary_ops do
-    "(" <> expr(expr, vars) <> ")"
+  defp op_to_binary({ op, _, [_, _] } = expr, sources) when op in @binary_ops do
+    "(" <> expr(expr, sources) <> ")"
   end
 
-  defp op_to_binary(expr, vars) do
-    expr(expr, vars)
+  defp op_to_binary(expr, sources) do
+    expr(expr, sources)
   end
 
   # TODO: Records (Kernel.access)
-  defp select_clause({ :{}, _, elems }, vars) do
-    Enum.map_join(elems, ", ", &select_clause(&1, vars))
+  defp select_clause({ :{}, _, elems }, sources) do
+    Enum.map_join(elems, ", ", &select_clause(&1, sources))
   end
 
-  defp select_clause(list, vars) when is_list(list) do
-    Enum.map_join(list, ", ", &select_clause(&1, vars))
+  defp select_clause(list, sources) when is_list(list) do
+    Enum.map_join(list, ", ", &select_clause(&1, sources))
   end
 
-  defp select_clause(expr, vars) do
-    expr(expr, vars)
+  defp select_clause(expr, sources) do
+    expr(expr, sources)
   end
 
   defp escape_string(value) when is_binary(value) do
@@ -372,26 +367,24 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp create_names(query) do
-    models = query.models |> tuple_to_list
-    Enum.reduce(models, [], fn(model, names) ->
-      table = model.__model__(:source) |> String.first
-      name = unique_name(names, table, 0)
-      [{ model, name }|names]
+    sources = query.sources |> tuple_to_list
+    Enum.reduce(sources, [], fn({ table, entity, model }, names) ->
+      name = unique_name(names, String.first(table), 0)
+      [{ { table, name }, entity, model }|names]
     end) |> Enum.reverse |> list_to_tuple
   end
 
   # Brute force find unique name
   defp unique_name(names, name, counter) do
-    cnt_name = name <> integer_to_binary(counter)
-    if Enum.any?(names, fn({ _, n }) -> n == cnt_name end) do
+    counted_name = name <> integer_to_binary(counter)
+    if Enum.any?(names, fn { { _, n }, _, _ } -> n == counted_name end) do
       unique_name(names, name, counter+1)
     else
-      cnt_name
+      counted_name
     end
   end
 
-  # This is fixed in R16B02, we can remove this fix when we stop supporting
-  # R16 and R16B01
+  # This is fixed in R16B02, we can remove this fix when we stop supporting R16B01
   defp fixed_integer_to_binary(0, _), do: "0"
   defp fixed_integer_to_binary(value, base), do: integer_to_binary(value, base)
 end

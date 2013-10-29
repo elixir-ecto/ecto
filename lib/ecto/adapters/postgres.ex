@@ -45,7 +45,7 @@ defmodule Ecto.Adapters.Postgres do
         transformed = Enum.map(rows, fn row ->
           values = tuple_to_list(row)
           QueryExpr[expr: expr] = Normalizer.normalize_select(query.select)
-          transform_row(expr, values, query.models) |> elem(0)
+          transform_row(expr, values, query.sources) |> elem(0)
         end)
 
         # Combine records in case of assoc selector
@@ -111,28 +111,27 @@ defmodule Ecto.Adapters.Postgres do
     :poolboy.transaction(repo.__postgres__(:pool_name), fun)
   end
 
-  defp transform_row({ :{}, _, list }, values, models) do
-    { result, values } = transform_row(list, values, models)
+  defp transform_row({ :{}, _, list }, values, sources) do
+    { result, values } = transform_row(list, values, sources)
     { list_to_tuple(result), values }
   end
 
-  defp transform_row({ _, _ } = tuple, values, models) do
-    { result, values } = transform_row(tuple_to_list(tuple), values, models)
+  defp transform_row({ _, _ } = tuple, values, sources) do
+    { result, values } = transform_row(tuple_to_list(tuple), values, sources)
     { list_to_tuple(result), values }
   end
 
-  defp transform_row(list, values, models) when is_list(list) do
+  defp transform_row(list, values, sources) when is_list(list) do
     { result, values } = Enum.reduce(list, { [], values }, fn elem, { res, values } ->
-      { result, values } = transform_row(elem, values, models)
+      { result, values } = transform_row(elem, values, sources)
       { [result|res], values }
     end)
 
     { Enum.reverse(result), values }
   end
 
-  defp transform_row({ :&, _, [_] } = var, values, models) do
-    model = Util.find_model(models, var)
-    entity = model.__model__(:entity)
+  defp transform_row({ :&, _, [_] } = var, values, sources) do
+    entity = Util.find_source(sources, var) |> Util.entity
     entity_size = length(entity.__entity__(:field_names))
     { entity_values, values } = Enum.split(values, entity_size)
 

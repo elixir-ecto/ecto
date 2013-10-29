@@ -33,7 +33,7 @@ defmodule Ecto.Associations do
   def transform_result({ :assoc, _, [parent, child] }, results, Query[] = query) do
     AssocJoinExpr[expr: join_expr] = Util.find_expr(query, child)
     { :., _, [^parent, field] } = join_expr
-    entity = query.from.__model__(:entity)
+    { _source, entity, _model } = query.from
     refl = entity.__entity__(:association, field)
 
     [{ parent, child }|results] = results

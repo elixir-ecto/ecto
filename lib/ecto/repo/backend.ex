@@ -21,8 +21,7 @@ defmodule Ecto.Repo.Backend do
   def get(repo, adapter, queryable, id) when is_integer(id) do
     reason      = "getting entity"
     query       = Queryable.to_query(queryable)
-    model       = query.from
-    entity      = model.__model__(:entity)
+    entity      = query.from |> Util.entity
     primary_key = entity.__entity__(:primary_key)
 
     Util.validate_get(query, repo.query_apis)
@@ -31,7 +30,7 @@ defmodule Ecto.Repo.Backend do
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
     # normalization and what not.
-    query = Q.from(x in query.from,
+    query = Q.from(x in query,
                    where: field(x, ^primary_key) == ^id,
                    limit: 1) |> Util.normalize
 
@@ -43,8 +42,7 @@ defmodule Ecto.Repo.Backend do
   end
 
   def all(repo, adapter, queryable) do
-    query = Queryable.to_query(queryable)
-    query = Util.normalize(query)
+    query = Queryable.to_query(queryable) |> Util.normalize
     Util.validate(query, repo.query_apis)
     reason = "fetching entities"
     result = adapter.all(repo, query) |> check_result(adapter, reason)
@@ -93,8 +91,7 @@ defmodule Ecto.Repo.Backend do
   end
 
   def runtime_update_all(repo, adapter, queryable, values) do
-    query = Queryable.to_query(queryable)
-    query = Util.normalize(query, skip_select: true)
+    query = Queryable.to_query(queryable) |> Util.normalize(skip_select: true)
     Util.validate_update(query, repo.query_apis, values)
 
     reason = "updating entities"
@@ -112,8 +109,7 @@ defmodule Ecto.Repo.Backend do
   end
 
   def delete_all(repo, adapter, queryable) do
-    query = Queryable.to_query(queryable)
-    query = Util.normalize(query, skip_select: true)
+    query = Queryable.to_query(queryable) |> Util.normalize(skip_select: true)
     Util.validate_delete(query, repo.query_apis)
 
     reason = "deleting entities"

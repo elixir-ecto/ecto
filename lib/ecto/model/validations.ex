@@ -119,7 +119,7 @@ defmodule Ecto.Model.Validations do
   ## Function scope
 
   Note that calling `validate` and `validatep` starts a new function,
-  with its own scope. That said, the folling is invalid:
+  with its own scope. That said, the following is invalid:
 
       values = %w(jpg gif png)
 

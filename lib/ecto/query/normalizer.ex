@@ -12,7 +12,7 @@ defmodule Ecto.Query.Normalizer do
 
   def normalize(Query[] = query, opts) do
     query
-    |> setup_models
+    |> setup_sources
     |> auto_select(opts)
     |> normalize_group_by
   end
@@ -20,8 +20,7 @@ defmodule Ecto.Query.Normalizer do
   # Transform an assocation join to an ordinary join
   def normalize_join(AssocJoinExpr[] = join, Query[] = query) do
     { :., _, [left, right] } = join.expr
-    model = Util.find_model(query.models, left)
-    entity = model.__model__(:entity)
+    entity = Util.find_source(query.sources, left) |> Util.entity
     refl = entity.__entity__(:association, right)
     associated = refl.associated
 
@@ -64,8 +63,7 @@ defmodule Ecto.Query.Normalizer do
   defp normalize_group_by(Query[] = query) do
     Enum.map(query.group_bys, fn
       QueryExpr[expr: { :&, _, _ } = var] = expr ->
-        model = Util.find_model(query.models, var)
-        entity = model.__model__(:entity)
+        entity = Util.find_source(query.sources, var) |> Util.entity
         fields = entity.__entity__(:field_names)
         expr.expr(Enum.map(fields, &{ var, &1 }))
       field ->
@@ -73,23 +71,25 @@ defmodule Ecto.Query.Normalizer do
     end) |> query.group_bys
   end
 
-  # Adds all models to the query for fast access
-  defp setup_models(Query[] = query) do
+  # Adds all sources to the query for fast access
+  defp setup_sources(Query[] = query) do
     froms = if query.from, do: [query.from], else: []
 
-    models = Enum.reduce(query.joins, froms, fn join, acc ->
-      case join do
-        AssocJoinExpr[expr: { :., _, [left, right] }] ->
-          model = Util.find_model(Enum.reverse(acc), left)
-          entity = model.__model__(:entity)
-          refl = entity.__entity__(:association, right)
-          assoc = if refl, do: refl.associated
-          [assoc|acc]
-        JoinExpr[model: model] ->
-          [model|acc]
-      end
+    sources = Enum.reduce(query.joins, froms, fn
+      AssocJoinExpr[expr: { :., _, [left, right] }], acc ->
+        entity = Util.find_source(Enum.reverse(acc), left) |> Util.entity
+        refl = entity.__entity__(:association, right)
+
+        if refl do
+          assoc = refl.associated
+          [ { assoc.__model__(:source), assoc.__model__(:entity), assoc } | acc ]
+        else
+          [nil|acc]
+        end
+      JoinExpr[model: model], acc ->
+        [ { model.__model__(:source), model.__model__(:entity), model } | acc ]
     end)
 
-    models |> Enum.reverse |> list_to_tuple |> query.models
+    sources |> Enum.reverse |> list_to_tuple |> query.sources
   end
 end

@@ -81,9 +81,9 @@ defmodule Ecto.Query do
 
   @type t :: Query.t
 
-  defrecord Query, models: nil, from: nil, joins: [], wheres: [], select: nil,
-                   order_bys: [], limit: nil, offset: nil, group_bys: [], havings: [],
-                   preloads: []
+  defrecord Query, sources: nil, from: nil, joins: [], wheres: [], select: nil,
+                   order_bys: [], limit: nil, offset: nil, group_bys: [],
+                   havings: [], preloads: []
 
   defrecord QueryExpr, [:expr, :file, :line]
   defrecord AssocJoinExpr, [:qual, :expr, :file, :line]
