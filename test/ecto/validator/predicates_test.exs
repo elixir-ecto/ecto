@@ -122,6 +122,82 @@ defmodule Ecto.Validator.PredicatesTest do
     assert member_of(:name, 7, 1..5, message: "not a member") == [name: "not a member"]
   end
 
+  ## Greater than
+
+  test "greater_than on invalid" do
+    assert greater_than(:age, 5, 10)  == [age: "must be greater than 10"]
+    assert greater_than(:age, 10, 10) == [age: "must be greater than 10"]
+  end
+
+  test "greater_than on valid" do
+    assert greater_than(:age, 5, 0) == []
+  end
+
+  test "greater_than skips on nil" do
+    assert greater_than(:age, nil, 10) == []
+  end
+
+  test "greater_than with custom message" do
+    assert greater_than(:age, 5, 10, message: "bad number") == [age: "bad number"]
+  end
+
+  ## Greater than or equal to
+
+  test "greater_than_or_equal_to on invalid" do
+    assert greater_than_or_equal_to(:age, 5, 10) == [age: "must be greater than or equal to 10"]
+  end
+
+  test "greater_than_or_equal_to on valid" do
+    assert greater_than_or_equal_to(:age, 5, 0) == []
+    assert greater_than_or_equal_to(:age, 5, 5) == []
+  end
+
+  test "greater_than_or_equal_to skips on nil" do
+    assert greater_than_or_equal_to(:age, nil, 10) == []
+  end
+
+  test "greater_than_or_equal_to with custom message" do
+    assert greater_than_or_equal_to(:age, 5, 10, message: "bad number") == [age: "bad number"]
+  end
+
+  ## Less than
+
+  test "less_than on invalid" do
+    assert less_than(:age, 10, 5)  == [age: "must be less than 5"]
+    assert less_than(:age, 10, 10) == [age: "must be less than 10"]
+  end
+
+  test "less_than on valid" do
+    assert less_than(:age, 0, 5) == []
+  end
+
+  test "less_than skips on nil" do
+    assert less_than(:age, nil, 10) == []
+  end
+
+  test "less_than with custom message" do
+    assert less_than(:age, 10, 5, message: "bad number") == [age: "bad number"]
+  end
+
+  ## Less than or equal to
+
+  test "less_than_or_equal_to on invalid" do
+    assert less_than_or_equal_to(:age, 10, 5) == [age: "must be less than or equal to 5"]
+  end
+
+  test "less_than_or_equal_to on valid" do
+    assert less_than_or_equal_to(:age, 0, 5) == []
+    assert less_than_or_equal_to(:age, 5, 5) == []
+  end
+
+  test "less_than_or_equal_to skips on nil" do
+    assert less_than_or_equal_to(:age, nil, 10) == []
+  end
+
+  test "less_than_or_equal_to with custom message" do
+    assert less_than_or_equal_to(:age, 10, 5, message: "bad number") == [age: "bad number"]
+  end
+
   ## Not member of
 
   test "not_member_of on invalid" do

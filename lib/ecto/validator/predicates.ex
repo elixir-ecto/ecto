@@ -159,6 +159,86 @@ defmodule Ecto.Validator.Predicates do
   defp characters(x), do: "#{x} characters"
 
   @doc """
+  Validates the given number is greater than the given value.
+  Expects numbers as value, raises otherwise.
+
+  ## Options
+
+  * `:message` - defaults to "must be greater than X"
+
+  ## Examples
+
+      validates user,
+          age: greater_than(18)
+
+  """
+  def greater_than(attr, value, check, opts // [])
+  def greater_than(_attr, value, check, _opts) when
+        is_integer(check) and (nil?(value) or value > check), do: []
+  def greater_than(attr, _value, check, opts) when is_integer(check), do:
+        [{ attr, opts[:message] || "must be greater than #{check}" }]
+
+  @doc """
+  Validates the given number is greater than or equal to the given value.
+  Expects numbers as value, raises otherwise.
+
+  ## Options
+
+  * `:message` - defaults to "must be greater than or equal to X"
+
+  ## Examples
+
+      validates user,
+          age: greater_than_or_equal_to(18)
+
+  """
+  def greater_than_or_equal_to(attr, value, check, opts // [])
+  def greater_than_or_equal_to(_attr, value, check, _opts) when
+        is_integer(check) and (nil?(value) or value >= check), do: []
+  def greater_than_or_equal_to(attr, _value, check, opts) when is_integer(check), do:
+        [{ attr, opts[:message] || "must be greater than or equal to #{check}" }]
+
+  @doc """
+  Validates the given number is less than the given value.
+  Expects numbers as value, raises otherwise.
+
+  ## Options
+
+  * `:message` - defaults to "must be less than X"
+
+  ## Examples
+
+      validates user,
+          age: less_than(18)
+
+  """
+  def less_than(attr, value, check, opts // [])
+  def less_than(_attr, value, check, _opts) when
+        is_integer(check) and (nil?(value) or value < check), do: []
+  def less_than(attr, _value, check, opts) when is_integer(check), do:
+        [{ attr, opts[:message] || "must be less than #{check}" }]
+
+  @doc """
+  Validates the given number is less than or equal to the given value.
+  Expects numbers as value, raises otherwise.
+
+  ## Options
+
+  * `:message` - defaults to "must be less than or equal to X"
+
+  ## Examples
+
+      validates user,
+          age: less_than_or_equal_to(18)
+
+  """
+  def less_than_or_equal_to(attr, value, check, opts // [])
+  def less_than_or_equal_to(_attr, value, check, _opts) when
+        is_integer(check) and (nil?(value) or value <= check), do: []
+  def less_than_or_equal_to(attr, _value, check, opts) when is_integer(check), do:
+        [{ attr, opts[:message] || "must be less than or equal to #{check}" }]
+
+  @doc """
   Validates the attribute is member of the given enumerable.
 
   This validator has the same semantics as calling `Enum.member?/2`
