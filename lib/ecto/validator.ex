@@ -5,6 +5,7 @@ defmodule Ecto.Validator do
       Ecto.Validator.record(user,
         name: present() when on_create?(user),
         age: present(message: "must be present"),
+        age: greater_than(18),
         also: validate_other
       )
 
@@ -56,9 +57,9 @@ defmodule Ecto.Validator do
   defp process(opts, value, getter) do
     var = quote do: var
 
-    validations = Enum.reduce opts, [], fn i, acc ->
-      quote do: unquote(acc) ++ unquote(process_each(i, var, getter))
-    end
+    validations = opts
+      |> Stream.map(&process_each(&1, var, getter))
+      |> concat
 
     quote do
       unquote(var) = unquote(value)
@@ -66,23 +67,37 @@ defmodule Ecto.Validator do
     end
   end
 
+  defp concat(predicates) do
+    Enum.reduce(predicates, fn i, acc ->
+      quote do: unquote(acc) ++ unquote(i)
+    end)
+  end
+
   defp process_each({ :also, function }, var, _getter) do
-    handle_when function, fn call -> Macro.pipe(var, call) end
+    handle_ops function, fn call -> Macro.pipe(var, call) end
   end
 
   defp process_each({ attr, function }, var, getter) do
-    handle_when function, fn call ->
+    handle_ops function, fn call ->
       Macro.pipe(attr, Macro.pipe(getter.(var, attr), call))
     end
   end
 
-  defp handle_when({ :when, _, [left, right] }, callback) do
+  defp handle_ops({ :when, _, [left, right] }, callback) do
     quote do
-      if unquote(right), do: unquote(callback.(left)), else: []
+      if unquote(right), do: unquote(concat(handle_and(left, callback))), else: []
     end
   end
 
-  defp handle_when(other, callback) do
-    callback.(other)
+  defp handle_ops(other, callback) do
+    concat(handle_and(other, callback))
+  end
+
+  defp handle_and({ :and, _, [left, right] }, callback) do
+    [callback.(left)|handle_and(right, callback)]
+  end
+
+  defp handle_and(other, callback) do
+    [callback.(other)]
   end
 end

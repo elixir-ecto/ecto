@@ -32,6 +32,17 @@ defmodule Ecto.ValidatorTest do
     assert record(user, age: present() when user.name != "jose") == [age: "can't be blank"]
   end
 
+  test "record handles and" do
+    user = User.new(age: nil)
+    assert record(user, age: present() and greater_than(18)) == [age: "can't be blank"]
+
+    user = User.new(age: 10)
+    assert record(user, age: present() and greater_than(18)) == [age: "too big"]
+
+    user = User.new(age: 20)
+    assert record(user, age: present() and greater_than(18)) == []
+  end
+
   test "record passes predicate arguments" do
     assert record(User.new(name: nil),
                    name: present(message: "must be present")) == [name: "must be present"]
@@ -48,6 +59,9 @@ defmodule Ecto.ValidatorTest do
     assert record(User.new(name: nil, age: nil),
              name: present(),
              also: validate_other) == [name: "can't be blank", age: "can't be blank"]
+
+    assert record(User.new(name: nil, age: nil),
+              also: validate_other and validate_other) == [age: "can't be blank", age: "can't be blank"]
   end
 
   test "validates dicts" do
@@ -59,6 +73,10 @@ defmodule Ecto.ValidatorTest do
   def present(attr, value, opts // [])
   def present(attr, nil, opts), do: [{ attr, opts[:message] || "can't be blank" }]
   def present(_attr, _value, _opts), do: []
+
+  def greater_than(attr, value, min, opts // [])
+  def greater_than(_attr, value, min, _opts) when value > min, do: []
+  def greater_than(attr, _value, _min, opts), do: [{ attr, opts[:message] || "too big" }]
 
   defp validate_other(record) do
     Ecto.Validator.record(record, age: present())

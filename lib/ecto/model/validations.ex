@@ -18,6 +18,7 @@ defmodule Ecto.Model.Validations do
         validate user,
                name: present(),
                 age: present(message: "must be present"),
+                age: greater_than(18),
                also: validate_attachments
 
         validatep validate_attachments(user),
@@ -60,6 +61,7 @@ defmodule Ecto.Model.Validations do
       validate user,
         name: present(),
          age: present(message: "must be present"),
+         age: greater_than(18),
         also: validate_attachments
 
   Each predicate above is going to receive the attribute being validated
@@ -68,6 +70,14 @@ defmodule Ecto.Model.Validations do
 
       present(:name, user.name)
       present(:age, user.age, message: "must be present")
+
+  Note that predicates can be chained together with `and`. The following
+  is equivalent to the example above:
+
+      validate user,
+        name: present(),
+         age: present(message: "must be present") and greater_than(18),
+        also: validate_attachments
 
   The predicate given to `:also` is special as it simply receives the
   current record as argument. In this example, `validate_attachments`
