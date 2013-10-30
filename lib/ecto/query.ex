@@ -264,7 +264,7 @@ defmodule Ecto.Query do
 
       Ecto.Query.check_binds(query, unquote(length(binding)))
       JoinBuilder.validate_qual(qual)
-      count_entities = Util.count_entities(query)
+      var!(count_entities, Ecto.Query) = Util.count_entities(query)
 
       if unquote(is_assoc) do
         join = AssocJoinExpr[qual: qual, expr: join_expr, file: __ENV__.file, line: __ENV__.line]
