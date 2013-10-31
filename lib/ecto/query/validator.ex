@@ -52,31 +52,31 @@ defmodule Ecto.Query.Validator do
   def validate_update(Query[] = query, apis, values) do
     validate_only_where(query)
 
-    entity = Util.entity(query.from)
-
     if values == [] do
       raise Ecto.InvalidQuery, reason: "no values to update given"
     end
 
-    Enum.each(values, fn({ field, expr }) ->
-      expected_type = entity.__entity__(:field_type, field)
+    if entity = Util.entity(query.from) do
+      Enum.each(values, fn { field, expr } ->
+        expected_type = entity.__entity__(:field_type, field)
 
-      unless expected_type do
-        raise Ecto.InvalidQuery, reason: "field `#{field}` is not on the " <>
-          "entity `#{inspect entity}`"
-      end
+        unless expected_type do
+          raise Ecto.InvalidQuery, reason: "field `#{field}` is not on the " <>
+            "entity `#{inspect entity}`"
+        end
 
-      # TODO: Check if entity field allows nil
-      state = State[sources: query.sources, apis: apis]
-      type = type_check(expr, state)
+        # TODO: Check if entity field allows nil
+        state = State[sources: query.sources, apis: apis]
+        type = type_check(expr, state)
 
-      format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
-      format_type = Util.type_to_ast(type) |> Macro.to_string
-      unless expected_type == type do
-        raise Ecto.InvalidQuery, reason: "expected_type `#{format_expected_type}` " <>
-        " on `#{inspect entity}.#{field}` doesn't match type `#{format_type}`"
-      end
-    end)
+        format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
+        format_type = Util.type_to_ast(type) |> Macro.to_string
+        unless expected_type == type do
+          raise Ecto.InvalidQuery, reason: "expected_type `#{format_expected_type}` " <>
+          " on `#{inspect entity}.#{field}` doesn't match type `#{format_type}`"
+        end
+      end)
+    end
 
     validate(query, apis, skip_select: true)
   end
@@ -132,7 +132,7 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(type, expr.file, expr.line) do
         expr_type = type_check(expr.expr, state)
 
-        unless expr_type == :boolean do
+        unless expr_type in [:unknown, :boolean] do
           format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
           raise Ecto.InvalidQuery, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
             "is of type `#{format_expr_type}`, has to be of boolean type"
@@ -146,10 +146,16 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(:join, expr.file, expr.line) do
         { :., _, [left, right] } = expr.expr
         entity = Util.find_source(state.sources, left) |> Util.entity
+
+        if nil?(entity) do
+          raise Ecto.InvalidQuery, reason: "association join can only be performed " <>
+            "on fields from an entity"
+        end
+
         refl = entity.__entity__(:association, right)
         unless refl do
           raise Ecto.InvalidQuery, reason: "association join can only be performed " <>
-            "assocation fields"
+            "on assocation fields"
         end
       end
     end)
@@ -181,7 +187,7 @@ defmodule Ecto.Query.Validator do
   # group_by field
   defp validate_field({ var, field }, State[] = state) do
     entity = Util.find_source(state.sources, var) |> Util.entity
-    do_validate_field(entity, field)
+    if entity, do: do_validate_field(entity, field)
   end
 
   defp do_validate_field(entity, field) do
@@ -192,10 +198,15 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_preloads(preloads, State[] = state) do
+    entity = Util.entity(state.from)
+
+    if preloads != [] and nil?(entity) do
+      raise Ecto.InvalidQuery, reason: "can only preload on fields from an entity"
+    end
+
     Enum.each(preloads, fn(QueryExpr[] = expr) ->
       rescue_metadata(:preload, expr.file, expr.line) do
         Enum.map(expr.expr, fn field ->
-          entity = Util.entity(state.from)
           type = entity.__entity__(:association, field)
           unless type do
             raise Ecto.InvalidQuery, reason: "`#{inspect entity}.#{field}` is not an association field"
@@ -225,52 +236,60 @@ defmodule Ecto.Query.Validator do
 
   # var.x
   defp type_check({ { :., _, [{ :&, _, [_] } = var, field] }, _, [] }, State[] = state) do
-    entity = Util.find_source(state.sources, var) |> Util.entity
-    check_grouped({ entity, field }, state)
+    source = Util.find_source(state.sources, var)
+    check_grouped({ source, field }, state)
 
-    type = entity.__entity__(:field_type, field)
-    unless type do
-      raise Ecto.InvalidQuery, reason: "unknown field `#{field}` on `#{inspect entity}`"
+    if entity = Util.entity(source) do
+      type = entity.__entity__(:field_type, field)
+      unless type do
+        raise Ecto.InvalidQuery, reason: "unknown field `#{field}` on `#{inspect entity}`"
+      end
+      type
+    else
+      :unknown
     end
-    type
   end
 
   # var
   defp type_check({ :&, _, [_] } = var, State[] = state) do
-    entity = Util.find_source(state.sources, var) |> Util.entity
-    fields = entity.__entity__(:field_names)
-    Enum.each(fields, &check_grouped({ entity, &1 }, state))
-
-    entity
+    source = Util.find_source(state.sources, var)
+    if entity = Util.entity(source) do
+      fields = entity.__entity__(:field_names)
+      Enum.each(fields, &check_grouped({ source, &1 }, state))
+      entity
+    else
+      source = Util.source(source)
+      raise Ecto.InvalidQuery, reason: "cannot select on source, `#{inspect source}`, with no entity"
+    end
   end
 
   # ops & functions
   defp type_check({ name, _, args } = expr, state) when is_atom(name) and is_list(args) do
     length_args = length(args)
 
-    type = Enum.find_value(state.apis, fn(api) ->
-      if api.aggregate?(name, length_args) do
-        if state.in_agg? do
-          raise Ecto.InvalidQuery, reason: "aggregate function calls cannot be nested"
-        end
-        state = state.in_agg?(true)
-      end
-
-      arg_types = Enum.map(args, &type_check(&1, state))
-
-      if function_exported?(api, name, length_args) do
-        case apply(api, name, arg_types) do
-          { :ok, type } -> type
-          { :error, allowed } ->
-            raise Ecto.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
-        end
-      end
-    end)
-
-    unless type do
+    api = Enum.find(state.apis, &function_exported?(&1, name, length_args))
+    unless api do
       raise Ecto.InvalidQuery, reason: "function `#{name}/#{length_args}` not defined in query API"
     end
-    type
+
+    is_agg = api.aggregate?(name, length_args)
+    if is_agg and state.in_agg? do
+      raise Ecto.InvalidQuery, reason: "aggregate function calls cannot be nested"
+    end
+
+    state = state.in_agg?(is_agg)
+    arg_types = Enum.map(args, &type_check(&1, state))
+
+    if Enum.any?(arg_types, &(&1 == :unknown)) do
+      :unknown
+    else
+      case apply(api, name, arg_types) do
+        { :ok, type } ->
+          type
+        { :error, allowed } ->
+          raise Ecto.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
+      end
+    end
   end
 
   # list
@@ -316,6 +335,12 @@ defmodule Ecto.Query.Validator do
     end
   end
 
+  # Some two-tuples may be records (ex. Ecto.Binary[]), so check for records
+  # explicitly. We can do this because we don't allow atoms in queries.
+  defp select_clause({ atom, _ } = record, state) when is_atom(atom) do
+    type_check(record, state)
+  end
+
   defp select_clause({ left, right }, state) do
     select_clause(left, state)
     select_clause(right, state)
@@ -336,15 +361,15 @@ defmodule Ecto.Query.Validator do
   defp group_by_sources(group_bys, sources) do
     Enum.map(group_bys, fn(expr) ->
       Enum.map(expr.expr, fn({ var, field }) ->
-        entity = Util.find_source(sources, var) |> Util.entity
-        { entity, field }
+        source = Util.find_source(sources, var)
+        { source, field }
       end)
     end) |> Enum.concat |> Enum.uniq
   end
 
-  defp check_grouped(entity_field, state) do
-    if state.grouped? and not state.in_agg? and not (entity_field in state.grouped) do
-      { entity, field } = entity_field
+  defp check_grouped({ source, field } = source_field, state) do
+    if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do
+      entity = Util.entity(source) || Util.source(source)
       raise Ecto.InvalidQuery, reason: "`#{inspect entity}.#{field}` must appear in `group_by` " <>
         "or be used in an aggregate function"
     end

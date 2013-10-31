@@ -32,9 +32,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "from" do
     query = from(Model) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.x\nFROM model AS m0"
+  end
 
-    query = from(Model) |> select([r], r.x) |> normalize
-    assert SQL.select(query) == "SELECT m0.x\nFROM model AS m0"
+  test "from without entity" do
+    query = from("posts") |> select([r], r.x) |> normalize
+    assert SQL.select(query) == "SELECT p0.x\nFROM posts AS p0"
   end
 
   test "select" do
@@ -310,6 +312,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "join with nothing bound" do
     query = from(Model) |> join(:inner, [], q in Model2, q.z == q.z) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM model AS m0\nINNER JOIN model2 AS m1 ON m1.z = m1.z"
+  end
+
+  test "join without entity" do
+    query = from("posts") |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM posts AS p0\nINNER JOIN comments AS c0 ON p0.x = c0.z"
   end
 
   defmodule Comment do

@@ -87,7 +87,7 @@ defmodule Ecto.Query do
 
   defrecord QueryExpr, [:expr, :file, :line]
   defrecord AssocJoinExpr, [:qual, :expr, :file, :line]
-  defrecord JoinExpr, [:qual, :model, :on, :file, :line]
+  defrecord JoinExpr, [:qual, :source, :on, :file, :line]
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
@@ -270,7 +270,7 @@ defmodule Ecto.Query do
         join = AssocJoinExpr[qual: qual, expr: join_expr, file: __ENV__.file, line: __ENV__.line]
       else
         on = QueryExpr[expr: unquote(on_expr), file: __ENV__.file, line: __ENV__.line]
-        join = JoinExpr[qual: qual, model: join_expr, on: on, file: __ENV__.file, line: __ENV__.line]
+        join = JoinExpr[qual: qual, source: join_expr, on: on, file: __ENV__.file, line: __ENV__.line]
       end
       Util.merge(query, :join, join)
     end
@@ -597,7 +597,7 @@ defmodule Ecto.Query do
       if unquote(is_assoc) do
         join = AssocJoinExpr[qual: qual, expr: expr, file: __ENV__.file, line: __ENV__.line]
       else
-        join = JoinExpr[qual: qual, model: expr, file: __ENV__.file, line: __ENV__.line]
+        join = JoinExpr[qual: qual, source: expr, file: __ENV__.file, line: __ENV__.line]
       end
       Util.merge(unquote(state.quoted), :join, join)
     end

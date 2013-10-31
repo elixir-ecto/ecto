@@ -22,6 +22,10 @@ defmodule Ecto.Query.JoinBuilder do
     { [], module }
   end
 
+  def escape(string, _vars) when is_binary(string) do
+    { [], string }
+  end
+
   def escape({ { :., _, _ } = assoc, _, [] }, vars) do
     escape(assoc, vars)
   end

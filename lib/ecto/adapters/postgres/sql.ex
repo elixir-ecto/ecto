@@ -5,7 +5,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # update and delete. All queries has to be normalized and validated for
   # correctness before given to this module.
 
-  require Ecto.Query
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
@@ -149,16 +148,16 @@ defmodule Ecto.Adapters.Postgres.SQL do
     # the same entity can be referenced multiple times in joins
 
     sources_list = tuple_to_list(sources)
-    Enum.map_reduce(query.joins, used_names, fn(expr, names) ->
-      JoinExpr[] = expr = Normalizer.normalize_join(expr, query)
+    Enum.map_reduce(query.joins, used_names, fn(join, names) ->
+      join = JoinExpr[] = Normalizer.normalize_join(join, query)
 
-      source = Enum.find(sources_list, fn({ { _, name }, _, model }) ->
-        model == expr.model and not name in names
+      source = Enum.find(sources_list, fn({ { source, name }, _, model }) ->
+        ((source == join.source) or (model == join.source)) and not name in names
       end)
 
       { table, name } = Util.source(source)
-      on_sql = expr(expr.on.expr, sources)
-      qual = join_qual(expr.qual)
+      on_sql = expr(join.on.expr, sources)
+      qual = join_qual(join.qual)
 
       { "#{qual} JOIN #{table} AS #{name} ON " <> on_sql, [name|names] }
     end) |> elem(0)

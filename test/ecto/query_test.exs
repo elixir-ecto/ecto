@@ -126,6 +126,10 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  test "string source query" do
+    assert Query[from: { "posts", nil, nil }] = from(p in "posts") |> select([p], p.title)
+  end
+
   test "validate from expression" do
     delay_compile(from(Post, []))
 

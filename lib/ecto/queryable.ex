@@ -12,6 +12,10 @@ defimpl Ecto.Queryable, for: Ecto.Query.Query do
   def to_query(query), do: query
 end
 
+defimpl Ecto.Queryable, for: BitString do
+  def to_query(source), do: Ecto.Query.Query[from: { source, nil, nil }]
+end
+
 defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
     try do

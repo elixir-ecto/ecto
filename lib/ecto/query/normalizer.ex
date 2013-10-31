@@ -30,7 +30,7 @@ defmodule Ecto.Query.Normalizer do
     on_expr = on_expr(refl, assoc_var, fk, pk)
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
 
-    JoinExpr[qual: join.qual, model: associated, on: on, file: join.file, line: join.line]
+    JoinExpr[qual: join.qual, source: associated, on: on, file: join.file, line: join.line]
   end
 
   def normalize_join(JoinExpr[] = expr, _query), do: expr
@@ -78,15 +78,18 @@ defmodule Ecto.Query.Normalizer do
     sources = Enum.reduce(query.joins, froms, fn
       AssocJoinExpr[expr: { :., _, [left, right] }], acc ->
         entity = Util.find_source(Enum.reverse(acc), left) |> Util.entity
-        refl = entity.__entity__(:association, right)
 
-        if refl do
+        if entity && (refl = entity.__entity__(:association, right)) do
           assoc = refl.associated
           [ { assoc.__model__(:source), assoc.__model__(:entity), assoc } | acc ]
         else
           [nil|acc]
         end
-      JoinExpr[model: model], acc ->
+
+      JoinExpr[source: source], acc when is_binary(source) ->
+        [ { source, nil, nil } | acc ]
+
+      JoinExpr[source: model], acc when is_atom(model) ->
         [ { model.__model__(:source), model.__model__(:entity), model } | acc ]
     end)
 

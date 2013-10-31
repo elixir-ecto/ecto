@@ -18,6 +18,17 @@ defmodule Ecto.Integration.RepoTest do
            TestRepo.all(from p in Post)
   end
 
+  test "fetch without entity" do
+    Post.Entity[id: id] = TestRepo.create(Post.Entity[title: "title1"])
+    Post.Entity[] = TestRepo.create(Post.Entity[title: "title2"])
+
+    assert ["title1", "title2"] =
+      TestRepo.all(from(p in "posts", order_by: p.title, select: p.title))
+
+    assert [^id] =
+      TestRepo.all(from(p in "posts", where: p.title == "title1", select: p.id))
+  end
+
   test "create and delete single, fetch nothing" do
     post = Post.Entity[title: "The shiny new Ecto", text: "coming soon..."]
 

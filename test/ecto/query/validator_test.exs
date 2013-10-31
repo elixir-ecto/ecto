@@ -31,6 +31,9 @@ defmodule Ecto.Query.ValidatorTest do
   test "valid query with bindings" do
     query = from(Post) |> select([p], { p.title })
     validate(query)
+
+    query = from("posts") |> select([p], { p.title })
+    validate(query)
   end
 
   test "invalid query" do
@@ -42,6 +45,9 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "where expression must be boolean" do
     query = from(Post) |> where([p], p.title == "") |> select([], 123)
+    validate(query)
+
+    query = from("posts") |> where([p], p.title == "") |> select([], 123)
     validate(query)
 
     query = from(Post) |> where([p], p.title) |> select([], 123)
@@ -101,6 +107,9 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> where([], true or false) |> select([], 0)
+    validate(query)
+
+    query = from("posts") |> where([p], p.a or p.b + p.c * upcase(p.d)) |> select([], 0)
     validate(query)
   end
 
@@ -305,6 +314,13 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "cannot preload without entity" do
+    query = from("posts") |> preload(:comments)
+    assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+  end
+
   test "can only preload association field" do
     query = from(Post) |> preload(:comments)
     validate(query)
@@ -326,9 +342,22 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "join have to be followed by on" do
+    query = from(c in Comment, join: p in Post, on: true, select: c)
+    validate(query)
+
+    query = from(c in "comments", join: p in "posts", on: true, select: c.a)
+    validate(query)
+
     query = from(c in Comment, join: p in Post, select: c)
     message = "an `on` query expression have to follow a `join` unless it's an association join"
     assert_raise Ecto.InvalidQuery, message, fn ->
+      validate(query)
+    end
+  end
+
+  test "cannot association without entity" do
+    query = from(p in "posts", join: p.comments)
+    assert_raise Ecto.InvalidQuery, fn ->
       validate(query)
     end
   end
@@ -377,5 +406,15 @@ defmodule Ecto.Query.ValidatorTest do
     assert_raise Ecto.TypeCheckError, fn ->
       validate(query)
     end
+
+    query = from(p in Post, select: binary(p.text))
+    assert_raise Ecto.InvalidQuery, "binary/1 argument has to be a literal of binary type", fn ->
+      validate(query)
+    end
+  end
+
+  test "source only query" do
+    query = from(p in "posts", select: p.any_post)
+    validate(query)
   end
 end
