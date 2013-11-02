@@ -10,6 +10,7 @@ defmodule Ecto.Repo.Backend do
   require Ecto.Query, as: Q
 
   def start_link(repo, adapter) do
+    Enum.each(repo.query_apis, &Code.ensure_loaded(&1))
     adapter.start_link(repo, parse_url(repo.url))
   end
 

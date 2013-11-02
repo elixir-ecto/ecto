@@ -1,3 +1,2 @@
-[ "pgsql": {:git, "git://github.com/ericmj/pgsql.git", "ac8c0f65098d8d5ffafa613f54945ebfa7377983", [{:branch, "elixir"}]},
-  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "91b68de43d49bcccf2631016febda70b20d7aa75", []},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "2f400436b7bc711d6da1d8843a5e4ff9de0085ec", []} ]
+[ "poolboy": {:git, "git://github.com/devinus/poolboy.git", "91b68de43d49bcccf2631016febda70b20d7aa75", []},
+  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "ebdbbb0c96582c6d45c747e2883251a17744e0f4", []} ]
