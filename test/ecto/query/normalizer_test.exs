@@ -3,7 +3,6 @@ defmodule Ecto.Query.NormalizerTest do
 
   import Ecto.Query
   alias Ecto.Queryable
-  alias Ecto.Query.Query
   alias Ecto.Query.Util
 
   defmodule Post do

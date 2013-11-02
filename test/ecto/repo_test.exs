@@ -39,9 +39,6 @@ defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.Repo
-
-  alias Ecto.RepoTest.MockAdapter
   alias Ecto.RepoTest.MyRepo
   alias Ecto.RepoTest.MyModel
   alias Ecto.RepoTest.MyModelNoPK

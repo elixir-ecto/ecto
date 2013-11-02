@@ -1,9 +1,6 @@
 defmodule Ecto.Preloader do
   @moduledoc false
 
-  alias Ecto.Query.Query
-  alias Ecto.Query.QueryExpr
-  alias Ecto.Query.Util
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo

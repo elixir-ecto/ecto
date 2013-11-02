@@ -5,7 +5,6 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Queryable
   alias Ecto.Query.Query
   alias Ecto.Query.Util
-  alias Ecto.Query.WhereBuilder
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.BuilderUtil
   require Ecto.Query, as: Q

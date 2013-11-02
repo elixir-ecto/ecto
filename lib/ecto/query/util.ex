@@ -5,7 +5,6 @@ defmodule Ecto.Query.Util do
 
   alias Ecto.Queryable
   alias Ecto.Query.Query
-  alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.AssocJoinExpr
 

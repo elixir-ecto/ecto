@@ -2,7 +2,6 @@ defmodule Ecto.Query.TypespecTest do
   use ExUnit.Case, async: true
 
   alias Ecto.Query.API
-  alias Ecto.Query.Typespec
 
   test "functions" do
     assert API.-(:integer) == { :ok, :integer }
