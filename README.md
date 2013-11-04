@@ -84,7 +84,7 @@ Currently we just support the Postgres adapter. The repository is also responsib
 
     ecto://USERNAME:PASSWORD@HOST/DATABASE
 
-Besides, a set of options can be passed to the adatpter as:
+Besides, a set of options can be passed to the adapter as:
 
     ecto://USERNAME:PASSWORD@HOST/DATABASE?KEY=VALUE
 
