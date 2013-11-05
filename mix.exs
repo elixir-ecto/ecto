@@ -21,13 +21,13 @@ defmodule Ecto.Mixfile do
   end
 
   defp deps(:prod) do
-    [ { :poolboy, github: "devinus/poolboy" } ]
+    [ { :poolboy, github: "devinus/poolboy" },
+      { :postgrex, github: "ericmj/postgrex", optional: true } ]
   end
 
   defp deps(_) do
     deps(:prod) ++
-      [ { :ex_doc, github: "elixir-lang/ex_doc" },
-        { :postgrex, github: "ericmj/postgrex" } ]
+      [ { :ex_doc, github: "elixir-lang/ex_doc" } ]
   end
 
   defp envs do
