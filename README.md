@@ -41,7 +41,7 @@ end
 Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, you will also need the library that Ecto's PostgreSQL adapter is using.
 
 ```elixir
-def deps do
+defp deps do
   [ { :postgrex, github: "ericmj/postgrex" },
     { :ecto, github: "elixir-lang/ecto" } ]
 end
