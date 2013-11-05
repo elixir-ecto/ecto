@@ -95,11 +95,14 @@ defmodule Ecto.Query.API do
   def left or right
   defs boolean or boolean :: boolean
 
-  @doc "Boolean is left in right list."
+  @doc """
+  Return `true` if `left` is in `right` list, `false`
+  otherwise.
+  """
   def left in right
   defs var in list(var) :: boolean
 
-  @doc "Range from left to right,"
+  @doc "Range from left to right."
   def left .. right
   defs integer .. integer :: list(integer)
 
