@@ -127,7 +127,7 @@ defmodule Ecto.Repo do
 
       # Fetch all post titles
       query = from p in Post,
-           select: post.title
+           select: p.title
       MyRepo.all(query)
   """
   defcallback all(Ecto.Query.t) :: [Ecto.Entity.t] | no_return
