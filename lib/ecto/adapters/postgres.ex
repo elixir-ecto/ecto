@@ -7,6 +7,7 @@ defmodule Ecto.Adapters.Postgres do
 
   @behaviour Ecto.Adapter
   @behaviour Ecto.Adapter.Migrations
+  @behaviour Ecto.Adapter.Transactions
 
   @default_port 5432
 
@@ -83,16 +84,11 @@ defmodule Ecto.Adapters.Postgres do
     nrows
   end
 
-  # We expose the querying function because we need it in tests.
   @doc false
-  def query(repo, sql) when is_binary(sql) do
-    :poolboy.transaction(repo.__postgres__(:pool_name), fn conn ->
-      Postgrex.Connection.query!(conn, sql)
+  def query(repo, sql) do
+    use_worker(repo, fn worker ->
+      Postgrex.Connection.query!(worker, sql)
     end)
-  end
-
-  def query(repo, fun) when is_function(fun, 1) do
-    :poolboy.transaction(repo.__postgres__(:pool_name), fun)
   end
 
   defp transform_row({ :{}, _, list }, values, sources) do
@@ -169,6 +165,74 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   ## Transaction API
+
+  def transaction(repo, fun) do
+    worker = checkout_worker(repo)
+    try do
+      Postgrex.Connection.begin!(worker)
+      value = fun.()
+      Postgrex.Connection.commit!(worker)
+      { :ok, value }
+    catch
+      :throw, :ecto_rollback ->
+        Postgrex.Connection.rollback!(worker)
+        :error
+      type, term ->
+        Postgrex.Connection.rollback!(worker)
+        :erlang.raise(type, term, System.stacktrace)
+    after
+      checkin_worker(repo)
+    end
+  end
+
+  defp use_worker(repo, fun) do
+    pool = repo.__postgres__(:pool_name)
+    key = { :ecto_transaction_pid, pool }
+
+    if value = Process.get(key) do
+      in_transaction = true
+      worker = elem(value, 0)
+    else
+      worker = :poolboy.checkout(pool)
+    end
+
+    try do
+      fun.(worker)
+    after
+      if !in_transaction do
+        :poolboy.checkin(pool, worker)
+      end
+    end
+  end
+
+  defp checkout_worker(repo) do
+    pool = repo.__postgres__(:pool_name)
+    key = { :ecto_transaction_pid, pool }
+
+    case Process.get(key) do
+      { worker, counter } ->
+        Process.put(key, { worker, counter + 1 })
+        worker
+      nil ->
+        worker = :poolboy.checkout(pool)
+        Process.put(key, { worker, 1 })
+        worker
+    end
+  end
+
+  defp checkin_worker(repo) do
+    pool = repo.__postgres__(:pool_name)
+    key = { :ecto_transaction_pid, pool }
+
+    case Process.get(key) do
+      { worker, 1 } ->
+        :poolboy.checkin(pool, worker)
+        Process.delete(key)
+      { worker, counter } ->
+        Process.put(key, { worker, counter - 1 })
+    end
+    :ok
+  end
 
   # Only use internally for now in tests
   # Only works reliably with pool_size = 1

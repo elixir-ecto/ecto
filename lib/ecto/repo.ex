@@ -69,6 +69,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.delete_all(__MODULE__, unquote(adapter), queryable)
       end
 
+      def transaction(fun) do
+        Ecto.Repo.Backend.transaction(__MODULE__, unquote(adapter), fun)
+      end
+
       def query_apis do
         [ Ecto.Query.API ]
       end
@@ -194,6 +198,41 @@ defmodule Ecto.Repo do
       from(p in Post, where: p.id < 10) |> MyRepo.delete_all
   """
   defcallback delete_all(Ecto.Queryable.t) :: integer | no_return
+
+  @doc """
+  Runs the given function inside a transaction. If an unhandled error occurs the
+  transaction will be rolled back. If no error occurred the transaction will be
+  commited when the function returns. A transaction can be explicitly rolled
+  back by throwing `:ecto_rollback`, this will leave immediately leave the given
+  function but the throw will not bubble up. Transactions can be nested.
+
+  ## Examples
+
+      MyRepo.transaction(fn ->
+        MyRepo.update(alice.update_balance(&(&1 - 10))
+        MyRepo.update(bob.update_balance(&(&1 + 10))
+      end)
+
+      # In the following example only the comment will be rolled back
+      MyRepo.transaction(fn ->
+        MyRepo.create(Post.new)
+
+        MyRepo.transaction(fn ->
+          MyRepo.create(Comment.new)
+          raise "error"
+        end)
+      end)
+
+      # Roll back a transaction explicitly
+      MyRepo.transaction(fn ->
+        p = MyRepo.create(Post.new)
+        if not Editor.post_allowed?(p) do
+          throw :ecto_rollback
+        end
+      end)
+
+  """
+  defcallback transaction(fun) :: any
 
   @doc """
   Returns the adapter tied to the repository.

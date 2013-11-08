@@ -103,6 +103,10 @@ defmodule Ecto.Repo.Backend do
     adapter.delete_all(repo, query)
   end
 
+  def transaction(repo, adapter, fun) when is_function(fun, 0) do
+    adapter.transaction(repo, fun)
+  end
+
   ## Helpers
 
   defp parse_url(url) do

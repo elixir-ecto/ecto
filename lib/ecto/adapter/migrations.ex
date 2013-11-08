@@ -1,33 +1,34 @@
 defmodule Ecto.Adapter.Migrations  do
   @moduledoc """
-  This module specifies the migrations API that an adapter is required to
-  implement.
+  Specifies the migrations API that an adapter is required to implement.
   """
 
   use Behaviour
 
   @doc """
-  Running a migration with a specific version.
+  Runs an up migration on the given repo, the migration is identified by the
+  supplied version.
 
   ## Examples
 
-    MyRepo.migrate_up(Repo, 20080906120000, "CREATE TABLE users(id serial, name varchar(50));")
+    MyRepo.migrate_up(Repo, 20080906120000, "CREATE TABLE users(id serial, name text)")
 
   """
   defcallback migrate_up(Ecto.Repo.t, integer, binary) :: :ok | :already_up | no_return
 
   @doc """
-  Running a migration with a specific version.
+  Runs a down migration on the given repo, the migration is identified by the
+  supplied version.
 
   ## Examples
 
-    MyRepo.migrate_down(Repo, 20080906120000, "DROP TABLE users;")
+    MyRepo.migrate_down(Repo, 20080906120000, "DROP TABLE users")
 
   """
   defcallback migrate_down(Ecto.Repo.t, integer, binary) :: :ok | :missing_up | no_return
 
   @doc """
-  Returns all versions migrated in the database.
+  Returns the versions of all migrations that have been run on the given repo.
   """
   defcallback migrated_versions(Ecto.Repo.t) :: [integer] | no_return
 end
