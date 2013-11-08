@@ -19,13 +19,12 @@ defmodule Ecto.Repo.Backend do
   end
 
   def get(repo, adapter, queryable, id) when is_integer(id) do
-    reason      = "getting entity"
     query       = Queryable.to_query(queryable)
     entity      = query.from |> Util.entity
     primary_key = entity.__entity__(:primary_key)
 
     Util.validate_get(query, repo.query_apis)
-    check_primary_key(entity, reason)
+    check_primary_key(entity)
 
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
@@ -34,7 +33,7 @@ defmodule Ecto.Repo.Backend do
                    where: field(x, ^primary_key) == ^id,
                    limit: 1) |> Util.normalize
 
-    case adapter.all(repo, query) |> check_result(adapter, reason) do
+    case adapter.all(repo, query) do
       [entity] -> entity
       [] -> nil
       _ -> raise Ecto.NotSingleResult, entity: entity
@@ -44,8 +43,7 @@ defmodule Ecto.Repo.Backend do
   def all(repo, adapter, queryable) do
     query = Queryable.to_query(queryable) |> Util.normalize
     Util.validate(query, repo.query_apis)
-    reason = "fetching entities"
-    result = adapter.all(repo, query) |> check_result(adapter, reason)
+    result = adapter.all(repo, query)
 
     if query.preloads == [] do
       result
@@ -55,9 +53,8 @@ defmodule Ecto.Repo.Backend do
   end
 
   def create(repo, adapter, entity) do
-    reason = "creating an entity"
-    validate_entity(entity, reason)
-    primary_key = adapter.create(repo, entity) |> check_result(adapter, reason)
+    validate_entity(entity)
+    primary_key = adapter.create(repo, entity)
 
     if primary_key do
       entity.primary_key(primary_key)
@@ -67,13 +64,10 @@ defmodule Ecto.Repo.Backend do
   end
 
   def update(repo, adapter, entity) do
-    reason = "updating an entity"
-    check_primary_key(entity, reason)
-    validate_entity(entity, reason)
+    check_primary_key(entity)
+    validate_entity(entity)
 
-    adapter.update(repo, entity)
-      |> check_result(adapter, reason)
-      |> check_single_result(entity)
+    adapter.update(repo, entity) |> check_single_result(entity)
   end
 
   def update_all(repo, adapter, queryable, values) do
@@ -93,27 +87,20 @@ defmodule Ecto.Repo.Backend do
   def runtime_update_all(repo, adapter, queryable, values) do
     query = Queryable.to_query(queryable) |> Util.normalize(skip_select: true)
     Util.validate_update(query, repo.query_apis, values)
-
-    reason = "updating entities"
-    adapter.update_all(repo, query, values) |> check_result(adapter, reason)
+    adapter.update_all(repo, query, values)
   end
 
   def delete(repo, adapter, entity) do
-    reason = "deleting an entity"
-    check_primary_key(entity, reason)
-    validate_entity(entity, reason)
+    check_primary_key(entity)
+    validate_entity(entity)
 
-    adapter.delete(repo, entity)
-      |> check_result(adapter, reason)
-      |> check_single_result(entity)
+    adapter.delete(repo, entity) |> check_single_result(entity)
   end
 
   def delete_all(repo, adapter, queryable) do
     query = Queryable.to_query(queryable) |> Util.normalize(skip_select: true)
     Util.validate_delete(query, repo.query_apis)
-
-    reason = "deleting entities"
-    adapter.delete_all(repo, query) |> check_result(adapter, reason)
+    adapter.delete_all(repo, query)
   end
 
   ## Helpers
@@ -151,15 +138,6 @@ defmodule Ecto.Repo.Backend do
     Enum.map dict, fn({ k, v }) -> { binary_to_atom(k), v } end
   end
 
-  defp check_result(result, adapter, reason) do
-    case result do
-      :ok -> :ok
-      { :ok, res } -> res
-      { :error, err } ->
-        raise Ecto.AdapterError, adapter: adapter, reason: reason, internal: err
-    end
-  end
-
   defp check_single_result(result, entity) do
     unless result == 1 do
       module = elem(entity, 0)
@@ -170,20 +148,20 @@ defmodule Ecto.Repo.Backend do
     :ok
   end
 
-  defp check_primary_key(entity, reason) when is_atom(entity) do
+  defp check_primary_key(entity) when is_atom(entity) do
     unless entity.__entity__(:primary_key) do
-      raise Ecto.NoPrimaryKey, entity: entity, reason: reason
+      raise Ecto.NoPrimaryKey, entity: entity
     end
   end
 
-  defp check_primary_key(entity, reason) when is_record(entity) do
+  defp check_primary_key(entity) when is_record(entity) do
     module = elem(entity, 0)
     unless module.__entity__(:primary_key) && entity.primary_key do
-      raise Ecto.NoPrimaryKey, entity: entity, reason: reason
+      raise Ecto.NoPrimaryKey, entity: entity
     end
   end
 
-  defp validate_entity(entity, reason) do
+  defp validate_entity(entity) do
     module = elem(entity, 0)
     primary_key = module.__entity__(:primary_key)
     zipped = module.__entity__(:entity_kw, entity)
@@ -203,7 +181,7 @@ defmodule Ecto.Repo.Backend do
       # TODO: Check if entity field allows nil
       unless valid do
         raise Ecto.InvalidEntity, entity: entity, field: field,
-          type: value_type, expected_type: type, reason: reason
+          type: value_type, expected_type: type
       end
     end)
   end

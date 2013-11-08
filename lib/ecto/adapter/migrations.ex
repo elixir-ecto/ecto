@@ -14,7 +14,7 @@ defmodule Ecto.Adapter.Migrations  do
     MyRepo.migrate_up(Repo, 20080906120000, "CREATE TABLE users(id serial, name varchar(50));")
 
   """
-  defcallback migrate_up(Ecto.Repo.t, integer, binary) :: :ok | :already_up | { :error, error :: term }
+  defcallback migrate_up(Ecto.Repo.t, integer, binary) :: :ok | :already_up | no_return
 
   @doc """
   Running a migration with a specific version.
@@ -24,10 +24,10 @@ defmodule Ecto.Adapter.Migrations  do
     MyRepo.migrate_down(Repo, 20080906120000, "DROP TABLE users;")
 
   """
-  defcallback migrate_down(Ecto.Repo.t, integer, binary) :: :ok | :missing_up | { :error, error :: term }
+  defcallback migrate_down(Ecto.Repo.t, integer, binary) :: :ok | :missing_up | no_return
 
   @doc """
   Returns all versions migrated in the database.
   """
-  defcallback migrated_versions(Ecto.Repo.t) :: { :ok, [integer] } | { :error, error :: term }
+  defcallback migrated_versions(Ecto.Repo.t) :: [integer] | no_return
 end

@@ -18,16 +18,9 @@ defexception Ecto.InvalidURL, [:url, :reason] do
   end
 end
 
-defexception Ecto.NoPrimaryKey, [:entity, :reason] do
-  def message(Ecto.NoPrimaryKey[entity: entity, reason: reason]) do
-    "entity `#{elem(entity, 0)}` failed: #{reason} because it has no primary key"
-  end
-end
-
-defexception Ecto.AdapterError, [:adapter, :reason, :internal] do
-  def message(Ecto.AdapterError[adapter: adapter, reason: reason, internal: internal]) do
-    "adapter #{inspect adapter} failed: #{reason}" <>
-    if internal, do: "\ninternal error: #{inspect internal}", else: ""
+defexception Ecto.NoPrimaryKey, [:entity] do
+  def message(Ecto.NoPrimaryKey[entity: entity]) do
+    "entity `#{elem(entity, 0)}` has no primary key"
   end
 end
 

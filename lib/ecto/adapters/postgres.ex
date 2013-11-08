@@ -37,73 +37,57 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   def all(repo, Query[] = query) do
-    result = query(repo, SQL.select(query))
+    Postgrex.Result[rows: rows] = query(repo, SQL.select(query))
 
-    case result do
-      { :ok, Postgrex.Result[rows: rows] } ->
-        # Transform each row based on select expression
-        transformed = Enum.map(rows, fn row ->
-          values = tuple_to_list(row)
-          QueryExpr[expr: expr] = Normalizer.normalize_select(query.select)
-          transform_row(expr, values, query.sources) |> elem(0)
-        end)
+    # Transform each row based on select expression
+    transformed = Enum.map(rows, fn row ->
+      values = tuple_to_list(row)
+      QueryExpr[expr: expr] = Normalizer.normalize_select(query.select)
+      transform_row(expr, values, query.sources) |> elem(0)
+    end)
 
-        # Combine records in case of assoc selector
-        expr = query.select.expr
-        if Ecto.Associations.assoc_select?(expr) do
-          transformed = Ecto.Associations.transform_result(expr, transformed, query)
-        end
-
-        { :ok, transformed }
-      { :error, _ } = err -> err
+    # Combine records in case of assoc selector
+    expr = query.select.expr
+    if Ecto.Associations.assoc_select?(expr) do
+      transformed = Ecto.Associations.transform_result(expr, transformed, query)
     end
+    transformed
   end
 
   def create(repo, entity) do
-    result = query(repo, SQL.insert(entity))
-
-    case result do
-      { :ok, Postgrex.Result[rows: [{ primary_key }]] } ->
-        { :ok, primary_key }
-      { :ok, _ }->
-        { :ok, nil }
-      err -> err
+    case query(repo, SQL.insert(entity)) do
+      Postgrex.Result[rows: [{ primary_key }]] ->
+        primary_key
+      _ ->
+        nil
     end
   end
 
   def update(repo, entity) do
-    case query(repo, SQL.update(entity)) do
-      { :ok, Postgrex.Result[num_rows: nrows] } -> { :ok, nrows }
-      err -> err
-    end
+    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update(entity))
+    nrows
   end
 
   def update_all(repo, query, values) do
-    case query(repo, SQL.update_all(query, values)) do
-      { :ok, Postgrex.Result[num_rows: nrows] } -> { :ok, nrows }
-      err -> err
-    end
+    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update_all(query, values))
+    nrows
   end
 
   def delete(repo, entity) do
-    case query(repo, SQL.delete(entity)) do
-      { :ok, Postgrex.Result[num_rows: nrows] } -> { :ok, nrows }
-      err -> err
-    end
+    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete(entity))
+    nrows
   end
 
   def delete_all(repo, query) do
-    case query(repo, SQL.delete_all(query)) do
-      { :ok, Postgrex.Result[num_rows: nrows] } -> { :ok, nrows }
-      err -> err
-    end
+    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete_all(query))
+    nrows
   end
 
   # We expose the querying function because we need it in tests.
   @doc false
   def query(repo, sql) when is_binary(sql) do
     :poolboy.transaction(repo.__postgres__(:pool_name), fn conn ->
-      Postgrex.Connection.query(conn, sql)
+      Postgrex.Connection.query!(conn, sql)
     end)
   end
 
@@ -191,84 +175,59 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def transaction_begin(repo) do
-    case query(repo, "BEGIN") do
-      { :ok, _ } -> :ok
-      err -> err
-    end
+    query(repo, "BEGIN")
+    :ok
   end
 
   @doc false
   def transaction_rollback(repo) do
-    case query(repo, "ROLLBACK") do
-      { :ok, _ } -> :ok
-      err -> err
-    end
+    query(repo, "ROLLBACK")
+    :ok
   end
 
   @doc false
   def transaction_commit(repo) do
-    case query(repo, "COMMIT") do
-      { :ok, _ } -> :ok
-      err -> err
-    end
+    query(repo, "COMMIT")
+    :ok
   end
 
   ## Migration API
 
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
-      { :ok, Postgrex.Result[num_rows: 0] } ->
+      Postgrex.Result[num_rows: 0] ->
         # TODO: We need to wrap this inside a database transaction
         run_commands(repo, commands, fn ->
           insert_migration_version(repo, version)
         end)
-      { :ok, _ } ->
+      _ ->
         :already_up
-      err ->
-        err
     end
   end
 
   def migrate_down(repo, version, commands) do
     case check_migration_version(repo, version) do
-      { :ok, Postgrex.Result[num_rows: 0] } ->
+      Postgrex.Result[num_rows: 0] ->
         :missing_up
-      { :ok, _ } ->
+      _ ->
         # TODO: We need to wrap this inside a database transaction
         run_commands(repo, commands, fn ->
           delete_migration_version(repo, version)
         end)
-      err ->
-        err
     end
   end
 
   defp run_commands(repo, commands, fun) do
-    Enum.find_value(commands, :ok, fn command ->
-      case query(repo, command) do
-        { :ok, _ } ->
-          case fun.() do
-            { :ok, _ } -> nil
-            err -> err
-          end
-        err ->
-          err
-      end
+    Enum.each(commands, fn command ->
+      query(repo, command)
+      fun.()
     end)
   end
 
   def migrated_versions(repo) do
-    case create_migrations_table(repo) do
-      { :ok, _ } ->
-        case query(repo, "SELECT version FROM schema_migrations;") do
-          { :ok, Postgrex.Result[rows: rows] } ->
-            { :ok, Enum.map(rows, &elem(&1, 0)) }
-          err ->
-            err
-        end
-      err ->
-        err
-    end
+    create_migrations_table(repo)
+    Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations")
+    Enum.map(rows, &elem(&1, 0))
   end
 
   defp create_migrations_table(repo) do
@@ -276,10 +235,8 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp check_migration_version(repo, version) do
-    case create_migrations_table(repo) do
-      { :ok, _ } -> query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}")
-      err -> err
-    end
+    create_migrations_table(repo)
+    query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}")
   end
 
   defp insert_migration_version(repo, version) do

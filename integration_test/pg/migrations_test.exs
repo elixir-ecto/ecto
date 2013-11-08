@@ -28,15 +28,15 @@ defmodule Ecto.Integration.MigrationsTest do
   import Ecto.Migrator
 
   test "migrations up and down" do
-    assert migrated_versions(TestRepo) == { :ok, [] }
+    assert migrated_versions(TestRepo) == []
     assert up(TestRepo, 20080906120000, GoodMigration) == :ok
-    assert migrated_versions(TestRepo) == { :ok, [20080906120000] }
+    assert migrated_versions(TestRepo) == [20080906120000]
     assert up(TestRepo, 20080906120000, GoodMigration) == :already_up
-    assert migrated_versions(TestRepo) == { :ok, [20080906120000] }
+    assert migrated_versions(TestRepo) == [20080906120000]
     assert down(TestRepo, 20080906120001, GoodMigration) == :missing_up
-    assert migrated_versions(TestRepo) == { :ok, [20080906120000] }
+    assert migrated_versions(TestRepo) == [20080906120000]
     assert down(TestRepo, 20080906120000, GoodMigration) == :ok
-    assert migrated_versions(TestRepo) == { :ok, [] }
+    assert migrated_versions(TestRepo) == []
   end
 
   # test "bad migration" do
