@@ -77,11 +77,11 @@ defmodule Ecto.Integration.Postgres.Case do
   end
 
   setup do
-    :ok = Postgres.transaction_begin(TestRepo)
+    :ok = Postgres.begin_test_transaction(TestRepo)
   end
 
   teardown do
-    :ok = Postgres.transaction_rollback(TestRepo)
+    :ok = Postgres.rollback_test_transaction(TestRepo)
   end
 end
 

@@ -8,6 +8,7 @@ defmodule Ecto.Adapters.Postgres do
   @behaviour Ecto.Adapter
   @behaviour Ecto.Adapter.Migrations
   @behaviour Ecto.Adapter.Transactions
+  @behaviour Ecto.Adapter.TestTransactions
 
   @default_port 5432
 
@@ -84,7 +85,6 @@ defmodule Ecto.Adapters.Postgres do
     nrows
   end
 
-  @doc false
   def query(repo, sql) do
     use_worker(repo, fn worker ->
       Postgrex.Connection.query!(worker, sql)
@@ -234,25 +234,20 @@ defmodule Ecto.Adapters.Postgres do
     :ok
   end
 
-  # Only use internally for now in tests
-  # Only works reliably with pool_size = 1
+  ## Test transaction API
 
-  @doc false
-  def transaction_begin(repo) do
-    query(repo, "BEGIN")
-    :ok
+  def begin_test_transaction(repo) do
+    pool = repo.__postgres__(:pool_name)
+    :poolboy.transaction(pool, fn worker ->
+      Postgrex.Connection.begin!(worker)
+    end)
   end
 
-  @doc false
-  def transaction_rollback(repo) do
-    query(repo, "ROLLBACK")
-    :ok
-  end
-
-  @doc false
-  def transaction_commit(repo) do
-    query(repo, "COMMIT")
-    :ok
+  def rollback_test_transaction(repo) do
+    pool = repo.__postgres__(:pool_name)
+    :poolboy.transaction(pool, fn worker ->
+      Postgrex.Connection.rollback!(worker)
+    end)
   end
 
   ## Migration API
@@ -260,7 +255,6 @@ defmodule Ecto.Adapters.Postgres do
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
       Postgrex.Result[num_rows: 0] ->
-        # TODO: We need to wrap this inside a database transaction
         run_commands(repo, commands, fn ->
           insert_migration_version(repo, version)
         end)
@@ -274,7 +268,6 @@ defmodule Ecto.Adapters.Postgres do
       Postgrex.Result[num_rows: 0] ->
         :missing_up
       _ ->
-        # TODO: We need to wrap this inside a database transaction
         run_commands(repo, commands, fn ->
           delete_migration_version(repo, version)
         end)
@@ -282,10 +275,13 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp run_commands(repo, commands, fun) do
-    Enum.each(commands, fn command ->
-      query(repo, command)
-      fun.()
+    transaction(repo, fn ->
+      Enum.each(commands, fn command ->
+        query(repo, command)
+        fun.()
+      end)
     end)
+    :ok
   end
 
   def migrated_versions(repo) do
