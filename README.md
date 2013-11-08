@@ -134,7 +134,7 @@ Since entities are records, they are equally immutable and all the record functi
 
 ```elixir
 weather = Weather.Entity.new
-weather = weather.temp_lo(30
+weather = weather.temp_lo(30)
 weather.temp_lo #=> 30
 ```
 
