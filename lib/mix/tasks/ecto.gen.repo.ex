@@ -27,6 +27,11 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     create_directory Path.dirname(file)
     create_file file, repo_template(mod: repo, app: app, base: base)
     open?(file)
+    Mix.shell.info """
+    Don't forget to add your new repo to your supervision tree as:
+
+        worker(#{inspect repo}, [])
+    """
   end
 
   embed_template :repo, """
