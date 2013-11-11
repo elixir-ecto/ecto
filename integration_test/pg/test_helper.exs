@@ -1,5 +1,7 @@
 ExUnit.start
 
+Code.require_file "../../test/support/file_helpers.exs", __DIR__
+
 alias Ecto.Adapters.Postgres
 alias Ecto.Integration.Postgres.TestRepo
 

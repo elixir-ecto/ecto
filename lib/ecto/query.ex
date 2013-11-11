@@ -79,8 +79,6 @@ defmodule Ecto.Query do
   in the keywords query and in the query expression formats.
   """
 
-  @type t :: Query.t
-
   defrecord Query, sources: nil, from: nil, joins: [], wheres: [], select: nil,
                    order_bys: [], limit: nil, offset: nil, group_bys: [],
                    havings: [], preloads: []
@@ -88,6 +86,8 @@ defmodule Ecto.Query do
   defrecord QueryExpr, [:expr, :file, :line]
   defrecord AssocJoinExpr, [:qual, :expr, :file, :line]
   defrecord JoinExpr, [:qual, :source, :on, :file, :line]
+
+  @type t :: Query.t
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
