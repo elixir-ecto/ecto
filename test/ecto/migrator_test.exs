@@ -11,21 +11,13 @@ defmodule Ecto.MigratorTest do
     end
 
     def migrate_up(__MODULE__, id, ["up"]) do
-      case migrated_versions(__MODULE__) do
-        { :ok, versions } ->
-          if id in versions, do: :already_up, else: :ok
-        error ->
-          error
-      end
+      versions = migrated_versions(__MODULE__)
+      if id in versions, do: :already_up, else: :ok
     end
 
     def migrate_down(__MODULE__, id, ["down"]) do
-      case migrated_versions(__MODULE__) do
-        { :ok, versions } ->
-          if id in versions, do: :ok, else: :already_down
-        error ->
-          error
-      end
+      versions = migrated_versions(__MODULE__)
+      if id in versions, do: :ok, else: :already_down
     end
 
     def migrated_versions(__MODULE__) do
@@ -44,7 +36,7 @@ defmodule Ecto.MigratorTest do
   end
 
   setup do
-    Process.put(:migrated_versions, { :ok, [1, 2, 3] })
+    Process.put(:migrated_versions, [1, 2, 3])
     :ok
   end
 
@@ -76,15 +68,6 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "a_sample.exs"
       assert Ecto.Migrator.run_up(ProcessRepo, path) == []
-    end
-  end
-
-  test "fails if it cannot contact the database" do
-    in_tmp fn path ->
-      Process.put(:migrated_versions, { :error, :oops })
-      assert_raise Ecto.MigrationError, "could not migrate, got: :oops", fn ->
-        Ecto.Migrator.run_up(ProcessRepo, path)
-      end
     end
   end
 

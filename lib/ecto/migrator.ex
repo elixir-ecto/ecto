@@ -71,14 +71,10 @@ defmodule Ecto.Migrator do
   defp ensure_no_duplication([]), do: :ok
 
   defp filter_migrated(migrations, repo) do
-    case repo.adapter.migrated_versions(repo) do
-      { :error, error } ->
-        raise Ecto.MigrationError, message: "could not migrate, got: #{inspect error}"
-      { :ok, versions } ->
-        Enum.filter(migrations, fn { version, _file } ->
-          not (version in versions)
-        end)
-    end
+    versions = repo.adapter.migrated_versions(repo)
+    Enum.filter(migrations, fn { version, _file } ->
+      not (version in versions)
+    end)
   end
 
   defp execute_migrations(migrations, repo) do
@@ -90,8 +86,6 @@ defmodule Ecto.Migrator do
 
       commands = List.wrap(mod.up)
       case repo.adapter.migrate_up(repo, version, commands) do
-        { :error, error } ->
-          raise Ecto.MigrationError, message: "could not migrate, got: #{inspect error}"
         :already_up ->
           version
         :ok ->
