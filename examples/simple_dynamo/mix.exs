@@ -19,6 +19,8 @@ defmodule SimpleDynamo.Mixfile do
 
   defp deps do
     [ { :cowboy, github: "extend/cowboy" },
-      { :dynamo, "0.1.0-dev", github: "elixir-lang/dynamo" } ]
+      { :dynamo, "0.1.0-dev", github: "elixir-lang/dynamo" },
+      { :postgrex, github: "ericmj/postgrex" },
+      { :ecto, path: "../.."} ]
   end
 end
