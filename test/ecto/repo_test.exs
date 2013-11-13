@@ -164,6 +164,6 @@ defmodule Ecto.RepoTest do
   end
 
   test "app_dir is available" do
-    assert MyRepo.priv == Path.expand("../../priv/db", __DIR__)
+    assert MyRepo.priv == Path.expand("../../_build/shared/lib/ecto/priv/db", __DIR__)
   end
 end
