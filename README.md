@@ -225,7 +225,7 @@ def update(id, params) do
   weather = Repo.get(Weather, id).update(params)
 
   case Weather.validate(weather) do
-    []     -> json weather: Repo.create(weather)
+    []     -> json weather: Repo.update(weather)
     errors -> json errors: errors
   end
 end
