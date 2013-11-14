@@ -62,6 +62,14 @@ defmodule Ecto.Integration.Postgres.Permalink do
   end
 end
 
+defmodule Ecto.Integration.Postgres.Custom do
+  use Ecto.Model
+
+  queryable "customs", primary_key: false do
+    field :foo, :string, primary_key: true
+  end
+end
+
 defmodule Ecto.Integration.Postgres.Case do
   use ExUnit.CaseTemplate
 
@@ -75,6 +83,7 @@ defmodule Ecto.Integration.Postgres.Case do
       alias Ecto.Integration.Postgres.Post
       alias Ecto.Integration.Postgres.Comment
       alias Ecto.Integration.Postgres.Permalink
+      alias Ecto.Integration.Postgres.Custom
     end
   end
 
@@ -122,6 +131,7 @@ setup_database = [
   "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), count integer)",
   "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, interval interval, bytes bytea, post_id integer)",
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
+  "CREATE TABLE customs (foo text PRIMARY KEY)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]

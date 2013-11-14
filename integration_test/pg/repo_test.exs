@@ -79,6 +79,15 @@ defmodule Ecto.Integration.RepoTest do
     assert nil == TestRepo.get(Post, -1)
   end
 
+  test "get entity with custom primary key" do
+    TestRepo.create(Custom.Entity[foo: "1"])
+    TestRepo.create(Custom.Entity[foo: "2"])
+
+    assert Custom.Entity[foo: "1"] == TestRepo.get(Custom, "1")
+    assert Custom.Entity[foo: "2"] == TestRepo.get(Custom, "2")
+    assert nil == TestRepo.get(Custom, "3")
+  end
+
   test "transform row" do
     assert Post.Entity[] = TestRepo.create(Post.Entity[title: "1", text: "hai"])
 

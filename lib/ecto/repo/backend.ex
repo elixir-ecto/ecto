@@ -18,13 +18,18 @@ defmodule Ecto.Repo.Backend do
     adapter.stop(repo)
   end
 
-  def get(repo, adapter, queryable, id) when is_integer(id) do
+  def get(repo, adapter, queryable, id) do
     query       = Queryable.to_query(queryable)
     entity      = query.from |> Util.entity
     primary_key = entity.__entity__(:primary_key)
 
     Util.validate_get(query, repo.query_apis)
     check_primary_key(entity)
+
+    case Util.value_to_type(id) do
+      { :ok, _ } -> :ok
+      { :error, reason } -> raise ArgumentError, message: reason
+    end
 
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
