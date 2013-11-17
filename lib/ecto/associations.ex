@@ -92,6 +92,8 @@ defmodule Ecto.Associations do
     order_by: field(x, ^pk)
   end
 
+  ## ASSOCIATION JOIN COMBINER ##
+
   defp combine([], refl, last_parent, parents, children) do
     children = Enum.reverse(children)
     last_parent = set_loaded(last_parent, refl, children)
@@ -117,18 +119,11 @@ defmodule Ecto.Associations do
     apply(record1, pk, []) == apply(record2, pk, [])
   end
 
-  defp set_loaded(record, field, loaded) when is_atom(field) do
+  defp set_loaded(record, refl, loaded) do
+    if not is_record(refl, HasMany), do: loaded = Enum.first(loaded)
+    field = refl.field
     association = apply(record, field, [])
     association = association.__assoc__(:loaded, loaded)
     apply(record, field, [association])
-  end
-
-  defp set_loaded(record, HasMany[field: field], loaded) do
-    set_loaded(record, field, loaded)
-  end
-
-  defp set_loaded(record, refl, loaded) do
-    loaded = Enum.first(loaded)
-    set_loaded(record, refl.field, loaded)
   end
 end

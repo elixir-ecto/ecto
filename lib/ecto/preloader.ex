@@ -2,7 +2,6 @@ defmodule Ecto.Preloader do
   @moduledoc false
 
   alias Ecto.Reflections.HasOne
-  alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo
 
   def run(repo, original, name, pos // [])
@@ -10,12 +9,7 @@ defmodule Ecto.Preloader do
   def run(_repo, [], _name, _pos), do: []
 
   def run(repo, original, name, pos) do
-    # Extract records from their data structure, see get_from_pos
-    if pos == [] do
-      records = original
-    else
-      records = Enum.map(original, &get_from_pos(&1, pos))
-    end
+    records = extract(original, pos)
 
     record = Enum.first(records)
     module = elem(record, 0)
@@ -27,9 +21,10 @@ defmodule Ecto.Preloader do
 
     # Save the records old indicies and then sort by primary_key or foreign_key
     # depending on the association type
-    records = records
-      |> Stream.with_index
-      |> Enum.sort(&cmp_record(&1, &2, refl))
+    { records, indicies } = records
+    |> Stream.with_index
+    |> sort(refl)
+    |> :lists.unzip
 
     combined = case refl do
       BelongsTo[] ->
@@ -38,20 +33,17 @@ defmodule Ecto.Preloader do
         combine_has(records, associated, refl, [], [])
     end
 
-    # Restore ordering given to the preloader
-    records = combined
-      |> Enum.sort(&cmp_prev_record/2)
-      |> Enum.map(&elem(&1, 0))
-
-    # Put records back into their data structure
-    if pos == [] do
-      records
-    else
-      records
-        |> Enum.zip(original)
-        |> Enum.map(fn { rec, orig } -> set_at_pos(orig, pos, rec) end)
-    end
+    # Restore ordering given to the preloader and put back records into
+    # original data structure
+    combined
+    |> :lists.zip(indicies)
+    |> unsort()
+    |> Enum.map(&elem(&1, 0))
+    |> unextract(original, pos)
   end
+
+
+  ## COMBINE HAS_MANY / HAS_ONE ##
 
   defp combine_has(records, [], refl, acc1, acc2) do
     # Store accumulated association on next record
@@ -60,19 +52,19 @@ defmodule Ecto.Preloader do
 
     # Set remaining records loaded assocations to empty lists
     records = Enum.map(records, fn record ->
-      if elem(record, 0), do: set_loaded(record, refl, []), else: record
+      if record, do: set_loaded(record, refl, []), else: record
     end)
-    acc1 ++ [record|records]
+    Enum.reverse(acc1) ++ [record|records]
   end
 
   defp combine_has([record|records], [assoc|assocs], refl, acc1, acc2) do
     cond do
       # Ignore nil records, they may be nil depending on the join qualifier
-      nil?(elem(record, 0)) ->
+      nil?(record) ->
         combine_has(records, [assoc|assocs], refl, [nil|acc1], acc2)
       # Record and association match so save association in accumulator, more
       # associations may match the same record
-      compare_has(record, assoc, refl) ->
+      compare(record, assoc, refl) == :eq ->
         combine_has([record|records], assocs, refl, acc1, [assoc|acc2])
       # Record and association doesnt match so store previously accumulated
       # associations on record, move onto the next record and reset acc
@@ -82,24 +74,27 @@ defmodule Ecto.Preloader do
     end
   end
 
+
+  ## COMBINE BELONGS_TO ##
+
   defp combine_belongs([], [_], _refl, acc) do
-    acc
+    Enum.reverse(acc)
   end
 
   defp combine_belongs(records, [], refl, acc) do
     # Set remaining records loaded assocations to nil
     records = Enum.map(records, fn record ->
-      if elem(record, 0), do: set_loaded(record, refl, nil), else: record
+      if record, do: set_loaded(record, refl, nil), else: record
     end)
-    acc ++ records
+    Enum.reverse(acc) ++ records
   end
 
   defp combine_belongs([record|records], [assoc|assocs], refl, acc) do
-    if nil?(elem(record, 0)) do
+    if nil?(record) do
       # Ignore nil records, they may be nil depending on the join qualifier
       combine_belongs(records, [assoc|assocs], refl, [nil|acc])
     else
-      case compare_belongs(record, assoc, refl) do
+      case compare(record, assoc, refl) do
         # Record and association match so store association on record,
         # association may match more records so keep it
         :eq ->
@@ -117,10 +112,13 @@ defmodule Ecto.Preloader do
     end
   end
 
+
+  ## COMMON UTILS ##
+
   # Compare record and association to see if they match
-  defp compare_belongs({ record, _ }, assoc, BelongsTo[] = refl) do
-    record_id = apply(record, refl.foreign_key, [])
-    assoc_id = apply(assoc, refl.primary_key, [])
+  defp compare(record, assoc, refl) do
+    record_id = apply(record, record_key(refl), [])
+    assoc_id = apply(assoc, assoc_key(refl), [])
     cond do
       record_id == assoc_id -> :eq
       record_id > assoc_id -> :gt
@@ -128,44 +126,58 @@ defmodule Ecto.Preloader do
     end
   end
 
-  # Compare record and association to see if they match
-  defp compare_has({ record, _ }, assoc, refl) do
-    apply(record, refl.primary_key, []) == apply(assoc, refl.foreign_key, [])
-  end
-
-  defp cmp_record({ record1, _ }, { record2, _ }, BelongsTo[] = refl) do
-    # BelongsTo sorts by foreign_key
-    fk = refl.foreign_key
-    !! (record1 && record2 && apply(record1, fk, []) < apply(record2, fk, []))
-  end
-
-  defp cmp_record({ record1, _ }, { record2, _ }, refl) do
-    # HasOne and HasMany sorts by primary_key
-    pk = refl.primary_key
-    !! (record1 && record2 && apply(record1, pk, []) < apply(record2, pk, []))
-  end
-
-  defp cmp_prev_record({ _, ix1 }, { _, ix2 }) do
-    ix1 < ix2
-  end
-
   # Set the loaded value on the association of the given record
-  defp set_loaded({ record, ix }, field, value) when is_atom(field) do
+  defp set_loaded(record, refl, value) do
+    if is_record(refl, HasOne), do: value = Enum.first(value)
+    field = refl.field
     association = apply(record, field, [])
     association = association.__assoc__(:loaded, value)
-    { apply(record, field, [association]), ix }
+    apply(record, field, [association])
   end
 
-  defp set_loaded(rec, HasMany[field: field], value) do
-    set_loaded(rec, field, value)
+
+  ## SORTING ##
+
+  defp sort(records, refl) do
+    key = record_key(refl)
+    Enum.sort(records, fn { record1, _ }, { record2, _ } ->
+      !! (record1 && record2 && apply(record1, key, []) < apply(record2, key, []))
+    end)
   end
 
-  defp set_loaded(rec, HasOne[field: field], value) do
-    set_loaded(rec, field, Enum.first(value))
+  defp unsort(records) do
+    Enum.sort(records, fn { _, ix1 }, { _, ix2 } ->
+      ix1 < ix2
+    end)
   end
 
-  defp set_loaded(rec, BelongsTo[field: field], value) do
-    set_loaded(rec, field, value)
+  defp record_key(BelongsTo[] = refl), do: refl.foreign_key
+  defp record_key(refl), do: refl.primary_key
+
+  defp assoc_key(BelongsTo[] = refl), do: refl.primary_key
+  defp assoc_key(refl), do: refl.foreign_key
+
+
+  ## EXTRACT / UNEXTRACT ##
+
+  # Extract records from their data structure, see get_from_pos
+  defp extract(original, pos) do
+    if pos == [] do
+      original
+    else
+      Enum.map(original, &get_from_pos(&1, pos))
+    end
+  end
+
+  # Put records back into their original data structure
+  defp unextract(records, original, pos) do
+    if pos == [] do
+      records
+    else
+      records
+      |> :lists.zip(original)
+      |> Enum.map(fn { rec, orig } -> set_at_pos(orig, pos, rec) end)
+    end
   end
 
   # The record that needs associations preloaded on it can be nested inside
