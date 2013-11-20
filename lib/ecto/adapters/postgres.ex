@@ -17,6 +17,7 @@ defmodule Ecto.Adapters.Postgres do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
   alias Ecto.Query.Normalizer
+  alias Postgrex.TypeInfo
 
   ## Adapter API
 
@@ -139,28 +140,28 @@ defmodule Ecto.Adapters.Postgres do
                   worker_module: Postgrex.Connection ] ++ pool_opts
 
     worker_opts = worker_opts
-                  |> Keyword.put(:decoder, &decoder/6)
+                  |> Keyword.put(:decoder, &decoder/4)
                   |> Keyword.put_new(:port, @default_port)
 
     { pool_opts, worker_opts }
   end
 
-  defp decoder(:bytea, _type, _oid, :binary, default, param) do
+  defp decoder(TypeInfo[sender: :bytea], :binary, default, param) do
     value = default.(param)
     Ecto.Binary[value: value]
   end
 
-  defp decoder(:interval, _type, _oid, :binary, default, param) do
+  defp decoder(TypeInfo[sender: :interval], :binary, default, param) do
     { mon, day, sec } = default.(param)
     Ecto.Interval[month: mon, day: day, sec: sec]
   end
 
-  defp decoder(timestamp, _type, _oid, :binary, default, param) when timestamp in [:timestamp, :timestamptz] do
+  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in [:timestamp, :timestamptz] do
     { { year, mon, day }, { hour, min, sec } } = default.(param)
     Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
   end
 
-  defp decoder(_type, _sender, _oid, _format, default, param) do
+  defp decoder(_type, _format, default, param) do
     default.(param)
   end
 

@@ -22,7 +22,7 @@ defmodule Ecto.Mixfile do
 
   defp deps(:prod) do
     [ { :poolboy, github: "devinus/poolboy" },
-      { :postgrex, github: "ericmj/postgrex", optional: true } ]
+      { :postgrex, "~> 0.2.0", github: "ericmj/postgrex", optional: true } ]
   end
 
   defp deps(_) do
