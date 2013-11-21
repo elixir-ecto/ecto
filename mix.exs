@@ -35,15 +35,3 @@ defmodule Ecto.Mixfile do
       all: [ test_paths: ["test", "integration_test/pg"] ] ]
   end
 end
-
-defmodule Mix.Tasks.Release_docs do
-  @shortdoc "Releases docs"
-
-  def run(_) do
-    Mix.Task.run "docs"
-
-    File.rm_rf "../elixir-lang.github.com/docs/ecto"
-    File.cp_r "docs/.", "../elixir-lang.github.com/docs/ecto/"
-    File.rm_rf "docs"
-  end
-end
