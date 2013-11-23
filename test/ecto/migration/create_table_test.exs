@@ -4,7 +4,7 @@ defmodule Ecto.Migration.CreateTableTest do
 
   test "adding columns" do
     table = new.column(:name, :string)
-    column = List.last(table.columns)
+    [column] = table.columns
 
     assert Enum.count(table.columns) == 1
     assert column.name == :name
@@ -13,7 +13,7 @@ defmodule Ecto.Migration.CreateTableTest do
 
   test "adding string column" do
     table = new.string(:name)
-    column = List.last(table.columns)
+    [column] = table.columns
 
     assert column.name == :name
     assert column.type == :string
@@ -21,7 +21,7 @@ defmodule Ecto.Migration.CreateTableTest do
 
   test "adding integer column" do
     table = new.integer(:num)
-    column = List.last(table.columns)
+    [column] = table.columns
 
     assert column.name == :num
     assert column.type == :integer
@@ -29,7 +29,7 @@ defmodule Ecto.Migration.CreateTableTest do
 
   test "adding float column" do
     table = new.float(:num)
-    column = List.last(table.columns)
+    [column] = table.columns
 
     assert column.name == :num
     assert column.type == :float
@@ -37,7 +37,7 @@ defmodule Ecto.Migration.CreateTableTest do
 
   test "adding boolean column" do
     table = new.boolean(:flag)
-    column = List.last(table.columns)
+    [column] = table.columns
 
     assert column.name == :flag
     assert column.type == :boolean
@@ -45,7 +45,7 @@ defmodule Ecto.Migration.CreateTableTest do
 
   test "adding binary column" do
     table = new.binary(:flag)
-    column = List.last(table.columns)
+    [column] = table.columns
 
     assert column.name == :flag
     assert column.type == :binary
@@ -53,7 +53,7 @@ defmodule Ecto.Migration.CreateTableTest do
 
   test "adding list column" do
     table = new.list(:flag)
-    column = List.last(table.columns)
+    [column] = table.columns
 
     assert column.name == :flag
     assert column.type == :list
@@ -61,7 +61,7 @@ defmodule Ecto.Migration.CreateTableTest do
 
   test "adding datetime column" do
     table = new.datetime(:flag)
-    column = List.last(table.columns)
+    [column] = table.columns
 
     assert column.name == :flag
     assert column.type == :datetime
