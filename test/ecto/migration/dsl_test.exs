@@ -1,4 +1,4 @@
-defmodule Ecto.MigratorDslTest do
+defmodule Ecto.Migration.DslTest do
   use ExUnit.Case
   import Ecto.Migration.Dsl
 
