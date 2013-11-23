@@ -6,7 +6,16 @@ defmodule Ecto.Migration.Dsl do
       col = Column.new(name: name, type: type)
       table.columns(table.columns ++ [col])
     end
+
+    def string(name, table),   do: column(name, :string, table)
+    def integer(name, table),  do: column(name, :integer, table)
+    def float(name, table),    do: column(name, :float, table)
+    def boolean(name, table),  do: column(name, :boolean, table)
+    def binary(name, table),   do: column(name, :binary, table)
+    def list(name, table),     do: column(name, :list, table)
+    def datetime(name, table), do: column(name, :datetime, table)
   end
+
   defrecord DropTable, name: nil
 
   def drop_table(name) do
