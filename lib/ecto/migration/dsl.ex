@@ -1,5 +1,12 @@
 defmodule Ecto.Migration.Dsl do
-  defrecord CreateTable, name: nil
+  defrecord Column, name: nil, type: nil
+
+  defrecord CreateTable, name: nil, columns: [] do
+    def column(name, type, table) do
+      col = Column.new(name: name, type: type)
+      table.columns(table.columns ++ [col])
+    end
+  end
   defrecord DropTable, name: nil
 
   def drop_table(name) do
