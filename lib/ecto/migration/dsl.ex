@@ -7,13 +7,13 @@ defmodule Ecto.Migration.Dsl do
       table.columns(table.columns ++ [col])
     end
 
-    def string(name, table),   do: column(name, :string, table)
-    def integer(name, table),  do: column(name, :integer, table)
-    def float(name, table),    do: column(name, :float, table)
-    def boolean(name, table),  do: column(name, :boolean, table)
-    def binary(name, table),   do: column(name, :binary, table)
-    def list(name, table),     do: column(name, :list, table)
-    def datetime(name, table), do: column(name, :datetime, table)
+    def string(name, table),   do: table.column(name, :string)
+    def integer(name, table),  do: table.column(name, :integer)
+    def float(name, table),    do: table.column(name, :float)
+    def boolean(name, table),  do: table.column(name, :boolean)
+    def binary(name, table),   do: table.column(name, :binary)
+    def list(name, table),     do: table.column(name, :list)
+    def datetime(name, table), do: table.column(name, :datetime)
 
     def timestamps(table) do
       table.datetime(:created_at)
