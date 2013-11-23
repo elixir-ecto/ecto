@@ -66,4 +66,15 @@ defmodule Ecto.Migration.CreateTableTest do
     assert column.name == :flag
     assert column.type == :datetime
   end
+
+  test "adding timestamps" do
+    table = new.timestamps
+    [created_at, updated_at] = table.columns
+
+    assert created_at.name == :created_at
+    assert created_at.type == :datetime
+
+    assert updated_at.name == :updated_at
+    assert updated_at.type == :datetime
+  end
 end

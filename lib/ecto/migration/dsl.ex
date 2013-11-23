@@ -14,6 +14,11 @@ defmodule Ecto.Migration.Dsl do
     def binary(name, table),   do: column(name, :binary, table)
     def list(name, table),     do: column(name, :list, table)
     def datetime(name, table), do: column(name, :datetime, table)
+
+    def timestamps(table) do
+      table.datetime(:created_at)
+           .datetime(:updated_at)
+    end
   end
 
   defrecord DropTable, name: nil
