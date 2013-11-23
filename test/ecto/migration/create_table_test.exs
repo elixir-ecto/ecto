@@ -3,78 +3,90 @@ defmodule Ecto.Migration.CreateTableTest do
   import Ecto.Migration.Dsl.CreateTable
 
   test "adding columns" do
-    table = new.column(:name, :string)
-    [column] = table.columns
+    table = build.column(:name, :string)
+    [_id, column] = table.columns
 
-    assert Enum.count(table.columns) == 1
     assert column.name == :name
     assert column.type == :string
   end
 
   test "adding string column" do
-    table = new.string(:name)
-    [column] = table.columns
+    table = build.string(:name)
+    [_id, column] = table.columns
 
     assert column.name == :name
     assert column.type == :string
   end
 
   test "adding integer column" do
-    table = new.integer(:num)
-    [column] = table.columns
+    table = build.integer(:num)
+    [_id, column] = table.columns
 
     assert column.name == :num
     assert column.type == :integer
   end
 
   test "adding float column" do
-    table = new.float(:num)
-    [column] = table.columns
+    table = build.float(:num)
+    [_id, column] = table.columns
 
     assert column.name == :num
     assert column.type == :float
   end
 
   test "adding boolean column" do
-    table = new.boolean(:flag)
-    [column] = table.columns
+    table = build.boolean(:flag)
+    [_id, column] = table.columns
 
     assert column.name == :flag
     assert column.type == :boolean
   end
 
   test "adding binary column" do
-    table = new.binary(:flag)
-    [column] = table.columns
+    table = build.binary(:flag)
+    [_id, column] = table.columns
 
     assert column.name == :flag
     assert column.type == :binary
   end
 
   test "adding list column" do
-    table = new.list(:flag)
-    [column] = table.columns
+    table = build.list(:flag)
+    [_id, column] = table.columns
 
     assert column.name == :flag
     assert column.type == :list
   end
 
   test "adding datetime column" do
-    table = new.datetime(:flag)
-    [column] = table.columns
+    table = build.datetime(:flag)
+    [_id, column] = table.columns
 
     assert column.name == :flag
     assert column.type == :datetime
   end
 
   test "adding timestamps" do
-    table = new.timestamps
-    [created_at, updated_at] = table.columns
+    table = build.timestamps
+    [_id, created_at, updated_at] = table.columns
 
     assert created_at.name == :created_at
     assert created_at.type == :datetime
 
     assert updated_at.name == :updated_at
     assert updated_at.type == :datetime
+  end
+
+  test "adds primary key" do
+    table = build
+    [id] = table.columns
+
+    assert id.name == :id
+    assert id.type == :primary_key
+  end
+
+  test "can disable primary key" do
+    table = build(key: false)
+    assert [] == table.columns
   end
 end
