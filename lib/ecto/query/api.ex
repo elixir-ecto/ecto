@@ -175,6 +175,14 @@ defmodule Ecto.Query.API do
   def localtimestamp()
   defs localtimestamp() :: datetime
 
+  @doc "Case-insensitive pattern match."
+  def ilike(left, right)
+  defs ilike(string, string) :: boolean
+
+  @doc "Case-sensitive pattern match."
+  def like(left, right)
+  defs like(string, string) :: boolean
+
   ## Aggregate functions
 
   @doc "Aggregate function, averages the given field over the current group."

@@ -19,7 +19,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
       +:  "+", -:  "-", *:  "*",
       <>: "||", ++: "||",
       pow: "^", div: "/", rem: "%",
-      date_add: "+", date_sub: "-" ]
+      date_add: "+", date_sub: "-",
+      ilike: "ILIKE", like: "LIKE" ]
 
   functions =
     [ { { :downcase, 1 }, "lower" }, { { :upcase, 1 }, "upper" } ]
