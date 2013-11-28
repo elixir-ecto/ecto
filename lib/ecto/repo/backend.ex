@@ -197,10 +197,7 @@ defmodule Ecto.Repo.Backend do
 
   defp preload(repo, Query[] = query, results) do
     pos = Util.locate_var(query.select.expr, { :&, [], [0] })
-    preloads = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
-
-    Enum.reduce(preloads, results, fn field, acc ->
-      Ecto.Preloader.run(repo, acc, field, pos)
-    end)
+    fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
+    Ecto.Preloader.run(results, repo, fields, pos)
   end
 end

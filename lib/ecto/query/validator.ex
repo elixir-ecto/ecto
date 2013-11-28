@@ -9,6 +9,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.AssocJoinExpr
+  alias Ecto.Query.Normalizer
 
   defrecord State, sources: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil, from: nil, query: nil
@@ -206,13 +207,19 @@ defmodule Ecto.Query.Validator do
 
     Enum.each(preloads, fn(QueryExpr[] = expr) ->
       rescue_metadata(:preload, expr.file, expr.line) do
-        Enum.map(expr.expr, fn field ->
-          type = entity.__entity__(:association, field)
-          unless type do
-            raise Ecto.InvalidQuery, reason: "`#{inspect entity}.#{field}` is not an association field"
-          end
-        end)
+        fields = Normalizer.normalize_preload(expr.expr)
+        check_preload_fields(fields, entity)
       end
+    end)
+  end
+
+  defp check_preload_fields(fields, entity) do
+    Enum.map(fields, fn { field, sub_fields } ->
+      refl = entity.__entity__(:association, field)
+      unless refl do
+        raise Ecto.InvalidQuery, reason: "`#{inspect entity}.#{field}` is not an association field"
+      end
+      check_preload_fields(sub_fields, refl.associated.__model__(:entity))
     end)
   end
 

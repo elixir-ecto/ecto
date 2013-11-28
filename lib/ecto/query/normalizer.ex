@@ -41,6 +41,13 @@ defmodule Ecto.Query.Normalizer do
 
   def normalize_select(QueryExpr[expr: _] = expr), do: expr
 
+  def normalize_preload(fields) do
+    Enum.map(List.wrap(fields), fn
+      { field, sub_fields } -> { field, normalize_preload(sub_fields) }
+      field -> { field, [] }
+    end)
+  end
+
   defp on_expr(BelongsTo[], assoc_var, fk, pk) do
     quote do unquote(assoc_var).unquote(pk) == &0.unquote(fk) end
   end

@@ -3,13 +3,24 @@ defmodule Ecto.Preloader do
 
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.BelongsTo
+  alias Ecto.Query.Normalizer
 
-  def run(repo, original, name, pos // [])
+  def run(original, repo, fields, pos // [])
 
-  def run(_repo, [], _name, _pos), do: []
+  def run([], _repo, _fields, _pos), do: []
 
-  def run(repo, original, name, pos) do
+  def run(original, repo, fields, pos) do
+    fields = Normalizer.normalize_preload(fields)
     records = extract(original, pos)
+    records = Enum.reduce(fields, records, &do_run(&2, repo, &1))
+    unextract(records, original, pos)
+  end
+
+  defp do_run(records, repo, field) do
+    case field do
+      { name, sub_fields } -> sub_fields = List.wrap(sub_fields)
+      name -> sub_fields = []
+    end
 
     record = Enum.first(records)
     module = elem(record, 0)
@@ -17,7 +28,12 @@ defmodule Ecto.Preloader do
     query = Ecto.Associations.preload_query(refl, records)
     associated = repo.all(query)
 
+    # Recurse down nested fields
+    associated = Enum.reduce(sub_fields, associated, &do_run(&2, repo, &1))
+
     # TODO: Make sure all records are the same entity
+    # TODO: Check if we need actually need to sort for performance,
+    #       combine with above
 
     # Save the records old indicies and then sort by primary_key or foreign_key
     # depending on the association type
@@ -39,7 +55,6 @@ defmodule Ecto.Preloader do
     |> :lists.zip(indicies)
     |> unsort()
     |> Enum.map(&elem(&1, 0))
-    |> unextract(original, pos)
   end
 
 
@@ -160,12 +175,12 @@ defmodule Ecto.Preloader do
 
   ## EXTRACT / UNEXTRACT ##
 
-  # Extract records from their data structure, see get_from_pos
+  # Extract records from their data structure, see get_at_pos
   defp extract(original, pos) do
     if pos == [] do
       original
     else
-      Enum.map(original, &get_from_pos(&1, pos))
+      Enum.map(original, &get_at_pos(&1, pos))
     end
   end
 
@@ -184,14 +199,14 @@ defmodule Ecto.Preloader do
   # tuples and lists. We retrieve and set the record inside the structure with
   # the help of a list of indicies into tuples and lists.
   # { x, [ y, z, { RECORD, p } ] } #=> indicies: [ 1, 2, 0 ]
-  defp get_from_pos(value, []), do: value
+  defp get_at_pos(value, []), do: value
 
-  defp get_from_pos(tuple, [ix|pos]) when is_tuple(tuple) do
-    elem(tuple, ix) |> get_from_pos(pos)
+  defp get_at_pos(tuple, [ix|pos]) when is_tuple(tuple) do
+    elem(tuple, ix) |> get_at_pos(pos)
   end
 
-  defp get_from_pos(list, [ix|pos]) when is_list(list) do
-    Enum.at(list, ix) |> get_from_pos(pos)
+  defp get_at_pos(list, [ix|pos]) when is_list(list) do
+    Enum.at(list, ix) |> get_at_pos(pos)
   end
 
   defp set_at_pos(_other, [], value) do
@@ -204,24 +219,6 @@ defmodule Ecto.Preloader do
   end
 
   defp set_at_pos(list, [ix|pos], value) when is_list(list) do
-    update_at(list, ix, &set_at_pos(&1, pos, value))
-  end
-
-  # TODO: Add to List/Enum module?
-  # Update element at index location in list with given function
-  defp update_at(list, index, fun) do
-    if index < 0 do
-      do_update_at(list, length(list) + index, fun)
-    else
-      do_update_at(list, index, fun)
-    end
-  end
-
-  defp do_update_at([value|list], index, fun) when index <= 0 do
-    [ fun.(value) | list ]
-  end
-
-  defp do_update_at([h|t], index, fun) do
-    [ h | do_update_at(t, index - 1, fun) ]
+    List.update_at(list, ix, &set_at_pos(&1, pos, value))
   end
 end

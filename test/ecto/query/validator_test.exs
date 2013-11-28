@@ -21,6 +21,7 @@ defmodule Ecto.Query.ValidatorTest do
       field :text, :string
       field :temp, :virtual
       field :posted, :datetime
+      belongs_to :post, Ecto.Query.ValidatorTest.Post
     end
   end
 
@@ -335,6 +336,21 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> preload(:comments) |> select([p], 0)
+    assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+  end
+
+  test "can preload nested" do
+    query = from(Post) |> preload(comments: :post) |> select([p], p)
+    validate(query)
+
+    query = from(Post) |> preload(comments: :test) |> select([p], p)
+    assert_raise Ecto.InvalidQuery, fn ->
+      validate(query)
+    end
+
+    query = from(Post) |> preload(comments: :posted) |> select([p], p)
     assert_raise Ecto.InvalidQuery, fn ->
       validate(query)
     end
