@@ -22,6 +22,7 @@ defmodule Ecto.Mixfile do
 
   defp deps(:prod) do
     [ { :poolboy, github: "devinus/poolboy" },
+      { :emysql, "0.2", github: "Eonblast/Emysql", ref: "dc2d1d26db0aee512c923e36b798dbfe3b919af9" },
       { :postgrex, "~> 0.2.0", github: "ericmj/postgrex", optional: true } ]
   end
 
@@ -32,6 +33,7 @@ defmodule Ecto.Mixfile do
 
   defp envs do
     [ pg: [ test_paths: ["integration_test/pg"] ],
-      all: [ test_paths: ["test", "integration_test/pg"] ] ]
+      mysql: [test_paths: ["integration_test/mysql"] ],
+      all: [ test_paths: ["test", "integration_test/pg", "integartion_test/mysql"] ] ]
   end
 end
