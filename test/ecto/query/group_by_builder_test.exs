@@ -18,12 +18,12 @@ defmodule Ecto.Query.GroupByBuilderTest do
   end
 
   test "escape raise" do
-    assert_raise Ecto.InvalidQuery, "unbound variable `x` in query", fn ->
+    assert_raise Ecto.InvalidQueryError, "unbound variable `x` in query", fn ->
       escape(quote do x.y end, [])
     end
 
     message = "malformed group_by query"
-    assert_raise Ecto.InvalidQuery, message, fn ->
+    assert_raise Ecto.InvalidQueryError, message, fn ->
       escape(quote do 1 + 2 end, [])
     end
   end

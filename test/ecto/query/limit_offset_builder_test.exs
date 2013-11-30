@@ -18,7 +18,7 @@ defmodule Ecto.Query.LimitOffsetBuilderTest do
       from(Post) |> limit([], x * 3) |> offset([], 4 * 2) |> select([], 0)
     end
 
-    assert_raise Ecto.InvalidQuery, %r"limit and offset expressions must be a single integer value", fn ->
+    assert_raise Ecto.InvalidQueryError, %r"limit and offset expressions must be a single integer value", fn ->
       delay_compile from(Post) |> limit([], "a") |> select([], 0)
     end
   end

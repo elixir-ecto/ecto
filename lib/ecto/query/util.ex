@@ -111,9 +111,9 @@ defmodule Ecto.Query.Util do
         joins = joins ++ [join.on(expr)]
         query.joins(joins)
       { _, [AssocJoinExpr[]] } ->
-        raise Ecto.InvalidQuery, reason: "an `on` query expression cannot follow an assocation join"
+        raise Ecto.InvalidQueryError, reason: "an `on` query expression cannot follow an assocation join"
       _ ->
-        raise Ecto.InvalidQuery, reason: "an `on` query expression must follow a `join`"
+        raise Ecto.InvalidQueryError, reason: "an `on` query expression must follow a `join`"
     end
   end
 
@@ -133,14 +133,14 @@ defmodule Ecto.Query.Util do
     bound_vars = Enum.filter(vars, &(&1 != :_))
     dup_vars = bound_vars -- Enum.uniq(bound_vars)
     unless dup_vars == [] do
-      raise Ecto.InvalidQuery, reason: "variable `#{hd dup_vars}` is already defined in query"
+      raise Ecto.InvalidQueryError, reason: "variable `#{hd dup_vars}` is already defined in query"
     end
 
     vars
   end
 
   def escape_binding(_) do
-    raise Ecto.InvalidQuery, reason: "binding should be list of variables"
+    raise Ecto.InvalidQueryError, reason: "binding should be list of variables"
   end
 
   # Converts internal type format to "typespec" format
@@ -257,14 +257,14 @@ defmodule Ecto.Query.Util do
   end
 
   defp escape_var(_) do
-    raise Ecto.InvalidQuery, reason: "binding should be list of variables"
+    raise Ecto.InvalidQueryError, reason: "binding should be list of variables"
   end
 
   defmacrop check_merge_dup(left, right, fields) do
     Enum.map(fields, fn field ->
       quote do
         if unquote(left).unquote(field) && unquote(right).unquote(field) do
-          raise Ecto.InvalidQuery, reason: "only one #{unquote(field)} expression is allowed in query"
+          raise Ecto.InvalidQueryError, reason: "only one #{unquote(field)} expression is allowed in query"
         end
       end
     end)

@@ -57,7 +57,7 @@ defmodule Ecto.Query.BuilderUtil do
 
   # everything else is not allowed
   def escape(other, _vars, _join_var) do
-    raise Ecto.InvalidQuery, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
+    raise Ecto.InvalidQueryError, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
   def escape_var(var, vars, join_var // nil) do
@@ -70,7 +70,7 @@ defmodule Ecto.Query.BuilderUtil do
       if var != :_ and ix do
         { :{}, [], [:&, [], [ix]] }
       else
-        raise Ecto.InvalidQuery, reason: "unbound variable `#{var}` in query"
+        raise Ecto.InvalidQueryError, reason: "unbound variable `#{var}` in query"
       end
     end
   end

@@ -1,7 +1,7 @@
 alias Ecto.Query.Util
 
-defexception Ecto.InvalidQuery, [:reason, :type, :query, :file, :line] do
-  def message(Ecto.InvalidQuery[] = e) do
+defexception Ecto.InvalidQueryError, [:reason, :type, :query, :file, :line] do
+  def message(Ecto.InvalidQueryError[] = e) do
     if e.type && e.query && e.file && e.line do
       fl = Exception.format_file_line(e.file, e.line)
       "#{fl}: the query `#{e.type}: #{Macro.to_string(e.query)}` " <>

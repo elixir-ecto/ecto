@@ -33,6 +33,6 @@ defmodule Ecto.Query.GroupByBuilder do
   end
 
   defp escape_field(_other, _vars) do
-    raise Ecto.InvalidQuery, reason: "malformed group_by query"
+    raise Ecto.InvalidQueryError, reason: "malformed group_by query"
   end
 end

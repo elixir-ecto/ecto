@@ -68,23 +68,23 @@ defmodule Ecto.QueryTest do
   end
 
   test "only one select is allowed" do
-    assert_raise Ecto.InvalidQuery, "only one select expression is allowed in query", fn ->
+    assert_raise Ecto.InvalidQueryError, "only one select expression is allowed in query", fn ->
       from(p in Post) |> select([], 1) |> select([], 2)
     end
   end
 
   test "only one limit or offset is allowed" do
-    assert_raise Ecto.InvalidQuery, "only one limit expression is allowed in query", fn ->
+    assert_raise Ecto.InvalidQueryError, "only one limit expression is allowed in query", fn ->
       from(p in Post) |> limit([], 1) |> limit([], 2) |> select([], 3)
     end
 
-    assert_raise Ecto.InvalidQuery, "only one offset expression is allowed in query", fn ->
+    assert_raise Ecto.InvalidQueryError, "only one offset expression is allowed in query", fn ->
       from(p in Post) |> offset([], 1) |> offset([], 2) |> select([], 3)
     end
   end
 
   test "binding should be list of variables" do
-    assert_raise Ecto.InvalidQuery, "binding should be list of variables", fn ->
+    assert_raise Ecto.InvalidQueryError, "binding should be list of variables", fn ->
       delay_compile select(Query[], [0], 1)
     end
   end
@@ -100,7 +100,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "variable is already defined" do
-    assert_raise Ecto.InvalidQuery, "variable `p` is already defined in query", fn ->
+    assert_raise Ecto.InvalidQueryError, "variable `p` is already defined in query", fn ->
       delay_compile(from(p in Post, from: p in Post))
     end
   end
@@ -133,17 +133,17 @@ defmodule Ecto.QueryTest do
   test "validate from expression" do
     delay_compile(from(Post, []))
 
-    assert_raise Ecto.InvalidQuery, fn ->
+    assert_raise Ecto.InvalidQueryError, fn ->
       delay_compile(from(Post, [123]))
     end
 
-    assert_raise Ecto.InvalidQuery, fn ->
+    assert_raise Ecto.InvalidQueryError, fn ->
       delay_compile(from(Post, 123))
     end
   end
 
   test "unbound _ var" do
-    assert_raise Ecto.InvalidQuery, fn ->
+    assert_raise Ecto.InvalidQueryError, fn ->
       delay_compile(from(Post) |> select([], _.x))
     end
 
@@ -161,11 +161,11 @@ defmodule Ecto.QueryTest do
   end
 
   test "binding collision" do
-    assert_raise Ecto.InvalidQuery, "variable `x` is already defined in query", fn ->
+    assert_raise Ecto.InvalidQueryError, "variable `x` is already defined in query", fn ->
       delay_compile(from(Post) |> from(Comment) |> select([x, x], x.id))
     end
 
-    assert_raise Ecto.InvalidQuery, "variable `x` is already defined in query", fn ->
+    assert_raise Ecto.InvalidQueryError, "variable `x` is already defined in query", fn ->
       delay_compile(from(x in Post, from: x in Comment, select: x.id))
     end
   end
@@ -173,7 +173,7 @@ defmodule Ecto.QueryTest do
   test "join on keyword query" do
     from(c in Comment, join: p in Post, on: c.text == "", select: c)
 
-    assert_raise Ecto.InvalidQuery, "an `on` query expression must follow a `join`", fn ->
+    assert_raise Ecto.InvalidQueryError, "an `on` query expression must follow a `join`", fn ->
       delay_compile(from(c in Comment, on: c.text == "", select: c))
     end
   end
@@ -187,11 +187,11 @@ defmodule Ecto.QueryTest do
     from(a in Query[])
     from([a] in Query[])
 
-    assert_raise Ecto.InvalidQuery, fn ->
+    assert_raise Ecto.InvalidQueryError, fn ->
       from([a, b] in Comment)
     end
 
-    assert_raise Ecto.InvalidQuery, fn ->
+    assert_raise Ecto.InvalidQueryError, fn ->
       from(Comment) |> where([x, y], true)
     end
   end
