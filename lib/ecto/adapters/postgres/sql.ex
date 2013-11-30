@@ -10,6 +10,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
   alias Ecto.Query.Normalizer
+  alias Ecto.Query.NameResolution
 
   unary_ops = [ -: "-", +: "+" ]
 
@@ -44,7 +45,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a select statement
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
-    sources = create_names(query)
+    sources = NameResolution.create_names(query)
     { from, used_names } = from(query.from, sources)
 
     select   = select(query.select, sources)
@@ -97,7 +98,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for an update all statement
   def update_all(Query[] = query, values) do
-    names  = create_names(query)
+    names  = NameResolution.create_names(query)
     from = elem(names, 0)
     { table, name } = Util.source(from)
 
@@ -124,7 +125,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for an delete all statement
   def delete_all(Query[] = query) do
-    names  = create_names(query)
+    names  = NameResolution.create_names(query)
     from   = elem(names, 0)
     { table, name } = Util.source(from)
 
@@ -364,24 +365,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp escape_string(value) when is_binary(value) do
     :binary.replace(value, "'", "''", [:global])
-  end
-
-  defp create_names(query) do
-    sources = query.sources |> tuple_to_list
-    Enum.reduce(sources, [], fn({ table, entity, model }, names) ->
-      name = unique_name(names, String.first(table), 0)
-      [{ { table, name }, entity, model }|names]
-    end) |> Enum.reverse |> list_to_tuple
-  end
-
-  # Brute force find unique name
-  defp unique_name(names, name, counter) do
-    counted_name = name <> integer_to_binary(counter)
-    if Enum.any?(names, fn { { _, n }, _, _ } -> n == counted_name end) do
-      unique_name(names, name, counter+1)
-    else
-      counted_name
-    end
   end
 
   # This is fixed in R16B02, we can remove this fix when we stop supporting R16B01
