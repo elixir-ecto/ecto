@@ -192,7 +192,7 @@ defmodule Ecto.Query do
   """
   defmacro from(expr, kw) when is_list(kw) do
     unless Keyword.keyword?(kw) do
-      raise Ecto.InvalidQueryError, reason: "second argument to from has to be a keyword list"
+      raise Ecto.QueryError, reason: "second argument to from has to be a keyword list"
     end
 
     { binds, expr } = FromBuilder.escape(expr)
@@ -277,11 +277,11 @@ defmodule Ecto.Query do
 
     is_assoc = Ecto.Associations.assoc_join?(join_expr)
     unless is_assoc == nil?(on) do
-      raise Ecto.InvalidQueryError, reason: "`join` expression requires explicit `on` " <>
+      raise Ecto.QueryError, reason: "`join` expression requires explicit `on` " <>
         "expression unless association join expression"
     end
     if (bind = Enum.first(expr_bindings)) && bind in binding do
-      raise Ecto.InvalidQueryError, reason: "variable `#{bind}` is already defined in query"
+      raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
     end
 
     on_expr = if on do
@@ -579,7 +579,7 @@ defmodule Ecto.Query do
   def check_binds(queryable, count_binds) do
     query = Ecto.Queryable.to_query(queryable)
     if count_binds > 1 and count_binds > Util.count_entities(query) do
-      raise Ecto.InvalidQueryError, reason: "more binds specified than there are models on query"
+      raise Ecto.QueryError, reason: "more binds specified than there are models on query"
     end
   end
 
@@ -596,7 +596,7 @@ defmodule Ecto.Query do
 
     Enum.each binds, fn bind ->
       if bind != :_ and bind in state.binds do
-        raise Ecto.InvalidQueryError, reason: "variable `#{bind}` is already defined in query"
+        raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
       end
     end
 
@@ -635,7 +635,7 @@ defmodule Ecto.Query do
   defp build_join(qual, expr, KwState[] = state) do
     { binds, expr } = JoinBuilder.escape(expr, state.binds)
     if (bind = Enum.first(binds)) && bind != :_ && bind in state.binds do
-      raise Ecto.InvalidQueryError, reason: "variable `#{bind}` is already defined in query"
+      raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
     end
 
     is_assoc = Ecto.Associations.assoc_join?(expr)

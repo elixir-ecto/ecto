@@ -43,14 +43,14 @@ defmodule Ecto.Query.JoinBuilder do
   end
 
   def escape(_other, _vars) do
-    raise Ecto.InvalidQueryError, reason: "invalid `join` query expression"
+    raise Ecto.QueryError, reason: "invalid `join` query expression"
   end
 
   @qualifiers [ :inner, :left, :right, :full ]
 
   def validate_qual(qual) when qual in @qualifiers, do: :ok
   def validate_qual(_qual) do
-    raise Ecto.InvalidQueryError, reason: "invalid join qualifier, accepted qualifiers are: " <>
+    raise Ecto.QueryError, reason: "invalid join qualifier, accepted qualifiers are: " <>
       Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
   end
 end

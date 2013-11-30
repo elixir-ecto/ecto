@@ -124,7 +124,7 @@ defmodule Ecto.Repo do
 
   @doc """
   Fetches all results from the data store based on the given query. May raise
-  `Ecto.InvalidQueryError` if query validation fails. `Ecto.AdapterError` will be
+  `Ecto.QueryError` if query validation fails. `Ecto.AdapterError` will be
   raised if there is an adapter error.
 
   ## Example

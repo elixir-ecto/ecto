@@ -31,23 +31,23 @@ defmodule Ecto.Query.BuilderUtilTest do
   test "escape raise" do
     message = %r"is not a valid query expression"
 
-    assert_raise Ecto.InvalidQueryError, message, fn ->
+    assert_raise Ecto.QueryError, message, fn ->
       escape(quote do x end, [])
     end
 
-    assert_raise Ecto.InvalidQueryError, message, fn ->
+    assert_raise Ecto.QueryError, message, fn ->
       escape(quote do :atom end, [])
     end
 
     message = %r"unbound variable"
 
-    assert_raise Ecto.InvalidQueryError, message, fn ->
+    assert_raise Ecto.QueryError, message, fn ->
       escape(quote do x.y end, [])
     end
   end
 
   test "unbound wildcard var" do
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       escape(quote do _.y end, [:_, :_])
     end
   end

@@ -34,7 +34,7 @@ defmodule Ecto.Query.OrderByBuilder do
   end
 
   defp escape_field({ _, _ }, _vars) do
-    raise Ecto.InvalidQueryError, reason: "malformed order_by query"
+    raise Ecto.QueryError, reason: "malformed order_by query"
   end
 
   defp escape_field(ast, vars) do
@@ -44,7 +44,7 @@ defmodule Ecto.Query.OrderByBuilder do
   defp check_dir(dir) do
     unless dir in [nil, :asc, :desc] do
       reason = "non-allowed direction `#{dir}`, only `asc` and `desc` allowed"
-      raise Ecto.InvalidQueryError, reason: reason
+      raise Ecto.QueryError, reason: reason
     end
   end
 end

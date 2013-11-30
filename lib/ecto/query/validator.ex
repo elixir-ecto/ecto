@@ -19,9 +19,9 @@ defmodule Ecto.Query.Validator do
     quote location: :keep do
       try do
         unquote(block)
-      rescue e in [Ecto.InvalidQueryError] ->
+      rescue e in [Ecto.QueryError] ->
         stacktrace = System.stacktrace
-        raise Ecto.InvalidQueryError, [reason: e.reason, type: unquote(type),
+        raise Ecto.QueryError, [reason: e.reason, type: unquote(type),
           file: unquote(file), line: unquote(line)], stacktrace
       end
     end
@@ -29,7 +29,7 @@ defmodule Ecto.Query.Validator do
 
   def validate(Query[] = query, apis, opts) do
     if query.from == nil do
-      raise Ecto.InvalidQueryError, reason: "a query must have a from expression"
+      raise Ecto.QueryError, reason: "a query must have a from expression"
     end
 
     grouped = group_by_sources(query.group_bys, query.sources)
@@ -54,7 +54,7 @@ defmodule Ecto.Query.Validator do
     validate_only_where(query)
 
     if values == [] do
-      raise Ecto.InvalidQueryError, reason: "no values to update given"
+      raise Ecto.QueryError, reason: "no values to update given"
     end
 
     if entity = Util.entity(query.from) do
@@ -62,7 +62,7 @@ defmodule Ecto.Query.Validator do
         expected_type = entity.__entity__(:field_type, field)
 
         unless expected_type do
-          raise Ecto.InvalidQueryError, reason: "field `#{field}` is not on the " <>
+          raise Ecto.QueryError, reason: "field `#{field}` is not on the " <>
             "entity `#{inspect entity}`"
         end
 
@@ -73,7 +73,7 @@ defmodule Ecto.Query.Validator do
         format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
         format_type = Util.type_to_ast(type) |> Macro.to_string
         unless expected_type == type do
-          raise Ecto.InvalidQueryError, reason: "expected_type `#{format_expected_type}` " <>
+          raise Ecto.QueryError, reason: "expected_type `#{format_expected_type}` " <>
           " on `#{inspect entity}.#{field}` doesn't match type `#{format_type}`"
         end
       end)
@@ -99,7 +99,7 @@ defmodule Ecto.Query.Validator do
     # TODO: File and line metadata
     unless match?(Query[joins: [], select: nil, order_bys: [], limit: nil,
         offset: nil, group_bys: [], havings: [], preloads: []], query) do
-      raise Ecto.InvalidQueryError, reason: "update query can only have a single `where` expression"
+      raise Ecto.QueryError, reason: "update query can only have a single `where` expression"
     end
   end
 
@@ -108,7 +108,7 @@ defmodule Ecto.Query.Validator do
 
     { joins, assocs } = Enum.partition(joins, fn
       JoinExpr[on: nil] ->
-        raise Ecto.InvalidQueryError, reason: "an `on` query expression have to " <>
+        raise Ecto.QueryError, reason: "an `on` query expression have to " <>
           "follow a `join` unless it's an association join"
       JoinExpr[] -> true
       AssocJoinExpr[] -> false
@@ -135,7 +135,7 @@ defmodule Ecto.Query.Validator do
 
         unless expr_type in [:unknown, :boolean] do
           format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
-          raise Ecto.InvalidQueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
+          raise Ecto.QueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
             "is of type `#{format_expr_type}`, has to be of boolean type"
         end
       end
@@ -149,13 +149,13 @@ defmodule Ecto.Query.Validator do
         entity = Util.find_source(state.sources, left) |> Util.entity
 
         if nil?(entity) do
-          raise Ecto.InvalidQueryError, reason: "association join can only be performed " <>
+          raise Ecto.QueryError, reason: "association join can only be performed " <>
             "on fields from an entity"
         end
 
         refl = entity.__entity__(:association, right)
         unless refl do
-          raise Ecto.InvalidQueryError, reason: "association join can only be performed " <>
+          raise Ecto.QueryError, reason: "association join can only be performed " <>
             "on assocation fields"
         end
       end
@@ -194,7 +194,7 @@ defmodule Ecto.Query.Validator do
   defp do_validate_field(entity, field) do
     type = entity.__entity__(:field_type, field)
     unless type do
-      raise Ecto.InvalidQueryError, reason: "unknown field `#{field}` on `#{inspect entity}`"
+      raise Ecto.QueryError, reason: "unknown field `#{field}` on `#{inspect entity}`"
     end
   end
 
@@ -202,7 +202,7 @@ defmodule Ecto.Query.Validator do
     entity = Util.entity(state.from)
 
     if preloads != [] and nil?(entity) do
-      raise Ecto.InvalidQueryError, reason: "can only preload on fields from an entity"
+      raise Ecto.QueryError, reason: "can only preload on fields from an entity"
     end
 
     Enum.each(preloads, fn(QueryExpr[] = expr) ->
@@ -217,7 +217,7 @@ defmodule Ecto.Query.Validator do
     Enum.map(fields, fn { field, sub_fields } ->
       refl = entity.__entity__(:association, field)
       unless refl do
-        raise Ecto.InvalidQueryError, reason: "`#{inspect entity}.#{field}` is not an association field"
+        raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` is not an association field"
       end
       check_preload_fields(sub_fields, refl.associated.__model__(:entity))
     end)
@@ -234,7 +234,7 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(:select, select.file, select.line) do
         pos = Util.locate_var(select.expr, { :&, [], [0] })
         if nil?(pos) do
-          raise Ecto.InvalidQueryError, reason: "source in from expression " <>
+          raise Ecto.QueryError, reason: "source in from expression " <>
             "needs to be selected when using preload query"
         end
       end
@@ -249,7 +249,7 @@ defmodule Ecto.Query.Validator do
     if entity = Util.entity(source) do
       type = entity.__entity__(:field_type, field)
       unless type do
-        raise Ecto.InvalidQueryError, reason: "unknown field `#{field}` on `#{inspect entity}`"
+        raise Ecto.QueryError, reason: "unknown field `#{field}` on `#{inspect entity}`"
       end
       type
     else
@@ -266,7 +266,7 @@ defmodule Ecto.Query.Validator do
       entity
     else
       source = Util.source(source)
-      raise Ecto.InvalidQueryError, reason: "cannot select on source, `#{inspect source}`, with no entity"
+      raise Ecto.QueryError, reason: "cannot select on source, `#{inspect source}`, with no entity"
     end
   end
 
@@ -276,12 +276,12 @@ defmodule Ecto.Query.Validator do
 
     api = Enum.find(state.apis, &function_exported?(&1, name, length_args))
     unless api do
-      raise Ecto.InvalidQueryError, reason: "function `#{name}/#{length_args}` not defined in query API"
+      raise Ecto.QueryError, reason: "function `#{name}/#{length_args}` not defined in query API"
     end
 
     is_agg = api.aggregate?(name, length_args)
     if is_agg and state.in_agg? do
-      raise Ecto.InvalidQueryError, reason: "aggregate function calls cannot be nested"
+      raise Ecto.QueryError, reason: "aggregate function calls cannot be nested"
     end
 
     state = state.in_agg?(is_agg)
@@ -308,7 +308,7 @@ defmodule Ecto.Query.Validator do
         { :list, :any }
       [type|rest] ->
         unless Enum.all?(rest, &Util.type_eq?(type, &1)) do
-          raise Ecto.InvalidQueryError, reason: "all elements in list has to be of same type"
+          raise Ecto.QueryError, reason: "all elements in list has to be of same type"
         end
         { :list, type }
     end
@@ -316,7 +316,7 @@ defmodule Ecto.Query.Validator do
 
   # atom
   defp type_check(literal, _vars) when is_atom(literal) and not (literal in [true, false, nil]) do
-    raise Ecto.InvalidQueryError, reason: "atoms are not allowed in queries `#{literal}`"
+    raise Ecto.QueryError, reason: "atoms are not allowed in queries `#{literal}`"
   end
 
   # values
@@ -324,7 +324,7 @@ defmodule Ecto.Query.Validator do
     case Util.value_to_type(value) do
       { :ok, type } -> type
       { :error, reason } ->
-        raise Ecto.InvalidQueryError, reason: reason
+        raise Ecto.QueryError, reason: reason
     end
   end
 
@@ -333,12 +333,12 @@ defmodule Ecto.Query.Validator do
   defp select_clause({ :assoc, _, [parent, child] }, State[] = state) do
     entity = Util.find_source(state.sources, parent) |> Util.entity
     unless entity == Util.entity(state.from) do
-      raise Ecto.InvalidQueryError, reason: "can only associate on the from entity"
+      raise Ecto.QueryError, reason: "can only associate on the from entity"
     end
 
     expr = Util.find_expr(state.query, child)
     unless match?(AssocJoinExpr[qual: qual] when qual in [:inner, :left], expr) do
-      raise Ecto.InvalidQueryError, reason: "can only associate on an inner or left association join"
+      raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
     end
   end
 
@@ -377,7 +377,7 @@ defmodule Ecto.Query.Validator do
   defp check_grouped({ source, field } = source_field, state) do
     if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do
       entity = Util.entity(source) || Util.source(source)
-      raise Ecto.InvalidQueryError, reason: "`#{inspect entity}.#{field}` must appear in `group_by` " <>
+      raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` must appear in `group_by` " <>
         "or be used in an aggregate function"
     end
   end

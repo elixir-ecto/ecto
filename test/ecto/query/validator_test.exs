@@ -38,7 +38,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid query" do
     query = select(Query[], [], 123)
-    assert_raise Ecto.InvalidQueryError, %r"a query must have a from expression", fn ->
+    assert_raise Ecto.QueryError, %r"a query must have a from expression", fn ->
       validate(query)
     end
   end
@@ -51,7 +51,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> where([p], p.title) |> select([], 123)
-    assert_raise Ecto.InvalidQueryError, %r"where expression", fn ->
+    assert_raise Ecto.QueryError, %r"where expression", fn ->
       validate(query)
     end
   end
@@ -61,7 +61,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> having([], "abc") |> select([], 123)
-    assert_raise Ecto.InvalidQueryError, %r"having expression", fn ->
+    assert_raise Ecto.QueryError, %r"having expression", fn ->
       validate(query)
     end
   end
@@ -71,7 +71,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> join(:inner, [], Comment, "abc") |> select([], 123)
-    assert_raise Ecto.InvalidQueryError, %r"join_on expression", fn ->
+    assert_raise Ecto.QueryError, %r"join_on expression", fn ->
       validate(query)
     end
   end
@@ -85,7 +85,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "unknown field" do
     query = from(Post) |> select([p], p.unknown)
-    assert_raise Ecto.InvalidQueryError, %r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post.Entity`", fn ->
+    assert_raise Ecto.QueryError, %r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post.Entity`", fn ->
       validate(query)
     end
   end
@@ -190,14 +190,14 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "group_by invalid field" do
     query = from(Post) |> group_by([p], p.hai) |> select([], 0)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "order_by invalid field" do
     query = from(Post) |> order_by([p], p.hai) |> select([], 0)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
@@ -207,7 +207,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> having([p], p.id) |> select([], 0)
-    assert_raise Ecto.InvalidQueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.id` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.id` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -217,7 +217,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
-    assert_raise Ecto.InvalidQueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -227,7 +227,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> group_by([p], p.id) |> select([p], p.title)
-    assert_raise Ecto.InvalidQueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -237,7 +237,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> group_by([p], p.id) |> select([p], p)
-    assert_raise Ecto.InvalidQueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -254,12 +254,12 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "only allow functions in API" do
     query = from(Post) |> select([], forty_two())
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
 
     query = from(Post) |> select([], avg())
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
@@ -276,7 +276,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "don't allow nested aggregates" do
     query = from(Post) |> select([p], count(count(p.id)))
-    assert_raise Ecto.InvalidQueryError, "aggregate function calls cannot be nested", fn ->
+    assert_raise Ecto.QueryError, "aggregate function calls cannot be nested", fn ->
       validate(query)
     end
   end
@@ -309,14 +309,14 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "cannot reference virtual field" do
     query = from(Comment) |> select([c], c.temp)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "cannot preload without entity" do
     query = from("posts") |> preload(:comments)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
@@ -326,7 +326,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> preload(:title)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
@@ -336,7 +336,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> preload(:comments) |> select([p], 0)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
@@ -346,12 +346,12 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> preload(comments: :test) |> select([p], p)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
 
     query = from(Post) |> preload(comments: :posted) |> select([p], p)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
@@ -365,14 +365,14 @@ defmodule Ecto.Query.ValidatorTest do
 
     query = from(c in Comment, join: p in Post, select: c)
     message = "an `on` query expression have to follow a `join` unless it's an association join"
-    assert_raise Ecto.InvalidQueryError, message, fn ->
+    assert_raise Ecto.QueryError, message, fn ->
       validate(query)
     end
   end
 
   test "cannot association without entity" do
     query = from(p in "posts", join: p.comments)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
@@ -382,7 +382,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(p in Post, join: p.title)
-    assert_raise Ecto.InvalidQueryError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
@@ -392,12 +392,12 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(p in Post, join: c in p.comments, select: assoc(c, p))
-    assert_raise Ecto.InvalidQueryError, "can only associate on the from entity", fn ->
+    assert_raise Ecto.QueryError, "can only associate on the from entity", fn ->
       validate(query)
     end
 
     query = from(p in Post, join: c in Comment, on: true, select: assoc(p, c))
-    assert_raise Ecto.InvalidQueryError, "can only associate on an inner or left association join", fn ->
+    assert_raise Ecto.QueryError, "can only associate on an inner or left association join", fn ->
       validate(query)
     end
   end
@@ -423,7 +423,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
 
     query = from(p in Post, select: binary(p.text))
-    assert_raise Ecto.InvalidQueryError, "binary/1 argument has to be a literal of binary type", fn ->
+    assert_raise Ecto.QueryError, "binary/1 argument has to be a literal of binary type", fn ->
       validate(query)
     end
   end

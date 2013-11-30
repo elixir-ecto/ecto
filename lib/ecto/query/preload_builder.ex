@@ -14,5 +14,5 @@ defmodule Ecto.Query.PreloadBuilder do
   end
 
   def validate(atom) when is_atom(atom), do: :ok
-  def validate(_other), do: raise(Ecto.InvalidQueryError, reason: @reason)
+  def validate(_other), do: raise(Ecto.QueryError, reason: @reason)
 end

@@ -25,7 +25,7 @@ defmodule Ecto.Query.FromBuilder do
       { [:_], quote(do: other) }
 
       iex> escape(quote do: x() in other)
-      ** (Ecto.InvalidQueryError) invalid `from` query expression
+      ** (Ecto.QueryError) invalid `from` query expression
 
   """
   @spec escape(Macro.t) :: { [atom], Macro.t }
@@ -34,7 +34,7 @@ defmodule Ecto.Query.FromBuilder do
       { var, _, context } when is_atom(var) and is_atom(context) ->
         var
       _ ->
-        raise Ecto.InvalidQueryError, reason: "invalid `from` query expression"
+        raise Ecto.QueryError, reason: "invalid `from` query expression"
     end)
     { binds, expr }
   end

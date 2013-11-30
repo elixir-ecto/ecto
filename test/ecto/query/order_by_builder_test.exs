@@ -17,17 +17,17 @@ defmodule Ecto.Query.OrderByBuilderTest do
   end
 
   test "escape raise" do
-    assert_raise Ecto.InvalidQueryError, "unbound variable `x` in query", fn ->
+    assert_raise Ecto.QueryError, "unbound variable `x` in query", fn ->
       escape(quote do x.y end, [])
     end
 
     message = "non-allowed direction `test`, only `asc` and `desc` allowed"
-    assert_raise Ecto.InvalidQueryError, message, fn ->
+    assert_raise Ecto.QueryError, message, fn ->
       escape(quote do [test: x.y] end, [:x])
     end
 
     message = "malformed order_by query"
-    assert_raise Ecto.InvalidQueryError, message, fn ->
+    assert_raise Ecto.QueryError, message, fn ->
       escape(quote do 1 + 2 end, [])
     end
   end
