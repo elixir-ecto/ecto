@@ -236,7 +236,7 @@ end
 Last but not least, Ecto allows you to write queries in Elixir and send them to the repository, which translates them to the underlying database. Let's see an example:
 
 ```elixir
-import Ecto.Query, only: [from: 2]
+use Ecto.Query
 
 query = from w in Weather,
       where: w.prcp > 0 or w.prcp == nil,
@@ -257,19 +257,6 @@ Queries are defined and extended with the `from` macro. The supported keywords a
 * `:select` - although we used `:select` above, it is optional and by default it simply returns the entity tied to the model being queried
 * `:preload` - used for preloading associations
 
-You can find more info about queries and the supported keywords in the [`Ecto.Query` module](http://elixir-lang.org/docs/ecto/Ecto.Query.html).
-
-In the previous section, we have defined our model as queryable. This is what allows our model to be used in the query as: `from w in Weather`. The right-hand side of `in` must implement the `Ecto.Queryable` protocol, which is done automatically for models that use the queryable feature.
-
-Since queries also implement `Ecto.Queryable`, we can compose queries:
-
-```elixir
-query = from w in Weather,
-      where: w.prcp > 0 or w.prcp == nil
-
-Repo.all(from q in query, limit: 30)
-```
-
 When writing a query, you are inside Ecto's query syntax. In order to access external values or invoke functions, you need to use the `^` operator, which is overloaded by Ecto:
 
 ```elixir
@@ -280,30 +267,7 @@ end
 
 This comes with the extra benefit that queries in Ecto can easily access database functions. For example, `upcase`, `downcase`, `pow` are all available inside Ecto query syntax and are sent directly to the database. You can see the full list of supported functions at [`Ecto.Query.API`](http://elixir-lang.org/docs/ecto/Ecto.Query.API.html).
 
-Finally, notice that queries in Ecto must be type-safe. The following example will fail:
-
-```elixir
-Repo.all(from w in Weather, where: w.prcp == "oops")
-```
-
-with the following error message:
-
-```elixir
-** (Ecto.Query.TypeCheckError) the following expression does not type check:
-
-    &0.prcp() == "foo"
-
-Allowed types for ==/2:
-
-    number == number
-    var == var
-    nil == _
-    _ == nil
-
-Got: float == string
-```
-
-The error message is saying that, the database operator `==/2` can compare numbers with numbers, be them integer or floats, it can compare any value with other value of the same type (`var == var`), and it can compare any other value with `nil`.
+Ecto queries are also composable and type-safe. You can find more info it and the supported keywords in the [`Ecto.Query` module](http://elixir-lang.org/docs/ecto/Ecto.Query.html).
 
 With this, we finish our introduction. The next section goes into more details on other Ecto features, like generators, associations and more.
 
