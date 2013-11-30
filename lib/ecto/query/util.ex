@@ -87,7 +87,7 @@ defmodule Ecto.Query.Util do
     if type == :on do
       merge_on(query, expr)
     else
-      check_merge(query, Query.new([{ type, expr }]))
+      check_duplicate(query, type, expr)
 
       case type do
         :from     -> query.from(expr)
@@ -260,18 +260,16 @@ defmodule Ecto.Query.Util do
     raise Ecto.QueryError, reason: "binding should be list of variables"
   end
 
-  defmacrop check_merge_dup(left, right, fields) do
-    Enum.map(fields, fn field ->
-      quote do
-        if unquote(left).unquote(field) && unquote(right).unquote(field) do
-          raise Ecto.QueryError, reason: "only one #{unquote(field)} expression is allowed in query"
-        end
+  # Check duplicates only for the queries below.
+  lc type inlist [:select, :from, :limit, :offset] do
+    defp check_duplicate(Query[] = left, unquote(type), expr) when not nil?(expr) do
+      if left.unquote(type) do
+        raise Ecto.QueryError, reason: "only one #{unquote(type)} expression is allowed in query"
       end
-    end)
+    end
   end
 
-  # Checks if a query merge can be done
-  defp check_merge(Query[] = left, Query[] = right) do
-    check_merge_dup(left, right, [:select, :from, :limit, :offset])
+  defp check_duplicate(_left, _type, _expr) do
+    :ok
   end
 end
