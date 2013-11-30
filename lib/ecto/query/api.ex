@@ -1,6 +1,15 @@
 defmodule Ecto.Query.API do
   use Ecto.Query.Typespec
 
+  @moduledoc """
+  The Query API available by default in Ecto queries.
+
+  All queries in Ecto are typesafe and this module defines all
+  database functions based on their type. Note that this module defines
+  only the API, each database adapter still needs to support the
+  functions outlined here.
+  """
+
   ## Types
 
   deft float

@@ -1,6 +1,6 @@
 defmodule Ecto.Adapter.Transactions  do
   @moduledoc """
-  Specifies the transactions API that an adapter is required to implement.
+  Specifies the adapter transactions API.
   """
 
   use Behaviour

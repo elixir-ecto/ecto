@@ -7,6 +7,9 @@ defmodule Ecto.Adapter do
   use Behaviour
   @type t :: module
 
+  @doc """
+  The callback invoked when the adapter is used.
+  """
   defmacrocallback __using__(opts :: Keyword.t) :: Macro.t
 
   @doc """

@@ -1,13 +1,14 @@
 defmodule Ecto.Adapter.Migrations  do
   @moduledoc """
-  Specifies the migrations API that an adapter is required to implement.
+  Specifies the adapter migrations API.
   """
 
   use Behaviour
 
   @doc """
-  Runs an up migration on the given repo, the migration is identified by the
-  supplied version.
+  Runs an up migration.
+
+  It expects a repository, the migration version and the migration code.
 
   ## Examples
 
@@ -17,8 +18,9 @@ defmodule Ecto.Adapter.Migrations  do
   defcallback migrate_up(Ecto.Repo.t, integer, binary) :: :ok | :already_up | no_return
 
   @doc """
-  Runs a down migration on the given repo, the migration is identified by the
-  supplied version.
+  Runs a down migration.
+
+  It expects a repository, the migration version and the migration code.
 
   ## Examples
 
@@ -28,7 +30,7 @@ defmodule Ecto.Adapter.Migrations  do
   defcallback migrate_down(Ecto.Repo.t, integer, binary) :: :ok | :missing_up | no_return
 
   @doc """
-  Returns the versions of all migrations that have been run on the given repo.
+  Returns all migrated versions as integers.
   """
   defcallback migrated_versions(Ecto.Repo.t) :: [integer] | no_return
 end

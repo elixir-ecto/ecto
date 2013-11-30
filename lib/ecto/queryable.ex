@@ -13,22 +13,20 @@ defimpl Ecto.Queryable, for: Ecto.Query.Query do
 end
 
 defimpl Ecto.Queryable, for: BitString do
-  def to_query(source), do: Ecto.Query.Query[from: { source, nil, nil }]
+  def to_query(source) when is_binary(source),
+    do: Ecto.Query.Query[from: { source, nil, nil }]
 end
 
 defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
     try do
-      { module.__model__(:source), module.__model__(:entity) }
+      module.__queryable__
     rescue
       UndefinedFunctionError ->
         raise Protocol.UndefinedError,
              protocol: @protocol,
                 value: module,
-          description: "the given module/atom is not a queryable model"
-    else
-      { source, entity } ->
-        Ecto.Query.Query[from: { source, entity, module }]
+          description: "the given module/atom is not queryable"
     end
   end
 end

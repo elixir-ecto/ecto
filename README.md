@@ -289,7 +289,7 @@ Repo.all(from w in Weather, where: w.prcp == "oops")
 with the following error message:
 
 ```elixir
-** (Ecto.TypeCheckError) the following expression does not type check:
+** (Ecto.Query.TypeCheckError) the following expression does not type check:
 
     &0.prcp() == "foo"
 

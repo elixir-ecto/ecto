@@ -40,8 +40,12 @@ defexception Ecto.NotSingleResult, [:entity, :primary_key, :id] do
   end
 end
 
-defexception Ecto.TypeCheckError, [:expr, :types, :allowed] do
-  def message(Ecto.TypeCheckError[] = e) do
+defexception Ecto.Query.TypeCheckError, [:expr, :types, :allowed] do
+  @moduledoc """
+  Exception raised when a query does not type check.
+  Read `Ecto.Query` and `Ecto.Query.API` docs for more information.
+  """
+  def message(Ecto.Query.TypeCheckError[] = e) do
     { name, _, _ } = e.expr
     expected = Enum.map_join(e.allowed, "\n    ", &Macro.to_string(&1))
 

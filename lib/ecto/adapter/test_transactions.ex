@@ -1,7 +1,14 @@
 defmodule Ecto.Adapter.TestTransactions  do
   @moduledoc """
-  Specifies the transactions test API that an adapter is required to implement.
-  Should only be used during testing.
+  Specifies the adapter test transactions API.
+
+  These adapter functions work by starting a transaction and storing
+  the connection back in the pool with an open transaction. At the end
+  of the test, the transaction is rolled back, reverting all data added
+  during tests.
+
+  Note this approach only works if the connection pool has size of 1
+  and does not support any overflow.
 
   ## Postgres test example
 
@@ -17,7 +24,7 @@ defmodule Ecto.Adapter.TestTransactions  do
 
       # All tests in this module will be wrapped in transactions
       defmodule PostTest do
-        # Important to set `async: false` for all tests sharing a repo.
+        # Tests that use the shared repository should be sync
         use ExUnit.Case, async: false
         alias Ecto.Adapters.Postgres
 

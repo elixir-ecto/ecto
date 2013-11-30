@@ -1,65 +1,101 @@
 defmodule Ecto.Query do
   @moduledoc """
-  This module is the query DSL. Queries are used to fetch data from a repository
-  (see `Ecto.Repo`).
+  Provides the Query DSL.
 
-  ## Examples
+  Queries are used to retrieve and manipualte data in a repository
+  (see `Ecto.Repo`). Although this module provides a complete API,
+  supporting expressions like `where/3`, `select/3` and so forth,
+  most of the times developers need to import only the `from/1` and
+  `from/2` macros. That is exactly the API that `use Ecto.Query`
+  provides out of the box:
 
-      import Ecto.Query
+      # Imports only from/1 and from/2 from Ecto.Query
+      use Ecto.Query
 
-         from w in Weather,
-       where: w.prcp > 0,
-      select: w.city
+      # Create a query
+      query = from w in Weather,
+            where: w.prcp > 0,
+           select: w.city
 
-  The above example will create a query that can be run against a repository.
-  `from` will bind the variable `w` to the entity `Weather` (see `Ecto.Entity`).
-  If there are multiple from expressions the query will run for every
-  permutation of their combinations. `where` is used to filter the results,
-  multiple `where`s can be given. `select` selects which results will be
-  returned, a single variable can be given, that will return the full entity, or
-  a single field. Multiple fields can also be grouped in lists or tuples. Only
-  one `select` expression is allowed.
+      # econd the query to the repository
+      Repo.all(query)
 
-  External variables and elixir expressions can be injected into a query
-  expression with `^`. Anything that isn't inside a `^` expression is treated
-  as a query expression.
+  ## Composition
+
+  Ecto queries are composable. For example, the query above can
+  actually be defined in two parts:
+
+      # Create a query
+      query = from w in Weather, where: w.prcp > 0,
+
+      # Extend the query
+      query = from w in query, select: w.city
+
+  Keep in mind though the variable names used on the left-hand
+  side of `in` are just a convenience, they are not taken into
+  account in the query generation.
+
+  Any value can used on the right-side of `in` as long as it
+  implements the `Ecto.Queryable` protocol.
+
+  ## Data security
+
+  External values and elixir expressions can be injected into a query
+  expression with `^`. Anything that isn't inside a `^` expression
+  is treated as a query expression.
 
   This allows one to create dynamic queries:
 
       def with_minimum(age, height_ft) do
-        from u in User,
+          from u in User,
         where: u.age > ^age and u.height > ^(height_ft * 3.28)
       end
 
-  In the example above, we will compare against the `age` given as argument.
-  Notice the `select` clause is optional, Ecto will automatically infer and
-  returns the user record (similar to `select: u`) from the query above.
+  In the example above, we will compare against the `age` and `height`
+  given as arguments, appropriately convering the height. Note all
+  external values will be quoted to avoid SQL injection attacks in
+  the underlying repository.
 
-  ## Extensions
+  Notice the `select` clause is optional, Ecto will automatically infers
+  and returns the user record (similar to `select: u`) from the query above.
 
-  Queries are composable and can be extend dynamically. This allows you to
-  create specific queries given a parameter:
+  ## Type safety
 
-      query = from w in Weather, select: w.city
-      if filter_by_prcp do
-        query = extend w in query, where: w.prcp > 0
-      end
-      Repo.all(query)
+  Ecto queries are also type-safe. For example, the following query:
 
-  Or even create functions that extend an existing query:
+      from u in User, where: u.age == "zero"
 
-      def paginate(query, page, size) do
-        extend query,
-          limit: size,
-          offset: (page-1) * size
-      end
+  will error with the following message:
 
-      query |> paginate |> Repo.all
+      ** (Ecto.Query.TypeCheckError) the following expression does not type check:
+
+          &0.age() == "zero"
+
+      Allowed types for ==/2:
+
+          number == number
+          var == var
+          nil == _
+          _ == nil
+
+      Got: integer == string
+
+  The types above mean:
+
+  * `number == number` - any number (be it float, integer, etc) can be compared
+    with any other number;
+  * `var == var` - the comparison operator also works if both operands are of
+    the same type (i.e. `var` represents a variable type);
+  * `nil == _` and `_ == nil` - the comparison operator also type checks if any
+    of the operands are nil;
+
+  All operations allowed in a query with their respective type are defined
+  in `Ecto.Query.API`.
 
   ## Query expansion
 
-  In the examples above, we have used the so-called **keywords query syntax**
-  to create a query. Our first example:
+  In all examples so far, we have used the **keywords query syntax** to create
+  a query. Our first example:
 
       import Ecto.Query
 
@@ -108,13 +144,15 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Creates a query. It can either be a keyword query or a query expression. If it
-  is a keyword query the first argument should be an `in` expression and the
-  second argument a keyword query where they keys are expression types and the
-  values are expressions.
+  Creates a query.
 
-  If it is a query expression the first argument is the original query and the
-  second argument the expression.
+  It can either be a keyword query or a query expression. If it is a
+  keyword query the first argument should be an `in` expression and
+  the second argument a keyword query where they keys are expression
+  types and the values are expressions.
+
+  If it is a query expression the first argument is the original query
+  and the second argument the expression.
 
   ## Keywords examples
 
@@ -124,17 +162,6 @@ defmodule Ecto.Query do
 
       from(City) |> select([c], c)
 
-  # Extending queries
-
-  An existing query can be extended with `from` by appending the given
-  expressions to it.
-
-  The existing variables from the original query can be rebound by
-  giving the variables on the left hand side of `in`. The bindings
-  are order dependent, that means that each variable will be bound to
-  the variable in the original query that was defined in the same order
-  as the binding was in its list.
-
   ## Examples
 
       def paginate(query, page, size) do
@@ -143,22 +170,25 @@ defmodule Ecto.Query do
           offset: (page-1) * size
       end
 
-  The example above does not rebinding any variable, as they are not
-  required for `limit` and `offset`. However, extending a query with
-  where expression would require so:
+  The example above does not use `in` because none of `limit` and `offset`
+  requires such. However, extending a query with where expression would
+  require so:
 
       def published(query) do
         from p in query, where: p.published_at != nil
       end
 
-  Notice we have rebound the term `p`. In case the given query has
-  more than one `from` expression, each of them must be given in
-  the order they were bound:
+  Notice we have created a `p` variable to represent each item in the query.
+  In case the given query has more than one `from` expression, each of them
+  must be given in the order they were bound:
 
       def published_multi(query) do
         from [p,o] in query,
         where: p.published_at != nil and o.published_at != nil
       end
+
+  Note the variables `p` and `q` must be named as you find more convenient
+  as they have no important in the query sent to the database.
   """
   defmacro from(expr, kw) when is_list(kw) do
     unless Keyword.keyword?(kw) do
@@ -208,16 +238,18 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  A join query expression. Receives an entity that is to be joined to the query
-  and a condition to do the joining on. The join condition can be any expression
-  that evaluates to a boolean value. The join is by default an inner join, the
-  qualifier can be changed by giving the atoms: `:inner`, `:left`, `:right` or
+  A join query expression.
+
+  Receives an entity that is to be joined to the query and a condition to
+  do the joining on. The join condition can be any expression that evaluates
+  to a boolean value. The join is by default an inner join, the qualifier
+  can be changed by giving the atoms: `:inner`, `:left`, `:right` or
   `:full`. For a keyword query the `:join` keyword can be changed to:
   `:inner_join`, `:left_join`, `:right_join` or `:full_join`.
 
-  The join condition can be automatically set when doing an association join. An
-  association join can be done on any association field (`has_many`, `has_one`,
-  `belong_to`).
+  The join condition can be automatically set when doing an association
+  join. An association join can be done on any association field
+  (`has_many`, `has_one`, `belong_to`).
 
   ## Keywords examples
 
@@ -277,18 +309,21 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  A select query expression. Selects which fields will be selected from the
-  entity and any transformations that should be performed on the fields, any
-  expression that is accepted in a query can be a select field. There can only
-  be one select expression in a query, if the select expression is omitted, the
-  query will by default select the full entity (only works when there is a
-  single from expression and no group by).
+  A select query expression.
+
+  Selects which fields will be selected from the entity and any transformations
+  that should be performed on the fields. Any expression that is accepted in a
+  query can be a select field.
+
+  There can only be one select expression in a query, if the select expression is
+  omitted, the query will by default select the full entity (only works when there
+  is a single `from` expression and no `group_by`).
 
   The sub-expressions in the query can be wrapped in lists or tuples as shown in
   the examples. A full entity can also be selected if the entity variable is the
   only thing in the expression.
 
-  The `assoc/2` selector can be used to load an association on a parent entity
+  The `assoc/2` selector can be used to embed an association on a parent entity
   as shown in the examples below. The first argument to `assoc` has to be a
   variable bound in the `from` query expression, the second has to be a variable
   bound in an association join on the `from` variable.
@@ -321,9 +356,11 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  A where query expression. Filters the rows from the entity. If there are more
-  than one where expressions they will be combined in conjunction. A where
-  expression have to evaluate to a boolean value.
+  A where query expression.
+
+  `where` expressions are used to filter the result set. If there is more
+  than one where expression, they are combined with `and` operator. All
+  where expression have to evaluate to a boolean value.
 
   ## Keywords examples
 
@@ -347,10 +384,11 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  An order by query expression. Orders the fields based on one or more entity
-  fields. It accepts a single field or a list field, the direction can be
-  specified in a keyword list as shown in the examples. There can be several
-  order by expressions in a query.
+  An order by query expression.
+
+  Orders the fields based on one or more fields. It accepts a single field
+  or a list field, the direction can be specified in a keyword list as shown
+  in the examples. There can be several order by expressions in a query.
 
   ## Keywords examples
 
@@ -376,9 +414,10 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  A limit query expression. Limits the number of rows selected from the entity.
-  Can be any expression but have to evaluate to an integer value. Can't include
-  entity fields.
+  A limit query expression.
+
+  Limits the number of rows selected from the result. Can be any expression but
+  have to evaluate to an integer value. It can't include any field.
 
   ## Keywords examples
 
@@ -401,9 +440,10 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  An offset query expression. Limits the number of rows selected from the
-  entity. Can be any expression but have to evaluate to an integer value.
-  Can't include entity fields.
+  An offset query expression.
+
+  Offsets the number of rows selected from the result. Can be any expression
+  but have to evaluate to an integer value. It can't include any field.
 
   ## Keywords examples
 
@@ -427,11 +467,13 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  A group by query expression. Groups together rows from the entity that have
-  the same values in the given fields. Using `group_by` "groups" the query
-  giving it different semantics in the `select` expression. If a query is
-  grouped only fields that were referenced in the `group_by` can be used in the
-  `select` or if the field is given as an argument to an aggregate function.
+  A group by query expression.
+
+  Groups together rows from the entity that have the same values in the given
+  fields. Using `group_by` "groups" the query giving it different semantics
+  in the `select` expression. If a query is grouped only fields that were
+  referenced in the `group_by` can be used in the `select` or if the field
+  is given as an argument to an aggregate function.
 
   ## Keywords examples
 
@@ -463,10 +505,12 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  A having query expression. Like `where` `having` filters rows from the entity,
-  but after the grouping is performed giving it the same semantics as `select`
-  for a grouped query (see `group_by/3`). `having` groups the query even if the
-  query has no `group_by` expression.
+  A having query expression.
+
+  Like `where` `having` filters rows from the entity, but after the grouping is
+  performed giving it the same semantics as `select` for a grouped query
+  (see `group_by/3`). `having` groups the query even if the query has no
+  `group_by` expression.
 
   ## Keywords examples
 
@@ -497,10 +541,15 @@ defmodule Ecto.Query do
   end
 
   @doc """
-    A preload query expression. Preloads the specified fields on the entity in the
-  from expression. Loads all associated records for each entity in the result
-  set based on the association. The fields have to be association fields and the
-  entity has to be in the select expression.
+  Mark associations to be pre-loaded.
+
+  Pre-loading allow developers to specify associations that should be pre-
+  loaded once the first result set is retrieved. Consider this example:
+
+      Repo.all from p in Post, preload: [:comments]
+
+  The example above will fetch all posts from the database and then do
+  a separate query returning all comments associated to the given posts.
 
   ## Keywords examples
 

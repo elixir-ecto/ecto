@@ -108,10 +108,20 @@ defmodule Ecto.Model.Queryable do
     quote do
       @ecto_source unquote(source)
       @ecto_entity unquote(entity)
+
+      @doc "Delegates to #{@ecto_entity}.new/0"
       def new(), do: @ecto_entity.new()
+
+      @doc "Delegates to #{@ecto_entity}.new/1"
       def new(params), do: @ecto_entity.new(params)
+
+      @doc false
       def __model__(:source), do: @ecto_source
       def __model__(:entity), do: @ecto_entity
+
+      @doc false
+      def __queryable__,
+        do: Ecto.Query.Query[from: { @ecto_source, @ecto_entity, __MODULE__ }]
     end
   end
 end

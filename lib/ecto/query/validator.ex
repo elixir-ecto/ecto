@@ -294,7 +294,7 @@ defmodule Ecto.Query.Validator do
         { :ok, type } ->
           type
         { :error, allowed } ->
-          raise Ecto.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
+          raise Ecto.Query.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
       end
     end
   end

@@ -78,7 +78,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "entity field types" do
     query = from(Post) |> select([p], p.title + 2)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
@@ -115,27 +115,27 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid expressions" do
     query = from(Post) |> select([p], p.id + "abc")
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
     query = from(Post) |> select([p], p.id == "abc")
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
     query = from(Post) |> select([p], -p.title)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
     query = from(Post) |> select([p], 1 < p.title)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
     query = from(Post) |> where([p], true or p.title) |> select([], 0)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
@@ -156,7 +156,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid in expression" do
     query = from(Post) |> select([p], 1 in p.title)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
@@ -168,12 +168,12 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid .. expression" do
     query = from(Post) |> select([], 1 .. '3')
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
     query = from(Post) |> select([], "1" .. 3)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
@@ -183,7 +183,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> where([p], [p.title, p.title] == 1) |> select([], 0)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
@@ -289,7 +289,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post) |> select([p], 1 + nil)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
@@ -408,7 +408,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(c in Comment, where: c.posted == 123, select: c)
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
@@ -418,7 +418,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(Post, select: binary("abc") <> "abc")
-    assert_raise Ecto.TypeCheckError, fn ->
+    assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
