@@ -1,25 +1,19 @@
 defmodule Ecto.Query.LimitOffsetBuilderTest do
   use ExUnit.Case, async: true
 
-  import Support.CompileHelpers
-  import Ecto.Query, warn: false
+  import Ecto.Query
 
-  defmodule Post do
-    use Ecto.Model
-
-    queryable :posts do
-      field :title, :string
+  test "invalid limit and offset" do
+    assert_raise Ecto.QueryError, %r"limit and offset expressions must be a single integer value", fn ->
+      Ecto.Query.Query[] |> limit("a") |> select([], 0)
     end
   end
 
-  test "limit and offset" do
-    delay_compile do
-      x = 1
-      from(Post) |> limit(x * 3) |> offset(4 * 2) |> select([], 0)
-    end
+  test "overrides on duplicated limit and offset" do
+    query = Ecto.Query.Query[] |> limit(1) |> limit(2)
+    assert query.limit == 2
 
-    assert_raise Ecto.QueryError, %r"limit and offset expressions must be a single integer value", fn ->
-      delay_compile from(Post) |> limit("a") |> select([], 0)
-    end
+    query = Ecto.Query.Query[] |> offset(1) |> offset(2) |> select([], 3)
+    assert query.offset == 2
   end
 end

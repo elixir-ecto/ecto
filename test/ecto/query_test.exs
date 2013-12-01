@@ -74,16 +74,6 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  test "only one limit or offset is allowed" do
-    assert_raise Ecto.QueryError, "only one limit expression is allowed in query", fn ->
-      from(p in Post) |> limit(1) |> limit(2) |> select([], 3)
-    end
-
-    assert_raise Ecto.QueryError, "only one offset expression is allowed in query", fn ->
-      from(p in Post) |> offset(1) |> offset(2) |> select([], 3)
-    end
-  end
-
   test "binding should be list of variables" do
     assert_raise Ecto.QueryError, "binding list should contain only variables, got: 0", fn ->
       delay_compile select(Query[], [0], 1)

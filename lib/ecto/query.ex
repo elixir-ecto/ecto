@@ -386,7 +386,9 @@ defmodule Ecto.Query do
   A limit query expression.
 
   Limits the number of rows selected from the result. Can be any expression but
-  have to evaluate to an integer value. It can't include any field.
+  have to evaluate to an integer value and it can't include any field.
+
+  If `limit` is given twice, it overrides the previous value.
 
   ## Keywords examples
 
@@ -398,19 +400,16 @@ defmodule Ecto.Query do
 
   """
   defmacro limit(query, expr) do
-    quote do
-      query = unquote(query)
-      expr = unquote(expr)
-      LimitOffsetBuilder.validate(expr)
-      Util.merge(query, :limit, expr)
-    end
+    LimitOffsetBuilder.build(:limit, query, expr, __CALLER__)
   end
 
   @doc """
   An offset query expression.
 
   Offsets the number of rows selected from the result. Can be any expression
-  but have to evaluate to an integer value. It can't include any field.
+  but have to evaluate to an integer value and tt can't include any field.
+
+  If `offset` is given twice, it overrides the previous value.
 
   ## Keywords examples
 
@@ -423,12 +422,7 @@ defmodule Ecto.Query do
 
   """
   defmacro offset(query, expr) do
-    quote do
-      query = unquote(query)
-      expr = unquote(expr)
-      LimitOffsetBuilder.validate(expr)
-      Util.merge(query, :offset, expr)
-    end
+    LimitOffsetBuilder.build(:offset, query, expr, __CALLER__)
   end
 
   @doc """

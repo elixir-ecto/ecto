@@ -183,5 +183,5 @@ defmodule Ecto.Query.BuilderUtil do
   defp escape(QueryExpr[] = query),
     do: { :{}, [], tuple_to_list(query) }
   defp escape(other),
-    do: Macro.escape(other)
+    do: other
 end
