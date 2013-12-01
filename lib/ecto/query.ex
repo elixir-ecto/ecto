@@ -125,7 +125,6 @@ defmodule Ecto.Query do
 
   @type t :: Query.t
 
-  alias Ecto.Query.BuilderUtil
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.SelectBuilder
@@ -135,7 +134,6 @@ defmodule Ecto.Query do
   alias Ecto.Query.HavingBuilder
   alias Ecto.Query.PreloadBuilder
   alias Ecto.Query.JoinBuilder
-  alias Ecto.Query.Util
 
   @doc false
   defmacro __using__(_) do
@@ -254,39 +252,7 @@ defmodule Ecto.Query do
         |> select([p, c], { p, c })
   """
   defmacro join(query, qual, binding, expr, on // nil) do
-    binding = BuilderUtil.escape_binding(binding)
-    { expr_bindings, join_expr } = JoinBuilder.escape(expr, binding)
-
-    is_assoc = Ecto.Associations.assoc_join?(join_expr)
-    unless is_assoc == nil?(on) do
-      raise Ecto.QueryError, reason: "`join` expression requires explicit `on` " <>
-        "expression unless association join expression"
-    end
-    if (bind = Enum.first(expr_bindings)) && bind in binding do
-      raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
-    end
-
-    on_expr = if on do
-      binds = binding ++ expr_bindings
-      WhereBuilder.escape(on, binds, bind)
-    end
-
-    quote do
-      query = unquote(query)
-      qual = unquote(qual)
-      join_expr = unquote(join_expr)
-
-      JoinBuilder.validate_qual(qual)
-      var!(count_binds, Ecto.Query) = Util.count_binds(query)
-
-      if unquote(is_assoc) do
-        join = AssocJoinExpr[qual: qual, expr: join_expr, file: __ENV__.file, line: __ENV__.line]
-      else
-        on = QueryExpr[expr: unquote(on_expr), file: __ENV__.file, line: __ENV__.line]
-        join = JoinExpr[qual: qual, source: join_expr, on: on, file: __ENV__.file, line: __ENV__.line]
-      end
-      Util.merge(query, :join, join)
-    end
+    JoinBuilder.build(query, qual, binding, expr, on, __CALLER__)
   end
 
   @doc """
@@ -528,7 +494,7 @@ defmodule Ecto.Query do
       end
 
     { t, on } = collect_on(t, nil)
-    { new_binds, _ } = JoinBuilder.escape(expr, binds)
+    { _, new_binds, _ } = JoinBuilder.escape(expr, binds)
 
     quoted = quote do
       Ecto.Query.join(unquote(quoted), unquote(qual), unquote(binds),

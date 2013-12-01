@@ -12,13 +12,6 @@ defmodule Ecto.Associations do
   require Ecto.Query, as: Q
 
   @doc """
-  Returns true if join expression is an assocation join.
-  """
-  def assoc_join?({ :., _, _ }), do: true
-  def assoc_join?({ :{}, _, [:., _, _] }), do: true
-  def assoc_join?(_), do: false
-
-  @doc """
   Returns true if select expression is an assoc selector.
   """
   def assoc_select?({ :assoc, _, [_, _] }), do: true

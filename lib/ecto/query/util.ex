@@ -96,14 +96,6 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  # Count the number of entities on the query
-  @doc false
-  def count_binds(queryable) do
-    Query[from: from, joins: joins] = Queryable.to_query(queryable)
-    count = if from, do: 1, else: 0
-    count + length(joins)
-  end
-
   # Converts internal type format to "typespec" format
   @doc false
   def type_to_ast({ type, inner }), do: { type, [], [type_to_ast(inner)] }

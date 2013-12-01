@@ -9,7 +9,7 @@ defmodule Ecto.Query.BuilderUtil do
   place. This means that everything foreign will be inserted as-is into
   the query.
   """
-  @spec escape(Macro.t, [atom], atom) :: Macro.t
+  @spec escape(Macro.t, [atom], { atom, Macro.t } | nil) :: Macro.t
   def escape(expr, vars, join_var // nil)
 
   # var.x - where var is bound
@@ -74,13 +74,11 @@ defmodule Ecto.Query.BuilderUtil do
   which use a `count_binds` variable assigned to the `Ecto.Query`
   to pass the required indice information.
   """
-  @spec escape_var(atom, [atom], atom | nil) :: Macro.t | no_return
+  @spec escape_var(atom, [atom], { atom, Macro.t } | nil) :: Macro.t | no_return
   def escape_var(var, vars, join_var // nil)
 
-  def escape_var(var, _vars, var) do
-    # Get the variable bound in the join expression's actual position
-    ix = quote do: var!(count_binds, Ecto.Query)
-    { :{}, [], [:&, [], [ix]] }
+  def escape_var(var, _vars, { var, idx }) do
+    { :{}, [], [:&, [], [idx]] }
   end
 
   def escape_var(var, vars, _join_var) do
@@ -168,6 +166,23 @@ defmodule Ecto.Query.BuilderUtil do
   alias Ecto.Query.QueryExpr
 
   @doc """
+  Counts the bindings in a query expression.
+
+  ## Examples
+
+      iex> count_binds(Ecto.Query.Query[joins: [1,2,3]])
+      3
+
+      iex> count_binds(Ecto.Query.Query[from: 0, joins: [1,2]])
+      3
+
+  """
+  def count_binds(Query[from: from, joins: joins]) do
+    count = if from, do: 1, else: 0
+    count + length(joins)
+  end
+
+  @doc """
   Applies a query at compilation time or at runtime.
 
   This function is responsible to check if a given query is an
@@ -210,26 +225,30 @@ defmodule Ecto.Query.BuilderUtil do
   """
   def apply_query(query, module, args, env) do
     query = Macro.expand(query, env)
-    args  = lc i inlist args, do: escape(i)
-    case unescape(query) do
+    args  = lc i inlist args, do: escape_query(i)
+    case unescape_query(query) do
       Query[] = unescaped ->
-        apply(module, :apply, [unescaped|args]) |> escape
+        apply(module, :apply, [unescaped|args]) |> escape_query
       _ ->
-        quote do
-          unquote(module).apply(unquote_splicing([query|args]))
-        end
+        quote do: unquote(module).apply(unquote_splicing([query|args]))
     end
   end
 
-  defp unescape({ :{}, _meta, [Query|_] = query }),
+  @doc """
+  Unescapes an `Ecto.Query.Query` record.
+  """
+  def unescape_query({ :{}, _meta, [Query|_] = query }),
     do: list_to_tuple(query)
-  defp unescape(other),
+  def unescape_query(other),
     do: other
 
-  defp escape(Query[] = query),
+  @doc """
+  Escapes an `Ecto.Query.Query` and associated records.
+  """
+  def escape_query(Query[] = query),
     do: { :{}, [], tuple_to_list(query) }
-  defp escape(QueryExpr[] = query),
+  def escape_query(QueryExpr[] = query),
     do: { :{}, [], tuple_to_list(query) }
-  defp escape(other),
+  def escape_query(other),
     do: other
 end

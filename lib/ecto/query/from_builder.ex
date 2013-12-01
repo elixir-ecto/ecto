@@ -84,10 +84,10 @@ defmodule Ecto.Query.FromBuilder do
   end
 
   defp check_binds(query, count) do
-    if count > 1 and count > Ecto.Query.Util.count_binds(query) do
+    if count > 1 and count > BuilderUtil.count_binds(query) do
       raise Ecto.QueryError,
         reason: "`from` in query expression specified #{count} " <>
-                "binds but query contains #{Ecto.Query.Util.count_binds(query)} binds"
+                "binds but query contains #{BuilderUtil.count_binds(query)} binds"
     end
   end
 end
