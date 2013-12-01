@@ -125,24 +125,6 @@ defmodule Ecto.Query.Util do
     count + length(joins)
   end
 
-  # Converts list of variables to list of atoms
-  @doc false
-  def escape_binding(binding) when is_list(binding) do
-    vars = Enum.map(binding, &escape_var(&1))
-
-    bound_vars = Enum.filter(vars, &(&1 != :_))
-    dup_vars = bound_vars -- Enum.uniq(bound_vars)
-    unless dup_vars == [] do
-      raise Ecto.QueryError, reason: "variable `#{hd dup_vars}` is already defined in query"
-    end
-
-    vars
-  end
-
-  def escape_binding(_) do
-    raise Ecto.QueryError, reason: "binding should be list of variables"
-  end
-
   # Converts internal type format to "typespec" format
   @doc false
   def type_to_ast({ type, inner }), do: { type, [], [type_to_ast(inner)] }
@@ -246,18 +228,6 @@ defmodule Ecto.Query.Util do
 
   def locate_var(expr, var) do
     if expr == var, do: []
-  end
-
-  defp escape_var(var) when is_atom(var) do
-    var
-  end
-
-  defp escape_var({ var, _, context }) when is_atom(var) and is_atom(context) do
-    var
-  end
-
-  defp escape_var(_) do
-    raise Ecto.QueryError, reason: "binding should be list of variables"
   end
 
   # Check duplicates only for the queries below.

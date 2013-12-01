@@ -125,6 +125,7 @@ defmodule Ecto.Query do
 
   @type t :: Query.t
 
+  alias Ecto.Query.BuilderUtil
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.SelectBuilder
@@ -253,7 +254,7 @@ defmodule Ecto.Query do
         |> select([p, c], { p, c })
   """
   defmacro join(query, qual, binding, expr, on // nil) do
-    binding = Util.escape_binding(binding)
+    binding = BuilderUtil.escape_binding(binding)
     { expr_bindings, join_expr } = JoinBuilder.escape(expr, binding)
 
     is_assoc = Ecto.Associations.assoc_join?(join_expr)
@@ -324,13 +325,7 @@ defmodule Ecto.Query do
 
   """
   defmacro select(query, binding, expr) do
-    binding = Util.escape_binding(binding)
-    quote do
-      query = unquote(query)
-      select_expr = unquote(SelectBuilder.escape(expr, binding))
-      select = QueryExpr[expr: select_expr, file: __ENV__.file, line: __ENV__.line]
-      Util.merge(query, :select, select)
-    end
+    SelectBuilder.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -350,7 +345,7 @@ defmodule Ecto.Query do
 
   """
   defmacro where(query, binding, expr) do
-    binding = Util.escape_binding(binding)
+    binding = BuilderUtil.escape_binding(binding)
     quote do
       query = unquote(query)
       where_expr = unquote(WhereBuilder.escape(expr, binding))
@@ -378,7 +373,7 @@ defmodule Ecto.Query do
 
   """
   defmacro order_by(query, binding, expr)  do
-    binding = Util.escape_binding(binding)
+    binding = BuilderUtil.escape_binding(binding)
     quote do
       query = unquote(query)
       expr = unquote(OrderByBuilder.escape(expr, binding))
@@ -463,7 +458,7 @@ defmodule Ecto.Query do
 
   """
   defmacro group_by(query, binding, expr) do
-    binding = Util.escape_binding(binding)
+    binding = BuilderUtil.escape_binding(binding)
     quote do
       query = unquote(query)
       expr = unquote(GroupByBuilder.escape(expr, binding))
@@ -497,7 +492,7 @@ defmodule Ecto.Query do
         |> select([p], count(p.id))
   """
   defmacro having(query, binding, expr) do
-    binding = Util.escape_binding(binding)
+    binding = BuilderUtil.escape_binding(binding)
     quote do
       query = unquote(query)
       having_expr = unquote(HavingBuilder.escape(expr, binding))

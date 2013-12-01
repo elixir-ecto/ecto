@@ -50,9 +50,11 @@ defmodule Ecto.Query.FromBuilder do
   end
 
   @doc """
-  Builds a quoted expression that will evaluate to a query
-  at runtime. If possible, it does all calculations at compile
-  time to avoid runtime work.
+  Builds a quoted expression.
+
+  The quoted expression should evaluate to a query at runtime.
+  If possible, it does all calculations at compile time to avoid
+  runtime work.
   """
   @spec build(Macro.t, Macro.Env.t) :: Macro.t
   def build(expr, env) do
@@ -72,7 +74,7 @@ defmodule Ecto.Query.FromBuilder do
   end
 
   @doc """
-  The callback invoked at runtime to build the query.
+  The callback applied by `build/2` to build the query.
   """
   @spec apply(Ecto.Queryable.t, non_neg_integer) :: Ecto.Query.Query.t
   def apply(query, binds) do

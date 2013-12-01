@@ -69,7 +69,8 @@ defmodule Ecto.QueryTest do
 
   test "only one select is allowed" do
     assert_raise Ecto.QueryError, "only one select expression is allowed in query", fn ->
-      from(p in Post) |> select([], 1) |> select([], 2)
+      post = Post
+      from(p in post) |> select([], 1) |> select([], 2)
     end
   end
 
@@ -84,7 +85,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "binding should be list of variables" do
-    assert_raise Ecto.QueryError, "binding should be list of variables", fn ->
+    assert_raise Ecto.QueryError, "binding list should contain only variables, got: 0", fn ->
       delay_compile select(Query[], [0], 1)
     end
   end
@@ -161,7 +162,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "binding collision" do
-    assert_raise Ecto.QueryError, "variable `x` is already defined in query", fn ->
+    assert_raise Ecto.QueryError, "variable `x` is bound twice", fn ->
       delay_compile(from(Post) |> from(Comment) |> select([x, x], x.id))
     end
 

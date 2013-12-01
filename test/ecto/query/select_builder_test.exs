@@ -2,6 +2,7 @@ defmodule Ecto.Query.SelectBuilderTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query.SelectBuilder
+  doctest Ecto.Query.SelectBuilder
 
   test "escape" do
     assert Macro.escape(quote do &0 end) ==
