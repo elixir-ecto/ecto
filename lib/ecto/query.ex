@@ -397,7 +397,7 @@ defmodule Ecto.Query do
       from(u in User) |> where(u.id == current_user) |> limit(1)
 
   """
-  defmacro limit(query, binding // [], expr) do
+  defmacro limit(query, expr) do
     quote do
       query = unquote(query)
       expr = unquote(expr)
@@ -422,7 +422,7 @@ defmodule Ecto.Query do
       from(p in Post) |> limit(10) |> offset(30)
 
   """
-  defmacro offset(query, binding // [], expr) do
+  defmacro offset(query, expr) do
     quote do
       query = unquote(query)
       expr = unquote(expr)
@@ -523,7 +523,7 @@ defmodule Ecto.Query do
 
       from(Post) |> preload(:comments) |> select([p], p)
   """
-  defmacro preload(query, binding // [], expr) do
+  defmacro preload(query, expr) do
     expr = List.wrap(expr)
     PreloadBuilder.validate(expr)
     quote do
@@ -576,11 +576,16 @@ defmodule Ecto.Query do
     state.quoted(quoted)
   end
 
+  defp build_query_type({ type, expr }, KwState[] = state) when type in [:limit, :offset, :preload] do
+    state.quoted(quote do
+      Ecto.Query.unquote(type)(unquote(state.quoted), unquote(expr))
+    end)
+  end
+
   defp build_query_type({ type, expr }, KwState[] = state) do
-    quoted = quote do
+    state.quoted(quote do
       Ecto.Query.unquote(type)(unquote(state.quoted), unquote(state.binds), unquote(expr))
-    end
-    state.quoted(quoted)
+    end)
   end
 
   defp build_join(qual, expr, KwState[] = state) do

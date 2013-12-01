@@ -76,11 +76,11 @@ defmodule Ecto.QueryTest do
 
   test "only one limit or offset is allowed" do
     assert_raise Ecto.QueryError, "only one limit expression is allowed in query", fn ->
-      from(p in Post) |> limit([], 1) |> limit([], 2) |> select([], 3)
+      from(p in Post) |> limit(1) |> limit(2) |> select([], 3)
     end
 
     assert_raise Ecto.QueryError, "only one offset expression is allowed in query", fn ->
-      from(p in Post) |> offset([], 1) |> offset([], 2) |> select([], 3)
+      from(p in Post) |> offset(1) |> offset(2) |> select([], 3)
     end
   end
 
@@ -92,7 +92,6 @@ defmodule Ecto.QueryTest do
 
   test "keyword query" do
     # queries need to be on the same line or == wont work
-
     assert from(p in Post, []) == from(p in Post)
 
     assert from(p in Post, select: 1+2) == from(p in Post) |> select([p], 1+2)
