@@ -8,11 +8,11 @@ defmodule Ecto.Query.BuilderUtil do
   # will be evaluated in their place. This means that everything foreign will be
   # inserted as-is into the query.
 
-  # var.x - where var is bound
   def escape(expr, vars, join_var // nil)
 
+  # var.x - where var is bound
   def escape({ { :., _, [{ var, _, context}, right] }, _, [] }, vars, join_var)
-      when is_atom(var) and is_atom(context) do
+      when is_atom(var) and is_atom(context) and is_atom(right) do
     left_escaped = escape_var(var, vars, join_var)
     dot_escaped = { :{}, [], [:., [], [left_escaped, right]] }
     { :{}, [], [dot_escaped, [], []] }
@@ -23,6 +23,7 @@ defmodule Ecto.Query.BuilderUtil do
     arg
   end
 
+  # ecto types
   def escape({ :binary, _, [arg] }, vars, join_var) do
     arg_escaped = escape(arg, vars, join_var)
     Ecto.Binary[value: arg_escaped]
@@ -31,7 +32,10 @@ defmodule Ecto.Query.BuilderUtil do
   # field macro
   def escape({ :field, _, [{ var, _, context }, field] }, vars, join_var)
       when is_atom(var) and is_atom(context) do
-    escape_field(var, escape(field, vars, join_var), vars, join_var)
+    var   = escape_var(var, vars, join_var)
+    field = escape(field, vars, join_var)
+    dot   = { :{}, [], [:., [], [var, field]] }
+    { :{}, [], [dot, [], []] }
   end
 
   # binary literal
@@ -75,10 +79,40 @@ defmodule Ecto.Query.BuilderUtil do
     end
   end
 
-  def escape_field(var, field, vars, join_var // nil) do
-    left_escaped = escape_var(var, vars, join_var)
-    dot_escaped = { :{}, [], [:., [], [left_escaped, field]] }
-    { :{}, [], [dot_escaped, [], []] }
+  @doc """
+  Escapes dot calls in query expressions.
+
+  A dot may be in three formats, all shown in the examples below.
+  Returns :error if it isn't a dot expression.
+
+  ## Examples
+
+      iex> escape_dot(quote(do: x.y), [:x])
+      {{:{}, [], [:&, [], [0]]}, :y}
+
+      iex> escape_dot(quote(do: x.y()), [:x])
+      {{:{}, [], [:&, [], [0]]}, :y}
+
+      iex> escape_dot(quote(do: field(x, ^:y)), [:x])
+      {{:{}, [], [:&, [], [0]]}, :y}
+
+      iex> escape_dot(quote(do: x), [:x])
+      :error
+
+  """
+  @spec escape_dot(Macro.t, [atom]) :: { Macro.t, Macro.t } | :error
+  def escape_dot({ :field, _, [{ var, _, context }, field] }, vars)
+      when is_atom(var) and is_atom(context) do
+    { escape_var(var, vars), escape(field, vars) }
+  end
+
+  def escape_dot({ { :., _, [{ var, _, context }, field] }, _, [] }, vars)
+      when is_atom(var) and is_atom(context) and is_atom(field) do
+    { escape_var(var, vars), field }
+  end
+
+  def escape_dot(_, _vars) do
+    :error
   end
 
   @doc """

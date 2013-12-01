@@ -27,7 +27,7 @@ defmodule Ecto.Query.OrderByBuilderTest do
       escape(quote do [test: x.y] end, [:x])
     end
 
-    message = "malformed order_by query"
+    message = "malformed `order_by` query expression"
     assert_raise Ecto.QueryError, message, fn ->
       escape(quote do 1 + 2 end, [])
     end

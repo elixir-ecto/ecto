@@ -26,24 +26,13 @@ defmodule Ecto.Query.JoinBuilder do
     { [], string }
   end
 
-  def escape({ { :., _, _ } = assoc, _, [] }, vars) do
-    escape(assoc, vars)
-  end
-
-  def escape({ :., _, [{ var, _, context }, field] }, vars)
-      when is_atom(var) and is_atom(context) and is_atom(field) do
-    left_escaped = Ecto.Query.BuilderUtil.escape_var(var, vars)
-    assoc = { :{}, [], [:., [], [left_escaped, field]] }
-    { [], assoc }
-  end
-
-  def escape({ :field, _, [{ var, _, context }, field] }, vars)
-      when is_atom(var) and is_atom(context) do
-    { [], BuilderUtil.escape_field(var, field, vars) }
-  end
-
-  def escape(_other, _vars) do
-    raise Ecto.QueryError, reason: "invalid `join` query expression"
+  def escape(dot, vars) do
+    case BuilderUtil.escape_dot(dot, vars) do
+      { var, field } ->
+        { [], { :{}, [], [:., [], [var, field]] } }
+      :error ->
+        raise Ecto.QueryError, reason: "malformed `join` query expression"
+    end
   end
 
   @qualifiers [ :inner, :left, :right, :full ]

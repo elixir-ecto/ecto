@@ -9,30 +9,20 @@ defmodule Ecto.Query.GroupByBuilder do
     Enum.map(list, &escape_field(&1, vars))
   end
 
-  def escape({ var, _, context }, vars)
-      when is_atom(var) and is_atom(context) do
+  def escape({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
     BuilderUtil.escape_var(var, vars)
   end
 
   def escape(field, vars) do
-    [ escape_field(field, vars) ]
+    [escape_field(field, vars)]
   end
 
-  defp escape_field({ { :., _, _ } = dot, _, [] }, vars) do
-    escape_field(dot, vars)
-  end
-
-  defp escape_field({ :., _, [{ var, _, context }, field] }, vars)
-      when is_atom(var) and is_atom(context) and is_atom(field) do
-    { BuilderUtil.escape_var(var, vars), field }
-  end
-
-  defp escape_field({ :field, _, [{ var, _, context }, field] }, vars)
-      when is_atom(var) and is_atom(context) do
-    { BuilderUtil.escape_var(var, vars), BuilderUtil.escape(field, vars) }
-  end
-
-  defp escape_field(_other, _vars) do
-    raise Ecto.QueryError, reason: "malformed group_by query"
+  defp escape_field(dot, vars) do
+    case BuilderUtil.escape_dot(dot, vars) do
+      { _, _ } = var_field ->
+        var_field
+      :error ->
+        raise Ecto.QueryError, reason: "malformed `group_by` query expression"
+    end
   end
 end
