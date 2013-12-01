@@ -1,8 +1,10 @@
 defmodule Ecto.Query.Validator do
   @moduledoc false
 
-  # This module does validation on the query checking that it's in a correct
-  # format, raising if it's not.
+  # This module does validation on the query checking that it's in
+  # a correct format, raising if it's not.
+
+  # TODO: Check it raises on missing bindings
 
   alias Ecto.Query.Util
   alias Ecto.Query.Query

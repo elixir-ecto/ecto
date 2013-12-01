@@ -133,11 +133,11 @@ defmodule Ecto.QueryTest do
   test "validate from expression" do
     delay_compile(from(Post, []))
 
-    assert_raise Ecto.QueryError, fn ->
+    assert_raise ArgumentError, fn ->
       delay_compile(from(Post, [123]))
     end
 
-    assert_raise Ecto.QueryError, fn ->
+    assert_raise ArgumentError, fn ->
       delay_compile(from(Post, 123))
     end
   end
@@ -188,11 +188,8 @@ defmodule Ecto.QueryTest do
     from([a] in Query[])
 
     assert_raise Ecto.QueryError, fn ->
-      from([a, b] in Comment)
-    end
-
-    assert_raise Ecto.QueryError, fn ->
-      from(Comment) |> where([x, y], true)
+      comment = Comment
+      from([a, b] in comment)
     end
   end
 end

@@ -190,28 +190,14 @@ defmodule Ecto.Query do
   Note the variables `p` and `q` must be named as you find more convenient
   as they have no important in the query sent to the database.
   """
-  defmacro from(expr, kw) when is_list(kw) do
+  defmacro from(expr, kw) do
     unless Keyword.keyword?(kw) do
-      raise Ecto.QueryError, reason: "second argument to from has to be a keyword list"
+      raise ArgumentError, reason: "second argument to `from` has to be a keyword list"
     end
 
-    { binds, expr } = FromBuilder.escape(expr)
-    quoted = quote do
-      expr = unquote(expr)
-      Ecto.Query.check_binds(expr, unquote(length(binds)))
-      expr
-    end
+    { binds, _ } = FromBuilder.escape(expr)
+    quoted = FromBuilder.build(expr, __CALLER__)
     build_query(quoted, binds, kw)
-  end
-
-  defmacro from(query, expr) do
-    { binds, expr } = FromBuilder.escape(expr)
-
-    quote do
-      query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binds)))
-      Util.merge(query, :from, unquote(expr))
-    end
   end
 
   @doc """
@@ -229,12 +215,7 @@ defmodule Ecto.Query do
   end
 
   defmacro from(expr) do
-    { binds, expr } = FromBuilder.escape(expr)
-    quote do
-      expr = unquote(expr)
-      Ecto.Query.check_binds(expr, unquote(length(binds)))
-      expr
-    end
+    FromBuilder.build(expr, __CALLER__)
   end
 
   @doc """
@@ -294,9 +275,8 @@ defmodule Ecto.Query do
       qual = unquote(qual)
       join_expr = unquote(join_expr)
 
-      Ecto.Query.check_binds(query, unquote(length(binding)))
       JoinBuilder.validate_qual(qual)
-      var!(count_entities, Ecto.Query) = Util.count_entities(query)
+      var!(count_binds, Ecto.Query) = Util.count_binds(query)
 
       if unquote(is_assoc) do
         join = AssocJoinExpr[qual: qual, expr: join_expr, file: __ENV__.file, line: __ENV__.line]
@@ -347,8 +327,6 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-
       select_expr = unquote(SelectBuilder.escape(expr, binding))
       select = QueryExpr[expr: select_expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(query, :select, select)
@@ -375,8 +353,6 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-
       where_expr = unquote(WhereBuilder.escape(expr, binding))
       where = QueryExpr[expr: where_expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(query, :where, where)
@@ -405,8 +381,6 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-
       expr = unquote(OrderByBuilder.escape(expr, binding))
       order_by = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(query, :order_by, order_by)
@@ -431,8 +405,6 @@ defmodule Ecto.Query do
   defmacro limit(query, binding // [], expr) do
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-
       expr = unquote(expr)
       LimitOffsetBuilder.validate(expr)
       Util.merge(query, :limit, expr)
@@ -458,8 +430,6 @@ defmodule Ecto.Query do
   defmacro offset(query, binding // [], expr) do
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-
       expr = unquote(expr)
       LimitOffsetBuilder.validate(expr)
       Util.merge(query, :offset, expr)
@@ -496,8 +466,6 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-
       expr = unquote(GroupByBuilder.escape(expr, binding))
       group_by = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(query, :group_by, group_by)
@@ -532,8 +500,6 @@ defmodule Ecto.Query do
     binding = Util.escape_binding(binding)
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-
       having_expr = unquote(HavingBuilder.escape(expr, binding))
       having = QueryExpr[expr: having_expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(query, :having, having)
@@ -567,19 +533,9 @@ defmodule Ecto.Query do
     PreloadBuilder.validate(expr)
     quote do
       query = unquote(query)
-      Ecto.Query.check_binds(query, unquote(length(binding)))
-
       preload_expr = unquote(expr)
       preload = QueryExpr[expr: preload_expr, file: __ENV__.file, line: __ENV__.line]
       Util.merge(query, :preload, preload)
-    end
-  end
-
-  @doc false
-  def check_binds(queryable, count_binds) do
-    query = Ecto.Queryable.to_query(queryable)
-    if count_binds > 1 and count_binds > Util.count_entities(query) do
-      raise Ecto.QueryError, reason: "more binds specified than there are models on query"
     end
   end
 

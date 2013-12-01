@@ -22,7 +22,7 @@ defmodule Ecto.Model.QueryableTest do
   end
 
   test "imports Ecto.Query functions" do
-    assert User.from_1 == User
+    assert is_record(User.from_1, Ecto.Query.Query)
     assert is_record(User.from_2, Ecto.Query.Query)
   end
 

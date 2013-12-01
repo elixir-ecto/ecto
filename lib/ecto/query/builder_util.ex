@@ -63,7 +63,7 @@ defmodule Ecto.Query.BuilderUtil do
   def escape_var(var, vars, join_var // nil) do
     if var == join_var do
       # Get the variable bound in the join expression's actual position
-      ix = quote do var!(count_entities, Ecto.Query) end
+      ix = quote do var!(count_binds, Ecto.Query) end
       { :{}, [], [:&, [], [ix]] }
     else
       ix = Enum.find_index(vars, &(&1 == var))
@@ -80,4 +80,33 @@ defmodule Ecto.Query.BuilderUtil do
     dot_escaped = { :{}, [], [:., [], [left_escaped, field]] }
     { :{}, [], [dot_escaped, [], []] }
   end
+
+  # Helpers used by all builders for optimizing the query at
+  # runtime or compilation time. Currently they are in this
+  # module but the plan is to extract them.
+
+  alias Ecto.Query.Query
+
+  def apply_query(query, module, args, env) do
+    query = Macro.expand(query, env)
+    case unescape(query) do
+      Query[] = unescaped ->
+        apply(module, :apply, [unescaped|args]) |> escape
+      _ ->
+        args = lc i inlist [query|args], do: escape(i)
+        quote do
+          unquote(module).apply(unquote_splicing(args))
+        end
+    end
+  end
+
+  def unescape({ :{}, _meta, [Query|_] = query }),
+    do: list_to_tuple(query)
+  def unescape(other),
+    do: other
+
+  def escape(Query[] = query),
+    do: { :{}, [], tuple_to_list(query) }
+  def escape(other),
+    do: other
 end
