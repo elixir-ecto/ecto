@@ -1,13 +1,15 @@
 defmodule Ecto.Query.BuilderUtil do
   @moduledoc false
 
-  # Common functions for the query builder modules.
+  @doc """
+  Smart escapes a query expression.
 
-  # Smart escapes a query expression. Everything that is a query expression will
-  # be escaped, foreign (elixir) expressions will not be escaped so that they
-  # will be evaluated in their place. This means that everything foreign will be
-  # inserted as-is into the query.
-
+  Everything that is a query expression will be escaped, foreign (elixir)
+  expressions will not be escaped so that they will be evaluated in their
+  place. This means that everything foreign will be inserted as-is into
+  the query.
+  """
+  @spec escape(Macro.t, [atom], atom) :: Macro.t
   def escape(expr, vars, join_var // nil)
 
   # var.x - where var is bound
@@ -64,18 +66,30 @@ defmodule Ecto.Query.BuilderUtil do
     raise Ecto.QueryError, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
-  def escape_var(var, vars, join_var // nil) do
-    if var == join_var do
-      # Get the variable bound in the join expression's actual position
-      ix = quote do var!(count_binds, Ecto.Query) end
+  @doc """
+  Escapes a variable according to the given binds.
+
+  A escaped variable is represented internally as `&0`, `&1` and
+  so on. This function is also responsible for handling join vars
+  which use a `count_binds` variable assigned to the `Ecto.Query`
+  to pass the required indice information.
+  """
+  @spec escape_var(atom, [atom], atom | nil) :: Macro.t | no_return
+  def escape_var(var, vars, join_var // nil)
+
+  def escape_var(var, _vars, var) do
+    # Get the variable bound in the join expression's actual position
+    ix = quote do: var!(count_binds, Ecto.Query)
+    { :{}, [], [:&, [], [ix]] }
+  end
+
+  def escape_var(var, vars, _join_var) do
+    ix = Enum.find_index(vars, &(&1 == var))
+
+    if var != :_ and ix do
       { :{}, [], [:&, [], [ix]] }
     else
-      ix = Enum.find_index(vars, &(&1 == var))
-      if var != :_ and ix do
-        { :{}, [], [:&, [], [ix]] }
-      else
-        raise Ecto.QueryError, reason: "unbound variable `#{var}` in query"
-      end
+      raise Ecto.QueryError, reason: "unbound variable `#{var}` in query"
     end
   end
 
