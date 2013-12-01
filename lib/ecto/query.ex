@@ -198,7 +198,7 @@ defmodule Ecto.Query do
 
     { binds, _ } = FromBuilder.escape(expr)
     quoted = FromBuilder.build(expr, __CALLER__)
-    build_query(quoted, binds, kw)
+    build_query(kw, quoted, binds)
   end
 
   @doc """
@@ -497,78 +497,65 @@ defmodule Ecto.Query do
     PreloadBuilder.build(query, expr, __CALLER__)
   end
 
-  defrecord KwState, [:quoted, :binds]
-
   # Builds the quoted code for creating a keyword query
-  defp build_query(quoted, binds, kw) do
-    state = KwState[quoted: quoted, binds: binds]
-    Enum.reduce(kw, state, &build_query_type(&1, &2)).quoted
-  end
 
-  defp build_query_type({ :from, expr }, KwState[] = state) do
-    { binds, expr } = FromBuilder.escape(expr)
+  @binds    [:where, :select, :order_by, :group_by, :having]
+  @no_binds [:limit, :offset, :preload]
+  @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
-    Enum.each binds, fn bind ->
-      if bind != :_ and bind in state.binds do
-        raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
-      end
-    end
-
-    quoted = quote do: Util.merge(unquote(state.quoted), :from, unquote(expr))
-    state.quoted(quoted).binds(state.binds ++ binds)
-  end
-
-  @joins [:join, :inner_join, :left_join, :right_join, :full_join]
-
-  defp build_query_type({ join, expr }, state) when join in @joins do
-    case join do
-      :join       -> build_join(:inner, expr, state)
-      :inner_join -> build_join(:inner, expr, state)
-      :left_join  -> build_join(:left, expr, state)
-      :right_join -> build_join(:right, expr, state)
-      :full_join  -> build_join(:full, expr, state)
-    end
-  end
-
-  defp build_query_type({ :on, expr }, KwState[] = state) do
+  defp build_query([{ type, expr }|t], quoted, binds) when type in @binds do
     quoted = quote do
-      expr = unquote(WhereBuilder.escape(expr, state.binds))
-      on = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
-      Util.merge(unquote(state.quoted), :on, on)
+      Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
     end
-    state.quoted(quoted)
+    build_query t, quoted, binds
   end
 
-  defp build_query_type({ type, expr }, KwState[] = state) when type in [:limit, :offset, :preload] do
-    state.quoted(quote do
-      Ecto.Query.unquote(type)(unquote(state.quoted), unquote(expr))
-    end)
-  end
-
-  defp build_query_type({ type, expr }, KwState[] = state) do
-    state.quoted(quote do
-      Ecto.Query.unquote(type)(unquote(state.quoted), unquote(state.binds), unquote(expr))
-    end)
-  end
-
-  defp build_join(qual, expr, KwState[] = state) do
-    { binds, expr } = JoinBuilder.escape(expr, state.binds)
-    if (bind = Enum.first(binds)) && bind != :_ && bind in state.binds do
-      raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
+  defp build_query([{ type, expr }|t], quoted, binds) when type in @no_binds do
+    quoted = quote do
+      Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
     end
+    build_query t, quoted, binds
+  end
 
-    is_assoc = Ecto.Associations.assoc_join?(expr)
+  defp build_query([{ join, expr }|t], quoted, binds) when join in @joins do
+    qual =
+      case join do
+        :join       -> :inner
+        :inner_join -> :inner
+        :left_join  -> :left
+        :right_join -> :right
+        :full_join  -> :full
+      end
+
+    { t, on } = collect_on(t, nil)
+    { new_binds, _ } = JoinBuilder.escape(expr, binds)
 
     quoted = quote do
-      qual = unquote(qual)
-      expr = unquote(expr)
-      if unquote(is_assoc) do
-        join = AssocJoinExpr[qual: qual, expr: expr, file: __ENV__.file, line: __ENV__.line]
-      else
-        join = JoinExpr[qual: qual, source: expr, file: __ENV__.file, line: __ENV__.line]
-      end
-      Util.merge(unquote(state.quoted), :join, join)
+      Ecto.Query.join(unquote(quoted), unquote(qual), unquote(binds),
+                      unquote(expr), unquote(on))
     end
-    state.quoted(quoted).binds(state.binds ++ [bind])
+
+    build_query t, quoted, binds ++ new_binds
   end
+
+  defp build_query([{ :on, _value }|_], _quoted, _binds) do
+    raise Ecto.QueryError,
+      reason: "`on` keyword must immediatelly follow a join"
+  end
+
+  defp build_query([{ key, _value }|_], _quoted, _binds) do
+    raise Ecto.QueryError,
+      reason: "unsupported #{inspect key} in keyword query expression"
+  end
+
+  defp build_query([], quoted, _binds) do
+    quoted
+  end
+
+  defp collect_on([{ :on, expr }|t], nil),
+    do: collect_on(t, expr)
+  defp collect_on([{ :on, expr }|t], acc),
+    do: collect_on(t, { :and, [], [acc, expr] })
+  defp collect_on(other, acc),
+    do: { other, acc }
 end

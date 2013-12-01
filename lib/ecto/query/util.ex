@@ -5,8 +5,6 @@ defmodule Ecto.Query.Util do
 
   alias Ecto.Queryable
   alias Ecto.Query.Query
-  alias Ecto.Query.JoinExpr
-  alias Ecto.Query.AssocJoinExpr
 
   @doc """
   Validates the query to check if it is correct. Should be called before
@@ -84,36 +82,17 @@ defmodule Ecto.Query.Util do
   def merge(queryable, type, expr) do
     query = Queryable.to_query(queryable)
 
-    if type == :on do
-      merge_on(query, expr)
-    else
-      check_duplicate(query, type, expr)
-
-      case type do
-        :from     -> query.from(expr)
-        :join     -> query.update_joins(&(&1 ++ [expr]))
-        :where    -> query.update_wheres(&(&1 ++ [expr]))
-        :select   -> query.select(expr)
-        :order_by -> query.update_order_bys(&(&1 ++ [expr]))
-        :limit    -> query.limit(expr)
-        :offset   -> query.offset(expr)
-        :group_by -> query.update_group_bys(&(&1 ++ [expr]))
-        :having   -> query.update_havings(&(&1 ++ [expr]))
-        :preload  -> query.update_preloads(&(&1 ++ [expr]))
-      end
-    end
-  end
-
-  @doc false
-  def merge_on(Query[joins: joins] = query, expr) do
-    case Enum.split(joins, -1) do
-      { joins, [JoinExpr[] = join] } ->
-        joins = joins ++ [join.on(expr)]
-        query.joins(joins)
-      { _, [AssocJoinExpr[]] } ->
-        raise Ecto.QueryError, reason: "an `on` query expression cannot follow an assocation join"
-      _ ->
-        raise Ecto.QueryError, reason: "an `on` query expression must follow a `join`"
+    case type do
+      :from     -> query.from(expr)
+      :join     -> query.update_joins(&(&1 ++ [expr]))
+      :where    -> query.update_wheres(&(&1 ++ [expr]))
+      :select   -> query.select(expr)
+      :order_by -> query.update_order_bys(&(&1 ++ [expr]))
+      :limit    -> query.limit(expr)
+      :offset   -> query.offset(expr)
+      :group_by -> query.update_group_bys(&(&1 ++ [expr]))
+      :having   -> query.update_havings(&(&1 ++ [expr]))
+      :preload  -> query.update_preloads(&(&1 ++ [expr]))
     end
   end
 
@@ -228,18 +207,5 @@ defmodule Ecto.Query.Util do
 
   def locate_var(expr, var) do
     if expr == var, do: []
-  end
-
-  # Check duplicates only for the queries below.
-  lc type inlist [:select, :from, :limit, :offset] do
-    defp check_duplicate(Query[] = left, unquote(type), expr) when not nil?(expr) do
-      if left.unquote(type) do
-        raise Ecto.QueryError, reason: "only one #{unquote(type)} expression is allowed in query"
-      end
-    end
-  end
-
-  defp check_duplicate(_left, _type, _expr) do
-    :ok
   end
 end
