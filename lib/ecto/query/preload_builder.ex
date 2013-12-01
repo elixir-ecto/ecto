@@ -2,29 +2,29 @@ defmodule Ecto.Query.PreloadBuilder do
   @moduledoc false
   alias Ecto.Query.BuilderUtil
 
-  @type preload :: [preload] | [{ atom, preload }]
+  @type preload :: [{ atom, preload }]
 
   @doc """
-  Escapes a preload.
+  Normalizes a preload.
 
   A preload may be an atom, a list of atoms or a keyword list.
   """
-  @spec escape(term) :: preload | no_return
-  def escape(list) when is_list(list) do
-    Enum.map(list, &escape/1)
+  @spec normalize(term) :: preload | no_return
+  def normalize(preload) do
+    Enum.map(List.wrap(preload), &normalize_each/1)
   end
 
-  def escape({ atom, list }) when is_atom(atom) do
-    { atom, escape(list) }
+  defp normalize_each({ atom, list }) when is_atom(atom) do
+    { atom, normalize(list) }
   end
 
-  def escape(atom) when is_atom(atom) do
-    [atom]
+  defp normalize_each(atom) when is_atom(atom) do
+    { atom, [] }
   end
 
-  def escape(other) do
+  defp normalize_each(other) do
     raise Ecto.QueryError,
-      reason: "preload expects a compile time a atom, a (nested) keyword or " <>
+      reason: "preload expects an atom, a (nested) keyword or " <>
               "a (nested) list of atoms, got: #{inspect other}"
   end
 
@@ -37,7 +37,7 @@ defmodule Ecto.Query.PreloadBuilder do
   """
   @spec build(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(query, expr, env) do
-    preload = Ecto.Query.QueryExpr[expr: escape(expr), file: env.file, line: env.line]
+    preload = Ecto.Query.QueryExpr[expr: normalize(expr), file: env.file, line: env.line]
     BuilderUtil.apply_query(query, __MODULE__, [preload], env)
   end
 

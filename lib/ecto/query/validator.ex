@@ -11,7 +11,6 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.AssocJoinExpr
-  alias Ecto.Query.Normalizer
 
   defrecord State, sources: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil, from: nil, query: nil
@@ -209,8 +208,7 @@ defmodule Ecto.Query.Validator do
 
     Enum.each(preloads, fn(QueryExpr[] = expr) ->
       rescue_metadata(:preload, expr.file, expr.line) do
-        fields = Normalizer.normalize_preload(expr.expr)
-        check_preload_fields(fields, entity)
+        check_preload_fields(expr.expr, entity)
       end
     end)
   end

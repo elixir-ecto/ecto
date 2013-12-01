@@ -3,14 +3,13 @@ defmodule Ecto.Preloader do
 
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.BelongsTo
-  alias Ecto.Query.Normalizer
 
   def run(original, repo, fields, pos // [])
 
   def run([], _repo, _fields, _pos), do: []
 
   def run(original, repo, fields, pos) do
-    fields = Normalizer.normalize_preload(fields)
+    fields = Ecto.Query.PreloadBuilder.normalize(fields)
     records = extract(original, pos)
     records = Enum.reduce(fields, records, &do_run(&2, repo, &1))
     unextract(records, original, pos)
