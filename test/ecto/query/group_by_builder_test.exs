@@ -2,6 +2,7 @@ defmodule Ecto.Query.GroupByBuilderTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query.GroupByBuilder
+  doctest Ecto.Query.GroupByBuilder
 
   test "escape" do
     varx = { :{}, [], [:&, [], [0]] }

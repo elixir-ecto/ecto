@@ -3,8 +3,23 @@ defmodule Ecto.Query.GroupByBuilder do
 
   alias Ecto.Query.BuilderUtil
 
-  # Escapes a group by query to a list of fields
+  @doc """
+  Escapes a group by expression.
 
+  A group by may be a variable, representing all fields in that
+  entity, or a list of fields as `x.y`.
+
+  ## Examples
+
+      iex> escape(quote(do: [x.x, y.y]), [:x, :y])
+      [{{:{}, [], [:&, [], [0]]}, :x},
+       {{:{}, [], [:&, [], [1]]}, :y}]
+
+      iex> escape(quote(do: x), [:x, :y])
+      {:{}, [], [:&, [], [0]]}
+
+  """
+  @spec escape(Macro.t, [atom]) :: Macro.t | no_return
   def escape(list, vars) when is_list(list) do
     Enum.map(list, &escape_field(&1, vars))
   end
@@ -24,5 +39,29 @@ defmodule Ecto.Query.GroupByBuilder do
       :error ->
         raise Ecto.QueryError, reason: "malformed `group_by` query expression"
     end
+  end
+
+  @doc """
+  Builds a quoted expression.
+
+  The quoted expression should evaluate to a query at runtime.
+  If possible, it does all calculations at compile time to avoid
+  runtime work.
+  """
+  @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, binding, expr, env) do
+    binding  = BuilderUtil.escape_binding(binding)
+    expr     = escape(expr, binding)
+    group_by = Ecto.Query.QueryExpr[expr: expr, file: env.file, line: env.line]
+    BuilderUtil.apply_query(query, __MODULE__, [group_by], env)
+  end
+
+  @doc """
+  The callback applied by `build/4` to build the query.
+  """
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  def apply(query, expr) do
+    Ecto.Query.Query[group_bys: group_bys] = query = Ecto.Queryable.to_query(query)
+    query.group_bys(group_bys ++ [expr])
   end
 end

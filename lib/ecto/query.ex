@@ -440,13 +440,7 @@ defmodule Ecto.Query do
 
   """
   defmacro group_by(query, binding, expr) do
-    binding = BuilderUtil.escape_binding(binding)
-    quote do
-      query = unquote(query)
-      expr = unquote(GroupByBuilder.escape(expr, binding))
-      group_by = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
-      Util.merge(query, :group_by, group_by)
-    end
+    GroupByBuilder.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -474,13 +468,7 @@ defmodule Ecto.Query do
         |> select([p], count(p.id))
   """
   defmacro having(query, binding, expr) do
-    binding = BuilderUtil.escape_binding(binding)
-    quote do
-      query = unquote(query)
-      having_expr = unquote(HavingBuilder.escape(expr, binding))
-      having = QueryExpr[expr: having_expr, file: __ENV__.file, line: __ENV__.line]
-      Util.merge(query, :having, having)
-    end
+    HavingBuilder.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -506,14 +494,7 @@ defmodule Ecto.Query do
       from(Post) |> preload(:comments) |> select([p], p)
   """
   defmacro preload(query, expr) do
-    expr = List.wrap(expr)
-    PreloadBuilder.validate(expr)
-    quote do
-      query = unquote(query)
-      preload_expr = unquote(expr)
-      preload = QueryExpr[expr: preload_expr, file: __ENV__.file, line: __ENV__.line]
-      Util.merge(query, :preload, preload)
-    end
+    PreloadBuilder.build(query, expr, __CALLER__)
   end
 
   defrecord KwState, [:quoted, :binds]

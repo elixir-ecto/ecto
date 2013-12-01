@@ -17,7 +17,7 @@ defmodule Ecto.Query.OrderByBuilder do
        { :{}, [], [:asc, { :{}, [], [:&, [], [1]] }, :y] }]
 
   """
-  @spec escape(Macro.t, [atom]) :: Macro.t
+  @spec escape(Macro.t, [atom]) :: Macro.t | no_return
   def escape(list, vars) when is_list(list) do
     Enum.map(list, &escape_field(&1, vars))
   end
