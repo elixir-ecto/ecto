@@ -1,6 +1,8 @@
 defmodule Ecto.Query.BuilderUtil do
   @moduledoc false
 
+  alias Ecto.Query.Query
+
   @doc """
   Smart escapes a query expression.
 
@@ -162,9 +164,6 @@ defmodule Ecto.Query.BuilderUtil do
   defp escape_bind(bind),
     do: raise(Ecto.QueryError, reason: "binding list should contain only variables, got: #{Macro.to_string(bind)}")
 
-  alias Ecto.Query.Query
-  alias Ecto.Query.QueryExpr
-
   @doc """
   Counts the bindings in a query expression.
 
@@ -246,8 +245,6 @@ defmodule Ecto.Query.BuilderUtil do
   Escapes an `Ecto.Query.Query` and associated records.
   """
   def escape_query(Query[] = query),
-    do: { :{}, [], tuple_to_list(query) }
-  def escape_query(QueryExpr[] = query),
     do: { :{}, [], tuple_to_list(query) }
   def escape_query(other),
     do: other

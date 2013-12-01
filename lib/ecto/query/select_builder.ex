@@ -67,7 +67,8 @@ defmodule Ecto.Query.SelectBuilder do
   def build(query, binding, expr, env) do
     binding = BuilderUtil.escape_binding(binding)
     expr    = escape(expr, binding)
-    select  = Ecto.Query.QueryExpr[expr: expr, file: env.file, line: env.line]
+    select  = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
+                          file: unquote(env.file), line: unquote(env.line)]
     BuilderUtil.apply_query(query, __MODULE__, [select], env)
   end
 

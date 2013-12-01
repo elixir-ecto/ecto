@@ -14,7 +14,8 @@ defmodule Ecto.Query.WhereBuilder do
   def build(query, binding, expr, env) do
     binding = BuilderUtil.escape_binding(binding)
     expr    = BuilderUtil.escape(expr, binding)
-    where   = Ecto.Query.QueryExpr[expr: expr, file: env.file, line: env.line]
+    where   = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
+                          file: unquote(env.file), line: unquote(env.line)]
     BuilderUtil.apply_query(query, __MODULE__, [where], env)
   end
 

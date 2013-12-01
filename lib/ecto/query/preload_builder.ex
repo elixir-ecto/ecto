@@ -37,7 +37,9 @@ defmodule Ecto.Query.PreloadBuilder do
   """
   @spec build(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(query, expr, env) do
-    preload = Ecto.Query.QueryExpr[expr: normalize(expr), file: env.file, line: env.line]
+    expr = normalize(expr)
+    preload = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
+                          file: unquote(env.file), line: unquote(env.line)]
     BuilderUtil.apply_query(query, __MODULE__, [preload], env)
   end
 

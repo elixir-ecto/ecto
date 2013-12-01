@@ -14,7 +14,8 @@ defmodule Ecto.Query.HavingBuilder do
   def build(query, binding, expr, env) do
     binding = BuilderUtil.escape_binding(binding)
     expr    = BuilderUtil.escape(expr, binding)
-    having  = Ecto.Query.QueryExpr[expr: expr, file: env.file, line: env.line]
+    having  = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
+                          file: unquote(env.file), line: unquote(env.line)]
     BuilderUtil.apply_query(query, __MODULE__, [having], env)
   end
 
