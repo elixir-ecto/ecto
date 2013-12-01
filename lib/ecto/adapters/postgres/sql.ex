@@ -204,8 +204,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     { _, name } = Util.find_source(sources, var) |> Util.source
     str = "#{name}.#{field}"
     case dir do
-      nil   -> str
-      :asc  -> str <> " ASC"
+      :asc  -> str
       :desc -> str <> " DESC"
     end
   end

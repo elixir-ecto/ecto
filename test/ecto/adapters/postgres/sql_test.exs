@@ -63,7 +63,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT m0.x\nFROM model AS m0\nORDER BY m0.x, m0.y"
 
     query = from(Model) |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
-    assert SQL.select(query) == "SELECT m0.x\nFROM model AS m0\nORDER BY m0.x ASC, m0.y DESC"
+    assert SQL.select(query) == "SELECT m0.x\nFROM model AS m0\nORDER BY m0.x, m0.y DESC"
   end
 
   test "limit and offset" do

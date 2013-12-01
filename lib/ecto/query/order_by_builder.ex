@@ -3,15 +3,27 @@ defmodule Ecto.Query.OrderByBuilder do
 
   alias Ecto.Query.BuilderUtil
 
-  # Escapes an order by query to a list of `{ direction, field }` pairs. See
-  # `Ecto.Query.order_by for the allowed formats for the expression.
+  @doc """
+  Escapes an order by query.
 
+  The query is escaped to a list of `{ direction, var, field }`
+  pairs at runtime. Escaping also validates direction is one of
+  `:asc` or `:desc`.
+
+  ## Examples
+
+      iex> escape(quote do [x.x, y.y] end, [:x, :y])
+      [{ :{}, [], [:asc, { :{}, [], [:&, [], [0]] }, :x] },
+       { :{}, [], [:asc, { :{}, [], [:&, [], [1]] }, :y] }]
+
+  """
+  @spec escape(Macro.t, [atom]) :: Macro.t
   def escape(list, vars) when is_list(list) do
     Enum.map(list, &escape_field(&1, vars))
   end
 
   def escape(field, vars) do
-    [ escape_field(field, vars) ]
+    [escape_field(field, vars)]
   end
 
   defp escape_field({ dir, { :., _, [{ var, _, context }, field] } }, vars)
@@ -38,13 +50,36 @@ defmodule Ecto.Query.OrderByBuilder do
   end
 
   defp escape_field(ast, vars) do
-    escape_field({ nil, ast }, vars)
+    escape_field({ :asc, ast }, vars)
   end
 
+  defp check_dir(dir) when dir in [:asc, :desc], do: :ok
   defp check_dir(dir) do
-    unless dir in [nil, :asc, :desc] do
-      reason = "non-allowed direction `#{dir}`, only `asc` and `desc` allowed"
-      raise Ecto.QueryError, reason: reason
-    end
+    reason = "non-allowed direction `#{dir}`, only `asc` and `desc` allowed"
+    raise Ecto.QueryError, reason: reason
+  end
+
+  @doc """
+  Builds a quoted expression.
+
+  The quoted expression should evaluate to a query at runtime.
+  If possible, it does all calculations at compile time to avoid
+  runtime work.
+  """
+  @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, binding, expr, env) do
+    binding  = BuilderUtil.escape_binding(binding)
+    expr     = escape(expr, binding)
+    order_by = Ecto.Query.QueryExpr[expr: expr, file: env.file, line: env.line]
+    BuilderUtil.apply_query(query, __MODULE__, [order_by], env)
+  end
+
+  @doc """
+  The callback applied by `build/4` to build the query.
+  """
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  def apply(query, expr) do
+    Ecto.Query.Query[order_bys: order_bys] = query = Ecto.Queryable.to_query(query)
+    query.order_bys(order_bys ++ [expr])
   end
 end

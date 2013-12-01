@@ -345,13 +345,7 @@ defmodule Ecto.Query do
 
   """
   defmacro where(query, binding, expr) do
-    binding = BuilderUtil.escape_binding(binding)
-    quote do
-      query = unquote(query)
-      where_expr = unquote(WhereBuilder.escape(expr, binding))
-      where = QueryExpr[expr: where_expr, file: __ENV__.file, line: __ENV__.line]
-      Util.merge(query, :where, where)
-    end
+    WhereBuilder.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -373,13 +367,7 @@ defmodule Ecto.Query do
 
   """
   defmacro order_by(query, binding, expr)  do
-    binding = BuilderUtil.escape_binding(binding)
-    quote do
-      query = unquote(query)
-      expr = unquote(OrderByBuilder.escape(expr, binding))
-      order_by = QueryExpr[expr: expr, file: __ENV__.file, line: __ENV__.line]
-      Util.merge(query, :order_by, order_by)
-    end
+    OrderByBuilder.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
