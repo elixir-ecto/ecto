@@ -493,14 +493,14 @@ defmodule Ecto.Query do
       end
 
     { t, on } = collect_on(t, nil)
-    { _, new_binds, _ } = JoinBuilder.escape(expr, binds)
+    { join_bind, _, _ } = JoinBuilder.escape(expr, binds)
 
     quoted = quote do
       Ecto.Query.join(unquote(quoted), unquote(qual), unquote(binds),
                       unquote(expr), unquote(on))
     end
 
-    build_query t, quoted, binds ++ new_binds
+    build_query t, quoted, binds ++ List.wrap(join_bind)
   end
 
   defp build_query([{ :on, _value }|_], _quoted, _binds) do

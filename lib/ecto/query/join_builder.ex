@@ -9,46 +9,47 @@ defmodule Ecto.Query.JoinBuilder do
   @doc """
   Escapes a join expression (not including the `on` expression).
 
-  It returns a tuple containing if this join is an association join,
-  binds and the expression. `binds` is either an empty list or a list
-  of single. `expr` is either an alias or an association join of format
-  `entity.field`.
+  It returns a tuple containing the binds, the on expression (if available)
+  and the association expression.
 
   ## Examples
 
       iex> escape(quote(do: x in "foo"), [])
-      { false, [:x], "foo" }
+      { :x, "foo", nil }
+
+      iex> escape(quote(do: "foo"), [])
+      { nil, "foo", nil }
 
       iex> escape(quote(do: x in Sample), [])
-      { false, [:x], { :__aliases__, [alias: false], [:Sample] } }
+      { :x, { :__aliases__, [alias: false], [:Sample] }, nil }
 
       iex> escape(quote(do: c in p.comments), [:p])
-      {true, [:c], {{:{}, [], [:&, [], [0]]}, :comments}}
+      { :c, nil, {{:{}, [], [:&, [], [0]]}, :comments} }
 
   """
-  @spec escape(Macro.t, [atom]) :: { boolean, [atom], Macro.t }
+  @spec escape(Macro.t, [atom]) :: { [atom], Macro.t | nil, Macro.t | nil }
   def escape({ :in, _, [{ var, _, context }, expr] }, vars)
       when is_atom(var) and is_atom(context) do
-    escape(expr, vars) |> set_elem(1, [var])
+    escape(expr, vars) |> set_elem(0, var)
   end
 
   def escape({ :in, _, [{ var, _, context }, expr] }, vars)
       when is_atom(var) and is_atom(context) do
-    escape(expr, vars) |> set_elem(1, [var])
+    escape(expr, vars) |> set_elem(0, var)
   end
 
   def escape({ :__aliases__, _, _ } = module, _vars) do
-    { false, [], module }
+    { nil, module, nil }
   end
 
   def escape(string, _vars) when is_binary(string) do
-    { false, [], string }
+    { nil, string, nil }
   end
 
   def escape(dot, vars) do
     case BuilderUtil.escape_dot(dot, vars) do
       { _, _ } = var_field ->
-        { true, [], var_field }
+        { [], nil, var_field }
       :error ->
         raise Ecto.QueryError, reason: "malformed `join` query expression"
     end
@@ -64,26 +65,23 @@ defmodule Ecto.Query.JoinBuilder do
   @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(query, qual, binding, expr, on, env) do
     binding = BuilderUtil.escape_binding(binding)
-    { is_assoc?, join_binding, join_expr } = escape(expr, binding)
+    { join_bind, join_expr, join_assoc } = escape(expr, binding)
+    is_assoc? = not nil?(join_assoc)
 
     validate_qual(qual)
-    validate_on(is_assoc?, on)
-
-    if (bind = Enum.first(join_binding)) && bind in binding do
-      raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
-    end
+    validate_on(on, is_assoc?)
+    validate_bind(join_bind, binding)
 
     # Define the variable that will be used to calculate the number of binds.
     # If the variable is known at compile time, calculate it now.
     query = Macro.expand(query, env)
     { query, getter, setter } = count_binds(query, is_assoc?)
 
+    join_on = escape_on(on, binding ++ List.wrap(join_bind), { join_bind, getter }, env)
     join =
-      if is_assoc? do
-        quoted_assoc_join_expr(qual, join_expr, env)
-      else
-        on = on && BuilderUtil.escape(on, binding ++ join_binding, { bind, getter })
-        quoted_join_expr(qual, join_expr, on, env)
+      quote do
+        JoinExpr[qual: unquote(qual), source: unquote(join_expr), on: unquote(join_on),
+                 file: unquote(env.file), line: unquote(env.line), assoc: unquote(join_assoc)]
       end
 
     case query do
@@ -96,6 +94,12 @@ defmodule Ecto.Query.JoinBuilder do
           query.joins(joins ++ [unquote(join)])
         end
     end
+  end
+
+  defp escape_on(nil, _binding, _join_var, _env), do: nil
+  defp escape_on(on, binding, join_var, env) do
+    on = BuilderUtil.escape(on, binding, join_var)
+    quote do: QueryExpr[expr: unquote(on), line: unquote(env.line), file: unquote(env.file)]
   end
 
   defp count_binds(query, is_assoc?) do
@@ -116,21 +120,6 @@ defmodule Ecto.Query.JoinBuilder do
     end
   end
 
-  defp quoted_join_expr(qual, join_expr, on_expr, env) do
-    quote do
-      on = QueryExpr[expr: unquote(on_expr), line: unquote(env.line), file: unquote(env.file)]
-      JoinExpr[qual: unquote(qual), source: unquote(join_expr), on: on,
-               file: unquote(env.file), line: unquote(env.line)]
-    end
-  end
-
-  defp quoted_assoc_join_expr(qual, join_expr, env) do
-    quote do
-      JoinExpr[qual: unquote(qual), assoc: unquote(join_expr),
-               file: unquote(env.file), line: unquote(env.line)]
-    end
-  end
-
   @qualifiers [:inner, :left, :right, :full]
 
   defp validate_qual(qual) when qual in @qualifiers, do: :ok
@@ -140,10 +129,16 @@ defmodule Ecto.Query.JoinBuilder do
               Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
   end
 
-  defp validate_on(is_assoc?, on) when is_assoc? == nil?(on), do: :ok
+  defp validate_on(on, is_assoc?) when is_assoc? == nil?(on), do: :ok
   defp validate_on(_, _) do
     raise Ecto.QueryError,
       reason: "`join` expression requires explicit `on` " <>
               "expression unless association join expression"
+  end
+
+  defp validate_bind(bind, all) do
+    if bind && bind in all do
+      raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
+    end
   end
 end
