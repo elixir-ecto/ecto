@@ -3,7 +3,6 @@ defmodule Ecto.Repo.Backend do
   @moduledoc false
 
   alias Ecto.Queryable
-  alias Ecto.Query.Query
   alias Ecto.Query.Util
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.BuilderUtil
@@ -48,13 +47,7 @@ defmodule Ecto.Repo.Backend do
   def all(repo, adapter, queryable) do
     query = Queryable.to_query(queryable) |> Util.normalize
     Util.validate(query, repo.query_apis)
-    result = adapter.all(repo, query)
-
-    if query.preloads == [] do
-      result
-    else
-      preload(repo, query, result)
-    end
+    adapter.all(repo, query)
   end
 
   def create(repo, adapter, entity) do
@@ -193,11 +186,5 @@ defmodule Ecto.Repo.Backend do
           type: value_type, expected_type: type
       end
     end)
-  end
-
-  defp preload(repo, Query[] = query, results) do
-    pos = Util.locate_var(query.select.expr, { :&, [], [0] })
-    fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
-    Ecto.Preloader.run(results, repo, fields, pos)
   end
 end
