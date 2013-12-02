@@ -316,11 +316,9 @@ defmodule Ecto.Entity do
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
-    assoc_name  = queryable |> Module.split |> List.last |> String.downcase
-
     opts = opts
            |> Keyword.put_new(:primary_key, :id)
-           |> Keyword.put_new(:foreign_key, :"#{assoc_name}_id")
+           |> Keyword.put_new(:foreign_key, :"#{name}_id")
 
     __field__(mod, opts[:foreign_key], :integer, [])
 
