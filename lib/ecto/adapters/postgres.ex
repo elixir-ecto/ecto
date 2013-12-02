@@ -13,10 +13,10 @@ defmodule Ecto.Adapters.Postgres do
   @default_port 5432
 
   alias Ecto.Adapters.Postgres.SQL
+  alias Ecto.Associations.Assoc
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
-  alias Ecto.Query.Normalizer
   alias Postgrex.TypeInfo
 
   ## Adapter API
@@ -40,13 +40,15 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   def all(repo, Query[] = query) do
-    Postgrex.Result[rows: rows] = query(repo, SQL.select(query))
+    pg_query = query.select |> normalize_select |> query.select
+
+    Postgrex.Result[rows: rows] = query(repo, SQL.select(pg_query))
 
     # Transform each row based on select expression
     transformed = Enum.map(rows, fn row ->
       values = tuple_to_list(row)
-      QueryExpr[expr: expr] = Normalizer.normalize_select(query.select)
-      transform_row(expr, values, query.sources) |> elem(0)
+      QueryExpr[expr: expr] = normalize_select(pg_query.select)
+      transform_row(expr, values, pg_query.sources) |> elem(0)
     end)
 
     transformed
@@ -88,6 +90,46 @@ defmodule Ecto.Adapters.Postgres do
       Postgrex.Connection.query!(worker, sql)
     end)
   end
+
+  defp prepare_start(repo, opts) do
+    pool_name = repo.__postgres__(:pool_name)
+    { pool_opts, worker_opts } = Dict.split(opts, [:size, :max_overflow])
+
+    pool_opts = pool_opts
+      |> Keyword.update(:size, 5, &binary_to_integer(&1))
+      |> Keyword.update(:max_overflow, 10, &binary_to_integer(&1))
+
+    pool_opts = [
+      name: { :local, pool_name },
+      worker_module: Postgrex.Connection ] ++ pool_opts
+
+    worker_opts = worker_opts
+      |> Keyword.put(:decoder, &decoder/4)
+      |> Keyword.put_new(:port, @default_port)
+
+    { pool_opts, worker_opts }
+  end
+
+  def normalize_select(QueryExpr[expr: { :assoc, _, [_, _] } = assoc] = expr) do
+    normalize_assoc(assoc) |> expr.expr
+  end
+
+  def normalize_select(QueryExpr[expr: _] = expr), do: expr
+
+  defp normalize_assoc({ :assoc, _, [_, _] } = assoc) do
+    { var, fields } = Assoc.decompose_assoc(assoc)
+    normalize_assoc(var, fields)
+  end
+
+  defp normalize_assoc(var, fields) do
+    nested = Enum.map(fields, fn { _field, nested } ->
+      { var, fields } = Assoc.decompose_assoc(nested)
+      normalize_assoc(var, fields)
+    end)
+    { var, nested }
+  end
+
+  ## Result set transformation
 
   defp transform_row({ :{}, _, list }, values, sources) do
     { result, values } = transform_row(list, values, sources)
@@ -131,23 +173,7 @@ defmodule Ecto.Adapters.Postgres do
     Ecto.Associations.Preloader.run(results, repo, fields, pos)
   end
 
-  defp prepare_start(repo, opts) do
-    pool_name = repo.__postgres__(:pool_name)
-    { pool_opts, worker_opts } = Dict.split(opts, [:size, :max_overflow])
-
-    pool_opts = pool_opts
-                |> Keyword.update(:size, 5, &binary_to_integer(&1))
-                |> Keyword.update(:max_overflow, 10, &binary_to_integer(&1))
-
-    pool_opts = [ name: { :local, pool_name },
-                  worker_module: Postgrex.Connection ] ++ pool_opts
-
-    worker_opts = worker_opts
-                  |> Keyword.put(:decoder, &decoder/4)
-                  |> Keyword.put_new(:port, @default_port)
-
-    { pool_opts, worker_opts }
-  end
+  ## Postgrex casting
 
   defp decoder(TypeInfo[sender: :bytea], :binary, default, param) do
     value = default.(param)

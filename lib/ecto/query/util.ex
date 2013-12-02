@@ -187,10 +187,6 @@ defmodule Ecto.Query.Util do
   end
 
   @doc false
-  def assoc_extract({ :&, _, [_] } = var), do: { var, [] }
-  def assoc_extract({ :assoc, _, [var, fields] }), do: { var, fields }
-
-  @doc false
   def record_key(BelongsTo[] = refl), do: refl.foreign_key
   def record_key(refl), do: refl.primary_key
 

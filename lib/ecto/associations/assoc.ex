@@ -1,6 +1,6 @@
 defmodule Ecto.Associations.Assoc do
   @moduledoc """
-  This module provides assoc selector merger.
+  This module provides the assoc selector merger and utilities around it.
   """
 
   alias Ecto.Query.Query
@@ -18,6 +18,12 @@ defmodule Ecto.Associations.Assoc do
   end
 
   def run(results, _expr, _query), do: results
+
+  @doc """
+  Decomposes an `assoc(var, fields)` or `var` into `{ var, fields }`.
+  """
+  def decompose_assoc({ :&, _, [_] } = var), do: { var, [] }
+  def decompose_assoc({ :assoc, _, [var, fields] }), do: { var, fields }
 
   defp merge(rows, var, fields, query) do
     refls = create_refls(var, fields, query)
@@ -75,7 +81,7 @@ defmodule Ecto.Associations.Assoc do
 
   defp create_refls(var, fields, Query[] = query) do
     Enum.map(fields, fn { field, nested } ->
-      { inner_var, fields } = Util.assoc_extract(nested)
+      { inner_var, fields } = decompose_assoc(nested)
 
       entity = Util.find_source(query.sources, var) |> Util.entity
       refl = entity.__entity__(:association, field)
@@ -86,7 +92,7 @@ defmodule Ecto.Associations.Assoc do
 
   defp create_acc(fields) do
     acc = Enum.map(fields, fn { _field, nested } ->
-      { _, fields } = Util.assoc_extract(nested)
+      { _, fields } = decompose_assoc(nested)
       create_acc(fields)
     end)
     { HashSet.new, HashDict.new, acc }

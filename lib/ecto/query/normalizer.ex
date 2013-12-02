@@ -49,25 +49,6 @@ defmodule Ecto.Query.Normalizer do
     join.source(associated).on(on)
   end
 
-  def normalize_select(QueryExpr[expr: { :assoc, _, [_, _] } = assoc] = expr) do
-    normalize_assoc(assoc) |> expr.expr
-  end
-
-  def normalize_select(QueryExpr[expr: _] = expr), do: expr
-
-  defp normalize_assoc({ :assoc, _, [_, _] } = assoc) do
-    { var, fields } = Util.assoc_extract(assoc)
-    normalize_assoc(var, fields)
-  end
-
-  defp normalize_assoc(var, fields) do
-    nested = Enum.map(fields, fn { _field, nested } ->
-      { var, fields } = Util.assoc_extract(nested)
-      normalize_assoc(var, fields)
-    end)
-    { var, nested }
-  end
-
   defp on_expr(BelongsTo[], assoc_var, record_var, fk, pk) do
     quote do unquote(assoc_var).unquote(pk) == unquote(record_var).unquote(fk) end
   end

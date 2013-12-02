@@ -9,7 +9,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
-  alias Ecto.Query.Normalizer
 
   unary_ops = [ -: "-", +: "+" ]
 
@@ -132,8 +131,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "DELETE FROM #{table} AS #{name}" <> where
   end
 
-  defp select(expr, sources) do
-    QueryExpr[expr: expr] = Normalizer.normalize_select(expr)
+  defp select(QueryExpr[expr: expr], sources) do
     "SELECT " <> select_clause(expr, sources)
   end
 

@@ -10,6 +10,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
+  alias Ecto.Associations.Assoc
 
   defrecord State, sources: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil, from: nil, query: nil
@@ -333,7 +334,7 @@ defmodule Ecto.Query.Validator do
 
   defp assoc_select(parent_var, fields, State[] = state) do
     Enum.each(fields, fn { field, nested } ->
-      { child_var, nested_fields } = Util.assoc_extract(nested)
+      { child_var, nested_fields } = Assoc.decompose_assoc(nested)
       parent_entity = Util.find_source(state.sources, parent_var) |> Util.entity
 
       refl = parent_entity.__entity__(:association, field)
