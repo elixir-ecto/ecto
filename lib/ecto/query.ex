@@ -454,9 +454,17 @@ defmodule Ecto.Query do
         preload: [:comments],
         select: p)
 
+      # Returns all posts and their associated comments
+      # with the associated author
+      from(p in Post,
+        preload: [user: [], comments: [:user]],
+        select: p)
+
   ## Expressions examples
 
       from(Post) |> preload(:comments) |> select([p], p)
+
+      from(Post) |> preload([:user, { :comments, [:user] }]) |> select([p], p)
   """
   defmacro preload(query, expr) do
     PreloadBuilder.build(query, expr, __CALLER__)
