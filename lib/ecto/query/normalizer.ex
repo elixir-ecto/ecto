@@ -44,7 +44,7 @@ defmodule Ecto.Query.Normalizer do
     assoc_var = Util.model_var(query, associated)
     pk = refl.primary_key
     fk = refl.foreign_key
-    on_expr = on_expr(refl, assoc_var, fk, pk)
+    on_expr = on_expr(refl, assoc_var, left, fk, pk)
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
     join.source(associated).on(on)
   end
@@ -55,12 +55,12 @@ defmodule Ecto.Query.Normalizer do
 
   def normalize_select(QueryExpr[expr: _] = expr), do: expr
 
-  defp on_expr(BelongsTo[], assoc_var, fk, pk) do
-    quote do unquote(assoc_var).unquote(pk) == &0.unquote(fk) end
+  defp on_expr(BelongsTo[], assoc_var, record_var, fk, pk) do
+    quote do unquote(assoc_var).unquote(pk) == unquote(record_var).unquote(fk) end
   end
 
-  defp on_expr(_refl, assoc_var, fk, pk) do
-    quote do unquote(assoc_var).unquote(fk) == &0.unquote(pk) end
+  defp on_expr(_refl, assoc_var, record_var, fk, pk) do
+    quote do unquote(assoc_var).unquote(fk) == unquote(record_var).unquote(pk) end
   end
 
   # Auto select the entity in the from expression
