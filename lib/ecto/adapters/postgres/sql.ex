@@ -346,17 +346,32 @@ defmodule Ecto.Adapters.Postgres.SQL do
     expr(expr, sources)
   end
 
-  # TODO: Records (Kernel.access)
-  defp select_clause({ :{}, _, elems }, sources) do
-    Enum.map_join(elems, ", ", &select_clause(&1, sources))
-  end
-
-  defp select_clause(list, sources) when is_list(list) do
-    Enum.map_join(list, ", ", &select_clause(&1, sources))
-  end
-
   defp select_clause(expr, sources) do
-    expr(expr, sources)
+    flatten_select(expr) |> Enum.map_join(", ", &expr(&1, sources))
+  end
+
+  # TODO: Records (Kernel.access)
+
+  # Some two-tuples may be records (ex. Ecto.Binary[]), so check for records
+  # explicitly. We can do this because we don't allow atoms in queries.
+  defp flatten_select({ atom, _ } = record) when is_atom(atom) do
+    [record]
+  end
+
+  defp flatten_select({ left, right }) do
+    flatten_select({ :{}, [], [left, right] })
+  end
+
+  defp flatten_select({ :{}, _, elems }) do
+    Enum.flat_map(elems, &flatten_select/1)
+  end
+
+  defp flatten_select(list) when is_list(list) do
+    Enum.flat_map(list, &flatten_select/1)
+  end
+
+  defp flatten_select(expr) do
+    [expr]
   end
 
   defp escape_string(value) when is_binary(value) do
