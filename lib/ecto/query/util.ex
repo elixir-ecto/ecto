@@ -59,11 +59,11 @@ defmodule Ecto.Query.Util do
   @doc """
   Look up the expression where the variable was bound.
   """
-  def find_expr(Query[from: from], { :&, _, [0] }) do
+  def source_expr(Query[from: from], { :&, _, [0] }) do
     from
   end
 
-  def find_expr(Query[joins: joins], { :&, _, [ix] }) do
+  def source_expr(Query[joins: joins], { :&, _, [ix] }) do
     Enum.at(joins, ix - 1)
   end
 
@@ -180,4 +180,8 @@ defmodule Ecto.Query.Util do
   def locate_var(expr, var) do
     if expr == var, do: []
   end
+
+  @doc false
+  def assoc_extract({ :&, _, [_] } = var), do: { var, [] }
+  def assoc_extract({ :assoc, _, [var, fields] }), do: { var, fields }
 end

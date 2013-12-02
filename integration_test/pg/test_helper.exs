@@ -50,6 +50,7 @@ defmodule Ecto.Integration.Postgres.Comment do
     field :interval, :interval
     field :bytes, :binary
     belongs_to :post, Ecto.Integration.Postgres.Post
+    belongs_to :author, Ecto.Integration.Postgres.User
   end
 end
 
@@ -59,6 +60,15 @@ defmodule Ecto.Integration.Postgres.Permalink do
   queryable "permalinks" do
     field :url, :string
     belongs_to :post, Ecto.Integration.Postgres.Post
+  end
+end
+
+defmodule Ecto.Integration.Postgres.User do
+  use Ecto.Model
+
+  queryable "users" do
+    field :name, :string
+    has_many :comments, Ecto.Integration.Postgres.Comment
   end
 end
 
@@ -83,6 +93,7 @@ defmodule Ecto.Integration.Postgres.Case do
       alias Ecto.Integration.Postgres.Post
       alias Ecto.Integration.Postgres.Comment
       alias Ecto.Integration.Postgres.Permalink
+      alias Ecto.Integration.Postgres.User
       alias Ecto.Integration.Postgres.Custom
     end
   end
@@ -129,8 +140,9 @@ end)
 
 setup_database = [
   "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), count integer)",
-  "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, interval interval, bytes bytea, post_id integer)",
+  "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, interval interval, bytes bytea, post_id integer, author_id integer)",
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
+  "CREATE TABLE users (id serial PRIMARY KEY, name text)",
   "CREATE TABLE customs (foo text PRIMARY KEY)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"

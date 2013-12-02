@@ -4,7 +4,6 @@ defmodule Ecto.Associations do
   """
 
   alias Ecto.Query.Query
-  alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.HasMany
@@ -23,13 +22,8 @@ defmodule Ecto.Associations do
   """
   def transform_result(_expr, [], _query), do: true
 
-  def transform_result({ :assoc, _, [parent, child] }, results, Query[] = query) do
-    JoinExpr[assoc: { ^parent, field }] = Util.find_expr(query, child)
-    { _source, entity, _model } = query.from
-    refl = entity.__entity__(:association, field)
-
-    [{ parent, child }|results] = results
-    combine(results, refl, parent, [], [child])
+  def transform_result({ :assoc, _, [parent, fields] }, results, Query[] = query) do
+    merge(results, parent, fields, query)
   end
 
   @doc false
@@ -84,32 +78,87 @@ defmodule Ecto.Associations do
     order_by: field(x, ^pk)
   end
 
-  ## ASSOCIATION JOIN COMBINER ##
+  ## ASSOCIATION JOIN MERGER ##
 
-  defp combine([], refl, last_parent, parents, children) do
-    children = Enum.reverse(children)
-    last_parent = set_loaded(last_parent, refl, children)
-    Enum.reverse([last_parent|parents])
+  defp merge(rows, var, fields, query) do
+    refls = create_refls(var, fields, query)
+    { _, _, acc } = create_acc(fields)
+    acc = { HashSet.new, [], acc }
+
+    { _keys, parents, children } = Enum.reduce(rows, acc, &merge_to_dict(&1, { nil, refls }, &2))
+    parents = lc parent inlist parents, do: build_record({ 0, parent }, refls, children) |> elem(1)
+    Enum.reverse(parents)
   end
 
-  defp combine([{ parent, child }|rows], refl, last_parent, parents, children) do
-    cond do
-      nil?(parent) ->
-        combine(rows, refl, last_parent, [nil|parents], children)
-      compare(parent, last_parent, refl) ->
-        combine(rows, refl, parent, parents, [child|children])
-      true ->
-        children = Enum.reverse(children)
-        last_parent = set_loaded(last_parent, refl, children)
-        parents = [last_parent|parents]
-        combine([{ parent, child }|rows], refl, parent, parents, [])
+  defp build_record({ pos, parent }, refls, fields) do
+    zipped = Enum.zip(refls, fields)
+    new_parent =
+      Enum.reduce(zipped, parent, fn { refl, field }, parent ->
+        { refl, refls } = refl
+        { _, children, sub_children } = field
+
+        record_key = apply(parent, record_key(refl), [])
+        if record_key do
+          my_children = Dict.get(children, record_key) || []
+          built_children = lc child inlist my_children, do: build_record(child, refls, sub_children)
+        else
+          built_children = []
+        end
+
+        sorted_children = built_children
+          |> Enum.sort(&compare/2)
+          |> Enum.map(&elem(&1, 1))
+        set_loaded(parent, refl, sorted_children)
+      end)
+
+    { pos, new_parent }
+  end
+
+  defp merge_to_dict({ record, sub_records }, { refl, sub_refls }, { keys, dict, sub_dicts }) do
+    if not (nil?(record) or Set.member?(keys, record.primary_key)) do
+      keys = Set.put(keys, record.primary_key)
+      if refl do
+        assoc_key = apply(record, assoc_key(refl), [])
+        item = { Dict.size(dict), record }
+        dict = Dict.update(dict, assoc_key, [item], &[item|&1])
+      else
+        dict = [record|dict]
+      end
     end
+
+    zipped = List.zip([sub_records, sub_refls, sub_dicts])
+    sub_dicts = lc { recs, refls, dicts } inlist zipped do
+      merge_to_dict(recs, refls, dicts)
+    end
+
+    { keys, dict, sub_dicts }
   end
 
-  defp compare(record1, record2, refl) do
-    pk = refl.primary_key
-    apply(record1, pk, []) == apply(record2, pk, [])
+  defp create_refls(var, fields, Query[] = query) do
+    Enum.map(fields, fn { field, nested } ->
+      { inner_var, fields } = Util.assoc_extract(nested)
+
+      entity = Util.find_source(query.sources, var) |> Util.entity
+      refl = entity.__entity__(:association, field)
+
+      { refl, create_refls(inner_var, fields, query) }
+    end)
   end
+
+  defp create_acc(fields) do
+    acc = Enum.map(fields, fn { _field, nested } ->
+      { _, fields } = Util.assoc_extract(nested)
+      create_acc(fields)
+    end)
+    { HashSet.new, HashDict.new, acc }
+  end
+
+  # TODO: MOVE! Preloader also uses this
+  defp record_key(BelongsTo[] = refl), do: refl.foreign_key
+  defp record_key(refl), do: refl.primary_key
+
+  defp assoc_key(BelongsTo[] = refl), do: refl.primary_key
+  defp assoc_key(refl), do: refl.foreign_key
 
   defp set_loaded(record, refl, loaded) do
     if not is_record(refl, HasMany), do: loaded = Enum.first(loaded)
@@ -118,4 +167,6 @@ defmodule Ecto.Associations do
     association = association.__assoc__(:loaded, loaded)
     apply(record, field, [association])
   end
+
+  defp compare({ pos1, _ }, { pos2, _ }), do: pos1 < pos2
 end
