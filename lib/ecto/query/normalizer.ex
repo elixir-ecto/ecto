@@ -5,23 +5,40 @@ defmodule Ecto.Query.Normalizer do
 
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
-  alias Ecto.Query.AssocJoinExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
   alias Ecto.Reflections.BelongsTo
 
-  def normalize(Query[] = query, opts) do
+  def normalize(Query[] = query, opts // []) do
     query
     |> setup_sources
+    |> normalize_joins
     |> auto_select(opts)
     |> normalize_group_by
   end
 
+  defp normalize_joins(Query[joins: joins] = query) do
+    query.joins Enum.map(joins, &normalize_join(&1, query))
+  end
+
   # Transform an assocation join to an ordinary join
-  def normalize_join(AssocJoinExpr[] = join, Query[] = query) do
-    { :., _, [left, right] } = join.expr
+  def normalize_join(JoinExpr[assoc: nil] = join, _query), do: join
+
+  def normalize_join(JoinExpr[assoc: { left, right }] = join, Query[] = query) do
     entity = Util.find_source(query.sources, left) |> Util.entity
+
+    if nil?(entity) do
+      raise Ecto.QueryError, file: join.file, line: join.line,
+        reason: "association join cannot be performed without an entity"
+    end
+
     refl = entity.__entity__(:association, right)
+
+    unless refl do
+      raise Ecto.QueryError, file: join.file, line: join.line,
+        reason: "could not find association `#{right}` on entity #{inspect entity}"
+    end
+
     associated = refl.associated
 
     assoc_var = Util.model_var(query, associated)
@@ -29,11 +46,8 @@ defmodule Ecto.Query.Normalizer do
     fk = refl.foreign_key
     on_expr = on_expr(refl, assoc_var, fk, pk)
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
-
-    JoinExpr[qual: join.qual, source: associated, on: on, file: join.file, line: join.line]
+    join.source(associated).on(on)
   end
-
-  def normalize_join(JoinExpr[] = expr, _query), do: expr
 
   def normalize_select(QueryExpr[expr: { :assoc, _, [fst, snd] }] = expr) do
     expr.expr({ :{}, [], [fst, snd] })
@@ -76,7 +90,7 @@ defmodule Ecto.Query.Normalizer do
     froms = if query.from, do: [query.from], else: []
 
     sources = Enum.reduce(query.joins, froms, fn
-      AssocJoinExpr[expr: { :., _, [left, right] }], acc ->
+      JoinExpr[assoc: { left, right }], acc ->
         entity = Util.find_source(Enum.reverse(acc), left) |> Util.entity
 
         if entity && (refl = entity.__entity__(:association, right)) do
@@ -86,6 +100,7 @@ defmodule Ecto.Query.Normalizer do
           [nil|acc]
         end
 
+      # TODO: Validate this on join creation
       JoinExpr[source: source], acc when is_binary(source) ->
         [ { source, nil, nil } | acc ]
 

@@ -10,7 +10,6 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
-  alias Ecto.Query.AssocJoinExpr
 
   defrecord State, sources: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil, from: nil, query: nil
@@ -106,18 +105,8 @@ defmodule Ecto.Query.Validator do
 
   defp validate_joins(joins, state) do
     state = state.grouped?(false)
-
-    { joins, assocs } = Enum.partition(joins, fn
-      JoinExpr[on: nil] ->
-        raise Ecto.QueryError, reason: "an `on` query expression have to " <>
-          "follow a `join` unless it's an association join"
-      JoinExpr[] -> true
-      AssocJoinExpr[] -> false
-    end)
-
     ons = Enum.map(joins, &(&1.on))
     validate_booleans(:join_on, ons, state)
-    validate_assoc_joins(assocs, state)
   end
 
   defp validate_wheres(wheres, state) do
@@ -138,26 +127,6 @@ defmodule Ecto.Query.Validator do
           format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
           raise Ecto.QueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
             "is of type `#{format_expr_type}`, has to be of boolean type"
-        end
-      end
-    end)
-  end
-
-  defp validate_assoc_joins(joins, State[] = state) do
-    Enum.each(joins, fn AssocJoinExpr[] = expr ->
-      rescue_metadata(:join, expr.file, expr.line) do
-        { :., _, [left, right] } = expr.expr
-        entity = Util.find_source(state.sources, left) |> Util.entity
-
-        if nil?(entity) do
-          raise Ecto.QueryError, reason: "association join can only be performed " <>
-            "on fields from an entity"
-        end
-
-        refl = entity.__entity__(:association, right)
-        unless refl do
-          raise Ecto.QueryError, reason: "association join can only be performed " <>
-            "on assocation fields"
         end
       end
     end)
@@ -332,13 +301,18 @@ defmodule Ecto.Query.Validator do
 
   defp select_clause({ :assoc, _, [parent, child] }, State[] = state) do
     entity = Util.find_source(state.sources, parent) |> Util.entity
+
     unless entity == Util.entity(state.from) do
       raise Ecto.QueryError, reason: "can only associate on the from entity"
     end
 
     expr = Util.find_expr(state.query, child)
-    unless match?(AssocJoinExpr[qual: qual] when qual in [:inner, :left], expr) do
-      raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
+
+    case expr do
+      JoinExpr[qual: qual, assoc: assoc] when qual in [:inner, :left] and not nil?(assoc) ->
+        :ok
+      _ ->
+        raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
     end
   end
 

@@ -149,9 +149,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     # the same entity can be referenced multiple times in joins
 
     sources_list = tuple_to_list(sources)
-    Enum.map_reduce(query.joins, used_names, fn(join, names) ->
-      join = JoinExpr[] = Normalizer.normalize_join(join, query)
-
+    Enum.map_reduce(query.joins, used_names, fn(JoinExpr[] = join, names) ->
       source = Enum.find(sources_list, fn({ { source, name }, _, model }) ->
         ((source == join.source) or (model == join.source)) and not name in names
       end)

@@ -120,8 +120,7 @@ defmodule Ecto.Query do
                    havings: [], preloads: []
 
   defrecord QueryExpr, [:expr, :file, :line]
-  defrecord AssocJoinExpr, [:qual, :expr, :file, :line]
-  defrecord JoinExpr, [:qual, :source, :on, :file, :line]
+  defrecord JoinExpr, [:qual, :source, :on, :file, :line, :assoc]
 
   @type t :: Query.t
 

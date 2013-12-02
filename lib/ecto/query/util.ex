@@ -3,7 +3,6 @@ defmodule Ecto.Query.Util do
   This module provide utility functions on queries.
   """
 
-  alias Ecto.Queryable
   alias Ecto.Query.Query
 
   @doc """
@@ -76,25 +75,6 @@ defmodule Ecto.Query.Util do
 
   @doc "Returns model from a source tuple or nil if there is none."
   def model({ _source, _entity, model }), do: model
-
-  # Merges a Queryable with a query expression
-  @doc false
-  def merge(queryable, type, expr) do
-    query = Queryable.to_query(queryable)
-
-    case type do
-      :from     -> query.from(expr)
-      :join     -> query.update_joins(&(&1 ++ [expr]))
-      :where    -> query.update_wheres(&(&1 ++ [expr]))
-      :select   -> query.select(expr)
-      :order_by -> query.update_order_bys(&(&1 ++ [expr]))
-      :limit    -> query.limit(expr)
-      :offset   -> query.offset(expr)
-      :group_by -> query.update_group_bys(&(&1 ++ [expr]))
-      :having   -> query.update_havings(&(&1 ++ [expr]))
-      :preload  -> query.update_preloads(&(&1 ++ [expr]))
-    end
-  end
 
   # Converts internal type format to "typespec" format
   @doc false

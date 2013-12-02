@@ -5,7 +5,6 @@ defmodule Ecto.Query.JoinBuilder do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
-  alias Ecto.Query.AssocJoinExpr
 
   @doc """
   Escapes a join expression (not including the `on` expression).
@@ -24,7 +23,7 @@ defmodule Ecto.Query.JoinBuilder do
       { false, [:x], { :__aliases__, [alias: false], [:Sample] } }
 
       iex> escape(quote(do: c in p.comments), [:p])
-      {true, [:c], {:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :comments]]}}
+      {true, [:c], {{:{}, [], [:&, [], [0]]}, :comments}}
 
   """
   @spec escape(Macro.t, [atom]) :: { boolean, [atom], Macro.t }
@@ -48,8 +47,8 @@ defmodule Ecto.Query.JoinBuilder do
 
   def escape(dot, vars) do
     case BuilderUtil.escape_dot(dot, vars) do
-      { var, field } ->
-        { true, [], { :{}, [], [:., [], [var, field]] } }
+      { _, _ } = var_field ->
+        { true, [], var_field }
       :error ->
         raise Ecto.QueryError, reason: "malformed `join` query expression"
     end
@@ -105,11 +104,11 @@ defmodule Ecto.Query.JoinBuilder do
       Query[] = unescaped ->
         { unescaped, BuilderUtil.count_binds(unescaped), nil }
 
-      # We don't have the query but we won't use it anyway.
+      # We don't have the query but we won't use binds anyway.
       _  when is_assoc? ->
         { query, nil, nil }
 
-      # We don't have the query nor can use it, handle it at runtime.
+      # We don't have the query, handle it at runtime.
       _ ->
         { query,
           quote(do: var!(count_binds, Ecto.Query)),
@@ -127,12 +126,12 @@ defmodule Ecto.Query.JoinBuilder do
 
   defp quoted_assoc_join_expr(qual, join_expr, env) do
     quote do
-      AssocJoinExpr[qual: unquote(qual), expr: unquote(join_expr),
-                    file: unquote(env.file), line: unquote(env.line)]
+      JoinExpr[qual: unquote(qual), assoc: unquote(join_expr),
+               file: unquote(env.file), line: unquote(env.line)]
     end
   end
 
-  @qualifiers [ :inner, :left, :right, :full ]
+  @qualifiers [:inner, :left, :right, :full]
 
   defp validate_qual(qual) when qual in @qualifiers, do: :ok
   defp validate_qual(_qual) do

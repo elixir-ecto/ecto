@@ -4,7 +4,7 @@ defmodule Ecto.Associations do
   """
 
   alias Ecto.Query.Query
-  alias Ecto.Query.AssocJoinExpr
+  alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.HasMany
@@ -24,8 +24,7 @@ defmodule Ecto.Associations do
   def transform_result(_expr, [], _query), do: true
 
   def transform_result({ :assoc, _, [parent, child] }, results, Query[] = query) do
-    AssocJoinExpr[expr: join_expr] = Util.find_expr(query, child)
-    { :., _, [^parent, field] } = join_expr
+    JoinExpr[assoc: { ^parent, field }] = Util.find_expr(query, child)
     { _source, entity, _model } = query.from
     refl = entity.__entity__(:association, field)
 

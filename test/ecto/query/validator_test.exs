@@ -364,23 +364,6 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
   end
 
-  test "cannot association without entity" do
-    query = from(p in "posts", join: p.comments)
-    assert_raise Ecto.QueryError, fn ->
-      validate(query)
-    end
-  end
-
-  test "association join" do
-    query = from(p in Post, join: p.comments)
-    validate(query)
-
-    query = from(p in Post, join: p.title)
-    assert_raise Ecto.QueryError, fn ->
-      validate(query)
-    end
-  end
-
   test "assoc selector" do
     query = from(p in Post, join: c in p.comments, select: assoc(p, c))
     validate(query)
