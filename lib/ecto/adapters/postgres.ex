@@ -49,16 +49,9 @@ defmodule Ecto.Adapters.Postgres do
       transform_row(expr, values, query.sources) |> elem(0)
     end)
 
-    expr = query.select.expr
-    if Ecto.Associations.assoc_select?(expr) do
-      transformed = Ecto.Associations.transform_result(expr, transformed, query)
-    end
-
-    if query.preloads != [] do
-      transformed = preload(repo, query, transformed)
-    end
-
     transformed
+      |> Ecto.Associations.Assoc.run(query.select.expr, query)
+      |> preload(repo, query)
   end
 
   def create(repo, entity) do
@@ -132,10 +125,10 @@ defmodule Ecto.Adapters.Postgres do
     { value, values }
   end
 
-  defp preload(repo, Query[] = query, results) do
+  defp preload(results, repo, Query[] = query) do
     pos = Util.locate_var(query.select.expr, { :&, [], [0] })
     fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
-    Ecto.Preloader.run(results, repo, fields, pos)
+    Ecto.Associations.Preloader.run(results, repo, fields, pos)
   end
 
   defp prepare_start(repo, opts) do

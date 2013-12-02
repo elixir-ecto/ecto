@@ -456,7 +456,7 @@ defmodule Ecto.Query do
   a separate query returning all comments associated to the given posts.
 
   Nested associations can also be preloaded as seen in the examples below.
-  One query per field to be preloaded will be issued to the database.
+  One query per association to be preloaded will be issued to the database.
 
   ## Keywords examples
 

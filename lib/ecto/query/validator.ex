@@ -349,7 +349,7 @@ defmodule Ecto.Query.Validator do
 
       unless child_entity.__entity__(:primary_key) do
         raise Ecto.QueryError, reason: "`assoc/2` selector requires a primary key on " <>
-          "entity: `#{child_entity}"
+          "entity: `#{child_entity}`"
       end
 
       expr = Util.source_expr(state.query, child_var)
@@ -370,7 +370,7 @@ defmodule Ecto.Query.Validator do
     end) |> Enum.concat |> Enum.uniq
   end
 
-  defp check_grouped({ source, field } = source_field, state) do
+  defp check_grouped({ source, field } = source_field, State[] = state) do
     if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do
       entity = Util.entity(source) || Util.source(source)
       raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` must appear in `group_by` " <>
