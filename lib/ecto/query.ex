@@ -261,18 +261,19 @@ defmodule Ecto.Query do
   that should be performed on the fields. Any expression that is accepted in a
   query can be a select field.
 
-  There can only be one select expression in a query, if the select expression is
-  omitted, the query will by default select the full entity (only works when there
-  is a single `from` expression and no `group_by`).
+  There can only be one select expression in a query, if the select expression
+  is omitted, the query will by default select the full entity.
 
   The sub-expressions in the query can be wrapped in lists or tuples as shown in
-  the examples. A full entity can also be selected if the entity variable is the
-  only thing in the expression.
+  the examples. A full entity can also be selected.
 
   The `assoc/2` selector can be used to embed an association on a parent entity
   as shown in the examples below. The first argument to `assoc` has to be a
-  variable bound in the `from` query expression, the second has to be a variable
-  bound in an association join on the `from` variable.
+  variable bound in the `from` query expression, the second has to be the field
+  of the association and a variable bound in an association join.
+
+  Nested `assoc/2 expressions are also allowed when there are multiple
+  association joins in the query.
 
   ## Keywords examples
 
@@ -281,7 +282,14 @@ defmodule Ecto.Query do
       from(c in City, select: [c.name, c.county])
       from(c in City, select: { c.name, to_binary(40 + 2), 43 })
 
-      from(p in Post, join: c in p.comments, select: assoc(p, c))
+      from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
+
+      # Fetch all posts, their comments and the posts' and comments' authors
+            from p in Post,
+      left_join: p_u in p.author,
+      left_join: c in p.comments,
+      left_join: c_u in c.author,
+         select: assoc(p, author: p_u, comments: assoc(c, author: c_u))
 
   ## Expressions examples
 
@@ -446,6 +454,9 @@ defmodule Ecto.Query do
 
   The example above will fetch all posts from the database and then do
   a separate query returning all comments associated to the given posts.
+
+  Nested associations can also be preloaded as seen in the examples below.
+  One query per field to be preloaded will be issued to the database.
 
   ## Keywords examples
 
