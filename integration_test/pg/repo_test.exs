@@ -292,6 +292,12 @@ defmodule Ecto.Integration.RepoTest do
 
     assert [Post.Entity[], nil, Post.Entity[]] =
            Preloader.run([p1, nil, p2], TestRepo, :permalink)
+
+    c1 = TestRepo.create(Comment.Entity[text: "1", post_id: p1.id])
+    c2 = TestRepo.create(Comment.Entity[text: "2", post_id: p2.id])
+
+    assert [Comment.Entity[], nil, Comment.Entity[]] =
+           Preloader.run([c1, nil, c2], TestRepo, :post)
   end
 
   test "preload nested" do

@@ -11,11 +11,15 @@ defmodule Ecto.Associations.Preloader do
 
   @doc """
   Loads all associations on the result set according to the given fields.
+  `fields` is a list of fields that can be nested in rose tree structure:
+  `node :: { atom, [node | atom] }` (see `Ecto.Query.PreloadBuilder.normalize/1`).
+  `pos` is a list of indices into tuples and lists that locate the concerned
+  entity.
+
   See `Ecto.Query.preload/2`.
   """
+  @spec run([Record.t], atom, [atom | tuple], [non_neg_integer]) :: [Record.t]
   def run(original, repo, fields, pos // [])
-
-  def run([], _repo, _fields, _pos), do: []
 
   def run(original, _repo, [], _pos), do: original
 
@@ -26,32 +30,35 @@ defmodule Ecto.Associations.Preloader do
     unextract(records, original, pos)
   end
 
-  defp do_run(records, repo, field) do
-    case field do
-      { name, sub_fields } -> sub_fields = List.wrap(sub_fields)
-      name -> sub_fields = []
-    end
+  # Receives a list of entity records to preload the given association fields
+  # on. The fields given is a rose tree of the root node field and it's nested
+  # fields. We recurse down the rose tree and perform a query for the
+  # associated entities for each field.
+  defp do_run([], _repo, _field), do: []
 
+  defp do_run(records, repo, { field, sub_fields }) do
     record = Enum.first(records)
     module = elem(record, 0)
-    refl = module.__entity__(:association, name)
+    refl = module.__entity__(:association, field)
+    should_sort? = should_sort?(records, refl)
+
+    # Query for the associated entities
     query = preload_query(refl, records)
     associated = repo.all(query)
 
     # Recurse down nested fields
     associated = Enum.reduce(sub_fields, associated, &do_run(&2, repo, &1))
 
-    # TODO: Make sure all records are the same entity
-    # TODO: Check if we need actually need to sort for performance,
-    #       combine with above
+    if should_sort? do
+      # Save the records old indices and then sort by primary_key or foreign_key
+      # depending on the association type
+      { records, indicies } = records
+      |> Stream.with_index
+      |> sort(refl)
+      |> :lists.unzip
+    end
 
-    # Save the records old indicies and then sort by primary_key or foreign_key
-    # depending on the association type
-    { records, indicies } = records
-    |> Stream.with_index
-    |> sort(refl)
-    |> :lists.unzip
-
+    # Put the associated entities on the association of the parent
     combined = case refl do
       BelongsTo[] ->
         combine_belongs(records, associated, refl, [])
@@ -59,19 +66,24 @@ defmodule Ecto.Associations.Preloader do
         combine_has(records, associated, refl, [], [])
     end
 
-    # Restore ordering given to the preloader and put back records into
-    # original data structure
+    if should_sort? do
+      # Restore ordering of entities given to the preloader
+      combined = combined
+      |> :lists.zip(indicies)
+      |> unsort()
+      |> Enum.map(&elem(&1, 0))
+    end
+
     combined
-    |> :lists.zip(indicies)
-    |> unsort()
-    |> Enum.map(&elem(&1, 0))
   end
 
-  defp preload_query(refl, records)
-      when is_record(refl, HasMany) or is_record(refl, HasOne) do
+  defp preload_query(refl, records) when is_record(refl, HasMany) or is_record(refl, HasOne) do
     pk  = refl.primary_key
     fk  = refl.foreign_key
-    ids = Enum.filter_map(records, &(&1), &apply(&1, pk, []))
+
+    ids = Enum.reduce(records, [], fn record, acc ->
+      if record, do: [apply(record, pk, [])|acc], else: acc
+    end)
 
        Q.from x in refl.associated,
        where: field(x, ^fk) in ^ids,
@@ -79,9 +91,12 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp preload_query(BelongsTo[] = refl, records) do
-    fun = &apply(&1, refl.foreign_key, [])
-    ids = Enum.filter_map(records, fun, fun)
     pk = refl.primary_key
+    fk = refl.foreign_key
+
+    ids = Enum.reduce(records, [], fn record, acc ->
+      if record && (key = apply(record, fk, [])), do: [key|acc], else: acc
+    end)
 
        Q.from x in refl.associated,
        where: field(x, ^pk) in ^ids,
@@ -96,7 +111,7 @@ defmodule Ecto.Associations.Preloader do
     [record|records] = records
     record = set_loaded(record, refl, Enum.reverse(acc2))
 
-    # Set remaining records loaded assocations to empty lists
+    # Set remaining records loaded associations to empty lists
     records = Enum.map(records, fn record ->
       if record, do: set_loaded(record, refl, []), else: record
     end)
@@ -183,6 +198,20 @@ defmodule Ecto.Associations.Preloader do
 
 
   ## SORTING ##
+
+  defp should_sort?(records, refl) do
+    key = Util.record_key(refl)
+    first = Enum.first(records)
+
+    Enum.reduce(records, { first, false }, fn record, { last, sort? } ->
+      if last && record && elem(record, 0) != elem(last, 0) do
+        raise ArgumentError, message: "all entities has to be of the same type"
+      end
+
+      sort? = sort? || (last && record && apply(last, key, []) > apply(record, key, []))
+      { record, sort? }
+    end) |> elem(1)
+  end
 
   defp sort(records, refl) do
     key = Util.record_key(refl)
