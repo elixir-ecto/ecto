@@ -10,6 +10,7 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
+  alias Ecto.Associations.Assoc
 
   defrecord State, sources: [], vars: [], grouped: [], grouped?: false,
     in_agg?: false, apis: nil, from: nil, query: nil
@@ -299,21 +300,13 @@ defmodule Ecto.Query.Validator do
 
   # Handle top level select cases
 
-  defp select_clause({ :assoc, _, [parent, child] }, State[] = state) do
-    entity = Util.find_source(state.sources, parent) |> Util.entity
-
+  defp select_clause({ :assoc, _, [var, fields] }, State[] = state) do
+    entity = Util.find_source(state.sources, var) |> Util.entity
     unless entity == Util.entity(state.from) do
       raise Ecto.QueryError, reason: "can only associate on the from entity"
     end
 
-    expr = Util.find_expr(state.query, child)
-
-    case expr do
-      JoinExpr[qual: qual, assoc: assoc] when qual in [:inner, :left] and not nil?(assoc) ->
-        :ok
-      _ ->
-        raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
-    end
+    assoc_select(var, fields, state)
   end
 
   # Some two-tuples may be records (ex. Ecto.Binary[]), so check for records
@@ -339,6 +332,36 @@ defmodule Ecto.Query.Validator do
     type_check(other, state)
   end
 
+  defp assoc_select(parent_var, fields, State[] = state) do
+    Enum.each(fields, fn { field, nested } ->
+      { child_var, nested_fields } = Assoc.decompose_assoc(nested)
+      parent_entity = Util.find_source(state.sources, parent_var) |> Util.entity
+
+      refl = parent_entity.__entity__(:association, field)
+      unless refl do
+        raise Ecto.QueryError, reason: "field `#{inspect parent_entity}.#{field}` is not an association"
+      end
+
+      child_entity = Util.find_source(state.sources, child_var) |> Util.entity
+      unless refl.associated.__model__(:entity) == child_entity do
+        raise Ecto.QueryError, reason: "association on `#{inspect parent_entity}.#{field}` " <>
+          "doesn't match given entity: `#{child_entity}`"
+      end
+
+      unless child_entity.__entity__(:primary_key) do
+        raise Ecto.QueryError, reason: "`assoc/2` selector requires a primary key on " <>
+          "entity: `#{child_entity}`"
+      end
+
+      expr = Util.source_expr(state.query, child_var)
+      unless match?(JoinExpr[qual: qual, assoc: assoc] when not nil?(assoc) and qual in [:inner, :left], expr) do
+        raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
+      end
+
+      assoc_select(child_var, nested_fields, state)
+    end)
+  end
+
   defp group_by_sources(group_bys, sources) do
     Enum.map(group_bys, fn(expr) ->
       Enum.map(expr.expr, fn({ var, field }) ->
@@ -348,7 +371,7 @@ defmodule Ecto.Query.Validator do
     end) |> Enum.concat |> Enum.uniq
   end
 
-  defp check_grouped({ source, field } = source_field, state) do
+  defp check_grouped({ source, field } = source_field, State[] = state) do
     if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do
       entity = Util.entity(source) || Util.source(source)
       raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` must appear in `group_by` " <>

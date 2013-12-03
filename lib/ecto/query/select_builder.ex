@@ -22,11 +22,8 @@ defmodule Ecto.Query.SelectBuilder do
 
   """
   @spec escape(Macro.t, [atom]) :: Macro.t
-  def escape({ :assoc, _, [{ fst, _, fst_ctxt }, { snd, _, snd_ctxt }] }, vars)
-      when is_atom(fst) and is_atom(fst_ctxt) and is_atom(snd) and is_atom(snd_ctxt) do
-    fst = BuilderUtil.escape_var(fst, vars)
-    snd = BuilderUtil.escape_var(snd, vars)
-    { :{}, [], [:assoc, [], [fst, snd]] }
+  def escape({ :assoc, _, args } = assoc, vars) when is_list(args) do
+    escape_assoc(assoc, vars)
   end
 
   def escape(other, vars), do: do_escape(other, vars)
@@ -54,6 +51,31 @@ defmodule Ecto.Query.SelectBuilder do
 
   defp do_escape(other, vars) do
     BuilderUtil.escape(other, vars)
+  end
+
+  # assoc/2
+  defp escape_assoc({ :assoc, _, [{ var, _, context }, list] }, vars)
+      when is_atom(var) and is_atom(context) and is_list(list) do
+    var = BuilderUtil.escape_var(var, vars)
+
+    list = Enum.map(list, fn
+      { field, { assoc_var, _, assoc_ctxt } }
+          when is_atom(field) and is_atom(assoc_var) and is_atom(assoc_ctxt) ->
+        { field, BuilderUtil.escape_var(assoc_var, vars) }
+
+      { field, other } when is_atom(field) ->
+        { field, escape_assoc(other, vars) }
+
+      other ->
+        escape_assoc(other, vars)
+    end)
+
+    { :{}, [], [:assoc, [], [var, list]] }
+  end
+
+  defp escape_assoc(other, _vars) do
+    raise Ecto.QueryError,
+      reason: "`#{Macro.to_string(other)}` is not a valid expression inside `assoc/2` selector"
   end
 
   @doc """

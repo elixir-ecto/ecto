@@ -4,6 +4,7 @@ defmodule Ecto.Query.Util do
   """
 
   alias Ecto.Query.Query
+  alias Ecto.Reflections.BelongsTo
 
   @doc """
   Validates the query to check if it is correct. Should be called before
@@ -59,11 +60,11 @@ defmodule Ecto.Query.Util do
   @doc """
   Look up the expression where the variable was bound.
   """
-  def find_expr(Query[from: from], { :&, _, [0] }) do
+  def source_expr(Query[from: from], { :&, _, [0] }) do
     from
   end
 
-  def find_expr(Query[joins: joins], { :&, _, [ix] }) do
+  def source_expr(Query[joins: joins], { :&, _, [ix] }) do
     Enum.at(joins, ix - 1)
   end
 
@@ -167,17 +168,29 @@ defmodule Ecto.Query.Util do
 
   def locate_var(list, var) when is_list(list) do
     list = Stream.with_index(list)
-    { poss, pos } = Enum.find_value(list, fn { elem, ix } ->
+    res = Enum.find_value(list, fn { elem, ix } ->
       if poss = locate_var(elem, var) do
         { poss, ix }
       else
         nil
       end
     end)
-    [pos|poss]
+
+    case res do
+      { poss, pos } -> [pos|poss]
+      nil -> nil
+    end
   end
 
   def locate_var(expr, var) do
     if expr == var, do: []
   end
+
+  @doc false
+  def record_key(BelongsTo[] = refl), do: refl.foreign_key
+  def record_key(refl), do: refl.primary_key
+
+  @doc false
+  def assoc_key(BelongsTo[] = refl), do: refl.primary_key
+  def assoc_key(refl), do: refl.foreign_key
 end

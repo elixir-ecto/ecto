@@ -11,6 +11,15 @@ defmodule Ecto.Query.ValidatorTest do
     queryable :posts do
       field :title, :string
       has_many :comments, Ecto.Query.ValidatorTest.Comment
+      has_one :permalink, Ecto.Query.ValidatorTest.Permalink
+    end
+  end
+
+  defmodule Permalink do
+    use Ecto.Model
+
+    queryable :comments, primary_key: false do
+      belongs_to :post, Ecto.Query.ValidatorTest.Post
     end
   end
 
@@ -365,15 +374,30 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "assoc selector" do
-    query = from(p in Post, join: c in p.comments, select: assoc(p, c))
+    query = from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
     validate(query)
 
-    query = from(p in Post, join: c in p.comments, select: assoc(c, p))
+    query = from(p in Post, join: c in p.comments, select: assoc(c, post: p))
     assert_raise Ecto.QueryError, "can only associate on the from entity", fn ->
       validate(query)
     end
 
-    query = from(p in Post, join: c in Comment, on: true, select: assoc(p, c))
+    query = from(p in Post, join: c in p.comments, select: assoc(p, not_field: c))
+    assert_raise Ecto.QueryError, "field `Ecto.Query.ValidatorTest.Post.Entity.not_field` is not an association", fn ->
+      validate(query)
+    end
+
+    query = from(p in Post, join: c in p.comments, select: assoc(p, permalink: c))
+    assert_raise Ecto.QueryError, %r"doesn't match given entity", fn ->
+      validate(query)
+    end
+
+    query = from(p in Post, join: pl in p.permalink, select: assoc(p, permalink: pl))
+    assert_raise Ecto.QueryError, %r"`assoc/2` selector requires a primary key on", fn ->
+      validate(query)
+    end
+
+    query = from(p in Post, join: c in Comment, on: true, select: assoc(p, comments: c))
     assert_raise Ecto.QueryError, "can only associate on an inner or left association join", fn ->
       validate(query)
     end

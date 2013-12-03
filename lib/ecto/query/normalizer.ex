@@ -49,12 +49,6 @@ defmodule Ecto.Query.Normalizer do
     join.source(associated).on(on)
   end
 
-  def normalize_select(QueryExpr[expr: { :assoc, _, [fst, snd] }] = expr) do
-    expr.expr({ :{}, [], [fst, snd] })
-  end
-
-  def normalize_select(QueryExpr[expr: _] = expr), do: expr
-
   defp on_expr(BelongsTo[], assoc_var, record_var, fk, pk) do
     quote do unquote(assoc_var).unquote(pk) == unquote(record_var).unquote(fk) end
   end

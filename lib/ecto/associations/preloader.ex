@@ -1,12 +1,23 @@
-defmodule Ecto.Preloader do
-  @moduledoc false
+defmodule Ecto.Associations.Preloader do
+  @moduledoc """
+  This module provides assoc selector merger.
+  """
 
   alias Ecto.Reflections.HasOne
+  alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo
+  alias Ecto.Query.Util
+  require Ecto.Query, as: Q
 
+  @doc """
+  Loads all associations on the result set according to the given fields.
+  See `Ecto.Query.preload/2`.
+  """
   def run(original, repo, fields, pos // [])
 
   def run([], _repo, _fields, _pos), do: []
+
+  def run(original, _repo, [], _pos), do: original
 
   def run(original, repo, fields, pos) do
     fields = Ecto.Query.PreloadBuilder.normalize(fields)
@@ -24,7 +35,7 @@ defmodule Ecto.Preloader do
     record = Enum.first(records)
     module = elem(record, 0)
     refl = module.__entity__(:association, name)
-    query = Ecto.Associations.preload_query(refl, records)
+    query = preload_query(refl, records)
     associated = repo.all(query)
 
     # Recurse down nested fields
@@ -54,6 +65,27 @@ defmodule Ecto.Preloader do
     |> :lists.zip(indicies)
     |> unsort()
     |> Enum.map(&elem(&1, 0))
+  end
+
+  defp preload_query(refl, records)
+      when is_record(refl, HasMany) or is_record(refl, HasOne) do
+    pk  = refl.primary_key
+    fk  = refl.foreign_key
+    ids = Enum.filter_map(records, &(&1), &apply(&1, pk, []))
+
+       Q.from x in refl.associated,
+       where: field(x, ^fk) in ^ids,
+    order_by: field(x, ^fk)
+  end
+
+  defp preload_query(BelongsTo[] = refl, records) do
+    fun = &apply(&1, refl.foreign_key, [])
+    ids = Enum.filter_map(records, fun, fun)
+    pk = refl.primary_key
+
+       Q.from x in refl.associated,
+       where: field(x, ^pk) in ^ids,
+    order_by: field(x, ^pk)
   end
 
 
@@ -131,8 +163,8 @@ defmodule Ecto.Preloader do
 
   # Compare record and association to see if they match
   defp compare(record, assoc, refl) do
-    record_id = apply(record, record_key(refl), [])
-    assoc_id = apply(assoc, assoc_key(refl), [])
+    record_id = apply(record, Util.record_key(refl), [])
+    assoc_id = apply(assoc, Util.assoc_key(refl), [])
     cond do
       record_id == assoc_id -> :eq
       record_id > assoc_id -> :gt
@@ -153,7 +185,7 @@ defmodule Ecto.Preloader do
   ## SORTING ##
 
   defp sort(records, refl) do
-    key = record_key(refl)
+    key = Util.record_key(refl)
     Enum.sort(records, fn { record1, _ }, { record2, _ } ->
       !! (record1 && record2 && apply(record1, key, []) < apply(record2, key, []))
     end)
@@ -164,12 +196,6 @@ defmodule Ecto.Preloader do
       ix1 < ix2
     end)
   end
-
-  defp record_key(BelongsTo[] = refl), do: refl.foreign_key
-  defp record_key(refl), do: refl.primary_key
-
-  defp assoc_key(BelongsTo[] = refl), do: refl.primary_key
-  defp assoc_key(refl), do: refl.foreign_key
 
 
   ## EXTRACT / UNEXTRACT ##
