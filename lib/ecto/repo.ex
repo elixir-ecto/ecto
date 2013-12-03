@@ -6,8 +6,9 @@ defmodule Ecto.Repo do
 
   When used, the following options are allowed:
 
-  * `:adapter` - the adapter to be used for the repository; it will be used
-                 to handle connections to the data store and to compile queries
+  * `:adapter` - the adapter to be used for the repository
+
+  * `:env` - configures the repository to support environments
 
   ## Example
 
@@ -18,6 +19,24 @@ defmodule Ecto.Repo do
           "ecto://postgres:postgres@localhost/postgres"
         end
       end
+
+  Most of the times, we want the repository to work with different
+  environments. In such cases, we can pass an `:env` option:
+
+      defmodule MyRepo do
+        use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
+
+        def url(:dev),  do: "ecto://postgres:postgres@localhost/postgres_dev"
+        def url(:test), do: "ecto://postgres:postgres@localhost/postgres_test?size=1"
+        def url(:prod), do: "ecto://postgres:postgres@localhost/postgres_prod"
+      end
+
+  Notice that, when using the environment, developers should implement
+  `url/1` which automatically passes the environment instead of `url/0`.
+
+  Note the environment is only used at compilation time. That said, don't
+  forget to set the `:build_per_environment` option to true in your Mix
+  project definition.
   """
 
   use Behaviour
@@ -26,12 +45,21 @@ defmodule Ecto.Repo do
   @doc false
   defmacro __using__(opts) do
     adapter = Keyword.fetch!(opts, :adapter)
+    env     = Keyword.get(opts, :env)
 
     quote do
       use unquote(adapter)
       @behaviour Ecto.Repo
+      @env unquote(env)
 
       import Ecto.Utils, only: [app_dir: 2]
+
+      if @env do
+        def url do
+          url(@env)
+        end
+        defoverridable url: 0
+      end
 
       def start_link do
         Ecto.Repo.Backend.start_link(__MODULE__, unquote(adapter))
@@ -73,16 +101,16 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.transaction(__MODULE__, unquote(adapter), fun)
       end
 
-      def query_apis do
-        [ Ecto.Query.API ]
-      end
-
       def adapter do
         unquote(adapter)
       end
 
       def __repo__ do
         true
+      end
+
+      def query_apis do
+        [Ecto.Query.API]
       end
 
       defoverridable [query_apis: 0]

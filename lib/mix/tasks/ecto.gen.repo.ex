@@ -27,6 +27,12 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     create_directory Path.dirname(file)
     create_file file, repo_template(mod: repo, app: app, base: base)
     open?(file)
+
+    unless Mix.project[:build_per_environment] do
+      Mix.shell.info "We have generated a repo that uses a different database per environment. " <>
+                     "So don't forget to set [build_per_environment: true] in your mix.exs file.\n"
+    end
+
     Mix.shell.info """
     Don't forget to add your new repo to your supervision tree as:
 
@@ -36,14 +42,24 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   embed_template :repo, """
   defmodule <%= inspect @mod %> do
-    use Ecto.Repo, adapter: Ecto.Adapters.Postgres
+    use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
 
-    def priv do
-      app_dir(<%= inspect @app %>, "priv/<%= @base %>")
+    @doc "The URL to reach the database."
+    def url(:dev) do
+      "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_dev"
     end
 
-    def url do
-      "ecto://postgres:postgres@localhost/<%= @app %>_<%= @base %>"
+    def url(:test) do
+      "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_test?size=1&max_overflow=0"
+    end
+
+    def url(:prod) do
+      "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_prod"
+    end
+
+    @doc "The priv directory to load migrations and metadata."
+    def priv do
+      app_dir(<%= inspect @app %>, "priv/<%= @base %>")
     end
   end
   """

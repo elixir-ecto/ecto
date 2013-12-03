@@ -52,6 +52,17 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  test "handles environment support" do
+    defmodule EnvRepo do
+      # Use a variable to ensure it is properly expanded at runtime
+      env = :dev
+      use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter, env: env
+      def url(:dev), do: "dev_sample"
+    end
+
+    assert EnvRepo.url == "dev_sample"
+  end
+
   test "needs entity with primary key" do
     entity = MyModelNoPK.new(x: "abc")
     assert_raise Ecto.NoPrimaryKey, fn ->
