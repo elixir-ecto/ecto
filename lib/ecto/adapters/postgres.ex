@@ -52,7 +52,7 @@ defmodule Ecto.Adapters.Postgres do
     end)
 
     transformed
-      |> Ecto.Associations.Assoc.run(query.select.expr, query)
+      |> Ecto.Associations.Assoc.run(query)
       |> preload(repo, query)
   end
 

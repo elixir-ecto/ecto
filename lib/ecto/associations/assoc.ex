@@ -4,52 +4,98 @@ defmodule Ecto.Associations.Assoc do
   """
 
   alias Ecto.Query.Query
+  alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
   alias Ecto.Reflections.HasMany
 
   @doc """
-  Transforms a result set based on the assoc selector, combining the entities
-  specified in the assoc selector.  See `Ecto.Query.select/3`.
+  Transforms a result set based on the assoc selector, loading the associations
+  onto their parent entity. See `Ecto.Query.select/3`.
   """
-  def run([], _expr, _query), do: []
+  @spec run([Record.t], Query.t) :: [Record.t]
+  def run([], _query), do: []
 
-  def run(results, { :assoc, _, [parent, fields] }, Query[] = query) do
-    merge(results, parent, fields, query)
+  def run(results, Query[] = query) do
+    case query.select do
+      QueryExpr[expr: { :assoc, _, [parent, fields] }] ->
+        merge(results, parent, fields, query)
+      _ ->
+        results
+    end
   end
-
-  def run(results, _expr, _query), do: results
 
   @doc """
   Decomposes an `assoc(var, fields)` or `var` into `{ var, fields }`.
   """
+  @spec decompose_assoc(Macro.t) :: { Macro.t, [Macro.t] }
   def decompose_assoc({ :&, _, [_] } = var), do: { var, [] }
   def decompose_assoc({ :assoc, _, [var, fields] }), do: { var, fields }
 
   defp merge(rows, var, fields, query) do
+    # Pre-create rose tree of reflections and accumulator dicts in the same
+    # structure as the fields tree
     refls = create_refls(var, fields, query)
     { _, _, acc } = create_acc(fields)
     acc = { HashSet.new, [], acc }
 
+    # Populate tree of dicts of associated entities from the result set
     { _keys, parents, children } = Enum.reduce(rows, acc, &merge_to_dict(&1, { nil, refls }, &2))
-    parents = lc parent inlist parents, do: build_record({ 0, parent }, refls, children) |> elem(1)
+
+    # Load associated entities onto their parents
+    parents = lc parent inlist parents, do: build_record({ 0, parent }, children, refls) |> elem(1)
+
     Enum.reverse(parents)
   end
 
-  defp build_record({ pos, parent }, refls, fields) do
-    zipped = Enum.zip(refls, fields)
-    new_parent =
-      Enum.reduce(zipped, parent, fn { refl, field }, parent ->
-        { refl, refls } = refl
-        { _, children, sub_children } = field
+  defp merge_to_dict({ record, sub_records }, { refl, sub_refls }, { keys, dict, sub_dicts }) do
+    # We recurse down the tree of the row result, the reflections and the
+    # dict accumulators
 
+    # The set makes sure that we don't add duplicated associated entities
+    if not (nil?(record) or Set.member?(keys, record.primary_key)) do
+      keys = Set.put(keys, record.primary_key)
+      if refl do
+        # Add associated entity to dict with association key, we use to
+        # put the entity on the right parent later
+        # Also store position so we can sort
+        assoc_key = apply(record, Util.assoc_key(refl), [])
+        item = { Dict.size(dict), record }
+        dict = Dict.update(dict, assoc_key, [item], &[item|&1])
+      else
+        # If no reflection we are at the top-most parent
+        dict = [record|dict]
+      end
+    end
+
+    # Recurse down
+    zipped = List.zip([sub_records, sub_refls, sub_dicts])
+    sub_dicts = lc { recs, refls, dicts } inlist zipped do
+      merge_to_dict(recs, refls, dicts)
+    end
+
+    { keys, dict, sub_dicts }
+  end
+
+  defp build_record({ pos, parent }, children, refls) do
+    zipped = List.zip([children, refls])
+
+    # Load all associated children onto the parent
+    new_parent =
+      Enum.reduce(zipped, parent, fn { child, refl }, parent ->
+        { refl, refls } = refl
+        { _, children, sub_children } = child
+
+        # Get the children associated to the parent
         record_key = apply(parent, Util.record_key(refl), [])
         if record_key do
           my_children = Dict.get(children, record_key) || []
-          built_children = lc child inlist my_children, do: build_record(child, refls, sub_children)
+          # Recurse down and build the children
+          built_children = lc child inlist my_children, do: build_record(child, sub_children, refls)
         else
           built_children = []
         end
 
+        # Fix ordering that was shuffled by HashDict
         sorted_children = built_children
           |> Enum.sort(&compare/2)
           |> Enum.map(&elem(&1, 1))
@@ -57,26 +103,6 @@ defmodule Ecto.Associations.Assoc do
       end)
 
     { pos, new_parent }
-  end
-
-  defp merge_to_dict({ record, sub_records }, { refl, sub_refls }, { keys, dict, sub_dicts }) do
-    if not (nil?(record) or Set.member?(keys, record.primary_key)) do
-      keys = Set.put(keys, record.primary_key)
-      if refl do
-        assoc_key = apply(record, Util.assoc_key(refl), [])
-        item = { Dict.size(dict), record }
-        dict = Dict.update(dict, assoc_key, [item], &[item|&1])
-      else
-        dict = [record|dict]
-      end
-    end
-
-    zipped = List.zip([sub_records, sub_refls, sub_dicts])
-    sub_dicts = lc { recs, refls, dicts } inlist zipped do
-      merge_to_dict(recs, refls, dicts)
-    end
-
-    { keys, dict, sub_dicts }
   end
 
   defp create_refls(var, fields, Query[] = query) do
