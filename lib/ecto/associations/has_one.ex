@@ -1,5 +1,5 @@
 defrecord Ecto.Reflections.HasOne, [ :field, :owner, :associated,
-  :foreign_key, :primary_key ]
+  :key, :assoc_key ]
 
 defmodule Ecto.Associations.HasOne do
   @moduledoc """
@@ -20,7 +20,7 @@ defmodule Ecto.Associations.HasOne do
   """
   def new(params // [], assoc(target: target, name: name, primary_key: pk_value)) do
     refl = Refl[] = target.__entity__(:association, name)
-    fk = refl.foreign_key
+    fk = refl.assoc_key
     refl.associated.new([{ fk, pk_value }] ++ params)
   end
 
@@ -68,8 +68,8 @@ defimpl Inspect, for: Ecto.Associations.HasOne do
     target      = assoc.__assoc__(:target)
     refl        = target.__entity__(:association, name)
     associated  = refl.associated
-    primary_key = refl.primary_key
-    foreign_key = refl.foreign_key
+    primary_key = refl.key
+    foreign_key = refl.assoc_key
     kw = [
       name: name,
       target: target,

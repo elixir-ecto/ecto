@@ -58,7 +58,7 @@ defmodule Ecto.Associations.Assoc do
         # Add associated entity to dict with association key, we use to
         # put the entity on the right parent later
         # Also store position so we can sort
-        assoc_key = apply(record, Util.assoc_key(refl), [])
+        assoc_key = apply(record, refl.assoc_key, [])
         item = { Dict.size(dict), record }
         dict = Dict.update(dict, assoc_key, [item], &[item|&1])
       else
@@ -86,7 +86,7 @@ defmodule Ecto.Associations.Assoc do
         { _, children, sub_children } = child
 
         # Get the children associated to the parent
-        record_key = apply(parent, Util.record_key(refl), [])
+        record_key = apply(parent, refl.key, [])
         if record_key do
           my_children = Dict.get(children, record_key) || []
           # Recurse down and build the children

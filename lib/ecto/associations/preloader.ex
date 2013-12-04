@@ -6,7 +6,6 @@ defmodule Ecto.Associations.Preloader do
   alias Ecto.Reflections.HasOne
   alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo
-  alias Ecto.Query.Util
   require Ecto.Query, as: Q
 
   @doc """
@@ -78,29 +77,29 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp preload_query(refl, records) when is_record(refl, HasMany) or is_record(refl, HasOne) do
-    pk  = refl.primary_key
-    fk  = refl.foreign_key
+    key = refl.key
+    assoc_key = refl.assoc_key
 
     ids = Enum.reduce(records, [], fn record, acc ->
-      if record, do: [apply(record, pk, [])|acc], else: acc
+      if record, do: [apply(record, key, [])|acc], else: acc
     end)
 
        Q.from x in refl.associated,
-       where: field(x, ^fk) in ^ids,
-    order_by: field(x, ^fk)
+       where: field(x, ^assoc_key) in ^ids,
+    order_by: field(x, ^assoc_key)
   end
 
   defp preload_query(BelongsTo[] = refl, records) do
-    pk = refl.primary_key
-    fk = refl.foreign_key
+    key = refl.key
+    assoc_key = refl.assoc_key
 
     ids = Enum.reduce(records, [], fn record, acc ->
-      if record && (key = apply(record, fk, [])), do: [key|acc], else: acc
+      if record && (key = apply(record, key, [])), do: [key|acc], else: acc
     end)
 
        Q.from x in refl.associated,
-       where: field(x, ^pk) in ^ids,
-    order_by: field(x, ^pk)
+       where: field(x, ^assoc_key) in ^ids,
+    order_by: field(x, ^assoc_key)
   end
 
 
@@ -178,8 +177,8 @@ defmodule Ecto.Associations.Preloader do
 
   # Compare record and association to see if they match
   defp compare(record, assoc, refl) do
-    record_id = apply(record, Util.record_key(refl), [])
-    assoc_id = apply(assoc, Util.assoc_key(refl), [])
+    record_id = apply(record, refl.key, [])
+    assoc_id = apply(assoc, refl.assoc_key, [])
     cond do
       record_id == assoc_id -> :eq
       record_id > assoc_id -> :gt
@@ -200,7 +199,7 @@ defmodule Ecto.Associations.Preloader do
   ## SORTING ##
 
   defp should_sort?(records, refl) do
-    key = Util.record_key(refl)
+    key = refl.key
     first = Enum.first(records)
 
     Enum.reduce(records, { first, false }, fn record, { last, sort? } ->
@@ -214,7 +213,7 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp sort(records, refl) do
-    key = Util.record_key(refl)
+    key = refl.key
     Enum.sort(records, fn { record1, _ }, { record2, _ } ->
       !! (record1 && record2 && apply(record1, key, []) < apply(record2, key, []))
     end)

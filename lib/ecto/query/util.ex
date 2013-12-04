@@ -4,7 +4,6 @@ defmodule Ecto.Query.Util do
   """
 
   alias Ecto.Query.Query
-  alias Ecto.Reflections.BelongsTo
 
   @doc """
   Validates the query to check if it is correct. Should be called before
@@ -185,12 +184,4 @@ defmodule Ecto.Query.Util do
   def locate_var(expr, var) do
     if expr == var, do: []
   end
-
-  @doc false
-  def record_key(BelongsTo[] = refl), do: refl.foreign_key
-  def record_key(refl), do: refl.primary_key
-
-  @doc false
-  def assoc_key(BelongsTo[] = refl), do: refl.primary_key
-  def assoc_key(refl), do: refl.foreign_key
 end

@@ -14,8 +14,8 @@ defmodule Ecto.Associations do
     values = [
       owner: module,
       associated: assoc,
-      foreign_key: fk || :"#{model_name}_#{pk}",
-      primary_key: pk,
+      key: pk,
+      assoc_key: fk || :"#{model_name}_#{pk}",
       field: :"__#{name}__" ]
 
     case type do
@@ -28,8 +28,8 @@ defmodule Ecto.Associations do
     values = [
       owner: module,
       associated: assoc,
-      foreign_key: fk,
-      primary_key: pk,
+      key: fk,
+      assoc_key: pk,
       field: :"__#{name}__" ]
     BelongsTo.new(values)
   end

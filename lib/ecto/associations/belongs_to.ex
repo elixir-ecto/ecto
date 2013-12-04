@@ -1,5 +1,5 @@
 defrecord Ecto.Reflections.BelongsTo, [ :field, :owner, :associated,
-  :foreign_key, :primary_key ]
+  :key, :assoc_key ]
 
 defmodule Ecto.Associations.BelongsTo do
   @moduledoc """
@@ -64,8 +64,8 @@ defimpl Inspect, for: Ecto.Associations.BelongsTo do
     target      = assoc.__assoc__(:target)
     refl        = target.__entity__(:association, name)
     associated  = refl.associated
-    primary_key = refl.primary_key
-    foreign_key = refl.foreign_key
+    foreign_key = refl.key
+    primary_key = refl.assoc_key
     kw = [
       name: name,
       target: target,

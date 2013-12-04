@@ -140,9 +140,9 @@ defmodule Ecto.EntityTest do
   end
 
   test "has_many association" do
-    assert Ecto.Reflections.HasMany[field: :"__posts__", owner: EntityAssocs,
-                                    associated: Post, foreign_key: :assocs_id] =
-      EntityAssocs.__entity__(:association, :posts)
+    refl = Ecto.Reflections.HasMany[field: :"__posts__", owner: EntityAssocs,
+                                    associated: Post, key: :id, assoc_key: :assocs_id]
+    assert refl == EntityAssocs.__entity__(:association, :posts)
 
     r = EntityAssocs[id: 1]
     assoc = r.posts
@@ -165,9 +165,9 @@ defmodule Ecto.EntityTest do
   end
 
   test "has_one association" do
-    assert Ecto.Reflections.HasOne[field: :"__author__", owner: EntityAssocs,
-                                    associated: User, foreign_key: :assocs_id] =
-      EntityAssocs.__entity__(:association, :author)
+    refl = Ecto.Reflections.HasOne[field: :"__author__", owner: EntityAssocs,
+                                   associated: User, key: :id, assoc_key: :assocs_id]
+    assert refl == EntityAssocs.__entity__(:association, :author)
 
     r = EntityAssocs[id: 2]
     assoc = r.author
@@ -189,9 +189,9 @@ defmodule Ecto.EntityTest do
   end
 
   test "belongs_to association" do
-    assert Ecto.Reflections.BelongsTo[field: :"__comment__", owner: EntityAssocs,
-                                    associated: Comment, foreign_key: :comment_id] =
-      EntityAssocs.__entity__(:association, :comment)
+    refl = Ecto.Reflections.BelongsTo[field: :"__comment__", owner: EntityAssocs,
+                                      associated: Comment, key: :comment_id, assoc_key: :id]
+    assert refl == EntityAssocs.__entity__(:association, :comment)
 
     assert EntityAssocs.__entity__(:field, :comment_id) == [type: :integer]
 
@@ -237,24 +237,24 @@ defmodule Ecto.EntityTest do
 
   test "has_many options" do
     refl = EntityAssocOpts.__entity__(:association, :posts)
-    assert :pk == refl.primary_key
-    assert :fk == refl.foreign_key
+    assert :pk == refl.key
+    assert :fk == refl.assoc_key
   end
 
   test "has_one options" do
     refl = EntityAssocOpts.__entity__(:association, :author)
-    assert :pk == refl.primary_key
-    assert :fk == refl.foreign_key
+    assert :pk == refl.key
+    assert :fk == refl.assoc_key
   end
 
   test "belongs_to options" do
     refl = EntityAssocOpts.__entity__(:association, :permalink)
-    assert :pk == refl.primary_key
-    assert :fk == refl.foreign_key
+    assert :pk == refl.assoc_key
+    assert :fk == refl.key
 
     refl = EntityAssocOpts.__entity__(:association, :permalink2)
-    assert :pk == refl.primary_key
-    assert :permalink2_id == refl.foreign_key
+    assert :pk == refl.assoc_key
+    assert :permalink2_id == refl.key
   end
 
   test "primary_key option has to match a field on entity" do
