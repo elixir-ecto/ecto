@@ -6,7 +6,7 @@ defmodule Ecto.Associations.Assoc do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
-  alias Ecto.Reflections.HasMany
+  alias Ecto.Associations
 
   @doc """
   Transforms a result set based on the assoc selector, loading the associations
@@ -99,7 +99,7 @@ defmodule Ecto.Associations.Assoc do
         sorted_children = built_children
           |> Enum.sort(&compare/2)
           |> Enum.map(&elem(&1, 1))
-        set_loaded(parent, refl, sorted_children)
+        Associations.set_loaded(parent, refl, sorted_children)
       end)
 
     { pos, new_parent }
@@ -122,14 +122,6 @@ defmodule Ecto.Associations.Assoc do
       create_acc(fields)
     end)
     { HashSet.new, HashDict.new, acc }
-  end
-
-  defp set_loaded(record, refl, loaded) do
-    if not is_record(refl, HasMany), do: loaded = Enum.first(loaded)
-    field = refl.field
-    association = apply(record, field, [])
-    association = association.__assoc__(:loaded, loaded)
-    apply(record, field, [association])
   end
 
   defp compare({ pos1, _ }, { pos2, _ }), do: pos1 < pos2

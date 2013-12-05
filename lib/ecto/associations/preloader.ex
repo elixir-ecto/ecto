@@ -3,9 +3,8 @@ defmodule Ecto.Associations.Preloader do
   This module provides assoc selector merger.
   """
 
-  alias Ecto.Reflections.HasOne
-  alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo
+  alias Ecto.Associations
   require Ecto.Query, as: Q
 
   @doc """
@@ -42,7 +41,7 @@ defmodule Ecto.Associations.Preloader do
     should_sort? = should_sort?(records, refl)
 
     # Query for the associated entities
-    query = preload_query(refl, records)
+    query = preload_query(records, refl)
     associated = repo.all(query)
 
     # Recurse down nested fields
@@ -58,38 +57,20 @@ defmodule Ecto.Associations.Preloader do
     end
 
     # Put the associated entities on the association of the parent
-    combined = case refl do
-      BelongsTo[] ->
-        combine_belongs(records, associated, refl, [])
-      _ ->
-        combine_has(records, associated, refl, [], [])
-    end
+    merged = merge(records, associated, refl, [], [])
 
     if should_sort? do
       # Restore ordering of entities given to the preloader
-      combined = combined
+      merged = merged
       |> :lists.zip(indicies)
       |> unsort()
       |> Enum.map(&elem(&1, 0))
     end
 
-    combined
+    merged
   end
 
-  defp preload_query(refl, records) when is_record(refl, HasMany) or is_record(refl, HasOne) do
-    key = refl.key
-    assoc_key = refl.assoc_key
-
-    ids = Enum.reduce(records, [], fn record, acc ->
-      if record, do: [apply(record, key, [])|acc], else: acc
-    end)
-
-       Q.from x in refl.associated,
-       where: field(x, ^assoc_key) in ^ids,
-    order_by: field(x, ^assoc_key)
-  end
-
-  defp preload_query(BelongsTo[] = refl, records) do
+  defp preload_query(records, refl) do
     key = refl.key
     assoc_key = refl.assoc_key
 
@@ -103,77 +84,63 @@ defmodule Ecto.Associations.Preloader do
   end
 
 
-  ## COMBINE HAS_MANY / HAS_ONE ##
+  ## MERGE ##
 
-  defp combine_has(records, [], refl, acc1, acc2) do
+  defp merge([], [_], _refl, acc, []) do
+    Enum.reverse(acc)
+  end
+
+  defp merge(records, [], refl, acc1, acc2) do
     # Store accumulated association on next record
     [record|records] = records
-    record = set_loaded(record, refl, Enum.reverse(acc2))
+    record = Associations.set_loaded(record, refl, Enum.reverse(acc2))
 
     # Set remaining records loaded associations to empty lists
     records = Enum.map(records, fn record ->
-      if record, do: set_loaded(record, refl, []), else: record
+      if record, do: Associations.set_loaded(record, refl, []), else: record
     end)
     Enum.reverse(acc1) ++ [record|records]
   end
 
-  defp combine_has([record|records], [assoc|assocs], refl, acc1, acc2) do
-    cond do
-      # Ignore nil records, they may be nil depending on the join qualifier
-      nil?(record) ->
-        combine_has(records, [assoc|assocs], refl, [nil|acc1], acc2)
+  defp merge([record|records], [assoc|assocs], refl, acc1, acc2) do
+    # Ignore nil records, they may be nil depending on the join qualifier
+    if nil?(record) do
+      merge(records, [assoc|assocs], refl, [nil|acc1], acc2)
+    else
+      step([record|records], [assoc|assocs], refl, acc1, acc2)
+    end
+  end
+
+  defp step([record|records], [assoc|assocs], BelongsTo[] = refl, acc, []) do
+    case compare(record, assoc, refl) do
+      # Record and association match so store association on record,
+      # association may match more records so keep it
+      :eq ->
+        record = Associations.set_loaded(record, refl, [assoc])
+        merge(records, [assoc|assocs], refl, [record|acc], [])
+      # Go to next association
+      :gt ->
+        merge([record|records], assocs, refl, acc, [])
+      # Go to next record, no association matched it so store nil
+      # in association
+      :lt ->
+        record = Associations.set_loaded(record, refl, [])
+        merge(records, [assoc|assocs], refl, [record|acc], [])
+    end
+  end
+
+  defp step([record|records], [assoc|assocs], refl, acc1, acc2) do
+    if compare(record, assoc, refl) == :eq do
       # Record and association match so save association in accumulator, more
       # associations may match the same record
-      compare(record, assoc, refl) == :eq ->
-        combine_has([record|records], assocs, refl, acc1, [assoc|acc2])
+      merge([record|records], assocs, refl, acc1, [assoc|acc2])
+    else
       # Record and association doesnt match so store previously accumulated
       # associations on record, move onto the next record and reset acc
-      true ->
-        record = set_loaded(record, refl, Enum.reverse(acc2))
-        combine_has(records, [assoc|assocs], refl, [record|acc1], [])
+      record = Associations.set_loaded(record, refl, Enum.reverse(acc2))
+      merge(records, [assoc|assocs], refl, [record|acc1], [])
     end
   end
-
-
-  ## COMBINE BELONGS_TO ##
-
-  defp combine_belongs([], [_], _refl, acc) do
-    Enum.reverse(acc)
-  end
-
-  defp combine_belongs(records, [], refl, acc) do
-    # Set remaining records loaded assocations to nil
-    records = Enum.map(records, fn record ->
-      if record, do: set_loaded(record, refl, nil), else: record
-    end)
-    Enum.reverse(acc) ++ records
-  end
-
-  defp combine_belongs([record|records], [assoc|assocs], refl, acc) do
-    if nil?(record) do
-      # Ignore nil records, they may be nil depending on the join qualifier
-      combine_belongs(records, [assoc|assocs], refl, [nil|acc])
-    else
-      case compare(record, assoc, refl) do
-        # Record and association match so store association on record,
-        # association may match more records so keep it
-        :eq ->
-          record = set_loaded(record, refl, assoc)
-          combine_belongs(records, [assoc|assocs], refl, [record|acc])
-        # Go to next association
-        :gt ->
-          combine_belongs([record|records], assocs, refl, acc)
-        # Go to next record, no association matched it so store nil
-        # in association
-        :lt ->
-          record = set_loaded(record, refl, nil)
-          combine_belongs(records, [assoc|assocs], refl, [record|acc])
-      end
-    end
-  end
-
-
-  ## COMMON UTILS ##
 
   # Compare record and association to see if they match
   defp compare(record, assoc, refl) do
@@ -184,15 +151,6 @@ defmodule Ecto.Associations.Preloader do
       record_id > assoc_id -> :gt
       record_id < assoc_id -> :lt
     end
-  end
-
-  # Set the loaded value on the association of the given record
-  defp set_loaded(record, refl, value) do
-    if is_record(refl, HasOne), do: value = Enum.first(value)
-    field = refl.field
-    association = apply(record, field, [])
-    association = association.__assoc__(:loaded, value)
-    apply(record, field, [association])
   end
 
 

@@ -33,4 +33,12 @@ defmodule Ecto.Associations do
       field: :"__#{name}__" ]
     BelongsTo.new(values)
   end
+
+  def set_loaded(record, refl, loaded) do
+    if not is_record(refl, HasMany), do: loaded = Enum.first(loaded)
+    field = refl.field
+    association = apply(record, field, [])
+    association = association.__assoc__(:loaded, loaded)
+    apply(record, field, [association])
+  end
 end
