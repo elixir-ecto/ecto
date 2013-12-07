@@ -117,7 +117,7 @@ You can read more about [the Repository API in the docs](http://elixir-lang.org/
 
 ### Entities
 
-Entities in Ecto (docs) are used to represent data. An entity can defined as follow:
+Entities in Ecto (docs) are used to represent data. An entity can be defined as follows:
 
 ```elixir
 defmodule Weather.Entity do
@@ -150,13 +150,13 @@ Entities also provide casting and associations, which are explored in later sect
 
 ### Models
 
-Entities in Ecto are simply data. All the behaviour exists in models which is nothing more than an Elixir module. Ecto provides many convenience functions that makes it easy to implement common model functionality, like callbacks and validations. The functionalities provided by `Ecto.Model` are:
+Entities in Ecto are simply data. All of the behaviour exists in models, which are nothing more than Elixir modules. Ecto provides many convenience functions that make it easy to implement common model functionality, like callbacks and validations. The functionalities provided by `Ecto.Model` are:
 
 * [`Ecto.Model.Queryable`](http://elixir-lang.org/docs/ecto/Ecto.Model.Queryable.html) - defines a model as queryable;
 * [`Ecto.Model.Validations`](http://elixir-lang.org/docs/ecto/Ecto.Model.Validations.html) - conveniences for defining module-level validations in models;
 * `Ecto.Model.Callbacks` - to be implemented;
 
-By using `Ecto.Model` all the functionality above is included, but you can cherry pick the ones you want to use. For this introduction, we will explore only the queryable functionality as it is the basic functionality.
+By using `Ecto.Model` all the functionality above is included, but you can cherry pick the ones you want to use. For this introduction, we will explore only the queryable functionality, as it is the most basic functionality.
 
 The queryable functionality connects an entity to a database table, allowing us to finally interact with a repository. Given the `Weather.Entity` defined above, we can integrate it with a model as follows:
 
@@ -167,7 +167,7 @@ defmodule Weather do
 end
 ```
 
-Since this is a common pattern, Ecto allows developers to define an entity inlined in a model. We can bundle the `Weather` and `Weather.Entity` modules together as follows:
+Since this is a common pattern, Ecto allows developers to define an entity inline in a model. We can bundle the `Weather` and `Weather.Entity` modules together as follows:
 
 ```elixir
 defmodule Weather do
@@ -182,7 +182,7 @@ defmodule Weather do
 end
 ```
 
-This compact model/entity definition is the preferred format (unless you need a decoupled entity) and will be format used from now on. The model also defines `Weather.new/1` as shortcut that simply delegates to `Weather.Entity`:
+This compact model/entity definition is the preferred format (unless you need a decoupled entity) and will be the format used from now on. The model also defines `Weather.new/1` as a shortcut that simply delegates to `Weather.Entity`:
 
 ```elixir
 weather = Weather.new(temp_lo: 0, temp_hi: 23)
@@ -294,7 +294,7 @@ When defining each entity field, a type needs to be given. Those types are speci
 * `:datetime`
 * `:virtual` - virtual types can have any value and they are not sent to the database;
 
-When manipulating the entity via the record functions, it is responsibility of the developer to ensure the fields are cast to the proper value. For example:
+When manipulating the entity via the record functions, it is the responsibility of the developer to ensure the fields are cast to the proper value. For example:
 
 ```elixir
 weather = Weather.Entity.new(temp_lo: "0")
