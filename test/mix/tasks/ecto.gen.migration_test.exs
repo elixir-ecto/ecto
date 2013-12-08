@@ -4,12 +4,13 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
   import Support.FileHelpers
   import Mix.Tasks.Ecto.Gen.Migration, only: [run: 1]
 
-  tmp_path = Path.join(tmp_path, inspect(Ecto.Gen.Migration))
+  build_path = Path.join(build_tmp_path, inspect(Ecto.Gen.Migration))
+  tmp_path   = Path.join(tmp_path, inspect(Ecto.Gen.Migration))
   @migrations_path Path.join(tmp_path, "migrations")
 
   defmodule Repo do
     def priv do
-      unquote(tmp_path)
+      unquote(build_path)
     end
 
     def __repo__ do

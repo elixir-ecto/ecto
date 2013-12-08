@@ -8,6 +8,10 @@ defmodule Support.FileHelpers do
     Path.expand("../../tmp", __DIR__)
   end
 
+  def build_tmp_path do
+    Path.join(Mix.Project.app_path, "tmp")
+  end
+
   @doc """
   Executes the given function in a temp directory
   tailored for this test case and test.

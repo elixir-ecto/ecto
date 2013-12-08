@@ -56,7 +56,8 @@ defmodule Mix.Tasks.Ecto do
   @spec migrations_path(Ecto.Repo.T) :: String.t | no_return
   def migrations_path(repo) do
     if function_exported?(repo, :priv, 0) do
-      Path.join(repo.priv, "migrations")
+      # Convert migrations path from _build to source.
+      Path.join(Path.relative_to(repo.priv, Mix.Project.app_path), "migrations")
     else
       raise Mix.Error, message: "expected repo #{inspect repo} to define priv/0 in order to use migrations"
     end
