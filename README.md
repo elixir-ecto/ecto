@@ -410,16 +410,17 @@ defmodule Repo.CreatePosts do
   use Ecto.Migration
 
   def up do
-    ""
+    [ "CREATE TABLE IF NOT EXISTS migrations_test(id serial primary key, name text)",
+      "INSERT INTO migrations_test (name) VALUES ('inserted')" ]
   end
 
   def down do
-    ""
+    "DROP TABLE migrations_test"
   end
 end
 ```
 
-Simply write the SQL commands for updating the database (`up`) and for rolling it back (`down`) and you are ready to go!
+Simply write the SQL commands for updating the database (`up`) and for rolling it back (`down`) and you are ready to go! To run a single command return a string, to run multiple return a list of strings. 
 
 Note the generated file (and all migration files) starts with a timestamp, which identifies the migration version. By running migrations, a `schema_migrations` table will be created in your database to keep which migrations are "up" (already executed) and which ones are "down".
 
