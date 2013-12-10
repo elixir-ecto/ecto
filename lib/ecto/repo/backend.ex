@@ -52,13 +52,7 @@ defmodule Ecto.Repo.Backend do
 
   def create(repo, adapter, entity) do
     validate_entity(entity)
-    primary_key = adapter.create(repo, entity)
-
-    if primary_key do
-      entity.primary_key(primary_key)
-    else
-      entity
-    end
+    adapter.create(repo, entity)
   end
 
   def update(repo, adapter, entity) do
