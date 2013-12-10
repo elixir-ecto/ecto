@@ -77,7 +77,7 @@ end
 defimpl Enumerable, for: Ecto.Associations.HasMany do
   def count(assoc), do: length(assoc.to_list)
   def member?(assoc, value), do: value in assoc.to_list
-  def reduce(assoc, acc, fun), do: Enum.reduce(assoc.to_list, acc, fun)
+  def reduce(assoc, acc, fun), do: Enumerable.List.reduce(assoc.to_list, acc, fun)
 end
 
 defimpl Inspect, for: Ecto.Associations.HasMany do

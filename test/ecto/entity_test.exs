@@ -90,7 +90,7 @@ defmodule Ecto.EntityTest do
   end
 
   defmodule EntityCustomPK do
-    use Ecto.Entity, primary_key: { :pk, :integer }
+    use Ecto.Entity, primary_key: { :pk, :integer, [] }
     field :x, :string
   end
 
@@ -227,7 +227,7 @@ defmodule Ecto.EntityTest do
   end
 
   defmodule EntityAssocOpts do
-    use Ecto.Entity, model: AssocOpts, primary_key: { :pk, :integer }
+    use Ecto.Entity, model: AssocOpts, primary_key: { :pk, :integer, [] }
 
     has_many :posts, Post, primary_key: :pk, foreign_key: :fk
     has_one :author, User, primary_key: :pk, foreign_key: :fk

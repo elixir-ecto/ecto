@@ -21,9 +21,22 @@ defmodule Ecto.Model.QueryableTest do
     end
   end
 
+  defmodule DefaultUser do
+    @queryable_defaults primary_key: { :uuid, :string, [] }
+    use Ecto.Model.Queryable
+
+    queryable "users" do
+      field :name
+    end
+  end
+
   test "imports Ecto.Query functions" do
     assert is_record(User.from_1, Ecto.Query.Query)
     assert is_record(User.from_2, Ecto.Query.Query)
+  end
+
+  test "uses @queryable_defaults" do
+    assert DefaultUser.new(uuid: "abc").uuid == "abc"
   end
 
   test "delegates to the given entity" do

@@ -32,10 +32,37 @@ defmodule Ecto.Model.Queryable do
 
   * `new/0` - simply delegates to `entity.new/0`
   * `new/1` - simply delegates to `entity.new/1`
-  * `__model__/1` - reflection functions about the model
+  * `__model__/1` - reflection functions about the source and entity
 
   This module also automatically imports `from/1` and `from/2`
   from `Ecto.Query` as a convenience.
+
+  ## Entity defaults
+
+  When using the block syntax, the created entity uses the usual default
+  of a primary key named `:id`, of type `:integer`. This can be customized
+  by passing `primary_key: false` to queryable:
+
+      queryable "weather", primary_key: false do
+        ...
+      end
+
+  Or by passing a tuple in the format `{ field, type, opts }`. If your
+  application wants to use another primary key as default application wise,
+  that can be achieved by wrapping the model functionality into your own
+  module and setting the `@queryable_defaults` attribute:
+
+      defmodule MyApp.Model do
+        defmacro __using__(_) do
+          quote do
+            @queryable_defaults primary_key: { :uuid, :string, [] }
+            use Ecto.Model
+          end
+        end
+      end
+
+  Now by using `MyApp.Model` you will get the `:uuid` field, with type
+  `:string` as primary key.
   """
 
   @doc false
@@ -93,10 +120,13 @@ defmodule Ecto.Model.Queryable do
 
   defmacro queryable(source, opts, [do: block]) do
     quote do
-      opts = unquote(opts)
+      opts =
+        (Module.get_attribute(__MODULE__, :queryable_defaults) || [])
+        |> Keyword.merge(unquote(opts))
+        |> Keyword.put(:model, __MODULE__)
 
       defmodule Entity do
-        use Ecto.Entity, Keyword.put(opts, :model, unquote(__CALLER__.module))
+        use Ecto.Entity, opts
         unquote(block)
       end
 

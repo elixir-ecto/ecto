@@ -41,7 +41,7 @@ defmodule Ecto.Entity do
   * `:primary_key` - Sets the primary key, if this option is not set a primary
                      key named *id* of type *integer* will be generated. If
                      set to `false` no primary key will be generated, to set
-                     a custom primary key give `{ name, type }` to the option.
+                     a custom primary key give `{ name, type, opts }` to the option.
 
   In addition to the record functionality, Ecto also defines accessors and updater
   functions for the primary key will be generated on the entity, specifically
@@ -238,10 +238,10 @@ defmodule Ecto.Entity do
           field(:id, :integer, primary_key: true)
         false ->
           :ok
-        { name, type } ->
-          field(name, type, primary_key: true)
+        { name, type, opts } ->
+          field(name, type, Keyword.put(opts, :primary_key, true))
         other ->
-          raise ArgumentError, message: ":primary_key must be false or { name, type }"
+          raise ArgumentError, message: ":primary_key must be false or { name, type, opts }"
       end
     end
   end
