@@ -193,8 +193,13 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "insert" do
-    query = SQL.insert(Model.Entity[x: 123, y: "456"])
+    query = SQL.insert(Model.Entity[x: 123, y: "456"], [:id])
     assert query == "INSERT INTO model (x, y)\nVALUES (123, '456'::text)\nRETURNING id"
+  end
+
+  test "insert with several missing values" do
+    query = SQL.insert(Model.Entity[x: 123], [:id, :y])
+    assert query == "INSERT INTO model (x)\nVALUES (123)\nRETURNING id, y"
   end
 
   test "update" do
@@ -375,14 +380,14 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "primary key any location" do
     model = PKModel.Entity[x: 10, y: 30]
-    assert SQL.insert(model) == "INSERT INTO model (x, y)\nVALUES (10, 30)\nRETURNING pk"
+    assert SQL.insert(model, [:pk]) == "INSERT INTO model (x, y)\nVALUES (10, 30)\nRETURNING pk"
 
     model = PKModel.Entity[x: 10, pk: 20, y: 30]
     assert SQL.insert(model) == "INSERT INTO model (x, pk, y)\nVALUES (10, 20, 30)"
   end
 
   test "send explicit set primary key" do
-    model = Model.Entity[id: 123, x: 0, y: 1]
-    assert SQL.insert(model) == "INSERT INTO model (id, x, y)\nVALUES (123, 0, 1)"
+    model = Model.Entity[id: 123, x: 0, y: 2]
+    assert SQL.insert(model) == "INSERT INTO model (id, x, y)\nVALUES (123, 0, 2)"
   end
 end

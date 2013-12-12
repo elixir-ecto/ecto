@@ -62,19 +62,19 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for an insert statement
-  def insert(entity) do
+  def insert(entity, returning // []) do
     module      = elem(entity, 0)
     table       = entity.model.__model__(:source)
-    primary_key = module.__entity__(:primary_key)
-    pk_value    = entity.primary_key
+    pk_value = entity.primary_key
 
     zipped = module.__entity__(:entity_kw, entity, primary_key: !!pk_value)
-
-    [ fields, values ] = List.unzip(zipped)
+     
+    [fields, values] = Enum.filter(zipped, fn({_, val}) -> val != nil end)
+      |> List.unzip
 
     "INSERT INTO #{table} (" <> Enum.join(fields, ", ") <> ")\n" <>
     "VALUES (" <> Enum.map_join(values, ", ", &literal(&1)) <> ")" <>
-    if primary_key && !pk_value, do: "\nRETURNING #{primary_key}", else: ""
+    if !Enum.empty?(returning), do: "\nRETURNING " <> Enum.join(returning, ", "), else: ""
   end
 
   # Generate SQL for an update statement
