@@ -2,8 +2,8 @@ defmodule Ecto.Migration.Dsl do
   defrecord Column, name: nil, type: nil, null: nil, limit: nil, default: :undefined
 
   defrecord CreateTable, name: nil, columns: [] do
-    def build(options // []) do
-      new.setup_key(options[:key] !== false)
+    def build(options // [key: true]) do
+      new.setup_key(options[:key])
     end
 
     def column(name, type, options // [], table) do
