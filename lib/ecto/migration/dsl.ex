@@ -1,13 +1,13 @@
 defmodule Ecto.Migration.Dsl do
-  defrecord Column, name: nil, type: nil
+  defrecord Column, name: nil, type: nil, null: nil, limit: nil, default: :undefined
 
   defrecord CreateTable, name: nil, columns: [] do
     def build(options // []) do
       new.setup_key(options[:key] !== false)
     end
 
-    def column(name, type, table) do
-      col = Column.new(name: name, type: type)
+    def column(name, type, options // [], table) do
+      col = Column.new(Dict.merge(options, name: name, type: type))
       table.columns(table.columns ++ [col])
     end
 

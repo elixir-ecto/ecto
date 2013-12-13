@@ -3,11 +3,14 @@ defmodule Ecto.Migration.CreateTableTest do
   import Ecto.Migration.Dsl.CreateTable
 
   test "adding columns" do
-    table = build.column(:name, :string)
+    table = build.column(:name, :string, limit: 20, null: true, default: "unknown")
     [_id, column] = table.columns
 
     assert column.name == :name
     assert column.type == :string
+    assert column.null
+    assert column.default == "unknown"
+    assert column.limit == 20
   end
 
   test "adding string column" do
