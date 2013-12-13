@@ -11,6 +11,15 @@ defmodule Ecto.Migration.ChangeTableTest do
     assert column.type == :string
   end
 
+  test "adding aliases" do
+    table = new.string(:name)
+    [{type, column}] = table.changes
+
+    assert type == :add
+    assert column.name == :name
+    assert column.type == :string
+  end
+
   test "removing column" do
     table = new.remove(:name)
     [{type, column}] = table.changes
