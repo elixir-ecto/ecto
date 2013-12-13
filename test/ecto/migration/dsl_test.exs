@@ -3,7 +3,7 @@ defmodule Ecto.Migration.DslTest do
   import Ecto.Migration.Dsl
 
   test "creating table" do
-    command = create_table(:products, fn(_) -> nil end)
+    command = create_table(:products)
 
     assert command == Ecto.Migration.Dsl.CreateTable[name: :products]
   end
@@ -29,7 +29,7 @@ defmodule Ecto.Migration.DslTest do
   end
 
   test "change table" do
-    command = change_table(:products, fn(_) -> nil end)
+    command = change_table(:products)
 
     assert command == Ecto.Migration.Dsl.ChangeTable[name: :products]
   end

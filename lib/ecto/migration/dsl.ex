@@ -65,16 +65,12 @@ defmodule Ecto.Migration.Dsl do
     DropTable.new(name: name)
   end
 
-  def create_table(name, fun) do
-    table = CreateTable.new(name: name)
-    fun.(table)
-    table
+  def create_table(name) do
+    CreateTable.new(name: name)
   end
 
-  def change_table(name, fun) do
-    table = ChangeTable.new(name: name)
-    fun.(table)
-    table
+  def change_table(name) do
+    ChangeTable.new(name: name)
   end
 
   def create_index(table_name, columns, [unique: unique] // [unique: false]) do
