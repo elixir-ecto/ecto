@@ -4,10 +4,18 @@ defmodule Ecto.Migration.ChangeTableTest do
 
   test "adding column" do
     table = new.column(:name, :string)
-    [{type, column}] = table.columns
+    [{type, column}] = table.changes
 
     assert type == :add
     assert column.name == :name
     assert column.type == :string
+  end
+
+  test "removing column" do
+    table = new.remove(:name)
+    [{type, column}] = table.changes
+
+    assert type == :remove
+    assert column.name == :name
   end
 end

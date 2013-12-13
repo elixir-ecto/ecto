@@ -29,10 +29,15 @@ defmodule Ecto.Migration.Dsl do
     end
   end
 
-  defrecord ChangeTable, name: nil, columns: [] do
+  defrecord ChangeTable, name: nil, changes: [] do
     def column(name, type, options // [], table) do
       col = Column.new(Dict.merge(options, name: name, type: type))
-      table.columns(table.columns ++ [{:add, col}])
+      table.changes(table.changes ++ [{:add, col}])
+    end
+
+    def remove(name, table) do
+      col = Column.new(name: name)
+      table.changes(table.changes ++ [{:remove, col}])
     end
   end
 
