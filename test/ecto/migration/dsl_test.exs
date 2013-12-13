@@ -49,4 +49,13 @@ defmodule Ecto.Migration.DslTest do
     assert command == Ecto.Migration.Dsl.ChangeTable[name: :products,
                                                      changes: [{:remove, Ecto.Migration.Dsl.Column[name: :summary]}]]
   end
+
+  test "changing column" do
+    command = change_column(:products, :summary, :string, limit: 20)
+
+    assert command == Ecto.Migration.Dsl.ChangeTable[name: :products,
+                                                     changes: [{:change, Ecto.Migration.Dsl.Column[name: :summary,
+                                                                                                  type: :string,
+                                                                                                  limit: 20]}]]
+  end
 end

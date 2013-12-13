@@ -88,4 +88,8 @@ defmodule Ecto.Migration.Dsl do
   def remove_column(table_name, name) do
     change_table(table_name).remove(name)
   end
+
+  def change_column(table_name, name, type, options // []) do
+    change_table(table_name).change(name, type, options)
+  end
 end
