@@ -27,4 +27,10 @@ defmodule Ecto.Migration.DslTest do
 
     assert command == Ecto.Migration.Dsl.DropIndex[table_name: :products, columns: [:name]]
   end
+
+  test "change table" do
+    command = change_table(:products, fn(_) -> nil end)
+
+    assert command == Ecto.Migration.Dsl.ChangeTable[name: :products]
+  end
 end
