@@ -13,4 +13,18 @@ defmodule Ecto.Migration.DslTest do
 
     assert command == Ecto.Migration.Dsl.DropTable[name: :products]
   end
+
+  test "creating index" do
+    command = create_index(:products, [:name], unique: true)
+
+    assert command == Ecto.Migration.Dsl.CreateIndex[table_name: :products,
+                                                     columns: [:name],
+                                                     unique: true]
+  end
+
+  test "dropping index" do
+    command = drop_index(:products, [:name])
+
+    assert command == Ecto.Migration.Dsl.DropIndex[table_name: :products, columns: [:name]]
+  end
 end
