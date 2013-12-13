@@ -42,4 +42,11 @@ defmodule Ecto.Migration.DslTest do
                                                                                                 type: :string,
                                                                                                 limit: 20]}]]
   end
+
+  test "remove column" do
+    command = remove_column(:products, :summary)
+
+    assert command == Ecto.Migration.Dsl.ChangeTable[name: :products,
+                                                     changes: [{:remove, Ecto.Migration.Dsl.Column[name: :summary]}]]
+  end
 end
