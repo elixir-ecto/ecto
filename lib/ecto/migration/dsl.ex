@@ -80,4 +80,9 @@ defmodule Ecto.Migration.Dsl do
   def drop_index(table_name, columns) do
     DropIndex.new(table_name: table_name, columns: columns)
   end
+
+  def add_column(table_name, name, type, options // []) do
+    change_table(table_name)
+      .column(name, type, options)
+  end
 end
