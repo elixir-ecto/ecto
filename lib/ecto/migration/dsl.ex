@@ -31,6 +31,8 @@ defmodule Ecto.Migration.Dsl do
 
   defrecord DropTable, name: nil
 
+  defrecord CreateIndex, table_name: nil, unique: false, columns: []
+
   def drop_table(name) do
     DropTable.new(name: name)
   end
@@ -39,5 +41,9 @@ defmodule Ecto.Migration.Dsl do
     table = CreateTable.new(name: name)
     fun.(table)
     table
+  end
+
+  def create_index(table_name, columns, [unique: unique] // [unique: false]) do
+    CreateIndex.new(table_name: table_name, columns: columns, unique: unique)
   end
 end
