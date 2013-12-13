@@ -39,6 +39,11 @@ defmodule Ecto.Migration.Dsl do
       col = Column.new(name: name)
       table.changes(table.changes ++ [{:remove, col}])
     end
+
+    def change(name, type, options // [], table) do
+      col = Column.new(Dict.merge(options, name: name, type: type))
+      table.changes(table.changes ++ [{:change, col}])
+    end
   end
 
   defrecord DropTable, name: nil
