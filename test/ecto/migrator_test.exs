@@ -50,24 +50,10 @@ defmodule Ecto.MigratorTest do
     assert Ecto.Migrator.down(ProcessRepo, 1, Migration) == :ok
   end
 
-  test "run_up runs all migrations inside a directory" do
-    in_tmp fn path ->
-      create_migration "13_sample.exs"
-      assert Ecto.Migrator.run_up(ProcessRepo, path) == [13]
-    end
-  end
-
-  test "run_up skip migrations that are already up" do
-    in_tmp fn path ->
-      create_migration "1_sample.exs"
-      assert Ecto.Migrator.run_up(ProcessRepo, path) == []
-    end
-  end
-
   test "expects files starting with an integer" do
     in_tmp fn path ->
       create_migration "a_sample.exs"
-      assert Ecto.Migrator.run_up(ProcessRepo, path) == []
+      assert Ecto.Migrator.run(ProcessRepo, path) == []
     end
   end
 
@@ -75,7 +61,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       File.write! "13_sample.exs", ":ok"
       assert_raise Ecto.MigrationError, "file 13_sample.exs does not contain any Ecto.Migration", fn ->
-        Ecto.Migrator.run_up(ProcessRepo, path)
+        Ecto.Migrator.run(ProcessRepo, path)
       end
     end
   end
@@ -85,8 +71,120 @@ defmodule Ecto.MigratorTest do
       create_migration "13_hello.exs"
       create_migration "13_other.exs"
       assert_raise Ecto.MigrationError, "migrations can't be executed, version 13 is duplicated", fn ->
-        Ecto.Migrator.run_up(ProcessRepo, path)
+        Ecto.Migrator.run(ProcessRepo, path)
       end
+    end
+  end
+
+  test "vanilla migrations runs all up" do
+    in_tmp fn path ->
+      create_migration "13_vanilla_run.exs"
+      create_migration "14_vanilla_run.exs"
+      refute Ecto.Migrator.run(ProcessRepo, path) == []
+    end
+  end
+
+  test "migrations without direction run up" do
+    in_tmp fn path ->
+      create_migration "13_run_without_direction.exs"
+      create_migration "14_run_without_direction.exs"
+      refute Ecto.Migrator.run(ProcessRepo, path, []) == []
+    end
+  end
+
+  test "upwards migrations without strategies runs all" do
+    in_tmp fn path ->
+      create_migration "13_up_without_strategies.exs"
+      create_migration "14_up_without_strategies.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, direction: :up) == [13, 14]
+    end
+  end
+
+  test "downwards migrations without strategies revert one" do
+    in_tmp fn path ->
+      create_migration "1_down_without_strategies.exs"
+      create_migration "2_down_without_strategies.exs"
+      create_migration "3_down_without_strategies.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, direction: :down) == [3]
+    end
+  end
+
+  test "upwards migrations skips migrations that are already up" do
+    in_tmp fn path ->
+      create_migration "1_sample.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path) == []
+    end
+  end
+
+  test "downwards migrations skips migrations that are already down" do
+    in_tmp fn path ->
+      create_migration "1_sample.exs"
+      create_migration "4_sample.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, direction: :down, all: true) == [1]
+    end
+  end
+
+  test "stepwise migrations stop before all have been run" do
+    in_tmp fn path ->
+      create_migration "13_step_premature_end.exs"
+      create_migration "14_step_premature_end.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, step: 1) == [13]
+    end
+  end
+
+  test "stepwise migrations stop at the number of available migrations" do
+    in_tmp fn path ->
+      create_migration "13_step_to_the_end.exs"
+      create_migration "14_step_to_the_end.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, step: 2) == [13, 14]
+    end
+  end
+
+  test "stepwise migrations stop even if asked to exceed available" do
+    in_tmp fn path ->
+      create_migration "13_step_past_the_end.exs"
+      create_migration "14_step_past_the_end.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, step: 3) == [13, 14]
+    end
+  end
+
+  test "version migrations stop before all have been run" do
+    in_tmp fn path ->
+      create_migration "13_version_premature_end.exs"
+      create_migration "14_version_premature_end.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, to: 13) == [13]
+    end
+  end
+
+  test "version migrations stop at the number of available migrations" do
+    in_tmp fn path ->
+      create_migration "13_version_to_the_end.exs"
+      create_migration "14_version_to_the_end.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, to: 14) == [13, 14]
+    end
+  end
+
+  test "version migrations stop even if asked to exceed available" do
+    in_tmp fn path ->
+      create_migration "13_version_past_the_end.exs"
+      create_migration "14_version_past_the_end.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, to: 15) == [13, 14]
+    end
+  end
+
+  test "version migrations take precedence over stepwise and total migrations" do
+    in_tmp fn path ->
+      create_migration "13_version_precedence.exs"
+      create_migration "14_version_precedence.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, to: 13, all: true, step: 2) == [13]
+    end
+  end
+
+  test "stepwise migrations take precedence over total migrations" do
+    in_tmp fn path ->
+      create_migration "13_step_precedence.exs"
+      create_migration "14_step_precedence.exs"
+      assert Ecto.Migrator.run(ProcessRepo, path, all: true, step: 1) == [13]
     end
   end
 

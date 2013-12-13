@@ -1,7 +1,7 @@
-defmodule Mix.Tasks.Ecto.MigrateTest do
+defmodule Mix.Tasks.Ecto.RollbackTest do
   use ExUnit.Case, async: true
 
-  import Mix.Tasks.Ecto.Migrate, only: [run: 2]
+  import Mix.Tasks.Ecto.Rollback, only: [run: 2]
 
   defmodule Repo do
     def start_link do
@@ -30,7 +30,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     run [to_string(Repo)], fn repo, path, opts ->
       assert repo == Repo
       assert path == "hello/migrations"
-      assert opts == [direction: :up]
+      assert opts == [direction: :down]
     end
   end
 end
