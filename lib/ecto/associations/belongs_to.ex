@@ -65,12 +65,12 @@ defimpl Inspect, for: Ecto.Associations.BelongsTo do
     refl        = target.__entity__(:association, name)
     associated  = refl.associated
     foreign_key = refl.key
-    primary_key = refl.assoc_key
+    references  = refl.assoc_key
     kw = [
       name: name,
       target: target,
       associated: associated,
-      primary_key: primary_key,
+      references: references,
       foreign_key: foreign_key
     ]
     concat ["#Ecto.Associations.BelongsTo<", Kernel.inspect(kw, opts), ">"]

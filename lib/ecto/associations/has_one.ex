@@ -68,13 +68,13 @@ defimpl Inspect, for: Ecto.Associations.HasOne do
     target      = assoc.__assoc__(:target)
     refl        = target.__entity__(:association, name)
     associated  = refl.associated
-    primary_key = refl.key
+    references  = refl.key
     foreign_key = refl.assoc_key
     kw = [
       name: name,
       target: target,
       associated: associated,
-      primary_key: primary_key,
+      references: references,
       foreign_key: foreign_key
     ]
     concat ["#Ecto.Associations.HasOne<", Kernel.inspect(kw, opts), ">"]

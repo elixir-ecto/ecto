@@ -229,10 +229,10 @@ defmodule Ecto.EntityTest do
   defmodule EntityAssocOpts do
     use Ecto.Entity, model: AssocOpts, primary_key: { :pk, :integer, [] }
 
-    has_many :posts, Post, primary_key: :pk, foreign_key: :fk
-    has_one :author, User, primary_key: :pk, foreign_key: :fk
-    belongs_to :permalink, Permalink, primary_key: :pk, foreign_key: :fk
-    belongs_to :permalink2, Permalink, primary_key: :pk
+    has_many :posts, Post, references: :pk, foreign_key: :fk
+    has_one :author, User, references: :pk, foreign_key: :fk
+    belongs_to :permalink, Permalink, references: :pk, foreign_key: :fk
+    belongs_to :permalink2, Permalink, references: :pk
   end
 
   test "has_many options" do
@@ -257,14 +257,14 @@ defmodule Ecto.EntityTest do
     assert :permalink2_id == refl.key
   end
 
-  test "primary_key option has to match a field on entity" do
-    message = "`primary_key` option on association doesn't match any field on the entity"
+  test "references option has to match a field on entity" do
+    message = "`references` option on association doesn't match any field on the entity"
     assert_raise ArgumentError, message, fn ->
       defmodule EntityPkAssocMisMatch do
         use Ecto.Entity, model: PkAssocMisMatch
 
-        has_many :posts, Post, primary_key: :pk
-        has_one :author, User, primary_key: :pk
+        has_many :posts, Post, references: :pk
+        has_one :author, User, references: :pk
       end
     end
   end

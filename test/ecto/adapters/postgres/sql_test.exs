@@ -328,7 +328,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     use Ecto.Model
     queryable "comments" do
       belongs_to :post, Ecto.Adapters.Postgres.SQLTest.Post,
-        primary_key: :a,
+        references: :a,
         foreign_key: :b
     end
   end
@@ -337,10 +337,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     use Ecto.Model
     queryable "posts" do
       has_many :comments, Ecto.Adapters.Postgres.SQLTest.Comment,
-        primary_key: :c,
+        references: :c,
         foreign_key: :d
       has_one :permalink, Ecto.Adapters.Postgres.SQLTest.Permalink,
-        primary_key: :e,
+        references: :e,
         foreign_key: :f
       field :c, :integer
       field :e, :integer

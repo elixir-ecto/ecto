@@ -87,7 +87,7 @@ defmodule Ecto.Entity do
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
                        other entity, defaults to: `:"#{model}_id"`;
-    * `:primary_key` - Sets the key on the current entity to be used for the
+    * `:references`  - Sets the key on the current entity to be used for the
                        association, defaults to the primary key on the entity;
 
   ## Examples
@@ -138,7 +138,7 @@ defmodule Ecto.Entity do
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
                        other entity, defaults to: `:"#{model}_id"`;
-    * `:primary_key` - Sets the key on the current entity to be used for the
+    * `:references`  - Sets the key on the current entity to be used for the
                        association, defaults to the primary key on the entity;
 
   ## Examples
@@ -187,7 +187,7 @@ defmodule Ecto.Entity do
 
     * `:foreign_key` - Sets the foreign key field name, defaults to:
                        `:"#{other_entity}_id"`;
-    * `:primary_key` - Sets the key on the other entity to be used for the
+    * `:references`  - Sets the key on the other entity to be used for the
                        association, defaults to: `:id`;
 
   ## Examples
@@ -317,7 +317,7 @@ defmodule Ecto.Entity do
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
     opts = opts
-           |> Keyword.put_new(:primary_key, :id)
+           |> Keyword.put_new(:references, :id)
            |> Keyword.put_new(:foreign_key, :"#{name}_id")
 
     __field__(mod, opts[:foreign_key], :integer, [])
@@ -346,7 +346,7 @@ defmodule Ecto.Entity do
     model = Module.get_attribute(mod, :ecto_model)
     if nil?(model) and nil?(foreign_key) do
       raise ArgumentError, message: "need to set `foreign_key` option for " <>
-        "assocation when model name can't be infered"
+        "association when model name can't be infered"
     end
   end
 
@@ -369,17 +369,17 @@ defmodule Ecto.Entity do
   defp ecto_assocs(assocs, primary_key, fields) do
     quoted = Enum.map(assocs, fn({ name, opts, }) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key, fields: fields] do
-        pk = opts[:primary_key] || primary_key
+        pk = opts[:references] || primary_key
         virtual_name = :"__#{name}__"
 
         if nil?(pk) do
-          raise ArgumentError, message: "need to set `primary_key` option for " <>
+          raise ArgumentError, message: "need to set `references` option for " <>
             "association when entity has no primary key"
         end
 
         if opts[:type] in [:has_many, :has_one] do
           unless Enum.any?(fields, fn { name, _ } -> pk == name end) do
-            raise ArgumentError, message: "`primary_key` option on association " <>
+            raise ArgumentError, message: "`references` option on association " <>
               "doesn't match any field on the entity"
           end
         end
