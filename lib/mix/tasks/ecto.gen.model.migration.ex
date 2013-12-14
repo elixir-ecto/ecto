@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Ecto.Gen.ModelMigration do
+defmodule Mix.Tasks.Ecto.Gen.Model.Migration do
   use Mix.Task
   import Mix.Tasks.Ecto
   import Mix.Generator
@@ -37,14 +37,12 @@ defmodule Mix.Tasks.Ecto.Gen.ModelMigration do
     # Get short repo name
     {:ok, repo_name} = to_string(repo) |> String.split(".") |> Enum.fetch(-1)
 
-    table_name = (repo_name <> model_name) |> underscore
     migration_name = "Create" <> model_name <> "Table" |> underscore
-    module_name = Module.concat([repo, Migrations, camelize(migration_name)])
     path = migrations_path(repo)
     [ path: path,
-      table_name: table_name,
+      table_name: (repo_name <> model_name) |> underscore,
       migration_name: migration_name,
-      module_name: module_name,
+      module_name: Module.concat([repo, Migrations, camelize(migration_name)]),
       file_name: Path.join(path, "#{timestamp}_#{migration_name}.exs"),
       columns: columns_from_field_specs(repo, ["id:serial primary key"|field_specs])
     ]

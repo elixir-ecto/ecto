@@ -1,11 +1,11 @@
-defmodule Mix.Tasks.Ecto.Gen.ModelMigrationTest do
+defmodule Mix.Tasks.Ecto.Gen.Model.MigrationTest do
   use ExUnit.Case, async: true
 
   import Support.FileHelpers
-  import Mix.Tasks.Ecto.Gen.ModelMigration, only: [run: 1]
+  import Mix.Tasks.Ecto.Gen.Model.Migration, only: [run: 1]
 
-  build_path = Path.join(build_tmp_path, inspect(Ecto.Gen.ModelMigration))
-  tmp_path   = Path.join(tmp_path, inspect(Ecto.Gen.ModelMigration))
+  build_path = Path.join(build_tmp_path, inspect(Ecto.Gen.Model.Migration))
+  tmp_path   = Path.join(tmp_path, inspect(Ecto.Gen.Model.Migration))
   @migrations_path Path.join(tmp_path, "migrations")
 
   defmodule Repo do
@@ -30,7 +30,7 @@ defmodule Mix.Tasks.Ecto.Gen.ModelMigrationTest do
     assert [name] = File.ls!(@migrations_path)
     assert name =~ %r/^\d{14}_create_my_model_table\.exs$/
     assert_file Path.join(@migrations_path, name), fn file ->
-      assert file =~ "defmodule Mix.Tasks.Ecto.Gen.ModelMigrationTest.Repo.Migrations.CreateMyModelTable do"
+      assert file =~ "defmodule Mix.Tasks.Ecto.Gen.Model.MigrationTest.Repo.Migrations.CreateMyModelTable do"
       assert file =~ "use Ecto.Migration"
       assert file =~ "def up do"
       assert file =~ "CREATE TABLE repo_my_model ("
