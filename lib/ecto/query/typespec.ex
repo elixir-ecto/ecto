@@ -66,7 +66,7 @@ defmodule Ecto.Query.Typespec do
   end
 
   def __defs__(mod, { :::, meta, [left, right] })  do
-    { name, args } = Macro.extract_args(left)
+    { name, args } = Macro.decompose_call(left)
 
     deft = Module.get_attribute(mod, :ecto_deft)
     defa = Module.get_attribute(mod, :ecto_defa)
