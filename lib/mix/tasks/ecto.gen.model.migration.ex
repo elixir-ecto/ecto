@@ -11,7 +11,7 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Migration do
 
   ## Examples
 
-      mix ecto.gen.model_migration MyApp.Repo MyModel
+      mix ecto.gen.model.migration MyApp.Repo MyModel
 
   """
   def run(args) do
@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Migration do
         end
       { _repo, _ } ->
         raise Mix.Error, message:
-              "expected ecto.gen.modelMigration to receive the model name, got: #{inspect Enum.join(args, " ")}"
+              "expected ecto.gen.model.migration to receive the repo and model name, got: #{inspect Enum.join(args, " ")}"
     end
   end
 
