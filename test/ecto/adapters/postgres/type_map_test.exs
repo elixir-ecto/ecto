@@ -7,4 +7,8 @@ defmodule Ecto.Adapters.Postgres.TypeMapTest do
   test "datetime", do: assert T.for(:datetime) == :timestamp
   test "integer",  do: assert T.for(:integer)  == :integer
   test "boolean",  do: assert T.for(:boolean)  == :boolean
+
+  test "handles strings" do
+    assert T.for("string") == :text
+  end
 end
