@@ -38,6 +38,6 @@ defmodule Ecto.Migration.Ast do
 
   defrecord DropTable, name: nil
 
-  defrecord CreateIndex, table_name: nil, unique: false, columns: []
-  defrecord DropIndex, table_name: nil, columns: []
+  defrecord CreateIndex, name: nil, table_name: nil, unique: false, columns: []
+  defrecord DropIndex, name: nil, table_name: nil, columns: []
 end
