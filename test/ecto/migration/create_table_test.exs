@@ -1,6 +1,6 @@
 defmodule Ecto.Migration.CreateTableTest do
   use ExUnit.Case
-  import Ecto.Migration.Dsl.CreateTable
+  import Ecto.Migration.Ast.CreateTable
 
   test "adding columns" do
     table = build.column(:name, :string, limit: 20, null: true, default: "unknown")

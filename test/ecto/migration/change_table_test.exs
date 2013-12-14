@@ -1,6 +1,6 @@
 defmodule Ecto.Migration.ChangeTableTest do
   use ExUnit.Case
-  import Ecto.Migration.Dsl.ChangeTable
+  import Ecto.Migration.Ast.ChangeTable
 
   test "adding column" do
     table = new.column(:name, :string)

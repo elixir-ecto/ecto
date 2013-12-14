@@ -1,12 +1,12 @@
 defmodule Ecto.Migration.DslTest do
   use ExUnit.Case
 
-  alias Ecto.Migration.Dsl.CreateTable
-  alias Ecto.Migration.Dsl.ChangeTable
-  alias Ecto.Migration.Dsl.DropTable
-  alias Ecto.Migration.Dsl.CreateIndex
-  alias Ecto.Migration.Dsl.DropIndex
-  alias Ecto.Migration.Dsl.Column
+  alias Ecto.Migration.Ast.CreateTable
+  alias Ecto.Migration.Ast.ChangeTable
+  alias Ecto.Migration.Ast.DropTable
+  alias Ecto.Migration.Ast.CreateIndex
+  alias Ecto.Migration.Ast.DropIndex
+  alias Ecto.Migration.Ast.Column
 
   import Ecto.Migration.Dsl
 
