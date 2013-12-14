@@ -43,6 +43,24 @@ defmodule Mix.Tasks.Ecto.Gen.Model.MigrationTest do
     end
   end
 
+  test "generates a new namespaced migration" do
+    run [to_string(Repo), "My.SpecialModel", "greeting:string", "counter:integer"]
+    assert [name] = File.ls!(@migrations_path)
+    assert name =~ %r/^\d{14}_create_my_special_model_table\.exs$/
+    assert_file Path.join(@migrations_path, name), fn file ->
+      assert file =~ "defmodule Mix.Tasks.Ecto.Gen.Model.MigrationTest.Repo.Migrations.CreateMySpecialModelTable do"
+      assert file =~ "use Ecto.Migration"
+      assert file =~ "def up do"
+      assert file =~ "CREATE TABLE repo_my_special_model ("
+      assert file =~ "id serial primary key,"
+      assert file =~ "greeting text,"
+      assert file =~ "counter integer"
+      assert file =~ ");"
+      assert file =~ "def down do"
+      assert file =~ "DROP TABLE repo_my_special_model;"
+    end
+  end
+
   test "raises when missing file" do
     assert_raise Mix.Error, fn -> run [to_string(Repo)] end
   end

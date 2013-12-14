@@ -37,6 +37,7 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Migration do
     # Get short repo name
     {:ok, repo_name} = to_string(repo) |> String.split(".") |> Enum.fetch(-1)
 
+    model_name = String.replace model_name, ".", ""
     migration_name = "Create" <> model_name <> "Table" |> underscore
     path = migrations_path(repo)
     [ path: path,
