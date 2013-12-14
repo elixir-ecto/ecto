@@ -10,6 +10,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
   alias Ecto.Query.Normalizer
+  alias Ecto.Migration.Ast.CreateTable
+  alias Ecto.Migration.Ast.DropTable
+  alias Ecto.Migration.Ast.CreateIndex
+  alias Ecto.Migration.Ast.DropIndex
+  alias Ecto.Migration.Ast.Column
 
   unary_ops = [ -: "-", +: "+" ]
 
@@ -130,6 +135,18 @@ defmodule Ecto.Adapters.Postgres.SQL do
     where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, names)
     "DELETE FROM #{table} AS #{name}" <> where
   end
+
+  def migrate(CreateTable[]=table),   do: "CREATE TABLE #{table.name} (#{column_definitions(table.columns)})"
+  def migrate(DropTable[name: name]), do: "DROP TABLE #{name}"
+  def migrate(CreateIndex[]=index),   do: "CREATE INDEX #{index.name} ON #{index.table_name} (#{Enum.join(index.columns, ", ")})"
+  def migrate(DropIndex[name: name]), do: "DROP INDEX #{name}"
+
+  defp column_definitions(columns) do
+    Enum.map_join(columns, ", ", &column_definition/1)
+  end
+
+  defp column_definition(Column[] = column), do: "#{column.name} #{column_type(column.type)}"
+  defp column_type(:string), do: "VARCHAR"
 
   defp select(expr, sources) do
     QueryExpr[expr: expr] = Normalizer.normalize_select(expr)
