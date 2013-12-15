@@ -40,28 +40,8 @@ defmodule Ecto.Migrator do
     repo.adapter.migrate_down(repo, version, commands)
   end
 
+  @spec strategy_types :: list(atom)
   def strategy_types, do: [:to, :step, :all]
-
-
-  @doc """
-  Apply migrations in a directory to a repository.
-
-  Uses the default strategy for each direction:
-
-  * ':up'   uses `{ :all, true }`
-  * ':down' uses `{ :step, 1 }`
-
-  Consult Migrator.run/4 for information on strategies.
-  """
-  @spec run(Ecto.Repo.t, binary, atom) :: [integer]
-  def run(repo, directory, direction)
-
-  def run(repo, directory, :up) do
-    run repo, directory, :up, { :all, true }
-  end
-  def run(repo, directory, :down) do
-    run repo, directory, :down, { :step, 1 }
-  end
 
   @doc """
   Apply migrations in a directory to a repository with given strategy.

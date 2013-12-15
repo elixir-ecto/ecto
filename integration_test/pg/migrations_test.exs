@@ -81,12 +81,12 @@ defmodule Ecto.Integration.MigrationsTest do
     in_tmp fn path ->
       create_migration(42, @good_migration)
       create_migration(43, @good_migration)
-      assert [42, 43] = run(TestRepo, path, :up)
+      assert [42, 43] = run(TestRepo, path, :up, { :all, true })
 
       create_migration(44, @good_migration)
-      assert [44] = run(TestRepo, path, :up)
+      assert [44] = run(TestRepo, path, :up, { :all, true })
 
-      assert [] = run(TestRepo, path, :up)
+      assert [] = run(TestRepo, path, :up, { :all, true })
 
       assert Postgrex.Result[num_rows: 3] =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test")
@@ -125,10 +125,10 @@ defmodule Ecto.Integration.MigrationsTest do
         create_migration(49, @good_migration),
         create_migration(50, @good_migration),
       ]
-      assert [49, 50] = run(TestRepo, path, :up)
+      assert [49, 50] = run(TestRepo, path, :up, { :all, true })
       purge migrations
 
-      assert [50] = run(TestRepo, path, :down)
+      assert [50] = run(TestRepo, path, :down, { :step, 1 })
       purge migrations
 
       assert Postgrex.Result[num_rows: 1] =
@@ -145,7 +145,7 @@ defmodule Ecto.Integration.MigrationsTest do
         create_migration(52, @good_migration),
       ]
 
-      assert [51, 52] = run(TestRepo, path, :up)
+      assert [51, 52] = run(TestRepo, path, :up, { :all, true })
       purge migrations
 
       assert [52] = run(TestRepo, path, :down, { :to, 52 })
@@ -164,7 +164,7 @@ defmodule Ecto.Integration.MigrationsTest do
         create_migration(53, @good_migration),
         create_migration(54, @good_migration),
       ]
-      assert [53, 54] = run(TestRepo, path, :up)
+      assert [53, 54] = run(TestRepo, path, :up, { :all, true })
       purge migrations
 
       assert [54, 53] = run(TestRepo, path, :down, { :all, true })
@@ -173,7 +173,7 @@ defmodule Ecto.Integration.MigrationsTest do
       assert Postgrex.Result[num_rows: 0] =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test")
 
-      assert [53, 54] = run(TestRepo, path, :up)
+      assert [53, 54] = run(TestRepo, path, :up, { :all, true })
     end
   end
 
@@ -181,7 +181,7 @@ defmodule Ecto.Integration.MigrationsTest do
     in_tmp fn path ->
       create_migration(55, @bad_migration)
       assert_raise Postgrex.Error, fn ->
-        run(TestRepo, path, :up)
+        run(TestRepo, path, :up, { :all, true })
       end
     end
   end

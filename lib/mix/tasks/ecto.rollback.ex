@@ -35,6 +35,6 @@ defmodule Mix.Tasks.Ecto.Rollback do
     ensure_repo(repo)
     ensure_started(repo)
     { strategy, _ } = parse_strategy(opts) # We don't use other opts atm
-    migrator.(repo, migrations_path(repo), :down, strategy)
+    migrator.(repo, migrations_path(repo), :down, strategy || { :step, 1 })
   end
 end

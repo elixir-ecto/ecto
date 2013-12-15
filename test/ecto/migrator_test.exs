@@ -55,7 +55,7 @@ defmodule Ecto.MigratorTest do
   test "expects files starting with an integer" do
     in_tmp fn path ->
       create_migration "a_sample.exs"
-      assert run(ProcessRepo, path, :up) == []
+      assert run(ProcessRepo, path, :up, { :all, true }) == []
     end
   end
 
@@ -63,7 +63,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       File.write! "13_sample.exs", ":ok"
       assert_raise Ecto.MigrationError, "file 13_sample.exs does not contain any Ecto.Migration", fn ->
-        run(ProcessRepo, path, :up)
+        run(ProcessRepo, path, :up, { :all, true })
       end
     end
   end
@@ -73,32 +73,15 @@ defmodule Ecto.MigratorTest do
       create_migration "13_hello.exs"
       create_migration "13_other.exs"
       assert_raise Ecto.MigrationError, "migrations can't be executed, version 13 is duplicated", fn ->
-        run(ProcessRepo, path, :up)
+        run(ProcessRepo, path, :up, { :all, true })
       end
-    end
-  end
-
-  test "upwards migrations without strategies runs all" do
-    in_tmp fn path ->
-      create_migration "13_up_without_strategies.exs"
-      create_migration "14_up_without_strategies.exs"
-      assert run(ProcessRepo, path, :up) == [13, 14]
-    end
-  end
-
-  test "downwards migrations without strategies revert one" do
-    in_tmp fn path ->
-      create_migration "1_down_without_strategies.exs"
-      create_migration "2_down_without_strategies.exs"
-      create_migration "3_down_without_strategies.exs"
-      assert run(ProcessRepo, path, :down) == [3]
     end
   end
 
   test "upwards migrations skips migrations that are already up" do
     in_tmp fn path ->
       create_migration "1_sample.exs"
-      assert run(ProcessRepo, path, :up) == []
+      assert run(ProcessRepo, path, :up, { :all, true }) == []
     end
   end
 
