@@ -128,7 +128,7 @@ defmodule Ecto.Integration.MigrationsTest do
       assert [49, 50] = run(TestRepo, path)
       purge migrations
 
-      assert [50] = run(TestRepo, path, direction: :down)
+      assert [50] = run(TestRepo, path, :down)
       purge migrations
 
       assert Postgrex.Result[num_rows: 1] =
@@ -148,7 +148,7 @@ defmodule Ecto.Integration.MigrationsTest do
       assert [51, 52] = run(TestRepo, path)
       purge migrations
 
-      assert [52] = run(TestRepo, path, direction: :down, to: 52)
+      assert [52] = run(TestRepo, path, :down, to: 52)
       purge migrations
 
       assert Postgrex.Result[num_rows: 1] =
@@ -167,7 +167,7 @@ defmodule Ecto.Integration.MigrationsTest do
       assert [53, 54] = run(TestRepo, path)
       purge migrations
 
-      assert [54, 53] = run(TestRepo, path, direction: :down, all: true)
+      assert [54, 53] = run(TestRepo, path, :down, all: true)
       purge migrations
 
       assert Postgrex.Result[num_rows: 0] =

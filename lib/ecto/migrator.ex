@@ -20,6 +20,8 @@ defmodule Ecto.Migrator do
 
   """
 
+  @type strategy :: { atom, any }
+
   @doc """
   Runs an up migration on the given repository.
   """
@@ -38,42 +40,45 @@ defmodule Ecto.Migrator do
     repo.adapter.migrate_down(repo, version, commands)
   end
 
-  @doc false
-  def run_all(repo, directory) do
-    IO.write "Ecto.Migrator.run_all/2 is deprecated, please use Ecto.Migrator.run/3 instead."
-    run repo, directory
-  end
-
   @doc """
   Apply migrations in a directory to a repository.
 
   Available options are:
-  - `direction:` `:up` or `:down`
-                  defaults to :up
+  * `:all`  runs all available if `true`
+  * `:step` runs the specific number of migrations
+  * `:to`   runs all until the supplied version is reached
 
-  - `all:`  runs all available if `true`
-  - `step:` runs a specific number of migrations
-  - `to:`   runs all until supplied version is reached
+  If none are provided, the direction determines the migration strategy:
 
-  If `:all`, `:step`, or `:to` are not provided, the direction
-  determines the default migration strategy:
+  * `:up`   runs with `all: true`
+  * `:down` runs with `step: 1`
 
-  - `up:`   runs with `all: true`
-  - `down:` runs with `step: 1`
-
-  If more than one stragegy is provided, it will conservatively favor
+  If more than one strategy is provided, it will conservatively favor
   the most explicit strategy: it will run `:to` a migration,
   before it `:steps` through migrations, before it runs `:all`.
   """
-  @spec run(Ecto.Repo.t, binary, Keyword.t) :: [integer]
-  def run(repo, directory, opts // []) do
-    { direction, strategy } = parse_opts(opts)
+  @spec run(Ecto.Repo.t, binary, atom, Keyword.t) :: [integer]
+  def run(repo, directory, direction // :up, opts // [])
+
+  def run(repo, directory, opts, []) when is_list opts do
+    run repo, directory, :up, opts
+  end
+
+  def run(repo, directory, direction, opts) do
+    { strategy, _ } = parse_opts(opts) # We don't care about other opts atm
     do_run repo, directory, direction, strategy
   end
 
   # To extend Migrator.run with different strategies,
-  # define a `do_run` clause that matches on it
-  # and insert the strategy type into the `strategies` function below.
+  # define a `run` clause that matches on it and insert
+  # the strategy type into the `strategies` function above.
+
+  defp do_run(repo, directory, :up, nil) do
+    do_run repo, directory, :up, { :all, true }
+  end
+  defp do_run(repo, directory, :down, nil) do
+    do_run repo, directory, :down, { :step, 1 }
+  end
 
   defp do_run(repo, directory, direction, {:to, target_version}) do
     within_target_version? = fn
@@ -99,34 +104,28 @@ defmodule Ecto.Migrator do
   end
 
   # Keep in order of precedence.
-  defp strategies, do: [:to, :step, :all]
+  defp strategy_types, do: [:to, :step, :all]
 
   defp parse_opts(opts) do
-    { direction, opts } = Keyword.pop(opts, :direction, :up)
-    { direction, strategy_from(opts) || default_strategy_for(direction) }
+    { strategies, opts } = Enum.partition(opts, &(valid_strategy?(&1)))
+    { select_strategy(strategies), opts }
   end
 
-  defp strategy_from([]), do: nil
-  defp strategy_from([strategy]) do
-    if strategy |> elem(0) |> Kernel.in(strategies) do
-      strategy
-    end
-  end
-  defp strategy_from(opts) do
-    opts
-      |> Enum.filter(&(&1 |> elem(0) |> Kernel.in(strategies)))
+  defp valid_strategy?({ type, _ }), do: type in strategy_types
+
+  defp select_strategy([]), do: nil
+  defp select_strategy([strategy]), do: strategy
+  defp select_strategy(strategies) do
+    strategies
       |> Enum.sort(&(strategy_precedence(&1) > strategy_precedence(&2)))
       |> Enum.first
   end
 
-  defp strategy_precedence({ strategy, _ }) do
-    strategies
-      |> :lists.reverse
-      |> Enum.find_index(&(&1 == strategy))
+  defp strategy_precedence({ type, _ }) do
+    strategy_types
+      |> Enum.reverse
+      |> Enum.find_index(&(&1 == type))
   end
-
-  defp default_strategy_for(:up),    do: { :all, true }
-  defp default_strategy_for(:down),  do: { :step, 1 }
 
   defp pending_in_direction(repo, directory, :up) do
     versions = repo.adapter.migrated_versions(repo)

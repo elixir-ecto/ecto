@@ -26,13 +26,13 @@ defmodule Mix.Tasks.Ecto.Migrate do
       mix ecto.migrate MyApp.Repo --to 20080906120000
 
   """
-  def run(args, migrator // &Ecto.Migrator.run/3) do
+  def run(args, migrator // &Ecto.Migrator.run/4) do
     { opts, args, _ } = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, version: :integer],
       aliases: [n: :step, v: :to]
     { repo, _ } = parse_repo(args)
     ensure_repo(repo)
     ensure_started(repo)
-    migrator.(repo, migrations_path(repo), Keyword.merge(opts, direction: :up))
+    migrator.(repo, migrations_path(repo), :up, opts)
   end
 end

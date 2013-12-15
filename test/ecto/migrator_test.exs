@@ -96,7 +96,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_up_without_strategies.exs"
       create_migration "14_up_without_strategies.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, direction: :up) == [13, 14]
+      assert Ecto.Migrator.run(ProcessRepo, path, :up) == [13, 14]
     end
   end
 
@@ -105,7 +105,7 @@ defmodule Ecto.MigratorTest do
       create_migration "1_down_without_strategies.exs"
       create_migration "2_down_without_strategies.exs"
       create_migration "3_down_without_strategies.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, direction: :down) == [3]
+      assert Ecto.Migrator.run(ProcessRepo, path, :down) == [3]
     end
   end
 
@@ -120,7 +120,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "1_sample.exs"
       create_migration "4_sample.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, direction: :down, all: true) == [1]
+      assert Ecto.Migrator.run(ProcessRepo, path, :down, all: true) == [1]
     end
   end
 

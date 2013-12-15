@@ -27,13 +27,13 @@ defmodule Mix.Tasks.Ecto.Rollback do
       mix ecto.rollback MyApp.Repo --to 20080906120000
 
   """
-  def run(args, migrator // &Ecto.Migrator.run/3) do
+  def run(args, migrator // &Ecto.Migrator.run/4) do
     { opts, args, _ } = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, version: :integer],
       aliases: [n: :step, v: :to]
     { repo, _ } = parse_repo(args)
     ensure_repo(repo)
     ensure_started(repo)
-    migrator.(repo, migrations_path(repo), Keyword.merge(opts, direction: :down))
+    migrator.(repo, migrations_path(repo), :down, opts)
   end
 end

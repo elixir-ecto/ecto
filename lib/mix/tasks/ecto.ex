@@ -66,6 +66,7 @@ defmodule Mix.Tasks.Ecto do
   @doc """
   Asks if the user wants to open a file based on ECTO_EDITOR.
   """
+  @spec open?(binary) :: boolean
   def open?(file) do
     editor = System.get_env("ECTO_EDITOR") || ""
     if editor != "" do
