@@ -3,6 +3,8 @@ defmodule Ecto.MigratorTest do
 
   import Support.FileHelpers
 
+  import Ecto.Migrator
+
   defmodule ProcessRepo do
     @behaviour Ecto.Adapter.Migrations
 
@@ -41,19 +43,19 @@ defmodule Ecto.MigratorTest do
   end
 
   test "up invokes the repository adapter with up commands" do
-    assert Ecto.Migrator.up(ProcessRepo, 0, Migration) == :ok
-    assert Ecto.Migrator.up(ProcessRepo, 1, Migration) == :already_up
+    assert up(ProcessRepo, 0, Migration) == :ok
+    assert up(ProcessRepo, 1, Migration) == :already_up
   end
 
   test "down invokes the repository adapter with down commands" do
-    assert Ecto.Migrator.down(ProcessRepo, 0, Migration) == :already_down
-    assert Ecto.Migrator.down(ProcessRepo, 1, Migration) == :ok
+    assert down(ProcessRepo, 0, Migration) == :already_down
+    assert down(ProcessRepo, 1, Migration) == :ok
   end
 
   test "expects files starting with an integer" do
     in_tmp fn path ->
       create_migration "a_sample.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path) == []
+      assert run(ProcessRepo, path, :up) == []
     end
   end
 
@@ -61,7 +63,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       File.write! "13_sample.exs", ":ok"
       assert_raise Ecto.MigrationError, "file 13_sample.exs does not contain any Ecto.Migration", fn ->
-        Ecto.Migrator.run(ProcessRepo, path)
+        run(ProcessRepo, path, :up)
       end
     end
   end
@@ -71,24 +73,8 @@ defmodule Ecto.MigratorTest do
       create_migration "13_hello.exs"
       create_migration "13_other.exs"
       assert_raise Ecto.MigrationError, "migrations can't be executed, version 13 is duplicated", fn ->
-        Ecto.Migrator.run(ProcessRepo, path)
+        run(ProcessRepo, path, :up)
       end
-    end
-  end
-
-  test "vanilla migrations runs all up" do
-    in_tmp fn path ->
-      create_migration "13_vanilla_run.exs"
-      create_migration "14_vanilla_run.exs"
-      refute Ecto.Migrator.run(ProcessRepo, path) == []
-    end
-  end
-
-  test "migrations without direction run up" do
-    in_tmp fn path ->
-      create_migration "13_run_without_direction.exs"
-      create_migration "14_run_without_direction.exs"
-      refute Ecto.Migrator.run(ProcessRepo, path, []) == []
     end
   end
 
@@ -96,7 +82,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_up_without_strategies.exs"
       create_migration "14_up_without_strategies.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, :up) == [13, 14]
+      assert run(ProcessRepo, path, :up) == [13, 14]
     end
   end
 
@@ -105,14 +91,14 @@ defmodule Ecto.MigratorTest do
       create_migration "1_down_without_strategies.exs"
       create_migration "2_down_without_strategies.exs"
       create_migration "3_down_without_strategies.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, :down) == [3]
+      assert run(ProcessRepo, path, :down) == [3]
     end
   end
 
   test "upwards migrations skips migrations that are already up" do
     in_tmp fn path ->
       create_migration "1_sample.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path) == []
+      assert run(ProcessRepo, path, :up) == []
     end
   end
 
@@ -120,7 +106,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "1_sample.exs"
       create_migration "4_sample.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, :down, all: true) == [1]
+      assert run(ProcessRepo, path, :down, all: true) == [1]
     end
   end
 
@@ -128,7 +114,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_premature_end.exs"
       create_migration "14_step_premature_end.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, step: 1) == [13]
+      assert run(ProcessRepo, path, :up, step: 1) == [13]
     end
   end
 
@@ -136,7 +122,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_to_the_end.exs"
       create_migration "14_step_to_the_end.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, step: 2) == [13, 14]
+      assert run(ProcessRepo, path, :up, step: 2) == [13, 14]
     end
   end
 
@@ -144,7 +130,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_past_the_end.exs"
       create_migration "14_step_past_the_end.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, step: 3) == [13, 14]
+      assert run(ProcessRepo, path, :up, step: 3) == [13, 14]
     end
   end
 
@@ -152,7 +138,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_premature_end.exs"
       create_migration "14_version_premature_end.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, to: 13) == [13]
+      assert run(ProcessRepo, path, :up, to: 13) == [13]
     end
   end
 
@@ -160,7 +146,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_to_the_end.exs"
       create_migration "14_version_to_the_end.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, to: 14) == [13, 14]
+      assert run(ProcessRepo, path, :up, to: 14) == [13, 14]
     end
   end
 
@@ -168,7 +154,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_past_the_end.exs"
       create_migration "14_version_past_the_end.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, to: 15) == [13, 14]
+      assert run(ProcessRepo, path, :up, to: 15) == [13, 14]
     end
   end
 
@@ -176,7 +162,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_precedence.exs"
       create_migration "14_version_precedence.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, to: 13, all: true, step: 2) == [13]
+      assert run(ProcessRepo, path, :up, to: 13, all: true, step: 2) == [13]
     end
   end
 
@@ -184,7 +170,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_precedence.exs"
       create_migration "14_step_precedence.exs"
-      assert Ecto.Migrator.run(ProcessRepo, path, all: true, step: 1) == [13]
+      assert run(ProcessRepo, path, :up, all: true, step: 1) == [13]
     end
   end
 

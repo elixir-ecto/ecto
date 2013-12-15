@@ -58,11 +58,7 @@ defmodule Ecto.Migrator do
   before it `:steps` through migrations, before it runs `:all`.
   """
   @spec run(Ecto.Repo.t, binary, atom, Keyword.t) :: [integer]
-  def run(repo, directory, direction // :up, opts // [])
-
-  def run(repo, directory, opts, []) when is_list opts do
-    run repo, directory, :up, opts
-  end
+  def run(repo, directory, direction, opts // [])
 
   def run(repo, directory, direction, opts) do
     { strategy, _ } = parse_opts(opts) # We don't care about other opts atm
