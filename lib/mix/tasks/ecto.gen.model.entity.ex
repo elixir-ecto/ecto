@@ -27,6 +27,7 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Entity do
           mod: params[:module_name], table: params[:table_name], fields: params[:fields]
         ])
         open?(params[:file_name])
+        Mix.Tasks.Compile.run [params[:file_name]]
 
         Path.dirname(params[:test_file_name]) |> create_directory
         create_file params[:test_file_name], test_template([ mod: params[:module_name] ])
