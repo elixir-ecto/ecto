@@ -51,4 +51,27 @@ defmodule Mix.Tasks.Ecto.Gen.Model.EntityTest do
   test "raises when missing file" do
     assert_raise Mix.Error, fn -> run [to_string(Repo)] end
   end
+
+  test "generates an entity test" do
+    in_tmp fn _ ->
+      run [to_string(Repo), "MyModel", "name:string", "created_at:datetime"]
+
+      assert_file "test/my_model_test.exs", fn file ->
+        assert file =~ "defmodule MyModelTest do"
+        assert file =~ "test \"the truth\" do"
+      end
+    end
+  end
+
+  test "generates a namespaced entity test" do
+    in_tmp fn _ ->
+      run [to_string(Repo), "My.SpecialModel", "greeting:string", "counter:integer"]
+
+      assert_file "test/my/special_model_test.exs", fn file ->
+        assert file =~ "defmodule My.SpecialModelTest do"
+        assert file =~ "test \"the truth\" do"
+      end
+    end
+  end
+
 end
