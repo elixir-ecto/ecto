@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
       assert repo == Repo
       assert path == "hello/migrations"
       assert direction == :down
-      assert strategy == []
+      assert strategy == nil
     end
   end
 end

@@ -76,4 +76,26 @@ defmodule Mix.Tasks.Ecto do
       false
     end
   end
+
+  @spec parse_strategy(Keyword.t) :: { Migrator.strategy, Keyword.t }
+  def parse_strategy(opts) do
+    { strategies, opts } = Enum.partition(opts, &(valid_strategy?(&1)))
+    { select_strategy(strategies), opts }
+  end
+
+  defp valid_strategy?({ type, _ }), do: type in Ecto.Migrator.strategy_types
+
+  defp select_strategy([]), do: nil
+  defp select_strategy([strategy]), do: strategy
+  defp select_strategy(strategies) do
+    strategies
+      |> Enum.sort(&(strategy_precedence(&1) > strategy_precedence(&2)))
+      |> Enum.first
+  end
+
+  defp strategy_precedence({ type, _ }) do
+    Ecto.Migrator.strategy_types
+      |> Enum.reverse
+      |> Enum.find_index(&(&1 == type))
+  end
 end
