@@ -329,7 +329,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp literal(literal) when is_binary(literal) do
-    "'#{escape_string(literal)}'::text"
+    "'#{escape_string(literal)}'"
   end
 
   defp literal(literal) when is_number(literal) do
