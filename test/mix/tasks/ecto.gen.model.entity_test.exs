@@ -21,13 +21,11 @@ defmodule Mix.Tasks.Ecto.Gen.Model.EntityTest do
     in_tmp fn _ ->
       run [to_string(Repo), "MyModel", "name:string", "created_at:datetime"]
       assert_file "lib/my_model.ex", fn file ->
-        assert file =~ "defmodule MyModel.Entity do"
-        assert file =~ "use Ecto.Entity"
-        assert file =~ "field :name, :string"
-        assert file =~ "field :created_at, :datetime"
         assert file =~ "defmodule MyModel do"
         assert file =~ "use Ecto.Model"
-        assert file =~ "queryable \"repo_my_model\", MyModel.Entity"
+        assert file =~ "queryable \"repo_my_model\" do"
+        assert file =~ "field :name, :string"
+        assert file =~ "field :created_at, :datetime"
       end
     end
   end
@@ -37,13 +35,11 @@ defmodule Mix.Tasks.Ecto.Gen.Model.EntityTest do
       run [to_string(Repo), "My.SpecialModel", "greeting:string", "counter:integer"]
 
       assert_file "lib/my/special_model.ex", fn file ->
-        assert file =~ "defmodule My.SpecialModel.Entity do"
-        assert file =~ "use Ecto.Entity"
-        assert file =~ "field :greeting, :string"
-        assert file =~ "field :counter, :integer"
         assert file =~ "defmodule My.SpecialModel do"
         assert file =~ "use Ecto.Model"
-        assert file =~ "queryable \"repo_my_special_model\", My.SpecialModel.Entity"
+        assert file =~ "queryable \"repo_my_special_model\" do"
+        assert file =~ "field :greeting, :string"
+        assert file =~ "field :counter, :integer"
       end
     end
   end
