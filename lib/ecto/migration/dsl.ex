@@ -66,6 +66,18 @@ defmodule Ecto.Migration.Dsl do
     {:add, column, type, opts}
   end
 
+  def modify(column, type, opts // []) do
+    {:modify, column, type, opts}
+  end
+
+  def remove(column) do
+    {:remove, column}
+  end
+
+  def rename(from, to) do
+    {:rename, from, to}
+  end
+
   def timestamps do
     [add(:created_at, :datetime), add(:updated_at, :datetime)]
   end

@@ -58,12 +58,18 @@ defmodule Ecto.Migration.DslTest do
     assert command == {:executed, {:drop, Index.new(table: :products, columns: [:name], unique: nil)}}
   end
 
-  test "change table" do
+  test "alter table" do
     command = alter table(:products) do
-      add :name, :string
+      add :name, :string, default: 'Untitled'
+      modify :price, :integer, default: 99
+      remove :summary
+      rename :name, :title
     end
 
     assert command == {:executed, {:alter, Table[name: :products],
-                        [{:add, :name, :string, []}]}}
+                        [{:add, :name, :string, [default: 'Untitled']},
+                         {:modify, :price, :integer, [default: 99]},
+                         {:remove, :summary},
+                         {:rename, :name, :title}]}}
   end
 end
