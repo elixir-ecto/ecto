@@ -189,6 +189,7 @@ defmodule Ecto.Entity do
                        `:"#{other_entity}_id"`;
     * `:references`  - Sets the key on the other entity to be used for the
                        association, defaults to: `:id`;
+    * `:type`        - Sets the type of `:foreign_key`. Defaults to: `:integer`;
 
   ## Examples
 
@@ -319,8 +320,9 @@ defmodule Ecto.Entity do
     opts = opts
            |> Keyword.put_new(:references, :id)
            |> Keyword.put_new(:foreign_key, :"#{name}_id")
+           |> Keyword.put_new(:type, :integer)
 
-    __field__(mod, opts[:foreign_key], :integer, [])
+    __field__(mod, opts[:foreign_key], opts[:type], [])
 
     assoc = Ecto.Associations.BelongsTo.__assoc__(:new, name, mod)
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
