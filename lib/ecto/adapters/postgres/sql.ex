@@ -43,11 +43,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # Generate SQL for a select statement
   def select(Query[] = query) do
     # Generate SQL for every query expression type and combine to one string
-    sources = create_names(query)
-    { from, used_names } = from(query.from, sources)
+    sources  = create_names(query)
 
+    from     = from(sources)
     select   = select(query.select, sources)
-    join     = join(query, sources, used_names)
+    join     = join(query, sources)
     where    = where(query.wheres, sources)
     group_by = group_by(query.group_bys, sources)
     having   = having(query.havings, sources)
@@ -63,13 +63,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for an insert statement
   def insert(entity, returning // []) do
-    module      = elem(entity, 0)
-    table       = entity.model.__model__(:source)
-    pk_value = entity.primary_key
+    module = elem(entity, 0)
+    table  = entity.model.__model__(:source)
 
-    zipped = module.__entity__(:entity_kw, entity, primary_key: !!pk_value)
-     
-    [fields, values] = Enum.filter(zipped, fn({_, val}) -> val != nil end)
+    [fields, values] = module.__entity__(:entity_kw, entity)
+      |> Enum.filter(fn { _, val } -> val != nil end)
       |> List.unzip
 
     "INSERT INTO #{table} (" <> Enum.join(fields, ", ") <> ")\n" <>
@@ -86,7 +84,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
     zipped = module.__entity__(:entity_kw, entity, primary_key: false)
 
-    zipped_sql = Enum.map_join(zipped, ", ", fn({k, v}) ->
+    zipped_sql = Enum.map_join(zipped, ", ", fn { k, v } ->
       "#{k} = #{literal(v)}"
     end)
 
@@ -96,11 +94,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Generate SQL for an update all statement
   def update_all(Query[] = query, values) do
-    names  = create_names(query)
-    from = elem(names, 0)
+    names = create_names(query)
+    from  = elem(names, 0)
     { table, name } = Util.source(from)
 
-    zipped_sql = Enum.map_join(values, ", ", fn({field, expr}) ->
+    zipped_sql = Enum.map_join(values, ", ", fn { field, expr } ->
       "#{field} = #{expr(expr, names)}"
     end)
 
@@ -135,29 +133,21 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "SELECT " <> select_clause(expr, sources)
   end
 
-  defp from(from, sources) do
-    from_model = Util.model(from)
-    source = tuple_to_list(sources) |> Enum.find(&(from_model == Util.model(&1)))
-    { table, name } = Util.source(source)
-    { "FROM #{table} AS #{name}", [name] }
+  defp from(sources) do
+    { table, name } = elem(sources, 0) |> Util.source
+    "FROM #{table} AS #{name}"
   end
 
-  defp join(Query[] = query, sources, used_names) do
-    # We need to make sure that we get a unique name for each entity since
-    # the same entity can be referenced multiple times in joins
-
-    sources_list = tuple_to_list(sources)
-    Enum.map_reduce(query.joins, used_names, fn(JoinExpr[] = join, names) ->
-      source = Enum.find(sources_list, fn({ { source, name }, _, model }) ->
-        ((source == join.source) or (model == join.source)) and not name in names
-      end)
-
+  defp join(Query[] = query, sources) do
+    joins = Stream.with_index(query.joins)
+    Enum.map(joins, fn { JoinExpr[] = join, ix } ->
+      source = elem(sources, ix+1)
       { table, name } = Util.source(source)
+
       on_sql = expr(join.on.expr, sources)
       qual = join_qual(join.qual)
-
-      { "#{qual} JOIN #{table} AS #{name} ON " <> on_sql, [name|names] }
-    end) |> elem(0)
+      "#{qual} JOIN #{table} AS #{name} ON " <> on_sql
+    end)
   end
 
   defp join_qual(:inner), do: "INNER"
@@ -172,8 +162,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp group_by([], _sources), do: nil
 
   defp group_by(group_bys, sources) do
-    exprs = Enum.map_join(group_bys, ", ", fn(expr) ->
-      Enum.map_join(expr.expr, ", ", fn({ var, field }) ->
+    exprs = Enum.map_join(group_bys, ", ", fn expr ->
+      Enum.map_join(expr.expr, ", ", fn { var, field } ->
         { _, name } = Util.find_source(sources, var) |> Util.source
         "#{name}.#{field}"
       end)
@@ -189,7 +179,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp order_by([], _sources), do: nil
 
   defp order_by(order_bys, sources) do
-    exprs = Enum.map_join(order_bys, ", ", fn(expr) ->
+    exprs = Enum.map_join(order_bys, ", ", fn expr ->
       Enum.map_join(expr.expr, ", ", &order_by_expr(&1, sources))
     end)
 
@@ -214,7 +204,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp boolean(_name, [], _sources), do: nil
 
   defp boolean(name, query_exprs, sources) do
-    exprs = Enum.map_join(query_exprs, " AND ", fn(QueryExpr[expr: expr]) ->
+    exprs = Enum.map_join(query_exprs, " AND ", fn QueryExpr[expr: expr] ->
       "(" <> expr(expr, sources) <> ")"
     end)
 

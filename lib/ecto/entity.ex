@@ -458,15 +458,14 @@ defmodule Ecto.Entity do
       end
 
       def __entity__(:entity_kw, entity, opts // []) do
-        filter_pk = opts[:primary_key] == false
+        keep_pk     = Keyword.get(opts, :primary_key, true)
         primary_key = __entity__(:primary_key)
 
         [_module|values] = tuple_to_list(entity)
         zipped = Enum.zip(unquote(all_field_names), values)
 
         Enum.filter(zipped, fn { field, _ } ->
-          __entity__(:field, field) &&
-            (not filter_pk || (filter_pk && field != primary_key))
+          __entity__(:field, field) && (keep_pk or field != primary_key)
         end)
       end
     end

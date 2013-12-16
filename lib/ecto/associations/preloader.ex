@@ -102,16 +102,16 @@ defmodule Ecto.Associations.Preloader do
     Enum.reverse(acc1) ++ [record|records]
   end
 
-  defp merge([record|records], [assoc|assocs], refl, acc1, acc2) do
+  defp merge([record|records], assocs, refl, acc1, acc2) do
     # Ignore nil records, they may be nil depending on the join qualifier
     if nil?(record) do
-      merge(records, [assoc|assocs], refl, [nil|acc1], acc2)
+      merge(records, assocs, refl, [nil|acc1], acc2)
     else
-      step([record|records], [assoc|assocs], refl, acc1, acc2)
+      match([record|records], assocs, refl, acc1, acc2)
     end
   end
 
-  defp step([record|records], [assoc|assocs], BelongsTo[] = refl, acc, []) do
+  defp match([record|records], [assoc|assocs], BelongsTo[] = refl, acc, []) do
     case compare(record, assoc, refl) do
       # Record and association match so store association on record,
       # association may match more records so keep it
@@ -129,7 +129,7 @@ defmodule Ecto.Associations.Preloader do
     end
   end
 
-  defp step([record|records], [assoc|assocs], refl, acc1, acc2) do
+  defp match([record|records], [assoc|assocs], refl, acc1, acc2) do
     if compare(record, assoc, refl) == :eq do
       # Record and association match so save association in accumulator, more
       # associations may match the same record

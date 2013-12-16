@@ -57,14 +57,13 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   def create(repo, entity) do
-    module = elem(entity, 0)
+    module      = elem(entity, 0)
     primary_key = module.__entity__(:primary_key)
     pk_value    = entity.primary_key
 
-    zipped = module.__entity__(:entity_kw, entity, primary_key: !!pk_value)
-
-    returning = Enum.filter(zipped, fn({_, val}) -> val == nil end)
-      |> Enum.map(fn({key, _}) -> key end)
+    returning = module.__entity__(:entity_kw, entity)
+      |> Enum.filter(fn { _, val } -> val == nil end)
+      |> Keyword.keys
 
     if primary_key && !pk_value do
       returning = [primary_key] ++ returning
@@ -73,8 +72,7 @@ defmodule Ecto.Adapters.Postgres do
     case query(repo, SQL.insert(entity, returning)) do
       Postgrex.Result[rows: [values]] ->
         #Setup the entity to use the RETURNING values
-        Enum.zip(returning, tuple_to_list(values))
-          |> entity.update
+        Enum.zip(returning, tuple_to_list(values)) |> entity.update
       _ ->
         nil
     end
