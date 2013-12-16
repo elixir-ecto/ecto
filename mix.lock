@@ -1,3 +1,3 @@
-[ "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "2e0716ac0450a029dce2a30c871b50d98baf4aee", []},
+[ "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "a9eaade0ab8f17e17c894b6eadda10656585e378", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "c2c939b51aba06790ca51fa78b14c254a6ea977d", []},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "73778e19ce08877f4fe713329a3dbc99ca5e2056", []} ]
+  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "218db4af386045984c20eabe5771447abd5bd096", []} ]

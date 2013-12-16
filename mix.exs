@@ -7,7 +7,7 @@ defmodule Ecto.Mixfile do
       deps: deps(Mix.env),
       env: envs,
       name: "Ecto",
-      elixir: "~> 0.11.2-dev",
+      elixir: "~> 0.12.0",
       source_url: "https://github.com/elixir-lang/ecto",
       docs: fn -> [
         source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),
@@ -22,7 +22,7 @@ defmodule Ecto.Mixfile do
 
   defp deps(:prod) do
     [ { :poolboy, github: "devinus/poolboy" },
-      { :postgrex, "~> 0.2.0", github: "ericmj/postgrex", optional: true } ]
+      { :postgrex, "~> 0.3.0", github: "ericmj/postgrex", optional: true } ]
   end
 
   defp deps(_) do

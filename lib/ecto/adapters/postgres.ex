@@ -189,17 +189,17 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Postgrex casting
 
-  defp decoder(TypeInfo[sender: :bytea], :binary, default, param) do
+  defp decoder(TypeInfo[sender: "bytea"], :binary, default, param) do
     value = default.(param)
     Ecto.Binary[value: value]
   end
 
-  defp decoder(TypeInfo[sender: :interval], :binary, default, param) do
+  defp decoder(TypeInfo[sender: "interval"], :binary, default, param) do
     { mon, day, sec } = default.(param)
     Ecto.Interval[month: mon, day: day, sec: sec]
   end
 
-  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in [:timestamp, :timestamptz] do
+  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["timestamp", "timestamptz"] do
     { { year, mon, day }, { hour, min, sec } } = default.(param)
     Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
   end
