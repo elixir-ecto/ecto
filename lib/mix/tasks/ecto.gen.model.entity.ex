@@ -57,22 +57,20 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Entity do
   end
 
   embed_template :model, """
-  defmodule <%= @mod %>.Entity do
-    use Ecto.Entity
-
-    <%= Enum.join(@fields, "\n    ") %>
-  end
-
   defmodule <%= @mod %> do
     use Ecto.Model
 
-    queryable "<%= @table %>", <%= @mod %>.Entity
+    queryable "<%= @table %>" do
+      <%= Enum.join(@fields, "\n      ") %>
+    end
   end
   """
 
   embed_template :test, """
   defmodule <%= @mod %>Test do
-    use ExUnit.Case, async: true
+    # Test cases interacting with the DB most be async.
+    # If your test cases don't, feel free to enable async.
+    use ExUnit.Case, async: false
 
     test "the truth" do
       assert true
