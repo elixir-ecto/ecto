@@ -50,10 +50,16 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Migration do
   end
 
   defp columns_from_field_specs(repo, field_specs) do
-    Enum.map(field_specs, fn(spec) ->
-      [field_name, ecto_type] = String.split(spec, ":")
-      "#{field_name} #{repo.adapter.type_map.for(ecto_type)}"
-    end)
+    Enum.filter_map(
+      field_specs,
+      fn(spec) ->
+        not (spec =~ %r/:virtual$/)
+      end,
+      fn(spec) ->
+        [field_name, ecto_type] = String.split(spec, ":")
+        "#{field_name} #{repo.adapter.type_map.for(ecto_type)}"
+      end
+    )
   end
 
   defp timestamp do

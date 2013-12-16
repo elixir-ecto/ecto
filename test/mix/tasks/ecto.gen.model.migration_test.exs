@@ -61,6 +61,24 @@ defmodule Mix.Tasks.Ecto.Gen.Model.MigrationTest do
     end
   end
 
+  test "ignores virtual fields in the table" do
+    run [to_string(Repo), "MyModel", "name:string", "magic:virtual"]
+    assert [name] = File.ls!(@migrations_path)
+    assert_file Path.join(@migrations_path, name), fn file ->
+      assert file =~ "name text"
+      refute file =~ "magic"
+    end
+  end
+
+  test "keeps a field named \"virtual\"" do
+    run [to_string(Repo), "MyModel", "name:string", "virtual:text"]
+    assert [name] = File.ls!(@migrations_path)
+    assert_file Path.join(@migrations_path, name), fn file ->
+      assert file =~ "name text"
+      assert file =~ "virtual text"
+    end
+  end
+
   test "raises when missing file" do
     assert_raise Mix.Error, fn -> run [to_string(Repo)] end
   end
