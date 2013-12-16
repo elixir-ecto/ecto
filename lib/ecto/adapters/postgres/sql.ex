@@ -10,11 +10,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
   alias Ecto.Query.Normalizer
-  alias Ecto.Migration.Ast.CreateTable
-  alias Ecto.Migration.Ast.DropTable
-  alias Ecto.Migration.Ast.CreateIndex
-  alias Ecto.Migration.Ast.DropIndex
-  alias Ecto.Migration.Ast.Column
+  alias Ecto.Migration.Ast.Table
+  alias Ecto.Migration.Ast.Index
 
   unary_ops = [ -: "-", +: "+" ]
 
@@ -136,16 +133,27 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "DELETE FROM #{table} AS #{name}" <> where
   end
 
-  def migrate(CreateTable[]=table),   do: "CREATE TABLE #{table.name} (#{column_definitions(table.columns)})"
-  def migrate(DropTable[name: name]), do: "DROP TABLE #{name}"
-  def migrate(CreateIndex[]=index),   do: "CREATE INDEX #{index.name} ON #{index.table_name} (#{Enum.join(index.columns, ", ")})"
-  def migrate(DropIndex[name: name]), do: "DROP INDEX #{name}"
+  def migrate({:create, Table[]=table, columns}) do
+    "CREATE TABLE #{table.name} (#{column_definitions(columns)})"
+  end
+
+  def migrate({:drop, Table[name: name]}) do
+    "DROP TABLE #{name}"
+  end
+
+  def migrate({:create, Index[]=index}) do
+    "CREATE INDEX #{index.name} ON #{index.table_name} (#{Enum.join(index.columns, ", ")})"
+  end
+
+  def migrate({:drop, Index[name: name]}) do
+    "DROP INDEX #{name}"
+  end
 
   defp column_definitions(columns) do
     Enum.map_join(columns, ", ", &column_definition/1)
   end
 
-  defp column_definition(Column[] = column), do: "#{column.name} #{column_type(column.type)}"
+  defp column_definition({:add, name, type, opts}), do: "#{name} #{column_type(type)}"
   defp column_type(:string), do: "VARCHAR"
 
   defp select(expr, sources) do

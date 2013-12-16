@@ -386,29 +386,27 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.insert(model) == "INSERT INTO model (id, x, y)\nVALUES (123, 0, 1)"
   end
 
-  alias Ecto.Migration.Ast.CreateTable
-  alias Ecto.Migration.Ast.DropTable
-  alias Ecto.Migration.Ast.CreateIndex
-  alias Ecto.Migration.Ast.DropIndex
-  alias Ecto.Migration.Ast.Column
+  alias Ecto.Migration.Ast.Table
+  alias Ecto.Migration.Ast.Index
 
   test "create table" do
-    create = CreateTable[name: :posts, columns: [Column.new(name: :title, type: :string)]]
+    create = {:create, Table.new(name: :posts),
+               [{:add, :title, :string, []}]}
     assert SQL.migrate(create) == "CREATE TABLE posts (title VARCHAR)"
   end
 
   test "drop table" do
-    drop = DropTable[name: :posts]
+    drop = {:drop, Table.new(name: :posts)}
     assert SQL.migrate(drop) == "DROP TABLE posts"
   end
 
   test "create index" do
-    create = CreateIndex[name: "posts$main", table_name: :posts, columns: [:category_id, :permalink]]
+    create = {:create, Index.new(name: "posts$main", table: :posts, columns: [:category_id, :permalink])}
     assert SQL.migrate(create) == "CREATE INDEX posts$main ON posts (category_id, permalink)"
   end
 
   test "drop index" do
-    drop = DropIndex[name: "posts$main"]
+    drop = {:drop, Index.new(name: "posts$main")}
     assert SQL.migrate(drop) == "DROP INDEX posts$main"
   end
 end
