@@ -1,63 +1,69 @@
 defmodule Ecto.Migration.DslTest do
   use ExUnit.Case
 
-  alias Ecto.Migration.Ast.CreateTable
-  alias Ecto.Migration.Ast.ChangeTable
-  alias Ecto.Migration.Ast.DropTable
-  alias Ecto.Migration.Ast.CreateIndex
-  alias Ecto.Migration.Ast.DropIndex
-  alias Ecto.Migration.Ast.Column
+  alias Ecto.Migration.Ast.Table
+  alias Ecto.Migration.Ast.Index
 
   import Ecto.Migration.Dsl
 
-  test "creating table" do
-    command = create_table(:products)
+  defmodule MockMigrationRunner do
+    use GenServer.Behaviour
 
-    assert command == CreateTable[name: :products]
+    def start_link do
+      :gen_server.start_link({:local, :migration_runner}, __MODULE__, [], [])
+    end
+
+    def handle_call({:run, command}, _from, state) do
+      {:reply, {:executed, command}, state}
+    end
+  end
+
+  setup do
+    MockMigrationRunner.start_link
+    :ok
+  end
+
+  test "executing" do
+    assert execute("a command") == {:executed, "a command"}
+  end
+
+  test "creating table" do
+    command = create table(:products, key: true) do
+      add :name, :string
+      timestamps
+    end
+
+    assert command == {:executed, {:create, Table[name: :products, key: true],
+                        [{:add, :id, :primary_key, []},
+                         {:add, :name, :string, []},
+                         {:add, :created_at, :datetime, []},
+                         {:add, :updated_at, :datetime, []}]}}
   end
 
   test "dropping table" do
-    command = drop_table(:products)
+    command = drop table(:products)
 
-    assert command == DropTable[name: :products]
+    assert command == {:executed, {:drop, Table.new(name: :products)}}
   end
 
   test "creating index" do
-    command = create_index(:products, [:name], unique: true)
+    command = create index(:products, [:name], unique: true)
 
-    assert command == CreateIndex[table_name: :products, columns: [:name], unique: true]
+    assert command == {:executed, {:create, Index.new(table: :products, columns: [:name], unique: true)}}
   end
 
   test "dropping index" do
-    command = drop_index(:products, [:name])
+    command = drop index([:name], on: :products)
 
-    assert command == DropIndex[table_name: :products, columns: [:name]]
+    assert command == {:executed, {:drop, Index.new(table: :products, columns: [:name], unique: nil)}}
   end
 
   test "change table" do
-    command = change_table(:products)
+    command = alter table(:products) do
+      add :name, :string
+    end
 
-    assert command == ChangeTable[name: :products]
-  end
-
-  test "adding column" do
-    command = add_column(:products, :summary, :string, limit: 20)
-
-    assert command == ChangeTable[name: :products, changes: [
-        {:add, Column[name: :summary, type: :string, limit: 20]}]]
-  end
-
-  test "remove column" do
-    command = remove_column(:products, :summary)
-
-    assert command == ChangeTable[name: :products, changes: [
-        {:remove, Column[name: :summary]}]]
-  end
-
-  test "changing column" do
-    command = change_column(:products, :summary, :string, limit: 20)
-
-    assert command == ChangeTable[name: :products, changes: [
-        {:change, Column[name: :summary, type: :string, limit: 20]}]]
+    assert command == {:executed, {:alter, Table[name: :products],
+                        [{:add, :name, :string, []}]}}
   end
 end

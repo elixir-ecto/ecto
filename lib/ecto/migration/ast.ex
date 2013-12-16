@@ -40,4 +40,17 @@ defmodule Ecto.Migration.Ast do
 
   defrecord CreateIndex, name: nil, table_name: nil, unique: false, columns: []
   defrecord DropIndex, name: nil, table_name: nil, columns: []
+
+  defrecord Table, name: nil, key: true
+
+  defrecord Index, table: nil, name: nil, columns: [], unique: false do
+    def actual_name(index) do
+      case index.name do
+        nil -> [index.table, index.columns, "index"]
+                 |> List.flatten
+                 |> Enum.join("_")
+        _ -> index.name
+      end
+    end
+  end
 end

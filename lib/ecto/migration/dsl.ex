@@ -19,41 +19,73 @@ defmodule Ecto.Migration.Dsl do
     end
   end
 
-  alias Ecto.Migration.Ast.CreateTable
-  alias Ecto.Migration.Ast.ChangeTable
-  alias Ecto.Migration.Ast.DropTable
-  alias Ecto.Migration.Ast.CreateIndex
-  alias Ecto.Migration.Ast.DropIndex
+  defmodule MigrationRunner do
+    use GenServer.Behaviour
 
-  def drop_table(name) do
-    DropTable.new(name: name)
+    @server_name :migration_runner
+    @full_name {:local, @server_name}
+
+    def run(command) do
+      :gen_server.call(@server_name, {:run, command})
+    end
   end
 
-  def create_table(name) do
-    CreateTable.new(name: name)
+  alias Ecto.Migration.Ast.Table
+  alias Ecto.Migration.Ast.Index
+
+  defmacro create(object, do: block) do
+    commands = case block do
+      {:__block__, _location, ops} -> ops
+      _ -> [block]
+    end
+
+    quote do
+      Table[key: key] = unquote(object)
+      id = if key, do: [add(:id, :primary_key)], else: []
+      execute {:create, unquote(object), id ++ unquote(commands) |> List.flatten}
+    end
   end
 
-  def change_table(name) do
-    ChangeTable.new(name: name)
+  defmacro alter(object, do: block) do
+    commands = case block do
+      {:__block__, _location, ops} -> ops
+      _ -> [block]
+    end
+
+    quote do
+      execute {:alter, unquote(object), unquote(commands) |> List.flatten}
+    end
   end
 
-  def create_index(table_name, columns, [unique: unique] // [unique: false]) do
-    CreateIndex.new(table_name: table_name, columns: columns, unique: unique)
+  def create(object) do
+    execute {:create, object}
   end
 
-  def drop_index(table_name, columns) do
-    DropIndex.new(table_name: table_name, columns: columns)
+  def drop(object) do
+    execute {:drop, object}
   end
 
-  def add_column(table_name, name, type, options // []) do
-    change_table(table_name).column(name, type, options)
+  def table(name, opts // []) do
+    Table.new(name: name, key: Dict.get(opts, :key, true))
   end
 
-  def remove_column(table_name, name) do
-    change_table(table_name).remove(name)
+  def index(columns, opts=[on: table]) do
+    Index.new(table: table, columns: columns, unique: opts[:unique])
   end
 
-  def change_column(table_name, name, type, options // []) do
-    change_table(table_name).change(name, type, options)
+  def index(table, columns, opts // []) do
+    Index.new(table: table, columns: columns, unique: opts[:unique])
+  end
+
+  def execute(command) do
+    MigrationRunner.run command
+  end
+
+  def add(column, type, opts // []) do
+    {:add, column, type, opts}
+  end
+
+  def timestamps do
+    [add(:created_at, :datetime), add(:updated_at, :datetime)]
   end
 end
