@@ -45,7 +45,7 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Migration do
       migration_name: migration_name,
       module_name: Module.concat([repo, Migrations, camelize(migration_name)]),
       file_name: Path.join(path, "#{timestamp}_#{migration_name}.exs"),
-      columns: columns_from_field_specs(repo, ["id:serial primary key"|field_specs])
+      columns: columns_from_field_specs(repo, ["id:id"|field_specs])
     ]
   end
 
@@ -70,7 +70,7 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Migration do
 
     def up do
       \"\"\"
-      CREATE TABLE <%= @table %> (
+      CREATE TABLE IF NOT EXISTS <%= @table %> (
         <%= Enum.join(@columns, ",\n      ") %>
       );
       \"\"\"

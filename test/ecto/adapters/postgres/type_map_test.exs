@@ -11,4 +11,8 @@ defmodule Ecto.Adapters.Postgres.TypeMapTest do
   test "handles strings" do
     assert T.for("string") == :text
   end
+
+  test "handles custom ID type" do
+    assert T.for(:id) == :'serial primary key'
+  end
 end
