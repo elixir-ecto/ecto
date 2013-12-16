@@ -368,6 +368,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT 0\nFROM posts AS p0\nINNER JOIN permalinks AS p1 ON p1.f = p0.e"
   end
 
+  test "association join with on" do
+    query = from(Post) |> join(:inner, [p], c in p.comments, 1 == 2) |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM posts AS p0\nINNER JOIN comments AS c0 ON (1 = 2) AND (c0.d = p0.c)"
+  end
+
   defmodule PKModel do
     use Ecto.Model
 

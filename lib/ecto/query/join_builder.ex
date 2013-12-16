@@ -129,12 +129,12 @@ defmodule Ecto.Query.JoinBuilder do
               Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
   end
 
-  defp validate_on(on, is_assoc?) when is_assoc? == nil?(on), do: :ok
-  defp validate_on(_, _) do
+  defp validate_on(nil, false) do
     raise Ecto.QueryError,
       reason: "`join` expression requires explicit `on` " <>
               "expression unless association join expression"
   end
+  defp validate_on(_on, _is_assoc?), do: :ok
 
   defp validate_bind(bind, all) do
     if bind && bind in all do

@@ -40,14 +40,22 @@ defmodule Ecto.Query.Normalizer do
 
     associated = refl.associated
     assoc_var = Util.model_var(query, associated)
-    on_expr = on_expr(refl, assoc_var, left)
+    on_expr = on_expr(join.on, refl, assoc_var, left)
     on = QueryExpr[expr: on_expr, file: join.file, line: join.line]
     join.source(associated).on(on)
   end
 
-  defp on_expr(refl, assoc_var, record_var) do
-    quote do
-      unquote(assoc_var).unquote(refl.assoc_key) == unquote(record_var).unquote(refl.key)
+  defp on_expr(on_expr, refl, assoc_var, record_var) do
+    key = refl.key
+    assoc_key = refl.assoc_key
+    relation = quote do
+      unquote(assoc_var).unquote(assoc_key) == unquote(record_var).unquote(key)
+    end
+
+    if on_expr do
+      quote do: unquote(on_expr.expr) and unquote(relation)
+    else
+      relation
     end
   end
 

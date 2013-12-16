@@ -12,6 +12,7 @@ defmodule Ecto.QueryTest do
 
     queryable :posts do
       field :title, :string
+      has_many :comments, Ecto.QueryTest.Comment
     end
   end
 
@@ -152,9 +153,16 @@ defmodule Ecto.QueryTest do
 
   test "join on keyword query" do
     from(c in Comment, join: p in Post, on: c.text == "", select: c)
+    from(p in Post, join: c in p.comments, on: c.text == "", select: p)
 
     assert_raise Ecto.QueryError, "`on` keyword must immediatelly follow a join", fn ->
       delay_compile(from(c in Comment, on: c.text == "", select: c))
+    end
+
+    message = "`join` expression requires explicit `on` " <>
+              "expression unless association join expression"
+    assert_raise Ecto.QueryError, message, fn ->
+      delay_compile(from(c in Comment, join: p in Post, select: c))
     end
   end
 
