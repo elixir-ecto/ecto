@@ -32,7 +32,7 @@ defmodule Ecto.AdapterTest do
   end
 
   test "does not receive invalid urls" do
-    assert_raise Ecto.InvalidURL, %r"url has to start with a scheme", fn ->
+    assert_raise Ecto.InvalidURL, %r"url should start with a scheme", fn ->
       parse_url("eric:hunter2@host:123/mydb")
     end
 

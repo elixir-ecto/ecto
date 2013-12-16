@@ -103,9 +103,8 @@ defmodule Ecto.Repo.Backend do
 
   defp parse_url(url) do
   
-    # Ensure url starts with <scheme>:// (URI.parse doesn't enforce this)
     unless url =~ %r/^[^:\/?#\s]+:\/\// do
-      raise Ecto.InvalidURL, url: url, reason: "url has to start with a scheme before some credentials/domain"
+      raise Ecto.InvalidURL, url: url, reason: "url should start with a scheme, host should start with //"
     end
 
     info = URI.parse(url)
