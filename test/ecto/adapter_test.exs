@@ -32,8 +32,8 @@ defmodule Ecto.AdapterTest do
   end
 
   test "does not receive invalid urls" do
-    assert_raise Ecto.InvalidURL, %r"not an ecto url", fn ->
-      parse_url("http://eric:hunter2@host:123/mydb")
+    assert_raise Ecto.InvalidURL, %r"url should start with a scheme", fn ->
+      parse_url("eric:hunter2@host:123/mydb")
     end
 
     assert_raise Ecto.InvalidURL, %r"url has to contain a username", fn ->

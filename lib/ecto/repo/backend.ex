@@ -102,11 +102,12 @@ defmodule Ecto.Repo.Backend do
   ## Helpers
 
   defp parse_url(url) do
-    info = URI.parse(url)
-
-    unless info.scheme == "ecto" do
-      raise Ecto.InvalidURL, url: url, reason: "not an ecto url"
+  
+    unless url =~ %r/^[^:\/?#\s]+:\/\// do
+      raise Ecto.InvalidURL, url: url, reason: "url should start with a scheme, host should start with //"
     end
+
+    info = URI.parse(url)
 
     unless is_binary(info.userinfo) and size(info.userinfo) > 0  do
       raise Ecto.InvalidURL, url: url, reason: "url has to contain a username"
