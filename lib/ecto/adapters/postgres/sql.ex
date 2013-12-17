@@ -160,7 +160,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     Enum.map_join(columns, ", ", &column_definition/1)
   end
 
-  defp column_definition({:add, name, type, opts}), do: "#{name} #{column_type(type)}"
+  defp column_definition({:add, name, type, _opts}), do: "#{name} #{column_type(type)}"
 
   defp column_changes(columns) do
     Enum.map_join(columns, ", ", &column_change/1)
