@@ -19,8 +19,14 @@ defmodule Ecto.Migration.BidirectionalRunner do
     {:reply, command, :up}
   end
 
-  def handle_call({:run, command}, _from, :down) do
-    {:reply, reverse(command), :down}
+  def handle_call({:run, command}, _from, state=:down) do
+    reversed = reverse(command)
+
+    if reversed do
+      {:reply, reversed, state}
+    else
+      {:reply, :not_reversible, state}
+    end
   end
 
   def direction(direction) do
@@ -35,7 +41,7 @@ defmodule Ecto.Migration.BidirectionalRunner do
     :gen_server.call(@server_name, message)
   end
 
-  defp reverse([]), do: []
+  defp reverse([]),    do: []
   defp reverse([h|t]), do: [reverse(h)|reverse(t)]
   defp reverse({:create, Table[]=table, _columns}), do: {:drop, table}
   defp reverse({:create, Index[]=index}),           do: {:drop, index}
@@ -44,11 +50,9 @@ defmodule Ecto.Migration.BidirectionalRunner do
   defp reverse({:alter,  Table[]=table, changes}) do
     reversed = reverse(changes)
 
-    if reversed |> Enum.any? &(&1 == :not_reversable) do
-      :not_reversable
-    else
+    if reversed |> Enum.all? &(&1) do
       {:alter, table, reversed}
     end
   end
-  defp reverse(_), do: :not_reversable
+  defp reverse(_), do: false
 end

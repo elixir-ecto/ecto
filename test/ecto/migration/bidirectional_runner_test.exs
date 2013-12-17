@@ -36,13 +36,13 @@ defmodule Ecto.Migration.BidirectionalRunnerTest do
   test "cannot reverse drop table" do
     BidirectionalRunner.direction(:down)
 
-    assert BidirectionalRunner.run({:drop, Table.new}) == :not_reversable
+    assert BidirectionalRunner.run({:drop, Table.new}) == :not_reversible
   end
 
   test "cannot reverse drop index" do
     BidirectionalRunner.direction(:down)
 
-    assert BidirectionalRunner.run({:drop, Index.new}) == :not_reversable
+    assert BidirectionalRunner.run({:drop, Index.new}) == :not_reversible
   end
 
   test "can reverse column additions to removals" do
@@ -60,12 +60,12 @@ defmodule Ecto.Migration.BidirectionalRunnerTest do
   test "cannot reverse column removal" do
     BidirectionalRunner.direction(:down)
 
-    assert BidirectionalRunner.run({:alter, Table.new, [{:remove, :summary}]}) == :not_reversable
+    assert BidirectionalRunner.run({:alter, Table.new, [{:remove, :summary}]}) == :not_reversible
   end
 
   test "cannot reverse column modification" do
     BidirectionalRunner.direction(:down)
 
-    assert BidirectionalRunner.run({:alter, Table.new, [{:modify, :summary, :string, []}]}) == :not_reversable
+    assert BidirectionalRunner.run({:alter, Table.new, [{:modify, :summary, :string, []}]}) == :not_reversible
   end
 end
