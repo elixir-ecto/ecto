@@ -253,58 +253,30 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Migration API
 
-  def migrate_up(repo, version, commands) do
-    case check_migration_version(repo, version) do
-      Postgrex.Result[num_rows: 0] ->
-        run_commands(repo, commands, fn ->
-          insert_migration_version(repo, version)
-        end)
-      _ ->
-        :already_up
-    end
-  end
-
-  def migrate_down(repo, version, commands) do
-    case check_migration_version(repo, version) do
-      Postgrex.Result[num_rows: 0] ->
-        :missing_up
-      _ ->
-        run_commands(repo, commands, fn ->
-          delete_migration_version(repo, version)
-        end)
-    end
-  end
-
-  defp run_commands(repo, commands, fun) do
-    transaction(repo, fn ->
-      Enum.each(commands, fn command ->
-        query(repo, command)
-        fun.()
-      end)
-    end)
-    :ok
-  end
-
   def migrated_versions(repo) do
     create_migrations_table(repo)
     Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations")
     Enum.map(rows, &elem(&1, 0))
   end
 
-  defp create_migrations_table(repo) do
+  def create_migrations_table(repo) do
     query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)")
   end
 
-  defp check_migration_version(repo, version) do
+  def check_migration_version(repo, version) do
     create_migrations_table(repo)
     query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}")
   end
 
-  defp insert_migration_version(repo, version) do
+  def insert_migration_version(repo, version) do
     query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})")
   end
 
-  defp delete_migration_version(repo, version) do
+  def delete_migration_version(repo, version) do
     query(repo, "DELETE FROM schema_migrations WHERE version = #{version}")
+  end
+
+  def execute_migration(repo, definition) do
+    query(repo, SQL.migrate(definition))
   end
 end
