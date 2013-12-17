@@ -405,8 +405,18 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.migrate(create) == "CREATE INDEX posts$main ON posts (category_id, permalink)"
   end
 
+  test "create index without explicit name" do
+    create = {:create, Index.new(table: :posts, columns: [:category_id, :permalink])}
+    assert SQL.migrate(create) == "CREATE INDEX posts_category_id_permalink_index ON posts (category_id, permalink)"
+  end
+
   test "drop index" do
     drop = {:drop, Index.new(name: "posts$main")}
     assert SQL.migrate(drop) == "DROP INDEX posts$main"
+  end
+
+  test "drop index without explicit name" do
+    drop = {:drop, Index.new(table: :posts, columns: [:name])}
+    assert SQL.migrate(drop) == "DROP INDEX posts_name_index"
   end
 end
