@@ -29,7 +29,7 @@ defmodule Ecto.Integration.MigrationsTest do
   end
 
   @good_migration """
-    defmodule Ecto.MigrationTest.GoodMigration~B do
+    defmodule ~s do
       use Ecto.Migration
 
       def up do
@@ -38,13 +38,13 @@ defmodule Ecto.Integration.MigrationsTest do
       end
 
       def down do
-        []
+        [ "DELETE FROM migrations_test WHERE id IN ( SELECT id FROM migrations_test LIMIT 1 )" ]
       end
     end
   """
 
   @bad_migration """
-    defmodule Ecto.MigrationTest.BadMigration~B do
+    defmodule ~s do
       use Ecto.Migration
 
       def up do
@@ -77,27 +77,111 @@ defmodule Ecto.Integration.MigrationsTest do
     end
   end
 
-  test "run all migrations" do
+  test "run up all migrations" do
     in_tmp fn path ->
       create_migration(42, @good_migration)
       create_migration(43, @good_migration)
-      assert [42, 43] = run_up(TestRepo, path)
+      assert [42, 43] = run(TestRepo, path, :up, { :all, true })
 
       create_migration(44, @good_migration)
-      assert [44] = run_up(TestRepo, path)
+      assert [44] = run(TestRepo, path, :up, { :all, true })
 
-      assert [] = run_up(TestRepo, path)
+      assert [] = run(TestRepo, path, :up, { :all, true })
 
       assert Postgrex.Result[num_rows: 3] =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test")
     end
   end
 
+  test "run up to migration" do
+    in_tmp fn path ->
+      create_migration(45, @good_migration)
+      create_migration(46, @good_migration)
+      assert [45] = run(TestRepo, path, :up, { :to, 45 })
+
+      assert Postgrex.Result[num_rows: 1] =
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+
+      assert [46] = run(TestRepo, path, :up, { :to, 46 })
+    end
+  end
+
+  test "run up 1 migration" do
+    in_tmp fn path ->
+      create_migration(47, @good_migration)
+      create_migration(48, @good_migration)
+      assert [47] = run(TestRepo, path, :up, { :step, 1 })
+
+      assert Postgrex.Result[num_rows: 1] =
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+
+      assert [48] = run(TestRepo, path, :up, { :to, 48 })
+    end
+  end
+
+  test "run down 1 migration" do
+    in_tmp fn path ->
+      migrations = [
+        create_migration(49, @good_migration),
+        create_migration(50, @good_migration),
+      ]
+      assert [49, 50] = run(TestRepo, path, :up, { :all, true })
+      purge migrations
+
+      assert [50] = run(TestRepo, path, :down, { :step, 1 })
+      purge migrations
+
+      assert Postgrex.Result[num_rows: 1] =
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+
+      assert [50] = run(TestRepo, path, :up, { :to, 50 })
+    end
+  end
+
+  test "run down to migration" do
+    in_tmp fn path ->
+      migrations = [
+        create_migration(51, @good_migration),
+        create_migration(52, @good_migration),
+      ]
+
+      assert [51, 52] = run(TestRepo, path, :up, { :all, true })
+      purge migrations
+
+      assert [52] = run(TestRepo, path, :down, { :to, 52 })
+      purge migrations
+
+      assert Postgrex.Result[num_rows: 1] =
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+
+      assert [52] = run(TestRepo, path, :up, { :to, 52 })
+    end
+  end
+
+  test "run down all migrations" do
+    in_tmp fn path ->
+      migrations = [
+        create_migration(53, @good_migration),
+        create_migration(54, @good_migration),
+      ]
+      assert [53, 54] = run(TestRepo, path, :up, { :all, true })
+      purge migrations
+
+      assert [54, 53] = run(TestRepo, path, :down, { :all, true })
+      purge migrations
+
+      assert Postgrex.Result[num_rows: 0] =
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+
+      assert [53, 54] = run(TestRepo, path, :up, { :all, true })
+    end
+  end
+
   test "bad migration raises" do
     in_tmp fn path ->
-      create_migration(42, @bad_migration)
+      create_migration(55, @bad_migration)
       assert_raise Postgrex.Error, fn ->
-        run_up(TestRepo, path)
+        run(TestRepo, path, :up, { :all, true })
       end
     end
   end
@@ -107,6 +191,17 @@ defmodule Ecto.Integration.MigrationsTest do
   end
 
   defp create_migration(num, contents) do
-    File.write!("#{num}_migration.exs", :io_lib.format(contents, [num]))
+    migration = Module.concat(__MODULE__, "Migration#{num}")
+    File.write!("#{num}_migration.exs", :io_lib.format(contents, [migration]))
+    migration
+  end
+
+  defp purge(modules) do
+    modules
+      |> List.wrap
+      |> Enum.each( fn m ->
+           :code.delete m
+           :code.purge m
+         end )
   end
 end

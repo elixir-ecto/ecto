@@ -3,6 +3,8 @@ defmodule Ecto.MigratorTest do
 
   import Support.FileHelpers
 
+  import Ecto.Migrator
+
   defmodule ProcessRepo do
     @behaviour Ecto.Adapter.Migrations
 
@@ -41,33 +43,19 @@ defmodule Ecto.MigratorTest do
   end
 
   test "up invokes the repository adapter with up commands" do
-    assert Ecto.Migrator.up(ProcessRepo, 0, Migration) == :ok
-    assert Ecto.Migrator.up(ProcessRepo, 1, Migration) == :already_up
+    assert up(ProcessRepo, 0, Migration) == :ok
+    assert up(ProcessRepo, 1, Migration) == :already_up
   end
 
   test "down invokes the repository adapter with down commands" do
-    assert Ecto.Migrator.down(ProcessRepo, 0, Migration) == :already_down
-    assert Ecto.Migrator.down(ProcessRepo, 1, Migration) == :ok
-  end
-
-  test "run_up runs all migrations inside a directory" do
-    in_tmp fn path ->
-      create_migration "13_sample.exs"
-      assert Ecto.Migrator.run_up(ProcessRepo, path) == [13]
-    end
-  end
-
-  test "run_up skip migrations that are already up" do
-    in_tmp fn path ->
-      create_migration "1_sample.exs"
-      assert Ecto.Migrator.run_up(ProcessRepo, path) == []
-    end
+    assert down(ProcessRepo, 0, Migration) == :already_down
+    assert down(ProcessRepo, 1, Migration) == :ok
   end
 
   test "expects files starting with an integer" do
     in_tmp fn path ->
       create_migration "a_sample.exs"
-      assert Ecto.Migrator.run_up(ProcessRepo, path) == []
+      assert run(ProcessRepo, path, :up, { :all, true }) == []
     end
   end
 
@@ -75,7 +63,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       File.write! "13_sample.exs", ":ok"
       assert_raise Ecto.MigrationError, "file 13_sample.exs does not contain any Ecto.Migration", fn ->
-        Ecto.Migrator.run_up(ProcessRepo, path)
+        run(ProcessRepo, path, :up, { :all, true })
       end
     end
   end
@@ -85,8 +73,71 @@ defmodule Ecto.MigratorTest do
       create_migration "13_hello.exs"
       create_migration "13_other.exs"
       assert_raise Ecto.MigrationError, "migrations can't be executed, version 13 is duplicated", fn ->
-        Ecto.Migrator.run_up(ProcessRepo, path)
+        run(ProcessRepo, path, :up, { :all, true })
       end
+    end
+  end
+
+  test "upwards migrations skips migrations that are already up" do
+    in_tmp fn path ->
+      create_migration "1_sample.exs"
+      assert run(ProcessRepo, path, :up, { :all, true }) == []
+    end
+  end
+
+  test "downwards migrations skips migrations that are already down" do
+    in_tmp fn path ->
+      create_migration "1_sample.exs"
+      create_migration "4_sample.exs"
+      assert run(ProcessRepo, path, :down, { :all, true }) == [1]
+    end
+  end
+
+  test "stepwise migrations stop before all have been run" do
+    in_tmp fn path ->
+      create_migration "13_step_premature_end.exs"
+      create_migration "14_step_premature_end.exs"
+      assert run(ProcessRepo, path, :up, { :step, 1 }) == [13]
+    end
+  end
+
+  test "stepwise migrations stop at the number of available migrations" do
+    in_tmp fn path ->
+      create_migration "13_step_to_the_end.exs"
+      create_migration "14_step_to_the_end.exs"
+      assert run(ProcessRepo, path, :up, { :step, 2 }) == [13, 14]
+    end
+  end
+
+  test "stepwise migrations stop even if asked to exceed available" do
+    in_tmp fn path ->
+      create_migration "13_step_past_the_end.exs"
+      create_migration "14_step_past_the_end.exs"
+      assert run(ProcessRepo, path, :up, { :step, 3 }) == [13, 14]
+    end
+  end
+
+  test "version migrations stop before all have been run" do
+    in_tmp fn path ->
+      create_migration "13_version_premature_end.exs"
+      create_migration "14_version_premature_end.exs"
+      assert run(ProcessRepo, path, :up, { :to, 13 }) == [13]
+    end
+  end
+
+  test "version migrations stop at the number of available migrations" do
+    in_tmp fn path ->
+      create_migration "13_version_to_the_end.exs"
+      create_migration "14_version_to_the_end.exs"
+      assert run(ProcessRepo, path, :up, { :to, 14 }) == [13, 14]
+    end
+  end
+
+  test "version migrations stop even if asked to exceed available" do
+    in_tmp fn path ->
+      create_migration "13_version_past_the_end.exs"
+      create_migration "14_version_past_the_end.exs"
+      assert run(ProcessRepo, path, :up, { :to, 15 }) == [13, 14]
     end
   end
 
