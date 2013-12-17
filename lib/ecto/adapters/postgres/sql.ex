@@ -90,7 +90,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
     zipped_sql = Enum.map_join(zipped, ", ", fn { k, v } ->
       "#{quote_column(k)} = #{literal(v)}"
-      "\"#{k}\" = #{literal(v)}"
     end)
 
     "UPDATE #{quote_table(table)} SET " <> zipped_sql <> "\n" <>
