@@ -1,4 +1,4 @@
-defmodule Ecto.Migration.BidirectionalRunner do
+defmodule Ecto.Migration.Runner do
   use GenServer.Behaviour
 
   alias Ecto.Migration.Ast.Table
@@ -7,23 +7,23 @@ defmodule Ecto.Migration.BidirectionalRunner do
   @server_name :migration_runner
   @full_name {:local, @server_name}
 
-  def start_link do
-    :gen_server.start_link(@full_name, __MODULE__, :up, [])
+  def start_link(repo) do
+    :gen_server.start_link(@full_name, __MODULE__, {:up, repo}, [])
   end
 
-  def handle_call({:direction, direction}, _from, _state) do
-    {:reply, :ok, direction}
+  def handle_call({:direction, direction}, _from, {_, repo}) do
+    {:reply, :ok, {direction, repo}}
   end
 
-  def handle_call({:run, command}, _from, :up) do
-    {:reply, command, :up}
+  def handle_call({:execute, command}, _from, state={:up, repo}) do
+    {:reply, repo.adapter.migrate(repo, command), state}
   end
 
-  def handle_call({:run, command}, _from, state=:down) do
+  def handle_call({:execute, command}, _from, state={:down, repo}) do
     reversed = reverse(command)
 
     if reversed do
-      {:reply, reversed, state}
+      {:reply, repo.adapter.migrate(repo, reversed), state}
     else
       {:reply, :not_reversible, state}
     end
@@ -33,8 +33,8 @@ defmodule Ecto.Migration.BidirectionalRunner do
     call {:direction, direction}
   end
 
-  def run(command) do
-    call {:run, command}
+  def execute(command) do
+    call {:execute, command}
   end
 
   defp call(message) do
