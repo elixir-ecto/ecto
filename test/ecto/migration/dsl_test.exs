@@ -6,20 +6,20 @@ defmodule Ecto.Migration.DslTest do
 
   import Ecto.Migration.Dsl
 
-  defmodule MockBidirectionalRunner do
+  defmodule MockRunner do
     use GenServer.Behaviour
 
     def start_link do
       :gen_server.start_link({:local, :migration_runner}, __MODULE__, [], [])
     end
 
-    def handle_call({:run, command}, _from, state) do
+    def handle_call({:execute, command}, _from, state) do
       {:reply, {:executed, command}, state}
     end
   end
 
   setup_all do
-    {:ok, pid} = MockBidirectionalRunner.start_link
+    {:ok, pid} = MockRunner.start_link
     {:ok, pid: pid}
   end
 

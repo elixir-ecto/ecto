@@ -2,7 +2,7 @@ defmodule Ecto.Migration.Dsl do
 
   alias Ecto.Migration.Ast.Table
   alias Ecto.Migration.Ast.Index
-  alias Ecto.Migration.BidirectionalRunner
+  alias Ecto.Migration.Runner
 
   defmacro create(object, do: block) do
     commands = case block do
@@ -49,7 +49,7 @@ defmodule Ecto.Migration.Dsl do
   end
 
   def execute(command) do
-    BidirectionalRunner.run command
+    Runner.execute command
   end
 
   def add(column, type, opts // []) do
