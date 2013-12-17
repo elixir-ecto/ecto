@@ -20,6 +20,9 @@ defmodule Ecto.MigratorTest do
       if id in versions, do: :ok, else: :already_down
     end
 
+    def check_migration_version(__MODULE__, _version), do: nil
+    def execute_migration(__MODULE__, _command), do: nil
+
     def migrated_versions(__MODULE__) do
       Process.get(:migrated_versions)
     end
