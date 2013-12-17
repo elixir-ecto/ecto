@@ -395,8 +395,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "create table" do
     create = {:create, Table.new(name: :posts),
+               [{:add, :id, :primary_key, []}],
                [{:add, :title, :string, []}]}
-    assert SQL.migrate(create) == "CREATE TABLE posts (title varchar)"
+    assert SQL.migrate(create) == "CREATE TABLE posts (id serial primary key, title varchar)"
   end
 
   test "drop table" do

@@ -172,6 +172,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp column_change({:rename, from, to}),          do: "RENAME COLUMN #{from} TO #{to}"
 
   defp column_type(:string), do: "varchar"
+  defp column_type(:primary_key), do: "serial primary key"
   defp column_type(:integer), do: "integer"
 
   defp select(expr, sources) do
