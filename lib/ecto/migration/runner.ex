@@ -16,7 +16,7 @@ defmodule Ecto.Migration.Runner do
   end
 
   def handle_call({:execute, command}, _from, state={:up, repo}) do
-    {:reply, repo.adapter.migrate(repo, command), state}
+    {:reply, repo.adapter.execute_migration(repo, command), state}
   end
 
   def handle_call({:execute, command}, _from, state={:down, repo}) do
