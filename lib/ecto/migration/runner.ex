@@ -23,7 +23,7 @@ defmodule Ecto.Migration.Runner do
     reversed = reverse(command)
 
     if reversed do
-      {:reply, repo.adapter.migrate(repo, reversed), state}
+      {:reply, repo.adapter.execute_migration(repo, reversed), state}
     else
       {:reply, :not_reversible, state}
     end

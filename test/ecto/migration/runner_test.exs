@@ -6,7 +6,7 @@ defmodule Ecto.Migration.RunnerTest do
   alias Ecto.Migration.Ast.Index
 
   defmodule MockAdapter do
-    def migrate(_repo, command) do
+    def execute_migration(_repo, command) do
       {:migrated, command}
     end
   end
