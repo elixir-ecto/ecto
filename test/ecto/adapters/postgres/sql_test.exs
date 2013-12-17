@@ -389,6 +389,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   alias Ecto.Migration.Ast.Table
   alias Ecto.Migration.Ast.Index
 
+  test "executing a string during migration" do
+    assert SQL.migrate("example") == "example"
+  end
+
   test "create table" do
     create = {:create, Table.new(name: :posts),
                [{:add, :title, :string, []}]}

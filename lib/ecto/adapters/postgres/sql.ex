@@ -154,6 +154,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "ALTER TABLE #{table.name} (#{column_changes(changes)})"
   end
 
+  def migrate(default), do: default
+
   defp column_definitions(columns) do
     Enum.map_join(columns, ", ", &column_definition/1)
   end
