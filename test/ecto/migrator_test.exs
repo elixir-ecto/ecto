@@ -10,18 +10,10 @@ defmodule Ecto.MigratorTest do
       __MODULE__
     end
 
-    def insert_migration_version(__MODULE__, id) do
-      versions = migrated_versions(__MODULE__)
-      if id in versions, do: :already_up, else: :ok
-    end
-
-    def delete_migration_version(__MODULE__, id) do
-      versions = migrated_versions(__MODULE__)
-      if id in versions, do: :ok, else: :already_down
-    end
-
-    def check_migration_version(__MODULE__, _version), do: nil
-    def execute_migration(__MODULE__, _command), do: nil
+    def insert_migration_version(__MODULE__, _version), do: nil
+    def delete_migration_version(__MODULE__, _version), do: nil
+    def check_migration_version(__MODULE__, _version),  do: nil
+    def execute_migration(__MODULE__, _command),        do: nil
 
     def migrated_versions(__MODULE__) do
       Process.get(:migrated_versions)
@@ -75,11 +67,9 @@ defmodule Ecto.MigratorTest do
 
   test "up invokes the repository adapter with up commands" do
     assert Ecto.Migrator.up(ProcessRepo, 0, Migration) == :ok
-    assert Ecto.Migrator.up(ProcessRepo, 1, Migration) == :already_up
   end
 
   test "down invokes the repository adapter with down commands" do
-    assert Ecto.Migrator.down(ProcessRepo, 0, Migration) == :already_down
     assert Ecto.Migrator.down(ProcessRepo, 1, Migration) == :ok
   end
 

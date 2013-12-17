@@ -37,6 +37,7 @@ defmodule Ecto.Migrator do
 
       repo.adapter.insert_migration_version(repo, version)
     end
+    :ok
   end
 
   @doc """
@@ -54,6 +55,7 @@ defmodule Ecto.Migrator do
 
       repo.adapter.delete_migration_version(repo, version)
     end
+    :ok
   end
 
   @doc """
