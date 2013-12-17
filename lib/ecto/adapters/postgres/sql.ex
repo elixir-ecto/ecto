@@ -150,12 +150,27 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "DROP INDEX #{index.format_name}"
   end
 
+  def migrate({:alter, Table[]=table, changes}) do
+    "ALTER TABLE #{table.name} (#{column_changes(changes)})"
+  end
+
   defp column_definitions(columns) do
     Enum.map_join(columns, ", ", &column_definition/1)
   end
 
   defp column_definition({:add, name, type, opts}), do: "#{name} #{column_type(type)}"
-  defp column_type(:string), do: "VARCHAR"
+
+  defp column_changes(columns) do
+    Enum.map_join(columns, ", ", &column_change/1)
+  end
+
+  defp column_change({:add, name, type, _opts}),    do: "ADD COLUMN #{name} #{column_type(type)}"
+  defp column_change({:modify, name, type, _opts}), do: "ALTER COLUMN #{name} TYPE #{column_type(type)}"
+  defp column_change({:remove, name}),              do: "DROP COLUMN #{name}"
+  defp column_change({:rename, from, to}),          do: "RENAME COLUMN #{from} TO #{to}"
+
+  defp column_type(:string), do: "varchar"
+  defp column_type(:integer), do: "integer"
 
   defp select(expr, sources) do
     QueryExpr[expr: expr] = Normalizer.normalize_select(expr)

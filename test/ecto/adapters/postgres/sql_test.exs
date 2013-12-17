@@ -392,7 +392,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "create table" do
     create = {:create, Table.new(name: :posts),
                [{:add, :title, :string, []}]}
-    assert SQL.migrate(create) == "CREATE TABLE posts (title VARCHAR)"
+    assert SQL.migrate(create) == "CREATE TABLE posts (title varchar)"
   end
 
   test "drop table" do
@@ -423,5 +423,15 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "drop index without explicit name" do
     drop = {:drop, Index.new(table: :posts, columns: [:name])}
     assert SQL.migrate(drop) == "DROP INDEX posts_name_index"
+  end
+
+  test "alter table" do
+    alter = {:alter, Table.new(name: :posts),
+               [{:add, :title, :string, []},
+                {:modify, :price, :integer, []},
+                {:remove, :summary},
+                {:rename, :cat_id, :category_id}]}
+
+    assert SQL.migrate(alter) == "ALTER TABLE posts (ADD COLUMN title varchar, ALTER COLUMN price TYPE integer, DROP COLUMN summary, RENAME COLUMN cat_id TO category_id)"
   end
 end
