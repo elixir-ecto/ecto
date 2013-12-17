@@ -1,7 +1,7 @@
 defmodule Ecto.Migration.Dsl do
 
-  alias Ecto.Migration.Ast.Table
-  alias Ecto.Migration.Ast.Index
+  alias Ecto.Migration.Table
+  alias Ecto.Migration.Index
   alias Ecto.Migration.Runner
 
   defmacro create(object, do: block) do

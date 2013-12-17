@@ -1,8 +1,8 @@
 defmodule Ecto.Migration.Runner do
   use GenServer.Behaviour
 
-  alias Ecto.Migration.Ast.Table
-  alias Ecto.Migration.Ast.Index
+  alias Ecto.Migration.Table
+  alias Ecto.Migration.Index
 
   @server_name :migration_runner
   @full_name {:local, @server_name}

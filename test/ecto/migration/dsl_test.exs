@@ -1,8 +1,8 @@
 defmodule Ecto.Migration.DslTest do
   use ExUnit.Case, async: false
 
-  alias Ecto.Migration.Ast.Table
-  alias Ecto.Migration.Ast.Index
+  alias Ecto.Migration.Table
+  alias Ecto.Migration.Index
 
   import Ecto.Migration.Dsl
 

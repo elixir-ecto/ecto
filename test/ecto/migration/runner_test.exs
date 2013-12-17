@@ -2,8 +2,8 @@ defmodule Ecto.Migration.RunnerTest do
   use ExUnit.Case, async: false
 
   alias Ecto.Migration.Runner
-  alias Ecto.Migration.Ast.Table
-  alias Ecto.Migration.Ast.Index
+  alias Ecto.Migration.Table
+  alias Ecto.Migration.Index
 
   defmodule MockAdapter do
     def execute_migration(_repo, command) do

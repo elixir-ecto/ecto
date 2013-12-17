@@ -10,8 +10,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
   alias Ecto.Query.Normalizer
-  alias Ecto.Migration.Ast.Table
-  alias Ecto.Migration.Ast.Index
+  alias Ecto.Migration.Table
+  alias Ecto.Migration.Index
 
   unary_ops = [ -: "-", +: "+" ]
 

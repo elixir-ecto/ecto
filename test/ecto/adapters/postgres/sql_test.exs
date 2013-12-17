@@ -386,8 +386,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.insert(model) == "INSERT INTO model (id, x, y)\nVALUES (123, 0, 1)"
   end
 
-  alias Ecto.Migration.Ast.Table
-  alias Ecto.Migration.Ast.Index
+  alias Ecto.Migration.Table
+  alias Ecto.Migration.Index
 
   test "executing a string during migration" do
     assert SQL.migrate("example") == "example"
