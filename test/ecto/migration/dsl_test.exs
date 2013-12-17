@@ -1,12 +1,12 @@
 defmodule Ecto.Migration.DslTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   alias Ecto.Migration.Ast.Table
   alias Ecto.Migration.Ast.Index
 
   import Ecto.Migration.Dsl
 
-  defmodule MockMigrationRunner do
+  defmodule MockBidirectionalRunner do
     use GenServer.Behaviour
 
     def start_link do
@@ -18,8 +18,13 @@ defmodule Ecto.Migration.DslTest do
     end
   end
 
-  setup do
-    MockMigrationRunner.start_link
+  setup_all do
+    {:ok, pid} = MockBidirectionalRunner.start_link
+    {:ok, pid: pid}
+  end
+
+  teardown_all context do
+    :erlang.exit(context[:pid], :kill)
     :ok
   end
 

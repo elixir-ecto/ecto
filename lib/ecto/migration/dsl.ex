@@ -1,18 +1,8 @@
 defmodule Ecto.Migration.Dsl do
 
-  defmodule MigrationRunner do
-    use GenServer.Behaviour
-
-    @server_name :migration_runner
-    @full_name {:local, @server_name}
-
-    def run(command) do
-      :gen_server.call(@server_name, {:run, command})
-    end
-  end
-
   alias Ecto.Migration.Ast.Table
   alias Ecto.Migration.Ast.Index
+  alias Ecto.Migration.BidirectionalRunner
 
   defmacro create(object, do: block) do
     commands = case block do
@@ -59,7 +49,7 @@ defmodule Ecto.Migration.Dsl do
   end
 
   def execute(command) do
-    MigrationRunner.run command
+    BidirectionalRunner.run command
   end
 
   def add(column, type, opts // []) do
