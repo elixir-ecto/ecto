@@ -142,7 +142,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   def migrate({:create, Index[]=index}) do
-    "CREATE INDEX #{index.name} ON #{index.table_name} (#{Enum.join(index.columns, ", ")})"
+    "CREATE INDEX #{index.name} ON #{index.table} (#{Enum.join(index.columns, ", ")})"
   end
 
   def migrate({:drop, Index[name: name]}) do
