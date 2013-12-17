@@ -18,6 +18,11 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
   end
 
+  teardown_all do
+    :erlang.exit(:erlang.whereis(:migration_runner), :kill)
+    :ok
+  end
+
   test "runs the migrator" do
     run [to_string(Repo)], fn _, _ ->
       Process.put(:migrated, true)
