@@ -20,7 +20,7 @@ defmodule Ecto.Migrator do
 
   """
 
-  @type strategy :: { atom, any }
+  @type strategy :: [all: true, to: non_neg_integer, step: non_neg_integer]
 
   @doc """
   Runs an up migration on the given repository.
@@ -46,40 +46,47 @@ defmodule Ecto.Migrator do
   @doc """
   Apply migrations in a directory to a repository with given strategy.
 
-  Strategies are two-tuples of a type and a parameter.
+  A strategy must be pass as an option. The available strategy types are:
 
-  Available strategy types are:
   * `:all`  runs all available if `true`
   * `:step` runs the specific number of migrations
   * `:to`   runs all until the supplied version is reached
+
   """
-
-  # To extend Migrator.run with different strategies,
-  # define a `run` clause that matches on it and insert
-  # the strategy type into the `strategies` function above.
-
   @spec run(Ecto.Repo.t, binary, atom, strategy) :: [integer]
-  def run(repo, directory, direction, strategy)
+  def run(repo, directory, direction, opts) do
+    cond do
+      opts[:all] ->
+        run_all(repo, directory, direction)
+      to = opts[:to] ->
+        run_to(repo, directory, direction, to)
+      step = opts[:step] ->
+        run_step(repo, directory, direction, step)
+      true ->
+        raise ArgumentError, message: "expected one of :all, :to, or :step strategies"
+    end
+  end
 
-  def run(repo, directory, direction, {:to, target_version}) do
+  defp run_to(repo, directory, direction, target) do
     within_target_version? = fn
       { version, _ }, target, :up ->
         version <= target
       { version, _ }, target, :down ->
         version >= target
     end
+
     pending_in_direction(repo, directory, direction)
-      |> Enum.take_while(&(within_target_version?.(&1, target_version, direction)))
+      |> Enum.take_while(&(within_target_version?.(&1, target, direction)))
       |> migrate(direction, repo)
   end
 
-  def run(repo, directory, direction, {:step, count}) do
+  defp run_step(repo, directory, direction, count) do
     pending_in_direction(repo, directory, direction)
       |> Enum.take(count)
       |> migrate(direction, repo)
   end
 
-  def run(repo, directory, direction, {:all, true}) do
+  defp run_all(repo, directory, direction) do
     pending_in_direction(repo, directory, direction)
       |> migrate(direction, repo)
   end

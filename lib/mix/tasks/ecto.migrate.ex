@@ -33,7 +33,11 @@ defmodule Mix.Tasks.Ecto.Migrate do
     { repo, _ } = parse_repo(args)
     ensure_repo(repo)
     ensure_started(repo)
-    { strategy, _ } = parse_strategy(opts) # We don't use other opts atm
-    migrator.(repo, migrations_path(repo), :up, strategy || { :all, true })
+
+    unless opts[:to] || opts[:step] || opts[:all] do
+      opts = Keyword.put(opts, :all, true)
+    end
+
+    migrator.(repo, migrations_path(repo), :up, opts)
   end
 end
