@@ -24,16 +24,16 @@ defmodule Ecto.Migration.DslTest do
   end
 
   test "executing" do
-    assert execute("a command") == {:executed, "a command"}
+    assert execute("a response") == {:executed, "a response"}
   end
 
   test "creating table" do
-    command = create table(:products, key: true) do
+    response = create table(:products, key: true) do
       add :name, :string
       timestamps
     end
 
-    assert command == {:executed, {:create, Table[name: :products, key: true],
+    assert response == {:executed, {:create, Table[name: :products, key: true],
                         [{:add, :id, :primary_key, []},
                          {:add, :name, :string, []},
                          {:add, :created_at, :datetime, []},
@@ -41,32 +41,32 @@ defmodule Ecto.Migration.DslTest do
   end
 
   test "dropping table" do
-    command = drop table(:products)
+    response = drop table(:products)
 
-    assert command == {:executed, {:drop, Table.new(name: :products)}}
+    assert response == {:executed, {:drop, Table.new(name: :products)}}
   end
 
   test "creating index" do
-    command = create index(:products, [:name], unique: true)
+    response = create index(:products, [:name], unique: true)
 
-    assert command == {:executed, {:create, Index.new(table: :products, columns: [:name], unique: true)}}
+    assert response == {:executed, {:create, Index.new(table: :products, columns: [:name], unique: true)}}
   end
 
   test "dropping index" do
-    command = drop index([:name], on: :products)
+    response = drop index([:name], on: :products)
 
-    assert command == {:executed, {:drop, Index.new(table: :products, columns: [:name], unique: nil)}}
+    assert response == {:executed, {:drop, Index.new(table: :products, columns: [:name], unique: nil)}}
   end
 
   test "alter table" do
-    command = alter table(:products) do
+    response = alter table(:products) do
       add :name, :string, default: 'Untitled'
       modify :price, :integer, default: 99
       remove :summary
       rename :name, :title
     end
 
-    assert command == {:executed, {:alter, Table[name: :products],
+    assert response == {:executed, {:alter, Table[name: :products],
                         [{:add, :name, :string, [default: 'Untitled']},
                          {:modify, :price, :integer, [default: 99]},
                          {:remove, :summary},
