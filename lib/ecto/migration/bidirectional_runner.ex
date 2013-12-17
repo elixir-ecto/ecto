@@ -35,8 +35,20 @@ defmodule Ecto.Migration.BidirectionalRunner do
     :gen_server.call(@server_name, message)
   end
 
+  defp reverse([]), do: []
+  defp reverse([h|t]), do: [reverse(h)|reverse(t)]
   defp reverse({:create, Table[]=table, _columns}), do: {:drop, table}
   defp reverse({:create, Index[]=index}),           do: {:drop, index}
-  # TODO: rename, alter (add, rename)
+  defp reverse({:add,    name, _type, _opts}),      do: {:remove, name}
+  defp reverse({:rename, from, to}),                do: {:rename, to, from}
+  defp reverse({:alter,  Table[]=table, changes}) do
+    reversed = reverse(changes)
+
+    if reversed |> Enum.any? &(&1 == :not_reversable) do
+      :not_reversable
+    else
+      {:alter, table, reversed}
+    end
+  end
   defp reverse(_), do: :not_reversable
 end
