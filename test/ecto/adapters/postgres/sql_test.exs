@@ -436,6 +436,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
                 {:remove, :summary},
                 {:rename, :cat_id, :category_id}]}
 
-    assert SQL.migrate(alter) == "ALTER TABLE posts (ADD COLUMN title varchar, ALTER COLUMN price TYPE integer, DROP COLUMN summary, RENAME COLUMN cat_id TO category_id)"
+    assert SQL.migrate(alter) == "ALTER TABLE posts ADD COLUMN title varchar, ALTER COLUMN price TYPE integer, DROP COLUMN summary, RENAME COLUMN cat_id TO category_id"
   end
 end

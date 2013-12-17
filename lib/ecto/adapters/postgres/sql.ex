@@ -151,7 +151,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   def migrate({:alter, Table[]=table, changes}) do
-    "ALTER TABLE #{table.name} (#{column_changes(changes)})"
+    "ALTER TABLE #{table.name} #{column_changes(changes)}"
   end
 
   def migrate(default), do: default
