@@ -1,4 +1,6 @@
 defmodule Ecto.Migrator do
+  alias Ecto.Migration.Runner
+
   @moduledoc """
   This module provides the migration API.
 
@@ -24,16 +26,34 @@ defmodule Ecto.Migrator do
   Runs an up migration on the given repository.
   """
   def up(repo, version, module) do
-    commands = List.wrap(module.up)
-    repo.adapter.migrate_up(repo, version, commands)
+    repo.transaction fn ->
+      Runner.direction(:up)
+
+      if function_exported?(module, :up, 0) do
+        module.up
+      else
+        module.change
+      end
+
+      repo.adapter.insert_migration_version(repo, version)
+    end
   end
 
   @doc """
   Runs a down migration on the given repository.
   """
   def down(repo, version, module) do
-    commands = List.wrap(module.down)
-    repo.adapter.migrate_down(repo, version, commands)
+    repo.transaction fn ->
+      if function_exported?(module, :down, 0) do
+        Runner.direction(:up)
+        module.down
+      else
+        Runner.direction(:down)
+        module.change
+      end
+
+      repo.adapter.delete_migration_version(repo, version)
+    end
   end
 
   @doc """
@@ -84,8 +104,7 @@ defmodule Ecto.Migrator do
           function_exported?(mod, :__migration__, 0)
         end) || raise_no_migration_in_file(file)
 
-      commands = List.wrap(mod.up)
-      case repo.adapter.migrate_up(repo, version, commands) do
+      case up(repo, version, mod) do
         :already_up ->
           version
         :ok ->

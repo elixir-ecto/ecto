@@ -10,12 +10,12 @@ defmodule Ecto.MigratorTest do
       __MODULE__
     end
 
-    def migrate_up(__MODULE__, id, ["up"]) do
+    def insert_migration_version(__MODULE__, id) do
       versions = migrated_versions(__MODULE__)
       if id in versions, do: :already_up, else: :ok
     end
 
-    def migrate_down(__MODULE__, id, ["down"]) do
+    def delete_migration_version(__MODULE__, id) do
       versions = migrated_versions(__MODULE__)
       if id in versions, do: :ok, else: :already_down
     end
@@ -23,16 +23,46 @@ defmodule Ecto.MigratorTest do
     def migrated_versions(__MODULE__) do
       Process.get(:migrated_versions)
     end
+
+    def transaction(fun), do: fun.()
   end
 
   defmodule Migration do
+    use Ecto.Migration
+
     def up do
-      "up"
+      execute "up"
     end
 
     def down do
-      "down"
+      execute "down"
     end
+  end
+
+  defmodule MockRunner do
+    use GenServer.Behaviour
+
+    def start_link do
+      :gen_server.start_link({:local, :migration_runner}, __MODULE__, [], [])
+    end
+
+    def handle_call({:direction, direction}, _from, state) do
+      {:reply, {:changed, direction}, state}
+    end
+
+    def handle_call({:execute, command}, _from, state) do
+      {:reply, {:executed, command}, state}
+    end
+  end
+
+  setup_all do
+    {:ok, pid} = MockRunner.start_link
+    {:ok, pid: pid}
+  end
+
+  teardown_all context do
+    :erlang.exit(context[:pid], :kill)
+    :ok
   end
 
   setup do
@@ -96,11 +126,13 @@ defmodule Ecto.MigratorTest do
       use Ecto.Migration
 
       def up do
-        "up"
+        create table(:products) do
+          add :name, :string
+        end
       end
 
       def down do
-        "down"
+        drop table(:products)
       end
     end
     """
