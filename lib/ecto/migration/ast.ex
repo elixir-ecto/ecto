@@ -6,9 +6,9 @@ defmodule Ecto.Migration.Ast do
     def format_name(index) do
       case index.name do
         nil -> [index.table, index.columns, "index"]
-                 |> List.flatten
-                 |> Enum.join("_")
-        _ -> index.name
+               |> List.flatten
+               |> Enum.join("_")
+        _   -> index.name
       end
     end
   end
