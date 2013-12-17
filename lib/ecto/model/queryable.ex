@@ -47,22 +47,56 @@ defmodule Ecto.Model.Queryable do
         ...
       end
 
-  Or by passing a tuple in the format `{ field, type, opts }`. If your
-  application wants to use another primary key as default application wise,
-  that can be achieved by wrapping the model functionality into your own
-  module and setting the `@queryable_defaults` attribute:
+  Or by passing a tuple in the format `{ field, type, opts }`:
+
+      queryable "weather", primary_key: { :custom_field, :string, [] } do
+        ...
+      end
+
+  Global defaults can be specified via the `@queryable_defaults` attribute.
+  This is useful if you want to use a different default primary key
+  through your entire application.
+
+  The supported options are:
+
+  * `primary_key` - either `false`, or a `{ field, type, opts }` tuple
+  * `foreign_key_type` - sets the type for any belongs_to associations.
+                         This can be overrided using the `:type` option
+                         to the `belongs_to` statement. Defaults to
+                         type `:integer`
+
+  Example:
 
       defmodule MyApp.Model do
         defmacro __using__(_) do
           quote do
-            @queryable_defaults primary_key: { :uuid, :string, [] }
+            @queryable_defaults primary_key: { :uuid, :string, [] },
+                                foreign_key_type: :string
             use Ecto.Model
           end
         end
       end
 
-  Now by using `MyApp.Model` you will get the `:uuid` field, with type
-  `:string` as primary key.
+      defmodule MyApp.Post do
+        use MyApp.Model
+        queryable "posts" do
+          has_many :comments, MyApp.Comment
+        end
+      end
+
+      defmodule MyApp.Comment do
+        use MyApp.Model
+        queryable "comments" do
+          belongs_to :post, MyApp.Comment
+        end
+      end
+
+  By using `MyApp.Model`, any `MyApp.Post` and `MyApp.Comment` entities
+  will get the `:uuid` field, with type `:string` as the primary key.
+
+  The `belongs_to` association on `MyApp.Comment` will also now require
+  that `:post_id` be of `:string` type to reference the `:uuid` of a
+  `MyApp.Post` entity.
   """
 
   @doc false
