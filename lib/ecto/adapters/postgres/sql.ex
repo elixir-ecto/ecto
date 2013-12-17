@@ -174,6 +174,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp column_type(:string), do: "varchar"
   defp column_type(:primary_key), do: "serial primary key"
   defp column_type(:integer), do: "integer"
+  defp column_type(:datetime), do: "time"
 
   defp select(expr, sources) do
     QueryExpr[expr: expr] = Normalizer.normalize_select(expr)
