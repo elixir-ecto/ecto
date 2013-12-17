@@ -1,29 +1,30 @@
-defmodule Mix.Tasks.Ecto.Migrate do
+defmodule Mix.Tasks.Ecto.Rollback do
   use Mix.Task
   import Mix.Tasks.Ecto
 
-  @shortdoc "Runs migrations up on a repo"
+  @shortdoc "Reverts migrations down on a repo"
 
   @moduledoc """
-  Runs the pending migrations for the given repository.
+  Reverts applied migrations in the given repository.
 
   Migrations are expected to be found inside the migrations
   directory returned by the priv function defined in the
   repository.
 
-  Runs all pending migrations by default. To migrate up
+  Runs the latest applied migration by default. To roll back to
   to a version number, supply `--to version_number`.
-  To migrate up a specific number of times, use `--step n`.
+  To roll back a specific number of times, use `--step n`.
+  To undo all applied migrations, provide `--all`.
 
   ## Examples
 
-      mix ecto.migrate MyApp.Repo
+      mix ecto.rollback MyApp.Repo
 
-      mix ecto.migrate MyApp.Repo -n 3
-      mix ecto.migrate MyApp.Repo --step 3
+      mix ecto.rollback MyApp.Repo -n 3
+      mix ecto.rollback MyApp.Repo --step 3
 
-      mix ecto.migrate MyApp.Repo -v 20080906120000
-      mix ecto.migrate MyApp.Repo --to 20080906120000
+      mix ecto.rollback MyApp.Repo -v 20080906120000
+      mix ecto.rollback MyApp.Repo --to 20080906120000
 
   """
   def run(args, migrator // &Ecto.Migrator.run/4) do
@@ -34,6 +35,6 @@ defmodule Mix.Tasks.Ecto.Migrate do
     ensure_repo(repo)
     ensure_started(repo)
     { strategy, _ } = parse_strategy(opts) # We don't use other opts atm
-    migrator.(repo, migrations_path(repo), :up, strategy || { :all, true })
+    migrator.(repo, migrations_path(repo), :down, strategy || { :step, 1 })
   end
 end
