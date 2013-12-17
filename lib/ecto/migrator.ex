@@ -40,9 +40,6 @@ defmodule Ecto.Migrator do
     repo.adapter.migrate_down(repo, version, commands)
   end
 
-  @spec strategy_types :: list(atom)
-  def strategy_types, do: [:to, :step, :all]
-
   @doc """
   Apply migrations in a directory to a repository with given strategy.
 
