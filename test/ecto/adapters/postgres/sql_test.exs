@@ -22,6 +22,15 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     end
   end
 
+  defmodule Model3 do
+    use Ecto.Model
+
+    queryable "model3" do
+      field :l1, { :list, :string }
+      field :l2, { :list, :integer }
+    end
+  end
+
   defmodule SomeModel do
     use Ecto.Model
 
@@ -202,9 +211,19 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert query == "INSERT INTO \"model\" (\"x\")\nVALUES (123)\nRETURNING \"id\", \"y\""
   end
 
+  test "insert with list" do
+      query = SQL.insert(Model3.Entity[l1: ["a", "b", "c"], l2: [1, 2, 3]], [:id])
+      assert query == "INSERT INTO model3 (l1, l2)\nVALUES (ARRAY['a', 'b', 'c'], ARRAY[1, 2, 3])\nRETURNING id"
+  end
+
   test "update" do
     query = SQL.update(Model.Entity[id: 42, x: 123, y: "456"])
     assert query == "UPDATE \"model\" SET \"x\" = 123, \"y\" = '456'\nWHERE \"id\" = 42"
+  end
+
+  test "update with list" do
+    query = SQL.update(Model3.Entity[id: 42, l1: ["c", "d"], l2: [4, 5]])
+    assert query == "UPDATE model3 SET l1 = ARRAY['c', 'd'], l2 = ARRAY[4, 5]\nWHERE id = 42"
   end
 
   test "delete" do

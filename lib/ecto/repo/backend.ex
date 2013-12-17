@@ -167,6 +167,7 @@ defmodule Ecto.Repo.Backend do
       type = module.__entity__(:field_type, field)
 
       value_type = case Util.value_to_type(value) do
+        { :ok, { vtype, { :ok, subvtype } } } -> { vtype, subvtype }
         { :ok, vtype } -> vtype
         { :error, reason } -> raise ArgumentError, message: reason
       end
