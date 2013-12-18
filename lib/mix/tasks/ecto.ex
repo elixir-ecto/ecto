@@ -1,4 +1,6 @@
 defmodule Mix.Tasks.Ecto do
+  import Mix.Generator
+
   # Conveniences for writing Mix.Tasks in Ecto.
   @moduledoc false
 
@@ -35,6 +37,28 @@ defmodule Mix.Tasks.Ecto do
         raise Mix.Error, message: "could not load #{inspect repo}, error: #{inspect error}"
     end
   end
+
+  @doc """
+  Create a file and the containing directory.
+  """
+  def create_file_with_dir(file_name, template_fun, locals) do
+    Path.dirname(file_name) |> create_directory
+    create_file file_name, template_fun.(locals)
+    open?(file_name)
+  end
+
+
+  @doc """
+  Creates a simple timestamp for use in generated filesnames
+  """
+  def timestamp do
+    { { y, m, d }, { hh, mm, ss } } = :calendar.universal_time()
+    "#{y}#{pad(m)}#{pad(d)}#{pad(hh)}#{pad(mm)}#{pad(ss)}"
+  end
+
+  defp pad(i) when i < 10, do: << ?0, ?0 + i >>
+  defp pad(i), do: to_string(i)
+
 
   @doc """
   Ensures the given repository is started and running.

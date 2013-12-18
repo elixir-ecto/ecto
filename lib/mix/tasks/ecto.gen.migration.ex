@@ -16,14 +16,12 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   """
   def run(args) do
     case parse_repo(args) do
-      { repo, [name] } ->
+      { repo, [repo_name] } ->
         ensure_repo(repo)
-        path = migrations_path(repo)
-        file = Path.join(path, "#{timestamp}_#{name}.exs")
-        create_directory path
-        create_file file, migration_template(mod: Module.concat([repo, Migrations, camelize(name)]))
+        params = get_params(repo, repo_name)
+        create_file_with_dir params[:file_name], &migration_template/1, params
 
-        if open?(file) && Mix.shell.yes?("Do you want to run this migration?") do
+        if open?(params[:file_name]) && Mix.shell.yes?("Do you want to run this migration?") do
           Mix.Task.run "ecto.migrate", [repo]
         end
       { _repo, _ } ->
@@ -32,16 +30,14 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
     end
   end
 
-  defp timestamp do
-    { { y, m, d }, { hh, mm, ss } } = :calendar.universal_time()
-    "#{y}#{pad(m)}#{pad(d)}#{pad(hh)}#{pad(mm)}#{pad(ss)}"
+  def get_params(repo, repo_name) do
+    [ file_name: Path.join(migrations_path(repo), "#{timestamp}_#{repo_name}.exs"),
+      module_name: Module.concat([repo, Migrations, camelize(repo_name)])
+    ]
   end
 
-  defp pad(i) when i < 10, do: << ?0, ?0 + i >>
-  defp pad(i), do: to_string(i)
-
   embed_template :migration, """
-  defmodule <%= inspect @mod %> do
+  defmodule <%= inspect @module_name %> do
     use Ecto.Migration
 
     def up do

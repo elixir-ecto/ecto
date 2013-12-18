@@ -22,16 +22,10 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Entity do
         ensure_repo(repo)
         params = get_params(repo, model_name, field_specs)
 
-        Path.dirname(params[:file_name]) |> create_directory
-        create_file params[:file_name], model_template([
-          mod: params[:module_name], table: params[:table_name], fields: params[:fields]
-        ])
-        open?(params[:file_name])
+        create_file_with_dir(params[:file_name], &model_template/1, params)
         Mix.Tasks.Compile.run [params[:file_name]]
 
-        Path.dirname(params[:test_file_name]) |> create_directory
-        create_file params[:test_file_name], test_template([ mod: params[:module_name] ])
-        open?(params[:test_file_name])
+        create_file_with_dir(params[:test_file_name], &test_template/1, params)
       { _repo, _ } ->
         raise Mix.Error, message:
               "expected ecto.gen.model.entity to receive the repo and model name, got: #{inspect Enum.join(args, " ")}"
@@ -57,17 +51,17 @@ defmodule Mix.Tasks.Ecto.Gen.Model.Entity do
   end
 
   embed_template :model, """
-  defmodule <%= @mod %> do
+  defmodule <%= @module_name %> do
     use Ecto.Model
 
-    queryable "<%= @table %>" do
+    queryable "<%= @table_name %>" do
       <%= Enum.join(@fields, "\n      ") %>
     end
   end
   """
 
   embed_template :test, """
-  defmodule <%= @mod %>Test do
+  defmodule <%= @module_name %>Test do
     # Test cases interacting with the DB most be async.
     # If your test cases don't, feel free to enable async.
     use ExUnit.Case, async: false
