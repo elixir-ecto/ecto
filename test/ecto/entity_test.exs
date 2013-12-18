@@ -130,7 +130,7 @@ defmodule Ecto.EntityTest do
     has_many :posts, Post
     has_one :author, User
     belongs_to :comment, Comment
-  end
+  end  
 
   test "associations" do
     assert EntityAssocs.__entity__(:association, :not_a_field) == nil
@@ -206,6 +206,26 @@ defmodule Ecto.EntityTest do
 
     r = r.comment({ Comment })
     assert { Comment } = r.comment.get
+  end
+
+  test "belongs_to association foreign_key type" do
+    defmodule ForeignKeyType do
+      use Ecto.Entity
+      belongs_to :comment, Comment, type: :datetime
+    end
+
+    defmodule DefaultForeignKeyType do
+      @queryable_defaults foreign_key_type: :string
+      use Ecto.Model
+
+      queryable "defaults" do
+        ## :type option overrides any @queryable_defaults
+        belongs_to :comment, Comment, type: :interval 
+      end
+    end
+
+    assert ForeignKeyType.__entity__(:field, :comment_id) == [type: :datetime]
+    assert DefaultForeignKeyType.Entity.__entity__(:field, :comment_id) == [type: :interval]
   end
 
   test "association needs foreign_key option if no model" do
