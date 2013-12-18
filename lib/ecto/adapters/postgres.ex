@@ -263,11 +263,6 @@ defmodule Ecto.Adapters.Postgres do
     query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)")
   end
 
-  def check_migration_version(repo, version) do
-    create_migrations_table(repo)
-    query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}")
-  end
-
   def insert_migration_version(repo, version) do
     query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})")
   end

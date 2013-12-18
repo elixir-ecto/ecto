@@ -12,7 +12,6 @@ defmodule Ecto.MigratorTest do
 
     def insert_migration_version(__MODULE__, _version), do: nil
     def delete_migration_version(__MODULE__, _version), do: nil
-    def check_migration_version(__MODULE__, _version),  do: nil
     def execute_migration(__MODULE__, _command),        do: nil
 
     def migrated_versions(__MODULE__) do

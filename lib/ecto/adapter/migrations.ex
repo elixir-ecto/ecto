@@ -11,11 +11,6 @@ defmodule Ecto.Adapter.Migrations  do
   defcallback migrated_versions(Ecto.Repo.t) :: [integer] | no_return
 
   @doc """
-  Checks if a migration version has been run return
-  """
-  defcallback check_migration_version(Ecto.Repo.t, integer) :: :already_ran | no_return
-
-  @doc """
   Inserts record of a migration version
   """
   defcallback insert_migration_version(Ecto.Repo.t, integer) :: :ok | no_return
@@ -26,7 +21,7 @@ defmodule Ecto.Adapter.Migrations  do
   defcallback delete_migration_version(Ecto.Repo.t, integer) :: :ok | no_return
 
   @doc """
-  Executes migrations commands
+  Executes migration commands
   """
   defcallback execute_migration(Ecto.Repo.t, tuple) :: :ok | no_return
 end
