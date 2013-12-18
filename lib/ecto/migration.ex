@@ -13,7 +13,11 @@ defmodule Ecto.Migration do
           if function_exported?(__MODULE__, :up, 0) do
             __MODULE__.up
           else
-            __MODULE__.change
+            if function_exported?(__MODULE__, :change, 0) do
+              __MODULE__.change
+            else
+              raise Ecto.MigrationError.new(message: "#{__MODULE__} does not implement a `up/0` or `change/0` function")
+            end
           end
 
           fun.()
@@ -26,8 +30,12 @@ defmodule Ecto.Migration do
             Runner.direction(:up)
             __MODULE__.down
           else
-            Runner.direction(:down)
-            __MODULE__.change
+            if function_exported?(__MODULE__, :change, 0) do
+              Runner.direction(:down)
+              __MODULE__.change
+            else
+              raise Ecto.MigrationError.new(message: "#{__MODULE__} does not implement a `down/0` or `change/0` function")
+            end
           end
 
           fun.()

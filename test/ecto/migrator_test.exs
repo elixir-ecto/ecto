@@ -44,6 +44,10 @@ defmodule Ecto.MigratorTest do
     end
   end
 
+  defmodule InvalidMigration do
+    use Ecto.Migration
+  end
+
   defmodule MockRunner do
     use GenServer.Behaviour
 
@@ -79,13 +83,26 @@ defmodule Ecto.MigratorTest do
     assert Ecto.Migrator.up(ProcessRepo, 0, Migration) == :ok
     assert Ecto.Migrator.up(ProcessRepo, 1, Migration) == :already_up
     assert Ecto.Migrator.up(ProcessRepo, 0, ReversibleMigration) == :ok
-   end
+  end
 
-   test "down invokes the repository adapter with down commands" do
+  test "down invokes the repository adapter with down commands" do
     assert Ecto.Migrator.down(ProcessRepo, 0, Migration) == :already_down
     assert Ecto.Migrator.down(ProcessRepo, 1, Migration) == :ok
     assert Ecto.Migrator.down(ProcessRepo, 1, ReversibleMigration) == :ok
   end
+
+  test "up raises error when missing up/0 and change/0" do
+    assert_raise Ecto.MigrationError, fn ->
+      Ecto.Migrator.up(ProcessRepo, 0, InvalidMigration)
+    end
+  end
+
+  test "down raises error when missing down/0 and change/0" do
+    assert_raise Ecto.MigrationError, fn ->
+      Ecto.Migrator.down(ProcessRepo, 1, InvalidMigration)
+    end
+  end
+
 
   test "run_up runs all migrations inside a directory" do
     in_tmp fn path ->
