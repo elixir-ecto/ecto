@@ -324,12 +324,7 @@ defmodule Ecto.Entity do
            |> Keyword.put_new(:foreign_key, :"#{name}_id")
 
     foreign_key_type =
-      if nil?(opts[:type]) do
-        global_type = Module.get_attribute(mod, :ecto_foreign_key_type)
-        if nil?(global_type), do: :integer, else: global_type
-      else
-        opts[:type]
-      end
+      opts[:type] || Module.get_attribute(mod, :ecto_foreign_key_type) || :integer
 
     __field__(mod, opts[:foreign_key], foreign_key_type, [])
 
