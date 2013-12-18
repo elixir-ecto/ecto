@@ -67,9 +67,11 @@ defmodule Ecto.MigratorTest do
 
   test "up invokes the repository adapter with up commands" do
     assert Ecto.Migrator.up(ProcessRepo, 0, Migration) == :ok
-  end
+    assert Ecto.Migrator.up(ProcessRepo, 1, Migration) == :already_up
+   end
 
-  test "down invokes the repository adapter with down commands" do
+   test "down invokes the repository adapter with down commands" do
+    assert Ecto.Migrator.down(ProcessRepo, 0, Migration) == :already_down
     assert Ecto.Migrator.down(ProcessRepo, 1, Migration) == :ok
   end
 

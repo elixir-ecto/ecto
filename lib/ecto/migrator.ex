@@ -26,36 +26,44 @@ defmodule Ecto.Migrator do
   Runs an up migration on the given repository.
   """
   def up(repo, version, module) do
-    repo.transaction fn ->
-      Runner.direction(:up)
+    if repo.adapter.migrated_versions(repo) |> Enum.member?(version) do
+      :already_up
+    else
+      repo.transaction fn ->
+        Runner.direction(:up)
 
-      if function_exported?(module, :up, 0) do
-        module.up
-      else
-        module.change
+        if function_exported?(module, :up, 0) do
+          module.up
+        else
+          module.change
+        end
+
+        repo.adapter.insert_migration_version(repo, version)
       end
-
-      repo.adapter.insert_migration_version(repo, version)
+      :ok
     end
-    :ok
   end
 
   @doc """
   Runs a down migration on the given repository.
   """
   def down(repo, version, module) do
-    repo.transaction fn ->
-      if function_exported?(module, :down, 0) do
-        Runner.direction(:up)
-        module.down
-      else
-        Runner.direction(:down)
-        module.change
-      end
+    if repo.adapter.migrated_versions(repo) |> Enum.member?(version) do
+      repo.transaction fn ->
+        if function_exported?(module, :down, 0) do
+          Runner.direction(:up)
+          module.down
+        else
+          Runner.direction(:down)
+          module.change
+        end
 
-      repo.adapter.delete_migration_version(repo, version)
+        repo.adapter.delete_migration_version(repo, version)
+      end
+      :ok
+    else
+      :already_down
     end
-    :ok
   end
 
   @doc """
