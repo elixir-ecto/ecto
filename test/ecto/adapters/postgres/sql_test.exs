@@ -213,7 +213,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "insert with list" do
       query = SQL.insert(Model3.Entity[l1: ["a", "b", "c"], l2: [1, 2, 3]], [:id])
-      assert query == "INSERT INTO model3 (l1, l2)\nVALUES (ARRAY['a', 'b', 'c'], ARRAY[1, 2, 3])\nRETURNING id"
+      assert query == "INSERT INTO \"model3\" (\"l1\", \"l2\")\nVALUES (ARRAY['a', 'b', 'c'], ARRAY[1, 2, 3])\nRETURNING \"id\""
   end
 
   test "update" do
@@ -223,7 +223,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "update with list" do
     query = SQL.update(Model3.Entity[id: 42, l1: ["c", "d"], l2: [4, 5]])
-    assert query == "UPDATE model3 SET l1 = ARRAY['c', 'd'], l2 = ARRAY[4, 5]\nWHERE id = 42"
+    assert query == "UPDATE \"model3\" SET \"l1\" = ARRAY['c', 'd'], \"l2\" = ARRAY[4, 5]\nWHERE \"id\" = 42"
   end
 
   test "delete" do
