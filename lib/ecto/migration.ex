@@ -37,13 +37,12 @@ defmodule Ecto.Migration do
   defrecord Table, name: nil, key: true
 
   defrecord Index, table: nil, name: nil, columns: [], unique: false do
-    def format_name(index) do
-      case index.name do
-        nil -> [index.table, index.columns, "index"]
-               |> List.flatten
-               |> Enum.join("_")
-        _   -> index.name
-      end
+    def format_name(Index[name: nil]=index) do
+      [index.table, index.columns, "index"]
+      |> List.flatten
+      |> Enum.join("_")
     end
+
+    def format_name(index), do: index.name
   end
 end
