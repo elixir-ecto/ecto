@@ -1,4 +1,7 @@
 defmodule Ecto.Migration.Runner do
+  @moduledoc """
+  Runner is a gen server that's responsible for running migrations in either `:up` or `:down` directions
+  """
   use GenServer.Behaviour
 
   alias Ecto.Migration.Table
@@ -7,6 +10,9 @@ defmodule Ecto.Migration.Runner do
   @server_name :migration_runner
   @full_name {:local, @server_name}
 
+  @doc """
+  Starts the runner for the specified repo.
+  """
   def start_link(repo) do
     :gen_server.start_link(@full_name, __MODULE__, {:up, repo}, [])
   end
@@ -29,10 +35,17 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
+  @doc """
+  Changes the direction to run commands.
+  """
   def direction(direction) do
     call {:direction, direction}
   end
 
+  @doc """
+  Executes command tuples or strings.
+  Ecto.MigrationError will be raised when the server is in `:down` direction and `command` is irreversible
+  """
   def execute(command) do
     case call {:execute, command} do
       :irreversible -> raise Ecto.MigrationError.new(message: "Cannot reverse migration command: #{inspect command}")
