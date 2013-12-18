@@ -48,13 +48,17 @@ defmodule Ecto.Migration.RunnerTest do
   test "cannot reverse drop table" do
     Runner.direction(:down)
 
-    assert Runner.execute({:drop, Table.new}) == :not_reversible
+    assert_raise Ecto.MigrationError, fn ->
+      Runner.execute({:drop, Table.new})
+    end
   end
 
   test "cannot reverse drop index" do
     Runner.direction(:down)
 
-    assert Runner.execute({:drop, Index.new}) == :not_reversible
+    assert_raise Ecto.MigrationError, fn ->
+      Runner.execute({:drop, Index.new})
+    end
   end
 
   test "can reverse column additions to removals" do
@@ -72,12 +76,16 @@ defmodule Ecto.Migration.RunnerTest do
   test "cannot reverse column removal" do
     Runner.direction(:down)
 
-    assert Runner.execute({:alter, Table.new, [{:remove, :summary}]}) == :not_reversible
+    assert_raise Ecto.MigrationError, fn ->
+      Runner.execute({:alter, Table.new, [{:remove, :summary}]})
+    end
   end
 
   test "cannot reverse column modification" do
     Runner.direction(:down)
 
-    assert Runner.execute({:alter, Table.new, [{:modify, :summary, :string, []}]}) == :not_reversible
+    assert_raise Ecto.MigrationError, fn ->
+      Runner.execute({:alter, Table.new, [{:modify, :summary, :string, []}]})
+    end
   end
 end

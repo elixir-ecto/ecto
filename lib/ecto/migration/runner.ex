@@ -25,7 +25,7 @@ defmodule Ecto.Migration.Runner do
     if reversed do
       {:reply, repo.adapter.execute_migration(repo, reversed), state}
     else
-      {:reply, :not_reversible, state}
+      {:reply, :irreversible, state}
     end
   end
 
@@ -34,7 +34,10 @@ defmodule Ecto.Migration.Runner do
   end
 
   def execute(command) do
-    call {:execute, command}
+    case call {:execute, command} do
+      :irreversible -> raise Ecto.MigrationError.new(message: "Cannot reverse migration command: #{inspect command}")
+      response      -> response
+    end
   end
 
   defp call(message) do
