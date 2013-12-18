@@ -7,18 +7,9 @@ defmodule Ecto.Migration do
       def __migration__, do: true
 
       def up(repo, fun) do
-        Runner.direction(:up)
-
         repo.transaction fn ->
-          if function_exported?(__MODULE__, :up, 0) do
-            __MODULE__.up
-          else
-            if function_exported?(__MODULE__, :change, 0) do
-              __MODULE__.change
-            else
-              raise Ecto.MigrationError.new(message: "#{__MODULE__} does not implement a `up/0` or `change/0` function")
-            end
-          end
+          attempt(:up, :up) || attempt(:up, :change) ||
+            raise Ecto.MigrationError.new(message: "#{__MODULE__} does not implement a `up/0` or `change/0` function")
 
           fun.()
         end
@@ -26,19 +17,18 @@ defmodule Ecto.Migration do
 
       def down(repo, fun) do
         repo.transaction fn ->
-          if function_exported?(__MODULE__, :down, 0) do
-            Runner.direction(:up)
-            __MODULE__.down
-          else
-            if function_exported?(__MODULE__, :change, 0) do
-              Runner.direction(:down)
-              __MODULE__.change
-            else
-              raise Ecto.MigrationError.new(message: "#{__MODULE__} does not implement a `down/0` or `change/0` function")
-            end
-          end
+          attempt(:up, :down) || attempt(:down, :change) ||
+            raise Ecto.MigrationError.new(message: "#{__MODULE__} does not implement a `down/0` or `change/0` function")
 
           fun.()
+        end
+      end
+
+      defp attempt(direction, operation) do
+        if function_exported?(__MODULE__, operation, 0) do
+          Runner.direction(direction)
+          apply(__MODULE__, operation, [])
+          :ok
         end
       end
     end
