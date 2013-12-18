@@ -34,6 +34,16 @@ defmodule Ecto.MigratorTest do
     end
   end
 
+  defmodule ReversibleMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:posts) do
+        add :name, :string
+      end
+    end
+  end
+
   defmodule MockRunner do
     use GenServer.Behaviour
 
@@ -68,11 +78,13 @@ defmodule Ecto.MigratorTest do
   test "up invokes the repository adapter with up commands" do
     assert Ecto.Migrator.up(ProcessRepo, 0, Migration) == :ok
     assert Ecto.Migrator.up(ProcessRepo, 1, Migration) == :already_up
+    assert Ecto.Migrator.up(ProcessRepo, 0, ReversibleMigration) == :ok
    end
 
    test "down invokes the repository adapter with down commands" do
     assert Ecto.Migrator.down(ProcessRepo, 0, Migration) == :already_down
     assert Ecto.Migrator.down(ProcessRepo, 1, Migration) == :ok
+    assert Ecto.Migrator.down(ProcessRepo, 1, ReversibleMigration) == :ok
   end
 
   test "run_up runs all migrations inside a directory" do
