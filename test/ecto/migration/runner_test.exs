@@ -28,7 +28,7 @@ defmodule Ecto.Migration.RunnerTest do
   end
 
   test "run in forward direction" do
-    Runner.direction(:up)
+    Runner.direction(:forward)
 
     assert Runner.execute({:create, Table.new, []}) == {:migrated, {:create, Table.new, []}}
     assert Runner.execute({:create, Index.new}) == {:migrated, {:create, Index.new}}
@@ -38,7 +38,7 @@ defmodule Ecto.Migration.RunnerTest do
   end
 
   test "run in reverse direction" do
-    Runner.direction(:down)
+    Runner.direction(:reverse)
 
     assert Runner.execute({:create, Table.new, []}) == {:migrated, {:drop, Table.new}}
     assert Runner.execute({:create, Index.new}) == {:migrated, {:drop, Index.new}}
@@ -46,7 +46,7 @@ defmodule Ecto.Migration.RunnerTest do
   end
 
   test "cannot reverse drop table" do
-    Runner.direction(:down)
+    Runner.direction(:reverse)
 
     assert_raise Ecto.MigrationError, fn ->
       Runner.execute({:drop, Table.new})
@@ -54,7 +54,7 @@ defmodule Ecto.Migration.RunnerTest do
   end
 
   test "cannot reverse drop index" do
-    Runner.direction(:down)
+    Runner.direction(:reverse)
 
     assert_raise Ecto.MigrationError, fn ->
       Runner.execute({:drop, Index.new})
@@ -62,19 +62,19 @@ defmodule Ecto.Migration.RunnerTest do
   end
 
   test "can reverse column additions to removals" do
-    Runner.direction(:down)
+    Runner.direction(:reverse)
 
     assert Runner.execute({:alter, Table.new, [{:add, :summary, :string, []}]}) == {:migrated, {:alter, Table.new, [{:remove, :summary}] }}
   end
 
   test "can reverse column renaming" do
-    Runner.direction(:down)
+    Runner.direction(:reverse)
 
     assert Runner.execute({:alter, Table.new, [{:rename, :summary, :details}]}) == {:migrated, {:alter, Table.new, [{:rename, :details, :summary}]}}
   end
 
   test "cannot reverse column removal" do
-    Runner.direction(:down)
+    Runner.direction(:reverse)
 
     assert_raise Ecto.MigrationError, fn ->
       Runner.execute({:alter, Table.new, [{:remove, :summary}]})
@@ -82,7 +82,7 @@ defmodule Ecto.Migration.RunnerTest do
   end
 
   test "cannot reverse column modification" do
-    Runner.direction(:down)
+    Runner.direction(:reverse)
 
     assert_raise Ecto.MigrationError, fn ->
       Runner.execute({:alter, Table.new, [{:modify, :summary, :string, []}]})

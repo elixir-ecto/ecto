@@ -8,7 +8,7 @@ defmodule Ecto.Migration do
 
       def up(repo, fun) do
         repo.transaction fn ->
-          attempt(:up, :up) || attempt(:up, :change) ||
+          attempt(:forward, :up) || attempt(:reverse, :change) ||
             raise Ecto.MigrationError.new(message: "#{__MODULE__} does not implement a `up/0` or `change/0` function")
 
           fun.()
@@ -17,7 +17,7 @@ defmodule Ecto.Migration do
 
       def down(repo, fun) do
         repo.transaction fn ->
-          attempt(:up, :down) || attempt(:down, :change) ||
+          attempt(:forward, :down) || attempt(:reverse, :change) ||
             raise Ecto.MigrationError.new(message: "#{__MODULE__} does not implement a `down/0` or `change/0` function")
 
           fun.()

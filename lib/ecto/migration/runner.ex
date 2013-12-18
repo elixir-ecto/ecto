@@ -1,6 +1,6 @@
 defmodule Ecto.Migration.Runner do
   @moduledoc """
-  Runner is a gen server that's responsible for running migrations in either `:up` or `:down` directions
+  Runner is a gen server that's responsible for running migrations in either `:forward` or `:reverse` directions
   """
   use GenServer.Behaviour
 
@@ -14,18 +14,18 @@ defmodule Ecto.Migration.Runner do
   Starts the runner for the specified repo.
   """
   def start_link(repo) do
-    :gen_server.start_link(@full_name, __MODULE__, {:up, repo}, [])
+    :gen_server.start_link(@full_name, __MODULE__, {:forward, repo}, [])
   end
 
   def handle_call({:direction, direction}, _from, {_, repo}) do
     {:reply, :ok, {direction, repo}}
   end
 
-  def handle_call({:execute, command}, _from, state={:up, repo}) do
+  def handle_call({:execute, command}, _from, state={:forward, repo}) do
     {:reply, repo.adapter.execute_migration(repo, command), state}
   end
 
-  def handle_call({:execute, command}, _from, state={:down, repo}) do
+  def handle_call({:execute, command}, _from, state={:reverse, repo}) do
     reversed = reverse(command)
 
     if reversed do
@@ -44,7 +44,7 @@ defmodule Ecto.Migration.Runner do
 
   @doc """
   Executes command tuples or strings.
-  Ecto.MigrationError will be raised when the server is in `:down` direction and `command` is irreversible
+  Ecto.MigrationError will be raised when the server is in `:reverse` direction and `command` is irreversible
   """
   def execute(command) do
     case call {:execute, command} do
