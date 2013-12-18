@@ -259,10 +259,6 @@ defmodule Ecto.Adapters.Postgres do
     Enum.map(rows, &elem(&1, 0))
   end
 
-  def create_migrations_table(repo) do
-    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)")
-  end
-
   def insert_migration_version(repo, version) do
     query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})")
   end
@@ -273,5 +269,9 @@ defmodule Ecto.Adapters.Postgres do
 
   def execute_migration(repo, definition) do
     query(repo, SQL.migrate(definition))
+  end
+
+  defp create_migrations_table(repo) do
+    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)")
   end
 end
