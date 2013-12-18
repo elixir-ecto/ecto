@@ -8,11 +8,13 @@ defmodule Ecto.Migrator do
         use Ecto.Migration
 
         def up do
-          "CREATE TABLE user(id serial PRIMARY_KEY, username text)"
+          create table(:users) do
+            add :username, :string
+          end
         end
 
         def down do
-          "DROP TABLE user"
+          drop table(:users)
         end
       end
 
