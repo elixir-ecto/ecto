@@ -1,10 +1,10 @@
-defmodule Ecto.Migration.DslTest do
+defmodule Ecto.Migration.DSLTest do
   use ExUnit.Case, async: false
 
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
 
-  import Ecto.Migration.Dsl
+  import Ecto.Migration.DSL
 
   defmodule MockRunner do
     use GenServer.Behaviour

@@ -1,4 +1,4 @@
-defmodule Ecto.Migration.Dsl do
+defmodule Ecto.Migration.DSL do
   @moduledoc """
   Functions and macros for defining migration operations.
   """
