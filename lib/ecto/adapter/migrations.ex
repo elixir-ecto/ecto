@@ -11,17 +11,17 @@ defmodule Ecto.Adapter.Migrations  do
   defcallback migrated_versions(Ecto.Repo.t) :: [integer] | no_return
 
   @doc """
-  Inserts record of a migration version
+  Records that a migration has completed successfully.
   """
   defcallback insert_migration_version(Ecto.Repo.t, integer) :: :ok | no_return
 
   @doc """
-  Removes record of migration version
+  Removes record of migration when version is rolled back.
   """
   defcallback delete_migration_version(Ecto.Repo.t, integer) :: :ok | no_return
 
   @doc """
-  Executes migration commands
+  Executes migration commands like `{:create, ..}`, `{:drop, ..}`.
   """
   defcallback execute_migration(Ecto.Repo.t, tuple) :: :ok | no_return
 end
