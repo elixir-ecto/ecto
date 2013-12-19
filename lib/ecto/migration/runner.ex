@@ -57,18 +57,22 @@ defmodule Ecto.Migration.Runner do
     :gen_server.call(@server_name, message)
   end
 
-  defp reverse([]),    do: []
-  defp reverse([h|t]), do: [reverse(h)|reverse(t)]
+  defp reverse([]),   do: []
+  defp reverse([h|t]) do
+    if reversed = reverse(h) do
+      [reversed|reverse(t)]
+    end
+  end
+
   defp reverse({:create, Table[]=table, _columns}), do: {:drop, table}
   defp reverse({:create, Index[]=index}),           do: {:drop, index}
   defp reverse({:add,    name, _type, _opts}),      do: {:remove, name}
   defp reverse({:rename, from, to}),                do: {:rename, to, from}
   defp reverse({:alter,  Table[]=table, changes}) do
-    reversed = reverse(changes)
-
-    if reversed |> Enum.all? &(&1) do
+    if reversed = reverse(changes) do
       {:alter, table, reversed}
     end
   end
+
   defp reverse(_), do: false
 end
