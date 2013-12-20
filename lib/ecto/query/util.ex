@@ -122,15 +122,21 @@ defmodule Ecto.Query.Util do
   def value_to_type(list) when is_list(list) do
     types = Enum.map(list, &value_to_type/1)
 
-    case types do
-      [] ->
-        { :ok, { :list, :any } }
-      [type|rest] ->
-        if Enum.all?(rest, &type_eq?(type, &1)) do
-          { :ok, { :list, type } }
-        else
-          { :error, "all elements in list has to be of same type" }
-        end
+    if error = Enum.find(types, &match?({ :error, _ }, &1)) do
+      error
+    else
+      types = Enum.map(types, &elem(&1, 1))
+
+      case types do
+        [] ->
+          { :ok, { :list, :any } }
+        [type|rest] ->
+          if Enum.all?(rest, &type_eq?(type, &1)) do
+            { :ok, { :list, type } }
+          else
+            { :error, "all elements in list has to be of same type" }
+          end
+      end
     end
   end
 
