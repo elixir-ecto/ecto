@@ -29,6 +29,14 @@ defmodule Ecto.RepoTest.MyModel do
   end
 end
 
+defmodule Ecto.RepoTest.MyModelList do
+  use Ecto.Model
+
+  queryable "my_entity" do
+    field :l1, { :list, :string }
+  end
+end
+
 defmodule Ecto.RepoTest.MyModelNoPK do
   use Ecto.Model
 
@@ -43,6 +51,7 @@ defmodule Ecto.RepoTest do
   import Ecto.Query
   alias Ecto.RepoTest.MyRepo
   alias Ecto.RepoTest.MyModel
+  alias Ecto.RepoTest.MyModelList
   alias Ecto.RepoTest.MyModelNoPK
   require MyRepo
 
@@ -173,6 +182,12 @@ defmodule Ecto.RepoTest do
   test "unsupported type" do
     assert_raise ArgumentError, fn ->
       MyRepo.create(MyModel.Entity[x: {123}])
+    end
+  end
+
+  test "list value types incorrect" do
+    assert_raise Ecto.InvalidEntity, fn ->
+      MyRepo.create(MyModelList.Entity[l1: [1, 2, 3]])
     end
   end
 

@@ -330,6 +330,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
     to_string(literal)
   end
 
+  defp literal(literal) when is_list(literal) do
+    "ARRAY[" <> Enum.map_join(literal, ", ", &literal(&1)) <> "]"
+  end
+
   defp op_to_binary({ op, _, [_, _] } = expr, sources) when op in @binary_ops do
     "(" <> expr(expr, sources) <> ")"
   end
