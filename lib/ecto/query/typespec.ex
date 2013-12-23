@@ -33,35 +33,43 @@ defmodule Ecto.Query.Typespec do
   """
   defmacro defs({ :::, _, [head, _] } = expr) do
     quote bind_quoted: [expr: Macro.escape(expr), head: Macro.escape(head)] do
-      { name, args, guards, return, catch_all } = Ecto.Query.Typespec.__defs__(__MODULE__, expr)
-      arity = length(args)
-
-      if @aggregate do
-        @doc false
-        def aggregate?(unquote(name), unquote(arity)), do: true
-      end
-      @aggregate false
-
-      if catch_all do
-        @ecto_defs Dict.delete(@ecto_defs, { name, arity })
-      else
-        @ecto_defs Dict.update(@ecto_defs, { name, arity }, [head], &[head|&1])
-      end
-
-      def unquote(name)(unquote_splicing(args)) when unquote(guards), do: { :ok, unquote(return) }
+      var!(defs, Ecto.Query.Typespec).(expr, head)
     end
   end
 
   ## Callbacks
 
   defmacro __using__(_) do
-    quote do
-      import unquote(__MODULE__)
-      @before_compile unquote(__MODULE__)
+    quote unquote: false do
+      import Ecto.Query.Typespec
+      @before_compile Ecto.Query.Typespec
       @ecto_deft []
       @ecto_defs HashDict.new
       @ecto_defa HashDict.new
       @aggregate false
+
+      # Instead of injecting this code multiple times into the user module,
+      # we simply define this function at the beginning and invoke it. This
+      # reduces the memory consumption when compiling Ecto.Query.API from
+      # 270MB to 70MB.
+      var!(defs, Ecto.Query.Typespec) = fn expr, head ->
+        { name, args, guards, return, catch_all } = Ecto.Query.Typespec.__defs__(__MODULE__, expr)
+        arity = length(args)
+
+        if @aggregate do
+          @doc false
+          def aggregate?(unquote(name), unquote(arity)), do: true
+        end
+        @aggregate false
+
+        if catch_all do
+          @ecto_defs Dict.delete(@ecto_defs, { name, arity })
+        else
+          @ecto_defs Dict.update(@ecto_defs, { name, arity }, [head], &[head|&1])
+        end
+
+        def unquote(name)(unquote_splicing(args)) when unquote(guards), do: { :ok, unquote(return) }
+      end
     end
   end
 
