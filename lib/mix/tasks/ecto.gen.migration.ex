@@ -15,6 +15,8 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
 
   """
   def run(args) do
+    Mix.Task.run "compile"
+
     case parse_repo(args) do
       { repo, [name] } ->
         ensure_repo(repo)
