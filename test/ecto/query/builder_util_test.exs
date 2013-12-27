@@ -16,6 +16,9 @@ defmodule Ecto.Query.BuilderUtilTest do
 
     assert Macro.escape(quote do avg(0) end) ==
            escape(quote do avg(0) end, [])
+
+    assert quote(do: %s"123") ==
+           escape(quote do %s"123" end, [])
   end
 
   test "don't escape interpolation" do

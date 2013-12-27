@@ -3,6 +3,8 @@ defmodule Ecto.Query.BuilderUtil do
 
   alias Ecto.Query.Query
 
+  @expand_sigils [:sigil_c, :sigil_C, :sigil_s, :sigil_S, :sigil_w, :sigil_W]
+
   @doc """
   Smart escapes a query expression.
 
@@ -44,6 +46,12 @@ defmodule Ecto.Query.BuilderUtil do
 
   # binary literal
   def escape({ :<<>>, _, _ } = bin, _vars, _join_var), do: bin
+
+  # sigils
+  def escape({ name, _, _ } = sigil, _vars, _join_var)
+      when name in @expand_sigils do
+    sigil
+  end
 
   # ops & functions
   def escape({ name, meta, args }, vars, join_var)
