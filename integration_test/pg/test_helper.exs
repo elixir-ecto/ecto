@@ -80,6 +80,14 @@ defmodule Ecto.Integration.Postgres.Custom do
   end
 end
 
+defmodule Ecto.Integration.Postgres.Barebone do
+  use Ecto.Model
+
+  queryable "barebones", primary_key: false do
+    field :text, :string
+  end
+end
+
 defmodule Ecto.Integration.Postgres.Case do
   use ExUnit.CaseTemplate
 
@@ -95,6 +103,7 @@ defmodule Ecto.Integration.Postgres.Case do
       alias Ecto.Integration.Postgres.Permalink
       alias Ecto.Integration.Postgres.User
       alias Ecto.Integration.Postgres.Custom
+      alias Ecto.Integration.Postgres.Barebone
     end
   end
 
@@ -144,6 +153,7 @@ setup_database = [
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
   "CREATE TABLE customs (foo text PRIMARY KEY)",
+  "CREATE TABLE barebones (text text)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]

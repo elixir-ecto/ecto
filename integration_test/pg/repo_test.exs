@@ -72,6 +72,11 @@ defmodule Ecto.Integration.RepoTest do
            TestRepo.all(from p in Post, where: p.title == "2")
   end
 
+  test "create with no primary key" do
+    assert Barebone.Entity[text: nil] = TestRepo.create(Barebone.Entity[])
+    assert Barebone.Entity[text: "text"] = TestRepo.create(Barebone.Entity[text: "text"])
+  end
+
   test "get entity" do
     post1 = TestRepo.create(Post.Entity[title: "1", text: "hai"])
     post2 = TestRepo.create(Post.Entity[title: "2", text: "hai"])

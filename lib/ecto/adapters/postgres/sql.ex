@@ -70,13 +70,25 @@ defmodule Ecto.Adapters.Postgres.SQL do
     module = elem(entity, 0)
     table  = entity.model.__model__(:source)
 
-    [fields, values] = module.__entity__(:entity_kw, entity)
+    { fields, values } = module.__entity__(:entity_kw, entity)
       |> Enum.filter(fn { _, val } -> val != nil end)
-      |> List.unzip
+      |> :lists.unzip
 
-    "INSERT INTO #{quote_table(table)} (" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ")\n" <>
-    "VALUES (" <> Enum.map_join(values, ", ", &literal(&1)) <> ")" <>
-    if !Enum.empty?(returning), do: "\nRETURNING " <> Enum.map_join(returning, ", ", &quote_column(&1)), else: ""
+    sql = "INSERT INTO #{quote_table(table)}"
+
+    if fields == [] do
+      sql = sql <> " DEFAULT VALUES"
+    else
+      sql = sql <>
+        " (" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ")\n" <>
+        "VALUES (" <> Enum.map_join(values, ", ", &literal(&1)) <> ")"
+    end
+
+    if !Enum.empty?(returning) do
+      sql = sql <> "\nRETURNING " <> Enum.map_join(returning, ", ", &quote_column(&1))
+    end
+
+    sql
   end
 
   # Generate SQL for an update statement
