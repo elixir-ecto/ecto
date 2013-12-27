@@ -71,13 +71,15 @@ defmodule Ecto.Query.Normalizer do
 
   # Group by all fields
   defp normalize_group_by(Query[] = query) do
-    Enum.map(query.group_bys, fn
-      QueryExpr[expr: { :&, _, _ } = var] = expr ->
-        entity = Util.find_source(query.sources, var) |> Util.entity
-        fields = entity.__entity__(:field_names)
-        expr.expr(Enum.map(fields, &{ var, &1 }))
-      field ->
-        field
+    Enum.map(query.group_bys, fn QueryExpr[] = expr ->
+      Enum.flat_map(expr.expr, fn
+        { :&, _, _ } = var ->
+          entity = Util.find_source(query.sources, var) |> Util.entity
+          fields = entity.__entity__(:field_names)
+          Enum.map(fields, &{ var, &1 })
+        field ->
+          [field]
+      end) |> expr.expr
     end) |> query.group_bys
   end
 

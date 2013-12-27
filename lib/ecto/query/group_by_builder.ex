@@ -6,8 +6,8 @@ defmodule Ecto.Query.GroupByBuilder do
   @doc """
   Escapes a group by expression.
 
-  A group by may be a variable, representing all fields in that
-  entity, or a list of fields as `x.y`.
+  A group by may be a single variable `x`, representing all fields in that
+  entity, a field `x.y`, or a list of fields and variables.
 
   ## Examples
 
@@ -16,23 +16,23 @@ defmodule Ecto.Query.GroupByBuilder do
        {{:{}, [], [:&, [], [1]]}, :y}]
 
       iex> escape(quote(do: x), [:x, :y])
-      {:{}, [], [:&, [], [0]]}
+      [{:{}, [], [:&, [], [0]]}]
 
   """
   @spec escape(Macro.t, [atom]) :: Macro.t | no_return
   def escape(list, vars) when is_list(list) do
-    Enum.map(list, &escape_field(&1, vars))
+    Enum.map(list, &do_escape(&1, vars))
   end
 
-  def escape({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
+  def escape(ast, vars) do
+    [do_escape(ast, vars)]
+  end
+
+  defp do_escape({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
     BuilderUtil.escape_var(var, vars)
   end
 
-  def escape(field, vars) do
-    [escape_field(field, vars)]
-  end
-
-  defp escape_field(dot, vars) do
+  defp do_escape(dot, vars) do
     case BuilderUtil.escape_dot(dot, vars) do
       { _, _ } = var_field ->
         var_field

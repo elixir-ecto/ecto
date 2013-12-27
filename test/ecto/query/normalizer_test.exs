@@ -22,9 +22,10 @@ defmodule Ecto.Query.NormalizerTest do
   end
 
   test "group by all fields" do
-    query = from(p in Post, group_by: p) |> normalize
+    query = from(p in Post, group_by: [p, p.text]) |> normalize
     var = { :&, [], [0] }
-    assert [{ var, :id }, { var, :title }, { var, :text }] = Enum.first(query.group_bys).expr
+    assert [{ var, :id }, { var, :title }, { var, :text }, { var, :text }] =
+           Enum.first(query.group_bys).expr
   end
 
   test "normalize assoc joins" do
