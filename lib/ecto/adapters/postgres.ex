@@ -74,7 +74,7 @@ defmodule Ecto.Adapters.Postgres do
         #Setup the entity to use the RETURNING values
         Enum.zip(returning, tuple_to_list(values)) |> entity.update
       _ ->
-        nil
+        entity
     end
   end
 
