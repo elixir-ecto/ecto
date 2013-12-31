@@ -13,6 +13,7 @@ defmodule Ecto.Adapters.Postgres do
   @default_port 5432
 
   alias Ecto.Adapters.Postgres.SQL
+  alias Ecto.Adapters.Postgres.Worker
   alias Ecto.Associations.Assoc
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
@@ -100,7 +101,7 @@ defmodule Ecto.Adapters.Postgres do
 
   def query(repo, sql) do
     use_worker(repo, fn worker ->
-      Postgrex.Connection.query!(worker, sql)
+      Worker.query!(worker, sql)
     end)
   end
 
@@ -114,7 +115,7 @@ defmodule Ecto.Adapters.Postgres do
 
     pool_opts = [
       name: { :local, pool_name },
-      worker_module: Postgrex.Connection ] ++ pool_opts
+      worker_module: Worker ] ++ pool_opts
 
     worker_opts = worker_opts
       |> Keyword.put(:decoder, &decoder/4)
@@ -211,16 +212,16 @@ defmodule Ecto.Adapters.Postgres do
   def transaction(repo, fun) do
     worker = checkout_worker(repo)
     try do
-      Postgrex.Connection.begin!(worker)
+      Worker.begin!(worker)
       value = fun.()
-      Postgrex.Connection.commit!(worker)
+      Worker.commit!(worker)
       { :ok, value }
     catch
       :throw, :ecto_rollback ->
-        Postgrex.Connection.rollback!(worker)
+        Worker.rollback!(worker)
         :error
       type, term ->
-        Postgrex.Connection.rollback!(worker)
+        Worker.rollback!(worker)
         :erlang.raise(type, term, System.stacktrace)
     after
       checkin_worker(repo)
@@ -281,14 +282,14 @@ defmodule Ecto.Adapters.Postgres do
   def begin_test_transaction(repo) do
     pool = repo.__postgres__(:pool_name)
     :poolboy.transaction(pool, fn worker ->
-      Postgrex.Connection.begin!(worker)
+      Worker.begin!(worker)
     end)
   end
 
   def rollback_test_transaction(repo) do
     pool = repo.__postgres__(:pool_name)
     :poolboy.transaction(pool, fn worker ->
-      Postgrex.Connection.rollback!(worker)
+      Worker.rollback!(worker)
     end)
   end
 
