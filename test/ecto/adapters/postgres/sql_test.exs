@@ -57,6 +57,20 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT m0.\"x\", m0.\"y\" + 123\nFROM \"model\" AS m0"
   end
 
+  test "distinct" do 
+    query = from(Model) |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
+
+    query = from(Model) |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"x\", m0.\"y\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
+
+    query = from(Model) |> distinct([r], r) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
+
+    query = from(Model) |> distinct([r], [r, r.x]) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\", m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0" 
+  end
+
   test "where" do
     query = from(Model) |> where([r], r.x != nil) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nWHERE (m0.\"x\" IS NOT NULL)"

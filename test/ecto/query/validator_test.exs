@@ -201,6 +201,25 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "distinct expression" do 
+    query = from(Post) |> distinct([p], [p.id, p.title]) |> select([p], [p, p.id])
+    validate(query)
+
+    query = from(Post) |> distinct([p], p) |> select([p], p)
+    validate(query)
+
+    query = from(Post) |> distinct([p], p) |> select([p], [p.id, p.title])
+    validate(query)
+  
+    query = from(Post) |> distinct([p], p.title)
+    validate(query)
+  
+    query = from(Post) |> distinct([p], p.title) |> select([p], p.id)
+    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `select`", fn ->
+      validate(query)
+    end
+  end
+
   test "group_by invalid field" do
     query = from(Post) |> group_by([p], p.hai) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->

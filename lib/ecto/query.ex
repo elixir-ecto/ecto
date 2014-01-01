@@ -117,7 +117,7 @@ defmodule Ecto.Query do
 
   defrecord Query, sources: nil, from: nil, joins: [], wheres: [], select: nil,
                    order_bys: [], limit: nil, offset: nil, group_bys: [],
-                   havings: [], preloads: []
+                   havings: [], preloads: [], distincts: []
 
   defrecord QueryExpr, [:expr, :file, :line]
   defrecord JoinExpr, [:qual, :source, :on, :file, :line, :assoc]
@@ -127,6 +127,7 @@ defmodule Ecto.Query do
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.SelectBuilder
+  alias Ecto.Query.DistinctBuilder
   alias Ecto.Query.OrderByBuilder
   alias Ecto.Query.LimitOffsetBuilder
   alias Ecto.Query.GroupByBuilder
@@ -300,6 +301,21 @@ defmodule Ecto.Query do
   defmacro select(query, binding, expr) do
     SelectBuilder.build(query, binding, expr, __CALLER__)
   end
+
+  @doc """
+  A distinct query expression.
+
+  ## Keywords examples
+
+    TODO...
+
+  ## Expressions examples
+
+    TODO...
+  """
+  defmacro distinct(query, binding, expr) do 
+    DistinctBuilder.build(query, binding, expr, __CALLER__)
+  end 
 
   @doc """
   A where query expression.
@@ -483,7 +499,7 @@ defmodule Ecto.Query do
 
   # Builds the quoted code for creating a keyword query
 
-  @binds    [:where, :select, :order_by, :group_by, :having]
+  @binds    [:where, :select, :distinct, :order_by, :group_by, :having]
   @no_binds [:limit, :offset, :preload]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 

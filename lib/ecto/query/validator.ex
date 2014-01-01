@@ -47,6 +47,7 @@ defmodule Ecto.Query.Validator do
 
     unless opts[:skip_select] do
       validate_select(query.select, state)
+      validate_distincts(query, state)
       preload_selected(query)
     end
   end
@@ -95,11 +96,11 @@ defmodule Ecto.Query.Validator do
 
   defp validate_only_where(query) do
     # Update validation check if assertion fails
-    unquote(unless size(Query[]) == 12, do: raise "Ecto.Query.Query out of date")
+    unquote(unless size(Query[]) == 13, do: raise "Ecto.Query.Query out of date")
 
     # TODO: File and line metadata
     unless match?(Query[joins: [], select: nil, order_bys: [], limit: nil,
-        offset: nil, group_bys: [], havings: [], preloads: []], query) do
+        offset: nil, group_bys: [], havings: [], preloads: [], distincts: []], query) do
       raise Ecto.QueryError, reason: "update query can only have a single `where` expression"
     end
   end
@@ -197,6 +198,20 @@ defmodule Ecto.Query.Validator do
     rescue_metadata(:select, expr.file, expr.line) do
       select_clause(expr.expr, state)
     end
+  end
+
+  defp validate_distincts(Query[select: select, distincts: distincts, sources: sources], state) do
+    validate_field_list(:distinct, distincts, state)
+
+    Enum.each(distinct_sources(distincts, sources), fn { var, source, field } -> 
+      #Check for either var or var.field in the select expression
+      pos = Util.locate_var(select.expr, var) 
+      pos = pos || Util.locate_var(select.expr, { { :., [], [var, field] }, [], [] })
+      if nil?(pos) do 
+        entity = Util.entity(source) || Util.source(source)
+        raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` must appear in `select` "
+      end  
+    end)
   end
 
   defp preload_selected(Query[select: select, preloads: preloads]) do
@@ -364,6 +379,15 @@ defmodule Ecto.Query.Validator do
       Enum.map(expr.expr, fn({ var, field }) ->
         source = Util.find_source(sources, var)
         { source, field }
+      end)
+    end) |> Enum.concat |> Enum.uniq
+  end
+
+  defp distinct_sources(distincts, sources) do 
+    Enum.map(distincts, fn(expr) ->
+      Enum.map(expr.expr, fn({ var, field }) ->
+        source = Util.find_source(sources, var)
+        { var, source, field }
       end)
     end) |> Enum.concat |> Enum.uniq
   end
