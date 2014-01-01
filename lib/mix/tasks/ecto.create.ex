@@ -1,0 +1,29 @@
+defmodule Mix.Tasks.Ecto.Create do
+  use Mix.Task
+  import Mix.Tasks.Ecto
+
+  @shortdoc "Create a Repo"
+
+  @moduledoc """
+  Create the given repository in the location specified at its `url`.
+
+  ## Examples
+
+      mix ecto.create MyApp.Repo
+
+  """
+  def run(args) do
+    { repo, _ } = parse_repo(args)
+    ensure_repo(repo)
+
+    case repo.adapter.storage_up(repo) do 
+      :ok ->
+        Mix.shell.info "The repo #{inspect repo} has been created."
+      { :error, :already_up } ->
+        Mix.shell.info "The repo #{inspect repo} is already up."
+      { :error, term } ->
+        raise Mix.Error, message:
+           "The repo #{inspect repo} couldn't be started, reason given: #{term}."
+    end
+  end
+end

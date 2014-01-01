@@ -7,6 +7,7 @@ defmodule Ecto.Adapters.Postgres do
 
   @behaviour Ecto.Adapter
   @behaviour Ecto.Adapter.Migrations
+  @behaviour Ecto.Adapter.Storage
   @behaviour Ecto.Adapter.Transactions
   @behaviour Ecto.Adapter.TestTransactions
 
@@ -287,6 +288,13 @@ defmodule Ecto.Adapters.Postgres do
       Worker.rollback!(worker)
     end)
   end
+
+  ## Storage API 
+
+  def storage_up(_) do 
+    #no-op
+    :ok
+  end 
 
   ## Migration API
 
