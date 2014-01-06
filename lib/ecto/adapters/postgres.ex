@@ -291,9 +291,32 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Storage API 
 
-  def storage_up(_) do 
-    #no-op
-    :ok
+  def storage_up(repo) do 
+    storage_options = Ecto.Repo.Backend.parse_url(repo.url)
+
+    #TODO: allow the user to specify those options either in the Repo or on command line
+    database_options = %s(ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8')
+
+    creation_cmd = ""
+
+    unless nil?(Keyword.get(storage_options, :password, nil)) do 
+      creation_cmd = %s(PGPASSWORD=#{ Keyword.get(storage_options, :password)} )  
+    end
+    
+    creation_cmd = creation_cmd <> %s(psql -U #{ Keyword.get(storage_options, :username) } )
+    creation_cmd = creation_cmd <> %s(--host #{ Keyword.get(storage_options, :hostname) } )
+    creation_cmd = creation_cmd <> %s(-c "CREATE DATABASE #{ Keyword.get(storage_options, :database) } )
+    creation_cmd = creation_cmd <> %s(#{database_options};" )
+
+    status = Ecto.Utils.cmd creation_cmd, fn(data) ->
+      Process.put(:creation_output, data)
+    end
+
+    case [status, Process.get(:creation_output)] do  
+      [0, _] -> :ok 
+      [1, _] -> { :error, :already_up }
+      [_, _] -> { :error, Process.get(:creation_output) }
+    end 
   end 
 
   ## Migration API
