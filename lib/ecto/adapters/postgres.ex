@@ -314,7 +314,7 @@ defmodule Ecto.Adapters.Postgres do
 
     cond do 
       output =~ %r/already exists/ -> { :error, :already_up }
-      output =~ %r/(ERROR|FATAL):/ -> { :error, output }
+      output =~ %r/(ERROR|FATAL|psql):/ -> { :error, output }
       true -> :ok
     end 
   end 
