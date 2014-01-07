@@ -10,6 +10,10 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Query.Validator
   require Ecto.Query, as: Q
 
+  def parsed_url(repo, adapter) do
+    parse_url(repo.url)
+  end
+
   def start_link(repo, adapter) do
     Enum.each(repo.query_apis, &Code.ensure_loaded(&1))
     adapter.start_link(repo, parse_url(repo.url))
@@ -106,8 +110,8 @@ defmodule Ecto.Repo.Backend do
 
   ## Helpers
 
-  #TODO: move this to an Ecto.Utils and document?
-  def parse_url(url) do
+  defp parse_url(url) do
+
     unless url =~ %r/^[^:\/?#\s]+:\/\// do
       raise Ecto.InvalidURL, url: url, reason: "url should start with a scheme, host should start with //"
     end

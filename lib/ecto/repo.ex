@@ -61,6 +61,10 @@ defmodule Ecto.Repo do
         defoverridable url: 0
       end
 
+      def parsed_url do 
+        Ecto.Repo.Backend.parsed_url(__MODULE__, unquote(adapter))
+      end 
+
       def start_link do
         Ecto.Repo.Backend.start_link(__MODULE__, unquote(adapter))
       end
