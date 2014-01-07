@@ -15,7 +15,8 @@ defmodule Mix.Tasks.Ecto.Create do
   def run(args) do
     { repo, _ } = parse_repo(args)
     ensure_repo(repo)
-
+    ensure_storage_up(repo)
+    
     case repo.adapter.storage_up(repo) do 
       :ok ->
         Mix.shell.info "The repo #{inspect repo} has been created."

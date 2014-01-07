@@ -51,6 +51,21 @@ defmodule Mix.Tasks.Ecto do
   end
 
   @doc """
+  Ensures the given repository can be created (storage up)
+  """
+  @spec ensure_storage_up(Ecto.Repo.t) :: Ecto.Repo.t | no_return 
+  def ensure_storage_up(repo) do
+    cond do 
+      not function_exported?(repo, :adapter, 0) -> 
+        raise Mix.Error, message: "expected #{inspect repo} to use an adapter for creation"
+      not function_exported?(repo.adapter, :storage_up, 1) ->
+        raise Mix.Error, message: "expected #{inspect repo.adapter} to define storage_up/1 in order to create #{inspect repo}"
+      true -> 
+        repo 
+    end 
+  end 
+
+  @doc """
   Gets the migrations path from a repository.
   """
   @spec migrations_path(Ecto.Repo.T) :: String.t | no_return
