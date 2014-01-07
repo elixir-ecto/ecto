@@ -206,9 +206,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert query == "INSERT INTO \"model\" (\"x\", \"y\")\nVALUES (123, '456')\nRETURNING \"id\""
   end
 
-  test "insert with several missing values" do
+  test "insert with missing values" do
     query = SQL.insert(Model.Entity[x: 123], [:id, :y])
     assert query == "INSERT INTO \"model\" (\"x\")\nVALUES (123)\nRETURNING \"id\", \"y\""
+
+    query = SQL.insert(Model.Entity[], [:id, :y])
+    assert query == "INSERT INTO \"model\" DEFAULT VALUES\nRETURNING \"id\", \"y\""
   end
 
   test "insert with list" do
