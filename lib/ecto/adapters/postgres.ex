@@ -310,14 +310,12 @@ defmodule Ecto.Adapters.Postgres do
       %s(-c "CREATE DATABASE #{ Keyword.get(storage_options, :database) } ) <>
       %s(#{database_options};" )
 
-    status = Ecto.Utils.cmd creation_cmd, fn(data) ->
-      Process.put(:creation_output, data)
-    end
+    output = System.cmd creation_cmd
 
-    case [status, Process.get(:creation_output)] do  
-      [0, _] -> :ok 
-      [1, _] -> { :error, :already_up }
-      [_, _] -> { :error, Process.get(:creation_output) }
+    cond do 
+      output =~ %r/already exists/ -> { :error, :already_up }
+      output =~ %r/(ERROR|FATAL):/ -> { :error, output }
+      true -> :ok
     end 
   end 
 
