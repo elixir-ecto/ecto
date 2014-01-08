@@ -5,7 +5,8 @@ defmodule Ecto.QueryTest do
   import Ecto.Query
 
   alias Ecto.Query.Query
-  alias Ecto.Query.Util
+  alias Ecto.Query.Normalizer
+  alias Ecto.Query.Validator
 
   defmodule Post do
     use Ecto.Model
@@ -24,7 +25,11 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  def validate(query), do: query |> Util.normalize |> Util.validate([Ecto.Query.API])
+  def validate(query) do
+    query
+    |> Normalizer.normalize
+    |> Validator.validate([Ecto.Query.API])
+  end
 
   test "call queryable on every merge" do
     query = from(Post) |> select([p], p.title)

@@ -6,6 +6,8 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Query.Util
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Normalizer
+  alias Ecto.Query.Validator
   require Ecto.Query, as: Q
 
   def start_link(repo, adapter) do
@@ -22,7 +24,7 @@ defmodule Ecto.Repo.Backend do
     entity      = query.from |> Util.entity
     primary_key = entity.__entity__(:primary_key)
 
-    Util.validate_get(query, repo.query_apis)
+    Validator.validate_get(query, repo.query_apis)
     check_primary_key(entity)
 
     case Util.value_to_type(id) do
@@ -35,7 +37,7 @@ defmodule Ecto.Repo.Backend do
     # normalization and what not.
     query = Q.from(x in query,
                    where: field(x, ^primary_key) == ^id,
-                   limit: 1) |> Util.normalize
+                   limit: 1) |> Normalizer.normalize
 
     case adapter.all(repo, query) do
       [entity] -> entity
@@ -45,8 +47,8 @@ defmodule Ecto.Repo.Backend do
   end
 
   def all(repo, adapter, queryable) do
-    query = Queryable.to_query(queryable) |> Util.normalize
-    Util.validate(query, repo.query_apis)
+    query = Queryable.to_query(queryable) |> Normalizer.normalize
+    Validator.validate(query, repo.query_apis)
     adapter.all(repo, query)
   end
 
@@ -79,8 +81,8 @@ defmodule Ecto.Repo.Backend do
   end
 
   def runtime_update_all(repo, adapter, queryable, values) do
-    query = Queryable.to_query(queryable) |> Util.normalize(skip_select: true)
-    Util.validate_update(query, repo.query_apis, values)
+    query = Queryable.to_query(queryable) |> Normalizer.normalize(skip_select: true)
+    Validator.validate_update(query, repo.query_apis, values)
     adapter.update_all(repo, query, values)
   end
 
@@ -93,8 +95,8 @@ defmodule Ecto.Repo.Backend do
   end
 
   def delete_all(repo, adapter, queryable) do
-    query = Queryable.to_query(queryable) |> Util.normalize(skip_select: true)
-    Util.validate_delete(query, repo.query_apis)
+    query = Queryable.to_query(queryable) |> Normalizer.normalize(skip_select: true)
+    Validator.validate_delete(query, repo.query_apis)
     adapter.delete_all(repo, query)
   end
 
@@ -105,7 +107,6 @@ defmodule Ecto.Repo.Backend do
   ## Helpers
 
   defp parse_url(url) do
-  
     unless url =~ %r/^[^:\/?#\s]+:\/\// do
       raise Ecto.InvalidURL, url: url, reason: "url should start with a scheme, host should start with //"
     end

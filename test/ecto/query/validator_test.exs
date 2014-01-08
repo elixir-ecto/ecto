@@ -3,7 +3,8 @@ defmodule Ecto.Query.ValidatorTest do
 
   import Ecto.Query
   alias Ecto.Query.Query
-  alias Ecto.Query.Util
+  alias Ecto.Query.Normalizer
+  alias Ecto.Query.Validator
 
   defmodule Post do
     use Ecto.Model
@@ -34,7 +35,11 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  def validate(query), do: query |> Util.normalize |> Util.validate([Ecto.Query.API])
+  def validate(query) do
+    query
+    |> Normalizer.normalize
+    |> Validator.validate([Ecto.Query.API])
+  end
 
 
   test "valid query with bindings" do
@@ -311,9 +316,9 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "multiple query apis" do
-    query = from(Post) |> select([p], custom(p.id)) |> Util.normalize
-    Util.validate(query, [CustomAPI])
-    Util.validate(query, [Ecto.Query.API, CustomAPI])
+    query = from(Post) |> select([p], custom(p.id)) |> Normalizer.normalize
+    Validator.validate(query, [CustomAPI])
+    Validator.validate(query, [Ecto.Query.API, CustomAPI])
   end
 
   test "cannot reference virtual field" do

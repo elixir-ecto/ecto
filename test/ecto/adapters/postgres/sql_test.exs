@@ -2,7 +2,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  import Ecto.Query.Util, only: [normalize: 1]
+  import Ecto.Query.Normalizer, only: [normalize: 1]
   alias Ecto.Adapters.Postgres.SQL
   alias Ecto.Queryable
 

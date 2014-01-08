@@ -6,46 +6,6 @@ defmodule Ecto.Query.Util do
   alias Ecto.Query.Query
 
   @doc """
-  Validates the query to check if it is correct. Should be called before
-  compilation by the query adapter.
-  """
-  def validate(query, query_apis, opts // []) do
-    Ecto.Query.Validator.validate(query, query_apis, opts)
-  end
-
-  @doc """
-  Validates an update query to check if it is correct. Should be called before
-  compilation by the query adapter.
-  """
-  def validate_update(query, query_apis, values) do
-    Ecto.Query.Validator.validate_update(query, query_apis, values)
-  end
-
-  @doc """
-  Validates a delete query to check if it is correct. Should be called before
-  compilation by the query adapter.
-  """
-  def validate_delete(query, query_apis) do
-    Ecto.Query.Validator.validate_delete(query, query_apis)
-  end
-
-  @doc """
-  Validates a get query to check if it is correct. Should be called before
-  compilation by the query adapter.
-  """
-  def validate_get(query, query_apis) do
-    Ecto.Query.Validator.validate_get(query, query_apis)
-  end
-
-  @doc """
-  Normalizes the query. Should be called before validation and compilation by
-  the query adapter.
-  """
-  def normalize(query, opts // []) do
-    Ecto.Query.Normalizer.normalize(query, opts)
-  end
-
-  @doc """
   Look up a source with a variable.
   """
   def find_source(sources, { :&, _, [ix] }) when is_tuple(sources) do

@@ -28,7 +28,7 @@ defmodule Ecto.Adapter do
   defcallback stop(Ecto.Repo.t) :: :ok
 
   @doc """
-  Fetchs all results from the data store based on the given query.
+  Fetches all results from the data store based on the given query.
   """
   defcallback all(Ecto.Repo.t, Ecto.Query.t) :: [Record.t] | no_return
 
