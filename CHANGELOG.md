@@ -10,6 +10,7 @@
 * Deprecations
 
 * Backwards incompatible changes
+  * `Ecto.Binary[]` is no longer used to wrap binary values. Instead always use `binary/1` in queries
 
 # v0.0.1
 

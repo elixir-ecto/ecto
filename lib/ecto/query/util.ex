@@ -150,6 +150,22 @@ defmodule Ecto.Query.Util do
   def type_eq?(x, x), do: true
   def type_eq?(_, _), do: false
 
+  # Returns true if another type can be casted to the given type
+  @doc false
+  def type_castable_to?(:binary), do: true
+  def type_castable_to?(_), do: false
+
+  # Tries to cast the given value to the specified type.
+  # If value cannot be casted just return it.
+  @doc false
+  def try_cast(value, :binary) when is_binary(value) do
+    Ecto.Binary[value: value]
+  end
+
+  def try_cast(value, _) do
+    value
+  end
+
   # Get var for given model in query
   def model_var(Query[] = query, model) do
     sources = tuple_to_list(query.sources)

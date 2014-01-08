@@ -51,11 +51,13 @@ defmodule Ecto.Repo.Backend do
   end
 
   def create(repo, adapter, entity) do
+    entity = normalize_entity(entity)
     validate_entity(entity)
     adapter.create(repo, entity)
   end
 
   def update(repo, adapter, entity) do
+    entity = normalize_entity(entity)
     check_primary_key(entity)
     validate_entity(entity)
 
@@ -83,6 +85,7 @@ defmodule Ecto.Repo.Backend do
   end
 
   def delete(repo, adapter, entity) do
+    entity = normalize_entity(entity)
     check_primary_key(entity)
     validate_entity(entity)
 
@@ -179,6 +182,22 @@ defmodule Ecto.Repo.Backend do
       unless valid do
         raise Ecto.InvalidEntity, entity: entity, field: field,
           type: value_type, expected_type: type
+      end
+    end)
+  end
+
+  defp normalize_entity(entity) do
+    module = elem(entity, 0)
+    fields = module.__entity__(:field_names)
+
+    Enum.reduce(fields, entity, fn field, entity ->
+      type = module.__entity__(:field_type, field)
+
+      if Util.type_castable_to?(type) do
+        value = apply(entity, field, []) |> Util.try_cast(type)
+        apply(entity, field, [value])
+      else
+        entity
       end
     end)
   end

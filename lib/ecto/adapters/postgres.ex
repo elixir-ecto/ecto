@@ -188,11 +188,6 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Postgrex casting
 
-  defp decoder(TypeInfo[sender: "bytea"], :binary, default, param) do
-    value = default.(param)
-    Ecto.Binary[value: value]
-  end
-
   defp decoder(TypeInfo[sender: "interval"], :binary, default, param) do
     { mon, day, sec } = default.(param)
     Ecto.Interval[month: mon, day: day, sec: sec]
