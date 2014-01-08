@@ -15,7 +15,7 @@ defmodule Ecto.Integration.StorageTest do
                                 hostname: "localhost"]) == { :error, :already_up }
 
     #Clean-up for this test
-    Mix.Shell.cmd(%s(psql -U postgres -c "DROP DATABASE IF EXISTS storage_mgt;"), fn(_) -> end)
+    System.cmd %s(psql -U postgres -c "DROP DATABASE IF EXISTS storage_mgt;")
   end
 
   test "storage up (wrong credentials)" do

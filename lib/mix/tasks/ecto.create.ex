@@ -2,10 +2,10 @@ defmodule Mix.Tasks.Ecto.Create do
   use Mix.Task
   import Mix.Tasks.Ecto
 
-  @shortdoc "Create a Repo"
+  @shortdoc "Create the database for the repo"
 
   @moduledoc """
-  Create the given repository in the location specified at its `url`.
+  Create the database for the given repository, as specified in the repo's `url`.
 
   ## Examples
 
@@ -17,14 +17,14 @@ defmodule Mix.Tasks.Ecto.Create do
     ensure_repo(repo)
     ensure_storage_up(repo)
 
-    case repo.adapter.storage_up(repo) do
+    case repo.storage_up do
       :ok ->
-        Mix.shell.info "The repo #{inspect repo} has been created."
+        Mix.shell.info "The database for repo #{inspect repo} has been created."
       { :error, :already_up } ->
-        Mix.shell.info "The repo #{inspect repo} is already up."
+        Mix.shell.info "The database for repo #{inspect repo} has already been created."
       { :error, term } ->
         raise Mix.Error, message:
-           "The repo #{inspect repo} couldn't be started, reason given: #{term}."
+           "The database for repo #{inspect repo} couldn't be created, reason given: #{term}."
     end
   end
 

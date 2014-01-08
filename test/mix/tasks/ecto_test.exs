@@ -3,20 +3,6 @@ defmodule Mix.Tasks.EctoTest do
 
   import Mix.Tasks.Ecto
 
-  defmodule LameAdapter do
-  end
-
-  defmodule Adapter do
-    def storage_up(_), do: nil
-  end
-
-  defmodule LameAdapterRepo do
-    def adapter, do: LameAdapter
-  end
-
-  defmodule NoAdapterRepo do
-  end
-
   defmodule Repo do
     def adapter, do: Adapter
 
