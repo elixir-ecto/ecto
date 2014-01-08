@@ -16,8 +16,8 @@ defmodule Mix.Tasks.Ecto.Create do
     { repo, _ } = parse_repo(args)
     ensure_repo(repo)
     ensure_storage_up(repo)
-    
-    case repo.adapter.storage_up(repo) do 
+
+    case repo.adapter.storage_up(repo) do
       :ok ->
         Mix.shell.info "The repo #{inspect repo} has been created."
       { :error, :already_up } ->
@@ -25,6 +25,12 @@ defmodule Mix.Tasks.Ecto.Create do
       { :error, term } ->
         raise Mix.Error, message:
            "The repo #{inspect repo} couldn't be started, reason given: #{term}."
+    end
+  end
+
+  defp ensure_storage_up(repo) do
+    unless function_exported?(repo.adapter, :storage_up, 1) do
+      raise Mix.Error, message: "Expected #{inspect repo.adapter} to define storage_up/1 in order to create #{inspect repo}."
     end
   end
 end

@@ -3,22 +3,22 @@ defmodule Mix.Tasks.EctoTest do
 
   import Mix.Tasks.Ecto
 
-  defmodule LameAdapter do 
-  end 
-  
-  defmodule Adapter do 
-    def storage_up(_), do: nil 
+  defmodule LameAdapter do
   end
 
-  defmodule LameAdapterRepo do 
+  defmodule Adapter do
+    def storage_up(_), do: nil
+  end
+
+  defmodule LameAdapterRepo do
     def adapter, do: LameAdapter
   end
 
-  defmodule NoAdapterRepo do 
-  end 
+  defmodule NoAdapterRepo do
+  end
 
   defmodule Repo do
-    def adapter, do: Adapter 
+    def adapter, do: Adapter
 
     def start_link do
       Process.get(:start_link)
@@ -61,12 +61,6 @@ defmodule Mix.Tasks.EctoTest do
     Process.put(:start_link, { :error, self })
     assert_raise Mix.Error, fn -> ensure_started(Repo) end
   end
-   
-  test :ensure_storage_up do 
-    assert ensure_storage_up(Repo) == Repo 
-    assert_raise Mix.Error, fn -> ensure_storage_up(NoAdapterRepo) end      
-    assert_raise Mix.Error, fn -> ensure_storage_up(LameAdapterRepo) end      
-  end 
 
   test :migrations_path do
     assert migrations_path(Repo) == "hello/migrations"
