@@ -40,6 +40,7 @@ defmodule Ecto.Query.BuilderUtil do
       when is_atom(var) and is_atom(context) do
     var   = escape_var(var, vars, join_var)
     field = escape(field, vars, join_var)
+    field = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_field(unquote(field)))
     dot   = { :{}, [], [:., [], [var, field]] }
     { :{}, [], [dot, [], []] }
   end
@@ -116,7 +117,8 @@ defmodule Ecto.Query.BuilderUtil do
       {{:{}, [], [:&, [], [0]]}, :y}
 
       iex> escape_dot(quote(do: field(x, ^:y)), [:x])
-      {{:{}, [], [:&, [], [0]]}, :y}
+      { {:{}, [], [:&, [], [0]]},
+        {{:., [], [:"Elixir.Ecto.Query.BuilderUtil", :check_field]}, [], [:y]} }
 
       iex> escape_dot(quote(do: x), [:x])
       :error
@@ -125,7 +127,10 @@ defmodule Ecto.Query.BuilderUtil do
   @spec escape_dot(Macro.t, [atom]) :: { Macro.t, Macro.t } | :error
   def escape_dot({ :field, _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) do
-    { escape_var(var, vars), escape(field, vars) }
+    var   = escape_var(var, vars)
+    field = escape(field, vars)
+    field = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_field(unquote(field)))
+    { var, field }
   end
 
   def escape_dot({ { :., _, [{ var, _, context }, field] }, _, [] }, vars)
@@ -256,4 +261,15 @@ defmodule Ecto.Query.BuilderUtil do
     do: { :{}, [], tuple_to_list(query) }
   def escape_query(other),
     do: other
+
+  @doc """
+  Called by escaper at runtime to verify that `field/2` is given a macro.
+  """
+  def check_field(field) do
+    if is_atom(field) do
+      field
+    else
+      raise Ecto.QueryError, reason: "field name should be an atom, given: `#{inspect field}`"
+    end
+  end
 end

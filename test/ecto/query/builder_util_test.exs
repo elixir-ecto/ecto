@@ -19,6 +19,9 @@ defmodule Ecto.Query.BuilderUtilTest do
 
     assert quote(do: %s"123") ==
            escape(quote do %s"123" end, [])
+
+    assert quote(do: &0.z) ==
+           Code.eval_quoted(escape(quote do field(x, ^:z) end, [:x]), [], __ENV__) |> elem(0)
   end
 
   test "don't escape interpolation" do
@@ -33,26 +36,44 @@ defmodule Ecto.Query.BuilderUtilTest do
   end
 
   test "escape raise" do
-    message = %r"is not a valid query expression"
-
-    assert_raise Ecto.QueryError, message, fn ->
+    assert_raise Ecto.QueryError, %r"is not a valid query expression", fn ->
       escape(quote do x end, [])
     end
 
-    assert_raise Ecto.QueryError, message, fn ->
+    assert_raise Ecto.QueryError, %r"is not a valid query expression", fn ->
       escape(quote do :atom end, [])
     end
 
-    message = %r"unbound variable"
-
-    assert_raise Ecto.QueryError, message, fn ->
+    assert_raise Ecto.QueryError, %r"unbound variable", fn ->
       escape(quote do x.y end, [])
+    end
+
+    assert_raise Ecto.QueryError, %r"field name should be an atom", fn ->
+      Code.eval_quoted(escape(quote do field(x, 123) end, [:x]), [], __ENV__)
     end
   end
 
   test "unbound wildcard var" do
     assert_raise Ecto.QueryError, fn ->
       escape(quote do _.y end, [:_, :_])
+    end
+  end
+
+  test "escape dot" do
+    assert Macro.escape(quote(do: { &0, :y })) ==
+           escape_dot(quote(do: x.y), [:x])
+
+    assert Macro.escape(quote(do: { &0, :y })) ==
+           escape_dot(quote(do: x.y()), [:x])
+
+    assert :error ==
+           escape_dot(quote(do: x), [:x])
+
+    assert quote(do: { &0, :y }) ==
+           Code.eval_quoted(escape_dot(quote(do: field(x, ^:y)), [:x]), [], __ENV__) |> elem(0)
+
+    assert_raise Ecto.QueryError, %r"field name should be an atom", fn ->
+      Code.eval_quoted(escape_dot(quote do field(x, 123) end, [:x]), [], __ENV__)
     end
   end
 end

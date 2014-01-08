@@ -127,12 +127,22 @@ defmodule Ecto.Query.API do
   ## Functions
 
   @doc """
+  References a field. This can be used when a field needs
+  to be dynamically referenced.
+
+  ## Examples
+
+      x = :title
+      from(p in Post, select: field(p, ^x))
+
+  """
+  def field(_var, _atom), do: raise "field/2 should have been expanded"
+
+  @doc """
   Casts a binary literal to a binary type. By default a
   binary literal is of the string type.
   """
-  def binary(binary)
-  defs binary(binary) :: binary
-  defs binary(string) :: binary
+  def binary(_string), do: raise "binary/1 should have been expanded"
 
   @doc "Addition of datetime's with interval's"
   def date_add(left, right)

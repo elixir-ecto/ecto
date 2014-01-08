@@ -38,11 +38,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
     defp translate_name(unquote(fun), unquote(arity)), do: { :fun, unquote(str) }
   end)
 
+  defp translate_name(fun, _arity), do: { :fun, atom_to_binary(fun) }
+
   defp quote_table(table), do: "\"#{table}\""
 
   defp quote_column(column), do: "\"#{column}\""
-
-  defp translate_name(fun, _arity), do: { :fun, atom_to_binary(fun) }
 
   # Generate SQL for a select statement
   def select(Query[] = query) do
