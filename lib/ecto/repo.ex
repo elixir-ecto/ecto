@@ -73,6 +73,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.storage_up(__MODULE__, unquote(adapter))
       end
 
+      def storage_down do 
+        Ecto.Repo.Backend.storage_down(__MODULE__, unquote(adapter))
+      end
+
       def get(queryable, id) do
         Ecto.Repo.Backend.get(__MODULE__, unquote(adapter), queryable, id)
       end
@@ -153,6 +157,15 @@ defmodule Ecto.Repo do
   `{ :error, term }` in case anything else goes wrong.
   """
   defcallback storage_up() :: :ok | { :error, :already_up } | { :error, term }
+
+  @doc """
+  Drop the storage in the data store and return `:ok` if it was dropped
+  successfully.
+
+  Returns `{ :error, :already_down }` if the storage has already been dropped or
+  `{ :error, term }` in case anything else goes wrong.
+  """
+  defcallback storage_down() :: :ok | { :error, :already_down } | { :error, term }
 
   @doc """
   Fetches a single entity from the data store where the primary key matches the

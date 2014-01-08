@@ -3,26 +3,55 @@ defmodule Ecto.Integration.StorageTest do
 
   alias Ecto.Adapters.Postgres
 
-  test "storage up (twice in a row)" do
-    assert Postgres.storage_up([database: "storage_mgt",
-                                username: "postgres",
-                                password: "postgres",
-                                hostname: "localhost"]) == :ok
+  def correct_params do 
+    [database: "storage_mgt",
+     username: "postgres",
+     password: "postgres",
+     hostname: "localhost"]
+  end
 
-    assert Postgres.storage_up([database: "storage_mgt",
-                                username: "postgres",
-                                password: "postgres",
-                                hostname: "localhost"]) == { :error, :already_up }
+  def wrong_user do 
+    [database: "storage_mgt",
+     username: "randomuser",
+     password: "password1234",
+     hostname: "localhost"]
+  end
 
-    #Clean-up for this test
+  def drop_database do 
     System.cmd %s(psql -U postgres -c "DROP DATABASE IF EXISTS storage_mgt;")
   end
 
+  def create_database do 
+    System.cmd %s(psql -U postgres -c "CREATE DATABASE storage_mgt;")
+  end
+
+  test "storage up (twice in a row)" do
+    assert Postgres.storage_up(correct_params) == :ok
+
+    assert Postgres.storage_up(correct_params) == { :error, :already_up }
+
+    create_database
+  end
+
   test "storage up (wrong credentials)" do
-    { :error, error } = Postgres.storage_up([database: "storage_mgt",
-                                             username: "randomuser",
-                                             password: "password1234",
-                                             hostname: "localhost"])
+    { :error, error } = Postgres.storage_up(wrong_user)
     assert error =~ %r(password authentication)
+  end
+
+  test "storage down (twice in a row)" do 
+    create_database
+
+    assert Postgres.storage_down(correct_params) == :ok 
+  
+    assert Postgres.storage_down(correct_params) == { :error, :already_down }
+  end 
+
+  test "storage down (wrong credentials)" do 
+    create_database
+
+    { :error, error } = Postgres.storage_down(wrong_user)
+    assert error =~ %r(password authentication)
+    
+    drop_database
   end
 end
