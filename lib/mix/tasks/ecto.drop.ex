@@ -13,6 +13,8 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   """
   def run(args) do
+    Mix.Task.run "compile"
+
     { repo, _ } = parse_repo(args)
     ensure_repo(repo)
     ensure_storage_down(repo)
@@ -29,6 +31,7 @@ defmodule Mix.Tasks.Ecto.Drop do
   end
 
   defp ensure_storage_down(repo) do
+    Code.ensure_loaded(repo.adapter)
     unless function_exported?(repo.adapter, :storage_down, 1) do
       raise Mix.Error, message: "Expected #{inspect repo.adapter} to define storage_down/1 in order to drop #{inspect repo}."
     end
