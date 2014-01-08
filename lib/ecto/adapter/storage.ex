@@ -6,15 +6,18 @@ defmodule Ecto.Adapter.Storage  do
   use Behaviour
 
   @doc """
-  Create the repository at its specified `url`.
+  Create the storage in the data store and return `:ok` if it was created
+  successfully.
 
-  If the repository already exists, calling storage_up will be a no-op (:ok).
+  Returns `{ :error, :already_up }` if the storage has already been created or
+  `{ :error, term }` in case anything else goes wrong.
 
   ## Examples
 
-    MyRepo.storage_up(Repo)
+    MyAdapter.storage_up([ username: postgres,
+                           database: 'ecto_test',
+                           hostname: 'localhost'])
 
   """
-  defcallback storage_up(Ecto.Repo.t) :: :ok | { :error, any } | no_return
-  
+  defcallback storage_up(Keyword.t) :: :ok | { :error, :already_up } | { :error, term }
 end

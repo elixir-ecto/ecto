@@ -10,8 +10,8 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Query.Validator
   require Ecto.Query, as: Q
 
-  def parsed_url(repo, adapter) do
-    parse_url(repo.url)
+  def storage_up(repo, adapter) do
+    adapter.storage_up(parse_url(repo.url))
   end
 
   def start_link(repo, adapter) do
