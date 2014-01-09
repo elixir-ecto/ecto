@@ -298,9 +298,9 @@ defmodule Ecto.Adapters.Postgres do
     output = run_with_psql opts, "CREATE DATABASE #{ opts[:database] } " <> database_options
 
     cond do
+      String.length(output) == 0   -> :ok 
       output =~ %r/already exists/ -> { :error, :already_up }
-      output =~ %r/(ERROR|FATAL|psql):/ -> { :error, output }
-      true -> :ok
+      true                         -> { :error, output }
     end
   end
 
@@ -308,9 +308,9 @@ defmodule Ecto.Adapters.Postgres do
     output = run_with_psql(opts, "DROP DATABASE #{ opts[:database] }")
 
     cond do
+      String.length(output) == 0   -> :ok 
       output =~ %r/does not exist/ -> { :error, :already_down }
-      output =~ %r/(ERROR|FATAL|psql):/ -> { :error, output }
-      true -> :ok
+      true                         -> { :error, output }
     end
   end
 
@@ -323,9 +323,9 @@ defmodule Ecto.Adapters.Postgres do
 
     command =
       command <>
-      %s(psql -U #{ database[:username] } ) <>
+      %s(psql --quiet -U #{ database[:username] } ) <>
       %s(--host #{ database[:hostname] } ) <>
-      %s(-c "#{ sql_command }"; )
+      %s(-c "#{ sql_command };" )
 
     System.cmd command 
   end
