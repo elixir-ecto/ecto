@@ -32,7 +32,15 @@ defmodule Ecto.Query.BuilderUtil do
   # ecto types
   def escape({ :binary, _, [arg] }, vars, join_var) do
     arg_escaped = escape(arg, vars, join_var)
-    Ecto.Binary[value: arg_escaped]
+    { Ecto.Binary, arg_escaped }
+  end
+
+  def escape({ :array, _, [arg, type] }, vars, join_var) do
+    arg  = escape(arg, vars, join_var)
+    type = escape(type, vars, join_var)
+    type = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_array(unquote(type)))
+    { :{}, [], [Ecto.Array, arg, type] }
+    # TODO: Check that arg is and type is an atom
   end
 
   # field macro
@@ -263,13 +271,24 @@ defmodule Ecto.Query.BuilderUtil do
     do: other
 
   @doc """
-  Called by escaper at runtime to verify that `field/2` is given a macro.
+  Called by escaper at runtime to verify that `field/2` is given an atom.
   """
   def check_field(field) do
     if is_atom(field) do
       field
     else
       raise Ecto.QueryError, reason: "field name should be an atom, given: `#{inspect field}`"
+    end
+  end
+
+  @doc """
+  Called by escaper at runtime to verify that `array/2` is given an atom.
+  """
+  def check_array(type) do
+    if is_atom(type) do
+      type
+    else
+      raise Ecto.QueryError, reason: "array type should be an atom, given: `#{inspect type}`"
     end
   end
 end

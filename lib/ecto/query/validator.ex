@@ -270,31 +270,28 @@ defmodule Ecto.Query.Validator do
   end
 
   # list
-  defp type_check(list, state) when is_list(list) do
-    types = Enum.map(list, &type_check(&1, state))
-
-    case types do
-      [] ->
-        { :list, :any }
-      [type|rest] ->
-        unless Enum.all?(rest, &Util.type_eq?(type, &1)) do
-          raise Ecto.QueryError, reason: "all elements in list has to be of same type"
-        end
-        { :list, type }
-    end
+  defp type_check(list, _state) when is_list(list) do
+    # TODO: inspect with `no_char_lists: true` when we have this in elixir stable
+    raise Ecto.QueryError, reason: "lists `#{inspect list}` are not allowed in queries, " <>
+      "wrap in `array/2` instead"
   end
 
   # atom
-  defp type_check(literal, _vars) when is_atom(literal) and not (literal in [true, false, nil]) do
-    raise Ecto.QueryError, reason: "atoms are not allowed in queries `#{literal}`"
+  defp type_check(atom, _state) when is_atom(atom) and not (atom in [true, false, nil]) do
+    raise Ecto.QueryError, reason: "atoms are not allowed in queries `#{inspect atom}`"
   end
 
   # values
-  defp type_check(value, _state) do
-    case Util.value_to_type(value) do
-      { :ok, type } -> type
-      { :error, reason } ->
-        raise Ecto.QueryError, reason: reason
+  defp type_check(value, state) do
+    if Util.literal?(value) do
+      case Util.value_to_type(value, &{ :ok, type_check(&1, state) }) do
+        { :ok, type } ->
+          type
+        { :error, reason } ->
+          raise Ecto.QueryError, reason: reason
+      end
+    else
+      raise Ecto.QueryError, reason: "`unknown type of value `#{inspect value}`"
     end
   end
 

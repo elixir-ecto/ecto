@@ -7,7 +7,7 @@ defmodule Ecto.EntityTest do
     field :name, :string, default: "eric"
     field :email, :string, uniq: true
     field :temp, :virtual, default: "temp"
-    field :array, { :list, :string }
+    field :array, { :array, :string }
 
     def inc_id(__MODULE__[id: id]) do
       id + 1
@@ -29,7 +29,7 @@ defmodule Ecto.EntityTest do
       { :id, [type: :integer] },
       { :name, [type: :string] },
       { :email, [type: :string, uniq: true] },
-      { :array, [type: { :list, :string }] }
+      { :array, [type: { :array, :string }] }
     ]
 
     assert MyEntity.__entity__(:field_names) == [:id, :name, :email, :array]
@@ -130,7 +130,7 @@ defmodule Ecto.EntityTest do
     has_many :posts, Post
     has_one :author, User
     belongs_to :comment, Comment
-  end  
+  end
 
   test "associations" do
     assert EntityAssocs.__entity__(:association, :not_a_field) == nil
@@ -220,7 +220,7 @@ defmodule Ecto.EntityTest do
 
       queryable "defaults" do
         ## :type option overrides any @queryable_defaults
-        belongs_to :comment, Comment, type: :interval 
+        belongs_to :comment, Comment, type: :interval
       end
     end
 

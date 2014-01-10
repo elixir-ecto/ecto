@@ -17,25 +17,25 @@ defmodule Ecto.Query.TypespecTest do
 
   test "bind var" do
     assert API.==(:binary, :binary) == { :ok, :boolean }
-    assert API.==({ :list, :test }, { :list, :test }) == { :ok, :boolean }
+    assert API.==({ :array, :test }, { :array, :test }) == { :ok, :boolean }
     assert { :error, _ } = API.==(:x, :y)
 
-    assert API.in(:apa, { :list, :apa }) == { :ok, :boolean }
-    assert API.in(:bapa, { :list, :bapa }) == { :ok, :boolean }
-    assert { :error, _ } = API.in(:apa, { :list, :bapa })
+    assert API.in(:apa, { :array, :apa }) == { :ok, :boolean }
+    assert API.in(:bapa, { :array, :bapa }) == { :ok, :boolean }
+    assert { :error, _ } = API.in(:apa, { :array, :bapa })
 
-    assert API.++({ :list, :apa }, { :list, :apa }) == { :ok, { :list, :apa } }
-    assert API.++({ :list, :bapa }, { :list, :bapa }) == { :ok, { :list, :bapa } }
-    assert { :error, _ } = API.++({ :list, :apa }, { :list, :bapa })
+    assert API.++({ :array, :apa }, { :array, :apa }) == { :ok, { :array, :apa } }
+    assert API.++({ :array, :bapa }, { :array, :bapa }) == { :ok, { :array, :bapa } }
+    assert { :error, _ } = API.++({ :array, :apa }, { :array, :bapa })
   end
 
   test "wildcard" do
     assert API.==(nil, :anything) == { :ok, :boolean }
     assert API.==(:other_thing, nil) == { :ok, :boolean }
-    assert API.==({ :list, :integer }, nil) == { :ok, :boolean }
+    assert API.==({ :array, :integer }, nil) == { :ok, :boolean }
 
     assert API.count(:test) == { :ok, :integer }
-    assert API.count({ :list, :integer }) == { :ok, :integer }
+    assert API.count({ :array, :integer }) == { :ok, :integer }
   end
 
   test "aggregates" do

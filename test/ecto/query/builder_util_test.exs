@@ -20,6 +20,12 @@ defmodule Ecto.Query.BuilderUtilTest do
     assert quote(do: %s"123") ==
            escape(quote do %s"123" end, [])
 
+    assert { Ecto.Binary, { :<<>>, [], [1, 2, 3] } } ==
+           escape(quote do binary(<< 1, 2, 3 >>) end, [])
+
+    assert Ecto.Array[value: [1, 2, 3], type: :integer] ==
+           Code.eval_quoted(escape(quote do array([1, 2, 3], ^:integer) end, []), [], __ENV__) |> elem(0)
+
     assert quote(do: &0.z) ==
            Code.eval_quoted(escape(quote do field(x, ^:z) end, [:x]), [], __ENV__) |> elem(0)
   end
@@ -50,6 +56,10 @@ defmodule Ecto.Query.BuilderUtilTest do
 
     assert_raise Ecto.QueryError, %r"field name should be an atom", fn ->
       Code.eval_quoted(escape(quote do field(x, 123) end, [:x]), [], __ENV__)
+    end
+
+    assert_raise Ecto.QueryError, %r"array type should be an atom", fn ->
+      Code.eval_quoted(escape(quote do array([1, 2, 3], 123) end, []), [], __ENV__) |> elem(0)
     end
   end
 

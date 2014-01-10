@@ -71,15 +71,18 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp preload_query(records, refl) do
-    key = refl.key
+    key       = refl.key
     assoc_key = refl.assoc_key
+    record    = Enum.find(records, & &1)
+    module    = if record, do: elem(record, 0)
+    type      = if module, do: module.__entity__(:field_type, key)
 
     ids = Enum.reduce(records, [], fn record, acc ->
       if record && (key = apply(record, key, [])), do: [key|acc], else: acc
     end)
 
        Q.from x in refl.associated,
-       where: field(x, ^assoc_key) in ^ids,
+       where: field(x, ^assoc_key) in array(^ids, ^type),
     order_by: field(x, ^assoc_key)
   end
 

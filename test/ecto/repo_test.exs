@@ -33,7 +33,7 @@ defmodule Ecto.RepoTest.MyModelList do
   use Ecto.Model
 
   queryable "my_entity" do
-    field :l1, { :list, :string }
+    field :l1, { :array, :string }
   end
 end
 
@@ -187,7 +187,7 @@ defmodule Ecto.RepoTest do
 
   test "list value types incorrect" do
     assert_raise Ecto.InvalidEntity, fn ->
-      MyRepo.create(MyModelList.Entity[l1: [1, 2, 3]])
+      MyRepo.create(MyModelList.Entity[l1: Ecto.Array[value: [1, 2, 3], type: :integer]])
     end
   end
 

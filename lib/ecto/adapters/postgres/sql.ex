@@ -307,8 +307,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
     end
   end
 
-  defp expr(list, sources) when is_list(list) do
-    "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
+  defp expr(Ecto.Array[value: list, type: type], sources) do
+    "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]::#{type(type)}[]"
   end
 
   defp expr(literal, _sources), do: literal(literal)
@@ -334,16 +334,16 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "'\\x#{hex}'::bytea"
   end
 
+  defp literal(Ecto.Array[value: list, type: type]) do
+    "ARRAY[" <> Enum.map_join(list, ", ", &literal(&1)) <> "]::#{type(type)}[]"
+  end
+
   defp literal(literal) when is_binary(literal) do
     "'#{escape_string(literal)}'"
   end
 
   defp literal(literal) when is_number(literal) do
     to_string(literal)
-  end
-
-  defp literal(literal) when is_list(literal) do
-    "ARRAY[" <> Enum.map_join(literal, ", ", &literal(&1)) <> "]"
   end
 
   defp op_to_binary({ op, _, [_, _] } = expr, sources) when op in @binary_ops do
@@ -385,6 +385,17 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp escape_string(value) when is_binary(value) do
     :binary.replace(value, "'", "''", [:global])
   end
+
+  # Must be kept up to date with Util.types and Util.poly_types
+  defp type(:boolean),  do: "boolean"
+  defp type(:string),   do: "text"
+  defp type(:integer),  do: "integer"
+  defp type(:float),    do: "float"
+  defp type(:binary),   do: "bytea"
+  defp type(:datetime), do: "timestamp without time zone"
+  defp type(:interval), do: "interval"
+
+  defp type({ :array, inner }), do: type(inner) <> "[]"
 
   defp create_names(query) do
     sources = query.sources |> tuple_to_list

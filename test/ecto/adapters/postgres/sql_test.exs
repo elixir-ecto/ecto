@@ -26,8 +26,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     use Ecto.Model
 
     queryable "model3" do
-      field :l1, { :list, :string }
-      field :l2, { :list, :integer }
+      field :list1, { :array, :string }
+      field :list2, { :array, :integer }
+      field :binary, :binary
     end
   end
 
@@ -215,8 +216,13 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "insert with list" do
-      query = SQL.insert(Model3.Entity[l1: ["a", "b", "c"], l2: [1, 2, 3]], [:id])
-      assert query == "INSERT INTO \"model3\" (\"l1\", \"l2\")\nVALUES (ARRAY['a', 'b', 'c'], ARRAY[1, 2, 3])\nRETURNING \"id\""
+    query = SQL.insert(Model3.Entity[list1: Ecto.Array[value: ["a", "b", "c"], type: :string], list2: Ecto.Array[value: [1, 2, 3], type: :integer]], [:id])
+    assert query == "INSERT INTO \"model3\" (\"list1\", \"list2\")\nVALUES (ARRAY['a', 'b', 'c']::text[], ARRAY[1, 2, 3]::integer[])\nRETURNING \"id\""
+  end
+
+  test "insert with binary" do
+    query = SQL.insert(Model3.Entity[binary: Ecto.Binary[value: << 1, 2, 3 >>]], [:id])
+    assert query == "INSERT INTO \"model3\" (\"binary\")\nVALUES ('\\x010203'::bytea)\nRETURNING \"id\""
   end
 
   test "update" do
@@ -225,8 +231,13 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "update with list" do
-    query = SQL.update(Model3.Entity[id: 42, l1: ["c", "d"], l2: [4, 5]])
-    assert query == "UPDATE \"model3\" SET \"l1\" = ARRAY['c', 'd'], \"l2\" = ARRAY[4, 5]\nWHERE \"id\" = 42"
+    query = SQL.update(Model3.Entity[id: 42, list1: Ecto.Array[value: ["c", "d"], type: :string], list2: Ecto.Array[value: [4, 5], type: :integer]])
+    assert query == "UPDATE \"model3\" SET \"list1\" = ARRAY['c', 'd']::text[], \"list2\" = ARRAY[4, 5]::integer[], \"binary\" = NULL\nWHERE \"id\" = 42"
+  end
+
+  test "update with binary" do
+    query = SQL.update(Model3.Entity[id: 42, binary: Ecto.Binary[value: << 1, 2, 3 >>]])
+    assert query == "UPDATE \"model3\" SET \"list1\" = NULL, \"list2\" = NULL, \"binary\" = '\\x010203'::bytea\nWHERE \"id\" = 42"
   end
 
   test "delete" do
@@ -266,8 +277,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "in expression" do
-    query = from(Model) |> select([e], 1 in [1,e.x,3]) |> normalize
-    assert SQL.select(query) == "SELECT 1 = ANY (ARRAY[1, m0.\"x\", 3])\nFROM \"model\" AS m0"
+    query = from(Model) |> select([e], 1 in array([1,e.x,3], ^:integer)) |> normalize
+    assert SQL.select(query) == "SELECT 1 = ANY (ARRAY[1, m0.\"x\", 3]::integer[])\nFROM \"model\" AS m0"
 
     query = from(Model) |> select([e], e.x in 1..3) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" BETWEEN 1 AND 3\nFROM \"model\" AS m0"
@@ -277,8 +288,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "list expression" do
-    query = from(e in Model) |> where([e], [e.x, e.y] == nil) |> select([e], 0) |> normalize
-    assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nWHERE (ARRAY[m0.\"x\", m0.\"y\"] IS NULL)"
+    query = from(e in Model) |> where([e], array([e.x, e.y], ^:integer) == nil) |> select([e], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nWHERE (ARRAY[m0.\"x\", m0.\"y\"]::integer[] IS NULL)"
   end
 
   test "having" do
@@ -304,8 +315,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "sigils" do
-    query = from(Model) |> select([], %s"abc" in %w(abc def)) |> normalize
-    assert SQL.select(query) == "SELECT 'abc' = ANY (ARRAY['abc', 'def'])\nFROM \"model\" AS m0"
+    query = from(Model) |> select([], %s"abc" in array(%w(abc def), ^:string)) |> normalize
+    assert SQL.select(query) == "SELECT 'abc' = ANY (ARRAY['abc', 'def']::text[])\nFROM \"model\" AS m0"
   end
 
   defrecord Rec, [:x]

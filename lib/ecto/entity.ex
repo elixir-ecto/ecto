@@ -48,6 +48,8 @@ defmodule Ecto.Entity do
   `primary_key/1`, `primary_key/2` and `update_primary_key/2`.
   """
 
+  require Ecto.Query.Util, as: Util
+
   @type t :: Record.t
 
   ## API
@@ -218,8 +220,6 @@ defmodule Ecto.Entity do
 
   ## Callbacks
 
-  @types %w(boolean string integer float binary list datetime interval virtual)a
-
   @doc false
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
@@ -337,15 +337,12 @@ defmodule Ecto.Entity do
 
   ## Helpers
 
-  defp check_type!({ outer, inner }) when is_atom(outer) do
-    check_type!(outer)
-    check_type!(inner)
-  end
+  defp check_type!({ outer, inner }) when outer in Util.poly_types and inner in Util.types, do: :ok
+
+  defp check_type!(type) when type in Util.types, do: :ok
 
   defp check_type!(type) do
-    unless type in @types do
-      raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
-    end
+    raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
   end
 
   defp check_foreign_key!(mod, foreign_key) do

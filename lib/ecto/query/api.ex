@@ -17,7 +17,7 @@ defmodule Ecto.Query.API do
   deft boolean
   deft binary
   deft string
-  deft list(var)
+  deft array(var)
   deft datetime
   deft interval
   deft nil
@@ -105,15 +105,15 @@ defmodule Ecto.Query.API do
   defs boolean or boolean :: boolean
 
   @doc """
-  Return `true` if `left` is in `right` list, `false`
+  Return `true` if `left` is in `right` array, `false`
   otherwise.
   """
   def left in right
-  defs var in list(var) :: boolean
+  defs var in array(var) :: boolean
 
   @doc "Range from left to right."
   def left .. right
-  defs integer .. integer :: list(integer)
+  defs integer .. integer :: array(integer)
 
   @doc "Binary and string concatenation."
   def left <> right
@@ -122,7 +122,7 @@ defmodule Ecto.Query.API do
 
   @doc "List concatenation."
   def left ++ right
-  defs list(var) ++ list(var) :: list(var)
+  defs array(var) ++ array(var) :: array(var)
 
   ## Functions
 

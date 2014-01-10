@@ -11,6 +11,8 @@
 
 * Backwards incompatible changes
   * `Ecto.Binary[]` is no longer used to wrap binary values. Instead always use `binary/1` in queries
+  * `:list` type changed name to `:array`. Need to specify inner type for arrays in entity fields
+  * Literal lists no longer supported in queries. Need to specify inner type; use `array(list, ^:integer)` instead
 
 # v0.0.1
 
