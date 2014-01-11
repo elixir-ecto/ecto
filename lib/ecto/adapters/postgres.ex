@@ -7,6 +7,7 @@ defmodule Ecto.Adapters.Postgres do
 
   @behaviour Ecto.Adapter
   @behaviour Ecto.Adapter.Migrations
+  @behaviour Ecto.Adapter.Storage
   @behaviour Ecto.Adapter.Transactions
   @behaviour Ecto.Adapter.TestTransactions
 
@@ -286,6 +287,47 @@ defmodule Ecto.Adapters.Postgres do
     :poolboy.transaction(pool, fn worker ->
       Worker.rollback!(worker)
     end)
+  end
+
+  ## Storage API
+
+  def storage_up(opts) do
+    #TODO: allow the user to specify those options either in the Repo or on command line
+    database_options = %s(ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8')
+
+    output = run_with_psql opts, "CREATE DATABASE #{ opts[:database] } " <> database_options
+
+    cond do
+      String.length(output) == 0   -> :ok 
+      output =~ %r/already exists/ -> { :error, :already_up }
+      true                         -> { :error, output }
+    end
+  end
+
+  def storage_down(opts) do 
+    output = run_with_psql(opts, "DROP DATABASE #{ opts[:database] }")
+
+    cond do
+      String.length(output) == 0   -> :ok 
+      output =~ %r/does not exist/ -> { :error, :already_down }
+      true                         -> { :error, output }
+    end
+  end
+
+  defp run_with_psql(database, sql_command) do 
+    command = "" 
+
+    if password = database[:password] do
+      command = %s(PGPASSWORD=#{ password } )
+    end
+
+    command =
+      command <>
+      %s(psql --quiet -U #{ database[:username] } ) <>
+      %s(--host #{ database[:hostname] } ) <>
+      %s(-c "#{ sql_command };" )
+
+    System.cmd command 
   end
 
   ## Migration API
