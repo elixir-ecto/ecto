@@ -202,20 +202,28 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "distinct expression" do 
-    query = from(Post) |> distinct([p], [p.id, p.title]) |> select([p], [p, p.id])
+    query = from(Post) |> distinct([p], [p.id, p.title]) |> group_by([p], [p, p.title])
     validate(query)
 
-    query = from(Post) |> distinct([p], p) |> select([p], p)
+    query = from(Post) |> distinct([p], p) |> group_by([p], p)
     validate(query)
 
-    query = from(Post) |> distinct([p], p) |> select([p], [p.id, p.title])
+    query = from(Post) |> distinct([p], p) |> group_by([p], [p.id, p.title])
     validate(query)
   
-    query = from(Post) |> distinct([p], p.title)
+    query = from(Post) |> select([p], p.title) |> distinct([p], p.title) |> group_by([p], p.title)
+    validate(query)
+
+    query = from(Post) |> select([p], p.title) |> distinct([p], p.id) |> group_by([p], [p.id, p.title])
     validate(query)
   
-    query = from(Post) |> distinct([p], p.title) |> select([p], p.id)
-    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `select`", fn ->
+    query = from(Post) |> select([p], p.title) |> distinct([p], p.id) |> group_by([p], [p.title, p.id])
+    assert_raise Ecto.QueryError, %r"the leftmost `group_by` expression should reference all the `distinct` fields", fn ->
+      validate(query)
+    end
+
+    query = from(Post) |> distinct([p], p.title) |> group_by([p], [p.id, p.title])
+    assert_raise Ecto.QueryError, %r"the leftmost `group_by` expression should reference all the `distinct` fields", fn ->
       validate(query)
     end
   end

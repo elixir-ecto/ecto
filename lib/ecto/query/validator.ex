@@ -33,7 +33,7 @@ defmodule Ecto.Query.Validator do
       raise Ecto.QueryError, reason: "a query must have a from expression"
     end
 
-    grouped = group_by_sources(query.group_bys, query.sources)
+    grouped = exprs_sources(query.group_bys, query.sources)
     is_grouped = query.group_bys != [] or query.havings != []
     state = State[sources: query.sources, grouped: grouped, grouped?: is_grouped,
                   apis: apis, from: query.from, query: query]
@@ -200,17 +200,22 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp validate_distincts(Query[select: select, distincts: distincts, sources: sources], state) do
+  defp validate_distincts(Query[group_bys: group_bys, distincts: distincts, sources: sources], state) do
     validate_field_list(:distinct, distincts, state)
 
-    Enum.each(distinct_sources(distincts, sources), fn { var, source, field } -> 
-      #Check for either var or var.field in the select expression
-      pos = Util.locate_var(select.expr, var) 
-      pos = pos || Util.locate_var(select.expr, { { :., [], [var, field] }, [], [] })
-      if nil?(pos) do 
-        entity = Util.entity(source) || Util.source(source)
-        raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` must appear in `select` "
-      end  
+    # ensure that the fields in `distinct` appears in the leftmost part of the `group_by`
+    
+    # ex: distinct: id, title / group_by: title, id => no error
+    #     distinct: title / group_by: id => raise (title not in group_by)
+    #     distinct: title / group_by: id, title => raise (title in group_by but not leftmost part)
+
+    distinct_sources = exprs_sources(distincts, sources)
+    group_by_sources = exprs_sources(group_bys, sources)
+
+    group_by_sources |> Enum.take(Enum.count(distinct_sources)) |> Enum.each(fn (group_by) ->
+      unless group_by in distinct_sources do 
+        raise Ecto.QueryError, reason: "the leftmost `group_by` expression should reference all the `distinct` fields"
+      end 
     end)
   end
 
@@ -374,23 +379,14 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp group_by_sources(group_bys, sources) do
-    Enum.map(group_bys, fn(expr) ->
+  defp exprs_sources(exprs, sources) do 
+    Enum.map(exprs, fn(expr) ->
       Enum.map(expr.expr, fn({ var, field }) ->
         source = Util.find_source(sources, var)
         { source, field }
       end)
     end) |> Enum.concat |> Enum.uniq
-  end
-
-  defp distinct_sources(distincts, sources) do 
-    Enum.map(distincts, fn(expr) ->
-      Enum.map(expr.expr, fn({ var, field }) ->
-        source = Util.find_source(sources, var)
-        { var, source, field }
-      end)
-    end) |> Enum.concat |> Enum.uniq
-  end
+  end 
 
   defp check_grouped({ source, field } = source_field, State[] = state) do
     if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do

@@ -28,6 +28,13 @@ defmodule Ecto.Query.NormalizerTest do
            List.first(query.group_bys).expr
   end
 
+  test "distinct all fields" do 
+    query = from(p in Post, distinct: [p, p.text]) |> normalize
+    var = { :&, [], [0] }
+    assert [{ var, :id }, { var, :title }, { var, :text }, { var, :text }] =
+           Enum.first(query.distincts).expr
+  end
+
   test "normalize assoc joins" do
     query = from(p in Post, join: p.comments) |> normalize
     assert JoinExpr[on: on, assoc: assoc] = hd(query.joins)
