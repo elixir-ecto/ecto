@@ -25,7 +25,8 @@ defmodule Ecto.Model.QueryableTest do
     @queryable_defaults primary_key: { :uuid, :string, [] },
                         foreign_key_type: :string,
                         default_fields: [{ :hello, :integer, default: 1 },
-                                         { :override_me, :integer, overridable?: true }]
+                                         { :override_me, :integer, [overridable?: true,
+                                                                    default: 2] }]
     use Ecto.Model.Queryable
 
     queryable "users" do
