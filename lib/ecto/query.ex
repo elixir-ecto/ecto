@@ -305,13 +305,30 @@ defmodule Ecto.Query do
   @doc """
   A distinct query expression.
 
+  Only keep one row for each combination of values in the `distinct` query 
+  expression.
+
+  The row that is being kept depends on the ordering of the rows. To ensure
+  results are consistents, if an `order_by` expression is also added to the 
+  query, its leftmost part must first reference all the fields in the
+  `distinct` expression before referencing another field.
+
   ## Keywords examples
 
-    TODO...
+      # Returns the list of different categories in the Post entity
+      from(p in Post, distinct: p.category)
+
+      # Returns the first (by date) for each different categories of Post
+      from(p in Post, 
+         distinct: p.category, 
+         order_by: [p.category, p.date])
 
   ## Expressions examples
 
-    TODO...
+      from(Post) 
+        |> distinct([p], p.category)
+        |> order_by([p], [p.category, p.author])
+
   """
   defmacro distinct(query, binding, expr) do 
     DistinctBuilder.build(query, binding, expr, __CALLER__)
