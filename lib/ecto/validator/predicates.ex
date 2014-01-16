@@ -174,8 +174,8 @@ defmodule Ecto.Validator.Predicates do
   """
   def greater_than(attr, value, check, opts // [])
   def greater_than(_attr, value, check, _opts) when
-        is_integer(check) and (nil?(value) or value > check), do: []
-  def greater_than(attr, _value, check, opts) when is_integer(check), do:
+        is_number(check) and (nil?(value) or value > check), do: []
+  def greater_than(attr, _value, check, opts) when is_number(check), do:
         [{ attr, opts[:message] || "must be greater than #{check}" }]
 
   @doc """
@@ -194,8 +194,8 @@ defmodule Ecto.Validator.Predicates do
   """
   def greater_than_or_equal_to(attr, value, check, opts // [])
   def greater_than_or_equal_to(_attr, value, check, _opts) when
-        is_integer(check) and (nil?(value) or value >= check), do: []
-  def greater_than_or_equal_to(attr, _value, check, opts) when is_integer(check), do:
+        is_number(check) and (nil?(value) or value >= check), do: []
+  def greater_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
         [{ attr, opts[:message] || "must be greater than or equal to #{check}" }]
 
   @doc """
@@ -214,8 +214,8 @@ defmodule Ecto.Validator.Predicates do
   """
   def less_than(attr, value, check, opts // [])
   def less_than(_attr, value, check, _opts) when
-        is_integer(check) and (nil?(value) or value < check), do: []
-  def less_than(attr, _value, check, opts) when is_integer(check), do:
+        is_number(check) and (nil?(value) or value < check), do: []
+  def less_than(attr, _value, check, opts) when is_number(check), do:
         [{ attr, opts[:message] || "must be less than #{check}" }]
 
   @doc """
@@ -234,8 +234,8 @@ defmodule Ecto.Validator.Predicates do
   """
   def less_than_or_equal_to(attr, value, check, opts // [])
   def less_than_or_equal_to(_attr, value, check, _opts) when
-        is_integer(check) and (nil?(value) or value <= check), do: []
-  def less_than_or_equal_to(attr, _value, check, opts) when is_integer(check), do:
+        is_number(check) and (nil?(value) or value <= check), do: []
+  def less_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
         [{ attr, opts[:message] || "must be less than or equal to #{check}" }]
 
   @doc """
