@@ -194,16 +194,16 @@ defmodule Ecto.Query.BuilderUtil do
 
   ## Examples
 
-      iex> escape_fields_and_var(quote(do: [x.x, y.y]), [:x, :y])
+      iex> escape_fields_and_vars(quote(do: [x.x, y.y]), [:x, :y])
       [{{:{}, [], [:&, [], [0]]}, :x},
        {{:{}, [], [:&, [], [1]]}, :y}]
 
-      iex> escape_fields_and_var(quote(do: x), [:x, :y])
+      iex> escape_fields_and_vars(quote(do: x), [:x, :y])
       [{:{}, [], [:&, [], [0]]}]
 
   """
-  @spec escape_fields_and_var(Macro.t, [atom]) :: Macro.t | no_return
-  def escape_fields_and_var(ast, vars) do
+  @spec escape_fields_and_vars(Macro.t, [atom]) :: Macro.t | no_return
+  def escape_fields_and_vars(ast, vars) do
     Enum.map(List.wrap(ast), &do_escape_expr(&1, vars))
   end
 
