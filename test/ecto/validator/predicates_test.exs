@@ -210,6 +210,26 @@ defmodule Ecto.Validator.PredicatesTest do
     assert less_than_or_equal_to(:age, 10, 5, message: "bad number") == [age: "bad number"]
   end
 
+  ## Between
+
+  test "between on invalid" do
+    assert between(:age, 25, 18..21) == [age: "must be between 18 and 21"]
+    assert between(:price, 99.98, 79.98..89.98) == [price: "must be between 79.98 and 89.98"]
+  end
+
+  test "between on valid" do
+    assert between(:age, 19, 18..21) == []
+    assert between(:price, 80.00, 79.98..89.98) == []
+  end
+
+  test "between skips on nil" do
+    assert between(:age, nil, 18..21) == []
+  end
+
+  test "between with custom message" do
+    assert between(:age, 24, 18..21, message: "bad number") == [age: "bad number"]
+  end
+
   ## Not member of
 
   test "not_member_of on invalid" do

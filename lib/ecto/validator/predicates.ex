@@ -239,6 +239,26 @@ defmodule Ecto.Validator.Predicates do
         [{ attr, opts[:message] || "must be less than or equal to #{check}" }]
 
   @doc """
+  Validates the given number is between the value.
+  Expects a range as value, raises otherwise.
+
+  ## Options
+
+  * `:message` - defaults to "must be between X and Y"
+
+  ## Examples
+
+      validates user,
+          age: between(18..21)
+
+  """
+  def between(attr, value, min..max, opts // [])
+  def between(_attr, value, min..max, _opts) when
+    is_number(min) and is_number(max) and (nil?(value) or value in min..max), do: []
+  def between(attr, _value, min..max, opts) when is_number(min) and is_number(max), do:
+    [{ attr, opts[:message] || "must be between #{min} and #{max}" }]
+
+  @doc """
   Validates the attribute is member of the given enumerable.
 
   This validator has the same semantics as calling `Enum.member?/2`
