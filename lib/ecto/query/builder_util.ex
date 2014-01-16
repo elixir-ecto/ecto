@@ -187,28 +187,24 @@ defmodule Ecto.Query.BuilderUtil do
 
 
   @doc """
-  Escapes an expression.
+  Escapes simple expressions.
 
   An expression may be a single variable `x`, representing all fields in that
   entity, a field `x.y`, or a list of fields and variables.
 
   ## Examples
 
-      iex> escape_expr(quote(do: [x.x, y.y]), [:x, :y])
+      iex> escape_fields_and_var(quote(do: [x.x, y.y]), [:x, :y])
       [{{:{}, [], [:&, [], [0]]}, :x},
        {{:{}, [], [:&, [], [1]]}, :y}]
 
-      iex> escape_expr(quote(do: x), [:x, :y])
+      iex> escape_fields_and_var(quote(do: x), [:x, :y])
       [{:{}, [], [:&, [], [0]]}]
 
   """
-  @spec escape_expr(Macro.t, [atom]) :: Macro.t | no_return
-  def escape_expr(list, vars) when is_list(list) do
-    Enum.map(list, &do_escape_expr(&1, vars))
-  end
-
-  def escape_expr(ast, vars) do
-    [do_escape_expr(ast, vars)]
+  @spec escape_fields_and_var(Macro.t, [atom]) :: Macro.t | no_return
+  def escape_fields_and_var(ast, vars) do
+    Enum.map(List.wrap(ast), &do_escape_expr(&1, vars))
   end
 
   defp do_escape_expr({ var, _, context }, vars) when is_atom(var) and is_atom(context) do

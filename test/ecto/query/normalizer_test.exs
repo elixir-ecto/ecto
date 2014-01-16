@@ -32,7 +32,7 @@ defmodule Ecto.Query.NormalizerTest do
     query = from(p in Post, distinct: [p, p.text]) |> normalize
     var = { :&, [], [0] }
     assert [{ var, :id }, { var, :title }, { var, :text }, { var, :text }] =
-           Enum.first(query.distincts).expr
+           List.first(query.distincts).expr
   end
 
   test "normalize assoc joins" do
