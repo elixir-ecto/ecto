@@ -174,8 +174,8 @@ defmodule Ecto.Validator.Predicates do
   """
   def greater_than(attr, value, check, opts // [])
   def greater_than(_attr, value, check, _opts) when
-        is_integer(check) and (nil?(value) or value > check), do: []
-  def greater_than(attr, _value, check, opts) when is_integer(check), do:
+        is_number(check) and (nil?(value) or value > check), do: []
+  def greater_than(attr, _value, check, opts) when is_number(check), do:
         [{ attr, opts[:message] || "must be greater than #{check}" }]
 
   @doc """
@@ -194,8 +194,8 @@ defmodule Ecto.Validator.Predicates do
   """
   def greater_than_or_equal_to(attr, value, check, opts // [])
   def greater_than_or_equal_to(_attr, value, check, _opts) when
-        is_integer(check) and (nil?(value) or value >= check), do: []
-  def greater_than_or_equal_to(attr, _value, check, opts) when is_integer(check), do:
+        is_number(check) and (nil?(value) or value >= check), do: []
+  def greater_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
         [{ attr, opts[:message] || "must be greater than or equal to #{check}" }]
 
   @doc """
@@ -214,8 +214,8 @@ defmodule Ecto.Validator.Predicates do
   """
   def less_than(attr, value, check, opts // [])
   def less_than(_attr, value, check, _opts) when
-        is_integer(check) and (nil?(value) or value < check), do: []
-  def less_than(attr, _value, check, opts) when is_integer(check), do:
+        is_number(check) and (nil?(value) or value < check), do: []
+  def less_than(attr, _value, check, opts) when is_number(check), do:
         [{ attr, opts[:message] || "must be less than #{check}" }]
 
   @doc """
@@ -234,9 +234,29 @@ defmodule Ecto.Validator.Predicates do
   """
   def less_than_or_equal_to(attr, value, check, opts // [])
   def less_than_or_equal_to(_attr, value, check, _opts) when
-        is_integer(check) and (nil?(value) or value <= check), do: []
-  def less_than_or_equal_to(attr, _value, check, opts) when is_integer(check), do:
+        is_number(check) and (nil?(value) or value <= check), do: []
+  def less_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
         [{ attr, opts[:message] || "must be less than or equal to #{check}" }]
+
+  @doc """
+  Validates the given number is between the value.
+  Expects a range as value, raises otherwise.
+
+  ## Options
+
+  * `:message` - defaults to "must be between X and Y"
+
+  ## Examples
+
+      validates user,
+          age: between(18..21)
+
+  """
+  def between(attr, value, min..max, opts // [])
+  def between(_attr, value, min..max, _opts) when
+    is_number(min) and is_number(max) and (nil?(value) or value in min..max), do: []
+  def between(attr, _value, min..max, opts) when is_number(min) and is_number(max), do:
+    [{ attr, opts[:message] || "must be between #{min} and #{max}" }]
 
   @doc """
   Validates the attribute is member of the given enumerable.

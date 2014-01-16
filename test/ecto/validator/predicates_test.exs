@@ -127,10 +127,13 @@ defmodule Ecto.Validator.PredicatesTest do
   test "greater_than on invalid" do
     assert greater_than(:age, 5, 10)  == [age: "must be greater than 10"]
     assert greater_than(:age, 10, 10) == [age: "must be greater than 10"]
+    assert greater_than(:price, 89.98, 99.98) == [price: "must be greater than 99.98"]
+    assert greater_than(:price, 89.98, 89.98) == [price: "must be greater than 89.98"]
   end
 
   test "greater_than on valid" do
     assert greater_than(:age, 5, 0) == []
+    assert greater_than(:price, 89.98, 79.98) == []
   end
 
   test "greater_than skips on nil" do
@@ -145,11 +148,14 @@ defmodule Ecto.Validator.PredicatesTest do
 
   test "greater_than_or_equal_to on invalid" do
     assert greater_than_or_equal_to(:age, 5, 10) == [age: "must be greater than or equal to 10"]
+    assert greater_than_or_equal_to(:price, 89.98, 99.98) == [price: "must be greater than or equal to 99.98"]
   end
 
   test "greater_than_or_equal_to on valid" do
     assert greater_than_or_equal_to(:age, 5, 0) == []
     assert greater_than_or_equal_to(:age, 5, 5) == []
+    assert greater_than_or_equal_to(:price, 89.98, 79.98) == []
+    assert greater_than_or_equal_to(:price, 89.98, 89.98) == []
   end
 
   test "greater_than_or_equal_to skips on nil" do
@@ -165,10 +171,13 @@ defmodule Ecto.Validator.PredicatesTest do
   test "less_than on invalid" do
     assert less_than(:age, 10, 5)  == [age: "must be less than 5"]
     assert less_than(:age, 10, 10) == [age: "must be less than 10"]
+    assert less_than(:price, 89.98, 79.98) == [price: "must be less than 79.98"]
+    assert less_than(:price, 89.98, 89.98) == [price: "must be less than 89.98"]
   end
 
   test "less_than on valid" do
     assert less_than(:age, 0, 5) == []
+    assert less_than(:price, 89.98, 99.98) == []
   end
 
   test "less_than skips on nil" do
@@ -183,11 +192,14 @@ defmodule Ecto.Validator.PredicatesTest do
 
   test "less_than_or_equal_to on invalid" do
     assert less_than_or_equal_to(:age, 10, 5) == [age: "must be less than or equal to 5"]
+    assert less_than_or_equal_to(:price, 89.98, 79.98) == [price: "must be less than or equal to 79.98"]
   end
 
   test "less_than_or_equal_to on valid" do
     assert less_than_or_equal_to(:age, 0, 5) == []
     assert less_than_or_equal_to(:age, 5, 5) == []
+    assert less_than_or_equal_to(:price, 89.98, 99.98) == []
+    assert less_than_or_equal_to(:price, 89.98, 89.98) == []
   end
 
   test "less_than_or_equal_to skips on nil" do
@@ -196,6 +208,26 @@ defmodule Ecto.Validator.PredicatesTest do
 
   test "less_than_or_equal_to with custom message" do
     assert less_than_or_equal_to(:age, 10, 5, message: "bad number") == [age: "bad number"]
+  end
+
+  ## Between
+
+  test "between on invalid" do
+    assert between(:age, 25, 18..21) == [age: "must be between 18 and 21"]
+    assert between(:price, 99.98, 79.98..89.98) == [price: "must be between 79.98 and 89.98"]
+  end
+
+  test "between on valid" do
+    assert between(:age, 19, 18..21) == []
+    assert between(:price, 80.00, 79.98..89.98) == []
+  end
+
+  test "between skips on nil" do
+    assert between(:age, nil, 18..21) == []
+  end
+
+  test "between with custom message" do
+    assert between(:age, 24, 18..21, message: "bad number") == [age: "bad number"]
   end
 
   ## Not member of
