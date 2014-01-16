@@ -14,6 +14,7 @@ defmodule Ecto.Query.API do
 
   deft float
   deft integer
+  deft decimal
   deft boolean
   deft binary
   deft string
@@ -22,7 +23,7 @@ defmodule Ecto.Query.API do
   deft interval
   deft nil
 
-  defa number :: float | integer
+  defa number :: decimal | float | integer
 
   ## Operators
 
@@ -30,11 +31,13 @@ defmodule Ecto.Query.API do
   def (+arg)
   defs (+integer) :: integer
   defs (+float)   :: float
+  defs (+decimal) :: decimal
 
   @doc "Negate number."
   def (-arg)
   defs (-integer) :: integer
   defs (-float)   :: float
+  defs (-decimal) :: decimal
 
   @doc "Boolean not."
   def not(arg)
@@ -42,25 +45,31 @@ defmodule Ecto.Query.API do
 
   @doc "Addition of numbers."
   def left + right
-  defs float + number      :: float
-  defs number + float      :: float
-  defs integer + integer   :: integer
+  defs decimal + number  :: decimal
+  defs number + decimal  :: decimal
+  defs float + number    :: float
+  defs number + float    :: float
+  defs integer + integer :: integer
 
   @doc "Subtraction of numbers."
   def left - right
-  defs float - number      :: float
-  defs number - float      :: float
-  defs integer - integer   :: integer
+  defs decimal - number  :: decimal
+  defs number - decimal  :: decimal
+  defs float - number    :: float
+  defs number - float    :: float
+  defs integer - integer :: integer
 
   @doc "Multiplication of numbers."
   def left * right
+  defs decimal * number  :: decimal
+  defs number * decimal  :: decimal
   defs float * number    :: float
   defs number * float    :: float
   defs integer * integer :: integer
 
   @doc "Division of numbers."
   def left / right
-  defs number / number   :: float
+  defs number / number   :: decimal
 
   @doc "Equality."
   def left == right

@@ -142,7 +142,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT m0.\"x\" * 2\nFROM \"model\" AS m0"
 
     query = from(Model) |> select([r], r.x / 2) |> normalize
-    assert SQL.select(query) == "SELECT m0.\"x\" / 2::float\nFROM \"model\" AS m0"
+    assert SQL.select(query) == "SELECT m0.\"x\" / 2::numeric\nFROM \"model\" AS m0"
 
     query = from(Model) |> select([r], r.x and false) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" AND FALSE\nFROM \"model\" AS m0"
@@ -188,7 +188,16 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT 123\nFROM \"model\" AS m0"
 
     query = from(Model) |> select([], 123.0) |> normalize
-    assert SQL.select(query) == "SELECT 123.0\nFROM \"model\" AS m0"
+    assert SQL.select(query) == "SELECT 123.0::float\nFROM \"model\" AS m0"
+
+    query = from(Model) |> select([], ^Decimal.new("42")) |> normalize
+    assert SQL.select(query) == "SELECT 42.0\nFROM \"model\" AS m0"
+
+    query = from(Model) |> select([], ^Ecto.DateTime[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51]) |> normalize
+    assert SQL.select(query) == "SELECT timestamp '2014-1-16 20:26:51'\nFROM \"model\" AS m0"
+
+    query = from(Model) |> select([], ^Ecto.Interval[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51]) |> normalize
+    assert SQL.select(query) == "SELECT interval 'P2014-1-16T20:26:51'\nFROM \"model\" AS m0"
   end
 
   test "nested expressions" do
@@ -337,10 +346,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT random()\nFROM \"model\" AS m0"
 
     query = from(Model) |> select([], round(12.34)) |> normalize
-    assert SQL.select(query) == "SELECT round(12.34)\nFROM \"model\" AS m0"
+    assert SQL.select(query) == "SELECT round(12.34::float)\nFROM \"model\" AS m0"
 
     query = from(Model) |> select([], round(12.34, 1)) |> normalize
-    assert SQL.select(query) == "SELECT round(12.34, 1)\nFROM \"model\" AS m0"
+    assert SQL.select(query) == "SELECT round(12.34::float, 1)\nFROM \"model\" AS m0"
 
     query = from(Model) |> select([], pow(7, 2)) |> normalize
     assert SQL.select(query) == "SELECT 7 ^ 2\nFROM \"model\" AS m0"

@@ -151,7 +151,19 @@ defmodule Ecto.Adapters.Postgres do
     { list_to_tuple(result), values }
   end
 
-  defp transform_row({ _, _ } = tuple, values, sources) do
+  defp transform_row({ :&, _, [_] } = var, values, sources) do
+    entity = Util.find_source(sources, var) |> Util.entity
+    entity_size = length(entity.__entity__(:field_names))
+    { entity_values, values } = Enum.split(values, entity_size)
+    if Enum.all?(entity_values, &(nil?(&1))) do
+      { nil, values }
+    else
+      { entity.__entity__(:allocate, entity_values), values }
+    end
+  end
+
+  # Skip records
+  defp transform_row({ first, _ } = tuple, values, sources) when not is_atom(first) do
     { result, values } = transform_row(tuple_to_list(tuple), values, sources)
     { list_to_tuple(result), values }
   end
@@ -163,17 +175,6 @@ defmodule Ecto.Adapters.Postgres do
     end)
 
     { Enum.reverse(result), values }
-  end
-
-  defp transform_row({ :&, _, [_] } = var, values, sources) do
-    entity = Util.find_source(sources, var) |> Util.entity
-    entity_size = length(entity.__entity__(:field_names))
-    { entity_values, values } = Enum.split(values, entity_size)
-    if Enum.all?(entity_values, &(nil?(&1))) do
-      { nil, values }
-    else
-      { entity.__entity__(:allocate, entity_values), values }
-    end
   end
 
   defp transform_row(_, values, _entities) do
@@ -191,7 +192,7 @@ defmodule Ecto.Adapters.Postgres do
 
   defp decoder(TypeInfo[sender: "interval"], :binary, default, param) do
     { mon, day, sec } = default.(param)
-    Ecto.Interval[month: mon, day: day, sec: sec]
+    Ecto.Interval[year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec]
   end
 
   defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["timestamp", "timestamptz"] do
@@ -298,24 +299,24 @@ defmodule Ecto.Adapters.Postgres do
     output = run_with_psql opts, "CREATE DATABASE #{ opts[:database] } " <> database_options
 
     cond do
-      String.length(output) == 0   -> :ok 
+      String.length(output) == 0   -> :ok
       output =~ %r/already exists/ -> { :error, :already_up }
       true                         -> { :error, output }
     end
   end
 
-  def storage_down(opts) do 
+  def storage_down(opts) do
     output = run_with_psql(opts, "DROP DATABASE #{ opts[:database] }")
 
     cond do
-      String.length(output) == 0   -> :ok 
+      String.length(output) == 0   -> :ok
       output =~ %r/does not exist/ -> { :error, :already_down }
       true                         -> { :error, output }
     end
   end
 
-  defp run_with_psql(database, sql_command) do 
-    command = "" 
+  defp run_with_psql(database, sql_command) do
+    command = ""
 
     if password = database[:password] do
       command = %s(PGPASSWORD=#{ password } )
@@ -327,7 +328,7 @@ defmodule Ecto.Adapters.Postgres do
       %s(--host #{ database[:hostname] } ) <>
       %s(-c "#{ sql_command };" )
 
-    System.cmd command 
+    System.cmd command
   end
 
   ## Migration API
@@ -371,7 +372,7 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp create_migrations_table(repo) do
-    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)")
+    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)")
   end
 
   defp check_migration_version(repo, version) do

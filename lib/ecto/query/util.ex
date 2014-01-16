@@ -4,6 +4,7 @@ defmodule Ecto.Query.Util do
   """
 
   alias Ecto.Query.Query
+  import Decimal, only: [is_decimal: 1]
 
   @doc """
   Look up a source with a variable.
@@ -43,7 +44,7 @@ defmodule Ecto.Query.Util do
 
   @doc false
   defmacro types do
-    %w(boolean string integer float binary datetime interval virtual)a
+    %w(boolean string integer float decimal binary datetime interval virtual)a
   end
 
   @doc false
@@ -60,6 +61,7 @@ defmodule Ecto.Query.Util do
   def value_to_type(value, _fun) when is_binary(value), do: { :ok, :string }
   def value_to_type(value, _fun) when is_integer(value), do: { :ok, :integer }
   def value_to_type(value, _fun) when is_float(value), do: { :ok, :float }
+  def value_to_type(value, _fun) when is_decimal(value), do: { :ok, :decimal }
 
   def value_to_type(Ecto.DateTime[] = dt, fun) do
     types = tuple_to_list(dt)
@@ -140,6 +142,7 @@ defmodule Ecto.Query.Util do
   def literal?(value) when is_binary(value),  do: true
   def literal?(value) when is_integer(value), do: true
   def literal?(value) when is_float(value),   do: true
+  def literal?(value) when is_decimal(value), do: true
   def literal?(Ecto.DateTime[]),              do: true
   def literal?(Ecto.Interval[]),              do: true
   def literal?(Ecto.Binary[]),                do: true

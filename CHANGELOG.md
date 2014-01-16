@@ -4,6 +4,7 @@
   * Add `ecto.migrate` and `ecto.rollback` tasks, support `--to`, `--step` and `--all`
   * Do not require Ecto URI schema to start with `ecto`
   * Allow `:on` with association joins on keywords syntax
+  * Add Decimal support
 
 * Bug fixes
 
