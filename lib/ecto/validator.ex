@@ -94,7 +94,7 @@ defmodule Ecto.Validator do
   end
 
   defp handle_and({ :and, _, [left, right] }, callback) do
-    [callback.(left)|handle_and(right, callback)]
+    handle_and(left, callback) ++ [callback.(right)]
   end
 
   defp handle_and(other, callback) do
