@@ -200,21 +200,22 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp validate_distincts(Query[group_bys: group_bys, distincts: distincts, sources: sources], state) do
+  defp validate_distincts(Query[order_bys: order_bys, distincts: distincts, sources: sources], state) do
     validate_field_list(:distinct, distincts, state)
 
-    # ensure that the fields in `distinct` appears in the leftmost part of the `group_by`
+    # ensure that the fields in `distinct` appears before other fields in the `order_by` expression
     
-    # ex: distinct: id, title / group_by: title, id => no error
-    #     distinct: title / group_by: id => raise (title not in group_by)
-    #     distinct: title / group_by: id, title => raise (title in group_by but not leftmost part)
+    # ex: distinct: id, title / order_by: title, id => no error
+    #     distinct: title / order_by: id => raise (title not in order_by)
+    #     distinct: title / order_by: id, title => raise (title in order_by but not leftmost part)
 
     distinct_sources = exprs_sources(distincts, sources)
-    group_by_sources = exprs_sources(group_bys, sources)
+    order_by_sources = order_bys_sources(order_bys, sources)
+                        |> Enum.take(Enum.count(distinct_sources))
 
-    group_by_sources |> Enum.take(Enum.count(distinct_sources)) |> Enum.each(fn (group_by) ->
-      unless group_by in distinct_sources do 
-        raise Ecto.QueryError, reason: "the leftmost `group_by` expression should reference all the `distinct` fields"
+    Enum.each(order_by_sources, fn (order_by) ->
+      unless order_by in distinct_sources do 
+        raise Ecto.QueryError, reason: "the `order_by` expression should first reference all the `distinct` fields before other fields"
       end 
     end)
   end
@@ -382,6 +383,15 @@ defmodule Ecto.Query.Validator do
   defp exprs_sources(exprs, sources) do 
     Enum.map(exprs, fn(expr) ->
       Enum.map(expr.expr, fn({ var, field }) ->
+        source = Util.find_source(sources, var)
+        { source, field }
+      end)
+    end) |> Enum.concat |> Enum.uniq
+  end 
+
+  defp order_bys_sources(order_bys_expr, sources) do 
+    Enum.map(order_bys_expr, fn(expr) ->
+      Enum.map(expr.expr, fn({ _, var, field }) ->
         source = Util.find_source(sources, var)
         { source, field }
       end)
