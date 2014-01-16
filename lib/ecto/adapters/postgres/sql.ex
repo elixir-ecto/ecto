@@ -295,7 +295,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp expr({ fun, _, args }, sources) when is_atom(fun) and is_list(args) do
     case translate_name(fun, length(args)) do
       { :unary_op, op } ->
-        arg = expr(Enum.first(args), sources)
+        arg = expr(List.first(args), sources)
         op <> arg
       { :binary_op, op } ->
         [left, right] = args

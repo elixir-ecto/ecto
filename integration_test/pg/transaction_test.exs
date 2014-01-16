@@ -131,14 +131,14 @@ defmodule Ecto.Integration.TransactionTest do
       TestRepo1.transaction(fn ->
         e = TestRepo1.create(Trans.Entity[text: "7"])
         assert [^e] = TestRepo1.all(Trans)
-        pid <- :in_transaction
+        send(pid, :in_transaction)
         receive do
           :commit -> :ok
         after
           5000 -> raise "timeout"
         end
       end)
-      pid <- :commited
+      send(pid, :commited)
     end
 
     receive do
@@ -148,7 +148,7 @@ defmodule Ecto.Integration.TransactionTest do
     end
     assert [] = TestRepo1.all(Trans)
 
-    new_pid <- :commit
+    send(new_pid, :commit)
     receive do
       :commited -> :ok
     after

@@ -11,7 +11,7 @@ defmodule Ecto.Integration.WorkerTest do
   test "worker reconnects to database when connecton exits" do
     { :ok, worker } = Worker.start_link(worker_opts)
     { :links, links } = Process.info(worker, :links)
-    conn = Enum.first(Enum.reject(links, &(&1 == self)))
+    conn = List.first(Enum.reject(links, &(&1 == self)))
     Process.exit(conn, :normal)
     result = Worker.query!(worker, "SELECT TRUE")
     assert is_record(result, Postgrex.Result)

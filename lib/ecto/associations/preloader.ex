@@ -35,7 +35,7 @@ defmodule Ecto.Associations.Preloader do
   defp do_run([], _repo, _field), do: []
 
   defp do_run(records, repo, { field, sub_fields }) do
-    record = Enum.first(records)
+    record = List.first(records)
     module = elem(record, 0)
     refl = module.__entity__(:association, field)
     should_sort? = should_sort?(records, refl)
@@ -161,7 +161,7 @@ defmodule Ecto.Associations.Preloader do
 
   defp should_sort?(records, refl) do
     key = refl.key
-    first = Enum.first(records)
+    first = List.first(records)
 
     Enum.reduce(records, { first, false }, fn record, { last, sort? } ->
       if last && record && elem(record, 0) != elem(last, 0) do
