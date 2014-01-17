@@ -229,12 +229,23 @@ defmodule Ecto.Entity do
       @ecto_fields []
       @record_fields []
       @ecto_primary_key nil
+      @ecto_foreign_key_type opts[:foreign_key_type]
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
 
       @ecto_foreign_key_type opts[:foreign_key_type]
 
       @ecto_model opts[:model]
       field(:model, :virtual, default: opts[:model])
+
+      ## Default fields
+      Enum.map(opts[:default_fields] || [], fn field ->
+        case field do
+          { name, type, opts } ->
+            field(name, type, opts)
+          other ->
+            raise ArgumentError, message: ":default_fields must contain { name, type, opts } tuples"
+        end
+      end)
 
       case opts[:primary_key] do
         nil ->
@@ -283,16 +294,21 @@ defmodule Ecto.Entity do
       end
     end
 
-    clash = Enum.any?(fields, fn({ prev, _ }) -> name == prev end)
+    clash = Enum.any?(fields, fn { prev, opts } ->
+      name == prev && !Keyword.get(opts, :overridable?, false)
+    end)
     if clash do
       raise ArgumentError, message: "field `#{name}` was already set on entity"
     end
 
     record_fields = Module.get_attribute(mod, :record_fields)
-    Module.put_attribute(mod, :record_fields, record_fields ++ [{ name, opts[:default] }])
+    record_fields = Dict.delete(record_fields, name) ++ [{ name, opts[:default] }]
+    Module.put_attribute(mod, :record_fields, record_fields)
 
-    opts = Enum.reduce([:default, :primary_key], opts, &Dict.delete(&2, &1))
-    Module.put_attribute(mod, :ecto_fields, [{ name, [type: type] ++ opts }|fields])
+    opts = [type: type] ++
+      Enum.reduce([:default, :primary_key], opts, &Dict.delete(&2, &1))
+    fields = Dict.put(fields, name, opts)
+    Module.put_attribute(mod, :ecto_fields, fields)
   end
 
   @doc false
