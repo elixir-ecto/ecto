@@ -202,6 +202,12 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "distinct expression" do 
+    query = from(Post) |> distinct([p], p.id)
+    validate(query)
+
+    query = from(Post) |> distinct([p], [p.id, p.title])
+    validate(query)
+
     query = from(Post) |> distinct([p], [p.id, p.title]) |> order_by([p], [p.title])
     validate(query)
 
