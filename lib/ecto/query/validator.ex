@@ -271,8 +271,8 @@ defmodule Ecto.Query.Validator do
 
   # list
   defp type_check(list, _state) when is_list(list) do
-    # TODO: inspect with `no_char_lists: true` when we have this in elixir stable
-    raise Ecto.QueryError, reason: "lists `#{inspect list}` are not allowed in queries, " <>
+    list = inspect(list, no_char_lists: true)
+    raise Ecto.QueryError, reason: "lists `#{list}` are not allowed in queries, " <>
       "wrap in `array/2` instead"
   end
 
