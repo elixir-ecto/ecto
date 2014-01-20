@@ -7,7 +7,7 @@ defmodule Ecto.Mixfile do
       deps: deps(Mix.env),
       env: envs,
       name: "Ecto",
-      elixir: "~> 0.12.0",
+      elixir: "~> 0.12.3-dev",
       source_url: "https://github.com/elixir-lang/ecto",
       docs: fn -> [
         source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),

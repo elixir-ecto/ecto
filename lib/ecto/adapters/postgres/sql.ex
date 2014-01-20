@@ -261,7 +261,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "#{op_to_binary(left, sources)} IS NOT NULL"
   end
 
-  defp expr({ :in, _, [left, Range[first: first, last: last]] }, sources) do
+  defp expr({ :in, _, [left, first .. last] }, sources) do
     sqls = [ expr(left, sources), "BETWEEN", expr(first, sources), "AND",
              expr(last, sources) ]
     Enum.join(sqls, " ")
@@ -277,7 +277,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     expr(left, sources) <> " = ANY (" <> expr(right, sources) <> ")"
   end
 
-  defp expr(Range[] = range, sources) do
+  defp expr((_ .. _) = range, sources) do
     expr(Enum.to_list(range), sources)
   end
 
