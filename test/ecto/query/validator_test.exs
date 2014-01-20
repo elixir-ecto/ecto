@@ -201,7 +201,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  test "distinct expression" do 
+  test "distinct expression" do
     query = from(Post) |> distinct([p], p.id)
     validate(query)
 
@@ -213,13 +213,13 @@ defmodule Ecto.Query.ValidatorTest do
 
     query = from(Post) |> distinct([p], p) |> order_by([p], [p.id, p.title])
     validate(query)
-  
+
     query = from(Post) |> select([p], p.title) |> distinct([p], p.title) |> order_by([p], p.title)
     validate(query)
 
     query = from(Post) |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.id, p.title])
     validate(query)
-  
+
     query = from(Post) |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.title, p.id])
     assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
       validate(query)

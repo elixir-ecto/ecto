@@ -200,24 +200,51 @@ defmodule Ecto.Query.Validator do
     end
   end
 
+  defp validate_distincts(Query[distincts: []], _), do: nil
+
+  defp validate_distincts(Query[order_bys: [], distincts: distincts], state) do
+    validate_field_list(:distinct, distincts, state)
+  end
+
   defp validate_distincts(Query[order_bys: order_bys, distincts: distincts, sources: sources], state) do
     validate_field_list(:distinct, distincts, state)
 
     # ensure that the fields in `distinct` appears before other fields in the `order_by` expression
-    
+
     # ex: distinct: id, title / order_by: title, id => no error
     #     distinct: title / order_by: id => raise (title not in order_by)
     #     distinct: title / order_by: id, title => raise (title in order_by but not leftmost part)
 
-    distinct_sources = exprs_sources(distincts, sources)
+    distincts_sources = exprs_sources(distincts, sources)
     order_by_sources = order_bys_sources(order_bys, sources)
-                        |> Enum.take(Enum.count(distinct_sources))
 
-    Enum.each(order_by_sources, fn (order_by) ->
-      unless order_by in distinct_sources do 
-        raise Ecto.QueryError, reason: "the `order_by` expression should first reference all the `distinct` fields before other fields"
-      end 
+    # the idea here is to split the order_by_sources at the point where we first encounter
+    # an order_by { source, var } which isn't in the distincts's { source, var }
+
+    # what is before that index would be the 'leftmost part'
+    order_by_split_index = Enum.find_index(order_by_sources, fn(order_by_source) ->
+      not order_by_source in distincts_sources
     end)
+
+    # if the index is nil, then it means that the 'leftmost part' contains everything...
+    # or that there is no 'rightmost part'. In both cases, the distinct expression is OK.
+    unless nil?(order_by_split_index) do
+      { leftmost_order_bys, _ } = Enum.split(order_by_sources, order_by_split_index + 1)
+      Enum.each(distincts, fn(distinct) ->
+        rescue_metadata(:distinct, distinct.file, distinct.line) do
+          distinct_sources = Enum.map(distinct.expr, fn({ var, field }) ->
+            source = Util.find_source(sources, var)
+            { source, field }
+          end)
+          Enum.each(distinct_sources, fn (distinct_source) ->
+            unless distinct_source in leftmost_order_bys do
+              raise Ecto.QueryError, reason: "the `order_by` expression should first reference " <>
+                "all the `distinct` fields before other fields"
+            end
+          end)
+        end
+      end)
+    end
   end
 
   defp preload_selected(Query[select: select, preloads: preloads]) do
@@ -380,23 +407,23 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp exprs_sources(exprs, sources) do 
+  defp exprs_sources(exprs, sources) do
     Enum.map(exprs, fn(expr) ->
       Enum.map(expr.expr, fn({ var, field }) ->
         source = Util.find_source(sources, var)
         { source, field }
       end)
     end) |> Enum.concat |> Enum.uniq
-  end 
+  end
 
-  defp order_bys_sources(order_bys_expr, sources) do 
+  defp order_bys_sources(order_bys_expr, sources) do
     Enum.map(order_bys_expr, fn(expr) ->
       Enum.map(expr.expr, fn({ _, var, field }) ->
         source = Util.find_source(sources, var)
         { source, field }
       end)
     end) |> Enum.concat |> Enum.uniq
-  end 
+  end
 
   defp check_grouped({ source, field } = source_field, State[] = state) do
     if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do
