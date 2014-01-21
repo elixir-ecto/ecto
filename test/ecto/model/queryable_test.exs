@@ -12,11 +12,7 @@ defmodule Ecto.Model.QueryableTest do
     def test_attr(:entity), do: @ecto_entity
     def test_attr(:source), do: @ecto_source
 
-    def from_1 do
-      from(c in __MODULE__)
-    end
-
-    def from_2 do
+    def model_from do
       from(c in __MODULE__, where: c.name == nil)
     end
   end
@@ -33,8 +29,7 @@ defmodule Ecto.Model.QueryableTest do
   end
 
   test "imports Ecto.Query functions" do
-    assert is_record(User.from_1, Ecto.Query.Query)
-    assert is_record(User.from_2, Ecto.Query.Query)
+    assert is_record(User.model_from, Ecto.Query.Query)
   end
 
   test "uses @queryable_defaults" do

@@ -102,7 +102,7 @@ defmodule Ecto.Model.Queryable do
   @doc false
   defmacro __using__(_) do
     quote do
-      use Ecto.Query
+      import Ecto.Query, only: [from: 2]
       import unquote(__MODULE__)
     end
   end

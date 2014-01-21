@@ -30,7 +30,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "fetch empty" do
-    assert [] == TestRepo.all(from p in Post)
+    assert [] == TestRepo.all(Post)
   end
 
   test "create and fetch single" do
@@ -39,7 +39,7 @@ defmodule Ecto.Integration.RepoTest do
     assert is_integer(id)
 
     assert [Post.Entity[id: ^id, title: "The shiny new Ecto", text: "coming soon..."]] =
-           TestRepo.all(from p in Post)
+           TestRepo.all(Post)
   end
 
   test "fetch without entity" do
@@ -59,7 +59,7 @@ defmodule Ecto.Integration.RepoTest do
     assert Post.Entity[] = created = TestRepo.create(post)
     assert :ok == TestRepo.delete(created)
 
-    assert [] = TestRepo.all(from p in Post)
+    assert [] = TestRepo.all(Post)
   end
 
   test "create and delete single, fetch empty" do
@@ -69,7 +69,7 @@ defmodule Ecto.Integration.RepoTest do
     assert Post.Entity[] = created = TestRepo.create(post)
     assert :ok == TestRepo.delete(created)
 
-    assert [Post.Entity[]] = TestRepo.all(from p in Post)
+    assert [Post.Entity[]] = TestRepo.all(Post)
   end
 
   test "create and update single, fetch updated" do
@@ -79,7 +79,7 @@ defmodule Ecto.Integration.RepoTest do
     post = post.text("coming very soon...")
     assert :ok == TestRepo.update(post)
 
-    assert [Post.Entity[text: "coming very soon..."]] = TestRepo.all(from p in Post)
+    assert [Post.Entity[text: "coming very soon..."]] = TestRepo.all(Post)
   end
 
   test "create and fetch multiple" do
@@ -88,7 +88,7 @@ defmodule Ecto.Integration.RepoTest do
     assert Post.Entity[] = TestRepo.create(Post.Entity[title: "3", text: "hai"])
 
     assert [Post.Entity[title: "1"], Post.Entity[title: "2"], Post.Entity[title: "3"]] =
-           TestRepo.all(from p in Post)
+           TestRepo.all(from p in Post, [])
 
     assert [Post.Entity[title: "2"]] =
            TestRepo.all(from p in Post, where: p.title == "2")
@@ -419,11 +419,8 @@ defmodule Ecto.Integration.RepoTest do
     Comment.Entity[id: cid2] = TestRepo.create(Comment.Entity[text: "2", post_id: p1.id])
     Comment.Entity[id: cid3] = TestRepo.create(Comment.Entity[text: "3", post_id: p2.id])
 
-    query = from(c in p1.comments)
-    assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = TestRepo.all(query)
-
-    query = from(c in p2.comments)
-    assert [Comment.Entity[id: ^cid3]] = TestRepo.all(query)
+    assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = TestRepo.all(p1.comments)
+    assert [Comment.Entity[id: ^cid3]] = TestRepo.all(p2.comments)
 
     query = from(c in p1.comments, where: c.text == "1")
     assert [Comment.Entity[id: ^cid1]] = TestRepo.all(query)

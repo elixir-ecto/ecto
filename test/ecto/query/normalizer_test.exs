@@ -17,7 +17,7 @@ defmodule Ecto.Query.NormalizerTest do
   end
 
   test "auto select entity" do
-    query = from(Post) |> normalize
+    query = from(Post, []) |> normalize
     assert { :&, _, [0] } = query.select.expr
   end
 

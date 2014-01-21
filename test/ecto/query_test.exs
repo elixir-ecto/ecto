@@ -32,22 +32,22 @@ defmodule Ecto.QueryTest do
   end
 
   test "call queryable on every merge" do
-    query = from(Post) |> select([p], p.title)
+    query = Post |> select([p], p.title)
     validate(query)
 
-    query = from(Post) |> distinct([p], p.title)
+    query = Post |> distinct([p], p.title)
     validate(query)
 
-    query = from(Post) |> where([p], p.title == "42")
+    query = Post |> where([p], p.title == "42")
     validate(query)
 
-    query = from(Post) |> order_by([p], p.title)
+    query = Post |> order_by([p], p.title)
     validate(query)
 
-    query = from(Post) |> limit(42)
+    query = Post |> limit(42)
     validate(query)
 
-    query = from(Post) |> offset(43)
+    query = Post |> offset(43)
     validate(query)
 
     query = select(Post, [p], p.title)
@@ -70,19 +70,19 @@ defmodule Ecto.QueryTest do
   end
 
   test "vars are order dependent" do
-    query = from(p in Post) |> select([q], q.title)
+    query = from(p in Post, []) |> select([q], q.title)
     validate(query)
   end
 
   test "can append to selected query" do
-    query = from(p in Post) |> select([], 1) |> where([], true)
+    query = from(p in Post, []) |> select([], 1) |> where([], true)
     validate(query)
   end
 
   test "only one select is allowed" do
     assert_raise Ecto.QueryError, "only one select expression is allowed in query", fn ->
       post = Post
-      from(p in post) |> select([], 1) |> select([], 2)
+      post |> select([], 1) |> select([], 2)
     end
   end
 
@@ -94,36 +94,26 @@ defmodule Ecto.QueryTest do
 
   test "keyword query" do
     # queries need to be on the same line or == wont work
-    assert from(p in Post, []) == from(p in Post)
+    assert from(p in Post, select: 1+2) == from(p in Post, []) |> select([p], 1+2)
 
-    assert from(p in Post, select: 1+2) == from(p in Post) |> select([p], 1+2)
-
-    assert from(p in Post, where: 1<2) == from(p in Post) |> where([p], 1<2)
-  end
-
-  test "extend keyword query" do
-    query = from(p in Post)
-    assert (query |> select([p], p.title)) == from(p in query, select: p.title)
-
-    query = from(p in Post)
-    assert (query |> select([p], p.title)) == from([p] in query, select: p.title)
+    assert from(p in Post, where: 1<2) == from(p in Post, []) |> where([p], 1<2)
 
     query = Post
-    assert (query |> select([p], p.title)) == from([p] in query, select: p.title)
+    assert (query |> select([p], p.title)) == from(p in query, select: p.title)
   end
 
   test "cannot bind non-Queryable in from" do
     assert_raise Protocol.UndefinedError, fn ->
-      from(p in 123) |> select([p], p.title)
+      from(p in 123, []) |> select([p], p.title)
     end
 
     assert_raise Protocol.UndefinedError, fn ->
-      from(p in NotAnEntity) |> select([p], p.title)
+      from(p in NotAnEntity, []) |> select([p], p.title)
     end
   end
 
   test "string source query" do
-    assert Query[from: { "posts", nil, nil }] = from(p in "posts") |> select([p], p.title)
+    assert Query[from: { "posts", nil, nil }] = from(p in "posts", []) |> select([p], p.title)
   end
 
   test "validate from expression" do
@@ -140,25 +130,25 @@ defmodule Ecto.QueryTest do
 
   test "unbound _ var" do
     assert_raise Ecto.QueryError, fn ->
-      delay_compile(from(Post) |> select([], _.x))
+      delay_compile(Post |> select([], _.x))
     end
 
-    query = from(Post) |> select([_], 0)
+    query = Post |> select([_], 0)
     validate(query)
 
-    query = from(Post) |> join(:inner, [], Comment, true) |> select([_, c], c.text)
+    query = Post |> join(:inner, [], Comment, true) |> select([_, c], c.text)
     validate(query)
 
-    query = from(Post) |> join(:inner, [], Comment, true) |> select([p, _], p.title)
+    query = Post |> join(:inner, [], Comment, true) |> select([p, _], p.title)
     validate(query)
 
-    query = from(Post) |> join(:inner, [], Comment, true) |> select([_, _], 0)
+    query = Post |> join(:inner, [], Comment, true) |> select([_, _], 0)
     validate(query)
   end
 
   test "binding collision" do
     assert_raise Ecto.QueryError, "variable `x` is bound twice", fn ->
-      delay_compile(from(Post) |> from(Comment) |> select([x, x], x.id))
+      delay_compile(Post |> from(Comment) |> select([x, x], x.id))
     end
   end
 
@@ -179,16 +169,16 @@ defmodule Ecto.QueryTest do
 
   test "join queries adds binds" do
     from(c in Comment, join: p in Post, on: true, select: { p.title, c.text })
-    from(Comment) |> join(:inner, [c], p in Post, true) |> select([c,p], { p.title, c.text })
+    Comment |> join(:inner, [c], p in Post, true) |> select([c,p], { p.title, c.text })
   end
 
   test "cannot bind too many vars" do
-    from(a in Query[])
-    from([a] in Query[])
+    from(a in Query[], [])
+    from([a] in Query[], [])
 
     assert_raise Ecto.QueryError, fn ->
       comment = Comment
-      from([a, b] in comment)
+      from([a, b] in comment, [])
     end
   end
 end

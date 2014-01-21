@@ -44,10 +44,10 @@ defmodule Ecto.Query.ValidatorTest do
 
 
   test "valid query with bindings" do
-    query = from(Post) |> select([p], { p.title })
+    query = Post |> select([p], { p.title })
     validate(query)
 
-    query = from("posts") |> select([p], { p.title })
+    query = "posts" |> select([p], { p.title })
     validate(query)
   end
 
@@ -59,288 +59,288 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "where expression must be boolean" do
-    query = from(Post) |> where([p], p.title == "") |> select([], 123)
+    query = Post |> where([p], p.title == "") |> select([], 123)
     validate(query)
 
-    query = from("posts") |> where([p], p.title == "") |> select([], 123)
+    query = "posts" |> where([p], p.title == "") |> select([], 123)
     validate(query)
 
-    query = from(Post) |> where([p], p.title) |> select([], 123)
+    query = Post |> where([p], p.title) |> select([], 123)
     assert_raise Ecto.QueryError, %r"where expression", fn ->
       validate(query)
     end
   end
 
   test "having expression must be boolean" do
-    query = from(Post) |> having([], "abc" == "") |> select([], 123)
+    query = Post |> having([], "abc" == "") |> select([], 123)
     validate(query)
 
-    query = from(Post) |> having([], "abc") |> select([], 123)
+    query = Post |> having([], "abc") |> select([], 123)
     assert_raise Ecto.QueryError, %r"having expression", fn ->
       validate(query)
     end
   end
 
   test "join expression must be boolean" do
-    query = from(Post) |> join(:inner, [], Comment, "abc" == "") |> select([], 123)
+    query = Post |> join(:inner, [], Comment, "abc" == "") |> select([], 123)
     validate(query)
 
-    query = from(Post) |> join(:inner, [], Comment, "abc") |> select([], 123)
+    query = Post |> join(:inner, [], Comment, "abc") |> select([], 123)
     assert_raise Ecto.QueryError, %r"join_on expression", fn ->
       validate(query)
     end
   end
 
   test "entity field types" do
-    query = from(Post) |> select([p], p.title + 2)
+    query = Post |> select([p], p.title + 2)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
 
   test "unknown field" do
-    query = from(Post) |> select([p], p.unknown)
+    query = Post |> select([p], p.unknown)
     assert_raise Ecto.QueryError, %r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post.Entity`", fn ->
       validate(query)
     end
   end
 
   test "valid expressions" do
-    query = from(Post) |> select([p], p.id + 2)
+    query = Post |> select([p], p.id + 2)
     validate(query)
 
-    query = from(Post) |> select([p], p.id == 2)
+    query = Post |> select([p], p.id == 2)
     validate(query)
 
-    query = from(Post) |> select([p], p.title == "abc")
+    query = Post |> select([p], p.title == "abc")
     validate(query)
 
-    query = from(Post) |> select([], 1 + +123)
+    query = Post |> select([], 1 + +123)
     validate(query)
 
-    query = from(Post) |> where([p], p.id < 10) |> select([], 0)
+    query = Post |> where([p], p.id < 10) |> select([], 0)
     validate(query)
 
-    query = from(Post) |> where([], true or false) |> select([], 0)
+    query = Post |> where([], true or false) |> select([], 0)
     validate(query)
 
-    query = from("posts") |> where([p], p.a or p.b + p.c * upcase(p.d)) |> select([], 0)
+    query = "posts" |> where([p], p.a or p.b + p.c * upcase(p.d)) |> select([], 0)
     validate(query)
   end
 
   test "invalid expressions" do
-    query = from(Post) |> select([p], p.id + "abc")
+    query = Post |> select([p], p.id + "abc")
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
-    query = from(Post) |> select([p], p.id == "abc")
+    query = Post |> select([p], p.id == "abc")
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
-    query = from(Post) |> select([p], -p.title)
+    query = Post |> select([p], -p.title)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
-    query = from(Post) |> select([p], 1 < p.title)
+    query = Post |> select([p], 1 < p.title)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
 
-    query = from(Post) |> where([p], true or p.title) |> select([], 0)
+    query = Post |> where([p], true or p.title) |> select([], 0)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
 
   test "valid in expression" do
-    query = from(Post) |> select([], 1 in array([1,2,3], ^:integer))
+    query = Post |> select([], 1 in array([1,2,3], ^:integer))
     validate(query)
 
-    query = from(Post) |> select([], (2+2) in 1..5)
+    query = Post |> select([], (2+2) in 1..5)
     validate(query)
   end
 
   test "invalid in expression" do
-    query = from(Post) |> select([p], 1 in p.title)
+    query = Post |> select([p], 1 in p.title)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
 
   test "valid .. expression" do
-    query = from(Post) |> select([], 1 .. 3)
+    query = Post |> select([], 1 .. 3)
     validate(query)
   end
 
   test "invalid .. expression" do
-    query = from(Post) |> select([], "1" .. 3)
+    query = Post |> select([], "1" .. 3)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
 
   test "array expression" do
-    query = from(Post) |> where([p], array([p.title, p.title], ^:string) == nil) |> select([], 0)
+    query = Post |> where([p], array([p.title, p.title], ^:string) == nil) |> select([], 0)
     validate(query)
 
-    query = from(Post) |> where([p], [p.title, p.title] == nil) |> select([], 0)
+    query = Post |> where([p], [p.title, p.title] == nil) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
 
-    query = from(Post) |> select([p], 1 in [123, 123])
+    query = Post |> select([p], 1 in [123, 123])
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
 
-    query = from(Post) |> where([p], array([p.title, p.title], ^:string) == 1) |> select([], 0)
+    query = Post |> where([p], array([p.title, p.title], ^:string) == 1) |> select([], 0)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
   end
 
   test "distinct expression" do
-    query = from(Post) |> distinct([p], p.id)
+    query = Post |> distinct([p], p.id)
     validate(query)
 
-    query = from(Post) |> distinct([p], [p.id, p.title])
+    query = Post |> distinct([p], [p.id, p.title])
     validate(query)
 
-    query = from(Post) |> distinct([p], [p.id, p.title]) |> order_by([p], [p.title])
+    query = Post |> distinct([p], [p.id, p.title]) |> order_by([p], [p.title])
     validate(query)
 
-    query = from(Post) |> distinct([p], [p.id, p.title]) |> order_by([p], [p.title, p.id])
+    query = Post |> distinct([p], [p.id, p.title]) |> order_by([p], [p.title, p.id])
     validate(query)
 
-    query = from(Post) |> distinct([p], p) |> order_by([p], [p.id, p.title])
+    query = Post |> distinct([p], p) |> order_by([p], [p.id, p.title])
     validate(query)
 
-    query = from(Post) |> select([p], p.title) |> distinct([p], p.title) |> order_by([p], p.title)
+    query = Post |> select([p], p.title) |> distinct([p], p.title) |> order_by([p], p.title)
     validate(query)
 
-    query = from(Post) |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.id, p.title])
+    query = Post |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.id, p.title])
     validate(query)
 
-    query = from(Post) |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.title, p.id])
+    query = Post |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.title, p.id])
     assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
       validate(query)
     end
 
-    query = from(Post) |> distinct([p], p.title) |> order_by([p], [p.id, p.title])
+    query = Post |> distinct([p], p.title) |> order_by([p], [p.id, p.title])
     assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
       validate(query)
     end
 
-    query = from(Post) |> distinct([p], [p.title, p.text]) |> order_by([p], [p.title, p.id])
+    query = Post |> distinct([p], [p.title, p.text]) |> order_by([p], [p.title, p.id])
     assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
       validate(query)
     end
   end
 
   test "group_by invalid field" do
-    query = from(Post) |> group_by([p], p.hai) |> select([], 0)
+    query = Post |> group_by([p], p.hai) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "order_by invalid field" do
-    query = from(Post) |> order_by([p], p.hai) |> select([], 0)
+    query = Post |> order_by([p], p.hai) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "having without group_by" do
-    query = from(Post) |> having([], true) |> select([], 0)
+    query = Post |> having([], true) |> select([], 0)
     validate(query)
 
-    query = from(Post) |> having([p], p.id) |> select([], 0)
+    query = Post |> having([p], p.id) |> select([], 0)
     assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.id` must appear in `group_by`", fn ->
       validate(query)
     end
   end
 
   test "having with group_by" do
-    query = from(Post) |> group_by([p], p.id) |> having([p], p.id == 0) |> select([p], p.id)
+    query = Post |> group_by([p], p.id) |> having([p], p.id == 0) |> select([p], p.id)
     validate(query)
 
-    query = from(Post) |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
+    query = Post |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
     assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
 
   test "group_by groups expression" do
-    query = from(Post) |> group_by([p], p.id) |> select([p], p.id)
+    query = Post |> group_by([p], p.id) |> select([p], p.id)
     validate(query)
 
-    query = from(Post) |> group_by([p], p.id) |> select([p], p.title)
+    query = Post |> group_by([p], p.id) |> select([p], p.title)
     assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
 
   test "group_by groups entity expression" do
-    query = from(Post) |> group_by([p], [p.id, p.title, p.text]) |> select([p], p)
+    query = Post |> group_by([p], [p.id, p.title, p.text]) |> select([p], p)
     validate(query)
 
-    query = from(Post) |> group_by([p], p.id) |> select([p], p)
+    query = Post |> group_by([p], p.id) |> select([p], p)
     assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
 
   test "group_by doesn't group where" do
-    query = from(Post) |> group_by([p], p.id) |> where([p], p.title == "") |> select([p], p.id)
+    query = Post |> group_by([p], p.id) |> where([p], p.title == "") |> select([p], p.id)
     validate(query)
   end
 
   test "allow functions" do
-    query = from(Post) |> select([], avg(0))
+    query = Post |> select([], avg(0))
     validate(query)
   end
 
   test "only allow functions in API" do
-    query = from(Post) |> select([], forty_two())
+    query = Post |> select([], forty_two())
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
 
-    query = from(Post) |> select([], avg())
+    query = Post |> select([], avg())
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "allow grouped fields in aggregate" do
-    query = from(Post) |> group_by([p], p.id) |> select([p], avg(p.id))
+    query = Post |> group_by([p], p.id) |> select([p], avg(p.id))
     validate(query)
   end
 
   test "allow non-grouped fields in aggregate" do
-    query = from(Post) |> group_by([p], p.title) |> select([p], count(p.id))
+    query = Post |> group_by([p], p.title) |> select([p], count(p.id))
     validate(query)
   end
 
   test "don't allow nested aggregates" do
-    query = from(Post) |> select([p], count(count(p.id)))
+    query = Post |> select([p], count(count(p.id)))
     assert_raise Ecto.QueryError, "aggregate function calls cannot be nested", fn ->
       validate(query)
     end
   end
 
   test "nils only allowed in == and !=" do
-    query = from(Post) |> select([p], 1 == nil)
+    query = Post |> select([p], 1 == nil)
     validate(query)
 
-    query = from(Post) |> select([p], nil != "abc")
+    query = Post |> select([p], nil != "abc")
     validate(query)
 
-    query = from(Post) |> select([p], 1 + nil)
+    query = Post |> select([p], 1 + nil)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
@@ -354,55 +354,55 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "multiple query apis" do
-    query = from(Post) |> select([p], custom(p.id)) |> Normalizer.normalize
+    query = Post |> select([p], custom(p.id)) |> Normalizer.normalize
     Validator.validate(query, [CustomAPI])
     Validator.validate(query, [Ecto.Query.API, CustomAPI])
   end
 
   test "cannot reference virtual field" do
-    query = from(Comment) |> select([c], c.temp)
+    query = Comment |> select([c], c.temp)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "cannot preload without entity" do
-    query = from("posts") |> preload(:comments)
+    query = "posts" |> preload(:comments)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "can only preload association field" do
-    query = from(Post) |> preload(:comments)
+    query = Post |> preload(:comments)
     validate(query)
 
-    query = from(Post) |> preload(:title)
+    query = Post |> preload(:title)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "entity have to be selected with preload" do
-    query = from(Post) |> preload(:comments) |> select([p], p)
+    query = Post |> preload(:comments) |> select([p], p)
     validate(query)
 
-    query = from(Post) |> preload(:comments) |> select([p], 0)
+    query = Post |> preload(:comments) |> select([p], 0)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
   end
 
   test "can preload nested" do
-    query = from(Post) |> preload(comments: :post) |> select([p], p)
+    query = Post |> preload(comments: :post) |> select([p], p)
     validate(query)
 
-    query = from(Post) |> preload(comments: :test) |> select([p], p)
+    query = Post |> preload(comments: :test) |> select([p], p)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
 
-    query = from(Post) |> preload(comments: :posted) |> select([p], p)
+    query = Post |> preload(comments: :posted) |> select([p], p)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end

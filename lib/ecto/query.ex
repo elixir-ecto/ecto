@@ -5,12 +5,11 @@ defmodule Ecto.Query do
   Queries are used to retrieve and manipualte data in a repository
   (see `Ecto.Repo`). Although this module provides a complete API,
   supporting expressions like `where/3`, `select/3` and so forth,
-  most of the times developers need to import only the `from/1` and
-  `from/2` macros. That is exactly the API that `use Ecto.Query`
-  provides out of the box:
+  most of the times developers need to import only the `from/2`
+  macro.
 
       # Imports only from/1 and from/2 from Ecto.Query
-      use Ecto.Query
+      import Ecto.Query, only: [from: 2]
 
       # Create a query
       query = from w in Weather,
@@ -135,13 +134,6 @@ defmodule Ecto.Query do
   alias Ecto.Query.PreloadBuilder
   alias Ecto.Query.JoinBuilder
 
-  @doc false
-  defmacro __using__(_) do
-    quote do
-      import unquote(__MODULE__), only: [from: 1, from: 2]
-    end
-  end
-
   @doc """
   Creates a query.
 
@@ -200,24 +192,6 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Creates a query with a from query expression.
-
-  ## Examples
-
-      from(c in City)
-
-  """
-  defmacro from(kw) when is_list(kw) do
-    quote do
-      Ecto.Query.from(Ecto.Query.Query[], unquote(kw))
-    end
-  end
-
-  defmacro from(expr) do
-    FromBuilder.build(expr, __CALLER__)
-  end
-
-  @doc """
   A join query expression.
 
   Receives an entity that is to be joined to the query and a condition to
@@ -247,7 +221,7 @@ defmodule Ecto.Query do
         |> join(:inner, [c], p in Post, c.post_id == p.id)
         |> select([c, p], { p.title, c.text })
 
-      from(Post)
+      Post
         |> join(:left, [p], c in p.comments)
         |> select([p, c], { p, c })
   """
@@ -305,11 +279,11 @@ defmodule Ecto.Query do
   @doc """
   A distinct query expression.
 
-  Only keep one row for each combination of values in the `distinct` query 
+  Only keep one row for each combination of values in the `distinct` query
   expression.
 
   The row that is being kept depends on the ordering of the rows. To ensure
-  results are consistents, if an `order_by` expression is also added to the 
+  results are consistents, if an `order_by` expression is also added to the
   query, its leftmost part must first reference all the fields in the
   `distinct` expression before referencing another field.
 
@@ -319,20 +293,20 @@ defmodule Ecto.Query do
       from(p in Post, distinct: p.category)
 
       # Returns the first (by date) for each different categories of Post
-      from(p in Post, 
-         distinct: p.category, 
+      from(p in Post,
+         distinct: p.category,
          order_by: [p.category, p.date])
 
   ## Expressions examples
 
-      from(Post) 
+      Post
         |> distinct([p], p.category)
         |> order_by([p], [p.category, p.author])
 
   """
-  defmacro distinct(query, binding, expr) do 
+  defmacro distinct(query, binding, expr) do
     DistinctBuilder.build(query, binding, expr, __CALLER__)
-  end 
+  end
 
   @doc """
   A where query expression.
@@ -442,7 +416,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(Post) |> group_by([p], p.category) |> select([p], count(p.id))
+      Post |> group_by([p], p.category) |> select([p], count(p.id))
 
   """
   defmacro group_by(query, binding, expr) do
@@ -468,7 +442,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(Post)
+      Post
         |> group_by([p], p.category)
         |> having([p], avg(p.num_comments) > 10)
         |> select([p], count(p.id))
@@ -506,9 +480,9 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(Post) |> preload(:comments) |> select([p], p)
+      Post |> preload(:comments) |> select([p], p)
 
-      from(Post) |> preload([:user, { :comments, [:user] }]) |> select([p], p)
+      Post |> preload([:user, { :comments, [:user] }]) |> select([p], p)
   """
   defmacro preload(query, expr) do
     PreloadBuilder.build(query, expr, __CALLER__)

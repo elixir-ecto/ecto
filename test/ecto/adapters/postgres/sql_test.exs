@@ -40,188 +40,188 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "from" do
-    query = from(Model) |> select([r], r.x) |> normalize
+    query = Model |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0"
   end
 
   test "from without entity" do
-    query = from("posts") |> select([r], r.x) |> normalize
+    query = "posts" |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT p0.\"x\"\nFROM \"posts\" AS p0"
   end
 
   test "select" do
-    query = from(Model) |> select([r], {r.x, r.y}) |> normalize
+    query = Model |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], {r.x, r.y + 123}) |> normalize
+    query = Model |> select([r], {r.x, r.y + 123}) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\", m0.\"y\" + 123\nFROM \"model\" AS m0"
   end
 
   test "distinct" do 
-    query = from(Model) |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
+    query = Model |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
 
-    query = from(Model) |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
+    query = Model |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"x\", m0.\"y\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
 
-    query = from(Model) |> distinct([r], r) |> select([r], {r.x, r.y}) |> normalize
+    query = Model |> distinct([r], r) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
 
-    query = from(Model) |> distinct([r], [r, r.x]) |> select([r], {r.x, r.y}) |> normalize
+    query = Model |> distinct([r], [r, r.x]) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\", m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0" 
   end
 
   test "where" do
-    query = from(Model) |> where([r], r.x != nil) |> select([r], r.x) |> normalize
+    query = Model |> where([r], r.x != nil) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nWHERE (m0.\"x\" IS NOT NULL)"
 
-    query = from(Model) |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
+    query = Model |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nWHERE (m0.\"x\" = 42) AND (m0.\"y\" != 43)"
   end
 
   test "order by" do
-    query = from(Model) |> order_by([r], r.x) |> select([r], r.x) |> normalize
+    query = Model |> order_by([r], r.x) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nORDER BY m0.\"x\""
 
-    query = from(Model) |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
+    query = Model |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nORDER BY m0.\"x\", m0.\"y\""
 
-    query = from(Model) |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
+    query = Model |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nORDER BY m0.\"x\", m0.\"y\" DESC"
   end
 
   test "limit and offset" do
-    query = from(Model) |> limit(3) |> select([], 0) |> normalize
+    query = Model |> limit(3) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nLIMIT 3"
 
-    query = from(Model) |> offset(5) |> select([], 0) |> normalize
+    query = Model |> offset(5) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nOFFSET 5"
 
-    query = from(Model) |> offset(5) |> limit(3) |> select([], 0) |> normalize
+    query = Model |> offset(5) |> limit(3) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nLIMIT 3\nOFFSET 5"
   end
 
   test "variable binding" do
     x = 123
-    query = from(Model) |> select([], ^x) |> normalize
+    query = Model |> select([], ^x) |> normalize
     assert SQL.select(query) == "SELECT 123\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], ^x + r.y) |> normalize
+    query = Model |> select([r], ^x + r.y) |> normalize
     assert SQL.select(query) == "SELECT 123 + m0.\"y\"\nFROM \"model\" AS m0"
   end
 
   test "string escape" do
     x = "'\\ \n"
-    query = from(Model) |> select([], ^x) |> normalize
+    query = Model |> select([], ^x) |> normalize
     assert SQL.select(query) == "SELECT '''\\ \n'\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], "'") |> normalize
+    query = Model |> select([], "'") |> normalize
     assert SQL.select(query) == "SELECT ''''\nFROM \"model\" AS m0"
   end
 
   test "unary ops" do
-    query = from(Model) |> select([r], +r.x) |> normalize
+    query = Model |> select([r], +r.x) |> normalize
     assert SQL.select(query) == "SELECT +m0.\"x\"\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], -r.x) |> normalize
+    query = Model |> select([r], -r.x) |> normalize
     assert SQL.select(query) == "SELECT -m0.\"x\"\nFROM \"model\" AS m0"
   end
 
   test "binary ops" do
-    query = from(Model) |> select([r], r.x == 2) |> normalize
+    query = Model |> select([r], r.x == 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" = 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x != 2) |> normalize
+    query = Model |> select([r], r.x != 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" != 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x <= 2) |> normalize
+    query = Model |> select([r], r.x <= 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" <= 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x >= 2) |> normalize
+    query = Model |> select([r], r.x >= 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" >= 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x < 2) |> normalize
+    query = Model |> select([r], r.x < 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" < 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x > 2) |> normalize
+    query = Model |> select([r], r.x > 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" > 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x + 2) |> normalize
+    query = Model |> select([r], r.x + 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" + 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x - 2) |> normalize
+    query = Model |> select([r], r.x - 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" - 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x * 2) |> normalize
+    query = Model |> select([r], r.x * 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" * 2\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x / 2) |> normalize
+    query = Model |> select([r], r.x / 2) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" / 2::numeric\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x and false) |> normalize
+    query = Model |> select([r], r.x and false) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" AND FALSE\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x or false) |> normalize
+    query = Model |> select([r], r.x or false) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" OR FALSE\nFROM \"model\" AS m0"
   end
 
   test "binary op null check" do
-    query = from(Model) |> select([r], r.x == nil) |> normalize
+    query = Model |> select([r], r.x == nil) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" IS NULL\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], nil == r.x) |> normalize
+    query = Model |> select([r], nil == r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" IS NULL\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x != nil) |> normalize
+    query = Model |> select([r], r.x != nil) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" IS NOT NULL\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], nil != r.x) |> normalize
+    query = Model |> select([r], nil != r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" IS NOT NULL\nFROM \"model\" AS m0"
   end
 
   test "literals" do
-    query = from(Model) |> select([], nil) |> normalize
+    query = Model |> select([], nil) |> normalize
     assert SQL.select(query) == "SELECT NULL\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], true) |> normalize
+    query = Model |> select([], true) |> normalize
     assert SQL.select(query) == "SELECT TRUE\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], false) |> normalize
+    query = Model |> select([], false) |> normalize
     assert SQL.select(query) == "SELECT FALSE\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], "abc") |> normalize
+    query = Model |> select([], "abc") |> normalize
     assert SQL.select(query) == "SELECT 'abc'\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], <<?a,?b,?c>>) |> normalize
+    query = Model |> select([], <<?a,?b,?c>>) |> normalize
     assert SQL.select(query) == "SELECT 'abc'\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], binary(<<0,1,2>>)) |> normalize
+    query = Model |> select([], binary(<<0,1,2>>)) |> normalize
     assert SQL.select(query) == "SELECT '\\x000102'::bytea\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], 123) |> normalize
+    query = Model |> select([], 123) |> normalize
     assert SQL.select(query) == "SELECT 123\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], 123.0) |> normalize
+    query = Model |> select([], 123.0) |> normalize
     assert SQL.select(query) == "SELECT 123.0::float\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], ^Decimal.new("42")) |> normalize
+    query = Model |> select([], ^Decimal.new("42")) |> normalize
     assert SQL.select(query) == "SELECT 42.0\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], ^Ecto.DateTime[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51]) |> normalize
+    query = Model |> select([], ^Ecto.DateTime[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51]) |> normalize
     assert SQL.select(query) == "SELECT timestamp '2014-1-16 20:26:51'\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], ^Ecto.Interval[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51]) |> normalize
+    query = Model |> select([], ^Ecto.Interval[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51]) |> normalize
     assert SQL.select(query) == "SELECT interval 'P2014-1-16T20:26:51'\nFROM \"model\" AS m0"
   end
 
   test "nested expressions" do
     z = 123
-    query = from(r in Model) |> select([r], r.x + (r.y + ^(-z)) - 3) |> normalize
+    query = from(r in Model, []) |> select([r], r.x + (r.y + ^(-z)) - 3) |> normalize
     assert SQL.select(query) == "SELECT (m0.\"x\" + (m0.\"y\" + -123)) - 3\nFROM \"model\" AS m0"
   end
 
   test "use correct bindings" do
-    query = from(r in Model) |> select([not_r], not_r.x) |> normalize
+    query = from(r in Model, []) |> select([not_r], not_r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0"
   end
 
@@ -300,45 +300,45 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "in expression" do
-    query = from(Model) |> select([e], 1 in array([1,e.x,3], ^:integer)) |> normalize
+    query = Model |> select([e], 1 in array([1,e.x,3], ^:integer)) |> normalize
     assert SQL.select(query) == "SELECT 1 = ANY (ARRAY[1, m0.\"x\", 3]::integer[])\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([e], e.x in 1..3) |> normalize
+    query = Model |> select([e], e.x in 1..3) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" BETWEEN 1 AND 3\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([e], 1 in 1..(e.x + 5)) |> normalize
+    query = Model |> select([e], 1 in 1..(e.x + 5)) |> normalize
     assert SQL.select(query) == "SELECT 1 BETWEEN 1 AND m0.\"x\" + 5\nFROM \"model\" AS m0"
   end
 
   test "list expression" do
-    query = from(e in Model) |> where([e], array([e.x, e.y], ^:integer) == nil) |> select([e], 0) |> normalize
+    query = from(e in Model, []) |> where([e], array([e.x, e.y], ^:integer) == nil) |> select([e], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nWHERE (ARRAY[m0.\"x\", m0.\"y\"]::integer[] IS NULL)"
   end
 
   test "having" do
-    query = from(Model) |> having([p], p.x == p.x) |> select([], 0) |> normalize
+    query = Model |> having([p], p.x == p.x) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nHAVING (m0.\"x\" = m0.\"x\")"
 
-    query = from(Model) |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0) |> normalize
+    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nHAVING (m0.\"x\" = m0.\"x\") AND (m0.\"y\" = m0.\"y\")"
   end
 
   test "group by" do
-    query = from(Model) |> group_by([r], r.x) |> select([r], r.x) |> normalize
+    query = Model |> group_by([r], r.x) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"x\""
 
-    query = from(Model) |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
+    query = Model |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"x\", m0.\"y\""
 
-    query = from(Model) |> group_by([r], r) |> select([r], r.x) |> normalize
+    query = Model |> group_by([r], r) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"id\", m0.\"x\", m0.\"y\""
 
-    query = from(Model) |> group_by([r], [r, r.x]) |> select([r], r.x) |> normalize
+    query = Model |> group_by([r], [r, r.x]) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"id\", m0.\"x\", m0.\"y\", m0.\"x\""
   end
 
   test "sigils" do
-    query = from(Model) |> select([], %s"abc" in array(%w(abc def), ^:string)) |> normalize
+    query = Model |> select([], %s"abc" in array(%w(abc def), ^:string)) |> normalize
     assert SQL.select(query) == "SELECT 'abc' = ANY (ARRAY['abc', 'def']::text[])\nFROM \"model\" AS m0"
   end
 
@@ -348,43 +348,43 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "query interpolation" do
     r = Rec[x: 123]
-    query = from(Model) |> select([r], r.x + ^(1 + 2 + 3) + ^r.x) |> normalize
+    query = Model |> select([r], r.x + ^(1 + 2 + 3) + ^r.x) |> normalize
     assert SQL.select(query) == "SELECT (m0.\"x\" + 6) + 123\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([r], r.x + ^fun(r.x)) |> normalize
+    query = Model |> select([r], r.x + ^fun(r.x)) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" + 246\nFROM \"model\" AS m0"
   end
 
   test "functions" do
-    query = from(Model) |> select([], random()) |> normalize
+    query = Model |> select([], random()) |> normalize
     assert SQL.select(query) == "SELECT random()\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], round(12.34)) |> normalize
+    query = Model |> select([], round(12.34)) |> normalize
     assert SQL.select(query) == "SELECT round(12.34::float)\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], round(12.34, 1)) |> normalize
+    query = Model |> select([], round(12.34, 1)) |> normalize
     assert SQL.select(query) == "SELECT round(12.34::float, 1)\nFROM \"model\" AS m0"
 
-    query = from(Model) |> select([], pow(7, 2)) |> normalize
+    query = Model |> select([], pow(7, 2)) |> normalize
     assert SQL.select(query) == "SELECT 7 ^ 2\nFROM \"model\" AS m0"
   end
 
   test "join" do
-    query = from(Model) |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nINNER JOIN \"model2\" AS m1 ON m0.\"x\" = m1.\"z\""
 
-    query = from(Model) |> join(:inner, [p], q in Model2, p.x == q.z) |> join(:inner, [], Model, true) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> join(:inner, [], Model, true) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nINNER JOIN \"model2\" AS m1 ON m0.\"x\" = m1.\"z\"\n" <>
       "INNER JOIN \"model\" AS m2 ON TRUE"
   end
 
   test "join with nothing bound" do
-    query = from(Model) |> join(:inner, [], q in Model2, q.z == q.z) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [], q in Model2, q.z == q.z) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nINNER JOIN \"model2\" AS m1 ON m1.\"z\" = m1.\"z\""
   end
 
   test "join without entity" do
-    query = from("posts") |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], 0) |> normalize
+    query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"posts\" AS p0\nINNER JOIN \"comments\" AS c0 ON p0.\"x\" = c0.\"z\""
   end
 
@@ -418,22 +418,22 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "association join belongs_to" do
-    query = from(Comment) |> join(:inner, [c], p in c.post) |> select([], 0) |> normalize
+    query = Comment |> join(:inner, [c], p in c.post) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"comments\" AS c0\nINNER JOIN \"posts\" AS p0 ON p0.\"a\" = c0.\"b\""
   end
 
   test "association join has_many" do
-    query = from(Post) |> join(:inner, [p], c in p.comments) |> select([], 0) |> normalize
+    query = Post |> join(:inner, [p], c in p.comments) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"posts\" AS p0\nINNER JOIN \"comments\" AS c0 ON c0.\"d\" = p0.\"c\""
   end
 
   test "association join has_one" do
-    query = from(Post) |> join(:inner, [p], pp in p.permalink) |> select([], 0) |> normalize
+    query = Post |> join(:inner, [p], pp in p.permalink) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"posts\" AS p0\nINNER JOIN \"permalinks\" AS p1 ON p1.\"f\" = p0.\"e\""
   end
 
   test "association join with on" do
-    query = from(Post) |> join(:inner, [p], c in p.comments, 1 == 2) |> select([], 0) |> normalize
+    query = Post |> join(:inner, [p], c in p.comments, 1 == 2) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"posts\" AS p0\nINNER JOIN \"comments\" AS c0 ON (1 = 2) AND (c0.\"d\" = p0.\"c\")"
   end
 
