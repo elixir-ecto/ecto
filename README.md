@@ -247,6 +247,7 @@ Repo.all(query)
 
 Queries are defined and extended with the `from` macro. The supported keywords are:
 
+* `:distinct`
 * `:where`
 * `:order_by`
 * `:offset`

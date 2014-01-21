@@ -13,6 +13,7 @@ defmodule Ecto.Query.Normalizer do
     |> setup_sources
     |> normalize_joins
     |> auto_select(opts)
+    |> normalize_distinct
     |> normalize_group_by
   end
 
@@ -71,16 +72,26 @@ defmodule Ecto.Query.Normalizer do
 
   # Group by all fields
   defp normalize_group_by(Query[] = query) do
-    Enum.map(query.group_bys, fn QueryExpr[] = expr ->
+    normalize_entities(query.group_bys, query.sources) |> query.group_bys
+  end
+
+  # Add distinct on all field when Entity is in field list
+  defp normalize_distinct(Query[] = query) do
+    normalize_entities(query.distincts, query.sources) |> query.distincts 
+  end
+
+  # Expand Entity into all of its fields in an expression
+  defp normalize_entities(query_expr, sources) do 
+    Enum.map(query_expr, fn QueryExpr[] = expr ->
       Enum.flat_map(expr.expr, fn
         { :&, _, _ } = var ->
-          entity = Util.find_source(query.sources, var) |> Util.entity
+          entity = Util.find_source(sources, var) |> Util.entity
           fields = entity.__entity__(:field_names)
           Enum.map(fields, &{ var, &1 })
         field ->
           [field]
       end) |> expr.expr
-    end) |> query.group_bys
+    end)
   end
 
   # Adds all sources to the query for fast access

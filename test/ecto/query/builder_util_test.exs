@@ -86,4 +86,35 @@ defmodule Ecto.Query.BuilderUtilTest do
       Code.eval_quoted(escape_dot(quote do field(x, 123) end, [:x]), [], __ENV__)
     end
   end
+
+  test "escape_fields_and_vars" do 
+    varx = { :{}, [], [:&, [], [0]] }
+    vary = { :{}, [], [:&, [], [1]] }
+
+    assert [{ varx, :y }] ==
+           escape_fields_and_vars(quote do x.y end, [:x])
+
+    assert [{ varx, :x }, { vary, :y }] ==
+           escape_fields_and_vars(quote do [x.x, y.y] end, [:x, :y])
+
+    assert [varx] ==
+           escape_fields_and_vars(quote do x end, [:x])
+
+    assert [varx, { vary, :x }] ==
+           escape_fields_and_vars(quote do [x, y.x] end, [:x, :y])
+
+    assert [varx, vary] ==
+           escape_fields_and_vars(quote do [x, y] end, [:x, :y])
+  end 
+
+  test "escape_expr raise" do 
+    assert_raise Ecto.QueryError, "unbound variable `x` in query", fn ->
+      escape_fields_and_vars(quote do x.y end, [])
+    end
+
+    message = "malformed query expression"
+    assert_raise Ecto.QueryError, message, fn ->
+      escape_fields_and_vars(quote do 1 + 2 end, [])
+    end
+  end 
 end

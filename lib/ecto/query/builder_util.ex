@@ -185,6 +185,41 @@ defmodule Ecto.Query.BuilderUtil do
   defp escape_bind(bind),
     do: raise(Ecto.QueryError, reason: "binding list should contain only variables, got: #{Macro.to_string(bind)}")
 
+
+  @doc """
+  Escapes simple expressions.
+
+  An expression may be a single variable `x`, representing all fields in that
+  entity, a field `x.y`, or a list of fields and variables.
+
+  ## Examples
+
+      iex> escape_fields_and_vars(quote(do: [x.x, y.y]), [:x, :y])
+      [{{:{}, [], [:&, [], [0]]}, :x},
+       {{:{}, [], [:&, [], [1]]}, :y}]
+
+      iex> escape_fields_and_vars(quote(do: x), [:x, :y])
+      [{:{}, [], [:&, [], [0]]}]
+
+  """
+  @spec escape_fields_and_vars(Macro.t, [atom]) :: Macro.t | no_return
+  def escape_fields_and_vars(ast, vars) do
+    Enum.map(List.wrap(ast), &do_escape_expr(&1, vars))
+  end
+
+  defp do_escape_expr({ var, _, context }, vars) when is_atom(var) and is_atom(context) do
+    escape_var(var, vars)
+  end
+
+  defp do_escape_expr(dot, vars) do
+    case escape_dot(dot, vars) do
+      { _, _ } = var_field ->
+        var_field
+      :error ->
+        raise Ecto.QueryError, reason: "malformed query expression"
+    end
+  end
+
   @doc """
   Counts the bindings in a query expression.
 

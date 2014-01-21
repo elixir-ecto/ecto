@@ -35,6 +35,9 @@ defmodule Ecto.QueryTest do
     query = from(Post) |> select([p], p.title)
     validate(query)
 
+    query = from(Post) |> distinct([p], p.title)
+    validate(query)
+
     query = from(Post) |> where([p], p.title == "42")
     validate(query)
 
@@ -50,6 +53,9 @@ defmodule Ecto.QueryTest do
     query = select(Post, [p], p.title)
     validate(query)
 
+    query = distinct(Post, [p], p.title)
+    validate(query)
+    
     query = where(Post, [p], p.title == "42")
     validate(query)
 

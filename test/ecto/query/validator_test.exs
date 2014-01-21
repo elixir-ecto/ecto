@@ -201,6 +201,36 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "distinct expression" do
+    query = from(Post) |> distinct([p], p.id)
+    validate(query)
+
+    query = from(Post) |> distinct([p], [p.id, p.title])
+    validate(query)
+
+    query = from(Post) |> distinct([p], [p.id, p.title]) |> order_by([p], [p.title])
+    validate(query)
+
+    query = from(Post) |> distinct([p], p) |> order_by([p], [p.id, p.title])
+    validate(query)
+
+    query = from(Post) |> select([p], p.title) |> distinct([p], p.title) |> order_by([p], p.title)
+    validate(query)
+
+    query = from(Post) |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.id, p.title])
+    validate(query)
+
+    query = from(Post) |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.title, p.id])
+    assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
+      validate(query)
+    end
+
+    query = from(Post) |> distinct([p], p.title) |> order_by([p], [p.id, p.title])
+    assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
+      validate(query)
+    end
+  end
+
   test "group_by invalid field" do
     query = from(Post) |> group_by([p], p.hai) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->

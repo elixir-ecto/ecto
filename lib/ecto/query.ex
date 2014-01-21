@@ -117,7 +117,7 @@ defmodule Ecto.Query do
 
   defrecord Query, sources: nil, from: nil, joins: [], wheres: [], select: nil,
                    order_bys: [], limit: nil, offset: nil, group_bys: [],
-                   havings: [], preloads: []
+                   havings: [], preloads: [], distincts: []
 
   defrecord QueryExpr, [:expr, :file, :line]
   defrecord JoinExpr, [:qual, :source, :on, :file, :line, :assoc]
@@ -127,6 +127,7 @@ defmodule Ecto.Query do
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
   alias Ecto.Query.SelectBuilder
+  alias Ecto.Query.DistinctBuilder
   alias Ecto.Query.OrderByBuilder
   alias Ecto.Query.LimitOffsetBuilder
   alias Ecto.Query.GroupByBuilder
@@ -300,6 +301,38 @@ defmodule Ecto.Query do
   defmacro select(query, binding, expr) do
     SelectBuilder.build(query, binding, expr, __CALLER__)
   end
+
+  @doc """
+  A distinct query expression.
+
+  Only keep one row for each combination of values in the `distinct` query 
+  expression.
+
+  The row that is being kept depends on the ordering of the rows. To ensure
+  results are consistents, if an `order_by` expression is also added to the 
+  query, its leftmost part must first reference all the fields in the
+  `distinct` expression before referencing another field.
+
+  ## Keywords examples
+
+      # Returns the list of different categories in the Post entity
+      from(p in Post, distinct: p.category)
+
+      # Returns the first (by date) for each different categories of Post
+      from(p in Post, 
+         distinct: p.category, 
+         order_by: [p.category, p.date])
+
+  ## Expressions examples
+
+      from(Post) 
+        |> distinct([p], p.category)
+        |> order_by([p], [p.category, p.author])
+
+  """
+  defmacro distinct(query, binding, expr) do 
+    DistinctBuilder.build(query, binding, expr, __CALLER__)
+  end 
 
   @doc """
   A where query expression.
@@ -483,7 +516,7 @@ defmodule Ecto.Query do
 
   # Builds the quoted code for creating a keyword query
 
-  @binds    [:where, :select, :order_by, :group_by, :having]
+  @binds    [:where, :select, :distinct, :order_by, :group_by, :having]
   @no_binds [:limit, :offset, :preload]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
