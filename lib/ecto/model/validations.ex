@@ -22,7 +22,7 @@ defmodule Ecto.Model.Validations do
                also: validate_attachments
 
         validatep validate_attachments(user),
-           filename: matches(%r/\w+/),
+           filename: has_format(%r/\w+/),
              format: member_of(%w(jpg gif png))
       end
 
@@ -102,7 +102,7 @@ defmodule Ecto.Model.Validations do
   to change the predicates below:
 
       validatep validate_attachments(user),
-         filename: matches(%r/\w+/),
+         filename: has_format(%r/\w+/),
            format: member_of(%w(jpg gif png))
 
   To a custom predicate for image attachments:
@@ -134,7 +134,7 @@ defmodule Ecto.Model.Validations do
       values = %w(jpg gif png)
 
       validatep validate_attachments(user),
-         filename: matches(%r/\w+/),
+         filename: has_format(%r/\w+/),
            format: member_of(values)
 
   You can use module attributes instead:
@@ -142,14 +142,14 @@ defmodule Ecto.Model.Validations do
       @values %w(jpg gif png)
 
       validatep validate_attachments(user),
-         filename: matches(%r/\w+/),
+         filename: has_format(%r/\w+/),
            format: member_of(@values)
 
   On the plus side, it means you can also call other functions from
   the validator:
 
       validatep validate_attachments(user),
-         filename: matches(%r/\w+/),
+         filename: has_format(%r/\w+/),
            format: member_of(valid_formats)
 
       defp valid_formats(), do: %w(jpg gif png)
@@ -157,13 +157,13 @@ defmodule Ecto.Model.Validations do
  or even receive arguments:
 
      validatep validate_attachments(user, valid_formats // %w(jpg gif png)),
-        filename: matches(%r/\w+/),
+        filename: has_format(%r/\w+/),
           format: member_of(valid_formats)
 
   or:
 
       validatep validate_attachments(user, validate_format),
-         filename: matches(%r/\w+/),
+         filename: has_format(%r/\w+/),
            format: member_of(%w(jpg gif png)) when validate_format
 
   """
