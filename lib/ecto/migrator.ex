@@ -121,10 +121,6 @@ defmodule Ecto.Migrator do
 
   defp migrate(migrations, direction, repo) do
     ensure_no_duplication(migrations)
-    migrator = case direction do
-      :up -> &up/3
-      :down -> &down/3
-    end
 
     Enum.map migrations, fn { version, file } ->
       { mod, _bin } =
@@ -132,7 +128,17 @@ defmodule Ecto.Migrator do
           function_exported?(mod, :__migration__, 0)
         end) || raise_no_migration_in_file(file)
 
-      migrator.(repo, version, mod)
+      # TODO: Use logger in the future
+      file = Path.relative_to_cwd(file)
+      case direction do
+        :up ->
+          IO.puts IO.ANSI.escape("%{green}* running %{yellow}UP %{reset}#{file}")
+          up(repo, version, mod)
+        :down ->
+          IO.puts IO.ANSI.escape("%{green}* running %{yellow}DOWN %{reset}#{file}")
+          down(repo, version, mod)
+      end
+
       version
     end
   end

@@ -2,7 +2,7 @@ defmodule Ecto.MigratorTest do
   use ExUnit.Case
 
   import Support.FileHelpers
-
+  import ExUnit.CaptureIO
   import Ecto.Migrator
 
   defmodule ProcessRepo do
@@ -43,19 +43,25 @@ defmodule Ecto.MigratorTest do
   end
 
   test "up invokes the repository adapter with up commands" do
-    assert up(ProcessRepo, 0, Migration) == :ok
-    assert up(ProcessRepo, 1, Migration) == :already_up
+    capture_io(fn ->
+      assert up(ProcessRepo, 0, Migration) == :ok
+      assert up(ProcessRepo, 1, Migration) == :already_up
+    end)
   end
 
   test "down invokes the repository adapter with down commands" do
-    assert down(ProcessRepo, 0, Migration) == :already_down
-    assert down(ProcessRepo, 1, Migration) == :ok
+    capture_io(fn ->
+      assert down(ProcessRepo, 0, Migration) == :already_down
+      assert down(ProcessRepo, 1, Migration) == :ok
+    end)
   end
 
   test "expects files starting with an integer" do
     in_tmp fn path ->
       create_migration "a_sample.exs"
-      assert run(ProcessRepo, path, :up, all: true) == []
+      capture_io(fn ->
+        assert run(ProcessRepo, path, :up, all: true) == []
+      end)
     end
   end
 
@@ -63,7 +69,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       File.write! "13_sample.exs", ":ok"
       assert_raise Ecto.MigrationError, "file 13_sample.exs does not contain any Ecto.Migration", fn ->
-        run(ProcessRepo, path, :up, all: true)
+        capture_io fn -> run(ProcessRepo, path, :up, all: true) end
       end
     end
   end
@@ -73,7 +79,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_hello.exs"
       create_migration "13_other.exs"
       assert_raise Ecto.MigrationError, "migrations can't be executed, version 13 is duplicated", fn ->
-        run(ProcessRepo, path, :up, all: true)
+        capture_io fn -> run(ProcessRepo, path, :up, all: true) end
       end
     end
   end
@@ -81,7 +87,7 @@ defmodule Ecto.MigratorTest do
   test "upwards migrations skips migrations that are already up" do
     in_tmp fn path ->
       create_migration "1_sample.exs"
-      assert run(ProcessRepo, path, :up, all: true) == []
+      capture_io fn -> assert run(ProcessRepo, path, :up, all: true) == [] end
     end
   end
 
@@ -89,7 +95,9 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "1_sample.exs"
       create_migration "4_sample.exs"
-      assert run(ProcessRepo, path, :down, all: true) == [1]
+      capture_io(fn ->
+        assert run(ProcessRepo, path, :down, all: true) == [1]
+      end)
     end
   end
 
@@ -97,7 +105,9 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_premature_end.exs"
       create_migration "14_step_premature_end.exs"
-      assert run(ProcessRepo, path, :up, step: 1) == [13]
+      capture_io(fn ->
+        assert run(ProcessRepo, path, :up, step: 1) == [13]
+      end)
     end
   end
 
@@ -105,7 +115,9 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_to_the_end.exs"
       create_migration "14_step_to_the_end.exs"
-      assert run(ProcessRepo, path, :up, step: 2) == [13, 14]
+      capture_io(fn ->
+        assert run(ProcessRepo, path, :up, step: 2) == [13, 14]
+      end)
     end
   end
 
@@ -113,7 +125,9 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_past_the_end.exs"
       create_migration "14_step_past_the_end.exs"
-      assert run(ProcessRepo, path, :up, step: 3) == [13, 14]
+      capture_io(fn ->
+        assert run(ProcessRepo, path, :up, step: 3) == [13, 14]
+      end)
     end
   end
 
@@ -121,7 +135,9 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_premature_end.exs"
       create_migration "14_version_premature_end.exs"
-      assert run(ProcessRepo, path, :up, to: 13) == [13]
+      capture_io(fn ->
+        assert run(ProcessRepo, path, :up, to: 13) == [13]
+      end)
     end
   end
 
@@ -129,7 +145,9 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_to_the_end.exs"
       create_migration "14_version_to_the_end.exs"
-      assert run(ProcessRepo, path, :up, to: 14) == [13, 14]
+      capture_io(fn ->
+        assert run(ProcessRepo, path, :up, to: 14) == [13, 14]
+      end)
     end
   end
 
@@ -137,7 +155,9 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_past_the_end.exs"
       create_migration "14_version_past_the_end.exs"
-      assert run(ProcessRepo, path, :up, to: 15) == [13, 14]
+      capture_io(fn ->
+        assert run(ProcessRepo, path, :up, to: 15) == [13, 14]
+      end)
     end
   end
 
