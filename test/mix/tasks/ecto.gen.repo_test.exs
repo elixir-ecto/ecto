@@ -9,11 +9,11 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
       run ["Repo"]
 
       assert_file "lib/repo.ex", fn file ->
-        assert file =~ "defmodule Repo do"
-        assert file =~ "use Ecto.Repo, adapter: Ecto.Adapters.Postgres"
-        assert file =~ "app_dir(:ecto, \"priv/repo\")"
-        assert file =~ "\"ecto://user:pass@localhost/ecto_repo_dev\""
-        assert file =~ "\"ecto://user:pass@localhost/ecto_repo_test?size=1&max_overflow=0\""
+        assert String.contains? file, "defmodule Repo do"
+        assert String.contains? file, "use Ecto.Repo, adapter: Ecto.Adapters.Postgres"
+        assert String.contains? file, "app_dir(:ecto, \"priv/repo\")"
+        assert String.contains? file, "\"ecto://user:pass@localhost/ecto_repo_dev\""
+        assert String.contains? file, "\"ecto://user:pass@localhost/ecto_repo_test?size=1&max_overflow=0\""
       end
     end
   end
@@ -23,10 +23,10 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
       run ["My.AppRepo"]
 
       assert_file "lib/my/app_repo.ex", fn file ->
-        assert file =~ "defmodule My.AppRepo do"
-        assert file =~ "use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env"
-        assert file =~ "app_dir(:ecto, \"priv/app_repo\")"
-        assert file =~ "\"ecto://user:pass@localhost/ecto_app_repo_dev\""
+        assert String.contains? file, "defmodule My.AppRepo do"
+        assert String.contains? file, "use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env"
+        assert String.contains? file, "app_dir(:ecto, \"priv/app_repo\")"
+        assert String.contains? file, "\"ecto://user:pass@localhost/ecto_app_repo_dev\""
       end
     end
   end
