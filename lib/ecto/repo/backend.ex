@@ -116,7 +116,7 @@ defmodule Ecto.Repo.Backend do
 
   defp parse_url(url) do
 
-    unless url =~ %r/^[^:\/?#\s]+:\/\// do
+    unless String.match? url, %r/^[^:\/?#\s]+:\/\// do
       raise Ecto.InvalidURL, url: url, reason: "url should start with a scheme, host should start with //"
     end
 
@@ -126,7 +126,7 @@ defmodule Ecto.Repo.Backend do
       raise Ecto.InvalidURL, url: url, reason: "url has to contain a username"
     end
 
-    unless info.path =~ %r"^/([^/])+$" do
+    unless String.match? info.path, %r"^/([^/])+$" do
       raise Ecto.InvalidURL, url: url, reason: "path should be a database name"
     end
 
