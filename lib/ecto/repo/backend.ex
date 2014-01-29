@@ -14,7 +14,7 @@ defmodule Ecto.Repo.Backend do
     adapter.storage_up(parse_url(repo.url))
   end
 
-  def storage_down(repo, adapter) do 
+  def storage_down(repo, adapter) do
     adapter.storage_down(parse_url(repo.url))
   end
 

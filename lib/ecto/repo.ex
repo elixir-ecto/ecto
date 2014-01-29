@@ -73,7 +73,7 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.storage_up(__MODULE__, unquote(adapter))
       end
 
-      def storage_down do 
+      def storage_down do
         Ecto.Repo.Backend.storage_down(__MODULE__, unquote(adapter))
       end
 
@@ -224,8 +224,8 @@ defmodule Ecto.Repo do
 
       MyRepo.update_all(p in Post, visits: p.visits + 1)
 
-      from(p in Post, where: p.id < 10) |>
-        MyRepo.update_all(visits: title: "New title")
+      from(p in Post, where: p.id < 10)
+      |> MyRepo.update_all(title: "New title")
   """
   defmacrocallback update_all(Macro.t, Keyword.t) :: integer | no_return
 
