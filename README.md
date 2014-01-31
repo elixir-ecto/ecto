@@ -62,7 +62,7 @@ When using Ecto, we think about 4 main components:
 * [Repositories](http://elixir-lang.org/docs/ecto/Ecto.Repo.html): repositories are wrappers around the database. Via the repository, we can create, update, destroy and query existing entries. A repository needs an adapter and a URL to communicate to the database;
 * [Entities](http://elixir-lang.org/docs/ecto/Ecto.Entity.html): entities are data with an identity. They are Elixir records that represent a row in the database;
 * [Models](http://elixir-lang.org/docs/ecto/Ecto.Model.html): models represent behaviour. Validations, callbacks and query handling are all behaviours tied to a model;
-* [Queries](http://elixir-lang.org/docs/ecto/Ecto.Query.html): written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injetion, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
+* [Queries](http://elixir-lang.org/docs/ecto/Ecto.Query.html): written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injection, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
 
 Note how the storage (repositories), the data (entities) and behaviour (models) are decoupled in Ecto. In the following sections, we will describe those components and how they interact with each other. This README will follow the code outlined in the application at [examples/simple](https://github.com/elixir-lang/ecto/tree/master/examples/simple). Please follow the instructions outlined there to get it up and running.
 
