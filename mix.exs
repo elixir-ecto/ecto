@@ -4,16 +4,15 @@ defmodule Ecto.Mixfile do
   def project do
     [ app: :ecto,
       version: "0.1.0-dev",
-      deps: deps(Mix.env),
-      env: envs,
-      name: "Ecto",
       elixir: "~> 0.12.3-dev",
-      source_url: "https://github.com/elixir-lang/ecto",
-      docs: fn -> [
-        source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),
-        main: "overview",
-        readme: true ]
-      end ]
+      env: envs,
+      deps: deps(Mix.env),
+      build_per_environment: false,
+
+      # Docs
+      name: "Ecto",
+      docs: &docs/0,
+      source_url: "https://github.com/elixir-lang/ecto" ]
   end
 
   def application do
@@ -33,5 +32,11 @@ defmodule Ecto.Mixfile do
   defp envs do
     [ pg: [ test_paths: ["integration_test/pg"] ],
       all: [ test_paths: ["test", "integration_test/pg"] ] ]
+  end
+
+  defp docs do
+    [ source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),
+      main: "overview",
+      readme: true ]
   end
 end
