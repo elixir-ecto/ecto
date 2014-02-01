@@ -124,6 +124,17 @@ defmodule Ecto.Integration.TransactionTest do
     assert [] = TestRepo2.all(Trans)
   end
 
+  test "manual rollback with term" do
+    x = TestRepo1.transaction(fn ->
+      e = TestRepo1.create(Trans.Entity[text: "6"])
+      assert [^e] = TestRepo1.all(Trans)
+      throw { :ecto_rollback, "ecto" }
+    end)
+
+    assert x == { :error, "ecto" }
+    assert [] = TestRepo2.all(Trans)
+  end
+
   test "transactions are not shared in repo" do
     pid = self
 
