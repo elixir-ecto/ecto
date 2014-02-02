@@ -217,6 +217,9 @@ defmodule Ecto.Adapters.Postgres do
       :throw, :ecto_rollback ->
         Worker.rollback!(worker)
         :error
+      :throw, { :ecto_rollback, term } ->
+        Worker.rollback!(worker)
+        { :error, term }
       type, term ->
         Worker.rollback!(worker)
         :erlang.raise(type, term, System.stacktrace)

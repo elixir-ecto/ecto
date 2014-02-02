@@ -257,8 +257,9 @@ defmodule Ecto.Repo do
   Runs the given function inside a transaction. If an unhandled error occurs the
   transaction will be rolled back. If no error occurred the transaction will be
   commited when the function returns. A transaction can be explicitly rolled
-  back by throwing `:ecto_rollback`, this will leave immediately leave the given
-  function but the throw will not bubble up. Transactions can be nested.
+  back by throwing `:ecto_rollback` or `{ :ecto_rollback`, term }, this will
+  leave immediately leave the given function but the throw will not bubble up.
+  Transactions can be nested.
 
   ## Examples
 
