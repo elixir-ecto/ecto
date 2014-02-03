@@ -113,6 +113,11 @@ defmodule Ecto.Repo do
         unquote(adapter)
       end
 
+      # Allow raw Postgrex queries
+      def query(sql, params // []) do
+        unquote(adapter).query(__MODULE__, sql, params)
+      end
+
       def __repo__ do
         true
       end

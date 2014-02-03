@@ -9,8 +9,8 @@ defmodule Ecto.Adapters.Postgres.Worker do
     :gen_server.start_link __MODULE__, args, []
   end
 
-  def query!(worker, sql) do
-    case :gen_server.call(worker, { :query, sql }) do
+  def query!(worker, sql, params // []) do
+    case :gen_server.call(worker, { :query, sql, params }) do
       { :ok, res } -> res
       { :error, Postgrex.Error[] = err } -> raise err
     end
@@ -61,8 +61,8 @@ defmodule Ecto.Adapters.Postgres.Worker do
     end
   end
 
-  def handle_call({ :query, sql }, _from, state(conn: conn) = s) do
-    { :reply, Postgrex.Connection.query(conn, sql), s }
+  def handle_call({ :query, sql, params }, _from, state(conn: conn) = s) do
+    { :reply, Postgrex.Connection.query(conn, sql, params), s }
   end
 
   def handle_call(:begin, _from, state(conn: conn) = s) do

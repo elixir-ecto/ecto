@@ -100,9 +100,9 @@ defmodule Ecto.Adapters.Postgres do
     nrows
   end
 
-  def query(repo, sql) do
+  def query(repo, sql, params // []) do
     use_worker(repo, fn worker ->
-      Worker.query!(worker, sql)
+      Worker.query!(worker, sql, params)
     end)
   end
 
