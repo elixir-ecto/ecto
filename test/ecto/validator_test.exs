@@ -70,6 +70,12 @@ defmodule Ecto.ValidatorTest do
                  age: present()) == [name: "can't be blank"]
   end
 
+  test "validates binary dicts" do
+    assert bin_dict([{ "name", nil }, { "age", 27 }],
+                    name: present(),
+                     age: present()) == [name: "can't be blank"]
+  end
+
   def present(attr, value, opts // [])
   def present(attr, nil, opts), do: [{ attr, opts[:message] || "can't be blank" }]
   def present(_attr, _value, _opts), do: []

@@ -44,6 +44,16 @@ defmodule Ecto.Validator do
   end
 
   @doc """
+  Validates a given dict, with binary keys, given a set of predicates.
+  """
+  @spec bin_dict(Macro.t, Keyword.t) :: Macro.t
+  defmacro bin_dict(value, opts) when is_list(opts) do
+    process opts, value, fn var, attr ->
+      quote do: Dict.get(unquote(var), unquote(atom_to_binary(attr)))
+    end
+  end
+
+  @doc """
   Validates a given record given a set of predicates.
   """
   @spec record(Macro.t, Keyword.t) :: Macro.t
