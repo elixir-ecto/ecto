@@ -59,7 +59,7 @@ defmodule Ecto.Integration.TransactionTest do
     assert_raise UniqueError, fn ->
       TestRepo1.transaction(fn ->
         TestRepo1.transaction(fn ->
-          raise UniqueError[]
+          raise UniqueError
         end)
       end)
     end
@@ -81,7 +81,7 @@ defmodule Ecto.Integration.TransactionTest do
         e = TestRepo1.create(Trans.Entity[text: "2"])
         assert [^e] = TestRepo1.all(Trans)
         assert [] = TestRepo2.all(Trans)
-        raise UniqueError[]
+        raise UniqueError
       end)
     rescue
       UniqueError -> :ok
@@ -99,7 +99,7 @@ defmodule Ecto.Integration.TransactionTest do
           TestRepo1.transaction(fn ->
             e2 = TestRepo1.create(Trans.Entity[text: "4"])
             assert [^e1, ^e2] = TestRepo1.all(from(t in Trans, order_by: t.text))
-            raise UniqueError[]
+            raise UniqueError
           end)
         rescue
           UniqueError -> :ok
@@ -121,6 +121,15 @@ defmodule Ecto.Integration.TransactionTest do
     end)
 
     assert x == :error
+    assert [] = TestRepo2.all(Trans)
+  end
+
+  test "rollback with value" do
+    x = TestRepo1.transaction(fn ->
+      throw { :ecto_rollback, :foo }
+    end)
+
+    assert x == :foo
     assert [] = TestRepo2.all(Trans)
   end
 

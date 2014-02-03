@@ -398,8 +398,8 @@ defmodule Ecto.Entity do
         record_args = quote do: [{unquote(virtual_name), assoc}]
 
         if opts[:type] in [:has_many, :has_one] do
-          record_args = quote(do: [{unquote(pk), pk}]) ++ record_args
-          def unquote(name)(__MODULE__[unquote_splicing(record_args)]) do
+          has_args = quote(do: [{unquote(pk), pk}]) ++ record_args
+          def unquote(name)(__MODULE__[unquote_splicing(has_args)]) do
             if nil?(pk) do
               raise ArgumentError, message: "cannot access association when its " <>
                 "primary key is not set on the entity"
@@ -413,16 +413,16 @@ defmodule Ecto.Entity do
         end
 
         if opts[:type] == :has_many do
-          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)])
+          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)] = entity)
               when is_list(value) do
             assoc = assoc.__assoc__(:loaded, value)
-            __MODULE__[unquote_splicing(record_args)]
+            entity.unquote(virtual_name)(assoc)
           end
         else
-          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)])
+          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)] = entity)
               when is_record(value, unquote(opts[:queryable])) do
             assoc = assoc.__assoc__(:loaded, value)
-            __MODULE__[unquote_splicing(record_args)]
+            entity.unquote(virtual_name)(assoc)
           end
         end
       end

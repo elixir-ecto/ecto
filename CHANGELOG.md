@@ -8,6 +8,7 @@
   * Add 'distinct' query expression
 
 * Bug fixes
+  * Fix association functions resetting the entity when manually loading associated entities
 
 * Deprecations
 

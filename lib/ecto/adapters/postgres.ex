@@ -60,16 +60,10 @@ defmodule Ecto.Adapters.Postgres do
 
   def create(repo, entity) do
     module      = elem(entity, 0)
-    primary_key = module.__entity__(:primary_key)
-    pk_value    = entity.primary_key
 
     returning = module.__entity__(:entity_kw, entity)
       |> Enum.filter(fn { _, val } -> val == nil end)
       |> Keyword.keys
-
-    if primary_key && !pk_value do
-      returning = [primary_key] ++ returning
-    end
 
     case query(repo, SQL.insert(entity, returning)) do
       Postgrex.Result[rows: [values]] ->
