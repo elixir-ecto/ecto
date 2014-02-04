@@ -1,5 +1,14 @@
-defrecord Ecto.Reflections.HasOne, [ :field, :owner, :associated,
-  :key, :assoc_key ]
+defrecord Ecto.Reflections.HasOne, [:field, :owner, :associated, :key, :assoc_key] do
+  @moduledoc """
+  The reflection record for a `has_one` association. Its fields are:
+
+  * `field` - The name of the association field on the entity;
+  * `owner` - The model where the association was defined;
+  * `associated` - The model that is associated;
+  * `key` - The key on the `owner` model used for the association;
+  * `assoc_key` - The key on the `associated` model used for the association;
+  """
+end
 
 defmodule Ecto.Associations.HasOne do
   @moduledoc """
