@@ -4,6 +4,23 @@ defrecord Ecto.Reflections.HasMany, [ :field, :owner, :associated,
 defmodule Ecto.Associations.HasMany do
   @moduledoc """
   A has_many association.
+
+  ## Reflection
+
+  Any association module will generate the `__assoc__` function that can be
+  used for runtime introspection of the association.
+
+  * `__assoc__(:loaded, assoc)` - Returns the loaded entities or `:not_loaded`;
+  * `__assoc__(:loaded, value, assoc)` - Sets the loaded entities;
+  * `__assoc__(:target, assoc)` - Returns the entity where the association was
+                                  defined;
+  * `__assoc__(:name, assoc)` - Returns the name of the association field on the
+                                entity;
+  * `__assoc__(:primary_key, assoc)` - Returns the primary key (used when
+                                       creating a an entity with `new/2`);
+  * `__assoc__(:primary_key, value, assoc)` - Sets the primary key;
+  * `__assoc__(:new, name, target)` - Creates a new association with the given
+                                      name and target;
   """
 
   alias Ecto.Reflections.HasMany, as: Refl
@@ -50,7 +67,10 @@ defmodule Ecto.Associations.HasMany do
       assoc([{ unquote(field), var }]) = record
       var
     end
+  end
 
+  @doc false
+  Enum.each [:loaded, :primary_key], fn field ->
     def __assoc__(unquote(field), value, record) do
       assoc(record, [{ unquote(field), value }])
     end
