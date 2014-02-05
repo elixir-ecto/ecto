@@ -112,6 +112,10 @@ defmodule Ecto.Repo.Backend do
     adapter.transaction(repo, fun)
   end
 
+  def rollback(repo, adapter, value) do
+    adapter.rollback(repo, value)
+  end
+
   ## Helpers
 
   defp parse_url(url) do

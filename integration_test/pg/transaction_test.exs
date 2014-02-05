@@ -117,19 +117,19 @@ defmodule Ecto.Integration.TransactionTest do
     x = TestRepo1.transaction(fn ->
       e = TestRepo1.create(Trans.Entity[text: "6"])
       assert [^e] = TestRepo1.all(Trans)
-      throw :ecto_rollback
+      TestRepo1.rollback
     end)
 
-    assert x == :error
+    assert x == { :error, nil }
     assert [] = TestRepo2.all(Trans)
   end
 
   test "rollback with value" do
     x = TestRepo1.transaction(fn ->
-      throw { :ecto_rollback, :foo }
+      TestRepo1.rollback(:foo)
     end)
 
-    assert x == :foo
+    assert x == { :error, :foo }
     assert [] = TestRepo2.all(Trans)
   end
 

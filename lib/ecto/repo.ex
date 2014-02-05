@@ -109,6 +109,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.transaction(__MODULE__, unquote(adapter), fun)
       end
 
+      def rollback(value // nil) do
+        Ecto.Repo.Backend.rollback(__MODULE__, unquote(adapter), value)
+      end
+
       def adapter do
         unquote(adapter)
       end
@@ -257,8 +261,10 @@ defmodule Ecto.Repo do
   Runs the given function inside a transaction. If an unhandled error occurs the
   transaction will be rolled back. If no error occurred the transaction will be
   commited when the function returns. A transaction can be explicitly rolled
-  back by throwing `:ecto_rollback`, this will leave immediately leave the given
-  function but the throw will not bubble up. Transactions can be nested.
+  back by calling `rollback!`, this will immediately leave the function and
+  return the value given to `rollback!` as `{ :error, value }`. A successful
+  transaction returns the value returned by the function wrapped in a tuple as
+  `{ :ok, value }`. Transactions can be nested.
 
   ## Examples
 
@@ -281,12 +287,23 @@ defmodule Ecto.Repo do
       MyRepo.transaction(fn ->
         p = MyRepo.create(Post.new)
         if not Editor.post_allowed?(p) do
-          throw :ecto_rollback
+          MyRepo.rollback!
         end
       end)
 
   """
-  defcallback transaction(fun) :: any
+  defcallback transaction(fun) :: { :ok, any } | { :error, any }
+
+  @doc """
+  Rolls back the current transaction. See `rollback/1`.
+  """
+  defcallback rollback() :: no_return
+
+  @doc """
+  Rolls back the current transaction. The transaction will return the value
+  given as `{ :error, value }`.
+  """
+  defcallback rollback(any) :: no_return
 
   @doc """
   Returns the adapter tied to the repository.

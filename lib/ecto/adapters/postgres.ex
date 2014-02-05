@@ -208,15 +208,19 @@ defmodule Ecto.Adapters.Postgres do
       Worker.commit!(worker)
       { :ok, value }
     catch
-      :throw, :ecto_rollback ->
+      :throw, { :ecto_rollback, value } ->
         Worker.rollback!(worker)
-        :error
+        { :error, value }
       type, term ->
         Worker.rollback!(worker)
         :erlang.raise(type, term, System.stacktrace)
     after
       checkin_worker(repo)
     end
+  end
+
+  def rollback(_repo, value) do
+    throw { :ecto_rollback, value }
   end
 
   defp use_worker(repo, fun) do
