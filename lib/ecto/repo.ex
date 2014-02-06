@@ -201,7 +201,7 @@ defmodule Ecto.Repo do
   ## Example
 
       post = Post.new(title: "Ecto is great", text: "really, it is")
-        |> MyRepo.create
+             |> MyRepo.create
   """
   defcallback create(Ecto.Entity.t) :: Ecto.Entity.t | no_return
 
@@ -240,7 +240,7 @@ defmodule Ecto.Repo do
 
   ## Example
 
-      [post] = from p in Post, where: p.id == 42
+      [post] = MyRepo.all(from(p in Post, where: p.id == 42))
       MyRepo.delete(post)
   """
   defcallback delete(Ecto.Entity.t) :: :ok | no_return
