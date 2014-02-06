@@ -421,9 +421,19 @@ defmodule Repo.CreatePosts do
 end
 ```
 
-Simply write the SQL commands for updating the database (`up`) and for rolling it back (`down`) and you are ready to go! To run a single command return a string, to run multiple return a list of strings. 
+Simply write the SQL commands for updating the database (`up`) and for rolling it back (`down`) and you are ready to go! To run a single command return a string, to run multiple return a list of strings.
 
 Note the generated file (and all migration files) starts with a timestamp, which identifies the migration version. By running migrations, a `schema_migrations` table will be created in your database to keep which migrations are "up" (already executed) and which ones are "down".
+
+Migrations can be applied and rolled back with the mix tasks `ecto.migrate` and `ecto.rollback`. See the documentation for `Mix.Tasks.Ecto.Migrate` and `Mix.Tasks.Ecto.Rollback` for more in depth instructions.
+
+To run all pending migrations:
+
+    $ mix ecto.migrate Repo
+
+Roll back all applied migrations:
+
+    $ mix ecto.rollback Repo --all
 
 ## Contributing
 

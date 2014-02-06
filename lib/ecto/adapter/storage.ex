@@ -14,9 +14,9 @@ defmodule Ecto.Adapter.Storage  do
 
   ## Examples
 
-    MyAdapter.storage_up([username: postgres,
-                          database: 'ecto_test',
-                          hostname: 'localhost'])
+    storage_up(username: postgres,
+               database: 'ecto_test',
+               hostname: 'localhost')
 
   """
   defcallback storage_up(Keyword.t) :: :ok | { :error, :already_up } | { :error, term }
@@ -30,9 +30,9 @@ defmodule Ecto.Adapter.Storage  do
 
   ## Examples
 
-    MyAdapter.storage_down([username: postgres,
-                            database: 'ecto_test',
-                            hostname: 'localhost'])
+    storage_down(username: postgres,
+                 database: 'ecto_test',
+                 hostname: 'localhost')
 
   """
   defcallback storage_down(Keyword.t) :: :ok | { :error, :already_down } | { :error, term }

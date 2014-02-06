@@ -12,7 +12,7 @@ defmodule Ecto.Adapter.Migrations  do
 
   ## Examples
 
-    MyRepo.migrate_up(Repo, 20080906120000, "CREATE TABLE users(id serial, name text)")
+    migrate_up(Repo, 20080906120000, "CREATE TABLE users(id serial, name text)")
 
   """
   defcallback migrate_up(Ecto.Repo.t, integer, binary) :: :ok | :already_up | no_return
@@ -24,7 +24,7 @@ defmodule Ecto.Adapter.Migrations  do
 
   ## Examples
 
-    MyRepo.migrate_down(Repo, 20080906120000, "DROP TABLE users")
+    migrate_down(Repo, 20080906120000, "DROP TABLE users")
 
   """
   defcallback migrate_down(Ecto.Repo.t, integer, binary) :: :ok | :missing_up | no_return
