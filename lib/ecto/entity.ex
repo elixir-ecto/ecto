@@ -7,6 +7,33 @@ defmodule Ecto.Entity do
   like you would work with records, to set the default values for the record
   fields the `default` option is set in the `field` options.
 
+  When used, it allows the following options:
+
+  * `:model` - Sets the default associated model;
+  * `:primary_key` - Sets the primary key, if this option is not set a primary
+                     key named *id* of type *integer* will be generated. If
+                     set to `false` no primary key will be generated, to set
+                     a custom primary key give `{ name, type, opts }` to the option.
+
+  In addition to the record functionality, Ecto also defines accessors and updater
+  functions for the primary key will be generated on the entity, specifically
+  `primary_key/1`, `primary_key/2` and `update_primary_key/2`.
+
+  ## Reflection
+
+  Any entity module will generate the `__entity__` function that can be used for
+  runtime introspection of the entity.
+
+  * `__entity__(:field, field)` - Returns the options for the given field;
+  * `__entity__(:field_type, field)` - Returns the type of the given field;
+  * `__entity__(:field_names)` - Returns a list of all field names;
+  * `__entity__(:association, field)` - Returns the given field's association
+                                        reflection;
+  * `__entity__(:primary_key)` - Returns the field that is the primary key or
+                                 `nil` if there is none;
+  * `__entity__(:allocate, values) - Creates a new entity record from the given
+                                     field values;
+
   ## Example
 
       defmodule User.Entity do
@@ -34,18 +61,6 @@ defmodule Ecto.Entity do
 
       User.Entity.new
       #=> User.Entity[]
-
-  When used, it allows the following options:
-
-  * `:model` - Sets the default associated model;
-  * `:primary_key` - Sets the primary key, if this option is not set a primary
-                     key named *id* of type *integer* will be generated. If
-                     set to `false` no primary key will be generated, to set
-                     a custom primary key give `{ name, type, opts }` to the option.
-
-  In addition to the record functionality, Ecto also defines accessors and updater
-  functions for the primary key will be generated on the entity, specifically
-  `primary_key/1`, `primary_key/2` and `update_primary_key/2`.
   """
 
   require Ecto.Query.Util, as: Util
@@ -398,8 +413,8 @@ defmodule Ecto.Entity do
         record_args = quote do: [{unquote(virtual_name), assoc}]
 
         if opts[:type] in [:has_many, :has_one] do
-          record_args = quote(do: [{unquote(pk), pk}]) ++ record_args
-          def unquote(name)(__MODULE__[unquote_splicing(record_args)]) do
+          has_args = quote(do: [{unquote(pk), pk}]) ++ record_args
+          def unquote(name)(__MODULE__[unquote_splicing(has_args)]) do
             if nil?(pk) do
               raise ArgumentError, message: "cannot access association when its " <>
                 "primary key is not set on the entity"
@@ -413,16 +428,16 @@ defmodule Ecto.Entity do
         end
 
         if opts[:type] == :has_many do
-          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)])
+          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)] = entity)
               when is_list(value) do
             assoc = assoc.__assoc__(:loaded, value)
-            __MODULE__[unquote_splicing(record_args)]
+            entity.unquote(virtual_name)(assoc)
           end
         else
-          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)])
+          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)] = entity)
               when is_record(value, unquote(opts[:queryable])) do
             assoc = assoc.__assoc__(:loaded, value)
-            __MODULE__[unquote_splicing(record_args)]
+            entity.unquote(virtual_name)(assoc)
           end
         end
       end
@@ -460,7 +475,7 @@ defmodule Ecto.Entity do
         __MODULE__.new(zip)
       end
 
-      def __entity__(:entity_kw, entity, opts // []) do
+      def __entity__(:keywords, entity, opts // []) do
         keep_pk     = Keyword.get(opts, :primary_key, true)
         primary_key = __entity__(:primary_key)
 

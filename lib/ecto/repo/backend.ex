@@ -112,6 +112,10 @@ defmodule Ecto.Repo.Backend do
     adapter.transaction(repo, fun)
   end
 
+  def rollback(repo, adapter, value) do
+    adapter.rollback(repo, value)
+  end
+
   ## Helpers
 
   defp parse_url(url) do
@@ -174,7 +178,7 @@ defmodule Ecto.Repo.Backend do
   defp validate_entity(entity) do
     module = elem(entity, 0)
     primary_key = module.__entity__(:primary_key)
-    zipped = module.__entity__(:entity_kw, entity)
+    zipped = module.__entity__(:keywords, entity)
 
     Enum.each(zipped, fn({ field, value }) ->
       type = module.__entity__(:field_type, field)

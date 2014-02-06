@@ -6,8 +6,11 @@
   * Allow `:on` with association joins on keywords syntax
   * Add Decimal support
   * Add 'distinct' query expression
+  * Add `Validator.bin_dict/2`
+  * Add `Ecto.Repo.rollback` for explicit transaction rollback
 
 * Bug fixes
+  * Fix association functions resetting the entity when manually loading associated entities
 
 * Deprecations
 

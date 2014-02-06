@@ -218,12 +218,12 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       from(Comment)
-        |> join(:inner, [c], p in Post, c.post_id == p.id)
-        |> select([c, p], { p.title, c.text })
+      |> join(:inner, [c], p in Post, c.post_id == p.id)
+      |> select([c, p], { p.title, c.text })
 
       Post
-        |> join(:left, [p], c in p.comments)
-        |> select([p, c], { p, c })
+      |> join(:left, [p], c in p.comments)
+      |> select([p, c], { p, c })
   """
   defmacro join(query, qual, binding, expr, on // nil) do
     JoinBuilder.build(query, qual, binding, expr, on, __CALLER__)
@@ -300,8 +300,8 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       Post
-        |> distinct([p], p.category)
-        |> order_by([p], [p.category, p.author])
+      |> distinct([p], p.category)
+      |> order_by([p], [p.category, p.author])
 
   """
   defmacro distinct(query, binding, expr) do
@@ -443,9 +443,9 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       Post
-        |> group_by([p], p.category)
-        |> having([p], avg(p.num_comments) > 10)
-        |> select([p], count(p.id))
+      |> group_by([p], p.category)
+      |> having([p], avg(p.num_comments) > 10)
+      |> select([p], count(p.id))
   """
   defmacro having(query, binding, expr) do
     HavingBuilder.build(query, binding, expr, __CALLER__)

@@ -71,7 +71,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     module = elem(entity, 0)
     table  = entity.model.__model__(:source)
 
-    { fields, values } = module.__entity__(:entity_kw, entity)
+    { fields, values } = module.__entity__(:keywords, entity)
       |> Enum.filter(fn { _, val } -> val != nil end)
       |> :lists.unzip
 
@@ -99,7 +99,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     pk_field = module.__entity__(:primary_key)
     pk_value = entity.primary_key
 
-    zipped = module.__entity__(:entity_kw, entity, primary_key: false)
+    zipped = module.__entity__(:keywords, entity, primary_key: false)
 
     zipped_sql = Enum.map_join(zipped, ", ", fn { k, v } ->
       "#{quote_column(k)} = #{literal(v)}"

@@ -1,9 +1,32 @@
-defrecord Ecto.Reflections.BelongsTo, [ :field, :owner, :associated,
-  :key, :assoc_key ]
+defrecord Ecto.Reflections.BelongsTo, [:field, :owner, :associated, :key, :assoc_key] do
+  @moduledoc """
+  The reflection record for a `belongs_to` association. Its fields are:
+
+  * `field` - The name of the association field on the entity;
+  * `owner` - The model where the association was defined;
+  * `associated` - The model that is associated;
+  * `key` - The key on the `owner` model used for the association;
+  * `assoc_key` - The key on the `associated` model used for the association;
+  """
+end
 
 defmodule Ecto.Associations.BelongsTo do
   @moduledoc """
   A belongs_to association.
+
+  ## Reflection
+
+  Any association module will generate the `__assoc__` function that can be
+  used for runtime introspection of the association.
+
+  * `__assoc__(:loaded, assoc)` - Returns the loaded entities or `:not_loaded`;
+  * `__assoc__(:loaded, value, assoc)` - Sets the loaded entities;
+  * `__assoc__(:target, assoc)` - Returns the entity where the association was
+                                  defined;
+  * `__assoc__(:name, assoc)` - Returns the name of the association field on the
+                                entity;
+  * `__assoc__(:new, name, target)` - Creates a new association with the given
+                                      name and target;
   """
 
   @not_loaded :not_loaded
@@ -46,10 +69,11 @@ defmodule Ecto.Associations.BelongsTo do
       assoc([{ unquote(field), var }]) = record
       var
     end
+  end
 
-    def __assoc__(unquote(field), value, record) do
-      assoc(record, [{ unquote(field), value }])
-    end
+  @doc false
+  def __assoc__(:loaded, value, record) do
+    assoc(record, [loaded: value])
   end
 
   def __assoc__(:new, name, target) do

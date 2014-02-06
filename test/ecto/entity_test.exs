@@ -156,6 +156,7 @@ defmodule Ecto.EntityTest do
 
     r = r.posts([:test])
     assert [:test] = r.posts.to_list
+    assert 1 = r.id
 
     r = EntityAssocs[]
     message = "cannot access association when its primary key is not set on the entity"
@@ -180,6 +181,7 @@ defmodule Ecto.EntityTest do
 
     r = r.author({ User })
     assert { User } = r.author.get
+    assert 2 = r.id
 
     r = EntityAssocs[]
     message = "cannot access association when its primary key is not set on the entity"
@@ -195,7 +197,7 @@ defmodule Ecto.EntityTest do
 
     assert EntityAssocs.__entity__(:field, :comment_id) == [type: :integer]
 
-    r = EntityAssocs[]
+    r = EntityAssocs[id: 3]
     assoc = r.comment
     assert assoc.__assoc__(:name) == :comment
     assert assoc.__assoc__(:target) == EntityAssocs
@@ -206,6 +208,7 @@ defmodule Ecto.EntityTest do
 
     r = r.comment({ Comment })
     assert { Comment } = r.comment.get
+    assert 3 = r.id
   end
 
   test "belongs_to association foreign_key type" do

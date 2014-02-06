@@ -150,11 +150,12 @@ defmodule Ecto.Query.Util do
   def literal?(_),                            do: false
 
   # Returns true if the two types are considered equal by the type system
+  # Note that this does not consider casting
   @doc false
   def type_eq?(_, :any), do: true
   def type_eq?(:any, _), do: true
   def type_eq?({ outer, inner1 }, { outer, inner2 }), do: type_eq?(inner1, inner2)
-  def type_eq?(x, x), do: true
+  def type_eq?(type, type), do: true
   def type_eq?(_, _), do: false
 
   # Returns true if another type can be casted to the given type
