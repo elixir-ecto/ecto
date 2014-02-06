@@ -385,4 +385,8 @@ defmodule Ecto.Adapters.Postgres do
   defp delete_migration_version(repo, version) do
     query(repo, "DELETE FROM schema_migrations WHERE version = #{version}")
   end
+
+  def type_map do
+    Ecto.Adapters.Postgres.TypeMap
+  end
 end

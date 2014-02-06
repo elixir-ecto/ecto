@@ -33,6 +33,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
                      "So don't forget to set [build_per_environment: true] in your mix.exs file.\n"
     end
 
+    Mix.Tasks.Compile.run [file]
     Mix.shell.info """
     Don't forget to add your new repo to your supervision tree as:
 
