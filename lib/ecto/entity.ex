@@ -79,7 +79,7 @@ defmodule Ecto.Entity do
     * `:primary_key` - Sets the field to be the primary key, the default
       primary key have to be overridden by setting its name to `nil`;
   """
-  defmacro field(name, type // :string, opts // []) do
+  defmacro field(name, type \\ :string, opts \\ []) do
     quote do
       Ecto.Entity.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
@@ -130,7 +130,7 @@ defmodule Ecto.Entity do
                      select: assoc(p, c)))
       post.comments.to_list #=> [ Comment.Entity[...], ... ]
   """
-  defmacro has_many(name, queryable, opts // []) do
+  defmacro has_many(name, queryable, opts \\ []) do
     quote do
       Ecto.Entity.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -177,7 +177,7 @@ defmodule Ecto.Entity do
                      select: assoc(p, pl)))
       post.permalink.get #=> Permalink.Entity[...]
   """
-  defmacro has_one(name, queryable, opts // []) do
+  defmacro has_one(name, queryable, opts \\ []) do
     quote do
       Ecto.Entity.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -227,7 +227,7 @@ defmodule Ecto.Entity do
                         select: assoc(c, p)))
       comment.post.get #=> Post.Entity[...]
   """
-  defmacro belongs_to(name, queryable, opts // []) do
+  defmacro belongs_to(name, queryable, opts \\ []) do
     quote do
       Ecto.Entity.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -475,7 +475,7 @@ defmodule Ecto.Entity do
         __MODULE__.new(zip)
       end
 
-      def __entity__(:keywords, entity, opts // []) do
+      def __entity__(:keywords, entity, opts \\ []) do
         keep_pk     = Keyword.get(opts, :primary_key, true)
         primary_key = __entity__(:primary_key)
 

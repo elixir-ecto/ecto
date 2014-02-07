@@ -14,7 +14,7 @@ defmodule Ecto.Query.BuilderUtil do
   the query.
   """
   @spec escape(Macro.t, [atom], { atom, Macro.t } | nil) :: Macro.t
-  def escape(expr, vars, join_var // nil)
+  def escape(expr, vars, join_var \\ nil)
 
   # var.x - where var is bound
   def escape({ { :., _, [{ var, _, context}, right] }, _, [] }, vars, join_var)
@@ -94,7 +94,7 @@ defmodule Ecto.Query.BuilderUtil do
   to pass the required indice information.
   """
   @spec escape_var(atom, [atom], { atom, Macro.t } | nil) :: Macro.t | no_return
-  def escape_var(var, vars, join_var // nil)
+  def escape_var(var, vars, join_var \\ nil)
 
   def escape_var(var, _vars, { var, idx }) do
     { :{}, [], [:&, [], [idx]] }

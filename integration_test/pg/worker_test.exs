@@ -17,7 +17,7 @@ defmodule Ecto.Integration.WorkerTest do
     assert is_record(result, Postgrex.Result)
   end
 
-  defp worker_opts(opts // []) do
+  defp worker_opts(opts \\ []) do
     [ hostname: opts[:hostname] || "localhost",
       database: opts[:database] || "ecto_test",
       username: opts[:username] || "postgres",

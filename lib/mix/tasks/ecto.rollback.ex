@@ -27,7 +27,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
       mix ecto.rollback MyApp.Repo --to 20080906120000
 
   """
-  def run(args, migrator // &Ecto.Migrator.run/4) do
+  def run(args, migrator \\ &Ecto.Migrator.run/4) do
     Mix.Task.run "compile"
 
     { opts, args, _ } = OptionParser.parse args,

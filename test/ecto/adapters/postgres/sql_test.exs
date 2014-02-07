@@ -57,7 +57,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT m0.\"x\", m0.\"y\" + 123\nFROM \"model\" AS m0"
   end
 
-  test "distinct" do 
+  test "distinct" do
     query = Model |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
 
@@ -68,7 +68,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
 
     query = Model |> distinct([r], [r, r.x]) |> select([r], {r.x, r.y}) |> normalize
-    assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\", m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0" 
+    assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\", m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
   end
 
   test "where" do
@@ -452,11 +452,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.insert(model, [:pk]) == "INSERT INTO \"model\" (\"x\", \"y\")\nVALUES (10, 30)\nRETURNING \"pk\""
 
     model = PKModel.Entity[x: 10, pk: 20, y: 30]
-    assert SQL.insert(model) == "INSERT INTO \"model\" (\"x\", \"pk\", \"y\")\nVALUES (10, 20, 30)"
+    assert SQL.insert(model, []) == "INSERT INTO \"model\" (\"x\", \"pk\", \"y\")\nVALUES (10, 20, 30)"
   end
 
   test "send explicit set primary key" do
     model = Model.Entity[id: 123, x: 0, y: 2]
-    assert SQL.insert(model) == "INSERT INTO \"model\" (\"id\", \"x\", \"y\")\nVALUES (123, 0, 2)"
+    assert SQL.insert(model, []) == "INSERT INTO \"model\" (\"id\", \"x\", \"y\")\nVALUES (123, 0, 2)"
   end
 end

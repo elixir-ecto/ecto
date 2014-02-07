@@ -54,7 +54,7 @@ defmodule Ecto.Query.Util do
 
   # Takes an elixir value an returns its ecto type
   @doc false
-  def value_to_type(value, fun // nil)
+  def value_to_type(value, fun \\ nil)
 
   def value_to_type(nil, _fun), do: { :ok, nil }
   def value_to_type(value, _fun) when is_boolean(value), do: { :ok, :boolean }

@@ -8,7 +8,7 @@ defmodule Ecto.Query.Normalizer do
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
 
-  def normalize(Query[] = query, opts // []) do
+  def normalize(Query[] = query, opts \\ []) do
     query
     |> setup_sources
     |> normalize_joins
@@ -77,11 +77,11 @@ defmodule Ecto.Query.Normalizer do
 
   # Add distinct on all field when Entity is in field list
   defp normalize_distinct(Query[] = query) do
-    normalize_entities(query.distincts, query.sources) |> query.distincts 
+    normalize_entities(query.distincts, query.sources) |> query.distincts
   end
 
   # Expand Entity into all of its fields in an expression
-  defp normalize_entities(query_expr, sources) do 
+  defp normalize_entities(query_expr, sources) do
     Enum.map(query_expr, fn QueryExpr[] = expr ->
       Enum.flat_map(expr.expr, fn
         { :&, _, _ } = var ->

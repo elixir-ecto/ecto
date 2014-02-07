@@ -159,7 +159,7 @@ defmodule Ecto.Model.Queryable do
       end
 
   """
-  defmacro queryable(source, opts // [], do: block)
+  defmacro queryable(source, opts \\ [], do: block)
 
   defmacro queryable(source, opts, [do: block]) do
     quote do

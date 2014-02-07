@@ -225,7 +225,7 @@ defmodule Ecto.Query do
       |> join(:left, [p], c in p.comments)
       |> select([p, c], { p, c })
   """
-  defmacro join(query, qual, binding, expr, on // nil) do
+  defmacro join(query, qual, binding, expr, on \\ nil) do
     JoinBuilder.build(query, qual, binding, expr, on, __CALLER__)
   end
 

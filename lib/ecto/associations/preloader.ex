@@ -17,7 +17,7 @@ defmodule Ecto.Associations.Preloader do
   See `Ecto.Query.preload/2`.
   """
   @spec run([Record.t], atom, [atom | tuple], [non_neg_integer]) :: [Record.t]
-  def run(original, repo, fields, pos // [])
+  def run(original, repo, fields, pos \\ [])
 
   def run(original, _repo, [], _pos), do: original
 

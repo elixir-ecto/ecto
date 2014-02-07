@@ -44,7 +44,7 @@ defmodule Ecto.Associations.HasOne do
   Creates a new record of the associated entity with the foreign key field set
   to the primary key of the parent entity.
   """
-  def new(params // [], assoc(target: target, name: name, primary_key: pk_value)) do
+  def new(params \\ [], assoc(target: target, name: name, primary_key: pk_value)) do
     refl = Refl[] = target.__entity__(:association, name)
     fk = refl.assoc_key
     refl.associated.new([{ fk, pk_value }] ++ params)

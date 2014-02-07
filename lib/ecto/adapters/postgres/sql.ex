@@ -67,7 +67,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for an insert statement
-  def insert(entity, returning // []) do
+  def insert(entity, returning) do
     module = elem(entity, 0)
     table  = entity.model.__model__(:source)
 

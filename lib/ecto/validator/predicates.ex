@@ -25,7 +25,7 @@ defmodule Ecto.Validator.Predicates do
 
   """
   @spec present(atom, term, Keyword.t) :: maybe_error
-  def present(attr, value, opts // [])
+  def present(attr, value, opts \\ [])
 
   def present(attr, value, opts) when value in @blank and is_list(opts) do
     [{ attr, opts[:message] || "can't be blank" }]
@@ -50,7 +50,7 @@ defmodule Ecto.Validator.Predicates do
 
   """
   @spec absent(atom, term, Keyword.t) :: maybe_error
-  def absent(attr, value, opts // [])
+  def absent(attr, value, opts \\ [])
 
   def absent(_attr, value, opts) when value in @blank and is_list(opts) do
     []
@@ -75,7 +75,7 @@ defmodule Ecto.Validator.Predicates do
 
   """
   @spec has_format(atom, term, Regex.t | binary, Keyword.t) :: maybe_error
-  def has_format(attr, value, match_on, opts // []) when is_regex(match_on) and is_list(opts) do
+  def has_format(attr, value, match_on, opts \\ []) when is_regex(match_on) and is_list(opts) do
     if value == nil or Regex.match?(match_on, value) do
       []
     else
@@ -116,7 +116,7 @@ defmodule Ecto.Validator.Predicates do
 
   """
   @spec has_length(atom, term, Regex.t | binary, Keyword.t) :: maybe_error
-  def has_length(attr, value, match_on, opts // [])
+  def has_length(attr, value, match_on, opts \\ [])
 
   def has_length(_attr, nil, _match_on, opts) when is_list(opts) do
     []
@@ -172,7 +172,7 @@ defmodule Ecto.Validator.Predicates do
           age: greater_than(18)
 
   """
-  def greater_than(attr, value, check, opts // [])
+  def greater_than(attr, value, check, opts \\ [])
   def greater_than(_attr, value, check, _opts) when
         is_number(check) and (nil?(value) or value > check), do: []
   def greater_than(attr, _value, check, opts) when is_number(check), do:
@@ -192,7 +192,7 @@ defmodule Ecto.Validator.Predicates do
           age: greater_than_or_equal_to(18)
 
   """
-  def greater_than_or_equal_to(attr, value, check, opts // [])
+  def greater_than_or_equal_to(attr, value, check, opts \\ [])
   def greater_than_or_equal_to(_attr, value, check, _opts) when
         is_number(check) and (nil?(value) or value >= check), do: []
   def greater_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
@@ -212,7 +212,7 @@ defmodule Ecto.Validator.Predicates do
           age: less_than(18)
 
   """
-  def less_than(attr, value, check, opts // [])
+  def less_than(attr, value, check, opts \\ [])
   def less_than(_attr, value, check, _opts) when
         is_number(check) and (nil?(value) or value < check), do: []
   def less_than(attr, _value, check, opts) when is_number(check), do:
@@ -232,7 +232,7 @@ defmodule Ecto.Validator.Predicates do
           age: less_than_or_equal_to(18)
 
   """
-  def less_than_or_equal_to(attr, value, check, opts // [])
+  def less_than_or_equal_to(attr, value, check, opts \\ [])
   def less_than_or_equal_to(_attr, value, check, _opts) when
         is_number(check) and (nil?(value) or value <= check), do: []
   def less_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
@@ -252,7 +252,7 @@ defmodule Ecto.Validator.Predicates do
           age: between(18..21)
 
   """
-  def between(attr, value, min..max, opts // [])
+  def between(attr, value, min..max, opts \\ [])
   def between(_attr, value, min..max, _opts) when
     is_number(min) and is_number(max) and (nil?(value) or value in min..max), do: []
   def between(attr, _value, min..max, opts) when is_number(min) and is_number(max), do:
@@ -280,7 +280,7 @@ defmodule Ecto.Validator.Predicates do
 
   """
   @spec member_of(atom, term, Enumerable.t, Keyword.t) :: maybe_error
-  def member_of(attr, value, enum, opts // []) when is_list(opts) do
+  def member_of(attr, value, enum, opts \\ []) when is_list(opts) do
     if value == nil or value in enum do
       []
     else
@@ -311,7 +311,7 @@ defmodule Ecto.Validator.Predicates do
 
   """
   @spec not_member_of(atom, term, Enumerable.t, Keyword.t) :: maybe_error
-  def not_member_of(attr, value, enum, opts // []) when is_list(opts) do
+  def not_member_of(attr, value, enum, opts \\ []) when is_list(opts) do
     if value == nil or not(value in enum) do
       []
     else

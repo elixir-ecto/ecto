@@ -38,7 +38,7 @@ defmodule Ecto.Associations.BelongsTo do
   @doc """
   Creates a new record of the associated entity.
   """
-  def new(params // [], assoc(target: target, name: name)) do
+  def new(params \\ [], assoc(target: target, name: name)) do
     refl = target.__entity__(:association, name)
     refl.associated.new(params)
   end

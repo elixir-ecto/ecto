@@ -28,7 +28,7 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  def validate(Query[] = query, apis, opts // []) do
+  def validate(Query[] = query, apis, opts \\ []) do
     if query.from == nil do
       raise Ecto.QueryError, reason: "a query must have a from expression"
     end
@@ -229,18 +229,15 @@ defmodule Ecto.Query.Validator do
   defp do_validate_distincts(_, []), do: :ok
 
   defp do_validate_distincts(distincts, [{ source, field } | order_bys]) do
-    in_distinct? =
-      Enum.any?(distincts, fn
-        { ^source, ^field, _ } -> true
-        _ -> false
-      end)
+    filter = fn
+      { s, f, _ } when s == source and f == field -> true
+      _ -> false
+    end
+
+    in_distinct? =  Enum.any?(distincts, filter)
 
     if in_distinct? do
-      distincts =
-        Enum.reject(distincts, fn
-          { ^source, ^field, _ } -> true
-          _ -> false
-        end)
+      distincts = Enum.reject(distincts, filter)
       do_validate_distincts(distincts, order_bys)
     else
       { _, _, { file, line } } = Enum.at(distincts, 0)

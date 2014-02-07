@@ -109,7 +109,7 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.transaction(__MODULE__, unquote(adapter), fun)
       end
 
-      def rollback(value // nil) do
+      def rollback(value \\ nil) do
         Ecto.Repo.Backend.rollback(__MODULE__, unquote(adapter), value)
       end
 
