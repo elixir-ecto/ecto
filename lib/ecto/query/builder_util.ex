@@ -91,7 +91,7 @@ defmodule Ecto.Query.BuilderUtil do
   A escaped variable is represented internally as `&0`, `&1` and
   so on. This function is also responsible for handling join vars
   which use a `count_binds` variable assigned to the `Ecto.Query`
-  to pass the required indice information.
+  to pass the required index information.
   """
   @spec escape_var(atom, [atom], { atom, Macro.t } | nil) :: Macro.t | no_return
   def escape_var(var, vars, join_var \\ nil)

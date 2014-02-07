@@ -75,7 +75,7 @@ defmodule Ecto.Query.JoinBuilder do
     # Define the variable that will be used to calculate the number of binds.
     # If the variable is known at compile time, calculate it now.
     query = Macro.expand(query, env)
-    { query, getter, setter } = count_binds(query, is_assoc?)
+    { query, getter, setter } = count_binds(query)
 
     join_on = escape_on(on, binding ++ List.wrap(join_bind), { join_bind, getter }, env)
     join =
@@ -102,15 +102,11 @@ defmodule Ecto.Query.JoinBuilder do
     quote do: QueryExpr[expr: unquote(on), line: unquote(env.line), file: unquote(env.file)]
   end
 
-  defp count_binds(query, is_assoc?) do
+  defp count_binds(query) do
     case BuilderUtil.unescape_query(query) do
       # We have the query, calculate the count binds.
       Query[] = unescaped ->
         { unescaped, BuilderUtil.count_binds(unescaped), nil }
-
-      # We don't have the query but we won't use binds anyway.
-      _  when is_assoc? ->
-        { query, nil, nil }
 
       # We don't have the query, handle it at runtime.
       _ ->
@@ -132,7 +128,7 @@ defmodule Ecto.Query.JoinBuilder do
   defp validate_on(nil, false) do
     raise Ecto.QueryError,
       reason: "`join` expression requires explicit `on` " <>
-              "expression unless association join expression"
+              "expression unless it's an association join expression"
   end
   defp validate_on(_on, _is_assoc?), do: :ok
 

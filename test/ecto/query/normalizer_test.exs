@@ -6,13 +6,24 @@ defmodule Ecto.Query.NormalizerTest do
 
   alias Ecto.Query.JoinExpr
 
+  defmodule Comment do
+    use Ecto.Model
+
+    queryable :comments do
+      field :text, :string
+      field :temp, :virtual
+      field :posted, :datetime
+      belongs_to :post, Ecto.Query.NormalizerTest.Post
+    end
+  end
+
   defmodule Post do
     use Ecto.Model
 
     queryable :posts do
       field :title, :string
       field :text, :string
-      has_many :comments, Ecto.Query.ValidatorTest.Comment
+      has_many :comments, Ecto.Query.NormalizerTest.Comment
     end
   end
 
@@ -28,7 +39,7 @@ defmodule Ecto.Query.NormalizerTest do
            List.first(query.group_bys).expr
   end
 
-  test "distinct all fields" do 
+  test "distinct all fields" do
     query = from(p in Post, distinct: [p, p.text]) |> normalize
     var = { :&, [], [0] }
     assert [{ var, :id }, { var, :title }, { var, :text }, { var, :text }] =

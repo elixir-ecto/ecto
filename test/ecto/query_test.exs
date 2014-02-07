@@ -55,7 +55,7 @@ defmodule Ecto.QueryTest do
 
     query = distinct(Post, [p], p.title)
     validate(query)
-    
+
     query = where(Post, [p], p.title == "42")
     validate(query)
 
@@ -161,10 +161,16 @@ defmodule Ecto.QueryTest do
     end
 
     message = "`join` expression requires explicit `on` " <>
-              "expression unless association join expression"
+              "expression unless it's an association join expression"
     assert_raise Ecto.QueryError, message, fn ->
       delay_compile(from(c in Comment, join: p in Post, select: c))
     end
+  end
+
+  test "join on query expression" do
+    query = Post |> join(:inner, [p], c in p.comments, c.text == "") |> normalize
+    assert JoinExpr[on: on] = hd(query.joins)
+    assert Macro.to_string(on.expr) == "&1.text() == \"\" and &1.post_id() == &0.id()"
   end
 
   test "join queries adds binds" do

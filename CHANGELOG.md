@@ -11,6 +11,7 @@
 
 * Bug fixes
   * Fix association functions resetting the entity when manually loading associated entities
+  * Fix a bug where an association join's 'on' expression didn't use the bindings
 
 * Deprecations
 
