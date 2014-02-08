@@ -334,9 +334,11 @@ defmodule Ecto.Adapters.Postgres do
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
       Postgrex.Result[num_rows: 0] ->
-        run_commands(repo, commands, fn ->
+        transaction(repo, fn ->
+          Enum.each(commands, &query(repo, &1))
           insert_migration_version(repo, version)
         end)
+        :ok
       _ ->
         :already_up
     end
@@ -347,20 +349,12 @@ defmodule Ecto.Adapters.Postgres do
       Postgrex.Result[num_rows: 0] ->
         :missing_up
       _ ->
-        run_commands(repo, commands, fn ->
+        transaction(repo, fn ->
+          Enum.each(commands, &query(repo, &1))
           delete_migration_version(repo, version)
         end)
+        :ok
     end
-  end
-
-  defp run_commands(repo, commands, fun) do
-    transaction(repo, fn ->
-      Enum.each(commands, fn command ->
-        query(repo, command)
-        fun.()
-      end)
-    end)
-    :ok
   end
 
   def migrated_versions(repo) do

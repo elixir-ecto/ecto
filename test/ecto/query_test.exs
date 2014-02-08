@@ -168,8 +168,8 @@ defmodule Ecto.QueryTest do
   end
 
   test "join on query expression" do
-    query = Post |> join(:inner, [p], c in p.comments, c.text == "") |> normalize
-    assert JoinExpr[on: on] = hd(query.joins)
+    query = Post |> join(:inner, [p], c in p.comments, c.text == "") |> Normalizer.normalize
+    on = hd(query.joins).on
     assert Macro.to_string(on.expr) == "&1.text() == \"\" and &1.post_id() == &0.id()"
   end
 
