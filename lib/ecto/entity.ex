@@ -436,8 +436,7 @@ defmodule Ecto.Entity do
             entity.unquote(virtual_name)(assoc)
           end
         else
-          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)] = entity)
-              when is_record(value, unquote(opts[:queryable])) do
+          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)] = entity) do
             assoc = assoc.__assoc__(:loaded, value)
             entity.unquote(virtual_name)(assoc)
           end

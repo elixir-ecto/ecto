@@ -175,12 +175,8 @@ defmodule Ecto.EntityTest do
     assert assoc.__assoc__(:name) == :author
     assert assoc.__assoc__(:target) == EntityAssocs
 
-    assert_raise FunctionClauseError, fn ->
-      r.author(:test)
-    end
-
-    r = r.author({ User })
-    assert { User } = r.author.get
+    r = r.author({ User.Entity })
+    assert { User.Entity } = r.author.get
     assert 2 = r.id
 
     r = EntityAssocs[]
@@ -202,12 +198,8 @@ defmodule Ecto.EntityTest do
     assert assoc.__assoc__(:name) == :comment
     assert assoc.__assoc__(:target) == EntityAssocs
 
-    assert_raise FunctionClauseError, fn ->
-      r.comment(:test)
-    end
-
-    r = r.comment({ Comment })
-    assert { Comment } = r.comment.get
+    r = r.comment({ Comment.Entity })
+    assert { Comment.Entity } = r.comment.get
     assert 3 = r.id
   end
 
