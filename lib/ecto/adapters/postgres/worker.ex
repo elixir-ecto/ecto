@@ -39,13 +39,7 @@ defmodule Ecto.Adapters.Postgres.Worker do
 
   def init(args) do
     Process.flag(:trap_exit, true)
-
-    conn = case Postgrex.Connection.start_link(args) do
-      { :ok, conn } -> conn
-      _ -> nil
-    end
-
-    { :ok, state(conn: conn, params: args) }
+    { :ok, state(params: args) }
   end
 
   # Connection is disconnected, reconnect before continuing
@@ -54,10 +48,7 @@ defmodule Ecto.Adapters.Postgres.Worker do
       { :ok, conn } ->
         handle_call(request, from, state(s, conn: conn))
       { :error, err } ->
-        case request do
-          { :query, _ } -> { :error, err }
-          _ -> err
-        end
+        { :reply, { :error, err }, s }
     end
   end
 
