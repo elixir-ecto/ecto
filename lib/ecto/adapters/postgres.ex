@@ -67,7 +67,7 @@ defmodule Ecto.Adapters.Postgres do
 
     case query(repo, SQL.insert(entity, returning)) do
       Postgrex.Result[rows: [values]] ->
-        #Setup the entity to use the RETURNING values
+        # Setup the entity to use the RETURNING values
         Enum.zip(returning, tuple_to_list(values)) |> entity.update
       _ ->
         entity
@@ -95,8 +95,10 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   def query(repo, sql) do
-    use_worker(repo, fn worker ->
-      Worker.query!(worker, sql)
+    repo.log({ :query, sql }, fn ->
+      use_worker(repo, fn worker ->
+        Worker.query!(worker, sql)
+      end)
     end)
   end
 
@@ -203,16 +205,16 @@ defmodule Ecto.Adapters.Postgres do
   def transaction(repo, fun) do
     worker = checkout_worker(repo)
     try do
-      Worker.begin!(worker)
+      do_begin(repo, worker)
       value = fun.()
-      Worker.commit!(worker)
+      do_commit(repo, worker)
       { :ok, value }
     catch
       :throw, { :ecto_rollback, value } ->
-        Worker.rollback!(worker)
+        do_rollback(repo, worker)
         { :error, value }
       type, term ->
-        Worker.rollback!(worker)
+        do_rollback(repo, worker)
         :erlang.raise(type, term, System.stacktrace)
     after
       checkin_worker(repo)
@@ -272,19 +274,37 @@ defmodule Ecto.Adapters.Postgres do
     :ok
   end
 
+  defp do_begin(repo, worker) do
+    repo.log(:begin, fn ->
+      Worker.begin!(worker)
+    end)
+  end
+
+  defp do_rollback(repo, worker) do
+    repo.log(:begin, fn ->
+      Worker.rollback!(worker)
+    end)
+  end
+
+  defp do_commit(repo, worker) do
+    repo.log(:begin, fn ->
+      Worker.commit!(worker)
+    end)
+  end
+
   ## Test transaction API
 
   def begin_test_transaction(repo) do
     pool = repo.__postgres__(:pool_name)
     :poolboy.transaction(pool, fn worker ->
-      Worker.begin!(worker)
+      do_begin(repo, worker)
     end)
   end
 
   def rollback_test_transaction(repo) do
     pool = repo.__postgres__(:pool_name)
     :poolboy.transaction(pool, fn worker ->
-      Worker.rollback!(worker)
+      do_rollback(repo, worker)
     end)
   end
 

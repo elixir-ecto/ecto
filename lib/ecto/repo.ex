@@ -121,11 +121,15 @@ defmodule Ecto.Repo do
         true
       end
 
+      def log(arg, fun) do
+        fun.()
+      end
+
       def query_apis do
         [Ecto.Query.API]
       end
 
-      defoverridable [query_apis: 0]
+      defoverridable [log: 2, query_apis: 0]
     end
   end
 
@@ -311,7 +315,24 @@ defmodule Ecto.Repo do
   defcallback adapter() :: Ecto.Adapter.t
 
   @doc """
-  Returns the supported query APIs.
+  Enables logging and debugging of adapter actions such as sending queries to
+  the database. Should be overridden to customize behaviour.
+
+  ## Examples
+
+      def log({ :query, sql }, fun) do
+        { time, result } = :timer.tc(fun)
+        Logger.log({ sql, time })
+        result
+      end
+
+      def log(_arg, fun), do: fun.()
+
   """
-  defcallback query_apis :: [module]
+  defcallback log(any, (() -> any)) :: any
+
+  @doc """
+  Returns the supported query APIs. Should be overridden to customize.
+  """
+  defcallback query_apis() :: [module]
 end
