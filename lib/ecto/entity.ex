@@ -31,8 +31,10 @@ defmodule Ecto.Entity do
                                         reflection;
   * `__entity__(:primary_key)` - Returns the field that is the primary key or
                                  `nil` if there is none;
-  * `__entity__(:allocate, values) - Creates a new entity record from the given
-                                     field values;
+  * `__entity__(:allocate, values)` - Creates a new entity record from the given
+                                      field values;
+  * `__entity__(:keywords, entity)` - Return a keyword list of all non-virtual
+                                      fields and their values;
 
   ## Example
 

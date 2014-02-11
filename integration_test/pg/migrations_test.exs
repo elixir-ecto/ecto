@@ -96,7 +96,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
       assert capture_io(fn ->
         assert [] = run(TestRepo, path, :up, all: true)
-      end) == nil
+      end) == ""
 
       assert Postgrex.Result[num_rows: 3] =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test")

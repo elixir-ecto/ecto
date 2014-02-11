@@ -4,7 +4,7 @@ notifications:
     - jose.valim@plataformatec.com.br
     - eric.meadows.jonsson@gmail.com
 otp_release:
-  - R16B
+  - R16B02
 before_install:
   - git clone https://github.com/elixir-lang/elixir
   - cd elixir && make && cd ..
