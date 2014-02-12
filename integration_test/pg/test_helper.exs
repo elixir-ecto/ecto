@@ -117,8 +117,8 @@ defmodule Ecto.Integration.Postgres.Case do
 end
 
 setup_cmds = [
-  %s(psql -U postgres -c "DROP DATABASE IF EXISTS ecto_test;"),
-  %s(psql -U postgres -c "CREATE DATABASE ecto_test ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';")
+  ~s(psql -U postgres -c "DROP DATABASE IF EXISTS ecto_test;"),
+  ~s(psql -U postgres -c "CREATE DATABASE ecto_test ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';")
 ]
 
 Enum.each(setup_cmds, fn(cmd) ->

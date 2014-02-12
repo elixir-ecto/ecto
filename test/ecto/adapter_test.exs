@@ -32,19 +32,19 @@ defmodule Ecto.AdapterTest do
   end
 
   test "does not receive invalid urls" do
-    assert_raise Ecto.InvalidURL, %r"url should start with a scheme", fn ->
+    assert_raise Ecto.InvalidURL, ~r"url should start with a scheme", fn ->
       parse_url("eric:hunter2@host:123/mydb")
     end
 
-    assert_raise Ecto.InvalidURL, %r"url has to contain a username", fn ->
+    assert_raise Ecto.InvalidURL, ~r"url has to contain a username", fn ->
       parse_url("ecto://host:123/mydb")
     end
 
-    assert_raise Ecto.InvalidURL, %r"path should be a database name", fn ->
+    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
       parse_url("ecto://eric:hunter2@host:123/a/b/c")
     end
 
-    assert_raise Ecto.InvalidURL, %r"path should be a database name", fn ->
+    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
       parse_url("ecto://eric:hunter2@host:123/")
     end
   end

@@ -61,6 +61,6 @@ defmodule Mix.Tasks.Ecto.DropTest do
   end
 
   test "raises an error when the adapter doesn't define a storage_down" do
-    assert_raise Mix.Error, %r/to define storage_down\/1/, fn -> run [to_string(NoStorageDownRepo)] end
+    assert_raise Mix.Error, ~r/to define storage_down\/1/, fn -> run [to_string(NoStorageDownRepo)] end
   end
 end

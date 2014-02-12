@@ -87,7 +87,7 @@ defmodule Ecto.Entity do
     end
   end
 
-  @doc %S"""
+  @doc ~S"""
   Indicates a one-to-many association with another queryable, where this entity
   has zero or more records of the queryable structure. The other queryable often
   has a `belongs_to` field with the reverse association.
@@ -138,7 +138,7 @@ defmodule Ecto.Entity do
     end
   end
 
-  @doc %S"""
+  @doc ~S"""
   Indicates a one-to-one association with another queryable, where this entity
   has zero or one records of the queryable structure. The other queryable often
   has a `belongs_to` field with the reverse association.
@@ -185,7 +185,7 @@ defmodule Ecto.Entity do
     end
   end
 
-  @doc %S"""
+  @doc ~S"""
   Indicates a one-to-one association with another queryable, this entity
   belongs to zero or one records of the queryable structure. The other queryable
   often has a `has_one` or a `has_many` field with the reverse association.

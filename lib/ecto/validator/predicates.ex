@@ -71,7 +71,7 @@ defmodule Ecto.Validator.Predicates do
   ## Examples
 
       validate user,
-        email: has_format(%r/@/)
+        email: has_format(~r/@/)
 
   """
   @spec has_format(atom, term, Regex.t | binary, Keyword.t) :: maybe_error
@@ -273,7 +273,7 @@ defmodule Ecto.Validator.Predicates do
   ## Examples
 
       validate user,
-        gender: member_of(%w(male female other))
+        gender: member_of(~w(male female other))
 
       validate user,
         age: member_of(0..99)
@@ -303,7 +303,7 @@ defmodule Ecto.Validator.Predicates do
   ## Examples
 
       validate user,
-        username: not_member_of(%w(admin superuser))
+        username: not_member_of(~w(admin superuser))
 
       validate user,
         password: not_member_of([user.username, user.name],

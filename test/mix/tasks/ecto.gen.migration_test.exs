@@ -26,7 +26,7 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
   test "generates a new migration" do
     run [to_string(Repo), "my_migration"]
     assert [name] = File.ls!(@migrations_path)
-    assert String.match? name, %r/^\d{14}_my_migration\.exs$/
+    assert String.match? name, ~r/^\d{14}_my_migration\.exs$/
     assert_file Path.join(@migrations_path, name), fn file ->
       assert String.contains? file, "defmodule Mix.Tasks.Ecto.Gen.MigrationTest.Repo.Migrations.MyMigration do"
       assert String.contains? file, "use Ecto.Migration"

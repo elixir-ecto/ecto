@@ -4,7 +4,7 @@ defmodule Ecto.Query.LimitOffsetBuilderTest do
   import Ecto.Query
 
   test "invalid limit and offset" do
-    assert_raise Ecto.QueryError, %r"limit and offset expressions must be a single integer value", fn ->
+    assert_raise Ecto.QueryError, ~r"limit and offset expressions must be a single integer value", fn ->
       Ecto.Query.Query[] |> limit("a") |> select([], 0)
     end
   end

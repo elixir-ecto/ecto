@@ -338,7 +338,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "sigils" do
-    query = Model |> select([], %s"abc" in array(%w(abc def), ^:string)) |> normalize
+    query = Model |> select([], ~s"abc" in array(~w(abc def), ^:string)) |> normalize
     assert SQL.select(query) == "SELECT 'abc' = ANY (ARRAY['abc', 'def']::text[])\nFROM \"model\" AS m0"
   end
 

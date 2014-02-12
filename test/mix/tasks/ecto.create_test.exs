@@ -61,6 +61,6 @@ defmodule Mix.Tasks.Ecto.CreateTest do
   end
 
   test "raises an error when the adapter doesn't define a storage_up" do
-    assert_raise Mix.Error, %r/to define storage_up\/1/, fn -> run [to_string(NoStorageUpRepo)] end
+    assert_raise Mix.Error, ~r/to define storage_up\/1/, fn -> run [to_string(NoStorageUpRepo)] end
   end
 end

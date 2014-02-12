@@ -108,7 +108,7 @@ defmodule Ecto.Migrator do
   defp migrations_for(directory) do
     Path.join(directory, "*")
       |> Path.wildcard
-      |> Enum.filter(&Regex.match?(%r"\d+_.+\.exs$", &1))
+      |> Enum.filter(&Regex.match?(~r"\d+_.+\.exs$", &1))
       |> attach_versions
   end
 

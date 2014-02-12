@@ -1,5 +1,5 @@
 defmodule Ecto.Model.Validations do
-  @moduledoc %S"""
+  @moduledoc ~S"""
   Conveniences for defining module-level validations in models.
 
   This module provides two macros `validate` and `validatep` that
@@ -22,8 +22,8 @@ defmodule Ecto.Model.Validations do
                also: validate_attachments
 
         validatep validate_attachments(user),
-           filename: has_format(%r/\w+/),
-             format: member_of(%w(jpg gif png))
+           filename: has_format(~r/\w+/),
+             format: member_of(~w(jpg gif png))
       end
 
   By calling `validate user`, a `validate(user)` function is defined
@@ -102,8 +102,8 @@ defmodule Ecto.Model.Validations do
   to change the predicates below:
 
       validatep validate_attachments(user),
-         filename: has_format(%r/\w+/),
-           format: member_of(%w(jpg gif png))
+         filename: has_format(~r/\w+/),
+           format: member_of(~w(jpg gif png))
 
   To a custom predicate for image attachments:
 
@@ -113,7 +113,7 @@ defmodule Ecto.Model.Validations do
   It could be implemented as:
 
       def image_attachments(attr, value, opts \\ []) do
-        if Path.extname(value) in %w(jpg gif png) do
+        if Path.extname(value) in ~w(jpg gif png) do
           []
         else
           [{ attr, opts[:message] || "is not an image attachment" }]
@@ -131,40 +131,40 @@ defmodule Ecto.Model.Validations do
   Note that calling `validate` and `validatep` starts a new function,
   with its own scope. That said, the following is invalid:
 
-      values = %w(jpg gif png)
+      values = ~w(jpg gif png)
 
       validatep validate_attachments(user),
-         filename: has_format(%r/\w+/),
+         filename: has_format(~r/\w+/),
            format: member_of(values)
 
   You can use module attributes instead:
 
-      @values %w(jpg gif png)
+      @values ~w(jpg gif png)
 
       validatep validate_attachments(user),
-         filename: has_format(%r/\w+/),
+         filename: has_format(~r/\w+/),
            format: member_of(@values)
 
   On the plus side, it means you can also call other functions from
   the validator:
 
       validatep validate_attachments(user),
-         filename: has_format(%r/\w+/),
+         filename: has_format(~r/\w+/),
            format: member_of(valid_formats)
 
-      defp valid_formats(), do: %w(jpg gif png)
+      defp valid_formats(), do: ~w(jpg gif png)
 
  or even receive arguments:
 
-     validatep validate_attachments(user, valid_formats \\ %w(jpg gif png)),
-        filename: has_format(%r/\w+/),
+     validatep validate_attachments(user, valid_formats \\ ~w(jpg gif png)),
+        filename: has_format(~r/\w+/),
           format: member_of(valid_formats)
 
   or:
 
       validatep validate_attachments(user, validate_format),
-         filename: has_format(%r/\w+/),
-           format: member_of(%w(jpg gif png)) when validate_format
+         filename: has_format(~r/\w+/),
+           format: member_of(~w(jpg gif png)) when validate_format
 
   """
 

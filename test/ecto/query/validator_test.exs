@@ -53,7 +53,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "invalid query" do
     query = select(Query[], [], 123)
-    assert_raise Ecto.QueryError, %r"a query must have a from expression", fn ->
+    assert_raise Ecto.QueryError, ~r"a query must have a from expression", fn ->
       validate(query)
     end
   end
@@ -66,7 +66,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> where([p], p.title) |> select([], 123)
-    assert_raise Ecto.QueryError, %r"where expression", fn ->
+    assert_raise Ecto.QueryError, ~r"where expression", fn ->
       validate(query)
     end
   end
@@ -76,7 +76,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> having([], "abc") |> select([], 123)
-    assert_raise Ecto.QueryError, %r"having expression", fn ->
+    assert_raise Ecto.QueryError, ~r"having expression", fn ->
       validate(query)
     end
   end
@@ -86,7 +86,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> join(:inner, [], Comment, "abc") |> select([], 123)
-    assert_raise Ecto.QueryError, %r"join_on expression", fn ->
+    assert_raise Ecto.QueryError, ~r"join_on expression", fn ->
       validate(query)
     end
   end
@@ -100,7 +100,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "unknown field" do
     query = Post |> select([p], p.unknown)
-    assert_raise Ecto.QueryError, %r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post.Entity`", fn ->
+    assert_raise Ecto.QueryError, ~r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post.Entity`", fn ->
       validate(query)
     end
   end
@@ -225,17 +225,17 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.title, p.id])
-    assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
+    assert_raise Ecto.QueryError, ~r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
       validate(query)
     end
 
     query = Post |> distinct([p], p.title) |> order_by([p], [p.id, p.title])
-    assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
+    assert_raise Ecto.QueryError, ~r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
       validate(query)
     end
 
     query = Post |> distinct([p], [p.title, p.text]) |> order_by([p], [p.title, p.id])
-    assert_raise Ecto.QueryError, %r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
+    assert_raise Ecto.QueryError, ~r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
       validate(query)
     end
   end
@@ -259,7 +259,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> having([p], p.id) |> select([], 0)
-    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.id` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`Ecto.Query.ValidatorTest.Post.Entity.id` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -269,7 +269,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
-    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -279,7 +279,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id) |> select([p], p.title)
-    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -289,7 +289,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id) |> select([p], p)
-    assert_raise Ecto.QueryError, %r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -431,12 +431,12 @@ defmodule Ecto.Query.ValidatorTest do
     end
 
     query = from(p in Post, join: c in p.comments, select: assoc(p, permalink: c))
-    assert_raise Ecto.QueryError, %r"doesn't match given entity", fn ->
+    assert_raise Ecto.QueryError, ~r"doesn't match given entity", fn ->
       validate(query)
     end
 
     query = from(p in Post, join: pl in p.permalink, select: assoc(p, permalink: pl))
-    assert_raise Ecto.QueryError, %r"`assoc/2` selector requires a primary key on", fn ->
+    assert_raise Ecto.QueryError, ~r"`assoc/2` selector requires a primary key on", fn ->
       validate(query)
     end
 

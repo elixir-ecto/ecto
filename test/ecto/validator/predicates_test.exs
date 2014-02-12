@@ -37,19 +37,19 @@ defmodule Ecto.Validator.PredicatesTest do
   ## Has format
 
   test "has_format on invalid" do
-    assert has_format(:name, "hello world", %r"sample") == [name: "is invalid"]
+    assert has_format(:name, "hello world", ~r"sample") == [name: "is invalid"]
   end
 
   test "has_format on valid" do
-    assert has_format(:name, "hello", %r"hello") == []
+    assert has_format(:name, "hello", ~r"hello") == []
   end
 
   test "has_format skips on nil" do
-    assert has_format(:name, nil, %r"hello") == []
+    assert has_format(:name, nil, ~r"hello") == []
   end
 
   test "has_format with custom message" do
-    assert has_format(:name, "hello world", %r"sample", message: "no match") == [name: "no match"]
+    assert has_format(:name, "hello world", ~r"sample", message: "no match") == [name: "no match"]
   end
 
   ## Has length
@@ -105,17 +105,17 @@ defmodule Ecto.Validator.PredicatesTest do
   ## Member of
 
   test "member_of on invalid" do
-    assert member_of(:name, "hello", %w(foo bar baz)) == [name: "is not included in the list"]
+    assert member_of(:name, "hello", ~w(foo bar baz)) == [name: "is not included in the list"]
     assert member_of(:name, 7, 1..5) == [name: "is not included in the list"]
   end
 
   test "member_of on valid" do
-    assert member_of(:name, "foo", %w(foo bar baz)) == []
+    assert member_of(:name, "foo", ~w(foo bar baz)) == []
     assert member_of(:name, 3, 1..5) == []
   end
 
   test "member_of skips on nil" do
-    assert member_of(:name, nil, %w(foo bar baz)) == []
+    assert member_of(:name, nil, ~w(foo bar baz)) == []
   end
 
   test "member_of with custom message" do
@@ -233,17 +233,17 @@ defmodule Ecto.Validator.PredicatesTest do
   ## Not member of
 
   test "not_member_of on invalid" do
-    assert not_member_of(:name, "hello", %w(hello world)) == [name: "is reserved"]
+    assert not_member_of(:name, "hello", ~w(hello world)) == [name: "is reserved"]
     assert not_member_of(:name, 3, 1..5) == [name: "is reserved"]
   end
 
   test "not_member_of on valid" do
-    assert not_member_of(:name, "foo", %w(hello world)) == []
+    assert not_member_of(:name, "foo", ~w(hello world)) == []
     assert not_member_of(:name, 7, 1..5) == []
   end
 
   test "not_member_of skips on nil" do
-    assert not_member_of(:name, nil, %w(foo bar baz)) == []
+    assert not_member_of(:name, nil, ~w(foo bar baz)) == []
   end
 
   test "not_member_of with custom message" do

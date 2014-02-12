@@ -17,8 +17,8 @@ defmodule Ecto.Query.BuilderUtilTest do
     assert Macro.escape(quote do avg(0) end) ==
            escape(quote do avg(0) end, [])
 
-    assert quote(do: %s"123") ==
-           escape(quote do %s"123" end, [])
+    assert quote(do: ~s"123") ==
+           escape(quote do ~s"123" end, [])
 
     assert { Ecto.Binary, { :<<>>, [], [1, 2, 3] } } ==
            escape(quote do binary(<< 1, 2, 3 >>) end, [])
@@ -42,23 +42,23 @@ defmodule Ecto.Query.BuilderUtilTest do
   end
 
   test "escape raise" do
-    assert_raise Ecto.QueryError, %r"is not a valid query expression", fn ->
+    assert_raise Ecto.QueryError, ~r"is not a valid query expression", fn ->
       escape(quote do x end, [])
     end
 
-    assert_raise Ecto.QueryError, %r"is not a valid query expression", fn ->
+    assert_raise Ecto.QueryError, ~r"is not a valid query expression", fn ->
       escape(quote do :atom end, [])
     end
 
-    assert_raise Ecto.QueryError, %r"unbound variable", fn ->
+    assert_raise Ecto.QueryError, ~r"unbound variable", fn ->
       escape(quote do x.y end, [])
     end
 
-    assert_raise Ecto.QueryError, %r"field name should be an atom", fn ->
+    assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
       Code.eval_quoted(escape(quote do field(x, 123) end, [:x]), [], __ENV__)
     end
 
-    assert_raise Ecto.QueryError, %r"array type should be an atom", fn ->
+    assert_raise Ecto.QueryError, ~r"array type should be an atom", fn ->
       Code.eval_quoted(escape(quote do array([1, 2, 3], 123) end, []), [], __ENV__) |> elem(0)
     end
   end
@@ -82,7 +82,7 @@ defmodule Ecto.Query.BuilderUtilTest do
     assert quote(do: { &0, :y }) ==
            Code.eval_quoted(escape_dot(quote(do: field(x, ^:y)), [:x]), [], __ENV__) |> elem(0)
 
-    assert_raise Ecto.QueryError, %r"field name should be an atom", fn ->
+    assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
       Code.eval_quoted(escape_dot(quote do field(x, 123) end, [:x]), [], __ENV__)
     end
   end
