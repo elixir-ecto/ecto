@@ -9,6 +9,12 @@ defrecord Ecto.DateTime, [:year, :month, :day, :hour, :min, :sec] do
   end
 end
 
+defimpl String.Chars, for: Ecto.DateTime do
+  def to_string(Ecto.DateTime[year: year, month: month, day: day, hour: hour, min: min, sec: sec]) do
+    "#{year}-#{month}-#{day} #{hour}:#{min}:#{sec}"
+  end
+end
+
 defrecord Ecto.Interval, [:year, :month, :day, :hour, :min, :sec]
 
 defrecord Ecto.Binary, [:value] do
