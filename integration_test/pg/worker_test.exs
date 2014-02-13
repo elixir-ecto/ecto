@@ -10,6 +10,13 @@ defmodule Ecto.Integration.WorkerTest do
     refute :sys.get_state(worker) |> elem(1)
   end
 
+  test "worker starts with an active connection" do
+    { :ok, worker } = Worker.start_link(worker_opts(lazy: "false"))
+
+    assert Process.alive?(worker)
+    assert :sys.get_state(worker) |> elem(1)
+  end
+
   test "worker reconnects to database when connecton exits" do
     { :ok, worker } = Worker.start_link(worker_opts)
 
@@ -21,9 +28,10 @@ defmodule Ecto.Integration.WorkerTest do
   end
 
   defp worker_opts(opts \\ []) do
-    [ hostname: opts[:hostname] || "localhost",
-      database: opts[:database] || "ecto_test",
-      username: opts[:username] || "postgres",
-      password: opts[:password] || "postgres" ]
+    opts
+    |> Keyword.put_new(:hostname, "localhost")
+    |> Keyword.put_new(:database, "ecto_test")
+    |> Keyword.put_new(:username, "postgres")
+    |> Keyword.put_new(:password, "postgres")
   end
 end
