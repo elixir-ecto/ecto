@@ -16,7 +16,7 @@ defmodule Ecto.Mixfile do
   end
 
   def application do
-    []
+    [ applications: [:poolboy] ]
   end
 
   defp deps(:prod) do
