@@ -15,6 +15,13 @@ defmodule Mix.Tasks.Ecto.Migrate do
   to a version number, supply `--to version_number`.
   To migrate up a specific number of times, use `--step n`.
 
+  ## Command line options
+
+  * `--all` - run all pending migrations
+  * `--step` / `-n` - run n number of pending migrations
+  * `--to` / `-v` - run all migrations up to and including version
+  * `--no-start` - do not start applications
+
   ## Examples
 
       mix ecto.migrate MyApp.Repo
@@ -27,14 +34,15 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
   """
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
-    Mix.Task.run "compile"
+    Mix.Task.run "app.start", args
 
     { opts, args, _ } = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, version: :integer],
+      switches: [all: :boolean, step: :integer, to: :integer],
       aliases: [n: :step, v: :to]
+
     { repo, _ } = parse_repo(args)
     ensure_repo(repo)
-    ensure_started(repo)
+    if opts[:no_start], do: ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
       opts = Keyword.put(opts, :all, true)

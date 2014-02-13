@@ -7,13 +7,17 @@ defmodule Mix.Tasks.Ecto.Drop do
   @moduledoc """
   Drop the database for the given repository, as specified in the repo's `url`.
 
+  ## Command line options
+
+  * `--no-start` - do not start applications
+
   ## Examples
 
       mix ecto.drop MyApp.Repo
 
   """
   def run(args) do
-    Mix.Task.run "compile"
+    Mix.Task.run "app.start", args
 
     { repo, _ } = parse_repo(args)
     ensure_repo(repo)

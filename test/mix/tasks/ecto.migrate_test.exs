@@ -19,7 +19,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   end
 
   test "runs the migrator" do
-    run [to_string(Repo)], fn _, _, _, _ ->
+    run [to_string(Repo), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
     end
     assert Process.get(:migrated)
@@ -27,11 +27,11 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   end
 
   test "runs the migrator yielding the repository and migrations path" do
-    run [to_string(Repo)], fn repo, path, direction, strategy ->
+    run [to_string(Repo), "--no-start"], fn repo, path, direction, strategy ->
       assert repo == Repo
       assert path == "hello/migrations"
       assert direction == :up
-      assert strategy == [all: true]
+      assert strategy == [all: true, no_start: true]
     end
   end
 end
