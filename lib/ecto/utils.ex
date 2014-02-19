@@ -6,13 +6,14 @@ defmodule Ecto.Utils do
 
   @doc """
   Receives an `app` and returns the absolute `path` from
-  the application directory.
+  the application directory. It fails if the application
+  name is invalid.
   """
-  @spec app_dir(atom, String.t) :: String.t | { :error, term }
+  @spec app_dir(atom, String.t) :: String.t | no_return
   def app_dir(app, path) when is_atom(app) and is_binary(path) do
     case :code.lib_dir(app) do
-      { :error, _ } = error -> error
       lib when is_list(lib) -> Path.join(String.from_char_list!(lib), path)
+      { :error, :bad_name } -> raise "invalid application #{inspect app}"
     end
   end
 end
