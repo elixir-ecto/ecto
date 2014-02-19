@@ -1,20 +1,12 @@
 # Simple
 
-To run this example, you need to ensure postgres is up and running. Inside psql, ensure there is a database named `ecto_simple` with the following table:
-
-```sql
-CREATE TABLE weather (
-  id        SERIAL,
-  city      varchar(40),
-  temp_lo   integer,
-  temp_hi   integer,
-  prcp      float
-);
-```
+To run this example, you need to ensure postgres is up and running with a `postgres` username and `postgres` password. If you want to run with another credentials, just change the `Repo.url/0` in the `lib/simple.ex` file.
 
 Then, from the command line:
 
-* `mix deps.get`
+* `mix do deps.get, compile`
+* `mix ecto.create Repo`
+* `mix ecto.migrate Repo`
 * `iex -S mix`
 
 Inside IEx, run:

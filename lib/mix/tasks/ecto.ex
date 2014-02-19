@@ -53,11 +53,10 @@ defmodule Mix.Tasks.Ecto do
   @doc """
   Gets the migrations path from a repository.
   """
-  @spec migrations_path(Ecto.Repo.T) :: String.t | no_return
+  @spec migrations_path(Ecto.Repo.t) :: String.t | no_return
   def migrations_path(repo) do
     if function_exported?(repo, :priv, 0) do
-      # Convert migrations path from _build to source.
-      Path.join(Path.relative_to(repo.priv, Mix.Project.app_path), "migrations")
+      Path.join(repo.priv, "migrations")
     else
       raise Mix.Error, message: "expected repo #{inspect repo} to define priv/0 in order to use migrations"
     end
@@ -74,6 +73,16 @@ defmodule Mix.Tasks.Ecto do
       true
     else
       false
+    end
+  end
+
+  @doc """
+  Gets a path relative to the application path.
+  Raises on umbrella application.
+  """
+  def no_umbrella!(task) do
+    if Mix.Project.umbrella? do
+      raise Mix.Error, message: "cannot run task #{inspect task} from umbrella application"
     end
   end
 end

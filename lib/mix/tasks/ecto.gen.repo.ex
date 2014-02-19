@@ -17,6 +17,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   """
   def run(args) do
+    no_umbrella!("ecto.gen.repo")
     { repo, _ } = parse_repo(args)
 
     underscored = Mix.Utils.underscore(inspect(repo))
