@@ -75,8 +75,8 @@ defmodule Ecto.Validator.Predicates do
 
   """
   @spec has_format(atom, term, Regex.t | binary, Keyword.t) :: maybe_error
-  def has_format(attr, value, match_on, opts \\ []) when is_regex(match_on) and is_list(opts) do
-    if value == nil or Regex.match?(match_on, value) do
+  def has_format(attr, value, match_on, opts \\ []) when is_list(opts) do
+    if value == nil or value =~ match_on do
       []
     else
       [{ attr, opts[:message] || "is invalid" }]

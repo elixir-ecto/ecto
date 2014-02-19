@@ -1,4 +1,4 @@
 [ "decimal": {:git, "git://github.com/ericmj/decimal.git", "ca3ca3de2425b1ee19d175eca92d80dcfe02fdb1", []},
-  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "ee01fe3efd7b8af1dbaa00946bad5817d57b5875", []},
+  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "dc0397d15686315dad653ed13c4836e4c6ef54e3", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "d47df5df57b22eb183b0c48c8dcc5f9827fad71b", []},
   "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "c6fbb72d6f0678efd02e58b38cf2308397f0566a", []} ]
