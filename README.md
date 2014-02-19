@@ -88,30 +88,16 @@ Besides, a set of options can be passed to the adapter as:
 
     ecto://USERNAME:PASSWORD@HOST/DATABASE?KEY=VALUE
 
-Each repository in Ecto defines a `start_link/0` function that needs to be invoked before using the repository. In general, this function is not called directly, but via the supervisor chain, as shown [in the simple example](https://github.com/elixir-lang/ecto/tree/master/examples/simple):
+Each repository in Ecto defines a `start_link/0` function that needs to be invoked before using the repository. In general, this function is not called directly, but via the supervisor chain. In your application, it is very likely you have a `lib/*/supervisor.ex` file. You just need to edit it to start your worker on the supervisor `init/1` function:
 
 ```elixir
-defmodule Simple.App do
-  use Application.Behaviour
-
-  def start(_type, _args) do
-    Simple.Sup.start_link
-  end
-end
-
-defmodule Simple.Sup do
-  use Supervisor.Behaviour
-
-  def start_link do
-    :supervisor.start_link({ :local, __MODULE__ }, __MODULE__, [])
-  end
-
-  def init([]) do
-    tree = [ worker(Repo, []) ]
-    supervise(tree, strategy: :one_for_all)
-  end
+def init([]) do
+  tree = [ worker(Repo, []) ]
+  supervise(tree, strategy: :one_for_all)
 end
 ```
+
+A simple example can be found [in the Ecto git repo](https://github.com/elixir-lang/ecto/tree/master/examples/simple).
 
 You can read more about [the Repository API in the docs](http://elixir-lang.org/docs/ecto/Ecto.Repo.html).
 
