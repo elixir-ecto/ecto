@@ -35,7 +35,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
   """
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
-    Mix.Task.run "compile"
+    Mix.Task.run "app.start", args
 
     { opts, args, _ } = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer],
