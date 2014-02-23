@@ -4,8 +4,8 @@ defmodule Ecto.Query.LockBuilderTest do
   import Ecto.Query
 
   test "invalid lock" do
-    assert_raise Ecto.QueryError, ~r"lock expression must be a boolean value", fn ->
-      Ecto.Query.Query[] |> lock("a") |> select([], 0)
+    assert_raise Ecto.QueryError, ~r"lock expression must be a boolean value or a valid string", fn ->
+      Ecto.Query.Query[] |> lock(1) |> select([], 0)
     end
   end
 

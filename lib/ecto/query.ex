@@ -397,18 +397,22 @@ defmodule Ecto.Query do
   @doc """
   A lock query expression.
 
-  Locks the rows selected for update. Can be any expression but
-  have to evaluate to a boolean value and it can't include any field.
+  Provides support for row-level pessimistic locking using 
+  SELECT ... FOR UPDATE or other, database-specific, locking clauses.
+  Can be any expression but have to evaluate to a boolean value or a 
+  string and it can't include any field.
 
   If `lock` is given twice, it overrides the previous value.
 
   ## Keywords examples
 
       from(u in User, where: u.id == current_user, lock: true)
+      from(u in User, where: u.id == current_user, lock: \"FOR SHARE NOWAIT\")
 
   ## Expressions examples
 
       from(u in User) |> where(u.id == current_user) |> lock(true)
+      from(u in User) |> where(u.id == current_user) |> lock(\"FOR SHARE NOWAIT\")
 
   """
   defmacro lock(query, expr) do

@@ -52,6 +52,9 @@ defmodule Ecto.QueryTest do
 
     query = Post |> lock(true)
     validate(query)
+
+    query = Post |> lock("FOR SHARE NOWAIT")
+    validate(query)
     
     query = select(Post, [p], p.title)
     validate(query)

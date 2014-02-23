@@ -104,6 +104,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "lock" do
     query = Model |> lock(true) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nFOR UPDATE"
+
+    query = Model |> lock("FOR SHARE NOWAIT") |> select([], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nFOR SHARE NOWAIT"
   end
 
   test "variable binding" do

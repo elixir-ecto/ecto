@@ -233,6 +233,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp lock(nil), do: nil
   defp lock(false), do: nil
   defp lock(true), do: "FOR UPDATE"
+  defp lock(lock_clause), do: lock_clause
   
   defp boolean(_name, [], _sources), do: nil
 
