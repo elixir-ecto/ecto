@@ -397,7 +397,7 @@ defmodule Ecto.Query do
   @doc """
   A lock query expression.
 
-  Locks the rows returned by query for update. Can be any expression but
+  Locks the rows selected for update. Can be any expression but
   have to evaluate to a boolean value and it can't include any field.
 
   If `lock` is given twice, it overrides the previous value.
