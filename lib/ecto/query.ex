@@ -513,7 +513,7 @@ defmodule Ecto.Query do
   # Builds the quoted code for creating a keyword query
 
   @binds    [:where, :select, :distinct, :order_by, :group_by, :having]
-  @no_binds [:limit, :offset, :preload]
+  @no_binds [:limit, :offset, :preload, :lock]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
   defp build_query([{ type, expr }|t], quoted, binds) when type in @binds do
