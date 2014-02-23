@@ -116,7 +116,7 @@ defmodule Ecto.Query do
 
   defrecord Query, sources: nil, from: nil, joins: [], wheres: [], select: nil,
                    order_bys: [], limit: nil, offset: nil, group_bys: [],
-                   havings: [], preloads: [], distincts: []
+                   havings: [], preloads: [], distincts: [], lock: nil
 
   defrecord QueryExpr, [:expr, :file, :line]
   defrecord JoinExpr, [:qual, :source, :on, :file, :line, :assoc]
@@ -133,6 +133,7 @@ defmodule Ecto.Query do
   alias Ecto.Query.HavingBuilder
   alias Ecto.Query.PreloadBuilder
   alias Ecto.Query.JoinBuilder
+  alias Ecto.Query.LockBuilder
 
   @doc """
   Creates a query.
@@ -393,6 +394,27 @@ defmodule Ecto.Query do
     LimitOffsetBuilder.build(:offset, query, expr, __CALLER__)
   end
 
+  @doc """
+  A lock query expression.
+
+  Locks the rows returned by query for update. Can be any expression but
+  have to evaluate to a boolean value and it can't include any field.
+
+  If `lock` is given twice, it overrides the previous value.
+
+  ## Keywords examples
+
+      from(u in User, where: u.id == current_user, lock: true)
+
+  ## Expressions examples
+
+      from(u in User) |> where(u.id == current_user) |> lock(true)
+
+  """
+  defmacro lock(query, expr) do
+    LockBuilder.build(:lock, query, expr, __CALLER__)
+  end
+  
   @doc """
   A group by query expression.
 

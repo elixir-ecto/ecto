@@ -59,8 +59,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
     order_by = order_by(query.order_bys, sources)
     limit    = limit(query.limit)
     offset   = offset(query.offset)
+    lock     = lock(query.lock)
 
-    [select, from, join, where, group_by, having, order_by, limit, offset]
+    [select, from, join, where, group_by, having, order_by, limit, offset, lock]
       |> Enum.filter(&(&1 != nil))
       |> List.flatten
       |> Enum.join("\n")
@@ -229,6 +230,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp offset(nil), do: nil
   defp offset(num), do: "OFFSET " <> integer_to_binary(num)
 
+  defp lock(nil), do: nil
+  defp lock(false), do: nil
+  defp lock(true), do: "FOR UPDATE"
+  
   defp boolean(_name, [], _sources), do: nil
 
   defp boolean(name, query_exprs, sources) do
