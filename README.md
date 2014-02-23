@@ -238,6 +238,7 @@ Queries are defined and extended with the `from` macro. The supported keywords a
 * `:order_by`
 * `:offset`
 * `:limit`
+* `:lock`
 * `:group_by`
 * `:having`
 * `:join`

@@ -50,6 +50,9 @@ defmodule Ecto.QueryTest do
     query = Post |> offset(43)
     validate(query)
 
+    query = Post |> lock(true)
+    validate(query)
+    
     query = select(Post, [p], p.title)
     validate(query)
 
