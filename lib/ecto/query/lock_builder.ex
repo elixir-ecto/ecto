@@ -7,16 +7,12 @@ defmodule Ecto.Query.LockBuilder do
   Validates the expression is an integer or raise.
   """
   @spec validate(Macro.t) :: Macro.t | no_return
-  def validate(expr) when is_boolean(expr), do: expr
+  def validate(expr) when is_boolean(expr) or is_binary(expr), do: expr
 
   def validate(expr) do
-    if String.valid?(expr) do
-      expr
-    else
-      raise Ecto.QueryError, reason: "lock expression must be a boolean value" <>
-                               " or a valid string with the database-specific locking" <>
-                               " clause, got: #{inspect expr}"
-    end
+    raise Ecto.QueryError, reason: "lock expression must be a boolean value" <>
+                             " or a string containing the database-specific locking" <>
+                             " clause, got: #{inspect expr}"
   end
   
   @doc """
@@ -29,7 +25,7 @@ defmodule Ecto.Query.LockBuilder do
   @spec build(:lock, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(type, query, expr, env) do
     expr =
-      case is_boolean(expr) or String.valid?(expr) do
+      case is_boolean(expr) or is_binary(expr) do
         true  -> expr
         false -> quote do: unquote(__MODULE__).validate(unquote(expr))
       end
