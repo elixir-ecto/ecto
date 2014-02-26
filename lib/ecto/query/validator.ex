@@ -96,11 +96,11 @@ defmodule Ecto.Query.Validator do
 
   defp validate_only_where(query) do
     # Update validation check if assertion fails
-    unquote(unless size(Query[]) == 13, do: raise "Ecto.Query.Query out of date")
+    unquote(unless size(Query[]) == 14, do: raise "Ecto.Query.Query out of date")
 
     # TODO: File and line metadata
     unless match?(Query[joins: [], select: nil, order_bys: [], limit: nil,
-        offset: nil, group_bys: [], havings: [], preloads: [], distincts: []], query) do
+        offset: nil, group_bys: [], havings: [], preloads: [], distincts: [], lock: nil], query) do
       raise Ecto.QueryError, reason: "update query can only have a single `where` expression"
     end
   end
