@@ -155,7 +155,6 @@ setup_database = [
   "CREATE TABLE customs (foo text PRIMARY KEY)",
   "CREATE TABLE barebones (text text)",
   "CREATE TABLE transaction (id serial, text text)",
-  "CREATE TABLE locks (id serial PRIMARY KEY, value int)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 
