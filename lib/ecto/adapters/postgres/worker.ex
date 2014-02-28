@@ -3,10 +3,14 @@ defmodule Ecto.Adapters.Postgres.Worker do
 
   use GenServer.Behaviour
 
-  defrecordp :state, [ :conn, :params ]
+  defrecordp :state, [ :conn, :params, :monitor ]
+
+  def start(args) do
+    :gen_server.start(__MODULE__, args, [])
+  end
 
   def start_link(args) do
-    :gen_server.start_link __MODULE__, args, []
+    :gen_server.start_link(__MODULE__, args, [])
   end
 
   def query!(worker, sql, params \\ []) do
@@ -35,6 +39,14 @@ defmodule Ecto.Adapters.Postgres.Worker do
       :ok -> :ok
       Postgrex.Error[] = err -> raise err
     end
+  end
+
+  def monitor_me(worker) do
+    :gen_server.cast(worker, { :monitor, self })
+  end
+
+  def demonitor_me(worker) do
+    :gen_server.cast(worker, { :demonitor, self })
   end
 
   def init(args) do
@@ -75,8 +87,22 @@ defmodule Ecto.Adapters.Postgres.Worker do
     { :reply, Postgrex.Connection.rollback(conn), s }
   end
 
+  def handle_cast({ :monitor, pid }, state(monitor: nil) = s) do
+    ref = Process.monitor(pid)
+    { :noreply, state(s, monitor: { pid, ref }) }
+  end
+
+  def handle_cast({ :demonitor, pid }, state(monitor: { pid, ref }) = s) do
+    Process.demonitor(ref)
+    { :noreply, state(s, monitor: nil) }
+  end
+
   def handle_info({ :EXIT, conn, _reason }, state(conn: conn) = s) do
     { :noreply, state(s, conn: nil) }
+  end
+
+  def handle_info({ :DOWN, ref, :process, pid, _info }, state(monitor: { pid, ref }) = s) do
+    { :stop, :normal, s }
   end
 
   def handle_info(_info, s) do

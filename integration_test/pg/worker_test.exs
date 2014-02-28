@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.WorkerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Ecto.Adapters.Postgres.Worker
 
@@ -25,6 +25,21 @@ defmodule Ecto.Integration.WorkerTest do
 
     Process.exit(conn, :normal)
     assert Postgrex.Result[] = Worker.query!(worker, "SELECT TRUE")
+  end
+
+  test "worker stops if caller dies" do
+    { :ok, worker } = Worker.start(worker_opts(lazy: "false"))
+    conn = :sys.get_state(worker) |> elem(1)
+    worker_mon = Process.monitor(worker)
+    conn_mon = Process.monitor(conn)
+
+    spawn(fn ->
+      Worker.monitor_me(worker)
+      Worker.query!(worker, "SELECT TRUE")
+    end)
+
+    assert_receive({ :DOWN, ^worker_mon, :process, ^worker, _ }, 1000)
+    assert_receive({ :DOWN, ^conn_mon, :process, ^conn, _ }, 1000)
   end
 
   defp worker_opts(opts \\ []) do
