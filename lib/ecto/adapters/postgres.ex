@@ -255,6 +255,7 @@ defmodule Ecto.Adapters.Postgres do
         worker
       nil ->
         worker = :poolboy.checkout(pool)
+        Worker.monitor_me(worker)
         Process.put(key, { worker, 1 })
         worker
     end
@@ -266,6 +267,7 @@ defmodule Ecto.Adapters.Postgres do
 
     case Process.get(key) do
       { worker, 1 } ->
+        Worker.demonitor_me(worker)
         :poolboy.checkin(pool, worker)
         Process.delete(key)
       { worker, counter } ->
