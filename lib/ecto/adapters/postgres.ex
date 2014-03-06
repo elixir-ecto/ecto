@@ -42,20 +42,20 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   def all(repo, Query[] = query) do
-    pg_query = query.select |> normalize_select |> query.select
+    pg_query = Query[] = query.select |> normalize_select |> query.select
 
     Postgrex.Result[rows: rows] = query(repo, SQL.select(pg_query))
 
     # Transform each row based on select expression
-    transformed = Enum.map(rows, fn row ->
-      values = tuple_to_list(row)
-      QueryExpr[expr: expr] = normalize_select(pg_query.select)
-      transform_row(expr, values, pg_query.sources) |> elem(0)
-    end)
+    transformed =
+      Enum.map(rows, fn row ->
+        values = tuple_to_list(row)
+        transform_row(pg_query.select.expr, values, pg_query.sources) |> elem(0)
+      end)
 
     transformed
-      |> Ecto.Associations.Assoc.run(query)
-      |> preload(repo, query)
+    |> Ecto.Associations.Assoc.run(query)
+    |> preload(repo, query)
   end
 
   def create(repo, entity) do
@@ -67,10 +67,9 @@ defmodule Ecto.Adapters.Postgres do
 
     case query(repo, SQL.insert(entity, returning)) do
       Postgrex.Result[rows: [values]] ->
-        # Setup the entity to use the RETURNING values
-        Enum.zip(returning, tuple_to_list(values)) |> entity.update
+        Enum.zip(returning, tuple_to_list(values))
       _ ->
-        entity
+        []
     end
   end
 

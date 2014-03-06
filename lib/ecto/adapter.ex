@@ -30,13 +30,12 @@ defmodule Ecto.Adapter do
   @doc """
   Fetches all results from the data store based on the given query.
   """
-  defcallback all(Ecto.Repo.t, Ecto.Query.t) :: [Record.t] | no_return
+  defcallback all(Ecto.Repo.t, Ecto.Query.t) :: [term] | no_return
 
   @doc """
-  Stores a single new entity in the data store. And return a primary key
-  if one was created for the entity.
+  Stores a single new entity in the data store. Return the default values.
   """
-  defcallback create(Ecto.Repo.t, Ecto.Entity.t) :: nil | integer | no_return
+  defcallback create(Ecto.Repo.t, Ecto.Entity.t) :: [Keyword.t] | no_return
 
   @doc """
   Updates an entity using the primary key as key.

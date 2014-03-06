@@ -34,6 +34,8 @@ defmodule Ecto.Integration.Postgres.Post do
   queryable "posts" do
     field :title, :string
     field :text, :string
+    field :tags, { :array, :string }
+    field :bin, :binary
     field :temp, :virtual, default: "temp"
     field :count, :integer
     has_many :comments, Ecto.Integration.Postgres.Comment
@@ -148,7 +150,7 @@ Enum.each(setup_cmds, fn(cmd) ->
 end)
 
 setup_database = [
-  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), count integer)",
+  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
   "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, interval interval, bytes bytea, post_id integer, author_id integer)",
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",

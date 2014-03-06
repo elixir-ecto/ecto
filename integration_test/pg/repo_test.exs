@@ -73,13 +73,14 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and update single, fetch updated" do
-    post = Post.Entity[title: "The shiny new Ecto", text: "coming soon..."]
+    post = Post.Entity[title: "The shiny new Ecto", text: "coming soon...", tags: ["1"], bin: <<1>>]
 
     post = TestRepo.create(post)
+    assert Post.Entity[tags: ["1"], bin: <<1>>] = post
     post = post.text("coming very soon...")
     assert :ok == TestRepo.update(post)
 
-    assert [Post.Entity[text: "coming very soon..."]] = TestRepo.all(Post)
+    assert [Post.Entity[text: "coming very soon...", tags: ["1"], bin: <<1>>]] = TestRepo.all(Post)
   end
 
   test "create and fetch multiple" do

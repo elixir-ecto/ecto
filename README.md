@@ -278,7 +278,7 @@ When defining each entity field, a type needs to be given. Those types are speci
 * `:boolean`
 * `:binary` - for binaries;
 * `:string` - for utf-8 encoded binaries;
-* `:list`
+* `{ :array, inner_type }`
 * `:datetime`
 * `:virtual` - virtual types can have any value and they are not sent to the database;
 
