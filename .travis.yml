@@ -4,7 +4,7 @@ notifications:
     - jose.valim@plataformatec.com.br
     - eric.meadows.jonsson@gmail.com
 otp_release:
-  - R16B02
+  - R16B03-1
 before_install:
   - git clone https://github.com/elixir-lang/elixir
   - cd elixir && make && cd ..
@@ -12,7 +12,4 @@ before_script:
   - export PATH=`pwd`/elixir/bin:$PATH
   - MIX_ENV=test mix do deps.get
 script:
-  - mix test
-env:
-  - MIX_ENV=test
-  - MIX_ENV=pg
+  - MIX_ENV=all mix test
