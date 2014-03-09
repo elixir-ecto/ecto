@@ -177,12 +177,11 @@ defmodule Ecto.Repo do
 
   @doc """
   Fetches a single entity from the data store where the primary key matches the
-  given id. id should be an integer or a string that can be cast to an
-  integer. Returns `nil` if no result was found. If the entity in the queryable
+  given id. Returns `nil` if no result was found. If the entity in the queryable
   has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
   will be raised if there is an adapter error.
   """
-  defcallback get(Ecto.Queryable.t, integer) :: Ecto.Entity.t | nil | no_return
+  defcallback get(Ecto.Queryable.t, term) :: Ecto.Entity.t | nil | no_return
 
   @doc """
   Fetches all results from the data store based on the given query. May raise
