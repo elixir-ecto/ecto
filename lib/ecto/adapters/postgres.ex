@@ -282,13 +282,13 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp do_rollback(repo, worker) do
-    repo.log(:begin, fn ->
+    repo.log(:rollback, fn ->
       Worker.rollback!(worker)
     end)
   end
 
   defp do_commit(repo, worker) do
-    repo.log(:begin, fn ->
+    repo.log(:commit, fn ->
       Worker.commit!(worker)
     end)
   end
