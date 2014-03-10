@@ -1,7 +1,7 @@
 defmodule Ecto.Repo do
   @moduledoc """
   This module is used to define a repository. A repository maps to a data
-  store, for example an SQL database. A repository must implement `url/0` and
+  store, for example a SQL database. A repository must implement `url/0` and
   set an adapter (see `Ecto.Adapter`) to be used for the repository.
 
   When used, the following options are allowed:
