@@ -8,8 +8,8 @@ Ecto is a domain specific language for writing queries and interacting with data
 defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
-  def url do
-    "ecto://postgres:postgres@localhost/ecto_simple"
+  def conf do
+    parse_url "ecto://postgres:postgres@localhost/ecto_simple"
   end
 end
 
@@ -74,8 +74,8 @@ A repository is a wrapper around the database. We can define a repository as fol
 defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
-  def url do
-    "ecto://postgres:postgres@localhost/ecto_simple"
+  def conf do
+    parse_url "ecto://postgres:postgres@localhost/ecto_simple"
   end
 end
 ```

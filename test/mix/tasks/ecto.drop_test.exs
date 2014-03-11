@@ -24,26 +24,26 @@ defmodule Mix.Tasks.Ecto.DropTest do
     defmacro __using__(_), do: :ok
   end
 
-  # Mocked repos 
+  # Mocked repos
 
   defmodule Repo do
     use Ecto.Repo, adapter: Adapter
-    def url, do: "ecto://user:pass@localhost/repo"
+    def conf, do: parse_url "ecto://user:pass@localhost/repo"
   end
 
   defmodule ExistingRepo do
     use Ecto.Repo, adapter: AlreadyDownAdapter
-    def url, do: "ecto://user:pass@localhost/repo"
+    def conf, do: parse_url "ecto://user:pass@localhost/repo"
   end
 
   defmodule ConfusedRepo do
     use Ecto.Repo, adapter: ConfusedAdapter
-    def url, do: "ecto://user:pass@localhost/confused"
+    def conf, do: parse_url "ecto://user:pass@localhost/confused"
   end
 
   defmodule NoStorageDownRepo do
     use Ecto.Repo, adapter: NoStorageDownAdapter
-    def url, do: "ecto://user:pass@localhost/repo"
+    def conf, do: parse_url "ecto://user:pass@localhost/repo"
   end
 
   test "runs the adapter storage_down" do

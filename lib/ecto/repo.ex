@@ -1,7 +1,7 @@
 defmodule Ecto.Repo do
   @moduledoc """
   This module is used to define a repository. A repository maps to a data
-  store, for example an SQL database. A repository must implement `url/0` and
+  store, for example an SQL database. A repository must implement `conf/0` and
   set an adapter (see `Ecto.Adapter`) to be used for the repository.
 
   When used, the following options are allowed:
@@ -15,8 +15,8 @@ defmodule Ecto.Repo do
       defmodule MyRepo do
         use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
-        def url do
-          "ecto://postgres:postgres@localhost/postgres"
+        def conf do
+          parse_url "ecto://postgres:postgres@localhost/postgres"
         end
       end
 
@@ -26,13 +26,15 @@ defmodule Ecto.Repo do
       defmodule MyRepo do
         use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
 
-        def url(:dev),  do: "ecto://postgres:postgres@localhost/postgres_dev"
-        def url(:test), do: "ecto://postgres:postgres@localhost/postgres_test?size=1"
-        def url(:prod), do: "ecto://postgres:postgres@localhost/postgres_prod"
+        def conf(env), do: parse_url url(env)
+
+        defp url(:dev),  do: "ecto://postgres:postgres@localhost/postgres_dev"
+        defp url(:test), do: "ecto://postgres:postgres@localhost/postgres_test?size=1"
+        defp url(:prod), do: "ecto://postgres:postgres@localhost/postgres_prod"
       end
 
   Notice that, when using the environment, developers should implement
-  `url/1` which automatically passes the environment instead of `url/0`.
+  `conf/1` which automatically passes the environment instead of `conf/0`.
 
   Note the environment is only used at compilation time. That said, don't
   forget to set the `:build_per_environment` option to true in your Mix
@@ -55,10 +57,10 @@ defmodule Ecto.Repo do
       import Ecto.Utils, only: [app_dir: 2]
 
       if @env do
-        def url do
-          url(@env)
+        def conf do
+          conf(@env)
         end
-        defoverridable url: 0
+        defoverridable conf: 0
       end
 
       def start_link do
@@ -113,6 +115,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.rollback(__MODULE__, unquote(adapter), value)
       end
 
+      def parse_url(url) do
+        Ecto.Repo.Backend.parse_url(url)
+      end
+
       def adapter do
         unquote(adapter)
       end
@@ -134,12 +140,19 @@ defmodule Ecto.Repo do
   end
 
   @doc """
-  Should return the Ecto URL to be used for the repository. A URL is of the
-  following format: `ecto://username:password@hostname:port/database?opts=123`
-  where the `password`, `port` and `options` are optional. This function must be
-  implemented by the user.
+  Should return the database options that will be given to the adapter. Often
+  used in conjunction with `parse_url/1`. This  function must be implemented by
+  the user.
   """
-  defcallback url() :: String.t
+  defcallback conf() :: Keyword.t
+
+
+  @doc """
+  Parses an Ecto URL of the following format:
+  `ecto://username:password@hostname:port/database?opts=123` where the
+  `password`, `port` and `options` are optional.
+  """
+  defcallback parse_url(String.t) :: Keyword.t
 
   @doc """
   Starts any connection pooling or supervision and return `{ :ok, pid }`

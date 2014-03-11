@@ -45,16 +45,19 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
   defmodule <%= inspect @mod %> do
     use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
 
+    @doc "Adapter configuration"
+    def conf(env), do: parse_url url(env)
+
     @doc "The URL to reach the database."
-    def url(:dev) do
+    defp url(:dev) do
       "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_dev"
     end
 
-    def url(:test) do
+    defp url(:test) do
       "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_test?size=1&max_overflow=0"
     end
 
-    def url(:prod) do
+    defp url(:prod) do
       "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_prod"
     end
 

@@ -17,7 +17,7 @@ end
 defmodule Ecto.RepoTest.MyRepo do
   use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter
 
-  def url,  do: ""
+  def conf, do: []
   def priv, do: app_dir(:ecto, "priv/db")
 end
 
@@ -68,10 +68,10 @@ defmodule Ecto.RepoTest do
       # Use a variable to ensure it is properly expanded at runtime
       env = :dev
       use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter, env: env
-      def url(:dev), do: "dev_sample"
+      def conf(:dev), do: "dev_sample"
     end
 
-    assert EnvRepo.url == "dev_sample"
+    assert EnvRepo.conf == "dev_sample"
   end
 
   test "needs entity with primary key" do
@@ -193,5 +193,34 @@ defmodule Ecto.RepoTest do
 
   test "app_dir is available" do
     assert MyRepo.priv == Path.expand("../../_build/shared/lib/ecto/priv/db", __DIR__)
+  end
+
+  test "parse_url options" do
+    url = MyRepo.parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b")
+    assert { :password, "hunter2" } in url
+    assert { :username, "eric" } in url
+    assert { :hostname, "host" } in url
+    assert { :database, "mydb" } in url
+    assert { :port, 12345 } in url
+    assert { :size, "10" } in url
+    assert { :a, "b" } in url
+  end
+
+  test "fail on invalid urls" do
+    assert_raise Ecto.InvalidURL, ~r"url should start with a scheme", fn ->
+      MyRepo.parse_url("eric:hunter2@host:123/mydb")
+    end
+
+    assert_raise Ecto.InvalidURL, ~r"url has to contain a username", fn ->
+      MyRepo.parse_url("ecto://host:123/mydb")
+    end
+
+    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
+      MyRepo.parse_url("ecto://eric:hunter2@host:123/a/b/c")
+    end
+
+    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
+      MyRepo.parse_url("ecto://eric:hunter2@host:123/")
+    end
   end
 end

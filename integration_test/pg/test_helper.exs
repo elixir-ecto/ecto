@@ -19,8 +19,8 @@ defmodule Ecto.Integration.Postgres.TestRepo do
     "integration_test/pg/ecto/priv"
   end
 
-  def url do
-    "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
+  def conf do
+    parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
   end
 
   def query_apis do

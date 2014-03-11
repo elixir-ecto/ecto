@@ -11,16 +11,16 @@ defmodule Ecto.Repo.Backend do
   require Ecto.Query, as: Q
 
   def storage_up(repo, adapter) do
-    adapter.storage_up(parse_url(repo.url))
+    adapter.storage_up(repo.conf)
   end
 
   def storage_down(repo, adapter) do
-    adapter.storage_down(parse_url(repo.url))
+    adapter.storage_down(repo.conf)
   end
 
   def start_link(repo, adapter) do
     Enum.each(repo.query_apis, &Code.ensure_loaded(&1))
-    adapter.start_link(repo, parse_url(repo.url))
+    adapter.start_link(repo, repo.conf)
   end
 
   def stop(repo, adapter) do
@@ -116,10 +116,7 @@ defmodule Ecto.Repo.Backend do
     adapter.rollback(repo, value)
   end
 
-  ## Helpers
-
-  defp parse_url(url) do
-
+  def parse_url(url) do
     unless String.match? url, ~r/^[^:\/?#\s]+:\/\// do
       raise Ecto.InvalidURL, url: url, reason: "url should start with a scheme, host should start with //"
     end
@@ -147,6 +144,8 @@ defmodule Ecto.Repo.Backend do
 
     opts ++ query
   end
+
+  ## Helpers
 
   defp atomize_keys(dict) do
     Enum.map dict, fn({ k, v }) -> { binary_to_atom(k), v } end

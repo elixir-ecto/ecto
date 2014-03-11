@@ -23,27 +23,27 @@ defmodule Mix.Tasks.Ecto.CreateTest do
   defmodule NoStorageUpAdapter do
     defmacro __using__(_), do: :ok
   end
-  
+
   #Mocked repos
 
   defmodule Repo do
     use Ecto.Repo, adapter: Adapter
-    def url, do: "ecto://user:pass@localhost/repo"
+    def conf, do: parse_url "ecto://user:pass@localhost/repo"
   end
 
   defmodule ExistingRepo do
     use Ecto.Repo, adapter: AlreadyUpAdapter
-    def url, do: "ecto://user:pass@localhost/repo"
+    def conf, do: parse_url "ecto://user:pass@localhost/repo"
   end
 
   defmodule ConfusedRepo do
     use Ecto.Repo, adapter: ConfusedAdapter
-    def url, do: "ecto://user:pass@localhost/confused"
+    def conf, do: parse_url "ecto://user:pass@localhost/confused"
   end
 
   defmodule NoStorageUpRepo do
     use Ecto.Repo, adapter: NoStorageUpAdapter
-    def url, do: "ecto://user:pass@localhost/repo"
+    def conf, do: parse_url "ecto://user:pass@localhost/repo"
   end
 
   test "runs the adapter storage_up" do

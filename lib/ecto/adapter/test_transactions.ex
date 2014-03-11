@@ -17,8 +17,8 @@ defmodule Ecto.Adapter.TestTransactions  do
 
         # When testing it is important to set `size=1&max_overflow=0` so that
         # the repo will only have one connection
-        def url do
-          "ecto://postgres:postgres@localhost/test?size=1&max_overflow=0"
+        def conf do
+          parse_url "ecto://postgres:postgres@localhost/test?size=1&max_overflow=0"
         end
       end
 

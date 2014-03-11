@@ -3,9 +3,9 @@ defmodule Ecto.Adapters.PostgresTest do
 
   defmodule Repo do
     use Ecto.Repo, adapter: Ecto.Adapters.Postgres
-    
-    def url do
-      "ecto://postgres:postgres@localhost/repo"
+
+    def conf do
+      parse_url "ecto://postgres:postgres@localhost/repo"
     end
   end
 

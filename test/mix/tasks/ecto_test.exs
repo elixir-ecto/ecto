@@ -4,7 +4,6 @@ defmodule Mix.Tasks.EctoTest do
   import Mix.Tasks.Ecto
 
   defmodule Repo do
-
     def start_link do
       Process.get(:start_link)
     end

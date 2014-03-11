@@ -7,11 +7,11 @@ defmodule Ecto.Integration.LockTest do
   defmodule TestRepo1 do
     use Ecto.Repo, adapter: Postgres
 
-    def url do
-      "ecto://postgres:postgres@localhost/ecto_test?size=10"
+    def conf do
+      parse_url "ecto://postgres:postgres@localhost/ecto_test?size=10"
     end
   end
-  
+
   setup_all do
     { :ok, _ } = TestRepo1.start_link
     :ok
@@ -34,7 +34,7 @@ defmodule Ecto.Integration.LockTest do
   test "lock for update" do
     query = from(p in Post, where: p.id == 42, lock: true)
     pid = self
-    
+
     new_pid =
       spawn_link fn ->
         receive do
@@ -48,7 +48,7 @@ defmodule Ecto.Integration.LockTest do
           5000 -> raise "timeout"
         end
       end
-    
+
     TestRepo1.transaction(fn ->
       [post] = TestRepo1.all(query)           # select and lock the row
       send new_pid, :select_for_update        # signal second process to begin a transaction
@@ -69,5 +69,5 @@ defmodule Ecto.Integration.LockTest do
     # final count will be 3 if SELECT ... FOR UPDATE worked and 2 otherwise
     assert [Post.Entity[count: 3]] = TestRepo1.all(Post)
   end
- 
+
 end

@@ -7,16 +7,16 @@ defmodule Ecto.Integration.TransactionTest do
   defmodule TestRepo1 do
     use Ecto.Repo, adapter: Postgres
 
-    def url do
-      "ecto://postgres:postgres@localhost/ecto_test?size=10"
+    def conf do
+      parse_url "ecto://postgres:postgres@localhost/ecto_test?size=10"
     end
   end
 
   defmodule TestRepo2 do
     use Ecto.Repo, adapter: Postgres
 
-    def url do
-      "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
+    def conf do
+      parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
     end
   end
 

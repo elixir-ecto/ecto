@@ -190,7 +190,7 @@ defmodule Ecto.Entity do
   belongs to zero or one records of the queryable structure. The other queryable
   often has a `has_one` or a `has_many` field with the reverse association.
   Compared to `has_one` this association should be used where you would place
-  the foreign key on a SQL table.
+  the foreign key on an SQL table.
 
   Creates a virtual field called `name`. The association can be accessed via
   this field, see `Ecto.Associations.BelongsTo` for more information. Check the
