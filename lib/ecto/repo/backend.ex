@@ -27,7 +27,7 @@ defmodule Ecto.Repo.Backend do
     adapter.stop(repo)
   end
 
-  def get(repo, adapter, queryable, id) do
+  def get(repo, adapter, queryable, id, opts) do
     query       = Queryable.to_query(queryable)
     entity      = query.from |> Util.entity
     primary_key = entity.__entity__(:primary_key)
@@ -47,34 +47,34 @@ defmodule Ecto.Repo.Backend do
                    where: field(x, ^primary_key) == ^id,
                    limit: 1) |> Normalizer.normalize
 
-    case adapter.all(repo, query) do
+    case adapter.all(repo, query, opts) do
       [entity] -> entity
       [] -> nil
       _ -> raise Ecto.NotSingleResult, entity: entity
     end
   end
 
-  def all(repo, adapter, queryable) do
+  def all(repo, adapter, queryable, opts) do
     query = Queryable.to_query(queryable) |> Normalizer.normalize
     Validator.validate(query, repo.query_apis)
-    adapter.all(repo, query)
+    adapter.all(repo, query, opts)
   end
 
-  def create(repo, adapter, entity) do
+  def create(repo, adapter, entity, opts) do
     normalized_entity = normalize_entity(entity)
     validate_entity(normalized_entity)
-    adapter.create(repo, normalized_entity) |> entity.update
+    adapter.create(repo, normalized_entity, opts) |> entity.update
   end
 
-  def update(repo, adapter, entity) do
+  def update(repo, adapter, entity, opts) do
     entity = normalize_entity(entity)
     check_primary_key(entity)
     validate_entity(entity)
 
-    adapter.update(repo, entity) |> check_single_result(entity)
+    adapter.update(repo, entity, opts) |> check_single_result(entity)
   end
 
-  def update_all(repo, adapter, queryable, values) do
+  def update_all(repo, adapter, queryable, values, opts) do
     { binds, expr } = FromBuilder.escape(queryable)
 
     values = Enum.map(values, fn({ field, expr }) ->
@@ -83,33 +83,33 @@ defmodule Ecto.Repo.Backend do
     end)
 
     quote do
-      Ecto.Repo.Backend.runtime_update_all(unquote(repo),
-        unquote(adapter), unquote(expr), unquote(values))
+      Ecto.Repo.Backend.runtime_update_all(unquote(repo), unquote(adapter),
+        unquote(expr), unquote(values), unquote(opts))
     end
   end
 
-  def runtime_update_all(repo, adapter, queryable, values) do
+  def runtime_update_all(repo, adapter, queryable, values, opts) do
     query = Queryable.to_query(queryable) |> Normalizer.normalize(skip_select: true)
     Validator.validate_update(query, repo.query_apis, values)
-    adapter.update_all(repo, query, values)
+    adapter.update_all(repo, query, values, opts)
   end
 
-  def delete(repo, adapter, entity) do
+  def delete(repo, adapter, entity, opts) do
     entity = normalize_entity(entity)
     check_primary_key(entity)
     validate_entity(entity)
 
-    adapter.delete(repo, entity) |> check_single_result(entity)
+    adapter.delete(repo, entity, opts) |> check_single_result(entity)
   end
 
-  def delete_all(repo, adapter, queryable) do
+  def delete_all(repo, adapter, queryable, opts) do
     query = Queryable.to_query(queryable) |> Normalizer.normalize(skip_select: true)
     Validator.validate_delete(query, repo.query_apis)
-    adapter.delete_all(repo, query)
+    adapter.delete_all(repo, query, opts)
   end
 
-  def transaction(repo, adapter, fun) when is_function(fun, 0) do
-    adapter.transaction(repo, fun)
+  def transaction(repo, adapter, opts, fun) when is_function(fun, 0) do
+    adapter.transaction(repo, opts, fun)
   end
 
   def rollback(repo, adapter, value) do

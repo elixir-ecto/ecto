@@ -5,6 +5,8 @@ defmodule Ecto.Adapters.Postgres.Worker do
 
   defrecordp :state, [ :conn, :params, :monitor ]
 
+  @timeout 5000
+
   def start(args) do
     :gen_server.start(__MODULE__, args, [])
   end
@@ -13,29 +15,29 @@ defmodule Ecto.Adapters.Postgres.Worker do
     :gen_server.start_link(__MODULE__, args, [])
   end
 
-  def query!(worker, sql, params \\ []) do
-    case :gen_server.call(worker, { :query, sql, params }) do
+  def query!(worker, sql, params, timeout \\ @timeout) do
+    case :gen_server.call(worker, { :query, sql, params, timeout }, timeout) do
       { :ok, res } -> res
       { :error, Postgrex.Error[] = err } -> raise err
     end
   end
 
-  def begin!(worker) do
-    case :gen_server.call(worker, :begin) do
+  def begin!(worker, timeout \\ @timeout) do
+    case :gen_server.call(worker, { :begin, timeout }, timeout) do
       :ok -> :ok
       Postgrex.Error[] = err -> raise err
     end
   end
 
-  def commit!(worker) do
-    case :gen_server.call(worker, :commit) do
+  def commit!(worker, timeout \\ @timeout) do
+    case :gen_server.call(worker, { :commit, timeout }, timeout) do
       :ok -> :ok
       Postgrex.Error[] = err -> raise err
     end
   end
 
-  def rollback!(worker) do
-    case :gen_server.call(worker, :rollback) do
+  def rollback!(worker, timeout \\ @timeout) do
+    case :gen_server.call(worker, { :rollback, timeout }, timeout) do
       :ok -> :ok
       Postgrex.Error[] = err -> raise err
     end
@@ -71,20 +73,20 @@ defmodule Ecto.Adapters.Postgres.Worker do
     end
   end
 
-  def handle_call({ :query, sql, params }, _from, state(conn: conn) = s) do
-    { :reply, Postgrex.Connection.query(conn, sql, params), s }
+  def handle_call({ :query, sql, params, timeout }, _from, state(conn: conn) = s) do
+    { :reply, Postgrex.Connection.query(conn, sql, params, timeout), s }
   end
 
-  def handle_call(:begin, _from, state(conn: conn) = s) do
-    { :reply, Postgrex.Connection.begin(conn), s }
+  def handle_call({ :begin, timeout }, _from, state(conn: conn) = s) do
+    { :reply, Postgrex.Connection.begin(conn, timeout), s }
   end
 
-  def handle_call(:commit, _from, state(conn: conn) = s) do
-    { :reply, Postgrex.Connection.commit(conn), s }
+  def handle_call({ :commit, timeout }, _from, state(conn: conn) = s) do
+    { :reply, Postgrex.Connection.commit(conn, timeout), s }
   end
 
-  def handle_call(:rollback, _from, state(conn: conn) = s) do
-    { :reply, Postgrex.Connection.rollback(conn), s }
+  def handle_call({ :rollback, timeout }, _from, state(conn: conn) = s) do
+    { :reply, Postgrex.Connection.rollback(conn, timeout), s }
   end
 
   def handle_cast({ :monitor, pid }, state(monitor: nil) = s) do

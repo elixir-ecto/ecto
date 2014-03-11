@@ -13,7 +13,7 @@ defmodule Ecto.Adapter.Transactions  do
 
   See `Ecto.Repo.transaction/1`.
   """
-  defcallback transaction(Ecto.Repo.t, fun) :: { :ok, any } | { :error, any }
+  defcallback transaction(Ecto.Repo.t, Keyword.t, fun) :: { :ok, any } | { :error, any }
 
   @doc """
   Rolls back the current transaction. The transaction will return the value

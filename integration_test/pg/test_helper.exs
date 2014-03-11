@@ -110,11 +110,11 @@ defmodule Ecto.Integration.Postgres.Case do
   end
 
   setup do
-    :ok = Postgres.begin_test_transaction(TestRepo)
+    :ok = Postgres.begin_test_transaction(TestRepo, [])
   end
 
   teardown do
-    :ok = Postgres.rollback_test_transaction(TestRepo)
+    :ok = Postgres.rollback_test_transaction(TestRepo, [])
   end
 end
 
@@ -163,7 +163,7 @@ setup_database = [
 { :ok, _pid } = TestRepo.start_link
 
 Enum.each(setup_database, fn(sql) ->
-  result = Postgres.query(TestRepo, sql)
+  result = Postgres.query(TestRepo, sql, [])
   if match?({ :error, _ }, result) do
     IO.puts("Test database setup SQL error'd: `#{sql}`")
     IO.inspect(result)

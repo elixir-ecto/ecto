@@ -99,7 +99,7 @@ defmodule Ecto.Integration.MigrationsTest do
       end) == ""
 
       assert Postgrex.Result[num_rows: 3] =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
     end
   end
 
@@ -113,7 +113,7 @@ defmodule Ecto.Integration.MigrationsTest do
       end) == "* running UP 45_migration.exs\n"
 
       assert Postgrex.Result[num_rows: 1] =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
         assert [46] = run(TestRepo, path, :up, to: 46)
@@ -131,7 +131,7 @@ defmodule Ecto.Integration.MigrationsTest do
       end) == "* running UP 47_migration.exs\n"
 
       assert Postgrex.Result[num_rows: 1] =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
         assert [48] = run(TestRepo, path, :up, to: 48)
@@ -158,7 +158,7 @@ defmodule Ecto.Integration.MigrationsTest do
       purge migrations
 
       assert Postgrex.Result[num_rows: 1] =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
         assert [50] = run(TestRepo, path, :up, to: 50)
@@ -186,7 +186,7 @@ defmodule Ecto.Integration.MigrationsTest do
       purge migrations
 
       assert Postgrex.Result[num_rows: 1] =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
         assert [52] = run(TestRepo, path, :up, to: 52)
@@ -214,7 +214,7 @@ defmodule Ecto.Integration.MigrationsTest do
       purge migrations
 
       assert Postgrex.Result[num_rows: 0] =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test")
+        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
         assert [53, 54] = run(TestRepo, path, :up, all: true)

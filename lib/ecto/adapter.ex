@@ -30,34 +30,34 @@ defmodule Ecto.Adapter do
   @doc """
   Fetches all results from the data store based on the given query.
   """
-  defcallback all(Ecto.Repo.t, Ecto.Query.t) :: [term] | no_return
+  defcallback all(Ecto.Repo.t, Ecto.Query.t, Keyword.t) :: [term] | no_return
 
   @doc """
   Stores a single new entity in the data store. Return the default values.
   """
-  defcallback create(Ecto.Repo.t, Ecto.Entity.t) :: [Keyword.t] | no_return
+  defcallback create(Ecto.Repo.t, Ecto.Entity.t, Keyword.t) :: [Keyword.t] | no_return
 
   @doc """
   Updates an entity using the primary key as key.
   """
-  defcallback update(Ecto.Repo.t, Ecto.Entity.t) :: :ok | no_return
+  defcallback update(Ecto.Repo.t, Ecto.Entity.t, Keyword.t) :: :ok | no_return
 
   @doc """
   Updates all entities matching the given query with the values given. The
   query will only have where expressions and a single from expression. Returns
   the number of affected entities.
   """
-  defcallback update_all(Ecto.Repo.t, Ecto.Query.t, values :: Keyword.t) :: :integer | no_return
+  defcallback update_all(Ecto.Repo.t, Ecto.Query.t, values :: Keyword.t, Keyword.t) :: :integer | no_return
 
   @doc """
   Deletes an entity using the primary key as key.
   """
-  defcallback delete(Ecto.Repo.t, Ecto.Entity.t) :: :ok | no_return
+  defcallback delete(Ecto.Repo.t, Ecto.Entity.t, Keyword.t) :: :ok | no_return
 
   @doc """
   Deletes all entities matching the given query. The query will only have
   where expressions and a single from expression. Returns the number of affected
   entities.
   """
-  defcallback delete_all(Ecto.Repo.t, Ecto.Query.t) :: :integer | no_return
+  defcallback delete_all(Ecto.Repo.t, Ecto.Query.t, Keyword.t) :: :integer | no_return
 end

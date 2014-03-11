@@ -12,6 +12,7 @@ defmodule Ecto.Adapters.Postgres do
   @behaviour Ecto.Adapter.TestTransactions
 
   @default_port 5432
+  @timeout 5000
 
   alias Ecto.Adapters.Postgres.SQL
   alias Ecto.Adapters.Postgres.Worker
@@ -41,10 +42,10 @@ defmodule Ecto.Adapters.Postgres do
     :poolboy.stop(pool_name)
   end
 
-  def all(repo, Query[] = query) do
+  def all(repo, Query[] = query, opts) do
     pg_query = Query[] = query.select |> normalize_select |> query.select
 
-    Postgrex.Result[rows: rows] = query(repo, SQL.select(pg_query))
+    Postgrex.Result[rows: rows] = query(repo, SQL.select(pg_query), [], opts)
 
     # Transform each row based on select expression
     transformed =
@@ -58,14 +59,14 @@ defmodule Ecto.Adapters.Postgres do
     |> preload(repo, query)
   end
 
-  def create(repo, entity) do
+  def create(repo, entity, opts) do
     module      = elem(entity, 0)
 
     returning = module.__entity__(:keywords, entity)
       |> Enum.filter(fn { _, val } -> val == nil end)
       |> Keyword.keys
 
-    case query(repo, SQL.insert(entity, returning)) do
+    case query(repo, SQL.insert(entity, returning), [], opts) do
       Postgrex.Result[rows: [values]] ->
         Enum.zip(returning, tuple_to_list(values))
       _ ->
@@ -73,30 +74,31 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
-  def update(repo, entity) do
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update(entity))
+  def update(repo, entity, opts) do
+    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update(entity), [], opts)
     nrows
   end
 
-  def update_all(repo, query, values) do
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update_all(query, values))
+  def update_all(repo, query, values, opts) do
+    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update_all(query, values), [], opts)
     nrows
   end
 
-  def delete(repo, entity) do
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete(entity))
+  def delete(repo, entity, opts) do
+    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete(entity), [], opts)
     nrows
   end
 
-  def delete_all(repo, query) do
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete_all(query))
+  def delete_all(repo, query, opts) do
+    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete_all(query), [], opts)
     nrows
   end
 
-  def query(repo, sql, params \\ []) do
+  def query(repo, sql, params, opts \\ []) do
+    timeout = opts[:timeout] || @timeout
     repo.log({ :query, sql }, fn ->
-      use_worker(repo, fn worker ->
-        Worker.query!(worker, sql, params)
+      use_worker(repo, timeout, fn worker ->
+        Worker.query!(worker, sql, params, timeout)
       end)
     end)
   end
@@ -201,19 +203,20 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Transaction API
 
-  def transaction(repo, fun) do
-    worker = checkout_worker(repo)
+  def transaction(repo, opts, fun) do
+    timeout = opts[:timout] || @timeout
+    worker = checkout_worker(repo, timeout)
     try do
-      do_begin(repo, worker)
+      do_begin(repo, worker, timeout)
       value = fun.()
-      do_commit(repo, worker)
+      do_commit(repo, worker, timeout)
       { :ok, value }
     catch
       :throw, { :ecto_rollback, value } ->
-        do_rollback(repo, worker)
+        do_rollback(repo, worker, timeout)
         { :error, value }
       type, term ->
-        do_rollback(repo, worker)
+        do_rollback(repo, worker, timeout)
         :erlang.raise(type, term, System.stacktrace)
     after
       checkin_worker(repo)
@@ -224,7 +227,7 @@ defmodule Ecto.Adapters.Postgres do
     throw { :ecto_rollback, value }
   end
 
-  defp use_worker(repo, fun) do
+  defp use_worker(repo, timeout, fun) do
     pool = repo.__postgres__(:pool_name)
     key = { :ecto_transaction_pid, pool }
 
@@ -232,7 +235,7 @@ defmodule Ecto.Adapters.Postgres do
       in_transaction = true
       worker = elem(value, 0)
     else
-      worker = :poolboy.checkout(pool)
+      worker = :poolboy.checkout(pool, true, timeout)
     end
 
     try do
@@ -244,7 +247,7 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
-  defp checkout_worker(repo) do
+  defp checkout_worker(repo, timeout) do
     pool = repo.__postgres__(:pool_name)
     key = { :ecto_transaction_pid, pool }
 
@@ -253,7 +256,7 @@ defmodule Ecto.Adapters.Postgres do
         Process.put(key, { worker, counter + 1 })
         worker
       nil ->
-        worker = :poolboy.checkout(pool)
+        worker = :poolboy.checkout(pool, timeout)
         Worker.monitor_me(worker)
         Process.put(key, { worker, 1 })
         worker
@@ -275,38 +278,40 @@ defmodule Ecto.Adapters.Postgres do
     :ok
   end
 
-  defp do_begin(repo, worker) do
+  defp do_begin(repo, worker, timeout) do
     repo.log(:begin, fn ->
-      Worker.begin!(worker)
+      Worker.begin!(worker, timeout)
     end)
   end
 
-  defp do_rollback(repo, worker) do
+  defp do_rollback(repo, worker, timeout) do
     repo.log(:rollback, fn ->
-      Worker.rollback!(worker)
+      Worker.rollback!(worker, timeout)
     end)
   end
 
-  defp do_commit(repo, worker) do
+  defp do_commit(repo, worker, timeout) do
     repo.log(:commit, fn ->
-      Worker.commit!(worker)
+      Worker.commit!(worker, timeout)
     end)
   end
 
   ## Test transaction API
 
-  def begin_test_transaction(repo) do
+  def begin_test_transaction(repo, opts) do
+    timeout = opts[:timeout] || @timeout
     pool = repo.__postgres__(:pool_name)
     :poolboy.transaction(pool, fn worker ->
-      do_begin(repo, worker)
-    end)
+      do_begin(repo, worker, timeout)
+    end, timeout)
   end
 
-  def rollback_test_transaction(repo) do
+  def rollback_test_transaction(repo, opts) do
+    timeout = opts[:timeout] || @timeout
     pool = repo.__postgres__(:pool_name)
     :poolboy.transaction(pool, fn worker ->
-      do_rollback(repo, worker)
-    end)
+      do_rollback(repo, worker, timeout)
+    end, timeout)
   end
 
   ## Storage API
@@ -355,8 +360,8 @@ defmodule Ecto.Adapters.Postgres do
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
       Postgrex.Result[num_rows: 0] ->
-        transaction(repo, fn ->
-          Enum.each(commands, &query(repo, &1))
+        transaction(repo, [], fn ->
+          Enum.each(commands, &query(repo, &1, []))
           insert_migration_version(repo, version)
         end)
         :ok
@@ -370,8 +375,8 @@ defmodule Ecto.Adapters.Postgres do
       Postgrex.Result[num_rows: 0] ->
         :missing_up
       _ ->
-        transaction(repo, fn ->
-          Enum.each(commands, &query(repo, &1))
+        transaction(repo, [], fn ->
+          Enum.each(commands, &query(repo, &1, []))
           delete_migration_version(repo, version)
         end)
         :ok
@@ -380,24 +385,24 @@ defmodule Ecto.Adapters.Postgres do
 
   def migrated_versions(repo) do
     create_migrations_table(repo)
-    Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations")
+    Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations", [])
     Enum.map(rows, &elem(&1, 0))
   end
 
   defp create_migrations_table(repo) do
-    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)")
+    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)", [])
   end
 
   defp check_migration_version(repo, version) do
     create_migrations_table(repo)
-    query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}")
+    query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}", [])
   end
 
   defp insert_migration_version(repo, version) do
-    query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})")
+    query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})", [])
   end
 
   defp delete_migration_version(repo, version) do
-    query(repo, "DELETE FROM schema_migrations WHERE version = #{version}")
+    query(repo, "DELETE FROM schema_migrations WHERE version = #{version}", [])
   end
 end

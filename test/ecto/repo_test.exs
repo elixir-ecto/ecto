@@ -4,14 +4,14 @@ defmodule Ecto.RepoTest.MockAdapter do
   defmacro __using__(_opts), do: :ok
   def start_link(_repo, _opts), do: :ok
   def stop(_repo), do: :ok
-  def all(_repo, _query), do: []
-  def create(_repo, record) do
+  def all(_repo, _query, _opts), do: []
+  def create(_repo, record, _opts) do
     record.id(45)
   end
-  def update(_repo, _record), do: 1
-  def update_all(_repo, _query, _values), do: 1
-  def delete(_repo, _record), do: 1
-  def delete_all(_repo, _query), do: 1
+  def update(_repo, _record, _opts), do: 1
+  def update_all(_repo, _query, _values, _opts), do: 1
+  def delete(_repo, _record, _opts), do: 1
+  def delete_all(_repo, _query, _opts), do: 1
 end
 
 defmodule Ecto.RepoTest.MyRepo do
