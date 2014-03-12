@@ -1,9 +1,23 @@
 defmodule Ecto.Adapters.Postgres do
-  @moduledoc false
+  @moduledoc """
+  This is the adapter module for PostgreSQL. It handles and pools the
+  connections to the postgres database with poolboy.
 
-  # TODO: Make this module public and document the adapter options
-  # This module handles the connections to the Postgres database with poolboy.
-  # Each repository has their own pool.
+  ## Options
+
+  The options should be given via `Ecto.Repo.conf/0`.
+
+  `:hostname` - Server hostname;
+  `:port` - Server port (default: 5432);
+  `:username` - Username;
+  `:password` - User password;
+  `:size` - The number of connections to keep in the pool;
+  `:max_overflow` - The maximum overflow of connections (see poolboy docs);
+  `:parameters` - Keyword list of connection parameters;
+  `:ssl` - Set to true if ssl should be used (default: false);
+  `:ssl_opts` - A list of ssl options, see ssl docs;
+  `:lazy` - If false all connections will be started immediately on Repo startup (default: true)
+  """
 
   @behaviour Ecto.Adapter
   @behaviour Ecto.Adapter.Migrations
@@ -24,6 +38,7 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Adapter API
 
+  @doc false
   defmacro __using__(_opts) do
     quote do
       def __postgres__(:pool_name) do
@@ -32,16 +47,19 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  @doc false
   def start_link(repo, opts) do
     { pool_opts, worker_opts } = prepare_start(repo, opts)
     :poolboy.start_link(pool_opts, worker_opts)
   end
 
+  @doc false
   def stop(repo) do
     pool_name = repo.__postgres__(:pool_name)
     :poolboy.stop(pool_name)
   end
 
+  @doc false
   def all(repo, Query[] = query, opts) do
     pg_query = Query[] = query.select |> normalize_select |> query.select
 
@@ -59,6 +77,7 @@ defmodule Ecto.Adapters.Postgres do
     |> preload(repo, query)
   end
 
+  @doc false
   def create(repo, entity, opts) do
     module      = elem(entity, 0)
 
@@ -74,26 +93,42 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  @doc false
   def update(repo, entity, opts) do
     Postgrex.Result[num_rows: nrows] = query(repo, SQL.update(entity), [], opts)
     nrows
   end
 
+  @doc false
   def update_all(repo, query, values, opts) do
     Postgrex.Result[num_rows: nrows] = query(repo, SQL.update_all(query, values), [], opts)
     nrows
   end
 
+  @doc false
   def delete(repo, entity, opts) do
     Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete(entity), [], opts)
     nrows
   end
 
+  @doc false
   def delete_all(repo, query, opts) do
     Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete_all(query), [], opts)
     nrows
   end
 
+  @doc """
+  Run custom SQL query on given repo.
+
+  ## Options
+    `:timeout` - The time in milliseconds to wait for the call to finish,
+                 `:infinity` will wait indefinitely (default: 5000);
+
+  ## Examples
+
+      iex> Postgres.query(MyRepo, "SELECT $1 + $2", [40, 2])
+      Postgrex.Result[command: :select, columns: ["?column?"], rows: [{42}], num_rows: 1]
+  """
   def query(repo, sql, params, opts \\ []) do
     timeout = opts[:timeout] || @timeout
     repo.log({ :query, sql }, fn ->
@@ -122,6 +157,7 @@ defmodule Ecto.Adapters.Postgres do
     { pool_opts, worker_opts }
   end
 
+  @doc false
   def normalize_select(QueryExpr[expr: { :assoc, _, [_, _] } = assoc] = expr) do
     normalize_assoc(assoc) |> expr.expr
   end
@@ -203,6 +239,7 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Transaction API
 
+  @doc false
   def transaction(repo, opts, fun) do
     timeout = opts[:timout] || @timeout
     worker = checkout_worker(repo, timeout)
@@ -223,6 +260,7 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  @doc false
   def rollback(_repo, value) do
     throw { :ecto_rollback, value }
   end
@@ -298,6 +336,7 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Test transaction API
 
+  @doc false
   def begin_test_transaction(repo, opts) do
     timeout = opts[:timeout] || @timeout
     pool = repo.__postgres__(:pool_name)
@@ -306,6 +345,7 @@ defmodule Ecto.Adapters.Postgres do
     end, timeout)
   end
 
+  @doc false
   def rollback_test_transaction(repo, opts) do
     timeout = opts[:timeout] || @timeout
     pool = repo.__postgres__(:pool_name)
@@ -316,6 +356,7 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Storage API
 
+  @doc false
   def storage_up(opts) do
     # TODO: allow the user to specify those options either in the Repo or on command line
     database_options = ~s(ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8')
@@ -329,6 +370,7 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  @doc false
   def storage_down(opts) do
     output = run_with_psql(opts, "DROP DATABASE #{ opts[:database] }")
 
@@ -357,6 +399,7 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Migration API
 
+  @doc false
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
       Postgrex.Result[num_rows: 0] ->
@@ -370,6 +413,7 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  @doc false
   def migrate_down(repo, version, commands) do
     case check_migration_version(repo, version) do
       Postgrex.Result[num_rows: 0] ->
@@ -383,6 +427,7 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  @doc false
   def migrated_versions(repo) do
     create_migrations_table(repo)
     Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations", [])

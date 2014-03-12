@@ -142,7 +142,7 @@ defmodule Ecto.Repo do
 
   @doc """
   Should return the database options that will be given to the adapter. Often
-  used in conjunction with `parse_url/1`. This  function must be implemented by
+  used in conjunction with `parse_url/1`. This function must be implemented by
   the user.
   """
   defcallback conf() :: Keyword.t

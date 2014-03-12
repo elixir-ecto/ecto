@@ -51,16 +51,18 @@ defmodule Ecto.Adapters.Postgres.Worker do
     :gen_server.cast(worker, { :demonitor, self })
   end
 
-  def init(args) do
+  def init(opts) do
     Process.flag(:trap_exit, true)
 
+    lazy? = opts[:lazy] in [false, "false"]
+
     conn =
-      case args[:lazy] == "false" && Postgrex.Connection.start_link(args) do
+      case lazy? and Postgrex.Connection.start_link(opts) do
         { :ok, conn } -> conn
         _ -> nil
       end
 
-    { :ok, state(conn: conn, params: args) }
+    { :ok, state(conn: conn, params: opts) }
   end
 
   # Connection is disconnected, reconnect before continuing
