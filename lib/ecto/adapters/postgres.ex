@@ -337,7 +337,7 @@ defmodule Ecto.Adapters.Postgres do
   ## Test transaction API
 
   @doc false
-  def begin_test_transaction(repo, opts) do
+  def begin_test_transaction(repo, opts \\ []) do
     timeout = opts[:timeout] || @timeout
     pool = repo.__postgres__(:pool_name)
     :poolboy.transaction(pool, fn worker ->
@@ -346,7 +346,7 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   @doc false
-  def rollback_test_transaction(repo, opts) do
+  def rollback_test_transaction(repo, opts \\ []) do
     timeout = opts[:timeout] || @timeout
     pool = repo.__postgres__(:pool_name)
     :poolboy.transaction(pool, fn worker ->
