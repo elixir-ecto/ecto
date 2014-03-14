@@ -101,7 +101,7 @@ defmodule Ecto.Query.Validator do
     # TODO: File and line metadata
     unless match?(Query[joins: [], select: nil, order_bys: [], limit: nil,
         offset: nil, group_bys: [], havings: [], preloads: [], distincts: [], lock: nil], query) do
-      raise Ecto.QueryError, reason: "update query can only have a single `where` expression"
+      raise Ecto.QueryError, reason: "query can only have `where` expressions"
     end
   end
 
