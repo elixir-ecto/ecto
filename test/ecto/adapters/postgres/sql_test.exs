@@ -309,7 +309,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "in expression" do
     query = Model |> select([e], 1 in array([1,e.x,3], ^:integer)) |> normalize
-    assert SQL.select(query) == "SELECT 1 = ANY (ARRAY[1, m0.\"x\", 3]::integer[])\nFROM \"model\" AS m0"
+    assert SQL.select(query) == "SELECT 1 = ANY (ARRAY[1, m0.\"x\", 3])\nFROM \"model\" AS m0"
 
     query = Model |> select([e], e.x in 1..3) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" BETWEEN 1 AND 3\nFROM \"model\" AS m0"
@@ -319,8 +319,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "list expression" do
+    query = from(e in Model, []) |> where([e], array([], ^:integer) == nil) |> select([e], 0) |> normalize
+    assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nWHERE (ARRAY[]::integer[] IS NULL)"
+
     query = from(e in Model, []) |> where([e], array([e.x, e.y], ^:integer) == nil) |> select([e], 0) |> normalize
-    assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nWHERE (ARRAY[m0.\"x\", m0.\"y\"]::integer[] IS NULL)"
+    assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nWHERE (ARRAY[m0.\"x\", m0.\"y\"] IS NULL)"
   end
 
   test "having" do
@@ -347,7 +350,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "sigils" do
     query = Model |> select([], ~s"abc" in array(~w(abc def), ^:string)) |> normalize
-    assert SQL.select(query) == "SELECT 'abc' = ANY (ARRAY['abc', 'def']::text[])\nFROM \"model\" AS m0"
+    assert SQL.select(query) == "SELECT 'abc' = ANY (ARRAY['abc', 'def'])\nFROM \"model\" AS m0"
   end
 
   defrecord Rec, [:x]

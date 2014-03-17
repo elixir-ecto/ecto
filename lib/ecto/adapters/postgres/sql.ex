@@ -234,7 +234,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp lock(false), do: nil
   defp lock(true), do: "FOR UPDATE"
   defp lock(lock_clause), do: lock_clause
-  
+
   defp boolean(_name, [], _sources), do: nil
 
   defp boolean(name, query_exprs, sources) do
@@ -326,7 +326,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp expr(Ecto.Array[value: list, type: type], sources) do
-    "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]::#{type(type)}[]"
+    sql = "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
+    if list == [], do: sql = sql <> "::#{type(type)}[]"
+    sql
   end
 
   defp expr(literal, _sources), do: literal(literal)
