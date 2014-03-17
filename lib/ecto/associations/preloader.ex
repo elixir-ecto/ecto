@@ -41,33 +41,36 @@ defmodule Ecto.Associations.Preloader do
     should_sort? = should_sort?(records, refl)
 
     # Query for the associated entities
-    query = preload_query(records, refl)
-    associated = repo.all(query)
+    if query = preload_query(records, refl) do
+      associated = repo.all(query)
 
-    # Recurse down nested fields
-    associated = Enum.reduce(sub_fields, associated, &do_run(&2, repo, &1))
+      # Recurse down nested fields
+      associated = Enum.reduce(sub_fields, associated, &do_run(&2, repo, &1))
 
-    if should_sort? do
-      # Save the records old indices and then sort by primary_key or foreign_key
-      # depending on the association type
-      { records, indicies } = records
-      |> Stream.with_index
-      |> sort(refl)
-      |> :lists.unzip
+      if should_sort? do
+        # Save the records old indices and then sort by primary_key or foreign_key
+        # depending on the association type
+        { records, indicies } = records
+        |> Stream.with_index
+        |> sort(refl)
+        |> :lists.unzip
+      end
+
+      # Put the associated entities on the association of the parent
+      merged = merge(records, associated, refl, [], [])
+
+      if should_sort? do
+        # Restore ordering of entities given to the preloader
+        merged = merged
+        |> :lists.zip(indicies)
+        |> unsort()
+        |> Enum.map(&elem(&1, 0))
+      end
+
+      merged
+    else
+      []
     end
-
-    # Put the associated entities on the association of the parent
-    merged = merge(records, associated, refl, [], [])
-
-    if should_sort? do
-      # Restore ordering of entities given to the preloader
-      merged = merged
-      |> :lists.zip(indicies)
-      |> unsort()
-      |> Enum.map(&elem(&1, 0))
-    end
-
-    merged
   end
 
   defp preload_query(records, refl) do
@@ -81,9 +84,11 @@ defmodule Ecto.Associations.Preloader do
       if record && (key = apply(record, key, [])), do: [key|acc], else: acc
     end)
 
-       Q.from x in refl.associated,
-       where: field(x, ^assoc_key) in array(^ids, ^type),
-    order_by: field(x, ^assoc_key)
+    if ids != [] do
+         Q.from x in refl.associated,
+         where: field(x, ^assoc_key) in array(^ids, ^type),
+      order_by: field(x, ^assoc_key)
+    end
   end
 
 
