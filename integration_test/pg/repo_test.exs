@@ -412,6 +412,15 @@ defmodule Ecto.Integration.RepoTest do
     [{ ^p1, ^post }, { ^p2, ^post }] = TestRepo.all(query)
   end
 
+  test "has_many implements Enum.count protocol correctly" do
+    post = TestRepo.create(Post.Entity[title: "1"])
+    TestRepo.create(Comment.Entity[text: "1", post_id: post.id])
+
+    post1 = TestRepo.all(from p in Post, preload: [:comments]) |> hd
+
+    assert Enum.count(post1.comments) == 1
+  end
+
   test "has_many queryable" do
     p1 = TestRepo.create(Post.Entity[title: "1"])
     p2 = TestRepo.create(Post.Entity[title: "1"])
