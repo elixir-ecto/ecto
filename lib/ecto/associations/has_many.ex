@@ -105,7 +105,7 @@ defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
 end
 
 defimpl Enumerable, for: Ecto.Associations.HasMany do
-  def count(assoc), do: length(assoc.to_list)
+  def count(assoc), do: { :ok, length(assoc.to_list) }
   def member?(assoc, value), do: value in assoc.to_list
   def reduce(assoc, acc, fun), do: Enumerable.List.reduce(assoc.to_list, acc, fun)
 end
