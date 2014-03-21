@@ -233,6 +233,16 @@ defmodule Ecto.Adapters.Postgres do
     Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
   end
 
+  defp decoder(TypeInfo[sender: "date"], :binary, default, param) do
+    { year, mon, day } = default.(param)
+    Ecto.Date[year: year, month: mon, day: day]
+  end
+
+  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["time", "timetz"] do
+    { hour, min, sec } = default.(param)
+    Ecto.Time[hour: hour, min: min, sec: sec]
+  end
+
   defp decoder(_type, _format, default, param) do
     default.(param)
   end

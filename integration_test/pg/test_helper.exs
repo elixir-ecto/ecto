@@ -49,6 +49,8 @@ defmodule Ecto.Integration.Postgres.Comment do
   queryable "comments" do
     field :text, :string
     field :posted, :datetime
+    field :day, :date
+    field :time, :time
     field :interval, :interval
     field :bytes, :binary
     belongs_to :post, Ecto.Integration.Postgres.Post
@@ -151,7 +153,7 @@ end)
 
 setup_database = [
   "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
-  "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, interval interval, bytes bytea, post_id integer, author_id integer)",
+  "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, day date, time time, interval interval, bytes bytea, post_id integer, author_id integer)",
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
   "CREATE TABLE customs (foo text PRIMARY KEY)",

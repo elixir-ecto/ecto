@@ -9,6 +9,7 @@
   * Add `Validator.bin_dict/2`
   * Add `Ecto.Repo.rollback` for explicit transaction rollback
   * Add support for timeouts on Repo calls
+  * Add `:date` and `:time` types
 
 * Bug fixes
   * Fix association functions resetting the entity when manually loading associated entities
@@ -21,6 +22,7 @@
   * `:list` type changed name to `:array`. Need to specify inner type for arrays in entity fields
   * Literal lists no longer supported in queries. Need to specify inner type; use `array(list, ^:integer)` instead
   * Remove `url/0` for configuration of repos in favor of `conf/0` in conjunction with `parse_url/1`
+  * Query functions `date_add/1` and `date_sub/1` renamed to `time_add/1` and `time_sub/1` respectively, they also accept the types `:time` and `:date`
 
 # v0.0.1
 
