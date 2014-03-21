@@ -42,12 +42,20 @@ Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, yo
 
 ```elixir
 defp deps do
-  [ { :postgrex, github: "ericmj/postgrex" },
-    { :ecto, github: "elixir-lang/ecto" } ]
+  [{ :postgrex, github: "ericmj/postgrex" },
+   { :ecto, github: "elixir-lang/ecto" }]
 end
 ```
 
-After you are done, run `mix deps.get` in your shell to fetch and compile the dependencies.
+You should also update your applications list to include both projects:
+
+```elixir
+def application do
+  [applications: [:postgrex, :ecto]]
+end
+```
+
+After you are done, run `mix deps.get` in your shell to fetch the dependencies.
 
 ## Important links
 
