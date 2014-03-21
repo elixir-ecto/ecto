@@ -19,7 +19,7 @@ defmodule Ecto.Adapters.Mysql.Worker do
   def query!(worker, sql, params, timeout \\ @timeout) do
     case :gen_server.call(worker, { :query, sql, params, timeout }, timeout) do
       { :result_packet, _, _, res, _  } -> res
-      {:ok_packet, _, _, _, _, _, res } -> res
+      { :ok_packet, _, _, _, _, _, res } -> res
       { :error_packet, _, _, _, err } -> raise err
     end
   end
@@ -90,7 +90,7 @@ defmodule Ecto.Adapters.Mysql.Worker do
       :ok ->
         handle_call(request, from, state(s, conn: @pool_name))
       { :error, :pool_already_exists } ->
-        handle_call(request, from, s)
+        handle_call(request, from, state(s, conn: @pool_name))
       { :error, err } ->
         { :reply, { :error, err }, s }
     end
