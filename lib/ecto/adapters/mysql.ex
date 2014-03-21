@@ -25,7 +25,7 @@ defmodule Ecto.Adapters.Mysql do
   @behaviour Ecto.Adapter.Transactions
   @behaviour Ecto.Adapter.TestTransactions
 
-  @default_port 5432
+  @default_port 3306
   @timeout 5000
 
   alias Ecto.Adapters.Mysql.SQL
@@ -415,7 +415,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
-      
+
       # TODO use mysql driver
       Postgrex.Result[num_rows: 0] ->
         transaction(repo, [], fn ->
@@ -431,8 +431,8 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrate_down(repo, version, commands) do
     case check_migration_version(repo, version) do
-      
-      # TODO use mysql driver 
+
+      # TODO use mysql driver
       Postgrex.Result[num_rows: 0] ->
         :missing_up
       _ ->
@@ -447,7 +447,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrated_versions(repo) do
     create_migrations_table(repo)
-    
+
     # TODO use mysql driver
     Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations", [])
     Enum.map(rows, &elem(&1, 0))

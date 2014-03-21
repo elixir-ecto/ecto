@@ -33,7 +33,8 @@ defmodule Ecto.Mixfile do
 
   defp envs do
     [ pg: [ test_paths: ["integration_test/pg"] ],
-      all: [ test_paths: ["test", "integration_test/pg"] ] ]
+      mysql: [ test_paths: ["integration_test/mysql"] ],
+      all: [ test_paths: ["test", "integration_test/pg", "integration_test/mysql"] ] ]
   end
 
   defp docs do
