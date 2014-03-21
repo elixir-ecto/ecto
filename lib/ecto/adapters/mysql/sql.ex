@@ -9,7 +9,6 @@ defmodule Ecto.Adapters.Mysql.SQL do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
-  import Decimal, only: [is_decimal: 1]
 
   unary_ops = [ -: "-", +: "+" ]
 
@@ -18,8 +17,9 @@ defmodule Ecto.Adapters.Mysql.SQL do
       and: "AND", or: "OR",
       +:  "+", -:  "-", *:  "*",
       <>: "||", ++: "||",
-      pow: "^", div: "/", rem: "%",
-      date_add: "+", date_sub: "-", like: "LIKE" ]
+      div: "/", rem: "%",
+      date_add: "+", date_sub: "-",
+      ilike: "ILIKE", like: "LIKE" ]
 
   functions =
     [ { { :downcase, 1 }, "lower" }, { { :upcase, 1 }, "upper" } ]
@@ -38,11 +38,11 @@ defmodule Ecto.Adapters.Mysql.SQL do
     defp translate_name(unquote(fun), unquote(arity)), do: { :fun, unquote(str) }
   end)
 
+  defp quote_table(table), do: "`#{table}`"
+
+  defp quote_column(column), do: "`#{column}`"
+
   defp translate_name(fun, _arity), do: { :fun, atom_to_binary(fun) }
-
-  defp quote_table(table), do: "\"#{table}\""
-
-  defp quote_column(column), do: "\"#{column}\""
 
   # Generate SQL for a select statement
   def select(Query[] = query) do
@@ -50,7 +50,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
     sources  = create_names(query)
 
     from     = from(sources)
-    select   = select(query.select, query.distincts, sources)
+    select   = select(query.select, sources)
     join     = join(query, sources)
     where    = where(query.wheres, sources)
     group_by = group_by(query.group_bys, sources)
@@ -58,16 +58,15 @@ defmodule Ecto.Adapters.Mysql.SQL do
     order_by = order_by(query.order_bys, sources)
     limit    = limit(query.limit)
     offset   = offset(query.offset)
-    lock     = lock(query.lock)
 
-    [select, from, join, where, group_by, having, order_by, limit, offset, lock]
+    [select, from, join, where, group_by, having, order_by, limit, offset]
       |> Enum.filter(&(&1 != nil))
       |> List.flatten
-      |> Enum.join("\n")
+      |> Enum.join(" ")
   end
 
   # Generate SQL for an insert statement
-  def insert(entity, returning) do
+  def insert(entity) do
     module = elem(entity, 0)
     table  = entity.model.__model__(:source)
 
@@ -78,15 +77,11 @@ defmodule Ecto.Adapters.Mysql.SQL do
     sql = "INSERT INTO #{quote_table(table)}"
 
     if fields == [] do
-      sql = sql <> " DEFAULT VALUES"
+      sql = sql <> " () VALUES ()"
     else
       sql = sql <>
-        " (" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ")\n" <>
+        " (" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ") " <>
         "VALUES (" <> Enum.map_join(values, ", ", &literal(&1)) <> ")"
-    end
-
-    if !Enum.empty?(returning) do
-      sql = sql <> "\nRETURNING " <> Enum.map_join(returning, ", ", &quote_column(&1))
     end
 
     sql
@@ -105,7 +100,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
       "#{quote_column(k)} = #{literal(v)}"
     end)
 
-    "UPDATE #{quote_table(table)} SET " <> zipped_sql <> "\n" <>
+    "UPDATE #{quote_table(table)} SET " <> zipped_sql <> " " <>
     "WHERE #{quote_column(pk_field)} = #{literal(pk_value)}"
   end
 
@@ -119,9 +114,9 @@ defmodule Ecto.Adapters.Mysql.SQL do
       "#{quote_column(field)} = #{expr(expr, names)}"
     end)
 
-    where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, names)
+    where = if query.wheres == [], do: "", else: " " <> where(query.wheres, names)
 
-    "UPDATE #{quote_table(table)} AS #{name}\n" <>
+    "UPDATE #{quote_table(table)} AS #{name} " <>
     "SET " <> zipped_sql <>
     where
   end
@@ -142,23 +137,12 @@ defmodule Ecto.Adapters.Mysql.SQL do
     from   = elem(names, 0)
     { table, name } = Util.source(from)
 
-    where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, names)
+    where = if query.wheres == [], do: "", else: " " <> where(query.wheres, names)
     "DELETE FROM #{quote_table(table)} AS #{name}" <> where
   end
 
-  defp select(QueryExpr[expr: expr], [], sources) do
+  defp select(QueryExpr[expr: expr], sources) do
     "SELECT " <> select_clause(expr, sources)
-  end
-
-  defp select(QueryExpr[expr: expr], distincts, sources) do
-    exprs = Enum.map_join(distincts, ", ", fn expr ->
-      Enum.map_join(expr.expr, ", ", fn { var, field } ->
-        { _, name } = Util.find_source(sources, var) |> Util.source
-        "#{name}.#{quote_column(field)}"
-      end)
-    end)
-
-    "SELECT DISTINCT ON (" <> exprs <> ") " <> select_clause(expr, sources)
   end
 
   defp from(sources) do
@@ -193,7 +177,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
     exprs = Enum.map_join(group_bys, ", ", fn expr ->
       Enum.map_join(expr.expr, ", ", fn { var, field } ->
         { _, name } = Util.find_source(sources, var) |> Util.source
-        "#{name}.#{quote_column(field)}"
+        "#{quote_table(name)}.#{quote_column(field)}"
       end)
     end)
 
@@ -216,7 +200,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
 
   defp order_by_expr({ dir, var, field }, sources) do
     { _, name } = Util.find_source(sources, var) |> Util.source
-    str = "#{name}.#{quote_column(field)}"
+    str = "#{quote_table(name)}.#{quote_column(field)}"
     case dir do
       :asc  -> str
       :desc -> str <> " DESC"
@@ -228,11 +212,6 @@ defmodule Ecto.Adapters.Mysql.SQL do
 
   defp offset(nil), do: nil
   defp offset(num), do: "OFFSET " <> integer_to_binary(num)
-
-  defp lock(nil), do: nil
-  defp lock(false), do: nil
-  defp lock(true), do: "FOR UPDATE"
-  defp lock(lock_clause), do: lock_clause
 
   defp boolean(_name, [], _sources), do: nil
 
@@ -246,7 +225,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
 
   defp expr({ :., _, [{ :&, _, [_] } = var, field] }, sources) when is_atom(field) do
     { _, name } = Util.find_source(sources, var) |> Util.source
-    "#{name}.#{quote_column(field)}"
+    "#{quote_table(name)}.#{quote_column(field)}"
   end
 
   defp expr({ :!, _, [expr] }, sources) do
@@ -277,12 +256,6 @@ defmodule Ecto.Adapters.Mysql.SQL do
     "#{op_to_binary(left, sources)} IS NOT NULL"
   end
 
-  defp expr({ :in, _, [left, first .. last] }, sources) do
-    sqls = [ expr(left, sources), "BETWEEN", expr(first, sources), "AND",
-             expr(last, sources) ]
-    Enum.join(sqls, " ")
-  end
-
   defp expr({ :in, _, [left, { :.., _, [first, last] }] }, sources) do
     sqls = [ expr(left, sources), "BETWEEN", expr(first, sources), "AND",
              expr(last, sources) ]
@@ -290,7 +263,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
   end
 
   defp expr({ :in, _, [left, right] }, sources) do
-    expr(left, sources) <> " = ANY (" <> expr(right, sources) <> ")"
+    expr(left, sources) <> " IN " <> expr(right, sources)
   end
 
   defp expr((_ .. _) = range, sources) do
@@ -302,7 +275,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
   end
 
   defp expr({ :/, _, [left, right] }, sources) do
-    op_to_binary(left, sources) <> " / " <> op_to_binary(right, sources) <> "::numeric"
+    op_to_binary(left, sources) <> " / " <> op_to_binary(right, sources)
   end
 
   defp expr({ arg, _, [] }, sources) when is_tuple(arg) do
@@ -324,10 +297,8 @@ defmodule Ecto.Adapters.Mysql.SQL do
     end
   end
 
-  defp expr(Ecto.Array[value: list, type: type], sources) do
-    sql = "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
-    if list == [], do: sql = sql <> "::#{type(type)}[]"
-    sql
+  defp expr(list, sources) when is_list(list) do
+    "(" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> ")"
   end
 
   defp expr(literal, _sources), do: literal(literal)
@@ -350,29 +321,19 @@ defmodule Ecto.Adapters.Mysql.SQL do
     hex = lc << h :: [unsigned, 4], l :: [unsigned, 4] >> inbits binary do
       fixed_integer_to_binary(h, 16) <> fixed_integer_to_binary(l, 16)
     end
-    "'\\x#{hex}'::bytea"
-  end
-
-  defp literal(Ecto.Array[value: list, type: type]) do
-    "ARRAY[" <> Enum.map_join(list, ", ", &literal(&1)) <> "]::#{type(type)}[]"
+    "X'#{hex}'"
   end
 
   defp literal(literal) when is_binary(literal) do
     "'#{escape_string(literal)}'"
   end
 
-  defp literal(literal) when is_integer(literal) do
+  defp literal(literal) when is_number(literal) do
     to_string(literal)
   end
 
-  defp literal(literal) when is_float(literal) do
-    to_string(literal) <> "::float"
-  end
-
-  defp literal(num) when is_decimal(num) do
-    str = Decimal.to_string(num, :normal)
-    if :binary.match(str, ".") == :nomatch, do: str = str <> ".0"
-    str
+  defp literal(literal) when is_list(literal) do
+    "(" <> Enum.map_join(literal, ", ", &literal(&1)) <> ")"
   end
 
   defp op_to_binary({ op, _, [_, _] } = expr, sources) when op in @binary_ops do
@@ -414,17 +375,6 @@ defmodule Ecto.Adapters.Mysql.SQL do
   defp escape_string(value) when is_binary(value) do
     :binary.replace(value, "'", "''", [:global])
   end
-
-  # Must be kept up to date with Util.types and Util.poly_types
-  defp type(:boolean),  do: "boolean"
-  defp type(:string),   do: "text"
-  defp type(:integer),  do: "integer"
-  defp type(:float),    do: "float"
-  defp type(:binary),   do: "bytea"
-  defp type(:datetime), do: "timestamp without time zone"
-  defp type(:interval), do: "interval"
-
-  defp type({ :array, inner }), do: type(inner) <> "[]"
 
   defp create_names(query) do
     sources = query.sources |> tuple_to_list

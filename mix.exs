@@ -16,13 +16,14 @@ defmodule Ecto.Mixfile do
   end
 
   def application do
-    [ applications: [:poolboy] ]
+    [ applications: [:poolboy, :emysql] ]
   end
 
   defp deps(:prod) do
     [ { :poolboy, "~> 1.1.0", github: "devinus/poolboy" },
       { :decimal, "~> 0.1.0", github: "ericmj/decimal" },
-      { :postgrex, "~> 0.4.0", github: "ericmj/postgrex", optional: true } ]
+      { :postgrex, "~> 0.4.0", github: "ericmj/postgrex", optional: true },
+      { :emysql, github: "eonblast/emysql" } ]
   end
 
   defp deps(_) do

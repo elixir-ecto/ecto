@@ -234,15 +234,15 @@ defmodule Ecto.Adapters.Mysql do
 
   ## Postgrex casting
 
-  defp decoder(TypeInfo[sender: "interval"], :binary, default, param) do
-    { mon, day, sec } = default.(param)
-    Ecto.Interval[year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec]
-  end
+#  defp decoder(TypeInfo[sender: "interval"], :binary, default, param) do
+#    { mon, day, sec } = default.(param)
+#    Ecto.Interval[year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec]
+#  end
 
-  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["timestamp", "timestamptz"] do
-    { { year, mon, day }, { hour, min, sec } } = default.(param)
-    Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
-  end
+#  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["timestamp", "timestamptz"] do
+ #   { { year, mon, day }, { hour, min, sec } } = default.(param)
+ #   Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
+ # end
 
   defp decoder(_type, _format, default, param) do
     default.(param)
