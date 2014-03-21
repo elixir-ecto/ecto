@@ -20,7 +20,7 @@ defmodule Ecto.Integration.Mysql.TestRepo do
   end
 
   def conf do
-    parse_url "ecto://mysql:ecto@localhost/ecto_test?size=1&max_overflow=0"
+    parse_url "ecto://ecto:@localhost/ecto_test?size=1&max_overflow=0"
   end
 
   def query_apis do
@@ -38,8 +38,8 @@ defmodule Ecto.Integration.Mysql.Post do
     field :bin, :binary
     field :temp, :virtual, default: "temp"
     field :count, :integer
-    has_many :comments, Ecto.Integration.Postgres.Comment
-    has_one :permalink, Ecto.Integration.Postgres.Permalink
+    has_many :comments, Ecto.Integration.Mysql.Comment
+    has_one :permalink, Ecto.Integration.Mysql.Permalink
   end
 end
 
@@ -99,22 +99,22 @@ defmodule Ecto.Integration.Mysql.Case do
       require TestRepo
 
       import Ecto.Query
-      alias Ecto.Integration.Postgres.TestRepo
-      alias Ecto.Integration.Postgres.Post
-      alias Ecto.Integration.Postgres.Comment
-      alias Ecto.Integration.Postgres.Permalink
-      alias Ecto.Integration.Postgres.User
-      alias Ecto.Integration.Postgres.Custom
-      alias Ecto.Integration.Postgres.Barebone
+      alias Ecto.Integration.Mysql.TestRepo
+      alias Ecto.Integration.Mysql.Post
+      alias Ecto.Integration.Mysql.Comment
+      alias Ecto.Integration.Mysql.Permalink
+      alias Ecto.Integration.Mysql.User
+      alias Ecto.Integration.Mysql.Custom
+      alias Ecto.Integration.Mysql.Barebone
     end
   end
 
   setup do
-    :ok = Postgres.begin_test_transaction(TestRepo, [])
+    :ok = Mysql.begin_test_transaction(TestRepo, [])
   end
 
   teardown do
-    :ok = Postgres.rollback_test_transaction(TestRepo, [])
+    :ok = Mysql.rollback_test_transaction(TestRepo, [])
   end
 end
 
@@ -151,14 +151,15 @@ Enum.each(setup_cmds, fn(cmd) ->
 end)
 
 setup_database = [
-  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
-  "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, interval interval, bytes bytea, post_id integer, author_id integer)",
-  "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
-  "CREATE TABLE users (id serial PRIMARY KEY, name text)",
-  "CREATE TABLE customs (foo text PRIMARY KEY)",
-  "CREATE TABLE barebones (text text)",
-  "CREATE TABLE transaction (id serial, text text)",
-  "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
+  "SELECT 1 = 1",
+  "CREATE TABLE posts (id INT AUTO_INCREMENT, PRIMARY KEY(id))"# (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
+  # "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, interval interval, bytes bytea, post_id integer, author_id integer)",
+  # "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
+  # "CREATE TABLE users (id serial PRIMARY KEY, name text)",
+  # "CREATE TABLE customs (foo text PRIMARY KEY)",
+  # "CREATE TABLE barebones (text text)",
+  # "CREATE TABLE transaction (id serial, text text)",
+  # "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 
 { :ok, _pid } = TestRepo.start_link

@@ -40,7 +40,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   defmacro __using__(_opts) do
     quote do
-      def __mysql_(:pool_name) do
+      def __mysql__(:pool_name) do
         __MODULE__.Pool
       end
     end
@@ -60,17 +60,15 @@ defmodule Ecto.Adapters.Mysql do
 
   @doc false
   def all(repo, Query[] = query, opts) do
-    pg_query = Query[] = query.select |> normalize_select |> query.select
+    mysql_query = Query[] = query.select |> normalize_select |> query.select
 
     # TODO change to mysql driver
-    Postgrex.Result[rows: rows] = query(repo, SQL.select(pg_query), [], opts)
+    rows = query(repo, SQL.select(mysql_query), [], opts)
 
     # Transform each row based on select expression
     transformed =
       Enum.map(rows, fn row ->
-        values = tuple_to_list(row)
-    # TODO pg_query
-        transform_row(pg_query.select.expr, values, pg_query.sources) |> elem(0)
+        transform_row(mysql_query.select.expr, row, mysql_query.sources) |> elem(0)
       end)
 
     transformed
