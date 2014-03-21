@@ -25,7 +25,7 @@ defmodule Ecto.Adapters.Mysql do
   @behaviour Ecto.Adapter.Transactions
   @behaviour Ecto.Adapter.TestTransactions
 
-  @default_port 5432
+  @default_port 3306
   @timeout 5000
 
   alias Ecto.Adapters.Mysql.SQL
@@ -40,7 +40,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   defmacro __using__(_opts) do
     quote do
-      def __mysql_(:pool_name) do
+      def __mysql__(:pool_name) do
         __MODULE__.Pool
       end
     end
@@ -60,17 +60,15 @@ defmodule Ecto.Adapters.Mysql do
 
   @doc false
   def all(repo, Query[] = query, opts) do
-    pg_query = Query[] = query.select |> normalize_select |> query.select
+    mysql_query = Query[] = query.select |> normalize_select |> query.select
 
     # TODO change to mysql driver
-    Postgrex.Result[rows: rows] = query(repo, SQL.select(pg_query), [], opts)
+    rows = query(repo, SQL.select(mysql_query), [], opts)
 
     # Transform each row based on select expression
     transformed =
       Enum.map(rows, fn row ->
-        values = tuple_to_list(row)
-    # TODO pg_query
-        transform_row(pg_query.select.expr, values, pg_query.sources) |> elem(0)
+        transform_row(mysql_query.select.expr, row, mysql_query.sources) |> elem(0)
       end)
 
     transformed
@@ -415,7 +413,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
-      
+
       # TODO use mysql driver
       Postgrex.Result[num_rows: 0] ->
         transaction(repo, [], fn ->
@@ -431,8 +429,8 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrate_down(repo, version, commands) do
     case check_migration_version(repo, version) do
-      
-      # TODO use mysql driver 
+
+      # TODO use mysql driver
       Postgrex.Result[num_rows: 0] ->
         :missing_up
       _ ->
@@ -447,7 +445,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrated_versions(repo) do
     create_migrations_table(repo)
-    
+
     # TODO use mysql driver
     Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations", [])
     Enum.map(rows, &elem(&1, 0))
