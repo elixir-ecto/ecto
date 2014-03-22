@@ -78,51 +78,31 @@ defmodule Ecto.Adapters.Mysql do
 
   @doc false
   def create(repo, entity, opts) do
-    module      = elem(entity, 0)
-
-    returning = module.__entity__(:keywords, entity)
-      |> Enum.filter(fn { _, val } -> val == nil end)
-      |> Keyword.keys
-
-    case query(repo, SQL.insert(entity, returning), [], opts) do
-
-      # TODO change to mysql driver
-      Postgrex.Result[rows: [values]] ->
-        Enum.zip(returning, tuple_to_list(values))
-      _ ->
-        []
-    end
+    { :ok, _, insert_id, row } = query(repo, SQL.insert(entity), [], opts)
+    [id: insert_id]
   end
 
   @doc false
   def update(repo, entity, opts) do
-
-    # TODO change to mysql driver
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update(entity), [], opts)
+    { :ok, nrows, _, _ } = query(repo, SQL.update(entity), [], opts)
     nrows
   end
 
   @doc false
   def update_all(repo, query, values, opts) do
-
-    # TODO change to mysql driver
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update_all(query, values), [], opts)
+    { :ok, nrows, _, _ } = query(repo, SQL.update_all(query, values), [], opts)
     nrows
   end
 
   @doc false
   def delete(repo, entity, opts) do
-
-    # TODO change to mysql driver
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete(entity), [], opts)
+    { :ok, nrows, _, _ } = query(repo, SQL.delete(entity), [], opts)
     nrows
   end
 
   @doc false
   def delete_all(repo, query, opts) do
-
-    # change to mysql driver
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete_all(query), [], opts)
+    { :ok, nrows, _, _ } = query(repo, SQL.delete_all(query), [], opts)
     nrows
   end
 

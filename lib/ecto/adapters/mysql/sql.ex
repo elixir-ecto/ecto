@@ -138,7 +138,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
     { table, name } = Util.source(from)
 
     where = if query.wheres == [], do: "", else: " " <> where(query.wheres, names)
-    "DELETE FROM #{quote_table(table)} AS #{name}" <> where
+    "DELETE FROM #{name} USING #{quote_table(table)} AS #{name}" <> where
   end
 
   defp select(QueryExpr[expr: expr], sources) do

@@ -18,9 +18,9 @@ defmodule Ecto.Adapters.Mysql.Worker do
 
   def query!(worker, sql, params, timeout \\ @timeout) do
     case :gen_server.call(worker, { :query, sql, params, timeout }, timeout) do
-      { :result_packet, _, _, res, _  } -> res
-      { :ok_packet, _, _, _, _, _, res } -> res
-      { :error_packet, _, _, _, err } -> raise err
+      { :result_packet, _, _, rows, _  } -> rows
+      { :ok_packet, _, affected_rows, insert_id, _, _, msg } -> { :ok, affected_rows, insert_id, msg }
+      { :error_packet, _, _, _, err } -> { :error, err }
     end
   end
 
