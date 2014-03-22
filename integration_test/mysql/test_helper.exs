@@ -47,8 +47,6 @@ defmodule Ecto.Integration.Mysql.Comment do
   queryable "comments" do
     field :text, :string
     field :posted, :datetime
-    field :interval, :interval
-    field :bytes, :binary
     belongs_to :post, Ecto.Integration.Mysql.Post
     belongs_to :author, Ecto.Integration.Mysql.User
   end
@@ -116,6 +114,7 @@ defmodule Ecto.Integration.Mysql.Case do
     Mysql.query(TestRepo, "TRUNCATE TABLE permalinks", [])
     Mysql.query(TestRepo, "TRUNCATE TABLE customs", [])
     Mysql.query(TestRepo, "TRUNCATE TABLE barebones", [])
+    Mysql.query(TestRepo, "TRUNCATE TABLE comments", [])
   end
 end
 
@@ -156,7 +155,7 @@ setup_database = [
   "CREATE TABLE posts (id INT AUTO_INCREMENT, title varchar(100), text varchar (100), count integer, PRIMARY KEY(id))",# (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
   "CREATE TABLE comments (id INT AUTO_INCREMENT, text varchar(100), posted timestamp, post_id integer, author_id integer, PRIMARY KEY(id))",
   "CREATE TABLE permalinks (id INT AUTO_INCREMENT, url varchar(100), post_id integer, PRIMARY KEY(id))",
-  # "CREATE TABLE users (id serial PRIMARY KEY, name text)",
+  "CREATE TABLE users (id INT AUTO_INCREMENT, name text, PRIMARY KEY(id))",
   "CREATE TABLE customs (foo varchar(100), PRIMARY KEY(foo))",
   "CREATE TABLE barebones (text text)",
   # "CREATE TABLE transaction (id serial, text text)",

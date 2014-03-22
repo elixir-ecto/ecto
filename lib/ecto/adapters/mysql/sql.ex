@@ -324,6 +324,10 @@ defmodule Ecto.Adapters.Mysql.SQL do
     "X'#{hex}'"
   end
 
+  defp literal(Ecto.Array[value: list]) do
+    "(" <> Enum.map_join(list, ", ", &literal(&1)) <> ")"
+  end
+
   defp literal(literal) when is_binary(literal) do
     "'#{escape_string(literal)}'"
   end

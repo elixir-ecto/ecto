@@ -62,7 +62,6 @@ defmodule Ecto.Adapters.Mysql do
   def all(repo, Query[] = query, opts) do
     mysql_query = Query[] = query.select |> normalize_select |> query.select
 
-    # TODO change to mysql driver
     rows = query(repo, SQL.select(mysql_query), [], opts)
 
     # Transform each row based on select expression
@@ -78,7 +77,7 @@ defmodule Ecto.Adapters.Mysql do
 
   @doc false
   def create(repo, entity, opts) do
-    { :ok, _, insert_id, row } = query(repo, SQL.insert(entity), [], opts)
+    { :ok, _, insert_id, _ } = query(repo, SQL.insert(entity), [], opts)
     [id: insert_id]
   end
 
@@ -177,6 +176,16 @@ defmodule Ecto.Adapters.Mysql do
     entity = Util.find_source(sources, var) |> Util.entity
     entity_size = length(entity.__entity__(:field_names))
     { entity_values, values } = Enum.split(values, entity_size)
+
+    # # TODO EMysql returns :undefined for values where Postgrex returns nil
+    entity_values = Enum.map(entity_values, fn(entity_value) ->
+      if entity_value == :undefined do
+        nil
+      else
+        entity_value
+      end
+    end)
+
     if Enum.all?(entity_values, &(nil?(&1))) do
       { nil, values }
     else
@@ -209,18 +218,6 @@ defmodule Ecto.Adapters.Mysql do
     fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
     Ecto.Associations.Preloader.run(results, repo, fields, pos)
   end
-
-  ## Postgrex casting
-
-#  defp decoder(TypeInfo[sender: "interval"], :binary, default, param) do
-#    { mon, day, sec } = default.(param)
-#    Ecto.Interval[year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec]
-#  end
-
-#  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["timestamp", "timestamptz"] do
- #   { { year, mon, day }, { hour, min, sec } } = default.(param)
- #   Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
- # end
 
   defp decoder(_type, _format, default, param) do
     default.(param)
