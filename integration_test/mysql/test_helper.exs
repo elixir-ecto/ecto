@@ -153,7 +153,7 @@ end)
 setup_database = [
   "SELECT 1 = 1",
   "CREATE TABLE posts (id INT AUTO_INCREMENT, title varchar(100), text varchar (100), count integer, PRIMARY KEY(id))",# (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
-  "CREATE TABLE comments (id INT AUTO_INCREMENT, text varchar(100), posted timestamp, post_id integer, author_id integer, PRIMARY KEY(id))",
+  "CREATE TABLE comments (id INT AUTO_INCREMENT, text varchar(100), posted timestamp NULL, post_id integer, author_id integer, PRIMARY KEY(id))",
   "CREATE TABLE permalinks (id INT AUTO_INCREMENT, url varchar(100), post_id integer, PRIMARY KEY(id))",
   "CREATE TABLE users (id INT AUTO_INCREMENT, name text, PRIMARY KEY(id))",
   "CREATE TABLE customs (foo varchar(100), PRIMARY KEY(foo))",

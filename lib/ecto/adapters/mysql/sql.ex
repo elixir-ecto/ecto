@@ -313,10 +313,6 @@ defmodule Ecto.Adapters.Mysql.SQL do
     "timestamp '#{dt.year}-#{dt.month}-#{dt.day} #{dt.hour}:#{dt.min}:#{dt.sec}'"
   end
 
-  defp literal(Ecto.Interval[] = i) do
-    "interval 'P#{i.year}-#{i.month}-#{i.day}T#{i.hour}:#{i.min}:#{i.sec}'"
-  end
-
   defp literal(Ecto.Binary[value: binary]) do
     hex = lc << h :: [unsigned, 4], l :: [unsigned, 4] >> inbits binary do
       fixed_integer_to_binary(h, 16) <> fixed_integer_to_binary(l, 16)

@@ -1,6 +1,7 @@
 defmodule Ecto.Integration.SQLEscapeTest do
   use Ecto.Integration.Mysql.Case
 
+  # MYSQL TODO: Fix this
   # test "Repo.all escape" do
   #   TestRepo.create(Post.new(text: "hello"))
 

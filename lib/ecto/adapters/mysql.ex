@@ -176,15 +176,7 @@ defmodule Ecto.Adapters.Mysql do
     entity = Util.find_source(sources, var) |> Util.entity
     entity_size = length(entity.__entity__(:field_names))
     { entity_values, values } = Enum.split(values, entity_size)
-
-    # # TODO EMysql returns :undefined for values where Postgrex returns nil
-    entity_values = Enum.map(entity_values, fn(entity_value) ->
-      if entity_value == :undefined do
-        nil
-      else
-        entity_value
-      end
-    end)
+    entity_values = Enum.map(entity_values, &transform_value(&1))
 
     if Enum.all?(entity_values, &(nil?(&1))) do
       { nil, values }
@@ -202,6 +194,7 @@ defmodule Ecto.Adapters.Mysql do
   defp transform_row(list, values, sources) when is_list(list) do
     { result, values } = Enum.reduce(list, { [], values }, fn elem, { res, values } ->
       { result, values } = transform_row(elem, values, sources)
+      result = transform_value(result)
       { [result|res], values }
     end)
 
@@ -212,6 +205,14 @@ defmodule Ecto.Adapters.Mysql do
     [value|values] = values
     { value, values }
   end
+
+  defp transform_value(:undefined), do: nil
+
+  defp transform_value({:datetime, {{year, mon, day}, {hour, min, sec}}}) do
+    Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
+  end
+
+  defp transform_value(value), do: value
 
   defp preload(results, repo, Query[] = query) do
     pos = Util.locate_var(query.select.expr, { :&, [], [0] })
