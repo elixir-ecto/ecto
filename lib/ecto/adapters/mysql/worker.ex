@@ -77,16 +77,8 @@ defmodule Ecto.Adapters.Mysql.Worker do
 
   # Connection is disconnected, reconnect before continuing
   def handle_call(request, from, state(conn: nil, params: params) = s) do
-    # todo clean this up
-    case :emysql.add_pool(
-      @pool_name,
-      15,
-      bitstring_to_list(params[:username]),
-      bitstring_to_list(params[:password]),
-      bitstring_to_list(params[:hostname]),
-      params[:port],
-      bitstring_to_list(params[:database]),
-      :utf8) do
+    params = translate_params(params)
+    case :emysql.add_pool(@pool_name, params) do
       :ok ->
         handle_call(request, from, state(s, conn: @pool_name))
       { :error, :pool_already_exists } ->
@@ -149,5 +141,17 @@ defmodule Ecto.Adapters.Mysql.Worker do
   # TODO mysql driver
   def terminate(_reason, state(conn: conn)) do
     Postgrex.Connection.stop(conn)
+  end
+
+  defp translate_params(params) do
+    [
+      size: 1,
+      user: bitstring_to_list(params[:username]),
+      password: bitstring_to_list(params[:password]),
+      host: bitstring_to_list(params[:hostname]),
+      port: params[:port],
+      database: bitstring_to_list(params[:database]),
+      encoding: :utf8
+    ]
   end
 end

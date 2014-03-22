@@ -83,8 +83,8 @@ defmodule Ecto.Adapters.Mysql do
 
   @doc false
   def update(repo, entity, opts) do
-    { :ok, nrows, _, _ } = query(repo, SQL.update(entity), [], opts)
-    nrows
+    { :ok, _, _, _ } = query(repo, SQL.update(entity), [], opts)
+    1
   end
 
   @doc false
