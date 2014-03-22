@@ -8,6 +8,20 @@ defmodule Ecto.Integration.TypesTest do
     assert Comment.Entity[posted: ^now] = TestRepo.get(Comment, c.id)
   end
 
+  test "date type" do
+    now = Ecto.Date[year: 2013, month: 8, day: 1]
+    c = TestRepo.create(Comment.Entity[day: now])
+
+    assert Comment.Entity[day: ^now] = TestRepo.get(Comment, c.id)
+  end
+
+  test "time type" do
+    now = Ecto.Time[hour: 14, min: 28, sec: 0]
+    c = TestRepo.create(Comment.Entity[time: now])
+
+    assert Comment.Entity[time: ^now] = TestRepo.get(Comment, c.id)
+  end
+
   test "interval type" do
     interval = Ecto.Interval[year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0]
     c = TestRepo.create(Comment.Entity[interval: interval])

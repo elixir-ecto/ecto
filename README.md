@@ -288,6 +288,8 @@ When defining each entity field, a type needs to be given. Those types are speci
 * `:string` - for utf-8 encoded binaries;
 * `{ :array, inner_type }`
 * `:datetime`
+* `:date`
+* `:time`
 * `:virtual` - virtual types can have any value and they are not sent to the database;
 
 When manipulating the entity via the record functions, it is the responsibility of the developer to ensure the fields are cast to the proper value. For example:

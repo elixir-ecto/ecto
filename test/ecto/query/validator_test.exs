@@ -32,6 +32,8 @@ defmodule Ecto.Query.ValidatorTest do
       field :text, :string
       field :temp, :virtual
       field :posted, :datetime
+      field :day, :date
+      field :time, :time
       belongs_to :post, Ecto.Query.ValidatorTest.Post
     end
   end
@@ -452,6 +454,28 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(c in Comment, where: c.posted == 123, select: c)
+    assert_raise Ecto.Query.TypeCheckError, fn ->
+      validate(query)
+    end
+  end
+
+  test "date type" do
+    date = Ecto.Date[year: 2013, month: 8, day: 1]
+    query = from(c in Comment, where: c.day == ^date, select: c)
+    validate(query)
+
+    query = from(c in Comment, where: c.day == 123, select: c)
+    assert_raise Ecto.Query.TypeCheckError, fn ->
+      validate(query)
+    end
+  end
+
+  test "time type" do
+    time = Ecto.Time[hour: 14, min: 28, sec: 0]
+    query = from(c in Comment, where: c.time == ^time, select: c)
+    validate(query)
+
+    query = from(c in Comment, where: c.time == 123, select: c)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
