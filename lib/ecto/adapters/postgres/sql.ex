@@ -310,6 +310,14 @@ defmodule Ecto.Adapters.Postgres.SQL do
     expr(arg, sources)
   end
 
+  defp expr({ :date, _, [datetime] }, sources) do
+    expr(datetime, sources) <> "::date"
+  end
+
+  defp expr({ :time, _, [datetime] }, sources) do
+    expr(datetime, sources) <> "::time"
+  end
+
   defp expr({ fun, _, args }, sources) when is_atom(fun) and is_list(args) do
     case translate_name(fun, length(args)) do
       { :unary_op, op } ->
@@ -341,6 +349,14 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp literal(Ecto.DateTime[] = dt) do
     "timestamp '#{dt.year}-#{dt.month}-#{dt.day} #{dt.hour}:#{dt.min}:#{dt.sec}'"
+  end
+
+  defp literal(Ecto.Date[] = d) do
+    "date '#{d.year}-#{d.month}-#{d.day}'"
+  end
+
+  defp literal(Ecto.Time[] = t) do
+    "time '#{t.hour}:#{t.min}:#{t.sec}'"
   end
 
   defp literal(Ecto.Interval[] = i) do

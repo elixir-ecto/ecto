@@ -44,7 +44,7 @@ defmodule Ecto.Query.Util do
 
   @doc false
   defmacro types do
-    ~w(boolean string integer float decimal binary datetime interval virtual)a
+    ~w(boolean string integer float decimal binary datetime date time interval virtual)a
   end
 
   @doc false
@@ -64,9 +64,8 @@ defmodule Ecto.Query.Util do
   def value_to_type(value, _fun) when is_decimal(value), do: { :ok, :decimal }
 
   def value_to_type(Ecto.DateTime[] = dt, fun) do
-    types = tuple_to_list(dt)
-            |> tl
-            |> Enum.map(&value_to_type(&1, fun))
+    [_|types] = tuple_to_list(dt)
+    types = Enum.map(types, &value_to_type(&1, fun))
 
     res = Enum.find_value(types, fn
       { :ok, :integer } -> nil
@@ -74,11 +73,33 @@ defmodule Ecto.Query.Util do
       { :error, "all datetime elements has to be a literal of integer type" }
     end)
 
-    if res do
-      res
-    else
-      { :ok, :datetime }
-    end
+    res || { :ok, :datetime }
+  end
+
+  def value_to_type(Ecto.Date[] = d, fun) do
+    [_|types] = tuple_to_list(d)
+    types = Enum.map(types, &value_to_type(&1, fun))
+
+    res = Enum.find_value(types, fn
+      { :ok, :integer } -> nil
+      { :error, _ } = err -> err
+      { :error, "all date elements has to be a literal of integer type" }
+    end)
+
+    res || { :ok, :date }
+  end
+
+  def value_to_type(Ecto.Time[] = t, fun) do
+    [_|types] = tuple_to_list(t)
+    types = Enum.map(types, &value_to_type(&1, fun))
+
+    res = Enum.find_value(types, fn
+      { :ok, :integer } -> nil
+      { :error, _ } = err -> err
+      { :error, "all time elements has to be a literal of integer type" }
+    end)
+
+    res || { :ok, :time }
   end
 
   def value_to_type(Ecto.Interval[] = dt, fun) do
@@ -144,6 +165,8 @@ defmodule Ecto.Query.Util do
   def literal?(value) when is_float(value),   do: true
   def literal?(value) when is_decimal(value), do: true
   def literal?(Ecto.DateTime[]),              do: true
+  def literal?(Ecto.Date[]),                  do: true
+  def literal?(Ecto.Time[]),                  do: true
   def literal?(Ecto.Interval[]),              do: true
   def literal?(Ecto.Binary[]),                do: true
   def literal?(Ecto.Array[]),                 do: true

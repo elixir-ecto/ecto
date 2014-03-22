@@ -42,12 +42,20 @@ Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, yo
 
 ```elixir
 defp deps do
-  [ { :postgrex, github: "ericmj/postgrex" },
-    { :ecto, github: "elixir-lang/ecto" } ]
+  [{ :postgrex, github: "ericmj/postgrex" },
+   { :ecto, github: "elixir-lang/ecto" }]
 end
 ```
 
-After you are done, run `mix deps.get` in your shell to fetch and compile the dependencies.
+You should also update your applications list to include both projects:
+
+```elixir
+def application do
+  [applications: [:postgrex, :ecto]]
+end
+```
+
+After you are done, run `mix deps.get` in your shell to fetch the dependencies.
 
 ## Important links
 
@@ -280,6 +288,8 @@ When defining each entity field, a type needs to be given. Those types are speci
 * `:string` - for utf-8 encoded binaries;
 * `{ :array, inner_type }`
 * `:datetime`
+* `:date`
+* `:time`
 * `:virtual` - virtual types can have any value and they are not sent to the database;
 
 When manipulating the entity via the record functions, it is the responsibility of the developer to ensure the fields are cast to the proper value. For example:

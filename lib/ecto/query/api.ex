@@ -20,6 +20,8 @@ defmodule Ecto.Query.API do
   deft string
   deft array(var)
   deft datetime
+  deft date
+  deft time
   deft interval
   deft nil
 
@@ -154,16 +156,24 @@ defmodule Ecto.Query.API do
   def binary(_string), do: raise "binary/1 should have been expanded"
 
   @doc "Addition of datetime's with interval's"
-  def date_add(left, right)
-  defs date_add(datetime, interval) :: datetime
-  defs date_add(interval, datetime) :: datetime
-  defs date_add(interval, interval) :: interval
+  def time_add(left, right)
+  defs time_add(datetime, interval) :: datetime
+  defs time_add(interval, datetime) :: datetime
+  defs time_add(date, interval)     :: date
+  defs time_add(interval, date)     :: date
+  defs time_add(time, interval)     :: time
+  defs time_add(interval, time)     :: time
+  defs time_add(interval, interval) :: interval
 
   @doc "Subtraction of datetime's with interval's"
-  def date_sub(left, right)
-  defs date_sub(datetime, interval) :: datetime
-  defs date_sub(interval, datetime) :: datetime
-  defs date_sub(interval, interval) :: interval
+  def time_sub(left, right)
+  defs time_sub(datetime, interval) :: datetime
+  defs time_sub(interval, datetime) :: datetime
+  defs time_sub(date, interval)     :: date
+  defs time_sub(interval, date)     :: date
+  defs time_sub(time, interval)     :: time
+  defs time_sub(interval, time)     :: time
+  defs time_sub(interval, interval) :: interval
 
   @doc "base to the power of exp."
   def pow(base, exp)
@@ -196,12 +206,21 @@ defmodule Ecto.Query.API do
   def upcase(string)
   defs upcase(string) :: string
 
-  @doc "Returns the current date and time"
+  @doc "Returns the current date and time."
   def now()
   defs now() :: datetime
 
+  @doc "Returns the current local date and time."
   def localtimestamp()
   defs localtimestamp() :: datetime
+
+  @doc "Extract date from datetime."
+  def date(datetime)
+  defs date(datetime) :: date
+
+  @doc "Extract time from datetime."
+  def time(datetime)
+  defs time(datetime) :: time
 
   @doc "Case-insensitive pattern match."
   def ilike(left, right)
