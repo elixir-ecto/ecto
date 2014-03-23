@@ -259,11 +259,11 @@ defmodule Ecto.Adapters.Mysql.SQLTest do
 
   test "delete all" do
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.delete_all(query) == "DELETE FROM `model` AS m0"
+    assert SQL.delete_all(query) == "DELETE FROM m0 USING `model` AS m0"
 
     query = from(e in Model, where: e.x == 123) |> normalize
     assert SQL.delete_all(query) ==
-           "DELETE FROM `model` AS m0 WHERE (`m0`.`x` = 123)"
+           "DELETE FROM m0 USING `model` AS m0 WHERE (`m0`.`x` = 123)"
   end
 
   test "in expression" do

@@ -34,8 +34,6 @@ defmodule Ecto.Integration.Mysql.Post do
   queryable "posts" do
     field :title, :string
     field :text, :string
-    field :tags, { :array, :string }
-    field :bin, :binary
     field :temp, :virtual, default: "temp"
     field :count, :integer
     has_many :comments, Ecto.Integration.Mysql.Comment
@@ -49,8 +47,6 @@ defmodule Ecto.Integration.Mysql.Comment do
   queryable "comments" do
     field :text, :string
     field :posted, :datetime
-    field :interval, :interval
-    field :bytes, :binary
     belongs_to :post, Ecto.Integration.Mysql.Post
     belongs_to :author, Ecto.Integration.Mysql.User
   end
@@ -109,12 +105,16 @@ defmodule Ecto.Integration.Mysql.Case do
     end
   end
 
-  setup do
-    :ok = Mysql.begin_test_transaction(TestRepo, [])
-  end
+  # setup do
+  #   :ok = Mysql.begin_test_transaction(TestRepo, [])
+  # end
 
   teardown do
-    :ok = Mysql.rollback_test_transaction(TestRepo, [])
+    Mysql.query(TestRepo, "TRUNCATE TABLE posts", [])
+    Mysql.query(TestRepo, "TRUNCATE TABLE permalinks", [])
+    Mysql.query(TestRepo, "TRUNCATE TABLE customs", [])
+    Mysql.query(TestRepo, "TRUNCATE TABLE barebones", [])
+    Mysql.query(TestRepo, "TRUNCATE TABLE comments", [])
   end
 end
 
@@ -152,12 +152,12 @@ end)
 
 setup_database = [
   "SELECT 1 = 1",
-  "CREATE TABLE posts (id INT AUTO_INCREMENT, PRIMARY KEY(id))"# (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
-  # "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, interval interval, bytes bytea, post_id integer, author_id integer)",
-  # "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
-  # "CREATE TABLE users (id serial PRIMARY KEY, name text)",
-  # "CREATE TABLE customs (foo text PRIMARY KEY)",
-  # "CREATE TABLE barebones (text text)",
+  "CREATE TABLE posts (id INT AUTO_INCREMENT, title varchar(100), text varchar (100), count integer, PRIMARY KEY(id))",# (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
+  "CREATE TABLE comments (id INT AUTO_INCREMENT, text varchar(100), posted timestamp NULL, post_id integer, author_id integer, PRIMARY KEY(id))",
+  "CREATE TABLE permalinks (id INT AUTO_INCREMENT, url varchar(100), post_id integer, PRIMARY KEY(id))",
+  "CREATE TABLE users (id INT AUTO_INCREMENT, name text, PRIMARY KEY(id))",
+  "CREATE TABLE customs (foo varchar(100), PRIMARY KEY(foo))",
+  "CREATE TABLE barebones (text text)",
   # "CREATE TABLE transaction (id serial, text text)",
   # "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]

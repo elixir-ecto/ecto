@@ -138,7 +138,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
     { table, name } = Util.source(from)
 
     where = if query.wheres == [], do: "", else: " " <> where(query.wheres, names)
-    "DELETE FROM #{quote_table(table)} AS #{name}" <> where
+    "DELETE FROM #{name} USING #{quote_table(table)} AS #{name}" <> where
   end
 
   defp select(QueryExpr[expr: expr], sources) do
@@ -313,15 +313,15 @@ defmodule Ecto.Adapters.Mysql.SQL do
     "timestamp '#{dt.year}-#{dt.month}-#{dt.day} #{dt.hour}:#{dt.min}:#{dt.sec}'"
   end
 
-  defp literal(Ecto.Interval[] = i) do
-    "interval 'P#{i.year}-#{i.month}-#{i.day}T#{i.hour}:#{i.min}:#{i.sec}'"
-  end
-
   defp literal(Ecto.Binary[value: binary]) do
     hex = lc << h :: [unsigned, 4], l :: [unsigned, 4] >> inbits binary do
       fixed_integer_to_binary(h, 16) <> fixed_integer_to_binary(l, 16)
     end
     "X'#{hex}'"
+  end
+
+  defp literal(Ecto.Array[value: list]) do
+    "(" <> Enum.map_join(list, ", ", &literal(&1)) <> ")"
   end
 
   defp literal(literal) when is_binary(literal) do

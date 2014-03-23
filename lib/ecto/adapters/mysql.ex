@@ -62,7 +62,6 @@ defmodule Ecto.Adapters.Mysql do
   def all(repo, Query[] = query, opts) do
     mysql_query = Query[] = query.select |> normalize_select |> query.select
 
-    # TODO change to mysql driver
     rows = query(repo, SQL.select(mysql_query), [], opts)
 
     # Transform each row based on select expression
@@ -78,51 +77,31 @@ defmodule Ecto.Adapters.Mysql do
 
   @doc false
   def create(repo, entity, opts) do
-    module      = elem(entity, 0)
-
-    returning = module.__entity__(:keywords, entity)
-      |> Enum.filter(fn { _, val } -> val == nil end)
-      |> Keyword.keys
-
-    case query(repo, SQL.insert(entity, returning), [], opts) do
-
-      # TODO change to mysql driver
-      Postgrex.Result[rows: [values]] ->
-        Enum.zip(returning, tuple_to_list(values))
-      _ ->
-        []
-    end
+    { :ok, _, insert_id, _ } = query(repo, SQL.insert(entity), [], opts)
+    [id: insert_id]
   end
 
   @doc false
   def update(repo, entity, opts) do
-
-    # TODO change to mysql driver
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update(entity), [], opts)
-    nrows
+    { :ok, _, _, _ } = query(repo, SQL.update(entity), [], opts)
+    1
   end
 
   @doc false
   def update_all(repo, query, values, opts) do
-
-    # TODO change to mysql driver
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update_all(query, values), [], opts)
+    { :ok, nrows, _, _ } = query(repo, SQL.update_all(query, values), [], opts)
     nrows
   end
 
   @doc false
   def delete(repo, entity, opts) do
-
-    # TODO change to mysql driver
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete(entity), [], opts)
+    { :ok, nrows, _, _ } = query(repo, SQL.delete(entity), [], opts)
     nrows
   end
 
   @doc false
   def delete_all(repo, query, opts) do
-
-    # change to mysql driver
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete_all(query), [], opts)
+    { :ok, nrows, _, _ } = query(repo, SQL.delete_all(query), [], opts)
     nrows
   end
 
@@ -197,6 +176,8 @@ defmodule Ecto.Adapters.Mysql do
     entity = Util.find_source(sources, var) |> Util.entity
     entity_size = length(entity.__entity__(:field_names))
     { entity_values, values } = Enum.split(values, entity_size)
+    entity_values = Enum.map(entity_values, &transform_value(&1))
+
     if Enum.all?(entity_values, &(nil?(&1))) do
       { nil, values }
     else
@@ -213,6 +194,7 @@ defmodule Ecto.Adapters.Mysql do
   defp transform_row(list, values, sources) when is_list(list) do
     { result, values } = Enum.reduce(list, { [], values }, fn elem, { res, values } ->
       { result, values } = transform_row(elem, values, sources)
+      result = transform_value(result)
       { [result|res], values }
     end)
 
@@ -224,23 +206,19 @@ defmodule Ecto.Adapters.Mysql do
     { value, values }
   end
 
+  defp transform_value(:undefined), do: nil
+
+  defp transform_value({:datetime, {{year, mon, day}, {hour, min, sec}}}) do
+    Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
+  end
+
+  defp transform_value(value), do: value
+
   defp preload(results, repo, Query[] = query) do
     pos = Util.locate_var(query.select.expr, { :&, [], [0] })
     fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
     Ecto.Associations.Preloader.run(results, repo, fields, pos)
   end
-
-  ## Postgrex casting
-
-#  defp decoder(TypeInfo[sender: "interval"], :binary, default, param) do
-#    { mon, day, sec } = default.(param)
-#    Ecto.Interval[year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec]
-#  end
-
-#  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["timestamp", "timestamptz"] do
- #   { { year, mon, day }, { hour, min, sec } } = default.(param)
- #   Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
- # end
 
   defp decoder(_type, _format, default, param) do
     default.(param)
