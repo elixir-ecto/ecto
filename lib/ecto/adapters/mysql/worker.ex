@@ -28,8 +28,7 @@ defmodule Ecto.Adapters.Mysql.Worker do
     case :gen_server.call(worker, { :begin, timeout }, timeout) do
       :ok -> :ok
 
-      # TODO mysql driver
-      Postgrex.Error[] = err -> raise err
+      :error = err -> raise err
     end
   end
 
@@ -37,8 +36,7 @@ defmodule Ecto.Adapters.Mysql.Worker do
     case :gen_server.call(worker, { :commit, timeout }, timeout) do
       :ok -> :ok
 
-      # TODO mysql driver
-      Postgrex.Error[] = err -> raise err
+      :error = err -> raise err
     end
   end
 
@@ -46,8 +44,7 @@ defmodule Ecto.Adapters.Mysql.Worker do
     case :gen_server.call(worker, { :rollback, timeout }, timeout) do
       :ok -> :ok
 
-      # TODO mysql driver
-      Postgrex.Error[] = err -> raise err
+      :error = err -> raise err
     end
   end
 
@@ -90,7 +87,6 @@ defmodule Ecto.Adapters.Mysql.Worker do
 
   def handle_call({ :query, sql, _params, _timeout }, _from, state(conn: conn) = s) do
 
-    # TODO mysql driver
     { :reply, :emysql.execute(conn, sql), s }
   end
 

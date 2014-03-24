@@ -113,9 +113,7 @@ defmodule Ecto.Adapters.Mysql do
                  `:infinity` will wait indefinitely (default: 5000);
 
   ## Examples
-      mysql
-      iex> Postgres.query(MyRepo, "SELECT $1 + $2", [40, 2])
-      Postgrex.Result[command: :select, columns: ["?column?"], rows: [{42}], num_rows: 1]
+      iex> Mysql.query(MyRepo, "SELECT $1 + $2", [40, 2])
   """
   def query(repo, sql, params, opts \\ []) do
     timeout = opts[:timeout] || @timeout
@@ -391,9 +389,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
-
-      # TODO use mysql driver
-      Postgrex.Result[num_rows: 0] ->
+       {:ok, 0, _, _}->
         transaction(repo, [], fn ->
           Enum.each(commands, &query(repo, &1, []))
           insert_migration_version(repo, version)
@@ -407,9 +403,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrate_down(repo, version, commands) do
     case check_migration_version(repo, version) do
-
-      # TODO use mysql driver
-      Postgrex.Result[num_rows: 0] ->
+      {:ok, 0, _, _} ->
         :missing_up
       _ ->
         transaction(repo, [], fn ->
@@ -423,9 +417,7 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrated_versions(repo) do
     create_migrations_table(repo)
-
-    # TODO use mysql driver
-    Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations", [])
+    rows = query(repo, "SELECT version FROM schema_migrations", [])
     Enum.map(rows, &elem(&1, 0))
   end
 
