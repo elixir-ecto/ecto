@@ -22,8 +22,6 @@ defmodule Ecto.Adapters.Mysql do
   @behaviour Ecto.Adapter
   @behaviour Ecto.Adapter.Migrations
   @behaviour Ecto.Adapter.Storage
-  @behaviour Ecto.Adapter.Transactions
-  @behaviour Ecto.Adapter.TestTransactions
 
   @default_port 3306
   @timeout 5000
@@ -34,6 +32,9 @@ defmodule Ecto.Adapters.Mysql do
   alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
+
+  alias EMysql.Result
+  alias EMysql.OkPacket
 
   ## Adapter API
 
@@ -62,7 +63,7 @@ defmodule Ecto.Adapters.Mysql do
   def all(repo, Query[] = query, opts) do
     mysql_query = Query[] = query.select |> normalize_select |> query.select
 
-    rows = query(repo, SQL.select(mysql_query), [], opts)
+    Result[rows: rows] = query(repo, SQL.select(mysql_query), [], opts)
 
     # Transform each row based on select expression
     transformed =
@@ -77,32 +78,33 @@ defmodule Ecto.Adapters.Mysql do
 
   @doc false
   def create(repo, entity, opts) do
-    { :ok, _, insert_id, _ } = query(repo, SQL.insert(entity), [], opts)
+    OkPacket[insert_id: insert_id] = query(repo, SQL.insert(entity), [], opts)
+    # MySQL TODO: use the primary key here
     [id: insert_id]
   end
 
   @doc false
   def update(repo, entity, opts) do
-    { :ok, _, _, _ } = query(repo, SQL.update(entity), [], opts)
+    OkPacket[affected_rows: 1] = query(repo, SQL.update(entity), [], opts)
     1
   end
 
   @doc false
   def update_all(repo, query, values, opts) do
-    { :ok, nrows, _, _ } = query(repo, SQL.update_all(query, values), [], opts)
-    nrows
+    OkPacket[affected_rows: affected_rows] = query(repo, SQL.update_all(query, values), [], opts)
+    affected_rows
   end
 
   @doc false
   def delete(repo, entity, opts) do
-    { :ok, nrows, _, _ } = query(repo, SQL.delete(entity), [], opts)
-    nrows
+    OkPacket[affected_rows: affected_rows] = query(repo, SQL.delete(entity), [], opts)
+    affected_rows
   end
 
   @doc false
   def delete_all(repo, query, opts) do
-    { :ok, nrows, _, _ } = query(repo, SQL.delete_all(query), [], opts)
-    nrows
+    OkPacket[affected_rows: affected_rows] = query(repo, SQL.delete_all(query), [], opts)
+    affected_rows
   end
 
   @doc """
@@ -139,6 +141,7 @@ defmodule Ecto.Adapters.Mysql do
     worker_opts = worker_opts
       |> Keyword.put(:decoder, &decoder/4)
       |> Keyword.put_new(:port, @default_port)
+      |> Keyword.put(:pool_name, pool_name)
 
     { pool_opts, worker_opts }
   end
@@ -222,34 +225,6 @@ defmodule Ecto.Adapters.Mysql do
     default.(param)
   end
 
-  ## Transaction API
-
-  @doc false
-  def transaction(repo, opts, fun) do
-    timeout = opts[:timout] || @timeout
-    worker = checkout_worker(repo, timeout)
-    try do
-      do_begin(repo, worker, timeout)
-      value = fun.()
-      do_commit(repo, worker, timeout)
-      { :ok, value }
-    catch
-      :throw, { :ecto_rollback, value } ->
-        do_rollback(repo, worker, timeout)
-        { :error, value }
-      type, term ->
-        do_rollback(repo, worker, timeout)
-        :erlang.raise(type, term, System.stacktrace)
-    after
-      checkin_worker(repo)
-    end
-  end
-
-  @doc false
-  def rollback(_repo, value) do
-    throw { :ecto_rollback, value }
-  end
-
   defp use_worker(repo, timeout, fun) do
     pool = repo.__mysql__(:pool_name)
     key = { :ecto_transaction_pid, pool }
@@ -268,75 +243,6 @@ defmodule Ecto.Adapters.Mysql do
         :poolboy.checkin(pool, worker)
       end
     end
-  end
-
-  defp checkout_worker(repo, timeout) do
-    pool = repo.__mysql__(:pool_name)
-    key = { :ecto_transaction_pid, pool }
-
-    case Process.get(key) do
-      { worker, counter } ->
-        Process.put(key, { worker, counter + 1 })
-        worker
-      nil ->
-        worker = :poolboy.checkout(pool, timeout)
-        Worker.monitor_me(worker)
-        Process.put(key, { worker, 1 })
-        worker
-    end
-  end
-
-  defp checkin_worker(repo) do
-    pool = repo.__mysql__(:pool_name)
-    key = { :ecto_transaction_pid, pool }
-
-    case Process.get(key) do
-      { worker, 1 } ->
-        Worker.demonitor_me(worker)
-        :poolboy.checkin(pool, worker)
-        Process.delete(key)
-      { worker, counter } ->
-        Process.put(key, { worker, counter - 1 })
-    end
-    :ok
-  end
-
-  defp do_begin(repo, worker, timeout) do
-    repo.log(:begin, fn ->
-      Worker.begin!(worker, timeout)
-    end)
-  end
-
-  defp do_rollback(repo, worker, timeout) do
-    repo.log(:rollback, fn ->
-      Worker.rollback!(worker, timeout)
-    end)
-  end
-
-  defp do_commit(repo, worker, timeout) do
-    repo.log(:commit, fn ->
-      Worker.commit!(worker, timeout)
-    end)
-  end
-
-  ## Test transaction API
-
-  @doc false
-  def begin_test_transaction(repo, opts \\ []) do
-    timeout = opts[:timeout] || @timeout
-    pool = repo.__mysql__(:pool_name)
-    :poolboy.transaction(pool, fn worker ->
-      do_begin(repo, worker, timeout)
-    end, timeout)
-  end
-
-  @doc false
-  def rollback_test_transaction(repo, opts \\ []) do
-    timeout = opts[:timeout] || @timeout
-    pool = repo.__mysql__(:pool_name)
-    :poolboy.transaction(pool, fn worker ->
-      do_rollback(repo, worker, timeout)
-    end, timeout)
   end
 
   ## Storage API
@@ -389,11 +295,11 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
-       {:ok, 0, _, _}->
-        transaction(repo, [], fn ->
-          Enum.each(commands, &query(repo, &1, []))
-          insert_migration_version(repo, version)
+      Result[rows: []] ->
+        Enum.each(commands, fn command ->
+          query(repo, command, [])
         end)
+        insert_migration_version(repo, version)
         :ok
       _ ->
         :already_up
@@ -403,13 +309,11 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrate_down(repo, version, commands) do
     case check_migration_version(repo, version) do
-      {:ok, 0, _, _} ->
+      Result[rows: []] ->
         :missing_up
       _ ->
-        transaction(repo, [], fn ->
-          Enum.each(commands, &query(repo, &1, []))
-          delete_migration_version(repo, version)
-        end)
+        Enum.each(commands, &query(repo, &1, []))
+        delete_migration_version(repo, version)
         :ok
     end
   end
@@ -417,12 +321,12 @@ defmodule Ecto.Adapters.Mysql do
   @doc false
   def migrated_versions(repo) do
     create_migrations_table(repo)
-    rows = query(repo, "SELECT version FROM schema_migrations", [])
-    Enum.map(rows, &elem(&1, 0))
+    EMysql.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations", [])
+    List.flatten(rows)
   end
 
   defp create_migrations_table(repo) do
-    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)", [])
+    query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id INT AUTO_INCREMENT, version bigint, PRIMARY KEY(id))", [])
   end
 
   defp check_migration_version(repo, version) do

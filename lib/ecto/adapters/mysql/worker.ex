@@ -6,7 +6,6 @@ defmodule Ecto.Adapters.Mysql.Worker do
   defrecordp :state, [ :conn, :params, :monitor ]
 
   @timeout 5000
-  @pool_name :ecto
 
   def start(args) do
     :gen_server.start(__MODULE__, args, [])
@@ -18,33 +17,12 @@ defmodule Ecto.Adapters.Mysql.Worker do
 
   def query!(worker, sql, params, timeout \\ @timeout) do
     case :gen_server.call(worker, { :query, sql, params, timeout }, timeout) do
-      { :result_packet, _, _, rows, _  } -> rows
-      { :ok_packet, _, affected_rows, insert_id, _, _, msg } -> { :ok, affected_rows, insert_id, msg }
-      { :error_packet, _, _, _, err } -> { :error, err }
-    end
-  end
-
-  def begin!(worker, timeout \\ @timeout) do
-    case :gen_server.call(worker, { :begin, timeout }, timeout) do
-      :ok -> :ok
-
-      :error = err -> raise err
-    end
-  end
-
-  def commit!(worker, timeout \\ @timeout) do
-    case :gen_server.call(worker, { :commit, timeout }, timeout) do
-      :ok -> :ok
-
-      :error = err -> raise err
-    end
-  end
-
-  def rollback!(worker, timeout \\ @timeout) do
-    case :gen_server.call(worker, { :rollback, timeout }, timeout) do
-      :ok -> :ok
-
-      :error = err -> raise err
+      { :result_packet, _, _, rows, _  } ->
+        EMysql.Result[rows: rows, num_rows: Enum.count(rows)]
+      { :ok_packet, _seq_num, affected_rows, insert_id, _status, _warning_message, msg } ->
+        EMysql.OkPacket[affected_rows: affected_rows, insert_id: insert_id, msg: msg]
+      { :error_packet, _seq_num, _code, _, msg } ->
+        EMysql.Error[msg: msg]
     end
   end
 
@@ -74,12 +52,14 @@ defmodule Ecto.Adapters.Mysql.Worker do
 
   # Connection is disconnected, reconnect before continuing
   def handle_call(request, from, state(conn: nil, params: params) = s) do
+    pool_name = Keyword.get(params, :pool_name)
     params = translate_params(params)
-    case :emysql.add_pool(@pool_name, params) do
+
+    case :emysql.add_pool(pool_name, params) do
       :ok ->
-        handle_call(request, from, state(s, conn: @pool_name))
+        handle_call(request, from, state(s, conn: pool_name))
       { :error, :pool_already_exists } ->
-        handle_call(request, from, state(s, conn: @pool_name))
+        handle_call(request, from, state(s, conn: pool_name))
       { :error, err } ->
         { :reply, { :error, err }, s }
     end
@@ -88,24 +68,6 @@ defmodule Ecto.Adapters.Mysql.Worker do
   def handle_call({ :query, sql, _params, _timeout }, _from, state(conn: conn) = s) do
 
     { :reply, :emysql.execute(conn, sql), s }
-  end
-
-  def handle_call({ :begin, timeout }, _from, state(conn: conn) = s) do
-
-    # TODO mysql driver
-    { :reply, Postgrex.Connection.begin(conn, timeout), s }
-  end
-
-  def handle_call({ :commit, timeout }, _from, state(conn: conn) = s) do
-
-    # TODO mysql driver
-    { :reply, Postgrex.Connection.commit(conn, timeout), s }
-  end
-
-  def handle_call({ :rollback, timeout }, _from, state(conn: conn) = s) do
-
-    # TODO mysql driver
-    { :reply, Postgrex.Connection.rollback(conn, timeout), s }
   end
 
   def handle_cast({ :monitor, pid }, state(monitor: nil) = s) do
@@ -134,9 +96,8 @@ defmodule Ecto.Adapters.Mysql.Worker do
     :ok
   end
 
-  # TODO mysql driver
   def terminate(_reason, state(conn: conn)) do
-    Postgrex.Connection.stop(conn)
+    :emysql.remove_pool(conn)
   end
 
   defp translate_params(params) do

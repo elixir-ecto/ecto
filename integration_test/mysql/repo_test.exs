@@ -474,7 +474,7 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.create(Permalink.Entity[url: "3", post_id: pid2])
 
     query = from(pl in Permalink, left_join: p in pl.post, select: assoc(pl, post: p))
-    assert [p1, p2, p3] = TestRepo.all(query)
+    assert [p1, p2, _p3] = TestRepo.all(query)
     assert Post.Entity[id: ^pid1] = p1.post.get
     # MYSQL TODO: Fix This
     # assert nil = p2.post.get

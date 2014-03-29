@@ -115,6 +115,8 @@ defmodule Ecto.Integration.Mysql.Case do
     Mysql.query(TestRepo, "TRUNCATE TABLE customs", [])
     Mysql.query(TestRepo, "TRUNCATE TABLE barebones", [])
     Mysql.query(TestRepo, "TRUNCATE TABLE comments", [])
+    Mysql.query(TestRepo, "TRUNCATE TABLE schema_migrations", [])
+    Mysql.query(TestRepo, "TRUNCATE TABLE migrations_test", [])
   end
 end
 
