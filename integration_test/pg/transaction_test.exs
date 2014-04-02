@@ -67,7 +67,7 @@ defmodule Ecto.Integration.TransactionTest do
 
   test "transaction commits" do
     TestRepo1.transaction(fn ->
-      e = TestRepo1.create(Trans.Entity[text: "1"])
+      e = TestRepo1.insert(Trans.Entity[text: "1"])
       assert [^e] = TestRepo1.all(Trans)
       assert [] = TestRepo2.all(Trans)
     end)
@@ -78,7 +78,7 @@ defmodule Ecto.Integration.TransactionTest do
   test "transaction rolls back" do
     try do
       TestRepo1.transaction(fn ->
-        e = TestRepo1.create(Trans.Entity[text: "2"])
+        e = TestRepo1.insert(Trans.Entity[text: "2"])
         assert [^e] = TestRepo1.all(Trans)
         assert [] = TestRepo2.all(Trans)
         raise UniqueError
@@ -92,12 +92,12 @@ defmodule Ecto.Integration.TransactionTest do
 
   test "nested transaction partial roll back" do
     TestRepo1.transaction(fn ->
-      e1 = TestRepo1.create(Trans.Entity[text: "3"])
+      e1 = TestRepo1.insert(Trans.Entity[text: "3"])
       assert [^e1] = TestRepo1.all(Trans)
 
         try do
           TestRepo1.transaction(fn ->
-            e2 = TestRepo1.create(Trans.Entity[text: "4"])
+            e2 = TestRepo1.insert(Trans.Entity[text: "4"])
             assert [^e1, ^e2] = TestRepo1.all(from(t in Trans, order_by: t.text))
             raise UniqueError
           end)
@@ -105,7 +105,7 @@ defmodule Ecto.Integration.TransactionTest do
           UniqueError -> :ok
         end
 
-      e3 = TestRepo1.create(Trans.Entity[text: "5"])
+      e3 = TestRepo1.insert(Trans.Entity[text: "5"])
       assert [^e1, ^e3] = TestRepo1.all(from(t in Trans, order_by: t.text))
       assert [] = TestRepo2.all(Trans)
       end)
@@ -115,7 +115,7 @@ defmodule Ecto.Integration.TransactionTest do
 
   test "manual rollback doesnt bubble up" do
     x = TestRepo1.transaction(fn ->
-      e = TestRepo1.create(Trans.Entity[text: "6"])
+      e = TestRepo1.insert(Trans.Entity[text: "6"])
       assert [^e] = TestRepo1.all(Trans)
       TestRepo1.rollback
     end)
@@ -138,7 +138,7 @@ defmodule Ecto.Integration.TransactionTest do
 
     new_pid = spawn_link fn ->
       TestRepo1.transaction(fn ->
-        e = TestRepo1.create(Trans.Entity[text: "7"])
+        e = TestRepo1.insert(Trans.Entity[text: "7"])
         assert [^e] = TestRepo1.all(Trans)
         send(pid, :in_transaction)
         receive do

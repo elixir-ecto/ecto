@@ -22,7 +22,7 @@ defmodule Ecto.Integration.LockTest do
   end
 
   setup do
-    Post.new(id: 42, count: 1) |> TestRepo1.create
+    Post.new(id: 42, count: 1) |> TestRepo1.insert
     :ok
   end
 
