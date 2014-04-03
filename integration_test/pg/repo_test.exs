@@ -34,11 +34,11 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and fetch single" do
-    assert Post.Entity[id: id] = TestRepo.insert(Post.Entity[title: "The shiny new Ecto", text: "coming soon..."])
+    assert Post.Entity[id: id] = TestRepo.insert(Post.Entity[title: "create", text: "and fetch single"])
 
     assert is_integer(id)
 
-    assert [Post.Entity[id: ^id, title: "The shiny new Ecto", text: "coming soon..."]] =
+    assert [Post.Entity[id: ^id, title: "create", text: "and fetch single"]] =
            TestRepo.all(Post)
   end
 
@@ -54,7 +54,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and delete single, fetch nothing" do
-    post = Post.Entity[title: "The shiny new Ecto", text: "coming soon..."]
+    post = Post.Entity[title: "create and delete single", text: "fetch nothing"]
 
     assert Post.Entity[] = created = TestRepo.insert(post)
     assert :ok == TestRepo.delete(created)
@@ -63,7 +63,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and delete single, fetch empty" do
-    post = Post.Entity[title: "The shiny new Ecto", text: "coming soon..."]
+    post = Post.Entity[title: "create and delete single", text: "fetch empty"]
 
     assert Post.Entity[] = TestRepo.insert(post)
     assert Post.Entity[] = created = TestRepo.insert(post)
@@ -73,7 +73,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and update single, fetch updated" do
-    post = Post.Entity[title: "The shiny new Ecto", text: "coming soon...", tags: ["1"], bin: <<1>>]
+    post = Post.Entity[title: "create and update single", text: "fetch updated", tags: ["1"], bin: <<1>>]
 
     post = TestRepo.insert(post)
     assert Post.Entity[tags: ["1"], bin: <<1>>] = post
@@ -166,12 +166,12 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "update expression syntax" do
-    assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai", count: 1])
-    assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai", count: 1])
+    assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
+    assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
 
-    assert 2 = TestRepo.update_all(p in Post, count: p.count + 41)
-    assert Post.Entity[count: 42] = TestRepo.get(Post, id1)
-    assert Post.Entity[count: 42] = TestRepo.get(Post, id2)
+    assert 2 = TestRepo.update_all(p in Post, text: p.text <> "bai")
+    assert Post.Entity[text: "haibai"] = TestRepo.get(Post, id1)
+    assert Post.Entity[text: "haibai"] = TestRepo.get(Post, id2)
   end
 
   test "delete some entites" do

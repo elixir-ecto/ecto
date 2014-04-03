@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.StorageTest do
-  use Ecto.Integration.Postgres.Case
+  use ExUnit.Case, async: false
 
   alias Ecto.Adapters.Postgres
 

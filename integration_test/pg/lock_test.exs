@@ -12,6 +12,14 @@ defmodule Ecto.Integration.LockTest do
     end
   end
 
+  defmodule LockCounter do
+    use Ecto.Model
+
+    queryable "lock_counters" do
+      field :count, :integer
+    end
+  end
+
   setup_all do
     { :ok, _ } = TestRepo1.start_link
     :ok
@@ -22,17 +30,17 @@ defmodule Ecto.Integration.LockTest do
   end
 
   setup do
-    Post.new(id: 42, count: 1) |> TestRepo1.insert
+    LockCounter.new(id: 42, count: 1) |> TestRepo1.insert
     :ok
   end
 
   teardown do
-    TestRepo1.get(Post, 42) |> TestRepo1.delete
+    TestRepo1.get(LockCounter, 42) |> TestRepo1.delete
     :ok
   end
 
   test "lock for update" do
-    query = from(p in Post, where: p.id == 42, lock: true)
+    query = from(p in LockCounter, where: p.id == 42, lock: true)
     pid = self
 
     new_pid =
@@ -67,7 +75,7 @@ defmodule Ecto.Integration.LockTest do
     end
 
     # final count will be 3 if SELECT ... FOR UPDATE worked and 2 otherwise
-    assert [Post.Entity[count: 3]] = TestRepo1.all(Post)
+    assert [LockCounter.Entity[count: 3]] = TestRepo1.all(LockCounter)
   end
 
 end
