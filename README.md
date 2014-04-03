@@ -348,7 +348,7 @@ Ecto also supports joins with associations:
 query = from p in Post,
       where: p.id == 42,
   left_join: c in p.comments,
-     select: assoc(p, c)
+     select: assoc(p, comments: c)
 
 [post] = Repo.all(query)
 
