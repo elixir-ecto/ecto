@@ -88,7 +88,12 @@ defmodule Ecto.Repo do
       end
 
       def create(entity, opts \\ []) do
-        Ecto.Repo.Backend.create(__MODULE__, unquote(adapter), entity, opts)
+        IO.write :stderr, "#{__MODULE__}.create/2 is deprecated, please use #{__MODULE__}.insert/2 instead\n#{Exception.format_stacktrace}"
+        insert(entity, opts)
+      end
+
+      def insert(entity, opts \\ []) do
+        Ecto.Repo.Backend.insert(__MODULE__, unquote(adapter), entity, opts)
       end
 
       def update(entity, opts \\ []) do
@@ -230,9 +235,9 @@ defmodule Ecto.Repo do
   ## Example
 
       post = Post.new(title: "Ecto is great", text: "really, it is")
-             |> MyRepo.create
+             |> MyRepo.insert
   """
-  defcallback create(Ecto.Entity.t, Keyword.t) :: Ecto.Entity.t | no_return
+  defcallback insert(Ecto.Entity.t, Keyword.t) :: Ecto.Entity.t | no_return
 
   @doc """
   Updates an entity using the primary key as key. If the entity has no primary
@@ -324,17 +329,17 @@ defmodule Ecto.Repo do
 
       # In the following example only the comment will be rolled back
       MyRepo.transaction(fn ->
-        MyRepo.create(Post.new)
+        MyRepo.insert(Post.new)
 
         MyRepo.transaction(fn ->
-          MyRepo.create(Comment.new)
+          MyRepo.insert(Comment.new)
           raise "error"
         end)
       end)
 
       # Roll back a transaction explicitly
       MyRepo.transaction(fn ->
-        p = MyRepo.create(Post.new)
+        p = MyRepo.insert(Post.new)
         if not Editor.post_allowed?(p) do
           MyRepo.rollback!
         end

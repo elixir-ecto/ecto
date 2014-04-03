@@ -35,7 +35,7 @@ defmodule Ecto.Adapter do
   @doc """
   Stores a single new entity in the data store. Return the default values.
   """
-  defcallback create(Ecto.Repo.t, Ecto.Entity.t, Keyword.t) :: [Keyword.t] | no_return
+  defcallback insert(Ecto.Repo.t, Ecto.Entity.t, Keyword.t) :: [Keyword.t] | no_return
 
   @doc """
   Updates an entity using the primary key as key.
