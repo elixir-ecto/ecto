@@ -87,6 +87,11 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.all(__MODULE__, unquote(adapter), queryable, opts)
       end
 
+      def create(entity, opts \\ []) do
+        IO.write :stderr, "#{__MODULE__}.create/2 is deprecated, please use #{__MODULE__}.insert/2 instead\n#{Exception.format_stacktrace}"
+        insert(entity, opts)
+      end
+
       def insert(entity, opts \\ []) do
         Ecto.Repo.Backend.insert(__MODULE__, unquote(adapter), entity, opts)
       end
