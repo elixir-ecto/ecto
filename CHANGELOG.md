@@ -14,8 +14,10 @@
 * Bug fixes
   * Fix association functions resetting the entity when manually loading associated entities
   * Fix a bug where an association join's 'on' expression didn't use the bindings
+  * `Enum.count/1` on has_many associations shouldn't break
 
 * Deprecations
+  * Rename `Repo.create/1` to `Repo.insert/1`
 
 * Backwards incompatible changes
   * `Ecto.Binary[]` is no longer used to wrap binary values. Instead always use `binary/1` in queries
