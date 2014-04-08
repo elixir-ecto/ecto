@@ -264,6 +264,8 @@ defmodule Ecto.Query.API do
   def min(numbers)
   defs min(integer) :: integer
   defs min(float) :: float
+  defs min(date) :: date
+  defs min(datetime) :: datetime
 
   @doc "Aggregate function, sums the given field over the current group."
   @aggregate true
