@@ -253,7 +253,9 @@ defmodule Ecto.Query.API do
   def max(numbers)
   defs max(integer) :: integer
   defs max(float) :: float
-
+  defs max(date) :: date
+  defs max(datetime) :: datetime
+  
   @doc """
   Aggregate function, the minimum number of the given field in the current
   group.
