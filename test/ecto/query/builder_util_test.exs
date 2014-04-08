@@ -6,13 +6,13 @@ defmodule Ecto.Query.BuilderUtilTest do
 
   test "escape" do
     assert Macro.escape(quote do &0.y end) ==
-           escape(quote do x.y end, [:x])
+           escape(quote do x.y end, [x: 0])
 
     assert Macro.escape(quote do &0.y + &0.z end) ==
-           escape(quote do x.y + x.z end, [:x])
+           escape(quote do x.y + x.z end, [x: 0])
 
     assert Macro.escape(quote do &0.y + &1.z end) ==
-           escape(quote do x.y + y.z end, [:x, :y])
+           escape(quote do x.y + y.z end, [x: 0, y: 1])
 
     assert Macro.escape(quote do avg(0) end) ==
            escape(quote do avg(0) end, [])
@@ -27,7 +27,7 @@ defmodule Ecto.Query.BuilderUtilTest do
            Code.eval_quoted(escape(quote do array([1, 2, 3], ^:integer) end, []), [], __ENV__) |> elem(0)
 
     assert quote(do: &0.z) ==
-           Code.eval_quoted(escape(quote do field(x, ^:z) end, [:x]), [], __ENV__) |> elem(0)
+           Code.eval_quoted(escape(quote do field(x, ^:z) end, [x: 0]), [], __ENV__) |> elem(0)
   end
 
   test "don't escape interpolation" do
@@ -55,7 +55,7 @@ defmodule Ecto.Query.BuilderUtilTest do
     end
 
     assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
-      Code.eval_quoted(escape(quote do field(x, 123) end, [:x]), [], __ENV__)
+      Code.eval_quoted(escape(quote do field(x, 123) end, [x: 0]), [], __ENV__)
     end
 
     assert_raise Ecto.QueryError, ~r"array type should be an atom", fn ->
@@ -63,51 +63,45 @@ defmodule Ecto.Query.BuilderUtilTest do
     end
   end
 
-  test "unbound wildcard var" do
-    assert_raise Ecto.QueryError, fn ->
-      escape(quote do _.y end, [:_, :_])
-    end
-  end
-
   test "escape dot" do
     assert Macro.escape(quote(do: { &0, :y })) ==
-           escape_dot(quote(do: x.y), [:x])
+           escape_dot(quote(do: x.y), [x: 0])
 
     assert Macro.escape(quote(do: { &0, :y })) ==
-           escape_dot(quote(do: x.y()), [:x])
+           escape_dot(quote(do: x.y()), [x: 0])
 
     assert :error ==
-           escape_dot(quote(do: x), [:x])
+           escape_dot(quote(do: x), [x: 0])
 
     assert quote(do: { &0, :y }) ==
-           Code.eval_quoted(escape_dot(quote(do: field(x, ^:y)), [:x]), [], __ENV__) |> elem(0)
+           Code.eval_quoted(escape_dot(quote(do: field(x, ^:y)), [x: 0]), [], __ENV__) |> elem(0)
 
     assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
-      Code.eval_quoted(escape_dot(quote do field(x, 123) end, [:x]), [], __ENV__)
+      Code.eval_quoted(escape_dot(quote do field(x, 123) end, [x: 0]), [], __ENV__)
     end
   end
 
-  test "escape_fields_and_vars" do 
+  test "escape_fields_and_vars" do
     varx = { :{}, [], [:&, [], [0]] }
     vary = { :{}, [], [:&, [], [1]] }
 
     assert [{ varx, :y }] ==
-           escape_fields_and_vars(quote do x.y end, [:x])
+           escape_fields_and_vars(quote do x.y end, [x: 0])
 
     assert [{ varx, :x }, { vary, :y }] ==
-           escape_fields_and_vars(quote do [x.x, y.y] end, [:x, :y])
+           escape_fields_and_vars(quote do [x.x, y.y] end, [x: 0, y: 1])
 
     assert [varx] ==
-           escape_fields_and_vars(quote do x end, [:x])
+           escape_fields_and_vars(quote do x end, [x: 0])
 
     assert [varx, { vary, :x }] ==
-           escape_fields_and_vars(quote do [x, y.x] end, [:x, :y])
+           escape_fields_and_vars(quote do [x, y.x] end, [x: 0, y: 1])
 
     assert [varx, vary] ==
-           escape_fields_and_vars(quote do [x, y] end, [:x, :y])
-  end 
+           escape_fields_and_vars(quote do [x, y] end, [x: 0, y: 1])
+  end
 
-  test "escape_expr raise" do 
+  test "escape_expr raise" do
     assert_raise Ecto.QueryError, "unbound variable `x` in query", fn ->
       escape_fields_and_vars(quote do x.y end, [])
     end
@@ -116,5 +110,5 @@ defmodule Ecto.Query.BuilderUtilTest do
     assert_raise Ecto.QueryError, message, fn ->
       escape_fields_and_vars(quote do 1 + 2 end, [])
     end
-  end 
+  end
 end

@@ -13,75 +13,75 @@ defmodule Ecto.Query.BuilderUtil do
   place. This means that everything foreign will be inserted as-is into
   the query.
   """
-  @spec escape(Macro.t, [atom], { atom, Macro.t } | nil) :: Macro.t
-  def escape(expr, vars, join_var \\ nil)
+  @spec escape(Macro.t, Keyword.t) :: Macro.t
+  def escape(expr, vars)
 
   # var.x - where var is bound
-  def escape({ { :., _, [{ var, _, context}, right] }, _, [] }, vars, join_var)
+  def escape({ { :., _, [{ var, _, context}, right] }, _, [] }, vars)
       when is_atom(var) and is_atom(context) and is_atom(right) do
-    left_escaped = escape_var(var, vars, join_var)
+    left_escaped = escape_var(var, vars)
     dot_escaped = { :{}, [], [:., [], [left_escaped, right]] }
     { :{}, [], [dot_escaped, [], []] }
   end
 
   # interpolation
-  def escape({ :^, _, [arg] }, _vars, _join_var) do
+  def escape({ :^, _, [arg] }, _vars) do
     arg
   end
 
   # ecto types
-  def escape({ :binary, _, [arg] }, vars, join_var) do
-    arg_escaped = escape(arg, vars, join_var)
+  def escape({ :binary, _, [arg] }, vars) do
+    arg_escaped = escape(arg, vars)
     { Ecto.Binary, arg_escaped }
   end
 
-  def escape({ :array, _, [arg, type] }, vars, join_var) do
-    arg  = escape(arg, vars, join_var)
-    type = escape(type, vars, join_var)
+  def escape({ :array, _, [arg, type] }, vars) do
+    arg  = escape(arg, vars)
+    type = escape(type, vars)
     type = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_array(unquote(type)))
     { :{}, [], [Ecto.Array, arg, type] }
     # TODO: Check that arg is and type is an atom
   end
 
   # field macro
-  def escape({ :field, _, [{ var, _, context }, field] }, vars, join_var)
+  def escape({ :field, _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) do
-    var   = escape_var(var, vars, join_var)
-    field = escape(field, vars, join_var)
+    var   = escape_var(var, vars)
+    field = escape(field, vars)
     field = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_field(unquote(field)))
     dot   = { :{}, [], [:., [], [var, field]] }
     { :{}, [], [dot, [], []] }
   end
 
   # binary literal
-  def escape({ :<<>>, _, _ } = bin, _vars, _join_var), do: bin
+  def escape({ :<<>>, _, _ } = bin, _vars), do: bin
 
   # sigils
-  def escape({ name, _, _ } = sigil, _vars, _join_var)
+  def escape({ name, _, _ } = sigil, _vars)
       when name in @expand_sigils do
     sigil
   end
 
   # ops & functions
-  def escape({ name, meta, args }, vars, join_var)
+  def escape({ name, meta, args }, vars)
       when is_atom(name) and is_list(args) do
-    args = Enum.map(args, &escape(&1, vars, join_var))
+    args = Enum.map(args, &escape(&1, vars))
     { :{}, [], [name, meta, args] }
   end
 
   # list
-  def escape(list, vars, join_var) when is_list(list) do
-    Enum.map(list, &escape(&1, vars, join_var))
+  def escape(list, vars) when is_list(list) do
+    Enum.map(list, &escape(&1, vars))
   end
 
   # literals
-  def escape(literal, _vars, _join_var) when is_binary(literal), do: literal
-  def escape(literal, _vars, _join_var) when is_boolean(literal), do: literal
-  def escape(literal, _vars, _join_var) when is_number(literal), do: literal
-  def escape(nil, _vars, _join_var), do: nil
+  def escape(literal, _vars) when is_binary(literal), do: literal
+  def escape(literal, _vars) when is_boolean(literal), do: literal
+  def escape(literal, _vars) when is_number(literal), do: literal
+  def escape(nil, _vars), do: nil
 
   # everything else is not allowed
-  def escape(other, _vars, _join_var) do
+  def escape(other, _vars) do
     raise Ecto.QueryError, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
@@ -93,15 +93,11 @@ defmodule Ecto.Query.BuilderUtil do
   which use a `count_binds` variable assigned to the `Ecto.Query`
   to pass the required index information.
   """
-  @spec escape_var(atom, [atom], { atom, Macro.t } | nil) :: Macro.t | no_return
-  def escape_var(var, vars, join_var \\ nil)
+  @spec escape_var(atom, Keyword.t) :: Macro.t | no_return
+  def escape_var(var, vars)
 
-  def escape_var(var, _vars, { var, idx }) do
-    { :{}, [], [:&, [], [idx]] }
-  end
-
-  def escape_var(var, vars, _join_var) do
-    ix = Enum.find_index(vars, &(&1 == var))
+  def escape_var(var, vars) do
+    ix = vars[var]
 
     if var != :_ and ix do
       { :{}, [], [:&, [], [ix]] }
@@ -118,21 +114,21 @@ defmodule Ecto.Query.BuilderUtil do
 
   ## Examples
 
-      iex> escape_dot(quote(do: x.y), [:x])
+      iex> escape_dot(quote(do: x.y), [x: 0])
       {{:{}, [], [:&, [], [0]]}, :y}
 
-      iex> escape_dot(quote(do: x.y()), [:x])
+      iex> escape_dot(quote(do: x.y()), [x: 0])
       {{:{}, [], [:&, [], [0]]}, :y}
 
-      iex> escape_dot(quote(do: field(x, ^:y)), [:x])
+      iex> escape_dot(quote(do: field(x, ^:y)), [x: 0])
       { {:{}, [], [:&, [], [0]]},
         {{:., [], [:"Elixir.Ecto.Query.BuilderUtil", :check_field]}, [], [:y]} }
 
-      iex> escape_dot(quote(do: x), [:x])
+      iex> escape_dot(quote(do: x), [x: 0])
       :error
 
   """
-  @spec escape_dot(Macro.t, [atom]) :: { Macro.t, Macro.t } | :error
+  @spec escape_dot(Macro.t, Keyword.t) :: { Macro.t, Macro.t } | :error
   def escape_dot({ :field, _, [{ var, _, context }, field] }, vars)
       when is_atom(var) and is_atom(context) do
     var   = escape_var(var, vars)
@@ -156,15 +152,15 @@ defmodule Ecto.Query.BuilderUtil do
   ## Examples
 
       iex> escape_binding(quote do: [x, y, z])
-      [:x, :y, :z]
+      [x: 0, y: 1, z: 2]
 
       iex> escape_binding(quote do: [x, y, x])
       ** (Ecto.QueryError) variable `x` is bound twice
 
   """
   def escape_binding(binding) when is_list(binding) do
-    vars       = Enum.map(binding, &escape_bind(&1))
-    bound_vars = Enum.filter(vars, &(&1 != :_))
+    vars       = binding |> Stream.with_index |> Enum.map(&escape_bind(&1))
+    bound_vars = vars |> Keyword.keys |> Enum.filter(&(&1 != :_))
     dup_vars   = bound_vars -- Enum.uniq(bound_vars)
 
     unless dup_vars == [] do
@@ -178,11 +174,11 @@ defmodule Ecto.Query.BuilderUtil do
     raise Ecto.QueryError, reason: "binding should be list of variables, got: #{Macro.to_string(bind)}"
   end
 
-  defp escape_bind(var) when is_atom(var),
-    do: var
-  defp escape_bind({ var, _, context }) when is_atom(var) and is_atom(context),
-    do: var
-  defp escape_bind(bind),
+  defp escape_bind({ { var, _ } = tuple, _ }) when is_atom(var),
+    do: tuple
+  defp escape_bind({ { var, _, context }, ix }) when is_atom(var) and is_atom(context),
+    do: { var, ix }
+  defp escape_bind({ bind, _ix }),
     do: raise(Ecto.QueryError, reason: "binding list should contain only variables, got: #{Macro.to_string(bind)}")
 
 
@@ -194,15 +190,15 @@ defmodule Ecto.Query.BuilderUtil do
 
   ## Examples
 
-      iex> escape_fields_and_vars(quote(do: [x.x, y.y]), [:x, :y])
+      iex> escape_fields_and_vars(quote(do: [x.x, y.y]), [x: 0, y: 1])
       [{{:{}, [], [:&, [], [0]]}, :x},
        {{:{}, [], [:&, [], [1]]}, :y}]
 
-      iex> escape_fields_and_vars(quote(do: x), [:x, :y])
+      iex> escape_fields_and_vars(quote(do: x), [x: 0, y: 1])
       [{:{}, [], [:&, [], [0]]}]
 
   """
-  @spec escape_fields_and_vars(Macro.t, [atom]) :: Macro.t | no_return
+  @spec escape_fields_and_vars(Macro.t, Keyword.t) :: Macro.t | no_return
   def escape_fields_and_vars(ast, vars) do
     Enum.map(List.wrap(ast), &do_escape_expr(&1, vars))
   end
@@ -256,7 +252,7 @@ defmodule Ecto.Query.BuilderUtil do
 
   For example, take into account the `SelectBuilder`:
 
-      select  = Ecto.Query.QueryExpr[expr: expr, file: env.file, line: env.line]
+      select = Ecto.Query.QueryExpr[expr: expr, file: env.file, line: env.line]
       BuilderUtil.apply_query(query, __MODULE__, [select], env)
 
   `expr` is already an escaped expression and we must not escape
@@ -270,10 +266,10 @@ defmodule Ecto.Query.BuilderUtil do
   1. In order to call this function, the arguments must be escapable
      values supported by the `escape/1` function below;
 
-  2. The apply function not manipulate the given arguments,
-     with exception by the query.
+  2. The apply function may not manipulate the given arguments,
+     with exception to the query.
 
-  In particular, when invoke at compilation time, all arguments
+  In particular, when invoked at compilation time, all arguments
   (except the query) will be escaped, so they can be injected into
   the query properly, but they will be in their runtime form
   when invoked at runtime.
@@ -289,20 +285,16 @@ defmodule Ecto.Query.BuilderUtil do
     end
   end
 
-  @doc """
-  Unescapes an `Ecto.Query.Query` record.
-  """
-  def unescape_query({ :{}, _meta, [Query|_] = query }),
+  # Unescapes an `Ecto.Query.Query` record.
+  defp unescape_query({ :{}, _meta, [Query|_] = query }),
     do: list_to_tuple(query)
-  def unescape_query(other),
+  defp unescape_query(other),
     do: other
 
-  @doc """
-  Escapes an `Ecto.Query.Query` and associated records.
-  """
-  def escape_query(Query[] = query),
+  # Escapes an `Ecto.Query.Query` and associated records.
+  defp escape_query(Query[] = query),
     do: { :{}, [], tuple_to_list(query) }
-  def escape_query(other),
+  defp escape_query(other),
     do: other
 
   @doc """

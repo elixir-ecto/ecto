@@ -448,6 +448,13 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT 0\nFROM \"posts\" AS p0\nINNER JOIN \"comments\" AS c0 ON (1 = 2) AND (c0.\"d\" = p0.\"c\")"
   end
 
+  test "join produces correct bindings" do
+    query = from(p in Post, join: c in Comment, on: true)
+    query = from(p in query, join: c in Comment, on: true, select: { p.id, c.id })
+    query = normalize(query)
+    assert SQL.select(query) == ~s'SELECT p0."id", c1."id"\nFROM "posts" AS p0\nINNER JOIN "comments" AS c0 ON TRUE\nINNER JOIN "comments" AS c1 ON TRUE'
+  end
+
   defmodule PKModel do
     use Ecto.Model
 

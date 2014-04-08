@@ -23,19 +23,21 @@ defmodule Ecto.Query.JoinBuilder do
       iex> escape(quote(do: x in Sample), [])
       { :x, { :__aliases__, [alias: false], [:Sample] }, nil }
 
-      iex> escape(quote(do: c in p.comments), [:p])
+      iex> escape(quote(do: c in p.comments), [p: 0])
       { :c, nil, {{:{}, [], [:&, [], [0]]}, :comments} }
 
   """
-  @spec escape(Macro.t, [atom]) :: { [atom], Macro.t | nil, Macro.t | nil }
+  @spec escape(Macro.t, Keyword.t) :: { [atom], Macro.t | nil, Macro.t | nil }
   def escape({ :in, _, [{ var, _, context }, expr] }, vars)
       when is_atom(var) and is_atom(context) do
-    escape(expr, vars) |> set_elem(0, var)
+    { _, expr, assoc } = escape(expr, vars)
+    { var, expr, assoc }
   end
 
   def escape({ :in, _, [{ var, _, context }, expr] }, vars)
       when is_atom(var) and is_atom(context) do
-    escape(expr, vars) |> set_elem(0, var)
+    { _, expr, assoc } = escape(expr, vars)
+    { var, expr, assoc }
   end
 
   def escape({ :__aliases__, _, _ } = module, _vars) do
@@ -62,8 +64,8 @@ defmodule Ecto.Query.JoinBuilder do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.Env.t) :: Macro.t
-  def build(query, qual, binding, expr, on, env) do
+  @spec build_with_binds(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.Env.t) :: { Macro.t, Keyword.t, non_neg_integer | nil }
+  def build_with_binds(query, qual, binding, expr, on, count_bind, env) do
     binding = BuilderUtil.escape_binding(binding)
     { join_bind, join_expr, join_assoc } = escape(expr, binding)
     is_assoc? = not nil?(join_assoc)
@@ -72,48 +74,47 @@ defmodule Ecto.Query.JoinBuilder do
     validate_on(on, is_assoc?)
     validate_bind(join_bind, binding)
 
-    # Define the variable that will be used to calculate the number of binds.
-    # If the variable is known at compile time, calculate it now.
-    query = Macro.expand(query, env)
-    { query, getter, setter } = count_binds(query)
+    if join_bind && !count_bind do
+      # If count_bind is not an integer, make it a variable.
+      # The variable is the getter/setter storage.
+      count_bind = quote(do: count_bind)
+      count_setter = quote(do: unquote(count_bind) = BuilderUtil.count_binds(query))
+    end
 
-    join_on = escape_on(on, binding ++ List.wrap(join_bind), { join_bind, getter }, env)
+    binding = binding ++ [{ join_bind, count_bind }]
+
+    join_on = escape_on(on, binding, env)
     join =
       quote do
         JoinExpr[qual: unquote(qual), source: unquote(join_expr), on: unquote(join_on),
                  file: unquote(env.file), line: unquote(env.line), assoc: unquote(join_assoc)]
       end
 
-    case query do
-      Query[joins: joins] ->
-        query.joins(joins ++ [join]) |> BuilderUtil.escape_query
-      _ ->
+    if is_integer(count_bind) do
+      count_bind = count_bind + 1
+      quoted = BuilderUtil.apply_query(query, __MODULE__, [join], env)
+    else
+      count_bind = quote(do: unquote(count_bind) + 1)
+      quoted =
         quote do
           Query[joins: joins] = query = Ecto.Queryable.to_query(unquote(query))
-          unquote(setter)
+          unquote(count_setter)
           query.joins(joins ++ [unquote(join)])
         end
-    end
+      end
+
+    { quoted, binding, count_bind }
   end
 
-  defp escape_on(nil, _binding, _join_var, _env), do: nil
-  defp escape_on(on, binding, join_var, env) do
-    on = BuilderUtil.escape(on, binding, join_var)
+  def apply(query, expr) do
+    Ecto.Query.Query[joins: joins] = query = Ecto.Queryable.to_query(query)
+    query.joins(joins ++ [expr])
+  end
+
+  defp escape_on(nil, _binding, _env), do: nil
+  defp escape_on(on, binding, env) do
+    on = BuilderUtil.escape(on, binding)
     quote do: QueryExpr[expr: unquote(on), line: unquote(env.line), file: unquote(env.file)]
-  end
-
-  defp count_binds(query) do
-    case BuilderUtil.unescape_query(query) do
-      # We have the query, calculate the count binds.
-      Query[] = unescaped ->
-        { unescaped, BuilderUtil.count_binds(unescaped), nil }
-
-      # We don't have the query, handle it at runtime.
-      _ ->
-        { query,
-          quote(do: var!(count_binds, Ecto.Query)),
-          quote(do: var!(count_binds, Ecto.Query) = BuilderUtil.count_binds(query)) }
-    end
   end
 
   @qualifiers [:inner, :left, :right, :full]
