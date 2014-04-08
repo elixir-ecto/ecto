@@ -256,7 +256,7 @@ defmodule Ecto.Query.API do
   defs max(date) :: date
   defs max(datetime) :: datetime
   defs max(time) :: time
-  
+
   @doc """
   Aggregate function, the minimum number of the given field in the current
   group.
