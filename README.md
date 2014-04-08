@@ -187,7 +187,7 @@ A repository in Elixir only works with queryable structures. Since we have defin
 
 ```elixir
 weather = Weather.new(temp_lo: 0, temp_hi: 23)
-Repo.create(weather)
+Repo.insert(weather)
 ```
 
 After persisting `weather` to the database, it will return a new copy of weather with the primary key (the `id`) set. We can use this value to read an entity back from the repository:
@@ -348,7 +348,7 @@ Ecto also supports joins with associations:
 query = from p in Post,
       where: p.id == 42,
   left_join: c in p.comments,
-     select: assoc(p, c)
+     select: assoc(p, comments: c)
 
 [post] = Repo.all(query)
 

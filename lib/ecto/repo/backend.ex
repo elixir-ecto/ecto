@@ -60,10 +60,10 @@ defmodule Ecto.Repo.Backend do
     adapter.all(repo, query, opts)
   end
 
-  def create(repo, adapter, entity, opts) do
+  def insert(repo, adapter, entity, opts) do
     normalized_entity = normalize_entity(entity)
     validate_entity(normalized_entity)
-    adapter.create(repo, normalized_entity, opts) |> entity.update
+    adapter.insert(repo, normalized_entity, opts) |> entity.update
   end
 
   def update(repo, adapter, entity, opts) do

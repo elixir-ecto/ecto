@@ -37,7 +37,6 @@ defmodule Ecto.Integration.Postgres.Post do
     field :tags, { :array, :string }
     field :bin, :binary
     field :temp, :virtual, default: "temp"
-    field :count, :integer
     has_many :comments, Ecto.Integration.Postgres.Comment
     has_one :permalink, Ecto.Integration.Postgres.Permalink
   end
@@ -152,13 +151,14 @@ Enum.each(setup_cmds, fn(cmd) ->
 end)
 
 setup_database = [
-  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, count integer)",
+  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea)",
   "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, day date, time time, interval interval, bytes bytea, post_id integer, author_id integer)",
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
   "CREATE TABLE customs (foo text PRIMARY KEY)",
   "CREATE TABLE barebones (text text)",
   "CREATE TABLE transaction (id serial, text text)",
+  "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 

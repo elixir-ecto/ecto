@@ -12,32 +12,36 @@ defmodule Ecto.Query.FromBuilder do
   ## Examples
 
       iex> escape(quote do: MyModel)
-      { [:_], quote(do: MyModel) }
+      { [], quote(do: MyModel) }
 
       iex> escape(quote do: p in posts)
-      { [:p], quote(do: posts) }
+      { [p: 0], quote(do: posts) }
 
       iex> escape(quote do: [p, q] in posts)
-      { [:p, :q], quote(do: posts) }
+      { [p: 0, q: 1], quote(do: posts) }
 
       iex> escape(quote do: [_, _] in abc)
-      { [:_, :_], quote(do: abc) }
+      { [], quote(do: abc) }
 
       iex> escape(quote do: other)
-      { [:_], quote(do: other) }
+      { [], quote(do: other) }
 
       iex> escape(quote do: x() in other)
       ** (Ecto.QueryError) invalid `from` query expression
 
   """
-  @spec escape(Macro.t) :: { [atom], Macro.t }
+  @spec escape(Macro.t) :: { Keyword.t, Macro.t }
   def escape({ :in, _, [list, expr] }) when is_list(list) do
-    binds = Enum.map(list, fn
-      { var, _, context } when is_atom(var) and is_atom(context) ->
-        var
-      _ ->
-        raise Ecto.QueryError, reason: "invalid `from` query expression"
-    end)
+    binds =
+      Enum.flat_map(Stream.with_index(list), fn
+        { { :_, _, context }, _ix } when is_atom(context) ->
+          []
+        { { var, _, context }, ix } when is_atom(var) and is_atom(context) ->
+          [{ var, ix }]
+        { _, _count } ->
+          raise Ecto.QueryError, reason: "invalid `from` query expression"
+      end)
+
     { binds, expr }
   end
 
@@ -46,7 +50,7 @@ defmodule Ecto.Query.FromBuilder do
   end
 
   def escape(expr) do
-    { [:_], expr }
+    { [], expr }
   end
 
   @doc """
@@ -56,25 +60,29 @@ defmodule Ecto.Query.FromBuilder do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, Macro.Env.t) :: Macro.t
-  def build(expr, env) do
+  @spec build_with_binds(Macro.t, Macro.Env.t) :: { Macro.t, Keyword.t, non_neg_integer | nil }
+  def build_with_binds(expr, env) do
     { binds, expr } = escape(expr)
 
-    query = case Macro.expand(expr, env) do
+    case Macro.expand(expr, env) do
       atom when is_atom(atom) ->
+        count_bind = 1
         if Code.ensure_compiled?(atom) do
-          Ecto.Queryable.to_query(atom) |> Macro.escape
+          quoted = Ecto.Queryable.to_query(atom) |> Macro.escape
         else
-          atom
+          quoted = atom
         end
-      other -> other
+      other ->
+        count_bind = nil
+        quoted = other
     end
 
-    BuilderUtil.apply_query(query, __MODULE__, [length(binds)], env)
+    quoted = BuilderUtil.apply_query(quoted, __MODULE__, [length(binds)], env)
+    { quoted, binds, count_bind }
   end
 
   @doc """
-  The callback applied by `build/2` to build the query.
+  The callback applied by `build_with_binds/2` to build the query.
   """
   @spec apply(Ecto.Queryable.t, non_neg_integer) :: Ecto.Query.Query.t
   def apply(query, binds) do

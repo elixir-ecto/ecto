@@ -2,4 +2,4 @@
   "emysql": {:git, "git://github.com/eonblast/emysql.git", "ea507627e2b56d8a90e98db0bd78cb0d7456289d", []},
   "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "1419e7adc1c289cd75587d9f435c412c70c297d9", []},
   "poolboy": {:git, "git://github.com/devinus/poolboy.git", "64e1eaef0b1e88849c7e7ba9ff75f8cd4dba2a3b", []},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "7139261b927f58c0f67a7a830e113adecdadb3bb", []} ]
+  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "7bb042d90d80fcfe396408af77a505173912b153", []} ]

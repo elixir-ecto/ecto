@@ -5,7 +5,7 @@ defmodule Ecto.RepoTest.MockAdapter do
   def start_link(_repo, _opts), do: :ok
   def stop(_repo), do: :ok
   def all(_repo, _query, _opts), do: []
-  def create(_repo, record, _opts) do
+  def insert(_repo, record, _opts) do
     record.id(45)
   end
   def update(_repo, _record, _opts), do: 1
@@ -110,7 +110,7 @@ defmodule Ecto.RepoTest do
     entity = MyModel.new(x: 123)
 
     assert_raise Ecto.InvalidEntity, fn ->
-      MyRepo.create(entity)
+      MyRepo.insert(entity)
     end
 
     entity = MyModel.new(id: 1, x: 123)
@@ -181,13 +181,13 @@ defmodule Ecto.RepoTest do
 
   test "unsupported type" do
     assert_raise ArgumentError, fn ->
-      MyRepo.create(MyModel.Entity[x: {123}])
+      MyRepo.insert(MyModel.Entity[x: {123}])
     end
   end
 
   test "list value types incorrect" do
     assert_raise Ecto.InvalidEntity, fn ->
-      MyRepo.create(MyModelList.Entity[l1: Ecto.Array[value: [1, 2, 3], type: :integer]])
+      MyRepo.insert(MyModelList.Entity[l1: Ecto.Array[value: [1, 2, 3], type: :integer]])
     end
   end
 

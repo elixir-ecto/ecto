@@ -78,9 +78,8 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   @doc false
-  def create(repo, entity, opts) do
-    module      = elem(entity, 0)
-
+  def insert(repo, entity, opts) do
+    module    = elem(entity, 0)
     returning = module.__entity__(:keywords, entity)
       |> Enum.filter(fn { _, val } -> val == nil end)
       |> Keyword.keys

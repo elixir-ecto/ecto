@@ -17,11 +17,11 @@ defmodule Ecto.Query.SelectBuilder do
       iex> escape([ 1, 2 ], [])
       [1, 2]
 
-      iex> escape(quote(do: x), [:x])
+      iex> escape(quote(do: x), [x: 0])
       { :{}, [], [:&, [], [0]] }
 
   """
-  @spec escape(Macro.t, [atom]) :: Macro.t
+  @spec escape(Macro.t, Keyword.t) :: Macro.t
   def escape({ :assoc, _, args } = assoc, vars) when is_list(args) do
     escape_assoc(assoc, vars)
   end
