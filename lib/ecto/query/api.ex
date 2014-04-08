@@ -255,6 +255,7 @@ defmodule Ecto.Query.API do
   defs max(float) :: float
   defs max(date) :: date
   defs max(datetime) :: datetime
+  defs max(time) :: time
   
   @doc """
   Aggregate function, the minimum number of the given field in the current
@@ -266,6 +267,7 @@ defmodule Ecto.Query.API do
   defs min(float) :: float
   defs min(date) :: date
   defs min(datetime) :: datetime
+  defs min(time) :: time
 
   @doc "Aggregate function, sums the given field over the current group."
   @aggregate true
