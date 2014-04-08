@@ -12,12 +12,12 @@ defmodule Ecto.Query.OrderByBuilder do
 
   ## Examples
 
-      iex> escape(quote do [x.x, y.y] end, [:x, :y])
+      iex> escape(quote do [x.x, y.y] end, [x: 0, y: 1])
       [{ :{}, [], [:asc, { :{}, [], [:&, [], [0]] }, :x] },
        { :{}, [], [:asc, { :{}, [], [:&, [], [1]] }, :y] }]
 
   """
-  @spec escape(Macro.t, [atom]) :: Macro.t | no_return
+  @spec escape(Macro.t, Keyword.t) :: Macro.t | no_return
   def escape(list, vars) when is_list(list) do
     Enum.map(list, &escape_field(&1, vars))
   end

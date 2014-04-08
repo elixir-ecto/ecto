@@ -8,13 +8,13 @@ defmodule Ecto.Query.OrderByBuilderTest do
     varx = { :{}, [], [:&, [], [0]] }
     vary = { :{}, [], [:&, [], [1]] }
     assert [{ :{}, [], [:asc, varx, :y] }] ==
-           escape(quote do x.y end, [:x])
+           escape(quote do x.y end, [x: 0])
 
     assert [{ :{}, [], [:asc, varx, :x] }, { :{}, [], [:asc, vary, :y] }] ==
-           escape(quote do [x.x, y.y] end, [:x, :y])
+           escape(quote do [x.x, y.y] end, [x: 0, y: 1])
 
     assert [{ :{}, [], [:asc, varx, :x] }, { :{}, [], [:desc, vary, :y] }] ==
-           escape(quote do [asc: x.x, desc: y.y] end, [:x, :y])
+           escape(quote do [asc: x.x, desc: y.y] end, [x: 0, y: 1])
   end
 
   test "escape raise" do
@@ -24,7 +24,7 @@ defmodule Ecto.Query.OrderByBuilderTest do
 
     message = "non-allowed direction `test`, only `asc` and `desc` allowed"
     assert_raise Ecto.QueryError, message, fn ->
-      escape(quote do [test: x.y] end, [:x])
+      escape(quote do [test: x.y] end, [x: 0])
     end
 
     message = "malformed `order_by` query expression"

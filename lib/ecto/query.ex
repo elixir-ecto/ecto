@@ -187,9 +187,8 @@ defmodule Ecto.Query do
       raise ArgumentError, reason: "second argument to `from` has to be a keyword list"
     end
 
-    { binds, _ } = FromBuilder.escape(expr)
-    quoted = FromBuilder.build(expr, __CALLER__)
-    build_query(kw, quoted, binds)
+    { quoted, binds, count_bind } = FromBuilder.build_with_binds(expr, __CALLER__)
+    build_query(kw, __CALLER__, count_bind, quoted, binds)
   end
 
   @doc """
@@ -227,7 +226,8 @@ defmodule Ecto.Query do
       |> select([p, c], { p, c })
   """
   defmacro join(query, qual, binding, expr, on \\ nil) do
-    JoinBuilder.build(query, qual, binding, expr, on, __CALLER__)
+    JoinBuilder.build_with_binds(query, qual, binding, expr, on, nil, __CALLER__)
+    |> elem(0)
   end
 
   @doc """
@@ -397,9 +397,9 @@ defmodule Ecto.Query do
   @doc """
   A lock query expression.
 
-  Provides support for row-level pessimistic locking using 
+  Provides support for row-level pessimistic locking using
   SELECT ... FOR UPDATE or other, database-specific, locking clauses.
-  Can be any expression but have to evaluate to a boolean value or a 
+  Can be any expression but have to evaluate to a boolean value or a
   string and it can't include any field.
 
   If `lock` is given twice, it overrides the previous value.
@@ -418,7 +418,7 @@ defmodule Ecto.Query do
   defmacro lock(query, expr) do
     LockBuilder.build(:lock, query, expr, __CALLER__)
   end
-  
+
   @doc """
   A group by query expression.
 
@@ -520,21 +520,34 @@ defmodule Ecto.Query do
   @no_binds [:limit, :offset, :preload, :lock]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
-  defp build_query([{ type, expr }|t], quoted, binds) when type in @binds do
-    quoted = quote do
-      Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
-    end
-    build_query t, quoted, binds
+  defp build_query([{ type, expr }|t], env, count_bind, quoted, binds) when type in @binds do
+    # If all bindings are integer indexes keep AST Macro.expand'able to Query[],
+    # otherwise ensure that quoted is evaluated before macro call
+    quoted =
+      if Enum.all?(binds, fn { _, value } -> is_integer(value) end) do
+        quote do
+          Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
+        end
+      else
+        quote do
+          query = unquote(quoted)
+          Ecto.Query.unquote(type)(query, unquote(binds), unquote(expr))
+        end
+      end
+
+    build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ type, expr }|t], quoted, binds) when type in @no_binds do
-    quoted = quote do
-      Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
-    end
-    build_query t, quoted, binds
+  defp build_query([{ type, expr }|t], env, count_bind, quoted, binds) when type in @no_binds do
+    quoted =
+      quote do
+        Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
+      end
+
+    build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ join, expr }|t], quoted, binds) when join in @joins do
+  defp build_query([{ join, expr }|t], env, count_bind, quoted, binds) when join in @joins do
     qual =
       case join do
         :join       -> :inner
@@ -545,27 +558,22 @@ defmodule Ecto.Query do
       end
 
     { t, on } = collect_on(t, nil)
-    { join_bind, _, _ } = JoinBuilder.escape(expr, binds)
+    { quoted, binds, count_bind } = JoinBuilder.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
 
-    quoted = quote do
-      Ecto.Query.join(unquote(quoted), unquote(qual), unquote(binds),
-                      unquote(expr), unquote(on))
-    end
-
-    build_query t, quoted, binds ++ List.wrap(join_bind)
+    build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ :on, _value }|_], _quoted, _binds) do
+  defp build_query([{ :on, _value }|_], _env, _count_bind, _quoted, _binds) do
     raise Ecto.QueryError,
-      reason: "`on` keyword must immediatelly follow a join"
+      reason: "`on` keyword must immediately follow a join"
   end
 
-  defp build_query([{ key, _value }|_], _quoted, _binds) do
+  defp build_query([{ key, _value }|_], _env, _count_bind, _quoted, _binds) do
     raise Ecto.QueryError,
       reason: "unsupported #{inspect key} in keyword query expression"
   end
 
-  defp build_query([], quoted, _binds) do
+  defp build_query([], _env, _count_bind, quoted, _binds) do
     quoted
   end
 

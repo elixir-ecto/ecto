@@ -55,7 +55,7 @@ defmodule Ecto.QueryTest do
 
     query = Post |> lock("FOR SHARE NOWAIT")
     validate(query)
-    
+
     query = select(Post, [p], p.title)
     validate(query)
 
@@ -162,7 +162,7 @@ defmodule Ecto.QueryTest do
     from(c in Comment, join: p in Post, on: c.text == "", select: c)
     from(p in Post, join: c in p.comments, on: c.text == "", select: p)
 
-    assert_raise Ecto.QueryError, "`on` keyword must immediatelly follow a join", fn ->
+    assert_raise Ecto.QueryError, "`on` keyword must immediately follow a join", fn ->
       delay_compile(from(c in Comment, on: c.text == "", select: c))
     end
 
@@ -192,5 +192,19 @@ defmodule Ecto.QueryTest do
       comment = Comment
       from([a, b] in comment, [])
     end
+  end
+
+  test "query builder is compile time" do
+    quoted =
+      quote do
+        from(p in Post,
+             join: c in p.comments,
+             join: cc in Comment, on: c.text == "",
+             limit: 0,
+             where: p.id == 0 and c.id == 0 and cc.id == 0,
+             select: p)
+      end
+
+    assert { :{}, _, [Ecto.Query.Query | _] } = Macro.expand(quoted, __ENV__)
   end
 end
