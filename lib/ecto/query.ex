@@ -2,7 +2,7 @@ defmodule Ecto.Query do
   @moduledoc """
   Provides the Query DSL.
 
-  Queries are used to retrieve and manipualte data in a repository
+  Queries are used to retrieve and manipulate data in a repository
   (see `Ecto.Repo`). Although this module provides a complete API,
   supporting expressions like `where/3`, `select/3` and so forth,
   most of the times developers need to import only the `from/2`
@@ -16,7 +16,7 @@ defmodule Ecto.Query do
             where: w.prcp > 0,
            select: w.city
 
-      # econd the query to the repository
+      # Send the query to the repository
       Repo.all(query)
 
   ## Composition
@@ -25,7 +25,7 @@ defmodule Ecto.Query do
   actually be defined in two parts:
 
       # Create a query
-      query = from w in Weather, where: w.prcp > 0,
+      query = from w in Weather, where: w.prcp > 0
 
       # Extend the query
       query = from w in query, select: w.city
@@ -34,7 +34,7 @@ defmodule Ecto.Query do
   side of `in` are just a convenience, they are not taken into
   account in the query generation.
 
-  Any value can used on the right-side of `in` as long as it
+  Any value can be used on the right-side of `in` as long as it
   implements the `Ecto.Queryable` protocol.
 
   ## Data security
@@ -51,7 +51,7 @@ defmodule Ecto.Query do
       end
 
   In the example above, we will compare against the `age` and `height`
-  given as arguments, appropriately convering the height. Note all
+  given as arguments, appropriately converting the height. Note all
   external values will be quoted to avoid SQL injection attacks in
   the underlying repository.
 
@@ -64,7 +64,7 @@ defmodule Ecto.Query do
 
       from u in User, where: u.age == "zero"
 
-  will error with the following message:
+  will return an error with the following message:
 
       ** (Ecto.Query.TypeCheckError) the following expression does not type check:
 
@@ -180,7 +180,7 @@ defmodule Ecto.Query do
       end
 
   Note the variables `p` and `q` must be named as you find more convenient
-  as they have no important in the query sent to the database.
+  as they have no importance in the query sent to the database.
   """
   defmacro from(expr, kw) do
     unless Keyword.keyword?(kw) do
@@ -284,7 +284,7 @@ defmodule Ecto.Query do
   expression.
 
   The row that is being kept depends on the ordering of the rows. To ensure
-  results are consistents, if an `order_by` expression is also added to the
+  results are consistent, if an `order_by` expression is also added to the
   query, its leftmost part must first reference all the fields in the
   `distinct` expression before referencing another field.
 
@@ -376,7 +376,7 @@ defmodule Ecto.Query do
   An offset query expression.
 
   Offsets the number of rows selected from the result. Can be any expression
-  but have to evaluate to an integer value and tt can't include any field.
+  but have to evaluate to an integer value and it can't include any field.
 
   If `offset` is given twice, it overrides the previous value.
 
