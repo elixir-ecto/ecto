@@ -368,7 +368,7 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def storage_up(opts) do
     # TODO: allow the user to specify those options either in the Repo or on command line
-    database_options = ~s(ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8')
+    database_options = ~s(TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8')
 
     output = run_with_psql opts, "CREATE DATABASE #{ opts[:database] } " <> database_options
 
