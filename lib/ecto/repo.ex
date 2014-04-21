@@ -83,6 +83,18 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.get(__MODULE__, unquote(adapter), queryable, id, opts)
       end
 
+      def get!(queryable, id, opts \\ []) do
+        Ecto.Repo.Backend.get!(__MODULE__, unquote(adapter), queryable, id, opts)
+      end
+
+      def one(queryable, opts \\ []) do
+        Ecto.Repo.Backend.one(__MODULE__, unquote(adapter), queryable, opts)
+      end
+
+      def one!(queryable, opts \\ []) do
+        Ecto.Repo.Backend.one!(__MODULE__, unquote(adapter), queryable, opts)
+      end
+
       def all(queryable, opts \\ []) do
         Ecto.Repo.Backend.all(__MODULE__, unquote(adapter), queryable, opts)
       end

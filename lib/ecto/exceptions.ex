@@ -33,7 +33,7 @@ defexception Ecto.InvalidModel, [:model, :field, :type, :expected_type, :reason]
   end
 end
 
-defexception Ecto.NotSingleResult, [:model, :primary_key, :id] do
+defexception Ecto.NotSingleResult, [:model, :primary_key, :id, :results] do
   def message(Ecto.NotSingleResult[] = e) do
     "the result set from `#{e.model}` where `#{e.primary_key} == #{e.id}` " <>
     "was not a single value"

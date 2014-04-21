@@ -40,6 +40,8 @@ defmodule Ecto.Integration.RepoTest do
 
     assert [%Post{id: ^id, title: "create", text: "and fetch single"}] =
            TestRepo.all(Post)
+
+    assert Post.Entity[id: ^id, title: "create", text: "and fetch single"] = TestRepo.one(Post)
   end
 
   test "fetch without model" do
@@ -51,6 +53,12 @@ defmodule Ecto.Integration.RepoTest do
 
     assert [^id] =
       TestRepo.all(from(p in "posts", where: p.title == "title1", select: p.id))
+
+    assert "title1" =
+      TestRepo.one(from(p in "posts", order_by: p.title, select: p.title, limit: 1))
+
+    assert "title1" =
+      TestRepo.one!(from(p in "posts", order_by: p.title, select: p.title, limit: 1))
   end
 
   test "create and delete single, fetch nothing" do
@@ -121,6 +129,27 @@ defmodule Ecto.Integration.RepoTest do
     assert %Custom{foo: "1"} == TestRepo.get(Custom, "1")
     assert %Custom{foo: "2"} == TestRepo.get(Custom, "2")
     assert nil == TestRepo.get(Custom, "3")
+  end
+
+  test "one raises when result is more than one row" do
+    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
+    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
+
+    assert_raise Ecto.NotSingleResult, fn ->
+      TestRepo.one(from p in Post, where: p.text == "hai")
+    end
+
+    assert_raise Ecto.NotSingleResult, fn ->
+      TestRepo.one!(from p in Post, where: p.text == "hai")
+    end
+  end
+
+  test "one with bang raises when there are no results" do    
+    assert nil == TestRepo.one(from p in Post, where: p.text == "hai")
+
+    assert_raise Ecto.NotSingleResult, fn ->
+      TestRepo.one!(from p in Post, where: p.text == "hai")
+    end
   end
 
   test "transform row" do

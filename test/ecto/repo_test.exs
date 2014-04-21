@@ -61,6 +61,10 @@ defmodule Ecto.RepoTest do
     assert_raise Ecto.Query.TypeCheckError, fn ->
       MyRepo.all(from(m in MyModel, select: m.x + 1))
     end
+
+    assert_raise Ecto.Query.TypeCheckError, fn ->
+      MyRepo.one(from(m in MyModel, select: m.x + 1))
+    end
   end
 
   test "handles environment support" do
