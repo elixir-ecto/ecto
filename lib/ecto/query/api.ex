@@ -222,6 +222,10 @@ defmodule Ecto.Query.API do
   def time(datetime)
   defs time(datetime) :: time
 
+  @doc "Create a datetime from a date and a time"
+  def datetime(date, time)
+  defs datetime(date, time) :: datetime
+
   @doc "Case-insensitive pattern match."
   def ilike(left, right)
   defs ilike(string, string) :: boolean

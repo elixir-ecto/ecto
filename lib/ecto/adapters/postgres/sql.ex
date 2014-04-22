@@ -318,6 +318,10 @@ defmodule Ecto.Adapters.Postgres.SQL do
     expr(datetime, sources) <> "::time"
   end
 
+  defp expr({ :datetime, _, [date, time] }, sources) do
+    "(#{expr(date, sources)} + #{expr(time, sources)})"
+  end
+
   defp expr({ fun, _, args }, sources) when is_atom(fun) and is_list(args) do
     case translate_name(fun, length(args)) do
       { :unary_op, op } ->
