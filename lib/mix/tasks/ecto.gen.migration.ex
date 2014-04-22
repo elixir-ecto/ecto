@@ -20,6 +20,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   def run(args) do
     no_umbrella!("ecto.gen.migration")
     Mix.Task.run "app.start", args
+    {_, args, _} = OptionParser.parse(args)
 
     case parse_repo(args) do
       { repo, [name] } ->
