@@ -54,13 +54,16 @@ defmodule Ecto.Adapters.Postgres.Worker do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    lazy? = opts[:lazy] in [false, "false"]
+    eager? = Keyword.get(opts, :lazy, true) in [false, "false"]
 
-    conn =
-      case lazy? and Postgrex.Connection.start_link(opts) do
-        { :ok, conn } -> conn
-        _ -> nil
+    if eager? do
+      case Postgrex.Connection.start_link(opts) do
+        { :ok, conn } ->
+          conn = conn
+        _ ->
+          :ok
       end
+    end
 
     { :ok, state(conn: conn, params: opts) }
   end
