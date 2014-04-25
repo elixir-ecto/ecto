@@ -52,7 +52,7 @@ defmodule Ecto.Query.Util do
     ~w(array)a
   end
 
-  # Takes an elixir value an returns its ecto type
+  # Takes an elixir value and returns its ecto type
   @doc false
   def value_to_type(value, fun \\ nil)
 
@@ -70,7 +70,7 @@ defmodule Ecto.Query.Util do
     res = Enum.find_value(types, fn
       { :ok, :integer } -> nil
       { :error, _ } = err -> err
-      { :error, "all datetime elements has to be a literal of integer type" }
+      { :error, "all datetime elements have to be a literal of integer type" }
     end)
 
     res || { :ok, :datetime }
@@ -83,7 +83,7 @@ defmodule Ecto.Query.Util do
     res = Enum.find_value(types, fn
       { :ok, :integer } -> nil
       { :error, _ } = err -> err
-      { :error, "all date elements has to be a literal of integer type" }
+      { :error, "all date elements have to be a literal of integer type" }
     end)
 
     res || { :ok, :date }
@@ -96,7 +96,7 @@ defmodule Ecto.Query.Util do
     res = Enum.find_value(types, fn
       { :ok, :integer } -> nil
       { :error, _ } = err -> err
-      { :error, "all time elements has to be a literal of integer type" }
+      { :error, "all time elements have to be a literal of integer type" }
     end)
 
     res || { :ok, :time }
@@ -110,7 +110,7 @@ defmodule Ecto.Query.Util do
     res = Enum.find_value(types, fn
       { :ok, :integer } -> nil
       { :error, _ } = err -> err
-      _ -> { :error, "all interval elements has to be a literal of integer type" }
+      _ -> { :error, "all interval elements have to be a literal of integer type" }
     end)
 
     if res do
@@ -139,7 +139,7 @@ defmodule Ecto.Query.Util do
     res = Enum.find_value(elem_types, fn
       { :ok, elem_type } ->
         unless type_eq?(type, elem_type) do
-          { :error, "all elements in array has to be of same type" }
+          { :error, "all elements in array have to be of same type" }
         end
       { :error, _ } = err ->
         err

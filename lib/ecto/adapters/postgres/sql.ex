@@ -2,7 +2,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   @moduledoc false
 
   # This module handles the generation of SQL code from queries and for create,
-  # update and delete. All queries has to be normalized and validated for
+  # update and delete. All queries have to be normalized and validated for
   # correctness before given to this module.
 
   alias Ecto.Query.Query
