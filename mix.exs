@@ -5,9 +5,9 @@ defmodule Ecto.Mixfile do
     [ app: :ecto,
       version: "0.1.0-dev",
       elixir: "~> 0.13.1-dev",
-      env: envs,
       deps: deps,
       build_per_environment: false,
+      test_paths: test_paths(Mix.env),
 
       # Docs
       name: "Ecto",
@@ -26,10 +26,9 @@ defmodule Ecto.Mixfile do
       { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
   end
 
-  defp envs do
-    [ pg: [ test_paths: ["integration_test/pg"] ],
-      all: [ test_paths: ["test", "integration_test/pg"] ] ]
-  end
+  defp test_paths(:pg),  do: ["integration_test/pg"]
+  defp test_paths(:all), do: ["test", "integration_test/pg"]
+  defp test_paths(_),    do: ["test"]
 
   defp docs do
     [ source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),
