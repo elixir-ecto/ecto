@@ -29,7 +29,7 @@ defmodule Ecto.Associations.Preloader do
   end
 
   # Receives a list of entity records to preload the given association fields
-  # on. The fields given is a rose tree of the root node field and it's nested
+  # on. The fields given are a rose tree of the root node field and its nested
   # fields. We recurse down the rose tree and perform a query for the
   # associated entities for each field.
   defp do_run([], _repo, _field), do: []
@@ -50,7 +50,7 @@ defmodule Ecto.Associations.Preloader do
       if should_sort? do
         # Save the records old indices and then sort by primary_key or foreign_key
         # depending on the association type
-        { records, indicies } = records
+        { records, indices } = records
         |> Stream.with_index
         |> sort(refl)
         |> :lists.unzip
@@ -62,7 +62,7 @@ defmodule Ecto.Associations.Preloader do
       if should_sort? do
         # Restore ordering of entities given to the preloader
         merged = merged
-        |> :lists.zip(indicies)
+        |> :lists.zip(indices)
         |> unsort()
         |> Enum.map(&elem(&1, 0))
       end
@@ -170,7 +170,7 @@ defmodule Ecto.Associations.Preloader do
 
     Enum.reduce(records, { first, false }, fn record, { last, sort? } ->
       if last && record && elem(record, 0) != elem(last, 0) do
-        raise ArgumentError, message: "all entities has to be of the same type"
+        raise ArgumentError, message: "all entities have to be of the same type"
       end
 
       sort? = sort? || (last && record && apply(last, key, []) > apply(record, key, []))
@@ -216,8 +216,8 @@ defmodule Ecto.Associations.Preloader do
 
   # The record that needs associations preloaded on it can be nested inside
   # tuples and lists. We retrieve and set the record inside the structure with
-  # the help of a list of indicies into tuples and lists.
-  # { x, [ y, z, { RECORD, p } ] } #=> indicies: [ 1, 2, 0 ]
+  # the help of a list of indices into tuples and lists.
+  # { x, [ y, z, { RECORD, p } ] } #=> indices: [ 1, 2, 0 ]
   defp get_at_pos(value, []), do: value
 
   defp get_at_pos(tuple, [ix|pos]) when is_tuple(tuple) do

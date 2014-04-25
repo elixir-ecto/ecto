@@ -31,7 +31,7 @@ defmodule Ecto.Associations.BelongsTo do
 
   @not_loaded :not_loaded
 
-  # Needs to be defrecordp because we don't want pollute the module
+  # Needs to be defrecordp because we don't want to pollute the module
   # with functions generated for the record
   defrecordp :assoc, __MODULE__, [:loaded, :target, :name]
 
