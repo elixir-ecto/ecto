@@ -130,7 +130,7 @@ defmodule Ecto.Integration.RepoTest do
            TestRepo.all(from p in Post, select: [p.title, p.text])
   end
 
-  test "update some entites" do
+  test "update some entities" do
     assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
     assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
     assert Post.Entity[id: id3] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
@@ -142,7 +142,7 @@ defmodule Ecto.Integration.RepoTest do
     assert Post.Entity[title: "3"] = TestRepo.get(Post, id3)
   end
 
-  test "update all entites" do
+  test "update all entities" do
     assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
     assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
     assert Post.Entity[id: id3] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
@@ -153,7 +153,7 @@ defmodule Ecto.Integration.RepoTest do
     assert Post.Entity[title: "x"] = TestRepo.get(Post, id3)
   end
 
-  test "update no entites" do
+  test "update no entities" do
     assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
     assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
     assert Post.Entity[id: id3] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
@@ -174,7 +174,7 @@ defmodule Ecto.Integration.RepoTest do
     assert Post.Entity[text: "haibai"] = TestRepo.get(Post, id2)
   end
 
-  test "delete some entites" do
+  test "delete some entities" do
     assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
     assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
     assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
@@ -184,7 +184,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [Post.Entity[]] = TestRepo.all(Post)
   end
 
-  test "delete all entites" do
+  test "delete all entities" do
     assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
     assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
     assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
@@ -193,7 +193,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [] = TestRepo.all(Post)
   end
 
-  test "delete no entites" do
+  test "delete no entities" do
     assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
     assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
     assert Post.Entity[id: id3] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])

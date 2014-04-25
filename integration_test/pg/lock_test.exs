@@ -77,5 +77,4 @@ defmodule Ecto.Integration.LockTest do
     # final count will be 3 if SELECT ... FOR UPDATE worked and 2 otherwise
     assert [LockCounter.Entity[count: 3]] = TestRepo1.all(LockCounter)
   end
-
 end
