@@ -150,10 +150,6 @@ defmodule Ecto.EntityTest do
     assert assoc.__assoc__(:target) == EntityAssocs
     assert assoc.__assoc__(:primary_key) == r.id
 
-    assert_raise FunctionClauseError, fn ->
-      r.posts(:test)
-    end
-
     r = r.posts([:test])
     assert [:test] = r.posts.to_list
     assert 1 = r.id

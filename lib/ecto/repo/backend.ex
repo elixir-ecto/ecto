@@ -133,7 +133,7 @@ defmodule Ecto.Repo.Backend do
 
     destructure [username, password], String.split(info.userinfo, ":")
     database = String.slice(info.path, 1, size(info.path))
-    query = URI.decode_query(info.query || "", []) |> atomize_keys
+    query = URI.decode_query(info.query || "") |> atomize_keys
 
     opts = [ username: username,
              hostname: info.host,

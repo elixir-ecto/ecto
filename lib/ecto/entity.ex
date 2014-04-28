@@ -430,8 +430,7 @@ defmodule Ecto.Entity do
         end
 
         if opts[:type] == :has_many do
-          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)] = entity)
-              when is_list(value) do
+          def unquote(name)(value, __MODULE__[unquote_splicing(record_args)] = entity) do
             assoc = assoc.__assoc__(:loaded, value)
             entity.unquote(virtual_name)(assoc)
           end

@@ -4,10 +4,10 @@ defmodule Ecto.Mixfile do
   def project do
     [ app: :ecto,
       version: "0.1.0-dev",
-      elixir: "~> 0.12.4 or ~> 0.13.0-dev",
-      env: envs,
-      deps: deps(Mix.env),
+      elixir: "~> 0.13.1-dev",
+      deps: deps,
       build_per_environment: false,
+      test_paths: test_paths(Mix.env),
 
       # Docs
       name: "Ecto",
@@ -19,21 +19,16 @@ defmodule Ecto.Mixfile do
     [ applications: [:poolboy] ]
   end
 
-  defp deps(:prod) do
+  defp deps() do
     [ { :poolboy, "~> 1.1.0", github: "devinus/poolboy" },
-      { :decimal, "~> 0.1.0", github: "ericmj/decimal" },
-      { :postgrex, "~> 0.4.0", github: "ericmj/postgrex", optional: true } ]
+      { :decimal, "~> 0.1.2", github: "ericmj/decimal", override: true },
+      { :postgrex, "~> 0.4.2", github: "ericmj/postgrex", optional: true },
+      { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
   end
 
-  defp deps(_) do
-    deps(:prod) ++
-      [ { :ex_doc, github: "elixir-lang/ex_doc" } ]
-  end
-
-  defp envs do
-    [ pg: [ test_paths: ["integration_test/pg"] ],
-      all: [ test_paths: ["test", "integration_test/pg"] ] ]
-  end
+  defp test_paths(:pg),  do: ["integration_test/pg"]
+  defp test_paths(:all), do: ["test", "integration_test/pg"]
+  defp test_paths(_),    do: ["test"]
 
   defp docs do
     [ source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),

@@ -71,7 +71,7 @@ defmodule Ecto.ValidatorTest do
   end
 
   test "validates binary dicts" do
-    assert bin_dict([{ "name", nil }, { "age", 27 }],
+    assert bin_dict(%{"name" => nil, "age" => 27 },
                     name: present(),
                      age: present()) == [name: "can't be blank"]
   end

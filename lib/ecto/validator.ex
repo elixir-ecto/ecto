@@ -84,12 +84,12 @@ defmodule Ecto.Validator do
   end
 
   defp process_each({ :also, function }, var, _getter) do
-    handle_ops function, fn call -> Macro.pipe(var, call) end
+    handle_ops function, fn call -> Macro.pipe(var, call, 0) end
   end
 
   defp process_each({ attr, function }, var, getter) do
     handle_ops function, fn call ->
-      Macro.pipe(attr, Macro.pipe(getter.(var, attr), call))
+      Macro.pipe(attr, Macro.pipe(getter.(var, attr), call, 0), 0)
     end
   end
 
