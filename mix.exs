@@ -20,7 +20,7 @@ defmodule Ecto.Mixfile do
   end
 
   defp deps() do
-    [{:poolboy,  "~> 1.2.0", github: "devinus/poolboy"},
+    [{:poolboy,  "~> 1.2.1"},
      {:decimal,  "~> 0.1.2"},
      {:postgrex, "~> 0.4.2", optional: true},
      {:ex_doc, github: "elixir-lang/ex_doc", only: :docs}]
