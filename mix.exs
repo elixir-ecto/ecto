@@ -9,6 +9,9 @@ defmodule Ecto.Mixfile do
      build_per_environment: false,
      test_paths: test_paths(Mix.env),
 
+     description: description,
+     package: package,
+
      # Docs
      name: "Ecto",
      docs: &docs/0,
@@ -29,6 +32,19 @@ defmodule Ecto.Mixfile do
   defp test_paths(:pg),  do: ["integration_test/pg"]
   defp test_paths(:all), do: ["test", "integration_test/pg"]
   defp test_paths(_),    do: ["test"]
+
+  defp description do
+    """
+    Ecto is a domain specific language for writing queries and interacting with databases in Elixir.
+    """
+  end
+
+  defp package do
+    [ contributors: ["Eric Meadows-Jönsson", "José Valim"],
+      licenses: ["Apache 2.0"],
+      links: [ { "GitHub", "https://github.com/elixir-lang/ecto" },
+               { "Docs", "http://elixir-lang.org/docs/ecto/" } ] ]
+  end
 
   defp docs do
     [source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),
