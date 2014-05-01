@@ -303,7 +303,7 @@ defmodule Ecto.Adapters.Postgres do
         Process.put(key, { worker, counter + 1 })
         worker
       nil ->
-        worker = :poolboy.checkout(pool, timeout)
+        worker = :poolboy.checkout(pool, true, timeout)
         Worker.monitor_me(worker)
         Process.put(key, { worker, 1 })
         worker
