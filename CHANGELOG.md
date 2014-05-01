@@ -1,4 +1,4 @@
-# v0.1.0-dev
+# v0.1.0 (2014-05-01)
 
 * Enhancements
   * Add `ecto.migrate` and `ecto.rollback` tasks, support `--to`, `--step` and `--all`
