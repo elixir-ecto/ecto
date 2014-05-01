@@ -42,7 +42,7 @@ defmodule Ecto.Associations.Assoc do
     { _keys, parents, children } = Enum.reduce(rows, acc, &merge_to_dict(&1, { nil, refls }, &2))
 
     # Load associated entities onto their parents
-    parents = lc parent inlist parents, do: build_record({ 0, parent }, children, refls) |> elem(1)
+    parents = for parent <- parents, do: build_record({ 0, parent }, children, refls) |> elem(1)
 
     Enum.reverse(parents)
   end
@@ -69,7 +69,7 @@ defmodule Ecto.Associations.Assoc do
 
     # Recurse down
     zipped = List.zip([sub_records, sub_refls, sub_dicts])
-    sub_dicts = lc { recs, refls, dicts } inlist zipped do
+    sub_dicts = for { recs, refls, dicts } <- zipped do
       merge_to_dict(recs, refls, dicts)
     end
 
@@ -90,7 +90,7 @@ defmodule Ecto.Associations.Assoc do
         if record_key do
           my_children = Dict.get(children, record_key) || []
           # Recurse down and build the children
-          built_children = lc child inlist my_children, do: build_record(child, sub_children, refls)
+          built_children = for child <- my_children, do: build_record(child, sub_children, refls)
         else
           built_children = []
         end

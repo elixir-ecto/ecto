@@ -367,7 +367,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp literal(Ecto.Binary[value: binary]) do
-    hex = lc << h :: [unsigned, 4], l :: [unsigned, 4] >> inbits binary do
+    hex = for << h :: [unsigned, 4], l :: [unsigned, 4] <- binary >> do
       fixed_integer_to_binary(h, 16) <> fixed_integer_to_binary(l, 16)
     end
     "'\\x#{hex}'::bytea"

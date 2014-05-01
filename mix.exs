@@ -4,7 +4,7 @@ defmodule Ecto.Mixfile do
   def project do
     [app: :ecto,
      version: "0.1.0-dev",
-     elixir: "~> 0.13.1-dev",
+     elixir: "~> 0.13.1",
      deps: deps,
      build_per_environment: false,
      test_paths: test_paths(Mix.env),
