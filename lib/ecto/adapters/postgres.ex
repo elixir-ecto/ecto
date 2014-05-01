@@ -63,7 +63,7 @@ defmodule Ecto.Adapters.Postgres do
   def all(repo, Query[] = query, opts) do
     pg_query = Query[] = query.select |> normalize_select |> query.select
 
-    Postgrex.Result[rows: rows] = query(repo, SQL.select(pg_query), [], opts)
+    %Postgrex.Result{rows: rows} = query(repo, SQL.select(pg_query), [], opts)
 
     # Transform each row based on select expression
     transformed =
@@ -85,7 +85,7 @@ defmodule Ecto.Adapters.Postgres do
       |> Keyword.keys
 
     case query(repo, SQL.insert(entity, returning), [], opts) do
-      Postgrex.Result[rows: [values]] ->
+      %Postgrex.Result{rows: [values]} ->
         Enum.zip(returning, tuple_to_list(values))
       _ ->
         []
@@ -94,25 +94,25 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def update(repo, entity, opts) do
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update(entity), [], opts)
+    %Postgrex.Result{num_rows: nrows} = query(repo, SQL.update(entity), [], opts)
     nrows
   end
 
   @doc false
   def update_all(repo, query, values, opts) do
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.update_all(query, values), [], opts)
+    %Postgrex.Result{num_rows: nrows} = query(repo, SQL.update_all(query, values), [], opts)
     nrows
   end
 
   @doc false
   def delete(repo, entity, opts) do
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete(entity), [], opts)
+    %Postgrex.Result{num_rows: nrows} = query(repo, SQL.delete(entity), [], opts)
     nrows
   end
 
   @doc false
   def delete_all(repo, query, opts) do
-    Postgrex.Result[num_rows: nrows] = query(repo, SQL.delete_all(query), [], opts)
+    %Postgrex.Result{num_rows: nrows} = query(repo, SQL.delete_all(query), [], opts)
     nrows
   end
 
@@ -222,22 +222,22 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Postgrex casting
 
-  defp decoder(TypeInfo[sender: "interval"], :binary, default, param) do
+  defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
     { mon, day, sec } = default.(param)
     Ecto.Interval[year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec]
   end
 
-  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["timestamp", "timestamptz"] do
+  defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["timestamp", "timestamptz"] do
     { { year, mon, day }, { hour, min, sec } } = default.(param)
     Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
   end
 
-  defp decoder(TypeInfo[sender: "date"], :binary, default, param) do
+  defp decoder(%TypeInfo{sender: "date"}, :binary, default, param) do
     { year, mon, day } = default.(param)
     Ecto.Date[year: year, month: mon, day: day]
   end
 
-  defp decoder(TypeInfo[sender: sender], :binary, default, param) when sender in ["time", "timetz"] do
+  defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["time", "timetz"] do
     { hour, min, sec } = default.(param)
     Ecto.Time[hour: hour, min: min, sec: sec]
   end
@@ -411,7 +411,7 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
-      Postgrex.Result[num_rows: 0] ->
+      %Postgrex.Result{num_rows: 0} ->
         transaction(repo, [], fn ->
           Enum.each(commands, &query(repo, &1, []))
           insert_migration_version(repo, version)
@@ -425,7 +425,7 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def migrate_down(repo, version, commands) do
     case check_migration_version(repo, version) do
-      Postgrex.Result[num_rows: 0] ->
+      %Postgrex.Result{num_rows: 0} ->
         :missing_up
       _ ->
         transaction(repo, [], fn ->
@@ -439,7 +439,7 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def migrated_versions(repo) do
     create_migrations_table(repo)
-    Postgrex.Result[rows: rows] = query(repo, "SELECT version FROM schema_migrations", [])
+    %Postgrex.Result{rows: rows} = query(repo, "SELECT version FROM schema_migrations", [])
     Enum.map(rows, &elem(&1, 0))
   end
 

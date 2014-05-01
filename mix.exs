@@ -19,11 +19,11 @@ defmodule Ecto.Mixfile do
     [applications: [:decimal, :poolboy]]
   end
 
-  defp deps() do
-    [{:poolboy,  "~> 1.2.1"},
-     {:decimal,  "~> 0.1.2"},
-     {:postgrex, "~> 0.4.2", optional: true},
-     {:ex_doc, github: "elixir-lang/ex_doc", only: :docs}]
+  defp deps do
+    [ { :poolboy, "~> 1.2.1" },
+      { :decimal, "~> 0.2.0" },
+      { :postgrex, "~> 0.5.0", optional: true },
+      { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
   end
 
   defp test_paths(:pg),  do: ["integration_test/pg"]

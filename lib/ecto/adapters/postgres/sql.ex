@@ -9,7 +9,6 @@ defmodule Ecto.Adapters.Postgres.SQL do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
-  import Decimal, only: [is_decimal: 1]
 
   unary_ops = [ -: "-", +: "+" ]
 
@@ -390,7 +389,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     to_string(literal) <> "::float"
   end
 
-  defp literal(num) when is_decimal(num) do
+  defp literal(%Decimal{} = num) do
     str = Decimal.to_string(num, :normal)
     if :binary.match(str, ".") == :nomatch, do: str = str <> ".0"
     str

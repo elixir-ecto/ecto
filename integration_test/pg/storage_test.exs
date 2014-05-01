@@ -27,6 +27,7 @@ defmodule Ecto.Integration.StorageTest do
 
   teardown do
     drop_database
+    :ok
   end
 
   test "storage up (twice in a row)" do

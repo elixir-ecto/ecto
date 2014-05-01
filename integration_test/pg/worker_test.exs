@@ -20,11 +20,11 @@ defmodule Ecto.Integration.WorkerTest do
   test "worker reconnects to database when connecton exits" do
     { :ok, worker } = Worker.start_link(worker_opts)
 
-    assert Postgrex.Result[] = Worker.query!(worker, "SELECT TRUE", [])
+    assert %Postgrex.Result{} = Worker.query!(worker, "SELECT TRUE", [])
     conn = :sys.get_state(worker) |> elem(1)
 
     Process.exit(conn, :normal)
-    assert Postgrex.Result[] = Worker.query!(worker, "SELECT TRUE", [])
+    assert %Postgrex.Result{} = Worker.query!(worker, "SELECT TRUE", [])
   end
 
   test "worker stops if caller dies" do
@@ -46,7 +46,7 @@ defmodule Ecto.Integration.WorkerTest do
     :error_logger.tty(false)
     { :ok, worker } = Worker.start(worker_opts(lazy: "false"))
 
-    assert Postgrex.Result[] = Worker.query!(worker, "SELECT pg_sleep(0.11)", [], 200)
+    assert %Postgrex.Result{} = Worker.query!(worker, "SELECT pg_sleep(0.11)", [], 200)
     assert { :timeout, _ } = catch_exit Worker.query!(worker, "SELECT pg_sleep(0.12)", [], 0)
     :timer.sleep(100)
     assert { :noproc, _ } = catch_exit Worker.query!(worker, "SELECT pg_sleep(0.13)", [], 200)

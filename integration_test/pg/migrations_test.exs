@@ -98,7 +98,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [] = run(TestRepo, path, :up, all: true)
       end) == ""
 
-      assert Postgrex.Result[num_rows: 3] =
+      assert %Postgrex.Result{num_rows: 3} =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
     end
   end
@@ -112,7 +112,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [45] = run(TestRepo, path, :up, to: 45)
       end) == "* running UP 45_migration.exs\n"
 
-      assert Postgrex.Result[num_rows: 1] =
+      assert %Postgrex.Result{num_rows: 1} =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -130,7 +130,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [47] = run(TestRepo, path, :up, step: 1)
       end) == "* running UP 47_migration.exs\n"
 
-      assert Postgrex.Result[num_rows: 1] =
+      assert %Postgrex.Result{num_rows: 1} =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -157,7 +157,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
       purge migrations
 
-      assert Postgrex.Result[num_rows: 1] =
+      assert %Postgrex.Result{num_rows: 1} =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -185,7 +185,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
       purge migrations
 
-      assert Postgrex.Result[num_rows: 1] =
+      assert %Postgrex.Result{num_rows: 1} =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -213,7 +213,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
       purge migrations
 
-      assert Postgrex.Result[num_rows: 0] =
+      assert %Postgrex.Result{num_rows: 0} =
         Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
