@@ -47,9 +47,9 @@ defmodule Ecto.Model.Queryable do
         ...
       end
 
-  Or by passing a tuple in the format `{ field, type, opts }`:
+  Or by passing a tuple in the format `{field, type, opts}`:
 
-      queryable "weather", primary_key: { :custom_field, :string, [] } do
+      queryable "weather", primary_key: {:custom_field, :string, []} do
         ...
       end
 
@@ -59,7 +59,7 @@ defmodule Ecto.Model.Queryable do
 
   The supported options are:
 
-  * `primary_key` - either `false`, or a `{ field, type, opts }` tuple
+  * `primary_key` - either `false`, or a `{field, type, opts}` tuple
   * `foreign_key_type` - sets the type for any belongs_to associations.
                          This can be overrided using the `:type` option
                          to the `belongs_to` statement. Defaults to
@@ -79,7 +79,7 @@ defmodule Ecto.Model.Queryable do
       defmodule MyApp.Model do
         defmacro __using__(_) do
           quote do
-            @queryable_defaults primary_key: { :uuid, :string, [] },
+            @queryable_defaults primary_key: {:uuid, :string, []},
                                 foreign_key_type: :string
             use Ecto.Model
           end
@@ -194,7 +194,7 @@ defmodule Ecto.Model.Queryable do
 
       @doc false
       def __queryable__,
-        do: Ecto.Query.Query[from: { @ecto_source, @ecto_entity, __MODULE__ }]
+        do: Ecto.Query.Query[from: {@ecto_source, @ecto_entity, __MODULE__}]
     end
   end
 end

@@ -49,7 +49,7 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def start_link(repo, opts) do
-    { pool_opts, worker_opts } = prepare_start(repo, opts)
+    {pool_opts, worker_opts} = prepare_start(repo, opts)
     :poolboy.start_link(pool_opts, worker_opts)
   end
 
@@ -81,7 +81,7 @@ defmodule Ecto.Adapters.Postgres do
   def insert(repo, entity, opts) do
     module    = elem(entity, 0)
     returning = module.__entity__(:keywords, entity)
-      |> Enum.filter(fn { _, val } -> val == nil end)
+      |> Enum.filter(fn {_, val} -> val == nil end)
       |> Keyword.keys
 
     case query(repo, SQL.insert(entity, returning), [], opts) do
@@ -130,7 +130,7 @@ defmodule Ecto.Adapters.Postgres do
   """
   def query(repo, sql, params, opts \\ []) do
     timeout = opts[:timeout] || @timeout
-    repo.log({ :query, sql }, fn ->
+    repo.log({:query, sql}, fn ->
       use_worker(repo, timeout, fn worker ->
         Worker.query!(worker, sql, params, timeout)
       end)
@@ -139,83 +139,83 @@ defmodule Ecto.Adapters.Postgres do
 
   defp prepare_start(repo, opts) do
     pool_name = repo.__postgres__(:pool_name)
-    { pool_opts, worker_opts } = Dict.split(opts, [:size, :max_overflow])
+    {pool_opts, worker_opts} = Dict.split(opts, [:size, :max_overflow])
 
     pool_opts = pool_opts
       |> Keyword.update(:size, 5, &binary_to_integer(&1))
       |> Keyword.update(:max_overflow, 10, &binary_to_integer(&1))
 
     pool_opts = [
-      name: { :local, pool_name },
+      name: {:local, pool_name},
       worker_module: Worker ] ++ pool_opts
 
     worker_opts = worker_opts
       |> Keyword.put(:decoder, &decoder/4)
       |> Keyword.put_new(:port, @default_port)
 
-    { pool_opts, worker_opts }
+    {pool_opts, worker_opts}
   end
 
   @doc false
-  def normalize_select(QueryExpr[expr: { :assoc, _, [_, _] } = assoc] = expr) do
+  def normalize_select(QueryExpr[expr: {:assoc, _, [_, _]} = assoc] = expr) do
     normalize_assoc(assoc) |> expr.expr
   end
 
   def normalize_select(QueryExpr[expr: _] = expr), do: expr
 
-  defp normalize_assoc({ :assoc, _, [_, _] } = assoc) do
-    { var, fields } = Assoc.decompose_assoc(assoc)
+  defp normalize_assoc({:assoc, _, [_, _]} = assoc) do
+    {var, fields} = Assoc.decompose_assoc(assoc)
     normalize_assoc(var, fields)
   end
 
   defp normalize_assoc(var, fields) do
-    nested = Enum.map(fields, fn { _field, nested } ->
-      { var, fields } = Assoc.decompose_assoc(nested)
+    nested = Enum.map(fields, fn {_field, nested} ->
+      {var, fields} = Assoc.decompose_assoc(nested)
       normalize_assoc(var, fields)
     end)
-    { var, nested }
+    {var, nested}
   end
 
   ## Result set transformation
 
-  defp transform_row({ :{}, _, list }, values, sources) do
-    { result, values } = transform_row(list, values, sources)
-    { list_to_tuple(result), values }
+  defp transform_row({:{}, _, list}, values, sources) do
+    {result, values} = transform_row(list, values, sources)
+    {list_to_tuple(result), values}
   end
 
-  defp transform_row({ :&, _, [_] } = var, values, sources) do
+  defp transform_row({:&, _, [_]} = var, values, sources) do
     entity = Util.find_source(sources, var) |> Util.entity
     entity_size = length(entity.__entity__(:field_names))
-    { entity_values, values } = Enum.split(values, entity_size)
+    {entity_values, values} = Enum.split(values, entity_size)
     if Enum.all?(entity_values, &(nil?(&1))) do
-      { nil, values }
+      {nil, values}
     else
-      { entity.__entity__(:allocate, entity_values), values }
+      {entity.__entity__(:allocate, entity_values), values}
     end
   end
 
   # Skip records
-  defp transform_row({ first, _ } = tuple, values, sources) when not is_atom(first) do
-    { result, values } = transform_row(tuple_to_list(tuple), values, sources)
-    { list_to_tuple(result), values }
+  defp transform_row({first, _} = tuple, values, sources) when not is_atom(first) do
+    {result, values} = transform_row(tuple_to_list(tuple), values, sources)
+    {list_to_tuple(result), values}
   end
 
   defp transform_row(list, values, sources) when is_list(list) do
-    { result, values } = Enum.reduce(list, { [], values }, fn elem, { res, values } ->
-      { result, values } = transform_row(elem, values, sources)
-      { [result|res], values }
+    {result, values} = Enum.reduce(list, {[], values}, fn elem, {res, values} ->
+      {result, values} = transform_row(elem, values, sources)
+      {[result|res], values}
     end)
 
-    { Enum.reverse(result), values }
+    {Enum.reverse(result), values}
   end
 
   defp transform_row(_, values, _entities) do
     [value|values] = values
-    { value, values }
+    {value, values}
   end
 
   defp preload(results, repo, Query[] = query) do
-    pos = Util.locate_var(query.select.expr, { :&, [], [0] })
+    pos = Util.locate_var(query.select.expr, {:&, [], [0]})
     fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
     Ecto.Associations.Preloader.run(results, repo, fields, pos)
   end
@@ -223,22 +223,22 @@ defmodule Ecto.Adapters.Postgres do
   ## Postgrex casting
 
   defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
-    { mon, day, sec } = default.(param)
+    {mon, day, sec} = default.(param)
     Ecto.Interval[year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec]
   end
 
   defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["timestamp", "timestamptz"] do
-    { { year, mon, day }, { hour, min, sec } } = default.(param)
+    {{year, mon, day}, {hour, min, sec}} = default.(param)
     Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
   end
 
   defp decoder(%TypeInfo{sender: "date"}, :binary, default, param) do
-    { year, mon, day } = default.(param)
+    {year, mon, day} = default.(param)
     Ecto.Date[year: year, month: mon, day: day]
   end
 
   defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["time", "timetz"] do
-    { hour, min, sec } = default.(param)
+    {hour, min, sec} = default.(param)
     Ecto.Time[hour: hour, min: min, sec: sec]
   end
 
@@ -256,11 +256,11 @@ defmodule Ecto.Adapters.Postgres do
       do_begin(repo, worker, timeout)
       value = fun.()
       do_commit(repo, worker, timeout)
-      { :ok, value }
+      {:ok, value}
     catch
-      :throw, { :ecto_rollback, value } ->
+      :throw, {:ecto_rollback, value} ->
         do_rollback(repo, worker, timeout)
-        { :error, value }
+        {:error, value}
       type, term ->
         do_rollback(repo, worker, timeout)
         :erlang.raise(type, term, System.stacktrace)
@@ -271,12 +271,12 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def rollback(_repo, value) do
-    throw { :ecto_rollback, value }
+    throw {:ecto_rollback, value}
   end
 
   defp use_worker(repo, timeout, fun) do
     pool = repo.__postgres__(:pool_name)
-    key = { :ecto_transaction_pid, pool }
+    key = {:ecto_transaction_pid, pool}
 
     if value = Process.get(key) do
       in_transaction = true
@@ -296,31 +296,31 @@ defmodule Ecto.Adapters.Postgres do
 
   defp checkout_worker(repo, timeout) do
     pool = repo.__postgres__(:pool_name)
-    key = { :ecto_transaction_pid, pool }
+    key = {:ecto_transaction_pid, pool}
 
     case Process.get(key) do
-      { worker, counter } ->
-        Process.put(key, { worker, counter + 1 })
+      {worker, counter} ->
+        Process.put(key, {worker, counter + 1})
         worker
       nil ->
         worker = :poolboy.checkout(pool, true, timeout)
         Worker.monitor_me(worker)
-        Process.put(key, { worker, 1 })
+        Process.put(key, {worker, 1})
         worker
     end
   end
 
   defp checkin_worker(repo) do
     pool = repo.__postgres__(:pool_name)
-    key = { :ecto_transaction_pid, pool }
+    key = {:ecto_transaction_pid, pool}
 
     case Process.get(key) do
-      { worker, 1 } ->
+      {worker, 1} ->
         Worker.demonitor_me(worker)
         :poolboy.checkin(pool, worker)
         Process.delete(key)
-      { worker, counter } ->
-        Process.put(key, { worker, counter - 1 })
+      {worker, counter} ->
+        Process.put(key, {worker, counter - 1})
     end
     :ok
   end
@@ -370,23 +370,23 @@ defmodule Ecto.Adapters.Postgres do
     # TODO: allow the user to specify those options either in the Repo or on command line
     database_options = ~s(TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8')
 
-    output = run_with_psql opts, "CREATE DATABASE #{ opts[:database] } " <> database_options
+    output = run_with_psql opts, "CREATE DATABASE #{opts[:database]} " <> database_options
 
     cond do
       String.length(output) == 0                 -> :ok
-      String.contains?(output, "already exists") -> { :error, :already_up }
-      true                                       -> { :error, output }
+      String.contains?(output, "already exists") -> {:error, :already_up}
+      true                                       -> {:error, output}
     end
   end
 
   @doc false
   def storage_down(opts) do
-    output = run_with_psql(opts, "DROP DATABASE #{ opts[:database] }")
+    output = run_with_psql(opts, "DROP DATABASE #{opts[:database]}")
 
     cond do
       String.length(output) == 0                 -> :ok
-      String.contains?(output, "does not exist") -> { :error, :already_down }
-      true                                       -> { :error, output }
+      String.contains?(output, "does not exist") -> {:error, :already_down}
+      true                                       -> {:error, output}
     end
   end
 
@@ -394,14 +394,14 @@ defmodule Ecto.Adapters.Postgres do
     command = ""
 
     if password = database[:password] do
-      command = ~s(PGPASSWORD=#{ password } )
+      command = ~s(PGPASSWORD=#{password} )
     end
 
     command =
       command <>
-      ~s(psql --quiet -U #{ database[:username] } ) <>
-      ~s(--host #{ database[:hostname] } ) <>
-      ~s(-c "#{ sql_command };" )
+      ~s(psql --quiet -U #{database[:username]} ) <>
+      ~s(--host #{database[:hostname]} ) <>
+      ~s(-c "#{sql_command};" )
 
     System.cmd command
   end

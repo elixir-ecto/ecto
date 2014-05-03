@@ -12,12 +12,12 @@ defmodule Mix.Tasks.Ecto.CreateTest do
 
   defmodule AlreadyUpAdapter do
     defmacro __using__(_), do: :ok
-    def storage_up(_), do: { :error, :already_up }
+    def storage_up(_), do: {:error, :already_up}
   end
 
   defmodule ConfusedAdapter do
     defmacro __using__(_), do: :ok
-    def storage_up(_), do: { :error, :confused }
+    def storage_up(_), do: {:error, :confused}
   end
 
   defmodule NoStorageUpAdapter do
@@ -48,12 +48,12 @@ defmodule Mix.Tasks.Ecto.CreateTest do
 
   test "runs the adapter storage_up" do
     run [to_string(Repo)]
-    assert_received { :mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.CreateTest.Repo has been created."] }
+    assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.CreateTest.Repo has been created."]}
   end
 
   test "informs the user when the repo is already up" do
     run [to_string(ExistingRepo)]
-    assert_received { :mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.CreateTest.ExistingRepo has already been created."] }
+    assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.CreateTest.ExistingRepo has already been created."]}
   end
 
   test "raises an error when storage_up gives an unknown feedback" do

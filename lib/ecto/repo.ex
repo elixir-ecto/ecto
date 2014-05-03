@@ -161,15 +161,15 @@ defmodule Ecto.Repo do
   defcallback parse_url(String.t) :: Keyword.t
 
   @doc """
-  Starts any connection pooling or supervision and return `{ :ok, pid }`
+  Starts any connection pooling or supervision and return `{:ok, pid}`
   or just `:ok` if nothing needs to be done.
 
-  Returns `{ :error, { :already_started, pid } }` if the repo already
-  started or `{ :error, term }` in case anything else goes wrong.
+  Returns `{:error, {:already_started, pid}}` if the repo already
+  started or `{:error, term}` in case anything else goes wrong.
   """
-  defcallback start_link() :: { :ok, pid } | :ok |
-                              { :error, { :already_started, pid } } |
-                              { :error, term }
+  defcallback start_link() :: {:ok, pid} | :ok |
+                              {:error, {:already_started, pid}} |
+                              {:error, term}
 
   @doc """
   Stops any connection pooling or supervision started with `start_link/1`.
@@ -180,19 +180,19 @@ defmodule Ecto.Repo do
   Create the storage in the data store and return `:ok` if it was created
   successfully.
 
-  Returns `{ :error, :already_up }` if the storage has already been created or
-  `{ :error, term }` in case anything else goes wrong.
+  Returns `{:error, :already_up}` if the storage has already been created or
+  `{:error, term}` in case anything else goes wrong.
   """
-  defcallback storage_up() :: :ok | { :error, :already_up } | { :error, term }
+  defcallback storage_up() :: :ok | {:error, :already_up} | {:error, term}
 
   @doc """
   Drop the storage in the data store and return `:ok` if it was dropped
   successfully.
 
-  Returns `{ :error, :already_down }` if the storage has already been dropped or
-  `{ :error, term }` in case anything else goes wrong.
+  Returns `{:error, :already_down}` if the storage has already been dropped or
+  `{:error, term}` in case anything else goes wrong.
   """
-  defcallback storage_down() :: :ok | { :error, :already_down } | { :error, term }
+  defcallback storage_down() :: :ok | {:error, :already_down} | {:error, term}
 
   @doc """
   Fetches a single entity from the data store where the primary key matches the
@@ -312,9 +312,9 @@ defmodule Ecto.Repo do
   transaction will be rolled back. If no error occurred the transaction will be
   commited when the function returns. A transaction can be explicitly rolled
   back by calling `rollback!`, this will immediately leave the function and
-  return the value given to `rollback!` as `{ :error, value }`. A successful
+  return the value given to `rollback!` as `{:error, value}`. A successful
   transaction returns the value returned by the function wrapped in a tuple as
-  `{ :ok, value }`. Transactions can be nested.
+  `{:ok, value}`. Transactions can be nested.
 
   ## Options
     `:timeout` - The time in milliseconds to wait for the call to finish,
@@ -346,7 +346,7 @@ defmodule Ecto.Repo do
       end)
 
   """
-  defcallback transaction(Keyword.t, fun) :: { :ok, any } | { :error, any }
+  defcallback transaction(Keyword.t, fun) :: {:ok, any} | {:error, any}
 
   @doc """
   Rolls back the current transaction. See `rollback/1`.
@@ -355,7 +355,7 @@ defmodule Ecto.Repo do
 
   @doc """
   Rolls back the current transaction. The transaction will return the value
-  given as `{ :error, value }`.
+  given as `{:error, value}`.
   """
   defcallback rollback(any) :: no_return
 
@@ -370,9 +370,9 @@ defmodule Ecto.Repo do
 
   ## Examples
 
-      def log({ :query, sql }, fun) do
-        { time, result } = :timer.tc(fun)
-        Logger.log({ sql, time })
+      def log({:query, sql}, fun) do
+        {time, result} = :timer.tc(fun)
+        Logger.log({sql, time})
         result
       end
 

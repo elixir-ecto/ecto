@@ -46,10 +46,10 @@ defmodule Ecto.Query.ValidatorTest do
 
 
   test "valid query with bindings" do
-    query = Post |> select([p], { p.title })
+    query = Post |> select([p], {p.title})
     validate(query)
 
-    query = "posts" |> select([p], { p.title })
+    query = "posts" |> select([p], {p.title})
     validate(query)
   end
 

@@ -18,10 +18,10 @@ defmodule Mix.Tasks.EctoTest do
   end
 
   test :parse_repo do
-    assert parse_repo([Repo]) == { Repo, [] }
-    assert parse_repo([Repo, "foo"]) == { Repo, ["foo"] }
-    assert parse_repo([inspect(Repo), "foo"]) == { Repo, ["foo"] }
-    assert parse_repo([to_string(Repo), "foo"]) == { Repo, ["foo"] }
+    assert parse_repo([Repo]) == {Repo, []}
+    assert parse_repo([Repo, "foo"]) == {Repo, ["foo"]}
+    assert parse_repo([inspect(Repo), "foo"]) == {Repo, ["foo"]}
+    assert parse_repo([to_string(Repo), "foo"]) == {Repo, ["foo"]}
     assert_raise Mix.Error, fn -> parse_repo([]) end
     assert_raise Mix.Error, fn -> parse_repo([""]) end
   end
@@ -36,13 +36,13 @@ defmodule Mix.Tasks.EctoTest do
     Process.put(:start_link, :ok)
     assert ensure_started(Repo) == Repo
 
-    Process.put(:start_link, { :ok, self })
+    Process.put(:start_link, {:ok, self})
     assert ensure_started(Repo) == Repo
 
-    Process.put(:start_link, { :error, { :already_started, self } })
+    Process.put(:start_link, {:error, {:already_started, self}})
     assert ensure_started(Repo) == Repo
 
-    Process.put(:start_link, { :error, self })
+    Process.put(:start_link, {:error, self})
     assert_raise Mix.Error, fn -> ensure_started(Repo) end
   end
 

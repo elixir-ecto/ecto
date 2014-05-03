@@ -6,15 +6,15 @@ defmodule Ecto.Query.OrderByBuilder do
   @doc """
   Escapes an order by query.
 
-  The query is escaped to a list of `{ direction, var, field }`
+  The query is escaped to a list of `{direction, var, field}`
   pairs at runtime. Escaping also validates direction is one of
   `:asc` or `:desc`.
 
   ## Examples
 
       iex> escape(quote do [x.x, y.y] end, [x: 0, y: 1])
-      [{ :{}, [], [:asc, { :{}, [], [:&, [], [0]] }, :x] },
-       { :{}, [], [:asc, { :{}, [], [:&, [], [1]] }, :y] }]
+      [{:{}, [], [:asc, {:{}, [], [:&, [], [0]]}, :x]},
+       {:{}, [], [:asc, {:{}, [], [:&, [], [1]]}, :y]}]
 
   """
   @spec escape(Macro.t, Keyword.t) :: Macro.t | no_return
@@ -26,18 +26,18 @@ defmodule Ecto.Query.OrderByBuilder do
     [escape_field(field, vars)]
   end
 
-  defp escape_field({ dir, dot }, vars) do
+  defp escape_field({dir, dot}, vars) do
     check_dir(dir)
     case BuilderUtil.escape_dot(dot, vars) do
-      { var, field } ->
-        { :{}, [], [dir, var, field] }
+      {var, field} ->
+        {:{}, [], [dir, var, field]}
       :error ->
         raise Ecto.QueryError, reason: "malformed `order_by` query expression"
     end
   end
 
   defp escape_field(ast, vars) do
-    escape_field({ :asc, ast }, vars)
+    escape_field({:asc, ast}, vars)
   end
 
   defp check_dir(dir) when dir in [:asc, :desc], do: :ok

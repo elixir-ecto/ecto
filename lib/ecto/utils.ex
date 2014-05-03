@@ -13,7 +13,7 @@ defmodule Ecto.Utils do
   def app_dir(app, path) when is_atom(app) and is_binary(path) do
     case :code.lib_dir(app) do
       lib when is_list(lib) -> Path.join(String.from_char_data!(lib), path)
-      { :error, :bad_name } -> raise "invalid application #{inspect app}"
+      {:error, :bad_name} -> raise "invalid application #{inspect app}"
     end
   end
 end

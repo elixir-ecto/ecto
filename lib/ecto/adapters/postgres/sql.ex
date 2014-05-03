@@ -22,23 +22,23 @@ defmodule Ecto.Adapters.Postgres.SQL do
       ilike: "ILIKE", like: "LIKE" ]
 
   functions =
-    [ { { :downcase, 1 }, "lower" }, { { :upcase, 1 }, "upper" } ]
+    [ {{:downcase, 1}, "lower"}, {{:upcase, 1}, "upper"} ]
 
   @binary_ops Dict.keys(binary_ops)
 
-  Enum.map(unary_ops, fn { op, str } ->
-    defp translate_name(unquote(op), 1), do: { :unary_op, unquote(str) }
+  Enum.map(unary_ops, fn {op, str} ->
+    defp translate_name(unquote(op), 1), do: {:unary_op, unquote(str)}
   end)
 
-  Enum.map(binary_ops, fn { op, str } ->
-    defp translate_name(unquote(op), 2), do: { :binary_op, unquote(str) }
+  Enum.map(binary_ops, fn {op, str} ->
+    defp translate_name(unquote(op), 2), do: {:binary_op, unquote(str)}
   end)
 
-  Enum.map(functions, fn { { fun, arity }, str } ->
-    defp translate_name(unquote(fun), unquote(arity)), do: { :fun, unquote(str) }
+  Enum.map(functions, fn {{fun, arity}, str} ->
+    defp translate_name(unquote(fun), unquote(arity)), do: {:fun, unquote(str)}
   end)
 
-  defp translate_name(fun, _arity), do: { :fun, atom_to_binary(fun) }
+  defp translate_name(fun, _arity), do: {:fun, atom_to_binary(fun)}
 
   defp quote_table(table), do: "\"#{table}\""
 
@@ -71,8 +71,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
     module = elem(entity, 0)
     table  = entity.model.__model__(:source)
 
-    { fields, values } = module.__entity__(:keywords, entity)
-      |> Enum.filter(fn { _, val } -> val != nil end)
+    {fields, values} = module.__entity__(:keywords, entity)
+      |> Enum.filter(fn {_, val} -> val != nil end)
       |> :lists.unzip
 
     sql = "INSERT INTO #{quote_table(table)}"
@@ -101,7 +101,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
     zipped = module.__entity__(:keywords, entity, primary_key: false)
 
-    zipped_sql = Enum.map_join(zipped, ", ", fn { k, v } ->
+    zipped_sql = Enum.map_join(zipped, ", ", fn {k, v} ->
       "#{quote_column(k)} = #{literal(v)}"
     end)
 
@@ -113,9 +113,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
   def update_all(Query[] = query, values) do
     names = create_names(query)
     from  = elem(names, 0)
-    { table, name } = Util.source(from)
+    {table, name} = Util.source(from)
 
-    zipped_sql = Enum.map_join(values, ", ", fn { field, expr } ->
+    zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
       "#{quote_column(field)} = #{expr(expr, names)}"
     end)
 
@@ -140,7 +140,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   def delete_all(Query[] = query) do
     names  = create_names(query)
     from   = elem(names, 0)
-    { table, name } = Util.source(from)
+    {table, name} = Util.source(from)
 
     where = if query.wheres == [], do: "", else: "\n" <> where(query.wheres, names)
     "DELETE FROM #{quote_table(table)} AS #{name}" <> where
@@ -152,8 +152,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp select(QueryExpr[expr: expr], distincts, sources) do
     exprs = Enum.map_join(distincts, ", ", fn expr ->
-      Enum.map_join(expr.expr, ", ", fn { var, field } ->
-        { _, name } = Util.find_source(sources, var) |> Util.source
+      Enum.map_join(expr.expr, ", ", fn {var, field} ->
+        {_, name} = Util.find_source(sources, var) |> Util.source
         "#{name}.#{quote_column(field)}"
       end)
     end)
@@ -162,15 +162,15 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   defp from(sources) do
-    { table, name } = elem(sources, 0) |> Util.source
+    {table, name} = elem(sources, 0) |> Util.source
     "FROM #{quote_table(table)} AS #{name}"
   end
 
   defp join(Query[] = query, sources) do
     joins = Stream.with_index(query.joins)
-    Enum.map(joins, fn { JoinExpr[] = join, ix } ->
+    Enum.map(joins, fn {JoinExpr[] = join, ix} ->
       source = elem(sources, ix+1)
-      { table, name } = Util.source(source)
+      {table, name} = Util.source(source)
 
       on_sql = expr(join.on.expr, sources)
       qual = join_qual(join.qual)
@@ -191,8 +191,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp group_by(group_bys, sources) do
     exprs = Enum.map_join(group_bys, ", ", fn expr ->
-      Enum.map_join(expr.expr, ", ", fn { var, field } ->
-        { _, name } = Util.find_source(sources, var) |> Util.source
+      Enum.map_join(expr.expr, ", ", fn {var, field} ->
+        {_, name} = Util.find_source(sources, var) |> Util.source
         "#{name}.#{quote_column(field)}"
       end)
     end)
@@ -214,8 +214,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "ORDER BY " <> exprs
   end
 
-  defp order_by_expr({ dir, var, field }, sources) do
-    { _, name } = Util.find_source(sources, var) |> Util.source
+  defp order_by_expr({dir, var, field}, sources) do
+    {_, name} = Util.find_source(sources, var) |> Util.source
     str = "#{name}.#{quote_column(field)}"
     case dir do
       :asc  -> str
@@ -244,52 +244,52 @@ defmodule Ecto.Adapters.Postgres.SQL do
     name <> " " <> exprs
   end
 
-  defp expr({ :., _, [{ :&, _, [_] } = var, field] }, sources) when is_atom(field) do
-    { _, name } = Util.find_source(sources, var) |> Util.source
+  defp expr({:., _, [{:&, _, [_]} = var, field]}, sources) when is_atom(field) do
+    {_, name} = Util.find_source(sources, var) |> Util.source
     "#{name}.#{quote_column(field)}"
   end
 
-  defp expr({ :!, _, [expr] }, sources) do
+  defp expr({:!, _, [expr]}, sources) do
     "NOT (" <> expr(expr, sources) <> ")"
   end
 
-  defp expr({ :&, _, [_] } = var, sources) do
+  defp expr({:&, _, [_]} = var, sources) do
     source = Util.find_source(sources, var)
     entity = Util.entity(source)
     fields = entity.__entity__(:field_names)
-    { _, name } = Util.source(source)
+    {_, name} = Util.source(source)
     Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")
   end
 
-  defp expr({ :==, _, [nil, right] }, sources) do
+  defp expr({:==, _, [nil, right]}, sources) do
     "#{op_to_binary(right, sources)} IS NULL"
   end
 
-  defp expr({ :==, _, [left, nil] }, sources) do
+  defp expr({:==, _, [left, nil]}, sources) do
     "#{op_to_binary(left, sources)} IS NULL"
   end
 
-  defp expr({ :!=, _, [nil, right] }, sources) do
+  defp expr({:!=, _, [nil, right]}, sources) do
     "#{op_to_binary(right, sources)} IS NOT NULL"
   end
 
-  defp expr({ :!=, _, [left, nil] }, sources) do
+  defp expr({:!=, _, [left, nil]}, sources) do
     "#{op_to_binary(left, sources)} IS NOT NULL"
   end
 
-  defp expr({ :in, _, [left, first .. last] }, sources) do
+  defp expr({:in, _, [left, first .. last]}, sources) do
     sqls = [ expr(left, sources), "BETWEEN", expr(first, sources), "AND",
              expr(last, sources) ]
     Enum.join(sqls, " ")
   end
 
-  defp expr({ :in, _, [left, { :.., _, [first, last] }] }, sources) do
+  defp expr({:in, _, [left, {:.., _, [first, last]}]}, sources) do
     sqls = [ expr(left, sources), "BETWEEN", expr(first, sources), "AND",
              expr(last, sources) ]
     Enum.join(sqls, " ")
   end
 
-  defp expr({ :in, _, [left, right] }, sources) do
+  defp expr({:in, _, [left, right]}, sources) do
     expr(left, sources) <> " = ANY (" <> expr(right, sources) <> ")"
   end
 
@@ -297,41 +297,41 @@ defmodule Ecto.Adapters.Postgres.SQL do
     expr(Enum.to_list(range), sources)
   end
 
-  defp expr({ :.., _, [first, last] }, sources) do
+  defp expr({:.., _, [first, last]}, sources) do
     expr(Enum.to_list(first..last), sources)
   end
 
-  defp expr({ :/, _, [left, right] }, sources) do
+  defp expr({:/, _, [left, right]}, sources) do
     op_to_binary(left, sources) <> " / " <> op_to_binary(right, sources) <> "::numeric"
   end
 
-  defp expr({ arg, _, [] }, sources) when is_tuple(arg) do
+  defp expr({arg, _, []}, sources) when is_tuple(arg) do
     expr(arg, sources)
   end
 
-  defp expr({ :date, _, [datetime] }, sources) do
+  defp expr({:date, _, [datetime]}, sources) do
     expr(datetime, sources) <> "::date"
   end
 
-  defp expr({ :time, _, [datetime] }, sources) do
+  defp expr({:time, _, [datetime]}, sources) do
     expr(datetime, sources) <> "::time"
   end
 
-  defp expr({ :datetime, _, [date, time] }, sources) do
+  defp expr({:datetime, _, [date, time]}, sources) do
     "(#{expr(date, sources)} + #{expr(time, sources)})"
   end
 
-  defp expr({ fun, _, args }, sources) when is_atom(fun) and is_list(args) do
+  defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
     case translate_name(fun, length(args)) do
-      { :unary_op, op } ->
+      {:unary_op, op} ->
         arg = expr(List.first(args), sources)
         op <> arg
-      { :binary_op, op } ->
+      {:binary_op, op} ->
         [left, right] = args
         op_to_binary(left, sources) <> " #{op} " <> op_to_binary(right, sources)
-      { :fun, "localtimestamp" } ->
+      {:fun, "localtimestamp"} ->
         "localtimestamp"
-      { :fun, fun } ->
+      {:fun, fun} ->
         "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, sources)) <> ")"
     end
   end
@@ -395,7 +395,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     str
   end
 
-  defp op_to_binary({ op, _, [_, _] } = expr, sources) when op in @binary_ops do
+  defp op_to_binary({op, _, [_, _]} = expr, sources) when op in @binary_ops do
     "(" <> expr(expr, sources) <> ")"
   end
 
@@ -411,15 +411,15 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   # Some two-tuples may be records (ex. Ecto.Binary[]), so check for records
   # explicitly. We can do this because we don't allow atoms in queries.
-  defp flatten_select({ atom, _ } = record) when is_atom(atom) do
+  defp flatten_select({atom, _} = record) when is_atom(atom) do
     [record]
   end
 
-  defp flatten_select({ left, right }) do
-    flatten_select({ :{}, [], [left, right] })
+  defp flatten_select({left, right}) do
+    flatten_select({:{}, [], [left, right]})
   end
 
-  defp flatten_select({ :{}, _, elems }) do
+  defp flatten_select({:{}, _, elems}) do
     Enum.flat_map(elems, &flatten_select/1)
   end
 
@@ -444,20 +444,20 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp type(:datetime), do: "timestamp without time zone"
   defp type(:interval), do: "interval"
 
-  defp type({ :array, inner }), do: type(inner) <> "[]"
+  defp type({:array, inner}), do: type(inner) <> "[]"
 
   defp create_names(query) do
     sources = query.sources |> tuple_to_list
-    Enum.reduce(sources, [], fn({ table, entity, model }, names) ->
+    Enum.reduce(sources, [], fn({table, entity, model}, names) ->
       name = unique_name(names, String.first(table), 0)
-      [{ { table, name }, entity, model }|names]
+      [{{table, name}, entity, model}|names]
     end) |> Enum.reverse |> list_to_tuple
   end
 
   # Brute force find unique name
   defp unique_name(names, name, counter) do
     counted_name = name <> integer_to_binary(counter)
-    if Enum.any?(names, fn { { _, n }, _, _ } -> n == counted_name end) do
+    if Enum.any?(names, fn {{_, n}, _, _} -> n == counted_name end) do
       unique_name(names, name, counter+1)
     else
       counted_name

@@ -10,7 +10,7 @@ defmodule Ecto.Associations.Preloader do
   @doc """
   Loads all associations on the result set according to the given fields.
   `fields` is a list of fields that can be nested in rose tree structure:
-  `node :: { atom, [node | atom] }` (see `Ecto.Query.PreloadBuilder.normalize/1`).
+  `node :: {atom, [node | atom]}` (see `Ecto.Query.PreloadBuilder.normalize/1`).
   `pos` is a list of indices into tuples and lists that locate the concerned
   entity.
 
@@ -34,7 +34,7 @@ defmodule Ecto.Associations.Preloader do
   # associated entities for each field.
   defp do_run([], _repo, _field), do: []
 
-  defp do_run(records, repo, { field, sub_fields }) do
+  defp do_run(records, repo, {field, sub_fields}) do
     record = List.first(records)
     module = elem(record, 0)
     refl = module.__entity__(:association, field)
@@ -50,7 +50,7 @@ defmodule Ecto.Associations.Preloader do
       if should_sort? do
         # Save the records old indices and then sort by primary_key or foreign_key
         # depending on the association type
-        { records, indices } = records
+        {records, indices} = records
         |> Stream.with_index
         |> sort(refl)
         |> :lists.unzip
@@ -168,25 +168,25 @@ defmodule Ecto.Associations.Preloader do
     key = refl.key
     first = List.first(records)
 
-    Enum.reduce(records, { first, false }, fn record, { last, sort? } ->
+    Enum.reduce(records, {first, false}, fn record, {last, sort?} ->
       if last && record && elem(record, 0) != elem(last, 0) do
         raise ArgumentError, message: "all entities have to be of the same type"
       end
 
       sort? = sort? || (last && record && apply(last, key, []) > apply(record, key, []))
-      { record, sort? }
+      {record, sort?}
     end) |> elem(1)
   end
 
   defp sort(records, refl) do
     key = refl.key
-    Enum.sort(records, fn { record1, _ }, { record2, _ } ->
+    Enum.sort(records, fn {record1, _}, {record2, _} ->
       !! (record1 && record2 && apply(record1, key, []) < apply(record2, key, []))
     end)
   end
 
   defp unsort(records) do
-    Enum.sort(records, fn { _, ix1 }, { _, ix2 } ->
+    Enum.sort(records, fn {_, ix1}, {_, ix2} ->
       ix1 < ix2
     end)
   end
@@ -210,14 +210,14 @@ defmodule Ecto.Associations.Preloader do
     else
       records
       |> :lists.zip(original)
-      |> Enum.map(fn { rec, orig } -> set_at_pos(orig, pos, rec) end)
+      |> Enum.map(fn {rec, orig} -> set_at_pos(orig, pos, rec) end)
     end
   end
 
   # The record that needs associations preloaded on it can be nested inside
   # tuples and lists. We retrieve and set the record inside the structure with
   # the help of a list of indices into tuples and lists.
-  # { x, [ y, z, { RECORD, p } ] } #=> indices: [ 1, 2, 0 ]
+  # {x, [ y, z, {RECORD, p} ]} #=> indices: [ 1, 2, 0 ]
   defp get_at_pos(value, []), do: value
 
   defp get_at_pos(tuple, [ix|pos]) when is_tuple(tuple) do

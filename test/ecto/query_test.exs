@@ -119,7 +119,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "string source query" do
-    assert Query[from: { "posts", nil, nil }] = from(p in "posts", []) |> select([p], p.title)
+    assert Query[from: {"posts", nil, nil}] = from(p in "posts", []) |> select([p], p.title)
   end
 
   test "validate from expression" do
@@ -180,8 +180,8 @@ defmodule Ecto.QueryTest do
   end
 
   test "join queries adds binds" do
-    from(c in Comment, join: p in Post, on: true, select: { p.title, c.text })
-    Comment |> join(:inner, [c], p in Post, true) |> select([c,p], { p.title, c.text })
+    from(c in Comment, join: p in Post, on: true, select: {p.title, c.text})
+    Comment |> join(:inner, [c], p in Post, true) |> select([c,p], {p.title, c.text})
   end
 
   test "cannot bind too many vars" do
@@ -205,6 +205,6 @@ defmodule Ecto.QueryTest do
              select: p)
       end
 
-    assert { :{}, _, [Ecto.Query.Query | _] } = Macro.expand(quoted, __ENV__)
+    assert {:{}, _, [Ecto.Query.Query | _]} = Macro.expand(quoted, __ENV__)
   end
 end

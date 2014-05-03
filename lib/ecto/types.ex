@@ -1,29 +1,29 @@
 defrecord Ecto.Date, [:year, :month, :day] do
   def to_erl(Ecto.Date[] = d) do
-    { d.year, d.month, d.day }
+    {d.year, d.month, d.day}
   end
 
-  def from_erl({ year, month, day }) do
+  def from_erl({year, month, day}) do
     Ecto.Date[year: year, month: month, day: day]
   end
 end
 
 defrecord Ecto.Time, [:hour, :min, :sec] do
   def to_erl(Ecto.Time[] = t) do
-    { t.hour, t.min, t.sec }
+    {t.hour, t.min, t.sec}
   end
 
-  def from_erl({ hour, min, sec }) do
+  def from_erl({hour, min, sec}) do
     Ecto.Time[hour: hour, min: min, sec: sec]
   end
 end
 
 defrecord Ecto.DateTime, [:year, :month, :day, :hour, :min, :sec] do
   def to_erl(Ecto.DateTime[] = dt) do
-    { { dt.year, dt.month, dt.day }, { dt.hour, dt.min, dt.sec } }
+    {{dt.year, dt.month, dt.day}, {dt.hour, dt.min, dt.sec}}
   end
 
-  def from_erl({ { year, month, day }, { hour, min, sec } }) do
+  def from_erl({{year, month, day}, {hour, min, sec}}) do
     Ecto.DateTime[year: year, month: month, day: day,
                   hour: hour, min: min, sec: sec]
   end

@@ -28,7 +28,7 @@ defmodule Ecto.Validator.Predicates do
   def present(attr, value, opts \\ [])
 
   def present(attr, value, opts) when value in @blank and is_list(opts) do
-    [{ attr, opts[:message] || "can't be blank" }]
+    [{attr, opts[:message] || "can't be blank"}]
   end
 
   def present(_attr, _value, opts) when is_list(opts) do
@@ -57,7 +57,7 @@ defmodule Ecto.Validator.Predicates do
   end
 
   def absent(attr, _value, opts) when is_list(opts) do
-    [{ attr, opts[:message] || "must be blank" }]
+    [{attr, opts[:message] || "must be blank"}]
   end
 
   @doc """
@@ -79,7 +79,7 @@ defmodule Ecto.Validator.Predicates do
     if value == nil or value =~ match_on do
       []
     else
-      [{ attr, opts[:message] || "is invalid" }]
+      [{attr, opts[:message] || "is invalid"}]
     end
   end
 
@@ -129,7 +129,7 @@ defmodule Ecto.Validator.Predicates do
 
   def has_length(attr, value, exact, opts) when is_integer(exact) do
     if String.length(value) != exact do
-      [{ attr, opts[:no_match] || "must be #{characters(exact)}" }]
+      [{attr, opts[:no_match] || "must be #{characters(exact)}"}]
     else
       []
     end
@@ -145,13 +145,13 @@ defmodule Ecto.Validator.Predicates do
 
   defp too_short(attr, length, min, opts) when is_integer(min) do
     if length < min do
-      [{ attr, opts[:too_short] || "is too short (minimum is #{characters(min)})" }]
+      [{attr, opts[:too_short] || "is too short (minimum is #{characters(min)})"}]
     end
   end
 
   defp too_long(attr, length, max, opts) when is_integer(max) do
     if length > max do
-      [{ attr, opts[:too_long] || "is too long (maximum is #{characters(max)})" }]
+      [{attr, opts[:too_long] || "is too long (maximum is #{characters(max)})"}]
     end
   end
 
@@ -176,7 +176,7 @@ defmodule Ecto.Validator.Predicates do
   def greater_than(_attr, value, check, _opts) when
         is_number(check) and (nil?(value) or value > check), do: []
   def greater_than(attr, _value, check, opts) when is_number(check), do:
-        [{ attr, opts[:message] || "must be greater than #{check}" }]
+        [{attr, opts[:message] || "must be greater than #{check}"}]
 
   @doc """
   Validates the given number is greater than or equal to the given value.
@@ -196,7 +196,7 @@ defmodule Ecto.Validator.Predicates do
   def greater_than_or_equal_to(_attr, value, check, _opts) when
         is_number(check) and (nil?(value) or value >= check), do: []
   def greater_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
-        [{ attr, opts[:message] || "must be greater than or equal to #{check}" }]
+        [{attr, opts[:message] || "must be greater than or equal to #{check}"}]
 
   @doc """
   Validates the given number is less than the given value.
@@ -216,7 +216,7 @@ defmodule Ecto.Validator.Predicates do
   def less_than(_attr, value, check, _opts) when
         is_number(check) and (nil?(value) or value < check), do: []
   def less_than(attr, _value, check, opts) when is_number(check), do:
-        [{ attr, opts[:message] || "must be less than #{check}" }]
+        [{attr, opts[:message] || "must be less than #{check}"}]
 
   @doc """
   Validates the given number is less than or equal to the given value.
@@ -236,7 +236,7 @@ defmodule Ecto.Validator.Predicates do
   def less_than_or_equal_to(_attr, value, check, _opts) when
         is_number(check) and (nil?(value) or value <= check), do: []
   def less_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
-        [{ attr, opts[:message] || "must be less than or equal to #{check}" }]
+        [{attr, opts[:message] || "must be less than or equal to #{check}"}]
 
   @doc """
   Validates the given number is between the value.
@@ -256,7 +256,7 @@ defmodule Ecto.Validator.Predicates do
   def between(_attr, value, min..max, _opts) when
     is_number(min) and is_number(max) and (nil?(value) or value in min..max), do: []
   def between(attr, _value, min..max, opts) when is_number(min) and is_number(max), do:
-    [{ attr, opts[:message] || "must be between #{min} and #{max}" }]
+    [{attr, opts[:message] || "must be between #{min} and #{max}"}]
 
   @doc """
   Validates the attribute is member of the given enumerable.
@@ -284,7 +284,7 @@ defmodule Ecto.Validator.Predicates do
     if value == nil or value in enum do
       []
     else
-      [{ attr, opts[:message] || "is not included in the list" }]
+      [{attr, opts[:message] || "is not included in the list"}]
     end
   end
 
@@ -315,7 +315,7 @@ defmodule Ecto.Validator.Predicates do
     if value == nil or not(value in enum) do
       []
     else
-      [{ attr, opts[:message] || "is reserved" }]
+      [{attr, opts[:message] || "is reserved"}]
     end
   end
 end

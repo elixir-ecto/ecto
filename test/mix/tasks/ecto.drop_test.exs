@@ -12,12 +12,12 @@ defmodule Mix.Tasks.Ecto.DropTest do
 
   defmodule AlreadyDownAdapter do
     defmacro __using__(_), do: :ok
-    def storage_down(_), do: { :error, :already_down }
+    def storage_down(_), do: {:error, :already_down}
   end
 
   defmodule ConfusedAdapter do
     defmacro __using__(_), do: :ok
-    def storage_down(_), do: { :error, :confused }
+    def storage_down(_), do: {:error, :confused}
   end
 
   defmodule NoStorageDownAdapter do
@@ -48,12 +48,12 @@ defmodule Mix.Tasks.Ecto.DropTest do
 
   test "runs the adapter storage_down" do
     run [to_string(Repo)]
-    assert_received { :mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.DropTest.Repo has been dropped."] }
+    assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.DropTest.Repo has been dropped."]}
   end
 
   test "informs the user when the repo is already down" do
     run [to_string(ExistingRepo)]
-    assert_received { :mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.DropTest.ExistingRepo has already been dropped."] }
+    assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.DropTest.ExistingRepo has already been dropped."]}
   end
 
   test "raises an error when storage_down gives an unknown feedback" do

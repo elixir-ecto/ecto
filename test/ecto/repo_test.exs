@@ -33,7 +33,7 @@ defmodule Ecto.RepoTest.MyModelList do
   use Ecto.Model
 
   queryable "my_entity" do
-    field :l1, { :array, :string }
+    field :l1, {:array, :string}
   end
 end
 
@@ -197,13 +197,13 @@ defmodule Ecto.RepoTest do
 
   test "parse_url options" do
     url = MyRepo.parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b")
-    assert { :password, "hunter2" } in url
-    assert { :username, "eric" } in url
-    assert { :hostname, "host" } in url
-    assert { :database, "mydb" } in url
-    assert { :port, 12345 } in url
-    assert { :size, "10" } in url
-    assert { :a, "b" } in url
+    assert {:password, "hunter2"} in url
+    assert {:username, "eric"} in url
+    assert {:hostname, "host"} in url
+    assert {:database, "mydb"} in url
+    assert {:port, 12345} in url
+    assert {:size, "10"} in url
+    assert {:a, "b"} in url
   end
 
   test "fail on invalid urls" do

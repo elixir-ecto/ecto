@@ -13,7 +13,7 @@ defmodule Ecto.Entity do
   * `:primary_key` - Sets the primary key, if this option is not set a primary
                      key named *id* of type *integer* will be generated. If
                      set to `false` no primary key will be generated, to set
-                     a custom primary key give `{ name, type, opts }` to the option.
+                     a custom primary key give `{name, type, opts}` to the option.
 
   In addition to the record functionality, Ecto also defines accessors and updater
   functions for the primary key will be generated on the entity, specifically
@@ -258,10 +258,10 @@ defmodule Ecto.Entity do
           field(:id, :integer, primary_key: true)
         false ->
           :ok
-        { name, type, opts } ->
+        {name, type, opts} ->
           field(name, type, Keyword.put(opts, :primary_key, true))
         other ->
-          raise ArgumentError, message: ":primary_key must be false or { name, type, opts }"
+          raise ArgumentError, message: ":primary_key must be false or {name, type, opts}"
       end
     end
   end
@@ -277,7 +277,7 @@ defmodule Ecto.Entity do
     record_fields = Module.get_attribute(mod, :record_fields)
     Record.deffunctions(record_fields, env)
 
-    fields = Enum.filter(all_fields, fn({ _, opts }) -> opts[:type] != :virtual end)
+    fields = Enum.filter(all_fields, fn({_, opts}) -> opts[:type] != :virtual end)
 
     [ ecto_fields(fields),
       ecto_assocs(assocs, primary_key, fields),
@@ -300,16 +300,16 @@ defmodule Ecto.Entity do
       end
     end
 
-    clash = Enum.any?(fields, fn({ prev, _ }) -> name == prev end)
+    clash = Enum.any?(fields, fn({prev, _}) -> name == prev end)
     if clash do
       raise ArgumentError, message: "field `#{name}` was already set on entity"
     end
 
     record_fields = Module.get_attribute(mod, :record_fields)
-    Module.put_attribute(mod, :record_fields, record_fields ++ [{ name, opts[:default] }])
+    Module.put_attribute(mod, :record_fields, record_fields ++ [{name, opts[:default]}])
 
     opts = Enum.reduce([:default, :primary_key], opts, &Dict.delete(&2, &1))
-    Module.put_attribute(mod, :ecto_fields, [{ name, [type: type] ++ opts }|fields])
+    Module.put_attribute(mod, :ecto_fields, [{name, [type: type] ++ opts}|fields])
   end
 
   @doc false
@@ -320,7 +320,7 @@ defmodule Ecto.Entity do
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [type: :has_many, queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, { name, opts })
+    Module.put_attribute(mod, :ecto_assocs, {name, opts})
   end
 
   @doc false
@@ -331,7 +331,7 @@ defmodule Ecto.Entity do
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [type: :has_one, queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, { name, opts })
+    Module.put_attribute(mod, :ecto_assocs, {name, opts})
   end
 
   @doc false
@@ -349,12 +349,12 @@ defmodule Ecto.Entity do
     __field__(mod, :"__#{name}__", :virtual, default: assoc)
 
     opts = [type: :belongs_to, queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, { name, opts })
+    Module.put_attribute(mod, :ecto_assocs, {name, opts})
   end
 
   ## Helpers
 
-  defp check_type!({ outer, inner }) when outer in Util.poly_types and inner in Util.types, do: :ok
+  defp check_type!({outer, inner}) when outer in Util.poly_types and inner in Util.types, do: :ok
 
   defp check_type!(type) when type in Util.types, do: :ok
 
@@ -371,7 +371,7 @@ defmodule Ecto.Entity do
   end
 
   defp ecto_fields(fields) do
-    quoted = Enum.map(fields, fn({ name, opts }) ->
+    quoted = Enum.map(fields, fn({name, opts}) ->
       quote do
         def __entity__(:field, unquote(name)), do: unquote(opts)
         def __entity__(:field_type, unquote(name)), do: unquote(opts[:type])
@@ -387,7 +387,7 @@ defmodule Ecto.Entity do
   end
 
   defp ecto_assocs(assocs, primary_key, fields) do
-    quoted = Enum.map(assocs, fn({ name, opts, }) ->
+    quoted = Enum.map(assocs, fn({name, opts,}) ->
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key, fields: fields] do
         pk = opts[:references] || primary_key
         virtual_name = :"__#{name}__"
@@ -398,7 +398,7 @@ defmodule Ecto.Entity do
         end
 
         if opts[:type] in [:has_many, :has_one] do
-          unless Enum.any?(fields, fn { name, _ } -> pk == name end) do
+          unless Enum.any?(fields, fn {name, _} -> pk == name end) do
             raise ArgumentError, message: "`references` option on association " <>
               "doesn't match any field on the entity"
           end
@@ -482,7 +482,7 @@ defmodule Ecto.Entity do
         [_module|values] = tuple_to_list(entity)
         zipped = Enum.zip(unquote(all_field_names), values)
 
-        Enum.filter(zipped, fn { field, _ } ->
+        Enum.filter(zipped, fn {field, _} ->
           __entity__(:field, field) && (keep_pk or field != primary_key)
         end)
       end

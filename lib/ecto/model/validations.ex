@@ -116,7 +116,7 @@ defmodule Ecto.Model.Validations do
         if Path.extname(value) in ~w(jpg gif png) do
           []
         else
-          [{ attr, opts[:message] || "is not an image attachment" }]
+          [{attr, opts[:message] || "is not an image attachment"}]
         end
       end
 
@@ -191,15 +191,15 @@ defmodule Ecto.Model.Validations do
     do_validate(:defp, function, keywords, Module.get_attribute(__CALLER__.module, :ecto_entity))
   end
 
-  defp do_validate(kind, { _, _, context } = var, keywords, entity) when is_atom(context) do
-    do_validate(kind, { :validate, [], [var] }, keywords, entity)
+  defp do_validate(kind, {_, _, context} = var, keywords, entity) when is_atom(context) do
+    do_validate(kind, {:validate, [], [var]}, keywords, entity)
   end
 
-  defp do_validate(_kind, { _, _, [] }, _keywords, _entity) do
+  defp do_validate(_kind, {_, _, []}, _keywords, _entity) do
     raise ArgumentError, message: "validate and validatep expects a function with at least one argument"
   end
 
-  defp do_validate(kind, { _, _, [h|_] } = signature, keywords, entity) do
+  defp do_validate(kind, {_, _, [h|_]} = signature, keywords, entity) do
     do_validate_var(h)
 
     quote do
@@ -215,8 +215,8 @@ defmodule Ecto.Model.Validations do
     nil
   end
 
-  defp do_validate_opt(kind, { fun, meta, [h|t] }, keywords, entity) do
-    signature = { fun, meta, [quote(do: unquote(h) = unquote(entity)[])|t] }
+  defp do_validate_opt(kind, {fun, meta, [h|t]}, keywords, entity) do
+    signature = {fun, meta, [quote(do: unquote(h) = unquote(entity)[])|t]}
 
     quote do
       Kernel.unquote(kind)(unquote(signature)) do
@@ -225,7 +225,7 @@ defmodule Ecto.Model.Validations do
     end
   end
 
-  defp do_validate_var({ _, _, context }) when is_atom(context), do: :ok
+  defp do_validate_var({_, _, context}) when is_atom(context), do: :ok
   defp do_validate_var(expr) do
     raise ArgumentError, message: "validate and validatep expects a function with a var " <>
                                   "as first argument, got: #{Macro.to_string(expr)}"

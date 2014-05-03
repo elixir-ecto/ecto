@@ -19,16 +19,16 @@ defmodule Mix.Tasks.Ecto.Drop do
   def run(args) do
     Mix.Task.run "app.start", args
 
-    { repo, _ } = parse_repo(args)
+    {repo, _} = parse_repo(args)
     ensure_repo(repo)
     ensure_storage_down(repo)
 
     case repo.storage_down do
       :ok ->
         Mix.shell.info "The database for repo #{inspect repo} has been dropped."
-      { :error, :already_down } ->
+      {:error, :already_down} ->
         Mix.shell.info "The database for repo #{inspect repo} has already been dropped."
-      { :error, term } ->
+      {:error, term} ->
         raise Mix.Error, message:
            "The database for repo #{inspect repo} couldn't be dropped, reason given: #{term}."
     end

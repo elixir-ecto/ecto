@@ -60,7 +60,7 @@ defmodule Ecto.Query.Validator do
     end
 
     if entity = Util.entity(query.from) do
-      Enum.each(values, fn { field, expr } ->
+      Enum.each(values, fn {field, expr} ->
         expected_type = entity.__entity__(:field_type, field)
 
         unless expected_type do
@@ -153,12 +153,12 @@ defmodule Ecto.Query.Validator do
   end
 
   # order_by field
-  defp validate_field({ _, var, field }, state) do
-    validate_field({ var, field }, state)
+  defp validate_field({_, var, field}, state) do
+    validate_field({var, field}, state)
   end
 
   # group_by field
-  defp validate_field({ var, field }, State[] = state) do
+  defp validate_field({var, field}, State[] = state) do
     entity = Util.find_source(state.sources, var) |> Util.entity
     if entity, do: do_validate_field(entity, field)
   end
@@ -185,7 +185,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp check_preload_fields(fields, entity) do
-    Enum.map(fields, fn { field, sub_fields } ->
+    Enum.map(fields, fn {field, sub_fields} ->
       refl = entity.__entity__(:association, field)
       unless refl do
         raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` is not an association field"
@@ -211,15 +211,15 @@ defmodule Ecto.Query.Validator do
 
     distincts =
       Enum.map(distincts, fn(expr) ->
-        Enum.map(expr.expr, fn({ var, field }) ->
+        Enum.map(expr.expr, fn({var, field}) ->
           source = Util.find_source(sources, var) |> Util.source
-          { source, field, { expr.file, expr.line } }
+          {source, field, {expr.file, expr.line}}
         end)
       end) |> Enum.concat
 
     order_bys =
       order_bys_sources(order_bys, sources)
-      |> Enum.map(fn { { source, _, _ }, field } -> { source, field } end)
+      |> Enum.map(fn {{source, _, _}, field} -> {source, field} end)
 
     do_validate_distincts(distincts, order_bys)
   end
@@ -228,9 +228,9 @@ defmodule Ecto.Query.Validator do
 
   defp do_validate_distincts(_, []), do: :ok
 
-  defp do_validate_distincts(distincts, [{ source, field } | order_bys]) do
+  defp do_validate_distincts(distincts, [{source, field} | order_bys]) do
     filter = fn
-      { s, f, _ } when s == source and f == field -> true
+      {s, f, _} when s == source and f == field -> true
       _ -> false
     end
 
@@ -240,7 +240,7 @@ defmodule Ecto.Query.Validator do
       distincts = Enum.reject(distincts, filter)
       do_validate_distincts(distincts, order_bys)
     else
-      { _, _, { file, line } } = Enum.at(distincts, 0)
+      {_, _, {file, line}} = Enum.at(distincts, 0)
       raise Ecto.QueryError, reason: "the `order_by` expression should first reference " <>
         "all the `distinct` fields before other fields", type: :distinct, file: file, line: line
     end
@@ -249,7 +249,7 @@ defmodule Ecto.Query.Validator do
   defp preload_selected(Query[select: select, preloads: preloads]) do
     unless preloads == [] do
       rescue_metadata(:select, select.file, select.line) do
-        pos = Util.locate_var(select.expr, { :&, [], [0] })
+        pos = Util.locate_var(select.expr, {:&, [], [0]})
         if nil?(pos) do
           raise Ecto.QueryError, reason: "source in from expression " <>
             "needs to be selected when using preload query"
@@ -259,9 +259,9 @@ defmodule Ecto.Query.Validator do
   end
 
   # var.x
-  defp type_check({ { :., _, [{ :&, _, [_] } = var, field] }, _, [] }, State[] = state) do
+  defp type_check({{:., _, [{:&, _, [_]} = var, field]}, _, []}, State[] = state) do
     source = Util.find_source(state.sources, var)
-    check_grouped({ source, field }, state)
+    check_grouped({source, field}, state)
 
     if entity = Util.entity(source) do
       type = entity.__entity__(:field_type, field)
@@ -275,11 +275,11 @@ defmodule Ecto.Query.Validator do
   end
 
   # var
-  defp type_check({ :&, _, [_] } = var, State[] = state) do
+  defp type_check({:&, _, [_]} = var, State[] = state) do
     source = Util.find_source(state.sources, var)
     if entity = Util.entity(source) do
       fields = entity.__entity__(:field_names)
-      Enum.each(fields, &check_grouped({ source, &1 }, state))
+      Enum.each(fields, &check_grouped({source, &1}, state))
       entity
     else
       source = Util.source(source)
@@ -288,7 +288,7 @@ defmodule Ecto.Query.Validator do
   end
 
   # ops & functions
-  defp type_check({ name, _, args } = expr, state) when is_atom(name) and is_list(args) do
+  defp type_check({name, _, args} = expr, state) when is_atom(name) and is_list(args) do
     length_args = length(args)
 
     api = Enum.find(state.apis, &function_exported?(&1, name, length_args))
@@ -308,9 +308,9 @@ defmodule Ecto.Query.Validator do
       :unknown
     else
       case apply(api, name, arg_types) do
-        { :ok, type } ->
+        {:ok, type} ->
           type
-        { :error, allowed } ->
+        {:error, allowed} ->
           raise Ecto.Query.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
       end
     end
@@ -331,10 +331,10 @@ defmodule Ecto.Query.Validator do
   # values
   defp type_check(value, state) do
     if Util.literal?(value) do
-      case Util.value_to_type(value, &{ :ok, type_check(&1, state) }) do
-        { :ok, type } ->
+      case Util.value_to_type(value, &{:ok, type_check(&1, state)}) do
+        {:ok, type} ->
           type
-        { :error, reason } ->
+        {:error, reason} ->
           raise Ecto.QueryError, reason: reason
       end
     else
@@ -344,7 +344,7 @@ defmodule Ecto.Query.Validator do
 
   # Handle top level select cases
 
-  defp select_clause({ :assoc, _, [var, fields] }, State[] = state) do
+  defp select_clause({:assoc, _, [var, fields]}, State[] = state) do
     entity = Util.find_source(state.sources, var) |> Util.entity
     unless entity == Util.entity(state.from) do
       raise Ecto.QueryError, reason: "can only associate on the from entity"
@@ -355,16 +355,16 @@ defmodule Ecto.Query.Validator do
 
   # Some two-tuples may be records (ex. Ecto.Binary[]), so check for records
   # explicitly. We can do this because we don't allow atoms in queries.
-  defp select_clause({ atom, _ } = record, state) when is_atom(atom) do
+  defp select_clause({atom, _} = record, state) when is_atom(atom) do
     type_check(record, state)
   end
 
-  defp select_clause({ left, right }, state) do
+  defp select_clause({left, right}, state) do
     select_clause(left, state)
     select_clause(right, state)
   end
 
-  defp select_clause({ :{}, _, list }, state) do
+  defp select_clause({:{}, _, list}, state) do
     Enum.each(list, &select_clause(&1, state))
   end
 
@@ -377,8 +377,8 @@ defmodule Ecto.Query.Validator do
   end
 
   defp assoc_select(parent_var, fields, State[] = state) do
-    Enum.each(fields, fn { field, nested } ->
-      { child_var, nested_fields } = Assoc.decompose_assoc(nested)
+    Enum.each(fields, fn {field, nested} ->
+      {child_var, nested_fields} = Assoc.decompose_assoc(nested)
       parent_entity = Util.find_source(state.sources, parent_var) |> Util.entity
 
       refl = parent_entity.__entity__(:association, field)
@@ -408,23 +408,23 @@ defmodule Ecto.Query.Validator do
 
   defp exprs_sources(exprs, sources) do
     Enum.map(exprs, fn(expr) ->
-      Enum.map(expr.expr, fn({ var, field }) ->
+      Enum.map(expr.expr, fn({var, field}) ->
         source = Util.find_source(sources, var)
-        { source, field }
+        {source, field}
       end)
     end) |> Enum.concat |> Enum.uniq
   end
 
   defp order_bys_sources(order_bys_expr, sources) do
     Enum.map(order_bys_expr, fn(expr) ->
-      Enum.map(expr.expr, fn({ _, var, field }) ->
+      Enum.map(expr.expr, fn({_, var, field}) ->
         source = Util.find_source(sources, var)
-        { source, field }
+        {source, field}
       end)
     end) |> Enum.concat |> Enum.uniq
   end
 
-  defp check_grouped({ source, field } = source_field, State[] = state) do
+  defp check_grouped({source, field} = source_field, State[] = state) do
     if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do
       entity = Util.entity(source) || Util.source(source)
       raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` must appear in `group_by` " <>

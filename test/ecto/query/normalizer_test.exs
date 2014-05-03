@@ -29,20 +29,20 @@ defmodule Ecto.Query.NormalizerTest do
 
   test "auto select entity" do
     query = from(Post, []) |> normalize
-    assert { :&, _, [0] } = query.select.expr
+    assert {:&, _, [0]} = query.select.expr
   end
 
   test "group by all fields" do
     query = from(p in Post, group_by: [p, p.text]) |> normalize
-    var = { :&, [], [0] }
-    assert [{ var, :id }, { var, :title }, { var, :text }, { var, :text }] =
+    var = {:&, [], [0]}
+    assert [{var, :id}, {var, :title}, {var, :text}, {var, :text}] =
            List.first(query.group_bys).expr
   end
 
   test "distinct all fields" do
     query = from(p in Post, distinct: [p, p.text]) |> normalize
-    var = { :&, [], [0] }
-    assert [{ var, :id }, { var, :title }, { var, :text }, { var, :text }] =
+    var = {:&, [], [0]}
+    assert [{var, :id}, {var, :title}, {var, :text}, {var, :text}] =
            List.first(query.distincts).expr
   end
 

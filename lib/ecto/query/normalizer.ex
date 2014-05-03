@@ -24,7 +24,7 @@ defmodule Ecto.Query.Normalizer do
   # Transform an assocation join to an ordinary join
   def normalize_join(JoinExpr[assoc: nil] = join, _query), do: join
 
-  def normalize_join(JoinExpr[assoc: { left, right }] = join, Query[] = query) do
+  def normalize_join(JoinExpr[assoc: {left, right}] = join, Query[] = query) do
     entity = Util.find_source(query.sources, left) |> Util.entity
 
     if nil?(entity) do
@@ -63,7 +63,7 @@ defmodule Ecto.Query.Normalizer do
   # Auto select the entity in the from expression
   defp auto_select(Query[] = query, opts) do
     if !opts[:skip_select] && query.select == nil do
-      var = { :&, [], [0] }
+      var = {:&, [], [0]}
       query.select(QueryExpr[expr: var])
     else
       query
@@ -84,10 +84,10 @@ defmodule Ecto.Query.Normalizer do
   defp normalize_entities(query_expr, sources) do
     Enum.map(query_expr, fn QueryExpr[] = expr ->
       Enum.flat_map(expr.expr, fn
-        { :&, _, _ } = var ->
+        {:&, _, _} = var ->
           entity = Util.find_source(sources, var) |> Util.entity
           fields = entity.__entity__(:field_names)
-          Enum.map(fields, &{ var, &1 })
+          Enum.map(fields, &{var, &1})
         field ->
           [field]
       end) |> expr.expr
@@ -99,22 +99,22 @@ defmodule Ecto.Query.Normalizer do
     froms = if query.from, do: [query.from], else: []
 
     sources = Enum.reduce(query.joins, froms, fn
-      JoinExpr[assoc: { left, right }], acc ->
+      JoinExpr[assoc: {left, right}], acc ->
         entity = Util.find_source(Enum.reverse(acc), left) |> Util.entity
 
         if entity && (refl = entity.__entity__(:association, right)) do
           assoc = refl.associated
-          [ { assoc.__model__(:source), assoc.__model__(:entity), assoc } | acc ]
+          [ {assoc.__model__(:source), assoc.__model__(:entity), assoc} | acc ]
         else
           [nil|acc]
         end
 
       # TODO: Validate this on join creation
       JoinExpr[source: source], acc when is_binary(source) ->
-        [ { source, nil, nil } | acc ]
+        [ {source, nil, nil} | acc ]
 
       JoinExpr[source: model], acc when is_atom(model) ->
-        [ { model.__model__(:source), model.__model__(:entity), model } | acc ]
+        [ {model.__model__(:source), model.__model__(:entity), model} | acc ]
     end)
 
     sources |> Enum.reverse |> list_to_tuple |> query.sources

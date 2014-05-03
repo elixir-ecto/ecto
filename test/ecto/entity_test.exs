@@ -7,7 +7,7 @@ defmodule Ecto.EntityTest do
     field :name, :string, default: "eric"
     field :email, :string, uniq: true
     field :temp, :virtual, default: "temp"
-    field :array, { :array, :string }
+    field :array, {:array, :string}
 
     def inc_id(__MODULE__[id: id]) do
       id + 1
@@ -26,10 +26,10 @@ defmodule Ecto.EntityTest do
 
   test "metadata" do
     fields = [
-      { :id, [type: :integer] },
-      { :name, [type: :string] },
-      { :email, [type: :string, uniq: true] },
-      { :array, [type: { :array, :string }] }
+      {:id, [type: :integer]},
+      {:name, [type: :string]},
+      {:email, [type: :string, uniq: true]},
+      {:array, [type: {:array, :string}]}
     ]
 
     assert MyEntity.__entity__(:field_names) == [:id, :name, :email, :array]
@@ -68,7 +68,7 @@ defmodule Ecto.EntityTest do
       defmodule EntitInvalidFieldType do
         use Ecto.Entity
 
-        field :name, { :apa }
+        field :name, {:apa}
       end
     end
   end
@@ -90,7 +90,7 @@ defmodule Ecto.EntityTest do
   end
 
   defmodule EntityCustomPK do
-    use Ecto.Entity, primary_key: { :pk, :integer, [] }
+    use Ecto.Entity, primary_key: {:pk, :integer, []}
     field :x, :string
   end
 
@@ -171,8 +171,8 @@ defmodule Ecto.EntityTest do
     assert assoc.__assoc__(:name) == :author
     assert assoc.__assoc__(:target) == EntityAssocs
 
-    r = r.author({ User.Entity })
-    assert { User.Entity } = r.author.get
+    r = r.author({User.Entity})
+    assert {User.Entity} = r.author.get
     assert 2 = r.id
 
     r = EntityAssocs[]
@@ -194,8 +194,8 @@ defmodule Ecto.EntityTest do
     assert assoc.__assoc__(:name) == :comment
     assert assoc.__assoc__(:target) == EntityAssocs
 
-    r = r.comment({ Comment.Entity })
-    assert { Comment.Entity } = r.comment.get
+    r = r.comment({Comment.Entity})
+    assert {Comment.Entity} = r.comment.get
     assert 3 = r.id
   end
 
@@ -238,7 +238,7 @@ defmodule Ecto.EntityTest do
   end
 
   defmodule EntityAssocOpts do
-    use Ecto.Entity, model: AssocOpts, primary_key: { :pk, :integer, [] }
+    use Ecto.Entity, model: AssocOpts, primary_key: {:pk, :integer, []}
 
     has_many :posts, Post, references: :pk, foreign_key: :fk
     has_one :author, User, references: :pk, foreign_key: :fk

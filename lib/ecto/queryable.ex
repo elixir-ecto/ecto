@@ -14,7 +14,7 @@ end
 
 defimpl Ecto.Queryable, for: BitString do
   def to_query(source) when is_binary(source),
-    do: Ecto.Query.Query[from: { source, nil, nil }]
+    do: Ecto.Query.Query[from: {source, nil, nil}]
 end
 
 defimpl Ecto.Queryable, for: Atom do

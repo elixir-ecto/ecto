@@ -2,7 +2,7 @@ defmodule Ecto.Query.PreloadBuilder do
   @moduledoc false
   alias Ecto.Query.BuilderUtil
 
-  @type preload :: [{ atom, preload }]
+  @type preload :: [{atom, preload}]
 
   @doc """
   Normalizes a preload.
@@ -15,12 +15,12 @@ defmodule Ecto.Query.PreloadBuilder do
     Enum.map(List.wrap(preload), &normalize_each/1)
   end
 
-  defp normalize_each({ atom, list }) when is_atom(atom) do
-    { atom, normalize(list) }
+  defp normalize_each({atom, list}) when is_atom(atom) do
+    {atom, normalize(list)}
   end
 
   defp normalize_each(atom) when is_atom(atom) do
-    { atom, [] }
+    {atom, []}
   end
 
   defp normalize_each(other) do

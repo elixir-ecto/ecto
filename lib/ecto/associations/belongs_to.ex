@@ -66,7 +66,7 @@ defmodule Ecto.Associations.BelongsTo do
   @doc false
   Enum.each [:loaded, :target, :name], fn field ->
     def __assoc__(unquote(field), record) do
-      assoc([{ unquote(field), var }]) = record
+      assoc([{unquote(field), var}]) = record
       var
     end
   end

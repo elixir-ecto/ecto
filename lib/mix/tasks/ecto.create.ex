@@ -19,16 +19,16 @@ defmodule Mix.Tasks.Ecto.Create do
   def run(args) do
     Mix.Task.run "app.start", args
 
-    { repo, _ } = parse_repo(args)
+    {repo, _} = parse_repo(args)
     ensure_repo(repo)
     ensure_storage_up(repo)
 
     case repo.storage_up do
       :ok ->
         Mix.shell.info "The database for repo #{inspect repo} has been created."
-      { :error, :already_up } ->
+      {:error, :already_up} ->
         Mix.shell.info "The database for repo #{inspect repo} has already been created."
-      { :error, term } ->
+      {:error, term} ->
         raise Mix.Error, message:
            "The database for repo #{inspect repo} couldn't be created, reason given: #{term}."
     end

@@ -83,17 +83,17 @@ defmodule Ecto.Validator do
     end)
   end
 
-  defp process_each({ :also, function }, var, _getter) do
+  defp process_each({:also, function}, var, _getter) do
     handle_ops function, fn call -> Macro.pipe(var, call, 0) end
   end
 
-  defp process_each({ attr, function }, var, getter) do
+  defp process_each({attr, function}, var, getter) do
     handle_ops function, fn call ->
       Macro.pipe(attr, Macro.pipe(getter.(var, attr), call, 0), 0)
     end
   end
 
-  defp handle_ops({ :when, _, [left, right] }, callback) do
+  defp handle_ops({:when, _, [left, right]}, callback) do
     quote do
       if unquote(right), do: unquote(concat(handle_and(left, callback))), else: []
     end
@@ -103,7 +103,7 @@ defmodule Ecto.Validator do
     concat(handle_and(other, callback))
   end
 
-  defp handle_and({ :and, _, [left, right] }, callback) do
+  defp handle_and({:and, _, [left, right]}, callback) do
     handle_and(left, callback) ++ [callback.(right)]
   end
 

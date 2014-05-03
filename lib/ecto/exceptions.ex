@@ -46,11 +46,11 @@ defexception Ecto.Query.TypeCheckError, [:expr, :types, :allowed] do
   Read `Ecto.Query` and `Ecto.Query.API` docs for more information.
   """
   def message(Ecto.Query.TypeCheckError[] = e) do
-    { name, _, _ } = e.expr
+    {name, _, _} = e.expr
     expected = Enum.map_join(e.allowed, "\n    ", &Macro.to_string(&1))
 
     types  = Enum.map(e.types, &Util.type_to_ast/1)
-    actual = Macro.to_string({ name, [], types })
+    actual = Macro.to_string({name, [], types})
 
     """
     the following expression does not type check:

@@ -18,7 +18,7 @@ defmodule Ecto.Model.QueryableTest do
   end
 
   defmodule DefaultUser do
-    @queryable_defaults primary_key: { :uuid, :string, [] },
+    @queryable_defaults primary_key: {:uuid, :string, []},
                         foreign_key_type: :string
     use Ecto.Model.Queryable
 

@@ -36,8 +36,8 @@ defmodule Ecto.Repo.Backend do
     check_primary_key(entity)
 
     case Util.value_to_type(id) do
-      { :ok, _ } -> :ok
-      { :error, reason } -> raise ArgumentError, message: reason
+      {:ok, _} -> :ok
+      {:error, reason} -> raise ArgumentError, message: reason
     end
 
     # TODO: Maybe it would indeed be better to emit a direct AST
@@ -75,11 +75,11 @@ defmodule Ecto.Repo.Backend do
   end
 
   def update_all(repo, adapter, queryable, values, opts) do
-    { binds, expr } = FromBuilder.escape(queryable)
+    {binds, expr} = FromBuilder.escape(queryable)
 
-    values = Enum.map(values, fn({ field, expr }) ->
+    values = Enum.map(values, fn({field, expr}) ->
       expr = BuilderUtil.escape(expr, binds)
-      { field, expr }
+      {field, expr}
     end)
 
     quote do
@@ -148,7 +148,7 @@ defmodule Ecto.Repo.Backend do
   ## Helpers
 
   defp atomize_keys(dict) do
-    Enum.map dict, fn({ k, v }) -> { binary_to_atom(k), v } end
+    Enum.map dict, fn({k, v}) -> {binary_to_atom(k), v} end
   end
 
   defp check_single_result(result, entity) do
@@ -179,12 +179,12 @@ defmodule Ecto.Repo.Backend do
     primary_key = module.__entity__(:primary_key)
     zipped = module.__entity__(:keywords, entity)
 
-    Enum.each(zipped, fn({ field, value }) ->
+    Enum.each(zipped, fn({field, value}) ->
       type = module.__entity__(:field_type, field)
 
       value_type = case Util.value_to_type(value) do
-        { :ok, vtype } -> vtype
-        { :error, reason } -> raise ArgumentError, message: reason
+        {:ok, vtype} -> vtype
+        {:error, reason} -> raise ArgumentError, message: reason
       end
 
       valid = field == primary_key or

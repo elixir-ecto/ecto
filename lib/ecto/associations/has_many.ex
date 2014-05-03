@@ -47,7 +47,7 @@ defmodule Ecto.Associations.HasMany do
   def new(params \\ [], assoc(target: target, name: name, primary_key: pk_value)) do
     refl = Refl[] = target.__entity__(:association, name)
     fk = refl.assoc_key
-    refl.associated.new([{ fk, pk_value }] ++ params)
+    refl.associated.new([{fk, pk_value}] ++ params)
   end
 
   @doc """
@@ -73,7 +73,7 @@ defmodule Ecto.Associations.HasMany do
   @doc false
   Enum.each [:loaded, :target, :name, :primary_key], fn field ->
     def __assoc__(unquote(field), record) do
-      assoc([{ unquote(field), var }]) = record
+      assoc([{unquote(field), var}]) = record
       var
     end
   end
@@ -81,7 +81,7 @@ defmodule Ecto.Associations.HasMany do
   @doc false
   Enum.each [:loaded, :primary_key], fn field ->
     def __assoc__(unquote(field), value, record) do
-      assoc(record, [{ unquote(field), value }])
+      assoc(record, [{unquote(field), value}])
     end
   end
 
@@ -105,7 +105,7 @@ defimpl Ecto.Queryable, for: Ecto.Associations.HasMany do
 end
 
 defimpl Enumerable, for: Ecto.Associations.HasMany do
-  def count(assoc), do: { :ok, length(assoc.to_list) }
+  def count(assoc), do: {:ok, length(assoc.to_list)}
   def member?(assoc, value), do: value in assoc.to_list
   def reduce(assoc, acc, fun), do: Enumerable.List.reduce(assoc.to_list, acc, fun)
 end

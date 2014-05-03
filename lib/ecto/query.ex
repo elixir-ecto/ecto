@@ -187,7 +187,7 @@ defmodule Ecto.Query do
       raise ArgumentError, reason: "second argument to `from` has to be a keyword list"
     end
 
-    { quoted, binds, count_bind } = FromBuilder.build_with_binds(expr, __CALLER__)
+    {quoted, binds, count_bind} = FromBuilder.build_with_binds(expr, __CALLER__)
     build_query(kw, __CALLER__, count_bind, quoted, binds)
   end
 
@@ -209,21 +209,21 @@ defmodule Ecto.Query do
 
          from c in Comment,
         join: p in Post, on: c.post_id == p.id,
-      select: { p.title, c.text }
+      select: {p.title, c.text}
 
          from p in Post,
         left_join: c in p.comments,
-      select: { p, c }
+      select: {p, c}
 
   ## Expressions examples
 
       from(Comment)
       |> join(:inner, [c], p in Post, c.post_id == p.id)
-      |> select([c, p], { p.title, c.text })
+      |> select([c, p], {p.title, c.text})
 
       Post
       |> join(:left, [p], c in p.comments)
-      |> select([p, c], { p, c })
+      |> select([p, c], {p, c})
   """
   defmacro join(query, qual, binding, expr, on \\ nil) do
     JoinBuilder.build_with_binds(query, qual, binding, expr, on, nil, __CALLER__)
@@ -254,9 +254,9 @@ defmodule Ecto.Query do
   ## Keywords examples
 
       from(c in City, select: c) # selects the entire entity
-      from(c in City, select: { c.name, c.population })
+      from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
-      from(c in City, select: { c.name, to_binary(40 + 2), 43 })
+      from(c in City, select: {c.name, to_binary(40 + 2), 43})
 
       from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
 
@@ -270,7 +270,7 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       from(c in City) |> select([c], c)
-      from(c in City) |> select([c], { c.name, c.country })
+      from(c in City) |> select([c], {c.name, c.country})
 
   """
   defmacro select(query, binding, expr) do
@@ -433,7 +433,7 @@ defmodule Ecto.Query do
       # Returns the number of posts in each category
       from(p in Post,
         group_by: p.category,
-        select: { p.category, count(p.id) })
+        select: {p.category, count(p.id)})
 
       # Group on all fields on the Post entity
       from(p in Post,
@@ -464,7 +464,7 @@ defmodule Ecto.Query do
       from(p in Post,
         group_by: p.category,
         having: avg(p.num_comments) > 10,
-        select: { p.category, count(p.id) })
+        select: {p.category, count(p.id)})
 
   ## Expressions examples
 
@@ -508,7 +508,7 @@ defmodule Ecto.Query do
 
       Post |> preload(:comments) |> select([p], p)
 
-      Post |> preload([:user, { :comments, [:user] }]) |> select([p], p)
+      Post |> preload([:user, {:comments, [:user]}]) |> select([p], p)
   """
   defmacro preload(query, expr) do
     PreloadBuilder.build(query, expr, __CALLER__)
@@ -520,11 +520,11 @@ defmodule Ecto.Query do
   @no_binds [:limit, :offset, :preload, :lock]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
-  defp build_query([{ type, expr }|t], env, count_bind, quoted, binds) when type in @binds do
+  defp build_query([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro.expand'able to Query[],
     # otherwise ensure that quoted is evaluated before macro call
     quoted =
-      if Enum.all?(binds, fn { _, value } -> is_integer(value) end) do
+      if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do
         quote do
           Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
         end
@@ -538,7 +538,7 @@ defmodule Ecto.Query do
     build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ type, expr }|t], env, count_bind, quoted, binds) when type in @no_binds do
+  defp build_query([{type, expr}|t], env, count_bind, quoted, binds) when type in @no_binds do
     quoted =
       quote do
         Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
@@ -547,7 +547,7 @@ defmodule Ecto.Query do
     build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ join, expr }|t], env, count_bind, quoted, binds) when join in @joins do
+  defp build_query([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
     qual =
       case join do
         :join       -> :inner
@@ -557,18 +557,18 @@ defmodule Ecto.Query do
         :full_join  -> :full
       end
 
-    { t, on } = collect_on(t, nil)
-    { quoted, binds, count_bind } = JoinBuilder.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
+    {t, on} = collect_on(t, nil)
+    {quoted, binds, count_bind} = JoinBuilder.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
 
     build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ :on, _value }|_], _env, _count_bind, _quoted, _binds) do
+  defp build_query([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
     raise Ecto.QueryError,
       reason: "`on` keyword must immediately follow a join"
   end
 
-  defp build_query([{ key, _value }|_], _env, _count_bind, _quoted, _binds) do
+  defp build_query([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
     raise Ecto.QueryError,
       reason: "unsupported #{inspect key} in keyword query expression"
   end
@@ -577,10 +577,10 @@ defmodule Ecto.Query do
     quoted
   end
 
-  defp collect_on([{ :on, expr }|t], nil),
+  defp collect_on([{:on, expr}|t], nil),
     do: collect_on(t, expr)
-  defp collect_on([{ :on, expr }|t], acc),
-    do: collect_on(t, { :and, [], [acc, expr] })
+  defp collect_on([{:on, expr}|t], acc),
+    do: collect_on(t, {:and, [], [acc, expr]})
   defp collect_on(other, acc),
-    do: { other, acc }
+    do: {other, acc}
 end
