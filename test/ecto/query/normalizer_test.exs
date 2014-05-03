@@ -48,14 +48,14 @@ defmodule Ecto.Query.NormalizerTest do
 
   test "normalize assoc joins" do
     query = from(p in Post, join: p.comments) |> normalize
-    assert JoinExpr[on: on, assoc: assoc] = hd(query.joins)
+    assert %JoinExpr{on: on, assoc: assoc} = hd(query.joins)
     assert assoc == {{:&, [], [0]}, :comments}
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
   end
 
   test "normalize assoc joins with on" do
     query = from(p in Post, join: c in p.comments, on: c.text == "") |> normalize
-    assert JoinExpr[on: on] = hd(query.joins)
+    assert %JoinExpr{on: on} = hd(query.joins)
     assert Macro.to_string(on.expr) == "&1.text() == \"\" and &1.post_id() == &0.id()"
   end
 

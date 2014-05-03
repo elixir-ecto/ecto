@@ -6,9 +6,8 @@ defmodule Ecto.Query.Validator do
 
   # TODO: Check it raises on missing bindings
 
+  alias Ecto.Query
   alias Ecto.Query.Util
-  alias Ecto.Query.Query
-  alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Associations.Assoc
 
@@ -28,7 +27,7 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  def validate(Query[] = query, apis, opts \\ []) do
+  def validate(query, apis, opts \\ []) do
     if query.from == nil do
       raise Ecto.QueryError, reason: "a query must have a from expression"
     end
@@ -52,7 +51,7 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  def validate_update(Query[] = query, apis, values) do
+  def validate_update(query, apis, values) do
     validate_only_where(query)
 
     if values == [] do
@@ -96,11 +95,11 @@ defmodule Ecto.Query.Validator do
 
   defp validate_only_where(query) do
     # Update validation check if assertion fails
-    unquote(unless size(Query[]) == 14, do: raise "Ecto.Query.Query out of date")
+    unquote(unless map_size(%Query{}) == 14, do: raise "Ecto.Query out of date")
 
     # TODO: File and line metadata
-    unless match?(Query[joins: [], select: nil, order_bys: [], limit: nil,
-        offset: nil, group_bys: [], havings: [], preloads: [], distincts: [], lock: nil], query) do
+    unless match?(%Query{joins: [], select: nil, order_bys: [], limit: nil,
+        offset: nil, group_bys: [], havings: [], preloads: [], distincts: [], lock: nil}, query) do
       raise Ecto.QueryError, reason: "query can only have `where` expressions"
     end
   end
@@ -121,7 +120,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_booleans(type, query_exprs, state) do
-    Enum.each(query_exprs, fn(QueryExpr[] = expr) ->
+    Enum.each(query_exprs, fn(expr) ->
       rescue_metadata(type, expr.file, expr.line) do
         expr_type = type_check(expr.expr, state)
 
@@ -143,7 +142,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_field_list(type, query_exprs, state) do
-    Enum.each(query_exprs, fn(QueryExpr[] = expr) ->
+    Enum.each(query_exprs, fn(expr) ->
       rescue_metadata(type, expr.file, expr.line) do
         Enum.map(expr.expr, fn expr ->
           validate_field(expr, state)
@@ -177,7 +176,7 @@ defmodule Ecto.Query.Validator do
       raise Ecto.QueryError, reason: "can only preload on fields from an entity"
     end
 
-    Enum.each(preloads, fn(QueryExpr[] = expr) ->
+    Enum.each(preloads, fn(expr) ->
       rescue_metadata(:preload, expr.file, expr.line) do
         check_preload_fields(expr.expr, entity)
       end
@@ -194,13 +193,13 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_select(QueryExpr[] = expr, State[] = state) do
+  defp validate_select(expr, State[] = state) do
     rescue_metadata(:select, expr.file, expr.line) do
       select_clause(expr.expr, state)
     end
   end
 
-  defp validate_distincts(Query[order_bys: order_bys, distincts: distincts, sources: sources], state) do
+  defp validate_distincts(%Query{order_bys: order_bys, distincts: distincts, sources: sources}, state) do
     validate_field_list(:distinct, distincts, state)
 
     # ensure that the fields in `distinct` appears before other fields in the `order_by` expression
@@ -246,7 +245,7 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp preload_selected(Query[select: select, preloads: preloads]) do
+  defp preload_selected(%Query{select: select, preloads: preloads}) do
     unless preloads == [] do
       rescue_metadata(:select, select.file, select.line) do
         pos = Util.locate_var(select.expr, {:&, [], [0]})
@@ -398,7 +397,7 @@ defmodule Ecto.Query.Validator do
       end
 
       expr = Util.source_expr(state.query, child_var)
-      unless match?(JoinExpr[qual: qual, assoc: assoc] when not nil?(assoc) and qual in [:inner, :left], expr) do
+      unless match?(%JoinExpr{qual: qual, assoc: assoc} when not nil?(assoc) and qual in [:inner, :left], expr) do
         raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
       end
 

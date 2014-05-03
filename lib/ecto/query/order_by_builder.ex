@@ -57,17 +57,17 @@ defmodule Ecto.Query.OrderByBuilder do
   def build(query, binding, expr, env) do
     binding  = BuilderUtil.escape_binding(binding)
     expr     = escape(expr, binding)
-    order_by = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
-                           file: unquote(env.file), line: unquote(env.line)]
+    order_by = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
+                         file: unquote(env.file), line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [order_by], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, expr) do
-    Ecto.Query.Query[order_bys: order_bys] = query = Ecto.Queryable.to_query(query)
-    query.order_bys(order_bys ++ [expr])
+    query = Ecto.Queryable.to_query(query)
+    %{query | order_bys: query.order_bys ++ [expr]}
   end
 end

@@ -14,17 +14,17 @@ defmodule Ecto.Query.WhereBuilder do
   def build(query, binding, expr, env) do
     binding = BuilderUtil.escape_binding(binding)
     expr    = BuilderUtil.escape(expr, binding)
-    where   = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
-                          file: unquote(env.file), line: unquote(env.line)]
+    where   = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
+                          file: unquote(env.file), line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [where], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, expr) do
-    Ecto.Query.Query[wheres: wheres] = query = Ecto.Queryable.to_query(query)
-    query.wheres(wheres ++ [expr])
+    query = Ecto.Queryable.to_query(query)
+    %{query | wheres: query.wheres ++ [expr]}
   end
 end

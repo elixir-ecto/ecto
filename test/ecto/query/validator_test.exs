@@ -2,7 +2,7 @@ defmodule Ecto.Query.ValidatorTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.Query.Query
+  alias Ecto.Query
   alias Ecto.Query.Normalizer
   alias Ecto.Query.Validator
 
@@ -54,7 +54,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "invalid query" do
-    query = select(Query[], [], 123)
+    query = select(%Query{}, [], 123)
     assert_raise Ecto.QueryError, ~r"a query must have a from expression", fn ->
       validate(query)
     end

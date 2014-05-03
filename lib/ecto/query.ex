@@ -114,14 +114,19 @@ defmodule Ecto.Query do
   in the keywords query and in the query expression formats.
   """
 
-  defrecord Query, sources: nil, from: nil, joins: [], wheres: [], select: nil,
-                   order_bys: [], limit: nil, offset: nil, group_bys: [],
-                   havings: [], preloads: [], distincts: [], lock: nil
+  defstruct [sources: nil, from: nil, joins: [], wheres: [], select: nil,
+             order_bys: [], limit: nil, offset: nil, group_bys: [],
+             havings: [], preloads: [], distincts: [], lock: nil]
 
-  defrecord QueryExpr, [:expr, :file, :line]
-  defrecord JoinExpr, [:qual, :source, :on, :file, :line, :assoc]
+  defmodule QueryExpr do
+    @moduledoc false
+    defstruct [:expr, :file, :line]
+  end
 
-  @type t :: Query.t
+  defmodule JoinExpr do
+    @moduledoc false
+    defstruct [:qual, :source, :on, :file, :line, :assoc]
+  end
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
@@ -521,7 +526,7 @@ defmodule Ecto.Query do
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
   defp build_query([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
-    # If all bindings are integer indexes keep AST Macro.expand'able to Query[],
+    # If all bindings are integer indexes keep AST Macro.expand'able to %Query{},
     # otherwise ensure that quoted is evaluated before macro call
     quoted =
       if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do

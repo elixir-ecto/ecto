@@ -3,7 +3,6 @@ defmodule Ecto.Associations.Assoc do
   This module provides the assoc selector merger and utilities around it.
   """
 
-  alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
   alias Ecto.Associations
@@ -12,12 +11,12 @@ defmodule Ecto.Associations.Assoc do
   Transforms a result set based on the assoc selector, loading the associations
   onto their parent entity. See `Ecto.Query.select/3`.
   """
-  @spec run([Record.t], Query.t) :: [Record.t]
+  @spec run([Record.t], Ecto.Query.t) :: [Record.t]
   def run([], _query), do: []
 
-  def run(results, Query[] = query) do
+  def run(results, query) do
     case query.select do
-      QueryExpr[expr: {:assoc, _, [parent, fields]}] ->
+      %QueryExpr{expr: {:assoc, _, [parent, fields]}} ->
         merge(results, parent, fields, query)
       _ ->
         results
@@ -105,7 +104,7 @@ defmodule Ecto.Associations.Assoc do
     {pos, new_parent}
   end
 
-  defp create_refls(var, fields, Query[] = query) do
+  defp create_refls(var, fields, query) do
     Enum.map(fields, fn {field, nested} ->
       {inner_var, fields} = decompose_assoc(nested)
 

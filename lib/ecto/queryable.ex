@@ -1,20 +1,20 @@
 defprotocol Ecto.Queryable do
   @moduledoc """
   The `Queryable` protocol is responsible for converting a structure to an
-  `Ecto.Query.Query` record. The only function required to implement is
+  `Ecto.Query` struct. The only function required to implement is
   `to_query` which does the conversion.
   """
 
   def to_query(expr)
 end
 
-defimpl Ecto.Queryable, for: Ecto.Query.Query do
+defimpl Ecto.Queryable, for: Ecto.Query do
   def to_query(query), do: query
 end
 
 defimpl Ecto.Queryable, for: BitString do
   def to_query(source) when is_binary(source),
-    do: Ecto.Query.Query[from: {source, nil, nil}]
+    do: %Ecto.Query{from: {source, nil, nil}}
 end
 
 defimpl Ecto.Queryable, for: Atom do

@@ -194,7 +194,7 @@ defmodule Ecto.Model.Queryable do
 
       @doc false
       def __queryable__,
-        do: Ecto.Query.Query[from: {@ecto_source, @ecto_entity, __MODULE__}]
+        do: %Ecto.Query{from: {@ecto_source, @ecto_entity, __MODULE__}}
     end
   end
 end

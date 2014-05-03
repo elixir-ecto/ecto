@@ -89,22 +89,22 @@ defmodule Ecto.Query.SelectBuilder do
   def build(query, binding, expr, env) do
     binding = BuilderUtil.escape_binding(binding)
     expr    = escape(expr, binding)
-    select  = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
-                          file: unquote(env.file), line: unquote(env.line)]
+    select  = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
+                          file: unquote(env.file), line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [select], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, select) do
-    Ecto.Query.Query[] = query = Ecto.Queryable.to_query(query)
+    query = Ecto.Queryable.to_query(query)
 
     if query.select do
       raise Ecto.QueryError, reason: "only one select expression is allowed in query"
     else
-      query.select(select)
+      %{query | select: select}
     end
   end
 end

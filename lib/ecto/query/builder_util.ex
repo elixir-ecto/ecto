@@ -1,7 +1,7 @@
 defmodule Ecto.Query.BuilderUtil do
   @moduledoc false
 
-  alias Ecto.Query.Query
+  alias Ecto.Query
 
   @expand_sigils [:sigil_c, :sigil_C, :sigil_s, :sigil_S, :sigil_w, :sigil_W]
 
@@ -221,14 +221,14 @@ defmodule Ecto.Query.BuilderUtil do
 
   ## Examples
 
-      iex> count_binds(Ecto.Query.Query[joins: [1,2,3]])
+      iex> count_binds(%Ecto.Query{joins: [1,2,3]})
       3
 
-      iex> count_binds(Ecto.Query.Query[from: 0, joins: [1,2]])
+      iex> count_binds(%Ecto.Query{from: 0, joins: [1,2]})
       3
 
   """
-  def count_binds(Query[from: from, joins: joins]) do
+  def count_binds(%Query{from: from, joins: joins}) do
     count = if from, do: 1, else: 0
     count + length(joins)
   end
@@ -237,14 +237,13 @@ defmodule Ecto.Query.BuilderUtil do
   Applies a query at compilation time or at runtime.
 
   This function is responsible to check if a given query is an
-  `Ecto.Query.Query` record at compile time or not and act
-  accordingly.
+  `Ecto.Query` struct at compile time or not and act accordingly.
 
   If a query is available, it invokes the `apply` function in the
   given `module`, otherwise, it delegates the call to runtime.
 
   It is important to keep in mind the complexities introduced
-  by this function. In particular, a Query[] is mixture of escaped
+  by this function. In particular, a %Query{} is mixture of escaped
   and unescaped expressions which makes it impossible for this
   function to properly escape or unescape it at compile/runtime.
   For this reason, the apply function should be ready to handle
@@ -252,7 +251,7 @@ defmodule Ecto.Query.BuilderUtil do
 
   For example, take into account the `SelectBuilder`:
 
-      select = Ecto.Query.QueryExpr[expr: expr, file: env.file, line: env.line]
+      select = %Ecto.Query.QueryExpr{expr: expr, file: env.file, line: env.line}
       BuilderUtil.apply_query(query, __MODULE__, [select], env)
 
   `expr` is already an escaped expression and we must not escape
@@ -278,22 +277,33 @@ defmodule Ecto.Query.BuilderUtil do
     query = Macro.expand(query, env)
     args  = for i <- args, do: escape_query(i)
     case unescape_query(query) do
-      Query[] = unescaped ->
+      %Query{} = unescaped ->
         apply(module, :apply, [unescaped|args]) |> escape_query
       _ ->
         quote do: unquote(module).apply(unquote_splicing([query|args]))
     end
   end
 
-  # Unescapes an `Ecto.Query.Query` record.
-  defp unescape_query({:{}, _meta, [Query|_] = query}),
-    do: list_to_tuple(query)
-  defp unescape_query(other),
-    do: other
+  # Unescapes an `Ecto.Query` struct.
+  defp unescape_query({:%, _, [Query, {:%{}, _, list}]}) do
+    Enum.into([__struct__: Query] ++ list, %{})
+  end
 
-  # Escapes an `Ecto.Query.Query` and associated records.
-  defp escape_query(Query[] = query),
-    do: {:{}, [], tuple_to_list(query)}
+  defp unescape_query({:%{}, _, list} = ast) do
+    if List.keyfind(list, :__struct__, 0) == {:__struct__, Query} do
+      Enum.into(list, %{})
+    else
+      ast
+    end
+  end
+
+  defp unescape_query(other) do
+    other
+  end
+
+  # Escapes an `Ecto.Query` and associated structs.
+  defp escape_query(%Query{} = query),
+    do: {:%{}, [], Map.to_list(query)}
   defp escape_query(other),
     do: other
 

@@ -14,17 +14,17 @@ defmodule Ecto.Query.GroupByBuilder do
   def build(query, binding, expr, env) do
     binding  = BuilderUtil.escape_binding(binding)
     expr     = BuilderUtil.escape_fields_and_vars(expr, binding)
-    group_by = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
-                           file: unquote(env.file), line: unquote(env.line)]
+    group_by = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
+                         file: unquote(env.file), line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [group_by], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, expr) do
-    Ecto.Query.Query[group_bys: group_bys] = query = Ecto.Queryable.to_query(query)
-    query.group_bys(group_bys ++ [expr])
+    query = Ecto.Queryable.to_query(query)
+    %{query | group_bys: query.group_bys ++ [expr]}
   end
 end

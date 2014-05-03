@@ -3,7 +3,7 @@ defmodule Ecto.Query.Util do
   This module provide utility functions on queries.
   """
 
-  alias Ecto.Query.Query
+  alias Ecto.Query
 
   @doc """
   Look up a source with a variable.
@@ -19,11 +19,11 @@ defmodule Ecto.Query.Util do
   @doc """
   Look up the expression where the variable was bound.
   """
-  def source_expr(Query[from: from], {:&, _, [0]}) do
+  def source_expr(%Query{from: from}, {:&, _, [0]}) do
     from
   end
 
-  def source_expr(Query[joins: joins], {:&, _, [ix]}) do
+  def source_expr(%Query{joins: joins}, {:&, _, [ix]}) do
     Enum.at(joins, ix - 1)
   end
 
@@ -202,7 +202,7 @@ defmodule Ecto.Query.Util do
   end
 
   # Get var for given model in query
-  def model_var(Query[] = query, model) do
+  def model_var(query, model) do
     sources = tuple_to_list(query.sources)
     pos = Enum.find_index(sources, &(model(&1) == model))
     {:&, [], [pos]}

@@ -84,7 +84,7 @@ defmodule Ecto.Query.FromBuilder do
   @doc """
   The callback applied by `build_with_binds/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, non_neg_integer) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, non_neg_integer) :: Ecto.Query.t
   def apply(query, binds) do
     query = Ecto.Queryable.to_query(query)
     check_binds(query, binds)

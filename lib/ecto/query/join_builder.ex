@@ -2,7 +2,6 @@ defmodule Ecto.Query.JoinBuilder do
   @moduledoc false
 
   alias Ecto.Query.BuilderUtil
-  alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
 
@@ -86,8 +85,8 @@ defmodule Ecto.Query.JoinBuilder do
     join_on = escape_on(on, binding, env)
     join =
       quote do
-        JoinExpr[qual: unquote(qual), source: unquote(join_expr), on: unquote(join_on),
-                 file: unquote(env.file), line: unquote(env.line), assoc: unquote(join_assoc)]
+        %JoinExpr{qual: unquote(qual), source: unquote(join_expr), on: unquote(join_on),
+                  file: unquote(env.file), line: unquote(env.line), assoc: unquote(join_assoc)}
       end
 
     if is_integer(count_bind) do
@@ -97,9 +96,9 @@ defmodule Ecto.Query.JoinBuilder do
       count_bind = quote(do: unquote(count_bind) + 1)
       quoted =
         quote do
-          Query[joins: joins] = query = Ecto.Queryable.to_query(unquote(query))
+          query = Ecto.Queryable.to_query(unquote(query))
           unquote(count_setter)
-          query.joins(joins ++ [unquote(join)])
+          %{query | joins: query.joins ++ [unquote(join)]}
         end
       end
 
@@ -107,14 +106,14 @@ defmodule Ecto.Query.JoinBuilder do
   end
 
   def apply(query, expr) do
-    Ecto.Query.Query[joins: joins] = query = Ecto.Queryable.to_query(query)
-    query.joins(joins ++ [expr])
+    query = Ecto.Queryable.to_query(query)
+    %{query | joins: query.joins ++ [expr]}
   end
 
   defp escape_on(nil, _binding, _env), do: nil
   defp escape_on(on, binding, env) do
     on = BuilderUtil.escape(on, binding)
-    quote do: QueryExpr[expr: unquote(on), line: unquote(env.line), file: unquote(env.file)]
+    quote do: %QueryExpr{expr: unquote(on), line: unquote(env.line), file: unquote(env.file)}
   end
 
   @qualifiers [:inner, :left, :right, :full]

@@ -31,7 +31,6 @@ defmodule Ecto.Adapters.Postgres do
   alias Ecto.Adapters.Postgres.SQL
   alias Ecto.Adapters.Postgres.Worker
   alias Ecto.Associations.Assoc
-  alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
   alias Postgrex.TypeInfo
@@ -60,8 +59,8 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   @doc false
-  def all(repo, Query[] = query, opts) do
-    pg_query = Query[] = query.select |> normalize_select |> query.select
+  def all(repo, query, opts) do
+    pg_query = %{query | select: normalize_select(query.select)}
 
     %Postgrex.Result{rows: rows} = query(repo, SQL.select(pg_query), [], opts)
 
@@ -157,11 +156,11 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   @doc false
-  def normalize_select(QueryExpr[expr: {:assoc, _, [_, _]} = assoc] = expr) do
-    normalize_assoc(assoc) |> expr.expr
+  def normalize_select(%QueryExpr{expr: {:assoc, _, [_, _]} = assoc} = expr) do
+    %{expr | expr: normalize_assoc(assoc)}
   end
 
-  def normalize_select(QueryExpr[expr: _] = expr), do: expr
+  def normalize_select(%QueryExpr{expr: _} = expr), do: expr
 
   defp normalize_assoc({:assoc, _, [_, _]} = assoc) do
     {var, fields} = Assoc.decompose_assoc(assoc)
@@ -214,7 +213,7 @@ defmodule Ecto.Adapters.Postgres do
     {value, values}
   end
 
-  defp preload(results, repo, Query[] = query) do
+  defp preload(results, repo, query) do
     pos = Util.locate_var(query.select.expr, {:&, [], [0]})
     fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
     Ecto.Associations.Preloader.run(results, repo, fields, pos)

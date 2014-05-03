@@ -5,9 +5,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   # update and delete. All queries have to be normalized and validated for
   # correctness before given to this module.
 
-  alias Ecto.Query.Query
   alias Ecto.Query.QueryExpr
-  alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
 
   unary_ops = [ -: "-", +: "+" ]
@@ -45,7 +43,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp quote_column(column), do: "\"#{column}\""
 
   # Generate SQL for a select statement
-  def select(Query[] = query) do
+  def select(query) do
     # Generate SQL for every query expression type and combine to one string
     sources  = create_names(query)
 
@@ -110,7 +108,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for an update all statement
-  def update_all(Query[] = query, values) do
+  def update_all(query, values) do
     names = create_names(query)
     from  = elem(names, 0)
     {table, name} = Util.source(from)
@@ -137,7 +135,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for an delete all statement
-  def delete_all(Query[] = query) do
+  def delete_all(query) do
     names  = create_names(query)
     from   = elem(names, 0)
     {table, name} = Util.source(from)
@@ -146,11 +144,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "DELETE FROM #{quote_table(table)} AS #{name}" <> where
   end
 
-  defp select(QueryExpr[expr: expr], [], sources) do
+  defp select(%QueryExpr{expr: expr}, [], sources) do
     "SELECT " <> select_clause(expr, sources)
   end
 
-  defp select(QueryExpr[expr: expr], distincts, sources) do
+  defp select(%QueryExpr{expr: expr}, distincts, sources) do
     exprs = Enum.map_join(distincts, ", ", fn expr ->
       Enum.map_join(expr.expr, ", ", fn {var, field} ->
         {_, name} = Util.find_source(sources, var) |> Util.source
@@ -166,9 +164,9 @@ defmodule Ecto.Adapters.Postgres.SQL do
     "FROM #{quote_table(table)} AS #{name}"
   end
 
-  defp join(Query[] = query, sources) do
+  defp join(query, sources) do
     joins = Stream.with_index(query.joins)
-    Enum.map(joins, fn {JoinExpr[] = join, ix} ->
+    Enum.map(joins, fn {join, ix} ->
       source = elem(sources, ix+1)
       {table, name} = Util.source(source)
 
@@ -237,7 +235,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
   defp boolean(_name, [], _sources), do: nil
 
   defp boolean(name, query_exprs, sources) do
-    exprs = Enum.map_join(query_exprs, " AND ", fn QueryExpr[expr: expr] ->
+    exprs = Enum.map_join(query_exprs, " AND ", fn %QueryExpr{expr: expr} ->
       "(" <> expr(expr, sources) <> ")"
     end)
 

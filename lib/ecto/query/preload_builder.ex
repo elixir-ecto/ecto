@@ -39,17 +39,17 @@ defmodule Ecto.Query.PreloadBuilder do
   @spec build(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(query, expr, env) do
     expr = normalize(expr)
-    preload = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
-                          file: unquote(env.file), line: unquote(env.line)]
+    preload = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
+                          file: unquote(env.file), line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [preload], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, expr) do
-    Ecto.Query.Query[preloads: preloads] = query = Ecto.Queryable.to_query(query)
-    query.preloads(preloads ++ [expr])
+    query = Ecto.Queryable.to_query(query)
+    %{query | preloads: query.preloads ++ [expr]}
   end
 end

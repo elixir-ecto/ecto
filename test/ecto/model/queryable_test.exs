@@ -29,7 +29,7 @@ defmodule Ecto.Model.QueryableTest do
   end
 
   test "imports Ecto.Query functions" do
-    assert is_record(User.model_from, Ecto.Query.Query)
+    assert %Ecto.Query{} = User.model_from
   end
 
   test "uses @queryable_defaults" do
