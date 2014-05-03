@@ -1,3 +1,0 @@
-[ "decimal": {:git, "git://github.com/ericmj/decimal.git", "ca3ca3de2425b1ee19d175eca92d80dcfe02fdb1", []},
-  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "91b68de43d49bcccf2631016febda70b20d7aa75", []},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "c6fbb72d6f0678efd02e58b38cf2308397f0566a", []} ]
