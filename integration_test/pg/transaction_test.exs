@@ -41,7 +41,7 @@ defmodule Ecto.Integration.TransactionTest do
   defmodule Trans do
     use Ecto.Model
 
-    queryable "transaction" do
+    schema "transaction" do
       field :text, :string
     end
   end
@@ -67,18 +67,18 @@ defmodule Ecto.Integration.TransactionTest do
 
   test "transaction commits" do
     TestRepo1.transaction(fn ->
-      e = TestRepo1.insert(Trans.Entity[text: "1"])
+      e = TestRepo1.insert(%Trans{text: "1"})
       assert [^e] = TestRepo1.all(Trans)
       assert [] = TestRepo2.all(Trans)
     end)
 
-    assert [Trans.Entity[text: "1"]] = TestRepo2.all(Trans)
+    assert [%Trans{text: "1"}] = TestRepo2.all(Trans)
   end
 
   test "transaction rolls back" do
     try do
       TestRepo1.transaction(fn ->
-        e = TestRepo1.insert(Trans.Entity[text: "2"])
+        e = TestRepo1.insert(%Trans{text: "2"})
         assert [^e] = TestRepo1.all(Trans)
         assert [] = TestRepo2.all(Trans)
         raise UniqueError
@@ -92,12 +92,12 @@ defmodule Ecto.Integration.TransactionTest do
 
   test "nested transaction partial roll back" do
     TestRepo1.transaction(fn ->
-      e1 = TestRepo1.insert(Trans.Entity[text: "3"])
+      e1 = TestRepo1.insert(%Trans{text: "3"})
       assert [^e1] = TestRepo1.all(Trans)
 
         try do
           TestRepo1.transaction(fn ->
-            e2 = TestRepo1.insert(Trans.Entity[text: "4"])
+            e2 = TestRepo1.insert(%Trans{text: "4"})
             assert [^e1, ^e2] = TestRepo1.all(from(t in Trans, order_by: t.text))
             raise UniqueError
           end)
@@ -105,17 +105,17 @@ defmodule Ecto.Integration.TransactionTest do
           UniqueError -> :ok
         end
 
-      e3 = TestRepo1.insert(Trans.Entity[text: "5"])
+      e3 = TestRepo1.insert(%Trans{text: "5"})
       assert [^e1, ^e3] = TestRepo1.all(from(t in Trans, order_by: t.text))
       assert [] = TestRepo2.all(Trans)
       end)
 
-    assert [Trans.Entity[text: "3"], Trans.Entity[text: "5"]] = TestRepo2.all(from(t in Trans, order_by: t.text))
+    assert [%Trans{text: "3"}, %Trans{text: "5"}] = TestRepo2.all(from(t in Trans, order_by: t.text))
   end
 
   test "manual rollback doesnt bubble up" do
     x = TestRepo1.transaction(fn ->
-      e = TestRepo1.insert(Trans.Entity[text: "6"])
+      e = TestRepo1.insert(%Trans{text: "6"})
       assert [^e] = TestRepo1.all(Trans)
       TestRepo1.rollback
     end)
@@ -138,7 +138,7 @@ defmodule Ecto.Integration.TransactionTest do
 
     new_pid = spawn_link fn ->
       TestRepo1.transaction(fn ->
-        e = TestRepo1.insert(Trans.Entity[text: "7"])
+        e = TestRepo1.insert(%Trans{text: "7"})
         assert [^e] = TestRepo1.all(Trans)
         send(pid, :in_transaction)
         receive do
@@ -164,6 +164,6 @@ defmodule Ecto.Integration.TransactionTest do
       5000 -> raise "timeout"
     end
 
-    assert [Trans.Entity[text: "7"]] = TestRepo1.all(Trans)
+    assert [%Trans{text: "7"}] = TestRepo1.all(Trans)
   end
 end

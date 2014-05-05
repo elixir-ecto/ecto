@@ -65,11 +65,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for an insert statement
-  def insert(entity, returning) do
-    module = elem(entity, 0)
-    table  = entity.model.__model__(:source)
+  def insert(model, returning) do
+    module = model.__struct__
+    table  = module.__schema__(:source)
 
-    {fields, values} = module.__entity__(:keywords, entity)
+    {fields, values} = module.__schema__(:keywords, model)
       |> Enum.filter(fn {_, val} -> val != nil end)
       |> :lists.unzip
 
@@ -91,13 +91,13 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for an update statement
-  def update(entity) do
-    module   = elem(entity, 0)
-    table    = entity.model.__model__(:source)
-    pk_field = module.__entity__(:primary_key)
-    pk_value = entity.primary_key
+  def update(model) do
+    module   = model.__struct__
+    table    = module.__schema__(:source)
+    pk_field = module.__schema__(:primary_key)
+    pk_value = Map.get(model, pk_field)
 
-    zipped = module.__entity__(:keywords, entity, primary_key: false)
+    zipped = module.__schema__(:keywords, model, primary_key: false)
 
     zipped_sql = Enum.map_join(zipped, ", ", fn {k, v} ->
       "#{quote_column(k)} = #{literal(v)}"
@@ -125,11 +125,11 @@ defmodule Ecto.Adapters.Postgres.SQL do
   end
 
   # Generate SQL for a delete statement
-  def delete(entity) do
-    module   = elem(entity, 0)
-    table    = entity.model.__model__(:source)
-    pk_field = module.__entity__(:primary_key)
-    pk_value = entity.primary_key
+  def delete(model) do
+    module   = model.__struct__
+    table    = module.__schema__(:source)
+    pk_field = module.__schema__(:primary_key)
+    pk_value = Map.get(model, pk_field)
 
     "DELETE FROM #{quote_table(table)} WHERE #{quote_column(pk_field)} = #{literal(pk_value)}"
   end
@@ -253,8 +253,8 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp expr({:&, _, [_]} = var, sources) do
     source = Util.find_source(sources, var)
-    entity = Util.entity(source)
-    fields = entity.__entity__(:field_names)
+    model = Util.model(source)
+    fields = model.__schema__(:field_names)
     {_, name} = Util.source(source)
     Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")
   end
@@ -366,7 +366,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp literal(Ecto.Binary[value: binary]) do
     hex = for << h :: [unsigned, 4], l :: [unsigned, 4] <- binary >> do
-      fixed_integer_to_binary(h, 16) <> fixed_integer_to_binary(l, 16)
+      integer_to_binary(h, 16) <> integer_to_binary(l, 16)
     end
     "'\\x#{hex}'::bytea"
   end
@@ -446,23 +446,19 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp create_names(query) do
     sources = query.sources |> tuple_to_list
-    Enum.reduce(sources, [], fn({table, entity, model}, names) ->
+    Enum.reduce(sources, [], fn {table, model}, names ->
       name = unique_name(names, String.first(table), 0)
-      [{{table, name}, entity, model}|names]
+      [{{table, name}, model}|names]
     end) |> Enum.reverse |> list_to_tuple
   end
 
   # Brute force find unique name
   defp unique_name(names, name, counter) do
     counted_name = name <> integer_to_binary(counter)
-    if Enum.any?(names, fn {{_, n}, _, _} -> n == counted_name end) do
+    if Enum.any?(names, fn {{_, n}, _} -> n == counted_name end) do
       unique_name(names, name, counter+1)
     else
       counted_name
     end
   end
-
-  # This is fixed in R16B02, we can remove this fix when we stop supporting R16B01
-  defp fixed_integer_to_binary(0, _), do: "0"
-  defp fixed_integer_to_binary(value, base), do: integer_to_binary(value, base)
 end

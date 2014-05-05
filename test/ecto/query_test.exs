@@ -11,7 +11,7 @@ defmodule Ecto.QueryTest do
   defmodule Post do
     use Ecto.Model
 
-    queryable :posts do
+    schema "posts" do
       field :title, :string
       has_many :comments, Ecto.QueryTest.Comment
     end
@@ -20,7 +20,7 @@ defmodule Ecto.QueryTest do
   defmodule Comment do
     use Ecto.Model
 
-    queryable :comments do
+    schema "comments" do
       field :text, :string
     end
   end
@@ -114,12 +114,12 @@ defmodule Ecto.QueryTest do
     end
 
     assert_raise Protocol.UndefinedError, fn ->
-      from(p in NotAnEntity, []) |> select([p], p.title)
+      from(p in NotAModel, []) |> select([p], p.title)
     end
   end
 
   test "string source query" do
-    assert %Query{from: {"posts", nil, nil}} = from(p in "posts", []) |> select([p], p.title)
+    assert %Query{from: {"posts", nil}} = from(p in "posts", []) |> select([p], p.title)
   end
 
   test "validate from expression" do

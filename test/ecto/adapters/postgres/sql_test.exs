@@ -9,7 +9,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   defmodule Model do
     use Ecto.Model
 
-    queryable "model" do
+    schema "model" do
       field :x, :integer
       field :y, :integer
     end
@@ -17,7 +17,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   defmodule Model2 do
     use Ecto.Model
-    queryable "model2" do
+    schema "model2" do
       field :z, :integer
     end
   end
@@ -25,7 +25,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   defmodule Model3 do
     use Ecto.Model
 
-    queryable "model3" do
+    schema "model3" do
       field :list1, {:array, :string}
       field :list2, {:array, :integer}
       field :binary, :binary
@@ -35,7 +35,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   defmodule SomeModel do
     use Ecto.Model
 
-    queryable "weird_name_123" do
+    schema "weird_name_123" do
     end
   end
 
@@ -44,7 +44,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0"
   end
 
-  test "from without entity" do
+  test "from without model" do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT p0.\"x\"\nFROM \"posts\" AS p0"
   end
@@ -234,45 +234,45 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "insert" do
-    query = SQL.insert(Model.Entity[x: 123, y: "456"], [:id])
+    query = SQL.insert(%Model{x: 123, y: "456"}, [:id])
     assert query == "INSERT INTO \"model\" (\"x\", \"y\")\nVALUES (123, '456')\nRETURNING \"id\""
   end
 
   test "insert with missing values" do
-    query = SQL.insert(Model.Entity[x: 123], [:id, :y])
+    query = SQL.insert(%Model{x: 123}, [:id, :y])
     assert query == "INSERT INTO \"model\" (\"x\")\nVALUES (123)\nRETURNING \"id\", \"y\""
 
-    query = SQL.insert(Model.Entity[], [:id, :y])
+    query = SQL.insert(%Model{}, [:id, :y])
     assert query == "INSERT INTO \"model\" DEFAULT VALUES\nRETURNING \"id\", \"y\""
   end
 
   test "insert with list" do
-    query = SQL.insert(Model3.Entity[list1: Ecto.Array[value: ["a", "b", "c"], type: :string], list2: Ecto.Array[value: [1, 2, 3], type: :integer]], [:id])
+    query = SQL.insert(%Model3{list1: Ecto.Array[value: ["a", "b", "c"], type: :string], list2: Ecto.Array[value: [1, 2, 3], type: :integer]}, [:id])
     assert query == "INSERT INTO \"model3\" (\"list1\", \"list2\")\nVALUES (ARRAY['a', 'b', 'c']::text[], ARRAY[1, 2, 3]::integer[])\nRETURNING \"id\""
   end
 
   test "insert with binary" do
-    query = SQL.insert(Model3.Entity[binary: Ecto.Binary[value: << 1, 2, 3 >>]], [:id])
+    query = SQL.insert(%Model3{binary: Ecto.Binary[value: << 1, 2, 3 >>]}, [:id])
     assert query == "INSERT INTO \"model3\" (\"binary\")\nVALUES ('\\x010203'::bytea)\nRETURNING \"id\""
   end
 
   test "update" do
-    query = SQL.update(Model.Entity[id: 42, x: 123, y: "456"])
+    query = SQL.update(%Model{id: 42, x: 123, y: "456"})
     assert query == "UPDATE \"model\" SET \"x\" = 123, \"y\" = '456'\nWHERE \"id\" = 42"
   end
 
   test "update with list" do
-    query = SQL.update(Model3.Entity[id: 42, list1: Ecto.Array[value: ["c", "d"], type: :string], list2: Ecto.Array[value: [4, 5], type: :integer]])
-    assert query == "UPDATE \"model3\" SET \"list1\" = ARRAY['c', 'd']::text[], \"list2\" = ARRAY[4, 5]::integer[], \"binary\" = NULL\nWHERE \"id\" = 42"
+    query = SQL.update(%Model3{id: 42, list1: Ecto.Array[value: ["c", "d"], type: :string], list2: Ecto.Array[value: [4, 5], type: :integer]})
+    assert query == "UPDATE \"model3\" SET \"binary\" = NULL, \"list1\" = ARRAY['c', 'd']::text[], \"list2\" = ARRAY[4, 5]::integer[]\nWHERE \"id\" = 42"
   end
 
   test "update with binary" do
-    query = SQL.update(Model3.Entity[id: 42, binary: Ecto.Binary[value: << 1, 2, 3 >>]])
-    assert query == "UPDATE \"model3\" SET \"list1\" = NULL, \"list2\" = NULL, \"binary\" = '\\x010203'::bytea\nWHERE \"id\" = 42"
+    query = SQL.update(%Model3{id: 42, binary: Ecto.Binary[value: << 1, 2, 3 >>]})
+    assert query == "UPDATE \"model3\" SET \"binary\" = '\\x010203'::bytea, \"list1\" = NULL, \"list2\" = NULL\nWHERE \"id\" = 42"
   end
 
   test "delete" do
-    query = SQL.delete(Model.Entity[id: 42, x: 123, y: "456"])
+    query = SQL.delete(%Model{id: 42, x: 123, y: "456"})
     assert query == "DELETE FROM \"model\" WHERE \"id\" = 42"
   end
 
@@ -394,14 +394,15 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT 0\nFROM \"model\" AS m0\nINNER JOIN \"model2\" AS m1 ON m1.\"z\" = m1.\"z\""
   end
 
-  test "join without entity" do
+  test "join without model" do
     query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], 0) |> normalize
     assert SQL.select(query) == "SELECT 0\nFROM \"posts\" AS p0\nINNER JOIN \"comments\" AS c0 ON p0.\"x\" = c0.\"z\""
   end
 
   defmodule Comment do
     use Ecto.Model
-    queryable "comments" do
+
+    schema "comments" do
       belongs_to :post, Ecto.Adapters.Postgres.SQLTest.Post,
         references: :a,
         foreign_key: :b
@@ -410,7 +411,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   defmodule Post do
     use Ecto.Model
-    queryable "posts" do
+
+    schema "posts" do
       has_many :comments, Ecto.Adapters.Postgres.SQLTest.Comment,
         references: :c,
         foreign_key: :d
@@ -424,7 +426,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   defmodule Permalink do
     use Ecto.Model
-    queryable "permalinks" do
+    schema "permalinks" do
     end
   end
 
@@ -458,7 +460,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   defmodule PKModel do
     use Ecto.Model
 
-    queryable "model", primary_key: false do
+    schema "model", primary_key: false do
       field :x, :integer
       field :pk, :integer, primary_key: true
       field :y, :integer
@@ -466,15 +468,15 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "primary key any location" do
-    model = PKModel.Entity[x: 10, y: 30]
+    model = %PKModel{x: 10, y: 30}
     assert SQL.insert(model, [:pk]) == "INSERT INTO \"model\" (\"x\", \"y\")\nVALUES (10, 30)\nRETURNING \"pk\""
 
-    model = PKModel.Entity[x: 10, pk: 20, y: 30]
-    assert SQL.insert(model, []) == "INSERT INTO \"model\" (\"x\", \"pk\", \"y\")\nVALUES (10, 20, 30)"
+    model = %PKModel{x: 10, pk: 20, y: 30}
+    assert SQL.insert(model, []) == "INSERT INTO \"model\" (\"pk\", \"x\", \"y\")\nVALUES (20, 10, 30)"
   end
 
   test "send explicit set primary key" do
-    model = Model.Entity[id: 123, x: 0, y: 2]
+    model = %Model{id: 123, x: 0, y: 2}
     assert SQL.insert(model, []) == "INSERT INTO \"model\" (\"id\", \"x\", \"y\")\nVALUES (123, 0, 2)"
   end
 end

@@ -24,18 +24,18 @@ defmodule Ecto.Query.Normalizer do
   def normalize_join(%JoinExpr{assoc: nil} = join, _query), do: join
 
   def normalize_join(%JoinExpr{assoc: {left, right}} = join, query) do
-    entity = Util.find_source(query.sources, left) |> Util.entity
+    model = Util.find_source(query.sources, left) |> Util.model
 
-    if nil?(entity) do
+    if nil?(model) do
       raise Ecto.QueryError, file: join.file, line: join.line,
-        reason: "association join cannot be performed without an entity"
+        reason: "association join cannot be performed without a model"
     end
 
-    refl = entity.__entity__(:association, right)
+    refl = model.__schema__(:association, right)
 
     unless refl do
       raise Ecto.QueryError, file: join.file, line: join.line,
-        reason: "could not find association `#{right}` on entity #{inspect entity}"
+        reason: "could not find association `#{right}` on model #{inspect model}"
     end
 
     associated = refl.associated
@@ -45,11 +45,11 @@ defmodule Ecto.Query.Normalizer do
     %{join | source: associated, on: on}
   end
 
-  defp on_expr(on_expr, refl, assoc_var, record_var) do
+  defp on_expr(on_expr, refl, assoc_var, struct_var) do
     key = refl.key
     assoc_key = refl.assoc_key
     relation = quote do
-      unquote(assoc_var).unquote(assoc_key) == unquote(record_var).unquote(key)
+      unquote(assoc_var).unquote(assoc_key) == unquote(struct_var).unquote(key)
     end
 
     if on_expr do
@@ -59,7 +59,7 @@ defmodule Ecto.Query.Normalizer do
     end
   end
 
-  # Auto select the entity in the from expression
+  # Auto select the model in the from expression
   defp auto_select(query, opts) do
     if !opts[:skip_select] && query.select == nil do
       var = {:&, [], [0]}
@@ -71,24 +71,24 @@ defmodule Ecto.Query.Normalizer do
 
   # Group by all fields
   defp normalize_group_by(query) do
-    entities = normalize_entities(query.group_bys, query.sources)
+    entities = normalize_models(query.group_bys, query.sources)
     %{query | group_bys: entities}
   end
 
-  # Add distinct on all field when Entity is in field list
+  # Add distinct on all field when model is in field list
   defp normalize_distinct(query) do
-    entities = normalize_entities(query.distincts, query.sources)
+    entities = normalize_models(query.distincts, query.sources)
     %{query | distincts: entities}
   end
 
-  # Expand Entity into all of its fields in an expression
-  defp normalize_entities(query_expr, sources) do
+  # Expand model into all of its fields in an expression
+  defp normalize_models(query_expr, sources) do
     Enum.map(query_expr, fn expr ->
       new_expr =
         Enum.flat_map(expr.expr, fn
           {:&, _, _} = var ->
-            entity = Util.find_source(sources, var) |> Util.entity
-            fields = entity.__entity__(:field_names)
+            model = Util.find_source(sources, var) |> Util.model
+            fields = model.__schema__(:field_names)
             Enum.map(fields, &{var, &1})
           field ->
             [field]
@@ -103,21 +103,21 @@ defmodule Ecto.Query.Normalizer do
 
     sources = Enum.reduce(query.joins, froms, fn
       %JoinExpr{assoc: {left, right}}, acc ->
-        entity = Util.find_source(Enum.reverse(acc), left) |> Util.entity
+        model = Util.find_source(Enum.reverse(acc), left) |> Util.model
 
-        if entity && (refl = entity.__entity__(:association, right)) do
+        if model && (refl = model.__schema__(:association, right)) do
           assoc = refl.associated
-          [ {assoc.__model__(:source), assoc.__model__(:entity), assoc} | acc ]
+          [ {assoc.__schema__(:source), assoc} | acc ]
         else
           [nil|acc]
         end
 
       # TODO: Validate this on join creation
       %JoinExpr{source: source}, acc when is_binary(source) ->
-        [ {source, nil, nil} | acc ]
+        [ {source, nil} | acc ]
 
       %JoinExpr{source: model}, acc when is_atom(model) ->
-        [ {model.__model__(:source), model.__model__(:entity), model} | acc ]
+        [ {model.__schema__(:source), model} | acc ]
     end)
 
     %{query | sources: sources |> Enum.reverse |> list_to_tuple}

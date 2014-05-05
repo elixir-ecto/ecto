@@ -28,13 +28,10 @@ defmodule Ecto.Query.Util do
   end
 
   @doc "Returns the source from a source tuple."
-  def source({source, _entity, _model}), do: source
-
-  @doc "Returns entity from a source tuple or nil if there is none."
-  def entity({_source, entity, _model}), do: entity
+  def source({source, _model}), do: source
 
   @doc "Returns model from a source tuple or nil if there is none."
-  def model({_source, _entity, model}), do: model
+  def model({_source, model}), do: model
 
   # Converts internal type format to "typespec" format
   @doc false

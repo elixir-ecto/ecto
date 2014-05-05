@@ -33,14 +33,14 @@ defmodule Ecto.Adapter do
   defcallback all(Ecto.Repo.t, Ecto.Query.t, Keyword.t) :: [term] | no_return
 
   @doc """
-  Stores a single new entity in the data store. Return the default values.
+  Stores a single new model in the data store. Return the default values.
   """
-  defcallback insert(Ecto.Repo.t, Ecto.Entity.t, Keyword.t) :: [Keyword.t] | no_return
+  defcallback insert(Ecto.Repo.t, Ecto.Model.t, Keyword.t) :: [Keyword.t] | no_return
 
   @doc """
-  Updates an entity using the primary key as key.
+  Updates an model using the primary key as key.
   """
-  defcallback update(Ecto.Repo.t, Ecto.Entity.t, Keyword.t) :: :ok | no_return
+  defcallback update(Ecto.Repo.t, Ecto.Model.t, Keyword.t) :: :ok | no_return
 
   @doc """
   Updates all entities matching the given query with the values given. The
@@ -50,9 +50,9 @@ defmodule Ecto.Adapter do
   defcallback update_all(Ecto.Repo.t, Ecto.Query.t, values :: Keyword.t, Keyword.t) :: :integer | no_return
 
   @doc """
-  Deletes an entity using the primary key as key.
+  Deletes an model using the primary key as key.
   """
-  defcallback delete(Ecto.Repo.t, Ecto.Entity.t, Keyword.t) :: :ok | no_return
+  defcallback delete(Ecto.Repo.t, Ecto.Model.t, Keyword.t) :: :ok | no_return
 
   @doc """
   Deletes all entities matching the given query. The query will only have

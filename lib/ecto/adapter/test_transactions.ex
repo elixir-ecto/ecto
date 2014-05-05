@@ -37,7 +37,7 @@ defmodule Ecto.Adapter.TestTransactions  do
         end
 
         test "create comment" do
-          assert Post.Entity[] = TestRepo.insert(Post.new)
+          assert %Post{} = TestRepo.insert(%Post{})
         end
       end
   """

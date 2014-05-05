@@ -15,7 +15,7 @@ defmodule Ecto.Integration.LockTest do
   defmodule LockCounter do
     use Ecto.Model
 
-    queryable "lock_counters" do
+    schema "lock_counters" do
       field :count, :integer
     end
   end
@@ -30,7 +30,7 @@ defmodule Ecto.Integration.LockTest do
   end
 
   setup do
-    LockCounter.new(id: 42, count: 1) |> TestRepo1.insert
+    %LockCounter{id: 42, count: 1} |> TestRepo1.insert
     :ok
   end
 
@@ -49,7 +49,7 @@ defmodule Ecto.Integration.LockTest do
           :select_for_update ->
             TestRepo1.transaction(fn ->
               [post] = TestRepo1.all(query)   # this should block until the other trans. commits
-              post.count(post.count + 1) |> TestRepo1.update
+              %{post | count: post.count + 1} |> TestRepo1.update
               send pid, :updated
             end)
         after
@@ -65,7 +65,7 @@ defmodule Ecto.Integration.LockTest do
       after
         100 -> :ok
       end
-      post.count(post.count + 1) |> TestRepo1.update
+      %{post | count: post.count + 1} |> TestRepo1.update
     end)
 
     receive do
@@ -75,6 +75,6 @@ defmodule Ecto.Integration.LockTest do
     end
 
     # final count will be 3 if SELECT ... FOR UPDATE worked and 2 otherwise
-    assert [LockCounter.Entity[count: 3]] = TestRepo1.all(LockCounter)
+    assert [%LockCounter{count: 3}] = TestRepo1.all(LockCounter)
   end
 end

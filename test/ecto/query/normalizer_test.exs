@@ -9,7 +9,7 @@ defmodule Ecto.Query.NormalizerTest do
   defmodule Comment do
     use Ecto.Model
 
-    queryable :comments do
+    schema :comments do
       field :text, :string
       field :temp, :virtual
       field :posted, :datetime
@@ -20,14 +20,14 @@ defmodule Ecto.Query.NormalizerTest do
   defmodule Post do
     use Ecto.Model
 
-    queryable :posts do
+    schema :posts do
       field :title, :string
       field :text, :string
       has_many :comments, Ecto.Query.NormalizerTest.Comment
     end
   end
 
-  test "auto select entity" do
+  test "auto select model" do
     query = from(Post, []) |> normalize
     assert {:&, _, [0]} = query.select.expr
   end
@@ -59,7 +59,7 @@ defmodule Ecto.Query.NormalizerTest do
     assert Macro.to_string(on.expr) == "&1.text() == \"\" and &1.post_id() == &0.id()"
   end
 
-  test "normalize joins: cannot associate without entity" do
+  test "normalize joins: cannot associate without model" do
     query = from(p in "posts", join: p.comments)
     assert_raise Ecto.QueryError, fn ->
       normalize(query)

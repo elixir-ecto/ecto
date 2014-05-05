@@ -199,7 +199,7 @@ defmodule Ecto.Query do
   @doc """
   A join query expression.
 
-  Receives an entity that is to be joined to the query and a condition to
+  Receives a model that is to be joined to the query and a condition to
   do the joining on. The join condition can be any expression that evaluates
   to a boolean value. The join is by default an inner join, the qualifier
   can be changed by giving the atoms: `:inner`, `:left`, `:right` or
@@ -238,17 +238,17 @@ defmodule Ecto.Query do
   @doc """
   A select query expression.
 
-  Selects which fields will be selected from the entity and any transformations
+  Selects which fields will be selected from the model and any transformations
   that should be performed on the fields. Any expression that is accepted in a
   query can be a select field.
 
   There can only be one select expression in a query, if the select expression
-  is omitted, the query will by default select the full entity.
+  is omitted, the query will by default select the full model.
 
   The sub-expressions in the query can be wrapped in lists or tuples as shown in
-  the examples. A full entity can also be selected.
+  the examples. A full model can also be selected.
 
-  The `assoc/2` selector can be used to embed an association on a parent entity
+  The `assoc/2` selector can be used to embed an association on a parent model
   as shown in the examples below. The first argument to `assoc` has to be a
   variable bound in the `from` query expression, the second has to be the field
   of the association and a variable bound in an association join.
@@ -258,7 +258,7 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      from(c in City, select: c) # selects the entire entity
+      from(c in City, select: c) # selects the entire model
       from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
       from(c in City, select: {c.name, to_binary(40 + 2), 43})
@@ -295,7 +295,7 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      # Returns the list of different categories in the Post entity
+      # Returns the list of different categories in the Post model
       from(p in Post, distinct: p.category)
 
       # Returns the first (by date) for each different categories of Post
@@ -427,7 +427,7 @@ defmodule Ecto.Query do
   @doc """
   A group by query expression.
 
-  Groups together rows from the entity that have the same values in the given
+  Groups together rows from the model that have the same values in the given
   fields. Using `group_by` "groups" the query giving it different semantics
   in the `select` expression. If a query is grouped only fields that were
   referenced in the `group_by` can be used in the `select` or if the field
@@ -440,7 +440,7 @@ defmodule Ecto.Query do
         group_by: p.category,
         select: {p.category, count(p.id)})
 
-      # Group on all fields on the Post entity
+      # Group on all fields on the Post model
       from(p in Post,
         group_by: p,
         select: p)
@@ -457,7 +457,7 @@ defmodule Ecto.Query do
   @doc """
   A having query expression.
 
-  Like `where` `having` filters rows from the entity, but after the grouping is
+  Like `where` `having` filters rows from the model, but after the grouping is
   performed giving it the same semantics as `select` for a grouped query
   (see `group_by/3`). `having` groups the query even if the query has no
   `group_by` expression.

@@ -4,7 +4,7 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Associations.Preloader
 
   test "types" do
-    TestRepo.insert(Post.Entity[])
+    TestRepo.insert(%Post{})
 
     assert [{ true, false }] ==
            TestRepo.all(from Post, select: { true, false })
@@ -34,17 +34,17 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and fetch single" do
-    assert Post.Entity[id: id] = TestRepo.insert(Post.Entity[title: "create", text: "and fetch single"])
+    assert %Post{id: id} = TestRepo.insert(%Post{title: "create", text: "and fetch single"})
 
     assert is_integer(id)
 
-    assert [Post.Entity[id: ^id, title: "create", text: "and fetch single"]] =
+    assert [%Post{id: ^id, title: "create", text: "and fetch single"}] =
            TestRepo.all(Post)
   end
 
-  test "fetch without entity" do
-    Post.Entity[id: id] = TestRepo.insert(Post.Entity[title: "title1"])
-    Post.Entity[] = TestRepo.insert(Post.Entity[title: "title2"])
+  test "fetch without model" do
+    %Post{id: id} = TestRepo.insert(%Post{title: "title1"})
+    %Post{} = TestRepo.insert(%Post{title: "title2"})
 
     assert ["title1", "title2"] =
       TestRepo.all(from(p in "posts", order_by: p.title, select: p.title))
@@ -54,72 +54,72 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and delete single, fetch nothing" do
-    post = Post.Entity[title: "create and delete single", text: "fetch nothing"]
+    post = %Post{title: "create and delete single", text: "fetch nothing"}
 
-    assert Post.Entity[] = created = TestRepo.insert(post)
+    assert %Post{} = created = TestRepo.insert(post)
     assert :ok == TestRepo.delete(created)
 
     assert [] = TestRepo.all(Post)
   end
 
   test "create and delete single, fetch empty" do
-    post = Post.Entity[title: "create and delete single", text: "fetch empty"]
+    post = %Post{title: "create and delete single", text: "fetch empty"}
 
-    assert Post.Entity[] = TestRepo.insert(post)
-    assert Post.Entity[] = created = TestRepo.insert(post)
+    assert %Post{} = TestRepo.insert(post)
+    assert %Post{} = created = TestRepo.insert(post)
     assert :ok == TestRepo.delete(created)
 
-    assert [Post.Entity[]] = TestRepo.all(Post)
+    assert [%Post{}] = TestRepo.all(Post)
   end
 
   test "create and update single, fetch updated" do
-    post = Post.Entity[title: "create and update single", text: "fetch updated", tags: ["1"], bin: <<1>>]
+    post = %Post{title: "create and update single", text: "fetch updated", tags: ["1"], bin: <<1>>}
 
     post = TestRepo.insert(post)
-    assert Post.Entity[tags: ["1"], bin: <<1>>] = post
-    post = post.text("coming very soon...")
+    assert %Post{tags: ["1"], bin: <<1>>} = post
+    post = %{post | text: "coming very soon..."}
     assert :ok == TestRepo.update(post)
 
-    assert [Post.Entity[text: "coming very soon...", tags: ["1"], bin: <<1>>]] = TestRepo.all(Post)
+    assert [%Post{text: "coming very soon...", tags: ["1"], bin: <<1>>}] = TestRepo.all(Post)
   end
 
   test "create and fetch multiple" do
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
+    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
-    assert [Post.Entity[title: "1"], Post.Entity[title: "2"], Post.Entity[title: "3"]] =
+    assert [%Post{title: "1"}, %Post{title: "2"}, %Post{title: "3"}] =
            TestRepo.all(from p in Post, [])
 
-    assert [Post.Entity[title: "2"]] =
+    assert [%Post{title: "2"}] =
            TestRepo.all(from p in Post, where: p.title == "2")
   end
 
   test "create with no primary key" do
-    assert Barebone.Entity[text: nil] = TestRepo.insert(Barebone.Entity[])
-    assert Barebone.Entity[text: "text"] = TestRepo.insert(Barebone.Entity[text: "text"])
+    assert %Barebone{text: nil} = TestRepo.insert(%Barebone{})
+    assert %Barebone{text: "text"} = TestRepo.insert(%Barebone{text: "text"})
   end
 
-  test "get entity" do
-    post1 = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    post2 = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
+  test "get model" do
+    post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
+    post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
 
     assert post1 == TestRepo.get(Post, post1.id)
     assert post2 == TestRepo.get(Post, post2.id)
     assert nil == TestRepo.get(Post, -1)
   end
 
-  test "get entity with custom primary key" do
-    TestRepo.insert(Custom.Entity[foo: "1"])
-    TestRepo.insert(Custom.Entity[foo: "2"])
+  test "get model with custom primary key" do
+    TestRepo.insert(%Custom{foo: "1"})
+    TestRepo.insert(%Custom{foo: "2"})
 
-    assert Custom.Entity[foo: "1"] == TestRepo.get(Custom, "1")
-    assert Custom.Entity[foo: "2"] == TestRepo.get(Custom, "2")
+    assert %Custom{foo: "1"} == TestRepo.get(Custom, "1")
+    assert %Custom{foo: "2"} == TestRepo.get(Custom, "2")
     assert nil == TestRepo.get(Custom, "3")
   end
 
   test "transform row" do
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
+    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
 
     assert ["1"] == TestRepo.all(from p in Post, select: p.title)
 
@@ -131,87 +131,87 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "update some entities" do
-    assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
-    assert Post.Entity[id: id3] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
     query = from(p in Post, where: p.title == "1" or p.title == "2")
     assert 2 = TestRepo.update_all(query, title: "x")
-    assert Post.Entity[title: "x"] = TestRepo.get(Post, id1)
-    assert Post.Entity[title: "x"] = TestRepo.get(Post, id2)
-    assert Post.Entity[title: "3"] = TestRepo.get(Post, id3)
+    assert %Post{title: "x"} = TestRepo.get(Post, id1)
+    assert %Post{title: "x"} = TestRepo.get(Post, id2)
+    assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
   test "update all entities" do
-    assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
-    assert Post.Entity[id: id3] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
     assert 3 = TestRepo.update_all(Post, title: "x")
-    assert Post.Entity[title: "x"] = TestRepo.get(Post, id1)
-    assert Post.Entity[title: "x"] = TestRepo.get(Post, id2)
-    assert Post.Entity[title: "x"] = TestRepo.get(Post, id3)
+    assert %Post{title: "x"} = TestRepo.get(Post, id1)
+    assert %Post{title: "x"} = TestRepo.get(Post, id2)
+    assert %Post{title: "x"} = TestRepo.get(Post, id3)
   end
 
   test "update no entities" do
-    assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
-    assert Post.Entity[id: id3] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
     query = from(p in Post, where: p.title == "4")
     assert 0 = TestRepo.update_all(query, title: "x")
-    assert Post.Entity[title: "1"] = TestRepo.get(Post, id1)
-    assert Post.Entity[title: "2"] = TestRepo.get(Post, id2)
-    assert Post.Entity[title: "3"] = TestRepo.get(Post, id3)
+    assert %Post{title: "1"} = TestRepo.get(Post, id1)
+    assert %Post{title: "2"} = TestRepo.get(Post, id2)
+    assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
   test "update expression syntax" do
-    assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
 
     assert 2 = TestRepo.update_all(p in Post, text: p.text <> "bai")
-    assert Post.Entity[text: "haibai"] = TestRepo.get(Post, id1)
-    assert Post.Entity[text: "haibai"] = TestRepo.get(Post, id2)
+    assert %Post{text: "haibai"} = TestRepo.get(Post, id1)
+    assert %Post{text: "haibai"} = TestRepo.get(Post, id2)
   end
 
   test "delete some entities" do
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
+    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
     query = from(p in Post, where: p.title == "1" or p.title == "2")
     assert 2 = TestRepo.delete_all(query)
-    assert [Post.Entity[]] = TestRepo.all(Post)
+    assert [%Post{}] = TestRepo.all(Post)
   end
 
   test "delete all entities" do
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
+    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
     assert 3 = TestRepo.delete_all(Post)
     assert [] = TestRepo.all(Post)
   end
 
   test "delete no entities" do
-    assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[id: id2] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
-    assert Post.Entity[id: id3] = TestRepo.insert(Post.Entity[title: "3", text: "hai"])
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
     query = from(p in Post, where: p.title == "4")
     assert 0 = TestRepo.delete_all(query)
-    assert Post.Entity[title: "1"] = TestRepo.get(Post, id1)
-    assert Post.Entity[title: "2"] = TestRepo.get(Post, id2)
-    assert Post.Entity[title: "3"] = TestRepo.get(Post, id3)
+    assert %Post{title: "1"} = TestRepo.get(Post, id1)
+    assert %Post{title: "2"} = TestRepo.get(Post, id2)
+    assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
   test "custom functions" do
-    assert Post.Entity[id: id1] = TestRepo.insert(Post.Entity[title: "hi"])
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "hi"})
     assert [id1*10] == TestRepo.all(from p in Post, select: custom(p.id))
   end
 
   test "virtual field" do
-    assert Post.Entity[id: id] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
+    assert %Post{id: id} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert TestRepo.get(Post, id).temp == "temp"
   end
 
@@ -220,14 +220,14 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "preload has_many" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "2"])
-    p3 = TestRepo.insert(Post.Entity[title: "3"])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
+    p3 = TestRepo.insert(%Post{title: "3"})
 
-    Comment.Entity[id: cid1] = TestRepo.insert(Comment.Entity[text: "1", post_id: p1.id])
-    Comment.Entity[id: cid2] = TestRepo.insert(Comment.Entity[text: "2", post_id: p1.id])
-    Comment.Entity[id: cid3] = TestRepo.insert(Comment.Entity[text: "3", post_id: p2.id])
-    Comment.Entity[id: cid4] = TestRepo.insert(Comment.Entity[text: "4", post_id: p2.id])
+    %Comment{id: cid1} = TestRepo.insert(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p1.id})
+    %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
+    %Comment{id: cid4} = TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
     assert_raise Ecto.AssociationNotLoadedError, fn ->
       p1.comments.to_list
@@ -235,20 +235,20 @@ defmodule Ecto.Integration.RepoTest do
     assert p1.comments.loaded? == false
 
     assert [p3, p1, p2] = Preloader.run([p3, p1, p2], TestRepo, :comments)
-    assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = p1.comments.to_list
-    assert [Comment.Entity[id: ^cid3], Comment.Entity[id: ^cid4]] = p2.comments.to_list
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.to_list
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.to_list
     assert [] = p3.comments.to_list
     assert p1.comments.loaded? == true
   end
 
   test "preload has_one" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "2"])
-    p3 = TestRepo.insert(Post.Entity[title: "3"])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
+    p3 = TestRepo.insert(%Post{title: "3"})
 
-    Permalink.Entity[id: pid1] = TestRepo.insert(Permalink.Entity[url: "1", post_id: p1.id])
-    Permalink.Entity[]         = TestRepo.insert(Permalink.Entity[url: "2", post_id: nil])
-    Permalink.Entity[id: pid3] = TestRepo.insert(Permalink.Entity[url: "3", post_id: p3.id])
+    %Permalink{id: pid1} = TestRepo.insert(%Permalink{url: "1", post_id: p1.id})
+    %Permalink{}         = TestRepo.insert(%Permalink{url: "2", post_id: nil})
+    %Permalink{id: pid3} = TestRepo.insert(%Permalink{url: "3", post_id: p3.id})
 
     assert_raise Ecto.AssociationNotLoadedError, fn ->
       p1.permalink.get
@@ -259,20 +259,20 @@ defmodule Ecto.Integration.RepoTest do
     assert p1.permalink.loaded? == false
 
     assert [p3, p1, p2] = Preloader.run([p3, p1, p2], TestRepo, :permalink)
-    assert Permalink.Entity[id: ^pid1] = p1.permalink.get
+    assert %Permalink{id: ^pid1} = p1.permalink.get
     assert nil = p2.permalink.get
-    assert Permalink.Entity[id: ^pid3] = p3.permalink.get
+    assert %Permalink{id: ^pid3} = p3.permalink.get
     assert p1.permalink.loaded? == true
   end
 
   test "preload belongs_to" do
-    Post.Entity[id: pid1] = TestRepo.insert(Post.Entity[title: "1"])
-    TestRepo.insert(Post.Entity[title: "2"])
-    Post.Entity[id: pid3] = TestRepo.insert(Post.Entity[title: "3"])
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    TestRepo.insert(%Post{title: "2"})
+    %Post{id: pid3} = TestRepo.insert(%Post{title: "3"})
 
-    pl1 = TestRepo.insert(Permalink.Entity[url: "1", post_id: pid1])
-    pl2 = TestRepo.insert(Permalink.Entity[url: "2", post_id: nil])
-    pl3 = TestRepo.insert(Permalink.Entity[url: "3", post_id: pid3])
+    pl1 = TestRepo.insert(%Permalink{url: "1", post_id: pid1})
+    pl2 = TestRepo.insert(%Permalink{url: "2", post_id: nil})
+    pl3 = TestRepo.insert(%Permalink{url: "3", post_id: pid3})
 
     assert_raise Ecto.AssociationNotLoadedError, fn ->
       pl1.post.get
@@ -280,62 +280,62 @@ defmodule Ecto.Integration.RepoTest do
     assert pl1.post.loaded? == false
 
     assert [pl3, pl1, pl2] = Preloader.run([pl3, pl1, pl2], TestRepo, :post)
-    assert Post.Entity[id: ^pid1] = pl1.post.get
+    assert %Post{id: ^pid1} = pl1.post.get
     assert nil = pl2.post.get
-    assert Post.Entity[id: ^pid3] = pl3.post.get
+    assert %Post{id: ^pid3} = pl3.post.get
     assert pl1.post.loaded? == true
   end
 
   test "preload belongs_to with shared assocs 1" do
-    Post.Entity[id: pid1] = TestRepo.insert(Post.Entity[title: "1"])
-    Post.Entity[id: pid2] = TestRepo.insert(Post.Entity[title: "2"])
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
 
-    c1 = TestRepo.insert(Comment.Entity[text: "1", post_id: pid1])
-    c2 = TestRepo.insert(Comment.Entity[text: "2", post_id: pid1])
-    c3 = TestRepo.insert(Comment.Entity[text: "3", post_id: pid2])
+    c1 = TestRepo.insert(%Comment{text: "1", post_id: pid1})
+    c2 = TestRepo.insert(%Comment{text: "2", post_id: pid1})
+    c3 = TestRepo.insert(%Comment{text: "3", post_id: pid2})
 
     assert [c3, c1, c2] = Preloader.run([c3, c1, c2], TestRepo, :post)
-    assert Post.Entity[id: ^pid1] = c1.post.get
-    assert Post.Entity[id: ^pid1] = c2.post.get
-    assert Post.Entity[id: ^pid2] = c3.post.get
+    assert %Post{id: ^pid1} = c1.post.get
+    assert %Post{id: ^pid1} = c2.post.get
+    assert %Post{id: ^pid2} = c3.post.get
   end
 
   test "preload belongs_to with shared assocs 2" do
-    Post.Entity[id: pid1] = TestRepo.insert(Post.Entity[title: "1"])
-    Post.Entity[id: pid2] = TestRepo.insert(Post.Entity[title: "2"])
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
 
-    c1 = TestRepo.insert(Comment.Entity[text: "1", post_id: pid1])
-    c2 = TestRepo.insert(Comment.Entity[text: "2", post_id: pid2])
-    c3 = TestRepo.insert(Comment.Entity[text: "3", post_id: nil])
+    c1 = TestRepo.insert(%Comment{text: "1", post_id: pid1})
+    c2 = TestRepo.insert(%Comment{text: "2", post_id: pid2})
+    c3 = TestRepo.insert(%Comment{text: "3", post_id: nil})
 
     assert [c3, c1, c2] = Preloader.run([c3, c1, c2], TestRepo, :post)
-    assert Post.Entity[id: ^pid1] = c1.post.get
-    assert Post.Entity[id: ^pid2] = c2.post.get
+    assert %Post{id: ^pid1} = c1.post.get
+    assert %Post{id: ^pid2} = c2.post.get
     assert nil = c3.post.get
   end
 
   test "preload nils" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "2"])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
 
-    assert [Post.Entity[], nil, Post.Entity[]] =
+    assert [%Post{}, nil, %Post{}] =
            Preloader.run([p1, nil, p2], TestRepo, :permalink)
 
-    c1 = TestRepo.insert(Comment.Entity[text: "1", post_id: p1.id])
-    c2 = TestRepo.insert(Comment.Entity[text: "2", post_id: p2.id])
+    c1 = TestRepo.insert(%Comment{text: "1", post_id: p1.id})
+    c2 = TestRepo.insert(%Comment{text: "2", post_id: p2.id})
 
-    assert [Comment.Entity[], nil, Comment.Entity[]] =
+    assert [%Comment{}, nil, %Comment{}] =
            Preloader.run([c1, nil, c2], TestRepo, :post)
   end
 
   test "preload nested" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "2"])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
 
-    TestRepo.insert(Comment.Entity[text: "1", post_id: p1.id])
-    TestRepo.insert(Comment.Entity[text: "2", post_id: p1.id])
-    TestRepo.insert(Comment.Entity[text: "3", post_id: p2.id])
-    TestRepo.insert(Comment.Entity[text: "4", post_id: p2.id])
+    TestRepo.insert(%Comment{text: "1", post_id: p1.id})
+    TestRepo.insert(%Comment{text: "2", post_id: p1.id})
+    TestRepo.insert(%Comment{text: "3", post_id: p2.id})
+    TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
     assert [p2, p1] = Preloader.run([p2, p1], TestRepo, [comments: :post])
     assert [c1, c2] = p1.comments.to_list
@@ -347,74 +347,74 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "preload keyword query" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "2"])
-    TestRepo.insert(Post.Entity[title: "3"])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
+    TestRepo.insert(%Post{title: "3"})
 
-    Comment.Entity[id: cid1] = TestRepo.insert(Comment.Entity[text: "1", post_id: p1.id])
-    Comment.Entity[id: cid2] = TestRepo.insert(Comment.Entity[text: "2", post_id: p1.id])
-    Comment.Entity[id: cid3] = TestRepo.insert(Comment.Entity[text: "3", post_id: p2.id])
-    Comment.Entity[id: cid4] = TestRepo.insert(Comment.Entity[text: "4", post_id: p2.id])
+    %Comment{id: cid1} = TestRepo.insert(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p1.id})
+    %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
+    %Comment{id: cid4} = TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
     query = from(p in Post, preload: [:comments], select: p)
 
     assert [p1, p2, p3] = TestRepo.all(query)
-    assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = p1.comments.to_list
-    assert [Comment.Entity[id: ^cid3], Comment.Entity[id: ^cid4]] = p2.comments.to_list
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.to_list
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.to_list
     assert [] = p3.comments.to_list
 
     query = from(p in Post, preload: [:comments], select: { 0, [p] })
     posts = TestRepo.all(query)
     [p1, p2, p3] = Enum.map(posts, fn { 0, [p] } -> p end)
 
-    assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = p1.comments.to_list
-    assert [Comment.Entity[id: ^cid3], Comment.Entity[id: ^cid4]] = p2.comments.to_list
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.to_list
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.to_list
     assert [] = p3.comments.to_list
   end
 
   test "row transform" do
-    post = TestRepo.insert(Post.Entity[title: "1", text: "hi"])
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
     query = from(p in Post, select: { p.title, [ p, { p.text } ] })
     [{ "1", [ ^post, { "hi" } ] }] = TestRepo.all(query)
   end
 
   test "join" do
-    post = TestRepo.insert(Post.Entity[title: "1", text: "hi"])
-    comment = TestRepo.insert(Comment.Entity[text: "hey"])
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    comment = TestRepo.insert(%Comment{text: "hey"})
     query = from(p in Post, join: c in Comment, on: true, select: { p, c })
     [{ ^post, ^comment }] = TestRepo.all(query)
   end
 
   test "has_many association join" do
-    post = TestRepo.insert(Post.Entity[title: "1", text: "hi"])
-    c1 = TestRepo.insert(Comment.Entity[text: "hey", post_id: post.id])
-    c2 = TestRepo.insert(Comment.Entity[text: "heya", post_id: post.id])
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
+    c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
 
     query = from(p in Post, join: c in p.comments, select: { p, c })
     [{ ^post, ^c1 }, { ^post, ^c2 }] = TestRepo.all(query)
   end
 
   test "has_one association join" do
-    post = TestRepo.insert(Post.Entity[title: "1", text: "hi"])
-    p1 = TestRepo.insert(Permalink.Entity[url: "hey", post_id: post.id])
-    p2 = TestRepo.insert(Permalink.Entity[url: "heya", post_id: post.id])
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
+    p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
     query = from(p in Post, join: c in p.permalink, select: { p, c })
     [{ ^post, ^p1 }, { ^post, ^p2 }] = TestRepo.all(query)
   end
 
   test "belongs_to association join" do
-    post = TestRepo.insert(Post.Entity[title: "1", text: "hi"])
-    p1 = TestRepo.insert(Permalink.Entity[url: "hey", post_id: post.id])
-    p2 = TestRepo.insert(Permalink.Entity[url: "heya", post_id: post.id])
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
+    p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
     query = from(p in Permalink, join: c in p.post, select: { p, c })
     [{ ^p1, ^post }, { ^p2, ^post }] = TestRepo.all(query)
   end
 
   test "has_many implements Enum.count protocol correctly" do
-    post = TestRepo.insert(Post.Entity[title: "1"])
-    TestRepo.insert(Comment.Entity[text: "1", post_id: post.id])
+    post = TestRepo.insert(%Post{title: "1"})
+    TestRepo.insert(%Comment{text: "1", post_id: post.id})
 
     post1 = TestRepo.all(from p in Post, preload: [:comments]) |> hd
 
@@ -422,107 +422,107 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "has_many queryable" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "1"])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "1"})
 
-    Comment.Entity[id: cid1] = TestRepo.insert(Comment.Entity[text: "1", post_id: p1.id])
-    Comment.Entity[id: cid2] = TestRepo.insert(Comment.Entity[text: "2", post_id: p1.id])
-    Comment.Entity[id: cid3] = TestRepo.insert(Comment.Entity[text: "3", post_id: p2.id])
+    %Comment{id: cid1} = TestRepo.insert(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p1.id})
+    %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
 
-    assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = TestRepo.all(p1.comments)
-    assert [Comment.Entity[id: ^cid3]] = TestRepo.all(p2.comments)
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = TestRepo.all(p1.comments)
+    assert [%Comment{id: ^cid3}] = TestRepo.all(p2.comments)
 
     query = from(c in p1.comments, where: c.text == "1")
-    assert [Comment.Entity[id: ^cid1]] = TestRepo.all(query)
+    assert [%Comment{id: ^cid1}] = TestRepo.all(query)
   end
 
   test "has_many assoc selector" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "1"])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "1"})
 
-    Comment.Entity[id: cid1] = TestRepo.insert(Comment.Entity[text: "1", post_id: p1.id])
-    Comment.Entity[id: cid2] = TestRepo.insert(Comment.Entity[text: "2", post_id: p1.id])
-    Comment.Entity[id: cid3] = TestRepo.insert(Comment.Entity[text: "3", post_id: p2.id])
+    %Comment{id: cid1} = TestRepo.insert(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p1.id})
+    %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
 
     query = from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
     assert [post1, post2] = TestRepo.all(query)
-    assert [Comment.Entity[id: ^cid1], Comment.Entity[id: ^cid2]] = post1.comments.to_list
-    assert [Comment.Entity[id: ^cid3]] = post2.comments.to_list
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = post1.comments.to_list
+    assert [%Comment{id: ^cid3}] = post2.comments.to_list
     assert post1.comments.loaded? == true
   end
 
   test "has_one assoc selector" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "2"])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
 
-    Permalink.Entity[id: pid1] = TestRepo.insert(Permalink.Entity[url: "1", post_id: p1.id])
-    Permalink.Entity[]         = TestRepo.insert(Permalink.Entity[url: "2"])
-    Permalink.Entity[id: pid3] = TestRepo.insert(Permalink.Entity[url: "3", post_id: p2.id])
+    %Permalink{id: pid1} = TestRepo.insert(%Permalink{url: "1", post_id: p1.id})
+    %Permalink{}         = TestRepo.insert(%Permalink{url: "2"})
+    %Permalink{id: pid3} = TestRepo.insert(%Permalink{url: "3", post_id: p2.id})
 
     query = from(p in Post, join: pl in p.permalink, select: assoc(p, permalink: pl))
     assert [post1, post3] = TestRepo.all(query)
-    assert Permalink.Entity[id: ^pid1] = post1.permalink.get
-    assert Permalink.Entity[id: ^pid3] = post3.permalink.get
+    assert %Permalink{id: ^pid1} = post1.permalink.get
+    assert %Permalink{id: ^pid3} = post3.permalink.get
     assert post1.permalink.loaded? == true
   end
 
   test "belongs_to assoc selector" do
-    Post.Entity[id: pid1] = TestRepo.insert(Post.Entity[title: "1"])
-    Post.Entity[id: pid2] = TestRepo.insert(Post.Entity[title: "2"])
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
 
-    TestRepo.insert(Permalink.Entity[url: "1", post_id: pid1])
-    TestRepo.insert(Permalink.Entity[url: "2"])
-    TestRepo.insert(Permalink.Entity[url: "3", post_id: pid2])
+    TestRepo.insert(%Permalink{url: "1", post_id: pid1})
+    TestRepo.insert(%Permalink{url: "2"})
+    TestRepo.insert(%Permalink{url: "3", post_id: pid2})
 
     query = from(pl in Permalink, left_join: p in pl.post, select: assoc(pl, post: p))
     assert [p1, p2, p3] = TestRepo.all(query)
-    assert Post.Entity[id: ^pid1] = p1.post.get
+    assert %Post{id: ^pid1} = p1.post.get
     assert nil = p2.post.get
-    assert Post.Entity[id: ^pid2] = p3.post.get
+    assert %Post{id: ^pid2} = p3.post.get
     assert p1.post.loaded? == true
     assert p2.post.loaded? == true
   end
 
   test "belongs_to assoc selector with shared assoc" do
-    Post.Entity[id: pid1] = TestRepo.insert(Post.Entity[title: "1"])
-    Post.Entity[id: pid2] = TestRepo.insert(Post.Entity[title: "2"])
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
 
-    c1 = TestRepo.insert(Comment.Entity[text: "1", post_id: pid1])
-    c2 = TestRepo.insert(Comment.Entity[text: "2", post_id: pid1])
-    c3 = TestRepo.insert(Comment.Entity[text: "3", post_id: pid2])
+    c1 = TestRepo.insert(%Comment{text: "1", post_id: pid1})
+    c2 = TestRepo.insert(%Comment{text: "2", post_id: pid1})
+    c3 = TestRepo.insert(%Comment{text: "3", post_id: pid2})
 
     query = from(c in Comment, join: p in c.post, select: assoc(c, post: p))
     assert [c1, c2, c3] = TestRepo.all(query)
-    assert Post.Entity[id: ^pid1] = c1.post.get
-    assert Post.Entity[id: ^pid1] = c2.post.get
-    assert Post.Entity[id: ^pid2] = c3.post.get
+    assert %Post{id: ^pid1} = c1.post.get
+    assert %Post{id: ^pid1} = c2.post.get
+    assert %Post{id: ^pid2} = c3.post.get
   end
 
   test "belongs_to assoc selector with shared assoc 2" do
-    Post.Entity[id: pid1] = TestRepo.insert(Post.Entity[title: "1"])
-    Post.Entity[id: pid2] = TestRepo.insert(Post.Entity[title: "2"])
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
 
-    c1 = TestRepo.insert(Comment.Entity[text: "1", post_id: pid1])
-    c2 = TestRepo.insert(Comment.Entity[text: "2", post_id: pid2])
-    c3 = TestRepo.insert(Comment.Entity[text: "3", post_id: nil])
+    c1 = TestRepo.insert(%Comment{text: "1", post_id: pid1})
+    c2 = TestRepo.insert(%Comment{text: "2", post_id: pid2})
+    c3 = TestRepo.insert(%Comment{text: "3", post_id: nil})
 
     query = from(c in Comment, left_join: p in c.post, select: assoc(c, post: p))
     assert [c1, c2, c3] = TestRepo.all(query)
-    assert Post.Entity[id: ^pid1] = c1.post.get
-    assert Post.Entity[id: ^pid2] = c2.post.get
+    assert %Post{id: ^pid1} = c1.post.get
+    assert %Post{id: ^pid2} = c2.post.get
     assert nil = c3.post.get
   end
 
   test "nested assoc" do
-    Post.Entity[id: pid1] = TestRepo.insert(Post.Entity[title: "1"])
-    Post.Entity[id: pid2] = TestRepo.insert(Post.Entity[title: "2"])
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
 
-    User.Entity[id: uid1] = TestRepo.insert(User.Entity[name: "1"])
-    User.Entity[id: uid2] = TestRepo.insert(User.Entity[name: "2"])
+    %User{id: uid1} = TestRepo.insert(%User{name: "1"})
+    %User{id: uid2} = TestRepo.insert(%User{name: "2"})
 
-    Comment.Entity[id: cid1] = TestRepo.insert(Comment.Entity[text: "1", post_id: pid1, author_id: uid1])
-    Comment.Entity[id: cid2] = TestRepo.insert(Comment.Entity[text: "2", post_id: pid1, author_id: uid2])
-    Comment.Entity[id: cid3] = TestRepo.insert(Comment.Entity[text: "3", post_id: pid2, author_id: uid2])
+    %Comment{id: cid1} = TestRepo.insert(%Comment{text: "1", post_id: pid1, author_id: uid1})
+    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: pid1, author_id: uid2})
+    %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: pid2, author_id: uid2})
 
     query = from p in Post,
       left_join: c in p.comments,
@@ -546,16 +546,16 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "nested assoc with missing records" do
-    Post.Entity[id: pid1] = TestRepo.insert(Post.Entity[title: "1"])
-    Post.Entity[id: pid2] = TestRepo.insert(Post.Entity[title: "2"])
-    Post.Entity[id: pid3] = TestRepo.insert(Post.Entity[title: "2"])
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
+    %Post{id: pid3} = TestRepo.insert(%Post{title: "2"})
 
-    User.Entity[id: uid1] = TestRepo.insert(User.Entity[name: "1"])
-    User.Entity[id: uid2] = TestRepo.insert(User.Entity[name: "2"])
+    %User{id: uid1} = TestRepo.insert(%User{name: "1"})
+    %User{id: uid2} = TestRepo.insert(%User{name: "2"})
 
-    Comment.Entity[id: cid1] = TestRepo.insert(Comment.Entity[text: "1", post_id: pid1, author_id: uid1])
-    Comment.Entity[id: cid2] = TestRepo.insert(Comment.Entity[text: "2", post_id: pid1, author_id: nil])
-    Comment.Entity[id: cid3] = TestRepo.insert(Comment.Entity[text: "3", post_id: pid3, author_id: uid2])
+    %Comment{id: cid1} = TestRepo.insert(%Comment{text: "1", post_id: pid1, author_id: uid1})
+    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: pid1, author_id: nil})
+    %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: pid3, author_id: uid2})
 
     query = from p in Post,
       left_join: c in p.comments,
@@ -581,9 +581,9 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "join qualifier" do
-    p1 = TestRepo.insert(Post.Entity[title: "1"])
-    p2 = TestRepo.insert(Post.Entity[title: "2"])
-    c1 = TestRepo.insert(Permalink.Entity[url: "1", post_id: p2.id])
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
+    c1 = TestRepo.insert(%Permalink{url: "1", post_id: p2.id})
 
     query = from(p in Post, left_join: c in p.permalink, order_by: p.id, select: {p, c})
     assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)

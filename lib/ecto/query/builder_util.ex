@@ -186,7 +186,7 @@ defmodule Ecto.Query.BuilderUtil do
   Escapes simple expressions.
 
   An expression may be a single variable `x`, representing all fields in that
-  entity, a field `x.y`, or a list of fields and variables.
+  model, a field `x.y`, or a list of fields and variables.
 
   ## Examples
 
@@ -286,7 +286,7 @@ defmodule Ecto.Query.BuilderUtil do
 
   # Unescapes an `Ecto.Query` struct.
   defp unescape_query({:%, _, [Query, {:%{}, _, list}]}) do
-    Enum.into([__struct__: Query] ++ list, %{})
+    struct(Query, list)
   end
 
   defp unescape_query({:%{}, _, list} = ast) do

@@ -58,16 +58,16 @@ defmodule Ecto.Query.Validator do
       raise Ecto.QueryError, reason: "no values to update given"
     end
 
-    if entity = Util.entity(query.from) do
+    if model = Util.model(query.from) do
       Enum.each(values, fn {field, expr} ->
-        expected_type = entity.__entity__(:field_type, field)
+        expected_type = model.__schema__(:field_type, field)
 
         unless expected_type do
           raise Ecto.QueryError, reason: "field `#{field}` is not on the " <>
-            "entity `#{inspect entity}`"
+            "model `#{inspect model}`"
         end
 
-        # TODO: Check if entity field allows nil
+        # TODO: Check if model field allows nil
         state = State[sources: query.sources, apis: apis]
         type = type_check(expr, state)
 
@@ -75,7 +75,7 @@ defmodule Ecto.Query.Validator do
         format_type = Util.type_to_ast(type) |> Macro.to_string
         unless expected_type == type do
           raise Ecto.QueryError, reason: "expected_type `#{format_expected_type}` " <>
-          " on `#{inspect entity}.#{field}` doesn't match type `#{format_type}`"
+          " on `#{inspect model}.#{field}` doesn't match type `#{format_type}`"
         end
       end)
     end
@@ -158,38 +158,38 @@ defmodule Ecto.Query.Validator do
 
   # group_by field
   defp validate_field({var, field}, State[] = state) do
-    entity = Util.find_source(state.sources, var) |> Util.entity
-    if entity, do: do_validate_field(entity, field)
+    model = Util.find_source(state.sources, var) |> Util.model
+    if model, do: do_validate_field(model, field)
   end
 
-  defp do_validate_field(entity, field) do
-    type = entity.__entity__(:field_type, field)
+  defp do_validate_field(model, field) do
+    type = model.__schema__(:field_type, field)
     unless type do
-      raise Ecto.QueryError, reason: "unknown field `#{field}` on `#{inspect entity}`"
+      raise Ecto.QueryError, reason: "unknown field `#{field}` on `#{inspect model}`"
     end
   end
 
   defp validate_preloads(preloads, State[] = state) do
-    entity = Util.entity(state.from)
+    model = Util.model(state.from)
 
-    if preloads != [] and nil?(entity) do
-      raise Ecto.QueryError, reason: "can only preload on fields from an entity"
+    if preloads != [] and nil?(model) do
+      raise Ecto.QueryError, reason: "can only preload on fields from a model"
     end
 
     Enum.each(preloads, fn(expr) ->
       rescue_metadata(:preload, expr.file, expr.line) do
-        check_preload_fields(expr.expr, entity)
+        check_preload_fields(expr.expr, model)
       end
     end)
   end
 
-  defp check_preload_fields(fields, entity) do
+  defp check_preload_fields(fields, model) do
     Enum.map(fields, fn {field, sub_fields} ->
-      refl = entity.__entity__(:association, field)
+      refl = model.__schema__(:association, field)
       unless refl do
-        raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` is not an association field"
+        raise Ecto.QueryError, reason: "`#{inspect model}.#{field}` is not an association field"
       end
-      check_preload_fields(sub_fields, refl.associated.__model__(:entity))
+      check_preload_fields(sub_fields, refl.associated)
     end)
   end
 
@@ -218,7 +218,7 @@ defmodule Ecto.Query.Validator do
 
     order_bys =
       order_bys_sources(order_bys, sources)
-      |> Enum.map(fn {{source, _, _}, field} -> {source, field} end)
+      |> Enum.map(fn {{source, _}, field} -> {source, field} end)
 
     do_validate_distincts(distincts, order_bys)
   end
@@ -262,10 +262,10 @@ defmodule Ecto.Query.Validator do
     source = Util.find_source(state.sources, var)
     check_grouped({source, field}, state)
 
-    if entity = Util.entity(source) do
-      type = entity.__entity__(:field_type, field)
+    if model = Util.model(source) do
+      type = model.__schema__(:field_type, field)
       unless type do
-        raise Ecto.QueryError, reason: "unknown field `#{field}` on `#{inspect entity}`"
+        raise Ecto.QueryError, reason: "unknown field `#{field}` on `#{inspect model}`"
       end
       type
     else
@@ -276,13 +276,13 @@ defmodule Ecto.Query.Validator do
   # var
   defp type_check({:&, _, [_]} = var, State[] = state) do
     source = Util.find_source(state.sources, var)
-    if entity = Util.entity(source) do
-      fields = entity.__entity__(:field_names)
+    if model = Util.model(source) do
+      fields = model.__schema__(:field_names)
       Enum.each(fields, &check_grouped({source, &1}, state))
-      entity
+      model
     else
       source = Util.source(source)
-      raise Ecto.QueryError, reason: "cannot select on source, `#{inspect source}`, with no entity"
+      raise Ecto.QueryError, reason: "cannot select on source, `#{inspect source}`, with no model"
     end
   end
 
@@ -344,9 +344,9 @@ defmodule Ecto.Query.Validator do
   # Handle top level select cases
 
   defp select_clause({:assoc, _, [var, fields]}, State[] = state) do
-    entity = Util.find_source(state.sources, var) |> Util.entity
-    unless entity == Util.entity(state.from) do
-      raise Ecto.QueryError, reason: "can only associate on the from entity"
+    model = Util.find_source(state.sources, var) |> Util.model
+    unless model == Util.model(state.from) do
+      raise Ecto.QueryError, reason: "can only associate on the from model"
     end
 
     assoc_select(var, fields, state)
@@ -378,22 +378,22 @@ defmodule Ecto.Query.Validator do
   defp assoc_select(parent_var, fields, State[] = state) do
     Enum.each(fields, fn {field, nested} ->
       {child_var, nested_fields} = Assoc.decompose_assoc(nested)
-      parent_entity = Util.find_source(state.sources, parent_var) |> Util.entity
+      parent_model = Util.find_source(state.sources, parent_var) |> Util.model
 
-      refl = parent_entity.__entity__(:association, field)
+      refl = parent_model.__schema__(:association, field)
       unless refl do
-        raise Ecto.QueryError, reason: "field `#{inspect parent_entity}.#{field}` is not an association"
+        raise Ecto.QueryError, reason: "field `#{inspect parent_model}.#{field}` is not an association"
       end
 
-      child_entity = Util.find_source(state.sources, child_var) |> Util.entity
-      unless refl.associated.__model__(:entity) == child_entity do
-        raise Ecto.QueryError, reason: "association on `#{inspect parent_entity}.#{field}` " <>
-          "doesn't match given entity: `#{child_entity}`"
+      child_model = Util.find_source(state.sources, child_var) |> Util.model
+      unless refl.associated == child_model do
+        raise Ecto.QueryError, reason: "association on `#{inspect parent_model}.#{field}` " <>
+          "doesn't match given model: `#{child_model}`"
       end
 
-      unless child_entity.__entity__(:primary_key) do
+      unless child_model.__schema__(:primary_key) do
         raise Ecto.QueryError, reason: "`assoc/2` selector requires a primary key on " <>
-          "entity: `#{child_entity}`"
+          "model: `#{child_model}`"
       end
 
       expr = Util.source_expr(state.query, child_var)
@@ -425,8 +425,8 @@ defmodule Ecto.Query.Validator do
 
   defp check_grouped({source, field} = source_field, State[] = state) do
     if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do
-      entity = Util.entity(source) || Util.source(source)
-      raise Ecto.QueryError, reason: "`#{inspect entity}.#{field}` must appear in `group_by` " <>
+      model = Util.model(source) || Util.source(source)
+      raise Ecto.QueryError, reason: "`#{inspect model}.#{field}` must appear in `group_by` " <>
         "or be used in an aggregate function"
     end
   end

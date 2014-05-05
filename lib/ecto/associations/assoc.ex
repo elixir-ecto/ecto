@@ -5,13 +5,12 @@ defmodule Ecto.Associations.Assoc do
 
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
-  alias Ecto.Associations
 
   @doc """
   Transforms a result set based on the assoc selector, loading the associations
-  onto their parent entity. See `Ecto.Query.select/3`.
+  onto their parent model. See `Ecto.Query.select/3`.
   """
-  @spec run([Record.t], Ecto.Query.t) :: [Record.t]
+  @spec run([Ecto.Model.t], Ecto.Query.t) :: [Ecto.Model.t]
   def run([], _query), do: []
 
   def run(results, query) do
@@ -41,33 +40,39 @@ defmodule Ecto.Associations.Assoc do
     {_keys, parents, children} = Enum.reduce(rows, acc, &merge_to_dict(&1, {nil, refls}, &2))
 
     # Load associated entities onto their parents
-    parents = for parent <- parents, do: build_record({0, parent}, children, refls) |> elem(1)
+    parents = for parent <- parents, do: build_struct({0, parent}, children, refls) |> elem(1)
 
     Enum.reverse(parents)
   end
 
-  defp merge_to_dict({record, sub_records}, {refl, sub_refls}, {keys, dict, sub_dicts}) do
+  defp merge_to_dict({struct, sub_structs}, {refl, sub_refls}, {keys, dict, sub_dicts}) do
     # We recurse down the tree of the row result, the reflections and the
     # dict accumulators
 
+    if struct do
+      module = struct.__struct__
+      pk_field = module.__schema__(:primary_key)
+      pk_value = Map.get(struct, pk_field)
+    end
+
     # The set makes sure that we don't add duplicated associated entities
-    if not (nil?(record) or Set.member?(keys, record.primary_key)) do
-      keys = Set.put(keys, record.primary_key)
+    if struct && not Set.member?(keys, pk_value) do
+      keys = Set.put(keys, pk_value)
       if refl do
-        # Add associated entity to dict with association key, we use to
-        # put the entity on the right parent later
+        # Add associated model to dict with association key, we use to
+        # put the model on the right parent later
         # Also store position so we can sort
-        assoc_key = apply(record, refl.assoc_key, [])
-        item = {Dict.size(dict), record}
+        assoc_key = Map.get(struct, refl.assoc_key)
+        item = {Dict.size(dict), struct}
         dict = Dict.update(dict, assoc_key, [item], &[item|&1])
       else
         # If no reflection we are at the top-most parent
-        dict = [record|dict]
+        dict = [struct|dict]
       end
     end
 
     # Recurse down
-    zipped = List.zip([sub_records, sub_refls, sub_dicts])
+    zipped = List.zip([sub_structs, sub_refls, sub_dicts])
     sub_dicts = for {recs, refls, dicts} <- zipped do
       merge_to_dict(recs, refls, dicts)
     end
@@ -75,7 +80,7 @@ defmodule Ecto.Associations.Assoc do
     {keys, dict, sub_dicts}
   end
 
-  defp build_record({pos, parent}, children, refls) do
+  defp build_struct({pos, parent}, children, refls) do
     zipped = List.zip([children, refls])
 
     # Load all associated children onto the parent
@@ -85,11 +90,11 @@ defmodule Ecto.Associations.Assoc do
         {_, children, sub_children} = child
 
         # Get the children associated to the parent
-        record_key = apply(parent, refl.key, [])
-        if record_key do
-          my_children = Dict.get(children, record_key) || []
+        struct_key = Map.get(parent, refl.key)
+        if struct_key do
+          my_children = Dict.get(children, struct_key) || []
           # Recurse down and build the children
-          built_children = for child <- my_children, do: build_record(child, sub_children, refls)
+          built_children = for child <- my_children, do: build_struct(child, sub_children, refls)
         else
           built_children = []
         end
@@ -98,7 +103,7 @@ defmodule Ecto.Associations.Assoc do
         sorted_children = built_children
           |> Enum.sort(&compare/2)
           |> Enum.map(&elem(&1, 1))
-        Associations.set_loaded(parent, refl, sorted_children)
+        set_loaded(parent, refl, sorted_children)
       end)
 
     {pos, new_parent}
@@ -108,8 +113,8 @@ defmodule Ecto.Associations.Assoc do
     Enum.map(fields, fn {field, nested} ->
       {inner_var, fields} = decompose_assoc(nested)
 
-      entity = Util.find_source(query.sources, var) |> Util.entity
-      refl = entity.__entity__(:association, field)
+      model = Util.find_source(query.sources, var) |> Util.model
+      refl = model.__schema__(:association, field)
 
       {refl, create_refls(inner_var, fields, query)}
     end)
@@ -124,4 +129,11 @@ defmodule Ecto.Associations.Assoc do
   end
 
   defp compare({pos1, _}, {pos2, _}), do: pos1 < pos2
+
+  defp set_loaded(struct, refl, loaded) do
+    unless is_record(refl, Ecto.Reflections.HasMany) do
+      loaded = List.first(loaded)
+    end
+    Ecto.Associations.load(struct, refl.field, loaded)
+  end
 end

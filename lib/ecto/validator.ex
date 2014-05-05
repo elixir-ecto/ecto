@@ -1,8 +1,8 @@
 defmodule Ecto.Validator do
   @moduledoc """
-  Validates a given record or dict given a set of predicates.
+  Validates a given struct or dict given a set of predicates.
 
-      Ecto.Validator.record(user,
+      Ecto.Validator.struct(user,
         name: present() when on_create?(user),
         age: present(message: "must be present"),
         age: greater_than(18),
@@ -22,7 +22,7 @@ defmodule Ecto.Validator do
 
   The validator also handles a special key `:also`, which is used to pipe
   to predicates without a particular attribute. Instead, such predicates
-  receive the record as argument. In this example, `validate_other` will
+  receive the struct as argument. In this example, `validate_other` will
   be invoked as:
 
       validate_other(user)
@@ -54,12 +54,12 @@ defmodule Ecto.Validator do
   end
 
   @doc """
-  Validates a given record given a set of predicates.
+  Validates a given struct given a set of predicates.
   """
-  @spec record(Macro.t, Keyword.t) :: Macro.t
-  defmacro record(value, opts) when is_list(opts) do
+  @spec struct(Macro.t, Keyword.t) :: Macro.t
+  defmacro struct(value, opts) when is_list(opts) do
     process opts, value, fn var, attr ->
-      quote do: unquote(var).unquote(attr)
+      quote do: Map.get(var, unquote(attr))
     end
   end
 

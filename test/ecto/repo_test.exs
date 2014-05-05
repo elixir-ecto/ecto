@@ -24,7 +24,7 @@ end
 defmodule Ecto.RepoTest.MyModel do
   use Ecto.Model
 
-  queryable "my_entity" do
+  schema "my_model" do
     field :x, :string
   end
 end
@@ -32,7 +32,7 @@ end
 defmodule Ecto.RepoTest.MyModelList do
   use Ecto.Model
 
-  queryable "my_entity" do
+  schema "my_model" do
     field :l1, {:array, :string}
   end
 end
@@ -40,7 +40,7 @@ end
 defmodule Ecto.RepoTest.MyModelNoPK do
   use Ecto.Model
 
-  queryable "my_entity", primary_key: false do
+  schema "my_model", primary_key: false do
     field :x, :string
   end
 end
@@ -74,52 +74,52 @@ defmodule Ecto.RepoTest do
     assert EnvRepo.conf == "dev_sample"
   end
 
-  test "needs entity with primary key" do
-    entity = MyModelNoPK.new(x: "abc")
+  test "needs model with primary key" do
+    model = %MyModelNoPK{x: "abc"}
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.update(entity)
+      MyRepo.update(model)
     end
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.delete(entity)
+      MyRepo.delete(model)
     end
     assert_raise Ecto.NoPrimaryKey, fn ->
       MyRepo.get(MyModelNoPK, 123)
     end
   end
 
-  test "needs entity with primary key value" do
-    entity = MyModel.new(x: "abc")
+  test "needs model with primary key value" do
+    model = %MyModel{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.update(entity)
+      MyRepo.update(model)
     end
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.delete(entity)
+      MyRepo.delete(model)
     end
   end
 
   test "works with primary key value" do
-    entity = MyModel.new(id: 1, x: "abc")
+    model = %MyModel{id: 1, x: "abc"}
 
-    MyRepo.update(entity)
-    MyRepo.delete(entity)
+    MyRepo.update(model)
+    MyRepo.delete(model)
     MyRepo.get(MyModel, 123)
   end
 
-  test "validate entity types" do
-    entity = MyModel.new(x: 123)
+  test "validate model types" do
+    model = %MyModel{x: 123}
 
-    assert_raise Ecto.InvalidEntity, fn ->
-      MyRepo.insert(entity)
+    assert_raise Ecto.InvalidModel, fn ->
+      MyRepo.insert(model)
     end
 
-    entity = MyModel.new(id: 1, x: 123)
+    model = %MyModel{id: 1, x: 123}
 
-    assert_raise Ecto.InvalidEntity, fn ->
-      MyRepo.update(entity)
+    assert_raise Ecto.InvalidModel, fn ->
+      MyRepo.update(model)
     end
-    assert_raise Ecto.InvalidEntity, fn ->
-      MyRepo.delete(entity)
+    assert_raise Ecto.InvalidModel, fn ->
+      MyRepo.delete(model)
     end
   end
 
@@ -181,13 +181,13 @@ defmodule Ecto.RepoTest do
 
   test "unsupported type" do
     assert_raise ArgumentError, fn ->
-      MyRepo.insert(MyModel.Entity[x: {123}])
+      MyRepo.insert(%MyModel{x: {123}})
     end
   end
 
   test "list value types incorrect" do
-    assert_raise Ecto.InvalidEntity, fn ->
-      MyRepo.insert(MyModelList.Entity[l1: Ecto.Array[value: [1, 2, 3], type: :integer]])
+    assert_raise Ecto.InvalidModel, fn ->
+      MyRepo.insert(%MyModelList{l1: Ecto.Array[value: [1, 2, 3], type: :integer]})
     end
   end
 

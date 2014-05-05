@@ -5,18 +5,16 @@ defmodule Ecto.Associations do
   alias Ecto.Reflections.HasMany
   alias Ecto.Reflections.BelongsTo
 
-  def create_reflection(type, name, model, module, pk, assoc, fk)
+  def create_reflection(type, name, module, pk, assoc, fk)
       when type in [:has_many, :has_one] do
-    if model do
-      model_name = model |> Module.split |> List.last |> String.downcase
-    end
+    model_name = module |> Module.split |> List.last |> String.downcase
 
     values = [
       owner: module,
       associated: assoc,
       key: pk,
       assoc_key: fk || :"#{model_name}_#{pk}",
-      field: :"__#{name}__" ]
+      field: name ]
 
     case type do
       :has_many -> HasMany.new(values)
@@ -24,21 +22,17 @@ defmodule Ecto.Associations do
     end
   end
 
-  def create_reflection(:belongs_to, name, _model, module, pk, assoc, fk) do
+  def create_reflection(:belongs_to, name, module, pk, assoc, fk) do
     values = [
       owner: module,
       associated: assoc,
       key: fk,
       assoc_key: pk,
-      field: :"__#{name}__" ]
+      field: name ]
     BelongsTo.new(values)
   end
 
-  def set_loaded(record, refl, loaded) do
-    if not is_record(refl, HasMany), do: loaded = List.first(loaded)
-    field = refl.field
-    association = apply(record, field, [])
-    association = association.__assoc__(:loaded, loaded)
-    apply(record, field, [association])
+  def load(struct, field, loaded) do
+    Map.update!(struct, field, &(&1.__assoc__(:loaded, loaded)))
   end
 end

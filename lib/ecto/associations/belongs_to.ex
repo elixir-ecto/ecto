@@ -2,7 +2,7 @@ defrecord Ecto.Reflections.BelongsTo, [:field, :owner, :associated, :key, :assoc
   @moduledoc """
   The reflection record for a `belongs_to` association. Its fields are:
 
-  * `field` - The name of the association field on the entity;
+  * `field` - The name of the association field on the model;
   * `owner` - The model where the association was defined;
   * `associated` - The model that is associated;
   * `key` - The key on the `owner` model used for the association;
@@ -21,10 +21,10 @@ defmodule Ecto.Associations.BelongsTo do
 
   * `__assoc__(:loaded, assoc)` - Returns the loaded entities or `:not_loaded`;
   * `__assoc__(:loaded, value, assoc)` - Sets the loaded entities;
-  * `__assoc__(:target, assoc)` - Returns the entity where the association was
+  * `__assoc__(:target, assoc)` - Returns the model where the association was
                                   defined;
   * `__assoc__(:name, assoc)` - Returns the name of the association field on the
-                                entity;
+                                model;
   * `__assoc__(:new, name, target)` - Creates a new association with the given
                                       name and target;
   """
@@ -36,19 +36,19 @@ defmodule Ecto.Associations.BelongsTo do
   defrecordp :assoc, __MODULE__, [:loaded, :target, :name]
 
   @doc """
-  Creates a new record of the associated entity.
+  Creates a new struct of the associated model.
   """
   def new(params \\ [], assoc(target: target, name: name)) do
-    refl = target.__entity__(:association, name)
-    refl.associated.new(params)
+    refl = target.__schema__(:association, name)
+    struct(refl.associated, params)
   end
 
   @doc """
-  Returns the associated record. Raises `AssociationNotLoadedError` if the
+  Returns the associated struct. Raises `AssociationNotLoadedError` if the
   association is not loaded.
   """
   def get(assoc(loaded: @not_loaded, target: target, name: name)) do
-    refl = target.__entity__(:association, name)
+    refl = target.__schema__(:association, name)
     raise Ecto.AssociationNotLoadedError,
       type: :belongs_to, owner: refl.owner, name: name
   end
@@ -87,7 +87,7 @@ defimpl Inspect, for: Ecto.Associations.BelongsTo do
   def inspect(assoc, opts) do
     name        = assoc.__assoc__(:name)
     target      = assoc.__assoc__(:target)
-    refl        = target.__entity__(:association, name)
+    refl        = target.__schema__(:association, name)
     associated  = refl.associated
     foreign_key = refl.key
     references  = refl.assoc_key
@@ -98,6 +98,6 @@ defimpl Inspect, for: Ecto.Associations.BelongsTo do
       references: references,
       foreign_key: foreign_key
     ]
-    concat ["#Ecto.Associations.BelongsTo<", Kernel.inspect(kw, opts), ">"]
+    concat ["#Ecto.Associations.BelongsTo<", Inspect.List.inspect(kw, opts), ">"]
   end
 end

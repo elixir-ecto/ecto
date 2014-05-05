@@ -31,7 +31,7 @@ end
 defmodule Ecto.Integration.Postgres.Post do
   use Ecto.Model
 
-  queryable "posts" do
+  schema "posts" do
     field :title, :string
     field :text, :string
     field :tags, { :array, :string }
@@ -45,7 +45,7 @@ end
 defmodule Ecto.Integration.Postgres.Comment do
   use Ecto.Model
 
-  queryable "comments" do
+  schema "comments" do
     field :text, :string
     field :posted, :datetime
     field :day, :date
@@ -60,7 +60,7 @@ end
 defmodule Ecto.Integration.Postgres.Permalink do
   use Ecto.Model
 
-  queryable "permalinks" do
+  schema "permalinks" do
     field :url, :string
     belongs_to :post, Ecto.Integration.Postgres.Post
   end
@@ -69,7 +69,7 @@ end
 defmodule Ecto.Integration.Postgres.User do
   use Ecto.Model
 
-  queryable "users" do
+  schema "users" do
     field :name, :string
     has_many :comments, Ecto.Integration.Postgres.Comment
   end
@@ -78,7 +78,7 @@ end
 defmodule Ecto.Integration.Postgres.Custom do
   use Ecto.Model
 
-  queryable "customs", primary_key: false do
+  schema "customs", primary_key: false do
     field :foo, :string, primary_key: true
   end
 end
@@ -86,7 +86,7 @@ end
 defmodule Ecto.Integration.Postgres.Barebone do
   use Ecto.Model
 
-  queryable "barebones", primary_key: false do
+  schema "barebones", primary_key: false do
     field :text, :string
   end
 end

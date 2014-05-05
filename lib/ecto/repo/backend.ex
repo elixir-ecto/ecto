@@ -29,11 +29,11 @@ defmodule Ecto.Repo.Backend do
 
   def get(repo, adapter, queryable, id, opts) do
     query       = Queryable.to_query(queryable)
-    entity      = query.from |> Util.entity
-    primary_key = entity.__entity__(:primary_key)
+    model      = query.from |> Util.model
+    primary_key = model.__schema__(:primary_key)
 
     Validator.validate_get(query, repo.query_apis)
-    check_primary_key(entity)
+    check_primary_key(model)
 
     case Util.value_to_type(id) do
       {:ok, _} -> :ok
@@ -48,9 +48,9 @@ defmodule Ecto.Repo.Backend do
                    limit: 1) |> Normalizer.normalize
 
     case adapter.all(repo, query, opts) do
-      [entity] -> entity
+      [model] -> model
       [] -> nil
-      _ -> raise Ecto.NotSingleResult, entity: entity
+      _ -> raise Ecto.NotSingleResult, model: model
     end
   end
 
@@ -60,18 +60,30 @@ defmodule Ecto.Repo.Backend do
     adapter.all(repo, query, opts)
   end
 
-  def insert(repo, adapter, entity, opts) do
-    normalized_entity = normalize_entity(entity)
-    validate_entity(normalized_entity)
-    adapter.insert(repo, normalized_entity, opts) |> entity.update
+  def insert(repo, adapter, model, opts) do
+    normalized_model = normalize_model(model)
+    validate_model(normalized_model)
+
+    result   = adapter.insert(repo, normalized_model, opts)
+    module   = model.__struct__
+    pk_field = module.__schema__(:primary_key)
+
+
+    if pk_field do
+      pk_value = Dict.get(result, pk_field)
+      model    = Ecto.Model.put_primary_key(model, pk_value)
+    end
+
+    struct(model, result)
   end
 
-  def update(repo, adapter, entity, opts) do
-    entity = normalize_entity(entity)
-    check_primary_key(entity)
-    validate_entity(entity)
+  def update(repo, adapter, model, opts) do
+    model = normalize_model(model)
+    check_primary_key(model)
+    validate_model(model)
 
-    adapter.update(repo, entity, opts) |> check_single_result(entity)
+    adapter.update(repo, model, opts)
+    |> check_single_result(model)
   end
 
   def update_all(repo, adapter, queryable, values, opts) do
@@ -89,21 +101,24 @@ defmodule Ecto.Repo.Backend do
   end
 
   def runtime_update_all(repo, adapter, queryable, values, opts) do
-    query = Queryable.to_query(queryable) |> Normalizer.normalize(skip_select: true)
+    query = Queryable.to_query(queryable)
+            |> Normalizer.normalize(skip_select: true)
     Validator.validate_update(query, repo.query_apis, values)
     adapter.update_all(repo, query, values, opts)
   end
 
-  def delete(repo, adapter, entity, opts) do
-    entity = normalize_entity(entity)
-    check_primary_key(entity)
-    validate_entity(entity)
+  def delete(repo, adapter, model, opts) do
+    model = normalize_model(model)
+    check_primary_key(model)
+    validate_model(model)
 
-    adapter.delete(repo, entity, opts) |> check_single_result(entity)
+    adapter.delete(repo, model, opts)
+    |> check_single_result(model)
   end
 
   def delete_all(repo, adapter, queryable, opts) do
-    query = Queryable.to_query(queryable) |> Normalizer.normalize(skip_select: true)
+    query = Queryable.to_query(queryable)
+            |> Normalizer.normalize(skip_select: true)
     Validator.validate_delete(query, repo.query_apis)
     adapter.delete_all(repo, query, opts)
   end
@@ -148,39 +163,41 @@ defmodule Ecto.Repo.Backend do
   ## Helpers
 
   defp atomize_keys(dict) do
-    Enum.map dict, fn({k, v}) -> {binary_to_atom(k), v} end
+    Enum.map dict, fn {k, v} -> {binary_to_atom(k), v} end
   end
 
-  defp check_single_result(result, entity) do
+  defp check_single_result(result, model) do
     unless result == 1 do
-      module = elem(entity, 0)
-      pk_field = module.__entity__(:primary_key)
-      pk_value = entity.primary_key
-      raise Ecto.NotSingleResult, entity: module, primary_key: pk_field, id: pk_value
+      module = model.__struct__
+      pk_field = module.__schema__(:primary_key)
+      pk_value = Map.get(model, pk_field)
+      raise Ecto.NotSingleResult, model: module, primary_key: pk_field, id: pk_value
     end
     :ok
   end
 
-  defp check_primary_key(entity) when is_atom(entity) do
-    unless entity.__entity__(:primary_key) do
-      raise Ecto.NoPrimaryKey, entity: entity
+  defp check_primary_key(model) when is_atom(model) do
+    unless model.__schema__(:primary_key) do
+      raise Ecto.NoPrimaryKey, model: model
     end
   end
 
-  defp check_primary_key(entity) when is_record(entity) do
-    module = elem(entity, 0)
-    unless module.__entity__(:primary_key) && entity.primary_key do
-      raise Ecto.NoPrimaryKey, entity: entity
+  defp check_primary_key(model) when is_map(model) do
+    module = model.__struct__
+    pk_field = module.__schema__(:primary_key)
+    pk_value = Map.get(model, pk_field)
+    unless module.__schema__(:primary_key) && pk_value do
+      raise Ecto.NoPrimaryKey, model: model
     end
   end
 
-  defp validate_entity(entity) do
-    module = elem(entity, 0)
-    primary_key = module.__entity__(:primary_key)
-    zipped = module.__entity__(:keywords, entity)
+  defp validate_model(model) do
+    module      = model.__struct__
+    primary_key = module.__schema__(:primary_key)
+    zipped      = module.__schema__(:keywords, model)
 
-    Enum.each(zipped, fn({field, value}) ->
-      type = module.__entity__(:field_type, field)
+    Enum.each(zipped, fn {field, value} ->
+      type = module.__schema__(:field_type, field)
 
       value_type = case Util.value_to_type(value) do
         {:ok, vtype} -> vtype
@@ -191,26 +208,25 @@ defmodule Ecto.Repo.Backend do
               value_type == nil or
               Util.type_eq?(value_type, type)
 
-      # TODO: Check if entity field allows nil
+      # TODO: Check if model field allows nil
       unless valid do
-        raise Ecto.InvalidEntity, entity: entity, field: field,
+        raise Ecto.InvalidModel, model: model, field: field,
           type: value_type, expected_type: type
       end
     end)
   end
 
-  defp normalize_entity(entity) do
-    module = elem(entity, 0)
-    fields = module.__entity__(:field_names)
+  defp normalize_model(model) do
+    module = model.__struct__
+    fields = module.__schema__(:field_names)
 
-    Enum.reduce(fields, entity, fn field, entity ->
-      type = module.__entity__(:field_type, field)
+    Enum.reduce(fields, model, fn field, model ->
+      type = module.__schema__(:field_type, field)
 
       if Util.type_castable_to?(type) do
-        value = apply(entity, field, []) |> Util.try_cast(type)
-        apply(entity, field, [value])
+        Map.update!(model, field, &Util.try_cast(&1, type))
       else
-        entity
+        model
       end
     end)
   end

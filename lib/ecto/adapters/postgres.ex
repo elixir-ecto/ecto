@@ -77,13 +77,13 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   @doc false
-  def insert(repo, entity, opts) do
-    module    = elem(entity, 0)
-    returning = module.__entity__(:keywords, entity)
+  def insert(repo, model, opts) do
+    module    = model.__struct__
+    returning = module.__schema__(:keywords, model)
       |> Enum.filter(fn {_, val} -> val == nil end)
       |> Keyword.keys
 
-    case query(repo, SQL.insert(entity, returning), [], opts) do
+    case query(repo, SQL.insert(model, returning), [], opts) do
       %Postgrex.Result{rows: [values]} ->
         Enum.zip(returning, tuple_to_list(values))
       _ ->
@@ -92,8 +92,8 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   @doc false
-  def update(repo, entity, opts) do
-    %Postgrex.Result{num_rows: nrows} = query(repo, SQL.update(entity), [], opts)
+  def update(repo, model, opts) do
+    %Postgrex.Result{num_rows: nrows} = query(repo, SQL.update(model), [], opts)
     nrows
   end
 
@@ -104,8 +104,8 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   @doc false
-  def delete(repo, entity, opts) do
-    %Postgrex.Result{num_rows: nrows} = query(repo, SQL.delete(entity), [], opts)
+  def delete(repo, model, opts) do
+    %Postgrex.Result{num_rows: nrows} = query(repo, SQL.delete(model), [], opts)
     nrows
   end
 
@@ -183,13 +183,13 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp transform_row({:&, _, [_]} = var, values, sources) do
-    entity = Util.find_source(sources, var) |> Util.entity
-    entity_size = length(entity.__entity__(:field_names))
-    {entity_values, values} = Enum.split(values, entity_size)
-    if Enum.all?(entity_values, &(nil?(&1))) do
+    model = Util.find_source(sources, var) |> Util.model
+    model_size = length(model.__schema__(:field_names))
+    {model_values, values} = Enum.split(values, model_size)
+    if Enum.all?(model_values, &(nil?(&1))) do
       {nil, values}
     else
-      {entity.__entity__(:allocate, entity_values), values}
+      {model.__schema__(:allocate, model_values), values}
     end
   end
 

@@ -5,7 +5,7 @@ defmodule Ecto.Model.ValidationsTest do
   defmodule User do
     use Ecto.Model
 
-    queryable "users" do
+    schema "users" do
       field :name, :string
       field :age, :string
       field :filename, :string
@@ -21,7 +21,7 @@ defmodule Ecto.Model.ValidationsTest do
   end
 
   defmodule Custom do
-    use Ecto.Model.Validations
+    use Ecto.Model
 
     validate validate(user, range, validate_name),
           name: present() when validate_name,
@@ -29,14 +29,14 @@ defmodule Ecto.Model.ValidationsTest do
   end
 
   test "defines the given validations" do
-    assert User.validate(User.Entity[]) ==
+    assert User.validate(%User{}) ==
       [name: "can't be blank",
        age: "can't be blank",
        filename: "can't be blank"]
   end
 
   test "supports custom validations with arguments" do
-    user = User.Entity[age: 27]
+    user = %User{age: 27}
 
     assert Custom.validate(user, 30..60, false) ==
            [age: "is not included in the list"]

@@ -20,7 +20,7 @@ defmodule Ecto.Repo do
         end
       end
 
-  Most of the times, we want the repository to work with different
+  Most of the time, we want the repository to work with different
   environments. In such cases, we can pass an `:env` option:
 
       defmodule MyRepo do
@@ -87,17 +87,12 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.all(__MODULE__, unquote(adapter), queryable, opts)
       end
 
-      def create(entity, opts \\ []) do
-        IO.write :stderr, "#{__MODULE__}.create/2 is deprecated, please use #{__MODULE__}.insert/2 instead\n#{Exception.format_stacktrace}"
-        insert(entity, opts)
+      def insert(model, opts \\ []) do
+        Ecto.Repo.Backend.insert(__MODULE__, unquote(adapter), model, opts)
       end
 
-      def insert(entity, opts \\ []) do
-        Ecto.Repo.Backend.insert(__MODULE__, unquote(adapter), entity, opts)
-      end
-
-      def update(entity, opts \\ []) do
-        Ecto.Repo.Backend.update(__MODULE__, unquote(adapter), entity, opts)
+      def update(model, opts \\ []) do
+        Ecto.Repo.Backend.update(__MODULE__, unquote(adapter), model, opts)
       end
 
       defmacro update_all(queryable, values, opts \\ []) do
@@ -105,8 +100,8 @@ defmodule Ecto.Repo do
                                      values, opts)
       end
 
-      def delete(entity, opts \\ []) do
-        Ecto.Repo.Backend.delete(__MODULE__, unquote(adapter), entity, opts)
+      def delete(model, opts \\ []) do
+        Ecto.Repo.Backend.delete(__MODULE__, unquote(adapter), model, opts)
       end
 
       def delete_all(queryable, opts \\ []) do
@@ -195,8 +190,8 @@ defmodule Ecto.Repo do
   defcallback storage_down() :: :ok | {:error, :already_down} | {:error, term}
 
   @doc """
-  Fetches a single entity from the data store where the primary key matches the
-  given id. Returns `nil` if no result was found. If the entity in the queryable
+  Fetches a single model from the data store where the primary key matches the
+  given id. Returns `nil` if no result was found. If the model in the queryable
   has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
   will be raised if there is an adapter error.
 
@@ -204,7 +199,7 @@ defmodule Ecto.Repo do
     `:timeout` - The time in milliseconds to wait for the call to finish,
                  `:infinity` will wait indefinitely (default: 5000);
   """
-  defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Entity.t | nil | no_return
+  defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
   Fetches all results from the data store based on the given query. May raise
@@ -222,10 +217,10 @@ defmodule Ecto.Repo do
            select: p.title
       MyRepo.all(query)
   """
-  defcallback all(Ecto.Query.t, Keyword.t) :: [Ecto.Entity.t] | no_return
+  defcallback all(Ecto.Query.t, Keyword.t) :: [Ecto.Model.t] | no_return
 
   @doc """
-  Stores a single new entity in the data store and returns its stored
+  Stores a single new model in the data store and returns its stored
   representation. May raise `Ecto.AdapterError` if there is an adapter error.
 
   ## Options
@@ -237,10 +232,10 @@ defmodule Ecto.Repo do
       post = Post.new(title: "Ecto is great", text: "really, it is")
              |> MyRepo.insert
   """
-  defcallback insert(Ecto.Entity.t, Keyword.t) :: Ecto.Entity.t | no_return
+  defcallback insert(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Updates an entity using the primary key as key. If the entity has no primary
+  Updates an model using the primary key as key. If the model has no primary
   key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
   there is an adapter error.
 
@@ -254,7 +249,7 @@ defmodule Ecto.Repo do
       post = post.title("New title")
       MyRepo.update(post)
   """
-  defcallback update(Ecto.Entity.t, Keyword.t) :: :ok | no_return
+  defcallback update(Ecto.Model.t, Keyword.t) :: :ok | no_return
 
   @doc """
   Updates all entities matching the given query with the given values.
@@ -276,7 +271,7 @@ defmodule Ecto.Repo do
   defmacrocallback update_all(Macro.t, Keyword.t, Keyword.t) :: integer | no_return
 
   @doc """
-  Deletes an entity using the primary key as key. If the entity has no primary
+  Deletes an model using the primary key as key. If the model has no primary
   key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
   there is an adapter error.
 
@@ -289,7 +284,7 @@ defmodule Ecto.Repo do
       [post] = MyRepo.all(from(p in Post, where: p.id == 42))
       MyRepo.delete(post)
   """
-  defcallback delete(Ecto.Entity.t, Keyword.t) :: :ok | no_return
+  defcallback delete(Ecto.Model.t, Keyword.t) :: :ok | no_return
 
   @doc """
   Deletes all entities matching the given query with the given values.

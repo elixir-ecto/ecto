@@ -8,7 +8,7 @@ defmodule Ecto.Model.Validations do
       defmodule User do
         use Ecto.Model
 
-        queryable "users" do
+        schema "users" do
           field :name, :string
           field :age, :string
           field :filename, :string
@@ -49,7 +49,7 @@ defmodule Ecto.Model.Validations do
   function. Note both macros can pass a function name as first
   argument which is the function to be defined. For `validatep`, we
   defined a `validate_attachments` function. All validation functions
-  must receive the current entity as argument. We can call the
+  must receive the current model as argument. We can call the
   `validate_attachments/1` locally as:
 
       validate_attachments(user)
@@ -80,7 +80,7 @@ defmodule Ecto.Model.Validations do
         also: validate_attachments
 
   The predicate given to `:also` is special as it simply receives the
-  current record as argument. In this example, `validate_attachments`
+  current struct as argument. In this example, `validate_attachments`
   will be invoked as:
 
       validate_attachments(user)
@@ -181,47 +181,47 @@ defmodule Ecto.Model.Validations do
   Defines a public function that runs the given validations.
   """
   defmacro validate(function, keywords) do
-    do_validate(:def, function, keywords, Module.get_attribute(__CALLER__.module, :ecto_entity))
+    do_validate(:def, function, keywords, __CALLER__.module)
   end
 
   @doc """
   Defines a private function that runs the given validations.
   """
   defmacro validatep(function, keywords) do
-    do_validate(:defp, function, keywords, Module.get_attribute(__CALLER__.module, :ecto_entity))
+    do_validate(:defp, function, keywords, __CALLER__.module)
   end
 
-  defp do_validate(kind, {_, _, context} = var, keywords, entity) when is_atom(context) do
-    do_validate(kind, {:validate, [], [var]}, keywords, entity)
+  defp do_validate(kind, {_, _, context} = var, keywords, model) when is_atom(context) do
+    do_validate(kind, {:validate, [], [var]}, keywords, model)
   end
 
-  defp do_validate(_kind, {_, _, []}, _keywords, _entity) do
+  defp do_validate(_kind, {_, _, []}, _keywords, _model) do
     raise ArgumentError, message: "validate and validatep expects a function with at least one argument"
   end
 
-  defp do_validate(kind, {_, _, [h|_]} = signature, keywords, entity) do
+  defp do_validate(kind, {_, _, [h|_]} = signature, keywords, model) do
     do_validate_var(h)
 
     quote do
-      unquote(do_validate_opt(kind, signature, keywords, entity))
+      unquote(do_validate_opt(kind, signature, keywords, model))
 
       Kernel.unquote(kind)(unquote(signature)) do
-        Ecto.Validator.record unquote(h), unquote(keywords)
+        Ecto.Validator.struct unquote(h), unquote(keywords)
       end
     end
   end
 
-  defp do_validate_opt(_kind, _signature, _keywords, nil) do
-    nil
-  end
+  defp do_validate_opt(kind, {fun, meta, [h|t]}, keywords, model) do
+    if Module.get_attribute(model, :ecto_source) do
+      signature = {fun, meta, [quote(do: unquote(h) = %unquote(model){})|t]}
 
-  defp do_validate_opt(kind, {fun, meta, [h|t]}, keywords, entity) do
-    signature = {fun, meta, [quote(do: unquote(h) = unquote(entity)[])|t]}
-
-    quote do
-      Kernel.unquote(kind)(unquote(signature)) do
-        Ecto.Validator.record unquote(h), unquote(keywords)
+      quote do
+        Kernel.unquote(kind)(unquote(signature)) do
+          Ecto.Validator.struct unquote(h), unquote(keywords)
+        end
       end
+    else
+      nil
     end
   end
 

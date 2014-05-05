@@ -34,7 +34,7 @@ end
 defmodule Weather do
   use Ecto.Model
 
-  queryable "weather" do
+  schema "weather" do
     field :city, :string
     field :temp_lo, :integer
     field :temp_hi, :integer
