@@ -59,7 +59,7 @@ defmodule Ecto.Validator do
   @spec struct(Macro.t, Keyword.t) :: Macro.t
   defmacro struct(value, opts) when is_list(opts) do
     process opts, value, fn var, attr ->
-      quote do: Map.get(var, unquote(attr))
+      quote do: Map.get(unquote(var), unquote(attr))
     end
   end
 
@@ -67,8 +67,9 @@ defmodule Ecto.Validator do
   defp process(opts, value, getter) do
     var = quote do: var
 
-    validations = opts
-      |> Stream.map(&process_each(&1, var, getter))
+    validations =
+      opts
+      |> Enum.map(&process_each(&1, var, getter))
       |> concat
 
     quote do
