@@ -7,21 +7,21 @@ defmodule Ecto.Integration.WorkerTest do
     { :ok, worker } = Worker.start_link(worker_opts(database: "gary"))
 
     assert Process.alive?(worker)
-    refute :sys.get_state(worker) |> elem(1)
+    refute :sys.get_state(worker).conn
   end
 
   test "worker starts with an active connection" do
     { :ok, worker } = Worker.start_link(worker_opts(lazy: "false"))
 
     assert Process.alive?(worker)
-    assert :sys.get_state(worker) |> elem(1)
+    assert :sys.get_state(worker).conn
   end
 
   test "worker reconnects to database when connecton exits" do
     { :ok, worker } = Worker.start_link(worker_opts)
 
     assert %Postgrex.Result{} = Worker.query!(worker, "SELECT TRUE", [])
-    conn = :sys.get_state(worker) |> elem(1)
+    conn = :sys.get_state(worker).conn
 
     Process.exit(conn, :normal)
     assert %Postgrex.Result{} = Worker.query!(worker, "SELECT TRUE", [])
@@ -29,7 +29,7 @@ defmodule Ecto.Integration.WorkerTest do
 
   test "worker stops if caller dies" do
     { :ok, worker } = Worker.start(worker_opts(lazy: "false"))
-    conn = :sys.get_state(worker) |> elem(1)
+    conn = :sys.get_state(worker).conn
     worker_mon = Process.monitor(worker)
     conn_mon = Process.monitor(conn)
 

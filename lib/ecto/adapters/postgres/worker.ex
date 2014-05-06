@@ -3,8 +3,6 @@ defmodule Ecto.Adapters.Postgres.Worker do
 
   use GenServer.Behaviour
 
-  defrecordp :state, [ :conn, :params, :monitor ]
-
   @timeout 5000
 
   def start(args) do
@@ -65,50 +63,50 @@ defmodule Ecto.Adapters.Postgres.Worker do
       end
     end
 
-    {:ok, state(conn: conn, params: opts)}
+    {:ok, Map.merge(new_state, %{conn: conn, params: opts})}
   end
 
   # Connection is disconnected, reconnect before continuing
-  def handle_call(request, from, state(conn: nil, params: params) = s) do
+  def handle_call(request, from, %{conn: nil, params: params} = s) do
     case Postgrex.Connection.start_link(params) do
       {:ok, conn} ->
-        handle_call(request, from, state(s, conn: conn))
+        handle_call(request, from, %{s | conn: conn})
       {:error, err} ->
         {:reply, {:error, err}, s}
     end
   end
 
-  def handle_call({:query, sql, params, timeout}, _from, state(conn: conn) = s) do
+  def handle_call({:query, sql, params, timeout}, _from, %{conn: conn} = s) do
     {:reply, Postgrex.Connection.query(conn, sql, params, timeout), s}
   end
 
-  def handle_call({:begin, timeout}, _from, state(conn: conn) = s) do
+  def handle_call({:begin, timeout}, _from, %{conn: conn} = s) do
     {:reply, Postgrex.Connection.begin(conn, timeout), s}
   end
 
-  def handle_call({:commit, timeout}, _from, state(conn: conn) = s) do
+  def handle_call({:commit, timeout}, _from, %{conn: conn} = s) do
     {:reply, Postgrex.Connection.commit(conn, timeout), s}
   end
 
-  def handle_call({:rollback, timeout}, _from, state(conn: conn) = s) do
+  def handle_call({:rollback, timeout}, _from, %{conn: conn} = s) do
     {:reply, Postgrex.Connection.rollback(conn, timeout), s}
   end
 
-  def handle_cast({:monitor, pid}, state(monitor: nil) = s) do
+  def handle_cast({:monitor, pid}, %{monitor: nil} = s) do
     ref = Process.monitor(pid)
-    {:noreply, state(s, monitor: {pid, ref})}
+    {:noreply, %{s | monitor: {pid, ref}}}
   end
 
-  def handle_cast({:demonitor, pid}, state(monitor: {pid, ref}) = s) do
+  def handle_cast({:demonitor, pid}, %{monitor: {pid, ref}} = s) do
     Process.demonitor(ref)
-    {:noreply, state(s, monitor: nil)}
+    {:noreply, %{s | monitor: nil}}
   end
 
-  def handle_info({:EXIT, conn, _reason}, state(conn: conn) = s) do
-    {:noreply, state(s, conn: nil)}
+  def handle_info({:EXIT, conn, _reason}, %{conn: conn} = s) do
+    {:noreply, %{s | conn: nil}}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, _info}, state(monitor: {pid, ref}) = s) do
+  def handle_info({:DOWN, ref, :process, pid, _info}, %{monitor: {pid, ref}} = s) do
     {:stop, :normal, s}
   end
 
@@ -116,11 +114,15 @@ defmodule Ecto.Adapters.Postgres.Worker do
     {:noreply, s}
   end
 
-  def terminate(_reason, state(conn: nil)) do
+  def terminate(_reason, %{conn: nil}) do
     :ok
   end
 
-  def terminate(_reason, state(conn: conn)) do
+  def terminate(_reason, %{conn: conn}) do
     Postgrex.Connection.stop(conn)
+  end
+
+  defp new_state do
+    %{conn: nil, params: nil, monitor: nil}
   end
 end
