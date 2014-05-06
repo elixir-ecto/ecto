@@ -334,7 +334,7 @@ defmodule Ecto.Adapters.Postgres.SQL do
     end
   end
 
-  defp expr(Ecto.Array[value: list, type: type], sources) do
+  defp expr(%Ecto.Array{value: list, type: type}, sources) do
     sql = "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
     if list == [], do: sql = sql <> "::#{type(type)}[]"
     sql
@@ -348,30 +348,30 @@ defmodule Ecto.Adapters.Postgres.SQL do
 
   defp literal(false), do: "FALSE"
 
-  defp literal(Ecto.DateTime[] = dt) do
-    "timestamp '#{dt.year}-#{dt.month}-#{dt.day} #{dt.hour}:#{dt.min}:#{dt.sec}'"
+  defp literal(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}) do
+    "timestamp '#{year}-#{month}-#{day} #{hour}:#{min}:#{sec}'"
   end
 
-  defp literal(Ecto.Date[] = d) do
-    "date '#{d.year}-#{d.month}-#{d.day}'"
+  defp literal(%Ecto.Date{year: year, month: month, day: day}) do
+    "date '#{year}-#{month}-#{day}'"
   end
 
-  defp literal(Ecto.Time[] = t) do
-    "time '#{t.hour}:#{t.min}:#{t.sec}'"
+  defp literal(%Ecto.Time{hour: hour, min: min, sec: sec}) do
+    "time '#{hour}:#{min}:#{sec}'"
   end
 
-  defp literal(Ecto.Interval[] = i) do
-    "interval 'P#{i.year}-#{i.month}-#{i.day}T#{i.hour}:#{i.min}:#{i.sec}'"
+  defp literal(%Ecto.Interval{year: year, month: month, day: day, hour: hour, min: min, sec: sec}) do
+    "interval 'P#{year}-#{month}-#{day}T#{hour}:#{min}:#{sec}'"
   end
 
-  defp literal(Ecto.Binary[value: binary]) do
+  defp literal(%Ecto.Binary{value: binary}) do
     hex = for << h :: [unsigned, 4], l :: [unsigned, 4] <- binary >> do
       integer_to_binary(h, 16) <> integer_to_binary(l, 16)
     end
     "'\\x#{hex}'::bytea"
   end
 
-  defp literal(Ecto.Array[value: list, type: type]) do
+  defp literal(%Ecto.Array{value: list, type: type}) do
     "ARRAY[" <> Enum.map_join(list, ", ", &literal(&1)) <> "]::#{type(type)}[]"
   end
 

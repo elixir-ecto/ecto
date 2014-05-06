@@ -1,53 +1,64 @@
-defrecord Ecto.Date, [:year, :month, :day] do
-  def to_erl(Ecto.Date[] = d) do
-    {d.year, d.month, d.day}
+defmodule Ecto.Date do
+  defstruct [:year, :month, :day]
+
+  def to_erl(%Ecto.Date{year: year, month: month, day: day}) do
+    {year, month, day}
   end
 
   def from_erl({year, month, day}) do
-    Ecto.Date[year: year, month: month, day: day]
+    %Ecto.Date{year: year, month: month, day: day}
   end
 end
 
-defrecord Ecto.Time, [:hour, :min, :sec] do
-  def to_erl(Ecto.Time[] = t) do
-    {t.hour, t.min, t.sec}
+defmodule Ecto.Time do
+  defstruct [:hour, :min, :sec]
+
+  def to_erl(%Ecto.Time{hour: hour, min: min, sec: sec}) do
+    {hour, min, sec}
   end
 
   def from_erl({hour, min, sec}) do
-    Ecto.Time[hour: hour, min: min, sec: sec]
+    %Ecto.Time{hour: hour, min: min, sec: sec}
   end
 end
 
-defrecord Ecto.DateTime, [:year, :month, :day, :hour, :min, :sec] do
-  def to_erl(Ecto.DateTime[] = dt) do
-    {{dt.year, dt.month, dt.day}, {dt.hour, dt.min, dt.sec}}
+defmodule Ecto.DateTime do
+  defstruct [:year, :month, :day, :hour, :min, :sec]
+
+  def to_erl(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}) do
+    {{year, month, day}, {hour, min, sec}}
   end
 
   def from_erl({{year, month, day}, {hour, min, sec}}) do
-    Ecto.DateTime[year: year, month: month, day: day,
-                  hour: hour, min: min, sec: sec]
+    %Ecto.DateTime{year: year, month: month, day: day,
+                   hour: hour, min: min, sec: sec}
   end
 
-  def to_date(Ecto.DateTime[] = dt) do
-    Ecto.Date[year: dt.year, month: dt.month, day: dt.day]
+  def to_date(%Ecto.DateTime{year: year, month: month, day: day}) do
+    %Ecto.Date{year: year, month: month, day: day}
   end
 
-  def to_time(Ecto.Time[] = dt) do
-    Ecto.Time[hour: dt.hour, min: dt.min, sec: dt.sec]
+  def to_time(%Ecto.Time{hour: hour, min: min, sec: sec}) do
+    %Ecto.Time{hour: hour, min: min, sec: sec}
   end
 
-  def from_date_time(Ecto.Date[] = d, Ecto.Time[] = t) do
-    Ecto.DateTime[year: d.year, month: d.month, day: d.day,
-                  hour: t.hour, min: t.min, sec: t.sec]
+  def from_date_time(%Ecto.Date{year: year, month: month, day: day},
+                     %Ecto.Time{hour: hour, min: min, sec: sec}) do
+    %Ecto.DateTime{year: year, month: month, day: day,
+                   hour: hour, min: min, sec: sec}
   end
 end
 
-defrecord Ecto.Interval, [:year, :month, :day, :hour, :min, :sec]
-
-defrecord Ecto.Binary, [:value] do
-  @moduledoc false
+defmodule Ecto.Interval do
+  defstruct [:year, :month, :day, :hour, :min, :sec]
 end
 
-defrecord Ecto.Array, [:value, :type] do
+defmodule Ecto.Binary do
   @moduledoc false
+  defstruct [:value]
+end
+
+defmodule Ecto.Array do
+  @moduledoc false
+  defstruct [:value, :type]
 end

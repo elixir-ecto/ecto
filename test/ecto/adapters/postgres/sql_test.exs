@@ -215,10 +215,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = Model |> select([], ^Decimal.new("42")) |> normalize
     assert SQL.select(query) == "SELECT 42.0\nFROM \"model\" AS m0"
 
-    query = Model |> select([], ^Ecto.DateTime[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51]) |> normalize
+    query = Model |> select([], ^%Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}) |> normalize
     assert SQL.select(query) == "SELECT timestamp '2014-1-16 20:26:51'\nFROM \"model\" AS m0"
 
-    query = Model |> select([], ^Ecto.Interval[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51]) |> normalize
+    query = Model |> select([], ^%Ecto.Interval{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}) |> normalize
     assert SQL.select(query) == "SELECT interval 'P2014-1-16T20:26:51'\nFROM \"model\" AS m0"
   end
 
@@ -247,12 +247,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "insert with list" do
-    query = SQL.insert(%Model3{list1: Ecto.Array[value: ["a", "b", "c"], type: :string], list2: Ecto.Array[value: [1, 2, 3], type: :integer]}, [:id])
+    query = SQL.insert(%Model3{list1: %Ecto.Array{value: ["a", "b", "c"], type: :string}, list2: %Ecto.Array{value: [1, 2, 3], type: :integer}}, [:id])
     assert query == "INSERT INTO \"model3\" (\"list1\", \"list2\")\nVALUES (ARRAY['a', 'b', 'c']::text[], ARRAY[1, 2, 3]::integer[])\nRETURNING \"id\""
   end
 
   test "insert with binary" do
-    query = SQL.insert(%Model3{binary: Ecto.Binary[value: << 1, 2, 3 >>]}, [:id])
+    query = SQL.insert(%Model3{binary: %Ecto.Binary{value: << 1, 2, 3 >>}}, [:id])
     assert query == "INSERT INTO \"model3\" (\"binary\")\nVALUES ('\\x010203'::bytea)\nRETURNING \"id\""
   end
 
@@ -262,12 +262,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "update with list" do
-    query = SQL.update(%Model3{id: 42, list1: Ecto.Array[value: ["c", "d"], type: :string], list2: Ecto.Array[value: [4, 5], type: :integer]})
+    query = SQL.update(%Model3{id: 42, list1: %Ecto.Array{value: ["c", "d"], type: :string}, list2: %Ecto.Array{value: [4, 5], type: :integer}})
     assert query == "UPDATE \"model3\" SET \"binary\" = NULL, \"list1\" = ARRAY['c', 'd']::text[], \"list2\" = ARRAY[4, 5]::integer[]\nWHERE \"id\" = 42"
   end
 
   test "update with binary" do
-    query = SQL.update(%Model3{id: 42, binary: Ecto.Binary[value: << 1, 2, 3 >>]})
+    query = SQL.update(%Model3{id: 42, binary: %Ecto.Binary{value: << 1, 2, 3 >>}})
     assert query == "UPDATE \"model3\" SET \"binary\" = '\\x010203'::bytea, \"list1\" = NULL, \"list2\" = NULL\nWHERE \"id\" = 42"
   end
 

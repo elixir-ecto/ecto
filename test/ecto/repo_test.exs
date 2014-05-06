@@ -187,7 +187,7 @@ defmodule Ecto.RepoTest do
 
   test "list value types incorrect" do
     assert_raise Ecto.InvalidModel, fn ->
-      MyRepo.insert(%MyModelList{l1: Ecto.Array[value: [1, 2, 3], type: :integer]})
+      MyRepo.insert(%MyModelList{l1: %Ecto.Array{value: [1, 2, 3], type: :integer}})
     end
   end
 

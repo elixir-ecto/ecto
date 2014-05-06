@@ -15,11 +15,11 @@ defmodule Ecto.Integration.RepoTest do
     assert [{ "abc", << 0, 1 >> }] ==
            TestRepo.all(from Post, select: { "abc", binary(^<< 0 , 1 >>) })
 
-    assert [{ Ecto.DateTime[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51] }] ==
-           TestRepo.all(from Post, select: { ^Ecto.DateTime[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51] })
+    assert [{ %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} }] ==
+           TestRepo.all(from Post, select: { ^%Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
 
-    assert [{ Ecto.Interval[year: 0, month: 24169, day: 16, hour: 0, min: 0, sec: 73611] }] ==
-           TestRepo.all(from Post, select: { ^Ecto.Interval[year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51] })
+    assert [{ %Ecto.Interval{year: 0, month: 24169, day: 16, hour: 0, min: 0, sec: 73611} }] ==
+           TestRepo.all(from Post, select: { ^%Ecto.Interval{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
 
     assert [{ [0, 1, 2, 3] }] ==
            TestRepo.all(from Post, select: { array([0, 1, 2, 3], ^:integer) })

@@ -449,7 +449,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "datetime type" do
-    datetime = Ecto.DateTime[year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0]
+    datetime = %Ecto.DateTime{year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0}
     query = from(c in Comment, where: c.posted == ^datetime, select: c)
     validate(query)
 
@@ -460,7 +460,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "date type" do
-    date = Ecto.Date[year: 2013, month: 8, day: 1]
+    date = %Ecto.Date{year: 2013, month: 8, day: 1}
     query = from(c in Comment, where: c.day == ^date, select: c)
     validate(query)
 
@@ -471,7 +471,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "time type" do
-    time = Ecto.Time[hour: 14, min: 28, sec: 0]
+    time = %Ecto.Time{hour: 14, min: 28, sec: 0}
     query = from(c in Comment, where: c.time == ^time, select: c)
     validate(query)
 

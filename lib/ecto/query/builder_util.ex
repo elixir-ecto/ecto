@@ -32,14 +32,14 @@ defmodule Ecto.Query.BuilderUtil do
   # ecto types
   def escape({:binary, _, [arg]}, vars) do
     arg_escaped = escape(arg, vars)
-    {Ecto.Binary, arg_escaped}
+    {:%, [], [Ecto.Binary, {:%{}, [], [value: arg_escaped]}]}
   end
 
   def escape({:array, _, [arg, type]}, vars) do
     arg  = escape(arg, vars)
     type = escape(type, vars)
     type = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_array(unquote(type)))
-    {:{}, [], [Ecto.Array, arg, type]}
+    {:%, [], [Ecto.Array, {:%{}, [], [value: arg, type: type]}]}
     # TODO: Check that arg is and type is an atom
   end
 

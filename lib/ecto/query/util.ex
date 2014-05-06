@@ -59,9 +59,9 @@ defmodule Ecto.Query.Util do
   def value_to_type(value, _fun) when is_float(value), do: {:ok, :float}
   def value_to_type(%Decimal{}, _fun), do: {:ok, :decimal}
 
-  def value_to_type(Ecto.DateTime[] = dt, fun) do
-    [_|types] = tuple_to_list(dt)
-    types = Enum.map(types, &value_to_type(&1, fun))
+  def value_to_type(%Ecto.DateTime{} = dt, fun) do
+    values = Map.delete(dt, :__struct__) |> Map.values
+    types = Enum.map(values, &value_to_type(&1, fun))
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
@@ -72,9 +72,9 @@ defmodule Ecto.Query.Util do
     res || {:ok, :datetime}
   end
 
-  def value_to_type(Ecto.Date[] = d, fun) do
-    [_|types] = tuple_to_list(d)
-    types = Enum.map(types, &value_to_type(&1, fun))
+  def value_to_type(%Ecto.Date{} = d, fun) do
+    values = Map.delete(d, :__struct__) |> Map.values
+    types = Enum.map(values, &value_to_type(&1, fun))
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
@@ -85,9 +85,9 @@ defmodule Ecto.Query.Util do
     res || {:ok, :date}
   end
 
-  def value_to_type(Ecto.Time[] = t, fun) do
-    [_|types] = tuple_to_list(t)
-    types = Enum.map(types, &value_to_type(&1, fun))
+  def value_to_type(%Ecto.Time{} = t, fun) do
+    values = Map.delete(t, :__struct__) |> Map.values
+    types = Enum.map(values, &value_to_type(&1, fun))
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
@@ -98,10 +98,9 @@ defmodule Ecto.Query.Util do
     res || {:ok, :time}
   end
 
-  def value_to_type(Ecto.Interval[] = dt, fun) do
-    types = tuple_to_list(dt)
-            |> tl
-            |> Enum.map(&value_to_type(&1, fun))
+  def value_to_type(%Ecto.Interval{} = dt, fun) do
+    values = Map.delete(dt, :__struct__) |> Map.values
+    types = Enum.map(values, &value_to_type(&1, fun))
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
@@ -116,7 +115,7 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def value_to_type(Ecto.Binary[value: binary], fun) do
+  def value_to_type(%Ecto.Binary{value: binary}, fun) do
     case value_to_type(binary, fun) do
       {:ok, :binary} -> {:ok, :binary}
       {:ok, :string} -> {:ok, :binary}
@@ -125,7 +124,7 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def value_to_type(Ecto.Array[value: list, type: type], fun) do
+  def value_to_type(%Ecto.Array{value: list, type: type}, fun) do
     unless type in types or (list == [] and nil?(type)) do
       {:error, "invalid type given to `array/2`: `#{inspect type}`"}
     end
@@ -160,12 +159,12 @@ defmodule Ecto.Query.Util do
   def literal?(value) when is_integer(value), do: true
   def literal?(value) when is_float(value),   do: true
   def literal?(%Decimal{}),                   do: true
-  def literal?(Ecto.DateTime[]),              do: true
-  def literal?(Ecto.Date[]),                  do: true
-  def literal?(Ecto.Time[]),                  do: true
-  def literal?(Ecto.Interval[]),              do: true
-  def literal?(Ecto.Binary[]),                do: true
-  def literal?(Ecto.Array[]),                 do: true
+  def literal?(%Ecto.DateTime{}),              do: true
+  def literal?(%Ecto.Date{}),                  do: true
+  def literal?(%Ecto.Time{}),                  do: true
+  def literal?(%Ecto.Interval{}),              do: true
+  def literal?(%Ecto.Binary{}),                do: true
+  def literal?(%Ecto.Array{}),                 do: true
   def literal?(_),                            do: false
 
   # Returns true if the two types are considered equal by the type system
@@ -187,11 +186,11 @@ defmodule Ecto.Query.Util do
   # If value cannot be casted just return it.
   @doc false
   def try_cast(binary, :binary) when is_binary(binary) do
-    Ecto.Binary[value: binary]
+    %Ecto.Binary{value: binary}
   end
 
   def try_cast(list, {:array, inner}) when is_list(list) do
-    Ecto.Array[value: list, type: inner]
+    %Ecto.Array{value: list, type: inner}
   end
 
   def try_cast(value, _) do
