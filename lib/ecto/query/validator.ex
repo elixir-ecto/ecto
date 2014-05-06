@@ -11,9 +11,6 @@ defmodule Ecto.Query.Validator do
   alias Ecto.Query.JoinExpr
   alias Ecto.Associations.Assoc
 
-  defrecord State, sources: [], vars: [], grouped: [], grouped?: false,
-    in_agg?: false, apis: nil, from: nil, query: nil
-
   # Adds type, file and line metadata to the exception
   defmacrop rescue_metadata(type, file, line, block) do
     quote location: :keep do
@@ -34,8 +31,9 @@ defmodule Ecto.Query.Validator do
 
     grouped = exprs_sources(query.group_bys, query.sources)
     is_grouped = query.group_bys != [] or query.havings != []
-    state = State[sources: query.sources, grouped: grouped, grouped?: is_grouped,
-                  apis: apis, from: query.from, query: query]
+    state = Map.merge(new_state,
+                      %{sources: query.sources, grouped: grouped, grouped?: is_grouped,
+                        apis: apis, from: query.from, query: query})
 
     validate_joins(query.joins, state)
     validate_wheres(query.wheres, state)
@@ -68,7 +66,7 @@ defmodule Ecto.Query.Validator do
         end
 
         # TODO: Check if model field allows nil
-        state = State[sources: query.sources, apis: apis]
+        state = Map.merge(new_state, %{sources: query.sources, apis: apis})
         type = type_check(expr, state)
 
         format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
@@ -105,13 +103,13 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_joins(joins, state) do
-    state = state.grouped?(false)
+    state = %{state | grouped?: false}
     ons = Enum.map(joins, &(&1.on))
     validate_booleans(:join_on, ons, state)
   end
 
   defp validate_wheres(wheres, state) do
-    state = state.grouped?(false)
+    state = %{state | grouped?: false}
     validate_booleans(:where, wheres, state)
   end
 
@@ -157,8 +155,8 @@ defmodule Ecto.Query.Validator do
   end
 
   # group_by field
-  defp validate_field({var, field}, State[] = state) do
-    model = Util.find_source(state.sources, var) |> Util.model
+  defp validate_field({var, field}, %{sources: sources}) do
+    model = Util.find_source(sources, var) |> Util.model
     if model, do: do_validate_field(model, field)
   end
 
@@ -169,8 +167,8 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp validate_preloads(preloads, State[] = state) do
-    model = Util.model(state.from)
+  defp validate_preloads(preloads, %{from: from}) do
+    model = Util.model(from)
 
     if preloads != [] and nil?(model) do
       raise Ecto.QueryError, reason: "can only preload on fields from a model"
@@ -193,7 +191,7 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_select(expr, State[] = state) do
+  defp validate_select(expr, state) do
     rescue_metadata(:select, expr.file, expr.line) do
       select_clause(expr.expr, state)
     end
@@ -209,8 +207,8 @@ defmodule Ecto.Query.Validator do
     #     distinct: title / order_by: id, title => raise (title in order_by but not leftmost part)
 
     distincts =
-      Enum.map(distincts, fn(expr) ->
-        Enum.map(expr.expr, fn({var, field}) ->
+      Enum.map(distincts, fn expr ->
+        Enum.map(expr.expr, fn {var, field} ->
           source = Util.find_source(sources, var) |> Util.source
           {source, field, {expr.file, expr.line}}
         end)
@@ -258,8 +256,8 @@ defmodule Ecto.Query.Validator do
   end
 
   # var.x
-  defp type_check({{:., _, [{:&, _, [_]} = var, field]}, _, []}, State[] = state) do
-    source = Util.find_source(state.sources, var)
+  defp type_check({{:., _, [{:&, _, [_]} = var, field]}, _, []}, %{sources: sources} = state) do
+    source = Util.find_source(sources, var)
     check_grouped({source, field}, state)
 
     if model = Util.model(source) do
@@ -274,8 +272,8 @@ defmodule Ecto.Query.Validator do
   end
 
   # var
-  defp type_check({:&, _, [_]} = var, State[] = state) do
-    source = Util.find_source(state.sources, var)
+  defp type_check({:&, _, [_]} = var, %{sources: sources} = state) do
+    source = Util.find_source(sources, var)
     if model = Util.model(source) do
       fields = model.__schema__(:field_names)
       Enum.each(fields, &check_grouped({source, &1}, state))
@@ -287,20 +285,21 @@ defmodule Ecto.Query.Validator do
   end
 
   # ops & functions
-  defp type_check({name, _, args} = expr, state) when is_atom(name) and is_list(args) do
+  defp type_check({name, _, args} = expr, %{apis: apis, in_agg?: in_agg?} = state)
+      when is_atom(name) and is_list(args) do
     length_args = length(args)
 
-    api = Enum.find(state.apis, &function_exported?(&1, name, length_args))
+    api = Enum.find(apis, &function_exported?(&1, name, length_args))
     unless api do
       raise Ecto.QueryError, reason: "function `#{name}/#{length_args}` not defined in query API"
     end
 
     is_agg = api.aggregate?(name, length_args)
-    if is_agg and state.in_agg? do
+    if is_agg and in_agg? do
       raise Ecto.QueryError, reason: "aggregate function calls cannot be nested"
     end
 
-    state = state.in_agg?(is_agg)
+    state = %{state | in_agg?: is_agg}
     arg_types = Enum.map(args, &type_check(&1, state))
 
     if Enum.any?(arg_types, &(&1 == :unknown)) do
@@ -343,9 +342,9 @@ defmodule Ecto.Query.Validator do
 
   # Handle top level select cases
 
-  defp select_clause({:assoc, _, [var, fields]}, State[] = state) do
-    model = Util.find_source(state.sources, var) |> Util.model
-    unless model == Util.model(state.from) do
+  defp select_clause({:assoc, _, [var, fields]}, %{from: from, sources: sources} = state) do
+    model = Util.find_source(sources, var) |> Util.model
+    unless model == Util.model(from) do
       raise Ecto.QueryError, reason: "can only associate on the from model"
     end
 
@@ -375,17 +374,17 @@ defmodule Ecto.Query.Validator do
     type_check(other, state)
   end
 
-  defp assoc_select(parent_var, fields, State[] = state) do
+  defp assoc_select(parent_var, fields, %{query: query, sources: sources} = state) do
     Enum.each(fields, fn {field, nested} ->
       {child_var, nested_fields} = Assoc.decompose_assoc(nested)
-      parent_model = Util.find_source(state.sources, parent_var) |> Util.model
+      parent_model = Util.find_source(sources, parent_var) |> Util.model
 
       refl = parent_model.__schema__(:association, field)
       unless refl do
         raise Ecto.QueryError, reason: "field `#{inspect parent_model}.#{field}` is not an association"
       end
 
-      child_model = Util.find_source(state.sources, child_var) |> Util.model
+      child_model = Util.find_source(sources, child_var) |> Util.model
       unless refl.associated == child_model do
         raise Ecto.QueryError, reason: "association on `#{inspect parent_model}.#{field}` " <>
           "doesn't match given model: `#{child_model}`"
@@ -396,7 +395,7 @@ defmodule Ecto.Query.Validator do
           "model: `#{child_model}`"
       end
 
-      expr = Util.source_expr(state.query, child_var)
+      expr = Util.source_expr(query, child_var)
       unless match?(%JoinExpr{qual: qual, assoc: assoc} when not nil?(assoc) and qual in [:inner, :left], expr) do
         raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
       end
@@ -423,11 +422,16 @@ defmodule Ecto.Query.Validator do
     end) |> Enum.concat |> Enum.uniq
   end
 
-  defp check_grouped({source, field} = source_field, State[] = state) do
-    if state.grouped? and not state.in_agg? and not (source_field in state.grouped) do
+  defp check_grouped({source, field} = source_field, %{grouped?: grouped?, in_agg?: in_agg?, grouped: grouped}) do
+    if grouped? and not in_agg? and not (source_field in grouped) do
       model = Util.model(source) || Util.source(source)
       raise Ecto.QueryError, reason: "`#{inspect model}.#{field}` must appear in `group_by` " <>
         "or be used in an aggregate function"
     end
+  end
+
+  defp new_state do
+    %{sources: [], vars: [], grouped: [], grouped?: false,
+      in_agg?: false, apis: nil, from: nil, query: nil}
   end
 end

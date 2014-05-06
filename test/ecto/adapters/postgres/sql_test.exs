@@ -353,12 +353,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == "SELECT 'abc' = ANY (ARRAY['abc', 'def'])\nFROM \"model\" AS m0"
   end
 
-  defrecord Rec, [:x]
+  defmodule Rec, do: defstruct [:x]
 
   defp fun(x), do: x+x
 
   test "query interpolation" do
-    r = Rec[x: 123]
+    r = %Rec{x: 123}
     query = Model |> select([r], r.x + ^(1 + 2 + 3) + ^r.x) |> normalize
     assert SQL.select(query) == "SELECT (m0.\"x\" + 6) + 123\nFROM \"model\" AS m0"
 
