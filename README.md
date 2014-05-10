@@ -16,7 +16,7 @@ end
 defmodule Weather do
   use Ecto.Model
 
-  queryable "weather" do
+  schema "weather" do
     field :city     # Defaults to type :string
     field :temp_lo, :integer
     field :temp_hi, :integer
@@ -278,7 +278,7 @@ Ecto supports defining associations on entities:
 defmodule Post do
   use Ecto.Model
 
-  queryable "posts" do
+  schema "posts" do
     has_many :comments, Comment
   end
 end
@@ -286,7 +286,7 @@ end
 defmodule Comment do
   use Ecto.Model
 
-  queryable "comments" do
+  schema "comments" do
     field :title, :string
     belongs_to :post, Post
   end
