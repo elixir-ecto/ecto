@@ -171,6 +171,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> select([r], r.x or false) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\" OR FALSE\nFROM \"model\" AS m0"
+
+    query = Model |> select([r], like(r.x, "test")) |> normalize
+    assert SQL.select(query) == "SELECT m0.\"x\" LIKE 'test'\nFROM \"model\" AS m0"
+
+    query = Model |> select([r], ilike(r.x, "test")) |> normalize
+    assert SQL.select(query) == "SELECT m0.\"x\" ILIKE 'test'\nFROM \"model\" AS m0"
   end
 
   test "binary op null check" do
