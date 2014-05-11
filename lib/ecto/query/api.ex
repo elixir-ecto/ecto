@@ -234,6 +234,10 @@ defmodule Ecto.Query.API do
   def like(left, right)
   defs like(string, string) :: boolean
 
+  @doc "Full text pattern search for PostgreSQL."
+  def search(left, right)
+  defs search(string, string) :: boolean
+
   ## Aggregate functions
 
   @doc "Aggregate function, averages the given field over the current group."
