@@ -100,6 +100,11 @@ defmodule Ecto.Integration.RepoTest do
     assert %Barebone{text: "text"} = TestRepo.insert(%Barebone{text: "text"})
   end
 
+  test "create with user-assigned primary key" do
+    assert %AssignedPrimaryKey{id: "id"} = TestRepo.insert(%AssignedPrimaryKey{id: "id"})
+    assert_raise Postgrex.Error, fn -> TestRepo.insert(%AssignedPrimaryKey{}) end
+  end
+
   test "get model" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})

@@ -69,9 +69,8 @@ defmodule Ecto.Repo.Backend do
     pk_field = module.__schema__(:primary_key)
 
 
-    if pk_field do
-      pk_value = Dict.get(result, pk_field)
-      model    = Ecto.Model.put_primary_key(model, pk_value)
+    if pk_field && (pk_value = Dict.get(result, pk_field)) do
+      model = Ecto.Model.put_primary_key(model, pk_value)
     end
 
     struct(model, result)
