@@ -42,7 +42,7 @@ Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, yo
 
 ```elixir
 defp deps do
-  [{:postgrex, ">= 0"},
+  [{:postgrex, ">= 0.0.0"},
    {:ecto, "~> 0.1.0"}]
 end
 ```
