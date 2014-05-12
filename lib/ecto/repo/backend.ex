@@ -70,7 +70,8 @@ defmodule Ecto.Repo.Backend do
 
 
     if pk_field do
-      pk_value = Dict.get(result, pk_field)
+      pk_value = Dict.get(result, pk_field) ||
+                 Map.get(normalized_model, pk_field)
       model    = Ecto.Model.put_primary_key(model, pk_value)
     end
 
