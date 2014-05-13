@@ -2,6 +2,7 @@
 
 * Backwards incompatible changes
   * Removed entities in favor of schema + structs. In particular, `Ecto.Entity` is gone as well as the `queryable/2` macro. Instead developers should invoke `schema/2` in their models, which will automatically define a struct in the current module. Now to create or update, developers should use `struct(Post, [])` or `%Post{}` instead of the previous `Post.new([])` or `Post[]`
+  * Renamed has_many association function `to_list` to `all` 
 
 # v0.1.0 (2014-05-01)
 

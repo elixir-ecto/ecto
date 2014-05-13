@@ -118,7 +118,7 @@ defmodule Ecto.Associations.Preloader do
     end
   end
 
-  defp match([struct|structs], [assoc|assocs], BelongsTo[] = refl, acc, []) do
+  defp match([struct|structs], [assoc|assocs], %BelongsTo{} = refl, acc, []) do
     case compare(struct, assoc, refl) do
       # Record and association match so store association on struct,
       # association may match more structs so keep it
@@ -241,7 +241,7 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp set_loaded(struct, refl, loaded) do
-    unless is_record(refl, Ecto.Reflections.HasMany) do
+    unless refl.__struct__ == Ecto.Reflections.HasMany do
       loaded = List.first(loaded)
     end
     Ecto.Associations.load(struct, refl.field, loaded)

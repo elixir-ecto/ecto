@@ -1,6 +1,6 @@
-defrecord Ecto.Reflections.BelongsTo, [:field, :owner, :associated, :key, :assoc_key] do
+defmodule Ecto.Reflections.BelongsTo do
   @moduledoc """
-  The reflection record for a `belongs_to` association. Its fields are:
+  The reflection struct for a `belongs_to` association. Its fields are:
 
   * `field` - The name of the association field on the model;
   * `owner` - The model where the association was defined;
@@ -8,11 +8,34 @@ defrecord Ecto.Reflections.BelongsTo, [:field, :owner, :associated, :key, :assoc
   * `key` - The key on the `owner` model used for the association;
   * `assoc_key` - The key on the `associated` model used for the association;
   """
+
+  defstruct [:field, :owner, :associated, :key, :assoc_key]
 end
 
 defmodule Ecto.Associations.BelongsTo do
+  @moduledoc false
+
+  defstruct [:loaded, :target, :name]
+end
+
+defmodule Ecto.Associations.BelongsTo.Proxy do
   @moduledoc """
   A belongs_to association.
+
+  ## Create
+
+  A new struct of the associated model can be created with `struct/2`.
+
+      defmodule Comment do
+        use Ecto.Model
+
+        schema "comments" do
+          belongs_to :post, Post
+        end
+      end
+
+      comment = %Comment{} 
+      struct(comment.post, []) #=> %Post{}
 
   ## Reflection
 
@@ -29,16 +52,13 @@ defmodule Ecto.Associations.BelongsTo do
                                       name and target;
   """
 
-  @not_loaded :not_loaded
+  @not_loaded :ECTO_NOT_LOADED
 
-  # Needs to be defrecordp because we don't want to pollute the module
-  # with functions generated for the record
-  defrecordp :assoc, __MODULE__, [:loaded, :target, :name]
+  require Ecto.Associations
+  Ecto.Associations.defproxy(Ecto.Associations.BelongsTo)
 
-  @doc """
-  Creates a new struct of the associated model.
-  """
-  def new(params \\ [], assoc(target: target, name: name)) do
+  @doc false
+  def __struct__(params \\ [], proxy(target: target, name: name)) do
     refl = target.__schema__(:association, name)
     struct(refl.associated, params)
   end
@@ -47,46 +67,44 @@ defmodule Ecto.Associations.BelongsTo do
   Returns the associated struct. Raises `AssociationNotLoadedError` if the
   association is not loaded.
   """
-  def get(assoc(loaded: @not_loaded, target: target, name: name)) do
+  def get(proxy(loaded: @not_loaded, target: target, name: name)) do
     refl = target.__schema__(:association, name)
     raise Ecto.AssociationNotLoadedError,
       type: :belongs_to, owner: refl.owner, name: name
   end
 
-  def get(assoc(loaded: loaded)) do
+  def get(proxy(loaded: loaded)) do
     loaded
   end
 
   @doc """
   Returns `true` if the association is loaded.
   """
-  def loaded?(assoc(loaded: @not_loaded)), do: false
+  def loaded?(proxy(loaded: @not_loaded)), do: false
   def loaded?(_), do: true
 
   @doc false
   Enum.each [:loaded, :target, :name], fn field ->
     def __assoc__(unquote(field), record) do
-      assoc([{unquote(field), var}]) = record
+      proxy([{unquote(field), var}]) = record
       var
     end
   end
 
   @doc false
   def __assoc__(:loaded, value, record) do
-    assoc(record, [loaded: value])
+    proxy(record, [loaded: value])
   end
 
   def __assoc__(:new, name, target) do
-    assoc(name: name, target: target, loaded: @not_loaded)
+    proxy(name: name, target: target, loaded: @not_loaded)
   end
 end
 
 defimpl Inspect, for: Ecto.Associations.BelongsTo do
   import Inspect.Algebra
 
-  def inspect(assoc, opts) do
-    name        = assoc.__assoc__(:name)
-    target      = assoc.__assoc__(:target)
+  def inspect(%{name: name, target: target}, opts) do
     refl        = target.__schema__(:association, name)
     associated  = refl.associated
     foreign_key = refl.key

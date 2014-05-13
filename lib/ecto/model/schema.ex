@@ -221,14 +221,14 @@ defmodule Ecto.Model.Schema do
 
       # The comments can come preloaded on the post struct
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
-      post.comments.to_list #=> [ %Comment{...}, ... ]
+      post.comments.all #=> [ %Comment{...}, ... ]
 
       # Or via an association join
       [post] = Repo.all(from(p in Post,
                       where: p.id == 42,
                   left_join: c in p.comments,
                      select: assoc(p, c)))
-      post.comments.to_list #=> [ %Comment{...}, ... ]
+      post.comments.all #=> [ %Comment{...}, ... ]
   """
   defmacro has_many(name, queryable, opts \\ []) do
     quote do
@@ -354,7 +354,7 @@ defmodule Ecto.Model.Schema do
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
-    assoc = Ecto.Associations.HasMany.__assoc__(:new, name, mod)
+    assoc = Ecto.Associations.HasMany.Proxy.__assoc__(:new, name, mod)
     __field__(mod, name, :virtual, default: assoc)
 
     opts = [type: :has_many, queryable: queryable] ++ opts
@@ -363,7 +363,7 @@ defmodule Ecto.Model.Schema do
 
   @doc false
   def __has_one__(mod, name, queryable, opts) do
-    assoc = Ecto.Associations.HasOne.__assoc__(:new, name, mod)
+    assoc = Ecto.Associations.HasOne.Proxy.__assoc__(:new, name, mod)
     __field__(mod, name, :virtual, default: assoc)
 
     opts = [type: :has_one, queryable: queryable] ++ opts
@@ -381,7 +381,7 @@ defmodule Ecto.Model.Schema do
 
     __field__(mod, opts[:foreign_key], foreign_key_type, [])
 
-    assoc = Ecto.Associations.BelongsTo.__assoc__(:new, name, mod)
+    assoc = Ecto.Associations.BelongsTo.Proxy.__assoc__(:new, name, mod)
     __field__(mod, name, :virtual, default: assoc)
 
     opts = [type: :belongs_to, queryable: queryable] ++ opts

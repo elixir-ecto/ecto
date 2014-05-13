@@ -17,22 +17,50 @@ defmodule Ecto.Associations do
       field: name ]
 
     case type do
-      :has_many -> HasMany.new(values)
-      :has_one  -> HasOne.new(values)
+      :has_many -> struct(HasMany, values)
+      :has_one  -> struct(HasOne, values)
     end
   end
 
   def create_reflection(:belongs_to, name, module, pk, assoc, fk) do
-    values = [
+    %BelongsTo{
       owner: module,
       associated: assoc,
       key: fk,
       assoc_key: pk,
-      field: name ]
-    BelongsTo.new(values)
+      field: name }
   end
 
   def load(struct, field, loaded) do
     Map.update!(struct, field, &(&1.__assoc__(:loaded, loaded)))
+  end
+
+  defmacro defproxy(struct) do
+    quote do
+      defmacrop proxy() do
+        tag    = __MODULE__
+        struct = unquote(struct)
+        quote do
+          {unquote(tag), %unquote(struct){}}
+        end
+      end
+
+      defmacrop proxy(kw) do
+        tag    = __MODULE__
+        struct = unquote(struct)
+        quote do
+          {unquote(tag), %unquote(struct){unquote_splicing(kw)}}
+        end
+      end
+
+      defmacrop proxy(proxy, kw) do
+        tag    = __MODULE__
+        struct = unquote(struct)
+        quote do
+          {unquote(tag), %unquote(struct){} = map} = unquote(proxy)
+          {unquote(tag), %{map | unquote_splicing(kw)}}
+        end
+      end
+    end
   end
 end
