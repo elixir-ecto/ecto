@@ -101,7 +101,9 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create with user-assigned primary key" do
-    assert %AssignedPrimaryKey{id: "id"} = TestRepo.insert(%AssignedPrimaryKey{id: "id"})
+    model = TestRepo.insert(%AssignedPrimaryKey{id: "id"})
+    assert model.id == "id"
+    assert model == TestRepo.get(AssignedPrimaryKey, "id")
     assert_raise Postgrex.Error, fn -> TestRepo.insert(%AssignedPrimaryKey{}) end
   end
 
