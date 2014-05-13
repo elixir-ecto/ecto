@@ -20,16 +20,17 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     no_umbrella!("ecto.gen.repo")
     {repo, _} = parse_repo(args)
 
+    config      = Mix.Project.config
     underscored = Mix.Utils.underscore(inspect(repo))
-    base = Path.basename(underscored)
-    file = Path.join("lib", underscored) <> ".ex"
-    app  = Mix.project[:app] || :YOUR_APP_NAME
+    base        = Path.basename(underscored)
+    file        = Path.join("lib", underscored) <> ".ex"
+    app         = config[:app] || :YOUR_APP_NAME
 
     create_directory Path.dirname(file)
     create_file file, repo_template(mod: repo, app: app, base: base)
     open?(file)
 
-    unless Mix.project[:build_per_environment] do
+    unless config[:build_per_environment] do
       Mix.shell.info "We have generated a repo that uses a different database per environment. " <>
                      "So don't forget to set [build_per_environment: true] in your mix.exs file.\n"
     end
