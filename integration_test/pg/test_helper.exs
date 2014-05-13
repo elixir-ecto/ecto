@@ -96,6 +96,8 @@ defmodule Ecto.Integration.Postgres.AssignedPrimaryKey do
   @schema_defaults [primary_key: {:id, :string, []}]
   
   schema "assigned_primary_keys" do
+    has_one  :user,  Ecto.Integration.Postgres.User
+    has_many :users, Ecto.Integration.Postgres.User
   end
 end
 
@@ -166,7 +168,7 @@ setup_database = [
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
   "CREATE TABLE customs (foo text PRIMARY KEY)",
   "CREATE TABLE barebones (text text)",
-  "CREATE TABLE assigned_primary_keys (id text PRIMARY KEY)",
+  "CREATE TABLE assigned_primary_keys (id text PRIMARY KEY, user_id integer)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
