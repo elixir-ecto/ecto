@@ -229,7 +229,7 @@ defmodule Ecto.Repo do
 
   ## Example
 
-      post = Post.new(title: "Ecto is great", text: "really, it is")
+      post = %Post{title: "Ecto is great", text: "really, it is"}
              |> MyRepo.insert
   """
   defcallback insert(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
@@ -324,17 +324,17 @@ defmodule Ecto.Repo do
 
       # In the following example only the comment will be rolled back
       MyRepo.transaction(fn ->
-        MyRepo.insert(Post.new)
+        MyRepo.insert(%Post{})
 
         MyRepo.transaction(fn ->
-          MyRepo.insert(Comment.new)
+          MyRepo.insert(%Comment{})
           raise "error"
         end)
       end)
 
       # Roll back a transaction explicitly
       MyRepo.transaction(fn ->
-        p = MyRepo.insert(Post.new)
+        p = MyRepo.insert(%Post{})
         if not Editor.post_allowed?(p) do
           MyRepo.rollback!
         end

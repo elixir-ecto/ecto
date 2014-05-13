@@ -50,12 +50,12 @@ defmodule Ecto.Model do
       raise Ecto.NoPrimaryKey, model: model
     end
 
-    fields   = module.__schema__(:associations)
+    fields = module.__schema__(:associations)
 
     model = Map.put(model, pk_field, id)
 
     Enum.reduce(fields, model, fn field, model ->
-      if (refl = module.__schema__(:association, field)) && elem(refl, 0) in @key_assocs do
+      if (refl = module.__schema__(:association, field)) && refl.__struct__ in @key_assocs do
         Map.update!(model, refl.field, &(&1.__assoc__(:primary_key, id)))
       else
         model

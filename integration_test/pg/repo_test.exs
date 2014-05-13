@@ -235,14 +235,14 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid4} = TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
     assert_raise Ecto.AssociationNotLoadedError, fn ->
-      p1.comments.to_list
+      p1.comments.all
     end
     assert p1.comments.loaded? == false
 
     assert [p3, p1, p2] = Preloader.run([p3, p1, p2], TestRepo, :comments)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.to_list
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.to_list
-    assert [] = p3.comments.to_list
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.all
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
+    assert [] = p3.comments.all
     assert p1.comments.loaded? == true
   end
 
@@ -343,8 +343,8 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
     assert [p2, p1] = Preloader.run([p2, p1], TestRepo, [comments: :post])
-    assert [c1, c2] = p1.comments.to_list
-    assert [c3, c4] = p2.comments.to_list
+    assert [c1, c2] = p1.comments.all
+    assert [c3, c4] = p2.comments.all
     assert p1.id == c1.post.get.id
     assert p1.id == c2.post.get.id
     assert p2.id == c3.post.get.id
@@ -364,17 +364,17 @@ defmodule Ecto.Integration.RepoTest do
     query = from(p in Post, preload: [:comments], select: p)
 
     assert [p1, p2, p3] = TestRepo.all(query)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.to_list
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.to_list
-    assert [] = p3.comments.to_list
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.all
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
+    assert [] = p3.comments.all
 
     query = from(p in Post, preload: [:comments], select: { 0, [p] })
     posts = TestRepo.all(query)
     [p1, p2, p3] = Enum.map(posts, fn { 0, [p] } -> p end)
 
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.to_list
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.to_list
-    assert [] = p3.comments.to_list
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.all
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
+    assert [] = p3.comments.all
   end
 
   test "row transform" do
@@ -423,7 +423,7 @@ defmodule Ecto.Integration.RepoTest do
 
     post1 = TestRepo.all(from p in Post, preload: [:comments]) |> hd
 
-    assert Enum.count(post1.comments) == 1
+    assert Enum.count(post1.comments.all) == 1
   end
 
   test "has_many queryable" do
@@ -451,8 +451,8 @@ defmodule Ecto.Integration.RepoTest do
 
     query = from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
     assert [post1, post2] = TestRepo.all(query)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = post1.comments.to_list
-    assert [%Comment{id: ^cid3}] = post2.comments.to_list
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = post1.comments.all
+    assert [%Comment{id: ^cid3}] = post2.comments.all
     assert post1.comments.loaded? == true
   end
 
@@ -539,8 +539,8 @@ defmodule Ecto.Integration.RepoTest do
     assert p1.id == pid1
     assert p2.id == pid2
 
-    assert [c1, c2] = p1.comments.to_list
-    assert [c3] = p2.comments.to_list
+    assert [c1, c2] = p1.comments.all
+    assert [c3] = p2.comments.all
     assert c1.id == cid1
     assert c2.id == cid2
     assert c3.id == cid3
@@ -573,9 +573,9 @@ defmodule Ecto.Integration.RepoTest do
     assert p2.id == pid2
     assert p3.id == pid3
 
-    assert [c1, c2] = p1.comments.to_list
-    assert [] = p2.comments.to_list
-    assert [c3] = p3.comments.to_list
+    assert [c1, c2] = p1.comments.all
+    assert [] = p2.comments.all
+    assert [c3] = p3.comments.all
     assert c1.id == cid1
     assert c2.id == cid2
     assert c3.id == cid3

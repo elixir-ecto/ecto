@@ -30,18 +30,18 @@ defmodule Ecto.AssociationsTest do
 
   test "has_many new" do
     post = Ecto.Model.put_primary_key(%Post{}, 42)
-    assert %Comment{text: "heyo", post_id: 42} = post.comments.new(text: "heyo")
+    assert %Comment{text: "heyo", post_id: 42} = struct(post.comments, text: "heyo")
   end
 
   test "has_one new" do
     post = Ecto.Model.put_primary_key(%Post{}, 42)
-    assert %Permalink{url: "test", post_id: 42} = post.permalink.new(url: "test")
+    assert %Permalink{url: "test", post_id: 42} = struct(post.permalink, url: "test")
   end
 
   test "load association" do
     post = %Post{}
     post = Ecto.Associations.load(post, :comments, [:test])
-    assert [:test] = post.comments.to_list
+    assert [:test] = post.comments.all
 
     post = %Post{}
     post = Ecto.Associations.load(post, :permalink, :test)

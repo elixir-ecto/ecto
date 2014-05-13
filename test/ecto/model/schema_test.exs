@@ -139,8 +139,8 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "has_many association" do
-    refl = Ecto.Reflections.HasMany[field: :posts, owner: ModelAssocs,
-                                    associated: Post, key: :id, assoc_key: :modelassocs_id]
+    refl = %Ecto.Reflections.HasMany{field: :posts, owner: ModelAssocs,
+                                     associated: Post, key: :id, assoc_key: :modelassocs_id}
     assert refl == ModelAssocs.__schema__(:association, :posts)
 
     r = %ModelAssocs{}
@@ -151,8 +151,8 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "has_one association" do
-    refl = Ecto.Reflections.HasOne[field: :author, owner: ModelAssocs,
-                                   associated: User, key: :id, assoc_key: :modelassocs_id]
+    refl = %Ecto.Reflections.HasOne{field: :author, owner: ModelAssocs,
+                                    associated: User, key: :id, assoc_key: :modelassocs_id}
     assert refl == ModelAssocs.__schema__(:association, :author)
 
     r = %ModelAssocs{}
@@ -162,8 +162,8 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "belongs_to association" do
-    refl = Ecto.Reflections.BelongsTo[field: :comment, owner: ModelAssocs,
-                                      associated: Comment, key: :comment_id, assoc_key: :id]
+    refl = %Ecto.Reflections.BelongsTo{field: :comment, owner: ModelAssocs,
+                                       associated: Comment, key: :comment_id, assoc_key: :id}
     assert refl == ModelAssocs.__schema__(:association, :comment)
 
     assert ModelAssocs.__schema__(:field, :comment_id) == [type: :integer]
