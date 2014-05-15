@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
     {repo, _} = parse_repo(args)
     ensure_repo(repo)
-    if opts[:no_start], do: ensure_started(repo)
+    unless opts[:no_start], do: ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
       opts = Keyword.put(opts, :all, true)
