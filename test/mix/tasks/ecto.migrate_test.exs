@@ -31,7 +31,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
       assert repo == Repo
       assert path == "hello/migrations"
       assert direction == :up
-      assert strategy == [all: true, no_start: true]
+      assert strategy == [all: true, start: false]
     end
   end
 end
