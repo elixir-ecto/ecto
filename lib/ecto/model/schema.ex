@@ -37,7 +37,7 @@ defmodule Ecto.Model.Schema do
         ...
       end
 
-  Implicit defaults can be specified via the `@scehma_defaults` attribute.
+  Implicit defaults can be specified via the `@schema_defaults` attribute.
   This is useful if you want to use a different default primary key
   through your entire application.
 
@@ -81,6 +81,28 @@ defmodule Ecto.Model.Schema do
   The `belongs_to` association on `MyApp.Comment` will also now require
   that `:post_id` be of `:string` type to reference the `:uuid` of a
   `MyApp.Post` model.
+
+  ## Setting Primary Keys with Schema Defaults
+
+  In the example above, the `:uuid` primary key field needs to be
+  explicitly set by the developer before the Model can be inserted
+  or updated in a database.
+
+  To set a primary key, the developer **must** call the function
+  `Ecto.Model.put_primary_key/2`.
+
+  Example:
+
+      uuid = "some_uuid"
+
+      # Don't do this
+      post = %MyApp.Post{uuid: uuid}
+
+      # Do this instead
+      post = Ecto.Model.put_primary_key(%MyApp.Post{}, uuid)
+
+  This must be done in order to ensure that any associations of the Model
+  are appropriately updated.
 
   ## Reflection
 
