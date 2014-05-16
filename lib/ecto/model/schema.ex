@@ -1,37 +1,10 @@
 defmodule Ecto.Model.Schema do
   @moduledoc """
-  Defines a schema for a model. A schema is a struct with associated
-  meta data that is persisted to a repository.
-
-  Every schema model is also a struct, that means that you work with models just
-  like you would work with structs, to set the default values for the struct
-  fields the `default` option is set in the `field` options.
-
-  When used, it allows the following options:
-
-  * `:primary_key` - Sets the primary key, if this option is not set a primary
-                     key named *id* of type *integer* will be generated. If
-                     set to `false` no primary key will be generated, to set
-                     a custom primary key give `{name, type, opts}` to the option.
-
-  ## Reflection
-
-  Any schema module will generate the `__schema__` function that can be used for
-  runtime introspection of the schema.
-
-  * `__schema__(:source)` - Returns the source as given to `schema/2`;
-  * `__schema__(:field, field)` - Returns the options for the given field;
-  * `__schema__(:field_type, field)` - Returns the type of the given field;
-  * `__schema__(:field_names)` - Returns a list of all field names;
-  * `__schema__(:associations)` - Returns a list of all association field names;
-  * `__schema__(:association, field)` - Returns the given field's association
-                                        reflection;
-  * `__schema__(:primary_key)` - Returns the field that is the primary key or
-                                 `nil` if there is none;
-  * `__schema__(:allocate, values)` - Creates a new model struct from the given
-                                      field values;
-  * `__schema__(:keywords, model)` - Return a keyword list of all non-virtual
-                                     fields and their values;
+  Defines a schema for a model.
+  
+  A schema is a struct with associated metadata that is persisted to a
+  repository. Every schema model is also a struct, that means that you work
+  with models just like you would work with structs.
 
   ## Example
 
@@ -50,9 +23,9 @@ defmodule Ecto.Model.Schema do
 
   ## Schema defaults
 
-  When using the block syntax, the created model uses the usual default
-  of a primary key named `:id`, of type `:integer`. This can be customized
-  by passing `primary_key: false` to schema:
+  When using the block syntax, the created model uses the default
+  of a primary key named `:id`, of type `:integer`. This can be
+  customized by passing `primary_key: false` to schema:
 
       schema "weather", primary_key: false do
         ...
@@ -64,7 +37,7 @@ defmodule Ecto.Model.Schema do
         ...
       end
 
-  Global defaults can be specified via the `@scehma_defaults` attribute.
+  Implicit defaults can be specified via the `@scehma_defaults` attribute.
   This is useful if you want to use a different default primary key
   through your entire application.
 
@@ -102,12 +75,32 @@ defmodule Ecto.Model.Schema do
         end
       end
 
-  Any models using `MyApp.Model will get the `:uuid` field, with type `:string`
-  as the primary key.
+  Any models using `MyApp.Model will get the `:uuid` field, with type
+  `:string` as the primary key.
 
   The `belongs_to` association on `MyApp.Comment` will also now require
   that `:post_id` be of `:string` type to reference the `:uuid` of a
   `MyApp.Post` model.
+
+  ## Reflection
+
+  Any schema module will generate the `__schema__` function that can be used for
+  runtime introspection of the schema.
+
+  * `__schema__(:source)` - Returns the source as given to `schema/2`;
+  * `__schema__(:field, field)` - Returns the options for the given field;
+  * `__schema__(:field_type, field)` - Returns the type of the given field;
+  * `__schema__(:field_names)` - Returns a list of all field names;
+  * `__schema__(:associations)` - Returns a list of all association field names;
+  * `__schema__(:association, field)` - Returns the given field's association
+                                        reflection;
+  * `__schema__(:primary_key)` - Returns the field that is the primary key or
+                                 `nil` if there is none;
+  * `__schema__(:allocate, values)` - Creates a new model struct from the given
+                                      field values;
+  * `__schema__(:keywords, model)` - Return a keyword list of all non-virtual
+                                     fields and their values;
+
   """
 
   require Ecto.Query.Util, as: Util
@@ -115,6 +108,7 @@ defmodule Ecto.Model.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
+      # TODO: Move those imports out to Ecto.Model
       import Ecto.Query, only: [from: 2]
       import Ecto.Model, only: [primary_key: 1, put_primary_key: 2]
       import Ecto.Model.Schema, only: [schema: 2, schema: 3]
