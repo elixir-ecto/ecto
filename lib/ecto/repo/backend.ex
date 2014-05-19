@@ -28,6 +28,21 @@ defmodule Ecto.Repo.Backend do
   end
 
   def get(repo, adapter, queryable, id, opts) do
+    case do_get(repo, adapter, queryable, id, opts) do
+      {_model, [one]} -> one
+      {_model, []} -> nil
+      {model, results} -> raise Ecto.NotSingleResult, model: model, results: length(results)
+    end
+  end
+
+  def get!(repo, adapter, queryable, id, opts) do
+    case do_get(repo, adapter, queryable, id, opts) do
+      {_model, [one]} -> one
+      {model, results} -> raise Ecto.NotSingleResult, model: model, results: length(results)
+    end
+  end
+
+  defp do_get(repo, adapter, queryable, id, opts) do
     query       = Queryable.to_query(queryable)
     model      = query.from |> Util.model
     primary_key = model.__schema__(:primary_key)
@@ -43,15 +58,34 @@ defmodule Ecto.Repo.Backend do
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
     # normalization and what not.
-    query = Q.from(x in query,
-                   where: field(x, ^primary_key) == ^id,
-                   limit: 1) |> Normalizer.normalize
+    query = Q.from(x in query, where: field(x, ^primary_key) == ^id) |> Normalizer.normalize
 
-    case adapter.all(repo, query, opts) do
-      [model] -> model
-      [] -> nil
-      _ -> raise Ecto.NotSingleResult, model: model
+    models = adapter.all(repo, query, opts)
+    {model, models}
+  end
+
+  def one(repo, adapter, queryable, opts) do
+    case do_one(repo, adapter, queryable, opts) do
+      {_model, [one]} -> one
+      {_model, []} -> nil
+      {model, results} -> raise Ecto.NotSingleResult, model: model, results: length(results)
     end
+  end
+
+  def one!(repo, adapter, queryable, opts) do
+    case do_one(repo, adapter, queryable, opts) do
+      {_model, [one]} -> one
+      {model, results} -> raise Ecto.NotSingleResult, model: model, results: length(results)
+    end
+  end
+
+  defp do_one(repo, adapter, queryable, opts) do
+    query  = Queryable.to_query(queryable) |> Normalizer.normalize
+    model  = query.from |> Util.model
+    Validator.validate(query, repo.query_apis)
+
+    models = adapter.all(repo, query, opts)
+    {model, models}
   end
 
   def all(repo, adapter, queryable, opts) do
@@ -170,7 +204,7 @@ defmodule Ecto.Repo.Backend do
       module = model.__struct__
       pk_field = module.__schema__(:primary_key)
       pk_value = Map.get(model, pk_field)
-      raise Ecto.NotSingleResult, model: module, primary_key: pk_field, id: pk_value
+      raise Ecto.NotSingleResult, model: module, primary_key: pk_field, id: pk_value, results: result
     end
     :ok
   end
