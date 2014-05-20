@@ -24,8 +24,10 @@ defmodule Ecto.Mixfile do
 
   defp deps do
     [ { :poolboy, "~> 1.2.1" },
-      { :decimal, "~> 0.2.0" },
-      { :postgrex, "~> 0.5.0", optional: true },
+      # { :decimal, "~> 0.2.0" },
+      # { :postgrex, "~> 0.5.0", optional: true },
+      { :decimal, github: "ericmj/decimal" },
+      { :postgrex, github: "ericmj/postgrex" },
       { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
   end
 

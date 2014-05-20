@@ -159,12 +159,12 @@ defmodule Ecto.Query.Util do
   def literal?(value) when is_integer(value), do: true
   def literal?(value) when is_float(value),   do: true
   def literal?(%Decimal{}),                   do: true
-  def literal?(%Ecto.DateTime{}),              do: true
-  def literal?(%Ecto.Date{}),                  do: true
-  def literal?(%Ecto.Time{}),                  do: true
-  def literal?(%Ecto.Interval{}),              do: true
-  def literal?(%Ecto.Binary{}),                do: true
-  def literal?(%Ecto.Array{}),                 do: true
+  def literal?(%Ecto.DateTime{}),             do: true
+  def literal?(%Ecto.Date{}),                 do: true
+  def literal?(%Ecto.Time{}),                 do: true
+  def literal?(%Ecto.Interval{}),             do: true
+  def literal?(%Ecto.Binary{}),               do: true
+  def literal?(%Ecto.Array{}),                do: true
   def literal?(_),                            do: false
 
   # Returns true if the two types are considered equal by the type system

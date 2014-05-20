@@ -44,7 +44,7 @@ defmodule Ecto.Repo.Backend do
 
   defp do_get(repo, adapter, queryable, id, opts) do
     query       = Queryable.to_query(queryable)
-    model      = query.from |> Util.model
+    model       = query.from |> Util.model
     primary_key = model.__schema__(:primary_key)
 
     Validator.validate_get(query, repo.query_apis)
@@ -220,7 +220,7 @@ defmodule Ecto.Repo.Backend do
     pk_field = module.__schema__(:primary_key)
     pk_value = Map.get(model, pk_field)
     unless module.__schema__(:primary_key) && pk_value do
-      raise Ecto.NoPrimaryKey, model: model
+      raise Ecto.NoPrimaryKey, model: module
     end
   end
 

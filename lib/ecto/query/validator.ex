@@ -13,13 +13,12 @@ defmodule Ecto.Query.Validator do
 
   # Adds type, file and line metadata to the exception
   defmacrop rescue_metadata(type, file, line, block) do
-    quote location: :keep do
+    quote do
       try do
         unquote(block)
       rescue e in [Ecto.QueryError] ->
         stacktrace = System.stacktrace
-        raise Ecto.QueryError, [reason: e.reason, type: unquote(type),
-          file: unquote(file), line: unquote(line)], stacktrace
+        reraise %{e | type: unquote(type), file: unquote(file), line: unquote(line)}, stacktrace
       end
     end
   end
