@@ -41,7 +41,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Post{id: ^id, title: "create", text: "and fetch single"}] =
            TestRepo.all(Post)
 
-    assert Post.Entity[id: ^id, title: "create", text: "and fetch single"] = TestRepo.one(Post)
+    assert %Post{id: ^id, title: "create", text: "and fetch single"} = TestRepo.one(Post)
   end
 
   test "fetch without model" do
@@ -132,8 +132,8 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "one raises when result is more than one row" do
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "1", text: "hai"])
-    assert Post.Entity[] = TestRepo.insert(Post.Entity[title: "2", text: "hai"])
+    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
 
     assert_raise Ecto.NotSingleResult, fn ->
       TestRepo.one(from p in Post, where: p.text == "hai")
