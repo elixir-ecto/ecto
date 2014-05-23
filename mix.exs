@@ -27,7 +27,7 @@ defmodule Ecto.Mixfile do
       # { :decimal, "~> 0.2.0" },
       # { :postgrex, "~> 0.5.0", optional: true },
       { :decimal, github: "ericmj/decimal" },
-      { :postgrex, github: "ericmj/postgrex" },
+      { :postgrex, github: "ericmj/postgrex", optional: true },
       { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
   end
 

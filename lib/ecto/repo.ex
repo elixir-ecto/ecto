@@ -46,8 +46,13 @@ defmodule Ecto.Repo do
 
   @doc false
   defmacro __using__(opts) do
-    adapter = Keyword.fetch!(opts, :adapter)
+    adapter = Macro.expand(Keyword.fetch!(opts, :adapter), __CALLER__)
     env     = Keyword.get(opts, :env)
+
+    unless Code.ensure_loaded?(adapter) do
+      raise ArgumentError, message: "Adapter #{inspect adapter} was not compiled, " <>
+                                    "ensure its driver is included as a dependency of your project"
+    end
 
     quote do
       use unquote(adapter)
