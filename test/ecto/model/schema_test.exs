@@ -140,7 +140,7 @@ defmodule Ecto.Model.SchemaTest do
 
   test "has_many association" do
     refl = %Ecto.Reflections.HasMany{field: :posts, owner: ModelAssocs,
-                                     associated: Post, key: :id, assoc_key: :modelassocs_id}
+                                     associated: Post, key: :id, assoc_key: :model_assocs_id}
     assert refl == ModelAssocs.__schema__(:association, :posts)
 
     r = %ModelAssocs{}
@@ -152,7 +152,7 @@ defmodule Ecto.Model.SchemaTest do
 
   test "has_one association" do
     refl = %Ecto.Reflections.HasOne{field: :author, owner: ModelAssocs,
-                                    associated: User, key: :id, assoc_key: :modelassocs_id}
+                                    associated: User, key: :id, assoc_key: :model_assocs_id}
     assert refl == ModelAssocs.__schema__(:association, :author)
 
     r = %ModelAssocs{}

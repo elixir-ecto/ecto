@@ -7,7 +7,7 @@ defmodule Ecto.Associations do
 
   def create_reflection(type, name, module, pk, assoc, fk)
       when type in [:has_many, :has_one] do
-    model_name = module |> Module.split |> List.last |> String.downcase
+    model_name = module |> Module.split |> List.last |> Ecto.Utils.underscore
 
     values = [
       owner: module,
@@ -28,7 +28,7 @@ defmodule Ecto.Associations do
       associated: assoc,
       key: fk,
       assoc_key: pk,
-      field: name }
+      field: name}
   end
 
   def load(struct, field, loaded) do
