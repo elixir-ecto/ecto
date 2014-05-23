@@ -6,17 +6,23 @@ defmodule Mix.Tasks.Ecto.DropTest do
   # Mocked adapters
 
   defmodule Adapter do
+    @behaviour Ecto.Adapter.Storage
     defmacro __using__(_), do: :ok
+    def storage_up(_), do: :ok
     def storage_down(_), do: :ok
   end
 
   defmodule AlreadyDownAdapter do
+    @behaviour Ecto.Adapter.Storage
     defmacro __using__(_), do: :ok
+    def storage_up(_), do: :ok
     def storage_down(_), do: {:error, :already_down}
   end
 
   defmodule ConfusedAdapter do
+    @behaviour Ecto.Adapter.Storage
     defmacro __using__(_), do: :ok
+    def storage_up(_), do: :ok
     def storage_down(_), do: {:error, :confused}
   end
 
@@ -60,7 +66,7 @@ defmodule Mix.Tasks.Ecto.DropTest do
     assert_raise Mix.Error, fn -> run [to_string(ConfusedRepo)] end
   end
 
-  test "raises an error when the adapter doesn't define a storage_down" do
-    assert_raise Mix.Error, ~r/to define storage_down\/1/, fn -> run [to_string(NoStorageDownRepo)] end
+  test "raises an error when the adapter doesn't define a storage" do
+    assert_raise Mix.Error, ~r/to implement Ecto.Adapter.Storage/, fn -> run [to_string(NoStorageDownRepo)] end
   end
 end

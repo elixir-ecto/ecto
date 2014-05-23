@@ -85,4 +85,15 @@ defmodule Mix.Tasks.Ecto do
       raise Mix.Error, message: "cannot run task #{inspect task} from umbrella application"
     end
   end
+
+  @doc """
+  Returns `true` if module implements behaviour.
+  """
+  def ensure_implements(module, behaviour, message) do
+    all = Keyword.take(module.__info__(:attributes), [:behaviour])
+    unless [behaviour] in Keyword.values(all) do
+      raise Mix.Error, message: "Expected #{inspect module} to implement #{inspect behaviour} " <>
+                                "in order to #{message}"
+    end
+  end
 end

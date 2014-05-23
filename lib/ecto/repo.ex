@@ -71,14 +71,6 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.stop(__MODULE__, unquote(adapter))
       end
 
-      def storage_up do
-        Ecto.Repo.Backend.storage_up(__MODULE__, unquote(adapter))
-      end
-
-      def storage_down do
-        Ecto.Repo.Backend.storage_down(__MODULE__, unquote(adapter))
-      end
-
       def get(queryable, id, opts \\ []) do
         Ecto.Repo.Backend.get(__MODULE__, unquote(adapter), queryable, id, opts)
       end
@@ -182,24 +174,6 @@ defmodule Ecto.Repo do
   Stops any connection pooling or supervision started with `start_link/1`.
   """
   defcallback stop() :: :ok
-
-  @doc """
-  Create the storage in the data store and return `:ok` if it was created
-  successfully.
-
-  Returns `{:error, :already_up}` if the storage has already been created or
-  `{:error, term}` in case anything else goes wrong.
-  """
-  defcallback storage_up() :: :ok | {:error, :already_up} | {:error, term}
-
-  @doc """
-  Drop the storage in the data store and return `:ok` if it was dropped
-  successfully.
-
-  Returns `{:error, :already_down}` if the storage has already been dropped or
-  `{:error, term}` in case anything else goes wrong.
-  """
-  defcallback storage_down() :: :ok | {:error, :already_down} | {:error, term}
 
   @doc """
   Fetches a single model from the data store where the primary key matches the

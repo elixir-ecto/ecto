@@ -10,14 +10,6 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Query.Validator
   require Ecto.Query, as: Q
 
-  def storage_up(repo, adapter) do
-    adapter.storage_up(repo.conf)
-  end
-
-  def storage_down(repo, adapter) do
-    adapter.storage_down(repo.conf)
-  end
-
   def start_link(repo, adapter) do
     Enum.each(repo.query_apis, &Code.ensure_loaded(&1))
     adapter.start_link(repo, repo.conf)

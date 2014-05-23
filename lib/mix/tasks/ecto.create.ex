@@ -21,9 +21,9 @@ defmodule Mix.Tasks.Ecto.Create do
 
     {repo, _} = parse_repo(args)
     ensure_repo(repo)
-    ensure_storage_up(repo)
+    ensure_implements(repo.adapter, Ecto.Adapter.Storage, "to create storage for #{inspect repo}")
 
-    case repo.storage_up do
+    case Ecto.Storage.up(repo) do
       :ok ->
         Mix.shell.info "The database for repo #{inspect repo} has been created."
       {:error, :already_up} ->
@@ -31,13 +31,6 @@ defmodule Mix.Tasks.Ecto.Create do
       {:error, term} ->
         raise Mix.Error, message:
            "The database for repo #{inspect repo} couldn't be created, reason given: #{term}."
-    end
-  end
-
-  defp ensure_storage_up(repo) do
-    Code.ensure_loaded(repo.adapter)
-    unless function_exported?(repo.adapter, :storage_up, 1) do
-      raise Mix.Error, message: "Expected #{inspect repo.adapter} to define storage_up/1 in order to create #{inspect repo}."
     end
   end
 end
