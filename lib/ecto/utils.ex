@@ -16,4 +16,42 @@ defmodule Ecto.Utils do
       {:error, :bad_name} -> raise "invalid application #{inspect app}"
     end
   end
+
+  @doc """
+  Parses an Ecto URL of the following format:
+  `ecto://username:password@hostname:port/database?opts=123` where the
+  `password`, `port` and `options` are optional.
+  """
+  def parse_url(url) do
+    unless String.match? url, ~r/^[^:\/?#\s]+:\/\// do
+      raise Ecto.InvalidURL, url: url, reason: "url should start with a scheme, host should start with //"
+    end
+
+    info = URI.parse(url)
+
+    unless is_binary(info.userinfo) and size(info.userinfo) > 0  do
+      raise Ecto.InvalidURL, url: url, reason: "url has to contain a username"
+    end
+
+    unless String.match? info.path, ~r"^/([^/])+$" do
+      raise Ecto.InvalidURL, url: url, reason: "path should be a database name"
+    end
+
+    destructure [username, password], String.split(info.userinfo, ":")
+    database = String.slice(info.path, 1, size(info.path))
+    query = URI.decode_query(info.query || "") |> atomize_keys
+
+    opts = [ username: username,
+             hostname: info.host,
+             database: database ]
+
+    if password,  do: opts = [password: password] ++ opts
+    if info.port, do: opts = [port: info.port] ++ opts
+
+    opts ++ query
+  end
+
+  defp atomize_keys(dict) do
+    Enum.map dict, fn {k, v} -> {binary_to_atom(k), v} end
+  end
 end

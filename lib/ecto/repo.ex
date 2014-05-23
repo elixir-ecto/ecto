@@ -54,7 +54,7 @@ defmodule Ecto.Repo do
       @behaviour Ecto.Repo
       @env unquote(env)
 
-      import Ecto.Utils, only: [app_dir: 2]
+      import Ecto.Utils, only: [app_dir: 2, parse_url: 1]
 
       if @env do
         def conf do
@@ -120,10 +120,6 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.rollback(__MODULE__, unquote(adapter), value)
       end
 
-      def parse_url(url) do
-        Ecto.Repo.Backend.parse_url(url)
-      end
-
       def adapter do
         unquote(adapter)
       end
@@ -151,13 +147,6 @@ defmodule Ecto.Repo do
   """
   defcallback conf() :: Keyword.t
 
-
-  @doc """
-  Parses an Ecto URL of the following format:
-  `ecto://username:password@hostname:port/database?opts=123` where the
-  `password`, `port` and `options` are optional.
-  """
-  defcallback parse_url(String.t) :: Keyword.t
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`

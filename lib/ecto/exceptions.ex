@@ -21,7 +21,7 @@ defmodule Ecto.InvalidURL do
   defexception [:message, :url]
 
   def exception(opts) do
-    msg = "invalid url #{opts[:url]}: #{opts[:reason]}"
+    msg = "invalid url #{opts[:url]}, #{opts[:reason]}"
     %Ecto.InvalidURL{message: msg, url: opts[:url]}
   end
 end

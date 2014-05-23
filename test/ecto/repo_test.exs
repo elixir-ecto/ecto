@@ -19,6 +19,7 @@ defmodule Ecto.RepoTest.MyRepo do
 
   def conf, do: []
   def priv, do: app_dir(:ecto, "priv/db")
+  def url,  do: parse_url("ecto://user@localhost/db")
 end
 
 defmodule Ecto.RepoTest.MyModel do
@@ -199,32 +200,7 @@ defmodule Ecto.RepoTest do
     assert MyRepo.priv == Path.expand("../../_build/shared/lib/ecto/priv/db", __DIR__)
   end
 
-  test "parse_url options" do
-    url = MyRepo.parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b")
-    assert {:password, "hunter2"} in url
-    assert {:username, "eric"} in url
-    assert {:hostname, "host"} in url
-    assert {:database, "mydb"} in url
-    assert {:port, 12345} in url
-    assert {:size, "10"} in url
-    assert {:a, "b"} in url
-  end
-
-  test "fail on invalid urls" do
-    assert_raise Ecto.InvalidURL, ~r"url should start with a scheme", fn ->
-      MyRepo.parse_url("eric:hunter2@host:123/mydb")
-    end
-
-    assert_raise Ecto.InvalidURL, ~r"url has to contain a username", fn ->
-      MyRepo.parse_url("ecto://host:123/mydb")
-    end
-
-    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
-      MyRepo.parse_url("ecto://eric:hunter2@host:123/a/b/c")
-    end
-
-    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
-      MyRepo.parse_url("ecto://eric:hunter2@host:123/")
-    end
+  test "parse_url is available" do
+    assert MyRepo.url[:hostname] == "localhost"
   end
 end
