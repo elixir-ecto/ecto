@@ -31,8 +31,25 @@ defmodule Ecto.Associations do
       field: name}
   end
 
-  def load(struct, field, loaded) do
-    Map.update!(struct, field, &(&1.__assoc__(:loaded, loaded)))
+  def load(model, field, loaded) do
+    model  = Map.update!(model, field, &(&1.__assoc__(:loaded, loaded)))
+    module = model.__struct__
+    refl   = module.__schema__(:association, field)
+
+    # Set the foreign key field if loading a belongs_to association
+    # Only do it if we are loading the proper associated model
+    if refl.__struct__ == Ecto.Reflections.BelongsTo do
+      fk_field   = refl.key
+      pk_field   = refl.assoc_key
+      associated = refl.associated
+
+      if match?(%{__struct__: ^associated}, loaded) do
+        pk    = Map.get(loaded, pk_field)
+        model = Map.put(model, fk_field, pk)
+      end
+    end
+
+    model
   end
 
   defmacro defproxy(struct) do

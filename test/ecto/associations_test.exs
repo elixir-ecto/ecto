@@ -51,4 +51,11 @@ defmodule Ecto.AssociationsTest do
     comment = Ecto.Associations.load(comment, :post, :test)
     assert :test = comment.post.get
   end
+
+  test "loading belongs_to sets foreign key" do
+    post = %Post{id: 42}
+    comment = %Comment{}
+    comment = Ecto.Associations.load(comment, :post, post)
+    assert comment.post_id == 42
+  end
 end
