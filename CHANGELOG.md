@@ -1,4 +1,4 @@
-# v0.2.0-dev
+# v0.2.0 (2014-05-24)
 
 * Enhancements
   * Add `Ecto.Assocations.load/3` for loading associations

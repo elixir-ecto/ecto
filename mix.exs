@@ -3,7 +3,7 @@ defmodule Ecto.Mixfile do
 
   def project do
     [app: :ecto,
-     version: "0.2.0-dev",
+     version: "0.2.0",
      elixir: "~> 0.13.3",
      deps: deps,
      build_per_environment: false,
@@ -42,8 +42,8 @@ defmodule Ecto.Mixfile do
   defp package do
     [ contributors: ["Eric Meadows-Jönsson", "José Valim"],
       licenses: ["Apache 2.0"],
-      links: [ { "GitHub", "https://github.com/elixir-lang/ecto" },
-               { "Docs", "http://elixir-lang.org/docs/ecto/" } ] ]
+      links: %{"GitHub" => "https://github.com/elixir-lang/ecto",
+               "Docs" => "http://elixir-lang.org/docs/ecto/"} ]
   end
 
   defp docs do
