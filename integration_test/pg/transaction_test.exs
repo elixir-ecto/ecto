@@ -20,7 +20,9 @@ defmodule Ecto.Integration.TransactionTest do
     end
   end
 
-  defexception UniqueError, [:message]
+  defmodule UniqueError do
+    defexception [:message]
+  end
 
   setup_all do
     { :ok, _ } = TestRepo1.start_link

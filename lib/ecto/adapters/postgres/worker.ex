@@ -2,7 +2,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
   defmodule Ecto.Adapters.Postgres.Worker do
     @moduledoc false
 
-    use GenServer.Behaviour
+    use GenServer
 
     @timeout 5000
 

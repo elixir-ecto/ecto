@@ -233,7 +233,7 @@ defmodule Ecto.Associations.Preloader do
 
   defp set_at_pos(tuple, [ix|pos], value) when is_tuple(tuple) do
     elem = elem(tuple, ix)
-    set_elem(tuple, ix, set_at_pos(elem, pos, value))
+    put_elem(tuple, ix, set_at_pos(elem, pos, value))
   end
 
   defp set_at_pos(list, [ix|pos], value) when is_list(list) do
