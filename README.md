@@ -323,7 +323,7 @@ query = from p in Post,
 
 [post] = Repo.all(query)
 
-post.comments.to_list #=> [%Comment{...}, %Comment{...}]
+post.comments.all #=> [%Comment{...}, %Comment{...}]
 ```
 
 Notice we used the `assoc` helper to associate the returned posts and comments while assembling the query results.
@@ -332,7 +332,7 @@ It is easy to see above though that a developer simply wants to get all comments
 
 ```elixir
 posts = Repo.all(from p in Post, preload: [:comments])
-hd(posts).comments.to_list #=> [%Comment{...}, %Comment{...}]
+hd(posts).comments.all #=> [%Comment{...}, %Comment{...}]
 ```
 
 When preloading, Ecto first fetches all posts and then Ecto does a separate query to retrieve all comments associated with the returned posts.
@@ -341,10 +341,10 @@ Notice that Ecto does not lazy load associations. While lazily loading associati
 
 ```elixir
 post = Repo.get(Post, 42)
-post.comments.to_list #=> ** (Ecto.AssociationNotLoadedError)
+post.comments.all #=> ** (Ecto.AssociationNotLoadedError)
 ```
 
-Besides `has_many`, Ecto also supports `has_one` and `belongs_to` associations. They work similarly, except retrieving the association value is done via `get`, instead of `to_list`:
+Besides `has_many`, Ecto also supports `has_one` and `belongs_to` associations. They work similarly, except retrieving the association value is done via `get`, instead of `all`:
 
 ```elixir
 query = from(c in Comment, where: c.id == 42, preload: :post)
