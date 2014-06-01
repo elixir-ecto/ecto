@@ -150,12 +150,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp select(%QueryExpr{expr: expr}, distincts, sources) do
-      exprs = Enum.map_join(distincts, ", ", fn expr ->
-        Enum.map_join(expr.expr, ", ", fn {var, field} ->
-          {_, name} = Util.find_source(sources, var) |> Util.source
-          "#{name}.#{quote_column(field)}"
+      exprs =
+        Enum.map_join(distincts, ", ", fn expr ->
+          Enum.map_join(expr.expr, ", ", &expr(&1, sources))
         end)
-      end)
 
       "SELECT DISTINCT ON (" <> exprs <> ") " <> select_clause(expr, sources)
     end
@@ -189,12 +187,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp group_by([], _sources), do: nil
 
     defp group_by(group_bys, sources) do
-      exprs = Enum.map_join(group_bys, ", ", fn expr ->
-        Enum.map_join(expr.expr, ", ", fn {var, field} ->
-          {_, name} = Util.find_source(sources, var) |> Util.source
-          "#{name}.#{quote_column(field)}"
+      exprs =
+        Enum.map_join(group_bys, ", ", fn expr ->
+          Enum.map_join(expr.expr, ", ", &expr(&1, sources))
         end)
-      end)
 
       "GROUP BY " <> exprs
     end
@@ -206,16 +202,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp order_by([], _sources), do: nil
 
     defp order_by(order_bys, sources) do
-      exprs = Enum.map_join(order_bys, ", ", fn expr ->
-        Enum.map_join(expr.expr, ", ", &order_by_expr(&1, sources))
-      end)
+      exprs =
+        Enum.map_join(order_bys, ", ", fn expr ->
+          Enum.map_join(expr.expr, ", ", &order_by_expr(&1, sources))
+        end)
 
       "ORDER BY " <> exprs
     end
 
-    defp order_by_expr({dir, var, field}, sources) do
-      {_, name} = Util.find_source(sources, var) |> Util.source
-      str = "#{name}.#{quote_column(field)}"
+    defp order_by_expr({dir, expr}, sources) do
+      str = expr(expr, sources)
       case dir do
         :asc  -> str
         :desc -> str <> " DESC"

@@ -57,14 +57,12 @@ defmodule Ecto.Query.BuilderUtil do
   def escape({:<<>>, _, _} = bin, _vars), do: bin
 
   # sigils
-  def escape({name, _, _} = sigil, _vars)
-      when name in @expand_sigils do
+  def escape({name, _, _} = sigil, _vars) when name in @expand_sigils do
     sigil
   end
 
   # ops & functions
-  def escape({name, meta, args}, vars)
-      when is_atom(name) and is_list(args) do
+  def escape({name, meta, args}, vars) when is_atom(name) and is_list(args) do
     args = Enum.map(args, &escape(&1, vars))
     {:{}, [], [name, meta, args]}
   end

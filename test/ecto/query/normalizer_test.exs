@@ -35,15 +35,13 @@ defmodule Ecto.Query.NormalizerTest do
   test "group by all fields" do
     query = from(p in Post, group_by: [p, p.text]) |> normalize
     var = {:&, [], [0]}
-    assert [{var, :id}, {var, :title}, {var, :text}, {var, :text}] =
-           List.first(query.group_bys).expr
+    assert List.first(query.group_bys).expr == field_list(var, [:id, :title, :text, :text])
   end
 
   test "distinct all fields" do
     query = from(p in Post, distinct: [p, p.text]) |> normalize
     var = {:&, [], [0]}
-    assert [{var, :id}, {var, :title}, {var, :text}, {var, :text}] =
-           List.first(query.distincts).expr
+    assert List.first(query.distincts).expr == field_list(var, [:id, :title, :text, :text])
   end
 
   test "normalize assoc joins" do
@@ -71,5 +69,11 @@ defmodule Ecto.Query.NormalizerTest do
     assert_raise Ecto.QueryError, fn ->
       normalize(query)
     end
+  end
+
+  defp field_list(var, fields) do
+    Enum.map(fields, fn field ->
+      {{:., [], [var, field]}, [], []}
+    end)
   end
 end

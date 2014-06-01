@@ -61,6 +61,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = Model |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
 
+    query = Model |> distinct([r], 2 * 2) |> select([r], r.x) |> normalize
+    assert SQL.select(query) == "SELECT DISTINCT ON (2 * 2) m0.\"x\"\nFROM \"model\" AS m0"
+
     query = Model |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"x\", m0.\"y\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
 
@@ -82,6 +85,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "order by" do
     query = Model |> order_by([r], r.x) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nORDER BY m0.\"x\""
+
+    query = Model |> order_by([r], 2 * 2) |> select([r], r.x) |> normalize
+    assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nORDER BY 2 * 2"
 
     query = Model |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nORDER BY m0.\"x\", m0.\"y\""
@@ -337,6 +343,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "group by" do
     query = Model |> group_by([r], r.x) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"x\""
+
+    query = Model |> group_by([r], 2 * 2) |> select([r], r.x) |> normalize
+    assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY 2 * 2"
 
     query = Model |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"x\", m0.\"y\""

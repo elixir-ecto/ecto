@@ -28,10 +28,10 @@ defmodule Ecto.Query.Validator do
       raise Ecto.QueryError, reason: "a query must have a from expression"
     end
 
-    grouped = exprs_sources(query.group_bys, query.sources)
-    is_grouped = query.group_bys != [] or query.havings != []
+    grouped = flatten(query.group_bys)
+    grouped? = query.group_bys != [] or query.havings != []
     state = Map.merge(new_state,
-                      %{sources: query.sources, grouped: grouped, grouped?: is_grouped,
+                      %{sources: query.sources, grouped: grouped, grouped?: grouped?,
                         apis: apis, from: query.from, query: query})
 
     validate_joins(query.joins, state)
@@ -66,7 +66,7 @@ defmodule Ecto.Query.Validator do
 
         # TODO: Check if model field allows nil
         state = Map.merge(new_state, %{sources: query.sources, apis: apis})
-        type = type_check(expr, state)
+        type = check(expr, state)
 
         format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
         format_type = Util.type_to_ast(type) |> Macro.to_string
@@ -117,9 +117,9 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_booleans(type, query_exprs, state) do
-    Enum.each(query_exprs, fn(expr) ->
+    Enum.each(query_exprs, fn expr ->
       rescue_metadata(type, expr.file, expr.line) do
-        expr_type = type_check(expr.expr, state)
+        expr_type = catch_grouped(fn -> check(expr.expr, state) end)
 
         unless expr_type in [:unknown, :boolean] do
           format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
@@ -131,39 +131,25 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_order_bys(order_bys, state) do
-    validate_field_list(:order_by, order_bys, state)
-  end
-
-  defp validate_group_bys(group_bys, state) do
-    validate_field_list(:group_by, group_bys, state)
-  end
-
-  defp validate_field_list(type, query_exprs, state) do
-    Enum.each(query_exprs, fn(expr) ->
-      rescue_metadata(type, expr.file, expr.line) do
-        Enum.map(expr.expr, fn expr ->
-          validate_field(expr, state)
+    state = %{state | grouped?: false}
+    Enum.each(order_bys, fn expr ->
+      rescue_metadata(:order_by, expr.file, expr.line) do
+        Enum.each(expr.expr, fn {_dir, expr} ->
+          check(expr, state)
         end)
       end
     end)
   end
 
-  # order_by field
-  defp validate_field({_, var, field}, state) do
-    validate_field({var, field}, state)
-  end
-
-  # group_by field
-  defp validate_field({var, field}, %{sources: sources}) do
-    model = Util.find_source(sources, var) |> Util.model
-    if model, do: do_validate_field(model, field)
-  end
-
-  defp do_validate_field(model, field) do
-    type = model.__schema__(:field_type, field)
-    unless type do
-      raise Ecto.QueryError, reason: "unknown field `#{field}` on `#{inspect model}`"
-    end
+  defp validate_group_bys(group_bys, state) do
+    state = %{state | grouped?: false}
+    Enum.each(group_bys, fn expr ->
+      rescue_metadata(:group_by, expr.file, expr.line) do
+        Enum.each(expr.expr, fn expr ->
+          check(expr, state)
+        end)
+      end
+    end)
   end
 
   defp validate_preloads(preloads, %{from: from}) do
@@ -192,30 +178,38 @@ defmodule Ecto.Query.Validator do
 
   defp validate_select(expr, state) do
     rescue_metadata(:select, expr.file, expr.line) do
-      select_clause(expr.expr, state)
+      catch_grouped(fn -> select_clause(expr.expr, state) end)
     end
   end
 
-  defp validate_distincts(%Query{order_bys: order_bys, distincts: distincts, sources: sources}, state) do
-    validate_field_list(:distinct, distincts, state)
+  defp validate_distincts(%Query{order_bys: order_bys, distincts: distincts}, state) do
+    state = %{state | grouped?: false}
+    Enum.each(distincts, fn expr ->
+      rescue_metadata(:distinct, expr.file, expr.line) do
+        Enum.each(expr.expr, fn expr ->
+          check(expr, state)
+        end)
+      end
+    end)
 
     # ensure that the fields in `distinct` appears before other fields in the `order_by` expression
 
-    # ex: distinct: id, title / order_by: title, id => no error
+    # ex: distinct: id, title / order_by: id, title => no error
+    #     distinct: id, title / order_by: title, id => no error
     #     distinct: title / order_by: id => raise (title not in order_by)
     #     distinct: title / order_by: id, title => raise (title in order_by but not leftmost part)
 
     distincts =
       Enum.map(distincts, fn expr ->
-        Enum.map(expr.expr, fn {var, field} ->
-          source = Util.find_source(sources, var) |> Util.source
-          {source, field, {expr.file, expr.line}}
+        Enum.map(expr.expr, fn distinct ->
+          {distinct, {expr.file, expr.line}}
         end)
       end) |> Enum.concat
 
     order_bys =
-      order_bys_sources(order_bys, sources)
-      |> Enum.map(fn {{source, _}, field} -> {source, field} end)
+      Enum.map(order_bys, fn expr ->
+        Enum.map(expr.expr, fn {_dir, expr} -> expr end)
+      end) |> Enum.concat
 
     do_validate_distincts(distincts, order_bys)
   end
@@ -224,19 +218,18 @@ defmodule Ecto.Query.Validator do
 
   defp do_validate_distincts(_, []), do: :ok
 
-  defp do_validate_distincts(distincts, [{source, field} | order_bys]) do
-    filter = fn
-      {s, f, _} when s == source and f == field -> true
-      _ -> false
+  defp do_validate_distincts(distincts, [order_by_expr|order_bys]) do
+    filter = fn {distinct_expr, _} ->
+      equal?(distinct_expr, order_by_expr)
     end
 
-    in_distinct? =  Enum.any?(distincts, filter)
+    in_distinct? = Enum.any?(distincts, filter)
 
     if in_distinct? do
       distincts = Enum.reject(distincts, filter)
       do_validate_distincts(distincts, order_bys)
     else
-      {_, _, {file, line}} = Enum.at(distincts, 0)
+      {_, {file, line}} = List.first(distincts)
       raise Ecto.QueryError, reason: "the `order_by` expression should first reference " <>
         "all the `distinct` fields before other fields", type: :distinct, file: file, line: line
     end
@@ -254,10 +247,15 @@ defmodule Ecto.Query.Validator do
     end
   end
 
+  defp check(expr, state) do
+    state = check_grouped(expr, state)
+    type_check(expr, state)
+  end
+
   # var.x
-  defp type_check({{:., _, [{:&, _, [_]} = var, field]}, _, []}, %{sources: sources} = state) do
+  defp type_check({{:., _, [{:&, _, [_]} = var, field]}, _, []} = expr, %{sources: sources} = state) do
+    check_was_grouped(expr, state)
     source = Util.find_source(sources, var)
-    check_grouped({source, field}, state)
 
     if model = Util.model(source) do
       type = model.__schema__(:field_type, field)
@@ -275,7 +273,13 @@ defmodule Ecto.Query.Validator do
     source = Util.find_source(sources, var)
     if model = Util.model(source) do
       fields = model.__schema__(:field_names)
-      Enum.each(fields, &check_grouped({source, &1}, state))
+
+      Enum.each(fields, fn field ->
+        field_expr = {{:., [], [var, field]}, [], []}
+        state = check_grouped(field_expr, state)
+        check_was_grouped(field_expr, state)
+      end)
+
       model
     else
       source = Util.source(source)
@@ -299,7 +303,7 @@ defmodule Ecto.Query.Validator do
     end
 
     state = %{state | in_agg?: is_agg}
-    arg_types = Enum.map(args, &type_check(&1, state))
+    arg_types = Enum.map(args, &check(&1, state))
 
     if Enum.any?(arg_types, &(&1 == :unknown)) do
       :unknown
@@ -350,12 +354,6 @@ defmodule Ecto.Query.Validator do
     assoc_select(var, fields, state)
   end
 
-  # Some two-tuples may be records (ex. Ecto.Binary[]), so check for records
-  # explicitly. We can do this because we don't allow atoms in queries.
-  defp select_clause({atom, _} = record, state) when is_atom(atom) do
-    type_check(record, state)
-  end
-
   defp select_clause({left, right}, state) do
     select_clause(left, state)
     select_clause(right, state)
@@ -370,7 +368,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp select_clause(other, state) do
-    type_check(other, state)
+    check(other, state)
   end
 
   defp assoc_select(parent_var, fields, %{query: query, sources: sources} = state) do
@@ -403,34 +401,58 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp exprs_sources(exprs, sources) do
-    Enum.map(exprs, fn(expr) ->
-      Enum.map(expr.expr, fn({var, field}) ->
-        source = Util.find_source(sources, var)
-        {source, field}
-      end)
-    end) |> Enum.concat |> Enum.uniq
+  defp flatten(exprs) do
+    Enum.flat_map(exprs, &(&1.expr))
   end
 
-  defp order_bys_sources(order_bys_expr, sources) do
-    Enum.map(order_bys_expr, fn(expr) ->
-      Enum.map(expr.expr, fn({_, var, field}) ->
-        source = Util.find_source(sources, var)
-        {source, field}
-      end)
-    end) |> Enum.concat |> Enum.uniq
-  end
-
-  defp check_grouped({source, field} = source_field, %{grouped?: grouped?, in_agg?: in_agg?, grouped: grouped}) do
-    if grouped? and not in_agg? and not (source_field in grouped) do
-      model = Util.model(source) || Util.source(source)
-      raise Ecto.QueryError, reason: "`#{inspect model}.#{field}` must appear in `group_by` " <>
-        "or be used in an aggregate function"
+  defp check_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false, grouped: grouped} = state) do
+    if Enum.any?(grouped, &equal?(expr, &1)) do
+      %{state | was_grouped?: true}
+    else
+      state
     end
   end
 
+  defp check_grouped(_expr, state) do
+    state
+  end
+
+  defp check_was_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false}) do
+    throw {:not_grouped, expr}
+  end
+
+  defp check_was_grouped(_expr, _state), do: :ok
+
+  defp catch_grouped(fun) do
+    try do
+      fun.()
+    catch
+      :throw, {:not_grouped, expr} ->
+        # TODO: Use query inspect here to remove &1
+        raise Ecto.QueryError, reason: "`#{Macro.to_string(expr)}` " <>
+          "must appear in `group_by` or be used in an aggregate function"
+    end
+  end
+
+  # Checks if two query expressions are equal
+  defp equal?({func1, _, args1}, {func2, _, args2}),
+    do: equal?(func1, func2) and equal?(args1, args2)
+
+  defp equal?([arg1|list1], [arg2|list2]),
+    do: equal?(arg1, arg2) and equal?(list1, list2)
+
+  defp equal?([], []),
+    do: true
+
+  defp equal?(arg, arg),
+    do: true
+
+  defp equal?(_arg1, _arg2),
+    do: false
+
   defp new_state do
     %{sources: [], vars: [], grouped: [], grouped?: false,
-      in_agg?: false, apis: nil, from: nil, query: nil}
+      was_grouped?: false, in_agg?: false, apis: nil, from: nil,
+      query: nil}
   end
 end

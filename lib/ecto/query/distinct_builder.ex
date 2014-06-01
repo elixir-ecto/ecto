@@ -4,6 +4,30 @@ defmodule Ecto.Query.DistinctBuilder do
   alias Ecto.Query.BuilderUtil
 
   @doc """
+  Escapes a list of quoted expressions.
+
+  See `Ecto.BuilderUtil.escape/2`.
+
+      iex> escape(quote do [x.x, foo()] end, [x: 0])
+      [{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
+       {:{}, [], [:foo, [], []]}]
+  """
+  @spec escape(Macro.t, Keyword.t) :: Macro.t
+  def escape(expr, vars) do
+    Enum.map(List.wrap(expr), fn expr ->
+      do_escape(expr, vars)
+    end)
+  end
+
+  defp do_escape({var, _, context}, vars) when is_atom(var) and is_atom(context) do
+    BuilderUtil.escape_var(var, vars)
+  end
+
+  defp do_escape(expr, vars) do
+    BuilderUtil.escape(expr, vars)
+  end
+
+  @doc """
   Builds a quoted expression.
 
   The quoted expression should evaluate to a query at runtime.
@@ -13,7 +37,7 @@ defmodule Ecto.Query.DistinctBuilder do
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
     binding  = BuilderUtil.escape_binding(binding)
-    expr     = BuilderUtil.escape_fields_and_vars(expr, binding)
+    expr     = escape(expr, binding)
     distinct = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
                            file: unquote(env.file), line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [distinct], env)
