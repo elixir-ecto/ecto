@@ -62,5 +62,14 @@ defmodule Ecto.Model do
       end
     end)
   end
+
+  @doc """
+  Shortcut for from p in __MODULE__
+  """
+  defmacro scoped(field, opts) do
+    quote do
+      from unquote(field) in __MODULE__, unquote(opts)
+    end
+  end
 end
 
