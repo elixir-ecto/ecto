@@ -9,6 +9,7 @@ defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def conf do
+    # The scheme can be anything, "ecto" is just an example
     parse_url "ecto://postgres:postgres@localhost/ecto_simple"
   end
 end
@@ -43,7 +44,7 @@ Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, yo
 ```elixir
 defp deps do
   [{:postgrex, ">= 0.0.0"},
-   {:ecto, "~> 0.1.0"}]
+   {:ecto, "~> 0.2.0"}]
 end
 ```
 
