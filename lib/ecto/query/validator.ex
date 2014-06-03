@@ -131,11 +131,10 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_order_bys(order_bys, state) do
-    state = %{state | grouped?: false}
     Enum.each(order_bys, fn expr ->
       rescue_metadata(:order_by, expr.file, expr.line) do
         Enum.each(expr.expr, fn {_dir, expr} ->
-          check(expr, state)
+          catch_grouped(fn -> check(expr, state) end)
         end)
       end
     end)
@@ -183,11 +182,10 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_distincts(%Query{order_bys: order_bys, distincts: distincts}, state) do
-    state = %{state | grouped?: false}
     Enum.each(distincts, fn expr ->
       rescue_metadata(:distinct, expr.file, expr.line) do
         Enum.each(expr.expr, fn expr ->
-          check(expr, state)
+          catch_grouped(fn -> check(expr, state) end)
         end)
       end
     end)
