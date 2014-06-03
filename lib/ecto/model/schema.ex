@@ -132,7 +132,7 @@ defmodule Ecto.Model.Schema do
     quote do
       # TODO: Move those imports out to Ecto.Model
       import Ecto.Query, only: [from: 2]
-      import Ecto.Model, only: [primary_key: 1, put_primary_key: 2]
+      import Ecto.Model, only: [primary_key: 1, put_primary_key: 2, scoped: 2]
       import Ecto.Model.Schema, only: [schema: 2, schema: 3]
     end
   end

@@ -64,7 +64,9 @@ defmodule Ecto.Model do
   end
 
   @doc """
-  Shortcut for from p in __MODULE__
+  Scopes a query to the local model.
+
+  Shorthand for `from(var in __MODULE__, ...)`.
   """
   defmacro scoped(field, opts) do
     quote do
