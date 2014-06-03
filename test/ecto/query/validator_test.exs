@@ -304,6 +304,23 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "aggregate function groups expression" do
+    query = Post |> select([p], [count(p.id), p.title])
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+
+    query = Post |> order_by([p], count(p.id)) |> select([p], p.title)
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+
+    query = Post |> distinct([p], count(p.id)) |> select([p], p.title)
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+  end
+
   test "group_by groups model expression" do
     query = Post |> group_by([p], [p.id, p.title, p.text]) |> select([p], p)
     validate(query)

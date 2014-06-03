@@ -29,7 +29,7 @@ defmodule Ecto.Query.Validator do
     end
 
     grouped = flatten(query.group_bys)
-    grouped? = query.group_bys != [] or query.havings != []
+    grouped? = grouped?(query, apis)
     state = Map.merge(new_state,
                       %{sources: query.sources, grouped: grouped, grouped?: grouped?,
                         apis: apis, from: query.from, query: query})
@@ -296,6 +296,9 @@ defmodule Ecto.Query.Validator do
     end
 
     is_agg = api.aggregate?(name, length_args)
+
+    # TODO: Check if aggregate function is allowed
+
     if is_agg and in_agg? do
       raise Ecto.QueryError, reason: "aggregate function calls cannot be nested"
     end
@@ -401,6 +404,43 @@ defmodule Ecto.Query.Validator do
 
   defp flatten(exprs) do
     Enum.flat_map(exprs, &(&1.expr))
+  end
+
+  defp grouped?(query, apis) do
+    query.group_bys != [] or
+    query.havings != [] or
+    has_aggregate?(query.order_bys, apis) or
+    has_aggregate?(query.distincts, apis) or
+    has_aggregate?(query.select, apis)
+  end
+
+  defp has_aggregate?(%Ecto.Query.QueryExpr{expr: expr}, apis) do
+    has_aggregate?(expr, apis)
+  end
+
+  defp has_aggregate?({left, right}, apis) do
+    has_aggregate?(left, apis) or has_aggregate?(right, apis)
+  end
+
+  defp has_aggregate?({name, _, args}, apis) when is_atom(name) and is_list(args) do
+    length_args = length(args)
+
+    api = Enum.find(apis, &function_exported?(&1, name, length_args))
+    agg? = api && api.aggregate?(name, length_args)
+
+    !!agg? or Enum.any?(args, &has_aggregate?(&1, apis))
+  end
+
+  defp has_aggregate?({arg, _, args}, apis) when is_list(args) do
+    has_aggregate?(arg, apis) or Enum.any?(args, &has_aggregate?(&1, apis))
+  end
+
+  defp has_aggregate?(list, apis) when is_list(list) do
+    Enum.any?(list, &has_aggregate?(&1, apis))
+  end
+
+  defp has_aggregate?(_other, _apis) do
+    false
   end
 
   defp check_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false, grouped: grouped} = state) do

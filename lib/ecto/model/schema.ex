@@ -171,8 +171,8 @@ defmodule Ecto.Model.Schema do
       unquote(block)
       import Ecto.Model.Schema, only: []
 
-      all_fields  = @ecto_fields |> Enum.reverse
-      assocs      = @ecto_assocs |> Enum.reverse
+      all_fields = @ecto_fields |> Enum.reverse
+      assocs     = @ecto_assocs |> Enum.reverse
 
       fields = Enum.filter(all_fields, fn {_, opts} -> opts[:type] != :virtual end)
 

@@ -4,6 +4,9 @@
   * Add support for all query expressions in `order_by`, `group_by` and `distinct` expressions, instead of only allowing lists of fields
   * Add `Ecto.Model.scoped/2` as a shorthand for `from(x in __MODULE__, ...)`
 
+* Bug fixes
+  * Aggregate functions in `order_by`, `distinct` and `select` will make the query grouped
+
 * Backwards incompatible changes
   * Single variables in `group_by` and `distinct` no longer expands to a list of fields
 
