@@ -14,17 +14,8 @@ defmodule Ecto.Query.DistinctBuilder do
   """
   @spec escape(Macro.t, Keyword.t) :: Macro.t
   def escape(expr, vars) do
-    Enum.map(List.wrap(expr), fn expr ->
-      do_escape(expr, vars)
-    end)
-  end
-
-  defp do_escape({var, _, context}, vars) when is_atom(var) and is_atom(context) do
-    BuilderUtil.escape_var(var, vars)
-  end
-
-  defp do_escape(expr, vars) do
-    BuilderUtil.escape(expr, vars)
+    List.wrap(expr)
+    |> BuilderUtil.escape(vars)
   end
 
   @doc """

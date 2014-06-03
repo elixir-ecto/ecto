@@ -220,9 +220,6 @@ defmodule Ecto.Query.ValidatorTest do
     query = Post |> distinct([p], [p.id, p.title]) |> order_by([p], [p.title, p.id])
     validate(query)
 
-    query = Post |> distinct([p], p) |> order_by([p], [p.id, p.title])
-    validate(query)
-
     query = Post |> select([p], p.title) |> distinct([p], p.title) |> order_by([p], p.title)
     validate(query)
 

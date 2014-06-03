@@ -407,6 +407,8 @@ defmodule Ecto.Query.Validator do
 
   defp check_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false, grouped: grouped} = state) do
     if Enum.any?(grouped, &equal?(expr, &1)) do
+      # TODO: If primary key was grouped on we can use all fields from
+      #       that model
       %{state | was_grouped?: true}
     else
       state

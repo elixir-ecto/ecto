@@ -18,30 +18,19 @@ defmodule Ecto.Query.OrderByBuilder do
 
   """
   @spec escape(Macro.t, Keyword.t) :: Macro.t
-  def escape(list, vars) when is_list(list) do
-    Enum.map(list, &do_escape(&1, vars))
-  end
-
   def escape(expr, vars) do
-    [do_escape(expr, vars)]
+    List.wrap(expr)
+    |> Enum.map(&do_escape(&1, vars))
   end
 
   defp do_escape({dir, expr}, vars) do
     check_dir(dir)
-    ast = escape_expr(expr, vars)
+    ast = BuilderUtil.escape(expr, vars)
     {dir, ast}
   end
 
   defp do_escape(expr, vars) do
-    {:asc, escape_expr(expr, vars)}
-  end
-
-  defp escape_expr({var, _, context}, vars) when is_atom(var) and is_atom(context) do
-    BuilderUtil.escape_var(var, vars)
-  end
-
-  defp escape_expr(expr, vars) do
-    BuilderUtil.escape(expr, vars)
+    {:asc, BuilderUtil.escape(expr, vars)}
   end
 
   defp check_dir(dir) when dir in [:asc, :desc], do: :ok

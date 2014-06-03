@@ -66,12 +66,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"x\", m0.\"y\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
-
-    query = Model |> distinct([r], r) |> select([r], {r.x, r.y}) |> normalize
-    assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
-
-    query = Model |> distinct([r], [r, r.x]) |> select([r], {r.x, r.y}) |> normalize
-    assert SQL.select(query) == "SELECT DISTINCT ON (m0.\"id\", m0.\"x\", m0.\"y\", m0.\"x\") m0.\"x\", m0.\"y\"\nFROM \"model\" AS m0"
   end
 
   test "where" do
@@ -349,12 +343,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"x\", m0.\"y\""
-
-    query = Model |> group_by([r], r) |> select([r], r.x) |> normalize
-    assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"id\", m0.\"x\", m0.\"y\""
-
-    query = Model |> group_by([r], [r, r.x]) |> select([r], r.x) |> normalize
-    assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0\nGROUP BY m0.\"id\", m0.\"x\", m0.\"y\", m0.\"x\""
   end
 
   test "sigils" do
