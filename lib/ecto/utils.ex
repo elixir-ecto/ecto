@@ -19,8 +19,11 @@ defmodule Ecto.Utils do
 
   @doc """
   Parses an Ecto URL of the following format:
-  `ecto://username:password@hostname:port/database?opts=123` where the
-  `password`, `port` and `options` are optional.
+  `ecto://username:password@hostname:port/database?opts=123` where all options
+  but the database is optional.
+
+  If `username` is not specified, `$PGUSER` or `$USER` will be used. `password`
+  defaults to `$PGPASS`. `hostname` defaults to `$PGHOST` or `localhost`.
   """
   def parse_url(url) do
     unless String.match? url, ~r/^[^:\/?#\s]+:\/\// do
@@ -28,10 +31,6 @@ defmodule Ecto.Utils do
     end
 
     info = URI.parse(url)
-
-    unless is_binary(info.userinfo) and size(info.userinfo) > 0  do
-      raise Ecto.InvalidURL, url: url, reason: "url has to contain a username"
-    end
 
     unless String.match? info.path, ~r"^/([^/])+$" do
       raise Ecto.InvalidURL, url: url, reason: "path should be a database name"
@@ -42,12 +41,12 @@ defmodule Ecto.Utils do
     query = URI.decode_query(info.query || "") |> atomize_keys
 
     opts = [ username: username,
+             password: password,
              hostname: info.host,
-             database: database ]
+             database: database,
+             port:     info.port ]
 
-    if password,  do: opts = [password: password] ++ opts
-    if info.port, do: opts = [port: info.port] ++ opts
-
+    opts = Enum.reject(opts, fn {_k, v} -> nil?(v) end)
     opts ++ query
   end
 
