@@ -156,9 +156,9 @@ defmodule Ecto.Model.Validations do
 
  or even receive arguments:
 
-     validatep validate_attachments(user, valid_formats \\ ~w(jpg gif png)),
-        filename: has_format(~r/\w+/),
-          format: member_of(valid_formats)
+      validatep validate_attachments(user, valid_formats \\ ~w(jpg gif png)),
+         filename: has_format(~r/\w+/),
+           format: member_of(valid_formats)
 
   or:
 
