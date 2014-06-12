@@ -22,20 +22,17 @@ defmodule Ecto.Integration.LockTest do
 
   setup_all do
     { :ok, _ } = TestRepo1.start_link
+    on_exit fn -> TestRepo1.stop end
     :ok
-  end
-
-  teardown_all do
-    :ok = TestRepo1.stop
   end
 
   setup do
     %LockCounter{id: 42, count: 1} |> TestRepo1.insert
-    :ok
-  end
 
-  teardown do
-    TestRepo1.get(LockCounter, 42) |> TestRepo1.delete
+    on_exit fn ->
+      TestRepo1.get(LockCounter, 42) |> TestRepo1.delete
+    end
+
     :ok
   end
 

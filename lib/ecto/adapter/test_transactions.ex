@@ -30,10 +30,10 @@ defmodule Ecto.Adapter.TestTransactions  do
 
         setup do
           Postgres.begin_test_transaction(TestRepo)
-        end
 
-        teardown do
-          Postgres.rollback_test_transaction(TestRepo)
+          on_exit fn ->
+            Postgres.rollback_test_transaction(TestRepo)
+          end
         end
 
         test "create comment" do

@@ -121,10 +121,12 @@ defmodule Ecto.Integration.Postgres.Case do
 
   setup do
     :ok = Postgres.begin_test_transaction(TestRepo, [])
-  end
 
-  teardown do
-    :ok = Postgres.rollback_test_transaction(TestRepo, [])
+    on_exit fn ->
+      :ok = Postgres.rollback_test_transaction(TestRepo, [])
+    end
+
+    :ok
   end
 end
 

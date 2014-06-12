@@ -25,8 +25,8 @@ defmodule Ecto.Integration.StorageTest do
     System.cmd ~s(psql -U postgres -c "CREATE DATABASE storage_mgt;")
   end
 
-  teardown do
-    drop_database
+  setup do
+    on_exit fn -> drop_database end
     :ok
   end
 
