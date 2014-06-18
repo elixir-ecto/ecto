@@ -1,4 +1,4 @@
-# v0.2.1-dev
+# v0.2.1 (2014-06-18)
 
 * Enhancements
   * Add support for all query expressions in `order_by`, `group_by` and `distinct` expressions, instead of only allowing lists of fields

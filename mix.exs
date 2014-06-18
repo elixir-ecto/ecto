@@ -3,8 +3,8 @@ defmodule Ecto.Mixfile do
 
   def project do
     [app: :ecto,
-     version: "0.2.1-dev",
-     elixir: "== 0.13.3 or ~> 0.14.0-dev",
+     version: "0.2.1",
+     elixir: "== 0.13.3 or ~> 0.14.0",
      deps: deps,
      build_per_environment: false,
      test_paths: test_paths(Mix.env),
@@ -23,12 +23,13 @@ defmodule Ecto.Mixfile do
   end
 
   defp deps do
-    [ { :poolboy, "~> 1.2.1" },
-      { :decimal, github: "ericmj/decimal", optional: true },
-      { :postgrex, github: "ericmj/postgrex", optional: true },
-      # { :decimal, "~> 0.2.1", optional: true },
-      # { :postgrex, "~> 0.5.1", optional: true },
-      { :ex_doc, github: "elixir-lang/ex_doc", only: :dev } ]
+    [{:poolboy, "~> 1.2.1"},
+     # {:decimal, github: "ericmj/decimal", optional: true},
+     # {:postgrex, github: "ericmj/postgrex", optional: true},
+     {:decimal, "~> 0.2.1", optional: true},
+     {:postgrex, "~> 0.5.1", optional: true},
+     {:ex_doc, github: "elixir-lang/ex_doc", only: :dev},
+     {:markdown, github: "devinus/markdown", only: :dev}]
   end
 
   defp test_paths(:pg),  do: ["integration_test/pg"]
@@ -42,10 +43,10 @@ defmodule Ecto.Mixfile do
   end
 
   defp package do
-    [ contributors: ["Eric Meadows-Jönsson", "José Valim"],
-      licenses: ["Apache 2.0"],
-      links: %{"GitHub" => "https://github.com/elixir-lang/ecto",
-               "Docs" => "http://elixir-lang.org/docs/ecto/"} ]
+    [contributors: ["Eric Meadows-Jönsson", "José Valim"],
+     licenses: ["Apache 2.0"],
+     links: %{"GitHub" => "https://github.com/elixir-lang/ecto",
+              "Docs" => "http://elixir-lang.org/docs/ecto/"}]
   end
 
   defp docs do

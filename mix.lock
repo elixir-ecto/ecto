@@ -1,4 +1,6 @@
-%{"decimal": {:git, "git://github.com/ericmj/decimal.git", "34e6959c24e200a5a90d18a9b2bbcdf998c69d4b", []},
+%{"decimal": {:package, "0.2.2"},
   "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "ca476cd10556b079a7b2ab421c9fdf3425afbe8a", []},
+  "hoedown": {:git, "git://github.com/hoedown/hoedown.git", "0610117f44b173a4e2112afb2f510156a32355b5", []},
+  "markdown": {:git, "git://github.com/devinus/markdown.git", "0345e2044ba71780ba02b2591f1017703d0fa148", []},
   "poolboy": {:package, "1.2.1"},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "dc15ecfb0eb1b8c74bae1b008dddca97a40ab213", []}}
+  "postgrex": {:package, "0.5.2"}}
