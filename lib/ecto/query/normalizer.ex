@@ -90,6 +90,6 @@ defmodule Ecto.Query.Normalizer do
         [ {model.__schema__(:source), model} | acc ]
     end)
 
-    %{query | sources: sources |> Enum.reverse |> list_to_tuple}
+    %{query | sources: sources |> Enum.reverse |> List.to_tuple}
   end
 end

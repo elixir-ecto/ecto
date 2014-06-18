@@ -199,7 +199,7 @@ defmodule Ecto.Query.Util do
 
   # Get var for given model in query
   def model_var(query, model) do
-    sources = tuple_to_list(query.sources)
+    sources = Tuple.to_list(query.sources)
     pos = Enum.find_index(sources, &(model(&1) == model))
     {:&, [], [pos]}
   end

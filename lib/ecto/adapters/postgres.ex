@@ -68,7 +68,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       # Transform each row based on select expression
       transformed =
         Enum.map(rows, fn row ->
-          values = tuple_to_list(row)
+          values = Tuple.to_list(row)
           transform_row(pg_query.select.expr, values, pg_query.sources) |> elem(0)
         end)
 
@@ -86,7 +86,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       case query(repo, SQL.insert(model, returning), [], opts) do
         %Postgrex.Result{rows: [values]} ->
-          Enum.zip(returning, tuple_to_list(values))
+          Enum.zip(returning, Tuple.to_list(values))
         _ ->
           []
       end
@@ -142,8 +142,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {pool_opts, worker_opts} = Dict.split(opts, [:size, :max_overflow])
 
       pool_opts = pool_opts
-        |> Keyword.update(:size, 5, &binary_to_integer(&1))
-        |> Keyword.update(:max_overflow, 10, &binary_to_integer(&1))
+        |> Keyword.update(:size, 5, &String.to_integer(&1))
+        |> Keyword.update(:max_overflow, 10, &String.to_integer(&1))
 
       pool_opts = [
         name: {:local, pool_name},
@@ -180,7 +180,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp transform_row({:{}, _, list}, values, sources) do
       {result, values} = transform_row(list, values, sources)
-      {list_to_tuple(result), values}
+      {List.to_tuple(result), values}
     end
 
     defp transform_row({:&, _, [_]} = var, values, sources) do
@@ -196,8 +196,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     # Skip records
     defp transform_row({first, _} = tuple, values, sources) when not is_atom(first) do
-      {result, values} = transform_row(tuple_to_list(tuple), values, sources)
-      {list_to_tuple(result), values}
+      {result, values} = transform_row(Tuple.to_list(tuple), values, sources)
+      {List.to_tuple(result), values}
     end
 
     defp transform_row(list, values, sources) when is_list(list) do

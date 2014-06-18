@@ -49,7 +49,7 @@ defmodule Ecto.Validator do
   @spec bin_dict(Macro.t, Keyword.t) :: Macro.t
   defmacro bin_dict(value, opts) when is_list(opts) do
     process opts, value, fn var, attr ->
-      quote do: Dict.get(unquote(var), unquote(atom_to_binary(attr)))
+      quote do: Dict.get(unquote(var), unquote(Atom.to_string(attr)))
     end
   end
 

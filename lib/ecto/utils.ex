@@ -76,7 +76,7 @@ defmodule Ecto.Utils do
   end
 
   defp atomize_keys(dict) do
-    Enum.map dict, fn {k, v} -> {binary_to_atom(k), v} end
+    Enum.map dict, fn {k, v} -> {String.to_atom(k), v} end
   end
 
   defp to_lower_char(char) when char in ?A..?Z, do: char + 32
