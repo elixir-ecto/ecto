@@ -37,7 +37,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       defp translate_name(unquote(fun), unquote(arity)), do: {:fun, unquote(str)}
     end)
 
-    defp translate_name(fun, _arity), do: {:fun, atom_to_binary(fun)}
+    defp translate_name(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
     defp quote_table(table), do: "\"#{table}\""
 
@@ -219,10 +219,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp limit(nil), do: nil
-    defp limit(num), do: "LIMIT " <> integer_to_binary(num)
+    defp limit(num), do: "LIMIT " <> Integer.to_string(num)
 
     defp offset(nil), do: nil
-    defp offset(num), do: "OFFSET " <> integer_to_binary(num)
+    defp offset(num), do: "OFFSET " <> Integer.to_string(num)
 
     defp lock(nil), do: nil
     defp lock(false), do: nil
@@ -363,7 +363,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp literal(%Ecto.Binary{value: binary}) do
       hex = for << h :: [unsigned, 4], l :: [unsigned, 4] <- binary >> do
-        integer_to_binary(h, 16) <> integer_to_binary(l, 16)
+        Integer.to_string(h, 16) <> Integer.to_string(l, 16)
       end
       "'\\x#{hex}'::bytea"
     end
@@ -442,16 +442,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp type({:array, inner}), do: type(inner) <> "[]"
 
     defp create_names(query) do
-      sources = query.sources |> tuple_to_list
+      sources = query.sources |> Tuple.to_list
       Enum.reduce(sources, [], fn {table, model}, names ->
         name = unique_name(names, String.first(table), 0)
         [{{table, name}, model}|names]
-      end) |> Enum.reverse |> list_to_tuple
+      end) |> Enum.reverse |> List.to_tuple
     end
 
     # Brute force find unique name
     defp unique_name(names, name, counter) do
-      counted_name = name <> integer_to_binary(counter)
+      counted_name = name <> Integer.to_string(counter)
       if Enum.any?(names, fn {{_, n}, _} -> n == counted_name end) do
         unique_name(names, name, counter+1)
       else
