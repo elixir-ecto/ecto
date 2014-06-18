@@ -1,4 +1,4 @@
-%{"decimal": {:git, "git://github.com/ericmj/decimal.git", "b4fd0f063ea7be43de5a942e79441b07f3e89484", []},
-  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "4ca45af7c6119a8ca594a057e184fb1cdf7298bf", []},
+%{"decimal": {:git, "git://github.com/ericmj/decimal.git", "34e6959c24e200a5a90d18a9b2bbcdf998c69d4b", []},
+  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "ca476cd10556b079a7b2ab421c9fdf3425afbe8a", []},
   "poolboy": {:package, "1.2.1"},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "6b38003bd5cd1c8f1c0b75a49a29047689e7bf6c", []}}
+  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "dc15ecfb0eb1b8c74bae1b008dddca97a40ab213", []}}

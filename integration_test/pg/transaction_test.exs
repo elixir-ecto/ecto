@@ -27,12 +27,6 @@ defmodule Ecto.Integration.TransactionTest do
   setup_all do
     { :ok, _ } = TestRepo1.start_link
     { :ok, _ } = TestRepo2.start_link
-
-    on_exit fn ->
-      :ok = TestRepo1.stop
-      :ok = TestRepo2.stop
-    end
-
     :ok
   end
 
