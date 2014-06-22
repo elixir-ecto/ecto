@@ -37,7 +37,7 @@ defmodule Ecto.Utils do
     end
 
     destructure [username, password], String.split(info.userinfo, ":")
-    database = String.slice(info.path, 1, size(info.path))
+    database = String.slice(info.path, 1, String.length(info.path))
     query = URI.decode_query(info.query || "") |> atomize_keys
 
     opts = [ username: username,
