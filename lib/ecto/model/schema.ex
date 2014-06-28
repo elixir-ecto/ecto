@@ -1,7 +1,7 @@
 defmodule Ecto.Model.Schema do
   @moduledoc """
   Defines a schema for a model.
-  
+
   A schema is a struct with associated metadata that is persisted to a
   repository. Every schema model is also a struct, that means that you work
   with models just like you would work with structs.
@@ -140,7 +140,7 @@ defmodule Ecto.Model.Schema do
   @doc """
   Defines a schema with a source name and field definitions.
   """
-  defmacro schema(source, opts \\ [], do: block)
+  defmacro schema(source, opts \\ [], block)
 
   defmacro schema(source, opts, [do: block]) do
     quote do
