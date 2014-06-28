@@ -252,7 +252,7 @@ defmodule Ecto.Validator.Predicates do
           age: between(18..21)
 
   """
-  def between(attr, value, min..max, opts \\ [])
+  def between(attr, value, range, opts \\ [])
   def between(_attr, value, min..max, _opts) when
     is_number(min) and is_number(max) and (nil?(value) or value in min..max), do: []
   def between(attr, _value, min..max, opts) when is_number(min) and is_number(max), do:
