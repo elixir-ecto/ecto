@@ -23,6 +23,12 @@ defmodule Ecto.UtilsTest do
     assert {:a, "b"} in url
   end
 
+  test "parse_urls empty username/password" do
+    url = parse_url("ecto://host:12345/mydb?size=10&a=b")
+    assert {:password, nil} in url
+    assert {:username, nil} in url
+  end
+
   test "fail on invalid urls" do
     assert_raise Ecto.InvalidURL, ~r"url should start with a scheme", fn ->
       parse_url("eric:hunter2@host:123/mydb")

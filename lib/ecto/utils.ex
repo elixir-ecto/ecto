@@ -36,7 +36,10 @@ defmodule Ecto.Utils do
       raise Ecto.InvalidURL, url: url, reason: "path should be a database name"
     end
 
-    destructure [username, password], String.split(info.userinfo, ":")
+    if info.userinfo do
+      destructure [username, password], String.split(info.userinfo, ":")
+    end
+
     database = String.slice(info.path, 1, String.length(info.path))
     query = URI.decode_query(info.query || "") |> atomize_keys
 
