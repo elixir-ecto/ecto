@@ -397,9 +397,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         command = ~s(PGPASSWORD=#{password} )
       end
 
+      if username = database[:username] do
+        command = ~s(PGUSER=#{username} )
+      end
+
       command =
         command <>
-        ~s(psql --quiet -U #{database[:username]} ) <>
+        ~s(psql --quiet ) <>
         ~s(--host #{database[:hostname]} ) <>
         ~s(-c "#{sql_command};" )
 
