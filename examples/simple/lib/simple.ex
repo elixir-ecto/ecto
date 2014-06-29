@@ -1,21 +1,11 @@
 defmodule Simple.App do
-  use Application.Behaviour
+  use Application
 
   def start(_type, _args) do
-    Simple.Sup.start_link
-  end
-end
-
-defmodule Simple.Sup do
-  use Supervisor.Behaviour
-
-  def start_link do
-    :supervisor.start_link({ :local, __MODULE__ }, __MODULE__, [])
-  end
-
-  def init([]) do
-    tree = [ worker(Repo, []) ]
-    supervise(tree, strategy: :one_for_all)
+    import Supervisor.Spec
+    tree = [worker(Repo, [])]
+    opts = [name: Simple.Sup, strategy: :one_for_one]
+    Supervisor.start_link(tree, opts)
   end
 end
 
