@@ -3,7 +3,7 @@
 # v0.2.2 (2014-06-30)
 
 * Enhancements
-  * Do not require username and password to present in `parse_url/1`
+  * Do not require username and password to be present in `parse_url/1`
 
 # v0.2.1 (2014-06-18)
 
