@@ -3,8 +3,8 @@ defmodule Ecto.Mixfile do
 
   def project do
     [app: :ecto,
-     version: "0.2.2-dev",
-     elixir: "== 0.13.3 or ~> 0.14.0",
+     version: "0.2.2",
+     elixir: "~> 0.14.0",
      deps: deps,
      build_per_environment: false,
      test_paths: test_paths(Mix.env),

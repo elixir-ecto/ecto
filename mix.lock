@@ -1,5 +1,5 @@
 %{"decimal": {:package, "0.2.2"},
-  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "ca476cd10556b079a7b2ab421c9fdf3425afbe8a", []},
+  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "ca71b84b9c3c7e23b4b661e485a909aee3fdbc3b", []},
   "hoedown": {:git, "git://github.com/hoedown/hoedown.git", "0610117f44b173a4e2112afb2f510156a32355b5", []},
   "markdown": {:git, "git://github.com/devinus/markdown.git", "0345e2044ba71780ba02b2591f1017703d0fa148", []},
   "poolboy": {:package, "1.2.1"},
