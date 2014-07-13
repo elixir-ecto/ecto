@@ -8,6 +8,10 @@ defmodule Ecto.Date do
   def from_erl({year, month, day}) do
     %Ecto.Date{year: year, month: month, day: day}
   end
+
+  def today
+    from_erl(:erlang.date)
+  end
 end
 
 defmodule Ecto.Time do
@@ -19,6 +23,10 @@ defmodule Ecto.Time do
 
   def from_erl({hour, min, sec}) do
     %Ecto.Time{hour: hour, min: min, sec: sec}
+  end
+
+  def now
+    from_erl(:erlang.time)
   end
 end
 
@@ -46,6 +54,10 @@ defmodule Ecto.DateTime do
                      %Ecto.Time{hour: hour, min: min, sec: sec}) do
     %Ecto.DateTime{year: year, month: month, day: day,
                    hour: hour, min: min, sec: sec}
+  end
+
+  def now
+    from_erl(:erlang.localtime)
   end
 end
 
