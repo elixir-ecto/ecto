@@ -286,8 +286,8 @@ defmodule Ecto.Repo do
   Runs the given function inside a transaction. If an unhandled error occurs the
   transaction will be rolled back. If no error occurred the transaction will be
   commited when the function returns. A transaction can be explicitly rolled
-  back by calling `rollback!`, this will immediately leave the function and
-  return the value given to `rollback!` as `{:error, value}`. A successful
+  back by calling `rollback`, this will immediately leave the function and
+  return the value given to `rollback` as `{:error, value}`. A successful
   transaction returns the value returned by the function wrapped in a tuple as
   `{:ok, value}`. Transactions can be nested.
 
@@ -316,7 +316,7 @@ defmodule Ecto.Repo do
       MyRepo.transaction(fn ->
         p = MyRepo.insert(%Post{})
         if not Editor.post_allowed?(p) do
-          MyRepo.rollback!
+          MyRepo.rollback
         end
       end)
 
