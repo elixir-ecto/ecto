@@ -362,7 +362,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp literal(%Ecto.Binary{value: binary}) do
-      hex = for << h :: [unsigned, 4], l :: [unsigned, 4] <- binary >> do
+      hex = for <<h :: unsigned-4, l :: unsigned-4 <- binary>> do
         Integer.to_string(h, 16) <> Integer.to_string(l, 16)
       end
       "'\\x#{hex}'::bytea"
