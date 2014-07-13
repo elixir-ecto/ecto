@@ -56,9 +56,14 @@ defmodule Ecto.DateTime do
                    hour: hour, min: min, sec: sec}
   end
 
-  def now
+  def local
     from_erl(:erlang.localtime)
   end
+
+  def utc
+    from_erl(:erlang.universaltime)
+  end
+
 end
 
 defmodule Ecto.Interval do
