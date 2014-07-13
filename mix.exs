@@ -4,7 +4,7 @@ defmodule Ecto.Mixfile do
   def project do
     [app: :ecto,
      version: "0.2.3-dev",
-     elixir: "~> 0.14.0",
+     elixir: "~> 0.14.3",
      deps: deps,
      build_per_environment: false,
      test_paths: test_paths(Mix.env),
@@ -26,8 +26,8 @@ defmodule Ecto.Mixfile do
     [{:poolboy, "~> 1.2.1"},
      # {:decimal, github: "ericmj/decimal", optional: true},
      # {:postgrex, github: "ericmj/postgrex", optional: true},
-     {:decimal, "~> 0.2.1", optional: true},
-     {:postgrex, "~> 0.5.1", optional: true},
+     {:decimal, "~> 0.2.3", optional: true},
+     {:postgrex, "~> 0.5.3", optional: true},
      {:ex_doc, github: "elixir-lang/ex_doc", only: :dev},
      {:markdown, github: "devinus/markdown", only: :dev}]
   end
@@ -50,7 +50,8 @@ defmodule Ecto.Mixfile do
   end
 
   defp docs do
-    [source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),
+    {ref, 0} = System.cmd("git", ["rev-parse", "--verify", "--quiet", "HEAD"])
+    [source_ref: ref,
      main: "overview",
      readme: true]
   end
