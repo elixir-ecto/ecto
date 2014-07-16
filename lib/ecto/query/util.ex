@@ -52,7 +52,7 @@ defmodule Ecto.Query.Util do
   @doc false
   def value_to_type(value, fun \\ nil)
 
-  def value_to_type(nil, _fun), do: {:ok, nil}
+  def value_to_type(nil, _fun), do: {:ok, :any}
   def value_to_type(value, _fun) when is_boolean(value), do: {:ok, :boolean}
   def value_to_type(value, _fun) when is_binary(value), do: {:ok, :string}
   def value_to_type(value, _fun) when is_integer(value), do: {:ok, :integer}
