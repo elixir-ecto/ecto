@@ -115,7 +115,7 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def value_to_type(%Ecto.Binary{value: binary}, fun) do
+  def value_to_type(%Ecto.Tagged{value: binary, type: :binary}, fun) do
     case value_to_type(binary, fun) do
       {:ok, :binary} -> {:ok, :binary}
       {:ok, :string} -> {:ok, :binary}
@@ -124,16 +124,16 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def value_to_type(%Ecto.Array{value: list, type: type}, fun) do
-    unless type in types or (list == [] and nil?(type)) do
-      {:error, "invalid type given to `array/2`: `#{inspect type}`"}
+  def value_to_type(%Ecto.Tagged{value: list, type: {:array, inner}}, fun) do
+    unless inner in types or (list == [] and nil?(inner)) do
+      {:error, "invalid type given to `array/2`: `#{inspect inner}`"}
     end
 
     elem_types = Enum.map(list, &value_to_type(&1, fun))
 
     res = Enum.find_value(elem_types, fn
       {:ok, elem_type} ->
-        unless type_eq?(type, elem_type) do
+        unless type_eq?(inner, elem_type) or (elem_type == :string and inner == :binary) do
           {:error, "all elements in array have to be of same type"}
         end
       {:error, _} = err ->
@@ -143,7 +143,7 @@ defmodule Ecto.Query.Util do
     if res do
       res
     else
-      {:ok, {:array, type}}
+      {:ok, {:array, inner}}
     end
   end
 
@@ -163,8 +163,8 @@ defmodule Ecto.Query.Util do
   def literal?(%Ecto.Date{}),                 do: true
   def literal?(%Ecto.Time{}),                 do: true
   def literal?(%Ecto.Interval{}),             do: true
-  def literal?(%Ecto.Binary{}),               do: true
-  def literal?(%Ecto.Array{}),                do: true
+  def literal?(%Ecto.Tagged{type: :binary}),               do: true
+  def literal?(%Ecto.Tagged{type: {:array, _}}),                do: true
   def literal?(_),                            do: false
 
   # Returns true if the two types are considered equal by the type system
@@ -186,11 +186,11 @@ defmodule Ecto.Query.Util do
   # If value cannot be casted just return it.
   @doc false
   def try_cast(binary, :binary) when is_binary(binary) do
-    %Ecto.Binary{value: binary}
+    %Ecto.Tagged{value: binary, type: :binary}
   end
 
   def try_cast(list, {:array, inner}) when is_list(list) do
-    %Ecto.Array{value: list, type: inner}
+    %Ecto.Tagged{value: list, type: {:array, inner}}
   end
 
   def try_cast(value, _) do
