@@ -133,7 +133,7 @@ defmodule Ecto.Query.Util do
 
     res = Enum.find_value(elem_types, fn
       {:ok, elem_type} ->
-        unless type_eq?(inner, elem_type) do
+        unless type_eq?(inner, elem_type) or (elem_type == :string and inner == :binary) do
           {:error, "all elements in array have to be of same type"}
         end
       {:error, _} = err ->
