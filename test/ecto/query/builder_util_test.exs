@@ -20,10 +20,10 @@ defmodule Ecto.Query.BuilderUtilTest do
     assert quote(do: ~s"123") ==
            escape(quote do ~s"123" end, [])
 
-    assert {:%, [], [Ecto.Binary, {:%{}, [], [value: {:<<>>, [], [1, 2, 3]}]}]} ==
+    assert {:%, [], [Ecto.Tagged, {:%{}, [], [value: {:<<>>, [], [1, 2, 3]}, type: :binary]}]} ==
            escape(quote do binary(<< 1, 2, 3 >>) end, [])
 
-    assert %Ecto.Array{value: [1, 2, 3], type: :integer} ==
+    assert %Ecto.Tagged{value: [1, 2, 3], type: {:array, :integer}} ==
            Code.eval_quoted(escape(quote do array([1, 2, 3], ^:integer) end, []), [], __ENV__) |> elem(0)
 
     assert quote(do: &0.z) ==

@@ -331,9 +331,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp expr(%Ecto.Array{value: list, type: type}, sources) do
+    defp expr(%Ecto.Tagged{value: list, type: {:array, inner}}, sources) do
       sql = "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
-      if list == [], do: sql = sql <> "::#{type(type)}[]"
+      if list == [], do: sql = sql <> "::#{type(inner)}[]"
       sql
     end
 
@@ -361,15 +361,15 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "interval 'P#{year}-#{month}-#{day}T#{hour}:#{min}:#{sec}'"
     end
 
-    defp literal(%Ecto.Binary{value: binary}) do
+    defp literal(%Ecto.Tagged{value: binary, type: :binary}) do
       hex = for <<h :: unsigned-4, l :: unsigned-4 <- binary>> do
         Integer.to_string(h, 16) <> Integer.to_string(l, 16)
       end
       "'\\x#{hex}'::bytea"
     end
 
-    defp literal(%Ecto.Array{value: list, type: type}) do
-      "ARRAY[" <> Enum.map_join(list, ", ", &literal(&1)) <> "]::#{type(type)}[]"
+    defp literal(%Ecto.Tagged{value: list, type: {:array, inner}}) do
+      "ARRAY[" <> Enum.map_join(list, ", ", &literal(&1)) <> "]::#{type(inner)}[]"
     end
 
     defp literal(literal) when is_binary(literal) do

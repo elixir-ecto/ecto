@@ -247,12 +247,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "insert with list" do
-    query = SQL.insert(%Model3{list1: %Ecto.Array{value: ["a", "b", "c"], type: :string}, list2: %Ecto.Array{value: [1, 2, 3], type: :integer}}, [:id])
+    query = SQL.insert(%Model3{list1: %Ecto.Tagged{value: ["a", "b", "c"], type: {:array, :string}}, list2: %Ecto.Tagged{value: [1, 2, 3], type: {:array, :integer}}}, [:id])
     assert query == "INSERT INTO \"model3\" (\"list1\", \"list2\")\nVALUES (ARRAY['a', 'b', 'c']::text[], ARRAY[1, 2, 3]::integer[])\nRETURNING \"id\""
   end
 
   test "insert with binary" do
-    query = SQL.insert(%Model3{binary: %Ecto.Binary{value: << 1, 2, 3 >>}}, [:id])
+    query = SQL.insert(%Model3{binary: %Ecto.Tagged{value: << 1, 2, 3 >>, type: :binary}}, [:id])
     assert query == "INSERT INTO \"model3\" (\"binary\")\nVALUES ('\\x010203'::bytea)\nRETURNING \"id\""
   end
 
@@ -262,12 +262,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "update with list" do
-    query = SQL.update(%Model3{id: 42, list1: %Ecto.Array{value: ["c", "d"], type: :string}, list2: %Ecto.Array{value: [4, 5], type: :integer}})
+    query = SQL.update(%Model3{id: 42, list1: %Ecto.Tagged{value: ["c", "d"], type: {:array, :string}}, list2: %Ecto.Tagged{value: [4, 5], type: {:array, :integer}}})
     assert query == "UPDATE \"model3\" SET \"binary\" = NULL, \"list1\" = ARRAY['c', 'd']::text[], \"list2\" = ARRAY[4, 5]::integer[]\nWHERE \"id\" = 42"
   end
 
   test "update with binary" do
-    query = SQL.update(%Model3{id: 42, binary: %Ecto.Binary{value: << 1, 2, 3 >>}})
+    query = SQL.update(%Model3{id: 42, binary: %Ecto.Tagged{value: << 1, 2, 3 >>, type: :binary}})
     assert query == "UPDATE \"model3\" SET \"binary\" = '\\x010203'::bytea, \"list1\" = NULL, \"list2\" = NULL\nWHERE \"id\" = 42"
   end
 

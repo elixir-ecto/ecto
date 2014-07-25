@@ -215,11 +215,7 @@ defmodule Ecto.Repo.Backend do
     Enum.reduce(fields, model, fn field, model ->
       type = module.__schema__(:field_type, field)
 
-      if Util.type_castable_to?(type) do
-        Map.update!(model, field, &Util.try_cast(&1, type))
-      else
-        model
-      end
+      Map.update!(model, field, &Util.try_cast(&1, type))
     end)
   end
 end
