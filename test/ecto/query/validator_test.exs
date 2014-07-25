@@ -188,6 +188,9 @@ defmodule Ecto.Query.ValidatorTest do
     query = Post |> where([p], array([p.title, p.title], ^:string) == nil) |> select([], 0)
     validate(query)
 
+    query = Post |> where([p], array([p.title, p.title], ^:binary) == nil) |> select([], 0)
+    validate(query)
+
     query = Post |> where([p], [p.title, p.title] == nil) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
