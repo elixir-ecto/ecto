@@ -31,7 +31,7 @@ end
 defmodule Ecto.Integration.Postgres.Post do
   use Ecto.Model
 
-  queryable "posts" do
+  schema "posts" do
     field :title, :string
     field :text, :string
     field :tags, { :array, :string }
@@ -45,7 +45,7 @@ end
 defmodule Ecto.Integration.Postgres.Comment do
   use Ecto.Model
 
-  queryable "comments" do
+  schema "comments" do
     field :text, :string
     field :posted, :datetime
     field :day, :date
@@ -60,7 +60,7 @@ end
 defmodule Ecto.Integration.Postgres.Permalink do
   use Ecto.Model
 
-  queryable "permalinks" do
+  schema "permalinks" do
     field :url, :string
     belongs_to :post, Ecto.Integration.Postgres.Post
   end
@@ -69,7 +69,7 @@ end
 defmodule Ecto.Integration.Postgres.User do
   use Ecto.Model
 
-  queryable "users" do
+  schema "users" do
     field :name, :string
     has_many :comments, Ecto.Integration.Postgres.Comment
   end
@@ -78,7 +78,7 @@ end
 defmodule Ecto.Integration.Postgres.Custom do
   use Ecto.Model
 
-  queryable "customs", primary_key: false do
+  schema "customs", primary_key: false do
     field :foo, :string, primary_key: true
   end
 end
@@ -86,8 +86,16 @@ end
 defmodule Ecto.Integration.Postgres.Barebone do
   use Ecto.Model
 
-  queryable "barebones", primary_key: false do
+  schema "barebones", primary_key: false do
     field :text, :string
+  end
+end
+
+defmodule Ecto.Integration.Postgres.AssignedPrimaryKey do
+  use Ecto.Model
+  @schema_defaults [primary_key: {:id, :string, []}]
+  
+  schema "assigned_primary_keys" do
   end
 end
 
@@ -107,21 +115,24 @@ defmodule Ecto.Integration.Postgres.Case do
       alias Ecto.Integration.Postgres.User
       alias Ecto.Integration.Postgres.Custom
       alias Ecto.Integration.Postgres.Barebone
+      alias Ecto.Integration.Postgres.AssignedPrimaryKey
     end
   end
 
   setup do
     :ok = Postgres.begin_test_transaction(TestRepo, [])
-  end
 
-  teardown do
-    :ok = Postgres.rollback_test_transaction(TestRepo, [])
+    on_exit fn ->
+      :ok = Postgres.rollback_test_transaction(TestRepo, [])
+    end
+
+    :ok
   end
 end
 
 setup_cmds = [
   ~s(psql -U postgres -c "DROP DATABASE IF EXISTS ecto_test;"),
-  ~s(psql -U postgres -c "CREATE DATABASE ecto_test ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';")
+  ~s(psql -U postgres -c "CREATE DATABASE ecto_test TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';")
 ]
 
 Enum.each(setup_cmds, fn(cmd) ->
@@ -157,6 +168,7 @@ setup_database = [
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
   "CREATE TABLE customs (foo text PRIMARY KEY)",
   "CREATE TABLE barebones (text text)",
+  "CREATE TABLE assigned_primary_keys (id text PRIMARY KEY)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"

@@ -2,7 +2,7 @@ defmodule Ecto.Query do
   @moduledoc """
   Provides the Query DSL.
 
-  Queries are used to retrieve and manipualte data in a repository
+  Queries are used to retrieve and manipulate data in a repository
   (see `Ecto.Repo`). Although this module provides a complete API,
   supporting expressions like `where/3`, `select/3` and so forth,
   most of the times developers need to import only the `from/2`
@@ -16,7 +16,7 @@ defmodule Ecto.Query do
             where: w.prcp > 0,
            select: w.city
 
-      # econd the query to the repository
+      # Send the query to the repository
       Repo.all(query)
 
   ## Composition
@@ -25,7 +25,7 @@ defmodule Ecto.Query do
   actually be defined in two parts:
 
       # Create a query
-      query = from w in Weather, where: w.prcp > 0,
+      query = from w in Weather, where: w.prcp > 0
 
       # Extend the query
       query = from w in query, select: w.city
@@ -34,7 +34,7 @@ defmodule Ecto.Query do
   side of `in` are just a convenience, they are not taken into
   account in the query generation.
 
-  Any value can used on the right-side of `in` as long as it
+  Any value can be used on the right-side of `in` as long as it
   implements the `Ecto.Queryable` protocol.
 
   ## Data security
@@ -51,7 +51,7 @@ defmodule Ecto.Query do
       end
 
   In the example above, we will compare against the `age` and `height`
-  given as arguments, appropriately convering the height. Note all
+  given as arguments, appropriately converting the height. Note all
   external values will be quoted to avoid SQL injection attacks in
   the underlying repository.
 
@@ -64,7 +64,7 @@ defmodule Ecto.Query do
 
       from u in User, where: u.age == "zero"
 
-  will error with the following message:
+  will return an error with the following message:
 
       ** (Ecto.Query.TypeCheckError) the following expression does not type check:
 
@@ -114,14 +114,19 @@ defmodule Ecto.Query do
   in the keywords query and in the query expression formats.
   """
 
-  defrecord Query, sources: nil, from: nil, joins: [], wheres: [], select: nil,
-                   order_bys: [], limit: nil, offset: nil, group_bys: [],
-                   havings: [], preloads: [], distincts: [], lock: nil
+  defstruct [sources: nil, from: nil, joins: [], wheres: [], select: nil,
+             order_bys: [], limit: nil, offset: nil, group_bys: [],
+             havings: [], preloads: [], distincts: [], lock: nil]
 
-  defrecord QueryExpr, [:expr, :file, :line]
-  defrecord JoinExpr, [:qual, :source, :on, :file, :line, :assoc]
+  defmodule QueryExpr do
+    @moduledoc false
+    defstruct [:expr, :file, :line]
+  end
 
-  @type t :: Query.t
+  defmodule JoinExpr do
+    @moduledoc false
+    defstruct [:qual, :source, :on, :file, :line, :assoc]
+  end
 
   alias Ecto.Query.FromBuilder
   alias Ecto.Query.WhereBuilder
@@ -180,21 +185,21 @@ defmodule Ecto.Query do
       end
 
   Note the variables `p` and `q` must be named as you find more convenient
-  as they have no important in the query sent to the database.
+  as they have no importance in the query sent to the database.
   """
   defmacro from(expr, kw) do
     unless Keyword.keyword?(kw) do
       raise ArgumentError, reason: "second argument to `from` has to be a keyword list"
     end
 
-    { quoted, binds, count_bind } = FromBuilder.build_with_binds(expr, __CALLER__)
+    {quoted, binds, count_bind} = FromBuilder.build_with_binds(expr, __CALLER__)
     build_query(kw, __CALLER__, count_bind, quoted, binds)
   end
 
   @doc """
   A join query expression.
 
-  Receives an entity that is to be joined to the query and a condition to
+  Receives a model that is to be joined to the query and a condition to
   do the joining on. The join condition can be any expression that evaluates
   to a boolean value. The join is by default an inner join, the qualifier
   can be changed by giving the atoms: `:inner`, `:left`, `:right` or
@@ -209,21 +214,21 @@ defmodule Ecto.Query do
 
          from c in Comment,
         join: p in Post, on: c.post_id == p.id,
-      select: { p.title, c.text }
+      select: {p.title, c.text}
 
          from p in Post,
         left_join: c in p.comments,
-      select: { p, c }
+      select: {p, c}
 
   ## Expressions examples
 
       from(Comment)
       |> join(:inner, [c], p in Post, c.post_id == p.id)
-      |> select([c, p], { p.title, c.text })
+      |> select([c, p], {p.title, c.text})
 
       Post
       |> join(:left, [p], c in p.comments)
-      |> select([p, c], { p, c })
+      |> select([p, c], {p, c})
   """
   defmacro join(query, qual, binding, expr, on \\ nil) do
     JoinBuilder.build_with_binds(query, qual, binding, expr, on, nil, __CALLER__)
@@ -233,17 +238,17 @@ defmodule Ecto.Query do
   @doc """
   A select query expression.
 
-  Selects which fields will be selected from the entity and any transformations
+  Selects which fields will be selected from the model and any transformations
   that should be performed on the fields. Any expression that is accepted in a
   query can be a select field.
 
   There can only be one select expression in a query, if the select expression
-  is omitted, the query will by default select the full entity.
+  is omitted, the query will by default select the full model.
 
   The sub-expressions in the query can be wrapped in lists or tuples as shown in
-  the examples. A full entity can also be selected.
+  the examples. A full model can also be selected.
 
-  The `assoc/2` selector can be used to embed an association on a parent entity
+  The `assoc/2` selector can be used to embed an association on a parent model
   as shown in the examples below. The first argument to `assoc` has to be a
   variable bound in the `from` query expression, the second has to be the field
   of the association and a variable bound in an association join.
@@ -253,10 +258,10 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      from(c in City, select: c) # selects the entire entity
-      from(c in City, select: { c.name, c.population })
+      from(c in City, select: c) # selects the entire model
+      from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
-      from(c in City, select: { c.name, to_binary(40 + 2), 43 })
+      from(c in City, select: {c.name, to_binary(40 + 2), 43})
 
       from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
 
@@ -270,7 +275,7 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       from(c in City) |> select([c], c)
-      from(c in City) |> select([c], { c.name, c.country })
+      from(c in City) |> select([c], {c.name, c.country})
 
   """
   defmacro select(query, binding, expr) do
@@ -284,13 +289,13 @@ defmodule Ecto.Query do
   expression.
 
   The row that is being kept depends on the ordering of the rows. To ensure
-  results are consistents, if an `order_by` expression is also added to the
+  results are consistent, if an `order_by` expression is also added to the
   query, its leftmost part must first reference all the fields in the
   `distinct` expression before referencing another field.
 
   ## Keywords examples
 
-      # Returns the list of different categories in the Post entity
+      # Returns the list of different categories in the Post model
       from(p in Post, distinct: p.category)
 
       # Returns the first (by date) for each different categories of Post
@@ -376,7 +381,7 @@ defmodule Ecto.Query do
   An offset query expression.
 
   Offsets the number of rows selected from the result. Can be any expression
-  but have to evaluate to an integer value and tt can't include any field.
+  but have to evaluate to an integer value and it can't include any field.
 
   If `offset` is given twice, it overrides the previous value.
 
@@ -422,7 +427,7 @@ defmodule Ecto.Query do
   @doc """
   A group by query expression.
 
-  Groups together rows from the entity that have the same values in the given
+  Groups together rows from the model that have the same values in the given
   fields. Using `group_by` "groups" the query giving it different semantics
   in the `select` expression. If a query is grouped only fields that were
   referenced in the `group_by` can be used in the `select` or if the field
@@ -433,9 +438,9 @@ defmodule Ecto.Query do
       # Returns the number of posts in each category
       from(p in Post,
         group_by: p.category,
-        select: { p.category, count(p.id) })
+        select: {p.category, count(p.id)})
 
-      # Group on all fields on the Post entity
+      # Group on all fields on the Post model
       from(p in Post,
         group_by: p,
         select: p)
@@ -452,7 +457,7 @@ defmodule Ecto.Query do
   @doc """
   A having query expression.
 
-  Like `where` `having` filters rows from the entity, but after the grouping is
+  Like `where` `having` filters rows from the model, but after the grouping is
   performed giving it the same semantics as `select` for a grouped query
   (see `group_by/3`). `having` groups the query even if the query has no
   `group_by` expression.
@@ -464,7 +469,7 @@ defmodule Ecto.Query do
       from(p in Post,
         group_by: p.category,
         having: avg(p.num_comments) > 10,
-        select: { p.category, count(p.id) })
+        select: {p.category, count(p.id)})
 
   ## Expressions examples
 
@@ -508,7 +513,7 @@ defmodule Ecto.Query do
 
       Post |> preload(:comments) |> select([p], p)
 
-      Post |> preload([:user, { :comments, [:user] }]) |> select([p], p)
+      Post |> preload([:user, {:comments, [:user]}]) |> select([p], p)
   """
   defmacro preload(query, expr) do
     PreloadBuilder.build(query, expr, __CALLER__)
@@ -520,11 +525,11 @@ defmodule Ecto.Query do
   @no_binds [:limit, :offset, :preload, :lock]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
-  defp build_query([{ type, expr }|t], env, count_bind, quoted, binds) when type in @binds do
-    # If all bindings are integer indexes keep AST Macro.expand'able to Query[],
+  defp build_query([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
+    # If all bindings are integer indexes keep AST Macro.expand'able to %Query{},
     # otherwise ensure that quoted is evaluated before macro call
     quoted =
-      if Enum.all?(binds, fn { _, value } -> is_integer(value) end) do
+      if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do
         quote do
           Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
         end
@@ -538,7 +543,7 @@ defmodule Ecto.Query do
     build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ type, expr }|t], env, count_bind, quoted, binds) when type in @no_binds do
+  defp build_query([{type, expr}|t], env, count_bind, quoted, binds) when type in @no_binds do
     quoted =
       quote do
         Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
@@ -547,7 +552,7 @@ defmodule Ecto.Query do
     build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ join, expr }|t], env, count_bind, quoted, binds) when join in @joins do
+  defp build_query([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
     qual =
       case join do
         :join       -> :inner
@@ -557,18 +562,18 @@ defmodule Ecto.Query do
         :full_join  -> :full
       end
 
-    { t, on } = collect_on(t, nil)
-    { quoted, binds, count_bind } = JoinBuilder.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
+    {t, on} = collect_on(t, nil)
+    {quoted, binds, count_bind} = JoinBuilder.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
 
     build_query t, env, count_bind, quoted, binds
   end
 
-  defp build_query([{ :on, _value }|_], _env, _count_bind, _quoted, _binds) do
+  defp build_query([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
     raise Ecto.QueryError,
       reason: "`on` keyword must immediately follow a join"
   end
 
-  defp build_query([{ key, _value }|_], _env, _count_bind, _quoted, _binds) do
+  defp build_query([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
     raise Ecto.QueryError,
       reason: "unsupported #{inspect key} in keyword query expression"
   end
@@ -577,10 +582,10 @@ defmodule Ecto.Query do
     quoted
   end
 
-  defp collect_on([{ :on, expr }|t], nil),
+  defp collect_on([{:on, expr}|t], nil),
     do: collect_on(t, expr)
-  defp collect_on([{ :on, expr }|t], acc),
-    do: collect_on(t, { :and, [], [acc, expr] })
+  defp collect_on([{:on, expr}|t], acc),
+    do: collect_on(t, {:and, [], [acc, expr]})
   defp collect_on(other, acc),
-    do: { other, acc }
+    do: {other, acc}
 end

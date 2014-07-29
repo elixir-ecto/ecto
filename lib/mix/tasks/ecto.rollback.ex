@@ -37,11 +37,11 @@ defmodule Mix.Tasks.Ecto.Rollback do
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     Mix.Task.run "app.start", args
 
-    { opts, args, _ } = OptionParser.parse args,
+    {opts, args, _} = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer],
       aliases: [n: :step, v: :to]
 
-    { repo, _ } = parse_repo(args)
+    {repo, _} = parse_repo(args)
     ensure_repo(repo)
     if opts[:no_start], do: ensure_started(repo)
 

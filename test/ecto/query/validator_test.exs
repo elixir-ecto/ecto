@@ -2,14 +2,14 @@ defmodule Ecto.Query.ValidatorTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.Query.Query
+  alias Ecto.Query
   alias Ecto.Query.Normalizer
   alias Ecto.Query.Validator
 
   defmodule Post do
     use Ecto.Model
 
-    queryable :posts do
+    schema :posts do
       field :title, :string
       field :text, :string
       has_many :comments, Ecto.Query.ValidatorTest.Comment
@@ -20,7 +20,7 @@ defmodule Ecto.Query.ValidatorTest do
   defmodule Permalink do
     use Ecto.Model
 
-    queryable :comments, primary_key: false do
+    schema :comments, primary_key: false do
       belongs_to :post, Ecto.Query.ValidatorTest.Post
     end
   end
@@ -28,7 +28,7 @@ defmodule Ecto.Query.ValidatorTest do
   defmodule Comment do
     use Ecto.Model
 
-    queryable :comments do
+    schema :comments do
       field :text, :string
       field :temp, :virtual
       field :posted, :datetime
@@ -46,15 +46,15 @@ defmodule Ecto.Query.ValidatorTest do
 
 
   test "valid query with bindings" do
-    query = Post |> select([p], { p.title })
+    query = Post |> select([p], {p.title})
     validate(query)
 
-    query = "posts" |> select([p], { p.title })
+    query = "posts" |> select([p], {p.title})
     validate(query)
   end
 
   test "invalid query" do
-    query = select(Query[], [], 123)
+    query = select(%Query{}, [], 123)
     assert_raise Ecto.QueryError, ~r"a query must have a from expression", fn ->
       validate(query)
     end
@@ -93,7 +93,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  test "entity field types" do
+  test "model field types" do
     query = Post |> select([p], p.title + 2)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
@@ -102,7 +102,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "unknown field" do
     query = Post |> select([p], p.unknown)
-    assert_raise Ecto.QueryError, ~r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post.Entity`", fn ->
+    assert_raise Ecto.QueryError, ~r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post`", fn ->
       validate(query)
     end
   end
@@ -208,6 +208,9 @@ defmodule Ecto.Query.ValidatorTest do
     query = Post |> distinct([p], p.id)
     validate(query)
 
+    query = Post |> distinct([p], p.id * 2)
+    validate(query)
+
     query = Post |> distinct([p], [p.id, p.title])
     validate(query)
 
@@ -215,9 +218,6 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> distinct([p], [p.id, p.title]) |> order_by([p], [p.title, p.id])
-    validate(query)
-
-    query = Post |> distinct([p], p) |> order_by([p], [p.id, p.title])
     validate(query)
 
     query = Post |> select([p], p.title) |> distinct([p], p.title) |> order_by([p], p.title)
@@ -261,7 +261,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> having([p], p.id) |> select([], 0)
-    assert_raise Ecto.QueryError, ~r"`Ecto.Query.ValidatorTest.Post.Entity.id` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`&0.id\(\)` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -271,7 +271,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
-    assert_raise Ecto.QueryError, ~r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -280,18 +280,53 @@ defmodule Ecto.Query.ValidatorTest do
     query = Post |> group_by([p], p.id) |> select([p], p.id)
     validate(query)
 
+    query = Post |> group_by([p], p.id * 2) |> select([p], p.id * 2)
+    validate(query)
+
+    query = Post |> group_by([p], p.id * 2) |> select([p], p.id)
+    assert_raise Ecto.QueryError, ~r"`&0.id\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+
     query = Post |> group_by([p], p.id) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+
+    query = Post |> group_by([p], p.id) |> order_by([p], p.title)
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+
+    query = Post |> group_by([p], p.id) |> distinct([p], p.title)
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
       validate(query)
     end
   end
 
-  test "group_by groups entity expression" do
+  test "aggregate function groups expression" do
+    query = Post |> select([p], [count(p.id), p.title])
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+
+    query = Post |> order_by([p], count(p.id)) |> select([p], p.title)
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+
+    query = Post |> distinct([p], count(p.id)) |> select([p], p.title)
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+      validate(query)
+    end
+  end
+
+  test "group_by groups model expression" do
     query = Post |> group_by([p], [p.id, p.title, p.text]) |> select([p], p)
     validate(query)
 
     query = Post |> group_by([p], p.id) |> select([p], p)
-    assert_raise Ecto.QueryError, ~r"`Ecto.Query.ValidatorTest.Post.Entity.title` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -368,7 +403,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  test "cannot preload without entity" do
+  test "cannot preload without model" do
     query = "posts" |> preload(:comments)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
@@ -385,7 +420,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  test "entity have to be selected with preload" do
+  test "model have to be selected with preload" do
     query = Post |> preload(:comments) |> select([p], p)
     validate(query)
 
@@ -423,17 +458,17 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(p in Post, join: c in p.comments, select: assoc(c, post: p))
-    assert_raise Ecto.QueryError, "can only associate on the from entity", fn ->
+    assert_raise Ecto.QueryError, "can only associate on the from model", fn ->
       validate(query)
     end
 
     query = from(p in Post, join: c in p.comments, select: assoc(p, not_field: c))
-    assert_raise Ecto.QueryError, "field `Ecto.Query.ValidatorTest.Post.Entity.not_field` is not an association", fn ->
+    assert_raise Ecto.QueryError, "field `Ecto.Query.ValidatorTest.Post.not_field` is not an association", fn ->
       validate(query)
     end
 
     query = from(p in Post, join: c in p.comments, select: assoc(p, permalink: c))
-    assert_raise Ecto.QueryError, ~r"doesn't match given entity", fn ->
+    assert_raise Ecto.QueryError, ~r"doesn't match given model", fn ->
       validate(query)
     end
 
@@ -449,7 +484,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "datetime type" do
-    datetime = Ecto.DateTime[year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0]
+    datetime = %Ecto.DateTime{year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0}
     query = from(c in Comment, where: c.posted == ^datetime, select: c)
     validate(query)
 
@@ -460,7 +495,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "date type" do
-    date = Ecto.Date[year: 2013, month: 8, day: 1]
+    date = %Ecto.Date{year: 2013, month: 8, day: 1}
     query = from(c in Comment, where: c.day == ^date, select: c)
     validate(query)
 
@@ -471,7 +506,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "time type" do
-    time = Ecto.Time[hour: 14, min: 28, sec: 0]
+    time = %Ecto.Time{hour: 14, min: 28, sec: 0}
     query = from(c in Comment, where: c.time == ^time, select: c)
     validate(query)
 

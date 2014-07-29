@@ -20,7 +20,7 @@ defmodule Ecto.Repo do
         end
       end
 
-  Most of the times, we want the repository to work with different
+  Most of the time, we want the repository to work with different
   environments. In such cases, we can pass an `:env` option:
 
       defmodule MyRepo do
@@ -46,15 +46,20 @@ defmodule Ecto.Repo do
 
   @doc false
   defmacro __using__(opts) do
-    adapter = Keyword.fetch!(opts, :adapter)
+    adapter = Macro.expand(Keyword.fetch!(opts, :adapter), __CALLER__)
     env     = Keyword.get(opts, :env)
+
+    unless Code.ensure_loaded?(adapter) do
+      raise ArgumentError, message: "Adapter #{inspect adapter} was not compiled, " <>
+                                    "ensure its driver is included as a dependency of your project"
+    end
 
     quote do
       use unquote(adapter)
       @behaviour Ecto.Repo
       @env unquote(env)
 
-      import Ecto.Utils, only: [app_dir: 2]
+      import Ecto.Utils, only: [app_dir: 2, parse_url: 1]
 
       if @env do
         def conf do
@@ -71,33 +76,32 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.stop(__MODULE__, unquote(adapter))
       end
 
-      def storage_up do
-        Ecto.Repo.Backend.storage_up(__MODULE__, unquote(adapter))
-      end
-
-      def storage_down do
-        Ecto.Repo.Backend.storage_down(__MODULE__, unquote(adapter))
-      end
-
       def get(queryable, id, opts \\ []) do
         Ecto.Repo.Backend.get(__MODULE__, unquote(adapter), queryable, id, opts)
+      end
+
+      def get!(queryable, id, opts \\ []) do
+        Ecto.Repo.Backend.get!(__MODULE__, unquote(adapter), queryable, id, opts)
+      end
+
+      def one(queryable, opts \\ []) do
+        Ecto.Repo.Backend.one(__MODULE__, unquote(adapter), queryable, opts)
+      end
+
+      def one!(queryable, opts \\ []) do
+        Ecto.Repo.Backend.one!(__MODULE__, unquote(adapter), queryable, opts)
       end
 
       def all(queryable, opts \\ []) do
         Ecto.Repo.Backend.all(__MODULE__, unquote(adapter), queryable, opts)
       end
 
-      def create(entity, opts \\ []) do
-        IO.write :stderr, "#{__MODULE__}.create/2 is deprecated, please use #{__MODULE__}.insert/2 instead\n#{Exception.format_stacktrace}"
-        insert(entity, opts)
+      def insert(model, opts \\ []) do
+        Ecto.Repo.Backend.insert(__MODULE__, unquote(adapter), model, opts)
       end
 
-      def insert(entity, opts \\ []) do
-        Ecto.Repo.Backend.insert(__MODULE__, unquote(adapter), entity, opts)
-      end
-
-      def update(entity, opts \\ []) do
-        Ecto.Repo.Backend.update(__MODULE__, unquote(adapter), entity, opts)
+      def update(model, opts \\ []) do
+        Ecto.Repo.Backend.update(__MODULE__, unquote(adapter), model, opts)
       end
 
       defmacro update_all(queryable, values, opts \\ []) do
@@ -105,8 +109,8 @@ defmodule Ecto.Repo do
                                      values, opts)
       end
 
-      def delete(entity, opts \\ []) do
-        Ecto.Repo.Backend.delete(__MODULE__, unquote(adapter), entity, opts)
+      def delete(model, opts \\ []) do
+        Ecto.Repo.Backend.delete(__MODULE__, unquote(adapter), model, opts)
       end
 
       def delete_all(queryable, opts \\ []) do
@@ -119,10 +123,6 @@ defmodule Ecto.Repo do
 
       def rollback(value \\ nil) do
         Ecto.Repo.Backend.rollback(__MODULE__, unquote(adapter), value)
-      end
-
-      def parse_url(url) do
-        Ecto.Repo.Backend.parse_url(url)
       end
 
       def adapter do
@@ -154,22 +154,15 @@ defmodule Ecto.Repo do
 
 
   @doc """
-  Parses an Ecto URL of the following format:
-  `ecto://username:password@hostname:port/database?opts=123` where the
-  `password`, `port` and `options` are optional.
-  """
-  defcallback parse_url(String.t) :: Keyword.t
-
-  @doc """
-  Starts any connection pooling or supervision and return `{ :ok, pid }`
+  Starts any connection pooling or supervision and return `{:ok, pid}`
   or just `:ok` if nothing needs to be done.
 
-  Returns `{ :error, { :already_started, pid } }` if the repo already
-  started or `{ :error, term }` in case anything else goes wrong.
+  Returns `{:error, {:already_started, pid}}` if the repo already
+  started or `{:error, term}` in case anything else goes wrong.
   """
-  defcallback start_link() :: { :ok, pid } | :ok |
-                              { :error, { :already_started, pid } } |
-                              { :error, term }
+  defcallback start_link() :: {:ok, pid} | :ok |
+                              {:error, {:already_started, pid}} |
+                              {:error, term}
 
   @doc """
   Stops any connection pooling or supervision started with `start_link/1`.
@@ -177,26 +170,8 @@ defmodule Ecto.Repo do
   defcallback stop() :: :ok
 
   @doc """
-  Create the storage in the data store and return `:ok` if it was created
-  successfully.
-
-  Returns `{ :error, :already_up }` if the storage has already been created or
-  `{ :error, term }` in case anything else goes wrong.
-  """
-  defcallback storage_up() :: :ok | { :error, :already_up } | { :error, term }
-
-  @doc """
-  Drop the storage in the data store and return `:ok` if it was dropped
-  successfully.
-
-  Returns `{ :error, :already_down }` if the storage has already been dropped or
-  `{ :error, term }` in case anything else goes wrong.
-  """
-  defcallback storage_down() :: :ok | { :error, :already_down } | { :error, term }
-
-  @doc """
-  Fetches a single entity from the data store where the primary key matches the
-  given id. Returns `nil` if no result was found. If the entity in the queryable
+  Fetches a single model from the data store where the primary key matches the
+  given id. Returns `nil` if no result was found. If the model in the queryable
   has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
   will be raised if there is an adapter error.
 
@@ -204,7 +179,7 @@ defmodule Ecto.Repo do
     `:timeout` - The time in milliseconds to wait for the call to finish,
                  `:infinity` will wait indefinitely (default: 5000);
   """
-  defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Entity.t | nil | no_return
+  defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
   Fetches all results from the data store based on the given query. May raise
@@ -222,10 +197,10 @@ defmodule Ecto.Repo do
            select: p.title
       MyRepo.all(query)
   """
-  defcallback all(Ecto.Query.t, Keyword.t) :: [Ecto.Entity.t] | no_return
+  defcallback all(Ecto.Query.t, Keyword.t) :: [Ecto.Model.t] | no_return
 
   @doc """
-  Stores a single new entity in the data store and returns its stored
+  Stores a single new model in the data store and returns its stored
   representation. May raise `Ecto.AdapterError` if there is an adapter error.
 
   ## Options
@@ -234,13 +209,13 @@ defmodule Ecto.Repo do
 
   ## Example
 
-      post = Post.new(title: "Ecto is great", text: "really, it is")
+      post = %Post{title: "Ecto is great", text: "really, it is"}
              |> MyRepo.insert
   """
-  defcallback insert(Ecto.Entity.t, Keyword.t) :: Ecto.Entity.t | no_return
+  defcallback insert(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Updates an entity using the primary key as key. If the entity has no primary
+  Updates an model using the primary key as key. If the model has no primary
   key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
   there is an adapter error.
 
@@ -254,7 +229,7 @@ defmodule Ecto.Repo do
       post = post.title("New title")
       MyRepo.update(post)
   """
-  defcallback update(Ecto.Entity.t, Keyword.t) :: :ok | no_return
+  defcallback update(Ecto.Model.t, Keyword.t) :: :ok | no_return
 
   @doc """
   Updates all entities matching the given query with the given values.
@@ -276,7 +251,7 @@ defmodule Ecto.Repo do
   defmacrocallback update_all(Macro.t, Keyword.t, Keyword.t) :: integer | no_return
 
   @doc """
-  Deletes an entity using the primary key as key. If the entity has no primary
+  Deletes an model using the primary key as key. If the model has no primary
   key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
   there is an adapter error.
 
@@ -289,7 +264,7 @@ defmodule Ecto.Repo do
       [post] = MyRepo.all(from(p in Post, where: p.id == 42))
       MyRepo.delete(post)
   """
-  defcallback delete(Ecto.Entity.t, Keyword.t) :: :ok | no_return
+  defcallback delete(Ecto.Model.t, Keyword.t) :: :ok | no_return
 
   @doc """
   Deletes all entities matching the given query with the given values.
@@ -312,9 +287,9 @@ defmodule Ecto.Repo do
   transaction will be rolled back. If no error occurred the transaction will be
   commited when the function returns. A transaction can be explicitly rolled
   back by calling `rollback!`, this will immediately leave the function and
-  return the value given to `rollback!` as `{ :error, value }`. A successful
+  return the value given to `rollback!` as `{:error, value}`. A successful
   transaction returns the value returned by the function wrapped in a tuple as
-  `{ :ok, value }`. Transactions can be nested.
+  `{:ok, value}`. Transactions can be nested.
 
   ## Options
     `:timeout` - The time in milliseconds to wait for the call to finish,
@@ -329,24 +304,24 @@ defmodule Ecto.Repo do
 
       # In the following example only the comment will be rolled back
       MyRepo.transaction(fn ->
-        MyRepo.insert(Post.new)
+        MyRepo.insert(%Post{})
 
         MyRepo.transaction(fn ->
-          MyRepo.insert(Comment.new)
+          MyRepo.insert(%Comment{})
           raise "error"
         end)
       end)
 
       # Roll back a transaction explicitly
       MyRepo.transaction(fn ->
-        p = MyRepo.insert(Post.new)
+        p = MyRepo.insert(%Post{})
         if not Editor.post_allowed?(p) do
           MyRepo.rollback!
         end
       end)
 
   """
-  defcallback transaction(Keyword.t, fun) :: { :ok, any } | { :error, any }
+  defcallback transaction(Keyword.t, fun) :: {:ok, any} | {:error, any}
 
   @doc """
   Rolls back the current transaction. See `rollback/1`.
@@ -355,7 +330,7 @@ defmodule Ecto.Repo do
 
   @doc """
   Rolls back the current transaction. The transaction will return the value
-  given as `{ :error, value }`.
+  given as `{:error, value}`.
   """
   defcallback rollback(any) :: no_return
 
@@ -370,9 +345,9 @@ defmodule Ecto.Repo do
 
   ## Examples
 
-      def log({ :query, sql }, fun) do
-        { time, result } = :timer.tc(fun)
-        Logger.log({ sql, time })
+      def log({:query, sql}, fun) do
+        {time, result} = :timer.tc(fun)
+        Logger.log({sql, time})
         result
       end
 

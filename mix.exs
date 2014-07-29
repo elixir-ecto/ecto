@@ -2,33 +2,45 @@ defmodule Ecto.Mixfile do
   use Mix.Project
 
   def project do
-    [ app: :ecto,
-      version: "0.1.0-dev",
-      elixir: "~> 0.12.4 or ~> 0.13.0-dev",
-      env: envs,
-      deps: deps(Mix.env),
-      build_per_environment: false,
+    [app: :ecto,
+     version: "0.2.2",
+     elixir: "~> 0.14.0",
+     deps: deps,
+     build_per_environment: false,
+     test_paths: test_paths(Mix.env),
 
-      # Docs
-      name: "Ecto",
-      docs: &docs/0,
-      source_url: "https://github.com/elixir-lang/ecto" ]
+     description: description,
+     package: package,
+
+     # Docs
+     name: "Ecto",
+     docs: &docs/0,
+     source_url: "https://github.com/elixir-lang/ecto"]
   end
 
   def application do
-    [ applications: [:poolboy, :emysql] ]
+    [applications: [:decimal, :poolboy, :emysql]]
   end
 
-  defp deps(:prod) do
-    [ { :poolboy, "~> 1.1.0", github: "devinus/poolboy" },
-      { :decimal, "~> 0.1.0", github: "ericmj/decimal" },
-      { :postgrex, "~> 0.4.0", github: "ericmj/postgrex", optional: true },
-      { :emysql, github: "eonblast/emysql" } ]
+  defp deps do
+    [{:poolboy, "~> 1.2.1"},
+     # {:decimal, github: "ericmj/decimal", optional: true},
+     # {:postgrex, github: "ericmj/postgrex", optional: true},
+     {:decimal, "~> 0.2.1", optional: true},
+     {:postgrex, "~> 0.5.1", optional: true},
+     {:emysql, github: "eonblast/emysql" },
+     {:ex_doc, github: "elixir-lang/ex_doc", only: :dev},
+     {:markdown, github: "devinus/markdown", only: :dev}]
   end
 
-  defp deps(_) do
-    deps(:prod) ++
-      [ { :ex_doc, github: "elixir-lang/ex_doc" } ]
+  defp test_paths(:pg),  do: ["integration_test/pg"]
+  defp test_paths(:all), do: ["test", "integration_test/pg"]
+  defp test_paths(_),    do: ["test"]
+
+  defp description do
+    """
+    Ecto is a domain specific language for writing queries and interacting with databases in Elixir.
+    """
   end
 
   defp envs do
@@ -37,9 +49,16 @@ defmodule Ecto.Mixfile do
       all: [ test_paths: ["test", "integration_test/pg", "integration_test/mysql"] ] ]
   end
 
+  defp package do
+    [contributors: ["Eric Meadows-Jönsson", "José Valim"],
+     licenses: ["Apache 2.0"],
+     links: %{"GitHub" => "https://github.com/elixir-lang/ecto",
+              "Docs" => "http://elixir-lang.org/docs/ecto/"}]
+  end
+
   defp docs do
-    [ source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),
-      main: "overview",
-      readme: true ]
+    [source_ref: System.cmd("git rev-parse --verify --quiet HEAD"),
+     main: "overview",
+     readme: true]
   end
 end

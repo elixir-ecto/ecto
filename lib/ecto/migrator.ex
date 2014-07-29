@@ -66,9 +66,9 @@ defmodule Ecto.Migrator do
 
   defp run_to(repo, directory, direction, target) do
     within_target_version? = fn
-      { version, _ }, target, :up ->
+      {version, _}, target, :up ->
         version <= target
-      { version, _ }, target, :down ->
+      {version, _}, target, :down ->
         version >= target
     end
 
@@ -91,7 +91,7 @@ defmodule Ecto.Migrator do
   defp pending_in_direction(repo, directory, :up) do
     versions = repo.adapter.migrated_versions(repo)
     migrations_for(directory) |>
-      Enum.filter(fn { version, _file } ->
+      Enum.filter(fn {version, _file} ->
         not (version in versions)
       end)
   end
@@ -99,7 +99,7 @@ defmodule Ecto.Migrator do
   defp pending_in_direction(repo, directory, :down) do
     versions = repo.adapter.migrated_versions(repo)
     migrations_for(directory) |>
-      Enum.filter(fn { version, _file } ->
+      Enum.filter(fn {version, _file} ->
         version in versions
       end)
       |> :lists.reverse
@@ -114,17 +114,17 @@ defmodule Ecto.Migrator do
 
   defp attach_versions(files) do
     Enum.map(files, fn(file) ->
-      { integer, _ } = Integer.parse(Path.basename(file))
-      { integer, file }
+      {integer, _} = Integer.parse(Path.basename(file))
+      {integer, file}
     end)
   end
 
   defp migrate(migrations, direction, repo) do
     ensure_no_duplication(migrations)
 
-    Enum.map migrations, fn { version, file } ->
-      { mod, _bin } =
-        Enum.find(Code.load_file(file), fn { mod, _bin } ->
+    Enum.map migrations, fn {version, file} ->
+      {mod, _bin} =
+        Enum.find(Code.load_file(file), fn {mod, _bin} ->
           function_exported?(mod, :__migration__, 0)
         end) || raise_no_migration_in_file(file)
 
@@ -143,7 +143,7 @@ defmodule Ecto.Migrator do
     end
   end
 
-  defp ensure_no_duplication([{ version, _ } | t]) do
+  defp ensure_no_duplication([{version, _} | t]) do
     if List.keyfind(t, version, 0) do
       raise Ecto.MigrationError, message: "migrations can't be executed, version #{version} is duplicated"
     else

@@ -36,13 +36,13 @@ defmodule Mix.Tasks.Ecto.Migrate do
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     Mix.Task.run "app.start", args
 
-    { opts, args, _ } = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer],
+    {opts, args, _} = OptionParser.parse args,
+      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean],
       aliases: [n: :step, v: :to]
 
-    { repo, _ } = parse_repo(args)
+    {repo, _} = parse_repo(args)
     ensure_repo(repo)
-    if opts[:no_start], do: ensure_started(repo)
+    unless opts[:start], do: ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
       opts = Keyword.put(opts, :all, true)

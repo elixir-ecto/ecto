@@ -4,14 +4,14 @@ defmodule Ecto.QueryTest do
   import Support.CompileHelpers
   import Ecto.Query
 
-  alias Ecto.Query.Query
+  alias Ecto.Query
   alias Ecto.Query.Normalizer
   alias Ecto.Query.Validator
 
   defmodule Post do
     use Ecto.Model
 
-    queryable :posts do
+    schema "posts" do
       field :title, :string
       has_many :comments, Ecto.QueryTest.Comment
     end
@@ -20,7 +20,7 @@ defmodule Ecto.QueryTest do
   defmodule Comment do
     use Ecto.Model
 
-    queryable :comments do
+    schema "comments" do
       field :text, :string
     end
   end
@@ -94,7 +94,7 @@ defmodule Ecto.QueryTest do
 
   test "binding should be list of variables" do
     assert_raise Ecto.QueryError, "binding list should contain only variables, got: 0", fn ->
-      delay_compile select(Query[], [0], 1)
+      delay_compile select(%Query{}, [0], 1)
     end
   end
 
@@ -114,12 +114,12 @@ defmodule Ecto.QueryTest do
     end
 
     assert_raise Protocol.UndefinedError, fn ->
-      from(p in NotAnEntity, []) |> select([p], p.title)
+      from(p in NotAModel, []) |> select([p], p.title)
     end
   end
 
   test "string source query" do
-    assert Query[from: { "posts", nil, nil }] = from(p in "posts", []) |> select([p], p.title)
+    assert %Query{from: {"posts", nil}} = from(p in "posts", []) |> select([p], p.title)
   end
 
   test "validate from expression" do
@@ -180,13 +180,13 @@ defmodule Ecto.QueryTest do
   end
 
   test "join queries adds binds" do
-    from(c in Comment, join: p in Post, on: true, select: { p.title, c.text })
-    Comment |> join(:inner, [c], p in Post, true) |> select([c,p], { p.title, c.text })
+    from(c in Comment, join: p in Post, on: true, select: {p.title, c.text})
+    Comment |> join(:inner, [c], p in Post, true) |> select([c,p], {p.title, c.text})
   end
 
   test "cannot bind too many vars" do
-    from(a in Query[], [])
-    from([a] in Query[], [])
+    from(a in %Query{}, [])
+    from([a] in %Query{}, [])
 
     assert_raise Ecto.QueryError, fn ->
       comment = Comment
@@ -205,6 +205,7 @@ defmodule Ecto.QueryTest do
              select: p)
       end
 
-    assert { :{}, _, [Ecto.Query.Query | _] } = Macro.expand(quoted, __ENV__)
+    assert {:%{}, _, list} = Macro.expand(quoted, __ENV__)
+    assert List.keyfind(list, :__struct__, 0) == {:__struct__, Query}
   end
 end

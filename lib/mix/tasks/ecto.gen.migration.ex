@@ -20,9 +20,10 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   def run(args) do
     no_umbrella!("ecto.gen.migration")
     Mix.Task.run "app.start", args
+    {_, args, _} = OptionParser.parse(args)
 
     case parse_repo(args) do
-      { repo, [name] } ->
+      {repo, [name]} ->
         ensure_repo(repo)
         path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
         file = Path.join(path, "#{timestamp}_#{name}.exs")
@@ -32,14 +33,14 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
         if open?(file) && Mix.shell.yes?("Do you want to run this migration?") do
           Mix.Task.run "ecto.migrate", [repo]
         end
-      { _repo, _ } ->
+      {_repo, _} ->
         raise Mix.Error, message:
               "expected ecto.gen.migration to receive the migration file name, got: #{inspect Enum.join(args, " ")}"
     end
   end
 
   defp timestamp do
-    { { y, m, d }, { hh, mm, ss } } = :calendar.universal_time()
+    {{y, m, d}, {hh, mm, ss}} = :calendar.universal_time()
     "#{y}#{pad(m)}#{pad(d)}#{pad(hh)}#{pad(mm)}#{pad(ss)}"
   end
 

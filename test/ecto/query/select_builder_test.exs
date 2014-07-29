@@ -11,7 +11,7 @@ defmodule Ecto.Query.SelectBuilderTest do
     assert Macro.escape(quote do &0.y end) ==
            escape(quote do x.y end, [x: 0])
 
-    assert { :{}, [], [:{}, [], [0, 1, 2]] } ==
+    assert {:{}, [], [:{}, [], [0, 1, 2]]} ==
            escape(quote do {0, 1, 2} end, [])
 
     assert [Macro.escape(quote do &0.y end), Macro.escape(quote do &0.z end)] ==
@@ -20,7 +20,7 @@ defmodule Ecto.Query.SelectBuilderTest do
     assert Macro.escape(quote do 2 * &0.y end) ==
             escape(quote do 2 * x.y end, [x: 0])
 
-    assert { :+, _, [{ :x, _, _ }, { :y, _, _ }] } =
+    assert {:+, _, [{:x, _, _}, {:y, _, _}]} =
             escape(quote do ^(x + y) end, [])
 
     assert (quote do x.y end) ==

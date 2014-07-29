@@ -20,10 +20,10 @@ defmodule Ecto.Query.BuilderUtilTest do
     assert quote(do: ~s"123") ==
            escape(quote do ~s"123" end, [])
 
-    assert { Ecto.Binary, { :<<>>, [], [1, 2, 3] } } ==
+    assert {:%, [], [Ecto.Binary, {:%{}, [], [value: {:<<>>, [], [1, 2, 3]}]}]} ==
            escape(quote do binary(<< 1, 2, 3 >>) end, [])
 
-    assert Ecto.Array[value: [1, 2, 3], type: :integer] ==
+    assert %Ecto.Array{value: [1, 2, 3], type: :integer} ==
            Code.eval_quoted(escape(quote do array([1, 2, 3], ^:integer) end, []), [], __ENV__) |> elem(0)
 
     assert quote(do: &0.z) ==
@@ -64,16 +64,16 @@ defmodule Ecto.Query.BuilderUtilTest do
   end
 
   test "escape dot" do
-    assert Macro.escape(quote(do: { &0, :y })) ==
+    assert Macro.escape(quote(do: {&0, :y})) ==
            escape_dot(quote(do: x.y), [x: 0])
 
-    assert Macro.escape(quote(do: { &0, :y })) ==
+    assert Macro.escape(quote(do: {&0, :y})) ==
            escape_dot(quote(do: x.y()), [x: 0])
 
     assert :error ==
            escape_dot(quote(do: x), [x: 0])
 
-    assert quote(do: { &0, :y }) ==
+    assert quote(do: {&0, :y}) ==
            Code.eval_quoted(escape_dot(quote(do: field(x, ^:y)), [x: 0]), [], __ENV__) |> elem(0)
 
     assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
@@ -82,19 +82,19 @@ defmodule Ecto.Query.BuilderUtilTest do
   end
 
   test "escape_fields_and_vars" do
-    varx = { :{}, [], [:&, [], [0]] }
-    vary = { :{}, [], [:&, [], [1]] }
+    varx = {:{}, [], [:&, [], [0]]}
+    vary = {:{}, [], [:&, [], [1]]}
 
-    assert [{ varx, :y }] ==
+    assert [{varx, :y}] ==
            escape_fields_and_vars(quote do x.y end, [x: 0])
 
-    assert [{ varx, :x }, { vary, :y }] ==
+    assert [{varx, :x}, {vary, :y}] ==
            escape_fields_and_vars(quote do [x.x, y.y] end, [x: 0, y: 1])
 
     assert [varx] ==
            escape_fields_and_vars(quote do x end, [x: 0])
 
-    assert [varx, { vary, :x }] ==
+    assert [varx, {vary, :x}] ==
            escape_fields_and_vars(quote do [x, y.x] end, [x: 0, y: 1])
 
     assert [varx, vary] ==

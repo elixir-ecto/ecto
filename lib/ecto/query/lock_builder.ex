@@ -14,7 +14,7 @@ defmodule Ecto.Query.LockBuilder do
                              " or a string containing the database-specific locking" <>
                              " clause, got: #{inspect expr}"
   end
-  
+
   @doc """
   Builds a quoted expression.
 
@@ -35,10 +35,10 @@ defmodule Ecto.Query.LockBuilder do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, :lock, term) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, :lock, term) :: Ecto.Query.t
   def apply(query, :lock, value) do
-    Ecto.Query.Query[] = query = Ecto.Queryable.to_query(query)
-    query.lock(value)
+    query = Ecto.Queryable.to_query(query)
+    %{query | lock: value}
   end
 
 end

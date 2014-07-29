@@ -11,32 +11,32 @@ defmodule Ecto.Query.SelectBuilder do
 
   ## Examples
 
-      iex> escape({ 1, 2 }, [])
-      { :{}, [], [ :{}, [], [1, 2] ] }
+      iex> escape({1, 2}, [])
+      {:{}, [], [ :{}, [], [1, 2] ]}
 
       iex> escape([ 1, 2 ], [])
       [1, 2]
 
       iex> escape(quote(do: x), [x: 0])
-      { :{}, [], [:&, [], [0]] }
+      {:{}, [], [:&, [], [0]]}
 
   """
   @spec escape(Macro.t, Keyword.t) :: Macro.t
-  def escape({ :assoc, _, args } = assoc, vars) when is_list(args) do
+  def escape({:assoc, _, args} = assoc, vars) when is_list(args) do
     escape_assoc(assoc, vars)
   end
 
   def escape(other, vars), do: do_escape(other, vars)
 
   # Tuple
-  defp do_escape({ left, right }, vars) do
-    do_escape({ :{}, [], [left, right] }, vars)
+  defp do_escape({left, right}, vars) do
+    do_escape({:{}, [], [left, right]}, vars)
   end
 
   # Tuple
-  defp do_escape({ :{}, _, list }, vars) do
+  defp do_escape({:{}, _, list}, vars) do
     list = Enum.map(list, &do_escape(&1, vars))
-    { :{}, [], [:{}, [], list] }
+    {:{}, [], [:{}, [], list]}
   end
 
   # List
@@ -45,7 +45,7 @@ defmodule Ecto.Query.SelectBuilder do
   end
 
   # var - where var is bound
-  defp do_escape({ var, _, context}, vars) when is_atom(var) and is_atom(context) do
+  defp do_escape({var, _, context}, vars) when is_atom(var) and is_atom(context) do
     BuilderUtil.escape_var(var, vars)
   end
 
@@ -54,23 +54,23 @@ defmodule Ecto.Query.SelectBuilder do
   end
 
   # assoc/2
-  defp escape_assoc({ :assoc, _, [{ var, _, context }, list] }, vars)
+  defp escape_assoc({:assoc, _, [{var, _, context}, list]}, vars)
       when is_atom(var) and is_atom(context) and is_list(list) do
     var = BuilderUtil.escape_var(var, vars)
 
     list = Enum.map(list, fn
-      { field, { assoc_var, _, assoc_ctxt } }
+      {field, {assoc_var, _, assoc_ctxt}}
           when is_atom(field) and is_atom(assoc_var) and is_atom(assoc_ctxt) ->
-        { field, BuilderUtil.escape_var(assoc_var, vars) }
+        {field, BuilderUtil.escape_var(assoc_var, vars)}
 
-      { field, other } when is_atom(field) ->
-        { field, escape_assoc(other, vars) }
+      {field, other} when is_atom(field) ->
+        {field, escape_assoc(other, vars)}
 
       other ->
         escape_assoc(other, vars)
     end)
 
-    { :{}, [], [:assoc, [], [var, list]] }
+    {:{}, [], [:assoc, [], [var, list]]}
   end
 
   defp escape_assoc(other, _vars) do
@@ -89,22 +89,22 @@ defmodule Ecto.Query.SelectBuilder do
   def build(query, binding, expr, env) do
     binding = BuilderUtil.escape_binding(binding)
     expr    = escape(expr, binding)
-    select  = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
-                          file: unquote(env.file), line: unquote(env.line)]
+    select  = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
+                          file: unquote(env.file), line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [select], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, select) do
-    Ecto.Query.Query[] = query = Ecto.Queryable.to_query(query)
+    query = Ecto.Queryable.to_query(query)
 
     if query.select do
       raise Ecto.QueryError, reason: "only one select expression is allowed in query"
     else
-      query.select(select)
+      %{query | select: select}
     end
   end
 end

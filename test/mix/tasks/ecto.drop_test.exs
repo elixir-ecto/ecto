@@ -6,18 +6,24 @@ defmodule Mix.Tasks.Ecto.DropTest do
   # Mocked adapters
 
   defmodule Adapter do
+    @behaviour Ecto.Adapter.Storage
     defmacro __using__(_), do: :ok
+    def storage_up(_), do: :ok
     def storage_down(_), do: :ok
   end
 
   defmodule AlreadyDownAdapter do
+    @behaviour Ecto.Adapter.Storage
     defmacro __using__(_), do: :ok
-    def storage_down(_), do: { :error, :already_down }
+    def storage_up(_), do: :ok
+    def storage_down(_), do: {:error, :already_down}
   end
 
   defmodule ConfusedAdapter do
+    @behaviour Ecto.Adapter.Storage
     defmacro __using__(_), do: :ok
-    def storage_down(_), do: { :error, :confused }
+    def storage_up(_), do: :ok
+    def storage_down(_), do: {:error, :confused}
   end
 
   defmodule NoStorageDownAdapter do
@@ -48,19 +54,19 @@ defmodule Mix.Tasks.Ecto.DropTest do
 
   test "runs the adapter storage_down" do
     run [to_string(Repo)]
-    assert_received { :mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.DropTest.Repo has been dropped."] }
+    assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.DropTest.Repo has been dropped."]}
   end
 
   test "informs the user when the repo is already down" do
     run [to_string(ExistingRepo)]
-    assert_received { :mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.DropTest.ExistingRepo has already been dropped."] }
+    assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.DropTest.ExistingRepo has already been dropped."]}
   end
 
   test "raises an error when storage_down gives an unknown feedback" do
     assert_raise Mix.Error, fn -> run [to_string(ConfusedRepo)] end
   end
 
-  test "raises an error when the adapter doesn't define a storage_down" do
-    assert_raise Mix.Error, ~r/to define storage_down\/1/, fn -> run [to_string(NoStorageDownRepo)] end
+  test "raises an error when the adapter doesn't define a storage" do
+    assert_raise Mix.Error, ~r/to implement Ecto.Adapter.Storage/, fn -> run [to_string(NoStorageDownRepo)] end
   end
 end

@@ -6,38 +6,31 @@ defmodule Ecto.Query.OrderByBuilder do
   @doc """
   Escapes an order by query.
 
-  The query is escaped to a list of `{ direction, var, field }`
+  The query is escaped to a list of `{direction, expression}`
   pairs at runtime. Escaping also validates direction is one of
   `:asc` or `:desc`.
 
   ## Examples
 
-      iex> escape(quote do [x.x, y.y] end, [x: 0, y: 1])
-      [{ :{}, [], [:asc, { :{}, [], [:&, [], [0]] }, :x] },
-       { :{}, [], [:asc, { :{}, [], [:&, [], [1]] }, :y] }]
+      iex> escape(quote do [x.x, foo()] end, [x: 0])
+      [asc: {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
+       asc: {:{}, [], [:foo, [], []]}]
 
   """
-  @spec escape(Macro.t, Keyword.t) :: Macro.t | no_return
-  def escape(list, vars) when is_list(list) do
-    Enum.map(list, &escape_field(&1, vars))
+  @spec escape(Macro.t, Keyword.t) :: Macro.t
+  def escape(expr, vars) do
+    List.wrap(expr)
+    |> Enum.map(&do_escape(&1, vars))
   end
 
-  def escape(field, vars) do
-    [escape_field(field, vars)]
-  end
-
-  defp escape_field({ dir, dot }, vars) do
+  defp do_escape({dir, expr}, vars) do
     check_dir(dir)
-    case BuilderUtil.escape_dot(dot, vars) do
-      { var, field } ->
-        { :{}, [], [dir, var, field] }
-      :error ->
-        raise Ecto.QueryError, reason: "malformed `order_by` query expression"
-    end
+    ast = BuilderUtil.escape(expr, vars)
+    {dir, ast}
   end
 
-  defp escape_field(ast, vars) do
-    escape_field({ :asc, ast }, vars)
+  defp do_escape(expr, vars) do
+    {:asc, BuilderUtil.escape(expr, vars)}
   end
 
   defp check_dir(dir) when dir in [:asc, :desc], do: :ok
@@ -57,17 +50,17 @@ defmodule Ecto.Query.OrderByBuilder do
   def build(query, binding, expr, env) do
     binding  = BuilderUtil.escape_binding(binding)
     expr     = escape(expr, binding)
-    order_by = quote do: Ecto.Query.QueryExpr[expr: unquote(expr),
-                           file: unquote(env.file), line: unquote(env.line)]
+    order_by = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
+                         file: unquote(env.file), line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [order_by], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.Query.t
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, expr) do
-    Ecto.Query.Query[order_bys: order_bys] = query = Ecto.Queryable.to_query(query)
-    query.order_bys(order_bys ++ [expr])
+    query = Ecto.Queryable.to_query(query)
+    %{query | order_bys: query.order_bys ++ [expr]}
   end
 end

@@ -8,7 +8,7 @@ defmodule Ecto.Model.Validations do
       defmodule User do
         use Ecto.Model
 
-        queryable "users" do
+        schema "users" do
           field :name, :string
           field :age, :string
           field :filename, :string
@@ -49,7 +49,7 @@ defmodule Ecto.Model.Validations do
   function. Note both macros can pass a function name as first
   argument which is the function to be defined. For `validatep`, we
   defined a `validate_attachments` function. All validation functions
-  must receive the current entity as argument. We can call the
+  must receive the current model as argument. We can call the
   `validate_attachments/1` locally as:
 
       validate_attachments(user)
@@ -80,7 +80,7 @@ defmodule Ecto.Model.Validations do
         also: validate_attachments
 
   The predicate given to `:also` is special as it simply receives the
-  current record as argument. In this example, `validate_attachments`
+  current struct as argument. In this example, `validate_attachments`
   will be invoked as:
 
       validate_attachments(user)
@@ -116,7 +116,7 @@ defmodule Ecto.Model.Validations do
         if Path.extname(value) in ~w(jpg gif png) do
           []
         else
-          [{ attr, opts[:message] || "is not an image attachment" }]
+          [{attr, opts[:message] || "is not an image attachment"}]
         end
       end
 
@@ -156,9 +156,9 @@ defmodule Ecto.Model.Validations do
 
  or even receive arguments:
 
-     validatep validate_attachments(user, valid_formats \\ ~w(jpg gif png)),
-        filename: has_format(~r/\w+/),
-          format: member_of(valid_formats)
+      validatep validate_attachments(user, valid_formats \\ ~w(jpg gif png)),
+         filename: has_format(~r/\w+/),
+           format: member_of(valid_formats)
 
   or:
 
@@ -181,51 +181,35 @@ defmodule Ecto.Model.Validations do
   Defines a public function that runs the given validations.
   """
   defmacro validate(function, keywords) do
-    do_validate(:def, function, keywords, Module.get_attribute(__CALLER__.module, :ecto_entity))
+    do_validate(:def, function, keywords)
   end
 
   @doc """
   Defines a private function that runs the given validations.
   """
   defmacro validatep(function, keywords) do
-    do_validate(:defp, function, keywords, Module.get_attribute(__CALLER__.module, :ecto_entity))
+    do_validate(:defp, function, keywords)
   end
 
-  defp do_validate(kind, { _, _, context } = var, keywords, entity) when is_atom(context) do
-    do_validate(kind, { :validate, [], [var] }, keywords, entity)
+  defp do_validate(kind, {_, _, context} = var, keywords) when is_atom(context) do
+    do_validate(kind, {:validate, [], [var]}, keywords)
   end
 
-  defp do_validate(_kind, { _, _, [] }, _keywords, _entity) do
+  defp do_validate(_kind, {_, _, []}, _keywords) do
     raise ArgumentError, message: "validate and validatep expects a function with at least one argument"
   end
 
-  defp do_validate(kind, { _, _, [h|_] } = signature, keywords, entity) do
+  defp do_validate(kind, {_, _, [h|_]} = signature, keywords) do
     do_validate_var(h)
 
     quote do
-      unquote(do_validate_opt(kind, signature, keywords, entity))
-
       Kernel.unquote(kind)(unquote(signature)) do
-        Ecto.Validator.record unquote(h), unquote(keywords)
+        Ecto.Validator.struct unquote(h), unquote(keywords)
       end
     end
   end
 
-  defp do_validate_opt(_kind, _signature, _keywords, nil) do
-    nil
-  end
-
-  defp do_validate_opt(kind, { fun, meta, [h|t] }, keywords, entity) do
-    signature = { fun, meta, [quote(do: unquote(h) = unquote(entity)[])|t] }
-
-    quote do
-      Kernel.unquote(kind)(unquote(signature)) do
-        Ecto.Validator.record unquote(h), unquote(keywords)
-      end
-    end
-  end
-
-  defp do_validate_var({ _, _, context }) when is_atom(context), do: :ok
+  defp do_validate_var({_, _, context}) when is_atom(context), do: :ok
   defp do_validate_var(expr) do
     raise ArgumentError, message: "validate and validatep expects a function with a var " <>
                                   "as first argument, got: #{Macro.to_string(expr)}"

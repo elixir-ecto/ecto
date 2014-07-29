@@ -1,5 +1,7 @@
-[ "decimal": {:git, "git://github.com/ericmj/decimal.git", "ab1b6637aac1eabce5dc5a57290b5366878c2e84", []},
-  "emysql": {:git, "git://github.com/eonblast/emysql.git", "ea507627e2b56d8a90e98db0bd78cb0d7456289d", []},
-  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "1419e7adc1c289cd75587d9f435c412c70c297d9", []},
-  "poolboy": {:git, "git://github.com/devinus/poolboy.git", "64e1eaef0b1e88849c7e7ba9ff75f8cd4dba2a3b", []},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "7bb042d90d80fcfe396408af77a505173912b153", []} ]
+%{"decimal": {:package, "0.2.2"},
+  "emysql": {:git, "git://github.com/eonblast/emysql.git", "c7e2103f8b737667f0128802e8de2f0d5ed2fa5c", []},
+  "ex_doc": {:git, "git://github.com/elixir-lang/ex_doc.git", "ca71b84b9c3c7e23b4b661e485a909aee3fdbc3b", []},
+  "hoedown": {:git, "git://github.com/hoedown/hoedown.git", "0610117f44b173a4e2112afb2f510156a32355b5", []},
+  "markdown": {:git, "git://github.com/devinus/markdown.git", "0345e2044ba71780ba02b2591f1017703d0fa148", []},
+  "poolboy": {:package, "1.2.1"},
+  "postgrex": {:package, "0.5.2"}}

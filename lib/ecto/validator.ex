@@ -1,8 +1,8 @@
 defmodule Ecto.Validator do
   @moduledoc """
-  Validates a given record or dict given a set of predicates.
+  Validates a given struct or dict given a set of predicates.
 
-      Ecto.Validator.record(user,
+      Ecto.Validator.struct(user,
         name: present() when on_create?(user),
         age: present(message: "must be present"),
         age: greater_than(18),
@@ -22,7 +22,7 @@ defmodule Ecto.Validator do
 
   The validator also handles a special key `:also`, which is used to pipe
   to predicates without a particular attribute. Instead, such predicates
-  receive the record as argument. In this example, `validate_other` will
+  receive the struct as argument. In this example, `validate_other` will
   be invoked as:
 
       validate_other(user)
@@ -49,17 +49,17 @@ defmodule Ecto.Validator do
   @spec bin_dict(Macro.t, Keyword.t) :: Macro.t
   defmacro bin_dict(value, opts) when is_list(opts) do
     process opts, value, fn var, attr ->
-      quote do: Dict.get(unquote(var), unquote(atom_to_binary(attr)))
+      quote do: Dict.get(unquote(var), unquote(Atom.to_string(attr)))
     end
   end
 
   @doc """
-  Validates a given record given a set of predicates.
+  Validates a given struct given a set of predicates.
   """
-  @spec record(Macro.t, Keyword.t) :: Macro.t
-  defmacro record(value, opts) when is_list(opts) do
+  @spec struct(Macro.t, Keyword.t) :: Macro.t
+  defmacro struct(value, opts) when is_list(opts) do
     process opts, value, fn var, attr ->
-      quote do: unquote(var).unquote(attr)
+      quote do: Map.get(unquote(var), unquote(attr))
     end
   end
 
@@ -67,8 +67,9 @@ defmodule Ecto.Validator do
   defp process(opts, value, getter) do
     var = quote do: var
 
-    validations = opts
-      |> Stream.map(&process_each(&1, var, getter))
+    validations =
+      opts
+      |> Enum.map(&process_each(&1, var, getter))
       |> concat
 
     quote do
@@ -83,17 +84,17 @@ defmodule Ecto.Validator do
     end)
   end
 
-  defp process_each({ :also, function }, var, _getter) do
-    handle_ops function, fn call -> Macro.pipe(var, call) end
+  defp process_each({:also, function}, var, _getter) do
+    handle_ops function, fn call -> Macro.pipe(var, call, 0) end
   end
 
-  defp process_each({ attr, function }, var, getter) do
+  defp process_each({attr, function}, var, getter) do
     handle_ops function, fn call ->
-      Macro.pipe(attr, Macro.pipe(getter.(var, attr), call))
+      Macro.pipe(attr, Macro.pipe(getter.(var, attr), call, 0), 0)
     end
   end
 
-  defp handle_ops({ :when, _, [left, right] }, callback) do
+  defp handle_ops({:when, _, [left, right]}, callback) do
     quote do
       if unquote(right), do: unquote(concat(handle_and(left, callback))), else: []
     end
@@ -103,7 +104,7 @@ defmodule Ecto.Validator do
     concat(handle_and(other, callback))
   end
 
-  defp handle_and({ :and, _, [left, right] }, callback) do
+  defp handle_and({:and, _, [left, right]}, callback) do
     handle_and(left, callback) ++ [callback.(right)]
   end
 
