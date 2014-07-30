@@ -133,7 +133,7 @@ defmodule Ecto.Query.Util do
 
     res = Enum.find_value(elem_types, fn
       {:ok, elem_type} ->
-        unless type_eq?(inner, elem_type) or (elem_type == :string and inner == :binary) do
+        unless type_eq?(inner, elem_type) or type_castable?(elem_type, inner) do
           {:error, "all elements in array have to be of same type"}
         end
       {:error, _} = err ->
@@ -153,19 +153,19 @@ defmodule Ecto.Query.Util do
 
   # Returns true if value is a query literal
   @doc false
-  def literal?(nil),                          do: true
-  def literal?(value) when is_boolean(value), do: true
-  def literal?(value) when is_binary(value),  do: true
-  def literal?(value) when is_integer(value), do: true
-  def literal?(value) when is_float(value),   do: true
-  def literal?(%Decimal{}),                   do: true
-  def literal?(%Ecto.DateTime{}),             do: true
-  def literal?(%Ecto.Date{}),                 do: true
-  def literal?(%Ecto.Time{}),                 do: true
-  def literal?(%Ecto.Interval{}),             do: true
-  def literal?(%Ecto.Tagged{type: :binary}),               do: true
-  def literal?(%Ecto.Tagged{type: {:array, _}}),                do: true
-  def literal?(_),                            do: false
+  def literal?(nil),                             do: true
+  def literal?(value) when is_boolean(value),    do: true
+  def literal?(value) when is_binary(value),     do: true
+  def literal?(value) when is_integer(value),    do: true
+  def literal?(value) when is_float(value),      do: true
+  def literal?(%Decimal{}),                      do: true
+  def literal?(%Ecto.DateTime{}),                do: true
+  def literal?(%Ecto.Date{}),                    do: true
+  def literal?(%Ecto.Time{}),                    do: true
+  def literal?(%Ecto.Interval{}),                do: true
+  def literal?(%Ecto.Tagged{type: :binary}),     do: true
+  def literal?(%Ecto.Tagged{type: {:array, _}}), do: true
+  def literal?(_),                               do: false
 
   # Returns true if the two types are considered equal by the type system
   # Note that this does not consider casting
@@ -176,11 +176,12 @@ defmodule Ecto.Query.Util do
   def type_eq?(type, type), do: true
   def type_eq?(_, _), do: false
 
-  # Returns true if another type can be casted to the given type
+  # Returns true if the literal type can be inferred as the second type.
+  # A literal type is a type that does not require wrapping with
+  # %Ecto.Tagged{}.
   @doc false
-  def type_castable_to?(:binary), do: true
-  def type_castable_to?({:array, _}), do: true
-  def type_castable_to?(_), do: false
+  def type_castable?(:string, :binary), do: true
+  def type_castable(_, _), do: false
 
   # Tries to cast the given value to the specified type.
   # If value cannot be casted just return it.
