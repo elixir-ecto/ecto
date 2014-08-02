@@ -132,10 +132,10 @@ defmodule Ecto.Migrator do
       file = Path.relative_to_cwd(file)
       case direction do
         :up ->
-          IO.puts IO.ANSI.escape("%{green}* running %{yellow}UP %{reset}#{file}")
+          IO.puts IO.ANSI.format([:green, "* running ", :yellow, "UP ", :reset, file])
           up(repo, version, mod)
         :down ->
-          IO.puts IO.ANSI.escape("%{green}* running %{yellow}DOWN %{reset}#{file}")
+          IO.puts IO.ANSI.format([:green, "* running ", :yellow, "DOWN ", :reset, file])
           down(repo, version, mod)
       end
 
