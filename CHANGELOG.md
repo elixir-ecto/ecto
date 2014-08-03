@@ -1,4 +1,12 @@
-# v0.2.3-dev
+# v0.2.3 (2014-08-03)
+
+* Enhancements
+  * Add `local` and `utc` to `Ecto.DateTime` and `Ecto.Date`
+
+* Bug fixes
+  * Treat `nil` as an any data type
+  * Support array of binaries
+  * Avoid race conditions when optimizing query compilation
 
 # v0.2.2 (2014-06-30)
 
