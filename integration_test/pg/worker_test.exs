@@ -43,7 +43,7 @@ defmodule Ecto.Integration.WorkerTest do
   end
 
   test "timeout" do
-    :error_logger.tty(false)
+    Logger.remove_backend(:console)
     { :ok, worker } = Worker.start(worker_opts(lazy: "false"))
 
     assert %Postgrex.Result{} = Worker.query!(worker, "SELECT pg_sleep(0.11)", [], 200)
@@ -51,7 +51,7 @@ defmodule Ecto.Integration.WorkerTest do
     :timer.sleep(100)
     assert { :noproc, _ } = catch_exit Worker.query!(worker, "SELECT pg_sleep(0.13)", [], 200)
   after
-    :error_logger.tty(true)
+    Logger.add_backend(:console, flush: true)
   end
 
   defp worker_opts(opts \\ []) do

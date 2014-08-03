@@ -188,6 +188,9 @@ defmodule Ecto.Query.ValidatorTest do
     query = Post |> where([p], array([p.title, p.title], ^:string) == nil) |> select([], 0)
     validate(query)
 
+    query = Post |> where([p], array([p.title, p.title], ^:binary) == nil) |> select([], 0)
+    validate(query)
+
     query = Post |> where([p], [p.title, p.title] == nil) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
@@ -370,7 +373,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  test "nils only allowed in == and !=" do
+  test "nils are any type" do
     query = Post |> select([p], 1 == nil)
     validate(query)
 
@@ -378,7 +381,13 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> select([p], 1 + nil)
+    validate(query)
+
+    query = Post |> select([p], array([1, nil, 2], ^:integer))
+    validate(query)
+
     assert_raise Ecto.Query.TypeCheckError, fn ->
+      query = Post |> select([p], "123" + nil)
       validate(query)
     end
   end

@@ -18,11 +18,11 @@ defmodule Ecto.Integration.StorageTest do
   end
 
   def drop_database do
-    System.cmd ~s(psql -U postgres -c "DROP DATABASE IF EXISTS storage_mgt;")
+    :os.cmd 'psql -U postgres -c "DROP DATABASE IF EXISTS storage_mgt;"'
   end
 
   def create_database do
-    System.cmd ~s(psql -U postgres -c "CREATE DATABASE storage_mgt;")
+    :os.cmd 'psql -U postgres -c "CREATE DATABASE storage_mgt;"'
   end
 
   setup do
