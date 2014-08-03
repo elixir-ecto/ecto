@@ -82,11 +82,11 @@ defmodule Ecto.Adapters.Mysql.Worker do
   end
 
   def handle_connection(:ok, request, from, s) do
-    :gen_server.call(request, from, s)
+    handle_call(request, from, s)
   end
   
   def handle_connection({:error, :pool_already_exists}, request, from, s) do
-    :gen_server.call(request, from, s)
+    handle_call(request, from, s)
   end
 
   def handle_connection({:error, err}, _request, _from, s) do
