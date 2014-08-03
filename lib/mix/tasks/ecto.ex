@@ -69,7 +69,7 @@ defmodule Mix.Tasks.Ecto do
   def open?(file) do
     editor = System.get_env("ECTO_EDITOR") || ""
     if editor != "" do
-      System.cmd editor <> " " <> inspect(file)
+      System.cmd(editor, [inspect(file)])
       true
     else
       false

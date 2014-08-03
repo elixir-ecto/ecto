@@ -398,7 +398,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
 
       if username = database[:username] do
-        command = ~s(PGUSER=#{username} )
+        command = ~s(PGUSER=#{username} ) <> command
       end
 
       command =
@@ -407,7 +407,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         ~s(--host #{database[:hostname]} ) <>
         ~s(-c "#{sql_command};" )
 
-      System.cmd command
+      String.to_char_list(command)
+      |> :os.cmd
+      |> List.to_string
     end
 
     ## Migration API

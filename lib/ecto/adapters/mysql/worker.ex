@@ -1,11 +1,13 @@
 defmodule Ecto.Adapters.Mysql.Worker do
   @moduledoc false
 
-  use GenServer.Behaviour
-
-  defrecordp :state, [ :conn, :params, :monitor ]
+  use GenServer
 
   @timeout 5000
+
+  alias Ecto.Adapters.Mysql.Result
+  alias Ecto.Adapters.Mysql.OkPacket
+  alias Ecto.Adapters.Mysql.Error
 
   def start(args) do
     :gen_server.start(__MODULE__, args, [])
@@ -15,15 +17,20 @@ defmodule Ecto.Adapters.Mysql.Worker do
     :gen_server.start_link(__MODULE__, args, [])
   end
 
-  def query!(worker, sql, params, timeout \\ @timeout) do
-    case :gen_server.call(worker, { :query, sql, params, timeout }, timeout) do
-      { :result_packet, _, _, rows, _  } ->
-        EMysql.Result[rows: rows, num_rows: Enum.count(rows)]
-      { :ok_packet, _seq_num, affected_rows, insert_id, _status, _warning_message, msg } ->
-        EMysql.OkPacket[affected_rows: affected_rows, insert_id: insert_id, msg: msg]
-      { :error_packet, _seq_num, _code, _, msg } ->
-        EMysql.Error[msg: msg]
-    end
+  def query!(worker, sql, params, timeout \\ @timeout) do #compare
+    handle_query(:gen_server.call(worker, { :query, sql, params, timeout }, timeout))
+  end
+
+  def handle_query({:result_packet, _, _, rows, _ }) do
+    %Result{rows: rows, num_rows: Enum.count(rows)}
+  end
+
+  def handle_query({:ok_packet, _seq_num, nrows, insert_id, _status, _warning_message, msg }) do
+    %OkPacket{num_rows: nrows, insert_id: insert_id, msg: msg}
+  end
+
+  def handle_query({:error_packet, _seq_num, _code, _, msg}) do
+    %Error{msg: msg}
   end
 
   def monitor_me(worker) do
@@ -37,78 +44,90 @@ defmodule Ecto.Adapters.Mysql.Worker do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    lazy? = opts[:lazy] in [false, "false"]
+    eager? = Keyword.get(opts, :lazy, true) in [false, "false"]
 
-    conn =
-
-      # TODO mysql driver
-      case lazy? and Postgrex.Connection.start_link(opts) do
-        { :ok, conn } -> conn
-        _ -> nil
+    if eager? do 
+      pool = Keyword.get(opts, :pool_name)
+      request = Keyword.get(opts, :request)
+      from = Keyword.get(opts, :from)
+      case connection(opts, request, from, new_state) do
+        :ok ->
+          conn = pool
+        _ ->
+          :ok
       end
+    end
+    {:ok, Map.merge(new_state, %{conn: conn, params: opts})}
+  end
 
-    { :ok, state(conn: conn, params: opts) }
+  defp format_params(params) do
+    [ size: 1,
+      user: String.to_list(params[:username]),
+      password: String.to_list(params[:password]),
+      host: String.to_list(params[:hostname]),
+      port: params[:port],
+      database: String.to_list(params[:database]),
+      encoding: :utf8 ]
   end
 
   # Connection is disconnected, reconnect before continuing
-  def handle_call(request, from, state(conn: nil, params: params) = s) do
-    pool_name = Keyword.get(params, :pool_name)
-    params = translate_params(params)
-
-    case :emysql.add_pool(pool_name, params) do
-      :ok ->
-        handle_call(request, from, state(s, conn: pool_name))
-      { :error, :pool_already_exists } ->
-        handle_call(request, from, state(s, conn: pool_name))
-      { :error, err } ->
-        { :reply, { :error, err }, s }
-    end
+  def handle_call(request, from, %{conn: nil, params: params} = s) do
+    connection(params, request, from, s)
   end
 
-  def handle_call({ :query, sql, _params, _timeout }, _from, state(conn: conn) = s) do
-
-    { :reply, :emysql.execute(conn, sql), s }
+  def connection(params, request, from, %{params: params} = s) do
+    pool = Keyword.get(params, :pool_name)
+    :emysql.add_pool(pool, format_params(params)) 
+    |> handle_connection(request, from, %{s | conn: pool})
   end
 
-  def handle_cast({ :monitor, pid }, state(monitor: nil) = s) do
+  def handle_connection(:ok, request, from, s) do
+    :gen_server.call(request, from, s)
+  end
+  
+  def handle_connection({:error, :pool_already_exists}, request, from, s) do
+    :gen_server.call(request, from, s)
+  end
+
+  def handle_connection({:error, err}, _request, _from, s) do
+    {:reply, {:error, err}, s}
+  end
+
+  def handle_call({:query, sql, _params, _timeout}, _from, %{conn: conn} = s) do
+    {:reply, :emysql.execute(conn, sql), s}
+  end
+
+  def handle_cast({:monitor, pid}, %{monitor: nil} = s) do
     ref = Process.monitor(pid)
-    { :noreply, state(s, monitor: { pid, ref }) }
+    {:noreply, %{s | monitor: {pid, ref}}}
   end
 
-  def handle_cast({ :demonitor, pid }, state(monitor: { pid, ref }) = s) do
+  def handle_cast({:demonitor, pid}, %{monitor: {pid, ref}} = s) do
     Process.demonitor(ref)
-    { :noreply, state(s, monitor: nil) }
+    {:noreply, %{s | monitor: nil}}
   end
 
-  def handle_info({ :EXIT, conn, _reason }, state(conn: conn) = s) do
-    { :noreply, state(s, conn: nil) }
+  def handle_info({:EXIT, conn, _reason }, %{conn: conn} = s) do
+    {:noreply, %{s | conn: nil}}
   end
 
-  def handle_info({ :DOWN, ref, :process, pid, _info }, state(monitor: { pid, ref }) = s) do
-    { :stop, :normal, s }
+  def handle_info({:DOWN, ref, :process, pid, _info}, %{monitor: {pid, ref}} = s) do
+    {:stop, :normal, s}
   end
 
   def handle_info(_info, s) do
-    { :noreply, s }
+    {:noreply, s}
   end
 
-  def terminate(_reason, state(conn: nil)) do
+  def terminate(_reason, %{conn: nil}) do
     :ok
   end
 
-  def terminate(_reason, state(conn: conn)) do
+  def terminate(_reason, %{conn: conn}) do
     :emysql.remove_pool(conn)
   end
 
-  defp translate_params(params) do
-    [
-      size: 1,
-      user: bitstring_to_list(params[:username]),
-      password: bitstring_to_list(params[:password]),
-      host: bitstring_to_list(params[:hostname]),
-      port: params[:port],
-      database: bitstring_to_list(params[:database]),
-      encoding: :utf8
-    ]
+  defp new_state do
+    %{conn: nil, params: nil, monitor: nil}
   end
 end

@@ -8,6 +8,15 @@ defmodule Ecto.Date do
   def from_erl({year, month, day}) do
     %Ecto.Date{year: year, month: month, day: day}
   end
+
+  def local do
+    from_erl(:erlang.date)
+  end
+
+  def utc do
+    {date, _time} = :erlang.universaltime
+    from_erl(date)
+  end
 end
 
 defmodule Ecto.Time do
@@ -19,6 +28,15 @@ defmodule Ecto.Time do
 
   def from_erl({hour, min, sec}) do
     %Ecto.Time{hour: hour, min: min, sec: sec}
+  end
+
+  def local do
+    from_erl(:erlang.time)
+  end
+
+  def utc do
+    {_date, time} = :erlang.universaltime
+    from_erl(time)
   end
 end
 
@@ -47,18 +65,21 @@ defmodule Ecto.DateTime do
     %Ecto.DateTime{year: year, month: month, day: day,
                    hour: hour, min: min, sec: sec}
   end
+
+  def local do
+    from_erl(:erlang.localtime)
+  end
+
+  def utc do
+    from_erl(:erlang.universaltime)
+  end
 end
 
 defmodule Ecto.Interval do
   defstruct [:year, :month, :day, :hour, :min, :sec]
 end
 
-defmodule Ecto.Binary do
-  @moduledoc false
-  defstruct [:value]
-end
-
-defmodule Ecto.Array do
+defmodule Ecto.Tagged do
   @moduledoc false
   defstruct [:value, :type]
 end
