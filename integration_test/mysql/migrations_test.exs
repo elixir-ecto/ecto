@@ -61,6 +61,13 @@ defmodule Ecto.Integration.MigrationsTest do
 
   import Ecto.Migrator
 
+  setup do
+    Application.put_env(:elixir, :ansi_enabled, false)
+    on_exit fn ->
+      Application.delete_env(:elixir, :ansi_enabled)
+    end
+  end
+                            
   test "migrations up and down" do
     assert migrated_versions(TestRepo) == []
     assert up(TestRepo, 20080906120000, GoodMigration) == :ok
