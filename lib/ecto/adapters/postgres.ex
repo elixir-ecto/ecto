@@ -55,8 +55,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def stop(repo) do
-      pool_name = repo.__postgres__(:pool_name)
-      :poolboy.stop(pool_name)
+      pool = repo_pool(repo)
+      :poolboy.stop(pool)
     end
 
     @doc false
@@ -129,9 +129,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         Postgrex.Result[command: :select, columns: ["?column?"], rows: [{42}], num_rows: 1]
     """
     def query(repo, sql, params, opts \\ []) do
+      pool = repo_pool(repo)
+
       timeout = opts[:timeout] || @timeout
       repo.log({:query, sql}, fn ->
-        use_worker(repo, timeout, fn worker ->
+        use_worker(pool, timeout, fn worker ->
           Worker.query!(worker, sql, params, timeout)
         end)
       end)
@@ -176,6 +178,22 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {var, nested}
     end
 
+    defp preload(results, repo, query) do
+      pos = Util.locate_var(query.select.expr, {:&, [], [0]})
+      fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
+      Ecto.Associations.Preloader.run(results, repo, fields, pos)
+    end
+
+    defp repo_pool(repo) do
+      pid = repo.__postgres__(:pool_name) |> Process.whereis
+
+      if nil?(pid) or not Process.alive?(pid) do
+        raise ArgumentError, message: "repo #{inspect repo} is not started"
+      end
+
+      pid
+    end
+
     ## Result set transformation
 
     defp transform_row({:{}, _, list}, values, sources) do
@@ -214,12 +232,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {value, values}
     end
 
-    defp preload(results, repo, query) do
-      pos = Util.locate_var(query.select.expr, {:&, [], [0]})
-      fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
-      Ecto.Associations.Preloader.run(results, repo, fields, pos)
-    end
-
     ## Postgrex casting
 
     defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
@@ -250,8 +262,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def transaction(repo, opts, fun) do
+      pool = repo_pool(repo)
+
       timeout = opts[:timout] || @timeout
-      worker = checkout_worker(repo, timeout)
+      worker = checkout_worker(pool, timeout)
+
       try do
         do_begin(repo, worker, timeout)
         value = fun.()
@@ -265,7 +280,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           do_rollback(repo, worker, timeout)
           :erlang.raise(type, term, System.stacktrace)
       after
-        checkin_worker(repo)
+        checkin_worker(pool)
       end
     end
 
@@ -274,8 +289,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       throw {:ecto_rollback, value}
     end
 
-    defp use_worker(repo, timeout, fun) do
-      pool = repo.__postgres__(:pool_name)
+    defp use_worker(pool, timeout, fun) do
       key = {:ecto_transaction_pid, pool}
 
       if value = Process.get(key) do
@@ -294,8 +308,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp checkout_worker(repo, timeout) do
-      pool = repo.__postgres__(:pool_name)
+    defp checkout_worker(pool, timeout) do
       key = {:ecto_transaction_pid, pool}
 
       case Process.get(key) do
@@ -310,8 +323,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp checkin_worker(repo) do
-      pool = repo.__postgres__(:pool_name)
+    defp checkin_worker(pool) do
       key = {:ecto_transaction_pid, pool}
 
       case Process.get(key) do
@@ -347,8 +359,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def begin_test_transaction(repo, opts \\ []) do
+      pool = repo_pool(repo)
       timeout = opts[:timeout] || @timeout
-      pool = repo.__postgres__(:pool_name)
+
       :poolboy.transaction(pool, fn worker ->
         do_begin(repo, worker, timeout)
       end, timeout)
@@ -356,8 +369,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def rollback_test_transaction(repo, opts \\ []) do
+      pool = repo_pool(repo)
       timeout = opts[:timeout] || @timeout
-      pool = repo.__postgres__(:pool_name)
+
       :poolboy.transaction(pool, fn worker ->
         do_rollback(repo, worker, timeout)
       end, timeout)

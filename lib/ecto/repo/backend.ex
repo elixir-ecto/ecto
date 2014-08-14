@@ -50,7 +50,8 @@ defmodule Ecto.Repo.Backend do
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
     # normalization and what not.
-    query = Q.from(x in query, where: field(x, ^primary_key) == ^id) |> Normalizer.normalize
+    query = Q.from(x in query, where: field(x, ^primary_key) == ^id)
+    |> Normalizer.normalize
 
     models = adapter.all(repo, query, opts)
     {model, models}

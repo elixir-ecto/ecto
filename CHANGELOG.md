@@ -2,6 +2,7 @@
 
 * Enhancements
   * Add `local` and `utc` to `Ecto.DateTime` and `Ecto.Date`
+  * Better error message if repo is not started
 
 * Bug fixes
   * Treat `nil` as an any data type
