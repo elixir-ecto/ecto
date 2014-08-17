@@ -144,6 +144,10 @@ defmodule Ecto.Validator.PredicatesTest do
     assert greater_than(:age, 5, 10, message: "bad number") == [age: "bad number"]
   end
 
+  test "greater_than fails on non-numeric values" do
+    assert greater_than(:age, "12312", 5) == [age: "must be greater than 5"]
+  end
+
   ## Greater than or equal to
 
   test "greater_than_or_equal_to on invalid" do
@@ -164,6 +168,10 @@ defmodule Ecto.Validator.PredicatesTest do
 
   test "greater_than_or_equal_to with custom message" do
     assert greater_than_or_equal_to(:age, 5, 10, message: "bad number") == [age: "bad number"]
+  end
+
+  test "greater_than_or_equal_to fails on non-numeric values" do
+    assert greater_than_or_equal_to(:age, "12312", 5) == [age: "must be greater than or equal to 5"]
   end
 
   ## Less than
@@ -188,6 +196,11 @@ defmodule Ecto.Validator.PredicatesTest do
     assert less_than(:age, 10, 5, message: "bad number") == [age: "bad number"]
   end
 
+  # Beware, since numbers are the "smallest" term in Elixir this wouldn't fail even if the is_numeric guard isn't here.
+  test "less_than fails on non-numeric values" do
+    assert less_than(:age, "12312", 5) == [age: "must be less than 5"]
+  end
+
   ## Less than or equal to
 
   test "less_than_or_equal_to on invalid" do
@@ -210,6 +223,11 @@ defmodule Ecto.Validator.PredicatesTest do
     assert less_than_or_equal_to(:age, 10, 5, message: "bad number") == [age: "bad number"]
   end
 
+  # Beware, since numbers are the "smallest" term in Elixir this wouldn't fail even if the is_numeric guard isn't here.
+  test "less_than_or_equal_to fails on non-numeric values" do
+    assert less_than_or_equal_to(:age, "12312", 5) == [age: "must be less than or equal to 5"]
+  end
+
   ## Between
 
   test "between on invalid" do
@@ -228,6 +246,11 @@ defmodule Ecto.Validator.PredicatesTest do
 
   test "between with custom message" do
     assert between(:age, 24, 18..21, message: "bad number") == [age: "bad number"]
+  end
+
+  # Beware, since numbers are the "smallest" term in Elixir this wouldn't fail even if the is_numeric guard isn't here.
+  test "between fails on non-numeric values" do
+    assert between(:age, "12312", 18..21) == [age: "must be between 18 and 21"]
   end
 
   ## Not member of
