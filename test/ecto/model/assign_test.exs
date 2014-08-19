@@ -51,4 +51,16 @@ defmodule Ecto.Model.AssignTest do
     assert_raise KeyError, fn -> Ecto.Model.assign(User, %{"blafoo" => "martin"}).blafoo end
     assert_raise KeyError, fn -> Ecto.Model.assign(%User{}, %{"blafoo" => "martin"}).blafoo end
   end
+
+  test "restricts assignment to given keys if :only option is used" do
+    user = Ecto.Model.assign(User, %{:name => "martin", "email" => "martin@email"}, only: [:email])
+    assert user.name == "eric"
+    assert user.email == "martin@email"
+  end
+
+  test "keeps existing entries even if key is restricted with :only option" do
+    user = Ecto.Model.assign(%User{name: "martin"}, %{name: "not martin", email: "martin@email"}, only: [:email])
+    assert user.name == "martin"
+    assert user.email == "martin@email"
+  end
 end

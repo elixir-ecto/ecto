@@ -1,12 +1,13 @@
 defmodule Ecto.Model.Assign do
-  def assign(model, values) do
-    values = filtered_keys(model(model), values)
+  def assign(model, values, opts \\ []) do
+    all_field_names = model(model).__schema__(:field_names)
+    field_names = Keyword.get(opts, :only, all_field_names)
+    values = filtered_keys(values, field_names)
     struct(model, values)
   end
 
-  defp filtered_keys(model, values) do
-    field_names = model.__schema__(:field_names)
-    binary_field_names = model.__schema__(:field_names) |> Enum.map(&Atom.to_string/1)
+  defp filtered_keys(values, field_names) do
+    binary_field_names = field_names |> Enum.map(&Atom.to_string/1)
     Enum.flat_map values, fn({k, v}) ->
       cond do
         k in field_names -> [{k, v}]
