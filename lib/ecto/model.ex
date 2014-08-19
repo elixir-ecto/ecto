@@ -73,5 +73,7 @@ defmodule Ecto.Model do
       from unquote(field) in __MODULE__, unquote(opts)
     end
   end
+
+  defdelegate assign(model, values), to: Ecto.Model.Assign
 end
 

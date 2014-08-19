@@ -1,0 +1,45 @@
+defmodule Ecto.Model.AssignTest do
+  use ExUnit.Case, async: true
+
+  defmodule User do
+    use Ecto.Model
+
+    schema "users" do
+      field :name, :string, default: "eric"
+      field :email, :string, default: "eric@email"
+      field :temp, :virtual, default: "temp"
+      field :array, {:array, :string}
+    end
+  end
+
+  test "assigning returns the correct struct" do
+    assert %User{} = Ecto.Model.assign(User, %{})
+  end
+
+  test "assigns with strings as keys" do
+    user = Ecto.Model.assign(User, %{"name" => "martin"})
+    assert user.name == "martin"
+  end
+
+  test "assigns with atoms as keys" do
+    user = Ecto.Model.assign(User, %{name: "martin"})
+    assert user.name == "martin"
+  end
+
+  test "assigns with both atoms and strings as keys" do
+    user = Ecto.Model.assign(User, %{:name => "martin", "email" => "martin@email"})
+    assert user.name == "martin"
+    assert user.email == "martin@email"
+  end
+
+  test "assigning honors defaults for absent values" do
+    user = Ecto.Model.assign(User, %{name: "martin"})
+    assert user.name == "martin"
+    assert user.email == "eric@email"
+  end
+
+  test "discards keys that don't correspond to a field" do
+    user = Ecto.Model.assign(User, %{"blafoo" => "martin"})
+    assert_raise KeyError, fn -> user.blafoo end
+  end
+end
