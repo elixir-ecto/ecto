@@ -418,6 +418,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       command =
         command <>
         ~s(psql --quiet ) <>
+        ~s(template1 ) <>
         ~s(--host #{database[:hostname]} ) <>
         ~s(-c "#{sql_command};" )
 
