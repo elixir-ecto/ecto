@@ -14,20 +14,25 @@ defmodule Ecto.Model.AssignTest do
 
   test "assigning returns the correct struct" do
     assert %User{} = Ecto.Model.assign(User, %{})
+    assert %User{} = Ecto.Model.assign(%User{}, %{})
   end
 
   test "assigns with strings as keys" do
-    user = Ecto.Model.assign(User, %{"name" => "martin"})
-    assert user.name == "martin"
+    assert Ecto.Model.assign(User, %{"name" => "martin"}).name == "martin"
+    assert Ecto.Model.assign(%User{}, %{"name" => "martin"}).name == "martin"
   end
 
   test "assigns with atoms as keys" do
-    user = Ecto.Model.assign(User, %{name: "martin"})
-    assert user.name == "martin"
+    assert Ecto.Model.assign(User, %{name: "martin"}).name == "martin"
+    assert Ecto.Model.assign(%User{}, %{name: "martin"}).name == "martin"
   end
 
   test "assigns with both atoms and strings as keys" do
     user = Ecto.Model.assign(User, %{:name => "martin", "email" => "martin@email"})
+    assert user.name == "martin"
+    assert user.email == "martin@email"
+
+    user = Ecto.Model.assign(%User{}, %{:name => "martin", "email" => "martin@email"})
     assert user.name == "martin"
     assert user.email == "martin@email"
   end
@@ -36,10 +41,14 @@ defmodule Ecto.Model.AssignTest do
     user = Ecto.Model.assign(User, %{name: "martin"})
     assert user.name == "martin"
     assert user.email == "eric@email"
+
+    user = Ecto.Model.assign(%User{}, %{name: "martin"})
+    assert user.name == "martin"
+    assert user.email == "eric@email"
   end
 
   test "discards keys that don't correspond to a field" do
-    user = Ecto.Model.assign(User, %{"blafoo" => "martin"})
-    assert_raise KeyError, fn -> user.blafoo end
+    assert_raise KeyError, fn -> Ecto.Model.assign(User, %{"blafoo" => "martin"}).blafoo end
+    assert_raise KeyError, fn -> Ecto.Model.assign(%User{}, %{"blafoo" => "martin"}).blafoo end
   end
 end

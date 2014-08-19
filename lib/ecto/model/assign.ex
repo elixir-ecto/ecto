@@ -1,6 +1,6 @@
 defmodule Ecto.Model.Assign do
   def assign(model, values) do
-    values = filtered_keys(model, values)
+    values = filtered_keys(model(model), values)
     struct(model, values)
   end
 
@@ -15,4 +15,8 @@ defmodule Ecto.Model.Assign do
       end
     end
   end
+
+  # Given either a model or a struct, return the model
+  defp model(module) when is_atom(module), do: module
+  defp model(%{__struct__: module} = model), do: module
 end
