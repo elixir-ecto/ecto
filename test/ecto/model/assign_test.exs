@@ -63,4 +63,12 @@ defmodule Ecto.Model.AssignTest do
     assert user.name == "martin"
     assert user.email == "martin@email"
   end
+
+  test "supports assigning to a virtual field" do
+    assert Ecto.Model.assign(User, %{temp: "assigned"}).temp == "assigned"
+  end
+
+  test "supports assigning to a virtual field when the field is listed in the :only option" do
+    assert Ecto.Model.assign(User, %{temp: "assigned"}, only: [:temp]).temp == "assigned"
+  end
 end
