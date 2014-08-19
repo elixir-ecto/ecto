@@ -24,21 +24,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def begin!(worker, timeout \\ @timeout) do
       case :gen_server.call(worker, {:begin, timeout}, timeout) do
         :ok -> :ok
-        {:error, %Postgrex.Error{}} = err -> raise err
+        {:error, %Postgrex.Error{} = err} -> raise err
       end
     end
 
     def commit!(worker, timeout \\ @timeout) do
       case :gen_server.call(worker, {:commit, timeout}, timeout) do
         :ok -> :ok
-        {:error, %Postgrex.Error{}} = err -> raise err
+        {:error, %Postgrex.Error{} = err} -> raise err
       end
     end
 
     def rollback!(worker, timeout \\ @timeout) do
       case :gen_server.call(worker, {:rollback, timeout}, timeout) do
         :ok -> :ok
-        {:error, %Postgrex.Error{}} = err -> raise err
+        {:error, %Postgrex.Error{} = err} -> raise err
       end
     end
 
