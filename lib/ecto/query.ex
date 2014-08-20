@@ -157,7 +157,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(City) |> select([c], c)
+      City |> select([c], c)
 
   ## Examples
 
@@ -222,7 +222,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(Comment)
+      Comment
       |> join(:inner, [c], p in Post, c.post_id == p.id)
       |> select([c, p], {p.title, c.text})
 
@@ -274,8 +274,8 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(c in City) |> select([c], c)
-      from(c in City) |> select([c], {c.name, c.country})
+      City |> select([c], c)
+      City |> select([c], {c.name, c.country})
 
   """
   defmacro select(query, binding, expr) do
@@ -327,7 +327,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(c in City) |> where([c], c.state == "Sweden")
+     City |> where([c], c.state == "Sweden")
 
   """
   defmacro where(query, binding, expr) do
@@ -349,7 +349,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(c in City) |> order_by([c], asc: c.name, desc: c.population)
+      City |> order_by([c], asc: c.name, desc: c.population)
 
   """
   defmacro order_by(query, binding, expr)  do
@@ -370,7 +370,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(u in User) |> where(u.id == current_user) |> limit(1)
+      User |> where(u.id == current_user) |> limit(1)
 
   """
   defmacro limit(query, expr) do
@@ -392,7 +392,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(p in Post) |> limit(10) |> offset(30)
+      Post |> limit(10) |> offset(30)
 
   """
   defmacro offset(query, expr) do
@@ -416,8 +416,8 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      from(u in User) |> where(u.id == current_user) |> lock(true)
-      from(u in User) |> where(u.id == current_user) |> lock(\"FOR SHARE NOWAIT\")
+      User |> where(u.id == current_user) |> lock(true)
+      User |> where(u.id == current_user) |> lock(\"FOR SHARE NOWAIT\")
 
   """
   defmacro lock(query, expr) do
