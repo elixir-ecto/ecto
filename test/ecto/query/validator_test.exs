@@ -467,9 +467,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(p in Post, join: c in p.comments, select: assoc(c, post: p))
-    assert_raise Ecto.QueryError, "can only associate on the from model", fn ->
-      validate(query)
-    end
+    validate(query)
 
     query = from(p in Post, join: c in p.comments, select: assoc(p, not_field: c))
     assert_raise Ecto.QueryError, "field `Ecto.Query.ValidatorTest.Post.not_field` is not an association", fn ->

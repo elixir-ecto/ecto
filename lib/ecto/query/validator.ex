@@ -346,12 +346,7 @@ defmodule Ecto.Query.Validator do
 
   # Handle top level select cases
 
-  defp select_clause({:assoc, _, [var, fields]}, %{from: from, sources: sources} = state) do
-    model = Util.find_source(sources, var) |> Util.model
-    unless model == Util.model(from) do
-      raise Ecto.QueryError, reason: "can only associate on the from model"
-    end
-
+  defp select_clause({:assoc, _, [var, fields]}, state) do
     assoc_select(var, fields, state)
   end
 
@@ -393,9 +388,13 @@ defmodule Ecto.Query.Validator do
           "model: `#{child_model}`"
       end
 
-      expr = Util.source_expr(query, child_var)
-      unless match?(%JoinExpr{qual: qual, assoc: assoc} when not nil?(assoc) and qual in [:inner, :left], expr) do
-        raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
+      case Util.source_expr(query, child_var) do
+        %JoinExpr{qual: qual, assoc: assoc} when not nil?(assoc) and qual in [:inner, :left] ->
+          :ok
+        %JoinExpr{} ->
+          raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
+        _ ->
+          :ok
       end
 
       assoc_select(child_var, nested_fields, state)

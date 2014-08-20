@@ -23,6 +23,11 @@ defmodule Ecto.Integration.Postgres.TestRepo do
     parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
   end
 
+  # def log(action, fun) do
+  #   IO.inspect action
+  #   fun.()
+  # end
+
   def query_apis do
     [Ecto.Integration.Postgres.CustomAPI, Ecto.Query.API]
   end
