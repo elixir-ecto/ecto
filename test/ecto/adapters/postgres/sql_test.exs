@@ -39,6 +39,14 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     end
   end
 
+  defmodule ArrayOfBinaries do
+    use Ecto.Model
+
+    schema "array_of_binaries" do
+      field :list, {:array, :binary}
+    end
+  end
+
   test "from" do
     query = Model |> select([r], r.x) |> normalize
     assert SQL.select(query) == "SELECT m0.\"x\"\nFROM \"model\" AS m0"
@@ -254,6 +262,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "insert with binary" do
     query = SQL.insert(%Model3{binary: %Ecto.Tagged{value: << 1, 2, 3 >>, type: :binary}}, [:id])
     assert query == "INSERT INTO \"model3\" (\"binary\")\nVALUES ('\\x010203'::bytea)\nRETURNING \"id\""
+  end
+
+  test "insert with binary array" do
+    query = SQL.insert(%ArrayOfBinaries{list: %Ecto.Tagged{value: ["a", "b", "c"], type: {:array, :binary}}}, [:id])
+    assert query == "INSERT INTO \"array_of_binaries\" (\"list\")\nVALUES (ARRAY['\\x61'::bytea, '\\x62'::bytea, '\\x63'::bytea]::bytea[])\nRETURNING \"id\""
   end
 
   test "update" do
