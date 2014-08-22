@@ -331,6 +331,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
+    # c.f. the same {:array, :binary} short-circuit in literal/1
+    defp expr(tagged = %Ecto.Tagged{value: _list, type: {:array, :binary}}, _sources) do
+      literal(tagged)
+    end
+
     defp expr(%Ecto.Tagged{value: list, type: {:array, inner}}, sources) do
       sql = "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
       if list == [], do: sql = sql <> "::#{type(inner)}[]"
@@ -366,6 +371,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         Integer.to_string(h, 16) <> Integer.to_string(l, 16)
       end
       "'\\x#{hex}'::bytea"
+    end
+
+    # we need to short-circuit binary arrays here, because the actual list can't be distinguished from a list of strings
+    defp literal(%Ecto.Tagged{value: list, type: {:array, :binary}}) do
+      "ARRAY[" <> Enum.map_join(list, ", ", &literal(%Ecto.Tagged{value: &1, type: :binary})) <> "]::#{type(:binary)}[]"
     end
 
     defp literal(%Ecto.Tagged{value: list, type: {:array, inner}}) do
