@@ -180,7 +180,6 @@ defmodule Ecto.Model.Schema do
 
       Module.eval_quoted __MODULE__, [
         Ecto.Model.Schema.ecto_struct(@struct_fields),
-        Ecto.Model.Schema.ecto_queryable(@ecto_source, __MODULE__),
         Ecto.Model.Schema.ecto_fields(fields),
         Ecto.Model.Schema.ecto_assocs(assocs, @ecto_primary_key, fields),
         Ecto.Model.Schema.ecto_primary_key(@ecto_primary_key),
@@ -410,15 +409,6 @@ defmodule Ecto.Model.Schema do
   def ecto_struct(struct_fields) do
     quote do
       defstruct unquote(Macro.escape(struct_fields))
-    end
-  end
-
-  @doc false
-  def ecto_queryable(source, module) do
-    quote do
-      def __queryable__ do
-        %Ecto.Query{from: {unquote(source), unquote(module)}}
-      end
     end
   end
 

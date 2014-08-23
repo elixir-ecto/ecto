@@ -67,11 +67,13 @@ defmodule Ecto.Query.FromBuilder do
     case Macro.expand(expr, env) do
       atom when is_atom(atom) ->
         count_bind = 1
-        if Code.ensure_compiled?(atom) do
-          quoted = Ecto.Queryable.to_query(atom) |> Macro.escape
-        else
-          quoted = atom
-        end
+
+        # Get the source at runtime so no unnecessary compile time
+        # dependencies between modules are added
+        source = quote do: unquote(atom).__schema__(:source)
+        map    = [from: {source, atom}]
+        quoted = {:%, [], [Ecto.Query, {:%{}, [], map}]}
+
       other ->
         count_bind = nil
         quoted = other

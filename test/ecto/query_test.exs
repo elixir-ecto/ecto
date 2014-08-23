@@ -113,7 +113,7 @@ defmodule Ecto.QueryTest do
       from(p in 123, []) |> select([p], p.title)
     end
 
-    assert_raise Protocol.UndefinedError, fn ->
+    assert_raise UndefinedFunctionError, fn ->
       from(p in NotAModel, []) |> select([p], p.title)
     end
   end
