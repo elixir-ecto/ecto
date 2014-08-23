@@ -195,10 +195,6 @@ defmodule Ecto.QueryTest do
   end
 
   test "query builder is compile time" do
-    # Queries will only be compile time optimized if the module being queried
-    # on is the local module or if it's required
-    require Post
-
     quoted =
       quote do
         from(p in Post,

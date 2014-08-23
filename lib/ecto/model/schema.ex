@@ -416,9 +416,8 @@ defmodule Ecto.Model.Schema do
   @doc false
   def ecto_queryable(source, module) do
     quote do
-      @ecto_queryable %Ecto.Query{from: {unquote(source), unquote(module)}}
       def __queryable__ do
-        @ecto_queryable
+        %Ecto.Query{from: {unquote(source), unquote(module)}}
       end
     end
   end

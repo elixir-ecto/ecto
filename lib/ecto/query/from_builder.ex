@@ -66,18 +66,12 @@ defmodule Ecto.Query.FromBuilder do
 
     case Macro.expand(expr, env) do
       atom when is_atom(atom) ->
-        queryable =
-          cond do
-            atom == env.module ->
-              Module.get_attribute(env.module, :ecto_queryable) || atom
-            atom in env.requires ->
-              Ecto.Queryable.to_query(atom)
-            true ->
-              atom
-          end
-
         count_bind = 1
-        quoted = Macro.escape(queryable)
+        if Code.ensure_compiled?(atom) do
+          quoted = Ecto.Queryable.to_query(atom) |> Macro.escape
+        else
+          quoted = atom
+        end
       other ->
         count_bind = nil
         quoted = other
