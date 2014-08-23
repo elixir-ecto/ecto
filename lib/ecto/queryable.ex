@@ -20,7 +20,7 @@ end
 defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
     try do
-      module.__queryable__
+      %Ecto.Query{from: {module.__schema__(:source), module}}
     rescue
       UndefinedFunctionError ->
         raise Protocol.UndefinedError,
