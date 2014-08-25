@@ -47,7 +47,7 @@ defmodule Ecto.Adapter do
   query will only have where expressions and a single from expression. Returns
   the number of affected entities.
   """
-  defcallback update_all(Ecto.Repo.t, Ecto.Query.t, values :: Keyword.t, Keyword.t) :: :integer | no_return
+  defcallback update_all(Ecto.Repo.t, Ecto.Query.t, Keyword.t, %{}, Keyword.t) :: :integer | no_return
 
   @doc """
   Deletes an model using the primary key as key.

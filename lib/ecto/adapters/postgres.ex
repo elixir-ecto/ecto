@@ -63,7 +63,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def all(repo, query, opts) do
       pg_query = %{query | select: normalize_select(query.select)}
 
-      %Postgrex.Result{rows: rows} = query(repo, SQL.select(pg_query), [], opts)
+      {sql, params} = SQL.select(pg_query)
+      %Postgrex.Result{rows: rows} = query(repo, sql, params, opts)
 
       # Transform each row based on select expression
       transformed =
@@ -84,7 +85,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> Enum.filter(fn {_, val} -> val == nil end)
         |> Keyword.keys
 
-      case query(repo, SQL.insert(model, returning), [], opts) do
+      {sql, params} = SQL.insert(model, returning)
+
+      case query(repo, sql, params, opts) do
         %Postgrex.Result{rows: [values]} ->
           Enum.zip(returning, Tuple.to_list(values))
         _ ->
@@ -94,25 +97,29 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def update(repo, model, opts) do
-      %Postgrex.Result{num_rows: nrows} = query(repo, SQL.update(model), [], opts)
+      {sql, params} = SQL.update(model)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
     @doc false
-    def update_all(repo, query, values, opts) do
-      %Postgrex.Result{num_rows: nrows} = query(repo, SQL.update_all(query, values), [], opts)
+    def update_all(repo, query, values, external, opts) do
+      {sql, params} = SQL.update_all(query, values, external)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
     @doc false
     def delete(repo, model, opts) do
-      %Postgrex.Result{num_rows: nrows} = query(repo, SQL.delete(model), [], opts)
+      {sql, params} = SQL.delete(model)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
     @doc false
     def delete_all(repo, query, opts) do
-      %Postgrex.Result{num_rows: nrows} = query(repo, SQL.delete_all(query), [], opts)
+      {sql, params} = SQL.delete_all(query)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
@@ -153,6 +160,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       worker_opts = worker_opts
         |> Keyword.put(:decoder, &decoder/4)
+        |> Keyword.put(:encoder, &encoder/3)
         |> Keyword.put_new(:port, @default_port)
 
       {pool_opts, worker_opts}
@@ -240,21 +248,51 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["timestamp", "timestamptz"] do
-      {{year, mon, day}, {hour, min, sec}} = default.(param)
-      %Ecto.DateTime{year: year, month: mon, day: day, hour: hour, min: min, sec: sec}
+      default.(param)
+      |> Ecto.DateTime.from_erl
     end
 
     defp decoder(%TypeInfo{sender: "date"}, :binary, default, param) do
-      {year, mon, day} = default.(param)
-      %Ecto.Date{year: year, month: mon, day: day}
+      default.(param)
+      |> Ecto.Date.from_erl
     end
 
     defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["time", "timetz"] do
-      {hour, min, sec} = default.(param)
-      %Ecto.Time{hour: hour, min: min, sec: sec}
+      default.(param)
+      |> Ecto.Time.from_erl
     end
 
     defp decoder(_type, _format, default, param) do
+      default.(param)
+    end
+
+    defp encoder(_type, default, %Ecto.Interval{} = interval) do
+      mon = interval.year * 12 + interval.month
+      day = interval.day
+      sec = interval.hour * 3600 + interval.min * 60 + interval.sec
+      default.({mon, day, sec})
+    end
+
+    defp encoder(_type, default, %Ecto.DateTime{} = datetime) do
+      Ecto.DateTime.to_erl(datetime)
+      |> default.()
+    end
+
+    defp encoder(_type, default, %Ecto.Date{} = date) do
+      Ecto.Date.to_erl(date)
+      |> default.()
+    end
+
+    defp encoder(_type, default, %Ecto.Time{} = time) do
+      Ecto.Time.to_erl(time)
+      |> default.()
+    end
+
+    defp encoder(_type, default, %Ecto.Tagged{value: value}) do
+      default.(value)
+    end
+
+    defp encoder(_type, default, param) do
       default.(param)
     end
 

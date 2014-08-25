@@ -5,13 +5,13 @@ defmodule Ecto.Query.GroupByBuilderTest do
   doctest Ecto.Query.GroupByBuilder
 
   test "escape" do
-    assert Macro.escape(quote do [&0.y] end) ==
+    assert {Macro.escape(quote do [&0.y] end), %{}} ==
            escape(quote do x.y end, [x: 0])
 
-    assert Macro.escape(quote do [&0.x, &1.y] end) ==
+    assert {Macro.escape(quote do [&0.x, &1.y] end), %{}} ==
            escape(quote do [x.x, y.y] end, [x: 0, y: 1])
 
-    assert Macro.escape(quote do [1 + 2] end) ==
+    assert {Macro.escape(quote do [1 + 2] end), %{}} ==
       escape(quote do 1 + 2 end, [])
   end
 

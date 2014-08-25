@@ -8,17 +8,21 @@ defmodule Ecto.Query.Validator do
 
   alias Ecto.Query
   alias Ecto.Query.Util
+  alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Associations.Assoc
 
+  require Ecto.Query.Util
+
   # Adds type, file and line metadata to the exception
-  defmacrop rescue_metadata(type, file, line, block) do
+  defmacrop rescue_metadata(type, expr, block) do
     quote do
+      %QueryExpr{file: file, line: line} = unquote(expr)
       try do
         unquote(block)
       rescue e in [Ecto.QueryError] ->
         stacktrace = System.stacktrace
-        reraise %{e | type: unquote(type), file: unquote(file), line: unquote(line)}, stacktrace
+        reraise %{e | type: unquote(type), file: file, line: line}, stacktrace
       end
     end
   end
@@ -118,7 +122,8 @@ defmodule Ecto.Query.Validator do
 
   defp validate_booleans(type, query_exprs, state) do
     Enum.each(query_exprs, fn expr ->
-      rescue_metadata(type, expr.file, expr.line) do
+      rescue_metadata(type, expr) do
+        state = %{state | external: expr.external}
         expr_type = catch_grouped(fn -> check(expr.expr, state) end)
 
         unless expr_type in [:unknown, :boolean] do
@@ -132,7 +137,8 @@ defmodule Ecto.Query.Validator do
 
   defp validate_order_bys(order_bys, state) do
     Enum.each(order_bys, fn expr ->
-      rescue_metadata(:order_by, expr.file, expr.line) do
+      rescue_metadata(:order_by, expr) do
+        state = %{state | external: expr.external}
         Enum.each(expr.expr, fn {_dir, expr} ->
           catch_grouped(fn -> check(expr, state) end)
         end)
@@ -143,10 +149,9 @@ defmodule Ecto.Query.Validator do
   defp validate_group_bys(group_bys, state) do
     state = %{state | grouped?: false}
     Enum.each(group_bys, fn expr ->
-      rescue_metadata(:group_by, expr.file, expr.line) do
-        Enum.each(expr.expr, fn expr ->
-          check(expr, state)
-        end)
+      rescue_metadata(:group_by, expr) do
+        state = %{state | external: expr.external}
+        Enum.each(expr.expr, &check(&1, state))
       end
     end)
   end
@@ -158,8 +163,8 @@ defmodule Ecto.Query.Validator do
       raise Ecto.QueryError, reason: "can only preload on fields from a model"
     end
 
-    Enum.each(preloads, fn(expr) ->
-      rescue_metadata(:preload, expr.file, expr.line) do
+    Enum.each(preloads, fn expr ->
+      rescue_metadata(:preload, expr) do
         check_preload_fields(expr.expr, model)
       end
     end)
@@ -176,14 +181,16 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_select(expr, state) do
-    rescue_metadata(:select, expr.file, expr.line) do
+    rescue_metadata(:select, expr) do
+      state = %{state | external: expr.external}
       catch_grouped(fn -> select_clause(expr.expr, state) end)
     end
   end
 
   defp validate_distincts(%Query{order_bys: order_bys, distincts: distincts}, state) do
     Enum.each(distincts, fn expr ->
-      rescue_metadata(:distinct, expr.file, expr.line) do
+      rescue_metadata(:distinct, expr) do
+        state = %{state | external: expr.external}
         Enum.each(expr.expr, fn expr ->
           catch_grouped(fn -> check(expr, state) end)
         end)
@@ -235,7 +242,7 @@ defmodule Ecto.Query.Validator do
 
   defp preload_selected(%Query{select: select, preloads: preloads}) do
     unless preloads == [] do
-      rescue_metadata(:select, select.file, select.line) do
+      rescue_metadata(:select, select) do
         pos = Util.locate_var(select.expr, {:&, [], [0]})
         if nil?(pos) do
           raise Ecto.QueryError, reason: "source in from expression " <>
@@ -248,6 +255,16 @@ defmodule Ecto.Query.Validator do
   defp check(expr, state) do
     state = check_grouped(expr, state)
     type_check(expr, state)
+  end
+
+  # ^0 (references external data)
+  defp type_check({:^, _, [ix]}, %{external: external}) do
+    case Util.external_to_type Map.fetch!(external, ix) do
+      {:ok, type} ->
+        type
+      {:error, reason} ->
+        raise Ecto.QueryError, reason: reason
+    end
   end
 
   # var.x
@@ -330,19 +347,56 @@ defmodule Ecto.Query.Validator do
     raise Ecto.QueryError, reason: "atoms are not allowed in queries `#{inspect atom}`"
   end
 
-  # values
-  defp type_check(value, state) do
-    if Util.literal?(value) do
-      case Util.value_to_type(value, &{:ok, type_check(&1, state)}) do
-        {:ok, type} ->
-          type
-        {:error, reason} ->
-          raise Ecto.QueryError, reason: reason
-      end
-    else
-      raise Ecto.QueryError, reason: "`unknown type of value `#{inspect value}`"
+  # binary(...)
+  defp type_check(%Ecto.Tagged{value: binary, type: :binary}, state) do
+    case type_check(binary, state) do
+      :binary -> :binary
+      :string -> :binary
+      _ ->
+        raise Ecto.QueryError, reason: "binary/1 argument has to be of binary type"
     end
   end
+
+  # array(..., type)
+  defp type_check(%Ecto.Tagged{value: list, type: {:array, inner}}, state) do
+    unless inner in Util.types or (list == [] and nil?(inner)) do
+      raise Ecto.QueryError, reason: "invalid type given to `array/2`: `#{inspect inner}`"
+    end
+
+    case external(list, state) do
+      {:ok, list} when is_list(list) ->
+        list = list
+      {:ok, other} ->
+        raise Ecto.QueryError, reason: "array/2 has to be given a list, given: `#{inspect other}`"
+      :error ->
+        :ok
+    end
+
+    elem_types = Enum.map(list, &type_check(&1, state))
+
+    Enum.each(elem_types, fn type ->
+      unless Util.type_eq?(inner, type) or Util.type_castable?(type, inner) do
+        raise Ecto.QueryError, reason: "all elements in array have to be of same type"
+      end
+    end)
+
+    {:array, inner}
+  end
+
+  # values
+  defp type_check(value, _state) do
+    case Util.external_to_type(value) do
+      {:ok, type} ->
+        type
+      {:error, reason} ->
+        raise Ecto.QueryError, reason: reason
+    end
+  end
+
+  defp external({:^, _, [ix]}, %{external: external}),
+    do: {:ok, Map.fetch!(external, ix)}
+  defp external(_other, _state),
+    do: :error
 
   # Handle top level select cases
 
@@ -492,6 +546,6 @@ defmodule Ecto.Query.Validator do
   defp new_state do
     %{sources: [], vars: [], grouped: [], grouped?: false,
       was_grouped?: false, in_agg?: false, apis: nil, from: nil,
-      query: nil}
+      query: nil, external: nil}
   end
 end
