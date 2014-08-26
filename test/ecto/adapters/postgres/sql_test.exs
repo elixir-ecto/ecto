@@ -216,6 +216,35 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = Model |> select([], ^1 + ^2) |> normalize
     assert SQL.select(query) == {"SELECT $1::integer + $2::integer\nFROM \"model\" AS m0", [1, 2]}
 
+    # TODO: limit and offset
+
+    query = Model
+            |> select([], ^0)
+            |> join(:inner, [], Model2, ^true)
+            |> join(:inner, [], Model2, ^false)
+            |> where([], ^true)
+            |> where([], ^false)
+            |> group_by([], ^1)
+            |> group_by([], ^2)
+            |> having([], ^true)
+            |> having([], ^false)
+            |> order_by([], ^3)
+            |> order_by([], ^4)
+            |> normalize
+
+    result = """
+    SELECT $1::integer
+    FROM \"model\" AS m0
+    INNER JOIN \"model2\" AS m1 ON $2::boolean
+    INNER JOIN \"model2\" AS m2 ON $3::boolean
+    WHERE ($4::boolean) AND ($5::boolean)
+    GROUP BY $6::integer, $7::integer
+    HAVING ($8::boolean) AND ($9::boolean)
+    ORDER BY $10::integer, $11::integer
+    """
+
+    assert SQL.select(query) == {String.rstrip(result), [0, true, false, true, false, 1, 2, true, false, 3, 4]}
+
     value = Decimal.new("42")
     query = Model |> select([], ^value) |> normalize
     assert SQL.select(query) == {"SELECT $1::decimal\nFROM \"model\" AS m0", [value]}
