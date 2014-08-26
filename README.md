@@ -76,7 +76,7 @@ Note how the storage (repositories), the data (entities) and behaviour (models) 
 
 ### Repositories
 
-A repository is a wrapper around the database. We can define a repository as follow:
+A repository is a wrapper around the database. We can define a repository as follows:
 
 ```elixir
 defmodule Repo do
