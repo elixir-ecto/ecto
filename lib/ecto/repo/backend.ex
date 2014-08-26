@@ -42,18 +42,12 @@ defmodule Ecto.Repo.Backend do
     Validator.validate_get(query, repo.query_apis)
     check_primary_key(model)
 
-    case Util.value_to_type(id) do
-      {:ok, _} -> :ok
-      {:error, reason} -> raise ArgumentError, message: reason
-    end
-
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
     # normalization and what not.
     query = Q.from(x in query, where: field(x, ^primary_key) == ^id)
-    |> Normalizer.normalize
 
-    models = adapter.all(repo, query, opts)
+    models = all(repo, adapter, query, opts)
     {model, models}
   end
 
@@ -91,7 +85,7 @@ defmodule Ecto.Repo.Backend do
     normalized_model = normalize_model(model)
     validate_model(normalized_model)
 
-    result   = adapter.insert(repo, normalized_model, opts)
+    result   = adapter.insert(repo, model, opts)
     module   = model.__struct__
     pk_field = module.__schema__(:primary_key)
 
@@ -104,9 +98,9 @@ defmodule Ecto.Repo.Backend do
   end
 
   def update(repo, adapter, model, opts) do
-    model = normalize_model(model)
-    check_primary_key(model)
-    validate_model(model)
+    normalized_model = normalize_model(model)
+    check_primary_key(normalized_model)
+    validate_model(normalized_model)
 
     adapter.update(repo, model, opts)
     |> check_single_result(model)
@@ -137,9 +131,9 @@ defmodule Ecto.Repo.Backend do
   end
 
   def delete(repo, adapter, model, opts) do
-    model = normalize_model(model)
-    check_primary_key(model)
-    validate_model(model)
+    normalized_model = normalize_model(model)
+    check_primary_key(normalized_model)
+    validate_model(normalized_model)
 
     adapter.delete(repo, model, opts)
     |> check_single_result(model)

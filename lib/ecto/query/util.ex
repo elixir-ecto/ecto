@@ -49,6 +49,7 @@ defmodule Ecto.Query.Util do
   end
 
   # Takes an elixir value and returns its ecto type
+  # Only allows query literals
   @doc false
   def value_to_type(value)
 
@@ -58,8 +59,42 @@ defmodule Ecto.Query.Util do
   def value_to_type(value) when is_integer(value), do: {:ok, :integer}
   def value_to_type(value) when is_float(value), do: {:ok, :float}
 
-  def value_to_type(value), do: {:error, "`unknown type of value `#{inspect value}`"}
+  def value_to_type(%Ecto.Tagged{value: binary, type: :binary}) do
+    case value_to_type(binary) do
+      {:ok, :binary}    -> {:ok, :binary}
+      {:ok, :string}    -> {:ok, :binary}
+      {:error, _} = err -> err
+      _ ->
+        {:error, "binary/1 argument has to be of binary type"}
+    end
+  end
 
+  def value_to_type(%Ecto.Tagged{value: list, type: {:array, inner}}) do
+    if inner in types or (list == [] and nil?(inner)) do
+      elem_types = Enum.map(list, &value_to_type/1)
+
+      error =
+        Enum.find_value(elem_types, fn
+          {:ok, type} ->
+            unless type_eq?(inner, type) or type_castable?(type, inner) do
+              {:error, "all elements in array have to be of same type"}
+            end
+          {:error, _} = err ->
+            err
+        end)
+
+      error || {:ok, {:array, inner}}
+    else
+      {:error, "invalid type given to `array/2`: `#{inspect inner}`"}
+    end
+  end
+
+  def value_to_type(value), do: {:error, "unknown type of value `#{inspect value}`"}
+
+  # Takes an elixir value and returns its ecto type.
+  # Different to value_to_type/1 it also allows values
+  # that can be interpolated into the query
+  @doc false
   def external_to_type(%Decimal{}), do: {:ok, :decimal}
 
   def external_to_type(%Ecto.DateTime{} = dt) do
@@ -115,36 +150,6 @@ defmodule Ecto.Query.Util do
       res
     else
       {:ok, :interval}
-    end
-  end
-
-  def external_to_type(%Ecto.Tagged{value: binary, type: :binary}) do
-    case external_to_type(binary) do
-      {:ok, :binary}    -> {:ok, :binary}
-      {:ok, :string}    -> {:ok, :binary}
-      {:error, _} = err -> err
-      _ ->
-        {:error, "binary/1 argument has to be of binary type"}
-    end
-  end
-
-  def external_to_type(%Ecto.Tagged{value: list, type: {:array, inner}}) do
-    if inner in types or (list == [] and nil?(inner)) do
-      elem_types = Enum.map(list, &external_to_type/1)
-
-      error =
-        Enum.find_value(elem_types, fn
-          {:ok, type} ->
-            unless type_eq?(inner, type) or type_castable?(type, inner) do
-              {:error, "all elements in array have to be of same type"}
-            end
-          {:error, _} = err ->
-            err
-        end)
-
-      error || {:ok, {:array, inner}}
-    else
-      {:error, "invalid type given to `array/2`: `#{inspect inner}`"}
     end
   end
 

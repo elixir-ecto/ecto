@@ -288,10 +288,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       |> default.()
     end
 
-    defp encoder(_type, default, %Ecto.Tagged{value: value}) do
-      default.(value)
-    end
-
     defp encoder(_type, default, param) do
       default.(param)
     end

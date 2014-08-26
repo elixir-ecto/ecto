@@ -385,7 +385,7 @@ defmodule Ecto.Query.Validator do
 
   # values
   defp type_check(value, _state) do
-    case Util.external_to_type(value) do
+    case Util.value_to_type(value) do
       {:ok, type} ->
         type
       {:error, reason} ->
