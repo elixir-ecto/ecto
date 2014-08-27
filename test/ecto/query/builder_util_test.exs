@@ -27,7 +27,7 @@ defmodule Ecto.Query.BuilderUtilTest do
            escape(quote do array([1, 2, 3], :integer) end, []) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
 
     assert quote(do: &0.z) ==
-           escape(quote do field(x, :z) end, [x: 0]) |> elem(0) |>Code.eval_quoted([], __ENV__) |> elem(0)
+           escape(quote do field(x, :z) end, [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
   end
 
   test "don't escape interpolation" do
@@ -54,11 +54,11 @@ defmodule Ecto.Query.BuilderUtilTest do
       escape(quote(do: x.y), [])
     end
 
-    assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
+    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
       escape(quote(do: field(x, 123)), [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
 
-    assert_raise Ecto.QueryError, ~r"array type should be an atom", fn ->
+    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
       escape(quote(do: array([1, 2, 3], 123)), []) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
   end
@@ -74,9 +74,9 @@ defmodule Ecto.Query.BuilderUtilTest do
            escape_dot(quote(do: x), [x: 0])
 
     assert quote(do: {&0, :y}) ==
-           Code.eval_quoted(escape_dot(quote(do: field(x, ^:y)), [x: 0]), [], __ENV__) |> elem(0)
+           Code.eval_quoted(escape_dot(quote(do: field(x, :y)), [x: 0]), [], __ENV__) |> elem(0)
 
-    assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
+    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
       Code.eval_quoted(escape_dot(quote(do: field(x, 123)), [x: 0]), [], __ENV__)
     end
   end

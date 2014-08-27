@@ -158,7 +158,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "valid in expression" do
-    query = Post |> select([], 1 in array([1,2,3], ^:integer))
+    query = Post |> select([], 1 in array([1,2,3], :integer))
     validate(query)
 
     query = Post |> select([], (2+2) in 1..5)
@@ -185,10 +185,10 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "array expression" do
-    query = Post |> where([p], array([p.title, p.title], ^:string) == nil) |> select([], 0)
+    query = Post |> where([p], array([p.title, p.title], :string) == nil) |> select([], 0)
     validate(query)
 
-    query = Post |> where([p], array([p.title, p.title], ^:binary) == nil) |> select([], 0)
+    query = Post |> where([p], array([p.title, p.title], :binary) == nil) |> select([], 0)
     validate(query)
 
     query = Post |> where([p], [p.title, p.title] == nil) |> select([], 0)
@@ -201,7 +201,7 @@ defmodule Ecto.Query.ValidatorTest do
       validate(query)
     end
 
-    query = Post |> where([p], array([p.title, p.title], ^:string) == 1) |> select([], 0)
+    query = Post |> where([p], array([p.title, p.title], :string) == 1) |> select([], 0)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
@@ -383,7 +383,7 @@ defmodule Ecto.Query.ValidatorTest do
     query = Post |> select([p], 1 + nil)
     validate(query)
 
-    query = Post |> select([p], array([1, nil, 2], ^:integer))
+    query = Post |> select([p], array([1, nil, 2], :integer))
     validate(query)
 
     assert_raise Ecto.Query.TypeCheckError, fn ->

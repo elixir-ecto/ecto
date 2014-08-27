@@ -44,8 +44,7 @@ defmodule Ecto.Query.BuilderUtil do
   def escape({:array, _, [arg, type]}, external, vars) do
     {arg, external}  = escape(arg, external, vars)
 
-    type = unhat(type)
-    type = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_array(unquote(type)))
+    type = atom(type)
     expr = {:%, [], [Ecto.Tagged, {:%{}, [], [value: arg, type: {:array, type}]}]}
 
     {expr, external}
@@ -55,9 +54,9 @@ defmodule Ecto.Query.BuilderUtil do
   # field macro
   def escape({:field, _, [{var, _, context}, field]}, external, vars)
       when is_atom(var) and is_atom(context) do
-    var   = escape_var(var, vars)
-    field = unhat(field)
-    field = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_field(unquote(field)))
+    var = escape_var(var, vars)
+
+    field = atom(field)
     dot   = {:{}, [], [:., [], [var, field]]}
     expr  = {:{}, [], [dot, [], []]}
 
@@ -140,9 +139,8 @@ defmodule Ecto.Query.BuilderUtil do
       iex> escape_dot(quote(do: x.y()), [x: 0])
       {{:{}, [], [:&, [], [0]]}, :y}
 
-      iex> escape_dot(quote(do: field(x, ^:y)), [x: 0])
-      {{:{}, [], [:&, [], [0]]},
-        {{:., [], [:"Elixir.Ecto.Query.BuilderUtil", :check_field]}, [], [:y]}}
+      iex> escape_dot(quote(do: field(x, :y)), [x: 0])
+      {{:{}, [], [:&, [], [0]]}, :y}
 
       iex> escape_dot(quote(do: x), [x: 0])
       :error
@@ -151,9 +149,8 @@ defmodule Ecto.Query.BuilderUtil do
   @spec escape_dot(Macro.t, Keyword.t) :: {Macro.t, Macro.t} | :error
   def escape_dot({:field, _, [{var, _, context}, field]}, vars)
       when is_atom(var) and is_atom(context) do
-    var   = escape_var(var, vars)
-    field = unhat(field)
-    field = quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_field(unquote(field)))
+    var = escape_var(var, vars)
+    field = atom(field)
     {var, field}
   end
 
@@ -327,29 +324,20 @@ defmodule Ecto.Query.BuilderUtil do
   defp escape_query(other),
     do: other
 
-  # Removes the interpolation hat (if it's there) from an expression
-  defp unhat({:^, _, [expr]}), do: expr
-  defp unhat(expr), do: expr
+  # Removes the interpolation hat from an expression, leaving the
+  # expression unescaped, or if there is no hat escapes the query
+  defp atom({:^, _, [expr]}),
+    do: quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_atom(unquote(expr)))
+  defp atom(atom) when is_atom(atom),
+    do: atom
+  defp atom(other),
+    do: raise(Ecto.QueryError, reason: "expected literal atom or interpolated value, got: `#{inspect other}`")
 
   @doc """
-  Called by escaper at runtime to verify that `field/2` is given an atom.
+  Called by escaper at runtime to verify that value is an atom.
   """
-  def check_field(field) do
-    if is_atom(field) do
-      field
-    else
-      raise Ecto.QueryError, reason: "field name should be an atom, given: `#{inspect field}`"
-    end
-  end
-
-  @doc """
-  Called by escaper at runtime to verify that `array/2` is given an atom.
-  """
-  def check_array(type) do
-    if is_atom(type) do
-      type
-    else
-      raise Ecto.QueryError, reason: "array type should be an atom, given: `#{inspect type}`"
-    end
-  end
+  def check_atom(atom) when is_atom(atom),
+    do: atom
+  def check_atom(other),
+    do: raise(Ecto.QueryError, reason: "expected atom, got: `#{inspect other}`")
 end

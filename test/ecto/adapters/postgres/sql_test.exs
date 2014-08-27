@@ -109,15 +109,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nFOR SHARE NOWAIT}, []}
   end
 
-  test "variable binding" do
-    x = 123
-    query = Model |> select([], ^x) |> normalize
-    assert SQL.select(query) == {~s{SELECT $1::integer\nFROM "model" AS m0}, [123]}
-
-    query = Model |> select([r], ^x + r.y) |> normalize
-    assert SQL.select(query) == {~s{SELECT $1::integer + m0."y"\nFROM "model" AS m0}, [123]}
-  end
-
   test "string escape" do
     query = Model |> select([], "'\\ \n") |> normalize
     assert SQL.select(query) == {~s{SELECT '''\\ \n'\nFROM "model" AS m0}, []}
@@ -335,7 +326,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "in expression" do
-    query = Model |> select([e], 1 in array([1,e.x,3], ^:integer)) |> normalize
+    query = Model |> select([e], 1 in array([1,e.x,3], :integer)) |> normalize
     assert SQL.select(query) == {~s{SELECT 1 = ANY (ARRAY[1, m0."x", 3])\nFROM "model" AS m0}, []}
 
     query = Model |> select([e], e.x in 1..3) |> normalize
@@ -346,10 +337,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "list expression" do
-    query = from(e in Model, []) |> where([e], array([], ^:integer) == nil) |> select([e], 0) |> normalize
+    query = from(e in Model, []) |> where([e], array([], :integer) == nil) |> select([e], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nWHERE (ARRAY[]::integer[] IS NULL)}, []}
 
-    query = from(e in Model, []) |> where([e], array([e.x, e.y], ^:integer) == nil) |> select([e], 0) |> normalize
+    query = from(e in Model, []) |> where([e], array([e.x, e.y], :integer) == nil) |> select([e], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nWHERE (ARRAY[m0."x", m0."y"] IS NULL)}, []}
   end
 
@@ -373,7 +364,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "sigils" do
-    query = Model |> select([], ~s"abc" in array(~w(abc def), ^:string)) |> normalize
+    query = Model |> select([], ~s"abc" in array(~w(abc def), :string)) |> normalize
     assert SQL.select(query) == {~s{SELECT 'abc' = ANY (ARRAY['abc', 'def'])\nFROM "model" AS m0}, []}
   end
 
