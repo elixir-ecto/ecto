@@ -14,19 +14,6 @@ defmodule Ecto.Query.Validator do
 
   require Ecto.Query.Util
 
-  # Adds type, file and line metadata to the exception
-  defmacrop rescue_metadata(type, expr, block) do
-    quote do
-      %QueryExpr{file: file, line: line} = unquote(expr)
-      try do
-        unquote(block)
-      rescue e in [Ecto.QueryError] ->
-        stacktrace = System.stacktrace
-        reraise %{e | type: unquote(type), file: file, line: line}, stacktrace
-      end
-    end
-  end
-
   def validate(query, apis, opts \\ []) do
     if query.from == nil do
       raise Ecto.QueryError, reason: "a query must have a from expression"
@@ -122,7 +109,7 @@ defmodule Ecto.Query.Validator do
 
   defp validate_booleans(type, query_exprs, state) do
     Enum.each(query_exprs, fn expr ->
-      rescue_metadata(type, expr) do
+      rescue_metadata(type, expr, fn ->
         state = %{state | external: expr.external}
         expr_type = catch_grouped(fn -> check(expr.expr, state) end)
 
@@ -131,28 +118,28 @@ defmodule Ecto.Query.Validator do
           raise Ecto.QueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
             "is of type `#{format_expr_type}`, has to be of boolean type"
         end
-      end
+      end)
     end)
   end
 
   defp validate_order_bys(order_bys, state) do
     Enum.each(order_bys, fn expr ->
-      rescue_metadata(:order_by, expr) do
+      rescue_metadata(:order_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn {_dir, expr} ->
           catch_grouped(fn -> check(expr, state) end)
         end)
-      end
+      end)
     end)
   end
 
   defp validate_group_bys(group_bys, state) do
     state = %{state | grouped?: false}
     Enum.each(group_bys, fn expr ->
-      rescue_metadata(:group_by, expr) do
+      rescue_metadata(:group_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, &check(&1, state))
-      end
+      end)
     end)
   end
 
@@ -164,9 +151,9 @@ defmodule Ecto.Query.Validator do
     end
 
     Enum.each(preloads, fn expr ->
-      rescue_metadata(:preload, expr) do
+      rescue_metadata(:preload, expr, fn ->
         check_preload_fields(expr.expr, model)
-      end
+      end)
     end)
   end
 
@@ -181,20 +168,20 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_select(expr, state) do
-    rescue_metadata(:select, expr) do
+    rescue_metadata(:select, expr, fn ->
       state = %{state | external: expr.external}
       catch_grouped(fn -> select_clause(expr.expr, state) end)
-    end
+    end)
   end
 
   defp validate_distincts(%Query{order_bys: order_bys, distincts: distincts}, state) do
     Enum.each(distincts, fn expr ->
-      rescue_metadata(:distinct, expr) do
+      rescue_metadata(:distinct, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn expr ->
           catch_grouped(fn -> check(expr, state) end)
         end)
-      end
+      end)
     end)
 
     # ensure that the fields in `distinct` appears before other fields in the `order_by` expression
@@ -242,13 +229,13 @@ defmodule Ecto.Query.Validator do
 
   defp preload_selected(%Query{select: select, preloads: preloads}) do
     unless preloads == [] do
-      rescue_metadata(:select, select) do
+      rescue_metadata(:select, select, fn ->
         pos = Util.locate_var(select.expr, {:&, [], [0]})
         if nil?(pos) do
           raise Ecto.QueryError, reason: "source in from expression " <>
             "needs to be selected when using preload query"
         end
-      end
+      end)
     end
   end
 
@@ -524,6 +511,16 @@ defmodule Ecto.Query.Validator do
         # TODO: Use query inspect here to remove &1
         raise Ecto.QueryError, reason: "`#{Macro.to_string(expr)}` " <>
           "must appear in `group_by` or be used in an aggregate function"
+    end
+  end
+
+  # Adds type, file and line metadata to the exception
+  defp rescue_metadata(type, %QueryExpr{file: file, line: line}, fun) do
+    try do
+      fun.()
+    rescue e in [Ecto.QueryError] ->
+      stacktrace = System.stacktrace
+      reraise %{e | type: type, file: file, line: line}, stacktrace
     end
   end
 
