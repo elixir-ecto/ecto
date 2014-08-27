@@ -42,18 +42,12 @@ defmodule Ecto.Repo.Backend do
     Validator.validate_get(query, repo.query_apis)
     check_primary_key(model)
 
-    case Util.value_to_type(id) do
-      {:ok, _} -> :ok
-      {:error, reason} -> raise ArgumentError, message: reason
-    end
-
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
     # normalization and what not.
     query = Q.from(x in query, where: field(x, ^primary_key) == ^id)
-    |> Normalizer.normalize
 
-    models = adapter.all(repo, query, opts)
+    models = all(repo, adapter, query, opts)
     {model, models}
   end
 
@@ -91,7 +85,7 @@ defmodule Ecto.Repo.Backend do
     normalized_model = normalize_model(model)
     validate_model(normalized_model)
 
-    result   = adapter.insert(repo, normalized_model, opts)
+    result   = adapter.insert(repo, model, opts)
     module   = model.__struct__
     pk_field = module.__schema__(:primary_key)
 
@@ -104,9 +98,9 @@ defmodule Ecto.Repo.Backend do
   end
 
   def update(repo, adapter, model, opts) do
-    model = normalize_model(model)
-    check_primary_key(model)
-    validate_model(model)
+    normalized_model = normalize_model(model)
+    check_primary_key(normalized_model)
+    validate_model(normalized_model)
 
     adapter.update(repo, model, opts)
     |> check_single_result(model)
@@ -115,28 +109,31 @@ defmodule Ecto.Repo.Backend do
   def update_all(repo, adapter, queryable, values, opts) do
     {binds, expr} = FromBuilder.escape(queryable)
 
-    values = Enum.map(values, fn({field, expr}) ->
-      expr = BuilderUtil.escape(expr, binds)
-      {field, expr}
-    end)
+    {values, external} =
+      Enum.map_reduce(values, %{}, fn {field, expr}, external ->
+        {expr, external} = BuilderUtil.escape(expr, external, binds)
+        {{field, expr}, external}
+      end)
+
+    external = BuilderUtil.escape_external(external)
 
     quote do
       Ecto.Repo.Backend.runtime_update_all(unquote(repo), unquote(adapter),
-        unquote(expr), unquote(values), unquote(opts))
+        unquote(expr), unquote(values), unquote(external), unquote(opts))
     end
   end
 
-  def runtime_update_all(repo, adapter, queryable, values, opts) do
+  def runtime_update_all(repo, adapter, queryable, values, external, opts) do
     query = Queryable.to_query(queryable)
             |> Normalizer.normalize(skip_select: true)
     Validator.validate_update(query, repo.query_apis, values)
-    adapter.update_all(repo, query, values, opts)
+    adapter.update_all(repo, query, values, external, opts)
   end
 
   def delete(repo, adapter, model, opts) do
-    model = normalize_model(model)
-    check_primary_key(model)
-    validate_model(model)
+    normalized_model = normalize_model(model)
+    check_primary_key(normalized_model)
+    validate_model(normalized_model)
 
     adapter.delete(repo, model, opts)
     |> check_single_result(model)
@@ -192,7 +189,7 @@ defmodule Ecto.Repo.Backend do
     Enum.each(zipped, fn {field, value} ->
       type = module.__schema__(:field_type, field)
 
-      value_type = case Util.value_to_type(value) do
+      value_type = case Util.external_to_type(value) do
         {:ok, vtype} -> vtype
         {:error, reason} -> raise ArgumentError, message: reason
       end
@@ -215,7 +212,6 @@ defmodule Ecto.Repo.Backend do
 
     Enum.reduce(fields, model, fn field, model ->
       type = module.__schema__(:field_type, field)
-
       Map.update!(model, field, &Util.try_cast(&1, type))
     end)
   end

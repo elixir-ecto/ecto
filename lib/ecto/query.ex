@@ -120,7 +120,7 @@ defmodule Ecto.Query do
 
   defmodule QueryExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line]
+    defstruct [expr: nil, external: %{}, file: nil, line: nil]
   end
 
   defmodule JoinExpr do

@@ -49,63 +49,101 @@ defmodule Ecto.Query.Util do
   end
 
   # Takes an elixir value and returns its ecto type
+  # Only allows query literals
   @doc false
-  def value_to_type(value, fun \\ nil)
+  def value_to_type(value)
 
-  def value_to_type(nil, _fun), do: {:ok, :any}
-  def value_to_type(value, _fun) when is_boolean(value), do: {:ok, :boolean}
-  def value_to_type(value, _fun) when is_binary(value), do: {:ok, :string}
-  def value_to_type(value, _fun) when is_integer(value), do: {:ok, :integer}
-  def value_to_type(value, _fun) when is_float(value), do: {:ok, :float}
-  def value_to_type(%Decimal{}, _fun), do: {:ok, :decimal}
+  def value_to_type(nil), do: {:ok, :any}
+  def value_to_type(value) when is_boolean(value), do: {:ok, :boolean}
+  def value_to_type(value) when is_binary(value), do: {:ok, :string}
+  def value_to_type(value) when is_integer(value), do: {:ok, :integer}
+  def value_to_type(value) when is_float(value), do: {:ok, :float}
 
-  def value_to_type(%Ecto.DateTime{} = dt, fun) do
+  def value_to_type(%Ecto.Tagged{value: binary, type: :binary}) do
+    case value_to_type(binary) do
+      {:ok, :binary}    -> {:ok, :binary}
+      {:ok, :string}    -> {:ok, :binary}
+      {:error, _} = err -> err
+      _ ->
+        {:error, "binary/1 argument has to be of binary type"}
+    end
+  end
+
+  def value_to_type(%Ecto.Tagged{value: list, type: {:array, inner}}) do
+    if inner in types or (list == [] and nil?(inner)) do
+      elem_types = Enum.map(list, &value_to_type/1)
+
+      error =
+        Enum.find_value(elem_types, fn
+          {:ok, type} ->
+            unless type_eq?(inner, type) or type_castable?(type, inner) do
+              {:error, "all elements in array have to be of same type"}
+            end
+          {:error, _} = err ->
+            err
+        end)
+
+      error || {:ok, {:array, inner}}
+    else
+      {:error, "invalid type given to `array/2`: `#{inspect inner}`"}
+    end
+  end
+
+  def value_to_type(value), do: {:error, "unknown type of value `#{inspect value}`"}
+
+  # Takes an elixir value and returns its ecto type.
+  # Different to value_to_type/1 it also allows values
+  # that can be interpolated into the query
+  @doc false
+  def external_to_type(%Decimal{}), do: {:ok, :decimal}
+
+  def external_to_type(%Ecto.DateTime{} = dt) do
     values = Map.delete(dt, :__struct__) |> Map.values
-    types = Enum.map(values, &value_to_type(&1, fun))
+    types = Enum.map(values, &external_to_type/1)
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
       {:error, _} = err -> err
-      {:error, "all datetime elements have to be a literal of integer type"}
+      {:error, "all datetime elements have to be of integer type"}
     end)
 
     res || {:ok, :datetime}
   end
 
-  def value_to_type(%Ecto.Date{} = d, fun) do
+  def external_to_type(%Ecto.Date{} = d) do
     values = Map.delete(d, :__struct__) |> Map.values
-    types = Enum.map(values, &value_to_type(&1, fun))
+    types = Enum.map(values, &external_to_type/1)
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
       {:error, _} = err -> err
-      {:error, "all date elements have to be a literal of integer type"}
+      {:error, "all date elements have to be of integer type"}
     end)
 
     res || {:ok, :date}
   end
 
-  def value_to_type(%Ecto.Time{} = t, fun) do
+  def external_to_type(%Ecto.Time{} = t) do
     values = Map.delete(t, :__struct__) |> Map.values
-    types = Enum.map(values, &value_to_type(&1, fun))
+    types = Enum.map(values, &external_to_type/1)
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
       {:error, _} = err -> err
-      {:error, "all time elements have to be a literal of integer type"}
+      {:error, "all time elements have to be of integer type"}
     end)
 
     res || {:ok, :time}
   end
 
-  def value_to_type(%Ecto.Interval{} = dt, fun) do
+  def external_to_type(%Ecto.Interval{} = dt) do
     values = Map.delete(dt, :__struct__) |> Map.values
-    types = Enum.map(values, &value_to_type(&1, fun))
+    types = Enum.map(values, &external_to_type/1)
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
       {:error, _} = err -> err
-      _ -> {:error, "all interval elements have to be a literal of integer type"}
+      _ -> {:error, "all interval elements have to be of integer type"}
     end)
 
     if res do
@@ -115,57 +153,7 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def value_to_type(%Ecto.Tagged{value: binary, type: :binary}, fun) do
-    case value_to_type(binary, fun) do
-      {:ok, :binary} -> {:ok, :binary}
-      {:ok, :string} -> {:ok, :binary}
-      {:error, _} = err -> err
-      _ -> {:error, "binary/1 argument has to be a literal of binary type"}
-    end
-  end
-
-  def value_to_type(%Ecto.Tagged{value: list, type: {:array, inner}}, fun) do
-    unless inner in types or (list == [] and nil?(inner)) do
-      {:error, "invalid type given to `array/2`: `#{inspect inner}`"}
-    end
-
-    elem_types = Enum.map(list, &value_to_type(&1, fun))
-
-    res = Enum.find_value(elem_types, fn
-      {:ok, elem_type} ->
-        unless type_eq?(inner, elem_type) or type_castable?(elem_type, inner) do
-          {:error, "all elements in array have to be of same type"}
-        end
-      {:error, _} = err ->
-        err
-    end)
-
-    if res do
-      res
-    else
-      {:ok, {:array, inner}}
-    end
-  end
-
-  def value_to_type(value, nil), do: {:error, "`unknown type of value `#{inspect value}`"}
-
-  def value_to_type(expr, fun), do: fun.(expr)
-
-  # Returns true if value is a query literal
-  @doc false
-  def literal?(nil),                             do: true
-  def literal?(value) when is_boolean(value),    do: true
-  def literal?(value) when is_binary(value),     do: true
-  def literal?(value) when is_integer(value),    do: true
-  def literal?(value) when is_float(value),      do: true
-  def literal?(%Decimal{}),                      do: true
-  def literal?(%Ecto.DateTime{}),                do: true
-  def literal?(%Ecto.Date{}),                    do: true
-  def literal?(%Ecto.Time{}),                    do: true
-  def literal?(%Ecto.Interval{}),                do: true
-  def literal?(%Ecto.Tagged{type: :binary}),     do: true
-  def literal?(%Ecto.Tagged{type: {:array, _}}), do: true
-  def literal?(_),                               do: false
+  def external_to_type(value), do: value_to_type(value)
 
   # Returns true if the two types are considered equal by the type system
   # Note that this does not consider casting
@@ -181,7 +169,7 @@ defmodule Ecto.Query.Util do
   # %Ecto.Tagged{}.
   @doc false
   def type_castable?(:string, :binary), do: true
-  def type_castable(_, _), do: false
+  def type_castable?(_, _), do: false
 
   # Tries to cast the given value to the specified type.
   # If value cannot be casted just return it.

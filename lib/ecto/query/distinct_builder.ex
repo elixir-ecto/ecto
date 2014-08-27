@@ -9,10 +9,11 @@ defmodule Ecto.Query.DistinctBuilder do
   See `Ecto.BuilderUtil.escape/2`.
 
       iex> escape(quote do [x.x, foo()] end, [x: 0])
-      [{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
-       {:{}, [], [:foo, [], []]}]
+      {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
+        {:{}, [], [:foo, [], []]}],
+       %{}}
   """
-  @spec escape(Macro.t, Keyword.t) :: Macro.t
+  @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
   def escape(expr, vars) do
     List.wrap(expr)
     |> BuilderUtil.escape(vars)
@@ -27,10 +28,15 @@ defmodule Ecto.Query.DistinctBuilder do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding  = BuilderUtil.escape_binding(binding)
-    expr     = escape(expr, binding)
-    distinct = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
-                           file: unquote(env.file), line: unquote(env.line)}
+    binding          = BuilderUtil.escape_binding(binding)
+    {expr, external} = escape(expr, binding)
+    external         = BuilderUtil.escape_external(external)
+
+    distinct = quote do: %Ecto.Query.QueryExpr{
+                           expr: unquote(expr),
+                           external: unquote(external),
+                           file: unquote(env.file),
+                           line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [distinct], env)
   end
 

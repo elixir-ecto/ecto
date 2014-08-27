@@ -22,7 +22,7 @@ defmodule Ecto.Integration.RepoTest do
            TestRepo.all(from Post, select: { ^%Ecto.Interval{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
 
     assert [{ [0, 1, 2, 3] }] ==
-           TestRepo.all(from Post, select: { array([0, 1, 2, 3], ^:integer) })
+           TestRepo.all(from Post, select: { array([0, 1, 2, 3], :integer) })
   end
 
   test "returns already started for started repos" do

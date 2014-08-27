@@ -5,61 +5,61 @@ defmodule Ecto.Query.BuilderUtilTest do
   doctest Ecto.Query.BuilderUtil
 
   test "escape" do
-    assert Macro.escape(quote do &0.y end) ==
+    assert {Macro.escape(quote do &0.y end), %{}} ==
            escape(quote do x.y end, [x: 0])
 
-    assert Macro.escape(quote do &0.y + &0.z end) ==
+    assert {Macro.escape(quote do &0.y + &0.z end), %{}} ==
            escape(quote do x.y + x.z end, [x: 0])
 
-    assert Macro.escape(quote do &0.y + &1.z end) ==
+    assert {Macro.escape(quote do &0.y + &1.z end), %{}} ==
            escape(quote do x.y + y.z end, [x: 0, y: 1])
 
-    assert Macro.escape(quote do avg(0) end) ==
+    assert {Macro.escape(quote do avg(0) end), %{}} ==
            escape(quote do avg(0) end, [])
 
-    assert quote(do: ~s"123") ==
+    assert {quote(do: ~s"123"), %{}} ==
            escape(quote do ~s"123" end, [])
 
-    assert {:%, [], [Ecto.Tagged, {:%{}, [], [value: {:<<>>, [], [1, 2, 3]}, type: :binary]}]} ==
+    assert {{:%, [], [Ecto.Tagged, {:%{}, [], [value: {:<<>>, [], [1, 2, 3]}, type: :binary]}]}, %{}} ==
            escape(quote do binary(<< 1, 2, 3 >>) end, [])
 
     assert %Ecto.Tagged{value: [1, 2, 3], type: {:array, :integer}} ==
-           Code.eval_quoted(escape(quote do array([1, 2, 3], ^:integer) end, []), [], __ENV__) |> elem(0)
+           escape(quote do array([1, 2, 3], :integer) end, []) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
 
     assert quote(do: &0.z) ==
-           Code.eval_quoted(escape(quote do field(x, ^:z) end, [x: 0]), [], __ENV__) |> elem(0)
+           escape(quote do field(x, :z) end, [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
   end
 
   test "don't escape interpolation" do
-    assert (quote do 1 == 2 end) ==
-           escape(quote do ^(1 == 2) end, [])
+    assert {Macro.escape(quote(do: ^0)), %{0 => quote(do: 1 == 2)}} ==
+           escape(quote(do: ^(1 == 2)), [])
 
-    assert (quote do [] ++ [] end) ==
-           escape(quote do ^([] ++ []) end, [])
+    assert {Macro.escape(quote(do: ^0)), %{0 => quote(do: [] ++ [])}} ==
+           escape(quote(do: ^([] ++ [])), [])
 
-    assert (quote do 1 + 2 + 3 + 4 end) ==
-           escape(quote do ^(1 + 2 + 3 + 4) end, [])
+    assert {Macro.escape(quote(do: ^0 + ^1)), %{0 => 1, 1 => 2}} ==
+           escape(quote(do: ^1 + ^2), [])
   end
 
   test "escape raise" do
     assert_raise Ecto.QueryError, ~r"is not a valid query expression", fn ->
-      escape(quote do x end, [])
+      escape(quote(do: x), [])
     end
 
     assert_raise Ecto.QueryError, ~r"is not a valid query expression", fn ->
-      escape(quote do :atom end, [])
+      escape(quote(do: :atom), [])
     end
 
     assert_raise Ecto.QueryError, ~r"unbound variable", fn ->
-      escape(quote do x.y end, [])
+      escape(quote(do: x.y), [])
     end
 
-    assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
-      Code.eval_quoted(escape(quote do field(x, 123) end, [x: 0]), [], __ENV__)
+    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
+      escape(quote(do: field(x, 123)), [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
 
-    assert_raise Ecto.QueryError, ~r"array type should be an atom", fn ->
-      Code.eval_quoted(escape(quote do array([1, 2, 3], 123) end, []), [], __ENV__) |> elem(0)
+    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
+      escape(quote(do: array([1, 2, 3], 123)), []) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
   end
 
@@ -74,10 +74,10 @@ defmodule Ecto.Query.BuilderUtilTest do
            escape_dot(quote(do: x), [x: 0])
 
     assert quote(do: {&0, :y}) ==
-           Code.eval_quoted(escape_dot(quote(do: field(x, ^:y)), [x: 0]), [], __ENV__) |> elem(0)
+           Code.eval_quoted(escape_dot(quote(do: field(x, :y)), [x: 0]), [], __ENV__) |> elem(0)
 
-    assert_raise Ecto.QueryError, ~r"field name should be an atom", fn ->
-      Code.eval_quoted(escape_dot(quote do field(x, 123) end, [x: 0]), [], __ENV__)
+    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
+      Code.eval_quoted(escape_dot(quote(do: field(x, 123)), [x: 0]), [], __ENV__)
     end
   end
 
