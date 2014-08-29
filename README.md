@@ -344,7 +344,7 @@ hd(posts).comments.all #=> [%Comment{...}, %Comment{...}]
 
 When preloading, Ecto first fetches all posts and then Ecto does a separate query to retrieve all comments associated with the returned posts.
 
-Notice that Ecto does not lazy load associations. While lazily loading associations may sound convenient at first, in the long run it becomes a source of confusion and performance issues. That said, if you call `to_list` in an association that is not currently loaded, Ecto will raise an error:
+Notice that Ecto does not lazy load associations. While lazily loading associations may sound convenient at first, in the long run it becomes a source of confusion and performance issues. That said, if you call `all` in an association that is not currently loaded, Ecto will raise an error:
 
 ```elixir
 post = Repo.get(Post, 42)
