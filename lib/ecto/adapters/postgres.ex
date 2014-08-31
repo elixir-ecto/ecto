@@ -138,10 +138,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def query(repo, sql, params, opts \\ []) do
       pool = repo_pool(repo)
 
-      timeout = opts[:timeout] || @timeout
+      opts = Keyword.put_new(opts, :timeout, @timeout)
       repo.log({:query, sql}, fn ->
-        use_worker(pool, timeout, fn worker ->
-          Worker.query!(worker, sql, params, timeout)
+        use_worker(pool, opts[:timeout], fn worker ->
+          Worker.query!(worker, sql, params, opts)
         end)
       end)
     end
@@ -298,20 +298,20 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def transaction(repo, opts, fun) do
       pool = repo_pool(repo)
 
-      timeout = opts[:timout] || @timeout
-      worker = checkout_worker(pool, timeout)
+      opts = Keyword.put_new(opts, :timeout, @timeout)
+      worker = checkout_worker(pool, opts[:timeout])
 
       try do
-        do_begin(repo, worker, timeout)
+        do_begin(repo, worker, opts)
         value = fun.()
-        do_commit(repo, worker, timeout)
+        do_commit(repo, worker, opts)
         {:ok, value}
       catch
         :throw, {:ecto_rollback, value} ->
-          do_rollback(repo, worker, timeout)
+          do_rollback(repo, worker, opts)
           {:error, value}
         type, term ->
-          do_rollback(repo, worker, timeout)
+          do_rollback(repo, worker, opts)
           :erlang.raise(type, term, System.stacktrace)
       after
         checkin_worker(pool)
@@ -371,21 +371,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       :ok
     end
 
-    defp do_begin(repo, worker, timeout) do
+    defp do_begin(repo, worker, opts) do
       repo.log(:begin, fn ->
-        Worker.begin!(worker, timeout)
+        Worker.begin!(worker, opts)
       end)
     end
 
-    defp do_rollback(repo, worker, timeout) do
+    defp do_rollback(repo, worker, opts) do
       repo.log(:rollback, fn ->
-        Worker.rollback!(worker, timeout)
+        Worker.rollback!(worker, opts)
       end)
     end
 
-    defp do_commit(repo, worker, timeout) do
+    defp do_commit(repo, worker, opts) do
       repo.log(:commit, fn ->
-        Worker.commit!(worker, timeout)
+        Worker.commit!(worker, opts)
       end)
     end
 
@@ -394,21 +394,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     @doc false
     def begin_test_transaction(repo, opts \\ []) do
       pool = repo_pool(repo)
-      timeout = opts[:timeout] || @timeout
+      opts = Keyword.put_new(opts, :timeout, @timeout)
 
       :poolboy.transaction(pool, fn worker ->
-        do_begin(repo, worker, timeout)
-      end, timeout)
+        do_begin(repo, worker, opts)
+      end, opts[:timeout])
     end
 
     @doc false
     def rollback_test_transaction(repo, opts \\ []) do
       pool = repo_pool(repo)
-      timeout = opts[:timeout] || @timeout
+      opts = Keyword.put_new(opts, :timeout, @timeout)
 
       :poolboy.transaction(pool, fn worker ->
-        do_rollback(repo, worker, timeout)
-      end, timeout)
+        do_rollback(repo, worker, opts)
+      end, opts[:timeout])
     end
 
     ## Storage API

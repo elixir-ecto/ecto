@@ -4,7 +4,7 @@ defmodule Ecto.Mixfile do
   def project do
     [app: :ecto,
      version: "0.2.3",
-     elixir: "~> 0.15.0",
+     elixir: "~> 0.15.0 or ~> 1.0.0-rc1",
      deps: deps,
      build_per_environment: false,
      test_paths: test_paths(Mix.env),
@@ -25,9 +25,9 @@ defmodule Ecto.Mixfile do
   defp deps do
     [{:poolboy, "~> 1.2.1"},
      # {:decimal, github: "ericmj/decimal"},
-     # {:postgrex, github: "ericmj/postgrex", optional: true},
+     {:postgrex, github: "ericmj/postgrex", optional: true},
      {:decimal, "~> 0.2.3"},
-     {:postgrex, "~> 0.5.3", optional: true},
+     # {:postgrex, "~> 0.5.3", optional: true},
      {:ex_doc, "~> 0.5", only: :dev},
      {:earmark, "~> 0.1", only: :dev}]
   end

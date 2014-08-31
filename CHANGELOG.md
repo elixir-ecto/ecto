@@ -3,7 +3,7 @@
 * Enhancements
   * Better error message if repo is not started
   * Do not require `^` on literals inside `array/2` or `field/2`
-  * Parameterise queries, interpolated values are no longer encoded as literals in the generated SQL query, instead they are sent as query parameters
+  * Parametrize queries, interpolated values are no longer encoded as literals in the generated SQL query, instead they are sent as query parameters
 
 # v0.2.3 (2014-08-03)
 
