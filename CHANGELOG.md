@@ -1,4 +1,4 @@
-# v0.2.4
+# v0.2.4 (2014-09-08)
 
 * Enhancements
   * Better error message if repo is not started
