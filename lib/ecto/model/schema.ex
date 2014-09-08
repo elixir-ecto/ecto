@@ -435,7 +435,7 @@ defmodule Ecto.Model.Schema do
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key, fields: fields] do
         pk = opts[:references] || primary_key
 
-        if nil?(pk) do
+        if is_nil(pk) do
           raise ArgumentError, message: "need to set `references` option for " <>
             "association when model has no primary key"
         end

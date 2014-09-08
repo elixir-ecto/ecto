@@ -195,7 +195,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp repo_pool(repo) do
       pid = repo.__postgres__(:pool_name) |> Process.whereis
 
-      if nil?(pid) or not Process.alive?(pid) do
+      if is_nil(pid) or not Process.alive?(pid) do
         raise ArgumentError, message: "repo #{inspect repo} is not started"
       end
 
@@ -213,7 +213,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       model = Util.find_source(sources, var) |> Util.model
       model_size = length(model.__schema__(:field_names))
       {model_values, values} = Enum.split(values, model_size)
-      if Enum.all?(model_values, &(nil?(&1))) do
+      if Enum.all?(model_values, &(is_nil(&1))) do
         {nil, values}
       else
         {model.__schema__(:allocate, model_values), values}

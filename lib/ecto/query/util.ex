@@ -70,7 +70,7 @@ defmodule Ecto.Query.Util do
   end
 
   def value_to_type(%Ecto.Tagged{value: list, type: {:array, inner}}) do
-    if inner in types or (list == [] and nil?(inner)) do
+    if inner in types or (list == [] and is_nil(inner)) do
       elem_types = Enum.map(list, &value_to_type/1)
 
       error =

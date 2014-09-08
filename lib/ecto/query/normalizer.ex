@@ -24,7 +24,7 @@ defmodule Ecto.Query.Normalizer do
   def normalize_join(%JoinExpr{assoc: {left, right}} = join, query) do
     model = Util.find_source(query.sources, left) |> Util.model
 
-    if nil?(model) do
+    if is_nil(model) do
       raise Ecto.QueryError, file: join.file, line: join.line,
         reason: "association join cannot be performed without a model"
     end

@@ -66,7 +66,7 @@ defmodule Ecto.Query.JoinBuilder do
   def build_with_binds(query, qual, binding, expr, on, count_bind, env) do
     binding = BuilderUtil.escape_binding(binding)
     {join_bind, join_expr, join_assoc} = escape(expr, binding)
-    is_assoc? = not nil?(join_assoc)
+    is_assoc? = not is_nil(join_assoc)
 
     validate_qual(qual)
     validate_on(on, is_assoc?)

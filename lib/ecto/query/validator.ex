@@ -146,7 +146,7 @@ defmodule Ecto.Query.Validator do
   defp validate_preloads(preloads, %{from: from}) do
     model = Util.model(from)
 
-    if preloads != [] and nil?(model) do
+    if preloads != [] and is_nil(model) do
       raise Ecto.QueryError, reason: "can only preload on fields from a model"
     end
 
@@ -231,7 +231,7 @@ defmodule Ecto.Query.Validator do
     unless preloads == [] do
       rescue_metadata(:select, select, fn ->
         pos = Util.locate_var(select.expr, {:&, [], [0]})
-        if nil?(pos) do
+        if is_nil(pos) do
           raise Ecto.QueryError, reason: "source in from expression " <>
             "needs to be selected when using preload query"
         end
@@ -346,7 +346,7 @@ defmodule Ecto.Query.Validator do
 
   # array(..., type)
   defp type_check(%Ecto.Tagged{value: list, type: {:array, inner}}, state) do
-    unless inner in Util.types or (list == [] and nil?(inner)) do
+    unless inner in Util.types or (list == [] and is_nil(inner)) do
       raise Ecto.QueryError, reason: "invalid type given to `array/2`: `#{inspect inner}`"
     end
 
@@ -430,7 +430,7 @@ defmodule Ecto.Query.Validator do
       end
 
       case Util.source_expr(query, child_var) do
-        %JoinExpr{qual: qual, assoc: assoc} when not nil?(assoc) and qual in [:inner, :left] ->
+        %JoinExpr{qual: qual, assoc: assoc} when not is_nil(assoc) and qual in [:inner, :left] ->
           :ok
         %JoinExpr{} ->
           raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
