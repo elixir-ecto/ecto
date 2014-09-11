@@ -13,24 +13,26 @@ defmodule Ecto.Query.OrderByBuilder do
   ## Examples
 
       iex> escape(quote do [x.x, foo()] end, [x: 0])
-      [asc: {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
-       asc: {:{}, [], [:foo, [], []]}]
+      {[asc: {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
+        asc: {:{}, [], [:foo, [], []]}],
+       %{}}
 
   """
   @spec escape(Macro.t, Keyword.t) :: Macro.t
   def escape(expr, vars) do
     List.wrap(expr)
-    |> Enum.map(&do_escape(&1, vars))
+    |> Enum.map_reduce(%{}, &do_escape(&1, &2, vars))
   end
 
-  defp do_escape({dir, expr}, vars) do
+  defp do_escape({dir, expr}, external, vars) do
     check_dir(dir)
-    ast = BuilderUtil.escape(expr, vars)
-    {dir, ast}
+    {ast, external} = BuilderUtil.escape(expr, external, vars)
+    {{dir, ast}, external}
   end
 
-  defp do_escape(expr, vars) do
-    {:asc, BuilderUtil.escape(expr, vars)}
+  defp do_escape(expr, external, vars) do
+    {ast, external} = BuilderUtil.escape(expr, external, vars)
+    {{:asc, ast}, external}
   end
 
   defp check_dir(dir) when dir in [:asc, :desc], do: :ok
@@ -48,10 +50,15 @@ defmodule Ecto.Query.OrderByBuilder do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding  = BuilderUtil.escape_binding(binding)
-    expr     = escape(expr, binding)
-    order_by = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
-                         file: unquote(env.file), line: unquote(env.line)}
+    binding          = BuilderUtil.escape_binding(binding)
+    {expr, external} = escape(expr, binding)
+    external         = BuilderUtil.escape_external(external)
+
+    order_by = quote do: %Ecto.Query.QueryExpr{
+                           expr: unquote(expr),
+                           external: unquote(external),
+                           file: unquote(env.file),
+                           line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [order_by], env)
   end
 

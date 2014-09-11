@@ -5,16 +5,16 @@ defmodule Ecto.Query.OrderByBuilderTest do
   doctest Ecto.Query.OrderByBuilder
 
   test "escape" do
-    assert Macro.escape(quote do [asc: &0.y] end) ==
+    assert {Macro.escape(quote do [asc: &0.y] end), %{}} ==
            escape(quote do x.y end, [x: 0])
 
-    assert Macro.escape(quote do [asc: &0.x, asc: &1.y] end) ==
+    assert {Macro.escape(quote do [asc: &0.x, asc: &1.y] end), %{}} ==
            escape(quote do [x.x, y.y] end, [x: 0, y: 1])
 
-    assert Macro.escape(quote do [asc: &0.x, desc: &1.y] end) ==
+    assert {Macro.escape(quote do [asc: &0.x, desc: &1.y] end), %{}} ==
            escape(quote do [asc: x.x, desc: y.y] end, [x: 0, y: 1])
 
-    assert Macro.escape(quote do [asc: 1 + 2] end) ==
+    assert {Macro.escape(quote do [asc: 1 + 2] end), %{}} ==
       escape(quote do 1 + 2 end, [])
   end
 

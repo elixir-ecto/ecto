@@ -36,9 +36,9 @@ defmodule Ecto.Repo do
   Notice that, when using the environment, developers should implement
   `conf/1` which automatically passes the environment instead of `conf/0`.
 
-  Note the environment is only used at compilation time. That said, don't
-  forget to set the `:build_per_environment` option to true in your Mix
-  project definition.
+  Note the environment is only used at compilation time. That said, make
+  sure the `:build_per_environment` option is set to true (the default)
+  in your Mix project configuration.
   """
 
   use Behaviour

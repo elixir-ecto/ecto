@@ -49,7 +49,7 @@ defmodule Ecto.Utils do
              database: database,
              port:     info.port ]
 
-    opts = Enum.reject(opts, fn {_k, v} -> nil?(v) end)
+    opts = Enum.reject(opts, fn {_k, v} -> is_nil(v) end)
     opts ++ query
   end
 

@@ -12,10 +12,15 @@ defmodule Ecto.Query.WhereBuilder do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding = BuilderUtil.escape_binding(binding)
-    expr    = BuilderUtil.escape(expr, binding)
-    where   = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
-                          file: unquote(env.file), line: unquote(env.line)}
+    binding          = BuilderUtil.escape_binding(binding)
+    {expr, external} = BuilderUtil.escape(expr, binding)
+    external         = BuilderUtil.escape_external(external)
+
+    where = quote do: %Ecto.Query.QueryExpr{
+                        expr: unquote(expr),
+                        external: unquote(external),
+                        file: unquote(env.file),
+                        line: unquote(env.line)}
     BuilderUtil.apply_query(query, __MODULE__, [where], env)
   end
 
