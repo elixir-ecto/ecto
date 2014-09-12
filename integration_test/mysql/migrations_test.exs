@@ -232,9 +232,10 @@ defmodule Ecto.Integration.MigrationsTest do
 
   test "bad migration raises" do
     in_tmp fn path ->
+      create_migration(55, @bad_migration)
       assert_raise Mysql.Error, fn ->
         capture_io(fn ->
-          run(TestRepo, path, :up, all: true) |> IO.inspect
+          run(TestRepo, path, :up, all: true)
         end)
       end
     end

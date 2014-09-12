@@ -416,7 +416,6 @@ defmodule Ecto.Integration.RepoTest do
     post = TestRepo.insert(%Post{title: "1", text: "hi"})
     comment = TestRepo.insert(%Comment{text: "hey"})
     query = from(p in Post, join: c in Comment, on: true, select: { p, c })
-    IO.inspect([{ post, comment }])
     assert [{ ^post, ^comment }] = TestRepo.all(query)
   end
 
@@ -544,7 +543,6 @@ defmodule Ecto.Integration.RepoTest do
   test "has_one assoc selector reversed" do
     p1 = TestRepo.insert(%Post{title: "1"})
     p2 = TestRepo.insert(%Post{title: "2"})
-         TestRepo.insert(%Post{title: "3"})
 
     TestRepo.insert(%Permalink{url: "1", post_id: p1.id})
     TestRepo.insert(%Permalink{url: "2"})
@@ -565,7 +563,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "1"}    = pl1.post.get
     assert %Post{title: "2"}    = pl3.post.get
 
-    assert [pl1, pl2, pl3] = res2
+    assert [pl1, pl3, pl2] = res2
     assert %Permalink{url: "1"} = pl1
     assert %Permalink{url: "2"} = pl2
     assert %Permalink{url: "3"} = pl3
