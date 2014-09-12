@@ -9,6 +9,12 @@ defmodule Ecto.Integration.RepoTest do
     assert [{ true, false }] ==
            TestRepo.all(from Post, select: { true, false })
 
+    assert [nil] ==
+           TestRepo.all(from Post, select: nil)
+
+    assert [nil] ==
+           TestRepo.all(from Post, select: ^nil)
+
     assert [{ 1, 2.0, Decimal.new("42.0") }] ==
            TestRepo.all(from Post, select: { 1, 2.0, ^Decimal.new("42.0") })
 
