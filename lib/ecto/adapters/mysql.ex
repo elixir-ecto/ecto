@@ -32,6 +32,7 @@ defmodule Ecto.Adapters.Mysql do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.Util
   alias Ecto.Adapters.Mysql.Result
+  alias Ecto.Adapters.Mysql.Error
   alias Ecto.Adapters.Mysql.OkPacket
 
   ## Adapter API
@@ -47,7 +48,13 @@ defmodule Ecto.Adapters.Mysql do
 
   @doc false
   def start_link(repo, opts) do
-    Worker.start_link(repo.__mysql__(:pool_name), opts)
+    pool_name = repo.__mysql__(:pool_name)
+
+    opts = [ pool_name: pool_name ] ++ opts
+    opts = opts |> Keyword.put_new(:port, @default_port)
+
+
+    Worker.start_link(opts)
   end
 
   @doc false
@@ -60,13 +67,14 @@ defmodule Ecto.Adapters.Mysql do
   def all(repo, query, opts) do
     mysql_query = %{query | select: normalize_select(query.select)}
 
-    %Result{rows: rows} = query(repo, SQL.select(mysql_query), [], opts)
+    {sql, params} = SQL.select(mysql_query)
+
+    %Result{rows: rows} = query(repo, sql, params, opts)
 
     # Transform each row based on select expression
     transformed =
       Enum.map(rows, fn row ->
-        values = Tuple.to_list(row)
-        transform_row(mysql_query.select.expr, values, mysql_query.sources) |> elem(0)
+        transform_row(mysql_query.select.expr, row, mysql_query.sources) |> elem(0)
       end)
 
     transformed
@@ -78,41 +86,48 @@ defmodule Ecto.Adapters.Mysql do
   def insert(repo, model, opts) do
     module    = model.__struct__
     returning = module.__schema__(:keywords, model)
-      |> Enum.filter.(fn {_, val} -> val == nil end)
+      |> Enum.filter(fn {_, val} -> val == nil end)
       |> Keyword.keys
 
-      case query(repo, SQL.insert(model, returning), [], opts) do
-        %Result{rows: [values]} ->
-          Enum.zip(returning, Tuple.to_list(values))
-        _ ->
+      {sql, params} = SQL.insert(model, returning)
+
+      case query(repo, sql, params, opts) do
+        %OkPacket{insert_id: id} ->
+          [{:id, id}]
+        other ->
+          IO.inspect(other)
           []
       end
   end
 
   @doc false
-  def handle_query(repo, query, opts) do
-    %OkPacket{num_rows: nrows} = query(repo, query, [], opts)
+  def handle_query(repo, query, params, opts) do
+    %OkPacket{num_rows: nrows} = query(repo, query, params, opts)
     nrows
   end
 
   @doc false
   def update(repo, model, opts) do
-    handle_query(repo, SQL.update(model), opts)
+    {sql, params} = SQL.update(model)
+    handle_query(repo, sql, params, opts)
   end
 
   @doc false
-  def update_all(repo, query, values, opts) do
-    handle_query(repo, SQL.update_all(query, values), opts)
+  def update_all(repo, query, values, external, opts) do
+    {sql, params} = SQL.update_all(query, values, external)
+    handle_query(repo, sql, params, opts)
   end
 
   @doc false
   def delete(repo, model, opts) do
-    handle_query(repo, SQL.delete(model), opts)
+    {sql, params} = SQL.delete(model)
+    handle_query(repo, sql, params, opts)
   end
 
   @doc false
   def delete_all(repo, query, opts) do
-    handle_query(repo, SQL.delete_all(query), opts)
+    {sql, params} = SQL.delete_all(query)
+    handle_query(repo, sql, params, opts)
   end
 
   @doc """
@@ -127,8 +142,9 @@ defmodule Ecto.Adapters.Mysql do
   """
   def query(repo, sql, params, opts \\ []) do
     timeout = opts[:timeout] || @timeout
+    pool_name = repo.__mysql__(:pool_name)
     repo.log({:query, sql}, fn ->
-      Worker.query!(repo.__mysql__(:pool_name), sql, params, timeout)
+      Worker.query!(pool_name, sql, params, timeout)
     end)
   end
 
@@ -155,15 +171,18 @@ defmodule Ecto.Adapters.Mysql do
   ## Result set transformation
 
   defp transform_row({ :{}, _, list}, values, sources) do
+    #IO.inspect([:transform_tuple, list, values])
     {result, values } = transform_row(list, values, sources)
     {List.to_tuple(result), values}
   end
 
   defp transform_row({ :&, _, [_]} = var, values, sources) do
+    #IO.inspect([:transform_amp, var, values])
     model = Util.find_source(sources, var) |> Util.model
     model_size = length(model.__schema__(:field_names))
     {model_values, values} = Enum.split(values, model_size)
-    if Enum.all?(model_values, &(nil?(&1))) do
+    model_values = Enum.map(model_values, fn v -> transform_value(v) end)
+    if Enum.all?(model_values, &(is_nil(&1))) do
       {nil, values}
     else
       {model.__schema__(:allocate, model_values), values }
@@ -260,7 +279,20 @@ defmodule Ecto.Adapters.Mysql do
   def migrate_up(repo, version, commands) do
     case check_migration_version(repo, version) do
       %Result{rows: []} ->
-        Enum.each(commands, &query(repo, &1, []))
+        error = Enum.map(commands, &query(repo, &1, []))
+          |> Enum.find(fn res ->
+            case res do
+              %Error{} ->
+                true
+              _ ->
+                false
+            end
+          end)
+
+        if error != nil do
+          raise error
+        end
+
         insert_migration_version(repo, version)
         :ok
       _ ->

@@ -31,9 +31,10 @@ defmodule Ecto.Mixfile do
      {:earmark, "~> 0.1", only: :dev}]
   end
 
-  defp test_paths(:pg),  do: ["integration_test/pg"]
-  defp test_paths(:all), do: ["test", "integration_test/pg"]
-  defp test_paths(_),    do: ["test"]
+  defp test_paths(:pg),    do: ["integration_test/pg"]
+  defp test_paths(:mysql), do: ["integration_test/mysql"]
+  defp test_paths(:all),   do: ["test", "integration_test/pg", "integration_test/mysql"]
+  defp test_paths(_),      do: ["test"]
 
   defp description do
     """

@@ -10,15 +10,24 @@ defmodule Ecto.Adapters.Mysql.Worker do
   alias Ecto.Adapters.Mysql.Error
 
   def start(args) do
-    :gen_server.start(__MODULE__, args, [])
+    :gen_server.start({:global, :mysql_worker_pid}, __MODULE__, args, [])
   end
 
   def start_link(args) do
-    :gen_server.start_link(__MODULE__, args, [])
+    :gen_server.start_link({:global, :mysql_worker_pid}, __MODULE__, args, [])
   end
 
-  def query!(worker, sql, params, timeout \\ @timeout) do #compare
-    handle_query(:gen_server.call(worker, { :query, sql, params, timeout }, timeout))
+  def query!(_worker, sql, params, timeout \\ @timeout) do #compare
+    r = handle_query(:gen_server.call({:global, :mysql_worker_pid}, { :query, sql, params, timeout }, timeout))
+
+    r = case r do
+      %Error{msg: msg, query: nil, params: nil} ->
+        %Error{msg: msg, query: sql, params: params}
+      d ->
+        d
+    end
+
+    r
   end
 
   def handle_query({:result_packet, _, _, rows, _ }) do
@@ -30,7 +39,7 @@ defmodule Ecto.Adapters.Mysql.Worker do
   end
 
   def handle_query({:error_packet, _seq_num, _code, _, msg}) do
-    %Error{msg: msg}
+    %Error{msg: List.to_string(msg)}
   end
 
   def monitor_me(worker) do
@@ -61,12 +70,14 @@ defmodule Ecto.Adapters.Mysql.Worker do
   end
 
   defp format_params(params) do
-    [ size: 1,
-      user: String.to_list(params[:username]),
-      password: String.to_list(params[:password]),
-      host: String.to_list(params[:hostname]),
+    [
+      pool_id: params[:pool_name],
+      size: 1,
+      user: :erlang.binary_to_list(params[:username]),
+      password: :erlang.binary_to_list(params[:password]),
+      host: :erlang.binary_to_list(params[:hostname]),
       port: params[:port],
-      database: String.to_list(params[:database]),
+      database: :erlang.binary_to_list(params[:database]),
       encoding: :utf8 ]
   end
 
@@ -93,8 +104,8 @@ defmodule Ecto.Adapters.Mysql.Worker do
     {:reply, {:error, err}, s}
   end
 
-  def handle_call({:query, sql, _params, _timeout}, _from, %{conn: conn} = s) do
-    {:reply, :emysql.execute(conn, sql), s}
+  def handle_call({:query, sql, params, _timeout}, _from, %{conn: conn} = s) do
+    {:reply, :emysql.execute(conn, sql, params), s}
   end
 
   def handle_cast({:monitor, pid}, %{monitor: nil} = s) do
@@ -119,11 +130,13 @@ defmodule Ecto.Adapters.Mysql.Worker do
     {:noreply, s}
   end
 
-  def terminate(_reason, %{conn: nil}) do
+  def terminate(reason, %{conn: nil}) do
+    IO.inspect(reason)
     :ok
   end
 
-  def terminate(_reason, %{conn: conn}) do
+  def terminate(reason, %{conn: conn}) do
+    IO.inspect(reason)
     :emysql.remove_pool(conn)
   end
 
