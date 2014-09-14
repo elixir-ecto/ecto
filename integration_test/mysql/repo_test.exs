@@ -20,9 +20,6 @@ defmodule Ecto.Integration.RepoTest do
 
     assert [{ %Ecto.Interval{year: 0, month: 24169, day: 16, hour: 0, min: 0, sec: 73611} }] ==
            TestRepo.all(from Post, select: { ^%Ecto.Interval{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
-
-    assert [{ [0, 1, 2, 3] }] ==
-           TestRepo.all(from Post, select: { array([0, 1, 2, 3], :integer) })
   end
 
   test "returns already started for started repos" do
@@ -563,7 +560,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "1"}    = pl1.post.get
     assert %Post{title: "2"}    = pl3.post.get
 
-    assert [pl1, pl3, pl2] = res2
+    assert [pl1, pl2, pl3] = res2
     assert %Permalink{url: "1"} = pl1
     assert %Permalink{url: "2"} = pl2
     assert %Permalink{url: "3"} = pl3

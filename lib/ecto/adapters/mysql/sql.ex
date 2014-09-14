@@ -66,11 +66,11 @@ defmodule Ecto.Adapters.Mysql.SQL do
       |> List.flatten
       |> Enum.join("\n")
 
-    {sql, Map.values(external)}
+    {sql, List.flatten(Map.values(external))}
   end
 
   # Generate SQL for an insert statement
-  def insert(model, returning) do
+  def insert(model, _returning) do
     module = model.__struct__
     table  = module.__schema__(:source)
 
@@ -85,10 +85,10 @@ defmodule Ecto.Adapters.Mysql.SQL do
     else
       sql = sql <>
         " (" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ")\n" <>
-        "VALUES (" <> Enum.map_join(1..length(values), ", ", fn x -> "?" end) <> ")"
+        "VALUES (" <> Enum.map_join(1..length(values), ", ", fn _x -> "?" end) <> ")"
     end
 
-    {sql, values}
+    {sql, List.flatten(values)}
   end
 
   # Generate SQL for an update statement
@@ -116,7 +116,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
       "UPDATE #{quote_table(table)} SET " <> sql_sets <> "\n" <>
       "WHERE #{quote_column(pk_field)} = ?"
 
-    {sql, values ++ [pk_value]}
+    {sql, List.flatten(values) ++ [pk_value]}
   end
 
   # Generate SQL for an update all statement
@@ -138,7 +138,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
       "SET " <> zipped_sql <>
       where
 
-    {sql, Map.values(external)}
+    {sql, List.flatten(Map.values(external))}
   end
 
   # Generate SQL for a delete statement
@@ -287,13 +287,13 @@ defmodule Ecto.Adapters.Mysql.SQL do
   end
 
   defp expr({:^, [], [ix]}, state) do
-    if state.external_type do
-      value       = Map.fetch!(state.external, ix)
-      {:ok, type} = Util.external_to_type(value)
-      type        = "#{type(type)}"
-    end
+    value       = Map.fetch!(state.external, ix)
 
-    "?"
+    if is_list(value) do
+      Enum.map_join(1..length(value), ", ", fn _x -> "?" end)
+    else
+      "?"
+    end
   end
 
   defp expr({:., _, [{:&, _, [_]} = var, field]}, state) when is_atom(field) do
@@ -420,7 +420,7 @@ defmodule Ecto.Adapters.Mysql.SQL do
   end
 
 
-  defp expr(%Ecto.Tagged{value: expr, type: {:array, inner}}, state) do
+  defp expr(%Ecto.Tagged{value: expr, type: {:array, _inner}}, state) do
     state = %{state | external_type: false}
     expr(expr, state)
   end
@@ -505,8 +505,6 @@ defmodule Ecto.Adapters.Mysql.SQL do
   defp type(:datetime), do: "datetime"
   defp type(:interval), do: "interval"
   defp type(:decimal),  do: "decimal"
-
-  defp type({:array, inner}), do: type(inner) <> "[]"
 
   defp create_names(query) do
     sources = query.sources |> Tuple.to_list

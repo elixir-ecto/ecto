@@ -143,7 +143,7 @@ defmodule Ecto.Adapters.Mysql do
   def query(repo, sql, params, opts \\ []) do
     timeout = opts[:timeout] || @timeout
     pool_name = repo.__mysql__(:pool_name)
-    repo.log({:query, sql}, fn ->
+    repo.log({:query, sql, params}, fn ->
       Worker.query!(pool_name, sql, params, timeout)
     end)
   end
