@@ -19,7 +19,13 @@ end
 
 defmodule Ecto.Adapters.Mysql.Error do
   @type t :: %__MODULE__{
-    msg:  [String.t] | nil}
+    msg:  [String.t] | nil,
+    query: [String.t] | nil,
+    params: [list] | nil}
 
-  defstruct [:msg]
+  defexception [:msg, :query, :params]
+
+  def message(e) do
+    e.msg || "no message"
+  end
 end

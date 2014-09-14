@@ -9,7 +9,7 @@ defmodule Ecto.RepoTest.MockAdapter do
     record.id(45)
   end
   def update(_repo, _record, _opts), do: 1
-  def update_all(_repo, _query, _values, _opts), do: 1
+  def update_all(_repo, _query, _values, _external, _opts), do: 1
   def delete(_repo, _record, _opts), do: 1
   def delete_all(_repo, _query, _opts), do: 1
 end
@@ -131,7 +131,7 @@ defmodule Ecto.RepoTest do
   test "get validation" do
     MyRepo.get(MyModel, 123)
 
-    assert_raise ArgumentError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       MyRepo.get(MyModel, :atom)
     end
   end

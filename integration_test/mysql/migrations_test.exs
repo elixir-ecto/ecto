@@ -67,7 +67,7 @@ defmodule Ecto.Integration.MigrationsTest do
       Application.delete_env(:elixir, :ansi_enabled)
     end
   end
-                            
+
   test "migrations up and down" do
     assert migrated_versions(TestRepo) == []
     assert up(TestRepo, 20080906120000, GoodMigration) == :ok
@@ -82,7 +82,7 @@ defmodule Ecto.Integration.MigrationsTest do
   end
 
   test "bad migration" do
-    assert_raise EMysql.Error, fn ->
+    assert_raise Mysql.Error, fn ->
       up(TestRepo, 20080906120000, BadMigration)
     end
   end
@@ -106,7 +106,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [] = run(TestRepo, path, :up, all: true)
       end) == ""
 
-      assert EMysql.Result[num_rows: 3] =
+      assert %Mysql.Result{num_rows: 3} =
         Mysql.query(TestRepo, "SELECT * FROM migrations_test", [])
     end
   end
@@ -120,7 +120,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [45] = run(TestRepo, path, :up, to: 45)
       end) == "* running UP 45_migration.exs\n"
 
-      assert EMysql.Result[num_rows: 1] =
+      assert %Mysql.Result{num_rows: 1} =
         Mysql.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -138,7 +138,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [47] = run(TestRepo, path, :up, step: 1)
       end) == "* running UP 47_migration.exs\n"
 
-      assert EMysql.Result[num_rows: 1] =
+      assert %Mysql.Result{num_rows: 1} =
         Mysql.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -165,7 +165,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
       purge migrations
 
-      assert EMysql.Result[rows: rows] =
+      assert %Mysql.Result{rows: _rows} =
         Mysql.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -193,7 +193,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
       purge migrations
 
-      # assert Emysql.Result[num_rows: 1] =
+      # assert %Mysql.Result{num_rows: 1} =
       #   Mysql.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -221,7 +221,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
       purge migrations
 
-      # assert Emysql.Result[num_rows: 0] =
+      # assert %Emysql.Result{num_rows: 0} =
       #   Mysql.query(TestRepo, "SELECT * FROM migrations_test", [])
 
       assert capture_io(fn ->
@@ -233,9 +233,9 @@ defmodule Ecto.Integration.MigrationsTest do
   test "bad migration raises" do
     in_tmp fn path ->
       create_migration(55, @bad_migration)
-      assert_raise Emysql.Error, fn ->
+      assert_raise Mysql.Error, fn ->
         capture_io(fn ->
-          run(TestRepo, path, :up, all: true) |> IO.inspect
+          run(TestRepo, path, :up, all: true)
         end)
       end
     end
@@ -258,3 +258,4 @@ defmodule Ecto.Integration.MigrationsTest do
      end)
   end
 end
+

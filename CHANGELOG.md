@@ -1,4 +1,25 @@
-# v0.2.3-dev
+# v0.2.5-dev
+
+# v0.2.4 (2014-09-08)
+
+* Enhancements
+  * Better error message if repo is not started
+  * Do not require `^` on literals inside `array/2` or `field/2`
+  * Parametrize queries, interpolated values are no longer encoded as literals in the generated SQL query, instead they are sent as query parameters
+  * Allow starting the `assoc` selection from a joined association or building it from *right* outer joins
+
+* Bug fixes
+  * Remove possible deadlock for models using each other in queries
+
+# v0.2.3 (2014-08-03)
+
+* Enhancements
+  * Add `local` and `utc` to `Ecto.DateTime` and `Ecto.Date`
+
+* Bug fixes
+  * Treat `nil` as an any data type
+  * Support array of binaries
+  * Avoid race conditions when optimizing query compilation
 
 # v0.2.2 (2014-06-30)
 

@@ -180,7 +180,6 @@ defmodule Ecto.Model.Schema do
 
       Module.eval_quoted __MODULE__, [
         Ecto.Model.Schema.ecto_struct(@struct_fields),
-        Ecto.Model.Schema.ecto_queryable(@ecto_source, __MODULE__),
         Ecto.Model.Schema.ecto_fields(fields),
         Ecto.Model.Schema.ecto_assocs(assocs, @ecto_primary_key, fields),
         Ecto.Model.Schema.ecto_primary_key(@ecto_primary_key),
@@ -414,16 +413,6 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc false
-  def ecto_queryable(source, module) do
-    quote do
-      @ecto_queryable %Ecto.Query{from: {unquote(source), unquote(module)}}
-      def __queryable__ do
-        @ecto_queryable
-      end
-    end
-  end
-
-  @doc false
   def ecto_fields(fields) do
     quoted = Enum.map(fields, fn {name, opts} ->
       quote do
@@ -446,7 +435,7 @@ defmodule Ecto.Model.Schema do
       quote bind_quoted: [name: name, opts: opts, primary_key: primary_key, fields: fields] do
         pk = opts[:references] || primary_key
 
-        if nil?(pk) do
+        if is_nil(pk) do
           raise ArgumentError, message: "need to set `references` option for " <>
             "association when model has no primary key"
         end

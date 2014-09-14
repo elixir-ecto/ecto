@@ -23,6 +23,11 @@ defmodule Ecto.Integration.Postgres.TestRepo do
     parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
   end
 
+  # def log(action, fun) do
+  #   IO.inspect action
+  #   fun.()
+  # end
+
   def query_apis do
     [Ecto.Integration.Postgres.CustomAPI, Ecto.Query.API]
   end
@@ -94,7 +99,7 @@ end
 defmodule Ecto.Integration.Postgres.AssignedPrimaryKey do
   use Ecto.Model
   @schema_defaults [primary_key: {:id, :string, []}]
-  
+
   schema "assigned_primary_keys" do
   end
 end
@@ -129,6 +134,8 @@ defmodule Ecto.Integration.Postgres.Case do
     :ok
   end
 end
+
+Application.ensure_all_started(:logger)
 
 setup_cmds = [
   ~s(psql -U postgres -c "DROP DATABASE IF EXISTS ecto_test;"),

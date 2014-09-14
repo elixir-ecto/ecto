@@ -2,8 +2,8 @@ language: erlang
 otp_release:
   - 17.0
 before_install:
-  - git clone https://github.com/elixir-lang/elixir
-  - cd elixir && make && cd ..
+  - wget http://s3.hex.pm/builds/elixir/master.zip
+  - unzip -d elixir master.zip
 before_script:
   - export PATH=`pwd`/elixir/bin:$PATH
   - mix local.hex --force

@@ -3,8 +3,8 @@ defmodule Ecto.Mixfile do
 
   def project do
     [app: :ecto,
-     version: "0.2.3-dev",
-     elixir: "~> 0.15.0",
+     version: "0.2.5-dev",
+     elixir: "~> 1.0.0-rc2",
      deps: deps,
      build_per_environment: false,
      test_paths: test_paths(Mix.env),
@@ -24,18 +24,17 @@ defmodule Ecto.Mixfile do
 
   defp deps do
     [{:poolboy, "~> 1.2.1"},
-     # {:decimal, github: "ericmj/decimal", optional: true},
-     # {:postgrex, github: "ericmj/postgrex", optional: true},
-     {:decimal, "~> 0.2.3", optional: true},
-     {:postgrex, "~> 0.5.3", optional: true},
+     {:decimal, "~> 0.2.3"},
+     {:postgrex, "~> 0.6.0", optional: true},
      {:emysql, github: "eonblast/emysql" },
      {:ex_doc, "~> 0.5", only: :dev},
      {:earmark, "~> 0.1", only: :dev}]
   end
 
-  defp test_paths(:pg),  do: ["integration_test/pg"]
-  defp test_paths(:all), do: ["test", "integration_test/pg"]
-  defp test_paths(_),    do: ["test"]
+  defp test_paths(:pg),    do: ["integration_test/pg"]
+  defp test_paths(:mysql), do: ["integration_test/mysql"]
+  defp test_paths(:all),   do: ["test", "integration_test/pg", "integration_test/mysql"]
+  defp test_paths(_),      do: ["test"]
 
   defp description do
     """

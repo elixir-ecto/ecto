@@ -3,29 +3,30 @@ defmodule Ecto.Integration.SQLEscapeTest do
 
   # MYSQL TODO: Fix this
   # test "Repo.all escape" do
-  #   TestRepo.create(Post.new(text: "hello"))
+  #   TestRepo.create(%Post{text: "hello"))
 
   #   query = from(p in Post, select: "'\\")
   #   assert ["'\\"] == TestRepo.all(query)
   # end
 
+
   test "Repo.create escape" do
-    TestRepo.create(Post.new(text: "'"))
+    TestRepo.insert(%Post{text: "'"})
 
     query = from(p in Post, select: p.text)
     assert ["'"] == TestRepo.all(query)
   end
 
   test "Repo.update escape" do
-    p = TestRepo.create(Post.new(text: "hello"))
-    TestRepo.update(p.text("'"))
+    p = TestRepo.insert(%Post{text: "hello"})
+    TestRepo.update(%{p | text: "'"})
 
     query = from(p in Post, select: p.text)
     assert ["'"] == TestRepo.all(query)
   end
 
   test "Repo.update_all escape" do
-    TestRepo.create(Post.new(text: "hello"))
+    TestRepo.insert(%Post{text: "hello"})
     TestRepo.update_all(Post, text: "'")
 
     query = from(p in Post, select: p.text)
@@ -36,7 +37,7 @@ defmodule Ecto.Integration.SQLEscapeTest do
   end
 
   test "Repo.delete_all escape" do
-    TestRepo.create(Post.new(text: "hello"))
+    TestRepo.insert(%Post{text: "hello"})
     assert [_] = TestRepo.all(Post)
 
     TestRepo.delete_all(from(Post, where: "'" == "'"))

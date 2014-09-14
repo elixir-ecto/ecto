@@ -55,15 +55,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def stop(repo) do
-      pool_name = repo.__postgres__(:pool_name)
-      :poolboy.stop(pool_name)
+      pool = repo_pool(repo)
+      :poolboy.stop(pool)
     end
 
     @doc false
     def all(repo, query, opts) do
       pg_query = %{query | select: normalize_select(query.select)}
 
-      %Postgrex.Result{rows: rows} = query(repo, SQL.select(pg_query), [], opts)
+      {sql, params} = SQL.select(pg_query)
+      %Postgrex.Result{rows: rows} = query(repo, sql, params, opts)
 
       # Transform each row based on select expression
       transformed =
@@ -84,7 +85,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> Enum.filter(fn {_, val} -> val == nil end)
         |> Keyword.keys
 
-      case query(repo, SQL.insert(model, returning), [], opts) do
+      {sql, params} = SQL.insert(model, returning)
+
+      case query(repo, sql, params, opts) do
         %Postgrex.Result{rows: [values]} ->
           Enum.zip(returning, Tuple.to_list(values))
         _ ->
@@ -94,25 +97,29 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def update(repo, model, opts) do
-      %Postgrex.Result{num_rows: nrows} = query(repo, SQL.update(model), [], opts)
+      {sql, params} = SQL.update(model)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
     @doc false
-    def update_all(repo, query, values, opts) do
-      %Postgrex.Result{num_rows: nrows} = query(repo, SQL.update_all(query, values), [], opts)
+    def update_all(repo, query, values, external, opts) do
+      {sql, params} = SQL.update_all(query, values, external)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
     @doc false
     def delete(repo, model, opts) do
-      %Postgrex.Result{num_rows: nrows} = query(repo, SQL.delete(model), [], opts)
+      {sql, params} = SQL.delete(model)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
     @doc false
     def delete_all(repo, query, opts) do
-      %Postgrex.Result{num_rows: nrows} = query(repo, SQL.delete_all(query), [], opts)
+      {sql, params} = SQL.delete_all(query)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
@@ -129,10 +136,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         Postgrex.Result[command: :select, columns: ["?column?"], rows: [{42}], num_rows: 1]
     """
     def query(repo, sql, params, opts \\ []) do
-      timeout = opts[:timeout] || @timeout
+      pool = repo_pool(repo)
+
+      opts = Keyword.put_new(opts, :timeout, @timeout)
       repo.log({:query, sql}, fn ->
-        use_worker(repo, timeout, fn worker ->
-          Worker.query!(worker, sql, params, timeout)
+        use_worker(pool, opts[:timeout], fn worker ->
+          Worker.query!(worker, sql, params, opts)
         end)
       end)
     end
@@ -151,6 +160,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       worker_opts = worker_opts
         |> Keyword.put(:decoder, &decoder/4)
+        |> Keyword.put(:encoder, &encoder/3)
         |> Keyword.put_new(:port, @default_port)
 
       {pool_opts, worker_opts}
@@ -176,6 +186,22 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {var, nested}
     end
 
+    defp preload(results, repo, query) do
+      pos = Util.locate_var(query.select.expr, {:&, [], [0]})
+      fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
+      Ecto.Associations.Preloader.run(results, repo, fields, pos)
+    end
+
+    defp repo_pool(repo) do
+      pid = repo.__postgres__(:pool_name) |> Process.whereis
+
+      if is_nil(pid) or not Process.alive?(pid) do
+        raise ArgumentError, message: "repo #{inspect repo} is not started"
+      end
+
+      pid
+    end
+
     ## Result set transformation
 
     defp transform_row({:{}, _, list}, values, sources) do
@@ -187,7 +213,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       model = Util.find_source(sources, var) |> Util.model
       model_size = length(model.__schema__(:field_names))
       {model_values, values} = Enum.split(values, model_size)
-      if Enum.all?(model_values, &(nil?(&1))) do
+      if Enum.all?(model_values, &(is_nil(&1))) do
         {nil, values}
       else
         {model.__schema__(:allocate, model_values), values}
@@ -214,12 +240,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {value, values}
     end
 
-    defp preload(results, repo, query) do
-      pos = Util.locate_var(query.select.expr, {:&, [], [0]})
-      fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
-      Ecto.Associations.Preloader.run(results, repo, fields, pos)
-    end
-
     ## Postgrex casting
 
     defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
@@ -228,21 +248,47 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["timestamp", "timestamptz"] do
-      {{year, mon, day}, {hour, min, sec}} = default.(param)
-      %Ecto.DateTime{year: year, month: mon, day: day, hour: hour, min: min, sec: sec}
+      default.(param)
+      |> Ecto.DateTime.from_erl
     end
 
     defp decoder(%TypeInfo{sender: "date"}, :binary, default, param) do
-      {year, mon, day} = default.(param)
-      %Ecto.Date{year: year, month: mon, day: day}
+      default.(param)
+      |> Ecto.Date.from_erl
     end
 
     defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["time", "timetz"] do
-      {hour, min, sec} = default.(param)
-      %Ecto.Time{hour: hour, min: min, sec: sec}
+      default.(param)
+      |> Ecto.Time.from_erl
     end
 
     defp decoder(_type, _format, default, param) do
+      default.(param)
+    end
+
+    defp encoder(_type, default, %Ecto.Interval{} = interval) do
+      mon = interval.year * 12 + interval.month
+      day = interval.day
+      sec = interval.hour * 3600 + interval.min * 60 + interval.sec
+      default.({mon, day, sec})
+    end
+
+    defp encoder(_type, default, %Ecto.DateTime{} = datetime) do
+      Ecto.DateTime.to_erl(datetime)
+      |> default.()
+    end
+
+    defp encoder(_type, default, %Ecto.Date{} = date) do
+      Ecto.Date.to_erl(date)
+      |> default.()
+    end
+
+    defp encoder(_type, default, %Ecto.Time{} = time) do
+      Ecto.Time.to_erl(time)
+      |> default.()
+    end
+
+    defp encoder(_type, default, param) do
       default.(param)
     end
 
@@ -250,22 +296,25 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def transaction(repo, opts, fun) do
-      timeout = opts[:timout] || @timeout
-      worker = checkout_worker(repo, timeout)
+      pool = repo_pool(repo)
+
+      opts = Keyword.put_new(opts, :timeout, @timeout)
+      worker = checkout_worker(pool, opts[:timeout])
+
       try do
-        do_begin(repo, worker, timeout)
+        do_begin(repo, worker, opts)
         value = fun.()
-        do_commit(repo, worker, timeout)
+        do_commit(repo, worker, opts)
         {:ok, value}
       catch
         :throw, {:ecto_rollback, value} ->
-          do_rollback(repo, worker, timeout)
+          do_rollback(repo, worker, opts)
           {:error, value}
         type, term ->
-          do_rollback(repo, worker, timeout)
+          do_rollback(repo, worker, opts)
           :erlang.raise(type, term, System.stacktrace)
       after
-        checkin_worker(repo)
+        checkin_worker(pool)
       end
     end
 
@@ -274,8 +323,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       throw {:ecto_rollback, value}
     end
 
-    defp use_worker(repo, timeout, fun) do
-      pool = repo.__postgres__(:pool_name)
+    defp use_worker(pool, timeout, fun) do
       key = {:ecto_transaction_pid, pool}
 
       if value = Process.get(key) do
@@ -294,8 +342,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp checkout_worker(repo, timeout) do
-      pool = repo.__postgres__(:pool_name)
+    defp checkout_worker(pool, timeout) do
       key = {:ecto_transaction_pid, pool}
 
       case Process.get(key) do
@@ -310,8 +357,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp checkin_worker(repo) do
-      pool = repo.__postgres__(:pool_name)
+    defp checkin_worker(pool) do
       key = {:ecto_transaction_pid, pool}
 
       case Process.get(key) do
@@ -325,21 +371,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       :ok
     end
 
-    defp do_begin(repo, worker, timeout) do
+    defp do_begin(repo, worker, opts) do
       repo.log(:begin, fn ->
-        Worker.begin!(worker, timeout)
+        Worker.begin!(worker, opts)
       end)
     end
 
-    defp do_rollback(repo, worker, timeout) do
+    defp do_rollback(repo, worker, opts) do
       repo.log(:rollback, fn ->
-        Worker.rollback!(worker, timeout)
+        Worker.rollback!(worker, opts)
       end)
     end
 
-    defp do_commit(repo, worker, timeout) do
+    defp do_commit(repo, worker, opts) do
       repo.log(:commit, fn ->
-        Worker.commit!(worker, timeout)
+        Worker.commit!(worker, opts)
       end)
     end
 
@@ -347,20 +393,22 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def begin_test_transaction(repo, opts \\ []) do
-      timeout = opts[:timeout] || @timeout
-      pool = repo.__postgres__(:pool_name)
+      pool = repo_pool(repo)
+      opts = Keyword.put_new(opts, :timeout, @timeout)
+
       :poolboy.transaction(pool, fn worker ->
-        do_begin(repo, worker, timeout)
-      end, timeout)
+        do_begin(repo, worker, opts)
+      end, opts[:timeout])
     end
 
     @doc false
     def rollback_test_transaction(repo, opts \\ []) do
-      timeout = opts[:timeout] || @timeout
-      pool = repo.__postgres__(:pool_name)
+      pool = repo_pool(repo)
+      opts = Keyword.put_new(opts, :timeout, @timeout)
+
       :poolboy.transaction(pool, fn worker ->
-        do_rollback(repo, worker, timeout)
-      end, timeout)
+        do_rollback(repo, worker, opts)
+      end, opts[:timeout])
     end
 
     ## Storage API
@@ -404,6 +452,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       command =
         command <>
         ~s(psql --quiet ) <>
+        ~s(template1 ) <>
         ~s(--host #{database[:hostname]} ) <>
         ~s(-c "#{sql_command};" )
 

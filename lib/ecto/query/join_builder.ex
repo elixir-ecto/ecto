@@ -2,7 +2,6 @@ defmodule Ecto.Query.JoinBuilder do
   @moduledoc false
 
   alias Ecto.Query.BuilderUtil
-  alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
 
   @doc """
@@ -67,7 +66,7 @@ defmodule Ecto.Query.JoinBuilder do
   def build_with_binds(query, qual, binding, expr, on, count_bind, env) do
     binding = BuilderUtil.escape_binding(binding)
     {join_bind, join_expr, join_assoc} = escape(expr, binding)
-    is_assoc? = not nil?(join_assoc)
+    is_assoc? = not is_nil(join_assoc)
 
     validate_qual(qual)
     validate_on(on, is_assoc?)
@@ -85,8 +84,9 @@ defmodule Ecto.Query.JoinBuilder do
     join_on = escape_on(on, binding, env)
     join =
       quote do
-        %JoinExpr{qual: unquote(qual), source: unquote(join_expr), on: unquote(join_on),
-                  file: unquote(env.file), line: unquote(env.line), assoc: unquote(join_assoc)}
+        %JoinExpr{qual: unquote(qual), source: unquote(join_expr),
+                  on: unquote(join_on), assoc: unquote(join_assoc),
+                  file: unquote(env.file), line: unquote(env.line)}
       end
 
     if is_integer(count_bind) do
@@ -112,8 +112,14 @@ defmodule Ecto.Query.JoinBuilder do
 
   defp escape_on(nil, _binding, _env), do: nil
   defp escape_on(on, binding, env) do
-    on = BuilderUtil.escape(on, binding)
-    quote do: %QueryExpr{expr: unquote(on), line: unquote(env.line), file: unquote(env.file)}
+    {on, external} = BuilderUtil.escape(on, binding)
+    external       = BuilderUtil.escape_external(external)
+
+    quote do: %Ecto.Query.QueryExpr{
+                expr: unquote(on),
+                external: unquote(external),
+                line: unquote(env.line),
+                file: unquote(env.file)}
   end
 
   @qualifiers [:inner, :left, :right, :full]

@@ -111,7 +111,7 @@ defmodule Ecto.Associations.Preloader do
 
   defp merge([struct|structs], assocs, refl, acc1, acc2) do
     # Ignore nil structs, they may be nil depending on the join qualifier
-    if nil?(struct) do
+    if is_nil(struct) do
       merge(structs, assocs, refl, [nil|acc1], acc2)
     else
       match([struct|structs], assocs, refl, acc1, acc2)
