@@ -1,5 +1,8 @@
 # v0.2.5-dev
 
+* Bug fixes
+  * Fix encoding of interpolated `nil` values
+
 # v0.2.4 (2014-09-08)
 
 * Enhancements
