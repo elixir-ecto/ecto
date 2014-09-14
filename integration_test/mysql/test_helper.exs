@@ -24,10 +24,10 @@ defmodule Ecto.Integration.Mysql.TestRepo do
     parse_url "ecto://ecto:@localhost/ecto_test?size=1&max_overflow=0"
   end
 
-  # def log(action, fun) do
-  #   IO.inspect action
-  #   fun.()
-  # end
+   #def log(action, fun) do
+     #IO.inspect action
+     #fun.()
+   #end
 
   def query_apis do
     [Ecto.Integration.Mysql.CustomAPI, Ecto.Query.API]
