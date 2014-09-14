@@ -495,16 +495,16 @@ defmodule Ecto.Adapters.Mysql.SQL do
   end
 
   # Must be kept up to date with Util.types and Util.poly_types
-  defp type(:boolean),  do: "boolean"
-  defp type(:string),   do: "text"
-  defp type(:integer),  do: "integer"
-  defp type(:float),    do: "float"
-  defp type(:binary),   do: "bytea"
-  defp type(:date),     do: "date"
-  defp type(:time),     do: "time"
-  defp type(:datetime), do: "datetime"
-  defp type(:interval), do: "interval"
-  defp type(:decimal),  do: "decimal"
+  #defp type(:boolean),  do: "boolean"
+  #defp type(:string),   do: "text"
+  #defp type(:integer),  do: "integer"
+  #defp type(:float),    do: "float"
+  #defp type(:binary),   do: "bytea"
+  #defp type(:date),     do: "date"
+  #defp type(:time),     do: "time"
+  #defp type(:datetime), do: "datetime"
+  #defp type(:interval), do: "interval"
+  #defp type(:decimal),  do: "decimal"
 
   defp create_names(query) do
     sources = query.sources |> Tuple.to_list
