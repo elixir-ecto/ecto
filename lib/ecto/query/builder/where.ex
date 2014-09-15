@@ -1,4 +1,4 @@
-defmodule Ecto.Query.WhereBuilder do
+defmodule Ecto.Query.Builder.Where do
   @moduledoc false
 
   alias Ecto.Query.Builder

@@ -1,4 +1,4 @@
-defmodule Ecto.Query.DistinctBuilder do
+defmodule Ecto.Query.Builder.GroupBy do
   @moduledoc false
 
   alias Ecto.Query.Builder
@@ -6,14 +6,14 @@ defmodule Ecto.Query.DistinctBuilder do
   @doc """
   Escapes a list of quoted expressions.
 
-  See `Ecto.BuilderUtil.escape/2`.
+  See `Ecto.Builder.escape/2`.
 
       iex> escape(quote do [x.x, foo()] end, [x: 0])
       {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
         {:{}, [], [:foo, [], []]}],
        %{}}
   """
-  @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
+  @spec escape(Macro.t, Keyword.t) :: Macro.t
   def escape(expr, vars) do
     List.wrap(expr)
     |> Builder.escape(vars)
@@ -32,12 +32,12 @@ defmodule Ecto.Query.DistinctBuilder do
     {expr, external} = escape(expr, binding)
     external         = Builder.escape_external(external)
 
-    distinct = quote do: %Ecto.Query.QueryExpr{
+    group_by = quote do: %Ecto.Query.QueryExpr{
                            expr: unquote(expr),
                            external: unquote(external),
                            file: unquote(env.file),
                            line: unquote(env.line)}
-    Builder.apply_query(query, __MODULE__, [distinct], env)
+    Builder.apply_query(query, __MODULE__, [group_by], env)
   end
 
   @doc """
@@ -46,6 +46,6 @@ defmodule Ecto.Query.DistinctBuilder do
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, expr) do
     query = Ecto.Queryable.to_query(query)
-    %{query | distincts: query.distincts ++ [expr]}
+    %{query | group_bys: query.group_bys ++ [expr]}
   end
 end

@@ -1,4 +1,4 @@
-defmodule Ecto.Query.PreloadBuilder do
+defmodule Ecto.Query.Builder.Preload do
   @moduledoc false
   alias Ecto.Query.Builder
 

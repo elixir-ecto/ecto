@@ -1,4 +1,4 @@
-defmodule Ecto.Query.JoinBuilder do
+defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
   alias Ecto.Query.Builder

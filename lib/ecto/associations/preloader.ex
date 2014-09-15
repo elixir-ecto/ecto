@@ -9,7 +9,7 @@ defmodule Ecto.Associations.Preloader do
   @doc """
   Loads all associations on the result set according to the given fields.
   `fields` is a list of fields that can be nested in rose tree structure:
-  `node :: {atom, [node | atom]}` (see `Ecto.Query.PreloadBuilder.normalize/1`).
+  `node :: {atom, [node | atom]}` (see `Ecto.Query.Builder.Preload.normalize/1`).
   `pos` is a list of indices into tuples and lists that locate the concerned
   model.
 
@@ -21,7 +21,7 @@ defmodule Ecto.Associations.Preloader do
   def run(original, _repo, [], _pos), do: original
 
   def run(original, repo, fields, pos) do
-    fields = Ecto.Query.PreloadBuilder.normalize(fields)
+    fields = Ecto.Query.Builder.Preload.normalize(fields)
     structs = extract(original, pos)
     structs = Enum.reduce(fields, structs, &do_run(&2, repo, &1))
     unextract(structs, original, pos)

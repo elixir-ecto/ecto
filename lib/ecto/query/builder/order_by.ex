@@ -1,4 +1,4 @@
-defmodule Ecto.Query.OrderByBuilder do
+defmodule Ecto.Query.Builder.OrderBy do
   @moduledoc false
 
   alias Ecto.Query.Builder

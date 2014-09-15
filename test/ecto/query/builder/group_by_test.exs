@@ -1,8 +1,8 @@
-defmodule Ecto.Query.DistinctBuilderTest do
+defmodule Ecto.Query.Builder.GroupByTest do
   use ExUnit.Case, async: true
 
-  import Ecto.Query.DistinctBuilder
-  doctest Ecto.Query.DistinctBuilder
+  import Ecto.Query.Builder.GroupBy
+  doctest Ecto.Query.Builder.GroupBy
 
   test "escape" do
     assert {Macro.escape(quote do [&0.y] end), %{}} ==
