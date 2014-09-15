@@ -8,7 +8,6 @@ before_script:
   - export PATH=`pwd`/elixir/bin:$PATH
   - mix local.hex --force
   - mix deps.get
-  - createuser postgres --no-password -d
   - mysql -u root -e "CREATE USER 'ecto'@'localhost'; GRANT ALL ON *.* to 'ecto'@'localhost';"
 script:
   - MIX_ENV=all mix test
