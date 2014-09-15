@@ -497,7 +497,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     # Must be kept up to date with Util.types and Util.poly_types
     defp type(:boolean),  do: "boolean"
     defp type(:string),   do: "text"
-    defp type(:integer),  do: "integer"
+    defp type(:integer),  do: "bigint"
     defp type(:float),    do: "float"
     defp type(:binary),   do: "bytea"
     defp type(:date),     do: "date"

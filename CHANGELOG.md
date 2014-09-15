@@ -5,6 +5,7 @@
 
 * Bug fixes
   * Fix encoding of interpolated `nil` values
+  * Support interpolated large integers
 
 # v0.2.4 (2014-09-08)
 

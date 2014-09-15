@@ -205,7 +205,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "interpolated values" do
     query = Model |> select([], ^1 + ^2) |> normalize
-    assert SQL.select(query) == {~s{SELECT $1::integer + $2::integer\nFROM "model" AS m0}, [1, 2]}
+    assert SQL.select(query) == {~s{SELECT $1::bigint + $2::bigint\nFROM "model" AS m0}, [1, 2]}
 
     # TODO: limit and offset
 
@@ -224,14 +224,14 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
             |> normalize
 
     result = """
-    SELECT $1::integer
+    SELECT $1::bigint
     FROM "model" AS m0
     INNER JOIN "model2" AS m1 ON $2::boolean
     INNER JOIN "model2" AS m2 ON $3::boolean
     WHERE ($4::boolean) AND ($5::boolean)
-    GROUP BY $6::integer, $7::integer
+    GROUP BY $6::bigint, $7::bigint
     HAVING ($8::boolean) AND ($9::boolean)
-    ORDER BY $10::integer, $11::integer
+    ORDER BY $10::bigint, $11::bigint
     """
 
     assert SQL.select(query) == {String.rstrip(result), [0, true, false, true, false, 1, 2, true, false, 3, 4]}
@@ -248,7 +248,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x + (r.y + ^(-z)) - 3) |> normalize
-    assert SQL.select(query) == {~s{SELECT (m0."x" + (m0."y" + $1::integer)) - 3\nFROM "model" AS m0}, [-123]}
+    assert SQL.select(query) == {~s{SELECT (m0."x" + (m0."y" + $1::bigint)) - 3\nFROM "model" AS m0}, [-123]}
   end
 
   test "use correct bindings" do
@@ -313,7 +313,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: quote do: ^0], %{0 => 42}) ==
-           {~s{UPDATE "model" AS m0\nSET "x" = $1::integer}, [42]}
+           {~s{UPDATE "model" AS m0\nSET "x" = $1::bigint}, [42]}
   end
 
   test "delete all" do
@@ -338,7 +338,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "list expression" do
     query = from(e in Model, []) |> where([e], array([], :integer) == nil) |> select([e], 0) |> normalize
-    assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nWHERE (ARRAY[]::integer[] IS NULL)}, []}
+    assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nWHERE (ARRAY[]::bigint[] IS NULL)}, []}
 
     query = from(e in Model, []) |> where([e], array([e.x, e.y], :integer) == nil) |> select([e], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nWHERE (ARRAY[m0."x", m0."y"] IS NULL)}, []}
@@ -375,10 +375,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "query interpolation" do
     r = %Rec{x: 123}
     query = Model |> select([r], r.x + ^(1 + 2 + 3) + ^r.x) |> normalize
-    assert SQL.select(query) == {~s{SELECT (m0."x" + $1::integer) + $2::integer\nFROM "model" AS m0}, [6, 123]}
+    assert SQL.select(query) == {~s{SELECT (m0."x" + $1::bigint) + $2::bigint\nFROM "model" AS m0}, [6, 123]}
 
     query = Model |> select([r], r.x + ^fun(r.x)) |> normalize
-    assert SQL.select(query) == {~s{SELECT m0."x" + $1::integer\nFROM "model" AS m0}, [246]}
+    assert SQL.select(query) == {~s{SELECT m0."x" + $1::bigint\nFROM "model" AS m0}, [246]}
   end
 
   test "functions" do
