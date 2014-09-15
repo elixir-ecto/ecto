@@ -38,7 +38,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
     Mix.Task.run "app.start", args
 
     {opts, args, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer],
+      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean],
       aliases: [n: :step, v: :to]
 
     {repo, _} = parse_repo(args)
