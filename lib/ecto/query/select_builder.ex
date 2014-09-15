@@ -1,7 +1,7 @@
 defmodule Ecto.Query.SelectBuilder do
   @moduledoc false
 
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Builder
 
   @doc """
   Escapes a select.
@@ -51,18 +51,18 @@ defmodule Ecto.Query.SelectBuilder do
   # var - where var is bound
   defp do_escape({var, _, context}, external, vars)
       when is_atom(var) and is_atom(context) do
-    expr = BuilderUtil.escape_var(var, vars)
+    expr = Builder.escape_var(var, vars)
     {expr, external}
   end
 
   defp do_escape(other, external, vars) do
-    BuilderUtil.escape(other, external, vars)
+    Builder.escape(other, external, vars)
   end
 
   # assoc/2
   defp escape_assoc({:assoc, _, [{var, _, context}, list]}, external, vars)
       when is_atom(var) and is_atom(context) and is_list(list) do
-    var = BuilderUtil.escape_var(var, vars)
+    var = Builder.escape_var(var, vars)
     {list, external} = Enum.map_reduce(list, external,
                                        &escape_assoc_fields(&1, &2, vars))
 
@@ -77,7 +77,7 @@ defmodule Ecto.Query.SelectBuilder do
 
   defp escape_assoc_fields({field, {assoc_var, _, assoc_ctxt}}, external, vars)
       when is_atom(field) and is_atom(assoc_var) and is_atom(assoc_ctxt) do
-    expr = {field, BuilderUtil.escape_var(assoc_var, vars)}
+    expr = {field, Builder.escape_var(assoc_var, vars)}
     {expr, external}
   end
 
@@ -100,16 +100,16 @@ defmodule Ecto.Query.SelectBuilder do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding          = BuilderUtil.escape_binding(binding)
+    binding          = Builder.escape_binding(binding)
     {expr, external} = escape(expr, binding)
-    external         = BuilderUtil.escape_external(external)
+    external         = Builder.escape_external(external)
 
     select = quote do: %Ecto.Query.QueryExpr{
                          expr: unquote(expr),
                          external: unquote(external),
                          file: unquote(env.file),
                          line: unquote(env.line)}
-    BuilderUtil.apply_query(query, __MODULE__, [select], env)
+    Builder.apply_query(query, __MODULE__, [select], env)
   end
 
   @doc """

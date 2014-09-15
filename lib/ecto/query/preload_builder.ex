@@ -1,6 +1,6 @@
 defmodule Ecto.Query.PreloadBuilder do
   @moduledoc false
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Builder
 
   @type preload :: [{atom, preload}]
 
@@ -41,7 +41,7 @@ defmodule Ecto.Query.PreloadBuilder do
     expr = normalize(expr)
     preload = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
                           file: unquote(env.file), line: unquote(env.line)}
-    BuilderUtil.apply_query(query, __MODULE__, [preload], env)
+    Builder.apply_query(query, __MODULE__, [preload], env)
   end
 
   @doc """

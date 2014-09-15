@@ -1,4 +1,4 @@
-defmodule Ecto.Query.BuilderUtil do
+defmodule Ecto.Query.Builder do
   @moduledoc false
 
   alias Ecto.Query
@@ -269,7 +269,7 @@ defmodule Ecto.Query.BuilderUtil do
   For example, take into account the `SelectBuilder`:
 
       select = %Ecto.Query.QueryExpr{expr: expr, file: env.file, line: env.line}
-      BuilderUtil.apply_query(query, __MODULE__, [select], env)
+      Builder.apply_query(query, __MODULE__, [select], env)
 
   `expr` is already an escaped expression and we must not escape
   it again. However, it is wrapped in an Ecto.Query.QueryExpr,
@@ -327,7 +327,7 @@ defmodule Ecto.Query.BuilderUtil do
   # Removes the interpolation hat from an expression, leaving the
   # expression unescaped, or if there is no hat escapes the query
   defp atom({:^, _, [expr]}),
-    do: quote(do: :"Elixir.Ecto.Query.BuilderUtil".check_atom(unquote(expr)))
+    do: quote(do: :"Elixir.Ecto.Query.Builder".check_atom(unquote(expr)))
   defp atom(atom) when is_atom(atom),
     do: atom
   defp atom(other),
