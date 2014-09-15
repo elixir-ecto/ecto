@@ -1,4 +1,4 @@
-defmodule Ecto.Integration.RepoTest do
+defmodule Ecto.Integration.Mysql.RepoTest do
   use Ecto.Integration.Mysql.Case
 
   alias Ecto.Associations.Preloader

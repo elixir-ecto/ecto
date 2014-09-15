@@ -1,4 +1,4 @@
-defmodule Ecto.Integration.MigrationsTest do
+defmodule Ecto.Integration.Mysql.MigrationsTest do
   use Ecto.Integration.Mysql.Case
 
   import Support.FileHelpers
