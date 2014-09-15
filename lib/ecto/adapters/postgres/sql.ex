@@ -287,13 +287,23 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp expr({:^, [], [ix]}, state) do
-      if state.external_type do
-        value       = Map.fetch!(state.external, ix)
-        {:ok, type} = Util.external_to_type(value)
-        type        = "::#{type(type)}"
-      end
+      param_index = state.offset + ix + 1
+      value = Map.fetch!(state.external, ix)
 
-      "$#{state.offset+ix+1}#{type}"
+      # We don't know the resulting postgres type from the elixir value `nil`
+      # therefore we cannot send it as a parameter, because all parameters
+      # require a type. Instead send it as a plain-text NULL and let postgres
+      # infer the type.
+
+      cond do
+        is_nil(value) ->
+          "NULL"
+        state.external_type ->
+          {:ok, type} = Util.external_to_type(value)
+          "$#{param_index}::#{type(type)}"
+        true ->
+          "$#{param_index}"
+      end
     end
 
     defp expr({:., _, [{:&, _, [_]} = var, field]}, state) when is_atom(field) do
