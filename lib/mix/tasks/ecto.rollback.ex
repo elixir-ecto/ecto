@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
     {repo, _} = parse_repo(args)
     ensure_repo(repo)
-    unless opts[:no_start], do: ensure_started(repo)
+    if Keyword.get(opts, :start, true), do: ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
       opts = Keyword.put(opts, :step, 1)
