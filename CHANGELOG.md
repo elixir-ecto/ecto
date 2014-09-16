@@ -10,6 +10,9 @@
   * Support interpolating values on `Repo.update_all`
   * Correctly handle `nil` values inside `array/2` and `binary/1`
 
+* Backwards incompatible changes
+  * Do not translate `foo == nil` to the SQL `foo IS NULL`, provide `is_nil/1` instead
+
 # v0.2.4 (2014-09-08)
 
 * Enhancements

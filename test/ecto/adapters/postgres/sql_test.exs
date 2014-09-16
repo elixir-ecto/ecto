@@ -69,9 +69,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "where" do
-    query = Model |> where([r], r.x != nil) |> select([r], r.x) |> normalize
-    assert SQL.select(query) == {~s{SELECT m0."x"\nFROM "model" AS m0\nWHERE (m0."x" IS NOT NULL)}, []}
-
     query = Model |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
     assert SQL.select(query) == {~s{SELECT m0."x"\nFROM "model" AS m0\nWHERE (m0."x" = 42) AND (m0."y" != 43)}, []}
   end
@@ -163,18 +160,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == {~s{SELECT m0."x" OR FALSE\nFROM "model" AS m0}, []}
   end
 
-  test "binary op null check" do
-    query = Model |> select([r], r.x == nil) |> normalize
+  test "is_nil" do
+    query = Model |> select([r], is_nil(r.x)) |> normalize
     assert SQL.select(query) == {~s{SELECT m0."x" IS NULL\nFROM "model" AS m0}, []}
 
-    query = Model |> select([r], nil == r.x) |> normalize
-    assert SQL.select(query) == {~s{SELECT m0."x" IS NULL\nFROM "model" AS m0}, []}
-
-    query = Model |> select([r], r.x != nil) |> normalize
-    assert SQL.select(query) == {~s{SELECT m0."x" IS NOT NULL\nFROM "model" AS m0}, []}
-
-    query = Model |> select([r], nil != r.x) |> normalize
-    assert SQL.select(query) == {~s{SELECT m0."x" IS NOT NULL\nFROM "model" AS m0}, []}
+    query = Model |> select([r], not is_nil(r.x)) |> normalize
+    assert SQL.select(query) == {~s{SELECT NOT (m0."x" IS NULL)\nFROM "model" AS m0}, []}
   end
 
   test "literals" do
@@ -340,11 +331,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "list expression" do
-    query = from(e in Model, []) |> where([e], array([], :integer) == nil) |> select([e], 0) |> normalize
-    assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nWHERE (ARRAY[]::bigint[] IS NULL)}, []}
+    query = from(e in Model, []) |> select([e], array([], :integer)) |> normalize
+    assert SQL.select(query) == {~s{SELECT ARRAY[]::bigint[]\nFROM "model" AS m0}, []}
 
-    query = from(e in Model, []) |> where([e], array([e.x, e.y], :integer) == nil) |> select([e], 0) |> normalize
-    assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nWHERE (ARRAY[m0."x", m0."y"] IS NULL)}, []}
+    query = from(e in Model, []) |> select([e], array([e.x, e.y], :integer)) |> normalize
+    assert SQL.select(query) == {~s{SELECT ARRAY[m0."x", m0."y"]\nFROM "model" AS m0}, []}
   end
 
   test "having" do

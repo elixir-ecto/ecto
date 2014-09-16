@@ -286,6 +286,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {name <> " " <> exprs, external}
     end
 
+    defp expr({arg, _, []}, state) when is_tuple(arg) do
+      expr(arg, state)
+    end
+
     defp expr({:^, [], [ix]}, state) do
       param_index = state.offset + ix + 1
       value = Map.fetch!(state.external, ix)
@@ -311,10 +315,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "#{name}.#{quote_column(field)}"
     end
 
-    defp expr({:!, _, [expr]}, state) do
-      "NOT (" <> expr(expr, state) <> ")"
-    end
-
     defp expr({:&, _, [_]} = var, state) do
       source    = Util.find_source(state.sources, var)
       model     = Util.model(source)
@@ -322,22 +322,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {_, name} = Util.source(source)
 
       Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")
-    end
-
-    defp expr({:==, _, [nil, right]}, state) do
-      "#{op_to_binary(right, state)} IS NULL"
-    end
-
-    defp expr({:==, _, [left, nil]}, state) do
-      "#{op_to_binary(left, state)} IS NULL"
-    end
-
-    defp expr({:!=, _, [nil, right]}, state) do
-      "#{op_to_binary(right, state)} IS NOT NULL"
-    end
-
-    defp expr({:!=, _, [left, nil]}, state) do
-      "#{op_to_binary(left, state)} IS NOT NULL"
     end
 
     defp expr({:in, _, [left, first .. last]}, state) do
@@ -377,10 +361,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "::numeric"
     end
 
-    defp expr({arg, _, []}, state) when is_tuple(arg) do
-      expr(arg, state)
-    end
-
     defp expr({:date, _, [datetime]}, state) do
       expr(datetime, state) <> "::date"
     end
@@ -391,6 +371,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp expr({:datetime, _, [date, time]}, state) do
       "(#{expr(date, state)} + #{expr(time, state)})"
+    end
+
+    defp expr({:is_nil, _, [arg]}, state) do
+      "#{expr(arg, state)} IS NULL"
+    end
+
+    defp expr({op, _, [expr]}, state) when op in [:!, :not] do
+      "NOT (" <> expr(expr, state) <> ")"
     end
 
     defp expr({fun, _, args}, state) when is_atom(fun) and is_list(args) do

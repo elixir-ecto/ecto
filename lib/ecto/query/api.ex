@@ -115,6 +115,10 @@ defmodule Ecto.Query.API do
   def left or right
   defs boolean or boolean :: boolean
 
+  @doc "Returns `true` if argument is `nil`."
+  def is_nil(arg)
+  defs is_nil(_) :: boolean
+
   @doc """
   Return `true` if `left` is in `right` array, `false`
   otherwise.
