@@ -4,8 +4,8 @@ defmodule Ecto.Repo.Backend do
 
   alias Ecto.Queryable
   alias Ecto.Query.Util
-  alias Ecto.Query.FromBuilder
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Builder.From
+  alias Ecto.Query.Builder
   alias Ecto.Query.Normalizer
   alias Ecto.Query.Validator
   require Ecto.Query, as: Q
@@ -107,15 +107,15 @@ defmodule Ecto.Repo.Backend do
   end
 
   def update_all(repo, adapter, queryable, values, opts) do
-    {binds, expr} = FromBuilder.escape(queryable)
+    {binds, expr} = From.escape(queryable)
 
     {values, external} =
       Enum.map_reduce(values, %{}, fn {field, expr}, external ->
-        {expr, external} = BuilderUtil.escape(expr, external, binds)
+        {expr, external} = Builder.escape(expr, external, binds)
         {{field, expr}, external}
       end)
 
-    external = BuilderUtil.escape_external(external)
+    external = Builder.escape_external(external)
 
     quote do
       Ecto.Repo.Backend.runtime_update_all(unquote(repo), unquote(adapter),

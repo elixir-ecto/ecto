@@ -1,7 +1,7 @@
-defmodule Ecto.Query.JoinBuilder do
+defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Builder
   alias Ecto.Query.JoinExpr
 
   @doc """
@@ -47,7 +47,7 @@ defmodule Ecto.Query.JoinBuilder do
   end
 
   def escape(dot, vars) do
-    case BuilderUtil.escape_dot(dot, vars) do
+    case Builder.escape_dot(dot, vars) do
       {_, _} = var_field ->
         {[], nil, var_field}
       :error ->
@@ -64,7 +64,7 @@ defmodule Ecto.Query.JoinBuilder do
   """
   @spec build_with_binds(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
   def build_with_binds(query, qual, binding, expr, on, count_bind, env) do
-    binding = BuilderUtil.escape_binding(binding)
+    binding = Builder.escape_binding(binding)
     {join_bind, join_expr, join_assoc} = escape(expr, binding)
     is_assoc? = not is_nil(join_assoc)
 
@@ -76,7 +76,7 @@ defmodule Ecto.Query.JoinBuilder do
       # If count_bind is not an integer, make it a variable.
       # The variable is the getter/setter storage.
       count_bind = quote(do: count_bind)
-      count_setter = quote(do: unquote(count_bind) = BuilderUtil.count_binds(query))
+      count_setter = quote(do: unquote(count_bind) = Builder.count_binds(query))
     end
 
     binding = binding ++ [{join_bind, count_bind}]
@@ -91,7 +91,7 @@ defmodule Ecto.Query.JoinBuilder do
 
     if is_integer(count_bind) do
       count_bind = count_bind + 1
-      quoted = BuilderUtil.apply_query(query, __MODULE__, [join], env)
+      quoted = Builder.apply_query(query, __MODULE__, [join], env)
     else
       count_bind = quote(do: unquote(count_bind) + 1)
       quoted =
@@ -112,8 +112,8 @@ defmodule Ecto.Query.JoinBuilder do
 
   defp escape_on(nil, _binding, _env), do: nil
   defp escape_on(on, binding, env) do
-    {on, external} = BuilderUtil.escape(on, binding)
-    external       = BuilderUtil.escape_external(external)
+    {on, external} = Builder.escape(on, binding)
+    external       = Builder.escape_external(external)
 
     quote do: %Ecto.Query.QueryExpr{
                 expr: unquote(on),

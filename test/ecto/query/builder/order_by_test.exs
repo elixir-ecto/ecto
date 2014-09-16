@@ -1,8 +1,8 @@
-defmodule Ecto.Query.OrderByBuilderTest do
+defmodule Ecto.Query.Builder.OrderByTest do
   use ExUnit.Case, async: true
 
-  import Ecto.Query.OrderByBuilder
-  doctest Ecto.Query.OrderByBuilder
+  import Ecto.Query.Builder.OrderBy
+  doctest Ecto.Query.Builder.OrderBy
 
   test "escape" do
     assert {Macro.escape(quote do [asc: &0.y] end), %{}} ==

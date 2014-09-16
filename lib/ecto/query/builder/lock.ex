@@ -1,7 +1,7 @@
-defmodule Ecto.Query.LockBuilder do
+defmodule Ecto.Query.Builder.Lock do
   @moduledoc false
 
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Builder
 
   @doc """
   Validates the expression is an integer or raise.
@@ -29,7 +29,7 @@ defmodule Ecto.Query.LockBuilder do
         true  -> expr
         false -> quote do: unquote(__MODULE__).validate(unquote(expr))
       end
-    BuilderUtil.apply_query(query, __MODULE__, [type, expr], env)
+    Builder.apply_query(query, __MODULE__, [type, expr], env)
   end
 
   @doc """

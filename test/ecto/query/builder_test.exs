@@ -1,8 +1,8 @@
-defmodule Ecto.Query.BuilderUtilTest do
+defmodule Ecto.Query.BuilderTest do
   use ExUnit.Case, async: true
 
-  import Ecto.Query.BuilderUtil
-  doctest Ecto.Query.BuilderUtil
+  import Ecto.Query.Builder
+  doctest Ecto.Query.Builder
 
   test "escape" do
     assert {Macro.escape(quote do &0.y end), %{}} ==

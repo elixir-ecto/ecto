@@ -1,7 +1,7 @@
-defmodule Ecto.Query.LimitOffsetBuilder do
+defmodule Ecto.Query.Builder.LimitOffset do
   @moduledoc false
 
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Builder
 
   @doc """
   Validates the expression is an integer or raise.
@@ -28,7 +28,7 @@ defmodule Ecto.Query.LimitOffsetBuilder do
         true  -> expr
         false -> quote do: unquote(__MODULE__).validate(unquote(expr))
       end
-    BuilderUtil.apply_query(query, __MODULE__, [type, expr], env)
+    Builder.apply_query(query, __MODULE__, [type, expr], env)
   end
 
   @doc """

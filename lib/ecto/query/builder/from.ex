@@ -1,7 +1,7 @@
-defmodule Ecto.Query.FromBuilder do
+defmodule Ecto.Query.Builder.From do
   @moduledoc false
 
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Builder
 
   @doc """
   Handles from expressions.
@@ -79,7 +79,7 @@ defmodule Ecto.Query.FromBuilder do
         quoted = other
     end
 
-    quoted = BuilderUtil.apply_query(quoted, __MODULE__, [length(binds)], env)
+    quoted = Builder.apply_query(quoted, __MODULE__, [length(binds)], env)
     {quoted, binds, count_bind}
   end
 
@@ -94,10 +94,10 @@ defmodule Ecto.Query.FromBuilder do
   end
 
   defp check_binds(query, count) do
-    if count > 1 and count > BuilderUtil.count_binds(query) do
+    if count > 1 and count > Builder.count_binds(query) do
       raise Ecto.QueryError,
         reason: "`from` in query expression specified #{count} " <>
-                "binds but query contains #{BuilderUtil.count_binds(query)} binds"
+                "binds but query contains #{Builder.count_binds(query)} binds"
     end
   end
 end

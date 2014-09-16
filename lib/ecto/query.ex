@@ -128,17 +128,17 @@ defmodule Ecto.Query do
     defstruct [:qual, :source, :on, :file, :line, :assoc]
   end
 
-  alias Ecto.Query.FromBuilder
-  alias Ecto.Query.WhereBuilder
-  alias Ecto.Query.SelectBuilder
-  alias Ecto.Query.DistinctBuilder
-  alias Ecto.Query.OrderByBuilder
-  alias Ecto.Query.LimitOffsetBuilder
-  alias Ecto.Query.GroupByBuilder
-  alias Ecto.Query.HavingBuilder
-  alias Ecto.Query.PreloadBuilder
-  alias Ecto.Query.JoinBuilder
-  alias Ecto.Query.LockBuilder
+  alias Ecto.Query.Builder.From
+  alias Ecto.Query.Builder.Where
+  alias Ecto.Query.Builder.Select
+  alias Ecto.Query.Builder.Distinct
+  alias Ecto.Query.Builder.OrderBy
+  alias Ecto.Query.Builder.LimitOffset
+  alias Ecto.Query.Builder.GroupBy
+  alias Ecto.Query.Builder.Having
+  alias Ecto.Query.Builder.Preload
+  alias Ecto.Query.Builder.Join
+  alias Ecto.Query.Builder.Lock
 
   @doc """
   Creates a query.
@@ -192,7 +192,7 @@ defmodule Ecto.Query do
       raise ArgumentError, reason: "second argument to `from` has to be a keyword list"
     end
 
-    {quoted, binds, count_bind} = FromBuilder.build_with_binds(expr, __CALLER__)
+    {quoted, binds, count_bind} = From.build_with_binds(expr, __CALLER__)
     build_query(kw, __CALLER__, count_bind, quoted, binds)
   end
 
@@ -231,7 +231,7 @@ defmodule Ecto.Query do
       |> select([p, c], {p, c})
   """
   defmacro join(query, qual, binding, expr, on \\ nil) do
-    JoinBuilder.build_with_binds(query, qual, binding, expr, on, nil, __CALLER__)
+    Join.build_with_binds(query, qual, binding, expr, on, nil, __CALLER__)
     |> elem(0)
   end
 
@@ -279,7 +279,7 @@ defmodule Ecto.Query do
 
   """
   defmacro select(query, binding, expr) do
-    SelectBuilder.build(query, binding, expr, __CALLER__)
+    Select.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -311,7 +311,7 @@ defmodule Ecto.Query do
 
   """
   defmacro distinct(query, binding, expr) do
-    DistinctBuilder.build(query, binding, expr, __CALLER__)
+    Distinct.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -331,7 +331,7 @@ defmodule Ecto.Query do
 
   """
   defmacro where(query, binding, expr) do
-    WhereBuilder.build(query, binding, expr, __CALLER__)
+    Where.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -353,7 +353,7 @@ defmodule Ecto.Query do
 
   """
   defmacro order_by(query, binding, expr)  do
-    OrderByBuilder.build(query, binding, expr, __CALLER__)
+    OrderBy.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -374,7 +374,7 @@ defmodule Ecto.Query do
 
   """
   defmacro limit(query, expr) do
-    LimitOffsetBuilder.build(:limit, query, expr, __CALLER__)
+    LimitOffset.build(:limit, query, expr, __CALLER__)
   end
 
   @doc """
@@ -396,7 +396,7 @@ defmodule Ecto.Query do
 
   """
   defmacro offset(query, expr) do
-    LimitOffsetBuilder.build(:offset, query, expr, __CALLER__)
+    LimitOffset.build(:offset, query, expr, __CALLER__)
   end
 
   @doc """
@@ -421,7 +421,7 @@ defmodule Ecto.Query do
 
   """
   defmacro lock(query, expr) do
-    LockBuilder.build(:lock, query, expr, __CALLER__)
+    Lock.build(:lock, query, expr, __CALLER__)
   end
 
   @doc """
@@ -451,7 +451,7 @@ defmodule Ecto.Query do
 
   """
   defmacro group_by(query, binding, expr) do
-    GroupByBuilder.build(query, binding, expr, __CALLER__)
+    GroupBy.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -479,7 +479,7 @@ defmodule Ecto.Query do
       |> select([p], count(p.id))
   """
   defmacro having(query, binding, expr) do
-    HavingBuilder.build(query, binding, expr, __CALLER__)
+    Having.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -516,7 +516,7 @@ defmodule Ecto.Query do
       Post |> preload([:user, {:comments, [:user]}]) |> select([p], p)
   """
   defmacro preload(query, expr) do
-    PreloadBuilder.build(query, expr, __CALLER__)
+    Preload.build(query, expr, __CALLER__)
   end
 
   # Builds the quoted code for creating a keyword query
@@ -563,7 +563,7 @@ defmodule Ecto.Query do
       end
 
     {t, on} = collect_on(t, nil)
-    {quoted, binds, count_bind} = JoinBuilder.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
+    {quoted, binds, count_bind} = Join.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
 
     build_query t, env, count_bind, quoted, binds
   end

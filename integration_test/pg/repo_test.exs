@@ -29,6 +29,9 @@ defmodule Ecto.Integration.RepoTest do
 
     assert [{ [0, 1, 2, 3] }] ==
            TestRepo.all(from Post, select: { array([0, 1, 2, 3], :integer) })
+
+    assert [9223372036854775807] ==
+           TestRepo.all(from Post, select: ^9223372036854775807)
   end
 
   test "returns already started for started repos" do

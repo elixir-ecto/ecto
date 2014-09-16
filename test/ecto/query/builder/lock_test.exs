@@ -1,4 +1,4 @@
-defmodule Ecto.Query.LockBuilderTest do
+defmodule Ecto.Query.Builder.LockTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query

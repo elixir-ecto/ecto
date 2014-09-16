@@ -1,7 +1,7 @@
-defmodule Ecto.Query.OrderByBuilder do
+defmodule Ecto.Query.Builder.OrderBy do
   @moduledoc false
 
-  alias Ecto.Query.BuilderUtil
+  alias Ecto.Query.Builder
 
   @doc """
   Escapes an order by query.
@@ -26,12 +26,12 @@ defmodule Ecto.Query.OrderByBuilder do
 
   defp do_escape({dir, expr}, external, vars) do
     check_dir(dir)
-    {ast, external} = BuilderUtil.escape(expr, external, vars)
+    {ast, external} = Builder.escape(expr, external, vars)
     {{dir, ast}, external}
   end
 
   defp do_escape(expr, external, vars) do
-    {ast, external} = BuilderUtil.escape(expr, external, vars)
+    {ast, external} = Builder.escape(expr, external, vars)
     {{:asc, ast}, external}
   end
 
@@ -50,16 +50,16 @@ defmodule Ecto.Query.OrderByBuilder do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding          = BuilderUtil.escape_binding(binding)
+    binding          = Builder.escape_binding(binding)
     {expr, external} = escape(expr, binding)
-    external         = BuilderUtil.escape_external(external)
+    external         = Builder.escape_external(external)
 
     order_by = quote do: %Ecto.Query.QueryExpr{
                            expr: unquote(expr),
                            external: unquote(external),
                            file: unquote(env.file),
                            line: unquote(env.line)}
-    BuilderUtil.apply_query(query, __MODULE__, [order_by], env)
+    Builder.apply_query(query, __MODULE__, [order_by], env)
   end
 
   @doc """

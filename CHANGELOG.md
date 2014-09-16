@@ -1,7 +1,11 @@
 # v0.2.5-dev
 
+* Enhancements
+  * Change timeout of migration queries to infinity
+
 * Bug fixes
   * Fix encoding of interpolated `nil` values
+  * Support interpolated large integers
 
 # v0.2.4 (2014-09-08)
 
