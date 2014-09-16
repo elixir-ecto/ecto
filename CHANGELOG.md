@@ -2,6 +2,7 @@
 
 * Enhancements
   * Change timeout of migration queries to infinity
+  * Add uuid type
 
 * Bug fixes
   * Fix encoding of interpolated `nil` values

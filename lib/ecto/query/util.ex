@@ -40,7 +40,8 @@ defmodule Ecto.Query.Util do
 
   @doc false
   defmacro types do
-    ~w(boolean string integer float decimal binary datetime date time interval virtual)a
+    ~w(boolean string integer float decimal binary datetime date time interval
+       uuid virtual)a
   end
 
   @doc false
@@ -66,6 +67,21 @@ defmodule Ecto.Query.Util do
       {:error, _} = err -> err
       _ ->
         {:error, "binary/1 argument has to be of binary type"}
+    end
+  end
+
+  def value_to_type(%Ecto.Tagged{value: binary, type: :uuid}) do
+    case value_to_type(binary) do
+      {:ok, type} when type in [:uuid, :string] ->
+        if byte_size(binary) == 16 do
+          {:ok, :uuid}
+        else
+          {:error, "uuid `#{inspect binary}` is not 16 bytes"}
+        end
+      {:error, _} = err ->
+        err
+      _ ->
+        {:error, "uuid/1 argument has to be of binary type"}
     end
   end
 
@@ -169,6 +185,7 @@ defmodule Ecto.Query.Util do
   # %Ecto.Tagged{}.
   @doc false
   def type_castable?(:string, :binary), do: true
+  def type_castable?(:string, :uuid), do: true
   def type_castable?(_, _), do: false
 
   # Tries to cast the given value to the specified type.
@@ -176,6 +193,9 @@ defmodule Ecto.Query.Util do
   @doc false
   def try_cast(binary, :binary) when is_binary(binary) do
     %Ecto.Tagged{value: binary, type: :binary}
+  end
+  def try_cast(binary, :uuid) when is_binary(binary) do
+    %Ecto.Tagged{value: binary, type: :uuid}
   end
 
   def try_cast(list, {:array, inner}) when is_list(list) do

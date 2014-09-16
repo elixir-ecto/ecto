@@ -436,6 +436,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       expr(expr, state) <> "::bytea"
     end
 
+    defp expr(%Ecto.Tagged{value: binary, type: :uuid}, _state)
+        when is_binary(binary) do
+      hex = Base.encode16(binary, case: :lower)
+      "'#{hex}'::uuid"
+    end
+
+    defp expr(%Ecto.Tagged{value: expr, type: :uuid}, state) do
+      state = %{state | external_type: false}
+      expr(expr, state) <> "::uuid"
+    end
+
     defp expr(nil, _state), do: "NULL"
 
     defp expr(true, _state), do: "TRUE"
@@ -505,6 +516,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp type(:datetime), do: "timestamp without time zone"
     defp type(:interval), do: "interval"
     defp type(:decimal),  do: "decimal"
+    defp type(:uuid),     do: "uuid"
 
     defp type({:array, inner}), do: type(inner) <> "[]"
 

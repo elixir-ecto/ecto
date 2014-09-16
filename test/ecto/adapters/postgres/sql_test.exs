@@ -196,6 +196,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = Model |> select([], binary(<<0,1,2>>)) |> normalize
     assert SQL.select(query) == {~s{SELECT '\\x000102'::bytea\nFROM "model" AS m0}, []}
 
+    query = Model |> select([], uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>)) |> normalize
+    assert SQL.select(query) == {~s{SELECT '000102030405060708090a0b0c0d0e0f'::uuid\nFROM "model" AS m0}, []}
+
     query = Model |> select([], 123) |> normalize
     assert SQL.select(query) == {~s{SELECT 123\nFROM "model" AS m0}, []}
 

@@ -344,6 +344,16 @@ defmodule Ecto.Query.Validator do
     end
   end
 
+  # uuid(...)
+  defp type_check(%Ecto.Tagged{value: binary, type: :uuid}, state) do
+    case type_check(binary, state) do
+      :string -> :uuid
+      :uuid -> :uuid
+      _ ->
+        raise Ecto.QueryError, reason: "uuid/1 argument has to be of binary type"
+    end
+  end
+
   # array(..., type)
   defp type_check(%Ecto.Tagged{value: list, type: {:array, inner}}, state) do
     unless inner in Util.types or (list == [] and is_nil(inner)) do

@@ -18,8 +18,13 @@ defmodule Ecto.Integration.RepoTest do
     assert [{ 1, 2.0, Decimal.new("42.0") }] ==
            TestRepo.all(from Post, select: { 1, 2.0, ^Decimal.new("42.0") })
 
-    assert [{ "abc", << 0, 1 >> }] ==
-           TestRepo.all(from Post, select: { "abc", binary(^<< 0 , 1 >>) })
+    assert [{ "abc", <<0, 1>>, <<2, 3>> }] ==
+           TestRepo.all(from Post, select: { "abc", binary(^<<0 , 1>>), binary(<<2, 3>>) })
+
+    my_uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
+
+    assert [{ ^my_uuid, ^my_uuid }] =
+           TestRepo.all(from Post, select: { uuid(^my_uuid), uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>) })
 
     assert [{ %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} }] ==
            TestRepo.all(from Post, select: { ^%Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
@@ -90,14 +95,18 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and update single, fetch updated" do
-    post = %Post{title: "create and update single", text: "fetch updated", tags: ["1"], bin: <<1>>}
+    bin = <<1>>
+    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
+
+    post = %Post{title: "create and update single", text: "fetch updated", tags: ["1"], bin: bin, uuid: uuid}
 
     post = TestRepo.insert(post)
-    assert %Post{tags: ["1"], bin: <<1>>} = post
+    assert %Post{tags: ["1"], bin: ^bin, uuid: ^uuid} = post
     post = %{post | text: "coming very soon..."}
     assert :ok == TestRepo.update(post)
 
-    assert [%Post{text: "coming very soon...", tags: ["1"], bin: <<1>>}] = TestRepo.all(Post)
+    assert [%Post{text: "coming very soon...", tags: ["1"], bin: ^bin, uuid: ^uuid}] =
+           TestRepo.all(Post)
   end
 
   test "create and fetch multiple" do

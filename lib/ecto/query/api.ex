@@ -155,6 +155,12 @@ defmodule Ecto.Query.API do
   """
   def binary(_string), do: raise "binary/1 should have been expanded"
 
+  @doc """
+  Casts a binary literal to a `uuid` type. By default a
+  binary literal is of the string type.
+  """
+  def uuid(_string), do: raise "uuid/1 should have been expanded"
+
   @doc "Addition of datetime's with interval's"
   def time_add(left, right)
   defs time_add(datetime, interval) :: datetime
@@ -260,7 +266,7 @@ defmodule Ecto.Query.API do
   defs max(date) :: date
   defs max(datetime) :: datetime
   defs max(time) :: time
-  
+
   @doc """
   Aggregate function, the minimum number of the given field in the current
   group.

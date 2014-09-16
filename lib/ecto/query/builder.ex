@@ -41,6 +41,12 @@ defmodule Ecto.Query.Builder do
     {expr, external}
   end
 
+  def escape({:uuid, _, [arg]}, external, vars) do
+    {arg_escaped, external} = escape(arg, external, vars)
+    expr = {:%, [], [Ecto.Tagged, {:%{}, [], [value: arg_escaped, type: :uuid]}]}
+    {expr, external}
+  end
+
   def escape({:array, _, [arg, type]}, external, vars) do
     {arg, external}  = escape(arg, external, vars)
 
