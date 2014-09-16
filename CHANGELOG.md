@@ -8,6 +8,7 @@
   * Fix encoding of interpolated `nil` values
   * Support interpolated large integers
   * Support interpolating values on `Repo.update_all`
+  * Correctly handle `nil` values inside `array/2` and `binary/1`
 
 # v0.2.4 (2014-09-08)
 

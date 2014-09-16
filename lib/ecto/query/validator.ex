@@ -336,27 +336,25 @@ defmodule Ecto.Query.Validator do
 
   # binary(...)
   defp type_check(%Ecto.Tagged{value: binary, type: :binary}, state) do
-    case type_check(binary, state) do
-      :binary -> :binary
-      :string -> :binary
-      _ ->
-        raise Ecto.QueryError, reason: "binary/1 argument has to be of binary type"
+    if type_check(binary, state) in [:binary, :string, :any] do
+      :binary
+    else
+      raise Ecto.QueryError, reason: "binary/1 argument has to be of binary type"
     end
   end
 
   # uuid(...)
   defp type_check(%Ecto.Tagged{value: binary, type: :uuid}, state) do
-    case type_check(binary, state) do
-      :string -> :uuid
-      :uuid -> :uuid
-      _ ->
-        raise Ecto.QueryError, reason: "uuid/1 argument has to be of binary type"
+    if type_check(binary, state) in [:uuid, :string, :any] do
+      :uuid
+    else
+      raise Ecto.QueryError, reason: "uuid/1 argument has to be of binary type"
     end
   end
 
   # array(..., type)
   defp type_check(%Ecto.Tagged{value: list, type: {:array, inner}}, state) do
-    unless inner in Util.types or (list == [] and is_nil(inner)) do
+    unless inner in Util.types do
       raise Ecto.QueryError, reason: "invalid type given to `array/2`: `#{inspect inner}`"
     end
 
@@ -369,13 +367,15 @@ defmodule Ecto.Query.Validator do
         :ok
     end
 
-    elem_types = Enum.map(list, &type_check(&1, state))
+    unless is_nil(list) do
+      elem_types = Enum.map(list, &type_check(&1, state))
 
-    Enum.each(elem_types, fn type ->
-      unless Util.type_eq?(inner, type) or Util.type_castable?(type, inner) do
-        raise Ecto.QueryError, reason: "all elements in array have to be of same type"
-      end
-    end)
+      Enum.each(elem_types, fn type ->
+        unless Util.type_eq?(inner, type) or Util.type_castable?(type, inner) do
+          raise Ecto.QueryError, reason: "all elements in array have to be of same type"
+        end
+      end)
+    end
 
     {:array, inner}
   end

@@ -62,9 +62,10 @@ defmodule Ecto.Query.Util do
 
   def value_to_type(%Ecto.Tagged{value: binary, type: :binary}) do
     case value_to_type(binary) do
-      {:ok, :binary}    -> {:ok, :binary}
-      {:ok, :string}    -> {:ok, :binary}
-      {:error, _} = err -> err
+      {:ok, type} when type in [:binary, :string, :any] ->
+        {:ok, :binary}
+      {:error, _} = err ->
+        err
       _ ->
         {:error, "binary/1 argument has to be of binary type"}
     end
@@ -72,8 +73,8 @@ defmodule Ecto.Query.Util do
 
   def value_to_type(%Ecto.Tagged{value: binary, type: :uuid}) do
     case value_to_type(binary) do
-      {:ok, type} when type in [:uuid, :string] ->
-        if byte_size(binary) == 16 do
+      {:ok, type} when type in [:uuid, :string, :any] ->
+        if is_nil(binary) or byte_size(binary) == 16 do
           {:ok, :uuid}
         else
           {:error, "uuid `#{inspect binary}` is not 16 bytes"}
@@ -86,18 +87,20 @@ defmodule Ecto.Query.Util do
   end
 
   def value_to_type(%Ecto.Tagged{value: list, type: {:array, inner}}) do
-    if inner in types or (list == [] and is_nil(inner)) do
+    if inner in types do
       elem_types = Enum.map(list, &value_to_type/1)
 
-      error =
-        Enum.find_value(elem_types, fn
-          {:ok, type} ->
-            unless type_eq?(inner, type) or type_castable?(type, inner) do
-              {:error, "all elements in array have to be of same type"}
-            end
-          {:error, _} = err ->
-            err
-        end)
+      unless is_nil(list) do
+        error =
+          Enum.find_value(elem_types, fn
+            {:ok, type} ->
+              unless type_eq?(inner, type) or type_castable?(type, inner) do
+                {:error, "all elements in array have to be of same type"}
+              end
+            {:error, _} = err ->
+              err
+          end)
+      end
 
       error || {:ok, {:array, inner}}
     else

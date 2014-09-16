@@ -39,7 +39,7 @@ defmodule Ecto.Integration.Postgres.Post do
   schema "posts" do
     field :title, :string
     field :text, :string
-    field :tags, { :array, :string }
+    field :tags, {:array, :string}
     field :bin, :binary
     field :uuid, :uuid
     field :temp, :virtual, default: "temp"

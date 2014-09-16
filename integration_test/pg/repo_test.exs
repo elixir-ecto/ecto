@@ -18,13 +18,13 @@ defmodule Ecto.Integration.RepoTest do
     assert [{ 1, 2.0, Decimal.new("42.0") }] ==
            TestRepo.all(from Post, select: { 1, 2.0, ^Decimal.new("42.0") })
 
-    assert [{ "abc", <<0, 1>>, <<2, 3>> }] ==
-           TestRepo.all(from Post, select: { "abc", binary(^<<0 , 1>>), binary(<<2, 3>>) })
+    assert [{ "abc", <<0, 1>>, <<2, 3>>, nil }] ==
+           TestRepo.all(from Post, select: { "abc", binary(^<<0 , 1>>), binary(<<2, 3>>), binary(nil) })
 
     my_uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
 
-    assert [{ ^my_uuid, ^my_uuid }] =
-           TestRepo.all(from Post, select: { uuid(^my_uuid), uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>) })
+    assert [{ ^my_uuid, ^my_uuid, nil }] =
+           TestRepo.all(from Post, select: { uuid(^my_uuid), uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>), uuid(nil) })
 
     assert [{ %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} }] ==
            TestRepo.all(from Post, select: { ^%Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
@@ -32,8 +32,8 @@ defmodule Ecto.Integration.RepoTest do
     assert [{ %Ecto.Interval{year: 0, month: 24169, day: 16, hour: 0, min: 0, sec: 73611} }] ==
            TestRepo.all(from Post, select: { ^%Ecto.Interval{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
 
-    assert [{ [0, 1, 2, 3] }] ==
-           TestRepo.all(from Post, select: { array([0, 1, 2, 3], :integer) })
+    assert [{ [0, 1, 2, 3], nil }] ==
+           TestRepo.all(from Post, select: { array([0, 1, 2, 3], :integer), array(nil, :integer) })
 
     assert [9223372036854775807] ==
            TestRepo.all(from Post, select: ^9223372036854775807)
@@ -95,18 +95,38 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and update single, fetch updated" do
-    bin = <<1>>
-    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
-
-    post = %Post{title: "create and update single", text: "fetch updated", tags: ["1"], bin: bin, uuid: uuid}
+    post = %Post{title: "create and update single", text: "fetch updated", tags: ["1"]}
 
     post = TestRepo.insert(post)
-    assert %Post{tags: ["1"], bin: ^bin, uuid: ^uuid} = post
+    assert %Post{tags: ["1"]} = post
     post = %{post | text: "coming very soon..."}
     assert :ok == TestRepo.update(post)
 
-    assert [%Post{text: "coming very soon...", tags: ["1"], bin: ^bin, uuid: ^uuid}] =
-           TestRepo.all(Post)
+    assert [%Post{text: "coming very soon...", tags: ["1"]}] = TestRepo.all(Post)
+  end
+
+  test "insert and update inferred type values" do
+    bin = <<1>>
+    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
+    array = ["foo", "bar"]
+
+    post = %Post{bin: bin, uuid: uuid, tags: array}
+    post = TestRepo.insert(post)
+    assert %Post{bin: ^bin, uuid: ^uuid, tags: ^array} = post
+
+    assert :ok == TestRepo.update(post)
+
+    assert [%Post{bin: ^bin, uuid: ^uuid, tags: ^array}] = TestRepo.all(Post)
+  end
+
+  test "insert and update inferred type values with nils" do
+    post = %Post{bin: nil, uuid: nil, tags: nil}
+    post = TestRepo.insert(post)
+    assert %Post{bin: nil, uuid: nil, tags: nil} = post
+
+    assert :ok == TestRepo.update(post)
+
+    assert [%Post{bin: nil, uuid: nil, tags: nil}] = TestRepo.all(Post)
   end
 
   test "create and fetch multiple" do
