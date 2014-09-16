@@ -1,4 +1,4 @@
-defmodule Ecto.Integration.SQLEscapeTest do
+defmodule Ecto.Integration.Mysql.SQLEscapeTest do
   use Ecto.Integration.Mysql.Case
 
   # MYSQL TODO: Fix this
