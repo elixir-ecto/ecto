@@ -39,7 +39,7 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  def validate_update(query, apis, values) do
+  def validate_update(query, apis, values, external) do
     validate_only_where(query)
 
     if values == [] do
@@ -56,7 +56,7 @@ defmodule Ecto.Query.Validator do
         end
 
         # TODO: Check if model field allows nil
-        state = Map.merge(new_state, %{sources: query.sources, apis: apis})
+        state = Map.merge(new_state, %{sources: query.sources, apis: apis, external: external})
         type = check(expr, state)
 
         format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string

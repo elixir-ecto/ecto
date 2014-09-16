@@ -126,7 +126,8 @@ defmodule Ecto.Repo.Backend do
   def runtime_update_all(repo, adapter, queryable, values, external, opts) do
     query = Queryable.to_query(queryable)
             |> Normalizer.normalize(skip_select: true)
-    Validator.validate_update(query, repo.query_apis, values)
+
+    Validator.validate_update(query, repo.query_apis, values, external)
     adapter.update_all(repo, query, values, external, opts)
   end
 

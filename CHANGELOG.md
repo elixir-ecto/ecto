@@ -6,6 +6,7 @@
 * Bug fixes
   * Fix encoding of interpolated `nil` values
   * Support interpolated large integers
+  * Support interpolating values on `Repo.update_all`
 
 # v0.2.4 (2014-09-08)
 

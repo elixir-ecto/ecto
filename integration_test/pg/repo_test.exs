@@ -179,9 +179,9 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
     query = from(p in Post, where: p.title == "1" or p.title == "2")
-    assert 2 = TestRepo.update_all(query, title: "x")
-    assert %Post{title: "x"} = TestRepo.get(Post, id1)
-    assert %Post{title: "x"} = TestRepo.get(Post, id2)
+    assert 2 = TestRepo.update_all(query, title: "x", text: ^"ohai")
+    assert %Post{title: "x", text: "ohai"} = TestRepo.get(Post, id1)
+    assert %Post{title: "x", text: "ohai"} = TestRepo.get(Post, id2)
     assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
