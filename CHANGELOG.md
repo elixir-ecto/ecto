@@ -1,4 +1,4 @@
-# v0.2.5-dev
+# v0.2.5 (2014-09-17)
 
 * Enhancements
   * Change timeout of migration queries to infinity
