@@ -261,10 +261,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp limit(nil), do: nil
-    defp limit(num), do: "LIMIT " <> Integer.to_string(num)
+    defp limit(%Ecto.Query.QueryExpr{expr: expr}), do: "LIMIT " <> expr(expr, new_state([], [], 0))
 
     defp offset(nil), do: nil
-    defp offset(num), do: "OFFSET " <> Integer.to_string(num)
+    defp offset(%Ecto.Query.QueryExpr{expr: expr}), do: "OFFSET " <> expr(expr, new_state([], [], 0))
 
     defp lock(nil), do: nil
     defp lock(false), do: nil
