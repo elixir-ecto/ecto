@@ -91,8 +91,14 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = Model |> limit(3) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3}, []}
 
+    query = Model |> limit(pow(3, 2)) |> select([], 0) |> normalize
+    assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3 ^ 2}, []}
+
     query = Model |> offset(5) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nOFFSET 5}, []}
+
+    query = Model |> offset(pow(5, 1)) |> select([], 0) |> normalize
+    assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nOFFSET 5 ^ 1}, []}
 
     query = Model |> offset(5) |> limit(3) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3\nOFFSET 5}, []}

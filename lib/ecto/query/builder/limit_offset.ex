@@ -23,25 +23,29 @@ defmodule Ecto.Query.Builder.LimitOffset do
   """
   @spec build(:limit | :offset, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(type, query, expr, env) do
-    expr =
-      case is_integer(expr) do
-        true  -> expr
-        false -> quote do: unquote(__MODULE__).validate(unquote(expr))
-      end
-    Builder.apply_query(query, __MODULE__, [type, expr], env)
+    {expr, external} = Builder.escape(expr, [])
+    external = Builder.escape_external(external)
+
+    limoff = quote do: %Ecto.Query.QueryExpr{
+                        expr: unquote(expr),
+                        external: unquote(external),
+                        file: unquote(env.file),
+                        line: unquote(env.line)}
+
+    Builder.apply_query(query, __MODULE__, [type, limoff], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, :limit | :offset, term) :: Ecto.Query.t
-  def apply(query, :limit, value) do
+  def apply(query, :limit, expr) do
     query = Ecto.Queryable.to_query(query)
-    %{query | limit: value}
+    %{query | limit: expr}
   end
 
-  def apply(query, :offset, value) do
+  def apply(query, :offset, expr) do
     query = Ecto.Queryable.to_query(query)
-    %{query | offset: value}
+    %{query | offset: expr}
   end
 end
