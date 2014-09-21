@@ -525,12 +525,12 @@ defmodule Ecto.Query.Validator do
   end
 
   # Adds type, file and line metadata to the exception
-  defp rescue_metadata(type, %QueryExpr{file: file, line: line}, fun) do
+  defp rescue_metadata(type, %QueryExpr{expr: expr, file: file, line: line}, fun) do
     try do
       fun.()
-    rescue e in [Ecto.QueryError] ->
+    rescue e in [Ecto.QueryError, Ecto.Query.TypeCheckError] ->
       stacktrace = System.stacktrace
-      reraise %{e | type: type, file: file, line: line}, stacktrace
+      reraise %{e | type: type, query: expr, file: file, line: line}, stacktrace
     end
   end
 

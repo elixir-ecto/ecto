@@ -44,8 +44,8 @@ defmodule Ecto.Model.Schema do
   The supported options are:
 
   * `primary_key` - either `false`, or a `{field, type, opts}` tuple
-  * `foreign_key_type` - sets the type for any belongs_to associations.
-                         This can be overrided using the `:type` option
+  * `foreign_key_type` - sets the type for any `belongs_to` associations.
+                         This can be overridden using the `:type` option
                          to the `belongs_to` statement. Defaults to
                          type `:integer`
 

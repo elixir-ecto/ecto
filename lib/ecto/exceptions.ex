@@ -1,19 +1,21 @@
 alias Ecto.Query.Util
 
 defmodule Ecto.QueryError do
-  defexception [:message, :type, :query, :file, :line]
+  defexception [:reason, :type, :query, :file, :line]
 
-  def exception(opts) do
-    if opts[:type] && opts[:query] && opts[:file] && opts[:line] do
-      fl = Exception.format_file_line(opts[:file], opts[:line])
-      msg = "#{fl}: the query `#{opts[:type]}: #{Macro.to_string(opts[:query])}` " <>
-            "is invalid: #{opts[:reason]}"
-      opts = Keyword.put(opts, :message, msg)
+  def message(e) do
+    if e.type && e.query && e.file && e.line do
+      file = Path.relative_to_cwd(e.file)
+      """
+      #{Exception.format_file_line(file, e.line)} the query:
+
+          #{e.type}: #{Macro.to_string(e.query)}
+
+      is invalid: #{e.reason}
+      """
     else
-      opts = Keyword.put(opts, :message, opts[:reason])
+      e.reason
     end
-
-    struct(Ecto.QueryError, opts)
   end
 end
 
@@ -60,7 +62,7 @@ defmodule Ecto.NotSingleResult do
 end
 
 defmodule Ecto.Query.TypeCheckError do
-  defexception [:expr, :types, :allowed]
+  defexception [:expr, :types, :allowed, :type, :query, :file, :line]
 
   @moduledoc """
   Exception raised when a query does not type check.
@@ -68,6 +70,19 @@ defmodule Ecto.Query.TypeCheckError do
   """
 
   def message(e) do
+    if e.type && e.query && e.file && e.line do
+      file = Path.relative_to_cwd(e.file)
+      msg = """
+      #{Exception.format_file_line(file, e.line)} the query:
+
+          #{e.type}: #{Macro.to_string(e.query)}
+
+      has an expression that does not type check:
+      """
+    else
+      msg = "the following expression does not type check:"
+    end
+
     {name, _, _} = e.expr
     expected = Enum.map_join(e.allowed, "\n    ", &Macro.to_string(&1))
 
@@ -75,7 +90,7 @@ defmodule Ecto.Query.TypeCheckError do
     actual = Macro.to_string({name, [], types})
 
     """
-    the following expression does not type check:
+    #{msg}
 
         #{Macro.to_string(e.expr)}
 

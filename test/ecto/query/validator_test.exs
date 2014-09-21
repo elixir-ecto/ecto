@@ -368,7 +368,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "don't allow nested aggregates" do
     query = Post |> select([p], count(count(p.id)))
-    assert_raise Ecto.QueryError, "aggregate function calls cannot be nested", fn ->
+    assert_raise Ecto.QueryError, ~r"aggregate function calls cannot be nested", fn ->
       validate(query)
     end
   end
@@ -470,7 +470,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(p in Post, join: c in p.comments, select: assoc(p, not_field: c))
-    assert_raise Ecto.QueryError, "field `Ecto.Query.ValidatorTest.Post.not_field` is not an association", fn ->
+    assert_raise Ecto.QueryError, ~r"field `Ecto.Query.ValidatorTest.Post.not_field` is not an association", fn ->
       validate(query)
     end
 
@@ -485,7 +485,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
 
     query = from(p in Post, join: c in Comment, on: true, select: assoc(p, comments: c))
-    assert_raise Ecto.QueryError, "can only associate on an inner or left association join", fn ->
+    assert_raise Ecto.QueryError, ~r"can only associate on an inner or left association join", fn ->
       validate(query)
     end
   end
