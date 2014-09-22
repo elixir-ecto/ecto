@@ -60,17 +60,17 @@ After you are done, run `mix deps.get` in your shell to fetch the dependencies.
 
 ## Important links
 
-* [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
-* [Documentation](http://elixir-lang.org/docs/ecto)
-* [Examples](https://github.com/elixir-lang/ecto/tree/master/examples)
+  * [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
+  * [Documentation](http://elixir-lang.org/docs/ecto)
+  * [Examples](https://github.com/elixir-lang/ecto/tree/master/examples)
 
 ## Introduction
 
 When using Ecto, we think about 3 main components:
 
-* [Repositories](http://elixir-lang.org/docs/ecto/Ecto.Repo.html): repositories are wrappers around the database. Via the repository, we can create, update, destroy and query existing entries. A repository needs an adapter and a URL to communicate to the database;
-* [Models](http://elixir-lang.org/docs/ecto/Ecto.Model.html): models is a collection of functionality like the schema, validations and callbacks that can be cherry-picked;
-* [Queries](http://elixir-lang.org/docs/ecto/Ecto.Query.html): written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injection, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
+  * [Repositories](http://elixir-lang.org/docs/ecto/Ecto.Repo.html): repositories are wrappers around the database. Via the repository, we can create, update, destroy and query existing entries. A repository needs an adapter and a URL to communicate to the database;
+  * [Models](http://elixir-lang.org/docs/ecto/Ecto.Model.html): models is a collection of functionality like the schema, validations and callbacks that can be cherry-picked;
+  * [Queries](http://elixir-lang.org/docs/ecto/Ecto.Query.html): written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injection, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
 
 Note how the storage (repositories), the data (entities) and behaviour (models) are decoupled in Ecto. In the following sections, we will describe those components and how they interact with each other. This README will follow the code outlined in the application at [examples/simple](https://github.com/elixir-lang/ecto/tree/master/examples/simple). Please follow the instructions outlined there to get it up and running.
 
@@ -219,17 +219,17 @@ Repo.all(query)
 
 Queries are defined and extended with the `from` macro. The supported keywords are:
 
-* `:distinct`
-* `:where`
-* `:order_by`
-* `:offset`
-* `:limit`
-* `:lock`
-* `:group_by`
-* `:having`
-* `:join`
-* `:select` - although we used `:select` above, it is optional and by default it simply returns the model being queried
-* `:preload` - used for preloading associations
+  * `:distinct`
+  * `:where`
+  * `:order_by`
+  * `:offset`
+  * `:limit`
+  * `:lock`
+  * `:group_by`
+  * `:having`
+  * `:join`
+  * `:select` - although we used `:select` above, it is optional and by default it simply returns the model being queried
+  * `:preload` - used for preloading associations
 
 When writing a query, you are inside Ecto's query syntax. In order to access external values or invoke functions, you need to use the `^` operator, which is overloaded by Ecto:
 
@@ -253,22 +253,29 @@ Ecto provides many tasks to help your workflow as well as code generators. You c
 
 Ecto generators will automatically open the generated files if you have `ECTO_EDITOR` set in your environment variable. You can set this variable for different editors as follows:
 
-* Textmate: `mate -a`
+  * Textmate: `mate -a`
 
 ### Types and casting
 
 When defining the schema, types need to be given. Those types are specific to Ecto and must be one of:
 
-* `:integer`
-* `:float`
-* `:boolean`
-* `:binary` - for binaries;
-* `:string` - for utf-8 encoded binaries;
-* `{:array, inner_type}`
-* `:datetime`
-* `:date`
-* `:time`
-* `:virtual` - virtual types can have any value and they are not sent to the database;
+Ecto type               | Elixir type             | Tagged in queries with
+:---------------------- | :---------------------- | :---------------------
+`:integer`              | `integer`
+`:float`                | `float`
+`:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
+`:boolean`              | `boolean`
+`:binary`               | `binary`                | `binary(<<...>>)`
+`:string`               | UTF-8 encoded `binary`
+`:uuid`                 | 16 byte `binary`        | `uuid(<<...>>)`
+`{:array, inner_type}`  | `list`                  | `array([...], :integer)`
+`:datetime`             | `%Ecto.DateTime{}`
+`:date`                 | `%Ecto.Date{}`
+`:time`                 | `%Ecto.Time{}`
+
+In queries some values need to be tagged by their ecto type because the ecto type cannot be inferred from an elixir value. For example an Elixir binary can be both an arbitrary binary or a UTF-8 encoded string, therefore the value needs to be wrapped in a function: `binary(<<...>>)` to tag it with the correct type.
+
+Models can have fields of `:virtual` type. These fields are not persisted to the database or type checked.
 
 When manipulating the struct, it is the responsibility of the developer to ensure the fields are cast to the proper value. For example, you can create a weather struct with an invalid value for `temp_lo`:
 
