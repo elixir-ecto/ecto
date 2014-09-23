@@ -32,6 +32,7 @@ defmodule Ecto.Query.Validator do
     validate_havings(query.havings, state)
     validate_preloads(query.preloads, state)
     validate_limit(query.limit, state)
+    validate_offset(query.offset, state)
 
     unless opts[:skip_select] do
       validate_select(query.select, state)
@@ -112,6 +113,12 @@ defmodule Ecto.Query.Validator do
 
   defp validate_limit(expr, state) do
     validate_integer(:limit, expr, state)
+  end
+
+  defp validate_offset(nil, _), do: :ok
+
+  defp validate_offset(expr, state) do
+    validate_integer(:offset, expr, state)
   end
 
   defp validate_booleans(type, query_exprs, state) do

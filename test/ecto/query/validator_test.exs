@@ -103,6 +103,16 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "offset expression must be integer" do
+    query = Post |> offset(40 + 2) |> select([], 123)
+    validate(query)
+
+    query = Post |> offset(42 > 0) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"offset expression", fn ->
+      validate(query)
+    end
+  end
+
   test "model field types" do
     query = Post |> select([p], p.title + 2)
     assert_raise Ecto.Query.TypeCheckError, fn ->
