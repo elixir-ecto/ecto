@@ -121,32 +121,23 @@ defmodule Ecto.Query.Validator do
     validate_integer(:offset, expr, state)
   end
 
-  defp validate_booleans(type, query_exprs, state) do
-    Enum.each(query_exprs, fn expr ->
-      rescue_metadata(type, expr, fn ->
-        state = %{state | external: expr.external}
-        expr_type = catch_grouped(fn -> check(expr.expr, state) end)
-
-        unless expr_type in [:unknown, :boolean] do
-          format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
-          raise Ecto.QueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
-            "is of type `#{format_expr_type}`, has to be of boolean type"
-        end
-      end)
-    end)
-  end
-
-  defp validate_integer(type, expr, state) do
-    rescue_metadata(type, expr, fn ->
+  defp validate_expr_type(clause_type, valid_expr_type, expr, state) do
+    rescue_metadata(clause_type, expr, fn ->
       state = %{state | external: expr.external}
       expr_type = catch_grouped(fn -> check(expr.expr, state) end)
 
-      unless expr_type in [:unknown, :integer] do
+      unless expr_type in [:unknown, valid_expr_type] do
         format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
-        raise Ecto.QueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
-          "is of type `#{format_expr_type}`, has to be of integer type"
+        raise Ecto.QueryError, reason: "#{clause_type} expression `#{Macro.to_string(expr.expr)}` " <>
+          "is of type `#{format_expr_type}`, has to be of #{valid_expr_type} type"
       end
     end)
+  end
+
+  defp validate_integer(type, expr, state), do: validate_expr_type(type, :integer, expr, state)
+
+  defp validate_booleans(type, query_exprs, state) do
+    Enum.each(query_exprs, &(validate_expr_type(type, :boolean, &1, state)))
   end
 
   defp validate_order_bys(order_bys, state) do
