@@ -31,6 +31,7 @@ defmodule Ecto.Query.Validator do
     validate_group_bys(query.group_bys, state)
     validate_havings(query.havings, state)
     validate_preloads(query.preloads, state)
+    validate_limit(query.limit, state)
 
     unless opts[:skip_select] do
       validate_select(query.select, state)
@@ -107,6 +108,12 @@ defmodule Ecto.Query.Validator do
     validate_booleans(:having, havings, state)
   end
 
+  defp validate_limit(nil, _), do: :ok
+
+  defp validate_limit(expr, state) do
+    validate_integer(:limit, expr, state)
+  end
+
   defp validate_booleans(type, query_exprs, state) do
     Enum.each(query_exprs, fn expr ->
       rescue_metadata(type, expr, fn ->
@@ -119,6 +126,19 @@ defmodule Ecto.Query.Validator do
             "is of type `#{format_expr_type}`, has to be of boolean type"
         end
       end)
+    end)
+  end
+
+  defp validate_integer(type, expr, state) do
+    rescue_metadata(type, expr, fn ->
+      state = %{state | external: expr.external}
+      expr_type = catch_grouped(fn -> check(expr.expr, state) end)
+
+      unless expr_type in [:unknown, :integer] do
+        format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
+        raise Ecto.QueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
+          "is of type `#{format_expr_type}`, has to be of integer type"
+      end
     end)
   end
 
