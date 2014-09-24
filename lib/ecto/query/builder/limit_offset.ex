@@ -4,17 +4,6 @@ defmodule Ecto.Query.Builder.LimitOffset do
   alias Ecto.Query.Builder
 
   @doc """
-  Validates the expression is an integer or raise.
-  """
-  @spec validate(Macro.t) :: Macro.t | no_return
-  def validate(expr) when is_integer(expr), do: expr
-
-  def validate(expr) do
-    raise Ecto.QueryError, reason: "limit and offset expressions must be a single " <>
-                                   "integer value, got: #{inspect expr}"
-  end
-
-  @doc """
   Builds a quoted expression.
 
   The quoted expression should evaluate to a query at runtime.
