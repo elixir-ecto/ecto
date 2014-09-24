@@ -88,19 +88,19 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "limit and offset" do
-    query = Model |> limit(3) |> select([], 0) |> normalize
+    query = Model |> limit([r], 3) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3}, []}
 
-    query = Model |> limit(pow(3, 2)) |> select([], 0) |> normalize
+    query = Model |> limit([r], pow(3, 2)) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3 ^ 2}, []}
 
-    query = Model |> offset(5) |> select([], 0) |> normalize
+    query = Model |> offset([r], 5) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nOFFSET 5}, []}
 
-    query = Model |> offset(pow(5, 1)) |> select([], 0) |> normalize
+    query = Model |> offset([r], pow(5, 1)) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nOFFSET 5 ^ 1}, []}
 
-    query = Model |> offset(5) |> limit(3) |> select([], 0) |> normalize
+    query = Model |> offset([r], 5) |> limit([r], 3) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3\nOFFSET 5}, []}
   end
 
@@ -219,8 +219,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
             |> having([], ^false)
             |> order_by([], ^3)
             |> order_by([], ^4)
-            |> limit(^5)
-            |> offset(^6)
+            |> limit([], ^5)
+            |> offset([], ^6)
             |> normalize
 
     result = """
