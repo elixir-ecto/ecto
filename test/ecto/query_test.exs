@@ -44,10 +44,10 @@ defmodule Ecto.QueryTest do
     query = Post |> order_by([p], p.title)
     validate(query)
 
-    query = Post |> limit(42)
+    query = Post |> limit([p], 42)
     validate(query)
 
-    query = Post |> offset(43)
+    query = Post |> offset([p], 43)
     validate(query)
 
     query = Post |> lock(true)
@@ -68,10 +68,13 @@ defmodule Ecto.QueryTest do
     query = order_by(Post, [p], p.title)
     validate(query)
 
-    query = limit(Post, 42)
+    query = limit(Post, [p], 42)
     validate(query)
 
-    query = offset(Post, 43)
+    query = limit(Post, [p], pow(42, 2))
+    validate(query)
+
+    query = offset(Post, [p], 43)
     validate(query)
   end
 

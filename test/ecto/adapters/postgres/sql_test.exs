@@ -88,13 +88,19 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "limit and offset" do
-    query = Model |> limit(3) |> select([], 0) |> normalize
+    query = Model |> limit([r], 3) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3}, []}
 
-    query = Model |> offset(5) |> select([], 0) |> normalize
+    query = Model |> limit([r], pow(3, 2)) |> select([], 0) |> normalize
+    assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3 ^ 2}, []}
+
+    query = Model |> offset([r], 5) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nOFFSET 5}, []}
 
-    query = Model |> offset(5) |> limit(3) |> select([], 0) |> normalize
+    query = Model |> offset([r], pow(5, 1)) |> select([], 0) |> normalize
+    assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nOFFSET 5 ^ 1}, []}
+
+    query = Model |> offset([r], 5) |> limit([r], 3) |> select([], 0) |> normalize
     assert SQL.select(query) == {~s{SELECT 0\nFROM "model" AS m0\nLIMIT 3\nOFFSET 5}, []}
   end
 
@@ -201,8 +207,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = Model |> select([], ^1 + ^2) |> normalize
     assert SQL.select(query) == {~s{SELECT $1::bigint + $2::bigint\nFROM "model" AS m0}, [1, 2]}
 
-    # TODO: limit and offset
-
     query = Model
             |> select([], ^0)
             |> join(:inner, [], Model2, ^true)
@@ -215,6 +219,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
             |> having([], ^false)
             |> order_by([], ^3)
             |> order_by([], ^4)
+            |> limit([], ^5)
+            |> offset([], ^6)
             |> normalize
 
     result = """
@@ -226,9 +232,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     GROUP BY $6::bigint, $7::bigint
     HAVING ($8::boolean) AND ($9::boolean)
     ORDER BY $10::bigint, $11::bigint
+    LIMIT $12::bigint
+    OFFSET $13::bigint
     """
 
-    assert SQL.select(query) == {String.rstrip(result), [0, true, false, true, false, 1, 2, true, false, 3, 4]}
+    assert SQL.select(query) == {String.rstrip(result), [0, true, false, true, false, 1, 2, true, false, 3, 4, 5, 6]}
 
     value = Decimal.new("42")
     query = Model |> select([], ^value) |> normalize

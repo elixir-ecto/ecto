@@ -93,6 +93,38 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "limit expression must be integer" do
+    query = Post |> limit([p], 40 + 2) |> select([], 123)
+    validate(query)
+
+    query = Post |> limit([p], 42 > 0) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"limit expression", fn ->
+      validate(query)
+    end
+  end
+
+  test "offset expression must be integer" do
+    query = Post |> offset([p], 40 + 2) |> select([], 123)
+    validate(query)
+
+    query = Post |> offset([p], 42 > 0) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"offset expression", fn ->
+      validate(query)
+    end
+  end
+
+  test "limit and offset expressions cannot use row data" do
+    query = Post |> limit([p], p.id) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"limit expression", fn ->
+      validate(query)
+    end
+
+    query = Post |> offset([p], p.id) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"offset expression", fn ->
+      validate(query)
+    end
+  end
+
   test "model field types" do
     query = Post |> select([p], p.title + 2)
     assert_raise Ecto.Query.TypeCheckError, fn ->

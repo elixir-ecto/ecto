@@ -31,6 +31,8 @@ defmodule Ecto.Query.Validator do
     validate_group_bys(query.group_bys, state)
     validate_havings(query.havings, state)
     validate_preloads(query.preloads, state)
+    validate_limit(query.limit, state)
+    validate_offset(query.offset, state)
 
     unless opts[:skip_select] do
       validate_select(query.select, state)
@@ -107,19 +109,37 @@ defmodule Ecto.Query.Validator do
     validate_booleans(:having, havings, state)
   end
 
-  defp validate_booleans(type, query_exprs, state) do
-    Enum.each(query_exprs, fn expr ->
-      rescue_metadata(type, expr, fn ->
-        state = %{state | external: expr.external}
-        expr_type = catch_grouped(fn -> check(expr.expr, state) end)
+  defp validate_limit(nil, _), do: :ok
 
-        unless expr_type in [:unknown, :boolean] do
-          format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
-          raise Ecto.QueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
-            "is of type `#{format_expr_type}`, has to be of boolean type"
-        end
-      end)
+  defp validate_limit(expr, state) do
+    forbid_variables(:limit, expr)
+    validate_integer(:limit, expr, state)
+  end
+
+  defp validate_offset(nil, _), do: :ok
+
+  defp validate_offset(expr, state) do
+    forbid_variables(:offset, expr)
+    validate_integer(:offset, expr, state)
+  end
+
+  defp validate_expr_type(clause_type, valid_expr_type, expr, state) do
+    rescue_metadata(clause_type, expr, fn ->
+      state = %{state | external: expr.external}
+      expr_type = catch_grouped(fn -> check(expr.expr, state) end)
+
+      unless expr_type in [:unknown, valid_expr_type] do
+        format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
+        raise Ecto.QueryError, reason: "#{clause_type} expression `#{Macro.to_string(expr.expr)}` " <>
+          "is of type `#{format_expr_type}`, has to be of #{valid_expr_type} type"
+      end
     end)
+  end
+
+  defp validate_integer(type, expr, state), do: validate_expr_type(type, :integer, expr, state)
+
+  defp validate_booleans(type, query_exprs, state) do
+    Enum.each(query_exprs, &(validate_expr_type(type, :boolean, &1, state)))
   end
 
   defp validate_order_bys(order_bys, state) do
@@ -492,6 +512,15 @@ defmodule Ecto.Query.Validator do
   defp has_aggregate?(_other, _apis) do
     false
   end
+
+  defp forbid_variables(clause_type, {:&, _, _}) do
+    raise Ecto.QueryError, reason: "variables not available in #{clause_type} expression"
+  end
+
+  defp forbid_variables(clause_type, {{:., _, args}, _, _}), do: Enum.map(args, &forbid_variables(clause_type, &1))
+  defp forbid_variables(clause_type, {_, _, args}),          do: Enum.map(args, &forbid_variables(clause_type, &1))
+  defp forbid_variables(clause_type, %QueryExpr{expr: expr}), do: forbid_variables(clause_type, expr)
+  defp forbid_variables(_, _), do: :ok
 
   defp check_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false, grouped: grouped} = state) do
     if Enum.any?(grouped, &equal?(expr, &1)) do
