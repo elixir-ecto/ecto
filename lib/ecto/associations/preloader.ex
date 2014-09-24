@@ -68,7 +68,8 @@ defmodule Ecto.Associations.Preloader do
 
       merged
     else
-      []
+      # Set the association as loaded but empty
+      Enum.map(structs, &set_loaded(&1, refl, []))
     end
   end
 

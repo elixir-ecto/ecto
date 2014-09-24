@@ -418,6 +418,30 @@ defmodule Ecto.Integration.RepoTest do
     assert p2.id == c4.post.get.id
   end
 
+  test "preload has_many with no associated record" do
+    p = TestRepo.insert(%Post{title: "1"})
+    [p] = Preloader.run([p], TestRepo, :comments)
+
+    assert p.title == "1"
+    assert p.comments.all == []
+  end
+
+  test "preload has_one with no associated record" do
+    p = TestRepo.insert(%Post{title: "1"})
+    [p] = Preloader.run([p], TestRepo, :permalink)
+
+    assert p.title == "1"
+    assert p.permalink.get == nil
+  end
+
+  test "preload belongs_to with no associated record" do
+    c = TestRepo.insert(%Comment{text: "1"})
+    [c] = Preloader.run([c], TestRepo, :post)
+
+    assert c.text == "1"
+    assert c.post.get == nil
+  end
+
   test "preload keyword query" do
     p1 = TestRepo.insert(%Post{title: "1"})
     p2 = TestRepo.insert(%Post{title: "2"})
