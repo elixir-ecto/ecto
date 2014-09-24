@@ -370,11 +370,11 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      User |> where(u.id == current_user) |> limit(1)
+      User |> where([u], u.id == current_user) |> limit([u], 1)
 
   """
-  defmacro limit(query, expr) do
-    LimitOffset.build(:limit, query, expr, __CALLER__)
+  defmacro limit(query, binding, expr) do
+    LimitOffset.build(:limit, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -392,11 +392,11 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      Post |> limit(10) |> offset(30)
+      Post |> limit([p], 10) |> offset([p], 30)
 
   """
-  defmacro offset(query, expr) do
-    LimitOffset.build(:offset, query, expr, __CALLER__)
+  defmacro offset(query, binding, expr) do
+    LimitOffset.build(:offset, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -521,8 +521,8 @@ defmodule Ecto.Query do
 
   # Builds the quoted code for creating a keyword query
 
-  @binds    [:where, :select, :distinct, :order_by, :group_by, :having]
-  @no_binds [:limit, :offset, :preload, :lock]
+  @binds    [:where, :select, :distinct, :order_by, :group_by, :having, :limit, :offset]
+  @no_binds [:preload, :lock]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
   defp build_query([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do

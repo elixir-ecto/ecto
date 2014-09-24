@@ -112,12 +112,14 @@ defmodule Ecto.Query.Validator do
   defp validate_limit(nil, _), do: :ok
 
   defp validate_limit(expr, state) do
+    forbid_variables(:limit, expr)
     validate_integer(:limit, expr, state)
   end
 
   defp validate_offset(nil, _), do: :ok
 
   defp validate_offset(expr, state) do
+    forbid_variables(:offset, expr)
     validate_integer(:offset, expr, state)
   end
 
@@ -510,6 +512,15 @@ defmodule Ecto.Query.Validator do
   defp has_aggregate?(_other, _apis) do
     false
   end
+
+  defp forbid_variables(clause_type, {:&, _, _}) do
+    raise Ecto.QueryError, reason: "variables not available in #{clause_type} expression"
+  end
+
+  defp forbid_variables(clause_type, {{:., _, args}, _, _}), do: Enum.map(args, &forbid_variables(clause_type, &1))
+  defp forbid_variables(clause_type, {_, _, args}),          do: Enum.map(args, &forbid_variables(clause_type, &1))
+  defp forbid_variables(clause_type, %QueryExpr{expr: expr}), do: forbid_variables(clause_type, expr)
+  defp forbid_variables(_, _), do: :ok
 
   defp check_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false, grouped: grouped} = state) do
     if Enum.any?(grouped, &equal?(expr, &1)) do
