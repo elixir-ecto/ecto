@@ -56,10 +56,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {group_by, external} = group_by(query.group_bys, %{state | external: external})
       {having,   external} = having(query.havings,     %{state | external: external})
       {order_by, external} = order_by(query.order_bys, %{state | external: external})
+      {limit,    external} = limit(query.limit,        %{state | external: external})
+      {offset,   external} = offset(query.offset,      %{state | external: external})
 
       from   = from(sources)
-      limit  = limit(query.limit)
-      offset = offset(query.offset)
       lock   = lock(query.lock)
 
       sql =
@@ -260,11 +260,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp limit(nil), do: nil
-    defp limit(%Ecto.Query.QueryExpr{expr: expr}), do: "LIMIT " <> expr(expr, new_state([], [], 0))
+    defp limit(nil, state), do: {nil, state.external}
+    defp limit(%Ecto.Query.QueryExpr{expr: expr, external: external}, state) do
+      expr_state = %{state | external: external, offset: Map.size(state.external)}
+      {"LIMIT " <> expr(expr, expr_state), join_external(state.external, external)}
+    end
 
-    defp offset(nil), do: nil
-    defp offset(%Ecto.Query.QueryExpr{expr: expr}), do: "OFFSET " <> expr(expr, new_state([], [], 0))
+    defp offset(nil, state), do: {nil, state.external}
+    defp offset(%Ecto.Query.QueryExpr{expr: expr, external: external}, state) do
+      expr_state = %{state | external: external, offset: Map.size(state.external)}
+      {"OFFSET " <> expr(expr, expr_state), join_external(state.external, external)}
+    end
 
     defp lock(nil), do: nil
     defp lock(false), do: nil
