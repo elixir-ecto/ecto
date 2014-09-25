@@ -112,14 +112,20 @@ defmodule Ecto.Query.Validator do
   defp validate_limit(nil, _), do: :ok
 
   defp validate_limit(expr, state) do
-    forbid_variables(:limit, expr)
+    if contains_variable?(expr.expr) do
+      raise Ecto.QueryError, reason: "variables not allowed in limit expression"
+    end
+
     validate_integer(:limit, expr, state)
   end
 
   defp validate_offset(nil, _), do: :ok
 
   defp validate_offset(expr, state) do
-    forbid_variables(:offset, expr)
+    if contains_variable?(expr.expr) do
+      raise Ecto.QueryError, reason: "variables not allowed in offset expression"
+    end
+
     validate_integer(:offset, expr, state)
   end
 
@@ -513,14 +519,16 @@ defmodule Ecto.Query.Validator do
     false
   end
 
-  defp forbid_variables(clause_type, {:&, _, _}) do
-    raise Ecto.QueryError, reason: "variables not available in #{clause_type} expression"
-  end
-
-  defp forbid_variables(clause_type, {{:., _, args}, _, _}), do: Enum.map(args, &forbid_variables(clause_type, &1))
-  defp forbid_variables(clause_type, {_, _, args}),          do: Enum.map(args, &forbid_variables(clause_type, &1))
-  defp forbid_variables(clause_type, %QueryExpr{expr: expr}), do: forbid_variables(clause_type, expr)
-  defp forbid_variables(_, _), do: :ok
+  defp contains_variable?({:&, _, _}),
+    do: true
+  defp contains_variable?({left, _, right}),
+    do: contains_variable?(left) or contains_variable?(right)
+  defp contains_variable?({left, right}),
+    do: contains_variable?(left) or contains_variable?(right)
+  defp contains_variable?(list) when is_list(list),
+    do: Enum.any?(list, &contains_variable?/1)
+  defp contains_variable?(_),
+    do: false
 
   defp check_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false, grouped: grouped} = state) do
     if Enum.any?(grouped, &equal?(expr, &1)) do
