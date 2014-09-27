@@ -95,7 +95,6 @@ defmodule Ecto.Adapters.Mysql do
         %OkPacket{insert_id: id} ->
           [{:id, id}]
         other ->
-          IO.inspect(other)
           []
       end
   end
@@ -171,13 +170,11 @@ defmodule Ecto.Adapters.Mysql do
   ## Result set transformation
 
   defp transform_row({ :{}, _, list}, values, sources) do
-    #IO.inspect([:transform_tuple, list, values])
     {result, values } = transform_row(list, values, sources)
     {List.to_tuple(result), values}
   end
 
   defp transform_row({ :&, _, [_]} = var, values, sources) do
-    #IO.inspect([:transform_amp, var, values])
     model = Util.find_source(sources, var) |> Util.model
     model_size = length(model.__schema__(:field_names))
     {model_values, values} = Enum.split(values, model_size)
@@ -213,7 +210,11 @@ defmodule Ecto.Adapters.Mysql do
   defp transform_value(:undefined), do: nil
 
   defp transform_value({:datetime, {{year, mon, day}, {hour, min, sec}}}) do
-    Ecto.DateTime[year: year, month: mon, day: day, hour: hour, min: min, sec: sec]
+    %Ecto.DateTime{year: year, month: mon, day: day, hour: hour, min: min, sec: sec}
+  end
+
+  defp transform_value({:date, {year, mon, day}}) do
+    %Ecto.Date{year: year, month: mon, day: day}
   end
 
   defp transform_value(value), do: value
