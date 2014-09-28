@@ -12,7 +12,7 @@ defimpl Inspect, for: Ecto.Query do
       |> generate_names
       |> List.to_tuple
 
-    from      = from(query.from, elem(names, 0))
+    from      = bound_from(query.from, elem(names, 0))
     joins     = joins(query.joins, names)
     wheres    = Enum.map(query.wheres, &{:where, expr(&1, names)})
     group_bys = Enum.map(query.group_bys, &{:group_by, expr(&1, names)})
@@ -23,14 +23,22 @@ defimpl Inspect, for: Ecto.Query do
     lock      = lock(query.lock)
     select    = select(query.select, names)
 
-    kw = [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select]
-         |> Enum.concat
+    list = [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select]
+           |> Enum.concat
 
-    surround_many("#Ecto.Query<", query(kw), ">", opts, fn str, _ -> str end)
+    case list do
+      [_] ->
+        "#Ecto.Query<#{unbound_from(query.from)}>"
+      _ ->
+        surround_many("#Ecto.Query<", query(list), ">", opts, fn str, _ -> str end)
+    end
   end
 
-  defp from({source, nil}, name),    do: ["from #{name} in #{inspect source}"]
-  defp from({_source, model}, name), do: ["from #{name} in #{inspect model}"]
+  defp unbound_from({source, nil}),    do: inspect source
+  defp unbound_from({_source, model}), do: inspect model
+
+  defp bound_from({source, nil}, name),    do: ["from #{name} in #{inspect source}"]
+  defp bound_from({_source, model}, name), do: ["from #{name} in #{inspect model}"]
 
   defp joins(joins, names) do
     Enum.reduce(joins, {1, []}, fn expr, {ix, acc} ->

@@ -23,13 +23,13 @@ defmodule Ecto.Query.InspectTest do
 
   test "from" do
     assert i(from(Post, [])) ==
-           ~s{from p in Inspect.Post}
+           ~s{Inspect.Post}
 
     assert i(from(x in Post, [])) ==
-          ~s{from p in Inspect.Post}
+          ~s{Inspect.Post}
 
     assert i(from(x in "posts", [])) ==
-           ~s{from p in "posts"}
+           ~s{"posts"}
   end
 
   test "join" do
