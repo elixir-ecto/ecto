@@ -88,14 +88,14 @@ defmodule Ecto.Query.InspectTest do
     string = """
     from: p in Inspect.Post, join: c in p.comments, where: true,
     group_by: [p.id], having: true, order_by: [asc: p.id], limit: 1,
-    offset: 1, lock: true
+    offset: 1, lock: true, select: 1
     """
     |> String.rstrip
     |> String.replace("\n", " ")
 
     assert i(from(x in Post, join: y in x.comments, where: true, group_by: x.id,
                              having: true, order_by: x.id, limit: 1, offset: 1,
-                             lock: true)) == string
+                             lock: true, select: 1)) == string
   end
 
   test "external" do

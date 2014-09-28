@@ -21,8 +21,10 @@ defimpl Inspect, for: Ecto.Query do
     limit     = limit(query.limit, names)
     offset    = offset(query.offset, names)
     lock      = lock(query.lock)
+    select    = select(query.select, names)
 
-    query = [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock]
+    query = [from, joins, wheres, group_bys, havings, order_bys, limit, offset,
+             lock, select]
             |> Enum.concat
 
     surround_many("#Ecto.Query<", query(query), ">", opts, fn str, _ -> str end)
@@ -61,6 +63,9 @@ defimpl Inspect, for: Ecto.Query do
   defp lock(false), do: [lock: "false"]
   defp lock(true),  do: [lock: "true"]
   defp lock(str),   do: [lock: inspect str]
+
+  defp select(nil, _names), do: []
+  defp select(expr, names), do: [select: expr(expr, names)]
 
   defp expr(%QueryExpr{expr: expr, external: external}, names) do
     expr(expr, names, external)
