@@ -72,21 +72,40 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp expr(expr, names, external) do
-    Macro.to_string(expr, fn
-      {:&, _, [ix]}, _string ->
-        # Convert variables to proper identifiers
-        elem(names, ix)
-      {:^, _, [ix]}, _string ->
-        # Inject the interpolated value
-        escaped = Map.get(external, ix) |> Macro.escape
-        expr = {:^, [], [escaped]}
-        Macro.to_string(expr)
-      {{:., _, [_, _]}, _, []}, string ->
-        # Strip trailing ()
-        size = byte_size(string)
-        :binary.part(string, 0, size - 2)
-      _expr, string -> string
-    end)
+    Macro.to_string(expr, &expr_to_string(&1, &2, names, external))
+  end
+
+  # Convert variables to proper identifiers
+  defp expr_to_string({:&, _, [ix]}, _, names, _) do
+    elem(names, ix)
+  end
+
+  # Inject the interpolated value
+  defp expr_to_string({:^, _, [ix]}, _, _, external) do
+    escaped = Map.get(external, ix) |> Macro.escape
+    expr = {:^, [], [escaped]}
+    Macro.to_string(expr)
+  end
+
+  # Strip trailing ()
+  defp expr_to_string({{:., _, [_, _]}, _, []}, string, _, _) do
+    size = byte_size(string)
+    :binary.part(string, 0, size - 2)
+  end
+
+  # Tagged values
+  defp expr_to_string(%Ecto.Tagged{value: value, type: {outer, inner}}, _, names, external) do
+    {outer, [], [value, inner]}
+    |> expr(names, external)
+  end
+
+  defp expr_to_string(%Ecto.Tagged{value: value, type: type}, _, names, external) do
+    {type, [], [value]}
+    |> expr(names, external)
+  end
+
+  defp expr_to_string(_expr, string, _, _) do
+    string
   end
 
   defp join_qual(:inner), do: :join

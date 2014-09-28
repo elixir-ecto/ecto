@@ -98,6 +98,11 @@ defmodule Ecto.Query.InspectTest do
                              lock: true, select: 1)) == string
   end
 
+  test "tagged values" do
+    assert i(from(Post, select: {binary(<<0>>), uuid(<<0>>), array([0], :integer)})) ==
+           "from: p in Inspect.Post, select: {binary(<<0>>), uuid(<<0>>), array([0], :integer)}"
+  end
+
   test "external" do
     assert i(from(x in Post, where: ^123 + ^(1 * 3))) ==
            ~s{from: p in Inspect.Post, where: ^123 + ^3}
