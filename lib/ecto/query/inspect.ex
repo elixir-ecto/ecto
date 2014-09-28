@@ -23,15 +23,14 @@ defimpl Inspect, for: Ecto.Query do
     lock      = lock(query.lock)
     select    = select(query.select, names)
 
-    query = [from, joins, wheres, group_bys, havings, order_bys, limit, offset,
-             lock, select]
-            |> Enum.concat
+    kw = [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select]
+         |> Enum.concat
 
-    surround_many("#Ecto.Query<", query(query), ">", opts, fn str, _ -> str end)
+    surround_many("#Ecto.Query<", query(kw), ">", opts, fn str, _ -> str end)
   end
 
-  defp from({source, nil}, name),    do: [from: "#{name} in #{inspect source}"]
-  defp from({_source, model}, name), do: [from: "#{name} in #{inspect model}"]
+  defp from({source, nil}, name),    do: ["from #{name} in #{inspect source}"]
+  defp from({_source, model}, name), do: ["from #{name} in #{inspect model}"]
 
   defp joins(joins, names) do
     Enum.reduce(joins, {1, []}, fn expr, {ix, acc} ->
@@ -114,10 +113,12 @@ defimpl Inspect, for: Ecto.Query do
   defp join_qual(:outer), do: :outer_join
 
   defp query(kw) do
-    Enum.reduce(kw, [], fn {key, string}, acc ->
-      [concat(Atom.to_string(key) <> ": ", string)|acc]
+    Enum.map(kw, fn
+      {key, string} ->
+        concat(Atom.to_string(key) <> ": ", string)
+      string ->
+        string
     end)
-    |> Enum.reverse
   end
 
   defp collect_sources(query) do
@@ -126,8 +127,6 @@ defimpl Inspect, for: Ecto.Query do
         sources = [source]
       {_source, model} ->
         sources = [model]
-      nil ->
-        sources = []
     end
 
     Enum.reduce(query.joins, sources, fn
