@@ -25,17 +25,17 @@ defmodule Ecto.Query.Validator do
                       %{sources: query.sources, grouped: grouped, grouped?: grouped?,
                         apis: apis, from: query.from, query: query})
 
-    validate_joins(query.joins, state)
-    validate_wheres(query.wheres, state)
-    validate_order_bys(query.order_bys, state)
+    validate_joins(query, state)
+    validate_wheres(query, state)
+    validate_order_bys(query, state)
     validate_group_bys(query.group_bys, state)
-    validate_havings(query.havings, state)
+    validate_havings(query, state)
     validate_preloads(query.preloads, state)
-    validate_limit(query.limit, state)
-    validate_offset(query.offset, state)
+    validate_limit(query, state)
+    validate_offset(query, state)
 
     unless opts[:skip_select] do
-      validate_select(query.select, state)
+      validate_select(query, state)
       validate_distincts(query, state)
       preload_selected(query)
     end
@@ -94,45 +94,45 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp validate_joins(joins, state) do
+  defp validate_joins(query, state) do
     state = %{state | grouped?: false}
-    ons = Enum.map(joins, &(&1.on))
-    validate_booleans(:join_on, ons, state)
+    ons = Enum.map(query.joins, &(&1.on))
+    validate_booleans(query, :join_on, ons, state)
   end
 
-  defp validate_wheres(wheres, state) do
+  defp validate_wheres(query, state) do
     state = %{state | grouped?: false}
-    validate_booleans(:where, wheres, state)
+    validate_booleans(query, :where, query.wheres, state)
   end
 
-  defp validate_havings(havings, state) do
-    validate_booleans(:having, havings, state)
+  defp validate_havings(query, state) do
+    validate_booleans(query, :having, query.havings, state)
   end
 
-  defp validate_limit(nil, _), do: :ok
+  defp validate_limit(%Query{limit: nil}, _), do: :ok
 
-  defp validate_limit(expr, state) do
-    if contains_variable?(expr.expr) do
+  defp validate_limit(query, state) do
+    if contains_variable?(query.limit.expr) do
       raise Ecto.QueryError, reason: "variables not allowed in limit expression"
     end
 
-    validate_integer(:limit, expr, state)
+    validate_integer(query, :limit, query.limit, state)
   end
 
-  defp validate_offset(nil, _), do: :ok
+  defp validate_offset(%Query{offset: nil}, _), do: :ok
 
-  defp validate_offset(expr, state) do
-    if contains_variable?(expr.expr) do
+  defp validate_offset(query, state) do
+    if contains_variable?(query.offset.expr) do
       raise Ecto.QueryError, reason: "variables not allowed in offset expression"
     end
 
-    validate_integer(:offset, expr, state)
+    validate_integer(query, :offset, query.offset, state)
   end
 
-  defp validate_expr_type(clause_type, valid_expr_type, expr, state) do
+  defp validate_expr_type(query, clause_type, valid_expr_type, expr, state) do
     rescue_metadata(clause_type, expr, fn ->
       state = %{state | external: expr.external}
-      expr_type = catch_grouped(fn -> check(expr.expr, state) end)
+      expr_type = catch_grouped(query, fn -> check(expr.expr, state) end)
 
       unless expr_type in [:unknown, valid_expr_type] do
         format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
@@ -142,18 +142,18 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_integer(type, expr, state), do: validate_expr_type(type, :integer, expr, state)
+  defp validate_integer(query, type, expr, state), do: validate_expr_type(query, type, :integer, expr, state)
 
-  defp validate_booleans(type, query_exprs, state) do
-    Enum.each(query_exprs, &(validate_expr_type(type, :boolean, &1, state)))
+  defp validate_booleans(query, type, query_exprs, state) do
+    Enum.each(query_exprs, &(validate_expr_type(query, type, :boolean, &1, state)))
   end
 
-  defp validate_order_bys(order_bys, state) do
-    Enum.each(order_bys, fn expr ->
+  defp validate_order_bys(query, state) do
+    Enum.each(query.order_bys, fn expr ->
       rescue_metadata(:order_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn {_dir, expr} ->
-          catch_grouped(fn -> check(expr, state) end)
+          catch_grouped(query, fn -> check(expr, state) end)
         end)
       end)
     end)
@@ -193,19 +193,19 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_select(expr, state) do
-    rescue_metadata(:select, expr, fn ->
-      state = %{state | external: expr.external}
-      catch_grouped(fn -> select_clause(expr.expr, state) end)
+  defp validate_select(query, state) do
+    rescue_metadata(:select, query.select, fn ->
+      state = %{state | external: query.select.external}
+      catch_grouped(query, fn -> select_clause(query.select.expr, state) end)
     end)
   end
 
-  defp validate_distincts(%Query{order_bys: order_bys, distincts: distincts}, state) do
-    Enum.each(distincts, fn expr ->
+  defp validate_distincts(query, state) do
+    Enum.each(query.distincts, fn expr ->
       rescue_metadata(:distinct, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn expr ->
-          catch_grouped(fn -> check(expr, state) end)
+          catch_grouped(query, fn -> check(expr, state) end)
         end)
       end)
     end)
@@ -218,14 +218,14 @@ defmodule Ecto.Query.Validator do
     #     distinct: title / order_by: id, title => raise (title in order_by but not leftmost part)
 
     distincts =
-      Enum.map(distincts, fn expr ->
+      Enum.map(query.distincts, fn expr ->
         Enum.map(expr.expr, fn distinct ->
           {distinct, {expr.file, expr.line}}
         end)
       end) |> Enum.concat
 
     order_bys =
-      Enum.map(order_bys, fn expr ->
+      Enum.map(query.order_bys, fn expr ->
         Enum.map(expr.expr, fn {_dir, expr} -> expr end)
       end) |> Enum.concat
 
@@ -550,13 +550,12 @@ defmodule Ecto.Query.Validator do
 
   defp check_was_grouped(_expr, _state), do: :ok
 
-  defp catch_grouped(fun) do
+  defp catch_grouped(query, fun) do
     try do
       fun.()
     catch
       :throw, {:not_grouped, expr} ->
-        # TODO: Use query inspect here to remove &1
-        raise Ecto.QueryError, reason: "`#{Macro.to_string(expr)}` " <>
+        raise Ecto.QueryError, reason: "`#{Inspect.Ecto.Query.pp_from_query(query, expr)}` " <>
           "must appear in `group_by` or be used in an aggregate function"
     end
   end
