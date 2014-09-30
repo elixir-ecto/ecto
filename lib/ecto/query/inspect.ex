@@ -74,6 +74,17 @@ defimpl Inspect, for: Ecto.Query do
   defp select(nil, _names), do: []
   defp select(expr, names), do: [select: expr(expr, names)]
 
+  def pp_from_query(query, exp) do
+    names =
+      query
+      |> collect_sources
+      |> generate_letters
+      |> generate_names
+      |> List.to_tuple
+
+    expr(exp, names, [])
+  end
+
   defp expr(%QueryExpr{expr: expr, external: external}, names) do
     expr(expr, names, external)
   end

@@ -296,7 +296,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> having([p], p.id) |> select([], 0)
-    assert_raise Ecto.QueryError, ~r"`&0.id\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.id` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -306,7 +306,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -319,39 +319,39 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id * 2) |> select([p], p.id)
-    assert_raise Ecto.QueryError, ~r"`&0.id\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.id` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> group_by([p], p.id) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> group_by([p], p.id) |> order_by([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> group_by([p], p.id) |> distinct([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
 
   test "aggregate function groups expression" do
     query = Post |> select([p], [count(p.id), p.title])
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> order_by([p], count(p.id)) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> distinct([p], count(p.id)) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -361,7 +361,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id) |> select([p], p)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
