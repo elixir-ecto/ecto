@@ -14,6 +14,8 @@ defmodule Ecto.Query.Validator do
 
   require Ecto.Query.Util
 
+  import Inspect.Ecto.Query, only: [pp_from_query: 2]
+
   def validate(query, apis, opts \\ []) do
     if query.from == nil do
       raise Ecto.QueryError, reason: "a query must have a from expression"
@@ -555,7 +557,7 @@ defmodule Ecto.Query.Validator do
       fun.()
     catch
       :throw, {:not_grouped, expr} ->
-        raise Ecto.QueryError, reason: "`#{Inspect.Ecto.Query.pp_from_query(query, expr)}` " <>
+        raise Ecto.QueryError, reason: "`#{pp_from_query(query, expr)}` " <>
           "must appear in `group_by` or be used in an aggregate function"
     end
   end
