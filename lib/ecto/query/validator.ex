@@ -30,9 +30,9 @@ defmodule Ecto.Query.Validator do
     validate_joins(query, state)
     validate_wheres(query, state)
     validate_order_bys(query, state)
-    validate_group_bys(query.group_bys, state)
+    validate_group_bys(query, state)
     validate_havings(query, state)
-    validate_preloads(query.preloads, state)
+    validate_preloads(query, state)
     validate_limit(query, state)
     validate_offset(query, state)
 
@@ -132,7 +132,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_expr_type(query, clause_type, valid_expr_type, expr, state) do
-    rescue_metadata(clause_type, expr, fn ->
+    rescue_metadata(query, clause_type, expr, fn ->
       state = %{state | external: expr.external}
       expr_type = catch_grouped(query, fn -> check(expr.expr, state) end)
 
@@ -152,7 +152,7 @@ defmodule Ecto.Query.Validator do
 
   defp validate_order_bys(query, state) do
     Enum.each(query.order_bys, fn expr ->
-      rescue_metadata(:order_by, expr, fn ->
+      rescue_metadata(query, :order_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn {_dir, expr} ->
           catch_grouped(query, fn -> check(expr, state) end)
@@ -161,25 +161,25 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_group_bys(group_bys, state) do
+  defp validate_group_bys(query, state) do
     state = %{state | grouped?: false}
-    Enum.each(group_bys, fn expr ->
-      rescue_metadata(:group_by, expr, fn ->
+    Enum.each(query.group_bys, fn expr ->
+      rescue_metadata(query, :group_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, &check(&1, state))
       end)
     end)
   end
 
-  defp validate_preloads(preloads, %{from: from}) do
+  defp validate_preloads(query, %{from: from}) do
     model = Util.model(from)
 
-    if preloads != [] and is_nil(model) do
+    if query.preloads != [] and is_nil(model) do
       raise Ecto.QueryError, reason: "can only preload on fields from a model"
     end
 
-    Enum.each(preloads, fn expr ->
-      rescue_metadata(:preload, expr, fn ->
+    Enum.each(query.preloads, fn expr ->
+      rescue_metadata(query, :preload, expr, fn ->
         check_preload_fields(expr.expr, model)
       end)
     end)
@@ -196,7 +196,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_select(query, state) do
-    rescue_metadata(:select, query.select, fn ->
+    rescue_metadata(query, :select, query.select, fn ->
       state = %{state | external: query.select.external}
       catch_grouped(query, fn -> select_clause(query.select.expr, state) end)
     end)
@@ -204,7 +204,7 @@ defmodule Ecto.Query.Validator do
 
   defp validate_distincts(query, state) do
     Enum.each(query.distincts, fn expr ->
-      rescue_metadata(:distinct, expr, fn ->
+      rescue_metadata(query, :distinct, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn expr ->
           catch_grouped(query, fn -> check(expr, state) end)
@@ -255,10 +255,10 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp preload_selected(%Query{select: select, preloads: preloads}) do
-    unless preloads == [] do
-      rescue_metadata(:select, select, fn ->
-        pos = Util.locate_var(select.expr, {:&, [], [0]})
+  defp preload_selected(query) do
+    unless query.preloads == [] do
+      rescue_metadata(query, :select, query.select, fn ->
+        pos = Util.locate_var(query.select.expr, {:&, [], [0]})
         if is_nil(pos) do
           raise Ecto.QueryError, reason: "source in from expression " <>
             "needs to be selected when using preload query"
@@ -563,12 +563,12 @@ defmodule Ecto.Query.Validator do
   end
 
   # Adds type, file and line metadata to the exception
-  defp rescue_metadata(type, %QueryExpr{expr: expr, file: file, line: line}, fun) do
+  defp rescue_metadata(query, type, %QueryExpr{file: file, line: line}, fun) do
     try do
       fun.()
     rescue e in [Ecto.QueryError, Ecto.Query.TypeCheckError] ->
       stacktrace = System.stacktrace
-      reraise %{e | type: type, query: expr, file: file, line: line}, stacktrace
+      reraise %{e | type: type, query: query, file: file, line: line}, stacktrace
     end
   end
 

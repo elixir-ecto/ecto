@@ -9,7 +9,7 @@ defmodule Ecto.QueryError do
       """
       #{Exception.format_file_line(file, e.line)} the query:
 
-          #{e.type}: #{Macro.to_string(e.query)}
+          #{inspect e.query}
 
       is invalid: #{e.reason}
       """
