@@ -1,5 +1,8 @@
 # v0.2.6-dev
 
+* Bug fixes
+  * Cast primary key in `Repo.get/2`
+
 # v0.2.5 (2014-09-17)
 
 * Enhancements
