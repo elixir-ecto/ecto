@@ -105,6 +105,14 @@ defmodule Ecto.Integration.Postgres.AssignedPrimaryKey do
   end
 end
 
+defmodule Ecto.Integration.Postgres.UUIDPrimaryKey do
+  use Ecto.Model
+  @schema_defaults [primary_key: {:id, :uuid, []}]
+
+  schema "uuid_primary_keys" do
+  end
+end
+
 defmodule Ecto.Integration.Postgres.Case do
   use ExUnit.CaseTemplate
 
@@ -122,6 +130,7 @@ defmodule Ecto.Integration.Postgres.Case do
       alias Ecto.Integration.Postgres.Custom
       alias Ecto.Integration.Postgres.Barebone
       alias Ecto.Integration.Postgres.AssignedPrimaryKey
+      alias Ecto.Integration.Postgres.UUIDPrimaryKey
     end
   end
 
@@ -177,6 +186,7 @@ setup_database = [
   "CREATE TABLE customs (foo text PRIMARY KEY)",
   "CREATE TABLE barebones (text text)",
   "CREATE TABLE assigned_primary_keys (id text PRIMARY KEY)",
+  "CREATE TABLE uuid_primary_keys (id uuid PRIMARY KEY)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"

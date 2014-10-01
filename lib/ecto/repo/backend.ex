@@ -38,16 +38,19 @@ defmodule Ecto.Repo.Backend do
     query       = Queryable.to_query(queryable)
     model       = query.from |> Util.model
     primary_key = model.__schema__(:primary_key)
+    id          = normalize_primary_key(model, primary_key, id)
 
     Validator.validate_get(query, repo.query_apis)
     check_primary_key(model)
+    validate_primary_key(model, primary_key, id)
 
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
     # normalization and what not.
     query = Q.from(x in query, where: field(x, ^primary_key) == ^id)
+            |> Normalizer.normalize
 
-    models = all(repo, adapter, query, opts)
+    models = adapter.all(repo, query, opts)
     {model, models}
   end
 
@@ -188,7 +191,7 @@ defmodule Ecto.Repo.Backend do
     zipped      = module.__schema__(:keywords, model)
 
     Enum.each(zipped, fn {field, value} ->
-      type = module.__schema__(:field_type, field)
+      field_type = module.__schema__(:field_type, field)
 
       value_type = case Util.external_to_type(value) do
         {:ok, vtype} -> vtype
@@ -197,14 +200,33 @@ defmodule Ecto.Repo.Backend do
 
       valid = field == primary_key or
               value_type == nil or
-              Util.type_eq?(value_type, type)
+              Util.type_eq?(value_type, field_type)
 
       # TODO: Check if model field allows nil
       unless valid do
         raise Ecto.InvalidModel, model: model, field: field,
-          type: value_type, expected_type: type
+          type: value_type, expected_type: field_type
       end
     end)
+  end
+
+  defp validate_primary_key(model, primary_key, id) do
+    field_type = model.__schema__(:field_type, primary_key)
+
+    value_type = case Util.external_to_type(id) do
+      {:ok, vtype} -> vtype
+      {:error, reason} -> raise ArgumentError, message: reason
+    end
+
+    unless value_type == nil or Util.type_eq?(value_type, field_type) do
+      raise Ecto.InvalidModel, model: model, field: primary_key,
+        type: value_type, expected_type: field_type
+    end
+  end
+
+  defp normalize_primary_key(model, primary_key, id) do
+    type = model.__schema__(:field_type, primary_key)
+    Util.try_cast(id, type)
   end
 
   defp normalize_model(model) do

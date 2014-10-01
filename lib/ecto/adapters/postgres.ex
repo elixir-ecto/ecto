@@ -276,6 +276,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       default.(param)
     end
 
+    defp encoder(type, default, %Ecto.Tagged{value: value}) do
+      encoder(type, default, value)
+    end
+
     defp encoder(%TypeInfo{sender: "interval"}, default, %Ecto.Interval{} = interval) do
       mon = interval.year * 12 + interval.month
       day = interval.day
