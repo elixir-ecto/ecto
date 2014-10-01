@@ -104,7 +104,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def handle_info({:EXIT, conn, _reason}, %{conn: conn} = s) do
-      {:noreply, %{s | conn: nil}}
+      {:stop, :normal, %{s | conn: nil}}
     end
 
     def handle_info({:DOWN, ref, :process, pid, _info}, %{monitor: {pid, ref}} = s) do
@@ -115,12 +115,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {:noreply, s}
     end
 
-    def terminate(_reason, %{conn: nil}) do
-      :ok
-    end
-
     def terminate(_reason, %{conn: conn}) do
-      Postgrex.Connection.stop(conn)
+      if conn && Process.alive?(conn) do
+        Postgrex.Connection.stop(conn)
+      end
     end
 
     defp new_state do
