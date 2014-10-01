@@ -4,50 +4,48 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     use GenServer
 
-    @timeout 5000
-
     def start(args) do
-      :gen_server.start(__MODULE__, args, [])
+      GenServer.start(__MODULE__, args)
     end
 
     def start_link(args) do
-      :gen_server.start_link(__MODULE__, args, [])
+      GenServer.start_link(__MODULE__, args)
     end
 
     def query!(worker, sql, params, opts) do
-      case :gen_server.call(worker, {:query, sql, params, opts}, opts[:timeout]) do
+      case GenServer.call(worker, {:query, sql, params, opts}, opts[:timeout]) do
         {:ok, res} -> res
         {:error, %Postgrex.Error{} = err} -> raise err
       end
     end
 
     def begin!(worker, opts) do
-      case :gen_server.call(worker, {:begin, opts}, opts[:timeout]) do
+      case GenServer.call(worker, {:begin, opts}, opts[:timeout]) do
         :ok -> :ok
         {:error, %Postgrex.Error{} = err} -> raise err
       end
     end
 
     def commit!(worker, opts) do
-      case :gen_server.call(worker, {:commit, opts}, opts[:timeout]) do
+      case GenServer.call(worker, {:commit, opts}, opts[:timeout]) do
         :ok -> :ok
         {:error, %Postgrex.Error{} = err} -> raise err
       end
     end
 
     def rollback!(worker, opts) do
-      case :gen_server.call(worker, {:rollback, opts}, opts[:timeout]) do
+      case GenServer.call(worker, {:rollback, opts}, opts[:timeout]) do
         :ok -> :ok
         {:error, %Postgrex.Error{} = err} -> raise err
       end
     end
 
     def monitor_me(worker) do
-      :gen_server.cast(worker, {:monitor, self})
+      GenServer.cast(worker, {:monitor, self})
     end
 
     def demonitor_me(worker) do
-      :gen_server.cast(worker, {:demonitor, self})
+      GenServer.cast(worker, {:demonitor, self})
     end
 
     def init(opts) do
