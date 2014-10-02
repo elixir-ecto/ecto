@@ -1,15 +1,17 @@
 alias Ecto.Query.Util
 
 defmodule Ecto.QueryError do
-  defexception [:reason, :type, :query, :file, :line]
+  import Inspect.Ecto.Query, only: [pp_from_query: 2]
+
+  defexception [:reason, :type, :query, :expr, :file, :line]
 
   def message(e) do
     if e.type && e.query && e.file && e.line do
       file = Path.relative_to_cwd(e.file)
       """
-      #{Exception.format_file_line(file, e.line)} the query:
+      #{Exception.format_file_line(file, e.line)} the clause:
 
-          #{inspect e.query}
+          #{e.type}: #{pp_from_query(e.query, e.expr)}
 
       is invalid: #{e.reason}
       """
