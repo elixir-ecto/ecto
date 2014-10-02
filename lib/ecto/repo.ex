@@ -226,7 +226,7 @@ defmodule Ecto.Repo do
   ## Example
 
       [post] = from p in Post, where: p.id == 42
-      post = post.title("New title")
+      post = %{post | title: "New title"}
       MyRepo.update(post)
   """
   defcallback update(Ecto.Model.t, Keyword.t) :: :ok | no_return
