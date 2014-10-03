@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Ecto do
+defmodule Mix.Ecto do
   # Conveniences for writing Mix.Tasks in Ecto.
   @moduledoc false
 
