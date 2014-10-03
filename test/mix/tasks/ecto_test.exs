@@ -1,7 +1,7 @@
-defmodule Mix.Tasks.EctoTest do
+defmodule Mix.EctoTest do
   use ExUnit.Case, async: true
 
-  import Mix.Tasks.Ecto
+  import Mix.Ecto
 
   defmodule Repo do
     def start_link do

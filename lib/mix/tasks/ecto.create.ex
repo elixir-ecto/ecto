@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Ecto.Create do
   use Mix.Task
-  import Mix.Tasks.Ecto
+  import Mix.Ecto
 
   @shortdoc "Create the database for the repo"
 

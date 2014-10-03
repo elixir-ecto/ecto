@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Ecto.Rollback do
   use Mix.Task
-  import Mix.Tasks.Ecto
+  import Mix.Ecto
 
   @shortdoc "Reverts migrations down on a repo"
 

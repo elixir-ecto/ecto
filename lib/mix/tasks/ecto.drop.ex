@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Ecto.Drop do
   use Mix.Task
-  import Mix.Tasks.Ecto
+  import Mix.Ecto
 
   @shortdoc "Drop the database for the repo"
 
