@@ -511,6 +511,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp type(:interval), do: "interval"
     defp type(:decimal),  do: "decimal"
     defp type(:uuid),     do: "uuid"
+    defp type(:hstore),   do: "hstore"
 
     defp type({:array, inner}), do: type(inner) <> "[]"
 

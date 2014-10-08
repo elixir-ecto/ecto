@@ -27,7 +27,8 @@ defmodule Ecto.Mixfile do
      {:decimal, "~> 0.2.3"},
      {:postgrex, "~> 0.6.0", optional: true},
      {:ex_doc, "~> 0.6", only: :dev},
-     {:earmark, "~> 0.1", only: :dev}]
+     {:earmark, "~> 0.1", only: :dev},
+     {:apex, "~>0.3.0", only: :dev}]
   end
 
   defp test_paths(:pg),  do: ["integration_test/pg"]

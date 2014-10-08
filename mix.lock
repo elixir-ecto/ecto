@@ -1,4 +1,5 @@
-%{"decimal": {:package, "0.2.4"},
+%{"apex": {:package, "0.3.1"},
+  "decimal": {:package, "0.2.4"},
   "earmark": {:package, "0.1.10"},
   "ex_doc": {:package, "0.6.0"},
   "poolboy": {:package, "1.2.1"},

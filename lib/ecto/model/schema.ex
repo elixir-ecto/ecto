@@ -345,8 +345,10 @@ defmodule Ecto.Model.Schema do
   @doc false
   def __field__(mod, name, type, opts) do
     check_type!(type)
+    Apex.ap {mod, name, type, opts}
     fields = Module.get_attribute(mod, :ecto_fields)
-
+    Apex.ap fields
+    validate_field_options!(name, type, opts)
     if opts[:primary_key] do
       if pk = Module.get_attribute(mod, :ecto_primary_key) do
         raise ArgumentError, message: "primary key already defined as `#{pk}`"
@@ -365,6 +367,19 @@ defmodule Ecto.Model.Schema do
 
     opts = Enum.reduce([:default, :primary_key], opts, &Dict.delete(&2, &1))
     Module.put_attribute(mod, :ecto_fields, [{name, [type: type] ++ opts}|fields])
+  end
+
+  @doc false
+  def validate_field_options!(field_name, :hstore, opts) do
+    default = opts[:default]
+    unless is_nil(default) or is_map(default) do
+      raise ArgumentError, message: ":default for `#{field_name}` must be a map"
+    end
+  end
+
+  @doc false
+  def validate_field_options!(_, _, _) do
+    true
   end
 
   @doc false
