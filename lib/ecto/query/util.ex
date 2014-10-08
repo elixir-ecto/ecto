@@ -108,8 +108,8 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def value_to_type(%Ecto.Tagged{value: dict, type: {:hash, inner}}) do
-     # Enum.map(hash)
+  def value_to_type(value) when is_map(value) do
+     {:ok, :hstore}
   end
 
   def value_to_type(value), do: {:error, "unknown type of value `#{inspect value}`"}

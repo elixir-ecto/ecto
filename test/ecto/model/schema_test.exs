@@ -65,7 +65,7 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "allows defaults for hstore" do
-    assert %Version{}.old_version == HashDict.new
+    assert %Version{}.old_version == %{}
   end
 
   test "raises an error when default is not a map" do
@@ -80,8 +80,10 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
-  test "the something about HSTORE" do
-    assert 1 == Version.__schema__(:keywords, %Version{ old_version: [key: "value"], duckets: {1,2,3} })
+  test "hstore metadata" do
+    assert Version.__schema__(:field, :old_version) == [type: :hstore]
+    assert Version.__schema__(:field_type, :old_version) == :hstore
+    assert Version.__schema__(:keywords, %Version{ old_version: [key: "value"], duckets: {1,2,3} })
   end
 
   test "schema attributes" do

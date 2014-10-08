@@ -347,7 +347,6 @@ defmodule Ecto.Model.Schema do
     check_type!(type)
     Apex.ap {mod, name, type, opts}
     fields = Module.get_attribute(mod, :ecto_fields)
-    Apex.ap fields
     validate_field_options!(name, type, opts)
     if opts[:primary_key] do
       if pk = Module.get_attribute(mod, :ecto_primary_key) do

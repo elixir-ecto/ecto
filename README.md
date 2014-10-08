@@ -96,6 +96,25 @@ Besides, a set of options can be passed to the adapter as:
 
     ecto://USERNAME:PASSWORD@HOST/DATABASE?KEY=VALUE
 
+You may also specify specific options to pass directly to the adapter. For example, to add support for [PostGIS](http://postgis.net/), simply add [geo](https://github.com/bryanjos/geo) to your deps and pass in the library's custom encoder, decoder, and formatter:
+
+```elixir
+defmodule Repo do
+  use Ecto.Repo, adapter: Ecto.Adapters.Postgres
+
+  def conf do
+    [
+      hostname: "localhost",
+      username: "postgres",
+      database: "addresses",
+      encoder: &Geo.PostGIS.encoder/3,
+      decoder: &Geo.PostGIS.decoder/4,
+      formatter: &Geo.PostGIS.formatter/1
+    ]
+  end
+end
+```
+
 Each repository in Ecto defines a `start_link/0` function that needs to be invoked before using the repository. In general, this function is not called directly, but via the supervisor chain. If your application was generated with a supervisor (by passing `--sup` to `mix new`) you will have a `lib/my_app.ex` file containing the application start callback that defines and starts your supervisor. You just need to edit the `start/2` function to start the repo as a worker on the supervisor:
 
 ```elixir
