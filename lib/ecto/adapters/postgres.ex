@@ -18,6 +18,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     `:ssl` - Set to true if ssl should be used (default: false);
     `:ssl_opts` - A list of ssl options, see ssl docs;
     `:lazy` - If false all connections will be started immediately on Repo startup (default: true)
+    `:formatter` - custom formatter to be used by the adapter. (default: &Ecto.Adapters.Postgres.formatter/1)
+    `:decoder` - custom decoder to be used by the adapter. (default: &Ecto.Adapters.Postgres.decoder/4)
+    `:encoder` - custom encoder to be used by the adapter. (default: &Ecto.Adapters.Postgres.encoder/3)
+
     """
 
     @behaviour Ecto.Adapter
@@ -159,9 +163,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         worker_module: Worker ] ++ pool_opts
 
       worker_opts = worker_opts
-        |> Keyword.put(:formatter, &formatter/1)
-        |> Keyword.put(:decoder, &decoder/4)
-        |> Keyword.put(:encoder, &encoder/3)
+        |> Keyword.put_new(:formatter, &formatter/1)
+        |> Keyword.put_new(:decoder, &decoder/4)
+        |> Keyword.put_new(:encoder, &encoder/3)
         |> Keyword.put_new(:port, @default_port)
 
       {pool_opts, worker_opts}
