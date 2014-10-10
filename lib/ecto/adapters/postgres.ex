@@ -247,72 +247,75 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Postgrex casting
 
-    defp formatter(%TypeInfo{sender: "uuid"}), do: :binary
-    defp formatter(_), do: nil
+    @doc false
+    def formatter(%TypeInfo{sender: "uuid"}), do: :binary
+    def formatter(_), do: nil
 
-    defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
+    @doc false
+    def decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
       {mon, day, sec} = default.(param)
       %Ecto.Interval{year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec}
     end
 
-    defp decoder(%TypeInfo{sender: sender}, :binary, default, param)
+    def decoder(%TypeInfo{sender: sender}, :binary, default, param)
         when sender in ["timestamp", "timestamptz"] do
       default.(param)
       |> Ecto.DateTime.from_erl
     end
 
-    defp decoder(%TypeInfo{sender: "date"}, :binary, default, param) do
+    def decoder(%TypeInfo{sender: "date"}, :binary, default, param) do
       default.(param)
       |> Ecto.Date.from_erl
     end
 
-    defp decoder(%TypeInfo{sender: sender}, :binary, default, param)
+    def decoder(%TypeInfo{sender: sender}, :binary, default, param)
         when sender in ["time", "timetz"] do
       default.(param)
       |> Ecto.Time.from_erl
     end
 
-    defp decoder(%TypeInfo{sender: "uuid"}, :binary, _default, param) do
+    def decoder(%TypeInfo{sender: "uuid"}, :binary, _default, param) do
       param
     end
 
-    defp decoder(_type, _format, default, param) do
+    def decoder(_type, _format, default, param) do
       default.(param)
     end
 
-    defp encoder(type, default, %Ecto.Tagged{value: value}) do
+    @doc false
+    def encoder(type, default, %Ecto.Tagged{value: value}) do
       encoder(type, default, value)
     end
 
-    defp encoder(%TypeInfo{sender: "interval"}, default, %Ecto.Interval{} = interval) do
+    def encoder(%TypeInfo{sender: "interval"}, default, %Ecto.Interval{} = interval) do
       mon = interval.year * 12 + interval.month
       day = interval.day
       sec = interval.hour * 3600 + interval.min * 60 + interval.sec
       default.({mon, day, sec})
     end
 
-    defp encoder(%TypeInfo{sender: sender}, default, %Ecto.DateTime{} = datetime)
+    def encoder(%TypeInfo{sender: sender}, default, %Ecto.DateTime{} = datetime)
         when sender in ["timestamp", "timestamptz"] do
       Ecto.DateTime.to_erl(datetime)
       |> default.()
     end
 
-    defp encoder(%TypeInfo{sender: "date"}, default, %Ecto.Date{} = date) do
+    def encoder(%TypeInfo{sender: "date"}, default, %Ecto.Date{} = date) do
       Ecto.Date.to_erl(date)
       |> default.()
     end
 
-    defp encoder(%TypeInfo{sender: sender}, default, %Ecto.Time{} = time)
+    def encoder(%TypeInfo{sender: sender}, default, %Ecto.Time{} = time)
         when sender in ["time", "timetz"] do
       Ecto.Time.to_erl(time)
       |> default.()
     end
 
-    defp encoder(%TypeInfo{sender: "uuid"}, _default, uuid) do
+    def encoder(%TypeInfo{sender: "uuid"}, _default, uuid) do
       uuid
     end
 
-    defp encoder(_type, default, param) do
+    def encoder(_type, default, param) do
       default.(param)
     end
 
