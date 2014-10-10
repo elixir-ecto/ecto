@@ -566,9 +566,13 @@ defmodule Ecto.Query.Validator do
   defp rescue_metadata(query, type, %QueryExpr{expr: expr, file: file, line: line}, fun) do
     try do
       fun.()
-    rescue e in [Ecto.QueryError, Ecto.Query.TypeCheckError] ->
-      stacktrace = System.stacktrace
-      reraise %{e | type: type, query: query, expr: expr, file: file, line: line}, stacktrace
+    rescue
+      e in [Ecto.QueryError] ->
+        stacktrace = System.stacktrace
+        reraise %{e | type: type, query: query, expr: expr, file: file, line: line}, stacktrace
+      e in [Ecto.Query.TypeCheckError] ->
+        stacktrace = System.stacktrace
+        reraise %{e | query: query, expr: expr, file: file, line: line}, stacktrace
     end
   end
 

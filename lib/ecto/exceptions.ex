@@ -66,7 +66,7 @@ end
 defmodule Ecto.Query.TypeCheckError do
   import Inspect.Ecto.Query, only: [pp_from_query: 2]
 
-  defexception [:expr, :types, :allowed, :type, :query, :file, :line]
+  defexception [:expr, :types, :allowed, :query, :file, :line]
 
   @moduledoc """
   Exception raised when a query does not type check.
