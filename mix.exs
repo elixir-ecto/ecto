@@ -28,7 +28,7 @@ defmodule Ecto.Mixfile do
      {:hstore, ">= 0.0.2", optional: true, github: "SenecaSystems/hstore"},
      {:ex_doc, "~> 0.6", only: :dev},
      {:earmark, "~> 0.1", only: :dev},
-     {:apex, "~>0.3.0", only: :dev}]
+     {:apex, "~>0.3.0"}]
   end
 
   defp test_paths(:pg),  do: ["integration_test/pg"]
