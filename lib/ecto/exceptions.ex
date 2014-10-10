@@ -78,7 +78,7 @@ defmodule Ecto.Query.TypeCheckError do
       file = Path.relative_to_cwd(e.file)
       msg = "#{Exception.format_file_line(file, e.line)} the expression:"
     else
-      msg = "the following expression does not type check:"
+      msg = "the following expression:"
     end
 
     {name, _, _} = e.expr
