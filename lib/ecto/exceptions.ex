@@ -64,7 +64,9 @@ defmodule Ecto.NotSingleResult do
 end
 
 defmodule Ecto.Query.TypeCheckError do
-  defexception [:expr, :types, :allowed, :type, :query, :file, :line]
+  import Inspect.Ecto.Query, only: [pp_from_query: 2]
+
+  defexception [:expr, :types, :allowed, :query, :file, :line]
 
   @moduledoc """
   Exception raised when a query does not type check.
@@ -72,17 +74,11 @@ defmodule Ecto.Query.TypeCheckError do
   """
 
   def message(e) do
-    if e.type && e.query && e.file && e.line do
+    if e.query && e.file && e.line do
       file = Path.relative_to_cwd(e.file)
-      msg = """
-      #{Exception.format_file_line(file, e.line)} the query:
-
-          #{e.type}: #{Macro.to_string(e.query)}
-
-      has an expression that does not type check:
-      """
+      msg = "#{Exception.format_file_line(file, e.line)} the expression:"
     else
-      msg = "the following expression does not type check:"
+      msg = "the following expression:"
     end
 
     {name, _, _} = e.expr
@@ -94,9 +90,9 @@ defmodule Ecto.Query.TypeCheckError do
     """
     #{msg}
 
-        #{Macro.to_string(e.expr)}
+        #{pp_from_query(e.query, e.expr)}
 
-    Allowed types for #{name}/#{length(e.types)}:
+    does not type check. Allowed types for #{name}/#{length(e.types)}:
 
         #{expected}
 
