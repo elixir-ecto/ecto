@@ -31,6 +31,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     alias Ecto.Adapters.Postgres.SQL
     alias Ecto.Adapters.Postgres.Worker
+    alias Ecto.Adapters.Postgres.Hstore
     alias Ecto.Associations.Assoc
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.Util
@@ -163,7 +164,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> Keyword.put(:decoder, &decoder/4)
         |> Keyword.put(:encoder, &encoder/3)
         |> Keyword.put_new(:port, @default_port)
-
       {pool_opts, worker_opts}
     end
 
@@ -243,8 +243,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Postgrex casting
 
-    defp formatter(%TypeInfo{sender: "uuid"}), do: :binary
-    defp formatter(_), do: nil
+    @doc false
+    def formatter(%TypeInfo{sender: "uuid"}), do: :binary
+    def formatter(%TypeInfo{sender: "hstore"}), do: :binary
+    def formatter(_), do: nil
 
     defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
       {mon, day, sec} = default.(param)
@@ -270,6 +272,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp decoder(%TypeInfo{sender: "uuid"}, :binary, _default, param) do
       param
+    end
+
+    defp decoder(%TypeInfo{sender: "hstore"}, :binary, default, param) do
+      default.(param) |> Hstore.decode
     end
 
     defp decoder(_type, _format, default, param) do
@@ -306,6 +312,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp encoder(%TypeInfo{sender: "uuid"}, _default, uuid) do
       uuid
+    end
+
+    defp encoder(%TypeInfo{sender: "hstore"}, default, map) do
+      map |> default.()
     end
 
     defp encoder(_type, default, param) do
