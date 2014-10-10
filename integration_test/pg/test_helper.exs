@@ -21,6 +21,17 @@ defmodule Ecto.Integration.Postgres.TestRepo do
 
   def conf do
     parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
+
+    [ username: "postgres",
+      password: "postgres",
+      hostname: "0.0.0.0",
+      port: 5432,
+      database: "ecto_test",
+      encoder: &Hstore.encoder/3,
+      decoder: &Hstore.decoder/4,
+      formatter: &Hstore.formatter/1,
+      max_overflow: "0",
+      size: "1"]
   end
 
   # def log(action, fun) do
@@ -149,7 +160,8 @@ Application.ensure_all_started(:logger)
 
 setup_cmds = [
   ~s(psql -U postgres -c "DROP DATABASE IF EXISTS ecto_test;"),
-  ~s(psql -U postgres -c "CREATE DATABASE ecto_test TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';")
+  ~s(psql -U postgres -c "CREATE EXTENSION IF NOT EXISTS hstore;"),
+  ~s(psql -U postgres -c "CREATE DATABASE ecto_test TEMPLATE=template1 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';")
 ]
 
 Enum.each(setup_cmds, fn(cmd) ->
@@ -189,6 +201,7 @@ setup_database = [
   "CREATE TABLE uuid_primary_keys (id uuid PRIMARY KEY)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
+  "CREATE TABLE IF NOT EXISTS hstore_test(id serial primary key, data hstore)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 

@@ -25,7 +25,7 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
-  test "uses @schema_defauls" do
+  test "uses @schema_defaults" do
     assert %DefaultUser{uuid: "abc"}.uuid == "abc"
     assert DefaultUser.__schema__(:field, :comment_id) == [type: :string]
   end
@@ -47,8 +47,43 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
+  defmodule Version do
+    use Ecto.Model
+
+    schema "versions" do
+      field :old_version, :hstore, default: %{}
+      field :duckets, {:array, :integer}
+    end
+  end
+
   test "imports Ecto.Query functions" do
     assert %Ecto.Query{} = MyModel.model_from
+  end
+
+  test "sets type for hstore field" do
+    assert Version.__schema__(:field, :old_version) == [type: :hstore]
+  end
+
+  test "allows defaults for hstore" do
+    assert %Version{}.old_version == %{}
+  end
+
+  test "raises an error when default is not a map" do
+    assert_raise ArgumentError, ":default for `gstore` must be a map", fn ->
+      defmodule ModelFieldNameClash do
+        use Ecto.Model
+
+        schema "stores" do
+          field :gstore, :hstore, default: "bananas"
+        end
+      end
+    end
+  end
+
+  test "hstore metadata" do
+    assert Version.__schema__(:field, :old_version) == [type: :hstore]
+    assert Version.__schema__(:field_type, :old_version) == :hstore
+    assert Version.__schema__(:keywords, %Version{ old_version: [key: "value"], duckets: {1,2,3} })
   end
 
   test "schema attributes" do

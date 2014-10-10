@@ -1,5 +1,7 @@
-%{"decimal": {:package, "0.2.5"},
+%{"apex": {:package, "0.3.1"},
+  "decimal": {:package, "0.2.5"},
   "earmark": {:package, "0.1.10"},
   "ex_doc": {:package, "0.6.0"},
+  "hstore": {:git, "git://github.com/SenecaSystems/hstore.git", "f95c9d1554543399d40d5c036e03800c15e0d838", []},
   "poolboy": {:package, "1.3.0"},
-  "postgrex": {:package, "0.6.0"}}
+  "postgrex": {:git, "git://github.com/SenecaSystems/postgrex.git", "ff4014da842512899850a984012eac94dc3f1537", [branch: "hstore"]}}
