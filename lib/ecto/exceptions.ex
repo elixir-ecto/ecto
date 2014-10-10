@@ -74,7 +74,7 @@ defmodule Ecto.Query.TypeCheckError do
   """
 
   def message(e) do
-    if e.type && e.query && e.file && e.line do
+    if e.query && e.file && e.line do
       file = Path.relative_to_cwd(e.file)
       msg = "#{Exception.format_file_line(file, e.line)} the expression:"
     else
