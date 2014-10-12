@@ -43,8 +43,7 @@ defmodule Ecto.Mixfile do
   defp package do
     [contributors: ["Eric Meadows-Jönsson", "José Valim"],
      licenses: ["Apache 2.0"],
-     links: %{"GitHub" => "https://github.com/elixir-lang/ecto",
-              "Docs" => "http://elixir-lang.org/docs/ecto/"}]
+     links: %{"GitHub" => "https://github.com/elixir-lang/ecto"}]
   end
 
   defp docs do
