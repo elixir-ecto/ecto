@@ -46,6 +46,11 @@ defmodule Ecto.ValidatorTest do
     assert V.struct(user, age: present() and greater_than(18) and less_than(30)) == []
   end
 
+  test "struct handles and with conditionals" do
+    user = %User{name: "eric", age: nil}
+    assert V.struct(user, age: present() and greater_than(18) when user.name != "jose") == [age: "can't be blank"]
+  end
+
   test "struct passes predicate arguments" do
     assert V.struct(%User{name: nil},
                    name: present(message: "must be present")) == [name: "must be present"]
