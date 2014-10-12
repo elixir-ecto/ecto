@@ -22,7 +22,7 @@ defmodule Ecto.ValidatorTest do
   end
 
   test "struct dispatches to a local predicate" do
-    present = &present/2
+    present = &present/1
     assert V.struct(%User{}, name: present.()) == nil
     assert V.struct(%User{name: nil}, name: present.()) == %{name: ["can't be blank"]}
   end
@@ -84,17 +84,17 @@ defmodule Ecto.ValidatorTest do
                      age: present()) == %{name: ["can't be blank"]}
   end
 
-  def present(attr, value, opts \\ [])
-  def present(attr, nil, opts), do: [{attr, opts[:message] || "can't be blank"}]
-  def present(_attr, _value, _opts), do: []
+  def present(value, opts \\ [])
+  def present(nil, opts), do: opts[:message] || "can't be blank"
+  def present(_value, _opts), do: nil
 
-  def greater_than(attr, value, min, opts \\ [])
-  def greater_than(_attr, value, min, _opts) when value > min, do: []
-  def greater_than(attr, _value, _min, opts), do: [{attr, opts[:message] || "too big"}]
+  def greater_than(value, min, opts \\ [])
+  def greater_than(value, min, _opts) when value > min, do: nil
+  def greater_than(_value, _min, opts), do: opts[:message] || "too big"
 
-  def less_than(attr, value, max, opts \\ [])
-  def less_than(_attr, value, max, _opts) when value < max, do: []
-  def less_than(attr, _value, _max, opts), do: [{attr, opts[:message] || "too low"}]
+  def less_than(value, max, opts \\ [])
+  def less_than(value, max, _opts) when value < max, do: nil
+  def less_than(_value, _max, opts), do: opts[:message] || "too low"
 
   defp validate_other(struct) do
     V.struct(struct, age: present())

@@ -97,15 +97,14 @@ defmodule Ecto.Validator do
       quote do
         acc = unquote(acc)
         case unquote(predicate) do
-          [] -> acc
-          [{_, msg}] ->
-            Map.update(acc, unquote(attr), [msg], &[msg|&1])
+          nil -> acc
+          msg -> Map.update(acc, unquote(attr), [msg], &[msg|&1])
         end
       end
     end
 
     handle_ops function, acc, quotation, fn call ->
-      Macro.pipe(attr, Macro.pipe(getter.(var, attr), call, 0), 0)
+      Macro.pipe(getter.(var, attr), call, 0)
     end
   end
 
