@@ -30,19 +30,19 @@ defmodule Ecto.Model.ValidationsTest do
 
   test "defines the given validations" do
     assert User.validate(%User{}) ==
-      [name: "can't be blank",
-       age: "can't be blank",
-       filename: "can't be blank"]
+      %{name: ["can't be blank"],
+        age: ["can't be blank"],
+        filename: ["can't be blank"]}
   end
 
   test "supports custom validations with arguments" do
     user = %User{age: 27}
 
     assert Custom.validate(user, 30..60, false) ==
-           [age: "is not included in the list"]
+           %{age: ["is not included in the list"]}
 
     assert Custom.validate(user, 20..60, true) ==
-           [name: "can't be blank"]
+           %{name: ["can't be blank"]}
   end
 
   test "raises on functions with no arguments" do

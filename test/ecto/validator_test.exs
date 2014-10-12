@@ -8,80 +8,80 @@ defmodule Ecto.ValidatorTest do
   end
 
   test "struct with no predicate" do
-    assert V.struct(%User{}, []) == []
+    assert V.struct(%User{}, []) == nil
   end
 
   test "struct dispatches to a module predicate" do
-    assert V.struct(%User{}, name: present()) == []
-    assert V.struct(%User{name: nil}, name: present()) == [name: "can't be blank"]
+    assert V.struct(%User{}, name: present()) == nil
+    assert V.struct(%User{name: nil}, name: present()) == %{name: ["can't be blank"]}
   end
 
   test "struct dispatches to a remote predicate" do
-    assert V.struct(%User{}, name: __MODULE__.present()) == []
-    assert V.struct(%User{name: nil}, name: __MODULE__.present()) == [name: "can't be blank"]
+    assert V.struct(%User{}, name: __MODULE__.present()) == nil
+    assert V.struct(%User{name: nil}, name: __MODULE__.present()) == %{name: ["can't be blank"]}
   end
 
   test "struct dispatches to a local predicate" do
     present = &present/2
-    assert V.struct(%User{}, name: present.()) == []
-    assert V.struct(%User{name: nil}, name: present.()) == [name: "can't be blank"]
+    assert V.struct(%User{}, name: present.()) == nil
+    assert V.struct(%User{name: nil}, name: present.()) == %{name: ["can't be blank"]}
   end
 
   test "struct handles conditionals" do
     user = %User{age: nil}
-    assert V.struct(user, age: present() when user.name != "jose") == []
+    assert V.struct(user, age: present() when user.name != "jose") == nil
 
     user = %User{name: "eric", age: nil}
-    assert V.struct(user, age: present() when user.name != "jose") == [age: "can't be blank"]
+    assert V.struct(user, age: present() when user.name != "jose") == %{age: ["can't be blank"]}
   end
 
   test "struct handles and" do
     user = %User{age: nil}
-    assert V.struct(user, age: present() and greater_than(18)) == [age: "can't be blank"]
+    assert V.struct(user, age: present() and greater_than(18)) == %{age: ["can't be blank"]}
 
     user = %User{age: 10}
-    assert V.struct(user, age: present() and greater_than(18)) == [age: "too big"]
+    assert V.struct(user, age: present() and greater_than(18)) == %{age: ["too big"]}
 
     user = %User{age: 20}
-    assert V.struct(user, age: present() and greater_than(18) and less_than(30)) == []
+    assert V.struct(user, age: present() and greater_than(18) and less_than(30)) == nil
   end
 
   test "struct handles and with conditionals" do
     user = %User{name: "eric", age: nil}
-    assert V.struct(user, age: present() and greater_than(18) when user.name != "jose") == [age: "can't be blank"]
+    assert V.struct(user, age: present() and greater_than(18) when user.name != "jose") == %{age: ["can't be blank"]}
   end
 
   test "struct passes predicate arguments" do
     assert V.struct(%User{name: nil},
-                   name: present(message: "must be present")) == [name: "must be present"]
+                   name: present(message: "must be present")) == %{name: ["must be present"]}
   end
 
   test "struct is evaluated just once" do
     Process.put(:count, 0)
     assert V.struct((Process.put(:count, Process.get(:count) + 1); %User{}),
-             name: present()) == []
+             name: present()) == nil
     assert Process.get(:count) == 1
   end
 
   test "struct dispatches to also" do
     assert V.struct(%User{name: nil, age: nil},
              name: present(),
-             also: validate_other) == [name: "can't be blank", age: "can't be blank"]
+             also: validate_other) == %{name: ["can't be blank"], age: ["can't be blank"]}
 
     assert V.struct(%User{name: nil, age: nil},
-              also: validate_other and validate_other) == [age: "can't be blank", age: "can't be blank"]
+              also: validate_other and validate_other) == %{age: ["can't be blank", "can't be blank"]}
   end
 
   test "validates dicts" do
     assert V.dict([name: nil, age: 27],
                 name: present(),
-                 age: present()) == [name: "can't be blank"]
+                 age: present()) == %{name: ["can't be blank"]}
   end
 
   test "validates binary dicts" do
     assert V.bin_dict(%{"name" => nil, "age" => 27},
                     name: present(),
-                     age: present()) == [name: "can't be blank"]
+                     age: present()) == %{name: ["can't be blank"]}
   end
 
   def present(attr, value, opts \\ [])
