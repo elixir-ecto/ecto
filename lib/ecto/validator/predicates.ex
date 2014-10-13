@@ -7,7 +7,7 @@ defmodule Ecto.Validator.Predicates do
   model.
   """
 
-  @type maybe_error :: [] | Keyword.t
+  @type maybe_error :: nil | binary
   @blank [nil, "", []]
 
   @doc """
@@ -24,15 +24,15 @@ defmodule Ecto.Validator.Predicates do
         name: present()
 
   """
-  @spec present(atom, term, Keyword.t) :: maybe_error
-  def present(attr, value, opts \\ [])
+  @spec present(term, Keyword.t) :: maybe_error
+  def present(value, opts \\ [])
 
-  def present(attr, value, opts) when value in @blank and is_list(opts) do
-    [{attr, opts[:message] || "can't be blank"}]
+  def present(value, opts) when value in @blank and is_list(opts) do
+    opts[:message] || "can't be blank"
   end
 
-  def present(_attr, _value, opts) when is_list(opts) do
-    []
+  def present(_value, opts) when is_list(opts) do
+    nil
   end
 
   @doc """
@@ -49,15 +49,15 @@ defmodule Ecto.Validator.Predicates do
         honeypot: absent()
 
   """
-  @spec absent(atom, term, Keyword.t) :: maybe_error
-  def absent(attr, value, opts \\ [])
+  @spec absent(term, Keyword.t) :: maybe_error
+  def absent(value, opts \\ [])
 
-  def absent(_attr, value, opts) when value in @blank and is_list(opts) do
-    []
+  def absent(value, opts) when value in @blank and is_list(opts) do
+    nil
   end
 
-  def absent(attr, _value, opts) when is_list(opts) do
-    [{attr, opts[:message] || "must be blank"}]
+  def absent(_value, opts) when is_list(opts) do
+    opts[:message] || "must be blank"
   end
 
   @doc """
@@ -74,12 +74,10 @@ defmodule Ecto.Validator.Predicates do
         email: has_format(~r/@/)
 
   """
-  @spec has_format(atom, term, Regex.t | binary, Keyword.t) :: maybe_error
-  def has_format(attr, value, match_on, opts \\ []) when is_list(opts) do
-    if value == nil or value =~ match_on do
-      []
-    else
-      [{attr, opts[:message] || "is invalid"}]
+  @spec has_format(term, Regex.t | binary, Keyword.t) :: maybe_error
+  def has_format(value, match_on, opts \\ []) when is_list(opts) do
+    unless value == nil or value =~ match_on do
+      opts[:message] || "is invalid"
     end
   end
 
@@ -115,43 +113,40 @@ defmodule Ecto.Validator.Predicates do
         code: has_length(3, no_match: "needs to be 3 characters")
 
   """
-  @spec has_length(atom, term, Regex.t | binary, Keyword.t) :: maybe_error
-  def has_length(attr, value, match_on, opts \\ [])
+  @spec has_length(term, Regex.t | binary, Keyword.t) :: maybe_error
+  def has_length(value, match_on, opts \\ [])
 
-  def has_length(_attr, nil, _match_on, opts) when is_list(opts) do
-    []
+  def has_length(nil, _match_on, opts) when is_list(opts) do
+    nil
   end
 
-  def has_length(attr, value, min..max, opts) when is_binary(value) when is_list(opts) do
+  def has_length(value, min..max, opts) when is_binary(value) when is_list(opts) do
     length = String.length(value)
-    too_short(attr, length, min, opts) || too_long(attr, length, max, opts) || []
+    too_short(length, min, opts) || too_long(length, max, opts)
   end
 
-  def has_length(attr, value, exact, opts) when is_integer(exact) do
+  def has_length(value, exact, opts) when is_integer(exact) do
     if String.length(value) != exact do
-      [{attr, opts[:no_match] || "must be #{characters(exact)}"}]
-    else
-      []
+      opts[:no_match] || "must be #{characters(exact)}"
     end
   end
 
-  def has_length(attr, value, opts, other) when is_list(opts) and is_list(other) do
+  def has_length(value, opts, other) when is_list(opts) and is_list(other) do
     opts   = Keyword.merge(opts, other)
     length = String.length(value)
-    ((min = opts[:min]) && too_short(attr, length, min, opts)) ||
-    ((max = opts[:max]) && too_long(attr, length, max, opts)) ||
-    []
+    ((min = opts[:min]) && too_short(length, min, opts)) ||
+    ((max = opts[:max]) && too_long(length, max, opts))
   end
 
-  defp too_short(attr, length, min, opts) when is_integer(min) do
+  defp too_short(length, min, opts) when is_integer(min) do
     if length < min do
-      [{attr, opts[:too_short] || "is too short (minimum is #{characters(min)})"}]
+      opts[:too_short] || "is too short (minimum is #{characters(min)})"
     end
   end
 
-  defp too_long(attr, length, max, opts) when is_integer(max) do
+  defp too_long(length, max, opts) when is_integer(max) do
     if length > max do
-      [{attr, opts[:too_long] || "is too long (maximum is #{characters(max)})"}]
+      opts[:too_long] || "is too long (maximum is #{characters(max)})"
     end
   end
 
@@ -172,11 +167,12 @@ defmodule Ecto.Validator.Predicates do
           age: greater_than(18)
 
   """
-  def greater_than(attr, value, check, opts \\ [])
-  def greater_than(_attr, value, check, _opts) when
-        is_number(check) and (is_nil(value) or value > check), do: []
-  def greater_than(attr, _value, check, opts) when is_number(check), do:
-        [{attr, opts[:message] || "must be greater than #{check}"}]
+  def greater_than(value, check, opts \\ [])
+  def greater_than(value, check, _opts) when
+        is_number(check) and (is_nil(value) or value > check), do: nil
+  def greater_than(_value, check, opts) when is_number(check) do
+    opts[:message] || "must be greater than #{check}"
+  end
 
   @doc """
   Validates the given number is greater than or equal to the given value.
@@ -192,11 +188,12 @@ defmodule Ecto.Validator.Predicates do
           age: greater_than_or_equal_to(18)
 
   """
-  def greater_than_or_equal_to(attr, value, check, opts \\ [])
-  def greater_than_or_equal_to(_attr, value, check, _opts) when
-        is_number(check) and (is_nil(value) or value >= check), do: []
-  def greater_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
-        [{attr, opts[:message] || "must be greater than or equal to #{check}"}]
+  def greater_than_or_equal_to(value, check, opts \\ [])
+  def greater_than_or_equal_to(value, check, _opts) when
+        is_number(check) and (is_nil(value) or value >= check), do: nil
+  def greater_than_or_equal_to(_value, check, opts) when is_number(check) do
+    opts[:message] || "must be greater than or equal to #{check}"
+  end
 
   @doc """
   Validates the given number is less than the given value.
@@ -212,11 +209,12 @@ defmodule Ecto.Validator.Predicates do
           age: less_than(18)
 
   """
-  def less_than(attr, value, check, opts \\ [])
-  def less_than(_attr, value, check, _opts) when
-        is_number(check) and (is_nil(value) or value < check), do: []
-  def less_than(attr, _value, check, opts) when is_number(check), do:
-        [{attr, opts[:message] || "must be less than #{check}"}]
+  def less_than(value, check, opts \\ [])
+  def less_than(value, check, _opts) when
+        is_number(check) and (is_nil(value) or value < check), do: nil
+  def less_than(_value, check, opts) when is_number(check) do
+    opts[:message] || "must be less than #{check}"
+  end
 
   @doc """
   Validates the given number is less than or equal to the given value.
@@ -232,11 +230,12 @@ defmodule Ecto.Validator.Predicates do
           age: less_than_or_equal_to(18)
 
   """
-  def less_than_or_equal_to(attr, value, check, opts \\ [])
-  def less_than_or_equal_to(_attr, value, check, _opts) when
-        is_number(check) and (is_nil(value) or value <= check), do: []
-  def less_than_or_equal_to(attr, _value, check, opts) when is_number(check), do:
-        [{attr, opts[:message] || "must be less than or equal to #{check}"}]
+  def less_than_or_equal_to(value, check, opts \\ [])
+  def less_than_or_equal_to(value, check, _opts) when
+        is_number(check) and (is_nil(value) or value <= check), do: nil
+  def less_than_or_equal_to(_value, check, opts) when is_number(check) do
+    opts[:message] || "must be less than or equal to #{check}"
+  end
 
   @doc """
   Validates the given number is between the value.
@@ -252,11 +251,12 @@ defmodule Ecto.Validator.Predicates do
           age: between(18..21)
 
   """
-  def between(attr, value, range, opts \\ [])
-  def between(_attr, value, min..max, _opts) when
-    is_number(min) and is_number(max) and (is_nil(value) or value in min..max), do: []
-  def between(attr, _value, min..max, opts) when is_number(min) and is_number(max), do:
-    [{attr, opts[:message] || "must be between #{min} and #{max}"}]
+  def between(value, range, opts \\ [])
+  def between(value, min..max, _opts) when
+    is_number(min) and is_number(max) and (is_nil(value) or value in min..max), do: nil
+  def between(_value, min..max, opts) when is_number(min) and is_number(max) do
+    opts[:message] || "must be between #{min} and #{max}"
+  end
 
   @doc """
   Validates the attribute is member of the given enumerable.
@@ -279,12 +279,10 @@ defmodule Ecto.Validator.Predicates do
         age: member_of(0..99)
 
   """
-  @spec member_of(atom, term, Enumerable.t, Keyword.t) :: maybe_error
-  def member_of(attr, value, enum, opts \\ []) when is_list(opts) do
-    if value == nil or value in enum do
-      []
-    else
-      [{attr, opts[:message] || "is not included in the list"}]
+  @spec member_of(term, Enumerable.t, Keyword.t) :: maybe_error
+  def member_of(value, enum, opts \\ []) when is_list(opts) do
+    unless value == nil or value in enum do
+      opts[:message] || "is not included in the list"
     end
   end
 
@@ -310,12 +308,10 @@ defmodule Ecto.Validator.Predicates do
                                 message: "cannot be the same as username or first name")
 
   """
-  @spec not_member_of(atom, term, Enumerable.t, Keyword.t) :: maybe_error
-  def not_member_of(attr, value, enum, opts \\ []) when is_list(opts) do
-    if value == nil or not(value in enum) do
-      []
-    else
-      [{attr, opts[:message] || "is reserved"}]
+  @spec not_member_of(term, Enumerable.t, Keyword.t) :: maybe_error
+  def not_member_of(value, enum, opts \\ []) when is_list(opts) do
+    unless value == nil or not(value in enum) do
+      opts[:message] || "is reserved"
     end
   end
 end
