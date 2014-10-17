@@ -27,16 +27,16 @@ defmodule Ecto.Model.CallbacksTest do
       field :updated_at, :datetime
     end
 
-    before_insert &Utils.set_timestamps/1
-    before_update &Utils.set_timestamps/1
-    before_update :incr_revision
+    before_insert Utils, :set_timestamps
+    before_update Utils, :set_timestamps
+    before_update User, :incr_revision
 
     def incr_revision(user), do: %{ user | revision: (user.revision || 0) + 1}
   end
 
 
   test "stores callbacks in the model's __callbacks__" do
-    assert is_function List.first(User.__callbacks__(:before_insert))
+    assert User.__callbacks__(:before_insert) == [{Utils, :set_timestamps}]
   end
 
   test "stores multiple callbacks in the model's __callbacks__" do
