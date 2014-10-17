@@ -2,23 +2,25 @@ defmodule Ecto.Model.Callbacks do
   @moduledoc ~S"""
   Define module-level callbacks in models.
   """
-  defmacro callbacks([do: block]) do
+
+  @events [:before_insert, :before_update, :before_delete]
+
+  defmacro __using__(_opts) do
     quote do
       @ecto_callbacks []
-      import Ecto.Model.Callbacks, only: [on: 2]
-      unquote block
-      import Ecto.Model.Callbacks, only: []
 
-      def __callbacks__(event) do
-        Keyword.get_values(@ecto_callbacks, event)
-      end
+      import Ecto.Model.Callbacks, only: unquote(@events |> Enum.map(&{&1, 1}) |> Keyword.new)
     end
   end
 
-  defmacro on(event, function) do
-    quote do
-      Ecto.Model.Callbacks.register_callback __MODULE__, unquote(event),
-                                             unquote(function)
+  for event <- @events do
+    defmacro unquote(event)(function) do
+      event = unquote(event)
+      quote unquote: true, bind_quoted: [event: event] do
+        Ecto.Model.Callbacks.register_callback(__MODULE__, event, unquote(function))
+        def __callbacks__(event), do: Keyword.get_values(@ecto_callbacks, event)
+        Module.make_overridable(__MODULE__, [__callbacks__: 1])
+      end
     end
   end
 
@@ -31,7 +33,20 @@ defmodule Ecto.Model.Callbacks do
   end
 
   def apply_callbacks(model, event) do
-    model.__struct__.__callbacks__(event)
-    |> Enum.reduce(model, fn(callback, model) -> callback.(model) end)
+    apply(model.__struct__, :__callbacks__, [event])
+    |> Enum.reduce(model, &apply_callback/2)
+  end
+
+  def apply_callback(callback, model) when is_atom(callback) do
+    apply(model.__struct__, callback, [model])
+  end
+
+  def apply_callback(callback, model) when is_function(callback) do
+    callback.(model)
+  end
+
+  def apply_callback(callback, model) do
+    raise ArgumentError, message: "callbacks must be atoms or functions, " <>
+                                  "got: #{Macro.to_string(callback)}"
   end
 end
