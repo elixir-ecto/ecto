@@ -37,14 +37,14 @@ defmodule Ecto.Model.CallbacksTest do
   test "applies callbacks" do
 
     assert %User{name: "Michael"}
-      |> Ecto.Model.Callbacks.apply_callbacks(:before_save) ==
-        %User{name: "Michael", updated_at: Ecto.DateTime.local }
+            |> Ecto.Model.Callbacks.apply_callbacks(:before_save) ==
+              %User{name: "Michael", updated_at: Ecto.DateTime.local }
   end
 
   test "applies multiple callbcaks" do
     assert %User{name: "Michael"}
-      |> Ecto.Model.Callbacks.apply_callbacks(:before_insert) ==
-        %User{name: "Michael", updated_at: Ecto.DateTime.local,
-              created_at: Ecto.DateTime.local }
+            |> Ecto.Model.Callbacks.apply_callbacks(:before_insert) ==
+              %User{name: "Michael", updated_at: Ecto.DateTime.local,
+                    created_at: Ecto.DateTime.local }
   end
 end
