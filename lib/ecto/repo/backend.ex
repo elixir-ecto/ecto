@@ -122,7 +122,7 @@ defmodule Ecto.Repo.Backend do
     adapter.update(repo, model, opts)
     |> check_single_result(model)
 
-    model |> Callbacks.apply_callbacks(:after_insert)
+    model |> Callbacks.apply_callbacks(:after_update)
   end
 
   def update_all(repo, adapter, queryable, values, opts) do
