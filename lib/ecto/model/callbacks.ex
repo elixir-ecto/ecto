@@ -85,10 +85,11 @@ defmodule Ecto.Model.Callbacks do
       iex> Ecto.Model.Callbacks.apply_callbacks %User{}, :before_create
       %User{}
   """
-  def apply_callbacks(model, event) do
+  def apply_callbacks(model, event) when is_map(model) do
     apply(model.__struct__, :__callbacks__, [event])
     |> Enum.reduce model, &do_apply_callback/2
   end
+  def apply_callbacks(object, _event), do: object
 
   defp do_apply_callback({module, function}, model) do
     apply module, function, [model]
