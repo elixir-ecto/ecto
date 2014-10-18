@@ -29,6 +29,9 @@ defmodule Ecto.Model.Callbacks do
 
   As callbacks can be used to alter the user, please make sure to always return
   the user object, even when unaltered.
+
+  Callbacks will not be invoked on bulk actions such as `Repo.delete_all` or
+  `Repo.update_all`.
   """
 
   @doc false
@@ -39,6 +42,9 @@ defmodule Ecto.Model.Callbacks do
       import Ecto.Model.Callbacks, only: unquote(@events
                                                  |> Enum.map(&{&1, 2})
                                                  |> Keyword.new)
+
+      def __callbacks__(_event), do: []
+      Module.make_overridable(__MODULE__, [__callbacks__: 1])
     end
   end
 
@@ -63,7 +69,7 @@ defmodule Ecto.Model.Callbacks do
   end
 
   @doc false
-  defp register_callback(mod, name, callback_mod, callback_fun) do
+  def register_callback(mod, name, callback_mod, callback_fun) do
     callbacks =
       Module.get_attribute(mod, :ecto_callbacks) ++
       Keyword.new([{name, {callback_mod, callback_fun}}])
