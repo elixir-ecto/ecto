@@ -34,7 +34,6 @@ defmodule Ecto.Model.CallbacksTest do
     def incr_revision(user), do: %{ user | revision: (user.revision || 0) + 1}
   end
 
-
   test "stores callbacks in the model's __callbacks__" do
     assert User.__callbacks__(:before_insert) == [{Utils, :set_timestamps}]
   end
@@ -59,5 +58,50 @@ defmodule Ecto.Model.CallbacksTest do
             |> Ecto.Model.Callbacks.apply_callbacks(:before_update) ==
               %User{name: "Michael", updated_at: Utils.current_time,
                     created_at: Utils.current_time, revision: 1}
+  end
+
+  ## Repo integration
+
+  defmodule CallbackModel do
+    use Ecto.Model
+
+    schema "callback_model" do
+      field :x
+    end
+
+    after_get __MODULE__, :send_after_get
+
+    def test_send(message, model), do: send(self, {message, model})
+    def send_after_get(model), do: test_send(:after_get, model)
+  end
+
+  defmodule MockAdapter do
+    @behaviour Ecto.Adapter
+
+    defmacro __using__(_opts), do: :ok
+    def start_link(_repo, _opts), do: :ok
+    def stop(_repo), do: :ok
+    def all(_repo, _query, _opts), do: [%CallbackModel{id: 1}]
+    def insert(_repo, record, _opts) do
+      record.id(45)
+    end
+    def update(_repo, _record, _opts), do: 1
+    def update_all(_repo, _query, _values, _external, _opts), do: 1
+    def delete(_repo, _record, _opts), do: 1
+    def delete_all(_repo, _query, _opts), do: 1
+  end
+
+  defmodule MyRepo do
+    use Ecto.Repo, adapter: MockAdapter
+
+    def conf, do: []
+    def priv, do: app_dir(:ecto, "priv/db")
+    def url,  do: parse_url("ecto://user@localhost/db")
+  end
+
+  test "before_get" do
+    MyRepo.get CallbackModel, 1
+
+    assert_received {:after_get, %CallbackModel{id: _}}
   end
 end
