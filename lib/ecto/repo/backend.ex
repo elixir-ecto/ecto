@@ -8,6 +8,7 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Query.Builder
   alias Ecto.Query.Normalizer
   alias Ecto.Query.Validator
+  alias Ecto.Model.Callbacks
   require Ecto.Query, as: Q
 
   def start_link(repo, adapter) do
@@ -50,7 +51,9 @@ defmodule Ecto.Repo.Backend do
     query = Q.from(x in query, where: field(x, ^primary_key) == ^id)
             |> Normalizer.normalize
 
-    models = adapter.all(repo, query, opts)
+    models =
+      adapter.all(repo, query, opts)
+      |> Enum.map(&Callbacks.apply_callbacks(&1, :after_get))
     {model, models}
   end
 
@@ -74,7 +77,9 @@ defmodule Ecto.Repo.Backend do
     model  = query.from |> Util.model
     Validator.validate(query, repo.query_apis)
 
-    models = adapter.all(repo, query, opts)
+    models =
+      adapter.all(repo, query, opts)
+      |> Enum.map(&Callbacks.apply_callbacks(&1, :after_get))
     {model, models}
   end
 
@@ -82,10 +87,14 @@ defmodule Ecto.Repo.Backend do
     query = Queryable.to_query(queryable) |> Normalizer.normalize
     Validator.validate(query, repo.query_apis)
     adapter.all(repo, query, opts)
+    |> Enum.map(&Callbacks.apply_callbacks(&1, :after_get))
   end
 
   def insert(repo, adapter, model, opts) do
-    normalized_model = normalize_model(model)
+    normalized_model =
+      model
+      |> Callbacks.apply_callbacks(:before_insert)
+      |> normalize_model
     validate_model(normalized_model)
 
     result   = adapter.insert(repo, model, opts)
@@ -97,16 +106,23 @@ defmodule Ecto.Repo.Backend do
       model = Ecto.Model.put_primary_key(model, pk_value)
     end
 
+    model = Callbacks.apply_callbacks(model, :after_insert)
+
     struct(model, result)
   end
 
   def update(repo, adapter, model, opts) do
-    normalized_model = normalize_model(model)
+    normalized_model =
+      model
+      |> Callbacks.apply_callbacks(:before_update)
+      |> normalize_model
     check_primary_key(normalized_model)
     validate_model(normalized_model)
 
     adapter.update(repo, model, opts)
     |> check_single_result(model)
+
+    model |> Callbacks.apply_callbacks(:after_insert)
   end
 
   def update_all(repo, adapter, queryable, values, opts) do
@@ -135,12 +151,17 @@ defmodule Ecto.Repo.Backend do
   end
 
   def delete(repo, adapter, model, opts) do
-    normalized_model = normalize_model(model)
+    normalized_model =
+      model
+      |> Callbacks.apply_callbacks(:before_delete)
+      |> normalize_model
     check_primary_key(normalized_model)
     validate_model(normalized_model)
 
     adapter.delete(repo, model, opts)
     |> check_single_result(model)
+
+    Callbacks.apply_callbacks(model, :after_delete)
   end
 
   def delete_all(repo, adapter, queryable, opts) do
