@@ -119,10 +119,13 @@ defmodule Ecto.Repo.Backend do
     check_primary_key(normalized_model)
     validate_model(normalized_model)
 
-    adapter.update(repo, model, opts)
-    |> check_single_result(model)
+    single_result =
+      adapter.update(repo, model, opts)
+      |> check_single_result(model)
 
     model |> Callbacks.apply_callbacks(:after_update)
+
+    single_result
   end
 
   def update_all(repo, adapter, queryable, values, opts) do
@@ -158,10 +161,13 @@ defmodule Ecto.Repo.Backend do
     check_primary_key(normalized_model)
     validate_model(normalized_model)
 
-    adapter.delete(repo, model, opts)
-    |> check_single_result(model)
+    single_result =
+      adapter.delete(repo, model, opts)
+      |> check_single_result(model)
 
     Callbacks.apply_callbacks(model, :after_delete)
+
+    single_result
   end
 
   def delete_all(repo, adapter, queryable, opts) do
