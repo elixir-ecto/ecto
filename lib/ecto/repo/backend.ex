@@ -104,7 +104,7 @@ defmodule Ecto.Repo.Backend do
     end
 
     if Callbacks.defined?(model, ~w(before_insert after_inster)a),
-      do: repo.transaction(insert_fun),
+      do: extract_transaction_value(repo.transaction(insert_fun)),
       else: insert_fun.()
   end
 
@@ -126,7 +126,7 @@ defmodule Ecto.Repo.Backend do
     end
 
     if Callbacks.defined?(model, ~w(before_update after_update)a),
-       do: repo.transaction(update_fn),
+       do: extract_transaction_value(repo.transaction(update_fn)),
        else: update_fn.()
   end
 
@@ -173,7 +173,7 @@ defmodule Ecto.Repo.Backend do
     end
 
     if Callbacks.defined?(model, ~w(before_delete after_delete)a),
-      do: repo.transaction(delete_fun),
+      do: extract_transaction_value(repo.transaction(delete_fun)),
       else: delete_fun.()
   end
 
@@ -272,4 +272,7 @@ defmodule Ecto.Repo.Backend do
       Map.update!(model, field, &Util.try_cast(&1, type))
     end)
   end
+
+  defp extract_transaction_value({:ok, value}), do: value
+  defp extract_transaction_value(error_tuple), do: error_tuple
 end
