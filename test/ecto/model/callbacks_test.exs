@@ -34,16 +34,21 @@ defmodule Ecto.Model.CallbacksTest do
     def incr_revision(user), do: %{ user | revision: (user.revision || 0) + 1}
   end
 
-  test "stores callbacks in the model's __callbacks__" do
-    assert User.__callbacks__(:before_insert) == [{Utils, :set_timestamps}]
+  test "all possible macros are there" do
+    assert macro_exported?(Ecto.Model.Callbacks, :before_insert, 2)
+    assert macro_exported?(Ecto.Model.Callbacks, :after_insert, 2)
+    assert macro_exported?(Ecto.Model.Callbacks, :before_update, 2)
+    assert macro_exported?(Ecto.Model.Callbacks, :after_update, 2)
+    assert macro_exported?(Ecto.Model.Callbacks, :before_delete, 2)
+    assert macro_exported?(Ecto.Model.Callbacks, :after_delete, 2)
   end
 
-  test "stores multiple callbacks in the model's __callbacks__" do
-    assert Enum.count(User.__callbacks__(:before_update)) == 2
+  test "defines functions for callbacks" do
+    assert function_exported?(User, :before_insert, 1)
   end
 
-  test "returns empty lists for non-registered callbacks" do
-    assert Enum.empty? User.__callbacks__(:before_delete)
+  test "doesn't define callbacks for not-registered events" do
+    refute function_exported?(User, :after_insert, 1)
   end
 
   test "applies callbacks" do
@@ -69,10 +74,10 @@ defmodule Ecto.Model.CallbacksTest do
       field :x
     end
 
-    after_get __MODULE__, :send_after_get
+    before_update __MODULE__, :send_before_update
 
     def test_send(message, model), do: send(self, {message, model})
-    def send_after_get(model), do: test_send(:after_get, model)
+    def send_before_update(model), do: test_send(:before_update, model)
   end
 
   defmodule MockAdapter do
@@ -83,7 +88,7 @@ defmodule Ecto.Model.CallbacksTest do
     def stop(_repo), do: :ok
     def all(_repo, _query, _opts), do: [%CallbackModel{id: 1}]
     def insert(_repo, record, _opts) do
-      record.id(45)
+      %{ record | id: 45 }
     end
     def update(_repo, _record, _opts), do: 1
     def update_all(_repo, _query, _values, _external, _opts), do: 1
@@ -99,9 +104,9 @@ defmodule Ecto.Model.CallbacksTest do
     def url,  do: parse_url("ecto://user@localhost/db")
   end
 
-  test "before_get" do
-    MyRepo.get CallbackModel, 1
+  test "before_update" do
+    MyRepo.update %CallbackModel{id: 1, x: "foo"}
 
-    assert_received {:after_get, %CallbackModel{id: _}}
+    assert_received {:before_update, _}
   end
 end

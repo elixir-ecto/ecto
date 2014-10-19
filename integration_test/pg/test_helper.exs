@@ -20,7 +20,7 @@ defmodule Ecto.Integration.Postgres.TestRepo do
   end
 
   def conf do
-    parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
+    parse_url "ecto://postgres:postgres@localhost:15432/ecto_test?size=1&max_overflow=0"
   end
 
   # def log(action, fun) do
