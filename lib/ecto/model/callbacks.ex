@@ -70,6 +70,7 @@ defmodule Ecto.Model.Callbacks do
       quote unquote: true, bind_quoted: [event: event, callbacks: callbacks] do
         def unquote(event)(struct) do
           unquote(callbacks)
+          |> Enum.reverse
           |> Enum.reduce struct, fn({mod, fun}, struct) ->
                                    apply(mod, fun, [struct])
                                  end
@@ -163,12 +164,9 @@ defmodule Ecto.Model.Callbacks do
   """
   def register_callback(event, module, function) do
     quote do
-
-      # OPTIMIZE: Store lists in reverse order and then reverse on read?
-      #           Currently it's traversed every time >1 callback is added.
       event_callbacks =
-        List.wrap(@ecto_callbacks[unquote(event)])
-        |> List.insert_at(-1, { unquote(module), unquote(function) })
+        [ { unquote(module), unquote(function) } |
+          List.wrap(@ecto_callbacks[unquote(event)]) ]
 
       ecto_callbacks =
         Keyword.put(@ecto_callbacks, unquote(event), event_callbacks)
