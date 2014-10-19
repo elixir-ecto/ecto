@@ -116,11 +116,9 @@ defmodule Ecto.Repo.Backend do
     update_fn = fn ->
       model         = Callbacks.apply_callbacks(model, :before_update)
       single_result =
-        repo
         adapter.update(repo, Callbacks.apply_callbacks(model, :before_update), opts)
         |> check_single_result(model)
-
-      model |> Callbacks.apply_callbacks(:after_update)
+        |> Callbacks.apply_callbacks(:after_update)
 
       single_result
     end
@@ -273,6 +271,8 @@ defmodule Ecto.Repo.Backend do
     end)
   end
 
-  defp extract_transaction_value({:ok, value}), do: value
-  defp extract_transaction_value(error_tuple), do: error_tuple
+  defp extract_transaction_value(return_tuple) do
+    {:ok, value} = return_tuple
+    value
+  end
 end
