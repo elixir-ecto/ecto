@@ -368,7 +368,7 @@ You can find more information about defining associations and each respective as
 
 ### Migrations
 
-Ecto supports migrations with plain SQL. In order to generate a new migration you first need to a define a `priv/0` function inside your repository pointing to a directory that will keep repo data. We recommend it to be placed inside the `priv` in your application directory:
+Ecto supports migrations with plain SQL. In order to generate a new migration you first need to define a `priv/0` function inside your repository pointing to a directory that will keep repo data. We recommend it to be placed inside the `priv` in your application directory:
 
 ```elixir
 defmodule Repo do
