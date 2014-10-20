@@ -10,6 +10,9 @@ before_script:
   - mix deps.get
 script:
   - MIX_ENV=all mix test
+after_script:
+  - mix deps.get --only docs
+  - MIX_ENV=docs mix inch.report
 notifications:
   recipients:
     - jose.valim@plataformatec.com.br
