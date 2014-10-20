@@ -88,7 +88,7 @@ defmodule Ecto.Model.Callbacks do
 
   ## Example
 
-    before_insert User, :generate_permalink
+      before_insert User, :generate_permalink
 
   """
   defmacro before_insert(module, function),
@@ -101,7 +101,7 @@ defmodule Ecto.Model.Callbacks do
 
   ## Example
 
-    after_insert Stats, :increase_user_count
+      after_insert Stats, :increase_user_count
 
   """
   defmacro after_insert(module, function),
@@ -125,7 +125,7 @@ defmodule Ecto.Model.Callbacks do
 
   ## Example
 
-    after_update User, :notify_account_change
+      after_update User, :notify_account_change
 
   """
   defmacro after_update(module, function),
@@ -138,7 +138,7 @@ defmodule Ecto.Model.Callbacks do
 
   ## Example
 
-    before_delete User, :copy_to_archive
+      before_delete User, :copy_to_archive
 
   """
   defmacro before_delete(module, function),
@@ -151,7 +151,7 @@ defmodule Ecto.Model.Callbacks do
 
   ## Example
 
-    after_delete UserMailer, :send_questioneer
+      after_delete UserMailer, :send_questioneer
 
   """
   defmacro after_delete(module, function),
@@ -162,7 +162,7 @@ defmodule Ecto.Model.Callbacks do
   Registers a callback in a model by adding it to a list of callbacks stored
   in the module variable `@ecto_callbacks[event]`.
   """
-  def register_callback(event, module, function) do
+  defp register_callback(event, module, function) do
     quote do
       event_callbacks =
         [ { unquote(module), unquote(function) } |
@@ -195,7 +195,8 @@ defmodule Ecto.Model.Callbacks do
   def apply_callbacks(object, _event), do: object
 
   def defined?(model, callbacks) when is_map(model) do
-    Enum.all?(callbacks, &function_exported?(model.__struct__, &1, 1))
+    module = model.__struct__
+    Enum.all?(callbacks, &function_exported?(module, &1, 1))
   end
   def defined?(_model, _callbacks), do: false
 end
