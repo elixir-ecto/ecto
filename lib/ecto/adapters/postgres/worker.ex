@@ -13,6 +13,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def query!(worker, sql, params, opts) do
+      Apex.ap({:query!, worker, sql, params, opts})
       case GenServer.call(worker, {:query, sql, params, opts}, opts[:timeout]) do
         {:ok, res} -> res
         {:error, %Postgrex.Error{} = err} -> raise err
@@ -76,6 +77,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def handle_call({:query, sql, params, opts}, _from, %{conn: conn} = s) do
+      Apex.ap(["Querying connection with: ",conn, sql, params, opts])
       {:reply, Postgrex.Connection.query(conn, sql, params, opts), s}
     end
 

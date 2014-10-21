@@ -508,4 +508,18 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.insert(model, []) ==
            {~s{INSERT INTO "model" ("id", "x", "y")\nVALUES ($1, $2, $3)}, [123, 0, 2]}
   end
+
+  defmodule HStoreModel do
+    use Ecto.Model
+
+    schema "hstore_models" do
+      field :data, :hstore, default: %{}
+    end
+  end
+
+  test "insert without a value should put in default" do
+    model = %HStoreModel{}
+    assert SQL.insert(model, [:data]) ==
+      {~s{INSERT INTO "hstore_models" ("data")\nVALUES ($1)\nRETURNING "data"}, [%{}]}
+  end
 end
