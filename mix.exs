@@ -25,7 +25,7 @@ defmodule Ecto.Mixfile do
   defp deps do
     [{:poolboy, "~> 1.2"},
      {:decimal, "~> 0.2.3"},
-     {:postgrex, "~> 0.6.0", optional: true},
+     {:postgrex, "~> 0.6.0", optional: true, github: "SenecaSystems/postgrex", branch: "hstore"},
      {:ex_doc, "~> 0.6", only: :dev},
      {:earmark, "~> 0.1", only: :dev}]
   end

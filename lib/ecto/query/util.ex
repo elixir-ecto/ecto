@@ -41,7 +41,7 @@ defmodule Ecto.Query.Util do
   @doc false
   defmacro types do
     ~w(boolean string integer float decimal binary datetime date time interval
-       uuid virtual)a
+       uuid virtual hstore)a
   end
 
   @doc false
@@ -107,6 +107,8 @@ defmodule Ecto.Query.Util do
       {:error, "invalid type given to `array/2`: `#{inspect inner}`"}
     end
   end
+
+  def value_to_type(value) when is_map(value), do: {:ok, :hstore}
 
   def value_to_type(value), do: {:error, "unknown type of value `#{inspect value}`"}
 

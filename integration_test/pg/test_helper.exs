@@ -23,11 +23,6 @@ defmodule Ecto.Integration.Postgres.TestRepo do
     parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
   end
 
-  # def log(action, fun) do
-  #   IO.inspect action
-  #   fun.()
-  # end
-
   def query_apis do
     [Ecto.Integration.Postgres.CustomAPI, Ecto.Query.API]
   end
@@ -149,7 +144,8 @@ Application.ensure_all_started(:logger)
 
 setup_cmds = [
   ~s(psql -U postgres -c "DROP DATABASE IF EXISTS ecto_test;"),
-  ~s(psql -U postgres -c "CREATE DATABASE ecto_test TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';")
+  ~s(psql -U postgres -c "CREATE DATABASE ecto_test TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';"),
+  ~s(psql -U postgres -d ecto_test -c "#{~s(CREATE EXTENSION IF NOT EXISTS "hstore";)}")
 ]
 
 Enum.each(setup_cmds, fn(cmd) ->
