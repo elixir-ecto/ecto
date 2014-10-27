@@ -58,7 +58,7 @@ defmodule Ecto.Model.CallbacksTest do
                     created_at: Utils.current_time}
   end
 
-  test "applies multiple callbcaks" do
+  test "applies multiple callbacks" do
     assert %User{name: "Michael"}
             |> Ecto.Model.Callbacks.apply_callbacks(:before_update) ==
               %User{name: "Michael", updated_at: Utils.current_time,
@@ -74,39 +74,89 @@ defmodule Ecto.Model.CallbacksTest do
       field :x
     end
 
+    before_insert __MODULE__, :add_before_insert
+    after_insert __MODULE__, :add_after_insert
     before_update __MODULE__, :send_before_update
+    after_update __MODULE__, :send_after_update
+    before_delete __MODULE__, :send_before_delete
+    after_delete __MODULE__, :send_after_delete
 
-    def test_send(message, model), do: send(self, {message, model})
-    def send_before_update(model), do: test_send(:before_update, model)
-  end
-
-  defmodule MockAdapter do
-    @behaviour Ecto.Adapter
-
-    defmacro __using__(_opts), do: :ok
-    def start_link(_repo, _opts), do: :ok
-    def stop(_repo), do: :ok
-    def all(_repo, _query, _opts), do: [%CallbackModel{id: 1}]
-    def insert(_repo, record, _opts) do
-      %{ record | id: 45 }
+    def add_before_insert(model), do: %{model | x: model.x <> ",before_insert"}
+    def add_after_insert(model), do: %{model | x: model.x <> ",after_insert"}
+    def send_before_update(model) do
+      send(self, {:before_update, model})
+      %{model | x: "changed before update"}
     end
-    def update(_repo, _record, _opts), do: 1
-    def update_all(_repo, _query, _values, _external, _opts), do: 1
-    def delete(_repo, _record, _opts), do: 1
-    def delete_all(_repo, _query, _opts), do: 1
+    def send_after_update(model), do: send(self, {:after_update, model})
+    def send_before_delete(model) do
+      send(self, {:before_delete, model})
+      %{model | x: "changed before delete"}
+    end
+    def send_after_delete(model), do: send(self, {:after_delete, model})
   end
 
   defmodule MyRepo do
-    use Ecto.Repo, adapter: MockAdapter
+    use Ecto.Repo, adapter: Ecto.MockAdapter
 
     def conf, do: []
     def priv, do: app_dir(:ecto, "priv/db")
     def url,  do: parse_url("ecto://user@localhost/db")
   end
 
-  test "before_update" do
-    MyRepo.update %CallbackModel{id: 1, x: "foo"}
+  test "wraps operations into transactions if callback present" do
+    model = %CallbackModel{id: 1, x: "initial"}
 
-    assert_received {:before_update, _}
+    MyRepo.insert model
+
+    # From MockAdapter:
+    assert_received {:transaction, _fun}
+  end
+
+  test "before_insert, after_insert" do
+    model = %CallbackModel{id: 1, x: "initial"}
+
+    model = MyRepo.insert model
+
+    assert model.x == "initial,before_insert,after_insert"
+  end
+
+  test "before_update" do
+    model = %CallbackModel{id: 1, x: "foo"}
+
+    MyRepo.update  model
+
+    assert_received {:before_update, ^model}
+    # From MockAdapter:
+    assert_received {:update, %CallbackModel{id: 1, x: "changed before update"}}
+  end
+
+  test "after_update" do
+    model = %CallbackModel{id: 1, x: "foo"}
+
+    MyRepo.update  model
+
+    model_after_update = %{model | x: "changed before update"}
+
+    assert_received {:after_update, ^model_after_update}
+  end
+
+  test "before_delete" do
+    model = %CallbackModel{id: 1, x: "foo"}
+
+    MyRepo.delete model
+
+    assert_received {:before_delete, ^model}
+    # From MockAdapter:
+    assert_received {:delete, %CallbackModel{id: 1, x: "changed before delete"}}
+  end
+
+  test "after_delete" do
+    model = %CallbackModel{id: 1, x: "foo"}
+
+    MyRepo.delete model
+
+    model_after_delete = %{model | x: "changed before delete"}
+
+    assert_received {:after_delete, ^model_after_delete}
   end
 end
