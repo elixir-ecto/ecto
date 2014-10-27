@@ -99,11 +99,11 @@ defmodule Ecto.Repo.Backend do
         model = Ecto.Model.put_primary_key(model, pk_value)
       end
 
-      Callbacks.apply_callbacks(model, :after_insert)
-      |> struct(result)
+      struct(module, result)
+      |> Callbacks.apply_callbacks(:after_insert)
     end
 
-    if Callbacks.defined?(model, ~w(before_insert after_inster)a),
+    if Callbacks.defined?(model, ~w(before_insert after_insert)a),
       do: extract_transaction_value(repo.transaction(insert_fun)),
       else: insert_fun.()
   end
@@ -116,9 +116,10 @@ defmodule Ecto.Repo.Backend do
     update_fn = fn ->
       model         = Callbacks.apply_callbacks(model, :before_update)
       single_result =
-        adapter.update(repo, Callbacks.apply_callbacks(model, :before_update), opts)
+        adapter.update(repo, model, opts)
         |> check_single_result(model)
-        |> Callbacks.apply_callbacks(:after_update)
+
+      Callbacks.apply_callbacks(model, :after_update)
 
       single_result
     end

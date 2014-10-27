@@ -196,7 +196,7 @@ defmodule Ecto.Model.Callbacks do
 
   def defined?(model, callbacks) when is_map(model) do
     module = model.__struct__
-    Enum.all?(callbacks, &function_exported?(module, &1, 1))
+    Enum.any?(callbacks, &function_exported?(module, &1, 1))
   end
   def defined?(_model, _callbacks), do: false
 end
