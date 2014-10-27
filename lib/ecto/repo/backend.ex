@@ -99,7 +99,7 @@ defmodule Ecto.Repo.Backend do
         model = Ecto.Model.put_primary_key(model, pk_value)
       end
 
-      struct(module, result)
+      struct(model, result)
       |> Callbacks.apply_callbacks(:after_insert)
     end
 
