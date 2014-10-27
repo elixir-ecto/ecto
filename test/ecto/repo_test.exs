@@ -1,27 +1,3 @@
-defmodule Ecto.RepoTest.MockAdapter do
-  @behaviour Ecto.Adapter
-
-  defmacro __using__(_opts), do: :ok
-  def start_link(_repo, _opts), do: :ok
-  def stop(_repo), do: :ok
-  def all(_repo, _query, _opts), do: []
-  def insert(_repo, record, _opts) do
-    record.id(45)
-  end
-  def update(_repo, _record, _opts), do: 1
-  def update_all(_repo, _query, _values, _external, _opts), do: 1
-  def delete(_repo, _record, _opts), do: 1
-  def delete_all(_repo, _query, _opts), do: 1
-end
-
-defmodule Ecto.RepoTest.MyRepo do
-  use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter
-
-  def conf, do: []
-  def priv, do: app_dir(:ecto, "priv/db")
-  def url,  do: parse_url("ecto://user@localhost/db")
-end
-
 defmodule Ecto.RepoTest.MyModel do
   use Ecto.Model
 
@@ -50,7 +26,7 @@ defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.RepoTest.MyRepo
+  alias Ecto.MyRepo
   alias Ecto.RepoTest.MyModel
   alias Ecto.RepoTest.MyModelList
   alias Ecto.RepoTest.MyModelNoPK
@@ -72,7 +48,7 @@ defmodule Ecto.RepoTest do
     defmodule EnvRepo do
       # Use a variable to ensure it is properly expanded at runtime
       env = :dev
-      use Ecto.Repo, adapter: Ecto.RepoTest.MockAdapter, env: env
+      use Ecto.Repo, adapter: Ecto.MockAdapter, env: env
       def conf(:dev), do: "dev_sample"
     end
 
