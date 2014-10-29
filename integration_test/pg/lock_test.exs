@@ -46,8 +46,8 @@ defmodule Ecto.Integration.LockTest do
             TestRepo1.transaction(fn ->
               [post] = TestRepo1.all(query)   # this should block until the other trans. commits
               %{post | count: post.count + 1} |> TestRepo1.update
-              send pid, :updated
             end)
+            send pid, :updated
         after
           5000 -> raise "timeout"
         end
