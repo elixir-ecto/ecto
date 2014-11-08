@@ -217,13 +217,10 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "array expression" do
-    query = Post |> where([p], array([p.title, p.title], :string) == nil) |> select([], 0)
+    query = Post |> where([p], "123" in array([p.title, p.title], :string)) |> select([], 0)
     validate(query)
 
-    query = Post |> where([p], array([p.title, p.title], :binary) == nil) |> select([], 0)
-    validate(query)
-
-    query = Post |> where([p], [p.title, p.title] == nil) |> select([], 0)
+    query = Post |> where([p], [p.title, p.title] == []) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
@@ -401,25 +398,6 @@ defmodule Ecto.Query.ValidatorTest do
   test "don't allow nested aggregates" do
     query = Post |> select([p], count(count(p.id)))
     assert_raise Ecto.QueryError, ~r"aggregate function calls cannot be nested", fn ->
-      validate(query)
-    end
-  end
-
-  test "nils are any type" do
-    query = Post |> select([p], 1 == nil)
-    validate(query)
-
-    query = Post |> select([p], nil != "abc")
-    validate(query)
-
-    query = Post |> select([p], 1 + nil)
-    validate(query)
-
-    query = Post |> select([p], array([1, nil, 2], :integer))
-    validate(query)
-
-    assert_raise Ecto.Query.TypeCheckError, fn ->
-      query = Post |> select([p], "123" + nil)
       validate(query)
     end
   end

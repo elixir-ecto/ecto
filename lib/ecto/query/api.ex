@@ -23,7 +23,6 @@ defmodule Ecto.Query.API do
   deft date
   deft time
   deft interval
-  deft nil
 
   defa number :: decimal | float | integer
 
@@ -77,15 +76,11 @@ defmodule Ecto.Query.API do
   def left == right
   defs number == number :: boolean
   defs var == var       :: boolean
-  defs nil == _         :: boolean
-  defs _ == nil         :: boolean
 
   @doc "Inequality."
   def left != right
   defs number != number :: boolean
   defs var != var       :: boolean
-  defs nil != _         :: boolean
-  defs _ != nil         :: boolean
 
   @doc "Left less than or equal to right."
   def left <= right
