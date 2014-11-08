@@ -65,7 +65,7 @@ defmodule Ecto.Query.Validator do
 
         format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
         format_type = Util.type_to_ast(type) |> Macro.to_string
-        unless expected_type == type do
+        unless Util.type_eq?(expected_type, type) do
           raise Ecto.QueryError, reason: "expected_type `#{format_expected_type}` " <>
           " on `#{inspect model}.#{field}` doesn't match type `#{format_type}`"
         end

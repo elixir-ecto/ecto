@@ -159,6 +159,7 @@ defmodule Ecto.RepoTest do
       MyRepo.update_all(e in MyModel, [])
     end
 
+    MyRepo.update_all(e in MyModel, x: nil)
     MyRepo.update_all(e in MyModel, x: e.x)
     MyRepo.update_all(e in MyModel, x: "123")
     MyRepo.update_all(MyModel, x: "123")
