@@ -469,6 +469,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         command = ~s(PGUSER=#{username} ) <> command
       end
 
+      if port = database[:port] do
+        command = ~s(PGPORT=#{port} ) <> command
+      end
+
       command =
         command <>
         ~s(psql --quiet ) <>
