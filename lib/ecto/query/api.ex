@@ -149,6 +149,17 @@ defmodule Ecto.Query.API do
   def field(_var, _atom), do: raise "field/2 should have been expanded"
 
   @doc """
+  Casts a list to an array.
+
+  ## Example
+
+      ids = [1, 2, 3]
+      from(c in Comment, where c.id in array(^ids, :integer)
+
+  """
+  def array(_list, _atom), do: raise "array/2 should have been expanded"
+
+  @doc """
   Casts a binary literal to a binary type. By default a
   binary literal is of the string type.
   """
