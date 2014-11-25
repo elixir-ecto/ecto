@@ -253,7 +253,7 @@ defmodule Ecto.Query do
   variable bound in the `from` query expression, the second has to be the field
   of the association and a variable bound in an association join.
 
-  Nested `assoc/2 expressions are also allowed when there are multiple
+  Nested `assoc/2` expressions are also allowed when there are multiple
   association joins in the query.
 
   ## Keywords examples
