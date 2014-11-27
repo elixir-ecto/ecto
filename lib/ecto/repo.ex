@@ -171,15 +171,51 @@ defmodule Ecto.Repo do
 
   @doc """
   Fetches a single model from the data store where the primary key matches the
-  given id. Returns `nil` if no result was found. If the model in the queryable
+  given id.
+
+  Returns `nil` if no result was found. If the model in the queryable
   has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
   will be raised if there is an adapter error.
 
   ## Options
+
     `:timeout` - The time in milliseconds to wait for the call to finish,
                  `:infinity` will wait indefinitely (default: 5000);
   """
   defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
+
+
+  @doc """
+  Similar to `get/3` but raises `Ecto.NotSingleResult` if no record was found.
+
+  ## Options
+
+    `:timeout` - The time in milliseconds to wait for the call to finish,
+                 `:infinity` will wait indefinitely (default: 5000);
+  """
+  defcallback get!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
+
+  @doc """
+  Fetches a single result from the query.
+
+  Returns `nil` if no result was found.
+
+  ## Options
+
+    `:timeout` - The time in milliseconds to wait for the call to finish,
+                 `:infinity` will wait indefinitely (default: 5000);
+  """
+  defcallback one(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
+
+  @doc """
+  Similar to `one/3` but raises `Ecto.NotSingleResult` if no record was found.
+
+  ## Options
+
+    `:timeout` - The time in milliseconds to wait for the call to finish,
+                 `:infinity` will wait indefinitely (default: 5000);
+  """
+  defcallback one!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
   Fetches all results from the data store based on the given query. May raise
@@ -256,6 +292,7 @@ defmodule Ecto.Repo do
   there is an adapter error.
 
   ## Options
+
     `:timeout` - The time in milliseconds to wait for the call to finish,
                  `:infinity` will wait indefinitely (default: 5000);
 
@@ -263,6 +300,7 @@ defmodule Ecto.Repo do
 
       [post] = MyRepo.all(from(p in Post, where: p.id == 42))
       MyRepo.delete(post)
+
   """
   defcallback delete(Ecto.Model.t, Keyword.t) :: :ok | no_return
 
@@ -271,6 +309,7 @@ defmodule Ecto.Repo do
   `Ecto.AdapterError` will be raised if there is an adapter error.
 
   ## Options
+
     `:timeout` - The time in milliseconds to wait for the call to finish,
                  `:infinity` will wait indefinitely (default: 5000);
 
