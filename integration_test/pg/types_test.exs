@@ -30,9 +30,19 @@ defmodule Ecto.Integration.TypesTest do
   end
 
   test "binary type is hidden" do
-    binary = << 0, 1, 2, 3, 4 >>
+    binary = <<0, 1, 2, 3, 4>>
     c = TestRepo.insert(%Comment{bytes: binary})
 
     assert ^binary = TestRepo.get(Comment, c.id).bytes
+  end
+
+  test "uuid type" do
+    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
+
+    p = TestRepo.insert(%Post{uuid: uuid})
+    assert ^uuid = TestRepo.get(Post, p.id).uuid
+
+    TestRepo.insert(%UUIDPrimaryKey{id: uuid})
+    assert ^uuid = TestRepo.get(UUIDPrimaryKey, uuid).id
   end
 end

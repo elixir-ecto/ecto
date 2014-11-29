@@ -193,7 +193,7 @@ defmodule Ecto.Query do
     end
 
     {quoted, binds, count_bind} = From.build_with_binds(expr, __CALLER__)
-    build_query(kw, __CALLER__, count_bind, quoted, binds)
+    Ecto.Query.Keyword.build(kw, __CALLER__, count_bind, quoted, binds)
   end
 
   @doc """
@@ -253,7 +253,7 @@ defmodule Ecto.Query do
   variable bound in the `from` query expression, the second has to be the field
   of the association and a variable bound in an association join.
 
-  Nested `assoc/2 expressions are also allowed when there are multiple
+  Nested `assoc/2` expressions are also allowed when there are multiple
   association joins in the query.
 
   ## Keywords examples
@@ -370,11 +370,11 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      User |> where(u.id == current_user) |> limit(1)
+      User |> where([u], u.id == current_user) |> limit([u], 1)
 
   """
-  defmacro limit(query, expr) do
-    LimitOffset.build(:limit, query, expr, __CALLER__)
+  defmacro limit(query, binding, expr) do
+    LimitOffset.build(:limit, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -392,11 +392,11 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-      Post |> limit(10) |> offset(30)
+      Post |> limit([p], 10) |> offset([p], 30)
 
   """
-  defmacro offset(query, expr) do
-    LimitOffset.build(:offset, query, expr, __CALLER__)
+  defmacro offset(query, binding, expr) do
+    LimitOffset.build(:offset, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -518,74 +518,4 @@ defmodule Ecto.Query do
   defmacro preload(query, expr) do
     Preload.build(query, expr, __CALLER__)
   end
-
-  # Builds the quoted code for creating a keyword query
-
-  @binds    [:where, :select, :distinct, :order_by, :group_by, :having]
-  @no_binds [:limit, :offset, :preload, :lock]
-  @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
-
-  defp build_query([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
-    # If all bindings are integer indexes keep AST Macro.expand'able to %Query{},
-    # otherwise ensure that quoted is evaluated before macro call
-    quoted =
-      if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do
-        quote do
-          Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
-        end
-      else
-        quote do
-          query = unquote(quoted)
-          Ecto.Query.unquote(type)(query, unquote(binds), unquote(expr))
-        end
-      end
-
-    build_query t, env, count_bind, quoted, binds
-  end
-
-  defp build_query([{type, expr}|t], env, count_bind, quoted, binds) when type in @no_binds do
-    quoted =
-      quote do
-        Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
-      end
-
-    build_query t, env, count_bind, quoted, binds
-  end
-
-  defp build_query([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
-    qual =
-      case join do
-        :join       -> :inner
-        :inner_join -> :inner
-        :left_join  -> :left
-        :right_join -> :right
-        :full_join  -> :full
-      end
-
-    {t, on} = collect_on(t, nil)
-    {quoted, binds, count_bind} = Join.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
-
-    build_query t, env, count_bind, quoted, binds
-  end
-
-  defp build_query([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
-    raise Ecto.QueryError,
-      reason: "`on` keyword must immediately follow a join"
-  end
-
-  defp build_query([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
-    raise Ecto.QueryError,
-      reason: "unsupported #{inspect key} in keyword query expression"
-  end
-
-  defp build_query([], _env, _count_bind, quoted, _binds) do
-    quoted
-  end
-
-  defp collect_on([{:on, expr}|t], nil),
-    do: collect_on(t, expr)
-  defp collect_on([{:on, expr}|t], acc),
-    do: collect_on(t, {:and, [], [acc, expr]})
-  defp collect_on(other, acc),
-    do: {other, acc}
 end

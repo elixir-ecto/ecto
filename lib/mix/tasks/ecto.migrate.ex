@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Ecto.Migrate do
   use Mix.Task
-  import Mix.Tasks.Ecto
+  import Mix.Ecto
 
   @shortdoc "Runs migrations up on a repo"
 

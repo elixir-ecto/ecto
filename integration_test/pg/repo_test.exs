@@ -18,8 +18,13 @@ defmodule Ecto.Integration.RepoTest do
     assert [{ 1, 2.0, Decimal.new("42.0") }] ==
            TestRepo.all(from Post, select: { 1, 2.0, ^Decimal.new("42.0") })
 
-    assert [{ "abc", << 0, 1 >> }] ==
-           TestRepo.all(from Post, select: { "abc", binary(^<< 0 , 1 >>) })
+    assert [{ "abc", <<0, 1>>, <<2, 3>>, nil }] ==
+           TestRepo.all(from Post, select: { "abc", binary(^<<0 , 1>>), binary(<<2, 3>>), binary(nil) })
+
+    my_uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
+
+    assert [{ ^my_uuid, ^my_uuid, nil }] =
+           TestRepo.all(from Post, select: { uuid(^my_uuid), uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>), uuid(nil) })
 
     assert [{ %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} }] ==
            TestRepo.all(from Post, select: { ^%Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
@@ -27,8 +32,8 @@ defmodule Ecto.Integration.RepoTest do
     assert [{ %Ecto.Interval{year: 0, month: 24169, day: 16, hour: 0, min: 0, sec: 73611} }] ==
            TestRepo.all(from Post, select: { ^%Ecto.Interval{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
 
-    assert [{ [0, 1, 2, 3] }] ==
-           TestRepo.all(from Post, select: { array([0, 1, 2, 3], :integer) })
+    assert [{ [0, 1, 2, 3], nil }] ==
+           TestRepo.all(from Post, select: { array([0, 1, 2, 3], :integer), array(nil, :integer) })
 
     assert [9223372036854775807] ==
            TestRepo.all(from Post, select: ^9223372036854775807)
@@ -90,14 +95,38 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "create and update single, fetch updated" do
-    post = %Post{title: "create and update single", text: "fetch updated", tags: ["1"], bin: <<1>>}
+    post = %Post{title: "create and update single", text: "fetch updated", tags: ["1"]}
 
     post = TestRepo.insert(post)
-    assert %Post{tags: ["1"], bin: <<1>>} = post
+    assert %Post{tags: ["1"]} = post
     post = %{post | text: "coming very soon..."}
     assert :ok == TestRepo.update(post)
 
-    assert [%Post{text: "coming very soon...", tags: ["1"], bin: <<1>>}] = TestRepo.all(Post)
+    assert [%Post{text: "coming very soon...", tags: ["1"]}] = TestRepo.all(Post)
+  end
+
+  test "insert and update inferred type values" do
+    bin = <<1>>
+    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
+    array = ["foo", "bar"]
+
+    post = %Post{bin: bin, uuid: uuid, tags: array}
+    post = TestRepo.insert(post)
+    assert %Post{bin: ^bin, uuid: ^uuid, tags: ^array} = post
+
+    assert :ok == TestRepo.update(post)
+
+    assert [%Post{bin: ^bin, uuid: ^uuid, tags: ^array}] = TestRepo.all(Post)
+  end
+
+  test "insert and update inferred type values with nils" do
+    post = %Post{bin: nil, uuid: nil, tags: nil}
+    post = TestRepo.insert(post)
+    assert %Post{bin: nil, uuid: nil, tags: nil} = post
+
+    assert :ok == TestRepo.update(post)
+
+    assert [%Post{bin: nil, uuid: nil, tags: nil}] = TestRepo.all(Post)
   end
 
   test "create and fetch multiple" do
@@ -179,9 +208,9 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
 
     query = from(p in Post, where: p.title == "1" or p.title == "2")
-    assert 2 = TestRepo.update_all(query, title: "x")
-    assert %Post{title: "x"} = TestRepo.get(Post, id1)
-    assert %Post{title: "x"} = TestRepo.get(Post, id2)
+    assert 2 = TestRepo.update_all(query, title: "x", text: ^"ohai")
+    assert %Post{title: "x", text: "ohai"} = TestRepo.get(Post, id1)
+    assert %Post{title: "x", text: "ohai"} = TestRepo.get(Post, id2)
     assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
@@ -387,6 +416,30 @@ defmodule Ecto.Integration.RepoTest do
     assert p1.id == c2.post.get.id
     assert p2.id == c3.post.get.id
     assert p2.id == c4.post.get.id
+  end
+
+  test "preload has_many with no associated record" do
+    p = TestRepo.insert(%Post{title: "1"})
+    [p] = Preloader.run([p], TestRepo, :comments)
+
+    assert p.title == "1"
+    assert p.comments.all == []
+  end
+
+  test "preload has_one with no associated record" do
+    p = TestRepo.insert(%Post{title: "1"})
+    [p] = Preloader.run([p], TestRepo, :permalink)
+
+    assert p.title == "1"
+    assert p.permalink.get == nil
+  end
+
+  test "preload belongs_to with no associated record" do
+    c = TestRepo.insert(%Comment{text: "1"})
+    [c] = Preloader.run([c], TestRepo, :post)
+
+    assert c.text == "1"
+    assert c.post.get == nil
   end
 
   test "preload keyword query" do

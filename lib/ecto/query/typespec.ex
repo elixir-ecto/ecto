@@ -207,15 +207,13 @@ defmodule Ecto.Query.Typespec do
     case guards do
       []    -> true
       [h|t] ->
-        Enum.reduce t, compile_guard(h), fn tuple, acc ->
-          quote do
-            unquote(compile_guard(tuple)) and unquote(acc)
-          end
-        end
+        Enum.reduce(t, compile_guard(h), fn tuple, acc ->
+          quote do: unquote(compile_guard(tuple)) and unquote(acc)
+        end)
     end
   end
 
   defp compile_guard({var, types}) do
-    quote do: unquote(var) in unquote(types) or unquote(var) == :any
+    quote do: unquote(var) in unquote(types)
   end
 end

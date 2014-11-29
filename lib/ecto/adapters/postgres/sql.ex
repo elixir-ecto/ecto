@@ -56,10 +56,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {group_by, external} = group_by(query.group_bys, %{state | external: external})
       {having,   external} = having(query.havings,     %{state | external: external})
       {order_by, external} = order_by(query.order_bys, %{state | external: external})
+      {limit,    external} = limit(query.limit,        %{state | external: external})
+      {offset,   external} = offset(query.offset,      %{state | external: external})
 
       from   = from(sources)
-      limit  = limit(query.limit)
-      offset = offset(query.offset)
       lock   = lock(query.lock)
 
       sql =
@@ -260,11 +260,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp limit(nil), do: nil
-    defp limit(num), do: "LIMIT " <> Integer.to_string(num)
+    defp limit(nil, state), do: {nil, state.external}
+    defp limit(%Ecto.Query.QueryExpr{expr: expr, external: external}, state) do
+      expr_state = %{state | external: external, offset: Map.size(state.external)}
+      {"LIMIT " <> expr(expr, expr_state), join_external(state.external, external)}
+    end
 
-    defp offset(nil), do: nil
-    defp offset(num), do: "OFFSET " <> Integer.to_string(num)
+    defp offset(nil, state), do: {nil, state.external}
+    defp offset(%Ecto.Query.QueryExpr{expr: expr, external: external}, state) do
+      expr_state = %{state | external: external, offset: Map.size(state.external)}
+      {"OFFSET " <> expr(expr, expr_state), join_external(state.external, external)}
+    end
 
     defp lock(nil), do: nil
     defp lock(false), do: nil
@@ -284,6 +290,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       exprs = Enum.join(exprs, " AND ")
       {name <> " " <> exprs, external}
+    end
+
+    defp expr({arg, _, []}, state) when is_tuple(arg) do
+      expr(arg, state)
     end
 
     defp expr({:^, [], [ix]}, state) do
@@ -311,10 +321,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "#{name}.#{quote_column(field)}"
     end
 
-    defp expr({:!, _, [expr]}, state) do
-      "NOT (" <> expr(expr, state) <> ")"
-    end
-
     defp expr({:&, _, [_]} = var, state) do
       source    = Util.find_source(state.sources, var)
       model     = Util.model(source)
@@ -322,22 +328,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {_, name} = Util.source(source)
 
       Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")
-    end
-
-    defp expr({:==, _, [nil, right]}, state) do
-      "#{op_to_binary(right, state)} IS NULL"
-    end
-
-    defp expr({:==, _, [left, nil]}, state) do
-      "#{op_to_binary(left, state)} IS NULL"
-    end
-
-    defp expr({:!=, _, [nil, right]}, state) do
-      "#{op_to_binary(right, state)} IS NOT NULL"
-    end
-
-    defp expr({:!=, _, [left, nil]}, state) do
-      "#{op_to_binary(left, state)} IS NOT NULL"
     end
 
     defp expr({:in, _, [left, first .. last]}, state) do
@@ -377,10 +367,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "::numeric"
     end
 
-    defp expr({arg, _, []}, state) when is_tuple(arg) do
-      expr(arg, state)
-    end
-
     defp expr({:date, _, [datetime]}, state) do
       expr(datetime, state) <> "::date"
     end
@@ -391,6 +377,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp expr({:datetime, _, [date, time]}, state) do
       "(#{expr(date, state)} + #{expr(time, state)})"
+    end
+
+    defp expr({:is_nil, _, [arg]}, state) do
+      "#{expr(arg, state)} IS NULL"
+    end
+
+    defp expr({op, _, [expr]}, state) when op in [:!, :not] do
+      "NOT (" <> expr(expr, state) <> ")"
     end
 
     defp expr({fun, _, args}, state) when is_atom(fun) and is_list(args) do
@@ -434,6 +428,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp expr(%Ecto.Tagged{value: expr, type: :binary}, state) do
       state = %{state | external_type: false}
       expr(expr, state) <> "::bytea"
+    end
+
+    defp expr(%Ecto.Tagged{value: binary, type: :uuid}, _state)
+        when is_binary(binary) do
+      hex = Base.encode16(binary, case: :lower)
+      "'#{hex}'::uuid"
+    end
+
+    defp expr(%Ecto.Tagged{value: expr, type: :uuid}, state) do
+      state = %{state | external_type: false}
+      expr(expr, state) <> "::uuid"
     end
 
     defp expr(nil, _state), do: "NULL"
@@ -505,6 +510,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp type(:datetime), do: "timestamp without time zone"
     defp type(:interval), do: "interval"
     defp type(:decimal),  do: "decimal"
+    defp type(:uuid),     do: "uuid"
 
     defp type({:array, inner}), do: type(inner) <> "[]"
 

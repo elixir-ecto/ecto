@@ -3,7 +3,7 @@ defmodule Ecto.Mixfile do
 
   def project do
     [app: :ecto,
-     version: "0.2.5-dev",
+     version: "0.2.6-dev",
      elixir: "~> 1.0",
      deps: deps,
      build_per_environment: false,
@@ -23,11 +23,11 @@ defmodule Ecto.Mixfile do
   end
 
   defp deps do
-    [{:poolboy, "~> 1.2.1"},
+    [{:poolboy, "~> 1.4"},
      {:decimal, "~> 0.2.3"},
      {:postgrex, "~> 0.6.0", optional: true},
      {:emysql, github: "eonblast/emysql" },
-     {:ex_doc, "~> 0.5", only: :dev},
+     {:ex_doc, "~> 0.6", only: :dev},
      {:earmark, "~> 0.1", only: :dev}]
   end
 
@@ -45,8 +45,7 @@ defmodule Ecto.Mixfile do
   defp package do
     [contributors: ["Eric Meadows-Jönsson", "José Valim"],
      licenses: ["Apache 2.0"],
-     links: %{"GitHub" => "https://github.com/elixir-lang/ecto",
-              "Docs" => "http://elixir-lang.org/docs/ecto/"}]
+     links: %{"GitHub" => "https://github.com/elixir-lang/ecto"}]
   end
 
   defp docs do

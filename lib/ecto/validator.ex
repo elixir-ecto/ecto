@@ -63,52 +63,70 @@ defmodule Ecto.Validator do
     end
   end
 
-  defp process([], _value, _getter), do: []
+  defp process([], _value, _getter), do: nil
   defp process(opts, value, getter) do
     var = quote do: var
 
     validations =
-      opts
-      |> Enum.map(&process_each(&1, var, getter))
-      |> concat
+      Enum.reduce(opts, quote(do: %{}), &process_each(&1, &2, var, getter))
 
     quote do
       unquote(var) = unquote(value)
-      unquote(validations)
+      if map_size(errors = unquote(validations)) > 0 do
+        errors
+      end
     end
   end
 
-  defp concat(predicates) do
-    Enum.reduce(predicates, fn i, acc ->
-      quote do: unquote(acc) ++ unquote(i)
-    end)
-  end
+  defp process_each({:also, function}, acc, var, _getter) do
+    quotation = fn acc, predicate ->
+      quote do
+        Map.merge unquote(acc), unquote(predicate), fn _k, v1, v2 ->
+          v1 ++ v2
+        end
+      end
+    end
 
-  defp process_each({:also, function}, var, _getter) do
-    handle_ops function, fn call -> Macro.pipe(var, call, 0) end
-  end
-
-  defp process_each({attr, function}, var, getter) do
-    handle_ops function, fn call ->
-      Macro.pipe(attr, Macro.pipe(getter.(var, attr), call, 0), 0)
+    handle_ops function, acc, quotation, fn call ->
+      Macro.pipe(var, call, 0)
     end
   end
 
-  defp handle_ops({:when, _, [left, right]}, callback) do
+  defp process_each({attr, function}, acc, var, getter) do
+    quotation = fn acc, predicate ->
+      quote do
+        acc = unquote(acc)
+        case unquote(predicate) do
+          nil -> acc
+          msg -> Map.update(acc, unquote(attr), [msg], &[msg|&1])
+        end
+      end
+    end
+
+    handle_ops function, acc, quotation, fn call ->
+      Macro.pipe(getter.(var, attr), call, 0)
+    end
+  end
+
+  defp handle_ops({:when, _, [left, right]}, acc, quotation, builder) do
     quote do
-      if unquote(right), do: unquote(concat(handle_and(left, callback))), else: []
+      if unquote(right) do
+        unquote(handle_and(left, acc, quotation, builder))
+      else
+        unquote(acc)
+      end
     end
   end
 
-  defp handle_ops(other, callback) do
-    concat(handle_and(other, callback))
+  defp handle_ops(other, acc, quotation, builder) do
+    handle_and(other, acc, quotation, builder)
   end
 
-  defp handle_and({:and, _, [left, right]}, callback) do
-    handle_and(left, callback) ++ [callback.(right)]
+  defp handle_and({:and, _, [left, right]}, acc, quotation, builder) do
+    handle_and(left, quotation.(acc, builder.(right)), quotation, builder)
   end
 
-  defp handle_and(other, callback) do
-    [callback.(other)]
+  defp handle_and(other, acc, quotation, builder) do
+    quotation.(acc, builder.(other))
   end
 end

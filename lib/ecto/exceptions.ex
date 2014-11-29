@@ -1,19 +1,23 @@
 alias Ecto.Query.Util
 
 defmodule Ecto.QueryError do
-  defexception [:message, :type, :query, :file, :line]
+  import Inspect.Ecto.Query, only: [pp_from_query: 2]
 
-  def exception(opts) do
-    if opts[:type] && opts[:query] && opts[:file] && opts[:line] do
-      fl = Exception.format_file_line(opts[:file], opts[:line])
-      msg = "#{fl}: the query `#{opts[:type]}: #{Macro.to_string(opts[:query])}` " <>
-            "is invalid: #{opts[:reason]}"
-      opts = Keyword.put(opts, :message, msg)
+  defexception [:reason, :type, :query, :expr, :file, :line]
+
+  def message(e) do
+    if e.type && e.query && e.file && e.line do
+      file = Path.relative_to_cwd(e.file)
+      """
+      #{Exception.format_file_line(file, e.line)} the clause:
+
+          #{e.type}: #{pp_from_query(e.query, e.expr)}
+
+      is invalid: #{e.reason}
+      """
     else
-      opts = Keyword.put(opts, :message, opts[:reason])
+      e.reason
     end
-
-    struct(Ecto.QueryError, opts)
   end
 end
 
@@ -60,7 +64,9 @@ defmodule Ecto.NotSingleResult do
 end
 
 defmodule Ecto.Query.TypeCheckError do
-  defexception [:expr, :types, :allowed]
+  import Inspect.Ecto.Query, only: [pp_from_query: 2]
+
+  defexception [:expr, :types, :allowed, :query, :file, :line]
 
   @moduledoc """
   Exception raised when a query does not type check.
@@ -68,6 +74,13 @@ defmodule Ecto.Query.TypeCheckError do
   """
 
   def message(e) do
+    if e.query && e.file && e.line do
+      file = Path.relative_to_cwd(e.file)
+      msg = "#{Exception.format_file_line(file, e.line)} the expression:"
+    else
+      msg = "the following expression:"
+    end
+
     {name, _, _} = e.expr
     expected = Enum.map_join(e.allowed, "\n    ", &Macro.to_string(&1))
 
@@ -75,11 +88,11 @@ defmodule Ecto.Query.TypeCheckError do
     actual = Macro.to_string({name, [], types})
 
     """
-    the following expression does not type check:
+    #{msg}
 
-        #{Macro.to_string(e.expr)}
+        #{pp_from_query(e.query, e.expr)}
 
-    Allowed types for #{name}/#{length(e.types)}:
+    does not type check. Allowed types for #{name}/#{length(e.types)}:
 
         #{expected}
 

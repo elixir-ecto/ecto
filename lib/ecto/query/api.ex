@@ -23,7 +23,6 @@ defmodule Ecto.Query.API do
   deft date
   deft time
   deft interval
-  deft nil
 
   defa number :: decimal | float | integer
 
@@ -77,15 +76,11 @@ defmodule Ecto.Query.API do
   def left == right
   defs number == number :: boolean
   defs var == var       :: boolean
-  defs nil == _         :: boolean
-  defs _ == nil         :: boolean
 
   @doc "Inequality."
   def left != right
   defs number != number :: boolean
   defs var != var       :: boolean
-  defs nil != _         :: boolean
-  defs _ != nil         :: boolean
 
   @doc "Left less than or equal to right."
   def left <= right
@@ -114,6 +109,10 @@ defmodule Ecto.Query.API do
   @doc "Boolean or."
   def left or right
   defs boolean or boolean :: boolean
+
+  @doc "Returns `true` if argument is `nil`."
+  def is_nil(arg)
+  defs is_nil(_) :: boolean
 
   @doc """
   Return `true` if `left` is in `right` array, `false`
@@ -150,10 +149,27 @@ defmodule Ecto.Query.API do
   def field(_var, _atom), do: raise "field/2 should have been expanded"
 
   @doc """
+  Casts a list to an array.
+
+  ## Example
+
+      ids = [1, 2, 3]
+      from(c in Comment, where c.id in array(^ids, :integer)
+
+  """
+  def array(_list, _atom), do: raise "array/2 should have been expanded"
+
+  @doc """
   Casts a binary literal to a binary type. By default a
   binary literal is of the string type.
   """
   def binary(_string), do: raise "binary/1 should have been expanded"
+
+  @doc """
+  Casts a binary literal to a `uuid` type. By default a
+  binary literal is of the string type.
+  """
+  def uuid(_string), do: raise "uuid/1 should have been expanded"
 
   @doc "Addition of datetime's with interval's"
   def time_add(left, right)

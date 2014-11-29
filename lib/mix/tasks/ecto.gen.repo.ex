@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.Ecto.Gen.Repo do
   use Mix.Task
 
-  import Mix.Tasks.Ecto
+  import Mix.Ecto
   import Mix.Generator
 
   @shortdoc "Generates a new repository"

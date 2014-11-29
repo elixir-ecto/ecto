@@ -30,10 +30,6 @@ defmodule Ecto.Query.TypespecTest do
   end
 
   test "wildcard" do
-    assert API.==(nil, :anything) == {:ok, :boolean}
-    assert API.==(:other_thing, nil) == {:ok, :boolean}
-    assert API.==({:array, :integer}, nil) == {:ok, :boolean}
-
     assert API.count(:test) == {:ok, :integer}
     assert API.count({:array, :integer}) == {:ok, :integer}
   end

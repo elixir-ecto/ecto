@@ -1,11 +1,22 @@
-# v0.2.5-dev
+# v0.2.6-dev
+
+* Bug fixes
+  * Cast primary key in `Repo.get/2`
+
+# v0.2.5 (2014-09-17)
 
 * Enhancements
   * Change timeout of migration queries to infinity
+  * Add uuid type
 
 * Bug fixes
   * Fix encoding of interpolated `nil` values
   * Support interpolated large integers
+  * Support interpolating values on `Repo.update_all`
+  * Correctly handle `nil` values inside `array/2` and `binary/1`
+
+* Backwards incompatible changes
+  * Do not translate `foo == nil` to the SQL `foo IS NULL`, provide `is_nil/1` instead
 
 # v0.2.4 (2014-09-08)
 

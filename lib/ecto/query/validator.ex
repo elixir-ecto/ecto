@@ -14,6 +14,8 @@ defmodule Ecto.Query.Validator do
 
   require Ecto.Query.Util
 
+  import Inspect.Ecto.Query, only: [pp_from_query: 2]
+
   def validate(query, apis, opts \\ []) do
     if query.from == nil do
       raise Ecto.QueryError, reason: "a query must have a from expression"
@@ -25,21 +27,23 @@ defmodule Ecto.Query.Validator do
                       %{sources: query.sources, grouped: grouped, grouped?: grouped?,
                         apis: apis, from: query.from, query: query})
 
-    validate_joins(query.joins, state)
-    validate_wheres(query.wheres, state)
-    validate_order_bys(query.order_bys, state)
-    validate_group_bys(query.group_bys, state)
-    validate_havings(query.havings, state)
-    validate_preloads(query.preloads, state)
+    validate_joins(query, state)
+    validate_wheres(query, state)
+    validate_order_bys(query, state)
+    validate_group_bys(query, state)
+    validate_havings(query, state)
+    validate_preloads(query, state)
+    validate_limit(query, state)
+    validate_offset(query, state)
 
     unless opts[:skip_select] do
-      validate_select(query.select, state)
+      validate_select(query, state)
       validate_distincts(query, state)
       preload_selected(query)
     end
   end
 
-  def validate_update(query, apis, values) do
+  def validate_update(query, apis, values, external) do
     validate_only_where(query)
 
     if values == [] do
@@ -56,12 +60,12 @@ defmodule Ecto.Query.Validator do
         end
 
         # TODO: Check if model field allows nil
-        state = Map.merge(new_state, %{sources: query.sources, apis: apis})
+        state = Map.merge(new_state, %{sources: query.sources, apis: apis, external: external})
         type = check(expr, state)
 
         format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
         format_type = Util.type_to_ast(type) |> Macro.to_string
-        unless expected_type == type do
+        unless Util.type_eq?(expected_type, type) do
           raise Ecto.QueryError, reason: "expected_type `#{format_expected_type}` " <>
           " on `#{inspect model}.#{field}` doesn't match type `#{format_type}`"
         end
@@ -92,66 +96,90 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp validate_joins(joins, state) do
+  defp validate_joins(query, state) do
     state = %{state | grouped?: false}
-    ons = Enum.map(joins, &(&1.on))
-    validate_booleans(:join_on, ons, state)
+    ons = Enum.map(query.joins, &(&1.on))
+    validate_booleans(query, :join_on, ons, state)
   end
 
-  defp validate_wheres(wheres, state) do
+  defp validate_wheres(query, state) do
     state = %{state | grouped?: false}
-    validate_booleans(:where, wheres, state)
+    validate_booleans(query, :where, query.wheres, state)
   end
 
-  defp validate_havings(havings, state) do
-    validate_booleans(:having, havings, state)
+  defp validate_havings(query, state) do
+    validate_booleans(query, :having, query.havings, state)
   end
 
-  defp validate_booleans(type, query_exprs, state) do
-    Enum.each(query_exprs, fn expr ->
-      rescue_metadata(type, expr, fn ->
-        state = %{state | external: expr.external}
-        expr_type = catch_grouped(fn -> check(expr.expr, state) end)
+  defp validate_limit(%Query{limit: nil}, _), do: :ok
 
-        unless expr_type in [:unknown, :boolean] do
-          format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
-          raise Ecto.QueryError, reason: "#{type} expression `#{Macro.to_string(expr.expr)}` " <>
-            "is of type `#{format_expr_type}`, has to be of boolean type"
-        end
-      end)
+  defp validate_limit(query, state) do
+    if contains_variable?(query.limit.expr) do
+      raise Ecto.QueryError, reason: "variables not allowed in limit expression"
+    end
+
+    validate_integer(query, :limit, query.limit, state)
+  end
+
+  defp validate_offset(%Query{offset: nil}, _), do: :ok
+
+  defp validate_offset(query, state) do
+    if contains_variable?(query.offset.expr) do
+      raise Ecto.QueryError, reason: "variables not allowed in offset expression"
+    end
+
+    validate_integer(query, :offset, query.offset, state)
+  end
+
+  defp validate_expr_type(query, clause_type, valid_expr_type, expr, state) do
+    rescue_metadata(query, clause_type, expr, fn ->
+      state = %{state | external: expr.external}
+      expr_type = catch_grouped(query, fn -> check(expr.expr, state) end)
+
+      unless expr_type in [:unknown, valid_expr_type] do
+        format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
+        raise Ecto.QueryError, reason: "#{clause_type} expression `#{Macro.to_string(expr.expr)}` " <>
+          "is of type `#{format_expr_type}`, has to be of #{valid_expr_type} type"
+      end
     end)
   end
 
-  defp validate_order_bys(order_bys, state) do
-    Enum.each(order_bys, fn expr ->
-      rescue_metadata(:order_by, expr, fn ->
+  defp validate_integer(query, type, expr, state), do: validate_expr_type(query, type, :integer, expr, state)
+
+  defp validate_booleans(query, type, query_exprs, state) do
+    Enum.each(query_exprs, &(validate_expr_type(query, type, :boolean, &1, state)))
+  end
+
+  defp validate_order_bys(query, state) do
+    Enum.each(query.order_bys, fn expr ->
+      rescue_metadata(query, :order_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn {_dir, expr} ->
-          catch_grouped(fn -> check(expr, state) end)
+          catch_grouped(query, fn -> check(expr, state) end)
         end)
       end)
     end)
   end
 
-  defp validate_group_bys(group_bys, state) do
+  defp validate_group_bys(query, state) do
     state = %{state | grouped?: false}
-    Enum.each(group_bys, fn expr ->
-      rescue_metadata(:group_by, expr, fn ->
+    Enum.each(query.group_bys, fn expr ->
+      rescue_metadata(query, :group_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, &check(&1, state))
       end)
     end)
   end
 
-  defp validate_preloads(preloads, %{from: from}) do
+  defp validate_preloads(query, %{from: from}) do
     model = Util.model(from)
 
-    if preloads != [] and is_nil(model) do
+    if query.preloads != [] and is_nil(model) do
       raise Ecto.QueryError, reason: "can only preload on fields from a model"
     end
 
-    Enum.each(preloads, fn expr ->
-      rescue_metadata(:preload, expr, fn ->
+    Enum.each(query.preloads, fn expr ->
+      rescue_metadata(query, :preload, expr, fn ->
         check_preload_fields(expr.expr, model)
       end)
     end)
@@ -167,19 +195,19 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp validate_select(expr, state) do
-    rescue_metadata(:select, expr, fn ->
-      state = %{state | external: expr.external}
-      catch_grouped(fn -> select_clause(expr.expr, state) end)
+  defp validate_select(query, state) do
+    rescue_metadata(query, :select, query.select, fn ->
+      state = %{state | external: query.select.external}
+      catch_grouped(query, fn -> select_clause(query.select.expr, state) end)
     end)
   end
 
-  defp validate_distincts(%Query{order_bys: order_bys, distincts: distincts}, state) do
-    Enum.each(distincts, fn expr ->
-      rescue_metadata(:distinct, expr, fn ->
+  defp validate_distincts(query, state) do
+    Enum.each(query.distincts, fn expr ->
+      rescue_metadata(query, :distinct, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn expr ->
-          catch_grouped(fn -> check(expr, state) end)
+          catch_grouped(query, fn -> check(expr, state) end)
         end)
       end)
     end)
@@ -192,14 +220,14 @@ defmodule Ecto.Query.Validator do
     #     distinct: title / order_by: id, title => raise (title in order_by but not leftmost part)
 
     distincts =
-      Enum.map(distincts, fn expr ->
+      Enum.map(query.distincts, fn expr ->
         Enum.map(expr.expr, fn distinct ->
           {distinct, {expr.file, expr.line}}
         end)
       end) |> Enum.concat
 
     order_bys =
-      Enum.map(order_bys, fn expr ->
+      Enum.map(query.order_bys, fn expr ->
         Enum.map(expr.expr, fn {_dir, expr} -> expr end)
       end) |> Enum.concat
 
@@ -227,10 +255,10 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp preload_selected(%Query{select: select, preloads: preloads}) do
-    unless preloads == [] do
-      rescue_metadata(:select, select, fn ->
-        pos = Util.locate_var(select.expr, {:&, [], [0]})
+  defp preload_selected(query) do
+    unless query.preloads == [] do
+      rescue_metadata(query, :select, query.select, fn ->
+        pos = Util.locate_var(query.select.expr, {:&, [], [0]})
         if is_nil(pos) do
           raise Ecto.QueryError, reason: "source in from expression " <>
             "needs to be selected when using preload query"
@@ -336,17 +364,25 @@ defmodule Ecto.Query.Validator do
 
   # binary(...)
   defp type_check(%Ecto.Tagged{value: binary, type: :binary}, state) do
-    case type_check(binary, state) do
-      :binary -> :binary
-      :string -> :binary
-      _ ->
-        raise Ecto.QueryError, reason: "binary/1 argument has to be of binary type"
+    if type_check(binary, state) in [:binary, :string, :any] do
+      :binary
+    else
+      raise Ecto.QueryError, reason: "binary/1 argument has to be of binary type"
+    end
+  end
+
+  # uuid(...)
+  defp type_check(%Ecto.Tagged{value: binary, type: :uuid}, state) do
+    if type_check(binary, state) in [:uuid, :string, :any] do
+      :uuid
+    else
+      raise Ecto.QueryError, reason: "uuid/1 argument has to be of binary type"
     end
   end
 
   # array(..., type)
   defp type_check(%Ecto.Tagged{value: list, type: {:array, inner}}, state) do
-    unless inner in Util.types or (list == [] and is_nil(inner)) do
+    unless inner in Util.types do
       raise Ecto.QueryError, reason: "invalid type given to `array/2`: `#{inspect inner}`"
     end
 
@@ -359,13 +395,15 @@ defmodule Ecto.Query.Validator do
         :ok
     end
 
-    elem_types = Enum.map(list, &type_check(&1, state))
+    unless is_nil(list) do
+      elem_types = Enum.map(list, &type_check(&1, state))
 
-    Enum.each(elem_types, fn type ->
-      unless Util.type_eq?(inner, type) or Util.type_castable?(type, inner) do
-        raise Ecto.QueryError, reason: "all elements in array have to be of same type"
-      end
-    end)
+      Enum.each(elem_types, fn type ->
+        unless Util.type_eq?(inner, type) or Util.type_castable?(type, inner) do
+          raise Ecto.QueryError, reason: "all elements in array have to be of same type"
+        end
+      end)
+    end
 
     {:array, inner}
   end
@@ -483,6 +521,17 @@ defmodule Ecto.Query.Validator do
     false
   end
 
+  defp contains_variable?({:&, _, _}),
+    do: true
+  defp contains_variable?({left, _, right}),
+    do: contains_variable?(left) or contains_variable?(right)
+  defp contains_variable?({left, right}),
+    do: contains_variable?(left) or contains_variable?(right)
+  defp contains_variable?(list) when is_list(list),
+    do: Enum.any?(list, &contains_variable?/1)
+  defp contains_variable?(_),
+    do: false
+
   defp check_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false, grouped: grouped} = state) do
     if Enum.any?(grouped, &equal?(expr, &1)) do
       # TODO: If primary key was grouped on we can use all fields from
@@ -503,24 +552,27 @@ defmodule Ecto.Query.Validator do
 
   defp check_was_grouped(_expr, _state), do: :ok
 
-  defp catch_grouped(fun) do
+  defp catch_grouped(query, fun) do
     try do
       fun.()
     catch
       :throw, {:not_grouped, expr} ->
-        # TODO: Use query inspect here to remove &1
-        raise Ecto.QueryError, reason: "`#{Macro.to_string(expr)}` " <>
+        raise Ecto.QueryError, reason: "`#{pp_from_query(query, expr)}` " <>
           "must appear in `group_by` or be used in an aggregate function"
     end
   end
 
   # Adds type, file and line metadata to the exception
-  defp rescue_metadata(type, %QueryExpr{file: file, line: line}, fun) do
+  defp rescue_metadata(query, type, %QueryExpr{expr: expr, file: file, line: line}, fun) do
     try do
       fun.()
-    rescue e in [Ecto.QueryError] ->
-      stacktrace = System.stacktrace
-      reraise %{e | type: type, file: file, line: line}, stacktrace
+    rescue
+      e in [Ecto.QueryError] ->
+        stacktrace = System.stacktrace
+        reraise %{e | type: type, query: query, expr: expr, file: file, line: line}, stacktrace
+      e in [Ecto.Query.TypeCheckError] ->
+        stacktrace = System.stacktrace
+        reraise %{e | query: query, expr: expr, file: file, line: line}, stacktrace
     end
   end
 

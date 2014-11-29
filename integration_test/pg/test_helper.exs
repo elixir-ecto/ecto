@@ -39,8 +39,9 @@ defmodule Ecto.Integration.Postgres.Post do
   schema "posts" do
     field :title, :string
     field :text, :string
-    field :tags, { :array, :string }
+    field :tags, {:array, :string}
     field :bin, :binary
+    field :uuid, :uuid
     field :temp, :virtual, default: "temp"
     has_many :comments, Ecto.Integration.Postgres.Comment
     has_one :permalink, Ecto.Integration.Postgres.Permalink
@@ -104,6 +105,14 @@ defmodule Ecto.Integration.Postgres.AssignedPrimaryKey do
   end
 end
 
+defmodule Ecto.Integration.Postgres.UUIDPrimaryKey do
+  use Ecto.Model
+  @schema_defaults [primary_key: {:id, :uuid, []}]
+
+  schema "uuid_primary_keys" do
+  end
+end
+
 defmodule Ecto.Integration.Postgres.Case do
   use ExUnit.CaseTemplate
 
@@ -121,6 +130,7 @@ defmodule Ecto.Integration.Postgres.Case do
       alias Ecto.Integration.Postgres.Custom
       alias Ecto.Integration.Postgres.Barebone
       alias Ecto.Integration.Postgres.AssignedPrimaryKey
+      alias Ecto.Integration.Postgres.UUIDPrimaryKey
     end
   end
 
@@ -169,13 +179,14 @@ Enum.each(setup_cmds, fn(cmd) ->
 end)
 
 setup_database = [
-  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea)",
+  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), text varchar(100), tags text[], bin bytea, uuid uuid)",
   "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, day date, time time, interval interval, bytes bytea, post_id integer, author_id integer)",
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
   "CREATE TABLE customs (foo text PRIMARY KEY)",
   "CREATE TABLE barebones (text text)",
   "CREATE TABLE assigned_primary_keys (id text PRIMARY KEY)",
+  "CREATE TABLE uuid_primary_keys (id uuid PRIMARY KEY)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
   "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"

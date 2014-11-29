@@ -159,6 +159,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         worker_module: Worker ] ++ pool_opts
 
       worker_opts = worker_opts
+        |> Keyword.put(:formatter, &formatter/1)
         |> Keyword.put(:decoder, &decoder/4)
         |> Keyword.put(:encoder, &encoder/3)
         |> Keyword.put_new(:port, @default_port)
@@ -242,12 +243,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Postgrex casting
 
+    defp formatter(%TypeInfo{sender: "uuid"}), do: :binary
+    defp formatter(_), do: nil
+
     defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
       {mon, day, sec} = default.(param)
       %Ecto.Interval{year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec}
     end
 
-    defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["timestamp", "timestamptz"] do
+    defp decoder(%TypeInfo{sender: sender}, :binary, default, param)
+        when sender in ["timestamp", "timestamptz"] do
       default.(param)
       |> Ecto.DateTime.from_erl
     end
@@ -257,35 +262,50 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       |> Ecto.Date.from_erl
     end
 
-    defp decoder(%TypeInfo{sender: sender}, :binary, default, param) when sender in ["time", "timetz"] do
+    defp decoder(%TypeInfo{sender: sender}, :binary, default, param)
+        when sender in ["time", "timetz"] do
       default.(param)
       |> Ecto.Time.from_erl
+    end
+
+    defp decoder(%TypeInfo{sender: "uuid"}, :binary, _default, param) do
+      param
     end
 
     defp decoder(_type, _format, default, param) do
       default.(param)
     end
 
-    defp encoder(_type, default, %Ecto.Interval{} = interval) do
+    defp encoder(type, default, %Ecto.Tagged{value: value}) do
+      encoder(type, default, value)
+    end
+
+    defp encoder(%TypeInfo{sender: "interval"}, default, %Ecto.Interval{} = interval) do
       mon = interval.year * 12 + interval.month
       day = interval.day
       sec = interval.hour * 3600 + interval.min * 60 + interval.sec
       default.({mon, day, sec})
     end
 
-    defp encoder(_type, default, %Ecto.DateTime{} = datetime) do
+    defp encoder(%TypeInfo{sender: sender}, default, %Ecto.DateTime{} = datetime)
+        when sender in ["timestamp", "timestamptz"] do
       Ecto.DateTime.to_erl(datetime)
       |> default.()
     end
 
-    defp encoder(_type, default, %Ecto.Date{} = date) do
+    defp encoder(%TypeInfo{sender: "date"}, default, %Ecto.Date{} = date) do
       Ecto.Date.to_erl(date)
       |> default.()
     end
 
-    defp encoder(_type, default, %Ecto.Time{} = time) do
+    defp encoder(%TypeInfo{sender: sender}, default, %Ecto.Time{} = time)
+        when sender in ["time", "timetz"] do
       Ecto.Time.to_erl(time)
       |> default.()
+    end
+
+    defp encoder(%TypeInfo{sender: "uuid"}, _default, uuid) do
+      uuid
     end
 
     defp encoder(_type, default, param) do
@@ -447,6 +467,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       if username = database[:username] do
         command = ~s(PGUSER=#{username} ) <> command
+      end
+
+      if port = database[:port] do
+        command = ~s(PGPORT=#{port} ) <> command
       end
 
       command =

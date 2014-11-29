@@ -34,14 +34,14 @@ defmodule Ecto.Model.Validations do
   The validations can be executed by calling the `validate` function:
 
       User.validate(User.new)
-      #=> [name: "can't be blank", age: "must be present"]
+      #=> %{name: ["can't be blank"], age: ["must be present"]}
 
   This function returns a list with the validation errors, with the
   attribute as key and the error message as value. You can match on
   an empty list to know if there were validation errors or not:
 
       case User.validate(user) do
-        []     -> # no errors
+        nil    -> # no errors
         errors -> # got errors
       end
 
@@ -68,8 +68,8 @@ defmodule Ecto.Model.Validations do
   and its current value as argument. For example, the `present` predicate
   above is going to be called as:
 
-      present(:name, user.name)
-      present(:age, user.age, message: "must be present")
+      present(user.name)
+      present(user.age, message: "must be present")
 
   Note that predicates can be chained together with `and`. The following
   is equivalent to the example above:
@@ -112,11 +112,9 @@ defmodule Ecto.Model.Validations do
 
   It could be implemented as:
 
-      def image_attachments(attr, value, opts \\ []) do
-        if Path.extname(value) in ~w(jpg gif png) do
-          []
-        else
-          [{attr, opts[:message] || "is not an image attachment"}]
+      def image_attachments(value, opts \\ []) do
+        unless Path.extname(value) in ~w(jpg gif png) do
+          opts[:message] || "is not an image attachment"
         end
       end
 

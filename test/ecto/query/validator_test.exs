@@ -93,6 +93,38 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
+  test "limit expression must be integer" do
+    query = Post |> limit([p], 40 + 2) |> select([], 123)
+    validate(query)
+
+    query = Post |> limit([p], 42 > 0) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"limit expression", fn ->
+      validate(query)
+    end
+  end
+
+  test "offset expression must be integer" do
+    query = Post |> offset([p], 40 + 2) |> select([], 123)
+    validate(query)
+
+    query = Post |> offset([p], 42 > 0) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"offset expression", fn ->
+      validate(query)
+    end
+  end
+
+  test "limit and offset expressions cannot use row data" do
+    query = Post |> limit([p], p.id) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"limit expression", fn ->
+      validate(query)
+    end
+
+    query = Post |> offset([p], p.id) |> select([], 123)
+    assert_raise Ecto.QueryError, ~r"offset expression", fn ->
+      validate(query)
+    end
+  end
+
   test "model field types" do
     query = Post |> select([p], p.title + 2)
     assert_raise Ecto.Query.TypeCheckError, fn ->
@@ -185,13 +217,10 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "array expression" do
-    query = Post |> where([p], array([p.title, p.title], :string) == nil) |> select([], 0)
+    query = Post |> where([p], "123" in array([p.title, p.title], :string)) |> select([], 0)
     validate(query)
 
-    query = Post |> where([p], array([p.title, p.title], :binary) == nil) |> select([], 0)
-    validate(query)
-
-    query = Post |> where([p], [p.title, p.title] == nil) |> select([], 0)
+    query = Post |> where([p], [p.title, p.title] == []) |> select([], 0)
     assert_raise Ecto.QueryError, fn ->
       validate(query)
     end
@@ -264,7 +293,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> having([p], p.id) |> select([], 0)
-    assert_raise Ecto.QueryError, ~r"`&0.id\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.id` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -274,7 +303,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -287,39 +316,39 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id * 2) |> select([p], p.id)
-    assert_raise Ecto.QueryError, ~r"`&0.id\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.id` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> group_by([p], p.id) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> group_by([p], p.id) |> order_by([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> group_by([p], p.id) |> distinct([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
 
   test "aggregate function groups expression" do
     query = Post |> select([p], [count(p.id), p.title])
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> order_by([p], count(p.id)) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
 
     query = Post |> distinct([p], count(p.id)) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -329,7 +358,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = Post |> group_by([p], p.id) |> select([p], p)
-    assert_raise Ecto.QueryError, ~r"`&0.title\(\)` must appear in `group_by`", fn ->
+    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
       validate(query)
     end
   end
@@ -368,26 +397,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   test "don't allow nested aggregates" do
     query = Post |> select([p], count(count(p.id)))
-    assert_raise Ecto.QueryError, "aggregate function calls cannot be nested", fn ->
-      validate(query)
-    end
-  end
-
-  test "nils are any type" do
-    query = Post |> select([p], 1 == nil)
-    validate(query)
-
-    query = Post |> select([p], nil != "abc")
-    validate(query)
-
-    query = Post |> select([p], 1 + nil)
-    validate(query)
-
-    query = Post |> select([p], array([1, nil, 2], :integer))
-    validate(query)
-
-    assert_raise Ecto.Query.TypeCheckError, fn ->
-      query = Post |> select([p], "123" + nil)
+    assert_raise Ecto.QueryError, ~r"aggregate function calls cannot be nested", fn ->
       validate(query)
     end
   end
@@ -470,7 +480,7 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
 
     query = from(p in Post, join: c in p.comments, select: assoc(p, not_field: c))
-    assert_raise Ecto.QueryError, "field `Ecto.Query.ValidatorTest.Post.not_field` is not an association", fn ->
+    assert_raise Ecto.QueryError, ~r"field `Ecto.Query.ValidatorTest.Post.not_field` is not an association", fn ->
       validate(query)
     end
 
@@ -485,7 +495,7 @@ defmodule Ecto.Query.ValidatorTest do
     end
 
     query = from(p in Post, join: c in Comment, on: true, select: assoc(p, comments: c))
-    assert_raise Ecto.QueryError, "can only associate on an inner or left association join", fn ->
+    assert_raise Ecto.QueryError, ~r"can only associate on an inner or left association join", fn ->
       validate(query)
     end
   end

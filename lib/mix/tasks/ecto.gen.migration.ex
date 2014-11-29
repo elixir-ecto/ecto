@@ -1,6 +1,6 @@
 defmodule Mix.Tasks.Ecto.Gen.Migration do
   use Mix.Task
-  import Mix.Tasks.Ecto
+  import Mix.Ecto
   import Mix.Generator
   import Mix.Utils, only: [camelize: 1]
 
