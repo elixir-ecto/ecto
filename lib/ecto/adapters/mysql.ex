@@ -52,8 +52,6 @@ defmodule Ecto.Adapters.Mysql do
 
     opts = [ pool_name: pool_name ] ++ opts
     opts = opts |> Keyword.put_new(:port, @default_port)
-
-
     Worker.start_link(opts)
   end
 
@@ -86,8 +84,8 @@ defmodule Ecto.Adapters.Mysql do
   def insert(repo, model, opts) do
     module    = model.__struct__
     returning = module.__schema__(:keywords, model)
-      |> Enum.filter(fn {_, val} -> val == nil end)
-      |> Keyword.keys
+    |> Enum.filter(fn {_, val} -> val == nil end)
+    |> Keyword.keys
 
       {sql, params} = SQL.insert(model, returning)
 
@@ -281,14 +279,14 @@ defmodule Ecto.Adapters.Mysql do
     case check_migration_version(repo, version) do
       %Result{rows: []} ->
         error = Enum.map(commands, &query(repo, &1, []))
-          |> Enum.find(fn res ->
-            case res do
-              %Error{} ->
-                true
-              _ ->
-                false
-            end
-          end)
+        |> Enum.find(fn res ->
+          case res do
+            %Error{} ->
+              true
+            _ ->
+              false
+          end
+        end)
 
         if error != nil do
           raise error
