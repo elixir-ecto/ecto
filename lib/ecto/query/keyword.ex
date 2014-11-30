@@ -47,7 +47,7 @@ defmodule Ecto.Query.Keyword do
       end
 
     {t, on} = collect_on(t, nil)
-    {quoted, binds, count_bind} = Join.build_with_binds(quoted, qual, binds, expr, on, count_bind, env)
+    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, count_bind, env)
 
     build(t, env, count_bind, quoted, binds)
   end

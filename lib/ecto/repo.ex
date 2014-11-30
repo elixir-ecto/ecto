@@ -205,7 +205,7 @@ defmodule Ecto.Repo do
     `:timeout` - The time in milliseconds to wait for the call to finish,
                  `:infinity` will wait indefinitely (default: 5000);
   """
-  defcallback one(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
+  defcallback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
   Similar to `one/3` but raises `Ecto.NotSingleResult` if no record was found.
@@ -215,7 +215,7 @@ defmodule Ecto.Repo do
     `:timeout` - The time in milliseconds to wait for the call to finish,
                  `:infinity` will wait indefinitely (default: 5000);
   """
-  defcallback one!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
+  defcallback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
   Fetches all results from the data store based on the given query. May raise

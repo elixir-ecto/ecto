@@ -60,8 +60,8 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build_with_binds(Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
-  def build_with_binds(expr, env) do
+  @spec build(Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
+  def build(expr, env) do
     {binds, expr} = escape(expr)
 
     case Macro.expand(expr, env) do
@@ -84,7 +84,7 @@ defmodule Ecto.Query.Builder.From do
   end
 
   @doc """
-  The callback applied by `build_with_binds/2` to build the query.
+  The callback applied by `build/2` to build the query.
   """
   @spec apply(Ecto.Queryable.t, non_neg_integer) :: Ecto.Query.t
   def apply(query, binds) do

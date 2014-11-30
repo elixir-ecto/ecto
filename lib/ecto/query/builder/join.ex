@@ -32,12 +32,6 @@ defmodule Ecto.Query.Builder.Join do
     {var, expr, assoc}
   end
 
-  def escape({:in, _, [{var, _, context}, expr]}, vars)
-      when is_atom(var) and is_atom(context) do
-    {_, expr, assoc} = escape(expr, vars)
-    {var, expr, assoc}
-  end
-
   def escape({:__aliases__, _, _} = module, _vars) do
     {nil, module, nil}
   end
@@ -62,8 +56,8 @@ defmodule Ecto.Query.Builder.Join do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build_with_binds(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
-  def build_with_binds(query, qual, binding, expr, on, count_bind, env) do
+  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
+  def build(query, qual, binding, expr, on, count_bind, env) do
     binding = Builder.escape_binding(binding)
     {join_bind, join_expr, join_assoc} = escape(expr, binding)
     is_assoc? = not is_nil(join_assoc)

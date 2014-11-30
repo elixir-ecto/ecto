@@ -192,7 +192,7 @@ defmodule Ecto.Query do
       raise ArgumentError, reason: "second argument to `from` has to be a keyword list"
     end
 
-    {quoted, binds, count_bind} = From.build_with_binds(expr, __CALLER__)
+    {quoted, binds, count_bind} = From.build(expr, __CALLER__)
     Ecto.Query.Keyword.build(kw, __CALLER__, count_bind, quoted, binds)
   end
 
@@ -231,7 +231,7 @@ defmodule Ecto.Query do
       |> select([p, c], {p, c})
   """
   defmacro join(query, qual, binding, expr, on \\ nil) do
-    Join.build_with_binds(query, qual, binding, expr, on, nil, __CALLER__)
+    Join.build(query, qual, binding, expr, on, nil, __CALLER__)
     |> elem(0)
   end
 
