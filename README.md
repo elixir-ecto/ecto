@@ -384,7 +384,9 @@ Where `:YOUR_APP_NAME` is your application name (as in the `mix.exs` file). Now 
 
     $ mix ecto.gen.migration Repo create_posts
 
-This will create a new file inside `priv/repo/migrations` with the following contents:
+This will create a new file inside `priv/repo/migrations` with the `up` and `down` functions.
+
+Simply write the SQL commands for updating the database (`up`) and for rolling it back (`down`) and you are ready to go! To run a single command return a string, to run multiple return a list of strings:
 
 ```elixir
 defmodule Repo.CreatePosts do
@@ -400,8 +402,6 @@ defmodule Repo.CreatePosts do
   end
 end
 ```
-
-Simply write the SQL commands for updating the database (`up`) and for rolling it back (`down`) and you are ready to go! To run a single command return a string, to run multiple return a list of strings.
 
 Note the generated file (and all migration files) starts with a timestamp, which identifies the migration version. By running migrations, a `schema_migrations` table will be created in your database to keep which migrations are "up" (already executed) and which ones are "down".
 
