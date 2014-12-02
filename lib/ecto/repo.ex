@@ -382,6 +382,8 @@ defmodule Ecto.Repo do
   Enables logging and debugging of adapter actions such as sending queries to
   the database. Should be overridden to customize behaviour.
 
+  You must return the result of calling the passed in function.
+
   ## Examples
 
       def log({:query, sql}, fun) do
