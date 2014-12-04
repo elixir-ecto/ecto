@@ -23,7 +23,7 @@ defmodule Ecto.Mixfile do
   end
 
   defp deps do
-    [{:poolboy, "~> 1.4"},
+    [{:poolboy, "~> 1.4.1"},
      {:decimal, "~> 0.2.3"},
      {:postgrex, "~> 0.6.0", optional: true},
      {:ex_doc, "~> 0.6", only: :dev},
