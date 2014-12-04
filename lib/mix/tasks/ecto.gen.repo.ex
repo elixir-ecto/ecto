@@ -68,14 +68,6 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
       app_dir(<%= inspect @app %>, "priv/<%= @base %>")
     end
 
-    def log({:query, sql}, fun) do
-      {time, result} = :timer.tc(fun)
-      Logger.debug fn ->
-        [inspect(sql), " executed in: ", inspect(time), "µs"]
-      end
-      result
-    end
-    def log(_arg, fun), do: fun.()
   end
   """
 end
