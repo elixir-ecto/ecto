@@ -1,5 +1,4 @@
 defmodule Ecto.Repo do
-
   @moduledoc """
   This module is used to define a repository. A repository maps to a data
   store, for example an SQL database. A repository must implement `conf/0` and
