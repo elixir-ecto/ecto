@@ -44,7 +44,6 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   embed_template :repo, """
   defmodule <%= inspect @mod %> do
-    require Logger
     use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
 
     @doc "Adapter configuration"
@@ -67,7 +66,6 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     def priv do
       app_dir(<%= inspect @app %>, "priv/<%= @base %>")
     end
-
   end
   """
 end
