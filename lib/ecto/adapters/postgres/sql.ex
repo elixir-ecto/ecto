@@ -66,7 +66,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         [select, from, join, where, group_by, having, order_by, limit, offset, lock]
         |> Enum.filter(&(&1 != nil))
         |> List.flatten
-        |> Enum.join("\n")
+        |> Enum.join(" ")
 
       {sql, Map.values(external)}
     end
@@ -86,12 +86,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         sql = sql <> " DEFAULT VALUES"
       else
         sql = sql <>
-          " (" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ")\n" <>
+          " (" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ") " <>
           "VALUES (" <> Enum.map_join(1..length(values), ", ", &"$#{&1}") <> ")"
       end
 
       if !Enum.empty?(returning) do
-        sql = sql <> "\nRETURNING " <> Enum.map_join(returning, ", ", &quote_column(&1))
+        sql = sql <> " RETURNING " <> Enum.map_join(returning, ", ", &quote_column(&1))
       end
 
       {sql, values}
@@ -113,7 +113,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end)
 
       sql =
-        "UPDATE #{quote_table(table)} SET " <> sql_sets <> "\n" <>
+        "UPDATE #{quote_table(table)} SET " <> sql_sets <> " " <>
         "WHERE #{quote_column(pk_field)} = $#{length(values)+1}"
 
       {sql, values ++ [pk_value]}
@@ -131,10 +131,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end)
 
       {where, external} = where(query.wheres, state)
-      where = if where, do: "\n" <> where, else: ""
+      where = if where, do: " " <> where, else: ""
 
       sql =
-        "UPDATE #{quote_table(table)} AS #{name}\n" <>
+        "UPDATE #{quote_table(table)} AS #{name} " <>
         "SET " <> zipped_sql <>
         where
 
@@ -160,7 +160,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       state           = new_state(names, %{})
       {sql, external} = where(query.wheres, state)
 
-      sql = if query.wheres == [], do: "", else: "\n" <> sql
+      sql = if query.wheres == [], do: "", else: " " <> sql
       sql = "DELETE FROM #{quote_table(table)} AS #{name}" <> sql
       {sql, Map.values(external)}
     end

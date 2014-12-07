@@ -58,6 +58,7 @@ defmodule Ecto.Repo do
       use unquote(adapter)
       @behaviour Ecto.Repo
       @env unquote(env)
+      require Logger
 
       import Ecto.Utils, only: [app_dir: 2, parse_url: 1]
 
@@ -133,7 +134,15 @@ defmodule Ecto.Repo do
         true
       end
 
-      def log(arg, fun) do
+      def log({:query, sql}, fun) do
+        {time, result} = :timer.tc(fun)
+        Logger.info fn ->
+          [inspect(sql), " (", inspect(time), "µs)"]
+        end
+        result
+      end
+
+      def log(_arg, fun) do
         fun.()
       end
 
