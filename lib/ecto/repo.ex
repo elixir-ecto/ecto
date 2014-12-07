@@ -55,10 +55,10 @@ defmodule Ecto.Repo do
     end
 
     quote do
-      require Logger
       use unquote(adapter)
       @behaviour Ecto.Repo
       @env unquote(env)
+      require Logger
 
       import Ecto.Utils, only: [app_dir: 2, parse_url: 1]
 
