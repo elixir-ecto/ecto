@@ -37,7 +37,7 @@ defmodule Simple do
 
   def sample_query do
     query = from w in Weather,
-          where: w.prcp > 0 or w.prcp == nil,
+          where: w.prcp > 0 or is_nil(w.prcp),
          select: w
     Repo.all(query)
   end
