@@ -30,7 +30,7 @@ defmodule Simple do
 
   def sample_query do
     query = from w in Weather,
-          where: w.prcp > 0 or w.prcp == nil,
+          where: w.prcp > 0 or is_nil(w.prcp),
          select: w
     Repo.all(query)
   end
@@ -209,7 +209,7 @@ Last but not least, Ecto allows you to write queries in Elixir and send them to 
 import Ecto.Query, only: [from: 2]
 
 query = from w in Weather,
-      where: w.prcp > 0 or w.prcp == nil,
+      where: w.prcp > 0 or is_nil(w.prcp),
      select: w
 
 Repo.all(query)
@@ -233,7 +233,7 @@ When writing a query, you are inside Ecto's query syntax. In order to access ext
 
 ```elixir
 def min_prcp(min) do
-  from w in Weather, where: w.prcp > ^min or w.prcp == nil
+  from w in Weather, where: w.prcp > ^min or is_nil(w.prcp)
 end
 ```
 
