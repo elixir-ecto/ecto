@@ -1,5 +1,6 @@
 %{"decimal": {:hex, :decimal, "0.2.5"},
   "earmark": {:hex, :earmark, "0.1.10"},
+  "emysql": {:git, "git://github.com/eonblast/emysql.git", "c7e2103f8b737667f0128802e8de2f0d5ed2fa5c", []},
   "ex_doc": {:hex, :ex_doc, "0.6.0"},
   "poolboy": {:hex, :poolboy, "1.4.1"},
   "postgrex": {:hex, :postgrex, "0.6.0"}}

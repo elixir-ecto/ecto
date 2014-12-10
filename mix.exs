@@ -26,13 +26,15 @@ defmodule Ecto.Mixfile do
     [{:poolboy, "~> 1.4.1"},
      {:decimal, "~> 0.2.3"},
      {:postgrex, "~> 0.6.0", optional: true},
+     {:emysql, github: "eonblast/emysql", optional: true},
      {:ex_doc, "~> 0.6", only: :dev},
      {:earmark, "~> 0.1", only: :dev}]
   end
 
-  defp test_paths(:pg),  do: ["integration_test/pg"]
-  defp test_paths(:all), do: ["test", "integration_test/pg"]
-  defp test_paths(_),    do: ["test"]
+  defp test_paths(:pg),    do: ["integration_test/pg"]
+  defp test_paths(:mysql), do: ["integration_test/mysql"]
+  defp test_paths(:all),   do: ["test", "integration_test/pg", "integration_test/mysql"]
+  defp test_paths(_),      do: ["test"]
 
   defp description do
     """

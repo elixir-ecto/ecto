@@ -8,8 +8,12 @@ before_script:
   - export PATH=`pwd`/elixir/bin:$PATH
   - mix local.hex --force
   - mix deps.get
+  - mysql -u root -e "CREATE USER 'ecto'@'localhost'; GRANT ALL ON *.* to 'ecto'@'localhost';"
 script:
   - MIX_ENV=all mix test
+services:
+  - postgresql
+  - mysql
 notifications:
   recipients:
     - jose.valim@plataformatec.com.br
