@@ -136,9 +136,7 @@ defmodule Ecto.Repo do
 
       def log({:query, sql}, fun) do
         {time, result} = :timer.tc(fun)
-        Logger.info fn ->
-          [inspect(sql), " (", inspect(time), "µs)"]
-        end
+        Logger.debug fn -> [sql, " (", inspect(time), "µs)"] end
         result
       end
 
