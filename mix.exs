@@ -26,8 +26,8 @@ defmodule Ecto.Mixfile do
     [{:poolboy, "~> 1.4.1"},
      {:decimal, "~> 0.2.3"},
      {:postgrex, "~> 0.6.0", optional: true},
-     {:ex_doc, "~> 0.6", only: :dev},
-     {:earmark, "~> 0.1", only: :dev}]
+     {:ex_doc, "~> 0.6", only: :docs},
+     {:earmark, "~> 0.1", only: :docs}]
   end
 
   defp test_paths(:pg),  do: ["integration_test/pg"]
