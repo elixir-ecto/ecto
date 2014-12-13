@@ -133,7 +133,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     ## Examples
 
         iex> Postgres.query(MyRepo, "SELECT $1 + $2", [40, 2])
-        Postgrex.Result[command: :select, columns: ["?column?"], rows: [{42}], num_rows: 1]
+        %Postgrex.Result{command: :select, columns: ["?column?"], rows: [{42}], num_rows: 1}
     """
     def query(repo, sql, params, opts \\ []) do
       pool = repo_pool(repo)

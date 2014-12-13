@@ -1,5 +1,5 @@
 %{"decimal": {:hex, :decimal, "0.2.5"},
-  "earmark": {:hex, :earmark, "0.1.10"},
-  "ex_doc": {:hex, :ex_doc, "0.6.0"},
-  "poolboy": {:hex, :poolboy, "1.4.1"},
+  "earmark": {:hex, :earmark, "0.1.12"},
+  "ex_doc": {:hex, :ex_doc, "0.6.2"},
+  "poolboy": {:hex, :poolboy, "1.4.2"},
   "postgrex": {:hex, :postgrex, "0.6.0"}}

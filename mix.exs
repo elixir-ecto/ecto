@@ -3,7 +3,7 @@ defmodule Ecto.Mixfile do
 
   def project do
     [app: :ecto,
-     version: "0.2.6-dev",
+     version: "0.2.6",
      elixir: "~> 1.0",
      deps: deps,
      build_per_environment: false,
@@ -50,6 +50,6 @@ defmodule Ecto.Mixfile do
     {ref, 0} = System.cmd("git", ["rev-parse", "--verify", "--quiet", "HEAD"])
     [source_ref: ref,
      main: "overview",
-     readme: true]
+     readme: "README.md"]
   end
 end

@@ -1,7 +1,17 @@
-# v0.2.6-dev
+# v0.2.6 (2014-12-13)
+
+* Enhancements
+  * Log queries by default
+  * Pretty print queries (`Inspect` protocol implemented)
 
 * Bug fixes
   * Cast primary key in `Repo.get/2`
+  * Use repository port in Mix tasks
+  * Fix type checking in `Repo.update_all/2`
+
+* Backwards incompatible changes
+  * Return validation errors as maps
+  * Fix belongs_to preload if no associated record exists
 
 # v0.2.5 (2014-09-17)
 
