@@ -18,6 +18,7 @@ defmodule Ecto.Model do
     quote do
       use Ecto.Model.Schema
       use Ecto.Model.Validations
+      import Ecto.Model.Assign, only: [assign: 2]
     end
   end
 
@@ -73,5 +74,8 @@ defmodule Ecto.Model do
       from unquote(field) in __MODULE__, unquote(opts)
     end
   end
+
+  defdelegate assign(model, values), to: Ecto.Model.Assign
+  defdelegate assign(model, values, opts), to: Ecto.Model.Assign
 end
 
