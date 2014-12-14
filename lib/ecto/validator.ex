@@ -81,7 +81,7 @@ defmodule Ecto.Validator do
   defp process_each({:also, function}, acc, var, _getter) do
     quotation = fn acc, predicate ->
       quote do
-        Map.merge unquote(acc), unquote(predicate), fn _k, v1, v2 ->
+        Map.merge unquote(acc), unquote(predicate) || %{}, fn _k, v1, v2 ->
           v1 ++ v2
         end
       end
