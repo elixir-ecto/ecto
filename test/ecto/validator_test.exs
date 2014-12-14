@@ -70,6 +70,9 @@ defmodule Ecto.ValidatorTest do
 
     assert V.struct(%User{name: nil, age: nil},
               also: validate_other and validate_other) == %{age: ["can't be blank", "can't be blank"]}
+
+    assert V.struct(%User{name: "name", age: 6},
+              also: validate_other) == nil
   end
 
   test "validates dicts" do
