@@ -14,7 +14,6 @@ defmodule Ecto.Model.CallbacksTest do
     def current_time, do: @current_time
   end
 
-
   defmodule User do
     use Ecto.Model
 
@@ -34,15 +33,6 @@ defmodule Ecto.Model.CallbacksTest do
     def incr_revision(user), do: %{ user | revision: (user.revision || 0) + 1}
   end
 
-  test "all possible macros are there" do
-    assert macro_exported?(Ecto.Model.Callbacks, :before_insert, 2)
-    assert macro_exported?(Ecto.Model.Callbacks, :after_insert, 2)
-    assert macro_exported?(Ecto.Model.Callbacks, :before_update, 2)
-    assert macro_exported?(Ecto.Model.Callbacks, :after_update, 2)
-    assert macro_exported?(Ecto.Model.Callbacks, :before_delete, 2)
-    assert macro_exported?(Ecto.Model.Callbacks, :after_delete, 2)
-  end
-
   test "defines functions for callbacks" do
     assert function_exported?(User, :before_insert, 1)
   end
@@ -53,14 +43,14 @@ defmodule Ecto.Model.CallbacksTest do
 
   test "applies callbacks" do
     assert %User{name: "Michael"}
-            |> Ecto.Model.Callbacks.apply_callbacks(:before_insert) ==
+            |> Ecto.Model.Callbacks.__apply__(:before_insert) ==
               %User{name: "Michael", updated_at: Utils.current_time,
                     created_at: Utils.current_time}
   end
 
   test "applies multiple callbacks" do
     assert %User{name: "Michael"}
-            |> Ecto.Model.Callbacks.apply_callbacks(:before_update) ==
+            |> Ecto.Model.Callbacks.__apply__(:before_update) ==
               %User{name: "Michael", updated_at: Utils.current_time,
                     created_at: Utils.current_time, revision: 1}
   end

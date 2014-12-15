@@ -1,5 +1,11 @@
 # v0.2.7-dev
 
+* Enhancements
+  * Add support for `Ecto.Model.Callbacks`
+
+* Bug fixes
+  * Fix merging of validation errors when using validation_also
+
 # v0.2.6 (2014-12-13)
 
 * Enhancements

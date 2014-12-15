@@ -89,9 +89,9 @@ defmodule Ecto.Repo.Backend do
     normalized_model = normalize_model model
     validate_model(normalized_model)
 
-
-    insert_fun = fn ->
-      model    = Callbacks.apply_callbacks(model, :before_insert)
+    with_transactions_if_callbacks repo, adapter, model, opts,
+                                   ~w(before_insert after_insert)a, fn ->
+      model    = Callbacks.__apply__(model, :before_insert)
       result   = adapter.insert(repo, model, opts)
       module   = model.__struct__
       pk_field = module.__schema__(:primary_key)
@@ -100,12 +100,8 @@ defmodule Ecto.Repo.Backend do
       end
 
       struct(model, result)
-      |> Callbacks.apply_callbacks(:after_insert)
+      |> Callbacks.__apply__(:after_insert)
     end
-
-    if Callbacks.defined?(model, ~w(before_insert after_insert)a),
-      do: extract_transaction_value(repo.transaction(insert_fun)),
-      else: insert_fun.()
   end
 
   def update(repo, adapter, model, opts) do
@@ -113,20 +109,16 @@ defmodule Ecto.Repo.Backend do
     check_primary_key(normalized_model)
     validate_model(normalized_model)
 
-    update_fn = fn ->
-      model         = Callbacks.apply_callbacks(model, :before_update)
-      single_result =
+    with_transactions_if_callbacks repo, adapter, model, opts,
+                                   ~w(before_update after_update)a, fn ->
+      model  = Callbacks.__apply__(model, :before_update)
+      single =
         adapter.update(repo, model, opts)
         |> check_single_result(model)
 
-      Callbacks.apply_callbacks(model, :after_update)
-
-      single_result
+      Callbacks.__apply__(model, :after_update)
+      single
     end
-
-    if Callbacks.defined?(model, ~w(before_update after_update)a),
-       do: extract_transaction_value(repo.transaction(update_fn)),
-       else: update_fn.()
   end
 
   def update_all(repo, adapter, queryable, values, opts) do
@@ -160,20 +152,16 @@ defmodule Ecto.Repo.Backend do
     check_primary_key(normalized_model)
     validate_model(normalized_model)
 
-    delete_fun = fn ->
-      model         = Callbacks.apply_callbacks(model, :before_delete)
-      single_result =
+    with_transactions_if_callbacks repo, adapter, model, opts,
+                                   ~w(before_delete after_delete)a, fn ->
+      model  = Callbacks.__apply__(model, :before_delete)
+      single =
         adapter.delete(repo, model, opts)
         |> check_single_result(model)
 
-      Callbacks.apply_callbacks(model, :after_delete)
-
-      single_result
+      Callbacks.__apply__(model, :after_delete)
+      single
     end
-
-    if Callbacks.defined?(model, ~w(before_delete after_delete)a),
-      do: extract_transaction_value(repo.transaction(delete_fun)),
-      else: delete_fun.()
   end
 
   def delete_all(repo, adapter, queryable, opts) do
@@ -272,8 +260,13 @@ defmodule Ecto.Repo.Backend do
     end)
   end
 
-  defp extract_transaction_value(return_tuple) do
-    {:ok, value} = return_tuple
-    value
+  defp with_transactions_if_callbacks(repo, adapter, model, opts, callbacks, fun) do
+    struct = model.__struct__
+    if Enum.any?(callbacks, &function_exported?(struct, &1, 1)) do
+      {:ok, value} = transaction(repo, adapter, opts, fun)
+      value
+    else
+      fun.()
+    end
   end
 end
