@@ -85,7 +85,7 @@ defmodule Ecto.Model.CallbacksTest do
     def send_after_delete(model), do: send(self, {:after_delete, model})
   end
 
-  defmodule MyRepo do
+  defmodule MockRepo do
     use Ecto.Repo, adapter: Ecto.MockAdapter
 
     def conf, do: []
@@ -96,7 +96,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "wraps operations into transactions if callback present" do
     model = %CallbackModel{id: 1, x: "initial"}
 
-    MyRepo.insert model
+    MockRepo.insert model
 
     # From MockAdapter:
     assert_received {:transaction, _fun}
@@ -105,7 +105,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_insert, after_insert" do
     model = %CallbackModel{id: 1, x: "initial"}
 
-    model = MyRepo.insert model
+    model = MockRepo.insert model
 
     assert model.x == "initial,before_insert,after_insert"
   end
@@ -113,7 +113,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_update" do
     model = %CallbackModel{id: 1, x: "foo"}
 
-    MyRepo.update  model
+    MockRepo.update  model
 
     assert_received {:before_update, ^model}
     # From MockAdapter:
@@ -123,7 +123,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "after_update" do
     model = %CallbackModel{id: 1, x: "foo"}
 
-    MyRepo.update  model
+    MockRepo.update  model
 
     model_after_update = %{model | x: "changed before update"}
 
@@ -133,7 +133,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_delete" do
     model = %CallbackModel{id: 1, x: "foo"}
 
-    MyRepo.delete model
+    MockRepo.delete model
 
     assert_received {:before_delete, ^model}
     # From MockAdapter:
@@ -143,7 +143,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "after_delete" do
     model = %CallbackModel{id: 1, x: "foo"}
 
-    MyRepo.delete model
+    MockRepo.delete model
 
     model_after_delete = %{model | x: "changed before delete"}
 

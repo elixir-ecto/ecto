@@ -26,21 +26,21 @@ defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.MyRepo
+  alias Ecto.MockRepo
   alias Ecto.RepoTest.MyModel
   alias Ecto.RepoTest.MyModelList
   alias Ecto.RepoTest.MyModelNoPK
-  require MyRepo
+  require MockRepo
 
   test "repo validates query" do
     import Ecto.Query
 
     assert_raise Ecto.Query.TypeCheckError, fn ->
-      MyRepo.all(from(m in MyModel, select: m.x + 1))
+      MockRepo.all(from(m in MyModel, select: m.x + 1))
     end
 
     assert_raise Ecto.Query.TypeCheckError, fn ->
-      MyRepo.one(from(m in MyModel, select: m.x + 1))
+      MockRepo.one(from(m in MyModel, select: m.x + 1))
     end
   end
 
@@ -58,13 +58,13 @@ defmodule Ecto.RepoTest do
   test "needs model with primary key" do
     model = %MyModelNoPK{x: "abc"}
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.update(model)
+      MockRepo.update(model)
     end
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.delete(model)
+      MockRepo.delete(model)
     end
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.get(MyModelNoPK, 123)
+      MockRepo.get(MyModelNoPK, 123)
     end
   end
 
@@ -72,112 +72,112 @@ defmodule Ecto.RepoTest do
     model = %MyModel{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.update(model)
+      MockRepo.update(model)
     end
     assert_raise Ecto.NoPrimaryKey, fn ->
-      MyRepo.delete(model)
+      MockRepo.delete(model)
     end
   end
 
   test "works with primary key value" do
     model = %MyModel{id: 1, x: "abc"}
 
-    MyRepo.update(model)
-    MyRepo.delete(model)
-    MyRepo.get(MyModel, 123)
+    MockRepo.update(model)
+    MockRepo.delete(model)
+    MockRepo.get(MyModel, 123)
   end
 
   test "validate model types" do
     model = %MyModel{x: 123}
 
     assert_raise Ecto.InvalidModel, fn ->
-      MyRepo.insert(model)
+      MockRepo.insert(model)
     end
 
     model = %MyModel{id: 1, x: 123}
 
     assert_raise Ecto.InvalidModel, fn ->
-      MyRepo.update(model)
+      MockRepo.update(model)
     end
     assert_raise Ecto.InvalidModel, fn ->
-      MyRepo.delete(model)
+      MockRepo.delete(model)
     end
   end
 
   test "get validation" do
-    MyRepo.get(MyModel, 123)
+    MockRepo.get(MyModel, 123)
 
     assert_raise ArgumentError, fn ->
-      MyRepo.get(MyModel, :atom)
+      MockRepo.get(MyModel, :atom)
     end
   end
 
   test "repo validates update_all" do
     query = from(e in MyModel, select: e)
     assert_raise Ecto.QueryError, fn ->
-      MyRepo.update_all(query, [])
+      MockRepo.update_all(query, [])
     end
 
     query = from(e in MyModel, order_by: e.x)
     assert_raise Ecto.QueryError, fn ->
-      MyRepo.update_all(query, [])
+      MockRepo.update_all(query, [])
     end
 
     assert_raise Ecto.QueryError, fn ->
-      MyRepo.update_all(p in MyModel, y: "123")
+      MockRepo.update_all(p in MyModel, y: "123")
     end
 
     assert_raise Ecto.QueryError, fn ->
-      MyRepo.update_all(p in MyModel, x: 123)
+      MockRepo.update_all(p in MyModel, x: 123)
     end
 
     assert_raise Ecto.QueryError, fn ->
-      MyRepo.update_all(e in MyModel, [])
+      MockRepo.update_all(e in MyModel, [])
     end
 
-    MyRepo.update_all(e in MyModel, x: nil)
-    MyRepo.update_all(e in MyModel, x: e.x)
-    MyRepo.update_all(e in MyModel, x: "123")
-    MyRepo.update_all(MyModel, x: "123")
+    MockRepo.update_all(e in MyModel, x: nil)
+    MockRepo.update_all(e in MyModel, x: e.x)
+    MockRepo.update_all(e in MyModel, x: "123")
+    MockRepo.update_all(MyModel, x: "123")
 
     query = from(e in MyModel, where: e.x == "123")
-    MyRepo.update_all(query, x: "")
+    MockRepo.update_all(query, x: "")
   end
 
   test "repo validates delete_all" do
     query = from(e in MyModel, select: e)
     assert_raise Ecto.QueryError, fn ->
-      MyRepo.delete_all(query)
+      MockRepo.delete_all(query)
     end
 
     query = from(e in MyModel, order_by: e.x)
     assert_raise Ecto.QueryError, fn ->
-      MyRepo.delete_all(query)
+      MockRepo.delete_all(query)
     end
 
-    MyRepo.delete_all(MyModel)
+    MockRepo.delete_all(MyModel)
 
     query = from(e in MyModel, where: e.x == "123")
-    MyRepo.delete_all(query)
+    MockRepo.delete_all(query)
   end
 
   test "unsupported type" do
     assert_raise ArgumentError, fn ->
-      MyRepo.insert(%MyModel{x: {123}})
+      MockRepo.insert(%MyModel{x: {123}})
     end
   end
 
   test "list value types incorrect" do
     assert_raise Ecto.InvalidModel, fn ->
-      MyRepo.insert(%MyModelList{l1: %Ecto.Tagged{value: [1, 2, 3], type: {:array, :integer}}})
+      MockRepo.insert(%MyModelList{l1: %Ecto.Tagged{value: [1, 2, 3], type: {:array, :integer}}})
     end
   end
 
   test "app_dir is available" do
-    assert MyRepo.priv == Path.expand("../../_build/shared/lib/ecto/priv/db", __DIR__)
+    assert MockRepo.priv == Path.expand("../../_build/shared/lib/ecto/priv/db", __DIR__)
   end
 
   test "parse_url is available" do
-    assert MyRepo.url[:hostname] == "localhost"
+    assert MockRepo.url[:hostname] == "localhost"
   end
 end

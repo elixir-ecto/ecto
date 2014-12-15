@@ -1,4 +1,4 @@
-defmodule Ecto.MyRepo do
+defmodule Ecto.MockRepo do
   use Ecto.Repo, adapter: Ecto.MockAdapter
 
   def conf, do: []
