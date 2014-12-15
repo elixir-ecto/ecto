@@ -9,5 +9,7 @@ Code.ensure_loaded(Ecto.Query.API)
 # Commonly used support feature
 Code.require_file "support/file_helpers.exs", __DIR__
 Code.require_file "support/compile_helpers.exs", __DIR__
+Code.require_file "support/mock_adapter.exs", __DIR__
+Code.require_file "support/my_repo.exs", __DIR__
 
 ExUnit.start()

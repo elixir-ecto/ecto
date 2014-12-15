@@ -18,6 +18,7 @@ defmodule Ecto.Model do
     quote do
       use Ecto.Model.Schema
       use Ecto.Model.Validations
+      use Ecto.Model.Callbacks
     end
   end
 

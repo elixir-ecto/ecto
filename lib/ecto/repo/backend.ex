@@ -8,6 +8,7 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Query.Builder
   alias Ecto.Query.Normalizer
   alias Ecto.Query.Validator
+  alias Ecto.Model.Callbacks
   require Ecto.Query, as: Q
 
   def start_link(repo, adapter) do
@@ -85,28 +86,47 @@ defmodule Ecto.Repo.Backend do
   end
 
   def insert(repo, adapter, model, opts) do
-    normalized_model = normalize_model(model)
+    normalized_model = normalize_model model
     validate_model(normalized_model)
 
-    result   = adapter.insert(repo, model, opts)
-    module   = model.__struct__
-    pk_field = module.__schema__(:primary_key)
 
+    insert_fun = fn ->
+      model    = Callbacks.apply_callbacks(model, :before_insert)
+      result   = adapter.insert(repo, model, opts)
+      module   = model.__struct__
+      pk_field = module.__schema__(:primary_key)
+      if pk_field && (pk_value = Dict.get(result, pk_field)) do
+        model = Ecto.Model.put_primary_key(model, pk_value)
+      end
 
-    if pk_field && (pk_value = Dict.get(result, pk_field)) do
-      model = Ecto.Model.put_primary_key(model, pk_value)
+      struct(model, result)
+      |> Callbacks.apply_callbacks(:after_insert)
     end
 
-    struct(model, result)
+    if Callbacks.defined?(model, ~w(before_insert after_insert)a),
+      do: extract_transaction_value(repo.transaction(insert_fun)),
+      else: insert_fun.()
   end
 
   def update(repo, adapter, model, opts) do
-    normalized_model = normalize_model(model)
+    normalized_model = normalize_model model
     check_primary_key(normalized_model)
     validate_model(normalized_model)
 
-    adapter.update(repo, model, opts)
-    |> check_single_result(model)
+    update_fn = fn ->
+      model         = Callbacks.apply_callbacks(model, :before_update)
+      single_result =
+        adapter.update(repo, model, opts)
+        |> check_single_result(model)
+
+      Callbacks.apply_callbacks(model, :after_update)
+
+      single_result
+    end
+
+    if Callbacks.defined?(model, ~w(before_update after_update)a),
+       do: extract_transaction_value(repo.transaction(update_fn)),
+       else: update_fn.()
   end
 
   def update_all(repo, adapter, queryable, values, opts) do
@@ -135,12 +155,25 @@ defmodule Ecto.Repo.Backend do
   end
 
   def delete(repo, adapter, model, opts) do
-    normalized_model = normalize_model(model)
+    normalized_model = normalize_model model
+
     check_primary_key(normalized_model)
     validate_model(normalized_model)
 
-    adapter.delete(repo, model, opts)
-    |> check_single_result(model)
+    delete_fun = fn ->
+      model         = Callbacks.apply_callbacks(model, :before_delete)
+      single_result =
+        adapter.delete(repo, model, opts)
+        |> check_single_result(model)
+
+      Callbacks.apply_callbacks(model, :after_delete)
+
+      single_result
+    end
+
+    if Callbacks.defined?(model, ~w(before_delete after_delete)a),
+      do: extract_transaction_value(repo.transaction(delete_fun)),
+      else: delete_fun.()
   end
 
   def delete_all(repo, adapter, queryable, opts) do
@@ -237,5 +270,10 @@ defmodule Ecto.Repo.Backend do
       type = module.__schema__(:field_type, field)
       Map.update!(model, field, &Util.try_cast(&1, type))
     end)
+  end
+
+  defp extract_transaction_value(return_tuple) do
+    {:ok, value} = return_tuple
+    value
   end
 end
