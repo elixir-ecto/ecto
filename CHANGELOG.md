@@ -1,4 +1,4 @@
-# v0.2.7-dev
+# v0.2.7 (2014-12-15)
 
 * Enhancements
   * Add support for `Ecto.Model.Callbacks`

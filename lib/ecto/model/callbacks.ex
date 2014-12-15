@@ -49,7 +49,6 @@ defmodule Ecto.Model.Callbacks do
 
       quote bind_quoted: [event: event, callbacks: callbacks] do
         def unquote(event)(model) do
-
           Enum.reduce unquote(callbacks), model, fn({mod, fun}, acc) ->
             apply(mod, fun, [acc])
           end
