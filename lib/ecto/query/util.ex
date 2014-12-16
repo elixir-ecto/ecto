@@ -41,7 +41,7 @@ defmodule Ecto.Query.Util do
   @doc false
   defmacro types do
     ~w(boolean string integer float decimal binary datetime date time interval
-       uuid virtual)a
+       uuid)a
   end
 
   @doc false

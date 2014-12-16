@@ -1,3 +1,8 @@
+# v0.3.0-dev
+
+* Backwards incompatible changes
+  * `:virtual` type no longer exists, instead pass `virtual: true` as field option
+
 # v0.2.8 (2014-12-16)
 
 * Bug fixes

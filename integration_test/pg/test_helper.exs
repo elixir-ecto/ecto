@@ -42,7 +42,7 @@ defmodule Ecto.Integration.Postgres.Post do
     field :tags, {:array, :string}
     field :bin, :binary
     field :uuid, :uuid
-    field :temp, :virtual, default: "temp"
+    field :temp, :string, default: "temp", virtual: true
     has_many :comments, Ecto.Integration.Postgres.Comment
     has_one :permalink, Ecto.Integration.Postgres.Permalink
   end

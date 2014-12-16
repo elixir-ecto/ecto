@@ -110,7 +110,6 @@ defmodule Ecto.Model.Schema do
   runtime introspection of the schema.
 
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
-  * `__schema__(:field, field)` - Returns the options for the given field;
   * `__schema__(:field_type, field)` - Returns the type of the given field;
   * `__schema__(:field_names)` - Returns a list of all field names;
   * `__schema__(:associations)` - Returns a list of all association field names;
@@ -147,10 +146,12 @@ defmodule Ecto.Model.Schema do
       opts = (Module.get_attribute(__MODULE__, :schema_defaults) || [])
              |> Keyword.merge(unquote(opts))
 
-      @ecto_fields []
-      @struct_fields []
       @ecto_primary_key nil
       @ecto_source unquote(source)
+
+      Module.register_attribute(__MODULE__, :assign_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
 
       @ecto_foreign_key_type opts[:foreign_key_type]
@@ -166,24 +167,25 @@ defmodule Ecto.Model.Schema do
           raise ArgumentError, message: ":primary_key must be false or {name, type, opts}"
       end
 
-      import Ecto.Model.Schema, only: [field: 1, field: 2, field: 3, has_many: 2,
-          has_many: 3, has_one: 2, has_one: 3, belongs_to: 2, belongs_to: 3]
-      unquote(block)
-      import Ecto.Model.Schema, only: []
+      try do
+        import Ecto.Model.Schema
+        unquote(block)
+      after
+        :ok
+      end
 
-      all_fields = @ecto_fields |> Enum.reverse
-      assocs     = @ecto_assocs |> Enum.reverse
-
-      fields = Enum.filter(all_fields, fn {_, opts} -> opts[:type] != :virtual end)
+      fields = @ecto_fields |> Enum.reverse
+      assocs = @ecto_assocs |> Enum.reverse
 
       def __schema__(:source), do: @ecto_source
 
       Module.eval_quoted __MODULE__, [
-        Ecto.Model.Schema.ecto_struct(@struct_fields),
-        Ecto.Model.Schema.ecto_fields(fields),
-        Ecto.Model.Schema.ecto_assocs(assocs, @ecto_primary_key, fields),
-        Ecto.Model.Schema.ecto_primary_key(@ecto_primary_key),
-        Ecto.Model.Schema.ecto_helpers(fields, all_fields, @ecto_primary_key) ]
+        Ecto.Model.Schema.__assign__(@assign_fields, @ecto_primary_key),
+        Ecto.Model.Schema.__struct__(@struct_fields),
+        Ecto.Model.Schema.__fields__(fields),
+        Ecto.Model.Schema.__assocs__(__MODULE__, assocs, @ecto_primary_key, fields),
+        Ecto.Model.Schema.__primary_key__(@ecto_primary_key),
+        Ecto.Model.Schema.__helpers__(fields, @ecto_primary_key) ]
     end
   end
 
@@ -191,13 +193,14 @@ defmodule Ecto.Model.Schema do
 
   @doc """
   Defines a field on the model schema with given name and type, will also create
-  a struct field. If the type is `:virtual` it wont be persisted.
+  a struct field.
 
   ## Options
 
-    * `:default` - Sets the default value on the schema and the struct;
-    * `:primary_key` - Sets the field to be the primary key, the default
-      primary key have to be overridden by setting its name to `nil`;
+    * `:default` - Sets the default value on the schema and the struct
+    * `:virtual` - When true, the field is not persisted
+    * `:primary_key` - When true, the field is set as primary key
+
   """
   defmacro field(name, type \\ :string, opts \\ []) do
     quote do
@@ -344,7 +347,8 @@ defmodule Ecto.Model.Schema do
   # especially check the default value
   @doc false
   def __field__(mod, name, type, opts) do
-    check_type!(type)
+    check_type!(type, opts[:virtual])
+
     fields = Module.get_attribute(mod, :ecto_fields)
 
     if opts[:primary_key] do
@@ -355,34 +359,34 @@ defmodule Ecto.Model.Schema do
       end
     end
 
-    clash = Enum.any?(fields, fn {prev, _} -> name == prev end)
-    if clash do
+    if List.keyfind(fields, name, 0) do
       raise ArgumentError, message: "field `#{name}` was already set on schema"
     end
 
-    struct_fields = Module.get_attribute(mod, :struct_fields)
-    Module.put_attribute(mod, :struct_fields, struct_fields ++ [{name, opts[:default]}])
+    Module.put_attribute(mod, :assign_fields, {name, type})
+    Module.put_attribute(mod, :struct_fields, {name, opts[:default]})
 
-    opts = Enum.reduce([:default, :primary_key], opts, &Dict.delete(&2, &1))
-    Module.put_attribute(mod, :ecto_fields, [{name, [type: type] ++ opts}|fields])
+    unless opts[:virtual] do
+      Module.put_attribute(mod, :ecto_fields, {name, type, opts})
+    end
   end
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
     assoc = Ecto.Associations.HasMany.Proxy.__assoc__(:new, name, mod)
-    __field__(mod, name, :virtual, default: assoc)
+    Module.put_attribute(mod, :struct_fields, {name, assoc})
 
-    opts = [type: :has_many, queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, opts})
+    opts = [queryable: queryable] ++ opts
+    Module.put_attribute(mod, :ecto_assocs, {name, :has_many, opts})
   end
 
   @doc false
   def __has_one__(mod, name, queryable, opts) do
     assoc = Ecto.Associations.HasOne.Proxy.__assoc__(:new, name, mod)
-    __field__(mod, name, :virtual, default: assoc)
+    Module.put_attribute(mod, :struct_fields, {name, assoc})
 
-    opts = [type: :has_one, queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, opts})
+    opts = [queryable: queryable] ++ opts
+    Module.put_attribute(mod, :ecto_assocs, {name, :has_one, opts})
   end
 
   @doc false
@@ -397,84 +401,93 @@ defmodule Ecto.Model.Schema do
     __field__(mod, opts[:foreign_key], foreign_key_type, [])
 
     assoc = Ecto.Associations.BelongsTo.Proxy.__assoc__(:new, name, mod)
-    __field__(mod, name, :virtual, default: assoc)
+    Module.put_attribute(mod, :struct_fields, {name, assoc})
 
-    opts = [type: :belongs_to, queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, opts})
+    opts = [queryable: queryable] ++ opts
+    Module.put_attribute(mod, :ecto_assocs, {name, :belongs_to, opts})
   end
 
   ## Helpers
 
   @doc false
-  def ecto_struct(struct_fields) do
+  def __assign__(assign_fields, primary_key) do
+    map = assign_fields |> Enum.into(%{}) |> Map.delete(primary_key) |> Macro.escape()
+    quote do
+      def __assign__ do
+        unquote(map)
+      end
+    end
+  end
+
+  @doc false
+  def __struct__(struct_fields) do
     quote do
       defstruct unquote(Macro.escape(struct_fields))
     end
   end
 
   @doc false
-  def ecto_fields(fields) do
-    quoted = Enum.map(fields, fn {name, opts} ->
+  def __fields__(fields) do
+    quoted = Enum.map(fields, fn {name, type, _opts} ->
       quote do
-        def __schema__(:field, unquote(name)), do: unquote(opts)
-        def __schema__(:field_type, unquote(name)), do: unquote(opts[:type])
+        def __schema__(:field_type, unquote(name)), do: unquote(type)
       end
     end)
 
     field_names = Enum.map(fields, &elem(&1, 0))
+
     quoted ++ [ quote do
-      def __schema__(:field, _), do: nil
       def __schema__(:field_type, _), do: nil
       def __schema__(:field_names), do: unquote(field_names)
     end ]
   end
 
   @doc false
-  def ecto_assocs(assocs, primary_key, fields) do
-    quoted = Enum.map(assocs, fn {name, opts} ->
-      quote bind_quoted: [name: name, opts: opts, primary_key: primary_key, fields: fields] do
-        pk = opts[:references] || primary_key
+  def __assocs__(module, assocs, primary_key, fields) do
+    quoted = Enum.map(assocs, fn {name, type, opts} ->
+      pk = opts[:references] || primary_key
 
-        if is_nil(pk) do
-          raise ArgumentError, message: "need to set `references` option for " <>
-            "association when model has no primary key"
+      if is_nil(pk) do
+        raise ArgumentError, message: "need to set :references option for " <>
+          "association #{inspect name} when model has no primary key"
+      end
+
+      if type in [:has_many, :has_one] do
+        unless List.keyfind(fields, pk, 0) do
+          raise ArgumentError, message: "model does not have the field #{inspect pk} used by " <>
+            "association #{inspect name}, please set the :references option accordingly"
         end
+      end
 
-        if opts[:type] in [:has_many, :has_one] do
-          unless Enum.any?(fields, fn {name, _} -> pk == name end) do
-            raise ArgumentError, message: "`references` option on association " <>
-              "doesn't match any field on the model"
-          end
-        end
+      refl = Ecto.Associations.create_reflection(type, name,
+        module, pk, opts[:queryable], opts[:foreign_key])
 
-        refl = Ecto.Associations.create_reflection(opts[:type], name,
-          __MODULE__, pk, opts[:queryable], opts[:foreign_key])
-
+      quote do
         def __schema__(:association, unquote(name)) do
           unquote(Macro.escape(refl))
         end
       end
     end)
 
-    quote do
-      def __schema__(:associations), do: unquote(Keyword.keys(assocs))
+    assoc_names = Enum.map(assocs, &elem(&1, 0))
 
+    quote do
+      def __schema__(:associations), do: unquote(assoc_names)
       unquote(quoted)
       def __schema__(:association, _), do: nil
     end
   end
 
   @doc false
-  def ecto_primary_key(primary_key) do
+  def __primary_key__(primary_key) do
     quote do
       def __schema__(:primary_key), do: unquote(primary_key)
     end
   end
 
   @doc false
-  def ecto_helpers(fields, all_fields, primary_key) do
+  def __helpers__(fields, primary_key) do
     field_names = Enum.map(fields, &elem(&1, 0))
-    all_field_names = Enum.map(all_fields, &elem(&1, 0))
 
     quote do
       # TODO: This can be optimized
@@ -491,17 +504,21 @@ defmodule Ecto.Model.Schema do
         keep_pk     = Keyword.get(opts, :primary_key, true)
         primary_key = unquote(primary_key)
 
-        values = Map.take(model, unquote(all_field_names))
+        values = Map.take(model, unquote(field_names))
 
-        Enum.filter(values, fn {field, _} ->
-          __schema__(:field, field) && (keep_pk or field != primary_key)
+        Map.to_list(if keep_pk do
+          values
+        else
+          Map.delete(values, primary_key)
         end)
       end
     end
   end
 
-  defp check_type!({outer, inner}) when outer in Util.poly_types and inner in Util.types, do: :ok
+  defp check_type!(:any, true),     do: :ok
+  defp check_type!(type, _virtual), do: check_type!(type)
 
+  defp check_type!({outer, inner}) when outer in Util.poly_types and inner in Util.types, do: :ok
   defp check_type!(type) when type in Util.types, do: :ok
 
   defp check_type!(type) do

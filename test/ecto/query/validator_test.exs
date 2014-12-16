@@ -30,7 +30,7 @@ defmodule Ecto.Query.ValidatorTest do
 
     schema :comments do
       field :text, :string
-      field :temp, :virtual
+      field :temp, :string, virtual: true
       field :posted, :datetime
       field :day, :date
       field :time, :time
@@ -43,7 +43,6 @@ defmodule Ecto.Query.ValidatorTest do
     |> Normalizer.normalize
     |> Validator.validate([Ecto.Query.API])
   end
-
 
   test "valid query with bindings" do
     query = Post |> select([p], {p.title})

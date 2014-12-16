@@ -27,7 +27,7 @@ defmodule Ecto.Model.SchemaTest do
 
   test "uses @schema_defauls" do
     assert %DefaultUser{uuid: "abc"}.uuid == "abc"
-    assert DefaultUser.__schema__(:field, :comment_id) == [type: :string]
+    assert DefaultUser.__schema__(:field_type, :comment_id) == :string
   end
 
   defmodule MyModel do
@@ -36,8 +36,9 @@ defmodule Ecto.Model.SchemaTest do
     schema "mymodel" do
       field :name, :string, default: "eric"
       field :email, :string, uniq: true
-      field :temp, :virtual, default: "temp"
+      field :temp, :any, default: "temp", virtual: true
       field :array, {:array, :string}
+      belongs_to :comment, Comment
     end
 
     def test_attr(:source), do: @ecto_source
@@ -55,23 +56,20 @@ defmodule Ecto.Model.SchemaTest do
     assert MyModel.test_attr(:source) == "mymodel"
   end
 
-  test "metadata" do
-    fields = [
-      {:id, [type: :integer]},
-      {:name, [type: :string]},
-      {:email, [type: :string, uniq: true]},
-      {:array, [type: {:array, :string}]}
-    ]
+  test "schema metadata" do
+    assert MyModel.__schema__(:source)                  == "mymodel"
+    assert MyModel.__schema__(:field_names)             == [:id, :name, :email, :array, :comment_id]
+    assert MyModel.__schema__(:field_type, :id)         == :integer
+    assert MyModel.__schema__(:field_type, :name)       == :string
+    assert MyModel.__schema__(:field_type, :email)      == :string
+    assert MyModel.__schema__(:field_type, :array)      == {:array, :string}
+    assert MyModel.__schema__(:field_type, :comment_id) == :integer
+  end
 
-    assert MyModel.__schema__(:source)             == "mymodel"
-    assert MyModel.__schema__(:field_names)        == [:id, :name, :email, :array]
-    assert MyModel.__schema__(:field, :id)         == fields[:id]
-    assert MyModel.__schema__(:field, :name)       == fields[:name]
-    assert MyModel.__schema__(:field, :email)      == fields[:email]
-    assert MyModel.__schema__(:field_type, :id)    == fields[:id][:type]
-    assert MyModel.__schema__(:field_type, :name)  == fields[:name][:type]
-    assert MyModel.__schema__(:field_type, :email) == fields[:email][:type]
-    assert MyModel.__schema__(:field_type, :array) == fields[:array][:type]
+  test "assign metadata" do
+    assert MyModel.__assign__ ==
+           %{name: :string, email: :string, array: {:array, :string},
+             comment_id: :integer, temp: :any}
   end
 
   test "field name clash" do
@@ -166,8 +164,6 @@ defmodule Ecto.Model.SchemaTest do
                                        associated: Comment, key: :comment_id, assoc_key: :id}
     assert refl == ModelAssocs.__schema__(:association, :comment)
 
-    assert ModelAssocs.__schema__(:field, :comment_id) == [type: :integer]
-
     r = %ModelAssocs{}
     assoc = r.comment
     assert assoc.__assoc__(:name) == :comment
@@ -192,8 +188,8 @@ defmodule Ecto.Model.SchemaTest do
       end
     end
 
-    assert ForeignKeyType.__schema__(:field, :comment_id) == [type: :datetime]
-    assert DefaultForeignKeyType.__schema__(:field, :comment_id) == [type: :interval]
+    assert ForeignKeyType.__schema__(:field_type, :comment_id) == :datetime
+    assert DefaultForeignKeyType.__schema__(:field_type, :comment_id) == :interval
   end
 
   defmodule ModelAssocOpts do
@@ -230,7 +226,8 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "references option has to match a field on model" do
-    message = "`references` option on association doesn't match any field on the model"
+    message = "model does not have the field :pk used by association :posts, " <>
+              "please set the :references option accordingly"
     assert_raise ArgumentError, message, fn ->
       defmodule ModelPkAssocMisMatch do
         use Ecto.Model

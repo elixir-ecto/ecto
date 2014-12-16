@@ -11,7 +11,7 @@ defmodule Ecto.Query.NormalizerTest do
 
     schema :comments do
       field :text, :string
-      field :temp, :virtual
+      field :temp, :string, virtual: true
       field :posted, :datetime
       belongs_to :post, Ecto.Query.NormalizerTest.Post
     end

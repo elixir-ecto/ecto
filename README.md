@@ -273,7 +273,7 @@ Ecto type               | Elixir type             | Tagged in queries with
 
 In queries some values need to be tagged by their ecto type because the ecto type cannot be inferred from an elixir value. For example an Elixir binary can be both an arbitrary binary or a UTF-8 encoded string, therefore the value needs to be wrapped in a function: `binary(<<...>>)` to tag it with the correct type.
 
-Models can have fields of `:virtual` type. These fields are not persisted to the database or type checked.
+Models can also have virtual fields. These fields are not persisted to the database and can optionally not be type checked by declaring type `:any`.
 
 When manipulating the struct, it is the responsibility of the developer to ensure the fields are cast to the proper value. For example, you can create a weather struct with an invalid value for `temp_lo`:
 
