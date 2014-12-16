@@ -68,8 +68,8 @@ defmodule Ecto.Model.Validations do
   and its current value as argument. For example, the `present` predicate
   above is going to be called as:
 
-      present(user.name)
-      present(user.age, message: "must be present")
+      present(:name, user.name)
+      present(:age, user.age, message: "must be present")
 
   Note that predicates can be chained together with `and`. The following
   is equivalent to the example above:
@@ -112,7 +112,7 @@ defmodule Ecto.Model.Validations do
 
   It could be implemented as:
 
-      def image_attachments(value, opts \\ []) do
+      def image_attachments(_field, value, opts \\ []) do
         unless Path.extname(value) in ~w(jpg gif png) do
           opts[:message] || "is not an image attachment"
         end

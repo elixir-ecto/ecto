@@ -192,7 +192,7 @@ def update(id, params) do
   weather = Repo.get(Weather, id) |> struct(params)
 
   case Weather.validate(weather) do
-    [] ->
+    nil ->
       Repo.update(weather)
       json weather: weather
     errors ->
@@ -431,7 +431,7 @@ If you are contributing to the Postgres adapter you need to run the integration 
 
 ## License
 
-Copyright 2012-2013 Elixir Lang.
+Copyright 2012-2014 Elixir Lang.
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.

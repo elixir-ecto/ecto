@@ -106,7 +106,7 @@ defmodule Ecto.Validator do
     end
 
     handle_ops function, acc, quotation, fn call ->
-      Macro.pipe(getter.(var, attr), call, 0)
+      Macro.pipe(attr, Macro.pipe(getter.(var, attr), call, 0), 0)
     end
   end
 
