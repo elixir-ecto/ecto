@@ -1,3 +1,8 @@
+# v0.2.8 (2014-12-16)
+
+* Bug fixes
+  * Validation predicates now receive the attribute as first argument
+
 # v0.2.7 (2014-12-15)
 
 * Enhancements
