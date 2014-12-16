@@ -1,4 +1,6 @@
 defmodule Ecto.Validator.Predicates do
+  require Ecto.Query
+
   @moduledoc """
   A handful of predicates to be used in validations.
 
@@ -318,6 +320,70 @@ defmodule Ecto.Validator.Predicates do
   def not_member_of(_field, value, enum, opts \\ []) when is_list(opts) do
     unless value == nil or not(value in enum) do
       opts[:message] || "is reserved"
+    end
+  end
+
+  @doc """
+  Validates the attribute given model are unique..
+
+  ## Options
+
+  * `:case_sensitive` - defaults true
+  * `:message` - defaults "already taken"
+  * `:on` - repo to query against
+  * `:scope` - defaults to []
+
+
+  ## Examples
+
+      validate user,
+        also: unique([:email], on: Repo)
+
+      validate user,
+        also: unique([:email, :username], on: Repo)
+
+  """
+  def unique(model, fields, opts \\ []) when is_list(opts) do
+    module         = model.__struct__
+    repo           = Keyword.fetch!(opts, :on)
+    scope          = opts[:scope] || []
+    message        = opts[:message] || "already taken"
+    case_sensitive = Keyword.get(opts, :case_sensitive, true)
+
+    where =
+      Enum.reduce(fields, false, fn field, acc ->
+        value = Map.fetch!(model, field)
+        if case_sensitive and is_binary(value) do
+          quote(do: unquote(acc) or downcase(&0.unquote(field)) == downcase(unquote(value)))
+        else
+          quote(do: unquote(acc) or &0.unquote(field) == unquote(value))
+        end
+      end)
+
+    where =
+      Enum.reduce(scope, where, fn field, acc ->
+        value = Map.fetch!(model, field)
+        quote(do: unquote(acc) and &0.unquote(field) == unquote(value))
+      end)
+
+    select = Enum.map(fields, fn field -> quote(do: &0.unquote(field)) end)
+
+    query = %{Ecto.Query.from(module, limit: 1) |
+      select: %Ecto.Query.QueryExpr{expr: select},
+      wheres: [%Ecto.Query.QueryExpr{expr: where}]}
+
+    case repo.all(query) do
+      [values] ->
+        zipped = Enum.zip(fields, values)
+        Enum.reduce(zipped, Map.new,  fn {field, value}, acc ->
+          if Map.fetch!(model, field) == value do 
+            Map.put(acc, field, message)
+          else
+            acc
+          end
+        end)
+      _ ->
+        nil
     end
   end
 end
