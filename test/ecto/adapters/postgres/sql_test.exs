@@ -174,6 +174,15 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) == {~s{SELECT NOT (m0."x" IS NULL) FROM "model" AS m0}, []}
   end
 
+  test "fragments" do
+    query = Model |> select([r], ~f[downcase(#{r.x})]) |> normalize
+    assert SQL.select(query) == {~s{SELECT downcase(m0."x") FROM "model" AS m0}, []}
+
+    value = 13
+    query = Model |> select([r], ~f[downcase(#{r.x}, #{^value})]) |> normalize
+    assert SQL.select(query) == {"SELECT downcase(m0.\"x\", $1::bigint) FROM \"model\" AS m0", '\r'}
+  end
+
   test "literals" do
     query = Model |> select([], nil) |> normalize
     assert SQL.select(query) == {~s{SELECT NULL FROM "model" AS m0}, []}
@@ -227,7 +236,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     SELECT $1::bigint FROM "model" AS m0 INNER JOIN "model2" AS m1 ON $2::boolean INNER JOIN "model2" AS m2 ON $3::boolean WHERE ($4::boolean) AND ($5::boolean) GROUP BY $6::bigint, $7::bigint HAVING ($8::boolean) AND ($9::boolean) ORDER BY $10::bigint, $11::bigint LIMIT $12::bigint OFFSET $13::bigint 
     """
 
-    assert SQL.select(query) == {String.rstrip(result), [0, true, false, true, false, 1, 2, true, false, 3, 4, 5, 6]}
+    assert SQL.select(query) == {String.rstrip(result),
+                                 [0, true, false, true, false, 1, 2, true, false, 3, 4, 5, 6]}
 
     value = Decimal.new("42")
     query = Model |> select([], ^value) |> normalize

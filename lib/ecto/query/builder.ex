@@ -3,6 +3,7 @@ defmodule Ecto.Query.Builder do
 
   alias Ecto.Query
 
+  @expand_fragments [:sigil_f, :sigil_F]
   @expand_sigils [:sigil_c, :sigil_C, :sigil_s, :sigil_S, :sigil_w, :sigil_W]
 
   @doc """
@@ -73,6 +74,20 @@ defmodule Ecto.Query.Builder do
   def escape({:<<>>, _, _} = bin, external, _vars),
     do: {bin, external}
 
+  # fragments
+  def escape({sigil, _, [{:<<>>, _, frags}, []]}, external, vars) when sigil in @expand_fragments do
+    {frags, external} =
+      Enum.map_reduce frags, external, fn
+        frag, external when is_binary(frag) ->
+          {frag, external}
+        {:::, _, [{{:., _, [Kernel, :to_string]}, _, [frag]}, _]}, external ->
+          escape(frag, external, vars)
+      end
+
+    {{:%, [], [Ecto.Query.Fragment, {:%{}, [], [parts: frags]}]},
+      external}
+  end
+
   # sigils
   def escape({name, _, _} = sigil, external, _vars) when name in @expand_sigils do
     {sigil, external}
@@ -114,9 +129,7 @@ defmodule Ecto.Query.Builder do
   Escapes a variable according to the given binds.
 
   A escaped variable is represented internally as `&0`, `&1` and
-  so on. This function is also responsible for handling join vars
-  which use a `count_binds` variable assigned to the `Ecto.Query`
-  to pass the required index information.
+  so on.
   """
   @spec escape_var(atom, Keyword.t) :: Macro.t | no_return
   def escape_var(var, vars)

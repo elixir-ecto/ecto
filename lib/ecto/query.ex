@@ -1,5 +1,5 @@
 defmodule Ecto.Query do
-  @moduledoc """
+  @moduledoc ~S"""
   Provides the Query DSL.
 
   Queries are used to retrieve and manipulate data in a repository
@@ -36,6 +36,28 @@ defmodule Ecto.Query do
 
   Any value can be used on the right-side of `in` as long as it
   implements the `Ecto.Queryable` protocol.
+
+  ## Query expressions
+
+  Ecto allows a limitted set of expressions to be used inside queries:
+
+    * Comparison operators: `==`, `!=`, `<=`, `>=`, `<`, `>`
+    * Boolean operators: `and`, `or`, `not`
+    * Inclusion operator: `in/2`
+    * Search functions: `like/2` and `ilike/2`
+    * Null check functions: `is_nil/1`
+    * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
+
+  However, any expression can be given to the underlying the database
+  by using fragments:
+
+      def unpublished_by_title(title)
+        from p in Post,
+          where: is_nil(p.published_at) and ~f[downcase(#{p.title}) == #{^title}]
+      end
+
+  Fragments are sent directly to the database while also allowing field names
+  like `p.title` and values like `^title` to be interpolated.
 
   ## Data security
 
@@ -126,6 +148,11 @@ defmodule Ecto.Query do
   defmodule JoinExpr do
     @moduledoc false
     defstruct [:qual, :source, :on, :file, :line, :assoc]
+  end
+
+  defmodule Fragment do
+    @moduledoc false
+    defstruct parts: []
   end
 
   alias Ecto.Query.Builder.From

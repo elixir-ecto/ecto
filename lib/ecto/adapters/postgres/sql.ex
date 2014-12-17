@@ -296,6 +296,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       expr(arg, state)
     end
 
+    defp expr(%Ecto.Query.Fragment{parts: parts}, state) do
+      Enum.map_join(parts, "", fn
+        part when is_binary(part) -> part
+        expr -> expr(expr, state)
+      end)
+    end
+
     defp expr({:^, [], [ix]}, state) do
       param_index = state.offset + ix + 1
       value = Map.fetch!(state.external, ix)

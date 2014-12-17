@@ -372,6 +372,17 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
   end
 
+  test "allow fragments" do
+    query = Post |> select([p], ~f[downcase(#{p.title})])
+    validate(query)
+
+    query = Post |> select([p], {p.title, ~f[downcase(#{p.title})]})
+    validate(query)
+
+    query = Post |> select([p], ~f[downcase(#{p.title}, #{^123})])
+    validate(query)
+  end
+
   test "only allow functions in API" do
     query = Post |> select([], forty_two())
     assert_raise Ecto.QueryError, fn ->

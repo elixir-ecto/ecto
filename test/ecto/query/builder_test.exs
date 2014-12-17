@@ -17,6 +17,9 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do avg(0) end), %{}} ==
            escape(quote do avg(0) end, [])
 
+    assert {quote do %unquote(Ecto.Query.Fragment){parts: ["foo"]} end, %{}} ==
+           escape(quote do ~f[foo] end, [])
+
     assert {quote(do: ~s"123"), %{}} ==
            escape(quote do ~s"123" end, [])
 
@@ -81,7 +84,7 @@ defmodule Ecto.Query.BuilderTest do
     end
   end
 
-  test "escape_fields_and_vars" do
+  test "escape fields and vars" do
     varx = {:{}, [], [:&, [], [0]]}
     vary = {:{}, [], [:&, [], [1]]}
 
@@ -101,7 +104,7 @@ defmodule Ecto.Query.BuilderTest do
            escape_fields_and_vars(quote do [x, y] end, [x: 0, y: 1])
   end
 
-  test "escape_expr raise" do
+  test "escape expr raise" do
     assert_raise Ecto.QueryError, "unbound variable `x` in query", fn ->
       escape_fields_and_vars(quote do x.y end, [])
     end

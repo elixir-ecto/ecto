@@ -272,6 +272,11 @@ defmodule Ecto.Query.Validator do
     type_check(expr, state)
   end
 
+  # Fragments (are always unknown)
+  defp type_check(%Ecto.Query.Fragment{}, _) do
+    :unknown
+  end
+
   # ^0 (references external data)
   defp type_check({:^, _, [ix]}, %{external: external}) do
     case Util.external_to_type Map.fetch!(external, ix) do
