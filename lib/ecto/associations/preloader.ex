@@ -86,7 +86,7 @@ defmodule Ecto.Associations.Preloader do
 
     if ids != [] do
          Q.from x in refl.associated,
-         where: field(x, ^assoc_key) in array(^ids, ^type),
+         where: field(x, ^assoc_key) in ^ids,
       order_by: field(x, ^assoc_key)
     end
   end

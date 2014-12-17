@@ -86,26 +86,9 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def value_to_type(%Ecto.Tagged{value: list, type: {:array, inner}}) do
-    if inner in types do
-      elem_types = Enum.map(list, &value_to_type/1)
-
-      unless is_nil(list) do
-        error =
-          Enum.find_value(elem_types, fn
-            {:ok, type} ->
-              unless type_eq?(inner, type) or type_castable?(type, inner) do
-                {:error, "all elements in array have to be of same type"}
-              end
-            {:error, _} = err ->
-              err
-          end)
-      end
-
-      error || {:ok, {:array, inner}}
-    else
-      {:error, "invalid type given to `array/2`: `#{inspect inner}`"}
-    end
+  def value_to_type(list) when is_list(list) do
+    # TODO: Implement me correctly
+    {:ok, {:array, :any}}
   end
 
   def value_to_type(value), do: {:error, "unknown type of value `#{inspect value}`"}
@@ -197,12 +180,13 @@ defmodule Ecto.Query.Util do
   def try_cast(binary, :binary) when is_binary(binary) do
     %Ecto.Tagged{value: binary, type: :binary}
   end
+
   def try_cast(binary, :uuid) when is_binary(binary) do
     %Ecto.Tagged{value: binary, type: :uuid}
   end
 
   def try_cast(list, {:array, inner}) when is_list(list) do
-    %Ecto.Tagged{value: list, type: {:array, inner}}
+    Enum.map(list, &try_cast(&1, inner))
   end
 
   def try_cast(value, _) do

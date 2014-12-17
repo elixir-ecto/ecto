@@ -54,7 +54,7 @@ defmodule Ecto.Query.Validator do
         end
 
         state = %{new_state | sources: query.sources, apis: apis, external: external}
-        type = type_check(expr, state)
+        type = :unknown # type_check(expr, state)
 
         format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
         format_type = Util.type_to_ast(type) |> Macro.to_string
@@ -125,7 +125,7 @@ defmodule Ecto.Query.Validator do
   defp validate_expr_type(query, clause_type, valid_expr_type, expr, state) do
     rescue_metadata(query, clause_type, expr, fn ->
       state = %{state | external: expr.external}
-      expr_type = type_check(expr.expr, state)
+      expr_type = :unknown # type_check(expr.expr, state)
 
       unless expr_type in [:unknown, valid_expr_type] do
         format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
@@ -146,7 +146,7 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(query, :order_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn {_dir, expr} ->
-          type_check(expr, state)
+          # type_check(expr, state)
         end)
       end)
     end)
@@ -156,7 +156,7 @@ defmodule Ecto.Query.Validator do
     Enum.each(query.group_bys, fn expr ->
       rescue_metadata(query, :group_by, expr, fn ->
         state = %{state | external: expr.external}
-        Enum.each(expr.expr, &type_check(&1, state))
+        # Enum.each(expr.expr, &type_check(&1, state))
       end)
     end)
   end
@@ -197,7 +197,7 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(query, :distinct, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn expr ->
-          type_check(expr, state)
+          # type_check(expr, state)
         end)
       end)
     end)
@@ -311,31 +311,31 @@ defmodule Ecto.Query.Validator do
   end
 
   # array(..., type)
-  defp type_check(%Ecto.Tagged{value: list, type: {:array, inner}}, state) do
-    unless inner in Util.types do
-      raise Ecto.QueryError, reason: "invalid type given to `array/2`: `#{inspect inner}`"
-    end
+  defp type_check(list, state) when is_list(list) do
+    # unless inner in Util.types do
+    #   raise Ecto.QueryError, reason: "invalid type given to `array/2`: `#{inspect inner}`"
+    # end
 
-    case external(list, state) do
-      {:ok, list} when is_list(list) ->
-        list = list
-      {:ok, other} ->
-        raise Ecto.QueryError, reason: "array/2 has to be given a list, given: `#{inspect other}`"
-      :error ->
-        :ok
-    end
+    # case external(list, state) do
+    #   {:ok, list} when is_list(list) ->
+    #     list = list
+    #   {:ok, other} ->
+    #     raise Ecto.QueryError, reason: "array/2 has to be given a list, given: `#{inspect other}`"
+    #   :error ->
+    #     :ok
+    # end
 
-    unless is_nil(list) do
-      elem_types = Enum.map(list, &type_check(&1, state))
+    # unless is_nil(list) do
+    #   elem_types = Enum.map(list, &type_check(&1, state))
 
-      Enum.each(elem_types, fn type ->
-        unless Util.type_eq?(inner, type) or Util.type_castable?(type, inner) do
-          raise Ecto.QueryError, reason: "all elements in array have to be of same type"
-        end
-      end)
-    end
+    #   Enum.each(elem_types, fn type ->
+    #     unless Util.type_eq?(inner, type) or Util.type_castable?(type, inner) do
+    #       raise Ecto.QueryError, reason: "all elements in array have to be of same type"
+    #     end
+    #   end)
+    # end
 
-    {:array, inner}
+    {:array, :unknown}
   end
 
   # values

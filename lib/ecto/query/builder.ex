@@ -48,16 +48,6 @@ defmodule Ecto.Query.Builder do
     {expr, external}
   end
 
-  def escape({:array, _, [arg, type]}, external, vars) do
-    {arg, external}  = escape(arg, external, vars)
-
-    type = atom(type)
-    expr = {:%, [], [Ecto.Tagged, {:%{}, [], [value: arg, type: {:array, type}]}]}
-
-    {expr, external}
-    # TODO: Check that arg is and type is an atom
-  end
-
   # field macro
   def escape({:field, _, [{var, _, context}, field]}, external, vars)
       when is_atom(var) and is_atom(context) do

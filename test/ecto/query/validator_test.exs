@@ -169,7 +169,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "array expression" do
-    query = Post |> where([p], "123" in array([p.title, p.title], :string)) |> select([], 0)
+    query = Post |> where([p], "123" in [p.title, p.title]) |> select([], 0)
     validate(query)
 
     query = Post |> where([p], [p.title, p.title] == []) |> select([], 0)
@@ -182,7 +182,7 @@ defmodule Ecto.Query.ValidatorTest do
       validate(query)
     end
 
-    query = Post |> where([p], array([p.title, p.title], :string) == 1) |> select([], 0)
+    query = Post |> where([p], [p.title, p.title] == 1) |> select([], 0)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end

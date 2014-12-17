@@ -105,8 +105,8 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "tagged values" do
-    assert i(from(Post, select: {binary(<<0>>), uuid(<<0>>), array([0], :integer)})) ==
-           "from p in Inspect.Post, select: {binary(<<0>>), uuid(<<0>>), array([0], :integer)}"
+    assert i(from(Post, select: {binary(<<0>>), uuid(<<0>>), [0]})) ==
+           "from p in Inspect.Post, select: {binary(<<0>>), uuid(<<0>>), [0]}"
   end
 
   test "external" do

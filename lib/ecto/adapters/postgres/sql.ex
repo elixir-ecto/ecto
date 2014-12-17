@@ -298,10 +298,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       cond do
         is_nil(value) ->
           "NULL"
-        # TODO: Remove this casting
-        state.external_type ->
-          {:ok, type} = Util.external_to_type(value)
-          "$#{param_index}::#{type(type)}"
         true ->
           "$#{param_index}"
       end
@@ -346,38 +342,26 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp expr(%Ecto.Tagged{value: list, type: {:array, inner}}, state)
-        when is_list(list) do
-      sql = "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, state)) <> "]"
-      if list == [], do: sql = sql <> "::#{type(inner)}[]"
-      sql
+    defp expr(list, state) when is_list(list) do
+      "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, state)) <> "]"
     end
 
-    defp expr(%Ecto.Tagged{value: expr, type: {:array, inner}}, state) do
-      state = %{state | external_type: false}
-      expr(expr, state) <> "::#{type(inner)}[]"
-    end
-
-    defp expr(%Ecto.Tagged{value: binary, type: :binary}, _state)
-        when is_binary(binary) do
+    defp expr(%Ecto.Tagged{value: binary, type: :binary}, _state) when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
-      "'\\x#{hex}'::bytea"
+      "'\\x#{hex}'"
     end
 
     defp expr(%Ecto.Tagged{value: expr, type: :binary}, state) do
-      state = %{state | external_type: false}
-      expr(expr, state) <> "::bytea"
+      expr(expr, state)
     end
 
-    defp expr(%Ecto.Tagged{value: binary, type: :uuid}, _state)
-        when is_binary(binary) do
+    defp expr(%Ecto.Tagged{value: binary, type: :uuid}, _state) when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
-      "'#{hex}'::uuid"
+      "'#{hex}'"
     end
 
     defp expr(%Ecto.Tagged{value: expr, type: :uuid}, state) do
-      state = %{state | external_type: false}
-      expr(expr, state) <> "::uuid"
+      expr(expr, state)
     end
 
     defp expr(nil, _state), do: "NULL"
@@ -395,7 +379,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp expr(literal, _state) when is_float(literal) do
-      to_string(literal) <> "::float"
+      to_string(literal)
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, state) when op in @binary_ops do
@@ -429,21 +413,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp escape_string(value) when is_binary(value) do
       :binary.replace(value, "'", "''", [:global])
     end
-
-    # Must be kept up to date with Util.types and Util.poly_types
-    defp type(:boolean),  do: "boolean"
-    defp type(:string),   do: "text"
-    defp type(:integer),  do: "bigint"
-    defp type(:float),    do: "float"
-    defp type(:binary),   do: "bytea"
-    defp type(:date),     do: "date"
-    defp type(:time),     do: "time"
-    defp type(:datetime), do: "timestamp without time zone"
-    defp type(:interval), do: "interval"
-    defp type(:decimal),  do: "decimal"
-    defp type(:uuid),     do: "uuid"
-
-    defp type({:array, inner}), do: type(inner) <> "[]"
 
     defp create_names(query) do
       sources = query.sources |> Tuple.to_list

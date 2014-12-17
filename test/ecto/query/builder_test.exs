@@ -26,9 +26,6 @@ defmodule Ecto.Query.BuilderTest do
     assert {{:%, [], [Ecto.Tagged, {:%{}, [], [value: {:<<>>, [], [1, 2, 3]}, type: :binary]}]}, %{}} ==
            escape(quote do binary(<< 1, 2, 3 >>) end, [])
 
-    assert %Ecto.Tagged{value: [1, 2, 3], type: {:array, :integer}} ==
-           escape(quote do array([1, 2, 3], :integer) end, []) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
-
     assert quote(do: &0.z) ==
            escape(quote do field(x, :z) end, [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
   end

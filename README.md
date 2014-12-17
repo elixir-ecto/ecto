@@ -266,7 +266,7 @@ Ecto type               | Elixir type             | Tagged in queries with
 `:binary`               | `binary`                | `binary(<<...>>)`
 `:string`               | UTF-8 encoded `binary`
 `:uuid`                 | 16 byte `binary`        | `uuid(<<...>>)`
-`{:array, inner_type}`  | `list`                  | `array([...], :integer)`
+`{:array, inner_type}`  | `list`
 `:datetime`             | `%Ecto.DateTime{}`
 `:date`                 | `%Ecto.Date{}`
 `:time`                 | `%Ecto.Time{}`
