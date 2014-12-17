@@ -28,49 +28,9 @@ defmodule Ecto.Query.API do
 
   ## Operators
 
-  @doc "Positive number."
-  def (+arg)
-  defs (+integer) :: integer
-  defs (+float)   :: float
-  defs (+decimal) :: decimal
-
-  @doc "Negate number."
-  def (-arg)
-  defs (-integer) :: integer
-  defs (-float)   :: float
-  defs (-decimal) :: decimal
-
   @doc "Boolean not."
   def not(arg)
   defs not(boolean) :: boolean
-
-  @doc "Addition of numbers."
-  def left + right
-  defs decimal + number  :: decimal
-  defs number + decimal  :: decimal
-  defs float + number    :: float
-  defs number + float    :: float
-  defs integer + integer :: integer
-
-  @doc "Subtraction of numbers."
-  def left - right
-  defs decimal - number  :: decimal
-  defs number - decimal  :: decimal
-  defs float - number    :: float
-  defs number - float    :: float
-  defs integer - integer :: integer
-
-  @doc "Multiplication of numbers."
-  def left * right
-  defs decimal * number  :: decimal
-  defs number * decimal  :: decimal
-  defs float * number    :: float
-  defs number * float    :: float
-  defs integer * integer :: integer
-
-  @doc "Division of numbers."
-  def left / right
-  defs number / number   :: decimal
 
   @doc "Equality."
   def left == right
@@ -110,7 +70,7 @@ defmodule Ecto.Query.API do
   def left or right
   defs boolean or boolean :: boolean
 
-  @doc "Returns `true` if argument is `nil`."
+  @doc "Returns `true` if argument is null."
   def is_nil(arg)
   defs is_nil(_) :: boolean
 
@@ -120,19 +80,6 @@ defmodule Ecto.Query.API do
   """
   def left in right
   defs var in array(var) :: boolean
-
-  @doc "Range from left to right."
-  def left .. right
-  defs integer .. integer :: array(integer)
-
-  @doc "Binary and string concatenation."
-  def left <> right
-  defs binary <> binary :: binary
-  defs string <> string :: string
-
-  @doc "List concatenation."
-  def left ++ right
-  defs array(var) ++ array(var) :: array(var)
 
   ## Functions
 
@@ -170,77 +117,6 @@ defmodule Ecto.Query.API do
   binary literal is of the string type.
   """
   def uuid(_string), do: raise "uuid/1 should have been expanded"
-
-  @doc "Addition of datetime's with interval's"
-  def time_add(left, right)
-  defs time_add(datetime, interval) :: datetime
-  defs time_add(interval, datetime) :: datetime
-  defs time_add(date, interval)     :: date
-  defs time_add(interval, date)     :: date
-  defs time_add(time, interval)     :: time
-  defs time_add(interval, time)     :: time
-  defs time_add(interval, interval) :: interval
-
-  @doc "Subtraction of datetime's with interval's"
-  def time_sub(left, right)
-  defs time_sub(datetime, interval) :: datetime
-  defs time_sub(interval, datetime) :: datetime
-  defs time_sub(date, interval)     :: date
-  defs time_sub(interval, date)     :: date
-  defs time_sub(time, interval)     :: time
-  defs time_sub(interval, time)     :: time
-  defs time_sub(interval, interval) :: interval
-
-  @doc "base to the power of exp."
-  def pow(base, exp)
-  defs pow(float, number) :: float
-  defs pow(number, float) :: float
-  defs pow(integer, integer) :: integer
-
-  @doc "Integer division."
-  def div(left, right)
-  defs div(integer, integer) :: integer
-
-  @doc "Integer remainder of division."
-  def rem(left, right)
-  defs rem(integer, integer) :: integer
-
-  @doc "Random float number from 0.0 to 1.0 including."
-  def random()
-  defs random() :: float
-
-  @doc "Round number to closest integer."
-  def round(number)
-  defs round(float) :: float
-  defs round(float, integer) :: float
-
-  @doc "Downcase string."
-  def downcase(string)
-  defs downcase(string) :: string
-
-  @doc "Upcase string."
-  def upcase(string)
-  defs upcase(string) :: string
-
-  @doc "Returns the current date and time."
-  def now()
-  defs now() :: datetime
-
-  @doc "Returns the current local date and time."
-  def localtimestamp()
-  defs localtimestamp() :: datetime
-
-  @doc "Extract date from datetime."
-  def date(datetime)
-  defs date(datetime) :: date
-
-  @doc "Extract time from datetime."
-  def time(datetime)
-  defs time(datetime) :: time
-
-  @doc "Create a datetime from a date and a time"
-  def datetime(date, time)
-  defs datetime(date, time) :: datetime
 
   @doc "Case-insensitive pattern match."
   def ilike(left, right)

@@ -35,11 +35,11 @@ defmodule Ecto.RepoTest do
   test "repo validates query" do
     import Ecto.Query
 
-    assert_raise Ecto.Query.TypeCheckError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       MockRepo.all(from(m in MyModel, select: m.x + 1))
     end
 
-    assert_raise Ecto.Query.TypeCheckError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       MockRepo.one(from(m in MyModel, select: m.x + 1))
     end
   end

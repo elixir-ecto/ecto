@@ -59,6 +59,8 @@ defmodule Ecto.Query do
   Fragments are sent directly to the database while also allowing field names
   like `p.title` and values like `^title` to be interpolated.
 
+  TODO: Talk about ^, field, array and friends
+
   ## Data security
 
   External values and elixir expressions can be injected into a query

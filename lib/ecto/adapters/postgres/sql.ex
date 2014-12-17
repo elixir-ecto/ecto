@@ -10,38 +10,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Query.JoinExpr
     alias Ecto.Query.Util
 
-    unary_ops = [ -: "-", +: "+" ]
 
     binary_ops =
-      [ ==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
-        and: "AND", or: "OR",
-        +:  "+", -:  "-", *:  "*",
-        <>: "||", ++: "||",
-        pow: "^", div: "/", rem: "%",
-        date_add: "+", date_sub: "-",
-        ilike: "ILIKE", like: "LIKE" ]
-
-    functions =
-      [ {{:downcase, 1}, "lower"}, {{:upcase, 1}, "upper"} ]
+      [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
+       and: "AND", or: "OR",
+       ilike: "ILIKE", like: "LIKE"]
 
     @binary_ops Dict.keys(binary_ops)
 
-    Enum.map(unary_ops, fn {op, str} ->
-      defp translate_name(unquote(op), 1), do: {:unary_op, unquote(str)}
-    end)
-
     Enum.map(binary_ops, fn {op, str} ->
-      defp translate_name(unquote(op), 2), do: {:binary_op, unquote(str)}
+      defp handle_fun(unquote(op), 2), do: {:binary_op, unquote(str)}
     end)
 
-    Enum.map(functions, fn {{fun, arity}, str} ->
-      defp translate_name(unquote(fun), unquote(arity)), do: {:fun, unquote(str)}
-    end)
-
-    defp translate_name(fun, _arity), do: {:fun, Atom.to_string(fun)}
+    defp handle_fun(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
     defp quote_table(table), do: "\"#{table}\""
-
     defp quote_column(column), do: "\"#{column}\""
 
     # Generate SQL for a select statement
@@ -337,77 +320,25 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")
     end
 
-    defp expr({:in, _, [left, first .. last]}, state) do
-      sqls = [expr(left, state),
-              "BETWEEN",
-              expr(first, state),
-              "AND",
-              expr(last, state)]
-      Enum.join(sqls, " ")
-    end
-
-    defp expr({:in, _, [left, {:.., _, [first, last]}]}, state) do
-      sqls = [expr(left, state),
-              "BETWEEN",
-              expr(first, state),
-              "AND",
-              expr(last, state)]
-      Enum.join(sqls, " ")
-    end
-
     defp expr({:in, _, [left, right]}, state) do
       expr(left, state) <> " = ANY (" <> expr(right, state) <> ")"
-    end
-
-    defp expr((_ .. _) = range, state) do
-      expr(Enum.to_list(range), state)
-    end
-
-    defp expr({:.., _, [first, last]}, state) do
-      expr(Enum.to_list(first..last), state)
-    end
-
-    defp expr({:/, _, [left, right]}, state) do
-      op_to_binary(left, state) <>
-      " / " <>
-      op_to_binary(right, state) <>
-      "::numeric"
-    end
-
-    defp expr({:date, _, [datetime]}, state) do
-      expr(datetime, state) <> "::date"
-    end
-
-    defp expr({:time, _, [datetime]}, state) do
-      expr(datetime, state) <> "::time"
-    end
-
-    defp expr({:datetime, _, [date, time]}, state) do
-      "(#{expr(date, state)} + #{expr(time, state)})"
     end
 
     defp expr({:is_nil, _, [arg]}, state) do
       "#{expr(arg, state)} IS NULL"
     end
 
-    defp expr({op, _, [expr]}, state) when op in [:!, :not] do
+    defp expr({:not, _, [expr]}, state) do
       "NOT (" <> expr(expr, state) <> ")"
     end
 
     defp expr({fun, _, args}, state) when is_atom(fun) and is_list(args) do
-      case translate_name(fun, length(args)) do
-        {:unary_op, op} ->
-          arg = expr(List.first(args), state)
-          op <> arg
-
+      case handle_fun(fun, length(args)) do
         {:binary_op, op} ->
           [left, right] = args
           op_to_binary(left, state) <>
           " #{op} "
           <> op_to_binary(right, state)
-
-        {:fun, "localtimestamp"} ->
-          "localtimestamp"
 
         {:fun, fun} ->
           "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, state)) <> ")"
@@ -476,14 +407,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp select_clause(expr, state) do
       flatten_select(expr) |> Enum.map_join(", ", &expr(&1, state))
-    end
-
-    # TODO: Records (Kernel.access)
-
-    # Some two-tuples may be records (ex. Ecto.Binary[]), so check for records
-    # explicitly. We can do this because we don't allow atoms in queries.
-    defp flatten_select({atom, _} = record) when is_atom(atom) do
-      [record]
     end
 
     defp flatten_select({left, right}) do

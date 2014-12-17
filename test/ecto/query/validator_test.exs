@@ -93,9 +93,6 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "limit expression must be integer" do
-    query = Post |> limit([p], 40 + 2) |> select([], 123)
-    validate(query)
-
     query = Post |> limit([p], 42 > 0) |> select([], 123)
     assert_raise Ecto.QueryError, ~r"limit expression", fn ->
       validate(query)
@@ -103,9 +100,6 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "offset expression must be integer" do
-    query = Post |> offset([p], 40 + 2) |> select([], 123)
-    validate(query)
-
     query = Post |> offset([p], 42 > 0) |> select([], 123)
     assert_raise Ecto.QueryError, ~r"offset expression", fn ->
       validate(query)
@@ -124,13 +118,6 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  test "model field types" do
-    query = Post |> select([p], p.title + 2)
-    assert_raise Ecto.Query.TypeCheckError, fn ->
-      validate(query)
-    end
-  end
-
   test "unknown field" do
     query = Post |> select([p], p.unknown)
     assert_raise Ecto.QueryError, ~r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post`", fn ->
@@ -139,16 +126,10 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "valid expressions" do
-    query = Post |> select([p], p.id + 2)
-    validate(query)
-
     query = Post |> select([p], p.id == 2)
     validate(query)
 
     query = Post |> select([p], p.title == "abc")
-    validate(query)
-
-    query = Post |> select([], 1 + +123)
     validate(query)
 
     query = Post |> where([p], p.id < 10) |> select([], 0)
@@ -156,23 +137,10 @@ defmodule Ecto.Query.ValidatorTest do
 
     query = Post |> where([], true or false) |> select([], 0)
     validate(query)
-
-    query = "posts" |> where([p], p.a or p.b + p.c * upcase(p.d)) |> select([], 0)
-    validate(query)
   end
 
   test "invalid expressions" do
-    query = Post |> select([p], p.id + "abc")
-    assert_raise Ecto.Query.TypeCheckError, fn ->
-      validate(query)
-    end
-
     query = Post |> select([p], p.id == "abc")
-    assert_raise Ecto.Query.TypeCheckError, fn ->
-      validate(query)
-    end
-
-    query = Post |> select([p], -p.title)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
@@ -191,25 +159,10 @@ defmodule Ecto.Query.ValidatorTest do
   test "valid in expression" do
     query = Post |> select([], 1 in array([1,2,3], :integer))
     validate(query)
-
-    query = Post |> select([], (2+2) in 1..5)
-    validate(query)
   end
 
   test "invalid in expression" do
     query = Post |> select([p], 1 in p.title)
-    assert_raise Ecto.Query.TypeCheckError, fn ->
-      validate(query)
-    end
-  end
-
-  test "valid .. expression" do
-    query = Post |> select([], 1 .. 3)
-    validate(query)
-  end
-
-  test "invalid .. expression" do
-    query = Post |> select([], "1" .. 3)
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
@@ -239,9 +192,6 @@ defmodule Ecto.Query.ValidatorTest do
     query = Post |> distinct([p], p.id)
     validate(query)
 
-    query = Post |> distinct([p], p.id * 2)
-    validate(query)
-
     query = Post |> distinct([p], [p.id, p.title])
     validate(query)
 
@@ -256,21 +206,6 @@ defmodule Ecto.Query.ValidatorTest do
 
     query = Post |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.id, p.title])
     validate(query)
-
-    query = Post |> select([p], p.title) |> distinct([p], p.id) |> order_by([p], [p.title, p.id])
-    assert_raise Ecto.QueryError, ~r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
-      validate(query)
-    end
-
-    query = Post |> distinct([p], p.title) |> order_by([p], [p.id, p.title])
-    assert_raise Ecto.QueryError, ~r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
-      validate(query)
-    end
-
-    query = Post |> distinct([p], [p.title, p.text]) |> order_by([p], [p.title, p.id])
-    assert_raise Ecto.QueryError, ~r"the `order_by` expression should first reference all the `distinct` fields before other fields", fn ->
-      validate(query)
-    end
   end
 
   test "group_by invalid field" do
@@ -290,76 +225,21 @@ defmodule Ecto.Query.ValidatorTest do
   test "having without group_by" do
     query = Post |> having([], true) |> select([], 0)
     validate(query)
-
-    query = Post |> having([p], p.id) |> select([], 0)
-    assert_raise Ecto.QueryError, ~r"`p.id` must appear in `group_by`", fn ->
-      validate(query)
-    end
   end
 
   test "having with group_by" do
     query = Post |> group_by([p], p.id) |> having([p], p.id == 0) |> select([p], p.id)
     validate(query)
-
-    query = Post |> group_by([p], p.id) |> having([p], p.title) |> select([], 0)
-    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
-      validate(query)
-    end
   end
 
   test "group_by groups expression" do
     query = Post |> group_by([p], p.id) |> select([p], p.id)
     validate(query)
-
-    query = Post |> group_by([p], p.id * 2) |> select([p], p.id * 2)
-    validate(query)
-
-    query = Post |> group_by([p], p.id * 2) |> select([p], p.id)
-    assert_raise Ecto.QueryError, ~r"`p.id` must appear in `group_by`", fn ->
-      validate(query)
-    end
-
-    query = Post |> group_by([p], p.id) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
-      validate(query)
-    end
-
-    query = Post |> group_by([p], p.id) |> order_by([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
-      validate(query)
-    end
-
-    query = Post |> group_by([p], p.id) |> distinct([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
-      validate(query)
-    end
-  end
-
-  test "aggregate function groups expression" do
-    query = Post |> select([p], [count(p.id), p.title])
-    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
-      validate(query)
-    end
-
-    query = Post |> order_by([p], count(p.id)) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
-      validate(query)
-    end
-
-    query = Post |> distinct([p], count(p.id)) |> select([p], p.title)
-    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
-      validate(query)
-    end
   end
 
   test "group_by groups model expression" do
     query = Post |> group_by([p], [p.id, p.title, p.text]) |> select([p], p)
     validate(query)
-
-    query = Post |> group_by([p], p.id) |> select([p], p)
-    assert_raise Ecto.QueryError, ~r"`p.title` must appear in `group_by`", fn ->
-      validate(query)
-    end
   end
 
   test "group_by doesn't group where" do
@@ -403,13 +283,6 @@ defmodule Ecto.Query.ValidatorTest do
   test "allow non-grouped fields in aggregate" do
     query = Post |> group_by([p], p.title) |> select([p], count(p.id))
     validate(query)
-  end
-
-  test "don't allow nested aggregates" do
-    query = Post |> select([p], count(count(p.id)))
-    assert_raise Ecto.QueryError, ~r"aggregate function calls cannot be nested", fn ->
-      validate(query)
-    end
   end
 
   defmodule CustomAPI do
@@ -544,16 +417,8 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "binary literals" do
-    query = from(Post, select: binary("abc") <> binary(<<0,1,2>>))
-    validate(query)
-
     query = from(p in Post, select: binary(p.title))
     validate(query)
-
-    query = from(Post, select: binary("abc") <> "abc")
-    assert_raise Ecto.Query.TypeCheckError, fn ->
-      validate(query)
-    end
   end
 
   test "source only query" do

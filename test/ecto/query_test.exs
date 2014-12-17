@@ -71,9 +71,6 @@ defmodule Ecto.QueryTest do
     query = limit(Post, [p], 42)
     validate(query)
 
-    query = limit(Post, [p], pow(42, 2))
-    validate(query)
-
     query = offset(Post, [p], 43)
     validate(query)
   end

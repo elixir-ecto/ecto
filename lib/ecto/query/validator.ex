@@ -21,11 +21,7 @@ defmodule Ecto.Query.Validator do
       raise Ecto.QueryError, reason: "a query must have a from expression"
     end
 
-    grouped = flatten(query.group_bys)
-    grouped? = grouped?(query, apis)
-    state = Map.merge(new_state,
-                      %{sources: query.sources, grouped: grouped, grouped?: grouped?,
-                        apis: apis, from: query.from, query: query})
+    state = %{new_state() | sources: query.sources, apis: apis, from: query.from, query: query}
 
     validate_joins(query, state)
     validate_wheres(query, state)
@@ -59,13 +55,12 @@ defmodule Ecto.Query.Validator do
             "model `#{inspect model}`"
         end
 
-        # TODO: Check if model field allows nil
-        state = Map.merge(new_state, %{sources: query.sources, apis: apis, external: external})
-        type = check(expr, state)
+        state = %{new_state | sources: query.sources, apis: apis, external: external}
+        type = type_check(expr, state)
 
         format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
         format_type = Util.type_to_ast(type) |> Macro.to_string
-        unless Util.type_eq?(expected_type, type) do
+        unless Util.type_eq?(expected_type, type) or type == :unknown do
           raise Ecto.QueryError, reason: "expected_type `#{format_expected_type}` " <>
           " on `#{inspect model}.#{field}` doesn't match type `#{format_type}`"
         end
@@ -97,13 +92,11 @@ defmodule Ecto.Query.Validator do
   end
 
   defp validate_joins(query, state) do
-    state = %{state | grouped?: false}
     ons = Enum.map(query.joins, &(&1.on))
     validate_booleans(query, :join_on, ons, state)
   end
 
   defp validate_wheres(query, state) do
-    state = %{state | grouped?: false}
     validate_booleans(query, :where, query.wheres, state)
   end
 
@@ -134,7 +127,7 @@ defmodule Ecto.Query.Validator do
   defp validate_expr_type(query, clause_type, valid_expr_type, expr, state) do
     rescue_metadata(query, clause_type, expr, fn ->
       state = %{state | external: expr.external}
-      expr_type = catch_grouped(query, fn -> check(expr.expr, state) end)
+      expr_type = type_check(expr.expr, state)
 
       unless expr_type in [:unknown, valid_expr_type] do
         format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
@@ -147,7 +140,7 @@ defmodule Ecto.Query.Validator do
   defp validate_integer(query, type, expr, state), do: validate_expr_type(query, type, :integer, expr, state)
 
   defp validate_booleans(query, type, query_exprs, state) do
-    Enum.each(query_exprs, &(validate_expr_type(query, type, :boolean, &1, state)))
+    Enum.each(query_exprs, &validate_expr_type(query, type, :boolean, &1, state))
   end
 
   defp validate_order_bys(query, state) do
@@ -155,18 +148,17 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(query, :order_by, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn {_dir, expr} ->
-          catch_grouped(query, fn -> check(expr, state) end)
+          type_check(expr, state)
         end)
       end)
     end)
   end
 
   defp validate_group_bys(query, state) do
-    state = %{state | grouped?: false}
     Enum.each(query.group_bys, fn expr ->
       rescue_metadata(query, :group_by, expr, fn ->
         state = %{state | external: expr.external}
-        Enum.each(expr.expr, &check(&1, state))
+        Enum.each(expr.expr, &type_check(&1, state))
       end)
     end)
   end
@@ -198,7 +190,7 @@ defmodule Ecto.Query.Validator do
   defp validate_select(query, state) do
     rescue_metadata(query, :select, query.select, fn ->
       state = %{state | external: query.select.external}
-      catch_grouped(query, fn -> select_clause(query.select.expr, state) end)
+      select_clause(query.select.expr, state)
     end)
   end
 
@@ -207,52 +199,10 @@ defmodule Ecto.Query.Validator do
       rescue_metadata(query, :distinct, expr, fn ->
         state = %{state | external: expr.external}
         Enum.each(expr.expr, fn expr ->
-          catch_grouped(query, fn -> check(expr, state) end)
+          type_check(expr, state)
         end)
       end)
     end)
-
-    # ensure that the fields in `distinct` appears before other fields in the `order_by` expression
-
-    # ex: distinct: id, title / order_by: id, title => no error
-    #     distinct: id, title / order_by: title, id => no error
-    #     distinct: title / order_by: id => raise (title not in order_by)
-    #     distinct: title / order_by: id, title => raise (title in order_by but not leftmost part)
-
-    distincts =
-      Enum.map(query.distincts, fn expr ->
-        Enum.map(expr.expr, fn distinct ->
-          {distinct, {expr.file, expr.line}}
-        end)
-      end) |> Enum.concat
-
-    order_bys =
-      Enum.map(query.order_bys, fn expr ->
-        Enum.map(expr.expr, fn {_dir, expr} -> expr end)
-      end) |> Enum.concat
-
-    do_validate_distincts(distincts, order_bys)
-  end
-
-  defp do_validate_distincts([], _), do: :ok
-
-  defp do_validate_distincts(_, []), do: :ok
-
-  defp do_validate_distincts(distincts, [order_by_expr|order_bys]) do
-    filter = fn {distinct_expr, _} ->
-      equal?(distinct_expr, order_by_expr)
-    end
-
-    in_distinct? = Enum.any?(distincts, filter)
-
-    if in_distinct? do
-      distincts = Enum.reject(distincts, filter)
-      do_validate_distincts(distincts, order_bys)
-    else
-      {_, {file, line}} = List.first(distincts)
-      raise Ecto.QueryError, reason: "the `order_by` expression should first reference " <>
-        "all the `distinct` fields before other fields", type: :distinct, file: file, line: line
-    end
   end
 
   defp preload_selected(query) do
@@ -265,11 +215,6 @@ defmodule Ecto.Query.Validator do
         end
       end)
     end
-  end
-
-  defp check(expr, state) do
-    state = check_grouped(expr, state)
-    type_check(expr, state)
   end
 
   # Fragments (are always unknown)
@@ -288,8 +233,7 @@ defmodule Ecto.Query.Validator do
   end
 
   # var.x
-  defp type_check({{:., _, [{:&, _, [_]} = var, field]}, _, []} = expr, %{sources: sources} = state) do
-    check_was_grouped(expr, state)
+  defp type_check({{:., _, [{:&, _, [_]} = var, field]}, _, []}, %{sources: sources}) do
     source = Util.find_source(sources, var)
 
     if model = Util.model(source) do
@@ -304,17 +248,9 @@ defmodule Ecto.Query.Validator do
   end
 
   # var
-  defp type_check({:&, _, [_]} = var, %{sources: sources} = state) do
+  defp type_check({:&, _, [_]} = var, %{sources: sources}) do
     source = Util.find_source(sources, var)
     if model = Util.model(source) do
-      fields = model.__schema__(:field_names)
-
-      Enum.each(fields, fn field ->
-        field_expr = {{:., [], [var, field]}, [], []}
-        state = check_grouped(field_expr, state)
-        check_was_grouped(field_expr, state)
-      end)
-
       model
     else
       source = Util.source(source)
@@ -323,25 +259,16 @@ defmodule Ecto.Query.Validator do
   end
 
   # ops & functions
-  defp type_check({name, _, args} = expr, %{apis: apis, in_agg?: in_agg?} = state)
+  defp type_check({name, _, args} = expr, %{apis: apis} = state)
       when is_atom(name) and is_list(args) do
-    length_args = length(args)
+    arity = length(args)
 
-    api = Enum.find(apis, &function_exported?(&1, name, length_args))
+    api = Enum.find(apis, &function_exported?(&1, name, arity))
     unless api do
-      raise Ecto.QueryError, reason: "function `#{name}/#{length_args}` not defined in query API"
+      raise Ecto.QueryError, reason: "function #{name}/#{arity} not defined in query API"
     end
 
-    is_agg = api.aggregate?(name, length_args)
-
-    # TODO: Check if aggregate function is allowed
-
-    if is_agg and in_agg? do
-      raise Ecto.QueryError, reason: "aggregate function calls cannot be nested"
-    end
-
-    state = %{state | in_agg?: is_agg}
-    arg_types = Enum.map(args, &check(&1, state))
+    arg_types = Enum.map(args, &type_check(&1, state))
 
     if Enum.any?(arg_types, &(&1 == :unknown)) do
       :unknown
@@ -448,7 +375,7 @@ defmodule Ecto.Query.Validator do
   end
 
   defp select_clause(other, state) do
-    check(other, state)
+    type_check(other, state)
   end
 
   defp assoc_select(parent_var, fields, %{query: query, sources: sources} = state) do
@@ -485,46 +412,6 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-  defp flatten(exprs) do
-    Enum.flat_map(exprs, &(&1.expr))
-  end
-
-  defp grouped?(query, apis) do
-    query.group_bys != [] or
-    query.havings != [] or
-    has_aggregate?(query.order_bys, apis) or
-    has_aggregate?(query.distincts, apis) or
-    has_aggregate?(query.select, apis)
-  end
-
-  defp has_aggregate?(%Ecto.Query.QueryExpr{expr: expr}, apis) do
-    has_aggregate?(expr, apis)
-  end
-
-  defp has_aggregate?({left, right}, apis) do
-    has_aggregate?(left, apis) or has_aggregate?(right, apis)
-  end
-
-  defp has_aggregate?({name, _, args}, apis) when is_atom(name) and is_list(args) do
-    length_args = length(args)
-
-    api = Enum.find(apis, &function_exported?(&1, name, length_args))
-    agg? = api && api.aggregate?(name, length_args)
-
-    !!agg? or Enum.any?(args, &has_aggregate?(&1, apis))
-  end
-
-  defp has_aggregate?({arg, _, args}, apis) when is_list(args) do
-    has_aggregate?(arg, apis) or Enum.any?(args, &has_aggregate?(&1, apis))
-  end
-
-  defp has_aggregate?(list, apis) when is_list(list) do
-    Enum.any?(list, &has_aggregate?(&1, apis))
-  end
-
-  defp has_aggregate?(_other, _apis) do
-    false
-  end
 
   defp contains_variable?({:&, _, _}),
     do: true
@@ -536,36 +423,6 @@ defmodule Ecto.Query.Validator do
     do: Enum.any?(list, &contains_variable?/1)
   defp contains_variable?(_),
     do: false
-
-  defp check_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false, grouped: grouped} = state) do
-    if Enum.any?(grouped, &equal?(expr, &1)) do
-      # TODO: If primary key was grouped on we can use all fields from
-      #       that model
-      %{state | was_grouped?: true}
-    else
-      state
-    end
-  end
-
-  defp check_grouped(_expr, state) do
-    state
-  end
-
-  defp check_was_grouped(expr, %{grouped?: true, was_grouped?: false, in_agg?: false}) do
-    throw {:not_grouped, expr}
-  end
-
-  defp check_was_grouped(_expr, _state), do: :ok
-
-  defp catch_grouped(query, fun) do
-    try do
-      fun.()
-    catch
-      :throw, {:not_grouped, expr} ->
-        raise Ecto.QueryError, reason: "`#{pp_from_query(query, expr)}` " <>
-          "must appear in `group_by` or be used in an aggregate function"
-    end
-  end
 
   # Adds type, file and line metadata to the exception
   defp rescue_metadata(query, type, %QueryExpr{expr: expr, file: file, line: line}, fun) do
@@ -581,25 +438,8 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  # Checks if two query expressions are equal
-  defp equal?({func1, _, args1}, {func2, _, args2}),
-    do: equal?(func1, func2) and equal?(args1, args2)
-
-  defp equal?([arg1|list1], [arg2|list2]),
-    do: equal?(arg1, arg2) and equal?(list1, list2)
-
-  defp equal?([], []),
-    do: true
-
-  defp equal?(arg, arg),
-    do: true
-
-  defp equal?(_arg1, _arg2),
-    do: false
-
   defp new_state do
-    %{sources: [], vars: [], grouped: [], grouped?: false,
-      was_grouped?: false, in_agg?: false, apis: nil, from: nil,
+    %{sources: [], vars: [], apis: nil, from: nil,
       query: nil, external: nil}
   end
 end
