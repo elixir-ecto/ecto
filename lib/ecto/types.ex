@@ -78,8 +78,3 @@ end
 defmodule Ecto.Interval do
   defstruct [:year, :month, :day, :hour, :min, :sec]
 end
-
-defmodule Ecto.Tagged do
-  @moduledoc false
-  defstruct [:value, :type]
-end

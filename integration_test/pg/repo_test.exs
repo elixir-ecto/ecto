@@ -15,16 +15,16 @@ defmodule Ecto.Integration.RepoTest do
     assert [nil] = TestRepo.all(from Post, select: ^nil)
 
     # Numbers
-    assert [{1, %Decimal{}}] = TestRepo.all(from Post, select: {1, 1.0})
+    assert [{1, 1.0}] = TestRepo.all(from Post, select: {1, 1.0})
 
     # Binaries
     assert [_] = TestRepo.all(from p in Post, where: p.bin == ^<<0, 1>> or true)
-    # TODO: Fix me
-    # assert [_] = TestRepo.all(from p in Post, where: p.bin == <<0, 1>> or true)
+    assert [_] = TestRepo.all(from p in Post, where: p.bin == <<0, 1>> or true)
 
     # UUID
     uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
     assert [_] = TestRepo.all(from p in Post, where: p.uuid == ^uuid or true)
+    assert [_] = TestRepo.all(from p in Post, where: p.uuid == uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>) or true)
 
     # Datetime
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}

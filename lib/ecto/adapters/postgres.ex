@@ -276,7 +276,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       default.(param)
     end
 
-    defp encoder(type, default, %Ecto.Tagged{value: value}) do
+    defp encoder(type, default, %Ecto.Query.Tagged{value: value}) do
       encoder(type, default, value)
     end
 

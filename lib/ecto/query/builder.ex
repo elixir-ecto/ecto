@@ -35,16 +35,19 @@ defmodule Ecto.Query.Builder do
     {expr, external}
   end
 
-  # ecto types
-  def escape({:binary, _, [arg]}, external, vars) do
-    {arg_escaped, external} = escape(arg, external, vars)
-    expr = {:%, [], [Ecto.Tagged, {:%{}, [], [value: arg_escaped, type: :binary]}]}
+  # tagged types
+  def escape({:<<>>, _, _} = bin, external, _vars) do
+    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :binary]}]}
     {expr, external}
   end
 
-  def escape({:uuid, _, [arg]}, external, vars) do
-    {arg_escaped, external} = escape(arg, external, vars)
-    expr = {:%, [], [Ecto.Tagged, {:%{}, [], [value: arg_escaped, type: :uuid]}]}
+  def escape({:uuid, _, [bin]}, external, _vars) when is_binary(bin) do
+    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
+    {expr, external}
+  end
+
+  def escape({:uuid, _, [{:<<>>, _, _} = bin]}, external, _vars) do
+    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
     {expr, external}
   end
 
@@ -59,10 +62,6 @@ defmodule Ecto.Query.Builder do
 
     {expr, external}
   end
-
-  # binary literal
-  def escape({:<<>>, _, _} = bin, external, _vars),
-    do: {bin, external}
 
   # fragments
   def escape({sigil, _, [{:<<>>, _, frags}, []]}, external, vars) when sigil in @expand_fragments do
@@ -111,6 +110,9 @@ defmodule Ecto.Query.Builder do
     raise Ecto.QueryError, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
+  @doc """
+  Escape the external entries map.
+  """
   def escape_external(map) do
     {:%{}, [], Map.to_list(map)}
   end

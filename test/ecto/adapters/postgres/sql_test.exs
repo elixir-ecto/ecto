@@ -151,7 +151,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     value = 13
     query = Model |> select([r], ~f[downcase(#{r.x}, #{^value})]) |> normalize
-    assert SQL.select(query) == {"SELECT downcase(m0.\"x\", $1::bigint) FROM \"model\" AS m0", '\r'}
+    assert SQL.select(query) == {"SELECT downcase(m0.\"x\", $1) FROM \"model\" AS m0", '\r'}
   end
 
   test "literals" do
@@ -167,14 +167,14 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     query = Model |> select([], "abc") |> normalize
     assert SQL.select(query) == {~s{SELECT 'abc' FROM "model" AS m0}, []}
 
-    query = Model |> select([], <<?a,?b,?c>>) |> normalize
-    assert SQL.select(query) == {~s{SELECT 'abc' FROM "model" AS m0}, []}
-
-    query = Model |> select([], binary(<<0,1,2>>)) |> normalize
-    assert SQL.select(query) == {~s{SELECT '\\x000102'::bytea FROM "model" AS m0}, []}
+    query = Model |> select([], <<0, ?a,?b,?c>>) |> normalize
+    assert SQL.select(query) == {~s{SELECT '\\x00616263' FROM "model" AS m0}, []}
 
     query = Model |> select([], uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>)) |> normalize
-    assert SQL.select(query) == {~s{SELECT '000102030405060708090a0b0c0d0e0f'::uuid FROM "model" AS m0}, []}
+    assert SQL.select(query) == {~s{SELECT '000102030405060708090A0B0C0D0E0F' FROM "model" AS m0}, []}
+
+    query = Model |> select([], uuid("\0\x01\x02\x03\x04\x05\x06\a\b\t\n\v\f\r\x0E\x0F")) |> normalize
+    assert SQL.select(query) == {~s{SELECT '000102030405060708090A0B0C0D0E0F' FROM "model" AS m0}, []}
 
     query = Model |> select([], 123) |> normalize
     assert SQL.select(query) == {~s{SELECT 123 FROM "model" AS m0}, []}
@@ -201,27 +201,27 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
             |> normalize
 
     result =
-      "SELECT $1::bigint FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON $2::boolean " <>
-      "INNER JOIN \"model2\" AS m2 ON $3::boolean WHERE ($4::boolean) AND ($5::boolean) " <>
-      "GROUP BY $6::bigint, $7::bigint HAVING ($8::boolean) AND ($9::boolean) " <>
-      "ORDER BY $10::bigint, $11::bigint LIMIT $12::bigint OFFSET $13::bigint"
+      "SELECT $1 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON $2 " <>
+      "INNER JOIN \"model2\" AS m2 ON $3 WHERE ($4) AND ($5) " <>
+      "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
+      "ORDER BY $10, $11 LIMIT $12 OFFSET $13"
 
     assert SQL.select(query) == {String.rstrip(result),
                                  [0, true, false, true, false, 1, 2, true, false, 3, 4, 5, 6]}
 
     value = Decimal.new("42")
     query = Model |> select([], ^value) |> normalize
-    assert SQL.select(query) == {~s{SELECT $1::decimal FROM "model" AS m0}, [value]}
+    assert SQL.select(query) == {~s{SELECT $1 FROM "model" AS m0}, [value]}
 
     value = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
     query = Model |> select([], ^value) |> normalize
-    assert SQL.select(query) == {~s{SELECT $1::timestamp without time zone FROM "model" AS m0}, [value]}
+    assert SQL.select(query) == {~s{SELECT $1 FROM "model" AS m0}, [value]}
   end
 
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x and (r.y > ^(-z)) or true) |> normalize
-    assert SQL.select(query) == {~s{SELECT (m0."x" AND (m0."y" > $1::bigint)) OR TRUE FROM "model" AS m0}, [-123]}
+    assert SQL.select(query) == {~s{SELECT (m0."x" AND (m0."y" > $1)) OR TRUE FROM "model" AS m0}, [-123]}
   end
 
   test "insert" do
@@ -277,7 +277,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: quote do: ^0], %{0 => 42}) ==
-           {~s{UPDATE "model" AS m0 SET "x" = $1::bigint}, [42]}
+           {~s{UPDATE "model" AS m0 SET "x" = $1}, [42]}
   end
 
   test "delete all" do
@@ -290,16 +290,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "in expression" do
-    query = Model |> select([e], 1 in array([1,e.x,3], :integer)) |> normalize
+    query = Model |> select([e], 1 in []) |> normalize
+    assert SQL.select(query) == {~s{SELECT 1 = ANY (ARRAY[]) FROM "model" AS m0}, []}
+
+    query = Model |> select([e], 1 in [1,e.x,3]) |> normalize
     assert SQL.select(query) == {~s{SELECT 1 = ANY (ARRAY[1, m0."x", 3]) FROM "model" AS m0}, []}
-  end
-
-  test "list expression" do
-    query = from(e in Model, []) |> select([e], array([], :integer)) |> normalize
-    assert SQL.select(query) == {~s{SELECT ARRAY[]::bigint[] FROM "model" AS m0}, []}
-
-    query = from(e in Model, []) |> select([e], array([e.x, e.y], :integer)) |> normalize
-    assert SQL.select(query) == {~s{SELECT ARRAY[m0."x", m0."y"] FROM "model" AS m0}, []}
   end
 
   test "having" do
@@ -322,7 +317,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "sigils" do
-    query = Model |> select([], ~s"abc" in array(~w(abc def), :string)) |> normalize
+    query = Model |> select([], ~s"abc" in ~w(abc def)) |> normalize
     assert SQL.select(query) == {~s{SELECT 'abc' = ANY (ARRAY['abc', 'def']) FROM "model" AS m0}, []}
   end
 
@@ -333,10 +328,10 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "query interpolation" do
     r = %Rec{x: 123}
     query = Model |> select([r], r.x > ^(1 + 2 + 3)) |> normalize
-    assert SQL.select(query) == {~s{SELECT m0."x" > $1::bigint FROM "model" AS m0}, [6]}
+    assert SQL.select(query) == {~s{SELECT m0."x" > $1 FROM "model" AS m0}, [6]}
 
     query = Model |> select([r], r.x > ^fun(r.x)) |> normalize
-    assert SQL.select(query) == {~s{SELECT m0."x" > $1::bigint FROM "model" AS m0}, [246]}
+    assert SQL.select(query) == {~s{SELECT m0."x" > $1 FROM "model" AS m0}, [246]}
   end
 
   test "join" do

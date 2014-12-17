@@ -257,16 +257,16 @@ Ecto generators will automatically open the generated files if you have `ECTO_ED
 
 When defining the schema, types need to be given. Those types are specific to Ecto and must be one of:
 
-Ecto type               | Elixir type             | Tagged in queries with
+Ecto type               | Elixir type             | Literal syntax in query
 :---------------------- | :---------------------- | :---------------------
 `:integer`              | `integer`
 `:float`                | `float`
-`:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
 `:boolean`              | `boolean`
-`:binary`               | `binary`                | `binary(<<...>>)`
 `:string`               | UTF-8 encoded `binary`
-`:uuid`                 | 16 byte `binary`        | `uuid(<<...>>)`
-`{:array, inner_type}`  | `list`
+`:binary`               | `binary`                | `<<int, int, int, ...>>`
+`:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
+`{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
+`:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
 `:datetime`             | `%Ecto.DateTime{}`
 `:date`                 | `%Ecto.Date{}`
 `:time`                 | `%Ecto.Time{}`

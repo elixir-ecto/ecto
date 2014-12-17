@@ -10,7 +10,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Query.JoinExpr
     alias Ecto.Query.Util
 
-
     binary_ops =
       [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
        and: "AND", or: "OR",
@@ -346,22 +345,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, state)) <> "]"
     end
 
-    defp expr(%Ecto.Tagged{value: binary, type: :binary}, _state) when is_binary(binary) do
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _state) when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
       "'\\x#{hex}'"
     end
 
-    defp expr(%Ecto.Tagged{value: expr, type: :binary}, state) do
-      expr(expr, state)
-    end
-
-    defp expr(%Ecto.Tagged{value: binary, type: :uuid}, _state) when is_binary(binary) do
-      hex = Base.encode16(binary, case: :lower)
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :uuid}, _state) when is_binary(binary) do
+      hex = Base.encode16(binary)
       "'#{hex}'"
-    end
-
-    defp expr(%Ecto.Tagged{value: expr, type: :uuid}, state) do
-      expr(expr, state)
     end
 
     defp expr(nil, _state), do: "NULL"
@@ -375,11 +366,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp expr(literal, _state) when is_integer(literal) do
-      to_string(literal)
+      String.Chars.Integer.to_string(literal)
     end
 
     defp expr(literal, _state) when is_float(literal) do
-      to_string(literal)
+      String.Chars.Float.to_string(literal) <> "::float"
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, state) when op in @binary_ops do
@@ -440,8 +431,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp new_state(sources, external, offset \\ nil) do
-      %{external: external, offset: offset, sources: sources,
-        external_type: true}
+      %{external: external, offset: offset, sources: sources}
     end
   end
 end

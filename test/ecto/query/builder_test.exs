@@ -23,8 +23,8 @@ defmodule Ecto.Query.BuilderTest do
     assert {quote(do: ~s"123"), %{}} ==
            escape(quote do ~s"123" end, [])
 
-    assert {{:%, [], [Ecto.Tagged, {:%{}, [], [value: {:<<>>, [], [1, 2, 3]}, type: :binary]}]}, %{}} ==
-           escape(quote do binary(<< 1, 2, 3 >>) end, [])
+    assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: "abc", type: :uuid]}]}, %{}} ==
+           escape(quote do uuid("abc") end, [])
 
     assert quote(do: &0.z) ==
            escape(quote do field(x, :z) end, [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
@@ -56,10 +56,6 @@ defmodule Ecto.Query.BuilderTest do
 
     assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
       escape(quote(do: field(x, 123)), [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__)
-    end
-
-    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
-      escape(quote(do: array([1, 2, 3], 123)), []) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
   end
 

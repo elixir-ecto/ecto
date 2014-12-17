@@ -169,7 +169,7 @@ defmodule Ecto.RepoTest do
 
   test "list value types incorrect" do
     assert_raise Ecto.InvalidModel, fn ->
-      MockRepo.insert(%MyModelList{l1: %Ecto.Tagged{value: [1, 2, 3], type: {:array, :integer}}})
+      MockRepo.insert(%MyModelList{l1: %Ecto.Query.Tagged{value: [1, 2, 3], type: {:array, :integer}}})
     end
   end
 

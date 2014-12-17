@@ -120,7 +120,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Tagged values
-  defp expr_to_string(%Ecto.Tagged{value: value, type: type}, _, names, external) do
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: type}, _, names, external) do
     {type, [], [value]}
     |> expr(names, external)
   end

@@ -280,37 +280,22 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  # list
-  defp type_check(list, _state) when is_list(list) do
-    list = inspect(list, no_char_lists: true)
-    raise Ecto.QueryError, reason: "lists `#{list}` are not allowed in queries, " <>
-      "wrap in `array/2` instead"
-  end
-
   # atom
   defp type_check(atom, _state) when is_atom(atom) and not (atom in [true, false, nil]) do
     raise Ecto.QueryError, reason: "atoms are not allowed in queries `#{inspect atom}`"
   end
 
-  # binary(...)
-  defp type_check(%Ecto.Tagged{value: binary, type: :binary}, state) do
-    if type_check(binary, state) in [:binary, :string, :any] do
-      :binary
-    else
-      raise Ecto.QueryError, reason: "binary/1 argument has to be of binary type"
-    end
+  # <<...>>
+  defp type_check(%Ecto.Query.Tagged{value: binary, type: :binary}, state) when is_binary(binary) do
+    :binary
   end
 
   # uuid(...)
-  defp type_check(%Ecto.Tagged{value: binary, type: :uuid}, state) do
-    if type_check(binary, state) in [:uuid, :string, :any] do
-      :uuid
-    else
-      raise Ecto.QueryError, reason: "uuid/1 argument has to be of binary type"
-    end
+  defp type_check(%Ecto.Query.Tagged{value: binary, type: :uuid}, state) when is_binary(binary) do
+    :uuid
   end
 
-  # array(..., type)
+  # lists
   defp type_check(list, state) when is_list(list) do
     # unless inner in Util.types do
     #   raise Ecto.QueryError, reason: "invalid type given to `array/2`: `#{inspect inner}`"

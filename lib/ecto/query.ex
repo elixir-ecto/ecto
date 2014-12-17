@@ -59,7 +59,8 @@ defmodule Ecto.Query do
   Fragments are sent directly to the database while also allowing field names
   like `p.title` and values like `^title` to be interpolated.
 
-  TODO: Talk about ^, field, array and friends
+  TODO: Talk about ^, field, and friends
+  TODO: Talk about literals: 1, 2.0 (decimal), strings, binaries, <<>>, lists, uuid
 
   ## Data security
 
@@ -155,6 +156,11 @@ defmodule Ecto.Query do
   defmodule Fragment do
     @moduledoc false
     defstruct parts: []
+  end
+
+  defmodule Tagged do
+    @moduledoc false
+    defstruct [:value, :type]
   end
 
   alias Ecto.Query.Builder.From

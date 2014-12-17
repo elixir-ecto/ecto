@@ -157,7 +157,7 @@ defmodule Ecto.Query.ValidatorTest do
   end
 
   test "valid in expression" do
-    query = Post |> select([], 1 in array([1,2,3], :integer))
+    query = Post |> select([], 1 in [1,2,3])
     validate(query)
   end
 
@@ -414,11 +414,6 @@ defmodule Ecto.Query.ValidatorTest do
     assert_raise Ecto.Query.TypeCheckError, fn ->
       validate(query)
     end
-  end
-
-  test "binary literals" do
-    query = from(p in Post, select: binary(p.title))
-    validate(query)
   end
 
   test "source only query" do

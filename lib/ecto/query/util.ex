@@ -60,7 +60,7 @@ defmodule Ecto.Query.Util do
   def value_to_type(value) when is_integer(value), do: {:ok, :integer}
   def value_to_type(value) when is_float(value), do: {:ok, :float}
 
-  def value_to_type(%Ecto.Tagged{value: binary, type: :binary}) do
+  def value_to_type(%Ecto.Query.Tagged{value: binary, type: :binary}) do
     case value_to_type(binary) do
       {:ok, type} when type in [:binary, :string, :any] ->
         {:ok, :binary}
@@ -71,7 +71,7 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def value_to_type(%Ecto.Tagged{value: binary, type: :uuid}) do
+  def value_to_type(%Ecto.Query.Tagged{value: binary, type: :uuid}) do
     case value_to_type(binary) do
       {:ok, type} when type in [:uuid, :string, :any] ->
         if is_nil(binary) or byte_size(binary) == 16 do
@@ -168,21 +168,21 @@ defmodule Ecto.Query.Util do
 
   # Returns true if the literal type can be inferred as the second type.
   # A literal type is a type that does not require wrapping with
-  # %Ecto.Tagged{}.
+  # %Ecto.Query.Tagged{}.
   @doc false
   def type_castable?(:string, :binary), do: true
   def type_castable?(:string, :uuid), do: true
   def type_castable?(_, _), do: false
 
   # Tries to cast the given value to the specified type.
-  # If value cannot be casted just return it.
+  # If value cannot be cast just return it.
   @doc false
   def try_cast(binary, :binary) when is_binary(binary) do
-    %Ecto.Tagged{value: binary, type: :binary}
+    %Ecto.Query.Tagged{value: binary, type: :binary}
   end
 
   def try_cast(binary, :uuid) when is_binary(binary) do
-    %Ecto.Tagged{value: binary, type: :uuid}
+    %Ecto.Query.Tagged{value: binary, type: :uuid}
   end
 
   def try_cast(list, {:array, inner}) when is_list(list) do
