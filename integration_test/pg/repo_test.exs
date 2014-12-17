@@ -6,8 +6,8 @@ defmodule Ecto.Integration.RepoTest do
   test "types" do
     TestRepo.insert(%Post{})
 
-    assert [{ true, false }] ==
-           TestRepo.all(from Post, select: { true, false })
+    assert [{true, false}] ==
+           TestRepo.all(from Post, select: {true, false})
 
     assert [nil] ==
            TestRepo.all(from Post, select: nil)
@@ -15,32 +15,32 @@ defmodule Ecto.Integration.RepoTest do
     assert [nil] ==
            TestRepo.all(from Post, select: ^nil)
 
-    assert [{ 1, 2.0, Decimal.new("42.0") }] ==
-           TestRepo.all(from Post, select: { 1, 2.0, ^Decimal.new("42.0") })
+    assert [{1, 2.0, Decimal.new("42.0")}] ==
+           TestRepo.all(from Post, select: {1, 2.0, ^Decimal.new("42.0")})
 
-    assert [{ "abc", <<0, 1>>, <<2, 3>>, nil }] ==
-           TestRepo.all(from Post, select: { "abc", binary(^<<0 , 1>>), binary(<<2, 3>>), binary(nil) })
+    assert [{"abc", <<0, 1>>, <<2, 3>>, nil}] ==
+           TestRepo.all(from Post, select: {"abc", binary(^<<0 , 1>>), binary(<<2, 3>>), binary(nil)})
 
     my_uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
 
-    assert [{ ^my_uuid, ^my_uuid, nil }] =
-           TestRepo.all(from Post, select: { uuid(^my_uuid), uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>), uuid(nil) })
+    assert [{^my_uuid, ^my_uuid, nil}] =
+           TestRepo.all(from Post, select: {uuid(^my_uuid), uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>), uuid(nil)})
 
-    assert [{ %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} }] ==
-           TestRepo.all(from Post, select: { ^%Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
+    assert [{%Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}}] ==
+           TestRepo.all(from Post, select: {^%Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}})
 
-    assert [{ %Ecto.Interval{year: 0, month: 24169, day: 16, hour: 0, min: 0, sec: 73611} }] ==
-           TestRepo.all(from Post, select: { ^%Ecto.Interval{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51} })
+    assert [{%Ecto.Interval{year: 0, month: 24169, day: 16, hour: 0, min: 0, sec: 73611}}] ==
+           TestRepo.all(from Post, select: {^%Ecto.Interval{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}})
 
-    assert [{ [0, 1, 2, 3], nil }] ==
-           TestRepo.all(from Post, select: { array([0, 1, 2, 3], :integer), array(nil, :integer) })
+    assert [{[0, 1, 2, 3], nil}] ==
+           TestRepo.all(from Post, select: {array([0, 1, 2, 3], :integer), array(nil, :integer)})
 
     assert [9223372036854775807] ==
            TestRepo.all(from Post, select: ^9223372036854775807)
   end
 
   test "returns already started for started repos" do
-    assert { :error, { :already_started, _ } } = TestRepo.start_link
+    assert {:error, {:already_started, _}} = TestRepo.start_link
   end
 
   test "fetch empty" do
@@ -195,8 +195,8 @@ defmodule Ecto.Integration.RepoTest do
 
     assert ["1"] == TestRepo.all(from p in Post, select: p.title)
 
-    assert [{ "1", "hai" }] ==
-           TestRepo.all(from p in Post, select: { p.title, p.text })
+    assert [{"1", "hai"}] ==
+           TestRepo.all(from p in Post, select: {p.title, p.text})
 
     assert [["1", "hai"]] ==
            TestRepo.all(from p in Post, select: [p.title, p.text])
@@ -275,11 +275,6 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "1"} = TestRepo.get(Post, id1)
     assert %Post{title: "2"} = TestRepo.get(Post, id2)
     assert %Post{title: "3"} = TestRepo.get(Post, id3)
-  end
-
-  test "custom functions" do
-    assert %Post{id: id1} = TestRepo.insert(%Post{title: "hi"})
-    assert [id1*10] == TestRepo.all(from p in Post, select: custom(p.id))
   end
 
   test "virtual field" do
@@ -459,9 +454,9 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
     assert [] = p3.comments.all
 
-    query = from(p in Post, preload: [:comments], select: { 0, [p] })
+    query = from(p in Post, preload: [:comments], select: {0, [p]})
     posts = TestRepo.all(query)
-    [p1, p2, p3] = Enum.map(posts, fn { 0, [p] } -> p end)
+    [p1, p2, p3] = Enum.map(posts, fn {0, [p]} -> p end)
 
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.all
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
@@ -470,15 +465,15 @@ defmodule Ecto.Integration.RepoTest do
 
   test "row transform" do
     post = TestRepo.insert(%Post{title: "1", text: "hi"})
-    query = from(p in Post, select: { p.title, [ p, { p.text } ] })
-    [{ "1", [ ^post, { "hi" } ] }] = TestRepo.all(query)
+    query = from(p in Post, select: {p.title, [ p, {p.text} ]})
+    [{"1", [ ^post, {"hi"} ]}] = TestRepo.all(query)
   end
 
   test "join" do
     post = TestRepo.insert(%Post{title: "1", text: "hi"})
     comment = TestRepo.insert(%Comment{text: "hey"})
-    query = from(p in Post, join: c in Comment, on: true, select: { p, c })
-    [{ ^post, ^comment }] = TestRepo.all(query)
+    query = from(p in Post, join: c in Comment, on: true, select: {p, c})
+    [{^post, ^comment}] = TestRepo.all(query)
   end
 
   test "has_many association join" do
@@ -486,8 +481,8 @@ defmodule Ecto.Integration.RepoTest do
     c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
     c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
 
-    query = from(p in Post, join: c in p.comments, select: { p, c })
-    [{ ^post, ^c1 }, { ^post, ^c2 }] = TestRepo.all(query)
+    query = from(p in Post, join: c in p.comments, select: {p, c})
+    [{^post, ^c1}, {^post, ^c2}] = TestRepo.all(query)
   end
 
   test "has_one association join" do
@@ -495,8 +490,8 @@ defmodule Ecto.Integration.RepoTest do
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
-    query = from(p in Post, join: c in p.permalink, select: { p, c })
-    [{ ^post, ^p1 }, { ^post, ^p2 }] = TestRepo.all(query)
+    query = from(p in Post, join: c in p.permalink, select: {p, c})
+    [{^post, ^p1}, {^post, ^p2}] = TestRepo.all(query)
   end
 
   test "belongs_to association join" do
@@ -504,8 +499,8 @@ defmodule Ecto.Integration.RepoTest do
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
-    query = from(p in Permalink, join: c in p.post, select: { p, c })
-    [{ ^p1, ^post }, { ^p2, ^post }] = TestRepo.all(query)
+    query = from(p in Permalink, join: c in p.post, select: {p, c})
+    [{^p1, ^post}, {^p2, ^post}] = TestRepo.all(query)
   end
 
   test "has_many implements Enum.count protocol correctly" do

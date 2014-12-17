@@ -5,13 +5,6 @@ Code.require_file "../../test/support/file_helpers.exs", __DIR__
 alias Ecto.Adapters.Postgres
 alias Ecto.Integration.Postgres.TestRepo
 
-defmodule Ecto.Integration.Postgres.CustomAPI do
-  use Ecto.Query.Typespec
-
-  deft integer
-  defs custom(integer) :: integer
-end
-
 defmodule Ecto.Integration.Postgres.TestRepo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
@@ -21,10 +14,6 @@ defmodule Ecto.Integration.Postgres.TestRepo do
 
   def conf do
     parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
-  end
-
-  def query_apis do
-    [Ecto.Integration.Postgres.CustomAPI, Ecto.Query.API]
   end
 end
 
@@ -184,7 +173,6 @@ setup_database = [
   "CREATE TABLE uuid_primary_keys (id uuid PRIMARY KEY)",
   "CREATE TABLE transaction (id serial, text text)",
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
-  "CREATE FUNCTION custom(integer) RETURNS integer AS 'SELECT $1 * 10;' LANGUAGE SQL"
 ]
 
 { :ok, _pid } = TestRepo.start_link

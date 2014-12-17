@@ -84,6 +84,12 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, lock: "FOOBAR"}
   end
 
+  test "fragments" do
+    value = "foobar"
+    assert i(from(x in Post, where: ~f[downcase(#{x.id}) == #{^value}])) ==
+           ~s{from p in Inspect.Post, where: ~f[downcase(p.id) == ^"foobar"]}
+  end
+
   test "all" do
     string = """
     from p in Inspect.Post, join: c in p.comments, where: true,

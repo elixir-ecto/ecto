@@ -74,6 +74,7 @@ defimpl Inspect, for: Ecto.Query do
   defp select(nil, _names), do: []
   defp select(expr, names), do: [select: expr(expr, names)]
 
+  # TODO: Get rid of this
   def pp_from_query(query, exp) do
     names =
       query
@@ -82,7 +83,7 @@ defimpl Inspect, for: Ecto.Query do
       |> generate_names
       |> List.to_tuple
 
-    expr(exp, names, [])
+    expr(exp, names, %{})
   end
 
   defp expr(%QueryExpr{expr: expr, external: external}, names) do
@@ -91,6 +92,13 @@ defimpl Inspect, for: Ecto.Query do
 
   defp expr(expr, names, external) do
     Macro.to_string(expr, &expr_to_string(&1, &2, names, external))
+  end
+
+  defp expr_to_string(%Ecto.Query.Fragment{parts: parts}, _, names, external) do
+    "~f[" <> Enum.map_join(parts, "", fn
+      part when is_binary(part) -> part
+      part -> expr(part, names, external)
+    end) <> "]"
   end
 
   # Convert variables to proper identifiers

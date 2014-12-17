@@ -298,6 +298,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       cond do
         is_nil(value) ->
           "NULL"
+        # TODO: Remove this casting
         state.external_type ->
           {:ok, type} = Util.external_to_type(value)
           "$#{param_index}::#{type(type)}"
