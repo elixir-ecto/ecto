@@ -8,11 +8,11 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do &0.y end), %{}} ==
            escape(quote do x.y end, [x: 0])
 
-    assert {Macro.escape(quote do &0.y + &0.z end), %{}} ==
-           escape(quote do x.y + x.z end, [x: 0])
+    assert {Macro.escape(quote do &0.y == &0.z end), %{}} ==
+           escape(quote do x.y == x.z end, [x: 0])
 
-    assert {Macro.escape(quote do &0.y + &1.z end), %{}} ==
-           escape(quote do x.y + y.z end, [x: 0, y: 1])
+    assert {Macro.escape(quote do &0.y == &1.z end), %{}} ==
+           escape(quote do x.y == y.z end, [x: 0, y: 1])
 
     assert {Macro.escape(quote do avg(0) end), %{}} ==
            escape(quote do avg(0) end, [])
@@ -37,17 +37,21 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote(do: ^0)), %{0 => quote(do: [] ++ [])}} ==
            escape(quote(do: ^([] ++ [])), [])
 
-    assert {Macro.escape(quote(do: ^0 + ^1)), %{0 => 1, 1 => 2}} ==
-           escape(quote(do: ^1 + ^2), [])
+    assert {Macro.escape(quote(do: ^0 == ^1)), %{0 => 1, 1 => 2}} ==
+           escape(quote(do: ^1 == ^2), [])
   end
 
   test "escape raise" do
-    assert_raise Ecto.QueryError, ~r"is not a valid query expression", fn ->
+    assert_raise Ecto.QueryError, ~r"Variable `x` is not a valid query expression", fn ->
       escape(quote(do: x), [])
     end
 
-    assert_raise Ecto.QueryError, ~r"is not a valid query expression", fn ->
+    assert_raise Ecto.QueryError, ~r"`:atom` is not a valid query expression", fn ->
       escape(quote(do: :atom), [])
+    end
+
+    assert_raise Ecto.QueryError, ~r"`unknown\(1, 2\)` is not a valid query expression", fn ->
+      escape(quote(do: unknown(1, 2)), [])
     end
 
     assert_raise Ecto.QueryError, ~r"unbound variable", fn ->
@@ -61,50 +65,19 @@ defmodule Ecto.Query.BuilderTest do
 
   test "escape dot" do
     assert Macro.escape(quote(do: {&0, :y})) ==
-           escape_dot(quote(do: x.y), [x: 0])
+           escape_join(quote(do: x.y), [x: 0])
 
     assert Macro.escape(quote(do: {&0, :y})) ==
-           escape_dot(quote(do: x.y()), [x: 0])
+           escape_join(quote(do: x.y()), [x: 0])
 
     assert :error ==
-           escape_dot(quote(do: x), [x: 0])
+           escape_join(quote(do: x), [x: 0])
 
     assert quote(do: {&0, :y}) ==
-           Code.eval_quoted(escape_dot(quote(do: field(x, :y)), [x: 0]), [], __ENV__) |> elem(0)
+           Code.eval_quoted(escape_join(quote(do: field(x, :y)), [x: 0]), [], __ENV__) |> elem(0)
 
     assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
-      Code.eval_quoted(escape_dot(quote(do: field(x, 123)), [x: 0]), [], __ENV__)
-    end
-  end
-
-  test "escape fields and vars" do
-    varx = {:{}, [], [:&, [], [0]]}
-    vary = {:{}, [], [:&, [], [1]]}
-
-    assert [{varx, :y}] ==
-           escape_fields_and_vars(quote do x.y end, [x: 0])
-
-    assert [{varx, :x}, {vary, :y}] ==
-           escape_fields_and_vars(quote do [x.x, y.y] end, [x: 0, y: 1])
-
-    assert [varx] ==
-           escape_fields_and_vars(quote do x end, [x: 0])
-
-    assert [varx, {vary, :x}] ==
-           escape_fields_and_vars(quote do [x, y.x] end, [x: 0, y: 1])
-
-    assert [varx, vary] ==
-           escape_fields_and_vars(quote do [x, y] end, [x: 0, y: 1])
-  end
-
-  test "escape expr raise" do
-    assert_raise Ecto.QueryError, "unbound variable `x` in query", fn ->
-      escape_fields_and_vars(quote do x.y end, [])
-    end
-
-    message = "malformed query expression"
-    assert_raise Ecto.QueryError, message, fn ->
-      escape_fields_and_vars(quote do 1 + 2 end, [])
+      Code.eval_quoted(escape_join(quote(do: field(x, 123)), [x: 0]), [], __ENV__)
     end
   end
 end

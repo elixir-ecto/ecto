@@ -97,11 +97,11 @@ defmodule Ecto.Query.Util do
   # Different to value_to_type/1 it also allows values
   # that can be interpolated into the query
   @doc false
-  def external_to_type(%Decimal{}), do: {:ok, :decimal}
+  def params_to_type(%Decimal{}), do: {:ok, :decimal}
 
-  def external_to_type(%Ecto.DateTime{} = dt) do
+  def params_to_type(%Ecto.DateTime{} = dt) do
     values = Map.delete(dt, :__struct__) |> Map.values
-    types = Enum.map(values, &external_to_type/1)
+    types = Enum.map(values, &params_to_type/1)
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
@@ -112,9 +112,9 @@ defmodule Ecto.Query.Util do
     res || {:ok, :datetime}
   end
 
-  def external_to_type(%Ecto.Date{} = d) do
+  def params_to_type(%Ecto.Date{} = d) do
     values = Map.delete(d, :__struct__) |> Map.values
-    types = Enum.map(values, &external_to_type/1)
+    types = Enum.map(values, &params_to_type/1)
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
@@ -125,9 +125,9 @@ defmodule Ecto.Query.Util do
     res || {:ok, :date}
   end
 
-  def external_to_type(%Ecto.Time{} = t) do
+  def params_to_type(%Ecto.Time{} = t) do
     values = Map.delete(t, :__struct__) |> Map.values
-    types = Enum.map(values, &external_to_type/1)
+    types = Enum.map(values, &params_to_type/1)
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
@@ -138,9 +138,9 @@ defmodule Ecto.Query.Util do
     res || {:ok, :time}
   end
 
-  def external_to_type(%Ecto.Interval{} = dt) do
+  def params_to_type(%Ecto.Interval{} = dt) do
     values = Map.delete(dt, :__struct__) |> Map.values
-    types = Enum.map(values, &external_to_type/1)
+    types = Enum.map(values, &params_to_type/1)
 
     res = Enum.find_value(types, fn
       {:ok, :integer} -> nil
@@ -155,7 +155,7 @@ defmodule Ecto.Query.Util do
     end
   end
 
-  def external_to_type(value), do: value_to_type(value)
+  def params_to_type(value), do: value_to_type(value)
 
   # Returns true if the two types are considered equal by the type system
   # Note that this does not consider casting

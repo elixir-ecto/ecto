@@ -229,7 +229,7 @@ Queries are defined and extended with the `from` macro. The supported keywords a
   * `:select` - although we used `:select` above, it is optional and by default it simply returns the model being queried
   * `:preload` - used for preloading associations
 
-When writing a query, you are inside Ecto's query syntax. In order to access external values or invoke functions, you need to use the `^` operator, which is overloaded by Ecto:
+When writing a query, you are inside Ecto's query syntax. In order to access params values or invoke functions, you need to use the `^` operator, which is overloaded by Ecto:
 
 ```elixir
 def min_prcp(min) do

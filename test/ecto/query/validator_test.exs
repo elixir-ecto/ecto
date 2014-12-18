@@ -263,18 +263,6 @@ defmodule Ecto.Query.ValidatorTest do
     validate(query)
   end
 
-  test "only allow functions in API" do
-    query = Post |> select([], forty_two())
-    assert_raise Ecto.QueryError, fn ->
-      validate(query)
-    end
-
-    query = Post |> select([], avg())
-    assert_raise Ecto.QueryError, fn ->
-      validate(query)
-    end
-  end
-
   test "allow grouped fields in aggregate" do
     query = Post |> group_by([p], p.id) |> select([p], avg(p.id))
     validate(query)
@@ -283,19 +271,6 @@ defmodule Ecto.Query.ValidatorTest do
   test "allow non-grouped fields in aggregate" do
     query = Post |> group_by([p], p.title) |> select([p], count(p.id))
     validate(query)
-  end
-
-  defmodule CustomAPI do
-    use Ecto.Query.Typespec
-
-    deft integer
-    defs custom(integer) :: integer
-  end
-
-  test "multiple query apis" do
-    query = Post |> select([p], custom(p.id)) |> Normalizer.normalize
-    Validator.validate(query, [CustomAPI])
-    Validator.validate(query, [Ecto.Query.API, CustomAPI])
   end
 
   test "cannot reference virtual field" do

@@ -3,9 +3,6 @@ defmodule Ecto.Query.Builder do
 
   alias Ecto.Query
 
-  @expand_fragments [:sigil_f, :sigil_F]
-  @expand_sigils [:sigil_c, :sigil_C, :sigil_s, :sigil_S, :sigil_w, :sigil_W]
-
   @doc """
   Smart escapes a query expression and extracts interpolated values in
   a map.
@@ -16,43 +13,43 @@ defmodule Ecto.Query.Builder do
   map.
   """
   @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
-  def escape(expr, external \\ %{}, vars)
+  def escape(expr, params \\ %{}, vars)
 
   # var.x - where var is bound
-  def escape({{:., _, [{var, _, context}, right]}, _, []}, external, vars)
+  def escape({{:., _, [{var, _, context}, right]}, _, []}, params, vars)
       when is_atom(var) and is_atom(context) and is_atom(right) do
     left_escaped = escape_var(var, vars)
     dot_escaped  = {:{}, [], [:., [], [left_escaped, right]]}
     expr         = {:{}, [], [dot_escaped, [], []]}
-    {expr, external}
+    {expr, params}
   end
 
   # interpolation
-  def escape({:^, _, [arg]}, external, _vars) do
-    index    = Map.size(external)
-    external = Map.put(external, index, arg)
-    expr     = {:{}, [], [:^, [], [index]]}
-    {expr, external}
+  def escape({:^, _, [arg]}, params, _vars) do
+    index  = Map.size(params)
+    params = Map.put(params, index, arg)
+    expr   = {:{}, [], [:^, [], [index]]}
+    {expr, params}
   end
 
   # tagged types
-  def escape({:<<>>, _, _} = bin, external, _vars) do
+  def escape({:<<>>, _, _} = bin, params, _vars) do
     expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :binary]}]}
-    {expr, external}
+    {expr, params}
   end
 
-  def escape({:uuid, _, [bin]}, external, _vars) when is_binary(bin) do
+  def escape({:uuid, _, [bin]}, params, _vars) when is_binary(bin) do
     expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
-    {expr, external}
+    {expr, params}
   end
 
-  def escape({:uuid, _, [{:<<>>, _, _} = bin]}, external, _vars) do
+  def escape({:uuid, _, [{:<<>>, _, _} = bin]}, params, _vars) do
     expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
-    {expr, external}
+    {expr, params}
   end
 
   # field macro
-  def escape({:field, _, [{var, _, context}, field]}, external, vars)
+  def escape({:field, _, [{var, _, context}, field]}, params, vars)
       when is_atom(var) and is_atom(context) do
     var = escape_var(var, vars)
 
@@ -60,60 +57,103 @@ defmodule Ecto.Query.Builder do
     dot   = {:{}, [], [:., [], [var, field]]}
     expr  = {:{}, [], [dot, [], []]}
 
-    {expr, external}
+    {expr, params}
   end
 
   # fragments
-  def escape({sigil, _, [{:<<>>, _, frags}, []]}, external, vars) when sigil in @expand_fragments do
-    {frags, external} =
-      Enum.map_reduce frags, external, fn
-        frag, external when is_binary(frag) ->
-          {frag, external}
-        {:::, _, [{{:., _, [Kernel, :to_string]}, _, [frag]}, _]}, external ->
-          escape(frag, external, vars)
+  def escape({sigil, _, [{:<<>>, _, frags}, []]}, params, vars) when sigil in ~w(sigil_f sigil_F)a do
+    {frags, params} =
+      Enum.map_reduce frags, params, fn
+        frag, params when is_binary(frag) ->
+          {frag, params}
+        {:::, _, [{{:., _, [Kernel, :to_string]}, _, [frag]}, _]}, params ->
+          escape(frag, params, vars)
       end
 
     {{:%, [], [Ecto.Query.Fragment, {:%{}, [], [parts: frags]}]},
-      external}
+      params}
   end
 
   # sigils
-  def escape({name, _, _} = sigil, external, _vars) when name in @expand_sigils do
-    {sigil, external}
-  end
-
-  # ops & functions
-  def escape({name, meta, args}, external, vars)
-      when is_atom(name) and is_list(args) do
-    {args, external} = Enum.map_reduce(args, external, &escape(&1, &2, vars))
-    expr = {:{}, [], [name, meta, args]}
-    {expr, external}
-  end
-
-  # list
-  def escape(list, external, vars) when is_list(list) do
-    Enum.map_reduce(list, external, &escape(&1, &2, vars))
+  def escape({name, _, _} = sigil, params, _vars) when name in ~w(sigil_s sigil_S sigil_w sigil_W)a do
+    {sigil, params}
   end
 
   # literals
-  def escape(literal, external, _vars) when is_binary(literal),
-    do: {literal, external}
-  def escape(literal, external, _vars) when is_boolean(literal),
-    do: {literal, external}
-  def escape(literal, external, _vars) when is_number(literal),
-    do: {literal, external}
-  def escape(nil, external, _vars),
-    do: {nil, external}
+  def escape(list, params, vars) when is_list(list),
+    do: Enum.map_reduce(list, params, &escape(&1, &2, vars))
+  def escape(literal, params, _vars) when is_binary(literal),
+    do: {literal, params}
+  def escape(literal, params, _vars) when is_boolean(literal),
+    do: {literal, params}
+  def escape(literal, params, _vars) when is_number(literal),
+    do: {literal, params}
+  def escape(nil, params, _vars),
+    do: {nil, params}
+
+  # comparison operators
+  def escape({comp_op, meta, [left, right]}, params, vars) when comp_op in ~w(== != < > <= >=)a do
+    escape_call(comp_op, meta, [left, right], params, vars)
+  end
+
+  # boolean binary operator
+  def escape({bool_op, meta, [left, right]}, params, vars) when bool_op in ~w(and or)a do
+    escape_call(bool_op, meta, [left, right], params, vars)
+  end
+
+  # boolean unary operator
+  def escape({:not, meta, [single]}, params, vars) do
+    escape_call(:not, meta, [single], params, vars)
+  end
+
+  # in operator
+  def escape({:in, meta, [left, right]}, params, vars) do
+    escape_call(:in, meta, [left, right], params, vars)
+  end
+
+  # Other functions - no type casting
+  def escape({name, meta, args} = call, params, vars) when is_atom(name) and is_list(args) do
+    if valid_call?(name, length(args)) do
+      escape_call(name, meta, args, params, vars)
+    else
+      raise Ecto.QueryError, reason: """
+      `#{Macro.to_string(call)}` is not a valid query expression.
+
+      * If you intended to call a database function, please check the documentation
+        for Ecto.Query to see the supported database expressions
+
+      * If you intended to call an Elixir function or introduce a value,
+        you need to explicitly interpolate it with ^
+      """
+    end
+  end
 
   # everything else is not allowed
-  def escape(other, _external, _vars) do
+  def escape({name, _, context} = var, _params, _vars) when is_atom(name) and is_atom(context) do
+    raise Ecto.QueryError, reason:
+      "Variable `#{Macro.to_string(var)}` is not a valid query expression. " <>
+      "Variables need to be explicitly interpolated in queries with ^"
+  end
+
+  def escape(other, _params, _vars) do
     raise Ecto.QueryError, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
+  defp valid_call?(agg, 1)  when agg in ~w(max count sum min avg)a, do: true
+  defp valid_call?(like, 2) when like in ~w(like ilike)a, do: true
+  defp valid_call?(:is_nil, 1), do: true
+  defp valid_call?(_, _),       do: false
+
+  defp escape_call(name, meta, args, params, vars) do
+    {args, params} = Enum.map_reduce(args, params, &escape(&1, &2, vars))
+    expr = {:{}, [], [name, meta, args]}
+    {expr, params}
+  end
+
   @doc """
-  Escape the external entries map.
+  Escape the params entries map.
   """
-  def escape_external(map) do
+  def escape_params(map) do
     {:%{}, [], Map.to_list(map)}
   end
 
@@ -137,40 +177,40 @@ defmodule Ecto.Query.Builder do
   end
 
   @doc """
-  Escapes dot calls in query expressions.
+  Escapes joins associations in query expressions.
 
-  A dot may be in three formats, all shown in the examples below.
-  Returns :error if it isn't a dot expression.
+  A join association may be in three formats, all shown in the examples
+  below. Returns :error if it isn't a join association expression.
 
   ## Examples
 
-      iex> escape_dot(quote(do: x.y), [x: 0])
+      iex> escape_join(quote(do: x.y), [x: 0])
       {{:{}, [], [:&, [], [0]]}, :y}
 
-      iex> escape_dot(quote(do: x.y()), [x: 0])
+      iex> escape_join(quote(do: x.y()), [x: 0])
       {{:{}, [], [:&, [], [0]]}, :y}
 
-      iex> escape_dot(quote(do: field(x, :y)), [x: 0])
+      iex> escape_join(quote(do: field(x, :y)), [x: 0])
       {{:{}, [], [:&, [], [0]]}, :y}
 
-      iex> escape_dot(quote(do: x), [x: 0])
+      iex> escape_join(quote(do: x), [x: 0])
       :error
 
   """
-  @spec escape_dot(Macro.t, Keyword.t) :: {Macro.t, Macro.t} | :error
-  def escape_dot({:field, _, [{var, _, context}, field]}, vars)
+  @spec escape_join(Macro.t, Keyword.t) :: {Macro.t, Macro.t} | :error
+  def escape_join({:field, _, [{var, _, context}, field]}, vars)
       when is_atom(var) and is_atom(context) do
     var = escape_var(var, vars)
     field = atom(field)
     {var, field}
   end
 
-  def escape_dot({{:., _, [{var, _, context}, field]}, _, []}, vars)
+  def escape_join({{:., _, [{var, _, context}, field]}, _, []}, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
     {escape_var(var, vars), field}
   end
 
-  def escape_dot(_, _vars) do
+  def escape_join(_, _vars) do
     :error
   end
 
@@ -208,41 +248,6 @@ defmodule Ecto.Query.Builder do
     do: {var, ix}
   defp escape_bind({bind, _ix}),
     do: raise(Ecto.QueryError, reason: "binding list should contain only variables, got: #{Macro.to_string(bind)}")
-
-
-  @doc """
-  Escapes simple expressions.
-
-  An expression may be a single variable `x`, representing all fields in that
-  model, a field `x.y`, or a list of fields and variables.
-
-  ## Examples
-
-      iex> escape_fields_and_vars(quote(do: [x.x, y.y]), [x: 0, y: 1])
-      [{{:{}, [], [:&, [], [0]]}, :x},
-       {{:{}, [], [:&, [], [1]]}, :y}]
-
-      iex> escape_fields_and_vars(quote(do: x), [x: 0, y: 1])
-      [{:{}, [], [:&, [], [0]]}]
-
-  """
-  @spec escape_fields_and_vars(Macro.t, Keyword.t) :: Macro.t | no_return
-  def escape_fields_and_vars(ast, vars) do
-    Enum.map(List.wrap(ast), &do_escape_expr(&1, vars))
-  end
-
-  defp do_escape_expr({var, _, context}, vars) when is_atom(var) and is_atom(context) do
-    escape_var(var, vars)
-  end
-
-  defp do_escape_expr(dot, vars) do
-    case escape_dot(dot, vars) do
-      {_, _} = var_field ->
-        var_field
-      :error ->
-        raise Ecto.QueryError, reason: "malformed query expression"
-    end
-  end
 
   @doc """
   Counts the bindings in a query expression.

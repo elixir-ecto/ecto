@@ -12,13 +12,13 @@ defmodule Ecto.Query.Builder.LimitOffset do
   """
   @spec build(:limit | :offset, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(type, query, binding, expr, env) do
-    binding          = Builder.escape_binding(binding)
-    {expr, external} = Builder.escape(expr, binding)
-    external = Builder.escape_external(external)
+    binding        = Builder.escape_binding(binding)
+    {expr, params} = Builder.escape(expr, binding)
+    params         = Builder.escape_params(params)
 
     limoff = quote do: %Ecto.Query.QueryExpr{
                         expr: unquote(expr),
-                        external: unquote(external),
+                        params: unquote(params),
                         file: unquote(env.file),
                         line: unquote(env.line)}
 

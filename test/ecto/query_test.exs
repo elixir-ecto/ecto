@@ -100,9 +100,8 @@ defmodule Ecto.QueryTest do
 
   test "keyword query" do
     # queries need to be on the same line or == wont work
-    assert from(p in Post, select: 1+2) == from(p in Post, []) |> select([p], 1+2)
-
-    assert from(p in Post, where: 1<2) == from(p in Post, []) |> where([p], 1<2)
+    assert from(p in Post, select: 1<2) == from(p in Post, []) |> select([p], 1<2)
+    assert from(p in Post, where: 1<2)  == from(p in Post, []) |> where([p], 1<2)
 
     query = Post
     assert (query |> select([p], p.title)) == from(p in query, select: p.title)

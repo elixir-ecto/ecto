@@ -60,7 +60,7 @@ defmodule Ecto.Query do
   like `p.title` and values like `^title` to be interpolated.
 
   TODO: Talk about ^, field, and friends
-  TODO: Talk about literals: 1, 2.0 (decimal), strings, binaries, <<>>, lists, uuid
+  TODO: Talk about literals: 1, 2.0 (decimal), strings, binaries, <<>>, lists, uuid, sigils
 
   ## Data security
 
@@ -145,7 +145,7 @@ defmodule Ecto.Query do
 
   defmodule QueryExpr do
     @moduledoc false
-    defstruct [expr: nil, external: %{}, file: nil, line: nil]
+    defstruct [expr: nil, params: %{}, file: nil, line: nil]
   end
 
   defmodule JoinExpr do

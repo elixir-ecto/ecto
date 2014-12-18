@@ -9,7 +9,7 @@ defmodule Ecto.MockAdapter do
     %{ record | id: 45 } |> Map.from_struct
   end
   def update(_repo, record, _opts), do: send(self, {:update, record}) && 1
-  def update_all(_repo, _query, _values, _external, _opts), do: 1
+  def update_all(_repo, _query, _values, _params, _opts), do: 1
   def delete(_repo, record, _opts), do: send(self, {:delete, record}) && 1
   def delete_all(_repo, _query, _opts), do: 1
 

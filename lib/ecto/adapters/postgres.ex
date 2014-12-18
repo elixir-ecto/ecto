@@ -103,8 +103,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    def update_all(repo, query, values, external, opts) do
-      {sql, params} = SQL.update_all(query, values, external)
+    def update_all(repo, query, values, params, opts) do
+      {sql, params} = SQL.update_all(query, values, params)
       %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end

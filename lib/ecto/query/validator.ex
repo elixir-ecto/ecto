@@ -21,23 +21,17 @@ defmodule Ecto.Query.Validator do
 
     state = %{new_state() | sources: query.sources, apis: apis, from: query.from, query: query}
 
-    validate_joins(query, state)
-    validate_wheres(query, state)
-    validate_order_bys(query, state)
-    validate_group_bys(query, state)
-    validate_havings(query, state)
     validate_preloads(query, state)
     validate_limit(query, state)
     validate_offset(query, state)
 
     unless opts[:skip_select] do
       validate_select(query, state)
-      validate_distincts(query, state)
       preload_selected(query)
     end
   end
 
-  def validate_update(query, apis, values, external) do
+  def validate_update(query, apis, values, _params) do
     validate_only_where(query)
 
     if values == [] do
@@ -45,22 +39,12 @@ defmodule Ecto.Query.Validator do
     end
 
     if model = Util.model(query.from) do
-      Enum.each(values, fn {field, expr} ->
+      Enum.each(values, fn {field, _expr} ->
         expected_type = model.__schema__(:field_type, field)
 
         unless expected_type do
           raise Ecto.QueryError, reason: "field `#{field}` is not on the " <>
             "model `#{inspect model}`"
-        end
-
-        state = %{new_state | sources: query.sources, apis: apis, external: external}
-        type = :unknown # type_check(expr, state)
-
-        format_expected_type = Util.type_to_ast(expected_type) |> Macro.to_string
-        format_type = Util.type_to_ast(type) |> Macro.to_string
-        unless Util.type_eq?(expected_type, type) or type == :unknown do
-          raise Ecto.QueryError, reason: "expected_type `#{format_expected_type}` " <>
-          " on `#{inspect model}.#{field}` doesn't match type `#{format_type}`"
         end
       end)
     end
@@ -88,77 +72,21 @@ defmodule Ecto.Query.Validator do
       raise Ecto.QueryError, reason: "query can only have `where` expressions"
     end
   end
-
-  defp validate_joins(query, state) do
-    ons = Enum.map(query.joins, &(&1.on))
-    validate_booleans(query, :join_on, ons, state)
-  end
-
-  defp validate_wheres(query, state) do
-    validate_booleans(query, :where, query.wheres, state)
-  end
-
-  defp validate_havings(query, state) do
-    validate_booleans(query, :having, query.havings, state)
-  end
-
+  
   defp validate_limit(%Query{limit: nil}, _), do: :ok
 
-  defp validate_limit(query, state) do
+  defp validate_limit(query, _state) do
     if contains_variable?(query.limit.expr) do
       raise Ecto.QueryError, reason: "variables not allowed in limit expression"
     end
-
-    validate_integer(query, :limit, query.limit, state)
   end
 
   defp validate_offset(%Query{offset: nil}, _), do: :ok
 
-  defp validate_offset(query, state) do
+  defp validate_offset(query, _state) do
     if contains_variable?(query.offset.expr) do
       raise Ecto.QueryError, reason: "variables not allowed in offset expression"
     end
-
-    validate_integer(query, :offset, query.offset, state)
-  end
-
-  defp validate_expr_type(query, clause_type, valid_expr_type, expr, state) do
-    rescue_metadata(query, clause_type, expr, fn ->
-      state = %{state | external: expr.external}
-      expr_type = :unknown # type_check(expr.expr, state)
-
-      unless expr_type in [:unknown, valid_expr_type] do
-        format_expr_type = Util.type_to_ast(expr_type) |> Macro.to_string
-        raise Ecto.QueryError, reason: "#{clause_type} expression `#{Macro.to_string(expr.expr)}` " <>
-          "is of type `#{format_expr_type}`, has to be of #{valid_expr_type} type"
-      end
-    end)
-  end
-
-  defp validate_integer(query, type, expr, state), do: validate_expr_type(query, type, :integer, expr, state)
-
-  defp validate_booleans(query, type, query_exprs, state) do
-    Enum.each(query_exprs, &validate_expr_type(query, type, :boolean, &1, state))
-  end
-
-  defp validate_order_bys(query, state) do
-    Enum.each(query.order_bys, fn expr ->
-      rescue_metadata(query, :order_by, expr, fn ->
-        state = %{state | external: expr.external}
-        Enum.each(expr.expr, fn {_dir, expr} ->
-          # type_check(expr, state)
-        end)
-      end)
-    end)
-  end
-
-  defp validate_group_bys(query, state) do
-    Enum.each(query.group_bys, fn expr ->
-      rescue_metadata(query, :group_by, expr, fn ->
-        state = %{state | external: expr.external}
-        # Enum.each(expr.expr, &type_check(&1, state))
-      end)
-    end)
   end
 
   defp validate_preloads(query, %{from: from}) do
@@ -187,19 +115,8 @@ defmodule Ecto.Query.Validator do
 
   defp validate_select(query, state) do
     rescue_metadata(query, :select, query.select, fn ->
-      state = %{state | external: query.select.external}
+      state = %{state | params: query.select.params}
       select_clause(query.select.expr, state)
-    end)
-  end
-
-  defp validate_distincts(query, state) do
-    Enum.each(query.distincts, fn expr ->
-      rescue_metadata(query, :distinct, expr, fn ->
-        state = %{state | external: expr.external}
-        Enum.each(expr.expr, fn expr ->
-          # type_check(expr, state)
-        end)
-      end)
     end)
   end
 
@@ -214,129 +131,6 @@ defmodule Ecto.Query.Validator do
       end)
     end
   end
-
-  # Fragments (are always unknown)
-  defp type_check(%Ecto.Query.Fragment{}, _) do
-    :unknown
-  end
-
-  # ^0 (references external data)
-  defp type_check({:^, _, [ix]}, %{external: external}) do
-    case Util.external_to_type Map.fetch!(external, ix) do
-      {:ok, type} ->
-        type
-      {:error, reason} ->
-        raise Ecto.QueryError, reason: reason
-    end
-  end
-
-  # var.x
-  defp type_check({{:., _, [{:&, _, [_]} = var, field]}, _, []}, %{sources: sources}) do
-    source = Util.find_source(sources, var)
-
-    if model = Util.model(source) do
-      type = model.__schema__(:field_type, field)
-      unless type do
-        raise Ecto.QueryError, reason: "unknown field `#{field}` on `#{inspect model}`"
-      end
-      type
-    else
-      :unknown
-    end
-  end
-
-  # var
-  defp type_check({:&, _, [_]} = var, %{sources: sources}) do
-    source = Util.find_source(sources, var)
-    if model = Util.model(source) do
-      model
-    else
-      source = Util.source(source)
-      raise Ecto.QueryError, reason: "cannot select on source, `#{inspect source}`, with no model"
-    end
-  end
-
-  # ops & functions
-  defp type_check({name, _, args} = expr, %{apis: apis} = state)
-      when is_atom(name) and is_list(args) do
-    arity = length(args)
-
-    api = Enum.find(apis, &function_exported?(&1, name, arity))
-    unless api do
-      raise Ecto.QueryError, reason: "function #{name}/#{arity} not defined in query API"
-    end
-
-    arg_types = Enum.map(args, &type_check(&1, state))
-
-    if Enum.any?(arg_types, &(&1 == :unknown)) do
-      :unknown
-    else
-      case apply(api, name, arg_types) do
-        {:ok, type} ->
-          type
-        {:error, allowed} ->
-          raise Ecto.Query.TypeCheckError, expr: expr, types: arg_types, allowed: allowed
-      end
-    end
-  end
-
-  # atom
-  defp type_check(atom, _state) when is_atom(atom) and not (atom in [true, false, nil]) do
-    raise Ecto.QueryError, reason: "atoms are not allowed in queries `#{inspect atom}`"
-  end
-
-  # <<...>>
-  defp type_check(%Ecto.Query.Tagged{value: binary, type: :binary}, state) when is_binary(binary) do
-    :binary
-  end
-
-  # uuid(...)
-  defp type_check(%Ecto.Query.Tagged{value: binary, type: :uuid}, state) when is_binary(binary) do
-    :uuid
-  end
-
-  # lists
-  defp type_check(list, state) when is_list(list) do
-    # unless inner in Util.types do
-    #   raise Ecto.QueryError, reason: "invalid type given to `array/2`: `#{inspect inner}`"
-    # end
-
-    # case external(list, state) do
-    #   {:ok, list} when is_list(list) ->
-    #     list = list
-    #   {:ok, other} ->
-    #     raise Ecto.QueryError, reason: "array/2 has to be given a list, given: `#{inspect other}`"
-    #   :error ->
-    #     :ok
-    # end
-
-    # unless is_nil(list) do
-    #   elem_types = Enum.map(list, &type_check(&1, state))
-
-    #   Enum.each(elem_types, fn type ->
-    #     unless Util.type_eq?(inner, type) or Util.type_castable?(type, inner) do
-    #       raise Ecto.QueryError, reason: "all elements in array have to be of same type"
-    #     end
-    #   end)
-    # end
-
-    {:array, :unknown}
-  end
-
-  # values
-  defp type_check(value, _state) do
-    case Util.value_to_type(value) do
-      {:ok, type} ->
-        type
-      {:error, reason} ->
-        raise Ecto.QueryError, reason: reason
-    end
-  end
-
-  defp external({:^, _, [ix]}, %{external: external}),
-    do: {:ok, Map.fetch!(external, ix)}
-  defp external(_other, _state),
-    do: :error
 
   # Handle top level select cases
 
@@ -357,8 +151,8 @@ defmodule Ecto.Query.Validator do
     Enum.each(list, &select_clause(&1, state))
   end
 
-  defp select_clause(other, state) do
-    type_check(other, state)
+  defp select_clause(other, _state) do
+    other
   end
 
   defp assoc_select(parent_var, fields, %{query: query, sources: sources} = state) do
@@ -423,6 +217,6 @@ defmodule Ecto.Query.Validator do
 
   defp new_state do
     %{sources: [], vars: [], apis: nil, from: nil,
-      query: nil, external: nil}
+      query: nil, params: nil}
   end
 end

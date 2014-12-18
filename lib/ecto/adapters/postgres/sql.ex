@@ -32,14 +32,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sources = create_names(query)
       state   = new_state(sources, %{})
 
-      {select,   external} = select(query.select, query.distincts, state)
-      {join,     external} = join(query,               %{state | external: external})
-      {where,    external} = where(query.wheres,       %{state | external: external})
-      {group_by, external} = group_by(query.group_bys, %{state | external: external})
-      {having,   external} = having(query.havings,     %{state | external: external})
-      {order_by, external} = order_by(query.order_bys, %{state | external: external})
-      {limit,    external} = limit(query.limit,        %{state | external: external})
-      {offset,   external} = offset(query.offset,      %{state | external: external})
+      {select,   params} = select(query.select, query.distincts, state)
+      {join,     params} = join(query,               %{state | params: params})
+      {where,    params} = where(query.wheres,       %{state | params: params})
+      {group_by, params} = group_by(query.group_bys, %{state | params: params})
+      {having,   params} = having(query.havings,     %{state | params: params})
+      {order_by, params} = order_by(query.order_bys, %{state | params: params})
+      {limit,    params} = limit(query.limit,        %{state | params: params})
+      {offset,   params} = offset(query.offset,      %{state | params: params})
 
       from   = from(sources)
       lock   = lock(query.lock)
@@ -50,7 +50,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> List.flatten
         |> Enum.join(" ")
 
-      {sql, Map.values(external)}
+      {sql, Map.values(params)}
     end
 
     # Generate SQL for an insert statement
@@ -102,17 +102,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     # Generate SQL for an update all statement
-    def update_all(query, values, external) do
+    def update_all(query, values, params) do
       names         = create_names(query)
       from          = elem(names, 0)
       {table, name} = Util.source(from)
-      state         = new_state(names, external, 0)
+      state         = new_state(names, params, 0)
 
       zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
         "#{quote_column(field)} = #{expr(expr, state)}"
       end)
 
-      {where, external} = where(query.wheres, state)
+      {where, params} = where(query.wheres, state)
       where = if where, do: " " <> where, else: ""
 
       sql =
@@ -120,7 +120,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         "SET " <> zipped_sql <>
         where
 
-      {sql, Map.values(external)}
+      {sql, Map.values(params)}
     end
 
     # Generate SQL for a delete statement
@@ -140,33 +140,33 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       from            = elem(names, 0)
       {table, name}   = Util.source(from)
       state           = new_state(names, %{})
-      {sql, external} = where(query.wheres, state)
+      {sql, params} = where(query.wheres, state)
 
       sql = if query.wheres == [], do: "", else: " " <> sql
       sql = "DELETE FROM #{quote_table(table)} AS #{name}" <> sql
-      {sql, Map.values(external)}
+      {sql, Map.values(params)}
     end
 
-    defp select(%QueryExpr{expr: expr, external: right}, [], %{external: external} = state) do
-      state = %{state | external: right, offset: Map.size(external)}
+    defp select(%QueryExpr{expr: expr, params: right}, [], %{params: params} = state) do
+      state = %{state | params: right, offset: Map.size(params)}
       sql   = "SELECT " <> select_clause(expr, state)
-      {sql, join_external(external, right)}
+      {sql, join_params(params, right)}
     end
 
-    defp select(%QueryExpr{expr: expr, external: right}, distincts, state) do
-      {exprs, external} =
-        Enum.map_reduce(distincts, state.external, fn
-          %QueryExpr{expr: expr, external: right}, left ->
-            state = %{state | external: right, offset: Map.size(left)}
+    defp select(%QueryExpr{expr: expr, params: right}, distincts, state) do
+      {exprs, params} =
+        Enum.map_reduce(distincts, state.params, fn
+          %QueryExpr{expr: expr, params: right}, left ->
+            state = %{state | params: right, offset: Map.size(left)}
             sql = Enum.map_join(expr, ", ", &expr(&1, state))
-            {sql, join_external(left, right)}
+            {sql, join_params(left, right)}
         end)
 
       exprs = Enum.join(exprs, ", ")
-      state = %{state | external: right, offset: Map.size(external)}
+      state = %{state | params: right, offset: Map.size(params)}
       sql   = "SELECT DISTINCT ON (" <> exprs <> ") " <>
               select_clause(expr, state)
-      {sql, join_external(external, right)}
+      {sql, join_params(params, right)}
     end
 
     defp from(sources) do
@@ -176,16 +176,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp join(query, state) do
       joins = Stream.with_index(query.joins)
-      Enum.map_reduce(joins, state.external, fn
-        {%JoinExpr{on: %QueryExpr{expr: expr, external: right}, qual: qual}, ix}, left ->
+      Enum.map_reduce(joins, state.params, fn
+        {%JoinExpr{on: %QueryExpr{expr: expr, params: right}, qual: qual}, ix}, left ->
           source        = elem(state.sources, ix+1)
           {table, name} = Util.source(source)
 
-          state = %{state | external: right, offset: Map.size(left)}
+          state = %{state | params: right, offset: Map.size(left)}
           on_sql = expr(expr, state)
           qual   = join_qual(qual)
           sql    = "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on_sql
-          {sql, join_external(left, right)}
+          {sql, join_params(left, right)}
       end)
     end
 
@@ -202,36 +202,36 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       boolean("HAVING", havings, state)
     end
 
-    defp group_by([], state), do: {nil, state.external}
+    defp group_by([], state), do: {nil, state.params}
 
     defp group_by(group_bys, state) do
-      {exprs, external} =
-        Enum.map_reduce(group_bys, state.external, fn
-          %QueryExpr{expr: expr, external: right}, left ->
-            state = %{state | external: right, offset: Map.size(left)}
+      {exprs, params} =
+        Enum.map_reduce(group_bys, state.params, fn
+          %QueryExpr{expr: expr, params: right}, left ->
+            state = %{state | params: right, offset: Map.size(left)}
             sql   = Enum.map_join(expr, ", ", &expr(&1, state))
-            {sql, join_external(left, right)}
+            {sql, join_params(left, right)}
         end)
 
       exprs = Enum.join(exprs, ", ")
       sql   = "GROUP BY " <> exprs
-      {sql, external}
+      {sql, params}
     end
 
-    defp order_by([], state), do: {nil, state.external}
+    defp order_by([], state), do: {nil, state.params}
 
     defp order_by(order_bys, state) do
-      {exprs, external} =
-        Enum.map_reduce(order_bys, state.external, fn
-          %QueryExpr{expr: expr, external: right}, left ->
-            state = %{state | external: right, offset: Map.size(left)}
+      {exprs, params} =
+        Enum.map_reduce(order_bys, state.params, fn
+          %QueryExpr{expr: expr, params: right}, left ->
+            state = %{state | params: right, offset: Map.size(left)}
             sql   = Enum.map_join(expr, ", ", &order_by_expr(&1, state))
-            {sql, join_external(left, right)}
+            {sql, join_params(left, right)}
         end)
 
       exprs = Enum.join(exprs, ", ")
       sql = "ORDER BY " <> exprs
-      {sql, external}
+      {sql, params}
     end
 
     defp order_by_expr({dir, expr}, state) do
@@ -242,16 +242,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp limit(nil, state), do: {nil, state.external}
-    defp limit(%Ecto.Query.QueryExpr{expr: expr, external: external}, state) do
-      expr_state = %{state | external: external, offset: Map.size(state.external)}
-      {"LIMIT " <> expr(expr, expr_state), join_external(state.external, external)}
+    defp limit(nil, state), do: {nil, state.params}
+    defp limit(%Ecto.Query.QueryExpr{expr: expr, params: params}, state) do
+      expr_state = %{state | params: params, offset: Map.size(state.params)}
+      {"LIMIT " <> expr(expr, expr_state), join_params(state.params, params)}
     end
 
-    defp offset(nil, state), do: {nil, state.external}
-    defp offset(%Ecto.Query.QueryExpr{expr: expr, external: external}, state) do
-      expr_state = %{state | external: external, offset: Map.size(state.external)}
-      {"OFFSET " <> expr(expr, expr_state), join_external(state.external, external)}
+    defp offset(nil, state), do: {nil, state.params}
+    defp offset(%Ecto.Query.QueryExpr{expr: expr, params: params}, state) do
+      expr_state = %{state | params: params, offset: Map.size(state.params)}
+      {"OFFSET " <> expr(expr, expr_state), join_params(state.params, params)}
     end
 
     defp lock(nil), do: nil
@@ -259,19 +259,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp lock(true), do: "FOR UPDATE"
     defp lock(lock_clause), do: lock_clause
 
-    defp boolean(_name, [], state), do: {nil, state.external}
+    defp boolean(_name, [], state), do: {nil, state.params}
 
     defp boolean(name, query_exprs, state) do
-      {exprs, external} =
-        Enum.map_reduce(query_exprs, state.external, fn
-          %QueryExpr{expr: expr, external: right}, left ->
-            state = %{state | external: right, offset: Map.size(left)}
+      {exprs, params} =
+        Enum.map_reduce(query_exprs, state.params, fn
+          %QueryExpr{expr: expr, params: right}, left ->
+            state = %{state | params: right, offset: Map.size(left)}
             expr  = "(" <> expr(expr, state) <> ")"
-            {expr, join_external(left, right)}
+            {expr, join_params(left, right)}
         end)
 
       exprs = Enum.join(exprs, " AND ")
-      {name <> " " <> exprs, external}
+      {name <> " " <> exprs, params}
     end
 
     defp expr({arg, _, []}, state) when is_tuple(arg) do
@@ -287,7 +287,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp expr({:^, [], [ix]}, state) do
       param_index = state.offset + ix + 1
-      value = Map.fetch!(state.external, ix)
+      value = Map.fetch!(state.params, ix)
 
       # We don't know the resulting postgres type from the elixir value `nil`
       # therefore we cannot send it as a parameter, because all parameters
@@ -423,15 +423,15 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp join_external(left, right) do
+    defp join_params(left, right) do
       size = Map.size(left)
       for {ix, value} <- right,
           into: left,
           do: {size+ix, value}
     end
 
-    defp new_state(sources, external, offset \\ nil) do
-      %{external: external, offset: offset, sources: sources}
+    defp new_state(sources, params, offset \\ nil) do
+      %{params: params, offset: offset, sources: sources}
     end
   end
 end

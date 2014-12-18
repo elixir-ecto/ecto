@@ -124,26 +124,26 @@ defmodule Ecto.Repo.Backend do
   def update_all(repo, adapter, queryable, values, opts) do
     {binds, expr} = From.escape(queryable)
 
-    {values, external} =
-      Enum.map_reduce(values, %{}, fn {field, expr}, external ->
-        {expr, external} = Builder.escape(expr, external, binds)
-        {{field, expr}, external}
+    {values, params} =
+      Enum.map_reduce(values, %{}, fn {field, expr}, params ->
+        {expr, params} = Builder.escape(expr, params, binds)
+        {{field, expr}, params}
       end)
 
-    external = Builder.escape_external(external)
+    params = Builder.escape_params(params)
 
     quote do
       Ecto.Repo.Backend.runtime_update_all(unquote(repo), unquote(adapter),
-        unquote(expr), unquote(values), unquote(external), unquote(opts))
+        unquote(expr), unquote(values), unquote(params), unquote(opts))
     end
   end
 
-  def runtime_update_all(repo, adapter, queryable, values, external, opts) do
+  def runtime_update_all(repo, adapter, queryable, values, params, opts) do
     query = Queryable.to_query(queryable)
             |> Normalizer.normalize(skip_select: true)
 
-    Validator.validate_update(query, repo.query_apis, values, external)
-    adapter.update_all(repo, query, values, external, opts)
+    Validator.validate_update(query, repo.query_apis, values, params)
+    adapter.update_all(repo, query, values, params, opts)
   end
 
   def delete(repo, adapter, model, opts) do
@@ -214,7 +214,7 @@ defmodule Ecto.Repo.Backend do
     Enum.each(zipped, fn {field, value} ->
       field_type = module.__schema__(:field_type, field)
 
-      value_type = case Util.external_to_type(value) do
+      value_type = case Util.params_to_type(value) do
         {:ok, vtype} -> vtype
         {:error, reason} -> raise ArgumentError, message: reason
       end
@@ -234,7 +234,7 @@ defmodule Ecto.Repo.Backend do
   defp validate_primary_key(model, primary_key, id) do
     field_type = model.__schema__(:field_type, primary_key)
 
-    value_type = case Util.external_to_type(id) do
+    value_type = case Util.params_to_type(id) do
       {:ok, vtype} -> vtype
       {:error, reason} -> raise ArgumentError, message: reason
     end

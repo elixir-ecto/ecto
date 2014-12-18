@@ -86,18 +86,18 @@ defimpl Inspect, for: Ecto.Query do
     expr(exp, names, %{})
   end
 
-  defp expr(%QueryExpr{expr: expr, external: external}, names) do
-    expr(expr, names, external)
+  defp expr(%QueryExpr{expr: expr, params: params}, names) do
+    expr(expr, names, params)
   end
 
-  defp expr(expr, names, external) do
-    Macro.to_string(expr, &expr_to_string(&1, &2, names, external))
+  defp expr(expr, names, params) do
+    Macro.to_string(expr, &expr_to_string(&1, &2, names, params))
   end
 
-  defp expr_to_string(%Ecto.Query.Fragment{parts: parts}, _, names, external) do
+  defp expr_to_string(%Ecto.Query.Fragment{parts: parts}, _, names, params) do
     "~f[" <> Enum.map_join(parts, "", fn
       part when is_binary(part) -> part
-      part -> expr(part, names, external)
+      part -> expr(part, names, params)
     end) <> "]"
   end
 
@@ -107,8 +107,8 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Inject the interpolated value
-  defp expr_to_string({:^, _, [ix]}, _, _, external) do
-    escaped = Map.get(external, ix) |> Macro.escape
+  defp expr_to_string({:^, _, [ix]}, _, _, params) do
+    escaped = Map.get(params, ix) |> Macro.escape
     expr = {:^, [], [escaped]}
     Macro.to_string(expr)
   end
@@ -120,9 +120,9 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Tagged values
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: type}, _, names, external) do
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: type}, _, names, params) do
     {type, [], [value]}
-    |> expr(names, external)
+    |> expr(names, params)
   end
 
   defp expr_to_string(_expr, string, _, _) do

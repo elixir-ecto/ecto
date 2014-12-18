@@ -32,18 +32,6 @@ defmodule Ecto.RepoTest do
   alias Ecto.RepoTest.MyModelNoPK
   require MockRepo
 
-  test "repo validates query" do
-    import Ecto.Query
-
-    assert_raise Ecto.QueryError, fn ->
-      MockRepo.all(from(m in MyModel, select: m.x + 1))
-    end
-
-    assert_raise Ecto.QueryError, fn ->
-      MockRepo.one(from(m in MyModel, select: m.x + 1))
-    end
-  end
-
   test "handles environment support" do
     defmodule EnvRepo do
       # Use a variable to ensure it is properly expanded at runtime

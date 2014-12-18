@@ -36,7 +36,7 @@ defmodule Ecto.Query.InspectTest do
     assert i(from(x in Post, join: y in x.comments)) ==
            ~s{from p in Inspect.Post, join: c in p.comments}
 
-    assert i(from(x in Post, [join: y in Comment, on: x.id = y.id])) ==
+    assert i(from(x in Post, [join: y in Comment, on: x.id == y.id])) ==
            ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: p.id = c.id}
 
     assert i(from(x in Post, join: y in x.post, join: z in y.post)) ==
@@ -104,14 +104,14 @@ defmodule Ecto.Query.InspectTest do
                              lock: true, select: 1)) == string
   end
 
-  test "tagged values" do
-    assert i(from(Post, select: {binary(<<0>>), uuid(<<0>>), [0]})) ==
-           "from p in Inspect.Post, select: {binary(<<0>>), uuid(<<0>>), [0]}"
+  test "container values" do
+    assert i(from(Post, select: {<<1, 2, 3>>, uuid(<<0>>), [0]})) ==
+           "from p in Inspect.Post, select: {<<1, 2, 3>>, uuid(<<0>>), [0]}"
   end
 
-  test "external" do
-    assert i(from(x in Post, where: ^123 + ^(1 * 3))) ==
-           ~s{from p in Inspect.Post, where: ^123 + ^3}
+  test "params" do
+    assert i(from(x in Post, where: ^123 > ^(1 * 3))) ==
+           ~s{from p in Inspect.Post, where: ^123 > ^3}
   end
 
   def i(query) do

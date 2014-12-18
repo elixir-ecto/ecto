@@ -24,15 +24,15 @@ defmodule Ecto.Query.Builder.OrderBy do
     |> Enum.map_reduce(%{}, &do_escape(&1, &2, vars))
   end
 
-  defp do_escape({dir, expr}, external, vars) do
+  defp do_escape({dir, expr}, params, vars) do
     check_dir(dir)
-    {ast, external} = Builder.escape(expr, external, vars)
-    {{dir, ast}, external}
+    {ast, params} = Builder.escape(expr, params, vars)
+    {{dir, ast}, params}
   end
 
-  defp do_escape(expr, external, vars) do
-    {ast, external} = Builder.escape(expr, external, vars)
-    {{:asc, ast}, external}
+  defp do_escape(expr, params, vars) do
+    {ast, params} = Builder.escape(expr, params, vars)
+    {{:asc, ast}, params}
   end
 
   defp check_dir(dir) when dir in [:asc, :desc], do: :ok
@@ -51,12 +51,12 @@ defmodule Ecto.Query.Builder.OrderBy do
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
     binding          = Builder.escape_binding(binding)
-    {expr, external} = escape(expr, binding)
-    external         = Builder.escape_external(external)
+    {expr, params} = escape(expr, binding)
+    params         = Builder.escape_params(params)
 
     order_by = quote do: %Ecto.Query.QueryExpr{
                            expr: unquote(expr),
-                           external: unquote(external),
+                           params: unquote(params),
                            file: unquote(env.file),
                            line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [order_by], env)

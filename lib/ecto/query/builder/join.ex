@@ -41,7 +41,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape(dot, vars) do
-    case Builder.escape_dot(dot, vars) do
+    case Builder.escape_join(dot, vars) do
       {_, _} = var_field ->
         {[], nil, var_field}
       :error ->
@@ -106,12 +106,12 @@ defmodule Ecto.Query.Builder.Join do
 
   defp escape_on(nil, _binding, _env), do: nil
   defp escape_on(on, binding, env) do
-    {on, external} = Builder.escape(on, binding)
-    external       = Builder.escape_external(external)
+    {on, params} = Builder.escape(on, binding)
+    params       = Builder.escape_params(params)
 
     quote do: %Ecto.Query.QueryExpr{
                 expr: unquote(on),
-                external: unquote(external),
+                params: unquote(params),
                 line: unquote(env.line),
                 file: unquote(env.file)}
   end
