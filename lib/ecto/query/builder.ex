@@ -8,6 +8,22 @@ defmodule Ecto.Query.Builder do
                 :datetime | :time | :date
 
   @doc """
+  Raises a query building error.
+  """
+  def error!(message) when is_binary(message) do
+    {:current_stacktrace, [_|t]} = Process.info(self, :current_stacktrace)
+
+    t = Enum.drop_while t, fn
+      {mod, _, _, _} ->
+        String.starts_with?(Atom.to_string(mod), ["Elixir.Ecto.Query.", "Elixir.Enum"])
+      _ ->
+        false
+    end
+
+    reraise Ecto.QueryError, [reason: message], t
+  end
+
+  @doc """
   Smart escapes a query expression and extracts interpolated values in
   a map.
 
@@ -96,62 +112,67 @@ defmodule Ecto.Query.Builder do
     do: {nil, params}
 
   # comparison operators
-  def escape({comp_op, meta, [left, right]}, _type, params, vars) when comp_op in ~w(== != < > <= >=)a do
-    escape_call(comp_op, meta, [left, right], params, vars)
-  end
-
-  # boolean binary operator
-  def escape({bool_op, meta, [left, right]}, _type, params, vars) when bool_op in ~w(and or)a do
-    escape_call(bool_op, meta, [left, right], params, vars)
-  end
-
-  # boolean unary operator
-  def escape({:not, meta, [single]}, _type, params, vars) do
-    escape_call(:not, meta, [single], params, vars)
+  def escape({comp_op, _, [_, _]} = expr, type, params, vars) when comp_op in ~w(== != < > <= >=)a do
+    assert_type!(expr, type, :boolean)
+    escape_call(expr, :any, params, vars)
   end
 
   # in operator
-  def escape({:in, meta, [left, right]}, _type, params, vars) do
-    escape_call(:in, meta, [left, right], params, vars)
+  def escape({:in, _, [_, _]} = expr, type, params, vars) do
+    assert_type!(expr, type, :boolean)
+    escape_call(expr, :any, params, vars)
   end
 
   # Other functions - no type casting
-  def escape({name, meta, args} = call, _type, params, vars) when is_atom(name) and is_list(args) do
-    if valid_call?(name, length(args)) do
-      escape_call(name, meta, args, params, vars)
-    else
-      raise Ecto.QueryError, reason: """
-      `#{Macro.to_string(call)}` is not a valid query expression.
+  def escape({name, _, args} = expr, type, params, vars) when is_atom(name) and is_list(args) do
+    case call_type(name, length(args)) do
+      {in_type, out_type} ->
+        assert_type!(expr, type, out_type)
+        escape_call(expr, in_type, params, vars)
+      nil ->
+        error! """
+        `#{Macro.to_string(expr)}` is not a valid query expression.
 
-      * If you intended to call a database function, please check the documentation
-        for Ecto.Query to see the supported database expressions
+        * If you intended to call a database function, please check the documentation
+          for Ecto.Query to see the supported database expressions
 
-      * If you intended to call an Elixir function or introduce a value,
-        you need to explicitly interpolate it with ^
-      """
+        * If you intended to call an Elixir function or introduce a value,
+          you need to explicitly interpolate it with ^
+        """
     end
   end
 
   # everything else is not allowed
   def escape({name, _, context} = var, _type, _params, _vars) when is_atom(name) and is_atom(context) do
-    raise Ecto.QueryError, reason:
-      "Variable `#{Macro.to_string(var)}` is not a valid query expression. " <>
-      "Variables need to be explicitly interpolated in queries with ^"
+    error! "variable `#{Macro.to_string(var)}` is not a valid query expression. " <>
+           "Variables need to be explicitly interpolated in queries with ^"
   end
 
   def escape(other, _type, _params, _vars) do
-    raise Ecto.QueryError, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
+    error! "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
-  defp valid_call?(agg, 1)  when agg in ~w(max count sum min avg)a, do: true
-  defp valid_call?(like, 2) when like in ~w(like ilike)a, do: true
-  defp valid_call?(:is_nil, 1), do: true
-  defp valid_call?(_, _),       do: false
-
-  defp escape_call(name, meta, args, params, vars) do
-    {args, params} = Enum.map_reduce(args, params, &escape(&1, :any, &2, vars))
+  defp escape_call({name, meta, args}, type, params, vars) do
+    {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars))
     expr = {:{}, [], [name, meta, args]}
     {expr, params}
+  end
+
+  defp call_type(agg, 1)  when agg in ~w(max count sum min avg)a, do: {:any, :any}
+  defp call_type(like, 2) when like in ~w(like ilike)a,           do: {:string, :boolean}
+  defp call_type(bool, 2) when bool in ~w(and or)a,               do: {:boolean, :boolean}
+  defp call_type(:not, 1),                                        do: {:boolean, :boolean}
+  defp call_type(:is_nil, 1),                                     do: {:any, :boolean}
+  defp call_type(_, _),                                           do: nil
+
+  defp assert_type!(expr, type, actual) do
+    if type == :any or actual == :any or type == actual do
+      :ok
+    else
+      error! "expression `#{Macro.to_string(expr)}` does not type check. " <>
+             "It returns a value of type #{inspect actual} but a value of " <>
+             "type #{inspect type} was expected"
+    end
   end
 
   @doc """
@@ -176,7 +197,7 @@ defmodule Ecto.Query.Builder do
     if var != :_ and ix do
       {:{}, [], [:&, [], [ix]]}
     else
-      raise Ecto.QueryError, reason: "unbound variable `#{var}` in query"
+      error! "unbound variable `#{var}` in query"
     end
   end
 
@@ -198,14 +219,14 @@ defmodule Ecto.Query.Builder do
     dup_vars   = bound_vars -- Enum.uniq(bound_vars)
 
     unless dup_vars == [] do
-      raise Ecto.QueryError, reason: "variable `#{hd dup_vars}` is bound twice"
+      error! "variable `#{hd dup_vars}` is bound twice"
     end
 
     vars
   end
 
   def escape_binding(bind) do
-    raise Ecto.QueryError, reason: "binding should be list of variables, got: #{Macro.to_string(bind)}"
+    error! "binding should be list of variables, got: #{Macro.to_string(bind)}"
   end
 
   defp escape_bind({{var, _} = tuple, _}) when is_atom(var),

@@ -17,7 +17,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
     params         = Builder.escape_params(params)
 
     if contains_variable?(expr) do
-      raise Ecto.QueryError, reason: "variables not allowed in #{type} expression"
+      Builder.error! "query variables are not allowed in #{type} expression"
     end
 
     limoff = quote do: %Ecto.Query.QueryExpr{

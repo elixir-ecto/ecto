@@ -92,32 +92,6 @@ defmodule Ecto.Query.ValidatorTest do
     end
   end
 
-  test "limit expression must be integer" do
-    query = Post |> limit([p], 42 > 0) |> select([], 123)
-    assert_raise Ecto.QueryError, ~r"limit expression", fn ->
-      validate(query)
-    end
-  end
-
-  test "offset expression must be integer" do
-    query = Post |> offset([p], 42 > 0) |> select([], 123)
-    assert_raise Ecto.QueryError, ~r"offset expression", fn ->
-      validate(query)
-    end
-  end
-
-  test "limit and offset expressions cannot use row data" do
-    query = Post |> limit([p], p.id) |> select([], 123)
-    assert_raise Ecto.QueryError, ~r"limit expression", fn ->
-      validate(query)
-    end
-
-    query = Post |> offset([p], p.id) |> select([], 123)
-    assert_raise Ecto.QueryError, ~r"offset expression", fn ->
-      validate(query)
-    end
-  end
-
   test "unknown field" do
     query = Post |> select([p], p.unknown)
     assert_raise Ecto.QueryError, ~r"unknown field `unknown` on `Ecto.Query.ValidatorTest.Post`", fn ->

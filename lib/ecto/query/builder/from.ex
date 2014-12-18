@@ -27,11 +27,11 @@ defmodule Ecto.Query.Builder.From do
       {[], quote(do: other)}
 
       iex> escape(quote do: x() in other)
-      ** (Ecto.QueryError) invalid `from` query expression
+      ** (Ecto.QueryError) malformed from `[x()] in other` in query expression
 
   """
   @spec escape(Macro.t) :: {Keyword.t, Macro.t}
-  def escape({:in, _, [list, expr]}) when is_list(list) do
+  def escape({:in, _, [list, expr]} = from) when is_list(list) do
     binds =
       Enum.flat_map(Stream.with_index(list), fn
         {{:_, _, context}, _ix} when is_atom(context) ->
@@ -39,7 +39,7 @@ defmodule Ecto.Query.Builder.From do
         {{var, _, context}, ix} when is_atom(var) and is_atom(context) ->
           [{var, ix}]
         {_, _count} ->
-          raise Ecto.QueryError, reason: "invalid `from` query expression"
+          Builder.error! "malformed from `#{Macro.to_string(from)}` in query expression"
       end)
 
     {binds, expr}
@@ -95,9 +95,8 @@ defmodule Ecto.Query.Builder.From do
 
   defp check_binds(query, count) do
     if count > 1 and count > Builder.count_binds(query) do
-      raise Ecto.QueryError,
-        reason: "`from` in query expression specified #{count} " <>
-                "binds but query contains #{Builder.count_binds(query)} binds"
+      Builder.error! "`from` in query expression specified #{count} " <>
+                     "binds but query contains #{Builder.count_binds(query)} binds"
     end
   end
 end

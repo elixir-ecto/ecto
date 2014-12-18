@@ -15,7 +15,8 @@ defmodule Ecto.Query.Builder.Distinct do
   """
   @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
   def escape(expr, vars) do
-    List.wrap(expr)
+    expr
+    |> List.wrap
     |> Builder.escape(:any, %{}, vars)
   end
 

@@ -3,7 +3,7 @@ defmodule Ecto.Query.Keyword do
 
   # Builds the quoted code for creating a keyword query
 
-  alias Ecto.Query.Builder.Join
+  alias Ecto.Query.Builder
 
   @binds    [:where, :select, :distinct, :order_by, :group_by, :having, :limit, :offset]
   @no_binds [:preload, :lock]
@@ -47,19 +47,16 @@ defmodule Ecto.Query.Keyword do
       end
 
     {t, on} = collect_on(t, nil)
-    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, count_bind, env)
-
+    {quoted, binds, count_bind} = Builder.Join.build(quoted, qual, binds, expr, on, count_bind, env)
     build(t, env, count_bind, quoted, binds)
   end
 
   def build([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
-    raise Ecto.QueryError,
-      reason: "`on` keyword must immediately follow a join"
+    Builder.error! "`on` keyword must immediately follow a join"
   end
 
   def build([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
-    raise Ecto.QueryError,
-      reason: "unsupported #{inspect key} in keyword query expression"
+    Builder.error! "unsupported #{inspect key} in keyword query expression"
   end
 
   def build([], _env, _count_bind, quoted, _binds) do

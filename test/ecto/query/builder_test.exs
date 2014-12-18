@@ -45,8 +45,18 @@ defmodule Ecto.Query.BuilderTest do
            escape(quote(do: ^1 == ^2), [])
   end
 
+  test "escape type checks" do
+    assert_raise Ecto.QueryError, ~r"It returns a value of type :boolean but a value of type :integer was expected", fn ->
+      escape(quote(do: ^1 == ^2), :integer, %{}, [])
+    end
+
+    assert_raise Ecto.QueryError, ~r"It returns a value of type :boolean but a value of type :integer was expected", fn ->
+      escape(quote(do: 1 > 2), :integer, %{}, [])
+    end
+  end
+
   test "escape raise" do
-    assert_raise Ecto.QueryError, ~r"Variable `x` is not a valid query expression", fn ->
+    assert_raise Ecto.QueryError, ~r"variable `x` is not a valid query expression", fn ->
       escape(quote(do: x), [])
     end
 

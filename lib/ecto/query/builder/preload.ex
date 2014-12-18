@@ -24,9 +24,8 @@ defmodule Ecto.Query.Builder.Preload do
   end
 
   defp normalize_each(other) do
-    raise Ecto.QueryError,
-      reason: "preload expects an atom, a (nested) keyword or " <>
-              "a (nested) list of atoms, got: #{inspect other}"
+    Builder.error! "invalid preload `#{inspect other}`. preload expects an atom " <>
+                   "a (nested) keyword or a (nested) list of atoms"
   end
 
   @doc """

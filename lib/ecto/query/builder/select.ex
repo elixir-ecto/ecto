@@ -71,8 +71,7 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   defp escape_assoc(other, _params, _vars) do
-    raise Ecto.QueryError,
-      reason: "`#{Macro.to_string(other)}` is not a valid expression inside `assoc/2` selector"
+    Builder.error! "invalid expression `#{Macro.to_string(other)}` inside `assoc/2` selector"
   end
 
   defp escape_assoc_fields({field, {assoc_var, _, assoc_ctxt}}, params, vars)
@@ -120,7 +119,7 @@ defmodule Ecto.Query.Builder.Select do
     query = Ecto.Queryable.to_query(query)
 
     if query.select do
-      raise Ecto.QueryError, reason: "only one select expression is allowed in query"
+      Builder.error! "only one select expression is allowed in query"
     else
       %{query | select: select}
     end

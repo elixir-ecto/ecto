@@ -58,8 +58,8 @@ defmodule Ecto.Query.Builder.Join do
     {[], nil, {Builder.escape_var(var, vars), field}}
   end
 
-  def escape(_join, _vars) do
-    raise Ecto.QueryError, reason: "malformed `join` query expression"
+  def escape(join, _vars) do
+    Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
   end
 
   @doc """
@@ -73,10 +73,8 @@ defmodule Ecto.Query.Builder.Join do
   def build(query, qual, binding, expr, on, count_bind, env) do
     binding = Builder.escape_binding(binding)
     {join_bind, join_expr, join_assoc} = escape(expr, binding)
-    is_assoc? = not is_nil(join_assoc)
 
     validate_qual(qual)
-    validate_on(on, is_assoc?)
     validate_bind(join_bind, binding)
 
     if join_bind && !count_bind do
@@ -132,22 +130,14 @@ defmodule Ecto.Query.Builder.Join do
   @qualifiers [:inner, :left, :right, :full]
 
   defp validate_qual(qual) when qual in @qualifiers, do: :ok
-  defp validate_qual(_qual) do
-    raise Ecto.QueryError,
-      reason: "invalid join qualifier, accepted qualifiers are: " <>
-              Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
+  defp validate_qual(qual) do
+    Builder.error! "invalid join qualifier `#{inspect qual}`, accepted qualifiers are: " <>
+                   Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
   end
-
-  defp validate_on(nil, false) do
-    raise Ecto.QueryError,
-      reason: "`join` expression requires explicit `on` " <>
-              "expression unless it's an association join expression"
-  end
-  defp validate_on(_on, _is_assoc?), do: :ok
 
   defp validate_bind(bind, all) do
     if bind && bind in all do
-      raise Ecto.QueryError, reason: "variable `#{bind}` is already defined in query"
+      Builder.error! "variable `#{bind}` is already defined in query"
     end
   end
 end

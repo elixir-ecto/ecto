@@ -10,9 +10,8 @@ defmodule Ecto.Query.Builder.Lock do
   def validate(expr) when is_boolean(expr) or is_binary(expr), do: expr
 
   def validate(expr) do
-    raise Ecto.QueryError, reason: "lock expression must be a boolean value" <>
-                             " or a string containing the database-specific locking" <>
-                             " clause, got: #{inspect expr}"
+    Builder.error! "invalid lock `#{inspect expr}`. lock must be a boolean value " <>
+                   "or a string containing the database-specific locking clause"
   end
 
   @doc """
