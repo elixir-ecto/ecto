@@ -14,16 +14,14 @@ defmodule Ecto.Query.Validator do
 
   require Ecto.Query.Util
 
-  def validate(query, apis, opts \\ []) do
+  def validate(query, opts \\ []) do
     if query.from == nil do
       raise Ecto.QueryError, reason: "a query must have a from expression"
     end
 
-    state = %{new_state() | sources: query.sources, apis: apis, from: query.from, query: query}
+    state = %{new_state() | sources: query.sources, from: query.from, query: query}
 
     validate_preloads(query, state)
-    validate_limit(query, state)
-    validate_offset(query, state)
 
     unless opts[:skip_select] do
       validate_select(query, state)
@@ -31,7 +29,7 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  def validate_update(query, apis, values, _params) do
+  def validate_update(query, values, _params) do
     validate_only_where(query)
 
     if values == [] do
@@ -49,17 +47,17 @@ defmodule Ecto.Query.Validator do
       end)
     end
 
-    validate(query, apis, skip_select: true)
+    validate(query, skip_select: true)
   end
 
-  def validate_delete(query, apis) do
+  def validate_delete(query) do
     validate_only_where(query)
-    validate(query, apis, skip_select: true)
+    validate(query, skip_select: true)
   end
 
-  def validate_get(query, apis) do
+  def validate_get(query) do
     validate_only_where(query)
-    validate(query, apis, skip_select: true)
+    validate(query, skip_select: true)
   end
 
   defp validate_only_where(query) do
@@ -70,22 +68,6 @@ defmodule Ecto.Query.Validator do
     unless match?(%Query{joins: [], select: nil, order_bys: [], limit: nil,
         offset: nil, group_bys: [], havings: [], preloads: [], distincts: [], lock: nil}, query) do
       raise Ecto.QueryError, reason: "query can only have `where` expressions"
-    end
-  end
-  
-  defp validate_limit(%Query{limit: nil}, _), do: :ok
-
-  defp validate_limit(query, _state) do
-    if contains_variable?(query.limit.expr) do
-      raise Ecto.QueryError, reason: "variables not allowed in limit expression"
-    end
-  end
-
-  defp validate_offset(%Query{offset: nil}, _), do: :ok
-
-  defp validate_offset(query, _state) do
-    if contains_variable?(query.offset.expr) do
-      raise Ecto.QueryError, reason: "variables not allowed in offset expression"
     end
   end
 
@@ -189,18 +171,6 @@ defmodule Ecto.Query.Validator do
     end)
   end
 
-
-  defp contains_variable?({:&, _, _}),
-    do: true
-  defp contains_variable?({left, _, right}),
-    do: contains_variable?(left) or contains_variable?(right)
-  defp contains_variable?({left, right}),
-    do: contains_variable?(left) or contains_variable?(right)
-  defp contains_variable?(list) when is_list(list),
-    do: Enum.any?(list, &contains_variable?/1)
-  defp contains_variable?(_),
-    do: false
-
   # Adds type, file and line metadata to the exception
   defp rescue_metadata(query, type, %QueryExpr{expr: expr, file: file, line: line}, fun) do
     try do
@@ -209,14 +179,11 @@ defmodule Ecto.Query.Validator do
       e in [Ecto.QueryError] ->
         stacktrace = System.stacktrace
         reraise %{e | type: type, query: query, expr: expr, file: file, line: line}, stacktrace
-      e in [Ecto.Query.TypeCheckError] ->
-        stacktrace = System.stacktrace
-        reraise %{e | query: query, expr: expr, file: file, line: line}, stacktrace
     end
   end
 
   defp new_state do
-    %{sources: [], vars: [], apis: nil, from: nil,
+    %{sources: [], vars: [], from: nil,
       query: nil, params: nil}
   end
 end

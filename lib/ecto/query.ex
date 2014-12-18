@@ -59,8 +59,8 @@ defmodule Ecto.Query do
   Fragments are sent directly to the database while also allowing field names
   like `p.title` and values like `^title` to be interpolated.
 
-  TODO: Talk about ^, field, and friends
-  TODO: Talk about literals: 1, 2.0 (decimal), strings, binaries, <<>>, lists, uuid, sigils
+  # TODO: Talk about ^, field, and friends
+  # TODO: Talk about literals: 1, 2.0 (decimal), strings, binaries, <<>>, lists, uuid, sigils
 
   ## Data security
 
@@ -83,38 +83,9 @@ defmodule Ecto.Query do
   Notice the `select` clause is optional, Ecto will automatically infers
   and returns the user record (similar to `select: u`) from the query above.
 
-  ## Type safety
+  ## Casting
 
-  Ecto queries are also type-safe. For example, the following query:
-
-      from u in User, where: u.age == "zero"
-
-  will return an error with the following message:
-
-      ** (Ecto.Query.TypeCheckError) the following expression does not type check:
-
-          &0.age() == "zero"
-
-      Allowed types for ==/2:
-
-          number == number
-          var == var
-          nil == _
-          _ == nil
-
-      Got: integer == string
-
-  The types above mean:
-
-  * `number == number` - any number (be it float, integer, etc) can be compared
-    with any other number;
-  * `var == var` - the comparison operator also works if both operands are of
-    the same type (i.e. `var` represents a variable type);
-  * `nil == _` and `_ == nil` - the comparison operator also type checks if any
-    of the operands are nil;
-
-  All operations allowed in a query with their respective type are defined
-  in `Ecto.Query.API`.
+  # TODO: Talk about casting
 
   ## Query expansion
 

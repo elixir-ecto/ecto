@@ -11,8 +11,8 @@ defmodule Ecto.Query.Builder.GroupByTest do
     assert {Macro.escape(quote do [&0.x, &1.y] end), %{}} ==
            escape(quote do [x.x, y.y] end, [x: 0, y: 1])
 
-    assert {Macro.escape(quote do [1 + 2] end), %{}} ==
-      escape(quote do 1 + 2 end, [])
+    assert {Macro.escape(quote do [1 < 2] end), %{}} ==
+           escape(quote do 1 < 2 end, [])
   end
 
   test "escape raise" do

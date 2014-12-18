@@ -144,11 +144,7 @@ defmodule Ecto.Repo do
         fun.()
       end
 
-      def query_apis do
-        [Ecto.Query.API]
-      end
-
-      defoverridable [log: 2, query_apis: 0]
+      defoverridable [log: 2]
     end
   end
 
@@ -403,9 +399,4 @@ defmodule Ecto.Repo do
 
   """
   defcallback log(any, (() -> any)) :: any
-
-  @doc """
-  Returns the supported query APIs. Should be overridden to customize.
-  """
-  defcallback query_apis() :: [module]
 end

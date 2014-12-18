@@ -3,6 +3,10 @@ defmodule Ecto.Query.Builder do
 
   alias Ecto.Query
 
+  @type type :: :any | :integer | :float | :boolean | :string |
+                :binary | :uuid | {:array, type} | :decimal |
+                :datetime | :time | :date
+
   @doc """
   Smart escapes a query expression and extracts interpolated values in
   a map.
@@ -12,11 +16,11 @@ defmodule Ecto.Query.Builder do
   with `^index` in the query where index is a number indexing into the
   map.
   """
-  @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
-  def escape(expr, params \\ %{}, vars)
+  @spec escape(Macro.t, type, map(), Keyword.t) :: {Macro.t, %{}}
+  def escape(expr, type, params, vars)
 
   # var.x - where var is bound
-  def escape({{:., _, [{var, _, context}, right]}, _, []}, params, vars)
+  def escape({{:., _, [{var, _, context}, right]}, _, []}, _type, params, vars)
       when is_atom(var) and is_atom(context) and is_atom(right) do
     left_escaped = escape_var(var, vars)
     dot_escaped  = {:{}, [], [:., [], [left_escaped, right]]}
@@ -25,7 +29,7 @@ defmodule Ecto.Query.Builder do
   end
 
   # interpolation
-  def escape({:^, _, [arg]}, params, _vars) do
+  def escape({:^, _, [arg]}, _type, params, _vars) do
     index  = Map.size(params)
     params = Map.put(params, index, arg)
     expr   = {:{}, [], [:^, [], [index]]}
@@ -33,27 +37,27 @@ defmodule Ecto.Query.Builder do
   end
 
   # tagged types
-  def escape({:<<>>, _, _} = bin, params, _vars) do
+  def escape({:<<>>, _, _} = bin, _type, params, _vars) do
     expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :binary]}]}
     {expr, params}
   end
 
-  def escape({:uuid, _, [bin]}, params, _vars) when is_binary(bin) do
+  def escape({:uuid, _, [bin]}, _type, params, _vars) when is_binary(bin) do
     expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
     {expr, params}
   end
 
-  def escape({:uuid, _, [{:<<>>, _, _} = bin]}, params, _vars) do
+  def escape({:uuid, _, [{:<<>>, _, _} = bin]}, _type, params, _vars) do
     expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
     {expr, params}
   end
 
   # field macro
-  def escape({:field, _, [{var, _, context}, field]}, params, vars)
+  def escape({:field, _, [{var, _, context}, field]}, _type, params, vars)
       when is_atom(var) and is_atom(context) do
     var = escape_var(var, vars)
 
-    field = atom(field)
+    field = quoted_atom!(field)
     dot   = {:{}, [], [:., [], [var, field]]}
     expr  = {:{}, [], [dot, [], []]}
 
@@ -61,13 +65,13 @@ defmodule Ecto.Query.Builder do
   end
 
   # fragments
-  def escape({sigil, _, [{:<<>>, _, frags}, []]}, params, vars) when sigil in ~w(sigil_f sigil_F)a do
+  def escape({sigil, _, [{:<<>>, _, frags}, []]}, _type, params, vars) when sigil in ~w(sigil_f sigil_F)a do
     {frags, params} =
       Enum.map_reduce frags, params, fn
         frag, params when is_binary(frag) ->
           {frag, params}
         {:::, _, [{{:., _, [Kernel, :to_string]}, _, [frag]}, _]}, params ->
-          escape(frag, params, vars)
+          escape(frag, :binary, params, vars)
       end
 
     {{:%, [], [Ecto.Query.Fragment, {:%{}, [], [parts: frags]}]},
@@ -75,44 +79,44 @@ defmodule Ecto.Query.Builder do
   end
 
   # sigils
-  def escape({name, _, _} = sigil, params, _vars) when name in ~w(sigil_s sigil_S sigil_w sigil_W)a do
+  def escape({name, _, _} = sigil, _type, params, _vars) when name in ~w(sigil_s sigil_S sigil_w sigil_W)a do
     {sigil, params}
   end
 
   # literals
-  def escape(list, params, vars) when is_list(list),
-    do: Enum.map_reduce(list, params, &escape(&1, &2, vars))
-  def escape(literal, params, _vars) when is_binary(literal),
+  def escape(list, _type, params, vars) when is_list(list),
+    do: Enum.map_reduce(list, params, &escape(&1, :any, &2, vars))
+  def escape(literal, _type, params, _vars) when is_binary(literal),
     do: {literal, params}
-  def escape(literal, params, _vars) when is_boolean(literal),
+  def escape(literal, _type, params, _vars) when is_boolean(literal),
     do: {literal, params}
-  def escape(literal, params, _vars) when is_number(literal),
+  def escape(literal, _type, params, _vars) when is_number(literal),
     do: {literal, params}
-  def escape(nil, params, _vars),
+  def escape(nil, _type, params, _vars),
     do: {nil, params}
 
   # comparison operators
-  def escape({comp_op, meta, [left, right]}, params, vars) when comp_op in ~w(== != < > <= >=)a do
+  def escape({comp_op, meta, [left, right]}, _type, params, vars) when comp_op in ~w(== != < > <= >=)a do
     escape_call(comp_op, meta, [left, right], params, vars)
   end
 
   # boolean binary operator
-  def escape({bool_op, meta, [left, right]}, params, vars) when bool_op in ~w(and or)a do
+  def escape({bool_op, meta, [left, right]}, _type, params, vars) when bool_op in ~w(and or)a do
     escape_call(bool_op, meta, [left, right], params, vars)
   end
 
   # boolean unary operator
-  def escape({:not, meta, [single]}, params, vars) do
+  def escape({:not, meta, [single]}, _type, params, vars) do
     escape_call(:not, meta, [single], params, vars)
   end
 
   # in operator
-  def escape({:in, meta, [left, right]}, params, vars) do
+  def escape({:in, meta, [left, right]}, _type, params, vars) do
     escape_call(:in, meta, [left, right], params, vars)
   end
 
   # Other functions - no type casting
-  def escape({name, meta, args} = call, params, vars) when is_atom(name) and is_list(args) do
+  def escape({name, meta, args} = call, _type, params, vars) when is_atom(name) and is_list(args) do
     if valid_call?(name, length(args)) do
       escape_call(name, meta, args, params, vars)
     else
@@ -129,13 +133,13 @@ defmodule Ecto.Query.Builder do
   end
 
   # everything else is not allowed
-  def escape({name, _, context} = var, _params, _vars) when is_atom(name) and is_atom(context) do
+  def escape({name, _, context} = var, _type, _params, _vars) when is_atom(name) and is_atom(context) do
     raise Ecto.QueryError, reason:
       "Variable `#{Macro.to_string(var)}` is not a valid query expression. " <>
       "Variables need to be explicitly interpolated in queries with ^"
   end
 
-  def escape(other, _params, _vars) do
+  def escape(other, _type, _params, _vars) do
     raise Ecto.QueryError, reason: "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
@@ -145,7 +149,7 @@ defmodule Ecto.Query.Builder do
   defp valid_call?(_, _),       do: false
 
   defp escape_call(name, meta, args, params, vars) do
-    {args, params} = Enum.map_reduce(args, params, &escape(&1, &2, vars))
+    {args, params} = Enum.map_reduce(args, params, &escape(&1, :any, &2, vars))
     expr = {:{}, [], [name, meta, args]}
     {expr, params}
   end
@@ -174,44 +178,6 @@ defmodule Ecto.Query.Builder do
     else
       raise Ecto.QueryError, reason: "unbound variable `#{var}` in query"
     end
-  end
-
-  @doc """
-  Escapes joins associations in query expressions.
-
-  A join association may be in three formats, all shown in the examples
-  below. Returns :error if it isn't a join association expression.
-
-  ## Examples
-
-      iex> escape_join(quote(do: x.y), [x: 0])
-      {{:{}, [], [:&, [], [0]]}, :y}
-
-      iex> escape_join(quote(do: x.y()), [x: 0])
-      {{:{}, [], [:&, [], [0]]}, :y}
-
-      iex> escape_join(quote(do: field(x, :y)), [x: 0])
-      {{:{}, [], [:&, [], [0]]}, :y}
-
-      iex> escape_join(quote(do: x), [x: 0])
-      :error
-
-  """
-  @spec escape_join(Macro.t, Keyword.t) :: {Macro.t, Macro.t} | :error
-  def escape_join({:field, _, [{var, _, context}, field]}, vars)
-      when is_atom(var) and is_atom(context) do
-    var = escape_var(var, vars)
-    field = atom(field)
-    {var, field}
-  end
-
-  def escape_join({{:., _, [{var, _, context}, field]}, _, []}, vars)
-      when is_atom(var) and is_atom(context) and is_atom(field) do
-    {escape_var(var, vars), field}
-  end
-
-  def escape_join(_, _vars) do
-    :error
   end
 
   @doc """
@@ -340,20 +306,22 @@ defmodule Ecto.Query.Builder do
   defp escape_query(other),
     do: other
 
-  # Removes the interpolation hat from an expression, leaving the
-  # expression unescaped, or if there is no hat escapes the query
-  defp atom({:^, _, [expr]}),
-    do: quote(do: :"Elixir.Ecto.Query.Builder".check_atom(unquote(expr)))
-  defp atom(atom) when is_atom(atom),
+  @doc """
+  Checks the variable is a quoted atom at compilation time or
+  delegate the check to runtime for interpolation.
+  """
+  def quoted_atom!({:^, _, [expr]}),
+    do: quote(do: :"Elixir.Ecto.Query.Builder".atom!(unquote(expr)))
+  def quoted_atom!(atom) when is_atom(atom),
     do: atom
-  defp atom(other),
+  def quoted_atom!(other),
     do: raise(Ecto.QueryError, reason: "expected literal atom or interpolated value, got: `#{inspect other}`")
 
   @doc """
   Called by escaper at runtime to verify that value is an atom.
   """
-  def check_atom(atom) when is_atom(atom),
+  def atom!(atom) when is_atom(atom),
     do: atom
-  def check_atom(other),
+  def atom!(other),
     do: raise(Ecto.QueryError, reason: "expected atom, got: `#{inspect other}`")
 end

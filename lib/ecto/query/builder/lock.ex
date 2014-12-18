@@ -40,5 +40,4 @@ defmodule Ecto.Query.Builder.Lock do
     query = Ecto.Queryable.to_query(query)
     %{query | lock: value}
   end
-
 end

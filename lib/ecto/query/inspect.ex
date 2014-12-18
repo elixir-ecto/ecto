@@ -120,6 +120,10 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Tagged values
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: :binary}, _, _names, _params) do
+    inspect value
+  end
+
   defp expr_to_string(%Ecto.Query.Tagged{value: value, type: type}, _, names, params) do
     {type, [], [value]}
     |> expr(names, params)

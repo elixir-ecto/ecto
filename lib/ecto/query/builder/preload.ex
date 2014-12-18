@@ -8,7 +8,7 @@ defmodule Ecto.Query.Builder.Preload do
   Normalizes a preload.
 
   A preload may be an atom, a list of atoms or a keyword list
-  nested as a rose tree.
+  nested as a tree.
   """
   @spec normalize(term) :: preload | no_return
   def normalize(preload) do

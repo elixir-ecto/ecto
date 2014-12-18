@@ -4,6 +4,10 @@ defmodule Ecto.Query.BuilderTest do
   import Ecto.Query.Builder
   doctest Ecto.Query.Builder
 
+  defp escape(quoted, vars) do
+    escape(quoted, :any, %{}, vars)
+  end
+
   test "escape" do
     assert {Macro.escape(quote do &0.y end), %{}} ==
            escape(quote do x.y end, [x: 0])
@@ -60,24 +64,6 @@ defmodule Ecto.Query.BuilderTest do
 
     assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
       escape(quote(do: field(x, 123)), [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__)
-    end
-  end
-
-  test "escape dot" do
-    assert Macro.escape(quote(do: {&0, :y})) ==
-           escape_join(quote(do: x.y), [x: 0])
-
-    assert Macro.escape(quote(do: {&0, :y})) ==
-           escape_join(quote(do: x.y()), [x: 0])
-
-    assert :error ==
-           escape_join(quote(do: x), [x: 0])
-
-    assert quote(do: {&0, :y}) ==
-           Code.eval_quoted(escape_join(quote(do: field(x, :y)), [x: 0]), [], __ENV__) |> elem(0)
-
-    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
-      Code.eval_quoted(escape_join(quote(do: field(x, 123)), [x: 0]), [], __ENV__)
     end
   end
 end

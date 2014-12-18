@@ -12,9 +12,9 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   ## Examples
 
-      iex> escape(quote do [x.x, foo()] end, [x: 0])
+      iex> escape(quote do [x.x, desc: 13] end, [x: 0])
       {[asc: {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
-        asc: {:{}, [], [:foo, [], []]}],
+        desc: 13],
        %{}}
 
   """
@@ -25,21 +25,33 @@ defmodule Ecto.Query.Builder.OrderBy do
   end
 
   defp do_escape({dir, expr}, params, vars) do
-    check_dir(dir)
-    {ast, params} = Builder.escape(expr, params, vars)
-    {{dir, ast}, params}
+    {ast, params} = Builder.escape(expr, :any, params, vars)
+    {{quoted_dir!(dir), ast}, params}
   end
 
   defp do_escape(expr, params, vars) do
-    {ast, params} = Builder.escape(expr, params, vars)
+    {ast, params} = Builder.escape(expr, :any, params, vars)
     {{:asc, ast}, params}
   end
 
-  defp check_dir(dir) when dir in [:asc, :desc], do: :ok
-  defp check_dir(dir) do
-    reason = "non-allowed direction `#{dir}`, only `asc` and `desc` allowed"
-    raise Ecto.QueryError, reason: reason
-  end
+  @doc """
+  Checks the variable is a quoted direction at compilation time or
+  delegate the check to runtime for interpolation.
+  """
+  def quoted_dir!({:^, _, [expr]}),
+    do: quote(do: :"Elixir.Ecto.Query.Builder.OrderBy".dir!(unquote(expr)))
+  def quoted_dir!(dir) when dir in [:asc, :desc],
+    do: dir
+  def quoted_dir!(other),
+    do: raise(Ecto.QueryError, reason: "expected :asc, :desc or interpolated value in order by, got: `#{inspect other}`")
+
+  @doc """
+  Called by at runtime to verify the direction.
+  """
+  def dir!(dir) when dir in [:asc, :desc],
+    do: dir
+  def dir!(other),
+    do: raise(Ecto.QueryError, reason: "expected :asc or :desc in order by, got: `#{inspect other}`")
 
   @doc """
   Builds a quoted expression.
@@ -50,7 +62,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding          = Builder.escape_binding(binding)
+    binding        = Builder.escape_binding(binding)
     {expr, params} = escape(expr, binding)
     params         = Builder.escape_params(params)
 

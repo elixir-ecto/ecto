@@ -41,7 +41,7 @@ defmodule Ecto.Query.ValidatorTest do
   def validate(query) do
     query
     |> Normalizer.normalize
-    |> Validator.validate([Ecto.Query.API])
+    |> Validator.validate()
   end
 
   test "valid query with bindings" do

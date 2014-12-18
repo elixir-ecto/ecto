@@ -37,7 +37,7 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, join: c in p.comments}
 
     assert i(from(x in Post, [join: y in Comment, on: x.id == y.id])) ==
-           ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: p.id = c.id}
+           ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: p.id == c.id}
 
     assert i(from(x in Post, join: y in x.post, join: z in y.post)) ==
            ~s{from p0 in Inspect.Post, join: p1 in p0.post, join: p2 in p1.post}

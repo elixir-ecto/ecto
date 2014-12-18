@@ -24,6 +24,12 @@ defmodule Ecto.Query.Builder.Join do
       iex> escape(quote(do: c in p.comments), [p: 0])
       {:c, nil, {{:{}, [], [:&, [], [0]]}, :comments}}
 
+      iex> escape(quote(do: c in p.comments()), [p: 0])
+      {:c, nil, {{:{}, [], [:&, [], [0]]}, :comments}}
+
+      iex> escape(quote(do: c in field(p, :comments)), [p: 0])
+      {:c, nil, {{:{}, [], [:&, [], [0]]}, :comments}}
+
   """
   @spec escape(Macro.t, Keyword.t) :: {[atom], Macro.t | nil, Macro.t | nil}
   def escape({:in, _, [{var, _, context}, expr]}, vars)
@@ -40,13 +46,20 @@ defmodule Ecto.Query.Builder.Join do
     {nil, string, nil}
   end
 
-  def escape(dot, vars) do
-    case Builder.escape_join(dot, vars) do
-      {_, _} = var_field ->
-        {[], nil, var_field}
-      :error ->
-        raise Ecto.QueryError, reason: "malformed `join` query expression"
-    end
+  def escape({:field, _, [{var, _, context}, field]}, vars)
+      when is_atom(var) and is_atom(context) do
+    var   = Builder.escape_var(var, vars)
+    field = Builder.quoted_atom!(field)
+    {[], nil, {var, field}}
+  end
+
+  def escape({{:., _, [{var, _, context}, field]}, _, []}, vars)
+      when is_atom(var) and is_atom(context) and is_atom(field) do
+    {[], nil, {Builder.escape_var(var, vars), field}}
+  end
+
+  def escape(_join, _vars) do
+    raise Ecto.QueryError, reason: "malformed `join` query expression"
   end
 
   @doc """
@@ -106,7 +119,7 @@ defmodule Ecto.Query.Builder.Join do
 
   defp escape_on(nil, _binding, _env), do: nil
   defp escape_on(on, binding, env) do
-    {on, params} = Builder.escape(on, binding)
+    {on, params} = Builder.escape(on, :boolean, %{}, binding)
     params       = Builder.escape_params(params)
 
     quote do: %Ecto.Query.QueryExpr{

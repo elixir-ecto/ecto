@@ -12,7 +12,6 @@ defmodule Ecto.Repo.Backend do
   require Ecto.Query, as: Q
 
   def start_link(repo, adapter) do
-    Enum.each(repo.query_apis, &Code.ensure_loaded(&1))
     adapter.start_link(repo, repo.conf)
   end
 
@@ -41,7 +40,7 @@ defmodule Ecto.Repo.Backend do
     primary_key = model.__schema__(:primary_key)
     id          = normalize_primary_key(model, primary_key, id)
 
-    Validator.validate_get(query, repo.query_apis)
+    Validator.validate_get(query)
     check_primary_key(model)
     validate_primary_key(model, primary_key, id)
 
@@ -73,7 +72,7 @@ defmodule Ecto.Repo.Backend do
   defp do_one(repo, adapter, queryable, opts) do
     query  = Queryable.to_query(queryable) |> Normalizer.normalize
     model  = query.from |> Util.model
-    Validator.validate(query, repo.query_apis)
+    Validator.validate(query)
 
     models = adapter.all(repo, query, opts)
     {model, models}
@@ -81,7 +80,7 @@ defmodule Ecto.Repo.Backend do
 
   def all(repo, adapter, queryable, opts) do
     query = Queryable.to_query(queryable) |> Normalizer.normalize
-    Validator.validate(query, repo.query_apis)
+    Validator.validate(query)
     adapter.all(repo, query, opts)
   end
 
@@ -126,7 +125,7 @@ defmodule Ecto.Repo.Backend do
 
     {values, params} =
       Enum.map_reduce(values, %{}, fn {field, expr}, params ->
-        {expr, params} = Builder.escape(expr, params, binds)
+        {expr, params} = Builder.escape(expr, :boolean, params, binds)
         {{field, expr}, params}
       end)
 
@@ -142,7 +141,7 @@ defmodule Ecto.Repo.Backend do
     query = Queryable.to_query(queryable)
             |> Normalizer.normalize(skip_select: true)
 
-    Validator.validate_update(query, repo.query_apis, values, params)
+    Validator.validate_update(query, values, params)
     adapter.update_all(repo, query, values, params, opts)
   end
 
@@ -167,7 +166,7 @@ defmodule Ecto.Repo.Backend do
   def delete_all(repo, adapter, queryable, opts) do
     query = Queryable.to_query(queryable)
             |> Normalizer.normalize(skip_select: true)
-    Validator.validate_delete(query, repo.query_apis)
+    Validator.validate_delete(query)
     adapter.delete_all(repo, query, opts)
   end
 

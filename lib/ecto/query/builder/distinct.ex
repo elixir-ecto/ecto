@@ -8,15 +8,15 @@ defmodule Ecto.Query.Builder.Distinct do
 
   See `Ecto.BuilderUtil.escape/2`.
 
-      iex> escape(quote do [x.x, foo()] end, [x: 0])
+      iex> escape(quote do [x.x, 13] end, [x: 0])
       {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
-        {:{}, [], [:foo, [], []]}],
+        13],
        %{}}
   """
   @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
   def escape(expr, vars) do
     List.wrap(expr)
-    |> Builder.escape(vars)
+    |> Builder.escape(:any, %{}, vars)
   end
 
   @doc """

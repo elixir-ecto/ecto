@@ -1,5 +1,7 @@
 alias Ecto.Query.Util
 
+# TODO: They should all finish with Error
+
 defmodule Ecto.QueryError do
   import Inspect.Ecto.Query, only: [pp_from_query: 2]
 
@@ -60,44 +62,6 @@ defmodule Ecto.NotSingleResult do
           "was not a single value"
 
     struct(Ecto.NotSingleResult, [message: msg] ++ opts)
-  end
-end
-
-defmodule Ecto.Query.TypeCheckError do
-  import Inspect.Ecto.Query, only: [pp_from_query: 2]
-
-  defexception [:expr, :types, :allowed, :query, :file, :line]
-
-  @moduledoc """
-  Exception raised when a query does not type check.
-  Read `Ecto.Query` and `Ecto.Query.API` docs for more information.
-  """
-
-  def message(e) do
-    if e.query && e.file && e.line do
-      file = Path.relative_to_cwd(e.file)
-      msg = "#{Exception.format_file_line(file, e.line)} the expression:"
-    else
-      msg = "the following expression:"
-    end
-
-    {name, _, _} = e.expr
-    expected = Enum.map_join(e.allowed, "\n    ", &Macro.to_string(&1))
-
-    types  = Enum.map(e.types, &Util.type_to_ast/1)
-    actual = Macro.to_string({name, [], types})
-
-    """
-    #{msg}
-
-        #{pp_from_query(e.query, e.expr)}
-
-    does not type check. Allowed types for #{name}/#{length(e.types)}:
-
-        #{expected}
-
-    Got: #{actual}
-    """
   end
 end
 

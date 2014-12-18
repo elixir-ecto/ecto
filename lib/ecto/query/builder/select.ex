@@ -56,7 +56,7 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   defp do_escape(other, params, vars) do
-    Builder.escape(other, params, vars)
+    Builder.escape(other, :any, params, vars)
   end
 
   # assoc/2
