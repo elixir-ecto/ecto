@@ -1,10 +1,40 @@
 defimpl Inspect, for: Ecto.Query do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
-  alias Ecto.Query.Util
+
   import Inspect.Algebra
 
   def inspect(query, opts) do
+    case to_list(query) do
+      [_] ->
+        "#Ecto.Query<#{unbound_from(query.from)}>"
+      list ->
+        list = Enum.map(list, fn
+          {key, string} ->
+            concat(Atom.to_string(key) <> ": ", string)
+          string ->
+            string
+        end)
+
+        surround_many("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
+    end
+  end
+
+  def to_string(query) do
+    case to_list(query) do
+      [_] ->
+        unbound_from(query.from)
+      list ->
+        Enum.map_join(list, ",\n  ", fn
+          {key, string} ->
+            Atom.to_string(key) <> ": " <> string
+          string ->
+            string
+        end)
+    end
+  end
+
+  defp to_list(query) do
     names =
       query
       |> collect_sources
@@ -23,15 +53,7 @@ defimpl Inspect, for: Ecto.Query do
     lock      = lock(query.lock)
     select    = select(query.select, names)
 
-    list = [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select]
-           |> Enum.concat
-
-    case list do
-      [_] ->
-        "#Ecto.Query<#{unbound_from(query.from)}>"
-      _ ->
-        surround_many("#Ecto.Query<", query(list), ">", opts, fn str, _ -> str end)
-    end
+    Enum.concat [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select]
   end
 
   defp unbound_from({source, nil}),    do: inspect source
@@ -50,13 +72,13 @@ defimpl Inspect, for: Ecto.Query do
     |> Enum.concat
   end
 
-  defp join(%JoinExpr{qual: qual, assoc: {{:&, _, [ix]}, right}}, name, names) do
+  defp join(%JoinExpr{qual: qual, assoc: {ix, right}}, name, names) do
     string = "#{name} in #{elem(names, ix)}.#{right}"
     [{join_qual(qual), string}]
   end
 
-  defp join(%JoinExpr{qual: qual, source: source, on: on}, name, names) do
-    string = "#{name} in #{inspect source}"
+  defp join(%JoinExpr{qual: qual, source: {source, model}, on: on}, name, names) do
+    string = "#{name} in #{inspect model || source}"
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
@@ -73,18 +95,6 @@ defimpl Inspect, for: Ecto.Query do
 
   defp select(nil, _names), do: []
   defp select(expr, names), do: [select: expr(expr, names)]
-
-  # TODO: Get rid of this
-  def pp_from_query(query, exp) do
-    names =
-      query
-      |> collect_sources
-      |> generate_letters
-      |> generate_names
-      |> List.to_tuple
-
-    expr(exp, names, %{})
-  end
 
   defp expr(%QueryExpr{expr: expr, params: params}, names) do
     expr(expr, names, params)
@@ -138,44 +148,21 @@ defimpl Inspect, for: Ecto.Query do
   defp join_qual(:right), do: :right_join
   defp join_qual(:outer), do: :outer_join
 
-  defp query(kw) do
-    Enum.map(kw, fn
-      {key, string} ->
-        concat(Atom.to_string(key) <> ": ", string)
-      string ->
-        string
-    end)
-  end
-
   defp collect_sources(query) do
-    case query.from do
-      {source, nil} ->
-        sources = [source]
-      {_source, model} ->
-        sources = [model]
-    end
+    {source, model} = query.from
 
-    Enum.reduce(query.joins, sources, fn
-      %JoinExpr{assoc: {left, right}}, acc ->
-        model = Util.find_source(Enum.reverse(acc), left)
-
-        if model && (refl = model.__schema__(:association, right)) do
-          assoc = refl.associated
-          [assoc|acc]
-        else
-          [right|acc]
-        end
-
-      %JoinExpr{source: source}, acc ->
-        [source|acc]
+    [model || source] ++ Enum.map(query.joins, fn
+      %JoinExpr{assoc: {_var, assoc}} ->
+        assoc
+      %JoinExpr{source: {source, model}} ->
+        model || source
     end)
-    |> Enum.reverse
   end
 
   defp generate_letters(sources) do
     Enum.map(sources, fn source ->
       source
-      |> to_string
+      |> Kernel.to_string
       |> normalize_source
       |> binary_first
       |> String.downcase
@@ -210,6 +197,5 @@ defimpl Inspect, for: Ecto.Query do
     do: source
 
   defp binary_first(<<letter, _ :: binary>>), do: <<letter>>
-
   defp binary_rest(<<_, rest :: binary>>), do: rest
 end

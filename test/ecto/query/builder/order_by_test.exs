@@ -23,16 +23,16 @@ defmodule Ecto.Query.Builder.OrderByTest do
   end
 
   test "escape raise" do
-    assert_raise Ecto.QueryError, "unbound variable `x` in query", fn ->
+    assert_raise Ecto.Query.CompileError, "unbound variable `x` in query", fn ->
       escape(quote do x.y end, [])
     end
 
     message = "expected :asc, :desc or interpolated value in order by, got: `:test`"
-    assert_raise Ecto.QueryError, message, fn ->
+    assert_raise Ecto.Query.CompileError, message, fn ->
       escape(quote do [test: x.y] end, [x: 0])
     end
 
-    assert_raise Ecto.QueryError, ~r"expected :asc or :desc in order by, got: `:temp`", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"expected :asc or :desc in order by, got: `:temp`", fn ->
       escape(quote do [{^var!(temp), x.y}] end, [x: 0])
       |> elem(0)
       |> Code.eval_quoted([temp: :temp], __ENV__)

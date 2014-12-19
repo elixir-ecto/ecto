@@ -35,33 +35,33 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape type checks" do
-    assert_raise Ecto.QueryError, ~r"It returns a value of type :boolean but a value of type :integer was expected", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer was expected", fn ->
       escape(quote(do: ^1 == ^2), :integer, %{}, [])
     end
 
-    assert_raise Ecto.QueryError, ~r"It returns a value of type :boolean but a value of type :integer was expected", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer was expected", fn ->
       escape(quote(do: 1 > 2), :integer, %{}, [])
     end
   end
 
   test "escape raise" do
-    assert_raise Ecto.QueryError, ~r"variable `x` is not a valid query expression", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"variable `x` is not a valid query expression", fn ->
       escape(quote(do: x), [])
     end
 
-    assert_raise Ecto.QueryError, ~r"`:atom` is not a valid query expression", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"`:atom` is not a valid query expression", fn ->
       escape(quote(do: :atom), [])
     end
 
-    assert_raise Ecto.QueryError, ~r"`unknown\(1, 2\)` is not a valid query expression", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"`unknown\(1, 2\)` is not a valid query expression", fn ->
       escape(quote(do: unknown(1, 2)), [])
     end
 
-    assert_raise Ecto.QueryError, ~r"unbound variable", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"unbound variable", fn ->
       escape(quote(do: x.y), [])
     end
 
-    assert_raise Ecto.QueryError, ~r"expected literal atom or interpolated value", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"expected literal atom or interpolated value", fn ->
       escape(quote(do: field(x, 123)), [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
   end

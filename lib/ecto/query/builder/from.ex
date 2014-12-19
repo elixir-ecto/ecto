@@ -27,7 +27,7 @@ defmodule Ecto.Query.Builder.From do
       {[], quote(do: other)}
 
       iex> escape(quote do: x() in other)
-      ** (Ecto.QueryError) malformed from `[x()] in other` in query expression
+      ** (Ecto.Query.CompileError) malformed from `[x()] in other` in query expression
 
   """
   @spec escape(Macro.t) :: {Keyword.t, Macro.t}

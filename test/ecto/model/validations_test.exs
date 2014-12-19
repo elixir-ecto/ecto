@@ -1,6 +1,6 @@
 defmodule Ecto.Model.ValidationsTest do
   use ExUnit.Case, async: true
-  import Support.CompileHelpers
+  import Support.EvalHelpers
 
   defmodule User do
     use Ecto.Model
@@ -48,7 +48,7 @@ defmodule Ecto.Model.ValidationsTest do
   test "raises on functions with no arguments" do
     msg = "validate and validatep expects a function with at least one argument"
     assert_raise ArgumentError, msg, fn ->
-      delay_compile do
+      quote_and_eval do
         defmodule Sample do
           use Ecto.Model.Validations
           validate validate(), name: present()
@@ -60,7 +60,7 @@ defmodule Ecto.Model.ValidationsTest do
   test "raises when there is no var" do
     msg = "validate and validatep expects a function with a var as first argument, got: :oops"
     assert_raise ArgumentError, msg, fn ->
-      delay_compile do
+      quote_and_eval do
         defmodule Sample do
           use Ecto.Model.Validations
           validate validate(:oops), name: present()

@@ -373,7 +373,7 @@ defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def priv do
-    app_dir(:YOUR_APP_NAME, "priv/repo")
+    Application.app_dir(:YOUR_APP_NAME, "priv/repo")
   end
 end
 ```

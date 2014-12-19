@@ -43,7 +43,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   def quoted_dir!(dir) when dir in [:asc, :desc],
     do: dir
   def quoted_dir!(other),
-    do: raise(Ecto.QueryError, reason: "expected :asc, :desc or interpolated value in order by, got: `#{inspect other}`")
+    do: Builder.error!("expected :asc, :desc or interpolated value in order by, got: `#{inspect other}`")
 
   @doc """
   Called by at runtime to verify the direction.
@@ -51,7 +51,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   def dir!(dir) when dir in [:asc, :desc],
     do: dir
   def dir!(other),
-    do: raise(Ecto.QueryError, reason: "expected :asc or :desc in order by, got: `#{inspect other}`")
+    do: Builder.error!("expected :asc or :desc in order by, got: `#{inspect other}`")
 
   @doc """
   Builds a quoted expression.

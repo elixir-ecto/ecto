@@ -60,7 +60,8 @@ defmodule Ecto.Repo do
       @env unquote(env)
       require Logger
 
-      import Ecto.Utils, only: [app_dir: 2, parse_url: 1]
+      import Ecto.Utils, only: [parse_url: 1]
+      import Application, only: [app_dir: 2]
 
       if @env do
         def conf do

@@ -17,7 +17,7 @@ defmodule Repo do
   end
 
   def priv do
-    app_dir(:simple, "priv")
+    Application.app_dir(:simple, "priv")
   end
 end
 

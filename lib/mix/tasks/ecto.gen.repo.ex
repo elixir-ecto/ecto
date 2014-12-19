@@ -64,7 +64,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     @doc "The priv directory to load migrations and metadata."
     def priv do
-      app_dir(<%= inspect @app %>, "priv/<%= @base %>")
+      Application.app_dir(<%= inspect @app %>, "priv/<%= @base %>")
     end
   end
   """

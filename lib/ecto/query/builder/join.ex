@@ -13,22 +13,22 @@ defmodule Ecto.Query.Builder.Join do
   ## Examples
 
       iex> escape(quote(do: x in "foo"), [])
-      {:x, "foo", nil}
+      {:x, {"foo", nil}, nil}
 
       iex> escape(quote(do: "foo"), [])
-      {nil, "foo", nil}
+      {nil, {"foo", nil}, nil}
 
       iex> escape(quote(do: x in Sample), [])
-      {:x, {:__aliases__, [alias: false], [:Sample]}, nil}
+      {:x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil}
 
       iex> escape(quote(do: c in p.comments), [p: 0])
-      {:c, nil, {{:{}, [], [:&, [], [0]]}, :comments}}
+      {:c, nil, {0, :comments}}
 
       iex> escape(quote(do: c in p.comments()), [p: 0])
-      {:c, nil, {{:{}, [], [:&, [], [0]]}, :comments}}
+      {:c, nil, {0, :comments}}
 
       iex> escape(quote(do: c in field(p, :comments)), [p: 0])
-      {:c, nil, {{:{}, [], [:&, [], [0]]}, :comments}}
+      {:c, nil, {0, :comments}}
 
   """
   @spec escape(Macro.t, Keyword.t) :: {[atom], Macro.t | nil, Macro.t | nil}
@@ -39,27 +39,31 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape({:__aliases__, _, _} = module, _vars) do
-    {nil, module, nil}
+    {nil, {nil, module}, nil}
   end
 
   def escape(string, _vars) when is_binary(string) do
-    {nil, string, nil}
+    {nil, {string, nil}, nil}
   end
 
   def escape({:field, _, [{var, _, context}, field]}, vars)
       when is_atom(var) and is_atom(context) do
-    var   = Builder.escape_var(var, vars)
+    var   = find_var!(var, vars)
     field = Builder.quoted_field!(field)
     {[], nil, {var, field}}
   end
 
   def escape({{:., _, [{var, _, context}, field]}, _, []}, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
-    {[], nil, {Builder.escape_var(var, vars), field}}
+    {[], nil, {find_var!(var, vars), field}}
   end
 
   def escape(join, _vars) do
     Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
+  end
+
+  defp find_var!(var, vars) do
+    vars[var] || Builder.error! "unbound variable `#{var}` in query"
   end
 
   @doc """

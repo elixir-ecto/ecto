@@ -2,23 +2,33 @@ alias Ecto.Query.Util
 
 # TODO: They should all finish with Error
 
+defmodule Ecto.Query.CompileError do
+  @moduledoc """
+  Raised at compilation time when the query cannot be compiled.
+  """
+  defexception [:message]
+end
+
 defmodule Ecto.QueryError do
-  import Inspect.Ecto.Query, only: [pp_from_query: 2]
+  @moduledoc """
+  Raised at runtime when the query is invalid.
+  """
+  defexception [:message]
 
-  defexception [:reason, :type, :query, :expr, :file, :line]
+  def exception(opts) do
+    message = Keyword.fetch!(opts, :message)
 
-  def message(e) do
-    if e.type && e.query && e.file && e.line do
-      file = Path.relative_to_cwd(e.file)
-      """
-      #{Exception.format_file_line(file, e.line)} the clause:
+    if query = opts[:query] do
+      file = Keyword.fetch!(opts, :file) |> Path.relative_to_cwd
+      line = Keyword.fetch!(opts, :line)
 
-          #{e.type}: #{pp_from_query(e.query, e.expr)}
+      %__MODULE__{message: """
+      #{Exception.format_file_line(file, line)} #{message} in query:
 
-      is invalid: #{e.reason}
-      """
+      #{Inspect.Ecto.Query.to_string(query)}
+      """}
     else
-      e.reason
+      %__MODULE__{message: message}
     end
   end
 end

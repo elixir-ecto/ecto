@@ -90,7 +90,7 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, where: ~f[downcase(p.id) == ^"foobar"]}
   end
 
-  test "all" do
+  test "inspect all" do
     string = """
     from p in Inspect.Post, join: c in p.comments, where: true,
     group_by: [p.id], having: true, order_by: [asc: p.id], limit: 1,
@@ -102,6 +102,28 @@ defmodule Ecto.Query.InspectTest do
     assert i(from(x in Post, join: y in x.comments, where: true, group_by: x.id,
                              having: true, order_by: x.id, limit: 1, offset: 1,
                              lock: true, select: 1)) == string
+  end
+
+  test "to_string all" do
+    string = """
+    from p in Inspect.Post,
+      join: c in p.comments,
+      where: true,
+      group_by: [p.id],
+      having: true,
+      order_by: [asc: p.id],
+      limit: 1,
+      offset: 1,
+      lock: true,
+      select: 1
+    """
+    |> String.rstrip
+
+    assert Inspect.Ecto.Query.to_string(
+      from(x in Post, join: y in x.comments, where: true, group_by: x.id,
+                      having: true, order_by: x.id, limit: 1, offset: 1,
+                      lock: true, select: 1)
+    ) == string
   end
 
   test "container values" do

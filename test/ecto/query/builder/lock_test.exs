@@ -4,7 +4,7 @@ defmodule Ecto.Query.Builder.LockTest do
   import Ecto.Query
 
   test "invalid lock" do
-    assert_raise Ecto.QueryError, ~r"invalid lock `1`", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"invalid lock `1`", fn ->
       %Ecto.Query{} |> lock(1) |> select([], 0)
     end
   end
@@ -12,6 +12,5 @@ defmodule Ecto.Query.Builder.LockTest do
   test "overrides on duplicated lock" do
     query = %Ecto.Query{} |> lock(false) |> lock(true)
     assert query.lock == true
-
   end
 end

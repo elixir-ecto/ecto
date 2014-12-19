@@ -34,7 +34,7 @@ defmodule Ecto.Query.Builder.SelectTest do
     assert {Macro.escape(quote do assoc(&0, comments: assoc(&1, author: &2), author: &3) end), %{}} ==
             escape(quote do assoc(p, comments: assoc(c, author: cu), author: pu) end, [p: 0, c: 1, cu: 2, pu: 3])
 
-    assert_raise Ecto.QueryError, fn ->
+    assert_raise Ecto.Query.CompileError, fn ->
       escape(quote do assoc(var, :hey) end, [:var])
     end
   end

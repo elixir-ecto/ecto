@@ -161,10 +161,6 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "app_dir is available" do
-    assert MockRepo.priv == Path.expand("../../_build/shared/lib/ecto/priv/db", __DIR__)
-  end
-
   test "parse_url is available" do
     assert MockRepo.url[:hostname] == "localhost"
   end

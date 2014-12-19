@@ -5,49 +5,63 @@ defmodule Ecto.Query.Normalizer do
 
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
-  alias Ecto.Query.Util
 
   def normalize(query, opts \\ []) do
     query
-    |> setup_sources
-    |> normalize_joins
+    |> normalize_sources
     |> auto_select(opts)
   end
 
-  defp normalize_joins(query) do
-    %{query | joins: Enum.map(query.joins, &normalize_join(&1, query))}
+  # Normalize all sources and adds a source
+  # field to the query for fast access.
+  defp normalize_sources(query) do
+    from = query.from || error!("query must have a from expression")
+
+    {joins, sources} =
+      Enum.map_reduce(query.joins, [from], &normalize_join(&1, &2, query))
+
+    %{query | sources: sources |> Enum.reverse |> List.to_tuple, joins: joins}
   end
 
-  # Transform an assocation join to an ordinary join
-  def normalize_join(%JoinExpr{assoc: nil} = join, _query), do: join
+  defp normalize_join(%JoinExpr{assoc: {ix, assoc}} = join, sources, query) do
+    {_, model} = Enum.fetch!(Enum.reverse(sources), ix)
 
-  def normalize_join(%JoinExpr{assoc: {left, right}} = join, query) do
-    model = Util.find_source(query.sources, left) |> Util.model
-
-    if is_nil(model) do
-      raise Ecto.QueryError, file: join.file, line: join.line,
-        reason: "association join cannot be performed without a model"
+    unless model do
+      error! query, join, "association join cannot be performed without a model"
     end
 
-    refl = model.__schema__(:association, right)
+    refl = model.__schema__(:association, assoc)
 
     unless refl do
-      raise Ecto.QueryError, file: join.file, line: join.line,
-        reason: "could not find association `#{right}` on model #{inspect model}"
+      error! query, join, "could not find association `#{assoc}` on model #{inspect model}"
     end
 
     associated = refl.associated
-    assoc_var = Util.model_var(query, associated)
-    on_expr = on_expr(join.on, refl, assoc_var, left)
-    on = %QueryExpr{expr: on_expr, file: join.file, line: join.line}
-    %{join | source: associated, on: on}
+    source     = {associated.__schema__(:source), associated}
+
+    on_expr    = on_expr(join.on, refl, ix, length(sources))
+    on         = %QueryExpr{expr: on_expr, file: join.file, line: join.line}
+    {%{join | source: source, on: on}, [source|sources]}
   end
 
-  defp on_expr(on_expr, refl, assoc_var, struct_var) do
+  defp normalize_join(%JoinExpr{source: {source, nil}} = join, sources, _query) when is_binary(source) do
+    source = {source, nil}
+    {%{join | source: source}, [source|sources]}
+  end
+
+  defp normalize_join(%JoinExpr{source: {nil, model}} = join, sources, _query) when is_atom(model) do
+    source = {model.__schema__(:source), model}
+    {%{join | source: source}, [source|sources]}
+  end
+
+  defp on_expr(on_expr, refl, var_ix, assoc_ix) do
     key = refl.key
+    var = {:&, [], [var_ix]}
     assoc_key = refl.assoc_key
+    assoc_var = {:&, [], [assoc_ix]}
+
     relation = quote do
-      unquote(assoc_var).unquote(assoc_key) == unquote(struct_var).unquote(key)
+      unquote(assoc_var).unquote(assoc_key) == unquote(var).unquote(key)
     end
 
     if on_expr do
@@ -67,29 +81,11 @@ defmodule Ecto.Query.Normalizer do
     end
   end
 
-  # Adds all sources to the query for fast access
-  defp setup_sources(query) do
-    froms = if query.from, do: [query.from], else: []
+  defp error!(message) do
+    raise Ecto.QueryError, message: message
+  end
 
-    sources = Enum.reduce(query.joins, froms, fn
-      %JoinExpr{assoc: {left, right}}, acc ->
-        model = Util.find_source(Enum.reverse(acc), left) |> Util.model
-
-        if model && (refl = model.__schema__(:association, right)) do
-          assoc = refl.associated
-          [ {assoc.__schema__(:source), assoc} | acc ]
-        else
-          [nil|acc]
-        end
-
-      # TODO: Validate this on join creation
-      %JoinExpr{source: source}, acc when is_binary(source) ->
-        [ {source, nil} | acc ]
-
-      %JoinExpr{source: model}, acc when is_atom(model) ->
-        [ {model.__schema__(:source), model} | acc ]
-    end)
-
-    %{query | sources: sources |> Enum.reverse |> List.to_tuple}
+  defp error!(query, expr, message) do
+    raise Ecto.QueryError, message: message, query: query, file: expr.file, line: expr.line
   end
 end

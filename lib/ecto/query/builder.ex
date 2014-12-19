@@ -207,7 +207,7 @@ defmodule Ecto.Query.Builder do
   def escape_var(var, vars) do
     ix = vars[var]
 
-    if var != :_ and ix do
+    if ix do
       {:{}, [], [:&, [], [ix]]}
     else
       error! "unbound variable `#{var}` in query"
@@ -223,7 +223,7 @@ defmodule Ecto.Query.Builder do
       [x: 0, y: 1, z: 2]
 
       iex> escape_binding(quote do: [x, y, x])
-      ** (Ecto.QueryError) variable `x` is bound twice
+      ** (Ecto.Query.CompileError) variable `x` is bound twice
 
   """
   @spec escape_binding(list) :: Keyword.t
@@ -248,7 +248,7 @@ defmodule Ecto.Query.Builder do
   defp escape_bind({{var, _, context}, ix}) when is_atom(var) and is_atom(context),
     do: {var, ix}
   defp escape_bind({bind, _ix}),
-    do: raise(Ecto.QueryError, reason: "binding list should contain only variables, got: #{Macro.to_string(bind)}")
+    do: error!("binding list should contain only variables, got: #{Macro.to_string(bind)}")
 
   @doc """
   Checks if the field is an atom at compilation time or
@@ -259,7 +259,7 @@ defmodule Ecto.Query.Builder do
   def quoted_field!(atom) when is_atom(atom),
     do: atom
   def quoted_field!(other),
-    do: raise(Ecto.QueryError, reason: "expected literal atom or interpolated value in field/2, got: `#{inspect other}`")
+    do: error!("expected literal atom or interpolated value in field/2, got: `#{inspect other}`")
 
   @doc """
   Called by escaper at runtime to verify that value is an atom.
@@ -267,7 +267,7 @@ defmodule Ecto.Query.Builder do
   def field!(atom) when is_atom(atom),
     do: atom
   def field!(other),
-    do: raise(Ecto.QueryError, reason: "expected atom in field/2, got: `#{inspect other}`")
+    do: error!("expected atom in field/2, got: `#{inspect other}`")
 
   @doc """
   Returns the type of an expression at build time.
@@ -335,7 +335,7 @@ defmodule Ecto.Query.Builder do
         false
     end
 
-    reraise Ecto.QueryError, [reason: message], t
+    reraise Ecto.Query.CompileError, [message: message], t
   end
 
   @doc """

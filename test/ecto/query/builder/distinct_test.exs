@@ -16,7 +16,7 @@ defmodule Ecto.Query.Builder.DistinctTest do
   end
 
   test "escape raise" do
-    assert_raise Ecto.QueryError, "unbound variable `x` in query", fn ->
+    assert_raise Ecto.Query.CompileError, "unbound variable `x` in query", fn ->
       escape(quote do x.y end, [])
     end
   end
