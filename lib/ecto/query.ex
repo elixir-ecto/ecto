@@ -113,6 +113,7 @@ defmodule Ecto.Query do
   defstruct [sources: nil, from: nil, joins: [], wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [],
              havings: [], preloads: [], distincts: [], lock: nil]
+  @opaque t :: %__MODULE__{}
 
   defmodule QueryExpr do
     @moduledoc false
@@ -134,6 +135,7 @@ defmodule Ecto.Query do
     defstruct [:value, :type]
   end
 
+  alias Ecto.Query.Builder
   alias Ecto.Query.Builder.From
   alias Ecto.Query.Builder.Where
   alias Ecto.Query.Builder.Select
@@ -199,8 +201,73 @@ defmodule Ecto.Query do
     end
 
     {quoted, binds, count_bind} = From.build(expr, __CALLER__)
-    Ecto.Query.Keyword.build(kw, __CALLER__, count_bind, quoted, binds)
+    from(kw, __CALLER__, count_bind, quoted, binds)
   end
+
+  @binds    [:where, :select, :distinct, :order_by, :group_by, :having, :limit, :offset]
+  @no_binds [:preload, :lock]
+  @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
+
+  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
+    # If all bindings are integer indexes keep AST Macro.expand'able to %Query{},
+    # otherwise ensure that quoted is evaluated before macro call
+    quoted =
+      if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do
+        quote do
+          Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
+        end
+      else
+        quote do
+          query = unquote(quoted)
+          Ecto.Query.unquote(type)(query, unquote(binds), unquote(expr))
+        end
+      end
+
+    from(t, env, count_bind, quoted, binds)
+  end
+
+  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @no_binds do
+    quoted =
+      quote do
+        Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
+      end
+
+    from(t, env, count_bind, quoted, binds)
+  end
+
+  defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
+    qual =
+      case join do
+        :join       -> :inner
+        :inner_join -> :inner
+        :left_join  -> :left
+        :right_join -> :right
+        :full_join  -> :full
+      end
+
+    {t, on} = collect_on(t, nil)
+    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, count_bind, env)
+    from(t, env, count_bind, quoted, binds)
+  end
+
+  defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
+    Builder.error! "`on` keyword must immediately follow a join"
+  end
+
+  defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
+    Builder.error! "unsupported #{inspect key} in keyword query expression"
+  end
+
+  defp from([], _env, _count_bind, quoted, _binds) do
+    quoted
+  end
+
+  defp collect_on([{:on, expr}|t], nil),
+    do: collect_on(t, expr)
+  defp collect_on([{:on, expr}|t], acc),
+    do: collect_on(t, {:and, [], [acc, expr]})
+  defp collect_on(other, acc),
+    do: {other, acc}
 
   @doc """
   A join query expression.

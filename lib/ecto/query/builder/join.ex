@@ -49,7 +49,7 @@ defmodule Ecto.Query.Builder.Join do
   def escape({:field, _, [{var, _, context}, field]}, vars)
       when is_atom(var) and is_atom(context) do
     var   = Builder.escape_var(var, vars)
-    field = Builder.quoted_atom!(field)
+    field = Builder.quoted_field!(field)
     {[], nil, {var, field}}
   end
 

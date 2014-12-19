@@ -108,7 +108,7 @@ defimpl Inspect, for: Ecto.Query do
 
   # Inject the interpolated value
   defp expr_to_string({:^, _, [ix]}, _, _, params) do
-    escaped = Map.get(params, ix) |> Macro.escape
+    escaped = Map.get(params, ix) |> elem(0) |> Macro.escape
     expr = {:^, [], [escaped]}
     Macro.to_string(expr)
   end

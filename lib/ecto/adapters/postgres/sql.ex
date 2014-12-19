@@ -425,7 +425,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp join_params(left, right) do
       size = Map.size(left)
-      for {ix, value} <- right,
+      for {ix, {value, _type}} <- right,
           into: left,
           do: {size+ix, value}
     end

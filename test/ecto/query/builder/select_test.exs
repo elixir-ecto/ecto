@@ -20,10 +20,10 @@ defmodule Ecto.Query.Builder.SelectTest do
     assert {Macro.escape(quote do 2 == &0.y end), %{}} ==
             escape(quote do 2 == x.y end, [x: 0])
 
-    assert {{:{}, [], [:^, [], [0]]}, %{0 => {:+, _, [{:x, _, _}, {:y, _, _}]}}} =
+    assert {{:{}, [], [:^, [], [0]]}, %{0 => {{:+, _, [{:x, _, _}, {:y, _, _}]}, :any}}} =
             escape(quote do ^(x + y) end, [])
 
-    assert {{:{}, [], [:^, [], [0]]}, %{0 => quote do x.y end}} ==
+    assert {{:{}, [], [:^, [], [0]]}, %{0 => {quote do x.y end, :any}}} ==
             escape(quote do ^x.y end, [])
   end
 

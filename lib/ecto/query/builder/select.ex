@@ -21,7 +21,7 @@ defmodule Ecto.Query.Builder.Select do
       {{:{}, [], [:&, [], [0]]}, %{}}
 
       iex> escape(quote(do: ^123), [])
-      {{:{}, [], [:^, [], [0]]}, %{0 => 123}}
+      {{:{}, [], [:^, [], [0]]}, %{0 => {123, :any}}}
 
   """
   @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
