@@ -4,8 +4,6 @@ defmodule Ecto.Query.Validator do
   # This module does validation on the query checking that it's in
   # a correct format, raising if it's not.
 
-  # TODO: Check it raises on missing bindings
-
   alias Ecto.Query
   alias Ecto.Query.Util
   alias Ecto.Query.QueryExpr
@@ -15,16 +13,8 @@ defmodule Ecto.Query.Validator do
   require Ecto.Query.Util
 
   def validate(query, opts \\ []) do
-    if query.from == nil do
-      raise Ecto.QueryError, reason: "a query must have a from expression"
-    end
-
-    state = %{new_state() | sources: query.sources, from: query.from, query: query}
-
-    validate_preloads(query, state)
-
     unless opts[:skip_select] do
-      validate_select(query, state)
+      validate_select(query)
       preload_selected(query)
     end
   end
@@ -71,34 +61,9 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp validate_preloads(query, %{from: from}) do
-    model = Util.model(from)
-
-    if query.preloads != [] and is_nil(model) do
-      raise Ecto.QueryError, reason: "can only preload on fields from a model"
-    end
-
-    Enum.each(query.preloads, fn expr ->
-      rescue_metadata(query, :preload, expr, fn ->
-        check_preload_fields(expr.expr, model)
-      end)
-    end)
-  end
-
-  defp check_preload_fields(fields, model) do
-    Enum.map(fields, fn {field, sub_fields} ->
-      refl = model.__schema__(:association, field)
-      unless refl do
-        raise Ecto.QueryError, reason: "`#{inspect model}.#{field}` is not an association field"
-      end
-      check_preload_fields(sub_fields, refl.associated)
-    end)
-  end
-
-  defp validate_select(query, state) do
+  defp validate_select(query) do
     rescue_metadata(query, :select, query.select, fn ->
-      state = %{state | params: query.select.params}
-      select_clause(query.select.expr, state)
+      select_clause(query.select.expr, query)
     end)
   end
 
@@ -116,38 +81,38 @@ defmodule Ecto.Query.Validator do
 
   # Handle top level select cases
 
-  defp select_clause({:assoc, _, [var, fields]}, state) do
-    assoc_select(var, fields, state)
+  defp select_clause({:assoc, _, [var, fields]}, query) do
+    assoc_select(var, fields, query)
   end
 
-  defp select_clause({left, right}, state) do
-    select_clause(left, state)
-    select_clause(right, state)
+  defp select_clause({left, right}, query) do
+    select_clause(left, query)
+    select_clause(right, query)
   end
 
-  defp select_clause({:{}, _, list}, state) do
-    Enum.each(list, &select_clause(&1, state))
+  defp select_clause({:{}, _, list}, query) do
+    Enum.each(list, &select_clause(&1, query))
   end
 
-  defp select_clause(list, state) when is_list(list) do
-    Enum.each(list, &select_clause(&1, state))
+  defp select_clause(list, query) when is_list(list) do
+    Enum.each(list, &select_clause(&1, query))
   end
 
-  defp select_clause(other, _state) do
+  defp select_clause(other, _query) do
     other
   end
 
-  defp assoc_select(parent_var, fields, %{query: query, sources: sources} = state) do
+  defp assoc_select(parent_var, fields, query) do
     Enum.each(fields, fn {field, nested} ->
       {child_var, nested_fields} = Assoc.decompose_assoc(nested)
-      parent_model = Util.find_source(sources, parent_var) |> Util.model
+      parent_model = Util.find_source(query.sources, parent_var) |> Util.model
 
       refl = parent_model.__schema__(:association, field)
       unless refl do
         raise Ecto.QueryError, reason: "field `#{inspect parent_model}.#{field}` is not an association"
       end
 
-      child_model = Util.find_source(sources, child_var) |> Util.model
+      child_model = Util.find_source(query.sources, child_var) |> Util.model
       unless refl.associated == child_model do
         raise Ecto.QueryError, reason: "association on `#{inspect parent_model}.#{field}` " <>
           "doesn't match given model: `#{child_model}`"
@@ -167,7 +132,7 @@ defmodule Ecto.Query.Validator do
           :ok
       end
 
-      assoc_select(child_var, nested_fields, state)
+      assoc_select(child_var, nested_fields, query)
     end)
   end
 
@@ -180,10 +145,5 @@ defmodule Ecto.Query.Validator do
         stacktrace = System.stacktrace
         reraise %{e | type: type, query: query, expr: expr, file: file, line: line}, stacktrace
     end
-  end
-
-  defp new_state do
-    %{sources: [], vars: [], from: nil,
-      query: nil, params: nil}
   end
 end

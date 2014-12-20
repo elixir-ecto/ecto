@@ -30,19 +30,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def select(query) do
       # Generate SQL for every query expression type and combine to one string
       sources = create_names(query)
-      state   = new_state(sources, %{})
 
-      {select,   params} = select(query.select, query.distincts, state)
-      {join,     params} = join(query,               %{state | params: params})
-      {where,    params} = where(query.wheres,       %{state | params: params})
-      {group_by, params} = group_by(query.group_bys, %{state | params: params})
-      {having,   params} = having(query.havings,     %{state | params: params})
-      {order_by, params} = order_by(query.order_bys, %{state | params: params})
-      {limit,    params} = limit(query.limit,        %{state | params: params})
-      {offset,   params} = offset(query.offset,      %{state | params: params})
-
-      from   = from(sources)
-      lock   = lock(query.lock)
+      from     = from(sources)
+      select   = select(query.select, query.distincts, sources)
+      join     = join(query, sources)
+      where    = where(query.wheres, sources)
+      group_by = group_by(query.group_bys, sources)
+      having   = having(query.havings, sources)
+      order_by = order_by(query.order_bys, sources)
+      limit    = limit(query.limit, sources)
+      offset   = offset(query.offset, sources)
+      lock     = lock(query.lock)
 
       sql =
         [select, from, join, where, group_by, having, order_by, limit, offset, lock]
@@ -50,7 +48,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> List.flatten
         |> Enum.join(" ")
 
-      {sql, Map.values(params)}
+      sql
     end
 
     # Generate SQL for an insert statement
@@ -102,25 +100,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     # Generate SQL for an update all statement
-    def update_all(query, values, params) do
-      names         = create_names(query)
-      from          = elem(names, 0)
+    def update_all(query, values) do
+      sources       = create_names(query)
+      from          = elem(sources, 0)
       {table, name} = Util.source(from)
-      state         = new_state(names, params, 0)
 
       zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
-        "#{quote_column(field)} = #{expr(expr, state)}"
+        "#{quote_column(field)} = #{expr(expr, sources)}"
       end)
 
-      {where, params} = where(query.wheres, state)
+      where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
 
-      sql =
-        "UPDATE #{quote_table(table)} AS #{name} " <>
-        "SET " <> zipped_sql <>
-        where
-
-      {sql, Map.values(params)}
+      "UPDATE #{quote_table(table)} AS #{name} " <>
+      "SET " <> zipped_sql <>
+      where
     end
 
     # Generate SQL for a delete statement
@@ -136,37 +130,28 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     # Generate SQL for an delete all statement
     def delete_all(query) do
-      names           = create_names(query)
-      from            = elem(names, 0)
+      sources         = create_names(query)
+      from            = elem(sources, 0)
       {table, name}   = Util.source(from)
-      state           = new_state(names, %{})
-      {sql, params} = where(query.wheres, state)
 
-      sql = if query.wheres == [], do: "", else: " " <> sql
-      sql = "DELETE FROM #{quote_table(table)} AS #{name}" <> sql
-      {sql, Map.values(params)}
+      where = where(query.wheres, sources)
+      where = if where, do: " " <> where, else: ""
+      "DELETE FROM #{quote_table(table)} AS #{name}" <> where
     end
 
-    defp select(%QueryExpr{expr: expr, params: right}, [], %{params: params} = state) do
-      state = %{state | params: right, offset: Map.size(params)}
-      sql   = "SELECT " <> select_clause(expr, state)
-      {sql, join_params(params, right)}
+    defp select(%QueryExpr{expr: expr}, [], sources) do
+      "SELECT " <> select_clause(expr, sources)
     end
 
-    defp select(%QueryExpr{expr: expr, params: right}, distincts, state) do
-      {exprs, params} =
-        Enum.map_reduce(distincts, state.params, fn
-          %QueryExpr{expr: expr, params: right}, left ->
-            state = %{state | params: right, offset: Map.size(left)}
-            sql = Enum.map_join(expr, ", ", &expr(&1, state))
-            {sql, join_params(left, right)}
+    defp select(%QueryExpr{expr: expr}, distincts, sources) do
+      exprs =
+        Enum.map_join(distincts, ", ", fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &expr(&1, sources))
         end)
 
       exprs = Enum.join(exprs, ", ")
-      state = %{state | params: right, offset: Map.size(params)}
-      sql   = "SELECT DISTINCT ON (" <> exprs <> ") " <>
-              select_clause(expr, state)
-      {sql, join_params(params, right)}
+      "SELECT DISTINCT ON (" <> exprs <> ") " <> select_clause(expr, sources)
     end
 
     defp from(sources) do
@@ -174,18 +159,15 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "FROM #{quote_table(table)} AS #{name}"
     end
 
-    defp join(query, state) do
+    defp join(query, sources) do
       joins = Stream.with_index(query.joins)
-      Enum.map_reduce(joins, state.params, fn
-        {%JoinExpr{on: %QueryExpr{expr: expr, params: right}, qual: qual}, ix}, left ->
-          source        = elem(state.sources, ix+1)
+      Enum.map(joins, fn
+        {%JoinExpr{on: %QueryExpr{expr: expr}, qual: qual}, ix} ->
+          source        = elem(sources, ix+1)
           {table, name} = Util.source(source)
-
-          state = %{state | params: right, offset: Map.size(left)}
-          on_sql = expr(expr, state)
+          on_sql = expr(expr, sources)
           qual   = join_qual(qual)
-          sql    = "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on_sql
-          {sql, join_params(left, right)}
+          "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on_sql
       end)
     end
 
@@ -194,64 +176,56 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp join_qual(:right), do: "RIGHT OUTER"
     defp join_qual(:full),  do: "FULL OUTER"
 
-    defp where(wheres, state) do
-      boolean("WHERE", wheres, state)
+    defp where(wheres, sources) do
+      boolean("WHERE", wheres, sources)
     end
 
-    defp having(havings, state) do
-      boolean("HAVING", havings, state)
+    defp having(havings, sources) do
+      boolean("HAVING", havings, sources)
     end
 
-    defp group_by([], state), do: {nil, state.params}
+    defp group_by([], _sources), do: nil
 
-    defp group_by(group_bys, state) do
-      {exprs, params} =
-        Enum.map_reduce(group_bys, state.params, fn
-          %QueryExpr{expr: expr, params: right}, left ->
-            state = %{state | params: right, offset: Map.size(left)}
-            sql   = Enum.map_join(expr, ", ", &expr(&1, state))
-            {sql, join_params(left, right)}
+    defp group_by(group_bys, sources) do
+      exprs =
+        Enum.map(group_bys, fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &expr(&1, sources))
         end)
 
       exprs = Enum.join(exprs, ", ")
-      sql   = "GROUP BY " <> exprs
-      {sql, params}
+      "GROUP BY " <> exprs
     end
 
-    defp order_by([], state), do: {nil, state.params}
+    defp order_by([], _sources), do: nil
 
-    defp order_by(order_bys, state) do
-      {exprs, params} =
-        Enum.map_reduce(order_bys, state.params, fn
-          %QueryExpr{expr: expr, params: right}, left ->
-            state = %{state | params: right, offset: Map.size(left)}
-            sql   = Enum.map_join(expr, ", ", &order_by_expr(&1, state))
-            {sql, join_params(left, right)}
+    defp order_by(order_bys, sources) do
+      exprs =
+        Enum.map(order_bys, fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
         end)
 
       exprs = Enum.join(exprs, ", ")
-      sql = "ORDER BY " <> exprs
-      {sql, params}
+      "ORDER BY " <> exprs
     end
 
-    defp order_by_expr({dir, expr}, state) do
-      str = expr(expr, state)
+    defp order_by_expr({dir, expr}, sources) do
+      str = expr(expr, sources)
       case dir do
         :asc  -> str
         :desc -> str <> " DESC"
       end
     end
 
-    defp limit(nil, state), do: {nil, state.params}
-    defp limit(%Ecto.Query.QueryExpr{expr: expr, params: params}, state) do
-      expr_state = %{state | params: params, offset: Map.size(state.params)}
-      {"LIMIT " <> expr(expr, expr_state), join_params(state.params, params)}
+    defp limit(nil, _sources), do: nil
+    defp limit(%Ecto.Query.QueryExpr{expr: expr}, sources) do
+      "LIMIT " <> expr(expr, sources)
     end
 
-    defp offset(nil, state), do: {nil, state.params}
-    defp offset(%Ecto.Query.QueryExpr{expr: expr, params: params}, state) do
-      expr_state = %{state | params: params, offset: Map.size(state.params)}
-      {"OFFSET " <> expr(expr, expr_state), join_params(state.params, params)}
+    defp offset(nil, _sources), do: nil
+    defp offset(%Ecto.Query.QueryExpr{expr: expr}, sources) do
+      "OFFSET " <> expr(expr, sources)
     end
 
     defp lock(nil), do: nil
@@ -259,56 +233,41 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp lock(true), do: "FOR UPDATE"
     defp lock(lock_clause), do: lock_clause
 
-    defp boolean(_name, [], state), do: {nil, state.params}
+    defp boolean(_name, [], _sources), do: nil
 
-    defp boolean(name, query_exprs, state) do
-      {exprs, params} =
-        Enum.map_reduce(query_exprs, state.params, fn
-          %QueryExpr{expr: expr, params: right}, left ->
-            state = %{state | params: right, offset: Map.size(left)}
-            expr  = "(" <> expr(expr, state) <> ")"
-            {expr, join_params(left, right)}
+    defp boolean(name, query_exprs, sources) do
+      exprs =
+        Enum.map(query_exprs, fn
+          %QueryExpr{expr: expr} ->
+            "(" <> expr(expr, sources) <> ")"
         end)
 
       exprs = Enum.join(exprs, " AND ")
-      {name <> " " <> exprs, params}
+      name <> " " <> exprs
     end
 
-    defp expr({arg, _, []}, state) when is_tuple(arg) do
-      expr(arg, state)
+    defp expr({arg, _, []}, sources) when is_tuple(arg) do
+      expr(arg, sources)
     end
 
-    defp expr(%Ecto.Query.Fragment{parts: parts}, state) do
+    defp expr(%Ecto.Query.Fragment{parts: parts}, sources) do
       Enum.map_join(parts, "", fn
         part when is_binary(part) -> part
-        expr -> expr(expr, state)
+        expr -> expr(expr, sources)
       end)
     end
 
-    defp expr({:^, [], [ix]}, state) do
-      param_index = state.offset + ix + 1
-      value = Map.fetch!(state.params, ix)
-
-      # We don't know the resulting postgres type from the elixir value `nil`
-      # therefore we cannot send it as a parameter, because all parameters
-      # require a type. Instead send it as a plain-text NULL and let postgres
-      # infer the type.
-
-      cond do
-        is_nil(value) ->
-          "NULL"
-        true ->
-          "$#{param_index}"
-      end
+    defp expr({:^, [], [ix]}, _sources) do
+      "$#{ix+1}"
     end
 
-    defp expr({:., _, [{:&, _, [_]} = var, field]}, state) when is_atom(field) do
-      {_, name} = Util.find_source(state.sources, var) |> Util.source
+    defp expr({:., _, [{:&, _, [_]} = var, field]}, sources) when is_atom(field) do
+      {_, name} = Util.find_source(sources, var) |> Util.source
       "#{name}.#{quote_column(field)}"
     end
 
-    defp expr({:&, _, [_]} = var, state) do
-      source    = Util.find_source(state.sources, var)
+    defp expr({:&, _, [_]} = var, sources) do
+      source    = Util.find_source(sources, var)
       model     = Util.model(source)
       fields    = model.__schema__(:field_names)
       {_, name} = Util.source(source)
@@ -316,73 +275,71 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")
     end
 
-    defp expr({:in, _, [left, right]}, state) do
-      expr(left, state) <> " = ANY (" <> expr(right, state) <> ")"
+    defp expr({:in, _, [left, right]}, sources) do
+      expr(left, sources) <> " = ANY (" <> expr(right, sources) <> ")"
     end
 
-    defp expr({:is_nil, _, [arg]}, state) do
-      "#{expr(arg, state)} IS NULL"
+    defp expr({:is_nil, _, [arg]}, sources) do
+      "#{expr(arg, sources)} IS NULL"
     end
 
-    defp expr({:not, _, [expr]}, state) do
-      "NOT (" <> expr(expr, state) <> ")"
+    defp expr({:not, _, [expr]}, sources) do
+      "NOT (" <> expr(expr, sources) <> ")"
     end
 
-    defp expr({fun, _, args}, state) when is_atom(fun) and is_list(args) do
+    defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
       case handle_fun(fun, length(args)) do
         {:binary_op, op} ->
           [left, right] = args
-          op_to_binary(left, state) <>
+          op_to_binary(left, sources) <>
           " #{op} "
-          <> op_to_binary(right, state)
+          <> op_to_binary(right, sources)
 
         {:fun, fun} ->
-          "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, state)) <> ")"
+          "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, sources)) <> ")"
       end
     end
 
-    defp expr(list, state) when is_list(list) do
-      "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, state)) <> "]"
+    defp expr(list, sources) when is_list(list) do
+      "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
     end
 
-    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _state) when is_binary(binary) do
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
       "'\\x#{hex}'"
     end
 
-    defp expr(%Ecto.Query.Tagged{value: binary, type: :uuid}, _state) when is_binary(binary) do
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :uuid}, _sources) when is_binary(binary) do
       hex = Base.encode16(binary)
       "'#{hex}'"
     end
 
-    defp expr(nil, _state), do: "NULL"
+    defp expr(nil, _sources),   do: "NULL"
+    defp expr(true, _sources),  do: "TRUE"
+    defp expr(false, _sources), do: "FALSE"
 
-    defp expr(true, _state), do: "TRUE"
-
-    defp expr(false, _state), do: "FALSE"
-
-    defp expr(literal, _state) when is_binary(literal) do
+    defp expr(literal, _sources) when is_binary(literal) do
       "'#{escape_string(literal)}'"
     end
 
-    defp expr(literal, _state) when is_integer(literal) do
+    defp expr(literal, _sources) when is_integer(literal) do
       String.Chars.Integer.to_string(literal)
     end
 
-    defp expr(literal, _state) when is_float(literal) do
+    defp expr(literal, _sources) when is_float(literal) do
       String.Chars.Float.to_string(literal) <> "::float"
     end
 
-    defp op_to_binary({op, _, [_, _]} = expr, state) when op in @binary_ops do
-      "(" <> expr(expr, state) <> ")"
+    defp op_to_binary({op, _, [_, _]} = expr, sources) when op in @binary_ops do
+      "(" <> expr(expr, sources) <> ")"
     end
 
-    defp op_to_binary(expr, state) do
-      expr(expr, state)
+    defp op_to_binary(expr, sources) do
+      expr(expr, sources)
     end
 
-    defp select_clause(expr, state) do
-      flatten_select(expr) |> Enum.map_join(", ", &expr(&1, state))
+    defp select_clause(expr, sources) do
+      flatten_select(expr) |> Enum.map_join(", ", &expr(&1, sources))
     end
 
     defp flatten_select({left, right}) do
@@ -421,17 +378,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       else
         counted_name
       end
-    end
-
-    defp join_params(left, right) do
-      size = Map.size(left)
-      for {ix, {value, _type}} <- right,
-          into: left,
-          do: {size+ix, value}
-    end
-
-    defp new_state(sources, params, offset \\ nil) do
-      %{params: params, offset: offset, sources: sources}
     end
   end
 end

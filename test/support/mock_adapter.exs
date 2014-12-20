@@ -4,14 +4,14 @@ defmodule Ecto.MockAdapter do
   defmacro __using__(_opts), do: :ok
   def start_link(_repo, _opts), do: :ok
   def stop(_repo), do: :ok
-  def all(_repo, _query, _opts), do: []
+  def all(_repo, _query, _params, _opts), do: []
   def insert(_repo, struct, _opts) do
     %{struct | id: 45} |> Map.from_struct
   end
   def update(_repo, record, _opts), do: send(self, {:update, record}) && 1
   def update_all(_repo, _query, _values, _params, _opts), do: 1
   def delete(_repo, record, _opts), do: send(self, {:delete, record}) && 1
-  def delete_all(_repo, _query, _opts), do: 1
+  def delete_all(_repo, _query, _params, _opts), do: 1
 
   def transaction(_repo, _opts, fun) do
     try do

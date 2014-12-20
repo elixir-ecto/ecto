@@ -30,7 +30,7 @@ defmodule Ecto.Adapter do
   @doc """
   Fetches all results from the data store based on the given query.
   """
-  defcallback all(Ecto.Repo.t, Ecto.Query.t, Keyword.t) :: [term] | no_return
+  defcallback all(Ecto.Repo.t, Ecto.Query.t, map(), Keyword.t) :: [term] | no_return
 
   @doc """
   Stores a single new model in the data store. Returns the default values.
@@ -47,7 +47,7 @@ defmodule Ecto.Adapter do
   query shall only have `where` expressions and a single `from` expression. Returns
   the number of affected entities.
   """
-  defcallback update_all(Ecto.Repo.t, Ecto.Query.t, Keyword.t, %{}, Keyword.t) :: :integer | no_return
+  defcallback update_all(Ecto.Repo.t, Ecto.Query.t, Keyword.t, map(), Keyword.t) :: :integer | no_return
 
   @doc """
   Deletes a model using the primary key as key.
@@ -59,5 +59,5 @@ defmodule Ecto.Adapter do
   `where` expressions and a single `from` expression. Returns the number of affected
   entities.
   """
-  defcallback delete_all(Ecto.Repo.t, Ecto.Query.t, Keyword.t) :: :integer | no_return
+  defcallback delete_all(Ecto.Repo.t, Ecto.Query.t, map(), Keyword.t) :: :integer | no_return
 end

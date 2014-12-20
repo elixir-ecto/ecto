@@ -47,10 +47,10 @@ defmodule Ecto.Repo.Backend do
     # TODO: Maybe it would indeed be better to emit a direct AST
     # instead of building it up so we don't need to pass through
     # normalization and what not.
-    query = Q.from(x in query, where: field(x, ^primary_key) == ^id)
-            |> Normalizer.normalize
+    {query, params} = Q.from(x in query, where: field(x, ^primary_key) == ^id)
+                      |> Normalizer.normalize(%{})
 
-    models = adapter.all(repo, query, opts)
+    models = adapter.all(repo, query, params, opts)
     {model, models}
   end
 
@@ -70,18 +70,18 @@ defmodule Ecto.Repo.Backend do
   end
 
   defp do_one(repo, adapter, queryable, opts) do
-    query  = Queryable.to_query(queryable) |> Normalizer.normalize
+    {query, params} = Queryable.to_query(queryable) |> Normalizer.normalize(%{})
     model  = query.from |> Util.model
     Validator.validate(query)
 
-    models = adapter.all(repo, query, opts)
+    models = adapter.all(repo, query, params, opts)
     {model, models}
   end
 
   def all(repo, adapter, queryable, opts) do
-    query = Queryable.to_query(queryable) |> Normalizer.normalize
+    {query, params} = Queryable.to_query(queryable) |> Normalizer.normalize(%{})
     Validator.validate(query)
-    adapter.all(repo, query, opts)
+    adapter.all(repo, query, params, opts)
   end
 
   def insert(repo, adapter, model, opts) do
@@ -123,9 +123,9 @@ defmodule Ecto.Repo.Backend do
   def update_all(repo, adapter, queryable, values, opts) do
     {binds, expr} = From.escape(queryable)
 
-    {values, params} =
+    {updates, params} =
       Enum.map_reduce(values, %{}, fn {field, expr}, params ->
-        {expr, params} = Builder.escape(expr, :boolean, params, binds)
+        {expr, params} = Builder.escape(expr, {0, field}, params, binds)
         {{field, expr}, params}
       end)
 
@@ -133,16 +133,18 @@ defmodule Ecto.Repo.Backend do
 
     quote do
       Ecto.Repo.Backend.runtime_update_all(unquote(repo), unquote(adapter),
-        unquote(expr), unquote(values), unquote(params), unquote(opts))
+        unquote(expr), unquote(updates), unquote(params), unquote(opts))
     end
   end
 
-  def runtime_update_all(repo, adapter, queryable, values, params, opts) do
-    query = Queryable.to_query(queryable)
-            |> Normalizer.normalize(skip_select: true)
+  def runtime_update_all(repo, adapter, queryable, updates, params, opts) do
+    # TODO: Those parameters should be properly cast
+    params = for {k, {v, _type}} <- params, into: %{}, do: {k, v}
+    {query, params} = Queryable.to_query(queryable)
+                      |> Normalizer.normalize(params, skip_select: true)
 
-    Validator.validate_update(query, values, params)
-    adapter.update_all(repo, query, values, params, opts)
+    Validator.validate_update(query, updates, params)
+    adapter.update_all(repo, query, updates, params, opts)
   end
 
   def delete(repo, adapter, model, opts) do
@@ -164,10 +166,10 @@ defmodule Ecto.Repo.Backend do
   end
 
   def delete_all(repo, adapter, queryable, opts) do
-    query = Queryable.to_query(queryable)
-            |> Normalizer.normalize(skip_select: true)
+    {query, params} = Queryable.to_query(queryable)
+            |> Normalizer.normalize(%{}, skip_select: true)
     Validator.validate_delete(query)
-    adapter.delete_all(repo, query, opts)
+    adapter.delete_all(repo, query, params, opts)
   end
 
   def transaction(repo, adapter, opts, fun) when is_function(fun, 0) do

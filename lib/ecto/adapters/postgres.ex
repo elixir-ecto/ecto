@@ -60,11 +60,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    def all(repo, query, opts) do
+    def all(repo, query, params, opts) do
       pg_query = %{query | select: normalize_select(query.select)}
 
-      {sql, params} = SQL.select(pg_query)
-      %Postgrex.Result{rows: rows} = query(repo, sql, params, opts)
+      sql = SQL.select(pg_query)
+      %Postgrex.Result{rows: rows} = query(repo, sql, Map.values(params), opts)
 
       # Transform each row based on select expression
       transformed =
@@ -104,8 +104,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def update_all(repo, query, values, params, opts) do
-      {sql, params} = SQL.update_all(query, values, params)
-      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
+      sql = SQL.update_all(query, values)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, Map.values(params), opts)
       nrows
     end
 
@@ -117,9 +117,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    def delete_all(repo, query, opts) do
-      {sql, params} = SQL.delete_all(query)
-      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
+    def delete_all(repo, query, params, opts) do
+      sql = SQL.delete_all(query)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, Map.values(params), opts)
       nrows
     end
 

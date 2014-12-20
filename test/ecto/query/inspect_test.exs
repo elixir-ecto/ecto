@@ -136,6 +136,12 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, where: ^123 > ^3}
   end
 
+  test "params after normalization" do
+    query = from(x in Post, where: ^123 > ^(1 * 3))
+    {query, _params} = Ecto.Query.Normalizer.normalize(query, %{})
+    assert i(query) == ~s{from p in Inspect.Post, where: ^... > ^..., select: p}
+  end
+
   def i(query) do
     assert "#Ecto.Query<" <> rest = inspect query
     size = byte_size(rest)

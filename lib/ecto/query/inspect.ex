@@ -117,10 +117,16 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Inject the interpolated value
+  #
+  # In case the query had its parameters removed,
+  # we use ... to express the interpolated code.
   defp expr_to_string({:^, _, [ix]}, _, _, params) do
-    escaped = Map.get(params, ix) |> elem(0) |> Macro.escape
-    expr = {:^, [], [escaped]}
-    Macro.to_string(expr)
+    escaped =
+      case Map.get(params || %{}, ix) do
+        {value, _type} -> Macro.escape(value)
+        _              -> {:..., [], nil}
+      end
+    Macro.to_string {:^, [], [escaped]}
   end
 
   # Strip trailing ()
