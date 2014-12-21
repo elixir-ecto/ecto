@@ -2,34 +2,8 @@ defmodule Ecto.Query.Builder.Preload do
   @moduledoc false
   alias Ecto.Query.Builder
 
-  @type preload :: [{atom, preload}]
-
   @doc """
-  Normalizes a preload.
-
-  A preload may be an atom, a list of atoms or a keyword list
-  nested as a tree.
-  """
-  @spec normalize(term) :: preload | no_return
-  def normalize(preload) do
-    Enum.map(List.wrap(preload), &normalize_each/1)
-  end
-
-  defp normalize_each({atom, list}) when is_atom(atom) do
-    {atom, normalize(list)}
-  end
-
-  defp normalize_each(atom) when is_atom(atom) do
-    {atom, []}
-  end
-
-  defp normalize_each(other) do
-    Builder.error! "invalid preload `#{inspect other}`. preload expects an atom " <>
-                   "a (nested) keyword or a (nested) list of atoms"
-  end
-
-  @doc """
-  Builds a quoted expression.
+  Applies the preloaded value into the query.
 
   The quoted expression should evaluate to a query at runtime.
   If possible, it does all calculations at compile time to avoid
@@ -37,10 +11,7 @@ defmodule Ecto.Query.Builder.Preload do
   """
   @spec build(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(query, expr, env) do
-    expr = normalize(expr)
-    preload = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
-                          file: unquote(env.file), line: unquote(env.line)}
-    Builder.apply_query(query, __MODULE__, [preload], env)
+    Builder.apply_query(query, __MODULE__, [expr], env)
   end
 
   @doc """

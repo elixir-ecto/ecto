@@ -1,4 +1,4 @@
-defmodule Ecto.Query.Normalizer do
+defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
@@ -6,12 +6,27 @@ defmodule Ecto.Query.Normalizer do
   alias Ecto.Query.JoinExpr
 
   @doc """
-  Prepares and finalizes the query in one step,
-  fullfilling the whole normalization process.
+  Plans the query for execution.
+
+  Planning happens in multiple steps:
+
+    1. First the query is prepared by retreiving
+       its cache key, casting and merging parameters
+
+    2. Then a cache lookup is done, if the query is
+       cached, we are done
+
+    3. If there is no cache, we need to actually
+       normalize and validate the query, before sending
+       it to the adapter
+
+    4. The query is sent to the adapter to be generated
+
+  Currently only steps 1 and 3 are implemented.
   """
-  def normalize(query, base, opts \\ []) do
+  def plan(query, base, opts \\ []) do
     {query, params} = prepare(query, base)
-    {finalize(query, base, opts), params}
+    {normalize(query, base, opts), params}
   end
 
   @doc """
@@ -61,6 +76,7 @@ defmodule Ecto.Query.Normalizer do
   end
 
   # TODO: Add cast
+  # TODO: Add type validation
   defp cast_and_merge_params(_query, params, expr_params) do
     size = Map.size(params)
     Enum.reduce expr_params, params, fn {k, {v, _}}, acc ->
@@ -95,7 +111,7 @@ defmodule Ecto.Query.Normalizer do
     associated = refl.associated
     source     = {associated.__schema__(:source), associated}
 
-    on = on_expr(join, refl, ix, length(sources))
+    on = on_expr(join.on, refl, ix, length(sources))
     {%{join | source: source, on: on}, [source|sources]}
   end
 
@@ -109,7 +125,7 @@ defmodule Ecto.Query.Normalizer do
     {%{join | source: source}, [source|sources]}
   end
 
-  defp on_expr(join, refl, var_ix, assoc_ix) do
+  defp on_expr(on, refl, var_ix, assoc_ix) do
     key = refl.key
     var = {:&, [], [var_ix]}
     assoc_key = refl.assoc_key
@@ -119,21 +135,20 @@ defmodule Ecto.Query.Normalizer do
       unquote(assoc_var).unquote(assoc_key) == unquote(var).unquote(key)
     end
 
-    if on = join.on do
-      %{on | expr: quote do: unquote(on.expr) and unquote(expr)}
-    else
-      %QueryExpr{expr: expr, file: join.file, line: join.line, params: %{}}
+    case on.expr do
+      true -> %{on | expr: expr}
+      _    -> %{on | expr: quote do: unquote(on.expr) and unquote(expr)}
     end
   end
 
   @doc """
-  Finalizes the query.
+  Normalizes the query.
 
   After the query was prepared and there is no cache
   entry, we need to update its interpolations and check
-  its  fields and associations exist and are valid.
+  its fields and associations exist and are valid.
   """
-  def finalize(query, base, opts) do
+  def normalize(query, base, opts) do
     query
     |> traverse_query(map_size(base), &increment_params/4)
     |> elem(0)

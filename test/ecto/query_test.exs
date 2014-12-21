@@ -5,7 +5,7 @@ defmodule Ecto.QueryTest do
   import Ecto.Query
 
   alias Ecto.Query
-  alias Ecto.Query.Normalizer
+  alias Ecto.Query.Planner
 
   defmodule Post do
     use Ecto.Model
@@ -25,10 +25,11 @@ defmodule Ecto.QueryTest do
   end
 
   def normalize(query) do
-    Normalizer.normalize(query)
+    {query, params} = Planner.prepare(query, %{})
+    {Planner.normalize(query, %{}, []), params}
   end
 
-  test "call queryable on every merge" do
+  test "is queryable on every merge" do
     query = Post |> select([p], p.title)
     normalize(query)
 
@@ -70,6 +71,23 @@ defmodule Ecto.QueryTest do
 
     query = offset(Post, [p], 43)
     normalize(query)
+
+    query = preload(Post, :comments)
+    normalize(query)
+  end
+
+  test "is queryable with runtime values" do
+    comments = :comments
+    query = preload(Post, comments)
+    normalize(query)
+
+    lock = true
+    query = lock(Post, lock)
+    normalize(query)
+
+    asc = :asc
+    query = order_by(Post, [p], [{^asc, p.title}])
+    normalize(query)
   end
 
   test "vars are order dependent" do
@@ -80,13 +98,6 @@ defmodule Ecto.QueryTest do
   test "can append to selected query" do
     query = from(p in Post, []) |> select([], 1) |> where([], true)
     normalize(query)
-  end
-
-  test "only one select is allowed" do
-    assert_raise Ecto.Query.CompileError, "only one select expression is allowed in query", fn ->
-      post = Post
-      post |> select([], 1) |> select([], 2)
-    end
   end
 
   test "binding should be list of variables" do
@@ -189,7 +200,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "join queries adds binds" do
-    from(c in Comment, join: p in Post, on: true, select: {p.title, c.text})
+    from(c in Comment, join: p in Post, select: {p.title, c.text})
     Comment |> join(:inner, [c], p in Post, true) |> select([c,p], {p.title, c.text})
   end
 end

@@ -7,11 +7,15 @@ defmodule Ecto.Associations.Preloader do
   require Ecto.Query, as: Q
 
   @doc """
-  Loads all associations on the result set according to the given fields.
-  `fields` is a list of fields that can be nested in rose tree structure:
-  `node :: {atom, [node | atom]}` (see `Ecto.Query.Builder.Preload.normalize/1`).
-  `pos` is a list of indices into tuples and lists that locate the concerned
-  model.
+  Loads all associations on the result set.
+
+  `fields` is a list of fields that can be nested in rose tree
+  structure:
+
+      node :: {atom, [node | atom]}
+
+  `pos` is a list of indices into tuples and lists that locate
+  the concerned model.
 
   See `Ecto.Query.preload/2`.
   """
@@ -21,7 +25,7 @@ defmodule Ecto.Associations.Preloader do
   def run(original, _repo, [], _pos), do: original
 
   def run(original, repo, fields, pos) do
-    fields = Ecto.Query.Builder.Preload.normalize(fields)
+    fields  = normalize(fields)
     structs = extract(original, pos)
     structs = Enum.reduce(fields, structs, &do_run(&2, repo, &1))
     unextract(structs, original, pos)
@@ -90,7 +94,6 @@ defmodule Ecto.Associations.Preloader do
       order_by: field(x, ^assoc_key)
     end
   end
-
 
   ## MERGE ##
 
@@ -161,6 +164,22 @@ defmodule Ecto.Associations.Preloader do
     end
   end
 
+  defp normalize(preload) do
+    Enum.map(List.wrap(preload), &normalize_each/1)
+  end
+
+  defp normalize_each({atom, list}) when is_atom(atom) do
+    {atom, normalize(list)}
+  end
+
+  defp normalize_each(atom) when is_atom(atom) do
+    {atom, []}
+  end
+
+  defp normalize_each(other) do
+    Builder.error! "invalid preload `#{inspect other}`. preload expects an atom " <>
+                   "a (nested) keyword or a (nested) list of atoms"
+  end
 
   ## SORTING ##
 

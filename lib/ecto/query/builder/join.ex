@@ -89,8 +89,8 @@ defmodule Ecto.Query.Builder.Join do
     end
 
     binding = binding ++ [{join_bind, count_bind}]
+    join_on = escape_on(on || true, binding, env)
 
-    join_on = escape_on(on, binding, env)
     join =
       quote do
         %JoinExpr{qual: unquote(qual), source: unquote(join_expr),
@@ -119,7 +119,6 @@ defmodule Ecto.Query.Builder.Join do
     %{query | joins: query.joins ++ [expr]}
   end
 
-  defp escape_on(nil, _binding, _env), do: nil
   defp escape_on(on, binding, env) do
     {on, params} = Builder.escape(on, :boolean, %{}, binding)
     params       = Builder.escape_params(params)

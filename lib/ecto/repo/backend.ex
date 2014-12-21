@@ -6,7 +6,7 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Query.Util
   alias Ecto.Query.Builder.From
   alias Ecto.Query.Builder
-  alias Ecto.Query.Normalizer
+  alias Ecto.Query.Planner
   alias Ecto.Query.Validator
   alias Ecto.Model.Callbacks
   require Ecto.Query, as: Q
@@ -44,11 +44,8 @@ defmodule Ecto.Repo.Backend do
     check_primary_key(model)
     validate_primary_key(model, primary_key, id)
 
-    # TODO: Maybe it would indeed be better to emit a direct AST
-    # instead of building it up so we don't need to pass through
-    # normalization and what not.
     {query, params} = Q.from(x in query, where: field(x, ^primary_key) == ^id)
-                      |> Normalizer.normalize(%{})
+                      |> Planner.plan(%{})
 
     models = adapter.all(repo, query, params, opts)
     {model, models}
@@ -70,7 +67,7 @@ defmodule Ecto.Repo.Backend do
   end
 
   defp do_one(repo, adapter, queryable, opts) do
-    {query, params} = Queryable.to_query(queryable) |> Normalizer.normalize(%{})
+    {query, params} = Queryable.to_query(queryable) |> Planner.plan(%{})
     model  = query.from |> Util.model
     Validator.validate(query)
 
@@ -79,7 +76,7 @@ defmodule Ecto.Repo.Backend do
   end
 
   def all(repo, adapter, queryable, opts) do
-    {query, params} = Queryable.to_query(queryable) |> Normalizer.normalize(%{})
+    {query, params} = Queryable.to_query(queryable) |> Planner.plan(%{})
     Validator.validate(query)
     adapter.all(repo, query, params, opts)
   end
@@ -141,7 +138,7 @@ defmodule Ecto.Repo.Backend do
     # TODO: Those parameters should be properly cast
     params = for {k, {v, _type}} <- params, into: %{}, do: {k, v}
     {query, params} = Queryable.to_query(queryable)
-                      |> Normalizer.normalize(params, skip_select: true)
+                      |> Planner.plan(params, skip_select: true)
 
     Validator.validate_update(query, updates, params)
     adapter.update_all(repo, query, updates, params, opts)
@@ -167,7 +164,7 @@ defmodule Ecto.Repo.Backend do
 
   def delete_all(repo, adapter, queryable, opts) do
     {query, params} = Queryable.to_query(queryable)
-            |> Normalizer.normalize(%{}, skip_select: true)
+            |> Planner.plan(%{}, skip_select: true)
     Validator.validate_delete(query)
     adapter.delete_all(repo, query, params, opts)
   end

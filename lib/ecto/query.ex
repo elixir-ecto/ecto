@@ -494,7 +494,7 @@ defmodule Ecto.Query do
 
   """
   defmacro lock(query, expr) do
-    Lock.build(:lock, query, expr, __CALLER__)
+    Lock.build(query, expr, __CALLER__)
   end
 
   @doc """

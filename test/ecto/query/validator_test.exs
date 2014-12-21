@@ -3,7 +3,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   import Ecto.Query
   alias Ecto.Query
-  alias Ecto.Query.Normalizer
+  alias Ecto.Query.Planner
   alias Ecto.Query.Validator
 
   defmodule Post do
@@ -40,7 +40,7 @@ defmodule Ecto.Query.ValidatorTest do
 
   def validate(query) do
     query
-    |> Normalizer.normalize
+    |> Planner.plan(%{})
     |> Validator.validate()
   end
 

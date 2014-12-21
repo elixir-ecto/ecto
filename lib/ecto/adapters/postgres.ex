@@ -189,8 +189,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp preload(results, repo, query) do
       pos = Util.locate_var(query.select.expr, {:&, [], [0]})
-      fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
-      Ecto.Associations.Preloader.run(results, repo, fields, pos)
+      Ecto.Associations.Preloader.run(results, repo, Enum.concat(query.preloads), pos)
     end
 
     defp repo_pool(repo) do

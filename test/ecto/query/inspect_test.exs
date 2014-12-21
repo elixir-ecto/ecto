@@ -94,14 +94,14 @@ defmodule Ecto.Query.InspectTest do
     string = """
     from p in Inspect.Post, join: c in p.comments, where: true,
     group_by: [p.id], having: true, order_by: [asc: p.id], limit: 1,
-    offset: 1, lock: true, select: 1
+    offset: 1, lock: true, select: 1, preload: :comments
     """
     |> String.rstrip
     |> String.replace("\n", " ")
 
     assert i(from(x in Post, join: y in x.comments, where: true, group_by: x.id,
                              having: true, order_by: x.id, limit: 1, offset: 1,
-                             lock: true, select: 1)) == string
+                             lock: true, select: 1, preload: :comments)) == string
   end
 
   test "to_string all" do
@@ -115,14 +115,15 @@ defmodule Ecto.Query.InspectTest do
       limit: 1,
       offset: 1,
       lock: true,
-      select: 1
+      select: 1,
+      preload: :comments
     """
     |> String.rstrip
 
     assert Inspect.Ecto.Query.to_string(
       from(x in Post, join: y in x.comments, where: true, group_by: x.id,
                       having: true, order_by: x.id, limit: 1, offset: 1,
-                      lock: true, select: 1)
+                      lock: true, select: 1, preload: :comments)
     ) == string
   end
 
@@ -136,10 +137,10 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, where: ^123 > ^3}
   end
 
-  test "params after normalization" do
+  test "params after prepare" do
     query = from(x in Post, where: ^123 > ^(1 * 3))
-    {query, _params} = Ecto.Query.Normalizer.normalize(query, %{})
-    assert i(query) == ~s{from p in Inspect.Post, where: ^... > ^..., select: p}
+    {query, _params} = Ecto.Query.Planner.prepare(query, %{})
+    assert i(query) == ~s{from p in Inspect.Post, where: ^... > ^...}
   end
 
   def i(query) do

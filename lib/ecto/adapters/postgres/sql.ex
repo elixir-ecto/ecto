@@ -165,9 +165,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         {%JoinExpr{on: %QueryExpr{expr: expr}, qual: qual}, ix} ->
           source        = elem(sources, ix+1)
           {table, name} = Util.source(source)
-          on_sql = expr(expr, sources)
-          qual   = join_qual(qual)
-          "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on_sql
+
+          on   = expr(expr, sources)
+          qual = join_qual(qual)
+
+          "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on
       end)
     end
 

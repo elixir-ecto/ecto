@@ -18,6 +18,10 @@ defimpl Inspect, for: Ecto.Query do
 
         surround_many("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
     end
+  rescue
+    e ->
+      IO.inspect stack = System.stacktrace
+      reraise e, stack
   end
 
   def to_string(query) do
@@ -48,12 +52,13 @@ defimpl Inspect, for: Ecto.Query do
     group_bys = Enum.map(query.group_bys, &{:group_by, expr(&1, names)})
     havings   = Enum.map(query.havings, &{:having, expr(&1, names)})
     order_bys = Enum.map(query.order_bys, &{:order_by, expr(&1, names)})
-    limit     = limit(query.limit, names)
-    offset    = offset(query.offset, names)
-    lock      = lock(query.lock)
-    select    = select(query.select, names)
+    preloads  = Enum.map(query.preloads, &{:preload, inspect(&1)})
+    limit     = kw_expr(:limit, query.limit, names)
+    offset    = kw_expr(:offset, query.offset, names)
+    select    = kw_expr(:select, query.select, names)
+    lock      = kw_inspect(:lock, query.lock)
 
-    Enum.concat [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select]
+    Enum.concat [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select, preloads]
   end
 
   defp unbound_from({source, nil}),    do: inspect source
@@ -72,9 +77,9 @@ defimpl Inspect, for: Ecto.Query do
     |> Enum.concat
   end
 
-  defp join(%JoinExpr{qual: qual, assoc: {ix, right}}, name, names) do
+  defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on}, name, names) do
     string = "#{name} in #{elem(names, ix)}.#{right}"
-    [{join_qual(qual), string}]
+    [{join_qual(qual), string}, on: expr(on, names)]
   end
 
   defp join(%JoinExpr{qual: qual, source: {source, model}, on: on}, name, names) do
@@ -82,19 +87,13 @@ defimpl Inspect, for: Ecto.Query do
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
-  defp limit(nil, _names), do: []
-  defp limit(expr, names), do: [limit: expr(expr, names)]
+  defp kw_expr(_key, nil, _names), do: []
+  defp kw_expr(key, %QueryExpr{expr: expr, params: params}, names) do
+    [{key, expr(expr, names, params)}]
+  end
 
-  defp offset(nil, _names), do: []
-  defp offset(expr, names), do: [offset: expr(expr, names)]
-
-  defp lock(nil),   do: []
-  defp lock(false), do: [lock: "false"]
-  defp lock(true),  do: [lock: "true"]
-  defp lock(str),   do: [lock: inspect str]
-
-  defp select(nil, _names), do: []
-  defp select(expr, names), do: [select: expr(expr, names)]
+  defp kw_inspect(_key, nil), do: []
+  defp kw_inspect(key, val),  do: [{key, inspect(val)}]
 
   defp expr(%QueryExpr{expr: expr, params: params}, names) do
     expr(expr, names, params)
@@ -170,38 +169,34 @@ defimpl Inspect, for: Ecto.Query do
       source
       |> Kernel.to_string
       |> normalize_source
-      |> binary_first
+      |> String.first
       |> String.downcase
     end)
   end
 
   defp generate_names(letters) do
-    generate_names(letters, [])
+    generate_names(Enum.reverse(letters), [], [])
   end
 
-  defp generate_names([letter|rest], acc) do
+  defp generate_names([letter|rest], acc, found) do
+    index = Enum.count(rest, & &1 == letter)
+
     cond do
-      name = Enum.find(acc, &(binary_first(&1) == letter)) ->
-        index = name |> binary_rest |> String.to_integer
-        new_name = "#{letter}#{index + 1}"
-        generate_names(rest, [new_name|acc])
-      Enum.any?(rest, &(&1 == letter)) ->
-        new_name = "#{letter}0"
-        generate_names(rest, [new_name|acc])
+      index > 0 ->
+        generate_names(rest, ["#{letter}#{index}"|acc], [letter|found])
+      letter in found ->
+        generate_names(rest, ["#{letter}0"|acc], [letter|found])
       true ->
-        generate_names(rest, [letter|acc])
+        generate_names(rest, [letter|acc], found)
     end
   end
 
-  defp generate_names([], acc) do
-    Enum.reverse(acc)
+  defp generate_names([], acc, _found) do
+    acc
   end
 
   defp normalize_source("Elixir." <> _ = source),
     do: source |> Module.split |> List.last
   defp normalize_source(source),
     do: source
-
-  defp binary_first(<<letter, _ :: binary>>), do: <<letter>>
-  defp binary_rest(<<_, rest :: binary>>), do: rest
 end

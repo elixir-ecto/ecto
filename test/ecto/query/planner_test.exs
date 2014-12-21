@@ -1,9 +1,7 @@
-defmodule Ecto.Query.NormalizerTest do
+defmodule Ecto.Query.PlannerTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  import Ecto.Query.Normalizer
-
   alias Ecto.Query.JoinExpr
 
   defmodule Comment do
@@ -13,7 +11,7 @@ defmodule Ecto.Query.NormalizerTest do
       field :text, :string
       field :temp, :string, virtual: true
       field :posted, :datetime
-      belongs_to :post, Ecto.Query.NormalizerTest.Post
+      belongs_to :post, Ecto.Query.PlannerTest.Post
     end
   end
 
@@ -23,8 +21,17 @@ defmodule Ecto.Query.NormalizerTest do
     schema "posts" do
       field :title, :string
       field :text, :string
-      has_many :comments, Ecto.Query.NormalizerTest.Comment
+      has_many :comments, Ecto.Query.PlannerTest.Comment
     end
+  end
+
+  defp prepare(query, params \\ %{}) do
+    Planner.prepare(query, params)
+  end
+
+  defp normalize(query, params, opts) do
+    {query, params} = prepare(query, params)
+    Planner.normalize(query, params, opts)
   end
 
   test "prepare: merges all parameters" do
@@ -33,7 +40,7 @@ defmodule Ecto.Query.NormalizerTest do
         select: {p.title, ^0},
         join: c in Comment,
         on: c.text == ^1,
-        join: c in p.comments,
+        join: d in p.comments,
         where: p.title == ^2,
         group_by: p.title == ^3,
         having: p.title == ^4,
@@ -53,7 +60,7 @@ defmodule Ecto.Query.NormalizerTest do
 
   test "prepare: checks from" do
     assert_raise Ecto.QueryError, ~r"query must have a from expression", fn ->
-      normalize(%Ecto.Query{})
+      prepare(%Ecto.Query{})
     end
   end
 
@@ -95,7 +102,7 @@ defmodule Ecto.Query.NormalizerTest do
   end
 
   test "normalize: select" do
-    query = from(Post, []) |> normalize
+    query = from(Post, []) |> normalize(%{}, [])
     assert {:&, _, [0]} = query.select.expr
   end
 end
