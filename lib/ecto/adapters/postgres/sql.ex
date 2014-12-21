@@ -150,7 +150,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
             Enum.map_join(expr, ", ", &expr(&1, sources))
         end)
 
-      exprs = Enum.join(exprs, ", ")
       "SELECT DISTINCT ON (" <> exprs <> ") " <> select_clause(expr, sources)
     end
 

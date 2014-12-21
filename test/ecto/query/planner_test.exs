@@ -2,6 +2,8 @@ defmodule Ecto.Query.PlannerTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
+
+  alias Ecto.Query.Planner
   alias Ecto.Query.JoinExpr
 
   defmodule Comment do
@@ -54,8 +56,8 @@ defmodule Ecto.Query.PlannerTest do
                        5 => 5, 6 => 6, 7 => 7}
 
     assert query.select.params == nil
-    refute Enum.any?(query.where, & &1.params)
-    refute Enum.any?(query.group_by, & &1.params)
+    refute Enum.any?(query.wheres, & &1.params)
+    refute Enum.any?(query.group_bys, & &1.params)
   end
 
   test "prepare: checks from" do

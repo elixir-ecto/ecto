@@ -177,8 +177,8 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp normalize_each(other) do
-    Builder.error! "invalid preload `#{inspect other}`. preload expects an atom " <>
-                   "a (nested) keyword or a (nested) list of atoms"
+    raise ArgumentError, "invalid preload `#{inspect other}`. preload expects an atom " <>
+                         "a (nested) keyword or a (nested) list of atoms"
   end
 
   ## SORTING ##
@@ -189,7 +189,7 @@ defmodule Ecto.Associations.Preloader do
 
     Enum.reduce(structs, {first, false}, fn struct, {last, sort?} ->
       if last && struct && struct.__struct__ != last.__struct__ do
-        raise ArgumentError, message: "all models have to be of the same type"
+        raise ArgumentError, "all models have to be of the same type for preload"
       end
 
       sort? = sort? || (last && struct && Map.get(last, key) > Map.get(struct, key))

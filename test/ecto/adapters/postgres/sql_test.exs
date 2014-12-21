@@ -282,12 +282,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.select(query) ==
            ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
 
-    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> join(:inner, [], Model, true) |> select([], 0) |> normalize
-    assert SQL.select(query) ==
-           ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z" } <>
-           ~s{INNER JOIN "model" AS m2 ON TRUE}
-
-    query = from(m in Model, inner_join: q in Model2) |> normalize
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z)
+                  |> join(:inner, [], Model, true) |> select([], 0) |> normalize
     assert SQL.select(query) ==
            ~s{SELECT 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z" } <>
            ~s{INNER JOIN "model" AS m2 ON TRUE}

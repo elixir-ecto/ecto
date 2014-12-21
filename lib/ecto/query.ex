@@ -197,7 +197,7 @@ defmodule Ecto.Query do
   """
   defmacro from(expr, kw) do
     unless Keyword.keyword?(kw) do
-      raise ArgumentError, reason: "second argument to `from` has to be a keyword list"
+      raise ArgumentError, "second argument to `from` has to be a keyword list"
     end
 
     {quoted, binds, count_bind} = From.build(expr, __CALLER__)
