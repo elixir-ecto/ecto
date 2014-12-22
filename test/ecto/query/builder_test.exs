@@ -35,11 +35,11 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape type checks" do
-    assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer was expected", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer is expected", fn ->
       escape(quote(do: ^1 == ^2), :integer, %{}, [])
     end
 
-    assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer was expected", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer is expected", fn ->
       escape(quote(do: 1 > 2), :integer, %{}, [])
     end
   end

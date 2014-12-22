@@ -128,12 +128,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> select([r], r.x > 2) |> normalize
     assert SQL.select(query) == ~s{SELECT m0."x" > 2 FROM "model" AS m0}
-
-    query = Model |> select([r], r.x and false) |> normalize
-    assert SQL.select(query) == ~s{SELECT m0."x" AND FALSE FROM "model" AS m0}
-
-    query = Model |> select([r], r.x or false) |> normalize
-    assert SQL.select(query) == ~s{SELECT m0."x" OR FALSE FROM "model" AS m0}
   end
 
   test "is_nil" do
@@ -184,8 +178,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "nested expressions" do
     z = 123
-    query = from(r in Model, []) |> select([r], r.x and (r.y > ^(-z)) or true) |> normalize
-    assert SQL.select(query) == ~s{SELECT (m0."x" AND (m0."y" > $1)) OR TRUE FROM "model" AS m0}
+    query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
+    assert SQL.select(query) == ~s{SELECT ((m0."x" > 0) AND (m0."y" > $1)) OR TRUE FROM "model" AS m0}
   end
 
   test "in expression" do
@@ -305,6 +299,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     use Ecto.Model
 
     schema "comments" do
+      field :d
       belongs_to :post, Ecto.Adapters.Postgres.SQLTest.Post,
         references: :a,
         foreign_key: :b
@@ -315,20 +310,23 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     use Ecto.Model
 
     schema "posts" do
+      field :a, :integer
+      field :c, :integer
+      field :e, :integer
+
       has_many :comments, Ecto.Adapters.Postgres.SQLTest.Comment,
         references: :c,
         foreign_key: :d
       has_one :permalink, Ecto.Adapters.Postgres.SQLTest.Permalink,
         references: :e,
         foreign_key: :f
-      field :c, :integer
-      field :e, :integer
     end
   end
 
   defmodule Permalink do
     use Ecto.Model
     schema "permalinks" do
+      field :f, :integer
     end
   end
 

@@ -2,13 +2,7 @@ defmodule Ecto.Query.Builder do
   @moduledoc false
 
   alias Ecto.Query
-
-  @type type :: basic | composite | runtime
-
-  @typep basic     :: :any | :integer | :float | :boolean | :string |
-                      :binary | :uuid | :decimal | :datetime | :time | :date
-  @typep composite :: {:array, basic}
-  @typep runtime   :: {non_neg_integer, atom | Macro.t}
+  alias Ecto.Query.Types
 
   @doc """
   Smart escapes a query expression and extracts interpolated values in
@@ -19,29 +13,25 @@ defmodule Ecto.Query.Builder do
   with `^index` in the query where index is a number indexing into the
   map.
   """
-  @spec escape(Macro.t, type, map(), Keyword.t) :: {Macro.t, %{}}
+  @spec escape(Macro.t, Types.type, map(), Keyword.t) :: {Macro.t, %{}}
   def escape(expr, type, params, vars)
 
   # var.x - where var is bound
-  def escape({{:., _, [{var, _, context}, field]}, _, []}, _type, params, vars)
+  def escape({{:., _, [{var, _, context}, field]}, _, []}, type, params, vars)
       when is_atom(var) and is_atom(context) and is_atom(field) do
     var  = escape_var(var, vars)
     dot  = {:{}, [], [:., [], [var, field]]}
-    expr = {:{}, [], [dot, [], []]}
+    expr = {:{}, [], [dot, field_meta(type), []]}
     {expr, params}
   end
 
   # field macro
-  def escape({:field, _, [{var, _, context}, field]}, _type, params, vars)
+  def escape({:field, _, [{var, _, context}, field]}, type, params, vars)
       when is_atom(var) and is_atom(context) do
     var   = escape_var(var, vars)
     field = quoted_field!(field)
-
-    # TODO: Store the field expected type
-    # so we can check it during validation
     dot   = {:{}, [], [:., [], [var, field]]}
-    expr  = {:{}, [], [dot, [], []]}
-
+    expr  = {:{}, [], [dot, field_meta(type), []]}
     {expr, params}
   end
 
@@ -168,6 +158,17 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
+  # We don't embed the type in the field metadata if the type
+  # is :any or if the type requires checking another field.
+  #
+  # Ecto concerns itself with type casting of concrete types
+  # for security purposes. Comparing a field with another is
+  # left to the database.
+
+  defp field_meta({composite, _} = type) when is_atom(composite), do: [ecto_type: type]
+  defp field_meta(type) when is_atom(type) and type != :any,      do: [ecto_type: type]
+  defp field_meta(_), do: []
+
   defp call_type(agg, 1)  when agg in ~w(max count sum min avg)a, do: {:any, :any}
   defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}
   defp call_type(like, 2) when like in ~w(like ilike)a,           do: {:string, :boolean}
@@ -178,12 +179,12 @@ defmodule Ecto.Query.Builder do
   defp call_type(_, _),                                           do: nil
 
   defp assert_type!(expr, type, actual) do
-    if type == :any or actual == :any or type == actual do
+    if Types.match?(type, actual) do
       :ok
     else
       error! "expression `#{Macro.to_string(expr)}` does not type check. " <>
              "It returns a value of type #{inspect actual} but a value of " <>
-             "type #{inspect type} was expected"
+             "type #{inspect type} is expected"
     end
   end
 
@@ -272,7 +273,7 @@ defmodule Ecto.Query.Builder do
   @doc """
   Returns the type of an expression at build time.
   """
-  @spec quoted_type(Macro.t, Keyword.t) :: type
+  @spec quoted_type(Macro.t, Keyword.t) :: Types.type
 
   # Fields
   def quoted_type({{:., _, [{var, _, context}, field]}, _, []}, vars)

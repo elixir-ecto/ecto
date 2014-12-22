@@ -64,7 +64,7 @@ defmodule Ecto.InvalidModel do
     type          = Util.type_to_ast(e.type)          |> Macro.to_string
 
     "model #{inspect e.model} failed validation when #{e.reason}, " <>
-    "field #{e.field} had type #{type} but type #{expected_type} was expected"
+    "field #{e.field} had type #{type} but type #{expected_type} is expected"
   end
 end
 

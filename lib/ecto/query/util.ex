@@ -1,7 +1,5 @@
 defmodule Ecto.Query.Util do
-  @moduledoc """
-  This module provide utility functions on queries.
-  """
+  @moduledoc false
 
   @doc """
   Look up a source with a variable.

@@ -73,7 +73,7 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "field name clash" do
-    assert_raise ArgumentError, "field `name` was already set on schema", fn ->
+    assert_raise ArgumentError, "field/association `name` is already set on schema", fn ->
       defmodule ModelFieldNameClash do
         use Ecto.Model
 

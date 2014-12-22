@@ -1,8 +1,8 @@
 defimpl Inspect, for: Ecto.Query do
+  import Inspect.Algebra
+
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
-
-  import Inspect.Algebra
 
   def inspect(query, opts) do
     case to_list(query) do
@@ -18,10 +18,6 @@ defimpl Inspect, for: Ecto.Query do
 
         surround_many("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
     end
-  rescue
-    e ->
-      IO.inspect stack = System.stacktrace
-      reraise e, stack
   end
 
   def to_string(query) do

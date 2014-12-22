@@ -103,6 +103,20 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: validate fields" do
+    message = ~r"field `Ecto.Query.PlannerTest.Comment.temp` does not exist in the model source"
+    assert_raise Ecto.QueryError, message, fn ->
+      query = from(Comment, []) |> select([c], c.temp)
+      normalize(query)
+    end
+
+    message = ~r"field `Ecto.Query.PlannerTest.Comment.text` inside where does not type check"
+    assert_raise Ecto.QueryError, message, fn ->
+      query = from(Comment, []) |> where([c], c.text)
+      normalize(query)
+    end
+  end
+
   test "normalize: select" do
     query = from(Post, []) |> normalize()
     assert {:&, _, [0]} = query.select.expr

@@ -5,6 +5,7 @@ defmodule Ecto.Query.Planner do
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Util
+  alias Ecto.Query.Types
   alias Ecto.Associations.Assoc
 
   @doc """
@@ -150,46 +151,62 @@ defmodule Ecto.Query.Planner do
     only_where? = Keyword.get(opts, :only_where, false)
 
     query
-    |> traverse_exprs(map_size(base), &increment_params/4)
+    |> traverse_exprs(map_size(base), &validate_and_increment/4)
     |> elem(0)
     |> normalize_select(only_where?)
     |> only_where(only_where?)
   end
 
-  defp increment_params(kind, _query, expr, counter) when kind in ~w(from lock)a do
-    {expr, counter}
-  end
-
-  defp increment_params(kind, _query, expr, counter) when kind in ~w(select limit offset)a do
+  defp validate_and_increment(kind, query, expr, counter) when kind in ~w(select limit offset)a do
     if expr do
-      increment_params expr, counter
+      do_validate_and_increment(kind, query, expr, counter)
     else
       {nil, counter}
     end
   end
 
-  defp increment_params(kind, _query, exprs, counter) when kind in ~w(distinct where group_by having order_by)a do
-    Enum.map_reduce exprs, counter, &increment_params/2
+  defp validate_and_increment(kind, query, exprs, counter) when kind in ~w(distinct where group_by having order_by)a do
+    Enum.map_reduce exprs, counter, &do_validate_and_increment(kind, query, &1, &2)
   end
 
-  defp increment_params(:join, _query, exprs, counter) do
+  defp validate_and_increment(:join, query, exprs, counter) do
     Enum.map_reduce exprs, counter, fn join, acc ->
-      {on, acc} = increment_params join.on, acc
+      {on, acc} = do_validate_and_increment(:join, query, join.on, acc)
       {%{join | on: on}, acc}
     end
   end
 
-  defp increment_params(expr, counter) do
+  defp do_validate_and_increment(kind, query, expr, counter) do
     {inner, acc} = Macro.prewalk expr.expr, counter, fn
-      {:^, meta, [idx]}, acc ->
-        {{:^, meta, [idx + counter]}, acc + 1}
+      {:^, meta, [param]}, acc ->
+        {{:^, meta, [param + counter]}, acc + 1}
+      {{:., _, [{:&, _, [source]}, field]}, meta, []} = quoted, acc ->
+        validate_field(kind, query, expr, source, field, meta)
+        {quoted, acc}
       other, acc ->
         {other, acc}
     end
     {%{expr | expr: inner}, acc}
   end
 
-  # Auto select the model in the from expression.
+  defp validate_field(kind, query, expr, source, field, meta) do
+    {_, model} = elem(query.sources, source)
+
+    if model do
+      type = model.__schema__(:field_type, field)
+
+      unless type do
+        error! query, expr, "field `#{inspect model}.#{field}` does not exist in the model source"
+      end
+
+      if (expected = meta[:ecto_type]) && !Types.match?(type, expected) do
+        error! query, expr, "field `#{inspect model}.#{field}` inside #{kind} does not type check. " <>
+                            "It has type #{inspect type} but a type #{inspect expected} is expected"
+      end
+    end
+  end
+
+  # Normalize the select field.
   defp normalize_select(query, only_where?) do
     cond do
       only_where? ->

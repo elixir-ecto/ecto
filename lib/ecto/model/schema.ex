@@ -349,8 +349,6 @@ defmodule Ecto.Model.Schema do
   def __field__(mod, name, type, opts) do
     check_type!(type, opts[:virtual])
 
-    fields = Module.get_attribute(mod, :ecto_fields)
-
     if opts[:primary_key] do
       if pk = Module.get_attribute(mod, :ecto_primary_key) do
         raise ArgumentError, message: "primary key already defined as `#{pk}`"
@@ -359,12 +357,8 @@ defmodule Ecto.Model.Schema do
       end
     end
 
-    if List.keyfind(fields, name, 0) do
-      raise ArgumentError, message: "field `#{name}` was already set on schema"
-    end
-
     Module.put_attribute(mod, :assign_fields, {name, type})
-    Module.put_attribute(mod, :struct_fields, {name, opts[:default]})
+    put_struct_field(mod, name, opts[:default])
 
     unless opts[:virtual] do
       Module.put_attribute(mod, :ecto_fields, {name, type, opts})
@@ -374,7 +368,7 @@ defmodule Ecto.Model.Schema do
   @doc false
   def __has_many__(mod, name, queryable, opts) do
     assoc = Ecto.Associations.HasMany.Proxy.__assoc__(:new, name, mod)
-    Module.put_attribute(mod, :struct_fields, {name, assoc})
+    put_struct_field(mod, name, assoc)
 
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :has_many, opts})
@@ -383,7 +377,7 @@ defmodule Ecto.Model.Schema do
   @doc false
   def __has_one__(mod, name, queryable, opts) do
     assoc = Ecto.Associations.HasOne.Proxy.__assoc__(:new, name, mod)
-    Module.put_attribute(mod, :struct_fields, {name, assoc})
+    put_struct_field(mod, name, assoc)
 
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :has_one, opts})
@@ -401,10 +395,20 @@ defmodule Ecto.Model.Schema do
     __field__(mod, opts[:foreign_key], foreign_key_type, [])
 
     assoc = Ecto.Associations.BelongsTo.Proxy.__assoc__(:new, name, mod)
-    Module.put_attribute(mod, :struct_fields, {name, assoc})
+    put_struct_field(mod, name, assoc)
 
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :belongs_to, opts})
+  end
+
+  defp put_struct_field(mod, name, assoc) do
+    fields = Module.get_attribute(mod, :struct_fields)
+
+    if List.keyfind(fields, name, 0) do
+      raise ArgumentError, message: "field/association `#{name}` is already set on schema"
+    end
+
+    Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
   ## Helpers
