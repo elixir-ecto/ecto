@@ -78,11 +78,11 @@ defmodule Ecto.QueryTest do
 
   test "is queryable with runtime values" do
     comments = :comments
-    query = preload(Post, comments)
+    query = preload(Post, ^comments)
     normalize(query)
 
     lock = true
-    query = lock(Post, lock)
+    query = lock(Post, ^lock)
     normalize(query)
 
     asc = :asc
