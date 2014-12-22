@@ -3,8 +3,6 @@ defmodule Ecto.Query.Util do
   This module provide utility functions on queries.
   """
 
-  alias Ecto.Query
-
   @doc """
   Look up a source with a variable.
   """

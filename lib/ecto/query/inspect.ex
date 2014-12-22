@@ -61,11 +61,11 @@ defimpl Inspect, for: Ecto.Query do
     Enum.concat [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select, preloads]
   end
 
+  defp bound_from(from, name), do: ["from #{name} in #{unbound_from from}"]
+
   defp unbound_from({source, nil}),    do: inspect source
   defp unbound_from({_source, model}), do: inspect model
-
-  defp bound_from({source, nil}, name),    do: ["from #{name} in #{inspect source}"]
-  defp bound_from({_source, model}, name), do: ["from #{name} in #{inspect model}"]
+  defp unbound_from(nil),              do: "query"
 
   defp joins(joins, names) do
     Enum.reduce(joins, {1, []}, fn expr, {ix, acc} ->
@@ -154,9 +154,14 @@ defimpl Inspect, for: Ecto.Query do
   defp join_qual(:outer), do: :outer_join
 
   defp collect_sources(query) do
-    {source, model} = query.from
+    from_sources(query.from) ++ join_sources(query.joins)
+  end
 
-    [model || source] ++ Enum.map(query.joins, fn
+  defp from_sources({source, model}), do: [model || source]
+  defp from_sources(nil),             do: ["query"]
+
+  defp join_sources(joins) do
+    Enum.map(joins, fn
       %JoinExpr{assoc: {_var, assoc}} ->
         assoc
       %JoinExpr{source: {source, model}} ->

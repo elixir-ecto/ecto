@@ -108,9 +108,15 @@ defmodule Ecto.Query.PlannerTest do
     assert {:&, _, [0]} = query.select.expr
   end
 
-  test "normalize: select with only_where" do
+  test "normalize: only where" do
     query = from(Post, []) |> normalize(%{}, only_where: true)
     assert is_nil query.select
+
+    message = ~r"only `where` expressions are allowed in query"
+    assert_raise Ecto.QueryError, message, fn ->
+      query = from(p in Post, select: p)
+      normalize(query, %{}, only_where: true)
+    end
   end
 
   test "normalize: assoc selector" do

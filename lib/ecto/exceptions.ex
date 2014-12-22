@@ -1,6 +1,7 @@
 alias Ecto.Query.Util
 
 # TODO: They should all finish with Error
+# TODO: Test NoResultsError and MultipleResultsError with unit tests
 
 defmodule Ecto.Query.CompileError do
   @moduledoc """
@@ -17,19 +18,23 @@ defmodule Ecto.QueryError do
 
   def exception(opts) do
     message = Keyword.fetch!(opts, :message)
+    query   = Keyword.fetch!(opts, :query)
+    message = """
+    #{message} in query:
 
-    if query = opts[:query] do
-      file = Keyword.fetch!(opts, :file) |> Path.relative_to_cwd
-      line = Keyword.fetch!(opts, :line)
+    #{Inspect.Ecto.Query.to_string(query)}
+    """
 
-      %__MODULE__{message: """
-      #{Exception.format_file_line(file, line)} #{message} in query:
-
-      #{Inspect.Ecto.Query.to_string(query)}
-      """}
-    else
-      %__MODULE__{message: message}
+    if (file = opts[:file]) && (line = opts[:line]) do
+      relative = Path.relative_to_cwd(file)
+      message  = Exception.format_file_line(relative, line) <> " " <> message
     end
+
+    %__MODULE__{message: message}
+  rescue
+    e ->
+      IO.inspect System.stacktrace
+      reraise e, System.stacktrace
   end
 end
 
@@ -63,15 +68,36 @@ defmodule Ecto.InvalidModel do
   end
 end
 
-defmodule Ecto.NotSingleResult do
-  defexception [:message, :model, :primary_key, :id, :results]
+defmodule Ecto.NoResultsError do
+  defexception [:message]
 
   def exception(opts) do
-    msg = "the result set from `#{opts[:model]}` " <>
-          "where `#{opts[:primary_key]} == #{opts[:id]}` " <>
-          "was not a single value"
+    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
 
-    struct(Ecto.NotSingleResult, [message: msg] ++ opts)
+    msg = """
+    expected at least one result but got none in query:
+
+    #{Inspect.Ecto.Query.to_string(query)}
+    """
+
+    %__MODULE__{message: msg}
+  end
+end
+
+defmodule Ecto.MultipleResultsError do
+  defexception [:message]
+
+  def exception(opts) do
+    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
+    count = Keyword.fetch!(opts, :count)
+
+    msg = """
+    expected at most one result but got #{count} in query:
+
+    #{Inspect.Ecto.Query.to_string(query)}
+    """
+
+    %__MODULE__{message: msg}
   end
 end
 

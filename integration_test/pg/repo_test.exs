@@ -175,11 +175,11 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
 
-    assert_raise Ecto.NotSingleResult, fn ->
+    assert_raise Ecto.MultipleResultsError, fn ->
       TestRepo.one(from p in Post, where: p.text == "hai")
     end
 
-    assert_raise Ecto.NotSingleResult, fn ->
+    assert_raise Ecto.MultipleResultsError, fn ->
       TestRepo.one!(from p in Post, where: p.text == "hai")
     end
   end
@@ -187,7 +187,7 @@ defmodule Ecto.Integration.RepoTest do
   test "one with bang raises when there are no results" do
     assert nil == TestRepo.one(from p in Post, where: p.text == "hai")
 
-    assert_raise Ecto.NotSingleResult, fn ->
+    assert_raise Ecto.NoResultsError, fn ->
       TestRepo.one!(from p in Post, where: p.text == "hai")
     end
   end

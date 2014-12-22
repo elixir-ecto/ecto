@@ -85,7 +85,7 @@ defmodule Ecto.Query.Planner do
   # Normalize all sources and adds a source
   # field to the query for fast access.
   defp prepare_sources(query) do
-    from = query.from || error!("query must have a from expression")
+    from = query.from || error!(query, "query must have a from expression")
 
     {joins, sources} =
       Enum.map_reduce(query.joins, [from], &prepare_join(&1, &2, query))
@@ -147,10 +147,13 @@ defmodule Ecto.Query.Planner do
   its fields and associations exist and are valid.
   """
   def normalize(query, base, opts) do
+    only_where? = Keyword.get(opts, :only_where, false)
+
     query
     |> traverse_exprs(map_size(base), &increment_params/4)
     |> elem(0)
-    |> normalize_select(opts)
+    |> normalize_select(only_where?)
+    |> only_where(only_where?)
   end
 
   defp increment_params(kind, _query, expr, counter) when kind in ~w(from lock)a do
@@ -187,9 +190,9 @@ defmodule Ecto.Query.Planner do
   end
 
   # Auto select the model in the from expression.
-  defp normalize_select(query, opts) do
+  defp normalize_select(query, only_where?) do
     cond do
-      opts[:only_where] ->
+      only_where? ->
         query
       query.select ->
         Macro.prewalk(query.select.expr, &validate_select(&1, query))
@@ -247,6 +250,21 @@ defmodule Ecto.Query.Planner do
     Enum.fetch! query.joins, ix - 1
   end
 
+  if map_size(%Ecto.Query{}) != 14 do
+    raise "Ecto.Query match out of date in planner"
+  end
+
+  defp only_where(query, false), do: query
+  defp only_where(query, true) do
+    case query do
+      %Ecto.Query{joins: [], select: nil, order_bys: [], limit: nil, offset: nil,
+                  group_bys: [], havings: [], preloads: [], distincts: [], lock: nil} ->
+        query
+      _ ->
+        error! query, "only `where` expressions are allowed"
+    end
+  end
+
   ## Helpers
 
   # Traverse all query components with expressions.
@@ -282,8 +300,8 @@ defmodule Ecto.Query.Planner do
     {%{query | offset: offset}, acc}
   end
 
-  defp error!(message) do
-    raise Ecto.QueryError, message: message
+  defp error!(query, message) do
+    raise Ecto.QueryError, message: message, query: query
   end
 
   defp error!(query, expr, message) do

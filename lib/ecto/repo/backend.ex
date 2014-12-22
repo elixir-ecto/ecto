@@ -7,9 +7,11 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Query.Builder.From
   alias Ecto.Query.Builder
   alias Ecto.Query.Planner
-  alias Ecto.Query.Validator
   alias Ecto.Model.Callbacks
-  require Ecto.Query, as: Q
+
+  require Ecto.Query
+
+  ## Pool related
 
   def start_link(repo, adapter) do
     adapter.start_link(repo, repo.conf)
@@ -19,67 +21,80 @@ defmodule Ecto.Repo.Backend do
     adapter.stop(repo)
   end
 
+  ## Queries related
+
+  def all(repo, adapter, queryable, opts) do
+    {query, params} = Queryable.to_query(queryable) |> Planner.plan(%{})
+    adapter.all(repo, query, params, opts)
+  end
+
   def get(repo, adapter, queryable, id, opts) do
-    case do_get(repo, adapter, queryable, id, opts) do
-      {_model, [one]} -> one
-      {_model, []} -> nil
-      {model, results} -> raise Ecto.NotSingleResult, model: model, results: length(results)
-    end
+    one(repo, adapter, prepare_get(queryable, id), opts)
   end
 
   def get!(repo, adapter, queryable, id, opts) do
-    case do_get(repo, adapter, queryable, id, opts) do
-      {_model, [one]} -> one
-      {model, results} -> raise Ecto.NotSingleResult, model: model, results: length(results)
-    end
-  end
-
-  defp do_get(repo, adapter, queryable, id, opts) do
-    query       = Queryable.to_query(queryable)
-    model       = query.from |> Util.model
-    primary_key = model.__schema__(:primary_key)
-    id          = normalize_primary_key(model, primary_key, id)
-
-    Validator.validate_get(query)
-    check_primary_key(model)
-    validate_primary_key(model, primary_key, id)
-
-    {query, params} = Q.from(x in query, where: field(x, ^primary_key) == ^id)
-                      |> Planner.plan(%{})
-
-    models = adapter.all(repo, query, params, opts)
-    {model, models}
+    one!(repo, adapter, prepare_get(queryable, id), opts)
   end
 
   def one(repo, adapter, queryable, opts) do
-    case do_one(repo, adapter, queryable, opts) do
-      {_model, [one]} -> one
-      {_model, []} -> nil
-      {model, results} -> raise Ecto.NotSingleResult, model: model, results: length(results)
+    case all(repo, adapter, queryable, opts) do
+      [one] -> one
+      []    -> nil
+      other -> raise Ecto.MultipleResultsError, queryable: queryable, count: length(other)
     end
   end
 
   def one!(repo, adapter, queryable, opts) do
-    case do_one(repo, adapter, queryable, opts) do
-      {_model, [one]} -> one
-      {model, results} -> raise Ecto.NotSingleResult, model: model, results: length(results)
+    case all(repo, adapter, queryable, opts) do
+      [one] -> one
+      []    -> raise Ecto.NoResultsError, queryable: queryable
+      other -> raise Ecto.MultipleResultsError, queryable: queryable, count: length(other)
     end
   end
 
-  defp do_one(repo, adapter, queryable, opts) do
-    {query, params} = Queryable.to_query(queryable) |> Planner.plan(%{})
-    model  = query.from |> Util.model
-    Validator.validate(query)
+  def update_all(repo, adapter, queryable, values, opts) do
+    {binds, expr} = From.escape(queryable)
 
-    models = adapter.all(repo, query, params, opts)
-    {model, models}
+    {updates, params} =
+      Enum.map_reduce(values, %{}, fn {field, expr}, params ->
+        {expr, params} = Builder.escape(expr, {0, field}, params, binds)
+        {{field, expr}, params}
+      end)
+
+    params = Builder.escape_params(params)
+
+    quote do
+      Ecto.Repo.Backend.update_all(unquote(repo), unquote(adapter),
+        unquote(expr), unquote(updates), unquote(params), unquote(opts))
+    end
   end
 
-  def all(repo, adapter, queryable, opts) do
-    {query, params} = Queryable.to_query(queryable) |> Planner.plan(%{})
-    Validator.validate(query)
-    adapter.all(repo, query, params, opts)
+  # The runtime callback for update all.
+  def update_all(repo, adapter, queryable, updates, params, opts) do
+    # TODO: Those parameters should be properly cast
+    params = for {k, {v, _type}} <- params, into: %{}, do: {k, v}
+    {query, params} = Queryable.to_query(queryable)
+                      |> Planner.plan(params, only_where: true)
+    adapter.update_all(repo, query, updates, params, opts)
   end
+
+  def delete_all(repo, adapter, queryable, opts) do
+    {query, params} = Queryable.to_query(queryable)
+                      |> Planner.plan(%{}, only_where: true)
+    adapter.delete_all(repo, query, params, opts)
+  end
+
+  ## Transaction related
+
+  def transaction(repo, adapter, opts, fun) when is_function(fun, 0) do
+    adapter.transaction(repo, opts, fun)
+  end
+
+  def rollback(repo, adapter, value) do
+    adapter.rollback(repo, value)
+  end
+
+  ## Model related
 
   def insert(repo, adapter, model, opts) do
     normalized_model = normalize_model model
@@ -117,32 +132,6 @@ defmodule Ecto.Repo.Backend do
     end
   end
 
-  def update_all(repo, adapter, queryable, values, opts) do
-    {binds, expr} = From.escape(queryable)
-
-    {updates, params} =
-      Enum.map_reduce(values, %{}, fn {field, expr}, params ->
-        {expr, params} = Builder.escape(expr, {0, field}, params, binds)
-        {{field, expr}, params}
-      end)
-
-    params = Builder.escape_params(params)
-
-    quote do
-      Ecto.Repo.Backend.runtime_update_all(unquote(repo), unquote(adapter),
-        unquote(expr), unquote(updates), unquote(params), unquote(opts))
-    end
-  end
-
-  def runtime_update_all(repo, adapter, queryable, updates, params, opts) do
-    # TODO: Those parameters should be properly cast
-    params = for {k, {v, _type}} <- params, into: %{}, do: {k, v}
-    {query, params} = Queryable.to_query(queryable)
-                      |> Planner.plan(params, only_where: true)
-
-    Validator.validate_update(query, updates, params)
-    adapter.update_all(repo, query, updates, params, opts)
-  end
 
   def delete(repo, adapter, model, opts) do
     normalized_model = normalize_model model
@@ -162,22 +151,27 @@ defmodule Ecto.Repo.Backend do
     end
   end
 
-  def delete_all(repo, adapter, queryable, opts) do
-    {query, params} = Queryable.to_query(queryable)
-            |> Planner.plan(%{}, only_where: true)
-    Validator.validate_delete(query)
-    adapter.delete_all(repo, query, params, opts)
-  end
-
-  def transaction(repo, adapter, opts, fun) when is_function(fun, 0) do
-    adapter.transaction(repo, opts, fun)
-  end
-
-  def rollback(repo, adapter, value) do
-    adapter.rollback(repo, value)
-  end
-
   ## Helpers
+
+  defp prepare_get(queryable, id) do
+    query = Queryable.to_query(queryable)
+
+    model =
+      case query.from do
+        {_source, model} when model != nil ->
+          model
+        _ ->
+          raise Ecto.QueryError, message: "cannot get an entry when query has no model in from",
+                                 query: query
+      end
+
+    primary_key = model.__schema__(:primary_key)
+    id          = normalize_primary_key(model, primary_key, id)
+
+    check_primary_key(model)
+    validate_primary_key(model, primary_key, id)
+    Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
+  end
 
   defp check_single_result(result, model) do
     unless result == 1 do
