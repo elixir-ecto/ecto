@@ -459,9 +459,9 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
     assert [] = p3.comments.all
 
-    query = from(p in Post, preload: [:comments], select: {0, [p]})
+    query = from(p in Post, preload: [:comments], select: {0, p})
     posts = TestRepo.all(query)
-    [p1, p2, p3] = Enum.map(posts, fn {0, [p]} -> p end)
+    [p1, p2, p3] = Enum.map(posts, fn {0, p} -> p end)
 
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.all
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
@@ -513,7 +513,6 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Comment{text: "1", post_id: post.id})
 
     post1 = TestRepo.all(from p in Post, preload: [:comments]) |> hd
-
     assert Enum.count(post1.comments.all) == 1
   end
 

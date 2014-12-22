@@ -73,9 +73,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           transform_row(pg_query.select.expr, values, pg_query.sources) |> elem(0)
         end)
 
-      transformed
-      |> Ecto.Associations.Assoc.run(query)
-      |> preload(repo, query)
+      Ecto.Associations.Assoc.run(transformed, query)
     end
 
     @doc false
@@ -185,11 +183,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         normalize_assoc(var, fields)
       end)
       {var, nested}
-    end
-
-    defp preload(results, repo, query) do
-      pos = Util.locate_var(query.select.expr, {:&, [], [0]})
-      Ecto.Associations.Preloader.run(results, repo, Enum.concat(query.preloads), pos)
     end
 
     defp repo_pool(repo) do

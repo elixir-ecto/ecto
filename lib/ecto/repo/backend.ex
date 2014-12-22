@@ -25,7 +25,8 @@ defmodule Ecto.Repo.Backend do
 
   def all(repo, adapter, queryable, opts) do
     {query, params} = Queryable.to_query(queryable) |> Planner.plan(%{})
-    adapter.all(repo, query, params, opts)
+    results = adapter.all(repo, query, params, opts)
+    preload(repo, query, results)
   end
 
   def get(repo, adapter, queryable, id, opts) do
@@ -132,7 +133,6 @@ defmodule Ecto.Repo.Backend do
     end
   end
 
-
   def delete(repo, adapter, model, opts) do
     normalized_model = normalize_model model
 
@@ -152,6 +152,39 @@ defmodule Ecto.Repo.Backend do
   end
 
   ## Helpers
+
+  # TODO: Test the error message
+  defp preload(_repo, %{preloads: []}, results), do: results
+  defp preload(repo, query, results) do
+    var      = {:&, [], [0]}
+    expr     = query.select.expr
+    preloads = Enum.concat(query.preloads)
+
+    cond do
+      is_var?(expr, var) ->
+        Ecto.Associations.Preloader.run(results, repo, preloads)
+      pos = select_var(expr, var) ->
+        Ecto.Associations.Preloader.run(results, repo, preloads, pos)
+      true ->
+        message = "source in from expression needs to be directly selected " <>
+                  "when using preload or inside a single tuple or list"
+        raise Ecto.QueryError, message: message, query: query
+    end
+  end
+
+  defp is_var?({:assoc, _, [expr, _right]}, var),
+    do: expr == var
+  defp is_var?(expr, var),
+    do: expr == var
+
+  defp select_var({left, right}, var),
+    do: select_var({:{}, [], [left, right]}, var)
+  defp select_var({:{}, _, list}, var),
+    do: select_var(list, var)
+  defp select_var(list, var) when is_list(list),
+    do: Enum.find_index(list, &is_var?(&1, var))
+  defp select_var(_, _),
+    do: nil
 
   defp prepare_get(queryable, id) do
     query = Queryable.to_query(queryable)

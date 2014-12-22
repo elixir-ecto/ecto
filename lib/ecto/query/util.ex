@@ -175,38 +175,4 @@ defmodule Ecto.Query.Util do
   def try_cast(value, _) do
     value
   end
-
-  # Find var in select clause. Returns a list of tuple and list indicies to
-  # find the var.
-  def locate_var({left, right}, var) do
-    locate_var({:{}, [], [left, right]}, var)
-  end
-
-  def locate_var({:{}, _, list}, var) do
-    locate_var(list, var)
-  end
-
-  def locate_var({:assoc, _, [left, _right]}, var) do
-    if left == var, do: []
-  end
-
-  def locate_var(list, var) when is_list(list) do
-    list = Stream.with_index(list)
-    res = Enum.find_value(list, fn {elem, ix} ->
-      if poss = locate_var(elem, var) do
-        {poss, ix}
-      else
-        nil
-      end
-    end)
-
-    case res do
-      {poss, pos} -> [pos|poss]
-      nil -> nil
-    end
-  end
-
-  def locate_var(expr, var) do
-    if expr == var, do: []
-  end
 end
