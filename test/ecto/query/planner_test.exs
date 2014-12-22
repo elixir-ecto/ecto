@@ -39,21 +39,21 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: merges all parameters" do
     query =
       from p in Post,
-        select: {p.title, ^0},
+        select: {p.title, ^"0"},
         join: c in Comment,
-        on: c.text == ^1,
+        on: c.text == ^"1",
         join: d in p.comments,
-        where: p.title == ^2,
-        group_by: p.title == ^3,
-        having: p.title == ^4,
-        order_by: [asc: ^5],
+        where: p.title == ^"2",
+        group_by: p.title == ^"3",
+        having: p.title == ^"4",
+        order_by: [asc: ^"5"],
         limit: ^6,
         offset: ^7
 
     {query, params} = prepare(query)
 
-    assert params == %{0 => 0, 1 => 1, 2 => 2, 3 => 3, 4 => 4,
-                       5 => 5, 6 => 6, 7 => 7}
+    assert params == %{0 => "0", 1 => "1", 2 => "2", 3 => "3", 4 => "4",
+                       5 => "5", 6 => 6, 7 => 7}
 
     assert query.select.params == nil
     refute Enum.any?(query.wheres, & &1.params)
@@ -64,6 +64,25 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.QueryError, ~r"query must have a from expression", fn ->
       prepare(%Ecto.Query{})
     end
+  end
+
+  test "prepare: casts values" do
+    {_query, params} = prepare(Post |> where([p], p.id == ^"1"))
+    assert params[0] == 1
+
+    exception = assert_raise Ecto.QueryError, fn ->
+      prepare(Post |> where([p], p.title == ^nil))
+    end
+
+    assert Exception.message(exception) =~ "value `nil` in `where` cannot be cast to type :string"
+    assert Exception.message(exception) =~ "where: p.title == ^nil"
+
+    exception =  assert_raise Ecto.QueryError, fn ->
+      prepare(Post |> where([p], p.title == ^1))
+    end
+
+    assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
+    assert Exception.message(exception) =~ "where: p.title == ^1"
   end
 
   test "prepare: joins" do
@@ -104,13 +123,13 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: validate fields" do
-    message = ~r"field `Ecto.Query.PlannerTest.Comment.temp` does not exist in the model source"
+    message = ~r"field `Ecto.Query.PlannerTest.Comment.temp` in `select` does not exist in the model source"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(Comment, []) |> select([c], c.temp)
       normalize(query)
     end
 
-    message = ~r"field `Ecto.Query.PlannerTest.Comment.text` inside where does not type check"
+    message = ~r"field `Ecto.Query.PlannerTest.Comment.text` in `where` does not type check"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(Comment, []) |> where([c], c.text)
       normalize(query)

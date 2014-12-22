@@ -195,7 +195,7 @@ defmodule Ecto.Query do
   Note the variables `p` and `q` must be named as you find more convenient
   as they have no importance in the query sent to the database.
   """
-  defmacro from(expr, kw) do
+  defmacro from(expr, kw \\ []) do
     unless Keyword.keyword?(kw) do
       raise ArgumentError, "second argument to `from` has to be a keyword list"
     end

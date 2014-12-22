@@ -12,7 +12,6 @@ defmodule Ecto.Integration.RepoTest do
 
     # nil
     assert [nil] = TestRepo.all(from Post, select: nil)
-    assert [] = TestRepo.all(from p in Post, where: p.bin == ^nil)
 
     # Numbers
     assert [{1, 1.0}] = TestRepo.all(from Post, select: {1, 1.0})
@@ -30,10 +29,6 @@ defmodule Ecto.Integration.RepoTest do
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
     assert [_] = TestRepo.all(from c in Comment, where: c.posted == ^datetime or true)
 
-    # Interval
-    interval = %Ecto.Interval{year: 0, month: 24169, day: 16, hour: 0, min: 0, sec: 73611}
-    assert [_] = TestRepo.all(from c in Comment, where: c.interval > ^interval or true)
-
     # Lists
     assert [[1, 2, 3]] = TestRepo.all(from Post, select: [1, 2, 3])
     assert [_] = TestRepo.all(from p in Post, where: p.tags == ["foo", "bar"] or true)
@@ -47,6 +42,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "fetch empty" do
     assert [] == TestRepo.all(Post)
+    assert [] == TestRepo.all(from p in Post)
   end
 
   test "create and fetch single" do

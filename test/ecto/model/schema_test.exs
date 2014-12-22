@@ -184,12 +184,12 @@ defmodule Ecto.Model.SchemaTest do
 
       schema "defaults" do
         ## :type option overrides any @queryable_defaults
-        belongs_to :comment, Comment, type: :interval
+        belongs_to :comment, Comment, type: :uuid
       end
     end
 
     assert ForeignKeyType.__schema__(:field_type, :comment_id) == :datetime
-    assert DefaultForeignKeyType.__schema__(:field_type, :comment_id) == :interval
+    assert DefaultForeignKeyType.__schema__(:field_type, :comment_id) == :uuid
   end
 
   defmodule ModelAssocOpts do

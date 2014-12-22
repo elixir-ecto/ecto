@@ -4,6 +4,8 @@ defmodule Ecto.Query.Builder do
   alias Ecto.Query
   alias Ecto.Query.Types
 
+  @type quoted_type :: Types.type | {non_neg_integer, atom | Macro.t}
+
   @doc """
   Smart escapes a query expression and extracts interpolated values in
   a map.
@@ -13,7 +15,7 @@ defmodule Ecto.Query.Builder do
   with `^index` in the query where index is a number indexing into the
   map.
   """
-  @spec escape(Macro.t, Types.type, map(), Keyword.t) :: {Macro.t, %{}}
+  @spec escape(Macro.t, quoted_type, map(), Keyword.t) :: {Macro.t, %{}}
   def escape(expr, type, params, vars)
 
   # var.x - where var is bound
@@ -67,7 +69,7 @@ defmodule Ecto.Query.Builder do
         frag, params when is_binary(frag) ->
           {frag, params}
         {:::, _, [{{:., _, [Kernel, :to_string]}, _, [frag]}, _]}, params ->
-          escape(frag, :binary, params, vars)
+          escape(frag, :any, params, vars)
       end
 
     {{:%, [], [Ecto.Query.Fragment, {:%{}, [], [parts: frags]}]},
@@ -273,7 +275,7 @@ defmodule Ecto.Query.Builder do
   @doc """
   Returns the type of an expression at build time.
   """
-  @spec quoted_type(Macro.t, Keyword.t) :: Types.type
+  @spec quoted_type(Macro.t, Keyword.t) :: quoted_type
 
   # Fields
   def quoted_type({{:., _, [{var, _, context}, field]}, _, []}, vars)

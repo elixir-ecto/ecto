@@ -22,13 +22,6 @@ defmodule Ecto.Integration.TypesTest do
     assert %Comment{time: ^now} = TestRepo.get(Comment, c.id)
   end
 
-  test "interval type" do
-    interval = %Ecto.Interval{year: 2013, month: 8, day: 1, hour: 14, min: 28, sec: 0}
-    c = TestRepo.insert(%Comment{interval: interval})
-
-    assert %Comment{interval: %Ecto.Interval{}} = TestRepo.get(Comment, c.id)
-  end
-
   test "binary type is hidden" do
     binary = <<0, 1, 2, 3, 4>>
     c = TestRepo.insert(%Comment{bytes: binary})

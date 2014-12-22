@@ -74,7 +74,3 @@ defmodule Ecto.DateTime do
     from_erl(:erlang.universaltime)
   end
 end
-
-defmodule Ecto.Interval do
-  defstruct [:year, :month, :day, :hour, :min, :sec]
-end

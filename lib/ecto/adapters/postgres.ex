@@ -238,11 +238,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp formatter(%TypeInfo{sender: "uuid"}), do: :binary
     defp formatter(_), do: nil
 
-    defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
-      {mon, day, sec} = default.(param)
-      %Ecto.Interval{year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec}
-    end
-
     defp decoder(%TypeInfo{sender: sender}, :binary, default, param)
         when sender in ["timestamp", "timestamptz"] do
       default.(param)
@@ -270,13 +265,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp encoder(type, default, %Ecto.Query.Tagged{value: value}) do
       encoder(type, default, value)
-    end
-
-    defp encoder(%TypeInfo{sender: "interval"}, default, %Ecto.Interval{} = interval) do
-      mon = interval.year * 12 + interval.month
-      day = interval.day
-      sec = interval.hour * 3600 + interval.min * 60 + interval.sec
-      default.({mon, day, sec})
     end
 
     defp encoder(%TypeInfo{sender: sender}, default, %Ecto.DateTime{} = datetime)

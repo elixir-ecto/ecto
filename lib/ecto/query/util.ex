@@ -21,8 +21,7 @@ defmodule Ecto.Query.Util do
 
   @doc false
   defmacro types do
-    ~w(boolean string integer float decimal binary datetime date time interval
-       uuid)a
+    ~w(boolean string integer float decimal binary datetime date time uuid)a
   end
 
   @doc false
@@ -117,23 +116,6 @@ defmodule Ecto.Query.Util do
     end)
 
     res || {:ok, :time}
-  end
-
-  def params_to_type(%Ecto.Interval{} = dt) do
-    values = Map.delete(dt, :__struct__) |> Map.values
-    types = Enum.map(values, &params_to_type/1)
-
-    res = Enum.find_value(types, fn
-      {:ok, :integer} -> nil
-      {:error, _} = err -> err
-      _ -> {:error, "all interval elements have to be of integer type"}
-    end)
-
-    if res do
-      res
-    else
-      {:ok, :interval}
-    end
   end
 
   def params_to_type(value), do: value_to_type(value)

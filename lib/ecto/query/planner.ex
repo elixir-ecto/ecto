@@ -54,7 +54,7 @@ defmodule Ecto.Query.Planner do
   defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
     if expr do
       {put_in(expr.params, nil),
-       cast_and_merge_params(query, params, expr.params)}
+       cast_and_merge_params(kind, query, expr, params)}
    else
       {expr, params}
     end
@@ -63,23 +63,49 @@ defmodule Ecto.Query.Planner do
   defp merge_params(kind, query, exprs, params) when kind in ~w(distinct where group_by having order_by)a do
     Enum.map_reduce exprs, params, fn expr, acc ->
       {put_in(expr.params, nil),
-       cast_and_merge_params(query, acc, expr.params)}
+       cast_and_merge_params(kind, query, expr, acc)}
     end
   end
 
   defp merge_params(:join, query, exprs, params) do
     Enum.map_reduce exprs, params, fn join, acc ->
       {put_in(join.on.params, nil),
-       cast_and_merge_params(query, acc, join.on.params)}
+       cast_and_merge_params(:join, query, join.on, acc)}
     end
   end
 
   # TODO: Add cast
   # TODO: Add type validation
-  defp cast_and_merge_params(_query, params, expr_params) do
+  defp cast_and_merge_params(kind, query, expr, params) do
     size = Map.size(params)
-    Enum.reduce expr_params, params, fn {k, {v, _}}, acc ->
-      Map.put acc, k + size, v
+    Enum.reduce expr.params, params, fn {k, {v, type}}, acc ->
+      Map.put acc, k + size, cast_param(kind, query, expr, v, type)
+    end
+  end
+
+  defp cast_param(kind, query, expr, v, {composite, {idx, field}}) when is_integer(idx) do
+    {_, model} = elem(query.sources, idx)
+    type = type!(kind, query, expr, model, field)
+    cast_param(kind, query, expr, v, {composite, type})
+  end
+
+  defp cast_param(kind, query, expr, v, {idx, field}) when is_integer(idx) do
+    {_, model} = elem(query.sources, idx)
+    type = type!(kind, query, expr, model, field)
+    cast_param(kind, query, expr, v, type)
+  end
+
+  defp cast_param(kind, query, expr, nil, type) do
+    error! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
+                        "(if you want to check for nils, use is_nil/1 instead)"
+  end
+
+  defp cast_param(kind, query, expr, v, type) do
+    case Types.cast(type, v) do
+      {:ok, v} ->
+        v
+      :error ->
+        error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
     end
   end
 
@@ -193,14 +219,10 @@ defmodule Ecto.Query.Planner do
     {_, model} = elem(query.sources, source)
 
     if model do
-      type = model.__schema__(:field_type, field)
-
-      unless type do
-        error! query, expr, "field `#{inspect model}.#{field}` does not exist in the model source"
-      end
+      type = type!(kind, query, expr, model, field)
 
       if (expected = meta[:ecto_type]) && !Types.match?(type, expected) do
-        error! query, expr, "field `#{inspect model}.#{field}` inside #{kind} does not type check. " <>
+        error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` does not type check. " <>
                             "It has type #{inspect type} but a type #{inspect expected} is expected"
       end
     end
@@ -315,6 +337,16 @@ defmodule Ecto.Query.Planner do
 
     {offset, acc} = fun.(:offset, original, original.offset, acc)
     {%{query | offset: offset}, acc}
+  end
+
+  defp type!(_kind, _query, _expr, nil, _field), do: :any
+
+  defp type!(kind, query, expr, model, field) do
+    if type = model.__schema__(:field_type, field) do
+      type
+    else
+      error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
+    end
   end
 
   defp error!(query, message) do
