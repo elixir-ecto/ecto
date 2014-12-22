@@ -4,13 +4,15 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
+  alias Ecto.Query.Util
+  alias Ecto.Associations.Assoc
 
   @doc """
   Plans the query for execution.
 
   Planning happens in multiple steps:
 
-    1. First the query is prepared by retreiving
+    1. First the query is prepared by retrieving
        its cache key, casting and merging parameters
 
     2. Then a cache lookup is done, if the query is
@@ -45,11 +47,7 @@ defmodule Ecto.Query.Planner do
   def prepare(query, params) do
     query
     |> prepare_sources
-    |> traverse_query(params, &merge_params/4)
-  end
-
-  defp merge_params(kind, _query, expr, params) when kind in ~w(from lock)a do
-    {expr, params}
+    |> traverse_exprs(params, &merge_params/4)
   end
 
   defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
@@ -150,9 +148,9 @@ defmodule Ecto.Query.Planner do
   """
   def normalize(query, base, opts) do
     query
-    |> traverse_query(map_size(base), &increment_params/4)
+    |> traverse_exprs(map_size(base), &increment_params/4)
     |> elem(0)
-    |> auto_select(opts)
+    |> normalize_select(opts)
   end
 
   defp increment_params(kind, _query, expr, counter) when kind in ~w(from lock)a do
@@ -188,19 +186,72 @@ defmodule Ecto.Query.Planner do
     {%{expr | expr: inner}, acc}
   end
 
-  # Auto select the model in the from expression
-  defp auto_select(query, opts) do
-    if !opts[:skip_select] && query.select == nil do
-      var = {:&, [], [0]}
-      %{query | select: %QueryExpr{expr: var}}
-    else
-      query
+  # Auto select the model in the from expression.
+  defp normalize_select(query, opts) do
+    cond do
+      opts[:only_where] ->
+        query
+      query.select ->
+        Macro.prewalk(query.select.expr, &validate_select(&1, query))
+        query
+      true ->
+        %{query | select: %QueryExpr{expr: {:&, [], [0]}}}
     end
+  end
+
+  defp validate_select({:assoc, _, [var, fields]}, query) do
+    validate_assoc(var, fields, query)
+  end
+
+  defp validate_select(other, _query) do
+    other
+  end
+
+  defp validate_assoc(parent_var, fields, query) do
+    Enum.each(fields, fn {field, nested} ->
+      {_, parent_model} = Util.find_source(query.sources, parent_var)
+      refl = parent_model.__schema__(:association, field)
+
+      unless refl do
+        error! query, query.select, "field `#{inspect parent_model}.#{field}` " <>
+                                    "in assoc/2 is not an association"
+      end
+
+      {child_var, child_fields} = Assoc.decompose_assoc(nested)
+      {_, child_model} = Util.find_source(query.sources, child_var)
+
+      unless refl.associated == child_model do
+        error! query, query.select, "association `#{inspect parent_model}.#{field}` " <>
+                                    "in assoc/2 doesn't match join model `#{child_model}`"
+      end
+
+      case find_source_expr(query, child_var) do
+        %JoinExpr{qual: qual} when qual in [:inner, :left] ->
+          :ok
+        %JoinExpr{qual: qual} ->
+          error! query, query.select, "association `#{inspect parent_model}.#{field}` " <>
+                                      "in assoc/2 requires an inner or left join, got #{qual} join"
+        _ ->
+          :ok
+      end
+
+      validate_assoc(child_var, child_fields, query)
+    end)
+  end
+
+  defp find_source_expr(query, {:&, _, [0]}) do
+    query.from
+  end
+
+  defp find_source_expr(query, {:&, _, [ix]}) do
+    Enum.fetch! query.joins, ix - 1
   end
 
   ## Helpers
 
-  defp traverse_query(original, acc, fun) do
+  # Traverse all query components with expressions.
+  # Therefore from, preload and lock are not traversed.
+  defp traverse_exprs(original, acc, fun) do
     query = original
 
     {select, acc} = fun.(:select, original, original.select, acc)
@@ -208,9 +259,6 @@ defmodule Ecto.Query.Planner do
 
     {distincts, acc} = fun.(:distinct, original, original.distincts, acc)
     query = %{query | distincts: distincts}
-
-    {from, acc} = fun.(:from, original, original.from, acc)
-    query = %{query | from: from}
 
     {joins, acc} = fun.(:join, original, original.joins, acc)
     query = %{query | joins: joins}
@@ -231,10 +279,7 @@ defmodule Ecto.Query.Planner do
     query = %{query | limit: limit}
 
     {offset, acc} = fun.(:offset, original, original.offset, acc)
-    query = %{query | offset: offset}
-
-    {lock, acc} = fun.(:lock, original, original.lock, acc)
-    {%{query | lock: lock}, acc}
+    {%{query | offset: offset}, acc}
   end
 
   defp error!(message) do

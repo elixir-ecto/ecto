@@ -138,7 +138,7 @@ defmodule Ecto.Repo.Backend do
     # TODO: Those parameters should be properly cast
     params = for {k, {v, _type}} <- params, into: %{}, do: {k, v}
     {query, params} = Queryable.to_query(queryable)
-                      |> Planner.plan(params, skip_select: true)
+                      |> Planner.plan(params, only_where: true)
 
     Validator.validate_update(query, updates, params)
     adapter.update_all(repo, query, updates, params, opts)
@@ -164,7 +164,7 @@ defmodule Ecto.Repo.Backend do
 
   def delete_all(repo, adapter, queryable, opts) do
     {query, params} = Queryable.to_query(queryable)
-            |> Planner.plan(%{}, skip_select: true)
+            |> Planner.plan(%{}, only_where: true)
     Validator.validate_delete(query)
     adapter.delete_all(repo, query, params, opts)
   end

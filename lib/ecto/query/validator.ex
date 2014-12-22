@@ -14,7 +14,6 @@ defmodule Ecto.Query.Validator do
 
   def validate(query, opts \\ []) do
     unless opts[:skip_select] do
-      validate_select(query)
       preload_selected(query)
     end
   end
@@ -61,12 +60,6 @@ defmodule Ecto.Query.Validator do
     end
   end
 
-  defp validate_select(query) do
-    rescue_metadata(query, :select, query.select, fn ->
-      select_clause(query.select.expr, query)
-    end)
-  end
-
   defp preload_selected(query) do
     unless query.preloads == [] do
       rescue_metadata(query, :select, query.select, fn ->
@@ -77,63 +70,6 @@ defmodule Ecto.Query.Validator do
         end
       end)
     end
-  end
-
-  # Handle top level select cases
-
-  defp select_clause({:assoc, _, [var, fields]}, query) do
-    assoc_select(var, fields, query)
-  end
-
-  defp select_clause({left, right}, query) do
-    select_clause(left, query)
-    select_clause(right, query)
-  end
-
-  defp select_clause({:{}, _, list}, query) do
-    Enum.each(list, &select_clause(&1, query))
-  end
-
-  defp select_clause(list, query) when is_list(list) do
-    Enum.each(list, &select_clause(&1, query))
-  end
-
-  defp select_clause(other, _query) do
-    other
-  end
-
-  defp assoc_select(parent_var, fields, query) do
-    Enum.each(fields, fn {field, nested} ->
-      {child_var, nested_fields} = Assoc.decompose_assoc(nested)
-      parent_model = Util.find_source(query.sources, parent_var) |> Util.model
-
-      refl = parent_model.__schema__(:association, field)
-      unless refl do
-        raise Ecto.QueryError, reason: "field `#{inspect parent_model}.#{field}` is not an association"
-      end
-
-      child_model = Util.find_source(query.sources, child_var) |> Util.model
-      unless refl.associated == child_model do
-        raise Ecto.QueryError, reason: "association on `#{inspect parent_model}.#{field}` " <>
-          "doesn't match given model: `#{child_model}`"
-      end
-
-      unless child_model.__schema__(:primary_key) do
-        raise Ecto.QueryError, reason: "`assoc/2` selector requires a primary key on " <>
-          "model: `#{child_model}`"
-      end
-
-      case Util.source_expr(query, child_var) do
-        %JoinExpr{qual: qual, assoc: assoc} when not is_nil(assoc) and qual in [:inner, :left] ->
-          :ok
-        %JoinExpr{} ->
-          raise Ecto.QueryError, reason: "can only associate on an inner or left association join"
-        _ ->
-          :ok
-      end
-
-      assoc_select(child_var, nested_fields, query)
-    end)
   end
 
   # Adds type, file and line metadata to the exception

@@ -12,21 +12,6 @@ defmodule Ecto.Query.Util do
     elem(sources, ix)
   end
 
-  def find_source(sources, {:&, _, [ix]}) when is_list(sources) do
-    Enum.at(sources, ix)
-  end
-
-  @doc """
-  Look up the expression where the variable was bound.
-  """
-  def source_expr(%Query{from: from}, {:&, _, [0]}) do
-    from
-  end
-
-  def source_expr(%Query{joins: joins}, {:&, _, [ix]}) do
-    Enum.at(joins, ix - 1)
-  end
-
   @doc "Returns the source from a source tuple."
   def source({source, _model}), do: source
 
