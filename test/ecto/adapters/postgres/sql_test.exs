@@ -149,11 +149,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "fragments" do
-    query = Model |> select([r], ~f[downcase(#{r.x})]) |> normalize
+    query = Model |> select([r], fragment("downcase(?)", r.x)) |> normalize
     assert SQL.all(query) == ~s{SELECT downcase(m0."x") FROM "model" AS m0}
 
     value = 13
-    query = Model |> select([r], ~f[downcase(#{r.x}, #{^value})]) |> normalize
+    query = Model |> select([r], fragment("downcase(?, ?)", r.x, ^value)) |> normalize
     assert SQL.all(query) == ~s{SELECT downcase(m0."x", $1) FROM "model" AS m0}
   end
 

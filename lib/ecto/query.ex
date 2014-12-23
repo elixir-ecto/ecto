@@ -48,44 +48,63 @@ defmodule Ecto.Query do
     * Null check functions: `is_nil/1`
     * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
 
-  However, any expression can be given to the underlying the database
-  by using fragments:
+  Futhermore, Ecto allows the following literals inside queries:
 
-      def unpublished_by_title(title)
-        from p in Post,
-          where: is_nil(p.published_at) and ~f[downcase(#{p.title}) == #{^title}]
-      end
+    * Integers: `1`, `2`, `3`
+    * Floats: `1.0`, `2.0`, `3.0`
+    * Booleans: `true`, `false`
+    * Binaries: `<<1, 2, 3>>`
+    * Strings: `"foo bar"`, `~s(this is a string)`
+    * Arrays: `[1, 2, 3]`, `~w(interpolate words)`
+    * UUIDs: `uuid("0123456789abcdef")`
 
-  Fragments are sent directly to the database while also allowing field names
-  like `p.title` and values like `^title` to be interpolated.
-
-  # TODO: Talk about ^, field, and friends
-  # TODO: Talk about literals: 1, 2.0 (decimal), strings, binaries, <<>>, lists, uuid, sigils
-
-  ## Data security
-
-  External values and elixir expressions can be injected into a query
-  expression with `^`. Anything that isn't inside a `^` expression
-  is treated as a query expression.
-
-  This allows one to create dynamic queries:
+  External values and Elixir expressions can be injected into a query
+  expression with `^`:
 
       def with_minimum(age, height_ft) do
           from u in User,
         where: u.age > ^age and u.height > ^(height_ft * 3.28)
       end
 
-  In the example above, we will compare against the `age` and `height`
-  given as arguments, appropriately converting the height. Note all
-  external values will be quoted to avoid SQL injection attacks in
-  the underlying repository.
+      with_minimum(18, 5.0)
 
-  Notice the `select` clause is optional, Ecto will automatically infers
-  and returns the user record (similar to `select: u`) from the query above.
+  Finally, Ecto provides two conveniences for dynamically generating
+  queries. The first is the `field/2` function which allows developers
+  to dynamically choose a field to query:
+
+      def at_least_four(doors_or_tires) do
+          from c in Car,
+        where: field(u, ^doors_or_tires) >= 4
+      end
+
+  In the example above, both `at_least_four(:doors)` and `at_least_four(:tires)`
+  would be valid calls as the field is dynamically inserted.
+
+  The other convenience is called fragments which allows developers to send
+  any expression to the database via the `fragment(...)` function:
+
+      def unpublished_by_title(title)
+        from p in Post,
+          where: is_nil(p.published_at) and
+                 fragment("downcase(?) == ?", p.title, ^title)
+      end
+
+  Fragments are sent directly to the database while also allowing field names
+  like `p.title` and values like `^title` to be interpolated.
 
   ## Casting
 
-  # TODO: Talk about casting
+  Ecto is able to cast values in queries:
+
+      age = "1"
+      Repo.all(from u in User, where: u.age > ^age)
+
+  The example above will work even if `age` is tagged as an :integer
+  in the User module because Ecto is able to cast values. In case a
+  value cannot be cast, `Ecto.CastError` is raised.
+
+  It is important to keep in mind that Ecto cannot cast nil values in
+  queries. Passing nil automatically causes the query to fail.
 
   ## Query expansion
 
@@ -123,11 +142,6 @@ defmodule Ecto.Query do
   defmodule JoinExpr do
     @moduledoc false
     defstruct [:qual, :source, :on, :file, :line, :assoc]
-  end
-
-  defmodule Fragment do
-    @moduledoc false
-    defstruct parts: []
   end
 
   defmodule Tagged do

@@ -71,18 +71,19 @@ defmodule Ecto.Query.Builder do
   end
 
   # fragments
-  def escape({sigil, _, [{:<<>>, _, frags}, []]}, _type, params, vars)
-      when sigil in ~w(sigil_f sigil_F)a do
-    {frags, params} =
-      Enum.map_reduce frags, params, fn
-        frag, params when is_binary(frag) ->
-          {frag, params}
-        {:::, _, [{{:., _, [Kernel, :to_string]}, _, [frag]}, _]}, params ->
-          escape(frag, :any, params, vars)
-      end
+  def escape({:fragment, meta, [query|frags]}, _type, params, vars) do
+    unless is_binary(query) do
+      error! "fragment(...) expects the first argument to be a string, got: `#{Macro.to_string(query)}`"
+    end
 
-    {{:%, [], [Ecto.Query.Fragment, {:%{}, [], [parts: frags]}]},
-      params}
+    pieces = String.split(query, "?")
+
+    if length(pieces) != length(frags) + 1 do
+      error! "fragment(...) expects extra arguments in the same amount of question marks in string"
+    end
+
+    {frags, params} = Enum.map_reduce(frags, params, &escape(&1, :any, &2, vars))
+    {{:{}, [], [:fragment, meta, merge_fragments(pieces, frags)]}, params}
   end
 
   # sigils
@@ -175,6 +176,11 @@ defmodule Ecto.Query.Builder do
   # Ecto concerns itself with type casting of concrete types
   # for security purposes. Comparing a field with another is
   # left to the database.
+
+  defp merge_fragments([h1|t1], [h2|t2]),
+    do: [h1, h2|merge_fragments(t1, t2)]
+  defp merge_fragments([h1], []),
+    do: [h1]
 
   defp field_meta({composite, _} = type) when is_atom(composite), do: [ecto_type: type]
   defp field_meta(type) when is_atom(type) and type != :any,      do: [ecto_type: type]

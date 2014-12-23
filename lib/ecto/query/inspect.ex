@@ -99,11 +99,8 @@ defimpl Inspect, for: Ecto.Query do
     Macro.to_string(expr, &expr_to_string(&1, &2, names, params))
   end
 
-  defp expr_to_string(%Ecto.Query.Fragment{parts: parts}, _, names, params) do
-    "~f[" <> Enum.map_join(parts, "", fn
-      part when is_binary(part) -> part
-      part -> expr(part, names, params)
-    end) <> "]"
+  defp expr_to_string({:fragment, _, parts}, _, names, params) do
+    "fragment(" <> unmerge_fragments(parts, "", [], names, params) <> ")"
   end
 
   # Convert variables to proper identifiers
@@ -142,6 +139,14 @@ defimpl Inspect, for: Ecto.Query do
 
   defp expr_to_string(_expr, string, _, _) do
     string
+  end
+
+  defp unmerge_fragments([s, v|t], frag, args, names, params) do
+    unmerge_fragments(t, frag <> s <> "?", [expr(v, names, params)|args], names, params)
+  end
+
+  defp unmerge_fragments([s], frag, args, _names, _params) do
+    Enum.join [inspect(frag <> s)|Enum.reverse(args)], ", "
   end
 
   defp join_qual(:inner), do: :join

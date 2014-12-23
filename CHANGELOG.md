@@ -1,7 +1,7 @@
 # v0.3.0-dev
 
 * Enhancements
-  * Support fragments in queries with the `~f[...]` sigil
+  * Support fragments in queries with the `fragment(...)` function
 
 * Backwards incompatible changes
   * `:virtual` type no longer exists, instead pass `virtual: true` as field option

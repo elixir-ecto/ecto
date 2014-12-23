@@ -119,17 +119,15 @@ defmodule Ecto.Query.Planner do
     cast_param(kind, query, expr, v, type)
   end
 
-  defp cast_param(kind, query, expr, nil, type) do
-    error! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
-                        "(if you want to check for nils, use is_nil/1 instead)"
-  end
-
   defp cast_param(kind, query, expr, v, type) do
     case Types.cast(type, v) do
+      {:ok, nil} ->
+        cast! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
+                            "(if you want to check for nils, use is_nil/1 instead)"
       {:ok, v} ->
         v
       :error ->
-        error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
+        cast! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
     end
   end
 
@@ -371,6 +369,15 @@ defmodule Ecto.Query.Planner do
     else
       error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
     end
+  end
+
+  def cast!(query, expr, message) do
+    message =
+      [message: message, query: query, file: expr.file, line: expr.line]
+      |> Ecto.QueryError.exception()
+      |> Exception.message
+
+    raise Ecto.CastError, message: message
   end
 
   defp error!(query, message) do

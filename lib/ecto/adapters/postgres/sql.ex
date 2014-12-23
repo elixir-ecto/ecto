@@ -219,22 +219,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         end)
     end
 
-    defp expr({arg, _, []}, sources) when is_tuple(arg) do
-      expr(arg, sources)
-    end
-
-    defp expr(%Ecto.Query.Fragment{parts: parts}, sources) do
-      Enum.map_join(parts, "", fn
-        part when is_binary(part) -> part
-        expr -> expr(expr, sources)
-      end)
-    end
-
     defp expr({:^, [], [ix]}, _sources) do
       "$#{ix+1}"
     end
 
-    defp expr({:., _, [{:&, _, [_]} = var, field]}, sources) when is_atom(field) do
+    defp expr({{:., _, [{:&, _, [_]} = var, field]}, _, []}, sources) when is_atom(field) do
       {_, name} = Util.find_source(sources, var) |> Util.source
       "#{name}.#{quote_column(field)}"
     end
@@ -258,6 +247,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp expr({:not, _, [expr]}, sources) do
       "NOT (" <> expr(expr, sources) <> ")"
+    end
+
+    defp expr({:fragment, _, parts}, sources) do
+      Enum.map_join(parts, "", fn
+        part when is_binary(part) -> part
+        expr -> expr(expr, sources)
+      end)
     end
 
     defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do

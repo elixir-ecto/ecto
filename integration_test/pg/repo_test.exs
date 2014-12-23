@@ -204,7 +204,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
 
-    assert 2 = TestRepo.update_all(p in Post, text: ~f[#{p.text} || 'bai'])
+    assert 2 = TestRepo.update_all(p in Post, text: fragment("? || 'bai'", p.text))
     assert %Post{text: "haibai"} = TestRepo.get(Post, id1)
     assert %Post{text: "haibai"} = TestRepo.get(Post, id2)
   end

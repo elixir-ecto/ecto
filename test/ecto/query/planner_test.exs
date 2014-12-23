@@ -70,14 +70,14 @@ defmodule Ecto.Query.PlannerTest do
     {_query, params} = prepare(Post |> where([p], p.id == ^"1"))
     assert params[0] == 1
 
-    exception = assert_raise Ecto.QueryError, fn ->
+    exception = assert_raise Ecto.CastError, fn ->
       prepare(Post |> where([p], p.title == ^nil))
     end
 
     assert Exception.message(exception) =~ "value `nil` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^nil"
 
-    exception =  assert_raise Ecto.QueryError, fn ->
+    exception =  assert_raise Ecto.CastError, fn ->
       prepare(Post |> where([p], p.title == ^1))
     end
 

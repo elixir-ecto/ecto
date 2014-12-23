@@ -29,6 +29,13 @@ defmodule Ecto.QueryError do
   end
 end
 
+defmodule Ecto.CastError do
+  @moduledoc """
+  Raised at runtime when a value cannot be cast.
+  """
+  defexception [:message]
+end
+
 defmodule Ecto.InvalidURLError do
   defexception [:message, :url]
 
