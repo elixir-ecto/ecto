@@ -174,7 +174,7 @@ Notice how the storage (repository) and the model are decoupled with structs rep
 
 * By having structs as data, we guarantee they are are light-weight, serializable structures. In many languages, the data is often represented by large, complex objects, with entwined state transactions, which makes serialization particularly hard;
 * By providing behaviour in modules, they are easy to compose (it is a matter of composing functions). You can easily have different structs sharing the same set of validations. Or the same struct being controlled by a different set of validations and rules on different parts of the application. For example, the Weather struct may require a different set of validations and data integrity rules depending on the role of the user manipulating the data;
-* By concerning only with storage, operations on the repository are simple and fast. You control the steps your data pass through before entering the repository. We don't pollute the repository with unecessary overhead, providing straight-forward and performant access to storage;
+* By concerning only with storage, operations on the repository are simple and fast. You control the steps your data pass through before entering the repository. We don't pollute the repository with unnecessary overhead, providing straight-forward and performant access to storage;
 
 Note you can use the `struct/2` function that ships with Elixir to create or update a struct based on dynamic values:
 
