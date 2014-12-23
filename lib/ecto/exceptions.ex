@@ -1,103 +1,89 @@
-alias Ecto.Query.Util
+defmodule Ecto.Query.CompileError do
+  @moduledoc """
+  Raised at compilation time when the query cannot be compiled.
+  """
+  defexception [:message]
+end
 
 defmodule Ecto.QueryError do
-  import Inspect.Ecto.Query, only: [pp_from_query: 2]
+  @moduledoc """
+  Raised at runtime when the query is invalid.
+  """
+  defexception [:message]
 
-  defexception [:reason, :type, :query, :expr, :file, :line]
+  def exception(opts) do
+    message = Keyword.fetch!(opts, :message)
+    query   = Keyword.fetch!(opts, :query)
+    message = """
+    #{message} in query:
 
-  def message(e) do
-    if e.type && e.query && e.file && e.line do
-      file = Path.relative_to_cwd(e.file)
-      """
-      #{Exception.format_file_line(file, e.line)} the clause:
+    #{Inspect.Ecto.Query.to_string(query)}
+    """
 
-          #{e.type}: #{pp_from_query(e.query, e.expr)}
-
-      is invalid: #{e.reason}
-      """
-    else
-      e.reason
+    if (file = opts[:file]) && (line = opts[:line]) do
+      relative = Path.relative_to_cwd(file)
+      message  = Exception.format_file_line(relative, line) <> " " <> message
     end
+
+    %__MODULE__{message: message}
   end
 end
 
-defmodule Ecto.InvalidURL do
+defmodule Ecto.InvalidURLError do
   defexception [:message, :url]
 
   def exception(opts) do
-    msg = "invalid url #{opts[:url]}, #{opts[:reason]}"
-    %Ecto.InvalidURL{message: msg, url: opts[:url]}
+    url = Keyword.fetch!(opts, :url)
+    msg = Keyword.fetch!(opts, :message)
+    msg = "invalid url #{url}, #{msg}"
+    %__MODULE__{message: msg, url: url}
   end
 end
 
-defmodule Ecto.NoPrimaryKey do
+defmodule Ecto.NoPrimaryKeyError do
   defexception [:message, :model]
 
   def exception(opts) do
-    msg = "model `#{opts[:model]}` has no primary key"
-    %Ecto.NoPrimaryKey{message: msg, model: opts[:model]}
+    model   = Keyword.fetch!(opts, :model)
+    message = "model `#{inspect model}` has no primary key"
+    %__MODULE__{message: message, model: model}
   end
 end
 
-defmodule Ecto.InvalidModel do
-  defexception [:model, :field, :type, :expected_type, :reason]
-
-  def message(e) do
-    expected_type = Util.type_to_ast(e.expected_type) |> Macro.to_string
-    type          = Util.type_to_ast(e.type)          |> Macro.to_string
-
-    "model #{inspect e.model} failed validation when #{e.reason}, " <>
-    "field #{e.field} had type #{type} but type #{expected_type} was expected"
-  end
+defmodule Ecto.InvalidModelError do
+  defexception [:message]
 end
 
-defmodule Ecto.NotSingleResult do
-  defexception [:message, :model, :primary_key, :id, :results]
+defmodule Ecto.NoResultsError do
+  defexception [:message]
 
   def exception(opts) do
-    msg = "the result set from `#{opts[:model]}` " <>
-          "where `#{opts[:primary_key]} == #{opts[:id]}` " <>
-          "was not a single value"
+    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
 
-    struct(Ecto.NotSingleResult, [message: msg] ++ opts)
+    msg = """
+    expected at least one result but got none in query:
+
+    #{Inspect.Ecto.Query.to_string(query)}
+    """
+
+    %__MODULE__{message: msg}
   end
 end
 
-defmodule Ecto.Query.TypeCheckError do
-  import Inspect.Ecto.Query, only: [pp_from_query: 2]
+defmodule Ecto.MultipleResultsError do
+  defexception [:message]
 
-  defexception [:expr, :types, :allowed, :query, :file, :line]
+  def exception(opts) do
+    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
+    count = Keyword.fetch!(opts, :count)
 
-  @moduledoc """
-  Exception raised when a query does not type check.
-  Read `Ecto.Query` and `Ecto.Query.API` docs for more information.
-  """
+    msg = """
+    expected at most one result but got #{count} in query:
 
-  def message(e) do
-    if e.query && e.file && e.line do
-      file = Path.relative_to_cwd(e.file)
-      msg = "#{Exception.format_file_line(file, e.line)} the expression:"
-    else
-      msg = "the following expression:"
-    end
-
-    {name, _, _} = e.expr
-    expected = Enum.map_join(e.allowed, "\n    ", &Macro.to_string(&1))
-
-    types  = Enum.map(e.types, &Util.type_to_ast/1)
-    actual = Macro.to_string({name, [], types})
-
+    #{Inspect.Ecto.Query.to_string(query)}
     """
-    #{msg}
 
-        #{pp_from_query(e.query, e.expr)}
-
-    does not type check. Allowed types for #{name}/#{length(e.types)}:
-
-        #{expected}
-
-    Got: #{actual}
-    """
+    %__MODULE__{message: msg}
   end
 end
 

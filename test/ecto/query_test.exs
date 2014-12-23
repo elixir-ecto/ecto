@@ -1,12 +1,11 @@
 defmodule Ecto.QueryTest do
   use ExUnit.Case, async: true
 
-  import Support.CompileHelpers
+  import Support.EvalHelpers
   import Ecto.Query
 
   alias Ecto.Query
-  alias Ecto.Query.Normalizer
-  alias Ecto.Query.Validator
+  alias Ecto.Query.Planner
 
   defmodule Post do
     use Ecto.Model
@@ -25,87 +24,86 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  def validate(query) do
-    query
-    |> Normalizer.normalize
-    |> Validator.validate([Ecto.Query.API])
+  def normalize(query) do
+    {query, params} = Planner.prepare(query, %{})
+    {Planner.normalize(query, %{}, []), params}
   end
 
-  test "call queryable on every merge" do
+  test "is queryable on every merge" do
     query = Post |> select([p], p.title)
-    validate(query)
+    normalize(query)
 
     query = Post |> distinct([p], p.title)
-    validate(query)
+    normalize(query)
 
     query = Post |> where([p], p.title == "42")
-    validate(query)
+    normalize(query)
 
     query = Post |> order_by([p], p.title)
-    validate(query)
+    normalize(query)
 
     query = Post |> limit([p], 42)
-    validate(query)
+    normalize(query)
 
     query = Post |> offset([p], 43)
-    validate(query)
+    normalize(query)
 
     query = Post |> lock(true)
-    validate(query)
+    normalize(query)
 
     query = Post |> lock("FOR SHARE NOWAIT")
-    validate(query)
+    normalize(query)
 
     query = select(Post, [p], p.title)
-    validate(query)
+    normalize(query)
 
     query = distinct(Post, [p], p.title)
-    validate(query)
+    normalize(query)
 
     query = where(Post, [p], p.title == "42")
-    validate(query)
+    normalize(query)
 
     query = order_by(Post, [p], p.title)
-    validate(query)
+    normalize(query)
 
     query = limit(Post, [p], 42)
-    validate(query)
+    normalize(query)
 
     query = offset(Post, [p], 43)
-    validate(query)
+    normalize(query)
+
+    query = preload(Post, :comments)
+    normalize(query)
+  end
+
+  test "is queryable with runtime values" do
+    comments = :comments
+    query = preload(Post, ^comments)
+    normalize(query)
+
+    lock = true
+    query = lock(Post, ^lock)
+    normalize(query)
+
+    asc = :asc
+    query = order_by(Post, [p], [{^asc, p.title}])
+    normalize(query)
   end
 
   test "vars are order dependent" do
     query = from(p in Post, []) |> select([q], q.title)
-    validate(query)
+    normalize(query)
   end
 
   test "can append to selected query" do
     query = from(p in Post, []) |> select([], 1) |> where([], true)
-    validate(query)
-  end
-
-  test "only one select is allowed" do
-    assert_raise Ecto.QueryError, "only one select expression is allowed in query", fn ->
-      post = Post
-      post |> select([], 1) |> select([], 2)
-    end
+    normalize(query)
   end
 
   test "binding should be list of variables" do
-    assert_raise Ecto.QueryError, "binding list should contain only variables, got: 0", fn ->
-      delay_compile select(%Query{}, [0], 1)
+    assert_raise Ecto.Query.CompileError, "binding list should contain only variables, got: 0", fn ->
+      quote_and_eval select(%Query{}, [0], 1)
     end
-  end
-
-  test "keyword query" do
-    # queries need to be on the same line or == wont work
-    assert from(p in Post, select: 1+2) == from(p in Post, []) |> select([p], 1+2)
-
-    assert from(p in Post, where: 1<2) == from(p in Post, []) |> where([p], 1<2)
-
-    query = Post
-    assert (query |> select([p], p.title)) == from(p in query, select: p.title)
   end
 
   test "cannot bind non-Queryable in from" do
@@ -122,79 +120,62 @@ defmodule Ecto.QueryTest do
     assert %Query{from: {"posts", nil}} = from(p in "posts", []) |> select([p], p.title)
   end
 
-  test "validate from expression" do
-    delay_compile(from(Post, []))
+  test "normalize from expression" do
+    quote_and_eval(from(Post, []))
 
     assert_raise ArgumentError, fn ->
-      delay_compile(from(Post, [123]))
+      quote_and_eval(from(Post, [123]))
     end
 
     assert_raise ArgumentError, fn ->
-      delay_compile(from(Post, 123))
+      quote_and_eval(from(Post, 123))
     end
   end
 
   test "unbound _ var" do
-    assert_raise Ecto.QueryError, fn ->
-      delay_compile(Post |> select([], _.x))
+    assert_raise Ecto.Query.CompileError, fn ->
+      quote_and_eval(Post |> select([], _.x))
     end
 
     query = Post |> select([_], 0)
-    validate(query)
+    normalize(query)
 
     query = Post |> join(:inner, [], Comment, true) |> select([_, c], c.text)
-    validate(query)
+    normalize(query)
 
     query = Post |> join(:inner, [], Comment, true) |> select([p, _], p.title)
-    validate(query)
+    normalize(query)
 
     query = Post |> join(:inner, [], Comment, true) |> select([_, _], 0)
-    validate(query)
+    normalize(query)
   end
 
   test "binding collision" do
-    assert_raise Ecto.QueryError, "variable `x` is bound twice", fn ->
-      delay_compile(Post |> from(Comment) |> select([x, x], x.id))
+    assert_raise Ecto.Query.CompileError, "variable `x` is bound twice", fn ->
+      quote_and_eval(Post |> from(Comment) |> select([x, x], x.id))
     end
-  end
-
-  test "join on keyword query" do
-    from(c in Comment, join: p in Post, on: c.text == "", select: c)
-    from(p in Post, join: c in p.comments, on: c.text == "", select: p)
-
-    assert_raise Ecto.QueryError, "`on` keyword must immediately follow a join", fn ->
-      delay_compile(from(c in Comment, on: c.text == "", select: c))
-    end
-
-    message = "`join` expression requires explicit `on` " <>
-              "expression unless it's an association join expression"
-    assert_raise Ecto.QueryError, message, fn ->
-      delay_compile(from(c in Comment, join: p in Post, select: c))
-    end
-  end
-
-  test "join on query expression" do
-    query = Post |> join(:inner, [p], c in p.comments, c.text == "") |> Normalizer.normalize
-    on = hd(query.joins).on
-    assert Macro.to_string(on.expr) == "&1.text() == \"\" and &1.post_id() == &0.id()"
-  end
-
-  test "join queries adds binds" do
-    from(c in Comment, join: p in Post, on: true, select: {p.title, c.text})
-    Comment |> join(:inner, [c], p in Post, true) |> select([c,p], {p.title, c.text})
   end
 
   test "cannot bind too many vars" do
     from(a in %Query{}, [])
     from([a] in %Query{}, [])
 
-    assert_raise Ecto.QueryError, fn ->
+    assert_raise Ecto.Query.CompileError, fn ->
       comment = Comment
       from([a, b] in comment, [])
     end
   end
 
-  test "query builder is compile time" do
+  test "keyword query" do
+    # queries need to be on the same line or == wont work
+    assert from(p in Post, select: 1<2) == from(p in Post, []) |> select([p], 1<2)
+    assert from(p in Post, where: 1<2)  == from(p in Post, []) |> where([p], 1<2)
+
+    query = Post
+    assert (query |> select([p], p.title)) == from(p in query, select: p.title)
+  end
+
+  test "keyword query builder is compile time" do
     quoted =
       quote do
         from(p in Post,
@@ -207,5 +188,19 @@ defmodule Ecto.QueryTest do
 
     assert {:%{}, _, list} = Macro.expand(quoted, __ENV__)
     assert List.keyfind(list, :__struct__, 0) == {:__struct__, Query}
+  end
+
+  test "join on keyword query" do
+    from(c in Comment, join: p in Post, on: c.text == "", select: c)
+    from(p in Post, join: c in p.comments, on: c.text == "", select: p)
+
+    assert_raise Ecto.Query.CompileError, "`on` keyword must immediately follow a join", fn ->
+      quote_and_eval(from(c in Comment, on: c.text == "", select: c))
+    end
+  end
+
+  test "join queries adds binds" do
+    from(c in Comment, join: p in Post, select: {p.title, c.text})
+    Comment |> join(:inner, [c], p in Post, true) |> select([c,p], {p.title, c.text})
   end
 end

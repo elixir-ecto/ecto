@@ -34,16 +34,16 @@ defmodule Ecto.Query.InspectTest do
 
   test "join" do
     assert i(from(x in Post, join: y in x.comments)) ==
-           ~s{from p in Inspect.Post, join: c in p.comments}
+           ~s{from p in Inspect.Post, join: c in p.comments, on: true}
 
-    assert i(from(x in Post, [join: y in Comment, on: x.id = y.id])) ==
-           ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: p.id = c.id}
+    assert i(from(x in Post, [join: y in Comment, on: x.id == y.id])) ==
+           ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: p.id == c.id}
 
     assert i(from(x in Post, join: y in x.post, join: z in y.post)) ==
-           ~s{from p0 in Inspect.Post, join: p1 in p0.post, join: p2 in p1.post}
+           ~s{from p0 in Inspect.Post, join: p1 in p0.post, on: true, join: p2 in p1.post, on: true}
 
     assert i(from(x in Post, left_join: y in x.comments)) ==
-           ~s{from p in Inspect.Post, left_join: c in p.comments}
+           ~s{from p in Inspect.Post, left_join: c in p.comments, on: true}
   end
 
   test "where" do
@@ -90,28 +90,58 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, where: ~f[downcase(p.id) == ^"foobar"]}
   end
 
-  test "all" do
+  test "inspect all" do
     string = """
-    from p in Inspect.Post, join: c in p.comments, where: true,
+    from p in Inspect.Post, join: c in p.comments, on: true, where: true,
     group_by: [p.id], having: true, order_by: [asc: p.id], limit: 1,
-    offset: 1, lock: true, select: 1
+    offset: 1, lock: true, select: 1, preload: :comments
     """
     |> String.rstrip
     |> String.replace("\n", " ")
 
     assert i(from(x in Post, join: y in x.comments, where: true, group_by: x.id,
                              having: true, order_by: x.id, limit: 1, offset: 1,
-                             lock: true, select: 1)) == string
+                             lock: true, select: 1, preload: :comments)) == string
   end
 
-  test "tagged values" do
-    assert i(from(Post, select: {binary(<<0>>), uuid(<<0>>), array([0], :integer)})) ==
-           "from p in Inspect.Post, select: {binary(<<0>>), uuid(<<0>>), array([0], :integer)}"
+  test "to_string all" do
+    string = """
+    from p in Inspect.Post,
+      join: c in p.comments,
+      on: true,
+      where: true,
+      group_by: [p.id],
+      having: true,
+      order_by: [asc: p.id],
+      limit: 1,
+      offset: 1,
+      lock: true,
+      select: 1,
+      preload: :comments
+    """
+    |> String.rstrip
+
+    assert Inspect.Ecto.Query.to_string(
+      from(x in Post, join: y in x.comments, where: true, group_by: x.id,
+                      having: true, order_by: x.id, limit: 1, offset: 1,
+                      lock: true, select: 1, preload: :comments)
+    ) == string
   end
 
-  test "external" do
-    assert i(from(x in Post, where: ^123 + ^(1 * 3))) ==
-           ~s{from p in Inspect.Post, where: ^123 + ^3}
+  test "container values" do
+    assert i(from(Post, select: {<<1, 2, 3>>, uuid(<<0>>), [0]})) ==
+           "from p in Inspect.Post, select: {<<1, 2, 3>>, uuid(<<0>>), [0]}"
+  end
+
+  test "params" do
+    assert i(from(x in Post, where: ^123 > ^(1 * 3))) ==
+           ~s{from p in Inspect.Post, where: ^123 > ^3}
+  end
+
+  test "params after prepare" do
+    query = from(x in Post, where: ^123 > ^(1 * 3))
+    {query, _params} = Ecto.Query.Planner.prepare(query, %{})
+    assert i(query) == ~s{from p in Inspect.Post, where: ^... > ^...}
   end
 
   def i(query) do

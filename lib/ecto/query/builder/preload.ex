@@ -2,35 +2,42 @@ defmodule Ecto.Query.Builder.Preload do
   @moduledoc false
   alias Ecto.Query.Builder
 
-  @type preload :: [{atom, preload}]
-
   @doc """
-  Normalizes a preload.
+  Escapes a preload.
 
   A preload may be an atom, a list of atoms or a keyword list
   nested as a rose tree.
+
+      iex> escape(:foo)
+      :foo
+
+      iex> escape(foo: :bar)
+      [foo: :bar]
+
   """
-  @spec normalize(term) :: preload | no_return
-  def normalize(preload) do
-    Enum.map(List.wrap(preload), &normalize_each/1)
+  @spec escape(Macro.t) :: Macro.t | no_return
+  def escape(atom) when is_atom(atom),
+    do: atom
+
+  def escape(list) when is_list(list),
+    do: Enum.map(list, &escape_each/1)
+
+  def escape({:^, _, [expr]}),
+    do: expr
+
+  def escape(other) do
+    Builder.error! "`#{Macro.to_string other}` is not a valid preload expression. " <>
+                   "preload expects an atom, a (nested) keyword or a (nested) " <>
+                   "list of atoms. Use ^ if you want to interpolate a value"
   end
 
-  defp normalize_each({atom, list}) when is_atom(atom) do
-    {atom, normalize(list)}
-  end
-
-  defp normalize_each(atom) when is_atom(atom) do
-    {atom, []}
-  end
-
-  defp normalize_each(other) do
-    raise Ecto.QueryError,
-      reason: "preload expects an atom, a (nested) keyword or " <>
-              "a (nested) list of atoms, got: #{inspect other}"
-  end
+  defp escape_each({atom, list}) when is_atom(atom),
+    do: {atom, escape(list)}
+  defp escape_each(other),
+    do: escape(other)
 
   @doc """
-  Builds a quoted expression.
+  Applies the preloaded value into the query.
 
   The quoted expression should evaluate to a query at runtime.
   If possible, it does all calculations at compile time to avoid
@@ -38,10 +45,7 @@ defmodule Ecto.Query.Builder.Preload do
   """
   @spec build(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(query, expr, env) do
-    expr = normalize(expr)
-    preload = quote do: %Ecto.Query.QueryExpr{expr: unquote(expr),
-                          file: unquote(env.file), line: unquote(env.line)}
-    Builder.apply_query(query, __MODULE__, [preload], env)
+    Builder.apply_query(query, __MODULE__, [escape(expr)], env)
   end
 
   @doc """

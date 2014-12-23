@@ -7,21 +7,26 @@ defmodule Ecto.Associations.Preloader do
   require Ecto.Query, as: Q
 
   @doc """
-  Loads all associations on the result set according to the given fields.
-  `fields` is a list of fields that can be nested in rose tree structure:
-  `node :: {atom, [node | atom]}` (see `Ecto.Query.Builder.Preload.normalize/1`).
-  `pos` is a list of indices into tuples and lists that locate the concerned
-  model.
+  Loads all associations on the result set.
+
+  `fields` is a list of fields that can be nested in rose tree
+  structure:
+
+      node :: {atom, [node | atom]}
+
+  `pos` is an indice into a tuple or a list that locates
+  the preloaded model. If nil, it means the model is not
+  nested inside any other data structure.
 
   See `Ecto.Query.preload/2`.
   """
   @spec run([Ecto.Model.t], atom, [atom | tuple], [non_neg_integer]) :: [Ecto.Model.t]
-  def run(original, repo, fields, pos \\ [])
+  def run(original, repo, fields, pos \\ nil)
 
   def run(original, _repo, [], _pos), do: original
 
   def run(original, repo, fields, pos) do
-    fields = Ecto.Query.Builder.Preload.normalize(fields)
+    fields  = normalize(fields)
     structs = extract(original, pos)
     structs = Enum.reduce(fields, structs, &do_run(&2, repo, &1))
     unextract(structs, original, pos)
@@ -34,7 +39,7 @@ defmodule Ecto.Associations.Preloader do
   defp do_run([], _repo, _field), do: []
 
   defp do_run(structs, repo, {field, sub_fields}) do
-    struct = List.first(structs)
+    struct = hd(structs)
     module = struct.__struct__
     refl = module.__schema__(:association, field)
     should_sort? = should_sort?(structs, refl)
@@ -86,11 +91,10 @@ defmodule Ecto.Associations.Preloader do
 
     if ids != [] do
          Q.from x in refl.associated,
-         where: field(x, ^assoc_key) in array(^ids, ^type),
+         where: field(x, ^assoc_key) in ^ids,
       order_by: field(x, ^assoc_key)
     end
   end
-
 
   ## MERGE ##
 
@@ -107,7 +111,7 @@ defmodule Ecto.Associations.Preloader do
     structs = Enum.map(structs, fn struct ->
       if struct, do: set_loaded(struct, refl, []), else: struct
     end)
-    Enum.reverse(acc1) ++ [struct|structs]
+    Enum.reverse(acc1, [struct|structs])
   end
 
   defp merge([struct|structs], assocs, refl, acc1, acc2) do
@@ -152,25 +156,41 @@ defmodule Ecto.Associations.Preloader do
 
   # Compare struct and association to see if they match
   defp compare(struct, assoc, refl) do
-    record_id = Map.get(struct, refl.key)
-    assoc_id = Map.get(assoc, refl.assoc_key)
+    struct_id = Map.get(struct, refl.key)
+    assoc_id  = Map.get(assoc, refl.assoc_key)
     cond do
-      record_id == assoc_id -> :eq
-      record_id > assoc_id  -> :gt
-      record_id < assoc_id  -> :lt
+      struct_id == assoc_id -> :eq
+      struct_id > assoc_id  -> :gt
+      struct_id < assoc_id  -> :lt
     end
   end
 
+  defp normalize(preload) do
+    Enum.map(List.wrap(preload), &normalize_each/1)
+  end
+
+  defp normalize_each({atom, list}) when is_atom(atom) do
+    {atom, normalize(list)}
+  end
+
+  defp normalize_each(atom) when is_atom(atom) do
+    {atom, []}
+  end
+
+  defp normalize_each(other) do
+    raise ArgumentError, "invalid preload `#{inspect other}`. preload expects an atom " <>
+                         "a (nested) keyword or a (nested) list of atoms"
+  end
 
   ## SORTING ##
 
   defp should_sort?(structs, refl) do
-    key = refl.key
-    first = List.first(structs)
+    key   = refl.key
+    first = hd(structs)
 
     Enum.reduce(structs, {first, false}, fn struct, {last, sort?} ->
       if last && struct && struct.__struct__ != last.__struct__ do
-        raise ArgumentError, message: "all models have to be of the same type"
+        raise ArgumentError, "all models have to be of the same type for preload"
       end
 
       sort? = sort? || (last && struct && Map.get(last, key) > Map.get(struct, key))
@@ -191,55 +211,29 @@ defmodule Ecto.Associations.Preloader do
     end)
   end
 
-
   ## EXTRACT / UNEXTRACT ##
 
-  # Extract structs from their data structure, see get_at_pos
-  defp extract(original, pos) do
-    if pos == [] do
-      original
-    else
-      Enum.map(original, &get_at_pos(&1, pos))
-    end
-  end
+  # Extract structs from their data structure
+  defp extract(original, nil), do: original
+  defp extract(original, pos), do: Enum.map(original, &get_at_pos(&1, pos))
 
   # Put structs back into their original data structure
+  defp unextract(structs, _original, nil), do: structs
   defp unextract(structs, original, pos) do
-    if pos == [] do
-      structs
-    else
-      structs
-      |> :lists.zip(original)
-      |> Enum.map(fn {rec, orig} -> set_at_pos(orig, pos, rec) end)
-    end
+    :lists.zipwith(fn struct, inner ->
+      put_at_pos(struct, inner, pos)
+    end, structs, original)
   end
 
-  # The struct that needs associations preloaded on it can be nested inside
-  # tuples and lists. We retrieve and set the struct inside the structure with
-  # the help of a list of indices into tuples and lists.
-  # {x, [ y, z, {STRUCT, p} ]} #=> indices: [ 1, 2, 0 ]
-  defp get_at_pos(value, []), do: value
+  defp get_at_pos(tuple, pos) when is_tuple(tuple),
+    do: elem(tuple, pos)
+  defp get_at_pos(list, pos) when is_list(list),
+    do: Enum.fetch!(list, pos)
 
-  defp get_at_pos(tuple, [ix|pos]) when is_tuple(tuple) do
-    elem(tuple, ix) |> get_at_pos(pos)
-  end
-
-  defp get_at_pos(list, [ix|pos]) when is_list(list) do
-    Enum.at(list, ix) |> get_at_pos(pos)
-  end
-
-  defp set_at_pos(_other, [], value) do
-    value
-  end
-
-  defp set_at_pos(tuple, [ix|pos], value) when is_tuple(tuple) do
-    elem = elem(tuple, ix)
-    put_elem(tuple, ix, set_at_pos(elem, pos, value))
-  end
-
-  defp set_at_pos(list, [ix|pos], value) when is_list(list) do
-    List.update_at(list, ix, &set_at_pos(&1, pos, value))
-  end
+  defp put_at_pos(struct, tuple, pos) when is_tuple(tuple),
+    do: put_elem(tuple, pos, struct)
+  defp put_at_pos(struct, list, pos) when is_list(list),
+    do: List.update_at(list, pos, struct)
 
   defp set_loaded(struct, refl, loaded) do
     unless refl.__struct__ == Ecto.Reflections.HasMany do

@@ -230,7 +230,7 @@ Queries are defined and extended with the `from` macro. The supported keywords a
   * `:select` - although we used `:select` above, it is optional and by default it simply returns the model being queried
   * `:preload` - used for preloading associations
 
-When writing a query, you are inside Ecto's query syntax. In order to access external values or invoke functions, you need to use the `^` operator, which is overloaded by Ecto:
+When writing a query, you are inside Ecto's query syntax. In order to access params values or invoke functions, you need to use the `^` operator, which is overloaded by Ecto:
 
 ```elixir
 def min_prcp(min) do
@@ -238,9 +238,7 @@ def min_prcp(min) do
 end
 ```
 
-This comes with the extra benefit that queries in Ecto can easily access database functions. For example, `upcase`, `downcase`, `pow` are all available inside Ecto query syntax and are sent directly to the database. You can see the full list of supported functions in the `Ecto.Query.API` module.
-
-Ecto queries are also composable and type-safe. You can find more info it and the supported keywords in the `Ecto.Query` module.
+This comes with the extra benefit that queries in Ecto provide many direct functions to the database. Furthermore, Ecto queries are also composable and type-safe. You can find more info it and the supported keywords in the `Ecto.Query` module.
 
 With this, we finish our introduction. The next section goes into more details on other Ecto features, like generators, associations and more.
 
@@ -258,16 +256,16 @@ Ecto generators will automatically open the generated files if you have `ECTO_ED
 
 When defining the schema, types need to be given. Those types are specific to Ecto and must be one of:
 
-Ecto type               | Elixir type             | Tagged in queries with
+Ecto type               | Elixir type             | Literal syntax in query
 :---------------------- | :---------------------- | :---------------------
 `:integer`              | `integer`
 `:float`                | `float`
-`:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
 `:boolean`              | `boolean`
-`:binary`               | `binary`                | `binary(<<...>>)`
 `:string`               | UTF-8 encoded `binary`
-`:uuid`                 | 16 byte `binary`        | `uuid(<<...>>)`
-`{:array, inner_type}`  | `list`                  | `array([...], :integer)`
+`:binary`               | `binary`                | `<<int, int, int, ...>>`
+`:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
+`{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
+`:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
 `:datetime`             | `%Ecto.DateTime{}`
 `:date`                 | `%Ecto.Date{}`
 `:time`                 | `%Ecto.Time{}`
@@ -376,7 +374,7 @@ defmodule Repo do
   use Ecto.Repo, adapter: Ecto.Adapters.Postgres
 
   def priv do
-    app_dir(:YOUR_APP_NAME, "priv/repo")
+    Application.app_dir(:YOUR_APP_NAME, "priv/repo")
   end
 end
 ```

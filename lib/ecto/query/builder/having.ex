@@ -12,13 +12,13 @@ defmodule Ecto.Query.Builder.Having do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding          = Builder.escape_binding(binding)
-    {expr, external} = Builder.escape(expr, binding)
-    external         = Builder.escape_external(external)
+    binding        = Builder.escape_binding(binding)
+    {expr, params} = Builder.escape(expr, :boolean, %{}, binding)
+    params         = Builder.escape_params(params)
 
     having = quote do: %Ecto.Query.QueryExpr{
                          expr: unquote(expr),
-                         external: unquote(external),
+                         params: unquote(params),
                          file: unquote(env.file),
                          line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [having], env)

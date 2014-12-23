@@ -60,11 +60,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    def all(repo, query, opts) do
+    def all(repo, query, params, opts) do
       pg_query = %{query | select: normalize_select(query.select)}
 
-      {sql, params} = SQL.select(pg_query)
-      %Postgrex.Result{rows: rows} = query(repo, sql, params, opts)
+      sql = SQL.all(pg_query)
+      %Postgrex.Result{rows: rows} = query(repo, sql, Map.values(params), opts)
 
       # Transform each row based on select expression
       transformed =
@@ -73,54 +73,61 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           transform_row(pg_query.select.expr, values, pg_query.sources) |> elem(0)
         end)
 
-      transformed
-      |> Ecto.Associations.Assoc.run(query)
-      |> preload(repo, query)
+      Ecto.Associations.Assoc.run(transformed, query)
     end
 
     @doc false
-    def insert(repo, model, opts) do
-      module    = model.__struct__
-      returning = module.__schema__(:keywords, model)
-        |> Enum.filter(fn {_, val} -> val == nil end)
-        |> Keyword.keys
+    def update_all(repo, query, values, params, opts) do
+      sql = SQL.update_all(query, values)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, Map.values(params), opts)
+      nrows
+    end
 
-      {sql, params} = SQL.insert(model, returning)
+    @doc false
+    def delete_all(repo, query, params, opts) do
+      sql = SQL.delete_all(query)
+      %Postgrex.Result{num_rows: nrows} = query(repo, sql, Map.values(params), opts)
+      nrows
+    end
 
-      case query(repo, sql, params, opts) do
+    @doc false
+    def insert(repo, source, params, opts) do
+      {fields, values} =
+        params
+        |> Enum.filter(fn {_, v} -> v != nil end)
+        |> :lists.unzip()
+
+      sql = SQL.insert(source, fields, Keyword.keys(params))
+
+      case query(repo, sql, values, opts) do
         %Postgrex.Result{rows: [values]} ->
-          Enum.zip(returning, Tuple.to_list(values))
-        _ ->
-          []
+          values
+        %Postgrex.Result{rows: []} ->
+          {}
       end
     end
 
     @doc false
-    def update(repo, model, opts) do
-      {sql, params} = SQL.update(model)
-      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
-      nrows
+    def update(repo, source, filter, fields, opts) do
+      {filter, values1} = :lists.unzip(filter)
+      {fields, values2} = :lists.unzip(fields)
+
+      sql = SQL.update(source, filter, fields, fields)
+
+      case query(repo, sql, values1 ++ values2, opts) do
+        %Postgrex.Result{rows: [values]} ->
+          values
+        %Postgrex.Result{rows: []} ->
+          {}
+      end
     end
 
     @doc false
-    def update_all(repo, query, values, external, opts) do
-      {sql, params} = SQL.update_all(query, values, external)
-      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
-      nrows
-    end
-
-    @doc false
-    def delete(repo, model, opts) do
-      {sql, params} = SQL.delete(model)
-      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
-      nrows
-    end
-
-    @doc false
-    def delete_all(repo, query, opts) do
-      {sql, params} = SQL.delete_all(query)
-      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
-      nrows
+    def delete(repo, source, filter, opts) do
+      {filter, values} = :lists.unzip(filter)
+      sql = SQL.delete(source, filter)
+      %Postgrex.Result{} = query(repo, sql, values, opts)
+      :ok
     end
 
     @doc """
@@ -187,12 +194,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {var, nested}
     end
 
-    defp preload(results, repo, query) do
-      pos = Util.locate_var(query.select.expr, {:&, [], [0]})
-      fields = Enum.map(query.preloads, &(&1.expr)) |> Enum.concat
-      Ecto.Associations.Preloader.run(results, repo, fields, pos)
-    end
-
     defp repo_pool(repo) do
       pid = repo.__postgres__(:pool_name) |> Process.whereis
 
@@ -246,11 +247,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp formatter(%TypeInfo{sender: "uuid"}), do: :binary
     defp formatter(_), do: nil
 
-    defp decoder(%TypeInfo{sender: "interval"}, :binary, default, param) do
-      {mon, day, sec} = default.(param)
-      %Ecto.Interval{year: 0, month: mon, day: day, hour: 0, min: 0, sec: sec}
-    end
-
     defp decoder(%TypeInfo{sender: sender}, :binary, default, param)
         when sender in ["timestamp", "timestamptz"] do
       default.(param)
@@ -276,15 +272,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       default.(param)
     end
 
-    defp encoder(type, default, %Ecto.Tagged{value: value}) do
+    defp encoder(type, default, %Ecto.Query.Tagged{value: value}) do
       encoder(type, default, value)
-    end
-
-    defp encoder(%TypeInfo{sender: "interval"}, default, %Ecto.Interval{} = interval) do
-      mon = interval.year * 12 + interval.month
-      day = interval.day
-      sec = interval.hour * 3600 + interval.min * 60 + interval.sec
-      default.({mon, day, sec})
     end
 
     defp encoder(%TypeInfo{sender: sender}, default, %Ecto.DateTime{} = datetime)

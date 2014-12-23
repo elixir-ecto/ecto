@@ -60,7 +60,8 @@ defmodule Ecto.Repo do
       @env unquote(env)
       require Logger
 
-      import Ecto.Utils, only: [app_dir: 2, parse_url: 1]
+      import Ecto.Utils, only: [parse_url: 1]
+      import Application, only: [app_dir: 2]
 
       if @env do
         def conf do
@@ -144,11 +145,7 @@ defmodule Ecto.Repo do
         fun.()
       end
 
-      def query_apis do
-        [Ecto.Query.API]
-      end
-
-      defoverridable [log: 2, query_apis: 0]
+      defoverridable [log: 2]
     end
   end
 
@@ -181,8 +178,8 @@ defmodule Ecto.Repo do
   given id.
 
   Returns `nil` if no result was found. If the model in the queryable
-  has no primary key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError`
-  will be raised if there is an adapter error.
+  has no primary key `Ecto.NoPrimaryKeyError` will be raised.
+  `Ecto.AdapterError` will be raised if there is an adapter error.
 
   ## Options
 
@@ -243,38 +240,6 @@ defmodule Ecto.Repo do
   defcallback all(Ecto.Query.t, Keyword.t) :: [Ecto.Model.t] | no_return
 
   @doc """
-  Stores a single new model in the data store and returns its stored
-  representation. May raise `Ecto.AdapterError` if there is an adapter error.
-
-  ## Options
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
-
-  ## Example
-
-      post = %Post{title: "Ecto is great", text: "really, it is"}
-             |> MyRepo.insert
-  """
-  defcallback insert(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
-
-  @doc """
-  Updates an model using the primary key as key. If the model has no primary
-  key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
-  there is an adapter error.
-
-  ## Options
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
-
-  ## Example
-
-      [post] = from p in Post, where: p.id == 42
-      post = %{post | title: "New title"}
-      MyRepo.update(post)
-  """
-  defcallback update(Ecto.Model.t, Keyword.t) :: :ok | no_return
-
-  @doc """
   Updates all entities matching the given query with the given values.
   `Ecto.AdapterError` will be raised if there is an adapter error.
 
@@ -294,24 +259,6 @@ defmodule Ecto.Repo do
   defmacrocallback update_all(Macro.t, Keyword.t, Keyword.t) :: integer | no_return
 
   @doc """
-  Deletes an model using the primary key as key. If the model has no primary
-  key `Ecto.NoPrimaryKey` will be raised. `Ecto.AdapterError` will be raised if
-  there is an adapter error.
-
-  ## Options
-
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
-
-  ## Example
-
-      [post] = MyRepo.all(from(p in Post, where: p.id == 42))
-      MyRepo.delete(post)
-
-  """
-  defcallback delete(Ecto.Model.t, Keyword.t) :: :ok | no_return
-
-  @doc """
   Deletes all entities matching the given query with the given values.
   `Ecto.AdapterError` will be raised if there is an adapter error.
 
@@ -327,6 +274,56 @@ defmodule Ecto.Repo do
       from(p in Post, where: p.id < 10) |> MyRepo.delete_all
   """
   defcallback delete_all(Ecto.Queryable.t, Keyword.t) :: integer | no_return
+
+  @doc """
+  Stores a single new model in the data store and returns its stored
+  representation. May raise `Ecto.AdapterError` if there is an adapter error.
+
+  ## Options
+    `:timeout` - The time in milliseconds to wait for the call to finish,
+                 `:infinity` will wait indefinitely (default: 5000);
+
+  ## Example
+
+      post = %Post{title: "Ecto is great", text: "really, it is"}
+             |> MyRepo.insert
+  """
+  defcallback insert(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
+
+  @doc """
+  Updates an model using the primary key as key. If the model has no primary
+  key `Ecto.NoPrimaryKeyError` will be raised. `Ecto.AdapterError` will be raised if
+  there is an adapter error.
+
+  ## Options
+    `:timeout` - The time in milliseconds to wait for the call to finish,
+                 `:infinity` will wait indefinitely (default: 5000);
+
+  ## Example
+
+      [post] = from p in Post, where: p.id == 42
+      post = %{post | title: "New title"}
+      MyRepo.update(post)
+  """
+  defcallback update(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
+
+  @doc """
+  Deletes an model using the primary key as key. If the model has no primary
+  key `Ecto.NoPrimaryKeyError` will be raised. `Ecto.AdapterError` will be raised if
+  there is an adapter error.
+
+  ## Options
+
+    `:timeout` - The time in milliseconds to wait for the call to finish,
+                 `:infinity` will wait indefinitely (default: 5000);
+
+  ## Example
+
+      [post] = MyRepo.all(from(p in Post, where: p.id == 42))
+      MyRepo.delete(post)
+
+  """
+  defcallback delete(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
   Runs the given function inside a transaction. If an unhandled error occurs the
@@ -403,9 +400,4 @@ defmodule Ecto.Repo do
 
   """
   defcallback log(any, (() -> any)) :: any
-
-  @doc """
-  Returns the supported query APIs. Should be overridden to customize.
-  """
-  defcallback query_apis() :: [module]
 end

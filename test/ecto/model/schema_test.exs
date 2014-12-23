@@ -73,7 +73,7 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "field name clash" do
-    assert_raise ArgumentError, "field `name` was already set on schema", fn ->
+    assert_raise ArgumentError, "field/association `name` is already set on schema", fn ->
       defmodule ModelFieldNameClash do
         use Ecto.Model
 
@@ -86,7 +86,7 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "invalid field type" do
-    assert_raise ArgumentError, "`{:apa}` is not a valid field type", fn ->
+    assert_raise ArgumentError, "unknown field type `{:apa}`", fn ->
       defmodule ModelInvalidFieldType do
         use Ecto.Model
 
@@ -184,12 +184,12 @@ defmodule Ecto.Model.SchemaTest do
 
       schema "defaults" do
         ## :type option overrides any @queryable_defaults
-        belongs_to :comment, Comment, type: :interval
+        belongs_to :comment, Comment, type: :uuid
       end
     end
 
     assert ForeignKeyType.__schema__(:field_type, :comment_id) == :datetime
-    assert DefaultForeignKeyType.__schema__(:field_type, :comment_id) == :interval
+    assert DefaultForeignKeyType.__schema__(:field_type, :comment_id) == :uuid
   end
 
   defmodule ModelAssocOpts do

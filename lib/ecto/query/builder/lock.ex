@@ -4,15 +4,35 @@ defmodule Ecto.Query.Builder.Lock do
   alias Ecto.Query.Builder
 
   @doc """
+  Escapes the lock code.
+
+      iex> escape(quote do: true)
+      true
+
+      iex> escape(quote do: "FOO")
+      "FOO"
+
+  """
+  @spec escape(Macro.t) :: Macro.t | no_return
+  def escape(lock) when is_boolean(lock) or is_binary(lock), do: lock
+
+  def escape({:^, _, [lock]}) do
+    quote do: unquote(__MODULE__).lock!(unquote(lock))
+  end
+
+  def escape(other) do
+    Builder.error! "`#{Macro.to_string(other)}` is not a valid lock expression, " <>
+                   "use ^ if you want to interpolate a value"
+  end
+
+  @doc """
   Validates the expression is an integer or raise.
   """
-  @spec validate(Macro.t) :: Macro.t | no_return
-  def validate(expr) when is_boolean(expr) or is_binary(expr), do: expr
+  def lock!(lock) when is_boolean(lock) or is_binary(lock), do: lock
 
-  def validate(expr) do
-    raise Ecto.QueryError, reason: "lock expression must be a boolean value" <>
-                             " or a string containing the database-specific locking" <>
-                             " clause, got: #{inspect expr}"
+  def lock!(lock) do
+    Builder.error! "invalid lock `#{inspect lock}`. lock must be a boolean value " <>
+                   "or a string containing the database-specific locking clause"
   end
 
   @doc """
@@ -22,23 +42,17 @@ defmodule Ecto.Query.Builder.Lock do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(:lock, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
-  def build(type, query, expr, env) do
-    expr =
-      case is_boolean(expr) or is_binary(expr) do
-        true  -> expr
-        false -> quote do: unquote(__MODULE__).validate(unquote(expr))
-      end
-    Builder.apply_query(query, __MODULE__, [type, expr], env)
+  @spec build(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, expr, env) do
+    Builder.apply_query(query, __MODULE__, [escape(expr)], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, :lock, term) :: Ecto.Query.t
-  def apply(query, :lock, value) do
+  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
+  def apply(query, value) do
     query = Ecto.Queryable.to_query(query)
     %{query | lock: value}
   end
-
 end

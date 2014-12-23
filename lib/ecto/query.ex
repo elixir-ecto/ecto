@@ -59,7 +59,8 @@ defmodule Ecto.Query do
   Fragments are sent directly to the database while also allowing field names
   like `p.title` and values like `^title` to be interpolated.
 
-  TODO: Talk about ^, field, array and friends
+  # TODO: Talk about ^, field, and friends
+  # TODO: Talk about literals: 1, 2.0 (decimal), strings, binaries, <<>>, lists, uuid, sigils
 
   ## Data security
 
@@ -82,38 +83,9 @@ defmodule Ecto.Query do
   Notice the `select` clause is optional, Ecto will automatically infers
   and returns the user record (similar to `select: u`) from the query above.
 
-  ## Type safety
+  ## Casting
 
-  Ecto queries are also type-safe. For example, the following query:
-
-      from u in User, where: u.age == "zero"
-
-  will return an error with the following message:
-
-      ** (Ecto.Query.TypeCheckError) the following expression does not type check:
-
-          &0.age() == "zero"
-
-      Allowed types for ==/2:
-
-          number == number
-          var == var
-          nil == _
-          _ == nil
-
-      Got: integer == string
-
-  The types above mean:
-
-  * `number == number` - any number (be it float, integer, etc) can be compared
-    with any other number;
-  * `var == var` - the comparison operator also works if both operands are of
-    the same type (i.e. `var` represents a variable type);
-  * `nil == _` and `_ == nil` - the comparison operator also type checks if any
-    of the operands are nil;
-
-  All operations allowed in a query with their respective type are defined
-  in `Ecto.Query.API`.
+  # TODO: Talk about casting
 
   ## Query expansion
 
@@ -141,10 +113,11 @@ defmodule Ecto.Query do
   defstruct [sources: nil, from: nil, joins: [], wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [],
              havings: [], preloads: [], distincts: [], lock: nil]
+  @opaque t :: %__MODULE__{}
 
   defmodule QueryExpr do
     @moduledoc false
-    defstruct [expr: nil, external: %{}, file: nil, line: nil]
+    defstruct [expr: nil, params: %{}, file: nil, line: nil]
   end
 
   defmodule JoinExpr do
@@ -157,6 +130,12 @@ defmodule Ecto.Query do
     defstruct parts: []
   end
 
+  defmodule Tagged do
+    @moduledoc false
+    defstruct [:value, :type]
+  end
+
+  alias Ecto.Query.Builder
   alias Ecto.Query.Builder.From
   alias Ecto.Query.Builder.Where
   alias Ecto.Query.Builder.Select
@@ -216,14 +195,79 @@ defmodule Ecto.Query do
   Note the variables `p` and `q` must be named as you find more convenient
   as they have no importance in the query sent to the database.
   """
-  defmacro from(expr, kw) do
+  defmacro from(expr, kw \\ []) do
     unless Keyword.keyword?(kw) do
-      raise ArgumentError, reason: "second argument to `from` has to be a keyword list"
+      raise ArgumentError, "second argument to `from` has to be a keyword list"
     end
 
     {quoted, binds, count_bind} = From.build(expr, __CALLER__)
-    Ecto.Query.Keyword.build(kw, __CALLER__, count_bind, quoted, binds)
+    from(kw, __CALLER__, count_bind, quoted, binds)
   end
+
+  @binds    [:where, :select, :distinct, :order_by, :group_by, :having, :limit, :offset]
+  @no_binds [:preload, :lock]
+  @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
+
+  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
+    # If all bindings are integer indexes keep AST Macro.expand'able to %Query{},
+    # otherwise ensure that quoted is evaluated before macro call
+    quoted =
+      if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do
+        quote do
+          Ecto.Query.unquote(type)(unquote(quoted), unquote(binds), unquote(expr))
+        end
+      else
+        quote do
+          query = unquote(quoted)
+          Ecto.Query.unquote(type)(query, unquote(binds), unquote(expr))
+        end
+      end
+
+    from(t, env, count_bind, quoted, binds)
+  end
+
+  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @no_binds do
+    quoted =
+      quote do
+        Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
+      end
+
+    from(t, env, count_bind, quoted, binds)
+  end
+
+  defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
+    qual =
+      case join do
+        :join       -> :inner
+        :inner_join -> :inner
+        :left_join  -> :left
+        :right_join -> :right
+        :full_join  -> :full
+      end
+
+    {t, on} = collect_on(t, nil)
+    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, count_bind, env)
+    from(t, env, count_bind, quoted, binds)
+  end
+
+  defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
+    Builder.error! "`on` keyword must immediately follow a join"
+  end
+
+  defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
+    Builder.error! "unsupported #{inspect key} in keyword query expression"
+  end
+
+  defp from([], _env, _count_bind, quoted, _binds) do
+    quoted
+  end
+
+  defp collect_on([{:on, expr}|t], nil),
+    do: collect_on(t, expr)
+  defp collect_on([{:on, expr}|t], acc),
+    do: collect_on(t, {:and, [], [acc, expr]})
+  defp collect_on(other, acc),
+    do: {other, acc}
 
   @doc """
   A join query expression.
@@ -450,7 +494,7 @@ defmodule Ecto.Query do
 
   """
   defmacro lock(query, expr) do
-    Lock.build(:lock, query, expr, __CALLER__)
+    Lock.build(query, expr, __CALLER__)
   end
 
   @doc """

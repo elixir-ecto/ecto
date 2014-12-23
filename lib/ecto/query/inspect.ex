@@ -1,10 +1,40 @@
 defimpl Inspect, for: Ecto.Query do
-  alias Ecto.Query.QueryExpr
-  alias Ecto.Query.JoinExpr
-  alias Ecto.Query.Util
   import Inspect.Algebra
 
+  alias Ecto.Query.QueryExpr
+  alias Ecto.Query.JoinExpr
+
   def inspect(query, opts) do
+    case to_list(query) do
+      [_] ->
+        "#Ecto.Query<#{unbound_from(query.from)}>"
+      list ->
+        list = Enum.map(list, fn
+          {key, string} ->
+            concat(Atom.to_string(key) <> ": ", string)
+          string ->
+            string
+        end)
+
+        surround_many("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
+    end
+  end
+
+  def to_string(query) do
+    case to_list(query) do
+      [_] ->
+        unbound_from(query.from)
+      list ->
+        Enum.map_join(list, ",\n  ", fn
+          {key, string} ->
+            Atom.to_string(key) <> ": " <> string
+          string ->
+            string
+        end)
+    end
+  end
+
+  defp to_list(query) do
     names =
       query
       |> collect_sources
@@ -18,27 +48,20 @@ defimpl Inspect, for: Ecto.Query do
     group_bys = Enum.map(query.group_bys, &{:group_by, expr(&1, names)})
     havings   = Enum.map(query.havings, &{:having, expr(&1, names)})
     order_bys = Enum.map(query.order_bys, &{:order_by, expr(&1, names)})
-    limit     = limit(query.limit, names)
-    offset    = offset(query.offset, names)
-    lock      = lock(query.lock)
-    select    = select(query.select, names)
+    preloads  = Enum.map(query.preloads, &{:preload, inspect(&1)})
+    limit     = kw_expr(:limit, query.limit, names)
+    offset    = kw_expr(:offset, query.offset, names)
+    select    = kw_expr(:select, query.select, names)
+    lock      = kw_inspect(:lock, query.lock)
 
-    list = [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select]
-           |> Enum.concat
-
-    case list do
-      [_] ->
-        "#Ecto.Query<#{unbound_from(query.from)}>"
-      _ ->
-        surround_many("#Ecto.Query<", query(list), ">", opts, fn str, _ -> str end)
-    end
+    Enum.concat [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select, preloads]
   end
+
+  defp bound_from(from, name), do: ["from #{name} in #{unbound_from from}"]
 
   defp unbound_from({source, nil}),    do: inspect source
   defp unbound_from({_source, model}), do: inspect model
-
-  defp bound_from({source, nil}, name),    do: ["from #{name} in #{inspect source}"]
-  defp bound_from({_source, model}, name), do: ["from #{name} in #{inspect model}"]
+  defp unbound_from(nil),              do: "query"
 
   defp joins(joins, names) do
     Enum.reduce(joins, {1, []}, fn expr, {ix, acc} ->
@@ -50,54 +73,36 @@ defimpl Inspect, for: Ecto.Query do
     |> Enum.concat
   end
 
-  defp join(%JoinExpr{qual: qual, assoc: {{:&, _, [ix]}, right}}, name, names) do
+  defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on}, name, names) do
     string = "#{name} in #{elem(names, ix)}.#{right}"
-    [{join_qual(qual), string}]
-  end
-
-  defp join(%JoinExpr{qual: qual, source: source, on: on}, name, names) do
-    string = "#{name} in #{inspect source}"
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
-  defp limit(nil, _names), do: []
-  defp limit(expr, names), do: [limit: expr(expr, names)]
-
-  defp offset(nil, _names), do: []
-  defp offset(expr, names), do: [offset: expr(expr, names)]
-
-  defp lock(nil),   do: []
-  defp lock(false), do: [lock: "false"]
-  defp lock(true),  do: [lock: "true"]
-  defp lock(str),   do: [lock: inspect str]
-
-  defp select(nil, _names), do: []
-  defp select(expr, names), do: [select: expr(expr, names)]
-
-  # TODO: Get rid of this
-  def pp_from_query(query, exp) do
-    names =
-      query
-      |> collect_sources
-      |> generate_letters
-      |> generate_names
-      |> List.to_tuple
-
-    expr(exp, names, %{})
+  defp join(%JoinExpr{qual: qual, source: {source, model}, on: on}, name, names) do
+    string = "#{name} in #{inspect model || source}"
+    [{join_qual(qual), string}, on: expr(on, names)]
   end
 
-  defp expr(%QueryExpr{expr: expr, external: external}, names) do
-    expr(expr, names, external)
+  defp kw_expr(_key, nil, _names), do: []
+  defp kw_expr(key, %QueryExpr{expr: expr, params: params}, names) do
+    [{key, expr(expr, names, params)}]
   end
 
-  defp expr(expr, names, external) do
-    Macro.to_string(expr, &expr_to_string(&1, &2, names, external))
+  defp kw_inspect(_key, nil), do: []
+  defp kw_inspect(key, val),  do: [{key, inspect(val)}]
+
+  defp expr(%QueryExpr{expr: expr, params: params}, names) do
+    expr(expr, names, params)
   end
 
-  defp expr_to_string(%Ecto.Query.Fragment{parts: parts}, _, names, external) do
+  defp expr(expr, names, params) do
+    Macro.to_string(expr, &expr_to_string(&1, &2, names, params))
+  end
+
+  defp expr_to_string(%Ecto.Query.Fragment{parts: parts}, _, names, params) do
     "~f[" <> Enum.map_join(parts, "", fn
       part when is_binary(part) -> part
-      part -> expr(part, names, external)
+      part -> expr(part, names, params)
     end) <> "]"
   end
 
@@ -107,10 +112,16 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Inject the interpolated value
-  defp expr_to_string({:^, _, [ix]}, _, _, external) do
-    escaped = Map.get(external, ix) |> Macro.escape
-    expr = {:^, [], [escaped]}
-    Macro.to_string(expr)
+  #
+  # In case the query had its parameters removed,
+  # we use ... to express the interpolated code.
+  defp expr_to_string({:^, _, [ix]}, _, _, params) do
+    escaped =
+      case Map.get(params || %{}, ix) do
+        {value, _type} -> Macro.escape(value)
+        _              -> {:..., [], nil}
+      end
+    Macro.to_string {:^, [], [escaped]}
   end
 
   # Strip trailing ()
@@ -120,14 +131,13 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Tagged values
-  defp expr_to_string(%Ecto.Tagged{value: value, type: {outer, inner}}, _, names, external) do
-    {outer, [], [value, inner]}
-    |> expr(names, external)
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: :binary}, _, _names, _params) do
+    inspect value
   end
 
-  defp expr_to_string(%Ecto.Tagged{value: value, type: type}, _, names, external) do
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: type}, _, names, params) do
     {type, [], [value]}
-    |> expr(names, external)
+    |> expr(names, params)
   end
 
   defp expr_to_string(_expr, string, _, _) do
@@ -139,78 +149,55 @@ defimpl Inspect, for: Ecto.Query do
   defp join_qual(:right), do: :right_join
   defp join_qual(:outer), do: :outer_join
 
-  defp query(kw) do
-    Enum.map(kw, fn
-      {key, string} ->
-        concat(Atom.to_string(key) <> ": ", string)
-      string ->
-        string
-    end)
+  defp collect_sources(query) do
+    from_sources(query.from) ++ join_sources(query.joins)
   end
 
-  defp collect_sources(query) do
-    case query.from do
-      {source, nil} ->
-        sources = [source]
-      {_source, model} ->
-        sources = [model]
-    end
+  defp from_sources({source, model}), do: [model || source]
+  defp from_sources(nil),             do: ["query"]
 
-    Enum.reduce(query.joins, sources, fn
-      %JoinExpr{assoc: {left, right}}, acc ->
-        model = Util.find_source(Enum.reverse(acc), left)
-
-        if model && (refl = model.__schema__(:association, right)) do
-          assoc = refl.associated
-          [assoc|acc]
-        else
-          [right|acc]
-        end
-
-      %JoinExpr{source: source}, acc ->
-        [source|acc]
+  defp join_sources(joins) do
+    Enum.map(joins, fn
+      %JoinExpr{assoc: {_var, assoc}} ->
+        assoc
+      %JoinExpr{source: {source, model}} ->
+        model || source
     end)
-    |> Enum.reverse
   end
 
   defp generate_letters(sources) do
     Enum.map(sources, fn source ->
       source
-      |> to_string
+      |> Kernel.to_string
       |> normalize_source
-      |> binary_first
+      |> String.first
       |> String.downcase
     end)
   end
 
   defp generate_names(letters) do
-    generate_names(letters, [])
+    generate_names(Enum.reverse(letters), [], [])
   end
 
-  defp generate_names([letter|rest], acc) do
+  defp generate_names([letter|rest], acc, found) do
+    index = Enum.count(rest, & &1 == letter)
+
     cond do
-      name = Enum.find(acc, &(binary_first(&1) == letter)) ->
-        index = name |> binary_rest |> String.to_integer
-        new_name = "#{letter}#{index + 1}"
-        generate_names(rest, [new_name|acc])
-      Enum.any?(rest, &(&1 == letter)) ->
-        new_name = "#{letter}0"
-        generate_names(rest, [new_name|acc])
+      index > 0 ->
+        generate_names(rest, ["#{letter}#{index}"|acc], [letter|found])
+      letter in found ->
+        generate_names(rest, ["#{letter}0"|acc], [letter|found])
       true ->
-        generate_names(rest, [letter|acc])
+        generate_names(rest, [letter|acc], found)
     end
   end
 
-  defp generate_names([], acc) do
-    Enum.reverse(acc)
+  defp generate_names([], acc, _found) do
+    acc
   end
 
   defp normalize_source("Elixir." <> _ = source),
     do: source |> Module.split |> List.last
   defp normalize_source(source),
     do: source
-
-  defp binary_first(<<letter, _ :: binary>>), do: <<letter>>
-
-  defp binary_rest(<<_, rest :: binary>>), do: rest
 end

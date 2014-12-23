@@ -3,15 +3,6 @@ defmodule Ecto.UtilsTest do
 
   import Ecto.Utils
 
-  test "app_dir/2" do
-    assert app_dir(:ecto, "priv/migrations") ==
-           Path.expand("../../_build/shared/lib/ecto/priv/migrations", __DIR__)
-
-    assert_raise RuntimeError, "invalid application :unknown", fn ->
-      app_dir(:unknown, "priv/migrations")
-    end
-  end
-
   test "parse_url options" do
     url = parse_url("ecto://eric:hunter2@host:12345/mydb?size=10&a=b")
     assert {:password, "hunter2"} in url
@@ -30,14 +21,15 @@ defmodule Ecto.UtilsTest do
   end
 
   test "fail on invalid urls" do
-    assert_raise Ecto.InvalidURL, ~r"url should start with a scheme", fn ->
+    assert_raise Ecto.InvalidURLError, ~r"url should start with a scheme", fn ->
       parse_url("eric:hunter2@host:123/mydb")
     end
-    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
+
+    assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
       parse_url("ecto://eric:hunter2@host:123/a/b/c")
     end
 
-    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
+    assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
       parse_url("ecto://eric:hunter2@host:123/")
     end
   end

@@ -124,8 +124,6 @@ defmodule Ecto.Model.Schema do
 
   """
 
-  require Ecto.Query.Util, as: Util
-
   @doc false
   defmacro __using__(_) do
     quote do
@@ -164,7 +162,7 @@ defmodule Ecto.Model.Schema do
         {name, type, opts} ->
           Ecto.Model.Schema.field(name, type, Keyword.put(opts, :primary_key, true))
         other ->
-          raise ArgumentError, message: ":primary_key must be false or {name, type, opts}"
+          raise ArgumentError, ":primary_key must be false or {name, type, opts}"
       end
 
       try do
@@ -349,8 +347,6 @@ defmodule Ecto.Model.Schema do
   def __field__(mod, name, type, opts) do
     check_type!(type, opts[:virtual])
 
-    fields = Module.get_attribute(mod, :ecto_fields)
-
     if opts[:primary_key] do
       if pk = Module.get_attribute(mod, :ecto_primary_key) do
         raise ArgumentError, message: "primary key already defined as `#{pk}`"
@@ -359,12 +355,8 @@ defmodule Ecto.Model.Schema do
       end
     end
 
-    if List.keyfind(fields, name, 0) do
-      raise ArgumentError, message: "field `#{name}` was already set on schema"
-    end
-
     Module.put_attribute(mod, :assign_fields, {name, type})
-    Module.put_attribute(mod, :struct_fields, {name, opts[:default]})
+    put_struct_field(mod, name, opts[:default])
 
     unless opts[:virtual] do
       Module.put_attribute(mod, :ecto_fields, {name, type, opts})
@@ -374,7 +366,7 @@ defmodule Ecto.Model.Schema do
   @doc false
   def __has_many__(mod, name, queryable, opts) do
     assoc = Ecto.Associations.HasMany.Proxy.__assoc__(:new, name, mod)
-    Module.put_attribute(mod, :struct_fields, {name, assoc})
+    put_struct_field(mod, name, assoc)
 
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :has_many, opts})
@@ -383,7 +375,7 @@ defmodule Ecto.Model.Schema do
   @doc false
   def __has_one__(mod, name, queryable, opts) do
     assoc = Ecto.Associations.HasOne.Proxy.__assoc__(:new, name, mod)
-    Module.put_attribute(mod, :struct_fields, {name, assoc})
+    put_struct_field(mod, name, assoc)
 
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :has_one, opts})
@@ -401,10 +393,20 @@ defmodule Ecto.Model.Schema do
     __field__(mod, opts[:foreign_key], foreign_key_type, [])
 
     assoc = Ecto.Associations.BelongsTo.Proxy.__assoc__(:new, name, mod)
-    Module.put_attribute(mod, :struct_fields, {name, assoc})
+    put_struct_field(mod, name, assoc)
 
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :belongs_to, opts})
+  end
+
+  defp put_struct_field(mod, name, assoc) do
+    fields = Module.get_attribute(mod, :struct_fields)
+
+    if List.keyfind(fields, name, 0) do
+      raise ArgumentError, message: "field/association `#{name}` is already set on schema"
+    end
+
+    Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
   ## Helpers
@@ -515,13 +517,14 @@ defmodule Ecto.Model.Schema do
     end
   end
 
-  defp check_type!(:any, true),     do: :ok
-  defp check_type!(type, _virtual), do: check_type!(type)
-
-  defp check_type!({outer, inner}) when outer in Util.poly_types and inner in Util.types, do: :ok
-  defp check_type!(type) when type in Util.types, do: :ok
-
-  defp check_type!(type) do
-    raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
+  defp check_type!(type, virtual?) do
+    cond do
+      type == :any and not virtual? ->
+        raise ArgumentError, "only virtual fields can have type :any"
+      Ecto.Query.Types.primitive?(type) ->
+        true
+      true ->
+        raise ArgumentError, "unknown field type `#{inspect type}`"
+    end
   end
 end
