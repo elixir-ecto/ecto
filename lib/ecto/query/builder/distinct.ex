@@ -6,8 +6,6 @@ defmodule Ecto.Query.Builder.Distinct do
   @doc """
   Escapes a list of quoted expressions.
 
-  See `Ecto.BuilderUtil.escape/2`.
-
       iex> escape(quote do [x.x, 13] end, [x: 0])
       {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
         13],

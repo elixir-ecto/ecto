@@ -63,7 +63,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def all(repo, query, params, opts) do
       pg_query = %{query | select: normalize_select(query.select)}
 
-      sql = SQL.select(pg_query)
+      sql = SQL.all(pg_query)
       %Postgrex.Result{rows: rows} = query(repo, sql, Map.values(params), opts)
 
       # Transform each row based on select expression
@@ -77,40 +77,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    def insert(repo, model, opts) do
-      module    = model.__struct__
-      returning = module.__schema__(:keywords, model)
-        |> Enum.filter(fn {_, val} -> val == nil end)
-        |> Keyword.keys
-
-      {sql, params} = SQL.insert(model, returning)
-
-      case query(repo, sql, params, opts) do
-        %Postgrex.Result{rows: [values]} ->
-          Enum.zip(returning, Tuple.to_list(values))
-        _ ->
-          []
-      end
-    end
-
-    @doc false
-    def update(repo, model, opts) do
-      {sql, params} = SQL.update(model)
-      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
-      nrows
-    end
-
-    @doc false
     def update_all(repo, query, values, params, opts) do
       sql = SQL.update_all(query, values)
       %Postgrex.Result{num_rows: nrows} = query(repo, sql, Map.values(params), opts)
-      nrows
-    end
-
-    @doc false
-    def delete(repo, model, opts) do
-      {sql, params} = SQL.delete(model)
-      %Postgrex.Result{num_rows: nrows} = query(repo, sql, params, opts)
       nrows
     end
 
@@ -119,6 +88,46 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sql = SQL.delete_all(query)
       %Postgrex.Result{num_rows: nrows} = query(repo, sql, Map.values(params), opts)
       nrows
+    end
+
+    @doc false
+    def insert(repo, source, params, opts) do
+      {fields, values} =
+        params
+        |> Enum.filter(fn {_, v} -> v != nil end)
+        |> :lists.unzip()
+
+      sql = SQL.insert(source, fields, Keyword.keys(params))
+
+      case query(repo, sql, values, opts) do
+        %Postgrex.Result{rows: [values]} ->
+          values
+        %Postgrex.Result{rows: []} ->
+          {}
+      end
+    end
+
+    @doc false
+    def update(repo, source, filter, fields, opts) do
+      {filter, values1} = :lists.unzip(filter)
+      {fields, values2} = :lists.unzip(fields)
+
+      sql = SQL.update(source, filter, fields, fields)
+
+      case query(repo, sql, values1 ++ values2, opts) do
+        %Postgrex.Result{rows: [values]} ->
+          values
+        %Postgrex.Result{rows: []} ->
+          {}
+      end
+    end
+
+    @doc false
+    def delete(repo, source, filter, opts) do
+      {filter, values} = :lists.unzip(filter)
+      sql = SQL.delete(source, filter)
+      %Postgrex.Result{} = query(repo, sql, values, opts)
+      :ok
     end
 
     @doc """

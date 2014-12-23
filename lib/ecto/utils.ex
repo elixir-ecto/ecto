@@ -27,13 +27,13 @@ defmodule Ecto.Utils do
   """
   def parse_url(url) do
     unless String.match? url, ~r/^[^:\/?#\s]+:\/\// do
-      raise Ecto.InvalidURL, url: url, reason: "url should start with a scheme, host should start with //"
+      raise Ecto.InvalidURLError, url: url, message: "url should start with a scheme, host should start with //"
     end
 
     info = URI.parse(url)
 
     unless String.match? info.path, ~r"^/([^/])+$" do
-      raise Ecto.InvalidURL, url: url, reason: "path should be a database name"
+      raise Ecto.InvalidURLError, url: url, message: "path should be a database name"
     end
 
     if info.userinfo do

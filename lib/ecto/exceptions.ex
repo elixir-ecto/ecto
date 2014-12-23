@@ -1,8 +1,3 @@
-alias Ecto.Query.Util
-
-# TODO: They should all finish with Error
-# TODO: Test NoResultsError and MultipleResultsError with unit tests
-
 defmodule Ecto.Query.CompileError do
   @moduledoc """
   Raised at compilation time when the query cannot be compiled.
@@ -31,41 +26,32 @@ defmodule Ecto.QueryError do
     end
 
     %__MODULE__{message: message}
-  rescue
-    e ->
-      IO.inspect System.stacktrace
-      reraise e, System.stacktrace
   end
 end
 
-defmodule Ecto.InvalidURL do
+defmodule Ecto.InvalidURLError do
   defexception [:message, :url]
 
   def exception(opts) do
-    msg = "invalid url #{opts[:url]}, #{opts[:reason]}"
-    %Ecto.InvalidURL{message: msg, url: opts[:url]}
+    url = Keyword.fetch!(opts, :url)
+    msg = Keyword.fetch!(opts, :message)
+    msg = "invalid url #{url}, #{msg}"
+    %__MODULE__{message: msg, url: url}
   end
 end
 
-defmodule Ecto.NoPrimaryKey do
+defmodule Ecto.NoPrimaryKeyError do
   defexception [:message, :model]
 
   def exception(opts) do
-    msg = "model `#{opts[:model]}` has no primary key"
-    %Ecto.NoPrimaryKey{message: msg, model: opts[:model]}
+    model   = Keyword.fetch!(opts, :model)
+    message = "model `#{inspect model}` has no primary key"
+    %__MODULE__{message: message, model: model}
   end
 end
 
-defmodule Ecto.InvalidModel do
-  defexception [:model, :field, :type, :expected_type, :reason]
-
-  def message(e) do
-    expected_type = Util.type_to_ast(e.expected_type) |> Macro.to_string
-    type          = Util.type_to_ast(e.type)          |> Macro.to_string
-
-    "model #{inspect e.model} failed validation when #{e.reason}, " <>
-    "field #{e.field} had type #{type} but type #{expected_type} is expected"
-  end
+defmodule Ecto.InvalidModelError do
+  defexception [:message]
 end
 
 defmodule Ecto.NoResultsError do

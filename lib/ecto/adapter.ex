@@ -5,6 +5,7 @@ defmodule Ecto.Adapter do
   """
 
   use Behaviour
+
   @type t :: module
 
   @doc """
@@ -33,16 +34,6 @@ defmodule Ecto.Adapter do
   defcallback all(Ecto.Repo.t, Ecto.Query.t, map(), Keyword.t) :: [term] | no_return
 
   @doc """
-  Stores a single new model in the data store. Returns the default values.
-  """
-  defcallback insert(Ecto.Repo.t, Ecto.Model.t, Keyword.t) :: [Keyword.t] | no_return
-
-  @doc """
-  Updates a model using the primary key as key.
-  """
-  defcallback update(Ecto.Repo.t, Ecto.Model.t, Keyword.t) :: :ok | no_return
-
-  @doc """
   Updates all entities matching the given query with the values given. The
   query shall only have `where` expressions and a single `from` expression. Returns
   the number of affected entities.
@@ -50,14 +41,25 @@ defmodule Ecto.Adapter do
   defcallback update_all(Ecto.Repo.t, Ecto.Query.t, Keyword.t, map(), Keyword.t) :: :integer | no_return
 
   @doc """
-  Deletes a model using the primary key as key.
-  """
-  defcallback delete(Ecto.Repo.t, Ecto.Model.t, Keyword.t) :: :ok | no_return
+  Deletes all entities matching the given query.
 
-  @doc """
-  Deletes all entities matching the given query. The query shall only have
-  `where` expressions and a single `from` expression. Returns the number of affected
-  entities.
+  The query shall only have `where` expressions and a `from` expression.
+  Returns the number of affected entities.
   """
   defcallback delete_all(Ecto.Repo.t, Ecto.Query.t, map(), Keyword.t) :: :integer | no_return
+
+  @doc """
+  Stores a single new model in the data store.
+  """
+  defcallback insert(Ecto.Repo.t, source :: binary, fields :: Keyword.t, Keyword.t) :: tuple | no_return
+
+  @doc """
+  Updates a model using the primary key as key.
+  """
+  defcallback update(Ecto.Repo.t, source :: binary, filter :: Keyword.t, fields :: Keyword.t, Keyword.t) :: tuple | no_return
+
+  @doc """
+  Deletes a model using the primary key as key.
+  """
+  defcallback delete(Ecto.Repo.t, source :: binary, filter :: Keyword.t, Keyword.t) :: :ok | no_return
 end

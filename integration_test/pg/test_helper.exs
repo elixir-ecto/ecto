@@ -68,7 +68,7 @@ defmodule Ecto.Integration.Postgres.Custom do
   use Ecto.Model
 
   schema "customs", primary_key: false do
-    field :foo, :string, primary_key: true
+    field :foo, :uuid, primary_key: true
   end
 end
 
@@ -77,22 +77,6 @@ defmodule Ecto.Integration.Postgres.Barebone do
 
   schema "barebones", primary_key: false do
     field :text, :string
-  end
-end
-
-defmodule Ecto.Integration.Postgres.AssignedPrimaryKey do
-  use Ecto.Model
-  @schema_defaults [primary_key: {:id, :string, []}]
-
-  schema "assigned_primary_keys" do
-  end
-end
-
-defmodule Ecto.Integration.Postgres.UUIDPrimaryKey do
-  use Ecto.Model
-  @schema_defaults [primary_key: {:id, :uuid, []}]
-
-  schema "uuid_primary_keys" do
   end
 end
 
@@ -112,8 +96,6 @@ defmodule Ecto.Integration.Postgres.Case do
       alias Ecto.Integration.Postgres.User
       alias Ecto.Integration.Postgres.Custom
       alias Ecto.Integration.Postgres.Barebone
-      alias Ecto.Integration.Postgres.AssignedPrimaryKey
-      alias Ecto.Integration.Postgres.UUIDPrimaryKey
     end
   end
 
@@ -166,11 +148,8 @@ setup_database = [
   "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, day date, time time, bytes bytea, post_id integer, author_id integer)",
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
-  "CREATE TABLE customs (foo text PRIMARY KEY)",
+  "CREATE TABLE customs (foo uuid PRIMARY KEY)",
   "CREATE TABLE barebones (text text)",
-  "CREATE TABLE assigned_primary_keys (id text PRIMARY KEY)",
-  "CREATE TABLE uuid_primary_keys (id uuid PRIMARY KEY)",
-  "CREATE TABLE transaction (id serial, text text)",
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
 ]
 

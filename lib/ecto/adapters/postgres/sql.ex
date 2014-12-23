@@ -10,30 +10,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Query.JoinExpr
     alias Ecto.Query.Util
 
-    binary_ops =
-      [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
-       and: "AND", or: "OR",
-       ilike: "ILIKE", like: "LIKE"]
-
-    @binary_ops Dict.keys(binary_ops)
-
-    Enum.map(binary_ops, fn {op, str} ->
-      defp handle_fun(unquote(op), 2), do: {:binary_op, unquote(str)}
-    end)
-
-    defp handle_fun(fun, _arity), do: {:fun, Atom.to_string(fun)}
-
-    defp quote_table(table), do: "\"#{table}\""
-    defp quote_column(column), do: "\"#{column}\""
-
-    # Generate SQL for a select statement
-    def select(query) do
+    # Generate a select statement for all
+    def all(query) do
       # Generate SQL for every query expression type and combine to one string
       sources = create_names(query)
 
       from     = from(sources)
       select   = select(query.select, query.distincts, sources)
-      join     = join(query, sources)
+      join     = join(query.joins, sources)
       where    = where(query.wheres, sources)
       group_by = group_by(query.group_bys, sources)
       having   = having(query.havings, sources)
@@ -42,61 +26,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       offset   = offset(query.offset, sources)
       lock     = lock(query.lock)
 
-      sql =
-        [select, from, join, where, group_by, having, order_by, limit, offset, lock]
-        |> Enum.filter(&(&1 != nil))
-        |> List.flatten
-        |> Enum.join(" ")
-
-      sql
-    end
-
-    # Generate SQL for an insert statement
-    def insert(model, returning) do
-      module = model.__struct__
-      table  = module.__schema__(:source)
-
-      {fields, values} = module.__schema__(:keywords, model)
-        |> Enum.filter(fn {_, val} -> val != nil end)
-        |> :lists.unzip
-
-      sql = "INSERT INTO #{quote_table(table)}"
-
-      if fields == [] do
-        sql = sql <> " DEFAULT VALUES"
-      else
-        sql = sql <>
-          " (" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ") " <>
-          "VALUES (" <> Enum.map_join(1..length(values), ", ", &"$#{&1}") <> ")"
-      end
-
-      if !Enum.empty?(returning) do
-        sql = sql <> " RETURNING " <> Enum.map_join(returning, ", ", &quote_column(&1))
-      end
-
-      {sql, values}
-    end
-
-    # Generate SQL for an update statement
-    def update(model) do
-      module   = model.__struct__
-      table    = module.__schema__(:source)
-      pk_field = module.__schema__(:primary_key)
-      pk_value = Map.get(model, pk_field)
-
-      {fields, values} = module.__schema__(:keywords, model, primary_key: false)
-                         |> :lists.unzip
-
-      fields = Enum.with_index(fields)
-      sql_sets = Enum.map_join(fields, ", ", fn {k, ix} ->
-        "#{quote_column(k)} = $#{ix+1}"
-      end)
-
-      sql =
-        "UPDATE #{quote_table(table)} SET " <> sql_sets <> " " <>
-        "WHERE #{quote_column(pk_field)} = $#{length(values)+1}"
-
-      {sql, values ++ [pk_value]}
+      [select, from, join, where, group_by, having, order_by, limit, offset, lock]
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.join(" ")
     end
 
     # Generate SQL for an update all statement
@@ -117,27 +49,78 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       where
     end
 
-    # Generate SQL for a delete statement
-    def delete(model) do
-      module   = model.__struct__
-      table    = module.__schema__(:source)
-      pk_field = module.__schema__(:primary_key)
-      pk_value = Map.get(model, pk_field)
-
-      sql = "DELETE FROM #{quote_table(table)} WHERE #{quote_column(pk_field)} = $1"
-      {sql, [pk_value]}
-    end
-
     # Generate SQL for an delete all statement
     def delete_all(query) do
-      sources         = create_names(query)
-      from            = elem(sources, 0)
-      {table, name}   = Util.source(from)
+      sources       = create_names(query)
+      from          = elem(sources, 0)
+      {table, name} = Util.source(from)
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
       "DELETE FROM #{quote_table(table)} AS #{name}" <> where
     end
+
+    # Generate SQL for an insert statement
+    def insert(table, fields, returning) do
+      values =
+        if fields == [] do
+          "DEFAULT VALUES"
+        else
+          "(" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ") " <>
+          "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
+        end
+
+      "INSERT INTO #{quote_table(table)} " <> values <> returning(returning)
+    end
+
+    # Generate SQL for an update statement
+    def update(table, filters, fields, returning) do
+      {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
+        {"#{quote_column(field)} = $#{acc}", acc + 1}
+      end
+
+      {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
+        {"#{quote_column(field)} = $#{acc}", acc + 1}
+      end
+
+      "UPDATE #{quote_table(table)} SET " <> Enum.join(fields, ", ") <>
+      " WHERE " <> Enum.join(filters, " AND ") <>
+      returning(returning)
+    end
+
+    # Generate SQL for a delete statement
+    def delete(table, filters) do
+      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
+        {"#{quote_column(field)} = $#{acc}", acc + 1}
+      end
+
+      "DELETE FROM #{quote_table(table)} WHERE " <> Enum.join(filters, " AND ")
+    end
+
+    ## Helpers
+
+    defp quote_table(table), do: "\"#{table}\""
+    defp quote_column(column), do: "\"#{column}\""
+
+    defp returning([]),
+      do: ""
+    defp returning(returning),
+      do: " RETURNING " <> Enum.map_join(returning, ", ", &quote_column/1)
+
+    ## Query generation
+
+    binary_ops =
+      [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
+       and: "AND", or: "OR",
+       ilike: "ILIKE", like: "LIKE"]
+
+    @binary_ops Dict.keys(binary_ops)
+
+    Enum.map(binary_ops, fn {op, str} ->
+      defp handle_fun(unquote(op), 2), do: {:binary_op, unquote(str)}
+    end)
+
+    defp handle_fun(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
     defp select(%QueryExpr{expr: expr}, [], sources) do
       "SELECT " <> select_clause(expr, sources)
@@ -158,9 +141,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "FROM #{quote_table(table)} AS #{name}"
     end
 
-    defp join(query, sources) do
-      joins = Stream.with_index(query.joins)
-      Enum.map(joins, fn
+    defp join([], _sources), do: nil
+    defp join(joins, sources) do
+      joins = Enum.with_index(joins)
+      Enum.map_join(joins, " ", fn
         {%JoinExpr{on: %QueryExpr{expr: expr}, qual: qual}, ix} ->
           source        = elem(sources, ix+1)
           {table, name} = Util.source(source)
@@ -186,29 +170,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp group_by([], _sources), do: nil
-
     defp group_by(group_bys, sources) do
-      exprs =
-        Enum.map(group_bys, fn
+      "GROUP BY " <>
+        Enum.map_join(group_bys, ", ", fn
           %QueryExpr{expr: expr} ->
             Enum.map_join(expr, ", ", &expr(&1, sources))
         end)
-
-      exprs = Enum.join(exprs, ", ")
-      "GROUP BY " <> exprs
     end
 
     defp order_by([], _sources), do: nil
-
     defp order_by(order_bys, sources) do
-      exprs =
-        Enum.map(order_bys, fn
+      "ORDER BY " <>
+        Enum.map_join(order_bys, ", ", fn
           %QueryExpr{expr: expr} ->
             Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
         end)
-
-      exprs = Enum.join(exprs, ", ")
-      "ORDER BY " <> exprs
     end
 
     defp order_by_expr({dir, expr}, sources) do
@@ -235,16 +211,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp lock(lock_clause), do: lock_clause
 
     defp boolean(_name, [], _sources), do: nil
-
     defp boolean(name, query_exprs, sources) do
-      exprs =
-        Enum.map(query_exprs, fn
+      name <> " " <>
+        Enum.map_join(query_exprs, " AND ", fn
           %QueryExpr{expr: expr} ->
             "(" <> expr(expr, sources) <> ")"
         end)
-
-      exprs = Enum.join(exprs, " AND ")
-      name <> " " <> exprs
     end
 
     defp expr({arg, _, []}, sources) when is_tuple(arg) do

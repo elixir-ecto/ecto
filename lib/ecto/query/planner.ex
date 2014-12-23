@@ -9,6 +9,32 @@ defmodule Ecto.Query.Planner do
   alias Ecto.Associations.Assoc
 
   @doc """
+  Plans a model for query execution.
+
+  It is mostly a matter of casting the
+  field values.
+  """
+  def model(kind, model, kw, dumper \\ &Types.dump/2) do
+    for {field, value} <- kw do
+      type = model.__schema__(:field_type, field)
+
+      unless type do
+        raise Ecto.InvalidModelError,
+          message: "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
+      end
+
+      case dumper.(type, value) do
+        {:ok, value} ->
+          {field, value}
+        :error ->
+          raise Ecto.InvalidModelError,
+            message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>
+                     "in `#{kind}` does not match type #{inspect type}"
+      end
+    end
+  end
+
+  @doc """
   Plans the query for execution.
 
   Planning happens in multiple steps:
@@ -27,7 +53,7 @@ defmodule Ecto.Query.Planner do
 
   Currently only steps 1 and 3 are implemented.
   """
-  def plan(query, base, opts \\ []) do
+  def query(query, base, opts \\ []) do
     {query, params} = prepare(query, base)
     {normalize(query, base, opts), params}
   end
@@ -74,8 +100,6 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  # TODO: Add cast
-  # TODO: Add type validation
   defp cast_and_merge_params(kind, query, expr, params) do
     size = Map.size(params)
     Enum.reduce expr.params, params, fn {k, {v, type}}, acc ->

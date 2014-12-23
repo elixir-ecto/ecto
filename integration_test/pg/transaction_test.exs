@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.TransactionTest do
-  use ExUnit.Case, async: false
+  use ExUnit.Case
 
   import Ecto.Query
   alias Ecto.Adapters.Postgres
@@ -25,20 +25,20 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   setup_all do
-    { :ok, _ } = TestRepo1.start_link
-    { :ok, _ } = TestRepo2.start_link
+    {:ok, _} = TestRepo1.start_link
+    {:ok, _} = TestRepo2.start_link
     :ok
   end
 
   setup do
-    Postgres.query(TestRepo1, "DELETE FROM transaction", [])
+    Postgres.query(TestRepo1, "DELETE FROM posts", [])
     :ok
   end
 
   defmodule Trans do
     use Ecto.Model
 
-    schema "transaction" do
+    schema "posts" do
       field :text, :string
     end
   end
@@ -49,7 +49,7 @@ defmodule Ecto.Integration.TransactionTest do
         42
       end)
     end)
-    assert x == { :ok, { :ok, 42 } }
+    assert x == {:ok, {:ok, 42}}
   end
 
   test "transaction re-raises" do
@@ -117,7 +117,7 @@ defmodule Ecto.Integration.TransactionTest do
       TestRepo1.rollback
     end)
 
-    assert x == { :error, nil }
+    assert x == {:error, nil}
     assert [] = TestRepo2.all(Trans)
   end
 
@@ -126,7 +126,7 @@ defmodule Ecto.Integration.TransactionTest do
       TestRepo1.rollback(:foo)
     end)
 
-    assert x == { :error, :foo }
+    assert x == {:error, :foo}
     assert [] = TestRepo2.all(Trans)
   end
 

@@ -21,14 +21,15 @@ defmodule Ecto.UtilsTest do
   end
 
   test "fail on invalid urls" do
-    assert_raise Ecto.InvalidURL, ~r"url should start with a scheme", fn ->
+    assert_raise Ecto.InvalidURLError, ~r"url should start with a scheme", fn ->
       parse_url("eric:hunter2@host:123/mydb")
     end
-    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
+
+    assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
       parse_url("ecto://eric:hunter2@host:123/a/b/c")
     end
 
-    assert_raise Ecto.InvalidURL, ~r"path should be a database name", fn ->
+    assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
       parse_url("ecto://eric:hunter2@host:123/")
     end
   end

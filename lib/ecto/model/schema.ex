@@ -124,8 +124,6 @@ defmodule Ecto.Model.Schema do
 
   """
 
-  require Ecto.Query.Util, as: Util
-
   @doc false
   defmacro __using__(_) do
     quote do
@@ -164,7 +162,7 @@ defmodule Ecto.Model.Schema do
         {name, type, opts} ->
           Ecto.Model.Schema.field(name, type, Keyword.put(opts, :primary_key, true))
         other ->
-          raise ArgumentError, message: ":primary_key must be false or {name, type, opts}"
+          raise ArgumentError, ":primary_key must be false or {name, type, opts}"
       end
 
       try do
@@ -519,13 +517,14 @@ defmodule Ecto.Model.Schema do
     end
   end
 
-  defp check_type!(:any, true),     do: :ok
-  defp check_type!(type, _virtual), do: check_type!(type)
-
-  defp check_type!({outer, inner}) when outer in Util.poly_types and inner in Util.types, do: :ok
-  defp check_type!(type) when type in Util.types, do: :ok
-
-  defp check_type!(type) do
-    raise ArgumentError, message: "`#{Macro.to_string(type)}` is not a valid field type"
+  defp check_type!(type, virtual?) do
+    cond do
+      type == :any and not virtual? ->
+        raise ArgumentError, "only virtual fields can have type :any"
+      Ecto.Query.Types.primitive?(type) ->
+        true
+      true ->
+        raise ArgumentError, "unknown field type `#{inspect type}`"
+    end
   end
 end
