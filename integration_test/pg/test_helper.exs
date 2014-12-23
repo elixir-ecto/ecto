@@ -150,6 +150,7 @@ setup_database = [
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
   "CREATE TABLE customs (foo uuid PRIMARY KEY)",
   "CREATE TABLE barebones (text text)",
+  "CREATE TABLE transactions (id serial PRIMARY KEY, text text)",
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
 ]
 

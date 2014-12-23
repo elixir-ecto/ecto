@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.LockTest do
-  use Ecto.Integration.Postgres.Case
+  use ExUnit.Case, async: true
 
   import Ecto.Query
   alias Ecto.Adapters.Postgres

@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.TransactionTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   import Ecto.Query
   alias Ecto.Adapters.Postgres
@@ -31,14 +31,14 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   setup do
-    Postgres.query(TestRepo1, "DELETE FROM posts", [])
+    Postgres.query(TestRepo1, "DELETE FROM transactions", [])
     :ok
   end
 
   defmodule Trans do
     use Ecto.Model
 
-    schema "posts" do
+    schema "transactions" do
       field :text, :string
     end
   end

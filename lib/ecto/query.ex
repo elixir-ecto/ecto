@@ -94,7 +94,7 @@ defmodule Ecto.Query do
 
   ## Casting
 
-  Ecto is able to cast values in queries:
+  Ecto is able to cast interpolated values in queries:
 
       age = "1"
       Repo.all(from u in User, where: u.age > ^age)

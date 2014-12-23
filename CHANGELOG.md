@@ -2,9 +2,13 @@
 
 * Enhancements
   * Support fragments in queries with the `fragment(...)` function
+  * Interpolated values in queries are now automatically cast. For example, `from u in User, where: u.age > ^"10"` will automatically cast "10" to an integer. Failing to cast will trigger an `Ecto.CastError`. Custom types will soon provide 
+  * `preload`, `lock` and `order_by` now allow dynamic values
+  * Improve and relax type inference. Ecto no longer requires `array(array, type)`, `binary(...)` and so on for interpolated values. In fact, the functions above have been removed.
 
 * Backwards incompatible changes
   * `:virtual` type no longer exists, instead pass `virtual: true` as field option
+  * Adapter API for `insert`, `update` and `delete` has been simplified
 
 # v0.2.8 (2014-12-16)
 
