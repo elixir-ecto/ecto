@@ -174,12 +174,11 @@ defmodule Ecto.Repo.Backend do
 
   ## Query Helpers
 
-  # TODO: Test the error message
   defp preload_for_all(_repo, %{preloads: []}, results), do: results
   defp preload_for_all(repo, query, results) do
     var      = {:&, [], [0]}
     expr     = query.select.expr
-    preloads = Enum.concat(query.preloads)
+    preloads = List.flatten(query.preloads)
 
     cond do
       is_var?(expr, var) ->
@@ -207,7 +206,6 @@ defmodule Ecto.Repo.Backend do
   defp select_var(_, _),
     do: nil
 
-  # TODO: Test the error message
   defp query_for_get(queryable, id) do
     query = Queryable.to_query(queryable)
     model = model!(:get, query)
@@ -215,7 +213,6 @@ defmodule Ecto.Repo.Backend do
     Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
   end
 
-  # TODO: Test the error message
   defp model!(kind, query) do
     case query.from do
       {_source, model} when model != nil ->

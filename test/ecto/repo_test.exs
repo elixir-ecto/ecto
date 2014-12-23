@@ -90,6 +90,11 @@ defmodule Ecto.RepoTest do
     assert_raise Ecto.CastError, message, fn ->
       MockRepo.get(MyModel, :atom)
     end
+
+    message = ~r"query in `get` must have a from expression with a model in query"
+    assert_raise Ecto.QueryError, message, fn ->
+      MockRepo.get(%Ecto.Query{}, :atom)
+    end
   end
 
   test "repo validates update_all" do
@@ -137,6 +142,13 @@ defmodule Ecto.RepoTest do
 
     assert_raise Ecto.QueryError, fn ->
       MockRepo.delete_all from(e in MyModel, order_by: e.x)
+    end
+  end
+
+  test "repo validates preload" do
+    message = ~r"source in from expression needs to be directly selected when using preload"
+    assert_raise Ecto.QueryError, message, fn ->
+      MockRepo.all MyModel |> preload(:hello) |> select([m], m.x)
     end
   end
 

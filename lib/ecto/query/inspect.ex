@@ -5,33 +5,23 @@ defimpl Inspect, for: Ecto.Query do
   alias Ecto.Query.JoinExpr
 
   def inspect(query, opts) do
-    case to_list(query) do
-      [_] ->
-        "#Ecto.Query<#{unbound_from(query.from)}>"
-      list ->
-        list = Enum.map(list, fn
-          {key, string} ->
-            concat(Atom.to_string(key) <> ": ", string)
-          string ->
-            string
-        end)
+    list = Enum.map(to_list(query), fn
+      {key, string} ->
+        concat(Atom.to_string(key) <> ": ", string)
+      string ->
+        string
+    end)
 
-        surround_many("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
-    end
+    surround_many("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
   end
 
   def to_string(query) do
-    case to_list(query) do
-      [_] ->
-        unbound_from(query.from)
-      list ->
-        Enum.map_join(list, ",\n  ", fn
-          {key, string} ->
-            Atom.to_string(key) <> ": " <> string
-          string ->
-            string
-        end)
-    end
+    Enum.map_join(to_list(query), ",\n  ", fn
+      {key, string} ->
+        Atom.to_string(key) <> ": " <> string
+      string ->
+        string
+    end)
   end
 
   defp to_list(query) do
@@ -64,13 +54,9 @@ defimpl Inspect, for: Ecto.Query do
   defp unbound_from(nil),              do: "query"
 
   defp joins(joins, names) do
-    Enum.reduce(joins, {1, []}, fn expr, {ix, acc} ->
-      string = join(expr, elem(names, ix), names)
-      {ix + 1, [string|acc]}
-    end)
-    |> elem(1)
-    |> Enum.reverse
-    |> Enum.concat
+    joins
+    |> Enum.with_index
+    |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, ix + 1), names) end)
   end
 
   defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on}, name, names) do
