@@ -122,4 +122,8 @@ defmodule Ecto.Migration.DSLTest do
   test "table exists" do
     assert table_exists?(:products) == {:checked_existence, {:table, :products}}
   end
+
+  test "index exists" do
+    assert index_exists?(:products_index) == {:checked_existence, {:index, :products_index}}
+  end
 end

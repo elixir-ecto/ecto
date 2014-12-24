@@ -354,8 +354,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT oid FROM pg_class WHERE relname = '#{table_name}') AND attname = '#{column_name}'"
     end
 
-    def object_exists_query({:table, table_name}) do
-      "SELECT count(1) FROM pg_tables WHERE tablename='#{table_name}'"
+    def object_exists_query({:table, name}) do
+      "SELECT count(1) FROM pg_tables WHERE tablename='#{name}'"
+    end
+
+    def object_exists_query({:index, name}) do
+      "SELECT count(1) FROM pg_class WHERE relname = '#{name}' AND relkind = 'i'"
     end
 
     defp column_definitions(columns) do

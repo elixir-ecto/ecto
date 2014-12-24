@@ -431,4 +431,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.object_exists_query({:table, :products}) ==
       "SELECT count(1) FROM pg_tables WHERE tablename='products'"
   end
+
+  test "index exists" do
+    assert SQL.object_exists_query({:index, "index$1"}) ==
+      "SELECT count(1) FROM pg_class WHERE relname = 'index$1' AND relkind = 'i'"
+  end
 end
