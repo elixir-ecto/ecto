@@ -16,6 +16,10 @@ defmodule Ecto.Migration.DSLTest do
     def handle_call({:execute, command}, _from, state) do
       {:reply, {:executed, command}, state}
     end
+
+    def handle_call({:exists, type, object}, _from, state) do
+      {:reply, {:exists, type, object}, state}
+    end
   end
 
   setup do
@@ -24,7 +28,7 @@ defmodule Ecto.Migration.DSLTest do
   end
 
   test "executing" do
-    assert execute("a response") == {:executed, "a response"}
+    assert execute("some sql command") == {:executed, "some sql command"}
   end
 
   test "creating table" do
@@ -109,5 +113,9 @@ defmodule Ecto.Migration.DSLTest do
     assert response == {:executed, {:create, %Table{name: :products, key: true},
                         [{:add, :id, :primary_key, []},
                          {:add, :category_id, {:references, :category, :id, :integer}, []}]}}
+  end
+
+  test "column exists" do
+    assert column_exists?(:products, :name) == {:exists, :column, {:products, :name}}
   end
 end
