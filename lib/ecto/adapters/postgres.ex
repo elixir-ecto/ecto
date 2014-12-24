@@ -428,6 +428,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           end)
           :ok
       end
+    def execute_migration(repo, definition) do
+      query(repo, SQL.migrate(definition), [])
     end
 
     @doc false
@@ -437,21 +439,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       Enum.map(rows, &elem(&1, 0))
     end
 
-    defp create_migrations_table(repo) do
-      query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)", [])
-    end
-
-    defp check_migration_version(repo, version) do
-      create_migrations_table(repo)
-      query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}", [])
-    end
-
-    defp insert_migration_version(repo, version) do
+    @doc false
+    def insert_migration_version(repo, version) do
       query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})", [])
     end
 
-    defp delete_migration_version(repo, version) do
+    @doc false
+    def delete_migration_version(repo, version) do
       query(repo, "DELETE FROM schema_migrations WHERE version = #{version}", [])
+    end
+
+    @doc false
+    defp create_migrations_table(repo) do
+      query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)", [])
     end
   end
 end

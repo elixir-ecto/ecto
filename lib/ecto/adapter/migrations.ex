@@ -6,28 +6,34 @@ defmodule Ecto.Adapter.Migrations  do
   use Behaviour
 
   @doc """
-  Runs an up migration.
-
-  It expects a repository, the migration version and the migration code.
+  Records that a migration has completed successfully.
 
   ## Examples
 
-    migrate_up(Repo, 20080906120000, "CREATE TABLE users(id serial, name text)")
+    insert_migration_version(Repo, 20080906120000)
 
   """
-  defcallback migrate_up(Ecto.Repo.t, integer, binary) :: :ok | :already_up | no_return
+  defcallback insert_migration_version(Ecto.Repo.t, integer) :: :ok | no_return
 
   @doc """
-  Runs a down migration.
-
-  It expects a repository, the migration version and the migration code.
+  Removes record of migration when version is rolled back.
 
   ## Examples
 
-    migrate_down(Repo, 20080906120000, "DROP TABLE users")
+    delete_migration_version(Repo, 20080906120000)
 
   """
-  defcallback migrate_down(Ecto.Repo.t, integer, binary) :: :ok | :missing_up | no_return
+  defcallback delete_migration_version(Ecto.Repo.t, integer) :: :ok | no_return
+
+  @doc """
+  Executes migration commands like `{:create, ..}`, `{:drop, ..}`.
+
+  ## Examples
+
+    execute_migration(Repo, {:drop, :index, %Index{name: "products$test"}})
+
+  """
+  defcallback execute_migration(Ecto.Repo.t, tuple) :: :ok | no_return
 
   @doc """
   Returns all migrated versions as integers.
