@@ -238,7 +238,7 @@ def min_prcp(min) do
 end
 ```
 
-This comes with the extra benefit that queries in Ecto provide many direct functions to the database. Furthermore, Ecto queries are also composable and type-safe. You can find more info it and the supported keywords in the `Ecto.Query` module.
+This comes with the extra benefit that queries in Ecto provide many direct functions to the database. Furthermore, Ecto queries are also composable and type-safe. You can find more on queries and the supported keywords in the `Ecto.Query` module.
 
 With this, we finish our introduction. The next section goes into more details on other Ecto features, like generators, associations and more.
 
