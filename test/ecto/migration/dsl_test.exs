@@ -73,6 +73,34 @@ defmodule Ecto.Migration.DSLTest do
                          {:rename, :name, :title}]}}
   end
 
+  test "add column" do
+    response = add_column(:products, :title, :string)
+
+    assert response == {:executed, {:alter, %Table{name: :products},
+                        [{:add, :title, :string, []}]}}
+  end
+
+  test "modify column" do
+    response = modify_column(:products, :title, :string)
+
+    assert response == {:executed, {:alter, %Table{name: :products},
+                        [{:modify, :title, :string, []}]}}
+  end
+
+  test "remove column" do
+    response = remove_column(:products, :title)
+
+    assert response == {:executed, {:alter, %Table{name: :products},
+                        [{:remove, :title}]}}
+  end
+
+  test "rename column" do
+    response = rename_column(:products, :title, :name)
+
+    assert response == {:executed, {:alter, %Table{name: :products},
+                        [{:rename, :title, :name}]}}
+  end
+
   test "references" do
     response = create table(:products) do
       add :category_id, references(:category)
