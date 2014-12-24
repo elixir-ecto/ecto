@@ -32,6 +32,17 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
+  def handle_call({:exists, command}, _from, state={direction, repo}) do
+    exists = repo.adapter.object_exists?(repo, command)
+    response = if direction == :forward, do: exists, else: !exists
+
+    {:reply, response, state}
+  end
+
+  def handle_call({:exists, command}, _from, state={:forward, repo}) do
+    {:reply, !repo.adapter.object_exists?(repo, command), state}
+  end
+
   @doc """
   Changes the direction to run commands.
   """
@@ -48,6 +59,13 @@ defmodule Ecto.Migration.Runner do
       :irreversible -> raise Ecto.MigrationError, message: "Cannot reverse migration command: #{inspect command}"
       response      -> response
     end
+  end
+
+  @doc """
+  Checks if object type exists
+  """
+  def exists?(type, object) do
+    call {:exists, {type, object}}
   end
 
   defp call(message) do

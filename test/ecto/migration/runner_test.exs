@@ -9,6 +9,9 @@ defmodule Ecto.Migration.RunnerTest do
     def execute_migration(_repo, command) do
       {:migrated, command}
     end
+
+    def object_exists?(_repo, {:column, {:products, :name}}), do: true
+    def object_exists?(_repo, _), do: false
   end
 
   defmodule MockRepo do
@@ -82,5 +85,17 @@ defmodule Ecto.Migration.RunnerTest do
     assert_raise Ecto.MigrationError, fn ->
       Runner.execute({:alter, %Table{}, [{:modify, :summary, :string, []}]})
     end
+  end
+
+  test "column exists" do
+    assert Runner.exists?(:column, {:products, :name}) == true
+    assert Runner.exists?(:column, {:products, :title}) == false
+  end
+
+  test "column exists in reverse" do
+    Runner.direction(:reverse)
+
+    assert Runner.exists?(:column, {:products, :name}) == false
+    assert Runner.exists?(:column, {:products, :title}) == true
   end
 end
