@@ -400,34 +400,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Migration API
 
-    @migrate_opts [timeout: :infinity]
-
     @doc false
-    def migrate_up(repo, version, commands) do
-      case check_migration_version(repo, version) do
-        %Postgrex.Result{num_rows: 0} ->
-          transaction(repo, [], fn ->
-            Enum.each(commands, &query(repo, &1, [], @migrate_opts))
-            insert_migration_version(repo, version)
-          end)
-          :ok
-        _ ->
-          :already_up
-      end
-    end
-
-    @doc false
-    def migrate_down(repo, version, commands) do
-      case check_migration_version(repo, version) do
-        %Postgrex.Result{num_rows: 0} ->
-          :missing_up
-        _ ->
-          transaction(repo, [], fn ->
-            Enum.each(commands, &query(repo, &1, [], @migrate_opts))
-            delete_migration_version(repo, version)
-          end)
-          :ok
-      end
     def execute_migration(repo, definition) do
       query(repo, SQL.migrate(definition), [])
     end

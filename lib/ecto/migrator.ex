@@ -27,8 +27,15 @@ defmodule Ecto.Migrator do
   """
   @spec up(Ecto.Repo.t, integer, Module.t) :: :ok | :already_up | no_return
   def up(repo, version, module) do
-    commands = List.wrap(module.up)
-    repo.adapter.migrate_up(repo, version, commands)
+    if repo.adapter.migrated_versions(repo) |> Enum.member?(version) do
+      :already_up
+    else
+      module.up repo, fn ->
+        repo.adapter.insert_migration_version(repo, version)
+      end
+
+      :ok
+    end
   end
 
   @doc """
@@ -36,8 +43,14 @@ defmodule Ecto.Migrator do
   """
   @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :missing_up | no_return
   def down(repo, version, module) do
-    commands = List.wrap(module.down)
-    repo.adapter.migrate_down(repo, version, commands)
+    if repo.adapter.migrated_versions(repo) |> Enum.member?(version) do
+      module.down repo, fn ->
+        repo.adapter.delete_migration_version(repo, version)
+      end
+      :ok
+    else
+      :already_down
+    end
   end
 
   @doc """

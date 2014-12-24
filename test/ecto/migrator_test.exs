@@ -12,32 +12,60 @@ defmodule Ecto.MigratorTest do
       __MODULE__
     end
 
-    def migrate_up(__MODULE__, id, ["up"]) do
-      versions = migrated_versions(__MODULE__)
-      if id in versions, do: :already_up, else: :ok
-    end
-
-    def migrate_down(__MODULE__, id, ["down"]) do
-      versions = migrated_versions(__MODULE__)
-      if id in versions, do: :ok, else: :already_down
-    end
-
     def migrated_versions(__MODULE__) do
       Process.get(:migrated_versions)
     end
+    def insert_migration_version(__MODULE__, _version), do: nil
+    def delete_migration_version(__MODULE__, _version), do: nil
+    def execute_migration(__MODULE__, _command),        do: nil
+
+    def transaction(fun), do: fun.()
   end
 
   defmodule Migration do
+    use Ecto.Migration
+
     def up do
-      "up"
+      execute "up"
     end
 
     def down do
-      "down"
+      execute "down"
+    end
+  end
+
+  defmodule ReversibleMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:posts) do
+        add :name, :string
+      end
+    end
+  end
+
+  defmodule InvalidMigration do
+    use Ecto.Migration
+  end
+
+  defmodule MockRunner do
+    use GenServer
+
+    def start_link do
+      GenServer.start_link(__MODULE__, [], [name: Ecto.Migration.Runner])
+    end
+
+    def handle_call({:direction, direction}, _from, state) do
+      {:reply, {:changed, direction}, state}
+    end
+
+    def handle_call({:execute, command}, _from, state) do
+      {:reply, {:executed, command}, state}
     end
   end
 
   setup do
+    {:ok, _} = MockRunner.start_link
     Process.put(:migrated_versions, [1, 2, 3])
     :ok
   end
@@ -46,6 +74,7 @@ defmodule Ecto.MigratorTest do
     capture_io(fn ->
       assert up(ProcessRepo, 0, Migration) == :ok
       assert up(ProcessRepo, 1, Migration) == :already_up
+      assert up(ProcessRepo, 0, ReversibleMigration) == :ok
     end)
   end
 
@@ -53,7 +82,20 @@ defmodule Ecto.MigratorTest do
     capture_io(fn ->
       assert down(ProcessRepo, 0, Migration) == :already_down
       assert down(ProcessRepo, 1, Migration) == :ok
+      assert down(ProcessRepo, 1, ReversibleMigration) == :ok
     end)
+  end
+
+  test "up raises error when missing up/0 and change/0" do
+    assert_raise Ecto.MigrationError, fn ->
+      Ecto.Migrator.up(ProcessRepo, 0, InvalidMigration)
+    end
+  end
+
+  test "down raises error when missing down/0 and change/0" do
+    assert_raise Ecto.MigrationError, fn ->
+      Ecto.Migrator.down(ProcessRepo, 1, InvalidMigration)
+    end
   end
 
   test "expects files starting with an integer" do
@@ -167,11 +209,13 @@ defmodule Ecto.MigratorTest do
       use Ecto.Migration
 
       def up do
-        "up"
+        create table(:products) do
+          add :name, :string
+        end
       end
 
       def down do
-        "down"
+        drop table(:products)
       end
     end
     """
