@@ -170,4 +170,18 @@ defmodule Ecto.Migration.DSL do
   def timestamps do
     [add(:created_at, :datetime), add(:updated_at, :datetime)]
   end
+
+  @doc """
+  Adds a foreign key.
+
+  ## Examples
+
+      create table(:product) do
+        add :category_id, references(:category)
+      end
+
+  """
+  def references(table) do
+    {:references, table, :id, :integer}
+  end
 end

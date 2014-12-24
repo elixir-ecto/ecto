@@ -375,6 +375,13 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("id" serial primary key, "title" varchar, "created_at" timestamp)|
   end
 
+  test "create table with reference" do
+    create = {:create, %Table{name: :posts},
+               [{:add, :id, :primary_key, []},
+                {:add, :category_id, {:references, "categories", "id", :integer }, []} ]}
+    assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("id" serial primary key, "category_id" integer REFERENCES "categories"("id"))|
+  end
+
   test "drop table" do
     drop = {:drop, %Table{name: :posts}}
     assert SQL.migrate(drop) == ~s|DROP TABLE "posts"|

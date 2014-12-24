@@ -72,4 +72,14 @@ defmodule Ecto.Migration.DSLTest do
                          {:remove, :summary},
                          {:rename, :name, :title}]}}
   end
+
+  test "references" do
+    response = create table(:products) do
+      add :category_id, references(:category)
+    end
+
+    assert response == {:executed, {:create, %Table{name: :products, key: true},
+                        [{:add, :id, :primary_key, []},
+                         {:add, :category_id, {:references, :category, :id, :integer}, []}]}}
+  end
 end

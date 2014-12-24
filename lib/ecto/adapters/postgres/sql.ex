@@ -372,6 +372,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       binary: "bytea"
     }
 
+    defp column_type({:references, foreign_table, foreign_column, type}), do: "#{column_type(type)} REFERENCES #{quote_name(foreign_table)}(#{quote_name(foreign_column)})"
     defp column_type({:array, type}), do: column_type(type) <> "[]"
     defp column_type(type), do: @column_types[type] || type
   end
