@@ -6,6 +6,8 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   alias Ecto.Adapters.Postgres.SQL
   alias Ecto.Queryable
   alias Ecto.Query.Planner
+  alias Ecto.Migration.Table
+  alias Ecto.Migration.Index
 
   defmodule Model do
     use Ecto.Model
@@ -357,5 +359,59 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   test "delete" do
     query = SQL.delete("model", [:x, :y])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2}
+  end
+
+  # Migrations
+
+  test "executing a string during migration" do
+    assert SQL.migrate("example") == "example"
+  end
+
+  test "create table" do
+    create = {:create, %Table{name: :posts},
+               [{:add, :id, :primary_key, []},
+                {:add, :title, :string, []},
+                {:add, :created_at, :datetime, []}]}
+    assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("id" serial primary key, "title" varchar, "created_at" time)|
+  end
+
+  test "drop table" do
+    drop = {:drop, %Table{name: :posts}}
+    assert SQL.migrate(drop) == ~s|DROP TABLE "posts"|
+  end
+
+  test "create index" do
+    create = {:create, %Index{name: "posts$main", table: :posts, columns: [:category_id, :permalink]}}
+    assert SQL.migrate(create) == ~s|CREATE INDEX "posts$main" ON "posts" ("category_id", "permalink")|
+  end
+
+  test "create index without explicit name" do
+    create = {:create, %Index{table: :posts, columns: [:category_id, :permalink]}}
+    assert SQL.migrate(create) == ~s|CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
+  end
+
+  test "create unique index" do
+    create = {:create, %Index{table: :posts, columns: [:permalink], unique: true}}
+    assert SQL.migrate(create) == ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+  end
+
+  test "drop index" do
+    drop = {:drop, %Index{name: "posts$main"}}
+    assert SQL.migrate(drop) == ~s|DROP INDEX "posts$main"|
+  end
+
+  test "drop index without explicit name" do
+    drop = {:drop, %Index{table: :posts, columns: [:name]}}
+    assert SQL.migrate(drop) == ~s|DROP INDEX "posts_name_index"|
+  end
+
+  test "alter table" do
+    alter = {:alter, %Table{name: :posts},
+               [{:add, :title, :string, []},
+                {:modify, :price, :integer, []},
+                {:remove, :summary},
+                {:rename, :cat_id, :category_id}]}
+
+    assert SQL.migrate(alter) == ~s|ALTER TABLE "posts" ADD COLUMN "title" varchar, ALTER COLUMN "price" TYPE integer, DROP COLUMN "summary", RENAME COLUMN "cat_id" TO "category_id"|
   end
 end
