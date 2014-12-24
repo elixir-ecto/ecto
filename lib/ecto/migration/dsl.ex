@@ -249,14 +249,44 @@ defmodule Ecto.Migration.DSL do
     {:references, table, foreign_column, type}
   end
 
+  @doc """
+  Checks if a column exists.
+
+  ## Examples
+
+    if !column_exists?(:products, :name) do
+      add_column(:products, :name, :string)
+    end
+
+  """
   def column_exists?(table_name, column_name) do
     exists?(:column, {table_name, column_name})
   end
 
+  @doc """
+  Checks if a table exists.
+
+  ## Examples
+
+    if table_exists?(:products) do
+      drop table(:products)
+    end
+
+  """
   def table_exists?(table_name) do
     exists?(:table, table_name)
   end
 
+  @doc """
+  Checks if an index exists.
+
+  ## Examples
+
+    if index_exists?(:products_index) do
+      drop index(:products_index)
+    end
+
+  """
   def index_exists?(name) do
     exists?(:index, name)
   end
