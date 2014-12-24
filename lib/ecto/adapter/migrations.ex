@@ -39,4 +39,9 @@ defmodule Ecto.Adapter.Migrations  do
   Returns all migrated versions as integers.
   """
   defcallback migrated_versions(Ecto.Repo.t) :: [integer] | no_return
+
+  @doc """
+  Checks if an object exists.
+  """
+  defcallback object_exists?(Ecto.Repo.t, tuple) :: boolean
 end

@@ -426,5 +426,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp create_migrations_table(repo) do
       query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)", [])
     end
+
+    @doc false
+    def object_exists?(repo, object) do
+      sql = SQL.object_exists_query(object)
+      %Postgrex.Result{rows: [{count}]} = query(repo, sql, [])
+
+      count > 0
+    end
   end
 end

@@ -18,6 +18,7 @@ defmodule Ecto.MigratorTest do
     def insert_migration_version(__MODULE__, _version), do: nil
     def delete_migration_version(__MODULE__, _version), do: nil
     def execute_migration(__MODULE__, _command),        do: nil
+    def object_exists?(__MODULE__, _object),            do: nil
 
     def transaction(fun), do: fun.()
   end
