@@ -351,11 +351,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def migrate(default) when is_bitstring(default), do: default
 
     def object_exists_query({:column, {table_name, column_name}}) do
-      "SELECT count(1) FROM information_schema.columns WHERE table_name = '#{table_name}' AND column_name = '#{column_name}'"
+      "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT oid FROM pg_class WHERE relname = '#{table_name}') AND attname = '#{column_name}'"
     end
 
     def object_exists_query({:table, table_name}) do
-      "SELECT count(1) FROM information_schema.tables WHERE table_name = '#{table_name}'"
+      "SELECT count(1) FROM pg_tables WHERE tablename='#{table_name}'"
     end
 
     defp column_definitions(columns) do
