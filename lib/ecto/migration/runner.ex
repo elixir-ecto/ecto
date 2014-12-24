@@ -62,7 +62,7 @@ defmodule Ecto.Migration.Runner do
   end
 
   @doc """
-  Checks if object type exists
+  Checks if a column, table or index exists
   """
   def exists?(type, object) do
     call {:exists, {type, object}}

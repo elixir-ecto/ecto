@@ -354,6 +354,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "SELECT count(1) FROM information_schema.columns WHERE table_name = '#{table_name}' AND column_name = '#{column_name}'"
     end
 
+    def object_exists_query({:table, table_name}) do
+      "SELECT count(1) FROM information_schema.tables WHERE table_name = '#{table_name}'"
+    end
+
     defp column_definitions(columns) do
       Enum.map_join(columns, ", ", &column_definition/1)
     end

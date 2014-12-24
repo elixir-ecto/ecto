@@ -426,4 +426,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.object_exists_query({:column, {:products, :id}}) ==
       "SELECT count(1) FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'id'"
   end
+
+  test "table exists" do
+    assert SQL.object_exists_query({:table, :products}) ==
+      "SELECT count(1) FROM information_schema.tables WHERE table_name = 'products'"
+  end
 end

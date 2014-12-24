@@ -253,6 +253,10 @@ defmodule Ecto.Migration.DSL do
     exists?(:column, {table_name, column_name})
   end
 
+  def table_exists?(table_name) do
+    exists?(:table, table_name)
+  end
+
   defp exists?(type, object) do
     Runner.exists?(type, object)
   end

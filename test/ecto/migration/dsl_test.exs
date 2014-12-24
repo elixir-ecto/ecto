@@ -17,8 +17,8 @@ defmodule Ecto.Migration.DSLTest do
       {:reply, {:executed, command}, state}
     end
 
-    def handle_call({:exists, type, object}, _from, state) do
-      {:reply, {:exists, type, object}, state}
+    def handle_call({:exists, object}, _from, state) do
+      {:reply, {:checked_existence, object}, state}
     end
   end
 
@@ -116,6 +116,10 @@ defmodule Ecto.Migration.DSLTest do
   end
 
   test "column exists" do
-    assert column_exists?(:products, :name) == {:exists, :column, {:products, :name}}
+    assert column_exists?(:products, :name) == {:checked_existence, {:column, {:products, :name}}}
+  end
+
+  test "table exists" do
+    assert table_exists?(:products) == {:checked_existence, {:table, :products}}
   end
 end
