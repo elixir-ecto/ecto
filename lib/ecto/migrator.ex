@@ -130,7 +130,7 @@ defmodule Ecto.Migrator do
   defp attach_versions(files) do
     Enum.map(files, fn(file) ->
       {integer, _} = Integer.parse(Path.basename(file))
-      {integer, file}
+      {Decimal.new(integer), file}
     end)
   end
 
