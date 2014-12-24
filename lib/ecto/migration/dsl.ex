@@ -90,7 +90,7 @@ defmodule Ecto.Migration.DSL do
 
   ## Examples
 
-    execute "UPDATE posts SET published_at = NULL"
+      execute "UPDATE posts SET published_at = NULL"
 
   """
   def execute(command) do
@@ -162,7 +162,7 @@ defmodule Ecto.Migration.DSL do
 
   ## Examples
 
-    add_column :products, :summary, :string
+      add_column :products, :summary, :string
 
   """
   def add_column(table_name, column, type, options \\ []) do
@@ -176,7 +176,7 @@ defmodule Ecto.Migration.DSL do
 
   ## Examples
 
-    modify_column(:user, :rating, :integer)
+      modify_column(:user, :rating, :integer)
 
   """
   def modify_column(table_name, column, type, options \\ []) do
@@ -190,7 +190,7 @@ defmodule Ecto.Migration.DSL do
 
   ## Examples
 
-    remove_column :products, :title
+      remove_column :products, :title
 
   """
   def remove_column(table_name, column) do
@@ -207,9 +207,9 @@ defmodule Ecto.Migration.DSL do
       rename_column :products, :old_name, :new_name
 
   """
-  def rename_column(table_name, column_name, new_name) do
+  def rename_column(table_name, from, to) do
     alter table(table_name) do
-      rename(column_name, new_name)
+      rename(from, to)
     end
   end
 
@@ -238,8 +238,8 @@ defmodule Ecto.Migration.DSL do
 
   ## Options
 
-  `:foreign_column` - The foreign column's name, default is `:id`;
-  `:type` - The foreign column's type, default is `:integer`;
+  * `:foreign_column` The foreign column's name, default is `:id`
+  * `:type`           The foreign column's type, default is `:integer`
 
   """
   def references(table, opts \\ []) do
