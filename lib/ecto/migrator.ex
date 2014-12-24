@@ -65,8 +65,6 @@ defmodule Ecto.Migrator do
   """
   @spec run(Ecto.Repo.t, binary, atom, strategy) :: [integer]
   def run(repo, directory, direction, opts) do
-    {:ok, _} = Ecto.Migration.Runner.start_link(repo)
-
     cond do
       opts[:all] ->
         run_all(repo, directory, direction)
