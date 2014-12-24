@@ -180,8 +180,16 @@ defmodule Ecto.Migration.DSL do
         add :category_id, references(:category)
       end
 
+  ## Options
+
+  `:foreign_column` - The foreign column's name, default is `:id`;
+  `:type` - The foreign column's type, default is `:integer`;
+
   """
-  def references(table) do
-    {:references, table, :id, :integer}
+  def references(table, opts \\ []) do
+    foreign_column = Keyword.get(opts, :foreign_column, :id)
+    type           = Keyword.get(opts, :type, :integer)
+
+    {:references, table, foreign_column, type}
   end
 end
