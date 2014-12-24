@@ -48,6 +48,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
       opts = Keyword.put(opts, :all, true)
     end
 
+    Ecto.Migration.Runner.start_link(repo)
     migrator.(repo, migrations_path(repo), :up, opts)
   end
 end
