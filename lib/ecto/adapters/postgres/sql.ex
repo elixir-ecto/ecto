@@ -365,9 +365,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp column_change({:remove, name}),              do: "DROP COLUMN #{quote_name(name)}"
     defp column_change({:rename, from, to}),          do: "RENAME COLUMN #{quote_name(from)} TO #{quote_name(to)}"
 
-    defp column_type(:string), do: "varchar"
-    defp column_type(:primary_key), do: "serial primary key"
-    defp column_type(:integer), do: "integer"
-    defp column_type(:datetime), do: "time"
+    @column_types %{
+      primary_key: "serial primary key",
+      string: "varchar",
+      datetime: "timestamp",
+      binary: "bytea"
+    }
+
+    defp column_type({:array, type}), do: column_type(type) <> "[]"
+    defp column_type(type), do: @column_types[type] || type
   end
 end
