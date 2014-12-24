@@ -9,11 +9,13 @@ defmodule Ecto.Integration.MigrationsTest do
     use Ecto.Migration
 
     def up do
-      "CREATE TABLE migrations_test(id serial primary key, name text)"
+      create table(:migrations_test) do
+        add :name, :text
+      end
     end
 
     def down do
-      "DROP table migrations_test"
+      drop table(:migrations_test)
     end
   end
 
@@ -21,11 +23,11 @@ defmodule Ecto.Integration.MigrationsTest do
     use Ecto.Migration
 
     def up do
-      "CREATE WHAT"
+      execute "CREATE WHAT"
     end
 
     def down do
-      "DROP table migrations_test"
+      execute "DROP table migrations_test"
     end
   end
 
@@ -34,12 +36,15 @@ defmodule Ecto.Integration.MigrationsTest do
       use Ecto.Migration
 
       def up do
-        [ "CREATE TABLE IF NOT EXISTS migrations_test(id serial primary key, name text)",
-          "INSERT INTO migrations_test (name) VALUES ('inserted')" ]
+        create table(:migrations_test) do
+          add :name, :text
+        end
+
+        execute "INSERT INTO migrations_test (name) VALUES ('inserted')"
       end
 
       def down do
-        [ "DELETE FROM migrations_test WHERE id IN ( SELECT id FROM migrations_test LIMIT 1 )" ]
+        execute "DELETE FROM migrations_test WHERE id IN ( SELECT id FROM migrations_test LIMIT 1 )"
       end
     end
   """
@@ -49,11 +54,11 @@ defmodule Ecto.Integration.MigrationsTest do
       use Ecto.Migration
 
       def up do
-        "error"
+        execute "error"
       end
 
       def down do
-        "error"
+        execute "error"
       end
     end
   """
