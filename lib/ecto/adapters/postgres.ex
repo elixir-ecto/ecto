@@ -424,7 +424,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     defp create_migrations_table(repo) do
-      query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version decimal)", [])
+      query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)", [])
     end
 
     @doc false
