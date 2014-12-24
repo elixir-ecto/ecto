@@ -421,4 +421,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     assert SQL.migrate(alter) == ~s|ALTER TABLE "posts" ADD COLUMN "title" varchar, ALTER COLUMN "price" TYPE integer, DROP COLUMN "summary", RENAME COLUMN "cat_id" TO "category_id"|
   end
+
+  test "column exists" do
+    assert SQL.object_exists_query({:column, {:products, :id}}) ==
+      "SELECT count(1) FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'id'"
+  end
 end

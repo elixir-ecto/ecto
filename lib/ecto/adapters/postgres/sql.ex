@@ -350,6 +350,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def migrate(default) when is_bitstring(default), do: default
 
+    def object_exists_query({:column, {table_name, column_name}}) do
+      "SELECT count(1) FROM information_schema.columns WHERE table_name = '#{table_name}' AND column_name = '#{column_name}'"
+    end
+
     defp column_definitions(columns) do
       Enum.map_join(columns, ", ", &column_definition/1)
     end
