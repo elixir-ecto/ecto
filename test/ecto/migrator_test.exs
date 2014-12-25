@@ -5,6 +5,14 @@ defmodule Ecto.MigratorTest do
   import ExUnit.CaptureIO
   import Ecto.Migrator
 
+  defp migration_logger(:up, file) do
+    IO.puts "* running UP #{file}"
+  end
+
+  defp migration_logger(:down, file) do
+    IO.puts "* running DOWN #{file}"
+  end
+  
   defmodule ProcessRepo do
     @behaviour Ecto.Adapter.Migrations
 
@@ -60,7 +68,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "a_sample.exs"
       capture_io(fn ->
-        assert run(ProcessRepo, path, :up, all: true) == []
+        assert run(ProcessRepo, path, :up, all: true, logger: &migration_logger/2) == []
       end)
     end
   end
@@ -69,7 +77,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       File.write! "13_sample.exs", ":ok"
       assert_raise Ecto.MigrationError, "file 13_sample.exs does not contain any Ecto.Migration", fn ->
-        capture_io fn -> run(ProcessRepo, path, :up, all: true) end
+        capture_io fn -> run(ProcessRepo, path, :up, all: true, logger: &migration_logger/2) end
       end
     end
   end
@@ -79,7 +87,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_hello.exs"
       create_migration "13_other.exs"
       assert_raise Ecto.MigrationError, "migrations can't be executed, version 13 is duplicated", fn ->
-        capture_io fn -> run(ProcessRepo, path, :up, all: true) end
+        capture_io fn -> run(ProcessRepo, path, :up, all: true, logger: &migration_logger/2) end
       end
     end
   end
@@ -87,7 +95,7 @@ defmodule Ecto.MigratorTest do
   test "upwards migrations skips migrations that are already up" do
     in_tmp fn path ->
       create_migration "1_sample.exs"
-      capture_io fn -> assert run(ProcessRepo, path, :up, all: true) == [] end
+      capture_io fn -> assert run(ProcessRepo, path, :up, all: true, logger: &migration_logger/2) == [] end
     end
   end
 
@@ -96,7 +104,7 @@ defmodule Ecto.MigratorTest do
       create_migration "1_sample.exs"
       create_migration "4_sample.exs"
       capture_io(fn ->
-        assert run(ProcessRepo, path, :down, all: true) == [1]
+        assert run(ProcessRepo, path, :down, all: true, logger: &migration_logger/2) == [1]
       end)
     end
   end
@@ -106,7 +114,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_step_premature_end.exs"
       create_migration "14_step_premature_end.exs"
       capture_io(fn ->
-        assert run(ProcessRepo, path, :up, step: 1) == [13]
+        assert run(ProcessRepo, path, :up, step: 1, logger: &migration_logger/2) == [13]
       end)
     end
   end
@@ -116,7 +124,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_step_to_the_end.exs"
       create_migration "14_step_to_the_end.exs"
       capture_io(fn ->
-        assert run(ProcessRepo, path, :up, step: 2) == [13, 14]
+        assert run(ProcessRepo, path, :up, step: 2, logger: &migration_logger/2) == [13, 14]
       end)
     end
   end
@@ -126,7 +134,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_step_past_the_end.exs"
       create_migration "14_step_past_the_end.exs"
       capture_io(fn ->
-        assert run(ProcessRepo, path, :up, step: 3) == [13, 14]
+        assert run(ProcessRepo, path, :up, step: 3, logger: &migration_logger/2) == [13, 14]
       end)
     end
   end
@@ -136,7 +144,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_version_premature_end.exs"
       create_migration "14_version_premature_end.exs"
       capture_io(fn ->
-        assert run(ProcessRepo, path, :up, to: 13) == [13]
+        assert run(ProcessRepo, path, :up, to: 13, logger: &migration_logger/2) == [13]
       end)
     end
   end
@@ -146,7 +154,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_version_to_the_end.exs"
       create_migration "14_version_to_the_end.exs"
       capture_io(fn ->
-        assert run(ProcessRepo, path, :up, to: 14) == [13, 14]
+        assert run(ProcessRepo, path, :up, to: 14, logger: &migration_logger/2) == [13, 14]
       end)
     end
   end
@@ -156,7 +164,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_version_past_the_end.exs"
       create_migration "14_version_past_the_end.exs"
       capture_io(fn ->
-        assert run(ProcessRepo, path, :up, to: 15) == [13, 14]
+        assert run(ProcessRepo, path, :up, to: 15, logger: &migration_logger/2) == [13, 14]
       end)
     end
   end

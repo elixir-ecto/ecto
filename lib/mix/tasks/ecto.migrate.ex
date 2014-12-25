@@ -33,11 +33,20 @@ defmodule Mix.Tasks.Ecto.Migrate do
       mix ecto.migrate MyApp.Repo --to 20080906120000
 
   """
+
+  defp migration_logger(:up, file) do
+    IO.puts "* running UP #{file}"
+  end
+
+  defp migration_logger(:down, file) do
+    IO.puts "* running DOWN #{file}"
+  end
+
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     Mix.Task.run "app.start", args
 
     {opts, args, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean],
+      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, logger: &migration_logger/2],
       aliases: [n: :step, v: :to]
 
     {repo, _} = parse_repo(args)
