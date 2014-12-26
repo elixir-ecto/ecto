@@ -1,21 +1,24 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
+  @version "0.3.0"
+
   def project do
     [app: :ecto,
-     version: "0.3.0-dev",
+     version: @version,
      elixir: "~> 1.0",
      deps: deps,
      build_per_environment: false,
      test_paths: test_paths(Mix.env),
 
+     # Hex
      description: description,
      package: package,
 
      # Docs
      name: "Ecto",
-     docs: &docs/0,
-     source_url: "https://github.com/elixir-lang/ecto"]
+     docs: [source_ref: "v#{@version}",
+            source_url: "https://github.com/elixir-lang/ecto"]]
   end
 
   def application do
@@ -45,12 +48,5 @@ defmodule Ecto.Mixfile do
     [contributors: ["Eric Meadows-Jönsson", "José Valim"],
      licenses: ["Apache 2.0"],
      links: %{"GitHub" => "https://github.com/elixir-lang/ecto"}]
-  end
-
-  defp docs do
-    {ref, 0} = System.cmd("git", ["rev-parse", "--verify", "--quiet", "HEAD"])
-    [source_ref: ref,
-     main: "overview",
-     readme: "README.md"]
   end
 end

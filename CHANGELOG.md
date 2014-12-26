@@ -1,4 +1,4 @@
-# v0.3.0-dev
+# v0.3.0 (2014-12-26)
 
 * Enhancements
   * Support fragments in queries with the `fragment(...)` function
