@@ -1,3 +1,16 @@
+defmodule Ecto.Associations.Unloaded do
+  @moduledoc """
+  Struct returned by one to one associations when there are not loaded.
+
+  The fields are:
+
+  * `:name` - the name of the association in `owner`
+  * `:owner` - the model that owns the association
+
+  """
+  defstruct [:name, :owner]
+end
+
 defmodule Ecto.Associations do
   @moduledoc false
 

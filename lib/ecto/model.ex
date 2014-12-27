@@ -24,6 +24,7 @@ defmodule Ecto.Model do
 
   @type t :: map
 
+  # TODO: Put primary key is useless
   @key_assocs [Ecto.Reflections.HasOne, Ecto.Reflections.HasMany]
 
   @doc """
@@ -69,6 +70,7 @@ defmodule Ecto.Model do
 
   Shorthand for `from(var in __MODULE__, ...)`.
   """
+  # TODO: Move me somewhere else. Possibly to the schema.
   defmacro scoped(field, opts) do
     quote do
       from unquote(field) in __MODULE__, unquote(opts)
