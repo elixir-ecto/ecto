@@ -64,23 +64,28 @@ defmodule Ecto.Query.Builder.From do
   def build(expr, env) do
     {binds, expr} = escape(expr)
 
-    case Macro.expand(expr, env) do
-      atom when is_atom(atom) ->
-        count_bind = 1
+    {count_bind, quoted} =
+      case Macro.expand(expr, env) do
+        model when is_atom(model) ->
+          # Get the source at runtime so no unnecessary compile time
+          # dependencies between modules are added
+          source = quote do: unquote(model).__schema__(:source)
+          {1, query(source, model)}
 
-        # Get the source at runtime so no unnecessary compile time
-        # dependencies between modules are added
-        source = quote do: unquote(atom).__schema__(:source)
-        map    = [from: {source, atom}]
-        quoted = {:%, [], [Ecto.Query, {:%{}, [], map}]}
+        source when is_binary(source) ->
+          # When a binary is used, there is no model
+          {1, query(source, nil)}
 
-      other ->
-        count_bind = nil
-        quoted = other
-    end
+        other ->
+          {nil, other}
+      end
 
     quoted = Builder.apply_query(quoted, __MODULE__, [length(binds)], env)
     {quoted, binds, count_bind}
+  end
+
+  defp query(source, model) do
+    {:%, [], [Ecto.Query, {:%{}, [], [from: {source, model}]}]}
   end
 
   @doc """

@@ -1,8 +1,6 @@
 defmodule Ecto.Model.CallbacksTest do
   use ExUnit.Case, async: true
 
-  alias Ecto.MockRepo
-
   defmodule UpdateCallback do
     use Ecto.Model
 

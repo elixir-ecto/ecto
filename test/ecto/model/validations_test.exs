@@ -3,13 +3,9 @@ defmodule Ecto.Model.ValidationsTest do
   import Support.EvalHelpers
 
   defmodule User do
-    use Ecto.Model
+    use Ecto.Model.Validations
 
-    schema "users" do
-      field :name, :string
-      field :age, :string
-      field :filename, :string
-    end
+    defstruct [:name, :age, :filename]
 
     validate user,
           name: present(),
@@ -21,7 +17,7 @@ defmodule Ecto.Model.ValidationsTest do
   end
 
   defmodule Custom do
-    use Ecto.Model
+    use Ecto.Model.Validations
 
     validate validate(user, range, validate_name),
           name: present() when validate_name,

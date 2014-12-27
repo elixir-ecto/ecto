@@ -1,8 +1,8 @@
 defprotocol Ecto.Queryable do
   @moduledoc """
-  The `Queryable` protocol is responsible for converting a structure to an
-  `Ecto.Query` struct. The only function required to implement is
-  `to_query` which does the conversion.
+  Converts a data structure into an `Ecto.Query` struct.
+
+  The only function required to implement is `to_query` which does the conversion.
   """
 
   def to_query(expr)
