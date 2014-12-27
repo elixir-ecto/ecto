@@ -11,6 +11,12 @@ defmodule Ecto.Validator.Predicates do
   @type maybe_error :: nil | binary
   @blank [nil, "", []]
 
+  defmacrop is_maybe_number(value) do
+    quote do
+      is_nil(unquote(value)) or is_number(unquote(value))
+    end
+  end
+
   @doc """
   Validates the attribute is present (i.e. not nil,
   nor an empty list nor an empty string).
@@ -168,12 +174,12 @@ defmodule Ecto.Validator.Predicates do
           age: greater_than(18)
 
   """
-  @spec greater_than(field, number, Keyword.t) :: maybe_error
+  @spec greater_than(field, number | nil, number, Keyword.t) :: maybe_error
   def greater_than(_field, value, check, opts \\ [])
-  def greater_than(_field, value, check, _opts) when
-        is_number(check) and (is_nil(value) or value > check), do: nil
-  def greater_than(_field, _value, check, opts) when is_number(check) do
-    opts[:message] || "must be greater than #{check}"
+      when is_maybe_number(value) and is_number(check) do
+    unless is_nil(value) or value > check do
+      opts[:message] || "must be greater than #{check}"
+    end
   end
 
   @doc """
@@ -190,12 +196,12 @@ defmodule Ecto.Validator.Predicates do
           age: greater_than_or_equal_to(18)
 
   """
-  @spec greater_than_or_equal_to(field, number, Keyword.t) :: maybe_error
+  @spec greater_than_or_equal_to(field, number | nil, number, Keyword.t) :: maybe_error
   def greater_than_or_equal_to(_field, value, check, opts \\ [])
-  def greater_than_or_equal_to(_field, value, check, _opts) when
-        is_number(check) and (is_nil(value) or value >= check), do: nil
-  def greater_than_or_equal_to(_field, _value, check, opts) when is_number(check) do
-    opts[:message] || "must be greater than or equal to #{check}"
+      when is_maybe_number(value) and is_number(check) do
+    unless is_nil(value) or value >= check do
+      opts[:message] || "must be greater than or equal to #{check}"
+    end
   end
 
   @doc """
@@ -212,12 +218,12 @@ defmodule Ecto.Validator.Predicates do
           age: less_than(18)
 
   """
-  @spec less_than(field, number, Keyword.t) :: maybe_error
+  @spec less_than(field, number | nil, number, Keyword.t) :: maybe_error
   def less_than(_field, value, check, opts \\ [])
-  def less_than(_field, value, check, _opts) when
-        is_number(check) and (is_nil(value) or value < check), do: nil
-  def less_than(_field, _value, check, opts) when is_number(check) do
-    opts[:message] || "must be less than #{check}"
+      when is_maybe_number(value) and is_number(check) do
+    unless is_nil(value) or value < check do
+      opts[:message] || "must be less than #{check}"
+    end
   end
 
   @doc """
@@ -234,12 +240,12 @@ defmodule Ecto.Validator.Predicates do
           age: less_than_or_equal_to(18)
 
   """
-  @spec less_than_or_equal_to(field, number, Keyword.t) :: maybe_error
+  @spec less_than_or_equal_to(field, number | nil, number, Keyword.t) :: maybe_error
   def less_than_or_equal_to(_field, value, check, opts \\ [])
-  def less_than_or_equal_to(_field, value, check, _opts) when
-        is_number(check) and (is_nil(value) or value <= check), do: nil
-  def less_than_or_equal_to(_field, _value, check, opts) when is_number(check) do
-    opts[:message] || "must be less than or equal to #{check}"
+      when is_maybe_number(value) and is_number(check) do
+    unless is_nil(value) or value <= check do
+      opts[:message] || "must be less than or equal to #{check}"
+    end
   end
 
   @doc """
@@ -256,12 +262,12 @@ defmodule Ecto.Validator.Predicates do
           age: between(18..21)
 
   """
-  @spec between(field, Range.t, Keyword.t) :: maybe_error
-  def between(_field, value, range, opts \\ [])
-  def between(_field, value, min..max, _opts) when
-    is_number(min) and is_number(max) and (is_nil(value) or value in min..max), do: nil
-  def between(_field, _value, min..max, opts) when is_number(min) and is_number(max) do
-    opts[:message] || "must be between #{min} and #{max}"
+  @spec between(field, number | nil, Range.t, Keyword.t) :: maybe_error
+  def between(_field, value, min..max, opts \\ [])
+      when is_maybe_number(value) and is_number(min) and is_number(max) do
+    unless is_nil(value) or value in min..max do
+      opts[:message] || "must be between #{min} and #{max}"
+    end
   end
 
   @doc """

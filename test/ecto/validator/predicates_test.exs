@@ -144,6 +144,12 @@ defmodule Ecto.Validator.PredicatesTest do
     assert greater_than(:name, 5, 10, message: "bad number") == "bad number"
   end
 
+  test "greater_than expects numbers" do
+    assert_raise FunctionClauseError, fn ->
+      greater_than(:name, "foo", 18)
+    end
+  end
+
   ## Greater than or equal to
 
   test "greater_than_or_equal_to on invalid" do
@@ -164,6 +170,12 @@ defmodule Ecto.Validator.PredicatesTest do
 
   test "greater_than_or_equal_to with custom message" do
     assert greater_than_or_equal_to(:name, 5, 10, message: "bad number") == "bad number"
+  end
+
+  test "greater_than_or_equal_to expects numbers" do
+    assert_raise FunctionClauseError, fn ->
+      greater_than_or_equal_to(:name, "foo", 18)
+    end
   end
 
   ## Less than
@@ -188,6 +200,12 @@ defmodule Ecto.Validator.PredicatesTest do
     assert less_than(:name, 10, 5, message: "bad number") == "bad number"
   end
 
+  test "less_than expects numbers" do
+    assert_raise FunctionClauseError, fn ->
+      less_than(:name, "foo", 18)
+    end
+  end
+
   ## Less than or equal to
 
   test "less_than_or_equal_to on invalid" do
@@ -210,6 +228,12 @@ defmodule Ecto.Validator.PredicatesTest do
     assert less_than_or_equal_to(:name, 10, 5, message: "bad number") == "bad number"
   end
 
+  test "less_than_or_equal_to expects numbers" do
+    assert_raise FunctionClauseError, fn ->
+      less_than_or_equal_to(:name, "foo", 18)
+    end
+  end
+
   ## Between
 
   test "between on invalid" do
@@ -228,6 +252,12 @@ defmodule Ecto.Validator.PredicatesTest do
 
   test "between with custom message" do
     assert between(:name, 24, 18..21, message: "bad number") == "bad number"
+  end
+
+  test "between expects numbers" do
+    assert_raise FunctionClauseError, fn ->
+      between(:name, "foo", 18..21)
+    end
   end
 
   ## Not member of
