@@ -56,6 +56,10 @@ defmodule Ecto.Query.Planner do
   def query(query, base, opts \\ []) do
     {query, params} = prepare(query, base)
     {normalize(query, base, opts), params}
+  rescue
+    e ->
+      # Reraise errors so we ignore the planner inner stacktrace
+      raise e
   end
 
   @doc """
@@ -110,25 +114,34 @@ defmodule Ecto.Query.Planner do
   defp cast_param(kind, query, expr, v, {composite, {idx, field}}) when is_integer(idx) do
     {_, model} = elem(query.sources, idx)
     type = type!(kind, query, expr, model, field)
-    cast_param(kind, query, expr, v, {composite, type})
+    cast_param(kind, query, expr, model, field, v, {composite, type})
   end
 
   defp cast_param(kind, query, expr, v, {idx, field}) when is_integer(idx) do
     {_, model} = elem(query.sources, idx)
     type = type!(kind, query, expr, model, field)
-    cast_param(kind, query, expr, v, type)
+    cast_param(kind, query, expr, model, field, v, type)
   end
 
   defp cast_param(kind, query, expr, v, type) do
     case Types.cast(type, v) do
       {:ok, nil} ->
-        cast! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
+        error! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
                             "(if you want to check for nils, use is_nil/1 instead)"
       {:ok, v} ->
         v
       :error ->
-        cast! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
+        error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
     end
+  end
+
+  defp cast_param(kind, query, expr, model, field, value, type) do
+    cast_param(kind, query, expr, value, type)
+  rescue
+    e in [Ecto.QueryError] ->
+      raise Ecto.CastError, model: model, field: field, value: value, type: type,
+                            message: Exception.message(e) <>
+                                     "\nError when casting value to `#{inspect model}.#{field}`"
   end
 
   # Normalize all sources and adds a source

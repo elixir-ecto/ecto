@@ -33,7 +33,16 @@ defmodule Ecto.CastError do
   @moduledoc """
   Raised at runtime when a value cannot be cast.
   """
-  defexception [:message]
+  defexception [:model, :field, :type, :value, :message]
+
+  def exception(opts) do
+    model = Keyword.fetch!(opts, :model)
+    field = Keyword.fetch!(opts, :field)
+    value = Keyword.fetch!(opts, :value)
+    type  = Keyword.fetch!(opts, :type)
+    msg   = Keyword.fetch!(opts, :message)
+    %__MODULE__{model: model, field: field, value: value, type: type, message: msg}
+  end
 end
 
 defmodule Ecto.InvalidURLError do

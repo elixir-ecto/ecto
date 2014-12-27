@@ -76,6 +76,7 @@ defmodule Ecto.Query.PlannerTest do
 
     assert Exception.message(exception) =~ "value `nil` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^nil"
+    assert Exception.message(exception) =~ "Error when casting value to `#{inspect Post}.title`"
 
     exception =  assert_raise Ecto.CastError, fn ->
       prepare(Post |> where([p], p.title == ^1))
@@ -83,6 +84,7 @@ defmodule Ecto.Query.PlannerTest do
 
     assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^1"
+    assert Exception.message(exception) =~ "Error when casting value to `#{inspect Post}.title`"
   end
 
   test "prepare: joins" do
