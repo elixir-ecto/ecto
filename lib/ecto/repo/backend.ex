@@ -194,6 +194,7 @@ defmodule Ecto.Repo.Backend do
   defp is_var?(expr, var),
     do: expr == var
 
+  # TODO: Bring back multiple indexes
   defp select_var({left, right}, var),
     do: select_var({:{}, [], [left, right]}, var)
   defp select_var({:{}, _, list}, var),

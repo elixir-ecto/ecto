@@ -43,6 +43,8 @@ defmodule Ecto.Associations.Preloader do
   # fields. We recurse down the rose tree and perform a query for the
   # associated entities for each field.
   defp do_run(structs, repo, {field, sub_fields}) do
+    # TODO: Make this use the new Ecto.Model.assoc/2.
+    # We just need to prune nils before-hand.
     module = hd(structs).__struct__
     refl   = module.__schema__(:association, field)
     should_sort? = should_sort?(structs, refl)
@@ -94,7 +96,7 @@ defmodule Ecto.Associations.Preloader do
           do: key
 
     if ids != [] do
-         Q.from x in refl.associated,
+         Q.from x in refl.assoc,
          where: field(x, ^assoc_key) in ^ids,
       order_by: field(x, ^assoc_key)
     end
@@ -236,11 +238,11 @@ defmodule Ecto.Associations.Preloader do
   defp put_at_pos(struct, list, pos) when is_list(list),
     do: List.update_at(list, pos, struct)
 
+  # TODO: Do not hardcode reflection
   defp set_loaded(struct, refl, loaded) do
     unless refl.__struct__ == Ecto.Reflections.HasMany do
       loaded = List.first(loaded)
     end
-
-    Ecto.Associations.load(struct, refl.field, loaded)
+    Map.put(struct, refl.field, loaded)
   end
 end

@@ -39,10 +39,11 @@ defmodule Ecto.Model do
     end
   end
 
+  import Ecto.Query, only: [from: 2]
   @type t :: map
 
   @doc """
-  Convenience to return the model primary key regardless of its field.
+  Returns the model primary key value.
 
   Raises `Ecto.NoPrimaryKeyError` if model has no primary key.
   """
@@ -53,5 +54,60 @@ defmodule Ecto.Model do
 
   defp primary_key_field(%{__struct__: model}) do
     model.__schema__(:primary_key) || raise Ecto.NoPrimaryKeyError, model: model
+  end
+
+  @doc """
+  Builds a query for the association in the given model or models.
+
+  ## Examples
+
+  In the example below, we get all comments associated to the given
+  post:
+
+      post = Repo.get Post, 1
+      Repo.all assoc(post, :comments)
+
+  `assoc/2` can also receive a list of posts, as long as the posts are
+  not empty:
+
+      posts = Repo.all from p in Post, where: is_nil(p.published_at)
+      Repo.all assoc(posts, :comments)
+
+  """
+  def assoc(model_or_models, assoc)
+
+  # TODO: Make this polymorphic
+  def assoc(model, assoc) when is_map(model) and is_atom(assoc) do
+    %{key: key, assoc: assoc, assoc_key: assoc_key} = reflection(model, assoc)
+
+    from x in assoc,
+      where: field(x, ^assoc_key) == ^Map.fetch!(model, key)
+  end
+
+  def assoc([], assoc) when is_atom(assoc) do
+    raise ArgumentError, "cannot retrieve association #{inspect assoc} for empty list"
+  end
+
+  def assoc([h|_] = structs, assoc) when is_atom(assoc) do
+    %{key: key, owner: owner, assoc_key: assoc_key, assoc: assoc} = reflection(h, assoc)
+
+    values =
+      for struct <- structs do
+        %{__struct__: model} = struct
+
+        if model != owner do
+          raise ArgumentError, "list given to `assoc/2` must have the same struct, " <>
+                               "got: #{inspect model} and #{inspect owner}"
+        end
+
+        Map.fetch!(struct, key)
+      end
+
+    from x in assoc, where: field(x, ^assoc_key) in ^values
+  end
+
+  defp reflection(%{__struct__: model}, assoc) do
+    model.__schema__(:association, assoc) ||
+      raise ArgumentError, "model #{inspect model} does not have association #{inspect assoc}"
   end
 end

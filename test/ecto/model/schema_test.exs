@@ -1,47 +1,16 @@
 defmodule Ecto.Model.SchemaTest do
   use ExUnit.Case, async: true
 
-  defmodule User do
-    use Ecto.Model
-
-    schema "users" do
-      # Type defaults to string
-      field :name
-    end
-  end
-
-  defmodule Comment do
-    defstruct []
-  end
-
-  defmodule DefaultUser do
-    @schema_defaults primary_key: {:uuid, :string, []},
-                     foreign_key_type: :string
-    use Ecto.Model
-
-    schema "users" do
-      field :name
-      belongs_to :comment, Comment
-    end
-  end
-
-  test "uses @schema_defauls" do
-    assert %DefaultUser{uuid: "abc"}.uuid == "abc"
-    assert DefaultUser.__schema__(:field, :comment_id) == :string
-  end
-
   defmodule MyModel do
     use Ecto.Model
 
     schema "mymodel" do
-      field :name, :string, default: "eric"
+      field :name,  :string, default: "eric"
       field :email, :string, uniq: true
-      field :temp, :any, default: "temp", virtual: true
+      field :temp,  :any, default: "temp", virtual: true
       field :array, {:array, :string}
       belongs_to :comment, Comment
     end
-
-    def test_attr(:source), do: @ecto_source
 
     def model_from do
       from(c in __MODULE__, where: c.name == nil)
@@ -50,10 +19,6 @@ defmodule Ecto.Model.SchemaTest do
 
   test "imports Ecto.Query functions" do
     assert %Ecto.Query{} = MyModel.model_from
-  end
-
-  test "schema attributes" do
-    assert MyModel.test_attr(:source) == "mymodel"
   end
 
   test "schema metadata" do
@@ -71,6 +36,24 @@ defmodule Ecto.Model.SchemaTest do
            %{name: :string, email: :string, array: {:array, :string},
              comment_id: :integer, temp: :any}
   end
+
+  defmodule DefaultModel do
+    @schema_defaults primary_key: {:uuid, :string, []},
+                     foreign_key_type: :string
+    use Ecto.Model
+
+    schema "users" do
+      field :name
+      belongs_to :comment, Comment
+    end
+  end
+
+  test "uses @schema_defauls" do
+    assert %DefaultModel{uuid: "abc"}.uuid == "abc"
+    assert DefaultModel.__schema__(:field, :comment_id) == :string
+  end
+
+  ## Errors
 
   test "field name clash" do
     assert_raise ArgumentError, "field/association `name` is already set on schema", fn ->
@@ -110,7 +93,7 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
-  test "dont fail custom primary key" do
+  test "doesn't fail custom primary key" do
     defmodule ModelDontFailCustomPK do
       use Ecto.Model
 
@@ -121,7 +104,9 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
-  defmodule ModelAssocs do
+  ##
+
+  defmodule AssocModel do
     use Ecto.Model
 
     schema "assocs" do
@@ -132,74 +117,50 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "associations" do
-    assert ModelAssocs.__schema__(:association, :not_a_field) == nil
-    assert ModelAssocs.__schema__(:fields) == [:id, :comment_id]
+    assert AssocModel.__schema__(:association, :not_a_field) == nil
+    assert AssocModel.__schema__(:fields) == [:id, :comment_id]
   end
 
   test "has_many association" do
-    refl = %Ecto.Reflections.HasMany{field: :posts, owner: ModelAssocs,
-                                     associated: Post, key: :id, assoc_key: :model_assocs_id}
-    assert refl == ModelAssocs.__schema__(:association, :posts)
+    assert AssocModel.__schema__(:association, :posts) ==
+           %Ecto.Reflections.HasMany{field: :posts, owner: AssocModel,
+                                     assoc: Post, key: :id, assoc_key: :assoc_model_id}
 
-    r = %ModelAssocs{}
-    assoc = r.posts
-    assert assoc.__assoc__(:name) == :posts
-    assert assoc.__assoc__(:target) == ModelAssocs
-    assert assoc.__assoc__(:primary_key) == r.id
+    posts = (%AssocModel{}).posts
+    assert %Ecto.Associations.NotLoaded{} = posts
+    assert inspect(posts) == "#Ecto.Associations.NotLoaded<association :posts is not loaded>"
   end
 
   test "has_one association" do
-    refl = %Ecto.Reflections.HasOne{field: :author, owner: ModelAssocs,
-                                    associated: User, key: :id, assoc_key: :model_assocs_id}
-    assert refl == ModelAssocs.__schema__(:association, :author)
+    assert AssocModel.__schema__(:association, :author) ==
+           %Ecto.Reflections.HasOne{field: :author, owner: AssocModel,
+                                    assoc: User, key: :id, assoc_key: :assoc_model_id}
 
-    r = %ModelAssocs{}
-    assoc = r.author
-    assert assoc.__assoc__(:name) == :author
-    assert assoc.__assoc__(:target) == ModelAssocs
+    author = (%AssocModel{}).author
+    assert %Ecto.Associations.NotLoaded{} = author
+    assert inspect(author) == "#Ecto.Associations.NotLoaded<association :author is not loaded>"
   end
 
   test "belongs_to association" do
-    refl = %Ecto.Reflections.BelongsTo{field: :comment, owner: ModelAssocs,
-                                       associated: Comment, key: :comment_id, assoc_key: :id}
-    assert refl == ModelAssocs.__schema__(:association, :comment)
+    assert AssocModel.__schema__(:association, :comment) ==
+           %Ecto.Reflections.BelongsTo{field: :comment, owner: AssocModel,
+                                       assoc: Comment, key: :comment_id, assoc_key: :id}
 
-    r = %ModelAssocs{}
-    assoc = r.comment
-    assert assoc.__assoc__(:name) == :comment
-    assert assoc.__assoc__(:target) == ModelAssocs
-  end
-
-  test "belongs_to association foreign_key type" do
-    defmodule ForeignKeyType do
-      use Ecto.Model
-      schema "fk" do
-        belongs_to :comment, Comment, type: :datetime
-      end
-    end
-
-    defmodule DefaultForeignKeyType do
-      @queryable_defaults foreign_key_type: :string
-      use Ecto.Model
-
-      schema "defaults" do
-        ## :type option overrides any @queryable_defaults
-        belongs_to :comment, Comment, type: :uuid
-      end
-    end
-
-    assert ForeignKeyType.__schema__(:field, :comment_id) == :datetime
-    assert DefaultForeignKeyType.__schema__(:field, :comment_id) == :uuid
+    comment = (%AssocModel{}).comment
+    assert %Ecto.Associations.NotLoaded{} = comment
+    assert inspect(comment) == "#Ecto.Associations.NotLoaded<association :comment is not loaded>"
   end
 
   defmodule ModelAssocOpts do
     use Ecto.Model
 
+    @schema_defaults foreign_key_type: :string
+
     schema "assoc", primary_key: {:pk, :integer, []} do
       has_many :posts, Post, references: :pk, foreign_key: :fk
       has_one :author, User, references: :pk, foreign_key: :fk
-      belongs_to :permalink, Permalink, references: :pk, foreign_key: :fk
-      belongs_to :permalink2, Permalink, references: :pk
+      belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk
+      belongs_to :permalink2, Permalink, references: :pk, type: :uuid
     end
   end
 
@@ -216,13 +177,16 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "belongs_to options" do
-    refl = ModelAssocOpts.__schema__(:association, :permalink)
+    refl = ModelAssocOpts.__schema__(:association, :permalink1)
     assert :pk == refl.assoc_key
     assert :fk == refl.key
 
     refl = ModelAssocOpts.__schema__(:association, :permalink2)
     assert :pk == refl.assoc_key
     assert :permalink2_id == refl.key
+
+    assert ModelAssocOpts.__schema__(:field, :fk) == :string
+    assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :uuid
   end
 
   test "references option has to match a field on model" do

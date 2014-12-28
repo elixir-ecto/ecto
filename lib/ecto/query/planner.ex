@@ -177,7 +177,7 @@ defmodule Ecto.Query.Planner do
       error! query, join, "could not find association `#{assoc}` on model #{inspect model}"
     end
 
-    associated = refl.associated
+    associated = refl.assoc
     source     = {associated.__schema__(:source), associated}
 
     on = on_expr(join.on, refl, ix, length(sources))
@@ -306,7 +306,7 @@ defmodule Ecto.Query.Planner do
       {child_var, child_fields} = Assoc.decompose_assoc(nested)
       {_, child_model} = Util.find_source(query.sources, child_var)
 
-      unless refl.associated == child_model do
+      unless refl.assoc == child_model do
         error! query, query.select, "association `#{inspect parent_model}.#{field}` " <>
                                     "in assoc/2 doesn't match join model `#{child_model}`"
       end

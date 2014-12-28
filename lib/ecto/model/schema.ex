@@ -342,18 +342,14 @@ defmodule Ecto.Model.Schema do
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
-    assoc = Ecto.Associations.HasMany.Proxy.__assoc__(:new, name, mod)
-    put_struct_field(mod, name, assoc)
-
+    put_struct_assoc_field(mod, name)
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :has_many, opts})
   end
 
   @doc false
   def __has_one__(mod, name, queryable, opts) do
-    assoc = Ecto.Associations.HasOne.Proxy.__assoc__(:new, name, mod)
-    put_struct_field(mod, name, assoc)
-
+    put_struct_assoc_field(mod, name)
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :has_one, opts})
   end
@@ -369,9 +365,7 @@ defmodule Ecto.Model.Schema do
 
     __field__(mod, opts[:foreign_key], foreign_key_type, [])
 
-    assoc = Ecto.Associations.BelongsTo.Proxy.__assoc__(:new, name, mod)
-    put_struct_field(mod, name, assoc)
-
+    put_struct_assoc_field(mod, name)
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :belongs_to, opts})
   end
@@ -384,6 +378,11 @@ defmodule Ecto.Model.Schema do
     end
 
     Module.put_attribute(mod, :struct_fields, {name, assoc})
+  end
+
+  defp put_struct_assoc_field(mod, name) do
+    put_struct_field(mod, name,
+                     %Ecto.Associations.NotLoaded{__owner__: mod, __field__: name})
   end
 
   ## Helpers
@@ -438,7 +437,7 @@ defmodule Ecto.Model.Schema do
         end
       end
 
-      refl = Ecto.Associations.create_reflection(type, name,
+      refl = __reflection__(type, name,
         module, pk, opts[:queryable], opts[:foreign_key])
 
       quote do
@@ -474,6 +473,32 @@ defmodule Ecto.Model.Schema do
         struct(__MODULE__, Enum.zip(unquote(field_names), values))
       end
     end
+  end
+
+  defp __reflection__(type, name, module, pk, assoc, fk)
+      when type in [:has_many, :has_one] do
+    model_name = module |> Module.split |> List.last |> Ecto.Utils.underscore
+
+    values = [
+      owner: module,
+      assoc: assoc,
+      key: pk,
+      assoc_key: fk || :"#{model_name}_#{pk}",
+      field: name ]
+
+    case type do
+      :has_many -> struct(Ecto.Reflections.HasMany, values)
+      :has_one  -> struct(Ecto.Reflections.HasOne, values)
+    end
+  end
+
+  defp __reflection__(:belongs_to, name, module, pk, assoc, fk) do
+    %Ecto.Reflections.BelongsTo{
+      owner: module,
+      assoc: assoc,
+      key: fk,
+      assoc_key: pk,
+      field: name}
   end
 
   defp check_type!(type, virtual?) do

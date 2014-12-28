@@ -31,6 +31,7 @@ defmodule Ecto.Query.Builder.Join do
       {:c, nil, {0, :comments}}
 
   """
+  # TODO: Forbid the field(...) and p.comment syntax
   @spec escape(Macro.t, Keyword.t) :: {[atom], Macro.t | nil, Macro.t | nil}
   def escape({:in, _, [{var, _, context}, expr]}, vars)
       when is_atom(var) and is_atom(context) do

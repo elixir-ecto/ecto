@@ -1,96 +1,65 @@
-defmodule Ecto.Associations.Unloaded do
+defmodule Ecto.Associations.NotLoaded do
   @moduledoc """
   Struct returned by one to one associations when there are not loaded.
 
   The fields are:
 
-  * `:name` - the name of the association in `owner`
-  * `:owner` - the model that owns the association
+    * `:__field__` - the association field in `__owner__`
+    * `:__owner__` - the model that owns the association
 
   """
-  defstruct [:name, :owner]
+  defstruct [:__field__, :__owner__]
+
+  defimpl Inspect do
+    def inspect(not_loaded, _opts) do
+      msg = "association #{inspect not_loaded.__field__} is not loaded"
+      ~s(#Ecto.Associations.NotLoaded<#{msg}>)
+    end
+  end
 end
 
 defmodule Ecto.Associations do
   @moduledoc false
+end
 
-  alias Ecto.Reflections.HasOne
-  alias Ecto.Reflections.HasMany
-  alias Ecto.Reflections.BelongsTo
+defmodule Ecto.Reflections.HasOne do
+  @moduledoc """
+  The reflection record for a `has_one` association. Its fields are:
 
-  def create_reflection(type, name, module, pk, assoc, fk)
-      when type in [:has_many, :has_one] do
-    model_name = module |> Module.split |> List.last |> Ecto.Utils.underscore
+  * `field` - The name of the association field on the model;
+  * `owner` - The model where the association was defined;
+  * `associated` - The model that is associated;
+  * `key` - The key on the `owner` model used for the association;
+  * `assoc_key` - The key on the `associated` model used for the association;
+  """
 
-    values = [
-      owner: module,
-      associated: assoc,
-      key: pk,
-      assoc_key: fk || :"#{model_name}_#{pk}",
-      field: name ]
+  defstruct [:field, :owner, :assoc, :key, :assoc_key]
+end
 
-    case type do
-      :has_many -> struct(HasMany, values)
-      :has_one  -> struct(HasOne, values)
-    end
-  end
+defmodule Ecto.Reflections.HasMany do
+  @moduledoc """
+  The struct record for a `has_many` association. Its fields are:
 
-  def create_reflection(:belongs_to, name, module, pk, assoc, fk) do
-    %BelongsTo{
-      owner: module,
-      associated: assoc,
-      key: fk,
-      assoc_key: pk,
-      field: name}
-  end
+  * `field` - The name of the association field on the model;
+  * `owner` - The model where the association was defined;
+  * `assoc` - The model that is associated;
+  * `key` - The key on the `owner` model used for the association;
+  * `assoc_key` - The key on the `associated` model used for the association;
+  """
 
-  def load(model, field, loaded) do
-    model  = Map.update!(model, field, &(&1.__assoc__(:loaded, loaded)))
-    module = model.__struct__
-    refl   = module.__schema__(:association, field)
+  defstruct [:field, :owner, :assoc, :key, :assoc_key]
+end
 
-    # Set the foreign key field if loading a belongs_to association
-    # Only do it if we are loading the proper associated model
-    if refl.__struct__ == Ecto.Reflections.BelongsTo do
-      fk_field   = refl.key
-      pk_field   = refl.assoc_key
-      associated = refl.associated
+defmodule Ecto.Reflections.BelongsTo do
+  @moduledoc """
+  The reflection struct for a `belongs_to` association. Its fields are:
 
-      if match?(%{__struct__: ^associated}, loaded) do
-        pk    = Map.get(loaded, pk_field)
-        model = Map.put(model, fk_field, pk)
-      end
-    end
+  * `field` - The name of the association field on the model;
+  * `owner` - The model where the association was defined;
+  * `assoc` - The model that is associated;
+  * `key` - The key on the `owner` model used for the association;
+  * `assoc_key` - The key on the `assoc` model used for the association;
+  """
 
-    model
-  end
-
-  defmacro defproxy(struct) do
-    quote do
-      defmacrop proxy() do
-        tag    = __MODULE__
-        struct = unquote(struct)
-        quote do
-          {unquote(tag), %unquote(struct){}}
-        end
-      end
-
-      defmacrop proxy(kw) do
-        tag    = __MODULE__
-        struct = unquote(struct)
-        quote do
-          {unquote(tag), %unquote(struct){unquote_splicing(kw)}}
-        end
-      end
-
-      defmacrop proxy(proxy, kw) do
-        tag    = __MODULE__
-        struct = unquote(struct)
-        quote do
-          {unquote(tag), %unquote(struct){} = map} = unquote(proxy)
-          {unquote(tag), %{map | unquote_splicing(kw)}}
-        end
-      end
-    end
-  end
+  defstruct [:field, :owner, :assoc, :key, :assoc_key]
 end

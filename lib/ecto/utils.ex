@@ -56,6 +56,7 @@ defmodule Ecto.Utils do
   @doc """
   Converts the given binary to underscore format.
   """
+  # TODO: Get rid of me
   def underscore(""), do: ""
 
   def underscore(<<h, t :: binary>>) do
