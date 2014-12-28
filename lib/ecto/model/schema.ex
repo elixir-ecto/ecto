@@ -18,8 +18,40 @@ defmodule Ecto.Model.Schema do
         end
       end
 
-  This module also automatically imports `from/2` from `Ecto.Query`
-  as a convenience.
+  ## Types and casting
+
+  When defining the schema, types need to be given. Those types are specific
+  to Ecto and must be one of:
+
+  Ecto type               | Elixir type             | Literal syntax in query
+  :---------------------- | :---------------------- | :---------------------
+  `:integer`              | `integer`               | 1, 2, 3
+  `:float`                | `float`                 | 1.0, 2.0, 3.0
+  `:boolean`              | `boolean`               | true, false
+  `:string`               | UTF-8 encoded `binary`  | "hello"
+  `:binary`               | `binary`                | `<<int, int, int, ...>>`
+  `:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
+  `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
+  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
+  `:datetime`             | `%Ecto.DateTime{}`
+  `:date`                 | `%Ecto.Date{}`
+  `:time`                 | `%Ecto.Time{}`
+
+  Models can also have virtual fields by passing the `virtual: true`
+  option. These fields are not persisted to the database and can
+  optionally not be type checked by declaring type `:any`.
+
+  When manipulating the struct, it is the responsibility of the
+  developer to ensure the fields are cast to the proper value. For
+  example, you can create a weather struct with an invalid value
+  for `temp_lo`:
+
+      iex> weather = %Weather{temp_lo: "0"}
+      iex> weather.temp_lo
+      "0"
+
+  However, if you attempt to persist the struct above, an error will
+  be raised since Ecto validates the types when building the query.
 
   ## Schema defaults
 
@@ -45,9 +77,8 @@ defmodule Ecto.Model.Schema do
 
   * `primary_key` - either `false`, or a `{field, type, opts}` tuple
   * `foreign_key_type` - sets the type for any `belongs_to` associations.
-                         This can be overridden using the `:type` option
-                         to the `belongs_to` statement. Defaults to
-                         type `:integer`
+    This can be overridden using the `:type` option to the `belongs_to`
+    statement. Defaults to type `:integer`
 
   ## Example
 
@@ -167,8 +198,7 @@ defmodule Ecto.Model.Schema do
   ## API
 
   @doc """
-  Defines a field on the model schema with given name and type, will also create
-  a struct field.
+  Defines a field on the model schema with given name and type.
 
   ## Options
 
@@ -184,9 +214,10 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc ~S"""
-  Indicates a one-to-many association with another model, where the current
-  model has zero or more records of the other model. The other model often
-  has a `belongs_to` field with the reverse association.
+  Indicates a one-to-many association with another model.
+
+  The current model has zero or more records of the other model. The other
+  model often has a `belongs_to` field with the reverse association.
 
   Creates a virtual field called `name`. The association can be accessed via
   this field, see `Ecto.Associations.HasMany` for more information. See the
@@ -196,9 +227,9 @@ defmodule Ecto.Model.Schema do
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
-                       other model, defaults to: `:"#{model}_id"`;
-    * `:references`  - Sets the key on the current model to be used for the
-                       association, defaults to the primary key on the model;
+      other model, defaults to: `:"#{model}_id"`;
+    * `:references` - Sets the key on the current model to be used for the
+      association, defaults to the primary key on the model;
 
   ## Examples
 
@@ -210,18 +241,12 @@ defmodule Ecto.Model.Schema do
 
       # Get all comments for a given post
       post = Repo.get(Post, 42)
-      comments = Repo.all(post.comments)
+      comments = Repo.all assoc(post, :comments)
 
       # The comments can come preloaded on the post struct
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
-      post.comments.all #=> [ %Comment{...}, ... ]
+      post.comments #=> [ %Comment{...}, ... ]
 
-      # Or via an association join
-      [post] = Repo.all(from(p in Post,
-                      where: p.id == 42,
-                  left_join: c in p.comments,
-                     select: assoc(p, c)))
-      post.comments.all #=> [ %Comment{...}, ... ]
   """
   defmacro has_many(name, queryable, opts \\ []) do
     quote do
@@ -230,9 +255,10 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc ~S"""
-  Indicates a one-to-one association with another model, where the current model
-  has zero or one records of the other model. The other model often has a
-  `belongs_to` field with the reverse association.
+  Indicates a one-to-one association with another model.
+
+  The current model has zero or one records of the other model. The other
+  model often has a `belongs_to` field with the reverse association.
 
   Creates a virtual field called `name`. The association can be accessed via
   this field, see `Ecto.Associations.HasOne` for more information. Check the
@@ -242,9 +268,9 @@ defmodule Ecto.Model.Schema do
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
-                       other model, defaults to: `:"#{model}_id"`;
+      other model, defaults to: `:"#{model}_id"`;
     * `:references`  - Sets the key on the current model to be used for the
-                       association, defaults to the primary key on the model;
+      association, defaults to the primary key on the model;
 
   ## Examples
 
@@ -254,16 +280,10 @@ defmodule Ecto.Model.Schema do
         end
       end
 
-      # The permalink can come preloaded on the post record
+      # The permalink can come preloaded on the post struct
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :permalink))
-      post.permalink.get #=> %Permalink{...}
+      post.permalink #=> %Permalink{...}
 
-      # Or via an association join
-      [post] = Repo.all(from(p in Post,
-                      where: p.id == 42,
-                  left_join: pl in p.permalink,
-                     select: assoc(p, pl)))
-      post.permalink.get #=> %Permalink{...}
   """
   defmacro has_one(name, queryable, opts \\ []) do
     quote do
@@ -272,16 +292,17 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc ~S"""
-  Indicates a one-to-one association with another model, the current model
-  belongs to zero or one records of the other model. The other model
-  often has a `has_one` or a `has_many` field with the reverse association.
-  Compared to `has_one` this association should be used where you would place
-  the foreign key on an SQL table.
+  Indicates a one-to-one association with another model.
 
-  Creates a virtual field called `name`. The association can be accessed via
-  this field, see `Ecto.Associations.BelongsTo` for more information. Check the
-  examples to see how to perform queries on the association and
-  `Ecto.Query.join/3` for joins.
+  The current model belongs to zero or one records of the other model. The other
+  model often has a `has_one` or a `has_many` field with the reverse association.
+
+  You should use `belongs_to` in the table that contains the foreign key. Imagine
+  a company <-> manager relationship. If the company contains the `manager_id` in
+  the underlying database table, we say the company belongs to manager.
+
+  In fact, when you invoke this macro, a field with the name of foreign key is
+  automatically defined in the schema for you.
 
   ## Options
 
@@ -295,20 +316,15 @@ defmodule Ecto.Model.Schema do
 
       defmodule Comment do
         schema "comments" do
+          # This automatically defines a post_id field too
           belongs_to :post, Post
         end
       end
 
       # The post can come preloaded on the comment record
       [comment] = Repo.all(from(c in Comment, where: c.id == 42, preload: :post))
-      comment.post.get #=> %Post{...}
+      comment.post #=> %Post{...}
 
-      # Or via an association join
-      [comment] = Repo.all(from(c in Comment,
-                         where: c.id == 42,
-                     left_join: p in c.post,
-                        select: assoc(c, p)))
-      comment.post.get #=> %Post{...}
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
     quote do
