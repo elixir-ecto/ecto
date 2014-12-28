@@ -42,7 +42,7 @@ defmodule Ecto.Query.PlannerTest do
         select: {p.title, ^"0"},
         join: c in Comment,
         on: c.text == ^"1",
-        join: d in p.comments,
+        join: d in assoc(p, :comments),
         where: p.title == ^"2",
         group_by: p.title == ^"3",
         having: p.title == ^"4",
@@ -96,7 +96,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: joins associations" do
-    query = from(p in Post, join: p.comments) |> prepare |> elem(0)
+    query = from(p in Post, join: assoc(p, :comments)) |> prepare |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: assoc} = hd(query.joins)
     assert assoc == {0, :comments}
     assert source == {"comments", Comment}
@@ -104,20 +104,20 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: joins associations with on" do
-    query = from(p in Post, join: c in p.comments, on: c.text == "") |> prepare |> elem(0)
+    query = from(p in Post, join: c in assoc(p, :comments), on: c.text == "") |> prepare |> elem(0)
     assert %JoinExpr{on: on} = hd(query.joins)
     assert Macro.to_string(on.expr) == "&1.text() == \"\" and &1.post_id() == &0.id()"
   end
 
   test "prepare: cannot associate without model" do
-    query = from(p in "posts", join: p.comments)
+    query = from(p in "posts", join: assoc(p, :comments))
     assert_raise Ecto.QueryError, ~r"association join cannot be performed without a model", fn ->
       prepare(query)
     end
   end
 
   test "prepare: requires an association field" do
-    query = from(p in Post, join: p.title)
+    query = from(p in Post, join: assoc(p, :title))
 
     assert_raise Ecto.QueryError, ~r"could not find association `title`", fn ->
       prepare(query)
@@ -155,15 +155,15 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: assoc selector" do
-    query = from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
+    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(p, comments: c))
     normalize(query)
 
-    query = from(p in Post, join: c in p.comments, select: assoc(c, post: p))
+    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(c, post: p))
     normalize(query)
 
     message = ~r"field `Ecto.Query.PlannerTest.Post.not_field` in assoc/2 is not an association"
     assert_raise Ecto.QueryError, message, fn ->
-      query = from(p in Post, join: c in p.comments, select: assoc(p, not_field: c))
+      query = from(p in Post, join: c in assoc(p, :comments), select: assoc(p, not_field: c))
       normalize(query)
     end
 
@@ -175,7 +175,7 @@ defmodule Ecto.Query.PlannerTest do
 
     message = ~r"requires an inner or left join, got right join"
     assert_raise Ecto.QueryError, message, fn ->
-      query = from(p in Post, right_join: c in p.comments, select: assoc(p, comments: c))
+      query = from(p in Post, right_join: c in assoc(p, :comments), select: assoc(p, comments: c))
       normalize(query)
     end
   end

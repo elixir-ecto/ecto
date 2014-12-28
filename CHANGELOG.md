@@ -1,10 +1,20 @@
+# v0.3.1-dev
+
+* Enhancements
+  * Associations have been rewriten into a faster and more flexible mechanism that does not require `.get`, `.all` and friends
+
+* Backwards incompatible changes
+  * Association proxies have been removed. This means `post.comments` returns `Ecto.Associations.NotLoaded` until `post.comments` has been explicitly preloaded. However, once preloaded, the comments list can be accessed directly
+  * Association proxies have been removed. This means `Repo.all post.comments` no longer returns all comments. Instead use `Repo.all Ecto.Model.assoc(post, :comments)`. It is recommended to `import Ecto.Model` into your modules
+  * `join: p.comments` has been removed in favor of `join: assoc(p, :comments)`
+
 # v0.3.0 (2014-12-26)
 
 * Enhancements
   * Support fragments in queries with the `fragment(...)` function
-  * Interpolated values in queries are now automatically cast. For example, `from u in User, where: u.age > ^"10"` will automatically cast "10" to an integer. Failing to cast will trigger an `Ecto.CastError`. Custom types will soon provide 
+  * Interpolated values in queries are now automatically cast. For example, `from u in User, where: u.age > ^"10"` will automatically cast "10" to an integer. Failing to cast will trigger an `Ecto.CastError`
   * `preload`, `lock` and `order_by` now allow dynamic values
-  * Improve and relax type inference. Ecto no longer requires `array(array, type)`, `binary(...)` and so on for interpolated values. In fact, the functions above have been removed.
+  * Improve and relax type inference. Ecto no longer requires `array(array, type)`, `binary(...)` and so on for interpolated values. In fact, the functions above have been removed
 
 * Backwards incompatible changes
   * `:virtual` type no longer exists, instead pass `virtual: true` as field option

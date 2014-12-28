@@ -21,17 +21,10 @@ defmodule Ecto.Query.Builder.Join do
       iex> escape(quote(do: x in Sample), [])
       {:x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil}
 
-      iex> escape(quote(do: c in p.comments), [p: 0])
-      {:c, nil, {0, :comments}}
-
-      iex> escape(quote(do: c in p.comments()), [p: 0])
-      {:c, nil, {0, :comments}}
-
-      iex> escape(quote(do: c in field(p, :comments)), [p: 0])
+      iex> escape(quote(do: c in assoc(p, :comments)), [p: 0])
       {:c, nil, {0, :comments}}
 
   """
-  # TODO: Forbid the field(...) and p.comment syntax
   @spec escape(Macro.t, Keyword.t) :: {[atom], Macro.t | nil, Macro.t | nil}
   def escape({:in, _, [{var, _, context}, expr]}, vars)
       when is_atom(var) and is_atom(context) do
@@ -47,16 +40,11 @@ defmodule Ecto.Query.Builder.Join do
     {nil, {string, nil}, nil}
   end
 
-  def escape({:field, _, [{var, _, context}, field]}, vars)
+  def escape({:assoc, _, [{var, _, context}, field]}, vars)
       when is_atom(var) and is_atom(context) do
     var   = find_var!(var, vars)
     field = Builder.quoted_field!(field)
     {[], nil, {var, field}}
-  end
-
-  def escape({{:., _, [{var, _, context}, field]}, _, []}, vars)
-      when is_atom(var) and is_atom(context) and is_atom(field) do
-    {[], nil, {find_var!(var, vars), field}}
   end
 
   def escape(join, _vars) do

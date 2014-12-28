@@ -259,10 +259,10 @@ defmodule Ecto.Integration.RepoTest do
     p2 = TestRepo.insert(%Post{title: "2"})
     c1 = TestRepo.insert(%Permalink{url: "1", post_id: p2.id})
 
-    query = from(p in Post, join: c in p.permalink, order_by: p.id, select: {p, c})
+    query = from(p in Post, join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
     assert [{^p2, ^c1}] = TestRepo.all(query)
 
-    query = from(p in Post, left_join: c in p.permalink, order_by: p.id, select: {p, c})
+    query = from(p in Post, left_join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
     assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
   end
 
@@ -271,7 +271,7 @@ defmodule Ecto.Integration.RepoTest do
     c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
     c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
 
-    query = from(p in Post, join: c in p.comments, select: {p, c})
+    query = from(p in Post, join: c in assoc(p, :comments), select: {p, c})
     [{^post, ^c1}, {^post, ^c2}] = TestRepo.all(query)
   end
 
@@ -280,7 +280,7 @@ defmodule Ecto.Integration.RepoTest do
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
-    query = from(p in Post, join: c in p.permalink, select: {p, c})
+    query = from(p in Post, join: c in assoc(p, :permalink), select: {p, c})
     [{^post, ^p1}, {^post, ^p2}] = TestRepo.all(query)
   end
 
@@ -289,7 +289,7 @@ defmodule Ecto.Integration.RepoTest do
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
-    query = from(p in Permalink, join: c in p.post, select: {p, c})
+    query = from(p in Permalink, join: c in assoc(p, :post), select: {p, c})
     [{^p1, ^post}, {^p2, ^post}] = TestRepo.all(query)
   end
 
@@ -458,7 +458,7 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p1.id})
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
 
-    query = from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
+    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(p, comments: c))
     assert [post1, post2] = TestRepo.all(query)
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = post1.comments
     assert [%Comment{id: ^cid3}] = post2.comments
@@ -474,13 +474,13 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Comment{text: "3", post_id: p2.id})
     TestRepo.insert(%Comment{text: "4"})
 
-    query = from(p in Post, left_join: c in p.comments, select: assoc(c, post: p))
+    query = from(p in Post, left_join: c in assoc(p, :comments), select: assoc(c, post: p))
     res1 = TestRepo.all(query)
 
-    query = from(p in Post, right_join: c in p.comments, select: assoc(c, post: p))
+    query = from(p in Post, right_join: c in assoc(p, :comments), select: assoc(c, post: p))
     res2 = TestRepo.all(query)
 
-    query = from(p in Post, join: c in p.comments, select: assoc(c, post: p))
+    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(c, post: p))
     res3 = TestRepo.all(query)
 
     assert [c1, c2, c3] = res1
@@ -512,7 +512,7 @@ defmodule Ecto.Integration.RepoTest do
     %Permalink{}         = TestRepo.insert(%Permalink{url: "2"})
     %Permalink{id: pid3} = TestRepo.insert(%Permalink{url: "3", post_id: p2.id})
 
-    query = from(p in Post, join: pl in p.permalink, select: assoc(p, permalink: pl))
+    query = from(p in Post, join: pl in assoc(p, :permalink), select: assoc(p, permalink: pl))
     assert [post1, post3] = TestRepo.all(query)
 
     assert %Permalink{id: ^pid1} = post1.permalink
@@ -528,13 +528,13 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Permalink{url: "2"})
     TestRepo.insert(%Permalink{url: "3", post_id: p2.id})
 
-    query = from(p in Post, left_join: pl in p.permalink, select: assoc(pl, post: p))
+    query = from(p in Post, left_join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
     res1 = TestRepo.all(query)
 
-    query = from(p in Post, right_join: pl in p.permalink, select: assoc(pl, post: p))
+    query = from(p in Post, right_join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
     res2 = TestRepo.all(query)
 
-    query = from(p in Post, join: pl in p.permalink, select: assoc(pl, post: p))
+    query = from(p in Post, join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
     res3 = TestRepo.all(query)
 
     assert [pl1, pl3] = res1
@@ -562,7 +562,7 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Permalink{url: "2"})
     TestRepo.insert(%Permalink{url: "3", post_id: pid2})
 
-    query = from(pl in Permalink, left_join: p in pl.post, select: assoc(pl, post: p))
+    query = from(pl in Permalink, left_join: p in assoc(pl, :post), select: assoc(pl, post: p))
     assert [p1, p2, p3] = TestRepo.all(query)
 
     assert %Post{id: ^pid1} = p1.post
@@ -579,13 +579,13 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Permalink{url: "2"})
     TestRepo.insert(%Permalink{url: "3", post_id: pid2})
 
-    query = from(pl in Permalink, left_join: p in pl.post, select: assoc(p, permalink: pl))
+    query = from(pl in Permalink, left_join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
     res1 = TestRepo.all(query)
 
-    query = from(pl in Permalink, right_join: p in pl.post, select: assoc(p, permalink: pl))
+    query = from(pl in Permalink, right_join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
     res2 = TestRepo.all(query)
 
-    query = from(pl in Permalink, join: p in pl.post, select: assoc(p, permalink: pl))
+    query = from(pl in Permalink, join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
     res3 = TestRepo.all(query)
 
     assert [p1, p2] = res1
@@ -617,8 +617,8 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: pid2, author_id: uid2})
 
     query = from p in Post,
-      left_join: c in p.comments,
-      left_join: u in c.author,
+      left_join: c in assoc(p, :comments),
+      left_join: u in assoc(c, :author),
       order_by: [p.id, c.id, u.id],
       select: assoc(p, comments: assoc(c, author: u))
 
@@ -650,8 +650,8 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: pid3, author_id: uid2})
 
     query = from p in Post,
-      left_join: c in p.comments,
-      left_join: u in c.author,
+      left_join: c in assoc(p, :comments),
+      left_join: u in assoc(c, :author),
       order_by: [p.id, c.id, u.id],
       select: assoc(p, comments: assoc(c, author: u))
 

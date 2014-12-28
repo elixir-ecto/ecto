@@ -124,7 +124,7 @@ defmodule Ecto.QueryTest do
 
   test "join on keyword query" do
     from(c in "comments", join: p in "posts", on: c.text == "", select: c)
-    from(p in "posts", join: c in p.comments, on: c.text == "", select: p)
+    from(p in "posts", join: c in assoc(p, :comments), on: c.text == "", select: p)
 
     assert_raise Ecto.Query.CompileError, "`on` keyword must immediately follow a join", fn ->
       quote_and_eval(from(c in "comments", on: c.text == "", select: c))

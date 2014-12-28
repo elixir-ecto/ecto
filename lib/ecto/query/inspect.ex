@@ -60,7 +60,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on}, name, names) do
-    string = "#{name} in #{elem(names, ix)}.#{right}"
+    string = "#{name} in assoc(#{elem(names, ix)}, #{inspect right})"
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
