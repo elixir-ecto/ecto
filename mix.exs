@@ -1,7 +1,7 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.3.1-dev"
 
   def project do
     [app: :ecto,
@@ -17,7 +17,7 @@ defmodule Ecto.Mixfile do
 
      # Docs
      name: "Ecto",
-     docs: [main: "overview", source_ref: "v#{@version}",
+     docs: [source_ref: "v#{@version}",
             source_url: "https://github.com/elixir-lang/ecto"]]
   end
 

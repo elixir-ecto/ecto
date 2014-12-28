@@ -3,32 +3,34 @@ defmodule Ecto.Model.Callbacks do
   Define module-level callbacks in models.
 
   A callback is invoked by your `Ecto.Repo` before (or after)
-  particular events. Callbacks always run inside a transaction.
+  particular events. A callback must always return the given
+  module and they always run inside a transaction.
 
   ## Example
 
       defmodule User do
         use Ecto.Model.Callbacks
 
-        before_create User, :set_default_fields
         after_create Stats, :increase_user_count
 
-        def set_default_fields(user)
+        def increase_user_count(user)
           # ...
         end
       end
 
-  When creating the user, both callbacks will be invoked with the user as
-  argument. Multiple callbacks can be defined, they will be invoked in
-  order of declaration.
+  When creating the user, the `after_create` callbacks will be
+  invoked with the `user` struct as argument. Multiple callbacks
+  can be defined, they will be invoked in order of declaration.
 
-  ## Important
+  ## Usage
 
-  As callbacks can be used to alter the model, please make sure to always
-  return the model struct, even when unaltered.
+  Callbacks in Ecto are useful for data consistency, for keeping
+  counters, setting fields and so on. Avoid using callbacks for
+  business rules or doing actions unrelated to the data itself,
+  like sending e-mails.
 
-  Callbacks will not be invoked on bulk actions such as `Repo.delete_all`
-  or `Repo.update_all`.
+  Finally, keep in mind callbacks are not invoked on bulk actions
+  such as `Repo.delete_all` or `Repo.update_all`.
   """
 
   @doc false

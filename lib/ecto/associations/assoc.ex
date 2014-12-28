@@ -130,10 +130,11 @@ defmodule Ecto.Associations.Assoc do
 
   defp compare({pos1, _}, {pos2, _}), do: pos1 < pos2
 
+  # TODO: Do not hardcode reflection
   defp set_loaded(struct, refl, loaded) do
     unless refl.__struct__ == Ecto.Reflections.HasMany do
       loaded = List.first(loaded)
     end
-    Ecto.Associations.load(struct, refl.field, loaded)
+    Map.put(struct, refl.field, loaded)
   end
 end

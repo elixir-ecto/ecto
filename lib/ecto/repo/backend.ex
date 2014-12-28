@@ -86,7 +86,7 @@ defmodule Ecto.Repo.Backend do
     # Properly cast parameters.
     params = Enum.into params, %{}, fn
       {k, {v, {0, field}}} ->
-        type = model.__schema__(:field_type, field)
+        type = model.__schema__(:field, field)
         {k, cast(:update_all, type, v)}
       {k, {v, type}} ->
         {k, cast(:update_all, type, v)}
@@ -123,13 +123,12 @@ defmodule Ecto.Repo.Backend do
       struct = Callbacks.__apply__(struct, :before_insert)
       model  = struct.__struct__
       source = model.__schema__(:source)
-      pk     = model.__schema__(:primary_key)
 
-      fields = Planner.model(:insert, model, model.__schema__(:keywords, struct))
+      fields = Planner.struct(:insert, struct)
       result = adapter.insert(repo, source, fields, opts)
 
       struct
-      |> build(pk, fields, result)
+      |> build(fields, result)
       |> Callbacks.__apply__(:after_insert)
     end
   end
@@ -144,28 +143,26 @@ defmodule Ecto.Repo.Backend do
       source = model.__schema__(:source)
       pk     = model.__schema__(:primary_key)
 
-      params = Planner.model(:update, model, model.__schema__(:keywords, struct))
+      params = Planner.struct(:update, struct)
       {filter, fields} = Keyword.split params, [pk]
       result = adapter.update(repo, source, filter, fields, opts)
 
       struct
-      |> build(pk, fields, result)
+      |> build(fields, result)
       |> Callbacks.__apply__(:after_update)
     end
   end
 
   def delete(repo, adapter, struct, opts) do
-    _ = primary_key_value!(struct)
-
     with_transactions_if_callbacks repo, adapter, struct, opts,
                                    ~w(before_delete after_delete)a, fn ->
       struct = Callbacks.__apply__(struct, :before_delete)
       model  = struct.__struct__
       source = model.__schema__(:source)
-      pk     = model.__schema__(:primary_key)
 
-      filter = Keyword.take model.__schema__(:keywords, struct), [pk]
-      filter = Planner.model(:delete, model, filter)
+      pk_field = model.__schema__(:primary_key)
+      pk_value = primary_key_value!(struct)
+      filter   = Planner.model(:delete, model, [{pk_field, pk_value}])
 
       :ok = adapter.delete(repo, source, filter, opts)
       Callbacks.__apply__(struct, :after_delete)
@@ -197,6 +194,7 @@ defmodule Ecto.Repo.Backend do
   defp is_var?(expr, var),
     do: expr == var
 
+  # TODO: Bring back multiple indexes
   defp select_var({left, right}, var),
     do: select_var({:{}, [], [left, right]}, var)
   defp select_var({:{}, _, list}, var),
@@ -244,16 +242,11 @@ defmodule Ecto.Repo.Backend do
       raise Ecto.NoPrimaryKeyError, model: struct.__struct__
   end
 
-  defp build(struct, pk_field, fields, result) do
+  defp build(struct, fields, result) do
     fields
     |> Enum.with_index
     |> Enum.reduce(struct, fn {{field, _}, idx}, acc ->
-         value = elem(result, idx)
-         if field == pk_field do
-           Ecto.Model.put_primary_key(acc, value)
-         else
-           Map.put(acc, field, value)
-         end
+         Map.put(acc, field, elem(result, idx))
        end)
   end
 

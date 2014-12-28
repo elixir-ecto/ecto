@@ -9,14 +9,23 @@ defmodule Ecto.Query.Planner do
   alias Ecto.Associations.Assoc
 
   @doc """
-  Plans a model for query execution.
+  Plans the struct for query execution.
 
-  It is mostly a matter of casting the
-  field values.
+  This function simply invokes `model/3` passing the persisted
+  field names as arguments.
+  """
+  def struct(kind, %{__struct__: model} = struct) do
+    model(kind, model, Map.take(struct, model.__schema__(:fields)))
+  end
+
+  @doc """
+  Plans the given fields belong to a model for query execution.
+
+  It is mostly a matter of casing the field values.
   """
   def model(kind, model, kw, dumper \\ &Types.dump/2) do
     for {field, value} <- kw do
-      type = model.__schema__(:field_type, field)
+      type = model.__schema__(:field, field)
 
       unless type do
         raise Ecto.InvalidModelError,
@@ -168,7 +177,7 @@ defmodule Ecto.Query.Planner do
       error! query, join, "could not find association `#{assoc}` on model #{inspect model}"
     end
 
-    associated = refl.associated
+    associated = refl.assoc
     source     = {associated.__schema__(:source), associated}
 
     on = on_expr(join.on, refl, ix, length(sources))
@@ -297,7 +306,7 @@ defmodule Ecto.Query.Planner do
       {child_var, child_fields} = Assoc.decompose_assoc(nested)
       {_, child_model} = Util.find_source(query.sources, child_var)
 
-      unless refl.associated == child_model do
+      unless refl.assoc == child_model do
         error! query, query.select, "association `#{inspect parent_model}.#{field}` " <>
                                     "in assoc/2 doesn't match join model `#{child_model}`"
       end
@@ -377,7 +386,7 @@ defmodule Ecto.Query.Planner do
   defp type!(_kind, _query, _expr, nil, _field), do: :any
 
   defp type!(kind, query, expr, model, field) do
-    if type = model.__schema__(:field_type, field) do
+    if type = model.__schema__(:field, field) do
       type
     else
       error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"

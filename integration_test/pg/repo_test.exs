@@ -3,6 +3,10 @@ defmodule Ecto.Integration.RepoTest do
 
   alias Ecto.Associations.Preloader
 
+  test "returns already started for started repos" do
+    assert {:error, {:already_started, _}} = TestRepo.start_link
+  end
+
   test "types" do
     TestRepo.insert(%Post{})
     TestRepo.insert(%Comment{})
@@ -34,10 +38,6 @@ defmodule Ecto.Integration.RepoTest do
     assert [_] = TestRepo.all(from p in Post, where: p.tags == ["foo", "bar"] or true)
     assert [_] = TestRepo.all(from p in Post, where: p.tags == ^["foo", "bar"] or true)
     assert [_] = TestRepo.all(from p in Post, where: p.tags == ^[] or true)
-  end
-
-  test "returns already started for started repos" do
-    assert {:error, {:already_started, _}} = TestRepo.start_link
   end
 
   test "fetch empty" do
@@ -107,20 +107,27 @@ defmodule Ecto.Integration.RepoTest do
     assert %Barebone{text: "text"} = TestRepo.insert(%Barebone{text: "text"})
   end
 
-  test "create with user-assigned primary key" do
+  test "insert with user-assigned primary key" do
     assert %Post{id: 1} = TestRepo.insert(%Post{id: 1})
   end
 
-  test "get model" do
+  test "get(!) model" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
 
     assert post1 == TestRepo.get(Post, post1.id)
     assert post2 == TestRepo.get(Post, post2.id)
     assert nil   == TestRepo.get(Post, -1)
+
+    assert post1 == TestRepo.get!(Post, post1.id)
+    assert post2 == TestRepo.get!(Post, post2.id)
+
+    assert_raise Ecto.NoResultsError, fn ->
+      TestRepo.get!(Post, -1)
+    end
   end
 
-  test "get model with custom primary key" do
+  test "get(!) model with custom primary key" do
     TestRepo.insert(%Custom{foo: "01abcdef01abcdef"})
     TestRepo.insert(%Custom{foo: "02abcdef02abcdef"})
 
@@ -129,7 +136,7 @@ defmodule Ecto.Integration.RepoTest do
     assert nil == TestRepo.get(Custom, "03abcdef03abcdef")
   end
 
-  test "one raises when result is more than one row" do
+  test "one(!) with multiple results" do
     assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
 
@@ -142,7 +149,7 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  test "one with bang raises when there are no results" do
+  test "one(!) when there are no results" do
     assert nil == TestRepo.one(from p in Post, where: p.text == "hai")
 
     assert_raise Ecto.NoResultsError, fn ->
@@ -245,8 +252,51 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.get(Post, id).temp == "temp"
   end
 
+  ## Joins
+
+  test "joins" do
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
+    c1 = TestRepo.insert(%Permalink{url: "1", post_id: p2.id})
+
+    query = from(p in Post, join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
+    assert [{^p2, ^c1}] = TestRepo.all(query)
+
+    query = from(p in Post, left_join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
+    assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
+  end
+
+  test "has_many association join" do
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
+    c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
+
+    query = from(p in Post, join: c in assoc(p, :comments), select: {p, c})
+    [{^post, ^c1}, {^post, ^c2}] = TestRepo.all(query)
+  end
+
+  test "has_one association join" do
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
+    p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
+
+    query = from(p in Post, join: c in assoc(p, :permalink), select: {p, c})
+    [{^post, ^p1}, {^post, ^p2}] = TestRepo.all(query)
+  end
+
+  test "belongs_to association join" do
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
+    p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
+
+    query = from(p in Permalink, join: c in assoc(p, :post), select: {p, c})
+    [{^p1, ^post}, {^p2, ^post}] = TestRepo.all(query)
+  end
+
+  ## Preloads
+
   test "preload empty" do
-    assert [] == Preloader.run([], TestRepo, :anything_goes)
+    assert Preloader.run([], TestRepo, :anything_goes) == []
   end
 
   test "preload has_many" do
@@ -259,16 +309,12 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
     %Comment{id: cid4} = TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
-    assert_raise Ecto.AssociationNotLoadedError, fn ->
-      p1.comments.all
-    end
-    assert p1.comments.loaded? == false
+    assert %Ecto.Associations.NotLoaded{} = p1.comments
 
     assert [p3, p1, p2] = Preloader.run([p3, p1, p2], TestRepo, :comments)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.all
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
-    assert [] = p3.comments.all
-    assert p1.comments.loaded? == true
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
+    assert [] = p3.comments
   end
 
   test "preload has_one" do
@@ -280,19 +326,13 @@ defmodule Ecto.Integration.RepoTest do
     %Permalink{}         = TestRepo.insert(%Permalink{url: "2", post_id: nil})
     %Permalink{id: pid3} = TestRepo.insert(%Permalink{url: "3", post_id: p3.id})
 
-    assert_raise Ecto.AssociationNotLoadedError, fn ->
-      p1.permalink.get
-    end
-    assert_raise Ecto.AssociationNotLoadedError, fn ->
-      p2.permalink.get
-    end
-    assert p1.permalink.loaded? == false
+    assert %Ecto.Associations.NotLoaded{} = p1.permalink
+    assert %Ecto.Associations.NotLoaded{} = p2.permalink
 
     assert [p3, p1, p2] = Preloader.run([p3, p1, p2], TestRepo, :permalink)
-    assert %Permalink{id: ^pid1} = p1.permalink.get
-    assert nil = p2.permalink.get
-    assert %Permalink{id: ^pid3} = p3.permalink.get
-    assert p1.permalink.loaded? == true
+    assert %Permalink{id: ^pid1} = p1.permalink
+    assert nil = p2.permalink
+    assert %Permalink{id: ^pid3} = p3.permalink
   end
 
   test "preload belongs_to" do
@@ -304,19 +344,15 @@ defmodule Ecto.Integration.RepoTest do
     pl2 = TestRepo.insert(%Permalink{url: "2", post_id: nil})
     pl3 = TestRepo.insert(%Permalink{url: "3", post_id: pid3})
 
-    assert_raise Ecto.AssociationNotLoadedError, fn ->
-      pl1.post.get
-    end
-    assert pl1.post.loaded? == false
+    assert %Ecto.Associations.NotLoaded{} = pl1.post
 
     assert [pl3, pl1, pl2] = Preloader.run([pl3, pl1, pl2], TestRepo, :post)
-    assert %Post{id: ^pid1} = pl1.post.get
-    assert nil = pl2.post.get
-    assert %Post{id: ^pid3} = pl3.post.get
-    assert pl1.post.loaded? == true
+    assert %Post{id: ^pid1} = pl1.post
+    assert nil = pl2.post
+    assert %Post{id: ^pid3} = pl3.post
   end
 
-  test "preload belongs_to with shared assocs 1" do
+  test "preload belongs_to with shared assocs" do
     %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
     %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
 
@@ -325,23 +361,9 @@ defmodule Ecto.Integration.RepoTest do
     c3 = TestRepo.insert(%Comment{text: "3", post_id: pid2})
 
     assert [c3, c1, c2] = Preloader.run([c3, c1, c2], TestRepo, :post)
-    assert %Post{id: ^pid1} = c1.post.get
-    assert %Post{id: ^pid1} = c2.post.get
-    assert %Post{id: ^pid2} = c3.post.get
-  end
-
-  test "preload belongs_to with shared assocs 2" do
-    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
-    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
-
-    c1 = TestRepo.insert(%Comment{text: "1", post_id: pid1})
-    c2 = TestRepo.insert(%Comment{text: "2", post_id: pid2})
-    c3 = TestRepo.insert(%Comment{text: "3", post_id: nil})
-
-    assert [c3, c1, c2] = Preloader.run([c3, c1, c2], TestRepo, :post)
-    assert %Post{id: ^pid1} = c1.post.get
-    assert %Post{id: ^pid2} = c2.post.get
-    assert nil = c3.post.get
+    assert %Post{id: ^pid1} = c1.post
+    assert %Post{id: ^pid1} = c2.post
+    assert %Post{id: ^pid2} = c3.post
   end
 
   test "preload nils" do
@@ -368,12 +390,12 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
     assert [p2, p1] = Preloader.run([p2, p1], TestRepo, [comments: :post])
-    assert [c1, c2] = p1.comments.all
-    assert [c3, c4] = p2.comments.all
-    assert p1.id == c1.post.get.id
-    assert p1.id == c2.post.get.id
-    assert p2.id == c3.post.get.id
-    assert p2.id == c4.post.get.id
+    assert [c1, c2] = p1.comments
+    assert [c3, c4] = p2.comments
+    assert p1.id == c1.post.id
+    assert p1.id == c2.post.id
+    assert p2.id == c3.post.id
+    assert p2.id == c4.post.id
   end
 
   test "preload has_many with no associated record" do
@@ -381,7 +403,7 @@ defmodule Ecto.Integration.RepoTest do
     [p] = Preloader.run([p], TestRepo, :comments)
 
     assert p.title == "1"
-    assert p.comments.all == []
+    assert p.comments == []
   end
 
   test "preload has_one with no associated record" do
@@ -389,7 +411,7 @@ defmodule Ecto.Integration.RepoTest do
     [p] = Preloader.run([p], TestRepo, :permalink)
 
     assert p.title == "1"
-    assert p.permalink.get == nil
+    assert p.permalink == nil
   end
 
   test "preload belongs_to with no associated record" do
@@ -397,7 +419,7 @@ defmodule Ecto.Integration.RepoTest do
     [c] = Preloader.run([c], TestRepo, :post)
 
     assert c.text == "1"
-    assert c.post.get == nil
+    assert c.post == nil
   end
 
   test "preload keyword query" do
@@ -413,75 +435,20 @@ defmodule Ecto.Integration.RepoTest do
     query = from(p in Post, preload: [:comments], select: p)
 
     assert [p1, p2, p3] = TestRepo.all(query)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.all
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
-    assert [] = p3.comments.all
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
+    assert [] = p3.comments
 
     query = from(p in Post, preload: [:comments], select: {0, p})
     posts = TestRepo.all(query)
     [p1, p2, p3] = Enum.map(posts, fn {0, p} -> p end)
 
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments.all
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments.all
-    assert [] = p3.comments.all
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
+    assert [] = p3.comments
   end
 
-  test "join" do
-    post    = TestRepo.insert(%Post{title: "1", text: "hi"})
-    comment = TestRepo.insert(%Comment{text: "hey"})
-    query   = from(p in Post, join: c in Comment, on: true, select: {p, c})
-    [{^post, ^comment}] = TestRepo.all(query)
-  end
-
-  test "has_many association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"})
-    c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
-    c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
-
-    query = from(p in Post, join: c in p.comments, select: {p, c})
-    [{^post, ^c1}, {^post, ^c2}] = TestRepo.all(query)
-  end
-
-  test "has_one association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"})
-    p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
-    p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
-
-    query = from(p in Post, join: c in p.permalink, select: {p, c})
-    [{^post, ^p1}, {^post, ^p2}] = TestRepo.all(query)
-  end
-
-  test "belongs_to association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"})
-    p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
-    p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
-
-    query = from(p in Permalink, join: c in p.post, select: {p, c})
-    [{^p1, ^post}, {^p2, ^post}] = TestRepo.all(query)
-  end
-
-  test "has_many implements Enum.count protocol correctly" do
-    post = TestRepo.insert(%Post{title: "1"})
-    TestRepo.insert(%Comment{text: "1", post_id: post.id})
-
-    post1 = TestRepo.all(from p in Post, preload: [:comments]) |> hd
-    assert Enum.count(post1.comments.all) == 1
-  end
-
-  test "has_many queryable" do
-    p1 = TestRepo.insert(%Post{title: "1"})
-    p2 = TestRepo.insert(%Post{title: "1"})
-
-    %Comment{id: cid1} = TestRepo.insert(%Comment{text: "1", post_id: p1.id})
-    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p1.id})
-    %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
-
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = TestRepo.all(p1.comments)
-    assert [%Comment{id: ^cid3}] = TestRepo.all(p2.comments)
-
-    query = from(c in p1.comments, where: c.text == "1")
-    assert [%Comment{id: ^cid1}] = TestRepo.all(query)
-  end
+  ## Preload assocs
 
   test "has_many assoc selector" do
     p1 = TestRepo.insert(%Post{title: "1"})
@@ -491,11 +458,10 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p1.id})
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
 
-    query = from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
+    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(p, comments: c))
     assert [post1, post2] = TestRepo.all(query)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = post1.comments.all
-    assert [%Comment{id: ^cid3}] = post2.comments.all
-    assert post1.comments.loaded? == true
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = post1.comments
+    assert [%Comment{id: ^cid3}] = post2.comments
   end
 
   test "has_many assoc selector reversed" do
@@ -508,32 +474,32 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Comment{text: "3", post_id: p2.id})
     TestRepo.insert(%Comment{text: "4"})
 
-    query = from(p in Post, left_join: c in p.comments, select: assoc(c, post: p))
+    query = from(p in Post, left_join: c in assoc(p, :comments), select: assoc(c, post: p))
     res1 = TestRepo.all(query)
 
-    query = from(p in Post, right_join: c in p.comments, select: assoc(c, post: p))
+    query = from(p in Post, right_join: c in assoc(p, :comments), select: assoc(c, post: p))
     res2 = TestRepo.all(query)
 
-    query = from(p in Post, join: c in p.comments, select: assoc(c, post: p))
+    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(c, post: p))
     res3 = TestRepo.all(query)
 
     assert [c1, c2, c3] = res1
     assert %Comment{text: "1"} = c1
     assert %Comment{text: "2"} = c2
     assert %Comment{text: "3"} = c3
-    assert %Post{title: "1"}   = c1.post.get
-    assert %Post{title: "1"}   = c2.post.get
-    assert %Post{title: "2"}   = c3.post.get
+    assert %Post{title: "1"}   = c1.post
+    assert %Post{title: "1"}   = c2.post
+    assert %Post{title: "2"}   = c3.post
 
     assert [c1, c2, c3, c4] = res2
     assert %Comment{text: "1"} = c1
     assert %Comment{text: "2"} = c2
     assert %Comment{text: "3"} = c3
     assert %Comment{text: "4"} = c4
-    assert %Post{title: "1"}   = c1.post.get
-    assert %Post{title: "1"}   = c2.post.get
-    assert %Post{title: "2"}   = c3.post.get
-    assert nil                 = c4.post.get
+    assert %Post{title: "1"}   = c1.post
+    assert %Post{title: "1"}   = c2.post
+    assert %Post{title: "2"}   = c3.post
+    assert nil                 = c4.post
 
     assert res1 == res3
   end
@@ -546,11 +512,11 @@ defmodule Ecto.Integration.RepoTest do
     %Permalink{}         = TestRepo.insert(%Permalink{url: "2"})
     %Permalink{id: pid3} = TestRepo.insert(%Permalink{url: "3", post_id: p2.id})
 
-    query = from(p in Post, join: pl in p.permalink, select: assoc(p, permalink: pl))
+    query = from(p in Post, join: pl in assoc(p, :permalink), select: assoc(p, permalink: pl))
     assert [post1, post3] = TestRepo.all(query)
-    assert %Permalink{id: ^pid1} = post1.permalink.get
-    assert %Permalink{id: ^pid3} = post3.permalink.get
-    assert post1.permalink.loaded? == true
+
+    assert %Permalink{id: ^pid1} = post1.permalink
+    assert %Permalink{id: ^pid3} = post3.permalink
   end
 
   test "has_one assoc selector reversed" do
@@ -562,28 +528,28 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Permalink{url: "2"})
     TestRepo.insert(%Permalink{url: "3", post_id: p2.id})
 
-    query = from(p in Post, left_join: pl in p.permalink, select: assoc(pl, post: p))
+    query = from(p in Post, left_join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
     res1 = TestRepo.all(query)
 
-    query = from(p in Post, right_join: pl in p.permalink, select: assoc(pl, post: p))
+    query = from(p in Post, right_join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
     res2 = TestRepo.all(query)
 
-    query = from(p in Post, join: pl in p.permalink, select: assoc(pl, post: p))
+    query = from(p in Post, join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
     res3 = TestRepo.all(query)
 
     assert [pl1, pl3] = res1
     assert %Permalink{url: "1"} = pl1
     assert %Permalink{url: "3"} = pl3
-    assert %Post{title: "1"}    = pl1.post.get
-    assert %Post{title: "2"}    = pl3.post.get
+    assert %Post{title: "1"}    = pl1.post
+    assert %Post{title: "2"}    = pl3.post
 
     assert [pl1, pl2, pl3] = res2
     assert %Permalink{url: "1"} = pl1
     assert %Permalink{url: "2"} = pl2
     assert %Permalink{url: "3"} = pl3
-    assert %Post{title: "1"}    = pl1.post.get
-    assert nil                  = pl2.post.get
-    assert %Post{title: "2"}    = pl3.post.get
+    assert %Post{title: "1"}    = pl1.post
+    assert nil                  = pl2.post
+    assert %Post{title: "2"}    = pl3.post
 
     assert res1 == res3
   end
@@ -596,13 +562,12 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Permalink{url: "2"})
     TestRepo.insert(%Permalink{url: "3", post_id: pid2})
 
-    query = from(pl in Permalink, left_join: p in pl.post, select: assoc(pl, post: p))
+    query = from(pl in Permalink, left_join: p in assoc(pl, :post), select: assoc(pl, post: p))
     assert [p1, p2, p3] = TestRepo.all(query)
-    assert %Post{id: ^pid1} = p1.post.get
-    assert nil = p2.post.get
-    assert %Post{id: ^pid2} = p3.post.get
-    assert p1.post.loaded?
-    assert p2.post.loaded?
+
+    assert %Post{id: ^pid1} = p1.post
+    assert nil = p2.post
+    assert %Post{id: ^pid2} = p3.post
   end
 
   test "belongs_to assoc selector reversed" do
@@ -614,60 +579,30 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Permalink{url: "2"})
     TestRepo.insert(%Permalink{url: "3", post_id: pid2})
 
-    query = from(pl in Permalink, left_join: p in pl.post, select: assoc(p, permalink: pl))
+    query = from(pl in Permalink, left_join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
     res1 = TestRepo.all(query)
 
-    query = from(pl in Permalink, right_join: p in pl.post, select: assoc(p, permalink: pl))
+    query = from(pl in Permalink, right_join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
     res2 = TestRepo.all(query)
 
-    query = from(pl in Permalink, join: p in pl.post, select: assoc(p, permalink: pl))
+    query = from(pl in Permalink, join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
     res3 = TestRepo.all(query)
 
     assert [p1, p2] = res1
     assert %Post{title: "1"}    = p1
     assert %Post{title: "2"}    = p2
-    assert %Permalink{url: "1"} = p1.permalink.get
-    assert %Permalink{url: "3"} = p2.permalink.get
+    assert %Permalink{url: "1"} = p1.permalink
+    assert %Permalink{url: "3"} = p2.permalink
 
     assert [p1, p2, p3] = res2
     assert %Post{title: "1"}    = p1
     assert %Post{title: "2"}    = p2
     assert %Post{title: "3"}    = p3
-    assert %Permalink{url: "1"} = p1.permalink.get
-    assert %Permalink{url: "3"} = p2.permalink.get
-    assert nil                  = p3.permalink.get
+    assert %Permalink{url: "1"} = p1.permalink
+    assert %Permalink{url: "3"} = p2.permalink
+    assert nil                  = p3.permalink
 
     assert res1 == res3
-  end
-
-  test "belongs_to assoc selector with shared assoc" do
-    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
-    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
-
-    c1 = TestRepo.insert(%Comment{text: "1", post_id: pid1})
-    c2 = TestRepo.insert(%Comment{text: "2", post_id: pid1})
-    c3 = TestRepo.insert(%Comment{text: "3", post_id: pid2})
-
-    query = from(c in Comment, join: p in c.post, select: assoc(c, post: p))
-    assert [c1, c2, c3] = TestRepo.all(query)
-    assert %Post{id: ^pid1} = c1.post.get
-    assert %Post{id: ^pid1} = c2.post.get
-    assert %Post{id: ^pid2} = c3.post.get
-  end
-
-  test "belongs_to assoc selector with shared assoc 2" do
-    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
-    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
-
-    c1 = TestRepo.insert(%Comment{text: "1", post_id: pid1})
-    c2 = TestRepo.insert(%Comment{text: "2", post_id: pid2})
-    c3 = TestRepo.insert(%Comment{text: "3", post_id: nil})
-
-    query = from(c in Comment, left_join: p in c.post, select: assoc(c, post: p))
-    assert [c1, c2, c3] = TestRepo.all(query)
-    assert %Post{id: ^pid1} = c1.post.get
-    assert %Post{id: ^pid2} = c2.post.get
-    assert nil = c3.post.get
   end
 
   test "nested assoc" do
@@ -682,8 +617,8 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: pid2, author_id: uid2})
 
     query = from p in Post,
-      left_join: c in p.comments,
-      left_join: u in c.author,
+      left_join: c in assoc(p, :comments),
+      left_join: u in assoc(c, :author),
       order_by: [p.id, c.id, u.id],
       select: assoc(p, comments: assoc(c, author: u))
 
@@ -691,15 +626,15 @@ defmodule Ecto.Integration.RepoTest do
     assert p1.id == pid1
     assert p2.id == pid2
 
-    assert [c1, c2] = p1.comments.all
-    assert [c3] = p2.comments.all
+    assert [c1, c2] = p1.comments
+    assert [c3] = p2.comments
     assert c1.id == cid1
     assert c2.id == cid2
     assert c3.id == cid3
 
-    assert c1.author.get.id == uid1
-    assert c2.author.get.id == uid2
-    assert c3.author.get.id == uid2
+    assert c1.author.id == uid1
+    assert c2.author.id == uid2
+    assert c3.author.id == uid2
   end
 
   test "nested assoc with missing records" do
@@ -715,8 +650,8 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: pid3, author_id: uid2})
 
     query = from p in Post,
-      left_join: c in p.comments,
-      left_join: u in c.author,
+      left_join: c in assoc(p, :comments),
+      left_join: u in assoc(c, :author),
       order_by: [p.id, c.id, u.id],
       select: assoc(p, comments: assoc(c, author: u))
 
@@ -725,24 +660,15 @@ defmodule Ecto.Integration.RepoTest do
     assert p2.id == pid2
     assert p3.id == pid3
 
-    assert [c1, c2] = p1.comments.all
-    assert [] = p2.comments.all
-    assert [c3] = p3.comments.all
+    assert [c1, c2] = p1.comments
+    assert [] = p2.comments
+    assert [c3] = p3.comments
     assert c1.id == cid1
     assert c2.id == cid2
     assert c3.id == cid3
 
-    assert c1.author.get.id == uid1
-    assert c2.author.get == nil
-    assert c3.author.get.id == uid2
-  end
-
-  test "join qualifier" do
-    p1 = TestRepo.insert(%Post{title: "1"})
-    p2 = TestRepo.insert(%Post{title: "2"})
-    c1 = TestRepo.insert(%Permalink{url: "1", post_id: p2.id})
-
-    query = from(p in Post, left_join: c in p.permalink, order_by: p.id, select: {p, c})
-    assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
+    assert c1.author.id == uid1
+    assert c2.author == nil
+    assert c3.author.id == uid2
   end
 end

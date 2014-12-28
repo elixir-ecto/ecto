@@ -570,7 +570,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Mark associations to be pre-loaded.
+  Marks associations to be pre-loaded.
 
   Pre-loading allow developers to specify associations that should be pre-
   loaded once the first result set is retrieved. Consider this example:
@@ -593,7 +593,7 @@ defmodule Ecto.Query do
       # Returns all posts and their associated comments
       # with the associated author
       from(p in Post,
-        preload: [user: [], comments: [:user]],
+        preload: [:user, comments: [:user]],
         select: p)
 
   ## Expressions examples

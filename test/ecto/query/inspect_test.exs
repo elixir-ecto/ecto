@@ -33,17 +33,17 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "join" do
-    assert i(from(x in Post, join: y in x.comments)) ==
-           ~s{from p in Inspect.Post, join: c in p.comments, on: true}
+    assert i(from(x in Post, join: y in assoc(x, :comments))) ==
+           ~s{from p in Inspect.Post, join: c in assoc(p, :comments), on: true}
 
     assert i(from(x in Post, [join: y in Comment, on: x.id == y.id])) ==
            ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: p.id == c.id}
 
-    assert i(from(x in Post, join: y in x.post, join: z in y.post)) ==
-           ~s{from p0 in Inspect.Post, join: p1 in p0.post, on: true, join: p2 in p1.post, on: true}
+    assert i(from(x in Post, join: y in assoc(x, :post), join: z in assoc(y, :post))) ==
+           ~s{from p0 in Inspect.Post, join: p1 in assoc(p0, :post), on: true, join: p2 in assoc(p1, :post), on: true}
 
-    assert i(from(x in Post, left_join: y in x.comments)) ==
-           ~s{from p in Inspect.Post, left_join: c in p.comments, on: true}
+    assert i(from(x in Post, left_join: y in assoc(x, :comments))) ==
+           ~s{from p in Inspect.Post, left_join: c in assoc(p, :comments), on: true}
   end
 
   test "where" do
@@ -92,14 +92,14 @@ defmodule Ecto.Query.InspectTest do
 
   test "inspect all" do
     string = """
-    from p in Inspect.Post, join: c in p.comments, on: true, where: true,
+    from p in Inspect.Post, join: c in assoc(p, :comments), on: true, where: true,
     group_by: [p.id], having: true, order_by: [asc: p.id], limit: 1,
     offset: 1, lock: true, select: 1, preload: :comments
     """
     |> String.rstrip
     |> String.replace("\n", " ")
 
-    assert i(from(x in Post, join: y in x.comments, where: true, group_by: x.id,
+    assert i(from(x in Post, join: y in assoc(x, :comments), where: true, group_by: x.id,
                              having: true, order_by: x.id, limit: 1, offset: 1,
                              lock: true, select: 1, preload: :comments)) == string
   end
@@ -107,7 +107,7 @@ defmodule Ecto.Query.InspectTest do
   test "to_string all" do
     string = """
     from p in Inspect.Post,
-      join: c in p.comments,
+      join: c in assoc(p, :comments),
       on: true,
       where: true,
       group_by: [p.id],
@@ -122,7 +122,7 @@ defmodule Ecto.Query.InspectTest do
     |> String.rstrip
 
     assert Inspect.Ecto.Query.to_string(
-      from(x in Post, join: y in x.comments, where: true, group_by: x.id,
+      from(x in Post, join: y in assoc(x, :comments), where: true, group_by: x.id,
                       having: true, order_by: x.id, limit: 1, offset: 1,
                       lock: true, select: 1, preload: :comments)
     ) == string

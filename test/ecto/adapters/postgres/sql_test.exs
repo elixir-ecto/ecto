@@ -308,25 +308,25 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   ## Associations
 
   test "association join belongs_to" do
-    query = Model2 |> join(:inner, [c], p in c.post) |> select([], 0) |> normalize
+    query = Model2 |> join(:inner, [c], p in assoc(c, :post)) |> select([], 0) |> normalize
     assert SQL.all(query) ==
            "SELECT 0 FROM \"model2\" AS m0 INNER JOIN \"model\" AS m1 ON m1.\"x\" = m0.\"z\""
   end
 
   test "association join has_many" do
-    query = Model |> join(:inner, [p], c in p.comments) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], c in assoc(p, :comments)) |> select([], 0) |> normalize
     assert SQL.all(query) ==
            "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON m1.\"z\" = m0.\"x\""
   end
 
   test "association join has_one" do
-    query = Model |> join(:inner, [p], pp in p.permalink) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], 0) |> normalize
     assert SQL.all(query) ==
            "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model3\" AS m1 ON m1.\"id\" = m0.\"y\""
   end
 
   test "association join with on" do
-    query = Model |> join(:inner, [p], c in p.comments, 1 == 2) |> select([], 0) |> normalize
+    query = Model |> join(:inner, [p], c in assoc(p, :comments), 1 == 2) |> select([], 0) |> normalize
     assert SQL.all(query) ==
            "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON (1 = 2) AND (m1.\"z\" = m0.\"x\")"
   end

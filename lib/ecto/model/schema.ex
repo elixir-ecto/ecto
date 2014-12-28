@@ -18,8 +18,40 @@ defmodule Ecto.Model.Schema do
         end
       end
 
-  This module also automatically imports `from/2` from `Ecto.Query`
-  as a convenience.
+  ## Types and casting
+
+  When defining the schema, types need to be given. Those types are specific
+  to Ecto and must be one of:
+
+  Ecto type               | Elixir type             | Literal syntax in query
+  :---------------------- | :---------------------- | :---------------------
+  `:integer`              | `integer`               | 1, 2, 3
+  `:float`                | `float`                 | 1.0, 2.0, 3.0
+  `:boolean`              | `boolean`               | true, false
+  `:string`               | UTF-8 encoded `binary`  | "hello"
+  `:binary`               | `binary`                | `<<int, int, int, ...>>`
+  `:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
+  `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
+  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
+  `:datetime`             | `%Ecto.DateTime{}`
+  `:date`                 | `%Ecto.Date{}`
+  `:time`                 | `%Ecto.Time{}`
+
+  Models can also have virtual fields by passing the `virtual: true`
+  option. These fields are not persisted to the database and can
+  optionally not be type checked by declaring type `:any`.
+
+  When manipulating the struct, it is the responsibility of the
+  developer to ensure the fields are cast to the proper value. For
+  example, you can create a weather struct with an invalid value
+  for `temp_lo`:
+
+      iex> weather = %Weather{temp_lo: "0"}
+      iex> weather.temp_lo
+      "0"
+
+  However, if you attempt to persist the struct above, an error will
+  be raised since Ecto validates the types when building the query.
 
   ## Schema defaults
 
@@ -45,9 +77,8 @@ defmodule Ecto.Model.Schema do
 
   * `primary_key` - either `false`, or a `{field, type, opts}` tuple
   * `foreign_key_type` - sets the type for any `belongs_to` associations.
-                         This can be overridden using the `:type` option
-                         to the `belongs_to` statement. Defaults to
-                         type `:integer`
+    This can be overridden using the `:type` option to the `belongs_to`
+    statement. Defaults to type `:integer`
 
   ## Example
 
@@ -82,54 +113,31 @@ defmodule Ecto.Model.Schema do
   that `:post_id` be of `:string` type to reference the `:uuid` of a
   `MyApp.Post` model.
 
-  ## Setting Primary Keys with Schema Defaults
-
-  In the example above, the `:uuid` primary key field needs to be
-  explicitly set by the developer before the Model can be inserted
-  or updated in a database.
-
-  To set a primary key, the developer **must** call the function
-  `Ecto.Model.put_primary_key/2`.
-
-  Example:
-
-      uuid = "some_uuid"
-
-      # Don't do this
-      post = %MyApp.Post{uuid: uuid}
-
-      # Do this instead
-      post = Ecto.Model.put_primary_key(%MyApp.Post{}, uuid)
-
-  This must be done in order to ensure that any associations of the Model
-  are appropriately updated.
-
   ## Reflection
 
   Any schema module will generate the `__schema__` function that can be used for
   runtime introspection of the schema.
 
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
-  * `__schema__(:field_type, field)` - Returns the type of the given field;
-  * `__schema__(:field_names)` - Returns a list of all field names;
-  * `__schema__(:associations)` - Returns a list of all association field names;
-  * `__schema__(:association, field)` - Returns the given field's association
-                                        reflection;
   * `__schema__(:primary_key)` - Returns the field that is the primary key or
                                  `nil` if there is none;
-  * `__schema__(:allocate, values)` - Creates a new model struct from the given
-                                      field values;
-  * `__schema__(:keywords, model)` - Return a keyword list of all non-virtual
-                                     fields and their values;
 
+  * `__schema__(:fields)` - Returns a list of all non-virtual field names;
+  * `__schema__(:field, field)` - Returns the type of the given non-virtual field;
+
+  * `__schema__(:associations)` - Returns a list of all association field names;
+  * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
+
+  * `__schema__(:load, values)` - Loads a new model struct from the given non-virtual
+                                  field values;
+
+  Furthermore, both `__struct__` and `__assign__` functions are defined
+  so structs and assignment functionalities are available.
   """
 
   @doc false
   defmacro __using__(_) do
     quote do
-      # TODO: Move those imports out to Ecto.Model
-      import Ecto.Query, only: [from: 2]
-      import Ecto.Model, only: [primary_key: 1, put_primary_key: 2, scoped: 2]
       import Ecto.Model.Schema, only: [schema: 2, schema: 3]
     end
   end
@@ -178,20 +186,19 @@ defmodule Ecto.Model.Schema do
       def __schema__(:source), do: @ecto_source
 
       Module.eval_quoted __MODULE__, [
-        Ecto.Model.Schema.__assign__(@assign_fields, @ecto_primary_key),
         Ecto.Model.Schema.__struct__(@struct_fields),
+        Ecto.Model.Schema.__assign__(@assign_fields, @ecto_primary_key),
         Ecto.Model.Schema.__fields__(fields),
         Ecto.Model.Schema.__assocs__(__MODULE__, assocs, @ecto_primary_key, fields),
         Ecto.Model.Schema.__primary_key__(@ecto_primary_key),
-        Ecto.Model.Schema.__helpers__(fields, @ecto_primary_key) ]
+        Ecto.Model.Schema.__helpers__(fields)]
     end
   end
 
   ## API
 
   @doc """
-  Defines a field on the model schema with given name and type, will also create
-  a struct field.
+  Defines a field on the model schema with given name and type.
 
   ## Options
 
@@ -207,9 +214,10 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc ~S"""
-  Indicates a one-to-many association with another model, where the current
-  model has zero or more records of the other model. The other model often
-  has a `belongs_to` field with the reverse association.
+  Indicates a one-to-many association with another model.
+
+  The current model has zero or more records of the other model. The other
+  model often has a `belongs_to` field with the reverse association.
 
   Creates a virtual field called `name`. The association can be accessed via
   this field, see `Ecto.Associations.HasMany` for more information. See the
@@ -219,9 +227,9 @@ defmodule Ecto.Model.Schema do
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
-                       other model, defaults to: `:"#{model}_id"`;
-    * `:references`  - Sets the key on the current model to be used for the
-                       association, defaults to the primary key on the model;
+      other model, defaults to: `:"#{model}_id"`;
+    * `:references` - Sets the key on the current model to be used for the
+      association, defaults to the primary key on the model;
 
   ## Examples
 
@@ -233,18 +241,12 @@ defmodule Ecto.Model.Schema do
 
       # Get all comments for a given post
       post = Repo.get(Post, 42)
-      comments = Repo.all(post.comments)
+      comments = Repo.all assoc(post, :comments)
 
       # The comments can come preloaded on the post struct
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
-      post.comments.all #=> [ %Comment{...}, ... ]
+      post.comments #=> [ %Comment{...}, ... ]
 
-      # Or via an association join
-      [post] = Repo.all(from(p in Post,
-                      where: p.id == 42,
-                  left_join: c in p.comments,
-                     select: assoc(p, c)))
-      post.comments.all #=> [ %Comment{...}, ... ]
   """
   defmacro has_many(name, queryable, opts \\ []) do
     quote do
@@ -253,9 +255,10 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc ~S"""
-  Indicates a one-to-one association with another model, where the current model
-  has zero or one records of the other model. The other model often has a
-  `belongs_to` field with the reverse association.
+  Indicates a one-to-one association with another model.
+
+  The current model has zero or one records of the other model. The other
+  model often has a `belongs_to` field with the reverse association.
 
   Creates a virtual field called `name`. The association can be accessed via
   this field, see `Ecto.Associations.HasOne` for more information. Check the
@@ -265,9 +268,9 @@ defmodule Ecto.Model.Schema do
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
-                       other model, defaults to: `:"#{model}_id"`;
+      other model, defaults to: `:"#{model}_id"`;
     * `:references`  - Sets the key on the current model to be used for the
-                       association, defaults to the primary key on the model;
+      association, defaults to the primary key on the model;
 
   ## Examples
 
@@ -277,16 +280,10 @@ defmodule Ecto.Model.Schema do
         end
       end
 
-      # The permalink can come preloaded on the post record
+      # The permalink can come preloaded on the post struct
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :permalink))
-      post.permalink.get #=> %Permalink{...}
+      post.permalink #=> %Permalink{...}
 
-      # Or via an association join
-      [post] = Repo.all(from(p in Post,
-                      where: p.id == 42,
-                  left_join: pl in p.permalink,
-                     select: assoc(p, pl)))
-      post.permalink.get #=> %Permalink{...}
   """
   defmacro has_one(name, queryable, opts \\ []) do
     quote do
@@ -295,16 +292,17 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc ~S"""
-  Indicates a one-to-one association with another model, the current model
-  belongs to zero or one records of the other model. The other model
-  often has a `has_one` or a `has_many` field with the reverse association.
-  Compared to `has_one` this association should be used where you would place
-  the foreign key on an SQL table.
+  Indicates a one-to-one association with another model.
 
-  Creates a virtual field called `name`. The association can be accessed via
-  this field, see `Ecto.Associations.BelongsTo` for more information. Check the
-  examples to see how to perform queries on the association and
-  `Ecto.Query.join/3` for joins.
+  The current model belongs to zero or one records of the other model. The other
+  model often has a `has_one` or a `has_many` field with the reverse association.
+
+  You should use `belongs_to` in the table that contains the foreign key. Imagine
+  a company <-> manager relationship. If the company contains the `manager_id` in
+  the underlying database table, we say the company belongs to manager.
+
+  In fact, when you invoke this macro, a field with the name of foreign key is
+  automatically defined in the schema for you.
 
   ## Options
 
@@ -318,20 +316,15 @@ defmodule Ecto.Model.Schema do
 
       defmodule Comment do
         schema "comments" do
+          # This automatically defines a post_id field too
           belongs_to :post, Post
         end
       end
 
       # The post can come preloaded on the comment record
       [comment] = Repo.all(from(c in Comment, where: c.id == 42, preload: :post))
-      comment.post.get #=> %Post{...}
+      comment.post #=> %Post{...}
 
-      # Or via an association join
-      [comment] = Repo.all(from(c in Comment,
-                         where: c.id == 42,
-                     left_join: p in c.post,
-                        select: assoc(c, p)))
-      comment.post.get #=> %Post{...}
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
     quote do
@@ -365,18 +358,14 @@ defmodule Ecto.Model.Schema do
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
-    assoc = Ecto.Associations.HasMany.Proxy.__assoc__(:new, name, mod)
-    put_struct_field(mod, name, assoc)
-
+    put_struct_assoc_field(mod, name)
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :has_many, opts})
   end
 
   @doc false
   def __has_one__(mod, name, queryable, opts) do
-    assoc = Ecto.Associations.HasOne.Proxy.__assoc__(:new, name, mod)
-    put_struct_field(mod, name, assoc)
-
+    put_struct_assoc_field(mod, name)
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :has_one, opts})
   end
@@ -392,9 +381,7 @@ defmodule Ecto.Model.Schema do
 
     __field__(mod, opts[:foreign_key], foreign_key_type, [])
 
-    assoc = Ecto.Associations.BelongsTo.Proxy.__assoc__(:new, name, mod)
-    put_struct_field(mod, name, assoc)
-
+    put_struct_assoc_field(mod, name)
     opts = [queryable: queryable] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, :belongs_to, opts})
   end
@@ -407,6 +394,11 @@ defmodule Ecto.Model.Schema do
     end
 
     Module.put_attribute(mod, :struct_fields, {name, assoc})
+  end
+
+  defp put_struct_assoc_field(mod, name) do
+    put_struct_field(mod, name,
+                     %Ecto.Associations.NotLoaded{__owner__: mod, __field__: name})
   end
 
   ## Helpers
@@ -432,16 +424,16 @@ defmodule Ecto.Model.Schema do
   def __fields__(fields) do
     quoted = Enum.map(fields, fn {name, type, _opts} ->
       quote do
-        def __schema__(:field_type, unquote(name)), do: unquote(type)
+        def __schema__(:field, unquote(name)), do: unquote(type)
       end
     end)
 
     field_names = Enum.map(fields, &elem(&1, 0))
 
-    quoted ++ [ quote do
-      def __schema__(:field_type, _), do: nil
-      def __schema__(:field_names), do: unquote(field_names)
-    end ]
+    quoted ++ [quote do
+      def __schema__(:field, _), do: nil
+      def __schema__(:fields), do: unquote(field_names)
+    end]
   end
 
   @doc false
@@ -461,7 +453,7 @@ defmodule Ecto.Model.Schema do
         end
       end
 
-      refl = Ecto.Associations.create_reflection(type, name,
+      refl = __reflection__(type, name,
         module, pk, opts[:queryable], opts[:foreign_key])
 
       quote do
@@ -488,33 +480,41 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc false
-  def __helpers__(fields, primary_key) do
+  def __helpers__(fields) do
     field_names = Enum.map(fields, &elem(&1, 0))
 
     quote do
       # TODO: This can be optimized
-      def __schema__(:allocate, values) do
-        zip   = Enum.zip(unquote(field_names), values)
-        pk    = Dict.get(zip, unquote(primary_key))
-        model = struct(__MODULE__, zip)
-
-        if pk, do: model = Ecto.Model.put_primary_key(model, pk)
-        model
-      end
-
-      def __schema__(:keywords, model, opts \\ []) do
-        keep_pk     = Keyword.get(opts, :primary_key, true)
-        primary_key = unquote(primary_key)
-
-        values = Map.take(model, unquote(field_names))
-
-        Map.to_list(if keep_pk do
-          values
-        else
-          Map.delete(values, primary_key)
-        end)
+      def __schema__(:load, values) do
+        struct(__MODULE__, Enum.zip(unquote(field_names), values))
       end
     end
+  end
+
+  defp __reflection__(type, name, module, pk, assoc, fk)
+      when type in [:has_many, :has_one] do
+    model_name = module |> Module.split |> List.last |> Ecto.Utils.underscore
+
+    values = [
+      owner: module,
+      assoc: assoc,
+      key: pk,
+      assoc_key: fk || :"#{model_name}_#{pk}",
+      field: name ]
+
+    case type do
+      :has_many -> struct(Ecto.Reflections.HasMany, values)
+      :has_one  -> struct(Ecto.Reflections.HasOne, values)
+    end
+  end
+
+  defp __reflection__(:belongs_to, name, module, pk, assoc, fk) do
+    %Ecto.Reflections.BelongsTo{
+      owner: module,
+      assoc: assoc,
+      key: fk,
+      assoc_key: pk,
+      field: name}
   end
 
   defp check_type!(type, virtual?) do

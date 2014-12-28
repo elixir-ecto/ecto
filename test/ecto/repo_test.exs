@@ -18,10 +18,10 @@ defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.MockRepo
+  require Ecto.MockRepo, as: MockRepo
+
   alias Ecto.RepoTest.MyModel
   alias Ecto.RepoTest.MyModelNoPK
-  require MockRepo
 
   test "handles environment support" do
     defmodule EnvRepo do
