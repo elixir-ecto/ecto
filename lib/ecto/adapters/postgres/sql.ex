@@ -231,7 +231,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp expr({:&, _, [_]} = var, sources) do
       source    = Util.find_source(sources, var)
       model     = Util.model(source)
-      fields    = model.__schema__(:field_names)
+      fields    = model.__schema__(:fields)
       {_, name} = Util.source(source)
 
       Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")

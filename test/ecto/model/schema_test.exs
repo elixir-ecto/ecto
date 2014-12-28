@@ -27,7 +27,7 @@ defmodule Ecto.Model.SchemaTest do
 
   test "uses @schema_defauls" do
     assert %DefaultUser{uuid: "abc"}.uuid == "abc"
-    assert DefaultUser.__schema__(:field_type, :comment_id) == :string
+    assert DefaultUser.__schema__(:field, :comment_id) == :string
   end
 
   defmodule MyModel do
@@ -57,13 +57,13 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "schema metadata" do
-    assert MyModel.__schema__(:source)                  == "mymodel"
-    assert MyModel.__schema__(:field_names)             == [:id, :name, :email, :array, :comment_id]
-    assert MyModel.__schema__(:field_type, :id)         == :integer
-    assert MyModel.__schema__(:field_type, :name)       == :string
-    assert MyModel.__schema__(:field_type, :email)      == :string
-    assert MyModel.__schema__(:field_type, :array)      == {:array, :string}
-    assert MyModel.__schema__(:field_type, :comment_id) == :integer
+    assert MyModel.__schema__(:source)             == "mymodel"
+    assert MyModel.__schema__(:fields)             == [:id, :name, :email, :array, :comment_id]
+    assert MyModel.__schema__(:field, :id)         == :integer
+    assert MyModel.__schema__(:field, :name)       == :string
+    assert MyModel.__schema__(:field, :email)      == :string
+    assert MyModel.__schema__(:field, :array)      == {:array, :string}
+    assert MyModel.__schema__(:field, :comment_id) == :integer
   end
 
   test "assign metadata" do
@@ -133,7 +133,7 @@ defmodule Ecto.Model.SchemaTest do
 
   test "associations" do
     assert ModelAssocs.__schema__(:association, :not_a_field) == nil
-    assert ModelAssocs.__schema__(:field_names) == [:id, :comment_id]
+    assert ModelAssocs.__schema__(:fields) == [:id, :comment_id]
   end
 
   test "has_many association" do
@@ -188,8 +188,8 @@ defmodule Ecto.Model.SchemaTest do
       end
     end
 
-    assert ForeignKeyType.__schema__(:field_type, :comment_id) == :datetime
-    assert DefaultForeignKeyType.__schema__(:field_type, :comment_id) == :uuid
+    assert ForeignKeyType.__schema__(:field, :comment_id) == :datetime
+    assert DefaultForeignKeyType.__schema__(:field, :comment_id) == :uuid
   end
 
   defmodule ModelAssocOpts do

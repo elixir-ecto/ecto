@@ -82,54 +82,31 @@ defmodule Ecto.Model.Schema do
   that `:post_id` be of `:string` type to reference the `:uuid` of a
   `MyApp.Post` model.
 
-  ## Setting Primary Keys with Schema Defaults
-
-  In the example above, the `:uuid` primary key field needs to be
-  explicitly set by the developer before the Model can be inserted
-  or updated in a database.
-
-  To set a primary key, the developer **must** call the function
-  `Ecto.Model.put_primary_key/2`.
-
-  Example:
-
-      uuid = "some_uuid"
-
-      # Don't do this
-      post = %MyApp.Post{uuid: uuid}
-
-      # Do this instead
-      post = Ecto.Model.put_primary_key(%MyApp.Post{}, uuid)
-
-  This must be done in order to ensure that any associations of the Model
-  are appropriately updated.
-
   ## Reflection
 
   Any schema module will generate the `__schema__` function that can be used for
   runtime introspection of the schema.
 
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
-  * `__schema__(:field_type, field)` - Returns the type of the given field;
-  * `__schema__(:field_names)` - Returns a list of all field names;
-  * `__schema__(:associations)` - Returns a list of all association field names;
-  * `__schema__(:association, field)` - Returns the given field's association
-                                        reflection;
   * `__schema__(:primary_key)` - Returns the field that is the primary key or
                                  `nil` if there is none;
-  * `__schema__(:allocate, values)` - Creates a new model struct from the given
-                                      field values;
-  * `__schema__(:keywords, model)` - Return a keyword list of all non-virtual
-                                     fields and their values;
 
+  * `__schema__(:fields)` - Returns a list of all non-virtual field names;
+  * `__schema__(:field, field)` - Returns the type of the given non-virtual field;
+
+  * `__schema__(:associations)` - Returns a list of all association field names;
+  * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
+
+  * `__schema__(:load, values)` - Loads a new model struct from the given non-virtual
+                                  field values;
+
+  Furthermore, both `__struct__` and `__assign__` functions are defined
+  so structs and assignment functionalities are available.
   """
 
   @doc false
   defmacro __using__(_) do
     quote do
-      # TODO: Move those imports out to Ecto.Model
-      import Ecto.Query, only: [from: 2]
-      import Ecto.Model, only: [primary_key: 1, put_primary_key: 2, scoped: 2]
       import Ecto.Model.Schema, only: [schema: 2, schema: 3]
     end
   end
@@ -178,12 +155,12 @@ defmodule Ecto.Model.Schema do
       def __schema__(:source), do: @ecto_source
 
       Module.eval_quoted __MODULE__, [
-        Ecto.Model.Schema.__assign__(@assign_fields, @ecto_primary_key),
         Ecto.Model.Schema.__struct__(@struct_fields),
+        Ecto.Model.Schema.__assign__(@assign_fields, @ecto_primary_key),
         Ecto.Model.Schema.__fields__(fields),
         Ecto.Model.Schema.__assocs__(__MODULE__, assocs, @ecto_primary_key, fields),
         Ecto.Model.Schema.__primary_key__(@ecto_primary_key),
-        Ecto.Model.Schema.__helpers__(fields, @ecto_primary_key) ]
+        Ecto.Model.Schema.__helpers__(fields)]
     end
   end
 
@@ -432,16 +409,16 @@ defmodule Ecto.Model.Schema do
   def __fields__(fields) do
     quoted = Enum.map(fields, fn {name, type, _opts} ->
       quote do
-        def __schema__(:field_type, unquote(name)), do: unquote(type)
+        def __schema__(:field, unquote(name)), do: unquote(type)
       end
     end)
 
     field_names = Enum.map(fields, &elem(&1, 0))
 
-    quoted ++ [ quote do
-      def __schema__(:field_type, _), do: nil
-      def __schema__(:field_names), do: unquote(field_names)
-    end ]
+    quoted ++ [quote do
+      def __schema__(:field, _), do: nil
+      def __schema__(:fields), do: unquote(field_names)
+    end]
   end
 
   @doc false
@@ -488,31 +465,13 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc false
-  def __helpers__(fields, primary_key) do
+  def __helpers__(fields) do
     field_names = Enum.map(fields, &elem(&1, 0))
 
     quote do
       # TODO: This can be optimized
-      def __schema__(:allocate, values) do
-        zip   = Enum.zip(unquote(field_names), values)
-        pk    = Dict.get(zip, unquote(primary_key))
-        model = struct(__MODULE__, zip)
-
-        if pk, do: model = Ecto.Model.put_primary_key(model, pk)
-        model
-      end
-
-      def __schema__(:keywords, model, opts \\ []) do
-        keep_pk     = Keyword.get(opts, :primary_key, true)
-        primary_key = unquote(primary_key)
-
-        values = Map.take(model, unquote(field_names))
-
-        Map.to_list(if keep_pk do
-          values
-        else
-          Map.delete(values, primary_key)
-        end)
+      def __schema__(:load, values) do
+        struct(__MODULE__, Enum.zip(unquote(field_names), values))
       end
     end
   end
