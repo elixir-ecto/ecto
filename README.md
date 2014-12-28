@@ -45,7 +45,7 @@ Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, yo
 ```elixir
 defp deps do
   [{:postgrex, ">= 0.0.0"},
-   {:ecto, "~> 0.2.5"}]
+   {:ecto, "~> 0.3.0"}]
 end
 ```
 
@@ -69,9 +69,9 @@ After you are done, run `mix deps.get` in your shell to fetch the dependencies.
 
 When using Ecto, we think about 3 main components:
 
-  * [Repositories](http://hexdocs.pm/ecto/0.2.5/Ecto.Repo.html): repositories are wrappers around the database. Via the repository, we can create, update, destroy and query existing entries. A repository needs an adapter and a URL to communicate to the database;
-  * [Models](http://hexdocs.pm/ecto/0.2.5/Ecto.Model.html): models is a collection of functionality like the schema, validations and callbacks that can be cherry-picked;
-  * [Queries](http://hexdocs.pm/ecto/0.2.5/Ecto.Query.html): written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injection, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
+  * [Repositories](http://hexdocs.pm/ecto/0.3.0/Ecto.Repo.html): repositories are wrappers around the database. Via the repository, we can create, update, destroy and query existing entries. A repository needs an adapter and a URL to communicate to the database;
+  * [Models](http://hexdocs.pm/ecto/0.3.0/Ecto.Model.html): models is a collection of functionality like the schema, validations and callbacks that can be cherry-picked;
+  * [Queries](http://hexdocs.pm/ecto/0.3.0/Ecto.Query.html): written in Elixir syntax, queries are used to retrieve information from a given repository. Queries in Ecto are secure, avoiding common problems like SQL Injection, and also type-safe. Queries are also composable via the `Ecto.Queryable` protocol.
 
 Note how the storage (repositories), the data (entities) and behaviour (models) are decoupled in Ecto. In the following sections, we will describe those components and how they interact with each other. This README will follow the code outlined in the application at [examples/simple](https://github.com/elixir-lang/ecto/tree/master/examples/simple). Please follow the instructions outlined there to get it up and running.
 
@@ -118,9 +118,9 @@ A simple example can be found [in the Ecto git repo](https://github.com/elixir-l
 
 Models provide different functionality that can be cherry-picked at will. They are:
 
-* [`Ecto.Model.Schema`](http://hexdocs.pm/ecto/0.2.5/Ecto.Model.Schema.html) - defines a model schema so it can be used in queries;
-* [`Ecto.Model.Validations`](http://hexdocs.pm/ecto/0.2.5/Ecto.Model.Validations.html) - conveniences for defining module-level validations in models;
-* `Ecto.Model.Callbacks` - to be implemented;
+* [`Ecto.Model.Schema`](http://hexdocs.pm/ecto/0.3.0/Ecto.Model.Schema.html) - defines a model schema so it can be used in queries;
+* [`Ecto.Model.Validations`](http://hexdocs.pm/ecto/0.3.0/Ecto.Model.Validations.html) - conveniences for defining module-level validations in models;
+* [`Ecto.Model.Callbacks`](http://hexdocs.pm/ecto/0.3.0/Ecto.Model.Callbacks.html) - provides life-cycle callbacks for data consistency;
 
 By using `Ecto.Model`, you get all of the above:
 
@@ -172,9 +172,11 @@ Repo.delete(weather)
 
 Notice how the storage (repository) and the model are decoupled with structs representing data. This provides many benefits:
 
-* By having structs as data, we guarantee they are are light-weight, serializable structures. In many languages, the data is often represented by large, complex objects, with entwined state transactions, which makes serialization particularly hard;
+* By having structs as data, we guarantee they are light-weight, serializable structures. In many languages, the data is often represented by large, complex objects, with entwined state transactions, which makes serialization particularly hard;
+
 * By providing behaviour in modules, they are easy to compose (it is a matter of composing functions). You can easily have different structs sharing the same set of validations. Or the same struct being controlled by a different set of validations and rules on different parts of the application. For example, the Weather struct may require a different set of validations and data integrity rules depending on the role of the user manipulating the data;
-* By concerning only with storage, operations on the repository are simple and fast. You control the steps your data pass through before entering the repository. We don't pollute the repository with unnecessary overhead, providing straight-forward and performant access to storage;
+
+* By making the storage explicit with repositories, we don't pollute the repository with unnecessary overhead, providing straight-forward and performant access to storage;
 
 Note you can use the `struct/2` function that ships with Elixir to create or update a struct based on dynamic values:
 
@@ -238,7 +240,7 @@ def min_prcp(min) do
 end
 ```
 
-This comes with the extra benefit that queries in Ecto provide many direct functions to the database. Furthermore, Ecto queries are also composable and type-safe. You can find more on queries and the supported keywords in the `Ecto.Query` module.
+This comes with the extra benefit that queries in Ecto provide many direct functions to the database. Furthermore, Ecto queries are also composable and type-safe. You can find more on queries and the supported keywords in the [`Ecto.Query`](http://hexdocs.pm/ecto/0.3.0/Ecto.Query.html) module.
 
 With this, we finish our introduction. The next section goes into more details on other Ecto features, like generators, associations and more.
 
@@ -248,9 +250,7 @@ With this, we finish our introduction. The next section goes into more details o
 
 Ecto provides many tasks to help your workflow as well as code generators. You can find all available tasks by typing `mix help` inside a project with Ecto.
 
-Ecto generators will automatically open the generated files if you have `ECTO_EDITOR` set in your environment variable. You can set this variable for different editors as follows:
-
-  * Textmate: `mate -a`
+Ecto generators will automatically open the generated files if you have `ECTO_EDITOR` set in your environment variable.
 
 ### Types and casting
 
@@ -270,7 +270,7 @@ Ecto type               | Elixir type             | Literal syntax in query
 `:date`                 | `%Ecto.Date{}`
 `:time`                 | `%Ecto.Time{}`
 
-In queries some values need to be tagged by their ecto type because the ecto type cannot be inferred from an elixir value. For example an Elixir binary can be both an arbitrary binary or a UTF-8 encoded string, therefore the value needs to be wrapped in a function: `binary(<<...>>)` to tag it with the correct type.
+In queries some values need to be tagged by their Ecto type because the ecto type cannot be inferred from an elixir value. For example an Elixir binary can be both an arbitrary binary or a UTF-8 encoded string, therefore the value needs to be wrapped in a function: `binary(<<...>>)` to tag it with the correct type.
 
 Models can also have virtual fields. These fields are not persisted to the database and can optionally not be type checked by declaring type `:any`.
 
@@ -306,21 +306,14 @@ defmodule Comment do
 end
 ```
 
-Ecto defines a field for each association:
-
-```elixir
-post = Repo.get(Post, 42)
-post.comments #=> Ecto.Association.HasMany[...]
-```
-
-The association record above provides a couple conveniences. First of all, `post.comments` is a queryable structure, which means we can use it in queries:
+Once an association is defined, Ecto provides a couple conveniences. The first one is the `Ecto.Model.assoc/2` function that allows us to easily retrieve all associated data to a given struct:
 
 ```elixir
 # Get all comments for the given post
-Repo.all(post.comments)
+Repo.all assoc(post, :comments)
 
-# Build a query on top of the associated comments
-query = from c in post.comments, where: c.title != nil
+# Or build a query on top of the associated comments
+query = from c in assoc(post, :comments), where: c.title != nil
 Repo.all(query)
 ```
 
@@ -328,42 +321,29 @@ Ecto also supports joins with associations:
 
 ```elixir
 query = from p in Post,
-      where: p.id == 42,
-  left_join: c in p.comments,
-     select: assoc(p, comments: c)
+       join: c in assoc(p, :comments),
+     select: {p, c}
 
-[post] = Repo.all(query)
-
-post.comments.all #=> [%Comment{...}, %Comment{...}]
+[{post, comment}] = Repo.all(query)
 ```
 
-Notice we used the `assoc` helper to associate the returned posts and comments while assembling the query results.
-
-It is easy to see above though that a developer simply wants to get all comments associated to each post. There is no filtering based on the underlying comment. For such, Ecto support preloads:
-
-```elixir
-posts = Repo.all(from p in Post, preload: [:comments])
-hd(posts).comments.all #=> [%Comment{...}, %Comment{...}]
-```
-
-When preloading, Ecto first fetches all posts and then Ecto does a separate query to retrieve all comments associated with the returned posts.
-
-Notice that Ecto does not lazy load associations. While lazily loading associations may sound convenient at first, in the long run it becomes a source of confusion and performance issues. That said, if you call `all` in an association that is not currently loaded, Ecto will raise an error:
+When an association is defined, Ecto also defines a field in the model with the association name. By default, associations are not loaded into this field:
 
 ```elixir
 post = Repo.get(Post, 42)
-post.comments.all #=> ** (Ecto.AssociationNotLoadedError)
+post.comments #=> #Ecto.Associations.NotLoaded<...>
 ```
 
-Besides `has_many`, Ecto also supports `has_one` and `belongs_to` associations. They work similarly, except retrieving the association value is done via `get`, instead of `all`:
+However, developers can use the preload functionality in queries to automatically pre-populate the field:
 
 ```elixir
-query = from(c in Comment, where: c.id == 42, preload: :post)
-[comment] = Repo.all(query)
-comment.post.get #=> %Post{...}
+post = Repo.one from p in Post, where: p.id == 13, preload: [:comments]
+post.comments #=> [%Comment{...}, %Comment{...}]
 ```
 
 You can find more information about defining associations and each respective association module in `Ecto.Model.Schema` docs.
+
+> NOTE: Ecto does not lazy load associations. While lazily loading associations may sound convenient at first, in the long run it becomes a source of confusion and performance issues.
 
 ### Migrations
 
