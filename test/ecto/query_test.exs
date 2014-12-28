@@ -62,9 +62,9 @@ defmodule Ecto.QueryTest do
     end
 
     "posts" |> select([_], 0)
-    "posts" |> join(:inner, [], "comments", true) |> select([_, c], c.text)
-    "posts" |> join(:inner, [], "comments", true) |> select([p, _], p.title)
-    "posts" |> join(:inner, [], "comments", true) |> select([_, _], 0)
+    "posts" |> join(:inner, [], "comments") |> select([_, c], c.text)
+    "posts" |> join(:inner, [], "comments") |> select([p, _], p.title)
+    "posts" |> join(:inner, [], "comments") |> select([_, _], 0)
   end
 
   test "binding collision" do
@@ -124,10 +124,16 @@ defmodule Ecto.QueryTest do
 
   test "join on keyword query" do
     from(c in "comments", join: p in "posts", on: c.text == "", select: c)
-    from(p in "posts", join: c in assoc(p, :comments), on: c.text == "", select: p)
+    from(p in "posts", join: c in assoc(p, :comments), select: p)
 
-    assert_raise Ecto.Query.CompileError, "`on` keyword must immediately follow a join", fn ->
+    message = ~r"`on` keyword must immediately follow a join"
+    assert_raise Ecto.Query.CompileError, message, fn ->
       quote_and_eval(from(c in "comments", on: c.text == "", select: c))
+    end
+
+    message = ~r"cannot specify `on` on `inner_join` when using association join,"
+    assert_raise Ecto.Query.CompileError, message, fn ->
+      quote_and_eval(from(c in "comments", join: p in assoc(c, :post), on: true))
     end
   end
 

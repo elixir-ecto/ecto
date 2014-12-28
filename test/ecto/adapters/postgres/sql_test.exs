@@ -325,12 +325,6 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
            "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model3\" AS m1 ON m1.\"id\" = m0.\"y\""
   end
 
-  test "association join with on" do
-    query = Model |> join(:inner, [p], c in assoc(p, :comments), 1 == 2) |> select([], 0) |> normalize
-    assert SQL.all(query) ==
-           "SELECT 0 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON (1 = 2) AND (m1.\"z\" = m0.\"x\")"
-  end
-
   test "join produces correct bindings" do
     query = from(p in Model, join: c in Model2, on: true)
     query = from(p in query, join: c in Model2, on: true, select: {p.id, c.id})

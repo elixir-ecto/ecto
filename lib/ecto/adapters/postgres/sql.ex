@@ -114,7 +114,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
        and: "AND", or: "OR",
        ilike: "ILIKE", like: "LIKE"]
 
-    @binary_ops Dict.keys(binary_ops)
+    @binary_ops Keyword.keys(binary_ops)
 
     Enum.map(binary_ops, fn {op, str} ->
       defp handle_fun(unquote(op), 2), do: {:binary_op, unquote(str)}

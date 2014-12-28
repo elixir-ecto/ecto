@@ -22,44 +22,47 @@ defmodule Ecto.Associations do
   @moduledoc false
 end
 
-defmodule Ecto.Reflections.HasOne do
+defmodule Ecto.Associations.HasOne do
   @moduledoc """
   The reflection record for a `has_one` association. Its fields are:
 
+  * `cardinality` - The association cardinality;
   * `field` - The name of the association field on the model;
   * `owner` - The model where the association was defined;
-  * `associated` - The model that is associated;
-  * `key` - The key on the `owner` model used for the association;
+  * `assoc` - The model that is associated;
+  * `owner_key` - The key on the `owner` model used for the association;
   * `assoc_key` - The key on the `associated` model used for the association;
   """
 
-  defstruct [:field, :owner, :assoc, :key, :assoc_key]
+  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
 end
 
-defmodule Ecto.Reflections.HasMany do
+defmodule Ecto.Associations.HasMany do
   @moduledoc """
   The struct record for a `has_many` association. Its fields are:
 
+  * `cardinality` - The association cardinality;
   * `field` - The name of the association field on the model;
   * `owner` - The model where the association was defined;
   * `assoc` - The model that is associated;
-  * `key` - The key on the `owner` model used for the association;
+  * `owner_key` - The key on the `owner` model used for the association;
   * `assoc_key` - The key on the `associated` model used for the association;
   """
 
-  defstruct [:field, :owner, :assoc, :key, :assoc_key]
+  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
 end
 
-defmodule Ecto.Reflections.BelongsTo do
+defmodule Ecto.Associations.BelongsTo do
   @moduledoc """
   The reflection struct for a `belongs_to` association. Its fields are:
 
+  * `cardinality` - The association cardinality;
   * `field` - The name of the association field on the model;
   * `owner` - The model where the association was defined;
   * `assoc` - The model that is associated;
-  * `key` - The key on the `owner` model used for the association;
+  * `owner_key` - The key on the `owner` model used for the association;
   * `assoc_key` - The key on the `assoc` model used for the association;
   """
 
-  defstruct [:field, :owner, :assoc, :key, :assoc_key]
+  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
 end

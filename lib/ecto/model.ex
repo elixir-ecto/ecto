@@ -78,7 +78,7 @@ defmodule Ecto.Model do
 
   # TODO: Make this polymorphic
   def assoc(model, assoc) when is_map(model) and is_atom(assoc) do
-    %{key: key, assoc: assoc, assoc_key: assoc_key} = reflection(model, assoc)
+    %{owner_key: key, assoc: assoc, assoc_key: assoc_key} = reflection(model, assoc)
 
     from x in assoc,
       where: field(x, ^assoc_key) == ^Map.fetch!(model, key)
@@ -89,10 +89,11 @@ defmodule Ecto.Model do
   end
 
   def assoc([h|_] = structs, assoc) when is_atom(assoc) do
-    %{key: key, owner: owner, assoc_key: assoc_key, assoc: assoc} = reflection(h, assoc)
+    %{owner_key: key, owner: owner, assoc_key: assoc_key, assoc: assoc} = reflection(h, assoc)
 
     values =
-      for struct <- structs do
+      for struct <- structs,
+          key =  Map.fetch!(struct, key) do
         %{__struct__: model} = struct
 
         if model != owner do
@@ -100,7 +101,7 @@ defmodule Ecto.Model do
                                "got: #{inspect model} and #{inspect owner}"
         end
 
-        Map.fetch!(struct, key)
+        key
       end
 
     from x in assoc, where: field(x, ^assoc_key) in ^values

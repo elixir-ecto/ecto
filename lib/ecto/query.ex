@@ -295,7 +295,7 @@ defmodule Ecto.Query do
 
   The join condition can be automatically set when doing an association
   join. An association join can be done on any association field
-  (`has_many`, `has_one`, `belong_to`).
+  (`has_many`, `has_one`, `belongs_to`).
 
   ## Keywords examples
 
@@ -304,7 +304,7 @@ defmodule Ecto.Query do
       select: {p.title, c.text}
 
          from p in Post,
-        left_join: c in p.comments,
+        left_join: c in assoc(p, :comments),
       select: {p, c}
 
   ## Expressions examples
@@ -314,7 +314,7 @@ defmodule Ecto.Query do
       |> select([c, p], {p.title, c.text})
 
       Post
-      |> join(:left, [p], c in p.comments)
+      |> join(:left, [p], c in assoc(p, :comments))
       |> select([p, c], {p, c})
   """
   defmacro join(query, qual, binding, expr, on \\ nil) do

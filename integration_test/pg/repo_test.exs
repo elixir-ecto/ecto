@@ -464,46 +464,6 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Comment{id: ^cid3}] = post2.comments
   end
 
-  test "has_many assoc selector reversed" do
-    p1 = TestRepo.insert(%Post{title: "1"})
-    p2 = TestRepo.insert(%Post{title: "2"})
-         TestRepo.insert(%Post{title: "3"})
-
-    TestRepo.insert(%Comment{text: "1", post_id: p1.id})
-    TestRepo.insert(%Comment{text: "2", post_id: p1.id})
-    TestRepo.insert(%Comment{text: "3", post_id: p2.id})
-    TestRepo.insert(%Comment{text: "4"})
-
-    query = from(p in Post, left_join: c in assoc(p, :comments), select: assoc(c, post: p))
-    res1 = TestRepo.all(query)
-
-    query = from(p in Post, right_join: c in assoc(p, :comments), select: assoc(c, post: p))
-    res2 = TestRepo.all(query)
-
-    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(c, post: p))
-    res3 = TestRepo.all(query)
-
-    assert [c1, c2, c3] = res1
-    assert %Comment{text: "1"} = c1
-    assert %Comment{text: "2"} = c2
-    assert %Comment{text: "3"} = c3
-    assert %Post{title: "1"}   = c1.post
-    assert %Post{title: "1"}   = c2.post
-    assert %Post{title: "2"}   = c3.post
-
-    assert [c1, c2, c3, c4] = res2
-    assert %Comment{text: "1"} = c1
-    assert %Comment{text: "2"} = c2
-    assert %Comment{text: "3"} = c3
-    assert %Comment{text: "4"} = c4
-    assert %Post{title: "1"}   = c1.post
-    assert %Post{title: "1"}   = c2.post
-    assert %Post{title: "2"}   = c3.post
-    assert nil                 = c4.post
-
-    assert res1 == res3
-  end
-
   test "has_one assoc selector" do
     p1 = TestRepo.insert(%Post{title: "1"})
     p2 = TestRepo.insert(%Post{title: "2"})
@@ -517,41 +477,6 @@ defmodule Ecto.Integration.RepoTest do
 
     assert %Permalink{id: ^pid1} = post1.permalink
     assert %Permalink{id: ^pid3} = post3.permalink
-  end
-
-  test "has_one assoc selector reversed" do
-    p1 = TestRepo.insert(%Post{title: "1"})
-    p2 = TestRepo.insert(%Post{title: "2"})
-         TestRepo.insert(%Post{title: "3"})
-
-    TestRepo.insert(%Permalink{url: "1", post_id: p1.id})
-    TestRepo.insert(%Permalink{url: "2"})
-    TestRepo.insert(%Permalink{url: "3", post_id: p2.id})
-
-    query = from(p in Post, left_join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
-    res1 = TestRepo.all(query)
-
-    query = from(p in Post, right_join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
-    res2 = TestRepo.all(query)
-
-    query = from(p in Post, join: pl in assoc(p, :permalink), select: assoc(pl, post: p))
-    res3 = TestRepo.all(query)
-
-    assert [pl1, pl3] = res1
-    assert %Permalink{url: "1"} = pl1
-    assert %Permalink{url: "3"} = pl3
-    assert %Post{title: "1"}    = pl1.post
-    assert %Post{title: "2"}    = pl3.post
-
-    assert [pl1, pl2, pl3] = res2
-    assert %Permalink{url: "1"} = pl1
-    assert %Permalink{url: "2"} = pl2
-    assert %Permalink{url: "3"} = pl3
-    assert %Post{title: "1"}    = pl1.post
-    assert nil                  = pl2.post
-    assert %Post{title: "2"}    = pl3.post
-
-    assert res1 == res3
   end
 
   test "belongs_to assoc selector" do
@@ -568,41 +493,6 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: ^pid1} = p1.post
     assert nil = p2.post
     assert %Post{id: ^pid2} = p3.post
-  end
-
-  test "belongs_to assoc selector reversed" do
-    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
-    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
-    %Post{} = TestRepo.insert(%Post{title: "3"})
-
-    TestRepo.insert(%Permalink{url: "1", post_id: pid1})
-    TestRepo.insert(%Permalink{url: "2"})
-    TestRepo.insert(%Permalink{url: "3", post_id: pid2})
-
-    query = from(pl in Permalink, left_join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
-    res1 = TestRepo.all(query)
-
-    query = from(pl in Permalink, right_join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
-    res2 = TestRepo.all(query)
-
-    query = from(pl in Permalink, join: p in assoc(pl, :post), select: assoc(p, permalink: pl))
-    res3 = TestRepo.all(query)
-
-    assert [p1, p2] = res1
-    assert %Post{title: "1"}    = p1
-    assert %Post{title: "2"}    = p2
-    assert %Permalink{url: "1"} = p1.permalink
-    assert %Permalink{url: "3"} = p2.permalink
-
-    assert [p1, p2, p3] = res2
-    assert %Post{title: "1"}    = p1
-    assert %Post{title: "2"}    = p2
-    assert %Post{title: "3"}    = p3
-    assert %Permalink{url: "1"} = p1.permalink
-    assert %Permalink{url: "3"} = p2.permalink
-    assert nil                  = p3.permalink
-
-    assert res1 == res3
   end
 
   test "nested assoc" do

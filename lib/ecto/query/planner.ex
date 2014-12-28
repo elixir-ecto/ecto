@@ -195,19 +195,16 @@ defmodule Ecto.Query.Planner do
   end
 
   defp on_expr(on, refl, var_ix, assoc_ix) do
-    key = refl.key
     var = {:&, [], [var_ix]}
+    owner_key = refl.owner_key
     assoc_key = refl.assoc_key
     assoc_var = {:&, [], [assoc_ix]}
 
     expr = quote do
-      unquote(assoc_var).unquote(assoc_key) == unquote(var).unquote(key)
+      unquote(assoc_var).unquote(assoc_key) == unquote(var).unquote(owner_key)
     end
 
-    case on.expr do
-      true -> %{on | expr: expr}
-      _    -> %{on | expr: quote do: unquote(on.expr) and unquote(expr)}
-    end
+    %{on | expr: expr}
   end
 
   @doc """

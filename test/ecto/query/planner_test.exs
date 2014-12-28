@@ -103,12 +103,6 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
   end
 
-  test "prepare: joins associations with on" do
-    query = from(p in Post, join: c in assoc(p, :comments), on: c.text == "") |> prepare |> elem(0)
-    assert %JoinExpr{on: on} = hd(query.joins)
-    assert Macro.to_string(on.expr) == "&1.text() == \"\" and &1.post_id() == &0.id()"
-  end
-
   test "prepare: cannot associate without model" do
     query = from(p in "posts", join: assoc(p, :comments))
     assert_raise Ecto.QueryError, ~r"association join cannot be performed without a model", fn ->

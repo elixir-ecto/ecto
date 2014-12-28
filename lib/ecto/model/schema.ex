@@ -219,11 +219,6 @@ defmodule Ecto.Model.Schema do
   The current model has zero or more records of the other model. The other
   model often has a `belongs_to` field with the reverse association.
 
-  Creates a virtual field called `name`. The association can be accessed via
-  this field, see `Ecto.Associations.HasMany` for more information. See the
-  examples to see how to perform queries on the association and
-  `Ecto.Query.join/3` for joins.
-
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
@@ -259,11 +254,6 @@ defmodule Ecto.Model.Schema do
 
   The current model has zero or one records of the other model. The other
   model often has a `belongs_to` field with the reverse association.
-
-  Creates a virtual field called `name`. The association can be accessed via
-  this field, see `Ecto.Associations.HasOne` for more information. Check the
-  examples to see how to perform queries on the association and
-  `Ecto.Query.join/3` for joins.
 
   ## Options
 
@@ -498,21 +488,21 @@ defmodule Ecto.Model.Schema do
     values = [
       owner: module,
       assoc: assoc,
-      key: pk,
+      owner_key: pk,
       assoc_key: fk || :"#{model_name}_#{pk}",
       field: name ]
 
     case type do
-      :has_many -> struct(Ecto.Reflections.HasMany, values)
-      :has_one  -> struct(Ecto.Reflections.HasOne, values)
+      :has_many -> struct(Ecto.Associations.HasMany, values)
+      :has_one  -> struct(Ecto.Associations.HasOne, values)
     end
   end
 
   defp __reflection__(:belongs_to, name, module, pk, assoc, fk) do
-    %Ecto.Reflections.BelongsTo{
+    %Ecto.Associations.BelongsTo{
       owner: module,
       assoc: assoc,
-      key: fk,
+      owner_key: fk,
       assoc_key: pk,
       field: name}
   end

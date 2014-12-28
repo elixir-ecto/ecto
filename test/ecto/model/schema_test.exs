@@ -123,8 +123,8 @@ defmodule Ecto.Model.SchemaTest do
 
   test "has_many association" do
     assert AssocModel.__schema__(:association, :posts) ==
-           %Ecto.Reflections.HasMany{field: :posts, owner: AssocModel,
-                                     assoc: Post, key: :id, assoc_key: :assoc_model_id}
+           %Ecto.Associations.HasMany{field: :posts, owner: AssocModel,
+                                      assoc: Post, owner_key: :id, assoc_key: :assoc_model_id}
 
     posts = (%AssocModel{}).posts
     assert %Ecto.Associations.NotLoaded{} = posts
@@ -133,8 +133,8 @@ defmodule Ecto.Model.SchemaTest do
 
   test "has_one association" do
     assert AssocModel.__schema__(:association, :author) ==
-           %Ecto.Reflections.HasOne{field: :author, owner: AssocModel,
-                                    assoc: User, key: :id, assoc_key: :assoc_model_id}
+           %Ecto.Associations.HasOne{field: :author, owner: AssocModel,
+                                    assoc: User, owner_key: :id, assoc_key: :assoc_model_id}
 
     author = (%AssocModel{}).author
     assert %Ecto.Associations.NotLoaded{} = author
@@ -143,8 +143,8 @@ defmodule Ecto.Model.SchemaTest do
 
   test "belongs_to association" do
     assert AssocModel.__schema__(:association, :comment) ==
-           %Ecto.Reflections.BelongsTo{field: :comment, owner: AssocModel,
-                                       assoc: Comment, key: :comment_id, assoc_key: :id}
+           %Ecto.Associations.BelongsTo{field: :comment, owner: AssocModel,
+                                        assoc: Comment, owner_key: :comment_id, assoc_key: :id}
 
     comment = (%AssocModel{}).comment
     assert %Ecto.Associations.NotLoaded{} = comment
@@ -166,24 +166,24 @@ defmodule Ecto.Model.SchemaTest do
 
   test "has_many options" do
     refl = ModelAssocOpts.__schema__(:association, :posts)
-    assert :pk == refl.key
+    assert :pk == refl.owner_key
     assert :fk == refl.assoc_key
   end
 
   test "has_one options" do
     refl = ModelAssocOpts.__schema__(:association, :author)
-    assert :pk == refl.key
+    assert :pk == refl.owner_key
     assert :fk == refl.assoc_key
   end
 
   test "belongs_to options" do
     refl = ModelAssocOpts.__schema__(:association, :permalink1)
+    assert :fk == refl.owner_key
     assert :pk == refl.assoc_key
-    assert :fk == refl.key
 
     refl = ModelAssocOpts.__schema__(:association, :permalink2)
+    assert :permalink2_id == refl.owner_key
     assert :pk == refl.assoc_key
-    assert :permalink2_id == refl.key
 
     assert ModelAssocOpts.__schema__(:field, :fk) == :string
     assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :uuid

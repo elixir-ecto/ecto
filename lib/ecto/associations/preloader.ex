@@ -3,7 +3,7 @@ defmodule Ecto.Associations.Preloader do
   This module provides assoc selector merger.
   """
 
-  alias Ecto.Reflections.BelongsTo
+  alias Ecto.Associations.BelongsTo
   require Ecto.Query, as: Q
 
   @doc """
@@ -86,13 +86,13 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp preload_query(structs, refl) do
-    key       = refl.key
+    owner_key = refl.owner_key
     assoc_key = refl.assoc_key
 
     ids =
       for struct <- structs,
           struct != nil,
-          key = Map.get(struct, key),
+          key = Map.fetch!(struct, owner_key),
           do: key
 
     if ids != [] do
@@ -163,7 +163,7 @@ defmodule Ecto.Associations.Preloader do
 
   # Compare struct and association to see if they match
   defp compare(struct, assoc, refl) do
-    struct_id = Map.get(struct, refl.key)
+    struct_id = Map.get(struct, refl.owner_key)
     assoc_id  = Map.get(assoc, refl.assoc_key)
     cond do
       struct_id == assoc_id -> :eq
@@ -194,7 +194,7 @@ defmodule Ecto.Associations.Preloader do
   ## SORTING ##
 
   defp should_sort?(structs, refl) do
-    key   = refl.key
+    key   = refl.owner_key
     first = hd(structs)
 
     Enum.reduce(structs, {first, false}, fn struct, {last, sort?} ->
@@ -208,7 +208,7 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp sort(structs, refl) do
-    key = refl.key
+    key = refl.owner_key
     Enum.sort(structs, fn {struct1, _}, {struct2, _} ->
       !! (struct1 && struct2 && Map.get(struct1, key) < Map.get(struct2, key))
     end)
@@ -240,7 +240,7 @@ defmodule Ecto.Associations.Preloader do
 
   # TODO: Do not hardcode reflection
   defp set_loaded(struct, refl, loaded) do
-    unless refl.__struct__ == Ecto.Reflections.HasMany do
+    unless refl.__struct__ == Ecto.Associations.HasMany do
       loaded = List.first(loaded)
     end
     Map.put(struct, refl.field, loaded)
