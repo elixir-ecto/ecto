@@ -125,7 +125,7 @@ defmodule Ecto.Repo do
         Ecto.Repo.Backend.transaction(__MODULE__, unquote(adapter), opts, fun)
       end
 
-      def rollback(value \\ nil) do
+      def rollback(value) do
         Ecto.Repo.Backend.rollback(__MODULE__, unquote(adapter), value)
       end
 
@@ -337,14 +337,15 @@ defmodule Ecto.Repo do
   `{:ok, value}`. Transactions can be nested.
 
   ## Options
+
     `:timeout` - The time in milliseconds to wait for the call to finish,
                  `:infinity` will wait indefinitely (default: 5000);
 
   ## Examples
 
       MyRepo.transaction(fn ->
-        MyRepo.update(alice.update_balance(&(&1 - 10))
-        MyRepo.update(bob.update_balance(&(&1 + 10))
+        MyRepo.update(%{alice | balance: alice.balance - 10})
+        MyRepo.update(%{bob | balance: bob.balance + 10})
       end)
 
       # In the following example only the comment will be rolled back
@@ -361,7 +362,7 @@ defmodule Ecto.Repo do
       MyRepo.transaction(fn ->
         p = MyRepo.insert(%Post{})
         if not Editor.post_allowed?(p) do
-          MyRepo.rollback
+          MyRepo.rollback(:posting_not_allowed)
         end
       end)
 
@@ -369,13 +370,9 @@ defmodule Ecto.Repo do
   defcallback transaction(Keyword.t, fun) :: {:ok, any} | {:error, any}
 
   @doc """
-  Rolls back the current transaction. See `rollback/1`.
-  """
-  defcallback rollback() :: no_return
+  Rolls back the current transaction.
 
-  @doc """
-  Rolls back the current transaction. The transaction will return the value
-  given as `{:error, value}`.
+  The transaction will return the value given as `{:error, value}`.
   """
   defcallback rollback(any) :: no_return
 

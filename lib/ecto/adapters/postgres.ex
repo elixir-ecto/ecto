@@ -296,8 +296,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           do_rollback(repo, worker, opts)
           {:error, value}
         type, term ->
+          stacktrace = System.stacktrace
           do_rollback(repo, worker, opts)
-          :erlang.raise(type, term, System.stacktrace)
+          :erlang.raise(type, term, stacktrace)
       after
         checkin_worker(pool)
       end
