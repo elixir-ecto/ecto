@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     # update and delete. All queries have to be normalized and validated for
     # correctness before given to this module.
 
+    alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.JoinExpr
     alias Ecto.Query.Util
@@ -122,18 +123,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp handle_fun(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%QueryExpr{expr: expr}, [], sources) do
-      "SELECT " <> select_clause(expr, sources)
+    defp select(%SelectExpr{fields: fields}, [], sources) do
+      "SELECT " <> Enum.map_join(fields, ", ", &expr(&1, sources))
     end
 
-    defp select(%QueryExpr{expr: expr}, distincts, sources) do
+    defp select(%SelectExpr{fields: fields}, distincts, sources) do
       exprs =
         Enum.map_join(distincts, ", ", fn
           %QueryExpr{expr: expr} ->
             Enum.map_join(expr, ", ", &expr(&1, sources))
         end)
 
-      "SELECT DISTINCT ON (" <> exprs <> ") " <> select_clause(expr, sources)
+      "SELECT DISTINCT ON (" <> exprs <> ") " <>
+        Enum.map_join(fields, ", ", &expr(&1, sources))
     end
 
     defp from(sources) do
@@ -305,26 +307,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp op_to_binary(expr, sources) do
       expr(expr, sources)
-    end
-
-    defp select_clause(expr, sources) do
-      flatten_select(expr) |> Enum.map_join(", ", &expr(&1, sources))
-    end
-
-    defp flatten_select({left, right}) do
-      flatten_select({:{}, [], [left, right]})
-    end
-
-    defp flatten_select({:{}, _, elems}) do
-      Enum.flat_map(elems, &flatten_select/1)
-    end
-
-    defp flatten_select(list) when is_list(list) do
-      Enum.flat_map(list, &flatten_select/1)
-    end
-
-    defp flatten_select(expr) do
-      [expr]
     end
 
     defp escape_string(value) when is_binary(value) do

@@ -131,12 +131,17 @@ defmodule Ecto.Query do
 
   defstruct [sources: nil, from: nil, joins: [], wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [],
-             havings: [], preloads: [], distincts: [], lock: nil]
+             havings: [], preloads: [], assocs: [], distincts: [], lock: nil]
   @opaque t :: %__MODULE__{}
 
   defmodule QueryExpr do
     @moduledoc false
     defstruct [expr: nil, params: %{}, file: nil, line: nil]
+  end
+
+  defmodule SelectExpr do
+    @moduledoc false
+    defstruct [expr: nil, params: %{}, file: nil, line: nil, fields: [], assocs: 0]
   end
 
   defmodule JoinExpr do
@@ -211,20 +216,20 @@ defmodule Ecto.Query do
   """
   defmacro from(expr, kw \\ []) do
     unless Keyword.keyword?(kw) do
-      raise ArgumentError, "second argument to `from` has to be a keyword list"
+      raise ArgumentError, "second argument to `from` must be a keyword list"
     end
 
     {quoted, binds, count_bind} = From.build(expr, __CALLER__)
     from(kw, __CALLER__, count_bind, quoted, binds)
   end
 
-  @binds    [:where, :select, :distinct, :order_by, :group_by, :having, :limit, :offset]
-  @no_binds [:preload, :lock]
+  @binds    [:where, :select, :distinct, :order_by, :group_by, :having, :limit, :offset, :preload]
+  @no_binds [:lock]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
   defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro.expand'able to %Query{},
-    # otherwise ensure that quoted is evaluated before macro call
+    # otherwise ensure that quoted code is evaluated before macro call
     quoted =
       if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do
         quote do
@@ -335,29 +340,12 @@ defmodule Ecto.Query do
   The sub-expressions in the query can be wrapped in lists or tuples as shown in
   the examples. A full model can also be selected.
 
-  The `assoc/2` selector can be used to embed an association on a parent model
-  as shown in the examples below. The first argument to `assoc` has to be a
-  variable bound in the `from` query expression, the second has to be the field
-  of the association and a variable bound in an association join.
-
-  Nested `assoc/2` expressions are also allowed when there are multiple
-  association joins in the query.
-
   ## Keywords examples
 
       from(c in City, select: c) # selects the entire model
       from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
-      from(c in City, select: {c.name, to_binary(40 + 2), 43})
-
-      from(p in Post, join: c in p.comments, select: assoc(p, comments: c))
-
-      # Fetch all posts, their comments and the posts' and comments' authors
-            from p in Post,
-      left_join: p_u in p.author,
-      left_join: c in p.comments,
-      left_join: c_u in c.author,
-         select: assoc(p, author: p_u, comments: assoc(c, author: c_u))
+      from(c in City, select: {c.name, ^to_binary(40 + 2), 43})
 
   ## Expressions examples
 
@@ -570,39 +558,53 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Marks associations to be pre-loaded.
+  Pre-loads the associations into the given model.
 
-  Pre-loading allow developers to specify associations that should be pre-
-  loaded once the first result set is retrieved. Consider this example:
+  Pre-loading allow developers to specify associations that are pre-loaded
+  into the model. Consider this example:
 
       Repo.all from p in Post, preload: [:comments]
 
   The example above will fetch all posts from the database and then do
   a separate query returning all comments associated to the given posts.
 
-  Nested associations can also be preloaded as seen in the examples below.
-  One query per association to be preloaded will be issued to the database.
+  However, often times, you want posts and comments to be selected and
+  filtered in the same query. For such cases, you can explicitly tell
+  the association to be pre-loaded into the model:
+
+      Repo.all from p in Post,
+                 join: c in assoc(p, :comments),
+                 where: c.published_at > p.updated_at,
+                 preload: [comments: c]
+
+  In the example above, instead of issuing a separate query to fetch
+  comments, Ecto will fetch posts and comments in a single query.
+
+  Nested associations can also be preloaded in both formats:
+
+      Repo.all from p in Post,
+                 preload: [comments: :likes]
+
+      Repo.all from p in Post,
+                 join: c in assoc(p, :comments),
+                 join: l in assoc(c, :likes),
+                 where: l.created_at > c.updated_at,
+                 preload: [comments: {c, likes: l}]
 
   ## Keywords examples
 
       # Returns all posts and their associated comments
       from(p in Post,
-        preload: [:comments],
-        select: p)
-
-      # Returns all posts and their associated comments
-      # with the associated author
-      from(p in Post,
-        preload: [:user, comments: [:user]],
+        preload: [:comments, comments: :likes],
         select: p)
 
   ## Expressions examples
 
       Post |> preload(:comments) |> select([p], p)
+      Post |> preload([p, c], [:user, comments: c]) |> select([p], p)
 
-      Post |> preload([:user, {:comments, [:user]}]) |> select([p], p)
   """
-  defmacro preload(query, expr) do
-    Preload.build(query, expr, __CALLER__)
+  defmacro preload(query, bindings \\ [], expr) do
+    Preload.build(query, bindings, expr, __CALLER__)
   end
 end

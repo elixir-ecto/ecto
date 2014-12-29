@@ -42,17 +42,13 @@ defmodule Ecto.Query.Builder.Join do
 
   def escape({:assoc, _, [{var, _, context}, field]}, vars)
       when is_atom(var) and is_atom(context) do
-    var   = find_var!(var, vars)
+    var   = Builder.find_var!(var, vars)
     field = Builder.quoted_field!(field)
     {[], nil, {var, field}}
   end
 
   def escape(join, _vars) do
     Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
-  end
-
-  defp find_var!(var, vars) do
-    vars[var] || Builder.error! "unbound variable `#{var}` in query"
   end
 
   @doc """

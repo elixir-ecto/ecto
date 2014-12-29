@@ -31,8 +31,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     alias Ecto.Adapters.Postgres.SQL
     alias Ecto.Adapters.Postgres.Worker
-    alias Ecto.Associations.Assoc
-    alias Ecto.Query.QueryExpr
     alias Ecto.Query.Util
     alias Postgrex.TypeInfo
 
@@ -61,16 +59,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def all(repo, query, params, opts) do
-      pg_query = %{query | select: normalize_select(query.select)}
-
-      sql = SQL.all(pg_query)
+      sql = SQL.all(query)
       %Postgrex.Result{rows: rows} = query(repo, sql, Map.values(params), opts)
 
       # Transform each row based on select expression
       transformed =
         Enum.map(rows, fn row ->
           values = Tuple.to_list(row)
-          transform_row(pg_query.select.expr, values, pg_query.sources) |> elem(0)
+          transform_row(query.select.expr, values, query.sources) |> elem(0)
         end)
 
       Ecto.Associations.Assoc.run(transformed, query)
@@ -172,26 +168,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> Keyword.put_new(:port, @default_port)
 
       {pool_opts, worker_opts}
-    end
-
-    @doc false
-    def normalize_select(%QueryExpr{expr: {:assoc, _, [_, _]} = assoc} = expr) do
-      %{expr | expr: normalize_assoc(assoc)}
-    end
-
-    def normalize_select(%QueryExpr{expr: _} = expr), do: expr
-
-    defp normalize_assoc({:assoc, _, [_, _]} = assoc) do
-      {var, fields} = Assoc.decompose_assoc(assoc)
-      normalize_assoc(var, fields)
-    end
-
-    defp normalize_assoc(var, fields) do
-      nested = Enum.map(fields, fn {_field, nested} ->
-        {var, fields} = Assoc.decompose_assoc(nested)
-        normalize_assoc(var, fields)
-      end)
-      {var, nested}
     end
 
     defp repo_pool(repo) do

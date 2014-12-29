@@ -458,7 +458,7 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p1.id})
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
 
-    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(p, comments: c))
+    query = from(p in Post, join: c in assoc(p, :comments), preload: [comments: c])
     assert [post1, post2] = TestRepo.all(query)
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = post1.comments
     assert [%Comment{id: ^cid3}] = post2.comments
@@ -472,7 +472,7 @@ defmodule Ecto.Integration.RepoTest do
     %Permalink{}         = TestRepo.insert(%Permalink{url: "2"})
     %Permalink{id: pid3} = TestRepo.insert(%Permalink{url: "3", post_id: p2.id})
 
-    query = from(p in Post, join: pl in assoc(p, :permalink), select: assoc(p, permalink: pl))
+    query = from(p in Post, join: pl in assoc(p, :permalink), preload: [permalink: pl])
     assert [post1, post3] = TestRepo.all(query)
 
     assert %Permalink{id: ^pid1} = post1.permalink
@@ -487,7 +487,7 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Permalink{url: "2"})
     TestRepo.insert(%Permalink{url: "3", post_id: pid2})
 
-    query = from(pl in Permalink, left_join: p in assoc(pl, :post), select: assoc(pl, post: p))
+    query = from(pl in Permalink, left_join: p in assoc(pl, :post), preload: [post: p])
     assert [p1, p2, p3] = TestRepo.all(query)
 
     assert %Post{id: ^pid1} = p1.post
@@ -510,7 +510,7 @@ defmodule Ecto.Integration.RepoTest do
       left_join: c in assoc(p, :comments),
       left_join: u in assoc(c, :author),
       order_by: [p.id, c.id, u.id],
-      select: assoc(p, comments: assoc(c, author: u))
+      preload: [comments: {c, author: u}]
 
     assert [p1, p2] = TestRepo.all(query)
     assert p1.id == pid1
@@ -543,7 +543,7 @@ defmodule Ecto.Integration.RepoTest do
       left_join: c in assoc(p, :comments),
       left_join: u in assoc(c, :author),
       order_by: [p.id, c.id, u.id],
-      select: assoc(p, comments: assoc(c, author: u))
+      preload: [comments: {c, author: u}]
 
     assert [p1, p2, p3] = TestRepo.all(query)
     assert p1.id == pid1

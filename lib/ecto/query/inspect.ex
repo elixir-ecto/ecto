@@ -1,7 +1,6 @@
 defimpl Inspect, for: Ecto.Query do
   import Inspect.Algebra
 
-  alias Ecto.Query.QueryExpr
   alias Ecto.Query.JoinExpr
 
   def inspect(query, opts) do
@@ -34,17 +33,21 @@ defimpl Inspect, for: Ecto.Query do
 
     from      = bound_from(query.from, elem(names, 0))
     joins     = joins(query.joins, names)
-    wheres    = Enum.map(query.wheres, &{:where, expr(&1, names)})
-    group_bys = Enum.map(query.group_bys, &{:group_by, expr(&1, names)})
-    havings   = Enum.map(query.havings, &{:having, expr(&1, names)})
-    order_bys = Enum.map(query.order_bys, &{:order_by, expr(&1, names)})
-    preloads  = Enum.map(query.preloads, &{:preload, inspect(&1)})
+    preloads  = preloads(query.preloads)
+    assocs    = assocs(query.assocs, names)
+
+    wheres    = kw_exprs(:where, query.wheres, names)
+    group_bys = kw_exprs(:group_by, query.group_bys, names)
+    havings   = kw_exprs(:having, query.havings, names)
+    order_bys = kw_exprs(:order_by, query.order_bys, names)
+
+    lock      = kw_inspect(:lock, query.lock)
     limit     = kw_expr(:limit, query.limit, names)
     offset    = kw_expr(:offset, query.offset, names)
     select    = kw_expr(:select, query.select, names)
-    lock      = kw_inspect(:lock, query.lock)
 
-    Enum.concat [from, joins, wheres, group_bys, havings, order_bys, limit, offset, lock, select, preloads]
+    Enum.concat [from, joins, wheres, group_bys, havings, order_bys,
+                 limit, offset, lock, select, preloads, assocs]
   end
 
   defp bound_from(from, name), do: ["from #{name} in #{unbound_from from}"]
@@ -59,9 +62,9 @@ defimpl Inspect, for: Ecto.Query do
     |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, ix + 1), names) end)
   end
 
-  defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on}, name, names) do
+  defp join(%JoinExpr{qual: qual, assoc: {ix, right}}, name, names) do
     string = "#{name} in assoc(#{elem(names, ix)}, #{inspect right})"
-    [{join_qual(qual), string}, on: expr(on, names)]
+    [{join_qual(qual), string}]
   end
 
   defp join(%JoinExpr{qual: qual, source: {source, model}, on: on}, name, names) do
@@ -69,15 +72,32 @@ defimpl Inspect, for: Ecto.Query do
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
-  defp kw_expr(_key, nil, _names), do: []
-  defp kw_expr(key, %QueryExpr{expr: expr, params: params}, names) do
-    [{key, expr(expr, names, params)}]
+  defp preloads([]),       do: []
+  defp preloads(preloads), do: [preload: inspect(preloads)]
+
+  defp assocs([], _names),    do: []
+  defp assocs(assocs, names), do: [preload: expr(assocs(assocs), names, %{})]
+
+  defp assocs(assocs) do
+    Enum.map assocs, fn
+      {field, {idx, []}} ->
+        {field, {:&, [], [idx]}}
+      {field, {idx, children}} ->
+        {field, {{:&, [], [idx]}, assocs(children)}}
+    end
   end
+
+  defp kw_exprs(key, exprs, names) do
+    Enum.map exprs, &{key, expr(&1, names)}
+  end
+
+  defp kw_expr(_key, nil, _names), do: []
+  defp kw_expr(key, expr, names),  do: [{key, expr(expr, names)}]
 
   defp kw_inspect(_key, nil), do: []
   defp kw_inspect(key, val),  do: [{key, inspect(val)}]
 
-  defp expr(%QueryExpr{expr: expr, params: params}, names) do
+  defp expr(%{expr: expr, params: params}, names) do
     expr(expr, names, params)
   end
 
@@ -89,7 +109,7 @@ defimpl Inspect, for: Ecto.Query do
     "fragment(" <> unmerge_fragments(parts, "", [], names, params) <> ")"
   end
 
-  # Convert variables to proper identifiers
+  # Convert variables to proper names
   defp expr_to_string({:&, _, [ix]}, _, names, _) do
     elem(names, ix)
   end

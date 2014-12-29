@@ -220,16 +220,8 @@ defmodule Ecto.Query.Builder do
   `&0`, `&1` and so on.
   """
   @spec escape_var(atom, Keyword.t) :: Macro.t | no_return
-  def escape_var(var, vars)
-
   def escape_var(var, vars) do
-    ix = vars[var]
-
-    if ix do
-      {:{}, [], [:&, [], [ix]]}
-    else
-      error! "unbound variable `#{var}` in query"
-    end
+    {:{}, [], [:&, [], [find_var!(var, vars)]]}
   end
 
   @doc """
@@ -269,6 +261,13 @@ defmodule Ecto.Query.Builder do
     do: error!("binding list should contain only variables, got: #{Macro.to_string(bind)}")
 
   @doc """
+  Finds the index value for the given var in vars or raises.
+  """
+  def find_var!(var, vars) do
+    vars[var] || error! "unbound variable `#{var}` in query"
+  end
+
+  @doc """
   Checks if the field is an atom at compilation time or
   delegate the check to runtime for interpolation.
   """
@@ -295,11 +294,11 @@ defmodule Ecto.Query.Builder do
   # Fields
   def quoted_type({{:., _, [{var, _, context}, field]}, _, []}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
-    do: {vars[var], field}
+    do: {Keyword.fetch!(vars, var), field}
 
   def quoted_type({:field, _, [{var, _, context}, field]}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
-    do: {vars[var], field}
+    do: {Keyword.fetch!(vars, var), field}
 
   # Unquoting code here means the second argument of field will
   # always be unquoted twice, one by the type checking and another
@@ -307,7 +306,7 @@ defmodule Ecto.Query.Builder do
   # as the solution is somewhat complicated.
   def quoted_type({:field, _, [{var, _, context}, {:^, _, [code]}]}, vars)
     when is_atom(var) and is_atom(context),
-    do: {vars[var], code}
+    do: {Keyword.fetch!(vars, var), code}
 
   # Tagged
   def quoted_type({:<<>>, _, _}, _vars), do: :binary

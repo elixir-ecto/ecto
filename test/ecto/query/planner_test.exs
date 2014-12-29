@@ -148,28 +148,25 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: assoc selector" do
-    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(p, comments: c))
+  test "normalize: preload assoc" do
+    query = from(p in Post, join: c in assoc(p, :comments), preload: [comments: c])
     normalize(query)
 
-    query = from(p in Post, join: c in assoc(p, :comments), select: assoc(c, post: p))
-    normalize(query)
-
-    message = ~r"field `Ecto.Query.PlannerTest.Post.not_field` in assoc/2 is not an association"
+    message = ~r"field `Ecto.Query.PlannerTest.Post.not_field` in preload is not an association"
     assert_raise Ecto.QueryError, message, fn ->
-      query = from(p in Post, join: c in assoc(p, :comments), select: assoc(p, not_field: c))
+      query = from(p in Post, join: c in assoc(p, :comments), preload: [not_field: c])
       normalize(query)
     end
 
-    message = ~r"association `Ecto.Query.PlannerTest.Post.comments` in assoc/2 doesn't match join model"
+    message = ~r"association `Ecto.Query.PlannerTest.Post.comments` in preload doesn't match join model"
     assert_raise Ecto.QueryError, message, fn ->
-      query = from(p in Post, join: c in Post, select: assoc(p, comments: c))
+      query = from(p in Post, join: c in Post, preload: [comments: c])
       normalize(query)
     end
 
     message = ~r"requires an inner or left join, got right join"
     assert_raise Ecto.QueryError, message, fn ->
-      query = from(p in Post, right_join: c in assoc(p, :comments), select: assoc(p, comments: c))
+      query = from(p in Post, right_join: c in assoc(p, :comments), preload: [comments: c])
       normalize(query)
     end
   end

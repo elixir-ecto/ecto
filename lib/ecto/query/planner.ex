@@ -2,11 +2,9 @@ defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
-  alias Ecto.Query.QueryExpr
+  alias Ecto.Query.SelectExpr
   alias Ecto.Query.JoinExpr
-  alias Ecto.Query.Util
   alias Ecto.Query.Types
-  alias Ecto.Associations.Assoc
 
   @doc """
   Plans the struct for query execution.
@@ -61,6 +59,15 @@ defmodule Ecto.Query.Planner do
     4. The query is sent to the adapter to be generated
 
   Currently only steps 1 and 3 are implemented.
+
+  ## Cache
+
+  All entries in the query, except the preload field, should
+  part in the cache key. The query key is composed by the
+  cache key of children expressions which are typically
+  pre-calculated at compilation time. However, some dynamic
+  fields may force particular expressions to have their cache
+  calculated at runtime.
   """
   def query(query, base, opts \\ []) do
     {query, params} = prepare(query, base)
@@ -221,6 +228,7 @@ defmodule Ecto.Query.Planner do
     |> traverse_exprs(map_size(base), &validate_and_increment/4)
     |> elem(0)
     |> normalize_select(only_where?)
+    |> validate_assocs
     |> only_where(only_where?)
   end
 
@@ -274,63 +282,95 @@ defmodule Ecto.Query.Planner do
     cond do
       only_where? ->
         query
-      query.select ->
-        Macro.prewalk(query.select.expr, &validate_select(&1, query))
-        query
+      select = query.select ->
+        %{query | select: prepopulate_select(query, select)}
       true ->
-        %{query | select: %QueryExpr{expr: {:&, [], [0]}}}
+        %{query | select: prepopulate_select(query, %SelectExpr{expr: {:&, [], [0]}})}
     end
   end
 
-  defp validate_select({:assoc, _, [var, fields]}, query) do
-    validate_assoc(var, fields, query)
+  defp prepopulate_select(query, select) do
+    # TODO: Allow assocs and fields to be mixed
+    if query.assocs == [] do
+      fields = collect_fields(select.expr)
+      expr   = select.expr
+    else
+      var    = {:&, [], [0]}
+      fields = [var|collect_assocs(query.assocs)]
+      expr   = collect_expr(var, query.assocs)
+    end
+
+    %{select | expr: expr, fields: fields, assocs: 0}
   end
 
-  defp validate_select(other, _query) do
-    other
+  defp collect_expr(var, fields) do
+    fields =
+      Enum.map fields, fn {_assoc, {idx, children}} ->
+        collect_expr({:&, [], [idx]}, children)
+      end
+    {var, fields}
   end
 
-  defp validate_assoc(parent_var, fields, query) do
-    Enum.each(fields, fn {field, nested} ->
-      {_, parent_model} = Util.find_source(query.sources, parent_var)
-      refl = parent_model.__schema__(:association, field)
+  defp collect_assocs([{_assoc, {idx, children}}|tail]),
+    do: [{:&, [], [idx]}] ++ collect_assocs(children) ++ collect_assocs(tail)
+  defp collect_assocs([]),
+    do: []
+
+  defp collect_fields({left, right}),
+    do: collect_fields([left, right])
+  defp collect_fields({:{}, _, elems}),
+    do: collect_fields(elems)
+  defp collect_fields(list) when is_list(list),
+    do: Enum.flat_map(list, &collect_fields/1)
+  defp collect_fields(expr),
+    do: [expr]
+
+  defp validate_assocs(query) do
+    validate_assocs(query, 0, query.assocs)
+    query
+  end
+
+  defp validate_assocs(query, idx, assocs) do
+    {_, parent_model} = elem(query.sources, idx)
+
+    Enum.each assocs, fn {assoc, {child_idx, child_assocs}} ->
+      refl = parent_model.__schema__(:association, assoc)
 
       unless refl do
-        error! query, query.select, "field `#{inspect parent_model}.#{field}` " <>
-                                    "in assoc/2 is not an association"
+        error! query, "field `#{inspect parent_model}.#{assoc}` " <>
+                      "in preload is not an association"
       end
 
-      {child_var, child_fields} = Assoc.decompose_assoc(nested)
-      {_, child_model} = Util.find_source(query.sources, child_var)
+      {_, child_model} = elem(query.sources, child_idx)
 
       unless refl.assoc == child_model do
-        error! query, query.select, "association `#{inspect parent_model}.#{field}` " <>
-                                    "in assoc/2 doesn't match join model `#{child_model}`"
+        error! query, "association `#{inspect parent_model}.#{assoc}` " <>
+                      "in preload doesn't match join model `#{inspect child_model}`"
       end
 
-      case find_source_expr(query, child_var) do
+      case find_source_expr(query, child_idx) do
         %JoinExpr{qual: qual} when qual in [:inner, :left] ->
           :ok
         %JoinExpr{qual: qual} ->
-          error! query, query.select, "association `#{inspect parent_model}.#{field}` " <>
-                                      "in assoc/2 requires an inner or left join, got #{qual} join"
+          error! query, "association `#{inspect parent_model}.#{assoc}` " <>
+                        "in preload requires an inner or left join, got #{qual} join"
         _ ->
           :ok
       end
 
-      validate_assoc(child_var, child_fields, query)
-    end)
+      validate_assocs(query, child_idx, child_assocs)
+    end
   end
 
-  defp find_source_expr(query, {:&, _, [0]}) do
+  defp find_source_expr(query, 0) do
     query.from
   end
 
-  defp find_source_expr(query, {:&, _, [ix]}) do
-    Enum.fetch! query.joins, ix - 1
+  defp find_source_expr(query, idx) do
+    Enum.fetch! query.joins, idx - 1
   end
 
-  if map_size(%Ecto.Query{}) != 14 do
+  if map_size(%Ecto.Query{}) != 15 do
     raise "Ecto.Query match out of date in planner"
   end
 
@@ -338,7 +378,8 @@ defmodule Ecto.Query.Planner do
   defp only_where(query, true) do
     case query do
       %Ecto.Query{joins: [], select: nil, order_bys: [], limit: nil, offset: nil,
-                  group_bys: [], havings: [], preloads: [], distincts: [], lock: nil} ->
+                  group_bys: [], havings: [], preloads: [], assocs: [], distincts: [],
+                  lock: nil} ->
         query
       _ ->
         error! query, "only `where` expressions are allowed"
