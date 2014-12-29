@@ -1,6 +1,8 @@
 defmodule Ecto.Query.Util do
   @moduledoc false
 
+  # TODO: Get rid of me
+
   @doc """
   Look up a source with a variable.
   """

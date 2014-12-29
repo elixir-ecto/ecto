@@ -291,24 +291,17 @@ defmodule Ecto.Query.Planner do
 
   defp prepopulate_select(query, select) do
     # TODO: Allow assocs and fields to be mixed
+    # TODO: Validate {:&, ..., [_]} have models
     if query.assocs == [] do
       fields = collect_fields(select.expr)
       expr   = select.expr
     else
       var    = {:&, [], [0]}
       fields = [var|collect_assocs(query.assocs)]
-      expr   = collect_expr(var, query.assocs)
+      expr   = fields
     end
 
     %{select | expr: expr, fields: fields, assocs: 0}
-  end
-
-  defp collect_expr(var, fields) do
-    fields =
-      Enum.map fields, fn {_assoc, {idx, children}} ->
-        collect_expr({:&, [], [idx]}, children)
-      end
-    {var, fields}
   end
 
   defp collect_assocs([{_assoc, {idx, children}}|tail]),

@@ -128,8 +128,8 @@ defmodule Ecto.Model.Schema do
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
 
-  * `__schema__(:load, values)` - Loads a new model struct from the given non-virtual
-                                  field values;
+  * `__schema__(:load, values, idx)` - Loads a new model struct from a tuple of non-virtual
+                                       field values starting at the given index;
 
   Furthermore, both `__struct__` and `__assign__` functions are defined
   so structs and assignment functionalities are available.
@@ -474,9 +474,11 @@ defmodule Ecto.Model.Schema do
     field_names = Enum.map(fields, &elem(&1, 0))
 
     quote do
-      # TODO: This can be optimized
-      def __schema__(:load, values) do
-        struct(__MODULE__, Enum.zip(unquote(field_names), values))
+      def __schema__(:load, values, idx) do
+        Enum.reduce(unquote(field_names), {__struct__(), idx}, fn
+          field, {struct, idx} ->
+            {Map.put(struct, field, elem(values, idx)), idx + 1}
+        end) |> elem(0)
       end
     end
   end

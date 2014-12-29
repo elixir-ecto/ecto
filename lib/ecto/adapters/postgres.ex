@@ -31,7 +31,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     alias Ecto.Adapters.Postgres.SQL
     alias Ecto.Adapters.Postgres.Worker
-    alias Ecto.Query.Util
     alias Postgrex.TypeInfo
 
     ## Adapter API
@@ -60,13 +59,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     @doc false
     def all(repo, query, params, opts) do
       sql = SQL.all(query)
+
       %Postgrex.Result{rows: rows} = query(repo, sql, Map.values(params), opts)
+
+      fields = process_fields(query.select.fields, query.sources)
 
       # Transform each row based on select expression
       transformed =
         Enum.map(rows, fn row ->
-          values = Tuple.to_list(row)
-          transform_row(query.select.expr, values, query.sources) |> elem(0)
+          list = process_row(fields, row)
+          transform_row(query.select.expr, list) |> elem(0)
         end)
 
       Ecto.Associations.Assoc.run(transformed, query)
@@ -182,38 +184,48 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Result set transformation
 
-    defp transform_row({:{}, _, list}, values, sources) do
-      {result, values} = transform_row(list, values, sources)
-      {List.to_tuple(result), values}
-    end
-
-    defp transform_row({:&, _, [_]} = var, values, sources) do
-      model = Util.find_source(sources, var) |> Util.model
-      model_size = length(model.__schema__(:fields))
-      {model_values, values} = Enum.split(values, model_size)
-      if Enum.all?(model_values, &(is_nil(&1))) do
-        {nil, values}
-      else
-        {model.__schema__(:load, model_values), values}
+    defp process_fields(fields, sources) do
+      Enum.map fields, fn
+        {:&, _, [idx]} ->
+          {_source, model} = elem(sources, idx)
+          {length(model.__schema__(:fields)), model}
+        _ ->
+          {1, nil}
       end
     end
 
-    # Skip records
-    defp transform_row({first, _} = tuple, values, sources) when not is_atom(first) do
-      {result, values} = transform_row(Tuple.to_list(tuple), values, sources)
+    defp process_row(fields, values) do
+      Enum.map_reduce(fields, 0, fn
+        {1, nil}, idx ->
+          {elem(values, idx), idx + 1}
+        {count, model}, idx ->
+          if all_nil?(values, idx, count) do
+            {nil, idx + count}
+          else
+            {model.__schema__(:load, values, idx), idx + count}
+          end
+      end) |> elem(0)
+    end
+
+    defp all_nil?(_tuple, _idx, 0), do: true
+    defp all_nil?(tuple, idx, _count) when elem(tuple, idx) != nil, do: false
+    defp all_nil?(tuple, idx, count), do: all_nil?(tuple, idx + 1, count - 1)
+
+    defp transform_row({:{}, _, list}, values) do
+      {result, values} = transform_row(list, values)
       {List.to_tuple(result), values}
     end
 
-    defp transform_row(list, values, sources) when is_list(list) do
-      {result, values} = Enum.reduce(list, {[], values}, fn elem, {res, values} ->
-        {result, values} = transform_row(elem, values, sources)
-        {[result|res], values}
-      end)
-
-      {Enum.reverse(result), values}
+    defp transform_row({left, right}, values) do
+      {[left, right], values} = transform_row([left, right], values)
+      {{left, right}, values}
     end
 
-    defp transform_row(_, values, _entities) do
+    defp transform_row(list, values) when is_list(list) do
+      Enum.map_reduce(list, values, &transform_row/2)
+    end
+
+    defp transform_row(_, values) do
       [value|values] = values
       {value, values}
     end

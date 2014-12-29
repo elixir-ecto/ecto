@@ -26,10 +26,35 @@ defmodule Ecto.Associations.Assoc do
     accs  = create_accs(fields)
 
     # Populate tree of dicts of associated entities from the result set
-    {_keys, dicts, sub_dicts} = Enum.reduce(rows, accs, &merge_to_dict(&1, &2, 0))
+    {_keys, dicts, sub_dicts} = Enum.reduce(rows, accs, fn row, acc ->
+      merge_to_dict(row, acc, 0) |> elem(0)
+    end)
 
     # Retrieve and load the assocs from cached dictionaries recursively
     load_assocs(HashDict.fetch!(dicts, 0), sub_dicts, refls)
+  end
+
+  defp merge_to_dict([struct|sub_structs], {keys, dict, sub_dicts}, parent_key) do
+    # If we have a struct, store it using the parent key
+    # unless we have already processed this particular entry.
+    if struct do
+      child_key = Ecto.Model.primary_key(struct) ||
+                    raise Ecto.NoPrimaryKeyError, model: struct.__struct__
+
+      cache = {parent_key, child_key}
+
+      if parent_key && not HashSet.member?(keys, cache) do
+        keys = HashSet.put(keys, cache)
+        item = {child_key, struct}
+        dict = HashDict.update(dict, parent_key, [item], &[item|&1])
+      end
+    end
+
+    # Now traverse sub_structs adding one by one to the tree
+    {sub_dicts, sub_structs} =
+      Enum.map_reduce sub_dicts, sub_structs, &merge_to_dict(&2, &1, child_key)
+
+    {{keys, dict, sub_dicts}, sub_structs}
   end
 
   defp load_assocs(structs, sub_dicts, refls) do
@@ -46,30 +71,6 @@ defmodule Ecto.Associations.Assoc do
           Map.put(acc, refl.field, loaded)
       end
     end
-  end
-
-  defp merge_to_dict({struct, sub_structs}, {keys, dict, sub_dicts}, parent_key) do
-    # If we have a struct, stored it in the parent key
-    # unless we have already processed this particular entry.
-    if struct do
-      child_key = Ecto.Model.primary_key(struct) ||
-                    raise Ecto.NoPrimaryKeyError, model: struct.__struct__
-
-      cache = {parent_key, child_key}
-
-      if parent_key && not HashSet.member?(keys, cache) do
-        keys = HashSet.put(keys, cache)
-        item = {child_key, struct}
-        dict = HashDict.update(dict, parent_key, [item], &[item|&1])
-      end
-    end
-
-    # Now recurse down the tree of results along side the accumulators
-    sub_dicts = for {recs, dicts} <- :lists.zip(sub_structs, sub_dicts) do
-      merge_to_dict(recs, dicts, child_key)
-    end
-
-    {keys, dict, sub_dicts}
   end
 
   defp create_refls(idx, fields, sources) do
