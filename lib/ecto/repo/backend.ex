@@ -5,6 +5,7 @@ defmodule Ecto.Repo.Backend do
   alias Ecto.Queryable
   alias Ecto.Query.Builder
   alias Ecto.Query.Planner
+  alias Ecto.Query.SelectExpr
   alias Ecto.Model.Callbacks
 
   require Ecto.Query
@@ -25,8 +26,19 @@ defmodule Ecto.Repo.Backend do
     {query, params} =
       Queryable.to_query(queryable)
       |> Planner.query(%{})
-    results = adapter.all(repo, query, params, opts)
-    preload_for_all(repo, query, results)
+
+    select = query.select
+
+    case query do
+      %{preloads: [], assocs: []} ->
+        adapter.all(repo, query, params, &to_select(&1, select), opts)
+      _ ->
+        results = adapter.all(repo, query, params, &(&1), opts)
+        results = Ecto.Associations.Assoc.run(results, query)
+        results = Enum.map(results, &to_select(&1, select))
+        results = preload_for_all(repo, query, results)
+        results
+    end
   end
 
   def get(repo, adapter, queryable, id, opts) do
@@ -170,6 +182,29 @@ defmodule Ecto.Repo.Backend do
   end
 
   ## Query Helpers
+
+  defp to_select(row, %SelectExpr{expr: expr}) do
+    transform_row(expr, row) |> elem(0)
+  end
+
+  defp transform_row({:{}, _, list}, values) do
+    {result, values} = transform_row(list, values)
+    {List.to_tuple(result), values}
+  end
+
+  defp transform_row({left, right}, values) do
+    {[left, right], values} = transform_row([left, right], values)
+    {{left, right}, values}
+  end
+
+  defp transform_row(list, values) when is_list(list) do
+    Enum.map_reduce(list, values, &transform_row/2)
+  end
+
+  defp transform_row(_, values) do
+    [value|values] = values
+    {value, values}
+  end
 
   defp preload_for_all(_repo, %{preloads: []}, results), do: results
   defp preload_for_all(repo, query, results) do

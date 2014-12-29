@@ -25,51 +25,69 @@ defmodule Ecto.Associations.Assoc do
     refls = create_refls(idx, fields, query.sources)
     accs  = create_accs(fields)
 
+    # Replace the dict in the accumulator by a list
+    # We use it as a flag to store the substructs
+    accs = put_elem(accs, 1, [])
+
     # Populate tree of dicts of associated entities from the result set
-    {_keys, dicts, sub_dicts} = Enum.reduce(rows, accs, fn row, acc ->
+    {_keys, rows, sub_dicts} = Enum.reduce(rows, accs, fn row, acc ->
       merge_to_dict(row, acc, 0) |> elem(0)
     end)
 
     # Retrieve and load the assocs from cached dictionaries recursively
-    load_assocs(HashDict.fetch!(dicts, 0), sub_dicts, refls)
+    for {item, sub_structs} <- Enum.reverse(rows) do
+      [load_assocs(item, sub_dicts, refls)|sub_structs]
+    end
   end
 
   defp merge_to_dict([struct|sub_structs], {keys, dict, sub_dicts}, parent_key) do
-    # If we have a struct, store it using the parent key
-    # unless we have already processed this particular entry.
     if struct do
       child_key = Ecto.Model.primary_key(struct) ||
                     raise Ecto.NoPrimaryKeyError, model: struct.__struct__
-
-      cache = {parent_key, child_key}
-
-      if parent_key && not HashSet.member?(keys, cache) do
-        keys = HashSet.put(keys, cache)
-        item = {child_key, struct}
-        dict = HashDict.update(dict, parent_key, [item], &[item|&1])
-      end
     end
 
-    # Now traverse sub_structs adding one by one to the tree
+    # Traverse sub_structs adding one by one to the tree.
+    # Note we need to traverse even if we don't have a child_key
+    # due to nested associations.
     {sub_dicts, sub_structs} =
       Enum.map_reduce sub_dicts, sub_structs, &merge_to_dict(&2, &1, child_key)
+
+    # Now if we have a struct and its parent key, we store the current
+    # data unless we have already processed it.
+    cache = {parent_key, child_key}
+
+    if struct && parent_key && not HashSet.member?(keys, cache) do
+      keys = HashSet.put(keys, cache)
+      item = {child_key, struct}
+
+      # If we have a list, we are at the root,
+      # so we also store the sub structs
+      dict =
+        if is_list(dict) do
+          [{item, sub_structs}|dict]
+        else
+          HashDict.update(dict, parent_key, [item], &[item|&1])
+        end
+    end
 
     {{keys, dict, sub_dicts}, sub_structs}
   end
 
-  defp load_assocs(structs, sub_dicts, refls) do
-    for {child_key, struct} <- Enum.reverse(structs) do
-      Enum.reduce :lists.zip(sub_dicts, refls), struct, fn
-        {{_keys, dict, sub_dicts}, {refl, refls}}, acc ->
-          loaded = load_assocs(HashDict.get(dict, child_key, []), sub_dicts, refls)
+  defp load_assocs({child_key, struct}, sub_dicts, refls) do
+    Enum.reduce :lists.zip(sub_dicts, refls), struct, fn
+      {{_keys, dict, sub_dicts}, {refl, refls}}, acc ->
+        loaded =
+          dict
+          |> HashDict.get(child_key, [])
+          |> Enum.reverse()
+          |> Enum.map(&load_assocs(&1, sub_dicts, refls))
 
-          # TODO: Do not hardcode
-          unless refl.__struct__ == Ecto.Associations.HasMany do
-            loaded = List.first(loaded)
-          end
+        # TODO: Do not hardcode
+        unless refl.__struct__ == Ecto.Associations.HasMany do
+          loaded = List.first(loaded)
+        end
 
-          Map.put(acc, refl.field, loaded)
-      end
+        Map.put(acc, refl.field, loaded)
     end
   end
 

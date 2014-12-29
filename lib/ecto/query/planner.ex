@@ -63,7 +63,7 @@ defmodule Ecto.Query.Planner do
   ## Cache
 
   All entries in the query, except the preload field, should
-  part in the cache key. The query key is composed by the
+  be part of the cache key. The query key is composed by the
   cache key of children expressions which are typically
   pre-calculated at compilation time. However, some dynamic
   fields may force particular expressions to have their cache
@@ -92,6 +92,7 @@ defmodule Ecto.Query.Planner do
   any cache mechanism.
   """
   def prepare(query, params) do
+    # TODO: Select fields normalization should be here
     query
     |> prepare_sources
     |> traverse_exprs(params, &merge_params/4)
@@ -294,14 +295,12 @@ defmodule Ecto.Query.Planner do
     # TODO: Validate {:&, ..., [_]} have models
     if query.assocs == [] do
       fields = collect_fields(select.expr)
-      expr   = select.expr
     else
       var    = {:&, [], [0]}
       fields = [var|collect_assocs(query.assocs)]
-      expr   = fields
     end
 
-    %{select | expr: expr, fields: fields, assocs: 0}
+    %{select | fields: fields, assocs: 0}
   end
 
   defp collect_assocs([{_assoc, {idx, children}}|tail]),

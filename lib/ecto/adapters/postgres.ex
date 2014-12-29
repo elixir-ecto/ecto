@@ -8,16 +8,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     The options should be given via `Ecto.Repo.conf/0`.
 
-    `:hostname` - Server hostname;
-    `:port` - Server port (default: 5432);
-    `:username` - Username;
-    `:password` - User password;
-    `:size` - The number of connections to keep in the pool;
-    `:max_overflow` - The maximum overflow of connections (see poolboy docs);
-    `:parameters` - Keyword list of connection parameters;
-    `:ssl` - Set to true if ssl should be used (default: false);
-    `:ssl_opts` - A list of ssl options, see ssl docs;
-    `:lazy` - If false all connections will be started immediately on Repo startup (default: true)
+      * `:hostname` - Server hostname
+      * `:port` - Server port (default: 5432)
+      * `:username` - Username
+      * `:password` - User password
+      * `:size` - The number of connections to keep in the pool
+      * `:max_overflow` - The maximum overflow of connections (see poolboy docs)
+      * `:parameters` - Keyword list of connection parameters
+      * `:ssl` - Set to true if ssl should be used (default: false)
+      * `:ssl_opts` - A list of ssl options, see ssl docs
+      * `:lazy` - If false all connections will be started immediately on Repo startup (default: true)
+
     """
 
     @behaviour Ecto.Adapter
@@ -57,21 +58,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    def all(repo, query, params, opts) do
-      sql = SQL.all(query)
-
-      %Postgrex.Result{rows: rows} = query(repo, sql, Map.values(params), opts)
-
+    def all(repo, query, params, fun, opts) do
+      sql    = SQL.all(query)
       fields = process_fields(query.select.fields, query.sources)
-
-      # Transform each row based on select expression
-      transformed =
-        Enum.map(rows, fn row ->
-          list = process_row(fields, row)
-          transform_row(query.select.expr, list) |> elem(0)
-        end)
-
-      Ecto.Associations.Assoc.run(transformed, query)
+      %Postgrex.Result{rows: rows} = query(repo, sql, Map.values(params), opts)
+      Enum.map(rows, & &1 |> process_row(fields) |> fun.())
     end
 
     @doc false
@@ -182,7 +173,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       pid
     end
 
-    ## Result set transformation
+    ## Rows processing
 
     defp process_fields(fields, sources) do
       Enum.map fields, fn
@@ -194,15 +185,15 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp process_row(fields, values) do
+    defp process_row(row, fields) do
       Enum.map_reduce(fields, 0, fn
         {1, nil}, idx ->
-          {elem(values, idx), idx + 1}
+          {elem(row, idx), idx + 1}
         {count, model}, idx ->
-          if all_nil?(values, idx, count) do
+          if all_nil?(row, idx, count) do
             {nil, idx + count}
           else
-            {model.__schema__(:load, values, idx), idx + count}
+            {model.__schema__(:load, row, idx), idx + count}
           end
       end) |> elem(0)
     end
@@ -210,25 +201,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp all_nil?(_tuple, _idx, 0), do: true
     defp all_nil?(tuple, idx, _count) when elem(tuple, idx) != nil, do: false
     defp all_nil?(tuple, idx, count), do: all_nil?(tuple, idx + 1, count - 1)
-
-    defp transform_row({:{}, _, list}, values) do
-      {result, values} = transform_row(list, values)
-      {List.to_tuple(result), values}
-    end
-
-    defp transform_row({left, right}, values) do
-      {[left, right], values} = transform_row([left, right], values)
-      {{left, right}, values}
-    end
-
-    defp transform_row(list, values) when is_list(list) do
-      Enum.map_reduce(list, values, &transform_row/2)
-    end
-
-    defp transform_row(_, values) do
-      [value|values] = values
-      {value, values}
-    end
 
     ## Postgrex casting
 

@@ -20,25 +20,29 @@ defmodule Ecto.Adapter do
   Returns `{:error, {:already_started, pid}}` if the repo already
   started or `{:error, term}` in case anything else goes wrong.
   """
-  defcallback start_link(Ecto.Repo.t, Keyword.t) ::
+  defcallback start_link(repo :: Ecto.Repo.t, options :: Keyword.t) ::
               {:ok, pid} | :ok | {:error, {:already_started, pid}} | {:error, term}
 
   @doc """
   Stops any connection pooling or supervision started with `start_link/1`.
   """
-  defcallback stop(Ecto.Repo.t) :: :ok
+  defcallback stop(repo :: Ecto.Repo.t) :: :ok
 
   @doc """
   Fetches all results from the data store based on the given query.
   """
-  defcallback all(Ecto.Repo.t, Ecto.Query.t, map(), Keyword.t) :: [term] | no_return
+  defcallback all(repo :: Ecto.Repo.t, query :: Ecto.Query.t,
+                  params :: map(), each_row :: (term -> term),
+                  opts :: Keyword.t) :: [term] | no_return
 
   @doc """
   Updates all entities matching the given query with the values given. The
   query shall only have `where` expressions and a single `from` expression. Returns
   the number of affected entities.
   """
-  defcallback update_all(Ecto.Repo.t, Ecto.Query.t, Keyword.t, map(), Keyword.t) :: :integer | no_return
+  defcallback update_all(repo :: Ecto.Repo.t, query :: Ecto.Query.t,
+                         filter :: Keyword.t, params :: map(),
+                         opts :: Keyword.t) :: :integer | no_return
 
   @doc """
   Deletes all entities matching the given query.
@@ -46,20 +50,24 @@ defmodule Ecto.Adapter do
   The query shall only have `where` expressions and a `from` expression.
   Returns the number of affected entities.
   """
-  defcallback delete_all(Ecto.Repo.t, Ecto.Query.t, map(), Keyword.t) :: :integer | no_return
+  defcallback delete_all(repo :: Ecto.Repo.t, query :: Ecto.Query.t,
+                         params :: map(), opts :: Keyword.t) :: :integer | no_return
 
   @doc """
   Stores a single new model in the data store.
   """
-  defcallback insert(Ecto.Repo.t, source :: binary, fields :: Keyword.t, Keyword.t) :: tuple | no_return
+  defcallback insert(repo :: Ecto.Repo.t, source :: binary,
+                     fields :: Keyword.t, opts :: Keyword.t) :: tuple | no_return
 
   @doc """
   Updates a model using the primary key as key.
   """
-  defcallback update(Ecto.Repo.t, source :: binary, filter :: Keyword.t, fields :: Keyword.t, Keyword.t) :: tuple | no_return
+  defcallback update(repo :: Ecto.Repo.t, source :: binary, filter :: Keyword.t,
+                     fields :: Keyword.t, opts :: Keyword.t) :: tuple | no_return
 
   @doc """
   Deletes a model using the primary key as key.
   """
-  defcallback delete(Ecto.Repo.t, source :: binary, filter :: Keyword.t, Keyword.t) :: :ok | no_return
+  defcallback delete(repo :: Ecto.Repo.t, source :: binary,
+                     filter :: Keyword.t, opts :: Keyword.t) :: :ok | no_return
 end
