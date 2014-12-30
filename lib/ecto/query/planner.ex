@@ -63,19 +63,20 @@ defmodule Ecto.Query.Planner do
   ## Cache
 
   All entries in the query, except the preload field, should
-  be part of the cache key. The query key is composed by the
-  cache key of children expressions which are typically
-  pre-calculated at compilation time. However, some dynamic
-  fields may force particular expressions to have their cache
-  calculated at runtime.
+  be part of the cache key. The cache key is composed by the
+  hash of children expressions which are typically pre-calculated
+  at compilation time. However, some dynamic fields may force
+  particular expressions to have their cache calculated at
+  runtime. Furthermore, fields that are not expressions, i.e.
+  assocs, sources and lock, have their cache key calculated
+  at runtime too.
+
+  The cache value is the compiled query by the adapter along-side
+  the select expression.
   """
   def query(query, base, opts \\ []) do
     {query, params} = prepare(query, base)
     {normalize(query, base, opts), params}
-  rescue
-    e ->
-      # Reraise errors so we ignore the planner inner stacktrace
-      raise e
   end
 
   @doc """
@@ -92,10 +93,13 @@ defmodule Ecto.Query.Planner do
   any cache mechanism.
   """
   def prepare(query, params) do
-    # TODO: Select fields normalization should be here
     query
     |> prepare_sources
     |> traverse_exprs(params, &merge_params/4)
+  rescue
+    e ->
+      # Reraise errors so we ignore the planner inner stacktrace
+      raise e
   end
 
   defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
@@ -173,10 +177,11 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prepare_join(%JoinExpr{assoc: {ix, assoc}} = join, sources, query) do
-    {_, model} = Enum.fetch!(Enum.reverse(sources), ix)
+    {source, model} = Enum.fetch!(Enum.reverse(sources), ix)
 
     unless model do
-      error! query, join, "association join cannot be performed without a model"
+      error! query, join, "cannot perform association join on #{inspect source} " <>
+                          "because it does not have a model"
     end
 
     refl = model.__schema__(:association, assoc)
@@ -231,6 +236,10 @@ defmodule Ecto.Query.Planner do
     |> normalize_select(only_where?)
     |> validate_assocs
     |> only_where(only_where?)
+  rescue
+    e ->
+      # Reraise errors so we ignore the planner inner stacktrace
+      raise e
   end
 
   defp validate_and_increment(kind, query, expr, counter) when kind in ~w(select limit offset)a do
@@ -280,42 +289,71 @@ defmodule Ecto.Query.Planner do
 
   # Normalize the select field.
   defp normalize_select(query, only_where?) do
+    # TODO: Test field normalization
+    # TODO: Test error messages
     cond do
       only_where? ->
         query
       select = query.select ->
-        %{query | select: prepopulate_select(query, select)}
+        %{query | select: normalize_fields(query, select)}
       true ->
-        %{query | select: prepopulate_select(query, %SelectExpr{expr: {:&, [], [0]}})}
+        select = %SelectExpr{expr: {:&, [], [0]}}
+        %{query | select: normalize_fields(query, select)}
     end
   end
 
-  defp prepopulate_select(query, select) do
-    # TODO: Allow assocs and fields to be mixed
-    # TODO: Validate {:&, ..., [_]} have models
-    if query.assocs == [] do
-      fields = collect_fields(select.expr)
+  defp normalize_fields(%{assocs: [], preloads: []} = query, select) do
+    {fields, from?} = collect_fields(query, select.expr, false)
+
+    fields =
+      if from? do
+        [{:&, [], [0]}|fields]
+      else
+        fields
+      end
+
+    %{select | fields: fields}
+  end
+
+  defp normalize_fields(%{assocs: assocs} = query, select) do
+    {fields, from?} = collect_fields(query, select.expr, false)
+
+    unless from? do
+      error! query, "the binding used in `from` must be selected in `select` when using `preload`"
+    end
+
+    assocs = collect_assocs(assocs)
+    fields = [{:&, [], [0]}|assocs] ++ fields
+    %{select | fields: fields, assocs: length(assocs)}
+  end
+
+  defp collect_fields(query, {:&, _, [idx]} = expr, from?) do
+    {source, model} = elem(query.sources, idx)
+
+    unless model do
+      error! query, "cannot `select` or `preload` #{inspect source} because it does not have a model"
+    end
+
+    if idx == 0 do
+      {[], true}
     else
-      var    = {:&, [], [0]}
-      fields = [var|collect_assocs(query.assocs)]
+      {[expr], from?}
     end
-
-    %{select | fields: fields, assocs: 0}
   end
+
+  defp collect_fields(query, {left, right}, from?),
+    do: collect_fields(query, [left, right], from?)
+  defp collect_fields(query, {:{}, _, elems}, from?),
+    do: collect_fields(query, elems, from?)
+  defp collect_fields(query, list, from?) when is_list(list),
+    do: Enum.flat_map_reduce(list, from?, &collect_fields(query, &1, &2))
+  defp collect_fields(_query, expr, from?),
+    do: {[expr], from?}
 
   defp collect_assocs([{_assoc, {idx, children}}|tail]),
     do: [{:&, [], [idx]}] ++ collect_assocs(children) ++ collect_assocs(tail)
   defp collect_assocs([]),
     do: []
-
-  defp collect_fields({left, right}),
-    do: collect_fields([left, right])
-  defp collect_fields({:{}, _, elems}),
-    do: collect_fields(elems)
-  defp collect_fields(list) when is_list(list),
-    do: Enum.flat_map(list, &collect_fields/1)
-  defp collect_fields(expr),
-    do: [expr]
 
   defp validate_assocs(query) do
     validate_assocs(query, 0, query.assocs)
@@ -323,6 +361,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp validate_assocs(query, idx, assocs) do
+    # We validate the model exists when normalizing fields above
     {_, parent_model} = elem(query.sources, idx)
 
     Enum.each assocs, fn {assoc, {child_idx, child_assocs}} ->
@@ -381,7 +420,7 @@ defmodule Ecto.Query.Planner do
   ## Helpers
 
   # Traverse all query components with expressions.
-  # Therefore from, preload and lock are not traversed.
+  # Therefore from, preload, assocs and lock are not traversed.
   defp traverse_exprs(original, acc, fun) do
     query = original
 

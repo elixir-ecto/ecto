@@ -33,11 +33,10 @@ defmodule Ecto.Repo.Backend do
       %{preloads: [], assocs: []} ->
         adapter.all(repo, query, params, &to_select(&1, select), opts)
       _ ->
-        results = adapter.all(repo, query, params, &(&1), opts)
-        results = Ecto.Associations.Assoc.run(results, query)
-        results = Enum.map(results, &to_select(&1, select))
-        results = preload_for_all(repo, query, results)
-        results
+        adapter.all(repo, query, params, &(&1), opts)
+        |> Ecto.Associations.Assoc.query(query)
+        |> Ecto.Associations.Preloader.run(repo, query.preloads, 0)
+        |> Enum.map(&to_select(&1, select)) # TODO: Remove this extra traversal
     end
   end
 
@@ -183,61 +182,37 @@ defmodule Ecto.Repo.Backend do
 
   ## Query Helpers
 
-  defp to_select(row, %SelectExpr{expr: expr}) do
-    transform_row(expr, row) |> elem(0)
+  defp to_select(row, %SelectExpr{expr: expr, fields: fields}) do
+    {from, values} =
+      case fields do
+        [{:&, _, [0]}|_] -> {hd(row), tl(row)}
+        _ -> {nil, row}
+      end
+    transform_row(expr, from, values) |> elem(0)
   end
 
-  defp transform_row({:{}, _, list}, values) do
-    {result, values} = transform_row(list, values)
+  defp transform_row({:{}, _, list}, from, values) do
+    {result, values} = transform_row(list, from, values)
     {List.to_tuple(result), values}
   end
 
-  defp transform_row({left, right}, values) do
-    {[left, right], values} = transform_row([left, right], values)
+  defp transform_row({left, right}, from, values) do
+    {[left, right], values} = transform_row([left, right], from, values)
     {{left, right}, values}
   end
 
-  defp transform_row(list, values) when is_list(list) do
-    Enum.map_reduce(list, values, &transform_row/2)
+  defp transform_row(list, from, values) when is_list(list) do
+    Enum.map_reduce(list, values, &transform_row(&1, from, &2))
   end
 
-  defp transform_row(_, values) do
+  defp transform_row({:&, _, [0]}, from, values) do
+    {from, values}
+  end
+
+  defp transform_row(_, _from, values) do
     [value|values] = values
     {value, values}
   end
-
-  defp preload_for_all(_repo, %{preloads: []}, results), do: results
-  defp preload_for_all(repo, query, results) do
-    var      = {:&, [], [0]}
-    expr     = query.select.expr
-    preloads = List.flatten(query.preloads)
-
-    cond do
-      is_var?(expr, var) ->
-        Ecto.Associations.Preloader.run(results, repo, preloads)
-      pos = select_var(expr, var) ->
-        Ecto.Associations.Preloader.run(results, repo, preloads, pos)
-      true ->
-        message = "source in from expression needs to be directly selected " <>
-                  "when using preload or inside a single tuple or list"
-        raise Ecto.QueryError, message: message, query: query
-    end
-  end
-
-  defp is_var?({:assoc, _, [expr, _right]}, var),
-    do: expr == var
-  defp is_var?(expr, var),
-    do: expr == var
-
-  # TODO: Bring back multiple indexes
-  defp select_var({left, right}, var),
-    do: select_var({:{}, [], [left, right]}, var)
-  defp select_var({:{}, _, list}, var),
-    do: select_var(list, var)
-  defp select_var(list, var) when is_list(list),
-    do: Enum.find_index(list, &is_var?(&1, var))
-  defp select_var(_, _),
-    do: nil
 
   defp query_for_get(queryable, id) do
     query = Queryable.to_query(queryable)

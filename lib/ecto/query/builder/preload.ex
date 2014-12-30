@@ -59,7 +59,7 @@ defmodule Ecto.Query.Builder.Preload do
   defp escape(other, _preloads, _assocs, _vars) do
     Builder.error! "`#{Macro.to_string other}` is not a valid preload expression. " <>
                    "preload expects an atom, a (nested) list of atoms or a (nested) " <>
-                   "keyword list with a selector, atoms or lists as values. " <>
+                   "keyword list with a binding, atoms or lists as values. " <>
                    "Use ^ if you want to interpolate a value"
   end
 
@@ -99,10 +99,11 @@ defmodule Ecto.Query.Builder.Preload do
     escape(other, preloads, assocs, vars)
   end
 
+  # TODO: Test me too
   defp require_assocs!(atom, var, assocs) do
     unless assocs do
-      Builder.error! "cannot link association `#{atom}` with selector `#{var}` because " <>
-                     "parent association does not provide a selector"
+      Builder.error! "cannot link association `#{atom}` with binding `#{var}` because " <>
+                     "parent association does not contain a binding"
     end
   end
 

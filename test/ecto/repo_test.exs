@@ -145,13 +145,6 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "repo validates preload" do
-    message = ~r"source in from expression needs to be directly selected when using preload"
-    assert_raise Ecto.QueryError, message, fn ->
-      MockRepo.all MyModel |> preload(:hello) |> select([m], m.x)
-    end
-  end
-
   test "parse_url is available" do
     assert MockRepo.url[:hostname] == "localhost"
   end

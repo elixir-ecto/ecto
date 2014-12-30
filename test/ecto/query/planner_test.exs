@@ -104,8 +104,10 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: cannot associate without model" do
-    query = from(p in "posts", join: assoc(p, :comments))
-    assert_raise Ecto.QueryError, ~r"association join cannot be performed without a model", fn ->
+    query   = from(p in "posts", join: assoc(p, :comments))
+    message = ~r"cannot perform association join on \"posts\" because it does not have a model"
+
+    assert_raise Ecto.QueryError, message, fn ->
       prepare(query)
     end
   end
@@ -145,6 +147,13 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.QueryError, message, fn ->
       query = from(p in Post, select: p)
       normalize(query, %{}, only_where: true)
+    end
+  end
+
+  test "normalize: preload" do
+    message = ~r"the binding used in `from` must be selected in `select` when using `preload`"
+    assert_raise Ecto.QueryError, message, fn ->
+      Post |> preload(:hello) |> select([p], p.title) |> normalize
     end
   end
 

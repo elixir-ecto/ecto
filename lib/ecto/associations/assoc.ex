@@ -1,29 +1,26 @@
 defmodule Ecto.Associations.Assoc do
-  @moduledoc """
-  This module provides the assoc selector merger and utilities around it.
-  """
+  @moduledoc false
 
   @doc """
-  Transforms a result set based on the assoc selector, loading the associations
-  onto their parent model. See `Ecto.Query.select/3`.
+  Transforms a result set based on query assocs, loading
+  the associations onto their parent model.
   """
-  @spec run([Ecto.Model.t], Ecto.Query.t) :: [Ecto.Model.t]
-  def run([], _query), do: []
+  @spec query([Ecto.Model.t], Ecto.Query.t) :: [Ecto.Model.t]
+  def query(rows, query)
 
-  def run(results, query) do
-    case query.assocs do
-      [] ->
-        results
-      assocs ->
-        merge(results, 0, assocs, query)
-    end
+  def query([], _query) do
+    []
   end
 
-  defp merge(rows, idx, fields, query) do
+  def query(rows, %{assocs: []}) do
+    rows
+  end
+
+  def query(rows, %{assocs: assocs, sources: sources}) do
     # Pre-create rose tree of reflections and accumulator
     # dicts in the same structure as the fields tree
-    refls = create_refls(idx, fields, query.sources)
-    accs  = create_accs(fields)
+    refls = create_refls(0, assocs, sources)
+    accs  = create_accs(assocs)
 
     # Replace the dict in the accumulator by a list
     # We use it as a flag to store the substructs
@@ -31,7 +28,7 @@ defmodule Ecto.Associations.Assoc do
 
     # Populate tree of dicts of associated entities from the result set
     {_keys, rows, sub_dicts} = Enum.reduce(rows, accs, fn row, acc ->
-      merge_to_dict(row, acc, 0) |> elem(0)
+      merge(row, acc, 0) |> elem(0)
     end)
 
     # Retrieve and load the assocs from cached dictionaries recursively
@@ -40,7 +37,7 @@ defmodule Ecto.Associations.Assoc do
     end
   end
 
-  defp merge_to_dict([struct|sub_structs], {keys, dict, sub_dicts}, parent_key) do
+  defp merge([struct|sub_structs], {keys, dict, sub_dicts}, parent_key) do
     if struct do
       child_key = Ecto.Model.primary_key(struct) ||
                     raise Ecto.NoPrimaryKeyError, model: struct.__struct__
@@ -50,7 +47,7 @@ defmodule Ecto.Associations.Assoc do
     # Note we need to traverse even if we don't have a child_key
     # due to nested associations.
     {sub_dicts, sub_structs} =
-      Enum.map_reduce sub_dicts, sub_structs, &merge_to_dict(&2, &1, child_key)
+      Enum.map_reduce sub_dicts, sub_structs, &merge(&2, &1, child_key)
 
     # Now if we have a struct and its parent key, we store the current
     # data unless we have already processed it.

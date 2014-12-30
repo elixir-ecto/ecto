@@ -20,7 +20,7 @@ defmodule Ecto.Associations.Preloader do
 
   See `Ecto.Query.preload/2`.
   """
-  @spec run([Ecto.Model.t], atom, [atom | tuple], [non_neg_integer]) :: [Ecto.Model.t]
+  @spec run([Ecto.Model.t], atom, [atom | tuple], 0 | nil) :: [Ecto.Model.t]
   def run(original, repo, fields, pos \\ nil)
 
   def run([], _repo, _fields, _pos) do
@@ -32,6 +32,7 @@ defmodule Ecto.Associations.Preloader do
   end
 
   def run(original, repo, fields, pos) do
+    # TODO: Do extract and unextract without extra traversals
     fields  = normalize(fields, fields)
     structs = extract(original, pos)
     structs = Enum.reduce(fields, structs, &do_run(&2, repo, &1))
@@ -133,7 +134,7 @@ defmodule Ecto.Associations.Preloader do
 
   defp match([struct|structs], [assoc|assocs], %BelongsTo{} = refl, acc, []) do
     case compare(struct, assoc, refl) do
-      # Record and association match so store association on struct,
+      # Struct and association match so store association on struct,
       # association may match more structs so keep it
       :eq ->
         struct = set_loaded(struct, refl, [assoc])
@@ -218,26 +219,16 @@ defmodule Ecto.Associations.Preloader do
   ## EXTRACT / UNEXTRACT ##
 
   # Extract structs from their data structure
-  defp extract(original, nil), do: original
-  defp extract(original, pos), do: Enum.map(original, &get_at_pos(&1, pos))
+  defp extract(original, nil),  do: original
+  defp extract(original, 0), do: Enum.map(original, &hd/1)
 
   # Put structs back into their original data structure
   defp unextract(structs, _original, nil), do: structs
-  defp unextract(structs, original, pos) do
-    :lists.zipwith(fn struct, inner ->
-      put_at_pos(struct, inner, pos)
+  defp unextract(structs, original, 0) do
+    :lists.zipwith(fn struct, [_|t] ->
+      [struct|t]
     end, structs, original)
   end
-
-  defp get_at_pos(tuple, pos) when is_tuple(tuple),
-    do: elem(tuple, pos)
-  defp get_at_pos(list, pos) when is_list(list),
-    do: Enum.fetch!(list, pos)
-
-  defp put_at_pos(struct, tuple, pos) when is_tuple(tuple),
-    do: put_elem(tuple, pos, struct)
-  defp put_at_pos(struct, list, pos) when is_list(list),
-    do: List.update_at(list, pos, struct)
 
   # TODO: Do not hardcode reflection
   defp set_loaded(struct, refl, loaded) do
