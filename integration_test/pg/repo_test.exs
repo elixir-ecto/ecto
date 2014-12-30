@@ -52,12 +52,6 @@ defmodule Ecto.Integration.RepoTest do
 
     assert [^id] =
       TestRepo.all(from(p in "posts", where: p.title == "title1", select: p.id))
-
-    assert "title1" =
-      TestRepo.one(from(p in "posts", order_by: p.title, select: p.title, limit: 1))
-
-    assert "title1" =
-      TestRepo.one!(from(p in "posts", order_by: p.title, select: p.title, limit: 1))
   end
 
   test "insert, update and delete" do
@@ -109,29 +103,45 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: 1} = TestRepo.insert(%Post{id: 1})
   end
 
-  test "get(!) model" do
+  test "get(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
 
     assert post1 == TestRepo.get(Post, post1.id)
-    assert post2 == TestRepo.get(Post, post2.id)
+    assert post2 == TestRepo.get(Post, to_string post2.id) # With casting
     assert nil   == TestRepo.get(Post, -1)
 
     assert post1 == TestRepo.get!(Post, post1.id)
-    assert post2 == TestRepo.get!(Post, post2.id)
+    assert post2 == TestRepo.get!(Post, to_string post2.id) # With casting
 
     assert_raise Ecto.NoResultsError, fn ->
       TestRepo.get!(Post, -1)
     end
   end
 
-  test "get(!) model with custom primary key" do
+  test "get(!) with custom primary key" do
     TestRepo.insert(%Custom{foo: "01abcdef01abcdef"})
     TestRepo.insert(%Custom{foo: "02abcdef02abcdef"})
 
     assert %Custom{foo: "01abcdef01abcdef"} == TestRepo.get(Custom, "01abcdef01abcdef")
     assert %Custom{foo: "02abcdef02abcdef"} == TestRepo.get(Custom, "02abcdef02abcdef")
     assert nil == TestRepo.get(Custom, "03abcdef03abcdef")
+  end
+
+  test "one(!)" do
+    post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
+    post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
+
+    assert post1 == TestRepo.one(from p in Post, where: p.id == ^post1.id)
+    assert post2 == TestRepo.one(from p in Post, where: p.id == ^to_string post2.id) # With casting
+    assert nil   == TestRepo.one(from p in Post, where: p.id == ^-1)
+
+    assert post1 == TestRepo.one!(from p in Post, where: p.id == ^post1.id)
+    assert post2 == TestRepo.one!(from p in Post, where: p.id == ^to_string post2.id) # With casting
+
+    assert_raise Ecto.NoResultsError, fn ->
+      TestRepo.one!(from p in Post, where: p.id == ^-1)
+    end
   end
 
   test "one(!) with multiple results" do
@@ -147,15 +157,7 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  test "one(!) when there are no results" do
-    assert nil == TestRepo.one(from p in Post, where: p.text == "hai")
-
-    assert_raise Ecto.NoResultsError, fn ->
-      TestRepo.one!(from p in Post, where: p.text == "hai")
-    end
-  end
-
-  test "transform row" do
+  test "data structures in select" do
     assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
 
     assert ["1"] == TestRepo.all(from p in Post, select: p.title)
@@ -167,54 +169,79 @@ defmodule Ecto.Integration.RepoTest do
            TestRepo.all(from p in Post, select: [p.title, p.text])
   end
 
-  test "update all entities" do
-    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
-    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
-    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
+  test "update all" do
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1"})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2"})
+    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3"})
 
-    # Here we are also asserting we can update values to nil
-    assert 3 = TestRepo.update_all(Post, title: "x", text: ^nil)
-    assert %Post{title: "x", text: nil} = TestRepo.get(Post, id1)
-    assert %Post{title: "x", text: nil} = TestRepo.get(Post, id2)
-    assert %Post{title: "x", text: nil} = TestRepo.get(Post, id3)
+    assert 3 = TestRepo.update_all(Post, title: "x")
+
+    assert %Post{title: "x"} = TestRepo.get(Post, id1)
+    assert %Post{title: "x"} = TestRepo.get(Post, id2)
+    assert %Post{title: "x"} = TestRepo.get(Post, id3)
   end
 
   test "update all with filter" do
-    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
-    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
-    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1"})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2"})
+    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3"})
 
-    value = "ohai"
     query = from(p in Post, where: p.title == "1" or p.title == "2")
+    assert 2 = TestRepo.update_all(query, title: "x", text: "")
 
-    assert 2 = TestRepo.update_all(query, title: "x", text: ^value)
-    assert %Post{title: "x", text: "ohai"} = TestRepo.get(Post, id1)
-    assert %Post{title: "x", text: "ohai"} = TestRepo.get(Post, id2)
+    assert %Post{title: "x"} = TestRepo.get(Post, id1)
+    assert %Post{title: "x"} = TestRepo.get(Post, id2)
     assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
-  test "update no entities" do
-    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
-    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
-    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})
+  test "update all no entries" do
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1"})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2"})
+    assert %Post{id: id3} = TestRepo.insert(%Post{title: "3"})
 
     query = from(p in Post, where: p.title == "4")
     assert 0 = TestRepo.update_all(query, title: "x")
+
     assert %Post{title: "1"} = TestRepo.get(Post, id1)
     assert %Post{title: "2"} = TestRepo.get(Post, id2)
     assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
-  test "update expression syntax" do
+  test "update all expression syntax" do
     assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
 
-    assert 2 = TestRepo.update_all(p in Post, text: fragment("? || 'bai'", p.text))
+    # Expressions
+    query = from p in Post, where: p.id > 0
+    assert 2 = TestRepo.update_all(p in query, text: fragment("? || 'bai'", p.text))
+
     assert %Post{text: "haibai"} = TestRepo.get(Post, id1)
     assert %Post{text: "haibai"} = TestRepo.get(Post, id2)
+
+    # Nil values
+    assert 2 = TestRepo.update_all(p in Post, text: nil)
+
+    assert %Post{text: nil} = TestRepo.get(Post, id1)
+    assert %Post{text: nil} = TestRepo.get(Post, id2)
+
+    # Interpolated values with casting
+    text = "hai"
+    assert 2 = TestRepo.update_all(p in Post, text: ^text, counter: ^to_string(id1))
+
+    assert %Post{text: "hai", counter: ^id1} = TestRepo.get(Post, id1)
+    assert %Post{text: "hai", counter: ^id1} = TestRepo.get(Post, id2)
   end
 
-  test "delete some entities" do
+  test "delete all" do
+    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "3", text: "hai"})
+
+    assert 3 = TestRepo.delete_all(Post)
+    assert [] = TestRepo.all(Post)
+  end
+
+  test "delete all with filter" do
     assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
     assert %Post{} = TestRepo.insert(%Post{title: "3", text: "hai"})
@@ -224,16 +251,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Post{}] = TestRepo.all(Post)
   end
 
-  test "delete all entities" do
-    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
-    assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
-    assert %Post{} = TestRepo.insert(%Post{title: "3", text: "hai"})
-
-    assert 3 = TestRepo.delete_all(Post)
-    assert [] = TestRepo.all(Post)
-  end
-
-  test "delete no entities" do
+  test "delete all no entries" do
     assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
     assert %Post{id: id3} = TestRepo.insert(%Post{title: "3", text: "hai"})

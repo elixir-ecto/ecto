@@ -93,13 +93,12 @@ defmodule Ecto.Repo.Queryable do
 
     # Check all fields are valid but don't use dump as we'll cast below.
     _ = Ecto.Repo.Model.validate_fields(:update_all, model, updates,
-                                       fn _type, value -> {:ok, value} end)
+                                        fn _type, value -> {:ok, value} end)
 
     # Properly cast parameters.
     params = Enum.into params, %{}, fn
       {k, {v, {0, field}}} ->
-        type = model.__schema__(:field, field) ||
-                 raise ArgumentError, "unknown field `#{field}` for model #{inspect model}"
+        type = model.__schema__(:field, field)
         {k, cast(:update_all, type, v)}
       {k, {v, type}} ->
         {k, cast(:update_all, type, v)}
