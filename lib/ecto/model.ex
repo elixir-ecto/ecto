@@ -77,6 +77,7 @@ defmodule Ecto.Model do
   def assoc(model_or_models, assoc)
 
   # TODO: Make this polymorphic
+  # TODO: Test me
   def assoc(model, assoc) when is_map(model) and is_atom(assoc) do
     %{owner_key: key, assoc: assoc, assoc_key: assoc_key} = reflection(model, assoc)
 

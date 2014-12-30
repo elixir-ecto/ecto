@@ -366,20 +366,6 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: ^pid2} = c3.post
   end
 
-  test "preload nils" do
-    p1 = TestRepo.insert(%Post{title: "1"})
-    p2 = TestRepo.insert(%Post{title: "2"})
-
-    assert [%Post{}, nil, %Post{}] =
-           Preloader.run([p1, nil, p2], TestRepo, :permalink)
-
-    c1 = TestRepo.insert(%Comment{text: "1", post_id: p1.id})
-    c2 = TestRepo.insert(%Comment{text: "2", post_id: p2.id})
-
-    assert [%Comment{}, nil, %Comment{}] =
-           Preloader.run([c1, nil, c2], TestRepo, :post)
-  end
-
   test "preload nested" do
     p1 = TestRepo.insert(%Post{title: "1"})
     p2 = TestRepo.insert(%Post{title: "2"})
@@ -398,7 +384,7 @@ defmodule Ecto.Integration.RepoTest do
     assert p2.id == c4.post.id
   end
 
-  test "preload has_many with no associated record" do
+  test "preload has_many with no associated entries" do
     p = TestRepo.insert(%Post{title: "1"})
     [p] = Preloader.run([p], TestRepo, :comments)
 
@@ -406,7 +392,7 @@ defmodule Ecto.Integration.RepoTest do
     assert p.comments == []
   end
 
-  test "preload has_one with no associated record" do
+  test "preload has_one with no associated entries" do
     p = TestRepo.insert(%Post{title: "1"})
     [p] = Preloader.run([p], TestRepo, :permalink)
 
@@ -414,7 +400,7 @@ defmodule Ecto.Integration.RepoTest do
     assert p.permalink == nil
   end
 
-  test "preload belongs_to with no associated record" do
+  test "preload belongs_to with no associated entry" do
     c = TestRepo.insert(%Comment{text: "1"})
     [c] = Preloader.run([c], TestRepo, :post)
 
@@ -439,13 +425,32 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
     assert [] = p3.comments
 
-    query = from(p in Post, preload: [:comments], select: {0, [p], 1})
+    query = from(p in Post, preload: [:comments], select: {0, [p], 1, 2})
     posts = TestRepo.all(query)
-    [p1, p2, p3] = Enum.map(posts, fn {0, [p], 1} -> p end)
+    [p1, p2, p3] = Enum.map(posts, fn {0, [p], 1, 2} -> p end)
 
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
     assert [] = p3.comments
+  end
+
+  test "preload keyword query with missing entries" do
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
+
+    %Permalink{id: plid1} = TestRepo.insert(%Permalink{url: "1", post_id: pid2})
+
+    %Comment{id: _} = TestRepo.insert(%Comment{text: "1", post_id: pid1})
+    %Comment{id: _} = TestRepo.insert(%Comment{text: "2", post_id: pid2})
+    %Comment{id: _} = TestRepo.insert(%Comment{text: "3", post_id: nil})
+
+    query = from(p in Post, right_join: c in assoc(p, :comments), preload: :permalink)
+    assert [p1, p2, nil] = TestRepo.all(query)
+    assert p1.id == pid1
+    assert p2.id == pid2
+
+    assert p1.permalink == nil
+    assert p2.permalink.id == plid1
   end
 
   ## Preload assocs
@@ -510,9 +515,11 @@ defmodule Ecto.Integration.RepoTest do
       left_join: c in assoc(p, :comments),
       left_join: u in assoc(c, :author),
       order_by: [p.id, c.id, u.id],
-      preload: [comments: {c, author: u}]
+      preload: [comments: {c, author: u}],
+      select: {0, [p], 1, 2}
 
-    assert [p1, p2] = TestRepo.all(query)
+    posts = TestRepo.all(query)
+    assert [p1, p2] = Enum.map(posts, fn {0, [p], 1, 2} -> p end)
     assert p1.id == pid1
     assert p2.id == pid2
 
@@ -527,7 +534,7 @@ defmodule Ecto.Integration.RepoTest do
     assert c3.author.id == uid2
   end
 
-  test "nested assoc with missing records" do
+  test "nested assoc with missing entries" do
     %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
     %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
     %Post{id: pid3} = TestRepo.insert(%Post{title: "2"})
@@ -560,5 +567,34 @@ defmodule Ecto.Integration.RepoTest do
     assert c1.author.id == uid1
     assert c2.author == nil
     assert c3.author.id == uid2
+  end
+
+  test "assoc with preload" do
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
+
+    %Permalink{id: plid1} = TestRepo.insert(%Permalink{url: "1", post_id: pid2})
+
+    %Comment{id: cid1} = TestRepo.insert(%Comment{text: "1", post_id: pid1})
+    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: pid2})
+    %Comment{id: _}    = TestRepo.insert(%Comment{text: "3", post_id: pid2})
+
+    query = from p in Post,
+      left_join: c in assoc(p, :comments),
+      where: c.text in ~w(1 2),
+      preload: [:permalink, comments: c],
+      select: {0, [p], 1, 2}
+
+    posts = TestRepo.all(query)
+    assert [p1, p2] = Enum.map(posts, fn {0, [p], 1, 2} -> p end)
+    assert p1.id == pid1
+    assert p2.id == pid2
+
+    assert p2.permalink.id == plid1
+
+    assert [c1] = p1.comments
+    assert [c2] = p2.comments
+    assert c1.id == cid1
+    assert c2.id == cid2
   end
 end

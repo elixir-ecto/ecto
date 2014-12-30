@@ -35,7 +35,7 @@ defmodule Ecto.Repo.Backend do
       _ ->
         adapter.all(repo, query, params, &(&1), opts)
         |> Ecto.Associations.Assoc.query(query)
-        |> Ecto.Associations.Preloader.run(repo, query.preloads, 0)
+        |> Ecto.Associations.Preloader.query(repo, query)
         |> Enum.map(&to_select(&1, select)) # TODO: Remove this extra traversal
     end
   end

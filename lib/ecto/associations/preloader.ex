@@ -7,6 +7,22 @@ defmodule Ecto.Associations.Preloader do
   require Ecto.Query, as: Q
 
   @doc """
+  Transforms a result set based on query preloads, loading
+  the associations onto their parent model.
+  """
+  @spec query([Ecto.Model.t], Ecto.Repo.t, Ecto.Query.t) :: [Ecto.Model.t]
+
+  def query([], _repo, _query),            do: []
+  def query(rows, _repo, %{preloads: []}), do: rows
+
+  def query(rows, repo, query) do
+    rows
+    |> extract
+    |> run(repo, query.preloads, query.assocs)
+    |> unextract(rows)
+  end
+
+  @doc """
   Loads all associations on the result set.
 
   `fields` is a list of fields that can be nested in rose tree
@@ -14,29 +30,19 @@ defmodule Ecto.Associations.Preloader do
 
       node :: {atom, [node | atom]}
 
-  `pos` is an indice into a tuple or a list that locates
-  the preloaded model. If nil, it means the model is not
-  nested inside any other data structure.
-
   See `Ecto.Query.preload/2`.
   """
-  @spec run([Ecto.Model.t], atom, [atom | tuple], 0 | nil) :: [Ecto.Model.t]
-  def run(original, repo, fields, pos \\ nil)
-
-  def run([], _repo, _fields, _pos) do
-    []
+  @spec run([Ecto.Model.t], atom, [atom | tuple]) :: [Ecto.Model.t]
+  def run(structs, repo, fields) do
+    run(structs, repo, fields, [])
   end
 
-  def run(original, _repo, [], _pos) do
-    original
-  end
-
-  def run(original, repo, fields, pos) do
-    # TODO: Do extract and unextract without extra traversals
-    fields  = normalize(fields, fields)
-    structs = extract(original, pos)
-    structs = Enum.reduce(fields, structs, &do_run(&2, repo, &1))
-    unextract(structs, original, pos)
+  defp run([], _repo, _fields, _assocs), do: []
+  defp run(structs, _repo, [], _assocs), do: structs
+  defp run(structs, repo, fields, assocs) do
+    fields
+    |> normalize(assocs, fields)
+    |> Enum.reduce(structs, &do_run(&2, repo, &1))
   end
 
   # Receives a list of model struct to preload the given association fields
@@ -45,11 +51,12 @@ defmodule Ecto.Associations.Preloader do
   # associated entities for each field.
   defp do_run(structs, repo, {field, sub_fields}) do
     # TODO: Make this use the new Ecto.Model.assoc/2.
-    # We just need to prune nils before-hand.
     module = hd(structs).__struct__
+
     # TODO: What if reflections is nil?!
     refl   = module.__schema__(:association, field)
-    should_sort? = should_sort?(structs, refl)
+
+    should_sort? = should_sort?(structs, module, refl)
 
     # Query for the associated entities
     if query = preload_query(structs, refl) do
@@ -93,7 +100,6 @@ defmodule Ecto.Associations.Preloader do
 
     ids =
       for struct <- structs,
-          struct != nil,
           key = Map.fetch!(struct, owner_key),
           do: key
 
@@ -111,25 +117,19 @@ defmodule Ecto.Associations.Preloader do
   end
 
   defp merge(structs, [], refl, acc1, acc2) do
-    # Store accumulated association on next struct
     [struct|structs] = structs
+
+    # Store accumulated association on next struct
     struct = set_loaded(struct, refl, Enum.reverse(acc2))
 
     # Set remaining structs loaded associations to empty lists
-    structs = Enum.map(structs, fn struct ->
-      if struct, do: set_loaded(struct, refl, []), else: struct
-    end)
+    structs = Enum.map(structs, &set_loaded(&1, refl, []))
 
     Enum.reverse(acc1, [struct|structs])
   end
 
-  defp merge([struct|structs], assocs, refl, acc1, acc2) do
-    # Ignore nil structs, they may be nil depending on the join qualifier
-    if is_nil(struct) do
-      merge(structs, assocs, refl, [nil|acc1], acc2)
-    else
-      match([struct|structs], assocs, refl, acc1, acc2)
-    end
+  defp merge(structs, assocs, refl, acc1, acc2) do
+    match(structs, assocs, refl, acc1, acc2)
   end
 
   defp match([struct|structs], [assoc|assocs], %BelongsTo{} = refl, acc, []) do
@@ -163,7 +163,6 @@ defmodule Ecto.Associations.Preloader do
     end
   end
 
-  # Compare struct and association to see if they match
   defp compare(struct, assoc, refl) do
     struct_id = Map.get(struct, refl.owner_key)
     assoc_id  = Map.get(assoc, refl.assoc_key)
@@ -176,59 +175,65 @@ defmodule Ecto.Associations.Preloader do
 
   ## NORMALIZER ##
 
-  defp normalize(preload, original) do
-    Enum.map(List.wrap(preload), &normalize_each(&1, original))
+  defp normalize(preload, assocs, original) do
+    Enum.map(List.wrap(preload), &normalize_each(&1, assocs, original))
   end
 
-  defp normalize_each({atom, list}, original) when is_atom(atom) do
-    {atom, normalize(list, original)}
+  defp normalize_each({atom, list}, assocs, original) when is_atom(atom) do
+    no_assoc!(assocs, atom)
+    {atom, normalize(list, assocs, original)}
   end
 
-  defp normalize_each(atom, _original) when is_atom(atom) do
+  defp normalize_each(atom, assocs, _original) when is_atom(atom) do
+    no_assoc!(assocs, atom)
     {atom, []}
   end
 
-  defp normalize_each(other, original) do
+  defp normalize_each(other, _assocs, original) do
     raise ArgumentError, "invalid preload `#{inspect other}` in `#{inspect original}`. " <>
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
   end
 
+  defp no_assoc!(nil, _atom), do: nil
+  defp no_assoc!(assocs, atom) do
+    if assocs[atom] do
+      raise ArgumentError, "cannot preload association `#{inspect atom}` because " <>
+                           "it has already been loaded with join association"
+    end
+  end
+
   ## SORTING ##
 
-  defp should_sort?(structs, refl) do
+  defp should_sort?(structs, module, refl) do
     key   = refl.owner_key
-    first = hd(structs)
+    first = hd(structs) |> Map.get(key)
 
-    Enum.reduce(structs, {first, false}, fn struct, {last, sort?} ->
-      if last && struct && struct.__struct__ != last.__struct__ do
+    Enum.reduce(structs, {first, false}, fn struct, {current, sort?} ->
+      if struct.__struct__ != module do
         raise ArgumentError, "all models have to be of the same type for preload"
       end
 
-      sort? = sort? || (last && struct && Map.get(last, key) > Map.get(struct, key))
-      {struct, sort?}
+      next = Map.fetch!(struct, key)
+      {next, sort? or next < current}
     end) |> elem(1)
   end
 
   defp sort(structs, refl) do
     key = refl.owner_key
     Enum.sort(structs, fn {struct1, _}, {struct2, _} ->
-      !! (struct1 && struct2 && Map.get(struct1, key) < Map.get(struct2, key))
+      Map.fetch!(struct1, key) < Map.fetch!(struct2, key)
     end)
   end
 
-  ## EXTRACT / UNEXTRACT ##
+  ## HELPERS
 
-  # Extract structs from their data structure
-  defp extract(original, nil),  do: original
-  defp extract(original, 0), do: Enum.map(original, &hd/1)
+  defp extract([[nil|_]|t2]), do: extract(t2)
+  defp extract([[h|_]|t2]),   do: [h|extract(t2)]
+  defp extract([]),           do: []
 
-  # Put structs back into their original data structure
-  defp unextract(structs, _original, nil), do: structs
-  defp unextract(structs, original, 0) do
-    :lists.zipwith(fn struct, [_|t] ->
-      [struct|t]
-    end, structs, original)
-  end
+  defp unextract(structs, [[nil|_]=h2|t2]),  do: [h2|unextract(structs, t2)]
+  defp unextract([h1|structs], [[_|t1]|t2]), do: [[h1|t1]|unextract(structs, t2)]
+  defp unextract([], []),                    do: []
 
   # TODO: Do not hardcode reflection
   defp set_loaded(struct, refl, loaded) do

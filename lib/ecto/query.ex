@@ -591,6 +591,14 @@ defmodule Ecto.Query do
                  where: l.created_at > c.updated_at,
                  preload: [comments: {c, likes: l}]
 
+  Keep in mind though both formats cannot be nested arbitrary. For
+  example, the query below is invalid because we cannot preload
+  likes with the join association `c`.
+
+      Repo.all from p in Post,
+                 join: c in assoc(p, :comments),
+                 preload: [comments: {c, :likes}]
+
   ## Keywords examples
 
       # Returns all posts and their associated comments

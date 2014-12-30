@@ -26,85 +26,83 @@ defmodule Ecto.Query.Builder.Preload do
       iex> escape([foo: {:c, [], nil}], [c: 1])
       {[], [foo: {1, []}]}
 
-      iex> escape([foo: {{:c, [], nil}, :bar}], [c: 1])
-      {[foo: [:bar]], [foo: {1, []}]}
-
       iex> escape([foo: {{:c, [], nil}, bar: {:l, [], nil}}], [c: 1, l: 2])
       {[], [foo: {1, [bar: {2, []}]}]}
 
       iex> escape([foo: {:c, [], nil}, bar: {:l, [], nil}], [c: 1, l: 2])
       {[], [foo: {1, []}, bar: {2, []}]}
 
+      iex> escape([foo: {{:c, [], nil}, :bar}], [c: 1])
+      ** (Ecto.Query.CompileError) cannot preload `:bar` inside join association preload
+
+      iex> escape([foo: [bar: {:c, [], nil}]], [c: 1])
+      ** (Ecto.Query.CompileError) cannot preload join association `:bar` with binding `c` because parent preload is not a join association
+
   """
   @spec escape(Macro.t, Keyword.t) :: {[Macro.t], [Macro.t]} | no_return
   def escape(preloads, vars) do
-    {preloads, assocs} = escape(preloads, [], [], vars)
+    {preloads, assocs} = escape(preloads, :both, [], [], vars)
     {Enum.reverse(preloads), Enum.reverse(assocs)}
   end
 
-  defp escape(atom, preloads, assocs, _vars) when is_atom(atom) do
+  defp escape(atom, mode, preloads, assocs, _vars) when is_atom(atom) do
+    assert_preload!(mode, atom)
     {[atom|preloads], assocs}
   end
 
-  defp escape(list, preloads, assocs, vars) when is_list(list) do
+  defp escape(list, mode, preloads, assocs, vars) when is_list(list) do
     Enum.reduce list, {preloads, assocs}, fn item, acc ->
-      escape_each(item, acc, vars)
+      escape_each(item, mode, acc, vars)
     end
   end
 
-  defp escape({:^, _, [expr]}, preloads, assocs, _vars) do
-    {[expr|preloads], assocs}
+  defp escape({:^, _, [inner]} = expr, mode, preloads, assocs, _vars) do
+    assert_preload!(mode, expr)
+    {[inner|preloads], assocs}
   end
 
-  defp escape(other, _preloads, _assocs, _vars) do
+  defp escape(other, _mode, _preloads, _assocs, _vars) do
     Builder.error! "`#{Macro.to_string other}` is not a valid preload expression. " <>
                    "preload expects an atom, a (nested) list of atoms or a (nested) " <>
                    "keyword list with a binding, atoms or lists as values. " <>
                    "Use ^ if you want to interpolate a value"
   end
 
-  defp escape_each({atom, {var, _, context}}, {preloads, assocs}, vars)
+  defp escape_each({atom, {var, _, context}}, mode, {preloads, assocs}, vars)
       when is_atom(atom) and is_atom(context) do
-    require_assocs!(atom, var, assocs)
+    assert_assoc!(mode, atom, var)
     idx = Builder.find_var!(var, vars)
     {preloads, [{atom, {idx, []}}|assocs]}
   end
 
-  defp escape_each({atom, {{var, _, context}, list}}, {preloads, assocs}, vars)
+  defp escape_each({atom, {{var, _, context}, list}}, mode, {preloads, assocs}, vars)
       when is_atom(atom) and is_atom(context) do
-    require_assocs!(atom, var, assocs)
+    assert_assoc!(mode, atom, var)
     idx = Builder.find_var!(var, vars)
-
-    {inner_preloads, inner_assocs} = escape(list, [], [], vars)
-
-    preloads =
-      if inner_preloads == [] do
-        preloads
-      else
-        [{atom, Enum.reverse(inner_preloads)}|preloads]
-      end
-
-    assocs =
-      [{atom, {idx, Enum.reverse(inner_assocs)}}|assocs]
-
-    {preloads, assocs}
+    {[], inner_assocs} = escape(list, :assoc, [], [], vars)
+    {preloads,
+     [{atom, {idx, Enum.reverse(inner_assocs)}}|assocs]}
   end
 
-  defp escape_each({atom, list}, {preloads, assocs}, vars) when is_atom(atom) do
-    {inner_preloads, nil} = escape(list, [], nil, vars)
+  defp escape_each({atom, list}, mode, {preloads, assocs}, vars) when is_atom(atom) do
+    assert_preload!(mode, {atom, list})
+    {inner_preloads, []} = escape(list, :preload, [], [], vars)
     {[{atom, Enum.reverse(inner_preloads)}|preloads], assocs}
   end
 
-  defp escape_each(other, {preloads, assocs}, vars) do
-    escape(other, preloads, assocs, vars)
+  defp escape_each(other, mode, {preloads, assocs}, vars) do
+    escape(other, mode, preloads, assocs, vars)
   end
 
-  # TODO: Test me too
-  defp require_assocs!(atom, var, assocs) do
-    unless assocs do
-      Builder.error! "cannot link association `#{atom}` with binding `#{var}` because " <>
-                     "parent association does not contain a binding"
-    end
+  defp assert_assoc!(mode, _atom, _var) when mode in [:both, :assoc], do: :ok
+  defp assert_assoc!(_mode, atom, var) do
+    Builder.error! "cannot preload join association `#{inspect atom}` with binding `#{var}` " <>
+                   "because parent preload is not a join association"
+  end
+
+  defp assert_preload!(mode, _term) when mode in [:both, :preload], do: :ok
+  defp assert_preload!(_mode, term) do
+    Builder.error! "cannot preload `#{Macro.to_string(term)}` inside join association preload"
   end
 
   @doc """
