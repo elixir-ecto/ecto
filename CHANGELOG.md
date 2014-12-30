@@ -3,12 +3,14 @@
 * Enhancements
   * Associations have been rewriten into a faster and more flexible mechanism that does not require `.get`, `.all` and friends
   * `preload/2` now supports query joins to be given
+  * Add `Repo.preload/2`
 
 * Backwards incompatible changes
   * Association proxies have been removed. This means `post.comments` returns `Ecto.Associations.NotLoaded` until `post.comments` has been explicitly preloaded. However, once preloaded, the comments list can be accessed directly
-  * Association proxies have been removed. This means `Repo.all post.comments` no longer returns all comments. Instead use `Repo.all Ecto.Model.assoc(post, :comments)`. It is recommended to `import Ecto.Model` into your modules
+  * Queryable implementation for associations has been removed. This means `Repo.all post.comments` no longer returns all comments. Instead use `Repo.all Ecto.Model.assoc(post, :comments)`. It is recommended to `import Ecto.Model` into your modules
   * `join: p.comments` has been removed in favor of `join: assoc(p, :comments)`
-  * `assoc/2` in select is deprecated, please use the enhanced preload mechanism instead
+  * `assoc/2` in `select` is deprecated, please use the enhanced preload mechanism instead
+  * `Ecto.Associations.Preloader.preload/3` was removed in favor of `Repo.preload/2`
 
 # v0.3.0 (2014-12-26)
 

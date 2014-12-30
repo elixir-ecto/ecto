@@ -1,8 +1,6 @@
 defmodule Ecto.Integration.RepoTest do
   use Ecto.Integration.Postgres.Case
 
-  alias Ecto.Associations.Preloader
-
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
   end
@@ -296,7 +294,7 @@ defmodule Ecto.Integration.RepoTest do
   ## Preloads
 
   test "preload empty" do
-    assert Preloader.run([], TestRepo, :anything_goes) == []
+    assert TestRepo.preload([], :anything_goes) == []
   end
 
   test "preload has_many" do
@@ -311,7 +309,7 @@ defmodule Ecto.Integration.RepoTest do
 
     assert %Ecto.Associations.NotLoaded{} = p1.comments
 
-    assert [p3, p1, p2] = Preloader.run([p3, p1, p2], TestRepo, :comments)
+    assert [p3, p1, p2] = TestRepo.preload([p3, p1, p2], :comments)
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
     assert [] = p3.comments
@@ -329,7 +327,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Ecto.Associations.NotLoaded{} = p1.permalink
     assert %Ecto.Associations.NotLoaded{} = p2.permalink
 
-    assert [p3, p1, p2] = Preloader.run([p3, p1, p2], TestRepo, :permalink)
+    assert [p3, p1, p2] = TestRepo.preload([p3, p1, p2], :permalink)
     assert %Permalink{id: ^pid1} = p1.permalink
     assert nil = p2.permalink
     assert %Permalink{id: ^pid3} = p3.permalink
@@ -346,7 +344,7 @@ defmodule Ecto.Integration.RepoTest do
 
     assert %Ecto.Associations.NotLoaded{} = pl1.post
 
-    assert [pl3, pl1, pl2] = Preloader.run([pl3, pl1, pl2], TestRepo, :post)
+    assert [pl3, pl1, pl2] = TestRepo.preload([pl3, pl1, pl2], :post)
     assert %Post{id: ^pid1} = pl1.post
     assert nil = pl2.post
     assert %Post{id: ^pid3} = pl3.post
@@ -360,7 +358,7 @@ defmodule Ecto.Integration.RepoTest do
     c2 = TestRepo.insert(%Comment{text: "2", post_id: pid1})
     c3 = TestRepo.insert(%Comment{text: "3", post_id: pid2})
 
-    assert [c3, c1, c2] = Preloader.run([c3, c1, c2], TestRepo, :post)
+    assert [c3, c1, c2] = TestRepo.preload([c3, c1, c2], :post)
     assert %Post{id: ^pid1} = c1.post
     assert %Post{id: ^pid1} = c2.post
     assert %Post{id: ^pid2} = c3.post
@@ -375,7 +373,7 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Comment{text: "3", post_id: p2.id})
     TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
-    assert [p2, p1] = Preloader.run([p2, p1], TestRepo, [comments: :post])
+    assert [p2, p1] = TestRepo.preload([p2, p1], [comments: :post])
     assert [c1, c2] = p1.comments
     assert [c3, c4] = p2.comments
     assert p1.id == c1.post.id
@@ -386,7 +384,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "preload has_many with no associated entries" do
     p = TestRepo.insert(%Post{title: "1"})
-    [p] = Preloader.run([p], TestRepo, :comments)
+    p = TestRepo.preload(p, :comments)
 
     assert p.title == "1"
     assert p.comments == []
@@ -394,7 +392,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "preload has_one with no associated entries" do
     p = TestRepo.insert(%Post{title: "1"})
-    [p] = Preloader.run([p], TestRepo, :permalink)
+    p = TestRepo.preload(p, :permalink)
 
     assert p.title == "1"
     assert p.permalink == nil
@@ -402,7 +400,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "preload belongs_to with no associated entry" do
     c = TestRepo.insert(%Comment{text: "1"})
-    [c] = Preloader.run([c], TestRepo, :post)
+    c = TestRepo.preload(c, :post)
 
     assert c.text == "1"
     assert c.post == nil

@@ -58,11 +58,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    def all(repo, query, params, fun, opts) do
+    def all(repo, query, params, opts) do
       sql    = SQL.all(query)
       fields = process_fields(query.select.fields, query.sources)
       %Postgrex.Result{rows: rows} = query(repo, sql, Map.values(params), opts)
-      Enum.map(rows, & &1 |> process_row(fields) |> fun.())
+      Enum.map(rows, &process_row(&1, fields))
     end
 
     @doc false

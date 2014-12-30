@@ -1,4 +1,6 @@
-defmodule Ecto.Associations.Assoc do
+defmodule Ecto.Repo.Assoc do
+  # The module invoked by repomodules
+  # for association related functionality.
   @moduledoc false
 
   @doc """
@@ -8,13 +10,8 @@ defmodule Ecto.Associations.Assoc do
   @spec query([Ecto.Model.t], Ecto.Query.t) :: [Ecto.Model.t]
   def query(rows, query)
 
-  def query([], _query) do
-    []
-  end
-
-  def query(rows, %{assocs: []}) do
-    rows
-  end
+  def query([], _query), do: []
+  def query(rows, %{assocs: []}), do: rows
 
   def query(rows, %{assocs: assocs, sources: sources}) do
     # Pre-create rose tree of reflections and accumulator

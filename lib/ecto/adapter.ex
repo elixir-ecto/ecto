@@ -32,8 +32,7 @@ defmodule Ecto.Adapter do
   Fetches all results from the data store based on the given query.
   """
   defcallback all(repo :: Ecto.Repo.t, query :: Ecto.Query.t,
-                  params :: map(), each_row :: (term -> term),
-                  opts :: Keyword.t) :: [[term]] | no_return
+                  params :: map(), opts :: Keyword.t) :: [[term]] | no_return
 
   @doc """
   Updates all entities matching the given query with the values given. The

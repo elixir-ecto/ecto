@@ -73,60 +73,64 @@ defmodule Ecto.Repo do
       end
 
       def start_link do
-        Ecto.Repo.Backend.start_link(__MODULE__, unquote(adapter))
+        unquote(adapter).start_link(__MODULE__, conf)
       end
 
       def stop do
-        Ecto.Repo.Backend.stop(__MODULE__, unquote(adapter))
-      end
-
-      def get(queryable, id, opts \\ []) do
-        Ecto.Repo.Backend.get(__MODULE__, unquote(adapter), queryable, id, opts)
-      end
-
-      def get!(queryable, id, opts \\ []) do
-        Ecto.Repo.Backend.get!(__MODULE__, unquote(adapter), queryable, id, opts)
-      end
-
-      def one(queryable, opts \\ []) do
-        Ecto.Repo.Backend.one(__MODULE__, unquote(adapter), queryable, opts)
-      end
-
-      def one!(queryable, opts \\ []) do
-        Ecto.Repo.Backend.one!(__MODULE__, unquote(adapter), queryable, opts)
-      end
-
-      def all(queryable, opts \\ []) do
-        Ecto.Repo.Backend.all(__MODULE__, unquote(adapter), queryable, opts)
-      end
-
-      def insert(model, opts \\ []) do
-        Ecto.Repo.Backend.insert(__MODULE__, unquote(adapter), model, opts)
-      end
-
-      def update(model, opts \\ []) do
-        Ecto.Repo.Backend.update(__MODULE__, unquote(adapter), model, opts)
-      end
-
-      defmacro update_all(queryable, values, opts \\ []) do
-        Ecto.Repo.Backend.update_all(__MODULE__, unquote(adapter), queryable,
-                                     values, opts)
-      end
-
-      def delete(model, opts \\ []) do
-        Ecto.Repo.Backend.delete(__MODULE__, unquote(adapter), model, opts)
-      end
-
-      def delete_all(queryable, opts \\ []) do
-        Ecto.Repo.Backend.delete_all(__MODULE__, unquote(adapter), queryable, opts)
+        unquote(adapter).stop(__MODULE__)
       end
 
       def transaction(opts \\ [], fun) do
-        Ecto.Repo.Backend.transaction(__MODULE__, unquote(adapter), opts, fun)
+        unquote(adapter).transaction(__MODULE__, opts, fun)
       end
 
       def rollback(value) do
-        Ecto.Repo.Backend.rollback(__MODULE__, unquote(adapter), value)
+        unquote(adapter).rollback(__MODULE__, value)
+      end
+
+      def all(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.all(__MODULE__, unquote(adapter), queryable, opts)
+      end
+
+      def get(queryable, id, opts \\ []) do
+        Ecto.Repo.Queryable.get(__MODULE__, unquote(adapter), queryable, id, opts)
+      end
+
+      def get!(queryable, id, opts \\ []) do
+        Ecto.Repo.Queryable.get!(__MODULE__, unquote(adapter), queryable, id, opts)
+      end
+
+      def one(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.one(__MODULE__, unquote(adapter), queryable, opts)
+      end
+
+      def one!(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.one!(__MODULE__, unquote(adapter), queryable, opts)
+      end
+
+      defmacro update_all(queryable, values, opts \\ []) do
+        Ecto.Repo.Queryable.update_all(__MODULE__, unquote(adapter), queryable,
+                                       values, opts)
+      end
+
+      def delete_all(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.delete_all(__MODULE__, unquote(adapter), queryable, opts)
+      end
+
+      def insert(model, opts \\ []) do
+        Ecto.Repo.Model.insert(__MODULE__, unquote(adapter), model, opts)
+      end
+
+      def update(model, opts \\ []) do
+        Ecto.Repo.Model.update(__MODULE__, unquote(adapter), model, opts)
+      end
+
+      def delete(model, opts \\ []) do
+        Ecto.Repo.Model.delete(__MODULE__, unquote(adapter), model, opts)
+      end
+
+      def preload(model_or_models, preloads) do
+        Ecto.Repo.Preloader.preload(model_or_models, __MODULE__, preloads)
       end
 
       def adapter do
@@ -137,6 +141,7 @@ defmodule Ecto.Repo do
         true
       end
 
+      # TODO: Should we keep this as overridable?
       def log({:query, sql}, fun) do
         {time, result} = :timer.tc(fun)
         Logger.debug fn -> [sql, " (", inspect(time), "µs)"] end
@@ -152,12 +157,21 @@ defmodule Ecto.Repo do
   end
 
   @doc """
+  Returns the adapter tied to the repository.
+  """
+  defcallback adapter() :: Ecto.Adapter.t
+
+  @doc """
+  Simply returns true to mark this module as a repository.
+  """
+  defcallback __repo__ :: true
+
+  @doc """
   Should return the database options that will be given to the adapter. Often
   used in conjunction with `parse_url/1`. This function must be implemented by
   the user.
   """
   defcallback conf() :: Keyword.t
-
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`
@@ -222,6 +236,18 @@ defmodule Ecto.Repo do
                  `:infinity` will wait indefinitely (default: 5000);
   """
   defcallback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
+
+  @doc """
+  Preloads all associations on the givne model or models.
+
+  `preloads` is a list of associations that can be nested in rose
+  tree structure:
+
+      node :: atom | {atom, node} | [node]
+
+  """
+  defcallback preload([Ecto.Model.t] | Ecto.Model.t, preloads :: term) ::
+                      [Ecto.Model.t] | Ecto.Model.t
 
   @doc """
   Fetches all results from the data store based on the given query. May raise
@@ -377,13 +403,9 @@ defmodule Ecto.Repo do
   defcallback rollback(any) :: no_return
 
   @doc """
-  Returns the adapter tied to the repository.
-  """
-  defcallback adapter() :: Ecto.Adapter.t
-
-  @doc """
   Enables logging and debugging of adapter actions such as sending queries to
-  the database. Should be overridden to customize behaviour.
+  the database. By default writes to Logger but can be overriden to customize
+  behaviour.
 
   You must return the result of calling the passed in function.
 
@@ -391,12 +413,12 @@ defmodule Ecto.Repo do
 
       def log({:query, sql}, fun) do
         {time, result} = :timer.tc(fun)
-        Logger.log({sql, time})
+        Logger.debug inspect{sql, time}
         result
       end
 
       def log(_arg, fun), do: fun.()
 
   """
-  defcallback log(any, (() -> any)) :: any
+  defcallback log({:query, String.t} | :begin | :commit | :rollback, (() -> any)) :: any
 end

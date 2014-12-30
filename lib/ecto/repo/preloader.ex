@@ -1,55 +1,58 @@
-defmodule Ecto.Associations.Preloader do
-  @moduledoc """
-  This module provides assoc selector merger.
-  """
+defmodule Ecto.Repo.Preloader do
+  # The module invoked by user defined repos
+  # for preload related functionality.
+  @moduledoc false
 
   alias Ecto.Associations.BelongsTo
-  require Ecto.Query, as: Q
+  require Ecto.Query
 
   @doc """
   Transforms a result set based on query preloads, loading
   the associations onto their parent model.
   """
-  @spec query([Ecto.Model.t], Ecto.Repo.t, Ecto.Query.t) :: [Ecto.Model.t]
-
+  @spec query([list], Ecto.Repo.t, Ecto.Query.t) :: [list]
   def query([], _repo, _query),            do: []
   def query(rows, _repo, %{preloads: []}), do: rows
 
   def query(rows, repo, query) do
     rows
     |> extract
-    |> run(repo, query.preloads, query.assocs)
+    |> preload(repo, query.preloads, query.assocs)
     |> unextract(rows)
   end
 
+  defp extract([[nil|_]|t2]), do: extract(t2)
+  defp extract([[h|_]|t2]),   do: [h|extract(t2)]
+  defp extract([]),           do: []
+
+  defp unextract(structs, [[nil|_]=h2|t2]),  do: [h2|unextract(structs, t2)]
+  defp unextract([h1|structs], [[_|t1]|t2]), do: [[h1|t1]|unextract(structs, t2)]
+  defp unextract([], []),                    do: []
+
   @doc """
-  Loads all associations on the result set.
-
-  `fields` is a list of fields that can be nested in rose tree
-  structure:
-
-      node :: {atom, [node | atom]}
-
-  See `Ecto.Query.preload/2`.
+  Implementation for `Ecto.Repo.preload/2`.
   """
-  @spec run([Ecto.Model.t], atom, [atom | tuple]) :: [Ecto.Model.t]
-  def run(structs, repo, fields) do
-    run(structs, repo, fields, [])
+  @spec preload(models, atom, atom | list) :: models when models: [Ecto.Model.t] | Ecto.Model.t
+  def preload(structs, repo, fields) when is_list(structs) do
+    preload(structs, repo, fields, [])
   end
 
-  defp run([], _repo, _fields, _assocs), do: []
-  defp run(structs, _repo, [], _assocs), do: structs
-  defp run(structs, repo, fields, assocs) do
+  def preload(struct, repo, fields) when is_map(struct) do
+    preload([struct], repo, fields, []) |> hd()
+  end
+
+  defp preload([], _repo, _fields, _assocs), do: []
+  defp preload(structs, repo, fields, assocs) do
     fields
     |> normalize(assocs, fields)
-    |> Enum.reduce(structs, &do_run(&2, repo, &1))
+    |> Enum.reduce(structs, &preload_each(&2, repo, &1))
   end
 
   # Receives a list of model struct to preload the given association fields
-  # on. The fields given are a rose tree of the root node field and its nested
-  # fields. We recurse down the rose tree and perform a query for the
+  # on. The fields given are a rose tree of the root node field and its
+  # nested fields. We recurse down the rose tree and perform a query for the
   # associated entities for each field.
-  defp do_run(structs, repo, {field, sub_fields}) do
+  defp preload_each(structs, repo, {field, sub_fields}) do
     # TODO: Make this use the new Ecto.Model.assoc/2.
     module = hd(structs).__struct__
 
@@ -63,7 +66,7 @@ defmodule Ecto.Associations.Preloader do
       associated = repo.all(query)
 
       # Recurse down nested fields
-      associated = Enum.reduce(sub_fields, associated, &do_run(&2, repo, &1))
+      associated = Enum.reduce(sub_fields, associated, &preload_each(&2, repo, &1))
 
       if should_sort? do
         # Save the structs old indices and then sort by primary_key or foreign_key
@@ -104,13 +107,21 @@ defmodule Ecto.Associations.Preloader do
           do: key
 
     if ids != [] do
-         Q.from x in refl.assoc,
-         where: field(x, ^assoc_key) in ^ids,
-      order_by: field(x, ^assoc_key)
+      Ecto.Query.from x in refl.assoc,
+                   where: field(x, ^assoc_key) in ^ids,
+                   order_by: field(x, ^assoc_key)
     end
   end
 
-  ## MERGE ##
+  # TODO: Do not hardcode
+  defp set_loaded(struct, refl, loaded) do
+    unless refl.__struct__ == Ecto.Associations.HasMany do
+      loaded = List.first(loaded)
+    end
+    Map.put(struct, refl.field, loaded)
+  end
+
+  ## Merge
 
   defp merge([], [_], _refl, acc, []) do
     Enum.reverse(acc)
@@ -173,7 +184,7 @@ defmodule Ecto.Associations.Preloader do
     end
   end
 
-  ## NORMALIZER ##
+  ## Normalizer
 
   defp normalize(preload, assocs, original) do
     Enum.map(List.wrap(preload), &normalize_each(&1, assocs, original))
@@ -202,7 +213,7 @@ defmodule Ecto.Associations.Preloader do
     end
   end
 
-  ## SORTING ##
+  ## Sorting
 
   defp should_sort?(structs, module, refl) do
     key   = refl.owner_key
@@ -223,23 +234,5 @@ defmodule Ecto.Associations.Preloader do
     Enum.sort(structs, fn {struct1, _}, {struct2, _} ->
       Map.fetch!(struct1, key) < Map.fetch!(struct2, key)
     end)
-  end
-
-  ## HELPERS
-
-  defp extract([[nil|_]|t2]), do: extract(t2)
-  defp extract([[h|_]|t2]),   do: [h|extract(t2)]
-  defp extract([]),           do: []
-
-  defp unextract(structs, [[nil|_]=h2|t2]),  do: [h2|unextract(structs, t2)]
-  defp unextract([h1|structs], [[_|t1]|t2]), do: [[h1|t1]|unextract(structs, t2)]
-  defp unextract([], []),                    do: []
-
-  # TODO: Do not hardcode reflection
-  defp set_loaded(struct, refl, loaded) do
-    unless refl.__struct__ == Ecto.Associations.HasMany do
-      loaded = List.first(loaded)
-    end
-    Map.put(struct, refl.field, loaded)
   end
 end

@@ -22,7 +22,7 @@ defmodule Ecto.Mixfile do
   end
 
   def application do
-    [applications: [:decimal, :poolboy]]
+    [applications: [:logger, :decimal, :poolboy]]
   end
 
   defp deps do

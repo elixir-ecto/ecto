@@ -1,6 +1,7 @@
-ExUnit.start
-
+Logger.configure(level: :info)
 Code.require_file "../../test/support/file_helpers.exs", __DIR__
+
+ExUnit.start
 
 alias Ecto.Adapters.Postgres
 alias Ecto.Integration.Postgres.TestRepo
@@ -109,8 +110,6 @@ defmodule Ecto.Integration.Postgres.Case do
     :ok
   end
 end
-
-Application.ensure_all_started(:logger)
 
 setup_cmds = [
   ~s(psql -U postgres -c "DROP DATABASE IF EXISTS ecto_test;"),

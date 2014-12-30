@@ -7,41 +7,6 @@ defmodule Ecto.Query.Planner do
   alias Ecto.Query.Types
 
   @doc """
-  Plans the struct for query execution.
-
-  This function simply invokes `model/3` passing the persisted
-  field names as arguments.
-  """
-  def struct(kind, %{__struct__: model} = struct) do
-    model(kind, model, Map.take(struct, model.__schema__(:fields)))
-  end
-
-  @doc """
-  Plans the given fields belong to a model for query execution.
-
-  It is mostly a matter of casing the field values.
-  """
-  def model(kind, model, kw, dumper \\ &Types.dump/2) do
-    for {field, value} <- kw do
-      type = model.__schema__(:field, field)
-
-      unless type do
-        raise Ecto.InvalidModelError,
-          message: "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
-      end
-
-      case dumper.(type, value) do
-        {:ok, value} ->
-          {field, value}
-        :error ->
-          raise Ecto.InvalidModelError,
-            message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>
-                     "in `#{kind}` does not match type #{inspect type}"
-      end
-    end
-  end
-
-  @doc """
   Plans the query for execution.
 
   Planning happens in multiple steps:
@@ -289,8 +254,6 @@ defmodule Ecto.Query.Planner do
 
   # Normalize the select field.
   defp normalize_select(query, only_where?) do
-    # TODO: Test field normalization
-    # TODO: Test error messages
     cond do
       only_where? ->
         query
@@ -458,7 +421,8 @@ defmodule Ecto.Query.Planner do
     if type = model.__schema__(:field, field) do
       type
     else
-      error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
+      error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` " <>
+                          "does not exist in the model source"
     end
   end
 

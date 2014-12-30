@@ -136,7 +136,36 @@ defmodule Ecto.Query.PlannerTest do
 
   test "normalize: select" do
     query = from(Post, []) |> normalize()
-    assert {:&, _, [0]} = query.select.expr
+    assert query.select.expr == {:&, [], [0]}
+    assert query.select.fields == [{:&, [], [0]}]
+
+    query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
+    assert query.select.fields ==
+           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [], []}]
+
+    query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
+    assert query.select.fields ==
+           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [], []}]
+
+    query =
+      from(Post, [])
+      |> join(:inner, [_], c in Comment)
+      |> preload([_, c], comments: c)
+      |> select([p, _], {p.title, p})
+      |> normalize()
+    assert query.select.fields ==
+           [{:&, [], [0]}, {:&, [], [1]}, {{:., [], [{:&, [], [0]}, :title]}, [], []}]
+  end
+
+  test "normalize: select without models" do
+    message = ~r"cannot `select` or `preload` \"posts\" because it does not have a model"
+    assert_raise Ecto.QueryError, message, fn ->
+      from("posts", []) |> normalize()
+    end
+
+    assert_raise Ecto.QueryError, message, fn ->
+      from("comments", []) |> join(:inner, [c], p in "posts") |> select([c, p], p) |> normalize()
+    end
   end
 
   test "normalize: only where" do
