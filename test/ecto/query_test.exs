@@ -7,7 +7,10 @@ defmodule Ecto.QueryTest do
 
   test "query interpolation" do
     comments = :comments
-    preload("posts", ^comments)
+    assert preload("posts", ^comments).preloads == [:comments]
+    assert preload("posts", ^[comments]).preloads == [[:comments]]
+    assert preload("posts", [users: ^comments]).preloads == [users: [:comments]]
+    assert preload("posts", [users: ^[comments]]).preloads == [users: [[:comments]]]
 
     lock = true
     lock("posts", ^lock)

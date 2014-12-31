@@ -434,6 +434,7 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
     %Comment{id: cid4} = TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
+    # Regular query
     query = from(p in Post, preload: [:comments], select: p)
 
     assert [p1, p2, p3] = TestRepo.all(query)
@@ -441,7 +442,10 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
     assert [] = p3.comments
 
-    query = from(p in Post, preload: [:comments], select: {0, [p], 1, 2})
+    # Now let's use an interpolated preload too
+    comments = [:comments]
+    query = from(p in Post, preload: ^comments, select: {0, [p], 1, 2})
+
     posts = TestRepo.all(query)
     [p1, p2, p3] = Enum.map(posts, fn {0, [p], 1, 2} -> p end)
 

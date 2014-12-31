@@ -187,17 +187,21 @@ defmodule Ecto.Repo.Preloader do
   ## Normalizer
 
   defp normalize(preload, assocs, original) do
-    Enum.map(List.wrap(preload), &normalize_each(&1, assocs, original))
+    Enum.flat_map(List.wrap(preload), &normalize_each(&1, assocs, original))
   end
 
   defp normalize_each({atom, list}, assocs, original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    {atom, normalize(list, assocs, original)}
+    [{atom, normalize(list, assocs, original)}]
   end
 
   defp normalize_each(atom, assocs, _original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    {atom, []}
+    [{atom, []}]
+  end
+
+  defp normalize_each(list, assocs, original) when is_list(list) do
+    Enum.flat_map(list, &normalize_each(&1, assocs, original))
   end
 
   defp normalize_each(other, _assocs, original) do
