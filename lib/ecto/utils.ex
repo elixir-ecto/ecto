@@ -1,22 +1,4 @@
 defmodule Ecto.Utils do
-  @moduledoc """
-  Convenience functions used throughout Ecto and
-  imported into users modules.
-  """
-
-  @doc """
-  Receives an `app` and returns the absolute `path` from
-  the application directory. It fails if the application
-  name is invalid.
-  """
-  @spec app_dir(atom, String.t) :: String.t | no_return
-  def app_dir(app, path) when is_atom(app) and is_binary(path) do
-    case :code.lib_dir(app) do
-      lib when is_list(lib) -> Path.join(List.to_string(lib), path)
-      {:error, :bad_name} -> raise "invalid application #{inspect app}"
-    end
-  end
-
   @doc """
   Parses an Ecto URL of the following format:
   `ecto://username:password@hostname:port/database?opts=123` where all options

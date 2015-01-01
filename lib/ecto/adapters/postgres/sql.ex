@@ -9,7 +9,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.JoinExpr
-    alias Ecto.Query.Util
 
     # Generate a select statement for all
     def all(query) do
@@ -34,9 +33,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     # Generate SQL for an update all statement
     def update_all(query, values) do
-      sources       = create_names(query)
-      from          = elem(sources, 0)
-      {table, name} = Util.source(from)
+      sources = create_names(query)
+      {table, name, _model} = elem(sources, 0)
 
       zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
         "#{quote_column(field)} = #{expr(expr, sources)}"
@@ -52,9 +50,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     # Generate SQL for an delete all statement
     def delete_all(query) do
-      sources       = create_names(query)
-      from          = elem(sources, 0)
-      {table, name} = Util.source(from)
+      sources = create_names(query)
+      {table, name, _model} = elem(sources, 0)
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
@@ -139,7 +136,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp from(sources) do
-      {table, name} = elem(sources, 0) |> Util.source
+      {table, name, _model} = elem(sources, 0)
       "FROM #{quote_table(table)} AS #{name}"
     end
 
@@ -148,8 +145,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       joins = Enum.with_index(joins)
       Enum.map_join(joins, " ", fn
         {%JoinExpr{on: %QueryExpr{expr: expr}, qual: qual}, ix} ->
-          source        = elem(sources, ix+1)
-          {table, name} = Util.source(source)
+          {table, name, _model} = elem(sources, ix+1)
 
           on   = expr(expr, sources)
           qual = join_qual(qual)
@@ -225,17 +221,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "$#{ix+1}"
     end
 
-    defp expr({{:., _, [{:&, _, [_]} = var, field]}, _, []}, sources) when is_atom(field) do
-      {_, name} = Util.find_source(sources, var) |> Util.source
+    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
+      {_, name, _} = elem(sources, idx)
       "#{name}.#{quote_column(field)}"
     end
 
-    defp expr({:&, _, [_]} = var, sources) do
-      source    = Util.find_source(sources, var)
-      model     = Util.model(source)
-      fields    = model.__schema__(:fields)
-      {_, name} = Util.source(source)
-
+    defp expr({:&, _, [idx]}, sources) do
+      {_table, name, model} = elem(sources, idx)
+      fields = model.__schema__(:fields)
       Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")
     end
 
@@ -317,15 +310,15 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sources = query.sources |> Tuple.to_list
       Enum.reduce(sources, [], fn {table, model}, names ->
         name = unique_name(names, String.first(table), 0)
-        [{{table, name}, model}|names]
+        [{table, name, model}|names]
       end) |> Enum.reverse |> List.to_tuple
     end
 
     # Brute force find unique name
     defp unique_name(names, name, counter) do
       counted_name = name <> Integer.to_string(counter)
-      if Enum.any?(names, fn {{_, n}, _} -> n == counted_name end) do
-        unique_name(names, name, counter+1)
+      if Enum.any?(names, fn {_, n, _} -> n == counted_name end) do
+        unique_name(names, name, counter + 1)
       else
         counted_name
       end
