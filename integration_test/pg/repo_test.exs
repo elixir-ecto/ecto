@@ -179,6 +179,12 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "x"} = TestRepo.get(Post, id1)
     assert %Post{title: "x"} = TestRepo.get(Post, id2)
     assert %Post{title: "x"} = TestRepo.get(Post, id3)
+
+    assert 3 = TestRepo.update_all("posts", title: "y")
+
+    assert %Post{title: "y"} = TestRepo.get(Post, id1)
+    assert %Post{title: "y"} = TestRepo.get(Post, id2)
+    assert %Post{title: "y"} = TestRepo.get(Post, id3)
   end
 
   test "update all with filter" do

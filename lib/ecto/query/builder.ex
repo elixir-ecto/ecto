@@ -373,6 +373,10 @@ defmodule Ecto.Query.Builder do
     count + length(joins)
   end
 
+  if map_size(%Ecto.Query{}) != 15 do
+    raise "Ecto.Query match out of date in builder"
+  end
+
   @doc """
   Applies a query at compilation time or at runtime.
 

@@ -196,12 +196,6 @@ defmodule Ecto.Query.PlannerTest do
       normalize(query)
     end
 
-    message = ~r"association `Ecto.Query.PlannerTest.Post.comments` in preload doesn't match join model"
-    assert_raise Ecto.QueryError, message, fn ->
-      query = from(p in Post, join: c in Post, preload: [comments: c])
-      normalize(query)
-    end
-
     message = ~r"requires an inner or left join, got right join"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(p in Post, right_join: c in assoc(p, :comments), preload: [comments: c])

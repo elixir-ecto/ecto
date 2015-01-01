@@ -7,6 +7,32 @@ defmodule Ecto.Query.Planner do
   alias Ecto.Query.Types
 
   @doc """
+  Asserts the given query has only where expressions.
+  """
+  def assert_only_where_expressions!(query) do
+    case query do
+      %Ecto.Query{joins: [], select: nil, order_bys: [], limit: nil, offset: nil,
+                  group_bys: [], havings: [], preloads: [], assocs: [], distincts: [],
+                  lock: nil} ->
+        query
+      _ ->
+        error! query, "only `where` expressions are allowed"
+    end
+  end
+
+  @doc """
+  Asserts the given query has a from with model field.
+  """
+  def assert_model!(query) do
+    case query.from do
+      {_source, model} when model != nil ->
+        model
+      _ ->
+        error! query, "expected a from expression with a model"
+    end
+  end
+
+  @doc """
   Plans the query for execution.
 
   Planning happens in multiple steps:
@@ -195,12 +221,15 @@ defmodule Ecto.Query.Planner do
   def normalize(query, base, opts) do
     only_where? = Keyword.get(opts, :only_where, false)
 
+    if only_where? do
+      assert_only_where_expressions!(query)
+    end
+
     query
     |> traverse_exprs(map_size(base), &validate_and_increment/4)
     |> elem(0)
     |> normalize_select(only_where?)
     |> validate_assocs
-    |> only_where(only_where?)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -335,13 +364,6 @@ defmodule Ecto.Query.Planner do
                       "in preload is not an association"
       end
 
-      {_, child_model} = elem(query.sources, child_idx)
-
-      unless refl.assoc == child_model do
-        error! query, "association `#{inspect parent_model}.#{assoc}` " <>
-                      "in preload doesn't match join model `#{inspect child_model}`"
-      end
-
       case find_source_expr(query, child_idx) do
         %JoinExpr{qual: qual} when qual in [:inner, :left] ->
           :ok
@@ -362,22 +384,6 @@ defmodule Ecto.Query.Planner do
 
   defp find_source_expr(query, idx) do
     Enum.fetch! query.joins, idx - 1
-  end
-
-  if map_size(%Ecto.Query{}) != 15 do
-    raise "Ecto.Query match out of date in planner"
-  end
-
-  defp only_where(query, false), do: query
-  defp only_where(query, true) do
-    case query do
-      %Ecto.Query{joins: [], select: nil, order_bys: [], limit: nil, offset: nil,
-                  group_bys: [], havings: [], preloads: [], assocs: [], distincts: [],
-                  lock: nil} ->
-        query
-      _ ->
-        error! query, "only `where` expressions are allowed"
-    end
   end
 
   ## Helpers

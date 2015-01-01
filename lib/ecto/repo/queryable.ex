@@ -83,24 +83,29 @@ defmodule Ecto.Repo.Queryable do
   """
   def update_all(repo, adapter, queryable, updates, params, opts) do
     query = Queryable.to_query(queryable)
-    model = model!(:update_all, query)
 
     if updates == [] do
       message = "no fields given to `update_all`"
       raise ArgumentError, message
     end
 
-    # Check all fields are valid but don't use dump as we'll cast below.
-    _ = Ecto.Repo.Model.validate_fields(:update_all, model, updates,
-                                        fn _type, value -> {:ok, value} end)
+    # If we have a model in the query, let's use it for casting.
+    case query.from do
+      {source, model} when model != nil ->
+        # Check all fields are valid but don't use dump as we'll cast below.
+        _ = Ecto.Repo.Model.validate_fields(:update_all, model, updates,
+                                            fn _type, value -> {:ok, value} end)
 
-    # Properly cast parameters.
-    params = Enum.into params, %{}, fn
-      {k, {v, {0, field}}} ->
-        type = model.__schema__(:field, field)
-        {k, cast(:update_all, type, v)}
-      {k, {v, type}} ->
-        {k, cast(:update_all, type, v)}
+        # Properly cast parameters.
+        params = Enum.into params, %{}, fn
+          {k, {v, {0, field}}} ->
+            type = model.__schema__(:field, field)
+            {k, cast(:update_all, type, v)}
+          {k, {v, type}} ->
+            {k, cast(:update_all, type, v)}
+        end
+      _ ->
+        :ok
     end
 
     {query, params} =
@@ -157,19 +162,9 @@ defmodule Ecto.Repo.Queryable do
 
   defp query_for_get(queryable, id) do
     query = Queryable.to_query(queryable)
-    model = model!(:get, query)
+    model = Ecto.Query.Planner.assert_model!(query)
     primary_key = primary_key_field!(model)
     Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
-  end
-
-  defp model!(kind, query) do
-    case query.from do
-      {_source, model} when model != nil ->
-        model
-      _ ->
-        message = "query in `#{kind}` must have a from expression with a model"
-        raise Ecto.QueryError, message: message, query: query
-    end
   end
 
   defp cast(kind, type, v) do

@@ -93,6 +93,19 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
+  test "fail invalid schema" do
+    assert_raise ArgumentError, "schema source must be a string, got: :hello", fn ->
+      defmodule SchemaFail do
+        use Ecto.Model
+
+        schema :hello do
+          field :x, :string
+          field :pk, :integer, primary_key: true
+        end
+      end
+    end
+  end
+
   test "doesn't fail custom primary key" do
     defmodule ModelDontFailCustomPK do
       use Ecto.Model
@@ -104,7 +117,7 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
-  ##
+  ## Associations
 
   defmodule AssocModel do
     use Ecto.Model

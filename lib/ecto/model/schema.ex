@@ -149,18 +149,22 @@ defmodule Ecto.Model.Schema do
 
   defmacro schema(source, opts, [do: block]) do
     quote do
+      source = unquote(source)
+
+      unless is_binary(source) do
+        raise ArgumentError, "schema source must be a string, got: #{inspect source}"
+      end
+
       # TODO: Revisit @schema_defaults and primary_key configuration
       opts = (Module.get_attribute(__MODULE__, :schema_defaults) || [])
              |> Keyword.merge(unquote(opts))
-
-      @ecto_primary_key nil
-      @ecto_source unquote(source)
 
       Module.register_attribute(__MODULE__, :assign_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
 
+      @ecto_primary_key nil
       @ecto_foreign_key_type opts[:foreign_key_type]
 
       case opts[:primary_key] do
@@ -184,11 +188,10 @@ defmodule Ecto.Model.Schema do
       fields = @ecto_fields |> Enum.reverse
       assocs = @ecto_assocs |> Enum.reverse
 
-      def __schema__(:source), do: @ecto_source
-
       Module.eval_quoted __MODULE__, [
         Ecto.Model.Schema.__struct__(@struct_fields),
         Ecto.Model.Schema.__assign__(@assign_fields, @ecto_primary_key),
+        Ecto.Model.Schema.__source__(source),
         Ecto.Model.Schema.__fields__(fields),
         Ecto.Model.Schema.__assocs__(__MODULE__, assocs, @ecto_primary_key, fields),
         Ecto.Model.Schema.__primary_key__(@ecto_primary_key),
@@ -412,6 +415,13 @@ defmodule Ecto.Model.Schema do
   def __struct__(struct_fields) do
     quote do
       defstruct unquote(Macro.escape(struct_fields))
+    end
+  end
+
+  @doc false
+  def __source__(source) do
+    quote do
+      def __schema__(:source), do: unquote(Macro.escape(source))
     end
   end
 

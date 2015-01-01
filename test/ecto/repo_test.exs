@@ -91,7 +91,7 @@ defmodule Ecto.RepoTest do
       MockRepo.get(MyModel, :atom)
     end
 
-    message = ~r"query in `get` must have a from expression with a model in query"
+    message = ~r"expected a from expression with a model in query"
     assert_raise Ecto.QueryError, message, fn ->
       MockRepo.get(%Ecto.Query{}, :atom)
     end
@@ -103,6 +103,7 @@ defmodule Ecto.RepoTest do
     MockRepo.update_all(e in MyModel, x: e.x)
     MockRepo.update_all(e in MyModel, x: "123")
     MockRepo.update_all(MyModel, x: "123")
+    MockRepo.update_all("my_model", x: "123")
 
     query = from(e in MyModel, where: e.x == "123")
     MockRepo.update_all(query, x: "")
