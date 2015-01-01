@@ -44,12 +44,22 @@ defmodule Ecto.Query.Builder.Join do
       when is_atom(var) and is_atom(context) do
     var   = Builder.find_var!(var, vars)
     field = Builder.quoted_field!(field)
-    {[], nil, {var, field}}
+    {nil, nil, {var, field}}
   end
 
-  def escape(join, _vars) do
-    Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
+  def escape(expr, _vars) do
+    {nil, quote(do: :"Elixir.Ecto.Query.Builder.Join".join!(unquote(expr))), nil}
   end
+
+  @doc """
+  Called at runtime to check dynamic joins.
+  """
+  def join!(expr) when is_atom(expr),
+    do: {nil, expr}
+  def join!(expr) when is_binary(expr),
+    do: {expr, nil}
+  def join!(expr),
+    do: Builder.error!("expected join to be a string or atom, got: `#{inspect expr}`")
 
   @doc """
   Builds a quoted expression.
@@ -63,7 +73,7 @@ defmodule Ecto.Query.Builder.Join do
     binding = Builder.escape_binding(binding)
     {join_bind, join_expr, join_assoc} = escape(expr, binding)
 
-    validate_qual(qual)
+    qual = validate_qual(qual)
     validate_bind(join_bind, binding)
 
     if join_bind && !count_bind do
@@ -120,17 +130,28 @@ defmodule Ecto.Query.Builder.Join do
                 file: unquote(env.file)}
   end
 
-  @qualifiers [:inner, :left, :right, :full]
+  defp validate_qual(qual) when is_atom(qual) do
+    qual!(qual)
+  end
 
-  defp validate_qual(qual) when qual in @qualifiers, do: :ok
   defp validate_qual(qual) do
-    Builder.error! "invalid join qualifier `#{inspect qual}`, accepted qualifiers are: " <>
-                   Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
+    quote(do: :"Elixir.Ecto.Query.Builder.Join".qual!(unquote(qual)))
   end
 
   defp validate_bind(bind, all) do
     if bind && bind in all do
       Builder.error! "variable `#{bind}` is already defined in query"
     end
+  end
+
+  @qualifiers [:inner, :left, :right, :full]
+
+  @doc """
+  Called at runtime to check dynamic qualifier.
+  """
+  def qual!(qual) when qual in @qualifiers, do: qual
+  def qual!(qual) do
+    Builder.error! "invalid join qualifier `#{inspect qual}`, accepted qualifiers are: " <>
+                   Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
   end
 end

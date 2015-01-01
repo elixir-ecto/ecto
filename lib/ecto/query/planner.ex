@@ -6,6 +6,10 @@ defmodule Ecto.Query.Planner do
   alias Ecto.Query.JoinExpr
   alias Ecto.Query.Types
 
+  if map_size(%Ecto.Query{}) != 15 do
+    raise "Ecto.Query match out of date in builder"
+  end
+
   @doc """
   Asserts the given query has only where expressions.
   """
@@ -160,14 +164,12 @@ defmodule Ecto.Query.Planner do
   # field to the query for fast access.
   defp prepare_sources(query) do
     from = query.from || error!(query, "query must have a from expression")
-
-    {joins, sources} =
-      Enum.map_reduce(query.joins, [from], &prepare_join(&1, &2, query))
-
-    %{query | sources: sources |> Enum.reverse |> List.to_tuple, joins: joins}
+    {joins, sources} = prepare_joins(query.joins, query, [], [from])
+    %{query | sources: sources |> Enum.reverse |> List.to_tuple(),
+              joins: joins |> Enum.reverse}
   end
 
-  defp prepare_join(%JoinExpr{assoc: {ix, assoc}} = join, sources, query) do
+  defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual} = join|t], query, joins, sources) do
     {source, model} = Enum.fetch!(Enum.reverse(sources), ix)
 
     unless model do
@@ -181,34 +183,60 @@ defmodule Ecto.Query.Planner do
       error! query, join, "could not find association `#{assoc}` on model #{inspect model}"
     end
 
-    associated = refl.assoc
-    source     = {associated.__schema__(:source), associated}
+    # If we have the following join:
+    #
+    #     from p in Post,
+    #       join: p in assoc(p, :comments)
+    #
+    # The callback below will return a query that contains only
+    # joins in a way it starts with a Comment and ends in the
+    # Post.
+    #
+    # This means we need to rewrite the joins below to properly
+    # shift the &... identifier and discard the last source as
+    # it will always be the ix in the current association.
+    child = refl.__struct__.joins_query(refl)
+    {child_joins, [_|child_sources]} = prepare_joins(child.joins, child, [], [child.from])
 
-    on = on_expr(join.on, refl, ix, length(sources))
-    {%{join | source: source, on: on}, [source|sources]}
+    var_ix = length(child_joins)
+    inc_ix = length(sources)
+    child_joins =
+      child_joins
+      |> :lists.zip(child_sources)
+      |> Enum.map(&rewrite_join(&1, qual, ix, var_ix, inc_ix))
+
+    prepare_joins(t, query, child_joins ++ joins, child_sources ++ sources)
   end
 
-  defp prepare_join(%JoinExpr{source: {source, nil}} = join, sources, _query) when is_binary(source) do
+  defp prepare_joins([%JoinExpr{source: {source, nil}} = join|t], query, joins, sources) when is_binary(source) do
     source = {source, nil}
-    {%{join | source: source}, [source|sources]}
+    join   = %{join | source: source}
+    prepare_joins(t, query, [join|joins], [source|sources])
   end
 
-  defp prepare_join(%JoinExpr{source: {nil, model}} = join, sources, _query) when is_atom(model) do
+  defp prepare_joins([%JoinExpr{source: {nil, model}} = join|t], query, joins, sources) when is_atom(model) do
     source = {model.__schema__(:source), model}
-    {%{join | source: source}, [source|sources]}
+    join   = %{join | source: source}
+    prepare_joins(t, query, [join|joins], [source|sources])
   end
 
-  defp on_expr(on, refl, var_ix, assoc_ix) do
-    var = {:&, [], [var_ix]}
-    owner_key = refl.owner_key
-    assoc_key = refl.assoc_key
-    assoc_var = {:&, [], [assoc_ix]}
+  defp prepare_joins([], _query, joins, sources) do
+    {joins, sources}
+  end
 
-    expr = quote do
-      unquote(assoc_var).unquote(assoc_key) == unquote(var).unquote(owner_key)
+  defp rewrite_join({%{on: on} = join, source}, qual, ix, var_ix, inc_ix) do
+    on = update_in on.expr, fn expr ->
+      Macro.prewalk expr, fn
+        # We need to replace the assoc index by the one from the actual query
+        {:&, meta, [assoc_ix]} when assoc_ix == var_ix -> {:&, meta, [ix]}
+        # All others need to be incremented by the existing sources
+        {:&, meta, [join_ix]} -> {:&, meta, [join_ix + inc_ix]}
+        # Everything else stays the same
+        other -> other
+      end
     end
 
-    %{on | expr: expr}
+    %{join | on: on, qual: qual, source: source}
   end
 
   @doc """

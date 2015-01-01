@@ -1,3 +1,5 @@
+require Ecto.Query
+
 defmodule Ecto.Associations do
   @moduledoc false
   # TODO: Document which association fields are required
@@ -121,6 +123,13 @@ defmodule Ecto.Associations.Has do
       assoc_key: opts[:foreign_key] || Ecto.Associations.association_key(module, ref)
     }
   end
+
+  @doc false
+  def joins_query(refl) do
+    Ecto.Query.from q in refl.assoc,
+      join: o in refl.owner,
+      on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
+  end
 end
 
 defmodule Ecto.Associations.BelongsTo do
@@ -154,5 +163,12 @@ defmodule Ecto.Associations.BelongsTo do
       owner_key: Keyword.fetch!(opts, :foreign_key),
       assoc_key: ref
     }
+  end
+
+  @doc false
+  def joins_query(refl) do
+    Ecto.Query.from q in refl.assoc,
+      join: o in refl.owner,
+      on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
   end
 end

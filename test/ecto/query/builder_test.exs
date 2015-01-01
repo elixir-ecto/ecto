@@ -61,6 +61,10 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote(do: x.y), [])
     end
 
+    assert_raise Ecto.Query.CompileError, ~r"unbound variable", fn ->
+      escape(quote(do: x.y == 1), [])
+    end
+
     assert_raise Ecto.Query.CompileError, ~r"expected literal atom or interpolated value", fn ->
       escape(quote(do: field(x, 123)), [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end

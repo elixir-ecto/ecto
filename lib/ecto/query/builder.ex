@@ -294,11 +294,11 @@ defmodule Ecto.Query.Builder do
   # Fields
   def quoted_type({{:., _, [{var, _, context}, field]}, _, []}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
-    do: {Keyword.fetch!(vars, var), field}
+    do: {find_var!(var, vars), field}
 
   def quoted_type({:field, _, [{var, _, context}, field]}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
-    do: {Keyword.fetch!(vars, var), field}
+    do: {find_var!(var, vars), field}
 
   # Unquoting code here means the second argument of field will
   # always be unquoted twice, one by the type checking and another
@@ -306,7 +306,7 @@ defmodule Ecto.Query.Builder do
   # as the solution is somewhat complicated.
   def quoted_type({:field, _, [{var, _, context}, {:^, _, [code]}]}, vars)
     when is_atom(var) and is_atom(context),
-    do: {Keyword.fetch!(vars, var), code}
+    do: {find_var!(var, vars), code}
 
   # Tagged
   def quoted_type({:<<>>, _, _}, _vars), do: :binary
@@ -371,10 +371,6 @@ defmodule Ecto.Query.Builder do
   def count_binds(%Query{from: from, joins: joins}) do
     count = if from, do: 1, else: 0
     count + length(joins)
-  end
-
-  if map_size(%Ecto.Query{}) != 15 do
-    raise "Ecto.Query match out of date in builder"
   end
 
   @doc """

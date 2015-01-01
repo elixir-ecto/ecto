@@ -91,7 +91,7 @@ defmodule Ecto.Repo.Queryable do
 
     # If we have a model in the query, let's use it for casting.
     case query.from do
-      {source, model} when model != nil ->
+      {_source, model} when model != nil ->
         # Check all fields are valid but don't use dump as we'll cast below.
         _ = Ecto.Repo.Model.validate_fields(:update_all, model, updates,
                                             fn _type, value -> {:ok, value} end)
