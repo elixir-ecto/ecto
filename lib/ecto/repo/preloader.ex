@@ -51,13 +51,14 @@ defmodule Ecto.Repo.Preloader do
   defp do_preload([], _repo, _preloads), do: []
 
   defp do_preload(structs, repo, preloads) do
-    # TODO: Make this use the new Ecto.Model.assoc/2.
+    module = hd(structs).__struct__
+
     # TODO: What if structs are not the same
-    # TODO: What if reflections is nil?!
+    # TODO: What if reflections is nil?
+
     entries =
       for {preload, sub_preloads} <- preloads do
-        module = hd(structs).__struct__
-        refl   = module.__schema__(:association, preload)
+        refl = module.__schema__(:association, preload)
 
         owner_key = refl.owner_key
         assoc_key = refl.assoc_key
@@ -82,8 +83,14 @@ defmodule Ecto.Repo.Preloader do
 
     for struct <- structs do
       Enum.reduce entries, struct, fn {refl, dict}, acc ->
-        key = Map.fetch!(acc, refl.owner_key)
-        set_loaded acc, refl, HashDict.get(dict, key, [])
+        key    = Map.fetch!(acc, refl.owner_key)
+        loaded = HashDict.get(dict, key, [])
+
+        if refl.cardinality == :one do
+          loaded = List.first(loaded)
+        end
+
+        Map.put(acc, refl.field, loaded)
       end
     end
   end
@@ -96,14 +103,6 @@ defmodule Ecto.Repo.Preloader do
     current  = Map.fetch!(h, key)
     {t1, t2} = Enum.split_while(t, &(Map.fetch!(&1, key) == current))
     into_dict(t2, key, HashDict.put(dict, current, [h|t1]))
-  end
-
-  # TODO: Optimize with cardinality
-  defp set_loaded(struct, refl, loaded) do
-    unless refl.__struct__ == Ecto.Associations.HasMany do
-      loaded = List.first(loaded)
-    end
-    Map.put(struct, refl.field, loaded)
   end
 
   ## Normalizer

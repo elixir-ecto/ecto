@@ -149,6 +149,7 @@ defmodule Ecto.Model.Schema do
 
   defmacro schema(source, opts, [do: block]) do
     quote do
+      # TODO: Revisit @schema_defaults and primary_key configuration
       opts = (Module.get_attribute(__MODULE__, :schema_defaults) || [])
              |> Keyword.merge(unquote(opts))
 
@@ -213,6 +214,21 @@ defmodule Ecto.Model.Schema do
     end
   end
 
+  @doc """
+  Defines an association.
+
+  This macro is used by `belongs_to/3`, `has_one/3` and `has_many/3` to
+  define associations. However, custom association mechanisms can be provided
+  by developers and hooked in via this macro.
+
+  Read more about custom associations in `Ecto.Associations`.
+  """
+  defmacro association(name, association, opts \\ []) do
+    quote do
+      Ecto.Model.Schema.__association__(__MODULE__, unquote(name), unquote(association), unquote(opts))
+    end
+  end
+
   @doc ~S"""
   Indicates a one-to-many association with another model.
 
@@ -222,7 +238,9 @@ defmodule Ecto.Model.Schema do
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
-      other model, defaults to: `:"#{model}_id"`;
+      other model, defaults to the underscored name of the current model
+      suffixed by `_id`
+
     * `:references` - Sets the key on the current model to be used for the
       association, defaults to the primary key on the model;
 
@@ -244,8 +262,9 @@ defmodule Ecto.Model.Schema do
 
   """
   defmacro has_many(name, queryable, opts \\ []) do
-    quote do
-      Ecto.Model.Schema.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+    quote bind_quoted: binding() do
+      association(name, Ecto.Associations.Has,
+                  [queryable: queryable, cardinality: :many] ++ opts)
     end
   end
 
@@ -258,9 +277,11 @@ defmodule Ecto.Model.Schema do
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
-      other model, defaults to: `:"#{model}_id"`;
+      other model, defaults to the underscored name of the current model
+      suffixed by `_id`
+
     * `:references`  - Sets the key on the current model to be used for the
-      association, defaults to the primary key on the model;
+      association, defaults to the primary key on the model
 
   ## Examples
 
@@ -276,8 +297,9 @@ defmodule Ecto.Model.Schema do
 
   """
   defmacro has_one(name, queryable, opts \\ []) do
-    quote do
-      Ecto.Model.Schema.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+    quote bind_quoted: binding() do
+      association(name, Ecto.Associations.Has,
+                  [queryable: queryable, cardinality: :one] ++ opts)
     end
   end
 
@@ -296,11 +318,14 @@ defmodule Ecto.Model.Schema do
 
   ## Options
 
-    * `:foreign_key` - Sets the foreign key field name, defaults to:
-                       `:"#{other_model}_id"`;
-    * `:references`  - Sets the key on the other model to be used for the
-                       association, defaults to: `:id`;
-    * `:type`        - Sets the type of `:foreign_key`. Defaults to: `:integer`;
+    * `:foreign_key` - Sets the foreign key field name, defaults to the name
+      of the association suffixed by `_id`. For example, `belongs_to :company`
+      will have foreign key of `:company_id`
+
+    * `:references` - Sets the key on the other model to be used for the
+      association, defaults to: `:id`
+
+    * `:type` - Sets the type of `:foreign_key`. Defaults to: `:integer`
 
   ## Examples
 
@@ -317,15 +342,20 @@ defmodule Ecto.Model.Schema do
 
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
-    quote do
-      Ecto.Model.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+    quote bind_quoted: binding() do
+      opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
+
+      foreign_key_type =
+        opts[:type] || @ecto_foreign_key_type || :integer
+
+      field(opts[:foreign_key], foreign_key_type, [])
+
+      association(name, Ecto.Associations.BelongsTo, [queryable: queryable] ++ opts)
     end
   end
 
   ## Callbacks
 
-  # TODO: Check that the opts are valid for the given type,
-  # especially check the default value
   @doc false
   def __field__(mod, name, type, opts) do
     check_type!(type, opts[:virtual])
@@ -338,6 +368,9 @@ defmodule Ecto.Model.Schema do
       end
     end
 
+    # TODO: Check that the opts are valid for the given type,
+    # especially check the default value
+
     Module.put_attribute(mod, :assign_fields, {name, type})
     put_struct_field(mod, name, opts[:default])
 
@@ -347,33 +380,10 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc false
-  def __has_many__(mod, name, queryable, opts) do
-    put_struct_assoc_field(mod, name)
-    opts = [queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, :has_many, opts})
-  end
-
-  @doc false
-  def __has_one__(mod, name, queryable, opts) do
-    put_struct_assoc_field(mod, name)
-    opts = [queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, :has_one, opts})
-  end
-
-  @doc false
-  def __belongs_to__(mod, name, queryable, opts) do
-    opts = opts
-           |> Keyword.put_new(:references, :id)
-           |> Keyword.put_new(:foreign_key, :"#{name}_id")
-
-    foreign_key_type =
-      opts[:type] || Module.get_attribute(mod, :ecto_foreign_key_type) || :integer
-
-    __field__(mod, opts[:foreign_key], foreign_key_type, [])
-
-    put_struct_assoc_field(mod, name)
-    opts = [queryable: queryable] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, :belongs_to, opts})
+  def __association__(mod, name, association, opts) do
+    put_struct_field(mod, name,
+                     %Ecto.Associations.NotLoaded{__owner__: mod, __field__: name})
+    Module.put_attribute(mod, :ecto_assocs, {name, association, opts})
   end
 
   defp put_struct_field(mod, name, assoc) do
@@ -386,12 +396,7 @@ defmodule Ecto.Model.Schema do
     Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
-  defp put_struct_assoc_field(mod, name) do
-    put_struct_field(mod, name,
-                     %Ecto.Associations.NotLoaded{__owner__: mod, __field__: name})
-  end
-
-  ## Helpers
+  ## Quoted callbacks
 
   @doc false
   def __assign__(assign_fields, primary_key) do
@@ -428,23 +433,10 @@ defmodule Ecto.Model.Schema do
 
   @doc false
   def __assocs__(module, assocs, primary_key, fields) do
+    fields = Enum.map(fields, &elem(&1, 0))
+
     quoted = Enum.map(assocs, fn {name, type, opts} ->
-      pk = opts[:references] || primary_key
-
-      if is_nil(pk) do
-        raise ArgumentError, message: "need to set :references option for " <>
-          "association #{inspect name} when model has no primary key"
-      end
-
-      if type in [:has_many, :has_one] do
-        unless List.keyfind(fields, pk, 0) do
-          raise ArgumentError, message: "model does not have the field #{inspect pk} used by " <>
-            "association #{inspect name}, please set the :references option accordingly"
-        end
-      end
-
-      refl = __reflection__(type, name,
-        module, pk, opts[:queryable], opts[:foreign_key])
+      refl = type.struct(name, module, primary_key, fields, opts)
 
       quote do
         def __schema__(:association, unquote(name)) do
@@ -481,32 +473,6 @@ defmodule Ecto.Model.Schema do
         end) |> elem(0)
       end
     end
-  end
-
-  defp __reflection__(type, name, module, pk, assoc, fk)
-      when type in [:has_many, :has_one] do
-    model_name = module |> Module.split |> List.last |> Ecto.Utils.underscore
-
-    values = [
-      owner: module,
-      assoc: assoc,
-      owner_key: pk,
-      assoc_key: fk || :"#{model_name}_#{pk}",
-      field: name ]
-
-    case type do
-      :has_many -> struct(Ecto.Associations.HasMany, values)
-      :has_one  -> struct(Ecto.Associations.HasOne, values)
-    end
-  end
-
-  defp __reflection__(:belongs_to, name, module, pk, assoc, fk) do
-    %Ecto.Associations.BelongsTo{
-      owner: module,
-      assoc: assoc,
-      owner_key: fk,
-      assoc_key: pk,
-      field: name}
   end
 
   defp check_type!(type, virtual?) do

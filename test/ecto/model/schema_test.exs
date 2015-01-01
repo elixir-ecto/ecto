@@ -123,8 +123,8 @@ defmodule Ecto.Model.SchemaTest do
 
   test "has_many association" do
     assert AssocModel.__schema__(:association, :posts) ==
-           %Ecto.Associations.HasMany{field: :posts, owner: AssocModel,
-                                      assoc: Post, owner_key: :id, assoc_key: :assoc_model_id}
+           %Ecto.Associations.Has{field: :posts, owner: AssocModel, cardinality: :many,
+                                  assoc: Post, owner_key: :id, assoc_key: :assoc_model_id}
 
     posts = (%AssocModel{}).posts
     assert %Ecto.Associations.NotLoaded{} = posts
@@ -133,8 +133,8 @@ defmodule Ecto.Model.SchemaTest do
 
   test "has_one association" do
     assert AssocModel.__schema__(:association, :author) ==
-           %Ecto.Associations.HasOne{field: :author, owner: AssocModel,
-                                    assoc: User, owner_key: :id, assoc_key: :assoc_model_id}
+           %Ecto.Associations.Has{field: :author, owner: AssocModel, cardinality: :one,
+                                  assoc: User, owner_key: :id, assoc_key: :assoc_model_id}
 
     author = (%AssocModel{}).author
     assert %Ecto.Associations.NotLoaded{} = author
@@ -143,7 +143,7 @@ defmodule Ecto.Model.SchemaTest do
 
   test "belongs_to association" do
     assert AssocModel.__schema__(:association, :comment) ==
-           %Ecto.Associations.BelongsTo{field: :comment, owner: AssocModel,
+           %Ecto.Associations.BelongsTo{field: :comment, owner: AssocModel, cardinality: :one,
                                         assoc: Comment, owner_key: :comment_id, assoc_key: :id}
 
     comment = (%AssocModel{}).comment

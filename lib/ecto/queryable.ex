@@ -30,18 +30,3 @@ defimpl Ecto.Queryable, for: Atom do
     end
   end
 end
-
-defimpl Ecto.Queryable, for: Tuple do
-  @has_many Ecto.Associations.HasMany.Proxy
-
-  def to_query(tuple) when elem(tuple, 0) == @has_many do
-    tuple.__queryable__
-  end
-
-  def to_query(tuple) do
-    raise Protocol.UndefinedError,
-         protocol: @protocol,
-            value: tuple,
-      description: "the given tuple is not queryable"
-  end
-end

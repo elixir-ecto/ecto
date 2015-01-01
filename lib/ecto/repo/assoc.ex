@@ -76,8 +76,7 @@ defmodule Ecto.Repo.Assoc do
           |> Enum.reverse()
           |> Enum.map(&load_assocs(&1, sub_dicts, refls))
 
-        # TODO: Do not hardcode
-        unless refl.__struct__ == Ecto.Associations.HasMany do
+        if refl.cardinality == :one do
           loaded = List.first(loaded)
         end
 

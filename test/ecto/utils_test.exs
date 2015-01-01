@@ -33,9 +33,4 @@ defmodule Ecto.UtilsTest do
       parse_url("ecto://eric:hunter2@host:123/")
     end
   end
-
-  test "underscore/2" do
-    assert underscore("Foo") == "foo"
-    assert underscore("FooBar") == "foo_bar"
-  end
 end
