@@ -19,8 +19,7 @@ defmodule Ecto.Repo.Queryable do
 
     adapter.all(repo, query, params, opts)
     |> Ecto.Repo.Assoc.query(query)
-    |> Ecto.Repo.Preloader.query(repo, query)
-    |> to_select(query.select)
+    |> Ecto.Repo.Preloader.query(repo, query, to_select(query.select))
   end
 
   @doc """
@@ -122,10 +121,10 @@ defmodule Ecto.Repo.Queryable do
 
   ## Helpers
 
-  defp to_select(rows, select) do
+  defp to_select(select) do
     expr  = select.expr
     from? = match?([{:&, _, [0]}|_], select.fields)
-    Enum.map(rows, &to_select(&1, expr, from?))
+    &to_select(&1, expr, from?)
   end
 
   defp to_select(row, expr, true),
