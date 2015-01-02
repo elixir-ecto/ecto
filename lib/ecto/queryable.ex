@@ -23,10 +23,16 @@ defimpl Ecto.Queryable, for: Atom do
       %Ecto.Query{from: {module.__schema__(:source), module}}
     rescue
       UndefinedFunctionError ->
+        message = if Code.ensure_loaded?(module) do
+          "the given module is not queryable"
+        else
+          "the given module does not exist"
+        end
+
         raise Protocol.UndefinedError,
              protocol: @protocol,
                 value: module,
-          description: "the given module/atom is not queryable"
+          description: message
     end
   end
 end

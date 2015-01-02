@@ -39,7 +39,6 @@ defmodule Ecto.Model do
     end
   end
 
-  import Ecto.Query, only: [from: 2]
   @type t :: map
 
   @doc """
@@ -74,42 +73,14 @@ defmodule Ecto.Model do
       Repo.all assoc(posts, :comments)
 
   """
-  def assoc(model_or_models, assoc)
+  def assoc(model_or_models, assoc) do
+    structs = List.wrap(model_or_models)
 
-  # TODO: Make this polymorphic
-  # TODO: Test me
-  def assoc(model, assoc) when is_map(model) and is_atom(assoc) do
-    %{owner_key: key, assoc: assoc, assoc_key: assoc_key} = reflection(model, assoc)
+    if structs == [] do
+      raise ArgumentError, "cannot retrieve association #{inspect assoc} for empty list"
+    end
 
-    from x in assoc,
-      where: field(x, ^assoc_key) == ^Map.fetch!(model, key)
-  end
-
-  def assoc([], assoc) when is_atom(assoc) do
-    raise ArgumentError, "cannot retrieve association #{inspect assoc} for empty list"
-  end
-
-  def assoc([h|_] = structs, assoc) when is_atom(assoc) do
-    %{owner_key: key, owner: owner, assoc_key: assoc_key, assoc: assoc} = reflection(h, assoc)
-
-    values =
-      for struct <- structs,
-          key =  Map.fetch!(struct, key) do
-        %{__struct__: model} = struct
-
-        if model != owner do
-          raise ArgumentError, "list given to `assoc/2` must have the same struct, " <>
-                               "got: #{inspect model} and #{inspect owner}"
-        end
-
-        key
-      end
-
-    from x in assoc, where: field(x, ^assoc_key) in ^values
-  end
-
-  defp reflection(%{__struct__: model}, assoc) do
-    model.__schema__(:association, assoc) ||
-      raise ArgumentError, "model #{inspect model} does not have association #{inspect assoc}"
+    {refl, values} = Ecto.Associations.owner_keys structs, assoc
+    refl.__struct__.assoc_query(refl, values)
   end
 end

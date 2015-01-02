@@ -51,48 +51,41 @@ defmodule Ecto.Repo.Preloader do
   defp do_preload([], _repo, _preloads), do: []
 
   defp do_preload(structs, repo, preloads) do
-    module = hd(structs).__struct__
-
-    # TODO: What if structs are not the same
-    # TODO: What if reflections is nil?
-
     entries =
       for {preload, sub_preloads} <- preloads do
-        refl = module.__schema__(:association, preload)
+        {refl, values} = Ecto.Associations.owner_keys(structs, preload)
 
-        owner_key = refl.owner_key
-        assoc_key = refl.assoc_key
-
-        ids =
-          for struct <- structs,
-              key = Map.fetch!(struct, owner_key),
-              do: key
-
-        preloaded =
-          if ids != [] do
-            query = Ecto.Query.from x in refl.assoc,
-                                  where: field(x, ^assoc_key) in ^ids,
-                                  order_by: field(x, ^assoc_key)
-            do_preload(repo.all(query), repo, sub_preloads)
-          else
+        loaded =
+          if values == [] do
             []
+          else
+            repo.all refl.__struct__.preload_query(refl, values)
           end
 
-        {refl, into_dict(preloaded, refl.assoc_key, HashDict.new)}
+        loaded = do_preload(loaded, repo, sub_preloads)
+        {refl, into_dict(loaded, refl)}
       end
 
     for struct <- structs do
       Enum.reduce entries, struct, fn {refl, dict}, acc ->
-        key    = Map.fetch!(acc, refl.owner_key)
-        loaded = HashDict.get(dict, key, [])
-
-        if refl.cardinality == :one do
-          loaded = List.first(loaded)
-        end
-
+        default = if refl.cardinality == :one, do: nil, else: []
+        key     = Map.fetch!(acc, refl.owner_key)
+        loaded  = HashDict.get(dict, key, default)
         Map.put(acc, refl.field, loaded)
       end
     end
+  end
+
+  ## Merges preloaded data into dictionaries for lookup
+
+  defp into_dict(coll, %{cardinality: :one, assoc_key: key}) do
+    Enum.reduce coll, HashDict.new, fn x, acc ->
+      HashDict.put(acc, Map.fetch!(x, key), x)
+    end
+  end
+
+  defp into_dict(coll, %{assoc_key: key}) do
+    into_dict(coll, key, HashDict.new)
   end
 
   defp into_dict([], _key, dict) do

@@ -37,7 +37,7 @@ defmodule Ecto.Model.SchemaTest do
              comment_id: :integer, temp: :any}
   end
 
-  defmodule DefaultModel do
+  defmodule SchemaModel do
     @schema_defaults primary_key: {:uuid, :string, []},
                      foreign_key_type: :string
     use Ecto.Model
@@ -49,8 +49,18 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   test "uses @schema_defauls" do
-    assert %DefaultModel{uuid: "abc"}.uuid == "abc"
-    assert DefaultModel.__schema__(:field, :comment_id) == :string
+    assert %SchemaModel{uuid: "abc"}.uuid == "abc"
+    assert SchemaModel.__schema__(:field, :comment_id) == :string
+  end
+
+  test "primary key" do
+    assert Ecto.Model.primary_key(%MyModel{}) == nil
+    assert Ecto.Model.primary_key(%MyModel{id: "hello"}) == "hello"
+  end
+
+  test "custom primary key" do
+    assert Ecto.Model.primary_key(%SchemaModel{}) == nil
+    assert Ecto.Model.primary_key(%SchemaModel{uuid: "hello"}) == "hello"
   end
 
   ## Errors
@@ -102,17 +112,6 @@ defmodule Ecto.Model.SchemaTest do
           field :x, :string
           field :pk, :integer, primary_key: true
         end
-      end
-    end
-  end
-
-  test "doesn't fail custom primary key" do
-    defmodule ModelDontFailCustomPK do
-      use Ecto.Model
-
-      schema "custompk", primary_key: false do
-        field :x, :string
-        field :pk, :integer, primary_key: true
       end
     end
   end
