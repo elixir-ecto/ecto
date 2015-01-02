@@ -1,4 +1,4 @@
-# v0.4.0-dev
+# v0.4.0 (2015-01-02)
 
 * Enhancements
   * Provide `Ecto.Model.build/2` and `Ecto.Model.assoc/2` for building and retrieving associations as queries. It is recommended to `import Ecto.Model` into your modules
