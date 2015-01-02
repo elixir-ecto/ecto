@@ -53,39 +53,37 @@ defmodule Ecto.Repo.Preloader do
   defp do_preload(structs, repo, preloads) do
     entries =
       for {preload, sub_preloads} <- preloads do
-        {refl, values} = Ecto.Associations.owner_keys(structs, preload)
+        assoc = Ecto.Associations.association_from_model!(hd(structs).__struct__, preload)
+        query = Ecto.Model.assoc(structs, preload)
 
-        loaded =
-          if values == [] do
-            []
-          else
-            repo.all refl.__struct__.preload_query(refl, values)
-          end
+        if assoc.cardinality == :many do
+          query = Ecto.Query.from q in query, order_by: field(q, ^assoc.assoc_key)
+        end
 
-        loaded = do_preload(loaded, repo, sub_preloads)
-        {refl, into_dict(loaded, refl)}
+        loaded = do_preload(repo.all(query), repo, sub_preloads)
+        {assoc, into_dict(assoc, loaded)}
       end
 
     for struct <- structs do
-      Enum.reduce entries, struct, fn {refl, dict}, acc ->
-        default = if refl.cardinality == :one, do: nil, else: []
-        key     = Map.fetch!(acc, refl.owner_key)
+      Enum.reduce entries, struct, fn {assoc, dict}, acc ->
+        default = if assoc.cardinality == :one, do: nil, else: []
+        key     = Map.fetch!(acc, assoc.owner_key)
         loaded  = HashDict.get(dict, key, default)
-        Map.put(acc, refl.field, loaded)
+        Map.put(acc, assoc.field, loaded)
       end
     end
   end
 
-  ## Merges preloaded data into dictionaries for lookup
+  ## Loads and merges preloaded data
 
-  defp into_dict(coll, %{cardinality: :one, assoc_key: key}) do
-    Enum.reduce coll, HashDict.new, fn x, acc ->
+  defp into_dict(%{cardinality: :one, assoc_key: key}, structs) do
+    Enum.reduce structs, HashDict.new, fn x, acc ->
       HashDict.put(acc, Map.fetch!(x, key), x)
     end
   end
 
-  defp into_dict(coll, %{assoc_key: key}) do
-    into_dict(coll, key, HashDict.new)
+  defp into_dict(%{assoc_key: key}, structs) do
+    into_dict(structs, key, HashDict.new)
   end
 
   defp into_dict([], _key, dict) do

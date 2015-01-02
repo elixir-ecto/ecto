@@ -23,14 +23,14 @@ defmodule Ecto.Associations do
   """
 
   @type t :: %{__struct__: module, cardinality: :one | :many,
-               field: :atom, owner_key: :atom}
+               field: atom, owner_key: atom}
   use Behaviour
 
   @doc """
   Builds the association struct.
 
   The struct must be defined in the module that implements the
-  callback and it must contain the following keys:
+  callback and it must contain at least the following keys:
 
     * `:cardinality` - tells if the association is one to one
       or one/many to many
@@ -45,6 +45,16 @@ defmodule Ecto.Associations do
   """
   defcallback struct(field :: atom, module, primary_key :: atom,
                      fields :: [atom], opts :: Keyword.t) :: t
+
+  @doc """
+  Builds a model for the given association.
+
+  The struct to build from is given as argument in case default values
+  should be set in the struct.
+
+  Invoked by `Ecto.Model.build/2`.
+  """
+  defcallback build(t, Ecto.Model.t) :: Ecto.Model.t
 
   @doc """
   Returns an association join query.
@@ -72,51 +82,17 @@ defmodule Ecto.Associations do
   This callback receives the association struct and it must return
   a query that retrieves all associated objects with the given
   values for the owner key.
+
+  This callback is used by `Ecto.Model.assoc/2`.
   """
   defcallback assoc_query(t, values :: [term]) :: Ecto.Query.t
 
   @doc """
-  Returns the preload query.
-
-  This callback receives the association struct and it must return
-  a query that retrieves all associated objects with the given
-  values for the owner key. The query must be ordered by its
-  association key in case the cardinality is not one.
+  Retrieves the association from the given model.
   """
-  defcallback preload_query(t, values :: [term]) :: Ecto.Query.t
-
-  @doc """
-  Receives an homogenous list of models and returns the
-  reflection for the association alongside a list of the
-  reflection owner keys for the list.
-
-  Raises if the association does not exist or if the list
-  is not homogenous.
-  """
-  def owner_keys([%{__struct__: model}|_] = structs, assoc) do
-    %{owner_key: owner_key} = refl = reflection_from_model!(model, assoc)
-
-    values =
-      for struct <- structs,
-        assert_struct!(model, struct),
-        key = Map.fetch!(struct, owner_key),
-        do: key
-
-    {refl, values}
-  end
-
-  defp reflection_from_model!(model, assoc) do
+  def association_from_model!(model, assoc) do
     model.__schema__(:association, assoc) ||
       raise ArgumentError, "model #{inspect model} does not have association #{inspect assoc}"
-  end
-
-  defp assert_struct!(model, %{__struct__: struct}) do
-    if struct != model do
-      raise ArgumentError, "expected an homogeneous list containing the same struct, " <>
-                           "got: #{inspect model} and #{inspect struct}"
-    else
-      true
-    end
   end
 
   @doc """
@@ -185,8 +161,8 @@ defmodule Ecto.Associations.NotLoaded do
 
   The fields are:
 
-    * `:__field__` - the association field in `__owner__`
-    * `:__owner__` - the model that owns the association
+    * `__field__` - the association field in `__owner__`
+    * `__owner__` - the model that owns the association
 
   """
   defstruct [:__field__, :__owner__]
@@ -201,7 +177,7 @@ end
 
 defmodule Ecto.Associations.Has do
   @moduledoc """
-  The reflection record for a `has_one` and `has_many` associations.
+  The association struct for `has_one` and `has_many` associations.
 
   Its fields are:
 
@@ -241,6 +217,11 @@ defmodule Ecto.Associations.Has do
   end
 
   @doc false
+  def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key}, struct) do
+    Map.put assoc.__struct__, assoc_key, Map.get(struct, owner_key)
+  end
+
+  @doc false
   def joins_query(refl) do
     from q in refl.assoc,
       join: o in refl.owner,
@@ -252,21 +233,11 @@ defmodule Ecto.Associations.Has do
     from x in refl.assoc,
       where: field(x, ^refl.assoc_key) in ^values
   end
-
-  @doc false
-  def preload_query(%{cardinality: :one} = refl, values) do
-    assoc_query(refl, values)
-  end
-
-  def preload_query(%{cardinality: :many} = refl, values) do
-    from x in assoc_query(refl, values),
-      order_by: field(x, ^refl.assoc_key)
-  end
 end
 
 defmodule Ecto.Associations.BelongsTo do
   @moduledoc """
-  The reflection struct for a `belongs_to` association.
+  The association struct for a `belongs_to` association.
 
   Its fields are:
 
@@ -301,6 +272,11 @@ defmodule Ecto.Associations.BelongsTo do
   end
 
   @doc false
+  def build(%{assoc: assoc}, _struct) do
+    assoc.__struct__
+  end
+
+  @doc false
   def joins_query(refl) do
     from q in refl.assoc,
       join: o in refl.owner,
@@ -311,10 +287,5 @@ defmodule Ecto.Associations.BelongsTo do
   def assoc_query(refl, values) do
     from x in refl.assoc,
       where: field(x, ^refl.assoc_key) in ^values
-  end
-
-  @doc false
-  def preload_query(refl, values) do
-    assoc_query(refl, values)
   end
 end

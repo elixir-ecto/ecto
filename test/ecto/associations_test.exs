@@ -77,6 +77,17 @@ defmodule Ecto.AssociationsTest do
 
   ## Integration tests through Ecto.Model
 
+  test "build/2" do
+    assert build(%Post{id: 1}, :comments) ==
+           %Comment{post_id: 1}
+
+    assert build(%Post{id: 1}, :permalink) ==
+           %Permalink{post_id: 1}
+
+    assert build(%Comment{post_id: 1}, :post) ==
+           %Post{id: nil}
+  end
+
   test "assoc/2" do
     assert inspect(assoc(%Post{id: 1}, :comments)) ==
            inspect(from c in Comment, where: c.post_id in ^[1])

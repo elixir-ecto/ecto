@@ -56,6 +56,34 @@ defmodule Ecto.Model do
   end
 
   @doc """
+  Builds a structs from the given `assoc` in `model`.
+
+  ## Examples
+
+  If the relationship is a `has_one` or `has_many` and
+  the key is set in the given model, the key will automatically
+  be set in the built association:
+
+      iex> post = Repo.get(Post, 13)
+      %Post{id: 13}
+      iex> build(post, :comment)
+      %Comment{id: nil, post_id: 13}
+
+  Note though it doesn't happen with belongs to cases, as the
+  key is often the primary key and such is usually generated
+  dynamically:
+
+      iex> comment = Repo.get(Post, 13)
+      %Comment{id: 13, post_id: 25}
+      iex> build(comment, :post)
+      %Post{id: nil}
+  """
+  def build(%{__struct__: model} = struct, assoc) do
+    assoc = Ecto.Associations.association_from_model!(model, assoc)
+    assoc.__struct__.build(assoc, struct)
+  end
+
+  @doc """
   Builds a query for the association in the given model or models.
 
   ## Examples
@@ -80,7 +108,25 @@ defmodule Ecto.Model do
       raise ArgumentError, "cannot retrieve association #{inspect assoc} for empty list"
     end
 
-    {refl, values} = Ecto.Associations.owner_keys structs, assoc
-    refl.__struct__.assoc_query(refl, values)
+    model = hd(structs).__struct__
+    assoc = %{owner_key: owner_key} =
+      Ecto.Associations.association_from_model!(model, assoc)
+
+    values =
+      for struct <- structs,
+        assert_struct!(model, struct),
+        key = Map.fetch!(struct, owner_key),
+        do: key
+
+    assoc.__struct__.assoc_query(assoc, values)
+  end
+
+  defp assert_struct!(model, %{__struct__: struct}) do
+    if struct != model do
+      raise ArgumentError, "expected an homogeneous list containing the same struct, " <>
+                           "got: #{inspect model} and #{inspect struct}"
+    else
+      true
+    end
   end
 end
