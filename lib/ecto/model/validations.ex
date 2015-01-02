@@ -33,12 +33,12 @@ defmodule Ecto.Model.Validations do
 
   The validations can be executed by calling the `validate` function:
 
-      User.validate(User.new)
+      User.validate(%User{})
       #=> %{name: ["can't be blank"], age: ["must be present"]}
 
-  This function returns a list with the validation errors, with the
-  attribute as key and the error message as value. You can match on
-  an empty list to know if there were validation errors or not:
+  This function returns a map with the validation errors, with the
+  attribute as key and the list of error messages as value. You can
+  match on nil to know if there were validation errors or not:
 
       case User.validate(user) do
         nil    -> # no errors
