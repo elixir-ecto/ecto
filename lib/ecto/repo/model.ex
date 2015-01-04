@@ -16,7 +16,7 @@ defmodule Ecto.Repo.Model do
       source = model.__schema__(:source)
 
       fields = validate_struct(:insert, struct)
-      result = adapter.insert(repo, source, fields, opts)
+      {:ok, result} = adapter.insert(repo, source, fields, opts)
 
       struct
       |> build(fields, result)
@@ -28,18 +28,17 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.update/2`.
   """
   def update(repo, adapter, struct, opts) do
-    _ = primary_key_value!(struct)
-
     with_transactions_if_callbacks repo, adapter, struct, opts,
                                    ~w(before_update after_update)a, fn ->
       struct = Callbacks.__apply__(struct, :before_update)
       model  = struct.__struct__
       source = model.__schema__(:source)
-      pk     = model.__schema__(:primary_key)
 
-      params = validate_struct(:update, struct)
-      {filter, fields} = Keyword.split params, [pk]
-      result = adapter.update(repo, source, filter, fields, opts)
+      pk_field = model.__schema__(:primary_key)
+      pk_value = primary_key_value!(struct)
+
+      fields = validate_struct(:update, struct) |> Keyword.delete(pk_field)
+      {:ok, result} = adapter.update(repo, source, [{pk_field, pk_value}], fields, opts)
 
       struct
       |> build(fields, result)

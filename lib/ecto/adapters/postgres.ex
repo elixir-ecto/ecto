@@ -90,9 +90,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       case query(repo, sql, values, opts) do
         %Postgrex.Result{rows: [values]} ->
-          values
-        %Postgrex.Result{rows: []} ->
-          {}
+          {:ok, values}
       end
     end
 
@@ -105,18 +103,24 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       case query(repo, sql, values1 ++ values2, opts) do
         %Postgrex.Result{rows: [values]} ->
-          values
+          {:ok, values}
         %Postgrex.Result{rows: []} ->
-          {}
+          {:error, :stale}
       end
     end
 
     @doc false
     def delete(repo, source, filter, opts) do
       {filter, values} = :lists.unzip(filter)
+
       sql = SQL.delete(source, filter)
-      %Postgrex.Result{} = query(repo, sql, values, opts)
-      :ok
+
+      case query(repo, sql, values, opts) do
+        %Postgrex.Result{num_rows: 1} ->
+          :ok
+        %Postgrex.Result{num_rows: 0} ->
+          {:error, :stale}
+      end
     end
 
     @doc """

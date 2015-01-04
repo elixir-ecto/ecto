@@ -10,9 +10,9 @@ defmodule Ecto.MockAdapter do
   def delete_all(_repo, _query, _params, _opts), do: 1
 
   def insert(_repo, _source, fields, _opts),
-    do: fields |> Keyword.values |> List.to_tuple
+    do: {:ok, fields |> Keyword.values |> List.to_tuple}
   def update(_repo, _source, _filter, fields, _opts),
-    do: fields |> Keyword.values |> List.to_tuple
+    do: {:ok, fields |> Keyword.values |> List.to_tuple}
   def delete(_repo, _source, _filter, _opts),
     do: :ok
 

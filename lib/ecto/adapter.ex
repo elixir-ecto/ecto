@@ -53,20 +53,33 @@ defmodule Ecto.Adapter do
                          params :: map(), opts :: Keyword.t) :: integer | no_return
 
   @doc """
-  Stores a single new model in the data store.
+  Inserts a single new model in the data store.
   """
   defcallback insert(repo :: Ecto.Repo.t, source :: binary,
-                     fields :: Keyword.t, opts :: Keyword.t) :: tuple | no_return
+                     fields :: Keyword.t, opts :: Keyword.t) :: {:ok, tuple} | no_return
 
   @doc """
-  Updates a model using the primary key as key.
+  Updates a single model with the given filters.
+
+  While `filter` can be any record column, it is expected that
+  at least the primary key (or any other key that uniquely
+  identifies an existing record) to be given as filter. Therefore,
+  in case there is no record matching the given filters,
+  `{:error, :stale}` is returned.
   """
-  defcallback update(repo :: Ecto.Repo.t, source :: binary, filter :: Keyword.t,
-                     fields :: Keyword.t, opts :: Keyword.t) :: tuple | no_return
+  defcallback update(repo :: Ecto.Repo.t, source :: binary,
+                     filter :: Keyword.t, fields :: Keyword.t,
+                     opts :: Keyword.t) :: {:ok, tuple} | {:error, :stale} | no_return
 
   @doc """
-  Deletes a model using the primary key as key.
+  Deletes a sigle model with the given filters.
+
+  While `filter` can be any record column, it is expected that
+  at least the primary key (or any other key that uniquely
+  identifies an existing record) to be given as filter. Therefore,
+  in case there is no record matching the given filters,
+  `{:error, :stale}` is returned.
   """
   defcallback delete(repo :: Ecto.Repo.t, source :: binary,
-                     filter :: Keyword.t, opts :: Keyword.t) :: :ok | no_return
+                     filter :: Keyword.t, opts :: Keyword.t) :: :ok | {:error, :stale} | no_return
 end
