@@ -224,7 +224,7 @@ defmodule Ecto.Associations.Has do
   @doc false
   def joins_query(refl) do
     from q in refl.assoc,
-      join: o in refl.owner,
+      join: o in ^refl.owner,
       on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
   end
 
@@ -279,7 +279,7 @@ defmodule Ecto.Associations.BelongsTo do
   @doc false
   def joins_query(refl) do
     from q in refl.assoc,
-      join: o in refl.owner,
+      join: o in ^refl.owner,
       on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
   end
 

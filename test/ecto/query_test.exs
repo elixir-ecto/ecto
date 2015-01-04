@@ -21,12 +21,12 @@ defmodule Ecto.QueryTest do
     qual = :left
     source = "comments"
     assert %{joins: [%{source: {"comments", nil}}]} =
-            join("posts", qual, [p], c in source, true)
+            join("posts", qual, [p], c in ^source, true)
 
     qual = :right
     source = Comment
     assert %{joins: [%{source: {nil, Comment}}]} =
-            join("posts", qual, [p], c in source, true)
+            join("posts", qual, [p], c in ^source, true)
   end
 
   test "vars are order dependent" do

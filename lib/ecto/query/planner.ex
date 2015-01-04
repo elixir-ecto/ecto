@@ -139,6 +139,8 @@ defmodule Ecto.Query.Planner do
     cast_param(kind, query, expr, model, field, v, type)
   end
 
+  # TODO: We need to dump after cast!
+  # Although we can only test this after we add custom types.
   defp cast_param(kind, query, expr, v, type) do
     case Types.cast(type, v) do
       {:ok, nil} ->

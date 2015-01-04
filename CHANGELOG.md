@@ -1,3 +1,8 @@
+# v0.5.0-dev
+
+* Bug fixes
+  * Require interpolation operator in joins
+
 # v0.4.0 (2015-01-02)
 
 * Enhancements

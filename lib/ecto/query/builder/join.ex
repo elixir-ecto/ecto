@@ -47,8 +47,12 @@ defmodule Ecto.Query.Builder.Join do
     {nil, nil, {var, field}}
   end
 
-  def escape(expr, _vars) do
+  def escape({:^, _, [expr]}, _vars) do
     {nil, quote(do: :"Elixir.Ecto.Query.Builder.Join".join!(unquote(expr))), nil}
+  end
+
+  def escape(join, _vars) do
+    Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
   end
 
   @doc """
