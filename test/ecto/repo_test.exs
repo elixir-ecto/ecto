@@ -9,7 +9,8 @@ end
 defmodule Ecto.RepoTest.MyModelNoPK do
   use Ecto.Model
 
-  schema "my_model", primary_key: false do
+  @primary_key false
+  schema "my_model" do
     field :x, :string
   end
 end

@@ -38,9 +38,10 @@ defmodule Ecto.Model.SchemaTest do
   end
 
   defmodule SchemaModel do
-    @schema_defaults primary_key: {:uuid, :string, []},
-                     foreign_key_type: :string
     use Ecto.Model
+
+    @primary_key {:uuid, :string, []}
+    @foreign_key_type :string
 
     schema "users" do
       field :name
@@ -48,7 +49,7 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
-  test "uses @schema_defauls" do
+  test "uses schema attributes" do
     assert %SchemaModel{uuid: "abc"}.uuid == "abc"
     assert SchemaModel.__schema__(:field, :comment_id) == :string
   end
@@ -90,19 +91,6 @@ defmodule Ecto.Model.SchemaTest do
     end
   end
 
-  test "fail custom primary key" do
-    assert_raise ArgumentError, "primary key already defined as `id`", fn ->
-      defmodule ModelFailCustomPK do
-        use Ecto.Model
-
-        schema "custompk" do
-          field :x, :string
-          field :pk, :integer, primary_key: true
-        end
-      end
-    end
-  end
-
   test "fail invalid schema" do
     assert_raise ArgumentError, "schema source must be a string, got: :hello", fn ->
       defmodule SchemaFail do
@@ -111,6 +99,18 @@ defmodule Ecto.Model.SchemaTest do
         schema :hello do
           field :x, :string
           field :pk, :integer, primary_key: true
+        end
+      end
+    end
+  end
+
+  test "fail invalid default" do
+    assert_raise ArgumentError, "schema source must be a string, got: :hello", fn ->
+      defmodule SchemaFail do
+        use Ecto.Model
+
+        schema :hello do
+          field :x, :string, default: 13
         end
       end
     end
@@ -166,9 +166,9 @@ defmodule Ecto.Model.SchemaTest do
   defmodule ModelAssocOpts do
     use Ecto.Model
 
-    @schema_defaults foreign_key_type: :string
-
-    schema "assoc", primary_key: {:pk, :integer, []} do
+    @primary_key {:pk, :integer, []}
+    @foreign_key_type :string
+    schema "assoc" do
       has_many :posts, Post, references: :pk, foreign_key: :fk
       has_one :author, User, references: :pk, foreign_key: :fk
       belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk

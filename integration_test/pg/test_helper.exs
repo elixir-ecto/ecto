@@ -69,15 +69,16 @@ end
 defmodule Ecto.Integration.Postgres.Custom do
   use Ecto.Model
 
-  schema "customs", primary_key: false do
-    field :foo, :uuid, primary_key: true
+  @primary_key {:foo, :uuid, []}
+  schema "customs" do
   end
 end
 
 defmodule Ecto.Integration.Postgres.Barebone do
   use Ecto.Model
 
-  schema "barebones", primary_key: false do
+  @primary_key false
+  schema "barebones" do
     field :text, :string
   end
 end

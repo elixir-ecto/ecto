@@ -119,7 +119,7 @@ defmodule Ecto do
 
   > NOTE: by using `Ecto.Model`, an `:id` field with type `:integer` is generated
   > by default, which is the primary key of the Model. If you want to use a different
-  > type of primary key, you can declare custom `@schema_defaults` in a module, and
+  > type of primary key, you can declare custom `@primary_key` in a module, and
   > use that in place of `Ecto.Model`. Consult the `Ecto.Model.Schema` documentation
   > for usage instructions.
 

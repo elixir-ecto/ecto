@@ -52,15 +52,13 @@ defmodule Ecto.Query.Types do
   Dumps a value to the given type.
 
   Opposite to casting, dumping is strict. The value must
-  be of the given type or an error happens. For such reasons,
-  `:any` is not an allowed type for dumping.
-
-  The difference is that `dump/2` calls the `dump/1`
-  callback in custom types (instead of `cast/1`).
+  be of the given type (or nil). Dump must also return
+  a valid Ecto types, as they will be sent to the underlying
+  data store.
   """
   @spec dump(type, term) :: {:ok, term} | :error
 
-  def dump(type, value) when type != :any do
+  def dump(type, value) do
     if of_type?(type, value) do
       {:ok, value}
     else
@@ -71,8 +69,12 @@ defmodule Ecto.Query.Types do
   @doc """
   Casts a value to the given type.
 
-  `cast/2` is used by the finder queries and assignment
-  to cast outside values to inner Ecto values.
+  `cast/2` is used by the finder queries and changesets
+  to cast outside values to specific types.
+
+  Note that nil can be cast to all primitive types as data
+  stores allow nil to be set on any column. Custom data types
+  may want to handle nil specially though.
 
       iex> cast(:any, "whatever")
       {:ok, "whatever"}
@@ -181,7 +183,7 @@ defmodule Ecto.Query.Types do
   @doc """
   Checks if a value is of the given primitive type.
 
-  Note that nil matches any type as data stores allows
+  Note that nil matches any type as data stores allow
   nil to be set on any column.
 
       iex> of_type?(:any, "whatever")

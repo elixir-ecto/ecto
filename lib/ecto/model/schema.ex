@@ -53,65 +53,55 @@ defmodule Ecto.Model.Schema do
   However, if you attempt to persist the struct above, an error will
   be raised since Ecto validates the types when building the query.
 
-  ## Schema defaults
+  ## Schema attributes
 
-  When using the block syntax, the created model uses the default
-  of a primary key named `:id`, of type `:integer`. This can be
-  customized by passing `primary_key: false` to schema:
+  The schema supports some attributes to be set before hand,
+  configuring the defined schema.
 
-      schema "weather", primary_key: false do
-        ...
-      end
+  Those attributes are:
 
-  Or by passing a tuple in the format `{field, type, opts}`:
+    * `@primary_key` - configures the schema primary key. It expects
+      a tuple with the primary key name, type and options. Defaults
+      to `{:id, :integer, []}`. When set to false, does not define
+      a primary key in the model;
 
-      schema "weather", primary_key: {:custom_field, :string, []} do
-        ...
-      end
+    * `@foreign_key_type` - configures the default foreign key type
+      used by `belongs_to` associations. Defaults to `:integer`;
 
-  Implicit defaults can be specified via the `@schema_defaults` attribute.
-  This is useful if you want to use a different default primary key
-  through your entire application.
+    * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
+      as the schema defines a struct behind the scenes;
 
-  The supported options are:
+  The advantage of defining configure the schema via those attributes
+  is that they can be set with a macro to configure application wide
+  defaults. For example, if you would like to use `uuid`'s in all of
+  your application models, you can do:
 
-  * `primary_key` - either `false`, or a `{field, type, opts}` tuple
-  * `foreign_key_type` - sets the type for any `belongs_to` associations.
-    This can be overridden using the `:type` option to the `belongs_to`
-    statement. Defaults to type `:integer`
-
-  ## Example
-
+      # Define a module to be used as base
       defmodule MyApp.Model do
         defmacro __using__(_) do
           quote do
-            @schema_defaults primary_key: {:uuid, :string, []},
-                             foreign_key_type: :string
             use Ecto.Model
+            @primary_key {:id, :uuid, []}
+            @foreign_key_type :uuid
           end
         end
       end
 
-      defmodule MyApp.Post do
-        use MyApp.Model
-        schema "posts" do
-          has_many :comments, MyApp.Comment
-        end
-      end
-
+      # Now use MyApp.Model to define new models
       defmodule MyApp.Comment do
         use MyApp.Model
+
         schema "comments" do
-          belongs_to :post, MyApp.Comment
+          belongs_to :post, MyApp.Post
         end
       end
 
-  Any models using `MyApp.Model will get the `:uuid` field, with type
-  `:string` as the primary key.
+  Any models using `MyApp.Model will get the `:id` field with type
+  `:uuid` as primary key.
 
-  The `belongs_to` association on `MyApp.Comment` will also now require
-  that `:post_id` be of `:string` type to reference the `:uuid` of a
-  `MyApp.Post` model.
+  The `belongs_to` association on `MyApp.Comment` will also define
+  a `:post_id` field with `:uuid` type that references the `:id` of
+  the `MyApp.Post` model.
 
   ## Reflection
 
@@ -138,16 +128,14 @@ defmodule Ecto.Model.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
-      import Ecto.Model.Schema, only: [schema: 2, schema: 3]
+      import Ecto.Model.Schema, only: [schema: 2]
     end
   end
 
   @doc """
   Defines a schema with a source name and field definitions.
   """
-  defmacro schema(source, opts \\ [], block)
-
-  defmacro schema(source, opts, [do: block]) do
+  defmacro schema(source, [do: block]) do
     quote do
       source = unquote(source)
 
@@ -155,28 +143,29 @@ defmodule Ecto.Model.Schema do
         raise ArgumentError, "schema source must be a string, got: #{inspect source}"
       end
 
-      # TODO: Revisit @schema_defaults and primary_key configuration
-      opts = (Module.get_attribute(__MODULE__, :schema_defaults) || [])
-             |> Keyword.merge(unquote(opts))
+      if Module.get_attribute(__MODULE__, :primary_key) == nil do
+        @primary_key {:id, :integer, []}
+      end
+
+      if Module.get_attribute(__MODULE__, :foreign_key_type) == nil do
+        @foreign_key_type :integer
+      end
 
       Module.register_attribute(__MODULE__, :assign_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
 
-      @ecto_primary_key nil
-      @ecto_foreign_key_type opts[:foreign_key_type]
-
-      case opts[:primary_key] do
-        nil ->
-          Ecto.Model.Schema.field(:id, :integer, primary_key: true)
-        false ->
-          :ok
-        {name, type, opts} ->
-          Ecto.Model.Schema.field(name, type, Keyword.put(opts, :primary_key, true))
-        other ->
-          raise ArgumentError, ":primary_key must be false or {name, type, opts}"
-      end
+      primary_key_field =
+        case @primary_key do
+          false ->
+            nil
+          {name, type, opts} ->
+            Ecto.Model.Schema.field(name, type, opts)
+            name
+          other ->
+            raise ArgumentError, "@primary_key must be false or {name, type, opts}"
+        end
 
       try do
         import Ecto.Model.Schema
@@ -190,11 +179,11 @@ defmodule Ecto.Model.Schema do
 
       Module.eval_quoted __MODULE__, [
         Ecto.Model.Schema.__struct__(@struct_fields),
-        Ecto.Model.Schema.__assign__(@assign_fields, @ecto_primary_key),
+        Ecto.Model.Schema.__assign__(@assign_fields, primary_key_field),
         Ecto.Model.Schema.__source__(source),
         Ecto.Model.Schema.__fields__(fields),
-        Ecto.Model.Schema.__assocs__(__MODULE__, assocs, @ecto_primary_key, fields),
-        Ecto.Model.Schema.__primary_key__(@ecto_primary_key),
+        Ecto.Model.Schema.__assocs__(__MODULE__, assocs, primary_key_field, fields),
+        Ecto.Model.Schema.__primary_key__(primary_key_field),
         Ecto.Model.Schema.__helpers__(fields)]
     end
   end
@@ -208,7 +197,6 @@ defmodule Ecto.Model.Schema do
 
     * `:default` - Sets the default value on the schema and the struct
     * `:virtual` - When true, the field is not persisted
-    * `:primary_key` - When true, the field is set as primary key
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
@@ -347,12 +335,8 @@ defmodule Ecto.Model.Schema do
   defmacro belongs_to(name, queryable, opts \\ []) do
     quote bind_quoted: binding() do
       opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
-
-      foreign_key_type =
-        opts[:type] || @ecto_foreign_key_type || :integer
-
+      foreign_key_type = opts[:type] || @foreign_key_type
       field(opts[:foreign_key], foreign_key_type, [])
-
       association(name, Ecto.Associations.BelongsTo, [queryable: queryable] ++ opts)
     end
   end
@@ -362,17 +346,7 @@ defmodule Ecto.Model.Schema do
   @doc false
   def __field__(mod, name, type, opts) do
     check_type!(type, opts[:virtual])
-
-    if opts[:primary_key] do
-      if pk = Module.get_attribute(mod, :ecto_primary_key) do
-        raise ArgumentError, message: "primary key already defined as `#{pk}`"
-      else
-        Module.put_attribute(mod, :ecto_primary_key, name)
-      end
-    end
-
-    # TODO: Check that the opts are valid for the given type,
-    # especially check the default value
+    check_default!(type, opts[:default])
 
     Module.put_attribute(mod, :assign_fields, {name, type})
     put_struct_field(mod, name, opts[:default])
@@ -493,6 +467,15 @@ defmodule Ecto.Model.Schema do
         true
       true ->
         raise ArgumentError, "unknown field type `#{inspect type}`"
+    end
+  end
+
+  defp check_default!(type, default) do
+    case Ecto.Query.Types.dump(type, default) do
+      {:ok, _} ->
+        :ok
+      :error ->
+        raise ArgumentError, "invalid default argument `#{inspect default}` for `#{inspect type}`"
     end
   end
 end
