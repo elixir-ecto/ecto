@@ -1,3 +1,5 @@
+Code.require_file "../support/mock_repo.exs", __DIR__
+
 defmodule Ecto.RepoTest.MyModel do
   use Ecto.Model
 

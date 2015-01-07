@@ -4,4 +4,18 @@ defmodule Ecto.TypesTest do
   import Kernel, except: [match?: 2], warn: false
   import Ecto.Types
   doctest Ecto.Types
+
+  def load(_), do: {:ok, :load}
+  def dump(_), do: {:ok, :dump}
+  def cast(_), do: {:ok, :cast}
+
+  test "custom types" do
+    assert load(__MODULE__, "foo") == {:ok, :load}
+    assert dump(__MODULE__, "foo") == {:ok, :dump}
+    assert cast(__MODULE__, "foo") == {:ok, :cast}
+
+    assert load(__MODULE__, nil) == {:ok, nil}
+    assert dump(__MODULE__, nil) == {:ok, nil}
+    assert cast(__MODULE__, nil) == {:ok, nil}
+  end
 end

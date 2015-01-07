@@ -144,11 +144,10 @@ defmodule Ecto.Query.Planner do
                         "(if you want to check for nils, use is_nil/1 instead)"
   end
 
-  # TODO: We need to dump after cast!
-  # Although we can only test this after we add custom types.
   defp cast_param(kind, query, expr, v, type) do
     case Types.cast(type, v) do
       {:ok, v} ->
+        {:ok, v} = Types.dump(type, v)
         v
       :error ->
         error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"

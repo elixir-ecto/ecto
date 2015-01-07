@@ -1,3 +1,6 @@
+Code.require_file "../../support/mock_repo.exs", __DIR__
+alias Ecto.MockRepo
+
 defmodule Ecto.Model.CallbacksTest do
   use ExUnit.Case, async: true
 
@@ -28,8 +31,6 @@ defmodule Ecto.Model.CallbacksTest do
   end
 
   ## Repo integration
-
-  alias Ecto.MockRepo
 
   defmodule AllCallback do
     use Ecto.Model

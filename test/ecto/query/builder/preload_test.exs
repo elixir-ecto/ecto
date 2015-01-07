@@ -1,3 +1,5 @@
+Code.require_file "../../../support/eval_helpers.exs", __DIR__
+
 defmodule Ecto.Query.Builder.PreloadTest do
   use ExUnit.Case, async: true
 

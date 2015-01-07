@@ -143,6 +143,17 @@ defmodule Ecto.Types do
   Opposite to casting, dumping requires the returned value
   to be a valid Ecto type, as it will be sent to the
   underlying data store.
+
+      iex> dump(:string, nil)
+      {:ok, nil}
+      iex> dump(:string, "foo")
+      {:ok, "foo"}
+
+      iex> dump(:integer, 1)
+      {:ok, 1}
+      iex> dump(:integer, "10")
+      :error
+
   """
   @spec dump(type, term) :: {:ok, term} | :error
 
@@ -152,6 +163,37 @@ defmodule Ecto.Types do
         {:ok, nil}
       not primitive?(type) ->
         type.dump(value)
+      of_type?(type, value) ->
+        {:ok, value}
+      true ->
+        :error
+    end
+  end
+
+  @doc """
+  Loads a value with the given type.
+
+  Load is invoked when loading database native types
+  into a struct.
+
+      iex> load(:string, nil)
+      {:ok, nil}
+      iex> load(:string, "foo")
+      {:ok, "foo"}
+
+      iex> load(:integer, 1)
+      {:ok, 1}
+      iex> load(:integer, "10")
+      :error
+  """
+  @spec load(type, term) :: {:ok, term} | :error
+
+  def load(type, value) do
+    cond do
+      value == nil ->
+        {:ok, nil}
+      not primitive?(type) ->
+        type.load(value)
       of_type?(type, value) ->
         {:ok, value}
       true ->

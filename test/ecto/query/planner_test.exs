@@ -1,3 +1,5 @@
+Code.require_file "../../support/types.exs", __DIR__
+
 defmodule Ecto.Query.PlannerTest do
   use ExUnit.Case, async: true
 
@@ -12,7 +14,7 @@ defmodule Ecto.Query.PlannerTest do
     schema "comments" do
       field :text, :string
       field :temp, :string, virtual: true
-      field :posted, :datetime
+      field :posted, Custom.DateTime
       belongs_to :post, Ecto.Query.PlannerTest.Post
     end
   end
@@ -85,6 +87,12 @@ defmodule Ecto.Query.PlannerTest do
     assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^1"
     assert Exception.message(exception) =~ "Error when casting value to `#{inspect Post}.title`"
+  end
+
+  test "prepare: casts and dumps custom types" do
+    datetime = %Custom.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
+    {_query, params} = prepare(Comment |> where([c], c.posted == ^datetime))
+    assert params[0] == %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
   end
 
   test "prepare: joins" do
