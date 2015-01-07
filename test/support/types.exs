@@ -1,6 +1,7 @@
 defmodule Custom.DateTime do
   defstruct [:year, :month, :day, :hour, :min, :sec]
 
+  def blank?(_), do: false
   def type, do: :datetime
 
   def cast(%Custom.DateTime{} = datetime), do: {:ok, datetime}

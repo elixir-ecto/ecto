@@ -59,15 +59,16 @@ defmodule Ecto.Changeset do
 
   defp process_required(key, params, types, model, {changes, errors, validations}) do
     {key, param_key} = cast_key(key)
-    validations      = [{key, :required}|validations]
+    validations = [{key, :required}|validations]
+    type = type!(types, key)
 
     {changes, errors} =
-      case cast_field(key, param_key, params, types) do
+      case cast_field(key, param_key, type, params) do
         {:ok, value} ->
-          {Map.put(changes, key, value), error_on_blank(key, value, errors)}
+          {Map.put(changes, key, value), error_on_blank(type, key, value, errors)}
         :missing ->
           value = Map.get(model, key)
-          {changes, error_on_blank(key, value, errors)}
+          {changes, error_on_blank(type, key, value, errors)}
         :invalid ->
           {changes, [{key, :invalid}|errors]}
       end
@@ -77,8 +78,9 @@ defmodule Ecto.Changeset do
 
   defp process_optional(key, params, types, {changes, errors}) do
     {key, param_key} = cast_key(key)
+    type = type!(types, key)
 
-    case cast_field(key, param_key, params, types) do
+    case cast_field(key, param_key, type, params) do
       {:ok, value} ->
         {Map.put(changes, key, value), errors}
       :missing ->
@@ -88,13 +90,13 @@ defmodule Ecto.Changeset do
     end
   end
 
+  defp type!(types, key),
+    do: Map.get(types, key) || raise ArgumentError, "unknown field `#{key}`"
+
   defp cast_key(key) when is_binary(key),
     do: {String.to_atom(key), key}
 
-  defp cast_field(key, param_key, params, types) do
-    type = Map.get(types, key) ||
-            raise ArgumentError, "unknown field `#{key}`"
-
+  defp cast_field(key, param_key, type, params) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
         case Ecto.Types.cast(type, value) do
@@ -106,17 +108,11 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp error_on_blank(key, value, errors) do
-    if blank?(value) do
-      [{key, :missing}|errors]
+  defp error_on_blank(type, key, value, errors) do
+    if Ecto.Types.blank?(type, value) do
+      [{key, :blank}|errors]
     else
       errors
     end
   end
-
-  defp blank?(" " <> t), do: blank?(t)
-  defp blank?(""),       do: true
-  defp blank?(nil),      do: true
-  defp blank?([]),       do: true
-  defp blank?(_),        do: false
 end

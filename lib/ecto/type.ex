@@ -40,6 +40,9 @@ defmodule Ecto.Type do
         # Everything else is a failure though
         def cast(_), do: :error
 
+        # Integers are never considered blank
+        def blank?(_), do: false
+
         # When loading data from the database, we are guaranteed to
         # receive an integer (as database are stricts) and we will
         # just return it to be stored in the model struct.
@@ -95,6 +98,9 @@ defmodule Ecto.Type do
         # Everything else needs to be a failure though
         def cast(_), do: :error
 
+        # Datetimes are never considered blank
+        def blank?(_), do: false
+
         # When loading data from the database, we need to convert
         # the Ecto type (Ecto.DateTime in this case) to our type:
         def load(%Ecto.DateTime{} = dt) do
@@ -129,6 +135,15 @@ defmodule Ecto.Type do
   structures, the type function should return `:datetime`.
   """
   defcallback type :: atom | {atom, atom}
+
+  @doc """
+  Returns if the value is considered blank/empty for this type.
+
+  This function is called by `Ecto.Changeset` after the value
+  has been `cast/1`, therefore it receives the values returned
+  by `cast/1`.
+  """
+  defcallback blank?(term) :: boolean
 
   @doc """
   Casts the given input to the custom type.

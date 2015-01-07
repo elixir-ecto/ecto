@@ -48,7 +48,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.params == params
     assert changeset.model  == struct
     assert changeset.changes == %{body: "world"}
-    assert changeset.errors == [title: :missing]
+    assert changeset.errors == [title: :blank]
     assert changeset.validations == [title: :required]
     refute changeset.valid?
   end
@@ -73,12 +73,30 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: required field is blank" do
+  test "cast/4: blank errors" do
     for title <- [nil, "", "   "] do
       changeset = cast(%{"title" => title}, %Post{}, ~w(title), ~w())
-      assert changeset.errors == [title: :missing]
+      assert changeset.errors == [title: :blank]
       refute changeset.valid?
     end
+
+    for title <- [nil, "", "   "] do
+      changeset = cast(%{}, %Post{title: title}, ~w(title), ~w())
+      assert changeset.errors == [title: :blank]
+      refute changeset.valid?
+    end
+
+    for title <- [nil, "", "   "] do
+      changeset = cast(%{"title" => title}, %Post{title: "valid"}, ~w(title), ~w())
+      assert changeset.errors == [title: :blank]
+      refute changeset.valid?
+    end
+  end
+
+  test "cast/4: is not blank if model is correct" do
+    changeset = cast(%{}, %Post{title: "valid"}, ~w(title), ~w())
+    assert changeset.errors == []
+    assert changeset.valid?
   end
 
   test "cast/4: fails on invalid field" do

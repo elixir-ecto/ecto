@@ -93,8 +93,8 @@ defmodule Ecto.Types do
   # This module is only concern about runtime checking
   # of values. Compile time checks are done directly in
   # the Ecto.Query.Builder module.
-
   @moduledoc false
+
   import Kernel, except: [match?: 2]
 
   @type type      :: primitive | custom
@@ -156,7 +156,6 @@ defmodule Ecto.Types do
 
   """
   @spec dump(type, term) :: {:ok, term} | :error
-
   def dump(type, value) do
     cond do
       value == nil ->
@@ -187,7 +186,6 @@ defmodule Ecto.Types do
       :error
   """
   @spec load(type, term) :: {:ok, term} | :error
-
   def load(type, value) do
     cond do
       value == nil ->
@@ -269,7 +267,6 @@ defmodule Ecto.Types do
 
   """
   @spec cast(type, term) :: {:ok, term} | :error
-
   def cast(type, value) do
     cond do
       value == nil ->
@@ -341,9 +338,7 @@ defmodule Ecto.Types do
       false
   """
   @spec of_type?(primitive, term) :: boolean
-
   def of_type?(:any, _), do: true
-
   def of_type?(:float, term),   do: is_float(term)
   def of_type?(:integer, term), do: is_integer(term)
   def of_type?(:boolean, term), do: is_boolean(term)
@@ -358,4 +353,45 @@ defmodule Ecto.Types do
   def of_type?(:time, %Ecto.Time{}),  do: true
   def of_type?(:datetime, %Ecto.DateTime{}), do: true
   def of_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
+
+  @doc """
+  Checks if an already cast value is blank.
+
+  This is used by `Ecto.Changeset.cast/4` when casting required fields.
+
+      iex> blank?(:string, nil)
+      true
+      iex> blank?(:integer, nil)
+      true
+
+      iex> blank?(:string, "")
+      true
+      iex> blank?(:string, "  ")
+      true
+      iex> blank?(:string, "hello")
+      false
+
+      iex> blank?({:array, :integer}, [])
+      true
+      iex> blank?({:array, :integer}, [1, 2, 3])
+      false
+
+  """
+  @spec blank?(type, term) :: boolean
+  def blank?(type, value) do
+    cond do
+      value == nil ->
+        true
+      not primitive?(type) ->
+        type.blank?(value)
+      true ->
+        do_blank?(value)
+    end
+  end
+
+  # Those are blank regardless of the primitive type.
+  defp do_blank?(" " <> t), do: do_blank?(t)
+  defp do_blank?(""), do: true
+  defp do_blank?([]), do: true
+  defp do_blank?(_),  do: false
 end
