@@ -77,7 +77,7 @@ defmodule Ecto.Repo.Model do
   @doc """
   Validates and cast the given fields belonging to the given model.
   """
-  def validate_fields(kind, model, kw, dumper \\ &Ecto.Query.Types.dump/2) do
+  def validate_fields(kind, model, kw, dumper \\ &Ecto.Types.dump/2) do
     for {field, value} <- kw do
       type = model.__schema__(:field, field)
 

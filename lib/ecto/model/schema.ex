@@ -18,41 +18,6 @@ defmodule Ecto.Model.Schema do
         end
       end
 
-  ## Types and casting
-
-  When defining the schema, types need to be given. Those types are specific
-  to Ecto and must be one of:
-
-  Ecto type               | Elixir type             | Literal syntax in query
-  :---------------------- | :---------------------- | :---------------------
-  `:integer`              | `integer`               | 1, 2, 3
-  `:float`                | `float`                 | 1.0, 2.0, 3.0
-  `:boolean`              | `boolean`               | true, false
-  `:string`               | UTF-8 encoded `binary`  | "hello"
-  `:binary`               | `binary`                | `<<int, int, int, ...>>`
-  `:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
-  `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
-  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
-  `:datetime`             | `%Ecto.DateTime{}`
-  `:date`                 | `%Ecto.Date{}`
-  `:time`                 | `%Ecto.Time{}`
-
-  Models can also have virtual fields by passing the `virtual: true`
-  option. These fields are not persisted to the database and can
-  optionally not be type checked by declaring type `:any`.
-
-  When manipulating the struct, it is the responsibility of the
-  developer to ensure the fields are cast to the proper value. For
-  example, you can create a weather struct with an invalid value
-  for `temp_lo`:
-
-      iex> weather = %Weather{temp_lo: "0"}
-      iex> weather.temp_lo
-      "0"
-
-  However, if you attempt to persist the struct above, an error will
-  be raised since Ecto validates the types when building the query.
-
   ## Schema attributes
 
   The schema supports some attributes to be set before hand,
@@ -102,6 +67,53 @@ defmodule Ecto.Model.Schema do
   The `belongs_to` association on `MyApp.Comment` will also define
   a `:post_id` field with `:uuid` type that references the `:id` of
   the `MyApp.Post` model.
+
+  ## Types and casting
+
+  When defining the schema, types need to be given. Those types are
+  specific to Ecto and must be one of:
+
+  Ecto type               | Elixir type             | Literal syntax in query
+  :---------------------- | :---------------------- | :---------------------
+  `:integer`              | `integer`               | 1, 2, 3
+  `:float`                | `float`                 | 1.0, 2.0, 3.0
+  `:boolean`              | `boolean`               | true, false
+  `:string`               | UTF-8 encoded `binary`  | "hello"
+  `:binary`               | `binary`                | `<<int, int, int, ...>>`
+  `:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
+  `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
+  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
+  `:datetime`             | `%Ecto.DateTime{}`
+  `:date`                 | `%Ecto.Date{}`
+  `:time`                 | `%Ecto.Time{}`
+
+  Models can also have virtual fields by passing the `virtual: true`
+  option. These fields are not persisted to the database and can
+  optionally not be type checked by declaring type `:any`.
+
+  When directly manipulating the struct, it is the responsibility of
+  the developer to ensure the field values have the proper type. For
+  example, you can create a weather struct with an invalid value
+  for `temp_lo`:
+
+      iex> weather = %Weather{temp_lo: "0"}
+      iex> weather.temp_lo
+      "0"
+
+  However, if you attempt to persist the struct above, an error will
+  be raised since Ecto validates the types when building the query.
+
+  Therefore, when working and manipulating external data, it is
+  recommended the usage of `Ecto.Changeset`'s that are able to filter
+  and properly cast external data. In fact, `Ecto.Changeset` and custom
+  types provide a powerful combination to extend Ecto types and queries.
+
+  ## Custom types
+
+  Besides the types mentioned above, Ecto allows custom types to be
+  defined. A custom type is a module that implements the `Ecto.Type`
+  behaviour. Read the `Ecto.Type` documentation for more information
+  on how to implement them.
 
   ## Reflection
 
@@ -450,6 +462,7 @@ defmodule Ecto.Model.Schema do
     field_names = Enum.map(fields, &elem(&1, 0))
 
     quote do
+      # TODO: Use custom types
       def __schema__(:load, values, idx) do
         Enum.reduce(unquote(field_names), {__struct__(), idx}, fn
           field, {struct, idx} ->
@@ -463,15 +476,21 @@ defmodule Ecto.Model.Schema do
     cond do
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any"
-      Ecto.Query.Types.primitive?(type) ->
+      Ecto.Types.primitive?(type) ->
         true
+      is_atom(type) ->
+        if Code.ensure_compiled?(type) and function_exported?(type, :type, 0) do
+          type
+        else
+          raise ArgumentError, "invalid or unknown field type `#{inspect type}`"
+        end
       true ->
-        raise ArgumentError, "unknown field type `#{inspect type}`"
+        raise ArgumentError, "invalid field type `#{inspect type}`"
     end
   end
 
   defp check_default!(type, default) do
-    case Ecto.Query.Types.dump(type, default) do
+    case Ecto.Types.dump(type, default) do
       {:ok, _} ->
         :ok
       :error ->

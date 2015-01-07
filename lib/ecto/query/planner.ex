@@ -4,7 +4,7 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.SelectExpr
   alias Ecto.Query.JoinExpr
-  alias Ecto.Query.Types
+  alias Ecto.Types
 
   if map_size(%Ecto.Query{}) != 15 do
     raise "Ecto.Query match out of date in builder"
@@ -139,13 +139,15 @@ defmodule Ecto.Query.Planner do
     cast_param(kind, query, expr, model, field, v, type)
   end
 
+  defp cast_param(kind, query, expr, nil, type) do
+    error! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
+                        "(if you want to check for nils, use is_nil/1 instead)"
+  end
+
   # TODO: We need to dump after cast!
   # Although we can only test this after we add custom types.
   defp cast_param(kind, query, expr, v, type) do
     case Types.cast(type, v) do
-      {:ok, nil} ->
-        error! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
-                            "(if you want to check for nils, use is_nil/1 instead)"
       {:ok, v} ->
         v
       :error ->

@@ -2,14 +2,14 @@ defmodule Ecto.Query.Builder do
   @moduledoc false
 
   alias Ecto.Query
-  alias Ecto.Query.Types
+  alias Ecto.Types
 
   @typedoc """
   Quoted types store primitive types and types in the format
   {source, quoted}. The latter are handled directly in the planner,
-  never forwarded to Ecto.Query.Types.
+  never forwarded to Ecto.Types.
 
-  The Ecto.Query.Types module concerns itself only with runtime types,
+  The Ecto.Types module concerns itself only with runtime types,
   which include all primitive types and custom user types. Note that
   custom user types do not show up during compilation time.
   """

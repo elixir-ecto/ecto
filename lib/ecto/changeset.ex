@@ -30,7 +30,7 @@ defmodule Ecto.Changeset do
 
   During casting, all valid parameters will have their key name
   converted to atoms and stored as a change in the changeset.
-  All other parmaeters that are not listed in `required` or
+  All other parameters that are not listed in `required` or
   `optional` are ignored.
 
   If casting of all fields is successful and all required fields
@@ -97,7 +97,7 @@ defmodule Ecto.Changeset do
 
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Ecto.Query.Types.cast(type, value) do
+        case Ecto.Types.cast(type, value) do
           {:ok, value} -> {:ok, value}
           :error       -> :invalid
         end
