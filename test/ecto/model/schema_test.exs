@@ -31,8 +31,8 @@ defmodule Ecto.Model.SchemaTest do
     assert MyModel.__schema__(:field, :comment_id) == :integer
   end
 
-  test "assign metadata" do
-    assert MyModel.__assign__ ==
+  test "changeset metadata" do
+    assert MyModel.__changeset__ ==
            %{name: :string, email: :string, array: {:array, :string},
              comment_id: :integer, temp: :any}
   end

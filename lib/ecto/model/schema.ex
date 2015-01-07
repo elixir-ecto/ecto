@@ -105,12 +105,12 @@ defmodule Ecto.Model.Schema do
 
   ## Reflection
 
-  Any schema module will generate the `__schema__` function that can be used for
-  runtime introspection of the schema.
+  Any schema module will generate the `__schema__` function that can be used
+  for runtime introspection of the schema.
 
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
-  * `__schema__(:primary_key)` - Returns the field that is the primary key or
-                                 `nil` if there is none;
+  * `__schema__(:primary_key)` - Returns the field that is the primary
+    key or `nil` if there is none;
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
   * `__schema__(:field, field)` - Returns the type of the given non-virtual field;
@@ -118,11 +118,11 @@ defmodule Ecto.Model.Schema do
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
 
-  * `__schema__(:load, values, idx)` - Loads a new model struct from a tuple of non-virtual
-                                       field values starting at the given index;
+  * `__schema__(:load, values, idx)` - Loads a new model struct from a
+    tuple of non-virtual field values starting at the given index;
 
-  Furthermore, both `__struct__` and `__assign__` functions are defined
-  so structs and assignment functionalities are available.
+  Furthermore, both `__struct__` and `__changeset__` functions are
+  defined so structs and changeset functionalities are available.
   """
 
   @doc false
@@ -151,7 +151,7 @@ defmodule Ecto.Model.Schema do
         @foreign_key_type :integer
       end
 
-      Module.register_attribute(__MODULE__, :assign_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
@@ -179,7 +179,7 @@ defmodule Ecto.Model.Schema do
 
       Module.eval_quoted __MODULE__, [
         Ecto.Model.Schema.__struct__(@struct_fields),
-        Ecto.Model.Schema.__assign__(@assign_fields, primary_key_field),
+        Ecto.Model.Schema.__changeset__(@changeset_fields, primary_key_field),
         Ecto.Model.Schema.__source__(source),
         Ecto.Model.Schema.__fields__(fields),
         Ecto.Model.Schema.__assocs__(__MODULE__, assocs, primary_key_field, fields),
@@ -348,7 +348,7 @@ defmodule Ecto.Model.Schema do
     check_type!(type, opts[:virtual])
     check_default!(type, opts[:default])
 
-    Module.put_attribute(mod, :assign_fields, {name, type})
+    Module.put_attribute(mod, :changeset_fields, {name, type})
     put_struct_field(mod, name, opts[:default])
 
     unless opts[:virtual] do
@@ -376,10 +376,10 @@ defmodule Ecto.Model.Schema do
   ## Quoted callbacks
 
   @doc false
-  def __assign__(assign_fields, primary_key) do
-    map = assign_fields |> Enum.into(%{}) |> Map.delete(primary_key) |> Macro.escape()
+  def __changeset__(changeset_fields, primary_key) do
+    map = changeset_fields |> Enum.into(%{}) |> Map.delete(primary_key) |> Macro.escape()
     quote do
-      def __assign__ do
+      def __changeset__ do
         unquote(map)
       end
     end

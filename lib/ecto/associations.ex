@@ -22,7 +22,7 @@ defmodule Ecto.Associations do
   in upcoming Ecto releases.
   """
 
-  @type t :: %{__struct__: module, cardinality: :one | :many,
+  @type t :: %{__struct__: atom, cardinality: :one | :many,
                field: atom, owner_key: atom}
   use Behaviour
 

@@ -39,7 +39,7 @@ defmodule Ecto.Model do
     end
   end
 
-  @type t :: map
+  @type t :: %{__struct__: atom}
 
   @doc """
   Returns the model primary key value.
