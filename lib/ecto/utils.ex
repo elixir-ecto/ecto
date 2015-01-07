@@ -45,8 +45,8 @@ defmodule Ecto.Utils do
   def merge_db_options(opt\\ %{}) do
     %{template: ~s(template0),
       encoding: ~s(UTF8),
-      lc_collate: ~s(en_US.UTF-8),
-      lc_ctype: ~s(en_US.UTF-8)
+      lc_collate: System.get_env["LANG"],
+      lc_ctype: System.get_env["LANG"]
     } |> Map.merge(opt) |> Map.to_list
   end
 

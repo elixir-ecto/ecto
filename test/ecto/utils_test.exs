@@ -21,7 +21,7 @@ defmodule Ecto.UtilsTest do
   end
 
   test "merge_db_options" do
-    new_opt = %{lc_collate: "en_IE.UTF-8", lc_ctype: "en_IE.UTF-8"}
+    new_opt = %{lc_collate: "lv_IE.UTF-8", lc_ctype: "lv_IE.UTF-8"}
     opt = merge_db_options(new_opt)
 
     assert opt[:lc_collate] == new_opt[:lc_collate]
@@ -32,8 +32,8 @@ defmodule Ecto.UtilsTest do
   test "when merge_db_options is empty " do
     default_val = %{template: ~s(template0),
       encoding: ~s(UTF8),
-      lc_collate: ~s(en_US.UTF-8),
-      lc_ctype: ~s(en_US.UTF-8)
+      lc_collate: System.get_env["LANG"],
+      lc_ctype: System.get_env["LANG"]
     }
 
     opt = merge_db_options

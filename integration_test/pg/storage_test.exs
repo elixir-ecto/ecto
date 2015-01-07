@@ -7,14 +7,24 @@ defmodule Ecto.Integration.StorageTest do
     [database: "storage_mgt",
      username: "postgres",
      password: "postgres",
-     hostname: "localhost"]
+     hostname: "localhost",
+     template: "template0",
+     encoding: "UTF8",
+     lc_collate: System.get_env["LANG"],
+     lc_ctype: System.get_env["LANG"]
+    ]
   end
 
   def wrong_user do
     [database: "storage_mgt",
      username: "randomuser",
      password: "password1234",
-     hostname: "localhost"]
+     hostname: "localhost",
+     template: "template0",
+     encoding: "UTF8",
+     lc_collate: System.get_env["LANG"],
+     lc_ctype: System.get_env["LANG"]
+    ]
   end
 
   def drop_database do
