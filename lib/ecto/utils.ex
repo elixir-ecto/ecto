@@ -2,20 +2,19 @@ defmodule Ecto.Utils do
   @doc """
   Parses an Ecto URL of the following format:
   `ecto://username:password@hostname:port/database?opts=123`, %{} where all options
-  but the database is optional.
 
-  Second parameters is for database options:
+  If `username` is not specified, `$PGUSER` or `$USER` will be used. `password`
+  defaults to `$PGPASS`. `hostname` defaults to `$PGHOST` or `localhost`.
+
+  You also can pass a second optional parameter as a map of database options where you can specify database options in following format:
     %{template: ~s(template0),
       encoding: ~s(UTF8),
       lc_collate: ~s(en_US.UTF-8),
       lc_ctype: ~s(en_US.UTF-8)
     }
 
-
-  If `username` is not specified, `$PGUSER` or `$USER` will be used. `password`
-  defaults to `$PGPASS`. `hostname` defaults to `$PGHOST` or `localhost`.
   """
-  def parse_url(url, db_opt\\ %{}) do
+  def parse_url(url,  db_options \\ %{}) do
     unless String.match? url, ~r/^[^:\/?#\s]+:\/\// do
       raise Ecto.InvalidURLError, url: url, message: "url should start with a scheme, host should start with //"
     end
@@ -40,10 +39,10 @@ defmodule Ecto.Utils do
              port:     info.port ]
 
     opts = Enum.reject(opts, fn {_k, v} -> is_nil(v) end)
-    opts ++ query ++ db_opts_mearge(db_opt)
+    opts ++ query ++ merge_db_options(db_options)
   end
 
-  def db_opts_mearge(opt\\ %{}) do
+  def merge_db_options(opt\\ %{}) do
     %{template: ~s(template0),
       encoding: ~s(UTF8),
       lc_collate: ~s(en_US.UTF-8),
