@@ -18,6 +18,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       * `:ssl` - Set to true if ssl should be used (default: false)
       * `:ssl_opts` - A list of ssl options, see ssl docs
       * `:lazy` - If false all connections will be started immediately on Repo startup (default: true)
+      * `:encoder` — Custom encoder function
+      * `:decoder` — Custom decoder function
+      * `:formatter` — Custom formatter function
 
     """
 
@@ -159,9 +162,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         worker_module: Worker ] ++ pool_opts
 
       worker_opts = worker_opts
-        |> Keyword.put(:formatter, &formatter/1)
-        |> Keyword.put(:decoder, &decoder/4)
-        |> Keyword.put(:encoder, &encoder/3)
+        |> Keyword.put(:formatter, fn(value) ->
+          (opts[:formatter] && opts[:formatter].(value)) || formatter(value)
+        end)
+        |> Keyword.put(:decoder, fn(type, format, default, param) ->
+          (opts[:decoder] && opts[:decoder].(type, format, fn (v) ->
+            decoder(type, format, default, v) end, param)) ||
+           decoder(type, format, default, param)
+        end)
+        |> Keyword.put(:encoder, fn(type, default, value) ->
+          (opts[:encoder] && opts[:encoder].(type, fn (v) ->
+            encoder(type, default, v) end, value)) ||
+            encoder(type, default, value)
+          end)
         |> Keyword.put_new(:port, @default_port)
 
       {pool_opts, worker_opts}
