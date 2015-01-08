@@ -118,7 +118,7 @@ defmodule Ecto.Types do
   def primitive?(_), do: false
 
   @doc """
-  Checks if two types match.
+  Checks if a given type matches with a primitive type.
 
       iex> match?(:whatever, :any)
       true
@@ -126,16 +126,25 @@ defmodule Ecto.Types do
       true
       iex> match?(:string, :string)
       true
-      iex> match?({:list, :string}, {:list, :any})
+      iex> match?({:array, :string}, {:array, :any})
       true
 
   """
-  @spec match?(type, type) :: boolean
-  def match?({outer, left}, {outer, right}), do: match?(left, right)
-  def match?(_left, :any),                   do: true
-  def match?(:any, _right),                  do: true
-  def match?(type, type),                    do: true
-  def match?(_, _),                          do: false
+  @spec match?(type, primitive) :: boolean
+  def match?(_left, :any),  do: true
+  def match?(:any, _right), do: true
+
+  def match?(type, primitive) do
+    if primitive?(type) do
+      do_match?(type, primitive)
+    else
+      do_match?(type.type, primitive)
+    end
+  end
+
+  defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
+  defp do_match?(type, type),                    do: true
+  defp do_match?(_, _),                          do: false
 
   @doc """
   Dumps a value to the given type.

@@ -153,7 +153,7 @@ defmodule Ecto.Type do
     2. When passing arguments to `Ecto.Query`
 
   """
-  defcallback cast(term) :: term
+  defcallback cast(term) :: {:ok, term} | :error
 
   @doc """
   Loads the given term into a custom type.

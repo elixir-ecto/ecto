@@ -22,6 +22,7 @@ defmodule Ecto.Query.PlannerTest do
   defmodule Post do
     use Ecto.Model
 
+    @primary_key {:id, Custom.Permalink, []}
     schema "posts" do
       field :title, :string
       field :text, :string
@@ -93,6 +94,10 @@ defmodule Ecto.Query.PlannerTest do
     datetime = %Custom.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
     {_query, params} = prepare(Comment |> where([c], c.posted == ^datetime))
     assert params[0] == {{2015, 1, 7}, {21, 18, 13}}
+
+    permalink = "1-hello-world"
+    {_query, params} = prepare(Post |> where([p], p.id == ^permalink))
+    assert params[0] == 1
   end
 
   test "prepare: joins" do
@@ -142,6 +147,17 @@ defmodule Ecto.Query.PlannerTest do
     message = ~r"field `Ecto.Query.PlannerTest.Comment.text` in `where` does not type check"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(Comment, []) |> where([c], c.text)
+      normalize(query)
+    end
+  end
+
+  test "normalize: validate fields with custom types" do
+    query = from(Post, []) |> where([p], p.id in [1,2,3])
+    normalize(query)
+
+    message = ~r"field `Ecto.Query.PlannerTest.Comment.text` in `where` does not type check"
+    assert_raise Ecto.QueryError, message, fn ->
+      query = from(Comment, []) |> where([c], c.text in [1,2,3])
       normalize(query)
     end
   end
