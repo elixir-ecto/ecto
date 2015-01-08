@@ -130,6 +130,9 @@ defmodule Ecto.Schema do
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
 
+  * `__schema__(:read_after_writes)` - Fields that must be read back from
+    the database after every write (insert or update);
+
   * `__schema__(:load, struct \\ __struct__(), fields_or_idx, values)` - Loads a
     new model struct from a tuple of non-virtual field values starting at the given
     index or defined by the given fields;
@@ -168,6 +171,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
 
       primary_key_field =
         case @primary_key do
@@ -197,7 +201,8 @@ defmodule Ecto.Schema do
         Ecto.Schema.__fields__(fields),
         Ecto.Schema.__assocs__(__MODULE__, assocs, primary_key_field, fields),
         Ecto.Schema.__primary_key__(primary_key_field),
-        Ecto.Schema.__load__(fields)]
+        Ecto.Schema.__load__(fields),
+        Ecto.Schema.__read_after_writes__(primary_key_field, @ecto_raw)]
     end
   end
 
@@ -210,6 +215,8 @@ defmodule Ecto.Schema do
 
     * `:default` - Sets the default value on the schema and the struct
     * `:virtual` - When true, the field is not persisted
+    * `:read_after_writes` - When true, the field is always read back
+      from the repository after inserts and updates
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
@@ -365,6 +372,10 @@ defmodule Ecto.Schema do
     put_struct_field(mod, name, opts[:default])
 
     unless opts[:virtual] do
+      if opts[:read_after_writes] do
+        Module.put_attribute(mod, :ecto_raw, name)
+      end
+
       Module.put_attribute(mod, :ecto_fields, {name, type, opts})
     end
   end
@@ -474,6 +485,17 @@ defmodule Ecto.Schema do
       def __schema__(:load, struct \\ __struct__(), fields_or_idx, values) do
         Ecto.Schema.__load__(struct, unquote(fields), fields_or_idx, values)
       end
+    end
+  end
+
+  @doc false
+  def __read_after_writes__(primary_key, fields) do
+    if primary_key do
+      fields = [primary_key|List.delete(fields, primary_key)]
+    end
+
+    quote do
+      def __schema__(:read_after_writes), do: unquote(fields)
     end
   end
 

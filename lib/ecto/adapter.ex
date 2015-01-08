@@ -56,7 +56,7 @@ defmodule Ecto.Adapter do
   Inserts a single new model in the data store.
   """
   defcallback insert(repo :: Ecto.Repo.t, source :: binary,
-                     fields :: Keyword.t, opts :: Keyword.t) :: {:ok, tuple} | no_return
+                     fields :: Keyword.t, returning :: [atom], opts :: Keyword.t) :: {:ok, tuple} | no_return
 
   @doc """
   Updates a single model with the given filters.
@@ -69,7 +69,7 @@ defmodule Ecto.Adapter do
   """
   defcallback update(repo :: Ecto.Repo.t, source :: binary,
                      filter :: Keyword.t, fields :: Keyword.t,
-                     opts :: Keyword.t) :: {:ok, tuple} | {:error, :stale} | no_return
+                     returning :: [atom], opts :: Keyword.t) :: {:ok, tuple} | {:error, :stale} | no_return
 
   @doc """
   Deletes a sigle model with the given filters.

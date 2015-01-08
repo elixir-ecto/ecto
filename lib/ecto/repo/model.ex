@@ -16,11 +16,12 @@ defmodule Ecto.Repo.Model do
       struct = Callbacks.__apply__(struct, :before_insert)
       model  = struct.__struct__
       source = model.__schema__(:source)
+      return = model.__schema__(:read_after_writes)
 
       fields = validate_struct(:insert, struct)
-      {:ok, values} = adapter.insert(repo, source, fields, opts)
+      {:ok, values} = adapter.insert(repo, source, fields, return, opts)
 
-      model.__schema__(:load, struct, Keyword.keys(fields), values)
+      model.__schema__(:load, struct, return, values)
       |> Callbacks.__apply__(:after_insert)
     end
   end
@@ -34,14 +35,15 @@ defmodule Ecto.Repo.Model do
       struct = Callbacks.__apply__(struct, :before_update)
       model  = struct.__struct__
       source = model.__schema__(:source)
+      return = model.__schema__(:read_after_writes)
 
       pk_field = model.__schema__(:primary_key)
       pk_value = primary_key_value!(struct)
 
       fields = validate_struct(:update, struct) |> Keyword.delete(pk_field)
-      {:ok, values} = adapter.update(repo, source, [{pk_field, pk_value}], fields, opts)
+      {:ok, values} = adapter.update(repo, source, [{pk_field, pk_value}], fields, return, opts)
 
-      model.__schema__(:load, struct, Keyword.keys(fields), values)
+      model.__schema__(:load, struct, return, values)
       |> Callbacks.__apply__(:after_update)
     end
   end

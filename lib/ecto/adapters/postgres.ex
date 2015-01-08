@@ -80,26 +80,28 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    def insert(repo, source, params, opts) do
+    def insert(repo, source, params, returning, opts) do
+      # TODO: This needs to be changed after we introduce changesets
       {fields, values} =
         params
         |> Enum.filter(fn {_, v} -> v != nil end)
         |> :lists.unzip()
 
-      sql = SQL.insert(source, fields, Keyword.keys(params))
+      sql = SQL.insert(source, fields, returning)
 
       case query(repo, sql, values, opts) do
-        %Postgrex.Result{rows: [values]} ->
+        %Postgrex.Result{num_rows: 1, rows: nil} ->
+          {:ok, {}}
+        %Postgrex.Result{num_rows: 1, rows: [values]} ->
           {:ok, values}
       end
     end
 
     @doc false
-    def update(repo, source, filter, fields, opts) do
+    def update(repo, source, filter, fields, returning, opts) do
       {filter, values1} = :lists.unzip(filter)
       {fields, values2} = :lists.unzip(fields)
-
-      sql = SQL.update(source, filter, fields, fields)
+      sql = SQL.update(source, filter, fields, returning)
 
       case query(repo, sql, values1 ++ values2, opts) do
         %Postgrex.Result{rows: [values]} ->
