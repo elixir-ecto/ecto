@@ -12,6 +12,10 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  defp changeset(params) do
+    cast(params, %Post{}, ~w(), ~w(title body))
+  end
+
   ## cast/4
 
   test "cast/4: on success" do
@@ -109,10 +113,45 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  ## Update functions
+
+  test "update_change/3" do
+    changeset =
+      changeset(%{"title" => "foo"})
+      |> update_change(:title, & &1 <> "bar")
+    assert changeset.changes.title == "foobar"
+
+    changeset =
+      changeset(%{"title" => nil})
+      |> update_change(:title, & &1 || "bar")
+    assert changeset.changes.title == "bar"
+
+    changeset =
+      changeset(%{})
+      |> update_change(:title, & &1 || "bar")
+    assert changeset.changes == %{}
+  end
+
+  test "put_change/3 and delete_change/2" do
+    changeset = changeset(%{})
+
+    changeset = put_change(changeset, :title, "foo")
+    assert changeset.changes.title == "foo"
+
+    changeset = put_change(changeset, :title, "bar")
+    assert changeset.changes.title == "bar"
+
+    changeset = delete_change(changeset, :title)
+    assert changeset.changes == %{}
+  end
+
   ## Validations
 
-  defp changeset(params) do
-    cast(params, %Post{}, ~w(), ~w(title body))
+  test "add_error/3" do
+    changeset =
+      changeset(%{})
+      |> add_error(:foo, :bar)
+    assert changeset.errors == [foo: :bar]
   end
 
   test "validate_change/3" do

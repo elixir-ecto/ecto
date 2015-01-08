@@ -123,6 +123,53 @@ defmodule Ecto.Changeset do
     end
   end
 
+  ## Working with changesets
+
+  @doc """
+  Updates a change.
+
+  The `function` is invoked with the change value only if there
+  is a change for the given `key`. Notice the value of the change
+  can still be nil (unless the field was marked as required on `cast/4`).
+  """
+  def update_change(%{changes: changes} = changeset, key, function) when is_atom(key) do
+    case Map.fetch(changes, key) do
+      {:ok, value} ->
+        changes = Map.put(changes, key, function.(value))
+        %{changeset | changes: changes}
+      :error ->
+        changeset
+    end
+  end
+
+  @doc """
+  Puts a change on the given key with value.
+  """
+  def put_change(changeset, key, value) do
+    update_in changeset.changes, &Map.put(&1, key, value)
+  end
+
+  @doc """
+  Deletes a change with the given key.
+  """
+  def delete_change(changeset, key) do
+    update_in changeset.changes, &Map.delete(&1, key)
+  end
+
+  ## Validations
+
+  @doc """
+  Adds an error to the changeset.
+
+  ## Examples
+
+      add_error(changeset, :name, :invalid)
+
+  """
+  def add_error(%{errors: errors} = changeset, key, error) do
+    %{changeset | errors: [{key, error}|errors], valid?: false}
+  end
+
   @doc """
   Validates the given `field` change.
 
