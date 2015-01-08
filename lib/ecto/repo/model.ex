@@ -5,6 +5,8 @@ defmodule Ecto.Repo.Model do
 
   alias Ecto.Model.Callbacks
 
+  # TODO: Add read_after_writes to avoid always loading data from the database
+
   @doc """
   Implementation for `Ecto.Repo.insert/2`.
   """
@@ -16,10 +18,9 @@ defmodule Ecto.Repo.Model do
       source = model.__schema__(:source)
 
       fields = validate_struct(:insert, struct)
-      {:ok, result} = adapter.insert(repo, source, fields, opts)
+      {:ok, values} = adapter.insert(repo, source, fields, opts)
 
-      struct
-      |> build(fields, result)
+      model.__schema__(:load, struct, Keyword.keys(fields), values)
       |> Callbacks.__apply__(:after_insert)
     end
   end
@@ -38,10 +39,9 @@ defmodule Ecto.Repo.Model do
       pk_value = primary_key_value!(struct)
 
       fields = validate_struct(:update, struct) |> Keyword.delete(pk_field)
-      {:ok, result} = adapter.update(repo, source, [{pk_field, pk_value}], fields, opts)
+      {:ok, values} = adapter.update(repo, source, [{pk_field, pk_value}], fields, opts)
 
-      struct
-      |> build(fields, result)
+      model.__schema__(:load, struct, Keyword.keys(fields), values)
       |> Callbacks.__apply__(:after_update)
     end
   end
@@ -102,14 +102,6 @@ defmodule Ecto.Repo.Model do
   defp primary_key_value!(struct) when is_map(struct) do
     Ecto.Model.primary_key(struct) ||
       raise Ecto.NoPrimaryKeyError, model: struct.__struct__
-  end
-
-  defp build(struct, fields, result) do
-    fields
-    |> Enum.with_index
-    |> Enum.reduce(struct, fn {{field, _}, idx}, acc ->
-         Map.put(acc, field, elem(result, idx))
-       end)
   end
 
   defp with_transactions_if_callbacks(repo, adapter, model, opts, callbacks, fun) do

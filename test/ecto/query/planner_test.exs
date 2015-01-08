@@ -92,7 +92,7 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: casts and dumps custom types" do
     datetime = %Custom.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
     {_query, params} = prepare(Comment |> where([c], c.posted == ^datetime))
-    assert params[0] == %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
+    assert params[0] == {{2015, 1, 7}, {21, 18, 13}}
   end
 
   test "prepare: joins" do

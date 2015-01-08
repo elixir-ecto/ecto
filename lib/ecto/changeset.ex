@@ -63,7 +63,7 @@ defmodule Ecto.Changeset do
     type = type!(types, key)
 
     {changes, errors} =
-      case cast_field(key, param_key, type, params) do
+      case cast_field(param_key, type, params) do
         {:ok, value} ->
           {Map.put(changes, key, value), error_on_blank(type, key, value, errors)}
         :missing ->
@@ -80,7 +80,7 @@ defmodule Ecto.Changeset do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
 
-    case cast_field(key, param_key, type, params) do
+    case cast_field(param_key, type, params) do
       {:ok, value} ->
         {Map.put(changes, key, value), errors}
       :missing ->
@@ -96,7 +96,7 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_binary(key),
     do: {String.to_atom(key), key}
 
-  defp cast_field(key, param_key, type, params) do
+  defp cast_field(param_key, type, params) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
         case Ecto.Types.cast(type, value) do

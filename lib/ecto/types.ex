@@ -156,10 +156,14 @@ defmodule Ecto.Types do
 
   """
   @spec dump(type, term) :: {:ok, term} | :error
+  def dump(_type, nil), do: {:ok, nil}
+
+  def dump(:datetime, datetime), do: {:ok, Ecto.DateTime.to_erl(datetime)}
+  def dump(:date, date),         do: {:ok, Ecto.Date.to_erl(date)}
+  def dump(:time, time),         do: {:ok, Ecto.Time.to_erl(time)}
+
   def dump(type, value) do
     cond do
-      value == nil ->
-        {:ok, nil}
       not primitive?(type) ->
         type.dump(value)
       of_type?(type, value) ->
@@ -186,10 +190,14 @@ defmodule Ecto.Types do
       :error
   """
   @spec load(type, term) :: {:ok, term} | :error
+  def load(_type, nil), do: {:ok, nil}
+
+  def load(:datetime, datetime), do: {:ok, Ecto.DateTime.from_erl(datetime)}
+  def load(:date, date),         do: {:ok, Ecto.Date.from_erl(date)}
+  def load(:time, time),         do: {:ok, Ecto.Time.from_erl(time)}
+
   def load(type, value) do
     cond do
-      value == nil ->
-        {:ok, nil}
       not primitive?(type) ->
         type.load(value)
       of_type?(type, value) ->

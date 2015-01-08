@@ -1,5 +1,5 @@
 defmodule Ecto.Model.Schema do
-  @moduledoc """
+  @moduledoc ~S"""
   Defines a schema for a model.
 
   A schema is a struct with associated metadata that is persisted to a
@@ -130,8 +130,9 @@ defmodule Ecto.Model.Schema do
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
 
-  * `__schema__(:load, values, idx)` - Loads a new model struct from a
-    tuple of non-virtual field values starting at the given index;
+  * `__schema__(:load, struct \\ __struct__(), fields_or_idx, values)` - Loads a
+    new model struct from a tuple of non-virtual field values starting at the given
+    index or defined by the given fields;
 
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
@@ -196,7 +197,7 @@ defmodule Ecto.Model.Schema do
         Ecto.Model.Schema.__fields__(fields),
         Ecto.Model.Schema.__assocs__(__MODULE__, assocs, primary_key_field, fields),
         Ecto.Model.Schema.__primary_key__(primary_key_field),
-        Ecto.Model.Schema.__helpers__(fields)]
+        Ecto.Model.Schema.__load__(fields)]
     end
   end
 
@@ -375,14 +376,21 @@ defmodule Ecto.Model.Schema do
     Module.put_attribute(mod, :ecto_assocs, {name, association, opts})
   end
 
-  defp put_struct_field(mod, name, assoc) do
-    fields = Module.get_attribute(mod, :struct_fields)
+  @doc false
+  def __load__(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
+    Enum.reduce(fields, {struct, idx}, fn
+      {field, type}, {acc, idx} ->
+        {:ok, value} = Ecto.Types.load(type, elem(values, idx))
+        {Map.put(acc, field, value), idx + 1}
+    end) |> elem(0)
+  end
 
-    if List.keyfind(fields, name, 0) do
-      raise ArgumentError, message: "field/association `#{name}` is already set on schema"
-    end
-
-    Module.put_attribute(mod, :struct_fields, {name, assoc})
+  def __load__(struct, fields, keys, values) when is_list(keys) and is_tuple(values) do
+    Enum.reduce(keys, {struct, 0}, fn
+      field, {acc, idx} ->
+        {:ok, value} = Ecto.Types.load(Keyword.fetch!(fields, field), elem(values, idx))
+        {Map.put(acc, field, value), idx + 1}
+    end) |> elem(0)
   end
 
   ## Quoted callbacks
@@ -431,15 +439,16 @@ defmodule Ecto.Model.Schema do
   def __assocs__(module, assocs, primary_key, fields) do
     fields = Enum.map(fields, &elem(&1, 0))
 
-    quoted = Enum.map(assocs, fn {name, type, opts} ->
-      refl = type.struct(name, module, primary_key, fields, opts)
+    quoted =
+      Enum.map(assocs, fn {name, type, opts} ->
+        refl = type.struct(name, module, primary_key, fields, opts)
 
-      quote do
-        def __schema__(:association, unquote(name)) do
-          unquote(Macro.escape(refl))
+        quote do
+          def __schema__(:association, unquote(name)) do
+            unquote(Macro.escape(refl))
+          end
         end
-      end
-    end)
+      end)
 
     assoc_names = Enum.map(assocs, &elem(&1, 0))
 
@@ -458,18 +467,26 @@ defmodule Ecto.Model.Schema do
   end
 
   @doc false
-  def __helpers__(fields) do
-    field_names = Enum.map(fields, &elem(&1, 0))
+  def __load__(fields) do
+    fields = Enum.map(fields, fn {name, type, _opts} -> {name, type} end)
 
     quote do
-      # TODO: Use custom types
-      def __schema__(:load, values, idx) do
-        Enum.reduce(unquote(field_names), {__struct__(), idx}, fn
-          field, {struct, idx} ->
-            {Map.put(struct, field, elem(values, idx)), idx + 1}
-        end) |> elem(0)
+      def __schema__(:load, struct \\ __struct__(), fields_or_idx, values) do
+        Ecto.Model.Schema.__load__(struct, unquote(fields), fields_or_idx, values)
       end
     end
+  end
+
+  ## Private
+
+  defp put_struct_field(mod, name, assoc) do
+    fields = Module.get_attribute(mod, :struct_fields)
+
+    if List.keyfind(fields, name, 0) do
+      raise ArgumentError, message: "field/association `#{name}` is already set on schema"
+    end
+
+    Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
   defp check_type!(type, virtual?) do

@@ -2,13 +2,10 @@ defmodule Ecto.Type do
   @moduledoc """
   Defines the `Ecto.Type` behaviour for implementing custom types.
 
-  A custom type expects 4 functions to be implemented, all documented
+  A custom type expects 5 functions to be implemented, all documented
   and described below. We also provide two examples of how custom
   types can be used in Ecto to augment existing types or providing
   your own types.
-
-  Through this documentation we refer to "Ecto native types". Those
-  are the types described in the `Ecto.Model.Schema` documentation.
 
   ## Augmenting types
 
@@ -78,7 +75,7 @@ defmodule Ecto.Type do
   simple and wish to use a more robust alternative.
 
   This can be achieved by implementing the proper `load/1` and `dump/1`
-  functions:
+  functions that cast the database types into another struct:
 
       defmodule SuperDateTime do
         defstruct [:year, :month, :day, :hour, :min, :sec]
@@ -101,18 +98,17 @@ defmodule Ecto.Type do
         # Datetimes are never considered blank
         def blank?(_), do: false
 
-        # When loading data from the database, we need to convert
-        # the Ecto type (Ecto.DateTime in this case) to our type:
-        def load(%Ecto.DateTime{} = dt) do
-          {:ok, %SuperDateTime{year: dt.year, month: dt.month, day: dt.day,
-                               hour: dt.hour, min: dt.min, sec: dt.sec}}
+        # When loading data from the database, we need to
+        # convert the Ecto type to our type:
+        def load({{year, month, day}, {hour, min, sec}}) do
+          {:ok, %SuperDateTime{year: year, month: month, day: day,
+                               hour: hour, min: min, sec: sec}}
         end
 
         # When dumping data to the database, we need to convert
         # our type back to Ecto.DateTime one:
         def dump(%SuperDateTime{} = dt) do
-          {:ok, %Ecto.DateTime{year: dt.year, month: dt.month, day: dt.day,
-                               hour: dt.hour, min: dt.min, sec: dt.sec}}
+          {:ok, {{dt.year, dt.month, dt.day}, {dt.hour, dt.min, dt.sec}}}
         end
         def dump(_), do: :error
       end
