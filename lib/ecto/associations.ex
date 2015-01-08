@@ -8,7 +8,7 @@ defmodule Ecto.Associations do
   This module contains documentation for those interested in
   understanding how Ecto associations work internally. If you are
   interested in an overview about associations in Ecto, you should
-  look into the documentation for `Ecto` and `Ecto.Model.Schema`
+  look into the documentation for `Ecto` and `Ecto.Schema`
   modules.
 
   ## Associations

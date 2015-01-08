@@ -1,4 +1,4 @@
-defmodule Ecto.Model.SchemaTest do
+defmodule Ecto.SchemaTest do
   use ExUnit.Case, async: true
 
   defmodule MyModel do

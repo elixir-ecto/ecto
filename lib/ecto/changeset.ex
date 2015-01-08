@@ -1,5 +1,12 @@
 defmodule Ecto.Changeset do
   @moduledoc """
+  Changesets allow filtering, casting and validation of model changes.
+
+  There is an example of working with changesets in the introductory
+  documentation in the `Ecto` module.
+
+  ## The Ecto.Changeset struct
+
   The fields are:
 
   * `valid?`      - Stores if the changeset is valid
@@ -99,7 +106,7 @@ defmodule Ecto.Changeset do
   defp cast_field(param_key, type, params) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Ecto.Types.cast(type, value) do
+        case Ecto.Schema.Types.cast(type, value) do
           {:ok, value} -> {:ok, value}
           :error       -> :invalid
         end
@@ -109,7 +116,7 @@ defmodule Ecto.Changeset do
   end
 
   defp error_on_blank(type, key, value, errors) do
-    if Ecto.Types.blank?(type, value) do
+    if Ecto.Schema.Types.blank?(type, value) do
       [{key, :blank}|errors]
     else
       errors

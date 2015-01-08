@@ -168,7 +168,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp cast(kind, type, v) do
-    case Ecto.Types.cast(type, v) do
+    case Ecto.Schema.Types.cast(type, v) do
       {:ok, v} ->
         v
       :error ->

@@ -1,41 +1,44 @@
 defmodule Ecto.Model do
   @moduledoc """
-  Models are Elixir modules with Ecto-specific behaviour.
-
-  This module provides some convenience functions for working
+  Provides convenience functions for defining and working
   with models.
 
   ## Using
 
-  When used, this module works as an "umbrella" module that adds
-  a bunch of functionality to your module:
+  When used, `Ecto.Model` works as an "umbrella" module that adds
+  common functionality to your module:
 
-    * `Ecto.Model.Schema` - provides the API necessary to define schemas;
-    * `Ecto.Model.Callbacks` - provides lifecycle callbacks;
-    * `Ecto.Model.Validations` - helpers for validations;
+    * `use Ecto.Schema` - provides the API necessary to define schemas
+    * `import Ecto.Changeset` - functions for building and manipulating changesets
+    * `import Ecto.Model` - functions for working with models and their associations
+    * `import Ecto.Query` - functions for generating and manipulating queries
 
-  By using `Ecto.Model` all the functionality above is included
-  and both `Ecto.Model` and `Ecto.Query` modules are imported.
+  Plus all the modules existing in `Ecto.Model.*` are brought in
+  too:
+
+    * `use Ecto.Model.Callbacks` - provides lifecycle callbacks
+
   However, you can avoid using `Ecto.Model` altogether in favor
-  of cherry picking the functionality above.
+  of cherry picking any of the functionality above.
 
   ## Importing
 
   You may want to import this module in contexts where you are
   working with different models. For example, in a web application,
   you may want to import this module into your plugs to provide
-  conveniences for assigning, building and accessing model information.
+  conveniences for building and accessing model information.
   """
 
   @doc false
   defmacro __using__(_opts) do
     quote do
-      use Ecto.Model.Callbacks
-      use Ecto.Model.Schema
-      use Ecto.Model.Validations
+      use Ecto.Schema
+      import Ecto.Changeset
+      import Ecto.Query
 
       import Ecto.Model
-      import Ecto.Query
+      use Ecto.Model.Callbacks
+      use Ecto.Model.Validations # TODO: Remove me
     end
   end
 

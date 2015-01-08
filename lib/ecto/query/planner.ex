@@ -4,7 +4,7 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.SelectExpr
   alias Ecto.Query.JoinExpr
-  alias Ecto.Types
+  alias Ecto.Schema.Types
 
   if map_size(%Ecto.Query{}) != 15 do
     raise "Ecto.Query match out of date in builder"

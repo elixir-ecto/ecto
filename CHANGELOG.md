@@ -3,9 +3,13 @@
 * Bug fixes
   * Require interpolation operator in joins
 
+* Deprecations
+  * Validations are deprecated in favor of changeset validations
+
 * Backwards incompatible changes
   * `@schema_defaults` is deprecated in favor of setting `@primary_key` and `@foreign_key_type` directly
-  * `Ecto.Model.Schema.schema/2` options are deprecated in favor of setting `@primary_key` and `@foreign_key_type` before the `schema/2` call
+  * `Ecto.Schema.schema/2` options are deprecated in favor of setting `@primary_key` and `@foreign_key_type` before the `schema/2` call
+  * `Ecto.Model.Schema` has been renamed to `Ecto.Schema`
 
 # v0.4.0 (2015-01-02)
 

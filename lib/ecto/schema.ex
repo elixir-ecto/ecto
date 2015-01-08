@@ -1,4 +1,4 @@
-defmodule Ecto.Model.Schema do
+defmodule Ecto.Schema do
   @moduledoc ~S"""
   Defines a schema for a model.
 
@@ -9,7 +9,7 @@ defmodule Ecto.Model.Schema do
   ## Example
 
       defmodule User do
-        use Ecto.Model.Schema
+        use Ecto.Schema
 
         schema "users" do
           field :name, :string
@@ -141,7 +141,7 @@ defmodule Ecto.Model.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
-      import Ecto.Model.Schema, only: [schema: 2]
+      import Ecto.Schema, only: [schema: 2]
     end
   end
 
@@ -174,14 +174,14 @@ defmodule Ecto.Model.Schema do
           false ->
             nil
           {name, type, opts} ->
-            Ecto.Model.Schema.field(name, type, opts)
+            Ecto.Schema.field(name, type, opts)
             name
           other ->
             raise ArgumentError, "@primary_key must be false or {name, type, opts}"
         end
 
       try do
-        import Ecto.Model.Schema
+        import Ecto.Schema
         unquote(block)
       after
         :ok
@@ -191,13 +191,13 @@ defmodule Ecto.Model.Schema do
       assocs = @ecto_assocs |> Enum.reverse
 
       Module.eval_quoted __MODULE__, [
-        Ecto.Model.Schema.__struct__(@struct_fields),
-        Ecto.Model.Schema.__changeset__(@changeset_fields, primary_key_field),
-        Ecto.Model.Schema.__source__(source),
-        Ecto.Model.Schema.__fields__(fields),
-        Ecto.Model.Schema.__assocs__(__MODULE__, assocs, primary_key_field, fields),
-        Ecto.Model.Schema.__primary_key__(primary_key_field),
-        Ecto.Model.Schema.__load__(fields)]
+        Ecto.Schema.__struct__(@struct_fields),
+        Ecto.Schema.__changeset__(@changeset_fields, primary_key_field),
+        Ecto.Schema.__source__(source),
+        Ecto.Schema.__fields__(fields),
+        Ecto.Schema.__assocs__(__MODULE__, assocs, primary_key_field, fields),
+        Ecto.Schema.__primary_key__(primary_key_field),
+        Ecto.Schema.__load__(fields)]
     end
   end
 
@@ -214,7 +214,7 @@ defmodule Ecto.Model.Schema do
   """
   defmacro field(name, type \\ :string, opts \\ []) do
     quote do
-      Ecto.Model.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
+      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
   end
 
@@ -229,7 +229,7 @@ defmodule Ecto.Model.Schema do
   """
   defmacro association(name, association, opts \\ []) do
     quote do
-      Ecto.Model.Schema.__association__(__MODULE__, unquote(name), unquote(association), unquote(opts))
+      Ecto.Schema.__association__(__MODULE__, unquote(name), unquote(association), unquote(opts))
     end
   end
 
@@ -380,7 +380,7 @@ defmodule Ecto.Model.Schema do
   def __load__(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
-        {:ok, value} = Ecto.Types.load(type, elem(values, idx))
+        {:ok, value} = Ecto.Schema.Types.load(type, elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
   end
@@ -388,7 +388,7 @@ defmodule Ecto.Model.Schema do
   def __load__(struct, fields, keys, values) when is_list(keys) and is_tuple(values) do
     Enum.reduce(keys, {struct, 0}, fn
       field, {acc, idx} ->
-        {:ok, value} = Ecto.Types.load(Keyword.fetch!(fields, field), elem(values, idx))
+        {:ok, value} = Ecto.Schema.Types.load(Keyword.fetch!(fields, field), elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
   end
@@ -472,7 +472,7 @@ defmodule Ecto.Model.Schema do
 
     quote do
       def __schema__(:load, struct \\ __struct__(), fields_or_idx, values) do
-        Ecto.Model.Schema.__load__(struct, unquote(fields), fields_or_idx, values)
+        Ecto.Schema.__load__(struct, unquote(fields), fields_or_idx, values)
       end
     end
   end
@@ -493,7 +493,7 @@ defmodule Ecto.Model.Schema do
     cond do
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any"
-      Ecto.Types.primitive?(type) ->
+      Ecto.Schema.Types.primitive?(type) ->
         true
       is_atom(type) ->
         if Code.ensure_compiled?(type) and function_exported?(type, :type, 0) do
@@ -507,7 +507,7 @@ defmodule Ecto.Model.Schema do
   end
 
   defp check_default!(type, default) do
-    case Ecto.Types.dump(type, default) do
+    case Ecto.Schema.Types.dump(type, default) do
       {:ok, _} ->
         :ok
       :error ->
