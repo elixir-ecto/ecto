@@ -163,7 +163,7 @@ defmodule Ecto.Type do
   the `dump/1` function is able to convert the returned value back
   into an Ecto native type.
   """
-  defcallback load(term) :: term
+  defcallback load(term) :: {:ok, term} | :error
 
   @doc """
   Dumps the given term into an Ecto native type.
@@ -171,5 +171,5 @@ defmodule Ecto.Type do
   This callback is called with any term that was stored in the struct
   and it needs to validate them and convert it to an Ecto native type.
   """
-  defcallback dump(term) :: term
+  defcallback dump(term) :: {:ok, term} | :error
 end
