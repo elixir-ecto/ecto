@@ -117,9 +117,123 @@ defmodule Ecto.Changeset do
 
   defp error_on_blank(type, key, value, errors) do
     if Ecto.Schema.Types.blank?(type, value) do
-      [{key, :blank}|errors]
+      [{key, :required}|errors]
     else
       errors
     end
   end
+
+  @doc """
+  Validates the given `field` change.
+
+  It invokes the `validator` function to perform the validation
+  only if a change for the given `field` exists and the change
+  value is not nil. The function must a list of errors (empty
+  meaning no errors).
+
+  In case of at least one error, they will be stored in the
+  `errors` field of the changeset and the `valid?` flag will
+  be set to false.
+  """
+  def validate_change(changeset, field, validator) when is_atom(field) do
+    %{changes: changes, errors: errors} = changeset
+
+    new =
+      if value = Map.get(changes, field), do: validator.(value), else: []
+
+    case new do
+      []    -> changeset
+      [_|_] -> %{changeset | errors: new ++ errors, valid?: false}
+    end
+  end
+
+  @doc """
+  Stores the validation `metadata` and validates the given `field` change.
+
+  Similar to `validate_change/3` but stores the validation metadata
+  into the changeset validators. The validator metadata is often used
+  as a reflection mechanism, to automatically generate code based on
+  the available validations.
+  """
+  def validate_change(%{validations: validations} = changeset, field, metadata, validator) do
+    changeset = %{changeset | validations: [{field, metadata}|validations]}
+    validate_change(changeset, field, validator)
+  end
+
+  @doc """
+  Validates a change has the given format.
+
+  ## Examples
+
+      validate_format(changeset, :email, ~r/@/)
+
+  """
+  def validate_format(changeset, field, format) do
+    validate_change changeset, field, {:format, format}, fn value ->
+      if value =~ format, do: [], else: [{field, :format}]
+    end
+  end
+
+  @doc """
+  Validates a change is included in the enumerable.
+
+  ## Examples
+
+      validate_inclusion(changeset, :gender, ["male", "female", "who cares?"])
+      validate_inclusion(changeset, :age, 0..99)
+  """
+  def validate_inclusion(changeset, field, data) do
+    validate_change changeset, field, {:inclusion, data}, fn value ->
+      if value in data, do: [], else: [{field, :inclusion}]
+    end
+  end
+
+  @doc """
+  Validates a change is not in the enumerable.
+
+  ## Examples
+
+      validate_exclusion(changeset, :name, ~w(admin superadmin))
+
+  """
+  def validate_exclusion(changeset, field, data) do
+    validate_change changeset, field, {:exclusion, data}, fn value ->
+      if value in data, do: [{field, :exclusion}], else: []
+    end
+  end
+
+  @doc """
+  Validates a change is a string of the given length.
+
+  ## Examples
+
+      validate_length(changeset, :title, 3..100)
+      validate_length(changeset, :title, min: 3)
+      validate_length(changeset, :title, max: 100)
+      validate_length(changeset, :code, is: 9)
+
+  """
+  def validate_length(changeset, field, min..max) when is_integer(min) and is_integer(max) do
+    validate_length changeset, field, [min: min, max: max]
+  end
+
+  def validate_length(changeset, field, opts) when is_list(opts) do
+    validate_change changeset, field, {:length, opts}, fn
+      value when is_binary(value) ->
+        length = String.length(value)
+        error  = ((is = opts[:is]) && wrong_length(length, is)) ||
+                 ((min = opts[:min]) && too_short(length, min)) ||
+                 ((max = opts[:max]) && too_long(length, max))
+        if error, do: [{field, error}], else: []
+    end
+  end
+
+  defp wrong_length(value, value),   do: nil
+  defp wrong_length(_length, value), do: {:wrong_length, value}
+
+  defp too_short(length, value) when length >= value, do: nil
+  defp too_short(_length, value), do: {:too_short, value}
+
+  defp too_long(length, value) when length <= value, do: nil
+  defp too_long(_length, value), do: {:too_long, value}
 end
