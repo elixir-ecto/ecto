@@ -23,7 +23,7 @@ defmodule Ecto.Integration.Postgres.Post do
 
   schema "posts" do
     field :title, :string
-    field :counter, :integer
+    field :counter, :integer, read_after_writes: true
     field :text, :string
     field :tags, {:array, :string}
     field :bin, :binary
@@ -145,7 +145,7 @@ Enum.each(setup_cmds, fn(cmd) ->
 end)
 
 setup_database = [
-  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), counter integer, text varchar(100), tags text[], bin bytea, uuid uuid)",
+  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), counter integer DEFAULT 10, text varchar(100), tags text[], bin bytea, uuid uuid)",
   "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, day date, time time, bytes bytea, post_id integer, author_id integer)",
   "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
   "CREATE TABLE users (id serial PRIMARY KEY, name text)",
@@ -155,11 +155,11 @@ setup_database = [
   "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
 ]
 
-{ :ok, _pid } = TestRepo.start_link
+{:ok, _pid} = TestRepo.start_link
 
 Enum.each(setup_database, fn(sql) ->
   result = Postgres.query(TestRepo, sql, [])
-  if match?({ :error, _ }, result) do
+  if match?({:error, _}, result) do
     IO.puts("Test database setup SQL error'd: `#{sql}`")
     IO.inspect(result)
     System.halt(1)

@@ -37,7 +37,7 @@ defmodule Ecto.RepoTest do
     assert EnvRepo.conf == "dev_sample"
   end
 
-  test "needs model with primary key" do
+  test "needs model with primary key field" do
     model = %MyModelNoPK{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKeyError, fn ->
@@ -53,7 +53,14 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "needs model with primary key value" do
+  test "works with primary key value" do
+    model = %MyModel{id: 1, x: "abc"}
+    MockRepo.update(model)
+    MockRepo.delete(model)
+    MockRepo.get(MyModel, 123)
+  end
+
+  test "fails without primary key value" do
     model = %MyModel{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKeyError, fn ->
@@ -65,23 +72,16 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "works with primary key value" do
-    model = %MyModel{id: 1, x: "abc"}
-    MockRepo.update(model)
-    MockRepo.delete(model)
-    MockRepo.get(MyModel, 123)
-  end
-
   test "validate model types" do
     model = %MyModel{x: 123}
 
-    assert_raise Ecto.InvalidModelError, fn ->
+    assert_raise Ecto.ChangeError, fn ->
       MockRepo.insert(model)
     end
 
     model = %MyModel{id: 1, x: 123}
 
-    assert_raise Ecto.InvalidModelError, fn ->
+    assert_raise Ecto.ChangeError, fn ->
       MockRepo.update(model)
     end
   end
@@ -127,7 +127,7 @@ defmodule Ecto.RepoTest do
     end
 
     message = "field `Ecto.RepoTest.MyModel.y` in `update_all` does not exist in the model source"
-    assert_raise Ecto.InvalidModelError, message, fn ->
+    assert_raise Ecto.ChangeError, message, fn ->
       MockRepo.update_all(p in MyModel, y: "123")
     end
   end
@@ -149,7 +149,35 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "parse_url is available" do
-    assert MockRepo.url[:hostname] == "localhost"
+  ## Changesets
+
+  test "create and update accepts changesets" do
+    valid = Ecto.Changeset.cast(%{}, %MyModel{id: 1}, [], [])
+    MockRepo.insert(valid)
+    MockRepo.update(valid)
+  end
+
+  test "create and update fail on invalid changeset" do
+    invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
+
+    assert_raise ArgumentError, "cannot insert/update an invalid changeset", fn ->
+      MockRepo.insert(invalid)
+    end
+
+    assert_raise ArgumentError, "cannot insert/update an invalid changeset", fn ->
+      MockRepo.update(invalid)
+    end
+  end
+
+  test "create and update fail on changeset without model" do
+    invalid = %Ecto.Changeset{valid?: true, model: nil}
+
+    assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
+      MockRepo.insert(invalid)
+    end
+
+    assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
+      MockRepo.update(invalid)
+    end
   end
 end

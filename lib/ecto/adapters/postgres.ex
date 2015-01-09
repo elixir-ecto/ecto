@@ -81,12 +81,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def insert(repo, source, params, returning, opts) do
-      # TODO: This needs to be changed after we introduce changesets
-      {fields, values} =
-        params
-        |> Enum.filter(fn {_, v} -> v != nil end)
-        |> :lists.unzip()
-
+      {fields, values} = :lists.unzip(params)
       sql = SQL.insert(source, fields, returning)
 
       case query(repo, sql, values, opts) do

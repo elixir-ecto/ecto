@@ -117,8 +117,8 @@ defmodule Ecto.Schema do
 
   ## Reflection
 
-  Any schema module will generate the `__schema__` function that can be used
-  for runtime introspection of the schema.
+  Any schema module will generate the `__schema__` function that can be
+  used for runtime introspection of the schema:
 
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
   * `__schema__(:primary_key)` - Returns the field that is the primary
@@ -130,8 +130,8 @@ defmodule Ecto.Schema do
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
 
-  * `__schema__(:read_after_writes)` - Fields that must be read back from
-    the database after every write (insert or update);
+  * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
+    from the database after every write (insert or update);
 
   * `__schema__(:load, struct \\ __struct__(), fields_or_idx, values)` - Loads a
     new model struct from a tuple of non-virtual field values starting at the given
@@ -196,7 +196,7 @@ defmodule Ecto.Schema do
 
       Module.eval_quoted __MODULE__, [
         Ecto.Schema.__struct__(@struct_fields),
-        Ecto.Schema.__changeset__(@changeset_fields, primary_key_field),
+        Ecto.Schema.__changeset__(@changeset_fields),
         Ecto.Schema.__source__(source),
         Ecto.Schema.__fields__(fields),
         Ecto.Schema.__assocs__(__MODULE__, assocs, primary_key_field, fields),
@@ -407,12 +407,10 @@ defmodule Ecto.Schema do
   ## Quoted callbacks
 
   @doc false
-  def __changeset__(changeset_fields, primary_key) do
-    map = changeset_fields |> Enum.into(%{}) |> Map.delete(primary_key) |> Macro.escape()
+  def __changeset__(changeset_fields) do
+    map = changeset_fields |> Enum.into(%{}) |> Macro.escape()
     quote do
-      def __changeset__ do
-        unquote(map)
-      end
+      def __changeset__, do: unquote(map)
     end
   end
 

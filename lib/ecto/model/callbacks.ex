@@ -4,7 +4,7 @@ defmodule Ecto.Model.Callbacks do
 
   A callback is invoked by your `Ecto.Repo` before (or after)
   particular events. A callback must always return the given
-  module and they always run inside a transaction.
+  data structure and they always run inside a transaction.
 
   ## Example
 
@@ -65,7 +65,7 @@ defmodule Ecto.Model.Callbacks do
   Adds a callback to the model that is invoked before the model is inserted
   into the database.
 
-  Takes the module and the function that are to be invoked as parameters.
+  The callback receives a `Ecto.Changeset` and must return a changeset.
 
   ## Example
 
@@ -79,7 +79,7 @@ defmodule Ecto.Model.Callbacks do
   Adds a callback to the model that is invoked after the model is inserted
   into the database.
 
-  Takes the module and the function that are to be invoked as parameters.
+  The callback receives a `Ecto.Changeset` and must return a changeset.
 
   ## Example
 
@@ -92,7 +92,7 @@ defmodule Ecto.Model.Callbacks do
   @doc """
   Adds a callback to the model that is invoked before the model is updated.
 
-  Takes the module and the function that are to be invoked as parameters.
+  The callback receives a `Ecto.Changeset` and must return a changeset.
 
   ## Example
 
@@ -100,12 +100,12 @@ defmodule Ecto.Model.Callbacks do
 
   """
   defmacro before_update(module, function),
-   do: register_callback(:before_update, module, function)
+    do: register_callback(:before_update, module, function)
 
   @doc """
   Adds a callback to the model that is invoked after the model is updated.
 
-  Takes the module and the function that are to be invoked as parameters.
+  The callback receives a `Ecto.Changeset` and must return a changeset.
 
   ## Example
 
@@ -119,7 +119,7 @@ defmodule Ecto.Model.Callbacks do
   Adds a callback to the model that is invoked before the model is deleted
   from the database.
 
-  Takes the module and the function that are to be invoked as parameters.
+  The callback receives the model being deleted and must return such model.
 
   ## Example
 
@@ -133,7 +133,7 @@ defmodule Ecto.Model.Callbacks do
   Adds a callback to the model that is invoked before the model is deleted
   from the database.
 
-  Takes the module and the function that are to be invoked as parameters.
+  The callback receives the model being deleted and must return such model.
 
   ## Example
 
@@ -150,22 +150,31 @@ defmodule Ecto.Model.Callbacks do
   end
 
   @doc """
-  Applies stored callbacks to a model.
+  Applies stored callbacks in model to given data.
 
-  Checks wether the callback is defined on the model, returns the model
-  unchanged if it isn't.
+  Checks wether the callback is defined on the model,
+  returns the data unchanged if it isn't.
+
+  This function also validates if the struct given
+  as input to the callback is the same as in the output.
 
   ## Examples
 
-      iex> Ecto.Model.Callbacks.__apply__ %User{}, :before_create
+      iex> Ecto.Model.Callbacks.__apply__ User, :before_delete, %User{}
       %User{some_var: "has changed"}
 
   """
-  def __apply__(%{__struct__: module} = model, callback) do
+  def __apply__(module, callback, %{__struct__: expected} = data) do
     if function_exported?(module, callback, 1) do
-      apply module, callback, [model]
+      case apply(module, callback, [data]) do
+        %{__struct__: ^expected} = data ->
+          data
+        other ->
+          raise ArgumentError,
+            "expected `#{callback}` callbacks to return a #{inspect expected}, got: #{inspect other}"
+      end
     else
-      model
+      data
     end
   end
 end

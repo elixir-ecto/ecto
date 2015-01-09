@@ -66,7 +66,7 @@ defmodule Ecto.NoPrimaryKeyError do
   end
 end
 
-defmodule Ecto.InvalidModelError do
+defmodule Ecto.ChangeError do
   defexception [:message]
 end
 
@@ -100,16 +100,6 @@ defmodule Ecto.MultipleResultsError do
     """
 
     %__MODULE__{message: msg}
-  end
-end
-
-defmodule Ecto.AssociationNotLoadedError do
-  defexception [:message, :type, :name, :owner]
-
-  def exception(opts) do
-    msg = "the #{opts[:type]} association on #{opts[:owner]}.#{opts[:name]} was not loaded"
-
-    struct(Ecto.AssociationNotLoadedError, [message: msg] ++ opts)
   end
 end
 

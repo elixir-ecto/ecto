@@ -47,7 +47,7 @@ defmodule Ecto.Model do
   @doc """
   Returns the model primary key value.
 
-  Raises `Ecto.NoPrimaryKeyError` if model has no primary key.
+  Raises `Ecto.NoPrimaryKeyError` if model has no primary key field.
   """
   @spec primary_key(t) :: any
   def primary_key(struct) do

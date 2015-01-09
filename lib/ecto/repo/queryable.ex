@@ -12,7 +12,7 @@ defmodule Ecto.Repo.Queryable do
   @doc """
   Implementation for `Ecto.Repo.all/2`
   """
-  def all(repo, adapter, queryable, opts) do
+  def all(repo, adapter, queryable, opts) when is_list(opts) do
     {query, params} =
       Queryable.to_query(queryable)
       |> Planner.query(%{})
@@ -81,7 +81,7 @@ defmodule Ecto.Repo.Queryable do
   @doc """
   Runtime callback for `Ecto.Repo.update_all/3`
   """
-  def update_all(repo, adapter, queryable, updates, params, opts) do
+  def update_all(repo, adapter, queryable, updates, params, opts) when is_list(opts) do
     query = Queryable.to_query(queryable)
 
     if updates == [] do
@@ -117,7 +117,7 @@ defmodule Ecto.Repo.Queryable do
   @doc """
   Implementation for `Ecto.Repo.delete_all/2`
   """
-  def delete_all(repo, adapter, queryable, opts) do
+  def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
     {query, params} =
       Queryable.to_query(queryable)
       |> Planner.query(%{}, only_where: true)

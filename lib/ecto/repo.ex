@@ -80,7 +80,7 @@ defmodule Ecto.Repo do
         unquote(adapter).stop(__MODULE__)
       end
 
-      def transaction(opts \\ [], fun) do
+      def transaction(opts \\ [], fun) when is_list(opts) do
         unquote(adapter).transaction(__MODULE__, opts, fun)
       end
 
@@ -195,12 +195,12 @@ defmodule Ecto.Repo do
 
   Returns `nil` if no result was found. If the model in the queryable
   has no primary key `Ecto.NoPrimaryKeyError` will be raised.
-  `Ecto.AdapterError` will be raised if there is an adapter error.
 
   ## Options
 
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
+
   """
   defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
 
@@ -210,8 +210,9 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
+
   """
   defcallback get!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
 
@@ -222,8 +223,9 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
+
   """
   defcallback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
 
@@ -232,13 +234,14 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
+
   """
   defcallback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
-  Preloads all associations on the givne model or models.
+  Preloads all associations on the given model or models.
 
   `preloads` is a list of associations that can be nested in rose
   tree structure:
@@ -250,13 +253,14 @@ defmodule Ecto.Repo do
                       [Ecto.Model.t] | Ecto.Model.t
 
   @doc """
-  Fetches all results from the data store based on the given query. May raise
-  `Ecto.QueryError` if query validation fails. `Ecto.AdapterError` will be
-  raised if there is an adapter error.
+  Fetches all results from the data store matching the given query.
+
+  May raise `Ecto.QueryError` if query validation fails.
 
   ## Options
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
 
   ## Example
 
@@ -269,11 +273,11 @@ defmodule Ecto.Repo do
 
   @doc """
   Updates all entities matching the given query with the given values.
-  `Ecto.AdapterError` will be raised if there is an adapter error.
 
   ## Options
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
 
   ## Examples
 
@@ -287,13 +291,12 @@ defmodule Ecto.Repo do
   defmacrocallback update_all(Macro.t, Keyword.t, Keyword.t) :: integer | no_return
 
   @doc """
-  Deletes all entities matching the given query with the given values.
-  `Ecto.AdapterError` will be raised if there is an adapter error.
+  Deletes all entities matching the given query.
 
   ## Options
 
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
 
   ## Examples
 
@@ -304,46 +307,69 @@ defmodule Ecto.Repo do
   defcallback delete_all(Ecto.Queryable.t, Keyword.t) :: integer | no_return
 
   @doc """
-  Stores a single new model in the data store and returns its stored
-  representation. May raise `Ecto.AdapterError` if there is an adapter error.
+  Inserts a model or a changeset.
+
+  In case a model is given, the model is converted into a changeset
+  with all model non-virtual fields as part of the changeset.
+
+  In case a changeset is given, the changes in the changeset are
+  merged with the model fields, and all of them are sent to the
+  database.
+
+  If any `before_insert` or `after_insert` callback is registered
+  in the given model, they will be invoked with the changeset.
 
   ## Options
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
 
   ## Example
 
-      post = %Post{title: "Ecto is great", text: "really, it is"}
-             |> MyRepo.insert
+      post = MyRepo.insert %Post{title: "Ecto is great"}
+
   """
-  defcallback insert(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
+  defcallback insert(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Updates an model using the primary key as key. If the model has no primary
-  key `Ecto.NoPrimaryKeyError` will be raised. `Ecto.AdapterError` will be raised if
-  there is an adapter error.
+  Updates a model or changeset using its primary key.
+
+  In case a model is given, the model is converted into a changeset
+  with all model non-virtual fields as part of the changeset.
+
+  In case a changeset is given, only the changes in the changeset
+  will be updated, leaving all the other model fields intact.
+
+  If any `before_update` or `after_update` callback are registered
+  in the given model, they will be invoked with the changeset.
+
+  If the model has no primary key, `Ecto.NoPrimaryKeyError` will be raised.
 
   ## Options
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
 
   ## Example
 
-      [post] = from p in Post, where: p.id == 42
+      post = MyRepo.get!(Post, 42)
       post = %{post | title: "New title"}
       MyRepo.update(post)
   """
-  defcallback update(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
+  defcallback update(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Deletes an model using the primary key as key. If the model has no primary
-  key `Ecto.NoPrimaryKeyError` will be raised. `Ecto.AdapterError` will be raised if
-  there is an adapter error.
+  Deletes a model using its primary key.
+
+  If any `before_delete` or `after_delete` callback are registered
+  in the given model, they will be invoked with the changeset.
+
+  If the model has no primary key, `Ecto.NoPrimaryKeyError` will be raised.
 
   ## Options
 
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
 
   ## Example
 
@@ -354,18 +380,21 @@ defmodule Ecto.Repo do
   defcallback delete(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Runs the given function inside a transaction. If an unhandled error occurs the
-  transaction will be rolled back. If no error occurred the transaction will be
-  commited when the function returns. A transaction can be explicitly rolled
-  back by calling `rollback`, this will immediately leave the function and
-  return the value given to `rollback` as `{:error, value}`. A successful
-  transaction returns the value returned by the function wrapped in a tuple as
-  `{:ok, value}`. Transactions can be nested.
+  Runs the given function inside a transaction.
+
+  If an unhandled error occurs the transaction will be rolled back.
+  If no error occurred the transaction will be commited when the
+  function returns. A transaction can be explicitly rolled back
+  by calling `rollback/1`, this will immediately leave the function
+  and return the value given to `rollback` as `{:error, value}`.
+
+  A successful transaction returns the value returned by the function
+  wrapped in a tuple as `{:ok, value}`. Transactions can be nested.
 
   ## Options
 
-    `:timeout` - The time in milliseconds to wait for the call to finish,
-                 `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
 
   ## Examples
 
@@ -404,8 +433,9 @@ defmodule Ecto.Repo do
 
   @doc """
   Enables logging and debugging of adapter actions such as sending queries to
-  the database. By default writes to Logger but can be overriden to customize
-  behaviour.
+  the database.
+
+  By default writes to Logger but can be overriden to customize behaviour.
 
   You must return the result of calling the passed in function.
 

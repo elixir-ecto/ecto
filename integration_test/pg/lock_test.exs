@@ -21,7 +21,7 @@ defmodule Ecto.Integration.LockTest do
   end
 
   setup_all do
-    { :ok, _ } = TestRepo1.start_link
+    {:ok, _} = TestRepo1.start_link
     :ok
   end
 

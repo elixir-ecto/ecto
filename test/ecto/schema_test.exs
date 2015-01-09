@@ -34,7 +34,7 @@ defmodule Ecto.SchemaTest do
   test "changeset metadata" do
     assert MyModel.__changeset__ ==
            %{name: :string, email: :string, array: {:array, :string},
-             comment_id: :integer, temp: :any}
+             comment_id: :integer, temp: :any, id: :integer}
   end
 
   defmodule SchemaModel do

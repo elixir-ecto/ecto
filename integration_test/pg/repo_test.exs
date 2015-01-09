@@ -103,6 +103,54 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: 1} = TestRepo.insert(%Post{id: 1})
   end
 
+  test "insert and update with changeset" do
+    # On insert we merge the fields and changes
+    changeset = Ecto.Changeset.cast(%{"title" => "hello", "temp" => "unknown"},
+                                    %Post{text: "x", title: "wrong"}, ~w(title temp), ~w())
+
+    post = TestRepo.insert(changeset)
+    assert %Post{text: "x", title: "hello", temp: "unknown"} = post
+    assert %Post{text: "x", title: "hello", temp: "temp"} = TestRepo.get!(Post, post.id)
+
+    # On update we merge only fields
+    changeset = Ecto.Changeset.cast(%{"title" => "world", "temp" => "unknown"},
+                                    %{post | text: "y"}, ~w(title temp), ~w())
+
+    assert %Post{text: "y", title: "world", temp: "unknown"} = TestRepo.update(changeset)
+    assert %Post{text: "x", title: "world", temp: "temp"} = TestRepo.get!(Post, post.id)
+  end
+
+  test "insert and update with changeset primary key" do
+    changeset = Ecto.Changeset.cast(%{"id" => "13"}, %Post{id: 11}, ~w(id), ~w())
+    assert %Post{id: 13} = post = TestRepo.insert(changeset)
+
+    changeset = Ecto.Changeset.cast(%{"id" => "15"}, post, ~w(id), ~w())
+    assert %Post{id: 15} = TestRepo.update(changeset)
+
+    # We even allow a nil primary key to be set via the
+    # changeset but that causes crashes
+    changeset = Ecto.Changeset.cast(%{"id" => nil}, %Post{id: 11}, ~w(), ~w(id))
+    assert_raise Postgrex.Error, ~r"not-null constraint", fn ->
+      TestRepo.insert(changeset)
+    end
+  end
+
+  test "insert and update with changeset dirty tracking" do
+    changeset = Ecto.Changeset.cast(%{"id" => 13}, %Post{}, ~w(id), ~w())
+
+    # There is no dirty tracking on insert, even with changesets,
+    # so database defaults never actually kick in.
+    assert %Post{id: 13, counter: nil} = post = TestRepo.insert(changeset)
+
+    # Set the counter to 11, so we can read it soon
+    TestRepo.update(%{post | counter: 11})
+
+    # Now, a combination of dirty tracking with read_after_writes,
+    # allow us to see the actual counter value.
+    changeset = Ecto.Changeset.cast(%{"title" => "hello"}, post, ~w(title), ~w())
+    assert %Post{id: 13, counter: 11, title: "hello"} = TestRepo.update(changeset)
+  end
+
   test "get(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})

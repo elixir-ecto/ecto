@@ -4,6 +4,7 @@
   * Make `Ecto.Schema.schema/2` configuration uniform
   * Add `Ecto.Changeset` which is able to filter, cast and validate parameters for changes
   * Support custom types via the `Ecto.Type` behaviour
+  * Support `read_after_writes` configuration for reading particular fields after we insert or update entries in the repository
 
 * Bug fixes
   * Require interpolation operator in joins
