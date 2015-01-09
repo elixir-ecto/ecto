@@ -158,62 +158,6 @@ defmodule Ecto.Migration.DSL do
   end
 
   @doc """
-  Add a single column. Shortcut for using `alter/1`.
-
-  ## Examples
-
-      add_column :products, :summary, :string
-
-  """
-  def add_column(table_name, column, type, options \\ []) do
-    alter table(table_name) do
-      add(column, type, options)
-    end
-  end
-
-  @doc """
-  Modify a single column's type. Shortcut for using `alter/1`.
-
-  ## Examples
-
-      modify_column(:user, :rating, :integer)
-
-  """
-  def modify_column(table_name, column, type, options \\ []) do
-    alter table(table_name) do
-      modify(column, type, options)
-    end
-  end
-
-  @doc """
-  Remove a single column. Shortcut for using `alter/1`.
-
-  ## Examples
-
-      remove_column :products, :title
-
-  """
-  def remove_column(table_name, column) do
-    alter table(table_name) do
-      remove(column)
-    end
-  end
-
-  @doc """
-  Rename a single column. Shortcut for using `alter/1`.
-
-  ## Examples
-
-      rename_column :products, :old_name, :new_name
-
-  """
-  def rename_column(table_name, from, to) do
-    alter table(table_name) do
-      rename(from, to)
-    end
-  end
-
-  @doc """
   Adds `created_at` and `updated_at` columns to a table.
 
   ## Examples
