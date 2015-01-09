@@ -1,5 +1,5 @@
 defmodule Ecto.MigratorTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
 
   import Support.FileHelpers
   import ExUnit.CaptureIO
@@ -49,24 +49,8 @@ defmodule Ecto.MigratorTest do
     use Ecto.Migration
   end
 
-  defmodule MockRunner do
-    use GenServer
-
-    def start_link do
-      GenServer.start_link(__MODULE__, [], [name: Ecto.Migration.Runner])
-    end
-
-    def handle_call({:direction, direction}, _from, state) do
-      {:reply, {:changed, direction}, state}
-    end
-
-    def handle_call({:execute, command}, _from, state) do
-      {:reply, {:executed, command}, state}
-    end
-  end
-
   setup do
-    {:ok, _} = MockRunner.start_link
+    {:ok, _} = Ecto.Migration.Runner.start_link(ProcessRepo)
     Process.put(:migrated_versions, [1, 2, 3])
     :ok
   end
