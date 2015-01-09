@@ -33,7 +33,14 @@ defmodule Ecto.Adapter.Migrations  do
     execute_migration(Repo, {:drop, :index, %Index{name: "products$test"}})
 
   """
-  defcallback execute_migration(Ecto.Repo.t, tuple) :: :ok | no_return
+  defcallback execute_migration(Ecto.Repo.t, tuple :: {:create, :table, Ecto.Migration.Table.t, [{:add,    atom, atom, Keyword.t}]} |
+                                                      {:drop,   :table, Ecto.Migration.Table.t} |
+                                                      {:alter,  :table, Ecto.Migration.Table.t, [{:add,    atom, atom, Keyword.t} |
+                                                                                                 {:modify, atom, atom, Keyword.t} |
+                                                                                                 {:remove, atom} |
+                                                                                                 {:rename, atom, atom}]} |
+                                                      {:create, :index, Ecto.Migration.Index.t} |
+                                                      {:drop,   :index, Ecto.Migration.Index.t}) :: :ok | no_return
 
   @doc """
   Returns all migrated versions as integers.
