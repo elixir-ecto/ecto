@@ -41,7 +41,7 @@ defmodule Ecto.Adapter.Migrations  do
   defcallback migrated_versions(Ecto.Repo.t) :: [integer] | no_return
 
   @doc """
-  Checks if an object exists.
+  Checks if a column, table or index exists.
   """
-  defcallback object_exists?(Ecto.Repo.t, tuple) :: boolean
+  defcallback object_exists?(Ecto.Repo.t, tuple :: {:table, atom} | {:index, atom} | {:column, {atom, atom}}) :: boolean
 end
