@@ -11,18 +11,18 @@ defmodule Ecto.Migration.Runner do
   Starts the runner for the specified repo.
   """
   def start_link(repo) do
-    GenServer.start_link(__MODULE__, {:forward, repo}, [name: __MODULE__])
+    GenServer.start_link(__MODULE__, %{direction: :forward, repo: repo}, [name: __MODULE__])
   end
 
-  def handle_call({:direction, direction}, _from, {_, repo}) do
-    {:reply, :ok, {direction, repo}}
+  def handle_call({:direction, direction}, _from, state) do
+    {:reply, :ok, %{state | direction: direction}}
   end
 
-  def handle_call({:execute, command}, _from, state={:forward, repo}) do
+  def handle_call({:execute, command}, _from, state=%{direction: :forward, repo: repo}) do
     {:reply, repo.adapter.execute_migration(repo, command), state}
   end
 
-  def handle_call({:execute, command}, _from, state={:reverse, repo}) do
+  def handle_call({:execute, command}, _from, state=%{direction: :reverse, repo: repo}) do
     reversed = reverse(command)
 
     if reversed do
@@ -32,15 +32,11 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
-  def handle_call({:exists, command}, _from, state={direction, repo}) do
+  def handle_call({:exists, command}, _from, state=%{direction: direction, repo: repo}) do
     exists = repo.adapter.object_exists?(repo, command)
     response = if direction == :forward, do: exists, else: !exists
 
     {:reply, response, state}
-  end
-
-  def handle_call({:exists, command}, _from, state={:forward, repo}) do
-    {:reply, !repo.adapter.object_exists?(repo, command), state}
   end
 
   @doc """
