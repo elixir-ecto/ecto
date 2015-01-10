@@ -129,6 +129,12 @@ defmodule Ecto.Migration.DSL do
         add :summary, :text
       end
 
+  ## Options
+
+  * `:default` The column's default value.
+  * `:null` `false` if the column should not allow null values.
+  * `:size` The size of the type. For example the numbers of characters. Default is no size.
+
   """
   def add(column, type, opts \\ []) do
     Runner.add_element {:add, column, type, opts}
@@ -143,6 +149,11 @@ defmodule Ecto.Migration.DSL do
         modify :title, :text
       end
 
+  ## Options
+
+  * `:default` The column's default value.
+  * `:null` `false` if the column should not allow null values.
+  * `:size` The size of the type. For example the numbers of characters. Default is no size.
   """
   def modify(column, type, opts \\ []) do
     Runner.add_element {:modify, column, type, opts}
