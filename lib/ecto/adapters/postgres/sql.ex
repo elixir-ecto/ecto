@@ -28,9 +28,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       offset   = offset(query.offset, sources)
       lock     = lock(query.lock)
 
-      [select, from, join, where, group_by, having, order_by, limit, offset, lock]
-      |> Enum.filter(&(&1 != nil))
-      |> Enum.join(" ")
+      assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
     # Generate SQL for an update all statement
@@ -325,6 +323,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
+    defp assemble(list) do
+      list
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.join(" ")
+    end
+
     # DDL
     def migrate({:create, %Table{}=table, columns}) do
       "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
@@ -335,8 +339,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def migrate({:create, %Index{}=index}) do
-      ["CREATE#{if index.unique, do: " UNIQUE"}", "INDEX", quote_name(Index.format_name(index)), "ON", quote_name(index.table), "(#{Enum.map_join(index.columns, ", ", &quote_name/1)})"]
-        |> Enum.join(" ")
+      assemble(["CREATE#{if index.unique, do: " UNIQUE"}", "INDEX", quote_name(Index.format_name(index)), "ON", quote_name(index.table), "(#{Enum.map_join(index.columns, ", ", &quote_name/1)})"])
     end
 
     def migrate({:drop, %Index{}=index}) do
@@ -365,16 +368,36 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       Enum.map_join(columns, ", ", &column_definition/1)
     end
 
-    defp column_definition({:add, name, type, _opts}), do: "#{quote_name(name)} #{column_type(type)}"
+    defp column_definition({:add, name, type, opts}) do
+      assemble([quote_name(name), column_type(type), column_options(opts)])
+    end
+
+    defp default_value(literal) when is_bitstring(literal) do
+      "'#{escape_string(literal)}'"
+    end
+
+    defp default_value(literal), do: literal
 
     defp column_changes(columns) do
       Enum.map_join(columns, ", ", &column_change/1)
     end
 
-    defp column_change({:add, name, type, _opts}),    do: "ADD COLUMN #{quote_name(name)} #{column_type(type)}"
-    defp column_change({:modify, name, type, _opts}), do: "ALTER COLUMN #{quote_name(name)} TYPE #{column_type(type)}"
-    defp column_change({:remove, name}),              do: "DROP COLUMN #{quote_name(name)}"
-    defp column_change({:rename, from, to}),          do: "RENAME COLUMN #{quote_name(from)} TO #{quote_name(to)}"
+    defp column_change({:add, name, type, opts}) do
+      assemble(["ADD COLUMN", quote_name(name), column_type(type), column_options(opts)])
+    end
+
+    defp column_change({:modify, name, type, opts}) do
+      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type), column_options(opts)])
+    end
+
+    defp column_change({:remove, name}),     do: "DROP COLUMN #{quote_name(name)}"
+    defp column_change({:rename, from, to}), do: "RENAME COLUMN #{quote_name(from)} TO #{quote_name(to)}"
+
+    defp column_options(opts) do
+      default = Keyword.get(opts, :default)
+
+      if default, do: "DEFAULT #{default_value(default)}"
+    end
 
     @column_types %{
       primary_key: "serial primary key",
