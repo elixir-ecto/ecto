@@ -353,16 +353,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def migrate(default) when is_bitstring(default), do: default
 
-    def object_exists_query({:column, {table_name, column_name}}) do
-      "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT oid FROM pg_class WHERE relname = '#{table_name}') AND attname = '#{column_name}'"
+    def object_exists_query(schema, {:column, {table_name, column_name}}) do
+      "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = '#{schema}' AND c.relname = '#{table_name}') AND attname = '#{column_name}'"
     end
 
-    def object_exists_query({:table, name}) do
-      "SELECT count(1) FROM pg_tables WHERE tablename='#{name}'"
+    def object_exists_query(schema, {:table, name}) do
+      "SELECT count(1) FROM pg_tables WHERE schemaname='#{schema}' AND tablename='#{name}'"
     end
 
-    def object_exists_query({:index, name}) do
-      "SELECT count(1) FROM pg_class WHERE relname = '#{name}' AND relkind = 'i'"
+    def object_exists_query(schema, {:index, name}) do
+      "SELECT count(1) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = '#{schema}' AND c.relname = '#{name}' AND c.relkind = 'i'"
     end
 
     defp column_definitions(columns) do

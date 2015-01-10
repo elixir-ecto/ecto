@@ -432,17 +432,17 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   end
 
   test "column exists" do
-    assert SQL.object_exists_query({:column, {:products, :id}}) ==
-      "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT oid FROM pg_class WHERE relname = 'products') AND attname = 'id'"
+    assert SQL.object_exists_query("sample_db", {:column, {:products, :id}}) ==
+      "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'sample_db' AND c.relname = 'products') AND attname = 'id'"
   end
 
   test "table exists" do
-    assert SQL.object_exists_query({:table, :products}) ==
-      "SELECT count(1) FROM pg_tables WHERE tablename='products'"
+    assert SQL.object_exists_query("sample_db", {:table, :products}) ==
+      "SELECT count(1) FROM pg_tables WHERE schemaname='sample_db' AND tablename='products'"
   end
 
   test "index exists" do
-    assert SQL.object_exists_query({:index, "index$1"}) ==
-      "SELECT count(1) FROM pg_class WHERE relname = 'index$1' AND relkind = 'i'"
+    assert SQL.object_exists_query("sample_db", {:index, "index$1"}) ==
+      "SELECT count(1) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'sample_db' AND c.relname = 'index$1' AND c.relkind = 'i'"
   end
 end

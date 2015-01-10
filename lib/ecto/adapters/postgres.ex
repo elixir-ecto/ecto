@@ -429,7 +429,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def object_exists?(repo, object) do
-      sql = SQL.object_exists_query(object)
+      database = Keyword.get(repo.conf, :database)
+      sql      = SQL.object_exists_query(database, object)
+
       %Postgrex.Result{rows: [{count}]} = query(repo, sql, [])
 
       count > 0
