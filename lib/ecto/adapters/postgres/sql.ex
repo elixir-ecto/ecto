@@ -325,6 +325,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp assemble(list) do
       list
+      |> List.flatten
       |> Enum.filter(&(&1 != nil))
       |> Enum.join(" ")
     end
@@ -372,12 +373,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       assemble([quote_name(name), column_type(type), column_options(opts)])
     end
 
-    defp default_value(literal) when is_bitstring(literal) do
-      "'#{escape_string(literal)}'"
-    end
-
-    defp default_value(literal), do: literal
-
     defp column_changes(columns) do
       Enum.map_join(columns, ", ", &column_change/1)
     end
@@ -395,8 +390,23 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp column_options(opts) do
       default = Keyword.get(opts, :default)
+      null    = Keyword.get(opts, :null)
 
-      if default, do: "DEFAULT #{default_value(default)}"
+      [default_expr(default), null_expr(null)]
+    end
+
+    defp null_expr(false), do: "NOT NULL"
+    defp null_expr(true), do: "NULL"
+    defp null_expr(_), do: nil
+
+    defp default_expr(nil), do: nil
+
+    defp default_expr(literal) when is_bitstring(literal) do
+      "DEFAULT '#{escape_string(literal)}'"
+    end
+
+    defp default_expr(literal) do
+      "DEFAULT #{literal}"
     end
 
     @column_types %{

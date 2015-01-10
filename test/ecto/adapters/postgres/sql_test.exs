@@ -382,12 +382,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("id" serial primary key, "category_id" integer REFERENCES "categories"("id"))|
   end
 
-  test "create table with default" do
+  test "create table with column options" do
     create = {:create, %Table{name: :posts},
-               [{:add, :name, :string, [default: "Untitled"]},
-                {:add, :on_hand, :integer, [default: 0]}]}
+               [{:add, :name, :string, [default: "Untitled", null: false]},
+                {:add, :on_hand, :integer, [default: 0, null: true]}]}
 
-    assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("name" varchar DEFAULT 'Untitled', "on_hand" integer DEFAULT 0)|
+    assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("name" varchar DEFAULT 'Untitled' NOT NULL, "on_hand" integer DEFAULT 0 NULL)|
   end
 
   test "drop table" do
@@ -422,12 +422,12 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "alter table" do
     alter = {:alter, %Table{name: :posts},
-               [{:add, :title, :string, [default: "Untitled"]},
-                {:modify, :price, :integer, [default: 1]},
+               [{:add, :title, :string, [default: "Untitled", null: false]},
+                {:modify, :price, :integer, [default: 1, null: true]},
                 {:remove, :summary},
                 {:rename, :cat_id, :category_id}]}
 
-    assert SQL.migrate(alter) == ~s|ALTER TABLE "posts" ADD COLUMN "title" varchar DEFAULT 'Untitled', ALTER COLUMN "price" TYPE integer DEFAULT 1, DROP COLUMN "summary", RENAME COLUMN "cat_id" TO "category_id"|
+    assert SQL.migrate(alter) == ~s|ALTER TABLE "posts" ADD COLUMN "title" varchar DEFAULT 'Untitled' NOT NULL, ALTER COLUMN "price" TYPE integer DEFAULT 1 NULL, DROP COLUMN "summary", RENAME COLUMN "cat_id" TO "category_id"|
   end
 
   test "column exists" do
