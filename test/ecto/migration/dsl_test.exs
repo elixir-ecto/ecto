@@ -70,7 +70,7 @@ defmodule Ecto.Migration.DSLTest do
   end
 
   test "dropping index" do
-    response = drop index([:name], on: :products)
+    response = drop index(:products, [:name])
 
     assert response == {:executed, {:drop, %Index{table: :products, columns: [:name], unique: nil}}}
   end

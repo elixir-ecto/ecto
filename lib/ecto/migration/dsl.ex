@@ -75,9 +75,6 @@ defmodule Ecto.Migration.DSL do
     %Table{name: name, key: Dict.get(opts, :key, true)}
   end
 
-  def index(columns, opts=[on: table]) do
-    %Index{table: table, columns: columns, unique: opts[:unique]}
-  end
 
   def index(table, columns, opts \\ []) do
     %Index{table: table, columns: columns, unique: opts[:unique]}
