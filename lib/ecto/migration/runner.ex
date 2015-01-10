@@ -11,25 +11,22 @@ defmodule Ecto.Migration.Runner do
   Starts the runner for the specified repo.
   """
   def start_link(repo) do
-    GenServer.start_link(__MODULE__, %{direction: :forward, repo: repo}, [name: __MODULE__])
+    state = %{direction: :forward,
+              repo: repo,
+              command: nil,
+              elements: []}
+
+    GenServer.start_link(__MODULE__, state, [name: __MODULE__])
   end
 
   def handle_call({:direction, direction}, _from, state) do
     {:reply, :ok, %{state | direction: direction}}
   end
 
-  def handle_call({:execute, command}, _from, state=%{direction: :forward, repo: repo}) do
-    {:reply, repo.adapter.execute_migration(repo, command), state}
-  end
+  def handle_call({:execute, command}, _from, state) do
+    response = execute_in_direction(state.repo, state.direction, command)
 
-  def handle_call({:execute, command}, _from, state=%{direction: :reverse, repo: repo}) do
-    reversed = reverse(command)
-
-    if reversed do
-      {:reply, repo.adapter.execute_migration(repo, reversed), state}
-    else
-      {:reply, :irreversible, state}
-    end
+    {:reply, response, state}
   end
 
   def handle_call({:exists, command}, _from, state=%{direction: direction, repo: repo}) do
@@ -37,6 +34,23 @@ defmodule Ecto.Migration.Runner do
     response = if direction == :forward, do: exists, else: !exists
 
     {:reply, response, state}
+  end
+
+  def handle_call({:start_command, command}, _from, state) do
+    {:reply, :ok, %{state | command: command}}
+  end
+
+  def handle_call(:end_command, _from, state) do
+    {operation, object} = state.command
+    response = execute_in_direction(state.repo, state.direction, {operation, object, state.elements})
+
+    {:reply, response, %{state | command: nil, elements: []}}
+  end
+
+  def handle_call({:add_element, element}, _from, state) do
+    elements = state.elements ++ [element]
+
+    {:reply, :ok, %{state | elements: elements}}
   end
 
   @doc """
@@ -58,6 +72,27 @@ defmodule Ecto.Migration.Runner do
   end
 
   @doc """
+  Start a command.
+  """
+  def start_command(command) do
+    call({:start_command, command})
+  end
+
+  @doc """
+  Executes and clears current command. Must call `create_command/1` first.
+  """
+  def end_command do
+    call(:end_command)
+  end
+
+  @doc """
+  Add an element to the current command. Must call `create_command/1` first.
+  """
+  def add_element(element) do
+    call({:add_element, element})
+  end
+
+  @doc """
   Checks if a column, table or index exists
   """
   def exists?(type, object) do
@@ -66,6 +101,20 @@ defmodule Ecto.Migration.Runner do
 
   defp call(message) do
     GenServer.call(__MODULE__, message)
+  end
+
+  defp execute_in_direction(repo, :forward, command) do
+    repo.adapter.execute_migration(repo, command)
+  end
+
+  defp execute_in_direction(repo, :reverse, command) do
+    reversed = reverse(command)
+
+    if reversed do
+      repo.adapter.execute_migration(repo, reversed)
+    else
+      :irreversible
+    end
   end
 
   defp reverse([]),   do: []

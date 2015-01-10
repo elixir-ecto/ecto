@@ -20,15 +20,16 @@ defmodule Ecto.Migration.DSL do
 
   """
   defmacro create(object, do: block) do
-    commands = case block do
-      {:__block__, _location, ops} -> ops
-      _ -> [block]
-    end
-
     quote(location: :keep) do
       %Table{key: key} = unquote(object)
-      id = if key, do: [add(:id, :primary_key)], else: []
-      execute {:create, unquote(object), id ++ unquote(commands) |> List.flatten}
+      Runner.start_command({:create, unquote(object)})
+
+      if key do
+        add(:id, :primary_key)
+      end
+
+      unquote(block)
+      Runner.end_command
     end
   end
 
@@ -46,13 +47,10 @@ defmodule Ecto.Migration.DSL do
 
   """
   defmacro alter(object, do: block) do
-    commands = case block do
-      {:__block__, _location, ops} -> ops
-      _ -> [block]
-    end
-
     quote(location: :keep) do
-      execute {:alter, unquote(object), unquote(commands) |> List.flatten}
+      Runner.start_command({:alter, unquote(object)})
+      unquote(block)
+      Runner.end_command
     end
   end
 
@@ -112,7 +110,7 @@ defmodule Ecto.Migration.DSL do
 
   """
   def add(column, type, opts \\ []) do
-    {:add, column, type, opts}
+    Runner.add_element {:add, column, type, opts}
   end
 
   @doc """
@@ -126,7 +124,7 @@ defmodule Ecto.Migration.DSL do
 
   """
   def modify(column, type, opts \\ []) do
-    {:modify, column, type, opts}
+    Runner.add_element {:modify, column, type, opts}
   end
 
   @doc """
@@ -140,7 +138,7 @@ defmodule Ecto.Migration.DSL do
 
   """
   def remove(column) do
-    {:remove, column}
+    Runner.add_element {:remove, column}
   end
 
   @doc """
@@ -154,7 +152,7 @@ defmodule Ecto.Migration.DSL do
 
   """
   def rename(from, to) do
-    {:rename, from, to}
+    Runner.add_element {:rename, from, to}
   end
 
   @doc """
@@ -168,7 +166,8 @@ defmodule Ecto.Migration.DSL do
 
   """
   def timestamps do
-    [add(:created_at, :datetime), add(:updated_at, :datetime)]
+    add(:created_at, :datetime)
+    add(:updated_at, :datetime)
   end
 
   @doc """

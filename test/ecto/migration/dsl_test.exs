@@ -10,7 +10,7 @@ defmodule Ecto.Migration.DSLTest do
     use GenServer
 
     def start_link do
-      GenServer.start_link(__MODULE__, [], [name: Ecto.Migration.Runner])
+      GenServer.start_link(__MODULE__, %{command: nil, elements: []}, [name: Ecto.Migration.Runner])
     end
 
     def handle_call({:execute, command}, _from, state) do
@@ -19,6 +19,19 @@ defmodule Ecto.Migration.DSLTest do
 
     def handle_call({:exists, object}, _from, state) do
       {:reply, {:checked_existence, object}, state}
+    end
+
+    def handle_call({:start_command, command}, _from, state) do
+      {:reply, :ok, %{state | command: command}}
+    end
+
+    def handle_call({:add_element, element}, _from, state) do
+      {:reply, :ok, %{state | elements: state.elements ++ [element]}}
+    end
+
+    def handle_call(:end_command, _from, state) do
+      {operation, object} = state.command
+      {:reply, {:executed, {operation, object, state.elements}}, state}
     end
   end
 
