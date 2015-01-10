@@ -11,14 +11,14 @@ defmodule Ecto.Model.Callbacks do
       defmodule User do
         use Ecto.Model.Callbacks
 
-        after_create Stats, :increase_user_count
+        after_insert Stats, :increase_user_count
 
         def increase_user_count(user)
           # ...
         end
       end
 
-  When creating the user, the `after_create` callbacks will be
+  When creating the user, the `after_insert` callbacks will be
   invoked with the `user` struct as argument. Multiple callbacks
   can be defined, they will be invoked in order of declaration.
 
