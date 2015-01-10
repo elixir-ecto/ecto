@@ -9,7 +9,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.JoinExpr
-    alias Ecto.Query.Util
     alias Ecto.Migration.Table
     alias Ecto.Migration.Index
 
