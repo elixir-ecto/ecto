@@ -71,11 +71,35 @@ defmodule Ecto.Migration.DSL do
     execute {:drop, object}
   end
 
+  @doc """
+  Returns a `%Table{}`.
+
+  ## Examples
+
+      create table(:products) do
+        add :name, :string
+        add :price, :decimal
+      end
+
+      alter table(:products) do
+        rename :name, :title
+      end
+
+      drop table(:products)
+  """
   def table(name, opts \\ []) do
     %Table{name: name, key: Dict.get(opts, :key, true)}
   end
 
+  @doc """
+  Returns a `%Index{}`. Indexes are non-unique by default.
 
+  ## Examples
+
+      create index(:products, [:category_id, :sku], unique: true)
+
+      drop index(:products, [:category_id, :sku])
+  """
   def index(table, columns, opts \\ []) do
     %Index{table: table, columns: columns, unique: opts[:unique]}
   end
