@@ -134,7 +134,8 @@ defmodule Ecto.Migration.DSL do
   * `:default` The column's default value.
   * `:null` `false` if the column should not allow null values.
   * `:size` The size of the type. For example the numbers of characters. Default is no size.
-
+  * `:precision` The precision for a numberic type. Default is no precision.
+  * `:scale` The scale of a numberic type. Default is 0 scale.
   """
   def add(column, type, opts \\ []) do
     Runner.add_element {:add, column, type, opts}
@@ -154,6 +155,8 @@ defmodule Ecto.Migration.DSL do
   * `:default` The column's default value.
   * `:null` `false` if the column should not allow null values.
   * `:size` The size of the type. For example the numbers of characters. Default is no size.
+  * `:precision` The precision for a numberic type. Default is no precision.
+  * `:scale` The scale of a numberic type. Default is 0 scale.
   """
   def modify(column, type, opts \\ []) do
     Runner.add_element {:modify, column, type, opts}

@@ -370,9 +370,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp column_definition({:add, name, type, opts}) do
-      size = Keyword.get(opts, :size)
-
-      assemble([quote_name(name), column_type(type, size), column_options(opts)])
+      assemble([quote_name(name), column_type(type, opts), column_options(opts)])
     end
 
     defp column_changes(columns) do
@@ -380,15 +378,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp column_change({:add, name, type, opts}) do
-      size = Keyword.get(opts, :size)
-
-      assemble(["ADD COLUMN", quote_name(name), column_type(type, size), column_options(opts)])
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(opts)])
     end
 
     defp column_change({:modify, name, type, opts}) do
-      size = Keyword.get(opts, :size)
-
-      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, size), column_options(opts)])
+      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts), column_options(opts)])
     end
 
     defp column_change({:remove, name}),     do: "DROP COLUMN #{quote_name(name)}"
@@ -422,15 +416,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       binary: "bytea"
     }
 
-    defp column_type({:references, foreign_table, foreign_column, type}, size), do: "#{column_type(type, size)} REFERENCES #{quote_name(foreign_table)}(#{quote_name(foreign_column)})"
-    defp column_type({:array, type}, size), do: column_type(type, size) <> "[]"
-    defp column_type(type, size) do
+    defp column_type({:references, foreign_table, foreign_column, type}, opts), do: "#{column_type(type, opts)} REFERENCES #{quote_name(foreign_table)}(#{quote_name(foreign_column)})"
+    defp column_type({:array, type}, opts), do: column_type(type, opts) <> "[]"
+    defp column_type(type, opts) do
+      size      = Keyword.get(opts, :size)
+      precision = Keyword.get(opts, :precision)
+      scale     = Keyword.get(opts, :scale)
+
       type_name = @column_types[type] || type
 
-      if size do
-        "#{type_name}(#{size})"
-      else
-        type_name
+      cond do
+        size      -> "#{type_name}(#{size})"
+        precision -> "#{type_name}(#{precision},#{scale || 0})"
+        true      -> type_name
       end
     end
   end
