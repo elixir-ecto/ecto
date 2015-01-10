@@ -45,7 +45,9 @@ defmodule Ecto.Changeset do
   changeset is returned as valid.
   """
   # TODO: Allow nil params
-  # TODO: Allow nil model
+  # TODO: Allow no model
+  # TODO: Allow field casting
+  # TODO: Add fetch_change and get_change
   @spec cast(map, Ecto.Model.t, [String.t], [String.t]) :: t
   def cast(params, %{__struct__: module} = model, required, optional)
       when is_map(params) and is_list(required) and is_list(optional) do

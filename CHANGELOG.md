@@ -16,6 +16,7 @@
   * `@schema_defaults` was removed in favor of setting `@primary_key` and `@foreign_key_type` directly
   * `Ecto.Schema.schema/2` options were removed in favor of setting `@primary_key` and `@foreign_key_type` before the `schema/2` call
   * `Ecto.Model.Schema` has been renamed to `Ecto.Schema`
+  * `before_insert`, `after_insert`, `before_update` and `after_update` in `Ecto.Model.Callbacks` now receive changesets
 
 # v0.4.0 (2015-01-02)
 

@@ -11,21 +11,21 @@ defmodule Ecto.Model.Callbacks do
       defmodule User do
         use Ecto.Model.Callbacks
 
-        after_create Stats, :increase_user_count
+        after_insert Stats, :increase_user_count
 
-        def increase_user_count(user)
+        def increase_user_count(changeset)
           # ...
         end
       end
 
-  When creating the user, the `after_create` callbacks will be
-  invoked with the `user` struct as argument. Multiple callbacks
+  When creating the user, the `after_insert` callbacks will be
+  invoked with a changeset as argument. Multiple callbacks
   can be defined, they will be invoked in order of declaration.
 
   ## Usage
 
   Callbacks in Ecto are useful for data consistency, for keeping
-  counters, setting fields and so on. Avoid using callbacks for
+  counters, setting changes and so on. Avoid using callbacks for
   business rules or doing actions unrelated to the data itself,
   like sending e-mails.
 
@@ -34,6 +34,7 @@ defmodule Ecto.Model.Callbacks do
   """
 
   @doc false
+  # TODO: Support custom args and local callbacks
   defmacro __using__(_opts) do
     quote do
       import Ecto.Model.Callbacks
@@ -62,10 +63,14 @@ defmodule Ecto.Model.Callbacks do
   # Callback macros
 
   @doc """
-  Adds a callback to the model that is invoked before the model is inserted
-  into the database.
+  Adds a callback that is invoked before the model is inserted
+  into the repository.
 
-  The callback receives a `Ecto.Changeset` and must return a changeset.
+  Since on insert all the model fields plus changeset changes
+  are sent to the repository, the callback will receive an
+  `Ecto.Changeset` with all the model fields and changes in
+  the `changeset.changes` field. The callback must return a
+  changeset.
 
   ## Example
 
@@ -76,10 +81,12 @@ defmodule Ecto.Model.Callbacks do
     do: register_callback(:before_insert, module, function)
 
   @doc """
-  Adds a callback to the model that is invoked after the model is inserted
-  into the database.
+  Adds a callback that is invoked after the model is inserted
+  into the repository.
 
-  The callback receives a `Ecto.Changeset` and must return a changeset.
+  The callback receives an `Ecto.Changeset` with both repository
+  values and changeset changes already applied to the model.
+  The callback must return a changeset.
 
   ## Example
 
@@ -90,9 +97,11 @@ defmodule Ecto.Model.Callbacks do
     do: register_callback(:after_insert, module, function)
 
   @doc """
-  Adds a callback to the model that is invoked before the model is updated.
+  Adds a callback that is invoked before the model is updated.
 
-  The callback receives a `Ecto.Changeset` and must return a changeset.
+  The callback receives an `Ecto.Changeset` with the changes
+  to be sent to the database in the `changeset.changes` field.
+  The callback must return a changeset.
 
   ## Example
 
@@ -103,9 +112,11 @@ defmodule Ecto.Model.Callbacks do
     do: register_callback(:before_update, module, function)
 
   @doc """
-  Adds a callback to the model that is invoked after the model is updated.
+  Adds a callback that is invoked after the model is updated.
 
-  The callback receives a `Ecto.Changeset` and must return a changeset.
+  The callback receives an `Ecto.Changeset` with both repository
+  values and changeset changes already applied to the model.
+  The callback must return a changeset.
 
   ## Example
 
@@ -116,8 +127,8 @@ defmodule Ecto.Model.Callbacks do
     do: register_callback(:after_update, module, function)
 
   @doc """
-  Adds a callback to the model that is invoked before the model is deleted
-  from the database.
+  Adds a callback that is invoked before the model is deleted
+  from the repository.
 
   The callback receives the model being deleted and must return such model.
 
@@ -130,8 +141,8 @@ defmodule Ecto.Model.Callbacks do
     do: register_callback(:before_delete, module, function)
 
   @doc """
-  Adds a callback to the model that is invoked before the model is deleted
-  from the database.
+  Adds a callback that is invoked before the model is deleted
+  from the repository.
 
   The callback receives the model being deleted and must return such model.
 

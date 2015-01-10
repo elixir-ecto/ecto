@@ -39,6 +39,7 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.update/2`.
   """
   def update(repo, adapter, %Ecto.Changeset{} = changeset, opts) when is_list(opts) do
+    # TODO: What if there are no changes?
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
