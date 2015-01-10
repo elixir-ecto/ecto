@@ -370,7 +370,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp column_definition({:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type), column_options(opts)])
+      size = Keyword.get(opts, :size)
+
+      assemble([quote_name(name), column_type(type, size), column_options(opts)])
     end
 
     defp column_changes(columns) do
@@ -378,11 +380,15 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp column_change({:add, name, type, opts}) do
-      assemble(["ADD COLUMN", quote_name(name), column_type(type), column_options(opts)])
+      size = Keyword.get(opts, :size)
+
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, size), column_options(opts)])
     end
 
     defp column_change({:modify, name, type, opts}) do
-      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type), column_options(opts)])
+      size = Keyword.get(opts, :size)
+
+      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, size), column_options(opts)])
     end
 
     defp column_change({:remove, name}),     do: "DROP COLUMN #{quote_name(name)}"
@@ -416,8 +422,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       binary: "bytea"
     }
 
-    defp column_type({:references, foreign_table, foreign_column, type}), do: "#{column_type(type)} REFERENCES #{quote_name(foreign_table)}(#{quote_name(foreign_column)})"
-    defp column_type({:array, type}), do: column_type(type) <> "[]"
-    defp column_type(type), do: @column_types[type] || type
+    defp column_type({:references, foreign_table, foreign_column, type}, size), do: "#{column_type(type, size)} REFERENCES #{quote_name(foreign_table)}(#{quote_name(foreign_column)})"
+    defp column_type({:array, type}, size), do: column_type(type, size) <> "[]"
+    defp column_type(type, size) do
+      type_name = @column_types[type] || type
+
+      if size do
+        "#{type_name}(#{size})"
+      else
+        type_name
+      end
+    end
   end
 end
