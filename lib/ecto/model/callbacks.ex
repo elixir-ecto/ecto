@@ -130,7 +130,9 @@ defmodule Ecto.Model.Callbacks do
   Adds a callback that is invoked before the model is deleted
   from the repository.
 
-  The callback receives the model being deleted and must return such model.
+  The callback receives an `Ecto.Changeset`. Although the changes
+  field is ignored by the repository on delete, future functionality
+  will allow pre-conditions to be set on delete.
 
   ## Example
 
@@ -144,7 +146,8 @@ defmodule Ecto.Model.Callbacks do
   Adds a callback that is invoked before the model is deleted
   from the repository.
 
-  The callback receives the model being deleted and must return such model.
+  The callback receives an `Ecto.Changeset` with the model
+  stored in it. The callback must return a changeset.
 
   ## Example
 

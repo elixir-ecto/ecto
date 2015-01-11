@@ -73,23 +73,27 @@ defmodule Ecto.Repo.Model do
     update(repo, adapter, changeset, opts)
   end
 
-  # TODO: Use changesets on delete too (due to fields constraints).
-
   @doc """
   Implementation for `Ecto.Repo.delete/2`.
   """
-  def delete(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
+  def delete(repo, adapter, %Ecto.Changeset{} = changeset, opts) when is_list(opts) do
+    struct = struct_from_changeset!(changeset)
+    model  = struct.__struct__
     source = model.__schema__(:source)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_delete after_delete)a, fn ->
-      struct = Callbacks.__apply__(model, :before_delete, struct)
+      changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
       pk_filter = validate_fields(:delete, model, pk_filter(model, struct))
       :ok = adapter.delete(repo, source, pk_filter, opts)
 
-      Callbacks.__apply__(model, :after_delete, struct)
+      Callbacks.__apply__(model, :after_delete, changeset).model
     end
+  end
+
+  def delete(repo, adapter, %{__struct__: _} = struct, opts) do
+    delete(repo, adapter, %Ecto.Changeset{model: struct, valid?: true}, opts)
   end
 
   ## Helpers used by other modules

@@ -56,8 +56,8 @@ defmodule Ecto.Model.CallbacksTest do
     after_insert  __MODULE__, :changeset_after
     before_update __MODULE__, :changeset_before
     after_update  __MODULE__, :changeset_after
-    before_delete __MODULE__, :model_before
-    after_delete  __MODULE__, :model_after
+    before_delete __MODULE__, :changeset_before
+    after_delete  __MODULE__, :changeset_after
 
     def changeset_before(changeset) do
       put_in(changeset.model.before, changeset.changes)
@@ -67,9 +67,6 @@ defmodule Ecto.Model.CallbacksTest do
     def changeset_after(changeset) do
       put_in(changeset.model.after, changeset.changes)
     end
-
-    def model_before(model), do: %{model | x: model.x <> ",before"}
-    def model_after(model),  do: %{model | x: model.x <> ",after"}
   end
 
   test "wraps operations into transactions if callback present" do
@@ -104,7 +101,8 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_delete and after_delete with model" do
     model = %AllCallback{id: 1, x: "x"}
     model = MockRepo.delete model
-    assert model.x == "x,before,after"
+    assert model.before == %{}
+    assert model.after == %{}
   end
 
   test "before_insert and after_insert with changeset" do

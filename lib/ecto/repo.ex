@@ -253,7 +253,7 @@ defmodule Ecto.Repo do
                       [Ecto.Model.t] | Ecto.Model.t
 
   @doc """
-  Fetches all results from the data store matching the given query.
+  Fetches all entries from the data store matching the given query.
 
   May raise `Ecto.QueryError` if query validation fails.
 
@@ -272,7 +272,7 @@ defmodule Ecto.Repo do
   defcallback all(Ecto.Query.t, Keyword.t) :: [Ecto.Model.t] | no_return
 
   @doc """
-  Updates all entities matching the given query with the given values.
+  Updates all entries matching the given query with the given values.
 
   ## Options
 
@@ -291,7 +291,7 @@ defmodule Ecto.Repo do
   defmacrocallback update_all(Macro.t, Keyword.t, Keyword.t) :: integer | no_return
 
   @doc """
-  Deletes all entities matching the given query.
+  Deletes all entries matching the given query.
 
   ## Options
 
