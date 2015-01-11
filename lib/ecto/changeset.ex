@@ -47,11 +47,29 @@ defmodule Ecto.Changeset do
   If casting of all fields is successful and all required fields
   are present either in the model or in the given params, the
   changeset is returned as valid.
+
+  ## No parameters
+
+  The `params` argument can also be nil. In such cases, the
+  changeset is automatically marked as invalid, with an empty
+  changes map. This is useful to run the changeset through
+  all validation steps for introspection.
   """
-  # TODO: Allow nil params
-  # TODO: Allow no model
-  # TODO: Add fetch_change and get_change
-  @spec cast(map, Ecto.Model.t, [String.t | atom], [String.t | atom]) :: t
+  @spec cast(map | nil, Ecto.Model.t, [String.t | atom], [String.t | atom]) :: t
+  def cast(nil, %{__struct__: _} = model, required, optional)
+      when is_list(required) and is_list(optional) do
+    to_atom = fn
+      key when is_atom(key) -> key
+      key when is_binary(key) -> String.to_atom(key)
+    end
+
+    required = Enum.map(required, to_atom)
+    optional = Enum.map(optional, to_atom)
+
+    %Ecto.Changeset{params: nil, model: model, valid?: false, errors: [],
+                    changes: %{}, required: required, optional: optional}
+  end
+
   def cast(params, %{__struct__: module} = model, required, optional)
       when is_map(params) and is_list(required) and is_list(optional) do
     types = module.__changeset__
@@ -129,6 +147,22 @@ defmodule Ecto.Changeset do
   end
 
   ## Working with changesets
+
+  @doc """
+  Fetches a change.
+  """
+  @spec fetch_change(t, atom) :: {:ok, term} | :error
+  def fetch_change(%{changes: changes}, key) when is_atom(key) do
+    Map.fetch(changes, key)
+  end
+
+  @doc """
+  Gets a change or returns default value.
+  """
+  @spec get_change(t, atom) :: term
+  def get_change(%{changes: changes}, key, default \\ nil) when is_atom(key) do
+    Map.get(changes, key, default)
+  end
 
   @doc """
   Updates a change.

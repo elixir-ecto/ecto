@@ -183,10 +183,6 @@ defmodule Ecto do
   For example, if the params map contain only the "name" and "email" keys,
   the "age" validation won't run.
 
-  Finally, `params` is given a default of `nil` in the `User.changeset/2`
-  function. In case there are no parameters, an invalid changeset is
-  returned without running any validations (as there aren't any changes).
-
   As an exampe, let's see how we could use the changeset above in
   a web application that needs to update users:
 

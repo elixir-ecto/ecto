@@ -57,6 +57,18 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
+  test "cast/4: no parameters" do
+    changeset = cast(nil, %Post{}, ~w(title), ~w(body)a)
+    assert changeset.model == %Post{}
+    assert changeset.params == nil
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == [:title]
+    assert changeset.optional == [:body]
+    refute changeset.valid?
+  end
+
   test "cast/4: can't cast required field" do
     params = %{"body" => :world}
     struct = %Post{}
@@ -113,7 +125,25 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  ## Update functions
+  ## Changeset functions
+
+  test "fetch_change/2" do
+    changeset = changeset(%{"title" => "foo", "body" => nil})
+
+    assert fetch_change(changeset, :title) == {:ok, "foo"}
+    assert fetch_change(changeset, :body) == {:ok, nil}
+    assert fetch_change(changeset, :other) == :error
+  end
+
+  test "get_change/3" do
+    changeset = changeset(%{"title" => "foo", "body" => nil})
+
+    assert get_change(changeset, :title) == "foo"
+    assert get_change(changeset, :body) == nil
+    assert get_change(changeset, :body, "other") == nil
+    assert get_change(changeset, :other) == nil
+    assert get_change(changeset, :other, "other") == "other"
+  end
 
   test "update_change/3" do
     changeset =
