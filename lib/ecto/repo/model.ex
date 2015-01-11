@@ -39,7 +39,6 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.update/2`.
   """
   def update(repo, adapter, %Ecto.Changeset{} = changeset, opts) when is_list(opts) do
-    # TODO: What if there are no changes?
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -52,13 +51,16 @@ defmodule Ecto.Repo.Model do
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_update after_update)a, fn ->
-      filter = pk_filter(model, struct)
-      filter = validate_fields(:update, model, filter)
-
       changeset = Callbacks.__apply__(model, :before_update, changeset)
       changes   = validate_changes(:update, model, fields, changeset)
 
-      {:ok, values} = adapter.update(repo, source, filter, changes, return, opts)
+      pk_filter = validate_fields(:update, model, pk_filter(model, struct))
+
+      if changes == [] do
+        changes = pk_filter
+      end
+
+      {:ok, values} = adapter.update(repo, source, pk_filter, changes, return, opts)
 
       changeset = load_into_changeset(changeset, model, return, values)
       Callbacks.__apply__(model, :after_update, changeset).model
@@ -81,11 +83,11 @@ defmodule Ecto.Repo.Model do
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_delete after_delete)a, fn ->
-      filter = pk_filter(model, struct)
-      filter = validate_fields(:delete, model, filter)
-
       struct = Callbacks.__apply__(model, :before_delete, struct)
-      :ok = adapter.delete(repo, source, filter, opts)
+
+      pk_filter = validate_fields(:delete, model, pk_filter(model, struct))
+      :ok = adapter.delete(repo, source, pk_filter, opts)
+
       Callbacks.__apply__(model, :after_delete, struct)
     end
   end

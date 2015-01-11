@@ -148,7 +148,14 @@ defmodule Ecto.Integration.RepoTest do
     # Now, a combination of dirty tracking with read_after_writes,
     # allow us to see the actual counter value.
     changeset = Ecto.Changeset.cast(%{"title" => "hello"}, post, ~w(title), ~w())
-    assert %Post{id: 13, counter: 11, title: "hello"} = TestRepo.update(changeset)
+    assert %Post{id: 13, counter: 11, title: "hello"} = post = TestRepo.update(changeset)
+
+    # Let's change the counter once more, so we can read it soon
+    TestRepo.update(%{post | counter: 13})
+
+    # And the value will be refreshed even if there are no changes
+    changeset = Ecto.Changeset.cast(%{}, post, ~w(), ~w())
+    assert %Post{id: 13, counter: 13, title: "hello"} = TestRepo.update(changeset)
   end
 
   test "get(!)" do
