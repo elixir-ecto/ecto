@@ -3,8 +3,8 @@ defmodule Ecto.Model.Callbacks do
   Define module-level callbacks in models.
 
   A callback is invoked by your `Ecto.Repo` before (or after)
-  particular events. A callback must always return the given
-  data structure and they always run inside a transaction.
+  particular events. Callbacks receive changesets, must
+  always a changeset back and always run inside a transaction.
 
   ## Example
 
@@ -22,6 +22,22 @@ defmodule Ecto.Model.Callbacks do
   invoked with a changeset as argument. Multiple callbacks
   can be defined, they will be invoked in order of declaration.
 
+  A callback can be defined in the following formats:
+
+      # Invoke the local function increase_user_count
+      after_insert :increase_user_count
+
+      # Invoke the local function increase_user_count
+      # with the given arguments (changeset is prepended)
+      after_insert :increase_user_count, ["foo", "bar"]
+
+      # Invoke the remote function increase_user_count
+      after_insert Stats, :increase_user_count
+
+      # Invoke the remote function increase_user_count
+      # with the given arguments (changeset is prepended)
+      after_insert Stats, :increase_user_count, ["foo", "bar"]
+
   ## Usage
 
   Callbacks in Ecto are useful for data consistency, for keeping
@@ -34,7 +50,7 @@ defmodule Ecto.Model.Callbacks do
   """
 
   @doc false
-  # TODO: Support custom args and local callbacks
+
   defmacro __using__(_opts) do
     quote do
       import Ecto.Model.Callbacks
@@ -48,14 +64,11 @@ defmodule Ecto.Model.Callbacks do
     callbacks = Module.get_attribute env.module, :ecto_callbacks
 
     for {event, callbacks} <- callbacks do
-      callbacks = Enum.reverse(callbacks)
+      body = Enum.reduce Enum.reverse(callbacks),
+                         quote(do: changeset), &compile_callback/2
 
-      quote bind_quoted: [event: event, callbacks: callbacks] do
-        def unquote(event)(model) do
-          Enum.reduce unquote(callbacks), model, fn({mod, fun}, acc) ->
-            apply(mod, fun, [acc])
-          end
-        end
+      quote do
+        def unquote(event)(changeset), do: unquote(body)
       end
     end
   end
@@ -77,8 +90,14 @@ defmodule Ecto.Model.Callbacks do
       before_insert User, :generate_permalink
 
   """
-  defmacro before_insert(module, function),
-    do: register_callback(:before_insert, module, function)
+  defmacro before_insert(function, args \\ []),
+    do: register_callback(:before_insert, function, args, [])
+
+  @doc """
+  Same as `before_insert/2` but with arguments.
+  """
+  defmacro before_insert(module, function, args),
+    do: register_callback(:before_insert, module, function, args)
 
   @doc """
   Adds a callback that is invoked after the model is inserted
@@ -93,8 +112,14 @@ defmodule Ecto.Model.Callbacks do
       after_insert Stats, :increase_user_count
 
   """
-  defmacro after_insert(module, function),
-    do: register_callback(:after_insert, module, function)
+  defmacro after_insert(function, args \\ []),
+    do: register_callback(:after_insert, function, args, [])
+
+  @doc """
+  Same as `after_insert/2` but with arguments.
+  """
+  defmacro after_insert(module, function, args),
+    do: register_callback(:after_insert, module, function, args)
 
   @doc """
   Adds a callback that is invoked before the model is updated.
@@ -108,8 +133,14 @@ defmodule Ecto.Model.Callbacks do
     before_update User, :set_update_at_timestamp
 
   """
-  defmacro before_update(module, function),
-    do: register_callback(:before_update, module, function)
+  defmacro before_update(function, args \\ []),
+    do: register_callback(:before_update, function, args, [])
+
+  @doc """
+  Same as `before_update/2` but with arguments.
+  """
+  defmacro before_update(module, function, args),
+    do: register_callback(:before_update, module, function, args)
 
   @doc """
   Adds a callback that is invoked after the model is updated.
@@ -123,8 +154,14 @@ defmodule Ecto.Model.Callbacks do
       after_update User, :notify_account_change
 
   """
-  defmacro after_update(module, function),
-    do: register_callback(:after_update, module, function)
+  defmacro after_update(function, args \\ []),
+    do: register_callback(:after_update, function, args, [])
+
+  @doc """
+  Same as `after_update/2` but with arguments.
+  """
+  defmacro after_update(module, function, args),
+    do: register_callback(:after_update, module, function, args)
 
   @doc """
   Adds a callback that is invoked before the model is deleted
@@ -139,8 +176,14 @@ defmodule Ecto.Model.Callbacks do
       before_delete User, :copy_to_archive
 
   """
-  defmacro before_delete(module, function),
-    do: register_callback(:before_delete, module, function)
+  defmacro before_delete(function, args \\ []),
+    do: register_callback(:before_delete, function, args, [])
+
+  @doc """
+  Same as `before_delete/2` but with arguments.
+  """
+  defmacro before_delete(module, function, args),
+    do: register_callback(:before_delete, module, function, args)
 
   @doc """
   Adds a callback that is invoked before the model is deleted
@@ -151,16 +194,51 @@ defmodule Ecto.Model.Callbacks do
 
   ## Example
 
-      after_delete UserMailer, :send_questioneer
+      after_delete User, :notify_garbage_collectors
 
   """
-  defmacro after_delete(module, function),
-    do: register_callback(:after_delete, module, function)
+  defmacro after_delete(function, args \\ []),
+    do: register_callback(:after_delete, function, args, [])
 
-  defp register_callback(event, module, function) do
-    quote bind_quoted: [event: event, callback: {module, function}] do
+  @doc """
+  Same as `after_delete/2` but with arguments.
+  """
+  defmacro after_delete(module, function, args),
+    do: register_callback(:after_delete, module, function, args)
+
+  defp register_callback(event, module, function, args) do
+    quote bind_quoted: binding() do
+      callback = {module, function, args}
       @ecto_callbacks Map.update(@ecto_callbacks, event, [callback], &[callback|&1])
     end
+  end
+
+  defp compile_callback({function, args, []}, acc)
+      when is_atom(function) and is_list(args) do
+    error = callback_error("#{function}/#{length(args)+1}")
+
+    quote do
+      case unquote(function)(unquote(acc), unquote_splicing(args)) do
+        %Ecto.Changeset{} = changeset -> changeset
+        other -> raise unquote(error) <> inspect(other)
+      end
+    end
+  end
+
+  defp compile_callback({module, function, args}, acc)
+      when is_atom(module) and is_atom(function) and is_list(args) do
+    error = callback_error("#{inspect module}.#{function}/#{length(args)+1}")
+
+    quote do
+      case unquote(module).unquote(function)(unquote(acc), unquote_splicing(args)) do
+        %Ecto.Changeset{} = changeset -> changeset
+        other -> raise unquote(error) <> inspect(other)
+      end
+    end
+  end
+
+  defp callback_error(callback) do
+    "expected callback #{callback} to return an Ecto.Changeset, got: "
   end
 
   @doc """
@@ -169,26 +247,20 @@ defmodule Ecto.Model.Callbacks do
   Checks wether the callback is defined on the model,
   returns the data unchanged if it isn't.
 
-  This function also validates if the struct given
-  as input to the callback is the same as in the output.
+  This function expects a changeset as input.
 
   ## Examples
 
-      iex> Ecto.Model.Callbacks.__apply__ User, :before_delete, %User{}
-      %User{some_var: "has changed"}
+      iex> changeset = Ecto.Changeset.cast(params, %User{}, ~w(name), ~w())
+      iex> Ecto.Model.Callbacks.__apply__ User, :before_delete, changeset
+      %Ecto.Changeset{...}
 
   """
-  def __apply__(module, callback, %{__struct__: expected} = data) do
+  def __apply__(module, callback, %Ecto.Changeset{} = changeset) do
     if function_exported?(module, callback, 1) do
-      case apply(module, callback, [data]) do
-        %{__struct__: ^expected} = data ->
-          data
-        other ->
-          raise ArgumentError,
-            "expected `#{callback}` callbacks to return a #{inspect expected}, got: #{inspect other}"
-      end
+      apply(module, callback, [changeset])
     else
-      data
+      changeset
     end
   end
 end

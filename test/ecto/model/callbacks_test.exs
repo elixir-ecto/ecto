@@ -4,38 +4,48 @@ alias Ecto.MockRepo
 defmodule Ecto.Model.CallbacksTest do
   use ExUnit.Case, async: true
 
-  defmodule DeleteCallback do
+  defmodule SomeCallback do
     use Ecto.Model
 
-    schema "delete_callback" do
+    schema "some_callback" do
       field :x, :string, default: ""
     end
 
-    before_delete __MODULE__, :add_before
-    before_delete __MODULE__, :add_before
+    before_delete __MODULE__, :add_to_x
+    before_delete __MODULE__, :add_to_x, ["2"]
+    before_delete :add_to_x
+    before_delete :add_to_x, ["2"]
 
-    before_update __MODULE__, :bad_callback
+    before_update :bad_callback
 
-    def add_before(model),    do: %{model | x: model.x <> ",before"}
-    def bad_callback(_model), do: nil
+    def add_to_x(changeset, str \\ "1") do
+      update_in changeset.model.x, &(&1 <> "," <> str)
+    end
+
+    defp bad_callback(_changeset) do
+      nil
+    end
   end
 
   test "defines functions for callbacks" do
-    assert function_exported?(DeleteCallback, :before_delete, 1)
+    assert function_exported?(SomeCallback, :before_delete, 1)
   end
 
   test "doesn't define callbacks for not-registered events" do
-    refute function_exported?(DeleteCallback, :after_delete, 1)
+    refute function_exported?(SomeCallback, :after_delete, 1)
   end
 
   test "applies callbacks" do
-    assert Ecto.Model.Callbacks.__apply__(DeleteCallback, :before_delete, %DeleteCallback{x: "x"}) ==
-           %DeleteCallback{x: "x,before,before"}
+    changeset = %Ecto.Changeset{model: %SomeCallback{x: "x"}}
+
+    assert Ecto.Model.Callbacks.__apply__(SomeCallback, :before_delete, changeset) ==
+           %Ecto.Changeset{model: %SomeCallback{x: "x,1,2,1,2"}}
   end
 
   test "raises on bad callbacks" do
-    assert_raise ArgumentError, ~r/expected `before_update` callbacks to return a/, fn ->
-      Ecto.Model.Callbacks.__apply__(DeleteCallback, :before_update, %DeleteCallback{x: "x"})
+    msg = "expected callback bad_callback/1 to return an Ecto.Changeset, got: nil"
+    assert_raise RuntimeError, msg, fn ->
+      Ecto.Model.Callbacks.__apply__(SomeCallback, :before_update, %Ecto.Changeset{})
     end
   end
 
@@ -70,7 +80,7 @@ defmodule Ecto.Model.CallbacksTest do
   end
 
   test "wraps operations into transactions if callback present" do
-    model = %DeleteCallback{x: "x"}
+    model = %SomeCallback{x: "x"}
     MockRepo.insert model
     refute_received {:transaction, _fun}
 
