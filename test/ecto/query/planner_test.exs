@@ -100,6 +100,16 @@ defmodule Ecto.Query.PlannerTest do
     assert params[0] == 1
   end
 
+  test "prepare: casts and dumps custom types with arrays" do
+    datetime = %Custom.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
+    {_query, params} = prepare(Comment |> where([c], c.posted in ^[datetime]))
+    assert params[0] == [{{2015, 1, 7}, {21, 18, 13}}]
+
+    permalink = "1-hello-world"
+    {_query, params} = prepare(Post |> where([p], p.id in ^[permalink]))
+    assert params[0] == [1]
+  end
+
   test "prepare: joins" do
     query = from(p in Post, join: c in "comments") |> prepare |> elem(0)
     assert hd(query.joins).source == {"comments", nil}

@@ -128,7 +128,7 @@ defmodule Ecto.Type do
 
   @type t         :: primitive | custom
   @type primitive :: basic | composite
-  @type custom    :: atom | {atom, atom}
+  @type custom    :: atom
 
   @typep basic     :: :any | :integer | :float | :boolean | :string |
                       :binary | :uuid | :decimal | :datetime | :time | :date
@@ -143,7 +143,7 @@ defmodule Ecto.Type do
   For example, if you want to provide your own datetime
   structures, the type function should return `:datetime`.
   """
-  defcallback type :: custom
+  defcallback type :: basic | custom
 
   @doc """
   Returns if the value is considered blank/empty for this type.
@@ -190,10 +190,20 @@ defmodule Ecto.Type do
 
   @doc """
   Checks if we have a primitive type.
+
+      iex> primitive?(:string)
+      true
+      iex> primitive?(Another)
+      false
+
+      iex> primitive?({:array, :string})
+      true
+      iex> primitive?({:array, Another})
+      true
+
   """
-  @spec primitive?(primitive) :: true
-  @spec primitive?(term) :: false
-  def primitive?({composite, basic}) when basic in @basic and composite in @composite, do: true
+  @spec primitive?(t) :: boolean
+  def primitive?({composite, _}) when composite in @composite, do: true
   def primitive?(basic) when basic in @basic, do: true
   def primitive?(_), do: false
 
@@ -251,11 +261,15 @@ defmodule Ecto.Type do
   def dump(:date, date),         do: {:ok, Ecto.Date.to_erl(date)}
   def dump(:time, time),         do: {:ok, Ecto.Time.to_erl(time)}
 
+  def dump({:array, type}, value) do
+    array(type, value, &dump/2, [])
+  end
+
   def dump(type, value) do
     cond do
       not primitive?(type) ->
         type.dump(value)
-      of_type?(type, value) ->
+      of_basic_type?(type, value) ->
         {:ok, value}
       true ->
         :error
@@ -285,11 +299,15 @@ defmodule Ecto.Type do
   def load(:date, date),         do: {:ok, Ecto.Date.from_erl(date)}
   def load(:time, time),         do: {:ok, Ecto.Time.from_erl(time)}
 
+  def load({:array, type}, value) do
+    array(type, value, &load/2, [])
+  end
+
   def load(type, value) do
     cond do
       not primitive?(type) ->
         type.load(value)
-      of_type?(type, value) ->
+      of_basic_type?(type, value) ->
         {:ok, value}
       true ->
         :error
@@ -364,13 +382,17 @@ defmodule Ecto.Type do
 
   """
   @spec cast(t, term) :: {:ok, term} | :error
+  def cast(_type, nil), do: {:ok, nil}
+
+  def cast({:array, type}, value) do
+    array(type, value, &cast/2, [])
+  end
+
   def cast(type, value) do
     cond do
-      value == nil ->
-        {:ok, nil}
       not primitive?(type) ->
         type.cast(value)
-      of_type?(type, value) ->
+      of_basic_type?(type, value) ->
         {:ok, value}
       true ->
         do_cast(type, value)
@@ -400,17 +422,6 @@ defmodule Ecto.Type do
     Decimal.Error -> :error
   end
 
-  defp do_cast({:array, type}, term) when is_list(term) do
-    {:ok, Enum.map(term, fn x ->
-      case cast(type, x) do
-        {:ok, cast} -> cast
-        :error -> throw :error
-      end
-    end)}
-  catch
-    :error -> :error
-  end
-
   # TODO: Add date/time/datetime parsing?
   defp do_cast(_, _), do: :error
 
@@ -436,41 +447,54 @@ defmodule Ecto.Type do
       iex> blank?({:array, :integer}, [1, 2, 3])
       false
 
+      iex> blank?({:array, Whatever}, [])
+      true
+      iex> blank?({:array, Whatever}, [1, 2, 3])
+      false
+
   """
   @spec blank?(t, term) :: boolean
+  def blank?(_type, nil), do: true
+
+  def blank?({:array, _}, value), do: value == []
+
   def blank?(type, value) do
-    cond do
-      value == nil ->
-        true
-      not primitive?(type) ->
-        type.blank?(value)
-      true ->
-        do_blank?(value)
+    if primitive?(type) do
+      blank?(value)
+    else
+      type.blank?(value)
     end
   end
 
   # Those are blank regardless of the primitive type.
-  defp do_blank?(" " <> t), do: do_blank?(t)
-  defp do_blank?(""), do: true
-  defp do_blank?([]), do: true
-  defp do_blank?(_),  do: false
+  defp blank?(" " <> t), do: blank?(t)
+  defp blank?(""), do: true
+  defp blank?(_),  do: false
 
   ## Helpers
 
   # Checks if a value is of the given primitive type.
-  defp of_type?(:any, _), do: true
-  defp of_type?(:float, term),   do: is_float(term)
-  defp of_type?(:integer, term), do: is_integer(term)
-  defp of_type?(:boolean, term), do: is_boolean(term)
+  defp of_basic_type?(:any, _), do: true
+  defp of_basic_type?(:float, term),   do: is_float(term)
+  defp of_basic_type?(:integer, term), do: is_integer(term)
+  defp of_basic_type?(:boolean, term), do: is_boolean(term)
 
-  defp of_type?(binary, term) when binary in ~w(binary uuid string)a, do: is_binary(term)
+  defp of_basic_type?(binary, term) when binary in ~w(binary uuid string)a, do: is_binary(term)
 
-  defp of_type?({:array, type}, term),
-    do: is_list(term) and Enum.all?(term, &of_type?(type, &1))
+  defp of_basic_type?(:decimal, %Decimal{}), do: true
+  defp of_basic_type?(:date, %Ecto.Date{}),  do: true
+  defp of_basic_type?(:time, %Ecto.Time{}),  do: true
+  defp of_basic_type?(:datetime, %Ecto.DateTime{}), do: true
+  defp of_basic_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
 
-  defp of_type?(:decimal, %Decimal{}), do: true
-  defp of_type?(:date, %Ecto.Date{}),  do: true
-  defp of_type?(:time, %Ecto.Time{}),  do: true
-  defp of_type?(:datetime, %Ecto.DateTime{}), do: true
-  defp of_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
+  defp array(type, [h|t], fun, acc) do
+    case fun.(type, h) do
+      {:ok, h} -> array(type, t, fun, [h|acc])
+      :error   -> :error
+    end
+  end
+
+  defp array(_type, [], _fun, acc) do
+    {:ok, Enum.reverse(acc)}
+  end
 end

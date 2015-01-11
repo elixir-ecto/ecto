@@ -1,4 +1,3 @@
-
 defmodule Custom.Permalink do
   def type, do: :integer
 

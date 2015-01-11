@@ -1,5 +1,6 @@
 Logger.configure(level: :info)
 Code.require_file "../../test/support/file_helpers.exs", __DIR__
+Code.require_file "../../test/support/types.exs", __DIR__
 
 ExUnit.start
 
@@ -51,6 +52,7 @@ end
 defmodule Ecto.Integration.Postgres.Permalink do
   use Ecto.Model
 
+  @foreign_key_type Custom.Permalink
   schema "permalinks" do
     field :url, :string
     belongs_to :post, Ecto.Integration.Postgres.Post

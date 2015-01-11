@@ -23,4 +23,14 @@ defmodule Ecto.TypeTest do
     assert cast(__MODULE__, nil) == {:ok, nil}
     assert blank?(__MODULE__, nil)
   end
+
+  test "custom types with array" do
+    assert load({:array, __MODULE__}, ["foo"]) == {:ok, [:load]}
+    assert dump({:array, __MODULE__}, ["foo"]) == {:ok, [:dump]}
+    assert cast({:array, __MODULE__}, ["foo"]) == {:ok, [:cast]}
+
+    assert load({:array, __MODULE__}, [nil]) == {:ok, [nil]}
+    assert dump({:array, __MODULE__}, [nil]) == {:ok, [nil]}
+    assert cast({:array, __MODULE__}, [nil]) == {:ok, [nil]}
+  end
 end
