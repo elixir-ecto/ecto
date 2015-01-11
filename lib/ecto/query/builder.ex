@@ -2,18 +2,17 @@ defmodule Ecto.Query.Builder do
   @moduledoc false
 
   alias Ecto.Query
-  alias Ecto.Schema.Types
 
   @typedoc """
   Quoted types store primitive types and types in the format
   {source, quoted}. The latter are handled directly in the planner,
-  never forwarded to Ecto.Schema.Types.
+  never forwarded to Ecto.Type.
 
-  The Ecto.Schema.Types module concerns itself only with runtime types,
+  The Ecto.Type module concerns itself only with runtime types,
   which include all primitive types and custom user types. Also
   note custom user types do not show up during compilation time.
   """
-  @type quoted_type :: Types.primitive | {non_neg_integer, atom | Macro.t}
+  @type quoted_type :: Ecto.Type.primitive | {non_neg_integer, atom | Macro.t}
 
   @doc """
   Smart escapes a query expression and extracts interpolated values in
@@ -196,7 +195,7 @@ defmodule Ecto.Query.Builder do
   defp call_type(_, _),                                           do: nil
 
   defp assert_type!(expr, type, actual) do
-    if Types.match?(type, actual) do
+    if Ecto.Type.match?(type, actual) do
       :ok
     else
       error! "expression `#{Macro.to_string(expr)}` does not type check. " <>

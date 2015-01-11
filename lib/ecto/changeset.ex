@@ -15,15 +15,19 @@ defmodule Ecto.Changeset do
   * `changes`     - The `changes` from parameters that were approved in casting
   * `errors`      - All errors from validations
   * `validations` - All validations performed in the changeset
+  * `required`    - All required fields as a list of atoms
+  * `optional`    - All optional fields as a list of atoms
   """
 
   defstruct valid?: false, model: nil, params: nil, changes: %{},
-            errors: [], validations: []
+            errors: [], validations: [], required: [], optional: []
 
   @type t :: %Ecto.Changeset{valid?: boolean(),
                              model: Ecto.Model.t | nil,
                              params: %{String.t => term} | nil,
                              changes: %{atom => term},
+                             required: [atom],
+                             optional: [atom],
                              errors: [{atom, atom | {atom, [term]}}],
                              validations: [{atom, atom | {atom, [term]}}]}
 
@@ -46,32 +50,30 @@ defmodule Ecto.Changeset do
   """
   # TODO: Allow nil params
   # TODO: Allow no model
-  # TODO: Allow field casting
   # TODO: Add fetch_change and get_change
-  @spec cast(map, Ecto.Model.t, [String.t], [String.t]) :: t
+  @spec cast(map, Ecto.Model.t, [String.t | atom], [String.t | atom]) :: t
   def cast(params, %{__struct__: module} = model, required, optional)
       when is_map(params) and is_list(required) and is_list(optional) do
     types = module.__changeset__
 
-    {changes, errors} =
-      Enum.reduce(optional, {%{}, []},
-                  &process_optional(&1, params, types, &2))
+    {optional, {changes, errors}} =
+      Enum.map_reduce(optional, {%{}, []},
+                      &process_optional(&1, params, types, &2))
 
-    {changes, errors, validations} =
-      Enum.reduce(required, {changes, errors, []},
-                  &process_required(&1, params, types, model, &2))
+    {required, {changes, errors}} =
+      Enum.map_reduce(required, {changes, errors},
+                      &process_required(&1, params, types, model, &2))
 
-    %Ecto.Changeset{params: params, model: model,
-                    valid?: errors == [], errors: errors,
-                    validations: validations, changes: changes}
+    %Ecto.Changeset{params: params, model: model, valid?: errors == [],
+                    errors: errors, changes: changes, required: required,
+                    optional: optional}
   end
 
-  defp process_required(key, params, types, model, {changes, errors, validations}) do
+  defp process_required(key, params, types, model, {changes, errors}) do
     {key, param_key} = cast_key(key)
-    validations = [{key, :required}|validations]
     type = type!(types, key)
 
-    {changes, errors} =
+    {key,
       case cast_field(param_key, type, params) do
         {:ok, value} ->
           {Map.put(changes, key, value), error_on_blank(type, key, value, errors)}
@@ -80,23 +82,22 @@ defmodule Ecto.Changeset do
           {changes, error_on_blank(type, key, value, errors)}
         :invalid ->
           {changes, [{key, :invalid}|errors]}
-      end
-
-    {changes, errors, validations}
+      end}
   end
 
   defp process_optional(key, params, types, {changes, errors}) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
 
-    case cast_field(param_key, type, params) do
-      {:ok, value} ->
-        {Map.put(changes, key, value), errors}
-      :missing ->
-        {changes, errors}
-      :invalid ->
-        {changes, [{key, :invalid}|errors]}
-    end
+    {key,
+      case cast_field(param_key, type, params) do
+        {:ok, value} ->
+          {Map.put(changes, key, value), errors}
+        :missing ->
+          {changes, errors}
+        :invalid ->
+          {changes, [{key, :invalid}|errors]}
+      end}
   end
 
   defp type!(types, key),
@@ -104,11 +105,13 @@ defmodule Ecto.Changeset do
 
   defp cast_key(key) when is_binary(key),
     do: {String.to_atom(key), key}
+  defp cast_key(key) when is_atom(key),
+    do: {key, Atom.to_string(key)}
 
   defp cast_field(param_key, type, params) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Ecto.Schema.Types.cast(type, value) do
+        case Ecto.Type.cast(type, value) do
           {:ok, value} -> {:ok, value}
           :error       -> :invalid
         end
@@ -118,7 +121,7 @@ defmodule Ecto.Changeset do
   end
 
   defp error_on_blank(type, key, value, errors) do
-    if Ecto.Schema.Types.blank?(type, value) do
+    if Ecto.Type.blank?(type, value) do
       [{key, :required}|errors]
     else
       errors

@@ -4,7 +4,6 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.SelectExpr
   alias Ecto.Query.JoinExpr
-  alias Ecto.Schema.Types
 
   if map_size(%Ecto.Query{}) != 15 do
     raise "Ecto.Query match out of date in builder"
@@ -145,9 +144,9 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cast_param(kind, query, expr, v, type) do
-    case Types.cast(type, v) do
+    case Ecto.Type.cast(type, v) do
       {:ok, v} ->
-        {:ok, v} = Types.dump(type, v)
+        {:ok, v} = Ecto.Type.dump(type, v)
         v
       :error ->
         error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
@@ -305,7 +304,7 @@ defmodule Ecto.Query.Planner do
     if model do
       type = type!(kind, query, expr, model, field)
 
-      if (expected = meta[:ecto_type]) && !Types.match?(type, expected) do
+      if (expected = meta[:ecto_type]) && !Ecto.Type.match?(type, expected) do
         error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` does not type check. " <>
                             "It has type #{inspect type} but a type #{inspect expected} is expected"
       end

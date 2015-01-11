@@ -391,7 +391,7 @@ defmodule Ecto.Schema do
   def __load__(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
-        {:ok, value} = Ecto.Schema.Types.load(type, elem(values, idx))
+        {:ok, value} = Ecto.Type.load(type, elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
   end
@@ -399,7 +399,7 @@ defmodule Ecto.Schema do
   def __load__(struct, fields, keys, values) when is_list(keys) and is_tuple(values) do
     Enum.reduce(keys, {struct, 0}, fn
       field, {acc, idx} ->
-        {:ok, value} = Ecto.Schema.Types.load(Keyword.fetch!(fields, field), elem(values, idx))
+        {:ok, value} = Ecto.Type.load(Keyword.fetch!(fields, field), elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
   end
@@ -513,7 +513,7 @@ defmodule Ecto.Schema do
     cond do
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any"
-      Ecto.Schema.Types.primitive?(type) ->
+      Ecto.Type.primitive?(type) ->
         true
       is_atom(type) ->
         if Code.ensure_compiled?(type) and function_exported?(type, :type, 0) do
@@ -527,7 +527,7 @@ defmodule Ecto.Schema do
   end
 
   defp check_default!(type, default) do
-    case Ecto.Schema.Types.dump(type, default) do
+    case Ecto.Type.dump(type, default) do
       {:ok, _} ->
         :ok
       :error ->

@@ -1,10 +1,12 @@
-defmodule Ecto.Schema.TypesTest do
+defmodule Ecto.TypeTest do
   use ExUnit.Case, async: true
 
   import Kernel, except: [match?: 2], warn: false
-  import Ecto.Schema.Types
-  doctest Ecto.Schema.Types
+  import Ecto.Type
+  doctest Ecto.Type
 
+  @behaviour Ecto.Type
+  def type,      do: :custom
   def load(_),   do: {:ok, :load}
   def dump(_),   do: {:ok, :dump}
   def cast(_),   do: {:ok, :cast}

@@ -22,12 +22,14 @@ defmodule Ecto.ChangesetTest do
     params = %{"title" => "hello", "body" => "world"}
     struct = %Post{}
 
-    changeset = cast(params, struct, ~w(title), ~w(body))
+    changeset = cast(params, struct, ~w(title)a, ~w(body))
     assert changeset.params == params
     assert changeset.model  == struct
     assert changeset.changes == %{title: "hello", body: "world"}
     assert changeset.errors == []
-    assert changeset.validations == [title: :required]
+    assert changeset.validations == []
+    assert changeset.required == [:title]
+    assert changeset.optional == [:body]
     assert changeset.valid?
   end
 
@@ -40,7 +42,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.model  == struct
     assert changeset.changes == %{title: "hello"}
     assert changeset.errors == []
-    assert changeset.validations == [title: :required]
     assert changeset.valid?
   end
 
@@ -53,7 +54,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.model  == struct
     assert changeset.changes == %{body: "world"}
     assert changeset.errors == [title: :required]
-    assert changeset.validations == [title: :required]
     refute changeset.valid?
   end
 
