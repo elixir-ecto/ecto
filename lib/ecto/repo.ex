@@ -24,9 +24,16 @@ defmodule Ecto.Repo do
         password: "postgres",
         hostname: "localhost"
 
-  The configuration that goes into the `config` is specific to
-  to the adapter, so check `Ecto.Adapters.Postgres` documentation
-  for more information.
+  Most of the configuration that goes into the `config` is specific
+  to to the adapter, so check `Ecto.Adapters.Postgres` documentation
+  for more information. However, some configuration is shared across
+  all adapters, they are:
+
+    * `:priv` - the directory where to keep repository data, like
+      migrations, schema and more. Defaults to "priv/YOUR_REPO"
+
+    * `:url` - an URL that specifies storage information. Read below
+      for more information
 
   ## URLs
 
