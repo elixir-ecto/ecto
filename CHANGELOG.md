@@ -1,4 +1,4 @@
-# v0.5.0-dev
+# v0.5.0 (2015-01-12)
 
 * Enhancements
   * Make `Ecto.Schema.schema/2` configuration uniform
