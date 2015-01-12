@@ -10,15 +10,9 @@ defmodule Simple.App do
 end
 
 defmodule Repo do
-  use Ecto.Repo, adapter: Ecto.Adapters.Postgres
-
-  def conf do
-    parse_url "ecto://postgres:postgres@localhost/ecto_simple"
-  end
-
-  def priv do
-    Application.app_dir(:simple, "priv")
-  end
+  use Ecto.Repo,
+    otp_app: :simple,
+    adapter: Ecto.Adapters.Postgres
 end
 
 defmodule Weather do

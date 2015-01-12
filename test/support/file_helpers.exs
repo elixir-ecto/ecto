@@ -8,10 +8,6 @@ defmodule Support.FileHelpers do
     Path.expand("../../tmp", __DIR__)
   end
 
-  def build_tmp_path do
-    Path.join(Mix.Project.app_path, "tmp")
-  end
-
   @doc """
   Executes the given function in a temp directory
   tailored for this test case and test.
@@ -42,6 +38,6 @@ defmodule Support.FileHelpers do
   end
 
   def assert_file(file, match) do
-    assert_file file, &(&1 =~  match)
+    assert_file file, &(assert &1 =~  match)
   end
 end

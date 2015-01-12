@@ -5,20 +5,21 @@ defmodule Ecto.Integration.TransactionTest do
   alias Ecto.Adapters.Postgres
 
   defmodule TestRepo1 do
-    use Ecto.Repo, adapter: Postgres
-
-    def conf do
-      parse_url "ecto://postgres:postgres@localhost/ecto_test?size=10"
-    end
+    use Ecto.Repo, adapter: Postgres, otp_app: :ecto
   end
+
+  Application.put_env(:ecto, TestRepo1,
+    url: "ecto://postgres:postgres@localhost/ecto_test",
+    size: 10)
 
   defmodule TestRepo2 do
-    use Ecto.Repo, adapter: Postgres
-
-    def conf do
-      parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
-    end
+    use Ecto.Repo, adapter: Postgres, otp_app: :ecto
   end
+
+  Application.put_env(:ecto, TestRepo2,
+    url: "ecto://postgres:postgres@localhost/ecto_test",
+    size: 1,
+    max_overflow: 0)
 
   defmodule UniqueError do
     defexception [:message]

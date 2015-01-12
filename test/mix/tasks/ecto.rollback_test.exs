@@ -9,12 +9,12 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
       :ok
     end
 
-    def priv do
-      "hello"
-    end
-
     def __repo__ do
       true
+    end
+
+    def config do
+      [priv: "hello", otp_app: :ecto]
     end
   end
 
@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   test "runs the migrator yielding the repository and migrations path" do
     run [to_string(Repo), "--no-start"], fn repo, path, direction, strategy ->
       assert repo == Repo
-      assert path == "hello/migrations"
+      assert path == Application.app_dir(:ecto, "hello/migrations")
       assert direction == :down
       assert strategy == [step: 1, start: false]
     end

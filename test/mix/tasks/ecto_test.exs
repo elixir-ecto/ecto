@@ -8,12 +8,12 @@ defmodule Mix.EctoTest do
       Process.get(:start_link)
     end
 
-    def priv do
-      "hello"
-    end
-
     def __repo__ do
       true
+    end
+
+    def config do
+      [priv: Process.get(:priv), otp_app: :ecto]
     end
   end
 
@@ -47,7 +47,9 @@ defmodule Mix.EctoTest do
   end
 
   test :migrations_path do
-    assert migrations_path(Repo) == "hello/migrations"
-    assert_raise Mix.Error, fn -> migrations_path(String) end
+    Process.put(:priv, nil)
+    assert migrations_path(Repo) == Application.app_dir(:ecto, "priv/repo/migrations")
+    Process.put(:priv, "hello")
+    assert migrations_path(Repo) == Application.app_dir(:ecto, "hello/migrations")
   end
 end

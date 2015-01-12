@@ -6,13 +6,18 @@
 Ecto is a domain specific language for writing queries and interacting with databases in Elixir. Here is an example:
 
 ```elixir
-defmodule Repo do
-  use Ecto.Repo, adapter: Ecto.Adapters.Postgres
+# In your config/config.exs file
+config :my_app, Repo,
+  database: "ecto_simple",
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost"
 
-  def conf do
-    # The scheme can be anything, "ecto" is just an example
-    parse_url "ecto://postgres:postgres@localhost/ecto_simple"
-  end
+# In your application code
+defmodule Repo do
+  use Ecto.Repo,
+    otp_app: :my_app,
+    adapter: Ecto.Adapters.Postgres
 end
 
 defmodule Weather do

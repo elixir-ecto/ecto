@@ -6,7 +6,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Options
 
-    The options should be given via `Ecto.Repo.conf/0`.
+    The options should be given via the repository configuration:
 
       * `:hostname` - Server hostname
       * `:port` - Server port (default: 5432)
@@ -147,9 +147,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       pool_name = repo.__postgres__(:pool_name)
       {pool_opts, worker_opts} = Dict.split(opts, [:size, :max_overflow])
 
+      # TODO: Remove those to integers calls
       pool_opts = pool_opts
-        |> Keyword.update(:size, 5, &String.to_integer(&1))
-        |> Keyword.update(:max_overflow, 10, &String.to_integer(&1))
+        |> Keyword.update(:size, 5, &to_integer(&1))
+        |> Keyword.update(:max_overflow, 10, &to_integer(&1))
 
       pool_opts = [
         name: {:local, pool_name},
@@ -164,11 +165,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {pool_opts, worker_opts}
     end
 
+    defp to_integer(int) when is_integer(int), do: int
+    defp to_integer(bin) when is_binary(bin),  do: String.to_integer(bin)
+
     defp repo_pool(repo) do
       pid = repo.__postgres__(:pool_name) |> Process.whereis
 
       if is_nil(pid) or not Process.alive?(pid) do
-        raise ArgumentError, message: "repo #{inspect repo} is not started"
+        raise ArgumentError, "repo #{inspect repo} is not started"
       end
 
       pid

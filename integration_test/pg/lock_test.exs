@@ -2,15 +2,16 @@ defmodule Ecto.Integration.LockTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.Adapters.Postgres
 
   defmodule TestRepo1 do
-    use Ecto.Repo, adapter: Postgres
-
-    def conf do
-      parse_url "ecto://postgres:postgres@localhost/ecto_test?size=10"
-    end
+    use Ecto.Repo,
+      otp_app: :ecto,
+      adapter: Ecto.Adapters.Postgres
   end
+
+  Application.put_env(:ecto, TestRepo1,
+    url: "ecto://postgres:postgres@localhost/ecto_test",
+    size: 10)
 
   defmodule LockCounter do
     use Ecto.Model

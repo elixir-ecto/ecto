@@ -22,21 +22,28 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     config      = Mix.Project.config
     underscored = Mix.Utils.underscore(inspect(repo))
-    base        = Path.basename(underscored)
-    file        = Path.join("lib", underscored) <> ".ex"
-    app         = config[:app] || :YOUR_APP_NAME
+
+    base = Path.basename(underscored)
+    file = Path.join("lib", underscored) <> ".ex"
+    app  = config[:app] || :YOUR_APP_NAME
+    opts = [mod: repo, app: app, base: base]
 
     create_directory Path.dirname(file)
-    create_file file, repo_template(mod: repo, app: app, base: base)
-    open?(file)
+    create_file file, repo_template(opts)
 
-    unless config[:build_per_environment] do
-      Mix.shell.info "We have generated a repo that uses a different database per environment. " <>
-                     "So don't forget to set [build_per_environment: true] in your mix.exs file.\n"
+    case File.read "config/config.exs" do
+      {:ok, contents} ->
+        Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
+        File.write! "config/config.exs", contents <> config_template(opts)
+      {:error, _} ->
+        create_file "config/config.exs", "use Mix.Config\n" <> config_template(opts)
     end
 
+    open?("config/config.exs")
+
     Mix.shell.info """
-    Don't forget to add your new repo to your supervision tree as:
+    Don't forget to add your new repo to your supervision tree
+    (typically in lib/#{app}.ex):
 
         worker(#{inspect repo}, [])
     """
@@ -44,28 +51,18 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   embed_template :repo, """
   defmodule <%= inspect @mod %> do
-    use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
-
-    @doc "Adapter configuration"
-    def conf(env), do: parse_url url(env)
-
-    @doc "The URL to reach the database."
-    defp url(:dev) do
-      "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_dev"
-    end
-
-    defp url(:test) do
-      "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_test?size=1&max_overflow=0"
-    end
-
-    defp url(:prod) do
-      "ecto://user:pass@localhost/<%= @app %>_<%= @base %>_prod"
-    end
-
-    @doc "The priv directory to load migrations and metadata."
-    def priv do
-      Application.app_dir(<%= inspect @app %>, "priv/<%= @base %>")
-    end
+    use Ecto.Repo,
+      adapter: Ecto.Adapters.Postgres,
+      otp_app: <%= inspect @app %>
   end
+  """
+
+  embed_template :config, """
+
+  config <%= inspect @app %>, <%= inspect @mod %>,
+    database: "<%= @app %>_<%= @base %>",
+    username: "user",
+    password: "pass",
+    hostname: "localhost"
   """
 end

@@ -115,9 +115,9 @@ defmodule Ecto.Associations do
     :"#{prefix}_#{suffix}"
   end
 
-  def underscore(""), do: ""
+  defp underscore(""), do: ""
 
-  def underscore(<<h, t :: binary>>) do
+  defp underscore(<<h, t :: binary>>) do
     <<to_lower_char(h)>> <> do_underscore(t, h)
   end
 

@@ -1,5 +1,5 @@
 defmodule Ecto.Adapter.TestTransactions  do
-  @moduledoc """
+  @moduledoc ~S"""
   Specifies the adapter test transactions API.
 
   These adapter functions work by starting a transaction and storing
@@ -10,22 +10,28 @@ defmodule Ecto.Adapter.TestTransactions  do
   Note this approach only works if the connection pool has size of 1
   and does not support any overflow.
 
-  ## Postgres test example
+  ## Postgres example
 
-      defmodule TestRepo do
-        use Ecto.Repo, adapter: Ecto.Adapters.Postgres
+  The first step is to configure your database pool to have size of
+  1 and no max overflow. You set those options in your `config/config.exs`:
 
-        # When testing it is important to set `size=1&max_overflow=0` so that
-        # the repo will only have one connection
-        def conf do
-          parse_url "ecto://postgres:postgres@localhost/test?size=1&max_overflow=0"
-        end
-      end
+      config :my_app, Repo,
+        size: 1,
+        max_overflow: 0
+
+  Since you don't want those options in your production database, we
+  typically recommend to create a `config/test.exs` and add the following
+  to the bottom of your `config/config.exs` file:
+
+      import_config "config/#{Mix.env}.exs"
+
+  Now with the test database properly configured, you can write transactional
+  tests:
 
       # All tests in this module will be wrapped in transactions
       defmodule PostTest do
-        # Tests that use the shared repository should be sync
-        use ExUnit.Case, async: false
+        # Tests that use the shared repository cannot be async
+        use ExUnit.Case
         alias Ecto.Adapters.Postgres
 
         setup do

@@ -11,6 +11,7 @@
 
 * Deprecations
   * Validations are deprecated in favor of `Ecto.Changeset` validations
+  * `def conf` in the repository is deprecated, instead pass the :otp_app option on `use Ecto.Repo` and define the repository configuration in the `config/config.exs` file. Some features like generators and migrations will be disable until you convert to the new configuration
 
 * Backwards incompatible changes
   * `@schema_defaults` was removed in favor of setting `@primary_key` and `@foreign_key_type` directly

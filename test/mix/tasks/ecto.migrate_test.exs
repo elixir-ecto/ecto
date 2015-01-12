@@ -9,12 +9,12 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
       :ok
     end
 
-    def priv do
-      "hello"
-    end
-
     def __repo__ do
       true
+    end
+
+    def config do
+      [priv: "hello", otp_app: :ecto]
     end
   end
 
@@ -29,7 +29,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   test "runs the migrator yielding the repository and migrations path" do
     run [to_string(Repo), "--no-start"], fn repo, path, direction, strategy ->
       assert repo == Repo
-      assert path == "hello/migrations"
+      assert path == Application.app_dir(:ecto, "hello/migrations")
       assert direction == :up
       assert strategy == [all: true, start: false]
     end

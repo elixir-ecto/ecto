@@ -7,16 +7,15 @@ ExUnit.start
 alias Ecto.Adapters.Postgres
 alias Ecto.Integration.Postgres.TestRepo
 
+Application.put_env(:ecto, TestRepo,
+  url: "ecto://postgres:postgres@localhost/ecto_test",
+  size: 1,
+  max_overflow: 0)
+
 defmodule Ecto.Integration.Postgres.TestRepo do
-  use Ecto.Repo, adapter: Ecto.Adapters.Postgres
-
-  def priv do
-    "integration_test/pg/ecto/priv"
-  end
-
-  def conf do
-    parse_url "ecto://postgres:postgres@localhost/ecto_test?size=1&max_overflow=0"
-  end
+  use Ecto.Repo,
+    otp_app: :ecto,
+    adapter: Ecto.Adapters.Postgres
 end
 
 defmodule Ecto.Integration.Postgres.Post do

@@ -24,25 +24,23 @@ defmodule Ecto do
 
   ## Repositories
 
-  `Ecto.Repo` is a wrapper around the database. We can define a repository as follows:
+  `Ecto.Repo` is a wrapper around the database. We can define a
+  repository as follows:
 
       defmodule Repo do
-        use Ecto.Repo, adapter: Ecto.Adapters.Postgres
-
-        def conf do
-          parse_url "ecto://postgres:postgres@localhost/ecto_simple"
-        end
+        use Ecto.Repo,
+          otp_app: :my_app,
+          adapter: Ecto.Adapters.Postgres
       end
 
-  Currently we just support the Postgres adapter. The repository is also responsible
-  for defining the url that locates the database. The URL should be in the following
-  format:
+  Where the configuration for the Repo must be in your application
+  environment, usually defined in your `config/config.exs`:
 
-      ecto://USERNAME:PASSWORD@HOST/DATABASE
-
-  Besides, a set of options can be passed to the adapter as:
-
-      ecto://USERNAME:PASSWORD@HOST/DATABASE?KEY=VALUE
+      config :my_app, Repo,
+        database: "ecto_simple",
+        username: "postgres",
+        password: "postgres",
+        hostname: "localhost"
 
   Each repository in Ecto defines a `start_link/0` function that needs to be invoked
   before using the repository. In general, this function is not called directly,
@@ -336,21 +334,7 @@ defmodule Ecto do
 
   ### Migrations
 
-  Ecto supports migrations with plain SQL. In order to generate a new migration you
-  first need to define a `priv/0` function inside your repository pointing to a
-  directory that will keep repo data. We recommend it to be placed inside the
-  `priv` in your application directory:
-
-      defmodule Repo do
-        use Ecto.Repo, adapter: Ecto.Adapters.Postgres
-
-        def priv do
-          Application.app_dir(:YOUR_APP_NAME, "priv/repo")
-        end
-      end
-
-  Where `:YOUR_APP_NAME` is your application name (as in the `mix.exs` file).
-  Now a migration can be generated with:
+  Ecto supports migrations with plain SQL. You can generate a migration with:
 
       $ mix ecto.gen.migration Repo create_posts
 

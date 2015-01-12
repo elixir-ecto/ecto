@@ -7,9 +7,9 @@ defmodule Mix.Tasks.Ecto.Rollback do
   @moduledoc """
   Reverts applied migrations in the given repository.
 
-  Migrations are expected to be found inside the migrations
-  directory returned by the priv function defined in the
-  repository.
+  By default, migrations are expected at "priv/YOUR_REPO/migrations"
+  directory of the current application but it can be configured
+  by specify the `:priv` key under the repository configuration.
 
   Runs the latest applied migration by default. To roll back to
   to a version number, supply `--to version_number`.

@@ -16,6 +16,11 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   ## Examples
 
       mix ecto.gen.migration MyApp.Repo add_posts_table
+
+  By default, the migration will be generated to the
+  "priv/repo/migrations" directory of the current application
+  but it can be configured by specify the `:priv` key under
+  the repository configuration.
   """
   def run(args) do
     no_umbrella!("ecto.gen.migration")

@@ -2,45 +2,49 @@ defmodule Ecto.Repo do
   @moduledoc """
   Defines a repository.
 
-  A repository maps to a data store, for example an SQL database.
-  A repository must implement `conf/0` and set an adapter (see `Ecto.Adapter`)
-  to be used for the repository.
+  A repository maps to an underlying data store, controlled by the
+  adapter. For example, Ecto ships with a Postgres adapter that
+  stores data into a PostgreSQL database.
 
-  When used, the following options are allowed:
+  When used, the repository expects the `:otp_app` as option.
+  The `:otp_app` should point to an OTP application that has
+  the repository configuration. For example, the repository:
 
-  * `:adapter` - the adapter to be used for the repository
-
-  * `:env` - configures the repository to support environments
-
-  ## Example
-
-      defmodule MyRepo do
-        use Ecto.Repo, adapter: Ecto.Adapters.Postgres
-
-        def conf do
-          parse_url "ecto://postgres:postgres@localhost/postgres"
-        end
+      defmodule Repo do
+        use Ecto.Repo,
+          otp_app: :my_app,
+          adapter: Ecto.Adapters.Postgres
       end
 
-  Most of the time, we want the repository to work with different
-  environments. In such cases, we can pass an `:env` option:
+  Could be configured with:
 
-      defmodule MyRepo do
-        use Ecto.Repo, adapter: Ecto.Adapters.Postgres, env: Mix.env
+      config :my_app, Repo,
+        database: "ecto_simple",
+        username: "postgres",
+        password: "postgres",
+        hostname: "localhost"
 
-        def conf(env), do: parse_url url(env)
+  The configuration that goes into the `config` is specific to
+  to the adapter, so check `Ecto.Adapters.Postgres` documentation
+  for more information.
 
-        defp url(:dev),  do: "ecto://postgres:postgres@localhost/postgres_dev"
-        defp url(:test), do: "ecto://postgres:postgres@localhost/postgres_test?size=1"
-        defp url(:prod), do: "ecto://postgres:postgres@localhost/postgres_prod"
-      end
+  ## URLs
 
-  Notice that, when using the environment, developers should implement
-  `conf/1` which automatically passes the environment instead of `conf/0`.
+  Repositories by default support URLs. For example, the configuration
+  above could be rewriten to:
 
-  Note the environment is only used at compilation time. That said, make
-  sure the `:build_per_environment` option is set to true (the default)
-  in your Mix project configuration.
+      config :my_app, Repo,
+        url: "ecto://postgres:postgres@localhost/ecto_simple"
+
+  The schema can be of any value. The path represents the database name
+  while options are simply merged in.
+
+  URLs also support `{:system, "KEY"}` to be given, telling Ecto to load
+  the configuration from the system environment instead:
+
+      config :my_app, Repo,
+        url: {:system, "DATABASE_URL"}
+
   """
 
   use Behaviour
@@ -50,6 +54,37 @@ defmodule Ecto.Repo do
   defmacro __using__(opts) do
     adapter = Macro.expand(Keyword.fetch!(opts, :adapter), __CALLER__)
     env     = Keyword.get(opts, :env)
+    otp_app = Keyword.get(opts, :otp_app)
+
+    unless otp_app do
+      IO.write """
+      use Ecto.Repo now expects the :otp_app as argument. Once you pass
+      the :otp_app, you MUST move your configuration to your config/config.exs
+      file. For example, in your repo:
+
+          defmodule #{inspect __CALLER__.module} do
+            use Ecto.Repo,
+              otp_app: :my_app,
+              adapter: Ecto.Adapters.Postgres
+          end
+
+      Now in your config/config.exs file:
+
+          config :my_app, #{inspect __CALLER__.module},
+            database: "ecto_simple",
+            username: "postgres",
+            password: "postgres",
+            hostname: "localhost"
+
+      or
+
+          config :my_app, #{inspect __CALLER__.module},
+            url: "ecto://postgres:postgres@localhost/ecto_simple"
+
+      The previous mode of configuring repositories will be removed
+      in the next release.
+      """
+    end
 
     unless Code.ensure_loaded?(adapter) do
       raise ArgumentError, message: "Adapter #{inspect adapter} was not compiled, " <>
@@ -60,10 +95,22 @@ defmodule Ecto.Repo do
       use unquote(adapter)
       @behaviour Ecto.Repo
       @env unquote(env)
+      @otp_app unquote(otp_app)
       require Logger
 
-      import Ecto.Utils, only: [parse_url: 1]
+      # TODO: Remove those
+      import Ecto.Repo.Config, only: [parse_url: 1]
       import Application, only: [app_dir: 2]
+
+      if @otp_app do
+        def config do
+          Ecto.Repo.Config.config(@otp_app, __MODULE__)
+        end
+      else
+        def config do
+          conf
+        end
+      end
 
       if @env do
         def conf do
@@ -73,7 +120,7 @@ defmodule Ecto.Repo do
       end
 
       def start_link do
-        unquote(adapter).start_link(__MODULE__, conf)
+        unquote(adapter).start_link(__MODULE__, config())
       end
 
       def stop do
@@ -171,7 +218,7 @@ defmodule Ecto.Repo do
   used in conjunction with `parse_url/1`. This function must be implemented by
   the user.
   """
-  defcallback conf() :: Keyword.t
+  defcallback config() :: Keyword.t
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`

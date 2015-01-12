@@ -26,17 +26,6 @@ defmodule Ecto.RepoTest do
   alias Ecto.RepoTest.MyModel
   alias Ecto.RepoTest.MyModelNoPK
 
-  test "handles environment support" do
-    defmodule EnvRepo do
-      # Use a variable to ensure it is properly expanded at runtime
-      env = :dev
-      use Ecto.Repo, adapter: Ecto.MockAdapter, env: env
-      def conf(:dev), do: "dev_sample"
-    end
-
-    assert EnvRepo.conf == "dev_sample"
-  end
-
   test "needs model with primary key field" do
     model = %MyModelNoPK{x: "abc"}
 

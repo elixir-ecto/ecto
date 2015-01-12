@@ -2,11 +2,7 @@ defmodule Ecto.Adapters.PostgresTest do
   use ExUnit.Case, async: true
 
   defmodule Repo do
-    use Ecto.Repo, adapter: Ecto.Adapters.Postgres
-
-    def conf do
-      parse_url "ecto://postgres:postgres@localhost/repo"
-    end
+    use Ecto.Repo, adapter: Ecto.Adapters.Postgres, otp_app: :ecto
   end
 
   test "stores pool_name metadata" do

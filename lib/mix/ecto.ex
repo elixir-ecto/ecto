@@ -53,13 +53,19 @@ defmodule Mix.Ecto do
   @doc """
   Gets the migrations path from a repository.
   """
-  @spec migrations_path(Ecto.Repo.t) :: String.t | no_return
+  @spec migrations_path(Ecto.Repo.t) :: String.t
   def migrations_path(repo) do
-    if function_exported?(repo, :priv, 0) do
-      Path.join(repo.priv, "migrations")
-    else
-      raise Mix.Error, message: "expected repo #{inspect repo} to define priv/0 in order to use migrations"
-    end
+    Path.join(repo_priv(repo), "migrations")
+  end
+
+  @doc """
+  Returns the private repository path.
+  """
+  def repo_priv(repo) do
+    config = repo.config()
+
+    Application.app_dir(Keyword.fetch!(config, :otp_app),
+      config[:priv] || "priv/#{repo |> Module.split |> List.last |> Mix.Utils.underscore}")
   end
 
   @doc """

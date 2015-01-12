@@ -7,9 +7,9 @@ defmodule Mix.Tasks.Ecto.Migrate do
   @moduledoc """
   Runs the pending migrations for the given repository.
 
-  Migrations are expected to be found inside the migrations
-  directory returned by the priv function defined in the
-  repository.
+  By default, migrations are expected at "priv/YOUR_REPO/migrations"
+  directory of the current application but it can be configured
+  by specify the `:priv` key under the repository configuration.
 
   Runs all pending migrations by default. To migrate up
   to a version number, supply `--to version_number`.
