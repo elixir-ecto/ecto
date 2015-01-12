@@ -53,6 +53,11 @@ defmodule Ecto.Repo.Config do
             hostname: info.host,
             port:     info.port]
 
-    Enum.reject(opts, fn {_k, v} -> is_nil(v) end)
+    Enum.reject(opts, fn {_k, v} -> is_nil(v) end) ++
+      atomize_keys(URI.decode_query(info.query || ""))
+  end
+
+  defp atomize_keys(dict) do
+    Enum.map dict, fn {k, v} -> {String.to_atom(k), v} end
   end
 end
