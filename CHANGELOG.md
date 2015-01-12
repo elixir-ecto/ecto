@@ -1,3 +1,9 @@
+# v0.6.0-dev
+
+* Backwards incompatible changes
+  * Previously deprecated validations have been removed
+  * Previously deprecated repository configuration has been removed
+
 # v0.5.0 (2015-01-12)
 
 * Enhancements
