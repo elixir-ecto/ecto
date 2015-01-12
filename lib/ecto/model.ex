@@ -38,7 +38,6 @@ defmodule Ecto.Model do
 
       import Ecto.Model
       use Ecto.Model.Callbacks
-      use Ecto.Model.Validations # TODO: Remove me
     end
   end
 

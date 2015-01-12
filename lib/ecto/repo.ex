@@ -60,38 +60,7 @@ defmodule Ecto.Repo do
   @doc false
   defmacro __using__(opts) do
     adapter = Macro.expand(Keyword.fetch!(opts, :adapter), __CALLER__)
-    env     = Keyword.get(opts, :env)
-    otp_app = Keyword.get(opts, :otp_app)
-
-    unless otp_app do
-      IO.write """
-      use Ecto.Repo now expects the :otp_app as argument. Once you pass
-      the :otp_app, you MUST move your configuration to your config/config.exs
-      file. For example, in your repo:
-
-          defmodule #{inspect __CALLER__.module} do
-            use Ecto.Repo,
-              otp_app: :my_app,
-              adapter: Ecto.Adapters.Postgres
-          end
-
-      Now in your config/config.exs file:
-
-          config :my_app, #{inspect __CALLER__.module},
-            database: "ecto_simple",
-            username: "postgres",
-            password: "postgres",
-            hostname: "localhost"
-
-      or
-
-          config :my_app, #{inspect __CALLER__.module},
-            url: "ecto://postgres:postgres@localhost/ecto_simple"
-
-      The previous mode of configuring repositories will be removed
-      in the next release.
-      """
-    end
+    otp_app = Keyword.fetch!(opts, :otp_app)
 
     unless Code.ensure_loaded?(adapter) do
       raise ArgumentError, message: "Adapter #{inspect adapter} was not compiled, " <>
@@ -99,31 +68,14 @@ defmodule Ecto.Repo do
     end
 
     quote do
-      use unquote(adapter)
       @behaviour Ecto.Repo
-      @env unquote(env)
       @otp_app unquote(otp_app)
+
+      use unquote(adapter)
       require Logger
 
-      # TODO: Remove those
-      import Ecto.Repo.Config, only: [parse_url: 1]
-      import Application, only: [app_dir: 2]
-
-      if @otp_app do
-        def config do
-          Ecto.Repo.Config.config(@otp_app, __MODULE__)
-        end
-      else
-        def config do
-          conf
-        end
-      end
-
-      if @env do
-        def conf do
-          conf(@env)
-        end
-        defoverridable conf: 0
+      def config do
+        Ecto.Repo.Config.config(@otp_app, __MODULE__)
       end
 
       def start_link do
