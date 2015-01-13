@@ -1,14 +1,20 @@
 # v0.6.0-dev
 
 * Enhancements
-  * Add `Ecto.Changeset.change/2`, `Ecto.Changeset.fetch_field/2` and `Ecto.Changeset.get_field/2`
-
-* Bug fixes
-  * Ensure fields in `Ecto.Repo.update_all/3` are dumped before being sent to the database
+  * Add `template`, `encoding`, `lc_collate` and `lc_ctype` options to adapter that are used when creating the database
 
 * Backwards incompatible changes
   * Previously deprecated validations have been removed
   * Previously deprecated repository configuration has been removed
+
+# v0.5.1 (2015-01-13)
+
+* Enhancements
+  * Add `Ecto.Changeset.change/2`, `Ecto.Changeset.fetch_field/2` and `Ecto.Changeset.get_field/2`
+  * Allow atoms and dynamic values in `order_by`
+
+* Bug fixes
+  * Ensure fields in `Ecto.Repo.update_all/3` are dumped before being sent to the database
 
 # v0.5.0 (2015-01-12)
 
