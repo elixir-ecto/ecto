@@ -12,8 +12,8 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  defp changeset(params) do
-    cast(params, %Post{}, ~w(), ~w(title body))
+  defp changeset(params, model \\ %Post{}) do
+    cast(params, model, ~w(), ~w(title body))
   end
 
   ## cast/4
@@ -126,6 +126,24 @@ defmodule Ecto.ChangesetTest do
   end
 
   ## Changeset functions
+
+  test "fetch_field/2" do
+    changeset = changeset(%{"title" => "foo"}, %Post{body: "bar"})
+
+    assert fetch_field(changeset, :title) == {:changes, "foo"}
+    assert fetch_field(changeset, :body) == {:model, "bar"}
+    assert fetch_field(changeset, :other) == :error
+  end
+
+  test "get_field/3" do
+    changeset = changeset(%{"title" => "foo"}, %Post{body: "bar"})
+
+    assert get_field(changeset, :title) == "foo"
+    assert get_field(changeset, :body) == "bar"
+    assert get_field(changeset, :body, "other") == "bar"
+    assert get_field(changeset, :other) == nil
+    assert get_field(changeset, :other, "other") == "other"
+  end
 
   test "fetch_change/2" do
     changeset = changeset(%{"title" => "foo", "body" => nil})
