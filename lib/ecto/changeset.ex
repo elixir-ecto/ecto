@@ -149,6 +149,46 @@ defmodule Ecto.Changeset do
   ## Working with changesets
 
   @doc """
+  Fetches the given field from changes or from the model.
+
+  While `fetch_change/2` only looks at the current `changes`
+  to retrieve a value, this function looks at the changes and
+  then falls back on the model, finally returning `:error` if
+  no value is available.
+  """
+  @spec fetch_field(t, atom) :: {:changes, term} | {:model, term} | :error
+  def fetch_field(%{changes: changes, model: model}, key) do
+    case Map.fetch(changes, key) do
+      {:ok, value} -> {:changes, value}
+      :error ->
+        case Map.fetch(model, key) do
+          {:ok, value} -> {:model, value}
+          :error       -> :error
+        end
+    end
+  end
+
+  @doc """
+  Gets a field from changes or from the model.
+
+  While `get_change/3` only looks at the current `changes`
+  to retrieve a value, this function looks at the changes and
+  then falls back on the model, finally returning `default` if
+  no value is available.
+  """
+  @spec get_field(t, atom, term) :: term
+  def get_field(%{changes: changes, model: model}, key, default \\ nil) do
+    case Map.fetch(changes, key) do
+      {:ok, value} -> value
+      :error ->
+        case Map.fetch(model, key) do
+          {:ok, value} -> value
+          :error       -> default
+        end
+    end
+  end
+
+  @doc """
   Fetches a change.
   """
   @spec fetch_change(t, atom) :: {:ok, term} | :error
@@ -159,7 +199,7 @@ defmodule Ecto.Changeset do
   @doc """
   Gets a change or returns default value.
   """
-  @spec get_change(t, atom) :: term
+  @spec get_change(t, atom, term) :: term
   def get_change(%{changes: changes}, key, default \\ nil) when is_atom(key) do
     Map.get(changes, key, default)
   end
