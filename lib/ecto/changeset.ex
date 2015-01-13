@@ -32,6 +32,27 @@ defmodule Ecto.Changeset do
                              validations: [{atom, atom | {atom, [term]}}]}
 
   @doc """
+  Generetes a changeset to change the given `model`.
+
+  This function is useful for directly changing the model,
+  without performing casting nor validation.
+
+  For this reason, `changes` expect the keys to be atoms.
+  See `cast/4` if you'd prefer to cast and validate external
+  parameters.
+  """
+  @spec change(Ecto.Model.t, %{atom => term}) :: t
+  def change(model, changes \\ %{})
+
+  def change(%{__struct__: _} = model, changes) when is_map(changes) do
+    %Ecto.Changeset{valid?: true, model: model, changes: changes}
+  end
+
+  def change(%{__struct__: _} = model, changes) when is_list(changes) do
+    %Ecto.Changeset{valid?: true, model: model, changes: Enum.into(changes, %{})}
+  end
+
+  @doc """
   Converts the given `params` into a changeset for `model`
   keeping only the set of `required` and `optional` keys.
 
@@ -55,7 +76,7 @@ defmodule Ecto.Changeset do
   changes map. This is useful to run the changeset through
   all validation steps for introspection.
   """
-  @spec cast(map | nil, Ecto.Model.t, [String.t | atom], [String.t | atom]) :: t
+  @spec cast(%{binary => term} | nil, Ecto.Model.t, [String.t | atom], [String.t | atom]) :: t
   def cast(nil, %{__struct__: _} = model, required, optional)
       when is_list(required) and is_list(optional) do
     to_atom = fn

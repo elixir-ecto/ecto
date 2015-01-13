@@ -127,6 +127,23 @@ defmodule Ecto.ChangesetTest do
 
   ## Changeset functions
 
+  test "change/2" do
+    changeset = change(%Post{})
+    assert changeset.valid?
+    assert changeset.model == %Post{}
+    assert changeset.changes == %{}
+
+    changeset = change(%Post{}, body: "bar")
+    assert changeset.valid?
+    assert changeset.model == %Post{}
+    assert changeset.changes == %{body: "bar"}
+
+    changeset = change(%Post{}, %{body: "bar"})
+    assert changeset.valid?
+    assert changeset.model == %Post{}
+    assert changeset.changes == %{body: "bar"}
+  end
+
   test "fetch_field/2" do
     changeset = changeset(%{"title" => "foo"}, %Post{body: "bar"})
 

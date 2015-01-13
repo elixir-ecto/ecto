@@ -4,7 +4,18 @@ defmodule Ecto.Model.Callbacks do
 
   A callback is invoked by your `Ecto.Repo` before (or after)
   particular events. Callbacks receive changesets, must
-  always a changeset back and always run inside a transaction.
+  always return a changeset back and always run inside a transaction.
+
+  Callbacks in Ecto are useful for data consistency, like keeping
+  counters, setting field values and so on. For this reason, callbacks
+  cannot abort and are invoked after the data is validated.
+
+  Therefore, don't use callbacks for validation, enforcing business
+  rules or performing actions unrelated to the data itself, like
+  sending e-mails.
+
+  Finally keep in mind callbacks are not invoked on bulk actions
+  such as `Ecto.Repo.update_all/3` or `Ecto.Repo.delete_all/2`.
 
   ## Example
 
@@ -38,15 +49,6 @@ defmodule Ecto.Model.Callbacks do
       # with the given arguments (changeset is prepended)
       after_insert Stats, :increase_user_count, ["foo", "bar"]
 
-  ## Usage
-
-  Callbacks in Ecto are useful for data consistency, for keeping
-  counters, setting changes and so on. Avoid using callbacks for
-  business rules or doing actions unrelated to the data itself,
-  like sending e-mails.
-
-  Finally, keep in mind callbacks are not invoked on bulk actions
-  such as `Repo.delete_all` or `Repo.update_all`.
   """
 
   @doc false
@@ -82,8 +84,10 @@ defmodule Ecto.Model.Callbacks do
   Since on insert all the model fields plus changeset changes
   are sent to the repository, the callback will receive an
   `Ecto.Changeset` with all the model fields and changes in
-  the `changeset.changes` field. The callback must return a
-  changeset.
+  the `changeset.changes` field. At this point, the changeset
+  was already validated and is always valid.
+
+  The callback must return a changeset.
 
   ## Example
 
@@ -126,6 +130,9 @@ defmodule Ecto.Model.Callbacks do
 
   The callback receives an `Ecto.Changeset` with the changes
   to be sent to the database in the `changeset.changes` field.
+  At this point, the changeset was already validated and is
+  always valid.
+
   The callback must return a changeset.
 
   ## Example
@@ -167,9 +174,10 @@ defmodule Ecto.Model.Callbacks do
   Adds a callback that is invoked before the model is deleted
   from the repository.
 
-  The callback receives an `Ecto.Changeset`. Although the changes
-  field is ignored by the repository on delete, future functionality
-  will allow pre-conditions to be set on delete.
+  The callback receives an `Ecto.Changeset`. At this point, the
+  changeset was already validated and is always valid.
+
+  The callback must return a changeset.
 
   ## Example
 

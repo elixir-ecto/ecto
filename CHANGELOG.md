@@ -1,5 +1,11 @@
 # v0.6.0-dev
 
+* Enhancements
+  * Add `Ecto.Changeset.change/2`, `Ecto.Changeset.fetch_field/2` and `Ecto.Changeset.get_field/2`
+
+* Bug fixes
+  * Ensure fields in `Ecto.Repo.update_all/3` are dumped before being sent to the database
+
 * Backwards incompatible changes
   * Previously deprecated validations have been removed
   * Previously deprecated repository configuration has been removed
