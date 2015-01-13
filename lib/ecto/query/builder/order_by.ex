@@ -19,9 +19,29 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   """
   @spec escape(Macro.t, Keyword.t) :: Macro.t
+  def escape({:^, _, [expr]}, _vars) do
+    {quote(do: Ecto.Query.Builder.OrderBy.order_by!(unquote(expr))), %{}}
+  end
+
   def escape(expr, vars) do
     List.wrap(expr)
     |> Enum.map_reduce(%{}, &do_escape(&1, &2, vars))
+  end
+
+  defp do_escape({dir, {:^, _, [expr]}}, params, _vars) do
+    {{quoted_dir!(dir), quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(expr)))}, params}
+  end
+
+  defp do_escape({:^, _, [expr]}, params, _vars) do
+    {{:asc, quote(do: Ecto.Query.Builder.OrderBy.field!(unquote(expr)))}, params}
+  end
+
+  defp do_escape({dir, field}, params, _vars) when is_atom(field) do
+    {{quoted_dir!(dir), Macro.escape(to_field(field))}, params}
+  end
+
+  defp do_escape(field, params, _vars) when is_atom(field) do
+    {{:asc, Macro.escape(to_field(field))}, params}
   end
 
   defp do_escape({dir, expr}, params, vars) do
@@ -39,11 +59,11 @@ defmodule Ecto.Query.Builder.OrderBy do
   delegate the check to runtime for interpolation.
   """
   def quoted_dir!({:^, _, [expr]}),
-    do: quote(do: :"Elixir.Ecto.Query.Builder.OrderBy".dir!(unquote(expr)))
+    do: quote(do: Ecto.Query.Builder.OrderBy.dir!(unquote(expr)))
   def quoted_dir!(dir) when dir in [:asc, :desc],
     do: dir
   def quoted_dir!(other),
-    do: Builder.error!("expected :asc, :desc or interpolated value in order by, got: `#{inspect other}`")
+    do: Builder.error!("expected :asc, :desc or interpolated value in `order_by`, got: `#{inspect other}`")
 
   @doc """
   Called by at runtime to verify the direction.
@@ -51,7 +71,31 @@ defmodule Ecto.Query.Builder.OrderBy do
   def dir!(dir) when dir in [:asc, :desc],
     do: dir
   def dir!(other),
-    do: Builder.error!("expected :asc or :desc in order by, got: `#{inspect other}`")
+    do: Builder.error!("expected :asc or :desc in `order_by`, got: `#{inspect other}`")
+
+  @doc """
+  Called at runtime to verify a field.
+  """
+  def field!(field) when is_atom(field),
+    do: to_field(field)
+  def field!(other),
+    do: Builder.error!("expected a field as an atom in `order_by`, got: `#{inspect other}`")
+
+  @doc """
+  Called at runtime to verify order_by.
+  """
+  def order_by!(order_by) do
+    Enum.map List.wrap(order_by), fn
+      {dir, field} when dir in [:asc, :desc] and is_atom(field) ->
+        {dir, to_field(field)}
+      field when is_atom(field) ->
+        {:asc, to_field(field)}
+      _ ->
+        Builder.error!("expected a list or keyword list of fields in `order_by`, got: `#{inspect order_by}`")
+    end
+  end
+
+  defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
 
   @doc """
   Builds a quoted expression.

@@ -271,7 +271,7 @@ defmodule Ecto.Query.Builder do
   delegate the check to runtime for interpolation.
   """
   def quoted_field!({:^, _, [expr]}),
-    do: quote(do: :"Elixir.Ecto.Query.Builder".field!(unquote(expr)))
+    do: quote(do: Ecto.Query.Builder.field!(unquote(expr)))
   def quoted_field!(atom) when is_atom(atom),
     do: atom
   def quoted_field!(other),
