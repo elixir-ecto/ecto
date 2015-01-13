@@ -1,23 +1,39 @@
 if Code.ensure_loaded?(Postgrex.Connection) do
   defmodule Ecto.Adapters.Postgres do
     @moduledoc """
-    This is the adapter module for PostgreSQL. It handles and pools the
-    connections to the postgres database with poolboy.
+    Adapter module for PostgreSQL.
+
+    It handles and pools the connections to the postgres
+    database with poolboy.
 
     ## Options
 
-    The options should be given via the repository configuration:
+    Postgrex options split in different categories described
+    below. All options should be given via the repository
+    configuration.
+
+    ### Connection options
 
       * `:hostname` - Server hostname
       * `:port` - Server port (default: 5432)
       * `:username` - Username
       * `:password` - User password
-      * `:size` - The number of connections to keep in the pool
-      * `:max_overflow` - The maximum overflow of connections (see poolboy docs)
       * `:parameters` - Keyword list of connection parameters
       * `:ssl` - Set to true if ssl should be used (default: false)
-      * `:ssl_opts` - A list of ssl options, see ssl docs
+      * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
+
+    ### Pool options
+
+      * `:size` - The number of connections to keep in the pool
+      * `:max_overflow` - The maximum overflow of connections (see poolboy docs)
       * `:lazy` - If false all connections will be started immediately on Repo startup (default: true)
+
+    ### Storage options
+
+      * `:template` - the template to create the database from (default: "template0")
+      * `:encoding` - the database encoding (default: "UTF8")
+      * `:lc_collate` - the collation order (default: "en_US.UTF-8")
+      * `:lc_ctype` - the character classification (default: "en_US.UTF-8")
 
     """
 
@@ -33,6 +49,32 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Adapters.Postgres.SQL
     alias Ecto.Adapters.Postgres.Worker
     alias Postgrex.TypeInfo
+
+    ## Public API
+
+    @doc """
+    Run custom SQL query on given repo.
+
+    ## Options
+
+      `:timeout` - The time in milliseconds to wait for the call to finish,
+                   `:infinity` will wait indefinitely (default: 5000);
+
+    ## Examples
+
+        iex> Postgres.query(MyRepo, "SELECT $1 + $2", [40, 2])
+        %Postgrex.Result{command: :select, columns: ["?column?"], rows: [{42}], num_rows: 1}
+    """
+    def query(repo, sql, params, opts \\ []) do
+      pool = repo_pool(repo)
+      opts = Keyword.put_new(opts, :timeout, @timeout)
+
+      repo.log({:query, sql}, fn ->
+        use_worker(pool, opts[:timeout], fn worker ->
+          Worker.query!(worker, sql, params, opts)
+        end)
+      end)
+    end
 
     ## Adapter API
 
@@ -56,6 +98,58 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       pool = repo_pool(repo)
       :poolboy.stop(pool)
     end
+
+    defp prepare_start(repo, opts) do
+      pool_name = repo.__postgres__(:pool_name)
+      {pool_opts, worker_opts} = Dict.split(opts, [:size, :max_overflow])
+
+      pool_opts = pool_opts
+        |> Keyword.put_new(:size, 5)
+        |> Keyword.put_new(:max_overflow, 10)
+
+      pool_opts = [
+        name: {:local, pool_name},
+        worker_module: Worker ] ++ pool_opts
+
+      worker_opts = worker_opts
+        |> Keyword.put(:formatter, &formatter/1)
+        |> Keyword.put(:decoder, &decoder/4)
+        |> Keyword.put(:encoder, &encoder/3)
+        |> Keyword.put_new(:port, @default_port)
+
+      {pool_opts, worker_opts}
+    end
+
+    defp repo_pool(repo) do
+      pid = repo.__postgres__(:pool_name) |> Process.whereis
+
+      if is_nil(pid) or not Process.alive?(pid) do
+        raise ArgumentError, "repo #{inspect repo} is not started"
+      end
+
+      pid
+    end
+
+    defp formatter(%TypeInfo{sender: "uuid"}), do: :binary
+    defp formatter(_), do: nil
+
+    defp decoder(%TypeInfo{sender: "uuid"}, :binary, _default, param) do
+      param
+    end
+
+    defp decoder(_type, _format, default, param) do
+      default.(param)
+    end
+
+    defp encoder(%TypeInfo{sender: "uuid"}, _default, uuid) do
+      uuid
+    end
+
+    defp encoder(_type, default, param) do
+      default.(param)
+    end
+
+    ## Query API
 
     @doc false
     def all(repo, query, params, opts) do
@@ -120,62 +214,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    @doc """
-    Run custom SQL query on given repo.
-
-    ## Options
-      `:timeout` - The time in milliseconds to wait for the call to finish,
-                   `:infinity` will wait indefinitely (default: 5000);
-
-    ## Examples
-
-        iex> Postgres.query(MyRepo, "SELECT $1 + $2", [40, 2])
-        %Postgrex.Result{command: :select, columns: ["?column?"], rows: [{42}], num_rows: 1}
-    """
-    def query(repo, sql, params, opts \\ []) do
-      pool = repo_pool(repo)
-
-      opts = Keyword.put_new(opts, :timeout, @timeout)
-      repo.log({:query, sql}, fn ->
-        use_worker(pool, opts[:timeout], fn worker ->
-          Worker.query!(worker, sql, params, opts)
-        end)
-      end)
-    end
-
-    defp prepare_start(repo, opts) do
-      pool_name = repo.__postgres__(:pool_name)
-      {pool_opts, worker_opts} = Dict.split(opts, [:size, :max_overflow])
-
-      pool_opts = pool_opts
-        |> Keyword.put_new(:size, 5)
-        |> Keyword.put_new(:max_overflow, 10)
-
-      pool_opts = [
-        name: {:local, pool_name},
-        worker_module: Worker ] ++ pool_opts
-
-      worker_opts = worker_opts
-        |> Keyword.put(:formatter, &formatter/1)
-        |> Keyword.put(:decoder, &decoder/4)
-        |> Keyword.put(:encoder, &encoder/3)
-        |> Keyword.put_new(:port, @default_port)
-
-      {pool_opts, worker_opts}
-    end
-
-    defp repo_pool(repo) do
-      pid = repo.__postgres__(:pool_name) |> Process.whereis
-
-      if is_nil(pid) or not Process.alive?(pid) do
-        raise ArgumentError, "repo #{inspect repo} is not started"
-      end
-
-      pid
-    end
-
-    ## Rows processing
-
     defp process_fields(fields, sources) do
       Enum.map fields, fn
         {:&, _, [idx]} ->
@@ -203,34 +241,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp all_nil?(tuple, idx, _count) when elem(tuple, idx) != nil, do: false
     defp all_nil?(tuple, idx, count), do: all_nil?(tuple, idx + 1, count - 1)
 
-    ## Postgrex casting
-
-    defp formatter(%TypeInfo{sender: "uuid"}), do: :binary
-    defp formatter(_), do: nil
-
-    defp decoder(%TypeInfo{sender: "uuid"}, :binary, _default, param) do
-      param
-    end
-
-    defp decoder(_type, _format, default, param) do
-      default.(param)
-    end
-
-    defp encoder(%TypeInfo{sender: "uuid"}, _default, uuid) do
-      uuid
-    end
-
-    defp encoder(_type, default, param) do
-      default.(param)
-    end
-
     ## Transaction API
 
     @doc false
     def transaction(repo, opts, fun) do
       pool = repo_pool(repo)
 
-      opts = Keyword.put_new(opts, :timeout, @timeout)
+      opts   = Keyword.put_new(opts, :timeout, @timeout)
       worker = checkout_worker(pool, opts[:timeout])
 
       try do
@@ -348,10 +365,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def storage_up(opts) do
-      # TODO: allow the user to specify those options either in the Repo or on command line
-      database_options = ~s(TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8')
+      database   = Keyword.fetch!(opts, :database)
+      template   = Keyword.get(opts, :template, "template0")
+      encoding   = Keyword.get(opts, :encoding, "UTF8")
+      lc_collate = Keyword.get(opts, :lc_collate, "en_US.UTF-8")
+      lc_ctype   = Keyword.get(opts, :lc_ctype, "en_US.UTF-8")
 
-      output = run_with_psql opts, "CREATE DATABASE #{opts[:database]} " <> database_options
+      output =
+        run_with_psql opts,
+          "CREATE DATABASE " <> database <> " " <>
+          "TEMPLATE=#{template} ENCODING='#{encoding}' " <>
+          "LC_COLLATE='#{lc_collate}' LC_CTYPE='#{lc_ctype}'"
 
       cond do
         String.length(output) == 0                 -> :ok
