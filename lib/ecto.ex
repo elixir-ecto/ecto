@@ -204,11 +204,11 @@ defmodule Ecto do
   differents changesets for different and use cases. For example, one
   could easily provide specific changesets for create and update:
 
-      def changeset(:create, user, params) do
+      def changeset(user, :create, params) do
         # Changeset on create
       end
 
-      def changeset(:update, user, params) do
+      def changeset(user, :update, params) do
         # Changeset on update
       end
 
