@@ -40,6 +40,12 @@ defmodule Ecto.Changeset do
   For this reason, `changes` expect the keys to be atoms.
   See `cast/4` if you'd prefer to cast and validate external
   parameters.
+
+  ## Examples
+
+      iex> changeset = change(post, title: "new title")
+      iex> Repo.update(changeset)
+      %Post{...}
   """
   @spec change(Ecto.Model.t, %{atom => term}) :: t
   def change(model, changes \\ %{})
@@ -75,6 +81,14 @@ defmodule Ecto.Changeset do
   changeset is automatically marked as invalid, with an empty
   changes map. This is useful to run the changeset through
   all validation steps for introspection.
+
+  ## Examples
+
+      iex> changeset = cast(params, post, ~w(title), ~w())
+      iex> if changeset.valid? do
+      ...>   Repo.update(changeset)
+      ...> end
+
   """
   @spec cast(%{binary => term} | nil, Ecto.Model.t, [String.t | atom], [String.t | atom]) :: t
   def cast(nil, %{__struct__: _} = model, required, optional)
