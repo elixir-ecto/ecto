@@ -4,7 +4,7 @@ defmodule Ecto.Query.Builder.JoinTest do
   import Ecto.Query.Builder.Join
   doctest Ecto.Query.Builder.Join
 
-  import Ecto.Query, only: [join: 5]
+  import Ecto.Query
 
   test "invalid joins" do
     assert_raise Ecto.Query.CompileError,
@@ -18,5 +18,17 @@ defmodule Ecto.Query.Builder.JoinTest do
       source = 123
       join("posts", :left, [p], c in ^source, true)
     end
+  end
+
+  test "join interpolation" do
+    qual = :left
+    source = "comments"
+    assert %{joins: [%{source: {"comments", nil}}]} =
+            join("posts", qual, [p], c in ^source, true)
+
+    qual = :right
+    source = Comment
+    assert %{joins: [%{source: {nil, Comment}}]} =
+            join("posts", qual, [p], c in ^source, true)
   end
 end

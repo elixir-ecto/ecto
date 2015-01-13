@@ -426,6 +426,21 @@ defmodule Ecto.Query do
 
       City |> order_by([c], asc: c.name, desc: c.population)
 
+  ## Atom values
+
+  For simplicity, `order_by` also allows the fields to be given
+  as atoms. In such cases, the field always applies to the source
+  given in `from` (i.e. the first binding). For example, the two
+  expressions below are equivalent:
+
+      from(c in City, order_by: [asc: :name, desc: :population])
+      from(c in City, order_by: [asc: c.name, desc: c.population])
+
+  A keyword list can also be interpolated:
+
+      values = [asc: :name, desc: :population]
+      from(c in City, order_by: ^values)
+
   """
   defmacro order_by(query, binding, expr)  do
     OrderBy.build(query, binding, expr, __CALLER__)

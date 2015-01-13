@@ -235,17 +235,17 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
             |> group_by([], ^2)
             |> having([], ^true)
             |> having([], ^false)
-            |> order_by([], ^3)
-            |> order_by([], ^4)
-            |> limit([], ^5)
-            |> offset([], ^6)
+            |> order_by([], fragment("?", ^3))
+            |> order_by([], ^:x)
+            |> limit([], ^4)
+            |> offset([], ^5)
             |> normalize
 
     result =
       "SELECT $1 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON $2 " <>
       "INNER JOIN \"model2\" AS m2 ON $3 WHERE ($4) AND ($5) " <>
       "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
-      "ORDER BY $10, $11 LIMIT $12 OFFSET $13"
+      "ORDER BY $10, m0.\"x\" LIMIT $11 OFFSET $12"
 
     assert SQL.all(query) == String.rstrip(result)
   end

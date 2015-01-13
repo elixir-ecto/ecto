@@ -48,7 +48,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape({:^, _, [expr]}, _vars) do
-    {nil, quote(do: :"Elixir.Ecto.Query.Builder.Join".join!(unquote(expr))), nil}
+    {nil, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil}
   end
 
   def escape(join, _vars) do
@@ -139,7 +139,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   defp validate_qual(qual) do
-    quote(do: :"Elixir.Ecto.Query.Builder.Join".qual!(unquote(qual)))
+    quote(do: Ecto.Query.Builder.Join.qual!(unquote(qual)))
   end
 
   defp validate_bind(bind, all) do

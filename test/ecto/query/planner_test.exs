@@ -49,7 +49,7 @@ defmodule Ecto.Query.PlannerTest do
         where: p.title == ^"2",
         group_by: p.title == ^"3",
         having: p.title == ^"4",
-        order_by: [asc: ^"5"],
+        order_by: [asc: fragment("?", ^"5")],
         limit: ^6,
         offset: ^7
 
