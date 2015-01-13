@@ -170,6 +170,7 @@ defmodule Ecto.Repo.Queryable do
   defp cast(kind, type, v) do
     case Ecto.Type.cast(type, v) do
       {:ok, v} ->
+        {:ok, v} = Ecto.Type.dump(type, v)
         v
       :error ->
         raise ArgumentError,

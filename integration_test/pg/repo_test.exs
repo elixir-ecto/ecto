@@ -284,13 +284,19 @@ defmodule Ecto.Integration.RepoTest do
 
     assert %Post{text: nil} = TestRepo.get(Post, id1)
     assert %Post{text: nil} = TestRepo.get(Post, id2)
+  end
 
-    # Interpolated values with casting
+  test "update all with casting and dumping" do
     text = "hai"
-    assert 2 = TestRepo.update_all(p in Post, text: ^text, counter: ^to_string(id1))
-
+    assert %Post{id: id1} = TestRepo.insert(%Post{})
+    assert 1 = TestRepo.update_all(p in Post, text: ^text, counter: ^to_string(id1))
     assert %Post{text: "hai", counter: ^id1} = TestRepo.get(Post, id1)
-    assert %Post{text: "hai", counter: ^id1} = TestRepo.get(Post, id2)
+
+    text = "hai"
+    date = Ecto.DateTime.utc
+    assert %Comment{id: id2} = TestRepo.insert(%Comment{})
+    assert 1 = TestRepo.update_all(p in Comment, text: ^text, posted: ^date)
+    assert %Comment{text: "hai", posted: ^date} = TestRepo.get(Comment, id2)
   end
 
   test "delete all" do
