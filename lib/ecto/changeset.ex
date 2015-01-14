@@ -10,6 +10,7 @@ defmodule Ecto.Changeset do
   The fields are:
 
   * `valid?`      - Stores if the changeset is valid
+  * `repo`        - The repository applying the changeset (only set after a Repo function is called)
   * `model`       - The changeset root model
   * `params`      - The parameters as given on changeset creation
   * `changes`     - The `changes` from parameters that were approved in casting
@@ -19,10 +20,11 @@ defmodule Ecto.Changeset do
   * `optional`    - All optional fields as a list of atoms
   """
 
-  defstruct valid?: false, model: nil, params: nil, changes: %{},
+  defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: []
 
   @type t :: %Ecto.Changeset{valid?: boolean(),
+                             repo: atom | nil,
                              model: Ecto.Model.t | nil,
                              params: %{String.t => term} | nil,
                              changes: %{atom => term},

@@ -1,6 +1,7 @@
 # v0.6.0-dev
 
 * Enhancements
+  * Pass the repository with the changeset to callbacks
   * Add `template`, `encoding`, `lc_collate` and `lc_ctype` options to adapter that are used when creating the database
 
 * Backwards incompatible changes

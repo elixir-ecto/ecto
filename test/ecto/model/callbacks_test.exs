@@ -69,12 +69,12 @@ defmodule Ecto.Model.CallbacksTest do
     before_delete __MODULE__, :changeset_before
     after_delete  __MODULE__, :changeset_after
 
-    def changeset_before(changeset) do
+    def changeset_before(%{repo: MockRepo} = changeset) do
       put_in(changeset.model.before, changeset.changes)
       |> delete_change(:z)
     end
 
-    def changeset_after(changeset) do
+    def changeset_after(%{repo: MockRepo} = changeset) do
       put_in(changeset.model.after, changeset.changes)
     end
   end

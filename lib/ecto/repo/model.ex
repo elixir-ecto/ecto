@@ -18,6 +18,7 @@ defmodule Ecto.Repo.Model do
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
+    changeset = %{changeset | repo: repo}
     changeset = merge_into_changeset(model, struct, fields, changeset)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
@@ -49,6 +50,7 @@ defmodule Ecto.Repo.Model do
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
     # changeset before hand.
+    changeset = %{changeset | repo: repo}
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_update after_update)a, fn ->
@@ -81,6 +83,9 @@ defmodule Ecto.Repo.Model do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     source = model.__schema__(:source)
+
+    # There are no field changes on delete
+    changeset = %{changeset | repo: repo}
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_delete after_delete)a, fn ->
