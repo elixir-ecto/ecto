@@ -424,34 +424,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Migration API
 
-    @migrate_opts [timeout: :infinity]
-
     @doc false
-    def migrate_up(repo, version, commands) do
-      case check_migration_version(repo, version) do
-        %Postgrex.Result{num_rows: 0} ->
-          transaction(repo, [], fn ->
-            Enum.each(commands, &query(repo, &1, [], @migrate_opts))
-            insert_migration_version(repo, version)
-          end)
-          :ok
-        _ ->
-          :already_up
-      end
-    end
-
-    @doc false
-    def migrate_down(repo, version, commands) do
-      case check_migration_version(repo, version) do
-        %Postgrex.Result{num_rows: 0} ->
-          :missing_up
-        _ ->
-          transaction(repo, [], fn ->
-            Enum.each(commands, &query(repo, &1, [], @migrate_opts))
-            delete_migration_version(repo, version)
-          end)
-          :ok
-      end
+    def execute_migration(repo, definition) do
+      query(repo, SQL.migrate(definition), [])
     end
 
     @doc false
@@ -461,21 +436,29 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       Enum.map(rows, &elem(&1, 0))
     end
 
+    @doc false
+    def insert_migration_version(repo, version) do
+      query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})", [])
+    end
+
+    @doc false
+    def delete_migration_version(repo, version) do
+      query(repo, "DELETE FROM schema_migrations WHERE version = #{version}", [])
+    end
+
+    @doc false
     defp create_migrations_table(repo) do
       query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)", [])
     end
 
-    defp check_migration_version(repo, version) do
-      create_migrations_table(repo)
-      query(repo, "SELECT version FROM schema_migrations WHERE version = #{version}", [])
-    end
+    @doc false
+    def object_exists?(repo, object) do
+      database = Keyword.get(repo.conf, :database)
+      sql      = SQL.object_exists_query(database, object)
 
-    defp insert_migration_version(repo, version) do
-      query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})", [])
-    end
+      %Postgrex.Result{rows: [{count}]} = query(repo, sql, [])
 
-    defp delete_migration_version(repo, version) do
-      query(repo, "DELETE FROM schema_migrations WHERE version = #{version}", [])
+      count > 0
     end
   end
 end
