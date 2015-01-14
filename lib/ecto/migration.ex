@@ -55,7 +55,7 @@ defmodule Ecto.Migration do
       Runner.start_command({:create, table})
 
       if table.primary_key do
-        add(:id, :primary_key)
+        add(:id, :serial, primary_key: true)
       end
 
       unquote(block)
@@ -186,11 +186,12 @@ defmodule Ecto.Migration do
 
   ## Options
 
-    * `:default` - The column's default value.
+    * `:default` - the column's default value.
+    * `:primary_key` - when true, marks this field as the primary key
     * `:null` - when `false`, the column does not allow null values.
     * `:size` - the size of the type (for example the numbers of characters). Default is no size.
-    * `:precision` - The precision for a numberic type. Default is no precision.
-    * `:scale` - The scale of a numberic type. Default is 0 scale.
+    * `:precision` - the precision for a numberic type. Default is no precision.
+    * `:scale` - the scale of a numberic type. Default is 0 scale.
 
   """
   def add(column, type \\ :string, opts \\ []) when is_atom(column) do

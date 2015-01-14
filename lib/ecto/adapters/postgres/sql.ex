@@ -402,26 +402,26 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp column_options(opts) do
       default = Keyword.get(opts, :default)
       null    = Keyword.get(opts, :null)
+      pk      = Keyword.get(opts, :primary_key)
 
-      [default_expr(default), null_expr(null)]
+      [default_expr(default), null_expr(null), pk_expr(pk)]
     end
+
+    defp pk_expr(true), do: "PRIMARY KEY"
+    defp pk_expr(_), do: nil
 
     defp null_expr(false), do: "NOT NULL"
     defp null_expr(true), do: "NULL"
     defp null_expr(_), do: nil
 
-    defp default_expr(nil), do: nil
-
-    defp default_expr(literal) when is_bitstring(literal) do
-      "DEFAULT '#{escape_string(literal)}'"
-    end
-
-    defp default_expr(literal) do
-      "DEFAULT #{literal}"
-    end
+    defp default_expr(nil),
+      do: nil
+    defp default_expr(literal) when is_binary(literal),
+      do: "DEFAULT '#{escape_string(literal)}'"
+    defp default_expr(literal),
+      do: "DEFAULT #{literal}"
 
     @column_types %{
-      primary_key: "serial primary key",
       string: "varchar",
       datetime: "timestamp",
       binary: "bytea"

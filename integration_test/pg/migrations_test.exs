@@ -9,6 +9,7 @@ defmodule Ecto.Integration.MigrationsTest do
     use Ecto.Migration
 
     def up do
+      # TODO: Test all migration commands
       create table(:migrations_test) do
         add :name, :text
       end
@@ -38,16 +39,16 @@ defmodule Ecto.Integration.MigrationsTest do
   end
 
   test "migrations up and down" do
-    assert migrated_versions(TestRepo) == []
+    assert migrated_versions(TestRepo) == [0]
     assert up(TestRepo, 20080906120000, GoodMigration) == :ok
 
-    assert migrated_versions(TestRepo) == [20080906120000]
+    assert migrated_versions(TestRepo) == [0, 20080906120000]
     assert up(TestRepo, 20080906120000, GoodMigration) == :already_up
-    assert migrated_versions(TestRepo) == [20080906120000]
+    assert migrated_versions(TestRepo) == [0, 20080906120000]
     assert down(TestRepo, 20080906120001, GoodMigration) == :already_down
-    assert migrated_versions(TestRepo) == [20080906120000]
+    assert migrated_versions(TestRepo) == [0, 20080906120000]
     assert down(TestRepo, 20080906120000, GoodMigration) == :ok
-    assert migrated_versions(TestRepo) == []
+    assert migrated_versions(TestRepo) == [0]
   end
 
   test "bad migration" do

@@ -370,19 +370,19 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
   test "create table" do
     create = {:create, %Table{name: :posts},
-               [{:add, :id, :primary_key, []},
+               [{:add, :id, :serial, [primary_key: true]},
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.migrate(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial primary key, "title" varchar, "created_at" timestamp)|
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "title" varchar, "created_at" timestamp)|
   end
 
   test "create table with reference" do
     create = {:create, %Table{name: :posts},
-               [{:add, :id, :primary_key, []},
+               [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, %Reference{table: :categories}, []} ]}
     assert SQL.migrate(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial primary key, "category_id" integer REFERENCES "categories"("id"))|
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer REFERENCES "categories"("id"))|
   end
 
   test "create table with column options" do

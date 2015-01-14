@@ -77,7 +77,7 @@ defmodule Ecto.MigrationTest do
 
     assert last_command() ==
            {:create, %Table{name: :posts},
-              [{:add, :id, :primary_key, []},
+              [{:add, :id, :serial, [primary_key: true]},
                {:add, :title, :string, []},
                {:add, :cost, :decimal, [precision: 3]},
                {:add, :author_id, %Reference{table: :authors}, []}]}

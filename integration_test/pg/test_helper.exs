@@ -114,55 +114,60 @@ defmodule Ecto.Integration.Postgres.Case do
   end
 end
 
-setup_cmds = [
-  ~s(psql -U postgres -c "DROP DATABASE IF EXISTS ecto_test;"),
-  ~s(psql -U postgres -c "CREATE DATABASE ecto_test TEMPLATE=template0 ENCODING='UTF8' LC_COLLATE='en_US.UTF-8' LC_CTYPE='en_US.UTF-8';")
-]
-
-Enum.each(setup_cmds, fn(cmd) ->
-  key = :ecto_setup_cmd_output
-  Process.put(key, "")
-  status = Mix.Shell.cmd(cmd, fn(data) ->
-    current = Process.get(key)
-    Process.put(key, current <> data)
-  end)
-
-  if status != 0 do
-    IO.puts """
-    Test setup command error'd:
-
-        #{cmd}
-
-    With:
-
-        #{Process.get(key)}
-    Please verify the user "postgres" exists and it has permissions
-    to create databases. If not, you can create a new user with:
-
-        createuser postgres --no-password -d
-    """
-    System.halt(1)
-  end
-end)
-
-setup_database = [
-  "CREATE TABLE posts (id serial PRIMARY KEY, title varchar(100), counter integer DEFAULT 10, text varchar(100), tags text[], bin bytea, uuid uuid)",
-  "CREATE TABLE comments (id serial PRIMARY KEY, text varchar(100), posted timestamp, day date, time time, bytes bytea, post_id integer, author_id integer)",
-  "CREATE TABLE permalinks (id serial PRIMARY KEY, url varchar(100), post_id integer)",
-  "CREATE TABLE users (id serial PRIMARY KEY, name text)",
-  "CREATE TABLE customs (foo uuid PRIMARY KEY)",
-  "CREATE TABLE barebones (text text)",
-  "CREATE TABLE transactions (id serial PRIMARY KEY, text text)",
-  "CREATE TABLE lock_counters (id serial PRIMARY KEY, count integer)",
-]
+Ecto.Storage.down(TestRepo)
+Ecto.Storage.up(TestRepo)
 
 {:ok, _pid} = TestRepo.start_link
 
-Enum.each(setup_database, fn(sql) ->
-  result = Postgres.query(TestRepo, sql, [])
-  if match?({:error, _}, result) do
-    IO.puts("Test database setup SQL error'd: `#{sql}`")
-    IO.inspect(result)
-    System.halt(1)
+defmodule Ecto.Integration.Migration do
+  use Ecto.Migration
+
+  def up do
+    create table(:posts) do
+      add :title, :string, size: 100
+      add :counter, :integer, default: 10
+      add :text, :string
+      add :tags, {:array, :text}
+      add :bin, :binary
+      add :uuid, :uuid
+      add :cost, :decimal, precision: 2, scale: 2
+    end
+
+    create table(:users) do
+      add :name, :text
+    end
+
+    create table(:permalinks) do
+      add :url
+      add :post_id, :integer
+    end
+
+    create table(:comments) do
+      add :text, :string, size: 100
+      add :posted, :datetime
+      add :day, :date
+      add :time, :time
+      add :bytes, :binary
+      add :post_id, references(:posts)
+      add :author_id, references(:users)
+    end
+
+    create table(:customs, primary_key: false) do
+      add :foo, :uuid, primary_key: true
+    end
+
+    create table(:barebones) do
+      add :text, :text
+    end
+
+    create table(:transactions) do
+      add :text, :text
+    end
+
+    create table(:lock_counters) do
+      add :count, :integer
+    end
   end
-end)
+end
+
+Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration)

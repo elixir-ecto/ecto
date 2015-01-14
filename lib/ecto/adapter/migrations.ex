@@ -16,8 +16,8 @@ defmodule Ecto.Adapter.Migrations  do
 
   @typedoc "Table subcommands"
   @type table_subcommands ::
-    {:add, field :: atom, type :: Ecto.Type.primitive | Ecto.Migration.Reference.t, Keyword.t} |
-    {:modify, field :: atom, type :: Ecto.Type.primitive | Ecto.Migration.Reference.t, Keyword.t} |
+    {:add, field :: atom, type :: Ecto.Type.t | Ecto.Migration.Reference.t, Keyword.t} |
+    {:modify, field :: atom, type :: Ecto.Type.t | Ecto.Migration.Reference.t, Keyword.t} |
     {:rename, from :: atom, to :: atom} |
     {:remove, field :: atom}
 
