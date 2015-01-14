@@ -9,6 +9,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.JoinExpr
+    alias Ecto.Migration.Table
+    alias Ecto.Migration.Index
 
     # Generate a select statement for all
     def all(query) do
@@ -26,9 +28,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       offset   = offset(query.offset, sources)
       lock     = lock(query.lock)
 
-      [select, from, join, where, group_by, having, order_by, limit, offset, lock]
-      |> Enum.filter(&(&1 != nil))
-      |> Enum.join(" ")
+      assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
     # Generate SQL for an update all statement
@@ -37,13 +37,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {table, name, _model} = elem(sources, 0)
 
       zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
-        "#{quote_column(field)} = #{expr(expr, sources)}"
+        "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
 
-      "UPDATE #{quote_table(table)} AS #{name} " <>
+      "UPDATE #{quote_name(table)} AS #{name} " <>
       "SET " <> zipped_sql <>
       where
     end
@@ -55,7 +55,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
-      "DELETE FROM #{quote_table(table)} AS #{name}" <> where
+      "DELETE FROM #{quote_name(table)} AS #{name}" <> where
     end
 
     # Generate SQL for an insert statement
@@ -64,24 +64,24 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         if fields == [] do
           "DEFAULT VALUES"
         else
-          "(" <> Enum.map_join(fields, ", ", &quote_column(&1)) <> ") " <>
+          "(" <> Enum.map_join(fields, ", ", &quote_name(&1)) <> ") " <>
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
         end
 
-      "INSERT INTO #{quote_table(table)} " <> values <> returning(returning)
+      "INSERT INTO #{quote_name(table)} " <> values <> returning(returning)
     end
 
     # Generate SQL for an update statement
     def update(table, filters, fields, returning) do
       {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
-        {"#{quote_column(field)} = $#{acc}", acc + 1}
+        {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
       {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
-        {"#{quote_column(field)} = $#{acc}", acc + 1}
+        {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "UPDATE #{quote_table(table)} SET " <> Enum.join(fields, ", ") <>
+      "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <>
       " WHERE " <> Enum.join(filters, " AND ") <>
       returning(returning)
     end
@@ -89,21 +89,20 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     # Generate SQL for a delete statement
     def delete(table, filters) do
       {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
-        {"#{quote_column(field)} = $#{acc}", acc + 1}
+        {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "DELETE FROM #{quote_table(table)} WHERE " <> Enum.join(filters, " AND ")
+      "DELETE FROM #{quote_name(table)} WHERE " <> Enum.join(filters, " AND ")
     end
 
     ## Helpers
 
-    defp quote_table(table), do: "\"#{table}\""
-    defp quote_column(column), do: "\"#{column}\""
+    defp quote_name(name), do: "\"#{name}\""
 
     defp returning([]),
       do: ""
     defp returning(returning),
-      do: " RETURNING " <> Enum.map_join(returning, ", ", &quote_column/1)
+      do: " RETURNING " <> Enum.map_join(returning, ", ", &quote_name/1)
 
     ## Query generation
 
@@ -137,7 +136,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{quote_table(table)} AS #{name}"
+      "FROM #{quote_name(table)} AS #{name}"
     end
 
     defp join([], _sources), do: nil
@@ -150,7 +149,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           on   = expr(expr, sources)
           qual = join_qual(qual)
 
-          "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on
+          "#{qual} JOIN #{quote_name(table)} AS #{name} ON " <> on
       end)
     end
 
@@ -223,13 +222,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_column(field)}"
+      "#{name}.#{quote_name(field)}"
     end
 
     defp expr({:&, _, [idx]}, sources) do
       {_table, name, model} = elem(sources, idx)
       fields = model.__schema__(:fields)
-      Enum.map_join(fields, ", ", &"#{name}.#{quote_column(&1)}")
+      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
     defp expr({:in, _, [left, right]}, sources) do
@@ -321,6 +320,115 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         unique_name(names, name, counter + 1)
       else
         counted_name
+      end
+    end
+
+    defp assemble(list) do
+      list
+      |> List.flatten
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.join(" ")
+    end
+
+    # DDL
+    def migrate({:create, %Table{}=table, columns}) do
+      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
+    end
+
+    def migrate({:drop, %Table{name: name}}) do
+      "DROP TABLE #{quote_name(name)}"
+    end
+
+    def migrate({:create, %Index{}=index}) do
+      assemble(["CREATE#{if index.unique, do: " UNIQUE"}", "INDEX", quote_name(Index.format_name(index)), "ON", quote_name(index.table), "(#{Enum.map_join(index.columns, ", ", &quote_name/1)})"])
+    end
+
+    def migrate({:drop, %Index{}=index}) do
+      "DROP INDEX #{quote_name(Index.format_name(index))}"
+    end
+
+    def migrate({:alter, %Table{}=table, changes}) do
+      "ALTER TABLE #{quote_name(table.name)} #{column_changes(changes)}"
+    end
+
+    def migrate(default) when is_bitstring(default), do: default
+
+    def object_exists_query(schema, {:column, {table_name, column_name}}) do
+      "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = '#{schema}' AND c.relname = '#{table_name}') AND attname = '#{column_name}'"
+    end
+
+    def object_exists_query(schema, {:table, name}) do
+      "SELECT count(1) FROM pg_tables WHERE schemaname='#{schema}' AND tablename='#{name}'"
+    end
+
+    def object_exists_query(schema, {:index, name}) do
+      "SELECT count(1) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = '#{schema}' AND c.relname = '#{name}' AND c.relkind = 'i'"
+    end
+
+    defp column_definitions(columns) do
+      Enum.map_join(columns, ", ", &column_definition/1)
+    end
+
+    defp column_definition({:add, name, type, opts}) do
+      assemble([quote_name(name), column_type(type, opts), column_options(opts)])
+    end
+
+    defp column_changes(columns) do
+      Enum.map_join(columns, ", ", &column_change/1)
+    end
+
+    defp column_change({:add, name, type, opts}) do
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(opts)])
+    end
+
+    defp column_change({:modify, name, type, opts}) do
+      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts), column_options(opts)])
+    end
+
+    defp column_change({:remove, name}),     do: "DROP COLUMN #{quote_name(name)}"
+    defp column_change({:rename, from, to}), do: "RENAME COLUMN #{quote_name(from)} TO #{quote_name(to)}"
+
+    defp column_options(opts) do
+      default = Keyword.get(opts, :default)
+      null    = Keyword.get(opts, :null)
+
+      [default_expr(default), null_expr(null)]
+    end
+
+    defp null_expr(false), do: "NOT NULL"
+    defp null_expr(true), do: "NULL"
+    defp null_expr(_), do: nil
+
+    defp default_expr(nil), do: nil
+
+    defp default_expr(literal) when is_bitstring(literal) do
+      "DEFAULT '#{escape_string(literal)}'"
+    end
+
+    defp default_expr(literal) do
+      "DEFAULT #{literal}"
+    end
+
+    @column_types %{
+      primary_key: "serial primary key",
+      string: "varchar",
+      datetime: "timestamp",
+      binary: "bytea"
+    }
+
+    defp column_type({:references, foreign_table, foreign_column, type}, opts), do: "#{column_type(type, opts)} REFERENCES #{quote_name(foreign_table)}(#{quote_name(foreign_column)})"
+    defp column_type({:array, type}, opts), do: column_type(type, opts) <> "[]"
+    defp column_type(type, opts) do
+      size      = Keyword.get(opts, :size)
+      precision = Keyword.get(opts, :precision)
+      scale     = Keyword.get(opts, :scale)
+
+      type_name = @column_types[type] || type
+
+      cond do
+        size      -> "#{type_name}(#{size})"
+        precision -> "#{type_name}(#{precision},#{scale || 0})"
+        true      -> type_name
       end
     end
   end
