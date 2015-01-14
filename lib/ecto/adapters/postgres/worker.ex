@@ -61,7 +61,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         end
       end
 
-      {:ok, %{conn: conn, params: opts, monitor: nil}}
+      {:ok, %{conn: conn, params: opts, monitor: nil, transactions: 0}}
     end
 
     # Connection is disconnected, reconnect before continuing
@@ -78,16 +78,52 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {:reply, Postgrex.Connection.query(conn, sql, params, opts), s}
     end
 
-    def handle_call({:begin, opts}, _from, %{conn: conn} = s) do
-      {:reply, Postgrex.Connection.begin(conn, opts), s}
+    def handle_call({:begin, opts}, _from, %{conn: conn, transactions: trans} = s) do
+      sql =
+        if trans == 0 do
+          "BEGIN"
+        else
+          "SAVEPOINT ecto_#{trans}"
+        end
+
+      reply =
+        case Postgrex.Connection.query(conn, sql, [], opts) do
+          {:ok, _}          -> :ok
+          {:error, _} = err -> err
+        end
+
+      {:reply, reply, %{s | transactions: trans + 1}}
     end
 
-    def handle_call({:commit, opts}, _from, %{conn: conn} = s) do
-      {:reply, Postgrex.Connection.commit(conn, opts), s}
+    def handle_call({:commit, opts}, _from, %{conn: conn, transactions: trans} = s) when trans >= 1 do
+      reply =
+        case trans do
+          1 ->
+            case Postgrex.Connection.query(conn, "COMMIT", [], opts) do
+              {:ok, _}          -> :ok
+              {:error, _} = err -> err
+            end
+          _ ->
+            :ok
+        end
+
+      {:reply, reply, %{s | transactions: trans - 1}}
     end
 
-    def handle_call({:rollback, opts}, _from, %{conn: conn} = s) do
-      {:reply, Postgrex.Connection.rollback(conn, opts), s}
+    def handle_call({:rollback, opts}, _from, %{conn: conn, transactions: trans} = s) when trans >= 1 do
+      sql =
+        case trans do
+          1 -> "ROLLBACK"
+          _ -> "ROLLBACK TO SAVEPOINT ecto_#{trans-1}"
+        end
+
+      reply =
+        case Postgrex.Connection.query(conn, sql, [], opts) do
+          {:ok, _}          -> :ok
+          {:error, _} = err -> err
+        end
+
+      {:reply, reply, %{s | transactions: trans - 1}}
     end
 
     def handle_cast({:monitor, pid}, %{monitor: nil} = s) do
