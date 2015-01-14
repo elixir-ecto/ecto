@@ -3,6 +3,7 @@ defmodule Ecto.Repo.Model do
   # for model related functionality.
   @moduledoc false
 
+  alias Ecto.Query.Planner
   alias Ecto.Model.Callbacks
 
   @doc """
@@ -54,7 +55,7 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_update, changeset)
       changes   = validate_changes(:update, model, fields, changeset)
 
-      pk_filter = validate_fields(:update, model, pk_filter(model, struct))
+      pk_filter = Planner.fields(:update, model, pk_filter(model, struct))
 
       if changes == [] do
         changes = pk_filter
@@ -85,7 +86,7 @@ defmodule Ecto.Repo.Model do
                                    ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
-      pk_filter = validate_fields(:delete, model, pk_filter(model, struct))
+      pk_filter = Planner.fields(:delete, model, pk_filter(model, struct))
       :ok = adapter.delete(repo, source, pk_filter, opts)
 
       Callbacks.__apply__(model, :after_delete, changeset).model
@@ -94,31 +95,6 @@ defmodule Ecto.Repo.Model do
 
   def delete(repo, adapter, %{__struct__: _} = struct, opts) do
     delete(repo, adapter, %Ecto.Changeset{model: struct, valid?: true}, opts)
-  end
-
-  ## Helpers used by other modules
-
-  @doc """
-  Validates and cast the given fields belonging to the given model.
-  """
-  def validate_fields(kind, model, kw, dumper \\ &Ecto.Type.dump/2) do
-    for {field, value} <- kw do
-      type = model.__schema__(:field, field)
-
-      unless type do
-        raise Ecto.ChangeError,
-          message: "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
-      end
-
-      case dumper.(type, value) do
-        {:ok, value} ->
-          {field, value}
-        :error ->
-          raise Ecto.ChangeError,
-            message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>
-                     "in `#{kind}` does not match type #{inspect type}"
-      end
-    end
   end
 
   ## Helpers
@@ -149,7 +125,7 @@ defmodule Ecto.Repo.Model do
   end
 
   defp validate_changes(kind, model, fields, changeset) do
-    validate_fields(kind, model, Map.take(changeset.changes, fields))
+    Planner.fields(kind, model, Map.take(changeset.changes, fields))
   end
 
   defp pk_filter(model, struct) do

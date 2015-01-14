@@ -10,28 +10,25 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
-  Asserts the given query has only where expressions.
+  Validates and cast the given fields belonging to the given model.
   """
-  def assert_only_where_expressions!(query) do
-    case query do
-      %Ecto.Query{joins: [], select: nil, order_bys: [], limit: nil, offset: nil,
-                  group_bys: [], havings: [], preloads: [], assocs: [], distincts: [],
-                  lock: nil} ->
-        query
-      _ ->
-        error! query, "only `where` expressions are allowed"
-    end
-  end
+  def fields(kind, model, kw, dumper \\ &Ecto.Type.dump/2) do
+    for {field, value} <- kw do
+      type = model.__schema__(:field, field)
 
-  @doc """
-  Asserts the given query has a from with model field.
-  """
-  def assert_model!(query) do
-    case query.from do
-      {_source, model} when model != nil ->
-        model
-      _ ->
-        error! query, "expected a from expression with a model"
+      unless type do
+        raise Ecto.ChangeError,
+          message: "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
+      end
+
+      case dumper.(type, value) do
+        {:ok, value} ->
+          {field, value}
+        :error ->
+          raise Ecto.ChangeError,
+            message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>
+                     "in `#{kind}` does not match type #{inspect type}"
+      end
     end
   end
 
@@ -469,6 +466,17 @@ defmodule Ecto.Query.Planner do
       |> Exception.message
 
     raise Ecto.CastError, message: message
+  end
+
+  defp assert_only_where_expressions!(query) do
+    case query do
+      %Ecto.Query{joins: [], select: nil, order_bys: [], limit: nil, offset: nil,
+                  group_bys: [], havings: [], preloads: [], assocs: [], distincts: [],
+                  lock: nil} ->
+        query
+      _ ->
+        error! query, "only `where` expressions are allowed"
+    end
   end
 
   defp error!(query, message) do

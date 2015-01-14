@@ -50,8 +50,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def init(opts) do
       Process.flag(:trap_exit, true)
-
-      eager? = Keyword.get(opts, :lazy, true) in [false, "false"]
+      eager? = Keyword.get(opts, :lazy, true)
 
       if eager? do
         case Postgrex.Connection.start_link(opts) do
@@ -62,7 +61,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         end
       end
 
-      {:ok, Map.merge(new_state, %{conn: conn, params: opts})}
+      {:ok, %{conn: conn, params: opts, monitor: nil}}
     end
 
     # Connection is disconnected, reconnect before continuing
@@ -117,10 +116,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       if conn && Process.alive?(conn) do
         Postgrex.Connection.stop(conn)
       end
-    end
-
-    defp new_state do
-      %{conn: nil, params: nil, monitor: nil}
     end
   end
 end
