@@ -49,8 +49,6 @@ defmodule Mix.Tasks.Ecto.Rollback do
       opts = Keyword.put(opts, :step, 1)
     end
 
-    Ecto.Migration.Runner.start_link(repo)
-
     migrator.(repo, migrations_path(repo), :down, opts)
   end
 end

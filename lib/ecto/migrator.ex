@@ -8,11 +8,11 @@ defmodule Ecto.Migrator do
         use Ecto.Migration
 
         def up do
-          "CREATE TABLE users(id serial PRIMARY_KEY, username text)"
+          execute "CREATE TABLE users(id serial PRIMARY_KEY, username text)"
         end
 
         def down do
-          "DROP TABLE users"
+          execute "DROP TABLE users"
         end
       end
 
@@ -22,19 +22,28 @@ defmodule Ecto.Migrator do
 
   @type strategy :: [all: true, to: non_neg_integer, step: non_neg_integer]
 
+  alias Ecto.Migration.Runner
+
   @doc """
   Runs an up migration on the given repository.
   """
   @spec up(Ecto.Repo.t, integer, Module.t) :: :ok | :already_up | no_return
   def up(repo, version, module) do
-    if repo.adapter.migrated_versions(repo) |> Enum.member?(version) do
+    if version in repo.adapter.migrated_versions(repo) do
       :already_up
     else
-      module.up repo, fn ->
-        repo.adapter.insert_migration_version(repo, version)
-      end
-
+      do_up(repo, version, module)
       :ok
+    end
+  end
+
+  defp do_up(repo, version, module) do
+    repo.transaction fn ->
+      attempt(repo, module, :forward, :up)
+        || attempt(repo, module, :forward, :change)
+        || raise Ecto.MigrationError,
+                 message: "#{inspect module} does not implement a `up/0` or `change/0` function"
+      repo.adapter.insert_migration_version(repo, version)
     end
   end
 
@@ -43,13 +52,31 @@ defmodule Ecto.Migrator do
   """
   @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :missing_up | no_return
   def down(repo, version, module) do
-    if repo.adapter.migrated_versions(repo) |> Enum.member?(version) do
-      module.down repo, fn ->
-        repo.adapter.delete_migration_version(repo, version)
-      end
+    if version in repo.adapter.migrated_versions(repo) do
+      do_down(repo, version, module)
       :ok
     else
       :already_down
+    end
+  end
+
+  defp do_down(repo, version, module) do
+    repo.transaction fn ->
+      attempt(repo, module, :forward, :down)
+        || attempt(repo, module, :reverse, :change)
+        || raise Ecto.MigrationError,
+                 message: "#{inspect module} does not implement a `down/0` or `change/0` function"
+      repo.adapter.delete_migration_version(repo, version)
+    end
+  end
+
+  defp attempt(repo, module, direction, operation) do
+    if Code.ensure_loaded?(module) and
+       function_exported?(module, operation, 0) do
+      Runner.start_link(repo, direction)
+      apply(module, operation, [])
+      Runner.stop()
+      :ok
     end
   end
 
@@ -86,43 +113,39 @@ defmodule Ecto.Migrator do
     end
 
     pending_in_direction(repo, directory, direction)
-      |> Enum.take_while(&(within_target_version?.(&1, target, direction)))
-      |> migrate(direction, repo)
+    |> Enum.take_while(&(within_target_version?.(&1, target, direction)))
+    |> migrate(direction, repo)
   end
 
   defp run_step(repo, directory, direction, count) do
     pending_in_direction(repo, directory, direction)
-      |> Enum.take(count)
-      |> migrate(direction, repo)
+    |> Enum.take(count)
+    |> migrate(direction, repo)
   end
 
   defp run_all(repo, directory, direction) do
     pending_in_direction(repo, directory, direction)
-      |> migrate(direction, repo)
+    |> migrate(direction, repo)
   end
 
   defp pending_in_direction(repo, directory, :up) do
     versions = repo.adapter.migrated_versions(repo)
-    migrations_for(directory) |>
-      Enum.filter(fn {version, _file} ->
-        not (version in versions)
-      end)
+    migrations_for(directory)
+    |> Enum.filter(fn {version, _file} -> not (version in versions) end)
   end
 
   defp pending_in_direction(repo, directory, :down) do
     versions = repo.adapter.migrated_versions(repo)
-    migrations_for(directory) |>
-      Enum.filter(fn {version, _file} ->
-        version in versions
-      end)
-      |> :lists.reverse
+    migrations_for(directory)
+    |> Enum.filter(fn {version, _file} -> version in versions end)
+    |> Enum.reverse
   end
 
   defp migrations_for(directory) do
     Path.join(directory, "*")
-      |> Path.wildcard
-      |> Enum.filter(&Regex.match?(~r"\d+_.+\.exs$", &1))
-      |> attach_versions
+    |> Path.wildcard
+    |> Enum.filter(&Regex.match?(~r"\d+_.+\.exs$", &1))
+    |> attach_versions
   end
 
   defp attach_versions(files) do
@@ -143,13 +166,14 @@ defmodule Ecto.Migrator do
 
       # TODO: Use logger in the future
       file = Path.relative_to_cwd(file)
+
       case direction do
         :up ->
           IO.puts IO.ANSI.format([:green, "* running ", :yellow, "UP ", :reset, file])
-          up(repo, version, mod)
+          do_up(repo, version, mod)
         :down ->
           IO.puts IO.ANSI.format([:green, "* running ", :yellow, "DOWN ", :reset, file])
-          down(repo, version, mod)
+          do_down(repo, version, mod)
       end
 
       version

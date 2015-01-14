@@ -426,7 +426,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @doc false
     def execute_migration(repo, definition) do
-      query(repo, SQL.migrate(definition), [])
+      query(repo, SQL.migrate(definition), [timeout: :infinity])
+      :ok
     end
 
     @doc false
@@ -447,18 +448,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     @doc false
-    defp create_migrations_table(repo) do
-      query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)", [])
+    def object_exists?(repo, object) do
+      sql = SQL.object_exists_query(object)
+      %Postgrex.Result{rows: [{count}]} = query(repo, sql, [])
+      count > 0
     end
 
-    @doc false
-    def object_exists?(repo, object) do
-      database = Keyword.get(repo.conf, :database)
-      sql      = SQL.object_exists_query(database, object)
-
-      %Postgrex.Result{rows: [{count}]} = query(repo, sql, [])
-
-      count > 0
+    defp create_migrations_table(repo) do
+      query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)", [])
     end
   end
 end

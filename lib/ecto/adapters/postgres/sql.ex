@@ -11,6 +11,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Query.JoinExpr
     alias Ecto.Migration.Table
     alias Ecto.Migration.Index
+    alias Ecto.Migration.Reference
 
     # Generate a select statement for all
     def all(query) do
@@ -339,30 +340,40 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "DROP TABLE #{quote_name(name)}"
     end
 
-    def migrate({:create, %Index{}=index}) do
-      assemble(["CREATE#{if index.unique, do: " UNIQUE"}", "INDEX", quote_name(Index.format_name(index)), "ON", quote_name(index.table), "(#{Enum.map_join(index.columns, ", ", &quote_name/1)})"])
-    end
-
-    def migrate({:drop, %Index{}=index}) do
-      "DROP INDEX #{quote_name(Index.format_name(index))}"
-    end
-
     def migrate({:alter, %Table{}=table, changes}) do
       "ALTER TABLE #{quote_name(table.name)} #{column_changes(changes)}"
     end
 
-    def migrate(default) when is_bitstring(default), do: default
-
-    def object_exists_query(schema, {:column, {table_name, column_name}}) do
-      "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = '#{schema}' AND c.relname = '#{table_name}') AND attname = '#{column_name}'"
+    def migrate({:create, %Index{}=index}) do
+      assemble(["CREATE#{if index.unique, do: " UNIQUE"} INDEX",
+                quote_name(index.name), "ON", quote_name(index.table),
+                "(#{Enum.map_join(index.columns, ", ", &quote_name/1)})"])
     end
 
-    def object_exists_query(schema, {:table, name}) do
-      "SELECT count(1) FROM pg_tables WHERE schemaname='#{schema}' AND tablename='#{name}'"
+    def migrate({:drop, %Index{}=index}) do
+      "DROP INDEX #{quote_name(index.name)}"
     end
 
-    def object_exists_query(schema, {:index, name}) do
-      "SELECT count(1) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = '#{schema}' AND c.relname = '#{name}' AND c.relkind = 'i'"
+    def migrate(default) when is_binary(default), do: default
+
+    def object_exists_query(%Table{name: name}) do
+      """
+      SELECT count(1) FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE c.relkind IN ('r','v','m')
+             AND c.relname = '#{name}'
+             AND n.nspname = ANY (current_schemas(false))
+      """
+    end
+
+    def object_exists_query(%Index{name: name}) do
+      """
+      SELECT count(1) FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE c.relkind IN ('i')
+             AND c.relname = '#{name}'
+             AND n.nspname = ANY (current_schemas(false))
+      """
     end
 
     defp column_definitions(columns) do
@@ -416,8 +427,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       binary: "bytea"
     }
 
-    defp column_type({:references, foreign_table, foreign_column, type}, opts), do: "#{column_type(type, opts)} REFERENCES #{quote_name(foreign_table)}(#{quote_name(foreign_column)})"
-    defp column_type({:array, type}, opts), do: column_type(type, opts) <> "[]"
+    defp column_type(%Reference{} = ref, opts),
+      do: "#{column_type(ref.type, opts)} REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})"
+    defp column_type({:array, type}, opts),
+      do: column_type(type, opts) <> "[]"
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)
@@ -428,7 +441,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       cond do
         size      -> "#{type_name}(#{size})"
         precision -> "#{type_name}(#{precision},#{scale || 0})"
-        true      -> type_name
+        true      -> "#{type_name}"
       end
     end
   end

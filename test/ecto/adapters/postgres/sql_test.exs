@@ -8,6 +8,7 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
   alias Ecto.Query.Planner
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
+  alias Ecto.Migration.Reference
 
   defmodule Model do
     use Ecto.Model
@@ -372,14 +373,16 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
                [{:add, :id, :primary_key, []},
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
-    assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("id" serial primary key, "title" varchar, "created_at" timestamp)|
+    assert SQL.migrate(create) ==
+           ~s|CREATE TABLE "posts" ("id" serial primary key, "title" varchar, "created_at" timestamp)|
   end
 
   test "create table with reference" do
     create = {:create, %Table{name: :posts},
                [{:add, :id, :primary_key, []},
-                {:add, :category_id, {:references, "categories", "id", :integer }, []} ]}
-    assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("id" serial primary key, "category_id" integer REFERENCES "categories"("id"))|
+                {:add, :category_id, %Reference{table: :categories}, []} ]}
+    assert SQL.migrate(create) ==
+           ~s|CREATE TABLE "posts" ("id" serial primary key, "category_id" integer REFERENCES "categories"("id"))|
   end
 
   test "create table with column options" do
@@ -388,7 +391,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
                 {:add, :price, :numeric, [precision: 8, scale: 2]},
                 {:add, :on_hand, :integer, [default: 0, null: true]}]}
 
-    assert SQL.migrate(create) == ~s|CREATE TABLE "posts" ("name" varchar(20) DEFAULT 'Untitled' NOT NULL, "price" numeric(8,2), "on_hand" integer DEFAULT 0 NULL)|
+    assert SQL.migrate(create) == """
+    CREATE TABLE "posts" ("name" varchar(20) DEFAULT 'Untitled' NOT NULL,
+    "price" numeric(8,2),
+    "on_hand" integer DEFAULT 0 NULL)
+    """ |> String.strip |> String.replace("\n", " ")
   end
 
   test "drop table" do
@@ -401,24 +408,14 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     assert SQL.migrate(create) == ~s|CREATE INDEX "posts$main" ON "posts" ("category_id", "permalink")|
   end
 
-  test "create index without explicit name" do
-    create = {:create, %Index{table: :posts, columns: [:category_id, :permalink]}}
-    assert SQL.migrate(create) == ~s|CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
-  end
-
   test "create unique index" do
-    create = {:create, %Index{table: :posts, columns: [:permalink], unique: true}}
-    assert SQL.migrate(create) == ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+    create = {:create, %Index{name: "posts$main", table: :posts, unique: true, columns: [:permalink]}}
+    assert SQL.migrate(create) == ~s|CREATE UNIQUE INDEX "posts$main" ON "posts" ("permalink")|
   end
 
   test "drop index" do
     drop = {:drop, %Index{name: "posts$main"}}
     assert SQL.migrate(drop) == ~s|DROP INDEX "posts$main"|
-  end
-
-  test "drop index without explicit name" do
-    drop = {:drop, %Index{table: :posts, columns: [:name]}}
-    assert SQL.migrate(drop) == ~s|DROP INDEX "posts_name_index"|
   end
 
   test "alter table" do
@@ -428,21 +425,11 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
                 {:remove, :summary},
                 {:rename, :cat_id, :category_id}]}
 
-    assert SQL.migrate(alter) == ~s|ALTER TABLE "posts" ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL, ALTER COLUMN "price" TYPE numeric(8,2) DEFAULT 1 NULL, DROP COLUMN "summary", RENAME COLUMN "cat_id" TO "category_id"|
-  end
-
-  test "column exists" do
-    assert SQL.object_exists_query("sample_db", {:column, {:products, :id}}) ==
-      "SELECT count(1) FROM pg_attribute WHERE attrelid = (SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'sample_db' AND c.relname = 'products') AND attname = 'id'"
-  end
-
-  test "table exists" do
-    assert SQL.object_exists_query("sample_db", {:table, :products}) ==
-      "SELECT count(1) FROM pg_tables WHERE schemaname='sample_db' AND tablename='products'"
-  end
-
-  test "index exists" do
-    assert SQL.object_exists_query("sample_db", {:index, "index$1"}) ==
-      "SELECT count(1) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'sample_db' AND c.relname = 'index$1' AND c.relkind = 'i'"
+    assert SQL.migrate(alter) == """
+    ALTER TABLE "posts"
+    ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL,
+    ALTER COLUMN "price" TYPE numeric(8,2) DEFAULT 1 NULL,
+    DROP COLUMN "summary", RENAME COLUMN "cat_id" TO "category_id"
+    """ |> String.strip |> String.replace("\n", " ")
   end
 end

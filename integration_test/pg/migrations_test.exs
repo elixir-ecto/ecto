@@ -22,46 +22,10 @@ defmodule Ecto.Integration.MigrationsTest do
   defmodule BadMigration do
     use Ecto.Migration
 
-    def up do
+    def change do
       execute "CREATE WHAT"
     end
-
-    def down do
-      execute "DROP table migrations_test"
-    end
   end
-
-  @good_migration """
-    defmodule ~s do
-      use Ecto.Migration
-
-      def up do
-        create table(:migrations_test) do
-          add :name, :text
-        end
-
-        execute "INSERT INTO migrations_test (name) VALUES ('inserted')"
-      end
-
-      def down do
-        execute "DELETE FROM migrations_test WHERE id IN ( SELECT id FROM migrations_test LIMIT 1 )"
-      end
-    end
-  """
-
-  @bad_migration """
-    defmodule ~s do
-      use Ecto.Migration
-
-      def up do
-        execute "error"
-      end
-
-      def down do
-        execute "error"
-      end
-    end
-  """
 
   import Ecto.Migrator
 
@@ -80,7 +44,7 @@ defmodule Ecto.Integration.MigrationsTest do
     assert migrated_versions(TestRepo) == [20080906120000]
     assert up(TestRepo, 20080906120000, GoodMigration) == :already_up
     assert migrated_versions(TestRepo) == [20080906120000]
-    assert down(TestRepo, 20080906120001, GoodMigration) == :missing_up
+    assert down(TestRepo, 20080906120001, GoodMigration) == :already_down
     assert migrated_versions(TestRepo) == [20080906120000]
     assert down(TestRepo, 20080906120000, GoodMigration) == :ok
     assert migrated_versions(TestRepo) == []
@@ -94,14 +58,14 @@ defmodule Ecto.Integration.MigrationsTest do
 
   test "run up all migrations" do
     in_tmp fn path ->
-      create_migration(42, @good_migration)
-      create_migration(43, @good_migration)
+      create_migration(42)
+      create_migration(43)
 
       assert capture_io(fn ->
         assert [42, 43] = run(TestRepo, path, :up, all: true)
       end) == "* running UP 42_migration.exs\n* running UP 43_migration.exs\n"
 
-      create_migration(44, @good_migration)
+      create_migration(44)
 
       assert capture_io(fn ->
         assert [44] = run(TestRepo, path, :up, all: true)
@@ -118,8 +82,8 @@ defmodule Ecto.Integration.MigrationsTest do
 
   test "run up to migration" do
     in_tmp fn path ->
-      create_migration(45, @good_migration)
-      create_migration(46, @good_migration)
+      create_migration(45)
+      create_migration(46)
 
       assert capture_io(fn ->
         assert [45] = run(TestRepo, path, :up, to: 45)
@@ -136,8 +100,8 @@ defmodule Ecto.Integration.MigrationsTest do
 
   test "run up 1 migration" do
     in_tmp fn path ->
-      create_migration(47, @good_migration)
-      create_migration(48, @good_migration)
+      create_migration(47)
+      create_migration(48)
 
       assert capture_io(fn ->
         assert [47] = run(TestRepo, path, :up, step: 1)
@@ -155,8 +119,8 @@ defmodule Ecto.Integration.MigrationsTest do
   test "run down 1 migration" do
     in_tmp fn path ->
       migrations = [
-        create_migration(49, @good_migration),
-        create_migration(50, @good_migration),
+        create_migration(49),
+        create_migration(50),
       ]
       assert capture_io(fn ->
         assert [49, 50] = run(TestRepo, path, :up, all: true)
@@ -182,8 +146,8 @@ defmodule Ecto.Integration.MigrationsTest do
   test "run down to migration" do
     in_tmp fn path ->
       migrations = [
-        create_migration(51, @good_migration),
-        create_migration(52, @good_migration),
+        create_migration(51),
+        create_migration(52),
       ]
 
       assert capture_io(fn ->
@@ -210,8 +174,8 @@ defmodule Ecto.Integration.MigrationsTest do
   test "run down all migrations" do
     in_tmp fn path ->
       migrations = [
-        create_migration(53, @good_migration),
-        create_migration(54, @good_migration),
+        create_migration(53),
+        create_migration(54),
       ]
 
       assert capture_io(fn ->
@@ -235,25 +199,34 @@ defmodule Ecto.Integration.MigrationsTest do
     end
   end
 
-  test "bad migration raises" do
-    in_tmp fn path ->
-      create_migration(55, @bad_migration)
-      assert_raise Postgrex.Error, fn ->
-        capture_io(fn ->
-          run(TestRepo, path, :up, all: true)
-        end)
-      end
-    end
-  end
-
   defp migrated_versions(repo) do
     repo.adapter.migrated_versions(repo)
   end
 
-  defp create_migration(num, contents) do
-    migration = Module.concat(__MODULE__, "Migration#{num}")
-    File.write!("#{num}_migration.exs", :io_lib.format(contents, [migration]))
-    migration
+  defp create_migration(num) do
+    module = Module.concat(__MODULE__, "Migration#{num}")
+
+    File.write! "#{num}_migration.exs", """
+    defmodule #{module} do
+      use Ecto.Migration
+
+      def up do
+        unless exists? table(:migrations_test) do
+          create table(:migrations_test) do
+            add :name, :text
+          end
+        end
+
+        execute "INSERT INTO migrations_test (name) VALUES ('inserted')"
+      end
+
+      def down do
+        execute "DELETE FROM migrations_test WHERE id IN (SELECT id FROM migrations_test LIMIT 1)"
+      end
+    end
+    """
+
+    module
   end
 
   defp purge(modules) do
