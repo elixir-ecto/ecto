@@ -1,4 +1,6 @@
 defmodule Ecto.Integration.LockTest do
+  # We can keep this test async as long as it
+  # is the only one accessing the lock_test table.
   use ExUnit.Case, async: true
 
   import Ecto.Query

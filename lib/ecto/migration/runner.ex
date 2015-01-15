@@ -116,7 +116,6 @@ defmodule Ecto.Migration.Runner do
   defp reverse({:drop,   %Index{}=index}),           do: {:create, index}
   defp reverse({:create, %Table{}=table, _columns}), do: {:drop, table}
   defp reverse({:add,    name, _type, _opts}),       do: {:remove, name}
-  defp reverse({:rename, from, to}),                 do: {:rename, to, from}
   defp reverse({:alter,  %Table{}=table, changes}) do
     if reversed = reverse(changes) do
       {:alter, table, reversed}

@@ -424,6 +424,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Migration API
 
+    # TODO: Consider not logging those
+
     @doc false
     def execute_ddl(repo, definition) do
       query(repo, SQL.migrate(definition), [timeout: :infinity])
@@ -433,12 +435,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     @doc false
     def ddl_exists?(repo, object) do
       sql = SQL.ddl_exists_query(object)
-      %Postgrex.Result{rows: [{count}]} = query(repo, sql, [])
+      %Postgrex.Result{rows: [{count}]} = query(repo, sql, [timeout: :infinity])
       count > 0
-    end
-
-    defp create_migrations_table(repo) do
-      query(repo, "CREATE TABLE IF NOT EXISTS schema_migrations (id serial primary key, version bigint)", [])
     end
   end
 end

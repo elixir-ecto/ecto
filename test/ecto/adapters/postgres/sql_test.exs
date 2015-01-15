@@ -422,14 +422,13 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
     alter = {:alter, %Table{name: :posts},
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
                 {:modify, :price, :numeric, [default: 1, null: true, precision: 8, scale: 2]},
-                {:remove, :summary},
-                {:rename, :cat_id, :category_id}]}
+                {:remove, :summary}]}
 
     assert SQL.migrate(alter) == """
     ALTER TABLE "posts"
     ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL,
     ALTER COLUMN "price" TYPE numeric(8,2) DEFAULT 1 NULL,
-    DROP COLUMN "summary", RENAME COLUMN "cat_id" TO "category_id"
+    DROP COLUMN "summary"
     """ |> String.strip |> String.replace("\n", " ")
   end
 end

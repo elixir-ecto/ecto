@@ -96,15 +96,13 @@ defmodule Ecto.MigrationTest do
       add :summary, :text
       modify :title, :text
       remove :views
-      rename :slug, :permalink
     end
 
     assert last_command() ==
            {:alter, %Table{name: :posts},
               [{:add, :summary, :text, []},
                {:modify, :title, :text, []},
-               {:remove, :views},
-               {:rename, :slug, :permalink}]}
+               {:remove, :views}]}
   end
 
   test "forward: drops a table" do
@@ -154,13 +152,11 @@ defmodule Ecto.MigrationTest do
   test "reverse: alters a table" do
     alter table(:posts) do
       add :summary, :text
-      rename :slug, :permalink
     end
 
     assert last_command() ==
            {:alter, %Table{name: :posts},
-              [{:remove, :summary},
-               {:rename, :permalink, :slug}]}
+              [{:remove, :summary}]}
 
     assert_raise Ecto.MigrationError, ~r/cannot reverse migration command/, fn ->
       alter table(:posts) do

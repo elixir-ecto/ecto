@@ -397,7 +397,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp column_change({:remove, name}),     do: "DROP COLUMN #{quote_name(name)}"
-    defp column_change({:rename, from, to}), do: "RENAME COLUMN #{quote_name(from)} TO #{quote_name(to)}"
 
     defp column_options(opts) do
       default = Keyword.get(opts, :default)

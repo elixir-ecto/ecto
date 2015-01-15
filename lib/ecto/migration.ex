@@ -72,7 +72,6 @@ defmodule Ecto.Migration do
         add :summary, :text
         modify :title, :text
         remove :views
-        rename :slug, :permalink
       end
 
   """
@@ -117,10 +116,6 @@ defmodule Ecto.Migration do
       create table(:products) do
         add :name, :string
         add :price, :decimal
-      end
-
-      alter table(:products) do
-        rename :name, :title
       end
 
       drop table(:products)
@@ -227,20 +222,6 @@ defmodule Ecto.Migration do
   """
   def remove(column) when is_atom(column) do
     Runner.subcommand {:remove, column}
-  end
-
-  @doc """
-  Renames a column when altering a table.
-
-  ## Examples
-
-      alter table(:posts) do
-        rename :name, :title
-      end
-
-  """
-  def rename(from, to) when is_atom(from) and is_atom(to) do
-    Runner.subcommand {:rename, from, to}
   end
 
   @doc """

@@ -8,7 +8,7 @@ defmodule Ecto.Integration.SQLEscapeTest do
     assert ["'\\"] == TestRepo.all(query)
   end
 
-  test "Repo.create escape" do
+  test "Repo.insert escape" do
     TestRepo.insert(%Post{text: "'"})
 
     query = from(p in Post, select: p.text)

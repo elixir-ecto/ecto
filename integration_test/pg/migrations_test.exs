@@ -9,10 +9,29 @@ defmodule Ecto.Integration.MigrationsTest do
     use Ecto.Migration
 
     def up do
-      # TODO: Test all migration commands
-      create table(:migrations_test) do
+      table = table(:migrations_test)
+
+      assert exists? table
+      drop table
+      refute exists? table
+
+      create table do
         add :name, :text
+        add :other, :text
       end
+
+      alter table do
+        modify :name, :string
+        remove :other
+        add :counter, :integer
+      end
+
+      index = index(:migrations_test, [:counter])
+      refute exists? index
+      create index
+      assert exists? index
+      drop index
+      refute exists? index
     end
 
     def down do
@@ -206,12 +225,6 @@ defmodule Ecto.Integration.MigrationsTest do
       use Ecto.Migration
 
       def up do
-        unless exists? table(:migrations_test) do
-          create table(:migrations_test) do
-            add :name, :text
-          end
-        end
-
         execute "INSERT INTO migrations_test (name) VALUES ('inserted')"
       end
 

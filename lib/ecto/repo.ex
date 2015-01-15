@@ -149,8 +149,8 @@ defmodule Ecto.Repo do
 
       # TODO: Should we keep this as overridable?
       def log({:query, sql}, fun) do
-        {time, result} = :timer.tc(fun)
-        Logger.debug fn -> [sql, " (", inspect(time), "µs)"] end
+        {time, result} = div(:timer.tc(fun), 100) / 10
+        Logger.debug fn -> [sql, " (", inspect(time), "ms)"] end
         result
       end
 

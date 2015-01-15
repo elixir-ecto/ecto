@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.WorkerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Ecto.Adapters.Postgres.Worker
 

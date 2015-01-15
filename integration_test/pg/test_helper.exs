@@ -114,8 +114,8 @@ defmodule Ecto.Integration.Postgres.Case do
   end
 end
 
-Ecto.Storage.down(TestRepo)
-Ecto.Storage.up(TestRepo)
+_   = Ecto.Storage.down(TestRepo)
+:ok = Ecto.Storage.up(TestRepo)
 
 {:ok, _pid} = TestRepo.start_link
 
@@ -167,7 +167,11 @@ defmodule Ecto.Integration.Migration do
     create table(:lock_counters) do
       add :count, :integer
     end
+
+    create table(:migrations_test) do
+      add :name, :text
+    end
   end
 end
 
-Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration)
+:ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration)
