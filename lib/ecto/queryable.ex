@@ -1,11 +1,12 @@
 defprotocol Ecto.Queryable do
   @moduledoc """
-  Converts a data structure into an `Ecto.Query` struct.
-
-  The only function required to implement is `to_query` which does the conversion.
+  Converts a data structure into an `Ecto.Query`.
   """
 
-  def to_query(expr)
+  @doc """
+  Converts the given `data` into an `Ecto.Query`.
+  """
+  def to_query(data)
 end
 
 defimpl Ecto.Queryable, for: Ecto.Query do
@@ -23,7 +24,7 @@ defimpl Ecto.Queryable, for: Atom do
       %Ecto.Query{from: {module.__schema__(:source), module}}
     rescue
       UndefinedFunctionError ->
-        message = if Code.ensure_loaded?(module) do
+        message = if :code.is_loaded(module) do
           "the given module is not queryable"
         else
           "the given module does not exist"

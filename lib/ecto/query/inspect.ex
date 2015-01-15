@@ -1,8 +1,8 @@
 defimpl Inspect, for: Ecto.Query do
   import Inspect.Algebra
-
   alias Ecto.Query.JoinExpr
 
+  @doc false
   def inspect(query, opts) do
     list = Enum.map(to_list(query), fn
       {key, string} ->
@@ -14,6 +14,7 @@ defimpl Inspect, for: Ecto.Query do
     surround_many("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
   end
 
+  @doc false
   def to_string(query) do
     Enum.map_join(to_list(query), ",\n  ", fn
       {key, string} ->
