@@ -23,13 +23,28 @@ defmodule Ecto.Migrator do
   @type strategy :: [all: true, to: non_neg_integer, step: non_neg_integer]
 
   alias Ecto.Migration.Runner
+  alias Ecto.Migration.SchemaMigration
+
+  @doc """
+  Gets all migrated versions.
+
+  This function ensures the migration table exists
+  if no table has been defined yet.
+  """
+  @spec migrated_versions(Ecto.Repo.t) :: [integer]
+  def migrated_versions(repo) do
+    SchemaMigration.ensure_schema_migrations_table!(repo)
+    SchemaMigration.migrated_versions(repo)
+  end
 
   @doc """
   Runs an up migration on the given repository.
   """
   @spec up(Ecto.Repo.t, integer, Module.t) :: :ok | :already_up | no_return
   def up(repo, version, module) do
-    if version in repo.adapter.migrated_versions(repo) do
+    versions = migrated_versions(repo)
+
+    if version in versions do
       :already_up
     else
       do_up(repo, version, module)
@@ -43,16 +58,18 @@ defmodule Ecto.Migrator do
         || attempt(repo, module, :forward, :change)
         || raise Ecto.MigrationError,
                  message: "#{inspect module} does not implement a `up/0` or `change/0` function"
-      repo.adapter.insert_migration_version(repo, version)
+      SchemaMigration.up(repo, version)
     end
   end
 
   @doc """
   Runs a down migration on the given repository.
   """
-  @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :missing_up | no_return
+  @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :already_down | no_return
   def down(repo, version, module) do
-    if version in repo.adapter.migrated_versions(repo) do
+    versions = migrated_versions(repo)
+
+    if version in versions do
       do_down(repo, version, module)
       :ok
     else
@@ -66,7 +83,7 @@ defmodule Ecto.Migrator do
         || attempt(repo, module, :reverse, :change)
         || raise Ecto.MigrationError,
                  message: "#{inspect module} does not implement a `down/0` or `change/0` function"
-      repo.adapter.delete_migration_version(repo, version)
+      SchemaMigration.down(repo, version)
     end
   end
 
@@ -92,19 +109,21 @@ defmodule Ecto.Migrator do
   """
   @spec run(Ecto.Repo.t, binary, atom, strategy) :: [integer]
   def run(repo, directory, direction, opts) do
+    versions = migrated_versions(repo)
+
     cond do
       opts[:all] ->
-        run_all(repo, directory, direction)
+        run_all(repo, versions, directory, direction)
       to = opts[:to] ->
-        run_to(repo, directory, direction, to)
+        run_to(repo, versions, directory, direction, to)
       step = opts[:step] ->
-        run_step(repo, directory, direction, step)
+        run_step(repo, versions, directory, direction, step)
       true ->
         raise ArgumentError, message: "expected one of :all, :to, or :step strategies"
     end
   end
 
-  defp run_to(repo, directory, direction, target) do
+  defp run_to(repo, versions, directory, direction, target) do
     within_target_version? = fn
       {version, _}, target, :up ->
         version <= target
@@ -112,30 +131,28 @@ defmodule Ecto.Migrator do
         version >= target
     end
 
-    pending_in_direction(repo, directory, direction)
+    pending_in_direction(versions, directory, direction)
     |> Enum.take_while(&(within_target_version?.(&1, target, direction)))
     |> migrate(direction, repo)
   end
 
-  defp run_step(repo, directory, direction, count) do
-    pending_in_direction(repo, directory, direction)
+  defp run_step(repo, versions, directory, direction, count) do
+    pending_in_direction(versions, directory, direction)
     |> Enum.take(count)
     |> migrate(direction, repo)
   end
 
-  defp run_all(repo, directory, direction) do
-    pending_in_direction(repo, directory, direction)
+  defp run_all(repo, versions, directory, direction) do
+    pending_in_direction(versions, directory, direction)
     |> migrate(direction, repo)
   end
 
-  defp pending_in_direction(repo, directory, :up) do
-    versions = repo.adapter.migrated_versions(repo)
+  defp pending_in_direction(versions, directory, :up) do
     migrations_for(directory)
     |> Enum.filter(fn {version, _file} -> not (version in versions) end)
   end
 
-  defp pending_in_direction(repo, directory, :down) do
-    versions = repo.adapter.migrated_versions(repo)
+  defp pending_in_direction(versions, directory, :down) do
     migrations_for(directory)
     |> Enum.filter(fn {version, _file} -> version in versions end)
     |> Enum.reverse

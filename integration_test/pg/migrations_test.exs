@@ -3,7 +3,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
   import Support.FileHelpers
   import ExUnit.CaptureIO
-  alias Ecto.Adapters.Postgres
+  import Ecto.Migrator, only: [migrated_versions: 1]
 
   defmodule GoodMigration do
     use Ecto.Migration
@@ -76,8 +76,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [] = run(TestRepo, path, :up, all: true)
       end) == ""
 
-      assert %Postgrex.Result{num_rows: 3} =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
+      assert count_entries() == 3
     end
   end
 
@@ -90,8 +89,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [45] = run(TestRepo, path, :up, to: 45)
       end) == "* running UP 45_migration.exs\n"
 
-      assert %Postgrex.Result{num_rows: 1} =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
+      assert count_entries() == 1
 
       assert capture_io(fn ->
         assert [46] = run(TestRepo, path, :up, to: 46)
@@ -108,8 +106,7 @@ defmodule Ecto.Integration.MigrationsTest do
         assert [47] = run(TestRepo, path, :up, step: 1)
       end) == "* running UP 47_migration.exs\n"
 
-      assert %Postgrex.Result{num_rows: 1} =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
+      assert count_entries() == 1
 
       assert capture_io(fn ->
         assert [48] = run(TestRepo, path, :up, to: 48)
@@ -123,6 +120,7 @@ defmodule Ecto.Integration.MigrationsTest do
         create_migration(49),
         create_migration(50),
       ]
+
       assert capture_io(fn ->
         assert [49, 50] = run(TestRepo, path, :up, all: true)
       end) == "* running UP 49_migration.exs\n* running UP 50_migration.exs\n"
@@ -134,9 +132,7 @@ defmodule Ecto.Integration.MigrationsTest do
       end) == "* running DOWN 50_migration.exs\n"
 
       purge migrations
-
-      assert %Postgrex.Result{num_rows: 1} =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
+      assert count_entries() == 1
 
       assert capture_io(fn ->
         assert [50] = run(TestRepo, path, :up, to: 50)
@@ -162,9 +158,7 @@ defmodule Ecto.Integration.MigrationsTest do
       end) == "* running DOWN 52_migration.exs\n"
 
       purge migrations
-
-      assert %Postgrex.Result{num_rows: 1} =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
+      assert count_entries() == 1
 
       assert capture_io(fn ->
         assert [52] = run(TestRepo, path, :up, to: 52)
@@ -191,8 +185,7 @@ defmodule Ecto.Integration.MigrationsTest do
 
       purge migrations
 
-      assert %Postgrex.Result{num_rows: 0} =
-        Postgres.query(TestRepo, "SELECT * FROM migrations_test", [])
+      assert count_entries() == 0
 
       assert capture_io(fn ->
         assert [53, 54] = run(TestRepo, path, :up, all: true)
@@ -200,8 +193,9 @@ defmodule Ecto.Integration.MigrationsTest do
     end
   end
 
-  defp migrated_versions(repo) do
-    repo.adapter.migrated_versions(repo)
+  defp count_entries() do
+    import Ecto.Query, only: [from: 2]
+    TestRepo.one! from p in "migrations_test", select: count(1)
   end
 
   defp create_migration(num) do
@@ -231,9 +225,9 @@ defmodule Ecto.Integration.MigrationsTest do
   end
 
   defp purge(modules) do
-     Enum.each(List.wrap(modules), fn m ->
-       :code.delete m
-       :code.purge m
-     end)
+    Enum.each(List.wrap(modules), fn m ->
+      :code.delete m
+      :code.purge m
+    end)
   end
 end

@@ -81,7 +81,7 @@ defmodule Ecto.Migration.Runner do
   """
   def exists?(object) do
     {repo, direction} = repo_and_direction()
-    exists = repo.adapter.object_exists?(repo, object)
+    exists = repo.adapter.ddl_exists?(repo, object)
     if direction == :forward, do: exists, else: !exists
   end
 
@@ -92,14 +92,14 @@ defmodule Ecto.Migration.Runner do
   end
 
   defp execute_in_direction(repo, :forward, command) do
-    repo.adapter.execute_migration(repo, command)
+    repo.adapter.execute_ddl(repo, command)
   end
 
   defp execute_in_direction(repo, :reverse, command) do
     reversed = reverse(command)
 
     if reversed do
-      repo.adapter.execute_migration(repo, reversed)
+      repo.adapter.execute_ddl(repo, reversed)
     else
       raise Ecto.MigrationError, message: "cannot reverse migration command: #{inspect command}"
     end

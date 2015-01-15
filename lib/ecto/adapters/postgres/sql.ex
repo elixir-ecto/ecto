@@ -356,7 +356,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def migrate(default) when is_binary(default), do: default
 
-    def object_exists_query(%Table{name: name}) do
+    def ddl_exists_query(%Table{name: name}) do
       """
       SELECT count(1) FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -366,7 +366,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       """
     end
 
-    def object_exists_query(%Index{name: name}) do
+    def ddl_exists_query(%Index{name: name}) do
       """
       SELECT count(1) FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace

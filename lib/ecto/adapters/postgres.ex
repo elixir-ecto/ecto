@@ -425,31 +425,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     ## Migration API
 
     @doc false
-    def execute_migration(repo, definition) do
+    def execute_ddl(repo, definition) do
       query(repo, SQL.migrate(definition), [timeout: :infinity])
       :ok
     end
 
     @doc false
-    def migrated_versions(repo) do
-      create_migrations_table(repo)
-      %Postgrex.Result{rows: rows} = query(repo, "SELECT version FROM schema_migrations", [])
-      Enum.map(rows, &elem(&1, 0))
-    end
-
-    @doc false
-    def insert_migration_version(repo, version) do
-      query(repo, "INSERT INTO schema_migrations(version) VALUES (#{version})", [])
-    end
-
-    @doc false
-    def delete_migration_version(repo, version) do
-      query(repo, "DELETE FROM schema_migrations WHERE version = #{version}", [])
-    end
-
-    @doc false
-    def object_exists?(repo, object) do
-      sql = SQL.object_exists_query(object)
+    def ddl_exists?(repo, object) do
+      sql = SQL.ddl_exists_query(object)
       %Postgrex.Result{rows: [{count}]} = query(repo, sql, [])
       count > 0
     end
