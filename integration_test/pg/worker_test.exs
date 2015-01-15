@@ -1,6 +1,5 @@
 defmodule Ecto.Integration.WorkerTest do
-  use ExUnit.Case, async: true
-
+  use ExUnit.Case
   alias Ecto.Adapters.Postgres.Worker
 
   test "worker starts without an active connection" do
@@ -11,7 +10,7 @@ defmodule Ecto.Integration.WorkerTest do
   end
 
   test "worker starts with an active connection" do
-    {:ok, worker} = Worker.start_link(worker_opts(lazy: "false"))
+    {:ok, worker} = Worker.start_link(worker_opts(lazy: false))
 
     assert Process.alive?(worker)
     assert :sys.get_state(worker).conn
@@ -28,7 +27,7 @@ defmodule Ecto.Integration.WorkerTest do
   end
 
   test "worker stops if caller dies" do
-    {:ok, worker} = Worker.start(worker_opts(lazy: "false"))
+    {:ok, worker} = Worker.start(worker_opts(lazy: false))
     conn = :sys.get_state(worker).conn
     worker_mon = Process.monitor(worker)
     conn_mon = Process.monitor(conn)
@@ -44,7 +43,7 @@ defmodule Ecto.Integration.WorkerTest do
 
   test "timeout" do
     Logger.remove_backend(:console)
-    {:ok, worker} = Worker.start(worker_opts(lazy: "false"))
+    {:ok, worker} = Worker.start(worker_opts(lazy: false))
 
     assert %Postgrex.Result{} = Worker.query!(worker, "SELECT pg_sleep(0.11)", [], timeout: 200)
     assert {:timeout, _} = catch_exit Worker.query!(worker, "SELECT pg_sleep(0.12)", [], timeout: 0)

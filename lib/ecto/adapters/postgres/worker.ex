@@ -50,9 +50,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def init(opts) do
       Process.flag(:trap_exit, true)
-      eager? = Keyword.get(opts, :lazy, true)
+      lazy? = Keyword.get(opts, :lazy, true)
 
-      if eager? do
+      unless lazy? do
         case Postgrex.Connection.start_link(opts) do
           {:ok, conn} ->
             conn = conn
