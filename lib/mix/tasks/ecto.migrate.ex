@@ -33,6 +33,8 @@ defmodule Mix.Tasks.Ecto.Migrate do
       mix ecto.migrate MyApp.Repo --to 20080906120000
 
   """
+
+  @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     Mix.Task.run "app.start", args
 

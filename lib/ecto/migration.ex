@@ -70,7 +70,7 @@ defmodule Ecto.Migration do
   end
 
   defmodule Table do
-    @doc """
+    @moduledoc """
     Defines a table struct used in migrations.
     """
     defstruct name: nil, primary_key: true
@@ -78,7 +78,7 @@ defmodule Ecto.Migration do
   end
 
   defmodule Reference do
-    @doc """
+    @moduledoc """
     Defines a reference struct used in migrations.
     """
     defstruct table: nil, column: :id, type: :integer

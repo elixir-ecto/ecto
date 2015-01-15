@@ -21,6 +21,8 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   * `--no-start` - do not start applications
 
   """
+
+  @doc false
   def run(args) do
     no_umbrella!("ecto.gen.migration")
     Mix.Task.run "app.start", args

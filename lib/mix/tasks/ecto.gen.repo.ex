@@ -16,6 +16,8 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
       mix ecto.gen.repo Repo
 
   """
+
+  @doc false
   def run(args) do
     no_umbrella!("ecto.gen.repo")
     {repo, _} = parse_repo(args)

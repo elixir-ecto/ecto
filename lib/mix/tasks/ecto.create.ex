@@ -16,6 +16,8 @@ defmodule Mix.Tasks.Ecto.Create do
       mix ecto.create MyApp.Repo
 
   """
+
+  @doc false
   def run(args) do
     Mix.Task.run "app.start", args
 
