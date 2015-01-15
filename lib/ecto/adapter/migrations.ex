@@ -25,12 +25,16 @@ defmodule Ecto.Adapter.Migrations  do
 
   It is recommended for adapters to use timeout of infinity in such
   commands, as tasks like adding indexes and upgrading tables can
-  take hours or even days.
+  take hours or even days. Also, ddl queries should not be logged
+  as they are logged automatically by the migrator.
   """
   defcallback execute_ddl(Ecto.Repo.t, command) :: :ok | no_return
 
   @doc """
   Checks if ddl value, like a table or index, exists.
+
+  Note ddl queries should not be logged as they are logged
+  automatically by the migrator.
   """
   defcallback ddl_exists?(Ecto.Repo.t, Ecto.Migration.Table.t | Ecto.Migration.Index.t) :: boolean
 end

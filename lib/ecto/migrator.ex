@@ -20,8 +20,6 @@ defmodule Ecto.Migrator do
 
   """
 
-  @type strategy :: [all: true, to: non_neg_integer, step: non_neg_integer]
-
   alias Ecto.Migration.Runner
   alias Ecto.Migration.SchemaMigration
 
@@ -40,22 +38,22 @@ defmodule Ecto.Migrator do
   @doc """
   Runs an up migration on the given repository.
   """
-  @spec up(Ecto.Repo.t, integer, Module.t) :: :ok | :already_up | no_return
-  def up(repo, version, module) do
+  @spec up(Ecto.Repo.t, integer, Module.t, Keyword.t) :: :ok | :already_up | no_return
+  def up(repo, version, module, opts \\ []) do
     versions = migrated_versions(repo)
 
     if version in versions do
       :already_up
     else
-      do_up(repo, version, module)
+      do_up(repo, version, module, opts)
       :ok
     end
   end
 
-  defp do_up(repo, version, module) do
+  defp do_up(repo, version, module, opts) do
     repo.transaction fn ->
-      attempt(repo, module, :forward, :up)
-        || attempt(repo, module, :forward, :change)
+      attempt(repo, module, :forward, :up, opts)
+        || attempt(repo, module, :forward, :change, opts)
         || raise Ecto.MigrationError,
                  message: "#{inspect module} does not implement a `up/0` or `change/0` function"
       SchemaMigration.up(repo, version)
@@ -66,33 +64,31 @@ defmodule Ecto.Migrator do
   Runs a down migration on the given repository.
   """
   @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :already_down | no_return
-  def down(repo, version, module) do
+  def down(repo, version, module, opts \\ []) do
     versions = migrated_versions(repo)
 
     if version in versions do
-      do_down(repo, version, module)
+      do_down(repo, version, module, opts)
       :ok
     else
       :already_down
     end
   end
 
-  defp do_down(repo, version, module) do
+  defp do_down(repo, version, module, opts) do
     repo.transaction fn ->
-      attempt(repo, module, :forward, :down)
-        || attempt(repo, module, :reverse, :change)
+      attempt(repo, module, :forward, :down, opts)
+        || attempt(repo, module, :backward, :change, opts)
         || raise Ecto.MigrationError,
                  message: "#{inspect module} does not implement a `down/0` or `change/0` function"
       SchemaMigration.down(repo, version)
     end
   end
 
-  defp attempt(repo, module, direction, operation) do
+  defp attempt(repo, module, direction, operation, opts) do
     if Code.ensure_loaded?(module) and
        function_exported?(module, operation, 0) do
-      Runner.start_link(repo, direction)
-      apply(module, operation, [])
-      Runner.stop()
+      Runner.run(repo, module, direction, operation, opts)
       :ok
     end
   end
@@ -100,30 +96,30 @@ defmodule Ecto.Migrator do
   @doc """
   Apply migrations in a directory to a repository with given strategy.
 
-  A strategy must be pass as an option. The available strategy types are:
+  A strategy must be given as an option. The available strategy types are:
 
-  * `:all`  runs all available if `true`
-  * `:step` runs the specific number of migrations
-  * `:to`   runs all until the supplied version is reached
+  * `:all` - runs all available if `true`
+  * `:step` - runs the specific number of migrations
+  * `:to` - runs all until the supplied version is reached
 
   """
-  @spec run(Ecto.Repo.t, binary, atom, strategy) :: [integer]
+  @spec run(Ecto.Repo.t, binary, atom, Keyword.t) :: [integer]
   def run(repo, directory, direction, opts) do
     versions = migrated_versions(repo)
 
     cond do
       opts[:all] ->
-        run_all(repo, versions, directory, direction)
+        run_all(repo, versions, directory, direction, opts)
       to = opts[:to] ->
-        run_to(repo, versions, directory, direction, to)
+        run_to(repo, versions, directory, direction, to, opts)
       step = opts[:step] ->
-        run_step(repo, versions, directory, direction, step)
+        run_step(repo, versions, directory, direction, step, opts)
       true ->
         raise ArgumentError, message: "expected one of :all, :to, or :step strategies"
     end
   end
 
-  defp run_to(repo, versions, directory, direction, target) do
+  defp run_to(repo, versions, directory, direction, target, opts) do
     within_target_version? = fn
       {version, _}, target, :up ->
         version <= target
@@ -133,18 +129,18 @@ defmodule Ecto.Migrator do
 
     pending_in_direction(versions, directory, direction)
     |> Enum.take_while(&(within_target_version?.(&1, target, direction)))
-    |> migrate(direction, repo)
+    |> migrate(direction, repo, opts)
   end
 
-  defp run_step(repo, versions, directory, direction, count) do
+  defp run_step(repo, versions, directory, direction, count, opts) do
     pending_in_direction(versions, directory, direction)
     |> Enum.take(count)
-    |> migrate(direction, repo)
+    |> migrate(direction, repo, opts)
   end
 
-  defp run_all(repo, versions, directory, direction) do
+  defp run_all(repo, versions, directory, direction, opts) do
     pending_in_direction(versions, directory, direction)
-    |> migrate(direction, repo)
+    |> migrate(direction, repo, opts)
   end
 
   defp pending_in_direction(versions, directory, :up) do
@@ -172,7 +168,7 @@ defmodule Ecto.Migrator do
     end)
   end
 
-  defp migrate(migrations, direction, repo) do
+  defp migrate(migrations, direction, repo, opts) do
     ensure_no_duplication(migrations)
 
     Enum.map migrations, fn {version, file} ->
@@ -181,16 +177,9 @@ defmodule Ecto.Migrator do
           function_exported?(mod, :__migration__, 0)
         end) || raise_no_migration_in_file(file)
 
-      # TODO: Use logger in the future
-      file = Path.relative_to_cwd(file)
-
       case direction do
-        :up ->
-          IO.puts IO.ANSI.format([:green, "* running ", :yellow, "UP ", :reset, file])
-          do_up(repo, version, mod)
-        :down ->
-          IO.puts IO.ANSI.format([:green, "* running ", :yellow, "DOWN ", :reset, file])
-          do_down(repo, version, mod)
+        :up   -> do_up(repo, version, mod, opts)
+        :down -> do_down(repo, version, mod, opts)
       end
 
       version

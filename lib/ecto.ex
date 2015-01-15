@@ -334,45 +334,11 @@ defmodule Ecto do
 
   ### Migrations
 
-  Ecto supports migrations with plain SQL. You can generate a migration with:
+  Ecto supports database migrations. You can generate a migration with:
 
       $ mix ecto.gen.migration Repo create_posts
 
   This will create a new file inside `priv/repo/migrations` with the `up` and
-  `down` functions.
-
-  Simply write the SQL commands for updating the database (`up`) and for rolling
-  it back (`down`) and you are ready to go! To run a single command return a string,
-  to run multiple return a list of strings:
-
-      defmodule Repo.CreatePosts do
-        use Ecto.Migration
-
-        def up do
-          [ "CREATE TABLE IF NOT EXISTS migrations_test(id serial primary key, name text)",
-            "INSERT INTO migrations_test (name) VALUES ('inserted')" ]
-        end
-
-        def down do
-          "DROP TABLE migrations_test"
-        end
-      end
-
-  Note the generated file (and all migration files) starts with a timestamp, which
-  identifies the migration version. By running migrations, a `schema_migrations`
-  table will be created in your database to keep which migrations are "up" (already
-  executed) and which ones are "down".
-
-  Migrations can be applied and rolled back with the mix tasks `ecto.migrate` and
-  `ecto.rollback`. See the documentation for `Mix.Tasks.Ecto.Migrate` and
-  `Mix.Tasks.Ecto.Rollback` for more in depth instructions.
-
-  To run all pending migrations:
-
-      $ mix ecto.migrate Repo
-
-  Rollback all applied migrations:
-
-      $ mix ecto.rollback Repo --all
+  `down` functions. Check `Ecto.Migration` for more information.
   """
 end

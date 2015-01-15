@@ -1,13 +1,70 @@
 defmodule Ecto.Migration do
   @moduledoc """
-  Defines a migration and provide helpers.
+  Migrations are used to modify your database schema over time.
+
+  This module provides many helpers for migrating the database,
+  allowing developers to use Elixir to alter their storage in
+  a way it is database independent.
+
+  Here is an example:
+
+      defmodule MyRepo.Migrations.CreatePosts do
+        use Ecto.Migration
+
+        def up do
+          create table(:weather) do
+            add :city,    :string, size: 40
+            add :temp_lo, :integer
+            add :temp_hi, :integer
+            add :prcp,    :float
+          end
+        end
+
+        def down do
+          drop table(:weather)
+        end
+      end
+
+  Note migrations have an `up/0` and `down/0` instructions, where
+  `up/0` is used to update your database and `down/0` rolls back
+  the prompted changes.
+
+  Ecto provides some mix tasks to help developers work with migrations:
+
+    * `mix ecto.gen.migration Repo add_weather_table` - generates a
+      migration that the user can fill in with particular commands
+    * `mix ecto.migrate Repo` - migrates a repository
+    * `mix ecto.rollback Repo` - rolls back a particular migration
+
+  Run the `mix help COMMAND` for more information.
+
+  ## Change
+
+  Migrations can also be automatically reversible by implementing
+  `change/0` instead of `up/0` and `down/0`. For example, the
+  migration above can be written as:
+
+      defmodule MyRepo.Migrations.CreatePosts do
+        use Ecto.Migration
+
+        def change do
+          create table(:weather) do
+            add :city,    :string, size: 40
+            add :temp_lo, :integer
+            add :temp_hi, :integer
+            add :prcp,    :float
+          end
+        end
+      end
+
+  Notice not all commands are reversible though. Trying to rollback
+  a non-reversible command will raise an `Ecto.MigrationError`.
   """
 
   defmodule Index do
     @moduledoc """
     Defines an index struct used in migrations.
     """
-
     defstruct table: nil, name: nil, columns: [], unique: false
     @type t :: %__MODULE__{table: atom, name: atom, columns: [atom], unique: boolean}
   end

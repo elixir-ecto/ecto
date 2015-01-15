@@ -4,9 +4,7 @@ Code.require_file "../../test/support/types.exs", __DIR__
 
 ExUnit.start
 
-alias Ecto.Adapters.Postgres
 alias Ecto.Integration.Postgres.TestRepo
-
 Application.put_env(:ecto, TestRepo,
   url: "ecto://postgres:postgres@localhost/ecto_test",
   size: 1,
@@ -104,10 +102,10 @@ defmodule Ecto.Integration.Postgres.Case do
   end
 
   setup do
-    :ok = Postgres.begin_test_transaction(TestRepo, [])
+    :ok = Ecto.Adapters.Postgres.begin_test_transaction(TestRepo, [])
 
     on_exit fn ->
-      :ok = Postgres.rollback_test_transaction(TestRepo, [])
+      :ok = Ecto.Adapters.Postgres.rollback_test_transaction(TestRepo, [])
     end
 
     :ok
@@ -174,4 +172,4 @@ defmodule Ecto.Integration.Migration do
   end
 end
 
-:ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration)
+:ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, level: :none)

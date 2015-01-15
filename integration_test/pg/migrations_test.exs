@@ -2,7 +2,6 @@ defmodule Ecto.Integration.MigrationsTest do
   use Ecto.Integration.Postgres.Case
 
   import Support.FileHelpers
-  import ExUnit.CaptureIO
   import Ecto.Migrator, only: [migrated_versions: 1]
 
   defmodule GoodMigration do
@@ -59,156 +58,69 @@ defmodule Ecto.Integration.MigrationsTest do
 
   test "migrations up and down" do
     assert migrated_versions(TestRepo) == [0]
-    assert up(TestRepo, 20080906120000, GoodMigration) == :ok
+    assert up(TestRepo, 20080906120000, GoodMigration, level: :none) == :ok
 
     assert migrated_versions(TestRepo) == [0, 20080906120000]
-    assert up(TestRepo, 20080906120000, GoodMigration) == :already_up
+    assert up(TestRepo, 20080906120000, GoodMigration, level: :none) == :already_up
     assert migrated_versions(TestRepo) == [0, 20080906120000]
-    assert down(TestRepo, 20080906120001, GoodMigration) == :already_down
+    assert down(TestRepo, 20080906120001, GoodMigration, level: :none) == :already_down
     assert migrated_versions(TestRepo) == [0, 20080906120000]
-    assert down(TestRepo, 20080906120000, GoodMigration) == :ok
+    assert down(TestRepo, 20080906120000, GoodMigration, level: :none) == :ok
     assert migrated_versions(TestRepo) == [0]
   end
 
   test "bad migration" do
     assert_raise Postgrex.Error, fn ->
-      up(TestRepo, 20080906120000, BadMigration)
+      up(TestRepo, 20080906120000, BadMigration, level: :none)
     end
   end
 
-  test "run up all migrations" do
-    in_tmp fn path ->
-      create_migration(42)
-      create_migration(43)
-
-      assert capture_io(fn ->
-        assert [42, 43] = run(TestRepo, path, :up, all: true)
-      end) == "* running UP 42_migration.exs\n* running UP 43_migration.exs\n"
-
-      create_migration(44)
-
-      assert capture_io(fn ->
-        assert [44] = run(TestRepo, path, :up, all: true)
-      end) == "* running UP 44_migration.exs\n"
-
-      assert capture_io(fn ->
-        assert [] = run(TestRepo, path, :up, all: true)
-      end) == ""
-
-      assert count_entries() == 3
-    end
-  end
-
-  test "run up to migration" do
-    in_tmp fn path ->
-      create_migration(45)
-      create_migration(46)
-
-      assert capture_io(fn ->
-        assert [45] = run(TestRepo, path, :up, to: 45)
-      end) == "* running UP 45_migration.exs\n"
-
-      assert count_entries() == 1
-
-      assert capture_io(fn ->
-        assert [46] = run(TestRepo, path, :up, to: 46)
-      end) == "* running UP 46_migration.exs\n"
-    end
-  end
-
-  test "run up 1 migration" do
+  test "run up to/step migration" do
     in_tmp fn path ->
       create_migration(47)
       create_migration(48)
 
-      assert capture_io(fn ->
-        assert [47] = run(TestRepo, path, :up, step: 1)
-      end) == "* running UP 47_migration.exs\n"
-
+      assert [47] = run(TestRepo, path, :up, step: 1, level: :none)
       assert count_entries() == 1
 
-      assert capture_io(fn ->
-        assert [48] = run(TestRepo, path, :up, to: 48)
-      end) == "* running UP 48_migration.exs\n"
+      assert [48] = run(TestRepo, path, :up, to: 48, level: :none)
     end
   end
 
-  test "run down 1 migration" do
+  test "run down to/step migration" do
     in_tmp fn path ->
       migrations = [
         create_migration(49),
         create_migration(50),
       ]
 
-      assert capture_io(fn ->
-        assert [49, 50] = run(TestRepo, path, :up, all: true)
-      end) == "* running UP 49_migration.exs\n* running UP 50_migration.exs\n"
-
+      assert [49, 50] = run(TestRepo, path, :up, all: true, level: :none)
       purge migrations
 
-      assert capture_io(fn ->
-        assert [50] = run(TestRepo, path, :down, step: 1)
-      end) == "* running DOWN 50_migration.exs\n"
-
+      assert [50] = run(TestRepo, path, :down, step: 1, level: :none)
       purge migrations
+
       assert count_entries() == 1
-
-      assert capture_io(fn ->
-        assert [50] = run(TestRepo, path, :up, to: 50)
-      end) == "* running UP 50_migration.exs\n"
+      assert [50] = run(TestRepo, path, :up, to: 50, level: :none)
     end
   end
 
-  test "run down to migration" do
-    in_tmp fn path ->
-      migrations = [
-        create_migration(51),
-        create_migration(52),
-      ]
-
-      assert capture_io(fn ->
-        assert [51, 52] = run(TestRepo, path, :up, all: true)
-      end) == "* running UP 51_migration.exs\n* running UP 52_migration.exs\n"
-
-      purge migrations
-
-      assert capture_io(fn ->
-        assert [52] = run(TestRepo, path, :down, to: 52)
-      end) == "* running DOWN 52_migration.exs\n"
-
-      purge migrations
-      assert count_entries() == 1
-
-      assert capture_io(fn ->
-        assert [52] = run(TestRepo, path, :up, to: 52)
-      end) == "* running UP 52_migration.exs\n"
-    end
-  end
-
-  test "run down all migrations" do
+  test "runs all migrations" do
     in_tmp fn path ->
       migrations = [
         create_migration(53),
         create_migration(54),
       ]
 
-      assert capture_io(fn ->
-        assert [53, 54] = run(TestRepo, path, :up, all: true)
-      end) == "* running UP 53_migration.exs\n* running UP 54_migration.exs\n"
-
+      assert [53, 54] = run(TestRepo, path, :up, all: true, level: :none)
+      assert [] = run(TestRepo, path, :up, all: true, level: :none)
       purge migrations
 
-      assert capture_io(fn ->
-        assert [54, 53] = run(TestRepo, path, :down, all: true)
-      end) == "* running DOWN 54_migration.exs\n* running DOWN 53_migration.exs\n"
-
+      assert [54, 53] = run(TestRepo, path, :down, all: true, level: :none)
       purge migrations
 
       assert count_entries() == 0
-
-      assert capture_io(fn ->
-        assert [53, 54] = run(TestRepo, path, :up, all: true)
-      end) == "* running UP 53_migration.exs\n* running UP 54_migration.exs\n"
+      assert [53, 54] = run(TestRepo, path, :up, all: true, level: :none)
     end
   end
 

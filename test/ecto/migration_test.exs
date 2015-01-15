@@ -14,7 +14,7 @@ defmodule Ecto.MigrationTest do
   alias Ecto.Migration.Reference
 
   setup meta do
-    {:ok, _} = Ecto.Migration.Runner.start_link(MockRepo, meta[:direction] || :forward)
+    {:ok, _} = Ecto.Migration.Runner.start_link(MockRepo, meta[:direction] || :forward, :none)
 
     on_exit fn ->
       try do
@@ -121,25 +121,25 @@ defmodule Ecto.MigrationTest do
   end
 
   ## Reverse
-  @moduletag direction: :reverse
+  @moduletag direction: :backward
 
-  test "reverse: fails when executing SQL" do
+  test "backward: fails when executing SQL" do
     assert_raise Ecto.MigrationError, ~r/cannot reverse migration command/, fn ->
       execute "HELLO, IS IT ME YOU ARE LOOKING FOR?"
     end
   end
 
-  test "reverse: table exists?" do
+  test "backward: table exists?" do
     refute exists?(table(:hello))
     assert %Table{name: :hello} = last_exists()
   end
 
-  test "reverse: index exists?" do
+  test "backward: index exists?" do
     refute exists?(index(:hello, [:world]))
     assert %Index{table: :hello} = last_exists()
   end
 
-  test "reverse: creates a table" do
+  test "backward: creates a table" do
     create table(:posts) do
       add :title
       add :cost, :decimal, precision: 3
@@ -149,7 +149,7 @@ defmodule Ecto.MigrationTest do
            {:drop, %Ecto.Migration.Table{name: :posts, primary_key: true}}
   end
 
-  test "reverse: alters a table" do
+  test "backward: alters a table" do
     alter table(:posts) do
       add :summary, :text
     end
@@ -165,18 +165,18 @@ defmodule Ecto.MigrationTest do
     end
   end
 
-  test "reverse: drops a table" do
+  test "backward: drops a table" do
     assert_raise Ecto.MigrationError, ~r/cannot reverse migration command/, fn ->
       drop table(:posts)
     end
   end
 
-  test "reverse: creates an index" do
+  test "backward: creates an index" do
     create index(:posts, [:title])
     assert {:drop, %Index{}} = last_command()
   end
 
-  test "reverse: drops an index" do
+  test "backward: drops an index" do
     drop index(:posts, [:title])
     assert {:create, %Index{}} = last_command()
   end

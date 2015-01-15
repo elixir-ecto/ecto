@@ -9,18 +9,17 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   @moduledoc """
   Generates a migration for the given repository.
 
-  ## Command line options
-
-  * `--no-start` - do not start applications
-
-  ## Examples
-
       mix ecto.gen.migration MyApp.Repo add_posts_table
 
   By default, the migration will be generated to the
   "priv/repo/migrations" directory of the current application
   but it can be configured by specify the `:priv` key under
   the repository configuration.
+
+  ## Command line options
+
+  * `--no-start` - do not start applications
+
   """
   def run(args) do
     no_umbrella!("ecto.gen.migration")

@@ -1,20 +1,35 @@
 defmodule Ecto.Migration.Runner do
   # A GenServer responsible for running migrations
-  # in either `:forward` or `:reverse` directions.
+  # in either `:forward` or `:backward` directions.
   @moduledoc false
 
   use GenServer
+  require Logger
 
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
 
   @doc """
+  Runs the given migration.
+  """
+  def run(repo, module, direction, operation, opts) do
+    level = Keyword.get(opts, :level, :info)
+    start_link(repo, direction, level)
+
+    log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
+    {time, _} = :timer.tc(module, operation, [])
+    log(level, "== Migrated in #{inspect(div(time, 10000) / 10)}s")
+
+    stop()
+  end
+
+  @doc """
   Starts the runner for the specified repo.
   """
-  def start_link(repo, direction) do
+  def start_link(repo, direction, level) do
     Agent.start_link(fn ->
       %{direction: direction, repo: repo,
-        command: nil, subcommands: []}
+        command: nil, subcommands: [], level: level}
     end, name: __MODULE__)
   end
 
@@ -29,11 +44,11 @@ defmodule Ecto.Migration.Runner do
   Executes command tuples or strings.
 
   Ecto.MigrationError will be raised when the server
-  is in `:reverse` direction and `command` is irreversible.
+  is in `:backward` direction and `command` is irreversible.
   """
   def execute(command) do
-    {repo, direction} = repo_and_direction()
-    execute_in_direction(repo, direction, command)
+    {repo, direction, level} = repo_and_direction_and_level()
+    execute_in_direction(repo, direction, level, command)
   end
 
   @doc """
@@ -80,25 +95,29 @@ defmodule Ecto.Migration.Runner do
   Checks if a table or index exists.
   """
   def exists?(object) do
-    {repo, direction} = repo_and_direction()
+    {repo, direction, _level} = repo_and_direction_and_level()
     exists = repo.adapter.ddl_exists?(repo, object)
     if direction == :forward, do: exists, else: !exists
   end
 
-  defp repo_and_direction do
-    Agent.get(__MODULE__, fn %{repo: repo, direction: direction} ->
-      {repo, direction}
+  ## Helpers
+
+  defp repo_and_direction_and_level do
+    Agent.get(__MODULE__, fn %{repo: repo, direction: direction, level: level} ->
+      {repo, direction, level}
     end)
   end
 
-  defp execute_in_direction(repo, :forward, command) do
+  defp execute_in_direction(repo, :forward, level, command) do
+    log_ddl(level, command)
     repo.adapter.execute_ddl(repo, command)
   end
 
-  defp execute_in_direction(repo, :reverse, command) do
+  defp execute_in_direction(repo, :backward, level, command) do
     reversed = reverse(command)
 
     if reversed do
+      log_ddl(level, reversed)
       repo.adapter.execute_ddl(repo, reversed)
     else
       raise Ecto.MigrationError, message: "cannot reverse migration command: #{inspect command}"
@@ -123,4 +142,24 @@ defmodule Ecto.Migration.Runner do
   end
 
   defp reverse(_), do: false
+
+  ## Logging
+
+  defp log_ddl(level, ddl) when is_binary(ddl),
+    do: log(level, "execute #{inspect ddl}")
+
+  defp log_ddl(level, {:create, %Table{} = table, _}),
+    do: log(level, "create table #{table.name}")
+  defp log_ddl(level, {:alter, %Table{} = table, _}),
+    do: log(level, "alter table #{table.name}")
+  defp log_ddl(level, {:drop, %Table{} = table}),
+    do: log(level, "drop table #{table.name}")
+
+  defp log_ddl(level, {:create, %Index{} = index}),
+    do: log(level, "create index #{index.name}")
+  defp log_ddl(level, {:drop, %Index{} = index}),
+    do: log(level, "drop index #{index.name}")
+
+  defp log(:none, _msg), do: :ok
+  defp log(level, msg),  do: Logger.log(level, msg)
 end

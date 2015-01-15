@@ -74,6 +74,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
+    # TODO: Move query out of the worker to reduce copying
     def handle_call({:query, sql, params, opts}, _from, %{conn: conn} = s) do
       {:reply, Postgrex.Connection.query(conn, sql, params, opts), s}
     end

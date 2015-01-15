@@ -424,19 +424,22 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Migration API
 
-    # TODO: Consider not logging those
-
     @doc false
     def execute_ddl(repo, definition) do
-      query(repo, SQL.migrate(definition), [timeout: :infinity])
+      ddl_query(repo, SQL.migrate(definition))
       :ok
     end
 
     @doc false
     def ddl_exists?(repo, object) do
-      sql = SQL.ddl_exists_query(object)
-      %Postgrex.Result{rows: [{count}]} = query(repo, sql, [timeout: :infinity])
+      %Postgrex.Result{rows: [{count}]} = ddl_query(repo, SQL.ddl_exists_query(object))
       count > 0
+    end
+
+    defp ddl_query(repo, sql) do
+      use_worker(repo_pool(repo), :infinity, fn worker ->
+        Worker.query!(worker, sql, [], [timeout: :infinity])
+      end)
     end
   end
 end

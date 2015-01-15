@@ -4,7 +4,6 @@ defmodule Ecto.MigratorTest do
   use ExUnit.Case
 
   import Support.FileHelpers
-  import ExUnit.CaptureIO
   import Ecto.Migrator
   alias Ecto.MockRepo
 
@@ -20,13 +19,29 @@ defmodule Ecto.MigratorTest do
     end
   end
 
-  defmodule ReversibleMigration do
+  defmodule ChangeMigration do
     use Ecto.Migration
 
     def change do
       create table(:posts) do
         add :name, :string
       end
+
+      create index(:posts, [:title])
+    end
+  end
+
+  defmodule UpDownMigration do
+    use Ecto.Migration
+
+    def up do
+      alter table(:posts) do
+        add :name, :string
+      end
+    end
+
+    def down do
+      execute "foo"
     end
   end
 
@@ -39,40 +54,70 @@ defmodule Ecto.MigratorTest do
     :ok
   end
 
+  test "logs migrations" do
+    output = capture_log fn ->
+      :ok = up(MockRepo, 0, ChangeMigration)
+    end
+
+    assert output =~ "== Running Ecto.MigratorTest.ChangeMigration.change/0 forward"
+    assert output =~ "create table posts"
+    assert output =~ "create index posts_title_index"
+    assert output =~ ~r"== Migrated in \d.\ds"
+
+    output = capture_log fn ->
+      :ok = down(MockRepo, 0, ChangeMigration)
+    end
+
+    assert output =~ "== Running Ecto.MigratorTest.ChangeMigration.change/0 backward"
+    assert output =~ "drop table posts"
+    assert output =~ "drop index posts_title_index"
+    assert output =~ ~r"== Migrated in \d.\ds"
+
+    output = capture_log fn ->
+      :ok = up(MockRepo, 0, UpDownMigration)
+    end
+
+    assert output =~ "== Running Ecto.MigratorTest.UpDownMigration.up/0 forward"
+    assert output =~ "alter table posts"
+    assert output =~ ~r"== Migrated in \d.\ds"
+
+    output = capture_log fn ->
+      :ok = down(MockRepo, 0, UpDownMigration)
+    end
+
+    assert output =~ "== Running Ecto.MigratorTest.UpDownMigration.down/0 forward"
+    assert output =~ "execute \"foo\""
+    assert output =~ ~r"== Migrated in \d.\ds"
+  end
+
   test "up invokes the repository adapter with up commands" do
-    capture_io(fn ->
-      assert up(MockRepo, 0, Migration) == :ok
-      assert up(MockRepo, 1, Migration) == :already_up
-      assert up(MockRepo, 10, ReversibleMigration) == :ok
-    end)
+    assert up(MockRepo, 0, Migration, level: :none) == :ok
+    assert up(MockRepo, 1, Migration, level: :none) == :already_up
+    assert up(MockRepo, 10, ChangeMigration, level: :none) == :ok
   end
 
   test "down invokes the repository adapter with down commands" do
-    capture_io(fn ->
-      assert down(MockRepo, 0, Migration) == :already_down
-      assert down(MockRepo, 1, Migration) == :ok
-      assert down(MockRepo, 2, ReversibleMigration) == :ok
-    end)
+    assert down(MockRepo, 0, Migration, level: :none) == :already_down
+    assert down(MockRepo, 1, Migration, level: :none) == :ok
+    assert down(MockRepo, 2, ChangeMigration, level: :none) == :ok
   end
 
   test "up raises error when missing up/0 and change/0" do
     assert_raise Ecto.MigrationError, fn ->
-      Ecto.Migrator.up(MockRepo, 0, InvalidMigration)
+      Ecto.Migrator.up(MockRepo, 0, InvalidMigration, level: :none)
     end
   end
 
   test "down raises error when missing down/0 and change/0" do
     assert_raise Ecto.MigrationError, fn ->
-      Ecto.Migrator.down(MockRepo, 1, InvalidMigration)
+      Ecto.Migrator.down(MockRepo, 1, InvalidMigration, level: :none)
     end
   end
 
   test "expects files starting with an integer" do
     in_tmp fn path ->
       create_migration "a_sample.exs"
-      capture_io(fn ->
-        assert run(MockRepo, path, :up, all: true) == []
-      end)
+      assert run(MockRepo, path, :up, all: true, level: :none) == []
     end
   end
 
@@ -80,7 +125,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       File.write! "13_sample.exs", ":ok"
       assert_raise Ecto.MigrationError, "file 13_sample.exs does not contain any Ecto.Migration", fn ->
-        capture_io fn -> run(MockRepo, path, :up, all: true) end
+        run(MockRepo, path, :up, all: true, level: :none)
       end
     end
   end
@@ -90,7 +135,7 @@ defmodule Ecto.MigratorTest do
       create_migration "13_hello.exs"
       create_migration "13_other.exs"
       assert_raise Ecto.MigrationError, "migrations can't be executed, version 13 is duplicated", fn ->
-        capture_io fn -> run(MockRepo, path, :up, all: true) end
+        run(MockRepo, path, :up, all: true, level: :none)
       end
     end
   end
@@ -98,7 +143,7 @@ defmodule Ecto.MigratorTest do
   test "upwards migrations skips migrations that are already up" do
     in_tmp fn path ->
       create_migration "1_sample.exs"
-      capture_io fn -> assert run(MockRepo, path, :up, all: true) == [] end
+      assert run(MockRepo, path, :up, all: true, level: :none) == []
     end
   end
 
@@ -106,9 +151,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "1_sample.exs"
       create_migration "4_sample.exs"
-      capture_io(fn ->
-        assert run(MockRepo, path, :down, all: true) == [1]
-      end)
+      assert run(MockRepo, path, :down, all: true, level: :none) == [1]
     end
   end
 
@@ -116,9 +159,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_premature_end.exs"
       create_migration "14_step_premature_end.exs"
-      capture_io(fn ->
-        assert run(MockRepo, path, :up, step: 1) == [13]
-      end)
+      assert run(MockRepo, path, :up, step: 1, level: :none) == [13]
     end
   end
 
@@ -126,9 +167,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_to_the_end.exs"
       create_migration "14_step_to_the_end.exs"
-      capture_io(fn ->
-        assert run(MockRepo, path, :up, step: 2) == [13, 14]
-      end)
+      assert run(MockRepo, path, :up, step: 2, level: :none) == [13, 14]
     end
   end
 
@@ -136,9 +175,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_step_past_the_end.exs"
       create_migration "14_step_past_the_end.exs"
-      capture_io(fn ->
-        assert run(MockRepo, path, :up, step: 3) == [13, 14]
-      end)
+      assert run(MockRepo, path, :up, step: 3, level: :none) == [13, 14]
     end
   end
 
@@ -146,9 +183,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_premature_end.exs"
       create_migration "14_version_premature_end.exs"
-      capture_io(fn ->
-        assert run(MockRepo, path, :up, to: 13) == [13]
-      end)
+      assert run(MockRepo, path, :up, to: 13, level: :none) == [13]
     end
   end
 
@@ -156,9 +191,7 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_to_the_end.exs"
       create_migration "14_version_to_the_end.exs"
-      capture_io(fn ->
-        assert run(MockRepo, path, :up, to: 14) == [13, 14]
-      end)
+      assert run(MockRepo, path, :up, to: 14, level: :none) == [13, 14]
     end
   end
 
@@ -166,10 +199,15 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_version_past_the_end.exs"
       create_migration "14_version_past_the_end.exs"
-      capture_io(fn ->
-        assert run(MockRepo, path, :up, to: 15) == [13, 14]
-      end)
+      assert run(MockRepo, path, :up, to: 15, level: :none) == [13, 14]
     end
+  end
+
+  defp capture_log(fun) do
+    ExUnit.CaptureIO.capture_io(:user, fn ->
+      fun.()
+      Logger.flush()
+    end) |> String.strip
   end
 
   defp create_migration(name) do
@@ -178,13 +216,11 @@ defmodule Ecto.MigratorTest do
       use Ecto.Migration
 
       def up do
-        create table(:products) do
-          add :name, :string
-        end
+        execute "up"
       end
 
       def down do
-        drop table(:products)
+        execute "down"
       end
     end
     """
