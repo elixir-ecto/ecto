@@ -137,7 +137,7 @@ defmodule Ecto.Model.Callbacks do
 
   ## Example
 
-    before_update User, :set_update_at_timestamp
+      before_update User, :set_update_at_timestamp
 
   """
   defmacro before_update(function, args \\ []),
