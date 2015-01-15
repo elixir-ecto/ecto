@@ -226,7 +226,7 @@ defmodule Ecto.Model.Callbacks do
     error = callback_error("#{function}/#{length(args)+1}")
 
     quote do
-      case unquote(function)(unquote(acc), unquote_splicing(args)) do
+      case unquote(function)(unquote(acc), unquote_splicing(Macro.escape(args))) do
         %Ecto.Changeset{} = changeset -> changeset
         other -> raise unquote(error) <> inspect(other)
       end
@@ -238,7 +238,7 @@ defmodule Ecto.Model.Callbacks do
     error = callback_error("#{inspect module}.#{function}/#{length(args)+1}")
 
     quote do
-      case unquote(module).unquote(function)(unquote(acc), unquote_splicing(args)) do
+      case unquote(module).unquote(function)(unquote(acc), unquote_splicing(Macro.escape(args))) do
         %Ecto.Changeset{} = changeset -> changeset
         other -> raise unquote(error) <> inspect(other)
       end

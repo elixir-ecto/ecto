@@ -12,13 +12,13 @@ defmodule Ecto.Model.CallbacksTest do
     end
 
     before_delete __MODULE__, :add_to_x
-    before_delete __MODULE__, :add_to_x, ["2"]
+    before_delete __MODULE__, :add_to_x, [%{str: "2"}]
     before_delete :add_to_x
-    before_delete :add_to_x, ["2"]
+    before_delete :add_to_x, [%{str: "2"}]
 
     before_update :bad_callback
 
-    def add_to_x(changeset, str \\ "1") do
+    def add_to_x(changeset, %{str: str} \\ %{str: "1"}) do
       update_in changeset.model.x, &(&1 <> "," <> str)
     end
 
