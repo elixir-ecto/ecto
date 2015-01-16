@@ -95,6 +95,8 @@ defmodule Ecto.Changeset do
 
   """
   @spec cast(%{binary => term} | nil, Ecto.Model.t, [String.t | atom], [String.t | atom]) :: t
+  def cast(val, model, required, optional \\ [])
+
   def cast(nil, %{__struct__: _} = model, required, optional)
       when is_list(required) and is_list(optional) do
     to_atom = fn

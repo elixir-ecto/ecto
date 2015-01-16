@@ -18,7 +18,7 @@ defmodule Ecto.ChangesetTest do
 
   ## cast/4
 
-  test "cast/4: on success" do
+  test "cast/4: on success is valid" do
     params = %{"title" => "hello", "body" => "world"}
     struct = %Post{}
 
@@ -33,7 +33,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "cast/4: missing optional" do
+  test "cast/4: missing optional is valid" do
     params = %{"title" => "hello"}
     struct = %Post{}
 
@@ -45,7 +45,19 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "cast/4: missing required" do
+  test "cast/4: no optionals passed is valid" do
+    params = %{"title" => "hello"}
+    struct = %Post{}
+
+    changeset = cast(params, struct, ~w(title))
+    assert changeset.params == params
+    assert changeset.model  == struct
+    assert changeset.changes == %{title: "hello"}
+    assert changeset.errors == []
+    assert changeset.valid?
+  end
+
+  test "cast/4: missing required is invalid" do
     params = %{"body" => "world"}
     struct = %Post{}
 
@@ -57,7 +69,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: no parameters" do
+  test "cast/4: no parameters is invalid" do
     changeset = cast(nil, %Post{}, ~w(title), ~w(body)a)
     assert changeset.model == %Post{}
     assert changeset.params == nil
