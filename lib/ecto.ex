@@ -201,7 +201,7 @@ defmodule Ecto do
   a bad request code.
 
   The benefit of having explicit changesets is that we can easily provide
-  differents changesets for different and use cases. For example, one
+  different changesets for different use cases. For example, one
   could easily provide specific changesets for create and update:
 
       def changeset(user, :create, params) do
