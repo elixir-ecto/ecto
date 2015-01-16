@@ -385,7 +385,7 @@ defmodule Ecto.Changeset do
   Unfortunately, different databases provide different guarantees
   when it comes to case sensitive. For example, in MySQL, comparisons
   are case insensitive. In Postgres, users can define case insensitive
-  column by using the `citext` extensions.
+  column by using the `:citext` type/extension.
 
   Those facts make it hard for Ecto to guarantee if the unique
   validation is case insensitive or not and therefore it **does not**
@@ -393,7 +393,7 @@ defmodule Ecto.Changeset do
 
   However this function does provide a `:downcase` option that
   guarantees values are downcased when doing the uniqueness check.
-  When you set this option, values are downcased regardless of which
+  When you set this option, values are downcased regardless of the
   database you are using.
 
   Since the `:downcase` option downcases the database values on the
