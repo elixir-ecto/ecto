@@ -20,6 +20,8 @@ defmodule Ecto.Changeset do
   * `optional`    - All optional fields as a list of atoms
   """
 
+  import Ecto.Query, only: [from: 2]
+
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: []
 
@@ -362,6 +364,35 @@ defmodule Ecto.Changeset do
   def validate_exclusion(changeset, field, data) do
     validate_change changeset, field, {:exclusion, data}, fn value ->
       if value in data, do: [{field, :exclusion}], else: []
+    end
+  end
+
+  @doc """
+  Validates `field`'s uniqueness on `Repo`.
+
+  ## Examples
+
+      validate_unique(changeset, :email, on: Repo)
+
+  """
+  def validate_unique(changeset, field, opts) when is_list(opts) do
+    repo = Keyword.fetch!(opts, :on)
+    validate_change changeset, field, :unique, fn value ->
+      struct = changeset.model.__struct__
+      query = from m in struct,
+              select: field(m, ^field),
+               where: field(m, ^field) == ^value,
+               limit: 1
+      if pk_value = Ecto.Model.primary_key(changeset.model) do
+        pk_field = struct.__schema__(:primary_key)
+        query = from m in query,
+                where: field(m, ^pk_field) != ^pk_value
+      end
+
+      case repo.all(query) do
+        []       -> []
+        [_value] -> [{field, :unique}]
+      end
     end
   end
 

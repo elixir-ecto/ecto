@@ -319,6 +319,24 @@ defmodule Ecto.ChangesetTest do
     assert changeset.validations == [title: {:exclusion, ~w(world)}]
   end
 
+  test "validate_unique/3" do
+    defmodule MyRepo do def all(_), do: Process.get(:unique_check) || [] end
+    changeset =
+      changeset(%{"title" => "hello"})
+      |> validate_unique(:title, on: MyRepo)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert changeset.validations == [title: :unique]
+
+    Process.put(:unique_check, [1])
+    changeset =
+      changeset(%{"title" => "hello"})
+      |> validate_unique(:title, on: MyRepo)
+    refute changeset.valid?
+    assert changeset.errors == [title: :unique]
+    assert changeset.validations == [title: :unique]
+  end
+
   test "validate_length/3 with range" do
     changeset =
       changeset(%{"title" => "world"})
