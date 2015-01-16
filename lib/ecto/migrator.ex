@@ -37,6 +37,11 @@ defmodule Ecto.Migrator do
 
   @doc """
   Runs an up migration on the given repository.
+
+  ## Options
+
+    * `:level` - the level to use for logging.
+      Can be any of `Logger.level/0` values or `:none`.
   """
   @spec up(Ecto.Repo.t, integer, Module.t, Keyword.t) :: :ok | :already_up | no_return
   def up(repo, version, module, opts \\ []) do
@@ -62,6 +67,12 @@ defmodule Ecto.Migrator do
 
   @doc """
   Runs a down migration on the given repository.
+
+  ## Options
+
+    * `:level` - the level to use for logging.
+      Can be any of `Logger.level/0` values or `:none`.
+
   """
   @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :already_down | no_return
   def down(repo, version, module, opts \\ []) do
@@ -96,11 +107,15 @@ defmodule Ecto.Migrator do
   @doc """
   Apply migrations in a directory to a repository with given strategy.
 
-  A strategy must be given as an option. The available strategy types are:
+  A strategy must be given as an option.
 
-  * `:all` - runs all available if `true`
-  * `:step` - runs the specific number of migrations
-  * `:to` - runs all until the supplied version is reached
+  ## Options
+
+    * `:all` - runs all available if `true`
+    * `:step` - runs the specific number of migrations
+    * `:to` - runs all until the supplied version is reached
+    * `:level` - the level to use for logging.
+      Can be any of `Logger.level/0` values or `:none`.
 
   """
   @spec run(Ecto.Repo.t, binary, atom, Keyword.t) :: [integer]
