@@ -17,16 +17,23 @@ defmodule Ecto.MockAdapter do
 
   ## Model
 
-  def insert(_repo, "schema_migrations", [version: version], _, _),
-    do: Process.put(:migrated_versions, [version|migrated_versions()]) && {:ok, {1}}
+  def insert(_repo, "schema_migrations", val, _, _) do
+    version  = Keyword.fetch!(val, :version)
+    Process.put(:migrated_versions, [version|migrated_versions()])
+    {:ok, {1}}
+  end
+
   def insert(_repo, _source, _fields, [_], _opts),
     do: {:ok, {1}}
 
   def update(_repo, _source, _filter, _fields, [_], _opts),
     do: {:ok, {1}}
 
-  def delete(_repo, "schema_migrations", [version: version], _),
-    do: Process.put(:migrated_versions, List.delete(migrated_versions(), version)) && :ok
+  def delete(_repo, "schema_migrations", [version: version], _) do
+    Process.put(:migrated_versions, List.delete(migrated_versions(), version))
+    :ok
+  end
+
   def delete(_repo, _source, _filter, _opts),
     do: :ok
 

@@ -17,6 +17,8 @@ defmodule Ecto.Model do
   too:
 
     * `use Ecto.Model.Callbacks` - provides lifecycle callbacks
+    * `use Ecto.Model.Timestamps` - automatically set `inserted_at` and
+      `updated_at` fields declared via `Ecto.Schema.timestamps/1`
 
   However, you can avoid using `Ecto.Model` altogether in favor
   of cherry picking any of the functionality above.
@@ -37,6 +39,7 @@ defmodule Ecto.Model do
       import Ecto.Query
 
       import Ecto.Model
+      use Ecto.Model.Timestamps
       use Ecto.Model.Callbacks
     end
   end

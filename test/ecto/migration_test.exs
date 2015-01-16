@@ -69,25 +69,28 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: creates a table" do
-    create table(:posts) do
+    create table = table(:posts) do
       add :title
       add :cost, :decimal, precision: 3
       add :author_id, references(:authors)
+      timestamps
     end
 
     assert last_command() ==
-           {:create, %Table{name: :posts},
+           {:create, table,
               [{:add, :id, :serial, [primary_key: true]},
                {:add, :title, :string, []},
                {:add, :cost, :decimal, [precision: 3]},
-               {:add, :author_id, %Reference{table: :authors}, []}]}
+               {:add, :author_id, %Reference{table: :authors}, []},
+               {:add, :inserted_at, :datetime, [null: false]},
+               {:add, :updated_at, :datetime, [null: false]}]}
 
-    create table(:posts, primary_key: false) do
+    create table = table(:posts, primary_key: false, timestamps: false) do
       add :title
     end
 
     assert last_command() ==
-           {:create, %Table{name: :posts, primary_key: false},
+           {:create, table,
               [{:add, :title, :string, []}]}
   end
 

@@ -17,6 +17,8 @@ defmodule Ecto.Migration do
             add :temp_lo, :integer
             add :temp_hi, :integer
             add :prcp,    :float
+
+            timestamps
           end
         end
 
@@ -98,16 +100,21 @@ defmodule Ecto.Migration do
   @doc """
   Creates a table.
 
+  By default, the table will also include a primary_key of name `:id`
+  and type `:serial`. Check `table/2` docs for more information.
+
   ## Examples
 
       create table(:posts) do
         add :title, :string, default: "Untitled"
         add :body,  :text
+
+        timestamps
       end
 
   """
   defmacro create(object, do: block) do
-    quote(location: :keep) do
+    quote do
       table = unquote(object)
       Runner.start_command({:create, table})
 
@@ -133,7 +140,7 @@ defmodule Ecto.Migration do
 
   """
   defmacro alter(object, do: block) do
-    quote(location: :keep) do
+    quote do
       Runner.start_command({:alter, unquote(object)})
       unquote(block)
       Runner.end_command
@@ -177,9 +184,14 @@ defmodule Ecto.Migration do
 
       drop table(:products)
 
+      create table(:products, primary_key: false) do
+        add :name, :string
+        add :price, :decimal
+      end
+
   ## Options
 
-    * `:primary_key` - when false, does not generate primary key for table
+    * `:primary_key` - when false, does not generate primary key on table creation
 
   """
   def table(name, opts \\ []) when is_atom(name) do
@@ -198,6 +210,7 @@ defmodule Ecto.Migration do
 
       # Name can be given explicitly though
       drop index(:products, [:category_id, :sku], name: :my_special_name)
+
   """
   def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
     index = struct(%Index{table: table, columns: columns}, opts)
@@ -248,6 +261,16 @@ defmodule Ecto.Migration do
   """
   def add(column, type \\ :string, opts \\ []) when is_atom(column) do
     Runner.subcommand {:add, column, type, opts}
+  end
+
+  @doc """
+  Adds `:inserted_at` and `:updated_at` timestamps columns.
+
+  Those columns are of `:datetime` type and cannot be null.
+  """
+  def timestamps do
+    add(:inserted_at, :datetime, null: false)
+    add(:updated_at, :datetime, null: false)
   end
 
   @doc """

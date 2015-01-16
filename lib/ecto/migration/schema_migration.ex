@@ -1,22 +1,23 @@
 defmodule Ecto.Migration.SchemaMigration do
   # Define a schema that works with the schema_migrations table
   @moduledoc false
-
-  import Ecto.Query, only: [from: 2]
-  use Ecto.Schema
+  use Ecto.Model
 
   @primary_key {:version, :integer, []}
   schema "schema_migrations" do
+    timestamps updated_at: false
   end
 
-  @table %Ecto.Migration.Table{name: :schema_migrations, primary_key: false}
+  @table %Ecto.Migration.Table{name: :schema_migrations}
 
   def ensure_schema_migrations_table!(repo) do
     adapter = repo.adapter
 
     unless adapter.ddl_exists?(repo, @table) do
       adapter.execute_ddl(repo,
-        {:create, @table, [{:add, :version, :bigint, primary_key: true}]})
+        {:create, @table, [
+          {:add, :version, :bigint, primary_key: true},
+          {:add, :inserted_at, :datetime, []}]})
     end
 
     :ok

@@ -58,12 +58,13 @@ defmodule Ecto.Integration.RepoTest do
     post = %Post{title: "create and delete single", text: "fetch empty"}
 
     assert %Post{} = TestRepo.insert(post)
-    assert %Post{} = created = TestRepo.insert(post)
-    assert %Post{} = TestRepo.delete(created)
-
-    assert [%Post{}] = TestRepo.all(Post)
+    assert %Post{} = to_be_deleted = TestRepo.insert(post)
+    assert %Post{} = TestRepo.delete(to_be_deleted)
 
     post = TestRepo.one(Post)
+    assert post.inserted_at
+    assert post.updated_at
+
     post = %{post | text: "coming very soon..."}
     assert %Post{} = TestRepo.update(post)
   end

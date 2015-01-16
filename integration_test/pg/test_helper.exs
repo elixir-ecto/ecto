@@ -29,6 +29,7 @@ defmodule Ecto.Integration.Postgres.Post do
     field :temp, :string, default: "temp", virtual: true
     has_many :comments, Ecto.Integration.Postgres.Comment
     has_one :permalink, Ecto.Integration.Postgres.Permalink
+    timestamps
   end
 end
 
@@ -129,6 +130,7 @@ defmodule Ecto.Integration.Migration do
       add :bin, :binary
       add :uuid, :uuid
       add :cost, :decimal, precision: 2, scale: 2
+      timestamps
     end
 
     create table(:users) do

@@ -4,6 +4,7 @@
   * Pass the repository with the changeset to callbacks
   * Add `template`, `encoding`, `lc_collate` and `lc_ctype` options to adapter that are used when creating the database
   * Add support for migrations (the previous migration style no longer works, just replace the SQL commands by `execute/1` calls)
+  * Add support for timestamps via the `timestamps/0` macro in schemas and `Ecto.Model.Timestamps`
 
 * Backwards incompatible changes
   * Previously deprecated validations have been removed

@@ -23,6 +23,7 @@ defmodule Weather do
     field :temp_lo, :integer
     field :temp_hi, :integer
     field :prcp, :float, default: 0.0
+    timestamps
   end
 end
 

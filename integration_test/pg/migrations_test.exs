@@ -56,6 +56,12 @@ defmodule Ecto.Integration.MigrationsTest do
     end
   end
 
+  test "schema migration" do
+    [migration] = TestRepo.all(Ecto.Migration.SchemaMigration)
+    assert migration.version == 0
+    assert migration.inserted_at
+  end
+
   test "migrations up and down" do
     assert migrated_versions(TestRepo) == [0]
     assert up(TestRepo, 20080906120000, GoodMigration, level: :none) == :ok
