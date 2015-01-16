@@ -427,7 +427,7 @@ defmodule Ecto.Schema do
   def __load__(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
-        {:ok, value} = Ecto.Type.load(type, elem(values, idx))
+        value = Ecto.Type.load!(type, elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
   end
@@ -435,7 +435,7 @@ defmodule Ecto.Schema do
   def __load__(struct, fields, keys, values) when is_list(keys) and is_tuple(values) do
     Enum.reduce(keys, {struct, 0}, fn
       field, {acc, idx} ->
-        {:ok, value} = Ecto.Type.load(Keyword.fetch!(fields, field), elem(values, idx))
+        value = Ecto.Type.load!(Keyword.fetch!(fields, field), elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
   end

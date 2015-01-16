@@ -143,8 +143,7 @@ defmodule Ecto.Query.Planner do
   defp cast_param(kind, query, expr, v, type) do
     case Ecto.Type.cast(type, v) do
       {:ok, v} ->
-        {:ok, v} = Ecto.Type.dump(type, v)
-        v
+        Ecto.Type.dump!(type, v)
       :error ->
         error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
     end

@@ -23,8 +23,7 @@ defmodule Ecto.Model.Timestamps do
     if get_change changeset, field do
       changeset
     else
-      {:ok, utc} = Ecto.Type.load(type, :erlang.universaltime)
-      put_change changeset, field, utc
+      put_change changeset, field, Ecto.Type.load!(type, :erlang.universaltime)
     end
   end
 

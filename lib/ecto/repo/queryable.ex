@@ -99,9 +99,9 @@ defmodule Ecto.Repo.Queryable do
         params = Enum.into params, %{}, fn
           {k, {v, {0, field}}} ->
             type = model.__schema__(:field, field)
-            {k, cast(:update_all, type, v)}
+            {k, cast_and_dump(:update_all, type, v)}
           {k, {v, type}} ->
-            {k, cast(:update_all, type, v)}
+            {k, cast_and_dump(:update_all, type, v)}
         end
       _ ->
         :ok
@@ -177,11 +177,10 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp cast(kind, type, v) do
+  defp cast_and_dump(kind, type, v) do
     case Ecto.Type.cast(type, v) do
       {:ok, v} ->
-        {:ok, v} = Ecto.Type.dump(type, v)
-        v
+        Ecto.Type.dump!(type, v)
       :error ->
         raise ArgumentError,
           "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"

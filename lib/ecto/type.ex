@@ -277,6 +277,17 @@ defmodule Ecto.Type do
   end
 
   @doc """
+  Same as `dump/2` but raises if value can't be dumped.
+  """
+  @spec dump!(t, term) :: term | no_return
+  def dump!(type, term) do
+    case dump(type, term) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "cannot dump `#{inspect term}` to type #{inspect type}"
+    end
+  end
+
+  @doc """
   Loads a value with the given type.
 
   Load is invoked when loading database native types
@@ -311,6 +322,17 @@ defmodule Ecto.Type do
         {:ok, value}
       true ->
         :error
+    end
+  end
+
+  @doc """
+  Same as `load/2` but raises if value can't be loaded.
+  """
+  @spec load!(t, term) :: term | no_return
+  def load!(type, term) do
+    case load(type, term) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "cannot load `#{inspect term}` as type #{inspect type}"
     end
   end
 
@@ -422,8 +444,18 @@ defmodule Ecto.Type do
     Decimal.Error -> :error
   end
 
-  # TODO: Add date/time/datetime parsing?
   defp do_cast(_, _), do: :error
+
+  @doc """
+  Same as `cast/2` but raises if value can't be cast.
+  """
+  @spec cast!(t, term) :: term | no_return
+  def cast!(type, term) do
+    case cast(type, term) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "cannot cast `#{inspect term}` to type #{inspect type}"
+    end
+  end
 
   @doc """
   Checks if an already cast value is blank.
