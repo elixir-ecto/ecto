@@ -22,10 +22,10 @@ defmodule Ecto.Integration.MigrationsTest do
       alter table do
         modify :name, :string
         remove :other
-        add :counter, :integer
+        add :author, :string
       end
 
-      index = index(:migrations_test, [:counter])
+      index = index(:migrations_test, ["lower(author)"])
       refute exists? index
       create index
       assert exists? index

@@ -347,7 +347,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def migrate({:create, %Index{}=index}) do
       assemble(["CREATE#{if index.unique, do: " UNIQUE"} INDEX",
                 quote_name(index.name), "ON", quote_name(index.table),
-                "(#{Enum.map_join(index.columns, ", ", &quote_name/1)})"])
+                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
     end
 
     def migrate({:drop, %Index{}=index}) do
@@ -361,7 +361,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       SELECT count(1) FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE c.relkind IN ('r','v','m')
-             AND c.relname = '#{name}'
+             AND c.relname = '#{escape_string(to_string(name))}'
              AND n.nspname = ANY (current_schemas(false))
       """
     end
@@ -371,7 +371,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       SELECT count(1) FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
        WHERE c.relkind IN ('i')
-             AND c.relname = '#{name}'
+             AND c.relname = '#{escape_string(to_string(name))}'
              AND n.nspname = ANY (current_schemas(false))
       """
     end
@@ -396,7 +396,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts), column_options(opts)])
     end
 
-    defp column_change({:remove, name}),     do: "DROP COLUMN #{quote_name(name)}"
+    defp column_change({:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
 
     defp column_options(opts) do
       default = Keyword.get(opts, :default)
@@ -419,6 +419,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       do: "DEFAULT '#{escape_string(literal)}'"
     defp default_expr(literal),
       do: "DEFAULT #{literal}"
+
+    defp index_expr(literal) when is_binary(literal),
+      do: literal
+    defp index_expr(literal),
+      do: quote_name(literal)
 
     @column_types %{
       string: "varchar",

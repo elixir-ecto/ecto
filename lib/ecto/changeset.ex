@@ -374,24 +374,70 @@ defmodule Ecto.Changeset do
 
       validate_unique(changeset, :email, on: Repo)
 
+
+  ## Options
+
+    * `:on` - the repository to perform the query on
+    * `:downcase` - when true, downcase values when performing the uniqueness query
+
+  ## Case sensitivity
+
+  Unfortunately, different databases provide different guarantees
+  when it comes to case sensitive. For example, in MySQL, comparisons
+  are case insensitive. In Postgres, users can define case insensitive
+  column by using the `citext` extensions.
+
+  Those facts make it hard for Ecto to guarantee if the unique
+  validation is case insensitive or not and therefore it **does not**
+  provide a `:case_sensitive` option.
+
+  However this function does provide a `:downcase` option that
+  guarantees values are downcased when doing the uniqueness check.
+  When you set this option, values are downcased regardless of which
+  database you are using.
+
+  Since the `:downcase` option downcases the database values on the
+  fly, use it with care as it may affect performance. For example,
+  if you must use this option, you may want to set an index with the
+  downcased value. Using `Ecto.Migration` syntax, one could write:
+
+      create index(:posts, ["lower(title)"])
+
+  Many times though, you don't even need to use the downcase option
+  at `validate_unique/3` and instead you can explicitly downcase
+  values before inserting them into the database:
+
+      cast(params, model, ~w(email), ~w())
+      |> update_change(:email, &String.downcase/1)
+      |> validate_unique(:email, on: Repo)
+
   """
-  def validate_unique(changeset, field, opts) when is_list(opts) do
+  def validate_unique(%{model: model} = changeset, field, opts) when is_list(opts) do
     repo = Keyword.fetch!(opts, :on)
     validate_change changeset, field, :unique, fn value ->
-      struct = changeset.model.__struct__
+      struct = model.__struct__
+
       query = from m in struct,
               select: field(m, ^field),
-               where: field(m, ^field) == ^value,
                limit: 1
-      if pk_value = Ecto.Model.primary_key(changeset.model) do
+
+      query =
+        if opts[:downcase] do
+          from m in query, where:
+            fragment("lower(?)", field(m, ^field)) == fragment("lower(?)", ^value)
+        else
+          from m in query, where: field(m, ^field) == ^value
+        end
+
+      if pk_value = Ecto.Model.primary_key(model) do
         pk_field = struct.__schema__(:primary_key)
         query = from m in query,
                 where: field(m, ^pk_field) != ^pk_value
       end
 
       case repo.all(query) do
-        []       -> []
-        [_value] -> [{field, :unique}]
+        []  -> []
+        [_] -> [{field, :unique}]
       end
     end
   end

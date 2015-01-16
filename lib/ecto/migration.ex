@@ -68,7 +68,7 @@ defmodule Ecto.Migration do
     Defines an index struct used in migrations.
     """
     defstruct table: nil, name: nil, columns: [], unique: false
-    @type t :: %__MODULE__{table: atom, name: atom, columns: [atom], unique: boolean}
+    @type t :: %__MODULE__{table: atom, name: atom, columns: [atom | String.t], unique: boolean}
   end
 
   defmodule Table do
@@ -201,6 +201,10 @@ defmodule Ecto.Migration do
   @doc """
   Returns an index struct that can be used on `create`, `drop`, etc.
 
+  Expects the table name as first argument and the index fields as
+  second. The field can be an atom, representing a column, or a
+  string representing an expression that is sent as is to the database.
+
   Indexes are non-unique by default.
 
   ## Examples
@@ -221,6 +225,8 @@ defmodule Ecto.Migration do
     [index.table, index.columns, "index"]
     |> List.flatten
     |> Enum.join("_")
+    |> String.replace(~r"[^\w_]", "_")
+    |> String.replace("__", "_")
     |> String.to_atom
   end
 

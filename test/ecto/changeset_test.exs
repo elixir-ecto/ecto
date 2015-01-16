@@ -320,20 +320,65 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "validate_unique/3" do
-    defmodule MyRepo do def all(_), do: Process.get(:unique_check) || [] end
+    defmodule UniqueRepo do
+      def all(query) do
+        [where] = query.wheres
+        assert Macro.to_string(where.expr) == "&0.title() == ^0"
+        assert query.limit.expr == 1
+        Process.get(:unique_query)
+      end
+    end
+
+    Process.put(:unique_query, [])
     changeset =
       changeset(%{"title" => "hello"})
-      |> validate_unique(:title, on: MyRepo)
+      |> validate_unique(:title, on: UniqueRepo)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [title: :unique]
 
-    Process.put(:unique_check, [1])
+    Process.put(:unique_query, [1])
     changeset =
       changeset(%{"title" => "hello"})
-      |> validate_unique(:title, on: MyRepo)
+      |> validate_unique(:title, on: UniqueRepo)
     refute changeset.valid?
     assert changeset.errors == [title: :unique]
+    assert changeset.validations == [title: :unique]
+  end
+
+  test "validate_unique/3 with primary key" do
+    defmodule UniquePKRepo do
+      def all(query) do
+        [where, pk_where] = query.wheres
+        assert Macro.to_string(where.expr) == "&0.title() == ^0"
+        assert Macro.to_string(pk_where.expr) == "&0.id() != ^0"
+        []
+      end
+    end
+
+    changeset =
+      changeset(%{"title" => "hello"}, %Post{id: 1})
+      |> validate_unique(:title, on: UniquePKRepo)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert changeset.validations == [title: :unique]
+  end
+
+  test "validate_unique/3 with downcase" do
+    defmodule DowncaseRepo do
+      def all(query) do
+        [where] = query.wheres
+        assert Macro.to_string(where.expr) ==
+               ~s|fragment("lower(", &0.title(), ")") == fragment("lower(", ^0, ")")|
+        []
+      end
+    end
+
+    changeset =
+      changeset(%{"title" => "hello"})
+      |> validate_unique(:title, on: DowncaseRepo, downcase: true)
+    assert changeset.valid?
+    assert changeset.errors == []
     assert changeset.validations == [title: :unique]
   end
 
