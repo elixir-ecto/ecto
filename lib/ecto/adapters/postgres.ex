@@ -57,8 +57,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Options
 
-      `:timeout` - The time in milliseconds to wait for the call to finish,
-                   `:infinity` will wait indefinitely (default: 5000);
+      * `:timeout` - The time in milliseconds to wait for the call to finish,
+                     `:infinity` will wait indefinitely (default: 5000);
+
+      * `:log` - When false, does not log the query
 
     ## Examples
 
@@ -69,11 +71,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       pool = repo_pool(repo)
       opts = Keyword.put_new(opts, :timeout, @timeout)
 
-      repo.log({:query, sql}, fn ->
+      log(repo, {:query, sql}, opts, fn ->
         use_worker(pool, opts[:timeout], fn worker ->
           Worker.query!(worker, sql, params, opts)
         end)
       end)
+    end
+
+    defp log(repo, tuple, opts, fun) do
+      if Keyword.get(opts, :log, true) do
+        repo.log(tuple, fun)
+      else
+        fun.()
+      end
     end
 
     ## Adapter API
@@ -324,19 +334,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     ## TODO: Make those in sync with the actual query
 
     defp do_begin(repo, worker, opts) do
-      repo.log({:query, "BEGIN TRANSACTION"} , fn ->
+      log(repo, {:query, "BEGIN TRANSACTION"}, opts, fn ->
         Worker.begin!(worker, opts)
       end)
     end
 
     defp do_rollback(repo, worker, opts) do
-      repo.log({:query, "ROLLBACK"}, fn ->
+      log(repo, {:query, "ROLLBACK"}, opts, fn ->
         Worker.rollback!(worker, opts)
       end)
     end
 
     defp do_commit(repo, worker, opts) do
-      repo.log({:query, "COMMIT"}, fn ->
+      log(repo, {:query, "COMMIT"}, opts, fn ->
         Worker.commit!(worker, opts)
       end)
     end
@@ -427,21 +437,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     ## Migration API
 
     @doc false
-    def execute_ddl(repo, definition) do
-      ddl_query(repo, SQL.migrate(definition))
+    def execute_ddl(repo, definition, opts) do
+      query(repo, SQL.migrate(definition), [], opts)
       :ok
     end
 
     @doc false
-    def ddl_exists?(repo, object) do
-      %Postgrex.Result{rows: [{count}]} = ddl_query(repo, SQL.ddl_exists_query(object))
+    def ddl_exists?(repo, object, opts) do
+      %Postgrex.Result{rows: [{count}]} =
+        query(repo, SQL.ddl_exists_query(object), [], opts)
       count > 0
-    end
-
-    defp ddl_query(repo, sql) do
-      use_worker(repo_pool(repo), :infinity, fn worker ->
-        Worker.query!(worker, sql, [], [timeout: :infinity])
-      end)
     end
   end
 end

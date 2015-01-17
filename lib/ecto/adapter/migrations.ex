@@ -5,36 +5,44 @@ defmodule Ecto.Adapter.Migrations  do
 
   use Behaviour
 
+  alias Ecto.Migration.Table
+  alias Ecto.Migration.Index
+  alias Ecto.Migration.Reference
+
   @typedoc "All migration commands"
   @type command ::
     raw :: String.t |
-    {:create, Ecto.Migration.Table.t, [table_subcommand]} |
-    {:alter, Ecto.Migration.Table.t, [table_subcommand]} |
-    {:drop, Ecto.Migration.Table.t} |
-    {:create, Ecto.Migration.Index.t} |
-    {:drop, Ecto.Migration.Index.t}
+    {:create, Table.t, [table_subcommand]} |
+    {:alter, Table.t, [table_subcommand]} |
+    {:drop, Table.t} |
+    {:create, Index.t} |
+    {:drop, Index.t}
 
   @typedoc "Table subcommands"
   @type table_subcommand ::
-    {:add, field :: atom, type :: Ecto.Type.t | Ecto.Migration.Reference.t, Keyword.t} |
-    {:modify, field :: atom, type :: Ecto.Type.t | Ecto.Migration.Reference.t, Keyword.t} |
+    {:add, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
+    {:modify, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
     {:remove, field :: atom}
 
   @doc """
   Executes migration commands.
 
-  It is recommended for adapters to use timeout of infinity in such
-  commands, as tasks like adding indexes and upgrading tables can
-  take hours or even days. Also, ddl queries should not be logged
-  as they are logged automatically by the migrator.
+  ## Options
+
+  * `:timeout` - The time in milliseconds to wait for the call to finish,
+    `:infinity` will wait indefinitely (default: 5000);
+  * `:log` - When false, does not log begin/commit/rollback queries
   """
-  defcallback execute_ddl(Ecto.Repo.t, command) :: :ok | no_return
+  defcallback execute_ddl(Ecto.Repo.t, command, Keyword.t) :: :ok | no_return
 
   @doc """
   Checks if ddl value, like a table or index, exists.
 
-  Note ddl queries should not be logged as they are logged
-  automatically by the migrator.
+  ## Options
+
+  * `:timeout` - The time in milliseconds to wait for the call to finish,
+    `:infinity` will wait indefinitely (default: 5000);
+  * `:log` - When false, does not log begin/commit/rollback queries
   """
-  defcallback ddl_exists?(Ecto.Repo.t, Ecto.Migration.Table.t | Ecto.Migration.Index.t) :: boolean
+  defcallback ddl_exists?(Ecto.Repo.t, Table.t | Index.t, Keyword.t) :: boolean
 end

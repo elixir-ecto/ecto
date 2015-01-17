@@ -40,8 +40,8 @@ defmodule Ecto.Migrator do
 
   ## Options
 
-    * `:level` - the level to use for logging.
-      Can be any of `Logger.level/0` values or `:none`.
+    * `:log` - the level to use for logging.
+      Can be any of `Logger.level/0` values or `false`.
   """
   @spec up(Ecto.Repo.t, integer, Module.t, Keyword.t) :: :ok | :already_up | no_return
   def up(repo, version, module, opts \\ []) do
@@ -56,7 +56,7 @@ defmodule Ecto.Migrator do
   end
 
   defp do_up(repo, version, module, opts) do
-    repo.transaction fn ->
+    repo.transaction [log: false], fn ->
       attempt(repo, module, :forward, :up, opts)
         || attempt(repo, module, :forward, :change, opts)
         || raise Ecto.MigrationError,
@@ -70,8 +70,8 @@ defmodule Ecto.Migrator do
 
   ## Options
 
-    * `:level` - the level to use for logging.
-      Can be any of `Logger.level/0` values or `:none`.
+    * `:log` - the level to use for logging.
+      Can be any of `Logger.level/0` values or `false`.
 
   """
   @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :already_down | no_return
@@ -87,7 +87,7 @@ defmodule Ecto.Migrator do
   end
 
   defp do_down(repo, version, module, opts) do
-    repo.transaction fn ->
+    repo.transaction [log: false], fn ->
       attempt(repo, module, :forward, :down, opts)
         || attempt(repo, module, :backward, :change, opts)
         || raise Ecto.MigrationError,
@@ -114,8 +114,8 @@ defmodule Ecto.Migrator do
     * `:all` - runs all available if `true`
     * `:step` - runs the specific number of migrations
     * `:to` - runs all until the supplied version is reached
-    * `:level` - the level to use for logging.
-      Can be any of `Logger.level/0` values or `:none`.
+    * `:log` - the level to use for logging.
+      Can be any of `Logger.level/0` values or `false`.
 
   """
   @spec run(Ecto.Repo.t, binary, atom, Keyword.t) :: [integer]

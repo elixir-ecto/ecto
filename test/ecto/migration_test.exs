@@ -14,7 +14,7 @@ defmodule Ecto.MigrationTest do
   alias Ecto.Migration.Reference
 
   setup meta do
-    {:ok, _} = Ecto.Migration.Runner.start_link(MockRepo, meta[:direction] || :forward, :none)
+    {:ok, _} = Ecto.Migration.Runner.start_link(MockRepo, meta[:direction] || :forward, false)
 
     on_exit fn ->
       try do

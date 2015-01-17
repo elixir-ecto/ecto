@@ -9,11 +9,13 @@ defmodule Ecto.Migration.Runner do
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
 
+  @opts [timeout: :infinity, log: false]
+
   @doc """
   Runs the given migration.
   """
   def run(repo, module, direction, operation, opts) do
-    level = Keyword.get(opts, :level, :info)
+    level = Keyword.get(opts, :log, :info)
     start_link(repo, direction, level)
 
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
@@ -96,7 +98,7 @@ defmodule Ecto.Migration.Runner do
   """
   def exists?(object) do
     {repo, direction, _level} = repo_and_direction_and_level()
-    exists = repo.adapter.ddl_exists?(repo, object)
+    exists = repo.adapter.ddl_exists?(repo, object, @opts)
     if direction == :forward, do: exists, else: !exists
   end
 
@@ -110,7 +112,7 @@ defmodule Ecto.Migration.Runner do
 
   defp execute_in_direction(repo, :forward, level, command) do
     log_ddl(level, command)
-    repo.adapter.execute_ddl(repo, command)
+    repo.adapter.execute_ddl(repo, command, @opts)
   end
 
   defp execute_in_direction(repo, :backward, level, command) do
@@ -118,7 +120,7 @@ defmodule Ecto.Migration.Runner do
 
     if reversed do
       log_ddl(level, reversed)
-      repo.adapter.execute_ddl(repo, reversed)
+      repo.adapter.execute_ddl(repo, reversed, @opts)
     else
       raise Ecto.MigrationError, message: "cannot reverse migration command: #{inspect command}"
     end
@@ -160,6 +162,6 @@ defmodule Ecto.Migration.Runner do
   defp log_ddl(level, {:drop, %Index{} = index}),
     do: log(level, "drop index #{index.name}")
 
-  defp log(:none, _msg), do: :ok
+  defp log(false, _msg), do: :ok
   defp log(level, msg),  do: Logger.log(level, msg)
 end

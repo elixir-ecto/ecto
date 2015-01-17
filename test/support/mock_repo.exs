@@ -47,12 +47,12 @@ defmodule Ecto.MockAdapter do
 
   ## Migrations
 
-  def execute_ddl(_repo, command) do
+  def execute_ddl(_repo, command, _) do
     Process.put(:last_command, command)
     :ok
   end
 
-  def ddl_exists?(_repo, object) do
+  def ddl_exists?(_repo, object, _) do
     Process.put(:last_exists, object)
     true
   end

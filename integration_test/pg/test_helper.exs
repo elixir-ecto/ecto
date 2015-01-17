@@ -174,4 +174,4 @@ defmodule Ecto.Integration.Migration do
   end
 end
 
-:ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, level: :none)
+:ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)

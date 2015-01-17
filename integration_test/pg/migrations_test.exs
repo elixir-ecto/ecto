@@ -64,20 +64,20 @@ defmodule Ecto.Integration.MigrationsTest do
 
   test "migrations up and down" do
     assert migrated_versions(TestRepo) == [0]
-    assert up(TestRepo, 20080906120000, GoodMigration, level: :none) == :ok
+    assert up(TestRepo, 20080906120000, GoodMigration, log: false) == :ok
 
     assert migrated_versions(TestRepo) == [0, 20080906120000]
-    assert up(TestRepo, 20080906120000, GoodMigration, level: :none) == :already_up
+    assert up(TestRepo, 20080906120000, GoodMigration, log: false) == :already_up
     assert migrated_versions(TestRepo) == [0, 20080906120000]
-    assert down(TestRepo, 20080906120001, GoodMigration, level: :none) == :already_down
+    assert down(TestRepo, 20080906120001, GoodMigration, log: false) == :already_down
     assert migrated_versions(TestRepo) == [0, 20080906120000]
-    assert down(TestRepo, 20080906120000, GoodMigration, level: :none) == :ok
+    assert down(TestRepo, 20080906120000, GoodMigration, log: false) == :ok
     assert migrated_versions(TestRepo) == [0]
   end
 
   test "bad migration" do
     assert_raise Postgrex.Error, fn ->
-      up(TestRepo, 20080906120000, BadMigration, level: :none)
+      up(TestRepo, 20080906120000, BadMigration, log: false)
     end
   end
 
@@ -86,10 +86,10 @@ defmodule Ecto.Integration.MigrationsTest do
       create_migration(47)
       create_migration(48)
 
-      assert [47] = run(TestRepo, path, :up, step: 1, level: :none)
+      assert [47] = run(TestRepo, path, :up, step: 1, log: false)
       assert count_entries() == 1
 
-      assert [48] = run(TestRepo, path, :up, to: 48, level: :none)
+      assert [48] = run(TestRepo, path, :up, to: 48, log: false)
     end
   end
 
@@ -100,14 +100,14 @@ defmodule Ecto.Integration.MigrationsTest do
         create_migration(50),
       ]
 
-      assert [49, 50] = run(TestRepo, path, :up, all: true, level: :none)
+      assert [49, 50] = run(TestRepo, path, :up, all: true, log: false)
       purge migrations
 
-      assert [50] = run(TestRepo, path, :down, step: 1, level: :none)
+      assert [50] = run(TestRepo, path, :down, step: 1, log: false)
       purge migrations
 
       assert count_entries() == 1
-      assert [50] = run(TestRepo, path, :up, to: 50, level: :none)
+      assert [50] = run(TestRepo, path, :up, to: 50, log: false)
     end
   end
 
@@ -118,15 +118,15 @@ defmodule Ecto.Integration.MigrationsTest do
         create_migration(54),
       ]
 
-      assert [53, 54] = run(TestRepo, path, :up, all: true, level: :none)
-      assert [] = run(TestRepo, path, :up, all: true, level: :none)
+      assert [53, 54] = run(TestRepo, path, :up, all: true, log: false)
+      assert [] = run(TestRepo, path, :up, all: true, log: false)
       purge migrations
 
-      assert [54, 53] = run(TestRepo, path, :down, all: true, level: :none)
+      assert [54, 53] = run(TestRepo, path, :down, all: true, log: false)
       purge migrations
 
       assert count_entries() == 0
-      assert [53, 54] = run(TestRepo, path, :up, all: true, level: :none)
+      assert [53, 54] = run(TestRepo, path, :up, all: true, log: false)
     end
   end
 

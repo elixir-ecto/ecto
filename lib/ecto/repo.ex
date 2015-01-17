@@ -209,6 +209,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   """
   defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
@@ -221,6 +222,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   """
   defcallback get!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
@@ -234,6 +236,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   """
   defcallback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
@@ -245,6 +248,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   """
   defcallback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
@@ -270,6 +274,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   ## Example
 
@@ -287,6 +292,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   ## Examples
 
@@ -306,6 +312,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   ## Examples
 
@@ -332,6 +339,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   ## Example
 
@@ -344,7 +352,10 @@ defmodule Ecto.Repo do
   Updates a model or changeset using its primary key.
 
   In case a model is given, the model is converted into a changeset
-  with all model non-virtual fields as part of the changeset.
+  with all model non-virtual fields as part of the changeset. For this
+  reason, it is preferred to use changesets as they perform dirty
+  tracking and avoid sending data that did not change to the database
+  over and over.
 
   In case a changeset is given, only the changes in the changeset
   will be updated, leaving all the other model fields intact.
@@ -358,6 +369,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   ## Example
 
@@ -379,6 +391,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
 
   ## Example
 
@@ -404,6 +417,7 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
       `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log begin/commit/rollback queries
 
   ## Examples
 
