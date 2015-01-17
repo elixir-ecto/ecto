@@ -10,6 +10,7 @@ defmodule Ecto.SchemaTest do
       field :temp,  :any, default: "temp", virtual: true
       field :array, {:array, :string}
       belongs_to :comment, Comment
+      belongs_to :permalink, Permalink, auto_field: false
     end
 
     def model_from do
@@ -35,6 +36,10 @@ defmodule Ecto.SchemaTest do
     assert MyModel.__changeset__ ==
            %{name: :string, email: :string, array: {:array, :string},
              comment_id: :integer, temp: :any, id: :integer}
+  end
+
+  test "skip field with auto_field false" do
+    refute MyModel.__schema__(:field, :permalink_id)
   end
 
   defmodule SchemaModel do

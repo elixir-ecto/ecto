@@ -367,12 +367,19 @@ defmodule Ecto.Schema do
 
     * `:foreign_key` - Sets the foreign key field name, defaults to the name
       of the association suffixed by `_id`. For example, `belongs_to :company`
-      will have foreign key of `:company_id`
+      will define foreign key of `:company_id`
 
     * `:references` - Sets the key on the other model to be used for the
       association, defaults to: `:id`
 
-    * `:type` - Sets the type of `:foreign_key`. Defaults to: `:integer`
+    * `:auto_field` - When false, does not automatically define a `:foreign_key`
+      field, implying the user is defining the field manually elsewhere
+
+    * `:type` - Sets the type of automtically defined `:foreign_key`.
+      Defaults to: `:integer` and be set per schema via `@foreign_key_type`
+
+  All other options are forwarded to the underlying foreign key definition
+  and therefore accept the same options as `field/3`.
 
   ## Examples
 
@@ -392,7 +399,9 @@ defmodule Ecto.Schema do
     quote bind_quoted: binding() do
       opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
       foreign_key_type = opts[:type] || @foreign_key_type
-      field(opts[:foreign_key], foreign_key_type, [])
+      if Keyword.get(opts, :auto_field, true) do
+        field(opts[:foreign_key], foreign_key_type, opts)
+      end
       association(name, Ecto.Associations.BelongsTo, [queryable: queryable] ++ opts)
     end
   end
@@ -539,7 +548,7 @@ defmodule Ecto.Schema do
     fields = Module.get_attribute(mod, :struct_fields)
 
     if List.keyfind(fields, name, 0) do
-      raise ArgumentError, message: "field/association `#{name}` is already set on schema"
+      raise ArgumentError, "field/association `#{name}` is already set on schema"
     end
 
     Module.put_attribute(mod, :struct_fields, {name, assoc})
