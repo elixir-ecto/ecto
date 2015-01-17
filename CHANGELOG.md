@@ -6,6 +6,11 @@
   * Add support for migrations (the previous migration style no longer works, just replace the SQL commands by `execute/1` calls)
   * Add support for timestamps via the `timestamps/0` macro in schemas and `Ecto.Model.Timestamps`
   * Add `validate_unique/3` to `Ecto.Changeset`
+  * Support setting `:auto_field` to false in `Ecto.Schema.belongs_to/3`
+
+* Bug fixes
+  * Do not choke on empty `order_by` or `group_by` during query generation
+  * Ensure queries are logged even during crashes
 
 * Backwards incompatible changes
   * Previously deprecated validations have been removed
