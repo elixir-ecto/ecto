@@ -147,15 +147,18 @@ defmodule Ecto.Repo do
         true
       end
 
-      # TODO: Should we keep this as overridable?
-      def log({:query, sql}, fun) do
-        {time, result} = :timer.tc(fun)
-        Logger.debug fn -> [sql, " (", inspect(div(time, 100) / 10), "ms)"] end
-        result
-      end
+      def log({_, cmd}, fun) do
+        prev = :os.timestamp()
 
-      def log(_arg, fun) do
-        fun.()
+        try do
+          fun.()
+        after
+          Logger.debug fn ->
+            next = :os.timestamp()
+            diff = :timer.now_diff(next, prev)
+            [cmd, " (", inspect(div(diff, 100) / 10), "ms)"]
+          end
+        end
       end
 
       defoverridable [log: 2]
@@ -438,23 +441,30 @@ defmodule Ecto.Repo do
   defcallback rollback(any) :: no_return
 
   @doc """
-  Enables logging and debugging of adapter actions such as sending queries to
-  the database.
+  Enables logging of adapter actions such as sending queries to the database.
 
   By default writes to Logger but can be overriden to customize behaviour.
 
-  You must return the result of calling the passed in function.
+  You must always return the result of calling the given function.
 
   ## Examples
 
-      def log({:query, sql}, fun) do
-        {time, result} = :timer.tc(fun)
-        Logger.debug inspect{sql, time}
-        result
+  The default implementation of the `log/2` function is shown below:
+
+      def log({_, cmd}, fun) do
+        prev = :os.timestamp()
+
+        try do
+          fun.()
+        after
+          Logger.debug fn ->
+            next = :os.timestamp()
+            diff = :timer.now_diff(next, prev)
+            [cmd, " (", inspect(div(diff, 100) / 10), "ms)"]
+          end
+        end
       end
 
-      def log(_arg, fun), do: fun.()
-
   """
-  defcallback log({:query, String.t} | :begin | :commit | :rollback, (() -> any)) :: any
+  defcallback log({atom, iodata}, function :: (() -> any)) :: any
 end

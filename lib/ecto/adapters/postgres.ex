@@ -321,20 +321,22 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       :ok
     end
 
+    ## TODO: Make those in sync with the actual query
+
     defp do_begin(repo, worker, opts) do
-      repo.log(:begin, fn ->
+      repo.log({:query, "BEGIN TRANSACTION"} , fn ->
         Worker.begin!(worker, opts)
       end)
     end
 
     defp do_rollback(repo, worker, opts) do
-      repo.log(:rollback, fn ->
+      repo.log({:query, "ROLLBACK"}, fn ->
         Worker.rollback!(worker, opts)
       end)
     end
 
     defp do_commit(repo, worker, opts) do
-      repo.log(:commit, fn ->
+      repo.log({:query, "COMMIT"}, fn ->
         Worker.commit!(worker, opts)
       end)
     end
