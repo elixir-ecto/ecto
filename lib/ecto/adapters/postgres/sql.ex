@@ -167,22 +167,30 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       boolean("HAVING", havings, sources)
     end
 
-    defp group_by([], _sources), do: nil
     defp group_by(group_bys, sources) do
-      "GROUP BY " <>
+      exprs =
         Enum.map_join(group_bys, ", ", fn
           %QueryExpr{expr: expr} ->
             Enum.map_join(expr, ", ", &expr(&1, sources))
         end)
+
+      case exprs do
+        "" -> nil
+        _  -> "GROUP BY " <> exprs
+      end
     end
 
-    defp order_by([], _sources), do: nil
     defp order_by(order_bys, sources) do
-      "ORDER BY " <>
+      exprs =
         Enum.map_join(order_bys, ", ", fn
           %QueryExpr{expr: expr} ->
             Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
         end)
+
+      case exprs do
+        "" -> nil
+        _  -> "ORDER BY " <> exprs
+      end
     end
 
     defp order_by_expr({dir, expr}, sources) do

@@ -94,6 +94,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y" DESC}
+
+    query = Model |> order_by([r], []) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
   end
 
   test "limit and offset" do
@@ -220,6 +223,9 @@ defmodule Ecto.Adapters.Postgres.SQLTest do
 
     query = Model |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 GROUP BY m0."x", m0."y"}
+
+    query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
   end
 
   test "sigils" do
