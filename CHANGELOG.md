@@ -1,6 +1,8 @@
-# v0.6.1-dev
+# Changelog
 
-# v0.6.0 (2015-01-17)
+## v0.6.1-dev
+
+## v0.6.0 (2015-01-17)
 
 * Enhancements
   * Pass the repository with the changeset to callbacks
@@ -18,7 +20,7 @@
   * Previously deprecated validations have been removed
   * Previously deprecated repository configuration has been removed
 
-# v0.5.1 (2015-01-13)
+## v0.5.1 (2015-01-13)
 
 * Enhancements
   * Add `Ecto.Changeset.change/2`, `Ecto.Changeset.fetch_field/2` and `Ecto.Changeset.get_field/2`
@@ -27,7 +29,7 @@
 * Bug fixes
   * Ensure fields in `Ecto.Repo.update_all/3` are dumped before being sent to the database
 
-# v0.5.0 (2015-01-12)
+## v0.5.0 (2015-01-12)
 
 * Enhancements
   * Make `Ecto.Schema.schema/2` configuration uniform
@@ -48,7 +50,7 @@
   * `Ecto.Model.Schema` has been renamed to `Ecto.Schema`
   * `before_insert`, `after_insert`, `before_update` and `after_update` in `Ecto.Model.Callbacks` now receive changesets
 
-# v0.4.0 (2015-01-02)
+## v0.4.0 (2015-01-02)
 
 * Enhancements
   * Provide `Ecto.Model.build/2` and `Ecto.Model.assoc/2` for building and retrieving associations as queries. It is recommended to `import Ecto.Model` into your modules
@@ -65,7 +67,7 @@
   * `assoc/2` in `select` is deprecated, please use `Ecto.Query.preload/3` instead
   * `Ecto.Associations.Preloader.preload/3` was removed in favor of `Repo.preload/2`
 
-# v0.3.0 (2014-12-26)
+## v0.3.0 (2014-12-26)
 
 * Enhancements
   * Support fragments in queries with the `fragment(...)` function
@@ -77,12 +79,12 @@
   * `:virtual` type no longer exists, instead pass `virtual: true` as field option
   * Adapter API for `insert`, `update` and `delete` has been simplified
 
-# v0.2.8 (2014-12-16)
+## v0.2.8 (2014-12-16)
 
 * Bug fixes
   * Validation predicates now receive the attribute as first argument
 
-# v0.2.7 (2014-12-15)
+## v0.2.7 (2014-12-15)
 
 * Enhancements
   * Add support for `Ecto.Model.Callbacks`
@@ -90,7 +92,7 @@
 * Bug fixes
   * Fix merging of validation errors when using validation_also
 
-# v0.2.6 (2014-12-13)
+## v0.2.6 (2014-12-13)
 
 * Enhancements
   * Log queries by default
@@ -105,7 +107,7 @@
   * Return validation errors as maps
   * Fix belongs_to preload if no associated record exists
 
-# v0.2.5 (2014-09-17)
+## v0.2.5 (2014-09-17)
 
 * Enhancements
   * Change timeout of migration queries to infinity
@@ -120,7 +122,7 @@
 * Backwards incompatible changes
   * Do not translate `foo == nil` to the SQL `foo IS NULL`, provide `is_nil/1` instead
 
-# v0.2.4 (2014-09-08)
+## v0.2.4 (2014-09-08)
 
 * Enhancements
   * Better error message if repo is not started
@@ -131,7 +133,7 @@
 * Bug fixes
   * Remove possible deadlock for models using each other in queries
 
-# v0.2.3 (2014-08-03)
+## v0.2.3 (2014-08-03)
 
 * Enhancements
   * Add `local` and `utc` to `Ecto.DateTime` and `Ecto.Date`
@@ -141,12 +143,12 @@
   * Support array of binaries
   * Avoid race conditions when optimizing query compilation
 
-# v0.2.2 (2014-06-30)
+## v0.2.2 (2014-06-30)
 
 * Enhancements
   * Do not require username and password to be present in `parse_url/1`
 
-# v0.2.1 (2014-06-18)
+## v0.2.1 (2014-06-18)
 
 * Enhancements
   * Add support for all query expressions in `order_by`, `group_by` and `distinct` expressions, instead of only allowing lists of fields
@@ -158,7 +160,7 @@
 * Backwards incompatible changes
   * Single variables in `group_by` and `distinct` no longer expands to a list of fields
 
-# v0.2.0 (2014-05-24)
+## v0.2.0 (2014-05-24)
 
 * Enhancements
   * Add `Ecto.Assocations.load/3` for loading associations
@@ -177,7 +179,7 @@
   * Renamed has_many association function `to_list` to `all`
   * `Ecto.Repo.storage_down` and `Ecto.Repo.storage_up` moved to `Ecto.Storage`
 
-# v0.1.0 (2014-05-01)
+## v0.1.0 (2014-05-01)
 
 * Enhancements
   * Add `ecto.migrate` and `ecto.rollback` tasks, support `--to`, `--step` and `--all`
@@ -205,6 +207,6 @@
   * Remove `url/0` for configuration of repos in favor of `conf/0` in conjunction with `parse_url/1`
   * Query functions `date_add/1` and `date_sub/1` renamed to `time_add/1` and `time_sub/1` respectively, they also accept the types `:time` and `:date`
 
-# v0.0.1
+## v0.0.1
 
 * Initial release
