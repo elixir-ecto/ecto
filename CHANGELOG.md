@@ -1,4 +1,6 @@
-# v0.6.0-dev
+# v0.6.1-dev
+
+# v0.6.0 (2015-01-17)
 
 * Enhancements
   * Pass the repository with the changeset to callbacks
