@@ -55,6 +55,8 @@ defmodule Ecto.Migration do
             add :temp_lo, :integer
             add :temp_hi, :integer
             add :prcp,    :float
+
+            timestamps
           end
         end
       end

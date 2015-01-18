@@ -603,7 +603,7 @@ defmodule Ecto.Query do
       Repo.all from p in Post,
                  join: c in assoc(p, :comments),
                  join: l in assoc(c, :likes),
-                 where: l.created_at > c.updated_at,
+                 where: l.inserted_at > c.updated_at,
                  preload: [comments: {c, likes: l}]
 
   Keep in mind though both formats cannot be nested arbitrary. For
