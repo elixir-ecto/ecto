@@ -16,16 +16,6 @@ defmodule Ecto.Integration.WorkerTest do
     assert :sys.get_state(worker).conn
   end
 
-  test "worker reconnects to database when connecton exits" do
-    {:ok, worker} = Worker.start_link(worker_opts)
-
-    assert %Postgrex.Result{} = Worker.query!(worker, "SELECT TRUE", [], timeout: 5000)
-    conn = :sys.get_state(worker).conn
-
-    Process.exit(conn, :normal)
-    assert %Postgrex.Result{} = Worker.query!(worker, "SELECT TRUE", [], timeout: 5000)
-  end
-
   test "worker stops if caller dies" do
     {:ok, worker} = Worker.start(worker_opts(lazy: false))
     conn = :sys.get_state(worker).conn
