@@ -31,11 +31,11 @@ defmodule Ecto.MockAdapter do
 
   def delete(_repo, "schema_migrations", [version: version], _) do
     Process.put(:migrated_versions, List.delete(migrated_versions(), version))
-    :ok
+    {:ok, {}}
   end
 
   def delete(_repo, _source, _filter, _opts),
-    do: :ok
+    do: {:ok, {}}
 
   ## Transactions
 

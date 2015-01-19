@@ -1,21 +1,41 @@
 if Code.ensure_loaded?(Postgrex.Connection) do
-  defmodule Ecto.Adapters.Postgres.SQL do
+
+  defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false
 
-    # This module handles the generation of SQL code from queries and for create,
-    # update and delete. All queries have to be normalized and validated for
-    # correctness before given to this module.
+    @default_port 5432
+    @behaviour Ecto.Adapters.SQL.Connection
+
+    ## Connection
+
+    def connect(opts) do
+      opts = Keyword.put_new(opts, :port, @default_port)
+      Postgrex.Connection.start_link(opts)
+    end
+
+    def disconnect(conn) do
+      try do
+        Postgrex.Connection.stop(conn)
+      catch
+        :exit, {:noproc, _} -> :ok
+      end
+      :ok
+    end
+
+    def query(conn, sql, params, opts) do
+      case Postgrex.Connection.query(conn, sql, params, opts) do
+        {:ok, %Postgrex.Result{rows: rows, num_rows: num}} -> {:ok, {rows, num}}
+        {:error, _} = err -> err
+      end
+    end
+
+    ## Query
 
     alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.JoinExpr
-    alias Ecto.Migration.Table
-    alias Ecto.Migration.Index
-    alias Ecto.Migration.Reference
 
-    # Generate a select statement for all
     def all(query) do
-      # Generate SQL for every query expression type and combine to one string
       sources = create_names(query)
 
       from     = from(sources)
@@ -32,7 +52,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
-    # Generate SQL for an update all statement
     def update_all(query, values) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
@@ -49,7 +68,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       where
     end
 
-    # Generate SQL for an delete all statement
     def delete_all(query) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
@@ -59,7 +77,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "DELETE FROM #{quote_name(table)} AS #{name}" <> where
     end
 
-    # Generate SQL for an insert statement
     def insert(table, fields, returning) do
       values =
         if fields == [] do
@@ -72,7 +89,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "INSERT INTO #{quote_name(table)} " <> values <> returning(returning)
     end
 
-    # Generate SQL for an update statement
     def update(table, filters, fields, returning) do
       {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
@@ -87,7 +103,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       returning(returning)
     end
 
-    # Generate SQL for a delete statement
     def delete(table, filters) do
       {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
@@ -95,15 +110,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       "DELETE FROM #{quote_name(table)} WHERE " <> Enum.join(filters, " AND ")
     end
-
-    ## Helpers
-
-    defp quote_name(name), do: "\"#{name}\""
-
-    defp returning([]),
-      do: ""
-    defp returning(returning),
-      do: " RETURNING " <> Enum.map_join(returning, ", ", &quote_name/1)
 
     ## Query generation
 
@@ -115,10 +121,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     @binary_ops Keyword.keys(binary_ops)
 
     Enum.map(binary_ops, fn {op, str} ->
-      defp handle_fun(unquote(op), 2), do: {:binary_op, unquote(str)}
+      defp handle_call(unquote(op), 2), do: {:binary_op, unquote(str)}
     end)
 
-    defp handle_fun(fun, _arity), do: {:fun, Atom.to_string(fun)}
+    defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
     defp select(%SelectExpr{fields: fields}, [], sources) do
       "SELECT " <> Enum.map_join(fields, ", ", &expr(&1, sources))
@@ -260,7 +266,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
-      case handle_fun(fun, length(args)) do
+      case handle_call(fun, length(args)) do
         {:binary_op, op} ->
           [left, right] = args
           op_to_binary(left, sources) <>
@@ -310,9 +316,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       expr(expr, sources)
     end
 
-    defp escape_string(value) when is_binary(value) do
-      :binary.replace(value, "'", "''", [:global])
-    end
+    defp returning([]),
+      do: ""
+    defp returning(returning),
+      do: " RETURNING " <> Enum.map_join(returning, ", ", &quote_name/1)
 
     defp create_names(query) do
       sources = query.sources |> Tuple.to_list
@@ -332,39 +339,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp assemble(list) do
-      list
-      |> List.flatten
-      |> Enum.filter(&(&1 != nil))
-      |> Enum.join(" ")
-    end
-
     # DDL
-    def migrate({:create, %Table{}=table, columns}) do
-      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
-    end
 
-    def migrate({:drop, %Table{name: name}}) do
-      "DROP TABLE #{quote_name(name)}"
-    end
+    alias Ecto.Migration.Table
+    alias Ecto.Migration.Index
+    alias Ecto.Migration.Reference
 
-    def migrate({:alter, %Table{}=table, changes}) do
-      "ALTER TABLE #{quote_name(table.name)} #{column_changes(changes)}"
-    end
-
-    def migrate({:create, %Index{}=index}) do
-      assemble(["CREATE#{if index.unique, do: " UNIQUE"} INDEX",
-                quote_name(index.name), "ON", quote_name(index.table),
-                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
-    end
-
-    def migrate({:drop, %Index{}=index}) do
-      "DROP INDEX #{quote_name(index.name)}"
-    end
-
-    def migrate(default) when is_binary(default), do: default
-
-    def ddl_exists_query(%Table{name: name}) do
+    def ddl_exists(%Table{name: name}) do
       """
       SELECT count(1) FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -374,7 +355,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       """
     end
 
-    def ddl_exists_query(%Index{name: name}) do
+    def ddl_exists(%Index{name: name}) do
       """
       SELECT count(1) FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
@@ -383,6 +364,30 @@ if Code.ensure_loaded?(Postgrex.Connection) do
              AND n.nspname = ANY (current_schemas(false))
       """
     end
+
+    def execute_ddl({:create, %Table{}=table, columns}) do
+      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
+    end
+
+    def execute_ddl({:drop, %Table{name: name}}) do
+      "DROP TABLE #{quote_name(name)}"
+    end
+
+    def execute_ddl({:alter, %Table{}=table, changes}) do
+      "ALTER TABLE #{quote_name(table.name)} #{column_changes(changes)}"
+    end
+
+    def execute_ddl({:create, %Index{}=index}) do
+      assemble(["CREATE#{if index.unique, do: " UNIQUE"} INDEX",
+                quote_name(index.name), "ON", quote_name(index.table),
+                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
+    end
+
+    def execute_ddl({:drop, %Index{}=index}) do
+      "DROP INDEX #{quote_name(index.name)}"
+    end
+
+    def execute_ddl(default) when is_binary(default), do: default
 
     defp column_definitions(columns) do
       Enum.map_join(columns, ", ", &column_definition/1)
@@ -456,5 +461,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         true      -> "#{type_name}"
       end
     end
+
+    ## Helpers
+
+    defp quote_name(name), do: "\"#{name}\""
+
+    defp assemble(list) do
+      list
+      |> List.flatten
+      |> Enum.filter(&(&1 != nil))
+      |> Enum.join(" ")
+    end
+
+    defp escape_string(value) when is_binary(value) do
+      :binary.replace(value, "'", "''", [:global])
+    end
   end
+
 end

@@ -1,5 +1,8 @@
-defmodule Ecto.Adapter.SQL.Connection do
+defmodule Ecto.Adapters.SQL.Connection do
   use Behaviour
+
+  # TODO: Add docs for SQL commands and decide
+  # if they should exist in this module
 
   @doc """
   Connects to the underlying database.

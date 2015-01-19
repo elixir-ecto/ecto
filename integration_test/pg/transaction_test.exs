@@ -34,7 +34,7 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   setup do
-    Postgres.query(TestRepo1, "DELETE FROM transactions", [])
+    TestRepo1.delete_all "transactions"
     :ok
   end
 

@@ -92,7 +92,7 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
       pk_filter = Planner.fields(:delete, model, pk_filter(model, struct))
-      :ok = adapter.delete(repo, source, pk_filter, opts)
+      {:ok, _} = adapter.delete(repo, source, pk_filter, opts)
 
       Callbacks.__apply__(model, :after_delete, changeset).model
     end

@@ -1,7 +1,7 @@
-defmodule Ecto.Adapter.SQL.WorkerTest do
+defmodule Ecto.Adapters.SQL.WorkerTest do
   use ExUnit.Case, async: true
 
-  alias Ecto.Adapter.SQL.Worker
+  alias Ecto.Adapters.SQL.Worker
 
   defmodule Connection do
     def connect(_opts) do

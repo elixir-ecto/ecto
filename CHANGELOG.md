@@ -2,6 +2,14 @@
 
 ## v0.6.1-dev
 
+* Enhancements
+  * Provide `Ecto.Adapters.SQL` with implementation to be shared by SQL adapters
+
+* Backwards incompatible changes
+  * `Ecto.Adapters.Postgres.query/4` has been renamed to `Ecto.Adapters.SQL.query/4`
+  * `Ecto.Adapters.Postgres.begin_test_transaction/2` has been renamed to `Ecto.Adapters.SQL.begin_test_transaction/2`
+  * `Ecto.Adapters.Postgres.rollback_test_transaction/2` has been renamed to `Ecto.Adapters.SQL.rollback_test_transaction/2`
+
 ## v0.6.0 (2015-01-17)
 
 * Enhancements

@@ -1,4 +1,4 @@
-defmodule Ecto.Adapter.SQL.Worker do
+defmodule Ecto.Adapters.SQL.Worker do
   @moduledoc false
   use GenServer
 
@@ -90,6 +90,8 @@ defmodule Ecto.Adapter.SQL.Worker do
   def handle_call(:query, _from, %{conn: conn, module: module} = s) do
     {:reply, {:ok, {module, conn}}, s}
   end
+
+  # TODO: Go through the connection for transaction SQL
 
   def handle_call({:begin, opts}, _from, %{conn: conn, transactions: trans} = s) do
     sql =
