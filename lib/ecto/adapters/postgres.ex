@@ -311,7 +311,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           worker
         nil ->
           worker = :poolboy.checkout(pool, true, timeout)
-          Worker.monitor_me(worker)
+          Worker.link_me(worker)
           Process.put(key, {worker, 1})
           worker
       end
@@ -322,7 +322,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       case Process.get(key) do
         {worker, 1} ->
-          Worker.demonitor_me(worker)
+          Worker.unlink_me(worker)
           :poolboy.checkin(pool, worker)
           Process.delete(key)
         {worker, counter} ->

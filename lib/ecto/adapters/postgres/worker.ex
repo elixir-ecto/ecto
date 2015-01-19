@@ -13,7 +13,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def query!(worker, sql, params, opts) do
-      case GenServer.call(worker, {:query, sql, params, opts}, opts[:timeout]) do
+      conn = GenServer.call(worker, :conn, opts[:timeout])
+
+      case Postgrex.Connection.query(conn, sql, params, opts) do
         {:ok, res} -> res
         {:error, %Postgrex.Error{} = err} -> raise err
       end
@@ -40,12 +42,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    def monitor_me(worker) do
-      GenServer.cast(worker, {:monitor, self})
+    def link_me(worker) do
+      GenServer.cast(worker, {:link, self})
     end
 
-    def demonitor_me(worker) do
-      GenServer.cast(worker, {:demonitor, self})
+    def unlink_me(worker) do
+      GenServer.cast(worker, {:unlink, self})
     end
 
     def init(opts) do
@@ -61,7 +63,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         end
       end
 
-      {:ok, %{conn: conn, params: opts, monitor: nil, transactions: 0}}
+      {:ok, %{conn: conn, params: opts, link: nil, transactions: 0}}
     end
 
     # Connection is disconnected, reconnect before continuing
@@ -74,9 +76,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    # TODO: Move query out of the worker to reduce copying
-    def handle_call({:query, sql, params, opts}, _from, %{conn: conn} = s) do
-      {:reply, Postgrex.Connection.query(conn, sql, params, opts), s}
+    def handle_call(:conn, _from, %{conn: conn} = s) do
+      {:reply, conn, s}
     end
 
     def handle_call({:begin, opts}, _from, %{conn: conn, transactions: trans} = s) do
@@ -127,22 +128,30 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {:reply, reply, %{s | transactions: trans - 1}}
     end
 
-    def handle_cast({:monitor, pid}, %{monitor: nil} = s) do
-      ref = Process.monitor(pid)
-      {:noreply, %{s | monitor: {pid, ref}}}
+    def handle_cast({:link, pid}, %{link: nil} = s) do
+      Process.link(pid)
+      {:noreply, %{s | link: pid}}
     end
 
-    def handle_cast({:demonitor, pid}, %{monitor: {pid, ref}} = s) do
-      Process.demonitor(ref)
-      {:noreply, %{s | monitor: nil}}
+    def handle_cast({:unlink, pid}, %{link: pid} = s) do
+      Process.unlink(pid)
+      {:noreply, %{s | link: nil}}
     end
 
-    def handle_info({:EXIT, conn, _reason}, %{conn: conn} = s) do
-      {:stop, :normal, %{s | conn: nil}}
+    # If there are no transactions, there is no state, so we just ignore the connection crash.
+    def handle_info({:EXIT, conn, _reason}, %{conn: conn, transactions: 0} = s) do
+      {:noreply, %{s | conn: nil}}
     end
 
-    def handle_info({:DOWN, ref, :process, pid, _info}, %{monitor: {pid, ref}} = s) do
-      {:stop, :normal, s}
+    # If we have a transaction, we need to crash, notifying all interested.
+    def handle_info({:EXIT, conn, reason}, %{conn: conn} = s) do
+      {:stop, reason, %{s | conn: nil}}
+    end
+
+    # If the linked process crashed, assume stale connection and close it.
+    def handle_info({:EXIT, link, reason}, %{conn: conn, link: link} = s) do
+      close_connection(conn)
+      {:noreply, %{s | link: nil, conn: nil}}
     end
 
     def handle_info(_info, s) do
@@ -150,8 +159,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def terminate(_reason, %{conn: conn}) do
-      if conn && Process.alive?(conn) do
-        Postgrex.Connection.stop(conn)
+      close_connection(conn)
+    end
+
+    defp close_connection(conn) do
+      try do
+        conn && Postgrex.Connection.stop(conn)
+      catch
+        :exit, {:noproc, _} -> :ok
       end
     end
   end

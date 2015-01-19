@@ -16,34 +16,49 @@ defmodule Ecto.Integration.WorkerTest do
     assert :sys.get_state(worker).conn
   end
 
-  test "worker stops if caller dies" do
+  test "worker survives, connection stops if caller dies" do
     {:ok, worker} = Worker.start(worker_opts(lazy: false))
     conn = :sys.get_state(worker).conn
+    conn_mon   = Process.monitor(conn)
     worker_mon = Process.monitor(worker)
-    conn_mon = Process.monitor(conn)
 
     spawn(fn ->
-      Worker.monitor_me(worker)
+      Worker.link_me(worker)
       Worker.query!(worker, "SELECT TRUE", [], timeout: 5000)
     end)
 
-    assert_receive({:DOWN, ^worker_mon, :process, ^worker, _}, 1000)
-    assert_receive({:DOWN, ^conn_mon, :process, ^conn, _}, 1000)
+    assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
+    refute_received {:DOWN, ^worker_mon, :process, ^worker, _}
+    refute :sys.get_state(worker).conn
   end
 
-  test "timeout" do
-    Logger.remove_backend(:console)
+  test "worker survives if connection dies outside of transaction" do
     {:ok, worker} = Worker.start(worker_opts(lazy: false))
+    conn = :sys.get_state(worker).conn
+    conn_mon   = Process.monitor(conn)
+    worker_mon = Process.monitor(worker)
 
-    assert %Postgrex.Result{} = Worker.query!(worker, "SELECT pg_sleep(0.11)", [], timeout: 200)
-    assert {:timeout, _} = catch_exit Worker.query!(worker, "SELECT pg_sleep(0.12)", [], timeout: 0)
-    :timer.sleep(100)
-    assert {:noproc, _} = catch_exit Worker.query!(worker, "SELECT pg_sleep(0.13)", [], timeout: 200)
-  after
-    Logger.add_backend(:console, flush: true)
+    Process.exit(conn, :shutdown)
+
+    assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
+    refute_received {:DOWN, ^worker_mon, :process, ^worker, _}
+    refute :sys.get_state(worker).conn
   end
 
-  defp worker_opts(opts \\ []) do
+  test "worker dies if connection dies inside of transaction" do
+    {:ok, worker} = Worker.start(worker_opts(lazy: false))
+    conn = :sys.get_state(worker).conn
+    conn_mon   = Process.monitor(conn)
+    worker_mon = Process.monitor(worker)
+
+    Worker.begin!(worker, [timeout: :infinity])
+    Process.exit(conn, :shutdown)
+
+    assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
+    assert_receive {:DOWN, ^worker_mon, :process, ^worker, _}, 1000
+  end
+
+  defp worker_opts(opts) do
     opts
     |> Keyword.put_new(:hostname, "localhost")
     |> Keyword.put_new(:database, "ecto_test")
