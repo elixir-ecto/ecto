@@ -1,30 +1,54 @@
-defmodule Ecto.Integration.WorkerTest do
-  use ExUnit.Case
-  alias Ecto.Adapters.Postgres.Worker
+defmodule Ecto.Adapter.SQL.WorkerTest do
+  use ExUnit.Case, async: true
+
+  alias Ecto.Adapter.SQL.Worker
+
+  defmodule Connection do
+    def connect(_opts) do
+      Agent.start_link(fn -> end)
+    end
+
+    def disconnect(conn) do
+      Agent.stop(conn)
+    end
+
+    def query(conn, _, [], opts) do
+      Agent.get(conn, fn _ ->
+        {:ok, []}
+      end, opts[:timeout])
+    end
+
+    def query(conn, "sleep", [value], opts) do
+      Agent.get(conn, fn _ ->
+        :timer.sleep(value)
+        {:ok, []}
+      end, opts[:timeout])
+    end
+  end
 
   test "worker starts without an active connection" do
-    {:ok, worker} = Worker.start_link(worker_opts(database: "gary"))
+    {:ok, worker} = Worker.start_link({Connection, []})
 
     assert Process.alive?(worker)
     refute :sys.get_state(worker).conn
   end
 
   test "worker starts with an active connection" do
-    {:ok, worker} = Worker.start_link(worker_opts(lazy: false))
+    {:ok, worker} = Worker.start_link({Connection, lazy: false})
 
     assert Process.alive?(worker)
     assert :sys.get_state(worker).conn
   end
 
   test "worker survives, connection stops if caller dies" do
-    {:ok, worker} = Worker.start(worker_opts(lazy: false))
+    {:ok, worker} = Worker.start({Connection, lazy: false})
     conn = :sys.get_state(worker).conn
     conn_mon   = Process.monitor(conn)
     worker_mon = Process.monitor(worker)
 
-    spawn(fn ->
+    spawn_link(fn ->
       Worker.link_me(worker)
-      Worker.query!(worker, "SELECT TRUE", [], timeout: 5000)
+      Worker.query!(worker, "sleep", [0], timeout: 5000)
     end)
 
     assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
@@ -33,7 +57,7 @@ defmodule Ecto.Integration.WorkerTest do
   end
 
   test "worker survives if connection dies outside of transaction" do
-    {:ok, worker} = Worker.start(worker_opts(lazy: false))
+    {:ok, worker} = Worker.start({Connection, lazy: false})
     conn = :sys.get_state(worker).conn
     conn_mon   = Process.monitor(conn)
     worker_mon = Process.monitor(worker)
@@ -46,7 +70,7 @@ defmodule Ecto.Integration.WorkerTest do
   end
 
   test "worker dies if connection dies inside of transaction" do
-    {:ok, worker} = Worker.start(worker_opts(lazy: false))
+    {:ok, worker} = Worker.start({Connection, lazy: false})
     conn = :sys.get_state(worker).conn
     conn_mon   = Process.monitor(conn)
     worker_mon = Process.monitor(worker)
@@ -56,13 +80,5 @@ defmodule Ecto.Integration.WorkerTest do
 
     assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
     assert_receive {:DOWN, ^worker_mon, :process, ^worker, _}, 1000
-  end
-
-  defp worker_opts(opts) do
-    opts
-    |> Keyword.put_new(:hostname, "localhost")
-    |> Keyword.put_new(:database, "ecto_test")
-    |> Keyword.put_new(:username, "postgres")
-    |> Keyword.put_new(:password, "postgres")
   end
 end
