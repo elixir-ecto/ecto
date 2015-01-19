@@ -69,7 +69,7 @@ defmodule Ecto.Schema do
         end
       end
 
-  Any models using `MyApp.Model will get the `:id` field with type
+  Any models using `MyApp.Model` will get the `:id` field with type
   `:uuid` as primary key.
 
   The `belongs_to` association on `MyApp.Comment` will also define
