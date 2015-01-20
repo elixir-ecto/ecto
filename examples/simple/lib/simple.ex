@@ -3,13 +3,13 @@ defmodule Simple.App do
 
   def start(_type, _args) do
     import Supervisor.Spec
-    tree = [worker(Repo, [])]
+    tree = [worker(Simple.Repo, [])]
     opts = [name: Simple.Sup, strategy: :one_for_one]
     Supervisor.start_link(tree, opts)
   end
 end
 
-defmodule Repo do
+defmodule Simple.Repo do
   use Ecto.Repo,
     otp_app: :simple,
     adapter: Ecto.Adapters.Postgres
@@ -34,6 +34,6 @@ defmodule Simple do
     query = from w in Weather,
           where: w.prcp > 0.0 or is_nil(w.prcp),
          select: w
-    Repo.all(query)
+    Simple.Repo.all(query)
   end
 end

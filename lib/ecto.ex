@@ -336,7 +336,7 @@ defmodule Ecto do
 
   Ecto supports database migrations. You can generate a migration with:
 
-      $ mix ecto.gen.migration Repo create_posts
+      $ mix ecto.gen.migration create_posts
 
   This will create a new file inside `priv/repo/migrations` with the `up` and
   `down` functions. Check `Ecto.Migration` for more information.

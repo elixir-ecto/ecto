@@ -18,20 +18,21 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
     end
   end
 
-  test "runs the migrator" do
-    run [to_string(Repo), "--no-start"], fn _, _, _, _ ->
+  test "runs the migrator without starting" do
+    run ["-r", to_string(Repo), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
     end
     assert Process.get(:migrated)
-    refute Process.get(:start)
+    refute Process.get(:started)
   end
 
   test "runs the migrator yielding the repository and migrations path" do
-    run [to_string(Repo), "--no-start"], fn repo, path, direction, strategy ->
+    run ["-r", to_string(Repo)], fn repo, path, direction, strategy ->
       assert repo == Repo
       assert path == Application.app_dir(:ecto, "hello/migrations")
       assert direction == :down
-      assert strategy == [step: 1, start: false]
+      assert strategy[:step] == 1
     end
+    assert Process.get(:started)
   end
 end

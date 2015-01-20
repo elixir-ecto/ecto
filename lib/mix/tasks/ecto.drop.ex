@@ -2,18 +2,20 @@ defmodule Mix.Tasks.Ecto.Drop do
   use Mix.Task
   import Mix.Ecto
 
-  @shortdoc "Drop the database for the repo"
+  @shortdoc "Drop the storage for the repo"
 
   @moduledoc """
-  Drop the database for the given repository, as specified in the repo's `url`.
-
-  ## Command line options
-
-  * `--no-start` - do not start applications
+  Drop the storage for the repository.
 
   ## Examples
 
-      mix ecto.drop MyApp.Repo
+      mix ecto.drop
+      mix ecto.drop -r Custom.Repo
+
+  ## Command line options
+
+    * `-r`, `--repo` - the repo to drop (defaults to `YourApp.Repo`)
+    * `--no-start` - do not start applications
 
   """
 
@@ -21,7 +23,7 @@ defmodule Mix.Tasks.Ecto.Drop do
   def run(args) do
     Mix.Task.run "app.start", args
 
-    {repo, _} = parse_repo(args)
+    repo = parse_repo(args)
     ensure_repo(repo)
     ensure_implements(repo.adapter, Ecto.Adapter.Storage, "to create storage for #{inspect repo}")
 
@@ -31,8 +33,7 @@ defmodule Mix.Tasks.Ecto.Drop do
       {:error, :already_down} ->
         Mix.shell.info "The database for repo #{inspect repo} has already been dropped."
       {:error, term} ->
-        raise Mix.Error, message:
-           "The database for repo #{inspect repo} couldn't be dropped, reason given: #{term}."
+        Mix.raise "The database for repo #{inspect repo} couldn't be dropped, reason given: #{term}."
     end
   end
 end

@@ -4,32 +4,37 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   import Mix.Generator
   import Mix.Utils, only: [camelize: 1]
 
-  @shortdoc "Generates a new migration for the repo"
+  @shortdoc "Generate a new migration for the repo"
 
   @moduledoc """
-  Generates a migration for the given repository.
+  Generates a migration.
 
-      mix ecto.gen.migration MyApp.Repo add_posts_table
+  ## Examples
+
+      mix ecto.gen.migration add_posts_table
+      mix ecto.gen.migration add_posts_table -r Custom.Repo
 
   By default, the migration will be generated to the
-  "priv/repo/migrations" directory of the current application
+  "priv/YOUR_REPO/migrations" directory of the current application
   but it can be configured by specify the `:priv` key under
   the repository configuration.
 
   ## Command line options
 
-  * `--no-start` - do not start applications
+    * `-r`, `--repo` - the repo to generate migration for (defaults to `YourApp.Repo`)
+    * `--no-start` - do not start applications
 
   """
 
   @doc false
   def run(args) do
     no_umbrella!("ecto.gen.migration")
-    Mix.Task.run "app.start", args
-    {_, args, _} = OptionParser.parse(args)
 
-    case parse_repo(args) do
-      {repo, [name]} ->
+    Mix.Task.run "app.start", args
+    repo = parse_repo(args)
+
+    case OptionParser.parse(args) do
+      {_, [name], _} ->
         ensure_repo(repo)
         path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
         file = Path.join(path, "#{timestamp}_#{name}.exs")
@@ -39,9 +44,9 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
         if open?(file) && Mix.shell.yes?("Do you want to run this migration?") do
           Mix.Task.run "ecto.migrate", [repo]
         end
-      {_repo, _} ->
-        raise Mix.Error, message:
-              "expected ecto.gen.migration to receive the migration file name, got: #{inspect Enum.join(args, " ")}"
+      {_, _, _} ->
+        Mix.raise "expected ecto.gen.migration to receive the migration file name, " <>
+                  "got: #{inspect Enum.join(args, " ")}"
     end
   end
 

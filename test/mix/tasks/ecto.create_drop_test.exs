@@ -35,26 +35,26 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
 
   test "runs the adapter storage_up" do
     Process.put(:storage_up, :ok)
-    Create.run [to_string(Repo)]
+    Create.run ["-r", to_string(Repo)]
     assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.CreateDropTest.Repo has been created."]}
   end
 
   test "informs the user when the repo is already up" do
     Process.put(:storage_up, {:error, :already_up})
-    Create.run [to_string(Repo)]
+    Create.run ["-r", to_string(Repo)]
     assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.CreateDropTest.Repo has already been created."]}
   end
 
   test "raises an error when storage_up gives an unknown feedback" do
     Process.put(:storage_up, {:error, :confused})
     assert_raise Mix.Error, fn ->
-      Create.run [to_string(Repo)]
+      Create.run ["-r", to_string(Repo)]
     end
   end
 
   test "raises an error on storage_up when the adapter doesn't define a storage" do
     assert_raise Mix.Error, ~r/to implement Ecto.Adapter.Storage/, fn ->
-      Create.run [to_string(NoStorageRepo)]
+      Create.run ["-r", to_string(NoStorageRepo)]
     end
   end
 
@@ -62,26 +62,26 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
 
   test "runs the adapter storage_down" do
     Process.put(:storage_down, :ok)
-    Drop.run [to_string(Repo)]
+    Drop.run ["-r", to_string(Repo)]
     assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.CreateDropTest.Repo has been dropped."]}
   end
 
   test "informs the user when the repo is already down" do
     Process.put(:storage_down, {:error, :already_down})
-    Drop.run [to_string(Repo)]
+    Drop.run ["-r", to_string(Repo)]
     assert_received {:mix_shell, :info, ["The database for repo Mix.Tasks.Ecto.CreateDropTest.Repo has already been dropped."]}
   end
 
   test "raises an error when storage_down gives an unknown feedback" do
     Process.put(:storage_down, {:error, :confused})
     assert_raise Mix.Error, fn ->
-      Drop.run [to_string(Repo)]
+      Drop.run ["-r", to_string(Repo)]
     end
   end
 
   test "raises an error on storage_down when the adapter doesn't define a storage" do
     assert_raise Mix.Error, ~r/to implement Ecto.Adapter.Storage/, fn ->
-      Drop.run [to_string(NoStorageRepo)]
+      Drop.run ["-r", to_string(NoStorageRepo)]
     end
   end
 end

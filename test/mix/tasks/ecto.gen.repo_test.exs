@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
 
   test "generates a new repo" do
     in_tmp fn _ ->
-      run ["Repo"]
+      run ["-r", "Repo"]
 
       assert_file "lib/repo.ex", fn file ->
         assert String.contains? file, "defmodule Repo do"
@@ -25,7 +25,7 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
         hostname: "localhost"
       """
 
-      run ["AnotherRepo"]
+      run ["-r", "AnotherRepo"]
 
       assert_file "config/config.exs", """
       config :ecto, AnotherRepo,
@@ -39,12 +39,15 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
 
   test "generates a new namespaced repo" do
     in_tmp fn _ ->
-      run ["My.AppRepo"]
+      run ["-r", "My.AppRepo"]
       assert_file "lib/my/app_repo.ex", "defmodule My.AppRepo do"
     end
   end
 
-  test "raises when missing repo" do
-    assert_raise Mix.Error, fn -> run [] end
+  test "generates default repo" do
+    in_tmp fn _ ->
+      run []
+      assert_file "lib/ecto/repo.ex", "defmodule Ecto.Repo do"
+    end
   end
 end

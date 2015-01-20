@@ -1,7 +1,17 @@
 defmodule Mix.EctoTest do
   use ExUnit.Case, async: true
-
   import Mix.Ecto
+
+  test :parse_repo do
+    assert parse_repo(["-r", "Repo"]) == Repo
+    assert parse_repo(["--repo", Repo]) == Repo
+    assert parse_repo([]) == Ecto.Repo
+
+    Application.put_env(:ecto, :app_namespace, Foo)
+    assert parse_repo([]) == Foo.Repo
+  after
+    Application.delete_env(:ecto, :app_namespace)
+  end
 
   defmodule Repo do
     def start_link do
@@ -17,19 +27,10 @@ defmodule Mix.EctoTest do
     end
   end
 
-  test :parse_repo do
-    assert parse_repo([Repo]) == {Repo, []}
-    assert parse_repo([Repo, "foo"]) == {Repo, ["foo"]}
-    assert parse_repo([inspect(Repo), "foo"]) == {Repo, ["foo"]}
-    assert parse_repo([to_string(Repo), "foo"]) == {Repo, ["foo"]}
-    assert_raise Mix.Error, fn -> parse_repo([]) end
-    assert_raise Mix.Error, fn -> parse_repo([""]) end
-  end
-
   test :ensure_repo do
     assert ensure_repo(Repo) == Repo
-    assert_raise Mix.Error, fn -> parse_repo(String) end
-    assert_raise Mix.Error, fn -> parse_repo(NotLoaded) end
+    assert_raise Mix.Error, fn -> ensure_repo(String) end
+    assert_raise Mix.Error, fn -> ensure_repo(NotLoaded) end
   end
 
   test :ensure_started do

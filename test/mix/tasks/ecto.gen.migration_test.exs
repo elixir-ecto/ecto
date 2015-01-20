@@ -23,7 +23,7 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
   end
 
   test "generates a new migration" do
-    run [to_string(Repo), "my_migration"]
+    run ["-r", to_string(Repo), "my_migration"]
     assert [name] = File.ls!(@migrations_path)
     assert String.match? name, ~r/^\d{14}_my_migration\.exs$/
     assert_file Path.join(@migrations_path, name), fn file ->
@@ -35,6 +35,6 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
   end
 
   test "raises when missing file" do
-    assert_raise Mix.Error, fn -> run [to_string(Repo)] end
+    assert_raise Mix.Error, fn -> run ["-r", to_string(Repo)] end
   end
 end

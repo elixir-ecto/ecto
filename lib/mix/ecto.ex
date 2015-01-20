@@ -3,20 +3,26 @@ defmodule Mix.Ecto do
   @moduledoc false
 
   @doc """
-  Parses the repository as the first argument in the given list
-  and ensure the repository is loaded and available.
+  Parses the repository option from the given list.
+
+  If no repo option is given, we get one from the environment.
   """
-  @spec parse_repo([term]) :: {Ecto.Repo.t, [term]} | no_return
-  def parse_repo([h|t]) when is_binary(h) and h != "" do
-    {Module.concat([h]), t}
+  @spec parse_repo([term]) :: Ecto.Repo.t
+  def parse_repo([key, value|_]) when key in ~w(--repo -r) do
+    Module.concat([value])
   end
 
-  def parse_repo([h|t]) when is_atom(h) and h != :"" do
-    {h, t}
+  def parse_repo([_|t]) do
+    parse_repo(t)
   end
 
-  def parse_repo(_) do
-    raise Mix.Error, message: "invalid arguments, expected a repo as first argument"
+  def parse_repo([]) do
+    app = Mix.Project.config |> Keyword.fetch!(:app)
+
+    case Application.get_env(app, :app_namespace, app) do
+      ^app -> app |> to_string |> Mix.Utils.camelize
+      mod  -> mod |> inspect
+    end |> Module.concat(Repo)
   end
 
   @doc """
@@ -29,10 +35,12 @@ defmodule Mix.Ecto do
         if function_exported?(repo, :__repo__, 0) do
           repo
         else
-          raise Mix.Error, message: "module #{inspect repo} is not a Ecto.Repo, it does not define __repo__/0"
+          Mix.raise "module #{inspect repo} is not a Ecto.Repo. " <>
+                    "Please pass a proper repo with the -r option."
         end
       {:error, error} ->
-        raise Mix.Error, message: "could not load #{inspect repo}, error: #{inspect error}"
+        Mix.raise "could not load #{inspect repo}, error: #{inspect error}. " <>
+                  "Please pass a proper repo with the -r option."
     end
   end
 
@@ -46,7 +54,7 @@ defmodule Mix.Ecto do
       {:ok, _} -> repo
       {:error, {:already_started, _}} -> repo
       {:error, error} ->
-        raise Mix.Error, message: "could not start repo #{inspect repo}, error: #{inspect error}"
+        Mix.raise "could not start repo #{inspect repo}, error: #{inspect error}"
     end
   end
 
@@ -88,7 +96,7 @@ defmodule Mix.Ecto do
   """
   def no_umbrella!(task) do
     if Mix.Project.umbrella? do
-      raise Mix.Error, message: "cannot run task #{inspect task} from umbrella application"
+      Mix.raise "cannot run task #{inspect task} from umbrella application"
     end
   end
 
@@ -98,8 +106,8 @@ defmodule Mix.Ecto do
   def ensure_implements(module, behaviour, message) do
     all = Keyword.take(module.__info__(:attributes), [:behaviour])
     unless [behaviour] in Keyword.values(all) do
-      raise Mix.Error, message: "Expected #{inspect module} to implement #{inspect behaviour} " <>
-                                "in order to #{message}"
+      Mix.raise "Expected #{inspect module} to implement #{inspect behaviour} " <>
+                "in order to #{message}"
     end
   end
 end

@@ -13,14 +13,19 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   ## Examples
 
-      mix ecto.gen.repo Repo
+      mix ecto.gen.repo
+      mix ecto.gen.repo -r Custom.Repo
+
+  ## Command line options
+
+    * `-r`, `--repo` - the repo to generate (defaults to `YourApp.Repo`)
 
   """
 
   @doc false
   def run(args) do
     no_umbrella!("ecto.gen.repo")
-    {repo, _} = parse_repo(args)
+    repo = parse_repo(args)
 
     config      = Mix.Project.config
     underscored = Mix.Utils.underscore(inspect(repo))

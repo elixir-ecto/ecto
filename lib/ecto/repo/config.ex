@@ -10,7 +10,7 @@ defmodule Ecto.Repo.Config do
       [otp_app: otp_app] ++ Keyword.merge(config, parse_url(url || ""))
     else
       raise ArgumentError,
-        "configuration for #{inspect module} not specified in #{inspect otp_app}"
+        "configuration for #{inspect module} not specified in #{inspect otp_app} environment"
     end
   end
 

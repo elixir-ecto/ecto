@@ -16,34 +16,35 @@ defmodule Mix.Tasks.Ecto.Rollback do
   To roll back a specific number of times, use `--step n`.
   To undo all applied migrations, provide `--all`.
 
-  ## Command line options
-
-  * `--all` - revert all applied migrations
-  * `--step` / `-n` - rever n number of applied migrations
-  * `--to` / `-v` - revert all migrations down to and including version
-  * `--no-start` - do not start applications
-
   ## Examples
 
-      mix ecto.rollback MyApp.Repo
+      mix ecto.rollback
+      mix ecto.rollback -r Custom.Repo
 
-      mix ecto.rollback MyApp.Repo -n 3
-      mix ecto.rollback MyApp.Repo --step 3
+      mix ecto.rollback -n 3
+      mix ecto.rollback --step 3
 
-      mix ecto.rollback MyApp.Repo -v 20080906120000
-      mix ecto.rollback MyApp.Repo --to 20080906120000
+      mix ecto.rollback -v 20080906120000
+      mix ecto.rollback --to 20080906120000
 
+  ## Command line options
+
+    * `-r`, `--repo` - the repo to rollback (defaults to `YourApp.Repo`)
+    * `--all` - revert all applied migrations
+    * `--step` / `-n` - rever n number of applied migrations
+    * `--to` / `-v` - revert all migrations down to and including version
+    * `--no-start` - do not start applications
   """
 
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     Mix.Task.run "app.start", args
+    repo = parse_repo(args)
 
-    {opts, args, _} = OptionParser.parse args,
+    {opts, _, _} = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer, start: :boolean],
       aliases: [n: :step, v: :to]
 
-    {repo, _} = parse_repo(args)
     ensure_repo(repo)
     if Keyword.get(opts, :start, true), do: ensure_started(repo)
 
