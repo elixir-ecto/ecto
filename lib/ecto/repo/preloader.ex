@@ -43,7 +43,7 @@ defmodule Ecto.Repo.Preloader do
   ## Implementation
 
   defp do_preload(structs, repo, preloads, assocs) do
-    preloads = normalize(preloads, assocs, preloads)
+    preloads = normalize(preloads, [], assocs, preloads)
     do_preload(structs, repo, preloads)
   end
 
@@ -98,32 +98,33 @@ defmodule Ecto.Repo.Preloader do
 
   ## Normalizer
 
-  defp normalize(preload, assocs, original) do
-    Enum.flat_map(List.wrap(preload), &normalize_each(&1, assocs, original))
+  defp normalize(preloads, acc, assocs, original) do
+    Enum.reduce(List.wrap(preloads), acc, &normalize_each(&1, &2, assocs, original))
   end
 
-  defp normalize_each({atom, list}, assocs, original) when is_atom(atom) do
-    no_assoc!(assocs, atom)
-    [{atom, normalize(list, assocs, original)}]
+  defp normalize_each({key, value}, acc, assocs, original) when is_atom(key) do
+    no_assoc!(assocs, key)
+    value = normalize(value, Keyword.get(acc, key, []), nil, original)
+    Keyword.put(acc, key, value)
   end
 
-  defp normalize_each(atom, assocs, _original) when is_atom(atom) do
-    no_assoc!(assocs, atom)
-    [{atom, []}]
+  defp normalize_each(key, acc, assocs, _original) when is_atom(key) do
+    no_assoc!(assocs, key)
+    Keyword.put_new(acc, key, [])
   end
 
-  defp normalize_each(list, assocs, original) when is_list(list) do
-    Enum.flat_map(list, &normalize_each(&1, assocs, original))
+  defp normalize_each(list, acc, assocs, original) when is_list(list) do
+    Enum.reduce(list, acc, &normalize_each(&1, &2, assocs, original))
   end
 
-  defp normalize_each(other, _assocs, original) do
+  defp normalize_each(other, _acc, _assocs, original) do
     raise ArgumentError, "invalid preload `#{inspect other}` in `#{inspect original}`. " <>
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
   end
 
   defp no_assoc!(nil, _atom), do: nil
   defp no_assoc!(assocs, atom) do
-    if assocs[atom] do
+    if Keyword.has_key?(assocs, atom) do
       raise ArgumentError, "cannot preload association `#{inspect atom}` because " <>
                            "it has already been loaded with join association"
     end
