@@ -84,7 +84,15 @@ $ cd ecto
 $ mix test
 ```
 
-If you are contributing to the Postgres adapter you need to run the integration tests for the adapter (it is a good idea to run the integration tests even if you are not contributing to the adapter). You need a Postgres user with username `postgres` and password `postgres` or with trust authentication. To run the tests the `MIX_ENV` environment variable needs to be set to `pg` when running the tests. To run only the integration tests: `MIX_ENV=pg mix test` or to run all tests: `MIX_ENV=all mix test`.
+Besides the unit tests above, it is recommended to run the adapter integration tests too:
+
+```
+# Run only PostgreSQL tests
+MIX_ENV=pg mix test
+
+# Run all tests (unit and all adapters)
+mix test.all
+```
 
 ## License
 

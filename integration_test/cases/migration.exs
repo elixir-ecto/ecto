@@ -1,5 +1,7 @@
-defmodule Ecto.Integration.MigrationsTest do
-  use Ecto.Integration.Postgres.Case
+Code.require_file "../../test/support/file_helpers.exs", __DIR__
+
+defmodule Ecto.Integration.MigrationTest do
+  use Ecto.Integration.Case
 
   import Support.FileHelpers
   import Ecto.Migrator, only: [migrated_versions: 1]
@@ -76,9 +78,7 @@ defmodule Ecto.Integration.MigrationsTest do
   end
 
   test "bad migration" do
-    assert_raise Postgrex.Error, fn ->
-      up(TestRepo, 20080906120000, BadMigration, log: false)
-    end
+    assert catch_error(up(TestRepo, 20080906120000, BadMigration, log: false))
   end
 
   test "run up to/step migration" do

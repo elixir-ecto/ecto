@@ -2,6 +2,7 @@ defmodule Ecto.Mixfile do
   use Mix.Project
 
   @version "0.6.1-dev"
+  @adapters [:pg]
 
   def project do
     [app: :ecto,
@@ -10,6 +11,10 @@ defmodule Ecto.Mixfile do
      deps: deps,
      build_per_environment: false,
      test_paths: test_paths(Mix.env),
+
+     # Custom testing
+     aliases: ["test.all": &test_all/1],
+     preferred_cli_env: ["test.all": :test],
 
      # Hex
      description: description,
@@ -34,9 +39,8 @@ defmodule Ecto.Mixfile do
      {:inch_ex, only: :docs}]
   end
 
-  defp test_paths(:pg),  do: ["integration_test/pg"]
-  defp test_paths(:all), do: ["test", "integration_test/pg"]
-  defp test_paths(_),    do: ["test"]
+  defp test_paths(adapter) when adapter in @adapters, do: ["integration_test/#{adapter}"]
+  defp test_paths(_), do: ["test"]
 
   defp description do
     """
@@ -48,5 +52,22 @@ defmodule Ecto.Mixfile do
     [contributors: ["Eric Meadows-Jönsson", "José Valim"],
      licenses: ["Apache 2.0"],
      links: %{"GitHub" => "https://github.com/elixir-lang/ecto"}]
+  end
+
+  defp test_all(args) do
+    args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
+    Mix.Task.run "test", args
+
+    for adapter <- @adapters do
+      IO.puts "==> Running integration tests for MIX_ENV=#{adapter}"
+
+      {_, res} = System.cmd "mix", ["test"|args],
+                            into: IO.binstream(:stdio, :line),
+                            env: [{"MIX_ENV", to_string(adapter)}]
+
+      if res > 0 do
+        System.at_exit(fn _ -> exit({:shutdown, 1}) end)
+      end
+    end
   end
 end

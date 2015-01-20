@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.SQLEscapeTest do
-  use Ecto.Integration.Postgres.Case
+  use Ecto.Integration.Case
 
   test "Repo.all escape" do
     TestRepo.insert(%Post{text: "hello"})

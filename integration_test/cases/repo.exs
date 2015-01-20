@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.RepoTest do
-  use Ecto.Integration.Postgres.Case
+  use Ecto.Integration.Case
 
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
