@@ -6,8 +6,8 @@ defmodule Ecto.Query.Builder.Select do
   @doc """
   Escapes a select.
 
-  It allows tuples, lists and variables at the top level or a
-  single `assoc(x, y)` expression.
+  It allows tuples, lists and variables at the top level. Inside the
+  tuples and lists query expressions are allowed.
 
   ## Examples
 
