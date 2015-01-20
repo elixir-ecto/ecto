@@ -1,4 +1,4 @@
-import Ecto.Query, only: [from: 2]
+import Ecto.Query, only: [from: 2, join: 4, select: 3]
 
 defmodule Ecto.Associations do
   @moduledoc """
@@ -23,7 +23,7 @@ defmodule Ecto.Associations do
   """
 
   @type t :: %{__struct__: atom, cardinality: :one | :many,
-               field: atom, owner_key: atom}
+               field: atom, owner_key: atom, owner: atom}
   use Behaviour
 
   @doc """
@@ -38,13 +38,14 @@ defmodule Ecto.Associations do
     * `:field` - tells the field in the owner struct where the
       association should be stored
 
+    * `:owner` - the owner module of the association
+
     * `:owner_key` - the key in the owner with the association value
 
     * `:assoc_key` - the key in the association with the association value
 
   """
-  defcallback struct(field :: atom, module, primary_key :: atom,
-                     fields :: [atom], opts :: Keyword.t) :: t
+  defcallback struct(module, field :: atom, opts :: Keyword.t) :: t
 
   @doc """
   Builds a model for the given association.
@@ -193,24 +194,34 @@ defmodule Ecto.Associations.Has do
   defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
 
   @doc false
-  def struct(name, module, primary_key, fields, opts) do
-    ref = opts[:references] || primary_key
+  def struct(module, name, opts) do
+    ref =
+      cond do
+        ref = opts[:references] ->
+          ref
+        primary_key = Module.get_attribute(module, :primary_key) ->
+          elem(primary_key, 0)
+        true ->
+          raise ArgumentError, "need to set :references option for " <>
+            "association #{inspect name} when model has no primary key"
+      end
 
-    if is_nil(ref) do
-      raise ArgumentError, "need to set :references option for " <>
-        "association #{inspect name} when model has no primary key"
-    end
-
-    unless ref in fields do
+    unless Module.get_attribute(module, :ecto_fields)[ref] do
       raise ArgumentError, "model does not have the field #{inspect ref} used by " <>
         "association #{inspect name}, please set the :references option accordingly"
+    end
+
+    assoc = Keyword.fetch!(opts, :queryable)
+
+    unless is_atom(assoc) do
+      raise ArgumentError, "association queryable must be a module, got: #{inspect assoc}"
     end
 
     %__MODULE__{
       field: name,
       cardinality: Keyword.fetch!(opts, :cardinality),
       owner: module,
-      assoc: Keyword.fetch!(opts, :queryable),
+      assoc: assoc,
       owner_key: ref,
       assoc_key: opts[:foreign_key] || Ecto.Associations.association_key(module, ref)
     }
@@ -218,13 +229,13 @@ defmodule Ecto.Associations.Has do
 
   @doc false
   def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key}, struct) do
-    Map.put assoc.__struct__, assoc_key, Map.get(struct, owner_key)
+    Map.put apply(assoc, :__struct__, []), assoc_key, Map.get(struct, owner_key)
   end
 
   @doc false
   def joins_query(refl) do
-    from q in refl.assoc,
-      join: o in ^refl.owner,
+    from o in refl.owner,
+      join: q in ^refl.assoc,
       on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
   end
 
@@ -232,6 +243,69 @@ defmodule Ecto.Associations.Has do
   def assoc_query(refl, values) do
     from x in refl.assoc,
       where: field(x, ^refl.assoc_key) in ^values
+  end
+end
+
+defmodule Ecto.Associations.HasThrough do
+  @moduledoc """
+  The association struct for `has_one` and `has_many` through associations.
+
+  Its fields are:
+
+    * `cardinality` - The association cardinality
+    * `field` - The name of the association field on the model
+    * `owner` - The model where the association was defined
+    * `owner_key` - The key on the `owner` model used for the association
+    * `through` - The through associations
+  """
+
+  @behaviour Ecto.Associations
+  defstruct [:cardinality, :field, :owner, :owner_key, :through]
+
+  @doc false
+  def struct(module, name, opts) do
+    through = Keyword.fetch!(opts, :through)
+
+    refl =
+      case through do
+        [h,_|_] ->
+          Module.get_attribute(module, :ecto_assocs)[h]
+        _ ->
+          raise ArgumentError, ":through expects a list with at least two entries: " <>
+            "the association in the current module and one step through, got: #{inspect through}"
+      end
+
+    unless refl do
+      raise ArgumentError, "model does not have the association #{inspect hd(through)} " <>
+        "used by association #{inspect name}, please ensure the association exists and " <>
+        "is defined before the :through one"
+    end
+
+    %__MODULE__{
+      field: name,
+      cardinality: Keyword.fetch!(opts, :cardinality),
+      through: through,
+      owner: module,
+      owner_key: refl.owner_key,
+    }
+  end
+
+  @doc false
+  def joins_query(%{owner: owner, through: through}) do
+    joins_query(through, owner) |> elem(0)
+  end
+
+  @doc false
+  def assoc_query(%{owner: owner, through: [h|t]}, values) do
+    refl = owner.__schema__(:association, h)
+    {query, counter} = joins_query(t, refl.__struct__.assoc_query(refl, values))
+    select(query, [x: counter], x)
+  end
+
+  defp joins_query(through, query) do
+    Enum.reduce(through, {query, 0}, fn current, {acc, counter} ->
+      {join(acc, :inner, [x: counter], assoc(x, ^current)), counter + 1}
+    end)
   end
 end
 
@@ -253,19 +327,29 @@ defmodule Ecto.Associations.BelongsTo do
   defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
 
   @doc false
-  def struct(name, module, primary_key, _fields, opts) do
-    ref = opts[:references] || primary_key
+  def struct(module, name, opts) do
+    ref =
+      cond do
+        ref = opts[:references] ->
+          ref
+        primary_key = Module.get_attribute(module, :primary_key) ->
+          elem(primary_key, 0)
+        true ->
+          raise ArgumentError, "need to set :references option for " <>
+            "association #{inspect name} when model has no primary key"
+      end
 
-    if is_nil(ref) do
-      raise ArgumentError, "need to set :references option for " <>
-        "association #{inspect name} when model has no primary key"
+    assoc = Keyword.fetch!(opts, :queryable)
+
+    unless is_atom(assoc) do
+      raise ArgumentError, "association queryable must be a module, got: #{inspect assoc}"
     end
 
     %__MODULE__{
       field: name,
       cardinality: :one,
       owner: module,
-      assoc: Keyword.fetch!(opts, :queryable),
+      assoc: assoc,
       owner_key: Keyword.fetch!(opts, :foreign_key),
       assoc_key: ref
     }
@@ -273,13 +357,13 @@ defmodule Ecto.Associations.BelongsTo do
 
   @doc false
   def build(%{assoc: assoc}, _struct) do
-    assoc.__struct__
+    apply(assoc, :__struct__, [])
   end
 
   @doc false
   def joins_query(refl) do
-    from q in refl.assoc,
-      join: o in ^refl.owner,
+    from o in refl.owner,
+      join: q in ^refl.assoc,
       on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
   end
 

@@ -187,21 +187,23 @@ defmodule Ecto.Query.Planner do
     #       join: p in assoc(p, :comments)
     #
     # The callback below will return a query that contains only
-    # joins in a way it starts with a Comment and ends in the
-    # Post.
+    # joins in a way it starts with the Post and ends in the
+    # Comment.
     #
     # This means we need to rewrite the joins below to properly
-    # shift the &... identifier and discard the last source as
+    # shift the &... identifier and discard the from source as
     # it will always be the ix in the current association.
     child = refl.__struct__.joins_query(refl)
-    {child_joins, [_|child_sources]} = prepare_joins(child.joins, child, [], [child.from])
+    {child_joins, child_sources} = prepare_joins(child.joins, child, [], [child.from])
 
-    var_ix = length(child_joins)
-    inc_ix = length(sources)
+    # Drop the last resource which is the owner (it is reversed)
+    child_sources = Enum.drop(child_sources, -1)
+    inc_ix = length(sources) - 1
+
     child_joins =
       child_joins
       |> :lists.zip(child_sources)
-      |> Enum.map(&rewrite_join(&1, qual, ix, var_ix, inc_ix))
+      |> Enum.map(&rewrite_join(&1, qual, ix, inc_ix))
 
     prepare_joins(t, query, child_joins ++ joins, child_sources ++ sources)
   end
@@ -222,11 +224,11 @@ defmodule Ecto.Query.Planner do
     {joins, sources}
   end
 
-  defp rewrite_join({%{on: on} = join, source}, qual, ix, var_ix, inc_ix) do
+  defp rewrite_join({%{on: on} = join, source}, qual, ix, inc_ix) do
     on = update_in on.expr, fn expr ->
       Macro.prewalk expr, fn
-        # We need to replace the assoc index by the one from the actual query
-        {:&, meta, [assoc_ix]} when assoc_ix == var_ix -> {:&, meta, [ix]}
+        # We need to replace the source by the one from the assoc
+        {:&, meta, [0]} -> {:&, meta, [ix]}
         # All others need to be incremented by the existing sources
         {:&, meta, [join_ix]} -> {:&, meta, [join_ix + inc_ix]}
         # Everything else stays the same

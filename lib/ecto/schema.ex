@@ -202,7 +202,7 @@ defmodule Ecto.Schema do
         Ecto.Schema.__changeset__(@changeset_fields),
         Ecto.Schema.__source__(source),
         Ecto.Schema.__fields__(fields),
-        Ecto.Schema.__assocs__(__MODULE__, assocs, primary_key_field, fields),
+        Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__primary_key__(primary_key_field),
         Ecto.Schema.__load__(fields),
         Ecto.Schema.__read_after_writes__(primary_key_field, @ecto_raw)]
@@ -310,8 +310,13 @@ defmodule Ecto.Schema do
   """
   defmacro has_many(name, queryable, opts \\ []) do
     quote bind_quoted: binding() do
-      association(name, Ecto.Associations.Has,
-                  [queryable: queryable, cardinality: :many] ++ opts)
+      if is_list(queryable) and Keyword.has_key?(queryable, :through) do
+        association(name, Ecto.Associations.HasThrough,
+                    [cardinality: :many] ++ queryable)
+      else
+        association(name, Ecto.Associations.Has,
+                    [queryable: queryable, cardinality: :many] ++ opts)
+      end
     end
   end
 
@@ -345,8 +350,13 @@ defmodule Ecto.Schema do
   """
   defmacro has_one(name, queryable, opts \\ []) do
     quote bind_quoted: binding() do
-      association(name, Ecto.Associations.Has,
-                  [queryable: queryable, cardinality: :one] ++ opts)
+      if is_list(queryable) and Keyword.has_key?(queryable, :through) do
+        association(name, Ecto.Associations.HasThrough,
+                    [cardinality: :one] ++ queryable)
+      else
+        association(name, Ecto.Associations.Has,
+                    [queryable: queryable, cardinality: :one] ++ opts)
+      end
     end
   end
 
@@ -421,7 +431,7 @@ defmodule Ecto.Schema do
         Module.put_attribute(mod, :ecto_raw, name)
       end
 
-      Module.put_attribute(mod, :ecto_fields, {name, type, opts})
+      Module.put_attribute(mod, :ecto_fields, {name, type})
     end
   end
 
@@ -429,7 +439,7 @@ defmodule Ecto.Schema do
   def __association__(mod, name, association, opts) do
     put_struct_field(mod, name,
                      %Ecto.Associations.NotLoaded{__owner__: mod, __field__: name})
-    Module.put_attribute(mod, :ecto_assocs, {name, association, opts})
+    Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
   end
 
   @doc false
@@ -475,7 +485,7 @@ defmodule Ecto.Schema do
 
   @doc false
   def __fields__(fields) do
-    quoted = Enum.map(fields, fn {name, type, _opts} ->
+    quoted = Enum.map(fields, fn {name, type} ->
       quote do
         def __schema__(:field, unquote(name)), do: unquote(type)
       end
@@ -490,13 +500,9 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __assocs__(module, assocs, primary_key, fields) do
-    fields = Enum.map(fields, &elem(&1, 0))
-
+  def __assocs__(assocs) do
     quoted =
-      Enum.map(assocs, fn {name, type, opts} ->
-        refl = type.struct(name, module, primary_key, fields, opts)
-
+      Enum.map(assocs, fn {name, refl} ->
         quote do
           def __schema__(:association, unquote(name)) do
             unquote(Macro.escape(refl))
@@ -522,8 +528,6 @@ defmodule Ecto.Schema do
 
   @doc false
   def __load__(fields) do
-    fields = Enum.map(fields, fn {name, type, _opts} -> {name, type} end)
-
     quote do
       def __schema__(:load, struct \\ __struct__(), fields_or_idx, values) do
         Ecto.Schema.__load__(struct, unquote(fields), fields_or_idx, values)
