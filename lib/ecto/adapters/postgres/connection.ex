@@ -24,9 +24,31 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def query(conn, sql, params, opts) do
       case Postgrex.Connection.query(conn, sql, params, opts) do
-        {:ok, %Postgrex.Result{rows: rows, num_rows: num}} -> {:ok, {rows, num}}
-        {:error, _} = err -> err
+        {:ok, %Postgrex.Result{} = result} -> {:ok, Map.from_struct(result)}
+        {:error, %Postgrex.Error{}} = err  -> err
       end
+    end
+
+    ## Transaction
+
+    def begin_transaction do
+      "BEGIN"
+    end
+
+    def rollback do
+      "ROLLBACK"
+    end
+
+    def commit do
+      "COMMIT"
+    end
+
+    def savepoint(savepoint) do
+      "SAVEPOINT " <> savepoint
+    end
+
+    def rollback_to_savepoint(savepoint) do
+      "ROLLBACK TO SAVEPOINT " <> savepoint
     end
 
     ## Query
@@ -99,16 +121,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
 
       "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <>
-      " WHERE " <> Enum.join(filters, " AND ") <>
-      returning(returning)
+        " WHERE " <> Enum.join(filters, " AND ") <>
+        returning(returning)
     end
 
-    def delete(table, filters) do
+    def delete(table, filters, returning) do
       {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "DELETE FROM #{quote_name(table)} WHERE " <> Enum.join(filters, " AND ")
+      "DELETE FROM #{quote_name(table)} WHERE " <> Enum.join(filters, " AND ") <>
+        returning(returning)
     end
 
     ## Query generation

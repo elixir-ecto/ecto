@@ -5,25 +5,30 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
 
   defmodule Connection do
     def connect(_opts) do
-      Agent.start_link(fn -> end)
+      Agent.start_link(fn -> [] end)
     end
 
     def disconnect(conn) do
       Agent.stop(conn)
     end
 
-    def query(conn, _, [], opts) do
-      Agent.get(conn, fn _ ->
-        {:ok, []}
-      end, opts[:timeout])
-    end
-
     def query(conn, "sleep", [value], opts) do
       Agent.get(conn, fn _ ->
         :timer.sleep(value)
-        {:ok, []}
+        {:ok, %{}}
       end, opts[:timeout])
     end
+
+    def query(conn, query, [], opts) do
+      Agent.update(conn, &[query|&1], opts[:timeout])
+      {:ok, %{}}
+    end
+
+    def begin_transaction, do: "BEGIN"
+    def rollback, do: "ROLLBACK"
+    def commit, do: "COMMIT"
+    def savepoint(savepoint), do: "SAVEPOINT " <> savepoint
+    def rollback_to_savepoint(savepoint), do: "ROLLBACK TO SAVEPOINT " <> savepoint
   end
 
   test "worker starts without an active connection" do
@@ -80,5 +85,27 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
 
     assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
     assert_receive {:DOWN, ^worker_mon, :process, ^worker, _}, 1000
+  end
+
+  test "worker correctly manages transactions" do
+    {:ok, worker} = Worker.start({Connection, lazy: false})
+
+    Worker.begin!(worker, [timeout: :infinity])
+    Worker.begin!(worker, [timeout: :infinity])
+    Worker.rollback!(worker, [timeout: :infinity])
+    Worker.commit!(worker, [timeout: :infinity])
+
+    assert commands(worker) ==
+           ["BEGIN", "SAVEPOINT ecto_1", "ROLLBACK TO SAVEPOINT ecto_1", "COMMIT"]
+
+    Worker.begin!(worker, [timeout: :infinity])
+    Worker.rollback!(worker, [timeout: :infinity])
+
+    assert commands(worker) == ["BEGIN", "ROLLBACK"]
+  end
+
+  defp commands(worker) do
+    conn = :sys.get_state(worker).conn
+    Agent.get_and_update(conn, fn commands -> {Enum.reverse(commands), []} end)
   end
 end

@@ -78,7 +78,7 @@ defmodule Ecto.Adapters.SQL do
       @doc false
       def delete(repo, source, filter, opts) do
         {filter, values} = :lists.unzip(filter)
-        Ecto.Adapters.SQL.model(repo, @conn.delete(source, filter), values, opts)
+        Ecto.Adapters.SQL.model(repo, @conn.delete(source, filter, []), values, opts)
       end
 
       ## Transaction
@@ -105,7 +105,7 @@ defmodule Ecto.Adapters.SQL do
       @doc false
       def ddl_exists?(repo, object, opts) do
         sql = @conn.ddl_exists(object)
-        {[{count}], _} = Ecto.Adapters.SQL.query(repo, sql, [], opts)
+        %{rows: [{count}]} = Ecto.Adapters.SQL.query(repo, sql, [], opts)
         count > 0
       end
     end
@@ -117,19 +117,31 @@ defmodule Ecto.Adapters.SQL do
   @doc """
   Runs custom SQL query on given repo.
 
+  In case of success, it must return an `:ok` tuple containing
+  a map with at least two keys:
+
+    * `:num_rows` - the number of rows affected
+
+    * `:rows` - the result set as a list. `nil` may be returned
+      instead of the list if the command does not yield any row
+      as result (but still yields the number of affected rows,
+      like a `delete` command without returning would)
+
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
-                   `:infinity` will wait indefinitely (default: 5000);
+      `:infinity` will wait indefinitely (default: 5000)
 
     * `:log` - When false, does not log the query
 
   ## Examples
 
       iex> Ecto.Adapters.SQL.query(MyRepo, "SELECT $1 + $2", [40, 2])
-      {[{42}], 1}
+      %{rows: [{42}], num_rows: 1}
 
   """
+  @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
+             %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query(repo, sql, params, opts) do
     opts = Keyword.put_new(opts, :timeout, @timeout)
 
@@ -226,6 +238,7 @@ defmodule Ecto.Adapters.SQL do
         end
       end
   """
+  @spec begin_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def begin_test_transaction(repo, opts \\ []) do
     pool = pool!(repo)
     opts = Keyword.put_new(opts, :timeout, @timeout)
@@ -233,11 +246,14 @@ defmodule Ecto.Adapters.SQL do
     :poolboy.transaction(pool, fn worker ->
       do_begin(repo, worker, opts)
     end, opts[:timeout])
+
+    :ok
   end
 
   @doc """
   Ends a test transaction, see `begin_test_transaction/2`.
   """
+  @spec rollback_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def rollback_test_transaction(repo, opts \\ []) do
     pool = pool!(repo)
     opts = Keyword.put_new(opts, :timeout, @timeout)
@@ -245,6 +261,8 @@ defmodule Ecto.Adapters.SQL do
     :poolboy.transaction(pool, fn worker ->
       do_rollback(repo, worker, opts)
     end, opts[:timeout])
+
+    :ok
   end
 
   ## Worker
@@ -294,25 +312,25 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def all(repo, sql, query, params, opts) do
-    {rows, _} = query(repo, sql, Map.values(params), opts)
+    %{rows: rows} = query(repo, sql, Map.values(params), opts)
     fields = extract_fields(query.select.fields, query.sources)
     Enum.map(rows, &process_row(&1, fields))
   end
 
   @doc false
   def count_all(repo, sql, params, opts) do
-    {_, num} = query(repo, sql, Map.values(params), opts)
+    %{num_rows: num} = query(repo, sql, Map.values(params), opts)
     num
   end
 
   @doc false
   def model(repo, sql, values, opts) do
     case query(repo, sql, values, opts) do
-      {nil, 1} ->
+      %{rows: nil, num_rows: 1} ->
         {:ok, {}}
-      {[values], 1} ->
+      %{rows: [values], num_rows: 1} ->
         {:ok, values}
-      {_, 0} ->
+      %{num_rows: 0} ->
         {:error, :stale}
     end
   end
@@ -401,10 +419,8 @@ defmodule Ecto.Adapters.SQL do
     :ok
   end
 
-  ## TODO: Make those in sync with the actual query
-
   defp do_begin(repo, worker, opts) do
-    log(repo, {:query, "BEGIN TRANSACTION"}, opts, fn ->
+    log(repo, {:query, "BEGIN"}, opts, fn ->
       Worker.begin!(worker, opts)
     end)
   end

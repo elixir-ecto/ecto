@@ -18,11 +18,12 @@ defmodule Ecto.Adapter.Migrations  do
     {:create, Index.t} |
     {:drop, Index.t}
 
-  @typedoc "Table subcommands"
   @type table_subcommand ::
     {:add, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
     {:modify, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
     {:remove, field :: atom}
+
+  @type ddl_object :: Table.t | Index.t
 
   @doc """
   Executes migration commands.
@@ -44,5 +45,5 @@ defmodule Ecto.Adapter.Migrations  do
     `:infinity` will wait indefinitely (default: 5000);
   * `:log` - When false, does not log begin/commit/rollback queries
   """
-  defcallback ddl_exists?(Ecto.Repo.t, Table.t | Index.t, Keyword.t) :: boolean
+  defcallback ddl_exists?(Ecto.Repo.t, ddl_object, Keyword.t) :: boolean
 end

@@ -364,7 +364,10 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "delete" do
-    query = SQL.delete("model", [:x, :y])
+    query = SQL.delete("model", [:x, :y], [:z])
+    assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2 RETURNING "z"}
+
+    query = SQL.delete("model", [:x, :y], [])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2}
   end
 

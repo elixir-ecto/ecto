@@ -91,17 +91,17 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, {:ok, {module, conn}}, s}
   end
 
-  # TODO: Go through the connection for transaction SQL
+  def handle_call({:begin, opts}, _from, s) do
+    %{conn: conn, transactions: trans, module: module} = s
 
-  def handle_call({:begin, opts}, _from, %{conn: conn, transactions: trans} = s) do
     sql =
       if trans == 0 do
-        "BEGIN"
+        module.begin_transaction
       else
-        "SAVEPOINT ecto_#{trans}"
+        module.savepoint "ecto_#{trans}"
       end
 
-    case s.module.query(conn, sql, [], opts) do
+    case module.query(conn, sql, [], opts) do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans + 1}}
       {:error, _} = err ->
@@ -109,10 +109,12 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
-  def handle_call({:commit, opts}, _from, %{conn: conn, transactions: trans} = s) when trans >= 1 do
+  def handle_call({:commit, opts}, _from, %{transactions: trans} = s) when trans >= 1 do
+    %{conn: conn, module: module} = s
+
     reply =
       case trans do
-        1 -> s.module.query(conn, "COMMIT", [], opts)
+        1 -> module.query(conn, module.commit, [], opts)
         _ -> {:ok, {[], 0}}
       end
 
@@ -124,14 +126,16 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
-  def handle_call({:rollback, opts}, _from, %{conn: conn, transactions: trans} = s) when trans >= 1 do
+  def handle_call({:rollback, opts}, _from, %{transactions: trans} = s) when trans >= 1 do
+    %{conn: conn, module: module} = s
+
     sql =
       case trans do
-        1 -> "ROLLBACK"
-        _ -> "ROLLBACK TO SAVEPOINT ecto_#{trans-1}"
+        1 -> module.rollback
+        _ -> module.rollback_to_savepoint "ecto_#{trans-1}"
       end
 
-    case s.module.query(conn, sql, [], opts) do
+    case module.query(conn, sql, [], opts) do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
