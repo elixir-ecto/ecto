@@ -298,7 +298,7 @@ defmodule Ecto.Repo do
 
       MyRepo.update_all(Post, title: "New title")
 
-      MyRepo.update_all(p in Post, visits: p.visits + 1)
+      MyRepo.update_all(p in Post, visits: fragment("? + 1", p.visits))
 
       from(p in Post, where: p.id < 10)
       |> MyRepo.update_all(title: "New title")
