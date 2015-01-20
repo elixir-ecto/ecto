@@ -131,9 +131,7 @@ defmodule Ecto.Integration.RepoTest do
     # We even allow a nil primary key to be set via the
     # changeset but that causes crashes
     changeset = Ecto.Changeset.cast(%{"id" => nil}, %Post{id: 11}, ~w(), ~w(id))
-    assert_raise Postgrex.Error, ~r"not-null constraint", fn ->
-      TestRepo.insert(changeset)
-    end
+    assert catch_error(TestRepo.insert(changeset))
   end
 
   test "insert and update with changeset dirty tracking" do
