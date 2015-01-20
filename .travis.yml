@@ -15,5 +15,6 @@ after_script:
   - MIX_ENV=docs mix inch.report
 notifications:
   recipients:
-    - jose.valim@plataformatec.com.br
-    - eric.meadows.jonsson@gmail.com
+    - jquadrin@gmail.com
+#    - jose.valim@plataformatec.com.br
+#    - eric.meadows.jonsson@gmail.com
