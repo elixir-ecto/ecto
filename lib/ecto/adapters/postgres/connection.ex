@@ -171,10 +171,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp join([], _sources), do: nil
     defp join(joins, sources) do
-      joins = Enum.with_index(joins)
       Enum.map_join(joins, " ", fn
-        {%JoinExpr{on: %QueryExpr{expr: expr}, qual: qual}, ix} ->
-          {table, name, _model} = elem(sources, ix+1)
+        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
+          {table, name, _model} = elem(sources, ix)
 
           on   = expr(expr, sources)
           qual = join_qual(qual)

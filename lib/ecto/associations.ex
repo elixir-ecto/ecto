@@ -1,4 +1,4 @@
-import Ecto.Query, only: [from: 2, join: 4, select: 3]
+import Ecto.Query, only: [from: 2, join: 4, distinct: 3, select: 3]
 
 defmodule Ecto.Associations do
   @moduledoc """
@@ -41,8 +41,6 @@ defmodule Ecto.Associations do
     * `:owner` - the owner module of the association
 
     * `:owner_key` - the key in the owner with the association value
-
-    * `:assoc_key` - the key in the association with the association value
 
   """
   defcallback struct(module, field :: atom, opts :: Keyword.t) :: t
@@ -87,6 +85,12 @@ defmodule Ecto.Associations do
   This callback is used by `Ecto.Model.assoc/2`.
   """
   defcallback assoc_query(t, values :: [term]) :: Ecto.Query.t
+
+  @doc """
+  Returns information used by the preloader.
+  """
+  defcallback preload_info(t) ::
+              {:assoc, t, atom} | {:through, t, [atom]}
 
   @doc """
   Retrieves the association from the given model.
@@ -244,6 +248,11 @@ defmodule Ecto.Associations.Has do
     from x in refl.assoc,
       where: field(x, ^refl.assoc_key) in ^values
   end
+
+  @doc false
+  def preload_info(refl) do
+    {:assoc, refl, refl.assoc_key}
+  end
 end
 
 defmodule Ecto.Associations.HasThrough do
@@ -291,6 +300,18 @@ defmodule Ecto.Associations.HasThrough do
   end
 
   @doc false
+  def build(%{field: name}, %{__struct__: struct}) do
+    raise ArgumentError,
+      "cannot build through association #{inspect name} for #{inspect struct}. " <>
+      "Instead build the intermediate steps explicitly."
+  end
+
+  @doc false
+  def preload_info(refl) do
+    {:through, refl, refl.through}
+  end
+
+  @doc false
   def joins_query(%{owner: owner, through: through}) do
     joins_query(through, owner) |> elem(0)
   end
@@ -299,7 +320,7 @@ defmodule Ecto.Associations.HasThrough do
   def assoc_query(%{owner: owner, through: [h|t]}, values) do
     refl = owner.__schema__(:association, h)
     {query, counter} = joins_query(t, refl.__struct__.assoc_query(refl, values))
-    select(query, [x: counter], x)
+    query |> distinct([x: counter], x) |> select([x: counter], x)
   end
 
   defp joins_query(through, query) do
@@ -371,5 +392,10 @@ defmodule Ecto.Associations.BelongsTo do
   def assoc_query(refl, values) do
     from x in refl.assoc,
       where: field(x, ^refl.assoc_key) in ^values
+  end
+
+  @doc false
+  def preload_info(refl) do
+    {:assoc, refl, refl.assoc_key}
   end
 end

@@ -21,32 +21,18 @@ defmodule Ecto.Query.Builder.From do
       {[p: 0, q: 1], quote(do: posts)}
 
       iex> escape(quote do: [_, _] in abc)
-      {[], quote(do: abc)}
+      {[_: 0, _: 1], quote(do: abc)}
 
       iex> escape(quote do: other)
       {[], quote(do: other)}
 
       iex> escape(quote do: x() in other)
-      ** (Ecto.Query.CompileError) malformed from `[x()] in other` in query expression
+      ** (Ecto.Query.CompileError) binding list should contain only variables, got: x()
 
   """
   @spec escape(Macro.t) :: {Keyword.t, Macro.t}
-  def escape({:in, _, [list, expr]} = from) when is_list(list) do
-    binds =
-      Enum.flat_map(Stream.with_index(list), fn
-        {{:_, _, context}, _ix} when is_atom(context) ->
-          []
-        {{var, _, context}, ix} when is_atom(var) and is_atom(context) ->
-          [{var, ix}]
-        {_, _count} ->
-          Builder.error! "malformed from `#{Macro.to_string(from)}` in query expression"
-      end)
-
-    {binds, expr}
-  end
-
-  def escape({:in, meta, [var, expr]}) do
-    escape({:in, meta, [[var], expr]})
+  def escape({:in, _, [var, expr]}) do
+    {Builder.escape_binding(List.wrap(var)), expr}
   end
 
   def escape(expr) do

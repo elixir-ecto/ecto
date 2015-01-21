@@ -60,7 +60,7 @@ defimpl Inspect, for: Ecto.Query do
   defp joins(joins, names) do
     joins
     |> Enum.with_index
-    |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, ix + 1), names) end)
+    |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, expr.ix || ix + 1), names) end)
   end
 
   defp join(%JoinExpr{qual: qual, assoc: {ix, right}}, name, names) do

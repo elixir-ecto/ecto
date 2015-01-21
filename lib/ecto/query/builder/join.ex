@@ -16,7 +16,7 @@ defmodule Ecto.Query.Builder.Join do
       {:x, {"foo", nil}, nil}
 
       iex> escape(quote(do: "foo"), [])
-      {nil, {"foo", nil}, nil}
+      {:_, {"foo", nil}, nil}
 
       iex> escape(quote(do: x in Sample), [])
       {:x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil}
@@ -33,22 +33,22 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape({:__aliases__, _, _} = module, _vars) do
-    {nil, {nil, module}, nil}
+    {:_, {nil, module}, nil}
   end
 
   def escape(string, _vars) when is_binary(string) do
-    {nil, {string, nil}, nil}
+    {:_, {string, nil}, nil}
   end
 
   def escape({:assoc, _, [{var, _, context}, field]}, vars)
       when is_atom(var) and is_atom(context) do
     var   = Builder.find_var!(var, vars)
     field = Builder.quoted_field!(field)
-    {nil, nil, {var, field}}
+    {:_, nil, {var, field}}
   end
 
   def escape({:^, _, [expr]}, _vars) do
-    {nil, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil}
+    {:_, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil}
   end
 
   def escape(join, _vars) do
@@ -80,7 +80,7 @@ defmodule Ecto.Query.Builder.Join do
     qual = validate_qual(qual)
     validate_bind(join_bind, binding)
 
-    if join_bind && !count_bind do
+    if join_bind != :_ and !count_bind do
       # If count_bind is not an integer, make it a variable.
       # The variable is the getter/setter storage.
       count_bind = quote(do: count_bind)
@@ -143,7 +143,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   defp validate_bind(bind, all) do
-    if bind && bind in all do
+    if bind != :_ and bind in all do
       Builder.error! "variable `#{bind}` is already defined in query"
     end
   end

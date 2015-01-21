@@ -13,6 +13,7 @@ defmodule Ecto.Integration.Post do
     field :temp, :string, default: "temp", virtual: true
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
+    has_many :comments_authors, through: [:comments, :author]
     timestamps
   end
 end
@@ -28,6 +29,7 @@ defmodule Ecto.Integration.Comment do
     field :bytes, :binary
     belongs_to :post, Ecto.Integration.Post
     belongs_to :author, Ecto.Integration.User
+    has_one :post_permalink, through: [:post, :permalink]
   end
 end
 
@@ -38,6 +40,7 @@ defmodule Ecto.Integration.Permalink do
   schema "permalinks" do
     field :url, :string
     belongs_to :post, Ecto.Integration.Post
+    has_many :post_comments_authors, through: [:post, :comments_authors]
   end
 end
 
@@ -46,7 +49,7 @@ defmodule Ecto.Integration.User do
 
   schema "users" do
     field :name, :string
-    has_many :comments, Ecto.Integration.Comment
+    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id
   end
 end
 
