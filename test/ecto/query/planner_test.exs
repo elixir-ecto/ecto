@@ -224,9 +224,14 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: select without models" do
+    message = ~r"queries with a string source \(\"posts\"\) expect an explicit select clause"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in "posts") |> normalize()
+    end
+
     message = ~r"cannot `select` or `preload` \"posts\" because it does not have a model"
     assert_raise Ecto.QueryError, message, fn ->
-      from("posts", []) |> normalize()
+      from(p in "posts", select: p) |> normalize()
     end
 
     assert_raise Ecto.QueryError, message, fn ->

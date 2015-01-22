@@ -344,6 +344,8 @@ defmodule Ecto.Query.Planner do
         query
       select = query.select ->
         %{query | select: normalize_fields(query, select)}
+      ({source, model} = query.from) && is_nil model ->
+        error! query, "queries with a string source (#{inspect source}) expect an explicit select clause"
       true ->
         select = %SelectExpr{expr: {:&, [], [0]}}
         %{query | select: normalize_fields(query, select)}
