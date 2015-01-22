@@ -289,11 +289,15 @@ defmodule Ecto.Schema do
       suffixed by `_id`
 
     * `:references` - Sets the key on the current model to be used for the
-      association, defaults to the primary key on the model;
+      association, defaults to the primary key on the model
+
+    * `:through` - If this association must be defined in terms of existing
+      associations. Read below for more information
 
   ## Examples
 
       defmodule Post do
+        use Ecto.Model
         schema "posts" do
           has_many :comments, Comment
         end
@@ -305,7 +309,74 @@ defmodule Ecto.Schema do
 
       # The comments can come preloaded on the post struct
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
-      post.comments #=> [ %Comment{...}, ... ]
+      post.comments #=> [%Comment{...}, ...]
+
+  ## has_many/has_one :through
+
+  Ecto also supports defining associations in terms of other associations
+  via the `:through` option. Let's see an example:
+
+      defmodule Post do
+        use Ecto.Model
+        schema "posts" do
+          has_many :comments, Comment
+          has_one :permalink, Permalink
+          has_many :comments_authors, through: [:comments, :author]
+        end
+      end
+
+      defmodule Comment do
+        use Ecto.Model
+        schema "comments" do
+          belongs_to :author, Author
+          belongs_to :post, Post
+          has_one :post_permalink, through: [:post, :permalink]
+        end
+      end
+
+  In the example above, we have defined a `has_many :through` association
+  named `:comments_authors`. A `:through` association always expect a list
+  and the first element of the list must be a previously defined association
+  in the current module. For example, `:comments_authors` first points to
+  `:comments` in the same module (Post), which then points to `:author` in
+  the next model `Comment`.
+
+  This `:through` associations will return all authors for all comments
+  that belongs to that post:
+
+      # Get all comments for a given post
+      post = Repo.get(Post, 42)
+      authors = Repo.all assoc(post, :comments_authors)
+
+  `:through` associations are read-only as they are useful to avoid repetition
+  allowing the developer to easily retrieve data that is often seem together
+  but stored across different tables.
+
+  `:through` associations can also be preloaded. In such cases, not only
+  the `:through` association is preloaded but all intermediate steps are
+  preloaded too:
+
+      [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments_authors))
+      post.comments_authors #=> [%Author{...}, ...]
+
+      # The comments for each post will be preloaded too
+      post.comments #=> [%Comment{...}, ...]
+
+      # And the author for each comment too
+      hd(post.comments).authors #=> [%Author{...}, ...]
+
+  Finally, `:through` can be used with multiple associations (not only 2)
+  and with associations of any kind, including `belongs_to` and others
+  `:through` associations. When the `:through` association is expected to
+  return one or no item, `has_one :through` should be used instead, as in
+  the example at the beginning of this section:
+
+      # How we defined the association above
+      has_one :post_permalink, through: [:post, :permalink]
+
+      # Get a preloaded comment
+      [comment] = Repo.all(Comment) |> Repo.preload(:post_permalink)
+      comment.post_permalink #=> %Permalink{...}
 
   """
   defmacro has_many(name, queryable, opts \\ []) do
@@ -335,9 +406,13 @@ defmodule Ecto.Schema do
     * `:references`  - Sets the key on the current model to be used for the
       association, defaults to the primary key on the model
 
+    * `:through` - If this association must be defined in terms of existing
+      associations. Read the section in `has_many/3` for more information
+
   ## Examples
 
       defmodule Post do
+        use Ecto.Model
         schema "posts" do
           has_one :permalink, Permalink
         end
@@ -394,6 +469,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Comment do
+        use Ecto.Model
         schema "comments" do
           # This automatically defines a post_id field too
           belongs_to :post, Post

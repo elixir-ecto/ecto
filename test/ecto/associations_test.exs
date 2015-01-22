@@ -213,4 +213,53 @@ defmodule Ecto.AssociationsTest do
       assoc([%Post{}, %Comment{}], :comments)
     end
   end
+
+  ## Preloader
+
+  alias Ecto.Repo.Preloader
+
+  test "preload: normalizer" do
+    assert Preloader.normalize(:foo, [], []) == [foo: []]
+    assert Preloader.normalize([foo: :bar], [], []) == [foo: [bar: []]]
+    assert Preloader.normalize([foo: [:bar, baz: :bat], this: :that], [], []) ==
+           [this: [that: []], foo: [baz: [bat: []], bar: []]]
+  end
+
+  test "preload: raises on assoc conflict" do
+    assert_raise ArgumentError, ~r"cannot preload association `:foo`", fn ->
+      Preloader.normalize(:foo, [foo: []], [])
+    end
+  end
+
+  test "preload: raises on invalid preload" do
+    assert_raise ArgumentError, ~r"invalid preload `123` in `123`", fn ->
+      Preloader.normalize(123, [], 123)
+    end
+  end
+
+  defp expand(model, preloads) do
+    Preloader.expand(model, Preloader.normalize(preloads, [], preloads), [])
+  end
+
+  test "preload: expand" do
+    assert [{:comments, {:assoc, %Ecto.Associations.Has{}, :post_id}, []},
+            {:permalink, {:assoc, %Ecto.Associations.Has{}, :post_id}, []}] =
+           expand(Post, [:comments, :permalink])
+
+    assert [{:post, {:assoc, %Ecto.Associations.BelongsTo{}, :id},
+              [author: [], permalink: []]}] =
+           expand(Comment, [:post, post: :author, post: :permalink])
+
+    assert [{:post, {:assoc, %Ecto.Associations.BelongsTo{}, :id},
+             [author: [], permalink: []]}] =
+           expand(Comment, [:post, post: :author, post: :permalink])
+
+    assert [{:posts, {:assoc, %Ecto.Associations.Has{}, :author_id}, [comments: [post: []]]},
+            {:posts_comments, {:through, %Ecto.Associations.HasThrough{}, [:posts, :comments]}, []}] =
+           expand(Author, [posts_comments: :post])
+
+    assert [{:posts, {:assoc, %Ecto.Associations.Has{}, :author_id}, [comments: _, comments: _]},
+           {:posts_comments, {:through, %Ecto.Associations.HasThrough{}, [:posts, :comments]}, []}] =
+           expand(Author, [:posts, posts_comments: :post, posts: [comments: :post]])
+  end
 end

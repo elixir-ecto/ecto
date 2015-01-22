@@ -143,28 +143,27 @@ defmodule Ecto.Repo.Preloader do
     many_into_dict(t2, key, HashDict.put(dict, current, [h|t1]))
   end
 
-  # TODO: Unit test me
   ## Normalizer
 
-  defp normalize(preload, assocs, original) do
-    Enum.flat_map(List.wrap(preload), &normalize_each(&1, assocs, original))
+  def normalize(preload, assocs, original) do
+    normalize_each(List.wrap(preload), [], assocs, original)
   end
 
-  defp normalize_each({atom, list}, assocs, original) when is_atom(atom) do
+  defp normalize_each({atom, list}, acc, assocs, original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    [{atom, normalize(list, assocs, original)}]
+    [{atom, normalize_each(List.wrap(list), [], assocs, original)}|acc]
   end
 
-  defp normalize_each(atom, assocs, _original) when is_atom(atom) do
+  defp normalize_each(atom, acc, assocs, _original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    [{atom, []}]
+    [{atom, []}|acc]
   end
 
-  defp normalize_each(list, assocs, original) when is_list(list) do
-    Enum.flat_map(list, &normalize_each(&1, assocs, original))
+  defp normalize_each(list, acc, assocs, original) when is_list(list) do
+    Enum.reduce(list, acc, &normalize_each(&1, &2, assocs, original))
   end
 
-  defp normalize_each(other, _assocs, original) do
+  defp normalize_each(other, _, _assocs, original) do
     raise ArgumentError, "invalid preload `#{inspect other}` in `#{inspect original}`. " <>
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
   end
@@ -177,10 +176,9 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  # TODO: Unit test me
   ## Expand
 
-  defp expand(model, preloads, acc) do
+  def expand(model, preloads, acc) do
     Enum.reduce(preloads, acc, fn {preload, sub_preloads}, acc ->
       case List.keyfind(acc, preload, 0) do
         {^preload, info, extra_preloads} ->
@@ -194,7 +192,7 @@ defmodule Ecto.Repo.Preloader do
               [{preload, info, sub_preloads}|acc]
             {:through, _, through} ->
               through = through |> Enum.reverse |> Enum.reduce(sub_preloads, &[{&1, &2}])
-              expand(model, through, [{preload, info, []}|acc])
+              List.keystore(expand(model, through, acc), preload, 0, {preload, info, []})
           end
       end
     end)
