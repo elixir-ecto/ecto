@@ -162,12 +162,17 @@ defmodule Ecto.Query.Planner do
   # field to the query for fast access.
   defp prepare_sources(query) do
     from = query.from || error!(query, "query must have a from expression")
-    {joins, sources} = prepare_joins(query.joins, query, [], [from])
-    %{query | sources: sources |> Enum.reverse |> List.to_tuple(),
+    {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins))
+    %{query | sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple(),
               joins: joins |> Enum.reverse}
   end
 
-  defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual} = join|t], query, joins, sources) do
+  defp prepare_joins(query, sources, offset) do
+    prepare_joins(query.joins, query, [], sources, [], 1, offset)
+  end
+
+  defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) do
     {source, model} = Enum.fetch!(Enum.reverse(sources), ix)
 
     unless model do
@@ -187,55 +192,80 @@ defmodule Ecto.Query.Planner do
     #       join: p in assoc(p, :comments)
     #
     # The callback below will return a query that contains only
-    # joins in a way it starts with a Comment and ends in the
-    # Post.
+    # joins in a way it starts with the Post and ends in the
+    # Comment.
     #
     # This means we need to rewrite the joins below to properly
-    # shift the &... identifier and discard the last source as
-    # it will always be the ix in the current association.
+    # shift the &... identifier in a way that:
+    #
+    #    &0         -> becomes assoc ix
+    #    &LAST_JOIN -> becomes counter
+    #
+    # All values in the middle should be shifted by offset,
+    # all values after join are already correct.
     child = refl.__struct__.joins_query(refl)
-    {child_joins, [_|child_sources]} = prepare_joins(child.joins, child, [], [child.from])
+    last_ix = length(child.joins)
+    source_ix = counter
 
-    var_ix = length(child_joins)
-    inc_ix = length(sources)
-    child_joins =
-      child_joins
-      |> :lists.zip(child_sources)
-      |> Enum.map(&rewrite_join(&1, qual, ix, var_ix, inc_ix))
+    {child_joins, child_sources, child_tail} =
+      prepare_joins(child, [child.from], offset + last_ix - 1)
 
-    prepare_joins(t, query, child_joins ++ joins, child_sources ++ sources)
+    # Rewrite joins indexes as mentioned above
+    child_joins = Enum.map(child_joins, &rewrite_join(&1, qual, ix, last_ix, source_ix, offset))
+
+    # Drop the last resource which is the association owner (it is reversed)
+    child_sources = Enum.drop(child_sources, -1)
+
+    [current_source|child_sources] = child_sources
+    child_sources = child_tail ++ child_sources
+
+    prepare_joins(t, query, child_joins ++ joins, [current_source|sources],
+                  child_sources ++ tail_sources, counter + 1, offset + length(child_sources))
   end
 
-  defp prepare_joins([%JoinExpr{source: {source, nil}} = join|t], query, joins, sources) when is_binary(source) do
+  defp prepare_joins([%JoinExpr{source: {source, nil}} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) when is_binary(source) do
     source = {source, nil}
-    join   = %{join | source: source}
-    prepare_joins(t, query, [join|joins], [source|sources])
+    join   = %{join | source: source, ix: counter}
+    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
   end
 
-  defp prepare_joins([%JoinExpr{source: {nil, model}} = join|t], query, joins, sources) when is_atom(model) do
+  defp prepare_joins([%JoinExpr{source: {nil, model}} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) when is_atom(model) do
     source = {model.__schema__(:source), model}
-    join   = %{join | source: source}
-    prepare_joins(t, query, [join|joins], [source|sources])
+    join   = %{join | source: source, ix: counter}
+    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
   end
 
-  defp prepare_joins([], _query, joins, sources) do
-    {joins, sources}
+  defp prepare_joins([], _query, joins, sources, tail_sources, _counter, _offset) do
+    {joins, sources, tail_sources}
   end
 
-  defp rewrite_join({%{on: on} = join, source}, qual, ix, var_ix, inc_ix) do
+  defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
     on = update_in on.expr, fn expr ->
       Macro.prewalk expr, fn
-        # We need to replace the assoc index by the one from the actual query
-        {:&, meta, [assoc_ix]} when assoc_ix == var_ix -> {:&, meta, [ix]}
-        # All others need to be incremented by the existing sources
-        {:&, meta, [join_ix]} -> {:&, meta, [join_ix + inc_ix]}
-        # Everything else stays the same
-        other -> other
+        {:&, meta, [join_ix]} ->
+          {:&, meta, [rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)]}
+        other ->
+          other
       end
     end
 
-    %{join | on: on, qual: qual, source: source}
+    %{join | on: on, qual: qual,
+             ix: rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)}
   end
+
+  # We need to replace the source by the one from the assoc
+  defp rewrite_ix(0, ix, _last_ix, _source_ix, _inc_x), do: ix
+
+  # The last entry will have the current source index
+  defp rewrite_ix(last_ix, _ix, last_ix, source_ix, _inc_x), do: source_ix
+
+  # All above last are already correct
+  defp rewrite_ix(join_ix, _ix, last_ix, _source_ix, _inc_ix) when join_ix > last_ix, do: join_ix
+
+  # All others need to be incremented by the offset sources
+  defp rewrite_ix(join_ix, _ix, _last_ix, _source_ix, inc_ix), do: join_ix + inc_ix
 
   @doc """
   Normalizes the query.
@@ -409,7 +439,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp find_source_expr(query, idx) do
-    Enum.fetch! query.joins, idx - 1
+    Enum.find(query.joins, & &1.ix == idx)
   end
 
   ## Helpers

@@ -16,6 +16,7 @@ defmodule Ecto.Query.PlannerTest do
       field :temp, :string, virtual: true
       field :posted, Custom.DateTime
       belongs_to :post, Ecto.Query.PlannerTest.Post
+      has_many :post_comments, through: [:post, :comments]
     end
   end
 
@@ -128,6 +129,33 @@ defmodule Ecto.Query.PlannerTest do
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
     assert source == {"comments", Comment}
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
+  end
+
+  test "prepare: nested joins associations" do
+    query = from(c in Comment, left_join: assoc(c, :post_comments)) |> prepare |> elem(0)
+    assert {{"comments", _}, {"comments", _}, {"posts", _}} = query.sources
+    assert [join1, join2] = query.joins
+    assert Enum.map(query.joins, & &1.ix) == [2, 1]
+    assert Macro.to_string(join1.on.expr) == "&2.id() == &0.post_id()"
+    assert Macro.to_string(join2.on.expr) == "&1.post_id() == &2.id()"
+
+    query = from(p in Comment, left_join: assoc(p, :post),
+                               left_join: assoc(p, :post_comments)) |> prepare |> elem(0)
+    assert {{"comments", _}, {"posts", _}, {"comments", _}, {"posts", _}} = query.sources
+    assert [join1, join2, join3] = query.joins
+    assert Enum.map(query.joins, & &1.ix) == [1, 3, 2]
+    assert Macro.to_string(join1.on.expr) == "&1.id() == &0.post_id()"
+    assert Macro.to_string(join2.on.expr) == "&3.id() == &0.post_id()"
+    assert Macro.to_string(join3.on.expr) == "&2.post_id() == &3.id()"
+
+    query = from(p in Comment, left_join: assoc(p, :post_comments),
+                               left_join: assoc(p, :post)) |> prepare |> elem(0)
+    assert {{"comments", _}, {"comments", _}, {"posts", _}, {"posts", _}} = query.sources
+    assert [join1, join2, join3] = query.joins
+    assert Enum.map(query.joins, & &1.ix) == [3, 1, 2]
+    assert Macro.to_string(join1.on.expr) == "&3.id() == &0.post_id()"
+    assert Macro.to_string(join2.on.expr) == "&1.post_id() == &3.id()"
+    assert Macro.to_string(join3.on.expr) == "&2.id() == &0.post_id()"
   end
 
   test "prepare: cannot associate without model" do

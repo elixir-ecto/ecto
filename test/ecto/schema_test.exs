@@ -140,6 +140,8 @@ defmodule Ecto.SchemaTest do
       has_many :posts, Post
       has_one :author, User
       belongs_to :comment, Comment
+      has_many :comment_authors, through: [:comment, :authors]
+      has_one :comment_main_author, through: [:comment, :main_author]
     end
   end
 
@@ -158,6 +160,16 @@ defmodule Ecto.SchemaTest do
     assert inspect(posts) == "#Ecto.Associations.NotLoaded<association :posts is not loaded>"
   end
 
+  test "has_many through association" do
+    assert AssocModel.__schema__(:association, :comment_authors) ==
+           %Ecto.Associations.HasThrough{field: :comment_authors, owner: AssocModel, cardinality: :many,
+                                         through: [:comment, :authors], owner_key: :comment_id}
+
+    authors = (%AssocModel{}).comment_authors
+    assert %Ecto.Associations.NotLoaded{} = authors
+    assert inspect(authors) == "#Ecto.Associations.NotLoaded<association :comment_authors is not loaded>"
+  end
+
   test "has_one association" do
     assert AssocModel.__schema__(:association, :author) ==
            %Ecto.Associations.Has{field: :author, owner: AssocModel, cardinality: :one,
@@ -166,6 +178,16 @@ defmodule Ecto.SchemaTest do
     author = (%AssocModel{}).author
     assert %Ecto.Associations.NotLoaded{} = author
     assert inspect(author) == "#Ecto.Associations.NotLoaded<association :author is not loaded>"
+  end
+
+  test "has_one through association" do
+    assert AssocModel.__schema__(:association, :comment_main_author) ==
+           %Ecto.Associations.HasThrough{field: :comment_main_author, owner: AssocModel, cardinality: :one,
+                                         through: [:comment, :main_author], owner_key: :comment_id}
+
+    author = (%AssocModel{}).comment_main_author
+    assert %Ecto.Associations.NotLoaded{} = author
+    assert inspect(author) == "#Ecto.Associations.NotLoaded<association :comment_main_author is not loaded>"
   end
 
   test "belongs_to association" do
@@ -216,16 +238,27 @@ defmodule Ecto.SchemaTest do
     assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :uuid
   end
 
-  test "references option has to match a field on model" do
-    message = "model does not have the field :pk used by association :posts, " <>
-              "please set the :references option accordingly"
+  test "has_* references option has to match a field on model" do
+    message = ~r"model does not have the field :pk used by association :posts"
     assert_raise ArgumentError, message, fn ->
       defmodule ModelPkAssocMisMatch do
         use Ecto.Model
 
         schema "assoc" do
           has_many :posts, Post, references: :pk
-          has_one :author, User, references: :pk
+        end
+      end
+    end
+  end
+
+  test "has_* through has to match an association on model" do
+    message = ~r"model does not have the association :whatever used by association :posts"
+    assert_raise ArgumentError, message, fn ->
+      defmodule ModelPkAssocMisMatch do
+        use Ecto.Model
+
+        schema "assoc" do
+          has_many :posts, through: [:whatever, :works]
         end
       end
     end

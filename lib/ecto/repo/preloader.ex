@@ -43,7 +43,7 @@ defmodule Ecto.Repo.Preloader do
   ## Implementation
 
   defp do_preload(structs, repo, preloads, assocs) do
-    preloads = normalize(preloads, [], assocs, preloads)
+    preloads = normalize(preloads, assocs, preloads)
     do_preload(structs, repo, preloads)
   end
 
@@ -51,82 +51,150 @@ defmodule Ecto.Repo.Preloader do
   defp do_preload([], _repo, _preloads), do: []
 
   defp do_preload(structs, repo, preloads) do
+    preloads = expand(hd(structs).__struct__, preloads, [])
+
     entries =
-      for {preload, sub_preloads} <- preloads do
-        assoc = Ecto.Associations.association_from_model!(hd(structs).__struct__, preload)
-        query = Ecto.Model.assoc(structs, preload)
+      Enum.map preloads, fn
+        {preload, {:assoc, assoc, assoc_key}, sub_preloads} ->
+          query = Ecto.Model.assoc(structs, preload)
+          card  = assoc.cardinality
 
-        if assoc.cardinality == :many do
-          query = Ecto.Query.from q in query, order_by: field(q, ^assoc.assoc_key)
-        end
+          if card == :many do
+            query = Ecto.Query.from q in query, order_by: field(q, ^assoc_key)
+          end
 
-        loaded = do_preload(repo.all(query), repo, sub_preloads)
-        {assoc, into_dict(assoc, loaded)}
+          loaded = do_preload(repo.all(query), repo, sub_preloads)
+          {:assoc, assoc, into_dict(card, assoc_key, loaded)}
+
+        {_, {:through, _, _} = info, []} ->
+          info
       end
 
     for struct <- structs do
-      Enum.reduce entries, struct, fn {assoc, dict}, acc ->
-        default = if assoc.cardinality == :one, do: nil, else: []
-        key     = Map.fetch!(acc, assoc.owner_key)
-        loaded  = HashDict.get(dict, key, default)
-        Map.put(acc, assoc.field, loaded)
+      Enum.reduce entries, struct, fn
+        {:assoc, assoc, dict}, acc -> load_assoc(acc, assoc, dict)
+        {:through, assoc, through}, acc -> load_through(acc, assoc, through)
       end
     end
   end
 
-  ## Loads and merges preloaded data
+  ## Load preloaded data
 
-  defp into_dict(%{cardinality: :one, assoc_key: key}, structs) do
+  defp load_assoc(struct, assoc, dict) do
+    key = Map.fetch!(struct, assoc.owner_key)
+
+    loaded =
+      cond do
+        value = HashDict.get(dict, key) -> value
+        assoc.cardinality == :many -> []
+        true -> nil
+      end
+
+    Map.put(struct, assoc.field, loaded)
+  end
+
+  defp load_through(struct, assoc, [h|t]) do
+    initial = struct |> Map.fetch!(h) |> List.wrap
+    loaded  = Enum.reduce(t, initial, &recur_through/2)
+
+    if assoc.cardinality == :one do
+      loaded = List.first(loaded)
+    end
+
+    Map.put(struct, assoc.field, loaded)
+  end
+
+  defp recur_through(assoc, structs) do
+    Enum.reduce(structs, {[], HashSet.new}, fn struct, acc ->
+      children = struct |> Map.fetch!(assoc) |> List.wrap
+
+      Enum.reduce children, acc, fn child, {fresh, set} ->
+        pk = Ecto.Model.primary_key(child) ||
+               raise Ecto.NoPrimaryKeyError, model: struct.__struct__
+
+        if HashSet.member?(set, pk) do
+          {fresh, set}
+        else
+          {[child|fresh], HashSet.put(set, pk)}
+        end
+      end
+    end) |> elem(0) |> Enum.reverse()
+  end
+
+  ## Stores preloaded data
+
+  defp into_dict(:one, key, structs) do
     Enum.reduce structs, HashDict.new, fn x, acc ->
       HashDict.put(acc, Map.fetch!(x, key), x)
     end
   end
 
-  defp into_dict(%{assoc_key: key}, structs) do
-    into_dict(structs, key, HashDict.new)
+  defp into_dict(:many, key, structs) do
+    many_into_dict(structs, key, HashDict.new)
   end
 
-  defp into_dict([], _key, dict) do
+  defp many_into_dict([], _key, dict) do
     dict
   end
 
-  defp into_dict([h|t], key, dict) do
+  defp many_into_dict([h|t], key, dict) do
     current  = Map.fetch!(h, key)
     {t1, t2} = Enum.split_while(t, &(Map.fetch!(&1, key) == current))
-    into_dict(t2, key, HashDict.put(dict, current, [h|t1]))
+    many_into_dict(t2, key, HashDict.put(dict, current, [h|t1]))
   end
 
   ## Normalizer
 
-  defp normalize(preloads, acc, assocs, original) do
-    Enum.reduce(List.wrap(preloads), acc, &normalize_each(&1, &2, assocs, original))
+  def normalize(preload, assocs, original) do
+    normalize_each(List.wrap(preload), [], assocs, original)
   end
 
-  defp normalize_each({key, value}, acc, assocs, original) when is_atom(key) do
-    no_assoc!(assocs, key)
-    value = normalize(value, Keyword.get(acc, key, []), nil, original)
-    Keyword.put(acc, key, value)
+  defp normalize_each({atom, list}, acc, assocs, original) when is_atom(atom) do
+    no_assoc!(assocs, atom)
+    [{atom, normalize_each(List.wrap(list), [], assocs, original)}|acc]
   end
 
-  defp normalize_each(key, acc, assocs, _original) when is_atom(key) do
-    no_assoc!(assocs, key)
-    Keyword.put_new(acc, key, [])
+  defp normalize_each(atom, acc, assocs, _original) when is_atom(atom) do
+    no_assoc!(assocs, atom)
+    [{atom, []}|acc]
   end
 
   defp normalize_each(list, acc, assocs, original) when is_list(list) do
     Enum.reduce(list, acc, &normalize_each(&1, &2, assocs, original))
   end
 
-  defp normalize_each(other, _acc, _assocs, original) do
+  defp normalize_each(other, _, _assocs, original) do
     raise ArgumentError, "invalid preload `#{inspect other}` in `#{inspect original}`. " <>
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
   end
 
   defp no_assoc!(nil, _atom), do: nil
   defp no_assoc!(assocs, atom) do
-    if Keyword.has_key?(assocs, atom) do
+    if assocs[atom] do
       raise ArgumentError, "cannot preload association `#{inspect atom}` because " <>
                            "it has already been loaded with join association"
     end
+  end
+
+  ## Expand
+
+  def expand(model, preloads, acc) do
+    Enum.reduce(preloads, acc, fn {preload, sub_preloads}, acc ->
+      case List.keyfind(acc, preload, 0) do
+        {^preload, info, extra_preloads} ->
+          List.keyreplace(acc, preload, 0, {preload, info, sub_preloads ++ extra_preloads})
+        nil ->
+          assoc = Ecto.Associations.association_from_model!(model, preload)
+          info  = assoc.__struct__.preload_info(assoc)
+
+          case info do
+            {:assoc, _, _} ->
+              [{preload, info, sub_preloads}|acc]
+            {:through, _, through} ->
+              through = through |> Enum.reverse |> Enum.reduce(sub_preloads, &[{&1, &2}])
+              List.keystore(expand(model, through, acc), preload, 0, {preload, info, []})
+          end
+      end
+    end)
   end
 end

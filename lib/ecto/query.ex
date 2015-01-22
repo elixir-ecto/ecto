@@ -146,7 +146,7 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix]
   end
 
   defmodule Tagged do

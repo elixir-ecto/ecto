@@ -237,7 +237,7 @@ defmodule Ecto.Query.Builder do
   """
   @spec escape_binding(list) :: Keyword.t
   def escape_binding(binding) when is_list(binding) do
-    vars       = binding |> Stream.with_index |> Enum.map(&escape_bind(&1))
+    vars       = binding |> Enum.with_index |> Enum.map(&escape_bind(&1))
     bound_vars = vars |> Keyword.keys |> Enum.filter(&(&1 != :_))
     dup_vars   = bound_vars -- Enum.uniq(bound_vars)
 
