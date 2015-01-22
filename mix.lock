@@ -4,4 +4,4 @@
   "inch_ex": {:hex, :inch_ex, "0.2.3"},
   "poison": {:hex, :poison, "1.3.0"},
   "poolboy": {:hex, :poolboy, "1.4.2"},
-  "postgrex": {:git, "git://github.com/ericmj/postgrex.git", "ea7ae4c626e75e4de1b97b58c7542a94236aa2b3", []}}
+  "postgrex": {:hex, :postgrex, "0.7.0"}}
