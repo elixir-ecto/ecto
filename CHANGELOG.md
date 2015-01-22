@@ -1,15 +1,21 @@
 # Changelog
 
-## v0.6.1-dev
+## v0.7.0-dev
 
 * Enhancements
   * Provide `Ecto.Adapters.SQL` with implementation to be shared by SQL adapters
+  * Allow `disctinct: selector` in query syntax
+  * Support `has_many :through` and `has_one :through` associations. `:through` can nest any type of association through n-levels.
+
+* Bug fixes
+  * Fix a bug where more than one nameless join could not be given in a query
+  * Ensure duplicate preloads are loaded only once
 
 * Backwards incompatible changes
   * `Ecto.Adapters.Postgres.query/4` has been renamed to `Ecto.Adapters.SQL.query/4`
   * `Ecto.Adapters.Postgres.begin_test_transaction/2` has been renamed to `Ecto.Adapters.SQL.begin_test_transaction/2`
   * `Ecto.Adapters.Postgres.rollback_test_transaction/2` has been renamed to `Ecto.Adapters.SQL.rollback_test_transaction/2`
-  * Mix tasks now expect the repository with the option `-r`, otherwise it defaults to the application based one 
+  * Mix tasks now expect the repository with the option `-r`, otherwise it defaults to the application based one
 
 ## v0.6.0 (2015-01-17)
 
