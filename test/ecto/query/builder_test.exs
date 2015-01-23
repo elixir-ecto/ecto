@@ -107,7 +107,7 @@ defmodule Ecto.Query.BuilderTest do
 
   test "returns the type for quoted query expression" do
     assert quoted_type({:<<>>, [], [1, 2, 3]}, []) == :binary
-    assert quoted_type({:uuid, [], ["foo"]}, []) == :uuid
+    assert quoted_type({:type, [], ["foo", :hello]}, []) == :hello
 
     assert quoted_type(1, []) == :integer
     assert quoted_type(1.0, []) == :float

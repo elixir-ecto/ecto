@@ -314,6 +314,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "'#{hex}'"
     end
 
+    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
+      expr(other, sources) <> "::" <> ecto_to_db(type)
+    end
+
     defp expr(nil, _sources),   do: "NULL"
     defp expr(true, _sources),  do: "TRUE"
     defp expr(false, _sources), do: "FALSE"
@@ -460,12 +464,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp index_expr(literal),
       do: quote_name(literal)
 
-    @column_types %{
-      string: "varchar",
-      datetime: "timestamp",
-      binary: "bytea"
-    }
-
     defp column_type(%Reference{} = ref, opts),
       do: "#{column_type(ref.type, opts)} REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})"
     defp column_type({:array, type}, opts),
@@ -474,8 +472,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)
       scale     = Keyword.get(opts, :scale)
-
-      type_name = @column_types[type] || type
+      type_name = ecto_to_db(type)
 
       cond do
         size      -> "#{type_name}(#{size})"
@@ -498,6 +495,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp escape_string(value) when is_binary(value) do
       :binary.replace(value, "'", "''", [:global])
     end
-  end
 
+    defp ecto_to_db(:string),   do: "varchar"
+    defp ecto_to_db(:datetime), do: "timestamp"
+    defp ecto_to_db(:binary),   do: "bytea"
+    defp ecto_to_db(other),     do: Atom.to_string(other)
+  end
 end

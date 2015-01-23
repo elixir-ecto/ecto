@@ -175,6 +175,20 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "prepare: tagged types" do
+    {query, params} = from(Post, []) |> select([p], type(^"1", :integer)) |> prepare
+    assert query.select.expr == %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}}
+    assert params == %{0 => 1}
+
+    {query, params} = from(Post, []) |> select([p], type(^"1", Custom.Permalink)) |> prepare
+    assert query.select.expr == %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}}
+    assert params == %{0 => 1}
+
+    assert_raise Ecto.QueryError, fn ->
+      from(Post, []) |> select([p], type(^"1", :datetime)) |> prepare
+    end
+  end
+
   test "normalize: validate fields" do
     message = ~r"field `Ecto.Query.PlannerTest.Comment.temp` in `select` does not exist in the model source"
     assert_raise Ecto.QueryError, message, fn ->

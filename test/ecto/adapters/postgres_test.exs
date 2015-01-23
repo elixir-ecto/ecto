@@ -192,6 +192,11 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == ~s{SELECT 123.0::float FROM "model" AS m0}
   end
 
+  test "tagged type" do
+    query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
+    assert SQL.all(query) == ~s{SELECT $1::uuid FROM "model" AS m0}
+  end
+
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize

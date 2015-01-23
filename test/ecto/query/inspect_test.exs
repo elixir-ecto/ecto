@@ -142,6 +142,10 @@ defmodule Ecto.Query.InspectTest do
   test "container values" do
     assert i(from(Post, select: {<<1, 2, 3>>, uuid(<<0>>), [0]})) ==
            "from p in Inspect.Post, select: {<<1, 2, 3>>, uuid(<<0>>), [0]}"
+
+    foo = <<1, 2, 3>>
+    assert i(from(Post, select: type(^foo, :uuid))) ==
+           "from p in Inspect.Post, select: type(^<<1, 2, 3>>, :uuid)"
   end
 
   test "params" do

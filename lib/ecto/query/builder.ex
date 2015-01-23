@@ -69,6 +69,16 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
+  def escape({:type, _, [{:^, _, [arg]}, type]}, _type, params, _vars) do
+    index  = Map.size(params)
+    params = Map.put(params, index, {arg, type})
+
+    map  = [value: {:{}, [], [:^, [], [index]]}, type: validate_type!(type)]
+    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], map}]}
+
+    {expr, params}
+  end
+
   # fragments
   def escape({:fragment, meta, [query|frags]}, _type, params, vars) do
     unless is_binary(query) do
@@ -205,6 +215,27 @@ defmodule Ecto.Query.Builder do
   end
 
   @doc """
+  Called at runtime to extract the type.
+  """
+  def type!(type) do
+    if Ecto.Type.primitive?(type) do
+      type
+    else
+      type.type
+    end
+  end
+
+  defp validate_type!({:__aliases__, _, _} = type) do
+    quote do: Ecto.Query.Builder.type!(unquote(type))
+  end
+  defp validate_type!(type) when is_atom(type) do
+    quote do: Ecto.Query.Builder.type!(unquote(type))
+  end
+  defp validate_type!(type) do
+    error! "type/2 expects an atom or alias as second argument, got: `#{Macro.to_string(type)}"
+  end
+
+  @doc """
   Escape the params entries map.
   """
   @spec escape_params(map()) :: Macro.t
@@ -310,6 +341,7 @@ defmodule Ecto.Query.Builder do
   # Tagged
   def quoted_type({:<<>>, _, _}, _vars), do: :binary
   def quoted_type({:uuid, _, [_]}, _vars), do: :uuid
+  def quoted_type({:type, _, [_, type]}, _vars), do: type
 
   # Sigils
   def quoted_type({sigil, _, _}, _vars) when sigil in ~w(sigil_s sigil_S)a, do: :string

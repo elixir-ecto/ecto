@@ -99,9 +99,17 @@ defmodule Ecto.Query do
       age = "1"
       Repo.all(from u in User, where: u.age > ^age)
 
-  The example above will work even if `age` is tagged as an :integer
-  in the User module because Ecto is able to cast values. In case a
-  value cannot be cast, `Ecto.CastError` is raised.
+  The example above works because `u.age` is tagged as an :integer
+  in the User model and therefore Ecto will attempt to cast the
+  interpolated `^age` to integer. In case a value cannot be cast,
+  `Ecto.CastError` is raised.
+
+  In some situations, Ecto is unable to infer the type for interpolated
+  values (as a database would be unable) and you may need to explicitly
+  tag it with the type/2 function:
+
+      type(^"1", :integer)
+      type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)
 
   It is important to keep in mind that Ecto cannot cast nil values in
   queries. Passing nil automatically causes the query to fail.

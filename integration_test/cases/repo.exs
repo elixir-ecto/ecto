@@ -38,6 +38,20 @@ defmodule Ecto.Integration.RepoTest do
     assert [_] = TestRepo.all(from p in Post, where: p.tags == ^[] or true)
   end
 
+  test "tagged types" do
+    TestRepo.insert(%Post{})
+
+    # Integer
+    assert [1] = TestRepo.all(from Post, select: type(^"1", :integer))
+
+    # UUID
+    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
+    assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, :uuid))
+
+    # Custom
+    assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
+  end
+
   test "fetch empty" do
     assert [] == TestRepo.all(Post)
     assert [] == TestRepo.all(from p in Post)

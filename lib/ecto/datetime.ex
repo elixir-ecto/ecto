@@ -80,6 +80,11 @@ defmodule Ecto.DateTime do
   defstruct [:year, :month, :day, :hour, :min, :sec]
 
   @doc """
+  The Ecto primitive type.
+  """
+  def type, do: :datetime
+
+  @doc """
   Converts an `Ecto.DateTime` into a `{date, time}` tuple.
   """
   def to_erl(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}) do

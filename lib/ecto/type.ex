@@ -216,8 +216,14 @@ defmodule Ecto.Type do
       true
       iex> match?(:string, :string)
       true
+
       iex> match?({:array, :string}, {:array, :any})
       true
+
+      iex> match?(Ecto.DateTime, :datetime)
+      true
+      iex> match?(Ecto.DateTime, :string)
+      false
 
   """
   @spec match?(t, primitive) :: boolean
