@@ -7,7 +7,6 @@ defmodule Ecto.Integration.RepoTest do
 
   test "types" do
     TestRepo.insert(%Post{})
-    TestRepo.insert(%Comment{})
 
     # Booleans
     assert [{true, false}] = TestRepo.all(from Post, select: {true, false})
@@ -29,7 +28,7 @@ defmodule Ecto.Integration.RepoTest do
 
     # Datetime
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
-    assert [_] = TestRepo.all(from c in Comment, where: c.posted == ^datetime or true)
+    assert [_] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime or true)
 
     # Lists
     assert [[1, 2, 3]] = TestRepo.all(from Post, select: [1, 2, 3])
@@ -49,8 +48,13 @@ defmodule Ecto.Integration.RepoTest do
     uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
     assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, :uuid))
 
+    # Datetime
+    datetime = :erlang.universaltime
+    assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, :datetime))
+
     # Custom
     assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
+    assert [{_, _}] = TestRepo.all(from Post, select: type(^Ecto.DateTime.utc, Ecto.DateTime))
   end
 
   test "fetch empty" do
@@ -95,19 +99,6 @@ defmodule Ecto.Integration.RepoTest do
 
     assert %Post{} = TestRepo.update(post)
     assert [%Post{bin: ^bin, uuid: ^uuid, tags: ^array}] = TestRepo.all(Post)
-  end
-
-  test "insert and update datetime inferred type values" do
-    date = %Ecto.Date{year: 2014, month: 12, day: 24}
-    time = %Ecto.Time{hour: 18, min: 41, sec: 24}
-    datetime = %Ecto.DateTime{year: 2014, month: 12, day: 24, hour: 18, min: 41, sec: 24}
-
-    comment = %Comment{day: date, time: time, posted: datetime}
-    comment = TestRepo.insert(comment)
-    assert %Comment{day: ^date, time: ^time, posted: ^datetime} = comment
-
-    assert %Comment{} = TestRepo.update(comment)
-    assert [%Comment{day: ^date, time: ^time, posted: ^datetime}] = TestRepo.all(Comment)
   end
 
   test "insert with no primary key" do
@@ -325,12 +316,13 @@ defmodule Ecto.Integration.RepoTest do
 
   test "update all with casting and dumping" do
     text = "hai"
+    date = Ecto.DateTime.utc
     assert %Post{id: id1} = TestRepo.insert(%Post{})
-    assert 1 = TestRepo.update_all(p in Post, text: ^text, counter: ^to_string(id1))
-    assert %Post{text: "hai", counter: ^id1} = TestRepo.get(Post, id1)
+    assert 1 = TestRepo.update_all(p in Post, text: ^text, counter: ^to_string(id1), inserted_at: ^date)
+    assert %Post{text: "hai", counter: ^id1, inserted_at: ^date} = TestRepo.get(Post, id1)
 
     text = "hai"
-    date = Ecto.DateTime.utc
+    date = :erlang.universaltime
     assert %Comment{id: id2} = TestRepo.insert(%Comment{})
     assert 1 = TestRepo.update_all(p in Comment, text: ^text, posted: ^date)
     assert %Comment{text: "hai", posted: ^date} = TestRepo.get(Comment, id2)

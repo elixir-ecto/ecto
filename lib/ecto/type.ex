@@ -71,56 +71,11 @@ defmodule Ecto.Type do
   value stored in the struct and the database was always an integer.
 
   However, sometimes, we want to completely replace Ecto data types
-  stored in the models. For example, data intensive applications may
-  find the `%Ecto.Datetime{}` struct, used by `:datetime` columns, too
-  simple and wish to use a more robust alternative.
+  stored in the models. This is for example how Ecto provides the
+  `Ecto.DateTime` struct as a replacement for the `:datetime` type.
 
-  This can be achieved by implementing the proper `load/1` and `dump/1`
-  functions that cast the database types into another struct:
-
-      defmodule SuperDateTime do
-        defstruct [:year, :month, :day, :hour, :min, :sec]
-
-        def type, do: :datetime
-
-        # Provide our own casting rules.
-        def cast(string) when is_binary(string) do
-          # Here, for example, you could try to parse different string formats.
-        end
-
-        # Our custom datetime should also be valid
-        def cast(%SuperDateTime{} = datetime) do
-          {:ok, datetime}
-        end
-
-        # Everything else needs to be a failure though
-        def cast(_), do: :error
-
-        # Datetimes are never considered blank
-        def blank?(_), do: false
-
-        # When loading data from the database, we need to
-        # convert the Ecto type to our type:
-        def load({{year, month, day}, {hour, min, sec}}) do
-          {:ok, %SuperDateTime{year: year, month: month, day: day,
-                               hour: hour, min: min, sec: sec}}
-        end
-
-        # When dumping data to the database, we need to convert
-        # our type back to Ecto.DateTime one:
-        def dump(%SuperDateTime{} = dt) do
-          {:ok, {{dt.year, dt.month, dt.day}, {dt.hour, dt.min, dt.sec}}}
-        end
-        def dump(_), do: :error
-      end
-
-  Now we can use in our fields too:
-
-      field :published_at, SuperDateTime
-
-  And that is all. By defining a custom type, we were able to extend Ecto's
-  casting abilities and also any Elixir value in our models while preserving
-  Ecto guarantees to safety and type conversion.
+  Check the `Ecto.DateTime` implementation for an example on how
+  to implement such types.
   """
 
   import Kernel, except: [match?: 2]
@@ -263,10 +218,6 @@ defmodule Ecto.Type do
   @spec dump(t, term) :: {:ok, term} | :error
   def dump(_type, nil), do: {:ok, nil}
 
-  def dump(:datetime, datetime), do: {:ok, Ecto.DateTime.to_erl(datetime)}
-  def dump(:date, date),         do: {:ok, Ecto.Date.to_erl(date)}
-  def dump(:time, time),         do: {:ok, Ecto.Time.to_erl(time)}
-
   def dump({:array, type}, value) do
     array(type, value, &dump/2, [])
   end
@@ -311,10 +262,6 @@ defmodule Ecto.Type do
   """
   @spec load(t, term) :: {:ok, term} | :error
   def load(_type, nil), do: {:ok, nil}
-
-  def load(:datetime, datetime), do: {:ok, Ecto.DateTime.from_erl(datetime)}
-  def load(:date, date),         do: {:ok, Ecto.Date.from_erl(date)}
-  def load(:time, time),         do: {:ok, Ecto.Time.from_erl(time)}
 
   def load({:array, type}, value) do
     array(type, value, &load/2, [])
@@ -520,9 +467,9 @@ defmodule Ecto.Type do
   defp of_basic_type?(binary, term) when binary in ~w(binary uuid string)a, do: is_binary(term)
 
   defp of_basic_type?(:decimal, %Decimal{}), do: true
-  defp of_basic_type?(:date, %Ecto.Date{}),  do: true
-  defp of_basic_type?(:time, %Ecto.Time{}),  do: true
-  defp of_basic_type?(:datetime, %Ecto.DateTime{}), do: true
+  defp of_basic_type?(:date, {_, _, _}),  do: true
+  defp of_basic_type?(:time, {_, _, _}),  do: true
+  defp of_basic_type?(:datetime, {{_, _, _}, {_, _, _}}), do: true
   defp of_basic_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
 
   defp array(type, [h|t], fun, acc) do

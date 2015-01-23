@@ -39,7 +39,7 @@ defmodule Ecto.Schema do
       used by `belongs_to` associations. Defaults to `:integer`;
 
     * `@timestamps_type` - configures the default timestamps type
-      used by `timestamps`. Defaults to `:datetime`;
+      used by `timestamps`. Defaults to `Ecto.DateTime`;
 
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
@@ -78,8 +78,12 @@ defmodule Ecto.Schema do
 
   ## Types and casting
 
-  When defining the schema, types need to be given. Those types are
-  specific to Ecto and must be one of:
+  When defining the schema, types need to be given. Types are split
+  in two categories, primitive types and custom types.
+
+  ### Primitive types
+
+  The primitive types are:
 
   Ecto type               | Elixir type             | Literal syntax in query
   :---------------------- | :---------------------- | :---------------------
@@ -91,13 +95,30 @@ defmodule Ecto.Schema do
   `:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
   `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
-  `:datetime`             | `%Ecto.DateTime{}`
-  `:date`                 | `%Ecto.Date{}`
-  `:time`                 | `%Ecto.Time{}`
+  `:datetime`             | `{{year, month, day}, {hour, min, sec}}`
+  `:date`                 | `{year, month, day}`
+  `:time`                 | `{hour, min, sec}`
 
-  Models can also have virtual fields by passing the `virtual: true`
-  option. These fields are not persisted to the database and can
-  optionally not be type checked by declaring type `:any`.
+  ### Custom types
+
+  Sometimes the primitive types in Ecto are too primitive. For example,
+  `:uuid` relies on the underling binary representation instead of
+  representing itself as a readable string.
+
+  For this reason, Ecto supports custom types. A custom type is a
+  module that implements the `Ecto.Type`. By default, Ecto provides
+  the following custom types:
+
+  Custom type             | Ecto type               | Elixir type
+  :---------------------- | :---------------------- | :---------------------
+  `Ecto.DateTime`         | `:datetime`             | `%Ecto.DateTime{}`
+  `Ecto.Date`             | `:date`                 | `%Ecto.Date{}`
+  `Ecto.Time`             | `:time`                 | `%Ecto.Time{}`
+
+  Read the `Ecto.Type` documentation if you want to implement your
+  own types.
+
+  ### Casting
 
   When directly manipulating the struct, it is the responsibility of
   the developer to ensure the field values have the proper type. For
@@ -116,12 +137,9 @@ defmodule Ecto.Schema do
   and properly cast external data. In fact, `Ecto.Changeset` and custom
   types provide a powerful combination to extend Ecto types and queries.
 
-  ## Custom types
-
-  Besides the types mentioned above, Ecto allows custom types to be
-  defined. A custom type is a module that implements the `Ecto.Type`
-  behaviour. Read the `Ecto.Type` documentation for more information
-  on how to implement them.
+  Finally, models can also have virtual fields by passing the
+  `virtual: true` option. These fields are not persisted to the database
+  and can optionally not be type checked by declaring type `:any`.
 
   ## Reflection
 
@@ -154,7 +172,7 @@ defmodule Ecto.Schema do
     quote do
       import Ecto.Schema, only: [schema: 2]
       @primary_key {:id, :integer, []}
-      @timestamps_type :datetime
+      @timestamps_type Ecto.DateTime
       @foreign_key_type :integer
     end
   end
@@ -237,7 +255,7 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:type` - the timestamps type, defaults to `:datetime`.
+    * `:type` - the timestamps type, defaults to `Ecto.DateTime`.
       Can also be set via the `@timestamps_type` attribute
     * `:inserted_at` - the name of the column for insertion times or `false`
     * `:updated_at` - the name of the column for update times or `false`

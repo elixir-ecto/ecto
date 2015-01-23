@@ -17,6 +17,7 @@
   * `Ecto.Adapters.Postgres.begin_test_transaction/2` has been renamed to `Ecto.Adapters.SQL.begin_test_transaction/2`
   * `Ecto.Adapters.Postgres.rollback_test_transaction/2` has been renamed to `Ecto.Adapters.SQL.rollback_test_transaction/2`
   * Mix tasks now expect the repository with the option `-r`, otherwise it defaults to the application based one
+  * `:datetime`, `:time` and `:date` will now return tuples in Ecto queries. To keep the previous behaviour, please replace the types in your schema with `Ecto.DateTime`, `Ecto.Time` and `Ecto.Date`
 
 ## v0.6.0 (2015-01-17)
 
