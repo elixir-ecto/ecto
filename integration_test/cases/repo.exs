@@ -42,7 +42,8 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Post{})
 
     # Integer
-    assert [1] = TestRepo.all(from Post, select: type(^"1", :integer))
+    assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
+    assert [1.0] = TestRepo.all(from Post, select: type(^1.0, :float))
 
     # UUID
     uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>

@@ -306,12 +306,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
-      "'\\x#{hex}'"
+      "'\\x#{hex}'::bytea"
     end
 
     defp expr(%Ecto.Query.Tagged{value: binary, type: :uuid}, _sources) when is_binary(binary) do
       hex = Base.encode16(binary)
-      "'#{hex}'"
+      "'#{hex}'::uuid"
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
