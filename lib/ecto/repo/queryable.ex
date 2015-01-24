@@ -127,6 +127,10 @@ defmodule Ecto.Repo.Queryable do
 
   defp to_select(select) do
     expr  = select.expr
+    # The planner always put the from as the first
+    # entry in the query, avoiding fetching it multiple
+    # times even if it appears multiple times in the query.
+    # So we always need to handle it specially.
     from? = match?([{:&, _, [0]}|_], select.fields)
     &to_select(&1, expr, from?)
   end
@@ -150,8 +154,23 @@ defmodule Ecto.Repo.Queryable do
     Enum.map_reduce(list, values, &transform_row(&1, from, &2))
   end
 
+  defp transform_row(%Ecto.Query.Tagged{tag: tag}, _from, values) do
+    [value|values] = values
+    {Ecto.Type.load!(tag, value), values}
+  end
+
   defp transform_row({:&, _, [0]}, from, values) do
     {from, values}
+  end
+
+  defp transform_row({{:., _, [{:&, _, [_]}, _]}, meta, []}, _from, values) do
+    [value|values] = values
+
+    if tag = Keyword.get(meta, :ecto_tag) do
+      {Ecto.Type.load!(tag, value), values}
+    else
+      {value, values}
+    end
   end
 
   defp transform_row(_, _from, values) do

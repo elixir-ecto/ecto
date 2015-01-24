@@ -49,12 +49,16 @@ defmodule Ecto.Integration.RepoTest do
     assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, :uuid))
 
     # Datetime
-    datetime = :erlang.universaltime
+    datetime = {{2014, 04, 17}, {14, 00, 00}}
     assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, :datetime))
 
-    # Custom
+    # Custom wrappers
     assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
-    assert [{_, _}] = TestRepo.all(from Post, select: type(^Ecto.DateTime.utc, Ecto.DateTime))
+
+    # Custom types
+    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
+    assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, Ecto.DateTime))
+    assert [%Ecto.DateTime{}] = TestRepo.all(from p in Post, select: p.inserted_at)
   end
 
   test "fetch empty" do

@@ -315,9 +315,9 @@ defmodule Ecto.Query.Planner do
     {inner, acc} = Macro.prewalk expr.expr, counter, fn
       {:^, meta, [param]}, acc ->
         {{:^, meta, [param + counter]}, acc + 1}
-      {{:., _, [{:&, _, [source]}, field]}, meta, []} = quoted, acc ->
-        validate_field(kind, query, expr, source, field, meta)
-        {quoted, acc}
+      {{:., _, [{:&, _, [source]}, field]} = dot, meta, []}, acc ->
+        tag = validate_field(kind, query, expr, source, field, meta)
+        {{dot, [ecto_tag: tag] ++ meta, []}, acc}
       other, acc ->
         {other, acc}
     end
@@ -330,10 +330,13 @@ defmodule Ecto.Query.Planner do
     if model do
       type = type!(kind, query, expr, model, field)
 
-      if (expected = meta[:ecto_type]) && !Ecto.Type.match?(type, expected) do
+      if (expected = Keyword.get(meta, :ecto_type)) &&
+         !Ecto.Type.match?(type, expected) do
         error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` does not type check. " <>
                             "It has type #{inspect type} but a type #{inspect expected} is expected"
       end
+
+      type
     end
   end
 
@@ -374,7 +377,7 @@ defmodule Ecto.Query.Planner do
 
     assocs = collect_assocs(assocs)
     fields = [{:&, [], [0]}|assocs] ++ fields
-    %{select | fields: fields, assocs: length(assocs)}
+    %{select | fields: fields}
   end
 
   defp collect_fields(query, {:&, _, [idx]} = expr, from?) do

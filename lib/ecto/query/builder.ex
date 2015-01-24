@@ -55,25 +55,25 @@ defmodule Ecto.Query.Builder do
 
   # tagged types
   def escape({:<<>>, _, _} = bin, _type, params, _vars) do
-    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :binary]}]}
+    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :binary, tag: :binary]}]}
     {expr, params}
   end
 
   def escape({:uuid, _, [bin]}, _type, params, _vars) when is_binary(bin) do
-    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
+    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid, tag: :uuid]}]}
     {expr, params}
   end
 
   def escape({:uuid, _, [{:<<>>, _, _} = bin]}, _type, params, _vars) do
-    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
+    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid, tag: :uuid]}]}
     {expr, params}
   end
 
-  def escape({:type, _, [{:^, _, [arg]}, type]}, _type, params, _vars) do
+  def escape({:type, _, [{:^, _, [arg]}, tag]}, _type, params, _vars) do
     index  = Map.size(params)
-    params = Map.put(params, index, {arg, type})
+    params = Map.put(params, index, {arg, tag})
 
-    map  = [value: {:{}, [], [:^, [], [index]]}, type: validate_type!(type)]
+    map  = [value: {:{}, [], [:^, [], [index]]}, type: validate_type!(tag), tag: tag]
     expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], map}]}
 
     {expr, params}
@@ -214,22 +214,17 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  @doc """
-  Called at runtime to extract the type.
-  """
-  def type!(type) do
-    if Ecto.Type.primitive?(type) do
-      type
-    else
-      type.type
-    end
+  defp validate_type!({:array, {:__aliases__, _, _}} = type) do
+    quote do: Ecto.Type.type(unquote(type))
   end
-
+  defp validate_type!({:array, atom} = type) when is_atom(atom) do
+    quote do: Ecto.Type.type(unquote(type))
+  end
   defp validate_type!({:__aliases__, _, _} = type) do
-    quote do: Ecto.Query.Builder.type!(unquote(type))
+    quote do: Ecto.Type.type(unquote(type))
   end
   defp validate_type!(type) when is_atom(type) do
-    quote do: Ecto.Query.Builder.type!(unquote(type))
+    quote do: Ecto.Type.type(unquote(type))
   end
   defp validate_type!(type) do
     error! "type/2 expects an atom or alias as second argument, got: `#{Macro.to_string(type)}"

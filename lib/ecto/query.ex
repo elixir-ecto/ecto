@@ -149,7 +149,7 @@ defmodule Ecto.Query do
 
   defmodule SelectExpr do
     @moduledoc false
-    defstruct [expr: nil, params: %{}, file: nil, line: nil, fields: [], assocs: 0]
+    defstruct [expr: nil, params: %{}, file: nil, line: nil, fields: []]
   end
 
   defmodule JoinExpr do
@@ -159,7 +159,10 @@ defmodule Ecto.Query do
 
   defmodule Tagged do
     @moduledoc false
-    defstruct [:value, :type]
+    # * value is the tagged value
+    # * tag is the directly tagged value, like Ecto.DateTime
+    # * type is the underlying tag type, like :datetime
+    defstruct [:value, :tag, :type]
   end
 
   alias Ecto.Query.Builder

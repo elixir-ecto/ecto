@@ -163,6 +163,33 @@ defmodule Ecto.Type do
   def primitive?(_), do: false
 
   @doc """
+  Retrieves the underlying type of a given type.
+
+      iex> type(:string)
+      :string
+      iex> type(Ecto.DateTime)
+      :datetime
+
+      iex> type({:array, :string})
+      {:array, :string}
+      iex> type({:array, Ecto.DateTime})
+      {:array, :datetime}
+
+  """
+  @spec type(t) :: t
+  def type(type)
+
+  def type({:array, type}), do: {:array, type(type)}
+
+  def type(type) do
+    if primitive?(type) do
+      type
+    else
+      type.type
+    end
+  end
+
+  @doc """
   Checks if a given type matches with a primitive type.
 
       iex> match?(:whatever, :any)

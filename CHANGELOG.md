@@ -6,11 +6,12 @@
   * Provide `Ecto.Adapters.SQL` with implementation to be shared by SQL adapters
   * Allow `disctinct: selector` in query syntax
   * Support `has_many :through` and `has_one :through` associations. `:through` can nest any type of association through n-levels
-  * Provide `type/2` in query syntax for casting any external value
+  * Provide `type/2` in query syntax for explicitly casting any external value
 
 * Bug fixes
-  * Fix a bug where more than one nameless join could not be given in a query
-  * Ensure duplicate preloads are loaded only once
+  * Fix a limitation where only one nameless join could be given to a query
+  * Ensure duplicated preloads are loaded only once
+  * Ensure `p.field` in select returns the proper field type
 
 * Backwards incompatible changes
   * `Ecto.Adapters.Postgres.query/4` has been renamed to `Ecto.Adapters.SQL.query/4`

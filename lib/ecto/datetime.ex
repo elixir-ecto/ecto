@@ -12,6 +12,11 @@ defmodule Ecto.Date do
   def type, do: :date
 
   @doc """
+  Dates are never blank.
+  """
+  def blank?(_), do: false
+
+  @doc """
   Casts to date.
   """
   def cast(%Ecto.Date{} = d), do: {:ok, d}
@@ -61,6 +66,11 @@ defmodule Ecto.Time do
   def type, do: :time
 
   @doc """
+  Times are never blank.
+  """
+  def blank?(_), do: false
+
+  @doc """
   Casts to time.
   """
   def cast(%Ecto.Time{} = t), do: {:ok, t}
@@ -108,6 +118,11 @@ defmodule Ecto.DateTime do
   The Ecto primitive type.
   """
   def type, do: :datetime
+
+  @doc """
+  Datetimes are never blank.
+  """
+  def blank?(_), do: false
 
   @doc """
   Casts to date time.

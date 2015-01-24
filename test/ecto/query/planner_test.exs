@@ -177,11 +177,13 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: tagged types" do
     {query, params} = from(Post, []) |> select([p], type(^"1", :integer)) |> prepare
-    assert query.select.expr == %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}}
+    assert query.select.expr ==
+           %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == %{0 => 1}
 
     {query, params} = from(Post, []) |> select([p], type(^"1", Custom.Permalink)) |> prepare
-    assert query.select.expr == %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}}
+    assert query.select.expr ==
+           %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: Custom.Permalink}
     assert params == %{0 => 1}
 
     assert_raise Ecto.QueryError, fn ->
@@ -221,11 +223,11 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [], []}]
+           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [ecto_tag: :string], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [], []}]
+           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [ecto_tag: :string], []}]
 
     query =
       from(Post, [])
@@ -234,7 +236,8 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0]}, {:&, [], [1]}, {{:., [], [{:&, [], [0]}, :title]}, [], []}]
+           [{:&, [], [0]}, {:&, [], [1]},
+            {{:., [], [{:&, [], [0]}, :title]}, [ecto_tag: :string], []}]
   end
 
   test "normalize: select without models" do

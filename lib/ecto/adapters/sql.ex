@@ -279,7 +279,7 @@ defmodule Ecto.Adapters.SQL do
 
           {#{inspect adapter}, ">= 0.0.0"}
 
-      And remember to recompile Ecto afterwards by cleaning the current install:
+      And remember to recompile Ecto afterwards by cleaning the current build:
 
           mix deps.clean ecto
       """
