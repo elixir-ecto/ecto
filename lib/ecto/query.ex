@@ -413,7 +413,7 @@ defmodule Ecto.Query do
 
   ## Expressions examples
 
-     City |> where([c], c.state == "Sweden")
+      City |> where([c], c.state == "Sweden")
 
   """
   defmacro where(query, binding, expr) do
