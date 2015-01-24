@@ -90,7 +90,7 @@ defmodule Ecto.Schema do
   `:integer`              | `integer`               | 1, 2, 3
   `:float`                | `float`                 | 1.0, 2.0, 3.0
   `:boolean`              | `boolean`               | true, false
-  `:string`               | UTF-8 encoded `binary`  | "hello"
+  `:string`               | UTF-8 encoded `string`  | "hello"
   `:binary`               | `binary`                | `<<int, int, int, ...>>`
   `:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
@@ -103,20 +103,22 @@ defmodule Ecto.Schema do
 
   Sometimes the primitive types in Ecto are too primitive. For example,
   `:uuid` relies on the underling binary representation instead of
-  representing itself as a readable string.
+  representing itself as a readable string. That's when `Ecto.UUID`
+  comes in.
 
-  For this reason, Ecto supports custom types. A custom type is a
-  module that implements the `Ecto.Type`. By default, Ecto provides
-  the following custom types:
+  `Ecto.UUID` is a  custom type. A custom type is a module that
+  implements the `Ecto.Type`. By default, Ecto provides the following
+  custom types:
 
   Custom type             | Ecto type               | Elixir type
   :---------------------- | :---------------------- | :---------------------
+  `Ecto.UUID`             | `:uuid`                 | "uuid-string"
   `Ecto.DateTime`         | `:datetime`             | `%Ecto.DateTime{}`
   `Ecto.Date`             | `:date`                 | `%Ecto.Date{}`
   `Ecto.Time`             | `:time`                 | `%Ecto.Time{}`
 
-  Read the `Ecto.Type` documentation if you want to implement your
-  own types.
+  Ecto allow developers to provide their own types too. Read the
+  `Ecto.Type` documentation for more information.
 
   ### Casting
 

@@ -7,6 +7,7 @@
   * Allow `disctinct: selector` in query syntax
   * Support `has_many :through` and `has_one :through` associations. `:through` can nest any type of association through n-levels
   * Provide `type/2` in query syntax for explicitly casting any external value
+  * Added `Ecto.UUID` type that handles UUIDs as strings
 
 * Bug fixes
   * Fix a limitation where only one nameless join could be given to a query

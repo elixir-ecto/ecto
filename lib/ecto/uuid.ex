@@ -1,6 +1,9 @@
 defmodule Ecto.UUID do
   @moduledoc """
-  An Ecto type for UUIDs.
+  An Ecto type for UUIDs strings.
+
+  In contrast to the `:uuid` type, the `Ecto.UUID` works
+  with UUID as strings instead of binary data.
   """
 
   @behaviour Ecto.Type
@@ -39,7 +42,7 @@ defmodule Ecto.UUID do
   def load(_), do: :error
 
   @doc """
-  Generates a version 4 (random) UUID
+  Generates a version 4 (random) UUID.
   """
   def generate do
     <<u0::48, _::4, u1::12, _::2, u2::62>> = :crypto.strong_rand_bytes(16)
@@ -47,6 +50,12 @@ defmodule Ecto.UUID do
   end
 
   defp encode(<<u0::32, u1::16, u2::16, u3::16, u4::48>>) do
-    :io_lib.format("~8.16.0B-~4.16.0B-~4.16.0B-~4.16.0B-~12.16.0B", [u0, u1, u2, u3, u4]) |> to_string
+    hex_pad(u0, 8) <> "-" <> hex_pad(u1, 4) <> "-" <> hex_pad(u2, 4) <>
+                      "-" <> hex_pad(u3, 4) <> "-" <> hex_pad(u4, 12)
+  end
+
+  defp hex_pad(hex, count) do
+    hex = Integer.to_string(hex, 16)
+    :binary.copy("0", count - byte_size(hex)) <> hex
   end
 end
