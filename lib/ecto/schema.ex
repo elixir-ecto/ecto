@@ -107,8 +107,8 @@ defmodule Ecto.Schema do
   comes in.
 
   `Ecto.UUID` is a  custom type. A custom type is a module that
-  implements the `Ecto.Type`. By default, Ecto provides the following
-  custom types:
+  implements the `Ecto.Type` behaviour. By default, Ecto provides the
+  following custom types:
 
   Custom type             | Ecto type               | Elixir type
   :---------------------- | :---------------------- | :---------------------
