@@ -56,7 +56,7 @@ defmodule Ecto.Adapters.Postgres do
       extra = extra <> " LC_COLLATE='#{lc_collate}'"
     end
 
-    if lc_ctype = Keyword.get(opts, :lc_ctype, "en_US.UTF-8") do
+    if lc_ctype = Keyword.get(opts, :lc_ctype) do
       extra = extra <> " LC_CTYPE='#{lc_ctype}'"
     end
 
