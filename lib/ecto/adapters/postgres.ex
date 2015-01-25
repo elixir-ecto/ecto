@@ -74,29 +74,21 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp run_with_psql(database, sql_command) do
-    command = ""
+    env = []
 
     if password = database[:password] do
-      command = ~s(PGPASSWORD=#{password} )
+      env = [{"PGPASSWORD", password}|env]
     end
 
     if username = database[:username] do
-      command = ~s(PGUSER=#{username} ) <> command
+      env = [{"PGUSER", username}|env]
     end
 
     if port = database[:port] do
-      command = ~s(PGPORT=#{port} ) <> command
+      env = [{"PGPORT", to_string(port)}|env]
     end
 
-    command =
-      command <>
-      ~s(psql --quiet ) <>
-      ~s(template1 ) <>
-      ~s(--host #{database[:hostname]} ) <>
-      ~s(-c "#{sql_command};" )
-
-    String.to_char_list(command)
-    |> :os.cmd
-    |> List.to_string
+    args = ["--quiet", "template1", "--host", database[:hostname], "-c", sql_command]
+    System.cmd("psql", args, env: env, stderr_to_stdout: true) |> elem(0)
   end
 end
