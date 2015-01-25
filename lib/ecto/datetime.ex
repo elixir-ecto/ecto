@@ -30,6 +30,19 @@ defmodule Ecto.DateTime.Util do
       unquote(hour) in 0..23 and unquote(min) in 0..59 and unquote(sec) in 0..59
     end
   end
+
+  @doc false
+  defmacro valid_millis(m1, m2, m3) do
+    quote do
+      unquote(m1) in ?0..?9 and unquote(m2) in ?0..?9 and unquote(m3) in ?0..?9
+    end
+  end
+
+  @doc false
+  def valid_rest(<<>>), do: true
+  def valid_rest(<< ?Z >>), do: true
+  def valid_rest(<< ?., m1, m2, m3, rest::binary >>) when valid_millis(m1, m2, m3), do: valid_rest(rest)
+  def valid_rest(_), do: false
 end
 
 defmodule Ecto.Date do
@@ -56,16 +69,16 @@ defmodule Ecto.Date do
   Casts to date.
   """
   def cast(<<year::32, ?-, month::16, ?-, day::16>>),
-    do: from_string_parts(to_li(year), to_i(month), to_i(day))
+    do: from_parts(to_li(year), to_i(month), to_i(day))
   def cast(%Ecto.Date{} = d),
     do: {:ok, d}
   def cast(_),
     do: :error
 
-  defp from_string_parts(year, month, day) when valid_date(year, month, day) do
+  defp from_parts(year, month, day) when valid_date(year, month, day) do
     {:ok, %Ecto.Date{year: year, month: month, day: day}}
   end
-  defp from_string_parts(_, _, _), do: :error
+  defp from_parts(_, _, _), do: :error
 
   @doc """
   Converts an `Ecto.Date` into a date triplet.
@@ -127,19 +140,18 @@ defmodule Ecto.Time do
   @doc """
   Casts to time.
   """
-  def cast(<<hour::16, ?:, min::16, ?:, sec::16, ?Z>>),
-    do: from_string_parts(to_i(hour), to_i(min),to_i(sec))
-  def cast(<<hour::16, ?:, min::16, ?:, sec::16>>),
-    do: from_string_parts(to_i(hour), to_i(min),to_i(sec))
+  def cast(<<hour::16, ?:, min::16, ?:, sec::16, rest::binary>>) do
+    if valid_rest(rest) do from_parts(to_i(hour), to_i(min), to_i(sec)) else :error end
+  end
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
   def cast(_),
     do: :error
 
-  defp from_string_parts(hour, min, sec) when valid_time(hour, min, sec) do
+  defp from_parts(hour, min, sec) when valid_time(hour, min, sec) do
     {:ok, %Ecto.Time{hour: hour, min: min, sec: sec}}
   end
-  defp from_string_parts(_, _, _), do: :error
+  defp from_parts(_, _, _), do: :error
 
   @doc """
   Converts an `Ecto.Time` into a time triplet.
@@ -201,22 +213,19 @@ defmodule Ecto.DateTime do
   @doc """
   Casts to date time.
   """
-  def cast(<<year::32, ?-, month::16, ?-, day::16, ?T, hour::16, ?:, min::16, ?:, sec::16, ?Z>>),
-    do: from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min),to_i(sec))
-  def cast(<<year::32, ?-, month::16, ?-, day::16, ?T, hour::16, ?:, min::16, ?:, sec::16>>),
-    do: from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min),to_i(sec))
-  def cast(<<year::32, ?-, month::16, ?-, day::16, ?\s, hour::16, ?:, min::16, ?:, sec::16>>),
-    do: from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min),to_i(sec))
+  def cast(<<year::32, ?-, month::16, ?-, day::16, sep, hour::16, ?:, min::16, ?:, sec::16, rest::binary>>) when sep in [?\s, ?T] do
+    if valid_rest(rest) do from_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min), to_i(sec)) else :error end
+  end
   def cast(%Ecto.DateTime{} = dt),
     do: {:ok, dt}
   def cast(_),
     do: :error
 
-  defp from_string_parts(year, month, day, hour, min, sec)
+  defp from_parts(year, month, day, hour, min, sec)
       when valid_date(year, month, day) and valid_time(hour, min, sec) do
     {:ok, %Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}}
   end
-  defp from_string_parts(_, _, _, _, _, _), do: :error
+  defp from_parts(_, _, _, _, _, _), do: :error
 
   @doc """
   Converts an `Ecto.DateTime` into a `{date, time}` tuple.
