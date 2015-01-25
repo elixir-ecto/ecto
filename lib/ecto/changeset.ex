@@ -67,8 +67,9 @@ defmodule Ecto.Changeset do
   keeping only the set of `required` and `optional` keys.
 
   This functions receives the `params` and cast them according
-  to the schema information from `model`. `params` are a map
-  with strings as key of potentially unsafe data.
+  to the schema information from `model`. `params` is a map of
+  string keys or a map with atom keys containing potentially
+  unsafe data.
 
   During casting, all valid parameters will have their key name
   converted to atoms and stored as a change in the changeset.
@@ -94,7 +95,8 @@ defmodule Ecto.Changeset do
       ...> end
 
   """
-  @spec cast(%{binary => term} | nil, Ecto.Model.t, [String.t | atom], [String.t | atom]) :: t
+  @spec cast(%{binary => term} | %{atom => term} | nil, Ecto.Model.t,
+             [String.t | atom], [String.t | atom]) :: t
   def cast(val, model, required, optional \\ [])
 
   def cast(nil, %{__struct__: _} = model, required, optional)
@@ -113,7 +115,8 @@ defmodule Ecto.Changeset do
 
   def cast(params, %{__struct__: module} = model, required, optional)
       when is_map(params) and is_list(required) and is_list(optional) do
-    types = module.__changeset__
+    params = convert_params(params)
+    types  = module.__changeset__
 
     {optional, {changes, errors}} =
       Enum.map_reduce(optional, {%{}, []},
@@ -177,6 +180,17 @@ defmodule Ecto.Changeset do
       :error ->
         :missing
     end
+  end
+
+  defp convert_params(params) do
+    :maps.fold fn
+      key, _value, _acc when is_binary(key) ->
+        throw :noop
+      key, value, acc when is_atom(key) ->
+        Map.put(acc, Atom.to_string(key), value)
+    end, %{}, params
+  catch
+    :noop -> params
   end
 
   defp error_on_blank(type, key, value, errors) do

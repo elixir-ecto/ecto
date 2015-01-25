@@ -18,12 +18,27 @@ defmodule Ecto.ChangesetTest do
 
   ## cast/4
 
-  test "cast/4: on success is valid" do
+  test "cast/4: with valid string keys" do
     params = %{"title" => "hello", "body" => "world"}
     struct = %Post{}
 
     changeset = cast(params, struct, ~w(title)a, ~w(body))
     assert changeset.params == params
+    assert changeset.model  == struct
+    assert changeset.changes == %{title: "hello", body: "world"}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == [:title]
+    assert changeset.optional == [:body]
+    assert changeset.valid?
+  end
+
+  test "cast/4: with valid atom keys" do
+    params = %{title: "hello", body: "world"}
+    struct = %Post{}
+
+    changeset = cast(params, struct, ~w(title)a, ~w(body))
+    assert changeset.params == %{"title" => "hello", "body" => "world"}
     assert changeset.model  == struct
     assert changeset.changes == %{title: "hello", body: "world"}
     assert changeset.errors == []

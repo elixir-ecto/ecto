@@ -9,6 +9,7 @@
   * Provide `type/2` in query syntax for explicitly casting any external value
   * Add `Ecto.UUID` type that handles UUIDs as strings
   * Add casting support to `Ecto.DateTime` and related types
+  * Allow a map with atom keys or a map with string keys in `Ecto.Changeset.cast/4`
 
 * Bug fixes
   * Fix a limitation where only one nameless join could be given to a query
