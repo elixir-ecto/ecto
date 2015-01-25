@@ -1,4 +1,40 @@
+defmodule Ecto.DateTime.Util do
+  @moduledoc false
+
+  @doc false
+  def zero_pad(val, count) do
+    num = Integer.to_string(val)
+    :binary.copy("0", count - byte_size(num)) <> num
+  end
+
+  @doc false
+  def to_i(string) do
+    String.to_integer(<<string::16>>)
+  end
+
+  @doc false
+  def to_li(string) do
+    String.to_integer(<<string::32>>)
+  end
+
+  @doc false
+  defmacro valid_date(_year, month, day) do 
+    quote do
+      (unquote(month) <= 12 and unquote(month) > 0 and unquote(day) <= 31 and unquote(day) > 0)
+    end
+  end
+
+  @doc false
+  defmacro valid_time(hour, min, sec) do 
+    quote do
+      (unquote(hour) <= 23 and unquote(min) <= 59 and unquote(sec) <= 59)
+    end
+  end
+end
+
 defmodule Ecto.Date do
+  import Ecto.DateTime.Util
+
   @moduledoc """
   An Ecto type for dates.
   """
@@ -19,8 +55,14 @@ defmodule Ecto.Date do
   @doc """
   Casts to date.
   """
+  def cast(<< year::32, ?-, month::16, ?-, day::16 >>), do: from_string_parts(to_li(year), to_i(month), to_i(day))
   def cast(%Ecto.Date{} = d), do: {:ok, d}
   def cast(_), do: :error
+
+  defp from_string_parts(year, month, day) when valid_date(year, month, day) do
+    {:ok, %Ecto.Date{year: year, month: month, day: day}}
+  end
+  defp from_string_parts(_, _, _), do: :error
 
   @doc """
   Converts an `Ecto.Date` into a date triplet.
@@ -34,6 +76,13 @@ defmodule Ecto.Date do
   """
   def load({year, month, day}) do
     {:ok, %Ecto.Date{year: year, month: month, day: day}}
+  end
+
+  @doc """
+  Converts `Ecto.Date` to its ISO 8601 string representation.
+  """
+  def to_string(%Ecto.Date{year: year, month: month, day: day}) do
+    zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2)
   end
 
   @doc """
@@ -53,6 +102,8 @@ defmodule Ecto.Date do
 end
 
 defmodule Ecto.Time do
+  import Ecto.DateTime.Util
+
   @moduledoc """
   An Ecto type for time.
   """
@@ -73,8 +124,15 @@ defmodule Ecto.Time do
   @doc """
   Casts to time.
   """
+  def cast(<< hour::16, ?:, min::16, ?:, sec::16, ?Z >>), do: from_string_parts(to_i(hour), to_i(min),to_i(sec))
+  def cast(<< hour::16, ?:, min::16, ?:, sec::16 >>), do: from_string_parts(to_i(hour), to_i(min),to_i(sec))
   def cast(%Ecto.Time{} = t), do: {:ok, t}
   def cast(_), do: :error
+
+  defp from_string_parts(hour, min, sec) when valid_time(hour, min, sec) do
+    {:ok, %Ecto.Time{hour: hour, min: min, sec: sec}}
+  end
+  defp from_string_parts(_, _, _), do: :error
 
   @doc """
   Converts an `Ecto.Time` into a time triplet.
@@ -88,6 +146,13 @@ defmodule Ecto.Time do
   """
   def load({hour, min, sec}) do
     {:ok, %Ecto.Time{hour: hour, min: min, sec: sec}}
+  end
+
+  @doc """
+  Converts `Ecto.Time` to its ISO 8601 without timezone string representation.
+  """
+  def to_string(%Ecto.Time{hour: hour, min: min, sec: sec}) do
+    zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
   end
 
   @doc """
@@ -107,6 +172,8 @@ defmodule Ecto.Time do
 end
 
 defmodule Ecto.DateTime do
+  import Ecto.DateTime.Util
+
   @moduledoc """
   An Ecto type for dates and times.
   """
@@ -127,8 +194,19 @@ defmodule Ecto.DateTime do
   @doc """
   Casts to date time.
   """
+  def cast(<< year::32, ?-, month::16, ?-, day::16, ?T, hour::16, ?:, min::16, ?:, sec::16, ?Z >>) do
+    from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min),to_i(sec))
+  end
+  def cast(<< year::32, ?-, month::16, ?-, day::16, ?T, hour::16, ?:, min::16, ?:, sec::16 >>) do
+    from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min),to_i(sec))
+  end
   def cast(%Ecto.DateTime{} = dt), do: {:ok, dt}
   def cast(_), do: :error
+
+  defp from_string_parts(year, month, day, hour, min, sec) when valid_date(year, month, day) and valid_time(hour, min, sec) do
+    {:ok, %Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}}
+  end
+  defp from_string_parts(_, _, _, _, _, _), do: :error
 
   @doc """
   Converts an `Ecto.DateTime` into a `{date, time}` tuple.
@@ -155,8 +233,16 @@ defmodule Ecto.DateTime do
   @doc """
   Converts `Ecto.DateTime` into an `Ecto.Time`.
   """
-  def to_time(%Ecto.Time{hour: hour, min: min, sec: sec}) do
+  def to_time(%Ecto.DateTime{hour: hour, min: min, sec: sec}) do
     %Ecto.Time{hour: hour, min: min, sec: sec}
+  end
+
+  @doc """
+  Converts `Ecto.DateTime` to its ISO 8601 UTC string representation.
+  """
+  def to_string(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}) do
+    zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2) <> "T" <> 
+    zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2) <> "Z"
   end
 
   @doc """
