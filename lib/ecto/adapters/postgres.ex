@@ -49,14 +49,14 @@ defmodule Ecto.Adapters.Postgres do
     lc_collate = Keyword.get(opts, :lc_collate, "en_US.UTF-8")
     lc_ctype   = Keyword.get(opts, :lc_ctype, "en_US.UTF-8")
 
-    output =
+    {output, status} =
       run_with_psql opts,
         "CREATE DATABASE " <> database <> " " <>
         "TEMPLATE=#{template} ENCODING='#{encoding}' " <>
         "LC_COLLATE='#{lc_collate}' LC_CTYPE='#{lc_ctype}'"
 
     cond do
-      String.length(output) == 0                 -> :ok
+      status == 0                                -> :ok
       String.contains?(output, "already exists") -> {:error, :already_up}
       true                                       -> {:error, output}
     end
@@ -64,31 +64,34 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def storage_down(opts) do
-    output = run_with_psql(opts, "DROP DATABASE #{opts[:database]}")
+    {output, status} = run_with_psql(opts, "DROP DATABASE #{opts[:database]}")
 
     cond do
-      String.length(output) == 0                 -> :ok
+      status == 0                                -> :ok
       String.contains?(output, "does not exist") -> {:error, :already_down}
       true                                       -> {:error, output}
     end
   end
 
   defp run_with_psql(database, sql_command) do
-    env = []
+    env =
+      if password = database[:password] do
+        [{"PGPASSWORD", password}]
+      else
+        []
+      end
 
-    if password = database[:password] do
-      env = [{"PGPASSWORD", password}|env]
-    end
+    args = []
 
     if username = database[:username] do
-      env = [{"PGUSER", username}|env]
+      args = ["-U", username|args]
     end
 
     if port = database[:port] do
-      env = [{"PGPORT", to_string(port)}|env]
+      args = ["-p", to_string(port)|args]
     end
 
-    args = ["--quiet", "template1", "--host", database[:hostname], "-c", sql_command]
-    System.cmd("psql", args, env: env, stderr_to_stdout: true) |> elem(0)
+    args = args ++ ["--quiet", "--host", database[:hostname], "-c", sql_command]
+    System.cmd("psql", args, env: env, stderr_to_stdout: true)
   end
 end
