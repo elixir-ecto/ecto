@@ -29,10 +29,10 @@ defmodule Ecto.Adapters.Postgres do
 
   ### Storage options
 
-    * `:template` - the template to create the database from (default: "template0")
     * `:encoding` - the database encoding (default: "UTF8")
-    * `:lc_collate` - the collation order (default: "en_US.UTF-8")
-    * `:lc_ctype` - the character classification (default: "en_US.UTF-8")
+    * `:template` - the template to create the database from
+    * `:lc_collate` - the collation order
+    * `:lc_ctype` - the character classification
 
   """
 
@@ -43,17 +43,26 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def storage_up(opts) do
-    database   = Keyword.fetch!(opts, :database)
-    template   = Keyword.get(opts, :template, "template0")
-    encoding   = Keyword.get(opts, :encoding, "UTF8")
-    lc_collate = Keyword.get(opts, :lc_collate, "en_US.UTF-8")
-    lc_ctype   = Keyword.get(opts, :lc_ctype, "en_US.UTF-8")
+    database = Keyword.fetch!(opts, :database)
+    encoding = Keyword.get(opts, :encoding, "UTF8")
+
+    extra = ""
+
+    if template = Keyword.get(opts, :template) do
+      extra = extra <> " TEMPLATE=#{template}"
+    end
+
+    if lc_collate = Keyword.get(opts, :lc_collate) do
+      extra = extra <> " LC_COLLATE='#{lc_collate}'"
+    end
+
+    if lc_ctype = Keyword.get(opts, :lc_ctype, "en_US.UTF-8") do
+      extra = extra <> " LC_CTYPE='#{lc_ctype}'"
+    end
 
     {output, status} =
-      run_with_psql opts,
-        "CREATE DATABASE " <> database <> " " <>
-        "TEMPLATE=#{template} ENCODING='#{encoding}' " <>
-        "LC_COLLATE='#{lc_collate}' LC_CTYPE='#{lc_ctype}'"
+      run_with_psql opts, "CREATE DATABASE " <> database <>
+                          " ENCODING='#{encoding}'" <> extra
 
     cond do
       status == 0                                -> :ok
