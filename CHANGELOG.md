@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.7.0-dev
+## v0.7.0 (2015-01-25)
 
 * Enhancements
   * Provide `Ecto.Adapters.SQL` with implementation to be shared by SQL adapters
