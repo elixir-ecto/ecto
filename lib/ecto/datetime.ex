@@ -127,10 +127,8 @@ defmodule Ecto.Time do
   @doc """
   Casts to time.
   """
-  def cast(<<hour::16, ?:, min::16, ?:, sec::16, ?Z>>),
-    do: from_string_parts(to_i(hour), to_i(min),to_i(sec))
-  def cast(<<hour::16, ?:, min::16, ?:, sec::16>>),
-    do: from_string_parts(to_i(hour), to_i(min),to_i(sec))
+  def cast(<<hour::16, ?:, min::16, ?:, sec::16, _::binary>>),
+    do: from_string_parts(to_i(hour), to_i(min), to_i(sec))
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
   def cast(_),
@@ -201,12 +199,10 @@ defmodule Ecto.DateTime do
   @doc """
   Casts to date time.
   """
-  def cast(<<year::32, ?-, month::16, ?-, day::16, ?T, hour::16, ?:, min::16, ?:, sec::16, ?Z>>),
-    do: from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min),to_i(sec))
-  def cast(<<year::32, ?-, month::16, ?-, day::16, ?T, hour::16, ?:, min::16, ?:, sec::16>>),
-    do: from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min),to_i(sec))
+  def cast(<<year::32, ?-, month::16, ?-, day::16, ?T, hour::16, ?:, min::16, ?:, sec::16, _::binary>>),
+    do: from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min), to_i(sec))
   def cast(<<year::32, ?-, month::16, ?-, day::16, ?\s, hour::16, ?:, min::16, ?:, sec::16>>),
-    do: from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min),to_i(sec))
+    do: from_string_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min), to_i(sec))
   def cast(%Ecto.DateTime{} = dt),
     do: {:ok, dt}
   def cast(_),

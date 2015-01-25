@@ -26,6 +26,7 @@ defmodule Ecto.TimeTest do
   test "cast" do
     assert Ecto.Time.cast(@test_time) == {:ok, @test_ecto_time}
     assert Ecto.Time.cast(@test_time <> "Z") == {:ok, @test_ecto_time}
+    assert Ecto.Time.cast(@test_time <> ".000Z") == {:ok, @test_ecto_time}
     assert Ecto.Date.cast("24:01:01") == :error
     assert Ecto.Date.cast("00:61:00") == :error
     assert Ecto.Date.cast("00:00:61") == :error
@@ -46,6 +47,7 @@ defmodule Ecto.DateTimeTest do
     assert Ecto.DateTime.cast("2015-01-23 23:50:07") == {:ok, @test_ecto_datetime}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07") == {:ok, @test_ecto_datetime}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07Z") == {:ok, @test_ecto_datetime}
+    assert Ecto.DateTime.cast("2015-01-23T23:50:07.000Z") == {:ok, @test_ecto_datetime}
   end
 
   test "to_string" do
