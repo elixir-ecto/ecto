@@ -7,7 +7,8 @@
   * Allow `disctinct: selector` in query syntax
   * Support `has_many :through` and `has_one :through` associations. `:through` can nest any type of association through n-levels
   * Provide `type/2` in query syntax for explicitly casting any external value
-  * Added `Ecto.UUID` type that handles UUIDs as strings
+  * Add `Ecto.UUID` type that handles UUIDs as strings
+  * Add casting support to `Ecto.DateTime` and related types
 
 * Bug fixes
   * Fix a limitation where only one nameless join could be given to a query
@@ -20,6 +21,7 @@
   * `Ecto.Adapters.Postgres.rollback_test_transaction/2` has been renamed to `Ecto.Adapters.SQL.rollback_test_transaction/2`
   * Mix tasks now expect the repository with the option `-r`, otherwise it defaults to the application based one
   * `:datetime`, `:time` and `:date` will now return tuples in Ecto queries. To keep the previous behaviour, please replace the types in your schema with `Ecto.DateTime`, `Ecto.Time` and `Ecto.Date`
+  * `Ecto.Changeset.validate_change/4` now passes the `field` and `value` to the callback function instead of only the `value`
 
 ## v0.6.0 (2015-01-17)
 
