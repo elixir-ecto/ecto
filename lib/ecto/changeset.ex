@@ -306,7 +306,7 @@ defmodule Ecto.Changeset do
     %{changes: changes, errors: errors} = changeset
 
     new =
-      if value = Map.get(changes, field), do: validator.(value), else: []
+      if value = Map.get(changes, field), do: validator.(field, value), else: []
 
     case new do
       []    -> changeset
@@ -336,7 +336,7 @@ defmodule Ecto.Changeset do
 
   """
   def validate_format(changeset, field, format) do
-    validate_change changeset, field, {:format, format}, fn value ->
+    validate_change changeset, field, {:format, format}, fn _, value ->
       if value =~ format, do: [], else: [{field, :format}]
     end
   end
@@ -350,7 +350,7 @@ defmodule Ecto.Changeset do
       validate_inclusion(changeset, :age, 0..99)
   """
   def validate_inclusion(changeset, field, data) do
-    validate_change changeset, field, {:inclusion, data}, fn value ->
+    validate_change changeset, field, {:inclusion, data}, fn _, value ->
       if value in data, do: [], else: [{field, :inclusion}]
     end
   end
@@ -364,7 +364,7 @@ defmodule Ecto.Changeset do
 
   """
   def validate_exclusion(changeset, field, data) do
-    validate_change changeset, field, {:exclusion, data}, fn value ->
+    validate_change changeset, field, {:exclusion, data}, fn _, value ->
       if value in data, do: [{field, :exclusion}], else: []
     end
   end
@@ -416,7 +416,7 @@ defmodule Ecto.Changeset do
   """
   def validate_unique(%{model: model} = changeset, field, opts) when is_list(opts) do
     repo = Keyword.fetch!(opts, :on)
-    validate_change changeset, field, :unique, fn value ->
+    validate_change changeset, field, :unique, fn _, value ->
       struct = model.__struct__
 
       query = from m in struct,
@@ -461,7 +461,7 @@ defmodule Ecto.Changeset do
 
   def validate_length(changeset, field, opts) when is_list(opts) do
     validate_change changeset, field, {:length, opts}, fn
-      value when is_binary(value) ->
+      _, value when is_binary(value) ->
         length = String.length(value)
         error  = ((is = opts[:is]) && wrong_length(length, is)) ||
                  ((min = opts[:min]) && too_short(length, min)) ||

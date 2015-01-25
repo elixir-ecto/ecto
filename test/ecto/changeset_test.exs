@@ -235,7 +235,7 @@ defmodule Ecto.ChangesetTest do
     # When valid
     changeset =
       changeset(%{"title" => "hello"})
-      |> validate_change(:title, fn "hello" -> [] end)
+      |> validate_change(:title, fn :title, "hello" -> [] end)
 
     assert changeset.valid?
     assert changeset.errors == []
@@ -243,7 +243,7 @@ defmodule Ecto.ChangesetTest do
     # When invalid
     changeset =
       changeset(%{"title" => "hello"})
-      |> validate_change(:title, fn "hello" -> [{:title, :oops}] end)
+      |> validate_change(:title, fn :title, "hello" -> [{:title, :oops}] end)
 
     refute changeset.valid?
     assert changeset.errors == [title: :oops]
@@ -251,7 +251,7 @@ defmodule Ecto.ChangesetTest do
     # When missing
     changeset =
       changeset(%{})
-      |> validate_change(:title, fn "hello" -> [{:title, :oops}] end)
+      |> validate_change(:title, fn :title, "hello" -> [{:title, :oops}] end)
 
     assert changeset.valid?
     assert changeset.errors == []
@@ -259,7 +259,7 @@ defmodule Ecto.ChangesetTest do
     # When nil
     changeset =
       changeset(%{"title" => nil})
-      |> validate_change(:title, fn "hello" -> [{:title, :oops}] end)
+      |> validate_change(:title, fn :title, "hello" -> [{:title, :oops}] end)
 
     assert changeset.valid?
     assert changeset.errors == []
@@ -268,7 +268,7 @@ defmodule Ecto.ChangesetTest do
   test "validate_change/4" do
     changeset =
       changeset(%{"title" => "hello"})
-      |> validate_change(:title, :oops, fn "hello" -> [{:title, :oops}] end)
+      |> validate_change(:title, :oops, fn :title, "hello" -> [{:title, :oops}] end)
 
     refute changeset.valid?
     assert changeset.errors == [title: :oops]
@@ -276,7 +276,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset =
       changeset(%{})
-      |> validate_change(:title, :oops, fn "hello" -> [{:title, :oops}] end)
+      |> validate_change(:title, :oops, fn :title, "hello" -> [{:title, :oops}] end)
 
     assert changeset.valid?
     assert changeset.errors == []
