@@ -69,6 +69,10 @@ defmodule Ecto.SchemaTest do
     assert Ecto.Model.primary_key(%SchemaModel{uuid: "hello"}) == "hello"
   end
 
+  test "has __state__ attribute" do
+    assert %SchemaModel{}.__state__ == :built
+  end
+
   ## Errors
 
   test "field name clash" do

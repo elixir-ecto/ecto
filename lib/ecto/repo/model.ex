@@ -95,6 +95,7 @@ defmodule Ecto.Repo.Model do
       {:ok, _} = adapter.delete(repo, source, pk_filter, opts)
 
       Callbacks.__apply__(model, :after_delete, changeset).model
+      |> Map.put(:__state__, :deleted)
     end
   end
 
