@@ -290,6 +290,22 @@ defmodule Ecto.Changeset do
     update_in changeset.changes, &Map.delete(&1, key)
   end
 
+  @doc """
+  Applies the changeset changes to its model
+
+  Note this operation is automatically performed on `Ecto.Repo.insert/2` and
+  `Ecto.Repo.update/2`, however this function is provided for
+  debugging and testing purposes.
+
+  ## Examples
+
+      apply(changeset)
+
+  """
+  def apply(%{changes: changes, model: model}) do
+    struct(model, changes)
+  end
+
   ## Validations
 
   @doc """

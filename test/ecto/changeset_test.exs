@@ -237,6 +237,17 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
+  test "apply/1" do
+    post = %Post{}
+    assert post.title == nil
+
+    changeset = changeset(%{"title" => "foo"}, post)
+    changed_post = apply(changeset)
+
+    assert changed_post.__struct__ == post.__struct__
+    assert changed_post.title == "foo"
+  end
+
   ## Validations
 
   test "add_error/3" do
