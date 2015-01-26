@@ -245,7 +245,9 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Adds a column when creating or altering a table.
+  Adds a column when creating or altering a table. In order to support database-specific types, in addition
+  to standard Ecto types, arbitrary atoms can be used for type names, for example, `:json` (if supported by the
+  underlying database.)
 
   ## Examples
 
@@ -255,6 +257,7 @@ defmodule Ecto.Migration do
 
       alter table(:posts) do
         add :summary, :text
+        add :object,  :json
       end
 
   ## Options
