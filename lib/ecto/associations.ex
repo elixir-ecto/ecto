@@ -218,7 +218,12 @@ defmodule Ecto.Associations.Has do
     assoc = Keyword.fetch!(opts, :queryable)
 
     unless is_atom(assoc) do
-      raise ArgumentError, "association queryable must be a module, got: #{inspect assoc}"
+      raise ArgumentError, "association queryable must be a model, got: #{inspect assoc}"
+    end
+
+    if opts[:through] do
+      raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
+                           "option, the model should not be passed as second argument"
     end
 
     %__MODULE__{
@@ -363,7 +368,7 @@ defmodule Ecto.Associations.BelongsTo do
     assoc = Keyword.fetch!(opts, :queryable)
 
     unless is_atom(assoc) do
-      raise ArgumentError, "association queryable must be a module, got: #{inspect assoc}"
+      raise ArgumentError, "association queryable must be a model, got: #{inspect assoc}"
     end
 
     %__MODULE__{

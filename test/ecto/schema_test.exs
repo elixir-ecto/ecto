@@ -256,6 +256,19 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  test "has_* expects a queryable" do
+    message = ~r"association queryable must be a model, got: 123"
+    assert_raise ArgumentError, message, fn ->
+      defmodule QueryableMisMatch do
+        use Ecto.Model
+
+        schema "assoc" do
+          has_many :posts, 123
+        end
+      end
+    end
+  end
+
   test "has_* through has to match an association on model" do
     message = ~r"model does not have the association :whatever used by association :posts"
     assert_raise ArgumentError, message, fn ->
@@ -264,6 +277,19 @@ defmodule Ecto.SchemaTest do
 
         schema "assoc" do
           has_many :posts, through: [:whatever, :works]
+        end
+      end
+    end
+  end
+
+  test "has_* through with model" do
+    message = ~r"When using the :through option, the model should not be passed as second argument"
+    assert_raise ArgumentError, message, fn ->
+      defmodule ModelThroughMatch do
+        use Ecto.Model
+
+        schema "assoc" do
+          has_many :posts, Post, through: [:whatever, :works]
         end
       end
     end
