@@ -43,8 +43,8 @@ defmodule Ecto.Model.CallbacksTest do
   end
 
   test "raises on bad callbacks" do
-    msg = "expected callback bad_callback/1 to return an Ecto.Changeset, got: nil"
-    assert_raise RuntimeError, msg, fn ->
+    msg = "expected `before_update` callbacks to return a Ecto.Changeset, got: nil"
+    assert_raise ArgumentError, msg, fn ->
       Ecto.Model.Callbacks.__apply__(SomeCallback, :before_update, %Ecto.Changeset{})
     end
   end
@@ -80,9 +80,8 @@ defmodule Ecto.Model.CallbacksTest do
       put_in(changeset.model.after, changeset.changes)
     end
 
-    def changeset_load(%{repo: MockRepo, model: model} = changeset) do
-      loaded = Map.put(model, :xyz, model.x <> model.y <> model.z)
-      %{changeset | model: loaded}
+    def changeset_load(model) do
+      Map.put(model, :xyz, model.x <> model.y <> model.z)
     end
   end
 

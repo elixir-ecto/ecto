@@ -112,9 +112,9 @@ defmodule Ecto.Repo.Model do
   defp struct_from_changeset!(%{model: struct}),
     do: struct
 
-  defp load_into_changeset(%{changes: changes, repo: repo} = changeset, model, return, values) do
+  defp load_into_changeset(%{changes: changes} = changeset, model, return, values) do
     update_in changeset.model,
-              &model.__schema__(:load, struct(&1, changes), return, values, repo)
+              &model.__schema__(:load, struct(&1, changes), return, values)
   end
 
   defp merge_into_changeset(model, struct, fields, changeset) do

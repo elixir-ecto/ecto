@@ -541,10 +541,9 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __load__(struct, fields, keys_or_idx, values, repo) do
+  def __load__(struct, fields, keys_or_idx, values) do
     loaded = do_load(struct, fields, keys_or_idx, values) |> Map.put(:__state__, :loaded)
-    changeset = %Ecto.Changeset{model: loaded, valid?: true, repo: repo}
-    Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, changeset).model
+    Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
   end
 
   @doc false
@@ -634,8 +633,8 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(fields) do
     quote do
-      def __schema__(:load, struct \\ __struct__(), fields_or_idx, values, repo) do
-        Ecto.Schema.__load__(struct, unquote(fields), fields_or_idx, values, repo)
+      def __schema__(:load, struct \\ __struct__(), fields_or_idx, values) do
+        Ecto.Schema.__load__(struct, unquote(fields), fields_or_idx, values)
       end
     end
   end
