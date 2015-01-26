@@ -36,7 +36,7 @@ defmodule Ecto.Changeset do
                              validations: [{atom, atom | {atom, [term]}}]}
 
   @doc """
-  Generetes a changeset to change the given `model`.
+  Generates a changeset to change the given `model`.
 
   This function is useful for directly changing the model,
   without performing casting nor validation.
