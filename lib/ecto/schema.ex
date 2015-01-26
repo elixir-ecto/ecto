@@ -196,6 +196,8 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
 
+      Module.put_attribute(__MODULE__, :struct_fields, {:__state__, :built})
+
       primary_key_field =
         case @primary_key do
           false ->
@@ -539,7 +541,12 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __load__(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
+  def __load__(struct, fields, keys_or_idx, values) do
+    do_load(struct, fields, keys_or_idx, values) |> Map.put(:__state__, :loaded)
+  end
+
+  @doc false
+  defp do_load(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
         value = Ecto.Type.load!(type, elem(values, idx))
@@ -547,7 +554,7 @@ defmodule Ecto.Schema do
     end) |> elem(0)
   end
 
-  def __load__(struct, fields, keys, values) when is_list(keys) and is_tuple(values) do
+  defp do_load(struct, fields, keys, values) when is_list(keys) and is_tuple(values) do
     Enum.reduce(keys, {struct, 0}, fn
       field, {acc, idx} ->
         value = Ecto.Type.load!(Keyword.fetch!(fields, field), elem(values, idx))
