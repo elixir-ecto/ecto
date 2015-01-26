@@ -33,4 +33,10 @@ defmodule Ecto.TypeTest do
     assert dump({:array, __MODULE__}, [nil]) == {:ok, [nil]}
     assert cast({:array, __MODULE__}, [nil]) == {:ok, [nil]}
   end
+
+  test "decimal casting" do
+    assert cast(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
+    assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
+    assert cast(:decimal, 1) == {:ok, Decimal.new("1")}
+  end
 end

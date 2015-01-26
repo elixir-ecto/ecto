@@ -418,7 +418,7 @@ defmodule Ecto.Type do
   defp do_cast(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
   defp do_cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
 
-  defp do_cast(:decimal, term) when is_binary(term) do
+  defp do_cast(:decimal, term) when is_binary(term) or is_number(term) do
     {:ok, Decimal.new(term)} # TODO: Add Decimal.parse/1
   rescue
     Decimal.Error -> :error
