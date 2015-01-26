@@ -267,7 +267,7 @@ defmodule Ecto.Model.Callbacks do
   Checks wether the callback is defined on the model,
   returns the data unchanged if it isn't.
 
-  This function expects a changeset as input.
+  This function expects a changeset for all callbacks except after_load as input.
 
   ## Examples
 
