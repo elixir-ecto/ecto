@@ -161,7 +161,7 @@ defmodule Ecto.Schema do
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
     from the database after every write (insert or update);
 
-  * `__schema__(:load, struct \\ __struct__(), fields_or_idx, values, repo)` - Loads a
+  * `__schema__(:load, struct \\ __struct__(), fields_or_idx, values)` - Loads a
     new model struct from a tuple of non-virtual field values starting at the given
     index or defined by the given fields;
 
