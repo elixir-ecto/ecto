@@ -142,7 +142,7 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
              %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
-  def query(repo, sql, params, opts) do
+  def query(repo, sql, params, opts \\ []) do
     opts = Keyword.put_new(opts, :timeout, @timeout)
 
     log(repo, {:query, sql}, opts, fn ->
