@@ -314,7 +314,7 @@ defmodule Ecto.Adapters.SQL do
   def all(repo, sql, query, params, opts) do
     %{rows: rows} = query(repo, sql, Map.values(params), opts)
     fields = extract_fields(query.select.fields, query.sources)
-    Enum.map(rows, &process_row(&1, fields))
+    Enum.map(rows, &process_row(&1, fields, repo))
   end
 
   @doc false
@@ -345,7 +345,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp process_row(row, fields) do
+  defp process_row(row, fields, repo) do
     Enum.map_reduce(fields, 0, fn
       {1, nil}, idx ->
         {elem(row, idx), idx + 1}
@@ -353,7 +353,7 @@ defmodule Ecto.Adapters.SQL do
         if all_nil?(row, idx, count) do
           {nil, idx + count}
         else
-          {model.__schema__(:load, idx, row), idx + count}
+          {model.__schema__(:load, idx, row, repo), idx + count}
         end
     end) |> elem(0)
   end

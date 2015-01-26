@@ -161,7 +161,7 @@ defmodule Ecto.Schema do
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
     from the database after every write (insert or update);
 
-  * `__schema__(:load, struct \\ __struct__(), fields_or_idx, values)` - Loads a
+  * `__schema__(:load, struct \\ __struct__(), fields_or_idx, values, repo)` - Loads a
     new model struct from a tuple of non-virtual field values starting at the given
     index or defined by the given fields;
 
@@ -541,8 +541,10 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __load__(struct, fields, keys_or_idx, values) do
-    do_load(struct, fields, keys_or_idx, values) |> Map.put(:__state__, :loaded)
+  def __load__(struct, fields, keys_or_idx, values, repo) do
+    loaded = do_load(struct, fields, keys_or_idx, values) |> Map.put(:__state__, :loaded)
+    changeset = %Ecto.Changeset{model: loaded, valid?: true, repo: repo}
+    Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, changeset).model
   end
 
   @doc false
@@ -632,8 +634,8 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(fields) do
     quote do
-      def __schema__(:load, struct \\ __struct__(), fields_or_idx, values) do
-        Ecto.Schema.__load__(struct, unquote(fields), fields_or_idx, values)
+      def __schema__(:load, struct \\ __struct__(), fields_or_idx, values, repo) do
+        Ecto.Schema.__load__(struct, unquote(fields), fields_or_idx, values, repo)
       end
     end
   end

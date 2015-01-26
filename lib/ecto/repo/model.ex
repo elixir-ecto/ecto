@@ -28,7 +28,7 @@ defmodule Ecto.Repo.Model do
 
       {:ok, values} = adapter.insert(repo, source, changes, return, opts)
 
-      changeset = load_into_changeset(changeset, model, return, values)
+      changeset = load_into_changeset(changeset, model, return, values, repo)
       Callbacks.__apply__(model, :after_insert, changeset).model
     end
   end
@@ -65,7 +65,7 @@ defmodule Ecto.Repo.Model do
 
       {:ok, values} = adapter.update(repo, source, pk_filter, changes, return, opts)
 
-      changeset = load_into_changeset(changeset, model, return, values)
+      changeset = load_into_changeset(changeset, model, return, values, repo)
       Callbacks.__apply__(model, :after_update, changeset).model
     end
   end
@@ -112,9 +112,9 @@ defmodule Ecto.Repo.Model do
   defp struct_from_changeset!(%{model: struct}),
     do: struct
 
-  defp load_into_changeset(%{changes: changes} = changeset, model, return, values) do
+  defp load_into_changeset(%{changes: changes} = changeset, model, return, values, repo) do
     update_in changeset.model,
-              &model.__schema__(:load, struct(&1, changes), return, values)
+              &model.__schema__(:load, struct(&1, changes), return, values, repo)
   end
 
   defp merge_into_changeset(model, struct, fields, changeset) do

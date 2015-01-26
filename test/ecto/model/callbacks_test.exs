@@ -60,6 +60,7 @@ defmodule Ecto.Model.CallbacksTest do
       field :z, :string, default: ""
       field :before, :any, virtual: true
       field :after,  :any, virtual: true
+      field :xyz, :string, virtual: true
     end
 
     before_insert __MODULE__, :changeset_before
@@ -68,6 +69,7 @@ defmodule Ecto.Model.CallbacksTest do
     after_update  __MODULE__, :changeset_after
     before_delete __MODULE__, :changeset_before
     after_delete  __MODULE__, :changeset_after
+    after_load    __MODULE__, :changeset_load
 
     def changeset_before(%{repo: MockRepo} = changeset) do
       put_in(changeset.model.before, changeset.changes)
@@ -76,6 +78,11 @@ defmodule Ecto.Model.CallbacksTest do
 
     def changeset_after(%{repo: MockRepo} = changeset) do
       put_in(changeset.model.after, changeset.changes)
+    end
+
+    def changeset_load(%{repo: MockRepo, model: model} = changeset) do
+      loaded = Map.put(model, :xyz, model.x <> model.y <> model.z)
+      %{changeset | model: loaded}
     end
   end
 
@@ -135,5 +142,11 @@ defmodule Ecto.Model.CallbacksTest do
     assert model.x == "x"
     assert model.y == "y"
     assert model.z == ""
+  end
+
+  test "after_load with model" do
+    model = %AllCallback{id: 1, x: "x", y: "y", z: "z"}
+    model = MockRepo.insert model
+    assert model.xyz == "xyz"
   end
 end

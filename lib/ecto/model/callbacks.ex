@@ -214,6 +214,32 @@ defmodule Ecto.Model.Callbacks do
   defmacro after_delete(module, function, args),
     do: register_callback(:after_delete, module, function, args)
 
+  @doc """
+  Adds a callback that is invoked after the model is loaded
+  from the repository.
+
+  The callback receives an `Ecto.Changeset` with the model
+  stored in it. The callback must return a changeset.
+
+  The callback can be useful, for example, to resolve the 
+  value of virtual fields. Since this will be invoked
+  every time the model is loaded, the callback must execute
+  very quickly to avoid drastic perfomance hits.
+
+  ## Example
+
+      after_load Post, :set_permalink
+
+  """
+  defmacro after_load(function, args \\ []),
+    do: register_callback(:after_load, function, args, [])
+
+  @doc """
+  Same as `after_load/2` but with arguments.
+  """
+  defmacro after_load(module, function, args),
+    do: register_callback(:after_load, module, function, args)
+
   defp register_callback(event, module, function, args) do
     quote bind_quoted: binding() do
       callback = {module, function, args}
