@@ -14,9 +14,9 @@ defmodule Ecto.UUID do
   def type, do: :uuid
 
   @doc """
-  UUIDs are never blank.
+  UUIDs are blank when given as strings and the string is blank.
   """
-  def blank?(_), do: false
+  defdelegate blank?(value), to: Ecto.Type
 
   @doc """
   Casts to UUID.

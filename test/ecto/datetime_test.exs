@@ -15,6 +15,11 @@ defmodule Ecto.DateTest do
   test "to_string" do
     assert Ecto.Date.to_string(@test_ecto_date) == @test_date
   end
+
+  test "blank?" do
+    assert Ecto.Date.blank?("")
+    refute Ecto.Date.blank?(%Ecto.Date{})
+  end
 end
 
 defmodule Ecto.TimeTest do
@@ -38,6 +43,11 @@ defmodule Ecto.TimeTest do
   test "to_string" do
     assert Ecto.Time.to_string(@test_ecto_time) == @test_time
   end
+
+  test "blank?" do
+    assert Ecto.Time.blank?("")
+    refute Ecto.Time.blank?(%Ecto.Time{})
+  end
 end
 
 defmodule Ecto.DateTimeTest do
@@ -56,5 +66,10 @@ defmodule Ecto.DateTimeTest do
 
   test "to_string" do
     assert Ecto.DateTime.to_string(@test_ecto_datetime) == (@test_datetime <> "Z")
+  end
+
+  test "blank?" do
+    assert Ecto.DateTime.blank?("")
+    refute Ecto.DateTime.blank?(%Ecto.DateTime{})
   end
 end

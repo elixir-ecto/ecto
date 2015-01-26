@@ -1,37 +1,39 @@
 defmodule Ecto.TypeTest do
   use ExUnit.Case, async: true
 
+  defmodule Custom do
+    @behaviour Ecto.Type
+    def type,      do: :custom
+    def load(_),   do: {:ok, :load}
+    def dump(_),   do: {:ok, :dump}
+    def cast(_),   do: {:ok, :cast}
+    def blank?(_), do: false
+  end
+
   import Kernel, except: [match?: 2], warn: false
   import Ecto.Type
   doctest Ecto.Type
 
-  @behaviour Ecto.Type
-  def type,      do: :custom
-  def load(_),   do: {:ok, :load}
-  def dump(_),   do: {:ok, :dump}
-  def cast(_),   do: {:ok, :cast}
-  def blank?(_), do: false
-
   test "custom types" do
-    assert load(__MODULE__, "foo") == {:ok, :load}
-    assert dump(__MODULE__, "foo") == {:ok, :dump}
-    assert cast(__MODULE__, "foo") == {:ok, :cast}
-    refute blank?(__MODULE__, "foo")
+    assert load(Custom, "foo") == {:ok, :load}
+    assert dump(Custom, "foo") == {:ok, :dump}
+    assert cast(Custom, "foo") == {:ok, :cast}
+    refute blank?(Custom, "foo")
 
-    assert load(__MODULE__, nil) == {:ok, nil}
-    assert dump(__MODULE__, nil) == {:ok, nil}
-    assert cast(__MODULE__, nil) == {:ok, nil}
-    assert blank?(__MODULE__, nil)
+    assert load(Custom, nil) == {:ok, nil}
+    assert dump(Custom, nil) == {:ok, nil}
+    assert cast(Custom, nil) == {:ok, nil}
+    assert blank?(Custom, nil)
   end
 
   test "custom types with array" do
-    assert load({:array, __MODULE__}, ["foo"]) == {:ok, [:load]}
-    assert dump({:array, __MODULE__}, ["foo"]) == {:ok, [:dump]}
-    assert cast({:array, __MODULE__}, ["foo"]) == {:ok, [:cast]}
+    assert load({:array, Custom}, ["foo"]) == {:ok, [:load]}
+    assert dump({:array, Custom}, ["foo"]) == {:ok, [:dump]}
+    assert cast({:array, Custom}, ["foo"]) == {:ok, [:cast]}
 
-    assert load({:array, __MODULE__}, [nil]) == {:ok, [nil]}
-    assert dump({:array, __MODULE__}, [nil]) == {:ok, [nil]}
-    assert cast({:array, __MODULE__}, [nil]) == {:ok, [nil]}
+    assert load({:array, Custom}, [nil]) == {:ok, [nil]}
+    assert dump({:array, Custom}, [nil]) == {:ok, [nil]}
+    assert cast({:array, Custom}, [nil]) == {:ok, [nil]}
   end
 
   test "decimal casting" do

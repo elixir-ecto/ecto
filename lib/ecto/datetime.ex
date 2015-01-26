@@ -18,31 +18,26 @@ defmodule Ecto.DateTime.Util do
   end
 
   @doc false
-  defmacro valid_date(_year, month, day) do
+  defmacro is_date(_year, month, day) do
     quote do
       unquote(month) in 1..12 and unquote(day) in 1..31
     end
   end
 
   @doc false
-  defmacro valid_time(hour, min, sec) do
+  defmacro is_time(hour, min, sec) do
     quote do
       unquote(hour) in 0..23 and unquote(min) in 0..59 and unquote(sec) in 0..59
     end
   end
 
   @doc false
-  defmacro valid_millis(m1, m2, m3) do
-    quote do
-      unquote(m1) in ?0..?9 and unquote(m2) in ?0..?9 and unquote(m3) in ?0..?9
-    end
-  end
-
-  @doc false
-  def valid_rest(<<>>), do: true
-  def valid_rest(<< ?Z >>), do: true
-  def valid_rest(<< ?., m1, m2, m3, rest::binary >>) when valid_millis(m1, m2, m3), do: valid_rest(rest)
-  def valid_rest(_), do: false
+  def valid_rest?(<<>>), do: true
+  def valid_rest?(<<?Z>>), do: true
+  def valid_rest?(<<?., m1, m2, m3, rest::binary>>)
+    when m1 in ?0..?9 and m2 in ?0..?9 and m3 in ?0..?9,
+    do: valid_rest?(rest)
+  def valid_rest?(_), do: false
 end
 
 defmodule Ecto.Date do
@@ -61,9 +56,9 @@ defmodule Ecto.Date do
   def type, do: :date
 
   @doc """
-  Dates are never blank.
+  Dates are blank when given as strings and the string is blank.
   """
-  def blank?(_), do: false
+  defdelegate blank?(value), to: Ecto.Type
 
   @doc """
   Casts to date.
@@ -75,7 +70,7 @@ defmodule Ecto.Date do
   def cast(_),
     do: :error
 
-  defp from_parts(year, month, day) when valid_date(year, month, day) do
+  defp from_parts(year, month, day) when is_date(year, month, day) do
     {:ok, %Ecto.Date{year: year, month: month, day: day}}
   end
   defp from_parts(_, _, _), do: :error
@@ -133,22 +128,22 @@ defmodule Ecto.Time do
   def type, do: :time
 
   @doc """
-  Times are never blank.
+  Times are blank when given as strings and the string is blank.
   """
-  def blank?(_), do: false
+  defdelegate blank?(value), to: Ecto.Type
 
   @doc """
   Casts to time.
   """
   def cast(<<hour::16, ?:, min::16, ?:, sec::16, rest::binary>>) do
-    if valid_rest(rest) do from_parts(to_i(hour), to_i(min), to_i(sec)) else :error end
+    if valid_rest?(rest), do: from_parts(to_i(hour), to_i(min), to_i(sec)), else: :error
   end
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
   def cast(_),
     do: :error
 
-  defp from_parts(hour, min, sec) when valid_time(hour, min, sec) do
+  defp from_parts(hour, min, sec) when is_time(hour, min, sec) do
     {:ok, %Ecto.Time{hour: hour, min: min, sec: sec}}
   end
   defp from_parts(_, _, _), do: :error
@@ -206,15 +201,21 @@ defmodule Ecto.DateTime do
   def type, do: :datetime
 
   @doc """
-  Datetimes are never blank.
+  Datetimes are blank when given as strings and the string is blank.
   """
-  def blank?(_), do: false
+  defdelegate blank?(value), to: Ecto.Type
 
   @doc """
   Casts to date time.
   """
-  def cast(<<year::32, ?-, month::16, ?-, day::16, sep, hour::16, ?:, min::16, ?:, sec::16, rest::binary>>) when sep in [?\s, ?T] do
-    if valid_rest(rest) do from_parts(to_li(year), to_i(month), to_i(day), to_i(hour), to_i(min), to_i(sec)) else :error end
+  def cast(<<year::32, ?-, month::16, ?-, day::16, sep,
+             hour::16, ?:, min::16, ?:, sec::16, rest::binary>>) when sep in [?\s, ?T] do
+    if valid_rest?(rest) do
+      from_parts(to_li(year), to_i(month), to_i(day),
+                 to_i(hour), to_i(min), to_i(sec))
+    else
+      :error
+    end
   end
   def cast(%Ecto.DateTime{} = dt),
     do: {:ok, dt}
@@ -222,7 +223,7 @@ defmodule Ecto.DateTime do
     do: :error
 
   defp from_parts(year, month, day, hour, min, sec)
-      when valid_date(year, month, day) and valid_time(hour, min, sec) do
+      when is_date(year, month, day) and is_time(hour, min, sec) do
     {:ok, %Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}}
   end
   defp from_parts(_, _, _, _, _, _), do: :error

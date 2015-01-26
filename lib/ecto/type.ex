@@ -478,10 +478,28 @@ defmodule Ecto.Type do
     end
   end
 
-  # Those are blank regardless of the primitive type.
-  defp blank?(" " <> t), do: blank?(t)
-  defp blank?(""), do: true
-  defp blank?(_),  do: false
+  @doc ~S"""
+  Checks if a value is blank.
+
+  This is an implementation that can be used by custom types,
+  typically tupes that are attempting to cast values from
+  strings.
+
+  Strings made only of spaces are considered blank.
+
+      iex> blank?("")
+      true
+      iex> blank?("foo")
+      false
+      iex> blank?("   ")
+      true
+      iex> blank?("\t")
+      true
+
+  """
+  def blank?(""), do: true
+  def blank?(string) when is_binary(string), do: String.lstrip(string) == ""
+  def blank?(_), do: false
 
   ## Helpers
 

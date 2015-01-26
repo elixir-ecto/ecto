@@ -23,4 +23,9 @@ defmodule Ecto.UUIDTest do
   test "generate" do
     assert << _::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96 >> = Ecto.UUID.generate
   end
+
+  test "blank?" do
+    assert Ecto.UUID.blank?("")
+    refute Ecto.UUID.blank?("hello")
+  end
 end
