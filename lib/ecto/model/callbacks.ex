@@ -214,6 +214,32 @@ defmodule Ecto.Model.Callbacks do
   defmacro after_delete(module, function, args),
     do: register_callback(:after_delete, module, function, args)
 
+  @doc """
+  Adds a callback that is invoked after the model is loaded
+  from the repository.
+
+  The callback receives the model being loaded and must
+  return a model.
+
+  The callback can be useful, for example, to resolve the 
+  value of virtual fields. Since this will be invoked
+  every time the model is loaded, the callback must execute
+  very quickly to avoid drastic perfomance hits.
+
+  ## Example
+
+      after_load Post, :set_permalink
+
+  """
+  defmacro after_load(function, args \\ []),
+    do: register_callback(:after_load, function, args, [])
+
+  @doc """
+  Same as `after_load/2` but with arguments.
+  """
+  defmacro after_load(module, function, args),
+    do: register_callback(:after_load, module, function, args)
+
   defp register_callback(event, module, function, args) do
     quote bind_quoted: binding() do
       callback = {module, function, args}
@@ -223,30 +249,16 @@ defmodule Ecto.Model.Callbacks do
 
   defp compile_callback({function, args, []}, acc)
       when is_atom(function) and is_list(args) do
-    error = callback_error("#{function}/#{length(args)+1}")
-
     quote do
-      case unquote(function)(unquote(acc), unquote_splicing(Macro.escape(args))) do
-        %Ecto.Changeset{} = changeset -> changeset
-        other -> raise unquote(error) <> inspect(other)
-      end
+      unquote(function)(unquote(acc), unquote_splicing(Macro.escape(args)))
     end
   end
 
   defp compile_callback({module, function, args}, acc)
       when is_atom(module) and is_atom(function) and is_list(args) do
-    error = callback_error("#{inspect module}.#{function}/#{length(args)+1}")
-
     quote do
-      case unquote(module).unquote(function)(unquote(acc), unquote_splicing(Macro.escape(args))) do
-        %Ecto.Changeset{} = changeset -> changeset
-        other -> raise unquote(error) <> inspect(other)
-      end
+      unquote(module).unquote(function)(unquote(acc), unquote_splicing(Macro.escape(args)))
     end
-  end
-
-  defp callback_error(callback) do
-    "expected callback #{callback} to return an Ecto.Changeset, got: "
   end
 
   @doc """
@@ -255,7 +267,7 @@ defmodule Ecto.Model.Callbacks do
   Checks wether the callback is defined on the model,
   returns the data unchanged if it isn't.
 
-  This function expects a changeset as input.
+  This function expects a changeset for all callbacks except after_load as input.
 
   ## Examples
 
@@ -264,11 +276,17 @@ defmodule Ecto.Model.Callbacks do
       %Ecto.Changeset{...}
 
   """
-  def __apply__(module, callback, %Ecto.Changeset{} = changeset) do
+  def __apply__(module, callback, %{__struct__: expected} = data) do
     if function_exported?(module, callback, 1) do
-      apply(module, callback, [changeset])
+      case apply(module, callback, [data]) do
+        %{__struct__: ^expected} = data ->
+          data
+        other ->
+          raise ArgumentError,
+            "expected `#{callback}` callbacks to return a #{inspect expected}, got: #{inspect other}"
+      end
     else
-      changeset
+      data
     end
   end
 end
