@@ -1,5 +1,21 @@
 # Changelog
 
+## v0.7.1-dev
+
+* Enhancements
+  * Support `after_load/2` and `after_load/3` callbacks
+  * Support casting floats and integers in addition to string in `Decimal`
+  * Add `__state__` field that to every schema that is either `:built`, `:loaded` or `:deleted`
+  * Add `Ecto.Changeset.apply/1`
+  * Support times with miliseconds in `Ecto.Time` and `Ecto.DateTime`
+
+* Bug fixes
+  * Do not accept default, null or primary key options in modify
+  * Ensure `Ecto.Model.assoc/2` with `has_* :through` has the association as source in from
+  * Properly implement `blank?` for `Ecto.UUID` and `Ecto.DateTime`
+  * Ensure `psql` actually works on Windows and does not set locale data by default
+  * Make options optional in `Ecto.Adapters.SQL.query/4`
+
 ## v0.7.0 (2015-01-25)
 
 * Enhancements
