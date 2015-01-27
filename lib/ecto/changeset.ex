@@ -99,6 +99,10 @@ defmodule Ecto.Changeset do
              [String.t | atom], [String.t | atom]) :: t
   def cast(val, model, required, optional \\ [])
 
+  def cast(%{__struct__: _} = params, _model, _required, _optional) do
+    raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
+  end
+
   def cast(nil, %{__struct__: _} = model, required, optional)
       when is_list(required) and is_list(optional) do
     to_atom = fn
@@ -113,7 +117,7 @@ defmodule Ecto.Changeset do
                     changes: %{}, required: required, optional: optional}
   end
 
-  def cast(params, %{__struct__: module} = model, required, optional)
+  def cast(%{} = params, %{__struct__: module} = model, required, optional)
       when is_map(params) and is_list(required) and is_list(optional) do
     params = convert_params(params)
     types  = module.__changeset__

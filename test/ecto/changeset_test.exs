@@ -152,6 +152,16 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "cast/4: fails on bad arguments" do
+    assert_raise ArgumentError, ~r"expected params to be a map, got struct", fn ->
+      cast(%Post{}, %Post{}, ~w(), ~w(unknown))
+    end
+
+    assert_raise FunctionClauseError, fn ->
+      cast([], %Post{}, ~w(), ~w(unknown))
+    end
+  end
+
   ## Changeset functions
 
   test "change/2" do
