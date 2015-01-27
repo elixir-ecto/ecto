@@ -97,9 +97,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
+      join  = join(query.joins, sources)
       where = where(query.wheres, sources)
-      where = if where, do: " " <> where, else: ""
-      "DELETE FROM #{quote_name(table)} AS #{name}" <> where
+
+      assemble(["DELETE FROM #{quote_name(table)} AS #{name}", join, where])
     end
 
     def insert(table, fields, returning) do
