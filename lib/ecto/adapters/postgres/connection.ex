@@ -432,7 +432,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp column_change({:modify, name, type, opts}) do
-      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts), column_options(opts)])
+      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts)])
     end
 
     defp column_change({:remove, name}), do: "DROP COLUMN #{quote_name(name)}"

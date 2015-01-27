@@ -287,7 +287,7 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Modifies a column when altering a table.
+  Modifies the type of column when altering a table.
 
   ## Examples
 
@@ -297,7 +297,9 @@ defmodule Ecto.Migration do
 
   ## Options
 
-  Accepts the same options as `add/3`.
+    * `:size` - the size of the type (for example the numbers of characters). Default is no size.
+    * `:precision` - the precision for a numberic type. Default is no precision.
+    * `:scale` - the scale of a numberic type. Default is 0 scale.
   """
   def modify(column, type, opts \\ []) when is_atom(column) do
     Runner.subcommand {:modify, column, type, opts}
