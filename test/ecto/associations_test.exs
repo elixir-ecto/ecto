@@ -108,7 +108,7 @@ defmodule Ecto.AssociationsTest do
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
            inspect(from c in Comment, join: p in Post, on: c.post_id == p.id,
-                        where: p.author_id in ^[1, 2, 3], distinct: c.id, select: c)
+                        where: p.author_id in ^[1, 2, 3], distinct: c, select: c)
   end
 
   test "has many through many to one" do
@@ -119,7 +119,7 @@ defmodule Ecto.AssociationsTest do
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
            inspect(from l in Permalink, join: p in Post, on: l.post_id == p.id,
-                        where: p.author_id in ^[1, 2, 3], distinct: l.id, select: l)
+                        where: p.author_id in ^[1, 2, 3], distinct: l, select: l)
   end
 
   test "has one through belongs to belongs" do
@@ -130,7 +130,7 @@ defmodule Ecto.AssociationsTest do
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
            inspect(from a in Author, join: p in Post, on: a.id == p.author_id,
-                        where: p.id in ^[1, 2, 3], distinct: a.id, select: a)
+                        where: p.id in ^[1, 2, 3], distinct: a, select: a)
   end
 
   test "has one through belongs to one" do
@@ -141,7 +141,7 @@ defmodule Ecto.AssociationsTest do
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
            inspect(from l in Permalink, join: p in Post, on: l.post_id == p.id,
-                        where: p.id in ^[1, 2, 3], distinct: l.id, select: l)
+                        where: p.id in ^[1, 2, 3], distinct: l, select: l)
   end
 
   test "has many through one to many" do
@@ -152,7 +152,7 @@ defmodule Ecto.AssociationsTest do
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
            inspect(from c in Comment, join: p in Post, on: c.post_id == p.id,
-                        where: p.summary_id in ^[1, 2, 3], distinct: c.id, select: c)
+                        where: p.summary_id in ^[1, 2, 3], distinct: c, select: c)
   end
 
   test "has one through one to belongs" do
@@ -163,7 +163,7 @@ defmodule Ecto.AssociationsTest do
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
            inspect(from a in Author, join: p in Post, on: a.id == p.author_id,
-                        where: p.summary_id in ^[1, 2, 3], distinct: a.id, select: a)
+                        where: p.summary_id in ^[1, 2, 3], distinct: a, select: a)
   end
 
   ## Integration tests through Ecto.Model

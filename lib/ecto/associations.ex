@@ -339,14 +339,11 @@ defmodule Ecto.Associations.HasThrough do
     {joins, {mapping, last}} = rewrite_joins(query)
     wheres = rewrite_many(query.wheres, mapping)
 
-    {_, model} = from = last.source
-    [_|joins]  = Enum.reverse([%{last | source: query.from}|joins])
-
-    pk = model.__schema__(:primary_key) ||
-          raise Ecto.NoPrimaryKeyError, model: model
+    from      = last.source
+    [_|joins] = Enum.reverse([%{last | source: query.from}|joins])
 
     %{query | from: from, joins: joins, wheres: wheres, sources: nil}
-    |> distinct([x], field(x, ^pk))
+    |> distinct([x], x)
     |> select([x], x)
   end
 
