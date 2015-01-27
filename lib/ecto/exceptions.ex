@@ -66,6 +66,17 @@ defmodule Ecto.NoPrimaryKeyError do
   end
 end
 
+defmodule Ecto.MissingPrimaryKeyError do
+  defexception [:message, :struct]
+
+  def exception(opts) do
+    struct  = Keyword.fetch!(opts, :struct)
+    message = "struct `#{inspect struct}` is missing primary key value"
+    %__MODULE__{message: message, struct: struct}
+  end
+end
+
+
 defmodule Ecto.ChangeError do
   defexception [:message]
 end

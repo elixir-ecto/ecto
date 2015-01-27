@@ -52,11 +52,11 @@ defmodule Ecto.RepoTest do
   test "fails without primary key value" do
     model = %MyModel{x: "abc"}
 
-    assert_raise Ecto.NoPrimaryKeyError, fn ->
+    assert_raise Ecto.MissingPrimaryKeyError, fn ->
       MockRepo.update(model)
     end
 
-    assert_raise Ecto.NoPrimaryKeyError, fn ->
+    assert_raise Ecto.MissingPrimaryKeyError, fn ->
       MockRepo.delete(model)
     end
   end

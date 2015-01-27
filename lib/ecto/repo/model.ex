@@ -137,7 +137,7 @@ defmodule Ecto.Repo.Model do
   defp pk_filter(model, struct) do
     pk_field = model.__schema__(:primary_key)
     pk_value = Ecto.Model.primary_key(struct) ||
-                 raise Ecto.NoPrimaryKeyError, model: model
+                 raise Ecto.MissingPrimaryKeyError, struct: struct
     [{pk_field, pk_value}]
   end
 
