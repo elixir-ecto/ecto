@@ -100,7 +100,7 @@ defmodule Ecto.Adapters.Postgres do
       args = ["-p", to_string(port)|args]
     end
 
-    args = args ++ ["--quiet", "--host", database[:hostname], "-c", sql_command]
+    args = args ++ ["--quiet", "--host", database[:hostname], "-d", "template1", "-c", sql_command]
     System.cmd("psql", args, env: env, stderr_to_stdout: true)
   end
 end
