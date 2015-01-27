@@ -87,12 +87,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
+      join  = join(query.joins, sources)
       where = where(query.wheres, sources)
-      where = if where, do: " " <> where, else: ""
 
-      "UPDATE #{quote_name(table)} AS #{name} " <>
-      "SET " <> zipped_sql <>
-      where
+      assemble(["UPDATE #{quote_name(table)} AS #{name}", "SET", zipped_sql, join, where])
     end
 
     def delete_all(query) do

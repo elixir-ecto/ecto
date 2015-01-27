@@ -283,6 +283,10 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: quote(do: ^0)]) ==
            ~s{UPDATE "model" AS m0 SET "x" = $1}
+
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
+    assert SQL.update_all(query, [x: 0]) ==
+           ~s{UPDATE "model" AS m0 SET "x" = 0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
   end
 
   test "delete all" do
