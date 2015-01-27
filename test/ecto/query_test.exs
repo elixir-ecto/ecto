@@ -132,4 +132,9 @@ defmodule Ecto.QueryTest do
     from(c in "comments", join: p in "posts", select: {p.title, c.text})
     "comments" |> join(:inner, [c], p in "posts", true) |> select([c,p], {p.title, c.text})
   end
+
+  test "join queries adds binds with custom values" do
+    base = join("comments", :inner, [c], p in "posts", true)
+    assert select(base, [p: 1], p) == select(base, [c, p], p)
+  end
 end

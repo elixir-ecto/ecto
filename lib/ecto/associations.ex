@@ -318,20 +318,72 @@ defmodule Ecto.Associations.HasThrough do
 
   @doc false
   def joins_query(%{owner: owner, through: through}) do
-    joins_query(through, owner) |> elem(0)
+    joins_query(owner, through)
+  end
+
+  defp joins_query(query, through) do
+    Enum.reduce(through, {query, 0}, fn current, {acc, counter} ->
+      {join(acc, :inner, [x: counter], assoc(x, ^current)), counter + 1}
+    end) |> elem(0)
   end
 
   @doc false
   def assoc_query(%{owner: owner, through: [h|t]}, values) do
-    refl = owner.__schema__(:association, h)
-    {query, counter} = joins_query(t, refl.__struct__.assoc_query(refl, values))
-    query |> distinct([x: counter], x) |> select([x: counter], x)
+    refl  = owner.__schema__(:association, h)
+
+    query =
+      refl.__struct__.assoc_query(refl, values)
+      |> joins_query(t)
+      |> Ecto.Query.Planner.prepare_sources()
+
+    {joins, {mapping, last}} = rewrite_joins(query)
+    wheres = rewrite_many(query.wheres, mapping)
+
+    from      = last.source
+    [_|joins] = Enum.reverse([%{last | source: query.from}|joins])
+
+    %{query | from: from, joins: joins, wheres: wheres, sources: nil}
+    |> distinct([x], x)
+    |> select([x], x)
   end
 
-  defp joins_query(through, query) do
-    Enum.reduce(through, {query, 0}, fn current, {acc, counter} ->
-      {join(acc, :inner, [x: counter], assoc(x, ^current)), counter + 1}
+  alias Ecto.Query.JoinExpr
+
+  defp rewrite_joins(query) do
+    count = length(query.joins)
+
+    Enum.map_reduce(query.joins, {%{0 => count}, nil}, fn
+      %JoinExpr{ix: ix, on: on} = join, {acc, _} ->
+        acc  = Map.put(acc, ix, count - Map.size(acc))
+        join = %{join | ix: nil, on: rewrite_expr(on, acc)}
+        {join, {acc, join}}
     end)
+  end
+
+  defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
+    expr =
+      Macro.prewalk expr, fn
+        {:&, meta, [ix]} ->
+          {:&, meta, [Map.fetch!(mapping, ix)]}
+        other ->
+          other
+      end
+
+    params =
+      Enum.reduce params, params, fn
+        {key, {val, {composite, {ix, field}}}}, acc when is_integer(ix) ->
+          Map.put(acc, key, {val, {composite, {Map.fetch!(mapping, ix), field}}})
+        {key, {val, {ix, field}}}, acc when is_integer(ix) ->
+          Map.put(acc, key, {val, {Map.fetch!(mapping, ix), field}})
+        {_, _}, acc ->
+          acc
+      end
+
+    %{part | expr: expr, params: params}
+  end
+
+  defp rewrite_many(exprs, acc) do
+    Enum.map(exprs, &rewrite_expr(&1, acc))
   end
 end
 

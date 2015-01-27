@@ -107,7 +107,7 @@ defmodule Ecto.AssociationsTest do
            inspect(from a in Author, join: p in assoc(a, :posts), join: c in assoc(p, :comments))
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
-           inspect(from p in Ecto.AssociationsTest.Post, join: c in assoc(p, :comments),
+           inspect(from c in Comment, join: p in Post, on: c.post_id == p.id,
                         where: p.author_id in ^[1, 2, 3], distinct: c, select: c)
   end
 
@@ -118,8 +118,8 @@ defmodule Ecto.AssociationsTest do
            inspect(from a in Author, join: p in assoc(a, :posts), join: c in assoc(p, :permalink))
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
-           inspect(from p in Ecto.AssociationsTest.Post, join: c in assoc(p, :permalink),
-                        where: p.author_id in ^[1, 2, 3], distinct: c, select: c)
+           inspect(from l in Permalink, join: p in Post, on: l.post_id == p.id,
+                        where: p.author_id in ^[1, 2, 3], distinct: l, select: l)
   end
 
   test "has one through belongs to belongs" do
@@ -129,7 +129,7 @@ defmodule Ecto.AssociationsTest do
            inspect(from c in Comment, join: p in assoc(c, :post), join: a in assoc(p, :author))
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
-           inspect(from p in Ecto.AssociationsTest.Post, join: a in assoc(p, :author),
+           inspect(from a in Author, join: p in Post, on: a.id == p.author_id,
                         where: p.id in ^[1, 2, 3], distinct: a, select: a)
   end
 
@@ -140,7 +140,7 @@ defmodule Ecto.AssociationsTest do
            inspect(from c in Comment, join: p in assoc(c, :post), join: l in assoc(p, :permalink))
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
-           inspect(from p in Ecto.AssociationsTest.Post, join: l in assoc(p, :permalink),
+           inspect(from l in Permalink, join: p in Post, on: l.post_id == p.id,
                         where: p.id in ^[1, 2, 3], distinct: l, select: l)
   end
 
@@ -151,7 +151,7 @@ defmodule Ecto.AssociationsTest do
            inspect(from s in Summary, join: p in assoc(s, :post), join: c in assoc(p, :comments))
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
-           inspect(from p in Ecto.AssociationsTest.Post, join: c in assoc(p, :comments),
+           inspect(from c in Comment, join: p in Post, on: c.post_id == p.id,
                         where: p.summary_id in ^[1, 2, 3], distinct: c, select: c)
   end
 
@@ -162,7 +162,7 @@ defmodule Ecto.AssociationsTest do
            inspect(from s in Summary, join: p in assoc(s, :post), join: a in assoc(p, :author))
 
     assert inspect(Ecto.Associations.HasThrough.assoc_query(assoc, [1,2,3])) ==
-           inspect(from p in Ecto.AssociationsTest.Post, join: a in assoc(p, :author),
+           inspect(from a in Author, join: p in Post, on: a.id == p.author_id,
                         where: p.summary_id in ^[1, 2, 3], distinct: a, select: a)
   end
 

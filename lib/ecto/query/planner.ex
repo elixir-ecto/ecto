@@ -86,11 +86,18 @@ defmodule Ecto.Query.Planner do
   def prepare(query, params) do
     query
     |> prepare_sources
-    |> traverse_exprs(params, &merge_params/4)
+    |> prepare_params(params)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
       raise e
+  end
+
+  @doc """
+  Prepare the parameters by merging and casting them according to sources.
+  """
+  def prepare_params(query, params) do
+    traverse_exprs(query, params, &merge_params/4)
   end
 
   defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
@@ -123,14 +130,14 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp cast_param(kind, query, expr, v, {composite, {idx, field}}) when is_integer(idx) do
-    {_, model} = elem(query.sources, idx)
+  defp cast_param(kind, query, expr, v, {composite, {ix, field}}) when is_integer(ix) do
+    {_, model} = elem(query.sources, ix)
     type = type!(kind, query, expr, model, field)
     cast_param(kind, query, expr, model, field, v, {composite, type})
   end
 
-  defp cast_param(kind, query, expr, v, {idx, field}) when is_integer(idx) do
-    {_, model} = elem(query.sources, idx)
+  defp cast_param(kind, query, expr, v, {ix, field}) when is_integer(ix) do
+    {_, model} = elem(query.sources, ix)
     type = type!(kind, query, expr, model, field)
     cast_param(kind, query, expr, model, field, v, type)
   end
@@ -158,9 +165,10 @@ defmodule Ecto.Query.Planner do
                                      "\nError when casting value to `#{inspect model}.#{field}`"
   end
 
-  # Normalize all sources and adds a source
-  # field to the query for fast access.
-  defp prepare_sources(query) do
+  @doc """
+  Prepare all sources, by traversing and expanding joins.
+  """
+  def prepare_sources(query) do
     from = query.from || error!(query, "query must have a from expression")
     {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins))
     %{query | sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple(),
@@ -230,7 +238,7 @@ defmodule Ecto.Query.Planner do
     prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
   end
 
-  defp prepare_joins([%JoinExpr{source: {nil, model}} = join|t],
+  defp prepare_joins([%JoinExpr{source: {_, model}} = join|t],
                      query, joins, sources, tail_sources, counter, offset) when is_atom(model) do
     source = {model.__schema__(:source), model}
     join   = %{join | source: source, ix: counter}
@@ -380,14 +388,14 @@ defmodule Ecto.Query.Planner do
     %{select | fields: fields}
   end
 
-  defp collect_fields(query, {:&, _, [idx]} = expr, from?) do
-    {source, model} = elem(query.sources, idx)
+  defp collect_fields(query, {:&, _, [ix]} = expr, from?) do
+    {source, model} = elem(query.sources, ix)
 
     unless model do
       error! query, "cannot `select` or `preload` #{inspect source} because it does not have a model"
     end
 
-    if idx == 0 do
+    if ix == 0 do
       {[], true}
     else
       {[expr], from?}
@@ -403,8 +411,8 @@ defmodule Ecto.Query.Planner do
   defp collect_fields(_query, expr, from?),
     do: {[expr], from?}
 
-  defp collect_assocs([{_assoc, {idx, children}}|tail]),
-    do: [{:&, [], [idx]}] ++ collect_assocs(children) ++ collect_assocs(tail)
+  defp collect_assocs([{_assoc, {ix, children}}|tail]),
+    do: [{:&, [], [ix]}] ++ collect_assocs(children) ++ collect_assocs(tail)
   defp collect_assocs([]),
     do: []
 
@@ -413,11 +421,11 @@ defmodule Ecto.Query.Planner do
     query
   end
 
-  defp validate_assocs(query, idx, assocs) do
+  defp validate_assocs(query, ix, assocs) do
     # We validate the model exists when normalizing fields above
-    {_, parent_model} = elem(query.sources, idx)
+    {_, parent_model} = elem(query.sources, ix)
 
-    Enum.each assocs, fn {assoc, {child_idx, child_assocs}} ->
+    Enum.each assocs, fn {assoc, {child_ix, child_assocs}} ->
       refl = parent_model.__schema__(:association, assoc)
 
       unless refl do
@@ -425,7 +433,7 @@ defmodule Ecto.Query.Planner do
                       "in preload is not an association"
       end
 
-      case find_source_expr(query, child_idx) do
+      case find_source_expr(query, child_ix) do
         %JoinExpr{qual: qual} when qual in [:inner, :left] ->
           :ok
         %JoinExpr{qual: qual} ->
@@ -435,7 +443,7 @@ defmodule Ecto.Query.Planner do
           :ok
       end
 
-      validate_assocs(query, child_idx, child_assocs)
+      validate_assocs(query, child_ix, child_assocs)
     end
   end
 
@@ -443,8 +451,8 @@ defmodule Ecto.Query.Planner do
     query.from
   end
 
-  defp find_source_expr(query, idx) do
-    Enum.find(query.joins, & &1.ix == idx)
+  defp find_source_expr(query, ix) do
+    Enum.find(query.joins, & &1.ix == ix)
   end
 
   ## Helpers
