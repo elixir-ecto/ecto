@@ -167,12 +167,12 @@ defmodule Ecto.QueryTest do
     refute query.lock == base.lock
 
     excluded_query = query
-    |> Ecto.Query.exclude(:joins)
-    |> Ecto.Query.exclude(:wheres)
-    |> Ecto.Query.exclude(:order_bys)
-    |> Ecto.Query.exclude(:group_bys)
-    |> Ecto.Query.exclude(:havings)
-    |> Ecto.Query.exclude(:distincts)
+    |> Ecto.Query.exclude(:join)
+    |> Ecto.Query.exclude(:where)
+    |> Ecto.Query.exclude(:order_by)
+    |> Ecto.Query.exclude(:group_by)
+    |> Ecto.Query.exclude(:having)
+    |> Ecto.Query.exclude(:distinct)
     |> Ecto.Query.exclude(:select)
     |> Ecto.Query.exclude(:limit)
     |> Ecto.Query.exclude(:offset)
@@ -218,7 +218,7 @@ defmodule Ecto.QueryTest do
     msg = ~r"no function clause matching in Ecto.Query.exclude/2"
 
     assert_raise FunctionClauseError, msg, fn ->
-      Ecto.Query.exclude(query, :sources)
+      Ecto.Query.exclude(query, :source)
     end
   end
 
@@ -231,7 +231,7 @@ defmodule Ecto.QueryTest do
     refute query.assocs == base.assocs
 
     excluded_query = query
-    |> Ecto.Query.exclude(:preloads)
+    |> Ecto.Query.exclude(:preload)
 
     assert excluded_query.preloads == base.preloads
     assert excluded_query.assocs == base.assocs
