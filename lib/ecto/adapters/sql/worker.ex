@@ -22,6 +22,7 @@ defmodule Ecto.Adapters.SQL.Worker do
     case GenServer.call(worker, :query, opts[:timeout]) do
       {:ok, {module, conn}} ->
         case module.query(conn, sql, params, opts) do
+	  :ok -> :ok
           {:ok, res} -> res
           {:error, err} -> raise err
         end
@@ -119,6 +120,7 @@ defmodule Ecto.Adapters.SQL.Worker do
       end
 
     case module.query(conn, sql, [], opts) do
+      :ok -> {:reply, :ok, %{s | transactions: trans + 1}}
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans + 1}}
       {:error, _} = err ->
@@ -155,6 +157,8 @@ defmodule Ecto.Adapters.SQL.Worker do
       end
 
     case module.query(conn, sql, [], opts) do
+      :ok ->
+        {:reply, :ok, %{s | transactions: trans - 1}}
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
@@ -186,6 +190,8 @@ defmodule Ecto.Adapters.SQL.Worker do
     %{conn: conn, module: module} = s
 
     case module.query(conn, module.rollback, [], opts) do
+      :ok ->
+        {:reply, :ok, %{s | transactions: 0, sandbox: false}}
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: 0, sandbox: false}}
       {:error, _} = err ->
@@ -219,6 +225,12 @@ defmodule Ecto.Adapters.SQL.Worker do
     %{conn: conn, module: module} = s
 
     case module.query(conn, module.begin_transaction, [], []) do
+      :ok ->
+        case module.query(conn, module.savepoint("ecto_sandbox"), [], []) do
+          :ok               -> {:ok, %{s | transactions: 1}}
+          {:ok, _}          -> {:ok, %{s | transactions: 1}}
+          {:error, _} = err -> err
+        end
       {:ok, _} ->
         case module.query(conn, module.savepoint("ecto_sandbox"), [], []) do
           {:ok, _}          -> {:ok, %{s | transactions: 1}}

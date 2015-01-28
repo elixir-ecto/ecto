@@ -14,7 +14,7 @@ defmodule Ecto.Repo.Model do
     model  = struct.__struct__
     fields = model.__schema__(:fields)
     source = model.__schema__(:source)
-    return = model.__schema__(:read_after_writes)
+    return = handle_returning(adapter, model)
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
@@ -45,7 +45,7 @@ defmodule Ecto.Repo.Model do
     model  = struct.__struct__
     fields = model.__schema__(:fields)
     source = model.__schema__(:source)
-    return = model.__schema__(:read_after_writes)
+    return = handle_returning(adapter, model)
 
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
@@ -104,6 +104,11 @@ defmodule Ecto.Repo.Model do
   end
 
   ## Helpers
+
+  def handle_returning(Ecto.Adapters.MySQL, _model), 
+    do: []
+  def handle_returning(_adapter, model), 
+    do: model.__schema__(:read_after_writes)
 
   defp struct_from_changeset!(%{valid?: false}),
     do: raise(ArgumentError, "cannot insert/update an invalid changeset")
