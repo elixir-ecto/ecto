@@ -76,12 +76,18 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
   test "worker survives, caller dies if connection dies inside of transaction" do
     {:ok, worker} = Worker.start({Connection, lazy: false})
     conn = :sys.get_state(worker).conn
+    parent = self()
 
-    caller = spawn(fn ->
+    caller = spawn_link(fn ->
       Worker.link_me(worker)
       Worker.begin!(worker, [timeout: :infinity])
+      send parent, :go_on
       :timer.sleep(:infinity)
     end)
+
+    # Wait until caller is linked
+    assert_receive :go_on, :infinity
+    Process.unlink(caller)
 
     conn_mon   = Process.monitor(conn)
     caller_mon = Process.monitor(caller)
