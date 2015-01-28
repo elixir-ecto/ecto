@@ -284,16 +284,16 @@ defmodule Ecto.Query.Planner do
   its fields and associations exist and are valid.
   """
   def normalize(query, base, opts) do
-    only_where? = Keyword.get(opts, :only_where, false)
+    only_filters? = Keyword.get(opts, :only_filters, false)
 
-    if only_where? do
-      assert_only_where_expressions!(query)
+    if only_filters? do
+      assert_filtered_expressions!(query)
     end
 
     query
     |> traverse_exprs(length(base), &validate_and_increment/4)
     |> elem(0)
-    |> normalize_select(only_where?)
+    |> normalize_select(only_filters?)
     |> validate_assocs
   rescue
     e ->
@@ -525,9 +525,9 @@ defmodule Ecto.Query.Planner do
     raise Ecto.CastError, message: message
   end
 
-  defp assert_only_where_expressions!(query) do
+  defp assert_filtered_expressions!(query) do
     case query do
-      %Ecto.Query{joins: [], select: nil, order_bys: [], limit: nil, offset: nil,
+      %Ecto.Query{select: nil, order_bys: [], limit: nil, offset: nil,
                   group_bys: [], havings: [], preloads: [], assocs: [], distincts: [],
                   lock: nil} ->
         query

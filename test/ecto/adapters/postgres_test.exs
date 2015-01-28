@@ -286,7 +286,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
     assert SQL.update_all(query, [x: 0]) ==
-           ~s{UPDATE "model" AS m0 SET "x" = 0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
+           ~s{UPDATE "model" SET "x" = 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
   end
 
   test "delete all" do
