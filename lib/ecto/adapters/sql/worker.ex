@@ -10,6 +10,14 @@ defmodule Ecto.Adapters.SQL.Worker do
     GenServer.start(__MODULE__, {module, args})
   end
 
+  def link_me(worker) do
+    GenServer.call(worker, :link_me)
+  end
+
+  def unlink_me(worker) do
+    GenServer.call(worker, :unlink_me)
+  end
+
   def query!(worker, sql, params, opts) do
     case GenServer.call(worker, :query, opts[:timeout]) do
       {:ok, {module, conn}} ->
@@ -23,36 +31,34 @@ defmodule Ecto.Adapters.SQL.Worker do
   end
 
   def begin!(worker, opts) do
-    case GenServer.call(worker, {:begin, opts}, opts[:timeout]) do
-      :ok -> :ok
-      {:error, err} -> raise err
-    end
+    call!(worker, {:begin, opts}, opts)
   end
 
   def commit!(worker, opts) do
-    case GenServer.call(worker, {:commit, opts}, opts[:timeout]) do
-      :ok -> :ok
-      {:error, err} -> raise err
-    end
+    call!(worker, {:commit, opts}, opts)
   end
 
   def rollback!(worker, opts) do
-    case GenServer.call(worker, {:rollback, opts}, opts[:timeout]) do
+    call!(worker, {:rollback, opts}, opts)
+  end
+
+  def begin_test_transaction!(worker, opts) do
+    call!(worker, {:begin_test_transaction, opts}, opts)
+  end
+
+  def restart_test_transaction!(worker, opts) do
+    call!(worker, {:restart_test_transaction, opts}, opts)
+  end
+
+  def rollback_test_transaction!(worker, opts) do
+    call!(worker, {:rollback_test_transaction, opts}, opts)
+  end
+
+  defp call!(worker, command, opts) do
+    case GenServer.call(worker, command, opts[:timeout]) do
       :ok -> :ok
       {:error, err} -> raise err
     end
-  end
-
-  def rollback_pending!(worker, opts) do
-    GenServer.cast(worker, {:rollback_pending, opts})
-  end
-
-  def link_me(worker) do
-    GenServer.call(worker, :link_me)
-  end
-
-  def unlink_me(worker) do
-    GenServer.call(worker, :unlink_me)
   end
 
   ## Callbacks
@@ -70,24 +76,29 @@ defmodule Ecto.Adapters.SQL.Worker do
       end
     end
 
-    {:ok, %{conn: conn, params: params, links: HashSet.new, transactions: 0, module: module}}
+    {:ok, %{conn: conn, params: params, link: nil,
+            transactions: 0, module: module, sandbox: false}}
   end
 
-  def handle_call(:link_me, {pid, _}, %{links: links} = s) do
+  # Those functions do not need a connection
+  def handle_call(:link_me, {pid, _}, %{link: nil} = s) do
     Process.link(pid)
-    {:reply, :ok, %{s | links: HashSet.put(links, pid)}}
+    {:reply, :ok, %{s | link: pid}}
   end
 
-  def handle_call(:unlink_me, {pid, _}, %{links: links} = s) do
+  def handle_call(:unlink_me, {pid, _}, %{link: pid} = s) do
     Process.unlink(pid)
-    {:reply, :ok, %{s | links: HashSet.delete(links, pid)}}
+    {:reply, :ok, %{s | link: nil}}
   end
 
   # Connection is disconnected, reconnect before continuing
   def handle_call(request, from, %{conn: nil, params: params, module: module} = s) do
     case module.connect(params) do
       {:ok, conn} ->
-        handle_call(request, from, %{s | conn: conn})
+        case begin_sandbox(%{s | conn: conn}) do
+          {:ok, s}      -> handle_call(request, from, s)
+          {:error, err} -> {:reply, {:error, err}, s}
+        end
       {:error, err} ->
         {:reply, {:error, err}, s}
     end
@@ -152,20 +163,33 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
-  # This is a cast because we don't want it to be automatically
-  # cleaned as this command is all about returning the transaction
-  # to a safe state.
-  def handle_cast({:rollback_pending, _opts}, %{transactions: 0} = s) do
-    {:noreply, s}
+  def handle_call({:begin_test_transaction, _opts}, _from, %{transactions: 0} = s) do
+    case begin_sandbox(%{s | sandbox: true}) do
+      {:ok, s}      -> {:reply, :ok, s}
+      {:error, err} -> {:reply, {:error, err}, s}
+    end
   end
 
-  def handle_cast({:rollback_pending, opts}, s) do
+  def handle_call({:restart_test_transaction, opts}, _from, %{transactions: 1} = s) do
+    %{conn: conn, module: module} = s
+
+    case module.query(conn, module.rollback_to_savepoint("ecto_sandbox"), [], opts) do
+      {:ok, _} ->
+        {:reply, :ok, s}
+      {:error, _} = err ->
+        GenServer.reply(err)
+        wipe_state(s)
+    end
+  end
+
+  def handle_call({:rollback_test_transaction, opts}, _from, %{transactions: 1} = s) do
     %{conn: conn, module: module} = s
 
     case module.query(conn, module.rollback, [], opts) do
       {:ok, _} ->
-        {:noreply, %{s | transactions: 0, links: HashSet.new}}
-      {:error, _} ->
+        {:reply, :ok, %{s | transactions: 0, sandbox: false}}
+      {:error, _} = err ->
+        GenServer.reply(err)
         wipe_state(s)
     end
   end
@@ -176,7 +200,7 @@ defmodule Ecto.Adapters.SQL.Worker do
   end
 
   # If a linked process crashed, assume stale connection and close it.
-  def handle_info({:EXIT, _link, _reason}, s) do
+  def handle_info({:EXIT, link, _reason}, %{link: link} = s) do
     wipe_state(s)
   end
 
@@ -188,6 +212,23 @@ defmodule Ecto.Adapters.SQL.Worker do
     conn && module.disconnect(conn)
   end
 
+  ## Helpers
+
+  defp begin_sandbox(%{sandbox: false} = s), do: {:ok, s}
+  defp begin_sandbox(%{sandbox: true} = s) do
+    %{conn: conn, module: module} = s
+
+    case module.query(conn, module.begin_transaction, [], []) do
+      {:ok, _} ->
+        case module.query(conn, module.savepoint("ecto_sandbox"), [], []) do
+          {:ok, _}          -> {:ok, %{s | transactions: 1}}
+          {:error, _} = err -> err
+        end
+      {:error, _} = err ->
+        err
+    end
+  end
+
   # Imagine the following scenario:
   #
   #   1. PID starts a transaction
@@ -195,32 +236,36 @@ defmodule Ecto.Adapters.SQL.Worker do
   #   3. The connection crashes (and we receive an EXIT message)
   #
   # If 2 and 3 happen at the same, there is no guarantee which
-  # one will happen first. That's why we can't simply kill the
-  # linked processes and start a new connection as we may have
-  # left-over messages in the inbox.
+  # one will be handled first. That's why we can't simply kill
+  # the linked processes and start a new connection as we may
+  # have left-over messages in the inbox.
   #
   # So this is what we do:
   #
-  #   1. We insert an all_clear marker in the inbox
-  #   2. We disconnect from the database
-  #   3. We kill all linked processes (transaction owners)
-  #   4. We remove all calls until we get the marker
+  #   1. We disconnect from the database
+  #   2. We kill the linked processes (transaction owner)
+  #   3. We remove all calls from that process
   #
   # Because this worker only accept calls and it is controlled by
   # the pool, the expectation is that the number of messages to
   # be removed will always be maximum 1.
-  defp wipe_state(%{conn: conn, module: module, links: links} = s) do
-    send self(), :all_clear
+  defp wipe_state(%{conn: conn, module: module, link: link} = s) do
     conn && module.disconnect(conn)
-    Enum.each links, &Process.exit(&1, {:ecto, :no_connection})
-    clear_calls()
-    {:noreply, %{s | conn: nil, links: HashSet.new, transactions: 0}}
+
+    if link do
+      Process.unlink(link)
+      Process.exit(link, {:ecto, :no_connection})
+      clear_calls(link)
+    end
+
+    {:noreply, %{s | conn: nil, link: nil, transactions: 0}}
   end
 
-  defp clear_calls() do
+  defp clear_calls(link) do
     receive do
-      :all_clear -> :ok
-      {:"$gen_call", _, _} -> clear_calls()
+      {:"$gen_call", {^link, _}, _} -> clear_calls(link)
+    after
+      0 -> :ok
     end
   end
 end

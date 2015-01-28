@@ -220,23 +220,55 @@ defmodule Ecto.Adapters.SQL do
   Now with the test database properly configured, you can write
   transactional tests:
 
-      # All tests in this module will be wrapped in transactions
+      # At the end of your test_helper.exs
+      # From now, all tests happen inside a transaction
+      Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
+
       defmodule PostTest do
         # Tests that use the shared repository cannot be async
         use ExUnit.Case
 
         setup do
-          Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
-
-          on_exit fn ->
-            Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-          end
+          # Go back to a clean slate at the beginning of every test
+          Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
+          :ok
         end
 
         test "create comment" do
           assert %Post{} = TestRepo.insert(%Post{})
         end
       end
+
+  In some cases, you may want to start the test transaction only
+  for specific tests and then roll it back. You can do it as:
+
+      defmodule PostTest do
+        # Tests that use the shared repository cannot be async
+        use ExUnit.Case
+
+        setup_all do
+          # Wrap this case in a transaction
+          Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
+
+          # Roll it back once we are done
+          on_exit fn ->
+            Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
+          end
+
+          :ok
+        end
+
+        setup do
+          # Go back to a clean slate at the beginning of every test
+          Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
+          :ok
+        end
+
+        test "create comment" do
+          assert %Post{} = TestRepo.insert(%Post{})
+        end
+      end
+
   """
   @spec begin_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def begin_test_transaction(repo, opts \\ []) do
@@ -244,8 +276,22 @@ defmodule Ecto.Adapters.SQL do
     opts = Keyword.put_new(opts, :timeout, @timeout)
 
     :poolboy.transaction(pool, fn worker ->
-      Worker.link_me(worker)
-      do_begin(repo, worker, opts)
+      Worker.begin_test_transaction!(worker, opts)
+    end, opts[:timeout])
+
+    :ok
+  end
+
+  @doc """
+  Restarts a test transaction, see `begin_test_transaction/2`.
+  """
+  @spec restart_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
+  def restart_test_transaction(repo, opts \\ []) do
+    pool = pool!(repo)
+    opts = Keyword.put_new(opts, :timeout, @timeout)
+
+    :poolboy.transaction(pool, fn worker ->
+      Worker.restart_test_transaction!(worker, opts)
     end, opts[:timeout])
 
     :ok
@@ -260,8 +306,7 @@ defmodule Ecto.Adapters.SQL do
     opts = Keyword.put_new(opts, :timeout, @timeout)
 
     :poolboy.transaction(pool, fn worker ->
-      do_rollback_pending(repo, worker, opts)
-      Worker.unlink_me(worker)
+      Worker.rollback_test_transaction!(worker, opts)
     end, opts[:timeout])
 
     :ok
@@ -430,12 +475,6 @@ defmodule Ecto.Adapters.SQL do
   defp do_rollback(repo, worker, opts) do
     log(repo, {:query, "ROLLBACK"}, opts, fn ->
       Worker.rollback!(worker, opts)
-    end)
-  end
-
-  defp do_rollback_pending(repo, worker, opts) do
-    log(repo, {:query, "ROLLBACK"}, opts, fn ->
-      Worker.rollback_pending!(worker, opts)
     end)
   end
 
