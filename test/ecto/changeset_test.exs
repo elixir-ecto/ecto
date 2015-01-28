@@ -48,6 +48,20 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
+  test "cast/4: with mixed atom and string keys" do
+    params = %{:title => "hello", "body" => "world"}
+    struct = %Post{}
+
+    changeset = cast(params, struct, ["title", :body], [])
+    assert changeset.params == %{"title" => "hello", "body" => "world"}
+    assert changeset.model  == struct
+    assert changeset.changes == %{title: "hello", body: "world"}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == [:title, :body]
+    assert changeset.valid?
+  end
+
   test "cast/4: missing optional is valid" do
     params = %{"title" => "hello"}
     struct = %Post{}

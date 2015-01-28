@@ -187,14 +187,12 @@ defmodule Ecto.Changeset do
   end
 
   defp convert_params(params) do
-    :maps.fold fn
-      key, _value, _acc when is_binary(key) ->
-        throw :noop
-      key, value, acc when is_atom(key) ->
-        Map.put(acc, Atom.to_string(key), value)
-    end, %{}, params
-  catch
-    :noop -> params
+    key_to_string = fn
+      {key, _val} = pair when is_binary(key) -> pair
+      {key, val} when is_atom(key)           -> {Atom.to_string(key), val}
+    end
+
+    params |> Enum.map(key_to_string) |> Enum.into(%{})
   end
 
   defp error_on_blank(type, key, value, errors) do
