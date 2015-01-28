@@ -67,7 +67,6 @@ defmodule Ecto.Model.Callbacks do
   """
 
   @doc false
-
   defmacro __using__(_opts) do
     quote do
       import Ecto.Model.Callbacks
@@ -97,12 +96,12 @@ defmodule Ecto.Model.Callbacks do
   into the repository.
 
   Since on insert all the model fields plus changeset changes
-  are sent to the repository, the callback will receive an
+  are sent to the repository, the callback receives an
   `Ecto.Changeset` with all the model fields and changes in
   the `changeset.changes` field. At this point, the changeset
-  was already validated and is always valid.
+  has already been validated and is always valid.
 
-  The callback must return a changeset and always run inside
+  The callback must return a changeset and always runs inside
   a transaction.
 
   ## Example
@@ -126,7 +125,7 @@ defmodule Ecto.Model.Callbacks do
   The callback receives an `Ecto.Changeset` with both repository
   values and changeset changes already applied to the model.
 
-  The callback must return a changeset and always run inside
+  The callback must return a changeset and always runs inside
   a transaction.
 
   ## Example
@@ -148,10 +147,10 @@ defmodule Ecto.Model.Callbacks do
 
   The callback receives an `Ecto.Changeset` with the changes
   to be sent to the database in the `changeset.changes` field.
-  At this point, the changeset was already validated and is
+  At this point, the changeset has already been validated and is
   always valid.
 
-  The callback must return a changeset and always run inside
+  The callback must return a changeset and always runs inside
   a transaction.
 
   ## Example
@@ -174,7 +173,7 @@ defmodule Ecto.Model.Callbacks do
   The callback receives an `Ecto.Changeset` with both repository
   values and changeset changes already applied to the model.
 
-  The callback must return a changeset and always run inside
+  The callback must return a changeset and always runs inside
   a transaction.
 
   ## Example
@@ -196,9 +195,9 @@ defmodule Ecto.Model.Callbacks do
   from the repository.
 
   The callback receives an `Ecto.Changeset`. At this point, the
-  changeset was already validated and is always valid.
+  changeset has already been validated and is always valid.
 
-  The callback must return a changeset and always run inside
+  The callback must return a changeset and always runs inside
   a transaction.
 
   ## Example
@@ -222,7 +221,7 @@ defmodule Ecto.Model.Callbacks do
   The callback receives an `Ecto.Changeset` with the model
   stored in it.
 
-  The callback must return a changeset and always run inside
+  The callback must return a changeset and always runs inside
   a transaction.
 
   ## Example
@@ -246,7 +245,7 @@ defmodule Ecto.Model.Callbacks do
   The callback receives the model being loaded and must
   return a model.
 
-  The callback can be useful, for example, to resolve the
+  This callback can be useful, for example, to resolve the
   value of virtual fields. Since this will be invoked
   every time the model is loaded, the callback must execute
   very quickly to avoid drastic perfomance hits.
@@ -289,7 +288,7 @@ defmodule Ecto.Model.Callbacks do
   @doc """
   Applies stored callbacks in model to given data.
 
-  Checks wether the callback is defined on the model,
+  Checks whether the callback is defined on the model,
   returns the data unchanged if it isn't.
 
   This function expects a changeset for all callbacks except after_load as input.
