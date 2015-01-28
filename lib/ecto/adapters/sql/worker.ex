@@ -114,7 +114,8 @@ defmodule Ecto.Adapters.SQL.Worker do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans + 1}}
       {:error, _} = err ->
-        {:stop, err, err, s}
+        GenServer.reply(err)
+        wipe_state(s)
     end
   end
 
@@ -131,7 +132,8 @@ defmodule Ecto.Adapters.SQL.Worker do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
-        {:stop, err, err, s}
+        GenServer.reply(err)
+        wipe_state(s)
     end
   end
 
@@ -148,7 +150,8 @@ defmodule Ecto.Adapters.SQL.Worker do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
-        {:stop, err, err, s}
+        GenServer.reply(err)
+        wipe_state(s)
     end
   end
 
@@ -156,21 +159,26 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, :ok, s}
   end
 
-  def handle_call({:rollback_pending, opts}, from, s) do
-    handle_call({:rollback, opts}, from, s)
+  def handle_call({:rollback_pending, opts}, _from, s) do
+    %{conn: conn, module: module} = s
+
+    case module.query(conn, module.rollback, [], opts) do
+      {:ok, _} ->
+        {:reply, :ok, %{s | transactions: 0}}
+      {:error, _} = err ->
+        GenServer.reply(err)
+        wipe_state(s)
+    end
   end
 
   # The connection crashed, notify all linked process.
-  def handle_info({:EXIT, conn, _reason}, %{conn: conn, links: links} = s) do
-    kill_links_and_clear_calls(links)
-    {:noreply, %{s | conn: nil, links: HashSet.new, transactions: 0}}
+  def handle_info({:EXIT, conn, _reason}, %{conn: conn} = s) do
+    wipe_state(%{s | conn: nil})
   end
 
   # If a linked process crashed, assume stale connection and close it.
-  def handle_info({:EXIT, _link, _reason}, %{conn: conn, module: module, links: links} = s) do
-    kill_links_and_clear_calls(links)
-    conn && module.disconnect(conn)
-    {:noreply, %{s | conn: nil, links: HashSet.new, transactions: 0}}
+  def handle_info({:EXIT, _link, _reason}, s) do
+    wipe_state(s)
   end
 
   def handle_info(_info, s) do
@@ -195,16 +203,19 @@ defmodule Ecto.Adapters.SQL.Worker do
   # So this is what we do:
   #
   #   1. We insert an all_clear marker in the inbox
-  #   2. We kill all linked processes (transaction owners)
-  #   3. We remove all calls until we get the marker
+  #   2. We disconnect from the database
+  #   3. We kill all linked processes (transaction owners)
+  #   4. We remove all calls until we get the marker
   #
   # Because this worker only accept calls and it is controlled by
   # the pool, the expectation is that the number of messages to
   # be removed will always be maximum 1.
-  defp kill_links_and_clear_calls(links) do
+  defp wipe_state(%{conn: conn, module: module, links: links} = s) do
     send self(), :all_clear
+    conn && module.disconnect(conn)
     Enum.each links, &Process.exit(&1, {:ecto, :no_connection})
     clear_calls()
+    {:noreply, %{s | conn: nil, links: HashSet.new, transactions: 0}}
   end
 
   defp clear_calls() do
