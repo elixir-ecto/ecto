@@ -1,3 +1,5 @@
+Code.require_file "../../../test/support/types.exs", __DIR__
+
 defmodule Ecto.Adapters.PostgresTest do
   use ExUnit.Case, async: true
 

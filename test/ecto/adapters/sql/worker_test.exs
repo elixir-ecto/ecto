@@ -53,7 +53,6 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
 
     spawn_link(fn ->
       Worker.link_me(worker)
-      Worker.query!(worker, "sleep", [0], timeout: 5000)
     end)
 
     assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
@@ -74,17 +73,24 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     refute :sys.get_state(worker).conn
   end
 
-  test "worker dies if connection dies inside of transaction" do
+  test "worker survives, caller dies if connection dies inside of transaction" do
     {:ok, worker} = Worker.start({Connection, lazy: false})
     conn = :sys.get_state(worker).conn
-    conn_mon   = Process.monitor(conn)
-    worker_mon = Process.monitor(worker)
 
-    Worker.begin!(worker, [timeout: :infinity])
+    caller = spawn(fn ->
+      Worker.link_me(worker)
+      Worker.begin!(worker, [timeout: :infinity])
+      Worker.query!(worker, "sleep", [5000], timeout: 5000)
+    end)
+
+    conn_mon   = Process.monitor(conn)
+    caller_mon = Process.monitor(caller)
+    worker_mon = Process.monitor(worker)
     Process.exit(conn, :shutdown)
 
     assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
-    assert_receive {:DOWN, ^worker_mon, :process, ^worker, _}, 1000
+    assert_receive {:DOWN, ^caller_mon, :process, ^caller, _}, 1000
+    refute_received {:DOWN, ^worker_mon, :process, ^worker, _}
   end
 
   test "worker correctly manages transactions" do

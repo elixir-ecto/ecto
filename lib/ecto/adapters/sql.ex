@@ -244,6 +244,7 @@ defmodule Ecto.Adapters.SQL do
     opts = Keyword.put_new(opts, :timeout, @timeout)
 
     :poolboy.transaction(pool, fn worker ->
+      Worker.link_me(worker)
       do_begin(repo, worker, opts)
     end, opts[:timeout])
 
@@ -260,6 +261,7 @@ defmodule Ecto.Adapters.SQL do
 
     :poolboy.transaction(pool, fn worker ->
       do_rollback(repo, worker, opts)
+      Worker.unlink_me(worker)
     end, opts[:timeout])
 
     :ok

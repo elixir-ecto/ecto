@@ -44,12 +44,14 @@ defmodule Ecto.Adapters.SQL.Worker do
   end
 
   def link_me(worker) do
-    GenServer.cast(worker, {:link, self})
+    GenServer.call(worker, :link_me)
   end
 
   def unlink_me(worker) do
-    GenServer.cast(worker, {:unlink, self})
+    GenServer.call(worker, :unlink_me)
   end
+
+  ## Callbacks
 
   def init({module, params}) do
     Process.flag(:trap_exit, true)
@@ -64,17 +66,17 @@ defmodule Ecto.Adapters.SQL.Worker do
       end
     end
 
-    {:ok, %{conn: conn, params: params, link: nil, transactions: 0, module: module}}
+    {:ok, %{conn: conn, params: params, links: HashSet.new, transactions: 0, module: module}}
   end
 
-  def handle_cast({:link, pid}, %{link: nil} = s) do
+  def handle_call(:link, {pid, _}, %{links: links} = s) do
     Process.link(pid)
-    {:noreply, %{s | link: pid}}
+    {:noreply, %{s | links: HashSet.put(links, pid)}}
   end
 
-  def handle_cast({:unlink, pid}, %{link: pid} = s) do
+  def handle_call(:unlink, {pid, _}, %{links: links} = s) do
     Process.unlink(pid)
-    {:noreply, %{s | link: nil}}
+    {:noreply, %{s | links: HashSet.delete(links, pid)}}
   end
 
   # Connection is disconnected, reconnect before continuing
@@ -143,20 +145,17 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
-  # If there are no transactions, there is no state, so we just ignore the connection crash.
-  def handle_info({:EXIT, conn, _reason}, %{conn: conn, transactions: 0} = s) do
-    {:noreply, %{s | conn: nil}}
+  # The connection crashed, notify all linked process.
+  def handle_info({:EXIT, conn, _reason}, %{conn: conn, links: links} = s) do
+    kill_links_and_clear_calls(links)
+    {:noreply, %{s | conn: nil, links: HashSet.new, transactions: 0}}
   end
 
-  # If we have a transaction, we need to crash, notifying all interested.
-  def handle_info({:EXIT, conn, reason}, %{conn: conn} = s) do
-    {:stop, reason, %{s | conn: nil}}
-  end
-
-  # If the linked process crashed, assume stale connection and close it.
-  def handle_info({:EXIT, link, _reason}, %{conn: conn, link: link, module: module} = s) do
+  # If a linked process crashed, assume stale connection and close it.
+  def handle_info({:EXIT, _link, _reason}, %{conn: conn, module: module, links: links} = s) do
+    kill_links_and_clear_calls(links)
     conn && module.disconnect(conn)
-    {:noreply, %{s | link: nil, conn: nil}}
+    {:noreply, %{s | conn: nil, links: HashSet.new, transactions: 0}}
   end
 
   def handle_info(_info, s) do
@@ -165,5 +164,38 @@ defmodule Ecto.Adapters.SQL.Worker do
 
   def terminate(_reason, %{conn: conn, module: module}) do
     conn && module.disconnect(conn)
+  end
+
+  # Imagine the following scenario:
+  #
+  #   1. PID starts a transaction
+  #   2. PID sends a query
+  #   3. The connection crashes (and we receive an EXIT message)
+  #
+  # If 2 and 3 happen at the same, there is no guarantee which
+  # one will happen first. That's why we can't simply kill the
+  # linked processes and start a new connection as we may have
+  # left-over messages in the inbox.
+  #
+  # So this is what we do:
+  #
+  #   1. We insert an all_clear marker in the inbox
+  #   2. We kill all linked processes (transaction owners)
+  #   3. We remove all calls until we get the marker
+  #
+  # Because this worker only accept calls and it is controlled by
+  # the pool, the expectation is that the number of messages to
+  # be removed will always be maximum 1.
+  defp kill_links_and_clear_calls(links) do
+    send self(), :all_clear
+    Enum.each links, &Process.exit(&1, {:ecto, :no_connection})
+    clear_calls()
+  end
+
+  defp clear_calls() do
+    receive do
+      :all_clear -> :ok
+      {:"$gen_call", _, _} -> clear_calls()
+    end
   end
 end
