@@ -165,6 +165,30 @@ defmodule Ecto.Query do
     defstruct [:value, :tag, :type]
   end
 
+  @doc """
+  Resets a previously set field on an %Ecto.Query{}
+
+  It can reset any field in the %Ecto.Query{} struct except for :sources and :from.
+
+  Excluding :preloads will reset both :preloads and :assocs.
+
+  ## Example
+
+      query |> Ecto.Query.exclude(:select)
+
+  """
+  def exclude(%Ecto.Query{} = query, :joins), do: %{query | joins: []}
+  def exclude(%Ecto.Query{} = query, :wheres), do: %{query | wheres: []}
+  def exclude(%Ecto.Query{} = query, :order_bys), do: %{query | order_bys: []}
+  def exclude(%Ecto.Query{} = query, :group_bys), do: %{query | group_bys: []}
+  def exclude(%Ecto.Query{} = query, :havings), do: %{query | havings: []}
+  def exclude(%Ecto.Query{} = query, :distincts), do: %{query | distincts: []}
+  def exclude(%Ecto.Query{} = query, :select), do: %{query | select: nil}
+  def exclude(%Ecto.Query{} = query, :limit), do: %{query | limit: nil}
+  def exclude(%Ecto.Query{} = query, :offset), do: %{query | offset: nil}
+  def exclude(%Ecto.Query{} = query, :lock), do: %{query | lock: nil}
+  def exclude(%Ecto.Query{} = query, :preloads), do: %{query | preloads: [], assocs: []}
+
   alias Ecto.Query.Builder
   alias Ecto.Query.Builder.From
   alias Ecto.Query.Builder.Where

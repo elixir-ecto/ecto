@@ -137,4 +137,103 @@ defmodule Ecto.QueryTest do
     base = join("comments", :inner, [c], p in "posts", true)
     assert select(base, [p: 1], p) == select(base, [c, p], p)
   end
+
+  test "Ecto.Query.exclude/2 will exclude a passed in field" do
+    base = %Ecto.Query{}
+
+    query = from(p in "posts",
+                 join: b in "blogs",
+                 join: c in "comments",
+                 where: p.id == 0 and b.id == 0 and c.id ==0,
+                 order_by: p.title,
+                 limit: 2,
+                 offset: 10,
+                 group_by: p.author,
+                 having: p.comments > 10,
+                 distinct: p.category,
+                 lock: true,
+                 select: p)
+
+    # Pre-exclusion assertions
+    refute query.joins == base.joins
+    refute query.wheres == base.wheres
+    refute query.order_bys == base.order_bys
+    refute query.group_bys == base.group_bys
+    refute query.havings == base.havings
+    refute query.distincts == base.distincts
+    refute query.select == base.select
+    refute query.limit == base.limit
+    refute query.offset == base.offset
+    refute query.lock == base.lock
+
+    excluded_query = query
+    |> Ecto.Query.exclude(:joins)
+    |> Ecto.Query.exclude(:wheres)
+    |> Ecto.Query.exclude(:order_bys)
+    |> Ecto.Query.exclude(:group_bys)
+    |> Ecto.Query.exclude(:havings)
+    |> Ecto.Query.exclude(:distincts)
+    |> Ecto.Query.exclude(:select)
+    |> Ecto.Query.exclude(:limit)
+    |> Ecto.Query.exclude(:offset)
+    |> Ecto.Query.exclude(:lock)
+
+    # Post-exclusion assertions
+    assert excluded_query.joins == base.joins
+    assert excluded_query.wheres == base.wheres
+    assert excluded_query.order_bys == base.order_bys
+    assert excluded_query.group_bys == base.group_bys
+    assert excluded_query.havings == base.havings
+    assert excluded_query.distincts == base.distincts
+    assert excluded_query.select == base.select
+    assert excluded_query.limit == base.limit
+    assert excluded_query.offset == base.offset
+    assert excluded_query.lock == base.lock
+  end
+
+  test "Ecto.Query.exclude/2 will not set a non-existent field to nil" do
+    query = from(p in "posts",
+                 select: p)
+
+    msg = ~r"no function clause matching in Ecto.Query.exclude/2"
+
+    assert_raise FunctionClauseError, msg, fn ->
+      Ecto.Query.exclude(query, :fake_field)
+    end
+  end
+
+  test "Ecto.Query.exclude/2 will not reset :from" do
+    query = from(p in "posts", select: p)
+
+    msg = ~r"no function clause matching in Ecto.Query.exclude/2"
+
+    assert_raise FunctionClauseError, msg, fn ->
+      Ecto.Query.exclude(query, :from)
+    end
+  end
+
+  test "Ecto.Query.exclude/2 will not reset :sources" do
+    query = from(p in "posts", select: p) |> Ecto.Query.Planner.prepare(%{}) |> elem(0)
+
+    msg = ~r"no function clause matching in Ecto.Query.exclude/2"
+
+    assert_raise FunctionClauseError, msg, fn ->
+      Ecto.Query.exclude(query, :sources)
+    end
+  end
+
+  test "Ecto.Query.exclude/2 will reset preloads and assocs if :preloads is passed in" do
+    base = %Ecto.Query{}
+
+    query = from(p in "posts", join: c in "comments", preload: [comments: c])
+
+    refute query.preloads == base.preloads
+    refute query.assocs == base.assocs
+
+    excluded_query = query
+    |> Ecto.Query.exclude(:preloads)
+
+    assert excluded_query.preloads == base.preloads
+    assert excluded_query.assocs == base.assocs
+  end
 end
