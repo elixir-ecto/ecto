@@ -225,7 +225,7 @@ defmodule Ecto.QueryTest do
   test "Ecto.Query.exclude/2 will reset preloads and assocs if :preloads is passed in" do
     base = %Ecto.Query{}
 
-    query = from(p in "posts", join: c in "comments", preload: [comments: c])
+    query = from p in "posts", join: c in assoc(p, :comments), preload: [:author, comments: c]
 
     refute query.preloads == base.preloads
     refute query.assocs == base.assocs
