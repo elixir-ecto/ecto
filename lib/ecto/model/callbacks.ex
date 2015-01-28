@@ -32,14 +32,14 @@ defmodule Ecto.Model.Callbacks do
   callback that is invoked everytime a model is loaded with the
   model itself. See `after_load/2` for more informations.
 
-  ## Example
+  ## Examples
 
       defmodule User do
         use Ecto.Model.Callbacks
 
-        after_insert Stats, :increase_user_count
+        after_insert :increase_user_count
 
-        def increase_user_count(changeset)
+        def increase_user_count(changeset) do
           # ...
         end
       end
@@ -50,17 +50,17 @@ defmodule Ecto.Model.Callbacks do
 
   A callback can be defined in the following formats:
 
-      # Invoke the local function increase_user_count
+      # Invoke the local function increase_user_count/1
       after_insert :increase_user_count
 
-      # Invoke the local function increase_user_count
+      # Invoke the local function increase_user_count/3
       # with the given arguments (changeset is prepended)
       after_insert :increase_user_count, ["foo", "bar"]
 
-      # Invoke the remote function increase_user_count
+      # Invoke the remote function Stats.increase_user_count/1
       after_insert Stats, :increase_user_count
 
-      # Invoke the remote function increase_user_count
+      # Invoke the remote function Stats.increase_user_count/3
       # with the given arguments (changeset is prepended)
       after_insert Stats, :increase_user_count, ["foo", "bar"]
 
