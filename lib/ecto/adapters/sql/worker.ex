@@ -69,14 +69,14 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:ok, %{conn: conn, params: params, links: HashSet.new, transactions: 0, module: module}}
   end
 
-  def handle_call(:link, {pid, _}, %{links: links} = s) do
+  def handle_call(:link_me, {pid, _}, %{links: links} = s) do
     Process.link(pid)
-    {:noreply, %{s | links: HashSet.put(links, pid)}}
+    {:reply, :ok, %{s | links: HashSet.put(links, pid)}}
   end
 
-  def handle_call(:unlink, {pid, _}, %{links: links} = s) do
+  def handle_call(:unlink_me, {pid, _}, %{links: links} = s) do
     Process.unlink(pid)
-    {:noreply, %{s | links: HashSet.delete(links, pid)}}
+    {:reply, :ok, %{s | links: HashSet.delete(links, pid)}}
   end
 
   # Connection is disconnected, reconnect before continuing
