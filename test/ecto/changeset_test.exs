@@ -157,6 +157,10 @@ defmodule Ecto.ChangesetTest do
       cast(%Post{}, %Post{}, ~w(), ~w(unknown))
     end
 
+    assert_raise ArgumentError, ~r"mixed keys", fn ->
+      cast(%{"title" => "foo", title: "foo"}, %Post{}, ~w(), ~w(unknown))
+    end
+
     assert_raise FunctionClauseError, fn ->
       cast([], %Post{}, ~w(), ~w(unknown))
     end
