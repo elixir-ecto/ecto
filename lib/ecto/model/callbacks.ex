@@ -9,12 +9,15 @@ defmodule Ecto.Model.Callbacks do
 
   A callback is invoked by your `Ecto.Repo` before (or after)
   particular events. Lifecycle callbacks always receive a
-  changeset as argument and must always a modified changeset.
+  changeset as an argument and must always return a modified changeset.
 
-  Such callbacks are useful for data consistency, like keeping
+  Such callbacks are useful for data consistency: keeping
   counters, setting field values and so on. For this reason,
-  callbacks cannot abort, always run inside the tranasction and
-  are invoked only after the data is validated.
+  callbacks:
+
+    * cannot abort
+    * always run inside the transaction
+    * are invoked only after the data is validated
 
   Therefore, don't use callbacks for validation, enforcing business
   rules or performing actions unrelated to the data itself, like
@@ -25,9 +28,9 @@ defmodule Ecto.Model.Callbacks do
 
   ## Other callbacks
 
-  Besides life-cycle callbacks, Ecto also supports an `after_load`
+  Besides lifecycle callbacks, Ecto also supports an `after_load`
   callback that is invoked everytime a model is loaded with the
-  model itself. See `after_load/2` for more information.
+  model itself. See `after_load/2` for more informations.
 
   ## Example
 
