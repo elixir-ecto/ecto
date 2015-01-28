@@ -80,7 +80,7 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     caller = spawn(fn ->
       Worker.link_me(worker)
       Worker.begin!(worker, [timeout: :infinity])
-      Worker.query!(worker, "sleep", [5000], timeout: 5000)
+      :timer.sleep(:infinity)
     end)
 
     conn_mon   = Process.monitor(conn)

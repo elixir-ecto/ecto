@@ -260,7 +260,7 @@ defmodule Ecto.Adapters.SQL do
     opts = Keyword.put_new(opts, :timeout, @timeout)
 
     :poolboy.transaction(pool, fn worker ->
-      do_rollback(repo, worker, opts)
+      do_rollback_pending(repo, worker, opts)
       Worker.unlink_me(worker)
     end, opts[:timeout])
 
@@ -430,6 +430,12 @@ defmodule Ecto.Adapters.SQL do
   defp do_rollback(repo, worker, opts) do
     log(repo, {:query, "ROLLBACK"}, opts, fn ->
       Worker.rollback!(worker, opts)
+    end)
+  end
+
+  defp do_rollback_pending(repo, worker, opts) do
+    log(repo, {:query, "ROLLBACK"}, opts, fn ->
+      Worker.rollback_pending!(worker, opts)
     end)
   end
 

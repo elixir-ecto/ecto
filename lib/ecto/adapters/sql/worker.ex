@@ -43,6 +43,13 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
+  def rollback_pending!(worker, opts) do
+    case GenServer.call(worker, {:rollback_pending, opts}, opts[:timeout]) do
+      :ok -> :ok
+      {:error, err} -> raise err
+    end
+  end
+
   def link_me(worker) do
     GenServer.call(worker, :link_me)
   end
@@ -143,6 +150,14 @@ defmodule Ecto.Adapters.SQL.Worker do
       {:error, _} = err ->
         {:stop, err, err, s}
     end
+  end
+
+  def handle_call({:rollback_pending, _opts}, _from, %{transactions: 0} = s) do
+    {:reply, :ok, s}
+  end
+
+  def handle_call({:rollback_pending, opts}, from, s) do
+    handle_call({:rollback, opts}, from, s)
   end
 
   # The connection crashed, notify all linked process.
