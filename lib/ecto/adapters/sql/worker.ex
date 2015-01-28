@@ -44,10 +44,7 @@ defmodule Ecto.Adapters.SQL.Worker do
   end
 
   def rollback_pending!(worker, opts) do
-    case GenServer.call(worker, {:rollback_pending, opts}, opts[:timeout]) do
-      :ok -> :ok
-      {:error, err} -> raise err
-    end
+    GenServer.cast(worker, {:rollback_pending, opts})
   end
 
   def link_me(worker) do
@@ -155,18 +152,20 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
-  def handle_call({:rollback_pending, _opts}, _from, %{transactions: 0} = s) do
-    {:reply, :ok, s}
+  # This is a cast because we don't want it to be automatically
+  # cleaned as this command is all about returning the transaction
+  # to a safe state.
+  def handle_cast({:rollback_pending, _opts}, %{transactions: 0} = s) do
+    {:noreply, s}
   end
 
-  def handle_call({:rollback_pending, opts}, _from, s) do
+  def handle_cast({:rollback_pending, opts}, s) do
     %{conn: conn, module: module} = s
 
     case module.query(conn, module.rollback, [], opts) do
       {:ok, _} ->
-        {:reply, :ok, %{s | transactions: 0}}
-      {:error, _} = err ->
-        GenServer.reply(err)
+        {:noreply, %{s | transactions: 0, links: HashSet.new}}
+      {:error, _} ->
         wipe_state(s)
     end
   end
