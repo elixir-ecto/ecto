@@ -109,12 +109,17 @@ defmodule Ecto.Model.Callbacks do
       before_insert User, :generate_permalink
 
   """
-  defmacro before_insert(function, args \\ []),
-    do: register_callback(:before_insert, function, args, [])
+  defmacro before_insert(function),
+    do: register_callback(:before_insert, function, [])
 
-  @doc """
-  Same as `before_insert/2` but with arguments.
-  """
+  defmacro before_insert(function, args)
+    when is_list(args),
+    do: register_callback(:before_insert, function, args)
+
+  defmacro before_insert(module, function)
+    when is_atom(function),
+    do: register_callback(:before_insert, module, function, [])
+
   defmacro before_insert(module, function, args),
     do: register_callback(:before_insert, module, function, args)
 
@@ -133,12 +138,17 @@ defmodule Ecto.Model.Callbacks do
       after_insert Stats, :increase_user_count
 
   """
-  defmacro after_insert(function, args \\ []),
-    do: register_callback(:after_insert, function, args, [])
+  defmacro after_insert(function),
+    do: register_callback(:after_insert, function, [])
 
-  @doc """
-  Same as `after_insert/2` but with arguments.
-  """
+  defmacro after_insert(function, args)
+    when is_list(args),
+    do: register_callback(:after_insert, function, args)
+
+  defmacro after_insert(module, function)
+    when is_atom(function),
+    do: register_callback(:after_insert, module, function, [])
+
   defmacro after_insert(module, function, args),
     do: register_callback(:after_insert, module, function, args)
 
@@ -158,12 +168,17 @@ defmodule Ecto.Model.Callbacks do
       before_update User, :set_update_at_timestamp
 
   """
-  defmacro before_update(function, args \\ []),
-    do: register_callback(:before_update, function, args, [])
+  defmacro before_update(function),
+    do: register_callback(:before_update, function, [])
 
-  @doc """
-  Same as `before_update/2` but with arguments.
-  """
+  defmacro before_update(function, args)
+    when is_list(args),
+    do: register_callback(:before_update, function, args)
+
+  defmacro before_update(module, function)
+    when is_atom(function),
+    do: register_callback(:before_update, module, function, [])
+
   defmacro before_update(module, function, args),
     do: register_callback(:before_update, module, function, args)
 
@@ -181,12 +196,17 @@ defmodule Ecto.Model.Callbacks do
       after_update User, :notify_account_change
 
   """
-  defmacro after_update(function, args \\ []),
-    do: register_callback(:after_update, function, args, [])
+  defmacro after_update(function),
+    do: register_callback(:after_update, function, [])
 
-  @doc """
-  Same as `after_update/2` but with arguments.
-  """
+  defmacro after_update(function, args)
+    when is_list(args),
+    do: register_callback(:after_update, function, args)
+
+  defmacro after_update(module, function)
+    when is_atom(function),
+    do: register_callback(:after_update, module, function, [])
+
   defmacro after_update(module, function, args),
     do: register_callback(:after_update, module, function, args)
 
@@ -205,12 +225,17 @@ defmodule Ecto.Model.Callbacks do
       before_delete User, :copy_to_archive
 
   """
-  defmacro before_delete(function, args \\ []),
-    do: register_callback(:before_delete, function, args, [])
+  defmacro before_delete(function),
+    do: register_callback(:before_delete, function, [])
 
-  @doc """
-  Same as `before_delete/2` but with arguments.
-  """
+  defmacro before_delete(function, args)
+    when is_list(args),
+    do: register_callback(:before_delete, function, args)
+
+  defmacro before_delete(module, function)
+    when is_atom(function),
+    do: register_callback(:before_delete, module, function, [])
+
   defmacro before_delete(module, function, args),
     do: register_callback(:before_delete, module, function, args)
 
@@ -229,14 +254,20 @@ defmodule Ecto.Model.Callbacks do
       after_delete User, :notify_garbage_collectors
 
   """
-  defmacro after_delete(function, args \\ []),
-    do: register_callback(:after_delete, function, args, [])
+  defmacro after_delete(function),
+    do: register_callback(:after_delete, function, [])
 
-  @doc """
-  Same as `after_delete/2` but with arguments.
-  """
+  defmacro after_delete(function, args)
+    when is_list(args),
+    do: register_callback(:after_delete, function, args)
+
+  defmacro after_delete(module, function)
+    when is_atom(function),
+    do: register_callback(:after_delete, module, function, [])
+
   defmacro after_delete(module, function, args),
     do: register_callback(:after_delete, module, function, args)
+
 
   @doc """
   Adds a callback that is invoked after the model is loaded
@@ -255,14 +286,27 @@ defmodule Ecto.Model.Callbacks do
       after_load Post, :set_permalink
 
   """
-  defmacro after_load(function, args \\ []),
-    do: register_callback(:after_load, function, args, [])
+  defmacro after_load(function),
+    do: register_callback(:after_load, function, [])
 
-  @doc """
-  Same as `after_load/2` but with arguments.
-  """
+  defmacro after_load(function, args)
+    when is_list(args),
+    do: register_callback(:after_load, function, args)
+
+  defmacro after_load(module, function)
+    when is_atom(function),
+    do: register_callback(:after_load, module, function, [])
+
   defmacro after_load(module, function, args),
     do: register_callback(:after_load, module, function, args)
+
+
+  defp register_callback(event, function, args) do
+    quote bind_quoted: binding() do
+      callback = {function, args}
+      @ecto_callbacks Map.update(@ecto_callbacks, event, [callback], &[callback|&1])
+    end
+  end
 
   defp register_callback(event, module, function, args) do
     quote bind_quoted: binding() do
@@ -271,15 +315,13 @@ defmodule Ecto.Model.Callbacks do
     end
   end
 
-  defp compile_callback({function, args, []}, acc)
-      when is_atom(function) and is_list(args) do
+  defp compile_callback({function, args}, acc) do
     quote do
       unquote(function)(unquote(acc), unquote_splicing(Macro.escape(args)))
     end
   end
 
-  defp compile_callback({module, function, args}, acc)
-      when is_atom(module) and is_atom(function) and is_list(args) do
+  defp compile_callback({module, function, args}, acc) do
     quote do
       unquote(module).unquote(function)(unquote(acc), unquote_splicing(Macro.escape(args)))
     end
