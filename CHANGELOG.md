@@ -54,10 +54,10 @@
 * Enhancements
   * Pass the repository with the changeset to callbacks
   * Add `template`, `encoding`, `lc_collate` and `lc_ctype` options to adapter that are used when creating the database
-  * Add support for migrations (the previous migration style no longer works, just replace the SQL commands by `execute/1` calls)
   * Add support for timestamps via the `timestamps/0` macro in schemas and `Ecto.Model.Timestamps`
   * Add `validate_unique/3` to `Ecto.Changeset`
   * Support setting `:auto_field` to false in `Ecto.Schema.belongs_to/3`
+  * Add support for migrations (the previous migration style no longer works, just replace the SQL commands by `execute/1` calls). If you have ran migrations previously, you will have to add an inserted_at column with type `datetime/timestamp` to your `schema_migrations` table. This column can be added using the new migrations themselves.
 
 * Bug fixes
   * Do not choke on empty `order_by` or `group_by` during query generation

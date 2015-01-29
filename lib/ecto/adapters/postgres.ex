@@ -91,6 +91,11 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp run_with_psql(database, sql_command) do
+    unless System.find_executable("psql") do
+      raise "could not find executable `psql` in path, " <>
+            "please guarantee it is available before running ecto commands"
+    end
+
     env =
       if password = database[:password] do
         [{"PGPASSWORD", password}]
