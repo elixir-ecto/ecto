@@ -288,6 +288,9 @@ defmodule Ecto.Repo do
   @doc """
   Updates all entries matching the given query with the given values.
 
+  This operation does not run the model `before_update` and
+  `after_update` callbacks.
+
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
@@ -307,6 +310,9 @@ defmodule Ecto.Repo do
 
   @doc """
   Deletes all entries matching the given query.
+
+  This operation does not run the model `before_delete` and
+  `after_delete` callbacks.
 
   ## Options
 
