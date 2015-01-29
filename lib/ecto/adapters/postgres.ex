@@ -2,12 +2,20 @@ defmodule Ecto.Adapters.Postgres do
   @moduledoc """
   Adapter module for PostgreSQL.
 
-  It handles and pools the connections to the postgres
-  database using `postgrex` with `poolboy`.
+  It uses `postgrex` for communicating to the database
+  and manages a connection pool with `poolboy`.
+
+  ## Features
+
+    * Full query support (including joins, preloads and associations)
+    * Support for transactions
+    * Support for data migrations
+    * Support for ecto.create and ecto.drop operations
+    * Support for transactional tests via `Ecto.Adapters.SQL`
 
   ## Options
 
-  Postgrex options split in different categories described
+  Postgres options split in different categories described
   below. All options should be given via the repository
   configuration.
 

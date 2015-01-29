@@ -66,6 +66,16 @@ end
 
 After you are done, run `mix deps.get` in your shell to fetch the dependencies.
 
+## Supported databases
+
+The following databases are supported:
+
+Database                | Elixir driver
+:---------------------- | :----------------------
+PostgreSQL              | [postgrex](http://github.com/ericmj/postgrex)
+
+We are currently looking for contributions to add support for other SQL databases and folks interested in exploring non-relational databases too.
+
 ## Important links
 
   * [Documentation](http://hexdocs.pm/ecto)
