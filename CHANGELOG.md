@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.7.2 (2015-01-29)
+
+* Enhancements
+  * Support `Ecto.Query.exclude/2` that resets a previously set query field
+  * Support more robust transactional tests via explicit `Ecto.Adapters.SQL.restart_test_transaction` command
+
+* Bug fixes
+  * Ensure `psql` does not require a database with the same name as the user
+
 ## v0.7.1 (2015-01-27)
 
 * Enhancements
