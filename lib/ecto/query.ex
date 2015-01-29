@@ -165,30 +165,6 @@ defmodule Ecto.Query do
     defstruct [:value, :tag, :type]
   end
 
-  @doc """
-  Resets a previously set field on an %Ecto.Query{}
-
-  It can reset any field in the %Ecto.Query{} struct except for :sources and :from.
-
-  Excluding :preloads will reset both :preloads and :assocs.
-
-  ## Example
-
-      query |> Ecto.Query.exclude(:select)
-
-  """
-  def exclude(%Ecto.Query{} = query, :join), do: %{query | joins: []}
-  def exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
-  def exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
-  def exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
-  def exclude(%Ecto.Query{} = query, :having), do: %{query | havings: []}
-  def exclude(%Ecto.Query{} = query, :distinct), do: %{query | distincts: []}
-  def exclude(%Ecto.Query{} = query, :select), do: %{query | select: nil}
-  def exclude(%Ecto.Query{} = query, :limit), do: %{query | limit: nil}
-  def exclude(%Ecto.Query{} = query, :offset), do: %{query | offset: nil}
-  def exclude(%Ecto.Query{} = query, :lock), do: %{query | lock: nil}
-  def exclude(%Ecto.Query{} = query, :preload), do: %{query | preloads: [], assocs: []}
-
   alias Ecto.Query.Builder
   alias Ecto.Query.Builder.From
   alias Ecto.Query.Builder.Where
@@ -201,6 +177,31 @@ defmodule Ecto.Query do
   alias Ecto.Query.Builder.Preload
   alias Ecto.Query.Builder.Join
   alias Ecto.Query.Builder.Lock
+
+  @doc """
+  Resets a previously set field on a query.
+
+  It can reset any query field except the query source (`from`).
+
+  ## Example
+
+      query |> Ecto.Query.exclude(:select)
+
+  """
+  def exclude(%Ecto.Query{} = query, field), do: do_exclude(query, field)
+  def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
+
+  defp do_exclude(%Ecto.Query{} = query, :join), do: %{query | joins: []}
+  defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
+  defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
+  defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
+  defp do_exclude(%Ecto.Query{} = query, :having), do: %{query | havings: []}
+  defp do_exclude(%Ecto.Query{} = query, :distinct), do: %{query | distincts: []}
+  defp do_exclude(%Ecto.Query{} = query, :select), do: %{query | select: nil}
+  defp do_exclude(%Ecto.Query{} = query, :limit), do: %{query | limit: nil}
+  defp do_exclude(%Ecto.Query{} = query, :offset), do: %{query | offset: nil}
+  defp do_exclude(%Ecto.Query{} = query, :lock), do: %{query | lock: nil}
+  defp do_exclude(%Ecto.Query{} = query, :preload), do: %{query | preloads: [], assocs: []}
 
   @doc """
   Creates a query.

@@ -138,7 +138,7 @@ defmodule Ecto.QueryTest do
     assert select(base, [p: 1], p) == select(base, [c, p], p)
   end
 
-  test "Ecto.Query.exclude/2 will exclude a passed in field" do
+  test "exclude/2 will exclude a passed in field" do
     base = %Ecto.Query{}
 
     query = from(p in "posts",
@@ -167,16 +167,16 @@ defmodule Ecto.QueryTest do
     refute query.lock == base.lock
 
     excluded_query = query
-    |> Ecto.Query.exclude(:join)
-    |> Ecto.Query.exclude(:where)
-    |> Ecto.Query.exclude(:order_by)
-    |> Ecto.Query.exclude(:group_by)
-    |> Ecto.Query.exclude(:having)
-    |> Ecto.Query.exclude(:distinct)
-    |> Ecto.Query.exclude(:select)
-    |> Ecto.Query.exclude(:limit)
-    |> Ecto.Query.exclude(:offset)
-    |> Ecto.Query.exclude(:lock)
+    |> exclude(:join)
+    |> exclude(:where)
+    |> exclude(:order_by)
+    |> exclude(:group_by)
+    |> exclude(:having)
+    |> exclude(:distinct)
+    |> exclude(:select)
+    |> exclude(:limit)
+    |> exclude(:offset)
+    |> exclude(:lock)
 
     # Post-exclusion assertions
     assert excluded_query.joins == base.joins
@@ -191,38 +191,31 @@ defmodule Ecto.QueryTest do
     assert excluded_query.lock == base.lock
   end
 
-  test "Ecto.Query.exclude/2 will not set a non-existent field to nil" do
-    query = from(p in "posts",
-                 select: p)
+  test "exclude/2 works with any queryable" do
+    query = "posts" |> exclude(:select)
+    assert query.from
+    refute query.select
+  end
 
-    msg = ~r"no function clause matching in Ecto.Query.exclude/2"
+  test "exclude/2 will not set a non-existent field to nil" do
+    query = from(p in "posts", select: p)
+    msg = ~r"no function clause matching in Ecto.Query"
 
     assert_raise FunctionClauseError, msg, fn ->
       Ecto.Query.exclude(query, :fake_field)
     end
   end
 
-  test "Ecto.Query.exclude/2 will not reset :from" do
+  test "exclude/2 will not reset :from" do
     query = from(p in "posts", select: p)
-
-    msg = ~r"no function clause matching in Ecto.Query.exclude/2"
+    msg = ~r"no function clause matching in Ecto.Query"
 
     assert_raise FunctionClauseError, msg, fn ->
       Ecto.Query.exclude(query, :from)
     end
   end
 
-  test "Ecto.Query.exclude/2 will not reset :sources" do
-    query = from(p in "posts", select: p) |> Ecto.Query.Planner.prepare(%{}) |> elem(0)
-
-    msg = ~r"no function clause matching in Ecto.Query.exclude/2"
-
-    assert_raise FunctionClauseError, msg, fn ->
-      Ecto.Query.exclude(query, :source)
-    end
-  end
-
-  test "Ecto.Query.exclude/2 will reset preloads and assocs if :preloads is passed in" do
+  test "exclude/2 will reset preloads and assocs if :preloads is passed in" do
     base = %Ecto.Query{}
 
     query = from p in "posts", join: c in assoc(p, :comments), preload: [:author, comments: c]
@@ -230,8 +223,7 @@ defmodule Ecto.QueryTest do
     refute query.preloads == base.preloads
     refute query.assocs == base.assocs
 
-    excluded_query = query
-    |> Ecto.Query.exclude(:preload)
+    excluded_query = query |> exclude(:preload)
 
     assert excluded_query.preloads == base.preloads
     assert excluded_query.assocs == base.assocs
