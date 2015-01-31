@@ -69,8 +69,19 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines an index struct used in migrations.
     """
-    defstruct table: nil, name: nil, columns: [], unique: false
-    @type t :: %__MODULE__{table: atom, name: atom, columns: [atom | String.t], unique: boolean}
+    defstruct table: nil,
+              name: nil,
+              columns: [],
+              unique: false,
+              concurrently: false
+
+    @type t :: %__MODULE__{
+      table: atom,
+      name: atom,
+      columns: [atom | String.t],
+      unique: boolean,
+      concurrently: boolean
+    }
   end
 
   defmodule Table do
