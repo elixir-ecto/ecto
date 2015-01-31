@@ -434,7 +434,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "drop index" do
     drop = {:drop, %Index{name: "posts$main"}}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX IF EXISTS "posts$main"|
   end
 
   test "alter table" do
