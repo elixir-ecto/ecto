@@ -415,8 +415,9 @@ defmodule Ecto.Adapters.SQL do
   def transaction(repo, opts, fun) do
     pool = pool!(repo)
 
-    opts   = Keyword.put_new(opts, :timeout, @timeout)
-    worker = checkout_worker(pool, opts[:timeout])
+    opts    = Keyword.put_new(opts, :timeout, @timeout)
+    timeout = opts[:timeout]
+    worker  = checkout_worker(pool, timeout)
 
     try do
       do_begin(repo, worker, opts)
@@ -432,7 +433,7 @@ defmodule Ecto.Adapters.SQL do
         do_rollback(repo, worker, opts)
         :erlang.raise(type, term, stacktrace)
     after
-      checkin_worker(pool)
+      checkin_worker(pool, timeout)
     end
   end
 
@@ -445,18 +446,18 @@ defmodule Ecto.Adapters.SQL do
         worker
       nil ->
         worker = :poolboy.checkout(pool, true, timeout)
-        Worker.link_me(worker)
+        Worker.link_me(worker, timeout)
         Process.put(key, {worker, 1})
         worker
     end
   end
 
-  defp checkin_worker(pool) do
+  defp checkin_worker(pool, timeout) do
     key = {:ecto_transaction_pid, pool}
 
     case Process.get(key) do
       {worker, 1} ->
-        Worker.unlink_me(worker)
+        Worker.unlink_me(worker, timeout)
         :poolboy.checkin(pool, worker)
         Process.delete(key)
       {worker, counter} ->

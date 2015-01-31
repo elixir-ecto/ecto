@@ -10,12 +10,12 @@ defmodule Ecto.Adapters.SQL.Worker do
     GenServer.start(__MODULE__, {module, args})
   end
 
-  def link_me(worker) do
-    GenServer.call(worker, :link_me)
+  def link_me(worker, timeout) do
+    GenServer.call(worker, :link_me, timeout)
   end
 
-  def unlink_me(worker) do
-    GenServer.call(worker, :unlink_me)
+  def unlink_me(worker, timeout) do
+    GenServer.call(worker, :unlink_me, timeout)
   end
 
   def query!(worker, sql, params, opts) do
@@ -229,10 +229,11 @@ defmodule Ecto.Adapters.SQL.Worker do
   defp begin_sandbox(%{sandbox: false} = s), do: {:ok, s}
   defp begin_sandbox(%{sandbox: true} = s) do
     %{conn: conn, module: module} = s
+    opts = [timeout: :infinity]
 
-    case module.query(conn, module.begin_transaction, [], []) do
+    case module.query(conn, module.begin_transaction, [], opts) do
       {:ok, _} ->
-        case module.query(conn, module.savepoint("ecto_sandbox"), [], []) do
+        case module.query(conn, module.savepoint("ecto_sandbox"), [], opts) do
           {:ok, _}          -> {:ok, %{s | transactions: 1}}
           {:error, _} = err -> err
         end
