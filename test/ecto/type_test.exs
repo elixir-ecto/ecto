@@ -41,4 +41,19 @@ defmodule Ecto.TypeTest do
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1) == {:ok, Decimal.new("1")}
   end
+
+  test "integer casting" do
+    assert cast(:integer, 1) == {:ok, 1}
+    assert cast(:integer, "1") == {:ok, 1}
+    assert cast(:integer, "1.0") == :error
+    assert cast(:integer, "1-nope") == :error
+  end
+
+  test "float casting" do
+    assert cast(:float, 1.0) == {:ok, 1.0}
+    assert cast(:float, 1) == {:ok, 1.0}
+    assert cast(:float, "1.0") == {:ok, 1.0}
+    assert cast(:float, "1") == {:ok, 1.0}
+    assert cast(:float, "1.err") == :error
+  end
 end
