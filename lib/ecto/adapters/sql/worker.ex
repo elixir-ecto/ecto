@@ -163,11 +163,19 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
+  def handle_call({:begin_test_transaction, _opts}, _from, %{sandbox: true} = s) do
+    {:reply, :ok, s}
+  end
+
   def handle_call({:begin_test_transaction, _opts}, _from, %{transactions: 0} = s) do
     case begin_sandbox(%{s | sandbox: true}) do
       {:ok, s}      -> {:reply, :ok, s}
       {:error, err} -> {:reply, {:error, err}, s}
     end
+  end
+
+  def handle_call({:restart_test_transaction, _opts}, _from, %{sandbox: false} = s) do
+    {:reply, :ok, s}
   end
 
   def handle_call({:restart_test_transaction, opts}, _from, %{transactions: 1} = s) do
@@ -180,6 +188,10 @@ defmodule Ecto.Adapters.SQL.Worker do
         GenServer.reply(err)
         wipe_state(s)
     end
+  end
+
+  def handle_call({:rollback_test_transaction, _opts}, _from, %{sandbox: false} = s) do
+    {:reply, :ok, s}
   end
 
   def handle_call({:rollback_test_transaction, opts}, _from, %{transactions: 1} = s) do
