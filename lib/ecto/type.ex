@@ -343,6 +343,8 @@ defmodule Ecto.Type do
 
       iex> cast(:float, 1.0)
       {:ok, 1.0}
+      iex> cast(:float, 1)
+      {:ok, 1.0}
       iex> cast(:float, "1")
       {:ok, 1.0}
       iex> cast(:float, "1.0")
@@ -414,6 +416,8 @@ defmodule Ecto.Type do
       _           -> :error
     end
   end
+
+  defp do_cast(:float, term) when is_integer(term), do: {:ok, term + 0.0}
 
   defp do_cast(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
   defp do_cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
