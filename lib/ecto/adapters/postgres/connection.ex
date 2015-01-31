@@ -404,8 +404,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def execute_ddl({:create, %Index{}=index}) do
-      assemble(["CREATE#{if index.unique, do: " UNIQUE"} INDEX",
-                quote_name(index.name), "ON", quote_name(index.table),
+      create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
+      if index.concurrently, do: create = create <> " CONCURRENTLY"
+
+      assemble([create, quote_name(index.name), "ON", quote_name(index.table),
                 "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
     end
 
