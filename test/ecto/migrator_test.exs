@@ -45,6 +45,15 @@ defmodule Ecto.MigratorTest do
     end
   end
 
+  defmodule NoTransactionMigration do
+    use Ecto.Migration
+    @disable_ddl_transaction true
+
+    def change do
+      create index(:posts, [:foo])
+    end
+  end
+
   defmodule InvalidMigration do
     use Ecto.Migration
   end
@@ -200,6 +209,18 @@ defmodule Ecto.MigratorTest do
       create_migration "13_version_past_the_end.exs"
       create_migration "14_version_past_the_end.exs"
       assert run(MockRepo, path, :up, to: 15, log: false) == [13, 14]
+    end
+  end
+
+  test "the migration can be disabled" do
+    capture_log fn ->
+      up(MockRepo, 0, NoTransactionMigration)
+
+      # Assert there's only one transaction message, which is for when the
+      # SchemaMigration does his thing. If @disable_ddl_transaction was set to
+      # false, we would have *two* {:transaction, _} messages.
+      {:messages, messages} = Process.info(self, :messages)
+      assert [{:transaction, _}] = messages
     end
   end
 

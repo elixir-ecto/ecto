@@ -56,12 +56,17 @@ defmodule Ecto.Migrator do
   end
 
   defp do_up(repo, version, module, opts) do
-    repo.transaction [log: false], fn ->
+    run_attempts = fn ->
       attempt(repo, module, :forward, :up, opts)
         || attempt(repo, module, :forward, :change, opts)
-        || raise Ecto.MigrationError,
-                 message: "#{inspect module} does not implement a `up/0` or `change/0` function"
+        || raise Ecto.MigrationError, message: "#{inspect module} does not implement a `up/0` or `change/0` function"
       SchemaMigration.up(repo, version)
+    end
+
+    if module.__disable_ddl_transaction__ do
+      run_attempts.()
+    else
+      repo.transaction [log: false], run_attempts
     end
   end
 
@@ -87,12 +92,17 @@ defmodule Ecto.Migrator do
   end
 
   defp do_down(repo, version, module, opts) do
-    repo.transaction [log: false], fn ->
+    run_attempts = fn ->
       attempt(repo, module, :forward, :down, opts)
         || attempt(repo, module, :backward, :change, opts)
-        || raise Ecto.MigrationError,
-                 message: "#{inspect module} does not implement a `down/0` or `change/0` function"
+        || raise Ecto.MigrationError, message: "#{inspect module} does not implement a `down/0` or `change/0` function"
       SchemaMigration.down(repo, version)
+    end
+
+    if module.__disable_ddl_transaction__ do
+      run_attempts.()
+    else
+      repo.transaction [log: false], run_attempts
     end
   end
 

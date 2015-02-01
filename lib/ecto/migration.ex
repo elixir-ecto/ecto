@@ -107,6 +107,15 @@ defmodule Ecto.Migration do
     quote location: :keep do
       import Ecto.Migration
       def __migration__, do: true
+      @disable_ddl_transaction false
+      @before_compile Ecto.Migration
+    end
+  end
+
+  @doc false
+  defmacro __before_compile__(_env) do
+    quote do
+      def __disable_ddl_transaction__, do: @disable_ddl_transaction
     end
   end
 
