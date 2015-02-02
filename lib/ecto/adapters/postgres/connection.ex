@@ -412,7 +412,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def execute_ddl({:drop, %Index{}=index}) do
-      "DROP INDEX #{quote_name(index.name)}"
+      assemble([
+        "DROP INDEX",
+        if(index.concurrently, do: "CONCURRENTLY"),
+        quote_name(index.name),
+      ])
     end
 
     def execute_ddl(default) when is_binary(default), do: default

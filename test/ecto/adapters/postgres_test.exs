@@ -447,6 +447,11 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
   end
 
+  test "drop index concurrently" do
+    drop = {:drop, %Index{name: "posts$main", concurrently: true}}
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX CONCURRENTLY "posts$main"|
+  end
+
   test "alter table" do
     alter = {:alter, %Table{name: :posts},
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
