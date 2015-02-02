@@ -63,7 +63,7 @@ defmodule Ecto.Migrator do
       SchemaMigration.up(repo, version)
     end
 
-    if module.__disable_ddl_transaction__ do
+    if module.__migration__[:disable_ddl_transaction] do
       run_attempts.()
     else
       repo.transaction [log: false], run_attempts
@@ -99,7 +99,7 @@ defmodule Ecto.Migrator do
       SchemaMigration.down(repo, version)
     end
 
-    if module.__disable_ddl_transaction__ do
+    if module.__migration__[:disable_ddl_transaction] do
       run_attempts.()
     else
       repo.transaction [log: false], run_attempts
