@@ -63,6 +63,32 @@ defmodule Ecto.Migration do
 
   Notice not all commands are reversible though. Trying to rollback
   a non-reversible command will raise an `Ecto.MigrationError`.
+
+  ## Transactions
+
+  By default, Ecto runs all migrations inside a transaction. That's not always
+  ideal: for example, PostgreSQL allows to create/drop indexes concurrently but
+  only outside of any transaction (see the [PostgreSQL
+  docs](http://www.postgresql.org/docs/9.2/static/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY)).
+
+  Migrations can be forced to run outside a transaction by setting the
+  `@disable_ddl_transaction` module attribute to `true`:
+
+      defmodule MyRepo.Migrations.CreateIndexes do
+        use Ecto.Migration
+        @disable_ddl_transaction true
+
+        def change do
+          create index(:posts, [:slug], concurrently: true)
+        end
+      end
+
+  Since running migrations outside a transaction can be dangerous, consider
+  performing very few operations in such migrations.
+
+  See the `index/3` function for more information on creating/dropping indexes
+  concurrently.
+
   """
 
   defmodule Index do
@@ -229,6 +255,17 @@ defmodule Ecto.Migration do
 
   Indexes are non-unique by default.
 
+  ## Adding/dropping indexes concurrently
+
+  PostgreSQL supports adding/dropping indexes concurrently (see the
+  [docs](http://www.postgresql.org/docs/9.4/static/sql-createindex.html)).
+  In order to take advantage of this, the `:concurrently` option needs to be set
+  to `true` when the index is created/dropped.
+
+  **Note**: in order for the `:concurrently` option to work, the migration must
+  not be run inside a transaction. See the `Ecto.Migration` docs for more
+  information on running migrations outside of a transaction.
+
   ## Examples
 
       # Without a name, index defaults to products_category_id_sku_index
@@ -236,6 +273,9 @@ defmodule Ecto.Migration do
 
       # Name can be given explicitly though
       drop index(:products, [:category_id, :sku], name: :my_special_name)
+
+      # Adding an index concurrently
+      create index(:products, [:category_id, :sku], concurrently: true)
 
   """
   def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
