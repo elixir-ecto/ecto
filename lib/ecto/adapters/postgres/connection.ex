@@ -456,8 +456,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       do: nil
     defp default_expr(literal) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
-    defp default_expr(literal),
+    defp default_expr(literal) when is_number(literal),
       do: "DEFAULT #{literal}"
+    defp default_expr({:fragment, expr}),
+      do: "DEFAULT #{expr}"
 
     defp index_expr(literal) when is_binary(literal),
       do: literal
@@ -475,9 +477,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       type_name = ecto_to_db(type)
 
       cond do
-        size      -> "#{type_name}(#{size})"
-        precision -> "#{type_name}(#{precision},#{scale || 0})"
-        true      -> "#{type_name}"
+        size            -> "#{type_name}(#{size})"
+        precision       -> "#{type_name}(#{precision},#{scale || 0})"
+        type == :string -> "#{type_name}(255)"
+        true            -> "#{type_name}"
       end
     end
 
@@ -502,4 +505,5 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp ecto_to_db(:binary),     do: "bytea"
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
+
 end

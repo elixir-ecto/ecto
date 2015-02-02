@@ -393,7 +393,7 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "title" varchar, "created_at" timestamp)|
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "title" varchar(255), "created_at" timestamp)|
   end
 
   test "create table with reference" do
@@ -407,12 +407,12 @@ defmodule Ecto.Adapters.PostgresTest do
   test "create table with column options" do
     create = {:create, %Table{name: :posts},
                [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
-                {:add, :price, :numeric, [precision: 8, scale: 2]},
+                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
                 {:add, :on_hand, :integer, [default: 0, null: true]}]}
 
     assert SQL.execute_ddl(create) == """
     CREATE TABLE "posts" ("name" varchar(20) DEFAULT 'Untitled' NOT NULL,
-    "price" numeric(8,2),
+    "price" numeric(8,2) DEFAULT expr,
     "on_hand" integer DEFAULT 0 NULL)
     """ |> String.strip |> String.replace("\n", " ")
   end
