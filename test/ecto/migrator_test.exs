@@ -45,6 +45,15 @@ defmodule Ecto.MigratorTest do
     end
   end
 
+  defmodule NoTransactionMigration do
+    use Ecto.Migration
+    @disable_ddl_transaction true
+
+    def change do
+      create index(:posts, [:foo])
+    end
+  end
+
   defmodule InvalidMigration do
     use Ecto.Migration
   end
@@ -200,6 +209,28 @@ defmodule Ecto.MigratorTest do
       create_migration "13_version_past_the_end.exs"
       create_migration "14_version_past_the_end.exs"
       assert run(MockRepo, path, :up, to: 15, log: false) == [13, 14]
+    end
+  end
+
+  test "migrations run inside a transaction by default" do
+    capture_log fn ->
+      up(MockRepo, 0, ChangeMigration)
+      # One transaction comes from the SchemaMigration insert, the other one
+      # from the actual migration we're testing.
+      assert_receive {:transaction, _}
+      assert_receive {:transaction, _}
+    end
+  end
+
+  test "migrations can be forced to run outside a transaction" do
+    capture_log fn ->
+      up(MockRepo, 0, NoTransactionMigration)
+
+      # From the SchemaMigration insert transaction.
+      assert_receive {:transaction, _}
+
+      # No transaction is executed by the migration.
+      refute_receive {:transaction, _}
     end
   end
 
