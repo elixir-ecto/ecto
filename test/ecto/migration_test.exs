@@ -23,7 +23,7 @@ defmodule Ecto.MigrationTest do
         :exit, _ -> :ok
       end
     end
-
+    
     :ok
   end
 

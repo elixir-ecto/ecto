@@ -15,17 +15,17 @@ defmodule Ecto.Integration.LockTest do
   end
 
   setup do
-    %LockCounter{id: 42, count: 1} |> PoolRepo.insert
+    %LockCounter{count: 1} |> PoolRepo.insert
 
     on_exit fn ->
-      PoolRepo.get(LockCounter, 42) |> PoolRepo.delete
+      PoolRepo.get(LockCounter, 1) |> PoolRepo.delete
     end
 
     :ok
   end
 
   test "lock for update" do
-    query = from(p in LockCounter, where: p.id == 42, lock: true)
+    query = from(p in LockCounter, where: p.id == 1, lock: true)
     pid = self
 
     new_pid =
