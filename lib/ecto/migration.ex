@@ -268,6 +268,16 @@ defmodule Ecto.Migration do
   not be run inside a transaction. See the `Ecto.Migration` docs for more
   information on running migrations outside of a transaction.
 
+  ## Index types
+
+  PostgreSQL supports several index types like B-tree, Hash or GiST. When
+  creating an index, the index type defaults to B-tree, but it can be specified
+  with the `:using` option. The `:using` option can be an atom or a string; its
+  value is passed to the `USING` clause as is.
+
+  More information on index types can be found in the [PostgreSQL
+  docs](http://www.postgresql.org/docs/9.4/static/indexes-types.html).
+
   ## Examples
 
       # Without a name, index defaults to products_category_id_sku_index
@@ -276,8 +286,11 @@ defmodule Ecto.Migration do
       # Name can be given explicitly though
       drop index(:products, [:category_id, :sku], name: :my_special_name)
 
-      # Adding an index concurrently
+      # Indexes can be added concurrently
       create index(:products, [:category_id, :sku], concurrently: true)
+
+      # The index type can be specified
+      create index(:products, [:name], using: :hash)
 
   """
   def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
