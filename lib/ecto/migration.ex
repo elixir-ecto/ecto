@@ -99,14 +99,16 @@ defmodule Ecto.Migration do
               name: nil,
               columns: [],
               unique: false,
-              concurrently: false
+              concurrently: false,
+              using: nil
 
     @type t :: %__MODULE__{
       table: atom,
       name: atom,
       columns: [atom | String.t],
       unique: boolean,
-      concurrently: boolean
+      concurrently: boolean,
+      using: atom | String.t
     }
   end
 
