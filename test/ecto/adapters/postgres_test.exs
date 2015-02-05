@@ -442,6 +442,16 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.execute_ddl(create) == ~s|CREATE UNIQUE INDEX CONCURRENTLY "posts$main" ON "posts" ("permalink")|
   end
 
+  test "create an index using a different type" do
+    create = {:create, %Index{name: "posts$hash", table: :posts, columns: [:id], using: :hash}}
+    assert SQL.execute_ddl(create) == ~s|CREATE INDEX "posts$hash" ON "posts" USING hash ("id")|
+  end
+
+  test "create an index using a different type concurrently" do
+    create = {:create, %Index{name: "posts$hash", table: :posts, columns: [:id], concurrently: true, using: "gist"}}
+    assert SQL.execute_ddl(create) == ~s|CREATE INDEX CONCURRENTLY "posts$hash" ON "posts" USING gist ("id")|
+  end
+
   test "drop index" do
     drop = {:drop, %Index{name: "posts$main"}}
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
