@@ -166,6 +166,58 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "cast/4: works with a changeset as the second argument" do
+    base_changeset = cast(%{}, %Post{title: "valid"}, ~w(title), ~w())
+
+    # No changes
+    changeset = cast(%{}, base_changeset, ~w(), ~w())
+    assert changeset.valid?
+    assert changeset.changes == %{}
+    assert changeset.required == [:title]
+
+    # Overriding changes
+    changeset = cast(%{title: "new"}, base_changeset, ~w(title), ~w())
+    assert changeset.valid?
+    assert changeset.changes == %{title: "new"}
+    assert changeset.required == [:title]
+
+    # Non-conflicting changes and optional field
+    changeset = cast(%{body: "new body"}, base_changeset, ~w(), ~w(body))
+    assert changeset.valid?
+    assert changeset.changes == %{body: "new body"}
+    assert changeset.required == [:title]
+    assert changeset.optional == [:body]
+
+    # Optional fields that already appear in the required fields are not put
+    # into the `:optional` list
+    changeset = cast(%{title: "new"}, base_changeset, ~w(), ~w(title))
+    assert changeset.valid?
+    assert changeset.changes == %{title: "new"}
+    assert changeset.required == [:title]
+    assert changeset.optional == []
+
+    base_changeset = cast(%{title: "valid"}, %Post{}, ~w(), ~w(title))
+
+    changeset = cast(%{title: "new"}, base_changeset, ~w(title), ~w())
+    assert changeset.valid?
+    assert changeset.changes == %{title: "new"}
+    assert changeset.required == [:title]
+    assert changeset.optional == []
+
+    changeset = cast(%{body: "new body"}, base_changeset, ~w(), ~w(body))
+    assert changeset.valid?
+    assert changeset.changes == %{body: "new body", title: "valid"}
+    assert changeset.required == []
+    assert Enum.sort(changeset.optional) == [:body, :title]
+  end
+
+  test "cast/4: accumulates errors when a changeset is passed" do
+    changeset = cast(%{}, %Post{}, ~w(title), ~w())
+    changeset = cast(%{}, changeset, ~w(title body), ~w())
+    refute changeset.valid?
+    assert Enum.sort(changeset.errors) == [body: :required, title: :required, title: :required]
+  end
+
   ## Changeset functions
 
   test "change/2" do
