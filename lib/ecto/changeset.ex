@@ -117,8 +117,14 @@ defmodule Ecto.Changeset do
                     changes: %{}, required: required, optional: optional}
   end
 
+  def cast(%{} = params, %Ecto.Changeset{} = changeset, required, optional)
+      when is_list(required) and is_list(optional) do
+    new_changeset = cast(params, changeset.model, required, optional)
+    merge_changesets(changeset, new_changeset)
+  end
+
   def cast(%{} = params, %{__struct__: module} = model, required, optional)
-      when is_map(params) and is_list(required) and is_list(optional) do
+      when is_list(required) and is_list(optional) do
     params = convert_params(params)
     types  = module.__changeset__
 
@@ -207,6 +213,23 @@ defmodule Ecto.Changeset do
     else
       errors
     end
+  end
+
+  defp merge_changesets(%Ecto.Changeset{model: model} = cs1, %Ecto.Changeset{model: model} = cs2) do
+    new_params   = Map.merge(cs1.params, cs2.params)
+    new_changes  = Map.merge(cs1.changes, cs2.changes)
+    new_errors   = cs1.errors ++ cs2.errors
+    new_required = Enum.uniq(cs1.required ++ cs2.required)
+
+    # Merges the :optional field of both changesets and then pulls out all the
+    # fields that have now become required.
+    opt_set = Enum.into(cs1.optional ++ cs2.optional, HashSet.new)
+    req_set = Enum.into(new_required, HashSet.new)
+    new_optional = HashSet.difference(opt_set, req_set) |> HashSet.to_list
+
+    %Ecto.Changeset{params: new_params, model: model, valid?: new_errors == [],
+                    errors: new_errors, changes: new_changes,
+                    required: new_required, optional: new_optional}
   end
 
   ## Working with changesets
