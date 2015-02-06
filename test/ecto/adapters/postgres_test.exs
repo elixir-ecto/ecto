@@ -355,7 +355,7 @@ defmodule Ecto.Adapters.PostgresTest do
   # Model based
 
   test "insert" do
-    query = SQL.insert("model", [:x, :y], [:id])
+    query = SQL.insert("model", [x: :integer, y: :integer], [:id])
     assert query == ~s{INSERT INTO "model" ("x", "y") VALUES ($1, $2) RETURNING "id"}
 
     query = SQL.insert("model", [], [:id])
@@ -366,18 +366,18 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "update" do
-    query = SQL.update("model", [:id], [:x, :y], [:z])
+    query = SQL.update("model", [id: :integer], [x: :integer, y: :integer], [:z])
     assert query == ~s{UPDATE "model" SET "x" = $2, "y" = $3 WHERE "id" = $1 RETURNING "z"}
 
-    query = SQL.update("model", [:id], [:x, :y], [])
+    query = SQL.update("model", [id: :integer], [x: :integer, y: :integer], [])
     assert query == ~s{UPDATE "model" SET "x" = $2, "y" = $3 WHERE "id" = $1}
   end
 
   test "delete" do
-    query = SQL.delete("model", [:x, :y], [:z])
+    query = SQL.delete("model", [x: :integer, y: :integer], [:z])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2 RETURNING "z"}
 
-    query = SQL.delete("model", [:x, :y], [])
+    query = SQL.delete("model", [x: :integer, y: :integer], [])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2}
   end
 

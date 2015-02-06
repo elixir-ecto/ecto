@@ -104,7 +104,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         if fields == [] do
           "DEFAULT VALUES"
         else
-          "(" <> Enum.map_join(fields, ", ", &quote_name(&1)) <> ") " <>
+          "(" <> Enum.map_join(fields, ", ", &quote_name(elem(&1, 0))) <> ") " <>
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
         end
 
@@ -112,11 +112,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def update(table, filters, fields, returning) do
-      {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
+      {filters, count} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
+      {fields, _count} = Enum.map_reduce fields, count, fn {field, _}, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
@@ -126,12 +126,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def delete(table, filters, returning) do
-      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
+      {filters, _} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "DELETE FROM #{quote_name(table)} WHERE " <> Enum.join(filters, " AND ") <>
-        returning(returning)
+      "DELETE FROM #{quote_name(table)} WHERE " <>
+        Enum.join(filters, " AND ") <> returning(returning)
     end
 
     ## Query generation

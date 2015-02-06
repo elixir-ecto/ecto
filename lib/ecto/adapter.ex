@@ -7,6 +7,7 @@ defmodule Ecto.Adapter do
   use Behaviour
 
   @type t :: module
+  @type fields :: [{{name :: atom, type :: atom}, value :: term}]
 
   @doc """
   The callback invoked when the adapter is used.
@@ -56,7 +57,7 @@ defmodule Ecto.Adapter do
   Inserts a single new model in the data store.
   """
   defcallback insert(repo :: Ecto.Repo.t, source :: binary,
-                     fields :: Keyword.t, returning :: [atom],
+                     fields :: fields, returning :: [atom],
                      opts :: Keyword.t) :: {:ok, tuple} | no_return
 
   @doc """
@@ -69,7 +70,7 @@ defmodule Ecto.Adapter do
   `{:error, :stale}` is returned.
   """
   defcallback update(repo :: Ecto.Repo.t, source :: binary,
-                     filter :: Keyword.t, fields :: Keyword.t,
+                     filter :: fields, fields :: fields,
                      returning :: [atom], opts :: Keyword.t) ::
                      {:ok, tuple} | {:error, :stale} | no_return
 
@@ -83,6 +84,6 @@ defmodule Ecto.Adapter do
   `{:error, :stale}` is returned.
   """
   defcallback delete(repo :: Ecto.Repo.t, source :: binary,
-                     filter :: Keyword.t, opts :: Keyword.t) ::
+                     filter :: fields, opts :: Keyword.t) ::
                      {:ok, tuple} | {:error, :stale} | no_return
 end
