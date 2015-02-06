@@ -355,7 +355,7 @@ defmodule Ecto.Adapters.PostgresTest do
   # Model based
 
   test "insert" do
-    query = SQL.insert("model", [:x, :y], [:id])
+    query = SQL.insert("model", [x: :integer, y: :integer], [:id])
     assert query == ~s{INSERT INTO "model" ("x", "y") VALUES ($1, $2) RETURNING "id"}
 
     query = SQL.insert("model", [], [:id])
@@ -366,18 +366,18 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "update" do
-    query = SQL.update("model", [:id], [:x, :y], [:z])
+    query = SQL.update("model", [id: :integer], [x: :integer, y: :integer], [:z])
     assert query == ~s{UPDATE "model" SET "x" = $2, "y" = $3 WHERE "id" = $1 RETURNING "z"}
 
-    query = SQL.update("model", [:id], [:x, :y], [])
+    query = SQL.update("model", [id: :integer], [x: :integer, y: :integer], [])
     assert query == ~s{UPDATE "model" SET "x" = $2, "y" = $3 WHERE "id" = $1}
   end
 
   test "delete" do
-    query = SQL.delete("model", [:x, :y], [:z])
+    query = SQL.delete("model", [x: :integer, y: :integer], [:z])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2 RETURNING "z"}
 
-    query = SQL.delete("model", [:x, :y], [])
+    query = SQL.delete("model", [x: :integer, y: :integer], [])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2}
   end
 
@@ -432,9 +432,34 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.execute_ddl(create) == ~s|CREATE UNIQUE INDEX "posts$main" ON "posts" ("permalink")|
   end
 
+  test "create index concurrently" do
+    create = {:create, %Index{name: "posts$main", table: :posts, columns: [:permalink], concurrently: true}}
+    assert SQL.execute_ddl(create) == ~s|CREATE INDEX CONCURRENTLY "posts$main" ON "posts" ("permalink")|
+  end
+
+  test "create unique index concurrently" do
+    create = {:create, %Index{name: "posts$main", table: :posts, columns: [:permalink], concurrently: true, unique: true}}
+    assert SQL.execute_ddl(create) == ~s|CREATE UNIQUE INDEX CONCURRENTLY "posts$main" ON "posts" ("permalink")|
+  end
+
+  test "create an index using a different type" do
+    create = {:create, %Index{name: "posts$hash", table: :posts, columns: [:id], using: :hash}}
+    assert SQL.execute_ddl(create) == ~s|CREATE INDEX "posts$hash" ON "posts" USING hash ("id")|
+  end
+
+  test "create an index using a different type concurrently" do
+    create = {:create, %Index{name: "posts$hash", table: :posts, columns: [:id], concurrently: true, using: "gist"}}
+    assert SQL.execute_ddl(create) == ~s|CREATE INDEX CONCURRENTLY "posts$hash" ON "posts" USING gist ("id")|
+  end
+
   test "drop index" do
     drop = {:drop, %Index{name: "posts$main"}}
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
+  end
+
+  test "drop index concurrently" do
+    drop = {:drop, %Index{name: "posts$main", concurrently: true}}
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX CONCURRENTLY "posts$main"|
   end
 
   test "alter table" do

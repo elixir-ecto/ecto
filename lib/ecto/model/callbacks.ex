@@ -245,10 +245,20 @@ defmodule Ecto.Model.Callbacks do
   The callback receives the model being loaded and must
   return a model.
 
-  This callback can be useful, for example, to resolve the
-  value of virtual fields. Since this will be invoked
-  every time the model is loaded, the callback must execute
-  very quickly to avoid drastic perfomance hits.
+  This callback can be useful to resolve the value of virtual
+  fields in situations they must always be present in the model.
+  Since this will be invoked every time the model is loaded, the
+  callback must execute very quickly to avoid drastic perfomance
+  hits.
+  
+  Another common misuse of `after_load` callbacks is to use it
+  for loading fields which are not always required. For example,
+  imagine you need to generate an access token based on the `User`
+  id and password. One could use `after_load` and a virtual field
+  to precompute the `access_token` value but it is simpler and cleaner
+  to simply provide an `access_token` function in the model:
+
+      User.access_token(user)
 
   ## Example
 

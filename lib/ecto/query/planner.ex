@@ -23,7 +23,7 @@ defmodule Ecto.Query.Planner do
 
       case dumper.(type, value) do
         {:ok, value} ->
-          {field, value}
+          {{field, Ecto.Type.type(type)}, value}
         :error ->
           raise Ecto.ChangeError,
             message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>

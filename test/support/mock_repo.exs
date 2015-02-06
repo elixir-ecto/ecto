@@ -18,7 +18,7 @@ defmodule Ecto.MockAdapter do
   ## Model
 
   def insert(_repo, "schema_migrations", val, _, _) do
-    version  = Keyword.fetch!(val, :version)
+    {_, version} = List.keyfind(val, {:version, :integer}, 0)
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, {1}}
   end
@@ -29,7 +29,8 @@ defmodule Ecto.MockAdapter do
   def update(_repo, _source, _filter, _fields, [_], _opts),
     do: {:ok, {1}}
 
-  def delete(_repo, "schema_migrations", [version: version], _) do
+  def delete(_repo, "schema_migrations", val, _) do
+    {_, version} = List.keyfind(val, {:version, :integer}, 0)
     Process.put(:migrated_versions, List.delete(migrated_versions(), version))
     {:ok, {}}
   end

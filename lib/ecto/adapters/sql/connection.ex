@@ -53,20 +53,19 @@ defmodule Ecto.Adapters.SQL.Connection do
   Returns an INSERT for the given `fields` in `table` returning
   the given `returning`.
   """
-  defcallback insert(table :: String.t, fields :: [atom], returning :: [atom]) :: String.t
+  defcallback insert(table :: String.t, fields :: Keyword.t, returning :: [atom]) :: String.t
 
   @doc """
   Returns an UPDATE for the given `fields` in `table` filtered by
   `filters` returning the given `returning`.
   """
-  defcallback update(table :: String.t, filters :: [atom],
-                     fields :: [atom], returning :: [atom]) :: String.t
+  defcallback update(table :: String.t, filters :: Keyword.t,
+                     fields :: Keyword.t, returning :: [atom]) :: String.t
 
   @doc """
-  Returns a DELETE for the given `fields` in `table` filtered by
-  `filters` returning the given `returning`.
+  Returns a DELETE for the `filters` returning the given `returning`.
   """
-  defcallback delete(table :: String.t, filters :: [atom], returning :: [atom]) :: String.t
+  defcallback delete(table :: String.t, filters :: Keyword.t, returning :: [atom]) :: String.t
 
   ## DDL
 

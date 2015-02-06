@@ -63,14 +63,53 @@ defmodule Ecto.Migration do
 
   Notice not all commands are reversible though. Trying to rollback
   a non-reversible command will raise an `Ecto.MigrationError`.
+
+  ## Transactions
+
+  By default, Ecto runs all migrations inside a transaction. That's not always
+  ideal: for example, PostgreSQL allows to create/drop indexes concurrently but
+  only outside of any transaction (see the [PostgreSQL
+  docs](http://www.postgresql.org/docs/9.2/static/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY)).
+
+  Migrations can be forced to run outside a transaction by setting the
+  `@disable_ddl_transaction` module attribute to `true`:
+
+      defmodule MyRepo.Migrations.CreateIndexes do
+        use Ecto.Migration
+        @disable_ddl_transaction true
+
+        def change do
+          create index(:posts, [:slug], concurrently: true)
+        end
+      end
+
+  Since running migrations outside a transaction can be dangerous, consider
+  performing very few operations in such migrations.
+
+  See the `index/3` function for more information on creating/dropping indexes
+  concurrently.
+
   """
 
   defmodule Index do
     @moduledoc """
     Defines an index struct used in migrations.
     """
-    defstruct table: nil, name: nil, columns: [], unique: false
-    @type t :: %__MODULE__{table: atom, name: atom, columns: [atom | String.t], unique: boolean}
+    defstruct table: nil,
+              name: nil,
+              columns: [],
+              unique: false,
+              concurrently: false,
+              using: nil
+
+    @type t :: %__MODULE__{
+      table: atom,
+      name: atom,
+      columns: [atom | String.t],
+      unique: boolean,
+      concurrently: boolean,
+      using: atom | String.t
+    }
   end
 
   defmodule Table do
@@ -95,7 +134,16 @@ defmodule Ecto.Migration do
   defmacro __using__(_) do
     quote location: :keep do
       import Ecto.Migration
-      def __migration__, do: true
+      @disable_ddl_transaction false
+      @before_compile Ecto.Migration
+    end
+  end
+
+  @doc false
+  defmacro __before_compile__(_env) do
+    quote do
+      def __migration__,
+        do: [disable_ddl_transaction: @disable_ddl_transaction]
     end
   end
 
@@ -209,6 +257,27 @@ defmodule Ecto.Migration do
 
   Indexes are non-unique by default.
 
+  ## Adding/dropping indexes concurrently
+
+  PostgreSQL supports adding/dropping indexes concurrently (see the
+  [docs](http://www.postgresql.org/docs/9.4/static/sql-createindex.html)).
+  In order to take advantage of this, the `:concurrently` option needs to be set
+  to `true` when the index is created/dropped.
+
+  **Note**: in order for the `:concurrently` option to work, the migration must
+  not be run inside a transaction. See the `Ecto.Migration` docs for more
+  information on running migrations outside of a transaction.
+
+  ## Index types
+
+  PostgreSQL supports several index types like B-tree, Hash or GiST. When
+  creating an index, the index type defaults to B-tree, but it can be specified
+  with the `:using` option. The `:using` option can be an atom or a string; its
+  value is passed to the `USING` clause as is.
+
+  More information on index types can be found in the [PostgreSQL
+  docs](http://www.postgresql.org/docs/9.4/static/indexes-types.html).
+
   ## Examples
 
       # Without a name, index defaults to products_category_id_sku_index
@@ -216,6 +285,12 @@ defmodule Ecto.Migration do
 
       # Name can be given explicitly though
       drop index(:products, [:category_id, :sku], name: :my_special_name)
+
+      # Indexes can be added concurrently
+      create index(:products, [:category_id, :sku], concurrently: true)
+
+      # The index type can be specified
+      create index(:products, [:name], using: :hash)
 
   """
   def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
