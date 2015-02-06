@@ -124,7 +124,6 @@ defmodule Ecto.Adapters.SQL.Worker do
         {:reply, :ok, %{s | transactions: trans + 1}}
       {:error, _} = err ->
         GenServer.reply(err)
-        IO.inspect "7"
         wipe_state(s)
     end
   end
@@ -143,7 +142,6 @@ defmodule Ecto.Adapters.SQL.Worker do
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
         GenServer.reply(err)
-        IO.inspect "6"
         wipe_state(s)
     end
   end
@@ -162,7 +160,6 @@ defmodule Ecto.Adapters.SQL.Worker do
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
         GenServer.reply(err)
-        IO.inspect "5"
         wipe_state(s)
     end
   end
@@ -184,7 +181,7 @@ defmodule Ecto.Adapters.SQL.Worker do
 
   def handle_call({:restart_test_transaction, opts}, _from, %{transactions: 1} = s) do
     %{conn: conn, module: module} = s
-    Logger.info "ROLLBACK SANDBOX"
+    
     case module.query(conn, module.rollback_to_savepoint("ecto_sandbox"), [], opts) do
       {:ok, _} ->
         {:reply, :ok, s}
@@ -206,7 +203,6 @@ defmodule Ecto.Adapters.SQL.Worker do
         {:reply, :ok, %{s | transactions: 0, sandbox: false}}
       {:error, _} = err ->
         GenServer.reply(err)
-        IO.inspect "3"
         wipe_state(s)
     end
   end
@@ -220,7 +216,6 @@ defmodule Ecto.Adapters.SQL.Worker do
 
   # If a linked process crashed, assume stale connection and close it.
   def handle_info({:EXIT, link, _reason}, %{link: link} = s) do
-    IO.inspect "1"
     wipe_state(s)
   end
 
@@ -238,7 +233,6 @@ defmodule Ecto.Adapters.SQL.Worker do
   defp begin_sandbox(%{sandbox: true} = s) do
     %{conn: conn, module: module} = s
     opts = [timeout: :infinity]
-    Logger.info "BEGIN SANDBOX"
     case module.query(conn, module.begin_transaction, [], opts) do
       {:ok, _} ->
         case module.query(conn, module.savepoint("ecto_sandbox"), [], opts) do
@@ -272,7 +266,6 @@ defmodule Ecto.Adapters.SQL.Worker do
   # be removed will always be maximum 1.
   defp wipe_state(%{conn: conn, module: module, link: link} = s) do
     conn && module.disconnect(conn)
-    IO.inspect "HERE!!!"
     if link do
       Process.unlink(link)
       Process.exit(link, {:ecto, :no_connection})

@@ -70,7 +70,7 @@ defmodule Ecto.Adapters.Mssql do
   @doc false
   def storage_down(opts) do
     {output, status} = run_with_sql_conn(opts, "DROP DATABASE #{opts[:database]}")
-
+    IO.inspect output
     cond do
       status == 0                                -> :ok
       output != nil -> if String.contains?(output[:msg_text], "does not exist"), do: {:error, :already_down}
@@ -88,7 +88,7 @@ defmodule Ecto.Adapters.Mssql do
           {_, %Tds.Error{message: message, mssql: error}} ->
             {error, 1}
         end
-      {error,_} -> 
+      {_,error} -> 
         {error, 1}
     end
   end

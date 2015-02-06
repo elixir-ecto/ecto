@@ -45,7 +45,8 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     def rollback_to_savepoint(savepoint) do
-      "ROLLBACK TRANSACTION " <> savepoint
+      "ROLLBACK TRANSACTION " <> savepoint <> ";" <> savepoint(savepoint)
+
     end
 
     ## Query
@@ -67,6 +68,7 @@ if Code.ensure_loaded?(Tds.Connection) do
       
       offset   = offset(query.offset, sources)
       # lock     = lock(query.lock)
+      
       # unlock   = unlock(query.lock)
 
       assemble([select, from, join, where, group_by, having, order_by, offset])
@@ -444,7 +446,7 @@ if Code.ensure_loaded?(Tds.Connection) do
       default = Keyword.get(opts, :default)
       null    = Keyword.get(opts, :null)
       pk      = Keyword.get(opts, :primary_key)
-
+      if pk == true, do: null = false
       [default_expr(default), null_expr(null), pk_expr(pk)]
     end
 
@@ -456,7 +458,7 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     defp null_expr(false), do: "NOT NULL"
     defp null_expr(true), do: "NULL"
-    defp null_expr(_), do: nil
+    defp null_expr(_), do: "NULL"
 
     defp default_expr(nil),
       do: nil

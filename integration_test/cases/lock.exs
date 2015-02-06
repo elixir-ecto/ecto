@@ -13,19 +13,21 @@ defmodule Ecto.Integration.LockTest do
       field :count, :integer
     end
   end
-
+  # TODO
+  # MSSQL Does not allow insertion into identity (serial) columns. 
+  #  Removed and assumed that this is the first
   setup do
-    %LockCounter{count: 1} |> PoolRepo.insert
+    lc = %LockCounter{count: 1} |> PoolRepo.insert
 
     on_exit fn ->
-      PoolRepo.get(LockCounter, 1) |> PoolRepo.delete
+      PoolRepo.delete(lc)
     end
 
-    :ok
+    {:ok, lc: lc}
   end
 
-  test "lock for update" do
-    query = from(p in LockCounter, where: p.id == 1, lock: true)
+  test "lock for update", meta do
+    query = from(p in LockCounter, where: p.id == ^meta.lc.id, lock: true)
     pid = self
 
     new_pid =
