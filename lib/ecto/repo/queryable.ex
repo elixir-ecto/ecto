@@ -90,22 +90,7 @@ defmodule Ecto.Repo.Queryable do
     end
 
     # If we have a model in the query, let's use it for casting.
-    case query.from do
-      {_source, model} when model != nil ->
-        # Check all fields are valid but don't use dump as we'll cast below.
-        _ = Planner.fields(:update_all, model, updates, fn _type, value -> {:ok, value} end)
-
-        # Properly cast parameters.
-        params = Enum.into params, %{}, fn
-          {k, {v, {0, field}}} ->
-            type = model.__schema__(:field, field)
-            {k, cast_and_dump(:update_all, type, v)}
-          {k, {v, type}} ->
-            {k, cast_and_dump(:update_all, type, v)}
-        end
-      _ ->
-        :ok
-    end
+    {updates, params} = cast_update_all(query, updates, params)
 
     {query, params} =
       Queryable.to_query(queryable)
@@ -183,6 +168,27 @@ defmodule Ecto.Repo.Queryable do
     model = assert_model!(query)
     primary_key = primary_key_field!(model)
     Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
+  end
+
+  defp cast_update_all(%{from: {_source ,model}}, updates, params) when model != nil do
+    # Check all fields are valid but don't use dump as they are expressions
+    updates = Planner.fields(:update_all, model, updates, fn _type, value -> {:ok, value} end)
+
+    # Properly cast parameters.
+    params = Enum.into params, %{}, fn
+      {k, {v, {0, field}}} ->
+        type = model.__schema__(:field, field)
+        {k, cast_and_dump(:update_all, type, v)}
+      {k, {v, type}} ->
+        {k, cast_and_dump(:update_all, type, v)}
+    end
+
+    {updates, params}
+  end
+
+  defp cast_update_all(%{}, updates, params) do
+    updates = Enum.map(updates, fn {f, v} -> {{f, :any}, v} end)
+    {updates, params}
   end
 
   defp assert_model!(query) do

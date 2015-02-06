@@ -78,7 +78,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
+      zipped_sql = Enum.map_join(values, ", ", fn {{field, _}, expr} ->
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 

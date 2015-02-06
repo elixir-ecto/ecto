@@ -273,19 +273,19 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "update all" do
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: 0]) ==
+    assert SQL.update_all(query, [{{:x, :integer}, 0}]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0}
 
     query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.update_all(query, [x: 0]) ==
+    assert SQL.update_all(query, [{{:x, :integer}, 0}]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0 WHERE (m0."x" = 123)}
 
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: 0, y: "123"]) ==
+    assert SQL.update_all(query, [{{:x, :integer}, 0}, {{:y, :string}, "123"}]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0, "y" = '123'}
 
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: quote do: ^0]) ==
+    assert SQL.update_all(query, [{{:x, :integer}, quote(do: ^0)}]) ==
            ~s{UPDATE "model" AS m0 SET "x" = $1}
   end
 

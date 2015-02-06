@@ -41,7 +41,7 @@ defmodule Ecto.Adapter do
   the number of affected entities.
   """
   defcallback update_all(repo :: Ecto.Repo.t, query :: Ecto.Query.t,
-                         filter :: Keyword.t, params :: map(),
+                         updates :: fields, params :: map(),
                          opts :: Keyword.t) :: integer | no_return
 
   @doc """
