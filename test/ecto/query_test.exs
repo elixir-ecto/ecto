@@ -16,8 +16,16 @@ defmodule Ecto.QueryTest do
   end
 
   test "binding should be list of variables" do
-    assert_raise Ecto.Query.CompileError, "binding list should contain only variables, got: 0", fn ->
+    assert_raise Ecto.Query.CompileError,
+                 "binding list should contain only variables, got: 0", fn ->
       quote_and_eval select(%Query{}, [0], 1)
+    end
+  end
+
+  test "does not allow nils in comparison" do
+    assert_raise Ecto.Query.CompileError,
+                 "comparison with nil is forbidden as it always evaluates to false", fn ->
+      quote_and_eval from p in "posts", where: p.id == nil
     end
   end
 

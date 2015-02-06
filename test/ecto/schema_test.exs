@@ -14,7 +14,7 @@ defmodule Ecto.SchemaTest do
     end
 
     def model_from do
-      from(c in __MODULE__, where: c.name == nil)
+      from(c in __MODULE__, where: is_nil(c.name))
     end
   end
 
