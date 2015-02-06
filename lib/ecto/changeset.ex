@@ -87,6 +87,21 @@ defmodule Ecto.Changeset do
   changes map. This is useful to run the changeset through
   all validation steps for introspection.
 
+  ## Composing casts
+
+  `cast/4` also accepts a changeset instead of a model as its second argument.
+  In such cases, all the effects caused by the call to `cast/4` (additional and
+  optional fields, errors and changes) are simply added to the ones already
+  present in the argument changeset. Parameters are merged (*not deep-merged*)
+  and the ones passed to `cast/4` take precedence over the ones already in the
+  changeset.
+
+  Note that if a field is marked both as *required* as well as *optional* (for
+  example by being in the `:required` field of the argument changeset and also
+  in the `optional` list passed to `cast/4`), then it will be marked as required
+  and not optional). This represents the fact that required fields are
+  "stronger" than optional fields.
+
   ## Examples
 
       iex> changeset = cast(params, post, ~w(title), ~w())
@@ -94,10 +109,22 @@ defmodule Ecto.Changeset do
       ...>   Repo.update(changeset)
       ...> end
 
+  Passing a changeset as the second argument:
+
+      iex> changeset = cast(%{title: "Hello"}, post, ~w(), ~w(title))
+      iex> new_changeset = cast(%{title: "Foo", body: "Bar"}, ~w(title), ~w(body))
+      iex> new_changeset.params
+      %{title: "Foo", body: "Bar"}
+      iex> new_changeset.required
+      [:title]
+      iex> new_changeset.optional
+      [:body]
+
   """
-  @spec cast(%{binary => term} | %{atom => term} | nil, Ecto.Model.t,
-             [String.t | atom], [String.t | atom]) :: t
-  def cast(val, model, required, optional \\ [])
+  @spec cast(%{binary => term} | %{atom => term} | nil,
+             Ecto.Model.t | Ecto.Changeset.t, [String.t | atom],
+             [String.t | atom]) :: t
+  def cast(val, model_or_changeset, required, optional \\ [])
 
   def cast(%{__struct__: _} = params, _model, _required, _optional) do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
