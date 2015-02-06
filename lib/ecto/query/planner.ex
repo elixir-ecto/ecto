@@ -53,20 +53,14 @@ defmodule Ecto.Query.Planner do
 
   ## Cache
 
-  All entries in the query, except the preload field, should
-  be part of the cache key. The cache key is composed by the
-  hash of children expressions which are typically pre-calculated
-  at compilation time. However, some dynamic fields may force
-  particular expressions to have their cache calculated at
-  runtime. Furthermore, fields that are not expressions, i.e.
-  assocs, sources and lock, have their cache key calculated
-  at runtime too.
+  All entries in the query, except the preload and sources
+  field, should be part of the cache key.
 
-  The cache value is the compiled query by the adapter along-side
-  the select expression.
+  The cache value is the compiled query by the adapter
+  along-side the select expression.
   """
   def query(query, base, opts \\ []) do
-    {query, params} = prepare(query, base)
+    {query, params, _key} = prepare(query, base)
     {normalize(query, base, opts), params}
   end
 
@@ -77,16 +71,15 @@ defmodule Ecto.Query.Planner do
   merged into a single value and their entries are prunned
   from the query.
 
-  In the future, this function should also calculate a hash
-  to be used as cache key.
-
   This function is called by the backend before invoking
   any cache mechanism.
   """
   def prepare(query, params) do
-    query
-    |> prepare_sources
-    |> prepare_params(params)
+    {query, {cache, params}} =
+      query
+      |> prepare_sources
+      |> prepare_cache(params)
+    {query, params, cache}
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -96,30 +89,29 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_params(query, params) do
-    traverse_exprs(query, params, &merge_params/4)
+  def prepare_cache(query, params) do
+    cache = [query.from, query.assocs, query.lock]
+    traverse_exprs(query, {cache, params}, &{&3, merge_cache(&1, &2, &3, &4)})
   end
 
-  defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
+  defp merge_cache(kind, query, expr, {cache, params}) when kind in ~w(select limit offset)a do
     if expr do
-      {put_in(expr.params, nil),
-       cast_and_merge_params(kind, query, expr, params)}
-   else
-      {expr, params}
+      {[expr.expr|cache], cast_and_merge_params(kind, query, expr, params)}
+    else
+      {cache, params}
     end
   end
 
-  defp merge_params(kind, query, exprs, params) when kind in ~w(distinct where group_by having order_by)a do
-    Enum.map_reduce exprs, params, fn expr, acc ->
-      {put_in(expr.params, nil),
-       cast_and_merge_params(kind, query, expr, acc)}
+  defp merge_cache(kind, query, exprs, acc) when kind in ~w(distinct where group_by having order_by)a do
+    Enum.reduce exprs, acc, fn expr, {cache, params} ->
+      {[expr.expr|cache], cast_and_merge_params(kind, query, expr, params)}
     end
   end
 
-  defp merge_params(:join, query, exprs, params) do
-    Enum.map_reduce exprs, params, fn join, acc ->
-      {put_in(join.on.params, nil),
-       cast_and_merge_params(:join, query, join.on, acc)}
+  defp merge_cache(:join, query, exprs, acc) do
+    Enum.reduce exprs, acc, fn %JoinExpr{qual: qual, source: source, on: on}, {cache, params} ->
+      {[{qual, source, on.expr}|cache],
+       cast_and_merge_params(:join, query, on, params)}
     end
   end
 
@@ -329,7 +321,7 @@ defmodule Ecto.Query.Planner do
       other, acc ->
         {other, acc}
     end
-    {%{expr | expr: inner}, acc}
+    {%{expr | expr: inner, params: nil}, acc}
   end
 
   defp validate_field(kind, query, expr, source, field, meta) do

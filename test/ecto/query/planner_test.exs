@@ -36,7 +36,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   defp normalize(query, params \\ %{}, opts \\ []) do
-    {query, params} = prepare(query, params)
+    {query, params, _key} = prepare(query, params)
     Planner.normalize(query, params, opts)
   end
 
@@ -46,22 +46,18 @@ defmodule Ecto.Query.PlannerTest do
         select: {p.title, ^"0"},
         join: c in Comment,
         on: c.text == ^"1",
-        join: d in assoc(p, :comments),
+        left_join: d in assoc(p, :comments),
         where: p.title == ^"2",
         group_by: p.title == ^"3",
         having: p.title == ^"4",
         order_by: [asc: fragment("?", ^"5")],
         limit: ^6,
-        offset: ^7
+        offset: ^7,
+        preload: [post: d]
 
-    {query, params} = prepare(query)
-
+    {_query, params, _key} = prepare(query)
     assert params == %{0 => "0", 1 => "1", 2 => "2", 3 => "3", 4 => "4",
                        5 => "5", 6 => 6, 7 => 7}
-
-    assert query.select.params == nil
-    refute Enum.any?(query.wheres, & &1.params)
-    refute Enum.any?(query.group_bys, & &1.params)
   end
 
   test "prepare: checks from" do
@@ -71,7 +67,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: casts values" do
-    {_query, params} = prepare(Post |> where([p], p.id == ^"1"))
+    {_query, params, _key} = prepare(Post |> where([p], p.id == ^"1"))
     assert params[0] == 1
 
     exception = assert_raise Ecto.CastError, fn ->
@@ -82,7 +78,7 @@ defmodule Ecto.Query.PlannerTest do
     assert Exception.message(exception) =~ "where: p.title == ^nil"
     assert Exception.message(exception) =~ "Error when casting value to `#{inspect Post}.title`"
 
-    exception =  assert_raise Ecto.CastError, fn ->
+    exception = assert_raise Ecto.CastError, fn ->
       prepare(Post |> where([p], p.title == ^1))
     end
 
@@ -93,21 +89,21 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: casts and dumps custom types" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
-    {_query, params} = prepare(Comment |> where([c], c.posted == ^datetime))
+    {_query, params, _key} = prepare(Comment |> where([c], c.posted == ^datetime))
     assert params[0] == {{2015, 1, 7}, {21, 18, 13}}
 
     permalink = "1-hello-world"
-    {_query, params} = prepare(Post |> where([p], p.id == ^permalink))
+    {_query, params, _key} = prepare(Post |> where([p], p.id == ^permalink))
     assert params[0] == 1
   end
 
   test "prepare: casts and dumps custom types with arrays" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
-    {_query, params} = prepare(Comment |> where([c], c.posted in ^[datetime]))
+    {_query, params, _key} = prepare(Comment |> where([c], c.posted in ^[datetime]))
     assert params[0] == [{{2015, 1, 7}, {21, 18, 13}}]
 
     permalink = "1-hello-world"
-    {_query, params} = prepare(Post |> where([p], p.id in ^[permalink]))
+    {_query, params, _key} = prepare(Post |> where([p], p.id in ^[permalink]))
     assert params[0] == [1]
   end
 
@@ -176,12 +172,12 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: tagged types" do
-    {query, params} = from(Post, []) |> select([p], type(^"1", :integer)) |> prepare
+    {query, params, _key} = from(Post, []) |> select([p], type(^"1", :integer)) |> prepare
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == %{0 => 1}
 
-    {query, params} = from(Post, []) |> select([p], type(^"1", Custom.Permalink)) |> prepare
+    {query, params, _key} = from(Post, []) |> select([p], type(^"1", Custom.Permalink)) |> prepare
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: Custom.Permalink}
     assert params == %{0 => 1}
