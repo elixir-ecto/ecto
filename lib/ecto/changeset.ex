@@ -243,10 +243,11 @@ defmodule Ecto.Changeset do
   end
 
   defp merge_changesets(%Ecto.Changeset{model: model} = cs1, %Ecto.Changeset{model: model} = cs2) do
-    new_params   = Map.merge(cs1.params, cs2.params)
-    new_changes  = Map.merge(cs1.changes, cs2.changes)
-    new_errors   = cs1.errors ++ cs2.errors
-    new_required = Enum.uniq(cs1.required ++ cs2.required)
+    new_params      = Map.merge(cs1.params, cs2.params)
+    new_changes     = Map.merge(cs1.changes, cs2.changes)
+    new_validations = cs1.validations ++ cs2.validations
+    new_errors      = cs1.errors ++ cs2.errors
+    new_required    = Enum.uniq(cs1.required ++ cs2.required)
 
     # Merges the :optional field of both changesets and then pulls out all the
     # fields that have now become required.
@@ -254,7 +255,8 @@ defmodule Ecto.Changeset do
 
     %Ecto.Changeset{params: new_params, model: model, valid?: new_errors == [],
                     errors: new_errors, changes: new_changes,
-                    required: new_required, optional: new_optional}
+                    required: new_required, optional: new_optional,
+                    validations: new_validations}
   end
 
   ## Working with changesets

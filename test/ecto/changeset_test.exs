@@ -218,6 +218,19 @@ defmodule Ecto.ChangesetTest do
     assert Enum.sort(changeset.errors) == [body: :required, title: :required, title: :required]
   end
 
+  test "cast/4: merges validations when a changeset is passed" do
+    base_changeset = cast(%{title: "Title"}, %Post{}, ~w(title), ~w())
+                |> validate_length(:title, 1..10)
+
+    changeset = cast(%{body: "Body"}, base_changeset, ~w(body), ~w())
+                |> validate_format(:body, ~r/B/)
+
+    assert changeset.valid?
+    assert length(changeset.validations) == 2
+    assert Enum.find(changeset.validations, &match?({:body, {:format, _}}, &1))
+    assert Enum.find(changeset.validations, &match?({:title, {:length, _}}, &1))
+  end
+
   ## Changeset functions
 
   test "change/2" do
