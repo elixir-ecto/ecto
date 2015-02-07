@@ -250,9 +250,7 @@ defmodule Ecto.Changeset do
 
     # Merges the :optional field of both changesets and then pulls out all the
     # fields that have now become required.
-    opt_set = Enum.into(cs1.optional ++ cs2.optional, HashSet.new)
-    req_set = Enum.into(new_required, HashSet.new)
-    new_optional = HashSet.difference(opt_set, req_set) |> HashSet.to_list
+    new_optional = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
 
     %Ecto.Changeset{params: new_params, model: model, valid?: new_errors == [],
                     errors: new_errors, changes: new_changes,
