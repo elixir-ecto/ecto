@@ -27,7 +27,7 @@ defmodule Ecto.Integration.MigrationTest do
         add :author, :string
       end
 
-      index = index(:migrations_test, ["lower(author)"])
+      index = index(:migrations_test, [:author])
       refute exists? index
       create index
       assert exists? index
@@ -143,11 +143,11 @@ defmodule Ecto.Integration.MigrationTest do
       use Ecto.Migration
 
       def up do
-        execute "INSERT INTO migrations_test (name) VALUES ('inserted')"
+        execute "INSERT INTO migrations_test (num) VALUES (#{num})"
       end
 
       def down do
-        execute "DELETE FROM migrations_test WHERE id IN (SELECT id FROM migrations_test LIMIT 1)"
+        execute "DELETE FROM migrations_test WHERE num = #{num}"
       end
     end
     """

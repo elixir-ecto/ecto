@@ -49,7 +49,7 @@ defmodule Ecto.Integration.Migration do
     end
 
     create table(:migrations_test) do
-      add :name, :text
+      add :num, :integer
     end
   end
 end
