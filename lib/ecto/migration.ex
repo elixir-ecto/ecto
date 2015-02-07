@@ -200,6 +200,9 @@ defmodule Ecto.Migration do
   @doc """
   Creates an index.
 
+  When reversing (in `change` running backward) indexes are only dropped if they
+  exist and no errors are raised. To enforce dropping an index use `drop/1`.
+
   ## Examples
 
       create index(:posts, [:name])

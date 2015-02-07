@@ -115,6 +115,13 @@ defmodule Ecto.Migration.Runner do
     repo.adapter.execute_ddl(repo, command, @opts)
   end
 
+  defp execute_in_direction(repo, :backward, level, {:create, %Index{}=index}) do
+    if repo.adapter.ddl_exists?(repo, index, @opts) do
+      log_ddl(level, {:drop, index})
+      repo.adapter.execute_ddl(repo, {:drop, index}, @opts)
+    end
+  end
+
   defp execute_in_direction(repo, :backward, level, command) do
     reversed = reverse(command)
 

@@ -181,6 +181,13 @@ defmodule Ecto.MigrationTest do
     assert {:drop, %Index{}} = last_command()
   end
 
+  test "backward: creates an index (does not exist)" do
+    Process.put(:ddl_exists, false)
+    create index(:posts, [:title])
+    refute last_command()
+    Process.delete(:ddl_exists)
+  end
+
   test "backward: drops an index" do
     drop index(:posts, [:title])
     assert {:create, %Index{}} = last_command()
