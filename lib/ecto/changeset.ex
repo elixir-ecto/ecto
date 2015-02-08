@@ -244,6 +244,48 @@ defmodule Ecto.Changeset do
 
   ## Working with changesets
 
+  @doc """
+  Merges two changesets.
+
+  This function merges two changesets provided they have been applied to the
+  same model (their `:model` field is equal); if the models differ, an
+  `ArgumentError` exception is raised. If one of the changesets has a `:repo`
+  field which is not `nil`, then the value of that field is used as the `:repo`
+  field of the resulting changeset; if both changesets have a non-`nil` and
+  different `:repo` field, an `ArgumentError` exception is raised.
+
+  The other fields are merged with the following criteria:
+
+  * `params` - params are merged (not deep-merged) giving precedence to the
+    params of `changeset2` in case of a conflict. If either changeset has its
+    `:params` field set to `nil`, the resulting changeset will have its params
+    set to `nil` too.
+  * `changes` - changes are merged giving precedence to the `changeset2`
+    changes.
+  * `errors` and `validations` - they are simply concatenated.
+  * `required` and `optional` - they are merged; all the fields that appear
+    in the optional list of either changesets and also in the required list of
+    the other changeset are moved to the required list of the resulting
+    changeset.
+
+  ## Examples
+
+      iex> changeset1 = cast(%{title: "Title"}, %Post{}, ~w(title), ~w(body))
+      iex> changeset2 = cast(%{title: "New title", body: "Body"}, %Post{}, ~w(title body), ~w())
+      iex> changeset = merge(changeset1, changeset2)
+      iex> changeset.changes
+      %{body: "Body", title: "New title"}
+      iex> changeset.required
+      [:title, :body]
+      iex> changeset.optional
+      []
+
+      iex> changeset1 = cast(%{title: "Title"}, %Post{body: "Body"}, ~w(title), ~w(body))
+      iex> changeset2 = cast(%{title: "New title"}, %Post{}, ~w(title), ~w())
+      iex> merge(changeset1, changeset2)
+      ** (ArgumentError) different models when merging changesets
+
+  """
   @spec merge(t, t) :: t
   def merge(changeset1, changeset2)
 
