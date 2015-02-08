@@ -172,66 +172,88 @@ defmodule Ecto.ChangesetTest do
     # No changes
     changeset = cast(%{}, base_changeset, ~w(), ~w())
     assert changeset.valid?
-    assert changeset.changes == %{}
+    assert changeset.changes  == %{}
     assert changeset.required == [:title]
 
-    # Overriding changes
-    changeset = cast(%{title: "new"}, base_changeset, ~w(title), ~w())
-    assert changeset.valid?
-    assert changeset.changes == %{title: "new"}
-    assert changeset.required == [:title]
-
-    # Non-conflicting changes and optional field
     changeset = cast(%{body: "new body"}, base_changeset, ~w(), ~w(body))
     assert changeset.valid?
-    assert changeset.changes == %{body: "new body"}
+    assert changeset.changes  == %{body: "new body"}
     assert changeset.required == [:title]
     assert changeset.optional == [:body]
-
-    # Optional fields that already appear in the required fields are not put
-    # into the `:optional` list
-    changeset = cast(%{title: "new"}, base_changeset, ~w(), ~w(title))
-    assert changeset.valid?
-    assert changeset.changes == %{title: "new"}
-    assert changeset.required == [:title]
-    assert changeset.optional == []
-
-    base_changeset = cast(%{title: "valid"}, %Post{}, ~w(), ~w(title))
-
-    changeset = cast(%{title: "new"}, base_changeset, ~w(title), ~w())
-    assert changeset.valid?
-    assert changeset.changes == %{title: "new"}
-    assert changeset.required == [:title]
-    assert changeset.optional == []
-
-    changeset = cast(%{body: "new body"}, base_changeset, ~w(), ~w(body))
-    assert changeset.valid?
-    assert changeset.changes == %{body: "new body", title: "valid"}
-    assert changeset.required == []
-    assert Enum.sort(changeset.optional) == [:body, :title]
   end
 
-  test "cast/4: accumulates errors when a changeset is passed" do
-    changeset = cast(%{}, %Post{}, ~w(title), ~w())
-    changeset = cast(%{}, changeset, ~w(title body), ~w())
+  ## Changeset functions
+
+  test "merge/2: merges changes, errors and validations" do
+    # Changes
+    cs1 = cast(%{title: "foo"}, %Post{}, ~w(title), ~w())
+    cs2 = cast(%{body: "bar"}, %Post{}, ~w(body), ~w())
+    assert merge(cs1, cs2).changes == %{body: "bar", title: "foo"}
+
+    # Errors
+    cs1 = cast(%{}, %Post{}, ~w(title), ~w())
+    cs2 = cast(%{}, %Post{}, ~w(title body), ~w())
+    changeset = merge(cs1, cs2)
     refute changeset.valid?
     assert Enum.sort(changeset.errors) == [body: :required, title: :required, title: :required]
-  end
 
-  test "cast/4: merges validations when a changeset is passed" do
-    base_changeset = cast(%{title: "Title"}, %Post{}, ~w(title), ~w())
+    # Validations
+    cs1 = cast(%{title: "Title"}, %Post{}, ~w(title), ~w())
                 |> validate_length(:title, 1..10)
 
-    changeset = cast(%{body: "Body"}, base_changeset, ~w(body), ~w())
+    cs2 = cast(%{body: "Body"}, %Post{}, ~w(body), ~w())
                 |> validate_format(:body, ~r/B/)
 
+    changeset = merge(cs1, cs2)
     assert changeset.valid?
     assert length(changeset.validations) == 2
     assert Enum.find(changeset.validations, &match?({:body, {:format, _}}, &1))
     assert Enum.find(changeset.validations, &match?({:title, {:length, _}}, &1))
   end
 
-  ## Changeset functions
+  test "merge/2: gives required fields precedence over optional ones" do
+    cs1 = cast(%{}, %Post{}, ~w(title), ~w())
+    cs2 = cast(%{}, %Post{}, ~w(), ~w(title))
+    changeset = merge(cs1, cs2)
+    assert changeset.required == [:title]
+    assert changeset.optional == []
+  end
+
+  test "merge/2: doesn't duplicate required or optional fields" do
+    cs1 = cast(%{}, %Post{}, ~w(title body), ~w())
+    cs2 = cast(%{}, %Post{}, ~w(body title), ~w(title))
+    changeset = merge(cs1, cs2)
+    assert Enum.sort(changeset.required) == [:body, :title]
+    assert Enum.sort(changeset.optional) == []
+  end
+
+  test "merge/2: gives precedence to the second changeset" do
+    cs1 = cast(%{title: "foo"}, %Post{}, ~w(title), ~w())
+    cs2 = cast(%{title: "bar"}, %Post{}, ~w(title), ~w())
+    changeset = merge(cs1, cs2)
+    assert changeset.valid?
+    assert changeset.params == %{"title" => "bar"}
+    assert changeset.changes == %{title: "bar"}
+  end
+
+  test "merge/2: merges the :repo field when either one is nil" do
+    changeset = merge(%Ecto.Changeset{repo: :foo}, %Ecto.Changeset{repo: nil})
+    assert changeset.repo == :foo
+
+    changeset = merge(%Ecto.Changeset{repo: nil}, %Ecto.Changeset{repo: :bar})
+    assert changeset.repo == :bar
+  end
+
+  test "merge/2: fails when the :model or :repo field are not equal" do
+    cs1 = cast(%{}, %Post{title: "foo"}, ~w(title), ~w())
+    cs2 = cast(%{}, %Post{title: "bar"}, ~w(title), ~w())
+    assert_raise ArgumentError, "different models when merging changesets", fn ->
+      merge(cs1, cs2)
+    end
+    assert_raise ArgumentError, "different repos when merging changesets", fn ->
+      merge(%Ecto.Changeset{repo: :foo}, %Ecto.Changeset{repo: :bar})
+    end
+  end
 
   test "change/2" do
     changeset = change(%Post{})

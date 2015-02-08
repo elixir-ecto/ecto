@@ -147,7 +147,7 @@ defmodule Ecto.Changeset do
   def cast(%{} = params, %Ecto.Changeset{} = changeset, required, optional)
       when is_list(required) and is_list(optional) do
     new_changeset = cast(params, changeset.model, required, optional)
-    merge_changesets(changeset, new_changeset)
+    merge(changeset, new_changeset)
   end
 
   def cast(%{} = params, %{__struct__: module} = model, required, optional)
@@ -242,24 +242,34 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp merge_changesets(%Ecto.Changeset{model: model} = cs1, %Ecto.Changeset{model: model} = cs2) do
-    new_params      = Map.merge(cs1.params, cs2.params)
+  ## Working with changesets
+
+  @spec merge(t, t) :: t
+  def merge(changeset1, changeset2)
+
+  def merge(%Ecto.Changeset{model: model, repo: repo1} = cs1, %Ecto.Changeset{model: model, repo: repo2} = cs2)
+      when is_nil(repo1) or is_nil(repo2) or repo1 == repo2 do
+    new_repo        = repo1 || repo2
+    new_params      = cs1.params && cs2.params && Map.merge(cs1.params, cs2.params)
     new_changes     = Map.merge(cs1.changes, cs2.changes)
     new_validations = cs1.validations ++ cs2.validations
     new_errors      = cs1.errors ++ cs2.errors
     new_required    = Enum.uniq(cs1.required ++ cs2.required)
-
-    # Merges the :optional field of both changesets and then pulls out all the
-    # fields that have now become required.
-    new_optional = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
+    new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
 
     %Ecto.Changeset{params: new_params, model: model, valid?: new_errors == [],
-                    errors: new_errors, changes: new_changes,
+                    errors: new_errors, changes: new_changes, repo: new_repo,
                     required: new_required, optional: new_optional,
                     validations: new_validations}
   end
 
-  ## Working with changesets
+  def merge(%Ecto.Changeset{model: m1}, %Ecto.Changeset{model: m2}) when m1 != m2 do
+    raise ArgumentError, message: "different models when merging changesets"
+  end
+
+  def merge(%Ecto.Changeset{repo: r1}, %Ecto.Changeset{repo: r2}) when r1 != r2 do
+    raise ArgumentError, message: "different repos when merging changesets"
+  end
 
   @doc """
   Fetches the given field from changes or from the model.
