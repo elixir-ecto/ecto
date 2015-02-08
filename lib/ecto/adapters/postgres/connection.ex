@@ -464,7 +464,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       do: nil
     defp default_expr(literal) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
-    defp default_expr(literal) when is_number(literal),
+    defp default_expr(literal) when is_number(literal) or is_boolean(literal),
       do: "DEFAULT #{literal}"
     defp default_expr({:fragment, expr}),
       do: "DEFAULT #{expr}"
