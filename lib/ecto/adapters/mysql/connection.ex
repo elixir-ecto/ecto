@@ -28,5 +28,27 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         {:error, %Mariaex.Error{} = err} -> err
       end
     end
+
+    ## Transaction
+
+    def begin_transaction do
+      "BEGIN"
+    end
+
+    def rollback do
+      "ROLLBACK"
+    end
+
+    def commit do
+      "COMMIT"
+    end
+
+    def savepoint(savepoint) do
+      "SAVEPOINT " <> savepoint
+    end
+
+    def rollback_to_savepoint(savepoint) do
+      "ROLLBACK TO SAVEPOINT " <> savepoint
+    end
   end
 end
