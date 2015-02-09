@@ -392,6 +392,31 @@ defmodule Ecto.Type do
     array(type, value, &cast/2, [])
   end
 
+  def cast(:integer, term) when is_binary(term) do
+    case Integer.parse(term) do
+      {int, ""} -> {:ok, int}
+      _         -> :error
+    end
+  end
+
+  def cast(:float, term) when is_binary(term) do
+    case Float.parse(term) do
+      {float, ""} -> {:ok, float}
+      _           -> :error
+    end
+  end
+
+  def cast(:float, term) when is_integer(term), do: {:ok, term + 0.0}
+
+  def cast(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
+  def cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
+
+  def cast(:decimal, term) when is_binary(term) or is_number(term) do
+    {:ok, Decimal.new(term)} # TODO: Add Decimal.parse/1
+  rescue
+    Decimal.Error -> :error
+  end
+
   def cast(type, value) do
     cond do
       not primitive?(type) ->
@@ -399,36 +424,9 @@ defmodule Ecto.Type do
       of_basic_type?(type, value) ->
         {:ok, value}
       true ->
-        do_cast(type, value)
+        :error
     end
   end
-
-  defp do_cast(:integer, term) when is_binary(term) do
-    case Integer.parse(term) do
-      {int, ""} -> {:ok, int}
-      _         -> :error
-    end
-  end
-
-  defp do_cast(:float, term) when is_binary(term) do
-    case Float.parse(term) do
-      {float, ""} -> {:ok, float}
-      _           -> :error
-    end
-  end
-
-  defp do_cast(:float, term) when is_integer(term), do: {:ok, term + 0.0}
-
-  defp do_cast(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
-  defp do_cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
-
-  defp do_cast(:decimal, term) when is_binary(term) or is_number(term) do
-    {:ok, Decimal.new(term)} # TODO: Add Decimal.parse/1
-  rescue
-    Decimal.Error -> :error
-  end
-
-  defp do_cast(_, _), do: :error
 
   @doc """
   Same as `cast/2` but raises if value can't be cast.

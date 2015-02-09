@@ -9,6 +9,7 @@ defmodule Ecto.Integration.Migration do
       add :tags, {:array, :text}
       add :bin, :binary
       add :uuid, :uuid
+      add :public, :boolean
       add :cost, :decimal, precision: 2, scale: 2
       timestamps
     end

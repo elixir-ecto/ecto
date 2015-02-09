@@ -8,9 +8,6 @@ defmodule Ecto.Integration.RepoTest do
   test "types" do
     TestRepo.insert(%Post{})
 
-    # Booleans
-    assert [{true, false}] = TestRepo.all(from Post, select: {true, false})
-
     # nil
     assert [nil] = TestRepo.all(from Post, select: nil)
 
@@ -51,6 +48,9 @@ defmodule Ecto.Integration.RepoTest do
     # Datetime
     datetime = {{2014, 04, 17}, {14, 00, 00}}
     assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, :datetime))
+
+    # Booleans
+    assert [true] = TestRepo.all(from p in Post, select: p.public)
 
     # Custom wrappers
     assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))

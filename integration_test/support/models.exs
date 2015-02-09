@@ -11,6 +11,7 @@ defmodule Ecto.Integration.Post do
     field :bin, :binary
     field :uuid, :uuid
     field :temp, :string, default: "temp", virtual: true
+    field :public, :boolean, default: true
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
     has_many :comments_authors, through: [:comments, :author]
