@@ -111,10 +111,6 @@ defmodule Ecto.Integration.RepoTest do
     assert %Barebone{text: "text"} = TestRepo.insert(%Barebone{text: "text"})
   end
 
-  test "insert with user-assigned primary key" do
-    assert %Post{id: 1} = TestRepo.insert(%Post{id: 1})
-  end
-
   test "insert and update with changeset" do
     # On insert we merge the fields and changes
     changeset = Ecto.Changeset.cast(%{"title" => "hello", "temp" => "unknown"},
@@ -132,6 +128,12 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{text: "x", title: "world", temp: "temp"} = TestRepo.get!(Post, post.id)
   end
 
+  @tag :assigns_primary_key
+  test "insert with user-assigned primary key" do
+    assert %Post{id: 1} = TestRepo.insert(%Post{id: 1})
+  end
+
+  @tag :assigns_primary_key
   test "insert and update with changeset primary key" do
     changeset = Ecto.Changeset.cast(%{"id" => "13"}, %Post{id: 11}, ~w(id), ~w())
     assert %Post{id: 13} = post = TestRepo.insert(changeset)
@@ -146,11 +148,11 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "insert and update with changeset dirty tracking" do
-    changeset = Ecto.Changeset.cast(%{"id" => 13}, %Post{}, ~w(id), ~w())
+    changeset = Ecto.Changeset.cast(%{}, %Post{}, ~w(), ~w())
 
     # There is no dirty tracking on insert, even with changesets,
     # so database defaults never actually kick in.
-    assert %Post{id: 13, counter: nil} = post = TestRepo.insert(changeset)
+    assert %Post{id: pid, counter: nil} = post = TestRepo.insert(changeset)
 
     # Set the counter to 11, so we can read it soon
     TestRepo.update(%{post | counter: 11})
@@ -158,14 +160,14 @@ defmodule Ecto.Integration.RepoTest do
     # Now, a combination of dirty tracking with read_after_writes,
     # allow us to see the actual counter value.
     changeset = Ecto.Changeset.cast(%{"title" => "hello"}, post, ~w(title), ~w())
-    assert %Post{id: 13, counter: 11, title: "hello"} = post = TestRepo.update(changeset)
+    assert %Post{id: ^pid, counter: 11, title: "hello"} = post = TestRepo.update(changeset)
 
     # Let's change the counter once more, so we can read it soon
     TestRepo.update(%{post | counter: 13})
 
     # And the value will be refreshed even if there are no changes
     changeset = Ecto.Changeset.cast(%{}, post, ~w(), ~w())
-    assert %Post{id: 13, counter: 13, title: "hello"} = TestRepo.update(changeset)
+    assert %Post{id: ^pid, counter: 13, title: "hello"} = TestRepo.update(changeset)
   end
 
   test "validate_unique/3" do
