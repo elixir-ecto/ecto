@@ -392,7 +392,7 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "title" varchar(255), "created_at" timestamp)|
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "title" varchar, "created_at" timestamp)|
   end
 
   test "create table with reference" do

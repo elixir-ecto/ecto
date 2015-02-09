@@ -81,7 +81,7 @@ defmodule Ecto.MigrationTest do
     assert last_command() ==
            {:create, table,
               [{:add, :id, :serial, [primary_key: true]},
-               {:add, :title, :string, []},
+               {:add, :title, :string, [size: 255]},
                {:add, :cost, :decimal, [precision: 3]},
                {:add, :author_id, %Reference{table: :authors}, []},
                {:add, :inserted_at, :datetime, [null: false]},
@@ -93,7 +93,7 @@ defmodule Ecto.MigrationTest do
 
     assert last_command() ==
            {:create, table,
-              [{:add, :title, :string, []}]}
+              [{:add, :title, :string, [size: 255]}]}
   end
 
   test "forward: alters a table" do
@@ -108,6 +108,21 @@ defmodule Ecto.MigrationTest do
               [{:add, :summary, :text, []},
                {:modify, :title, :text, []},
                {:remove, :views}]}
+  end
+
+  test "forward: size defaults" do
+    create table = table(:posts) do
+      add :title, :string
+      add :image, :binary
+      add :code, :string, size: 4
+    end
+
+    assert last_command() ==
+           {:create, table,
+              [{:add, :id, :serial, [primary_key: true]},
+               {:add, :title, :string, [size: 255]},
+               {:add, :image, :binary, [size: 1_048_576]},
+               {:add, :code,  :string, [size: 4]}]}
   end
 
   test "forward: drops a table" do
@@ -185,7 +200,6 @@ defmodule Ecto.MigrationTest do
     Process.put(:ddl_exists, false)
     create index(:posts, [:title])
     refute last_command()
-    Process.delete(:ddl_exists)
   end
 
   test "backward: drops an index" do
