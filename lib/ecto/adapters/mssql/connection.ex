@@ -369,8 +369,8 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr(nil, _sources),   do: "NULL"
-    defp expr(true, _sources),  do: "TRUE"
-    defp expr(false, _sources), do: "FALSE"
+    defp expr(true, _sources),  do: 1
+    defp expr(false, _sources), do: 0
 
     defp expr(literal, _sources) when is_binary(literal) do
       "'#{escape_string(literal)}'"
