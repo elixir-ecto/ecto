@@ -114,7 +114,7 @@ if Code.ensure_loaded?(Tds.Connection) do
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
-      "DELETE FROM #{table} AS #{name}" <> where
+      "DELETE #{name} FROM #{table} AS #{name}" <> where
     end
 
     def insert(table, fields, returning) do
@@ -294,7 +294,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr({:in, _, [left, right]}, sources) do
-      expr(left, sources) <> " = ANY (" <> expr(right, sources) <> ")"
+      expr(left, sources) <> " IN (" <> expr(right, sources) <> ")"
     end
 
     defp expr({:is_nil, _, [arg]}, sources) do
@@ -329,14 +329,39 @@ if Code.ensure_loaded?(Tds.Connection) do
       "[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
     end
 
+    defp expr(string, sources) when is_binary(string) do
+      string = string |> :unicode.characters_to_binary(:utf8, {:utf16, :little})
+    end
+
+    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
+      expr(other, sources)
+    end
+
     defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
       "0x#{hex}"
     end
 
     defp expr(%Ecto.Query.Tagged{value: binary, type: :uuid}, _sources) when is_binary(binary) do
-      hex = Base.encode16(binary)
-      "0x#{hex}"
+      <<
+       p1::binary-size(1),
+       p2::binary-size(1), 
+       p3::binary-size(1), 
+       p4::binary-size(1), 
+       p5::binary-size(1), 
+       p6::binary-size(1), 
+       p7::binary-size(1), 
+       p8::binary-size(1), 
+       p9::binary-size(1), 
+       p10::binary-size(1), 
+       p11::binary-size(1), 
+       p12::binary-size(1), 
+       p13::binary-size(1), 
+       p14::binary-size(1), 
+       p15::binary-size(1), 
+       p16::binary-size(1)>> = binary
+
+       p4 <> p3 <> p2 <>p1 <> p6 <> p5 <> p8 <> p7 <> p9 <> p10 <> p11 <> p12 <> p13 <> p14 <> p15 <> p16
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
@@ -510,7 +535,8 @@ if Code.ensure_loaded?(Tds.Connection) do
         pk == true      -> "bigint"
         size            -> "#{type_name}(#{size})"
         precision       -> "#{type_name}(#{precision},#{scale || 0})"
-        type == :string -> "ntext"
+        type == :string -> "nvarchar(255)"
+        type == :text   -> "nvarchar(max)"
         type == :binary -> "varbinary(max)"
         true            -> "#{type_name}"
       end
@@ -531,7 +557,7 @@ if Code.ensure_loaded?(Tds.Connection) do
       :binary.replace(value, "'", "''", [:global])
     end
 
-    defp ecto_to_db({:array, t}), do: "ntext"
+    defp ecto_to_db({:array, t}), do: "nvarchar(max)"
     defp ecto_to_db(:string),     do: "nvarchar"
     defp ecto_to_db(:binary),     do: "varbinary"
     defp ecto_to_db(other),       do: Atom.to_string(other)
