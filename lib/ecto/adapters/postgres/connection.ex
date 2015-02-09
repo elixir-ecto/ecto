@@ -447,14 +447,18 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp column_options(opts) do
       default = Keyword.get(opts, :default)
+      unique  = Keyword.get(opts, :unique)
       null    = Keyword.get(opts, :null)
       pk      = Keyword.get(opts, :primary_key)
 
-      [default_expr(default), null_expr(null), pk_expr(pk)]
+      [default_expr(default), unique_expr(unique), null_expr(null), pk_expr(pk)]
     end
 
     defp pk_expr(true), do: "PRIMARY KEY"
     defp pk_expr(_), do: nil
+
+    defp unique_expr(true), do: "UNIQUE"
+    defp unique_expr(_), do: nil
 
     defp null_expr(false), do: "NOT NULL"
     defp null_expr(true), do: "NULL"
