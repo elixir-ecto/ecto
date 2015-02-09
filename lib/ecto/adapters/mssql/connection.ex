@@ -19,7 +19,25 @@ if Code.ensure_loaded?(Tds.Connection) do
       :ok
     end
 
-    def query(conn, sql, params, opts) do
+    def query(conn, sql, params, opts) when is_binary(sql) do
+      {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
+          {%Tds.Parameter{name: "@#{acc}", value: param}, acc + 1}
+      end)
+      case Tds.Connection.query(conn, sql, params, opts) do
+        {:ok, %Tds.Result{} = result} -> {:ok, Map.from_struct(result)}
+        {:error, %Tds.Error{}} = err  -> err
+      end
+    end
+
+    def query(conn, {sql, types}, params, opts) do
+      IO.inspect params
+      {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
+          case Enum.fetch(types, acc-1) do
+            {:ok, {c, t}} -> type = t
+            :error -> type = nil
+          end
+          {%Tds.Parameter{name: "@#{acc}", value: param, type: type}, acc + 1}
+      end)
       case Tds.Connection.query(conn, sql, params, opts) do
         {:ok, %Tds.Result{} = result} -> {:ok, Map.from_struct(result)}
         {:error, %Tds.Error{}} = err  -> err
@@ -100,25 +118,24 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     def insert(table, fields, returning) do
-      IO.inspect fields
       values =
         if fields == [] do
           returning(returning, "INSERTED") <>
           " DEFAULT VALUES"
         else
-          "(" <> Enum.join(fields, ", ") <> ") " <>
+          "(" <> Enum.map_join(fields, ", ", &elem(&1, 0)) <> ") " <>
           returning(returning, "INSERTED") <>
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"@#{&1}") <> ")"
         end
-      "INSERT INTO #{table} " <> values
+      {"INSERT INTO #{table} " <> values, fields}
     end
 
     def update(table, filters, fields, returning) do
-      {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
+      {filters, count} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
         {"#{field} = @#{acc}", acc + 1}
       end
 
-      {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
+      {fields, _count} = Enum.map_reduce fields, count, fn {field, _}, acc ->
         {"#{field} = @#{acc}", acc + 1}
       end
 
@@ -127,11 +144,12 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     def delete(table, filters, returning) do
-      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
+      {filters, _} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
         {"#{field} = @#{acc}", acc + 1}
       end
 
-      "DELETE FROM #{table}" <> returning(returning,"DELETED") <> " WHERE " <> Enum.join(filters, " AND ")
+      "DELETE FROM #{table}" <> 
+      returning(returning,"DELETED") <> " WHERE " <> Enum.join(filters, " AND ")
         
     end
 
@@ -492,8 +510,8 @@ if Code.ensure_loaded?(Tds.Connection) do
         pk == true      -> "bigint"
         size            -> "#{type_name}(#{size})"
         precision       -> "#{type_name}(#{precision},#{scale || 0})"
-        type == :string -> "#{type_name}(255)"
-        type == :binary -> "#{type_name}(255)"
+        type == :string -> "ntext"
+        type == :binary -> "varbinary(max)"
         true            -> "#{type_name}"
       end
     end
@@ -513,8 +531,8 @@ if Code.ensure_loaded?(Tds.Connection) do
       :binary.replace(value, "'", "''", [:global])
     end
 
-    defp ecto_to_db({:array, t}), do: "nvarchar"
-    defp ecto_to_db(:string),     do: "varchar"
+    defp ecto_to_db({:array, t}), do: "ntext"
+    defp ecto_to_db(:string),     do: "nvarchar"
     defp ecto_to_db(:binary),     do: "varbinary"
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
