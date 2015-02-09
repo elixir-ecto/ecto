@@ -3,11 +3,19 @@
 ## v0.7.2 (2015-01-29)
 
 * Enhancements
+  * Allow changesets to be merged with `Ecto.Changeset.merge/2`
   * Support `Ecto.Query.exclude/2` that resets a previously set query field
   * Support more robust transactional tests via explicit `Ecto.Adapters.SQL.restart_test_transaction` command
+  * Support the `:using` option for indexes in Postgres
+  * Support adding/dropping indexes concurrently with Postgres
+  * Allow expressions to be given as default when adding columns via `fragment/1`
+  * Support integer casting on float types
 
 * Bug fixes
   * Ensure `psql` does not require a database with the same name as the user
+  * Only drop existing indexes when reversing `create index`
+  * Allow boolean literals as defaults when adding columns
+  * Add default varchar size to migrations
 
 ## v0.7.1 (2015-01-27)
 

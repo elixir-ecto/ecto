@@ -102,6 +102,48 @@ defmodule Ecto.Migration.Runner do
     if direction == :forward, do: exists, else: !exists
   end
 
+  ## Execute
+
+  defp execute_in_direction(repo, :forward, level, command) do
+    log_and_execute_ddl(repo, level, command)
+  end
+
+  defp execute_in_direction(repo, :backward, level, {:create, %Index{}=index}) do
+    if repo.adapter.ddl_exists?(repo, index, @opts) do
+      log_and_execute_ddl(repo, level, {:drop, index})
+    end
+  end
+
+  defp execute_in_direction(repo, :backward, level, {:drop, %Index{}=index}) do
+    log_and_execute_ddl(repo, level, {:create, index})
+  end
+
+  defp execute_in_direction(repo, :backward, level, command) do
+    if reversed = reverse(command) do
+      log_and_execute_ddl(repo, level, reversed)
+    else
+      raise Ecto.MigrationError, message: "cannot reverse migration command: #{command command}"
+    end
+  end
+
+  defp reverse({:create, %Table{}=table, _columns}), do: {:drop, table}
+  defp reverse({:alter,  %Table{}=table, changes}) do
+    if reversed = table_reverse(changes) do
+      {:alter, table, reversed}
+    end
+  end
+  defp reverse(_command), do: false
+
+  defp table_reverse([]),   do: []
+  defp table_reverse([h|t]) do
+    if reversed = table_reverse(h) do
+      [reversed|table_reverse(t)]
+    end
+  end
+
+  defp table_reverse({:add, name, _type, _opts}), do: {:remove, name}
+  defp table_reverse(_), do: false
+
   ## Helpers
 
   defp repo_and_direction_and_level do
@@ -110,58 +152,26 @@ defmodule Ecto.Migration.Runner do
     end)
   end
 
-  defp execute_in_direction(repo, :forward, level, command) do
-    log_ddl(level, command)
+  defp log_and_execute_ddl(repo, level, command) do
+    log(level, command(command))
     repo.adapter.execute_ddl(repo, command, @opts)
   end
 
-  defp execute_in_direction(repo, :backward, level, command) do
-    reversed = reverse(command)
-
-    if reversed do
-      log_ddl(level, reversed)
-      repo.adapter.execute_ddl(repo, reversed, @opts)
-    else
-      raise Ecto.MigrationError, message: "cannot reverse migration command: #{inspect command}"
-    end
-  end
-
-  defp reverse([]),   do: []
-  defp reverse([h|t]) do
-    if reversed = reverse(h) do
-      [reversed|reverse(t)]
-    end
-  end
-
-  defp reverse({:create, %Index{}=index}),           do: {:drop, index}
-  defp reverse({:drop,   %Index{}=index}),           do: {:create, index}
-  defp reverse({:create, %Table{}=table, _columns}), do: {:drop, table}
-  defp reverse({:add,    name, _type, _opts}),       do: {:remove, name}
-  defp reverse({:alter,  %Table{}=table, changes}) do
-    if reversed = reverse(changes) do
-      {:alter, table, reversed}
-    end
-  end
-
-  defp reverse(_), do: false
-
-  ## Logging
-
-  defp log_ddl(level, ddl) when is_binary(ddl),
-    do: log(level, "execute #{inspect ddl}")
-
-  defp log_ddl(level, {:create, %Table{} = table, _}),
-    do: log(level, "create table #{table.name}")
-  defp log_ddl(level, {:alter, %Table{} = table, _}),
-    do: log(level, "alter table #{table.name}")
-  defp log_ddl(level, {:drop, %Table{} = table}),
-    do: log(level, "drop table #{table.name}")
-
-  defp log_ddl(level, {:create, %Index{} = index}),
-    do: log(level, "create index #{index.name}")
-  defp log_ddl(level, {:drop, %Index{} = index}),
-    do: log(level, "drop index #{index.name}")
-
   defp log(false, _msg), do: :ok
   defp log(level, msg),  do: Logger.log(level, msg)
+
+  defp command(ddl) when is_binary(ddl),
+    do: "execute #{inspect ddl}"
+
+  defp command({:create, %Table{} = table, _}),
+    do: "create table #{table.name}"
+  defp command({:alter, %Table{} = table, _}),
+    do: "alter table #{table.name}"
+  defp command({:drop, %Table{} = table}),
+    do: "drop table #{table.name}"
+
+  defp command({:create, %Index{} = index}),
+    do: "create index #{index.name}"
+  defp command({:drop, %Index{} = index}),
+    do: "drop index #{index.name}"
 end

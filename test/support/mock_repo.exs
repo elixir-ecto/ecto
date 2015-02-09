@@ -55,7 +55,7 @@ defmodule Ecto.MockAdapter do
 
   def ddl_exists?(_repo, object, _) do
     Process.put(:last_exists, object)
-    true
+    Process.get(:ddl_exists, true)
   end
 
   defp migrated_versions do

@@ -87,6 +87,21 @@ defmodule Ecto.Changeset do
   changes map. This is useful to run the changeset through
   all validation steps for introspection.
 
+  ## Composing casts
+
+  `cast/4` also accepts a changeset instead of a model as its second argument.
+  In such cases, all the effects caused by the call to `cast/4` (additional and
+  optional fields, errors and changes) are simply added to the ones already
+  present in the argument changeset. Parameters are merged (*not deep-merged*)
+  and the ones passed to `cast/4` take precedence over the ones already in the
+  changeset.
+
+  Note that if a field is marked both as *required* as well as *optional* (for
+  example by being in the `:required` field of the argument changeset and also
+  in the `optional` list passed to `cast/4`), then it will be marked as required
+  and not optional). This represents the fact that required fields are
+  "stronger" than optional fields.
+
   ## Examples
 
       iex> changeset = cast(params, post, ~w(title), ~w())
@@ -94,10 +109,22 @@ defmodule Ecto.Changeset do
       ...>   Repo.update(changeset)
       ...> end
 
+  Passing a changeset as the second argument:
+
+      iex> changeset = cast(%{title: "Hello"}, post, ~w(), ~w(title))
+      iex> new_changeset = cast(%{title: "Foo", body: "Bar"}, ~w(title), ~w(body))
+      iex> new_changeset.params
+      %{title: "Foo", body: "Bar"}
+      iex> new_changeset.required
+      [:title]
+      iex> new_changeset.optional
+      [:body]
+
   """
-  @spec cast(%{binary => term} | %{atom => term} | nil, Ecto.Model.t,
-             [String.t | atom], [String.t | atom]) :: t
-  def cast(val, model, required, optional \\ [])
+  @spec cast(%{binary => term} | %{atom => term} | nil,
+             Ecto.Model.t | Ecto.Changeset.t, [String.t | atom],
+             [String.t | atom]) :: t
+  def cast(val, model_or_changeset, required, optional \\ [])
 
   def cast(%{__struct__: _} = params, _model, _required, _optional) do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
@@ -117,8 +144,14 @@ defmodule Ecto.Changeset do
                     changes: %{}, required: required, optional: optional}
   end
 
+  def cast(%{} = params, %Ecto.Changeset{} = changeset, required, optional)
+      when is_list(required) and is_list(optional) do
+    new_changeset = cast(params, changeset.model, required, optional)
+    merge(changeset, new_changeset)
+  end
+
   def cast(%{} = params, %{__struct__: module} = model, required, optional)
-      when is_map(params) and is_list(required) and is_list(optional) do
+      when is_list(required) and is_list(optional) do
     params = convert_params(params)
     types  = module.__changeset__
 
@@ -210,6 +243,75 @@ defmodule Ecto.Changeset do
   end
 
   ## Working with changesets
+
+  @doc """
+  Merges two changesets.
+
+  This function merges two changesets provided they have been applied to the
+  same model (their `:model` field is equal); if the models differ, an
+  `ArgumentError` exception is raised. If one of the changesets has a `:repo`
+  field which is not `nil`, then the value of that field is used as the `:repo`
+  field of the resulting changeset; if both changesets have a non-`nil` and
+  different `:repo` field, an `ArgumentError` exception is raised.
+
+  The other fields are merged with the following criteria:
+
+  * `params` - params are merged (not deep-merged) giving precedence to the
+    params of `changeset2` in case of a conflict. If either changeset has its
+    `:params` field set to `nil`, the resulting changeset will have its params
+    set to `nil` too.
+  * `changes` - changes are merged giving precedence to the `changeset2`
+    changes.
+  * `errors` and `validations` - they are simply concatenated.
+  * `required` and `optional` - they are merged; all the fields that appear
+    in the optional list of either changesets and also in the required list of
+    the other changeset are moved to the required list of the resulting
+    changeset.
+
+  ## Examples
+
+      iex> changeset1 = cast(%{title: "Title"}, %Post{}, ~w(title), ~w(body))
+      iex> changeset2 = cast(%{title: "New title", body: "Body"}, %Post{}, ~w(title body), ~w())
+      iex> changeset = merge(changeset1, changeset2)
+      iex> changeset.changes
+      %{body: "Body", title: "New title"}
+      iex> changeset.required
+      [:title, :body]
+      iex> changeset.optional
+      []
+
+      iex> changeset1 = cast(%{title: "Title"}, %Post{body: "Body"}, ~w(title), ~w(body))
+      iex> changeset2 = cast(%{title: "New title"}, %Post{}, ~w(title), ~w())
+      iex> merge(changeset1, changeset2)
+      ** (ArgumentError) different models when merging changesets
+
+  """
+  @spec merge(t, t) :: t
+  def merge(changeset1, changeset2)
+
+  def merge(%Ecto.Changeset{model: model, repo: repo1} = cs1, %Ecto.Changeset{model: model, repo: repo2} = cs2)
+      when is_nil(repo1) or is_nil(repo2) or repo1 == repo2 do
+    new_repo        = repo1 || repo2
+    new_params      = cs1.params && cs2.params && Map.merge(cs1.params, cs2.params)
+    new_changes     = Map.merge(cs1.changes, cs2.changes)
+    new_validations = cs1.validations ++ cs2.validations
+    new_errors      = cs1.errors ++ cs2.errors
+    new_required    = Enum.uniq(cs1.required ++ cs2.required)
+    new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
+
+    %Ecto.Changeset{params: new_params, model: model, valid?: new_errors == [],
+                    errors: new_errors, changes: new_changes, repo: new_repo,
+                    required: new_required, optional: new_optional,
+                    validations: new_validations}
+  end
+
+  def merge(%Ecto.Changeset{model: m1}, %Ecto.Changeset{model: m2}) when m1 != m2 do
+    raise ArgumentError, message: "different models when merging changesets"
+  end
+
+  def merge(%Ecto.Changeset{repo: r1}, %Ecto.Changeset{repo: r2}) when r1 != r2 do
+    raise ArgumentError, message: "different repos when merging changesets"
+  end
 
   @doc """
   Fetches the given field from changes or from the model.
