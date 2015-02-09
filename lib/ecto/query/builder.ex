@@ -117,6 +117,10 @@ defmodule Ecto.Query.Builder do
   def escape({comp_op, meta, [left, right]} = expr, type, params, vars) when comp_op in ~w(== != < > <= >=)a do
     assert_type!(expr, type, :boolean)
 
+    if is_nil(left) or is_nil(right) do
+      error! "comparison with nil is forbidden as it always evaluates to false"
+    end
+
     ltype = quoted_type(right, vars)
     rtype = quoted_type(left, vars)
 

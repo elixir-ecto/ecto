@@ -13,53 +13,36 @@ defmodule Ecto.Integration.LockTest do
       field :count, :integer
     end
   end
-  # TODO
-  # MSSQL Does not allow insertion into identity (serial) columns. 
-  #  Removed and assumed that this is the first
+
   setup do
-    lc = %LockCounter{count: 1} |> PoolRepo.insert
-
-    on_exit fn ->
-      PoolRepo.delete(lc)
-    end
-
-    {:ok, lc: lc}
+    on_exit fn -> PoolRepo.delete_all(LockCounter) end
   end
 
-  test "lock for update", meta do
-    query = from(p in LockCounter, where: p.id == ^meta.lc.id, lock: true)
-    pid = self
+  test "lock for update" do
+    %{id: id} = PoolRepo.insert(%LockCounter{count: 1})
+    query = from(lc in LockCounter, where: lc.id == ^id, lock: true)
+    pid   = self()
 
-    new_pid =
-      spawn_link fn ->
-        receive do
-          :select_for_update ->
-            PoolRepo.transaction(fn ->
-              [post] = PoolRepo.all(query)   # this should block until the other trans. commits
-              %{post | count: post.count + 1} |> PoolRepo.update
-            end)
-            send pid, :updated
-        after
-          5000 -> raise "timeout"
-        end
+    {:ok, new_pid} =
+      Task.start_link fn ->
+        assert_receive :select_for_update, 5000
+
+        PoolRepo.transaction(fn ->
+          [post] = PoolRepo.all(query) # this should block until the other trans. commit
+          %{post | count: post.count + 1} |> PoolRepo.update
+        end)
+
+        send pid, :updated
       end
 
     PoolRepo.transaction(fn ->
-      [post] = PoolRepo.all(query)           # select and lock the row
-      send new_pid, :select_for_update       # signal second process to begin a transaction
-      receive do
-        :updated -> raise "missing lock"     # if we get this before committing, our lock failed
-      after
-        100 -> :ok
-      end
-      %{post | count: post.count + 1} |> PoolRepo.update
+      [post] = PoolRepo.all(query)       # select and lock the row
+      send new_pid, :select_for_update   # signal second process to begin a transaction
+      refute_receive :udpated, 100       # if we get this before committing, our lock failed
+      PoolRepo.update(%{post | count: post.count + 1})
     end)
 
-    receive do
-      :updated -> :ok
-    after
-      5000 -> "timeout"
-    end
+    assert_receive :updated, 5000
 
     # Final count will be 3 if SELECT ... FOR UPDATE worked and 2 otherwise
     assert [%LockCounter{count: 3}] = PoolRepo.all(LockCounter)

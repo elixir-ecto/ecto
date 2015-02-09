@@ -78,7 +78,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
+      zipped_sql = Enum.map_join(values, ", ", fn {{field, _}, expr} ->
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
@@ -464,7 +464,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       do: nil
     defp default_expr(literal) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
-    defp default_expr(literal) when is_number(literal),
+    defp default_expr(literal) when is_number(literal) or is_boolean(literal),
       do: "DEFAULT #{literal}"
     defp default_expr({:fragment, expr}),
       do: "DEFAULT #{expr}"

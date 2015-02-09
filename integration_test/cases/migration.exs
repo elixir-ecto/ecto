@@ -26,11 +26,8 @@ defmodule Ecto.Integration.MigrationTest do
         remove :other
         add :author, :string
       end
-      # TODO 
-      # MSSQL Does not support native function based indexes. 
-      # Needs to be moved to pg
-      #index = index(:migrations_test, ["lower(author)"])
-      index = index(:migrations_test, ["author"])
+
+      index = index(:migrations_test, [:author])
       refute exists? index
       create index
       assert exists? index
@@ -140,18 +137,17 @@ defmodule Ecto.Integration.MigrationTest do
 
   defp create_migration(num) do
     module = Module.concat(__MODULE__, "Migration#{num}")
-    # TODO
-    # Removed LIMIT 1 from subselect on down. PG Specific
+
     File.write! "#{num}_migration.exs", """
     defmodule #{module} do
       use Ecto.Migration
 
       def up do
-        execute "INSERT INTO migrations_test (name) VALUES ('inserted')"
+        execute "INSERT INTO migrations_test (num) VALUES (#{num})"
       end
 
       def down do
-        execute "DELETE FROM migrations_test WHERE id IN (SELECT id FROM migrations_test)"
+        execute "DELETE FROM migrations_test WHERE num = #{num}"
       end
     end
     """

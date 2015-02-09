@@ -8,9 +8,6 @@ defmodule Ecto.Adapters.PostgresTest do
 
   alias Ecto.Queryable
   alias Ecto.Query.Planner
-  alias Ecto.Migration.Table
-  alias Ecto.Migration.Index
-  alias Ecto.Migration.Reference
 
   defmodule Model do
     use Ecto.Model
@@ -273,19 +270,19 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "update all" do
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: 0]) ==
+    assert SQL.update_all(query, [{{:x, :integer}, 0}]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0}
 
     query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.update_all(query, [x: 0]) ==
+    assert SQL.update_all(query, [{{:x, :integer}, 0}]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0 WHERE (m0."x" = 123)}
 
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: 0, y: "123"]) ==
+    assert SQL.update_all(query, [{{:x, :integer}, 0}, {{:y, :string}, "123"}]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0, "y" = '123'}
 
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: quote do: ^0]) ==
+    assert SQL.update_all(query, [{{:x, :integer}, quote(do: ^0)}]) ==
            ~s{UPDATE "model" AS m0 SET "x" = $1}
   end
 
@@ -383,12 +380,14 @@ defmodule Ecto.Adapters.PostgresTest do
 
   # DDL
 
+  import Ecto.Migration, only: [table: 1, index: 2, index: 3, references: 1]
+
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
   end
 
   test "create table" do
-    create = {:create, %Table{name: :posts},
+    create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
@@ -397,73 +396,35 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "create table with reference" do
-    create = {:create, %Table{name: :posts},
+    create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, %Reference{table: :categories}, []} ]}
+                {:add, :category_id, references(:categories), []} ]}
     assert SQL.execute_ddl(create) ==
            ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer REFERENCES "categories"("id"))|
   end
 
   test "create table with column options" do
-    create = {:create, %Table{name: :posts},
+    create = {:create, table(:posts),
                [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
                 {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
-                {:add, :on_hand, :integer, [default: 0, null: true]}]}
+                {:add, :on_hand, :integer, [default: 0, null: true]},
+                {:add, :is_active, :boolean, [default: true]}]}
 
     assert SQL.execute_ddl(create) == """
     CREATE TABLE "posts" ("name" varchar(20) DEFAULT 'Untitled' NOT NULL,
     "price" numeric(8,2) DEFAULT expr,
-    "on_hand" integer DEFAULT 0 NULL)
+    "on_hand" integer DEFAULT 0 NULL,
+    "is_active" boolean DEFAULT true)
     """ |> String.strip |> String.replace("\n", " ")
   end
 
   test "drop table" do
-    drop = {:drop, %Table{name: :posts}}
+    drop = {:drop, table(:posts)}
     assert SQL.execute_ddl(drop) == ~s|DROP TABLE "posts"|
   end
 
-  test "create index" do
-    create = {:create, %Index{name: "posts$main", table: :posts, columns: [:category_id, :permalink]}}
-    assert SQL.execute_ddl(create) == ~s|CREATE INDEX "posts$main" ON "posts" ("category_id", "permalink")|
-  end
-
-  test "create unique index" do
-    create = {:create, %Index{name: "posts$main", table: :posts, unique: true, columns: [:permalink]}}
-    assert SQL.execute_ddl(create) == ~s|CREATE UNIQUE INDEX "posts$main" ON "posts" ("permalink")|
-  end
-
-  test "create index concurrently" do
-    create = {:create, %Index{name: "posts$main", table: :posts, columns: [:permalink], concurrently: true}}
-    assert SQL.execute_ddl(create) == ~s|CREATE INDEX CONCURRENTLY "posts$main" ON "posts" ("permalink")|
-  end
-
-  test "create unique index concurrently" do
-    create = {:create, %Index{name: "posts$main", table: :posts, columns: [:permalink], concurrently: true, unique: true}}
-    assert SQL.execute_ddl(create) == ~s|CREATE UNIQUE INDEX CONCURRENTLY "posts$main" ON "posts" ("permalink")|
-  end
-
-  test "create an index using a different type" do
-    create = {:create, %Index{name: "posts$hash", table: :posts, columns: [:id], using: :hash}}
-    assert SQL.execute_ddl(create) == ~s|CREATE INDEX "posts$hash" ON "posts" USING hash ("id")|
-  end
-
-  test "create an index using a different type concurrently" do
-    create = {:create, %Index{name: "posts$hash", table: :posts, columns: [:id], concurrently: true, using: "gist"}}
-    assert SQL.execute_ddl(create) == ~s|CREATE INDEX CONCURRENTLY "posts$hash" ON "posts" USING gist ("id")|
-  end
-
-  test "drop index" do
-    drop = {:drop, %Index{name: "posts$main"}}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
-  end
-
-  test "drop index concurrently" do
-    drop = {:drop, %Index{name: "posts$main", concurrently: true}}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX CONCURRENTLY "posts$main"|
-  end
-
   test "alter table" do
-    alter = {:alter, %Table{name: :posts},
+    alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
                 {:modify, :price, :numeric, [precision: 8, scale: 2]},
                 {:remove, :summary}]}
@@ -474,5 +435,49 @@ defmodule Ecto.Adapters.PostgresTest do
     ALTER COLUMN "price" TYPE numeric(8,2),
     DROP COLUMN "summary"
     """ |> String.strip |> String.replace("\n", " ")
+  end
+
+  test "create index" do
+    create = {:create, index(:posts, [:category_id, :permalink])}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts_category_id_permalink_index" ON "posts" ("category_id", "permalink")|
+
+    create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts$main" ON "posts" (lower(permalink))|
+  end
+
+  test "create unique index" do
+    create = {:create, index(:posts, [:permalink], unique: true)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX "posts_permalink_index" ON "posts" ("permalink")|
+  end
+
+  test "create index concurrently" do
+    create = {:create, index(:posts, [:permalink], concurrently: true)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX CONCURRENTLY "posts_permalink_index" ON "posts" ("permalink")|
+  end
+
+  test "create unique index concurrently" do
+    create = {:create, index(:posts, [:permalink], concurrently: true, unique: true)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX CONCURRENTLY "posts_permalink_index" ON "posts" ("permalink")|
+  end
+
+  test "create an index using a different type" do
+    create = {:create, index(:posts, [:permalink], using: :hash)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX "posts_permalink_index" ON "posts" USING hash ("permalink")|
+  end
+
+  test "drop index" do
+    drop = {:drop, index(:posts, [:id], name: "posts$main")}
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX "posts$main"|
+  end
+
+  test "drop index concurrently" do
+    drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX CONCURRENTLY "posts$main"|
   end
 end
