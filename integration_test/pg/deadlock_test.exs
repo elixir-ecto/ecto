@@ -96,6 +96,18 @@ defmodule Ecto.Integration.DeadlockTest do
 
         assert_tx_aborted
 
+        # Not really sure what and how to test this
+        try do
+          Process.flag(:trap_exit, true)
+          PoolRepo.transaction fn ->
+          end
+        catch
+          class, msg ->
+            Logger.debug inspect([class, msg])
+        after
+          Process.flag(:trap_exit, false)
+        end
+
         # Even aborted transactions can be rolled back.
         PoolRepo.rollback(:deadlocked)
     else
