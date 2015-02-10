@@ -23,7 +23,7 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     def query(conn, sql, params, opts) when is_binary(sql) do
       {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
-          {%Tds.Parameter{name: "@#{acc}", value: param}, acc + 1}
+          {%Tds.Parameter{name: "@#{acc}", value: transform_value(param)}, acc + 1}
       end)
       case Tds.Connection.query(conn, sql, params, opts) do
         {:ok, %Tds.Result{} = result} -> {:ok, Map.from_struct(result)}
@@ -33,12 +33,13 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     def query(conn, {sql, types}, params, opts) do
       IO.inspect params
+      IO.inspect types
       {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
           case Enum.fetch(types, acc-1) do
             {:ok, {c, t}} -> type = t
             :error -> type = nil
           end
-          {%Tds.Parameter{name: "@#{acc}", value: param, type: type}, acc + 1}
+          {%Tds.Parameter{name: "@#{acc}", value: transform_value(param), type: type}, acc + 1}
       end)
       case Tds.Connection.query(conn, sql, params, opts) do
         {:ok, %Tds.Result{} = result} -> {:ok, Map.from_struct(result)}
@@ -46,6 +47,20 @@ if Code.ensure_loaded?(Tds.Connection) do
       end
     end
 
+
+    defp transform_value(value) when value == true or value == false do
+      if value == true, do: 1, else: 0
+    end
+
+    defp transform_value(list) when is_list(list) do
+      Enum.map_join(list, ", ", &"#{&1}")
+    end
+
+    # defp transform_value(string) when is_binary(string) do
+
+    # end
+
+    defp transform_value(value), do: value
     ## Transaction
 
     def begin_transaction do
@@ -98,15 +113,15 @@ if Code.ensure_loaded?(Tds.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
+      zipped_sql = Enum.map_join(values, ", ", fn {{field, _}, expr} ->
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
 
-      "UPDATE #{quote_name(table)} AS #{name} " <>
-      "SET " <> zipped_sql <>
+      "UPDATE #{name} " <>
+      "SET " <> zipped_sql <> " FROM #{quote_name(table)} AS #{name} " <>
       where
     end
 
@@ -133,6 +148,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     def update(table, filters, fields, returning) do
+      field_set = filters ++ fields
       {filters, count} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
         {"#{quote_name(field)} = @#{acc}", acc + 1}
       end
@@ -140,9 +156,8 @@ if Code.ensure_loaded?(Tds.Connection) do
       {fields, _count} = Enum.map_reduce fields, count, fn {field, _}, acc ->
         {"#{quote_name(field)} = @#{acc}", acc + 1}
       end
-
-      "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <> returning(returning, "INSERTED") <>
-        " WHERE " <> Enum.join(filters, " AND ")
+      {"UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <> returning(returning, "INSERTED") <>
+        " WHERE " <> Enum.join(filters, " AND "), field_set}
     end
 
     def delete(table, filters, returning) do
@@ -308,7 +323,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr({:fragment, _, parts}, sources) do
-     
+      Logger.info "Fragment Query"
       Enum.map_join(parts, "", fn
         part when is_binary(part) -> part
         expr -> expr(expr, sources)
@@ -329,18 +344,15 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr(list, sources) when is_list(list) do
-      "[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
+      Enum.map_join(list, ", ", &expr(&1, sources))
     end
 
     defp expr(string, sources) when is_binary(string) do
-      string = string |> :unicode.characters_to_binary(:utf8, {:utf16, :little})
-    end
-
-    defp expr(string, sources) when is_binary(string) do
-      string = string |> :unicode.characters_to_binary(:utf8, {:utf16, :little})
+      string = "'#{escape_string(string)}'"
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
+      Logger.info "Tagged Query"
       expr(other, sources)
     end
 
@@ -376,8 +388,8 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr(nil, _sources),   do: "NULL"
-    defp expr(true, _sources),  do: 1
-    defp expr(false, _sources), do: 0
+    defp expr(true, _sources),  do: "1"
+    defp expr(false, _sources), do: "0"
 
     defp expr(literal, _sources) when is_binary(literal) do
       "'#{escape_string(literal)}'"
@@ -530,7 +542,7 @@ if Code.ensure_loaded?(Tds.Connection) do
       "bigint REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})"
     end
     defp column_type({:array, type}, opts),
-      do: "nvarchar(max)"
+      do: raise "Array column type is not supported for MSSQL"
     defp column_type(:uuid, opts), do: "uniqueidentifier"
     defp column_type(type, opts) do
       pk        = Keyword.get(opts, :primary_key)
@@ -567,7 +579,6 @@ if Code.ensure_loaded?(Tds.Connection) do
       :binary.replace(value, "'", "''", [:global])
     end
 
-    defp ecto_to_db({:array, t}), do: "nvarchar(max)"
     defp ecto_to_db(:string),     do: "nvarchar"
     defp ecto_to_db(:binary),     do: "varbinary"
     defp ecto_to_db(:boolean),     do: "bit"
