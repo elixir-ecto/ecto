@@ -198,8 +198,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Helpers
 
-    defp quote_name(name), do: "\"#{name}\""
-
     defp assemble(list) do
       list
       |> List.flatten
