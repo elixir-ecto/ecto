@@ -322,7 +322,7 @@ defmodule Ecto.Changeset do
   no value is available.
   """
   @spec fetch_field(t, atom) :: {:changes, term} | {:model, term} | :error
-  def fetch_field(%{changes: changes, model: model}, key) do
+  def fetch_field(%{changes: changes, model: model} = _changeset, key) do
     case Map.fetch(changes, key) do
       {:ok, value} -> {:changes, value}
       :error ->
@@ -342,7 +342,7 @@ defmodule Ecto.Changeset do
   no value is available.
   """
   @spec get_field(t, atom, term) :: term
-  def get_field(%{changes: changes, model: model}, key, default \\ nil) do
+  def get_field(%{changes: changes, model: model} = _changeset, key, default \\ nil) do
     case Map.fetch(changes, key) do
       {:ok, value} -> value
       :error ->
@@ -357,7 +357,7 @@ defmodule Ecto.Changeset do
   Fetches a change.
   """
   @spec fetch_change(t, atom) :: {:ok, term} | :error
-  def fetch_change(%{changes: changes}, key) when is_atom(key) do
+  def fetch_change(%{changes: changes} = _changeset, key) when is_atom(key) do
     Map.fetch(changes, key)
   end
 
@@ -365,7 +365,7 @@ defmodule Ecto.Changeset do
   Gets a change or returns default value.
   """
   @spec get_change(t, atom, term) :: term
-  def get_change(%{changes: changes}, key, default \\ nil) when is_atom(key) do
+  def get_change(%{changes: changes} = _changeset, key, default \\ nil) when is_atom(key) do
     Map.get(changes, key, default)
   end
 
@@ -412,7 +412,7 @@ defmodule Ecto.Changeset do
       apply(changeset)
 
   """
-  def apply(%{changes: changes, model: model}) do
+  def apply(%{changes: changes, model: model} = _changeset) do
     struct(model, changes)
   end
 
