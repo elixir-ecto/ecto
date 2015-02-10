@@ -61,14 +61,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       from    = from(sources)
       where   = where(query.wheres, sources)
 
-      assemble([select, from])
+      assemble([select, from, where])
     end
 
     ## Query Generation
 
     alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
-    alias Ecto.Query.JoinExpr
 
     defp select(%SelectExpr{fields: fields}, [], sources) do
       "SELECT " <> Enum.map_join(fields, ", ", &expr(&1, sources))
@@ -130,7 +129,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     alias Ecto.Migration.Table
-    alias Ecto.Migration.Index
     alias Ecto.Migration.Reference
 
     def ddl_exists(%Table{name: name}) do
@@ -213,7 +211,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp ecto_to_db(:datetime),   do: "timestamp"
     defp ecto_to_db(:binary),     do: "blob"
     defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
-    defp ecto_to_db({:array, t}), do: "text" # TODO: MySQL does not support Array
+    defp ecto_to_db({:array, _}), do: "text" # TODO: MySQL does not support Array
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end
