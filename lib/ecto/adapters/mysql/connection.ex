@@ -57,7 +57,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def ddl_exists(%Table{name: name}) do
       """
-      SELECT COUNT (1) information_schema.tables C
+      SELECT COUNT(1)
+        FROM information_schema.tables T
        WHERE t.table_schema = SCHEMA()
              AND t.table_name = '#{escape_string(to_string(name))}'
       """
