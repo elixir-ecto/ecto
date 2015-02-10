@@ -125,7 +125,7 @@ defmodule Ecto.Changeset do
   @spec cast(%{binary => term} | %{atom => term} | nil,
              Ecto.Model.t | Ecto.Changeset.t, [String.t | atom],
              [String.t | atom]) :: t
-  def cast(val, model_or_changeset, required, optional \\ [])
+  def cast(params, model_or_changeset, required, optional \\ [])
 
   def cast(%{__struct__: _} = params, _model, _required, _optional) do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
