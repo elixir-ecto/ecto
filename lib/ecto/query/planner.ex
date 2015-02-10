@@ -60,7 +60,7 @@ defmodule Ecto.Query.Planner do
   along-side the select expression.
   """
   def query(query, base, opts \\ []) do
-    {query, params, _key} = prepare(query, base)
+    {query, params} = prepare(query, base)
     {normalize(query, base, opts), params}
   end
 
@@ -75,11 +75,9 @@ defmodule Ecto.Query.Planner do
   any cache mechanism.
   """
   def prepare(query, params) do
-    {query, {cache, params}} =
-      query
-      |> prepare_sources
-      |> prepare_cache(params)
-    {query, params, cache}
+    query
+    |> prepare_sources
+    |> prepare_params(params)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -89,29 +87,27 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_cache(query, params) do
-    cache = [query.from, query.assocs, query.lock]
-    traverse_exprs(query, {cache, params}, &{&3, merge_cache(&1, &2, &3, &4)})
+  def prepare_params(query, params) do
+    traverse_exprs(query, params, &{&3, merge_params(&1, &2, &3, &4)})
   end
 
-  defp merge_cache(kind, query, expr, {cache, params}) when kind in ~w(select limit offset)a do
+  defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
     if expr do
-      {[expr.expr|cache], cast_and_merge_params(kind, query, expr, params)}
+      cast_and_merge_params(kind, query, expr, params)
     else
-      {cache, params}
+      params
     end
   end
 
-  defp merge_cache(kind, query, exprs, acc) when kind in ~w(distinct where group_by having order_by)a do
-    Enum.reduce exprs, acc, fn expr, {cache, params} ->
-      {[expr.expr|cache], cast_and_merge_params(kind, query, expr, params)}
+  defp merge_params(kind, query, exprs, acc) when kind in ~w(distinct where group_by having order_by)a do
+    Enum.reduce exprs, acc, fn expr, params ->
+      cast_and_merge_params(kind, query, expr, params)
     end
   end
 
-  defp merge_cache(:join, query, exprs, acc) do
-    Enum.reduce exprs, acc, fn %JoinExpr{qual: qual, source: source, on: on}, {cache, params} ->
-      {[{qual, source, on.expr}|cache],
-       cast_and_merge_params(:join, query, on, params)}
+  defp merge_params(:join, query, exprs, acc) do
+    Enum.reduce exprs, acc, fn %JoinExpr{on: on}, params ->
+       cast_and_merge_params(:join, query, on, params)
     end
   end
 
