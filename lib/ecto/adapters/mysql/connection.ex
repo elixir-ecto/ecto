@@ -179,7 +179,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       do: "DEFAULT #{expr}"
 
     defp column_type(%Reference{} = ref, opts) do
-      "#{column_type(ref.type, opts)} REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})"
+      "#{column_type(ref.type, opts)} REFERENCES #{ref.table}(#{ref.column})"
     end
 
     defp column_type(type, opts) do
@@ -214,6 +214,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp ecto_to_db(:string),     do: "varchar"
     defp ecto_to_db(:datetime),   do: "timestamp"
     defp ecto_to_db(:binary),     do: "blob"
+    defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
+    defp ecto_to_db({:array, t}), do: "text" # TODO: MySQL does not support Array
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end
