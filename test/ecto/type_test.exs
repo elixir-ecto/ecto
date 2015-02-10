@@ -26,6 +26,11 @@ defmodule Ecto.TypeTest do
     assert blank?(Custom, nil)
   end
 
+  test "boolean types" do
+    assert load(:boolean, 1) == {:ok, true}
+    assert load(:boolean, 0) == {:ok, false}
+  end
+
   test "custom types with array" do
     assert load({:array, Custom}, ["foo"]) == {:ok, [:load]}
     assert dump({:array, Custom}, ["foo"]) == {:ok, [:dump]}

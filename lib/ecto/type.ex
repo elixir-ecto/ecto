@@ -291,6 +291,9 @@ defmodule Ecto.Type do
   @spec load(t, term) :: {:ok, term} | :error
   def load(_type, nil), do: {:ok, nil}
 
+  def load(:boolean, 0), do: {:ok, false}
+  def load(:boolean, 1), do: {:ok, true}
+
   def load({:array, type}, value) do
     array(type, value, &load/2, [])
   end
