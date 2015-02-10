@@ -6,6 +6,10 @@ defmodule Ecto.Integration.DeadlockTest do
 
   alias Ecto.Integration.PoolRepo
 
+  setup do
+    Logger.configure(level: :debug)
+  end
+
   test "deadlocks reset worker" do
     tx1 = self()
 
@@ -21,6 +25,57 @@ defmodule Ecto.Integration.DeadlockTest do
     tx2_result = Task.await(tx2_task)
 
     assert Enum.sort([tx1_result, tx2_result]) == [{:error, :deadlocked}, {:ok, :acquired}]
+  end
+
+  test "parent tx keeps locks when nested tx aborts" do
+    parent = self()
+
+    %Task{pid: other_tx} = other_tx_task = Task.async fn ->
+      PoolRepo.transaction fn ->
+        pg_advisory_xact_lock(1)
+        send(parent, :acquired1)
+        assert_receive :continue
+
+        {:error, :continue} = PoolRepo.transaction fn ->
+          try do
+            pg_advisory_xact_lock(2)
+            send(parent, :acquired2)
+            assert_receive :continue
+            Ecto.Adapters.SQL.query(PoolRepo, "INVALID SQL --> ABORTS TRANSACTION", [])
+          rescue
+            err in [Postgrex.Error] ->
+              # syntax error
+              assert %Postgrex.Error{postgres: %{code: "42601"}} = err
+              assert_tx_aborted
+              PoolRepo.rollback(:continue)
+          else
+            _ -> assert false # should catch syntax error
+          end
+        end
+
+        send(parent, :rollbacked_to_savepoint)
+        assert_receive :continue
+      end
+    end
+
+    PoolRepo.transaction fn ->
+      assert_receive :acquired1 # other_tx has acquired lock on 1
+      refute pg_try_advisory_xact_lock(1) # we can't get lock on 1
+      send(other_tx, :continue)
+
+      assert_receive :acquired2 # other_tx has acquired lock on 2 in a nested tx
+      refute pg_try_advisory_xact_lock(1) # we still can't get lock on 1
+      refute pg_try_advisory_xact_lock(2) # we now can't get lock on 2
+      send(other_tx, :continue)
+
+      assert_receive :rollbacked_to_savepoint # other tx has rolled back nested tx after it aborted
+      refute pg_try_advisory_xact_lock(1) # we still can't get lock on 1
+      assert pg_try_advisory_xact_lock(2) # but we can get lock on 2
+      send(other_tx, :continue)
+
+      Task.await(other_tx_task)
+      assert pg_try_advisory_xact_lock(1) # after other_tx is commited we can get a lock on 1
+    end
   end
 
   defp acquire_deadlock(other_tx, [key1, key2] = _locks) do
@@ -43,15 +98,7 @@ defmodule Ecto.Integration.DeadlockTest do
         {aborted_worker, _} = Process.get({:ecto_transaction_pid, Process.whereis(PoolRepo.__pool__)})
         %{transactions: 1} = :sys.get_state(aborted_worker)
 
-        try do
-          Ecto.Adapters.SQL.query(PoolRepo, "SELECT 1", []);
-        rescue
-          err in [Postgrex.Error] ->
-            # current transaction is aborted, commands ignored until end of transaction block
-            assert %Postgrex.Error{postgres: %{code: "25P02"}} = err
-        else
-          _ -> assert false # tx should be aborted
-        end
+        assert_tx_aborted
 
         # Even aborted transactions can be rolled back.
         PoolRepo.rollback(:deadlocked)
@@ -62,8 +109,27 @@ defmodule Ecto.Integration.DeadlockTest do
     end
   end
 
+  defp assert_tx_aborted do
+    try do
+      Ecto.Adapters.SQL.query(PoolRepo, "SELECT 1", []);
+    rescue
+      err in [Postgrex.Error] ->
+        # current transaction is aborted, commands ignored until end of transaction block
+        assert %Postgrex.Error{postgres: %{code: "25P02"}} = err
+    else
+      _ -> assert false # tx should be aborted
+    end
+  end
+
   defp pg_advisory_xact_lock(key) do
     %{rows: [{:void}]} =
       Ecto.Adapters.SQL.query(PoolRepo, "SELECT pg_advisory_xact_lock($1);", [key])
   end
+
+  defp pg_try_advisory_xact_lock(key) do
+    %{rows: [{result}]} =
+      Ecto.Adapters.SQL.query(PoolRepo, "SELECT pg_try_advisory_xact_lock($1);", [key])
+    result
+  end
+
 end
