@@ -221,8 +221,9 @@ defmodule Ecto.Type do
   end
 
   defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
-  defp do_match?(type, type),                    do: true
-  defp do_match?(_, _),                          do: false
+  defp do_match?(:decimal, type) when type in [:float, :integer], do: true
+  defp do_match?(type, type), do: true
+  defp do_match?(_, _), do: false
 
   @doc """
   Dumps a value to the given type.

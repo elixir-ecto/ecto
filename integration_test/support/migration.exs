@@ -1,16 +1,14 @@
 defmodule Ecto.Integration.Migration do
   use Ecto.Migration
 
-  def up do
+  def change do
     create table(:posts) do
       add :title, :string, size: 100
       add :counter, :integer, default: 10
-      add :text, :string
-      add :tags, {:array, :text}
-      add :bin, :binary
+      add :text, :binary
       add :uuid, :uuid
       add :public, :boolean
-      add :cost, :decimal, precision: 2, scale: 2
+      add :cost, :decimal, precision: 2, scale: 1
       timestamps
     end
 
@@ -26,9 +24,6 @@ defmodule Ecto.Integration.Migration do
     create table(:comments) do
       add :text, :string, size: 100
       add :posted, :datetime
-      add :day, :date
-      add :time, :time
-      add :bytes, :binary
       add :post_id, references(:posts)
       add :author_id, references(:users)
     end
@@ -51,6 +46,12 @@ defmodule Ecto.Integration.Migration do
 
     create table(:migrations_test) do
       add :num, :integer
+    end
+
+    unless :array_type in ExUnit.configuration[:exclude] do
+      create table(:tags) do
+        add :tags, {:array, :integer}
+      end
     end
   end
 end

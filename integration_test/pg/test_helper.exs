@@ -31,22 +31,6 @@ end
 defmodule Ecto.Integration.Case do
   use ExUnit.CaseTemplate
 
-  using do
-    quote do
-      import unquote(__MODULE__)
-      require TestRepo
-
-      import Ecto.Query
-      alias Ecto.Integration.TestRepo
-      alias Ecto.Integration.Post
-      alias Ecto.Integration.Comment
-      alias Ecto.Integration.Permalink
-      alias Ecto.Integration.User
-      alias Ecto.Integration.Custom
-      alias Ecto.Integration.Barebone
-    end
-  end
-
   setup_all do
     Ecto.Adapters.SQL.begin_test_transaction(TestRepo, [])
     on_exit fn -> Ecto.Adapters.SQL.rollback_test_transaction(TestRepo, []) end

@@ -5,6 +5,7 @@ defmodule Ecto.Integration.MigrationTest do
 
   import Support.FileHelpers
   import Ecto.Migrator, only: [migrated_versions: 1]
+  require Ecto.Integration.TestRepo, as: TestRepo
 
   defmodule GoodMigration do
     use Ecto.Migration
@@ -49,14 +50,6 @@ defmodule Ecto.Integration.MigrationTest do
   end
 
   import Ecto.Migrator
-
-  setup do
-    Application.put_env(:elixir, :ansi_enabled, false)
-
-    on_exit fn ->
-      Application.delete_env(:elixir, :ansi_enabled)
-    end
-  end
 
   test "schema migration" do
     [migration] = TestRepo.all(Ecto.Migration.SchemaMigration)

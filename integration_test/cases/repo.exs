@@ -1,64 +1,18 @@
 defmodule Ecto.Integration.RepoTest do
   use Ecto.Integration.Case
 
+  require Ecto.Integration.TestRepo, as: TestRepo
+  import Ecto.Query
+
+  alias Ecto.Integration.Post
+  alias Ecto.Integration.Comment
+  alias Ecto.Integration.Permalink
+  alias Ecto.Integration.User
+  alias Ecto.Integration.Custom
+  alias Ecto.Integration.Barebone
+
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
-  end
-
-  test "types" do
-    TestRepo.insert(%Post{})
-
-    # nil
-    assert [nil] = TestRepo.all(from Post, select: nil)
-
-    # Numbers
-    assert [{1, 1.0}] = TestRepo.all(from Post, select: {1, 1.0})
-
-    # Binaries
-    assert [_] = TestRepo.all(from p in Post, where: p.bin == ^<<0, 1>> or true)
-    assert [_] = TestRepo.all(from p in Post, where: p.bin == <<0, 1>> or true)
-
-    # UUID
-    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
-    assert [_] = TestRepo.all(from p in Post, where: p.uuid == ^uuid or true)
-    assert [_] = TestRepo.all(from p in Post, where: p.uuid == uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>) or true)
-
-    # Datetime
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
-    assert [_] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime or true)
-
-    # Lists
-    assert [[1, 2, 3]] = TestRepo.all(from Post, select: [1, 2, 3])
-    assert [_] = TestRepo.all(from p in Post, where: p.tags == ["foo", "bar"] or true)
-    assert [_] = TestRepo.all(from p in Post, where: p.tags == ^["foo", "bar"] or true)
-    assert [_] = TestRepo.all(from p in Post, where: p.tags == ^[] or true)
-  end
-
-  test "tagged types" do
-    TestRepo.insert(%Post{})
-
-    # Integer
-    assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
-    assert [1.0] = TestRepo.all(from Post, select: type(^1.0, :float))
-
-    # UUID
-    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
-    assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, :uuid))
-
-    # Datetime
-    datetime = {{2014, 04, 17}, {14, 00, 00}}
-    assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, :datetime))
-
-    # Booleans
-    assert [true] = TestRepo.all(from p in Post, select: p.public)
-
-    # Custom wrappers
-    assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
-
-    # Custom types
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
-    assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, Ecto.DateTime))
-    assert [%Ecto.DateTime{}] = TestRepo.all(from p in Post, select: p.inserted_at)
   end
 
   test "fetch empty" do
@@ -93,19 +47,6 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{__state__: :loaded} = TestRepo.update(post)
   end
 
-  test "insert and update binary inferred type values" do
-    bin   = <<1>>
-    uuid  = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
-    array = ["foo", "bar"]
-
-    post = %Post{bin: bin, uuid: uuid, tags: array}
-    post = TestRepo.insert(post)
-    assert %Post{bin: ^bin, uuid: ^uuid, tags: ^array} = post
-
-    assert %Post{} = TestRepo.update(post)
-    assert [%Post{bin: ^bin, uuid: ^uuid, tags: ^array}] = TestRepo.all(Post)
-  end
-
   test "insert with no primary key" do
     assert %Barebone{text: nil} = TestRepo.insert(%Barebone{})
     assert %Barebone{text: "text"} = TestRepo.insert(%Barebone{text: "text"})
@@ -134,7 +75,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :assigns_primary_key
-  test "insert and update with changeset primary key" do
+  test "insert and update with user-assigned primary key in changeset" do
     changeset = Ecto.Changeset.cast(%{"id" => "13"}, %Post{id: 11}, ~w(id), ~w())
     assert %Post{id: 13} = post = TestRepo.insert(changeset)
 
@@ -235,28 +176,16 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "one(!) with multiple results" do
-    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
-    assert %Post{} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "hai"})
+    assert %Post{} = TestRepo.insert(%Post{title: "hai"})
 
     assert_raise Ecto.MultipleResultsError, fn ->
-      TestRepo.one(from p in Post, where: p.text == "hai")
+      TestRepo.one(from p in Post, where: p.title == "hai")
     end
 
     assert_raise Ecto.MultipleResultsError, fn ->
-      TestRepo.one!(from p in Post, where: p.text == "hai")
+      TestRepo.one!(from p in Post, where: p.title == "hai")
     end
-  end
-
-  test "data structures in select" do
-    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
-
-    assert ["1"] == TestRepo.all(from p in Post, select: p.title)
-
-    assert [{"1", "hai"}] ==
-           TestRepo.all(from p in Post, select: {p.title, p.text})
-
-    assert [["1", "hai"]] ==
-           TestRepo.all(from p in Post, select: [p.title, p.text])
   end
 
   test "update all" do
@@ -390,7 +319,7 @@ defmodule Ecto.Integration.RepoTest do
     c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
     c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
 
-    query = from(p in Post, join: c in assoc(p, :comments), select: {p, c})
+    query = from(p in Post, join: c in assoc(p, :comments), select: {p, c}, order_by: p.id)
     [{^post, ^c1}, {^post, ^c2}] = TestRepo.all(query)
   end
 
@@ -399,16 +328,16 @@ defmodule Ecto.Integration.RepoTest do
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
-    query = from(p in Post, join: c in assoc(p, :permalink), select: {p, c})
+    query = from(p in Post, join: c in assoc(p, :permalink), select: {p, c}, order_by: c.id)
     [{^post, ^p1}, {^post, ^p2}] = TestRepo.all(query)
   end
 
   test "belongs_to association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    post = TestRepo.insert(%Post{title: "1"})
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
-    query = from(p in Permalink, join: c in assoc(p, :post), select: {p, c})
+    query = from(p in Permalink, join: c in assoc(p, :post), select: {p, c}, order_by: p.id)
     [{^p1, ^post}, {^p2, ^post}] = TestRepo.all(query)
   end
 

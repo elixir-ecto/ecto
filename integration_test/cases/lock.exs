@@ -4,7 +4,7 @@ defmodule Ecto.Integration.LockTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.Integration.PoolRepo
+  require Ecto.Integration.PoolRepo, as: PoolRepo
 
   defmodule LockCounter do
     use Ecto.Model
