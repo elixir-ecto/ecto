@@ -108,7 +108,7 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, {:ok, {module, conn}}, s}
   end
 
-  def handle_call({:begin, opts}, _from, s) do
+  def handle_call({:begin, opts}, from, s) do
     %{conn: conn, transactions: trans, module: module} = s
 
     sql =
@@ -122,12 +122,12 @@ defmodule Ecto.Adapters.SQL.Worker do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans + 1}}
       {:error, _} = err ->
-        GenServer.reply(err)
+        GenServer.reply(from, err)
         wipe_state(s)
     end
   end
 
-  def handle_call({:commit, opts}, _from, %{transactions: trans} = s) when trans >= 1 do
+  def handle_call({:commit, opts}, from, %{transactions: trans} = s) when trans >= 1 do
     %{conn: conn, module: module} = s
 
     reply =
@@ -140,12 +140,12 @@ defmodule Ecto.Adapters.SQL.Worker do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
-        GenServer.reply(err)
+        GenServer.reply(from, err)
         wipe_state(s)
     end
   end
 
-  def handle_call({:rollback, opts}, _from, %{transactions: trans} = s) when trans >= 1 do
+  def handle_call({:rollback, opts}, from, %{transactions: trans} = s) when trans >= 1 do
     %{conn: conn, module: module} = s
 
     sql =
@@ -158,7 +158,7 @@ defmodule Ecto.Adapters.SQL.Worker do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
-        GenServer.reply(err)
+        GenServer.reply(from, err)
         wipe_state(s)
     end
   end
@@ -178,14 +178,14 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, :ok, s}
   end
 
-  def handle_call({:restart_test_transaction, opts}, _from, %{transactions: 1} = s) do
+  def handle_call({:restart_test_transaction, opts}, from, %{transactions: 1} = s) do
     %{conn: conn, module: module} = s
 
     case module.query(conn, module.rollback_to_savepoint("ecto_sandbox"), [], opts) do
       {:ok, _} ->
         {:reply, :ok, s}
       {:error, _} = err ->
-        GenServer.reply(err)
+        GenServer.reply(from, err)
         wipe_state(s)
     end
   end
@@ -194,14 +194,14 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, :ok, s}
   end
 
-  def handle_call({:rollback_test_transaction, opts}, _from, %{transactions: 1} = s) do
+  def handle_call({:rollback_test_transaction, opts}, from, %{transactions: 1} = s) do
     %{conn: conn, module: module} = s
 
     case module.query(conn, module.rollback, [], opts) do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: 0, sandbox: false}}
       {:error, _} = err ->
-        GenServer.reply(err)
+        GenServer.reply(from, err)
         wipe_state(s)
     end
   end
