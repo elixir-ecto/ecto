@@ -38,7 +38,7 @@ defmodule Ecto.Integration.LockTest do
     PoolRepo.transaction(fn ->
       [post] = PoolRepo.all(query)       # select and lock the row
       send new_pid, :select_for_update   # signal second process to begin a transaction
-      refute_receive :udpated, 100       # if we get this before committing, our lock failed
+      refute_receive :updated, 100       # if we get this before committing, our lock failed
       PoolRepo.update(%{post | count: post.count + 1})
     end)
 
