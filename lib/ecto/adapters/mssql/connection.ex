@@ -2,6 +2,8 @@ if Code.ensure_loaded?(Tds.Connection) do
   defmodule Ecto.Adapters.Mssql.Connection do
     @moduledoc false
 
+    require Logger
+
     @default_port System.get_env("MSSQL_PORT") || 1433
     @behaviour Ecto.Adapters.SQL.Connection
 
@@ -97,13 +99,13 @@ if Code.ensure_loaded?(Tds.Connection) do
       {table, name, _model} = elem(sources, 0)
 
       zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
-        "#{field} = #{expr(expr, sources)}"
+        "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
 
-      "UPDATE #{table} AS #{name} " <>
+      "UPDATE #{quote_name(table)} AS #{name} " <>
       "SET " <> zipped_sql <>
       where
     end
@@ -114,7 +116,7 @@ if Code.ensure_loaded?(Tds.Connection) do
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
-      "DELETE #{name} FROM #{table} AS #{name}" <> where
+      "DELETE #{name} FROM #{quote_name(table)} AS #{name}" <> where
     end
 
     def insert(table, fields, returning) do
@@ -123,32 +125,32 @@ if Code.ensure_loaded?(Tds.Connection) do
           returning(returning, "INSERTED") <>
           " DEFAULT VALUES"
         else
-          "(" <> Enum.map_join(fields, ", ", &elem(&1, 0)) <> ") " <>
+          "(" <> Enum.map_join(fields, ", ", &quote_name(elem(&1, 0))) <> ") " <>
           returning(returning, "INSERTED") <>
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"@#{&1}") <> ")"
         end
-      {"INSERT INTO #{table} " <> values, fields}
+      {"INSERT INTO #{quote_name(table)} " <> values, fields}
     end
 
     def update(table, filters, fields, returning) do
       {filters, count} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
-        {"#{field} = @#{acc}", acc + 1}
+        {"#{quote_name(field)} = @#{acc}", acc + 1}
       end
 
       {fields, _count} = Enum.map_reduce fields, count, fn {field, _}, acc ->
-        {"#{field} = @#{acc}", acc + 1}
+        {"#{quote_name(field)} = @#{acc}", acc + 1}
       end
 
-      "UPDATE #{table} SET " <> Enum.join(fields, ", ") <> returning(returning, "INSERTED") <>
+      "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <> returning(returning, "INSERTED") <>
         " WHERE " <> Enum.join(filters, " AND ")
     end
 
     def delete(table, filters, returning) do
       {filters, _} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
-        {"#{field} = @#{acc}", acc + 1}
+        {"#{quote_name(field)} = @#{acc}", acc + 1}
       end
 
-      "DELETE FROM #{table}" <> 
+      "DELETE FROM #{quote_name(table)}" <> 
       returning(returning,"DELETED") <> " WHERE " <> Enum.join(filters, " AND ")
         
     end
@@ -186,7 +188,7 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     defp from(sources, lock) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{table} AS #{name}" <> lock(lock)
+      "FROM #{quote_name(table)} AS #{name}" <> lock(lock)
     end
 
     defp join([], _sources), do: nil
@@ -198,7 +200,7 @@ if Code.ensure_loaded?(Tds.Connection) do
           on   = expr(expr, sources)
           qual = join_qual(qual)
 
-          "#{qual} JOIN #{table} AS #{name} ON " <> on
+          "#{qual} JOIN #{quote_name(table)} AS #{name} ON " <> on
       end)
     end
 
@@ -284,13 +286,13 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{field}"
+      "#{name}.#{quote_name(field)}"
     end
 
     defp expr({:&, _, [idx]}, sources) do
       {_table, name, model} = elem(sources, idx)
       fields = model.__schema__(:fields)
-      Enum.map_join(fields, ", ", &"#{name}.#{&1}")
+      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
     defp expr({:in, _, [left, right]}, sources) do
@@ -306,6 +308,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr({:fragment, _, parts}, sources) do
+     
       Enum.map_join(parts, "", fn
         part when is_binary(part) -> part
         expr -> expr(expr, sources)
@@ -327,6 +330,10 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     defp expr(list, sources) when is_list(list) do
       "[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
+    end
+
+    defp expr(string, sources) when is_binary(string) do
+      string = string |> :unicode.characters_to_binary(:utf8, {:utf16, :little})
     end
 
     defp expr(string, sources) when is_binary(string) do
@@ -437,28 +444,28 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     def execute_ddl({:create, %Table{}=table, columns}) do
-      "CREATE TABLE #{table.name} (#{column_definitions(columns)})"
+      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
     end
 
     def execute_ddl({:drop, %Table{name: name}}) do
-      "DROP TABLE #{name}"
+      "DROP TABLE #{quote_name(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
       Enum.map_join(changes, "; ", fn(change) -> 
-        "ALTER TABLE #{table.name} #{column_change(change)}"
+        "ALTER TABLE #{quote_name(table.name)} #{column_change(change)}"
       end)
     end
 
     def execute_ddl({:create, %Index{}=index}) do
       IO.inspect index.columns
       assemble(["CREATE#{if index.unique, do: " UNIQUE"} INDEX",
-                index.name, " ON ", index.table,
+                quote_name(index.name), " ON ", quote_name(index.table),
                 " (#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
     end
 
     def execute_ddl({:drop, %Index{}=index}) do
-      assemble(["DROP INDEX", index.name, " ON ", index.table])
+      assemble(["DROP INDEX", quote_name(index.name), " ON ", quote_name(index.table)])
     end
 
     def execute_ddl(default) when is_binary(default), do: default
@@ -468,7 +475,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp column_definition({:add, name, type, opts}) do
-      assemble([name, column_type(type, opts), column_options(opts), serial_expr(type)])
+      assemble([quote_name(name), column_type(type, opts), column_options(opts), serial_expr(type)])
     end
 
     # defp column_changes(columns) do
@@ -476,14 +483,14 @@ if Code.ensure_loaded?(Tds.Connection) do
     # end
 
     defp column_change({:add, name, type, opts}) do
-      assemble(["ADD", name, column_type(type, opts), column_options(opts)])
+      assemble(["ADD", quote_name(name), column_type(type, opts), column_options(opts)])
     end
 
     defp column_change({:modify, name, type, opts}) do
-      assemble(["ALTER COLUMN", name, column_type(type, opts)])
+      assemble(["ALTER COLUMN", quote_name(name), column_type(type, opts)])
     end
 
-    defp column_change({:remove, name}), do: "DROP COLUMN #{name}"
+    defp column_change({:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
 
     defp column_options(opts) do
       default = Keyword.get(opts, :default)
@@ -505,6 +512,8 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     defp default_expr(nil),
       do: nil
+    defp default_expr(boolean) when boolean == true or boolean == false,
+      do: "DEFAULT #{if boolean == true, do: 1, else: 0}"
     defp default_expr(literal) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
     defp default_expr(literal) when is_number(literal),
@@ -518,7 +527,7 @@ if Code.ensure_loaded?(Tds.Connection) do
       do: literal
 
     defp column_type(%Reference{} = ref, opts) do
-      "bigint REFERENCES #{ref.table}(#{ref.column})"
+      "bigint REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})"
     end
     defp column_type({:array, type}, opts),
       do: "nvarchar(max)"
@@ -538,13 +547,14 @@ if Code.ensure_loaded?(Tds.Connection) do
         type == :string -> "nvarchar(255)"
         type == :text   -> "nvarchar(max)"
         type == :binary -> "varbinary(max)"
+        type == :boolean -> "bit"
         true            -> "#{type_name}"
       end
     end
 
     ## Helpers
 
-    defp quote_name(name), do: "'#{name}'"
+    defp quote_name(name), do: "[#{name}]"
 
     defp assemble(list) do
       list
@@ -560,6 +570,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     defp ecto_to_db({:array, t}), do: "nvarchar(max)"
     defp ecto_to_db(:string),     do: "nvarchar"
     defp ecto_to_db(:binary),     do: "varbinary"
+    defp ecto_to_db(:boolean),     do: "bit"
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end
