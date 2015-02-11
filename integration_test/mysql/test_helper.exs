@@ -1,5 +1,5 @@
 Logger.configure(level: :info)
-ExUnit.start
+ExUnit.start exclude: [:array_type]
 
 # Basic test repo
 alias Ecto.Integration.TestRepo
