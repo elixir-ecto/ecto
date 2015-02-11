@@ -132,7 +132,10 @@ defmodule Ecto.Adapters.SQL.Worker do
 
     reply =
       case trans do
-        1 -> module.query(conn, module.commit, [], opts)
+        1 ->
+          # We don't need to check if the tx is aborted because Postgres doesn't error when
+          # COMMITing a transaction that's aborted, it just "returns" ROLLBACK instead of COMMIT.
+          module.query(conn, module.commit, [], opts)
         _ -> {:ok, {[], 0}}
       end
 
