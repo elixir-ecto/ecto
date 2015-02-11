@@ -90,4 +90,9 @@ defmodule Ecto.Adapters.MySQL do
     args = ["--silent", "-u", database[:username], "-h", database[:hostname], "-e", sql_command]
     System.cmd("mysql", args, env: env, stderr_to_stdout: true)
   end
+
+  @doc false
+  def supports_ddl_transaction? do
+    false
+  end
 end
