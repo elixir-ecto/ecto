@@ -4,8 +4,8 @@ defmodule Ecto.Integration.TransactionTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  alias Ecto.Integration.PoolRepo
-  alias Ecto.Integration.TestRepo
+  require Ecto.Integration.PoolRepo, as: PoolRepo
+  require Ecto.Integration.TestRepo, as: TestRepo
 
   defmodule UniqueError do
     defexception [:message]

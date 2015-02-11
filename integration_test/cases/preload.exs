@@ -1,5 +1,13 @@
-defmodule Ecto.Integration.PreloadsTest do
+defmodule Ecto.Integration.PreloadTest do
   use Ecto.Integration.Case
+
+  require Ecto.Integration.TestRepo, as: TestRepo
+  import Ecto.Query
+
+  alias Ecto.Integration.Post
+  alias Ecto.Integration.Comment
+  alias Ecto.Integration.Permalink
+  alias Ecto.Integration.User
 
   test "preload empty" do
     assert TestRepo.preload([], :anything_goes) == []
@@ -332,7 +340,7 @@ defmodule Ecto.Integration.PreloadsTest do
     TestRepo.insert(%Permalink{url: "2"})
     TestRepo.insert(%Permalink{url: "3", post_id: pid2})
 
-    query = from(pl in Permalink, left_join: p in assoc(pl, :post), preload: [post: p])
+    query = from(pl in Permalink, left_join: p in assoc(pl, :post), preload: [post: p], order_by: pl.id)
     assert [p1, p2, p3] = TestRepo.all(query)
 
     assert %Post{id: ^pid1} = p1.post

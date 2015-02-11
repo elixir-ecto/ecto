@@ -144,12 +144,12 @@ defmodule Ecto.Query do
 
   defmodule QueryExpr do
     @moduledoc false
-    defstruct [expr: nil, params: %{}, file: nil, line: nil]
+    defstruct [expr: nil, params: [], file: nil, line: nil]
   end
 
   defmodule SelectExpr do
     @moduledoc false
-    defstruct [expr: nil, params: %{}, file: nil, line: nil, fields: []]
+    defstruct [expr: nil, params: [], file: nil, line: nil, fields: []]
   end
 
   defmodule JoinExpr do

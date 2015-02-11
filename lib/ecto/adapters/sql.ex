@@ -359,14 +359,14 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def all(repo, sql, query, params, opts) do
-    %{rows: rows} = query(repo, sql, Map.values(params), opts)
+    %{rows: rows} = query(repo, sql, params, opts)
     fields = extract_fields(query.select.fields, query.sources)
     Enum.map(rows, &process_row(&1, fields))
   end
 
   @doc false
   def count_all(repo, sql, params, opts) do
-    %{num_rows: num} = query(repo, sql, Map.values(params), opts)
+    %{num_rows: num} = query(repo, sql, params, opts)
     num
   end
 

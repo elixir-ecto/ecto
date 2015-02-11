@@ -6,12 +6,11 @@ defmodule Ecto.Integration.Post do
   schema "posts" do
     field :title, :string
     field :counter, :integer, read_after_writes: true
-    field :text, :string
-    field :tags, {:array, :string}
-    field :bin, :binary
+    field :text, :binary
     field :uuid, :uuid
     field :temp, :string, default: "temp", virtual: true
     field :public, :boolean, default: true
+    field :cost, :decimal
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
     has_many :comments_authors, through: [:comments, :author]
@@ -25,9 +24,6 @@ defmodule Ecto.Integration.Comment do
   schema "comments" do
     field :text, :string
     field :posted, :datetime
-    field :day, :date
-    field :time, :time
-    field :bytes, :binary
     belongs_to :post, Ecto.Integration.Post
     belongs_to :author, Ecto.Integration.User
     has_one :post_permalink, through: [:post, :permalink]
@@ -68,5 +64,13 @@ defmodule Ecto.Integration.Barebone do
   @primary_key false
   schema "barebones" do
     field :text, :string
+  end
+end
+
+defmodule Ecto.Integration.Tag do
+  use Ecto.Model
+
+  schema "tags" do
+    field :tags, {:array, :integer}
   end
 end

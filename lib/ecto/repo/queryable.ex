@@ -15,7 +15,7 @@ defmodule Ecto.Repo.Queryable do
   def all(repo, adapter, queryable, opts) when is_list(opts) do
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(%{})
+      |> Planner.query([])
 
     adapter.all(repo, query, params, opts)
     |> Ecto.Repo.Assoc.query(query)
@@ -104,7 +104,7 @@ defmodule Ecto.Repo.Queryable do
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(%{}, only_where: true)
+      |> Planner.query([], only_where: true)
     adapter.delete_all(repo, query, params, opts)
   end
 
@@ -175,12 +175,12 @@ defmodule Ecto.Repo.Queryable do
     updates = Planner.fields(:update_all, model, updates, fn _type, value -> {:ok, value} end)
 
     # Properly cast parameters.
-    params = Enum.into params, %{}, fn
-      {k, {v, {0, field}}} ->
+    params = Enum.map params, fn
+      {v, {0, field}} ->
         type = model.__schema__(:field, field)
-        {k, cast_and_dump(:update_all, type, v)}
-      {k, {v, type}} ->
-        {k, cast_and_dump(:update_all, type, v)}
+        cast_and_dump(:update_all, type, v)
+      {v, type} ->
+        cast_and_dump(:update_all, type, v)
     end
 
     {updates, params}

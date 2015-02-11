@@ -53,17 +53,11 @@ defmodule Ecto.Query.Planner do
 
   ## Cache
 
-  All entries in the query, except the preload field, should
-  be part of the cache key. The cache key is composed by the
-  hash of children expressions which are typically pre-calculated
-  at compilation time. However, some dynamic fields may force
-  particular expressions to have their cache calculated at
-  runtime. Furthermore, fields that are not expressions, i.e.
-  assocs, sources and lock, have their cache key calculated
-  at runtime too.
+  All entries in the query, except the preload and sources
+  field, should be part of the cache key.
 
-  The cache value is the compiled query by the adapter along-side
-  the select expression.
+  The cache value is the compiled query by the adapter
+  along-side the select expression.
   """
   def query(query, base, opts \\ []) do
     {query, params} = prepare(query, base)
@@ -76,9 +70,6 @@ defmodule Ecto.Query.Planner do
   This means all the parameters from query expressions are
   merged into a single value and their entries are prunned
   from the query.
-
-  In the future, this function should also calculate a hash
-  to be used as cache key.
 
   This function is called by the backend before invoking
   any cache mechanism.
@@ -96,37 +87,37 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_params(query, params) do
-    traverse_exprs(query, params, &merge_params/4)
+  def prepare_params(query, base) do
+    {query, params} = traverse_exprs(query, [], &{&3, merge_params(&1, &2, &3, &4)})
+    {query, base ++ Enum.reverse(params)}
   end
 
   defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
     if expr do
-      {put_in(expr.params, nil),
-       cast_and_merge_params(kind, query, expr, params)}
-   else
-      {expr, params}
+      cast_and_merge_params(kind, query, expr, params)
+    else
+      params
     end
   end
 
-  defp merge_params(kind, query, exprs, params) when kind in ~w(distinct where group_by having order_by)a do
-    Enum.map_reduce exprs, params, fn expr, acc ->
-      {put_in(expr.params, nil),
-       cast_and_merge_params(kind, query, expr, acc)}
+  defp merge_params(kind, query, exprs, acc) when kind in ~w(distinct where group_by having order_by)a do
+    Enum.reduce exprs, acc, fn expr, params ->
+      cast_and_merge_params(kind, query, expr, params)
     end
   end
 
-  defp merge_params(:join, query, exprs, params) do
-    Enum.map_reduce exprs, params, fn join, acc ->
-      {put_in(join.on.params, nil),
-       cast_and_merge_params(:join, query, join.on, acc)}
+  defp merge_params(:join, query, exprs, acc) do
+    Enum.reduce exprs, acc, fn %JoinExpr{on: on}, params ->
+      cast_and_merge_params(:join, query, on, params)
     end
   end
 
   defp cast_and_merge_params(kind, query, expr, params) do
-    size = Map.size(params)
-    Enum.reduce expr.params, params, fn {k, {v, type}}, acc ->
-      Map.put acc, k + size, cast_param(kind, query, expr, v, type)
+    Enum.reduce expr.params, params, fn
+      {v, {:in, type}}, acc ->
+        Enum.reverse(cast_param(kind, query, expr, v, {:array, type})) ++ acc
+      {v, type}, acc ->
+        [cast_param(kind, query, expr, v, type)|acc]
     end
   end
 
@@ -290,7 +281,7 @@ defmodule Ecto.Query.Planner do
     end
 
     query
-    |> traverse_exprs(map_size(base), &validate_and_increment/4)
+    |> traverse_exprs(length(base), &validate_and_increment/4)
     |> elem(0)
     |> normalize_select(only_where?)
     |> validate_assocs
@@ -321,15 +312,29 @@ defmodule Ecto.Query.Planner do
 
   defp do_validate_and_increment(kind, query, expr, counter) do
     {inner, acc} = Macro.prewalk expr.expr, counter, fn
-      {:^, meta, [param]}, acc ->
-        {{:^, meta, [param + counter]}, acc + 1}
+      {:in, in_meta, [left, {:^, meta, [param]}]}, acc ->
+        {v, _t} = Enum.fetch!(expr.params, param)
+        length  = length(v)
+
+        right =
+          case length do
+            0 -> []
+            _ -> {:^, meta, [acc, length]}
+          end
+
+        {{:in, in_meta, [left, right]}, acc + length}
+
+      {:^, meta, [ix]}, acc when is_integer(ix) ->
+        {{:^, meta, [acc]}, acc + 1}
+
       {{:., _, [{:&, _, [source]}, field]} = dot, meta, []}, acc ->
         tag = validate_field(kind, query, expr, source, field, meta)
         {{dot, [ecto_tag: tag] ++ meta, []}, acc}
+
       other, acc ->
         {other, acc}
     end
-    {%{expr | expr: inner}, acc}
+    {%{expr | expr: inner, params: nil}, acc}
   end
 
   defp validate_field(kind, query, expr, source, field, meta) do

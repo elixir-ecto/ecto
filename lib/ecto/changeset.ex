@@ -25,6 +25,7 @@ defmodule Ecto.Changeset do
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: []
 
+  @type error :: {atom, atom | {atom, [term]}}
   @type t :: %Ecto.Changeset{valid?: boolean(),
                              repo: atom | nil,
                              model: Ecto.Model.t | nil,
@@ -32,7 +33,7 @@ defmodule Ecto.Changeset do
                              changes: %{atom => term},
                              required: [atom],
                              optional: [atom],
-                             errors: [{atom, atom | {atom, [term]}}],
+                             errors: [error],
                              validations: [{atom, atom | {atom, [term]}}]}
 
   @doc """
@@ -124,7 +125,7 @@ defmodule Ecto.Changeset do
   @spec cast(%{binary => term} | %{atom => term} | nil,
              Ecto.Model.t | Ecto.Changeset.t, [String.t | atom],
              [String.t | atom]) :: t
-  def cast(val, model_or_changeset, required, optional \\ [])
+  def cast(params, model_or_changeset, required, optional \\ [])
 
   def cast(%{__struct__: _} = params, _model, _required, _optional) do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
@@ -322,7 +323,7 @@ defmodule Ecto.Changeset do
   no value is available.
   """
   @spec fetch_field(t, atom) :: {:changes, term} | {:model, term} | :error
-  def fetch_field(%{changes: changes, model: model}, key) do
+  def fetch_field(%{changes: changes, model: model} = _changeset, key) do
     case Map.fetch(changes, key) do
       {:ok, value} -> {:changes, value}
       :error ->
@@ -342,7 +343,7 @@ defmodule Ecto.Changeset do
   no value is available.
   """
   @spec get_field(t, atom, term) :: term
-  def get_field(%{changes: changes, model: model}, key, default \\ nil) do
+  def get_field(%{changes: changes, model: model} = _changeset, key, default \\ nil) do
     case Map.fetch(changes, key) do
       {:ok, value} -> value
       :error ->
@@ -357,7 +358,7 @@ defmodule Ecto.Changeset do
   Fetches a change.
   """
   @spec fetch_change(t, atom) :: {:ok, term} | :error
-  def fetch_change(%{changes: changes}, key) when is_atom(key) do
+  def fetch_change(%{changes: changes} = _changeset, key) when is_atom(key) do
     Map.fetch(changes, key)
   end
 
@@ -365,7 +366,7 @@ defmodule Ecto.Changeset do
   Gets a change or returns default value.
   """
   @spec get_change(t, atom, term) :: term
-  def get_change(%{changes: changes}, key, default \\ nil) when is_atom(key) do
+  def get_change(%{changes: changes} = _changeset, key, default \\ nil) when is_atom(key) do
     Map.get(changes, key, default)
   end
 
@@ -376,6 +377,7 @@ defmodule Ecto.Changeset do
   is a change for the given `key`. Notice the value of the change
   can still be nil (unless the field was marked as required on `cast/4`).
   """
+  @spec update_change(t, atom, (term -> term)) :: t
   def update_change(%{changes: changes} = changeset, key, function) when is_atom(key) do
     case Map.fetch(changes, key) do
       {:ok, value} ->
@@ -389,6 +391,7 @@ defmodule Ecto.Changeset do
   @doc """
   Puts a change on the given key with value.
   """
+  @spec put_change(t, atom, term) :: t
   def put_change(changeset, key, value) do
     update_in changeset.changes, &Map.put(&1, key, value)
   end
@@ -396,6 +399,7 @@ defmodule Ecto.Changeset do
   @doc """
   Deletes a change with the given key.
   """
+  @spec delete_change(t, atom) :: t
   def delete_change(changeset, key) do
     update_in changeset.changes, &Map.delete(&1, key)
   end
@@ -412,7 +416,8 @@ defmodule Ecto.Changeset do
       apply(changeset)
 
   """
-  def apply(%{changes: changes, model: model}) do
+  @spec apply(t) :: Ecto.Model.t
+  def apply(%{changes: changes, model: model} = _changeset) do
     struct(model, changes)
   end
 
@@ -426,6 +431,7 @@ defmodule Ecto.Changeset do
       add_error(changeset, :name, :invalid)
 
   """
+  @spec add_error(t, atom, error) :: t
   def add_error(%{errors: errors} = changeset, key, error) do
     %{changeset | errors: [{key, error}|errors], valid?: false}
   end
@@ -442,6 +448,7 @@ defmodule Ecto.Changeset do
   `errors` field of the changeset and the `valid?` flag will
   be set to false.
   """
+  @spec validate_change(t, atom, (atom, term -> [error])) :: t
   def validate_change(changeset, field, validator) when is_atom(field) do
     %{changes: changes, errors: errors} = changeset
 
@@ -462,6 +469,7 @@ defmodule Ecto.Changeset do
   as a reflection mechanism, to automatically generate code based on
   the available validations.
   """
+  @spec validate_change(t, atom, any, (atom, term -> [error])) :: t
   def validate_change(%{validations: validations} = changeset, field, metadata, validator) do
     changeset = %{changeset | validations: [{field, metadata}|validations]}
     validate_change(changeset, field, validator)
@@ -475,6 +483,7 @@ defmodule Ecto.Changeset do
       validate_format(changeset, :email, ~r/@/)
 
   """
+  @spec validate_format(t, atom, Regex.t) :: t
   def validate_format(changeset, field, format) do
     validate_change changeset, field, {:format, format}, fn _, value ->
       if value =~ format, do: [], else: [{field, :format}]
@@ -489,6 +498,7 @@ defmodule Ecto.Changeset do
       validate_inclusion(changeset, :gender, ["male", "female", "who cares?"])
       validate_inclusion(changeset, :age, 0..99)
   """
+  @spec validate_inclusion(t, atom, Enum.t) :: t
   def validate_inclusion(changeset, field, data) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
       if value in data, do: [], else: [{field, :inclusion}]
@@ -503,6 +513,7 @@ defmodule Ecto.Changeset do
       validate_exclusion(changeset, :name, ~w(admin superadmin))
 
   """
+  @spec validate_exclusion(t, atom, Enum.t) :: t
   def validate_exclusion(changeset, field, data) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
       if value in data, do: [{field, :exclusion}], else: []
@@ -554,6 +565,7 @@ defmodule Ecto.Changeset do
       |> validate_unique(:email, on: Repo)
 
   """
+  @spec validate_unique(t, atom, [Keyword.t]) :: t
   def validate_unique(%{model: model} = changeset, field, opts) when is_list(opts) do
     repo = Keyword.fetch!(opts, :on)
     validate_change changeset, field, :unique, fn _, value ->
@@ -595,6 +607,7 @@ defmodule Ecto.Changeset do
       validate_length(changeset, :code, is: 9)
 
   """
+  @spec validate_length(t, atom, Range.t | [Keyword.t]) :: t
   def validate_length(changeset, field, min..max) when is_integer(min) and is_integer(max) do
     validate_length changeset, field, [min: min, max: max]
   end

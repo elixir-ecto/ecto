@@ -21,7 +21,12 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
 
     def query(conn, query, [], opts) do
       Agent.update(conn, &[query|&1], opts[:timeout])
-      {:ok, %{}}
+
+      if opts[:error] do
+        {:error, RuntimeError.exception("oops")}
+      else
+        {:ok, %{}}
+      end
     end
 
     def begin_transaction, do: "BEGIN"
@@ -106,7 +111,19 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     assert commands(worker) == ["BEGIN", "ROLLBACK"]
   end
 
-  test "provides test transactions" do
+  test "worker replies with error on transaction error" do
+    {:ok, worker} = Worker.start({Connection, lazy: false})
+
+    Worker.begin!(worker, @opts)
+
+    assert_raise RuntimeError, "oops", fn ->
+      Worker.rollback!(worker, Keyword.put(@opts, :error, true))
+    end
+
+    refute :sys.get_state(worker).conn
+  end
+
+  test "worker correctly manages test transactions" do
     {:ok, worker} = Worker.start({Connection, lazy: false})
 
     # Check for idempotent commands

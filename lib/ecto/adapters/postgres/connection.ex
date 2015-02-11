@@ -268,8 +268,18 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
-    defp expr({:in, _, [left, right]}, sources) do
-      expr(left, sources) <> " = ANY (" <> expr(right, sources) <> ")"
+    defp expr({:in, _, [_left, []]}, _sources) do
+      "false"
+    end
+
+    defp expr({:in, _, [left, right]}, sources) when is_list(right) do
+      args = Enum.map_join right, ",", &expr(&1, sources)
+      expr(left, sources) <> " IN (" <> args <> ")"
+    end
+
+    defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources) do
+      args = Enum.map_join ix+1..ix+length, ",", &"$#{&1}"
+      expr(left, sources) <> " IN (" <> args <> ")"
     end
 
     defp expr({:is_nil, _, [arg]}, sources) do
@@ -301,7 +311,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp expr(list, sources) when is_list(list) do
-      "ARRAY[" <> Enum.map_join(list, ", ", &expr(&1, sources)) <> "]"
+      "ARRAY[" <> Enum.map_join(list, ",", &expr(&1, sources)) <> "]"
     end
 
     defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do

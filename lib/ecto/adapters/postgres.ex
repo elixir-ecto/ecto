@@ -44,7 +44,10 @@ defmodule Ecto.Adapters.Postgres do
 
   """
 
+  # Inherit all behaviour from Ecto.Adapters.SQL
   use Ecto.Adapters.SQL, :postgrex
+
+  # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
 
   ## Storage API

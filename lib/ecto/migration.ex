@@ -165,7 +165,7 @@ defmodule Ecto.Migration do
   """
   defmacro create(object, do: block) do
     quote do
-      table = unquote(object)
+      table = %Table{} = unquote(object)
       Runner.start_command({:create, table})
 
       if table.primary_key do
@@ -191,7 +191,8 @@ defmodule Ecto.Migration do
   """
   defmacro alter(object, do: block) do
     quote do
-      Runner.start_command({:alter, unquote(object)})
+      table = %Table{} = unquote(object)
+      Runner.start_command({:alter, table})
       unquote(block)
       Runner.end_command
     end

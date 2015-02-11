@@ -1,8 +1,8 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "0.7.2"
-  @adapters [:pg, :mssql]
+  @version "0.7.3-dev"
+  @adapters [:pg]
 
   def project do
     [app: :ecto,
@@ -33,8 +33,7 @@ defmodule Ecto.Mixfile do
   defp deps do
     [{:poolboy, "~> 1.4.1"},
      {:decimal, "~> 1.0"},
-     {:postgrex, "~> 0.7"},
-     {:tds, path: "../tds", env: Mix.env},
+     {:postgrex, "~> 0.7", optional: true},
      {:ex_doc, "~> 0.7", only: :docs},
      {:earmark, "~> 0.1", only: :docs},
      {:inch_ex, only: :docs}]
