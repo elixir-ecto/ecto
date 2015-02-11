@@ -40,6 +40,11 @@ defmodule Ecto.Query.PlannerTest do
     Planner.normalize(query, params, opts)
   end
 
+  defp normalize_with_params(query) do
+    {query, params} = prepare(query, [])
+    {Planner.normalize(query, [], []), params}
+  end
+
   test "prepare: merges all parameters" do
     query =
       from p in Post,
@@ -99,11 +104,19 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: casts and dumps custom types in in-expressions" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
     {_query, params} = prepare(Comment |> where([c], c.posted in ^[datetime]))
-    assert params == [[{{2015, 1, 7}, {21, 18, 13}}]]
+    assert params == [{{2015, 1, 7}, {21, 18, 13}}]
 
     permalink = "1-hello-world"
     {_query, params} = prepare(Post |> where([p], p.id in ^[permalink]))
-    assert params == [[1]]
+    assert params == [1]
+
+    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
+    {_query, params} = prepare(Comment |> where([c], c.posted in [^datetime]))
+    assert params == [{{2015, 1, 7}, {21, 18, 13}}]
+
+    permalink = "1-hello-world"
+    {_query, params} = prepare(Post |> where([p], p.id in [^permalink]))
+    assert params == [1]
   end
 
   test "prepare: joins" do
@@ -200,15 +213,39 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: validate fields with custom types" do
-    query = from(Post, []) |> where([p], p.id in [1,2,3])
+  test "normalize: validate fields in composite types" do
+    query = from(Post, []) |> where([p], p.id in [1, 2, 3])
     normalize(query)
 
     message = ~r"field `Ecto.Query.PlannerTest.Comment.text` in `where` does not type check"
     assert_raise Ecto.QueryError, message, fn ->
-      query = from(Comment, []) |> where([c], c.text in [1,2,3])
+      query = from(Comment, []) |> where([c], c.text in [1, 2, 3])
       normalize(query)
     end
+  end
+
+  test "normalize: flattens and expands in expressions" do
+    {query, params} = where(Post, [p], p.id in [1, 2, 3]) |> normalize_with_params()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in [1, 2, 3]"
+    assert params == []
+
+    {query, params} = where(Post, [p], p.id in [^1, 2, ^3]) |> normalize_with_params()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in [^0, 2, ^1]"
+    assert params == [1, 3]
+
+    {query, params} = where(Post, [p], p.id in ^[]) |> normalize_with_params()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in []"
+    assert params == []
+
+    {query, params} = where(Post, [p], p.id in ^[1, 2, 3]) |> normalize_with_params()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in ^(0, 3)"
+    assert params == [1, 2, 3]
+
+    {query, params} = where(Post, [p], p.title == ^"foo" and p.id in ^[1, 2, 3] and
+                                       p.title == ^"bar") |> normalize_with_params()
+    assert Macro.to_string(hd(query.wheres).expr) ==
+           "&0.title() == ^0 and &0.id() in ^(1, 3) and &0.title() == ^4"
+    assert params == ["foo", 1, 2, 3, "bar"]
   end
 
   test "normalize: select" do

@@ -120,6 +120,10 @@ defimpl Inspect, for: Ecto.Query do
   #
   # In case the query had its parameters removed,
   # we use ... to express the interpolated code.
+  defp expr_to_string({:^, _, [_ix, _len]}, _, _, _params) do
+    Macro.to_string {:^, [], [{:..., [], nil}]}
+  end
+
   defp expr_to_string({:^, _, [ix]}, _, _, params) do
     escaped =
       case Enum.at(params || [], ix) do

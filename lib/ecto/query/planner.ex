@@ -113,8 +113,11 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cast_and_merge_params(kind, query, expr, params) do
-    Enum.reduce expr.params, params, fn {v, type}, acc ->
-      [cast_param(kind, query, expr, v, type)|acc]
+    Enum.reduce expr.params, params, fn
+      {v, {:in, type}}, acc ->
+        Enum.reverse(cast_param(kind, query, expr, v, {:array, type})) ++ acc
+      {v, type}, acc ->
+        [cast_param(kind, query, expr, v, type)|acc]
     end
   end
 
@@ -309,11 +312,25 @@ defmodule Ecto.Query.Planner do
 
   defp do_validate_and_increment(kind, query, expr, counter) do
     {inner, acc} = Macro.prewalk expr.expr, counter, fn
-      {:^, meta, [param]}, acc ->
-        {{:^, meta, [param + counter]}, acc + 1}
+      {:in, in_meta, [left, {:^, meta, [param]}]}, acc ->
+        {v, _t} = Enum.fetch!(expr.params, param)
+        length  = length(v)
+
+        right =
+          case length do
+            0 -> []
+            _ -> {:^, meta, [acc, length]}
+          end
+
+        {{:in, in_meta, [left, right]}, acc + length}
+
+      {:^, meta, [ix]}, acc when is_integer(ix) ->
+        {{:^, meta, [acc]}, acc + 1}
+
       {{:., _, [{:&, _, [source]}, field]} = dot, meta, []}, acc ->
         tag = validate_field(kind, query, expr, source, field, meta)
         {{dot, [ecto_tag: tag] ++ meta, []}, acc}
+
       other, acc ->
         {other, acc}
     end

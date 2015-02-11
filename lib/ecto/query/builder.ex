@@ -96,14 +96,18 @@ defmodule Ecto.Query.Builder do
   end
 
   # sigils
-  def escape({name, _, [_, []]} = sigil, _type, params, _vars)
+  def escape({name, _, [_, _]} = sigil, _type, params, _vars)
       when name in ~w(sigil_s sigil_S sigil_w sigil_W)a do
     {sigil, params}
   end
 
-  # literals
+  # lists
+  def escape(list, {:array, type}, params, vars) when is_list(list),
+    do: Enum.map_reduce(list, params, &escape(&1, type, &2, vars))
   def escape(list, _type, params, vars) when is_list(list),
     do: Enum.map_reduce(list, params, &escape(&1, :any, &2, vars))
+
+  # literals
   def escape(literal, _type, params, _vars) when is_binary(literal),
     do: {literal, params}
   def escape(literal, _type, params, _vars) when is_boolean(literal),
@@ -130,17 +134,22 @@ defmodule Ecto.Query.Builder do
   end
 
   # in operator
-  def escape({:in, meta, [left, right]} = expr, type, params, vars) do
+  def escape({:in, meta, [left, right]} = expr, type, params, vars) when is_list(right) do
     assert_type!(expr, type, :boolean)
 
-    ltype =
-      case quoted_type(right, vars) do
-        {:array, type} -> type
-        _ -> :any
-      end
+    {:array, ltype} = quoted_type(right, vars)
+    rtype = {:array, quoted_type(left, vars)}
 
-    rtype =
-      {:array, quoted_type(left, vars)}
+    {left,  params} = escape(left, ltype, params, vars)
+    {right, params} = escape(right, rtype, params, vars)
+    {{:{}, [], [:in, meta, [left, right]]}, params}
+  end
+
+  def escape({:in, meta, [left, {:^, _, _} = right]} = expr, type, params, vars) do
+    assert_type!(expr, type, :boolean)
+
+    ltype = :any
+    rtype = {:in, quoted_type(left, vars)}
 
     {left,  params} = escape(left, ltype, params, vars)
     {right, params} = escape(right, rtype, params, vars)

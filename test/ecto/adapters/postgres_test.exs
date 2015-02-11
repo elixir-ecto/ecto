@@ -206,10 +206,19 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "in expression" do
     query = Model |> select([e], 1 in []) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 = ANY (ARRAY[]) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT false FROM "model" AS m0}
 
     query = Model |> select([e], 1 in [1,e.x,3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 = ANY (ARRAY[1, m0."x", 3]) FROM "model" AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (1,m0."x",3) FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in ^[]) |> normalize
+    assert SQL.all(query) == ~s{SELECT false FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in ^[1, 2, 3]) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 IN ($1,$2,$3) FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 IN (1,$1,3) FROM "model" AS m0}
   end
 
   test "having" do
@@ -234,9 +243,12 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
   end
 
-  test "sigils" do
-    query = Model |> select([], ~s"abc" in ~w(abc def)) |> normalize
-    assert SQL.all(query) == ~s{SELECT 'abc' = ANY (ARRAY['abc', 'def']) FROM "model" AS m0}
+  test "arrays and sigils" do
+    query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
+    assert SQL.all(query) == ~s{SELECT ARRAY[1,2,3] FROM "model" AS m0}
+
+    query = Model |> select([], fragment("?", ~w(abc def))) |> normalize
+    assert SQL.all(query) == ~s{SELECT ARRAY['abc','def'] FROM "model" AS m0}
   end
 
   test "interpolated values" do
