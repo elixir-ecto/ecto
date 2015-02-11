@@ -1,4 +1,4 @@
-defmodule Ecto.Adapter.Migrations  do
+defmodule Ecto.Adapter.Migration  do
   @moduledoc """
   Specifies the adapter migrations API.
   """

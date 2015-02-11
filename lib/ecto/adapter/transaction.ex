@@ -1,4 +1,4 @@
-defmodule Ecto.Adapter.Transactions  do
+defmodule Ecto.Adapter.Transaction  do
   @moduledoc """
   Specifies the adapter transactions API.
   """

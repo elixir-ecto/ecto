@@ -72,12 +72,12 @@ defmodule Ecto.Adapters.SQL.Connection do
   @doc """
   Receives a DDL object and returns a query that checks its existence.
   """
-  defcallback ddl_exists(Ecto.Adapter.Migrations.ddl_object) :: String.t
+  defcallback ddl_exists(Ecto.Adapter.Migration.ddl_object) :: String.t
 
   @doc """
   Receives a DDL command and returns a query that executes it.
   """
-  defcallback execute_ddl(Ecto.Adapter.Migrations.command) :: String.t
+  defcallback execute_ddl(Ecto.Adapter.Migration.command) :: String.t
 
   ## Transaction
 
