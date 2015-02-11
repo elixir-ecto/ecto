@@ -1,4 +1,4 @@
-defmodule Ecto.Adapter.Migrations  do
+defmodule Ecto.Adapter.Migration  do
   @moduledoc """
   Specifies the adapter migrations API.
   """
@@ -24,6 +24,12 @@ defmodule Ecto.Adapter.Migrations  do
     {:remove, field :: atom}
 
   @type ddl_object :: Table.t | Index.t
+
+  @doc """
+  Checks if the adapter supports ddl transaction.
+
+  """
+  defcallback supports_ddl_transaction? :: boolean
 
   @doc """
   Executes migration commands.

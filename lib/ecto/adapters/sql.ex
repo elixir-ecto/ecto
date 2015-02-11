@@ -16,8 +16,8 @@ defmodule Ecto.Adapters.SQL do
   defmacro __using__(adapter) do
     quote do
       @behaviour Ecto.Adapter
-      @behaviour Ecto.Adapter.Migrations
-      @behaviour Ecto.Adapter.Transactions
+      @behaviour Ecto.Adapter.Migration
+      @behaviour Ecto.Adapter.Transaction
 
       @conn __MODULE__.Connection
       @adapter unquote(adapter)
@@ -416,7 +416,7 @@ defmodule Ecto.Adapters.SQL do
     pool = pool!(repo)
 
     opts    = Keyword.put_new(opts, :timeout, @timeout)
-    timeout = opts[:timeout]
+    timeout = Keyword.get(opts, :timeout)
     worker  = checkout_worker(pool, timeout)
 
     try do

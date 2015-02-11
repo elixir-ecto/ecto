@@ -61,8 +61,8 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "insert with no primary key" do
-    assert %Barebone{text: nil} = TestRepo.insert(%Barebone{})
-    assert %Barebone{text: "text"} = TestRepo.insert(%Barebone{text: "text"})
+    assert %Barebone{num: nil} = TestRepo.insert(%Barebone{})
+    assert %Barebone{num: 13} = TestRepo.insert(%Barebone{num: 13})
   end
 
   test "insert and update with changeset" do
@@ -246,21 +246,21 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "update all expression syntax" do
-    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
-    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
+    assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", visits: 0})
+    assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", visits: 1})
 
     # Expressions
     query = from p in Post, where: p.id > 0
-    assert 2 = TestRepo.update_all(p in query, text: fragment("? || 'bai'", p.text))
+    assert 2 = TestRepo.update_all(p in query, visits: fragment("? + 2", p.visits))
 
-    assert %Post{text: "haibai"} = TestRepo.get(Post, id1)
-    assert %Post{text: "haibai"} = TestRepo.get(Post, id2)
+    assert %Post{visits: 2} = TestRepo.get(Post, id1)
+    assert %Post{visits: 3} = TestRepo.get(Post, id2)
 
     # Nil values
-    assert 2 = TestRepo.update_all(p in Post, text: nil)
+    assert 2 = TestRepo.update_all(p in Post, visits: nil)
 
-    assert %Post{text: nil} = TestRepo.get(Post, id1)
-    assert %Post{text: nil} = TestRepo.get(Post, id2)
+    assert %Post{visits: nil} = TestRepo.get(Post, id1)
+    assert %Post{visits: nil} = TestRepo.get(Post, id2)
   end
 
   test "update all with casting and dumping" do

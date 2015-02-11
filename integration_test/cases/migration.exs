@@ -11,7 +11,7 @@ defmodule Ecto.Integration.MigrationTest do
     use Ecto.Migration
 
     def up do
-      table = table(:migrations_test)
+      table = table(:barebones)
 
       assert exists? table
       drop table
@@ -28,7 +28,7 @@ defmodule Ecto.Integration.MigrationTest do
         add :author, :string
       end
 
-      index = index(:migrations_test, [:author])
+      index = index(:barebones, [:author])
       refute exists? index
       create index
       assert exists? index
@@ -37,7 +37,7 @@ defmodule Ecto.Integration.MigrationTest do
     end
 
     def down do
-      drop table(:migrations_test)
+      drop table(:barebones)
     end
   end
 
@@ -125,7 +125,7 @@ defmodule Ecto.Integration.MigrationTest do
 
   defp count_entries() do
     import Ecto.Query, only: [from: 2]
-    TestRepo.one! from p in "migrations_test", select: count(1)
+    TestRepo.one! from p in "barebones", select: count(1)
   end
 
   defp create_migration(num) do
@@ -136,11 +136,11 @@ defmodule Ecto.Integration.MigrationTest do
       use Ecto.Migration
 
       def up do
-        execute "INSERT INTO migrations_test (num) VALUES (#{num})"
+        execute "INSERT INTO barebones (num) VALUES (#{num})"
       end
 
       def down do
-        execute "DELETE FROM migrations_test WHERE num = #{num}"
+        execute "DELETE FROM barebones WHERE num = #{num}"
       end
     end
     """

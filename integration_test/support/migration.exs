@@ -9,6 +9,8 @@ defmodule Ecto.Integration.Migration do
       add :uuid, :uuid
       add :public, :boolean
       add :cost, :decimal, precision: 2, scale: 1
+      add :visits, :integer
+      add :intensity, :float
       timestamps
     end
 
@@ -33,7 +35,7 @@ defmodule Ecto.Integration.Migration do
     end
 
     create table(:barebones) do
-      add :text, :text
+      add :num, :integer
     end
 
     create table(:transactions) do
@@ -42,10 +44,6 @@ defmodule Ecto.Integration.Migration do
 
     create table(:lock_counters) do
       add :count, :integer
-    end
-
-    create table(:migrations_test) do
-      add :num, :integer
     end
 
     unless :array_type in ExUnit.configuration[:exclude] do

@@ -8,18 +8,26 @@ defmodule Ecto.Integration.TypeTest do
   alias Ecto.Integration.Tag
 
   test "primitive types" do
+    integer  = 1
+    float    = 0.1
     text     = <<0,1>>
     uuid     = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
     decimal  = Decimal.new("1.0")
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
-    TestRepo.insert(%Post{text: text, uuid: uuid, public: true,
-                          inserted_at: datetime, cost: decimal})
+
+    TestRepo.insert(%Post{text: text, uuid: uuid, public: true, visits: integer,
+                          inserted_at: datetime, cost: decimal, intensity: float})
 
     # nil
     assert [nil] = TestRepo.all(from Post, select: nil)
 
-    # Numbers
-    assert [{1, 1.0}] = TestRepo.all(from Post, select: {1, 1.0})
+    # Integers
+    assert [1] = TestRepo.all(from p in Post, where: p.visits == ^integer, select: p.visits)
+    assert [1] = TestRepo.all(from p in Post, where: p.visits == 1, select: p.visits)
+
+    # Floats
+    assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == ^float, select: p.intensity)
+    assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == 0.1, select: p.intensity)
 
     # Decimal
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^decimal, select: p.cost)
