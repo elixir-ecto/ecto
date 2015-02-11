@@ -6,10 +6,6 @@ defmodule Ecto.Integration.DeadlockTest do
 
   alias Ecto.Integration.PoolRepo
 
-  setup do
-    Logger.configure(level: :debug)
-  end
-
   test "deadlocks reset worker" do
     tx1 = self()
 
