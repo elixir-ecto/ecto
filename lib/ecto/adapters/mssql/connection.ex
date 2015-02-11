@@ -8,7 +8,6 @@ if Code.ensure_loaded?(Tds.Connection) do
     @behaviour Ecto.Adapters.SQL.Connection
 
     def connect(opts) do
-      opts = Keyword.put_new(opts, :port, @default_port)
       Tds.Connection.start_link(opts)
     end
 
@@ -22,18 +21,22 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     def query(conn, sql, params, opts) when is_binary(sql) do
+      #IO.inspect opts
       {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
           {%Tds.Parameter{name: "@#{acc}", value: transform_value(param)}, acc + 1}
       end)
       case Tds.Connection.query(conn, sql, params, opts) do
-        {:ok, %Tds.Result{} = result} -> {:ok, Map.from_struct(result)}
+        {:ok, %Tds.Result{} = result} ->
+          #IO.inspect result 
+          {:ok, Map.from_struct(result)}
         {:error, %Tds.Error{}} = err  -> err
       end
     end
 
     def query(conn, {sql, types}, params, opts) do
-      IO.inspect params
-      IO.inspect types
+      #IO.inspect opts
+      #IO.inspect params
+      #IO.inspect types
       {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
           case Enum.fetch(types, acc-1) do
             {:ok, {c, t}} -> type = t
@@ -186,8 +189,8 @@ if Code.ensure_loaded?(Tds.Connection) do
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
     defp select(%SelectExpr{fields: fields}, limit, [], sources) do
-      IO.inspect limit
-      "SELECT " <> Enum.map_join(fields, ", ", &expr(&1, sources))
+      #IO.inspect limit
+      "SELECT " <> Enum.map_join(fields, ", ", &expr(&1, sources)) 
     end
 
     defp select(%SelectExpr{fields: fields}, limit, distincts, sources) do
@@ -197,13 +200,13 @@ if Code.ensure_loaded?(Tds.Connection) do
             Enum.map_join(expr, ", ", &expr(&1, sources))
         end)
 
-      "SELECT DISTINCT ON (" <> exprs <> ") " <>
-        Enum.map_join(fields, ", ", &expr(&1, sources))
+      "SELECT DISTINCT " <> exprs
     end
 
     defp from(sources, lock) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{quote_name(table)} AS #{name}" <> lock(lock)
+      IO.inspect "LOCK: #{lock}"
+      "FROM #{quote_name(table)} AS #{name} " <> lock(lock)
     end
 
     defp join([], _sources), do: nil
@@ -279,7 +282,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     defp lock(nil), do: ""
     defp lock(false), do: ""
     defp lock(true), do: " WITH (UPDLOCK)"
-    defp lock(lock_clause), do: lock_clause
+    defp lock(lock_clause), do: escape_string(lock_clause)
 
     # defp unlock(nil), do: "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"
     # defp unlock(false), do: "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"
@@ -311,7 +314,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr({:in, _, [_left, []]}, _sources) do
-      "false"
+      "0=1"
     end
 
     defp expr({:in, _, [left, right]}, sources) when is_list(right) do
@@ -320,7 +323,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources) do
-      args = Enum.map_join ix+1..ix+length, ",", &"$#{&1}"
+      args = Enum.map_join ix+1..ix+length, ",", &"@#{&1}"
       expr(left, sources) <> " IN (" <> args <> ")"
     end
 
@@ -394,6 +397,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
+      Logger.info "Type: #{type}"
       expr(other, sources)
     end
 
@@ -424,7 +428,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     defp returning([], verb),
       do: ""
     defp returning(returning, verb) do 
-      " OUTPUT " <> Enum.map_join(returning, ", ", fn(arg) -> "#{verb}.#{arg} " end)
+      " OUTPUT " <> Enum.map_join(returning, ", ", fn(arg) -> "#{verb}.#{quote_name(arg)} " end)
     end
 
     defp create_names(query) do
@@ -480,7 +484,7 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     def execute_ddl({:create, %Index{}=index}) do
-      IO.inspect index.columns
+      #IO.inspect index.columns
       assemble(["CREATE#{if index.unique, do: " UNIQUE"} INDEX",
                 quote_name(index.name), " ON ", quote_name(index.table),
                 " (#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
