@@ -156,9 +156,9 @@ defmodule Ecto.Query.InspectTest do
 
   test "params after planner" do
     query = from(x in Post, where: ^123 > ^(1 * 3))
-            |> Ecto.Query.Planner.prepare(%{})
+            |> Ecto.Query.Planner.prepare([])
             |> elem(0)
-            |> Ecto.Query.Planner.normalize(%{}, [])
+            |> Ecto.Query.Planner.normalize([], [])
     assert i(query) == ~s{from p in Inspect.Post, where: ^... > ^..., select: p}
   end
 

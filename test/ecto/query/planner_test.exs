@@ -31,11 +31,11 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  defp prepare(query, params \\ %{}) do
+  defp prepare(query, params \\ []) do
     Planner.prepare(query, params)
   end
 
-  defp normalize(query, params \\ %{}, opts \\ []) do
+  defp normalize(query, params \\ [], opts \\ []) do
     {query, params} = prepare(query, params)
     Planner.normalize(query, params, opts)
   end
@@ -56,8 +56,7 @@ defmodule Ecto.Query.PlannerTest do
         preload: [post: d]
 
     {_query, params} = prepare(query)
-    assert params == %{0 => "0", 1 => "1", 2 => "2", 3 => "3", 4 => "4",
-                       5 => "5", 6 => 6, 7 => 7}
+    assert params == ["0", "1", "2", "3", "4", "5", 6, 7]
   end
 
   test "prepare: checks from" do
@@ -68,7 +67,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: casts values" do
     {_query, params} = prepare(Post |> where([p], p.id == ^"1"))
-    assert params[0] == 1
+    assert params == [1]
 
     exception = assert_raise Ecto.CastError, fn ->
       prepare(Post |> where([p], p.title == ^nil))
@@ -90,21 +89,21 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: casts and dumps custom types" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
     {_query, params} = prepare(Comment |> where([c], c.posted == ^datetime))
-    assert params[0] == {{2015, 1, 7}, {21, 18, 13}}
+    assert params == [{{2015, 1, 7}, {21, 18, 13}}]
 
     permalink = "1-hello-world"
     {_query, params} = prepare(Post |> where([p], p.id == ^permalink))
-    assert params[0] == 1
+    assert params == [1]
   end
 
-  test "prepare: casts and dumps custom types with arrays" do
+  test "prepare: casts and dumps custom types in in-expressions" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
     {_query, params} = prepare(Comment |> where([c], c.posted in ^[datetime]))
-    assert params[0] == [{{2015, 1, 7}, {21, 18, 13}}]
+    assert params == [[{{2015, 1, 7}, {21, 18, 13}}]]
 
     permalink = "1-hello-world"
     {_query, params} = prepare(Post |> where([p], p.id in ^[permalink]))
-    assert params[0] == [1]
+    assert params == [[1]]
   end
 
   test "prepare: joins" do
@@ -175,12 +174,12 @@ defmodule Ecto.Query.PlannerTest do
     {query, params} = from(Post, []) |> select([p], type(^"1", :integer)) |> prepare
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
-    assert params == %{0 => 1}
+    assert params == [1]
 
     {query, params} = from(Post, []) |> select([p], type(^"1", Custom.Permalink)) |> prepare
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: Custom.Permalink}
-    assert params == %{0 => 1}
+    assert params == [1]
 
     assert_raise Ecto.QueryError, fn ->
       from(Post, []) |> select([p], type(^"1", :datetime)) |> prepare
@@ -253,13 +252,13 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: only where" do
-    query = from(Post, []) |> normalize(%{}, only_where: true)
+    query = from(Post, []) |> normalize([], only_where: true)
     assert is_nil query.select
 
     message = ~r"only `where` expressions are allowed in query"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(p in Post, select: p)
-      normalize(query, %{}, only_where: true)
+      normalize(query, [], only_where: true)
     end
   end
 

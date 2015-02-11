@@ -29,7 +29,7 @@ defmodule Ecto.Adapters.SQL.Connection do
       as result (but still yields the number of affected rows,
       like a `delete` command without returning would)
   """
-  defcallback query(pid, query :: binary, params :: [term], opts :: Keyword.t) ::
+  defcallback query(pid, query :: binary, params :: list(), opts :: Keyword.t) ::
               {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
 
   ## Queries

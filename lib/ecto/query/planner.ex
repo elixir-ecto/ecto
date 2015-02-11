@@ -87,8 +87,9 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_params(query, params) do
-    traverse_exprs(query, params, &{&3, merge_params(&1, &2, &3, &4)})
+  def prepare_params(query, base) do
+    {query, params} = traverse_exprs(query, [], &{&3, merge_params(&1, &2, &3, &4)})
+    {query, base ++ Enum.reverse(params)}
   end
 
   defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
@@ -107,14 +108,13 @@ defmodule Ecto.Query.Planner do
 
   defp merge_params(:join, query, exprs, acc) do
     Enum.reduce exprs, acc, fn %JoinExpr{on: on}, params ->
-       cast_and_merge_params(:join, query, on, params)
+      cast_and_merge_params(:join, query, on, params)
     end
   end
 
   defp cast_and_merge_params(kind, query, expr, params) do
-    size = Map.size(params)
-    Enum.reduce expr.params, params, fn {k, {v, type}}, acc ->
-      Map.put acc, k + size, cast_param(kind, query, expr, v, type)
+    Enum.reduce expr.params, params, fn {_k, {v, type}}, acc ->
+      [cast_param(kind, query, expr, v, type)|acc]
     end
   end
 
@@ -278,7 +278,7 @@ defmodule Ecto.Query.Planner do
     end
 
     query
-    |> traverse_exprs(map_size(base), &validate_and_increment/4)
+    |> traverse_exprs(length(base), &validate_and_increment/4)
     |> elem(0)
     |> normalize_select(only_where?)
     |> validate_assocs
