@@ -48,6 +48,10 @@ defmodule Ecto.MockAdapter do
 
   ## Migrations
 
+  def supports_ddl_transaction? do
+    Process.get(:supports_ddl_transaction?) || false
+  end
+
   def execute_ddl(_repo, command, _) do
     Process.put(:last_command, command)
     :ok

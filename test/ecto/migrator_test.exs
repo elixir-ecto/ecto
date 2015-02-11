@@ -212,8 +212,10 @@ defmodule Ecto.MigratorTest do
     end
   end
 
-  test "migrations run inside a transaction by default" do
+  test "migrations run inside a transaction if the adapter supports ddl transactions" do
     capture_log fn ->
+      Process.put(:supports_ddl_transaction?, true)
+
       up(MockRepo, 0, ChangeMigration)
       # One transaction comes from the SchemaMigration insert, the other one
       # from the actual migration we're testing.
@@ -224,8 +226,23 @@ defmodule Ecto.MigratorTest do
 
   test "migrations can be forced to run outside a transaction" do
     capture_log fn ->
+      Process.put(:supports_ddl_transaction?, true)
+
       up(MockRepo, 0, NoTransactionMigration)
 
+      # From the SchemaMigration insert transaction.
+      assert_receive {:transaction, _}
+
+      # No transaction is executed by the migration.
+      refute_receive {:transaction, _}
+    end
+  end
+
+  test "migrations does not run inside a transaction if the adapter does not support ddl transactions" do
+    capture_log fn ->
+      Process.put(:supports_ddl_transaction?, false)
+
+      up(MockRepo, 0, ChangeMigration)
       # From the SchemaMigration insert transaction.
       assert_receive {:transaction, _}
 
