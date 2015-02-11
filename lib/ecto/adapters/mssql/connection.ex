@@ -310,8 +310,18 @@ if Code.ensure_loaded?(Tds.Connection) do
       Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
-    defp expr({:in, _, [left, right]}, sources) do
-      expr(left, sources) <> " IN (" <> expr(right, sources) <> ")"
+    defp expr({:in, _, [_left, []]}, _sources) do
+      "false"
+    end
+
+    defp expr({:in, _, [left, right]}, sources) when is_list(right) do
+      args = Enum.map_join right, ",", &expr(&1, sources)
+      expr(left, sources) <> " IN (" <> args <> ")"
+    end
+
+    defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources) do
+      args = Enum.map_join ix+1..ix+length, ",", &"$#{&1}"
+      expr(left, sources) <> " IN (" <> args <> ")"
     end
 
     defp expr({:is_nil, _, [arg]}, sources) do
