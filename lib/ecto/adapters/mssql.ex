@@ -92,4 +92,8 @@ defmodule Ecto.Adapters.Mssql do
         {error, 1}
     end
   end
+
+  def supports_ddl_transaction? do
+    true
+  end
 end

@@ -1,5 +1,5 @@
 Logger.configure(level: :info)
-ExUnit.start
+ExUnit.start exclude: [:assigns_primary_key, :array_type]
 require Logger
 # Basic test repo
 alias Ecto.Integration.TestRepo
@@ -54,6 +54,7 @@ defmodule Ecto.Integration.Case do
   end
 
   setup do
+    #Ecto.Adapters.SQL.begin_test_transaction(TestRepo, [])
     Ecto.Adapters.SQL.restart_test_transaction(TestRepo, [])
     #on_exit fn -> Ecto.Adapters.SQL.rollback_test_transaction(TestRepo, []) end
     :ok 
