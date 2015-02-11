@@ -119,4 +119,10 @@ defmodule Ecto.Adapters.Postgres do
     args = args ++ ["--quiet", "--host", database[:hostname], "-d", "template1", "-c", sql_command]
     System.cmd("psql", args, env: env, stderr_to_stdout: true)
   end
+
+  @doc false
+
+  def supports_ddl_transaction? do
+    true
+  end
 end

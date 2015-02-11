@@ -26,6 +26,12 @@ defmodule Ecto.Adapter.Migrations  do
   @type ddl_object :: Table.t | Index.t
 
   @doc """
+  Checks if the adapter supports ddl transaction.
+
+  """
+  defcallback supports_ddl_transaction? :: boolean
+
+  @doc """
   Executes migration commands.
 
   ## Options
