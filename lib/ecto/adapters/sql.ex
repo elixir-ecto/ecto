@@ -416,7 +416,7 @@ defmodule Ecto.Adapters.SQL do
     pool = pool!(repo)
 
     opts    = Keyword.put_new(opts, :timeout, @timeout)
-    timeout = opts[:timeout]
+    timeout = Keyword.get(opts, :timeout)
     worker  = checkout_worker(pool, timeout)
 
     try do

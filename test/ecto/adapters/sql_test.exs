@@ -3,6 +3,7 @@ defmodule Ecto.Adapters.SQLTest do
 
   defmodule Adapter do
     use Ecto.Adapters.SQL
+    def supports_ddl_transaction?, do: false
   end
 
   defmodule Repo do

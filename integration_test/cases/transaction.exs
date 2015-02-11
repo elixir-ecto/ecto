@@ -86,9 +86,10 @@ defmodule Ecto.Integration.TransactionTest do
       e3 = PoolRepo.insert(%Trans{text: "5"})
       assert [^e1, ^e3] = PoolRepo.all(from(t in Trans, order_by: t.text))
       assert [] = TestRepo.all(Trans)
-      end)
+    end)
 
-    assert [%Trans{text: "3"}, %Trans{text: "5"}] = TestRepo.all(from(t in Trans, order_by: t.text))
+    assert [%Trans{text: "3"}, %Trans{text: "5"}] =
+           TestRepo.all(from(t in Trans, order_by: t.text))
   end
 
   test "manual rollback doesnt bubble up" do

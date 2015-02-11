@@ -11,6 +11,8 @@ defmodule Ecto.Integration.Post do
     field :temp, :string, default: "temp", virtual: true
     field :public, :boolean, default: true
     field :cost, :decimal
+    field :visits, :integer
+    field :intensity, :float
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
     has_many :comments_authors, through: [:comments, :author]
@@ -63,7 +65,7 @@ defmodule Ecto.Integration.Barebone do
 
   @primary_key false
   schema "barebones" do
-    field :text, :string
+    field :num, :integer
   end
 end
 

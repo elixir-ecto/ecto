@@ -96,9 +96,12 @@ defmodule Ecto.Migrator do
 
   defp run_maybe_in_transaction(repo, module, fun) do
     cond do
-      module.__migration__[:disable_ddl_transaction] -> fun.()
-      repo.adapter.supports_ddl_transaction? -> repo.transaction [log: false], fun
-      true -> fun.()
+      module.__migration__[:disable_ddl_transaction] ->
+        fun.()
+      repo.adapter.supports_ddl_transaction? ->
+        repo.transaction [log: false, timeout: :infinity], fun
+      true ->
+        fun.()
     end
   end
 
