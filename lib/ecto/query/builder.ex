@@ -239,7 +239,7 @@ defmodule Ecto.Query.Builder do
   """
   @spec escape_params(map()) :: Macro.t
   def escape_params(map) do
-    {:%{}, [], Map.to_list(map)}
+    Map.values(map)
   end
 
   @doc """

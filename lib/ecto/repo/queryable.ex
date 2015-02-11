@@ -70,7 +70,7 @@ defmodule Ecto.Repo.Queryable do
         {{field, expr}, params}
       end)
 
-    params = Map.values(params)
+    params = Builder.escape_params(params)
 
     quote do
       Ecto.Repo.Queryable.update_all(unquote(repo), unquote(adapter),

@@ -370,13 +370,13 @@ defmodule Ecto.Associations.HasThrough do
       end
 
     params =
-      Enum.reduce params, params, fn
-        {key, {val, {composite, {ix, field}}}}, acc when is_integer(ix) ->
-          Map.put(acc, key, {val, {composite, {Map.fetch!(mapping, ix), field}}})
-        {key, {val, {ix, field}}}, acc when is_integer(ix) ->
-          Map.put(acc, key, {val, {Map.fetch!(mapping, ix), field}})
-        {_, _}, acc ->
-          acc
+      Enum.map params, fn
+        {val, {composite, {ix, field}}} when is_integer(ix) ->
+          {val, {composite, {Map.fetch!(mapping, ix), field}}}
+        {val, {ix, field}} when is_integer(ix) ->
+          {val, {Map.fetch!(mapping, ix), field}}
+        val ->
+          val
       end
 
     %{part | expr: expr, params: params}

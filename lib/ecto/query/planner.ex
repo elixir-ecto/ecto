@@ -113,7 +113,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cast_and_merge_params(kind, query, expr, params) do
-    Enum.reduce expr.params, params, fn {_k, {v, type}}, acc ->
+    Enum.reduce expr.params, params, fn {v, type}, acc ->
       [cast_param(kind, query, expr, v, type)|acc]
     end
   end

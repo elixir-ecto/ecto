@@ -122,7 +122,7 @@ defimpl Inspect, for: Ecto.Query do
   # we use ... to express the interpolated code.
   defp expr_to_string({:^, _, [ix]}, _, _, params) do
     escaped =
-      case Map.get(params || %{}, ix) do
+      case Enum.at(params || [], ix) do
         {value, _type} -> Macro.escape(value)
         _              -> {:..., [], nil}
       end
