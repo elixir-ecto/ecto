@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.7.3-dev
+## v0.8.0 (2015-02-12)
 
 * Enhancements
   * Allow changesets to be merged with `Ecto.Changeset.merge/2`
@@ -15,7 +15,7 @@
 * Bug fixes
   * Only drop existing indexes when reversing `create index`
   * Allow boolean literals as defaults when adding columns
-  * Add default varchar size to migrations
+  * Add default size to migrations for string columns
 
 * Backwards incompatible changes
   * `uuid()` and `<<>>` syntax in queries has been removed in favor of explicit parameters
