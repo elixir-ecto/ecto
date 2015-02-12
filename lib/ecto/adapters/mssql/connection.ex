@@ -20,50 +20,57 @@ if Code.ensure_loaded?(Tds.Connection) do
       :ok
     end
 
-    def query(conn, sql, params, opts) when is_binary(sql) do
-      #IO.inspect opts
-      {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
-          {%Tds.Parameter{name: "@#{acc}", value: transform_value(param)}, acc + 1}
-      end)
+    def query(conn, sql, params, opts) do
+      {params, _} = Enum.map_reduce params, 1, fn(param, acc) ->
+        {value, type} = case param do
+          %Ecto.Query.Tagged{value: value, type: :boolean} -> 
+              value = if value == true, do: 1, else: 0
+              {value, :boolean}
+          %Ecto.Query.Tagged{value: value, type: type} -> 
+              Logger.info "Param Type: #{Atom.to_string type}"
+              {value, type}
+          value -> 
+            Logger.info "Untagged Value"
+            {param(value), nil}
+        end
+        {%Tds.Parameter{name: "@#{acc}", value: value, type: type}, acc + 1}
+      end
+
       case Tds.Connection.query(conn, sql, params, opts) do
         {:ok, %Tds.Result{} = result} ->
-          #IO.inspect result 
           {:ok, Map.from_struct(result)}
         {:error, %Tds.Error{}} = err  -> err
       end
     end
 
-    def query(conn, {sql, types}, params, opts) do
-      #IO.inspect opts
-      #IO.inspect params
-      #IO.inspect types
-      {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
-          case Enum.fetch(types, acc-1) do
-            {:ok, {c, t}} -> type = t
-            :error -> type = nil
-          end
-          {%Tds.Parameter{name: "@#{acc}", value: transform_value(param), type: type}, acc + 1}
-      end)
-      case Tds.Connection.query(conn, sql, params, opts) do
-        {:ok, %Tds.Result{} = result} -> {:ok, Map.from_struct(result)}
-        {:error, %Tds.Error{}} = err  -> err
-      end
-    end
+    # def query(conn, {sql, types}, params, opts) do
+    #   #IO.inspect opts
+    #   #IO.inspect params
+    #   #IO.inspect types
+    #   {params, _} = Enum.map_reduce(params, 1, fn(param, acc) -> 
+    #       case Enum.fetch(types, acc-1) do
+    #         {:ok, {c, t}} -> type = t
+    #         :error -> type = nil
+    #       end
+    #       {%Tds.Parameter{name: "@#{acc}", value: transform_value(param), type: type}, acc + 1}
+    #   end)
+    #   case Tds.Connection.query(conn, sql, params, opts) do
+    #     {:ok, %Tds.Result{} = result} -> {:ok, Map.from_struct(result)}
+    #     {:error, %Tds.Error{}} = err  -> err
+    #   end
+    # end
 
-
-    defp transform_value(value) when value == true or value == false do
-      if value == true, do: 1, else: 0
-    end
-
-    defp transform_value(list) when is_list(list) do
-      Enum.map_join(list, ", ", &"#{&1}")
-    end
 
     # defp transform_value(string) when is_binary(string) do
 
     # end
-
-    defp transform_value(value), do: value
+    defp param(value) when is_binary(value) do
+      value
+        |> :unicode.characters_to_binary(:utf8, {:utf16, :little})
+    end
+    defp param(value) when value == true, do: 1
+    defp param(value) when value == false, do: 0
+    defp param(value), do: value
     ## Transaction
 
     def begin_transaction do
@@ -116,7 +123,7 @@ if Code.ensure_loaded?(Tds.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      zipped_sql = Enum.map_join(values, ", ", fn {{field, _}, expr} ->
+      zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
@@ -125,9 +132,9 @@ if Code.ensure_loaded?(Tds.Connection) do
       fields = Enum.map(values, fn {field, value} -> 
         field
       end)
-      {"UPDATE #{name} " <>
-       "SET " <> zipped_sql <> " FROM #{quote_name(table)} AS #{name} " <> 
-       where, fields}
+      "UPDATE #{name} " <>
+        "SET " <> zipped_sql <> " FROM #{quote_name(table)} AS #{name} " <> 
+        where
     end
 
     def delete_all(query) do
@@ -145,34 +152,32 @@ if Code.ensure_loaded?(Tds.Connection) do
           returning(returning, "INSERTED") <>
           " DEFAULT VALUES"
         else
-          "(" <> Enum.map_join(fields, ", ", &quote_name(elem(&1, 0))) <> ") " <>
+          "(" <> Enum.map_join(fields, ", ", &quote_name/1) <> ") " <>
           returning(returning, "INSERTED") <>
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"@#{&1}") <> ")"
         end
-      {"INSERT INTO #{quote_name(table)} " <> values, fields}
+      "INSERT INTO #{quote_name(table)} " <> values
     end
 
     def update(table, filters, fields, returning) do
-      field_set = filters ++ fields
-      {filters, count} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
+      {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
         {"#{quote_name(field)} = @#{acc}", acc + 1}
       end
 
-      {fields, _count} = Enum.map_reduce fields, count, fn {field, _}, acc ->
+      {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
         {"#{quote_name(field)} = @#{acc}", acc + 1}
       end
-      {"UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <> returning(returning, "INSERTED") <>
-        " WHERE " <> Enum.join(filters, " AND "), field_set}
+      "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <> returning(returning, "INSERTED") <>
+        " WHERE " <> Enum.join(filters, " AND ")
     end
 
     def delete(table, filters, returning) do
-      {filters, _} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
+      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
         {"#{quote_name(field)} = @#{acc}", acc + 1}
       end
 
       "DELETE FROM #{quote_name(table)}" <> 
       returning(returning,"DELETED") <> " WHERE " <> Enum.join(filters, " AND ")
-        
     end
 
     ## Query generation
@@ -370,14 +375,12 @@ if Code.ensure_loaded?(Tds.Connection) do
       "0x#{hex}"
     end
 
-    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
-      Logger.info "Tagged Query"
-      expr(other, sources)
-    end
-
     defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
+      Logger.info "Tagged Binary"
       hex = Base.encode16(binary, case: :lower)
-      "0x#{hex}"
+      bin = "0x#{hex}"
+      Logger.info "Binary: #{bin}"
+      bin
     end
 
     defp expr(%Ecto.Query.Tagged{value: binary, type: :uuid}, _sources) when is_binary(binary) do
@@ -404,6 +407,7 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
       Logger.info "Type: #{type}"
+      IO.inspect other
       expr(other, sources)
     end
 
