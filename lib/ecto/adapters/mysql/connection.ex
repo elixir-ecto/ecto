@@ -64,10 +64,20 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([select, from, where])
     end
 
+    def delete_all(query) do
+      sources = create_names(query)
+      {table, _name, _model} = elem(sources, 0)
+
+      where = where(query.wheres, sources)
+      where = if where, do: " " <> where, else: ""
+      "DELETE FROM #{table}" <> where
+    end
+
     def insert(table, fields, _returning) do
+      field = List.first(fields)
       # TODO: change to real implementation after https://github.com/liveforeverx/mariaex/issues/10
       # gets fixed
-      "INSERT INTO #{table} (inserted_at) VALUES ('0000-00-00 00:00:00')"
+      "INSERT INTO #{table} (#{field}) VALUES ('1')"
     end
 
     ## Query Generation
