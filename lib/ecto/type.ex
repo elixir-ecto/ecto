@@ -226,6 +226,28 @@ defmodule Ecto.Type do
   defp do_match?(_, _), do: false
 
   @doc """
+  Tags a value.
+  """
+  def tag(type, tag)
+
+  def tag(_type, %Ecto.Query.Tagged{} = tag) do
+    tag
+  end
+
+  def tag(type, value) do
+    if primitive?(type) do
+      do_tag(type, value)
+    else
+      do_tag(type.type, value)
+    end
+  end
+
+  defp do_tag(tag, value) when tag in ~w(uuid binary)a,
+    do: %Ecto.Query.Tagged{value: value, type: tag}
+  defp do_tag(_tag, value),
+    do: value
+
+  @doc """
   Dumps a value to the given type.
 
   Opposite to casting, dumping requires the returned value

@@ -139,7 +139,7 @@ defmodule Ecto.Repo.Queryable do
     Enum.map_reduce(list, values, &transform_row(&1, from, &2))
   end
 
-  defp transform_row(%Ecto.Query.Tagged{tag: tag}, _from, values) do
+  defp transform_row(%Ecto.Query.Tagged{tag: tag}, _from, values) when not is_nil(tag) do
     [value|values] = values
     {Ecto.Type.load!(tag, value), values}
   end
@@ -151,8 +151,8 @@ defmodule Ecto.Repo.Queryable do
   defp transform_row({{:., _, [{:&, _, [_]}, _]}, meta, []}, _from, values) do
     [value|values] = values
 
-    if tag = Keyword.get(meta, :ecto_tag) do
-      {Ecto.Type.load!(tag, value), values}
+    if type = Keyword.get(meta, :ecto_type) do
+      {Ecto.Type.load!(type, value), values}
     else
       {value, values}
     end
@@ -187,7 +187,6 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp cast_update_all(%{}, updates, params) do
-    updates = Enum.map(updates, fn {f, v} -> {{f, :any}, v} end)
     {updates, params}
   end
 

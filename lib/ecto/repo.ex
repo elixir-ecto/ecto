@@ -147,7 +147,7 @@ defmodule Ecto.Repo do
         true
       end
 
-      def log({_, cmd}, fun) do
+      def log({_, cmd, params}, fun) do
         prev = :os.timestamp()
 
         try do
@@ -156,7 +156,7 @@ defmodule Ecto.Repo do
           Logger.debug fn ->
             next = :os.timestamp()
             diff = :timer.now_diff(next, prev)
-            [cmd, " (", inspect(div(diff, 100) / 10), "ms)"]
+            [cmd, ?\s, inspect(params), ?\s, ?(, inspect(div(diff, 100) / 10), ?m, ?s, ?)]
           end
         end
       end

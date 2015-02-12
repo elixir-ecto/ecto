@@ -145,7 +145,7 @@ defmodule Ecto.Adapters.SQL do
   def query(repo, sql, params, opts \\ []) do
     opts = Keyword.put_new(opts, :timeout, @timeout)
 
-    log(repo, {:query, sql}, opts, fn ->
+    log(repo, {:query, sql, params}, opts, fn ->
       use_worker(repo, opts[:timeout], fn worker ->
         Worker.query!(worker, sql, params, opts)
       end)
@@ -468,19 +468,19 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp do_begin(repo, worker, opts) do
-    log(repo, {:query, "BEGIN"}, opts, fn ->
+    log(repo, {:query, "BEGIN", []}, opts, fn ->
       Worker.begin!(worker, opts)
     end)
   end
 
   defp do_rollback(repo, worker, opts) do
-    log(repo, {:query, "ROLLBACK"}, opts, fn ->
+    log(repo, {:query, "ROLLBACK", []}, opts, fn ->
       Worker.rollback!(worker, opts)
     end)
   end
 
   defp do_commit(repo, worker, opts) do
-    log(repo, {:query, "COMMIT"}, opts, fn ->
+    log(repo, {:query, "COMMIT", []}, opts, fn ->
       Worker.commit!(worker, opts)
     end)
   end

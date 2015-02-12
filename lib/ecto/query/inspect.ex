@@ -140,16 +140,16 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Tagged values
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: :binary}, _, _names, _params) when is_binary(value) do
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: tag}, _, names, params) when not is_nil(tag) do
+    {:type, [], [value, tag]} |> expr(names, params)
+  end
+
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: :binary}, _, _names, _params) when is_binary(value) do
     inspect value
   end
 
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: :uuid}, _, names, params) when is_binary(value) do
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: :uuid}, _, names, params) when is_binary(value) do
     {:uuid, [], [value]} |> expr(names, params)
-  end
-
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: type}, _, names, params) do
-    {:type, [], [value, type]} |> expr(names, params)
   end
 
   defp expr_to_string(_expr, string, _, _) do
