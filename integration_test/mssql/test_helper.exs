@@ -1,5 +1,5 @@
 Logger.configure(level: :info)
-ExUnit.start exclude: [:assigns_primary_key, :array_type]
+ExUnit.start exclude: [:assigns_primary_key, :array_type, :case_sensitive]
 require Logger
 # Basic test repo
 alias Ecto.Integration.TestRepo
