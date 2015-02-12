@@ -194,7 +194,7 @@ defmodule Ecto.Adapters.SQL do
   @doc ~S"""
   Starts a transaction for test.
 
-  This function work by starting a transaction and storing the connection
+  This function works by starting a transaction and storing the connection
   back in the pool with an open transaction. At the end of the test, the
   transaction must be rolled back with `rollback_test_transaction`,
   reverting all data added during tests.

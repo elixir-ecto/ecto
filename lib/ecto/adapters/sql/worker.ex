@@ -1,6 +1,7 @@
 defmodule Ecto.Adapters.SQL.Worker do
   @moduledoc false
   use GenServer
+  require Logger
 
   def start_link({module, args}) do
     GenServer.start_link(__MODULE__, {module, args})
@@ -183,7 +184,7 @@ defmodule Ecto.Adapters.SQL.Worker do
 
   def handle_call({:restart_test_transaction, opts}, from, %{transactions: 1} = s) do
     %{conn: conn, module: module} = s
-
+    
     case module.query(conn, module.rollback_to_savepoint("ecto_sandbox"), [], opts) do
       {:ok, _} ->
         {:reply, :ok, s}
@@ -210,7 +211,9 @@ defmodule Ecto.Adapters.SQL.Worker do
   end
 
   # The connection crashed, notify all linked process.
-  def handle_info({:EXIT, conn, _reason}, %{conn: conn} = s) do
+  def handle_info({:EXIT, conn, reason}, %{conn: conn} = s) do
+
+    IO.inspect reason
     wipe_state(%{s | conn: nil})
   end
 
@@ -233,7 +236,6 @@ defmodule Ecto.Adapters.SQL.Worker do
   defp begin_sandbox(%{sandbox: true} = s) do
     %{conn: conn, module: module} = s
     opts = [timeout: :infinity]
-
     case module.query(conn, module.begin_transaction, [], opts) do
       {:ok, _} ->
         case module.query(conn, module.savepoint("ecto_sandbox"), [], opts) do
@@ -267,7 +269,6 @@ defmodule Ecto.Adapters.SQL.Worker do
   # be removed will always be maximum 1.
   defp wipe_state(%{conn: conn, module: module, link: link} = s) do
     conn && module.disconnect(conn)
-
     if link do
       Process.unlink(link)
       Process.exit(link, {:ecto, :no_connection})
