@@ -338,6 +338,19 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
+  test "put_new_change/3" do
+    changeset = changeset(%{})
+
+    changeset = put_change(changeset, :title, "foo")
+    assert changeset.changes.title == "foo"
+
+    changeset = put_new_change(changeset, :title, "bar")
+    assert changeset.changes.title == "foo"
+
+    changeset = put_new_change(changeset, :body, "body")
+    assert changeset.changes.body == "body"
+  end
+
   test "apply/1" do
     post = %Post{}
     assert post.title == nil
