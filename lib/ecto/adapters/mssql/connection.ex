@@ -122,10 +122,12 @@ if Code.ensure_loaded?(Tds.Connection) do
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
-
-      "UPDATE #{name} " <>
-      "SET " <> zipped_sql <> " FROM #{quote_name(table)} AS #{name} " <>
-      where
+      fields = Enum.map(values, fn {field, value} -> 
+        field
+      end)
+      {"UPDATE #{name} " <>
+       "SET " <> zipped_sql <> " FROM #{quote_name(table)} AS #{name} " <> 
+       where, fields}
     end
 
     def delete_all(query) do
@@ -361,7 +363,11 @@ if Code.ensure_loaded?(Tds.Connection) do
     end
 
     defp expr(string, sources) when is_binary(string) do
-      string = "'#{escape_string(string)}'"
+      Logger.info "EXPR String: #{string}"
+      hex = string
+        |> :unicode.characters_to_binary(:utf8, {:utf16, :little})
+        |> Base.encode16(binary, case: :lower)
+      "0x#{hex}"
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
