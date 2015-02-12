@@ -407,7 +407,7 @@ defmodule Ecto.Changeset do
       "foo"
       iex> changeset = put_new_change(changeset, :title, "bar")
       iex> changeset.changes.title
-      "bar"
+      "foo"
 
   """
   @spec put_new_change(t, atom, term) :: t
