@@ -23,7 +23,7 @@ defmodule Ecto.Query.Planner do
 
       case dumper.(type, value) do
         {:ok, value} ->
-          {field, %Ecto.Query.Tagged{value: value, type: Ecto.Type.type(type)}}
+          {field, value}
         :error ->
           raise Ecto.ChangeError,
             message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>
@@ -141,7 +141,7 @@ defmodule Ecto.Query.Planner do
   defp cast_param(kind, query, expr, v, type) do
     case Ecto.Type.cast(type, v) do
       {:ok, v} ->
-        Ecto.Type.tag type, Ecto.Type.dump!(type, v)
+        Ecto.Type.dump!(type, v)
       :error ->
         error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
     end

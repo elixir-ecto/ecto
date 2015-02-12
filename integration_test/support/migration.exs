@@ -48,7 +48,8 @@ defmodule Ecto.Integration.Migration do
 
     unless :array_type in ExUnit.configuration[:exclude] do
       create table(:tags) do
-        add :tags, {:array, :integer}
+        add :ints, {:array, :integer}
+        add :uuids, {:array, :uuid}
       end
     end
   end

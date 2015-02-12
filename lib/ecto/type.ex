@@ -226,28 +226,6 @@ defmodule Ecto.Type do
   defp do_match?(_, _), do: false
 
   @doc """
-  Tags a value.
-  """
-  def tag(type, tag)
-
-  def tag(_type, %Ecto.Query.Tagged{} = tag) do
-    tag
-  end
-
-  def tag(type, value) do
-    if primitive?(type) do
-      do_tag(type, value)
-    else
-      do_tag(type.type, value)
-    end
-  end
-
-  defp do_tag(tag, value) when tag in ~w(uuid binary)a,
-    do: %Ecto.Query.Tagged{value: value, type: tag}
-  defp do_tag(_tag, value),
-    do: value
-
-  @doc """
   Dumps a value to the given type.
 
   Opposite to casting, dumping requires the returned value
@@ -255,7 +233,7 @@ defmodule Ecto.Type do
   underlying data store.
 
       iex> dump(:string, nil)
-      {:ok, nil}
+      {:ok, %Ecto.Query.Tagged{value: nil, type: :string}}
       iex> dump(:string, "foo")
       {:ok, "foo"}
 
@@ -264,12 +242,26 @@ defmodule Ecto.Type do
       iex> dump(:integer, "10")
       :error
 
+      iex> dump(:binary, "foo")
+      {:ok, %Ecto.Query.Tagged{value: "foo", type: :binary}}
+      iex> dump(:binary, 1)
+      :error
+
+      iex> dump({:array, :integer}, [1, 2, 3])
+      {:ok, [1, 2, 3]}
+      iex> dump({:array, :integer}, [1, "2", 3])
+      :error
+      iex> dump({:array, :binary}, ["1", "2", "3"])
+      {:ok, %Ecto.Query.Tagged{value: ["1", "2", "3"], type: {:array, :binary}}}
+
   """
   @spec dump(t, term) :: {:ok, term} | :error
-  def dump(_type, nil), do: {:ok, nil}
+  def dump(type, nil) do
+    {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
+  end
 
   def dump({:array, type}, value) do
-    array(type, value, &dump/2, [])
+    dump_array(type, value, [], false)
   end
 
   def dump(type, value) do
@@ -277,10 +269,34 @@ defmodule Ecto.Type do
       not primitive?(type) ->
         type.dump(value)
       of_basic_type?(type, value) ->
-        {:ok, value}
+        {:ok, tag(type, value)}
       true ->
         :error
     end
+  end
+
+  defp tag(type, value) when type in ~w(uuid binary)a,
+    do: %Ecto.Query.Tagged{value: value, type: type}
+  defp tag(_type, value),
+    do: value
+
+  defp dump_array(type, [h|t], acc, tagged) do
+    case dump(type, h) do
+      {:ok, %Ecto.Query.Tagged{value: h}} ->
+        dump_array(type, t, [h|acc], true)
+      {:ok, h} ->
+        dump_array(type, t, [h|acc], tagged)
+      :error ->
+        :error
+    end
+  end
+
+  defp dump_array(type, [], acc, true) do
+    {:ok, %Ecto.Query.Tagged{value: Enum.reverse(acc), type: {:array, type(type)}}}
+  end
+
+  defp dump_array(_type, [], acc, false) do
+    {:ok, Enum.reverse(acc)}
   end
 
   @doc """

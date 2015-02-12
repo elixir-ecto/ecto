@@ -60,7 +60,7 @@ defmodule Ecto.Mixfile do
     Mix.Task.run "test", args
 
     for adapter <- @adapters do
-      IO.puts "==> Running integration tests for MIX_ENV=#{adapter}"
+      IO.puts "==> Running integration tests for MIX_ENV=#{adapter} mix test"
 
       {_, res} = System.cmd "mix", ["test"|args],
                             into: IO.binstream(:stdio, :line),
