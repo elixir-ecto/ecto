@@ -1,4 +1,4 @@
-Logger.configure(level: :info)
+Logger.configure(level: :error)
 ExUnit.start exclude: [:assigns_primary_key, :array_type, :case_sensitive]
 require Logger
 # Basic test repo
@@ -26,6 +26,8 @@ defmodule Ecto.Integration.PoolRepo do
   use Ecto.Repo,
     otp_app: :ecto,
     adapter: Ecto.Adapters.Mssql
+
+    def lock_for_update, do: "WITH(UPDLOCK)"
 end
 
 defmodule Ecto.Integration.Case do
