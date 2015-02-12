@@ -385,7 +385,7 @@ defmodule Ecto.Adapters.SQL do
       %{num_rows: num} ->
         num
       %{} ->
-      0
+        0
     end
   end
 
