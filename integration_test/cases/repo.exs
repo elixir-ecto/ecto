@@ -128,23 +128,29 @@ defmodule Ecto.Integration.RepoTest do
     import Ecto.Changeset
     post = TestRepo.insert(%Post{title: "HELLO"})
 
-    on_insert = cast(%{"title" => "hello"}, %Post{}, ~w(title), ~w())
-    assert validate_unique(on_insert, :title, on: TestRepo).errors == []
-
     on_insert = cast(%{"title" => "HELLO"}, %Post{}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo).errors != []
 
     on_insert = cast(%{"title" => "hello"}, %Post{}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo, downcase: true).errors != []
 
-    on_update = cast(%{"title" => "hello"}, post, ~w(title), ~w())
-    assert validate_unique(on_update, :title, on: TestRepo).errors == []
-
     on_update = cast(%{"title" => "HELLO"}, post, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
 
     on_update = cast(%{"title" => "HELLO"}, %{post | id: post.id + 1}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors != []
+  end
+
+  @tag :case_sensitive
+  test "validate_unique/3 case sensitive" do
+    import Ecto.Changeset
+    post = TestRepo.insert(%Post{title: "HELLO"})
+
+    on_insert = cast(%{"title" => "hello"}, %Post{}, ~w(title), ~w())
+    assert validate_unique(on_insert, :title, on: TestRepo).errors == []
+
+    on_update = cast(%{"title" => "hello"}, %{post | id: post.id + 1}, ~w(title), ~w())
+    assert validate_unique(on_update, :title, on: TestRepo).errors == []
   end
 
   test "get(!)" do
