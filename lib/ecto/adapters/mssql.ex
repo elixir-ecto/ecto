@@ -44,7 +44,7 @@ defmodule Ecto.Adapters.Mssql do
     * `:lc_ctype` - the character classification
 
   """
-
+  alias Tds
   use Ecto.Adapters.SQL, :tds
   @behaviour Ecto.Adapter.Storage
 
