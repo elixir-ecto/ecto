@@ -189,9 +189,10 @@ defmodule Ecto.Query.Builder do
   defp merge_fragments([h1], []),
     do: [h1]
 
-  defp field_meta({composite, _} = type) when is_atom(composite), do: [ecto_type: type]
-  defp field_meta(type) when is_atom(type) and type != :any,      do: [ecto_type: type]
-  defp field_meta(_), do: []
+  defp field_meta(type) do
+    type = extract_primitive_type(type)
+    if type != :any, do: [ecto_type: type], else: []
+  end
 
   defp call_type(agg, 1)  when agg in ~w(max count sum min avg)a, do: {:any, :any}
   defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}
@@ -308,6 +309,18 @@ defmodule Ecto.Query.Builder do
     do: atom
   def field!(other),
     do: error!("expected atom in field/2, got: `#{inspect other}`")
+
+  @doc """
+  Returns the primitive type of an expression at build time.
+  """
+  @spec primitive_type(Macro.t, Keyword.t) :: quoted_type
+  def primitive_type(expr, vars) do
+    extract_primitive_type quoted_type(expr, vars)
+  end
+
+  defp extract_primitive_type({composite, _} = type) when is_atom(composite), do: type
+  defp extract_primitive_type(type) when is_atom(type), do: type
+  defp extract_primitive_type(_), do: :any
 
   @doc """
   Returns the type of an expression at build time.

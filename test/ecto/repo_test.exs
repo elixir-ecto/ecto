@@ -5,6 +5,7 @@ defmodule Ecto.RepoTest.MyModel do
 
   schema "my_model" do
     field :x, :string
+    field :y, :binary
   end
 end
 
@@ -115,9 +116,15 @@ defmodule Ecto.RepoTest do
       MockRepo.update_all(from(e in MyModel, order_by: e.x), x: "123")
     end
 
-    message = "field `Ecto.RepoTest.MyModel.y` in `update_all` does not exist in the model source"
+    message = "field `Ecto.RepoTest.MyModel.z` in `update_all` does not exist in the model source"
     assert_raise Ecto.ChangeError, message, fn ->
-      MockRepo.update_all(p in MyModel, y: "123")
+      MockRepo.update_all(MyModel, z: "123")
+    end
+
+    message = "field `Ecto.RepoTest.MyModel.y` in `update_all` does not type check. " <>
+              "It has type :binary but a type :string was given"
+    assert_raise Ecto.ChangeError, message, fn ->
+      MockRepo.update_all(MyModel, y: "123")
     end
   end
 

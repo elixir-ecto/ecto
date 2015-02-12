@@ -67,7 +67,7 @@ defmodule Ecto.Repo.Queryable do
     {updates, params} =
       Enum.map_reduce(values, %{}, fn {field, expr}, params ->
         {expr, params} = Builder.escape(expr, {0, field}, params, binds)
-        {{field, expr}, params}
+        {{field, {Builder.primitive_type(expr, binds), expr}}, params}
       end)
 
     params = Builder.escape_params(params)
@@ -172,7 +172,22 @@ defmodule Ecto.Repo.Queryable do
 
   defp cast_update_all(%{from: {_source, model}}, updates, params) when model != nil do
     # Check all fields are valid but don't use dump as they are expressions
-    updates = Planner.fields(:update_all, model, updates, fn _type, value -> {:ok, value} end)
+    updates = for {field, {expected, expr}} <- updates do
+      type = model.__schema__(:field, field)
+
+      unless type do
+        raise Ecto.ChangeError,
+          message: "field `#{inspect model}.#{field}` in `update_all` does not exist in the model source"
+      end
+
+      if expected != :any and !Ecto.Type.match?(type, expected) do
+        raise Ecto.ChangeError,
+          message: "field `#{inspect model}.#{field}` in `update_all` does not type check. " <>
+                   "It has type #{inspect type} but a type #{inspect expected} was given"
+      end
+
+      {field, expr}
+    end
 
     # Properly cast parameters.
     params = Enum.map params, fn
@@ -187,6 +202,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp cast_update_all(%{}, updates, params) do
+    updates = for {field, {_type, expr}} <- updates, do: {field, expr}
     {updates, params}
   end
 
