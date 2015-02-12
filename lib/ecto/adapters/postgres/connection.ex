@@ -23,6 +23,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def query(conn, sql, params, opts) do
+      params = Enum.map params, fn
+        %Ecto.Query.Tagged{value: value} -> value
+        value -> value
+      end
+
       case Postgrex.Connection.query(conn, sql, params, opts) do
         {:ok, %Postgrex.Result{} = result} -> {:ok, Map.from_struct(result)}
         {:error, %Postgrex.Error{}} = err  -> err
@@ -78,7 +83,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      zipped_sql = Enum.map_join(values, ", ", fn {{field, _}, expr} ->
+      zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
@@ -104,7 +109,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         if fields == [] do
           "DEFAULT VALUES"
         else
-          "(" <> Enum.map_join(fields, ", ", &quote_name(elem(&1, 0))) <> ") " <>
+          "(" <> Enum.map_join(fields, ", ", &quote_name/1) <> ") " <>
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
         end
 
@@ -112,11 +117,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def update(table, filters, fields, returning) do
-      {filters, count} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
+      {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      {fields, _count} = Enum.map_reduce fields, count, fn {field, _}, acc ->
+      {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
@@ -126,7 +131,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def delete(table, filters, returning) do
-      {filters, _} = Enum.map_reduce filters, 1, fn {field, _}, acc ->
+      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 

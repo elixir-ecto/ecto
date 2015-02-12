@@ -187,7 +187,6 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp cast_update_all(%{}, updates, params) do
-    updates = Enum.map(updates, fn {f, v} -> {{f, :any}, v} end)
     {updates, params}
   end
 

@@ -281,19 +281,19 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "update all" do
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [{{:x, :integer}, 0}]) ==
+    assert SQL.update_all(query, [x: 0]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0}
 
     query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.update_all(query, [{{:x, :integer}, 0}]) ==
+    assert SQL.update_all(query, [x: 0]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0 WHERE (m0."x" = 123)}
 
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [{{:x, :integer}, 0}, {{:y, :string}, "123"}]) ==
+    assert SQL.update_all(query, [x: 0, y: "123"]) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0, "y" = '123'}
 
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [{{:x, :integer}, quote(do: ^0)}]) ==
+    assert SQL.update_all(query, [x: quote(do: ^0)]) ==
            ~s{UPDATE "model" AS m0 SET "x" = $1}
   end
 
@@ -363,7 +363,7 @@ defmodule Ecto.Adapters.PostgresTest do
   # Model based
 
   test "insert" do
-    query = SQL.insert("model", [x: :integer, y: :integer], [:id])
+    query = SQL.insert("model", [:x, :y], [:id])
     assert query == ~s{INSERT INTO "model" ("x", "y") VALUES ($1, $2) RETURNING "id"}
 
     query = SQL.insert("model", [], [:id])
@@ -374,18 +374,18 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "update" do
-    query = SQL.update("model", [id: :integer], [x: :integer, y: :integer], [:z])
+    query = SQL.update("model", [:id], [:x, :y], [:z])
     assert query == ~s{UPDATE "model" SET "x" = $2, "y" = $3 WHERE "id" = $1 RETURNING "z"}
 
-    query = SQL.update("model", [id: :integer], [x: :integer, y: :integer], [])
+    query = SQL.update("model", [:id], [:x, :y], [])
     assert query == ~s{UPDATE "model" SET "x" = $2, "y" = $3 WHERE "id" = $1}
   end
 
   test "delete" do
-    query = SQL.delete("model", [x: :integer, y: :integer], [:z])
+    query = SQL.delete("model", [:x, :y], [:z])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2 RETURNING "z"}
 
-    query = SQL.delete("model", [x: :integer, y: :integer], [])
+    query = SQL.delete("model", [:x, :y], [])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2}
   end
 
