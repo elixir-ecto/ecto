@@ -87,11 +87,15 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :array_type
   test "array type" do
-    TestRepo.insert(%Tag{tags: [1, 2, 3]})
-    assert [[1, 2, 3]] = TestRepo.all(from Tag, select: [1, 2, 3])
+    TestRepo.insert(%Tag{ints: [1, 2, 3], uuids: ["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"]})
 
-    assert [] = TestRepo.all(from p in Tag, where: p.tags == ^[], select: p.tags)
-    assert [[1, 2, 3]] = TestRepo.all(from p in Tag, where: p.tags == ^[1, 2, 3], select: p.tags)
-    assert [[1, 2, 3]] = TestRepo.all(from p in Tag, where: p.tags == [1, 2, 3], select: p.tags)
+    assert [] = TestRepo.all(from p in Tag, where: p.ints == ^[], select: p.ints)
+    assert [[1, 2, 3]] = TestRepo.all(from p in Tag, where: p.ints == ^[1, 2, 3], select: p.ints)
+    assert [[1, 2, 3]] = TestRepo.all(from p in Tag, where: p.ints == [1, 2, 3], select: p.ints)
+
+    assert [] = TestRepo.all(from p in Tag, where: p.uuids == ^[], select: p.uuids)
+    assert [["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"]] =
+           TestRepo.all(from p in Tag, where: p.uuids == ^["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"],
+                                       select: p.uuids)
   end
 end

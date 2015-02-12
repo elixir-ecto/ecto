@@ -18,7 +18,7 @@ defmodule Ecto.MockAdapter do
   ## Model
 
   def insert(_repo, "schema_migrations", val, _, _) do
-    version = Keyword.fetch!(val, :version).value
+    version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, {1}}
   end
@@ -30,7 +30,7 @@ defmodule Ecto.MockAdapter do
     do: {:ok, {1}}
 
   def delete(_repo, "schema_migrations", val, _) do
-    version = Keyword.fetch!(val, :version).value
+    version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, List.delete(migrated_versions(), version))
     {:ok, {}}
   end

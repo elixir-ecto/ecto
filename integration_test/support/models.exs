@@ -73,6 +73,7 @@ defmodule Ecto.Integration.Tag do
   use Ecto.Model
 
   schema "tags" do
-    field :tags, {:array, :integer}
+    field :ints, {:array, :integer}
+    field :uuids, {:array, Ecto.UUID}
   end
 end

@@ -29,7 +29,10 @@ defmodule Ecto.UUID do
   Converts an string representing a UUID into a binary.
   """
   def dump(<< u0::64, ?-, u1::32, ?-, u2::32, ?-, u3::32, ?-, u4::96 >>) do
-    Base.decode16(<< u0::64, u1::32, u2::32, u3::32, u4::96 >>, case: :mixed)
+    case Base.decode16(<< u0::64, u1::32, u2::32, u3::32, u4::96 >>, case: :mixed) do
+      {:ok, value} -> {:ok, %Ecto.Query.Tagged{type: :uuid, value: value}}
+      :error       -> :error
+    end
   end
   def dump(_), do: :error
 
