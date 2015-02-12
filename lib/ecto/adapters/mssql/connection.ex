@@ -215,7 +215,6 @@ if Code.ensure_loaded?(Tds.Connection) do
 
     defp from(sources, lock) do
       {table, name, _model} = elem(sources, 0)
-      IO.inspect "LOCK: #{lock}"
       "FROM #{quote_name(table)} AS #{name} " <> lock(lock)
     end
 
@@ -289,7 +288,7 @@ if Code.ensure_loaded?(Tds.Connection) do
       "OFFSET " <> expr(expr, sources)
     end
 
-    defp lock(nil), do: nil
+    defp lock(nil), do: ""
     defp lock(lock_clause), do: lock_clause
 
     defp boolean(_name, [], _sources), do: nil
