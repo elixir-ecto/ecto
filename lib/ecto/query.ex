@@ -53,10 +53,13 @@ defmodule Ecto.Query do
     * Integers: `1`, `2`, `3`
     * Floats: `1.0`, `2.0`, `3.0`
     * Booleans: `true`, `false`
-    * Binaries: `<<1, 2, 3>>`
     * Strings: `"foo bar"`, `~s(this is a string)`
     * Arrays: `[1, 2, 3]`, `~w(interpolate words)`
-    * UUIDs: `uuid("0123456789abcdef")`
+
+  All other types must be passed as a parameter using interpolation
+  explained below.
+
+  ## Interpolation
 
   External values and Elixir expressions can be injected into a query
   expression with `^`:

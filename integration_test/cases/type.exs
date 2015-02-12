@@ -42,11 +42,9 @@ defmodule Ecto.Integration.TypeTest do
 
     # Binaries
     assert [^text] = TestRepo.all(from p in Post, where: p.text == ^text, select: p.text)
-    assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)
 
     # UUID
     assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == ^uuid, select: p.uuid)
-    assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == uuid(<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>), select: p.uuid)
 
     # Datetime
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)

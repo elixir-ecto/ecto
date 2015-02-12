@@ -54,21 +54,6 @@ defmodule Ecto.Query.Builder do
   end
 
   # tagged types
-  def escape({:<<>>, _, _} = bin, _type, params, _vars) do
-    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :binary]}]}
-    {expr, params}
-  end
-
-  def escape({:uuid, _, [bin]}, _type, params, _vars) when is_binary(bin) do
-    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
-    {expr, params}
-  end
-
-  def escape({:uuid, _, [{:<<>>, _, _} = bin]}, _type, params, _vars) do
-    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :uuid]}]}
-    {expr, params}
-  end
-
   def escape({:type, _, [{:^, _, [arg]}, tag]}, _type, params, _vars) do
     index  = Map.size(params)
     params = Map.put(params, index, {arg, tag})
