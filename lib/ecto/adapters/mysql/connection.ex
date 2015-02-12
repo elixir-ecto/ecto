@@ -64,6 +64,12 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([select, from, where])
     end
 
+    def insert(table, fields, _returning) do
+      # TODO: change to real implementation after https://github.com/liveforeverx/mariaex/issues/10
+      # gets fixed
+      "INSERT INTO #{table} (inserted_at) VALUES ('0000-00-00 00:00:00')"
+    end
+
     ## Query Generation
 
     alias Ecto.Query.SelectExpr
@@ -107,8 +113,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "#{name}.#{field}"
     end
 
-    ## DDL
-
     defp create_names(query) do
       sources = query.sources |> Tuple.to_list
 
@@ -128,9 +132,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
-    alias Ecto.Migration.Table
-    alias Ecto.Migration.Reference
+    ## DDL
 
+    alias Ecto.Migration.Table
+    alias Ecto.Migration.Index
+    alias Ecto.Migration.Reference
     def ddl_exists(%Table{name: name}) do
       """
       SELECT COUNT(1)
@@ -144,6 +150,33 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "CREATE TABLE #{table.name} (#{column_definitions(columns)})"
     end
 
+    def execute_ddl({:drop, %Table{name: name}}) do
+      "DROP TABLE #{name}"
+    end
+
+    def execute_ddl({:alter, %Table{}=table, changes}) do
+      "ALTER TABLE #{table.name} #{column_changes(changes)}"
+    end
+
+    def execute_ddl({:create, %Index{}=index}) do
+      create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
+
+      using = if index.using do "USING #{index.using}" end
+
+      assemble([create, index.name, "ON", index.table,
+                using, "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
+    end
+
+    def execute_ddl({:drop, %Index{}=index}) do
+      assemble([
+        "DROP INDEX",
+        if(index.concurrently, do: "CONCURRENTLY"),
+        index.name,
+      ])
+    end
+
+    def execute_ddl(default) when is_binary(default), do: default
+
     defp column_definitions(columns) do
       Enum.map_join(columns, ", ", &column_definition/1)
     end
@@ -151,6 +184,20 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp column_definition({:add, name, type, opts}) do
       assemble([name, column_type(type, opts), column_options(name, opts)])
     end
+
+    defp column_changes(columns) do
+      Enum.map_join(columns, ", ", &column_change/1)
+    end
+
+    defp column_change({:add, name, type, opts}) do
+      assemble(["ADD COLUMN", name, column_type(type, opts), column_options(name, opts)])
+    end
+
+    defp column_change({:modify, name, type, opts}) do
+      assemble(["ALTER COLUMN", name, "TYPE", column_type(type, opts)])
+    end
+
+    defp column_change({:remove, name}), do: "DROP COLUMN #{name}"
 
     defp column_options(name, opts) do
       default = Keyword.get(opts, :default)
@@ -175,6 +222,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       do: "DEFAULT #{literal}" # TODO: Check the boolean here :P
     defp default_expr({:fragment, expr}),
       do: "DEFAULT #{expr}"
+
+    defp index_expr(literal), do: literal
 
     defp column_type(%Reference{} = ref, opts) do
       "#{column_type(ref.type, opts)} REFERENCES #{ref.table}(#{ref.column})"

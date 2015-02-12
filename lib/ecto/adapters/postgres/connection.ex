@@ -35,7 +35,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
 
       case Postgrex.Connection.query(conn, sql, params, opts) do
-        {:ok, %Postgrex.Result{} = result} -> {:ok, Map.from_struct(result)}
+        {:ok, %Postgrex.Result{} = result} ->
+          {:ok, Map.from_struct(result)}
         {:error, %Postgrex.Error{}} = err  -> err
       end
     end

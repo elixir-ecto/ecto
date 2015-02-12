@@ -388,6 +388,8 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def model(repo, sql, values, returning, opts) do
     case query(repo, sql, values, opts) do
+      %{rows: [], num_rows: 1} ->
+        {:ok, {nil}}
       %{rows: nil, num_rows: 1} ->
         {:ok, []}
       %{rows: [values], num_rows: 1} ->
