@@ -26,8 +26,10 @@ if Code.ensure_loaded?(Tds.Connection) do
           %Ecto.Query.Tagged{value: value, type: :boolean} -> 
               value = if value == true, do: 1, else: 0
               {value, :boolean}
+          %Ecto.Query.Tagged{value: value, type: :binary} -> 
+            value = if value == "", do: nil, else: value
+            {value, :binary}
           %Ecto.Query.Tagged{value: value, type: type} -> 
-              Logger.info "Param Type: #{Atom.to_string type}"
               {value, type}
           value -> 
             Logger.info "Untagged Value"
@@ -38,6 +40,7 @@ if Code.ensure_loaded?(Tds.Connection) do
 
       case Tds.Connection.query(conn, sql, params, opts) do
         {:ok, %Tds.Result{} = result} ->
+
           {:ok, Map.from_struct(result)}
         {:error, %Tds.Error{}} = err  -> err
       end
@@ -286,15 +289,8 @@ if Code.ensure_loaded?(Tds.Connection) do
       "OFFSET " <> expr(expr, sources)
     end
 
-    defp lock(nil), do: ""
-    defp lock(false), do: ""
-    defp lock(true), do: " WITH (UPDLOCK)"
-    defp lock(lock_clause), do: escape_string(lock_clause)
-
-    # defp unlock(nil), do: "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"
-    # defp unlock(false), do: "SET TRANSACTION ISOLATION LEVEL READ COMMITTED"
-    # defp unlock(true), do: nil
-    # defp unlock(lock_clause), do: lock_clause
+    defp lock(nil), do: nil
+    defp lock(lock_clause), do: lock_clause
 
     defp boolean(_name, [], _sources), do: nil
     defp boolean(name, query_exprs, sources) do
@@ -372,7 +368,9 @@ if Code.ensure_loaded?(Tds.Connection) do
       hex = string
         |> :unicode.characters_to_binary(:utf8, {:utf16, :little})
         |> Base.encode16(case: :lower)
-      "0x#{hex}"
+      bin = "CONVERT(nvarchar(max), 0x#{hex})"
+      IO.inspect bin
+      bin
     end
 
     defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
