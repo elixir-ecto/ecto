@@ -397,6 +397,25 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Puts a change on the given key only if a change with that key doesn't already
+  exist.
+
+  ## Examples
+
+      iex> changeset = put_new_change(changeset, :title, "foo")
+      iex> changeset.changes.title
+      "foo"
+      iex> changeset = put_new_change(changeset, :title, "bar")
+      iex> changeset.changes.title
+      "bar"
+
+  """
+  @spec put_new_change(t, atom, term) :: t
+  def put_new_change(changeset, key, value) do
+    update_in changeset.changes, &Map.put_new(&1, key, value)
+  end
+
+  @doc """
   Deletes a change with the given key.
   """
   @spec delete_change(t, atom) :: t
