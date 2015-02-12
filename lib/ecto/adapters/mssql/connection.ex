@@ -366,7 +366,7 @@ if Code.ensure_loaded?(Tds.Connection) do
       Logger.info "EXPR String: #{string}"
       hex = string
         |> :unicode.characters_to_binary(:utf8, {:utf16, :little})
-        |> Base.encode16(binary, case: :lower)
+        |> Base.encode16(case: :lower)
       "0x#{hex}"
     end
 
