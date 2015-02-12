@@ -27,9 +27,6 @@ defmodule Ecto.Query.BuilderTest do
     assert {quote(do: ~s"123"), %{}} ==
            escape(quote do ~s"123" end, [])
 
-    assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: "abc", type: :uuid]}]}, %{}} ==
-           escape(quote do uuid("abc") end, [])
-
     assert quote(do: &0.z) ==
            escape(quote do field(x, :z) end, [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
   end

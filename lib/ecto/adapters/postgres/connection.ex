@@ -245,8 +245,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp lock(nil), do: nil
-    defp lock(false), do: nil
-    defp lock(true), do: "FOR UPDATE"
     defp lock(lock_clause), do: lock_clause
 
     defp boolean(_name, [], _sources), do: nil
@@ -317,16 +315,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp expr(list, sources) when is_list(list) do
       "ARRAY[" <> Enum.map_join(list, ",", &expr(&1, sources)) <> "]"
-    end
-
-    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
-      hex = Base.encode16(binary, case: :lower)
-      "'\\x#{hex}'::bytea"
-    end
-
-    defp expr(%Ecto.Query.Tagged{value: binary, type: :uuid}, _sources) when is_binary(binary) do
-      hex = Base.encode16(binary)
-      "'#{hex}'::uuid"
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do

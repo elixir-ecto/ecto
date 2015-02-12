@@ -128,23 +128,29 @@ defmodule Ecto.Integration.RepoTest do
     import Ecto.Changeset
     post = TestRepo.insert(%Post{title: "HELLO"})
 
-    on_insert = cast(%{"title" => "hello"}, %Post{}, ~w(title), ~w())
-    assert validate_unique(on_insert, :title, on: TestRepo).errors == []
-
     on_insert = cast(%{"title" => "HELLO"}, %Post{}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo).errors != []
 
     on_insert = cast(%{"title" => "hello"}, %Post{}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo, downcase: true).errors != []
 
-    on_update = cast(%{"title" => "hello"}, post, ~w(title), ~w())
-    assert validate_unique(on_update, :title, on: TestRepo).errors == []
-
     on_update = cast(%{"title" => "HELLO"}, post, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
 
     on_update = cast(%{"title" => "HELLO"}, %{post | id: post.id + 1}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors != []
+  end
+
+  @tag :case_sensitive
+  test "validate_unique/3 case sensitive" do
+    import Ecto.Changeset
+    post = TestRepo.insert(%Post{title: "HELLO"})
+
+    on_insert = cast(%{"title" => "hello"}, %Post{}, ~w(title), ~w())
+    assert validate_unique(on_insert, :title, on: TestRepo).errors == []
+
+    on_update = cast(%{"title" => "hello"}, %{post | id: post.id + 1}, ~w(title), ~w())
+    assert validate_unique(on_update, :title, on: TestRepo).errors == []
   end
 
   test "get(!)" do
@@ -225,11 +231,11 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: id3} = TestRepo.insert(%Post{title: "3"})
 
     query = from(p in Post, where: p.title == "1" or p.title == "2")
-    assert 2 = TestRepo.update_all(query, title: "x", text: "")
+    assert 2 = TestRepo.update_all(query, title: "x", text: ^"y")
 
-    assert %Post{title: "x"} = TestRepo.get(Post, id1)
-    assert %Post{title: "x"} = TestRepo.get(Post, id2)
-    assert %Post{title: "3"} = TestRepo.get(Post, id3)
+    assert %Post{title: "x", text: "y"} = TestRepo.get(Post, id1)
+    assert %Post{title: "x", text: "y"} = TestRepo.get(Post, id2)
+    assert %Post{title: "3", text: nil} = TestRepo.get(Post, id3)
   end
 
   test "update all no entries" do

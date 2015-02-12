@@ -26,6 +26,8 @@ defmodule Ecto.Integration.PoolRepo do
   use Ecto.Repo,
     otp_app: :ecto,
     adapter: Ecto.Adapters.Postgres
+
+  def lock_for_update, do: "FOR UPDATE"
 end
 
 defmodule Ecto.Integration.Case do

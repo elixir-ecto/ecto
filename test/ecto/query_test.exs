@@ -159,7 +159,7 @@ defmodule Ecto.QueryTest do
                  group_by: p.author,
                  having: p.comments > 10,
                  distinct: p.category,
-                 lock: true,
+                 lock: "FOO",
                  select: p)
 
     # Pre-exclusion assertions

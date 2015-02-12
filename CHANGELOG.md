@@ -4,15 +4,21 @@
 
 * Enhancements
   * Allow changesets to be merged with `Ecto.Changeset.merge/2`
+  * Add `Ecto.Changeset.put_new_change/3`
   * Support the `:using` option for indexes in Postgres
   * Support adding/dropping indexes concurrently with Postgres
   * Allow expressions to be given as default when adding columns via `fragment/1`
   * Support integer casting on float types
+  * Explicitly checks if adapter supports ddl transactions
+  * Log query parameters (this means custom log functions should now expect another element in the query tuple)
 
 * Bug fixes
   * Only drop existing indexes when reversing `create index`
   * Allow boolean literals as defaults when adding columns
   * Add default varchar size to migrations
+
+* Backwards incompatible changes
+  * `uuid()` and `<<>>` syntax in queries has been removed in favor of explicit parameters
 
 ## v0.7.2 (2015-01-29)
 

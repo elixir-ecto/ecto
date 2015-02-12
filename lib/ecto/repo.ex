@@ -156,7 +156,11 @@ defmodule Ecto.Repo do
           Logger.debug fn ->
             next = :os.timestamp()
             diff = :timer.now_diff(next, prev)
-            [cmd, ?\s, inspect(params), ?\s, ?(, inspect(div(diff, 100) / 10), ?m, ?s, ?)]
+            data = Enum.map params, fn
+              %Ecto.Query.Tagged{value: value} -> value
+              value -> value
+            end
+            [cmd, ?\s, inspect(data), ?\s, ?(, inspect(div(diff, 100) / 10), ?m, ?s, ?)]
           end
         end
       end
