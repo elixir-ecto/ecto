@@ -255,11 +255,11 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [ecto_tag: :string], []}]
+           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [ecto_tag: :string], []}]
+           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query =
       from(Post, [])
@@ -269,7 +269,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.fields ==
            [{:&, [], [0]}, {:&, [], [1]},
-            {{:., [], [{:&, [], [0]}, :title]}, [ecto_tag: :string], []}]
+            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
   end
 
   test "normalize: select without models" do

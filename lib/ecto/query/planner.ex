@@ -141,7 +141,7 @@ defmodule Ecto.Query.Planner do
   defp cast_param(kind, query, expr, v, type) do
     case Ecto.Type.cast(type, v) do
       {:ok, v} ->
-        Ecto.Type.dump!(type, v)
+        Ecto.Type.tag type, Ecto.Type.dump!(type, v)
       :error ->
         error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
     end
@@ -328,8 +328,8 @@ defmodule Ecto.Query.Planner do
         {{:^, meta, [acc]}, acc + 1}
 
       {{:., _, [{:&, _, [source]}, field]} = dot, meta, []}, acc ->
-        tag = validate_field(kind, query, expr, source, field, meta)
-        {{dot, [ecto_tag: tag] ++ meta, []}, acc}
+        type = validate_field(kind, query, expr, source, field, meta)
+        {{dot, [ecto_type: type] ++ meta, []}, acc}
 
       other, acc ->
         {other, acc}
