@@ -109,9 +109,6 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "lock" do
-    query = Model |> lock(true) |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 FOR UPDATE}
-
     query = Model |> lock("FOR SHARE NOWAIT") |> select([], 0) |> normalize
     assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 FOR SHARE NOWAIT}
   end

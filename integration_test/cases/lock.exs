@@ -20,8 +20,13 @@ defmodule Ecto.Integration.LockTest do
 
   test "lock for update" do
     %{id: id} = PoolRepo.insert(%LockCounter{count: 1})
-    query = from(lc in LockCounter, where: lc.id == ^id, lock: true)
-    pid   = self()
+    pid = self()
+
+    # Here we are manually inserting the lock in the query
+    # to test multiple adapters. Never do this in actual
+    # application code: it is not safe and could also break.
+    query = from(lc in LockCounter, where: lc.id == ^id)
+    query = %{query | lock: PoolRepo.lock_for_update}
 
     {:ok, new_pid} =
       Task.start_link fn ->
