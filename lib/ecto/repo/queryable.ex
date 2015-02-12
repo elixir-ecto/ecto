@@ -170,7 +170,7 @@ defmodule Ecto.Repo.Queryable do
     Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
   end
 
-  defp cast_update_all(%{from: {_source ,model}}, updates, params) when model != nil do
+  defp cast_update_all(%{from: {_source, model}}, updates, params) when model != nil do
     # Check all fields are valid but don't use dump as they are expressions
     updates = Planner.fields(:update_all, model, updates, fn _type, value -> {:ok, value} end)
 
