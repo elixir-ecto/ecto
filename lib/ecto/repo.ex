@@ -464,7 +464,7 @@ defmodule Ecto.Repo do
   """
   defcallback rollback(any) :: no_return
 
-  @doc """
+  @doc ~S"""
   Enables logging of adapter actions such as sending queries to the database.
 
   By default writes to Logger but can be overriden to customize behaviour.
@@ -475,7 +475,7 @@ defmodule Ecto.Repo do
 
   The default implementation of the `log/2` function is shown below:
 
-      def log({_, cmd}, fun) do
+      def log({_, cmd, params}, fun) do
         prev = :os.timestamp()
 
         try do
@@ -484,11 +484,15 @@ defmodule Ecto.Repo do
           Logger.debug fn ->
             next = :os.timestamp()
             diff = :timer.now_diff(next, prev)
-            [cmd, " (", inspect(div(diff, 100) / 10), "ms)"]
+            data = Enum.map params, fn
+              %Ecto.Query.Tagged{value: value} -> value
+              value -> value
+            end
+            [cmd, ?\s, inspect(data), ?\s, ?(, inspect(div(diff, 100) / 10), ?m, ?s, ?)]
           end
         end
       end
 
   """
-  defcallback log({atom, iodata}, function :: (() -> any)) :: any
+  defcallback log({atom, iodata, [term]}, function :: (() -> any)) :: any
 end
