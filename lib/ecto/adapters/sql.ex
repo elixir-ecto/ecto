@@ -381,19 +381,13 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def count_all(repo, sql, params, opts) do
-    case query(repo, sql, params, opts) do
-      %{num_rows: num} ->
-        num
-      %{} ->
-        0
-    end
+    %{num_rows: num} = query(repo, sql, params, opts)
+    num
   end
 
   @doc false
   def model(repo, sql, values, returning, opts) do
     case query(repo, sql, values, opts) do
-      %{rows: [], num_rows: 1} ->
-        {:ok, {nil}}
       %{rows: nil, num_rows: 1} ->
         {:ok, []}
       %{rows: [values], num_rows: 1} ->
