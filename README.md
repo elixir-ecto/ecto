@@ -70,9 +70,14 @@ After you are done, run `mix deps.get` in your shell to fetch the dependencies.
 
 The following databases are supported:
 
-Database                | Elixir driver
-:---------------------- | :----------------------
-PostgreSQL              | [postgrex](http://github.com/ericmj/postgrex)
+Database                | Ecto Adapter                   | Elixir driver
+:---------------------- | :----------------------------- | :-------------------
+PostgreSQL              | Ecto.Adapters.Postgres         | [postgrex][pg_drv]
+MSSQL                   | Tds.Ecto ([tds_ecto][tds_adp]) | [tds][tds_drv]
+
+[pg_drv]: http://github.com/ericmj/postgrex
+[tds_adp]: https://github.com/livehelpnow/tds_ecto
+[tds_drv]: https://github.com/livehelpnow/tds
 
 We are currently looking for contributions to add support for other SQL databases and folks interested in exploring non-relational databases too.
 
