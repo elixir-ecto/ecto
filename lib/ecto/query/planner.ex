@@ -115,7 +115,7 @@ defmodule Ecto.Query.Planner do
   defp cast_and_merge_params(kind, query, expr, params) do
     Enum.reduce expr.params, params, fn
       {v, {:in, type}}, acc ->
-        Enum.reverse(cast_param(kind, query, expr, v, {:array, type})) ++ acc
+        unfold_in(cast_param(kind, query, expr, v, {:array, type}), acc)
       {v, type}, acc ->
         [cast_param(kind, query, expr, v, type)|acc]
     end
@@ -155,6 +155,16 @@ defmodule Ecto.Query.Planner do
                             message: Exception.message(e) <>
                                      "\nError when casting value to `#{inspect model}.#{field}`"
   end
+
+  defp unfold_in(%Ecto.Query.Tagged{value: value, type: {:array, type}}, acc),
+    do: unfold_in(value, type, acc)
+  defp unfold_in(value, acc) when is_list(value),
+    do: Enum.reverse(value, acc)
+
+  defp unfold_in([h|t], type, acc),
+    do: unfold_in(t, type, [%Ecto.Query.Tagged{value: h, type: type}|acc])
+  defp unfold_in([], _type, acc),
+    do: acc
 
   @doc """
   Prepare all sources, by traversing and expanding joins.

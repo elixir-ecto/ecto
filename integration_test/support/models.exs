@@ -49,6 +49,7 @@ defmodule Ecto.Integration.User do
   schema "users" do
     field :name, :string
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id
+    belongs_to :custom, Ecto.Integration.Custom, references: :foo, type: :uuid
   end
 end
 

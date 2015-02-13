@@ -8,6 +8,7 @@ defmodule Ecto.Integration.PreloadTest do
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
+  alias Ecto.Integration.Custom
 
   test "preload empty" do
     assert TestRepo.preload([], :anything_goes) == []
@@ -120,6 +121,14 @@ defmodule Ecto.Integration.PreloadTest do
 
     assert c.text == "1"
     assert c.post == nil
+  end
+
+  test "preload with uuid" do
+    c = TestRepo.insert(%Custom{foo: "0123456789abcdef"})
+    u = TestRepo.insert(%User{custom_id: c.foo})
+
+    u = TestRepo.preload(u, :custom)
+    assert u.custom == c
   end
 
   test "preload has_many through" do

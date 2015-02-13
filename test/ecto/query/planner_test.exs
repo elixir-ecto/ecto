@@ -27,6 +27,7 @@ defmodule Ecto.Query.PlannerTest do
     schema "posts" do
       field :title, :string
       field :text, :string
+      field :code, :uuid
       has_many :comments, Ecto.Query.PlannerTest.Comment
     end
   end
@@ -117,6 +118,12 @@ defmodule Ecto.Query.PlannerTest do
     permalink = "1-hello-world"
     {_query, params} = prepare(Post |> where([p], p.id in [^permalink]))
     assert params == [1]
+
+    {_query, params} = prepare(Post |> where([p], p.code in [^"abcd"]))
+    assert params == [%Ecto.Query.Tagged{tag: nil, type: :uuid, value: "abcd"}]
+
+    {_query, params} = prepare(Post |> where([p], p.code in ^["abcd"]))
+    assert params == [%Ecto.Query.Tagged{tag: nil, type: :uuid, value: "abcd"}]
   end
 
   test "prepare: joins" do
