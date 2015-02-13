@@ -54,6 +54,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Query
 
+    alias Ecto.Query.SelectExpr
+    alias Ecto.Query.QueryExpr
+    alias Ecto.Query.JoinExpr
+
     def all(query) do
       sources = create_names(query)
 
@@ -82,8 +86,14 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Query Generation
 
-    alias Ecto.Query.SelectExpr
-    alias Ecto.Query.QueryExpr
+    binary_ops =
+      [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
+       and: "AND", or: "OR",
+       ilike: "ILIKE", like: "LIKE"]
+
+    @binary_ops Keyword.keys(binary_ops)
+
+    defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
     defp select(%SelectExpr{fields: fields}, [], sources) do
       "SELECT " <> Enum.map_join(fields, ", ", &expr(&1, sources))
@@ -118,9 +128,93 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         end)
     end
 
+    defp expr({:^, [], [ix]}, _sources) do
+      "$#{ix+1}"
+    end
+
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
       {_, name, _} = elem(sources, idx)
       "#{name}.#{field}"
+    end
+
+    defp expr({:&, _, [idx]}, sources) do
+      {_table, name, model} = elem(sources, idx)
+      fields = model.__schema__(:fields)
+      Enum.map_join(fields, ", ", &"#{name}.#{&1}")
+    end
+
+    defp expr({:in, _, [_left, []]}, _sources) do
+      "false"
+    end
+
+    defp expr({:in, _, [left, right]}, sources) when is_list(right) do
+      args = Enum.map_join right, ",", &expr(&1, sources)
+      expr(left, sources) <> " IN (" <> args <> ")"
+    end
+
+    defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources) do
+      args = Enum.map_join ix+1..ix+length, ",", &"$#{&1}"
+      expr(left, sources) <> " IN (" <> args <> ")"
+    end
+
+    defp expr({:is_nil, _, [arg]}, sources) do
+      "#{expr(arg, sources)} IS NULL"
+    end
+
+    defp expr({:not, _, [expr]}, sources) do
+      "NOT (" <> expr(expr, sources) <> ")"
+    end
+
+    defp expr({:fragment, _, parts}, sources) do
+      Enum.map_join(parts, "", fn
+        part when is_binary(part) -> part
+        expr -> expr(expr, sources)
+      end)
+    end
+
+    defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
+      case handle_call(fun, length(args)) do
+        {:binary_op, op} ->
+          [left, right] = args
+          op_to_binary(left, sources) <>
+          " #{op} "
+          <> op_to_binary(right, sources)
+
+        {:fun, fun} ->
+          "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, sources)) <> ")"
+      end
+    end
+
+    defp expr(list, sources) when is_list(list) do
+      "ARRAY[" <> Enum.map_join(list, ",", &expr(&1, sources)) <> "]"
+    end
+
+    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
+      expr(other, sources) <> "::" <> ecto_to_db(type)
+    end
+
+    defp expr(nil, _sources),   do: "NULL"
+    defp expr(true, _sources),  do: "TRUE"
+    defp expr(false, _sources), do: "FALSE"
+
+    defp expr(literal, _sources) when is_binary(literal) do
+      "'#{escape_string(literal)}'"
+    end
+
+    defp expr(literal, _sources) when is_integer(literal) do
+      String.Chars.Integer.to_string(literal)
+    end
+
+    defp expr(literal, _sources) when is_float(literal) do
+      String.Chars.Float.to_string(literal) <> "::float"
+    end
+
+    defp op_to_binary({op, _, [_, _]} = expr, sources) when op in @binary_ops do
+      "(" <> expr(expr, sources) <> ")"
+    end
+
+    defp op_to_binary(expr, sources) do
+      expr(expr, sources)
     end
 
     defp create_names(query) do
