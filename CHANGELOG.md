@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.8.1 (2015-02-13)
+
+* Bug fixes
+  * Ensure `in/2` queries on uuid/binary columns work
+
 ## v0.8.0 (2015-02-12)
 
 * Enhancements
