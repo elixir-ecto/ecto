@@ -314,6 +314,19 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Post{}] = TestRepo.all(Post)
   end
 
+  test "delete all with joins" do
+    user = TestRepo.insert(%User{name: "Tester"})
+    post = TestRepo.insert(%Post{title: "foo"})
+    TestRepo.insert(%Comment{text: "hey", author_id: user.id, post_id: post.id})
+    TestRepo.insert(%Comment{text: "foo", author_id: user.id, post_id: post.id})
+    TestRepo.insert(%Comment{text: "bar", post_id: post.id})
+
+    query = from(c in Comment, join: u in User, on: u.id == c.author_id, where: c.post_id in ^[post.id])
+    assert 2 = TestRepo.delete_all(query)
+
+    assert [%Comment{}] = TestRepo.all(Comment)
+  end
+
   test "delete all no entries" do
     assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})

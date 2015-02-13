@@ -299,7 +299,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
     assert SQL.delete_all(query) ==
-           ~s{DELETE FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
+           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z"}
   end
 
   ## Joins
