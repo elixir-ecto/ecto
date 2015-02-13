@@ -412,6 +412,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       Enum.map_join(columns, ", ", &column_definition/1)
     end
 
+    defp column_definition({:add, name, %Reference{} = ref, opts}) do
+      assemble([quote_name(name), column_type(ref.type, opts), column_options(name, opts), reference_expr(ref, name)])
+    end
+
     defp column_definition({:add, name, type, opts}) do
       assemble([quote_name(name), column_type(type, opts), column_options(name, opts)])
     end
@@ -455,8 +459,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp index_expr(literal), do: quote_name(literal)
 
-    defp column_type(%Reference{} = ref, opts) do
-      "#{column_type(ref.type, opts)} REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})"
+    defp reference_expr(%Reference{} = ref, foreign_key_name) do
+      ", FOREIGN KEY (#{quote_name(foreign_key_name)}) REFERENCES #{quote_name(ref.table)} (#{quote_name(ref.column)})"
     end
 
     defp column_type(type, opts) do

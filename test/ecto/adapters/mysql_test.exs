@@ -391,7 +391,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` integer REFERENCES `categories`(`id`))|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` integer , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`))|
   end
 
   test "create table with column options" do
