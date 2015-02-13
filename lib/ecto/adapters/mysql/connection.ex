@@ -398,7 +398,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def execute_ddl({:drop, %Index{}=index}) do
       assemble([
         "DROP INDEX",
-        if(index.concurrently, do: "CONCURRENTLY"),
         quote_name(index.name),
       ])
     end
