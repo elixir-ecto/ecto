@@ -190,7 +190,7 @@ defmodule Ecto.Adapters.MySQLTest do
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
-    assert SQL.all(query) == ~s{SELECT ((m0.`x` > 0) AND (m0.y > $1)) OR TRUE FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT ((m0.`x` > 0) AND (m0.`y` > $1)) OR TRUE FROM `model` AS m0}
   end
 
   test "in expression" do
@@ -285,7 +285,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = from(e in Model, where: e.x == 123) |> normalize
     assert SQL.delete_all(query) ==
-           ~s{DELETE FROM m0 USING `model` AS mo WHERE (m0.`x` = 123)}
+           ~s{DELETE FROM m0 USING `model` AS m0 WHERE (m0.`x` = 123)}
   end
 
   ## Joins

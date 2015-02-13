@@ -98,7 +98,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       where = where(query.wheres, sources)
 
       if where do
-        "DELETE FROM #{name} USING #{quote_name(table)} as #{name} " <> where
+        "DELETE FROM #{name} USING #{quote_name(table)} AS #{name} " <> where
       else
         "DELETE FROM #{quote_name(table)}"
       end
@@ -139,7 +139,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         Enum.join(filters, " AND ")
     end
 
-    ## Query Generation
+    ## Query generation
 
     binary_ops =
       [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
@@ -147,6 +147,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
        ilike: "ILIKE", like: "LIKE"]
 
     @binary_ops Keyword.keys(binary_ops)
+
+    Enum.map(binary_ops, fn {op, str} ->
+      defp handle_call(unquote(op), 2), do: {:binary_op, unquote(str)}
+    end)
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
@@ -343,7 +347,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp create_names(query) do
       sources = query.sources |> Tuple.to_list
-
       Enum.reduce(sources, [], fn {table, model}, names ->
         name = unique_name(names, String.first(table), 0)
         [{table, name, model}|names]
