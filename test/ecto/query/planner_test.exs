@@ -295,14 +295,14 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: only where" do
-    query = from(Post, []) |> normalize([], only_where: true)
+  test "normalize: only filters" do
+    query = from(Post, []) |> normalize([], only_filters: true)
     assert is_nil query.select
 
     message = ~r"only `where` expressions are allowed in query"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(p in Post, select: p)
-      normalize(query, [], only_where: true)
+      normalize(query, [], only_filters: true)
     end
   end
 

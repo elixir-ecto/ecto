@@ -226,7 +226,6 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "update all with joins" do
-    query = from p in Post, where: p.id > 0
     user = TestRepo.insert(%User{name: "Tester"})
     post = TestRepo.insert(%Post{title: "foo"})
     comment = TestRepo.insert(%Comment{text: "hey", author_id: user.id, post_id: post.id})
