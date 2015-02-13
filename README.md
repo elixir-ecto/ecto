@@ -70,14 +70,15 @@ After you are done, run `mix deps.get` in your shell to fetch the dependencies.
 
 The following databases are supported:
 
-Database                | Ecto Adapter                   | Elixir driver
-:---------------------- | :----------------------------- | :-------------------
-PostgreSQL              | Ecto.Adapters.Postgres         | [postgrex][pg_drv]
-MSSQL                   | Tds.Ecto ([tds_ecto][tds_adp]) | [tds][tds_drv]
+Database                | Ecto Adapter           | Dependency
+:---------------------- | :--------------------- | :-------------------
+PostgreSQL              | Ecto.Adapters.Postgres | [postgrex][postgrex]
+MSSQL                   | Tds.Ecto               | [tds_ecto][tds_ecto]
 
-[pg_drv]: http://github.com/ericmj/postgrex
-[tds_adp]: https://github.com/livehelpnow/tds_ecto
-[tds_drv]: https://github.com/livehelpnow/tds
+[postgrex]: http://github.com/ericmj/postgrex
+[tds_ecto]: https://github.com/livehelpnow/tds_ecto
+
+Just add the proper "Dependency" to your `mix.exs` file and the respective "Ecto Adapter" to your `Ecto.Repo` module.
 
 We are currently looking for contributions to add support for other SQL databases and folks interested in exploring non-relational databases too.
 
