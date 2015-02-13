@@ -449,7 +449,7 @@ defmodule Ecto.Adapters.MySQLTest do
   test "create an index using a different type" do
     create = {:create, index(:posts, [:permalink], using: :hash)}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE INDEX `posts_permalink_index` ON `posts` USING hash (`permalink`)|
+           ~s|CREATE INDEX `posts_permalink_index` ON `posts` (`permalink`) USING hash|
   end
 
   test "drop index" do

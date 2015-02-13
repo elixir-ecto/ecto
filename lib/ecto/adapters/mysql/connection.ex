@@ -395,7 +395,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       using = if index.using do "USING #{index.using}" end
 
       assemble([create, quote_name(index.name), "ON", quote_name(index.table),
-                using, "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
+                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})", using])
     end
 
     def execute_ddl({:drop, %Index{}=index}) do
