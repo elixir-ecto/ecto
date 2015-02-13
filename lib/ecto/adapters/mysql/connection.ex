@@ -402,6 +402,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([
         "DROP INDEX",
         quote_name(index.name),
+        "ON #{quote_name(index.table)}"
       ])
     end
 

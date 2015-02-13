@@ -454,6 +454,6 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "drop index" do
     drop = {:drop, index(:posts, [:id], name: "posts$main")}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main`|
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts`|
   end
 end
