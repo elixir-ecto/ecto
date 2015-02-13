@@ -19,6 +19,7 @@
 
 * Backwards incompatible changes
   * `uuid()` and `<<>>` syntax in queries has been removed in favor of explicit parameters
+  * `lock` expressions now must be a literal string
 
 ## v0.7.2 (2015-01-29)
 

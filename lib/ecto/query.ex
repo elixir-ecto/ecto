@@ -528,7 +528,7 @@ defmodule Ecto.Query do
     LimitOffset.build(:offset, query, binding, expr, __CALLER__)
   end
 
-  @doc """
+  @doc ~S"""
   A lock query expression.
 
   Provides support for row-level pessimistic locking using
@@ -540,13 +540,11 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      from(u in User, where: u.id == current_user, lock: true)
-      from(u in User, where: u.id == current_user, lock: \"FOR SHARE NOWAIT\")
+      from(u in User, where: u.id == current_user, lock: "FOR SHARE NOWAIT")
 
   ## Expressions examples
 
-      User |> where(u.id == current_user) |> lock(true)
-      User |> where(u.id == current_user) |> lock(\"FOR SHARE NOWAIT\")
+      User |> where(u.id == current_user) |> lock("FOR SHARE NOWAIT")
 
   """
   defmacro lock(query, expr) do
