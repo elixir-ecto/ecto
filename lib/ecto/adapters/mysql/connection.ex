@@ -61,27 +61,59 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def all(query) do
       sources = create_names(query)
 
-      select  = select(query.select, query.distincts, sources)
-      from    = from(sources)
-      where   = where(query.wheres, sources)
+      from     = from(sources)
+      select   = select(query.select, query.distincts, sources)
+      join     = join(query.joins, sources)
+      where    = where(query.wheres, sources)
+      group_by = group_by(query.group_bys, sources)
+      having   = having(query.havings, sources)
+      order_by = order_by(query.order_bys, sources)
+      limit    = limit(query.limit, sources)
+      offset   = offset(query.offset, sources)
+      lock     = lock(query.lock)
 
-      assemble([select, from, where])
+      assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
+    end
+
+    def update_all(query, values) do
+      sources = create_names(query)
+      {table, name, _model} = elem(sources, 0)
+
+      zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
+        "#{field} = #{expr(expr, sources)}"
+      end)
+
+      where = where(query.wheres, sources)
+      where = if where, do: " " <> where, else: ""
+
+      "UPDATE #{table} #{name} " <>
+      "SET " <> zipped_sql <>
+      where
     end
 
     def delete_all(query) do
       sources = create_names(query)
-      {table, _name, _model} = elem(sources, 0)
+      {table, name, _model} = elem(sources, 0)
 
       where = where(query.wheres, sources)
-      where = if where, do: " " <> where, else: ""
-      "DELETE FROM #{table}" <> where
+
+      if where do
+        "DELETE FROM #{name} USING #{table} as #{name} " <> where
+      else
+        "DELETE FROM #{table}"
+      end
     end
 
     def insert(table, fields, _returning) do
-      field = List.first(fields)
-      # TODO: change to real implementation after https://github.com/liveforeverx/mariaex/issues/10
-      # gets fixed
-      "INSERT INTO #{table} (#{field}) VALUES ('1')"
+      values =
+        if fields == [] do
+          raise "It does not support insert without specifying the column"
+        else
+          "(" <> Enum.map_join(fields, ", ", &(&1)) <> ") " <>
+          "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
+        end
+
+      "INSERT INTO #{table} " <> values
     end
 
     ## Query Generation
@@ -115,9 +147,78 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "FROM #{table} AS #{name}"
     end
 
-    def where(wheres, sources) do
+    defp join([], _sources), do: nil
+    defp join(joins, sources) do
+      Enum.map_join(joins, " ", fn
+        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
+          {table, name, _model} = elem(sources, ix)
+
+          on   = expr(expr, sources)
+          qual = join_qual(qual)
+
+          "#{qual} JOIN #{table} AS #{name} ON " <> on
+      end)
+    end
+
+    defp join_qual(:inner), do: "INNER"
+    defp join_qual(:left),  do: "LEFT OUTER"
+    defp join_qual(:right), do: "RIGHT OUTER"
+    defp join_qual(:full),  do: "FULL OUTER"
+
+    defp where(wheres, sources) do
       boolean("WHERE", wheres, sources)
     end
+
+    defp having(havings, sources) do
+      boolean("HAVING", havings, sources)
+    end
+
+    defp group_by(group_bys, sources) do
+      exprs =
+        Enum.map_join(group_bys, ", ", fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &expr(&1, sources))
+        end)
+
+      case exprs do
+        "" -> nil
+        _  -> "GROUP BY " <> exprs
+      end
+    end
+
+    defp order_by(order_bys, sources) do
+      exprs =
+        Enum.map_join(order_bys, ", ", fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
+        end)
+
+      case exprs do
+        "" -> nil
+        _  -> "ORDER BY " <> exprs
+      end
+    end
+
+    defp order_by_expr({dir, expr}, sources) do
+      str = expr(expr, sources)
+      case dir do
+        :asc  -> str
+        :desc -> str <> " DESC"
+      end
+    end
+
+    defp limit(nil, _sources), do: nil
+    defp limit(%Ecto.Query.QueryExpr{expr: expr}, sources) do
+      "LIMIT " <> expr(expr, sources)
+    end
+
+    defp offset(nil, _sources), do: nil
+    defp offset(%Ecto.Query.QueryExpr{expr: expr}, sources) do
+      "OFFSET " <> expr(expr, sources)
+    end
+
+    defp lock(nil), do: nil
+    defp lock(lock_clause), do: lock_clause
 
     defp boolean(_name, [], _sources), do: nil
     defp boolean(name, query_exprs, sources) do

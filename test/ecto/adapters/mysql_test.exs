@@ -279,11 +279,11 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "delete all" do
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.delete_all(query) == ~s{DELETE FROM model AS m0}
+    assert SQL.delete_all(query) == ~s{DELETE FROM model}
 
     query = from(e in Model, where: e.x == 123) |> normalize
     assert SQL.delete_all(query) ==
-           ~s{DELETE FROM model AS m0 WHERE (m0.x = 123)}
+           ~s{DELETE FROM m0 USING model AS mo WHERE (m0.x = 123)}
   end
 
   ## Joins
@@ -344,14 +344,8 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "insert" do
     # TODO: Improve examples
-    query = SQL.insert("model", [:x, :y])
+    query = SQL.insert("model", [:x, :y], [])
     assert query == ~s{INSERT INTO model (x, y) VALUES ($1, $2)}
-
-    query = SQL.insert("model", [])
-    assert query == ~s{INSERT INTO model}
-
-    query = SQL.insert("model", [])
-    assert query == ~s{INSERT INTO model}
   end
 
   test "update" do
