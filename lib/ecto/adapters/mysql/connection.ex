@@ -80,13 +80,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       {table, name, _model} = elem(sources, 0)
 
       zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
-        "#{field} = #{expr(expr, sources)}"
+        "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
       where = where(query.wheres, sources)
       where = if where, do: " " <> where, else: ""
 
-      "UPDATE #{table} #{name} " <>
+      "UPDATE #{quote_name(table)} AS #{name} " <>
       "SET " <> zipped_sql <>
       where
     end
@@ -98,22 +98,45 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       where = where(query.wheres, sources)
 
       if where do
-        "DELETE FROM #{name} USING #{table} as #{name} " <> where
+        "DELETE FROM #{name} USING #{quote_name(table)} as #{name} " <> where
       else
-        "DELETE FROM #{table}"
+        "DELETE FROM #{quote_name(table)}"
       end
     end
 
+    # TODO INSERT INTO POSTS () VALUES();
     def insert(table, fields, _returning) do
       values =
         if fields == [] do
-          raise "It does not support insert without specifying the column"
+          "() VALUES ()"
         else
-          "(" <> Enum.map_join(fields, ", ", &(&1)) <> ") " <>
+          "(" <> Enum.map_join(fields, ", ", &quote_name/1) <> ") " <>
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
         end
 
-      "INSERT INTO #{table} " <> values
+      "INSERT INTO #{quote_name(table)} " <> values
+    end
+
+    def update(table, filters, fields, _returning) do
+      {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
+        {"#{quote_name(field)} = $#{acc}", acc + 1}
+      end
+
+      {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
+        {"#{quote_name(field)} = $#{acc}", acc + 1}
+      end
+
+      "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <>
+        " WHERE " <> Enum.join(filters, " AND ")
+    end
+
+    def delete(table, filters, returning) do
+      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
+        {"#{quote_name(field)} = $#{acc}", acc + 1}
+      end
+
+      "DELETE FROM #{quote_name(table)} WHERE " <>
+        Enum.join(filters, " AND ")
     end
 
     ## Query Generation
@@ -144,7 +167,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{table} AS #{name}"
+      "FROM #{quote_name(table)} AS #{name}"
     end
 
     defp join([], _sources), do: nil
@@ -156,7 +179,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
           on   = expr(expr, sources)
           qual = join_qual(qual)
 
-          "#{qual} JOIN #{table} AS #{name} ON " <> on
+          "#{qual} JOIN #{quote_name(table)} AS #{name} ON " <> on
       end)
     end
 
@@ -235,13 +258,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{field}"
+      "#{name}.#{quote_name(field)}"
     end
 
     defp expr({:&, _, [idx]}, sources) do
       {_table, name, model} = elem(sources, idx)
       fields = model.__schema__(:fields)
-      Enum.map_join(fields, ", ", &"#{name}.#{&1}")
+      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
     defp expr({:in, _, [_left, []]}, _sources) do
@@ -352,15 +375,15 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     def execute_ddl({:create, %Table{} = table, columns}) do
-      "CREATE TABLE #{table.name} (#{column_definitions(columns)})"
+      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
     end
 
     def execute_ddl({:drop, %Table{name: name}}) do
-      "DROP TABLE #{name}"
+      "DROP TABLE #{quote_name(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
-      "ALTER TABLE #{table.name} #{column_changes(changes)}"
+      "ALTER TABLE #{quote_name(table.name)} #{column_changes(changes)}"
     end
 
     def execute_ddl({:create, %Index{}=index}) do
@@ -368,7 +391,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
       using = if index.using do "USING #{index.using}" end
 
-      assemble([create, index.name, "ON", index.table,
+      assemble([create, quote_name(index.name), "ON", quote_name(index.table),
                 using, "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
     end
 
@@ -376,7 +399,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([
         "DROP INDEX",
         if(index.concurrently, do: "CONCURRENTLY"),
-        index.name,
+        quote_name(index.name),
       ])
     end
 
@@ -387,7 +410,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp column_definition({:add, name, type, opts}) do
-      assemble([name, column_type(type, opts), column_options(name, opts)])
+      assemble([quote_name(name), column_type(type, opts), column_options(name, opts)])
     end
 
     defp column_changes(columns) do
@@ -395,14 +418,14 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp column_change({:add, name, type, opts}) do
-      assemble(["ADD COLUMN", name, column_type(type, opts), column_options(name, opts)])
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(name, opts)])
     end
 
     defp column_change({:modify, name, type, opts}) do
-      assemble(["ALTER COLUMN", name, "TYPE", column_type(type, opts)])
+      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts)])
     end
 
-    defp column_change({:remove, name}), do: "DROP COLUMN #{name}"
+    defp column_change({:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
 
     defp column_options(name, opts) do
       default = Keyword.get(opts, :default)
@@ -412,11 +435,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       [default_expr(default), null_expr(null), pk_expr(pk, name)]
     end
 
-    defp pk_expr(true, name), do: ", PRIMARY KEY(#{name})"
+    defp pk_expr(true, name), do: ", PRIMARY KEY(#{quote_name(name)})"
     defp pk_expr(_, _), do: nil
 
     defp null_expr(false), do: "NOT NULL"
-    defp null_expr(true), do: "NULL"
     defp null_expr(_), do: nil
 
     defp default_expr(nil),
@@ -428,10 +450,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp default_expr({:fragment, expr}),
       do: "DEFAULT #{expr}"
 
-    defp index_expr(literal), do: literal
+    defp index_expr(literal), do: quote_name(literal)
 
     defp column_type(%Reference{} = ref, opts) do
-      "#{column_type(ref.type, opts)} REFERENCES #{ref.table}(#{ref.column})"
+      "#{column_type(ref.type, opts)} REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})"
     end
 
     defp column_type(type, opts) do
@@ -449,6 +471,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     ## Helpers
+
+   defp quote_name(name), do: "`#{name}`"
 
     defp assemble(list) do
       list
