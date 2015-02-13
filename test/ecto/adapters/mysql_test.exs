@@ -422,6 +422,7 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:modify, :price, :numeric, [precision: 8, scale: 2]},
                 {:remove, :summary}]}
 
+   # TODO check this alter table syntax
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE `posts`
     ADD COLUMN `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
