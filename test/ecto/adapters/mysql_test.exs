@@ -109,8 +109,8 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "lock" do
-    query = Model |> lock("FOR SHARE NOWAIT") |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM `model` AS m0 FOR SHARE NOWAIT}
+    query = Model |> lock("LOCK IN SHARE MODE") |> select([], 0) |> normalize
+    assert SQL.all(query) == ~s{SELECT 0 FROM `model` AS m0 LOCK IN SHARE MODE}
   end
 
   test "string escape" do
@@ -211,11 +211,11 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "having" do
-    query = Model |> having([p], p.x == p.x) |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM `model` AS m0 HAVING (m0.`x` = m0.`x`)}
+    query = Model |> having([p], p.x == p.x) |> select([p], p.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0.`x` FROM `model` AS m0 HAVING (m0.`x` = m0.`x`)}
 
-    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 0 FROM `model` AS m0 HAVING (m0.`x` = m0.`x`) AND (m0.`y` = m0.`y`)}
+    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([p], [p.y, p.x]) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0.`y`, m0.`x` FROM `model` AS m0 HAVING (m0.`x` = m0.`x`) AND (m0.`y` = m0.`y`)}
   end
 
   test "group by" do
