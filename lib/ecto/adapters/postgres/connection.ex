@@ -99,7 +99,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {table, name, _model} = elem(sources, 0)
 
       join  = if query.joins != [], do: using(query.joins, sources)
-      where = if query.joins == [], do: where(query.wheres, sources)
+      where = where(query.wheres, sources)
 
       assemble(["DELETE FROM #{quote_name(table)} AS #{name}", join, where])
     end
@@ -177,11 +177,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp using([], _sources), do: nil
     defp using(joins, sources) do
       Enum.map_join(joins, " ", fn
-        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
+        %JoinExpr{ix: ix} ->
           {table, name, _model} = elem(sources, ix)
-          where = expr(expr, sources)
 
-          "USING #{quote_name(table)} AS #{name} WHERE " <> where
+          "USING #{quote_name(table)} AS #{name}"
       end)
     end
 

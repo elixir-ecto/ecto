@@ -318,9 +318,9 @@ defmodule Ecto.Integration.RepoTest do
     post = TestRepo.insert(%Post{title: "foo"})
     TestRepo.insert(%Comment{text: "hey", author_id: user.id, post_id: post.id})
     TestRepo.insert(%Comment{text: "foo", author_id: user.id, post_id: post.id})
-    TestRepo.insert(%Comment{text: "bar", post_id: post.id})
+    TestRepo.insert(%Comment{text: "bar", author_id: user.id})
 
-    query = from(c in Comment, join: u in User, on: u.id == c.author_id, where: c.post_id in ^[post.id])
+    query = from(c in Comment, join: u in User, where: u.id == c.author_id and c.post_id in ^[post.id])
     assert 2 = TestRepo.delete_all(query)
 
     assert [%Comment{}] = TestRepo.all(Comment)
