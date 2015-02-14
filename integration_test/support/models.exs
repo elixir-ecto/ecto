@@ -1,4 +1,4 @@
-Code.require_file "../../test/support/types.exs", __DIR__
+Code.require_file "types.exs", __DIR__
 
 defmodule Ecto.Integration.Post do
   use Ecto.Model

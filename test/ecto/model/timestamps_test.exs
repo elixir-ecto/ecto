@@ -1,5 +1,4 @@
 Code.require_file "../../support/mock_repo.exs", __DIR__
-Code.require_file "../../support/types.exs", __DIR__
 alias Ecto.MockRepo
 
 defmodule Ecto.Model.TimestampsTest do

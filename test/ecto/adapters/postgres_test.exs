@@ -1,4 +1,4 @@
-Code.require_file "../../../test/support/types.exs", __DIR__
+Code.require_file "../../../integration_test/support/types.exs", __DIR__
 
 defmodule Ecto.Adapters.PostgresTest do
   use ExUnit.Case, async: true
@@ -181,6 +181,9 @@ defmodule Ecto.Adapters.PostgresTest do
   test "tagged type" do
     query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
     assert SQL.all(query) == ~s{SELECT $1::uuid FROM "model" AS m0}
+
+    query = Model |> select([], type(^1, Custom.Permalink)) |> normalize
+    assert SQL.all(query) == ~s{SELECT $1::integer FROM "model" AS m0}
 
     query = Model |> select([], type(^[1,2,3], {:array, Custom.Permalink})) |> normalize
     assert SQL.all(query) == ~s{SELECT $1::integer[] FROM "model" AS m0}
