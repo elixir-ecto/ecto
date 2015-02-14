@@ -238,10 +238,16 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:default` - Sets the default value on the schema and the struct
-    * `:virtual` - When true, the field is not persisted
+    * `:default` - Sets the default value on the schema and the struct.
+      The default value is calculated at compilation time, so don't use
+      expressions like `Ecto.DateTime.local` or `Ecto.UUID.generate` as
+      they would then be the same for all records
+
+    * `:virtual` - When true, the field is not persisted to the database
+
     * `:read_after_writes` - When true, the field is always read back
-      from the repository after inserts and updates
+      from the repository after inserts and updates. This may not be
+      supported by all database adapters
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
