@@ -334,7 +334,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp expr(literal, _sources) when is_float(literal) do
-      String.Chars.Float.to_string(literal) <> "::float"
+      # MySQL doesn't support float cast
+      expr = String.Chars.Float.to_string(literal)
+      "(0 + #{expr})"
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, sources) when op in @binary_ops do
