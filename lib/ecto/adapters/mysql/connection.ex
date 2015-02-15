@@ -26,7 +26,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       case Mariaex.Connection.query(conn, sql, params, opts) do
         {:ok, %Mariaex.Result{} = result} -> {:ok, Map.from_struct(result)}
         {:error, %Mariaex.Error{}} =  err -> err
-        :ok -> {:ok, %{}}
       end
     end
 
