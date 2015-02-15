@@ -111,19 +111,19 @@ if Code.ensure_loaded?(Mariaex.Connection) do
           "() VALUES ()"
         else
           "(" <> Enum.map_join(fields, ", ", &quote_name/1) <> ") " <>
-          "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
+          "VALUES (" <> Enum.map_join(1..length(fields), ", ", fn (_) -> "?" end) <> ")"
         end
 
       "INSERT INTO #{quote_name(table)} " <> values
     end
 
     def update(table, filters, fields, _returning) do
-      {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
-        {"#{quote_name(field)} = $#{acc}", acc + 1}
+      filters = Enum.map filters, fn field  ->
+        "#{quote_name(field)} = ?"
       end
 
-      {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
-        {"#{quote_name(field)} = $#{acc}", acc + 1}
+      fields = Enum.map fields, fn field ->
+        "#{quote_name(field)} = ?"
       end
 
       "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <>
@@ -131,8 +131,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     def delete(table, filters, returning) do
-      {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
-        {"#{quote_name(field)} = $#{acc}", acc + 1}
+      filters = Enum.map filters, fn field ->
+        "#{quote_name(field)} = ?"
       end
 
       "DELETE FROM #{quote_name(table)} WHERE " <>
@@ -257,7 +257,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp expr({:^, [], [ix]}, _sources) do
-      "$#{ix+1}"
+      "?"
     end
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
@@ -281,7 +281,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources) do
-      args = Enum.map_join ix+1..ix+length, ",", &"$#{&1}"
+      args = Enum.map_join(ix+1..ix+length, ",", fn (_) -> "?" end)
       expr(left, sources) <> " IN (" <> args <> ")"
     end
 
@@ -368,6 +368,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     alias Ecto.Migration.Table
     alias Ecto.Migration.Index
     alias Ecto.Migration.Reference
+
     def ddl_exists(%Table{name: name}) do
       """
       SELECT COUNT(1)

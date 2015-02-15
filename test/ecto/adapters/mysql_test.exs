@@ -153,7 +153,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
     value = 13
     query = Model |> select([r], fragment("lcase(?, ?)", r.x, ^value)) |> normalize
-    assert SQL.all(query) == ~s{SELECT lcase(m0.`x`, $1) FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT lcase(m0.`x`, ?) FROM `model` AS m0}
   end
 
   test "literals" do
@@ -173,18 +173,18 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.all(query) == ~s{SELECT 123 FROM `model` AS m0}
 
     query = Model |> select([], 123.0) |> normalize
-    assert SQL.all(query) == ~s{SELECT 123.0::float FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT (0 + 123.0) FROM `model` AS m0}
   end
 
   test "tagged type" do
     query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
-    assert SQL.all(query) == ~s{SELECT CAST($1 AS binary(16)) FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT CAST(? AS binary(16)) FROM `model` AS m0}
   end
 
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
-    assert SQL.all(query) == ~s{SELECT ((m0.`x` > 0) AND (m0.`y` > $1)) OR TRUE FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT ((m0.`x` > 0) AND (m0.`y` > ?)) OR TRUE FROM `model` AS m0}
   end
 
   test "in expression" do
@@ -198,10 +198,10 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.all(query) == ~s{SELECT false FROM `model` AS m0}
 
     query = Model |> select([e], 1 in ^[1, 2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN ($1,$2,$3) FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (?,?,?) FROM `model` AS m0}
 
     query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 IN (1,$1,3) FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT 1 IN (1,?,3) FROM `model` AS m0}
   end
 
   test "having" do
@@ -251,10 +251,10 @@ defmodule Ecto.Adapters.MySQLTest do
             |> normalize
 
     result =
-      "SELECT $1 FROM `model` AS m0 INNER JOIN `model2` AS m1 ON $2 " <>
-      "INNER JOIN `model2` AS m2 ON $3 WHERE ($4) AND ($5) " <>
-      "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
-      "ORDER BY $10, m0.`x` LIMIT $11 OFFSET $12"
+      "SELECT ? FROM `model` AS m0 INNER JOIN `model2` AS m1 ON ? " <>
+      "INNER JOIN `model2` AS m2 ON ? WHERE (?) AND (?) " <>
+      "GROUP BY ?, ? HAVING (?) AND (?) " <>
+      "ORDER BY ?, m0.`x` LIMIT ? OFFSET ?"
 
     assert SQL.all(query) == String.rstrip(result)
   end
@@ -277,7 +277,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: quote(do: ^0)]) ==
-           ~s{UPDATE `model` AS m0 SET `x` = $1}
+           ~s{UPDATE `model` AS m0 SET `x` = ?}
   end
 
   test "delete all" do
@@ -348,27 +348,27 @@ defmodule Ecto.Adapters.MySQLTest do
   test "insert" do
     # TODO: Improve examples
     query = SQL.insert("model", [:x, :y], [])
-    assert query == ~s{INSERT INTO `model` (`x`, `y`) VALUES ($1, $2)}
+    assert query == ~s{INSERT INTO `model` (`x`, `y`) VALUES (?, ?)}
 
     query = SQL.insert("model", [], [])
     assert query == ~s{INSERT INTO `model` () VALUES ()}
   end
 
-  test "update" do
-    query = SQL.update("model", [:id], [:x, :y], [])
-    assert query == ~s{UPDATE `model` SET `x` = $2, `y` = $3 WHERE `id` = $1}
+   test "update" do
+     query = SQL.update("model", [:id], [:x, :y], [])
+     assert query == ~s{UPDATE `model` SET `x` = ?, `y` = ? WHERE `id` = ?}
 
-    query = SQL.update("model", [:id], [:x, :y], [])
-    assert query == ~s{UPDATE `model` SET `x` = $2, `y` = $3 WHERE `id` = $1}
-  end
+     query = SQL.update("model", [:id], [:x, :y], [])
+     assert query == ~s{UPDATE `model` SET `x` = ?, `y` = ? WHERE `id` = ?}
+   end
 
-  test "delete" do
-    query = SQL.delete("model", [:x, :y], [])
-    assert query == ~s{DELETE FROM `model` WHERE `x` = $1 AND `y` = $2}
+   test "delete" do
+     query = SQL.delete("model", [:x, :y], [])
+     assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
 
-    query = SQL.delete("model", [:x, :y], [])
-    assert query == ~s{DELETE FROM `model` WHERE `x` = $1 AND `y` = $2}
-  end
+     query = SQL.delete("model", [:x, :y], [])
+     assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
+   end
 
   # DDL
 
@@ -392,7 +392,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` integer , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`))|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`))|
   end
 
   test "create table with column options" do
