@@ -14,7 +14,7 @@ defmodule Ecto.Adapters.MySQL do
   ### Connection options
 
     * `:hostname` - Server hostname;
-    * `:port` - Server port (default: 5432);
+    * `:port` - Server port (default: 3306);
     * `:username` - Username;
     * `:password` - User password;
     * `:parameters` - Keyword list of connection parameters;
