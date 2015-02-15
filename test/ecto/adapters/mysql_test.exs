@@ -38,8 +38,6 @@ defmodule Ecto.Adapters.MySQLTest do
     use Ecto.Model
 
     schema "model3" do
-      field :list1, {:array, :string}
-      field :list2, {:array, :integer}
       field :binary, :binary
     end
   end
@@ -230,6 +228,13 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = Model |> group_by([r], []) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0.`x` FROM `model` AS m0}
+  end
+
+  test "arrays" do
+    assert_raise ArgumentError, "MySQL doesn't support Array type", fn ->
+      query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
+      SQL.all(query)
+    end
   end
 
   test "interpolated values" do
