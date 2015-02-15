@@ -178,11 +178,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "tagged type" do
     query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
-    assert SQL.all(query) == ~s{SELECT $1::binary(16) FROM `model` AS m0}
-
-    # TODO Test array
-    #query = Model |> select([], type(^[1,2,3], {:array, Custom.Permalink})) |> normalize
-    #assert SQL.all(query) == ~s{SELECT $1::integer[] FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT CAST($1 AS binary(16)) FROM `model` AS m0}
   end
 
   test "nested expressions" do
