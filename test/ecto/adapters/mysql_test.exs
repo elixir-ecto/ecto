@@ -264,7 +264,6 @@ defmodule Ecto.Adapters.MySQLTest do
   test "update all" do
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: 0]) ==
-    # TODO INSERT INTO POSTS () VALUES();
            ~s{UPDATE `model` AS m0 SET `x` = 0}
 
     query = from(e in Model, where: e.x == 123) |> normalize
@@ -346,7 +345,6 @@ defmodule Ecto.Adapters.MySQLTest do
   # Model based
 
   test "insert" do
-    # TODO: Improve examples
     query = SQL.insert("model", [:x, :y], [])
     assert query == ~s{INSERT INTO `model` (`x`, `y`) VALUES (?, ?)}
 
@@ -402,8 +400,6 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :on_hand, :integer, [default: 0, null: true]},
                 {:add, :is_active, :boolean, [default: true]}]}
 
-    # TODO CHECK THIS expr here
-
     assert SQL.execute_ddl(create) == """
     CREATE TABLE `posts` (`name` varchar(20) DEFAULT 'Untitled' NOT NULL,
     `price` numeric(8,2) DEFAULT expr,
@@ -423,7 +419,6 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:modify, :price, :numeric, [precision: 8, scale: 2]},
                 {:remove, :summary}]}
 
-   # TODO check this alter table syntax
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE `posts`
     ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
