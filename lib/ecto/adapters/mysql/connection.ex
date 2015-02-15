@@ -379,6 +379,15 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       """
     end
 
+    def ddl_exists(%Index{name: name}) do
+      """
+      SELECT COUNT(1)
+        FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = SCHEMA()
+         AND INDEX_NAME = '#{escape_string(to_string(name))}'
+      """
+    end
+
     def execute_ddl({:create, %Table{} = table, columns}) do
       "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
     end
