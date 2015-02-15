@@ -430,14 +430,14 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp column_change({:add, name, type, opts}) do
-      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(name, opts)])
+      assemble(["ADD", quote_name(name), column_type(type, opts), column_options(name, opts)])
     end
 
     defp column_change({:modify, name, type, opts}) do
-      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts)])
+      assemble(["MODIFY", quote_name(name), column_type(type, opts)])
     end
 
-    defp column_change({:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
+    defp column_change({:remove, name}), do: "DROP #{quote_name(name)}"
 
     defp column_options(name, opts) do
       default = Keyword.get(opts, :default)

@@ -426,9 +426,9 @@ defmodule Ecto.Adapters.MySQLTest do
    # TODO check this alter table syntax
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE `posts`
-    ADD COLUMN `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
-    ALTER COLUMN `price` TYPE numeric(8,2),
-    DROP COLUMN `summary`
+    ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
+    MODIFY `price` numeric(8,2),
+    DROP `summary`
     """ |> String.strip |> String.replace("\n", " ")
   end
 
