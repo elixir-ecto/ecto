@@ -56,5 +56,4 @@ _   = Ecto.Storage.down(TestRepo)
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
 
-# Uncomment when work on adapter MySQL.Connection starts
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)

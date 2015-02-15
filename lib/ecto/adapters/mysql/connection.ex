@@ -104,7 +104,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
-    # TODO INSERT INTO POSTS () VALUES();
+    # Returning isn't supported on MySQL
     def insert(table, fields, _returning) do
       values =
         if fields == [] do
@@ -496,7 +496,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp ecto_to_db(:datetime),   do: "timestamp"
     defp ecto_to_db(:binary),     do: "blob"
     defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
-    defp ecto_to_db({:array, _}), do: raise "MySQL doesn't support Array type." # MySQL does not support Array
+    defp ecto_to_db({:array, _}), do: raise "MySQL doesn't support Array type" # MySQL does not support Array
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end
