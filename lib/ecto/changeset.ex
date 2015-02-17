@@ -51,6 +51,7 @@ defmodule Ecto.Changeset do
       iex> changeset = change(post, title: "new title")
       iex> Repo.update(changeset)
       %Post{...}
+
   """
   @spec change(Ecto.Model.t, %{atom => term}) :: t
   def change(model, changes \\ %{})
@@ -321,6 +322,18 @@ defmodule Ecto.Changeset do
   to retrieve a value, this function looks at the changes and
   then falls back on the model, finally returning `:error` if
   no value is available.
+
+  ## Examples
+
+      iex> post = %Post{title: "Foo", body: "Bar baz bong"}
+      iex> changeset = change(post, %{title: "New title"})
+      iex> fetch_field(changeset, :title)
+      {:changes, "New title"}
+      iex> fetch_field(changeset, :body)
+      {:model, "Bar baz bong"}
+      iex> fetch_field(changeset, :not_a_field)
+      :error
+
   """
   @spec fetch_field(t, atom) :: {:changes, term} | {:model, term} | :error
   def fetch_field(%{changes: changes, model: model} = _changeset, key) do
@@ -341,6 +354,14 @@ defmodule Ecto.Changeset do
   to retrieve a value, this function looks at the changes and
   then falls back on the model, finally returning `default` if
   no value is available.
+
+      iex> post = %Post{title: "A title", body: "My body is a cage"}
+      iex> changeset = change(post, %{title: "A new title"})
+      iex> get_field(changeset, :title)
+      "A new title"
+      iex> get_field(changeset, :not_a_field, "Told you, not a field!")
+      "Told you, not a field!"
+
   """
   @spec get_field(t, atom, term) :: term
   def get_field(%{changes: changes, model: model} = _changeset, key, default \\ nil) do
@@ -355,7 +376,19 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Fetches a change.
+  Fetches a change from the given changeset.
+
+  This function only looks at the `:changes` field of the given `changeset` and
+  returns `{:ok, value}` if the change is present or `:error` if it's not.
+
+  ## Examples
+
+      iex> changeset = change(%Post{body: "foo"}, %{title: "bar"})
+      iex> fetch_change(changeset, :title)
+      {:ok, "bar"}
+      iex> fetch_change(changeset, :body)
+      :error
+
   """
   @spec fetch_change(t, atom) :: {:ok, term} | :error
   def fetch_change(%{changes: changes} = _changeset, key) when is_atom(key) do
@@ -363,7 +396,16 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Gets a change or returns default value.
+  Gets a change or returns a default value.
+
+  ## Examples
+
+      iex> changeset = change(%Post{body: "foo"}, %{title: "bar"})
+      iex> get_change(changeset, :title)
+      "bar"
+      iex> get_change(changeset, :body)
+      nil
+
   """
   @spec get_change(t, atom, term) :: term
   def get_change(%{changes: changes} = _changeset, key, default \\ nil) when is_atom(key) do
@@ -373,9 +415,17 @@ defmodule Ecto.Changeset do
   @doc """
   Updates a change.
 
-  The `function` is invoked with the change value only if there
-  is a change for the given `key`. Notice the value of the change
-  can still be nil (unless the field was marked as required on `cast/4`).
+  The given `function` is invoked with the change value only if there
+  is a change for the given `key`. Note that the value of the change
+  can still be `nil` (unless the field was marked as required on `cast/4`).
+
+  ## Examples
+
+      iex> changeset = change(%Post{}, %{impressions: 1})
+      iex> changeset = update_change(changeset, :impressions, &(&1 + 1))
+      iex> changeset.changes.impressions
+      2
+
   """
   @spec update_change(t, atom, (term -> term)) :: t
   def update_change(%{changes: changes} = changeset, key, function) when is_atom(key) do
@@ -389,7 +439,17 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Puts a change on the given key with value.
+  Puts a change on the given `key` with `value`.
+
+  If the change is already present, it is overridden with the new value.
+
+  ## Examples
+
+      iex> changeset = change(%Post{}, %{title: "foo"})
+      iex> changeset = put_change(changeset, :title, "bar")
+      iex> changeset.changes.title
+      "bar"
+
   """
   @spec put_change(t, atom, term) :: t
   def put_change(changeset, key, value) do
@@ -397,8 +457,8 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Puts a change on the given key only if a change with that key doesn't already
-  exist.
+  Puts a change on the given `key` only if a change with that key doesn't
+  already exist.
 
   ## Examples
 
@@ -417,6 +477,14 @@ defmodule Ecto.Changeset do
 
   @doc """
   Deletes a change with the given key.
+
+  ## Examples
+
+      iex> changeset = change(%Post{}, %{title: "foo"})
+      iex> changeset = delete_change(changeset, :title)
+      iex> get_change(changeset, :title)
+      nil
+
   """
   @spec delete_change(t, atom) :: t
   def delete_change(changeset, key) do
@@ -424,7 +492,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Applies the changeset changes to its model
+  Applies the changeset changes to the changeset model.
 
   Note this operation is automatically performed on `Ecto.Repo.insert/2` and
   `Ecto.Repo.update/2`, however this function is provided for
@@ -447,7 +515,12 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      add_error(changeset, :name, :invalid)
+      iex> changeset = change(%Post{}, %{title: ""})
+      iex> changeset = add_error(changeset, :title, :empty)
+      iex> changeset.errors
+      [title: :empty]
+      iex> changeset.valid?
+      false
 
   """
   @spec add_error(t, atom, error) :: t
@@ -460,12 +533,24 @@ defmodule Ecto.Changeset do
 
   It invokes the `validator` function to perform the validation
   only if a change for the given `field` exists and the change
-  value is not nil. The function must a list of errors (empty
-  meaning no errors).
+  value is not `nil`. The function must return a list of errors (with an
+  empty list meaning no errors).
 
-  In case of at least one error, they will be stored in the
-  `errors` field of the changeset and the `valid?` flag will
-  be set to false.
+  In case there's at least one error, the list of errors will be appended to the
+  `:errors` field of the changeset and the `:valid?` flag will be set to
+  `false`.
+
+  ## Examples
+
+      iex> changeset = change(%Post{}, %{title: "foo"})
+      iex> changeset = validate_change changeset, :title, fn
+      ...>   # Value must not be "foo"!
+      ...>   :title, "foo" -> [{:title, :is_foo}]
+      ...>   :title, _     -> []
+      ...> end
+      iex> changeset.errors
+      [{:title, :is_foo}]
+
   """
   @spec validate_change(t, atom, (atom, term -> [error])) :: t
   def validate_change(changeset, field, validator) when is_atom(field) do
@@ -487,6 +572,16 @@ defmodule Ecto.Changeset do
   into the changeset validators. The validator metadata is often used
   as a reflection mechanism, to automatically generate code based on
   the available validations.
+
+  ## Examples
+
+      iex> changeset = change(%Post{}, %{title: "foo"})
+      iex> changeset = validate_change changeset, :title, :useless_validator, fn
+      ...>   _, _ -> []
+      ...> end
+      iex> changeset.validations
+      [title: :useless_validator]
+
   """
   @spec validate_change(t, atom, any, (atom, term -> [error])) :: t
   def validate_change(%{validations: validations} = changeset, field, metadata, validator) do
@@ -496,6 +591,8 @@ defmodule Ecto.Changeset do
 
   @doc """
   Validates a change has the given format.
+
+  The format has to be expressed as a regular expression.
 
   ## Examples
 
@@ -510,12 +607,13 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates a change is included in the enumerable.
+  Validates a change is included in the given enumerable.
 
   ## Examples
 
       validate_inclusion(changeset, :gender, ["male", "female", "who cares?"])
       validate_inclusion(changeset, :age, 0..99)
+
   """
   @spec validate_inclusion(t, atom, Enum.t) :: t
   def validate_inclusion(changeset, field, data) do
@@ -525,7 +623,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates a change is not in the enumerable.
+  Validates a change is not included in given the enumerable.
 
   ## Examples
 
@@ -540,37 +638,36 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates `field`'s uniqueness on `Repo`.
+  Validates the given `field`'s uniqueness on the given repository.
 
   ## Examples
 
       validate_unique(changeset, :email, on: Repo)
 
-
   ## Options
 
     * `:on` - the repository to perform the query on
-    * `:downcase` - when true, downcase values when performing the uniqueness query
+    * `:downcase` - when `true`, downcase values when performing the uniqueness query
 
   ## Case sensitivity
 
   Unfortunately, different databases provide different guarantees
-  when it comes to case sensitive. For example, in MySQL, comparisons
-  are case insensitive. In Postgres, users can define case insensitive
+  when it comes to case-sensitiveness. For example, in MySQL, comparisons
+  are case-insensitive by default. In Postgres, users can define case insensitive
   column by using the `:citext` type/extension.
 
-  Those facts make it hard for Ecto to guarantee if the unique
-  validation is case insensitive or not and therefore it **does not**
+  These behaviours make it hard for Ecto to guarantee if the unique
+  validation is case insensitive or not and that's why Ecto **does not**
   provide a `:case_sensitive` option.
 
-  However this function does provide a `:downcase` option that
+  However `validate_unique/3` does provide a `:downcase` option that
   guarantees values are downcased when doing the uniqueness check.
-  When you set this option, values are downcased regardless of the
-  database you are using.
+  When this option is set, values are downcased regardless of the
+  database being used.
 
   Since the `:downcase` option downcases the database values on the
-  fly, use it with care as it may affect performance. For example,
-  if you must use this option, you may want to set an index with the
+  fly, it should be uses with care as it may affect performance. For example,
+  if this option is used, it could be appropriate to create an index with the
   downcased value. Using `Ecto.Migration` syntax, one could write:
 
       create index(:posts, ["lower(title)"])
@@ -578,6 +675,9 @@ defmodule Ecto.Changeset do
   Many times though, you don't even need to use the downcase option
   at `validate_unique/3` and instead you can explicitly downcase
   values before inserting them into the database:
+  Many times, however, it's even simpler to just explicitly downcase values
+  before inserting them into the database (and avoid the `:downcase` option in
+  `validate_unique/3`):
 
       cast(params, model, ~w(email), ~w())
       |> update_change(:email, &String.downcase/1)
@@ -617,6 +717,15 @@ defmodule Ecto.Changeset do
 
   @doc """
   Validates a change is a string of the given length.
+
+  ## Length
+
+  The length that the given string should have can be expressed through a range
+  (the string length must be in the range) or with a series of options:
+
+    * `:is` - the string length must be exactly this value
+    * `:min` - the string length must be greater than or equal to this value
+    * `:max` - the string lenght must be less than or equal to this value
 
   ## Examples
 
