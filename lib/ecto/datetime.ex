@@ -56,11 +56,6 @@ defmodule Ecto.Date do
   def type, do: :date
 
   @doc """
-  Dates are blank when given as strings and the string is blank.
-  """
-  defdelegate blank?(value), to: Ecto.Type
-
-  @doc """
   Casts to date.
   """
   def cast(<<year::32, ?-, month::16, ?-, day::16>>),
@@ -126,11 +121,6 @@ defmodule Ecto.Time do
   The Ecto primitive type.
   """
   def type, do: :time
-
-  @doc """
-  Times are blank when given as strings and the string is blank.
-  """
-  defdelegate blank?(value), to: Ecto.Type
 
   @doc """
   Casts to time.
@@ -199,11 +189,6 @@ defmodule Ecto.DateTime do
   The Ecto primitive type.
   """
   def type, do: :datetime
-
-  @doc """
-  Datetimes are blank when given as strings and the string is blank.
-  """
-  defdelegate blank?(value), to: Ecto.Type
 
   @doc """
   Casts to date time.

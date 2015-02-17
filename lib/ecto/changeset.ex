@@ -176,10 +176,10 @@ defmodule Ecto.Changeset do
     {key,
       case cast_field(param_key, type, params) do
         {:ok, value} ->
-          {Map.put(changes, key, value), error_on_blank(type, key, value, errors)}
+          {Map.put(changes, key, value), error_on_nil(key, value, errors)}
         :missing ->
           value = Map.get(model, key)
-          {changes, error_on_blank(type, key, value, errors)}
+          {changes, error_on_nil(key, value, errors)}
         :invalid ->
           {changes, [{key, :invalid}|errors]}
       end}
@@ -235,8 +235,8 @@ defmodule Ecto.Changeset do
     end) || params
   end
 
-  defp error_on_blank(type, key, value, errors) do
-    if Ecto.Type.blank?(type, value) do
+  defp error_on_nil(key, value, errors) do
+    if is_nil value do
       [{key, :required}|errors]
     else
       errors

@@ -38,9 +38,6 @@ defmodule Ecto.Type do
         # Everything else is a failure though
         def cast(_), do: :error
 
-        # Integers are never considered blank
-        def blank?(_), do: false
-
         # When loading data from the database, we are guaranteed to
         # receive an integer (as database are stricts) and we will
         # just return it to be stored in the model struct.
@@ -99,15 +96,6 @@ defmodule Ecto.Type do
   structures, the type function should return `:datetime`.
   """
   defcallback type :: basic | custom
-
-  @doc """
-  Returns if the value is considered blank/empty for this type.
-
-  This function is called by `Ecto.Changeset` after the value
-  has been `cast/1`, therefore it receives the values returned
-  by `cast/1`.
-  """
-  defcallback blank?(term) :: boolean
 
   @doc """
   Casts the given input to the custom type.
@@ -480,70 +468,6 @@ defmodule Ecto.Type do
       :error -> raise ArgumentError, "cannot cast `#{inspect term}` to type #{inspect type}"
     end
   end
-
-  @doc """
-  Checks if an already cast value is blank.
-
-  This is used by `Ecto.Changeset.cast/4` when casting required fields.
-
-      iex> blank?(:string, nil)
-      true
-      iex> blank?(:integer, nil)
-      true
-
-      iex> blank?(:string, "")
-      true
-      iex> blank?(:string, "  ")
-      true
-      iex> blank?(:string, "hello")
-      false
-
-      iex> blank?({:array, :integer}, [])
-      true
-      iex> blank?({:array, :integer}, [1, 2, 3])
-      false
-
-      iex> blank?({:array, Whatever}, [])
-      true
-      iex> blank?({:array, Whatever}, [1, 2, 3])
-      false
-
-  """
-  @spec blank?(t, term) :: boolean
-  def blank?(_type, nil), do: true
-
-  def blank?({:array, _}, value), do: value == []
-
-  def blank?(type, value) do
-    if primitive?(type) do
-      blank?(value)
-    else
-      type.blank?(value)
-    end
-  end
-
-  @doc ~S"""
-  Checks if a value is blank.
-
-  This is an implementation that can be used by custom types,
-  typically tupes that are attempting to cast values from
-  strings.
-
-  Strings made only of spaces are considered blank.
-
-      iex> blank?("")
-      true
-      iex> blank?("foo")
-      false
-      iex> blank?("   ")
-      true
-      iex> blank?("\t")
-      true
-
-  """
-  def blank?(""), do: true
-  def blank?(string) when is_binary(string), do: String.lstrip(string) == ""
-  def blank?(_), do: false
 
   ## Helpers
 

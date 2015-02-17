@@ -7,7 +7,6 @@ defmodule Ecto.TypeTest do
     def load(_),   do: {:ok, :load}
     def dump(_),   do: {:ok, :dump}
     def cast(_),   do: {:ok, :cast}
-    def blank?(_), do: false
   end
 
   import Kernel, except: [match?: 2], warn: false
@@ -18,12 +17,10 @@ defmodule Ecto.TypeTest do
     assert load(Custom, "foo") == {:ok, :load}
     assert dump(Custom, "foo") == {:ok, :dump}
     assert cast(Custom, "foo") == {:ok, :cast}
-    refute blank?(Custom, "foo")
 
     assert load(Custom, nil) == {:ok, nil}
     assert dump(Custom, nil) == {:ok, %Ecto.Query.Tagged{type: :custom, value: nil}}
     assert cast(Custom, nil) == {:ok, nil}
-    assert blank?(Custom, nil)
   end
 
   test "boolean types" do

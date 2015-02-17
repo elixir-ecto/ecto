@@ -116,27 +116,21 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: blank errors" do
-    for title <- [nil, "", "   "] do
-      changeset = cast(%{"title" => title}, %Post{}, ~w(title), ~w())
-      assert changeset.errors == [title: :required]
-      refute changeset.valid?
-    end
+  test "cast/4: required errors" do
+    changeset = cast(%{"title" => nil}, %Post{}, ~w(title), ~w())
+    assert changeset.errors == [title: :required]
+    refute changeset.valid?
 
-    for title <- [nil, "", "   "] do
-      changeset = cast(%{}, %Post{title: title}, ~w(title), ~w())
-      assert changeset.errors == [title: :required]
-      refute changeset.valid?
-    end
+    changeset = cast(%{}, %Post{title: nil}, ~w(title), ~w())
+    assert changeset.errors == [title: :required]
+    refute changeset.valid?
 
-    for title <- [nil, "", "   "] do
-      changeset = cast(%{"title" => title}, %Post{title: "valid"}, ~w(title), ~w())
-      assert changeset.errors == [title: :required]
-      refute changeset.valid?
-    end
+    changeset = cast(%{"title" => nil}, %Post{title: "valid"}, ~w(title), ~w())
+    assert changeset.errors == [title: :required]
+    refute changeset.valid?
   end
 
-  test "cast/4: is not blank if model is correct" do
+  test "cast/4: does not mark as required if model contains field" do
     changeset = cast(%{}, %Post{title: "valid"}, ~w(title), ~w())
     assert changeset.errors == []
     assert changeset.valid?

@@ -9,9 +9,7 @@ defmodule Custom.Permalink do
   end
 
   def cast(integer) when is_integer(integer), do: {:ok, integer}
-
   def cast(_), do: :error
-  def blank?(_), do: false
 
   def load(integer) when is_integer(integer), do: {:ok, integer}
   def dump(integer) when is_integer(integer), do: {:ok, integer}
