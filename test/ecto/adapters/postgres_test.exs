@@ -297,9 +297,9 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.delete_all(query) ==
            ~s{DELETE FROM "model" AS m0 WHERE (m0."x" = 123)}
 
-    query = Model |> join(:inner, [p], q in Model2) |> normalize
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
     assert SQL.delete_all(query) ==
-           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1}
+           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z"}
   end
 
   ## Joins
