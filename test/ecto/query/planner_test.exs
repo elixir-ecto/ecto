@@ -296,13 +296,13 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: only filters" do
-    query = from(Post, []) |> normalize([], only_filters: true)
+    query = from(Post, []) |> normalize([], only_filters: :sample)
     assert is_nil query.select
 
-    message = ~r"only `where` expressions are allowed in query"
+    message = ~r"`sample` allows only `where` and `join` expressions in query"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(p in Post, select: p)
-      normalize(query, [], only_filters: true)
+      normalize(query, [], only_filters: :sample)
     end
   end
 

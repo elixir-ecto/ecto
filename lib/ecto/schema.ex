@@ -32,8 +32,8 @@ defmodule Ecto.Schema do
 
     * `@primary_key` - configures the schema primary key. It expects
       a tuple with the primary key name, type and options. Defaults
-      to `{:id, :integer, []}`. When set to false, does not define
-      a primary key in the model;
+      to `{:id, :integer, [read_after_writes: true]}`. When set to
+      false, does not define a primary key in the model;
 
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. Defaults to `:integer`;
@@ -173,7 +173,7 @@ defmodule Ecto.Schema do
   defmacro __using__(_) do
     quote do
       import Ecto.Schema, only: [schema: 2]
-      @primary_key {:id, :integer, []}
+      @primary_key {:id, :integer, [read_after_writes: true]}
       @timestamps_type Ecto.DateTime
       @foreign_key_type :integer
     end
@@ -227,7 +227,7 @@ defmodule Ecto.Schema do
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__primary_key__(primary_key_field),
         Ecto.Schema.__load__(fields),
-        Ecto.Schema.__read_after_writes__(primary_key_field, @ecto_raw)]
+        Ecto.Schema.__read_after_writes__(@ecto_raw)]
     end
   end
 
@@ -646,11 +646,7 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __read_after_writes__(primary_key, fields) do
-    if primary_key do
-      fields = [primary_key|List.delete(fields, primary_key)]
-    end
-
+  def __read_after_writes__(fields) do
     quote do
       def __schema__(:read_after_writes), do: unquote(fields)
     end

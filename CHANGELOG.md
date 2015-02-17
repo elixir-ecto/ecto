@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.9.0-dev
+
+* Enhancements
+  * Log when migration is already up/down
+  * Support joins besides wheres in `update_all` and `delete_all`
+
+* Backwards incompatible changes
+  * Primary keys are no longer automatically marked with `read_after_writes`. If you have a custom primary key that is AUTO INCREMENT/SERIAL in the database, you will have to pass `read_after_writes: true` to its schema definition
+  * Remove blank checks from `Ecto.Changeset.cast/4` (you should automatically set the parameters values to nil before calling `cast/4`)
+
 ## v0.8.1 (2015-02-13)
 
 * Bug fixes

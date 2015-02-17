@@ -111,7 +111,7 @@ defmodule Ecto.RepoTest do
       MockRepo.update_all(p in MyModel, x: ^123)
     end
 
-    message = ~r"only `where` expressions are allowed in query"
+    message = ~r"`update_all` allows only `where` and `join` expressions in query"
     assert_raise Ecto.QueryError, message, fn ->
       MockRepo.update_all(from(e in MyModel, order_by: e.x), x: "123")
     end

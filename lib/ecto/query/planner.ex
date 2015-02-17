@@ -284,16 +284,16 @@ defmodule Ecto.Query.Planner do
   its fields and associations exist and are valid.
   """
   def normalize(query, base, opts) do
-    only_filters? = Keyword.get(opts, :only_filters, false)
+    only_filters = Keyword.get(opts, :only_filters)
 
-    if only_filters? do
-      assert_filtered_expressions!(query)
+    if only_filters do
+      assert_filtered_expressions!(query, only_filters)
     end
 
     query
     |> traverse_exprs(length(base), &validate_and_increment/4)
     |> elem(0)
-    |> normalize_select(only_filters?)
+    |> normalize_select(only_filters)
     |> validate_assocs
   rescue
     e ->
@@ -364,9 +364,9 @@ defmodule Ecto.Query.Planner do
   end
 
   # Normalize the select field.
-  defp normalize_select(query, only_where?) do
+  defp normalize_select(query, only_where) do
     cond do
-      only_where? ->
+      only_where ->
         query
       select = query.select ->
         %{query | select: normalize_fields(query, select)}
@@ -525,14 +525,14 @@ defmodule Ecto.Query.Planner do
     raise Ecto.CastError, message: message
   end
 
-  defp assert_filtered_expressions!(query) do
+  defp assert_filtered_expressions!(query, context) do
     case query do
       %Ecto.Query{select: nil, order_bys: [], limit: nil, offset: nil,
-                  group_bys: [], havings: [], preloads: [], assocs: [], distincts: [],
-                  lock: nil} ->
+                  group_bys: [], havings: [], preloads: [], assocs: [],
+                  distincts: [], lock: nil} ->
         query
       _ ->
-        error! query, "only `where` expressions are allowed"
+        error! query, "`#{context}` allows only `where` and `join` expressions"
     end
   end
 

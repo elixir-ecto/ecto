@@ -94,7 +94,7 @@ defmodule Ecto.Repo.Queryable do
 
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(params, only_filters: true)
+      |> Planner.query(params, only_filters: :update_all)
     adapter.update_all(repo, query, updates, params, opts)
   end
 
@@ -104,7 +104,7 @@ defmodule Ecto.Repo.Queryable do
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query([], only_filters: true)
+      |> Planner.query([], only_filters: :delete_all)
     adapter.delete_all(repo, query, params, opts)
   end
 
