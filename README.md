@@ -97,6 +97,7 @@ To contribute you need to compile Ecto from source and test it:
 ```
 $ git clone https://github.com/elixir-lang/ecto.git
 $ cd ecto
+$ mix deps.get
 $ mix test
 ```
 

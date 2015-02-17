@@ -61,7 +61,7 @@ defmodule Ecto.Model do
   end
 
   @doc """
-  Builds a structs from the given `assoc` in `model`.
+  Builds a struct from the given `assoc` in `model`.
 
   ## Examples
 
@@ -71,7 +71,7 @@ defmodule Ecto.Model do
 
       iex> post = Repo.get(Post, 13)
       %Post{id: 13}
-      iex> build(post, :comment)
+      iex> build(post, :comments)
       %Comment{id: nil, post_id: 13}
 
   Note though it doesn't happen with belongs to cases, as the
@@ -128,7 +128,7 @@ defmodule Ecto.Model do
 
   defp assert_struct!(model, %{__struct__: struct}) do
     if struct != model do
-      raise ArgumentError, "expected an homogeneous list containing the same struct, " <>
+      raise ArgumentError, "expected a homogeneous list containing the same struct, " <>
                            "got: #{inspect model} and #{inspect struct}"
     else
       true
