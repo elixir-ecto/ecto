@@ -209,7 +209,7 @@ defmodule Ecto.AssociationsTest do
   end
 
   test "assoc/2 fails on heterogeneous collections" do
-    assert_raise ArgumentError, ~r"expected an homogeneous list containing the same struct", fn ->
+    assert_raise ArgumentError, ~r"expected a homogeneous list containing the same struct", fn ->
       assoc([%Post{}, %Comment{}], :comments)
     end
   end
