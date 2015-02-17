@@ -231,7 +231,7 @@ defmodule Ecto.Integration.RepoTest do
     comment = TestRepo.insert(%Comment{text: "hey", author_id: user.id, post_id: post.id})
 
     query = from(c in Comment, join: u in User, on: u.id == c.author_id, where: c.post_id in ^[post.id])
-    TestRepo.update_all(query, text: "hoo")
+    assert 1 = TestRepo.update_all(query, text: "hoo")
 
     assert %Comment{text: "hoo"} = TestRepo.get(Comment, comment.id)
   end
