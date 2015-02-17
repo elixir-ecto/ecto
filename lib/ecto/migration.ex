@@ -417,8 +417,8 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      create table(:product) do
-        add :category_id, references(:category)
+      create table(:products) do
+        add :group_id, references(:groups)
       end
 
   ## Options
