@@ -87,21 +87,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
-      where = where(query.wheres, sources)
-      where = if where, do: " " <> where, else: ""
+      update = update_expr(query.joins, table, name)
+      join   = update_all_join(query.joins, sources)
+      where  = where(query.wheres, sources)
 
-      "UPDATE #{quote_name(table)} AS #{name} " <>
-      "SET " <> zipped_sql <>
-      where
+      assemble([update, "SET", zipped_sql, join, where])
     end
 
     def delete_all(query) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      where = where(query.wheres, sources)
-      where = if where, do: " " <> where, else: ""
-      "DELETE FROM #{quote_name(table)} AS #{name}" <> where
+      join  = using(query.joins, sources)
+      where = delete_all_where(query.joins, query.wheres, sources)
+
+      assemble(["DELETE FROM #{quote_name(table)} AS #{name}", join, where])
     end
 
     def insert(table, fields, returning) do
@@ -174,6 +174,30 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "FROM #{quote_name(table)} AS #{name}"
     end
 
+    defp using([], _sources), do: nil
+    defp using(joins, sources) do
+      Enum.map_join(joins, " ", fn
+        %JoinExpr{on: %QueryExpr{expr: expr}, ix: ix} ->
+          {table, name, _model} = elem(sources, ix)
+
+          where = expr(expr, sources)
+
+          "USING #{quote_name(table)} AS #{name} WHERE " <> where
+      end)
+    end
+
+    defp update_expr([], table, name) do
+      "UPDATE #{quote_name(table)} AS #{name}"
+    end
+    defp update_expr(_joins, table, _name) do
+      "UPDATE #{quote_name(table)}"
+    end
+
+    defp update_all_join([], _sources), do: nil
+    defp update_all_join(joins, sources) do
+      from(sources) <> " "  <> join(joins, sources)
+    end
+
     defp join([], _sources), do: nil
     defp join(joins, sources) do
       Enum.map_join(joins, " ", fn
@@ -191,6 +215,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp join_qual(:left),  do: "LEFT OUTER"
     defp join_qual(:right), do: "RIGHT OUTER"
     defp join_qual(:full),  do: "FULL OUTER"
+
+    defp delete_all_where([], wheres, sources) do
+      where(wheres, sources)
+    end
+    defp delete_all_where(_joins, wheres, sources) do
+      boolean("AND", wheres, sources)
+    end
 
     defp where(wheres, sources) do
       boolean("WHERE", wheres, sources)
