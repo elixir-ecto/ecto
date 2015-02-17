@@ -87,9 +87,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
-      update = if query.joins != [], do: "UPDATE #{quote_name(table)}", else: "UPDATE #{quote_name(table)} AS #{name}"
-      join  = if query.joins != [], do: from(sources) <> " "  <> join(query.joins, sources)
-      where = where(query.wheres, sources)
+      update = update_expr(query.joins, table, name)
+      join   = update_all_join(query.joins, sources)
+      where  = where(query.wheres, sources)
 
       assemble([update, "SET", zipped_sql, join, where])
     end
@@ -99,7 +99,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {table, name, _model} = elem(sources, 0)
 
       join  = using(query.joins, sources)
-      where = if query.joins != [], do: boolean("AND", query.wheres, sources), else: where(query.wheres, sources)
+      where = delete_all_where(query.joins, query.wheres, sources)
 
       assemble(["DELETE FROM #{quote_name(table)} AS #{name}", join, where])
     end
@@ -186,6 +186,18 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end)
     end
 
+    defp update_expr([], table, name) do
+      "UPDATE #{quote_name(table)} AS #{name}"
+    end
+    defp update_expr(_joins, table, _name) do
+      "UPDATE #{quote_name(table)}"
+    end
+
+    defp update_all_join([], _sources), do: nil
+    defp update_all_join(joins, sources) do
+      from(sources) <> " "  <> join(joins, sources)
+    end
+
     defp join([], _sources), do: nil
     defp join(joins, sources) do
       Enum.map_join(joins, " ", fn
@@ -203,6 +215,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp join_qual(:left),  do: "LEFT OUTER"
     defp join_qual(:right), do: "RIGHT OUTER"
     defp join_qual(:full),  do: "FULL OUTER"
+
+    defp delete_all_where([], wheres, sources) do
+      where(wheres, sources)
+    end
+    defp delete_all_where(_joins, wheres, sources) do
+      boolean("AND", wheres, sources)
+    end
 
     defp where(wheres, sources) do
       boolean("WHERE", wheres, sources)
