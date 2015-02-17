@@ -41,6 +41,17 @@ defmodule Ecto.Query.Builder.Select do
     {expr, params}
   end
 
+  # Map
+  defp escape({:%{}, _, pairs}, params, vars) do
+    {pairs, params} = Enum.map_reduce pairs, params, fn({k, v}, acc) ->
+      {expr, params} = escape(v, acc, vars)
+      {{k, expr}, params}
+    end
+
+    expr = {:{}, [], [:%{}, [], pairs]}
+    {expr, params}
+  end
+
   # List
   defp escape(list, params, vars) when is_list(list) do
     Enum.map_reduce(list, params, &escape(&1, &2, vars))
