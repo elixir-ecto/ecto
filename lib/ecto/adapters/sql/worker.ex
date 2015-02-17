@@ -118,12 +118,14 @@ defmodule Ecto.Adapters.SQL.Worker do
         module.savepoint "ecto_#{trans}"
       end
 
+    # Increase the transaction counter as rollback should be triggered.
+    s = %{s | transactions: trans + 1}
+
     case module.query(conn, sql, [], opts) do
       {:ok, _} ->
-        {:reply, :ok, %{s | transactions: trans + 1}}
+        {:reply, :ok, s}
       {:error, _} = err ->
-        GenServer.reply(from, err)
-        wipe_state(s)
+        {:reply, err, s}
     end
   end
 
@@ -132,19 +134,16 @@ defmodule Ecto.Adapters.SQL.Worker do
 
     reply =
       case trans do
-        1 ->
-          # We don't need to check if the tx is aborted because Postgres doesn't error when
-          # COMMITing a transaction that's aborted, it just "returns" ROLLBACK instead of COMMIT.
-          module.query(conn, module.commit, [], opts)
-        _ -> {:ok, {[], 0}}
+        1 -> module.query(conn, module.commit, [], opts)
+        _ -> {:ok, %{}}
       end
 
     case reply do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: trans - 1}}
       {:error, _} = err ->
-        GenServer.reply(from, err)
-        wipe_state(s)
+        # Don't change the transaction counter as rollback should be triggered.
+        {:reply, err, s}
     end
   end
 
@@ -157,12 +156,23 @@ defmodule Ecto.Adapters.SQL.Worker do
         _ -> module.rollback_to_savepoint "ecto_#{trans-1}"
       end
 
+    # Always reduce the transaction counter as the user
+    # will exit the transaction block anyway.
+    s = %{s | transactions: trans - 1}
+
     case module.query(conn, sql, [], opts) do
       {:ok, _} ->
-        {:reply, :ok, %{s | transactions: trans - 1}}
+        {:reply, :ok, s}
+      {:error, _} = err when trans == 1 ->
+        # We don't know if we actually rolled back, so it is best
+        # to completely drop the connection.
+        #
+        # In any case, we don't need to worry about the client as
+        # it should not expect any state in the connection anyway.
+        module.disconnect(conn)
+        {:reply, err, %{s | conn: nil}}
       {:error, _} = err ->
-        GenServer.reply(from, err)
-        wipe_state(s)
+        {:reply, err, s}
     end
   end
 
@@ -181,15 +191,12 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, :ok, s}
   end
 
-  def handle_call({:restart_test_transaction, opts}, from, %{transactions: 1} = s) do
+  def handle_call({:restart_test_transaction, opts}, _from, %{transactions: 1} = s) do
     %{conn: conn, module: module} = s
 
     case module.query(conn, module.rollback_to_savepoint("ecto_sandbox"), [], opts) do
-      {:ok, _} ->
-        {:reply, :ok, s}
-      {:error, _} = err ->
-        GenServer.reply(from, err)
-        wipe_state(s)
+      {:ok, _} -> {:reply, :ok, s}
+      {:error, _} = err -> {:reply, err, s}
     end
   end
 
@@ -204,8 +211,7 @@ defmodule Ecto.Adapters.SQL.Worker do
       {:ok, _} ->
         {:reply, :ok, %{s | transactions: 0, sandbox: false}}
       {:error, _} = err ->
-        GenServer.reply(from, err)
-        wipe_state(s)
+        {:reply, err, s}
     end
   end
 
