@@ -20,6 +20,8 @@ defmodule Ecto.Migrator do
 
   """
 
+  require Logger
+
   alias Ecto.Migration.Runner
   alias Ecto.Migration.SchemaMigration
 
@@ -193,6 +195,11 @@ defmodule Ecto.Migrator do
   end
 
   defp migrate(migrations, direction, repo, opts) do
+    if Enum.empty? migrations do
+      level = Keyword.get(opts, :log, :info)
+      log(level, "Already #{direction}")
+    end
+
     ensure_no_duplication(migrations)
 
     Enum.map migrations, fn {version, file} ->
@@ -223,4 +230,8 @@ defmodule Ecto.Migrator do
   defp raise_no_migration_in_file(file) do
     raise Ecto.MigrationError, message: "file #{Path.relative_to_cwd(file)} does not contain any Ecto.Migration"
   end
+
+  defp log(false, _msg), do: :ok
+  defp log(level, msg),  do: Logger.log(level, msg)
+
 end
