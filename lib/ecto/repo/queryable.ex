@@ -136,12 +136,10 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp transform_row({:%{}, _, pairs}, from, values) do
-    {result, values} = Enum.map_reduce pairs, values, fn({k, v}, acc) ->
-      {v, values} = transform_row(v, from, acc)
-      {{k, v}, values}
+    Enum.reduce pairs, {%{}, values}, fn({key, value}, {map, values_acc}) ->
+      {value, new_values} = transform_row(value, from, values_acc)
+      {Map.put(map, key, value), new_values}
     end
-
-    {Enum.into(result, %{}), values}
   end
 
   defp transform_row(list, from, values) when is_list(list) do
