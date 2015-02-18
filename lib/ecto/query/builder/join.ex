@@ -124,7 +124,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   defp escape_on(on, binding, env) do
-    {on, params} = Builder.escape(on, :boolean, %{}, binding)
+    {on, params} = Builder.escape(on, :boolean, %{}, binding, env)
     params       = Builder.escape_params(params)
 
     quote do: %Ecto.Query.QueryExpr{

@@ -66,7 +66,7 @@ defmodule Ecto.Repo.Queryable do
 
     {updates, params} =
       Enum.map_reduce(values, %{}, fn {field, expr}, params ->
-        {expr, params} = Builder.escape(expr, {0, field}, params, binds)
+        {expr, params} = Builder.escape(expr, {0, field}, params, binds, __ENV__)
         {{field, {Builder.primitive_type(expr, binds), expr}}, params}
       end)
 

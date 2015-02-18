@@ -11,50 +11,50 @@ defmodule Ecto.Query.Builder.Select do
 
   ## Examples
 
-      iex> escape({1, 2}, [])
+      iex> escape({1, 2}, [], __ENV__)
       {{:{}, [], [:{}, [], [1, 2]]}, %{}}
 
-      iex> escape([1, 2], [])
+      iex> escape([1, 2], [], __ENV__)
       {[1, 2], %{}}
 
-      iex> escape(quote(do: x), [x: 0])
+      iex> escape(quote(do: x), [x: 0], __ENV__)
       {{:{}, [], [:&, [], [0]]}, %{}}
 
-      iex> escape(quote(do: ^123), [])
+      iex> escape(quote(do: ^123), [], __ENV__)
       {{:{}, [], [:^, [], [0]]}, %{0 => {123, :any}}}
 
   """
-  @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
-  def escape(other, vars) do
-    escape(other, %{}, vars)
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  def escape(other, vars, env) do
+    escape(other, %{}, vars, env)
   end
 
   # Tuple
-  defp escape({left, right}, params, vars) do
-    escape({:{}, [], [left, right]}, params, vars)
+  defp escape({left, right}, params, vars, env) do
+    escape({:{}, [], [left, right]}, params, vars, env)
   end
 
   # Tuple
-  defp escape({:{}, _, list}, params, vars) do
-    {list, params} = Enum.map_reduce(list, params, &escape(&1, &2, vars))
+  defp escape({:{}, _, list}, params, vars, env) do
+    {list, params} = Enum.map_reduce(list, params, &escape(&1, &2, vars, env))
     expr = {:{}, [], [:{}, [], list]}
     {expr, params}
   end
 
   # List
-  defp escape(list, params, vars) when is_list(list) do
-    Enum.map_reduce(list, params, &escape(&1, &2, vars))
+  defp escape(list, params, vars, env) when is_list(list) do
+    Enum.map_reduce(list, params, &escape(&1, &2, vars, env))
   end
 
   # var - where var is bound
-  defp escape({var, _, context}, params, vars)
+  defp escape({var, _, context}, params, vars, _env)
       when is_atom(var) and is_atom(context) do
     expr = Builder.escape_var(var, vars)
     {expr, params}
   end
 
-  defp escape(other, params, vars) do
-    Builder.escape(other, :any, params, vars)
+  defp escape(other, params, vars, env) do
+    Builder.escape(other, :any, params, vars, env)
   end
 
   @doc """
@@ -67,7 +67,7 @@ defmodule Ecto.Query.Builder.Select do
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
     binding        = Builder.escape_binding(binding)
-    {expr, params} = escape(expr, binding)
+    {expr, params} = escape(expr, binding, env)
     params         = Builder.escape_params(params)
 
     select = quote do: %Ecto.Query.SelectExpr{
