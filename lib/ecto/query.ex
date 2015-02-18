@@ -378,8 +378,8 @@ defmodule Ecto.Query do
 
   The sub-expressions in the query can be wrapped in lists, tuples or maps as
   shown in the examples. A full model can also be selected. Note that map keys
-  can only be atoms, binaries, integers or floats otherwise an `ArgumentError`
-  exception is raised at compile-time.
+  can only be atoms, binaries, integers or floats otherwise an
+  `Ecto.Query.CompileError` exception is raised at compile-time.
 
   ## Keywords examples
 
