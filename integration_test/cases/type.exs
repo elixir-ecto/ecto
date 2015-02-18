@@ -81,6 +81,13 @@ defmodule Ecto.Integration.TypeTest do
 
     assert [["1", "hai"]] ==
            TestRepo.all(from p in Post, select: [p.title, p.text])
+
+    assert [%{:title => "1", 3 => "hai", "text" => "hai"}] ==
+           TestRepo.all(from p in Post, select: %{
+             :title => p.title,
+             "text" => p.text,
+             3 => p.text
+           })
   end
 
   @tag :array_type
