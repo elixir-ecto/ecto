@@ -376,8 +376,10 @@ defmodule Ecto.Query do
   There can only be one select expression in a query, if the select expression
   is omitted, the query will by default select the full model.
 
-  The sub-expressions in the query can be wrapped in lists or tuples as shown in
-  the examples. A full model can also be selected.
+  The sub-expressions in the query can be wrapped in lists, tuples or maps as
+  shown in the examples. A full model can also be selected. Note that map keys
+  can only be atoms, binaries, integers or floats otherwise an `ArgumentError`
+  exception is raised at compile-time.
 
   ## Keywords examples
 
@@ -385,11 +387,13 @@ defmodule Ecto.Query do
       from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
       from(c in City, select: {c.name, ^to_binary(40 + 2), 43})
+      from(c in City, select: %{n: c.name, answer: 42})
 
   ## Expressions examples
 
       City |> select([c], c)
       City |> select([c], {c.name, c.country})
+      City |> select([c], %{"name" => c.name})
 
   """
   defmacro select(query, binding, expr) do
