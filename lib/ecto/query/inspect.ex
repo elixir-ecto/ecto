@@ -159,7 +159,7 @@ defimpl Inspect, for: Ecto.Query do
   defp join_qual(:inner), do: :join
   defp join_qual(:left),  do: :left_join
   defp join_qual(:right), do: :right_join
-  defp join_qual(:outer), do: :outer_join
+  defp join_qual(:full),  do: :full_join
 
   defp collect_sources(query) do
     from_sources(query.from) ++ join_sources(query.joins)
