@@ -1,6 +1,8 @@
 Logger.configure(level: :info)
 ExUnit.start exclude: [:array_type]
 
+System.at_exit fn _ -> Logger.flush() end
+
 # Basic test repo
 alias Ecto.Integration.TestRepo
 
