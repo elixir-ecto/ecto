@@ -421,6 +421,8 @@ defmodule Ecto.Query.Planner do
     do: collect_fields(query, [left, right], from?)
   defp collect_fields(query, {:{}, _, elems}, from?),
     do: collect_fields(query, elems, from?)
+  defp collect_fields(query, {:%{}, _, pairs}, from?),
+    do: collect_fields(query, Enum.map(pairs, &elem(&1, 1)), from?)
   defp collect_fields(query, list, from?) when is_list(list),
     do: Enum.flat_map_reduce(list, from?, &collect_fields(query, &1, &2))
   defp collect_fields(_query, expr, from?),

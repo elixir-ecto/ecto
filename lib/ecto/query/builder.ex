@@ -244,13 +244,22 @@ defmodule Ecto.Query.Builder do
   @doc """
   Escapes a list of bindings as a list of atoms.
 
+  Only variables or `{:atom, value}` tuples are allowed in the `bindings` list,
+  otherwise an `Ecto.Query.CompileError` is raised.
+
   ## Examples
 
       iex> escape_binding(quote do: [x, y, z])
       [x: 0, y: 1, z: 2]
 
+      iex> escape_binding(quote do: [x: 0, z: 2])
+      [x: 0, z: 2]
+
       iex> escape_binding(quote do: [x, y, x])
       ** (Ecto.Query.CompileError) variable `x` is bound twice
+
+      iex> escape_binding(quote do: [a, b, :foo])
+      ** (Ecto.Query.CompileError) binding list should contain only variables, got: :foo
 
   """
   @spec escape_binding(list) :: Keyword.t
