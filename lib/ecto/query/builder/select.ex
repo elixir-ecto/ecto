@@ -42,12 +42,12 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # Map
-  defp escape({:%{}, _, pairs}, params, vars) do
+  defp escape({:%{}, _, pairs}, params, vars, env) do
     {pairs, params} = Enum.map_reduce pairs, params, fn({k, v}, acc) ->
       unless is_atom(k) or is_binary(k) or is_number(k) do
 				Builder.error! "keys can only be atoms/binaries/integers/floats"
       end
-      {expr, params} = escape(v, acc, vars)
+      {expr, params} = escape(v, acc, vars, env)
       {{k, expr}, params}
     end
 
