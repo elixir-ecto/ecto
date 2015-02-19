@@ -104,6 +104,8 @@ defmodule Ecto.Adapters.SQL do
         %{rows: [{count}]} = Ecto.Adapters.SQL.query(repo, sql, [], opts)
         count > 0
       end
+
+      defoverridable [insert: 5, update: 6, delete: 4]
     end
   end
 

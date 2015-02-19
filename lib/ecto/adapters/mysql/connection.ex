@@ -116,6 +116,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "INSERT INTO #{quote_name(table)} " <> values
     end
 
+    def last_inserted(table, pk) do
+      "SELECT #{quote_name(pk)} FROM #{quote_name(table)} WHERE #{quote_name(pk)} = LAST_INSERT_ID()"
+    end
+
     def update(table, filters, fields, _returning) do
       filters = Enum.map filters, fn field  ->
         "#{quote_name(field)} = ?"

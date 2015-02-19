@@ -95,4 +95,19 @@ defmodule Ecto.Adapters.MySQL do
   def supports_ddl_transaction? do
     false
   end
+
+  @doc false
+  def insert(repo, source, params, [], opts) do
+    super(repo, source, params, [], opts)
+  end
+
+  @doc false
+  def insert(repo, source, params, [pk|_], opts) do
+    case super(repo, source, params, [pk], opts) do
+      {:ok, {}} ->
+        last_inserted_query = @conn.last_inserted(source, pk)
+        Ecto.Adapters.SQL.model(repo, last_inserted_query, [], opts)
+      err -> err
+    end
+  end
 end
