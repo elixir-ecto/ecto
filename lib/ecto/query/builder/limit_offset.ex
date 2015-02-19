@@ -13,7 +13,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
   @spec build(:limit | :offset, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(type, query, binding, expr, env) do
     binding        = Builder.escape_binding(binding)
-    {expr, params} = Builder.escape(expr, :integer, %{}, binding)
+    {expr, params} = Builder.escape(expr, :integer, %{}, binding, env)
     params         = Builder.escape_params(params)
 
     if contains_variable?(expr) do

@@ -6,28 +6,28 @@ defmodule Ecto.Query.Builder.Distinct do
   @doc """
   Escapes a list of quoted expressions.
 
-      iex> escape(quote do x end, [x: 0])
+      iex> escape(quote do x end, [x: 0], __ENV__)
       {[{:{}, [], [:&, [], [0]]}], %{}}
 
-      iex> escape(quote do [x.x, 13] end, [x: 0])
+      iex> escape(quote do [x.x, 13] end, [x: 0], __ENV__)
       {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
         13],
        %{}}
 
   """
-  @spec escape(Macro.t, Keyword.t) :: {Macro.t, %{}}
-  def escape(expr, vars) do
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  def escape(expr, vars, env) do
     expr
     |> List.wrap
-    |> Enum.map_reduce(%{}, &escape(&1, &2, vars))
+    |> Enum.map_reduce(%{}, &escape(&1, &2, vars, env))
   end
 
-  defp escape({var, _, context}, params, vars) when is_atom(var) and is_atom(context) do
+  defp escape({var, _, context}, params, vars, _env) when is_atom(var) and is_atom(context) do
     {Builder.escape_var(var, vars), params}
   end
 
-  defp escape(expr, params, vars) do
-    Builder.escape(expr, :any, params, vars)
+  defp escape(expr, params, vars, env) do
+    Builder.escape(expr, :any, params, vars, env)
   end
 
   @doc """
@@ -40,7 +40,7 @@ defmodule Ecto.Query.Builder.Distinct do
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
     binding        = Builder.escape_binding(binding)
-    {expr, params} = escape(expr, binding)
+    {expr, params} = escape(expr, binding, env)
     params         = Builder.escape_params(params)
 
     distinct = quote do: %Ecto.Query.QueryExpr{

@@ -7,6 +7,18 @@ defmodule Ecto.QueryTest do
   import Ecto.Query
   alias Ecto.Query
 
+  defmacrop macro_equal(column, value) do
+    quote do
+      unquote(column) == unquote(value)
+    end
+  end
+
+  test "where allows macros" do
+    test_data = "test"
+    query = from(p in "posts") |> where([q], macro_equal(q.title, ^test_data))
+    assert "&0.title() == ^0" == Macro.to_string(hd(query.wheres).expr)
+  end
+
   test "vars are order dependent" do
     from(p in "posts", []) |> select([q], q.title)
   end

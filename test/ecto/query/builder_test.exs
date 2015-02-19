@@ -4,82 +4,82 @@ defmodule Ecto.Query.BuilderTest do
   import Ecto.Query.Builder
   doctest Ecto.Query.Builder
 
-  defp escape(quoted, vars) do
-    escape(quoted, :any, %{}, vars)
+  defp escape(quoted, vars, env) do
+    escape(quoted, :any, %{}, vars, env)
   end
 
   test "escape" do
     assert {Macro.escape(quote do &0.y end), %{}} ==
-           escape(quote do x.y end, [x: 0])
+           escape(quote do x.y end, [x: 0], __ENV__)
 
     assert {Macro.escape(quote do &0.y == &0.z end), %{}} ==
-           escape(quote do x.y == x.z end, [x: 0])
+           escape(quote do x.y == x.z end, [x: 0], __ENV__)
 
     assert {Macro.escape(quote do &0.y == &1.z end), %{}} ==
-           escape(quote do x.y == y.z end, [x: 0, y: 1])
+           escape(quote do x.y == y.z end, [x: 0, y: 1], __ENV__)
 
     assert {Macro.escape(quote do avg(0) end), %{}} ==
-           escape(quote do avg(0) end, [])
+           escape(quote do avg(0) end, [], __ENV__)
 
     assert {Macro.escape(quote do fragment("date_add(", &0.created_at, ", ", ^0, ")") end), %{0 => {0, :any}}} ==
-           escape(quote do fragment("date_add(?, ?)", p.created_at, ^0) end, [p: 0])
+           escape(quote do fragment("date_add(?, ?)", p.created_at, ^0) end, [p: 0], __ENV__)
 
     assert {quote(do: ~s"123"), %{}} ==
-           escape(quote do ~s"123" end, [])
+           escape(quote do ~s"123" end, [], __ENV__)
 
     assert quote(do: &0.z) ==
-           escape(quote do field(x, :z) end, [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
+           escape(quote do field(x, :z) end, [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
   end
 
   test "escape type checks" do
     assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer is expected", fn ->
-      escape(quote(do: ^1 == ^2), :integer, %{}, [])
+      escape(quote(do: ^1 == ^2), :integer, %{}, [], __ENV__)
     end
 
     assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer is expected", fn ->
-      escape(quote(do: 1 > 2), :integer, %{}, [])
+      escape(quote(do: 1 > 2), :integer, %{}, [], __ENV__)
     end
   end
 
   test "escape raise" do
     assert_raise Ecto.Query.CompileError, ~r"variable `x` is not a valid query expression", fn ->
-      escape(quote(do: x), [])
+      escape(quote(do: x), [], __ENV__)
     end
 
     assert_raise Ecto.Query.CompileError, ~r"`:atom` is not a valid query expression", fn ->
-      escape(quote(do: :atom), [])
+      escape(quote(do: :atom), [], __ENV__)
     end
 
     assert_raise Ecto.Query.CompileError, ~r"`unknown\(1, 2\)` is not a valid query expression", fn ->
-      escape(quote(do: unknown(1, 2)), [])
+      escape(quote(do: unknown(1, 2)), [], __ENV__)
     end
 
     assert_raise Ecto.Query.CompileError, ~r"unbound variable", fn ->
-      escape(quote(do: x.y), [])
+      escape(quote(do: x.y), [], __ENV__)
     end
 
     assert_raise Ecto.Query.CompileError, ~r"unbound variable", fn ->
-      escape(quote(do: x.y == 1), [])
+      escape(quote(do: x.y == 1), [], __ENV__)
     end
 
     assert_raise Ecto.Query.CompileError, ~r"expected literal atom or interpolated value", fn ->
-      escape(quote(do: field(x, 123)), [x: 0]) |> elem(0) |> Code.eval_quoted([], __ENV__)
+      escape(quote(do: field(x, 123)), [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
   end
 
   test "doesn't escape interpolation" do
     assert {Macro.escape(quote(do: ^0)), %{0 => {quote(do: 1 == 2), :any}}} ==
-           escape(quote(do: ^(1 == 2)), [])
+           escape(quote(do: ^(1 == 2)), [], __ENV__)
 
     assert {Macro.escape(quote(do: ^0)), %{0 => {quote(do: [] ++ []), :any}}} ==
-           escape(quote(do: ^([] ++ [])), [])
+           escape(quote(do: ^([] ++ [])), [], __ENV__)
 
     assert {Macro.escape(quote(do: ^0 == ^1)), %{0 => {1, :any}, 1 => {2, :any}}} ==
-           escape(quote(do: ^1 == ^2), [])
+           escape(quote(do: ^1 == ^2), [], __ENV__)
   end
 
   defp params(quoted, type, vars \\ []) do
-    escape(quoted, type, %{}, vars) |> elem(1)
+    escape(quoted, type, %{}, vars, __ENV__) |> elem(1)
   end
 
   test "infers the type for parameter" do
