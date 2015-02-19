@@ -15,7 +15,8 @@ defmodule Ecto.QueryTest do
 
   test "where allows macros" do
     test_data = "test"
-    from(p in "posts") |> where([q], macro_equal(q.title, ^test_data))
+    query = from(p in "posts") |> where([q], macro_equal(q.title, ^test_data))
+    assert "&0.title() == ^0" == Macro.to_string(hd(query.wheres).expr)
   end
 
   test "vars are order dependent" do
