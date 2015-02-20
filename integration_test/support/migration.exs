@@ -14,11 +14,6 @@ defmodule Ecto.Integration.Migration do
       timestamps
     end
 
-    create table(:optimistically_locked_posts) do
-      add :title, :string
-      add :lock_version, :integer, default: 1
-    end
-
     create table(:users) do
       add :name, :text
       add :custom_id, :uuid
@@ -27,6 +22,7 @@ defmodule Ecto.Integration.Migration do
     create table(:permalinks) do
       add :url
       add :post_id, :integer
+      add :lock_version, :integer, default: 1
     end
 
     create table(:comments) do

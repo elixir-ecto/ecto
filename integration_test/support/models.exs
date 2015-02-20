@@ -20,17 +20,6 @@ defmodule Ecto.Integration.Post do
   end
 end
 
-defmodule Ecto.Integration.OptimisticallyLockedPost do
-  use Ecto.Model
-
-  schema "optimistically_locked_posts" do
-    field :title, :string
-    field :lock_version, :integer, default: 1
-  end
-
-  optimistic_locking :lock_version
-end
-
 defmodule Ecto.Integration.Comment do
   use Ecto.Model
 
@@ -49,9 +38,12 @@ defmodule Ecto.Integration.Permalink do
   @foreign_key_type Custom.Permalink
   schema "permalinks" do
     field :url, :string
+    field :lock_version, :integer, default: 1
     belongs_to :post, Ecto.Integration.Post
     has_many :post_comments_authors, through: [:post, :comments_authors]
   end
+
+  optimistic_lock :lock_version
 end
 
 defmodule Ecto.Integration.User do

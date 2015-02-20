@@ -1,7 +1,7 @@
-defmodule Ecto.Model.OptimisticLocking do
-  defmacro optimistic_locking(field) do
+defmodule Ecto.Model.OptimisticLock do
+  defmacro optimistic_lock(field) do
     quote bind_quoted: [field: field] do
-			hook_name = :"optimistic_locking_#{field}"
+      hook_name = :"optimistic_lock_#{field}"
 
       before_update hook_name
       before_delete hook_name

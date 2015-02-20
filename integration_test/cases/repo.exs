@@ -5,7 +5,6 @@ defmodule Ecto.Integration.RepoTest do
   import Ecto.Query
 
   alias Ecto.Integration.Post
-  alias Ecto.Integration.OptimisticallyLockedPost
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
@@ -455,12 +454,12 @@ defmodule Ecto.Integration.RepoTest do
 
   test "optimistic locking in update/delete operations" do
     import Ecto.Changeset, only: [cast: 4]
-    base_post = TestRepo.insert(%OptimisticallyLockedPost{})
+    base_post = TestRepo.insert(%Permalink{})
 
-    cs_ok = cast(%{"title" => "1"}, base_post, ~w(title), ~w())
+    cs_ok = cast(%{"url" => "http://foo.bar"}, base_post, ~w(url), ~w())
     TestRepo.update(cs_ok)
 
-    cs_stale = cast(%{"title" => "2"}, base_post, ~w(title), ~w())
+    cs_stale = cast(%{"url" => "http://foo.baz"}, base_post, ~w(url), ~w())
     assert_raise Ecto.StaleModelError, fn -> TestRepo.update(cs_stale) end
     assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(cs_stale) end
   end
