@@ -82,12 +82,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         "#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
-      where = where(query.wheres, sources)
-      where = if where, do: " " <> where, else: ""
+      update = update_expr(query.joins, table, name)
+      join   = update_all_join(query.joins, sources)
+      where  = where(query.wheres, sources)
 
-      "UPDATE #{quote_name(table)} AS #{name} " <>
-      "SET " <> zipped_sql <>
-      where
+      assemble([update, "SET", zipped_sql, join, where])
     end
 
     def delete_all(query) do
@@ -178,6 +177,18 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)
       "FROM #{quote_name(table)} AS #{name}"
+    end
+
+    defp update_expr([], table, name) do
+      "UPDATE #{quote_name(table)} AS #{name}"
+    end
+    defp update_expr(_joins, table, _name) do
+      "UPDATE #{quote_name(table)}"
+    end
+
+    defp update_all_join([], _sources), do: nil
+    defp update_all_join(joins, sources) do
+      from(sources) <> " "  <> join(joins, sources)
     end
 
     defp join([], _sources), do: nil
