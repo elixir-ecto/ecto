@@ -453,11 +453,14 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "optimistic locking in update/delete operations" do
-    base_post = TestRepo.insert(%Post{lock_version: 2})
-    changeset = Ecto.Changeset.cast(%{}, base_post, [], [])
-    changeset = update_in changeset.filters, &Map.put(&1, :lock_version, 1)
+    import Ecto.Changeset, only: [cast: 4]
+    base_post = TestRepo.insert(%Post{})
 
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.update(changeset) end
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(changeset) end
+    cs_ok = cast(%{"title" => "1"}, base_post, ~w(title), ~w())
+    TestRepo.update(cs_ok)
+
+    cs_stale = cast(%{"title" => "2"}, base_post, ~w(title), ~w())
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.update(cs_stale) end
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(cs_stale) end
   end
 end
