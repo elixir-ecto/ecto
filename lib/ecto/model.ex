@@ -39,6 +39,7 @@ defmodule Ecto.Model do
       import Ecto.Query
 
       import Ecto.Model
+      import Ecto.Model.OptimisticLocking
       use Ecto.Model.Timestamps
       use Ecto.Model.Callbacks
     end
