@@ -175,17 +175,18 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp pool!(repo) do
-    pid = Process.whereis(elem(repo.__pool__, 0))
+    {pid, timeout} = repo.__pool__
+    pid = Process.whereis(pid)
 
     if is_nil(pid) or not Process.alive?(pid) do
       raise ArgumentError, "repo #{inspect repo} is not started"
     end
 
-    pid
+    {pid, timeout}
   end
 
   defp use_worker(repo, timeout, fun) do
-    pool = pool!(repo)
+    {pool, _} = pool!(repo)
     key  = {:ecto_transaction_pid, pool}
 
     {in_transaction, worker} =
@@ -286,8 +287,8 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec begin_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def begin_test_transaction(repo, opts \\ []) do
-    pool = pool!(repo)
-    opts = Keyword.put_new(opts, :timeout, elem(repo.__pool__, 1))
+    {pool, timeout} = pool!(repo)
+    opts = Keyword.put_new(opts, :timeout, timeout)
 
     :poolboy.transaction(pool, fn worker ->
       Worker.begin_test_transaction!(worker, opts)
@@ -301,8 +302,8 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec restart_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def restart_test_transaction(repo, opts \\ []) do
-    pool = pool!(repo)
-    opts = Keyword.put_new(opts, :timeout, elem(repo.__pool__, 1))
+    {pool, timeout} = pool!(repo)
+    opts = Keyword.put_new(opts, :timeout, timeout)
 
     :poolboy.transaction(pool, fn worker ->
       Worker.restart_test_transaction!(worker, opts)
@@ -316,8 +317,8 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec rollback_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def rollback_test_transaction(repo, opts \\ []) do
-    pool = pool!(repo)
-    opts = Keyword.put_new(opts, :timeout, elem(repo.__pool__, 1))
+    {pool, timeout} = pool!(repo)
+    opts = Keyword.put_new(opts, :timeout, timeout)
 
     :poolboy.transaction(pool, fn worker ->
       Worker.rollback_test_transaction!(worker, opts)
@@ -351,7 +352,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def stop(repo) do
-    :poolboy.stop pool!(repo)
+    :poolboy.stop elem(pool!(repo), 0)
   end
 
   defp split_opts(repo, opts) do
@@ -427,9 +428,9 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def transaction(repo, opts, fun) do
-    pool = pool!(repo)
+    {pool, timeout} = pool!(repo)
 
-    opts    = Keyword.put_new(opts, :timeout, elem(repo.__pool__, 1))
+    opts    = Keyword.put_new(opts, :timeout, timeout)
     timeout = Keyword.get(opts, :timeout)
     worker  = checkout_worker(pool, timeout)
 
