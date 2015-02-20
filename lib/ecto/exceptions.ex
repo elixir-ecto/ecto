@@ -117,3 +117,18 @@ end
 defmodule Ecto.MigrationError do
   defexception [:message]
 end
+
+defmodule Ecto.StaleModelError do
+  defexception [:message]
+
+  def exception(opts) do
+    action = Keyword.fetch!(opts, :action)
+    model = Keyword.fetch!(opts, :model)
+
+    msg = """
+    attempted to #{action} a stale #{model}
+    """
+
+    %__MODULE__{message: msg}
+  end
+end
