@@ -10,9 +10,13 @@ defmodule Ecto.Integration.Migration do
       add :public, :boolean
       add :cost, :decimal, precision: 2, scale: 1
       add :visits, :integer
-      add :lock_version, :integer, default: 1
       add :intensity, :float
       timestamps
+    end
+
+    create table(:optimistically_locked_posts) do
+      add :title, :string
+      add :lock_version, :integer, default: 1
     end
 
     create table(:users) do

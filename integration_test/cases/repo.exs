@@ -5,6 +5,7 @@ defmodule Ecto.Integration.RepoTest do
   import Ecto.Query
 
   alias Ecto.Integration.Post
+  alias Ecto.Integration.OptimisticallyLockedPost
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
@@ -454,7 +455,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "optimistic locking in update/delete operations" do
     import Ecto.Changeset, only: [cast: 4]
-    base_post = TestRepo.insert(%Post{})
+    base_post = TestRepo.insert(%OptimisticallyLockedPost{})
 
     cs_ok = cast(%{"title" => "1"}, base_post, ~w(title), ~w())
     TestRepo.update(cs_ok)

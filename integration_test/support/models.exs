@@ -13,11 +13,19 @@ defmodule Ecto.Integration.Post do
     field :cost, :decimal
     field :visits, :integer
     field :intensity, :float
-    field :lock_version, :integer, default: 1
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
     has_many :comments_authors, through: [:comments, :author]
     timestamps
+  end
+end
+
+defmodule Ecto.Integration.OptimisticallyLockedPost do
+  use Ecto.Model
+
+  schema "optimistically_locked_posts" do
+    field :title, :string
+    field :lock_version, :integer, default: 1
   end
 
   optimistic_locking :lock_version
