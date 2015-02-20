@@ -64,7 +64,7 @@ defmodule Ecto.Adapters.SQL do
       def insert(repo, source, params, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(source, fields, returning)
-        Ecto.Adapters.SQL.model(repo, sql, values, opts)
+        Ecto.Adapters.SQL.model(repo, sql, values, returning, opts)
       end
 
       @doc false
@@ -72,13 +72,13 @@ defmodule Ecto.Adapters.SQL do
         {filter, values1} = :lists.unzip(filter)
         {fields, values2} = :lists.unzip(fields)
         sql = @conn.update(source, filter, fields, returning)
-        Ecto.Adapters.SQL.model(repo, sql, values1 ++ values2, opts)
+        Ecto.Adapters.SQL.model(repo, sql, values1 ++ values2, returning, opts)
       end
 
       @doc false
       def delete(repo, source, filter, opts) do
         {filter, values} = :lists.unzip(filter)
-        Ecto.Adapters.SQL.model(repo, @conn.delete(source, filter, []), values, opts)
+        Ecto.Adapters.SQL.model(repo, @conn.delete(source, filter, []), values, [], opts)
       end
 
       ## Transaction
@@ -371,12 +371,12 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def model(repo, sql, values, opts) do
+  def model(repo, sql, values, returning, opts) do
     case query(repo, sql, values, opts) do
       %{rows: nil, num_rows: 1} ->
-        {:ok, {}}
+        {:ok, []}
       %{rows: [values], num_rows: 1} ->
-        {:ok, values}
+        {:ok, Enum.zip(returning, Tuple.to_list(values))}
       %{num_rows: 0} ->
         {:error, :stale}
     end
