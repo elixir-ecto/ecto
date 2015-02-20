@@ -462,12 +462,16 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       default = Keyword.get(opts, :default)
       null    = Keyword.get(opts, :null)
       pk      = Keyword.get(opts, :primary_key)
+      unique  = Keyword.get(opts, :unique)
 
-      [default_expr(default), null_expr(null), pk_expr(pk, name)]
+      [default_expr(default), unique_expr(unique), null_expr(null), pk_expr(pk, name)]
     end
 
     defp pk_expr(true, name), do: ", PRIMARY KEY(#{quote_name(name)})"
     defp pk_expr(_, _), do: nil
+
+    defp unique_expr(true), do: "UNIQUE"
+    defp unique_expr(_), do: nil
 
     defp null_expr(false), do: "NOT NULL"
     defp null_expr(_), do: nil
