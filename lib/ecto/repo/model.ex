@@ -5,11 +5,12 @@ defmodule Ecto.Repo.Model do
 
   alias Ecto.Query.Planner
   alias Ecto.Model.Callbacks
+  alias Ecto.Changeset
 
   @doc """
   Implementation for `Ecto.Repo.insert/2`.
   """
-  def insert(repo, adapter, %Ecto.Changeset{} = changeset, opts) when is_list(opts) do
+  def insert(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -23,6 +24,8 @@ defmodule Ecto.Repo.Model do
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_insert after_insert)a, fn ->
+      # Callbacks.__apply__/3 "ignores" undefined callbacks and simply returns
+      # the changeset unchanged in case the callback is missing.
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
       changes   = validate_changes(:insert, model, fields, changeset)
 
@@ -34,13 +37,13 @@ defmodule Ecto.Repo.Model do
   end
 
   def insert(repo, adapter, %{__struct__: _} = struct, opts) do
-    insert(repo, adapter, %Ecto.Changeset{model: struct, valid?: true}, opts)
+    insert(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
   end
 
   @doc """
   Implementation for `Ecto.Repo.update/2`.
   """
-  def update(repo, adapter, %Ecto.Changeset{} = changeset, opts) when is_list(opts) do
+  def update(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -54,16 +57,23 @@ defmodule Ecto.Repo.Model do
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_update after_update)a, fn ->
+      # Callbacks.__apply__/3 "ignores" undefined callbacks and simply returns
+      # the changeset unchanged in case the callback is missing.
       changeset = Callbacks.__apply__(model, :before_update, changeset)
       changes   = validate_changes(:update, model, fields, changeset)
 
-      pk_filter = Planner.fields(:update, model, pk_filter(model, struct))
+      filters = Planner.fields(:update, model, filters!(model, struct, changeset))
 
       if changes == [] do
-        changes = pk_filter
+        changes = filters
       end
 
-      {:ok, values} = adapter.update(repo, source, pk_filter, changes, return, opts)
+      values = case adapter.update(repo, source, filters, changes, return, opts) do
+        {:ok, values} ->
+          values
+        {:error, :stale} ->
+          raise Ecto.StaleModelError, action: :update, model: model
+      end
 
       changeset = load_into_changeset(changeset, model, values)
       Callbacks.__apply__(model, :after_update, changeset).model
@@ -79,14 +89,14 @@ defmodule Ecto.Repo.Model do
       changes = Map.delete(changes, pk_field)
     end
 
-    changeset = %Ecto.Changeset{model: struct, valid?: true, changes: changes}
+    changeset = %Changeset{model: struct, valid?: true, changes: changes}
     update(repo, adapter, changeset, opts)
   end
 
   @doc """
   Implementation for `Ecto.Repo.delete/2`.
   """
-  def delete(repo, adapter, %Ecto.Changeset{} = changeset, opts) when is_list(opts) do
+  def delete(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     source = model.__schema__(:source)
@@ -98,8 +108,13 @@ defmodule Ecto.Repo.Model do
                                    ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
-      pk_filter = Planner.fields(:delete, model, pk_filter(model, struct))
-      {:ok, _} = adapter.delete(repo, source, pk_filter, opts)
+      filters = Planner.fields(:delete, model, filters!(model, struct, changeset))
+      case adapter.delete(repo, source, filters, opts) do
+        {:ok, _} ->
+          nil
+        {:error, :stale} ->
+          raise Ecto.StaleModelError, action: :delete, model: model
+      end
 
       Callbacks.__apply__(model, :after_delete, changeset).model
       |> Map.put(:__state__, :deleted)
@@ -107,7 +122,7 @@ defmodule Ecto.Repo.Model do
   end
 
   def delete(repo, adapter, %{__struct__: _} = struct, opts) do
-    delete(repo, adapter, %Ecto.Changeset{model: struct, valid?: true}, opts)
+    delete(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
   end
 
   ## Helpers
@@ -150,11 +165,13 @@ defmodule Ecto.Repo.Model do
     Planner.fields(kind, model, Map.take(changeset.changes, fields))
   end
 
-  defp pk_filter(model, struct) do
+  defp filters!(model, struct, %Changeset{filters: filters}) do
+    cs_filters = Enum.to_list(filters)
     pk_field = model.__schema__(:primary_key)
     pk_value = Ecto.Model.primary_key(struct) ||
-                 raise Ecto.MissingPrimaryKeyError, struct: struct
-    [{pk_field, pk_value}]
+                raise Ecto.MissingPrimaryKeyError, struct: struct
+
+    [{pk_field, pk_value}|cs_filters]
   end
 
   defp with_transactions_if_callbacks(repo, adapter, model, opts, callbacks, fun) do
