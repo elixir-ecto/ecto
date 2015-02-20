@@ -226,13 +226,6 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.all(query) == ~s{SELECT m0.`x` FROM `model` AS m0}
   end
 
-  test "arrays" do
-    assert_raise ArgumentError, "MySQL doesn't support Array type", fn ->
-      query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
-      SQL.all(query)
-    end
-  end
-
   test "interpolated values" do
     query = Model
             |> select([], ^0)
@@ -460,5 +453,24 @@ defmodule Ecto.Adapters.MySQLTest do
   test "drop index" do
     drop = {:drop, index(:posts, [:id], name: "posts$main")}
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts`|
+  end
+
+  # Unsupported types and clauses
+
+  test "arrays" do
+    assert_raise ArgumentError, "Array type is not supported by MySQL", fn ->
+      query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
+      SQL.all(query)
+    end
+  end
+
+  test "returning" do
+    assert_raise ArgumentError, "RETURNING is not supported by MySQL", fn ->
+      SQL.insert("model", [:x, :y], [:id])
+    end
+
+    assert_raise ArgumentError, "RETURNING is not supported by MySQL", fn ->
+      SQL.update("model", [:id], [:x, :y], [:id])
+    end
   end
 end

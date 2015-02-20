@@ -103,8 +103,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
-    # Returning isn't supported on MySQL
-    def insert(table, fields, _returning) do
+    def insert(table, fields, returning) do
+      unless Enum.empty?(returning), do: raise(ArgumentError, "RETURNING is not supported by MySQL")
+
       values =
         if fields == [] do
           "() VALUES ()"
@@ -120,7 +121,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "SELECT #{quote_name(pk)} FROM #{quote_name(table)} WHERE #{quote_name(pk)} = LAST_INSERT_ID()"
     end
 
-    def update(table, filters, fields, _returning) do
+    def update(table, filters, fields, returning) do
+      unless Enum.empty?(returning), do: raise(ArgumentError, "RETURNING is not supported by MySQL")
+
       filters = Enum.map filters, fn field  ->
         "#{quote_name(field)} = ?"
       end
@@ -317,7 +320,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp expr(list, sources) when is_list(list) do
-      raise ArgumentError, "MySQL doesn't support Array type"
+      raise ArgumentError, "Array type is not supported by MySQL"
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
@@ -513,7 +516,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp ecto_to_db(:datetime),   do: "timestamp"
     defp ecto_to_db(:binary),     do: "blob"
     defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
-    defp ecto_to_db({:array, _}), do: raise(ArgumentError, "MySQL doesn't support Array type")
+    defp ecto_to_db({:array, _}), do: raise(ArgumentError, "Array type is not supported by MySQL")
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end
