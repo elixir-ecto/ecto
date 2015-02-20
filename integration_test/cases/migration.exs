@@ -25,7 +25,7 @@ defmodule Ecto.Integration.MigrationTest do
       alter table do
         modify :name, :string
         remove :other
-        add :author, :string
+        add :author, :string, unique: true
       end
 
       index = index(:barebones, [:author])
