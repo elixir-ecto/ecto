@@ -492,7 +492,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp default_expr(literal) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
     defp default_expr(literal) when is_number(literal) or is_boolean(literal),
-      do: "DEFAULT #{literal}" # TODO: Check the boolean here :P
+      do: "DEFAULT #{literal}"
     defp default_expr({:fragment, expr}),
       do: "DEFAULT #{expr}"
 
