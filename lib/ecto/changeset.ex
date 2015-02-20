@@ -18,12 +18,14 @@ defmodule Ecto.Changeset do
   * `validations` - All validations performed in the changeset
   * `required`    - All required fields as a list of atoms
   * `optional`    - All optional fields as a list of atoms
+  * `filters`     - The filters that will be applied in queries
   """
 
   import Ecto.Query, only: [from: 2]
 
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
-            errors: [], validations: [], required: [], optional: []
+            errors: [], validations: [], required: [], optional: [],
+            filters: %{}
 
   @type error :: {atom, atom | {atom, [term]}}
   @type t :: %Ecto.Changeset{valid?: boolean(),
@@ -34,7 +36,8 @@ defmodule Ecto.Changeset do
                              required: [atom],
                              optional: [atom],
                              errors: [error],
-                             validations: [{atom, atom | {atom, [term]}}]}
+                             validations: [{atom, atom | {atom, [term]}}],
+                             filters: %{atom => term}}
 
   @doc """
   Generates a changeset to change the given `model`.
