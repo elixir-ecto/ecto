@@ -408,6 +408,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     def execute_ddl({:create, %Index{}=index}) do
+      if index.concurrently, do: raise(ArgumentError, "CONCURRENTLY is not supported by MySQL")
+
       create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
 
       using = if index.using do "USING #{index.using}" end
@@ -417,6 +419,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     def execute_ddl({:drop, %Index{}=index}) do
+      if index.concurrently, do: raise(ArgumentError, "CONCURRENTLY is not supported by MySQL")
+
       assemble([
         "DROP INDEX",
         quote_name(index.name),

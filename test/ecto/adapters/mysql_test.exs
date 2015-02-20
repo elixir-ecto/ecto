@@ -473,4 +473,16 @@ defmodule Ecto.Adapters.MySQLTest do
       SQL.update("model", [:id], [:x, :y], [:id])
     end
   end
+
+  test "concurrently" do
+    assert_raise ArgumentError, "CONCURRENTLY is not supported by MySQL", fn ->
+      create = {:create, index(:posts, [:category_id, :permalink], concurrently: true)}
+      SQL.execute_ddl(create)
+    end
+
+    assert_raise ArgumentError, "CONCURRENTLY is not supported by MySQL", fn ->
+      create = {:drop, index(:posts, [:category_id, :permalink], concurrently: true)}
+      SQL.execute_ddl(create)
+    end
+  end
 end
