@@ -451,4 +451,13 @@ defmodule Ecto.Integration.RepoTest do
     assert u1.id == uid1
     assert u2.id == uid2
   end
+
+  test "optimistic locking in update/delete operations" do
+    base_post = TestRepo.insert(%Post{lock_version: 2})
+    changeset = Ecto.Changeset.cast(%{}, base_post, [], [])
+    changeset = update_in changeset.filters, &Map.put(&1, :lock_version, 1)
+
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.update(changeset) end
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(changeset) end
+  end
 end

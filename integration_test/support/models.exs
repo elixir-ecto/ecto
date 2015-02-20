@@ -13,6 +13,7 @@ defmodule Ecto.Integration.Post do
     field :cost, :decimal
     field :visits, :integer
     field :intensity, :float
+    field :lock_version, :integer
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
     has_many :comments_authors, through: [:comments, :author]
