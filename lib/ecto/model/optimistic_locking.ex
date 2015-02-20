@@ -1,10 +1,10 @@
 defmodule Ecto.Model.OptimisticLocking do
   defmacro optimistic_locking(field) do
-    hook_name = String.to_atom("optimistic_locking_#{field}")
+    quote bind_quoted: [field: field] do
+			hook_name = :"optimistic_locking_#{field}"
 
-    quote do
-      before_update unquote(hook_name)
-      before_delete unquote(hook_name)
+      before_update hook_name
+      before_delete hook_name
 
       defp unquote(hook_name)(%Ecto.Changeset{model: model} = changeset) do
         field = unquote(field)
