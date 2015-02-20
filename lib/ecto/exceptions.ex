@@ -126,7 +126,9 @@ defmodule Ecto.StaleModelError do
     model = Keyword.fetch!(opts, :model)
 
     msg = """
-    attempted to #{action} a stale #{model}
+    attempted to #{action} a stale model:
+
+    #{inspect model}
     """
 
     %__MODULE__{message: msg}

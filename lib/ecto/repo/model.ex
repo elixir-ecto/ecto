@@ -62,17 +62,18 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_update, changeset)
       changes   = validate_changes(:update, model, fields, changeset)
 
-      filters = Planner.fields(:update, model, filters!(model, struct, changeset))
+      {pk_field, pk_value} = pk_filter = pk_filter!(model, struct)
+      filters = Planner.fields(:update, model, Map.put(changeset.filters, pk_field, pk_value))
 
       if changes == [] do
-        changes = filters
+        changes = pk_filter
       end
 
       values = case adapter.update(repo, source, filters, changes, return, opts) do
         {:ok, values} ->
           values
         {:error, :stale} ->
-          raise Ecto.StaleModelError, action: :update, model: model
+          raise Ecto.StaleModelError, model: struct, action: :update
       end
 
       changeset = load_into_changeset(changeset, model, values)
@@ -108,12 +109,13 @@ defmodule Ecto.Repo.Model do
                                    ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
-      filters = Planner.fields(:delete, model, filters!(model, struct, changeset))
+      {pk_field, pk_value} = pk_filter!(model, struct)
+      filters = Planner.fields(:delete, model, Map.put(changeset.filters, pk_field, pk_value))
+
       case adapter.delete(repo, source, filters, opts) do
-        {:ok, _} ->
-          nil
+        {:ok, _} -> nil
         {:error, :stale} ->
-          raise Ecto.StaleModelError, action: :delete, model: model
+          raise Ecto.StaleModelError, model: struct, action: :delete
       end
 
       Callbacks.__apply__(model, :after_delete, changeset).model
@@ -165,13 +167,11 @@ defmodule Ecto.Repo.Model do
     Planner.fields(kind, model, Map.take(changeset.changes, fields))
   end
 
-  defp filters!(model, struct, %Changeset{filters: filters}) do
-    cs_filters = Enum.to_list(filters)
+  defp pk_filter!(model, struct) do
     pk_field = model.__schema__(:primary_key)
     pk_value = Ecto.Model.primary_key(struct) ||
                 raise Ecto.MissingPrimaryKeyError, struct: struct
-
-    [{pk_field, pk_value}|cs_filters]
+    {pk_field, pk_value}
   end
 
   defp with_transactions_if_callbacks(repo, adapter, model, opts, callbacks, fun) do
