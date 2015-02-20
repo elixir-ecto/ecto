@@ -18,7 +18,7 @@ defmodule Ecto.Changeset do
   * `validations` - All validations performed in the changeset
   * `required`    - All required fields as a list of atoms
   * `optional`    - All optional fields as a list of atoms
-  * `filters`     - The filters that will be applied in queries
+  * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
   """
 
   import Ecto.Query, only: [from: 2]
