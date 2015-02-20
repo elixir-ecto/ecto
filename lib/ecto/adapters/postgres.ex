@@ -34,6 +34,7 @@ defmodule Ecto.Adapters.Postgres do
     * `:size` - The number of connections to keep in the pool
     * `:max_overflow` - The maximum overflow of connections (see poolboy docs)
     * `:lazy` - If false all connections will be started immediately on Repo startup (default: true)
+    * `:timeout` - The time in milliseconds to wait for calls to the database to finish - must be available at compile time
 
   ### Storage options
 
