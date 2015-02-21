@@ -86,7 +86,7 @@ defmodule Ecto.Query do
   The other convenience is called fragments which allows developers to send
   any expression to the database via the `fragment(...)` function:
 
-      def unpublished_by_title(title)
+      def unpublished_by_title(title) do
         from p in Post,
           where: is_nil(p.published_at) and
                  fragment("downcase(?) == ?", p.title, ^title)
