@@ -451,4 +451,16 @@ defmodule Ecto.Integration.RepoTest do
     assert u1.id == uid1
     assert u2.id == uid2
   end
+
+  test "optimistic locking in update/delete operations" do
+    import Ecto.Changeset, only: [cast: 4]
+    base_post = TestRepo.insert(%Permalink{})
+
+    cs_ok = cast(%{"url" => "http://foo.bar"}, base_post, ~w(url), ~w())
+    TestRepo.update(cs_ok)
+
+    cs_stale = cast(%{"url" => "http://foo.baz"}, base_post, ~w(url), ~w())
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.update(cs_stale) end
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(cs_stale) end
+  end
 end

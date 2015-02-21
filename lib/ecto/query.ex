@@ -536,11 +536,16 @@ defmodule Ecto.Query do
   A lock query expression.
 
   Provides support for row-level pessimistic locking using
-  SELECT ... FOR UPDATE or other, database-specific, locking clauses.
-  Can be any expression but have to evaluate to a boolean value or a
-  string and it can't include any field.
+  `SELECT ... FOR UPDATE` or other, database-specific, locking clauses.
+  `expr` can be any expression but has to evaluate to a boolean value or to a
+  string and it can't include any fields.
 
-  If `lock` is given twice, it overrides the previous value.
+  If `lock` is used more than once, the last one used takes precedence.
+
+  Ecto also supports [optimistic
+  locking](http://en.wikipedia.org/wiki/Optimistic_concurrency_control) but not
+  through queries. For more information on optimistic locking, have a look at
+  the `Ecto.Model.OptimisticLock` module.
 
   ## Keywords examples
 

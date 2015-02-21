@@ -22,6 +22,7 @@ defmodule Ecto.Integration.Migration do
     create table(:permalinks) do
       add :url
       add :post_id, :integer
+      add :lock_version, :integer, default: 1
     end
 
     create table(:comments) do
