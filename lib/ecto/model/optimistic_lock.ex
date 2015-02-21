@@ -72,8 +72,16 @@ defmodule Ecto.Model.OptimisticLock do
 
   Optimistic locking also works with delete operations: when trying to delete a
   stale model, an `Ecto.StaleModelError` exception is raised as well.
-
   """
+
+  import Ecto.Changeset
+
+  @doc false
+  defmacro __using__(_) do
+    quote do
+      import Ecto.Model.OptimisticLock
+    end
+  end
 
   @doc """
   Specifies a field to use with optimistic locking.
@@ -100,18 +108,15 @@ defmodule Ecto.Model.OptimisticLock do
   """
   defmacro optimistic_lock(field) do
     quote bind_quoted: [field: field] do
-      hook_name = :"optimistic_lock_#{field}"
-
-      before_update hook_name
-      before_delete hook_name
-
-      defp unquote(hook_name)(%Ecto.Changeset{model: model} = changeset) do
-        field = unquote(field)
-        current = Map.fetch!(model, field)
-
-        update_in(changeset.filters, &Map.put(&1, field, current))
-        |> put_change(field, current + 1)
-      end
+      before_update Ecto.Model.OptimisticLock, :__lock__, [field]
+      before_delete Ecto.Model.OptimisticLock, :__lock__, [field]
     end
+  end
+
+  @doc false
+  def __lock__(%Ecto.Changeset{model: model} = changeset, field) do
+    current = Map.fetch!(model, field)
+    update_in(changeset.filters, &Map.put(&1, field, current))
+    |> put_change(field, current + 1)
   end
 end
