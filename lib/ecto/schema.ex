@@ -161,9 +161,8 @@ defmodule Ecto.Schema do
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
     from the database after every write (insert or update);
 
-  * `__schema__(:load, struct \\ __struct__(), fields_or_idx, values)` - Loads a
-    new model struct from a tuple of non-virtual field values starting at the given
-    index or defined by the given fields;
+  * `__schema__(:load, idx, values)` - Loads a new model from a tuple of non-virtual
+    field values starting at the given index. Typically used by adapter interfaces;
 
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
@@ -547,24 +546,15 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __load__(struct, fields, keys_or_idx, values) do
-    loaded = do_load(struct, fields, keys_or_idx, values) |> Map.put(:__state__, :loaded)
+  def __load__(struct, fields, idx, values) do
+    loaded = do_load(struct, fields, idx, values) |> Map.put(:__state__, :loaded)
     Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
   end
 
-  @doc false
   defp do_load(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
         value = Ecto.Type.load!(type, elem(values, idx))
-        {Map.put(acc, field, value), idx + 1}
-    end) |> elem(0)
-  end
-
-  defp do_load(struct, fields, keys, values) when is_list(keys) and is_tuple(values) do
-    Enum.reduce(keys, {struct, 0}, fn
-      field, {acc, idx} ->
-        value = Ecto.Type.load!(Keyword.fetch!(fields, field), elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
   end
@@ -639,8 +629,8 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(fields) do
     quote do
-      def __schema__(:load, struct \\ __struct__(), fields_or_idx, values) do
-        Ecto.Schema.__load__(struct, unquote(fields), fields_or_idx, values)
+      def __schema__(:load, idx, values) do
+        Ecto.Schema.__load__(__struct__(), unquote(fields), idx, values)
       end
     end
   end
