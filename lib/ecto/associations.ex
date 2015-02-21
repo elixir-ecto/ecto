@@ -13,13 +13,11 @@ defmodule Ecto.Associations do
 
   ## Associations
 
-  Associations work in Ecto via behaviours. Anyone can add new
-  associations to Ecto as long as they implement the callbacks
-  specified in this module.
-
-  Note though that, since the associations API is in development,
-  existing callbacks signature and new callbacks can be added
-  in upcoming Ecto releases.
+  Associations work in Ecto via behaviours. Although theoreticaly
+  anyone can add new associations to Ecto some components (like the
+  preloader) still make assumptions about the association structure
+  which may limit how associations work, therefore this behaviour
+  is experimental.
   """
 
   @type t :: %{__struct__: atom, cardinality: :one | :many,
