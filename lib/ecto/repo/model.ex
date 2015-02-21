@@ -137,17 +137,16 @@ defmodule Ecto.Repo.Model do
     do: struct
 
   defp load_into_changeset(%{changes: changes} = changeset, model, values) do
-
     update_in changeset.model, &do_load(struct(&1, changes), model, values)
   end
 
   defp do_load(struct, model, kv) do
-    loaded = Enum.reduce(kv, {struct}, fn
-      {k,v}, {acc} ->
-        value = Ecto.Type.load!(model.__schema__(:field, k), v)
-        {Map.put(acc, k, value)}
-    end) |> elem(0) |> Map.put(:__state__, :loaded)
-    Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
+    types = model.__changeset__
+    Enum.reduce(kv, struct, fn
+      {k,v}, acc ->
+        value = Ecto.Type.load!(Map.fetch!(types, k), v)
+        Map.put(acc, k, value)
+    end) |> Map.put(:__state__, :loaded)
   end
 
   defp merge_into_changeset(model, struct, fields, changeset) do

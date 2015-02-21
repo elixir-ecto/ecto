@@ -160,8 +160,8 @@ defmodule Ecto.Model.CallbacksTest do
   end
 
   test "after_load with model" do
-    model = %AllCallback{id: 1, x: "x", y: "y", z: "z"}
-    model = MockRepo.insert model
+    model = AllCallback.__schema__(:load, 2, {nil, nil, 1, "x", "y", "z"})
+    assert model.id == 1
     assert model.xyz == "xyz"
   end
 end
