@@ -51,9 +51,9 @@ defmodule Ecto.Model.OptimisticLock do
 
   Note that the `optimistic_lock/1` macro is defined in this module, which is
   imported when `Ecto.Model` is used. To use the `optimistic_lock/1` macro
-  without using `Ecto.Model`, just import or require
-  `Ecto.Model.OptimisticLock` but be sure to use `Ecto.Model.Callbacks` as well
-  since it's used by `Ecto.Model.OptimisticLock` under the hood.
+  without using `Ecto.Model`, just use `Ecto.Model.OptimisticLock` but be sure
+  to use `Ecto.Model.Callbacks` as well since it's used by
+  `Ecto.Model.OptimisticLock` under the hood.
 
   When a conflict happens (a record which has been previously fetched is being
   updated, but that same record has been modified since it was fetched), an

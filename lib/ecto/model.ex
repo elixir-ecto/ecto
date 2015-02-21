@@ -19,7 +19,7 @@ defmodule Ecto.Model do
     * `use Ecto.Model.Callbacks` - provides lifecycle callbacks
     * `use Ecto.Model.Timestamps` - automatically set `inserted_at` and
       `updated_at` fields declared via `Ecto.Schema.timestamps/1`
-    * `import Ecto.Model.OptimisticLock` - makes the `optimistic_lock/1` macro
+    * `use Ecto.Model.OptimisticLock` - makes the `optimistic_lock/1` macro
       available
 
   However, you can avoid using `Ecto.Model` altogether in favor
