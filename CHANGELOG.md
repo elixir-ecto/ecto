@@ -4,10 +4,15 @@
 
 * Enhancements
   * Log when migration is already up/down
-  * Support joins besides wheres in `update_all` and `delete_all`
+  * Support joins besides where clauses in `update_all` and `delete_all`
+  * Support optimistic locking with `Ecto.Model.OptimisticLock`
+  * Allow repo timeout to be configured
+  * Support maps in select in queries
+  * Allow custom macros to be used in queries
 
 * Backwards incompatible changes
-  * Primary keys are no longer automatically marked with `read_after_writes`. If you have a custom primary key that is AUTO INCREMENT/SERIAL in the database, you will have to pass `read_after_writes: true` to its schema definition
+  * The `:adapter` option should now be specified in the config file rather than when using `Ecto.Repo` (you will receive a warning if you don't)
+  * Primary keys are no longer automatically marked with `read_after_writes`. If you have a custom primary key that is AUTO INCREMENT/SERIAL in the database, you will have to pass `read_after_writes: true` as option when setting `@primary_key`
   * Remove blank checks from `Ecto.Changeset.cast/4` (you should automatically set the parameters values to nil before calling `cast/4`)
 
 ## v0.8.1 (2015-02-13)
