@@ -28,15 +28,14 @@ defmodule Ecto do
   repository as follows:
 
       defmodule Repo do
-        use Ecto.Repo,
-          otp_app: :my_app,
-          adapter: Ecto.Adapters.Postgres
+        use Ecto.Repo, otp_app: :my_app
       end
 
   Where the configuration for the Repo must be in your application
   environment, usually defined in your `config/config.exs`:
 
       config :my_app, Repo,
+        adapter: Ecto.Adapters.Postgres,
         database: "ecto_simple",
         username: "postgres",
         password: "postgres",

@@ -25,10 +25,8 @@ defmodule Ecto.Adapters.SQL do
       ## Worker
 
       @doc false
-      defmacro __using__(_) do
-        quote do
-          @before_compile Ecto.Adapters.SQL
-        end
+      defmacro __before_compile__(env) do
+        Ecto.Adapters.SQL.__before_compile__(env)
       end
 
       @doc false
@@ -109,15 +107,10 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  @default_timeout 5000
-  defmacro __before_compile__(env) do
+  def __before_compile__(env) do
     otp_app = Module.get_attribute(env.module, :otp_app)
-
-    timeout = try do
-      Ecto.Repo.Config.config(otp_app, env.module) |> Keyword.get(:timeout, @default_timeout)
-    rescue
-      [ArgumentError] -> @default_timeout
-    end
+    timeout = Application.get_env(otp_app, env.module, [])
+              |> Keyword.get(:timeout, 5000)
 
     quote do
       def __pool__ do

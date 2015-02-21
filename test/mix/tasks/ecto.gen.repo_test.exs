@@ -8,17 +8,17 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
     in_tmp fn _ ->
       run ["-r", "Repo"]
 
-      assert_file "lib/repo.ex", fn file ->
-        assert String.contains? file, "defmodule Repo do"
-        assert String.contains? file, "use Ecto.Repo"
-        assert String.contains? file, "adapter: Ecto.Adapters.Postgres,"
-        assert String.contains? file, "otp_app: :ecto"
+      assert_file "lib/repo.ex", """
+      defmodule Repo do
+        use Ecto.Repo, otp_app: :ecto
       end
+      """
 
       assert_file "config/config.exs", """
       use Mix.Config
 
       config :ecto, Repo,
+        adapter: Ecto.Adapters.Postgres,
         database: "ecto_repo",
         username: "user",
         password: "pass",
@@ -29,6 +29,7 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
 
       assert_file "config/config.exs", """
       config :ecto, AnotherRepo,
+        adapter: Ecto.Adapters.Postgres,
         database: "ecto_another_repo",
         username: "user",
         password: "pass",

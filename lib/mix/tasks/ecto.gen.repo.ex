@@ -58,15 +58,14 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   embed_template :repo, """
   defmodule <%= inspect @mod %> do
-    use Ecto.Repo,
-      adapter: Ecto.Adapters.Postgres,
-      otp_app: <%= inspect @app %>
+    use Ecto.Repo, otp_app: <%= inspect @app %>
   end
   """
 
   embed_template :config, """
 
   config <%= inspect @app %>, <%= inspect @mod %>,
+    adapter: Ecto.Adapters.Postgres,
     database: "<%= @app %>_<%= @base %>",
     username: "user",
     password: "pass",

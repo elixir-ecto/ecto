@@ -1,7 +1,7 @@
 defmodule Ecto.MockAdapter do
   @behaviour Ecto.Adapter
 
-  defmacro __using__(_opts), do: :ok
+  defmacro __before_compile__(_opts), do: :ok
   def start_link(_repo, _opts), do: :ok
   def stop(_repo), do: :ok
 
@@ -67,6 +67,8 @@ defmodule Ecto.MockAdapter do
   end
 end
 
+Application.put_env(:ecto, Ecto.MockRepo, adapter: Ecto.MockAdapter)
+
 defmodule Ecto.MockRepo do
-  use Ecto.Repo, adapter: Ecto.MockAdapter, otp_app: :ecto
+  use Ecto.Repo, otp_app: :ecto
 end

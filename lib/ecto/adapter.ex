@@ -9,9 +9,9 @@ defmodule Ecto.Adapter do
   @type t :: module
 
   @doc """
-  The callback invoked when the adapter is used.
+  The callback invoked in case the adapter needs to inject code.
   """
-  defmacrocallback __using__(opts :: Keyword.t) :: Macro.t
+  defmacrocallback __before_compile__(Macro.Env.t) :: Macro.t
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`

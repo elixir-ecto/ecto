@@ -2,6 +2,34 @@ defmodule Ecto.Repo.Config do
   @moduledoc false
 
   @doc """
+  Loads otp app and adapter configuration from options.
+  """
+  def parse(module, opts) do
+    otp_app = Keyword.fetch!(opts, :otp_app)
+
+    adapter = if opts[:adapter] do
+      IO.write :stderr, "warning: the :adapter option when using Ecto.Repo is deprecated, " <>
+                        "please configure the adapter in the config file with the remaining " <>
+                        "repository configuration\n#{Exception.format_stacktrace}"
+      opts[:adapter]
+    else
+      Application.get_env(otp_app, module, [])[:adapter]
+    end
+
+    unless adapter do
+      raise ArgumentError, "missing :adapter configuration in " <>
+                           "config #{inspect otp_app}, #{inspect module}"
+    end
+
+    unless Code.ensure_loaded?(adapter) do
+      raise ArgumentError, "adapter #{inspect adapter} was not compiled, " <>
+                           "ensure it is correct and it is included as a project dependency"
+    end
+
+    {otp_app, adapter}
+  end
+
+  @doc """
   Retrieves and normalizes the configuration for `repo` in `otp_app`.
   """
   def config(otp_app, module) do

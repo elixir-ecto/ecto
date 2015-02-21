@@ -11,14 +11,13 @@ defmodule Ecto.Repo do
   the repository configuration. For example, the repository:
 
       defmodule Repo do
-        use Ecto.Repo,
-          otp_app: :my_app,
-          adapter: Ecto.Adapters.Postgres
+        use Ecto.Repo, otp_app: :my_app
       end
 
   Could be configured with:
 
       config :my_app, Repo,
+        adapter: Ecto.Adapters.Postgres,
         database: "ecto_simple",
         username: "postgres",
         password: "postgres",
@@ -59,19 +58,14 @@ defmodule Ecto.Repo do
 
   @doc false
   defmacro __using__(opts) do
-    adapter = Macro.expand(Keyword.fetch!(opts, :adapter), __CALLER__)
-    otp_app = Keyword.fetch!(opts, :otp_app)
-
-    unless Code.ensure_loaded?(adapter) do
-      raise ArgumentError, message: "Adapter #{inspect adapter} was not compiled, " <>
-                                    "ensure its driver is included as a dependency of your project"
-    end
-
-    quote do
+    quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
-      @otp_app unquote(otp_app)
 
-      use unquote(adapter)
+      {otp_app, adapter} = Ecto.Repo.Config.parse(__MODULE__, opts)
+      @otp_app otp_app
+      @adapter adapter
+      @before_compile adapter
+
       require Logger
 
       def config do
@@ -79,60 +73,60 @@ defmodule Ecto.Repo do
       end
 
       def start_link do
-        unquote(adapter).start_link(__MODULE__, config())
+        @adapter.start_link(__MODULE__, config())
       end
 
       def stop do
-        unquote(adapter).stop(__MODULE__)
+        @adapter.stop(__MODULE__)
       end
 
       def transaction(opts \\ [], fun) when is_list(opts) do
-        unquote(adapter).transaction(__MODULE__, opts, fun)
+        @adapter.transaction(__MODULE__, opts, fun)
       end
 
       def rollback(value) do
-        unquote(adapter).rollback(__MODULE__, value)
+        @adapter.rollback(__MODULE__, value)
       end
 
       def all(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.all(__MODULE__, unquote(adapter), queryable, opts)
+        Ecto.Repo.Queryable.all(__MODULE__, @adapter, queryable, opts)
       end
 
       def get(queryable, id, opts \\ []) do
-        Ecto.Repo.Queryable.get(__MODULE__, unquote(adapter), queryable, id, opts)
+        Ecto.Repo.Queryable.get(__MODULE__, @adapter, queryable, id, opts)
       end
 
       def get!(queryable, id, opts \\ []) do
-        Ecto.Repo.Queryable.get!(__MODULE__, unquote(adapter), queryable, id, opts)
+        Ecto.Repo.Queryable.get!(__MODULE__, @adapter, queryable, id, opts)
       end
 
       def one(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.one(__MODULE__, unquote(adapter), queryable, opts)
+        Ecto.Repo.Queryable.one(__MODULE__, @adapter, queryable, opts)
       end
 
       def one!(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.one!(__MODULE__, unquote(adapter), queryable, opts)
+        Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
       end
 
       defmacro update_all(queryable, values, opts \\ []) do
-        Ecto.Repo.Queryable.update_all(__MODULE__, unquote(adapter), queryable,
+        Ecto.Repo.Queryable.update_all(__MODULE__, @adapter, queryable,
                                        values, opts)
       end
 
       def delete_all(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.delete_all(__MODULE__, unquote(adapter), queryable, opts)
+        Ecto.Repo.Queryable.delete_all(__MODULE__, @adapter, queryable, opts)
       end
 
       def insert(model, opts \\ []) do
-        Ecto.Repo.Model.insert(__MODULE__, unquote(adapter), model, opts)
+        Ecto.Repo.Model.insert(__MODULE__, @adapter, model, opts)
       end
 
       def update(model, opts \\ []) do
-        Ecto.Repo.Model.update(__MODULE__, unquote(adapter), model, opts)
+        Ecto.Repo.Model.update(__MODULE__, @adapter, model, opts)
       end
 
       def delete(model, opts \\ []) do
-        Ecto.Repo.Model.delete(__MODULE__, unquote(adapter), model, opts)
+        Ecto.Repo.Model.delete(__MODULE__, @adapter, model, opts)
       end
 
       def preload(model_or_models, preloads) do
@@ -140,7 +134,7 @@ defmodule Ecto.Repo do
       end
 
       def adapter do
-        unquote(adapter)
+        @adapter
       end
 
       def __repo__ do

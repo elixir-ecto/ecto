@@ -8,28 +8,28 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
 
   defmodule Adapter do
     @behaviour Ecto.Adapter.Storage
-    defmacro __using__(_), do: :ok
+    defmacro __before_compile__(_), do: :ok
     def storage_up(_), do: Process.get(:storage_up) || raise "no storage_up"
     def storage_down(_), do: Process.get(:storage_down) || raise "no storage_down"
   end
 
   defmodule NoStorageAdapter do
-    defmacro __using__(_), do: :ok
+    defmacro __before_compile__(_), do: :ok
   end
 
   # Mocked repos
 
+  Application.put_env(:ecto, __MODULE__.Repo, adapter: Adapter)
+
   defmodule Repo do
-    use Ecto.Repo, adapter: Adapter, otp_app: :ecto
+    use Ecto.Repo, otp_app: :ecto
   end
 
-  Application.put_env(:ecto, Repo, [])
+  Application.put_env(:ecto, __MODULE__.NoStorageRepo, adapter: NoStorageAdapter)
 
   defmodule NoStorageRepo do
-    use Ecto.Repo, adapter: NoStorageAdapter, otp_app: :ecto
+    use Ecto.Repo, otp_app: :ecto
   end
-
-  Application.put_env(:ecto, NoStorageRepo, [])
 
   ## Create
 
