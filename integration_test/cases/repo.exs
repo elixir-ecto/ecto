@@ -60,11 +60,6 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{__state__: :loaded} = TestRepo.update(post)
   end
 
-  test "insert with no primary key" do
-    assert %Barebone{num: nil} = TestRepo.insert(%Barebone{})
-    assert %Barebone{num: 13} = TestRepo.insert(%Barebone{num: 13})
-  end
-
   test "insert and update with changeset" do
     # On insert we merge the fields and changes
     changeset = Ecto.Changeset.cast(%{"title" => "hello", "temp" => "unknown"},
@@ -80,6 +75,20 @@ defmodule Ecto.Integration.RepoTest do
 
     assert %Post{text: "y", title: "world", temp: "unknown"} = TestRepo.update(changeset)
     assert %Post{text: "x", title: "world", temp: "temp"} = TestRepo.get!(Post, post.id)
+  end
+
+  test "insert and update with empty changeset" do
+    # On insert we merge the fields and changes
+    changeset = Ecto.Changeset.cast(%{}, %Comment{}, ~w(), ~w())
+    assert %Comment{} = comment = TestRepo.insert(changeset)
+
+    changeset = Ecto.Changeset.cast(%{}, comment, ~w(), ~w())
+    assert ^comment = TestRepo.update(changeset)
+  end
+
+  test "insert with no primary key" do
+    assert %Barebone{num: nil} = TestRepo.insert(%Barebone{})
+    assert %Barebone{num: 13} = TestRepo.insert(%Barebone{num: 13})
   end
 
   @tag :assigns_primary_key
@@ -101,6 +110,7 @@ defmodule Ecto.Integration.RepoTest do
     assert catch_error(TestRepo.insert(changeset))
   end
 
+  @tag :read_after_writes
   test "insert and update with changeset dirty tracking" do
     changeset = Ecto.Changeset.cast(%{}, %Post{}, ~w(), ~w())
 

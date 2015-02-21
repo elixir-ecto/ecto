@@ -62,11 +62,11 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_update, changeset)
       changes   = validate_changes(:update, model, fields, changeset)
 
-      {pk_field, pk_value} = pk_filter = pk_filter!(model, struct)
+      {pk_field, pk_value} = pk_filter!(model, struct)
       filters = Planner.fields(:update, model, Map.put(changeset.filters, pk_field, pk_value))
 
       if changes == [] do
-        changes = pk_filter
+        changes = [{pk_field, pk_value}]
       end
 
       values = case adapter.update(repo, source, filters, changes, return, opts) do
