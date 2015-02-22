@@ -159,7 +159,7 @@ defmodule Ecto.Repo do
         end
       end
 
-      defoverridable [log: 2]
+      defoverridable [log: 2, config: 0]
     end
   end
 
@@ -175,8 +175,7 @@ defmodule Ecto.Repo do
 
   @doc """
   Should return the database options that will be given to the adapter. Often
-  used in conjunction with `parse_url/1`. This function must be implemented by
-  the user.
+  used in conjunction with `parse_url/1`.
   """
   defcallback config() :: Keyword.t
 
