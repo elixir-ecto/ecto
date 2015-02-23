@@ -7,27 +7,25 @@ System.at_exit fn _ -> Logger.flush() end
 alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
+  adapter: Ecto.Adapters.MySQL,
   url: "ecto://root@localhost/ecto_test",
   size: 1,
   max_overflow: 0)
 
 defmodule Ecto.Integration.TestRepo do
-  use Ecto.Repo,
-    otp_app: :ecto,
-    adapter: Ecto.Adapters.MySQL
+  use Ecto.Repo, otp_app: :ecto
 end
 
 # Pool repo for transaction and lock tests
 alias Ecto.Integration.PoolRepo
 
 Application.put_env(:ecto, PoolRepo,
+  adapter: Ecto.Adapters.MySQL,
   url: "ecto://root@localhost/ecto_test",
   size: 10)
 
 defmodule Ecto.Integration.PoolRepo do
-  use Ecto.Repo,
-    otp_app: :ecto,
-    adapter: Ecto.Adapters.MySQL
+  use Ecto.Repo, otp_app: :ecto
 
   def lock_for_update, do: "FOR UPDATE"
 end
