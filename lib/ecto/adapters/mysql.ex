@@ -112,7 +112,7 @@ defmodule Ecto.Adapters.MySQL do
     case super(repo, source, params, [pk], opts) do
       {:ok, []} ->
         last_inserted_query = @conn.last_inserted(source, pk)
-        Ecto.Adapters.SQL.model(repo, last_inserted_query, [], opts)
+        Ecto.Adapters.SQL.model(repo, last_inserted_query, [], [pk], opts)
       {:error, _} = err -> err
     end
   end
