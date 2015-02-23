@@ -93,13 +93,12 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
+      delete = "DELETE #{name}.*"
+      from = from(sources)
+      join = join(query.joins, sources)
       where = where(query.wheres, sources)
 
-      if where do
-        "DELETE FROM #{name} USING #{quote_name(table)} AS #{name} " <> where
-      else
-        "DELETE FROM #{quote_name(table)}"
-      end
+      assemble([delete, from, join, where])
     end
 
     def insert(table, fields, returning) do

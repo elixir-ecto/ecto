@@ -278,11 +278,15 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "delete all" do
     query = Model |> Queryable.to_query |> normalize
-    assert SQL.delete_all(query) == ~s{DELETE FROM `model`}
+    assert SQL.delete_all(query) == ~s{DELETE m0.* FROM `model` AS m0}
 
     query = from(e in Model, where: e.x == 123) |> normalize
     assert SQL.delete_all(query) ==
-           ~s{DELETE FROM m0 USING `model` AS m0 WHERE (m0.`x` = 123)}
+           ~s{DELETE m0.* FROM `model` AS m0 WHERE (m0.`x` = 123)}
+
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
+    assert SQL.delete_all(query) ==
+           ~s{DELETE m0.* FROM `model` AS m0 INNER JOIN `model2` AS m1 ON m0.`x` = m1.`z`}
   end
 
   ## Joins
