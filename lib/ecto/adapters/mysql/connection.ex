@@ -101,9 +101,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([delete, from, join, where])
     end
 
-    def insert(table, fields, returning) do
-      unless Enum.empty?(returning), do: raise(ArgumentError, "RETURNING is not supported by MySQL")
-
+    # Raise if more than one column is passed to returning
+    def insert(table, fields, _returning) do
       values =
         if fields == [] do
           "() VALUES ()"
@@ -119,9 +118,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "SELECT #{quote_name(pk)} FROM #{quote_name(table)} WHERE #{quote_name(pk)} = LAST_INSERT_ID()"
     end
 
-    def update(table, filters, fields, returning) do
-      unless Enum.empty?(returning), do: raise(ArgumentError, "RETURNING is not supported by MySQL")
-
+    def update(table, filters, fields, _returning) do
       filters = Enum.map filters, fn field  ->
         "#{quote_name(field)} = ?"
       end
