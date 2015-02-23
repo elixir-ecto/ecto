@@ -257,23 +257,28 @@ defmodule Ecto.Adapters.MySQLTest do
   test "update all" do
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: 0]) ==
-           ~s{UPDATE `model` AS m0 SET `x` = 0}
+           ~s{UPDATE `model` AS m0 SET m0.`x` = 0}
 
     query = from(e in Model, where: e.x == 123) |> normalize
     assert SQL.update_all(query, [x: 0]) ==
-           ~s{UPDATE `model` AS m0 SET `x` = 0 WHERE (m0.`x` = 123)}
+           ~s{UPDATE `model` AS m0 SET m0.`x` = 0 WHERE (m0.`x` = 123)}
 
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: 0, y: "123"]) ==
-           ~s{UPDATE `model` AS m0 SET `x` = 0, `y` = '123'}
+           ~s{UPDATE `model` AS m0 SET m0.`x` = 0, m0.`y` = '123'}
 
     query = Model |> Queryable.to_query |> normalize
     assert SQL.update_all(query, [x: quote(do: ^0)]) ==
-           ~s{UPDATE `model` AS m0 SET `x` = ?}
+           ~s{UPDATE `model` AS m0 SET m0.`x` = ?}
 
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
     assert SQL.update_all(query, [x: 0]) ==
-           ~s{UPDATE `model` SET `x` = 0 FROM `model` AS m0 INNER JOIN `model2` AS m1 ON m0.`x` = m1.`z`}
+           ~s{UPDATE `model` AS m0 INNER JOIN `model2` AS m1 ON m0.`x` = m1.`z` SET m0.`x` = 0}
+
+    query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
+    assert SQL.update_all(query, [x: 0]) ==
+           ~s{UPDATE `model` AS m0 INNER JOIN `model2` AS m1 ON m0.`x` = m1.`z`} <>
+           ~s{ SET m0.`x` = 0 WHERE (m0.`x` = 123)}
   end
 
   test "delete all" do
@@ -287,6 +292,11 @@ defmodule Ecto.Adapters.MySQLTest do
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
     assert SQL.delete_all(query) ==
            ~s{DELETE m0.* FROM `model` AS m0 INNER JOIN `model2` AS m1 ON m0.`x` = m1.`z`}
+
+    query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
+    assert SQL.delete_all(query) ==
+           ~s{DELETE m0.* FROM `model` AS m0 } <>
+           ~s{INNER JOIN `model2` AS m1 ON m0.`x` = m1.`z` WHERE (m0.`x` = 123)}
   end
 
   ## Joins

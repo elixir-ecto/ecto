@@ -79,14 +79,14 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       {table, name, _model} = elem(sources, 0)
 
       zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
-        "#{quote_name(field)} = #{expr(expr, sources)}"
+        "#{name}.#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
-      update = update_expr(query.joins, table, name)
-      join   = update_all_join(query.joins, sources)
+      update = "UPDATE #{quote_name(table)} AS #{name}"
+      join   = join(query.joins, sources)
       where  = where(query.wheres, sources)
 
-      assemble([update, "SET", zipped_sql, join, where])
+      assemble([update, join, "SET", zipped_sql, where])
     end
 
     def delete_all(query) do
@@ -94,9 +94,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       {table, name, _model} = elem(sources, 0)
 
       delete = "DELETE #{name}.*"
-      from = from(sources)
-      join = join(query.joins, sources)
-      where = where(query.wheres, sources)
+      from   = from(sources)
+      join   = join(query.joins, sources)
+      where  = where(query.wheres, sources)
 
       assemble([delete, from, join, where])
     end
@@ -176,18 +176,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)
       "FROM #{quote_name(table)} AS #{name}"
-    end
-
-    defp update_expr([], table, name) do
-      "UPDATE #{quote_name(table)} AS #{name}"
-    end
-    defp update_expr(_joins, table, _name) do
-      "UPDATE #{quote_name(table)}"
-    end
-
-    defp update_all_join([], _sources), do: nil
-    defp update_all_join(joins, sources) do
-      from(sources) <> " "  <> join(joins, sources)
     end
 
     defp join([], _sources), do: nil
