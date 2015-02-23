@@ -382,11 +382,11 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "update" do
-    query = SQL.update("model", [:id], [:x, :y], [:z])
-    assert query == ~s{UPDATE "model" SET "x" = $2, "y" = $3 WHERE "id" = $1 RETURNING "z"}
+    query = SQL.update("model", [:x, :y], [:id], [:z])
+    assert query == ~s{UPDATE "model" SET "x" = $1, "y" = $2 WHERE "id" = $3 RETURNING "z"}
 
-    query = SQL.update("model", [:id], [:x, :y], [])
-    assert query == ~s{UPDATE "model" SET "x" = $2, "y" = $3 WHERE "id" = $1}
+    query = SQL.update("model", [:x, :y], [:id], [])
+    assert query == ~s{UPDATE "model" SET "x" = $1, "y" = $2 WHERE "id" = $3}
   end
 
   test "delete" do

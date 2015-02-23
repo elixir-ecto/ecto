@@ -69,7 +69,7 @@ defmodule Ecto.Adapter do
   `{:error, :stale}` is returned.
   """
   defcallback update(repo :: Ecto.Repo.t, source :: binary,
-                     filter :: Keyword.t, fields :: Keyword.t,
+                     fields :: Keyword.t, filter :: Keyword.t,
                      returning :: [atom], opts :: Keyword.t) ::
                      {:ok, Keyword.t} | {:error, :stale} | no_return
 

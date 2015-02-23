@@ -64,10 +64,10 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def update(repo, source, filter, fields, returning, opts) do
-        {filter, values1} = :lists.unzip(filter)
-        {fields, values2} = :lists.unzip(fields)
-        sql = @conn.update(source, filter, fields, returning)
+      def update(repo, source, fields, filter, returning, opts) do
+        {fields, values1} = :lists.unzip(fields)
+        {filter, values2} = :lists.unzip(filter)
+        sql = @conn.update(source, fields, filter, returning)
         Ecto.Adapters.SQL.model(repo, sql, values1 ++ values2, returning, opts)
       end
 

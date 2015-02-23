@@ -116,12 +116,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "INSERT INTO #{quote_name(table)} " <> values <> returning(returning)
     end
 
-    def update(table, filters, fields, returning) do
-      {filters, count} = Enum.map_reduce filters, 1, fn field, acc ->
+    def update(table, fields, filters, returning) do
+      {fields, count} = Enum.map_reduce fields, 1, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      {fields, _count} = Enum.map_reduce fields, count, fn field, acc ->
+      {filters, _count} = Enum.map_reduce filters, count, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 

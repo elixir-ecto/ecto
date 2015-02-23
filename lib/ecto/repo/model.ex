@@ -69,7 +69,7 @@ defmodule Ecto.Repo.Model do
         changes = [{pk_field, pk_value}]
       end
 
-      values = case adapter.update(repo, source, filters, changes, return, opts) do
+      values = case adapter.update(repo, source, changes, filters, return, opts) do
         {:ok, values} ->
           values
         {:error, :stale} ->
