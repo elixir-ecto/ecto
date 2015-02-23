@@ -54,7 +54,7 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
 
   test "worker survives, connection stops if caller dies" do
     {:ok, worker} = Worker.start({Connection, lazy: false})
-    conn = :sys.get_state(worker).conn
+    conn       = :sys.get_state(worker).conn
     conn_mon   = Process.monitor(conn)
     worker_mon = Process.monitor(worker)
 

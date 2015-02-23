@@ -107,18 +107,6 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  def __before_compile__(env) do
-    otp_app = Module.get_attribute(env.module, :otp_app)
-    timeout = Application.get_env(otp_app, env.module, [])
-              |> Keyword.get(:timeout, 5000)
-
-    quote do
-      def __pool__ do
-        {__MODULE__.Pool, unquote(timeout)}
-      end
-    end
-  end
-
   alias Ecto.Adapters.SQL.Worker
 
   @doc """
@@ -323,6 +311,21 @@ defmodule Ecto.Adapters.SQL do
   ## Worker
 
   @doc false
+  def __before_compile__(env) do
+    otp_app = Module.get_attribute(env.module, :otp_app)
+    timeout =
+      otp_app
+      |> Application.get_env(env.module, [])
+      |> Keyword.get(:timeout, 5000)
+
+    quote do
+      def __pool__ do
+        {__MODULE__.Pool, unquote(timeout)}
+      end
+    end
+  end
+
+  @doc false
   def start_link(connection, adapter, repo, opts) do
     {pool_opts, worker_opts} = split_opts(repo, opts)
 
@@ -359,6 +362,9 @@ defmodule Ecto.Adapters.SQL do
     pool_opts =
       [name: {:local, pool_name},
        worker_module: Worker] ++ pool_opts
+
+    worker_opts = worker_opts
+      |> Keyword.put(:timeout, Keyword.get(worker_opts, :connect_timeout, 5000))
 
     {pool_opts, worker_opts}
   end

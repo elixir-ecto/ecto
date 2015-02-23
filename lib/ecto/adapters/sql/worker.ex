@@ -95,7 +95,7 @@ defmodule Ecto.Adapters.SQL.Worker do
   def handle_call(request, from, %{conn: nil, params: params, module: module} = s) do
     case module.connect(params) do
       {:ok, conn} ->
-        case begin_sandbox(%{s | conn: conn}) do
+        case begin_sandbox(%{s | conn: conn}, params) do
           {:ok, s}      -> handle_call(request, from, s)
           {:error, err} -> {:reply, {:error, err}, s}
         end
@@ -108,7 +108,7 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, {:ok, {module, conn}}, s}
   end
 
-  def handle_call({:begin, opts}, from, s) do
+  def handle_call({:begin, opts}, _from, s) do
     %{conn: conn, transactions: trans, module: module} = s
 
     sql =
@@ -129,7 +129,7 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
-  def handle_call({:commit, opts}, from, %{transactions: trans} = s) when trans >= 1 do
+  def handle_call({:commit, opts}, _from, %{transactions: trans} = s) when trans >= 1 do
     %{conn: conn, module: module} = s
 
     reply =
@@ -147,7 +147,7 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
-  def handle_call({:rollback, opts}, from, %{transactions: trans} = s) when trans >= 1 do
+  def handle_call({:rollback, opts}, _from, %{transactions: trans} = s) when trans >= 1 do
     %{conn: conn, module: module} = s
 
     sql =
@@ -180,8 +180,8 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, :ok, s}
   end
 
-  def handle_call({:begin_test_transaction, _opts}, _from, %{transactions: 0} = s) do
-    case begin_sandbox(%{s | sandbox: true}) do
+  def handle_call({:begin_test_transaction, opts}, _from, %{transactions: 0} = s) do
+    case begin_sandbox(%{s | sandbox: true}, opts) do
       {:ok, s}      -> {:reply, :ok, s}
       {:error, err} -> {:reply, {:error, err}, s}
     end
@@ -204,7 +204,7 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, :ok, s}
   end
 
-  def handle_call({:rollback_test_transaction, opts}, from, %{transactions: 1} = s) do
+  def handle_call({:rollback_test_transaction, opts}, _from, %{transactions: 1} = s) do
     %{conn: conn, module: module} = s
 
     case module.query(conn, module.rollback, [], opts) do
@@ -235,10 +235,9 @@ defmodule Ecto.Adapters.SQL.Worker do
 
   ## Helpers
 
-  defp begin_sandbox(%{sandbox: false} = s), do: {:ok, s}
-  defp begin_sandbox(%{sandbox: true} = s) do
+  defp begin_sandbox(%{sandbox: false} = s, _opts), do: {:ok, s}
+  defp begin_sandbox(%{sandbox: true} = s, opts) do
     %{conn: conn, module: module} = s
-    opts = [timeout: :infinity]
 
     case module.query(conn, module.begin_transaction, [], opts) do
       {:ok, _} ->

@@ -36,13 +36,13 @@ defmodule Ecto.Adapters.Postgres do
     * `:parameters` - Keyword list of connection parameters
     * `:ssl` - Set to true if ssl should be used (default: false)
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
+    * `:connect_timeout` - The timeout for establishing new connections, defaults to `5000`
 
   ### Pool options
 
     * `:size` - The number of connections to keep in the pool
-    * `:max_overflow` - The maximum overflow of connections (see poolboy docs)
     * `:lazy` - If false all connections will be started immediately on Repo startup (default: true)
-    * `:timeout` - The time in milliseconds to wait for calls to the database to finish - must be available at compile time
+    * `:max_overflow` - The maximum overflow of connections (see poolboy docs)
 
   ### Storage options
 
