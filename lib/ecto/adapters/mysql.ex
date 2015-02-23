@@ -7,9 +7,15 @@ defmodule Ecto.Adapters.MySQL do
 
   ## Options
 
-  Mariaex options split in different categories described
+  MySQL options split in different categories described
   below. All options should be given via the repository
   configuration.
+
+  ### Compile time options
+  Those options should be set in the config file and require
+  recompilation in order to make an effect.
+    * `:adapter` - The adapter name, in this case, `Ecto.Adapters.MySQL`
+    * `:timeout` - The default timeout to use on queries, defaults to `5000`
 
   ### Connection options
 
