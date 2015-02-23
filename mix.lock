@@ -2,7 +2,7 @@
   "earmark": {:hex, :earmark, "0.1.13"},
   "ex_doc": {:hex, :ex_doc, "0.7.1"},
   "inch_ex": {:hex, :inch_ex, "0.2.4"},
-  "mariaex": {:git, "git://github.com/liveforeverx/mariaex.git", "43ddf640416dddab78cd31b2d95d6e27347b5fdd", []},
+  "mariaex": {:git, "git://github.com/liveforeverx/mariaex.git", "86adad4432286f7bdcef791cbd7b29145b2eb164", []},
   "poison": {:hex, :poison, "1.3.1"},
   "poolboy": {:hex, :poolboy, "1.4.2"},
   "postgrex": {:hex, :postgrex, "0.8.0"}}
