@@ -23,6 +23,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     def query(conn, sql, params, opts \\ []) do
+      params = Enum.map params, fn
+        %Ecto.Query.Tagged{value: value} -> value
+        value -> value
+      end
+
       case Mariaex.Connection.query(conn, sql, params, opts) do
         {:ok, %Mariaex.Result{} = result} -> {:ok, Map.from_struct(result)}
         {:error, %Mariaex.Error{}} =  err -> err
