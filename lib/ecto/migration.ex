@@ -327,6 +327,14 @@ defmodule Ecto.Migration do
   end
 
   @doc """
+  Gets the migrator direction.
+  """
+  @spec direction :: :up | :down
+  def direction do
+    Runner.migrator_direction
+  end
+
+  @doc """
   Adds a column when creating or altering a table.
 
   In order to support database-specific types, in addition to standard

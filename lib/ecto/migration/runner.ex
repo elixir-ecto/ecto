@@ -14,9 +14,9 @@ defmodule Ecto.Migration.Runner do
   @doc """
   Runs the given migration.
   """
-  def run(repo, module, direction, operation, opts) do
+  def run(repo, module, direction, operation, migrator_direction, opts) do
     level = Keyword.get(opts, :log, :info)
-    start_link(repo, direction, level)
+    start_link(repo, direction, migrator_direction, level)
 
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
     {time, _} = :timer.tc(module, operation, [])
@@ -28,9 +28,9 @@ defmodule Ecto.Migration.Runner do
   @doc """
   Starts the runner for the specified repo.
   """
-  def start_link(repo, direction, level) do
+  def start_link(repo, direction, migrator_direction, level) do
     Agent.start_link(fn ->
-      %{direction: direction, repo: repo,
+      %{direction: direction, repo: repo, migrator_direction: migrator_direction,
         command: nil, subcommands: [], level: level}
     end, name: __MODULE__)
   end
@@ -40,6 +40,19 @@ defmodule Ecto.Migration.Runner do
   """
   def stop() do
     Agent.stop(__MODULE__)
+  end
+
+  @doc """
+  Returns the migrator command (up or down).
+
+    * forward + up: up
+    * forward + down: down
+    * forward + change: up
+    * backward + change: down
+
+  """
+  def migrator_direction do
+    Agent.get(__MODULE__, & &1.migrator_direction)
   end
 
   @doc """

@@ -59,8 +59,8 @@ defmodule Ecto.Migrator do
 
   defp do_up(repo, version, module, opts) do
     run_maybe_in_transaction repo, module, fn ->
-      attempt(repo, module, :forward, :up, opts)
-        || attempt(repo, module, :forward, :change, opts)
+      attempt(repo, module, :forward, :up, :up, opts)
+        || attempt(repo, module, :forward, :change, :up, opts)
         || raise Ecto.MigrationError, message: "#{inspect module} does not implement a `up/0` or `change/0` function"
       SchemaMigration.up(repo, version)
     end
@@ -89,8 +89,8 @@ defmodule Ecto.Migrator do
 
   defp do_down(repo, version, module, opts) do
     run_maybe_in_transaction repo, module, fn ->
-      attempt(repo, module, :forward, :down, opts)
-        || attempt(repo, module, :backward, :change, opts)
+      attempt(repo, module, :forward, :down, :down, opts)
+        || attempt(repo, module, :backward, :change, :down, opts)
         || raise Ecto.MigrationError, message: "#{inspect module} does not implement a `down/0` or `change/0` function"
       SchemaMigration.down(repo, version)
     end
@@ -107,10 +107,10 @@ defmodule Ecto.Migrator do
     end
   end
 
-  defp attempt(repo, module, direction, operation, opts) do
+  defp attempt(repo, module, direction, operation, reference, opts) do
     if Code.ensure_loaded?(module) and
        function_exported?(module, operation, 0) do
-      Runner.run(repo, module, direction, operation, opts)
+      Runner.run(repo, module, direction, operation, reference, opts)
       :ok
     end
   end

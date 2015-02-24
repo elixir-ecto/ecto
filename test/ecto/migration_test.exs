@@ -12,13 +12,14 @@ defmodule Ecto.MigrationTest do
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference
+  alias Ecto.Migration.Runner
 
   setup meta do
-    {:ok, _} = Ecto.Migration.Runner.start_link(MockRepo, meta[:direction] || :forward, false)
+    {:ok, _} = Runner.start_link(MockRepo, meta[:direction] || :forward, :up, false)
 
     on_exit fn ->
       try do
-        Ecto.Migration.Runner.stop()
+        Runner.stop()
       catch
         :exit, _ -> :ok
       end
@@ -29,6 +30,10 @@ defmodule Ecto.MigrationTest do
 
   test "defines __migration__ function" do
     assert function_exported?(__MODULE__, :__migration__, 0)
+  end
+
+  test "allows direction to be retrieved" do
+    assert direction() == :up
   end
 
   test "creates a table" do
