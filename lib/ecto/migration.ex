@@ -296,6 +296,9 @@ defmodule Ecto.Migration do
       # The index type can be specified
       create index(:products, [:name], using: :hash)
 
+      # Create an index on custom expressions
+      create index(:products, ["lower(name)"], name: :products_lower_name_index)
+
   """
   def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
     index = struct(%Index{table: table, columns: columns}, opts)
