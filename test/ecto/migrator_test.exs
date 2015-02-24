@@ -231,10 +231,10 @@ defmodule Ecto.MigratorTest do
       up(MockRepo, 0, NoTransactionMigration)
 
       # From the SchemaMigration insert transaction.
-      assert_receive {:transaction, _}
+      assert_received {:transaction, _}
 
       # No transaction is executed by the migration.
-      refute_receive {:transaction, _}
+      refute_received {:transaction, _}
     end
   end
 
@@ -244,10 +244,10 @@ defmodule Ecto.MigratorTest do
 
       up(MockRepo, 0, ChangeMigration)
       # From the SchemaMigration insert transaction.
-      assert_receive {:transaction, _}
+      assert_received {:transaction, _}
 
       # No transaction is executed by the migration.
-      refute_receive {:transaction, _}
+      refute_received {:transaction, _}
     end
   end
 

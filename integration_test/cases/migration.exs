@@ -11,33 +11,11 @@ defmodule Ecto.Integration.MigrationTest do
     use Ecto.Migration
 
     def up do
-      table = table(:barebones)
-
-      assert exists? table
-      drop table
-      refute exists? table
-
-      create table do
-        add :name, :text
-        add :other, :text
-      end
-
-      alter table do
-        modify :name, :string
-        remove :other
-        add :author, :string, unique: true
-      end
-
-      index = index(:barebones, [:author])
-      refute exists? index
-      create index
-      assert exists? index
-      drop index
-      refute exists? index
+      :ok
     end
 
     def down do
-      drop table(:barebones)
+      :ok
     end
   end
 
