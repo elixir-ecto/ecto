@@ -180,7 +180,7 @@ defmodule Ecto do
   For example, if the params map contain only the "name" and "email" keys,
   the "age" validation won't run.
 
-  As an exampe, let's see how we could use the changeset above in
+  As an example, let's see how we could use the changeset above in
   a web application that needs to update users:
 
       def update(id, params) do
@@ -198,6 +198,19 @@ defmodule Ecto do
   and returns a changeset. If the changeset is valid, we persist the
   changes to the database, otherwise, we handle the error by emitting
   a bad request code.
+
+  Another example to create users:
+
+      def create(id, params) do
+        changeset = User.changeset %User{}, params["user"]
+
+        if changeset.valid? do
+          user = Repo.insert(changeset)
+          send_resp conn, 200, "Ok"
+        else
+          send_resp conn, 400, "Bad request"
+        end
+      end
 
   The benefit of having explicit changesets is that we can easily provide
   different changesets for different use cases. For example, one
