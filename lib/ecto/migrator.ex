@@ -147,9 +147,9 @@ defmodule Ecto.Migrator do
 
   defp run_to(repo, versions, directory, direction, target, opts) do
     within_target_version? = fn
-      {version, _}, target, :up ->
+      {version, _, _}, target, :up ->
         version <= target
-      {version, _}, target, :down ->
+      {version, _, _}, target, :down ->
         version >= target
     end
 
@@ -171,27 +171,33 @@ defmodule Ecto.Migrator do
 
   defp pending_in_direction(versions, directory, :up) do
     migrations_for(directory)
-    |> Enum.filter(fn {version, _file} -> not (version in versions) end)
+    |> Enum.filter(fn {version, _name, _file} -> not (version in versions) end)
   end
 
   defp pending_in_direction(versions, directory, :down) do
     migrations_for(directory)
-    |> Enum.filter(fn {version, _file} -> version in versions end)
+    |> Enum.filter(fn {version, _name, _file} -> version in versions end)
     |> Enum.reverse
   end
 
   defp migrations_for(directory) do
-    Path.join(directory, "*")
-    |> Path.wildcard
-    |> Enum.filter(&Regex.match?(~r"\d+_.+\.exs$", &1))
-    |> attach_versions
+    query = Path.join(directory, "*")
+
+    for entry <- Path.wildcard(query),
+        info = extract_migration_info(entry),
+        do: info
   end
 
-  defp attach_versions(files) do
-    Enum.map(files, fn(file) ->
-      {integer, _} = Integer.parse(Path.basename(file))
-      {integer, file}
-    end)
+  defp extract_migration_info(file) do
+    file = Path.basename(file)
+    ext  = Path.extname(file)
+
+    case Integer.parse(Path.rootname(file)) do
+      {integer, "_" <> name} when ext == ".exs" ->
+        {integer, name, file}
+      _ ->
+        nil
+    end
   end
 
   defp migrate(migrations, direction, repo, opts) do
@@ -202,7 +208,7 @@ defmodule Ecto.Migrator do
 
     ensure_no_duplication(migrations)
 
-    Enum.map migrations, fn {version, file} ->
+    Enum.map migrations, fn {version, _name, file} ->
       {mod, _bin} =
         Enum.find(Code.load_file(file), fn {mod, _bin} ->
           function_exported?(mod, :__migration__, 0)
@@ -217,12 +223,18 @@ defmodule Ecto.Migrator do
     end
   end
 
-  defp ensure_no_duplication([{version, _} | t]) do
+  defp ensure_no_duplication([{version, name, _} | t]) do
     if List.keyfind(t, version, 0) do
-      raise Ecto.MigrationError, message: "migrations can't be executed, version #{version} is duplicated"
-    else
-      ensure_no_duplication(t)
+      raise Ecto.MigrationError,
+        message: "migrations can't be executed, migration version #{version} is duplicated"
     end
+
+    if List.keyfind(t, name, 1) do
+      raise Ecto.MigrationError,
+        message: "migrations can't be executed, migration name #{name} is duplicated"
+    end
+
+    ensure_no_duplication(t)
   end
 
   defp ensure_no_duplication([]), do: :ok
@@ -233,5 +245,4 @@ defmodule Ecto.Migrator do
 
   defp log(false, _msg), do: :ok
   defp log(level, msg),  do: Logger.log(level, msg)
-
 end

@@ -160,7 +160,8 @@ defmodule Ecto.Adapters.SQL do
     pid = Process.whereis(pid)
 
     if is_nil(pid) or not Process.alive?(pid) do
-      raise ArgumentError, "repo #{inspect repo} is not started"
+      raise ArgumentError, "repo #{inspect repo} is not started, " <>
+                           "please ensure it is part of your supervision tree"
     end
 
     {pid, timeout}

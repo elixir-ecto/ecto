@@ -143,7 +143,17 @@ defmodule Ecto.MigratorTest do
     in_tmp fn path ->
       create_migration "13_hello.exs"
       create_migration "13_other.exs"
-      assert_raise Ecto.MigrationError, "migrations can't be executed, version 13 is duplicated", fn ->
+      assert_raise Ecto.MigrationError, "migrations can't be executed, migration version 13 is duplicated", fn ->
+        run(MockRepo, path, :up, all: true, log: false)
+      end
+    end
+  end
+
+  test "fails if there are duplicated name" do
+    in_tmp fn path ->
+      create_migration "13_hello.exs"
+      create_migration "14_hello.exs"
+      assert_raise Ecto.MigrationError, "migrations can't be executed, migration name hello is duplicated", fn ->
         run(MockRepo, path, :up, all: true, log: false)
       end
     end
@@ -158,56 +168,56 @@ defmodule Ecto.MigratorTest do
 
   test "downwards migrations skips migrations that are already down" do
     in_tmp fn path ->
-      create_migration "1_sample.exs"
-      create_migration "4_sample.exs"
+      create_migration "1_sample1.exs"
+      create_migration "4_sample2.exs"
       assert run(MockRepo, path, :down, all: true, log: false) == [1]
     end
   end
 
   test "stepwise migrations stop before all have been run" do
     in_tmp fn path ->
-      create_migration "13_step_premature_end.exs"
-      create_migration "14_step_premature_end.exs"
+      create_migration "13_step_premature_end1.exs"
+      create_migration "14_step_premature_end2.exs"
       assert run(MockRepo, path, :up, step: 1, log: false) == [13]
     end
   end
 
   test "stepwise migrations stop at the number of available migrations" do
     in_tmp fn path ->
-      create_migration "13_step_to_the_end.exs"
-      create_migration "14_step_to_the_end.exs"
+      create_migration "13_step_to_the_end1.exs"
+      create_migration "14_step_to_the_end2.exs"
       assert run(MockRepo, path, :up, step: 2, log: false) == [13, 14]
     end
   end
 
   test "stepwise migrations stop even if asked to exceed available" do
     in_tmp fn path ->
-      create_migration "13_step_past_the_end.exs"
-      create_migration "14_step_past_the_end.exs"
+      create_migration "13_step_past_the_end1.exs"
+      create_migration "14_step_past_the_end2.exs"
       assert run(MockRepo, path, :up, step: 3, log: false) == [13, 14]
     end
   end
 
   test "version migrations stop before all have been run" do
     in_tmp fn path ->
-      create_migration "13_version_premature_end.exs"
-      create_migration "14_version_premature_end.exs"
+      create_migration "13_version_premature_end1.exs"
+      create_migration "14_version_premature_end2.exs"
       assert run(MockRepo, path, :up, to: 13, log: false) == [13]
     end
   end
 
   test "version migrations stop at the number of available migrations" do
     in_tmp fn path ->
-      create_migration "13_version_to_the_end.exs"
-      create_migration "14_version_to_the_end.exs"
+      create_migration "13_version_to_the_end1.exs"
+      create_migration "14_version_to_the_end2.exs"
       assert run(MockRepo, path, :up, to: 14, log: false) == [13, 14]
     end
   end
 
   test "version migrations stop even if asked to exceed available" do
     in_tmp fn path ->
-      create_migration "13_version_past_the_end.exs"
-      create_migration "14_version_past_the_end.exs"
+      create_migration "13_version_past_the_end1.exs"
+      create_migration "14_version_past_the_end2.exs"
       assert run(MockRepo, path, :up, to: 15, log: false) == [13, 14]
     end
   end
