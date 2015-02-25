@@ -109,7 +109,7 @@ defmodule Ecto.Integration.MigrationTest do
   defp create_migration(num) do
     module = Module.concat(__MODULE__, "Migration#{num}")
 
-    File.write! "#{num}_migration.exs", """
+    File.write! "#{num}_migration_#{num}.exs", """
     defmodule #{module} do
       use Ecto.Migration
 
