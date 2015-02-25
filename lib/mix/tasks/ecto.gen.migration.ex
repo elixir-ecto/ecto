@@ -19,6 +19,9 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   but it can be configured by specify the `:priv` key under
   the repository configuration.
 
+  This generator will automatically open the generated file if
+  you have `ECTO_EDITOR` set in your environment variable.
+
   ## Command line options
 
     * `-r`, `--repo` - the repo to generate migration for (defaults to `YourApp.Repo`)

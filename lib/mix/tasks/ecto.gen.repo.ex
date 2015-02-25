@@ -16,6 +16,10 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
       mix ecto.gen.repo
       mix ecto.gen.repo -r Custom.Repo
 
+  This generator will automatically open the config/config.exs
+  after generation if you have `ECTO_EDITOR` set in your environment
+  variable.
+
   ## Command line options
 
     * `-r`, `--repo` - the repo to generate (defaults to `YourApp.Repo`)
