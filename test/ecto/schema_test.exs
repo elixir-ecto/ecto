@@ -6,8 +6,9 @@ defmodule Ecto.SchemaTest do
 
     schema "mymodel" do
       field :name,  :string, default: "eric"
-      field :email, :string, uniq: true
+      field :email, :string, uniq: true, read_after_writes: true
       field :temp,  :any, default: "temp", virtual: true
+      field :count, :decimal, read_after_writes: true
       field :array, {:array, :string}
       belongs_to :comment, Comment
       belongs_to :permalink, Permalink, auto_field: false
@@ -24,17 +25,18 @@ defmodule Ecto.SchemaTest do
 
   test "schema metadata" do
     assert MyModel.__schema__(:source)             == "mymodel"
-    assert MyModel.__schema__(:fields)             == [:id, :name, :email, :array, :comment_id]
+    assert MyModel.__schema__(:fields)             == [:id, :name, :email, :count, :array, :comment_id]
     assert MyModel.__schema__(:field, :id)         == :integer
     assert MyModel.__schema__(:field, :name)       == :string
     assert MyModel.__schema__(:field, :email)      == :string
     assert MyModel.__schema__(:field, :array)      == {:array, :string}
     assert MyModel.__schema__(:field, :comment_id) == :integer
+    assert MyModel.__schema__(:read_after_writes)  == [:id, :email, :count]
   end
 
   test "changeset metadata" do
     assert MyModel.__changeset__ ==
-           %{name: :string, email: :string, array: {:array, :string},
+           %{name: :string, email: :string, count: :decimal, array: {:array, :string},
              comment_id: :integer, temp: :any, id: :integer}
   end
 
