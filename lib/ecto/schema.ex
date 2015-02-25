@@ -641,7 +641,7 @@ defmodule Ecto.Schema do
   @doc false
   def __read_after_writes__(fields) do
     quote do
-      def __schema__(:read_after_writes), do: unquote(fields)
+      def __schema__(:read_after_writes), do: unquote(Enum.reverse(fields))
     end
   end
 
