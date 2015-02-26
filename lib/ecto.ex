@@ -152,8 +152,8 @@ defmodule Ecto do
         end
 
         def changeset(user, params \\ nil) do
-          params
-          |> cast(user, ~w(name email), ~w(age))
+          user
+          |> cast(params, ~w(name email), ~w(age))
           |> validate_format(:email, ~r/@/)
           |> validate_number(:age, more_than: 18)
           |> validate_unique(:email, Repo)
@@ -164,8 +164,8 @@ defmodule Ecto do
   we use them to generate and manipulate a changeset in the `changeset/2`
   function above.
 
-  First we invoke `Ecto.Changeset.cast/2` with the parameters, the model
-  and a list of required and optional fields and returns a changeset.
+  First we invoke `Ecto.Changeset.cast/4` with the model, the parameters
+  and a list of required and optional fields; this returns a changeset.
   The parameter is a map with binary keys and a value that will be cast
   based on the type defined on the model schema.
 
