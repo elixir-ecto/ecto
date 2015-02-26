@@ -222,6 +222,14 @@ defmodule Ecto.MigratorTest do
     end
   end
 
+  test "version migrations work iside directories" do
+    in_tmp fn path ->
+      File.mkdir_p!("foo")
+      create_migration "foo/13_version_in_dir.exs"
+      assert run(MockRepo, Path.join(path, "foo"), :up, to: 15, log: false) == [13]
+    end
+  end
+
   test "migrations run inside a transaction if the adapter supports ddl transactions" do
     capture_log fn ->
       Process.put(:supports_ddl_transaction?, true)
@@ -269,8 +277,9 @@ defmodule Ecto.MigratorTest do
   end
 
   defp create_migration(name) do
+    module = name |> Path.basename |> Path.rootname
     File.write! name, """
-    defmodule Ecto.MigrationTest.S#{Path.rootname(name)} do
+    defmodule Ecto.MigrationTest.S#{module} do
       use Ecto.Migration
 
       def up do

@@ -189,10 +189,10 @@ defmodule Ecto.Migrator do
   end
 
   defp extract_migration_info(file) do
-    filename = Path.basename(file)
-    ext  = Path.extname(filename)
+    base = Path.basename(file)
+    ext  = Path.extname(base)
 
-    case Integer.parse(Path.rootname(filename)) do
+    case Integer.parse(Path.rootname(base)) do
       {integer, "_" <> name} when ext == ".exs" ->
         {integer, name, file}
       _ ->
