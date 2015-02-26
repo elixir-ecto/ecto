@@ -117,7 +117,7 @@ defmodule Ecto.Changeset do
   Passing a changeset as the second argument:
 
       iex> changeset = cast(%{title: "Hello"}, post, ~w(), ~w(title))
-      iex> new_changeset = cast(%{title: "Foo", body: "Bar"}, ~w(title), ~w(body))
+      iex> new_changeset = cast(%{title: "Foo", body: "Bar"}, changeset, ~w(title), ~w(body))
       iex> new_changeset.params
       %{title: "Foo", body: "Bar"}
       iex> new_changeset.required
