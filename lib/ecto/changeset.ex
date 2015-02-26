@@ -71,15 +71,13 @@ defmodule Ecto.Changeset do
   Converts the given `params` into a changeset for `model`
   keeping only the set of `required` and `optional` keys.
 
-  This functions receives the `params` and cast them according
-  to the schema information from `model`. `params` is a map of
-  string keys or a map with atom keys containing potentially
-  unsafe data.
+  This functions receives a model and some `params`, and casts the `params`
+  according to the schema information from `model`. `params` is a map with
+  string keys or a map with atom keys containing potentially unsafe data.
 
-  During casting, all valid parameters will have their key name
-  converted to atoms and stored as a change in the changeset.
-  All other parameters that are not listed in `required` or
-  `optional` are ignored.
+  During casting, all valid parameters will have their key name converted to an
+  atom and stored as a change in the `:changes` field of the changeset.
+  All parameters that are not listed in `required` or `optional` are ignored.
 
   If casting of all fields is successful and all required fields
   are present either in the model or in the given params, the
@@ -87,17 +85,17 @@ defmodule Ecto.Changeset do
 
   ## No parameters
 
-  The `params` argument can also be nil. In such cases, the
+  The `params` argument can also be `nil`. In such cases, the
   changeset is automatically marked as invalid, with an empty
-  changes map. This is useful to run the changeset through
+  `:changes` map. This is useful to run the changeset through
   all validation steps for introspection.
 
   ## Composing casts
 
-  `cast/4` also accepts a changeset instead of a model as its second argument.
+  `cast/4` also accepts a changeset instead of a model as its first argument.
   In such cases, all the effects caused by the call to `cast/4` (additional and
   optional fields, errors and changes) are simply added to the ones already
-  present in the argument changeset. Parameters are merged (*not deep-merged*)
+  present in the argument changeset. Parameters are merged (**not deep-merged**)
   and the ones passed to `cast/4` take precedence over the ones already in the
   changeset.
 
@@ -109,15 +107,15 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      iex> changeset = cast(params, post, ~w(title), ~w())
+      iex> changeset = cast(post, params, ~w(title), ~w())
       iex> if changeset.valid? do
       ...>   Repo.update(changeset)
       ...> end
 
-  Passing a changeset as the second argument:
+  Passing a changeset as the first argument:
 
-      iex> changeset = cast(%{title: "Hello"}, post, ~w(), ~w(title))
-      iex> new_changeset = cast(%{title: "Foo", body: "Bar"}, changeset, ~w(title), ~w(body))
+      iex> changeset = cast(post, %{title: "Hello"}, ~w(), ~w(title))
+      iex> new_changeset = cast(changeset, %{title: "Foo", body: "Bar"}, ~w(title), ~w(body))
       iex> new_changeset.params
       %{title: "Foo", body: "Bar"}
       iex> new_changeset.required
@@ -126,16 +124,17 @@ defmodule Ecto.Changeset do
       [:body]
 
   """
-  @spec cast(%{binary => term} | %{atom => term} | nil,
-             Ecto.Model.t | Ecto.Changeset.t, [String.t | atom],
+  @spec cast(Ecto.Model.t | Ecto.Changeset.t,
+             %{binary => term} | %{atom => term} | nil,
+             [String.t | atom],
              [String.t | atom]) :: t
-  def cast(params, model_or_changeset, required, optional \\ [])
+  def cast(model_or_changeset, params, required, optional \\ [])
 
-  def cast(%{__struct__: _} = params, _model, _required, _optional) do
+  def cast(_model, %{__struct__: _} = params, _required, _optional) do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
   end
 
-  def cast(nil, %{__struct__: _} = model, required, optional)
+  def cast(%{__struct__: _} = model, nil, required, optional)
       when is_list(required) and is_list(optional) do
     to_atom = fn
       key when is_atom(key) -> key
@@ -149,13 +148,13 @@ defmodule Ecto.Changeset do
                     changes: %{}, required: required, optional: optional}
   end
 
-  def cast(%{} = params, %Ecto.Changeset{} = changeset, required, optional)
+  def cast(%Ecto.Changeset{} = changeset, %{} = params, required, optional)
       when is_list(required) and is_list(optional) do
-    new_changeset = cast(params, changeset.model, required, optional)
+    new_changeset = cast(changeset.model, params, required, optional)
     merge(changeset, new_changeset)
   end
 
-  def cast(%{} = params, %{__struct__: module} = model, required, optional)
+  def cast(%{__struct__: module} = model, %{} = params, required, optional)
       when is_list(required) and is_list(optional) do
     params = convert_params(params)
     types  = module.__changeset__
