@@ -62,16 +62,16 @@ defmodule Ecto.Integration.RepoTest do
 
   test "insert and update with changeset" do
     # On insert we merge the fields and changes
-    changeset = Ecto.Changeset.cast(%{"title" => "hello", "temp" => "unknown"},
-                                    %Post{text: "x", title: "wrong"}, ~w(title temp), ~w())
+    changeset = Ecto.Changeset.cast(%Post{text: "x", title: "wrong"},
+                                    %{"title" => "hello", "temp" => "unknown"}, ~w(title temp), ~w())
 
     post = TestRepo.insert(changeset)
     assert %Post{text: "x", title: "hello", temp: "unknown"} = post
     assert %Post{text: "x", title: "hello", temp: "temp"} = TestRepo.get!(Post, post.id)
 
     # On update we merge only fields
-    changeset = Ecto.Changeset.cast(%{"title" => "world", "temp" => "unknown"},
-                                    %{post | text: "y"}, ~w(title temp), ~w())
+    changeset = Ecto.Changeset.cast(%{post | text: "y"},
+                                    %{"title" => "world", "temp" => "unknown"}, ~w(title temp), ~w())
 
     assert %Post{text: "y", title: "world", temp: "unknown"} = TestRepo.update(changeset)
     assert %Post{text: "x", title: "world", temp: "temp"} = TestRepo.get!(Post, post.id)
@@ -79,10 +79,10 @@ defmodule Ecto.Integration.RepoTest do
 
   test "insert and update with empty changeset" do
     # On insert we merge the fields and changes
-    changeset = Ecto.Changeset.cast(%{}, %Comment{}, ~w(), ~w())
+    changeset = Ecto.Changeset.cast(%Comment{}, %{}, ~w(), ~w())
     assert %Comment{} = comment = TestRepo.insert(changeset)
 
-    changeset = Ecto.Changeset.cast(%{}, comment, ~w(), ~w())
+    changeset = Ecto.Changeset.cast(comment, %{}, ~w(), ~w())
     assert ^comment = TestRepo.update(changeset)
   end
 
@@ -98,21 +98,21 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :assigns_primary_key
   test "insert and update with user-assigned primary key in changeset" do
-    changeset = Ecto.Changeset.cast(%{"id" => "13"}, %Post{id: 11}, ~w(id), ~w())
+    changeset = Ecto.Changeset.cast(%Post{id: 11}, %{"id" => "13"}, ~w(id), ~w())
     assert %Post{id: 13} = post = TestRepo.insert(changeset)
 
-    changeset = Ecto.Changeset.cast(%{"id" => "15"}, post, ~w(id), ~w())
+    changeset = Ecto.Changeset.cast(post, %{"id" => "15"}, ~w(id), ~w())
     assert %Post{id: 15} = TestRepo.update(changeset)
 
     # We even allow a nil primary key to be set via the
     # changeset but that causes crashes
-    changeset = Ecto.Changeset.cast(%{"id" => nil}, %Post{id: 11}, ~w(), ~w(id))
+    changeset = Ecto.Changeset.cast(%Post{id: 11}, %{"id" => nil}, ~w(), ~w(id))
     assert catch_error(TestRepo.insert(changeset))
   end
 
   @tag :read_after_writes
   test "insert and update with changeset dirty tracking" do
-    changeset = Ecto.Changeset.cast(%{}, %Post{}, ~w(), ~w())
+    changeset = Ecto.Changeset.cast(%Post{}, %{}, ~w(), ~w())
 
     # There is no dirty tracking on insert, even with changesets,
     # so database defaults never actually kick in.
@@ -123,14 +123,14 @@ defmodule Ecto.Integration.RepoTest do
 
     # Now, a combination of dirty tracking with read_after_writes,
     # allow us to see the actual counter value.
-    changeset = Ecto.Changeset.cast(%{"title" => "hello"}, post, ~w(title), ~w())
+    changeset = Ecto.Changeset.cast(post, %{"title" => "hello"}, ~w(title), ~w())
     assert %Post{id: ^pid, counter: 11, title: "hello"} = post = TestRepo.update(changeset)
 
     # Let's change the counter once more, so we can read it soon
     TestRepo.update(%{post | counter: 13})
 
     # And the value will be refreshed even if there are no changes
-    changeset = Ecto.Changeset.cast(%{}, post, ~w(), ~w())
+    changeset = Ecto.Changeset.cast(post, %{}, ~w(), ~w())
     assert %Post{id: ^pid, counter: 13, title: "hello"} = TestRepo.update(changeset)
   end
 
@@ -138,16 +138,16 @@ defmodule Ecto.Integration.RepoTest do
     import Ecto.Changeset
     post = TestRepo.insert(%Post{title: "HELLO"})
 
-    on_insert = cast(%{"title" => "HELLO"}, %Post{}, ~w(title), ~w())
+    on_insert = cast(%Post{}, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo).errors != []
 
-    on_insert = cast(%{"title" => "hello"}, %Post{}, ~w(title), ~w())
+    on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo, downcase: true).errors != []
 
-    on_update = cast(%{"title" => "HELLO"}, post, ~w(title), ~w())
+    on_update = cast(post, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
 
-    on_update = cast(%{"title" => "HELLO"}, %{post | id: post.id + 1}, ~w(title), ~w())
+    on_update = cast(%{post | id: post.id + 1}, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors != []
   end
 
@@ -156,10 +156,10 @@ defmodule Ecto.Integration.RepoTest do
     import Ecto.Changeset
     post = TestRepo.insert(%Post{title: "HELLO"})
 
-    on_insert = cast(%{"title" => "hello"}, %Post{}, ~w(title), ~w())
+    on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo).errors == []
 
-    on_update = cast(%{"title" => "hello"}, %{post | id: post.id + 1}, ~w(title), ~w())
+    on_update = cast(%{post | id: post.id + 1}, %{"title" => "hello"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
   end
 
@@ -466,10 +466,10 @@ defmodule Ecto.Integration.RepoTest do
     import Ecto.Changeset, only: [cast: 4]
     base_post = TestRepo.insert(%Permalink{})
 
-    cs_ok = cast(%{"url" => "http://foo.bar"}, base_post, ~w(url), ~w())
+    cs_ok = cast(base_post, %{"url" => "http://foo.bar"}, ~w(url), ~w())
     TestRepo.update(cs_ok)
 
-    cs_stale = cast(%{"url" => "http://foo.baz"}, base_post, ~w(url), ~w())
+    cs_stale = cast(base_post, %{"url" => "http://foo.baz"}, ~w(url), ~w())
     assert_raise Ecto.StaleModelError, fn -> TestRepo.update(cs_stale) end
     assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(cs_stale) end
   end

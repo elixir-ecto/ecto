@@ -148,7 +148,7 @@ defmodule Ecto.RepoTest do
   ## Changesets
 
   test "create and update accepts changesets" do
-    valid = Ecto.Changeset.cast(%{}, %MyModel{id: 1}, [], [])
+    valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     MockRepo.insert(valid)
     MockRepo.update(valid)
   end
