@@ -1,5 +1,5 @@
 Logger.configure(level: :info)
-ExUnit.start exclude: [:array_type, :read_after_writes]
+ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive]
 
 System.at_exit fn _ -> Logger.flush() end
 
