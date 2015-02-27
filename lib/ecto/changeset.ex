@@ -21,6 +21,8 @@ defmodule Ecto.Changeset do
   * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
   """
 
+  alias __MODULE__
+
   import Ecto.Query, only: [from: 2]
 
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
@@ -28,16 +30,16 @@ defmodule Ecto.Changeset do
             filters: %{}
 
   @type error :: {atom, atom | {atom, [term]}}
-  @type t :: %Ecto.Changeset{valid?: boolean(),
-                             repo: atom | nil,
-                             model: Ecto.Model.t | nil,
-                             params: %{String.t => term} | nil,
-                             changes: %{atom => term},
-                             required: [atom],
-                             optional: [atom],
-                             errors: [error],
-                             validations: [{atom, atom | {atom, [term]}}],
-                             filters: %{atom => term}}
+  @type t :: %Changeset{valid?: boolean(),
+                        repo: atom | nil,
+                        model: Ecto.Model.t | nil,
+                        params: %{String.t => term} | nil,
+                        changes: %{atom => term},
+                        required: [atom],
+                        optional: [atom],
+                        errors: [error],
+                        validations: [{atom, atom | {atom, [term]}}],
+                        filters: %{atom => term}}
 
   @doc """
   Wraps the given model in a changeset or adds changes to a changeset.
@@ -79,20 +81,20 @@ defmodule Ecto.Changeset do
       "body"
 
   """
-  @spec change(Ecto.Model.t | Ecto.Changeset.t, %{atom => term} | [Keyword.t]) :: t
+  @spec change(Ecto.Model.t | t, %{atom => term} | [Keyword.t]) :: t
   def change(model_or_changeset, changes \\ %{})
 
   def change(model_or_changeset, changes) when is_list(changes) do
     change(model_or_changeset, Enum.into(changes, %{}))
   end
 
-  def change(%Ecto.Changeset{changes: changes} = changeset, new_changes)
+  def change(%Changeset{changes: changes} = changeset, new_changes)
       when is_map(new_changes) do
     %{changeset | changes: Map.merge(changes, new_changes)}
   end
 
   def change(%{__struct__: _} = model, changes) when is_map(changes) do
-    %Ecto.Changeset{valid?: true, model: model, changes: changes}
+    %Changeset{valid?: true, model: model, changes: changes}
   end
 
   @doc """
@@ -152,7 +154,7 @@ defmodule Ecto.Changeset do
       [:body]
 
   """
-  @spec cast(Ecto.Model.t | Ecto.Changeset.t,
+  @spec cast(Ecto.Model.t | t,
              %{binary => term} | %{atom => term} | nil,
              [String.t | atom],
              [String.t | atom]) :: t
@@ -172,11 +174,11 @@ defmodule Ecto.Changeset do
     required = Enum.map(required, to_atom)
     optional = Enum.map(optional, to_atom)
 
-    %Ecto.Changeset{params: nil, model: model, valid?: false, errors: [],
-                    changes: %{}, required: required, optional: optional}
+    %Changeset{params: nil, model: model, valid?: false, errors: [],
+               changes: %{}, required: required, optional: optional}
   end
 
-  def cast(%Ecto.Changeset{} = changeset, %{} = params, required, optional)
+  def cast(%Changeset{} = changeset, %{} = params, required, optional)
       when is_list(required) and is_list(optional) do
     new_changeset = cast(changeset.model, params, required, optional)
     merge(changeset, new_changeset)
@@ -195,9 +197,9 @@ defmodule Ecto.Changeset do
       Enum.map_reduce(required, {changes, errors},
                       &process_required(&1, params, types, model, &2))
 
-    %Ecto.Changeset{params: params, model: model, valid?: errors == [],
-                    errors: errors, changes: changes, required: required,
-                    optional: optional}
+    %Changeset{params: params, model: model, valid?: errors == [],
+               errors: errors, changes: changes, required: required,
+               optional: optional}
   end
 
   defp process_required(key, params, types, model, {changes, errors}) do
@@ -321,7 +323,7 @@ defmodule Ecto.Changeset do
   @spec merge(t, t) :: t
   def merge(changeset1, changeset2)
 
-  def merge(%Ecto.Changeset{model: model, repo: repo1} = cs1, %Ecto.Changeset{model: model, repo: repo2} = cs2)
+  def merge(%Changeset{model: model, repo: repo1} = cs1, %Changeset{model: model, repo: repo2} = cs2)
       when is_nil(repo1) or is_nil(repo2) or repo1 == repo2 do
     new_repo        = repo1 || repo2
     new_params      = cs1.params && cs2.params && Map.merge(cs1.params, cs2.params)
@@ -331,17 +333,17 @@ defmodule Ecto.Changeset do
     new_required    = Enum.uniq(cs1.required ++ cs2.required)
     new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
 
-    %Ecto.Changeset{params: new_params, model: model, valid?: new_errors == [],
-                    errors: new_errors, changes: new_changes, repo: new_repo,
-                    required: new_required, optional: new_optional,
-                    validations: new_validations}
+    %Changeset{params: new_params, model: model, valid?: new_errors == [],
+               errors: new_errors, changes: new_changes, repo: new_repo,
+               required: new_required, optional: new_optional,
+               validations: new_validations}
   end
 
-  def merge(%Ecto.Changeset{model: m1}, %Ecto.Changeset{model: m2}) when m1 != m2 do
+  def merge(%Changeset{model: m1}, %Changeset{model: m2}) when m1 != m2 do
     raise ArgumentError, message: "different models when merging changesets"
   end
 
-  def merge(%Ecto.Changeset{repo: r1}, %Ecto.Changeset{repo: r2}) when r1 != r2 do
+  def merge(%Changeset{repo: r1}, %Changeset{repo: r2}) when r1 != r2 do
     raise ArgumentError, message: "different repos when merging changesets"
   end
 
