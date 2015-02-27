@@ -364,11 +364,8 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "last_inserted" do
-    query = SQL.last_inserted("model", "id")
-    assert query == ~s{SELECT `id` FROM `model` WHERE `id` = LAST_INSERT_ID()}
-
-    query = SQL.last_inserted("model", "serial")
-    assert query == ~s{SELECT `serial` FROM `model` WHERE `serial` = LAST_INSERT_ID()}
+    query = SQL.last_inserted()
+    assert query == ~s{SELECT LAST_INSERT_ID()}
   end
 
    test "update" do
