@@ -6,15 +6,18 @@
   * Log when migration is already up/down
   * Support joins besides where clauses in `update_all` and `delete_all`
   * Support optimistic locking with `Ecto.Model.OptimisticLock`
-  * Allow repo timeout to be configured
+  * Allow repository `:timeout` to be configured
+  * Allow storage connections to be configured with `:connect_timeout`
   * Support maps in select in queries
   * Allow custom macros to be used in queries
 
 * Backwards incompatible changes
-  * The `:adapter` option should now be specified in the config file rather than when using `Ecto.Repo` (you will receive a warning if you don't)
   * Primary keys are no longer automatically marked with `read_after_writes`. If you have a custom primary key that is AUTO INCREMENT/SERIAL in the database, you will have to pass `read_after_writes: true` as option when setting `@primary_key`
-  * Remove blank checks from `Ecto.Changeset.cast/4` (you should automatically set the parameters values to nil before calling `cast/4`)
-  * `Ecto.Adapter.update/5` now expects the `changes` as third argument and `filters` as fourth. Custom adapters that worked on v0.8 need to be updated to work with v0.9
+  * Remove blank checks from `Ecto.Changeset.cast/4` (you should automatically set the parameters values to nil before calling `cast/4`. If you are using Phoenix, Phoenix master has a `plug :scrub_params, "user"` for that)
+  * `Ecto.Changeset.cast/4` now expects the changeset/model as first argument and the parameters as second
+
+* Deprecations
+  * The `:adapter` option should now be specified in the config file rather than when using `Ecto.Repo` (you will receive a warning if you don't)
 
 ## v0.8.1 (2015-02-13)
 

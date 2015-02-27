@@ -174,8 +174,7 @@ defmodule Ecto.Repo do
   defcallback __repo__ :: true
 
   @doc """
-  Should return the database options that will be given to the adapter. Often
-  used in conjunction with `parse_url/1`.
+  Returns the adapter configuration stored in the `:otp_app` environment.
   """
   defcallback config() :: Keyword.t
 
@@ -205,7 +204,7 @@ defmodule Ecto.Repo do
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+      `:infinity` will wait indefinitely (default: 5000)
     * `:log` - When false, does not log the query
 
   """
