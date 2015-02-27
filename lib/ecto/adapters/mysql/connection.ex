@@ -323,6 +323,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       raise ArgumentError, "Array type is not supported by MySQL"
     end
 
+    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) when type in [:integer, :float] do
+      expr(other, sources)
+    end
+
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
       "CAST(#{expr(other, sources)} AS " <> ecto_to_db(type) <> ")"
     end
@@ -521,7 +525,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp ecto_to_db(:string),     do: "varchar"
-    defp ecto_to_db(:datetime),   do: "timestamp"
+    defp ecto_to_db(:datetime),   do: "datetime"
     defp ecto_to_db(:binary),     do: "blob"
     defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
     defp ecto_to_db({:array, _}), do: raise(ArgumentError, "Array type is not supported by MySQL")

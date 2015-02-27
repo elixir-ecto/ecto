@@ -398,7 +398,7 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `title` varchar(255), `created_at` timestamp)|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `title` varchar(255), `created_at` datetime)|
   end
 
   test "create table with reference" do
