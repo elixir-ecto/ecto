@@ -40,31 +40,59 @@ defmodule Ecto.Changeset do
                              filters: %{atom => term}}
 
   @doc """
-  Generates a changeset to change the given `model`.
+  Wraps the given model in a changeset or adds changes to a changeset.
 
-  This function is useful for directly changing the model,
-  without performing casting nor validation.
+  This function is useful for:
 
-  For this reason, `changes` expect the keys to be atoms.
+    * wrapping a model inside a changeset
+    * directly changing the model without performing castings nor validations
+    * directly bulk-adding changes to a changeset
+
+  Since no validation nor casting is performed, `change/2` expects the keys in
+  `changes` to be atoms. `changes` can be a map as well as a keyword list.
+
+  When a changeset is passed as the first argument, the changes passed as the
+  second argument are merged over the changes already in the changeset (with
+  precedence to the new changes). If `changes` is not present or is an empty
+  map, this function is a no-op.
+
   See `cast/4` if you'd prefer to cast and validate external
   parameters.
 
   ## Examples
 
-      iex> changeset = change(post, title: "new title")
-      iex> Repo.update(changeset)
-      %Post{...}
+      iex> changeset = change(%Post{})
+      %Ecto.Changeset{...}
+      iex> changeset.valid?
+      true
+      iex> changeset.changes
+      %{}
+
+      iex> changeset = change(%Post{}, title: "title")
+      iex> changeset.changes.title
+      "title"
+
+      iex> changeset = change(changeset, %{title: "new title", body: "body"})
+      iex> changeset.changes.title
+      "new title"
+      iex> changeset.changes.body
+      "body"
 
   """
-  @spec change(Ecto.Model.t, %{atom => term}) :: t
-  def change(model, changes \\ %{})
+  @spec change(Ecto.Model.t | Ecto.Changeset.t, %{atom => term} | [Keyword.t]) :: t
+  def change(model_or_changeset, changes \\ %{})
+
+  def change(model_or_changeset, changes) when is_list(changes) do
+    change(model_or_changeset, Enum.into(changes, %{}))
+  end
+
+  def change(%Ecto.Changeset{changes: changes} = changeset, new_changes)
+      when is_map(new_changes) do
+    %{changeset | changes: Map.merge(changes, new_changes)}
+  end
 
   def change(%{__struct__: _} = model, changes) when is_map(changes) do
     %Ecto.Changeset{valid?: true, model: model, changes: changes}
-  end
-
-  def change(%{__struct__: _} = model, changes) when is_list(changes) do
-    %Ecto.Changeset{valid?: true, model: model, changes: Enum.into(changes, %{})}
   end
 
   @doc """
