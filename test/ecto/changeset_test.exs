@@ -249,7 +249,7 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  test "change/2" do
+  test "change/2 with a model" do
     changeset = change(%Post{})
     assert changeset.valid?
     assert changeset.model == %Post{}
@@ -264,6 +264,21 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.model == %Post{}
     assert changeset.changes == %{body: "bar"}
+  end
+
+  test "change/2 with a changeset" do
+    base_changeset = cast(%Post{}, %{title: "title"}, ~w(title), ~w())
+
+    assert change(base_changeset) == base_changeset
+
+    changeset = change(base_changeset, %{body: "body"})
+    assert changeset.changes == %{title: "title", body: "body"}
+
+    changeset = change(base_changeset, %{title: "new title"})
+    assert changeset.changes == %{title: "new title"}
+
+    changeset = change(base_changeset, title: "new title")
+    assert changeset.changes == %{title: "new title"}
   end
 
   test "fetch_field/2" do
