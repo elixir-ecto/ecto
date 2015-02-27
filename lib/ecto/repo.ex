@@ -159,7 +159,7 @@ defmodule Ecto.Repo do
         end
       end
 
-      defoverridable [log: 2, config: 0]
+      defoverridable [log: 2]
     end
   end
 
