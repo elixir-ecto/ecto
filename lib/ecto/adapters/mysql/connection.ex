@@ -525,6 +525,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp ecto_to_db(:string),     do: "varchar"
+    defp ecto_to_db(:float),      do: "double"
     defp ecto_to_db(:datetime),   do: "datetime"
     defp ecto_to_db(:binary),     do: "blob"
     defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
