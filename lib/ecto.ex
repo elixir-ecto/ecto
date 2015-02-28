@@ -155,7 +155,6 @@ defmodule Ecto do
           user
           |> cast(params, ~w(name email), ~w(age))
           |> validate_format(:email, ~r/@/)
-          |> validate_number(:age, more_than: 18)
           |> validate_unique(:email, Repo)
         end
       end
