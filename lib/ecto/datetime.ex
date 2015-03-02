@@ -95,15 +95,18 @@ defmodule Ecto.Date do
   Returns an `Ecto.Date` in local time.
   """
   def local do
-    load(:erlang.date) |> elem(1)
+    erl_load(:erlang.localtime)
   end
 
   @doc """
   Returns an `Ecto.Date` in UTC.
   """
   def utc do
-    {date, _time} = :erlang.universaltime
-    load(date) |> elem(1)
+    erl_load(:erlang.universaltime)
+  end
+
+  defp erl_load({{year, month, day}, _time}) do
+    %Ecto.Date{year: year, month: month, day: day}
   end
 end
 
@@ -142,13 +145,13 @@ defmodule Ecto.Time do
   Converts an `Ecto.Time` into a time triplet.
   """
   def dump(%Ecto.Time{hour: hour, min: min, sec: sec}) do
-    {:ok, {hour, min, sec}}
+    {:ok, {hour, min, sec, 0}}
   end
 
   @doc """
   Converts a time triplet into an `Ecto.Time`.
   """
-  def load({hour, min, sec}) do
+  def load({hour, min, sec, _}) do
     {:ok, %Ecto.Time{hour: hour, min: min, sec: sec}}
   end
 
@@ -163,15 +166,18 @@ defmodule Ecto.Time do
   Returns an `Ecto.Time` in local time.
   """
   def local do
-    load(:erlang.time) |> elem(1)
+    erl_load(:erlang.localtime)
   end
 
   @doc """
   Returns an `Ecto.Time` in UTC.
   """
   def utc do
-    {_date, time} = :erlang.universaltime
-    load(time) |> elem(1)
+    erl_load(:erlang.universaltime)
+  end
+
+  defp erl_load({_, {hour, min, sec}}) do
+    %Ecto.Time{hour: hour, min: min, sec: sec}
   end
 end
 
@@ -217,13 +223,13 @@ defmodule Ecto.DateTime do
   Converts an `Ecto.DateTime` into a `{date, time}` tuple.
   """
   def dump(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}) do
-    {:ok, {{year, month, day}, {hour, min, sec}}}
+    {:ok, {{year, month, day}, {hour, min, sec, 0}}}
   end
 
   @doc """
   Converts a `{date, time}` tuple into an `Ecto.DateTime`.
   """
-  def load({{year, month, day}, {hour, min, sec}}) do
+  def load({{year, month, day}, {hour, min, sec, _msec}}) do
     {:ok, %Ecto.DateTime{year: year, month: month, day: day,
                          hour: hour, min: min, sec: sec}}
   end
@@ -263,13 +269,18 @@ defmodule Ecto.DateTime do
   Returns an `Ecto.DateTime` in local time.
   """
   def local do
-    load(:erlang.localtime) |> elem(1)
+    erl_load(:erlang.localtime)
   end
 
   @doc """
   Returns an `Ecto.DateTime` in UTC.
   """
   def utc do
-    load(:erlang.universaltime) |> elem(1)
+    erl_load(:erlang.universaltime)
+  end
+
+  defp erl_load({{year, month, day}, {hour, min, sec}}) do
+    %Ecto.DateTime{year: year, month: month, day: day,
+                   hour: hour, min: min, sec: sec}
   end
 end

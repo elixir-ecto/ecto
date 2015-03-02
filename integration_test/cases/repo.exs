@@ -298,7 +298,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{text: "hai", counter: ^id1, inserted_at: ^date} = TestRepo.get(Post, id1)
 
     text = "hai"
-    date = :erlang.universaltime
+    date = {{2010, 4, 17}, {14, 00, 00, 00}}
     assert %Comment{id: id2} = TestRepo.insert(%Comment{})
     assert 1 = TestRepo.update_all(p in Comment, text: ^text, posted: ^date)
     assert %Comment{text: "hai", posted: ^date} = TestRepo.get(Comment, id2)

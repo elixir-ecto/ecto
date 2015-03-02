@@ -9,7 +9,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     ## Connection
 
     def connect(opts) do
-      opts = Keyword.put_new(opts, :port, @default_port)
+      extensions = [{Ecto.Adapters.Postgres.DateTime, []}]
+
+      opts =
+        opts
+        |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
+        |> Keyword.put_new(:port, @default_port)
+
       Postgrex.Connection.start_link(opts)
     end
 

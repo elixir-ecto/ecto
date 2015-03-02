@@ -42,7 +42,7 @@ defmodule Ecto.Integration.DeadlockTest do
           rescue
             err in [Postgrex.Error] ->
               # syntax error
-              assert %Postgrex.Error{postgres: %{code: "42601"}} = err
+              assert %Postgrex.Error{postgres: %{code: :syntax_error}} = err
               assert_tx_aborted
               PoolRepo.rollback(:continue)
           else
@@ -88,7 +88,7 @@ defmodule Ecto.Integration.DeadlockTest do
     rescue
       err in [Postgrex.Error] ->
         Logger.debug "#{inspect self()} got killed by deadlock detection"
-        assert %Postgrex.Error{postgres: %{code: "40P01"}} = err
+        assert %Postgrex.Error{postgres: %{code: :deadlock_detected}} = err
 
         # At this time the transaction count is actually 0 not 1 because Postgres
         # has killed the tx but Ecto doesn't know/care.
@@ -124,7 +124,7 @@ defmodule Ecto.Integration.DeadlockTest do
     rescue
       err in [Postgrex.Error] ->
         # current transaction is aborted, commands ignored until end of transaction block
-        assert %Postgrex.Error{postgres: %{code: "25P02"}} = err
+        assert %Postgrex.Error{postgres: %{code: :in_failed_sql_transaction}} = err
     else
       _ -> flunk "transaction should be aborted"
     end

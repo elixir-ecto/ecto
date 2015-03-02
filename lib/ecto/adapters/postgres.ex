@@ -37,6 +37,7 @@ defmodule Ecto.Adapters.Postgres do
     * `:ssl` - Set to true if ssl should be used (default: false)
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
     * `:connect_timeout` - The timeout for establishing new connections, defaults to `5000`
+    * `:extensions` - Specify extensions to the postgres adapter
 
   ### Pool options
 

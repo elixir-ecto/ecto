@@ -481,8 +481,8 @@ defmodule Ecto.Type do
 
   defp of_basic_type?(:decimal, %Decimal{}), do: true
   defp of_basic_type?(:date, {_, _, _}),  do: true
-  defp of_basic_type?(:time, {_, _, _}),  do: true
-  defp of_basic_type?(:datetime, {{_, _, _}, {_, _, _}}), do: true
+  defp of_basic_type?(:time, {_, _, _, _}),  do: true
+  defp of_basic_type?(:datetime, {{_, _, _}, {_, _, _, _}}), do: true
   defp of_basic_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
 
   defp array(type, [h|t], fun, acc) do

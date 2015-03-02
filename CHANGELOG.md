@@ -19,6 +19,10 @@
 * Deprecations
   * The `:adapter` option should now be specified in the config file rather than when using `Ecto.Repo` (you will receive a warning if you don't)
 
+* Adapter API changes
+  * `:time` types now use a tuple of four elements (hour, min, sec and msec)
+  * `Ecto.Adapter.update/6` now expects the changes as third argument followed by filters
+
 ## v0.8.1 (2015-02-13)
 
 * Bug fixes

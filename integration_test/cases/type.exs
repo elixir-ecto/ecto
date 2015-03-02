@@ -62,7 +62,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, :uuid))
 
     # Datetime
-    datetime = {{2014, 04, 17}, {14, 00, 00}}
+    datetime = {{2014, 04, 17}, {14, 00, 00, 00}}
     assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, :datetime))
 
     # Custom wrappers
