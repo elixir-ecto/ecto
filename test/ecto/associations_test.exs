@@ -214,6 +214,15 @@ defmodule Ecto.AssociationsTest do
     end
   end
 
+  test "Ecto.Associations.loaded?/1 returns false if association is not loaded" do
+    # refute Ecto.Associations.loaded?(%Post{}.comments)
+    refute Ecto.Associations.loaded?(%Post{}.comments)
+  end
+
+  test "Ecto.Associations.loaded?/1 returns true if association is loaded" do
+    assert Ecto.Associations.loaded?(%Post{comments: []}.comments)
+  end
+
   ## Preloader
 
   alias Ecto.Repo.Preloader
