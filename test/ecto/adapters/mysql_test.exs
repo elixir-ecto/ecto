@@ -113,7 +113,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "string escape" do
     query = Model |> select([], "'\\  ") |> normalize
-    assert SQL.all(query) == ~s{SELECT '''\\  ' FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT '''\\\\  ' FROM `model` AS m0}
 
     query = Model |> select([], "'") |> normalize
     assert SQL.all(query) == ~s{SELECT '''' FROM `model` AS m0}
@@ -365,10 +365,10 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "update" do
     query = SQL.update("model", [:id], [:x, :y], [])
-    assert query == ~s{UPDATE `model` SET `x` = ?, `y` = ? WHERE `id` = ?}
+    assert query == ~s{UPDATE `model` SET `id` = ? WHERE `x` = ? AND `y` = ?}
 
     query = SQL.update("model", [:id], [:x, :y], [])
-    assert query == ~s{UPDATE `model` SET `x` = ?, `y` = ? WHERE `id` = ?}
+    assert query == ~s{UPDATE `model` SET `id` = ? WHERE `x` = ? AND `y` = ?}
   end
 
   test "delete" do
