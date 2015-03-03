@@ -110,11 +110,11 @@ defmodule Ecto.Adapters.MySQL do
 
   @doc false
   def insert(repo, source, params, [pk|_], opts) do
-    case super(repo, source, params, [pk], opts) do
-      {:ok, []} ->
-        last_inserted_query = @conn.last_inserted()
-        Ecto.Adapters.SQL.model(repo, last_inserted_query, [], [pk], opts)
-      {:error, _} = err -> err
+    {fields, values} = :lists.unzip(params)
+    sql = @conn.insert(source, fields, [])
+    case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
+      %{num_rows: 1, last_insert_id: last_insert_id} ->
+        {:ok, ["#{pk}": last_insert_id]}
     end
   end
 end

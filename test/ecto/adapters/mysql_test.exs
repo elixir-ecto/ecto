@@ -363,26 +363,21 @@ defmodule Ecto.Adapters.MySQLTest do
     assert query == ~s{INSERT INTO `model` () VALUES ()}
   end
 
-  test "last_inserted" do
-    query = SQL.last_inserted()
-    assert query == ~s{SELECT LAST_INSERT_ID()}
+  test "update" do
+    query = SQL.update("model", [:id], [:x, :y], [])
+    assert query == ~s{UPDATE `model` SET `x` = ?, `y` = ? WHERE `id` = ?}
+
+    query = SQL.update("model", [:id], [:x, :y], [])
+    assert query == ~s{UPDATE `model` SET `x` = ?, `y` = ? WHERE `id` = ?}
   end
 
-   test "update" do
-     query = SQL.update("model", [:id], [:x, :y], [])
-     assert query == ~s{UPDATE `model` SET `x` = ?, `y` = ? WHERE `id` = ?}
+  test "delete" do
+    query = SQL.delete("model", [:x, :y], [])
+    assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
 
-     query = SQL.update("model", [:id], [:x, :y], [])
-     assert query == ~s{UPDATE `model` SET `x` = ?, `y` = ? WHERE `id` = ?}
-   end
-
-   test "delete" do
-     query = SQL.delete("model", [:x, :y], [])
-     assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
-
-     query = SQL.delete("model", [:x, :y], [])
-     assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
-   end
+    query = SQL.delete("model", [:x, :y], [])
+    assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
+  end
 
   # DDL
 
