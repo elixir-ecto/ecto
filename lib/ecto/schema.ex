@@ -99,11 +99,16 @@ defmodule Ecto.Schema do
   `:date`                 | `{year, month, day}`
   `:time`                 | `{hour, min, sec}`
 
+  **Note:** Although Ecto provides `:date`, `:time` and `:datetime`, you
+  likely want to use `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` respectively.
+  See the Custom types sections below about types that enhance the primitive
+  ones.
+
   ### Custom types
 
   Sometimes the primitive types in Ecto are too primitive. For example,
   `:uuid` relies on the underling binary representation instead of
-  representing itself as a readable string. That's when `Ecto.UUID`
+  representing itself as a readable string. That's where `Ecto.UUID`
   comes in.
 
   `Ecto.UUID` is a  custom type. A custom type is a module that
@@ -112,10 +117,10 @@ defmodule Ecto.Schema do
 
   Custom type             | Ecto type               | Elixir type
   :---------------------- | :---------------------- | :---------------------
-  `Ecto.UUID`             | `:uuid`                 | "uuid-string"
   `Ecto.DateTime`         | `:datetime`             | `%Ecto.DateTime{}`
   `Ecto.Date`             | `:date`                 | `%Ecto.Date{}`
   `Ecto.Time`             | `:time`                 | `%Ecto.Time{}`
+  `Ecto.UUID`             | `:uuid`                 | "uuid-string"
 
   Ecto allow developers to provide their own types too. Read the
   `Ecto.Type` documentation for more information.

@@ -101,21 +101,21 @@ defmodule Ecto.DateTimeTest do
 
   test "cast maps" do
     assert Ecto.DateTime.cast(%{"year" => "2015", "month" => "1", "day" => "23",
-                            "hour" => "23", "min" => "50", "sec" => "07"}) ==
+                                "hour" => "23", "min" => "50", "sec" => "07"}) ==
            {:ok, @test_ecto_datetime}
 
     assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07}) ==
            {:ok, @test_ecto_datetime}
 
     assert Ecto.DateTime.cast(%{"year" => "2015", "month" => "1", "day" => "23",
-                            "hour" => "23", "min" => "50"}) ==
+                                "hour" => "23", "min" => "50"}) ==
            {:ok, @test_ecto_datetime_zero}
 
     assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: 50}) ==
            {:ok, @test_ecto_datetime_zero}
 
     assert Ecto.DateTime.cast(%{"year" => "2015", "month" => "1", "day" => "23",
-                            "hour" => "", "min" => "50"}) ==
+                                "hour" => "", "min" => "50"}) ==
            :error
 
     assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: nil}) ==
