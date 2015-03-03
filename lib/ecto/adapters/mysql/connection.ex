@@ -513,7 +513,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp escape_string(value) when is_binary(value) do
-      :binary.replace(value, "'", "''", [:global])
+      value
+      |> :binary.replace("'", "''", [:global])
+      |> :binary.replace("\\", "\\\\", [:global])
     end
 
     defp ecto_to_db(:string),     do: "varchar"
