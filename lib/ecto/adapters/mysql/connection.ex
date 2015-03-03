@@ -374,18 +374,18 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def ddl_exists(%Table{name: name}) do
       """
       SELECT COUNT(1)
-        FROM information_schema.tables T
-       WHERE t.table_schema = SCHEMA()
-             AND t.table_name = '#{escape_string(to_string(name))}'
+        FROM information_schema.tables
+       WHERE table_schema = SCHEMA()
+             AND table_name = '#{escape_string(to_string(name))}'
       """
     end
 
     def ddl_exists(%Index{name: name}) do
       """
       SELECT COUNT(1)
-        FROM INFORMATION_SCHEMA.STATISTICS
-       WHERE TABLE_SCHEMA = SCHEMA()
-         AND INDEX_NAME = '#{escape_string(to_string(name))}'
+        FROM information_schema.statistics
+       WHERE table_schema = SCHEMA()
+         AND index_name = '#{escape_string(to_string(name))}'
       """
     end
 
