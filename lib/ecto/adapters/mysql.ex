@@ -117,4 +117,15 @@ defmodule Ecto.Adapters.MySQL do
         {:ok, ["#{pk}": last_insert_id]}
     end
   end
+
+  @doc false
+  def update(repo, source, fields, filter, returning, opts) do
+    {fields, values1} = :lists.unzip(fields)
+    {filter, values2} = :lists.unzip(filter)
+    sql = @conn.update(source, fields, filter, returning)
+    case Ecto.Adapters.SQL.query(repo, sql, values1 ++ values2, opts) do
+      %{num_rows: 0} -> {:error, :stale}
+      %{num_rows: _} -> {:ok, []}
+    end
+  end
 end
