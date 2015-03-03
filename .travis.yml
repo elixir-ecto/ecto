@@ -8,6 +8,7 @@ otp_release:
   - 17.0
   - 17.1
   - 17.4
+services: mysql
 sudo: false # to use faster container based build environment
 script:
   - mix test.all
