@@ -301,7 +301,8 @@ defmodule Ecto.Integration.PreloadTest do
     %Comment{id: _} = TestRepo.insert(%Comment{text: "2", post_id: pid2})
     %Comment{id: _} = TestRepo.insert(%Comment{text: "3", post_id: nil})
 
-    query = from(p in Post, right_join: c in assoc(p, :comments), preload: :permalink)
+    query = from(p in Post, right_join: c in assoc(p, :comments),
+                 preload: :permalink, order_by: c.id)
     assert [p1, p2, nil] = TestRepo.all(query)
     assert p1.id == pid1
     assert p2.id == pid2

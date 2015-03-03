@@ -106,11 +106,6 @@ defmodule Ecto.Integration.RepoTest do
 
     changeset = Ecto.Changeset.cast(post, %{"id" => "15"}, ~w(id), ~w())
     assert %Post{id: 15} = TestRepo.update(changeset)
-
-    # We even allow a nil primary key to be set via the
-    # changeset but that causes crashes
-    changeset = Ecto.Changeset.cast(%Post{id: 11}, %{"id" => nil}, ~w(), ~w(id))
-    assert catch_error(TestRepo.insert(changeset))
   end
 
   @tag :read_after_writes
