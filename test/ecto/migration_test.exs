@@ -52,7 +52,7 @@ defmodule Ecto.MigrationTest do
 
   test "creates a reference" do
     assert references(:posts) ==
-           %Reference{table: :posts, column: :id, type: :integer}
+           %Reference{table: :posts, column: :id, type: :serial}
     assert references(:posts, type: :uuid, column: :other) ==
            %Reference{table: :posts, column: :other, type: :uuid}
   end

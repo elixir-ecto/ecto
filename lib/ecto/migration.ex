@@ -124,7 +124,7 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a reference struct used in migrations.
     """
-    defstruct table: nil, column: :id, type: :integer
+    defstruct table: nil, column: :id, type: :serial
     @type t :: %__MODULE__{table: atom, column: atom, type: atom}
   end
 
