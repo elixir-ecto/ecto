@@ -107,14 +107,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     # Raise if more than one column is passed to returning
+    def insert(table, [], _returning), do: "INSERT INTO #{quote_name(table)} () VALUES ()"
     def insert(table, fields, _returning) do
-      values =
-        if fields == [] do
-          "() VALUES ()"
-        else
-          "(" <> Enum.map_join(fields, ", ", &quote_name/1) <> ") " <>
-          "VALUES (" <> Enum.map_join(1..length(fields), ", ", fn (_) -> "?" end) <> ")"
-        end
+      values = ~s{(#{Enum.map_join(fields, ", ", &quote_name/1)}) } <>
+               ~s{VALUES (#{Enum.map_join(1..length(fields), ", ", fn (_) -> "?" end)})}
 
       "INSERT INTO #{quote_name(table)} " <> values
     end
