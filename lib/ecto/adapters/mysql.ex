@@ -94,7 +94,7 @@ defmodule Ecto.Adapters.MySQL do
     end
 
     host = database[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
-    args = ["--silent", "-u", database[:username], "-h", database[:hostname], "-e", sql_command]
+    args = ["--silent", "-u", database[:username], "-h", host, "-e", sql_command]
     System.cmd("mysql", args, env: env, stderr_to_stdout: true)
   end
 

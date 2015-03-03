@@ -96,7 +96,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def delete_all(query) do
       sources = create_names(query)
-      {table, name, _model} = elem(sources, 0)
+      {_table, name, _model} = elem(sources, 0)
 
       delete = "DELETE #{name}.*"
       from   = from(sources)
@@ -132,7 +132,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         " WHERE " <> Enum.join(filters, " AND ")
     end
 
-    def delete(table, filters, returning) do
+    def delete(table, filters, _returning) do
       filters = Enum.map filters, fn field ->
         "#{quote_name(field)} = ?"
       end
@@ -258,7 +258,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         end)
     end
 
-    defp expr({:^, [], [ix]}, _sources) do
+    defp expr({:^, [], [_ix]}, _sources) do
       "?"
     end
 
@@ -315,7 +315,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
-    defp expr(list, sources) when is_list(list) do
+    defp expr(list, _sources) when is_list(list) do
       raise ArgumentError, "Array type is not supported by MySQL"
     end
 
