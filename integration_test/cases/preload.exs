@@ -24,7 +24,7 @@ defmodule Ecto.Integration.PreloadTest do
     %Comment{id: cid3} = TestRepo.insert(%Comment{text: "3", post_id: p2.id})
     %Comment{id: cid4} = TestRepo.insert(%Comment{text: "4", post_id: p2.id})
 
-    assert %Ecto.Associations.NotLoaded{} = p1.comments
+    assert %Ecto.Association.NotLoaded{} = p1.comments
 
     assert [p3, p1, p2] = TestRepo.preload([p3, p1, p2], :comments)
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
@@ -41,8 +41,8 @@ defmodule Ecto.Integration.PreloadTest do
     %Permalink{}         = TestRepo.insert(%Permalink{url: "2", post_id: nil})
     %Permalink{id: pid3} = TestRepo.insert(%Permalink{url: "3", post_id: p3.id})
 
-    assert %Ecto.Associations.NotLoaded{} = p1.permalink
-    assert %Ecto.Associations.NotLoaded{} = p2.permalink
+    assert %Ecto.Association.NotLoaded{} = p1.permalink
+    assert %Ecto.Association.NotLoaded{} = p2.permalink
 
     assert [p3, p1, p2] = TestRepo.preload([p3, p1, p2], :permalink)
     assert %Permalink{id: ^pid1} = p1.permalink
@@ -59,7 +59,7 @@ defmodule Ecto.Integration.PreloadTest do
     pl2 = TestRepo.insert(%Permalink{url: "2", post_id: nil})
     pl3 = TestRepo.insert(%Permalink{url: "3", post_id: pid3})
 
-    assert %Ecto.Associations.NotLoaded{} = pl1.post
+    assert %Ecto.Association.NotLoaded{} = pl1.post
 
     assert [pl3, pl1, pl2] = TestRepo.preload([pl3, pl1, pl2], :post)
     assert %Post{id: ^pid1} = pl1.post

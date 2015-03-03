@@ -1,6 +1,6 @@
 import Ecto.Query, only: [from: 2, join: 4, distinct: 3, select: 3]
 
-defmodule Ecto.Associations.NotLoaded do
+defmodule Ecto.Association.NotLoaded do
   @moduledoc """
   Struct returned by one to one associations when there are not loaded.
 
@@ -15,29 +15,31 @@ defmodule Ecto.Associations.NotLoaded do
   defimpl Inspect do
     def inspect(not_loaded, _opts) do
       msg = "association #{inspect not_loaded.__field__} is not loaded"
-      ~s(#Ecto.Associations.NotLoaded<#{msg}>)
+      ~s(#Ecto.Association.NotLoaded<#{msg}>)
     end
   end
 end
 
-defmodule Ecto.Associations do
+defmodule Ecto.Association do
   @moduledoc """
-  Documents the functions required for associations to implement
-  in order to work with Ecto query mechanism.
+  Conveniences for working with associations.
 
-  This module contains documentation for those interested in
-  understanding how Ecto associations work internally. If you are
-  interested in an overview about associations in Ecto, you should
-  look into the documentation for `Ecto` and `Ecto.Schema`
-  modules.
+  This module contains functions for working with association data.
+  If you are interested in an overview about associations in Ecto,
+  you should rather look into the documentation for `Ecto` and
+  `Ecto.Schema` modules.
 
-  ## Associations
+  ## Behaviour
 
-  Associations work in Ecto via behaviours. Although theoreticaly
-  anyone can add new associations to Ecto some components (like the
-  preloader) still make assumptions about the association structure
-  which may limit how associations work, therefore this behaviour
-  is experimental.
+  This module also specifies the behaviour to be implemented by
+  associations and is useful for those interested in understanding
+  how Ecto associations work internally.
+
+  Although theoreticaly anyone can add new associations to Ecto,
+  some components (like the preloader) still make assumptions about
+  the association structure which may limit how associations work.
+  Furthermore, this behaviour is experimental and may change without
+  notice.
   """
 
   @type t :: %{__struct__: atom, cardinality: :one | :many,
@@ -131,7 +133,7 @@ defmodule Ecto.Associations do
   """
   def loaded?(association) do
     case association do
-      %Ecto.Associations.NotLoaded{} -> false
+      %Ecto.Association.NotLoaded{} -> false
       _ -> true
     end
   end
@@ -141,13 +143,13 @@ defmodule Ecto.Associations do
 
   ## Examples
 
-      iex> Ecto.Associations.association_key(Hello.World, :id)
+      iex> Ecto.Association.association_key(Hello.World, :id)
       :world_id
 
-      iex> Ecto.Associations.association_key(Hello.HTTP, :id)
+      iex> Ecto.Association.association_key(Hello.HTTP, :id)
       :http_id
 
-      iex> Ecto.Associations.association_key(Hello.HTTPServer, :id)
+      iex> Ecto.Association.association_key(Hello.HTTPServer, :id)
       :http_server_id
 
   """
@@ -196,7 +198,7 @@ defmodule Ecto.Associations do
   defp to_lower_char(char), do: char
 end
 
-defmodule Ecto.Associations.Has do
+defmodule Ecto.Association.Has do
   @moduledoc """
   The association struct for `has_one` and `has_many` associations.
 
@@ -210,7 +212,7 @@ defmodule Ecto.Associations.Has do
     * `assoc_key` - The key on the `associated` model used for the association
   """
 
-  @behaviour Ecto.Associations
+  @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
 
   @doc false
@@ -248,7 +250,7 @@ defmodule Ecto.Associations.Has do
       owner: module,
       assoc: assoc,
       owner_key: ref,
-      assoc_key: opts[:foreign_key] || Ecto.Associations.association_key(module, ref)
+      assoc_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref)
     }
   end
 
@@ -276,7 +278,7 @@ defmodule Ecto.Associations.Has do
   end
 end
 
-defmodule Ecto.Associations.HasThrough do
+defmodule Ecto.Association.HasThrough do
   @moduledoc """
   The association struct for `has_one` and `has_many` through associations.
 
@@ -289,7 +291,7 @@ defmodule Ecto.Associations.HasThrough do
     * `through` - The through associations
   """
 
-  @behaviour Ecto.Associations
+  @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through]
 
   @doc false
@@ -403,7 +405,7 @@ defmodule Ecto.Associations.HasThrough do
   end
 end
 
-defmodule Ecto.Associations.BelongsTo do
+defmodule Ecto.Association.BelongsTo do
   @moduledoc """
   The association struct for a `belongs_to` association.
 
@@ -417,7 +419,7 @@ defmodule Ecto.Associations.BelongsTo do
     * `assoc_key` - The key on the `assoc` model used for the association
   """
 
-  @behaviour Ecto.Associations
+  @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
 
   @doc false

@@ -159,52 +159,52 @@ defmodule Ecto.SchemaTest do
 
   test "has_many association" do
     assert AssocModel.__schema__(:association, :posts) ==
-           %Ecto.Associations.Has{field: :posts, owner: AssocModel, cardinality: :many,
+           %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many,
                                   assoc: Post, owner_key: :id, assoc_key: :assoc_model_id}
 
     posts = (%AssocModel{}).posts
-    assert %Ecto.Associations.NotLoaded{} = posts
-    assert inspect(posts) == "#Ecto.Associations.NotLoaded<association :posts is not loaded>"
+    assert %Ecto.Association.NotLoaded{} = posts
+    assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
   end
 
   test "has_many through association" do
     assert AssocModel.__schema__(:association, :comment_authors) ==
-           %Ecto.Associations.HasThrough{field: :comment_authors, owner: AssocModel, cardinality: :many,
+           %Ecto.Association.HasThrough{field: :comment_authors, owner: AssocModel, cardinality: :many,
                                          through: [:comment, :authors], owner_key: :comment_id}
 
     authors = (%AssocModel{}).comment_authors
-    assert %Ecto.Associations.NotLoaded{} = authors
-    assert inspect(authors) == "#Ecto.Associations.NotLoaded<association :comment_authors is not loaded>"
+    assert %Ecto.Association.NotLoaded{} = authors
+    assert inspect(authors) == "#Ecto.Association.NotLoaded<association :comment_authors is not loaded>"
   end
 
   test "has_one association" do
     assert AssocModel.__schema__(:association, :author) ==
-           %Ecto.Associations.Has{field: :author, owner: AssocModel, cardinality: :one,
+           %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one,
                                   assoc: User, owner_key: :id, assoc_key: :assoc_model_id}
 
     author = (%AssocModel{}).author
-    assert %Ecto.Associations.NotLoaded{} = author
-    assert inspect(author) == "#Ecto.Associations.NotLoaded<association :author is not loaded>"
+    assert %Ecto.Association.NotLoaded{} = author
+    assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
   end
 
   test "has_one through association" do
     assert AssocModel.__schema__(:association, :comment_main_author) ==
-           %Ecto.Associations.HasThrough{field: :comment_main_author, owner: AssocModel, cardinality: :one,
+           %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocModel, cardinality: :one,
                                          through: [:comment, :main_author], owner_key: :comment_id}
 
     author = (%AssocModel{}).comment_main_author
-    assert %Ecto.Associations.NotLoaded{} = author
-    assert inspect(author) == "#Ecto.Associations.NotLoaded<association :comment_main_author is not loaded>"
+    assert %Ecto.Association.NotLoaded{} = author
+    assert inspect(author) == "#Ecto.Association.NotLoaded<association :comment_main_author is not loaded>"
   end
 
   test "belongs_to association" do
     assert AssocModel.__schema__(:association, :comment) ==
-           %Ecto.Associations.BelongsTo{field: :comment, owner: AssocModel, cardinality: :one,
+           %Ecto.Association.BelongsTo{field: :comment, owner: AssocModel, cardinality: :one,
                                         assoc: Comment, owner_key: :comment_id, assoc_key: :id}
 
     comment = (%AssocModel{}).comment
-    assert %Ecto.Associations.NotLoaded{} = comment
-    assert inspect(comment) == "#Ecto.Associations.NotLoaded<association :comment is not loaded>"
+    assert %Ecto.Association.NotLoaded{} = comment
+    assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
   end
 
   defmodule ModelAssocOpts do

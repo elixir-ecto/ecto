@@ -154,14 +154,14 @@
   * Add `Repo.preload/2`
   * `Ecto.Query.preload/3` now supports query joins to be given
   * Allow dynamic values for join qualifiers and join tables
-  * Define a behaviour named `Ecto.Associations` which defines the callback functions required to be implemented by associations
+  * Define a behaviour named `Ecto.Association` which defines the callback functions required to be implemented by associations
 
 * Backwards incompatible changes
-  * Association proxies have been removed. This means `post.comments` returns `Ecto.Associations.NotLoaded` until `post.comments` has been explicitly preloaded. However, once preloaded, the comments list can be accessed directly
+  * Association proxies have been removed. This means `post.comments` returns `Ecto.Association.NotLoaded` until `post.comments` has been explicitly preloaded. However, once preloaded, the comments list can be accessed directly
   * Queryable implementation for associations has been removed. This means `Repo.all post.comments` no longer returns all comments. Instead use `Repo.all Ecto.Model.assoc(post, :comments)`. It is recommended to `import Ecto.Model` into your modules
   * `join: p.comments` has been removed in favor of `join: assoc(p, :comments)`
   * `assoc/2` in `select` is deprecated, please use `Ecto.Query.preload/3` instead
-  * `Ecto.Associations.Preloader.preload/3` was removed in favor of `Repo.preload/2`
+  * `Ecto.Association.Preloader.preload/3` was removed in favor of `Repo.preload/2`
 
 ## v0.3.0 (2014-12-26)
 

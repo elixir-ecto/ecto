@@ -88,7 +88,7 @@ defmodule Ecto.Model do
       %Post{id: nil}
   """
   def build(%{__struct__: model} = struct, assoc) do
-    assoc = Ecto.Associations.association_from_model!(model, assoc)
+    assoc = Ecto.Association.association_from_model!(model, assoc)
     assoc.__struct__.build(assoc, struct)
   end
 
@@ -119,7 +119,7 @@ defmodule Ecto.Model do
 
     model = hd(structs).__struct__
     assoc = %{owner_key: owner_key} =
-      Ecto.Associations.association_from_model!(model, assoc)
+      Ecto.Association.association_from_model!(model, assoc)
 
     values =
       for struct <- structs,

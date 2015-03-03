@@ -303,7 +303,7 @@ defmodule Ecto.Schema do
   define associations. However, custom association mechanisms can be provided
   by developers and hooked in via this macro.
 
-  Read more about custom associations in `Ecto.Associations`.
+  Read more about custom associations in `Ecto.Association`.
   """
   defmacro association(name, association, opts \\ []) do
     quote do
@@ -417,10 +417,10 @@ defmodule Ecto.Schema do
   defmacro has_many(name, queryable, opts \\ []) do
     quote bind_quoted: binding() do
       if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-        association(name, Ecto.Associations.HasThrough,
+        association(name, Ecto.Association.HasThrough,
                     [cardinality: :many] ++ queryable)
       else
-        association(name, Ecto.Associations.Has,
+        association(name, Ecto.Association.Has,
                     [queryable: queryable, cardinality: :many] ++ opts)
       end
     end
@@ -461,10 +461,10 @@ defmodule Ecto.Schema do
   defmacro has_one(name, queryable, opts \\ []) do
     quote bind_quoted: binding() do
       if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-        association(name, Ecto.Associations.HasThrough,
+        association(name, Ecto.Association.HasThrough,
                     [cardinality: :one] ++ queryable)
       else
-        association(name, Ecto.Associations.Has,
+        association(name, Ecto.Association.Has,
                     [queryable: queryable, cardinality: :one] ++ opts)
       end
     end
@@ -523,7 +523,7 @@ defmodule Ecto.Schema do
       if Keyword.get(opts, :auto_field, true) do
         field(opts[:foreign_key], foreign_key_type, opts)
       end
-      association(name, Ecto.Associations.BelongsTo, [queryable: queryable] ++ opts)
+      association(name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
     end
   end
 
@@ -549,7 +549,7 @@ defmodule Ecto.Schema do
   @doc false
   def __association__(mod, name, association, opts) do
     put_struct_field(mod, name,
-                     %Ecto.Associations.NotLoaded{__owner__: mod, __field__: name})
+                     %Ecto.Association.NotLoaded{__owner__: mod, __field__: name})
     Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
   end
 

@@ -328,7 +328,7 @@ defmodule Ecto do
 
       iex> post = Repo.get(Post, 42)
       iex> post.comments
-      #Ecto.Associations.NotLoaded<...>
+      #Ecto.Association.NotLoaded<...>
 
   However, developers can use the preload functionality in queries to
   automatically pre-populate the field:
