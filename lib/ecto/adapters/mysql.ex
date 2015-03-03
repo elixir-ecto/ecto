@@ -47,7 +47,7 @@ defmodule Ecto.Adapters.MySQL do
   @doc false
   def storage_up(opts) do
     database  = Keyword.fetch!(opts, :database)
-    charset   = Keyword.get(opts, :char_set, "utf8")
+    charset   = Keyword.get(opts, :charset, "utf8")
 
     extra = ""
 
@@ -60,7 +60,7 @@ defmodule Ecto.Adapters.MySQL do
                            " DEFAULT CHARACTER SET = #{charset} " <> extra
 
     cond do
-      status == 0                  -> :ok
+      status == 0 -> :ok
       String.contains?(output, "database exists") -> {:error, :already_up}
       true                                        -> {:error, output}
     end
