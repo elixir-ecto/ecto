@@ -1,8 +1,6 @@
 Logger.configure(level: :info)
 ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive]
 
-System.at_exit fn _ -> Logger.flush() end
-
 # Basic test repo
 alias Ecto.Integration.TestRepo
 
@@ -26,8 +24,6 @@ Application.put_env(:ecto, PoolRepo,
 
 defmodule Ecto.Integration.PoolRepo do
   use Ecto.Repo, otp_app: :ecto
-
-  def lock_for_update, do: "FOR UPDATE"
 end
 
 defmodule Ecto.Integration.Case do
