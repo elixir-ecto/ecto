@@ -3,25 +3,31 @@
 ## v0.9.0-dev
 
 * Enhancements
+  * Add MySQL support
   * Log when migration is already up/down
   * Support joins besides where clauses in `update_all` and `delete_all`
   * Support optimistic locking with `Ecto.Model.OptimisticLock`
-  * Allow repository `:timeout` to be configured
-  * Allow storage connections to be configured with `:connect_timeout`
+  * Allow timeout when querying the database to be configured via `:timeout`
+  * Allow timeout when connecting to the database to be configured via `:connect_timeout`
   * Support maps in select in queries
   * Allow custom macros to be used in queries
+  * Support `distinct: true` that simply sets SELECT DISTINCT
 
 * Backwards incompatible changes
   * Primary keys are no longer automatically marked with `read_after_writes`. If you have a custom primary key that is AUTO INCREMENT/SERIAL in the database, you will have to pass `read_after_writes: true` as option when setting `@primary_key`
   * Remove blank checks from `Ecto.Changeset.cast/4` (you should automatically set the parameters values to nil before calling `cast/4`. If you are using Phoenix, Phoenix master has a `plug :scrub_params, "user"` for that)
   * `Ecto.Changeset.cast/4` now expects the changeset/model as first argument and the parameters as second
+  * `Ecto.Query.distinct/3` can now be specified on queries just once
+  * `Ecto.Associations` renamed to `Ecto.Association` (unlikely to affect user code)
 
 * Deprecations
   * The `:adapter` option should now be specified in the config file rather than when using `Ecto.Repo` (you will receive a warning if you don't)
 
 * Adapter API changes
   * `:time` types now use a tuple of four elements (hour, min, sec and msec)
-  * `Ecto.Adapter.update/6` now expects the changes as third argument followed by filters
+  * `Ecto.Adapter.update/6` now expects the fields as third argument and filters as fourth
+  * `Ecto.Migration.Reference` now have a default type of `:serial` that needs to be translated to the underlying primary key representation
+  * `Ecto.Query` now has a `distinct` field (instead of `distincts`) and its expression may true, false or a list
 
 ## v0.8.1 (2015-02-13)
 
