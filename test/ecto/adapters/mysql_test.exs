@@ -67,13 +67,13 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "distinct" do
     query = Model |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
-    assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0.`x`) m0.`x`, m0.`y` FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT DISTINCT (m0.`x`), m0.`x`, m0.`y` FROM `model` AS m0}
 
     query = Model |> distinct([r], 2) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT DISTINCT ON (2) m0.`x` FROM `model` AS m0}
+    assert SQL.all(query) == ~s{SELECT DISTINCT (2), m0.`x` FROM `model` AS m0}
 
-    query = Model |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
-    assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0.`x`, m0.`y`) m0.`x`, m0.`y` FROM `model` AS m0}
+    query = Model |> distinct([r], [r.x]) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT (m0.`x`), m0.`x`, m0.`y` FROM `model` AS m0}
   end
 
   test "where" do

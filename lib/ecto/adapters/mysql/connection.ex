@@ -163,7 +163,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
             Enum.map_join(expr, ", ", &expr(&1, sources))
         end)
 
-      "SELECT DISTINCT ON (" <> exprs <> ") " <>
+      "SELECT DISTINCT (" <> exprs <> "), " <>
         Enum.map_join(fields, ", ", &expr(&1, sources))
     end
 
