@@ -429,9 +429,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp column_definition({:add, name, %Reference{} = ref, opts}) do
-      # TODO: The foreign key time must match. Check if there is a way to get
-      # the referenced key's type
-      assemble([quote_name(name), "BIGINT UNSIGNED", column_options(name, opts), reference_expr(ref, name)])
+      assemble([quote_name(name), "#{reference_column_type(ref.type, opts)}", column_options(name, opts), reference_expr(ref, name)])
     end
 
     defp column_definition({:add, name, type, opts}) do
@@ -499,9 +497,12 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
+    defp reference_column_type(:serial, _opts), do: "BIGINT UNSIGNED"
+    defp reference_column_type(type, opts), do: column_type(type, opts)
+
     ## Helpers
 
-   defp quote_name(name), do: "`#{name}`"
+    defp quote_name(name), do: "`#{name}`"
 
     defp assemble(list) do
       list
