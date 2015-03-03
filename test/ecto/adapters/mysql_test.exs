@@ -478,12 +478,6 @@ defmodule Ecto.Adapters.MySQLTest do
     end
   end
 
-  test "returning" do
-   # assert_raise ArgumentError, "RETURNING is not supported by MySQL", fn ->
-   #   SQL.insert("model", [:x, :y], [:id])
-   # end
-  end
-
   test "concurrently" do
     assert_raise ArgumentError, "CONCURRENTLY is not supported by MySQL", fn ->
       create = {:create, index(:posts, [:category_id, :permalink], concurrently: true)}
