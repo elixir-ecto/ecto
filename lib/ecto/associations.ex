@@ -1,5 +1,25 @@
 import Ecto.Query, only: [from: 2, join: 4, distinct: 3, select: 3]
 
+defmodule Ecto.Associations.NotLoaded do
+  @moduledoc """
+  Struct returned by one to one associations when there are not loaded.
+
+  The fields are:
+
+    * `__field__` - the association field in `__owner__`
+    * `__owner__` - the model that owns the association
+
+  """
+  defstruct [:__field__, :__owner__]
+
+  defimpl Inspect do
+    def inspect(not_loaded, _opts) do
+      msg = "association #{inspect not_loaded.__field__} is not loaded"
+      ~s(#Ecto.Associations.NotLoaded<#{msg}>)
+    end
+  end
+end
+
 defmodule Ecto.Associations do
   @moduledoc """
   Documents the functions required for associations to implement
@@ -99,6 +119,24 @@ defmodule Ecto.Associations do
   end
 
   @doc """
+  Checks if an association is loaded.
+
+  ## Examples
+
+    post = Repo.get(Post, 1)
+    Ecto.Associations.loaded?(post.comments) # false
+    post = post |> Repo.preload(:comments)
+    Ecto.Associations.loaded?(post.comments) # true
+
+  """
+  def loaded?(association) do
+    case association do
+      %Ecto.Associations.NotLoaded{} -> false
+      _ -> true
+    end
+  end
+
+  @doc """
   Returns the association key for the given module with the given prefix.
 
   ## Examples
@@ -156,26 +194,6 @@ defmodule Ecto.Associations do
 
   defp to_lower_char(char) when char in ?A..?Z, do: char + 32
   defp to_lower_char(char), do: char
-end
-
-defmodule Ecto.Associations.NotLoaded do
-  @moduledoc """
-  Struct returned by one to one associations when there are not loaded.
-
-  The fields are:
-
-    * `__field__` - the association field in `__owner__`
-    * `__owner__` - the model that owns the association
-
-  """
-  defstruct [:__field__, :__owner__]
-
-  defimpl Inspect do
-    def inspect(not_loaded, _opts) do
-      msg = "association #{inspect not_loaded.__field__} is not loaded"
-      ~s(#Ecto.Associations.NotLoaded<#{msg}>)
-    end
-  end
 end
 
 defmodule Ecto.Associations.Has do
