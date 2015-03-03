@@ -123,10 +123,10 @@ defmodule Ecto.Associations do
 
   ## Examples
 
-    post = Repo.get(Post, 1)
-    Ecto.Associations.loaded?(post.comments) # false
-    post = post |> Repo.preload(:comments)
-    Ecto.Associations.loaded?(post.comments) # true
+      post = Repo.get(Post, 1)
+      Ecto.Associations.loaded?(post.comments) # false
+      post = post |> Repo.preload(:comments)
+      Ecto.Associations.loaded?(post.comments) # true
 
   """
   def loaded?(association) do
@@ -137,7 +137,7 @@ defmodule Ecto.Associations do
   end
 
   @doc """
-  Returns the association key for the given module with the given prefix.
+  Returns the association key for the given module with the given suffix.
 
   ## Examples
 
