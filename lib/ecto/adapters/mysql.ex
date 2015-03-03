@@ -114,7 +114,7 @@ defmodule Ecto.Adapters.MySQL do
     sql = @conn.insert(source, fields, [])
     case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
       %{num_rows: 1, last_insert_id: last_insert_id} ->
-        {:ok, ["#{pk}": last_insert_id]}
+        {:ok, [{pk, last_insert_id}]}
     end
   end
 
