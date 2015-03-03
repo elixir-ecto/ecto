@@ -128,4 +128,13 @@ defmodule Ecto.Adapters.MySQL do
       %{num_rows: _} -> {:ok, []}
     end
   end
+
+  @doc false
+  def delete(repo, source, filter, opts) do
+    {filter, values} = :lists.unzip(filter)
+    case Ecto.Adapters.SQL.query(repo, @conn.delete(source, filter, []), values, opts) do
+      %{num_rows: 0} -> {:error, :stale}
+      %{num_rows: _} -> {:ok, []}
+    end
+  end
 end
