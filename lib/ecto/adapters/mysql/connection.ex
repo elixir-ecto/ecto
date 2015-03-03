@@ -106,7 +106,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([delete, from, join, where])
     end
 
-    # Raise if more than one column is passed to returning
     def insert(table, [], _returning), do: "INSERT INTO #{quote_name(table)} () VALUES ()"
     def insert(table, fields, _returning) do
       values = ~s{(#{Enum.map_join(fields, ", ", &quote_name/1)}) } <>
