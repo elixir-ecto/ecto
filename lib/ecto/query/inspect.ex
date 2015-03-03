@@ -41,15 +41,15 @@ defimpl Inspect, for: Ecto.Query do
     group_bys = kw_exprs(:group_by, query.group_bys, names)
     havings   = kw_exprs(:having, query.havings, names)
     order_bys = kw_exprs(:order_by, query.order_bys, names)
-    distincts = kw_exprs(:distinct, query.distincts, names)
 
     lock      = kw_inspect(:lock, query.lock)
     limit     = kw_expr(:limit, query.limit, names)
     offset    = kw_expr(:offset, query.offset, names)
     select    = kw_expr(:select, query.select, names)
+    distinct  = kw_expr(:distinct, query.distinct, names)
 
     Enum.concat [from, joins, wheres, group_bys, havings, order_bys,
-                 limit, offset, lock, distincts, select, preloads, assocs]
+                 limit, offset, lock, distinct, select, preloads, assocs]
   end
 
   defp bound_from(from, name), do: ["from #{name} in #{unbound_from from}"]

@@ -72,7 +72,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sources = create_names(query)
 
       from     = from(sources)
-      select   = select(query.select, query.distincts, sources)
+      select   = select(query.select, query.distinct, sources)
       join     = join(query.joins, sources)
       where    = where(query.wheres, sources)
       group_by = group_by(query.group_bys, sources)
@@ -160,19 +160,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%SelectExpr{fields: fields}, [], sources) do
-      "SELECT " <> Enum.map_join(fields, ", ", &expr(&1, sources))
+    defp select(%SelectExpr{fields: fields}, distinct, sources) do
+      "SELECT " <> 
+        distinct(distinct, sources) <>
+        Enum.map_join(fields, ", ", &expr(&1, sources))
     end
 
-    defp select(%SelectExpr{fields: fields}, distincts, sources) do
-      exprs =
-        Enum.map_join(distincts, ", ", fn
-          %QueryExpr{expr: expr} ->
-            Enum.map_join(expr, ", ", &expr(&1, sources))
-        end)
-
-      "SELECT DISTINCT ON (" <> exprs <> ") " <>
-        Enum.map_join(fields, ", ", &expr(&1, sources))
+    defp distinct(nil, _sources), do: ""
+    defp distinct(%QueryExpr{expr: true}, _sources),  do: "DISTINCT "
+    defp distinct(%QueryExpr{expr: false}, _sources), do: ""
+    defp distinct(%QueryExpr{expr: exprs}, sources) when is_list(exprs) do
+      "DISTINCT ON (" <> Enum.map_join(exprs, ", ", &expr(&1, sources)) <> ") "
     end
 
     defp from(sources) do

@@ -9,6 +9,9 @@ defmodule Ecto.Query.Builder.Distinct do
       iex> escape(quote do x end, [x: 0], __ENV__)
       {[{:{}, [], [:&, [], [0]]}], %{}}
 
+      iex> escape(quote do true end, [], __ENV__)
+      {true, %{}}
+
       iex> escape(quote do [x.x, 13] end, [x: 0], __ENV__)
       {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
         13],
@@ -16,6 +19,10 @@ defmodule Ecto.Query.Builder.Distinct do
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  def escape(expr, _vars, _env) when is_boolean(expr) do
+    {expr, %{}}
+  end
+
   def escape(expr, vars, env) do
     expr
     |> List.wrap
@@ -55,8 +62,13 @@ defmodule Ecto.Query.Builder.Distinct do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
-  def apply(query, expr) do
+  def apply(query, distinct) do
     query = Ecto.Queryable.to_query(query)
-    %{query | distincts: query.distincts ++ [expr]}
+
+    if query.distinct do
+      Builder.error! "only one distinct expression is allowed in query"
+    else
+      %{query | distinct: distinct}
+    end
   end
 end

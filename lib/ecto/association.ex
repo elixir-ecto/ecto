@@ -361,7 +361,7 @@ defmodule Ecto.Association.HasThrough do
     [_|joins] = Enum.reverse([%{last | source: query.from}|joins])
 
     %{query | from: from, joins: joins, wheres: wheres, sources: nil}
-    |> distinct([x], x)
+    |> distinct([x], true)
     |> select([x], x)
   end
 

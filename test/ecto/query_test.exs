@@ -180,7 +180,7 @@ defmodule Ecto.QueryTest do
     refute query.order_bys == base.order_bys
     refute query.group_bys == base.group_bys
     refute query.havings == base.havings
-    refute query.distincts == base.distincts
+    refute query.distinct == base.distinct
     refute query.select == base.select
     refute query.limit == base.limit
     refute query.offset == base.offset
@@ -204,7 +204,7 @@ defmodule Ecto.QueryTest do
     assert excluded_query.order_bys == base.order_bys
     assert excluded_query.group_bys == base.group_bys
     assert excluded_query.havings == base.havings
-    assert excluded_query.distincts == base.distincts
+    assert excluded_query.distinct == base.distinct
     assert excluded_query.select == base.select
     assert excluded_query.limit == base.limit
     assert excluded_query.offset == base.offset

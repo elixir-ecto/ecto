@@ -142,7 +142,7 @@ defmodule Ecto.Query do
 
   defstruct [sources: nil, from: nil, joins: [], wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [],
-             havings: [], preloads: [], assocs: [], distincts: [], lock: nil]
+             havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
   @opaque t :: %__MODULE__{}
 
   defmodule QueryExpr do
@@ -199,7 +199,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :having), do: %{query | havings: []}
-  defp do_exclude(%Ecto.Query{} = query, :distinct), do: %{query | distincts: []}
+  defp do_exclude(%Ecto.Query{} = query, :distinct), do: %{query | distinct: nil}
   defp do_exclude(%Ecto.Query{} = query, :select), do: %{query | select: nil}
   defp do_exclude(%Ecto.Query{} = query, :limit), do: %{query | limit: nil}
   defp do_exclude(%Ecto.Query{} = query, :offset), do: %{query | offset: nil}
@@ -414,9 +414,10 @@ defmodule Ecto.Query do
   ## Keywords examples
 
       # Returns the list of different categories in the Post model
-      from(p in Post, distinct: p.category)
+      from(p in Post, distinct: true, select: p.category)
 
-      # Returns the first (by date) for each different categories of Post
+      # If your database supports DISTINCT ON(), you can pass
+      # expressions to distinct too
       from(p in Post,
          distinct: p.category,
          order_by: [p.category, p.date])
@@ -424,7 +425,7 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       Post
-      |> distinct([p], p.category)
+      |> distinct(true)
       |> order_by([p], [p.category, p.author])
 
   """

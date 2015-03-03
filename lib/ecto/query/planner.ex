@@ -94,7 +94,7 @@ defmodule Ecto.Query.Planner do
     {query, base ++ Enum.reverse(params)}
   end
 
-  defp merge_params(kind, query, expr, params) when kind in ~w(select limit offset)a do
+  defp merge_params(kind, query, expr, params) when kind in ~w(select distinct limit offset)a do
     if expr do
       cast_and_merge_params(kind, query, expr, params)
     else
@@ -102,7 +102,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp merge_params(kind, query, exprs, acc) when kind in ~w(distinct where group_by having order_by)a do
+  defp merge_params(kind, query, exprs, acc) when kind in ~w(where group_by having order_by)a do
     Enum.reduce exprs, acc, fn expr, params ->
       cast_and_merge_params(kind, query, expr, params)
     end
@@ -303,7 +303,7 @@ defmodule Ecto.Query.Planner do
       raise e
   end
 
-  defp validate_and_increment(kind, query, expr, counter) when kind in ~w(select limit offset)a do
+  defp validate_and_increment(kind, query, expr, counter) when kind in ~w(select distinct limit offset)a do
     if expr do
       do_validate_and_increment(kind, query, expr, counter)
     else
@@ -311,7 +311,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp validate_and_increment(kind, query, exprs, counter) when kind in ~w(distinct where group_by having order_by)a do
+  defp validate_and_increment(kind, query, exprs, counter) when kind in ~w(where group_by having order_by)a do
     Enum.map_reduce exprs, counter, &do_validate_and_increment(kind, query, &1, &2)
   end
 
@@ -484,8 +484,8 @@ defmodule Ecto.Query.Planner do
     {select, acc} = fun.(:select, original, original.select, acc)
     query = %{query | select: select}
 
-    {distincts, acc} = fun.(:distinct, original, original.distincts, acc)
-    query = %{query | distincts: distincts}
+    {distinct, acc} = fun.(:distinct, original, original.distinct, acc)
+    query = %{query | distinct: distinct}
 
     {joins, acc} = fun.(:join, original, original.joins, acc)
     query = %{query | joins: joins}
@@ -533,7 +533,7 @@ defmodule Ecto.Query.Planner do
     case query do
       %Ecto.Query{select: nil, order_bys: [], limit: nil, offset: nil,
                   group_bys: [], havings: [], preloads: [], assocs: [],
-                  distincts: [], lock: nil} ->
+                  distinct: nil, lock: nil} ->
         query
       _ ->
         error! query, "`#{context}` allows only `where` and `join` expressions"

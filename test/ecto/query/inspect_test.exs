@@ -76,6 +76,14 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, offset: 123}
   end
 
+  test "distinct" do
+    assert i(from(x in Post, distinct: true)) ==
+           ~s{from p in Inspect.Post, distinct: true}
+
+    assert i(from(x in Post, distinct: [x.foo])) ==
+           ~s{from p in Inspect.Post, distinct: [p.foo]}
+  end
+
   test "lock" do
     assert i(from(x in Post, lock: "FOOBAR")) ==
            ~s{from p in Inspect.Post, lock: "FOOBAR"}

@@ -455,10 +455,6 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{} = TestRepo.insert(%Comment{post_id: pid1, author_id: uid2})
     %Comment{} = TestRepo.insert(%Comment{post_id: pid2, author_id: uid2})
 
-    [u1, u2] = TestRepo.all Ecto.Model.assoc([p1, p2], :comments_authors)
-    assert u1.id == uid1
-    assert u2.id == uid2
-
     [u2, u1] = TestRepo.all Ecto.Model.assoc([p1, p2], :comments_authors)
                             |> order_by([a], a.name)
     assert u1.id == uid1
