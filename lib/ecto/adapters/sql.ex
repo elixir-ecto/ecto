@@ -105,7 +105,9 @@ defmodule Ecto.Adapters.SQL do
         count > 0
       end
 
-      defoverridable [insert: 5, update: 6, delete: 4]
+      defoverridable [all: 4, update_all: 5, delete_all: 4,
+                      insert: 5, update: 6, delete: 4,
+                      execute_ddl: 3, ddl_exists?: 3]
     end
   end
 
