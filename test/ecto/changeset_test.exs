@@ -9,11 +9,12 @@ defmodule Ecto.ChangesetTest do
     schema "posts" do
       field :title
       field :body
+      field :upvotes, :integer
     end
   end
 
   defp changeset(params, model \\ %Post{}) do
-    cast(model, params, ~w(), ~w(title body))
+    cast(model, params, ~w(), ~w(title body upvotes))
   end
 
   ## cast/4
@@ -588,5 +589,29 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10)
     refute changeset.valid?
     assert changeset.errors == [title: {:wrong_length, 10}]
+  end
+
+  test "validate_number/3" do
+    changeset = changeset(%{"upvotes" => 3}) |> validate_number(:upvotes, greater_than: 0)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert changeset.validations == [upvotes: {:number, [greater_than: 0]}]
+
+    # single error
+    changeset = changeset(%{"upvotes" => -1}) |> validate_number(:upvotes, greater_than: 0)
+    refute changeset.valid?
+    assert changeset.errors == [upvotes: {:must_be_greater_than, 0}]
+    assert changeset.validations == [upvotes: {:number, [greater_than: 0]}]
+
+    # multiple validations
+    changeset = changeset(%{"upvotes" => 3}) |> validate_number(:upvotes, greater_than: 0, less_than: 100)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert changeset.validations == [upvotes: {:number, [greater_than: 0, less_than: 100]}]
+
+    # multiple validations with multiple errors
+    changeset = changeset(%{"upvotes" => 3}) |> validate_number(:upvotes, greater_than: 100, less_than: 0)
+    refute changeset.valid?
+    assert changeset.errors == [upvotes: {:must_be_greater_than, 100}, upvotes: {:must_be_less_than, 0}]
   end
 end
