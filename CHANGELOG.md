@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.9.0-dev
+## v0.9.0 (2015-03-05)
 
 * Enhancements
   * Add MySQL support

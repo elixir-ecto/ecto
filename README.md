@@ -11,8 +11,7 @@ config :my_app, Repo,
   adapter: Ecto.Adapters.Postgres,
   database: "ecto_simple",
   username: "postgres",
-  password: "postgres",
-  hostname: "localhost"
+  password: "postgres"
 
 # In your application code
 defmodule Repo do
@@ -47,16 +46,28 @@ See the [online documentation](http://hexdocs.pm/ecto) or [run the sample applic
 
 ## Usage
 
-Add Ecto as a dependency in your `mix.exs` file. If you are using PostgreSQL, you will also need the library that Ecto's PostgreSQL adapter is using.
+You need to add both Ecto and the database adapter as a dependency to your `mix.exs` file. The supported databases and their adapters are:
+
+Database                | Ecto Adapter           | Dependency
+:---------------------- | :--------------------- | :-------------------
+PostgreSQL              | Ecto.Adapters.Postgres | [postgrex][postgrex]
+MySQL                   | Ecto.Adapters.MySQL    | [mariaex][mariaex]
+MSSQL                   | Tds.Ecto               | [tds_ecto][tds_ecto]
+
+[postgrex]: http://github.com/ericmj/postgrex
+[mariaex]: http://github.com/xerions/mariaex
+[tds_ecto]: https://github.com/livehelpnow/tds_ecto
+
+For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
 ```elixir
 defp deps do
-  [{:postgrex, "0.7.0"},
-   {:ecto, "~> 0.8.1"}]
+  [{:postgrex, ">= 0.0.0"},
+   {:ecto, "~> 0.9.0"}]
 end
 ```
 
-You should also update your applications list to include both projects:
+and update your applications list to include both projects:
 
 ```elixir
 def application do
@@ -64,21 +75,15 @@ def application do
 end
 ```
 
-After you are done, run `mix deps.get` in your shell to fetch the dependencies.
+Then run `mix deps.get` in your shell to fetch the dependencies. If you want to use another database, just choose the proper dependency from the table above.
 
-## Supported databases
+Finally, in the repository configuration, you will need to specify the `adapter:` respective to the chosen dependency. For PostgreSQL it is:
 
-The following databases are supported:
-
-Database                | Ecto Adapter           | Dependency
-:---------------------- | :--------------------- | :-------------------
-PostgreSQL              | Ecto.Adapters.Postgres | [postgrex][postgrex]
-MSSQL                   | Tds.Ecto               | [tds_ecto][tds_ecto]
-
-[postgrex]: http://github.com/ericmj/postgrex
-[tds_ecto]: https://github.com/livehelpnow/tds_ecto
-
-Just add the proper "Dependency" to your `mix.exs` file and the respective "Ecto Adapter" to your `Ecto.Repo` module.
+```elixir
+config :my_app, Repo,
+  adapter: Ecto.Adapters.Postgres,
+  ...
+```
 
 We are currently looking for contributions to add support for other SQL databases and folks interested in exploring non-relational databases too.
 
