@@ -14,6 +14,11 @@ defmodule Ecto.Integration.Migration do
       timestamps
     end
 
+    # Add a unique index on uuid. We use this
+    # to verify the behaviour that the index
+    # only matters if the UUID column is not NULL.
+    create index(:posts, [:uuid], unique: true)
+
     create_users_table()
     create_permalinks_table()
 
