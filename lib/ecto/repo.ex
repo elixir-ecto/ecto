@@ -357,7 +357,8 @@ defmodule Ecto.Repo do
   with all model non-virtual fields as part of the changeset. For this
   reason, it is preferred to use changesets as they perform dirty
   tracking and avoid sending data that did not change to the database
-  over and over.
+  over and over. In case there are no changes in the changeset, no
+  data is sent to the database at all.
 
   In case a changeset is given, only the changes in the changeset
   will be updated, leaving all the other model fields intact.

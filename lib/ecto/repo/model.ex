@@ -65,16 +65,17 @@ defmodule Ecto.Repo.Model do
       {pk_field, pk_value} = pk_filter!(model, struct)
       filters = Planner.fields(:update, model, Map.put(changeset.filters, pk_field, pk_value))
 
-      if changes == [] do
-        changes = [{pk_field, pk_value}]
-      end
-
-      values = case adapter.update(repo, source, changes, filters, return, opts) do
-        {:ok, values} ->
-          values
-        {:error, :stale} ->
-          raise Ecto.StaleModelError, model: struct, action: :update
-      end
+      values =
+        if changes != [] do
+          case adapter.update(repo, source, changes, filters, return, opts) do
+            {:ok, values} ->
+              values
+            {:error, :stale} ->
+              raise Ecto.StaleModelError, model: struct, action: :update
+          end
+        else
+          []
+        end
 
       changeset = load_into_changeset(changeset, model, values)
       Callbacks.__apply__(model, :after_update, changeset).model

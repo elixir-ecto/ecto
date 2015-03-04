@@ -82,8 +82,8 @@ defmodule Ecto.Integration.RepoTest do
     changeset = Ecto.Changeset.cast(%Comment{}, %{}, ~w(), ~w())
     assert %Comment{} = comment = TestRepo.insert(changeset)
 
-    # Assert we can update the same value twice, without changes,
-    # without triggering stale errors.
+    # Assert we can update the same value twice,
+    # without changes, without triggering stale errors.
     changeset = Ecto.Changeset.cast(comment, %{}, ~w(), ~w())
     assert ^comment = TestRepo.update(changeset)
     assert ^comment = TestRepo.update(changeset)

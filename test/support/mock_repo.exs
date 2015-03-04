@@ -26,7 +26,8 @@ defmodule Ecto.MockAdapter do
   def insert(_repo, _source, _fields, [_], _opts),
     do: {:ok, [id: 1]}
 
-  def update(_repo, _source, _filter, _fields, [_], _opts),
+  # Notice the list of changes is never empty.
+  def update(_repo, _source, [_|_], _filters, [_], _opts),
     do: {:ok, [id: 1]}
 
   def delete(_repo, "schema_migrations", val, _) do
