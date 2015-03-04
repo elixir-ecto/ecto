@@ -62,6 +62,9 @@ defmodule Ecto.Query.Builder.From do
           # When a binary is used, there is no model
           {1, query(source, nil)}
 
+        {source, model} when is_binary(source) and is_atom(model) ->
+          {1, query(source, model)}
+
         other ->
           {nil, other}
       end
