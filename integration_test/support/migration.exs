@@ -6,7 +6,7 @@ defmodule Ecto.Integration.Migration do
       add :title, :string, size: 100
       add :counter, :integer, default: 10
       add :text, :binary
-      add :uuid, :uuid, unique: true
+      add :uuid, :uuid
       add :public, :boolean
       add :cost, :decimal, precision: 2, scale: 1
       add :visits, :integer
