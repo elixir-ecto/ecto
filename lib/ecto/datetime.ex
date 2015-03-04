@@ -34,7 +34,7 @@ defmodule Ecto.DateTime.Util do
   @doc """
   Checks if the trailing part of a date/time matches ISO specs.
   """
-  defmacro is_iso(x) do
+  defmacro is_iso_8601(x) do
     quote do: unquote(x) in ["", "Z"]
   end
 
@@ -44,20 +44,19 @@ defmodule Ecto.DateTime.Util do
   Returns nil if an invalid format is given.
   """
   def usec("." <> rest) do
-    case Integer.parse(rest) do
-      {int, rest} when int in 0..999999 and is_iso(rest) -> to_usec(int)
-      _ -> nil
+    case parse(rest, "") do
+      {int, rest} when byte_size(int) in 1..6 and is_iso_8601(rest) ->
+        pad = String.duplicate("0", 6 - byte_size(int))
+        String.to_integer(pad <> int)
+      _ ->
+        nil
     end
   end
-  def usec(rest) when is_iso(rest), do: 0
+  def usec(rest) when is_iso_8601(rest), do: 0
   def usec(_), do: nil
 
-  defp to_usec(int) when int < 10, do: int * 100000
-  defp to_usec(int) when int < 100, do: int * 10000
-  defp to_usec(int) when int < 1000, do: int * 1000
-  defp to_usec(int) when int < 10000, do: int * 100
-  defp to_usec(int) when int < 100000, do: int * 10
-  defp to_usec(int) when int < 1000000, do: int * 1
+  defp parse(<<h, t::binary>>, acc) when h in ?0..?9, do: parse(t, <<acc::binary, h>>)
+  defp parse(rest, acc), do: {acc, rest}
 end
 
 defmodule Ecto.Date do
