@@ -14,7 +14,7 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
 
     assert_raise Ecto.Query.CompileError,
-                 "expected join to be a string or atom, got: `123`", fn ->
+                 "expected join to be a string, atom or {string, atom}, got: `123`", fn ->
       source = 123
       join("posts", :left, [p], c in ^source, true)
     end
@@ -29,6 +29,11 @@ defmodule Ecto.Query.Builder.JoinTest do
     qual = :right
     source = Comment
     assert %{joins: [%{source: {nil, Comment}}]} =
+            join("posts", qual, [p], c in ^source, true)
+
+    qual = :right
+    source = {"user_comments", Comment}
+    assert %{joins: [%{source: {"user_comments", Comment}}]} =
             join("posts", qual, [p], c in ^source, true)
   end
 end

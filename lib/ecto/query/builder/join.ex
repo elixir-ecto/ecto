@@ -21,6 +21,9 @@ defmodule Ecto.Query.Builder.Join do
       iex> escape(quote(do: x in Sample), [])
       {:x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil}
 
+      iex> escape(quote(do: x in {"foo", Sample}), [])
+      {:x, {"foo", {:__aliases__, [alias: false], [:Sample]}}, nil}
+
       iex> escape(quote(do: c in assoc(p, :comments)), [p: 0])
       {:c, nil, {0, :comments}}
 
@@ -38,6 +41,10 @@ defmodule Ecto.Query.Builder.Join do
 
   def escape(string, _vars) when is_binary(string) do
     {:_, {string, nil}, nil}
+  end
+
+  def escape({string, {:__aliases__, _, _} = module}, _vars) when is_binary(string) do
+    {:_, {string, module}, nil}
   end
 
   def escape({:assoc, _, [{var, _, context}, field]}, vars)
@@ -62,8 +69,10 @@ defmodule Ecto.Query.Builder.Join do
     do: {nil, expr}
   def join!(expr) when is_binary(expr),
     do: {expr, nil}
+  def join!({source, module}) when is_binary(source) and is_atom(module),
+    do: {source, module}
   def join!(expr),
-    do: Builder.error!("expected join to be a string or atom, got: `#{inspect expr}`")
+    do: Builder.error!("expected join to be a string, atom or {string, atom}, got: `#{inspect expr}`")
 
   @doc """
   Builds a quoted expression.
