@@ -55,8 +55,15 @@ defimpl Inspect, for: Ecto.Query do
   defp bound_from(from, name), do: ["from #{name} in #{unbound_from from}"]
 
   defp unbound_from({source, nil}),    do: inspect source
-  defp unbound_from({nil, model}), do: inspect model
-  defp unbound_from(from = {source, model}), do: inspect from
+
+  defp unbound_from(from = {source, model}) do
+    if source == model.__schema__(:source) do
+      inspect model
+    else
+      inspect from
+    end
+  end
+
   defp unbound_from(nil),              do: "query"
 
   defp joins(joins, names) do
