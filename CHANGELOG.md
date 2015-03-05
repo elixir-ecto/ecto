@@ -5,6 +5,7 @@
 * Enhancements
   * Add MySQL support
   * Log when migration is already up/down
+  * Add `Ecto.Association.loaded?/1`
   * Support joins besides where clauses in `update_all` and `delete_all`
   * Support optimistic locking with `Ecto.Model.OptimisticLock`
   * Allow timeout when querying the database to be configured via `:timeout`
