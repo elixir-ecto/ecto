@@ -17,6 +17,9 @@ defmodule Ecto.Query.Builder.From do
       iex> escape(quote do: p in posts)
       {[p: 0], quote(do: posts)}
 
+      iex> escape(quote do: p in {"posts", MyModel})
+      {[p: 0], quote(do: {"posts", MyModel})}
+
       iex> escape(quote do: [p, q] in posts)
       {[p: 0, q: 1], quote(do: posts)}
 

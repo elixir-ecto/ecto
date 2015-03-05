@@ -30,6 +30,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in "posts", [])) ==
            ~s{from p in "posts"}
+
+    assert i(from(x in {"user_posts", Post}, [])) ==
+           ~s[from p in {"user_posts", Inspect.Post}]
   end
 
   test "join" do
@@ -38,6 +41,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in Post, full_join: y in Comment, on: x.id == y.id)) ==
            ~s{from p in Inspect.Post, full_join: c in Inspect.Comment, on: p.id == c.id}
+
+    assert i(from(x in Post, full_join: y in {"user_comments", Comment}, on: x.id == y.id)) ==
+           ~s[from p in Inspect.Post, full_join: c in {"user_comments", Inspect.Comment}, on: p.id == c.id]
 
     assert i(from(x in Post, left_join: y in assoc(x, :comments))) ==
            ~s{from p in Inspect.Post, left_join: c in assoc(p, :comments)}
