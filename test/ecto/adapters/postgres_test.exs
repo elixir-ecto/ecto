@@ -99,6 +99,12 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Model |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y" DESC}
 
+    query = Model |> order_by([r], [r.y]) |> distinct([r], r.x) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0."x") m0."x" FROM "model" AS m0 ORDER BY m0."x", m0."y"}
+
+    query = Model |> order_by([r], [r.y]) |> distinct([r], r) |> select([r], r) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0."id", m0."x", m0."y") m0."id", m0."x", m0."y" FROM "model" AS m0 ORDER BY m0."y"}
+
     query = Model |> order_by([r], []) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
   end

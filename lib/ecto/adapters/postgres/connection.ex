@@ -77,7 +77,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       where    = where(query.wheres, sources)
       group_by = group_by(query.group_bys, sources)
       having   = having(query.havings, sources)
-      order_by = order_by(query.order_bys, sources)
+      order_by = order_by(query.order_bys, query.distincts, sources)
       limit    = limit(query.limit, sources)
       offset   = offset(query.offset, sources)
       lock     = lock(query.lock)
@@ -248,12 +248,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp order_by(order_bys, sources) do
+    defp order_by([], _distincts, _sources), do: nil
+    defp order_by(order_bys, distincts, sources) do
+      order_bys = distincts ++ order_bys
       exprs =
-        Enum.map_join(order_bys, ", ", fn
-          %QueryExpr{expr: expr} ->
-            Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
-        end)
+        order_bys
+        |> Enum.map(fn %QueryExpr{expr: expr} ->
+             Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
+           end)
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.join(", ")
 
       case exprs do
         "" -> nil
@@ -268,6 +272,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         :desc -> str <> " DESC"
       end
     end
+
+    defp order_by_expr({:&, _, [_]}, sources), do: nil
+    defp order_by_expr(expr, sources), do: expr(expr, sources)
 
     defp limit(nil, _sources), do: nil
     defp limit(%Ecto.Query.QueryExpr{expr: expr}, sources) do
