@@ -102,11 +102,15 @@ defmodule Ecto.DateTimeTest do
   use ExUnit.Case, async: true
 
   @test_datetime "2015-01-23T23:50:07"
-  @test_ecto_datetime %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07}
-  @test_ecto_datetime_zero %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 0}
+  @test_ecto_datetime %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07, usec: 0}
+  @test_ecto_datetime_zero %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 0, usec: 0}
+
+  @test_usec_datetime "2015-01-23T23:50:07.008"
+  @test_ecto_usec_datetime %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07, usec: 8000}
 
   test "cast itself" do
     assert Ecto.DateTime.cast(@test_ecto_datetime) == {:ok, @test_ecto_datetime}
+    assert Ecto.DateTime.cast(@test_ecto_usec_datetime) == {:ok, @test_ecto_usec_datetime}
   end
 
   test "cast strings" do
@@ -115,6 +119,9 @@ defmodule Ecto.DateTimeTest do
     assert Ecto.DateTime.cast("2015-01-23T23:50:07Z") == {:ok, @test_ecto_datetime}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07.000Z") == {:ok, @test_ecto_datetime}
     assert Ecto.DateTime.cast("2015-01-23P23:50:07") == :error
+
+    assert Ecto.DateTime.cast(@test_usec_datetime) == {:ok, @test_ecto_usec_datetime}
+    assert Ecto.DateTime.cast(@test_usec_datetime <> "Z") == {:ok, @test_ecto_usec_datetime}
   end
 
   test "cast maps" do
@@ -143,5 +150,8 @@ defmodule Ecto.DateTimeTest do
   test "to_string" do
     assert to_string(@test_ecto_datetime) == @test_datetime <> "Z"
     assert Ecto.DateTime.to_string(@test_ecto_datetime) == @test_datetime <> "Z"
+
+    assert to_string(@test_ecto_usec_datetime) == @test_usec_datetime <> "000Z"
+    assert Ecto.DateTime.to_string(@test_ecto_usec_datetime) == @test_usec_datetime <> "000Z"
   end
 end
