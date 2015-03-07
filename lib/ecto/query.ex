@@ -406,10 +406,11 @@ defmodule Ecto.Query do
   Only keep one row for each combination of values in the `distinct` query
   expression.
 
-  The row that is being kept depends on the ordering of the rows. To ensure
-  results are consistent, if an `order_by` expression is also added to the
-  query, its leftmost part must first reference all the fields in the
-  `distinct` expression before referencing another field.
+  The row that is being kept depends on the ordering of the rows. When an
+  `order_by` expression is also added to the query, all fields in the `distinct`
+  expression are automatically referenced in the compiled SQL query.
+  That way, you only need to specify the fields you want to order on to
+  the `order_by` expression.
 
   ## Keywords examples
 
@@ -420,7 +421,7 @@ defmodule Ecto.Query do
       # expressions to distinct too
       from(p in Post,
          distinct: p.category,
-         order_by: [p.category, p.date])
+         order_by: [p.date])
 
   ## Expressions examples
 

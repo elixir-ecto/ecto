@@ -69,15 +69,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Query.JoinExpr
 
     def all(query) do
-      sources = create_names(query)
+      sources        = create_names(query)
+      distinct       = query.distinct
+      distinct_exprs = distinct_exprs(distinct, sources)
 
       from     = from(sources)
-      select   = select(query.select, query.distinct, sources)
+      select   = select(query.select, distinct, distinct_exprs, sources)
       join     = join(query.joins, sources)
       where    = where(query.wheres, sources)
       group_by = group_by(query.group_bys, sources)
       having   = having(query.havings, sources)
-      order_by = order_by(query.order_bys, query.distincts, sources)
+      order_by = order_by(query.order_bys, distinct, distinct_exprs, sources)
       limit    = limit(query.limit, sources)
       offset   = offset(query.offset, sources)
       lock     = lock(query.lock)
@@ -160,18 +162,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%SelectExpr{fields: fields}, distinct, sources) do
-      "SELECT " <> 
-        distinct(distinct, sources) <>
+    defp select(%SelectExpr{fields: fields}, distinct, distinct_exprs, sources) do
+      "SELECT " <>
+        distinct(distinct, distinct_exprs) <>
         Enum.map_join(fields, ", ", &expr(&1, sources))
     end
 
-    defp distinct(nil, _sources), do: ""
-    defp distinct(%QueryExpr{expr: true}, _sources),  do: "DISTINCT "
-    defp distinct(%QueryExpr{expr: false}, _sources), do: ""
-    defp distinct(%QueryExpr{expr: exprs}, sources) when is_list(exprs) do
-      "DISTINCT ON (" <> Enum.map_join(exprs, ", ", &expr(&1, sources)) <> ") "
+    defp distinct_exprs(%QueryExpr{expr: exprs}, sources) when is_list(exprs) do
+      Enum.map_join(exprs, ", ", &expr(&1, sources))
     end
+    defp distinct_exprs(_, _), do: ""
+
+    defp distinct(nil, _sources), do: ""
+    defp distinct(%QueryExpr{expr: true}, _exprs),  do: "DISTINCT "
+    defp distinct(%QueryExpr{expr: false}, _exprs), do: ""
+    defp distinct(_query, exprs), do: "DISTINCT ON (" <> exprs <> ") "
 
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)
@@ -248,20 +253,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp order_by([], _distincts, _sources), do: nil
-    defp order_by(order_bys, distincts, sources) do
-      order_bys = distincts ++ order_bys
+    defp order_by(order_bys, distinct, distinct_exprs, sources) do
       exprs =
-        order_bys
-        |> Enum.map(fn %QueryExpr{expr: expr} ->
-             Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
-           end)
-        |> Enum.reject(&(&1 == ""))
-        |> Enum.join(", ")
+        Enum.map_join(order_bys, ", ", fn
+          %QueryExpr{expr: expr} ->
+            Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
+        end)
 
-      case exprs do
-        "" -> nil
-        _  -> "ORDER BY " <> exprs
+      case {distinct_exprs, exprs, distinct} do
+        {_, "", _} -> nil
+        {"", _, _} ->
+          "ORDER BY " <> exprs
+        {_, _, %QueryExpr{expr: [{:&, _, _}]}} ->
+          "ORDER BY " <> exprs
+        {_, _, _}  ->
+          "ORDER BY " <> distinct_exprs <> ", " <> exprs
       end
     end
 
@@ -272,9 +278,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         :desc -> str <> " DESC"
       end
     end
-
-    defp order_by_expr({:&, _, [_]}, sources), do: nil
-    defp order_by_expr(expr, sources), do: expr(expr, sources)
 
     defp limit(nil, _sources), do: nil
     defp limit(%Ecto.Query.QueryExpr{expr: expr}, sources) do
