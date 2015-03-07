@@ -24,6 +24,9 @@ defmodule Ecto.Query.Builder.Join do
       iex> escape(quote(do: x in {"foo", Sample}), [])
       {:x, {"foo", {:__aliases__, [alias: false], [:Sample]}}, nil}
 
+      iex> escape(quote(do: x in {"foo", :sample}), [])
+      {:x, {"foo", :sample}, nil}
+
       iex> escape(quote(do: c in assoc(p, :comments)), [p: 0])
       {:c, nil, {0, :comments}}
 
@@ -45,6 +48,10 @@ defmodule Ecto.Query.Builder.Join do
 
   def escape({string, {:__aliases__, _, _} = module}, _vars) when is_binary(string) do
     {:_, {string, module}, nil}
+  end
+
+  def escape({string, atom}, _vars) when is_binary(string) and is_atom(atom) do
+    {:_, {string, atom}, nil}
   end
 
   def escape({:assoc, _, [{var, _, context}, field]}, vars)
