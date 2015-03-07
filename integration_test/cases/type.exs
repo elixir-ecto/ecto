@@ -13,7 +13,8 @@ defmodule Ecto.Integration.TypeTest do
     text     = <<0,1>>
     uuid     = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
     decimal  = Decimal.new("1.0")
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
+    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26,
+      sec: 51, usec: 0}
 
     TestRepo.insert(%Post{text: text, uuid: uuid, public: true, visits: integer,
                           inserted_at: datetime, cost: decimal, intensity: float})
@@ -69,7 +70,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
 
     # Custom types
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51}
+    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51, usec: 0}
     assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, Ecto.DateTime))
   end
 
