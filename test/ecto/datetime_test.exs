@@ -78,6 +78,10 @@ defmodule Ecto.TimeTest do
            {:ok, @test_ecto_time_zero}
     assert Ecto.Time.cast(%{hour: 23, min: 50}) ==
            {:ok, @test_ecto_time_zero}
+    assert Ecto.Time.cast(%{hour: 12, min: 40, sec: 33, usec: 30_000}) ==
+           {:ok, @test_ecto_usec_time}
+    assert Ecto.Time.cast(%{"hour" => 12, "min" => 40, "sec" => 33, "usec" => 30_000}) ==
+           {:ok, @test_ecto_usec_time}
     assert Ecto.Time.cast(%{"hour" => "", "min" => "50"}) ==
            :error
     assert Ecto.Time.cast(%{hour: 23, min: nil}) ==
@@ -88,13 +92,13 @@ defmodule Ecto.TimeTest do
     assert to_string(@test_ecto_time) == @test_time
     assert Ecto.Time.to_string(@test_ecto_time) == @test_time
 
-    assert to_string(@test_ecto_usec_time) == @test_usec_time <> "000"
-    assert Ecto.Time.to_string(@test_ecto_usec_time) == @test_usec_time <> "000"
+    assert to_string(@test_ecto_usec_time) == @test_usec_time <> "000Z"
+    assert Ecto.Time.to_string(@test_ecto_usec_time) == @test_usec_time <> "000Z"
 
     assert to_string(%Ecto.Time{hour: 1, min: 2, sec: 3, usec: 4})
-      == "01:02:03.000004"
+           == "01:02:03.000004Z"
     assert Ecto.Time.to_string(%Ecto.Time{hour: 1, min: 2, sec: 3, usec: 4})
-      == "01:02:03.000004"
+           == "01:02:03.000004Z"
   end
 end
 
@@ -138,6 +142,15 @@ defmodule Ecto.DateTimeTest do
 
     assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: 50}) ==
            {:ok, @test_ecto_datetime_zero}
+
+    assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23,
+                                min: 50, sec: 07, usec: 8_000}) ==
+           {:ok, @test_ecto_usec_datetime}
+
+    assert Ecto.DateTime.cast(%{"year" => 2015, "month" => 1, "day" => 23,
+                                "hour" => 23, "min" => 50, "sec" => 07,
+                                "usec" => 8_000}) ==
+           {:ok, @test_ecto_usec_datetime}
 
     assert Ecto.DateTime.cast(%{"year" => "2015", "month" => "1", "day" => "23",
                                 "hour" => "", "min" => "50"}) ==

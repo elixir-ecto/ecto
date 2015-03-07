@@ -25,9 +25,12 @@ defmodule Ecto.DateTime.Util do
   end
 
   @doc "A guard to check for times"
-  defmacro is_time(hour, min, sec) do
+  defmacro is_time(hour, min, sec, usec \\ 0) do
     quote do
-      unquote(hour) in 0..23 and unquote(min) in 0..59 and unquote(sec) in 0..59
+      unquote(hour) in 0..23 and
+        unquote(min) in 0..59 and
+        unquote(sec) in 0..59 and
+        unquote(usec) in 0..999_999
     end
   end
 
@@ -147,7 +150,7 @@ defmodule Ecto.Time do
   """
 
   @behaviour Ecto.Type
-  defstruct [:hour, :min, :sec, :usec]
+  defstruct [:hour, :min, :sec, usec: 0]
 
   @doc """
   The Ecto primitive type.
@@ -167,27 +170,27 @@ defmodule Ecto.Time do
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
   def cast(%{"hour" => hour, "min" => min} = map),
-    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), 0)
+    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), to_i(Map.get(map, "usec", 0)))
   def cast(%{hour: hour, min: min} = map),
-    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)), 0)
+    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)), to_i(Map.get(map, :usec, 0)))
   def cast(_),
     do: :error
 
-  defp from_parts(hour, min, sec, usec)
-    when is_time(hour, min, sec) and usec in 0..999_999,
+  defp from_parts(hour, min, sec, usec) when is_time(hour, min, sec, usec),
     do: {:ok, %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}}
   defp from_parts(_, _, _, _),
     do: :error
 
   @doc """
-  Converts an `Ecto.Time` into a time triplet.
+  Converts an `Ecto.Time` into a time tuple (in the form `{hour, min, sec,
+  usec}`).
   """
   def dump(%Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}) do
     {:ok, {hour, min, sec, usec}}
   end
 
   @doc """
-  Converts a time triplet into an `Ecto.Time`.
+  Converts a time tuple like the one returned by `dump/1` into an `Ecto.Time`.
   """
   def load({hour, min, sec, usec}) do
     {:ok, %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}}
@@ -215,16 +218,17 @@ defmodule Ecto.Time do
   end
 
   defp erl_load({_, {hour, min, sec}}) do
-    %Ecto.Time{hour: hour, min: min, sec: sec, usec: 0}
+    %Ecto.Time{hour: hour, min: min, sec: sec}
   end
 
   defimpl String.Chars do
     def to_string(%Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}) do
       str = zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
+
       if is_nil(usec) or usec == 0 do
         str
       else
-        str <> "." <> zero_pad(usec, 6)
+        str <> "." <> zero_pad(usec, 6) <> "Z"
       end
     end
   end
@@ -238,7 +242,7 @@ defmodule Ecto.DateTime do
   """
 
   @behaviour Ecto.Type
-  defstruct [:year, :month, :day, :hour, :min, :sec, :usec]
+  defstruct [:year, :month, :day, :hour, :min, :sec, usec: 0]
 
   @doc """
   The Ecto primitive type.
@@ -264,12 +268,14 @@ defmodule Ecto.DateTime do
 
   def cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "min" => min} = map) do
     from_parts(to_i(year), to_i(month), to_i(day),
-               to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), 0)
+               to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)),
+               to_i(Map.get(map, "usec", 0)))
   end
 
   def cast(%{year: year, month: month, day: day, hour: hour, min: min} = map) do
     from_parts(to_i(year), to_i(month), to_i(day),
-               to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)), 0)
+               to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)),
+               to_i(Map.get(map, :usec, 0)))
   end
 
   def cast(_) do
@@ -277,7 +283,7 @@ defmodule Ecto.DateTime do
   end
 
   defp from_parts(year, month, day, hour, min, sec, usec)
-      when is_date(year, month, day) and is_time(hour, min, sec) do
+      when is_date(year, month, day) and is_time(hour, min, sec, usec) do
     {:ok, %Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}}
   end
   defp from_parts(_, _, _, _, _, _, _), do: :error
@@ -343,7 +349,7 @@ defmodule Ecto.DateTime do
 
   defp erl_load({{year, month, day}, {hour, min, sec}}) do
     %Ecto.DateTime{year: year, month: month, day: day,
-                   hour: hour, min: min, sec: sec, usec: 0}
+                   hour: hour, min: min, sec: sec}
   end
 
   defimpl String.Chars do
