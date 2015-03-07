@@ -47,7 +47,7 @@ defmodule Ecto.DateTime.Util do
     case parse(rest, "") do
       {int, rest} when byte_size(int) in 1..6 and is_iso_8601(rest) ->
         pad = String.duplicate("0", 6 - byte_size(int))
-        String.to_integer(pad <> int)
+        String.to_integer(int <> pad)
       _ ->
         nil
     end
@@ -147,7 +147,7 @@ defmodule Ecto.Time do
   """
 
   @behaviour Ecto.Type
-  defstruct [:hour, :min, :sec]
+  defstruct [:hour, :min, :sec, :usec]
 
   @doc """
   The Ecto primitive type.
@@ -158,8 +158,8 @@ defmodule Ecto.Time do
   Casts to time.
   """
   def cast(<<hour::2-bytes, ?:, min::2-bytes, ?:, sec::2-bytes, rest::binary>>) do
-    if usec(rest) do
-      from_parts(to_i(hour), to_i(min), to_i(sec))
+    if usec = usec(rest) do
+      from_parts(to_i(hour), to_i(min), to_i(sec), usec)
     else
       :error
     end
@@ -167,29 +167,30 @@ defmodule Ecto.Time do
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
   def cast(%{"hour" => hour, "min" => min} = map),
-    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)))
+    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), 0)
   def cast(%{hour: hour, min: min} = map),
-    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)))
+    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)), 0)
   def cast(_),
     do: :error
 
-  defp from_parts(hour, min, sec) when is_time(hour, min, sec) do
-    {:ok, %Ecto.Time{hour: hour, min: min, sec: sec}}
-  end
-  defp from_parts(_, _, _), do: :error
+  defp from_parts(hour, min, sec, usec)
+    when is_time(hour, min, sec) and usec in 0..999_999,
+    do: {:ok, %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}}
+  defp from_parts(_, _, _, _),
+    do: :error
 
   @doc """
   Converts an `Ecto.Time` into a time triplet.
   """
-  def dump(%Ecto.Time{hour: hour, min: min, sec: sec}) do
-    {:ok, {hour, min, sec, 0}}
+  def dump(%Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}) do
+    {:ok, {hour, min, sec, usec}}
   end
 
   @doc """
   Converts a time triplet into an `Ecto.Time`.
   """
-  def load({hour, min, sec, _}) do
-    {:ok, %Ecto.Time{hour: hour, min: min, sec: sec}}
+  def load({hour, min, sec, usec}) do
+    {:ok, %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}}
   end
 
   @doc """
@@ -214,12 +215,17 @@ defmodule Ecto.Time do
   end
 
   defp erl_load({_, {hour, min, sec}}) do
-    %Ecto.Time{hour: hour, min: min, sec: sec}
+    %Ecto.Time{hour: hour, min: min, sec: sec, usec: 0}
   end
 
   defimpl String.Chars do
-    def to_string(%Ecto.Time{hour: hour, min: min, sec: sec}) do
-      zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
+    def to_string(%Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}) do
+      str = zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
+      if is_nil(usec) or usec == 0 do
+        str
+      else
+        str <> "." <> zero_pad(usec, 6)
+      end
     end
   end
 end

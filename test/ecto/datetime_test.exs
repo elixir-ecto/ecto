@@ -39,19 +39,29 @@ defmodule Ecto.TimeTest do
   use ExUnit.Case, async: true
 
   @test_time "23:50:07"
-  @test_ecto_time %Ecto.Time{hour: 23, min: 50, sec: 07}
-  @test_ecto_time_zero %Ecto.Time{hour: 23, min: 50, sec: 0}
+  @test_ecto_time %Ecto.Time{hour: 23, min: 50, sec: 07, usec: 0}
+  @test_ecto_time_zero %Ecto.Time{hour: 23, min: 50, sec: 0, usec: 0}
+
+  @test_usec_time "12:40:33.030"
+  @test_ecto_usec_time %Ecto.Time{hour: 12, min: 40, sec: 33, usec: 30_000}
 
   test "cast itself" do
     assert Ecto.Time.cast(@test_ecto_time) == {:ok, @test_ecto_time}
+    assert Ecto.Time.cast(@test_ecto_time_zero) ==  {:ok, @test_ecto_time_zero}
   end
 
   test "cast strings" do
     assert Ecto.Time.cast(@test_time) == {:ok, @test_ecto_time}
     assert Ecto.Time.cast(@test_time <> "Z") == {:ok, @test_ecto_time}
-    assert Ecto.Time.cast(@test_time <> ".030") == {:ok, @test_ecto_time}
-    assert Ecto.Time.cast(@test_time <> ".030Z") == {:ok, @test_ecto_time}
-    assert Ecto.Time.cast(@test_time <> ".030231Z") == {:ok, @test_ecto_time}
+    assert Ecto.Time.cast(@test_usec_time) == {:ok, @test_ecto_usec_time}
+    assert Ecto.Time.cast(@test_usec_time <> "Z") == {:ok, @test_ecto_usec_time}
+    assert Ecto.Time.cast(@test_time <> ".123456")
+      == {:ok, %{@test_ecto_time | usec: 123456}}
+    assert Ecto.Time.cast(@test_time <> ".123456Z")
+      == {:ok, %{@test_ecto_time | usec: 123456}}
+    assert Ecto.Time.cast(@test_time <> ".000123Z")
+      == {:ok, %{@test_ecto_time | usec: 123}}
+
     assert Ecto.Date.cast("24:01:01") == :error
     assert Ecto.Date.cast("00:61:00") == :error
     assert Ecto.Date.cast("00:00:61") == :error
@@ -77,6 +87,14 @@ defmodule Ecto.TimeTest do
   test "to_string" do
     assert to_string(@test_ecto_time) == @test_time
     assert Ecto.Time.to_string(@test_ecto_time) == @test_time
+
+    assert to_string(@test_ecto_usec_time) == @test_usec_time <> "000"
+    assert Ecto.Time.to_string(@test_ecto_usec_time) == @test_usec_time <> "000"
+
+    assert to_string(%Ecto.Time{hour: 1, min: 2, sec: 3, usec: 4})
+      == "01:02:03.000004"
+    assert Ecto.Time.to_string(%Ecto.Time{hour: 1, min: 2, sec: 3, usec: 4})
+      == "01:02:03.000004"
   end
 end
 
