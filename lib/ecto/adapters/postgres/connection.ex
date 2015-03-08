@@ -79,7 +79,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       where    = where(query.wheres, sources)
       group_by = group_by(query.group_bys, sources)
       having   = having(query.havings, sources)
-      order_by = order_by(query.order_bys, distinct, distinct_exprs, sources)
+      order_by = order_by(query.order_bys, distinct_exprs, sources)
       limit    = limit(query.limit, sources)
       offset   = offset(query.offset, sources)
       lock     = lock(query.lock)
@@ -253,20 +253,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp order_by(order_bys, distinct, distinct_exprs, sources) do
+    defp order_by(order_bys, distinct_exprs, sources) do
       exprs =
         Enum.map_join(order_bys, ", ", fn
           %QueryExpr{expr: expr} ->
             Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
         end)
 
-      case {distinct_exprs, exprs, distinct} do
-        {_, "", _} -> nil
-        {"", _, _} ->
+      case {distinct_exprs, exprs} do
+        {_, ""} ->
+          nil
+        {"", _} ->
           "ORDER BY " <> exprs
-        {_, _, %QueryExpr{expr: [{:&, _, _}]}} ->
-          "ORDER BY " <> exprs
-        {_, _, _}  ->
+        {_, _}  ->
           "ORDER BY " <> distinct_exprs <> ", " <> exprs
       end
     end

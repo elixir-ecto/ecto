@@ -6,9 +6,6 @@ defmodule Ecto.Query.Builder.Distinct do
   @doc """
   Escapes a list of quoted expressions.
 
-      iex> escape(quote do x end, [x: 0], __ENV__)
-      {[{:{}, [], [:&, [], [0]]}], %{}}
-
       iex> escape(quote do true end, [], __ENV__)
       {true, %{}}
 
@@ -27,10 +24,6 @@ defmodule Ecto.Query.Builder.Distinct do
     expr
     |> List.wrap
     |> Enum.map_reduce(%{}, &escape(&1, &2, vars, env))
-  end
-
-  defp escape({var, _, context}, params, vars, _env) when is_atom(var) and is_atom(context) do
-    {Builder.escape_var(var, vars), params}
   end
 
   defp escape(expr, params, vars, env) do

@@ -403,22 +403,24 @@ defmodule Ecto.Query do
   @doc """
   A distinct query expression.
 
-  Only keep one row for each combination of values in the `distinct` query
-  expression.
+  When true, only keeps distinct values from the resulting
+  select expression.
 
-  The row that is being kept depends on the ordering of the rows. When an
-  `order_by` expression is also added to the query, all fields in the `distinct`
-  expression are automatically referenced in the compiled SQL query.
-  That way, you only need to specify the fields you want to order on to
-  the `order_by` expression.
+  If supported by your database, you can also pass query
+  expressions to distinct and it will generate a query
+  with DISTINCT ON. In such cases, the row that is being
+  kept depends on the ordering of the rows. When an `order_by`
+  expression is also added to the query, all fields in the
+  `distinct` expression are automatically referenced `order_by`
+  too.
 
   ## Keywords examples
 
       # Returns the list of different categories in the Post model
       from(p in Post, distinct: true, select: p.category)
 
-      # If your database supports DISTINCT ON(), you can pass
-      # expressions to distinct too
+      # If your database supports DISTINCT ON(),
+      # you can pass expressions to distinct too
       from(p in Post,
          distinct: p.category,
          order_by: [p.date])
