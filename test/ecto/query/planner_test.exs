@@ -132,6 +132,9 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(p in Post, join: c in Comment) |> prepare |> elem(0)
     assert hd(query.joins).source == {"comments", Comment}
+
+    query = from(p in Post, join: c in {"post_comments", Comment}) |> prepare |> elem(0)
+    assert hd(query.joins).source == {"post_comments", Comment}
   end
 
   test "prepare: joins associations" do

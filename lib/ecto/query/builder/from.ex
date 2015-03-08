@@ -17,6 +17,9 @@ defmodule Ecto.Query.Builder.From do
       iex> escape(quote do: p in posts)
       {[p: 0], quote(do: posts)}
 
+      iex> escape(quote do: p in {"posts", MyModel})
+      {[p: 0], quote(do: {"posts", MyModel})}
+
       iex> escape(quote do: [p, q] in posts)
       {[p: 0, q: 1], quote(do: posts)}
 
@@ -61,6 +64,9 @@ defmodule Ecto.Query.Builder.From do
         source when is_binary(source) ->
           # When a binary is used, there is no model
           {1, query(source, nil)}
+
+        {source, model} when is_binary(source) and is_atom(model) ->
+          {1, query(source, model)}
 
         other ->
           {nil, other}

@@ -241,9 +241,9 @@ defmodule Ecto.Query.Planner do
     prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
   end
 
-  defp prepare_joins([%JoinExpr{source: {_, model}} = join|t],
+  defp prepare_joins([%JoinExpr{source: {source, model}} = join|t],
                      query, joins, sources, tail_sources, counter, offset) when is_atom(model) do
-    source = {model.__schema__(:source), model}
+    source = if is_binary(source), do: {source, model}, else: {model.__schema__(:source), model}
     join   = %{join | source: source, ix: counter}
     prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
   end
