@@ -93,7 +93,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: casts and dumps custom types" do
-    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
+    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
     {_query, params} = prepare(Comment |> where([c], c.posted == ^datetime))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 
@@ -103,7 +103,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: casts and dumps custom types in in-expressions" do
-    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
+    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
     {_query, params} = prepare(Comment |> where([c], c.posted in ^[datetime]))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 
@@ -111,7 +111,7 @@ defmodule Ecto.Query.PlannerTest do
     {_query, params} = prepare(Post |> where([p], p.id in ^[permalink]))
     assert params == [1]
 
-    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13}
+    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
     {_query, params} = prepare(Comment |> where([c], c.posted in [^datetime]))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 

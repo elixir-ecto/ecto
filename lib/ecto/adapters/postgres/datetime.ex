@@ -35,17 +35,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       <<:calendar.date_to_gregorian_days(date) - @gd_epoch :: 32>>
     end
 
-    defp encode_time({hour, min, sec, msec})
-        when hour in 0..23 and min in 0..59 and sec in 0..59 and msec in 0..999_999 do
+    defp encode_time({hour, min, sec, usec})
+        when hour in 0..23 and min in 0..59 and sec in 0..59 and usec in 0..999_999 do
       time = {hour, min, sec}
-      <<:calendar.time_to_seconds(time) * 1_000_000 + msec :: 64>>
+      <<:calendar.time_to_seconds(time) * 1_000_000 + usec::64>>
     end
 
-    defp encode_timestamp({{year, month, day}, {hour, min, sec, msec}})
-        when year <= @timestamp_max_year and hour in 0..23 and min in 0..59 and sec in 0..59 and msec in 0..999_999 do
+    defp encode_timestamp({{year, month, day}, {hour, min, sec, usec}})
+        when year <= @timestamp_max_year and hour in 0..23 and min in 0..59 and sec in 0..59 and usec in 0..999_999 do
       datetime = {{year, month, day}, {hour, min, sec}}
       secs = :calendar.datetime_to_gregorian_seconds(datetime) - @gs_epoch
-      <<secs * 1_000_000 + msec :: 64>>
+      <<secs * 1_000_000 + usec :: 64>>
     end
 
     ### DECODING ###
