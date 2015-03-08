@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.10.0-dev
+
+* Enhancements
+  * Allow `from p in {"source", Model}`
+  * Add support for usec in `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime`
+
 ## v0.9.0 (2015-03-05)
 
 * Enhancements
