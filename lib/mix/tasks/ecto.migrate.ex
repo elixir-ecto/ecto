@@ -41,8 +41,10 @@ defmodule Mix.Tasks.Ecto.Migrate do
     repo = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean],
+      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, create: :boolean],
       aliases: [n: :step, v: :to]
+
+    if Keyword.get(opts, :create, true), do: Mix.Task.run("ecto.create", args)
 
     ensure_repo(repo)
     if Keyword.get(opts, :start, true), do: ensure_started(repo)
