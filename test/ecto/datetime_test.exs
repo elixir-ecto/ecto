@@ -62,11 +62,11 @@ defmodule Ecto.TimeTest do
     assert Ecto.Time.cast(@test_time <> ".000123Z")
       == {:ok, %{@test_ecto_time | usec: 123}}
 
-    assert Ecto.Date.cast("24:01:01") == :error
-    assert Ecto.Date.cast("00:61:00") == :error
-    assert Ecto.Date.cast("00:00:61") == :error
-    assert Ecto.Date.cast("00:00:009") == :error
-    assert Ecto.Date.cast("00:00:00.A00") == :error
+    assert Ecto.Time.cast("24:01:01") == :error
+    assert Ecto.Time.cast("00:61:00") == :error
+    assert Ecto.Time.cast("00:00:61") == :error
+    assert Ecto.Time.cast("00:00:009") == :error
+    assert Ecto.Time.cast("00:00:00.A00") == :error
   end
 
   test "cast maps" do
