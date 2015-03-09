@@ -49,7 +49,6 @@ defmodule Ecto.Changeset do
     equal_to:                 {&==/2, :must_be_equal_to},
   }
 
-
   @doc """
   Wraps the given model in a changeset or adds changes to a changeset.
 
@@ -814,7 +813,7 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      validate_number(changeset, :count, less_than: 3, parity: even)
+      validate_number(changeset, :count, less_than: 3)
       validate_number(changeset, :pi, greater_than: 3, less_than: 4)
       validate_number(changeset, :the_answer_to_life_the_universe_and_everything, equal_to: 42)
 
@@ -823,22 +822,20 @@ defmodule Ecto.Changeset do
   def validate_number(changeset, field, opts) do
     validate_change changeset, field, {:number, opts}, fn
       field, value ->
-        Enum.reduce(opts, [], fn(opt, errors) ->
-          {spec_key, target_value} = opt
-          errors ++ apply_from_validation_dict(field, value, spec_key, target_value, @number_validators)
-        end)
+        Enum.flat_map opts, fn {spec_key, target_value} ->
+          apply_from_validators(field, value, spec_key, target_value, @number_validators)
+        end
     end
   end
 
-  @spec apply_from_validation_dict(atom, any, atom, any, %{atom: {fun, atom}}) :: [Error]
-  defp apply_from_validation_dict(field, value, spec_key, target_value, validators_dict) do
-    case Map.fetch(validators_dict, spec_key) do
+  defp apply_from_validators(field, value, spec_key, target_value, validators_map) do
+    case Map.fetch(validators_map, spec_key) do
       {:ok, {spec_function, error_message}} ->
         case apply(spec_function, [value, target_value]) do
           true  -> []
           false -> [{field, {error_message, target_value}}]
         end
-      _ -> [] # if the spec_key isn't in the validators_dict just ignore it
+      _ -> [] # if the spec_key isn't in the validators_map just ignore it
     end
   end
 end
