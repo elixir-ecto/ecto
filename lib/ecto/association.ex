@@ -196,6 +196,14 @@ defmodule Ecto.Association do
 
   defp to_lower_char(char) when char in ?A..?Z, do: char + 32
   defp to_lower_char(char), do: char
+
+  def assoc_from_query(atom) when is_atom(atom), do: atom
+  def assoc_from_query({source, model}) when is_binary(source) and is_atom(model), do: model
+  def assoc_from_query(queryable) do
+    raise ArgumentError, "association queryable must be a model " <>
+      "or {source, model}, got: #{inspect queryable}"
+  end
+
 end
 
 defmodule Ecto.Association.Has do
@@ -236,13 +244,7 @@ defmodule Ecto.Association.Has do
 
     queryable = Keyword.fetch!(opts, :queryable)
 
-    assoc =
-      case queryable do
-        atom when is_atom(atom) -> atom
-        {source, model} when is_binary(source) and is_atom(model) -> model
-        _ -> raise ArgumentError, "association queryable must be a model " <>
-               "or {source, model}, got: #{inspect queryable}"
-      end
+    assoc = Ecto.Association.assoc_from_query(queryable)
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
@@ -444,13 +446,7 @@ defmodule Ecto.Association.BelongsTo do
 
     queryable = Keyword.fetch!(opts, :queryable)
 
-    assoc =
-      case queryable do
-        atom when is_atom(atom) -> atom
-        {source, model} when is_binary(source) and is_atom(model) -> model
-        _ -> raise ArgumentError, "association queryable must be a model " <>
-               "or {source, model}, got: #{inspect queryable}"
-      end
+    assoc = Ecto.Association.assoc_from_query(queryable)
 
     unless is_atom(assoc) do
       raise ArgumentError, "association queryable must be a model, got: #{inspect assoc}"
