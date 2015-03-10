@@ -29,7 +29,7 @@ defmodule Ecto.Changeset do
             errors: [], validations: [], required: [], optional: [],
             filters: %{}
 
-  @type error :: {atom, atom | {atom, [term]}}
+  @type error :: {atom, term}
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
                         model: Ecto.Model.t | nil,
@@ -41,6 +41,12 @@ defmodule Ecto.Changeset do
                         validations: [{atom, atom | {atom, [term]}}],
                         filters: %{atom => term}}
 
+  @length_validators %{
+    is:  {&==/2, :must_be_length},
+    min: {&>=/2, :must_be_longer_than},
+    max: {&<=/2, :must_be_shorter_than},
+  }
+
   @number_validators %{
     less_than:                {&</2, :must_be_less_than},
     greater_than:             {&>/2, :must_be_greater_than},
@@ -48,7 +54,6 @@ defmodule Ecto.Changeset do
     greater_than_or_equal_to: {&>=/2, :must_be_greater_than_or_equal_to},
     equal_to:                 {&==/2, :must_be_equal_to},
   }
-
 
   @doc """
   Wraps the given model in a changeset or adds changes to a changeset.
@@ -557,16 +562,35 @@ defmodule Ecto.Changeset do
   ## Examples
 
       iex> changeset = change(%Post{}, %{title: ""})
-      iex> changeset = add_error(changeset, :title, :empty)
+      iex> changeset = add_error(changeset, :title, {:just_another_error, nil})
       iex> changeset.errors
-      [title: :empty]
+      [title: [just_another_error: nil]]
       iex> changeset.valid?
       false
 
   """
   @spec add_error(t, atom, error) :: t
-  def add_error(%{errors: errors} = changeset, key, error) do
-    %{changeset | errors: [{key, error}|errors], valid?: false}
+  def add_error(changeset, key, error) do
+    add_errors(changeset, key, [error])
+  end
+
+  @doc """
+  Adds errors to the changeset.
+
+  ## Examples
+
+      iex> changeset = change(%Post{}, %{title: ""})
+      iex> changeset = add_errors(changeset, :title, [must_be_type: :integer, pointless: nil])
+      iex> changeset.errors
+      [title: [must_be_type: :integer, pointless: nil]]
+      iex> changeset.valid?
+      false
+
+  """
+  @spec add_errors(t, atom, [error]) :: t
+  def add_errors(%{errors: old_errors} = changeset, key, errors) do
+    new_errors = Dict.update(old_errors, key, errors, fn(val) -> errors ++ val end)
+    %{changeset | errors: new_errors, valid?: false}
   end
 
   @doc """
@@ -586,23 +610,23 @@ defmodule Ecto.Changeset do
       iex> changeset = change(%Post{}, %{title: "foo"})
       iex> changeset = validate_change changeset, :title, fn
       ...>   # Value must not be "foo"!
-      ...>   :title, "foo" -> [{:title, :is_foo}]
+      ...>   :title, "foo" -> [{:is_foo, nil}]
       ...>   :title, _     -> []
       ...> end
       iex> changeset.errors
-      [{:title, :is_foo}]
+      [title: [is_foo: nil]]
 
   """
-  @spec validate_change(t, atom, (atom, term -> [error])) :: t
+  @spec validate_change(t, atom, (atom, term -> [error | atom])) :: t
   def validate_change(changeset, field, validator) when is_atom(field) do
-    %{changes: changes, errors: errors} = changeset
+    %{changes: changes} = changeset
 
-    new =
+    new_errors =
       if value = Map.get(changes, field), do: validator.(field, value), else: []
 
-    case new do
+    case new_errors do
       []    -> changeset
-      [_|_] -> %{changeset | errors: new ++ errors, valid?: false}
+      [_|_] -> changeset |> add_errors(field, new_errors)
     end
   end
 
@@ -643,7 +667,7 @@ defmodule Ecto.Changeset do
   @spec validate_format(t, atom, Regex.t) :: t
   def validate_format(changeset, field, format) do
     validate_change changeset, field, {:format, format}, fn _, value ->
-      if value =~ format, do: [], else: [{field, :format}]
+      if value =~ format, do: [], else: [{:must_have_format, format}]
     end
   end
 
@@ -659,7 +683,7 @@ defmodule Ecto.Changeset do
   @spec validate_inclusion(t, atom, Enum.t) :: t
   def validate_inclusion(changeset, field, data) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
-      if value in data, do: [], else: [{field, :inclusion}]
+      if value in data, do: [], else: [{:must_include, data}]
     end
   end
 
@@ -674,7 +698,7 @@ defmodule Ecto.Changeset do
   @spec validate_exclusion(t, atom, Enum.t) :: t
   def validate_exclusion(changeset, field, data) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
-      if value in data, do: [{field, :exclusion}], else: []
+      if value in data, do: [{:must_exclude, data}], else: []
     end
   end
 
@@ -751,7 +775,7 @@ defmodule Ecto.Changeset do
 
       case repo.all(query) do
         []  -> []
-        [_] -> [{field, :unique}]
+        [_] -> [{:must_be_unique, nil}]
       end
     end
   end
@@ -781,64 +805,52 @@ defmodule Ecto.Changeset do
     validate_length changeset, field, [min: min, max: max]
   end
 
-  def validate_length(changeset, field, opts) when is_list(opts) do
+  def validate_length(changeset, field, opts) do
     validate_change changeset, field, {:length, opts}, fn
-      _, value when is_binary(value) ->
+      _, value ->
         length = String.length(value)
-        error  = ((is = opts[:is]) && wrong_length(length, is)) ||
-                 ((min = opts[:min]) && too_short(length, min)) ||
-                 ((max = opts[:max]) && too_long(length, max))
-        if error, do: [{field, error}], else: []
+        Enum.reduce(opts, [], fn(opt, errors) ->
+          {spec_key, target_value} = opt
+          errors ++ apply_from_validation_dict(length, spec_key, target_value, @length_validators)
+        end)
     end
   end
 
-  defp wrong_length(value, value),   do: nil
-  defp wrong_length(_length, value), do: {:wrong_length, value}
-
-  defp too_short(length, value) when length >= value, do: nil
-  defp too_short(_length, value), do: {:too_short, value}
-
-  defp too_long(length, value) when length <= value, do: nil
-  defp too_long(_length, value), do: {:too_long, value}
-
   @doc """
   Validates the properties of a number.
-
   ## Options
-
     * `:less_than`
     * `:greater_than`
     * `:less_than_or_equal_to`
     * `:greater_than_or_equal_to`
     * `:equal_to`
-
+  ### Integer-Only
+    * `:parity`
   ## Examples
-
       validate_number(changeset, :count, less_than: 3, parity: even)
       validate_number(changeset, :pi, greater_than: 3, less_than: 4)
       validate_number(changeset, :the_answer_to_life_the_universe_and_everything, equal_to: 42)
-
   """
   @spec validate_number(t, atom, Range.t | [Keyword.t]) :: t
   def validate_number(changeset, field, opts) do
     validate_change changeset, field, {:number, opts}, fn
-      field, value ->
+      _, value ->
         Enum.reduce(opts, [], fn(opt, errors) ->
           {spec_key, target_value} = opt
-          errors ++ apply_from_validation_dict(field, value, spec_key, target_value, @number_validators)
+          errors ++ apply_from_validation_dict(value, spec_key, target_value, @number_validators)
         end)
     end
   end
 
-  @spec apply_from_validation_dict(atom, any, atom, any, %{atom: {fun, atom}}) :: [Error]
-  defp apply_from_validation_dict(field, value, spec_key, target_value, validators_dict) do
-    case Map.fetch(validators_dict, spec_key) do
+  @spec apply_from_validation_dict(any, atom, any, %{atom: {fun, atom}}) :: [Error]
+  defp apply_from_validation_dict(value, spec_key, target_value, validations_dict) do
+    case Map.fetch(validations_dict, spec_key) do
       {:ok, {spec_function, error_message}} ->
         case apply(spec_function, [value, target_value]) do
           true  -> []
-          false -> [{field, {error_message, target_value}}]
+          false -> [{error_message, target_value}]
         end
-      _ -> [] # if the spec_key isn't in the validators_dict just ignore it
+      _ -> []
     end
   end
 end
