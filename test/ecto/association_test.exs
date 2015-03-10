@@ -10,6 +10,8 @@ defmodule Ecto.AssociationTest do
   alias __MODULE__.Permalink
   alias __MODULE__.Post
   alias __MODULE__.Summary
+  alias __MODULE__.Email
+  alias __MODULE__.Profile
 
   defmodule Post do
     use Ecto.Model
@@ -46,6 +48,8 @@ defmodule Ecto.AssociationTest do
       has_many :posts, Post
       has_many :posts_comments, through: [:posts, :comments]    # many -> many
       has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
+      has_many :emails, {"users_emails", Email}
+      has_one :profile, {"users_profiles", Profile}
     end
   end
 
@@ -56,6 +60,21 @@ defmodule Ecto.AssociationTest do
       has_one :post, Post
       has_one :post_author, through: [:post, :author]        # one -> belongs
       has_many :post_comments, through: [:post, :comments]   # one -> many
+    end
+  end
+
+  defmodule Email do
+    use Ecto.Model
+
+    schema "emails" do
+      belongs_to :author, {"post_authors", Author}
+    end
+  end
+
+  defmodule Profile do
+    use Ecto.Model
+
+    schema "profiles" do
     end
   end
 
@@ -74,6 +93,19 @@ defmodule Ecto.AssociationTest do
            inspect(from c in Comment, where: c.post_id in ^[1, 2, 3])
   end
 
+  test "has many model with specified source" do
+    assoc = Author.__schema__(:association, :emails)
+
+    assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
+           inspect(from a in Author, join: e in {"users_emails", Email}, on: e.author_id == a.id)
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+           inspect(from e in {"users_emails", Email}, where: e.author_id in ^[])
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+           inspect(from e in {"users_emails", Email}, where: e.author_id in ^[1, 2, 3])
+  end
+
   test "has one" do
     assoc = Post.__schema__(:association, :permalink)
 
@@ -87,6 +119,19 @@ defmodule Ecto.AssociationTest do
            inspect(from c in Permalink, where: c.post_id in ^[1, 2, 3])
   end
 
+  test "has one model with specified source" do
+    assoc = Author.__schema__(:association, :profile)
+
+    assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
+           inspect(from a in Author, join: p in {"users_profiles", Profile}, on: p.author_id == a.id)
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+           inspect(from p in {"users_profiles", Profile}, where: p.author_id in ^[])
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+           inspect(from p in {"users_profiles", Profile}, where: p.author_id in ^[1, 2, 3])
+  end
+
   test "belongs to" do
     assoc = Post.__schema__(:association, :author)
 
@@ -98,6 +143,19 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
            inspect(from a in Author, where: a.id in ^[1, 2, 3])
+  end
+
+  test "belongs to model with specified source" do
+    assoc = Email.__schema__(:association, :author)
+
+    assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
+           inspect(from e in Email, join: a in {"post_authors", Author}, on: a.id == e.author_id)
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+           inspect(from a in {"post_authors", Author}, where: a.id in ^[])
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+           inspect(from a in {"post_authors", Author}, where: a.id in ^[1, 2, 3])
   end
 
   test "has many through many to many" do

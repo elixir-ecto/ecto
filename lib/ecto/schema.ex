@@ -357,6 +357,9 @@ defmodule Ecto.Schema do
           has_many :comments, Comment
           has_one :permalink, Permalink
           has_many :comments_authors, through: [:comments, :author]
+
+          # Specify the association with custom source
+          has_many :tags, {"posts_tags", Tag}
         end
       end
 
@@ -450,6 +453,9 @@ defmodule Ecto.Schema do
         use Ecto.Model
         schema "posts" do
           has_one :permalink, Permalink
+
+          # Specify the association with custom source
+          has_one :category, {"posts_categories", Category}
         end
       end
 
@@ -508,6 +514,9 @@ defmodule Ecto.Schema do
         schema "comments" do
           # This automatically defines a post_id field too
           belongs_to :post, Post
+
+          # Specify the association with custom source
+          belongs_to :author, {"posts_authors", Author}
         end
       end
 
