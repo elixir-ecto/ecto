@@ -210,10 +210,11 @@ defmodule Ecto.Association.Has do
     * `assoc` - The model that is associated
     * `owner_key` - The key on the `owner` model used for the association
     * `assoc_key` - The key on the `associated` model used for the association
+    * `queryable` - The real query to use for querying association
   """
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
+  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable]
 
   @doc false
   def struct(module, name, opts) do
@@ -233,11 +234,15 @@ defmodule Ecto.Association.Has do
         "association #{inspect name}, please set the :references option accordingly"
     end
 
-    assoc = Keyword.fetch!(opts, :queryable)
+    queryable = Keyword.fetch!(opts, :queryable)
 
-    unless is_atom(assoc) do
-      raise ArgumentError, "association queryable must be a model, got: #{inspect assoc}"
-    end
+    assoc =
+      case queryable do
+        atom when is_atom(atom) -> atom
+        {source, model} when is_binary(source) and is_atom(model) -> model
+        _ -> raise ArgumentError, "association queryable must be a model " <>
+               "or {source, model}, got: #{inspect queryable}"
+      end
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
@@ -250,7 +255,8 @@ defmodule Ecto.Association.Has do
       owner: module,
       assoc: assoc,
       owner_key: ref,
-      assoc_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref)
+      assoc_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref),
+      queryable: queryable
     }
   end
 
@@ -262,13 +268,13 @@ defmodule Ecto.Association.Has do
   @doc false
   def joins_query(refl) do
     from o in refl.owner,
-      join: q in ^refl.assoc,
+      join: q in ^refl.queryable,
       on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
   end
 
   @doc false
   def assoc_query(refl, values) do
-    from x in refl.assoc,
+    from x in refl.queryable,
       where: field(x, ^refl.assoc_key) in ^values
   end
 
@@ -417,10 +423,11 @@ defmodule Ecto.Association.BelongsTo do
     * `assoc` - The model that is associated
     * `owner_key` - The key on the `owner` model used for the association
     * `assoc_key` - The key on the `assoc` model used for the association
+    * `queryable` - The real query to use for querying association
   """
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key]
+  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable]
 
   @doc false
   def struct(module, name, opts) do
@@ -435,7 +442,15 @@ defmodule Ecto.Association.BelongsTo do
             "association #{inspect name} when model has no primary key"
       end
 
-    assoc = Keyword.fetch!(opts, :queryable)
+    queryable = Keyword.fetch!(opts, :queryable)
+
+    assoc =
+      case queryable do
+        atom when is_atom(atom) -> atom
+        {source, model} when is_binary(source) and is_atom(model) -> model
+        _ -> raise ArgumentError, "association queryable must be a model " <>
+               "or {source, model}, got: #{inspect queryable}"
+      end
 
     unless is_atom(assoc) do
       raise ArgumentError, "association queryable must be a model, got: #{inspect assoc}"
@@ -447,7 +462,8 @@ defmodule Ecto.Association.BelongsTo do
       owner: module,
       assoc: assoc,
       owner_key: Keyword.fetch!(opts, :foreign_key),
-      assoc_key: ref
+      assoc_key: ref,
+      queryable: queryable
     }
   end
 
@@ -459,13 +475,13 @@ defmodule Ecto.Association.BelongsTo do
   @doc false
   def joins_query(refl) do
     from o in refl.owner,
-      join: q in ^refl.assoc,
+      join: q in ^refl.queryable,
       on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
   end
 
   @doc false
   def assoc_query(refl, values) do
-    from x in refl.assoc,
+    from x in refl.queryable,
       where: field(x, ^refl.assoc_key) in ^values
   end
 

@@ -149,18 +149,31 @@ defmodule Ecto.SchemaTest do
       belongs_to :comment, Comment
       has_many :comment_authors, through: [:comment, :authors]
       has_one :comment_main_author, through: [:comment, :main_author]
+      has_many :emails, {"users_emails", Email}
+      has_one :profile, {"users_profiles", Profile}
+      belongs_to :summary, {"post_summary", Summary}
     end
   end
 
   test "associations" do
     assert AssocModel.__schema__(:association, :not_a_field) == nil
-    assert AssocModel.__schema__(:fields) == [:id, :comment_id]
+    assert AssocModel.__schema__(:fields) == [:id, :comment_id, :summary_id]
   end
 
   test "has_many association" do
     assert AssocModel.__schema__(:association, :posts) ==
            %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many,
-                                  assoc: Post, owner_key: :id, assoc_key: :assoc_model_id}
+                                  assoc: Post, owner_key: :id, assoc_key: :assoc_model_id, queryable: Post}
+
+    posts = (%AssocModel{}).posts
+    assert %Ecto.Association.NotLoaded{} = posts
+    assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
+  end
+
+  test "has_many association via {source model}" do
+    assert AssocModel.__schema__(:association, :emails) ==
+           %Ecto.Association.Has{field: :emails, owner: AssocModel, cardinality: :many,
+                                  assoc: Email, owner_key: :id, assoc_key: :assoc_model_id, queryable: {"users_emails", Email}}
 
     posts = (%AssocModel{}).posts
     assert %Ecto.Association.NotLoaded{} = posts
@@ -180,7 +193,17 @@ defmodule Ecto.SchemaTest do
   test "has_one association" do
     assert AssocModel.__schema__(:association, :author) ==
            %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one,
-                                  assoc: User, owner_key: :id, assoc_key: :assoc_model_id}
+                                  assoc: User, owner_key: :id, assoc_key: :assoc_model_id, queryable: User}
+
+    author = (%AssocModel{}).author
+    assert %Ecto.Association.NotLoaded{} = author
+    assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
+  end
+
+  test "has_one association via {source, model}" do
+    assert AssocModel.__schema__(:association, :profile) ==
+           %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one,
+                                  assoc: Profile, owner_key: :id, assoc_key: :assoc_model_id, queryable: {"users_profiles", Profile}}
 
     author = (%AssocModel{}).author
     assert %Ecto.Association.NotLoaded{} = author
@@ -200,7 +223,17 @@ defmodule Ecto.SchemaTest do
   test "belongs_to association" do
     assert AssocModel.__schema__(:association, :comment) ==
            %Ecto.Association.BelongsTo{field: :comment, owner: AssocModel, cardinality: :one,
-                                        assoc: Comment, owner_key: :comment_id, assoc_key: :id}
+                                        assoc: Comment, owner_key: :comment_id, assoc_key: :id, queryable: Comment}
+
+    comment = (%AssocModel{}).comment
+    assert %Ecto.Association.NotLoaded{} = comment
+    assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
+  end
+
+  test "belongs_to association via {source, model}" do
+    assert AssocModel.__schema__(:association, :summary) ==
+           %Ecto.Association.BelongsTo{field: :summary, owner: AssocModel, cardinality: :one,
+                                        assoc: Summary, owner_key: :summary_id, assoc_key: :id, queryable: {"post_summary", Summary}}
 
     comment = (%AssocModel{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
@@ -259,7 +292,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_* expects a queryable" do
-    message = ~r"association queryable must be a model, got: 123"
+    message = ~r"association queryable must be a model or {source, model}, got: 123"
     assert_raise ArgumentError, message, fn ->
       defmodule QueryableMisMatch do
         use Ecto.Model
