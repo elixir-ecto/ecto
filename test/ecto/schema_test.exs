@@ -72,8 +72,8 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has __state__ attribute" do
-    assert %SchemaModel{}.__state__ == :built
-    assert SchemaModel.__schema__(:field, :__state__) == nil
+    assert %SchemaModel{}.__meta__.state == :built
+    assert SchemaModel.__schema__(:field, :__meta__) == nil
   end
 
   ## Errors

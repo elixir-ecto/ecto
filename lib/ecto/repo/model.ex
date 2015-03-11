@@ -120,7 +120,7 @@ defmodule Ecto.Repo.Model do
       end
 
       Callbacks.__apply__(model, :after_delete, changeset).model
-      |> Map.put(:__state__, :deleted)
+      |> Ecto.Schema.put_state(:deleted)
     end
   end
 
@@ -147,7 +147,7 @@ defmodule Ecto.Repo.Model do
       {k,v}, acc ->
         value = Ecto.Type.load!(Map.fetch!(types, k), v)
         Map.put(acc, k, value)
-    end) |> Map.put(:__state__, :loaded)
+    end) |> Ecto.Schema.put_state(:loaded)
   end
 
   defp merge_into_changeset(model, struct, fields, changeset) do
