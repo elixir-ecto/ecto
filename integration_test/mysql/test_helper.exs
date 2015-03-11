@@ -12,6 +12,8 @@ Application.put_env(:ecto, TestRepo,
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Repo, otp_app: :ecto
+
+  def adapter_supports_microsconds?, do: false
 end
 
 # Pool repo for transaction and lock tests
