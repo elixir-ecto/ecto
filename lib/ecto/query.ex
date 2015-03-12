@@ -229,8 +229,8 @@ defmodule Ecto.Query do
 
       def paginate(query, page, size) do
         from query,
-          limit: size,
-          offset: (page-1) * size
+          limit: ^size,
+          offset: ^((page-1) * size)
       end
 
   The example above does not use `in` because none of `limit` and `offset`
@@ -503,11 +503,11 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      from(u in User, where: u.id == current_user, limit: 1)
+      from(u in User, where: u.id == ^current_user, limit: 1)
 
   ## Expressions examples
 
-      User |> where([u], u.id == current_user) |> limit([u], 1)
+      User |> where([u], u.id == ^current_user) |> limit([u], 1)
 
   """
   defmacro limit(query, binding, expr) do
@@ -553,11 +553,11 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      from(u in User, where: u.id == current_user, lock: "FOR SHARE NOWAIT")
+      from(u in User, where: u.id == ^current_user, lock: "FOR SHARE NOWAIT")
 
   ## Expressions examples
 
-      User |> where(u.id == current_user) |> lock("FOR SHARE NOWAIT")
+      User |> where(u.id == ^current_user) |> lock("FOR SHARE NOWAIT")
 
   """
   defmacro lock(query, expr) do
