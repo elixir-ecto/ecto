@@ -333,7 +333,7 @@ defmodule Ecto do
   However, developers can use the preload functionality in queries to
   automatically pre-populate the field:
 
-      iex> post = Repo.one from p in Post, where: p.id == 13, preload: [:comments]
+      iex> post = Repo.get from(p in Post, preload: [:comments]), 42
       iex> post.comments
       [%Comment{...}, %Comment{...}]
 
