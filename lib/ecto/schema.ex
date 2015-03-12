@@ -7,7 +7,7 @@ defmodule Ecto.Schema.Metadata do
     * `state` - the state in a model's lifetime, e.g. :built, :loaded, :deleted
 
   """
-  defstruct [:state]
+  defstruct [:state, :source]
 end
 
 defmodule Ecto.Schema do
@@ -576,13 +576,13 @@ defmodule Ecto.Schema do
 
   @doc false
   def __load__(struct, fields, idx, values) do
-    loaded = do_load(struct, fields, idx, values) |> put_state(:loaded)
+    loaded = do_load(struct, fields, idx, values) |> put_meta(:state, :loaded)
     Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
   end
 
   @doc false
-  def put_state(struct, value) do
-    Map.put(struct, :__meta__, %{struct.__meta__ | state: value})
+  def put_meta(struct, field, value) do
+    Map.put(struct, :__meta__, Map.put(struct.__meta__, field, value))
   end
 
   defp do_load(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do

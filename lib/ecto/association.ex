@@ -205,6 +205,9 @@ defmodule Ecto.Association do
       "or {source, model}, got: #{inspect queryable}"
   end
 
+  def source_from_query({source, model}) when is_binary(source) and is_atom(model), do: source
+  def source_from_query(_), do: nil
+
 end
 
 defmodule Ecto.Association.Has do
@@ -264,8 +267,12 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key}, struct) do
-    Map.put apply(assoc, :__struct__, []), assoc_key, Map.get(struct, owner_key)
+  def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key,
+              queryable: queryable}, struct) do
+    assoc
+    |> apply(:__struct__, [])
+    |> Map.put(assoc_key, Map.get(struct, owner_key))
+    |> Ecto.Schema.put_meta(:source, Ecto.Association.source_from_query(queryable))
   end
 
   @doc false
@@ -465,8 +472,9 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def build(%{assoc: assoc}, _struct) do
+  def build(%{assoc: assoc, queryable: queryable}, _struct) do
     apply(assoc, :__struct__, [])
+    |> Ecto.Schema.put_meta(:source, Ecto.Association.source_from_query(queryable))
   end
 
   @doc false
