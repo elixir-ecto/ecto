@@ -117,7 +117,7 @@ defmodule Ecto.Integration.TransactionTest do
           5000 -> raise "timeout"
         end
       end)
-      send(pid, :commited)
+      send(pid, :committed)
     end
 
     receive do
@@ -129,7 +129,7 @@ defmodule Ecto.Integration.TransactionTest do
 
     send(new_pid, :commit)
     receive do
-      :commited -> :ok
+      :committed -> :ok
     after
       5000 -> raise "timeout"
     end
