@@ -305,9 +305,10 @@ defmodule Ecto.Schema do
 
   Read more about custom associations in `Ecto.Association`.
   """
-  defmacro association(name, association, opts \\ []) do
+  defmacro association(cardinality, name, association, opts \\ []) do
     quote do
-      Ecto.Schema.__association__(__MODULE__, unquote(name), unquote(association), unquote(opts))
+      Ecto.Schema.__association__(__MODULE__, unquote(cardinality), unquote(name),
+                                  unquote(association), unquote(opts))
     end
   end
 
@@ -420,11 +421,9 @@ defmodule Ecto.Schema do
   defmacro has_many(name, queryable, opts \\ []) do
     quote bind_quoted: binding() do
       if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-        association(name, Ecto.Association.HasThrough,
-                    [cardinality: :many] ++ queryable)
+        association(:many, name, Ecto.Association.HasThrough, queryable)
       else
-        association(name, Ecto.Association.Has,
-                    [queryable: queryable, cardinality: :many] ++ opts)
+        association(:many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       end
     end
   end
@@ -467,11 +466,9 @@ defmodule Ecto.Schema do
   defmacro has_one(name, queryable, opts \\ []) do
     quote bind_quoted: binding() do
       if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-        association(name, Ecto.Association.HasThrough,
-                    [cardinality: :one] ++ queryable)
+        association(:one, name, Ecto.Association.HasThrough, queryable)
       else
-        association(name, Ecto.Association.Has,
-                    [queryable: queryable, cardinality: :one] ++ opts)
+        association(:one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       end
     end
   end
@@ -532,7 +529,7 @@ defmodule Ecto.Schema do
       if Keyword.get(opts, :auto_field, true) do
         field(opts[:foreign_key], foreign_key_type, opts)
       end
-      association(name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+      association(:one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
     end
   end
 
@@ -556,9 +553,10 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __association__(mod, name, association, opts) do
-    put_struct_field(mod, name,
-                     %Ecto.Association.NotLoaded{__owner__: mod, __field__: name})
+  def __association__(mod, cardinality, name, association, opts) do
+    not_loaded  = %Ecto.Association.NotLoaded{owner: mod, field: name, cardinality: cardinality}
+    put_struct_field(mod, name, not_loaded)
+    opts = [cardinality: cardinality] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
   end
 
