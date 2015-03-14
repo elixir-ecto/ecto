@@ -199,7 +199,7 @@ defmodule Ecto.Association do
   defp to_lower_char(char), do: char
 
   @doc """
-  Returns assoc from queryable.
+  Retrieves assoc from queryable.
 
   ## Examples
 
@@ -208,6 +208,9 @@ defmodule Ecto.Association do
 
       iex> Ecto.Association.assoc_from_query(Model)
       Model
+
+      iex> Ecto.Association.assoc_from_query("wrong")
+      ** (ArgumentError) association queryable must be a model or {source, model}, got: "wrong"
 
   """
   def assoc_from_query(atom) when is_atom(atom), do: atom
@@ -218,22 +221,22 @@ defmodule Ecto.Association do
   end
 
   @doc """
-  Returns the custom source in queryable.
+  Retrieves the custom source in queryable.
 
   ## Examples
 
-      iex> Ecto.Association.source_from_query({"custom_source", Model})
+      iex> Ecto.Association.custom_source_from_query({"custom_source", Model})
       "custom_source"
 
-      iex> Ecto.Association.source_from_query(Model)
+      iex> Ecto.Association.custom_source_from_query(Model)
       nil
 
-      iex> Ecto.Association.source_from_query("wrong_query")
+      iex> Ecto.Association.custom_source_from_query("wrong_query")
       nil
 
   """
-  def source_from_query({source, model}) when is_binary(source) and is_atom(model), do: source
-  def source_from_query(_), do: nil
+  def custom_source_from_query({source, model}) when is_binary(source) and is_atom(model), do: source
+  def custom_source_from_query(_), do: nil
 
 end
 
@@ -296,10 +299,12 @@ defmodule Ecto.Association.Has do
   @doc false
   def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key,
               queryable: queryable}, struct) do
-    assoc
-    |> apply(:__struct__, [])
-    |> Map.put(assoc_key, Map.get(struct, owner_key))
-    |> Ecto.Schema.put_meta(:source, Ecto.Association.source_from_query(queryable))
+    built = assoc |> apply(:__struct__, []) |> Map.put(assoc_key, Map.get(struct, owner_key))
+    if source = Ecto.Association.custom_source_from_query(queryable) do
+      Ecto.Schema.put_meta(built, :source, source)
+    else
+      built
+    end
   end
 
   @doc false
@@ -500,8 +505,12 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def build(%{assoc: assoc, queryable: queryable}, _struct) do
-    apply(assoc, :__struct__, [])
-    |> Ecto.Schema.put_meta(:source, Ecto.Association.source_from_query(queryable))
+    built = apply(assoc, :__struct__, [])
+    if source = Ecto.Association.custom_source_from_query(queryable) do
+      Ecto.Schema.put_meta(built, :source, source)
+    else
+      built
+    end
   end
 
   @doc false

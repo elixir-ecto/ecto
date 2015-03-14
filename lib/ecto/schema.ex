@@ -1,10 +1,12 @@
 defmodule Ecto.Schema.Metadata do
   @moduledoc """
-  Stores metadata of model.
+  Stores metadata of a struct.
 
   The fields are:
 
-    * `state` - the state in a model's lifetime, e.g. :built, :loaded, :deleted
+    * `state` - the state in a struct's lifetime, e.g. :built, :loaded, :deleted
+    * `source` - the database source of a model, which is the source specified
+      in schema by default or custom source when building a assoc with the custom source.
 
   """
   defstruct [:state, :source]
@@ -214,7 +216,8 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
 
-      Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, %Metadata{state: :built}})
+      Module.put_attribute(__MODULE__, :struct_fields,
+                           {:__meta__, %Metadata{state: :built, source: source}})
 
       primary_key_field =
         case @primary_key do

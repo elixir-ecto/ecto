@@ -73,6 +73,9 @@ defmodule Ecto.SchemaTest do
 
   test "has __meta__ attribute" do
     assert %SchemaModel{}.__meta__.state == :built
+    assert %SchemaModel{}.__meta__.source == "users"
+    meta = %Ecto.Schema.Metadata{source: "users", state: :built}
+    assert %SchemaModel{} = %SchemaModel{__meta__: meta}
     assert SchemaModel.__schema__(:field, :__meta__) == nil
   end
 

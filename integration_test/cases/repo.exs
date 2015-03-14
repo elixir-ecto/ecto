@@ -48,17 +48,19 @@ defmodule Ecto.Integration.RepoTest do
   test "insert, update and delete" do
     post = %Post{title: "create and delete single", text: "fetch empty"}
 
-    assert %Post{__meta__: %Metadata{state: :loaded}} = TestRepo.insert(post)
+    loaded_meta = %Metadata{state: :loaded, source: "posts"}
+    deleted_meta = %Metadata{state: :deleted, source: "posts"}
+    assert %Post{__meta__: ^loaded_meta} = TestRepo.insert(post)
     assert %Post{} = to_be_deleted = TestRepo.insert(post)
-    assert %Post{__meta__: %Metadata{state: :deleted}} = TestRepo.delete(to_be_deleted)
+    assert %Post{__meta__: ^deleted_meta} = TestRepo.delete(to_be_deleted)
 
     post = TestRepo.one(Post)
     assert post.__meta__.state == :loaded
     assert post.inserted_at
     assert post.updated_at
 
-    post = %{post | text: "coming very soon...", __meta__: %Metadata{state: :built}}
-    assert %Post{__meta__: %Metadata{state: :loaded}} = TestRepo.update(post)
+    post = Ecto.Schema.put_meta(%{post | text: "coming very soon..."}, :state, :built)
+    assert %Post{__meta__: ^loaded_meta} = TestRepo.update(post)
   end
 
   test "insert and update with changeset" do
@@ -182,8 +184,10 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Custom{foo: "01abcdef01abcdef"})
     TestRepo.insert(%Custom{foo: "02abcdef02abcdef"})
 
-    assert %Custom{__meta__: %Metadata{state: :loaded}, foo: "01abcdef01abcdef"} == TestRepo.get(Custom, "01abcdef01abcdef")
-    assert %Custom{__meta__: %Metadata{state: :loaded}, foo: "02abcdef02abcdef"} == TestRepo.get(Custom, "02abcdef02abcdef")
+    assert Ecto.Schema.put_meta(%Custom{foo: "01abcdef01abcdef"}, :state, :loaded) ==
+           TestRepo.get(Custom, "01abcdef01abcdef")
+    assert Ecto.Schema.put_meta(%Custom{foo: "02abcdef02abcdef"}, :state, :loaded) ==
+           TestRepo.get(Custom, "02abcdef02abcdef")
     assert nil == TestRepo.get(Custom, "03abcdef03abcdef")
   end
 
