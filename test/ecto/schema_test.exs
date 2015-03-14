@@ -127,11 +127,11 @@ defmodule Ecto.SchemaTest do
   end
 
   test "fail invalid default" do
-    assert_raise ArgumentError, "schema source must be a string, got: :hello", fn ->
-      defmodule SchemaFail do
+    assert_raise ArgumentError, "invalid default argument `13` for `:string`", fn ->
+      defmodule DefaultFail do
         use Ecto.Model
 
-        schema :hello do
+        schema "hello" do
           field :x, :string, default: 13
         end
       end
