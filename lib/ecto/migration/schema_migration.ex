@@ -14,7 +14,7 @@ defmodule Ecto.Migration.SchemaMigration do
   def ensure_schema_migrations_table!(repo) do
     adapter = repo.adapter
 
-    # DLL queries do not log, so we do not need
+    # DDL queries do not log, so we do not need
     # to pass log: false here.
     unless adapter.ddl_exists?(repo, @table, @opts) do
       adapter.execute_ddl(repo,
