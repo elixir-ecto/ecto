@@ -50,6 +50,15 @@ defmodule Ecto.RepoTest do
     MockRepo.get(MyModel, 123)
   end
 
+  test "works with custom source model" do
+    model = %MyModel{id: 1, x: "abc", __meta__: %Ecto.Schema.Metadata{source: "custom_model"}}
+    MockRepo.update(model)
+    MockRepo.delete(model)
+
+    to_insert = %MyModel{x: "abc", __meta__: %Ecto.Schema.Metadata{source: "custom_model"}}
+    MockRepo.insert(to_insert)
+  end
+
   test "fails without primary key value" do
     model = %MyModel{x: "abc"}
 
