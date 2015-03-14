@@ -10,6 +10,7 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.User
   alias Ecto.Integration.Custom
   alias Ecto.Integration.Barebone
+  alias Ecto.Schema.Metadata
 
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
@@ -44,7 +45,6 @@ defmodule Ecto.Integration.RepoTest do
       TestRepo.all(from(p in "posts", where: p.title == "title1", select: p.id))
   end
 
-  alias Ecto.Schema.Metadata
   test "insert, update and delete" do
     post = %Post{title: "create and delete single", text: "fetch empty"}
 

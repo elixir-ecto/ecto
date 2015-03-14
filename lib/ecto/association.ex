@@ -198,6 +198,18 @@ defmodule Ecto.Association do
   defp to_lower_char(char) when char in ?A..?Z, do: char + 32
   defp to_lower_char(char), do: char
 
+  @doc """
+  Returns assoc from queryable.
+
+  ## Examples
+
+      iex> Ecto.Association.assoc_from_query({"custom_source", Model})
+      Model
+
+      iex> Ecto.Association.assoc_from_query(Model)
+      Model
+
+  """
   def assoc_from_query(atom) when is_atom(atom), do: atom
   def assoc_from_query({source, model}) when is_binary(source) and is_atom(model), do: model
   def assoc_from_query(queryable) do
@@ -205,6 +217,21 @@ defmodule Ecto.Association do
       "or {source, model}, got: #{inspect queryable}"
   end
 
+  @doc """
+  Returns the custom source in queryable.
+
+  ## Examples
+
+      iex> Ecto.Association.source_from_query({"custom_source", Model})
+      "custom_source"
+
+      iex> Ecto.Association.source_from_query(Model)
+      nil
+
+      iex> Ecto.Association.source_from_query("wrong_query")
+      nil
+
+  """
   def source_from_query({source, model}) when is_binary(source) and is_atom(model), do: source
   def source_from_query(_), do: nil
 

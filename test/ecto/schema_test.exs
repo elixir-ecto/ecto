@@ -71,7 +71,7 @@ defmodule Ecto.SchemaTest do
     assert Ecto.Model.primary_key(%SchemaModel{uuid: "hello"}) == "hello"
   end
 
-  test "has __state__ attribute" do
+  test "has __meta__ attribute" do
     assert %SchemaModel{}.__meta__.state == :built
     assert SchemaModel.__schema__(:field, :__meta__) == nil
   end
