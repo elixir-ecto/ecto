@@ -46,7 +46,7 @@ defmodule Ecto.Schema do
 
     * `@primary_key` - configures the schema primary key. It expects
       a tuple with the primary key name, type and options. Defaults
-      to `{:id, :integer, [read_after_writes: true]}`. When set to
+      to `{:id, :integer, read_after_writes: true}`. When set to
       false, does not define a primary key in the model;
 
     * `@foreign_key_type` - configures the default foreign key type
@@ -193,7 +193,7 @@ defmodule Ecto.Schema do
   defmacro __using__(_) do
     quote do
       import Ecto.Schema, only: [schema: 2]
-      @primary_key {:id, :integer, [read_after_writes: true]}
+      @primary_key {:id, :integer, read_after_writes: true}
       @timestamps_type Ecto.DateTime
       @foreign_key_type :integer
     end

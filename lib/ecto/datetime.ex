@@ -238,7 +238,7 @@ defmodule Ecto.DateTime do
   import Ecto.DateTime.Util
 
   @moduledoc """
-  An Ecto type for dates and times.
+  An Ecto type that includes a date and a time.
   """
 
   @behaviour Ecto.Type

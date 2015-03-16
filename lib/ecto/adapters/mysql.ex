@@ -40,6 +40,41 @@ defmodule Ecto.Adapters.MySQL do
 
     * `:charset` - the database encoding (default: "utf8")
     * `:collation` - the collation order
+
+  ## Limitations
+
+  There are some limitations when using Ecto with MySQL that one
+  needs to be aware of.
+
+  ### UUIDs
+
+  MySQL does not support UUID types. Ecto emulates them by using
+  `binary(16)`.
+
+  ### Read after writes
+
+  Because MySQL does not support RETURNING clauses in INSERT and
+  UPDATE, it does not support the `:read_after_writes` option of
+  `Ecto.Schema.field/3`. MySQL can only return the a single serial
+  column after INSERT and UPDATE if one exists. Using
+  `:read_after_writes` with non-serial columns will lead to wrong
+  behaviour.
+
+  ### DDL Transaction
+
+  MySQL does not support migrations inside transactions as it
+  automatically commits after some commands like CREATE TABLE.
+  Therefore MySQL migrations does not run inside transactions.
+
+  ### usec in datetime
+
+  Old MySQL versions did not support usec in datetime while
+  more recent versions would round or truncate the usec value.
+
+  Therefore, in case the user decides to use microseconds in
+  datetimes and timestamps with MySQL, be aware of such
+  differences and consult the documentation for your MySQL
+  version.
   """
 
   use Ecto.Adapters.SQL, :mariaex
