@@ -1,3 +1,17 @@
+defmodule Ecto.Schema.Metadata do
+  @moduledoc """
+  Stores metadata of a struct.
+
+  The fields are:
+
+    * `state` - the state in a struct's lifetime, e.g. :built, :loaded, :deleted
+    * `source` - the database source of a model, which is the source specified
+      in schema by default or custom source when building a assoc with the custom source.
+
+  """
+  defstruct [:state, :source]
+end
+
 defmodule Ecto.Schema do
   @moduledoc ~S"""
   Defines a schema for a model.
@@ -173,6 +187,8 @@ defmodule Ecto.Schema do
   defined so structs and changeset functionalities are available.
   """
 
+  alias Ecto.Schema.Metadata
+
   @doc false
   defmacro __using__(_) do
     quote do
@@ -200,7 +216,8 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
 
-      Module.put_attribute(__MODULE__, :struct_fields, {:__state__, :built})
+      Module.put_attribute(__MODULE__, :struct_fields,
+                           {:__meta__, %Metadata{state: :built, source: source}})
 
       primary_key_field =
         case @primary_key do
@@ -562,8 +579,13 @@ defmodule Ecto.Schema do
 
   @doc false
   def __load__(struct, fields, idx, values) do
-    loaded = do_load(struct, fields, idx, values) |> Map.put(:__state__, :loaded)
+    loaded = do_load(struct, fields, idx, values) |> put_meta(:state, :loaded)
     Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
+  end
+
+  @doc false
+  def put_meta(struct, field, value) do
+    Map.put(struct, :__meta__, Map.put(struct.__meta__, field, value))
   end
 
   defp do_load(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do

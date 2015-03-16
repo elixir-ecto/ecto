@@ -198,12 +198,45 @@ defmodule Ecto.Association do
   defp to_lower_char(char) when char in ?A..?Z, do: char + 32
   defp to_lower_char(char), do: char
 
+  @doc """
+  Retrieves assoc from queryable.
+
+  ## Examples
+
+      iex> Ecto.Association.assoc_from_query({"custom_source", Model})
+      Model
+
+      iex> Ecto.Association.assoc_from_query(Model)
+      Model
+
+      iex> Ecto.Association.assoc_from_query("wrong")
+      ** (ArgumentError) association queryable must be a model or {source, model}, got: "wrong"
+
+  """
   def assoc_from_query(atom) when is_atom(atom), do: atom
   def assoc_from_query({source, model}) when is_binary(source) and is_atom(model), do: model
   def assoc_from_query(queryable) do
     raise ArgumentError, "association queryable must be a model " <>
       "or {source, model}, got: #{inspect queryable}"
   end
+
+  @doc """
+  Retrieves the custom source in queryable.
+
+  ## Examples
+
+      iex> Ecto.Association.custom_source_from_query({"custom_source", Model})
+      "custom_source"
+
+      iex> Ecto.Association.custom_source_from_query(Model)
+      nil
+
+      iex> Ecto.Association.custom_source_from_query("wrong_query")
+      nil
+
+  """
+  def custom_source_from_query({source, model}) when is_binary(source) and is_atom(model), do: source
+  def custom_source_from_query(_), do: nil
 
 end
 
@@ -264,8 +297,14 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key}, struct) do
-    Map.put apply(assoc, :__struct__, []), assoc_key, Map.get(struct, owner_key)
+  def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key,
+              queryable: queryable}, struct) do
+    built = assoc |> apply(:__struct__, []) |> Map.put(assoc_key, Map.get(struct, owner_key))
+    if source = Ecto.Association.custom_source_from_query(queryable) do
+      Ecto.Schema.put_meta(built, :source, source)
+    else
+      built
+    end
   end
 
   @doc false
@@ -465,8 +504,13 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def build(%{assoc: assoc}, _struct) do
-    apply(assoc, :__struct__, [])
+  def build(%{assoc: assoc, queryable: queryable}, _struct) do
+    built = apply(assoc, :__struct__, [])
+    if source = Ecto.Association.custom_source_from_query(queryable) do
+      Ecto.Schema.put_meta(built, :source, source)
+    else
+      built
+    end
   end
 
   @doc false

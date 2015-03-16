@@ -14,7 +14,7 @@ defmodule Ecto.Repo.Model do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
-    source = model.__schema__(:source)
+    source = struct.__meta__.source
     return = model.__schema__(:read_after_writes)
 
     # On insert, we always merge the whole struct into the
@@ -47,7 +47,7 @@ defmodule Ecto.Repo.Model do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
-    source = model.__schema__(:source)
+    source = struct.__meta__.source
     return = model.__schema__(:read_after_writes)
 
     # Differently from insert, update does not copy the struct
@@ -101,7 +101,7 @@ defmodule Ecto.Repo.Model do
   def delete(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
-    source = model.__schema__(:source)
+    source = struct.__meta__.source
 
     # There are no field changes on delete
     changeset = %{changeset | repo: repo}
@@ -120,7 +120,7 @@ defmodule Ecto.Repo.Model do
       end
 
       Callbacks.__apply__(model, :after_delete, changeset).model
-      |> Map.put(:__state__, :deleted)
+      |> Ecto.Schema.put_meta(:state, :deleted)
     end
   end
 
@@ -147,7 +147,7 @@ defmodule Ecto.Repo.Model do
       {k,v}, acc ->
         value = Ecto.Type.load!(Map.fetch!(types, k), v)
         Map.put(acc, k, value)
-    end) |> Map.put(:__state__, :loaded)
+    end) |> Ecto.Schema.put_meta(:state, :loaded)
   end
 
   defp merge_into_changeset(model, struct, fields, changeset) do

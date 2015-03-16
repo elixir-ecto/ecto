@@ -236,6 +236,12 @@ defmodule Ecto.AssociationTest do
     assert build(%Comment{post_id: 1}, :post) ==
            %Post{id: nil}
 
+    assert build(%Author{id: 1}, :emails) ==
+      %Email{author_id: 1, __meta__: %Ecto.Schema.Metadata{source: "users_emails", state: :built}}
+
+    assert build(%Email{id: 1}, :author) ==
+      %Author{id: nil, __meta__: %Ecto.Schema.Metadata{source: "post_authors", state: :built}}
+
     assert_raise ArgumentError, ~r"cannot build through association :post_author", fn ->
       build(%Comment{}, :post_author)
     end
