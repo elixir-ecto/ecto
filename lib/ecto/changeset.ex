@@ -729,10 +729,7 @@ defmodule Ecto.Changeset do
     repo = Keyword.fetch!(opts, :on)
     validate_change changeset, field, :unique, fn _, value ->
       struct = model.__struct__
-
-      query = from m in struct,
-              select: field(m, ^field),
-               limit: 1
+      query  = from m in struct, select: field(m, ^field), limit: 1
 
       query =
         if opts[:downcase] do
@@ -742,11 +739,11 @@ defmodule Ecto.Changeset do
           from m in query, where: field(m, ^field) == ^value
         end
 
-      [{pk_field, pk_value}] = Ecto.Model.primary_key(model)
-      if pk_value do
-        query = from m in query,
-                where: field(m, ^pk_field) != ^pk_value
-      end
+      query =
+        Enum.reduce(Ecto.Model.primary_key!(model), query, fn
+          {_, nil}, acc -> acc
+          {k, v}, acc   -> from m in acc, where: field(m, ^k) != ^v
+        end)
 
       case repo.all(query) do
         []  -> []

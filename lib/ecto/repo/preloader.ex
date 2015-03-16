@@ -109,7 +109,7 @@ defmodule Ecto.Repo.Preloader do
       children = struct |> Map.fetch!(assoc) |> List.wrap
 
       Enum.reduce children, acc, fn child, {fresh, set} ->
-        [{_, pk}] = Ecto.Model.primary_key(child)
+        [{_, pk}] = Ecto.Model.primary_key!(child)
         pk || raise Ecto.MissingPrimaryKeyError, struct: child
 
         if HashSet.member?(set, pk) do

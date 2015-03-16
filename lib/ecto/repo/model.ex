@@ -20,7 +20,7 @@ defmodule Ecto.Repo.Model do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = %{changeset | repo: repo}
-    changeset = merge_into_changeset(model, struct, fields, changeset)
+    changeset = merge_into_changeset(struct, fields, changeset)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_insert after_insert)a, fn ->
@@ -62,8 +62,8 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_update, changeset)
       changes   = validate_changes(:update, model, fields, changeset)
 
-      {pk_field, pk_value} = pk_filter!(model, struct)
-      filters = Planner.fields(:update, model, Map.put(changeset.filters, pk_field, pk_value))
+      filters = add_pk_filter!(changeset.filters, struct)
+      filters = Planner.fields(:update, model, filters)
 
       values =
         if changes != [] do
@@ -110,8 +110,8 @@ defmodule Ecto.Repo.Model do
                                    ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
-      {pk_field, pk_value} = pk_filter!(model, struct)
-      filters = Planner.fields(:delete, model, Map.put(changeset.filters, pk_field, pk_value))
+      filters = add_pk_filter!(changeset.filters, struct)
+      filters = Planner.fields(:delete, model, filters)
 
       case adapter.delete(repo, source, filters, opts) do
         {:ok, _} -> nil
@@ -153,15 +153,16 @@ defmodule Ecto.Repo.Model do
     put_in model.__meta__.state, :loaded
   end
 
-  defp merge_into_changeset(model, struct, fields, changeset) do
-    changes  = Map.take(struct, fields)
-    pk_field = model.__schema__(:primary_key)
+  defp merge_into_changeset(struct, fields, changeset) do
+    # Get only the database fields from the struct
+    changes = Map.take(struct, fields)
 
-    # If we have a primary key field but it is nil,
-    # we should not include it in the list of changes.
-    if pk_field && !Ecto.Model.primary_key(struct)[pk_field] do
-      changes = Map.delete(changes, pk_field)
-    end
+    # Remove nil primary key fields from changes
+    changes =
+      Enum.reduce Ecto.Model.primary_key(struct), changes, fn
+        {k, nil}, acc -> Map.delete(acc, k)
+        _, acc -> acc
+      end
 
     update_in changeset.changes, &Map.merge(changes, &1)
   end
@@ -170,10 +171,13 @@ defmodule Ecto.Repo.Model do
     Planner.fields(kind, model, Map.take(changeset.changes, fields))
   end
 
-  defp pk_filter!(model, struct) do
-    [{pk_field, pk_value}] = Ecto.Model.primary_key(struct)
-    pk_value || raise Ecto.MissingPrimaryKeyError, struct: struct
-    {pk_field, pk_value}
+  defp add_pk_filter!(filters, struct) do
+    Enum.reduce Ecto.Model.primary_key!(struct), filters, fn
+      {_k, nil}, _acc ->
+        raise Ecto.MissingPrimaryKeyError, struct: struct
+      {k, v}, acc ->
+        Map.put(acc, k, v)
+    end
   end
 
   defp with_transactions_if_callbacks(repo, adapter, model, opts, callbacks, fun) do

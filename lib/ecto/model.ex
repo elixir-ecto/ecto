@@ -51,18 +51,29 @@ defmodule Ecto.Model do
   @type t :: %{__struct__: atom}
 
   @doc """
-  Returns the model primary key value.
-
-  Raises `Ecto.NoPrimaryKeyError` if model has no primary key field.
+  Returns the model primary keys as a keyword list.
   """
-  @spec primary_key(t) :: any
-  def primary_key(struct) do
-    field = primary_key_field(struct)
-    [{field, Map.fetch!(struct, field)}]
+  @spec primary_key(t) :: Keyword.t
+  def primary_key(%{__struct__: model} = struct) do
+    if field = model.__schema__(:primary_key) do
+      [{field, Map.fetch!(struct, field)}]
+    else
+      []
+    end
   end
 
-  defp primary_key_field(%{__struct__: model}) do
-    model.__schema__(:primary_key) || raise Ecto.NoPrimaryKeyError, model: model
+  @doc """
+  Returns the model primary keys as a keyword list.
+
+  Raises `Ecto.NoPrimaryKeyError` if the model has no
+  primary key field.
+  """
+  @spec primary_key!(t) :: Keyword.t | no_return
+  def primary_key!(struct) do
+    case primary_key(struct) do
+      [] -> raise Ecto.NoPrimaryKeyError, model: struct
+      pk -> pk
+    end
   end
 
   @doc """
