@@ -128,7 +128,7 @@ defmodule Ecto.Adapters.MySQL do
     end
 
     if port = database[:port] do
-      env = [{"MYSQL_TCP_PORT", port}|env]
+      env = [{"MYSQL_TCP_PORT", to_string(port)}|env]
     end
 
     host = database[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
