@@ -13,7 +13,16 @@ Application.put_env(:ecto, TestRepo,
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Repo, otp_app: :ecto
 
-  def adapter_supports_microsconds?, do: false
+  def round_timestamps(model) do
+    %{model | inserted_at: round_timestamp(model.inserted_at),
+              updated_at:  round_timestamp(model.updated_at)}
+  end
+
+  # Sets usec to 0. This is how MySQl 5.5 does it.
+  # MySQL 5.6 will also round up seconds if usec >= 500000.
+  defp round_timestamp(datetime) do
+    %Ecto.DateTime{datetime | usec: 0}
+  end
 end
 
 # Pool repo for transaction and lock tests

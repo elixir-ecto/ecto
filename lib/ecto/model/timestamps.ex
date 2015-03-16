@@ -23,11 +23,11 @@ defmodule Ecto.Model.Timestamps do
     if get_change changeset, field do
       changeset
     else
-      put_change changeset, field, Ecto.Type.load!(type, timestamp_tuple_with_usec)
+      put_change changeset, field, Ecto.Type.load!(type, timestamp_with_usec)
     end
   end
 
-  defp timestamp_tuple_with_usec do
+  defp timestamp_with_usec do
     erl_timestamp = :os.timestamp
     {_, _, usec} = erl_timestamp
     {date, {h, m, s}} =:calendar.now_to_datetime(erl_timestamp)
