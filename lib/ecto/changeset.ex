@@ -38,15 +38,15 @@ defmodule Ecto.Changeset do
                         required: [atom],
                         optional: [atom],
                         errors: [error],
-                        validations: [{atom, atom | {atom, [term]}}],
+                        validations: [{atom, String.t | {String.t, [term]}}],
                         filters: %{atom => term}}
 
   @number_validators %{
-    less_than:                {&</2, :must_be_less_than},
-    greater_than:             {&>/2, :must_be_greater_than},
-    less_than_or_equal_to:    {&<=/2, :must_be_less_than_or_equal_to},
-    greater_than_or_equal_to: {&>=/2, :must_be_greater_than_or_equal_to},
-    equal_to:                 {&==/2, :must_be_equal_to},
+    less_than:                {&</2,  "must be less than %{count}"},
+    greater_than:             {&>/2,  "must be greater than %{count}"},
+    less_than_or_equal_to:    {&<=/2, "must be less than or equal to %{count}"},
+    greater_than_or_equal_to: {&>=/2, "must be greater than or equal to %{count}"},
+    equal_to:                 {&==/2, "must be equal to %{count}"},
   }
 
   @doc """
@@ -278,7 +278,7 @@ defmodule Ecto.Changeset do
 
   defp error_on_nil(key, value, errors) do
     if is_nil value do
-      [{key, :required}|errors]
+      [{key, "can't be blank"}|errors]
     else
       errors
     end
@@ -634,20 +634,28 @@ defmodule Ecto.Changeset do
 
   The format has to be expressed as a regular expression.
 
+  ## Options
+
+    * `:message` - the message on failure, defaults to "has invalid format"
+
   ## Examples
 
       validate_format(changeset, :email, ~r/@/)
 
   """
   @spec validate_format(t, atom, Regex.t) :: t
-  def validate_format(changeset, field, format) do
+  def validate_format(changeset, field, format, opts \\ []) do
     validate_change changeset, field, {:format, format}, fn _, value ->
-      if value =~ format, do: [], else: [{field, :format}]
+      if value =~ format, do: [], else: [{field, message(opts, "has invalid format")}]
     end
   end
 
   @doc """
   Validates a change is included in the given enumerable.
+
+  ## Options
+
+    * `:message` - the message on failure, defaults to "is invalid"
 
   ## Examples
 
@@ -656,14 +664,18 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_inclusion(t, atom, Enum.t) :: t
-  def validate_inclusion(changeset, field, data) do
+  def validate_inclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
-      if value in data, do: [], else: [{field, :inclusion}]
+      if value in data, do: [], else: [{field, message(opts, "is invalid")}]
     end
   end
 
   @doc """
   Validates a change is not included in given the enumerable.
+
+  ## Options
+
+    * `:message` - the message on failure, defaults to "is reserved"
 
   ## Examples
 
@@ -671,9 +683,9 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_exclusion(t, atom, Enum.t) :: t
-  def validate_exclusion(changeset, field, data) do
+  def validate_exclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
-      if value in data, do: [{field, :exclusion}], else: []
+      if value in data, do: [{field, message(opts, "is reserved")}], else: []
     end
   end
 
@@ -686,6 +698,7 @@ defmodule Ecto.Changeset do
 
   ## Options
 
+    * `:message` - the message on failure, defaults to "has already been taken"
     * `:on` - the repository to perform the query on
     * `:downcase` - when `true`, downcase values when performing the uniqueness query
 
@@ -747,7 +760,7 @@ defmodule Ecto.Changeset do
 
       case repo.all(query) do
         []  -> []
-        [_] -> [{field, :unique}]
+        [_] -> [{field, message(opts, "has already been taken")}]
       end
     end
   end
@@ -755,47 +768,46 @@ defmodule Ecto.Changeset do
   @doc """
   Validates a change is a string of the given length.
 
-  ## Length
-
-  The length that the given string should have can be expressed through a range
-  (the string length must be in the range) or with a series of options:
+  ## Options
 
     * `:is` - the string length must be exactly this value
     * `:min` - the string length must be greater than or equal to this value
     * `:max` - the string lenght must be less than or equal to this value
+    * `:message` - the message on failure, depending on the validation, is one of:
+      * "should be %{count} characters"
+      * "should be at least %{count} characters"
+      * "should be at most %{count} characters"
 
   ## Examples
 
-      validate_length(changeset, :title, 3..100)
       validate_length(changeset, :title, min: 3)
       validate_length(changeset, :title, max: 100)
       validate_length(changeset, :code, is: 9)
 
   """
-  @spec validate_length(t, atom, Range.t | [Keyword.t]) :: t
-  def validate_length(changeset, field, min..max) when is_integer(min) and is_integer(max) do
-    validate_length changeset, field, [min: min, max: max]
-  end
-
+  @spec validate_length(t, atom, Keyword.t) :: t
   def validate_length(changeset, field, opts) when is_list(opts) do
     validate_change changeset, field, {:length, opts}, fn
       _, value when is_binary(value) ->
         length = String.length(value)
-        error  = ((is = opts[:is]) && wrong_length(length, is)) ||
-                 ((min = opts[:min]) && too_short(length, min)) ||
-                 ((max = opts[:max]) && too_long(length, max))
+        error  = ((is = opts[:is]) && wrong_length(length, is, opts)) ||
+                 ((min = opts[:min]) && too_short(length, min, opts)) ||
+                 ((max = opts[:max]) && too_long(length, max, opts))
         if error, do: [{field, error}], else: []
     end
   end
 
-  defp wrong_length(value, value),   do: nil
-  defp wrong_length(_length, value), do: {:wrong_length, value}
+  defp wrong_length(value, value, _opts), do: nil
+  defp wrong_length(_length, value, opts), do:
+    {message(opts, "should be %{count} characters"), value}
 
-  defp too_short(length, value) when length >= value, do: nil
-  defp too_short(_length, value), do: {:too_short, value}
+  defp too_short(length, value, _opts) when length >= value, do: nil
+  defp too_short(_length, value, opts), do:
+    {message(opts, "should be at least %{count} characters"), value}
 
-  defp too_long(length, value) when length <= value, do: nil
-  defp too_long(_length, value), do: {:too_long, value}
+  defp too_long(length, value, _opts) when length <= value, do: nil
+  defp too_long(_length, value, opts), do:
+    {message(opts, "should be at most %{count} characters"), value}
 
   @doc """
   Validates the properties of a number.
@@ -807,6 +819,12 @@ defmodule Ecto.Changeset do
     * `:less_than_or_equal_to`
     * `:greater_than_or_equal_to`
     * `:equal_to`
+    * `:message` - the message on failure, defaults to one of:
+      * "must be less than %{count}"
+      * "must be greater than %{count}"
+      * "must be less than or equal to %{count}"
+      * "must be greater than or equal to %{count}"
+      * "must be equal to %{count}"
 
   ## Examples
 
@@ -819,20 +837,24 @@ defmodule Ecto.Changeset do
   def validate_number(changeset, field, opts) do
     validate_change changeset, field, {:number, opts}, fn
       field, value ->
-        Enum.flat_map opts, fn {spec_key, target_value} ->
-          apply_from_validators(field, value, spec_key, target_value, @number_validators)
+        Enum.find_value opts, [], fn {spec_key, target_value} ->
+          validate_number(field, value, opts, spec_key, target_value)
         end
     end
   end
 
-  defp apply_from_validators(field, value, spec_key, target_value, validators_map) do
-    case Map.fetch(validators_map, spec_key) do
+  defp validate_number(field, value, opts, spec_key, target_value) do
+    case Map.fetch(@number_validators, spec_key) do
       {:ok, {spec_function, error_message}} ->
         case apply(spec_function, [value, target_value]) do
-          true  -> []
-          false -> [{field, {error_message, target_value}}]
+          true  -> nil
+          false -> [{field, {message(opts, error_message), target_value}}]
         end
-      _ -> [] # if the spec_key isn't in the validators_map just ignore it
+      _ -> nil # if the spec_key isn't in the validators_map just ignore it
     end
+  end
+
+  defp message(opts, default) do
+    Keyword.get(opts, :message, default)
   end
 end
