@@ -1,8 +1,11 @@
+Code.require_file "../support/date_time.exs", __DIR__
+
 defmodule Ecto.Integration.RepoTest do
   use Ecto.Integration.Case
 
   require Ecto.Integration.TestRepo, as: TestRepo
   import Ecto.Query
+  import Ecto.Integration.DateTime
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.Comment
@@ -167,7 +170,9 @@ defmodule Ecto.Integration.RepoTest do
 
   test "get(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
 
     assert post1 == TestRepo.get(Post, post1.id)
     assert post2 == TestRepo.get(Post, to_string post2.id) # With casting
@@ -196,7 +201,9 @@ defmodule Ecto.Integration.RepoTest do
 
   test "one(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
 
     assert post1 == TestRepo.one(from p in Post, where: p.id == ^post1.id)
     assert post2 == TestRepo.one(from p in Post, where: p.id == ^to_string post2.id) # With casting
@@ -363,7 +370,9 @@ defmodule Ecto.Integration.RepoTest do
 
   test "joins" do
     p1 = TestRepo.insert(%Post{title: "1"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
     p2 = TestRepo.insert(%Post{title: "2"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
     c1 = TestRepo.insert(%Permalink{url: "1", post_id: p2.id})
 
     query = from(p in Post, join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
@@ -375,6 +384,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "has_many association join" do
     post = TestRepo.insert(%Post{title: "1", text: "hi"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
     c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
     c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
 
@@ -384,6 +394,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "has_one association join" do
     post = TestRepo.insert(%Post{title: "1", text: "hi"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
@@ -393,6 +404,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "belongs_to association join" do
     post = TestRepo.insert(%Post{title: "1"})
+      |> round_datetime_if_needed(TestRepo.adapter_supports_microsconds?)
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
