@@ -221,23 +221,20 @@ defmodule Ecto.Association do
   end
 
   @doc """
-  Retrieves the custom source in queryable.
+  Merges source from query into to the given model.
 
-  ## Examples
-
-      iex> Ecto.Association.custom_source_from_query({"custom_source", Model})
-      "custom_source"
-
-      iex> Ecto.Association.custom_source_from_query(Model)
-      nil
-
-      iex> Ecto.Association.custom_source_from_query("wrong_query")
-      nil
-
+  In case the query does not have a source, returns
+  the model unchanged.
   """
-  def custom_source_from_query({source, model}) when is_binary(source) and is_atom(model), do: source
-  def custom_source_from_query(_), do: nil
+  def merge_source(model, query)
 
+  def merge_source(struct, {source, _}) do
+    put_in struct.__meta__.source, source
+  end
+
+  def merge_source(struct, _query) do
+    struct
+  end
 end
 
 defmodule Ecto.Association.Has do
@@ -299,12 +296,10 @@ defmodule Ecto.Association.Has do
   @doc false
   def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key,
               queryable: queryable}, struct) do
-    built = assoc |> apply(:__struct__, []) |> Map.put(assoc_key, Map.get(struct, owner_key))
-    if source = Ecto.Association.custom_source_from_query(queryable) do
-      Ecto.Schema.put_meta(built, :source, source)
-    else
-      built
-    end
+    assoc
+    |> apply(:__struct__, [])
+    |> Map.put(assoc_key, Map.get(struct, owner_key))
+    |> Ecto.Association.merge_source(queryable)
   end
 
   @doc false
@@ -505,12 +500,9 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def build(%{assoc: assoc, queryable: queryable}, _struct) do
-    built = apply(assoc, :__struct__, [])
-    if source = Ecto.Association.custom_source_from_query(queryable) do
-      Ecto.Schema.put_meta(built, :source, source)
-    else
-      built
-    end
+    assoc
+    |> apply(:__struct__, [])
+    |> Ecto.Association.merge_source(queryable)
   end
 
   @doc false

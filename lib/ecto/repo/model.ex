@@ -119,8 +119,8 @@ defmodule Ecto.Repo.Model do
           raise Ecto.StaleModelError, model: struct, action: :delete
       end
 
-      Callbacks.__apply__(model, :after_delete, changeset).model
-      |> Ecto.Schema.put_meta(:state, :deleted)
+      model = Callbacks.__apply__(model, :after_delete, changeset).model
+      put_in model.__meta__.state, :deleted
     end
   end
 
@@ -143,11 +143,14 @@ defmodule Ecto.Repo.Model do
 
   defp do_load(struct, model, kv) do
     types = model.__changeset__
-    Enum.reduce(kv, struct, fn
+
+    model = Enum.reduce(kv, struct, fn
       {k,v}, acc ->
         value = Ecto.Type.load!(Map.fetch!(types, k), v)
         Map.put(acc, k, value)
-    end) |> Ecto.Schema.put_meta(:state, :loaded)
+    end)
+
+    put_in model.__meta__.state, :loaded
   end
 
   defp merge_into_changeset(model, struct, fields, changeset) do

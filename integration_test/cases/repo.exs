@@ -59,7 +59,8 @@ defmodule Ecto.Integration.RepoTest do
     assert post.inserted_at
     assert post.updated_at
 
-    post = Ecto.Schema.put_meta(%{post | text: "coming very soon..."}, :state, :built)
+    post = %{post | text: "coming very soon..."}
+    post = put_in post.__meta__.state, :built
     assert %Post{__meta__: ^loaded_meta} = TestRepo.update(post)
   end
 
@@ -184,11 +185,13 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert(%Custom{foo: "01abcdef01abcdef"})
     TestRepo.insert(%Custom{foo: "02abcdef02abcdef"})
 
-    assert Ecto.Schema.put_meta(%Custom{foo: "01abcdef01abcdef"}, :state, :loaded) ==
+    assert %Custom{foo: "01abcdef01abcdef", __meta__: %{state: :loaded}} =
            TestRepo.get(Custom, "01abcdef01abcdef")
-    assert Ecto.Schema.put_meta(%Custom{foo: "02abcdef02abcdef"}, :state, :loaded) ==
+
+    assert %Custom{foo: "02abcdef02abcdef", __meta__: %{state: :loaded}} =
            TestRepo.get(Custom, "02abcdef02abcdef")
-    assert nil == TestRepo.get(Custom, "03abcdef03abcdef")
+
+    assert nil = TestRepo.get(Custom, "03abcdef03abcdef")
   end
 
   test "one(!)" do

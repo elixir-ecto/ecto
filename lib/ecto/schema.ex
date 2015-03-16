@@ -579,13 +579,9 @@ defmodule Ecto.Schema do
 
   @doc false
   def __load__(struct, fields, idx, values) do
-    loaded = do_load(struct, fields, idx, values) |> put_meta(:state, :loaded)
+    loaded = do_load(struct, fields, idx, values)
+    loaded = put_in loaded.__meta__.state, :loaded
     Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
-  end
-
-  @doc false
-  def put_meta(struct, field, value) do
-    Map.put(struct, :__meta__, Map.put(struct.__meta__, field, value))
   end
 
   defp do_load(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
