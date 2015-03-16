@@ -12,8 +12,6 @@ Application.put_env(:ecto, TestRepo,
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Repo, otp_app: :ecto
-
-  def round_timestamps(model), do: model
 end
 
 # Pool repo for transaction and lock tests

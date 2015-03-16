@@ -167,9 +167,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "get(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
-            |> TestRepo.round_timestamps()
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
-            |> TestRepo.round_timestamps()
 
     assert post1 == TestRepo.get(Post, post1.id)
     assert post2 == TestRepo.get(Post, to_string post2.id) # With casting
@@ -198,9 +196,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "one(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
-            |> TestRepo.round_timestamps()
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
-            |> TestRepo.round_timestamps()
 
     assert post1 == TestRepo.one(from p in Post, where: p.id == ^post1.id)
     assert post2 == TestRepo.one(from p in Post, where: p.id == ^to_string post2.id) # With casting
@@ -366,8 +362,8 @@ defmodule Ecto.Integration.RepoTest do
   ## Joins
 
   test "joins" do
-    p1 = TestRepo.insert(%Post{title: "1"}) |> TestRepo.round_timestamps()
-    p2 = TestRepo.insert(%Post{title: "2"}) |> TestRepo.round_timestamps()
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
     c1 = TestRepo.insert(%Permalink{url: "1", post_id: p2.id})
 
     query = from(p in Post, join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
@@ -378,7 +374,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "has_many association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"}) |> TestRepo.round_timestamps()
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
     c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
     c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
 
@@ -387,7 +383,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "has_one association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"}) |> TestRepo.round_timestamps()
+    post = TestRepo.insert(%Post{title: "1", text: "hi"})
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
@@ -396,7 +392,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "belongs_to association join" do
-    post = TestRepo.insert(%Post{title: "1"}) |> TestRepo.round_timestamps()
+    post = TestRepo.insert(%Post{title: "1"})
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 

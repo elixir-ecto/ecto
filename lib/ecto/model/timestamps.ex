@@ -23,15 +23,9 @@ defmodule Ecto.Model.Timestamps do
     if get_change changeset, field do
       changeset
     else
-      put_change changeset, field, Ecto.Type.load!(type, timestamp_with_usec)
+      {date, {h, m, s}} = :erlang.universaltime
+      put_change changeset, field, Ecto.Type.load!(type, {date, {h, m, s, 0}})
     end
-  end
-
-  defp timestamp_with_usec do
-    erl_timestamp = :os.timestamp
-    {_, _, usec} = erl_timestamp
-    {date, {h, m, s}} =:calendar.now_to_datetime(erl_timestamp)
-    {date, {h, m, s, usec}}
   end
 
   defmacro __before_compile__(env) do
