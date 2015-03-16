@@ -742,8 +742,8 @@ defmodule Ecto.Changeset do
           from m in query, where: field(m, ^field) == ^value
         end
 
-      if pk_value = Ecto.Model.primary_key(model) do
-        pk_field = struct.__schema__(:primary_key)
+      [{pk_field, pk_value}] = Ecto.Model.primary_key(model)
+      if pk_value do
         query = from m in query,
                 where: field(m, ^pk_field) != ^pk_value
       end

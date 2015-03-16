@@ -159,7 +159,7 @@ defmodule Ecto.Repo.Model do
 
     # If we have a primary key field but it is nil,
     # we should not include it in the list of changes.
-    if pk_field && !Ecto.Model.primary_key(struct) do
+    if pk_field && !Ecto.Model.primary_key(struct)[pk_field] do
       changes = Map.delete(changes, pk_field)
     end
 
@@ -171,9 +171,8 @@ defmodule Ecto.Repo.Model do
   end
 
   defp pk_filter!(model, struct) do
-    pk_field = model.__schema__(:primary_key)
-    pk_value = Ecto.Model.primary_key(struct) ||
-                raise Ecto.MissingPrimaryKeyError, struct: struct
+    [{pk_field, pk_value}] = Ecto.Model.primary_key(struct)
+    pk_value || raise Ecto.MissingPrimaryKeyError, struct: struct
     {pk_field, pk_value}
   end
 

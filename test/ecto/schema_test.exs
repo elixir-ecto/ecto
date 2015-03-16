@@ -62,13 +62,13 @@ defmodule Ecto.SchemaTest do
   end
 
   test "primary key" do
-    assert Ecto.Model.primary_key(%MyModel{}) == nil
-    assert Ecto.Model.primary_key(%MyModel{id: "hello"}) == "hello"
+    assert Ecto.Model.primary_key(%MyModel{}) == [id: nil]
+    assert Ecto.Model.primary_key(%MyModel{id: "hello"}) == [id: "hello"]
   end
 
   test "custom primary key" do
-    assert Ecto.Model.primary_key(%SchemaModel{}) == nil
-    assert Ecto.Model.primary_key(%SchemaModel{uuid: "hello"}) == "hello"
+    assert Ecto.Model.primary_key(%SchemaModel{}) == [uuid: nil]
+    assert Ecto.Model.primary_key(%SchemaModel{uuid: "hello"}) == [uuid: "hello"]
   end
 
   test "has __meta__ attribute" do

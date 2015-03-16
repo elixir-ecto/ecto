@@ -57,7 +57,8 @@ defmodule Ecto.Model do
   """
   @spec primary_key(t) :: any
   def primary_key(struct) do
-    Map.fetch!(struct, primary_key_field(struct))
+    field = primary_key_field(struct)
+    [{field, Map.fetch!(struct, field)}]
   end
 
   defp primary_key_field(%{__struct__: model}) do
