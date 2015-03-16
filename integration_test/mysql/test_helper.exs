@@ -1,5 +1,5 @@
 Logger.configure(level: :info)
-ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive]
+ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive, :uses_usec]
 
 # Basic test repo
 alias Ecto.Integration.TestRepo

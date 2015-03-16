@@ -20,6 +20,14 @@ defmodule Ecto.Integration.Post do
   end
 end
 
+defmodule Ecto.Integration.PostUsecTimestamps do
+  use Ecto.Model
+  schema "posts" do
+    field :title, :string
+    timestamps usec: true
+  end
+end
+
 defmodule Ecto.Integration.Comment do
   use Ecto.Model
 

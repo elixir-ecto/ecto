@@ -19,13 +19,23 @@ defmodule Ecto.Model.Timestamps do
   @doc """
   Puts a timestamp in the changeset with the given field and type.
   """
-  def put_timestamp(changeset, field, type) do
+  def put_timestamp(changeset, field, type, use_usec) do
     if get_change changeset, field do
       changeset
     else
-      {date, {h, m, s}} = :erlang.universaltime
-      put_change changeset, field, Ecto.Type.load!(type, {date, {h, m, s, 0}})
+      put_change changeset, field, Ecto.Type.load!(type, timestamp_tuple(use_usec))
     end
+  end
+
+  defp timestamp_tuple(_use_usec = true) do
+    erl_timestamp = :os.timestamp
+    {_, _, usec} = erl_timestamp
+    {date, {h, m, s}} =:calendar.now_to_datetime(erl_timestamp)
+    {date, {h, m, s, usec}}
+  end
+  defp timestamp_tuple(_use_usec = false) do
+    {date, {h, m, s}} = :erlang.universaltime
+    {date, {h, m, s, 0}}
   end
 
   defmacro __before_compile__(env) do
@@ -33,17 +43,18 @@ defmodule Ecto.Model.Timestamps do
 
     if timestamps do
       type = timestamps[:type]
+      usec = timestamps[:usec]
 
       inserted_at = if field = Keyword.fetch!(timestamps, :inserted_at) do
         quote do
-          before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type)]
+          before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type), unquote(usec)]
         end
       end
 
       updated_at = if field = Keyword.fetch!(timestamps, :updated_at) do
         quote do
-          before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type)]
-          before_update Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type)]
+          before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type), unquote(usec)]
+          before_update Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type), unquote(usec)]
         end
       end
 

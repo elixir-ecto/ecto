@@ -5,6 +5,7 @@ defmodule Ecto.Integration.RepoTest do
   import Ecto.Query
 
   alias Ecto.Integration.Post
+  alias Ecto.Integration.PostUsecTimestamps
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
@@ -474,5 +475,11 @@ defmodule Ecto.Integration.RepoTest do
     cs_stale = cast(base_post, %{"url" => "http://foo.baz"}, ~w(url), ~w())
     assert_raise Ecto.StaleModelError, fn -> TestRepo.update(cs_stale) end
     assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(cs_stale) end
+  end
+
+  @tag :uses_usec
+  test "insert and fetch a model with timestamps with usec" do
+    p1 = TestRepo.insert(%PostUsecTimestamps{title: "hello"})
+    assert [p1] == TestRepo.all(PostUsecTimestamps)
   end
 end
