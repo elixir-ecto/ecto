@@ -127,12 +127,9 @@ defmodule Ecto.Adapters.MySQL do
       env = [{"MYSQL_PWD", password}|env]
     end
 
-    if port = database[:port] do
-      env = [{"MYSQL_TCP_PORT", to_string(port)}|env]
-    end
-
     host = database[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
-    args = ["--silent", "-u", database[:username], "-h", host, "-e", sql_command]
+    port = database[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
+    args = ["--silent", "-u", database[:username], "-h", host, "-P", to_string(port), "-e", sql_command]
     System.cmd("mysql", args, env: env, stderr_to_stdout: true)
   end
 
