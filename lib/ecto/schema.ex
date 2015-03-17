@@ -168,8 +168,8 @@ defmodule Ecto.Schema do
   used for runtime introspection of the schema:
 
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
-  * `__schema__(:primary_key)` - Returns the field that is the primary
-    key or `nil` if there is none;
+  * `__schema__(:primary_key)` - Returns a list of the field that is the primary
+    key or [] if there is none;
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
   * `__schema__(:field, field)` - Returns the type of the given non-virtual field;
@@ -222,10 +222,10 @@ defmodule Ecto.Schema do
       primary_key_field =
         case @primary_key do
           false ->
-            nil
+            []
           {name, type, opts} ->
             Ecto.Schema.field(name, type, opts)
-            name
+            [name]
           other ->
             raise ArgumentError, "@primary_key must be false or {name, type, opts}"
         end

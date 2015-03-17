@@ -55,10 +55,8 @@ defmodule Ecto.Model do
   """
   @spec primary_key(t) :: Keyword.t
   def primary_key(%{__struct__: model} = struct) do
-    if field = model.__schema__(:primary_key) do
-      [{field, Map.fetch!(struct, field)}]
-    else
-      []
+    Enum.map model.__schema__(:primary_key), fn(field) ->
+      {field, Map.fetch!(struct, field)}
     end
   end
 

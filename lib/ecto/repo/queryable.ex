@@ -235,7 +235,9 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp primary_key_field!(model) when is_atom(model) do
-    model.__schema__(:primary_key) ||
-      raise Ecto.NoPrimaryKeyError, model: model
+    case model.__schema__(:primary_key) do
+      [field] -> field
+      _ -> raise Ecto.NoPrimaryKeyError, model: model
+    end
   end
 end
