@@ -85,15 +85,11 @@ defmodule Ecto.Repo.Model do
   def update(repo, adapter, %{__struct__: model} = struct, opts) do
     changes = Map.take(struct, model.__schema__(:fields))
 
-    # If we have a primary key field, we should
-    # not include it in the list of changes.
-    changes_without_pk =
-      case model.__schema__(:primary_key) do
-        [pk_field] -> Map.delete(changes, pk_field)
-        _ -> changes
-      end
+    # Remove all primary key fields from the list of changes.
+    changes =
+      Enum.reduce model.__schema__(:primary_key), changes, &Map.delete(&2, &1)
 
-    changeset = %Changeset{model: struct, valid?: true, changes: changes_without_pk}
+    changeset = %Changeset{model: struct, valid?: true, changes: changes}
     update(repo, adapter, changeset, opts)
   end
 
