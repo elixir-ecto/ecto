@@ -16,9 +16,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
   To migrate up a specific number of times, use `--step n`.
 
   By default, `ecto.create` task will be run first to ensure
-  the database has been created.
-  To skip it directly, use `--no-create`.
-
+  the database has been created. To skip it, pass `--no-create`.
 
   ## Examples
 
@@ -50,9 +48,8 @@ defmodule Mix.Tasks.Ecto.Migrate do
       switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, create: :boolean],
       aliases: [n: :step, v: :to]
 
-    if Keyword.get(opts, :create, true), do: creator.(args)
-
     ensure_repo(repo)
+    if Keyword.get(opts, :create, true), do: creator.(args)
     if Keyword.get(opts, :start, true), do: ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
