@@ -79,14 +79,14 @@ defmodule Ecto.Type do
   use Behaviour
 
   @type t         :: primitive | custom
-  @type primitive :: basic | composite
+  @type primitive :: base | composite
   @type custom    :: atom
 
-  @typep basic     :: :any | :integer | :float | :boolean | :string |
+  @typep base      :: :any | :integer | :float | :boolean | :string |
                       :binary | :uuid | :decimal | :datetime | :time | :date
-  @typep composite :: {:array, basic}
+  @typep composite :: {:array, base}
 
-  @basic     ~w(any integer float boolean string binary uuid decimal datetime time date)a
+  @base     ~w(any integer float boolean string binary uuid decimal datetime time date)a
   @composite ~w(array)a
 
   @doc """
@@ -95,7 +95,7 @@ defmodule Ecto.Type do
   For example, if you want to provide your own datetime
   structures, the type function should return `:datetime`.
   """
-  defcallback type :: basic | custom
+  defcallback type :: base | custom
 
   @doc """
   Casts the given input to the custom type.
@@ -147,8 +147,34 @@ defmodule Ecto.Type do
   """
   @spec primitive?(t) :: boolean
   def primitive?({composite, _}) when composite in @composite, do: true
-  def primitive?(basic) when basic in @basic, do: true
+  def primitive?(base) when base in @base, do: true
   def primitive?(_), do: false
+
+  @doc """
+  Checks if the given atom can be used as composite type.
+
+      iex> composite?(:array)
+      true
+      iex> composite?(:string)
+      false
+
+  """
+  @spec composite?(atom) :: boolean
+  def composite?(atom), do: atom in @composite
+
+  @doc """
+  Checks if the given atom can be used as base type.
+
+      iex> base?(:string)
+      true
+      iex> base?(:array)
+      false
+      iex> base?(Custom)
+      false
+
+  """
+  @spec base?(atom) :: boolean
+  def base?(atom), do: atom in @base
 
   @doc """
   Retrieves the underlying type of a given type.
@@ -256,7 +282,7 @@ defmodule Ecto.Type do
     cond do
       not primitive?(type) ->
         type.dump(value)
-      of_basic_type?(type, value) ->
+      of_base_type?(type, value) ->
         {:ok, tag(type, value)}
       true ->
         :error
@@ -328,7 +354,7 @@ defmodule Ecto.Type do
     cond do
       not primitive?(type) ->
         type.load(value)
-      of_basic_type?(type, value) ->
+      of_base_type?(type, value) ->
         {:ok, value}
       true ->
         :error
@@ -451,7 +477,7 @@ defmodule Ecto.Type do
     cond do
       not primitive?(type) ->
         type.cast(value)
-      of_basic_type?(type, value) ->
+      of_base_type?(type, value) ->
         {:ok, value}
       true ->
         :error
@@ -472,18 +498,18 @@ defmodule Ecto.Type do
   ## Helpers
 
   # Checks if a value is of the given primitive type.
-  defp of_basic_type?(:any, _), do: true
-  defp of_basic_type?(:float, term),   do: is_float(term)
-  defp of_basic_type?(:integer, term), do: is_integer(term)
-  defp of_basic_type?(:boolean, term), do: is_boolean(term)
+  defp of_base_type?(:any, _), do: true
+  defp of_base_type?(:float, term),   do: is_float(term)
+  defp of_base_type?(:integer, term), do: is_integer(term)
+  defp of_base_type?(:boolean, term), do: is_boolean(term)
 
-  defp of_basic_type?(binary, term) when binary in ~w(binary uuid string)a, do: is_binary(term)
+  defp of_base_type?(binary, term) when binary in ~w(binary uuid string)a, do: is_binary(term)
 
-  defp of_basic_type?(:decimal, %Decimal{}), do: true
-  defp of_basic_type?(:date, {_, _, _}),  do: true
-  defp of_basic_type?(:time, {_, _, _, _}),  do: true
-  defp of_basic_type?(:datetime, {{_, _, _}, {_, _, _, _}}), do: true
-  defp of_basic_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
+  defp of_base_type?(:decimal, %Decimal{}), do: true
+  defp of_base_type?(:date, {_, _, _}),  do: true
+  defp of_base_type?(:time, {_, _, _, _}),  do: true
+  defp of_base_type?(:datetime, {{_, _, _}, {_, _, _, _}}), do: true
+  defp of_base_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
 
   defp array(type, [h|t], fun, acc) do
     case fun.(type, h) do
