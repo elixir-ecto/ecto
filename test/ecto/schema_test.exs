@@ -32,6 +32,7 @@ defmodule Ecto.SchemaTest do
     assert MyModel.__schema__(:field, :array)      == {:array, :string}
     assert MyModel.__schema__(:field, :comment_id) == :integer
     assert MyModel.__schema__(:read_after_writes)  == [:id, :email, :count]
+    assert MyModel.__schema__(:primary_key)        == [:id]
   end
 
   test "changeset metadata" do
