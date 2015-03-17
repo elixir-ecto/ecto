@@ -1,3 +1,5 @@
+import Kernel, except: [to_string: 1]
+
 defmodule Ecto.DateTime.Util do
   @moduledoc false
 
@@ -111,10 +113,17 @@ defmodule Ecto.Date do
   end
 
   @doc """
-  Converts `Ecto.Date` to its ISO 8601 string representation.
+  Converts `Ecto.Date` to a readable string representation.
   """
-  def to_string(date) do
-    String.Chars.Ecto.Date.to_string(date)
+  def to_string(%Ecto.Date{year: year, month: month, day: day}) do
+    zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2)
+  end
+
+  @doc """
+  Converts `Ecto.Date` to ISO8601 representation.
+  """
+  def to_iso8601(date) do
+    to_string(date)
   end
 
   @doc """
@@ -133,12 +142,6 @@ defmodule Ecto.Date do
 
   defp erl_load({{year, month, day}, _time}) do
     %Ecto.Date{year: year, month: month, day: day}
-  end
-
-  defimpl String.Chars do
-    def to_string(%Ecto.Date{year: year, month: month, day: day}) do
-      zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2)
-    end
   end
 end
 
@@ -197,10 +200,23 @@ defmodule Ecto.Time do
   end
 
   @doc """
-  Converts `Ecto.Time` to its ISO 8601 without timezone string representation.
+  Converts `Ecto.Time` to a string representation.
   """
-  def to_string(time) do
-    String.Chars.Ecto.Time.to_string(time)
+  def to_string(%Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}) do
+    str = zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
+
+    if is_nil(usec) or usec == 0 do
+      str
+    else
+      str <> "." <> zero_pad(usec, 6)
+    end
+  end
+
+  @doc """
+  Converts `Ecto.Time` to its ISO 8601 UTC representation.
+  """
+  def to_iso8601(time) do
+    to_string(time) <> "Z"
   end
 
   @doc """
@@ -219,18 +235,6 @@ defmodule Ecto.Time do
 
   defp erl_load({_, {hour, min, sec}}) do
     %Ecto.Time{hour: hour, min: min, sec: sec}
-  end
-
-  defimpl String.Chars do
-    def to_string(%Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}) do
-      str = zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
-
-      if is_nil(usec) or usec == 0 do
-        str
-      else
-        str <> "." <> zero_pad(usec, 6) <> "Z"
-      end
-    end
   end
 end
 
@@ -327,10 +331,31 @@ defmodule Ecto.DateTime do
   end
 
   @doc """
-  Converts `Ecto.DateTime` to its ISO 8601 UTC string representation.
+  Converts `Ecto.DateTime` to its string representation.
   """
-  def to_string(datetime) do
-    String.Chars.Ecto.DateTime.to_string(datetime)
+  def to_string(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}) do
+    str = zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2) <> " " <>
+          zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
+
+    if is_nil(usec) or usec == 0 do
+      str
+    else
+      str <> "." <> zero_pad(usec, 6)
+    end
+  end
+
+  @doc """
+  Converts `Ecto.DateTime` to its ISO 8601 UTC representation.
+  """
+  def to_iso8601(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}) do
+    str = zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2) <> "T" <>
+          zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
+
+    if is_nil(usec) or usec == 0 do
+      str <> "Z"
+    else
+      str <> "." <> zero_pad(usec, 6) <> "Z"
+    end
   end
 
   @doc """
@@ -351,17 +376,10 @@ defmodule Ecto.DateTime do
     %Ecto.DateTime{year: year, month: month, day: day,
                    hour: hour, min: min, sec: sec}
   end
+end
 
-  defimpl String.Chars do
-    def to_string(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}) do
-      str = zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2) <> "T" <>
-            zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
-
-      if is_nil(usec) or usec == 0 do
-        str <> "Z"
-      else
-        str <> "." <> zero_pad(usec, 6) <> "Z"
-      end
-    end
+defimpl String.Chars, for: [Ecto.DateTime, Ecto.Date, Ecto.Time] do
+  def to_string(dt) do
+    @for.to_string(dt)
   end
 end
