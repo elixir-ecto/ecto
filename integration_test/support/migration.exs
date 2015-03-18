@@ -85,7 +85,7 @@ defmodule Ecto.Integration.Migration do
     false = exists? index
   end
 
-  # For the permalinks table, let's create a table
+  # For the permalinks table, let's create a table,
   # drop it, and get a new one.
   #
   #     create table(:permalinks) do

@@ -55,6 +55,9 @@ defmodule Ecto.Schema do
     * `@timestamps_type` - configures the default timestamps type
       used by `timestamps`. Defaults to `Ecto.DateTime`;
 
+    * `@timestamps_use_usec` - configures the default timestamp use
+      of microseconds. Defaults to `false`.
+
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
 
@@ -195,6 +198,7 @@ defmodule Ecto.Schema do
       import Ecto.Schema, only: [schema: 2]
       @primary_key {:id, :integer, read_after_writes: true}
       @timestamps_type Ecto.DateTime
+      @timestamps_use_usec false
       @foreign_key_type :integer
     end
   end
@@ -291,6 +295,9 @@ defmodule Ecto.Schema do
 
     * `:type` - the timestamps type, defaults to `Ecto.DateTime`.
       Can also be set via the `@timestamps_type` attribute
+    * `:usec` - boolean, sets whether microseconds are used in timestamps.
+      Microseconds will be 0 if false. Defaults to false.
+      Can also be set via the `@timestamps_use_usec` attribute
     * `:inserted_at` - the name of the column for insertion times or `false`
     * `:updated_at` - the name of the column for update times or `false`
 
@@ -299,6 +306,7 @@ defmodule Ecto.Schema do
     quote bind_quoted: binding do
       timestamps = Keyword.merge [inserted_at: :inserted_at,
                                   updated_at: :updated_at,
+                                  usec: @timestamps_use_usec,
                                   type: @timestamps_type], opts
 
       if inserted_at = Keyword.fetch!(timestamps, :inserted_at) do
