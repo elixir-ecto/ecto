@@ -52,11 +52,8 @@ defmodule Ecto.Schema do
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. Defaults to `:integer`;
 
-    * `@timestamps_type` - configures the default timestamps type
-      used by `timestamps`. Defaults to `Ecto.DateTime`;
-
-    * `@timestamps_use_usec` - configures the default timestamp use
-      of microseconds. Defaults to `false`.
+    * `@timestamps_opts` - configures the default timestamps type
+      used by `timestamps`. Defaults to `[type: Ecto.DateTime, usec: false]`;
 
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
@@ -197,8 +194,7 @@ defmodule Ecto.Schema do
     quote do
       import Ecto.Schema, only: [schema: 2]
       @primary_key {:id, :integer, read_after_writes: true}
-      @timestamps_type Ecto.DateTime
-      @timestamps_use_usec false
+      @timestamps_opts []
       @foreign_key_type :integer
     end
   end
@@ -294,30 +290,30 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:type` - the timestamps type, defaults to `Ecto.DateTime`.
-      Can also be set via the `@timestamps_type` attribute
     * `:usec` - boolean, sets whether microseconds are used in timestamps.
       Microseconds will be 0 if false. Defaults to false.
-      Can also be set via the `@timestamps_use_usec` attribute
     * `:inserted_at` - the name of the column for insertion times or `false`
     * `:updated_at` - the name of the column for update times or `false`
 
+  All options can be pre-configured by setting `@timestamps_opts`.
   """
   defmacro timestamps(opts \\ []) do
     quote bind_quoted: binding do
-      timestamps = Keyword.merge [inserted_at: :inserted_at,
-                                  updated_at: :updated_at,
-                                  usec: @timestamps_use_usec,
-                                  type: @timestamps_type], opts
+      timestamps =
+        [inserted_at: :inserted_at, updated_at: :updated_at,
+         type: Ecto.DateTime, usec: false]
+        |> Keyword.merge(@timestamps_opts)
+        |> Keyword.merge(opts)
 
       if inserted_at = Keyword.fetch!(timestamps, :inserted_at) do
-        Ecto.Schema.field(inserted_at, timestamps[:type], [])
+        Ecto.Schema.field(inserted_at, Keyword.fetch!(timestamps, :type), [])
       end
 
       if updated_at = Keyword.fetch!(timestamps, :updated_at) do
-        Ecto.Schema.field(updated_at, timestamps[:type], [])
+        Ecto.Schema.field(updated_at, Keyword.fetch!(timestamps, :type), [])
       end
 
-      @timestamps timestamps
+      @ecto_timestamps timestamps
     end
   end
 

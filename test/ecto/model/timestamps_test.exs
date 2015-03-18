@@ -15,7 +15,7 @@ defmodule Ecto.Model.TimestampsTest do
   defmodule Config do
     use Ecto.Model
 
-    @timestamps_type :datetime
+    @timestamps_opts [type: :datetime]
     schema "default" do
       timestamps inserted_at: :created_on, updated_at: :updated_on
     end

@@ -33,13 +33,14 @@ defmodule Ecto.Model.Timestamps do
     {date, {h, m, s}} =:calendar.now_to_datetime(erl_timestamp)
     {date, {h, m, s, usec}}
   end
+
   defp timestamp_tuple(_use_usec = false) do
     {date, {h, m, s}} = :erlang.universaltime
     {date, {h, m, s, 0}}
   end
 
   defmacro __before_compile__(env) do
-    timestamps = Module.get_attribute(env.module, :timestamps)
+    timestamps = Module.get_attribute(env.module, :ecto_timestamps)
 
     if timestamps do
       type = timestamps[:type]

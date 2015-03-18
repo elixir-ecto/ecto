@@ -14,6 +14,7 @@
   * Validations in changesets now return strings instead of atoms
   * `Ecto.Model.primary_key/1` now returns a keyword list of primary key fields, returning an empty list when there is no primary key. Use `Ecto.Model.primary_key!/1` for the raising variant
   * Use simple representations when converting `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` to strings. Use `to_iso8601` for the ISO specific formatting
+  * `@timestamps_type Your.Type` was removed in favor of `@timestamps_opts [type: Your.Type]`
 
 ## v0.9.0 (2015-03-05)
 
