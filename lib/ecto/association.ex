@@ -72,9 +72,9 @@ defmodule Ecto.Association do
   The struct to build from is given as argument in case default values
   should be set in the struct.
 
-  Invoked by `Ecto.Model.build/2`.
+  Invoked by `Ecto.Model.build/3`.
   """
-  defcallback build(t, Ecto.Model.t) :: Ecto.Model.t
+  defcallback build(t, Ecto.Model.t, %{atom => term} | [Keyword.t]) :: Ecto.Model.t
 
   @doc """
   Returns an association join query.
@@ -295,9 +295,10 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key,
-              queryable: queryable}, struct) do
+              queryable: queryable}, struct, attributes \\ %{}) do
     assoc
     |> apply(:__struct__, [])
+    |> Map.merge(Enum.into(attributes, %{}))
     |> Map.put(assoc_key, Map.get(struct, owner_key))
     |> Ecto.Association.merge_source(queryable)
   end
@@ -366,7 +367,7 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def build(%{field: name}, %{__struct__: struct}) do
+  def build(%{field: name}, %{__struct__: struct}, _attributes \\ %{}) do
     raise ArgumentError,
       "cannot build through association #{inspect name} for #{inspect struct}. " <>
       "Instead build the intermediate steps explicitly."
@@ -499,9 +500,10 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def build(%{assoc: assoc, queryable: queryable}, _struct) do
+  def build(%{assoc: assoc, queryable: queryable}, _struct, attributes \\ %{}) do
     assoc
     |> apply(:__struct__, [])
+    |> Map.merge(Enum.into(attributes, %{}))
     |> Ecto.Association.merge_source(queryable)
   end
 
