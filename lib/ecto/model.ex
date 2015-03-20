@@ -98,7 +98,8 @@ defmodule Ecto.Model do
       %Post{id: nil}
 
   You can also pass the attributes, which can be a map or
-  a keyword list, to set the struct's fields except the key.
+  a keyword list, to set the struct's fields except the
+  association key.
 
       iex> build(post, :comments, text: "cool")
       %Comment{id: nil, post_id: 13, text: "cool"}

@@ -295,10 +295,9 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key,
-              queryable: queryable}, struct, attributes \\ %{}) do
+              queryable: queryable}, struct, attributes) do
     assoc
-    |> apply(:__struct__, [])
-    |> Map.merge(Enum.into(attributes, %{}))
+    |> struct(attributes)
     |> Map.put(assoc_key, Map.get(struct, owner_key))
     |> Ecto.Association.merge_source(queryable)
   end
@@ -367,7 +366,7 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def build(%{field: name}, %{__struct__: struct}, _attributes \\ %{}) do
+  def build(%{field: name}, %{__struct__: struct}, _attributes) do
     raise ArgumentError,
       "cannot build through association #{inspect name} for #{inspect struct}. " <>
       "Instead build the intermediate steps explicitly."
@@ -500,10 +499,9 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def build(%{assoc: assoc, queryable: queryable}, _struct, attributes \\ %{}) do
+  def build(%{assoc: assoc, queryable: queryable}, _struct, attributes) do
     assoc
-    |> apply(:__struct__, [])
-    |> Map.merge(Enum.into(attributes, %{}))
+    |> struct(attributes)
     |> Ecto.Association.merge_source(queryable)
   end
 
