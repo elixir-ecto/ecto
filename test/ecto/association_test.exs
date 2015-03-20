@@ -17,6 +17,8 @@ defmodule Ecto.AssociationTest do
     use Ecto.Model
 
     schema "posts" do
+      field :title, :string
+
       has_many :comments, Comment
       has_one :permalink, Permalink
       belongs_to :author, Author
@@ -28,6 +30,8 @@ defmodule Ecto.AssociationTest do
     use Ecto.Model
 
     schema "comments" do
+      field :text, :string
+
       belongs_to :post, Post
       has_one :post_author, through: [:post, :author]       # belongs -> belongs
       has_one :post_permalink, through: [:post, :permalink] # belongs -> one
@@ -245,6 +249,23 @@ defmodule Ecto.AssociationTest do
     assert_raise ArgumentError, ~r"cannot build through association :post_author", fn ->
       build(%Comment{}, :post_author)
     end
+  end
+
+  test "build/3 with custom attributes" do
+    assert build(%Post{id: 1}, :comments, text: "Awesome!") ==
+           %Comment{post_id: 1, text: "Awesome!"}
+
+    assert build(%Post{id: 1}, :comments, %{text: "Awesome!"}) ==
+           %Comment{post_id: 1, text: "Awesome!"}
+
+    assert build(%Post{id: 1}, :comments, post_id: 2) ==
+           %Comment{post_id: 1}
+
+    assert build(%Comment{post_id: 1}, :post, title: "Hello") ==
+           %Post{id: nil, title: "Hello"}
+
+    assert build(%Comment{post_id: 1}, :post, %{title: "Hello"}) ==
+           %Post{id: nil, title: "Hello"}
   end
 
   test "assoc/2" do

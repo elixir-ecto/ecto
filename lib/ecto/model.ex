@@ -96,10 +96,23 @@ defmodule Ecto.Model do
       %Comment{id: 13, post_id: 25}
       iex> build(comment, :post)
       %Post{id: nil}
+
+  You can also pass the attributes, which can be a map or
+  a keyword list, to set the struct's fields except the
+  association key.
+
+      iex> build(post, :comments, text: "cool")
+      %Comment{id: nil, post_id: 13, text: "cool"}
+
+      iex> build(post, :comments, %{text: "cool"})
+      %Comment{id: nil, post_id: 13, text: "cool"}
+
+      iex> build(post, :comments, post_id: 1)
+      %Comment{id: nil, post_id: 13}
   """
-  def build(%{__struct__: model} = struct, assoc) do
+  def build(%{__struct__: model} = struct, assoc, attributes \\ %{}) do
     assoc = Ecto.Association.association_from_model!(model, assoc)
-    assoc.__struct__.build(assoc, struct)
+    assoc.__struct__.build(assoc, struct, attributes)
   end
 
   @doc """
