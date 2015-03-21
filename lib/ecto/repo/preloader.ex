@@ -40,42 +40,105 @@ defmodule Ecto.Repo.Preloader do
     do_preload([struct], repo, preloads, nil) |> hd()
   end
 
-  ## Implementation
-
   defp do_preload(structs, repo, preloads, assocs) do
     preloads = normalize(preloads, assocs, preloads)
-    do_preload(structs, repo, preloads)
+    preload_each(structs, repo, preloads)
   end
 
-  defp do_preload(structs, _repo, []),   do: structs
-  defp do_preload([], _repo, _preloads), do: []
+  ## Preloading
 
-  defp do_preload(structs, repo, preloads) do
-    preloads = expand(hd(structs).__struct__, preloads, [])
+  defp preload_each(structs, _repo, []),   do: structs
+  defp preload_each([], _repo, _preloads), do: []
+  defp preload_each(structs, repo, preloads) do
+    module   = hd(structs).__struct__
+    preloads = expand(module, preloads, [])
 
     entries =
       Enum.map preloads, fn
-        {preload, {:assoc, assoc, assoc_key}, sub_preloads} ->
-          query = Ecto.Model.assoc(structs, preload)
-          card  = assoc.cardinality
-
-          if card == :many do
-            query = Ecto.Query.from q in query, order_by: field(q, ^assoc_key)
-          end
-
-          loaded = do_preload(repo.all(query), repo, sub_preloads)
-          {:assoc, assoc, into_dict(card, assoc_key, loaded)}
-
+        {_, {:assoc, assoc, assoc_key}, sub_preloads} ->
+          preload_assoc(structs, module, repo, assoc, assoc_key, sub_preloads)
         {_, {:through, _, _} = info, []} ->
           info
       end
 
     for struct <- structs do
-      Enum.reduce entries, struct, fn
-        {:assoc, assoc, dict}, acc -> load_assoc(acc, assoc, dict)
-        {:through, assoc, through}, acc -> load_through(acc, assoc, through)
+      Enum.reduce entries, struct, fn {kind, assoc, data}, acc ->
+        cond do
+          loaded?(acc, assoc.field) ->
+            acc
+          kind == :assoc ->
+            load_assoc(acc, assoc, data)
+          kind == :through ->
+            load_through(acc, assoc, data)
+        end
       end
     end
+  end
+
+  ## Association preloading
+
+  defp preload_assoc(structs, module, repo, assoc, assoc_key, sub_preloads) do
+    case ids(structs, module, assoc) do
+      [] ->
+        {:assoc, assoc, HashDict.new}
+      ids ->
+        query = assoc.__struct__.assoc_query(assoc, ids)
+        card  = assoc.cardinality
+
+        if card == :many do
+          query = Ecto.Query.from q in query, order_by: field(q, ^assoc_key)
+        end
+
+        loaded = preload_each(repo.all(query), repo, sub_preloads)
+        {:assoc, assoc, assoc_dict(card, assoc_key, loaded)}
+    end
+  end
+
+  def ids(structs, module, assoc) do
+    field = assoc.field
+    owner_key = assoc.owner_key
+
+    for struct <- structs,
+      assert_struct!(module, struct),
+      not loaded?(struct, field),
+      key = Map.fetch!(struct, owner_key),
+      do: key
+  end
+
+  defp loaded?(struct, field) do
+    case Map.get(struct, field) do
+      %Ecto.Association.NotLoaded{} -> false
+      _ -> true
+    end
+  end
+
+  defp assert_struct!(model, %{__struct__: struct}) do
+    if struct != model do
+      raise ArgumentError, "expected a homogeneous list containing the same struct, " <>
+                           "got: #{inspect model} and #{inspect struct}"
+    else
+      true
+    end
+  end
+
+  defp assoc_dict(:one, key, structs) do
+    Enum.reduce structs, HashDict.new, fn x, acc ->
+      HashDict.put(acc, Map.fetch!(x, key), x)
+    end
+  end
+
+  defp assoc_dict(:many, key, structs) do
+    many_assoc_dict(structs, key, HashDict.new)
+  end
+
+  defp many_assoc_dict([], _key, dict) do
+    dict
+  end
+
+  defp many_assoc_dict([h|t], key, dict) do
+    current  = Map.fetch!(h, key)
+    {t1, t2} = Enum.split_while(t, &(Map.fetch!(&1, key) == current))
+    many_assoc_dict(t2, key, HashDict.put(dict, current, [h|t1]))
   end
 
   ## Load preloaded data
@@ -119,28 +182,6 @@ defmodule Ecto.Repo.Preloader do
         end
       end
     end) |> elem(0) |> Enum.reverse()
-  end
-
-  ## Stores preloaded data
-
-  defp into_dict(:one, key, structs) do
-    Enum.reduce structs, HashDict.new, fn x, acc ->
-      HashDict.put(acc, Map.fetch!(x, key), x)
-    end
-  end
-
-  defp into_dict(:many, key, structs) do
-    many_into_dict(structs, key, HashDict.new)
-  end
-
-  defp many_into_dict([], _key, dict) do
-    dict
-  end
-
-  defp many_into_dict([h|t], key, dict) do
-    current  = Map.fetch!(h, key)
-    {t1, t2} = Enum.split_while(t, &(Map.fetch!(&1, key) == current))
-    many_into_dict(t2, key, HashDict.put(dict, current, [h|t1]))
   end
 
   ## Normalizer

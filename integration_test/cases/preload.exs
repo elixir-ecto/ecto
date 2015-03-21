@@ -131,6 +131,21 @@ defmodule Ecto.Integration.PreloadTest do
     assert u.custom == c
   end
 
+  test "preload skips already loaded" do
+    p1 = TestRepo.insert(%Post{title: "1"})
+    p2 = TestRepo.insert(%Post{title: "2"})
+
+    %Comment{id: _}    = TestRepo.insert(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid2} = TestRepo.insert(%Comment{text: "2", post_id: p2.id})
+
+    assert %Ecto.Association.NotLoaded{} = p1.comments
+    p1 = %{p1 | comments: []}
+
+    assert [p1, p2] = TestRepo.preload([p1, p2], :comments)
+    assert [] = p1.comments
+    assert [%Comment{id: ^cid2}] = p2.comments
+  end
+
   test "preload has_many through" do
     %Post{id: pid1} = p1 = TestRepo.insert(%Post{})
     %Post{id: pid2} = p2 = TestRepo.insert(%Post{})
