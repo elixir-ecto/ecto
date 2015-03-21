@@ -103,8 +103,8 @@ defmodule Ecto.TimeTest do
   end
 
   test "to_iso8601" do
-    assert Ecto.Time.to_iso8601(@time) == "23:50:07Z"
-    assert Ecto.Time.to_iso8601(@time_usec) == "12:40:33.030000Z"
+    assert Ecto.Time.to_iso8601(@time) == "23:50:07"
+    assert Ecto.Time.to_iso8601(@time_usec) == "12:40:33.030000"
   end
 end
 

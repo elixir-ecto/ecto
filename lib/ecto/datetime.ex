@@ -216,7 +216,7 @@ defmodule Ecto.Time do
   Converts `Ecto.Time` to its ISO 8601 UTC representation.
   """
   def to_iso8601(time) do
-    to_string(time) <> "Z"
+    to_string(time)
   end
 
   @doc """
