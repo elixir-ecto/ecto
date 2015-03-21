@@ -206,7 +206,7 @@ defmodule Ecto.Changeset do
                       &process_required(&1, params, types, model, &2))
 
     %Changeset{params: params, model: model, valid?: errors == [],
-               errors: errors, changes: changes, required: required,
+               errors: Enum.reverse(errors), changes: changes, required: required,
                optional: optional}
   end
 

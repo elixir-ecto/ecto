@@ -77,11 +77,11 @@ defmodule Ecto.ChangesetTest do
     params = %{"body" => "world"}
     struct = %Post{}
 
-    changeset = cast(struct, params, ~w(title), ~w(body))
+    changeset = cast(struct, params, ~w(title upvotes), ~w(body))
     assert changeset.params == params
     assert changeset.model  == struct
     assert changeset.changes == %{body: "world"}
-    assert changeset.errors == [title: "can't be blank"]
+    assert changeset.errors == [title: "can't be blank", upvotes: "can't be blank"]
     refute changeset.valid?
   end
 
