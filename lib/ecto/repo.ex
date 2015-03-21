@@ -257,6 +257,8 @@ defmodule Ecto.Repo do
 
       node :: atom | {atom, node} | [node]
 
+  In case the associatin was already loaded, preload won't attempt
+  to reload it.
   """
   defcallback preload([Ecto.Model.t] | Ecto.Model.t, preloads :: term) ::
                       [Ecto.Model.t] | Ecto.Model.t

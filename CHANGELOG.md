@@ -1,17 +1,20 @@
 # Changelog
 
-## v0.10.0-dev
+## v0.10.0 (2015-03-21)
 
 * Enhancements
   * Add `validate_number/3` to `Ecto.Changeset`
   * Add cardinality to `Ecto.Association.NotLoaded`
   * Allow `{"source", Model}` as a source in queries and associations
   * Add support for usec in `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime`
+  * Add `usec: true` support to `Ecto.Schema.timestamps/1`
+  * Create database in `ecto.migrate` if one does not exist
+  * `Repo.preload/2` no longer preloads already loaded associations
 
 * Backwards incompatible changes
   * Using `distict: EXPR` automatically sets the given distinct expressions in `order_by`
   * `__state__` field has been removed in favor of a `__meta__` field which includes the state and the model source
-  * Validations in changesets now return strings instead of atoms
+  * Error messages in `Ecto.Changeset` now return strings instead of atoms
   * `Ecto.Model.primary_key/1` now returns a keyword list of primary key fields, returning an empty list when there is no primary key. Use `Ecto.Model.primary_key!/1` for the raising variant
   * Use simple representations when converting `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` to strings. Use `to_iso8601` for the ISO specific formatting
   * `@timestamps_type Your.Type` was removed in favor of `@timestamps_opts [type: Your.Type]`
