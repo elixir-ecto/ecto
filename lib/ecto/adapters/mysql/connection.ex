@@ -389,7 +389,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     def execute_ddl({:create, %Table{} = table, columns}) do
-      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
+      engine = engine_expr(table.engine)
+
+      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)}) " <> engine
     end
 
     def execute_ddl({:drop, %Table{name: name}}) do
@@ -477,6 +479,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp reference_expr(%Reference{} = ref, foreign_key_name) do
       ", FOREIGN KEY (#{quote_name(foreign_key_name)}) REFERENCES #{quote_name(ref.table)} (#{quote_name(ref.column)})"
     end
+
+    defp engine_expr(nil),
+      do: "ENGINE = INNODB"
+    defp engine_expr(storage_engine),
+      do: String.upcase("ENGINE = #{storage_engine}")
 
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)

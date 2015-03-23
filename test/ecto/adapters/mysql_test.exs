@@ -383,7 +383,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   # DDL
 
-  import Ecto.Migration, only: [table: 1, index: 2, index: 3, references: 1]
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -395,7 +395,16 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :title, :string, []},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `title` varchar(255), `created_at` datetime)|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `title` varchar(255), `created_at` datetime) ENGINE = INNODB|
+  end
+
+  test "create table with engine" do
+    create = {:create, table(:posts, engine: :myisam),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :title, :string, []},
+                {:add, :created_at, :datetime, []}]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `title` varchar(255), `created_at` datetime) ENGINE = MYISAM|
   end
 
   test "create table with reference" do
@@ -403,7 +412,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`))|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)) ENGINE = INNODB|
   end
 
   test "create table with column options" do
@@ -417,7 +426,7 @@ defmodule Ecto.Adapters.MySQLTest do
     CREATE TABLE `posts` (`name` varchar(20) DEFAULT 'Untitled' NOT NULL,
     `price` numeric(8,2) DEFAULT expr,
     `on_hand` integer DEFAULT 0,
-    `is_active` boolean DEFAULT true)
+    `is_active` boolean DEFAULT true) ENGINE = INNODB
     """ |> String.strip |> String.replace("\n", " ")
   end
 
