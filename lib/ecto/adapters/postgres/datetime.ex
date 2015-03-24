@@ -50,11 +50,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ### DECODING ###
 
-    def decode(%TypeInfo{send: "date_send"}, <<n :: 32>>, _, _),
+    def decode(%TypeInfo{send: "date_send"}, <<n :: signed-32>>, _, _),
       do: decode_date(n)
-    def decode(%TypeInfo{send: "time_send"}, <<n :: 64>>, _, _),
+    def decode(%TypeInfo{send: "time_send"}, <<n :: signed-64>>, _, _),
       do: decode_time(n)
-    def decode(%TypeInfo{send: "timestamp_send"}, <<n :: 64>>, _, _),
+    def decode(%TypeInfo{send: "timestamp_send"}, <<n :: signed-64>>, _, _),
       do: decode_timestamp(n)
 
     defp decode_date(days) do
