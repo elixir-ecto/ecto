@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.1-dev
+
+* Bug fixes
+  * No longer create database in `ecto.migrate` if one does not exist
+
 ## v0.10.0 (2015-03-21)
 
 * Enhancements
