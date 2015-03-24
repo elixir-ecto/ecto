@@ -15,9 +15,6 @@ defmodule Mix.Tasks.Ecto.Migrate do
   to a version number, supply `--to version_number`.
   To migrate up a specific number of times, use `--step n`.
 
-  By default, `ecto.create` task will be run first to ensure
-  the database has been created. To skip it, pass `--no-create`.
-
   ## Examples
 
       mix ecto.migrate
@@ -36,16 +33,15 @@ defmodule Mix.Tasks.Ecto.Migrate do
     * `--step` / `-n` - run n number of pending migrations
     * `--to` / `-v` - run all migrations up to and including version
     * `--no-start` - do not start applications
-    * `--no-create` - do not run `ecto.create`
   """
 
   @doc false
-  def run(args, migrator \\ &Ecto.Migrator.run/4, creator \\ &Mix.Tasks.Ecto.Create.run/1) do
+  def run(args, migrator \\ &Ecto.Migrator.run/4) do
     Mix.Task.run "app.start", args
     repo = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, create: :boolean],
+      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean],
       aliases: [n: :step, v: :to]
 
     ensure_repo(repo)
