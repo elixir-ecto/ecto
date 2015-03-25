@@ -1,9 +1,13 @@
 # Changelog
 
-## v0.10.1-dev
+## v0.10.1 (2015-03-25)
+
+* Enhancements
+  * Add an option to set the engine when creating a table (used by MySQL and defaults to InnoDB). This ensures Ecto works out of the box with earlier MySQL versions
 
 * Bug fixes
   * No longer create database in `ecto.migrate` if one does not exist
+  * Fix a bug where dates earlier than 2000 could not be saved in Postgres
 
 ## v0.10.0 (2015-03-21)
 

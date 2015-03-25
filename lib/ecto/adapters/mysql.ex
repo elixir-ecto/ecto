@@ -46,6 +46,15 @@ defmodule Ecto.Adapters.MySQL do
   There are some limitations when using Ecto with MySQL that one
   needs to be aware of.
 
+  ### Engine
+
+  Since Ecto uses transactions, MySQL users running old versions
+  (5.1 and before) must ensure their tables use the InnoDB engine
+  as the default (MyISAM) does not support transactions.
+
+  Tables created by Ecto are guaranteed to use InnoDB, regardless
+  of the MySQL version.
+
   ### UUIDs
 
   MySQL does not support UUID types. Ecto emulates them by using
