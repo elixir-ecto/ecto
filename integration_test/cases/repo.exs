@@ -309,6 +309,10 @@ defmodule Ecto.Integration.RepoTest do
     assert %Comment{id: id2} = TestRepo.insert(%Comment{})
     assert 1 = TestRepo.update_all(p in Comment, text: ^text, posted: ^date)
     assert %Comment{text: "hai", posted: ^date} = TestRepo.get(Comment, id2)
+
+    date = {{1955, 11, 12}, {6, 38, 01, 0}}
+    assert 1 = TestRepo.update_all(p in Comment, text: ^text, posted: ^date)
+    assert %Comment{text: "hai", posted: ^date} = TestRepo.get(Comment, id2)
   end
 
   test "delete all" do
