@@ -32,29 +32,29 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp encode_date({year, month, day}) when year <= @date_max_year do
       date = {year, month, day}
-      <<:calendar.date_to_gregorian_days(date) - @gd_epoch :: 32>>
+      <<:calendar.date_to_gregorian_days(date) - @gd_epoch :: signed-32>>
     end
 
     defp encode_time({hour, min, sec, usec})
         when hour in 0..23 and min in 0..59 and sec in 0..59 and usec in 0..999_999 do
       time = {hour, min, sec}
-      <<:calendar.time_to_seconds(time) * 1_000_000 + usec::64>>
+      <<:calendar.time_to_seconds(time) * 1_000_000 + usec :: signed-64>>
     end
 
     defp encode_timestamp({{year, month, day}, {hour, min, sec, usec}})
         when year <= @timestamp_max_year and hour in 0..23 and min in 0..59 and sec in 0..59 and usec in 0..999_999 do
       datetime = {{year, month, day}, {hour, min, sec}}
       secs = :calendar.datetime_to_gregorian_seconds(datetime) - @gs_epoch
-      <<secs * 1_000_000 + usec :: 64>>
+      <<secs * 1_000_000 + usec :: signed-64>>
     end
 
     ### DECODING ###
 
-    def decode(%TypeInfo{send: "date_send"}, <<n :: 32>>, _, _),
+    def decode(%TypeInfo{send: "date_send"}, <<n :: signed-32>>, _, _),
       do: decode_date(n)
-    def decode(%TypeInfo{send: "time_send"}, <<n :: 64>>, _, _),
+    def decode(%TypeInfo{send: "time_send"}, <<n :: signed-64>>, _, _),
       do: decode_time(n)
-    def decode(%TypeInfo{send: "timestamp_send"}, <<n :: 64>>, _, _),
+    def decode(%TypeInfo{send: "timestamp_send"}, <<n :: signed-64>>, _, _),
       do: decode_timestamp(n)
 
     defp decode_date(days) do
