@@ -385,11 +385,14 @@ defmodule Ecto.Migration do
   @doc """
   Adds `:inserted_at` and `:updated_at` timestamps columns.
 
-  Those columns are of `:datetime` type and cannot be null.
+  Those columns are of `:datetime` type and by default cannot
+  be null. `opts` can be given to customize the generated
+  fields.
   """
-  def timestamps do
-    add(:inserted_at, :datetime, null: false)
-    add(:updated_at, :datetime, null: false)
+  def timestamps(opts \\ []) do
+    opts = Keyword.put_new(opts, :null, false)
+    add(:inserted_at, :datetime, opts)
+    add(:updated_at, :datetime, opts)
   end
 
   @doc """

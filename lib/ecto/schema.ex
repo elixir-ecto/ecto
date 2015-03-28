@@ -1,17 +1,3 @@
-defmodule Ecto.Schema.Metadata do
-  @moduledoc """
-  Stores metadata of a struct.
-
-  The fields are:
-
-    * `state` - the state in a struct's lifetime, e.g. :built, :loaded, :deleted
-    * `source` - the database source of a model, which is the source specified
-      in schema by default or custom source when building a assoc with the custom source.
-
-  """
-  defstruct [:state, :source]
-end
-
 defmodule Ecto.Schema do
   @moduledoc ~S"""
   Defines a schema for a model.
@@ -180,14 +166,26 @@ defmodule Ecto.Schema do
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
     from the database after every write (insert or update);
 
-  * `__schema__(:load, idx, values)` - Loads a new model from a tuple of non-virtual
+  * `__schema__(:load, source, idx, values)` - Loads a new model from a tuple of non-virtual
     field values starting at the given index. Typically used by adapter interfaces;
 
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
   """
 
-  alias Ecto.Schema.Metadata
+  defmodule Metadata do
+    @moduledoc """
+    Stores metadata of a struct.
+
+    The fields are:
+
+      * `state` - the state in a struct's lifetime, e.g. :built, :loaded, :deleted
+      * `source` - the database source of a model, which is the source specified
+        in schema by default or custom source when building a assoc with the custom source.
+
+    """
+    defstruct [:state, :source]
+  end
 
   @doc false
   defmacro __using__(_) do
@@ -583,9 +581,9 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __load__(struct, fields, idx, values) do
+  def __load__(struct, source, fields, idx, values) do
     loaded = do_load(struct, fields, idx, values)
-    loaded = put_in loaded.__meta__.state, :loaded
+    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
     Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
   end
 
@@ -667,8 +665,8 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(fields) do
     quote do
-      def __schema__(:load, idx, values) do
-        Ecto.Schema.__load__(__struct__(), unquote(fields), idx, values)
+      def __schema__(:load, source, idx, values) do
+        Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values)
       end
     end
   end

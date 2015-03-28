@@ -43,6 +43,10 @@ defmodule Ecto.Repo.Preloader do
   defp do_preload(structs, repo, preloads, assocs) do
     preloads = normalize(preloads, assocs, preloads)
     preload_each(structs, repo, preloads)
+  rescue
+    e ->
+      # Reraise errors so we ignore the preload inner stacktrace
+      raise e
   end
 
   ## Preloading

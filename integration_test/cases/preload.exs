@@ -124,8 +124,8 @@ defmodule Ecto.Integration.PreloadTest do
   end
 
   test "preload with uuid" do
-    c = TestRepo.insert(%Custom{foo: "0123456789abcdef"})
-    u = TestRepo.insert(%User{custom_id: c.foo})
+    c = TestRepo.insert(%Custom{uuid: "0123456789abcdef"})
+    u = TestRepo.insert(%User{custom_id: c.uuid})
 
     u = TestRepo.preload(u, :custom)
     assert u.custom == c

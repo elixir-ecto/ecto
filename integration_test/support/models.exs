@@ -22,6 +22,7 @@ end
 
 defmodule Ecto.Integration.PostUsecTimestamps do
   use Ecto.Model
+
   schema "posts" do
     field :title, :string
     timestamps usec: true
@@ -37,6 +38,7 @@ defmodule Ecto.Integration.Comment do
     belongs_to :post, Ecto.Integration.Post
     belongs_to :author, Ecto.Integration.User
     has_one :post_permalink, through: [:post, :permalink]
+    timestamps
   end
 end
 
@@ -60,14 +62,14 @@ defmodule Ecto.Integration.User do
   schema "users" do
     field :name, :string
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id
-    belongs_to :custom, Ecto.Integration.Custom, references: :foo, type: :uuid
+    belongs_to :custom, Ecto.Integration.Custom, references: :uuid, type: :uuid
   end
 end
 
 defmodule Ecto.Integration.Custom do
   use Ecto.Model
 
-  @primary_key {:foo, :uuid, []}
+  @primary_key {:uuid, :uuid, []}
   schema "customs" do
   end
 end

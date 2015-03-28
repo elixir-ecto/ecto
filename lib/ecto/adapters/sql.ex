@@ -404,8 +404,8 @@ defmodule Ecto.Adapters.SQL do
   defp extract_fields(fields, sources) do
     Enum.map fields, fn
       {:&, _, [idx]} ->
-        {_source, model} = elem(sources, idx)
-        {length(model.__schema__(:fields)), model}
+        {_source, model} = pair = elem(sources, idx)
+        {length(model.__schema__(:fields)), pair}
       _ ->
         {1, nil}
     end
@@ -415,11 +415,11 @@ defmodule Ecto.Adapters.SQL do
     Enum.map_reduce(fields, 0, fn
       {1, nil}, idx ->
         {elem(row, idx), idx + 1}
-      {count, model}, idx ->
+      {count, {source, model}}, idx ->
         if all_nil?(row, idx, count) do
           {nil, idx + count}
         else
-          {model.__schema__(:load, idx, row), idx + count}
+          {model.__schema__(:load, source, idx, row), idx + count}
         end
     end) |> elem(0)
   end

@@ -11,7 +11,7 @@ defmodule Ecto.Integration.Migration do
       add :cost, :decimal, precision: 2, scale: 1
       add :visits, :integer
       add :intensity, :float
-      timestamps
+      timestamps null: true
     end
 
     # Add a unique index on uuid. We use this
@@ -27,10 +27,11 @@ defmodule Ecto.Integration.Migration do
       add :posted, :datetime
       add :post_id, references(:posts)
       add :author_id, references(:users)
+      timestamps
     end
 
     create table(:customs, primary_key: false) do
-      add :foo, :uuid, primary_key: true
+      add :uuid, :uuid, primary_key: true
     end
 
     create table(:barebones) do
