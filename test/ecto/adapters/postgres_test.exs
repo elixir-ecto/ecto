@@ -59,6 +59,11 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
   end
 
+  test "from with schema source" do
+    query = "public.posts" |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT p0."x" FROM "public"."posts" AS p0}
+  end
+
   test "select" do
     query = Model |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
@@ -346,7 +351,7 @@ defmodule Ecto.Adapters.PostgresTest do
   test "join without model" do
     query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], 0) |> normalize
     assert SQL.all(query) ==
-           ~s{SELECT 0 FROM "posts" AS p0 INNER JOIN "comments" AS c0 ON p0."x" = c0."z"}
+           ~s{SELECT 0 FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
   end
 
   ## Associations

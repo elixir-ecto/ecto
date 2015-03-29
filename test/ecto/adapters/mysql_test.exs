@@ -324,7 +324,7 @@ defmodule Ecto.Adapters.MySQLTest do
   test "join without model" do
     query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], 0) |> normalize
     assert SQL.all(query) ==
-           ~s{SELECT 0 FROM `posts` AS p0 INNER JOIN `comments` AS c0 ON p0.`x` = c0.`z`}
+           ~s{SELECT 0 FROM `posts` AS p0 INNER JOIN `comments` AS c1 ON p0.`x` = c1.`z`}
   end
 
   ## Associations

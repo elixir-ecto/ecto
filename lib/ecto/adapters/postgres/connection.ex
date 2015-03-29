@@ -109,7 +109,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       join  = using(query.joins, sources)
       where = delete_all_where(query.joins, query.wheres, sources)
 
-      assemble(["DELETE FROM #{quote_name(table)} AS #{name}", join, where])
+      assemble(["DELETE FROM #{quote_table(table)} AS #{name}", join, where])
     end
 
     def insert(table, fields, returning) do
@@ -121,7 +121,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
         end
 
-      "INSERT INTO #{quote_name(table)} " <> values <> returning(returning)
+      "INSERT INTO #{quote_table(table)} " <> values <> returning(returning)
     end
 
     def update(table, fields, filters, returning) do
@@ -133,7 +133,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <>
+      "UPDATE #{quote_table(table)} SET " <> Enum.join(fields, ", ") <>
         " WHERE " <> Enum.join(filters, " AND ") <>
         returning(returning)
     end
@@ -143,7 +143,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "DELETE FROM #{quote_name(table)} WHERE " <>
+      "DELETE FROM #{quote_table(table)} WHERE " <>
         Enum.join(filters, " AND ") <> returning(returning)
     end
 
@@ -180,17 +180,15 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{quote_name(table)} AS #{name}"
+      "FROM #{quote_table(table)} AS #{name}"
     end
 
-    defp using([], _sources), do: nil
+    defp using([], _sources), do: []
     defp using(joins, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, ix: ix} ->
           {table, name, _model} = elem(sources, ix)
-
           where = expr(expr, sources)
-
           "USING #{quote_name(table)} AS #{name} WHERE " <> where
       end)
     end
@@ -202,12 +200,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "UPDATE #{quote_name(table)}"
     end
 
-    defp update_all_join([], _sources), do: nil
+    defp update_all_join([], _sources), do: []
     defp update_all_join(joins, sources) do
       from(sources) <> " "  <> join(joins, sources)
     end
 
-    defp join([], _sources), do: nil
+    defp join([], _sources), do: []
     defp join(joins, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
@@ -216,7 +214,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           on   = expr(expr, sources)
           qual = join_qual(qual)
 
-          "#{qual} JOIN #{quote_name(table)} AS #{name} ON " <> on
+          "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on
       end)
     end
 
@@ -225,9 +223,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp join_qual(:right), do: "RIGHT OUTER"
     defp join_qual(:full),  do: "FULL OUTER"
 
-    defp delete_all_where([], wheres, sources) do
-      where(wheres, sources)
-    end
+    defp delete_all_where([], wheres, sources), do: where(wheres, sources)
     defp delete_all_where(_joins, wheres, sources) do
       boolean("AND", wheres, sources)
     end
@@ -248,7 +244,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         end)
 
       case exprs do
-        "" -> nil
+        "" -> []
         _  -> "GROUP BY " <> exprs
       end
     end
@@ -262,7 +258,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
       case {distinct_exprs, exprs} do
         {_, ""} ->
-          nil
+          []
         {"", _} ->
           "ORDER BY " <> exprs
         {_, _}  ->
@@ -278,20 +274,20 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp limit(nil, _sources), do: nil
+    defp limit(nil, _sources), do: []
     defp limit(%Ecto.Query.QueryExpr{expr: expr}, sources) do
       "LIMIT " <> expr(expr, sources)
     end
 
-    defp offset(nil, _sources), do: nil
+    defp offset(nil, _sources), do: []
     defp offset(%Ecto.Query.QueryExpr{expr: expr}, sources) do
       "OFFSET " <> expr(expr, sources)
     end
 
-    defp lock(nil), do: nil
+    defp lock(nil), do: []
     defp lock(lock_clause), do: lock_clause
 
-    defp boolean(_name, [], _sources), do: nil
+    defp boolean(_name, [], _sources), do: []
     defp boolean(name, query_exprs, sources) do
       name <> " " <>
         Enum.map_join(query_exprs, " AND ", fn
@@ -394,22 +390,18 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp returning(returning),
       do: " RETURNING " <> Enum.map_join(returning, ", ", &quote_name/1)
 
-    defp create_names(query) do
-      sources = query.sources |> Tuple.to_list
-      Enum.reduce(sources, [], fn {table, model}, names ->
-        name = unique_name(names, String.first(table), 0)
-        [{table, name, model}|names]
-      end) |> Enum.reverse |> List.to_tuple
+    defp create_names(%{sources: sources}) do
+      create_names(sources, 0, tuple_size(sources)) |> List.to_tuple()
     end
 
-    # Brute force find unique name
-    defp unique_name(names, name, counter) do
-      counted_name = name <> Integer.to_string(counter)
-      if Enum.any?(names, fn {_, n, _} -> n == counted_name end) do
-        unique_name(names, name, counter + 1)
-      else
-        counted_name
-      end
+    defp create_names(sources, pos, limit) when pos < limit do
+      {table, model} = elem(sources, pos)
+      name = String.first(table) <> Integer.to_string(pos)
+      [{table, name, model}|create_names(sources, pos + 1, limit)]
+    end
+
+    defp create_names(_sources, pos, pos) do
+      []
     end
 
     # DDL
@@ -439,33 +431,36 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def execute_ddl({:create, %Table{}=table, columns}) do
-      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)})"
+      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})"
     end
 
     def execute_ddl({:drop, %Table{name: name}}) do
-      "DROP TABLE #{quote_name(name)}"
+      "DROP TABLE #{quote_table(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
-      "ALTER TABLE #{quote_name(table.name)} #{column_changes(changes)}"
+      "ALTER TABLE #{quote_table(table.name)} #{column_changes(changes)}"
     end
 
     def execute_ddl({:create, %Index{}=index}) do
-      create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
-      if index.concurrently, do: create = create <> " CONCURRENTLY"
+      fields = Enum.map_join(index.columns, ", ", &index_expr/1)
 
-      using = if index.using do "USING #{index.using}" end
-
-      assemble([create, quote_name(index.name), "ON", quote_name(index.table),
-                using, "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})"])
+      assemble(["CREATE",
+                if_do(index.unique, "UNIQUE"),
+                "INDEX",
+                if_do(index.concurrently, "CONCURRENTLY"),
+                quote_name(index.name),
+                "ON",
+                quote_table(index.table),
+                if_do(index.using, "USING #{index.using}"),
+                "(#{fields})"])
     end
 
     def execute_ddl({:drop, %Index{}=index}) do
-      assemble([
-        "DROP INDEX",
-        if(index.concurrently, do: "CONCURRENTLY"),
-        quote_name(index.name),
-      ])
+      assemble(["DROP",
+                "INDEX",
+                if_do(index.concurrently, "CONCURRENTLY"),
+                quote_name(index.name)])
     end
 
     def execute_ddl(default) when is_binary(default), do: default
@@ -501,14 +496,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp pk_expr(true), do: "PRIMARY KEY"
-    defp pk_expr(_), do: nil
+    defp pk_expr(_), do: []
 
     defp null_expr(false), do: "NOT NULL"
     defp null_expr(true), do: "NULL"
-    defp null_expr(_), do: nil
+    defp null_expr(_), do: []
 
     defp default_expr(nil),
-      do: nil
+      do: []
     defp default_expr(literal) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
     defp default_expr(literal) when is_number(literal) or is_boolean(literal),
@@ -546,13 +541,32 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Helpers
 
-    defp quote_name(name), do: "\"#{name}\""
+    defp quote_name(name) when is_atom(name), do: quote_name(Atom.to_string(name))
+    defp quote_name(name) do
+      if String.contains?(name, "\"") do
+        raise ArgumentError, "bad field name #{inspect name}"
+      end
+
+      <<?", name::binary, ?">>
+    end
+
+    defp quote_table(name) when is_atom(name), do: quote_table(Atom.to_string(name))
+    defp quote_table(name) do
+      if String.contains?(name, "\"") do
+        raise ArgumentError, "bad table name #{inspect name}"
+      end
+
+      <<?", String.replace(name, ".", "\".\"")::binary, ?">>
+    end
 
     defp assemble(list) do
       list
       |> List.flatten
-      |> Enum.filter(&(&1 != nil))
       |> Enum.join(" ")
+    end
+
+    defp if_do(condition, value) do
+      if condition, do: value, else: []
     end
 
     defp escape_string(value) when is_binary(value) do
@@ -565,5 +579,4 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp ecto_to_db(:binary),     do: "bytea"
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
-
 end

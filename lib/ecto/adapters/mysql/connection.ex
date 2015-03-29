@@ -87,7 +87,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         "#{name}.#{quote_name(field)} = #{expr(expr, sources)}"
       end)
 
-      update = "UPDATE #{quote_name(table)} AS #{name}"
+      update = "UPDATE #{quote_table(table)} AS #{name}"
       join   = join(query.joins, sources)
       where  = where(query.wheres, sources)
 
@@ -106,12 +106,12 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([delete, from, join, where])
     end
 
-    def insert(table, [], _returning), do: "INSERT INTO #{quote_name(table)} () VALUES ()"
+    def insert(table, [], _returning), do: "INSERT INTO #{quote_table(table)} () VALUES ()"
     def insert(table, fields, _returning) do
       values = ~s{(#{Enum.map_join(fields, ", ", &quote_name/1)}) } <>
                ~s{VALUES (#{Enum.map_join(1..length(fields), ", ", fn (_) -> "?" end)})}
 
-      "INSERT INTO #{quote_name(table)} " <> values
+      "INSERT INTO #{quote_table(table)} " <> values
     end
 
     def update(table, fields, filters, _returning) do
@@ -123,7 +123,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         "#{quote_name(field)} = ?"
       end
 
-      "UPDATE #{quote_name(table)} SET " <> Enum.join(fields, ", ") <>
+      "UPDATE #{quote_table(table)} SET " <> Enum.join(fields, ", ") <>
         " WHERE " <> Enum.join(filters, " AND ")
     end
 
@@ -132,7 +132,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         "#{quote_name(field)} = ?"
       end
 
-      "DELETE FROM #{quote_name(table)} WHERE " <>
+      "DELETE FROM #{quote_table(table)} WHERE " <>
         Enum.join(filters, " AND ")
     end
 
@@ -169,7 +169,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "FROM #{quote_name(table)} AS #{name}"
     end
 
-    defp join([], _sources), do: nil
+    defp join([], _sources), do: []
     defp join(joins, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
@@ -203,7 +203,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         end)
 
       case exprs do
-        "" -> nil
+        "" -> []
         _  -> "GROUP BY " <> exprs
       end
     end
@@ -216,7 +216,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         end)
 
       case exprs do
-        "" -> nil
+        "" -> []
         _  -> "ORDER BY " <> exprs
       end
     end
@@ -229,20 +229,20 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
-    defp limit(nil, _sources), do: nil
+    defp limit(nil, _sources), do: []
     defp limit(%Ecto.Query.QueryExpr{expr: expr}, sources) do
       "LIMIT " <> expr(expr, sources)
     end
 
-    defp offset(nil, _sources), do: nil
+    defp offset(nil, _sources), do: []
     defp offset(%Ecto.Query.QueryExpr{expr: expr}, sources) do
       "OFFSET " <> expr(expr, sources)
     end
 
-    defp lock(nil), do: nil
+    defp lock(nil), do: []
     defp lock(lock_clause), do: lock_clause
 
-    defp boolean(_name, [], _sources), do: nil
+    defp boolean(_name, [], _sources), do: []
     defp boolean(name, query_exprs, sources) do
       name <> " " <>
         Enum.map_join(query_exprs, " AND ", fn
@@ -346,22 +346,18 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       expr(expr, sources)
     end
 
-    defp create_names(query) do
-      sources = query.sources |> Tuple.to_list
-      Enum.reduce(sources, [], fn {table, model}, names ->
-        name = unique_name(names, String.first(table), 0)
-        [{table, name, model}|names]
-      end) |> Enum.reverse |> List.to_tuple
+    defp create_names(%{sources: sources}) do
+      create_names(sources, 0, tuple_size(sources)) |> List.to_tuple()
     end
 
-    # Brute force find unique name
-    defp unique_name(names, name, counter) do
-      counted_name = name <> Integer.to_string(counter)
-      if Enum.any?(names, fn {_, n, _} -> n == counted_name end) do
-        unique_name(names, name, counter + 1)
-      else
-        counted_name
-      end
+    defp create_names(sources, pos, limit) when pos < limit do
+      {table, model} = elem(sources, pos)
+      name = String.first(table) <> Integer.to_string(pos)
+      [{table, name, model}|create_names(sources, pos + 1, limit)]
+    end
+
+    defp create_names(_sources, pos, pos) do
+      []
     end
 
     ## DDL
@@ -391,25 +387,24 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def execute_ddl({:create, %Table{} = table, columns}) do
       engine = engine_expr(table.engine)
 
-      "CREATE TABLE #{quote_name(table.name)} (#{column_definitions(columns)}) " <> engine
+      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)}) " <> engine
     end
 
     def execute_ddl({:drop, %Table{name: name}}) do
-      "DROP TABLE #{quote_name(name)}"
+      "DROP TABLE #{quote_table(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
-      "ALTER TABLE #{quote_name(table.name)} #{column_changes(changes)}"
+      "ALTER TABLE #{quote_table(table.name)} #{column_changes(changes)}"
     end
 
     def execute_ddl({:create, %Index{}=index}) do
       if index.concurrently, do: raise(ArgumentError, "CONCURRENTLY is not supported by MySQL")
 
       create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
+      using  = if index.using, do: "USING #{index.using}", else: []
 
-      using = if index.using do "USING #{index.using}" end
-
-      assemble([create, quote_name(index.name), "ON", quote_name(index.table),
+      assemble([create, quote_name(index.name), "ON", quote_table(index.table),
                 "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})", using])
     end
 
@@ -419,7 +414,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([
         "DROP INDEX",
         quote_name(index.name),
-        "ON #{quote_name(index.table)}"
+        "ON #{quote_table(index.table)}"
       ])
     end
 
@@ -430,7 +425,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp column_definition({:add, name, %Reference{} = ref, opts}) do
-      assemble([quote_name(name), "#{reference_column_type(ref.type, opts)}", column_options(name, opts), reference_expr(ref, name)])
+      assemble([quote_name(name), reference_column_type(ref.type, opts),
+                column_options(name, opts), reference_expr(ref, name)])
     end
 
     defp column_definition({:add, name, type, opts}) do
@@ -460,13 +456,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp pk_expr(true, name), do: ", PRIMARY KEY(#{quote_name(name)})"
-    defp pk_expr(_, _), do: nil
+    defp pk_expr(_, _), do: []
 
     defp null_expr(false), do: "NOT NULL"
-    defp null_expr(_), do: nil
+    defp null_expr(_), do: []
 
     defp default_expr(nil),
-      do: nil
+      do: []
     defp default_expr(literal) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
     defp default_expr(literal) when is_number(literal) or is_boolean(literal),
@@ -477,7 +473,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp index_expr(literal), do: quote_name(literal)
 
     defp reference_expr(%Reference{} = ref, foreign_key_name) do
-      ", FOREIGN KEY (#{quote_name(foreign_key_name)}) REFERENCES #{quote_name(ref.table)} (#{quote_name(ref.column)})"
+      ", FOREIGN KEY (#{quote_name(foreign_key_name)}) REFERENCES #{quote_table(ref.table)} (#{quote_name(ref.column)})"
     end
 
     defp engine_expr(nil),
@@ -504,12 +500,27 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Helpers
 
-    defp quote_name(name), do: "`#{name}`"
+    defp quote_name(name) when is_atom(name), do: quote_name(Atom.to_string(name))
+    defp quote_name(name) do
+      if String.contains?(name, "`") do
+        raise ArgumentError, "bad field name #{inspect name}"
+      end
+
+      <<?`, name::binary, ?`>>
+    end
+
+    defp quote_table(name) when is_atom(name), do: quote_table(Atom.to_string(name))
+    defp quote_table(name) do
+      if String.contains?(name, "`") do
+        raise ArgumentError, "bad table name #{inspect name}"
+      end
+
+      <<?`, name::binary, ?`>>
+    end
 
     defp assemble(list) do
       list
       |> List.flatten
-      |> Enum.filter(&(&1 != nil))
       |> Enum.join(" ")
     end
 
