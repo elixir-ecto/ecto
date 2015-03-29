@@ -10,11 +10,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def connect(opts) do
       extensions = [{Ecto.Adapters.Postgres.DateTime, []}]
+      port = (opts[:port] || @default_port) |> normalize_port
 
       opts =
         opts
         |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
-        |> Keyword.put_new(:port, @default_port)
+        |> Keyword.put(:port, port)
 
       Postgrex.Connection.start_link(opts)
     end
@@ -39,6 +40,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         {:error, %Postgrex.Error{}} = err  -> err
       end
     end
+
+    @doc """
+    Ensures a port is represented as an integer.  This
+    allows for configuration to grab data from the ENV without
+    having to convert it to an integer directly.
+    """
+    def normalize_port(port) when is_binary(port), do: to_int(port, Integer.parse(port))
+    def normalize_port(port), do: port
 
     ## Transaction
 
@@ -564,6 +573,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp ecto_to_db(:datetime),   do: "timestamp"
     defp ecto_to_db(:binary),     do: "bytea"
     defp ecto_to_db(other),       do: Atom.to_string(other)
+
+    defp to_int(original, :error), do: original
+    defp to_int(_, {num, ""}),     do: num
+
   end
 
 end
