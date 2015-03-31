@@ -517,7 +517,9 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.normalize_port("9876") == 9876
   end
 
-  test "normalize_port leaves it as-if if it is not an integer" do
-    assert SQL.normalize_port("abc") == "abc"
+  test "normalize_port should throw an exception if the string isn't an integer" do
+    assert_raise ArgumentError, "argument error", fn ->
+      SQL.normalize_port("abc")
+    end
   end
 end
