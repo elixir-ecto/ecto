@@ -16,7 +16,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       do: :ok
 
     def matching(_),
-      do: [send: "date_send", send: "time_send", send: "timestamp_send"]
+      do: [send: "date_send", send: "time_send",
+           send: "timestamp_send", send: "timestamptz_send"]
 
     def format(_),
       do: :binary
@@ -28,6 +29,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def encode(%TypeInfo{send: "time_send"}, time, _, _),
       do: encode_time(time)
     def encode(%TypeInfo{send: "timestamp_send"}, timestamp, _, _),
+      do: encode_timestamp(timestamp)
+    def encode(%TypeInfo{send: "timestamptz_send"}, timestamp, _, _),
       do: encode_timestamp(timestamp)
 
     defp encode_date({year, month, day}) when year <= @date_max_year do
@@ -55,6 +58,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def decode(%TypeInfo{send: "time_send"}, <<n :: signed-64>>, _, _),
       do: decode_time(n)
     def decode(%TypeInfo{send: "timestamp_send"}, <<n :: signed-64>>, _, _),
+      do: decode_timestamp(n)
+    def decode(%TypeInfo{send: "timestamptz_send"}, <<n :: signed-64>>, _, _),
       do: decode_timestamp(n)
 
     defp decode_date(days) do
