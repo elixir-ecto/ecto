@@ -574,7 +574,8 @@ defmodule Ecto.Schema do
 
   @doc false
   def __association__(mod, cardinality, name, association, opts) do
-    not_loaded  = %Ecto.Association.NotLoaded{owner: mod, field: name, cardinality: cardinality}
+    not_loaded  = %Ecto.Association.NotLoaded{__owner__: mod,
+                    __field__: name, __cardinality__: cardinality}
     put_struct_field(mod, name, not_loaded)
     opts = [cardinality: cardinality] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})

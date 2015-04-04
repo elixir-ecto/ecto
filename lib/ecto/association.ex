@@ -6,16 +6,16 @@ defmodule Ecto.Association.NotLoaded do
 
   The fields are:
 
-    * `field` - the association field in `owner`
-    * `owner` - the model that owns the association
-    * `cardinality` - the cardinality of the association
+    * `__field__` - the association field in `owner`
+    * `__owner__` - the model that owns the association
+    * `__cardinality__` - the cardinality of the association
 
   """
-  defstruct [:field, :owner, :cardinality]
+  defstruct [:__field__, :__owner__, :__cardinality__]
 
   defimpl Inspect do
     def inspect(not_loaded, _opts) do
-      msg = "association #{inspect not_loaded.field} is not loaded"
+      msg = "association #{inspect not_loaded.__field__} is not loaded"
       ~s(#Ecto.Association.NotLoaded<#{msg}>)
     end
   end

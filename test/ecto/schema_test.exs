@@ -180,7 +180,7 @@ defmodule Ecto.SchemaTest do
                                   assoc: Email, owner_key: :id, assoc_key: :assoc_model_id, queryable: {"users_emails", Email}}
 
     posts = (%AssocModel{}).posts
-    assert %Ecto.Association.NotLoaded{cardinality: :many} = posts
+    assert %Ecto.Association.NotLoaded{__cardinality__: :many} = posts
     assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
   end
 
@@ -210,7 +210,7 @@ defmodule Ecto.SchemaTest do
                                   assoc: Profile, owner_key: :id, assoc_key: :assoc_model_id, queryable: {"users_profiles", Profile}}
 
     author = (%AssocModel{}).author
-    assert %Ecto.Association.NotLoaded{cardinality: :one} = author
+    assert %Ecto.Association.NotLoaded{__cardinality__: :one} = author
     assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
   end
 
