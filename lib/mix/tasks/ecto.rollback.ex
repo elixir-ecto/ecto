@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
       aliases: [n: :step, v: :to]
 
     ensure_repo(repo)
-    if Keyword.get(opts, :start, true), do: ensure_started(repo)
+    ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
       opts = Keyword.put(opts, :step, 1)
