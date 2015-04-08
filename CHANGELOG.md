@@ -207,6 +207,7 @@
   * Improve and relax type inference. Ecto no longer requires `array(array, type)`, `binary(...)` and so on for interpolated values. In fact, the functions above have been removed
 
 * Backwards incompatible changes
+  * `order_by` no longer accepts a negative value.  use `asc` or `desc` instead.  Eg.: `order_by: [asc: t.position]` 
   * `:virtual` type no longer exists, instead pass `virtual: true` as field option
   * Adapter API for `insert`, `update` and `delete` has been simplified
 
