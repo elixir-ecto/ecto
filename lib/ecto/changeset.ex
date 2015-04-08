@@ -719,7 +719,7 @@ defmodule Ecto.Changeset do
   database being used.
 
   Since the `:downcase` option downcases the database values on the
-  fly, it should be uses with care as it may affect performance. For example,
+  fly, it should be used with care as it may affect performance. For example,
   if this option is used, it could be appropriate to create an index with the
   downcased value. Using `Ecto.Migration` syntax, one could write:
 
