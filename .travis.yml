@@ -8,6 +8,10 @@ otp_release:
   - 17.0
   - 17.1
   - 17.4
+matrix:
+  include:
+    - elixir: 1.0.4
+      otp_release: 17.5
 services: mysql
 sudo: false # to use faster container based build environment
 env:
