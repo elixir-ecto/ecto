@@ -114,6 +114,7 @@ defmodule Ecto.DateTimeTest do
   @datetime %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07, usec: 0}
   @datetime_zero %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 0, usec: 0}
   @datetime_usec %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07, usec: 8000}
+  @datetime_notime %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 0, min: 0, sec: 0, usec: 0}
 
   test "cast itself" do
     assert Ecto.DateTime.cast(@datetime) == {:ok, @datetime}
@@ -161,6 +162,10 @@ defmodule Ecto.DateTimeTest do
 
     assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: nil}) ==
            :error
+  end
+
+  test "from_date" do
+    assert Ecto.DateTime.from_date(%Ecto.Date{year: 2015, month: 1, day: 23}) == @datetime_notime
   end
 
   test "to_string" do

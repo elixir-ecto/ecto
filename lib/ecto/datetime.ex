@@ -322,6 +322,16 @@ defmodule Ecto.DateTime do
   end
 
   @doc """
+  Converts the given `Ecto.Date` into `Ecto.DateTime`.
+
+  The time component is zero.
+  """
+  def from_date(%Ecto.Date{year: year, month: month, day: day}) do
+    %Ecto.DateTime{year: year, month: month, day: day,
+      hour: 0, min: 0, sec: 0, usec: 0}
+  end
+
+  @doc """
   Converts the given `Ecto.Date` and `Ecto.Time` into `Ecto.DateTime`.
   """
   def from_date_and_time(%Ecto.Date{year: year, month: month, day: day},
