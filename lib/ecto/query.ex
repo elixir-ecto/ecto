@@ -432,15 +432,8 @@ defmodule Ecto.Query do
       |> order_by([p], [p.category, p.author])
 
   """
-  defmacro distinct(query, binding, expr) do
+  defmacro distinct(query, binding \\ [], expr) do
     Distinct.build(query, binding, expr, __CALLER__)
-  end
-
-  @doc """
-  Adds a distinct clause. See distinct/3
-  """
-  defmacro distinct(query, expr) do
-    Distinct.build(query, [], expr, __CALLER__)
   end
 
   @doc """
