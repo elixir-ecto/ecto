@@ -72,6 +72,12 @@ defmodule Ecto.Adapters.MySQLTest do
     query = Model |> distinct([r], false) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0.`x`, m0.`y` FROM `model` AS m0}
 
+    query = Model |> distinct(true) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT m0.`x`, m0.`y` FROM `model` AS m0}
+
+    query = Model |> distinct(false) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0.`x`, m0.`y` FROM `model` AS m0}
+
     assert_raise ArgumentError, "DISTINCT with multiple columns is not supported by MySQL", fn ->
       query = Model |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
       SQL.all(query)

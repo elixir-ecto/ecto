@@ -87,6 +87,12 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Model |> distinct([r], false) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
+
+    query = Model |> distinct(true) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT m0."x", m0."y" FROM "model" AS m0}
+
+    query = Model |> distinct(false) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
   end
 
   test "where" do
