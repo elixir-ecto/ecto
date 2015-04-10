@@ -68,8 +68,8 @@ defmodule Ecto.MockAdapter do
   end
 end
 
-Application.put_env(:ecto, Ecto.MockRepo, adapter: Ecto.MockAdapter)
+Application.put_env(:ecto, Ecto.MockRepo, [])
 
 defmodule Ecto.MockRepo do
-  use Ecto.Repo, otp_app: :ecto
+  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.MockAdapter
 end

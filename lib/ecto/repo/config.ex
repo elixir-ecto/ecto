@@ -6,15 +6,7 @@ defmodule Ecto.Repo.Config do
   """
   def parse(module, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
-
-    adapter = if opts[:adapter] do
-      IO.write :stderr, "warning: the :adapter option when using Ecto.Repo is deprecated, " <>
-                        "please configure the adapter in the config file with the remaining " <>
-                        "repository configuration\n#{Exception.format_stacktrace}"
-      opts[:adapter]
-    else
-      Application.get_env(otp_app, module, [])[:adapter]
-    end
+    adapter = opts[:adapter] || Application.get_env(otp_app, module, [])[:adapter]
 
     unless adapter do
       raise ArgumentError, "missing :adapter configuration in " <>
