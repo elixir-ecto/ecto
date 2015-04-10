@@ -437,6 +437,13 @@ defmodule Ecto.Query do
   end
 
   @doc """
+  Adds a distinct clause. See distinct/3
+  """
+  defmacro distinct(query, expr) do
+    Distinct.build(query, [], expr, __CALLER__)
+  end
+
+  @doc """
   A where query expression.
 
   `where` expressions are used to filter the result set. If there is more
