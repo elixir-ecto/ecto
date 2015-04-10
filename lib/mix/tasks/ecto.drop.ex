@@ -27,13 +27,19 @@ defmodule Mix.Tasks.Ecto.Drop do
     ensure_repo(repo)
     ensure_implements(repo.adapter, Ecto.Adapter.Storage, "to create storage for #{inspect repo}")
 
+    {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean]
+
     case Ecto.Storage.down(repo) do
       :ok ->
-        Mix.shell.info "The database for repo #{inspect repo} has been dropped."
+        unless opts[:quiet] do
+          Mix.shell.info "The database for #{inspect repo} has been dropped."
+        end
       {:error, :already_down} ->
-        Mix.shell.info "The database for repo #{inspect repo} has already been dropped."
+        unless opts[:quiet] do
+          Mix.shell.info "The database for #{inspect repo} has already been dropped."
+        end
       {:error, term} ->
-        Mix.raise "The database for repo #{inspect repo} couldn't be dropped, reason given: #{term}."
+        Mix.raise "The database for #{inspect repo} couldn't be dropped, reason given: #{term}."
     end
   end
 end
