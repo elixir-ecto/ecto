@@ -222,7 +222,7 @@ defmodule Ecto.Changeset do
           value = Map.get(model, key)
           {changes, error_on_nil(key, value, errors)}
         :invalid ->
-          {changes, [{key, :invalid}|errors]}
+          {changes, [{key, "is invalid"}|errors]}
       end}
   end
 
@@ -237,7 +237,7 @@ defmodule Ecto.Changeset do
         :missing ->
           {changes, errors}
         :invalid ->
-          {changes, [{key, :invalid}|errors]}
+          {changes, [{key, "is invalid"}|errors]}
       end}
   end
 

@@ -103,7 +103,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(body), ~w())
     assert changeset.changes == %{}
-    assert changeset.errors == [body: :invalid]
+    assert changeset.errors == [body: "is invalid"]
     refute changeset.valid?
   end
 
@@ -113,7 +113,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(), ~w(body))
     assert changeset.changes == %{}
-    assert changeset.errors == [body: :invalid]
+    assert changeset.errors == [body: "is invalid"]
     refute changeset.valid?
   end
 
