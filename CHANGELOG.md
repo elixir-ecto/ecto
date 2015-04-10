@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.10.2 (2015-04-10)
+
+* Enhancements
+  * Add `Ecto.DateTime.from_date/1`
+  * Allow adapter to be configured at the `:repo` level
+  * Add `--quiet` to `ecto.migrate`, `ecto.create` and `ecto.drop` tasks
+  * Support `timestampz` type for PostgreSQL
+
+* Bug fixes
+  * Ensure `:invalid` error shows up as "is invalid" message
+  * Improve support for "schema.table" queries in MySQL and PostgreSQL
+
 ## v0.10.1 (2015-03-25)
 
 * Enhancements

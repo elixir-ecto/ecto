@@ -1,7 +1,7 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "0.10.1"
+  @version "0.10.2"
   @adapters [:pg, :mysql]
 
   def project do
