@@ -156,7 +156,7 @@ defmodule Ecto do
           |> cast(params, ~w(name email), ~w(age))
           |> validate_format(:email, ~r/@/)
           |> validate_inclusion(:age, 0..130)
-          |> validate_unique(:email, Repo)
+          |> validate_unique(:email, on: Repo)
         end
       end
 
