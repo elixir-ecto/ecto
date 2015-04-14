@@ -140,6 +140,20 @@ defmodule Ecto.Date do
     erl_load(:erlang.universaltime)
   end
 
+  @doc """
+  Returns an Erlang date tuple from an `Ecto.Date`.
+  """
+  def to_erl(%Ecto.Date{year: year, month: month, day: day}) do
+    {year, month, day}
+  end
+
+  @doc """
+  Returns an `Ecto.Date` from an Erlang date tuple.
+  """
+  def from_erl({year, month, day}) do
+    %Ecto.Date{year: year, month: month, day: day}
+  end
+
   defp erl_load({{year, month, day}, _time}) do
     %Ecto.Date{year: year, month: month, day: day}
   end
@@ -231,6 +245,20 @@ defmodule Ecto.Time do
   """
   def utc do
     erl_load(:erlang.universaltime)
+  end
+
+  @doc """
+  Returns an Erlang time tuple from an `Ecto.Time`.
+  """
+  def to_erl(%Ecto.Time{hour: hour, min: min, sec: sec}) do
+    {hour, min, sec}
+  end
+
+  @doc """
+  Returns an `Ecto.Time` from an Erlang time tuple.
+  """
+  def from_erl({hour, min, sec}) do
+    %Ecto.Time{hour: hour, min: min, sec: sec}
   end
 
   defp erl_load({_, {hour, min, sec}}) do
@@ -380,6 +408,20 @@ defmodule Ecto.DateTime do
   """
   def utc do
     erl_load(:erlang.universaltime)
+  end
+
+  @doc """
+  Returns an Erlang datetime tuple from an `Ecto.DateTime`.
+  """
+  def to_erl(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}) do
+    {{year, month, day}, {hour, min, sec}}
+  end
+
+  @doc """
+  Returns an `Ecto.DateTime` from an Erlang datetime tuple.
+  """
+  def from_erl({{year, month, day}, {hour, min, sec}}) do
+    %Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}
   end
 
   defp erl_load({{year, month, day}, {hour, min, sec}}) do

@@ -36,6 +36,10 @@ defmodule Ecto.DateTest do
   test "to_iso8601" do
     assert Ecto.Date.to_iso8601(@date) == "2015-12-31"
   end
+
+  test "to_erl and from_erl" do
+    assert @date |> Ecto.Date.to_erl |> Ecto.Date.from_erl == @date
+  end
 end
 
 defmodule Ecto.TimeTest do
@@ -105,6 +109,10 @@ defmodule Ecto.TimeTest do
   test "to_iso8601" do
     assert Ecto.Time.to_iso8601(@time) == "23:50:07"
     assert Ecto.Time.to_iso8601(@time_usec) == "12:40:33.030000"
+  end
+
+  test "to_erl and from_erl" do
+    assert @time |> Ecto.Time.to_erl |> Ecto.Time.from_erl == @time
   end
 end
 
@@ -179,5 +187,9 @@ defmodule Ecto.DateTimeTest do
   test "to_iso8601" do
     assert Ecto.DateTime.to_iso8601(@datetime) == "2015-01-23T23:50:07Z"
     assert Ecto.DateTime.to_iso8601(@datetime_usec) == "2015-01-23T23:50:07.008000Z"
+  end
+
+  test "to_erl and from_erl" do
+    assert @datetime |> Ecto.DateTime.to_erl |> Ecto.DateTime.from_erl == @datetime
   end
 end
