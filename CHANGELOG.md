@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.11.0-dev
+
+* Enhancements
+  * Add `to_erl`/`from_erl` to datetime modules
+  * Allow `distinct(query, true)` query expression
+
+* Backwards incompatible changes
+  * `Ecto.Model` now only imports `from/2` from `Ecto.Query` out of the box
+
 ## v0.10.2 (2015-04-10)
 
 * Enhancements

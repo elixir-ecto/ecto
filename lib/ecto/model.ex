@@ -11,7 +11,7 @@ defmodule Ecto.Model do
     * `use Ecto.Schema` - provides the API necessary to define schemas
     * `import Ecto.Changeset` - functions for building and manipulating changesets
     * `import Ecto.Model` - functions for working with models and their associations
-    * `import Ecto.Query` - functions for generating and manipulating queries
+    * `import Ecto.Query, only: [from: 2]` - for generating and manipulating queries
 
   Plus all the modules existing in `Ecto.Model.*` are brought in
   too:
@@ -39,7 +39,7 @@ defmodule Ecto.Model do
     quote do
       use Ecto.Schema
       import Ecto.Changeset
-      import Ecto.Query
+      import Ecto.Query, only: [from: 2]
 
       import Ecto.Model
       use Ecto.Model.OptimisticLock
