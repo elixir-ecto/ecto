@@ -100,7 +100,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [[1, 2, 3]] = TestRepo.all(from p in Tag, where: p.ints == [1, 2, 3], select: p.ints)
 
     assert [] = TestRepo.all(from p in Tag, where: p.uuids == ^[], select: p.uuids)
-    assert [["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"]] =
+    assert [["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"]] =
            TestRepo.all(from p in Tag, where: p.uuids == ^["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"],
                                        select: p.uuids)
   end
