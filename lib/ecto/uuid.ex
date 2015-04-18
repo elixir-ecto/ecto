@@ -53,11 +53,17 @@ defmodule Ecto.UUID do
     hex_pad(u2, 4) <> "-" <>
     hex_pad(u3, 4) <> "-" <>
     hex_pad(u4, 12)
-    |> String.downcase
   end
 
   defp hex_pad(hex, count) do
     hex = Integer.to_string(hex, 16)
-    :binary.copy("0", count - byte_size(hex)) <> hex
+    lower(hex, :binary.copy("0", count - byte_size(hex)))
   end
+
+  defp lower(<<h, t::binary>>, acc) when h in ?A..?F,
+    do: lower(t, acc <> <<h + 32>>)
+  defp lower(<<h, t::binary>>, acc),
+    do: lower(t, acc <> <<h>>)
+  defp lower(<<>>, acc),
+    do: acc
 end
