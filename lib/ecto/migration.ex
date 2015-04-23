@@ -4,7 +4,7 @@ defmodule Ecto.Migration do
 
   This module provides many helpers for migrating the database,
   allowing developers to use Elixir to alter their storage in
-  a way it is database independent.
+  a way that is database independent.
 
   Here is an example:
 
