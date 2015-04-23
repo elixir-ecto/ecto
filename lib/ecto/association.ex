@@ -127,9 +127,9 @@ defmodule Ecto.Association do
   ## Examples
 
       post = Repo.get(Post, 1)
-      Ecto.Associations.loaded?(post.comments) # false
+      Ecto.Association.loaded?(post.comments) # false
       post = post |> Repo.preload(:comments)
-      Ecto.Associations.loaded?(post.comments) # true
+      Ecto.Association.loaded?(post.comments) # true
 
   """
   def loaded?(association) do
