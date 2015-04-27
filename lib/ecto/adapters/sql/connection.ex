@@ -1,4 +1,8 @@
 defmodule Ecto.Adapters.SQL.Connection do
+  @moduledoc """
+  Specifies the behaviour to be implemented by SQL pooled connections.
+  """
+
   use Behaviour
 
   @doc """
