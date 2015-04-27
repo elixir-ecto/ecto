@@ -7,19 +7,19 @@ Ecto is a domain specific language for writing queries and interacting with data
 
 ```elixir
 # In your config/config.exs file
-config :my_app, Repo,
+config :my_app, Sample.Repo,
   adapter: Ecto.Adapters.Postgres,
   database: "ecto_simple",
   username: "postgres",
   password: "postgres"
 
 # In your application code
-defmodule Repo do
+defmodule Sample.Repo do
   use Ecto.Repo,
     otp_app: :my_app
 end
 
-defmodule Weather do
+defmodule Sample.Weather do
   use Ecto.Model
 
   schema "weather" do
@@ -30,8 +30,10 @@ defmodule Weather do
   end
 end
 
-defmodule SimpleQuery do
+defmodule Sample.App do
   import Ecto.Query
+  alias Sample.Weather
+  alias Sample.Repo
 
   def sample_query do
     query = from w in Weather,
