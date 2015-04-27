@@ -30,7 +30,7 @@ defmodule Weather do
   end
 end
 
-defmodule Simple do
+defmodule SimpleQuery do
   import Ecto.Query
 
   def sample_query do
