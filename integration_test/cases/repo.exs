@@ -204,6 +204,27 @@ defmodule Ecto.Integration.RepoTest do
            TestRepo.get(from(c in {"posts", Custom}), "01abcdef01abcdef")
   end
 
+  test "get_by(!)" do
+    post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
+    post2 = TestRepo.insert(%Post{title: "2", text: "hello"})
+
+    assert post1 == TestRepo.get_by(Post, id: post1.id)
+    assert post1 == TestRepo.get_by(Post, text: post1.text)
+    assert post1 == TestRepo.get_by(Post, id: post1.id, text: post1.text)
+    assert post2 == TestRepo.get_by(Post, id: to_string(post2.id)) # With casting
+    assert nil   == TestRepo.get_by(Post, text: "hey")
+    assert nil   == TestRepo.get_by(Post, id: post2.id, text: "hey")
+
+    assert post1 == TestRepo.get_by!(Post, id: post1.id)
+    assert post1 == TestRepo.get_by!(Post, text: post1.text)
+    assert post1 == TestRepo.get_by!(Post, id: post1.id, text: post1.text)
+    assert post2 == TestRepo.get_by!(Post, id: to_string(post2.id)) # With casting
+
+    assert_raise Ecto.NoResultsError, fn ->
+      TestRepo.get_by!(Post, id: post2.id, text: "hey")
+    end
+  end
+
   test "one(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})

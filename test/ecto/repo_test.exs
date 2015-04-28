@@ -48,6 +48,7 @@ defmodule Ecto.RepoTest do
     MockRepo.update(model)
     MockRepo.delete(model)
     MockRepo.get(MyModel, 123)
+    MockRepo.get_by(MyModel, x: "abc")
   end
 
   test "works with custom source model" do
