@@ -3,7 +3,9 @@ defmodule Ecto.Migration.SchemaMigration do
   @moduledoc false
   use Ecto.Model
 
-  @primary_key {:version, :integer, []}
+  alias Ecto.Migration.Config
+
+  @primary_key Config.primary_key()
   schema "schema_migrations" do
     timestamps updated_at: false
   end
@@ -17,9 +19,12 @@ defmodule Ecto.Migration.SchemaMigration do
     # DDL queries do not log, so we do not need
     # to pass log: false here.
     unless adapter.ddl_exists?(repo, @table, @opts) do
+      column_name = Config.primary_key_column(:name)
+      column_type = Config.primary_key_column(:type)
+
       adapter.execute_ddl(repo,
         {:create, @table, [
-          {:add, :version, :bigint, primary_key: true},
+          {:add, column_name, column_type, primary_key: true},
           {:add, :inserted_at, :datetime, []}]}, @opts)
     end
 
