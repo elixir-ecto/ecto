@@ -23,7 +23,13 @@ defmodule Ecto.Migrator do
   require Logger
 
   alias Ecto.Migration.Runner
-  alias Ecto.Migration.SchemaMigration
+
+  @doc """
+  Returns the module used as the schema migrations model for a given repository.
+  """
+  def schema_migrations_model(repo) do
+    repo.config[:schema_migrations_model] || Ecto.Migration.SchemaMigration
+  end
 
   @doc """
   Gets all migrated versions.
@@ -33,8 +39,9 @@ defmodule Ecto.Migrator do
   """
   @spec migrated_versions(Ecto.Repo.t) :: [integer]
   def migrated_versions(repo) do
-    SchemaMigration.ensure_schema_migrations_table!(repo)
-    SchemaMigration.migrated_versions(repo)
+    model = schema_migrations_model(repo)
+    model.ensure_schema_migrations_table!(repo)
+    model.migrated_versions(repo)
   end
 
   @doc """
@@ -62,7 +69,7 @@ defmodule Ecto.Migrator do
       attempt(repo, module, :forward, :up, :up, opts)
         || attempt(repo, module, :forward, :change, :up, opts)
         || raise Ecto.MigrationError, message: "#{inspect module} does not implement a `up/0` or `change/0` function"
-      SchemaMigration.up(repo, version)
+      schema_migrations_model(repo).up(repo, version)
     end
   end
 
@@ -92,7 +99,7 @@ defmodule Ecto.Migrator do
       attempt(repo, module, :forward, :down, :down, opts)
         || attempt(repo, module, :backward, :change, :down, opts)
         || raise Ecto.MigrationError, message: "#{inspect module} does not implement a `down/0` or `change/0` function"
-      SchemaMigration.down(repo, version)
+      schema_migrations_model(repo).down(repo, version)
     end
   end
 
