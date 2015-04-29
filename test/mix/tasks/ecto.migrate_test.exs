@@ -19,8 +19,9 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   end
 
   test "runs the migrator with the repo started" do
-    run ["-r", to_string(Repo), "--no-start"], fn _, _, _, _ ->
+    run ["-r", to_string(Repo), "--no-start"], fn _, _, _, opts ->
       Process.put(:migrated, true)
+      assert opts[:log] == false
     end
     assert Process.get(:migrated)
     assert Process.get(:started)

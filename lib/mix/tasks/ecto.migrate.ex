@@ -51,7 +51,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
       opts = Keyword.put(opts, :all, true)
     end
 
-    if opts[:quiet] do
+    if opts[:quiet] || opts[:no_start] do
       opts = Keyword.put(opts, :log, false)
     end
 
