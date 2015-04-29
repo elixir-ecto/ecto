@@ -89,7 +89,42 @@ defmodule Ecto.Migration do
   See the `index/3` function for more information on creating/dropping indexes
   concurrently.
 
+  ## Behaviour
+
+  This module also specifies the behaviour to be implemented by
+  a schema migrations model and is useful for those interested in
+  understanding how to define a custom model for schema migrations.
   """
+
+  use Behaviour
+
+  @doc """
+  Checks if schema migrations table exists and creates it if it does not.
+
+  Invoked by `Ecto.Migrator.migrated_versions/1`.
+  """
+  defcallback ensure_schema_migrations_table!(repo :: Ecto.Repo.t) :: :ok
+
+  @doc """
+  Returns list of all migrated versions.
+
+  Invoked by `Ecto.Migrator.migrated_versions/1`.
+  """
+  defcallback migrated_versions(repo :: Ecto.Repo.t) :: [Ecto.Model.t]
+
+  @doc """
+  Adds a migration to the schema migrations table.
+
+  Invoked by `Ecto.Migrator.up/3`.
+  """
+  defcallback up(repo :: Ecto.Repo.t, version :: Ecto.Model.t) :: Ecto.Model.t | no_return
+
+  @doc """
+  Removes a given migration from the schema migrations table.
+
+  Invoked by `Ecto.Migrator.down/3`.
+  """
+  defcallback down(repo :: Ecto.Repo.t, version :: Ecto.Model.t) :: Ecto.Model.t | no_return
 
   defmodule Index do
     @moduledoc """

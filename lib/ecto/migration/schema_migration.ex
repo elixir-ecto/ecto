@@ -1,8 +1,15 @@
 defmodule Ecto.Migration.SchemaMigration do
-  # Define a schema that works with the schema_migrations table
-  @moduledoc false
+  @moduledoc """
+  Defines a schema that works with the schema_migrations table.
+
+  This module is the default model used for the schema migrations table.
+  It may be overridden by setting `schema_migrations_model: CustomMigration`
+  in the config for your Ecto Repo.
+  """
+
   use Ecto.Model
 
+  @behaviour Ecto.Migration
   @primary_key {:version, :integer, []}
   schema "schema_migrations" do
     timestamps updated_at: false

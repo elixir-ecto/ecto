@@ -270,6 +270,8 @@ defmodule Ecto.MigratorTest do
   end
 
   defmodule CustomSchemaMigration do
+    @behaviour Ecto.Migration
+
     def migrated_versions(_repo), do: []
     def up(_repo, _version), do: nil
     def down(_repo, _version), do: nil
