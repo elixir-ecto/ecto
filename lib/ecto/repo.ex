@@ -100,6 +100,14 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.get!(__MODULE__, @adapter, queryable, id, opts)
       end
 
+      def get_by(queryable, clauses, opts \\ []) do
+        Ecto.Repo.Queryable.get_by(__MODULE__, unquote(adapter), queryable, clauses, opts)
+      end
+
+      def get_by!(queryable, clauses, opts \\ []) do
+        Ecto.Repo.Queryable.get_by!(__MODULE__, unquote(adapter), queryable, clauses, opts)
+      end
+
       def one(queryable, opts \\ []) do
         Ecto.Repo.Queryable.one(__MODULE__, @adapter, queryable, opts)
       end
@@ -210,7 +218,6 @@ defmodule Ecto.Repo do
   """
   defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
 
-
   @doc """
   Similar to `get/3` but raises `Ecto.NotSingleResult` if no record was found.
 
@@ -234,11 +241,45 @@ defmodule Ecto.Repo do
       `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
+  ## Example
+
+      MyRepo.get_by(Post, title: "My post")
+
+  """
+  defcallback get_by(Ecto.Queryable.t, Keyword.t, Keyword.t) :: Ecto.Model.t | nil | no_return
+
+  @doc """
+  Similar to `get_by/3` but raises `Ecto.NotSingleResult` if no record was found.
+
+  ## Options
+
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
+
+  ## Example
+
+      MyRepo.get_by!(Post, title: "My post")
+
+  """
+  defcallback get_by!(Ecto.Queryable.t, Keyword.t, Keyword.t) :: Ecto.Model.t | nil | no_return
+
+  @doc """
+  Fetches a single result from the query.
+
+  Returns `nil` if no result was found.
+
+  ## Options
+
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
+
   """
   defcallback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
-  Similar to `one/3` but raises `Ecto.NotSingleResult` if no record was found.
+  Similar to `one/2` but raises `Ecto.NotSingleResult` if no record was found.
 
   ## Options
 

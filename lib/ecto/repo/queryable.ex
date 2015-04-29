@@ -36,6 +36,14 @@ defmodule Ecto.Repo.Queryable do
     one!(repo, adapter, query_for_get(queryable, id), opts)
   end
 
+  def get_by(repo, adapter, queryable, clauses, opts) do
+    one(repo, adapter, query_for_get_by(queryable, clauses), opts)
+  end
+
+  def get_by!(repo, adapter, queryable, clauses, opts) do
+    one!(repo, adapter, query_for_get_by(queryable, clauses), opts)
+  end
+
   @doc """
   Implementation for `Ecto.Repo.one/2`
   """
@@ -175,6 +183,12 @@ defmodule Ecto.Repo.Queryable do
     model = assert_model!(query)
     primary_key = primary_key_field!(model)
     Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
+  end
+
+  defp query_for_get_by(queryable, clauses) do
+    Enum.reduce(clauses, queryable, fn({field, value}, query) ->
+      query |> Ecto.Query.where([x], field(x, ^field) == ^value)
+    end)
   end
 
   defp cast_update_all(%{from: {_source, model}}, updates, params) when model != nil do
