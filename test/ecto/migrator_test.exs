@@ -269,6 +269,31 @@ defmodule Ecto.MigratorTest do
     end
   end
 
+  defmodule CustomSchemaMigration do
+    @behaviour Ecto.Migration
+
+    def migrated_versions(_repo), do: []
+    def up(_repo, _version), do: nil
+    def down(_repo, _version), do: nil
+    def ensure_schema_migrations_table!(_repo), do: :ok
+  end
+
+  test "can use custom schema migrations model" do
+    Application.put_env(:ecto, MockRepo, schema_migrations_model: CustomSchemaMigration)
+    assert schema_migrations_model(MockRepo) == CustomSchemaMigration
+
+    assert migrated_versions(MockRepo) == []
+    capture_log fn ->
+      :ok = up(MockRepo, "1", ChangeMigration)
+    end
+    capture_log fn ->
+      :already_down = down(MockRepo, "1", ChangeMigration)
+    end
+
+    Application.put_env(:ecto, MockRepo, schema_migrations_model: nil)
+    assert schema_migrations_model(MockRepo) == Ecto.Migration.SchemaMigration
+  end
+
   defp capture_log(fun) do
     ExUnit.CaptureIO.capture_io(:user, fn ->
       fun.()
