@@ -33,6 +33,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
     * `--step` / `-n` - run n number of pending migrations
     * `--to` / `-v` - run all migrations up to and including version
     * `--no-start` - do not start applications
+    * `--quiet` - do no log output
   """
 
   @doc false
@@ -51,7 +52,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
       opts = Keyword.put(opts, :all, true)
     end
 
-    if opts[:quiet] do
+    if opts[:quiet] || opts[:no_start] do
       opts = Keyword.put(opts, :log, false)
     end
 
