@@ -361,8 +361,8 @@ defmodule Ecto.Adapters.SQL do
     {pool_opts, worker_opts} = Keyword.split(opts, [:size, :max_overflow])
 
     pool_opts = pool_opts
-      |> Keyword.put_new(:size, 5)
-      |> Keyword.put_new(:max_overflow, 10)
+      |> Keyword.put_new(:size, 10)
+      |> Keyword.put_new(:max_overflow, 0)
 
     pool_opts =
       [name: {:local, pool_name},
