@@ -27,11 +27,11 @@ defmodule Ecto.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :decimal, :poolboy]]
+    [applications: [:logger, :decimal, :sbroker]]
   end
 
   defp deps do
-    [{:poolboy, "~> 1.4"},
+    [{:sbroker, "~> 0.6.2"},
      {:decimal, "~> 1.0"},
      {:postgrex, "~> 0.8.0", optional: true},
      {:mariaex, "~> 0.1.0", optional: true},

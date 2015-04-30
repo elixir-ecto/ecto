@@ -2,20 +2,20 @@ defmodule Ecto.Adapters.SQL.Worker do
   @moduledoc false
   use GenServer
 
-  def start_link({module, args}) do
-    GenServer.start_link(__MODULE__, {module, args})
+  alias Ecto.Adapters.SQL.Broker
+
+  def start_link({broker, module, args}) do
+    GenServer.start_link(__MODULE__, {broker, module, args})
   end
 
-  def start({module, args}) do
-    GenServer.start(__MODULE__, {module, args})
+  def start({broker, module, args}) do
+    GenServer.start(__MODULE__, {broker, module, args})
   end
 
-  def link_me(worker, timeout) do
-    GenServer.call(worker, :link_me, timeout)
-  end
-
-  def unlink_me(worker, timeout) do
-    GenServer.call(worker, :unlink_me, timeout)
+  def done(worker) do
+    GenServer.cast(worker, {:done, self()})
+    Process.unlink(worker)
+    :ok
   end
 
   def query!(worker, sql, params, opts) do
@@ -63,7 +63,7 @@ defmodule Ecto.Adapters.SQL.Worker do
 
   ## Callbacks
 
-  def init({module, params}) do
+  def init({broker, module, params}) do
     Process.flag(:trap_exit, true)
     lazy? = Keyword.get(params, :lazy, true)
 
@@ -76,19 +76,11 @@ defmodule Ecto.Adapters.SQL.Worker do
       end
     end
 
-    {:ok, %{conn: conn, params: params, link: nil,
+    tag = make_ref()
+    Broker.checkin(broker, tag)
+
+    {:ok, %{broker: broker, tag: tag, conn: conn, params: params, link: nil,
             transactions: 0, module: module, sandbox: false}}
-  end
-
-  # Those functions do not need a connection
-  def handle_call(:link_me, {pid, _}, %{link: nil} = s) do
-    Process.link(pid)
-    {:reply, :ok, %{s | link: pid}}
-  end
-
-  def handle_call(:unlink_me, {pid, _}, %{link: pid} = s) do
-    Process.unlink(pid)
-    {:reply, :ok, %{s | link: nil}}
   end
 
   # Connection is disconnected, reconnect before continuing
@@ -215,6 +207,12 @@ defmodule Ecto.Adapters.SQL.Worker do
     end
   end
 
+  def handle_cast({:done, pid}, %{link: pid, broker: broker, tag: tag} = s) do
+    Process.unlink(pid)
+    Broker.checkin(broker, tag)
+    {:noreply, %{s | link: nil}}
+  end
+
   # The connection crashed, notify all linked process.
   def handle_info({:EXIT, conn, _reason}, %{conn: conn} = s) do
     wipe_state(%{s | conn: nil})
@@ -223,6 +221,16 @@ defmodule Ecto.Adapters.SQL.Worker do
   # If a linked process crashed, assume stale connection and close it.
   def handle_info({:EXIT, link, _reason}, %{link: link} = s) do
     wipe_state(s)
+  end
+
+  def handle_info({tag, {:go, _, pid, _, _}}, %{tag: tag} = s) do
+    Process.link(pid)
+    {:noreply, %{s | link: pid}}
+  end
+
+  def handle_info({tag, {:drop, _}}, %{tag: tag, broker: broker} = s) do
+    Broker.checkin(broker, tag)
+    {:noreply, s}
   end
 
   def handle_info(_info, s) do
