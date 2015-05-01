@@ -2,6 +2,7 @@ defmodule Ecto.ChangesetTest do
   use ExUnit.Case, async: true
 
   import Ecto.Changeset
+  import Ecto.Query
 
   defmodule Post do
     use Ecto.Model
@@ -562,6 +563,40 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [title: :unique]
+  end
+
+  test "validate_unique/3 with scope" do
+    defmodule ScopeRepo do
+      def all(query) do
+        assert query.wheres |> Enum.count == 2
+        query_strings =  query.wheres |> Enum.map(&Macro.to_string(&1.expr))
+        assert query_strings |> Enum.member?("&0.title() == ^0")
+        assert query_strings |> Enum.member?("&0.body() == ^0")
+        assert query.limit.expr == 1
+        Process.get(:scope_query)
+      end
+    end
+
+    Process.put(:scope_query, [])
+    changeset =
+      changeset(%{"title" => "hello", "body" => "world"})
+      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert changeset.validations == [title: :unique]
+
+    Process.put(:scope_query, [1])
+    changeset =
+      changeset(%{"title" => "hello", "body" => "world"})
+      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
+    refute changeset.valid?
+    assert changeset.errors == [title: "has already been taken"]
+    assert changeset.validations == [title: :unique]
+
+    changeset =
+      changeset(%{"title" => "hello", "body" => "world"})
+      |> validate_unique(:title, scope: [:body], on: ScopeRepo, message: "yada")
+    assert changeset.errors == [title: "yada"]
   end
 
   test "validate_length/3" do

@@ -701,6 +701,7 @@ defmodule Ecto.Changeset do
     * `:message` - the message on failure, defaults to "has already been taken"
     * `:on` - the repository to perform the query on
     * `:downcase` - when `true`, downcase values when performing the uniqueness query
+    * `:scope` - a list of other fields to use for the uniqueness query
 
   ## Case sensitivity
 
@@ -736,6 +737,15 @@ defmodule Ecto.Changeset do
       |> update_change(:email, &String.downcase/1)
       |> validate_unique(:email, on: Repo)
 
+  ## Scope
+
+  The `:scope` option allows specifying of other fields that are used to limit
+  the uniqueness check. For exmaple, if our use case limits a user to a single
+  comment per blog post, it would look something like:
+
+      cast(params, model, ~w(comment), ~w())
+      |> validate_unique(:user_id, scope: :post_id, on: Repo)
+
   """
   @spec validate_unique(t, atom, [Keyword.t]) :: t
   def validate_unique(%{model: model} = changeset, field, opts) when is_list(opts) do
@@ -743,6 +753,13 @@ defmodule Ecto.Changeset do
     validate_change changeset, field, :unique, fn _, value ->
       struct = model.__struct__
       query  = from m in struct, select: field(m, ^field), limit: 1
+
+      if opts[:scope] do
+        query = Enum.reduce(opts[:scope], query, fn(field, acc) ->
+          value = get_field(changeset, field)
+          from m in acc, where: field(m, ^field) == ^value
+        end)
+      end
 
       query =
         if opts[:downcase] do
