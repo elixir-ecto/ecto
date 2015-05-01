@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.3 (2015-05-01)
+
+* Enhancements
+  * Relax poolboy dependency
+
 ## v0.10.2 (2015-04-10)
 
 * Enhancements
