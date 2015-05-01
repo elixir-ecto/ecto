@@ -150,7 +150,7 @@ defmodule Ecto.Integration.RepoTest do
     on_update = cast(post, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
 
-    on_update = cast(%{post | id: post.id + 1}, %{"title" => "HELLO"}, ~w(title), ~w())
+    on_update = cast(%{post | id: post.id + 1, title: nil}, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors != []
   end
 

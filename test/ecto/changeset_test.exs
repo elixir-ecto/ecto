@@ -10,7 +10,7 @@ defmodule Ecto.ChangesetTest do
     schema "posts" do
       field :title
       field :body
-      field :upvotes, :integer
+      field :upvotes, :integer, default: 0
     end
   end
 
@@ -82,12 +82,12 @@ defmodule Ecto.ChangesetTest do
     assert changeset.params == params
     assert changeset.model  == struct
     assert changeset.changes == %{body: "world"}
-    assert changeset.errors == [title: "can't be blank", upvotes: "can't be blank"]
+    assert changeset.errors == [title: "can't be blank"]
     refute changeset.valid?
   end
 
-  test "cast/4: no parameters is invalid" do
-    changeset = cast(%Post{}, nil, ~w(title), ~w(body)a)
+  test "cast/4: empty parameters is invalid" do
+    changeset = cast(%Post{}, :empty, ~w(title), ~w(body)a)
     assert changeset.model == %Post{}
     assert changeset.params == nil
     assert changeset.changes == %{}
@@ -302,21 +302,21 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "fetch_change/2" do
-    changeset = changeset(%{"title" => "foo", "body" => nil})
+    changeset = changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
 
     assert fetch_change(changeset, :title) == {:ok, "foo"}
-    assert fetch_change(changeset, :body) == {:ok, nil}
-    assert fetch_change(changeset, :other) == :error
+    assert fetch_change(changeset, :body) == :error
+    assert fetch_change(changeset, :upvotes) == {:ok, nil}
   end
 
   test "get_change/3" do
-    changeset = changeset(%{"title" => "foo", "body" => nil})
+    changeset = changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
 
     assert get_change(changeset, :title) == "foo"
     assert get_change(changeset, :body) == nil
-    assert get_change(changeset, :body, "other") == nil
-    assert get_change(changeset, :other) == nil
-    assert get_change(changeset, :other, "other") == "other"
+    assert get_change(changeset, :body, "other") == "other"
+    assert get_change(changeset, :upvotes) == nil
+    assert get_change(changeset, :upvotes, "other") == nil
   end
 
   test "update_change/3" do
@@ -326,9 +326,9 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.title == "foobar"
 
     changeset =
-      changeset(%{"title" => nil})
-      |> update_change(:title, & &1 || "bar")
-    assert changeset.changes.title == "bar"
+      changeset(%{"upvotes" => nil})
+      |> update_change(:upvotes, & &1 || 10)
+    assert changeset.changes.upvotes == 10
 
     changeset =
       changeset(%{})
@@ -362,12 +362,12 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.body == "body"
   end
 
-  test "apply/1" do
+  test "apply_changes/1" do
     post = %Post{}
     assert post.title == nil
 
     changeset = changeset(%{"title" => "foo"}, post)
-    changed_post = apply(changeset)
+    changed_post = apply_changes(changeset)
 
     assert changed_post.__struct__ == post.__struct__
     assert changed_post.title == "foo"

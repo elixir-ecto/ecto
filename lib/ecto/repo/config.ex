@@ -6,7 +6,8 @@ defmodule Ecto.Repo.Config do
   """
   def parse(module, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
-    adapter = opts[:adapter] || Application.get_env(otp_app, module, [])[:adapter]
+    config  = Application.get_env(otp_app, module, [])
+    adapter = opts[:adapter] || config[:adapter]
 
     unless adapter do
       raise ArgumentError, "missing :adapter configuration in " <>
@@ -18,7 +19,7 @@ defmodule Ecto.Repo.Config do
                            "ensure it is correct and it is included as a project dependency"
     end
 
-    {otp_app, adapter}
+    {otp_app, adapter, config}
   end
 
   @doc """
