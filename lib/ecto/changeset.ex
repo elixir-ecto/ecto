@@ -63,11 +63,10 @@ defmodule Ecto.Changeset do
 
   When a changeset is passed as the first argument, the changes passed as the
   second argument are merged over the changes already in the changeset (with
-  precedence to the new changes). If `changes` is not present or is an empty
-  map, this function is a no-op.
+  precedence to the new changes) without checking the model. If `changes` is
+  not present or is an empty map, this function is a no-op.
 
-  See `cast/4` if you'd prefer to cast and validate external
-  parameters.
+  See `cast/4` if you'd prefer to cast and validate external parameters.
 
   ## Examples
 
@@ -205,43 +204,30 @@ defmodule Ecto.Changeset do
 
     {optional, {changes, errors}} =
       Enum.map_reduce(optional, {%{}, []},
-                      &process_optional(&1, params, types, &2))
+                      &process_param(&1, :optional, params, types, model, &2))
 
     {required, {changes, errors}} =
       Enum.map_reduce(required, {changes, errors},
-                      &process_required(&1, params, types, model, &2))
+                      &process_param(&1, :required, params, types, model, &2))
 
     %Changeset{params: params, model: model, valid?: errors == [],
                errors: Enum.reverse(errors), changes: changes, required: required,
                optional: optional}
   end
 
-  defp process_required(key, params, types, model, {changes, errors}) do
+  defp process_param(key, kind, params, types, model, {changes, errors}) do
     {key, param_key} = cast_key(key)
+    current = Map.get(model, key)
     type = type!(types, key)
 
     {key,
       case cast_field(param_key, type, params) do
+        {:ok, ^current} ->
+          {changes, error_on_nil(kind, key, current, errors)}
         {:ok, value} ->
-          {Map.put(changes, key, value), error_on_nil(key, value, errors)}
+          {Map.put(changes, key, value), error_on_nil(kind, key, value, errors)}
         :missing ->
-          value = Map.get(model, key)
-          {changes, error_on_nil(key, value, errors)}
-        :invalid ->
-          {changes, [{key, "is invalid"}|errors]}
-      end}
-  end
-
-  defp process_optional(key, params, types, {changes, errors}) do
-    {key, param_key} = cast_key(key)
-    type = type!(types, key)
-
-    {key,
-      case cast_field(param_key, type, params) do
-        {:ok, value} ->
-          {Map.put(changes, key, value), errors}
-        :missing ->
-          {changes, errors}
+          {changes, error_on_nil(kind, key, current, errors)}
         :invalid ->
           {changes, [{key, "is invalid"}|errors]}
       end}
@@ -282,13 +268,10 @@ defmodule Ecto.Changeset do
     end) || params
   end
 
-  defp error_on_nil(key, value, errors) do
-    if is_nil value do
-      [{key, "can't be blank"}|errors]
-    else
-      errors
-    end
-  end
+  defp error_on_nil(:required, key, nil, errors),
+    do: [{key, "can't be blank"}|errors]
+  defp error_on_nil(_kind, _key, _value, errors),
+    do: errors
 
   ## Working with changesets
 
