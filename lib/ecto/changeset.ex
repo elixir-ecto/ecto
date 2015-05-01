@@ -690,11 +690,15 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates the given `field`'s uniqueness on the given repository.
+  Validates the given `field`'s uniqueness on the given repository. If a list
+  of several fields is given, the uniqueness constraint applies to the
+  combination of all fields, and any error is attached to the first field in
+  the list.
 
   ## Examples
 
       validate_unique(changeset, :email, on: Repo)
+      validate_unique(changeset, [:user_id, :group_id], on: Repo)
 
   ## Options
 
@@ -738,19 +742,24 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_unique(t, atom, [Keyword.t]) :: t
-  def validate_unique(%{model: model} = changeset, field, opts) when is_list(opts) do
+  @spec validate_unique(t, [atom], [Keyword.t]) :: t
+  def validate_unique(changeset, field, opts) when is_atom(field) do
+    validate_unique(changeset, [field], opts)
+  end
+  def validate_unique(%{model: model} = changeset, [field | other], opts) when is_list(opts) do
     repo = Keyword.fetch!(opts, :on)
     validate_change changeset, field, :unique, fn _, value ->
       struct = model.__struct__
       query  = from m in struct, select: field(m, ^field), limit: 1
 
-      query =
+      query = Enum.reduce([field | other], query, fn field, acc ->
         if opts[:downcase] do
-          from m in query, where:
+          from m in acc, where:
             fragment("lower(?)", field(m, ^field)) == fragment("lower(?)", ^value)
         else
-          from m in query, where: field(m, ^field) == ^value
+          from m in acc, where: field(m, ^field) == ^value
         end
+      end)
 
       query =
         Enum.reduce(Ecto.Model.primary_key!(model), query, fn
@@ -758,9 +767,11 @@ defmodule Ecto.Changeset do
           {k, v}, acc   -> from m in acc, where: field(m, ^k) != ^v
         end)
 
-      case repo.all(query) do
-        []  -> []
-        [_] -> [{field, message(opts, "has already been taken")}]
+      case {repo.all(query), other} do
+        {[], _}      -> []
+        {[_], []}    -> [{field, message(opts, "has already been taken")}]
+        {[_], other} -> [{field, message(opts,
+          "must be unique in combination with " <> Enum.join(other, ", "))}]
       end
     end
   end
