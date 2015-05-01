@@ -16,6 +16,11 @@
   * `Ecto.Model` now only imports `from/2` from `Ecto.Query` out of the box
   * `Ecto.Changeset.apply/1` was removed in favor of `Ecto.Changeset.apply_changes/1`
 
+## v0.10.3 (2015-05-01)
+
+* Enhancements
+  * Relax poolboy dependency
+
 ## v0.10.2 (2015-04-10)
 
 * Enhancements
