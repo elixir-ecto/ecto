@@ -564,6 +564,34 @@ defmodule Ecto.ChangesetTest do
     assert changeset.validations == [title: :unique]
   end
 
+  test "validate_unique/3 with multiple columns" do
+    defmodule UniqueMultiRepo do
+      def all(query) do
+        wheres = Enum.map(query.wheres, &Macro.to_string(&1.expr))
+        assert "&0.title() == ^0" in wheres
+        assert "&0.body() == ^0" in wheres
+        assert query.limit.expr == 1
+        Process.get(:unique_query)
+      end
+    end
+
+    Process.put(:unique_query, [])
+    changeset =
+      changeset(%{"title" => "hello", "body" => "world"})
+      |> validate_unique([:title, :body], on: UniqueMultiRepo)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert changeset.validations == [title: :unique]
+
+    Process.put(:unique_query, [1])
+    changeset =
+      changeset(%{"title" => "hello", "body" => "world"})
+      |> validate_unique([:title, :body], on: UniqueMultiRepo)
+    refute changeset.valid?
+    assert changeset.errors == [title: "must be unique in combination with body"]
+    assert changeset.validations == [title: :unique]
+  end
+
   test "validate_length/3" do
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 3, max: 7)
     assert changeset.valid?
