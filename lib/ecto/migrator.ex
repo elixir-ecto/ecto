@@ -42,7 +42,7 @@ defmodule Ecto.Migrator do
 
   ## Options
 
-    * `:log` - the level to use for logging.
+    * `:log` - the level to use for logging. Defaults to `:info`.
       Can be any of `Logger.level/0` values or `false`.
   """
   @spec up(Ecto.Repo.t, integer, Module.t, Keyword.t) :: :ok | :already_up | no_return
@@ -71,7 +71,7 @@ defmodule Ecto.Migrator do
 
   ## Options
 
-    * `:log` - the level to use for logging.
+    * `:log` - the level to use for logging. Defaults to `:info`.
       Can be any of `Logger.level/0` values or `false`.
 
   """
@@ -125,7 +125,7 @@ defmodule Ecto.Migrator do
     * `:all` - runs all available if `true`
     * `:step` - runs the specific number of migrations
     * `:to` - runs all until the supplied version is reached
-    * `:log` - the level to use for logging.
+    * `:log` - the level to use for logging. Defaults to `:info`.
       Can be any of `Logger.level/0` values or `false`.
 
   """

@@ -61,12 +61,14 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter} = Ecto.Repo.Config.parse(__MODULE__, opts)
+      {otp_app, adapter, config} = Ecto.Repo.Config.parse(__MODULE__, opts)
       @otp_app otp_app
       @adapter adapter
+      @config  config
       @before_compile adapter
 
       require Logger
+      @log_level config[:log_level] || :debug
 
       def config do
         Ecto.Repo.Config.config(@otp_app, __MODULE__)
@@ -155,7 +157,7 @@ defmodule Ecto.Repo do
         try do
           fun.()
         after
-          Logger.debug fn ->
+          Logger.log @log_level, fn ->
             next = :os.timestamp()
             diff = :timer.now_diff(next, prev)
             data = Enum.map params, fn

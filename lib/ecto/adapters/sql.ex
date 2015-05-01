@@ -317,10 +317,9 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def __before_compile__(env) do
-    otp_app = Module.get_attribute(env.module, :otp_app)
     timeout =
-      otp_app
-      |> Application.get_env(env.module, [])
+      env.module
+      |> Module.get_attribute(:config)
       |> Keyword.get(:timeout, 5000)
 
     quote do
