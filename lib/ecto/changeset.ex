@@ -121,12 +121,12 @@ defmodule Ecto.Changeset do
   are present either in the model or in the given params, the
   changeset is returned as valid.
 
-  ## No parameters
+  ## Empty parameters
 
-  The `params` argument can also be `nil`. In such cases, the
-  changeset is automatically marked as invalid, with an empty
-  `:changes` map. This is useful to run the changeset through
-  all validation steps for introspection.
+  The `params` argument can also be the atom `:empty`. In such cases, the
+  changeset is automatically marked as invalid, with an empty `:changes` map.
+  This is useful to run the changeset through all validation steps for
+  introspection.
 
   ## Composing casts
 
@@ -172,7 +172,13 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
   end
 
-  def cast(%{__struct__: _} = model, nil, required, optional)
+  def cast(%{__struct__: _} = model, nil, required, optional) do
+    IO.puts :stderr, "passing nil as parameters to cast/4 is deprecated. " <>
+                     "Please pass the atom :empty instead.\n" <> Exception.format_stacktrace()
+    cast(model, :empty, required, optional)
+  end
+
+  def cast(%{__struct__: _} = model, :empty, required, optional)
       when is_list(required) and is_list(optional) do
     to_atom = fn
       key when is_atom(key) -> key
@@ -404,7 +410,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec get_field(t, atom, term) :: term
-  def get_field(%{changes: changes, model: model} = _changeset, key, default \\ nil) do
+  def get_field(%Changeset{changes: changes, model: model} = _changeset, key, default \\ nil) do
     case Map.fetch(changes, key) do
       {:ok, value} -> value
       :error ->
@@ -431,7 +437,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec fetch_change(t, atom) :: {:ok, term} | :error
-  def fetch_change(%{changes: changes} = _changeset, key) when is_atom(key) do
+  def fetch_change(%Changeset{changes: changes} = _changeset, key) when is_atom(key) do
     Map.fetch(changes, key)
   end
 
@@ -448,7 +454,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec get_change(t, atom, term) :: term
-  def get_change(%{changes: changes} = _changeset, key, default \\ nil) when is_atom(key) do
+  def get_change(%Changeset{changes: changes} = _changeset, key, default \\ nil) when is_atom(key) do
     Map.get(changes, key, default)
   end
 
@@ -468,7 +474,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec update_change(t, atom, (term -> term)) :: t
-  def update_change(%{changes: changes} = changeset, key, function) when is_atom(key) do
+  def update_change(%Changeset{changes: changes} = changeset, key, function) when is_atom(key) do
     case Map.fetch(changes, key) do
       {:ok, value} ->
         changes = Map.put(changes, key, function.(value))
@@ -492,7 +498,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec put_change(t, atom, term) :: t
-  def put_change(changeset, key, value) do
+  def put_change(%Changeset{} = changeset, key, value) do
     update_in changeset.changes, &Map.put(&1, key, value)
   end
 
@@ -511,7 +517,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec put_new_change(t, atom, term) :: t
-  def put_new_change(changeset, key, value) do
+  def put_new_change(%Changeset{} = changeset, key, value) do
     update_in changeset.changes, &Map.put_new(&1, key, value)
   end
 
@@ -527,7 +533,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec delete_change(t, atom) :: t
-  def delete_change(changeset, key) do
+  def delete_change(%Changeset{} = changeset, key) do
     update_in changeset.changes, &Map.delete(&1, key)
   end
 
@@ -540,11 +546,11 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      apply(changeset)
+      apply_changes(changeset)
 
   """
-  @spec apply(t) :: Ecto.Model.t
-  def apply(%{changes: changes, model: model} = _changeset) do
+  @spec apply_changes(t) :: Ecto.Model.t
+  def apply_changes(%Changeset{changes: changes, model: model} = _changeset) do
     struct(model, changes)
   end
 

@@ -85,8 +85,8 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: no parameters is invalid" do
-    changeset = cast(%Post{}, nil, ~w(title), ~w(body)a)
+  test "cast/4: empty parameters is invalid" do
+    changeset = cast(%Post{}, :empty, ~w(title), ~w(body)a)
     assert changeset.model == %Post{}
     assert changeset.params == nil
     assert changeset.changes == %{}
@@ -361,12 +361,12 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.body == "body"
   end
 
-  test "apply/1" do
+  test "apply_changes/1" do
     post = %Post{}
     assert post.title == nil
 
     changeset = changeset(%{"title" => "foo"}, post)
-    changed_post = apply(changeset)
+    changed_post = apply_changes(changeset)
 
     assert changed_post.__struct__ == post.__struct__
     assert changed_post.title == "foo"
