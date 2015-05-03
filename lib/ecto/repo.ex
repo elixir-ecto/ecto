@@ -24,7 +24,7 @@ defmodule Ecto.Repo do
         hostname: "localhost"
 
   Most of the configuration that goes into the `config` is specific
-  to to the adapter, so check `Ecto.Adapters.Postgres` documentation
+  to the adapter, so check `Ecto.Adapters.Postgres` documentation
   for more information. However, some configuration is shared across
   all adapters, they are:
 
