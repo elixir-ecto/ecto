@@ -733,7 +733,7 @@ defmodule Ecto.Changeset do
   comment per blog post, it would look something like:
 
       cast(params, model, ~w(comment), ~w())
-      |> validate_unique(:user_id, scope: :post_id, on: Repo)
+      |> validate_unique(:user_id, scope: [:post_id], on: Repo)
 
   """
   @spec validate_unique(t, atom, [Keyword.t]) :: t

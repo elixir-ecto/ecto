@@ -12,11 +12,10 @@ defmodule Ecto.Adapters.SQLTest do
     use Ecto.Repo, otp_app: :ecto
   end
 
-  Application.put_env(:ecto, __MODULE__.RepoWithTimeout, adapter: Adapter)
+  Application.put_env(:ecto, __MODULE__.RepoWithTimeout, adapter: Adapter, timeout: 1500)
 
   defmodule RepoWithTimeout do
     use Ecto.Repo, otp_app: :ecto
-    Application.put_env(:ecto, __MODULE__, timeout: 1500)
   end
 
   test "stores __pool__ metadata" do

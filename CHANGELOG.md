@@ -5,6 +5,7 @@
 * Enhancements
   * Add `Ecto.Repo.get_by/3` and `Ecto.Repo.get_by!/3`
   * Add `to_erl`/`from_erl` to datetime modules
+  * Add `:scope` option to `Ecto.Changeset.validate_unique/2`
   * Allow `distinct(query, true)` query expression
   * Effectively track dirty changes in `Ecto.Changeset`. If the value being sent as parameter is the same as the value in the model, it won't be sent to the Repo on insert/update
 
