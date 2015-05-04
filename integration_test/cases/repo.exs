@@ -175,6 +175,17 @@ defmodule Ecto.Integration.RepoTest do
     assert validate_unique(on_insert, :title, scope: [:text], on: TestRepo).errors == []
   end
 
+  test "validate_unique/3 scope with a non-existent field will raise Ecto.QueryError" do
+    import Ecto.Changeset
+    post = TestRepo.insert(%Post{title: "hello", text: "world"})
+
+    on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w(text))
+    assert validate_unique(on_insert, :title, on: TestRepo).errors == [title: "has already been taken"]
+    assert_raise(Ecto.QueryError, fn ->
+      validate_unique(on_insert, :title, scope: [:non_existent], on: TestRepo).errors == []
+    end)
+  end
+
   test "get(!)" do
     post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
