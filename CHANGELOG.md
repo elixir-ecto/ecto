@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.11.0-dev
+## v0.11.0 (2015-05-04)
 
 * Enhancements
   * Add `Ecto.Repo.get_by/3` and `Ecto.Repo.get_by!/3`
