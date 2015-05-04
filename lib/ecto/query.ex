@@ -250,7 +250,7 @@ defmodule Ecto.Query do
         where: p.published_at != nil and o.published_at != nil
       end
 
-  Note the variables `p` and `q` must be named as you find more convenient
+  Note the variables `p` and `o` must be named as you find more convenient
   as they have no importance in the query sent to the database.
   """
   defmacro from(expr, kw \\ []) do
