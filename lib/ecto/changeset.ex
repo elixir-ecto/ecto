@@ -746,7 +746,11 @@ defmodule Ecto.Changeset do
       if opts[:scope] do
         query = Enum.reduce(opts[:scope], query, fn(field, acc) ->
           value = get_field(changeset, field)
-          from m in acc, where: field(m, ^field) == ^value
+          if value do
+            from m in acc, where: field(m, ^field) == ^value
+          else
+            acc
+          end
         end)
       end
 

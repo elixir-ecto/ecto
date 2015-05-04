@@ -570,8 +570,8 @@ defmodule Ecto.ChangesetTest do
       def all(query) do
         assert query.wheres |> Enum.count == 2
         query_strings =  query.wheres |> Enum.map(&Macro.to_string(&1.expr))
-        assert query_strings |> Enum.member?("&0.title() == ^0")
-        assert query_strings |> Enum.member?("&0.body() == ^0")
+        assert "&0.title() == ^0" in query_strings
+        assert "&0.body() == ^0" in query_strings
         assert query.limit.expr == 1
         Process.get(:scope_query)
       end
@@ -597,6 +597,27 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello", "body" => "world"})
       |> validate_unique(:title, scope: [:body], on: ScopeRepo, message: "yada")
     assert changeset.errors == [title: "yada"]
+  end
+
+  test "validate_unique/3 with scope ignores fields not on the model" do
+    defmodule ScopeRepo do
+      def all(query) do
+        assert query.wheres |> Enum.count == 1
+        query_strings =  query.wheres |> Enum.map(&Macro.to_string(&1.expr))
+        assert "&0.title() == ^0" in query_strings
+        refute "&0.not_real_field() == ^0" in query_strings
+        assert query.limit.expr == 1
+        Process.get(:scope_query)
+      end
+    end
+
+    Process.put(:scope_query, [])
+    changeset =
+      changeset(%{"title" => "hello"})
+      |> validate_unique(:title, scope: [:not_real_field], on: ScopeRepo)
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert changeset.validations == [title: :unique]
   end
 
   test "validate_length/3" do
