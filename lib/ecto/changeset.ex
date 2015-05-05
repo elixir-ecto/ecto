@@ -51,6 +51,8 @@ defmodule Ecto.Changeset do
 
   @doc """
   Wraps the given model in a changeset or adds changes to a changeset.
+  Changed attributes will only be added if the change does not have the
+  same value as the attribute in the model.
 
   This function is useful for:
 
@@ -77,9 +79,13 @@ defmodule Ecto.Changeset do
       iex> changeset.changes
       %{}
 
-      iex> changeset = change(%Post{}, title: "title")
-      iex> changeset.changes.title
-      "title"
+      iex> changeset = change(%Post{author: "bar"}, title: "title")
+      iex> changeset.changes
+      %{title: "title"}
+
+      iex> changeset = change(%Post{title: "title"}, title: "title")
+      iex> changeset.changes
+      %{}
 
       iex> changeset = change(changeset, %{title: "new title", body: "body"})
       iex> changeset.changes.title
@@ -97,11 +103,23 @@ defmodule Ecto.Changeset do
 
   def change(%Changeset{changes: changes} = changeset, new_changes)
       when is_map(new_changes) do
-    %{changeset | changes: Map.merge(changes, new_changes)}
+    changed = get_changed(changeset.model, new_changes)
+    %{changeset | changes: Map.merge(changes, changed)}
   end
 
   def change(%{__struct__: _} = model, changes) when is_map(changes) do
-    %Changeset{valid?: true, model: model, changes: changes}
+    changed = get_changed(model, changes)
+    %Changeset{valid?: true, model: model, changes: changed}
+  end
+
+  defp get_changed(model, new_changes) do
+    Enum.reduce(new_changes, %{}, fn({key, value}, acc) ->
+      if Map.get(model, key) != value do
+        Map.put(acc, key, value)
+      else
+        acc
+      end
+    end)
   end
 
   @doc """
@@ -470,38 +488,83 @@ defmodule Ecto.Changeset do
   @doc """
   Puts a change on the given `key` with `value`.
 
-  If the change is already present, it is overridden with the new value.
+  If the change is already present, it is overridden with
+  the new value, also, if the change has the same value as
+  the model, it is not added to the list of changes.
 
   ## Examples
 
-      iex> changeset = change(%Post{}, %{title: "foo"})
+      iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
       iex> changeset = put_change(changeset, :title, "bar")
-      iex> changeset.changes.title
-      "bar"
+      iex> changeset.changes
+      %{title: "bar"}
+
+      iex> changeset = put_change(changeset, :author, "bar")
+      iex> changeset.changes
+      %{title: "bar"}
 
   """
   @spec put_change(t, atom, term) :: t
   def put_change(%Changeset{} = changeset, key, value) do
-    update_in changeset.changes, &Map.put(&1, key, value)
+    if Map.get(changeset.model, key) == value do
+      changeset
+    else
+      update_in changeset.changes, &Map.put(&1, key, value)
+    end
   end
 
   @doc """
-  Puts a change on the given `key` only if a change with that key doesn't
-  already exist.
+  Puts a change on the given `key` with `value`.
+
+  If the change is already present, it is overridden with
+  the new value.
 
   ## Examples
 
+      iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
+      iex> changeset = put_change(changeset, :title, "bar")
+      iex> changeset.changes
+      %{title: "bar"}
+
+      iex> changeset = put_change(changeset, :author, "bar")
+      iex> changeset.changes
+      %{title: "bar", author: "bar"}
+
+  """
+  @spec force_change(t, atom, term) :: t
+  def force_change(%Changeset{} = changeset, key, value) do
+    update_in changeset.changes, &Map.put(&1, key, value)
+  end
+
+
+  @doc """
+  Puts a change on the given `key` only if a change with that key doesn't
+  already exist, also, if the change has the same value as the model, it
+  is not added to the list of changes.
+
+  ## Examples
+
+      iex> changeset = change(%Post{author: "bar"}, %{})
       iex> changeset = put_new_change(changeset, :title, "foo")
-      iex> changeset.changes.title
-      "foo"
+      iex> changeset.changes
+      %{title: "foo"}
+
       iex> changeset = put_new_change(changeset, :title, "bar")
-      iex> changeset.changes.title
-      "foo"
+      iex> changeset.changes
+      %{title: "foo"}
+
+      iex> changeset = put_new_change(changeset, :author, "bar")
+      iex> changeset.changes
+      %{title: "foo"}
 
   """
   @spec put_new_change(t, atom, term) :: t
   def put_new_change(%Changeset{} = changeset, key, value) do
-    update_in changeset.changes, &Map.put_new(&1, key, value)
+    if Map.get(changeset.model, key) == value do
+      changeset
+    else
+      update_in changeset.changes, &Map.put_new(&1, key, value)
+    end
   end
 
   @doc """
