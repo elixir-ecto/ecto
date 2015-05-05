@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.1 (2015-05-05)
+
+* Enhancements
+  * Add `force_change/3` to force a change into a changeset
+
+* Bug fixes
+  * `put_change/3`, `put_new_change/3` and `change/2` in `Ecto.Changeset` also verify the model value before storing the change
+
 ## v0.11.0 (2015-05-04)
 
 * Enhancements

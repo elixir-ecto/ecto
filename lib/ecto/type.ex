@@ -3,7 +3,7 @@ defmodule Ecto.Type do
   Defines functions and the `Ecto.Type` behaviour for implementing
   custom types.
 
-  A custom type expects 5 functions to be implemented, all documented
+  A custom type expects 4 functions to be implemented, all documented
   and described below. We also provide two examples of how custom
   types can be used in Ecto to augment existing types or providing
   your own types.

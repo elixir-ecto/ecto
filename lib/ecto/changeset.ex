@@ -51,6 +51,7 @@ defmodule Ecto.Changeset do
 
   @doc """
   Wraps the given model in a changeset or adds changes to a changeset.
+
   Changed attributes will only be added if the change does not have the
   same value as the attribute in the model.
 
@@ -64,9 +65,9 @@ defmodule Ecto.Changeset do
   `changes` to be atoms. `changes` can be a map as well as a keyword list.
 
   When a changeset is passed as the first argument, the changes passed as the
-  second argument are merged over the changes already in the changeset (with
-  precedence to the new changes) without checking the model. If `changes` is
-  not present or is an empty map, this function is a no-op.
+  second argument are merged over the changes already in the changeset if they
+  differ from the values in the model. If `changes` is an empty map, this
+  function is a no-op.
 
   See `cast/4` if you'd prefer to cast and validate external parameters.
 
@@ -535,7 +536,6 @@ defmodule Ecto.Changeset do
   def force_change(%Changeset{} = changeset, key, value) do
     update_in changeset.changes, &Map.put(&1, key, value)
   end
-
 
   @doc """
   Puts a change on the given `key` only if a change with that key doesn't
