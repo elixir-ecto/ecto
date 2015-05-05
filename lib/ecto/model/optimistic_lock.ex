@@ -117,6 +117,6 @@ defmodule Ecto.Model.OptimisticLock do
   def __lock__(%Ecto.Changeset{model: model} = changeset, field) do
     current = Map.fetch!(model, field)
     update_in(changeset.filters, &Map.put(&1, field, current))
-    |> put_change(field, current + 1)
+    |> force_change(field, current + 1)
   end
 end
