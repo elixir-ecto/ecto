@@ -9,7 +9,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     ## Connection
 
     def connect(opts) do
-      opts = Keyword.put_new(opts, :port, @default_port)
+      opts = Keyword.update(opts, :port, @default_port, &normalize_port/1)
       Mariaex.Connection.start_link(opts)
     end
 
@@ -33,6 +33,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         {:error, %Mariaex.Error{}} =  err -> err
       end
     end
+
+    defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
+    defp normalize_port(port) when is_integer(port), do: port
 
     ## Transaction
 

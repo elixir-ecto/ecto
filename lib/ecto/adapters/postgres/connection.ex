@@ -39,18 +39,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    @doc """
-    Ensures a port is represented as an integer.  This
-    allows for configuration to grab data from the ENV without
-    having to convert it to an integer directly.
-
-    An exception
-    will be thrown if the the provided string isn't an integer
-    e.g.  ** (ArgumentError) argument error
-          :erlang.binary_to_integer("a")
-    """
-    def normalize_port(port) when is_binary(port), do: String.to_integer(port)
-    def normalize_port(port) when is_integer(port), do: port
+    defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
+    defp normalize_port(port) when is_integer(port), do: port
 
     ## Transaction
 

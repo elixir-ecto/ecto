@@ -519,18 +519,4 @@ defmodule Ecto.Adapters.PostgresTest do
     drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX CONCURRENTLY "posts$main"|
   end
-
-  test "normalize_port when already an integer" do
-    assert SQL.normalize_port(1234) == 1234
-  end
-
-  test "normalize_port converts a string to an integer" do
-    assert SQL.normalize_port("9876") == 9876
-  end
-
-  test "normalize_port should throw an exception if the string isn't an integer" do
-    assert_raise ArgumentError, "argument error", fn ->
-      SQL.normalize_port("abc")
-    end
-  end
 end
