@@ -57,6 +57,13 @@ defmodule Ecto.MigrationTest do
            %Reference{table: :posts, column: :other, type: :uuid}
   end
 
+  test "chokes on alias types" do
+    assert_raise ArgumentError,
+                 ~r"Ecto.DateTime is not a valid database type", fn ->
+      add(:hello, Ecto.DateTime)
+    end
+  end
+
   ## Forward
   @moduletag direction: :forward
 

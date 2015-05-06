@@ -339,9 +339,23 @@ defmodule Ecto.Migration do
   @doc """
   Adds a column when creating or altering a table.
 
-  In order to support database-specific types, in addition to standard
-  Ecto types, arbitrary atoms can be used for type names, for example,
-  `:json` (if supported by the underlying database).
+  This function also accepts Ecto primitive types as column types
+  and they are normalized by the database adapter. For example,
+  `string` is converted to varchar, `datetime` to the underlying
+  datetime or timestamp type, `binary` to bits or blob, and so on.
+
+  However, the column type is not always the same as the type in your
+  model. For example, a model that has a `string` field, can be
+  supported by columns of types `char`, `varchar`, `text` and others.
+  For this reason, this function also accepts `text` and other columns,
+  which are sent as is to the underlying database.
+
+  To sum up, the column type may be either an Ecto primitive type,
+  which is normalized in cases the database does not understand it,
+  like `string` or `binary`, or a database type which is passed as is.
+  Custom Ecto types, like `Ecto.Datetime`, are not supported because
+  they are application level concern and may not always map to the
+  database.
 
   ## Examples
 
@@ -350,7 +364,7 @@ defmodule Ecto.Migration do
       end
 
       alter table(:posts) do
-        add :summary, :text
+        add :summary, :text # Database type
         add :object,  :json
       end
 
@@ -367,6 +381,7 @@ defmodule Ecto.Migration do
 
   """
   def add(column, type \\ :string, opts \\ []) when is_atom(column) do
+    validate_type!(type)
     Runner.subcommand {:add, column, type, opts}
   end
 
@@ -398,6 +413,8 @@ defmodule Ecto.Migration do
 
   @doc """
   Modifies the type of column when altering a table.
+
+  See `add/3` for more information on supported types.
 
   ## Examples
 
@@ -458,5 +475,20 @@ defmodule Ecto.Migration do
   """
   def exists?(%{} = object) do
     Runner.exists?(object)
+  end
+
+  defp validate_type!(type) when is_atom(type) do
+    case Atom.to_string(type) do
+      "Elixir." <> _ ->
+        raise ArgumentError,
+          "#{inspect type} is not a valid database type, " <>
+          "please use an atom like :string, :text and so on"
+      _ ->
+        :ok
+    end
+  end
+
+  defp validate_type!(%Reference{} = reference) do
+    reference
   end
 end
