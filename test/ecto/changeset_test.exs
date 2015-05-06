@@ -571,6 +571,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_unique(:title, on: UniqueRepo, message: "yada")
     assert changeset.errors == [title: "yada"]
+
+    changeset =
+      changeset(%{"title" => "hello"}) # Does not validate when there are errors
+      |> validate_length(:title, max: 3)
+      |> validate_unique(:title, on: UniqueRepo)
+    assert changeset.errors == [title: {"should be at most %{count} characters", 3}]
+    assert changeset.validations == [title: :unique, title: {:length, [max: 3]}]
   end
 
   test "validate_unique/3 with primary key" do
@@ -641,6 +648,19 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello", "body" => "world"})
       |> validate_unique(:title, scope: [:body], on: ScopeRepo, message: "yada")
     assert changeset.errors == [title: "yada"]
+
+    changeset =
+      changeset(%{"body" => "world"}) # Also validates when only scope changes
+      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
+    assert changeset.errors == [title: "has already been taken"]
+    assert changeset.validations == [title: :unique]
+
+    changeset =
+      changeset(%{"body" => "world"}) # Does not validate when there are errors
+      |> validate_length(:body, max: 3)
+      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
+    assert changeset.errors == [body: {"should be at most %{count} characters", 3}]
+    assert changeset.validations == [title: :unique, body: {:length, [max: 3]}]
   end
 
   test "validate_length/3" do

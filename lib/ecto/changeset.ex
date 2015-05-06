@@ -744,6 +744,9 @@ defmodule Ecto.Changeset do
   @doc """
   Validates the given `field`'s uniqueness on the given repository.
 
+  The validation runs if the field (or any of the values given in
+  scope) has changed and none of them contain an error.
+
   ## Examples
 
       validate_unique(changeset, :email, on: Repo)
@@ -759,8 +762,8 @@ defmodule Ecto.Changeset do
 
   Unfortunately, different databases provide different guarantees
   when it comes to case-sensitiveness. For example, in MySQL, comparisons
-  are case-insensitive by default. In Postgres, users can define case insensitive
-  column by using the `:citext` type/extension.
+  are case-insensitive by default. In Postgres, users can define case
+  insensitive column by using the `:citext` type/extension.
 
   These behaviours make it hard for Ecto to guarantee if the unique
   validation is case insensitive or not and that's why Ecto **does not**
@@ -778,12 +781,9 @@ defmodule Ecto.Changeset do
 
       create index(:posts, ["lower(title)"])
 
-  Many times though, you don't even need to use the downcase option
-  at `validate_unique/3` and instead you can explicitly downcase
-  values before inserting them into the database:
-  Many times, however, it's even simpler to just explicitly downcase values
-  before inserting them into the database (and avoid the `:downcase` option in
-  `validate_unique/3`):
+  Many times, however, it's simpler to just explicitly downcase values
+  before inserting them into the database and avoid the `:downcase` option
+  in `validate_unique/3`:
 
       cast(params, model, ~w(email), ~w())
       |> update_change(:email, &String.downcase/1)
@@ -800,14 +800,22 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_unique(t, atom, [Keyword.t]) :: t
-  def validate_unique(%{model: model} = changeset, field, opts) when is_list(opts) do
-    repo = Keyword.fetch!(opts, :on)
-    validate_change changeset, field, :unique, fn _, value ->
+  def validate_unique(changeset, field, opts) when is_list(opts) do
+    %{model: model, changes: changes, errors: errors, validations: validations} = changeset
+    changeset = %{changeset | validations: [{field, :unique}|validations]}
+
+    repo   = Keyword.fetch!(opts, :on)
+    scope  = Keyword.get(opts, :scope)
+    fields = [field|List.wrap(scope)]
+
+    if Enum.any?(fields, &Map.has_key?(changes, &1)) &&
+       Enum.all?(fields, &not Keyword.has_key?(errors, &1)) do
       struct = model.__struct__
+      value  = Map.get(changes, field)
       query  = from m in struct, select: field(m, ^field), limit: 1
 
-      if opts[:scope] do
-        query = Enum.reduce(opts[:scope], query, fn(field, acc) ->
+      if scope do
+        query = Enum.reduce(scope, query, fn(field, acc) ->
           value = get_field(changeset, field)
           from m in acc, where: field(m, ^field) == ^value
         end)
@@ -828,9 +836,11 @@ defmodule Ecto.Changeset do
         end)
 
       case repo.all(query) do
-        []  -> []
-        [_] -> [{field, message(opts, "has already been taken")}]
+        []  -> changeset
+        [_] -> add_error(changeset, field, message(opts, "has already been taken"))
       end
+    else
+      changeset
     end
   end
 
