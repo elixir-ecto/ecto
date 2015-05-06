@@ -816,17 +816,22 @@ defmodule Ecto.Changeset do
 
       if scope do
         query = Enum.reduce(scope, query, fn(field, acc) ->
-          value = get_field(changeset, field)
-          from m in acc, where: field(m, ^field) == ^value
+          case get_field(changeset, field) do
+            nil -> from m in acc, where: is_nil(field(m, ^field))
+            v   -> from m in acc, where: field(m, ^field) == ^v
+          end
         end)
       end
 
       query =
-        if opts[:downcase] do
-          from m in query, where:
-            fragment("lower(?)", field(m, ^field)) == fragment("lower(?)", ^value)
-        else
-          from m in query, where: field(m, ^field) == ^value
+        cond do
+          value == nil ->
+            from m in query, where: is_nil(field(m, ^field))
+          opts[:downcase] ->
+            from m in query, where:
+              fragment("lower(?)", field(m, ^field)) == fragment("lower(?)", ^value)
+          true ->
+            from m in query, where: field(m, ^field) == ^value
         end
 
       query =

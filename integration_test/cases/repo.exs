@@ -150,6 +150,9 @@ defmodule Ecto.Integration.RepoTest do
     on_update = cast(post, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
 
+    on_update = cast(post, %{"title" => nil}, ~w(), ~w(title))
+    assert validate_unique(on_update, :title, on: TestRepo).errors == []
+
     on_update = cast(%{post | id: post.id + 1, title: nil}, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors != []
   end
@@ -172,6 +175,9 @@ defmodule Ecto.Integration.RepoTest do
 
     on_insert = cast(%Post{}, %{"title" => "hello", "text" => "elixir"}, ~w(title), ~w(text))
     assert validate_unique(on_insert, :title, on: TestRepo).errors == [title: "has already been taken"]
+    assert validate_unique(on_insert, :title, scope: [:text], on: TestRepo).errors == []
+
+    on_insert = cast(%Post{}, %{"title" => "hello", "text" => nil}, ~w(title), ~w(text))
     assert validate_unique(on_insert, :title, scope: [:text], on: TestRepo).errors == []
 
     assert_raise(Ecto.QueryError, fn ->
