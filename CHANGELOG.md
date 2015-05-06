@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.11.2 (2015-05-06)
+
+* Bug fixes
+  * Trigger `validate_unique/3` if the field or any of the scopes changed
+  * Do not trigger `validate_unique/3` if the field or scopes contains errors
+  * Ensure repo log calls can be optimized out
+  * Improve error message when model types are given on migrations
+
 ## v0.11.1 (2015-05-05)
 
 * Enhancements

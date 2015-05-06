@@ -621,7 +621,8 @@ defmodule Ecto.ChangesetTest do
       def all(query) do
         assert query.wheres |> Enum.count == 2
         query_strings =  query.wheres |> Enum.map(&Macro.to_string(&1.expr))
-        assert "&0.title() == ^0" in query_strings
+        assert ("&0.title() == ^0" in query_strings) or
+               ("is_nil(&0.title())" in query_strings)
         assert "&0.body() == ^0" in query_strings
         assert query.limit.expr == 1
         Process.get(:scope_query)

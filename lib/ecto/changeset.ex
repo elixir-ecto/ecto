@@ -745,7 +745,9 @@ defmodule Ecto.Changeset do
   Validates the given `field`'s uniqueness on the given repository.
 
   The validation runs if the field (or any of the values given in
-  scope) has changed and none of them contain an error.
+  scope) has changed and none of them contain an error. For this
+  reason, you may want to trigger the unique validations as last
+  in your validation pipeline.
 
   ## Examples
 
