@@ -157,7 +157,7 @@ defmodule Ecto.Repo do
         try do
           fun.()
         after
-          Logger.log @log_level, fn ->
+          Logger.unquote(@log_level)(fn ->
             next = :os.timestamp()
             diff = :timer.now_diff(next, prev)
             data = Enum.map params, fn
@@ -165,7 +165,7 @@ defmodule Ecto.Repo do
               value -> value
             end
             [cmd, ?\s, inspect(data), ?\s, ?(, inspect(div(diff, 100) / 10), ?m, ?s, ?)]
-          end
+          end)
         end
       end
 
