@@ -10,11 +10,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def connect(opts) do
       extensions = [{Ecto.Adapters.Postgres.DateTime, []}]
-
       opts =
         opts
         |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
-        |> Keyword.put_new(:port, @default_port)
+        |> Keyword.update(:port, @default_port, &normalize_port/1)
 
       Postgrex.Connection.start_link(opts)
     end
@@ -39,6 +38,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         {:error, %Postgrex.Error{}} = err  -> err
       end
     end
+
+    @doc """
+    Ensures a port is represented as an integer.  This
+    allows for configuration to grab data from the ENV without
+    having to convert it to an integer directly.
+
+    An exception
+    will be thrown if the the provided string isn't an integer
+    e.g.  ** (ArgumentError) argument error
+          :erlang.binary_to_integer("a")
+    """
+    def normalize_port(port) when is_binary(port), do: String.to_integer(port)
+    def normalize_port(port) when is_integer(port), do: port
 
     ## Transaction
 
