@@ -117,15 +117,13 @@ defmodule Ecto.Integration.RepoTest do
   test "insert and update with changeset dirty tracking" do
     changeset = Ecto.Changeset.cast(%Post{}, %{}, ~w(), ~w())
 
-    # There is no dirty tracking on insert, even with changesets,
-    # so database defaults never actually kick in.
-    assert %Post{id: pid, counter: nil} = post = TestRepo.insert(changeset)
+    # Make sure the database default gets loaded with read_after_writes.
+    assert %Post{id: pid, counter: 10} = post = TestRepo.insert(changeset)
 
-    # Set the counter to 11, so we can read it soon
+    # Set the counter to 11
     TestRepo.update(%{post | counter: 11})
 
-    # Now, a combination of dirty tracking with read_after_writes,
-    # allow us to see the actual counter value.
+    # Update and validate that counter has not reverted to default
     changeset = Ecto.Changeset.cast(post, %{"title" => "hello"}, ~w(title), ~w())
     assert %Post{id: ^pid, counter: 11, title: "hello"} = post = TestRepo.update(changeset)
 
@@ -186,8 +184,8 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "get(!)" do
-    post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
-    post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
+    post1 = TestRepo.insert(%Post{title: "1", text: "hai", counter: 15})
+    post2 = TestRepo.insert(%Post{title: "2", text: "hai", counter: 16})
 
     assert post1 == TestRepo.get(Post, post1.id)
     assert post2 == TestRepo.get(Post, to_string post2.id) # With casting
@@ -224,8 +222,8 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "get_by(!)" do
-    post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
-    post2 = TestRepo.insert(%Post{title: "2", text: "hello"})
+    post1 = TestRepo.insert(%Post{title: "1", text: "hai", counter: 17})
+    post2 = TestRepo.insert(%Post{title: "2", text: "hello", counter: 18})
 
     assert post1 == TestRepo.get_by(Post, id: post1.id)
     assert post1 == TestRepo.get_by(Post, text: post1.text)
@@ -245,8 +243,8 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "one(!)" do
-    post1 = TestRepo.insert(%Post{title: "1", text: "hai"})
-    post2 = TestRepo.insert(%Post{title: "2", text: "hai"})
+    post1 = TestRepo.insert(%Post{title: "1", text: "hai", counter: 19})
+    post2 = TestRepo.insert(%Post{title: "2", text: "hai", counter: 20})
 
     assert post1 == TestRepo.one(from p in Post, where: p.id == ^post1.id)
     assert post2 == TestRepo.one(from p in Post, where: p.id == ^to_string post2.id) # With casting
@@ -416,8 +414,8 @@ defmodule Ecto.Integration.RepoTest do
   ## Joins
 
   test "joins" do
-    p1 = TestRepo.insert(%Post{title: "1"})
-    p2 = TestRepo.insert(%Post{title: "2"})
+    p1 = TestRepo.insert(%Post{title: "1", counter: 21})
+    p2 = TestRepo.insert(%Post{title: "2", counter: 22})
     c1 = TestRepo.insert(%Permalink{url: "1", post_id: p2.id})
 
     query = from(p in Post, join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
@@ -428,7 +426,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "has_many association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    post = TestRepo.insert(%Post{title: "1", text: "hi", counter: 23})
     c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
     c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
 
@@ -437,7 +435,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "has_one association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"})
+    post = TestRepo.insert(%Post{title: "1", text: "hi", counter: 24})
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
@@ -446,7 +444,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "belongs_to association join" do
-    post = TestRepo.insert(%Post{title: "1"})
+    post = TestRepo.insert(%Post{title: "1", counter: 25})
     p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
     p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
 
