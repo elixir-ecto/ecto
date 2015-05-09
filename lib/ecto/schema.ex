@@ -518,7 +518,7 @@ defmodule Ecto.Schema do
     * `:auto_field` - When false, does not automatically define a `:foreign_key`
       field, implying the user is defining the field manually elsewhere
 
-    * `:type` - Sets the type of automtically defined `:foreign_key`.
+    * `:type` - Sets the type of automatically defined `:foreign_key`.
       Defaults to: `:integer` and be set per schema via `@foreign_key_type`
 
   All other options are forwarded to the underlying foreign key definition
