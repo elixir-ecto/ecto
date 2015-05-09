@@ -2,6 +2,7 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
   use ExUnit.Case, async: true
 
   alias Ecto.Adapters.SQL.Worker
+  alias Ecto.Adapters.SQL.Broker
 
   defmodule Connection do
     def connect(_opts) do
@@ -36,30 +37,39 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     def rollback_to_savepoint(savepoint), do: "ROLLBACK TO SAVEPOINT " <> savepoint
   end
 
+  setup %{test: name} = context do
+    timeout = :sbroker_time.milli_seconds_to_native(5000)
+    queue_spec = {:squeue_timeout, timeout, :out, 1, :drop}
+    opts = [client_queue: queue_spec, worker_queue: queue_spec,
+      queue_interval: 200, name: name]
+    {:ok, broker} = Broker.start_link(opts)
+    {:ok, %{broker: broker}}
+  end
+
   @opts [timeout: :infinity]
 
-  test "worker starts without an active connection" do
-    {:ok, worker} = Worker.start_link({Connection, []})
+  test "worker starts without an active connection", %{broker: broker} do
+    {:ok, worker} = Worker.start_link({broker, Connection, []})
 
     assert Process.alive?(worker)
     refute :sys.get_state(worker).conn
   end
 
-  test "worker starts with an active connection" do
-    {:ok, worker} = Worker.start_link({Connection, lazy: false})
+  test "worker starts with an active connection", %{broker: broker} do
+    {:ok, worker} = Worker.start_link({broker, Connection, lazy: false})
 
     assert Process.alive?(worker)
     assert :sys.get_state(worker).conn
   end
 
-  test "worker survives, connection stops if caller dies" do
-    {:ok, worker} = Worker.start({Connection, lazy: false})
+  test "worker survives, connection stops if caller dies", %{broker: broker} do
+    {:ok, worker} = Worker.start({broker, Connection, lazy: false})
     conn       = :sys.get_state(worker).conn
     conn_mon   = Process.monitor(conn)
     worker_mon = Process.monitor(worker)
 
     spawn_link(fn ->
-      Worker.link_me(worker, :infinity)
+      _ = Broker.checkout(broker)
     end)
 
     assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
@@ -67,13 +77,13 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     refute :sys.get_state(worker).conn
   end
 
-  test "worker survives, caller dies if connection dies" do
-    {:ok, worker} = Worker.start({Connection, lazy: false})
+  test "worker survives, caller dies if connection dies", %{broker: broker} do
+    {:ok, worker} = Worker.start({broker, Connection, lazy: false})
     conn = :sys.get_state(worker).conn
     parent = self()
 
     caller = spawn_link(fn ->
-      Worker.link_me(worker, :infinity)
+      ^worker = Broker.checkout(broker)
       Worker.begin!(worker, @opts)
       send parent, :go_on
       :timer.sleep(:infinity)
@@ -94,8 +104,8 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     refute :sys.get_state(worker).conn
   end
 
-  test "worker correctly manages transactions" do
-    {:ok, worker} = Worker.start({Connection, lazy: false})
+  test "worker correctly manages transactions", %{broker: broker} do
+    {:ok, worker} = Worker.start({broker, Connection, lazy: false})
 
     Worker.begin!(worker, @opts)
     Worker.begin!(worker, @opts)
@@ -111,8 +121,8 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     assert commands(worker) == ["BEGIN", "ROLLBACK"]
   end
 
-  test "worker replies with error on transaction error" do
-    {:ok, worker} = Worker.start({Connection, lazy: false})
+  test "worker replies with error on transaction error", %{broker: broker} do
+    {:ok, worker} = Worker.start({broker, Connection, lazy: false})
 
     Worker.begin!(worker, @opts)
 
@@ -123,8 +133,8 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     refute :sys.get_state(worker).conn
   end
 
-  test "worker correctly manages test transactions" do
-    {:ok, worker} = Worker.start({Connection, lazy: false})
+  test "worker correctly manages test transactions", %{broker: broker} do
+    {:ok, worker} = Worker.start({broker, Connection, lazy: false})
 
     # Check for idempotent commands
     Worker.restart_test_transaction!(worker, @opts)

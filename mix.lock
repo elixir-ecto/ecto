@@ -4,5 +4,5 @@
   "inch_ex": {:hex, :inch_ex, "0.2.4"},
   "mariaex": {:hex, :mariaex, "0.1.0"},
   "poison": {:hex, :poison, "1.3.1"},
-  "poolboy": {:hex, :poolboy, "1.4.2"},
-  "postgrex": {:hex, :postgrex, "0.8.0"}}
+  "postgrex": {:hex, :postgrex, "0.8.0"},
+  "sbroker": {:hex, :sbroker, "0.6.2"}}

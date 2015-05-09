@@ -12,6 +12,10 @@ defmodule Ecto.Adapters.SQL do
   to SQL. See `Ecto.Adapters.SQL.Connection` for more info.
   """
 
+  @queue_spec {:squeue_timeout, :sbroker_time.milli_seconds_to_native(5000),
+      :out, :infinity, :drop}
+  @queue_interval 200
+
   @doc false
   defmacro __using__(adapter) do
     quote do
@@ -112,6 +116,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   alias Ecto.Adapters.SQL.Worker
+  alias Ecto.Adapters.SQL.Broker
 
   @doc """
   Runs custom SQL query on given repo.
@@ -145,7 +150,7 @@ defmodule Ecto.Adapters.SQL do
     opts = Keyword.put_new(opts, :timeout, elem(repo.__pool__, 1))
 
     log(repo, {:query, sql, params}, opts, fn ->
-      use_worker(repo, opts[:timeout], fn worker ->
+      use_worker(repo, fn worker ->
         Worker.query!(worker, sql, params, opts)
       end)
     end)
@@ -171,7 +176,7 @@ defmodule Ecto.Adapters.SQL do
     {pid, timeout}
   end
 
-  defp use_worker(repo, timeout, fun) do
+  defp use_worker(repo, fun) do
     {pool, _} = pool!(repo)
     key  = {:ecto_transaction_pid, pool}
 
@@ -180,16 +185,24 @@ defmodule Ecto.Adapters.SQL do
         {worker, _} ->
           {true, worker}
         nil ->
-          {false, :poolboy.checkout(pool, true, timeout)}
+          {false, checkout(pool)}
       end
 
     try do
       fun.(worker)
     after
       if not in_transaction do
-        :poolboy.checkin(pool, worker)
+        checkin(worker)
       end
     end
+  end
+
+  defp checkout(pool) do
+    Broker.checkout(pool)
+  end
+
+  defp checkin(worker) do
+    Worker.done(worker)
   end
 
   @doc ~S"""
@@ -276,9 +289,9 @@ defmodule Ecto.Adapters.SQL do
     {pool, timeout} = pool!(repo)
     opts = Keyword.put_new(opts, :timeout, timeout)
 
-    :poolboy.transaction(pool, fn worker ->
+    raw_transaction(pool, fn worker ->
       Worker.begin_test_transaction!(worker, opts)
-    end, opts[:timeout])
+    end)
 
     :ok
   end
@@ -291,9 +304,9 @@ defmodule Ecto.Adapters.SQL do
     {pool, timeout} = pool!(repo)
     opts = Keyword.put_new(opts, :timeout, timeout)
 
-    :poolboy.transaction(pool, fn worker ->
+    raw_transaction(pool, fn worker ->
       Worker.restart_test_transaction!(worker, opts)
-    end, opts[:timeout])
+    end)
 
     :ok
   end
@@ -306,11 +319,20 @@ defmodule Ecto.Adapters.SQL do
     {pool, timeout} = pool!(repo)
     opts = Keyword.put_new(opts, :timeout, timeout)
 
-    :poolboy.transaction(pool, fn worker ->
+    raw_transaction(pool, fn worker ->
       Worker.rollback_test_transaction!(worker, opts)
-    end, opts[:timeout])
+    end)
 
     :ok
+  end
+
+  defp raw_transaction(pool, fun) do
+    worker = checkout(pool)
+    try do
+      fun.(worker)
+    after
+      checkin(worker)
+    end
   end
 
   ## Worker
@@ -347,25 +369,55 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    :poolboy.start_link(pool_opts, {connection, worker_opts})
+    sup_name = pool_opts
+      |> Keyword.fetch!(:name)
+      |> Atom.to_string()
+      |> Kernel.<>(".Supervisor")
+      |> String.to_atom()
+
+    Supervisor.start_link(__MODULE__, {pool_opts, connection, worker_opts},
+      [name: sup_name])
+  end
+
+  @doc false
+  def init({pool_opts, connection, worker_opts}) do
+    import Supervisor.Spec
+
+
+    broker = worker(Broker, [pool_opts])
+
+    size = Keyword.fetch!(pool_opts, :size)
+    pool_name = Keyword.fetch!(pool_opts, :name)
+    workers = for id <- 1..size do
+        worker(Worker, [{pool_name, connection, worker_opts}], [id: id])
+      end
+    worker_sup = supervisor(Supervisor, [workers, [strategy: :one_for_one]])
+
+    supervise([broker, worker_sup], [strategy: :rest_for_one, max_restarts: 0])
   end
 
   @doc false
   def stop(repo) do
-    :poolboy.stop elem(pool!(repo), 0)
+    {pool, _} = pool!(repo)
+    monitor = Process.monitor(pool)
+    Process.exit(pool, :shutdown)
+    receive do
+      {:DOWN, ^monitor, _, _, _} ->
+        :ok
+    end
   end
 
   defp split_opts(repo, opts) do
     pool_name = elem(repo.__pool__, 0)
-    {pool_opts, worker_opts} = Keyword.split(opts, [:size, :max_overflow])
+    pool_keys = [:size, :client_queue, :worker_queue, :queue_interval]
+    {pool_opts, worker_opts} = Keyword.split(opts, pool_keys)
 
     pool_opts = pool_opts
       |> Keyword.put_new(:size, 10)
-      |> Keyword.put_new(:max_overflow, 0)
-
-    pool_opts =
-      [name: {:local, pool_name},
-       worker_module: Worker] ++ pool_opts
+      |> Keyword.put_new(:client_queue, @queue_spec)
+      |> Keyword.put_new(:worker_queue, @queue_spec)
+      |> Keyword.put_new(:queue_interval, @queue_interval)
+      |> Keyword.put(:name, pool_name)
 
     worker_opts = worker_opts
       |> Keyword.put(:timeout, Keyword.get(worker_opts, :connect_timeout, 5000))
@@ -434,8 +486,7 @@ defmodule Ecto.Adapters.SQL do
     {pool, timeout} = pool!(repo)
 
     opts    = Keyword.put_new(opts, :timeout, timeout)
-    timeout = Keyword.get(opts, :timeout)
-    worker  = checkout_worker(pool, timeout)
+    worker  = transaction_checkout(pool)
 
     try do
       do_begin(repo, worker, opts)
@@ -451,11 +502,11 @@ defmodule Ecto.Adapters.SQL do
         do_rollback(repo, worker, opts)
         :erlang.raise(type, term, stacktrace)
     after
-      checkin_worker(pool, timeout)
+      transaction_checkin(pool)
     end
   end
 
-  defp checkout_worker(pool, timeout) do
+  defp transaction_checkout(pool) do
     key = {:ecto_transaction_pid, pool}
 
     case Process.get(key) do
@@ -463,20 +514,18 @@ defmodule Ecto.Adapters.SQL do
         Process.put(key, {worker, counter + 1})
         worker
       nil ->
-        worker = :poolboy.checkout(pool, true, timeout)
-        Worker.link_me(worker, timeout)
+        worker = checkout(pool)
         Process.put(key, {worker, 1})
         worker
     end
   end
 
-  defp checkin_worker(pool, timeout) do
+  defp transaction_checkin(pool) do
     key = {:ecto_transaction_pid, pool}
 
     case Process.get(key) do
       {worker, 1} ->
-        Worker.unlink_me(worker, timeout)
-        :poolboy.checkin(pool, worker)
+        checkin(worker)
         Process.delete(key)
       {worker, counter} ->
         Process.put(key, {worker, counter - 1})
