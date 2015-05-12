@@ -1,4 +1,4 @@
-defmodule Repo.CreatePosts do
+defmodule Repo.CreateWeather do
   use Ecto.Migration
 
   def up do
