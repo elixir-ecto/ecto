@@ -804,7 +804,7 @@ defmodule Ecto.Changeset do
   @spec validate_unique(t, atom, [Keyword.t]) :: t
   def validate_unique(changeset, field, opts) when is_list(opts) do
     %{model: model, changes: changes, errors: errors, validations: validations} = changeset
-    changeset = %{changeset | validations: [{field, :unique}|validations]}
+    changeset = %{changeset | validations: [{field, {:unique, opts}}|validations]}
 
     repo   = Keyword.fetch!(opts, :on)
     scope  = Keyword.get(opts, :scope)
