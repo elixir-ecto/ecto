@@ -253,7 +253,8 @@ defmodule Ecto.Changeset do
   end
 
   defp type!(types, key),
-    do: Map.get(types, key) || raise ArgumentError, "unknown field `#{key}`"
+    do: Map.get(types, key) ||
+          raise ArgumentError, "unknown field `#{key}` (note only fields are supported in cast, associations are not)"
 
   defp cast_key(key) when is_binary(key),
     do: {String.to_atom(key), key}
