@@ -941,13 +941,17 @@ defmodule Ecto.Changeset do
     end
   end
 
-
   @doc """
-  Validates that the given field matches the confirmation param of that field.
+  Validates that the given field matches the confirmation
+  parameter of that field.
 
-  Note that this does not raise a validation error if the confirmation field is nil.
+  By calling `validate_confirmation(changeset, :email)`, this
+  validation will check if both "email" and "email_confirmation"
+  in the parameter map matches.
 
-  e.g. `validate_confirmation(changeset, :email)` would look for a param with the key of email_confirmation.
+  Note that this does not add a validation error if the confirmation
+  field is nil. Note "email_confirmation" does not need to be added
+  as a virtual field in your schema.
 
   ## Options
 
@@ -961,16 +965,15 @@ defmodule Ecto.Changeset do
   """
   @spec validate_confirmation(t, atom, Enum.t) :: t
   def validate_confirmation(changeset, field, opts \\ []) do
-    validate_change changeset, field, {:confirmation, opts}, fn
-      field, value ->
-        confirmation_value = changeset.params["#{field}_confirmation"]
-        case is_nil(confirmation_value) do
-          true ->
-            []
-          false ->
-            if value != confirmation_value, do: [{:"#{field}_confirmation", message(opts, "does not match")}], else: []
-        end
+    validate_change changeset, field, {:confirmation, opts}, fn _, _ ->
+      param = Atom.to_string(field)
+      confirmation = changeset.params["#{param}_confirmation"]
+      if is_nil(confirmation) or confirmation == changeset.params[param] do
+        []
+      else
+        [{field, message(opts, "does not match confirmation")}]
       end
+    end
   end
 
   defp message(opts, default) do
