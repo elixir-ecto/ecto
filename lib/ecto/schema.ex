@@ -529,17 +529,79 @@ defmodule Ecto.Schema do
       defmodule Comment do
         use Ecto.Model
         schema "comments" do
-          # This automatically defines a post_id field too
           belongs_to :post, Post
-
-          # Specify the association with custom source
-          belongs_to :author, {"posts_authors", Author}
         end
       end
 
       # The post can come preloaded on the comment record
       [comment] = Repo.all(from(c in Comment, where: c.id == 42, preload: :post))
       comment.post #=> %Post{...}
+
+  ## Polymorphic associations
+
+  One common use case for belongs to associations is to handle
+  polymorphism. For example, imagine you have defined a Comment
+  model and you wish to use it for commenting on tasks and posts.
+
+  Because Ecto does not tie a model to a given table, we can
+  achieve this by specifying the table on the association
+  definition. Let's start over and define a new Comment model:
+
+      defmodule Comment do
+        use Ecto.Model
+        schema "abstract table: comments" do
+          # This will be used by associations on each "concrete" table
+          field :assoc_id, :integer
+        end
+      end
+
+  Notice we have changed the table name to "abstract table: comment".
+  You can choose whatever name you want, the point here is that this
+  particular table will never exist.
+
+  Now in your Post and Task models:
+
+      defmodule Post do
+        use Ecto.Model
+        schema "posts" do
+          has_many :comments, {"posts_comments", Comment}, foreign_key: :assoc_id
+        end
+      end
+
+      defmodule Task do
+        use Ecto.Model
+        schema "tasks" do
+          has_many :comments, {"tasks_comments", Comment}, foreign_key: :assoc_id
+        end
+      end
+
+  Now each association uses its own specific table, "posts_comments"
+  and "tasks_comments", which must be created on migrations. The
+  advantage of this approach is that we never store unrelated data
+  together, ensuring we keep databases references fast and correct.
+
+  When using this technique, the only limitation is that you cannot
+  build comments directly. For example, the command below
+
+      Repo.insert(%Comment{})
+
+  will attempt to use the abstract table. Instead, one should
+
+      Repo.insert(build(post, :comments))
+
+  where `build/2` is defined in `Ecto.Model`. You can also
+  use `assoc/2` in both `Ecto.Model` and in the query syntax
+  to easily retrieve associated comments to a given post or
+  task:
+
+      # Fetch all comments associated to the given task
+      Repo.all(assoc(task, :comments))
+
+  Finally, if for some reason you wish to query one of comments
+  table directly, you can also specify the tuple source in
+  the query syntax:
+
+      Repo.all from(c in {"posts_comments", Comment}), ...)
 
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
