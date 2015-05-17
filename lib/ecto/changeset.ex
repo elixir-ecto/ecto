@@ -941,6 +941,38 @@ defmodule Ecto.Changeset do
     end
   end
 
+
+  @doc """
+  Validates that the given field matches the confirmation param of that field.
+
+  Note that this does not raise a validation error if the confirmation field is nil.
+
+  e.g. `validate_confirmation(changeset, :email)` would look for a param with the key of email_confirmation.
+
+  ## Options
+
+    * `:message` - the message on failure, defaults to "does not match"
+
+  ## Examples
+
+      validate_confirmation(changeset, :email)
+      validate_confirmation(changeset, :password, message: "passwords do not match")
+
+  """
+  @spec validate_confirmation(t, atom, Enum.t) :: t
+  def validate_confirmation(changeset, field, opts \\ []) do
+    validate_change changeset, field, {:confirmation, opts}, fn
+      field, value ->
+        confirmation_value = changeset.params["#{field}_confirmation"]
+        case is_nil(confirmation_value) do
+          true ->
+            []
+          false ->
+            if value != confirmation_value, do: [{:"#{field}_confirmation", message(opts, "does not match")}], else: []
+        end
+      end
+  end
+
   defp message(opts, default) do
     Keyword.get(opts, :message, default)
   end
