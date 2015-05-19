@@ -44,7 +44,7 @@ defmodule Ecto.Schema do
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
 
-  The advantage of defining configure the schema via those attributes
+  The advantage of configuring the schema via those attributes
   is that they can be set with a macro to configure application wide
   defaults. For example, if you would like to use `uuid`'s in all of
   your application models, you can do:
