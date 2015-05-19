@@ -292,6 +292,12 @@ defmodule Ecto.ChangesetTest do
     changeset = change(base_changeset, title: "new title")
     assert changeset.changes == %{title: "new title"}
 
+    changeset = change(base_changeset, title: nil)
+    assert changeset.changes == %{}
+
+    changeset = change(base_changeset, %{upvotes: nil})
+    assert changeset.changes == %{title: "title", upvotes: nil}
+
     changeset = change(base_changeset, %{upvotes: 5})
     assert changeset.changes == %{title: "title"}
 
@@ -356,22 +362,28 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "put_change/3 and delete_change/2" do
-    changeset = change(%Post{upvotes: 5})
+    base_changeset = change(%Post{upvotes: 5})
 
-    changeset = put_change(changeset, :title, "foo")
+    changeset = put_change(base_changeset, :title, "foo")
     assert changeset.changes.title == "foo"
-
-    changeset = put_change(changeset, :title, "bar")
-    assert changeset.changes.title == "bar"
-
-    changeset = put_change(changeset, :upvotes, 5)
-    refute Map.has_key?(changeset.changes, :upvotes)
 
     changeset = delete_change(changeset, :title)
     assert changeset.changes == %{}
 
+    changeset = put_change(base_changeset, :title, "bar")
+    assert changeset.changes.title == "bar"
+
+    changeset = put_change(base_changeset, :title, nil)
+    assert changeset.changes == %{}
+
+    changeset = put_change(base_changeset, :upvotes, 5)
+    assert changeset.changes == %{}
+
     changeset = put_change(changeset, :upvotes, 10)
     assert changeset.changes.upvotes == 10
+
+    changeset = put_change(base_changeset, :upvotes, nil)
+    assert changeset.changes.upvotes == nil
   end
 
   test "force_change/3" do

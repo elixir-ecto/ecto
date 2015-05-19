@@ -104,22 +104,17 @@ defmodule Ecto.Changeset do
 
   def change(%Changeset{changes: changes} = changeset, new_changes)
       when is_map(new_changes) do
-    changed = get_changed(changeset.model, new_changes)
-    %{changeset | changes: Map.merge(changes, changed)}
+    %{changeset | changes: get_changed(changeset.model, changes, new_changes)}
   end
 
   def change(%{__struct__: _} = model, changes) when is_map(changes) do
-    changed = get_changed(model, changes)
+    changed = get_changed(model, %{}, changes)
     %Changeset{valid?: true, model: model, changes: changed}
   end
 
-  defp get_changed(model, new_changes) do
-    Enum.reduce(new_changes, %{}, fn({key, value}, acc) ->
-      if Map.get(model, key) != value do
-        Map.put(acc, key, value)
-      else
-        acc
-      end
+  defp get_changed(model, old_changes, new_changes) do
+    Enum.reduce(new_changes, old_changes, fn({key, value}, acc) ->
+      put_change(model, acc, key, value)
     end)
   end
 
@@ -508,10 +503,17 @@ defmodule Ecto.Changeset do
   """
   @spec put_change(t, atom, term) :: t
   def put_change(%Changeset{} = changeset, key, value) do
-    if Map.get(changeset.model, key) == value do
-      changeset
-    else
-      update_in changeset.changes, &Map.put(&1, key, value)
+    update_in changeset.changes, &put_change(changeset.model, &1, key, value)
+  end
+
+  defp put_change(model, acc, key, value) do
+    cond do
+      Map.get(model, key) != value ->
+        Map.put(acc, key, value)
+      Map.has_key?(acc, key) ->
+        Map.delete(acc, key)
+      true ->
+        acc
     end
   end
 
