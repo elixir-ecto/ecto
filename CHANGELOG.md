@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.11.3 (2015-05-19)
+
+* Enhancements
+  * Add `validate_confirmation/3`
+  * Normalize ports for MySQL and PostgreSQL
+
+* Bug fixes
+  * Ensure changes in changesets can be reset to their original value
+
 ## v0.11.2 (2015-05-06)
 
 * Bug fixes
