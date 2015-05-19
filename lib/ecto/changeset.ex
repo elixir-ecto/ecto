@@ -613,9 +613,9 @@ defmodule Ecto.Changeset do
   ## Examples
 
       iex> changeset = change(%Post{}, %{title: ""})
-      iex> changeset = add_error(changeset, :title, :empty)
+      iex> changeset = add_error(changeset, :title, "empty")
       iex> changeset.errors
-      [title: :empty]
+      [title: "empty"]
       iex> changeset.valid?
       false
 
@@ -642,11 +642,11 @@ defmodule Ecto.Changeset do
       iex> changeset = change(%Post{}, %{title: "foo"})
       iex> changeset = validate_change changeset, :title, fn
       ...>   # Value must not be "foo"!
-      ...>   :title, "foo" -> [{:title, :is_foo}]
+      ...>   :title, "foo" -> [title: "is_foo"]
       ...>   :title, _     -> []
       ...> end
       iex> changeset.errors
-      [{:title, :is_foo}]
+      [title: "is_foo"]
 
   """
   @spec validate_change(t, atom, (atom, term -> [error])) :: t
