@@ -18,9 +18,9 @@ defmodule Ecto.Schema do
         end
       end
 
-  By default, a schema will generate both a primary key named `id`
-  of type `:integer` and `belongs_to` associations will generate
-  foreign keys of type `:integer` too. Those setting can be configured
+  By default, a schema will generate a primary key named `id`
+  of type `:integer` and `belongs_to` associations in the schema will generate
+  foreign keys of type `:integer`. Those setting can be configured
   below.
 
   ## Schema attributes
@@ -44,7 +44,7 @@ defmodule Ecto.Schema do
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
 
-  The advantage of defining configure the schema via those attributes
+  The advantage of configuring the schema via those attributes
   is that they can be set with a macro to configure application wide
   defaults. For example, if you would like to use `uuid`'s in all of
   your application models, you can do:
