@@ -29,7 +29,6 @@ defmodule Ecto.Changeset do
             errors: [], validations: [], required: [], optional: [],
             filters: %{}
 
-  @type error :: {atom, atom | {atom, [term]}}
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
                         model: Ecto.Model.t | nil,
@@ -40,6 +39,9 @@ defmodule Ecto.Changeset do
                         errors: [error],
                         validations: [{atom, String.t | {String.t, [term]}}],
                         filters: %{atom => term}}
+
+  @type error :: {atom, error_message}
+  @type error_message :: String.t | {String.t, integer}
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{count}"},
@@ -618,7 +620,7 @@ defmodule Ecto.Changeset do
       false
 
   """
-  @spec add_error(t, atom, error) :: t
+  @spec add_error(t, atom, error_message) :: t
   def add_error(%{errors: errors} = changeset, key, error) do
     %{changeset | errors: [{key, error}|errors], valid?: false}
   end
