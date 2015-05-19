@@ -18,9 +18,9 @@ defmodule Ecto.Schema do
         end
       end
 
-  By default, a schema will generate both a primary key named `id`
-  of type `:integer` and `belongs_to` associations will generate
-  foreign keys of type `:integer` too. Those setting can be configured
+  By default, a schema will generate a primary key named `id`
+  of type `:integer` and `belongs_to` associations in the schema will generate
+  foreign keys of type `:integer`. Those setting can be configured
   below.
 
   ## Schema attributes
