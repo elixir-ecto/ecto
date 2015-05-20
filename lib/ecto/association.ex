@@ -229,7 +229,7 @@ defmodule Ecto.Association do
   def merge_source(model, query)
 
   def merge_source(struct, {source, _}) do
-    put_in struct.__meta__.source, source
+    Ecto.Model.put_source(struct, source)
   end
 
   def merge_source(struct, _query) do

@@ -153,6 +153,18 @@ defmodule Ecto.Model do
     assoc.__struct__.assoc_query(assoc, values)
   end
 
+  @doc """
+  Update the database source of the model
+
+  ## Examples
+
+      post = Repo.get Post, 1
+      new_post = Ecto.Model.put_source(post, "user_posts")
+  """
+  def put_source(model, new_source) do
+    put_in model.__meta__.source, new_source
+  end
+
   defp assert_struct!(model, %{__struct__: struct}) do
     if struct != model do
       raise ArgumentError, "expected a homogeneous list containing the same struct, " <>

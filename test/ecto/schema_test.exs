@@ -80,6 +80,13 @@ defmodule Ecto.SchemaTest do
     assert SchemaModel.__schema__(:field, :__meta__) == nil
   end
 
+  test "updates source with put_source" do
+    model = %MyModel{}
+    assert model.__meta__.source == "mymodel"
+    new_model = Ecto.Model.put_source(model, "new_model")
+    assert new_model.__meta__.source == "new_model"
+  end
+
   ## Errors
 
   test "field name clash" do
