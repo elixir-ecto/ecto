@@ -216,7 +216,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "get(!) with custom source" do
     custom = %Custom{uuid: "01abcdef01abcdef"}
-    custom = put_in custom.__meta__.source, "posts"
+    custom = Ecto.Model.put_source(custom, "posts")
     TestRepo.insert(custom)
 
     assert %Custom{uuid: "01abcdef01abcdef", __meta__: %{source: "posts"}} =
