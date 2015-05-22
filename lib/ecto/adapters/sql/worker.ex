@@ -69,10 +69,7 @@ defmodule Ecto.Adapters.SQL.Worker do
     {:reply, :ok, s}
   end
 
-  def handle_call(:ask, from, %{client: nil, sandbox: false, transactions: []} = s) do
-    handle_ask(from, s)
-  end
-  def handle_call(:ask, from, %{client: nil, sandbox: true, transactions: [sandbox: _]} = s) do
+  def handle_call(:ask, from, %{client: nil} = s) do
     handle_ask(from, s)
   end
 
