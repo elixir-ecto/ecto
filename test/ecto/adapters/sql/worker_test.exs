@@ -59,81 +59,28 @@ defmodule Ecto.Adapters.SQL.WorkerTest do
     worker_mon = Process.monitor(worker)
 
     spawn_link(fn ->
-      Worker.link_me(worker, :infinity)
+      Worker.ask(worker, :infinity)
     end)
 
     assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
     refute_received {:DOWN, ^worker_mon, :process, ^worker, _}
-    refute :sys.get_state(worker).conn
-  end
-
-  test "worker survives, caller dies if connection dies" do
-    {:ok, worker} = Worker.start({Connection, lazy: false})
-    conn = :sys.get_state(worker).conn
-    parent = self()
-
-    caller = spawn_link(fn ->
-      Worker.link_me(worker, :infinity)
-      Worker.begin!(worker, @opts)
-      send parent, :go_on
-      :timer.sleep(:infinity)
-    end)
-
-    # Wait until caller is linked
-    assert_receive :go_on, :infinity
-    Process.unlink(caller)
-
-    conn_mon   = Process.monitor(conn)
-    caller_mon = Process.monitor(caller)
-    worker_mon = Process.monitor(worker)
-    Process.exit(conn, :shutdown)
-
-    assert_receive {:DOWN, ^conn_mon, :process, ^conn, _}, 1000
-    assert_receive {:DOWN, ^caller_mon, :process, ^caller, _}, 1000
-    refute_received {:DOWN, ^worker_mon, :process, ^worker, _}
-    refute :sys.get_state(worker).conn
-  end
-
-  test "worker correctly manages transactions" do
-    {:ok, worker} = Worker.start({Connection, lazy: false})
-
-    Worker.begin!(worker, @opts)
-    Worker.begin!(worker, @opts)
-    Worker.rollback!(worker, @opts)
-    Worker.commit!(worker, @opts)
-
-    assert commands(worker) ==
-           ["BEGIN", "SAVEPOINT ecto_1", "ROLLBACK TO SAVEPOINT ecto_1", "COMMIT"]
-
-    Worker.begin!(worker, @opts)
-    Worker.rollback!(worker, @opts)
-
-    assert commands(worker) == ["BEGIN", "ROLLBACK"]
-  end
-
-  test "worker replies with error on transaction error" do
-    {:ok, worker} = Worker.start({Connection, lazy: false})
-
-    Worker.begin!(worker, @opts)
-
-    assert_raise RuntimeError, "oops", fn ->
-      Worker.rollback!(worker, Keyword.put(@opts, :error, true))
-    end
-
     refute :sys.get_state(worker).conn
   end
 
   test "worker correctly manages test transactions" do
     {:ok, worker} = Worker.start({Connection, lazy: false})
 
-    # Check for idempotent commands
-    Worker.restart_test_transaction!(worker, @opts)
-    Worker.rollback_test_transaction!(worker, @opts)
-    Worker.begin_test_transaction!(worker, @opts)
+    {:ok, {_, _, monitor, []}} = Worker.ask(worker, :infinity)
 
-    Worker.begin_test_transaction!(worker, @opts)
-    Worker.restart_test_transaction!(worker, @opts)
-    Worker.rollback_test_transaction!(worker, @opts)
+    # Check for idempotent commands
+    assert Worker.restart_test_transaction(worker, monitor, [], @opts) == {:ok, []}
+    assert Worker.rollback_test_transaction(worker, monitor, [], @opts) == {:ok, []}
+    assert Worker.begin_test_transaction(worker, monitor, [], @opts) == {:ok, [sandbox: "ecto_sandbox"]}
+
+    assert Worker.begin_test_transaction(worker, monitor, [sandbox: "ecto_sandbox"], @opts) == {:ok, [sandbox: "ecto_sandbox"]}
+    assert Worker.begin_test_transaction(worker, monitor, [sandbox: "ecto_sandbox"], @opts) == {:ok, [sandbox: "ecto_sandbox"]}
+    assert Worker.restart_test_transaction(worker, monitor, [sandbox: "ecto_sandbox"], @opts) == {:ok, [sandbox: "ecto_sandbox"]}
+    assert Worker.rollback_test_transaction(worker, monitor, [sandbox: "ecto_sandbox"], @opts) == {:ok, []}
 
     assert commands(worker) == ["BEGIN", "SAVEPOINT ecto_sandbox",
                                 "ROLLBACK TO SAVEPOINT ecto_sandbox", "ROLLBACK"]
