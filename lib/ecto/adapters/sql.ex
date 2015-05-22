@@ -204,8 +204,8 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp disconnect(key, info, timeout) do
-    info = %{info | conn: nil}
-    _ = Process.put(key, info)
+    new_info = %{info | conn: nil}
+    _ = Process.put(key, new_info)
     done_and_disconnect(info, timeout)
   end
 
