@@ -92,7 +92,7 @@ defmodule Ecto.Integration.DeadlockTest do
 
         # At this time the transaction count is actually 0 not 1 because Postgres
         # has killed the tx but Ecto doesn't know/care.
-        {aborted_worker, _} = Process.get({:ecto_transaction_pid, Process.whereis(elem(PoolRepo.__pool__, 0))})
+        {aborted_worker, _} = Process.get({:ecto_transaction_pid, elem(PoolRepo.__pool__, 0)})
         %{transactions: 1}  = :sys.get_state(aborted_worker)
 
         assert_tx_aborted

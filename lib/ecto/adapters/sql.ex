@@ -159,20 +159,8 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp pool!(repo) do
-    {pid, timeout} = repo.__pool__
-    pid = Process.whereis(pid)
-
-    if is_nil(pid) or not Process.alive?(pid) do
-      raise ArgumentError, "repo #{inspect repo} is not started, " <>
-                           "please ensure it is part of your supervision tree"
-    end
-
-    {pid, timeout}
-  end
-
   defp use_worker(repo, timeout, fun) do
-    {pool, _} = pool!(repo)
+    {pool, _} = repo.__pool__
     key  = {:ecto_transaction_pid, pool}
 
     {in_transaction, worker} =
@@ -180,7 +168,7 @@ defmodule Ecto.Adapters.SQL do
         {worker, _} ->
           {true, worker}
         nil ->
-          {false, :poolboy.checkout(pool, true, timeout)}
+          {false, checkout(repo, pool, timeout)}
       end
 
     try do
@@ -189,6 +177,16 @@ defmodule Ecto.Adapters.SQL do
       if not in_transaction do
         :poolboy.checkin(pool, worker)
       end
+    end
+  end
+
+  defp checkout(repo, pool, timeout) do
+    try do
+      :poolboy.checkout(pool, true, timeout)
+    catch
+      :exit, {:noproc, _} ->
+        raise ArgumentError, "repo #{inspect repo} is not started, " <>
+                             "please ensure it is part of your supervision tree"
     end
   end
 
@@ -273,7 +271,7 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec begin_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def begin_test_transaction(repo, opts \\ []) do
-    {pool, timeout} = pool!(repo)
+    {pool, timeout} = repo.__pool__
     opts = Keyword.put_new(opts, :timeout, timeout)
 
     :poolboy.transaction(pool, fn worker ->
@@ -288,7 +286,7 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec restart_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def restart_test_transaction(repo, opts \\ []) do
-    {pool, timeout} = pool!(repo)
+    {pool, timeout} = repo.__pool__
     opts = Keyword.put_new(opts, :timeout, timeout)
 
     :poolboy.transaction(pool, fn worker ->
@@ -303,7 +301,7 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec rollback_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
   def rollback_test_transaction(repo, opts \\ []) do
-    {pool, timeout} = pool!(repo)
+    {pool, timeout} = repo.__pool__
     opts = Keyword.put_new(opts, :timeout, timeout)
 
     :poolboy.transaction(pool, fn worker ->
@@ -352,7 +350,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def stop(repo) do
-    :poolboy.stop elem(pool!(repo), 0)
+    :poolboy.stop elem(repo.__pool__, 0)
   end
 
   defp split_opts(repo, opts) do
@@ -431,11 +429,11 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def transaction(repo, opts, fun) do
-    {pool, timeout} = pool!(repo)
+    {pool, timeout} = repo.__pool__
 
     opts    = Keyword.put_new(opts, :timeout, timeout)
     timeout = Keyword.get(opts, :timeout)
-    worker  = checkout_worker(pool, timeout)
+    worker  = checkout_worker(repo, pool, timeout)
 
     try do
       do_begin(repo, worker, opts)
@@ -455,7 +453,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp checkout_worker(pool, timeout) do
+  defp checkout_worker(repo, pool, timeout) do
     key = {:ecto_transaction_pid, pool}
 
     case Process.get(key) do
@@ -463,7 +461,7 @@ defmodule Ecto.Adapters.SQL do
         Process.put(key, {worker, counter + 1})
         worker
       nil ->
-        worker = :poolboy.checkout(pool, true, timeout)
+        worker = checkout(repo, pool, timeout)
         Worker.link_me(worker, timeout)
         Process.put(key, {worker, 1})
         worker
