@@ -551,11 +551,11 @@ defmodule Ecto.Adapters.SQL do
 
   defp do_begin(repo, key, %{transactions: [], depth: 0, module: module} = info,
   opts, timeout) do
-    info = %{info | transactions: [nil], depth: 1}
+    info = %{info | transactions: [next: :transaction], depth: 1}
     _ = Process.put(key, info)
     query = apply(module, :begin_transaction, [])
     log(repo, {:query, query, []}, opts, fn ->
-      begin_query!(key, info, :transaction, query, [], opts, timeout)
+      begin_query!(key, info, query, [], opts, timeout)
     end)
     :ok
   end
@@ -564,17 +564,21 @@ defmodule Ecto.Adapters.SQL do
     savepoint = "ecto_#{n}"
     n = n + 1
     query = apply(module, :savepoint, [savepoint])
-    info = %{info | transactions: [nil | trans], depth: n}
+    info = %{info | transactions: [next: {:savepoint, savepoint}] ++ trans, depth: n}
     _ = Process.put(key, info)
     log(repo, {:query, query, []}, opts, fn ->
-      begin_query!(key, info, {:savepoint, savepoint}, query, [], opts, timeout)
+      begin_query!(key, info, query, [], opts, timeout)
     end)
     :ok
   end
 
-  defp do_rollback(_, key, %{conn: conn, transactions: trans, depth: n} = info, _, _)
-  when is_nil(conn) or is_nil(hd(trans)) do
+  defp do_rollback(_, key, %{conn: nil, transactions: trans, depth: n} = info, _, _) do
     info = %{info | transactions: tl(trans), depth: n-1}
+    _ = Process.put(key, info)
+    :ok
+  end
+  defp do_rollback(_, key, %{transactions: [{:next, _} | trans], depth: n} = info, _, _) do
+    info = %{info | transactions: trans, depth: n-1}
     _ = Process.put(key, info)
     :ok
   end
@@ -599,9 +603,13 @@ defmodule Ecto.Adapters.SQL do
     :ok
   end
 
-  defp do_commit(_, key, %{conn: conn, transactions: trans, depth: n} = info, _, _)
-  when is_nil(conn) or is_nil(hd(trans)) do
+  defp do_commit(_, key, %{conn: nil, transactions: trans, depth: n} = info, _, _) do
     info = %{info | transactions: tl(trans), depth: n-1}
+    _ = Process.put(key, info)
+    :ok
+  end
+  defp do_commit(_, key, %{transactions: [{:next, _} | trans], depth: n} = info, _, _) do
+    info = %{info | transactions: trans, depth: n-1}
     _ = Process.put(key, info)
     :ok
   end
@@ -621,8 +629,9 @@ defmodule Ecto.Adapters.SQL do
     :ok
   end
 
-  defp begin_query!(key, %{module: module, conn: conn, transactions: trans} = info,
-  transaction, sql, params, opts, timeout) do
+  defp begin_query!(key, %{module: module, conn: conn,
+    transactions: [{:next, transaction} | trans]} = info,
+  sql, params, opts, timeout) do
     try do
       apply(module, :query, [conn, sql, params, opts])
     catch
@@ -632,7 +641,7 @@ defmodule Ecto.Adapters.SQL do
         :erlang.raise(class, type, stack)
     else
       {:ok, result} ->
-        _ = Process.put(key, %{info | transactions: [transaction | tl(trans)]})
+        _ = Process.put(key, %{info | transactions: [transaction | trans]})
         result
       {:error, err} ->
         raise err
