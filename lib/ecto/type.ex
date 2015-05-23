@@ -22,7 +22,9 @@ defmodule Ecto.Type do
   still keeping the underlying Ecto type the same:
 
       defmodule Permalink do
-        def type, do: :integer
+        def type do
+          :integer
+        end
 
         # Provide our own casting rules.
         def cast(string) when is_binary(string) do
@@ -33,21 +35,30 @@ defmodule Ecto.Type do
         end
 
         # We should still accept integers
-        def cast(integer) when is_integer(integer), do: {:ok, integer}
-
+        def cast(integer) when is_integer(integer) do
+          {:ok, integer}
+        end
         # Everything else is a failure though
-        def cast(_), do: :error
+        def cast(_) do
+          :error
+        end
 
         # When loading data from the database, we are guaranteed to
         # receive an integer (as database are stricts) and we will
         # just return it to be stored in the model struct.
-        def load(integer) when is_integer(integer), do: {:ok, integer}
+        def load(integer) when is_integer(integer) do
+          {:ok, integer}
+        end
 
         # When dumping data to the database, we *expect* an integer
         # but any value could be inserted into the struct, so we need
         # guard against them.
-        def dump(integer) when is_integer(integer), do: {:ok, integer}
-        def dump(_), do: :error
+        def dump(integer) when is_integer(integer) do
+          {:ok, integer}
+        end
+        def dump(_) do
+          :error
+        end
       end
 
   Now, we can use our new field above as our primary key type in models:
