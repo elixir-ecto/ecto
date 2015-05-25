@@ -34,8 +34,12 @@ defmodule Ecto.UUID do
   @doc """
   Converts a binary UUID into a string.
   """
-  def load(uuid = << _::128 >>) do
+  def load(<< _::128 >> = uuid) do
    {:ok, encode(uuid)}
+  end
+  def load(<<_::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96>> = string) do
+    raise "trying to load string UUID as Ecto.UUID: #{inspect string}. " <>
+          "Maybe you wanted to declare :uuid as your database field?"
   end
   def load(_), do: :error
 

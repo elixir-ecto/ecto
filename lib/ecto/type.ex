@@ -510,18 +510,18 @@ defmodule Ecto.Type do
   defp of_base_type?(:time, {_, _, _, _}),  do: true
   defp of_base_type?(:datetime, {{_, _, _}, {_, _, _, _}}), do: true
 
-  defp of_base_type?(:date, %{__struct__: Ecto.Date}) do
-    raise "trying to dump/cast Ecto.Date as a :date type. " <>
+  defp of_base_type?(:date, %{__struct__: Ecto.Date} = d) do
+    raise "trying to dump/cast Ecto.Date as a :date type: #{inspect d}. " <>
           "Maybe you wanted to declare Ecto.Date in your schema?"
   end
 
-  defp of_base_type?(:time, %{__struct__: Ecto.Time}) do
-    raise "trying to dump/cast Ecto.Time as a :time type. " <>
+  defp of_base_type?(:time, %{__struct__: Ecto.Time} = t) do
+    raise "trying to dump/cast Ecto.Time as a :time type: #{inspect t}. " <>
           "Maybe you wanted to declare Ecto.Time in your schema?"
   end
 
-  defp of_base_type?(:datetime, %{__struct__: Ecto.DateTime}) do
-    raise "trying to dump/cast Ecto.DateTime as a :datetime type. " <>
+  defp of_base_type?(:datetime, %{__struct__: Ecto.DateTime} = dt) do
+    raise "trying to dump/cast Ecto.DateTime as a :datetime type: #{inspect dt}. " <>
           "Maybe you wanted to declare Ecto.DateTime in your schema?"
   end
 

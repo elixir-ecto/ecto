@@ -12,7 +12,10 @@ defmodule Ecto.UUIDTest do
 
   test "load" do
     assert Ecto.UUID.load(@test_uuid_binary) == {:ok, @test_uuid}
-    assert Ecto.UUID.load(@test_uuid) == :error
+    assert Ecto.UUID.load("") == :error
+    assert_raise RuntimeError, ~r"trying to load string UUID as Ecto.UUID:", fn ->
+      Ecto.UUID.load(@test_uuid)
+    end
   end
 
   test "dump" do
