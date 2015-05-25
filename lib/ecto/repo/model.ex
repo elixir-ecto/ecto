@@ -153,14 +153,11 @@ defmodule Ecto.Repo.Model do
 
   defp merge_into_changeset(struct, fields, changeset) do
     # Get only the database fields from the struct
-    changes = Map.take(struct, fields)
-
-    # Remove nil primary key fields from changes
+    # and remove nil fields from changes.
     changes =
-      Enum.reduce Ecto.Model.primary_key(struct), changes, fn
-        {k, nil}, acc -> Map.delete(acc, k)
-        _, acc -> acc
-      end
+      Map.take(struct, fields)
+      |> Enum.reject(fn {_, v} -> v == nil end)
+      |> Enum.into(%{})
 
     update_in changeset.changes, &Map.merge(changes, &1)
   end
