@@ -171,7 +171,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "validate_unique/3 with scope" do
     import Ecto.Changeset
-    post = TestRepo.insert(%Post{title: "hello", text: "world"})
+    TestRepo.insert(%Post{title: "hello", text: "world"})
 
     on_insert = cast(%Post{}, %{"title" => "hello", "text" => "elixir"}, ~w(title), ~w(text))
     assert validate_unique(on_insert, :title, on: TestRepo).errors == [title: "has already been taken"]

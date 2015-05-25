@@ -363,8 +363,6 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), code}
 
   # Tagged
-  def quoted_type({:<<>>, _, _}, _vars), do: :binary
-  def quoted_type({:uuid, _, [_]}, _vars), do: :uuid
   def quoted_type({:type, _, [_, type]}, _vars), do: type
 
   # Sigils
