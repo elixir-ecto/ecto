@@ -616,9 +616,8 @@ defmodule Ecto.ChangesetTest do
   test "validate_unique/3 with downcase" do
     defmodule DowncaseRepo do
       def all(query) do
-        [where] = query.wheres
-        assert Macro.to_string(where.expr) ==
-               ~s|fragment("lower(", &0.title(), ")") == fragment("lower(", ^0, ")")|
+        assert inspect(query) =~
+               ~s|where: fragment("lower(?)", p.title) == fragment("lower(?)", ^"hello")|
         []
       end
     end

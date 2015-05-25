@@ -21,7 +21,8 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do avg(0) end), %{}} ==
            escape(quote do avg(0) end, [], __ENV__)
 
-    assert {Macro.escape(quote do fragment("date_add(", &0.created_at, ", ", ^0, ")") end), %{0 => {0, :any}}} ==
+    assert {Macro.escape(quote do fragment({:raw, "date_add("}, {:expr, &0.created_at},
+                                           {:raw, ", "}, {:expr, ^0}, {:raw, ")"}) end), %{0 => {0, :any}}} ==
            escape(quote do fragment("date_add(?, ?)", p.created_at, ^0) end, [p: 0], __ENV__)
 
     assert {quote(do: ~s"123"), %{}} ==

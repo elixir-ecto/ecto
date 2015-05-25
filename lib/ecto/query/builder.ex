@@ -170,18 +170,17 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
+  defp merge_fragments([h1|t1], [h2|t2]),
+    do: [{:raw, h1}, {:expr, h2}|merge_fragments(t1, t2)]
+  defp merge_fragments([h1], []),
+    do: [{:raw, h1}]
+
   # We don't embed the type in the field metadata if the type
   # is :any or if the type requires checking another field.
   #
   # Ecto concerns itself with type casting of concrete types
   # for security purposes. Comparing a field with another is
   # left to the database.
-
-  defp merge_fragments([h1|t1], [h2|t2]),
-    do: [h1, h2|merge_fragments(t1, t2)]
-  defp merge_fragments([h1], []),
-    do: [h1]
-
   defp field_meta(type) do
     type = extract_primitive_type(type)
     if type != :any, do: [ecto_type: type], else: []

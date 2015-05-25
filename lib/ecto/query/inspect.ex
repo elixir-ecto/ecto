@@ -152,11 +152,11 @@ defimpl Inspect, for: Ecto.Query do
     string
   end
 
-  defp unmerge_fragments([s, v|t], frag, args, names, params) do
+  defp unmerge_fragments([{:raw, s}, {:expr, v}|t], frag, args, names, params) do
     unmerge_fragments(t, frag <> s <> "?", [expr(v, names, params)|args], names, params)
   end
 
-  defp unmerge_fragments([s], frag, args, _names, _params) do
+  defp unmerge_fragments([{:raw, s}], frag, args, _names, _params) do
     Enum.join [inspect(frag <> s)|Enum.reverse(args)], ", "
   end
 
