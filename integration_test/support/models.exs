@@ -5,7 +5,7 @@ defmodule Ecto.Integration.Post do
 
   schema "posts" do
     field :title, :string
-    field :counter, :integer, read_after_writes: true
+    field :counter, :integer
     field :text, :binary
     field :uuid, :uuid
     field :temp, :string, default: "temp", virtual: true
@@ -69,8 +69,11 @@ end
 defmodule Ecto.Integration.Custom do
   use Ecto.Model
 
+  # Must be a subset of posts
   @primary_key {:uuid, :uuid, []}
   schema "customs" do
+    field :counter, :integer, read_after_writes: true
+    field :visits, :integer
   end
 end
 

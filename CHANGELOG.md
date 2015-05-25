@@ -4,6 +4,7 @@
 
 * Enhancements
   * Add `put_source/2` function to `Ecto.Model`
+  * Do not send `nil` values for `read_after_writes` columns on `Ecto.Repo.insert/2`
 
 * Adapters backwards incompatible changes
   * fragment AST now tags each argument as raw or expr

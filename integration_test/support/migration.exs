@@ -4,7 +4,7 @@ defmodule Ecto.Integration.Migration do
   def change do
     create table(:posts) do
       add :title, :string, size: 100
-      add :counter, :integer, default: 10
+      add :counter, :integer
       add :text, :binary
       add :uuid, :uuid
       add :public, :boolean
@@ -32,6 +32,8 @@ defmodule Ecto.Integration.Migration do
 
     create table(:customs, primary_key: false) do
       add :uuid, :uuid, primary_key: true
+      add :counter, :integer, default: 10
+      add :visits,  :integer, default: 10
     end
 
     create table(:barebones) do

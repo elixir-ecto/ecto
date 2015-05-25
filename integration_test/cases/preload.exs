@@ -128,7 +128,7 @@ defmodule Ecto.Integration.PreloadTest do
     u = TestRepo.insert(%User{custom_id: c.uuid})
 
     u = TestRepo.preload(u, :custom)
-    assert u.custom == c
+    assert u.custom.uuid == c.uuid
   end
 
   test "preload skips already loaded" do

@@ -20,7 +20,7 @@ defmodule Ecto.Repo.Model do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = %{changeset | repo: repo}
-    changeset = merge_into_changeset(struct, fields, changeset)
+    changeset = merge_into_changeset(struct, fields, changeset, return)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_insert after_insert)a, fn ->
@@ -151,15 +151,17 @@ defmodule Ecto.Repo.Model do
     put_in model.__meta__.state, :loaded
   end
 
-  defp merge_into_changeset(struct, fields, changeset) do
+  defp merge_into_changeset(struct, fields, changeset, return) do
     # Get only the database fields from the struct
     changes = Map.take(struct, fields)
 
-    # Remove nil primary key fields from changes
+    # Remove nil read after writes from changes
     changes =
-      Enum.reduce Ecto.Model.primary_key(struct), changes, fn
-        {k, nil}, acc -> Map.delete(acc, k)
-        _, acc -> acc
+      Enum.reduce return, changes, fn k, acc ->
+        case Map.fetch(changes, k) do
+          {:ok, nil} -> Map.delete(acc, k)
+          _ -> acc
+        end
       end
 
     update_in changeset.changes, &Map.merge(changes, &1)

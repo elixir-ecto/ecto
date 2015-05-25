@@ -114,27 +114,24 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :read_after_writes
-  test "insert and update with changeset dirty tracking" do
-    changeset = Ecto.Changeset.cast(%Post{}, %{}, ~w(), ~w())
+  test "insert and update with changeset read after writes" do
+    changeset = Ecto.Changeset.cast(%Custom{uuid: "0123456789abcdef"}, %{}, ~w(), ~w())
 
     # There is no dirty tracking on insert, even with changesets,
-    # so database defaults never actually kick in.
-    assert %Post{id: pid, counter: nil} = post = TestRepo.insert(changeset)
+    # so database defaults kick in only with nil read after writes.
+    # counter should be 10, visits should be nil, even with same defaults.
+    assert %Custom{uuid: cid, counter: 10, visits: nil} = custom = TestRepo.insert(changeset)
 
-    # Set the counter to 11, so we can read it soon
-    TestRepo.update(%{post | counter: 11})
+    # Make sure the values we see are actually the ones in the DB
+    assert %Custom{uuid: cid, counter: 10, visits: nil} = TestRepo.get!(Custom, "0123456789abcdef")
 
-    # Now, a combination of dirty tracking with read_after_writes,
-    # allow us to see the actual counter value.
-    changeset = Ecto.Changeset.cast(post, %{"title" => "hello"}, ~w(title), ~w())
-    assert %Post{id: ^pid, counter: 11, title: "hello"} = post = TestRepo.update(changeset)
+    # Set the counter to 11 behind the scenes, it shall be read again
+    TestRepo.update(%{custom | counter: 11})
 
-    # Let's change the counter once more, so we can read it soon
-    TestRepo.update(%{post | counter: 13})
-
-    # And the value will be refreshed even if there are no changes
-    changeset = Ecto.Changeset.cast(post, %{}, ~w(), ~w())
-    assert %Post{id: ^pid, counter: 13, title: "hello"} = TestRepo.update(changeset)
+    # Now a combination of dirty tracking with read_after_writes
+    # allow us to see the new counter value.
+    changeset = Ecto.Changeset.cast(custom, %{"visits" => "13"}, ~w(visits), ~w())
+    assert %Custom{uuid: ^cid, counter: 11, visits: 13} = TestRepo.update(changeset)
   end
 
   test "validate_unique/3" do

@@ -23,12 +23,12 @@ defmodule Ecto.MockAdapter do
     {:ok, [version: 1]}
   end
 
-  def insert(_repo, _source, _fields, [_], _opts),
-    do: {:ok, [id: 1]}
+  def insert(_repo, _source, _fields, return, _opts),
+    do: {:ok, Enum.zip(return, 1..length(return))}
 
   # Notice the list of changes is never empty.
-  def update(_repo, _source, [_|_], _filters, [_], _opts),
-    do: {:ok, [id: 1]}
+  def update(_repo, _source, [_|_], _filters, return, _opts),
+    do: {:ok, Enum.zip(return, 1..length(return))}
 
   def delete(_repo, "schema_migrations", val, _) do
     version = Keyword.fetch!(val, :version)

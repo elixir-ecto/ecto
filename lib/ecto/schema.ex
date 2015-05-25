@@ -54,7 +54,7 @@ defmodule Ecto.Schema do
         defmacro __using__(_) do
           quote do
             use Ecto.Model
-            @primary_key {:id, :uuid, []}
+            @primary_key {:id, :uuid, read_after_writes: true}
             @foreign_key_type :uuid
           end
         end
@@ -264,13 +264,16 @@ defmodule Ecto.Schema do
 
     * `:virtual` - When true, the field is not persisted to the database
 
-    * `:read_after_writes` - When true, the field is always read back
-      from the repository during inserts and updates. For relational
-      databases, this means the RETURNING option of those statements
-      are used. For this reason, MySQL does not support this option for
-      any field besides the primary key (which must be of type serial).
-      Setting this option to true for MySQL will cause the values to be
-      ignored or, even worse, load invalid values from the database.
+    * `:read_after_writes` - When true, the field only sent on insert
+      if not nil and always read back from the repository during inserts
+      and updates.
+
+      For relational databases, this means the RETURNING option of those
+      statements are used. For this reason, MySQL does not support this
+      option for any field besides the primary key (which must be of type
+      serial). Setting this option to true for MySQL on non-primary key
+      columns will cause the values to be ignored or, even worse, load
+      invalid values from the database.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
