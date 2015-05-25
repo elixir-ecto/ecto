@@ -21,7 +21,7 @@ defmodule Ecto.UUID do
   def cast(_), do: :error
 
   @doc """
-  Converts an string representing a UUID into a binary.
+  Converts a string representing a UUID into a binary.
   """
   def dump(<< u0::64, ?-, u1::32, ?-, u2::32, ?-, u3::32, ?-, u4::96 >>) do
     case Base.decode16(<< u0::64, u1::32, u2::32, u3::32, u4::96 >>, case: :mixed) do
@@ -37,6 +37,7 @@ defmodule Ecto.UUID do
   def load(uuid = << _::128 >>) do
    {:ok, encode(uuid)}
   end
+  def load(<< _::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96 >> = u), do: {:ok, u}
   def load(_), do: :error
 
   @doc """
