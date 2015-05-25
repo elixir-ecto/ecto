@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.12.0-dev
+
+* Enhancements
+  * Add `put_source/2` function to `Ecto.Model`
+
+* Adapters backwards incompatible changes
+  * fragment AST now tags each argument as raw or expr
+
 ## v0.11.3 (2015-05-19)
 
 * Enhancements
