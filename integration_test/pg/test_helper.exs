@@ -1,6 +1,8 @@
 Logger.configure(level: :info)
 ExUnit.start
 
+Code.require_file "../support/repo.exs", __DIR__
+
 # Basic test repo
 alias Ecto.Integration.TestRepo
 
@@ -11,7 +13,7 @@ Application.put_env(:ecto, TestRepo,
   max_overflow: 0)
 
 defmodule Ecto.Integration.TestRepo do
-  use Ecto.Repo, otp_app: :ecto
+  use Ecto.Integration.Repo, otp_app: :ecto
 end
 
 # Pool repo for transaction and lock tests
@@ -23,7 +25,7 @@ Application.put_env(:ecto, PoolRepo,
   size: 10)
 
 defmodule Ecto.Integration.PoolRepo do
-  use Ecto.Repo, otp_app: :ecto
+  use Ecto.Integration.Repo, otp_app: :ecto
 
   def lock_for_update, do: "FOR UPDATE"
 end
