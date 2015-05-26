@@ -90,10 +90,10 @@ defmodule Ecto.Integration.DeadlockTest do
         Logger.debug "#{inspect self()} got killed by deadlock detection"
         assert %Postgrex.Error{postgres: %{code: :deadlock_detected}} = err
 
-        # At this time the transaction count is actually 0 not 1 because Postgres
-        # has killed the tx but Ecto doesn't know/care.
-        {aborted_worker, _} = Process.get({:ecto_transaction_pid, elem(PoolRepo.__pool__, 0)})
-        %{transactions: 1}  = :sys.get_state(aborted_worker)
+        # At this time the transaction count is actually 0 not 1
+        # because Postgres has killed the tx but Ecto doesn't know/care.
+        assert {_worker, _mod, _conn, 1, 0} =
+               Process.get({:ecto_transaction_info, elem(PoolRepo.__pool__, 0)})
 
         assert_tx_aborted
 

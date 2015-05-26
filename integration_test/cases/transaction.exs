@@ -68,20 +68,20 @@ defmodule Ecto.Integration.TransactionTest do
     assert [] = TestRepo.all(Trans)
   end
 
-  test "nested transaction partial roll back" do
+  test "nested transaction partial rollback" do
     PoolRepo.transaction(fn ->
       e1 = PoolRepo.insert(%Trans{text: "3"})
       assert [^e1] = PoolRepo.all(Trans)
 
-        try do
-          PoolRepo.transaction(fn ->
-            e2 = PoolRepo.insert(%Trans{text: "4"})
-            assert [^e1, ^e2] = PoolRepo.all(from(t in Trans, order_by: t.text))
-            raise UniqueError
-          end)
-        rescue
-          UniqueError -> :ok
-        end
+      try do
+        PoolRepo.transaction(fn ->
+          e2 = PoolRepo.insert(%Trans{text: "4"})
+          assert [^e1, ^e2] = PoolRepo.all(from(t in Trans, order_by: t.text))
+          raise UniqueError
+        end)
+      rescue
+        UniqueError -> :ok
+      end
 
       e3 = PoolRepo.insert(%Trans{text: "5"})
       assert [^e1, ^e3] = PoolRepo.all(from(t in Trans, order_by: t.text))

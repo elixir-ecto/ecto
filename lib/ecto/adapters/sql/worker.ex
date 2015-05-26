@@ -2,6 +2,8 @@ defmodule Ecto.Adapters.SQL.Worker do
   @moduledoc false
   use GenServer
 
+  @type modconn :: {module :: atom, conn :: pid}
+
   def start_link({module, args}) do
     GenServer.start_link(__MODULE__, {module, args})
   end
@@ -10,55 +12,67 @@ defmodule Ecto.Adapters.SQL.Worker do
     GenServer.start(__MODULE__, {module, args})
   end
 
-  def link_me(worker, timeout) do
-    GenServer.call(worker, :link_me, timeout)
+  @doc """
+  Asks for the module and the underlying connection process.
+  """
+  @spec ask(pid, timeout) :: {:ok, modconn} | {:error, Exception.t}
+  def ask(worker, timeout) do
+    GenServer.call(worker, :ask, timeout)
   end
 
-  def unlink_me(worker, timeout) do
-    GenServer.call(worker, :unlink_me, timeout)
-  end
-
-  def query!(worker, sql, params, opts) do
-    case GenServer.call(worker, :query, opts[:timeout]) do
-      {:ok, {module, conn}} ->
-        case module.query(conn, sql, params, opts) do
-          {:ok, res} -> res
-          {:error, err} -> raise err
-        end
-      {:error, err} ->
-        raise err
+  @doc """
+  Asks for the module and the underlying connection process.
+  """
+  @spec ask!(pid, timeout) :: modconn | no_return
+  def ask!(worker, timeout) do
+    case ask(worker, timeout) do
+      {:ok, modconn} -> modconn
+      {:error, err}  -> raise err
     end
   end
 
-  def begin!(worker, opts) do
-    call!(worker, {:begin, opts}, opts)
+  @doc """
+  Opens a transaction.
+
+  Invoked when the client wants to open up a connection.
+
+  The worker process starts to monitor the caller and
+  will wipeout all connection the connection in case of
+  crashes.
+  """
+  @spec open_transaction(pid, timeout) :: {:ok, modconn} | {:sandbox, modconn} | {:error, Exception.t}
+  def open_transaction(worker, timeout) do
+    GenServer.call(worker, :open_transaction, timeout)
   end
 
-  def commit!(worker, opts) do
-    call!(worker, {:commit, opts}, opts)
+  @doc """
+  Closes a transaction.
+
+  Invoked when a connection has been successfully closed.
+  """
+  @spec close_transaction(pid, timeout) :: :not_open | :closed
+  def close_transaction(worker, timeout) do
+    GenServer.call(worker, :close_transaction, timeout)
   end
 
-  def rollback!(worker, opts) do
-    call!(worker, {:rollback, opts}, opts)
+  @doc """
+  Breaks a transaction.
+
+  Automatically forces the worker to disconnect unless
+  in sandbox mode.
+  """
+  @spec break_transaction(pid, timeout) :: :broken | :not_open | :sandbox
+  def break_transaction(worker, timeout) do
+    GenServer.call(worker, :break_transaction, timeout)
   end
 
-  def begin_test_transaction!(worker, opts) do
-    call!(worker, {:begin_test_transaction, opts}, opts)
-  end
-
-  def restart_test_transaction!(worker, opts) do
-    call!(worker, {:restart_test_transaction, opts}, opts)
-  end
-
-  def rollback_test_transaction!(worker, opts) do
-    call!(worker, {:rollback_test_transaction, opts}, opts)
-  end
-
-  defp call!(worker, command, opts) do
-    case GenServer.call(worker, command, opts[:timeout]) do
-      :ok -> :ok
-      {:error, err} -> raise err
-    end
+  @doc """
+  Starts a sandbox transaction that lasts through the life-cycle
+  of the worker.
+  """
+  @spec sandbox_transaction(pid, timeout) :: {:ok, modconn} | :sandbox | :already_open
+  def sandbox_transaction(worker, timeout) do
+    GenServer.call(worker, :sandbox_transaction, timeout)
   end
 
   ## Callbacks
@@ -76,153 +90,91 @@ defmodule Ecto.Adapters.SQL.Worker do
       end
     end
 
-    {:ok, %{conn: conn, params: params, link: nil,
-            transactions: 0, module: module, sandbox: false}}
+    {:ok, %{conn: conn, params: params, transaction: :closed, module: module}}
   end
 
-  # Those functions do not need a connection
-  def handle_call(:link_me, {pid, _}, %{link: nil} = s) do
-    Process.link(pid)
-    {:reply, :ok, %{s | link: pid}}
+  ## Break transaction
+
+  def handle_call(:break_transaction, _from, %{transaction: :sandbox} = s) do
+    {:reply, :sandbox, s}
   end
 
-  def handle_call(:unlink_me, {pid, _}, %{link: pid} = s) do
-    Process.unlink(pid)
-    {:reply, :ok, %{s | link: nil}}
+  def handle_call(:break_transaction, _from, %{transaction: :closed} = s) do
+    {:reply, :not_open, s}
   end
 
-  # Connection is disconnected, reconnect before continuing
+  def handle_call(:break_transaction, _from, s) do
+    {:reply, :broken, disconnect(s)}
+  end
+
+  ## Close transaction
+
+  def handle_call(:close_transaction, _from, %{transaction: :sandbox} = s) do
+    {:reply, :closed, %{s | transaction: :closed}}
+  end
+
+  def handle_call(:close_transaction, _from, %{transaction: :closed} = s) do
+    {:reply, :not_open, s}
+  end
+
+  def handle_call(:close_transaction, _from, %{transaction: ref} = s) do
+    Process.demonitor(ref, [:flush])
+    {:reply, :closed, %{s | transaction: :closed}}
+  end
+
+  # Lazy connection handling
+
   def handle_call(request, from, %{conn: nil, params: params, module: module} = s) do
     case module.connect(params) do
-      {:ok, conn} ->
-        case begin_sandbox(%{s | conn: conn}, params) do
-          {:ok, s}      -> handle_call(request, from, s)
-          {:error, err} -> {:reply, {:error, err}, s}
-        end
-      {:error, err} ->
-        {:reply, {:error, err}, s}
-    end
-  end
-
-  def handle_call(:query, _from, %{conn: conn, module: module} = s) do
-    {:reply, {:ok, {module, conn}}, s}
-  end
-
-  def handle_call({:begin, opts}, _from, s) do
-    %{conn: conn, transactions: trans, module: module} = s
-
-    sql =
-      if trans == 0 do
-        module.begin_transaction
-      else
-        module.savepoint "ecto_#{trans}"
-      end
-
-    # Increase the transaction counter as rollback should be triggered.
-    s = %{s | transactions: trans + 1}
-
-    case module.query(conn, sql, [], opts) do
-      {:ok, _} ->
-        {:reply, :ok, s}
-      {:error, _} = err ->
-        {:reply, err, s}
-    end
-  end
-
-  def handle_call({:commit, opts}, _from, %{transactions: trans} = s) when trans >= 1 do
-    %{conn: conn, module: module} = s
-
-    reply =
-      case trans do
-        1 -> module.query(conn, module.commit, [], opts)
-        _ -> {:ok, %{}}
-      end
-
-    case reply do
-      {:ok, _} ->
-        {:reply, :ok, %{s | transactions: trans - 1}}
-      {:error, _} = err ->
-        # Don't change the transaction counter as rollback should be triggered.
-        {:reply, err, s}
-    end
-  end
-
-  def handle_call({:rollback, opts}, _from, %{transactions: trans} = s) when trans >= 1 do
-    %{conn: conn, module: module} = s
-
-    sql =
-      case trans do
-        1 -> module.rollback
-        _ -> module.rollback_to_savepoint "ecto_#{trans-1}"
-      end
-
-    # Always reduce the transaction counter as the user
-    # will exit the transaction block anyway.
-    s = %{s | transactions: trans - 1}
-
-    case module.query(conn, sql, [], opts) do
-      {:ok, _} ->
-        {:reply, :ok, s}
-      {:error, _} = err when trans == 1 ->
-        # We don't know if we actually rolled back, so it is best
-        # to completely drop the connection.
-        #
-        # In any case, we don't need to worry about the client as
-        # it should not expect any state in the connection anyway.
-        module.disconnect(conn)
-        {:reply, err, %{s | conn: nil}}
-      {:error, _} = err ->
-        {:reply, err, s}
-    end
-  end
-
-  def handle_call({:begin_test_transaction, _opts}, _from, %{sandbox: true} = s) do
-    {:reply, :ok, s}
-  end
-
-  def handle_call({:begin_test_transaction, opts}, _from, %{transactions: 0} = s) do
-    case begin_sandbox(%{s | sandbox: true}, opts) do
-      {:ok, s}      -> {:reply, :ok, s}
+      {:ok, conn}   -> handle_call(request, from, %{s | conn: conn})
       {:error, err} -> {:reply, {:error, err}, s}
     end
   end
 
-  def handle_call({:restart_test_transaction, _opts}, _from, %{sandbox: false} = s) do
-    {:reply, :ok, s}
+  def handle_call(:ask, _from, s) do
+    {:reply, {:ok, modconn(s)}, s}
   end
 
-  def handle_call({:restart_test_transaction, opts}, _from, %{transactions: 1} = s) do
-    %{conn: conn, module: module} = s
+  ## Open transaction
 
-    case module.query(conn, module.rollback_to_savepoint("ecto_sandbox"), [], opts) do
-      {:ok, _} -> {:reply, :ok, s}
-      {:error, _} = err -> {:reply, err, s}
-    end
+  def handle_call(:open_transaction, _from, %{transaction: :sandbox} = s) do
+    {:reply, {:sandbox, modconn(s)}, s}
   end
 
-  def handle_call({:rollback_test_transaction, _opts}, _from, %{sandbox: false} = s) do
-    {:reply, :ok, s}
+  def handle_call(:open_transaction, {pid, _}, %{transaction: :closed} = s) do
+    ref = Process.monitor(pid)
+    {:reply, {:ok, modconn(s)}, %{s | transaction: ref}}
   end
 
-  def handle_call({:rollback_test_transaction, opts}, _from, %{transactions: 1} = s) do
-    %{conn: conn, module: module} = s
-
-    case module.query(conn, module.rollback, [], opts) do
-      {:ok, _} ->
-        {:reply, :ok, %{s | transactions: 0, sandbox: false}}
-      {:error, _} = err ->
-        {:reply, err, s}
-    end
+  def handle_call(:open_transaction, from, %{transaction: _old_ref} = s) do
+    handle_call(:open_transaction, from, disconnect(s))
   end
 
-  # The connection crashed, notify all linked process.
+  ## Sandbox transaction
+
+  def handle_call(:sandbox_transaction, _from, %{transaction: :sandbox} = s) do
+    {:reply, {:sandbox, modconn(s)}, s}
+  end
+
+  def handle_call(:sandbox_transaction, _from, %{transaction: :closed} = s) do
+    {:reply, {:ok, modconn(s)}, %{s | transaction: :sandbox}}
+  end
+
+  def handle_call(:sandbox_transaction, _from, %{transaction: _} = s) do
+    {:reply, :already_open, s}
+  end
+
+  # The connection crashed. We don't need to notify
+  # the client if we have an open transaction because
+  # it will fail with noproc anyway. close_transaction
+  # and break_transaction witll return :not_open.
   def handle_info({:EXIT, conn, _reason}, %{conn: conn} = s) do
-    wipe_state(%{s | conn: nil})
+    {:noreply, disconnect(%{s | conn: nil})}
   end
 
-  # If a linked process crashed, assume stale connection and close it.
-  def handle_info({:EXIT, link, _reason}, %{link: link} = s) do
-    wipe_state(s)
+  # The transaction owner crashed without closing.
+  def handle_info({:DOWN, ref, _, _, _}, %{transaction: ref} = s) do
+    {:noreply, disconnect(%{s | transaction: :closed})}
   end
 
   def handle_info(_info, s) do
@@ -235,58 +187,17 @@ defmodule Ecto.Adapters.SQL.Worker do
 
   ## Helpers
 
-  defp begin_sandbox(%{sandbox: false} = s, _opts), do: {:ok, s}
-  defp begin_sandbox(%{sandbox: true} = s, opts) do
-    %{conn: conn, module: module} = s
-
-    case module.query(conn, module.begin_transaction, [], opts) do
-      {:ok, _} ->
-        case module.query(conn, module.savepoint("ecto_sandbox"), [], opts) do
-          {:ok, _}          -> {:ok, %{s | transactions: 1}}
-          {:error, _} = err -> err
-        end
-      {:error, _} = err ->
-        err
-    end
+  defp modconn(%{conn: conn, module: module}) do
+    {module, conn}
   end
 
-  # Imagine the following scenario:
-  #
-  #   1. PID starts a transaction
-  #   2. PID sends a query
-  #   3. The connection crashes (and we receive an EXIT message)
-  #
-  # If 2 and 3 happen at the same, there is no guarantee which
-  # one will be handled first. That's why we can't simply kill
-  # the linked processes and start a new connection as we may
-  # have left-over messages in the inbox.
-  #
-  # So this is what we do:
-  #
-  #   1. We disconnect from the database
-  #   2. We kill the linked processes (transaction owner)
-  #   3. We remove all calls from that process
-  #
-  # Because this worker only accept calls and it is controlled by
-  # the pool, the expectation is that the number of messages to
-  # be removed will always be maximum 1.
-  defp wipe_state(%{conn: conn, module: module, link: link} = s) do
+  defp disconnect(%{conn: conn, transaction: ref, module: module} = s) do
     conn && module.disconnect(conn)
 
-    if link do
-      Process.unlink(link)
-      Process.exit(link, {:ecto, :no_connection})
-      clear_calls(link)
+    if is_reference(ref) do
+      Process.demonitor(ref, [:flush])
     end
 
-    {:noreply, %{s | conn: nil, link: nil, transactions: 0}}
-  end
-
-  defp clear_calls(link) do
-    receive do
-      {:"$gen_call", {^link, _}, _} -> clear_calls(link)
-    after
-      0 -> :ok
-    end
+    %{s | conn: nil, transaction: :closed}
   end
 end
