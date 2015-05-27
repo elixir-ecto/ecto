@@ -38,7 +38,6 @@ defmodule Ecto.Integration.Comment do
     belongs_to :post, Ecto.Integration.Post
     belongs_to :author, Ecto.Integration.User
     has_one :post_permalink, through: [:post, :permalink]
-    timestamps
   end
 end
 
@@ -63,6 +62,7 @@ defmodule Ecto.Integration.User do
     field :name, :string
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id
     belongs_to :custom, Ecto.Integration.Custom, references: :uuid, type: :uuid
+    timestamps
   end
 end
 

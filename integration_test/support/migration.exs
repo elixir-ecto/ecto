@@ -27,7 +27,6 @@ defmodule Ecto.Integration.Migration do
       add :posted, :datetime
       add :post_id, references(:posts)
       add :author_id, references(:users)
-      timestamps
     end
 
     create table(:customs, primary_key: false) do
@@ -78,6 +77,7 @@ defmodule Ecto.Integration.Migration do
       modify :name, :text
       add :custom_id, :uuid
       remove :to_be_removed
+      timestamps
     end
 
     index = index(:users, [:custom_id], unique: true)
