@@ -1,5 +1,7 @@
 defmodule Ecto.Integration.TransactionTest do
-  use ExUnit.Case
+  # We can keep this test async as long as it
+  # is the only one access the transactions table
+  use ExUnit.Case, async: true
 
   import Ecto.Query
   require Ecto.Integration.PoolRepo, as: PoolRepo
@@ -135,6 +137,8 @@ defmodule Ecto.Integration.TransactionTest do
     assert [%Trans{text: "7"}] = PoolRepo.all(Trans)
   end
 
+  ## Failures when logging
+
   test "log raises before begin, does not rollback to savepoint of same name" do
     PoolRepo.transaction(fn ->
       PoolRepo.transaction(fn ->
@@ -197,6 +201,8 @@ defmodule Ecto.Integration.TransactionTest do
 
     assert [] = PoolRepo.all(Trans)
   end
+
+  ## Timeouts
 
   test "transaction exit includes :timeout on begin timeout" do
     assert match?({:timeout, _},

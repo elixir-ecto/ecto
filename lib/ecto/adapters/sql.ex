@@ -475,6 +475,8 @@ defmodule Ecto.Adapters.SQL do
         stacktrace = System.stacktrace
         rollback_transaction(key, repo, pool, timeout, opts)
         :erlang.raise(kind, reason, stacktrace)
+    after
+      maybe_checkin(key, pool)
     end
   end
 
@@ -523,15 +525,11 @@ defmodule Ecto.Adapters.SQL do
     %{worker: worker, module: module, counter: counter} = Process.get(key)
     counter = counter - 1
 
-    try do
-      if counter == 0 do
-        worker_fuse(pool, worker, timeout, fn ->
-          query(repo, module.commit, [], opts)
-          Worker.close_transaction(worker, timeout)
-        end)
-      end
-    after
-      maybe_checkin(key, pool, worker)
+    if counter == 0 do
+      worker_fuse(pool, worker, timeout, fn ->
+        query(repo, module.commit, [], opts)
+        Worker.close_transaction(worker, timeout)
+      end)
     end
   end
 
@@ -544,29 +542,25 @@ defmodule Ecto.Adapters.SQL do
       _ -> module.rollback_to_savepoint("ecto_#{counter}")
     end
 
-    try do
-      worker_fuse(pool, worker, timeout, fn ->
-        # We may lose the connection in case worker_fuse was triggered.
-        # So we need to check to avoid further raising on rollback.
-        if conn do
-          query(repo, query, [], opts)
-        end
+    worker_fuse(pool, worker, timeout, fn ->
+      # We may lose the connection in case worker_fuse was triggered.
+      # So we need to check to avoid further raising on rollback.
+      if conn do
+        query(repo, query, [], opts)
+      end
 
-        # If counter is 0, time to close the transaction.
-        if counter == 0 do
-          Worker.close_transaction(worker, timeout)
-        end
-      end)
-    after
-      maybe_checkin(key, pool, worker)
-    end
+      # If counter is 0, time to close the transaction.
+      if counter == 0 do
+        Worker.close_transaction(worker, timeout)
+      end
+    end)
   end
 
   # Note maybe_checkin needs to re-read the process dictionary
   # because worker_fuse may have cleaned up the connection and
   # we should not put it back.
-  defp maybe_checkin(key, pool, worker) do
-    %{counter: counter, threshold: threshold} = info = Process.get(key)
+  defp maybe_checkin(key, pool) do
+    %{worker: worker, counter: counter, threshold: threshold} = info = Process.get(key)
     counter = counter - 1
 
     if counter == threshold do
