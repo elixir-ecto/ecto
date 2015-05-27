@@ -170,7 +170,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{quote_name(table)} AS #{name}"
+      "FROM #{quote_table(table)} AS #{name}"
     end
 
     defp join([], _sources), do: []
@@ -182,7 +182,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
           on   = expr(expr, sources)
           qual = join_qual(qual)
 
-          "#{qual} JOIN #{quote_name(table)} AS #{name} ON " <> on
+          "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on
       end)
     end
 
@@ -519,7 +519,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         raise ArgumentError, "bad table name #{inspect name}"
       end
 
-      <<?`, name::binary, ?`>>
+      <<?`, String.replace(name, ".", "`.`")::binary, ?`>>
     end
 
     defp assemble(list) do
