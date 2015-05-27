@@ -7,9 +7,12 @@ defmodule Ecto.Adapters.SQL do
   a query function to developers.
 
   Developers that use `Ecto.Adapters.SQL` should implement
-  the connection module with specifics on how to connect
+  a connection module with specifics on how to connect
   to the database and also how to translate the queries
-  to SQL. See `Ecto.Adapters.SQL.Connection` for more info.
+  to SQL.
+
+  See `Ecto.Adapters.Worker` for connection pooling and
+  `Ecto.Adapters.SQL.Query` for the query semantics.
   """
 
   @doc false
@@ -111,7 +114,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  alias Ecto.Adapters.SQL.Worker
+  alias Ecto.Adapters.Worker
 
   @doc """
   Runs custom SQL query on given repo.
