@@ -151,25 +151,14 @@ defmodule Ecto.Repo do
         true
       end
 
-      def log({_, cmd, params}, fun) do
-        prev = :os.timestamp()
-
-        try do
-          fun.()
-        after
-          Logger.unquote(@log_level)(fn ->
-            next = :os.timestamp()
-            diff = :timer.now_diff(next, prev)
-            data = Enum.map params, fn
-              %Ecto.Query.Tagged{value: value} -> value
-              value -> value
-            end
-            [cmd, ?\s, inspect(data), ?\s, ?(, inspect(div(diff, 100) / 10), ?m, ?s, ?)]
-          end)
-        end
+      def log(entry) do
+        Logger.unquote(@log_level)(fn ->
+          {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
+          iodata
+        end)
       end
 
-      defoverridable [log: 2]
+      defoverridable [log: 1]
     end
   end
 
@@ -507,30 +496,17 @@ defmodule Ecto.Repo do
 
   By default writes to Logger but can be overriden to customize behaviour.
 
-  You must always return the result of calling the given function.
-
   ## Examples
 
-  The default implementation of the `log/2` function is shown below:
+  The default implementation of the `log/1` function is shown below:
 
-      def log({_, cmd, params}, fun) do
-        prev = :os.timestamp()
-
-        try do
-          fun.()
-        after
-          Logger.debug fn ->
-            next = :os.timestamp()
-            diff = :timer.now_diff(next, prev)
-            data = Enum.map params, fn
-              %Ecto.Query.Tagged{value: value} -> value
-              value -> value
-            end
-            [cmd, ?\s, inspect(data), ?\s, ?(, inspect(div(diff, 100) / 10), ?m, ?s, ?)]
-          end
-        end
+      def log(entry) do
+        Logger.debug(fn ->
+          {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
+          iodata
+        end)
       end
 
   """
-  defcallback log({atom, iodata, [term]}, function :: (() -> any)) :: any
+  defcallback log(Ecto.LogEntry.t) :: any
 end
