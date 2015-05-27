@@ -145,6 +145,7 @@ defmodule Ecto.Adapters.SQL do
     {pool, timeout} = repo.__pool__
     opts = Keyword.put_new(opts, :timeout, timeout)
 
+    # TODO: Do not consider checkout time on log
     log(repo, {:query, sql, params}, opts, fn ->
       case query(repo, pool, sql, params, opts) do
         {:ok, reply}  -> reply
@@ -165,13 +166,18 @@ defmodule Ecto.Adapters.SQL do
     key = {:ecto_transaction_info, pool}
 
     case Process.get(key) do
-      {_worker, module, conn, _counter, _threshold} ->
+      %{conn: nil} ->
+        # :noconnect can never be the reason a call fails because
+        # it is converted to {:nodedown, node}. This means the exit
+        # reason can be easily identified.
+        exit({:noconnect, {__MODULE__, :query, [repo, sql, params, opts]}})
+      %{module: module, conn: conn} ->
         module.query(conn, sql, params, opts)
       nil ->
         timeout = Keyword.get(opts, :timeout)
         pool_transaction(repo, pool, timeout, fn worker ->
-          {mod, conn} = Worker.ask!(worker, timeout)
-          mod.query(conn, sql, params, opts)
+          {module, conn} = Worker.ask!(worker, timeout)
+          module.query(conn, sql, params, opts)
         end)
     end
   end
@@ -454,7 +460,7 @@ defmodule Ecto.Adapters.SQL do
     key     = {:ecto_transaction_info, pool}
     opts    = Keyword.put_new(opts, :timeout, timeout)
     timeout = Keyword.get(opts, :timeout)
-    worker  = open_transaction(key, repo, pool, timeout)
+    open_transaction(key, repo, pool, timeout)
 
     try do
       begin_transaction(key, repo, pool, timeout, opts)
@@ -463,41 +469,38 @@ defmodule Ecto.Adapters.SQL do
       {:ok, value}
     catch
       :throw, {:ecto_rollback, value} ->
-        rollback_transaction(key, repo, pool, worker, timeout, opts)
+        rollback_transaction(key, repo, pool, timeout, opts)
         {:error, value}
       kind, reason ->
         stacktrace = System.stacktrace
-        rollback_transaction(key, repo, pool, worker, timeout, opts)
+        rollback_transaction(key, repo, pool, timeout, opts)
         :erlang.raise(kind, reason, stacktrace)
     end
   end
 
   defp open_transaction(key, repo, pool, timeout) do
-    case Process.get(key) do
-      {worker, _mod, _conn, _counter, _threshold} ->
-        worker
-      _ ->
-        worker = checkout(repo, pool, timeout)
+    unless Process.get(key) do
+      worker = checkout(repo, pool, timeout)
 
-        pool_fuse(pool, worker, fn ->
-          case Worker.open_transaction(worker, timeout) do
-            {:ok, {module, conn}} ->
-              # We got permission to start a transaction
-              Process.put(key, {worker, module, conn, 0, 0})
-            {:sandbox, {module, conn}} ->
-              # Inside sandbox we only emit savepoints
-              Process.put(key, {worker, module, conn, 1, 1})
-            {:error, err} ->
-              raise err
-          end
-        end)
-
-        worker
+      pool_fuse(pool, worker, fn ->
+        case Worker.open_transaction(worker, timeout) do
+          {:ok, {module, conn}} ->
+            # We got permission to start a transaction
+            Process.put(key, %{worker: worker, module: module, conn: conn,
+                               counter: 0, threshold: 0})
+          {:sandbox, {module, conn}} ->
+            # Inside sandbox we only emit savepoints
+            Process.put(key, %{worker: worker, module: module, conn: conn,
+                               counter: 1, threshold: 1})
+          {:error, err} ->
+            raise err
+        end
+      end)
     end
   end
 
   defp begin_transaction(key, repo, pool, timeout, opts) do
-    {worker, module, conn, counter, threshold} = Process.get(key)
+    %{worker: worker, module: module, counter: counter} = info = Process.get(key)
 
     query =
       case counter do
@@ -505,49 +508,35 @@ defmodule Ecto.Adapters.SQL do
         _ -> module.savepoint "ecto_#{counter}"
       end
 
+    # We need to bump the counter before going into
+    # worker_fuse because if it fails, we are going
+    # to still invoke the rollback so the counter
+    # must be correct.
+    Process.put(key, %{info | counter: counter + 1})
+
     worker_fuse(pool, worker, timeout, fn ->
       query(repo, query, [], opts)
-      Process.put(key, {worker, module, conn, counter + 1, threshold})
     end)
   end
 
   defp commit_transaction(key, repo, pool, timeout, opts) do
-    {worker, module, conn, counter, threshold} = Process.get(key)
+    %{worker: worker, module: module, counter: counter} = Process.get(key)
     counter = counter - 1
 
-    cond do
-      # Commit transactions
-      counter == 0 ->
-        try do
-          worker_fuse(pool, worker, timeout, fn ->
-            query(repo, module.commit, [], opts)
-            Worker.close_transaction(worker, timeout)
-          end)
-        after
-          checkin(pool, worker)
-        end
-      # Delete transaction in sandbox
-      counter == threshold ->
-        checkin(pool, worker)
-      # Just decrement the counter
-      true ->
-        Process.put(key, {worker, module, conn, counter, threshold})
+    try do
+      if counter == 0 do
+        worker_fuse(pool, worker, timeout, fn ->
+          query(repo, module.commit, [], opts)
+          Worker.close_transaction(worker, timeout)
+        end)
+      end
+    after
+      maybe_checkin(key, pool, worker)
     end
   end
 
-  defp rollback_transaction(key, repo, pool, worker, timeout, opts) do
-    if info = Process.get(key) do
-      do_rollback_transaction(key, info, repo, pool, timeout, opts)
-    else
-      # If we don't have the information, it means the worker fuse
-      # has already wiped everything away, we just need to check in
-      # the worker.
-      checkin(pool, worker)
-    end
-  end
-
-  defp do_rollback_transaction(key, info, repo, pool, timeout, opts) do
-    {worker, module, conn, counter, threshold} = info
+  defp rollback_transaction(key, repo, pool, timeout, opts) do
+    %{worker: worker, module: module, conn: conn, counter: counter} = Process.get(key)
     counter = counter - 1
 
     query = case counter do
@@ -557,23 +546,35 @@ defmodule Ecto.Adapters.SQL do
 
     try do
       worker_fuse(pool, worker, timeout, fn ->
-        query(repo, query, [], opts)
+        # We may lose the connection in case worker_fuse was triggered.
+        # So we need to check to avoid further raising on rollback.
+        if conn do
+          query(repo, query, [], opts)
+        end
+
+        # If counter is 0, time to close the transaction.
         if counter == 0 do
           Worker.close_transaction(worker, timeout)
         end
       end)
     after
-      if counter == threshold do
-        checkin(pool, worker)
-      else
-        Process.put(key, {worker, module, conn, counter, threshold})
-      end
+      maybe_checkin(key, pool, worker)
     end
   end
 
-  defp checkin(pool, worker) do
-    Process.delete({:ecto_transaction_info, pool})
-    :poolboy.checkin(pool, worker)
+  # Note maybe_checkin needs to re-read the process dictionary
+  # because worker_fuse may have cleaned up the connection and
+  # we should not put it back.
+  defp maybe_checkin(key, pool, worker) do
+    %{counter: counter, threshold: threshold} = info = Process.get(key)
+    counter = counter - 1
+
+    if counter == threshold do
+      Process.delete(key)
+      :poolboy.checkin(pool, worker)
+    else
+      Process.put(key, %{info | counter: counter})
+    end
   end
 
   ## Helpers
@@ -615,9 +616,11 @@ defmodule Ecto.Adapters.SQL do
   catch
     kind, reason ->
       # If it fails, we don't know the connection state
-      # so we need to break the transaction.
+      # so we need to break the transaction and remove
+      # the connection from transaction info.
       stack = System.stacktrace()
-      Process.delete({:ecto_transaction_info, pool})
+      key   = {:ecto_transaction_info, pool}
+      Process.put(key, %{Process.get(key) | conn: nil})
       Worker.break_transaction(worker, timeout)
       :erlang.raise(kind, reason, stack)
   end
