@@ -90,8 +90,8 @@ defmodule Ecto.Integration.RepoTest do
     # Assert we can update the same value twice,
     # without changes, without triggering stale errors.
     changeset = Ecto.Changeset.cast(comment, %{}, ~w(), ~w())
-    assert ^comment = TestRepo.update(changeset)
-    assert ^comment = TestRepo.update(changeset)
+    assert TestRepo.update(changeset) == comment
+    assert TestRepo.update(changeset) == comment
   end
 
   test "insert with no primary key" do
