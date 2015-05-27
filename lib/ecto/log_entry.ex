@@ -13,9 +13,9 @@ defmodule Ecto.LogEntry do
 
   alias Ecto.LogEntry
 
-  @type t :: %LogEntry{query: iodata :: (t -> iodata), params: [term],
+  @type t :: %LogEntry{query: iodata | (t -> iodata), params: [term],
                        query_time: integer, queue_time: integer | nil}
-  defstruct query: nil, params: [], query_time: 0, queue_time: nil
+  defstruct query: nil, params: [], query_time: nil, queue_time: nil
 
   @doc """
   Resolves a log entry.
