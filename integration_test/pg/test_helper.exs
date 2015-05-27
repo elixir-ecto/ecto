@@ -1,17 +1,21 @@
 Logger.configure(level: :info)
 ExUnit.start
 
+# Load support files
+Code.require_file "../support/repo.exs", __DIR__
+Code.require_file "../support/models.exs", __DIR__
+Code.require_file "../support/migration.exs", __DIR__
+
 # Basic test repo
 alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
   adapter: Ecto.Adapters.Postgres,
   url: "ecto://postgres:postgres@localhost/ecto_test",
-  size: 1,
-  max_overflow: 0)
+  size: 1)
 
 defmodule Ecto.Integration.TestRepo do
-  use Ecto.Repo, otp_app: :ecto
+  use Ecto.Integration.Repo, otp_app: :ecto
 end
 
 # Pool repo for transaction and lock tests
@@ -23,7 +27,7 @@ Application.put_env(:ecto, PoolRepo,
   size: 10)
 
 defmodule Ecto.Integration.PoolRepo do
-  use Ecto.Repo, otp_app: :ecto
+  use Ecto.Integration.Repo, otp_app: :ecto
 
   def lock_for_update, do: "FOR UPDATE"
 end
@@ -42,10 +46,6 @@ defmodule Ecto.Integration.Case do
     :ok
   end
 end
-
-# Load support models and migration
-Code.require_file "../support/models.exs", __DIR__
-Code.require_file "../support/migration.exs", __DIR__
 
 # Load up the repository, start it, and run migrations
 _   = Ecto.Storage.down(TestRepo)

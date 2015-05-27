@@ -1,24 +1,10 @@
-defmodule Ecto.Adapters.SQL.Connection do
+defmodule Ecto.Adapters.SQL.Query do
   @moduledoc """
-  Specifies the behaviour to be implemented by SQL pooled connections.
+  Specifies the behaviour to be implemented by the
+  connection for handling all SQL queries.
   """
 
   use Behaviour
-
-  @doc """
-  Connects to the underlying database.
-
-  Should return a process which is linked to
-  the caller process or an error.
-  """
-  defcallback connect(Keyword.t) :: {:ok, pid} | {:error, term}
-
-  @doc """
-  Disconnects the given `pid`.
-
-  If the given `pid` no longer exists, it should not raise.
-  """
-  defcallback disconnect(pid) :: :ok
 
   @doc """
   Executes the given query with params in connection.

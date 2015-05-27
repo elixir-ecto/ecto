@@ -4,7 +4,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     @moduledoc false
 
     @default_port 5432
-    @behaviour Ecto.Adapters.SQL.Connection
+    @behaviour Ecto.Adapters.Worker
+    @behaviour Ecto.Adapters.SQL.Query
 
     ## Connection
 

@@ -68,20 +68,20 @@ defmodule Ecto.Integration.TransactionTest do
     assert [] = TestRepo.all(Trans)
   end
 
-  test "nested transaction partial roll back" do
+  test "nested transaction partial rollback" do
     PoolRepo.transaction(fn ->
       e1 = PoolRepo.insert(%Trans{text: "3"})
       assert [^e1] = PoolRepo.all(Trans)
 
-        try do
-          PoolRepo.transaction(fn ->
-            e2 = PoolRepo.insert(%Trans{text: "4"})
-            assert [^e1, ^e2] = PoolRepo.all(from(t in Trans, order_by: t.text))
-            raise UniqueError
-          end)
-        rescue
-          UniqueError -> :ok
-        end
+      try do
+        PoolRepo.transaction(fn ->
+          e2 = PoolRepo.insert(%Trans{text: "4"})
+          assert [^e1, ^e2] = PoolRepo.all(from(t in Trans, order_by: t.text))
+          raise UniqueError
+        end)
+      rescue
+        UniqueError -> :ok
+      end
 
       e3 = PoolRepo.insert(%Trans{text: "5"})
       assert [^e1, ^e3] = PoolRepo.all(from(t in Trans, order_by: t.text))
@@ -135,5 +135,99 @@ defmodule Ecto.Integration.TransactionTest do
     end
 
     assert [%Trans{text: "7"}] = PoolRepo.all(Trans)
+  end
+
+  ## Failures when logging
+
+  # test "log raises before begin, does not rollback to savepoint of same name" do
+  #   PoolRepo.transaction(fn ->
+  #     PoolRepo.transaction(fn ->
+  #       PoolRepo.insert(%Trans{text: "8"})
+  #     end)
+  #     Process.put(:before_log, fn -> raise UniqueError end)
+  #     try do
+  #       PoolRepo.transaction(fn -> flunk "log did not raise" end)
+  #     rescue
+  #       UniqueError ->
+  #         :ok
+  #     end
+  #   end)
+
+  #   assert [%Trans{text: "8"}] = PoolRepo.all(Trans)
+  # end
+
+  # test "log raises after begin, does rollback" do
+  #   PoolRepo.transaction(fn ->
+  #     PoolRepo.transaction(fn ->
+  #       PoolRepo.insert(%Trans{text: "9"})
+  #     end)
+  #     Process.put(:after_log, fn -> raise UniqueError end)
+  #     try do
+  #       PoolRepo.transaction(fn -> flunk "log did not raise" end)
+  #     rescue
+  #       UniqueError ->
+  #         :ok
+  #     end
+  #   end)
+
+  #   assert [%Trans{text: "9"}] = PoolRepo.all(Trans)
+  # end
+
+  test "log raises before commit, does rollback" do
+    try do
+      PoolRepo.transaction(fn ->
+        PoolRepo.insert(%Trans{text: "10"})
+        Process.put(:before_log, fn -> raise UniqueError end)
+      end)
+    rescue
+      UniqueError ->
+        :ok
+    end
+
+    assert [] = PoolRepo.all(Trans)
+  end
+
+  test "log raises before rollback, does rollback" do
+    try do
+      PoolRepo.transaction(fn ->
+        PoolRepo.insert(%Trans{text: "11"})
+        Process.put(:before_log, fn -> raise UniqueError end)
+        PoolRepo.rollback(:rollback)
+      end)
+    rescue
+      UniqueError ->
+        :ok
+    end
+
+    assert [] = PoolRepo.all(Trans)
+  end
+
+  ## Timeouts
+
+  test "transaction exit includes :timeout on begin timeout" do
+    assert match?({:timeout, _},
+      catch_exit(PoolRepo.transaction(fn ->
+        PoolRepo.transaction([timeout: 0], fn -> flunk "did not timeout" end)
+      end)))
+  end
+
+  test "transaction exit includes :timeout on query timeout" do
+    assert match?({:timeout, _},
+      catch_exit(PoolRepo.transaction(fn ->
+        PoolRepo.insert(%Trans{text: "12"}, [timeout: 0])
+      end)))
+
+    assert [] = PoolRepo.all(Trans)
+  end
+
+  test "transaction exit includes :timeout on nested query timeout" do
+    assert match?({:timeout, _},
+      catch_exit(PoolRepo.transaction(fn ->
+        PoolRepo.transaction(fn ->
+          PoolRepo.insert(%Trans{text: "13"}, [timeout: 0])
+        end)
+      end)))
+
+    assert [] = PoolRepo.all(Trans)
   end
 end
