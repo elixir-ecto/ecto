@@ -5,6 +5,11 @@
 * Enhancements
   * Add `put_source/2` function to `Ecto.Model`
   * Do not send `nil` values for `read_after_writes` columns on `Ecto.Repo.insert/2`
+  * Optimize SQL transactions by reducing the amount of messages passed around
+  * Provide `Ecto.Adapters.Worker` which can work across adapters and provides transactional semantics
+
+* Backwards incompatible changes
+  * `Repo.log/2` is no longer invoked. Instead `Repo.log/1` is called with an `Ecto.LogEntry`
 
 * Adapters backwards incompatible changes
   * fragment AST now tags each argument as raw or expr
