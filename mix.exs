@@ -53,7 +53,8 @@ defmodule Ecto.Mixfile do
     [contributors: ["Eric Meadows-Jönsson", "José Valim"],
      licenses: ["Apache 2.0"],
      links: %{"GitHub" => "https://github.com/elixir-lang/ecto"},
-     files: ~w(mix.exs README.md CHANGELOG.md integration_test/cases integration_test/support lib)]
+     files: ~w(mix.exs README.md CHANGELOG.md lib) ++
+            ~w(integration_test/cases integration_test/sql integration_test/support)]
   end
 
   defp test_all(args) do

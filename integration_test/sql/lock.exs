@@ -15,7 +15,8 @@ defmodule Ecto.Integration.LockTest do
   end
 
   setup do
-    on_exit fn -> PoolRepo.delete_all(LockCounter) end
+    PoolRepo.delete_all(LockCounter)
+    :ok
   end
 
   test "lock for update" do
@@ -24,7 +25,7 @@ defmodule Ecto.Integration.LockTest do
 
     # Here we are manually inserting the lock in the query
     # to test multiple adapters. Never do this in actual
-    # application code: it is not safe and could also break.
+    # application code: it is not safe and not public.
     query = from(lc in LockCounter, where: lc.id == ^id)
     query = %{query | lock: PoolRepo.lock_for_update}
 

@@ -278,6 +278,10 @@ defmodule Ecto.Adapters.SQL do
     opts = Keyword.put_new(opts, :timeout, timeout)
     timeout = Keyword.get(opts, :timeout)
 
+    if Process.get({:ecto_transaction_info, pool}) do
+      raise "cannot #{event} test transaction because we are already inside a regular transaction"
+    end
+
     pool_transaction(repo, pool, timeout, fn worker ->
       case Worker.sandbox_transaction(worker, timeout) do
         {:ok, {mod, conn}} ->
@@ -286,8 +290,6 @@ defmodule Ecto.Adapters.SQL do
           restart_sandbox!(mod, conn, opts)
         {:sandbox, _} when event == :begin ->
           raise "cannot begin test transaction because we are already inside one"
-        :already_open ->
-          raise "cannot #{event} test transaction because we are already inside a regular transaction"
         {:error, err} ->
           raise err
       end
@@ -322,9 +324,11 @@ defmodule Ecto.Adapters.SQL do
     timeout = Keyword.get(opts, :timeout)
 
     pool_transaction(repo, pool, timeout, fn worker ->
-      {mod, conn} = Worker.ask!(worker, timeout)
-      rollback_sandbox!(mod, conn, opts)
-      Worker.close_transaction(worker, timeout)
+      worker_fuse(pool, worker, timeout, fn ->
+        {mod, conn} = Worker.ask!(worker, timeout)
+        rollback_sandbox!(mod, conn, opts)
+        Worker.close_transaction(worker, timeout)
+      end)
     end)
 
     :ok

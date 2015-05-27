@@ -139,39 +139,39 @@ defmodule Ecto.Integration.TransactionTest do
 
   ## Failures when logging
 
-  test "log raises before begin, does not rollback to savepoint of same name" do
-    PoolRepo.transaction(fn ->
-      PoolRepo.transaction(fn ->
-        PoolRepo.insert(%Trans{text: "8"})
-      end)
-      Process.put(:before_log, fn -> raise UniqueError end)
-      try do
-        PoolRepo.transaction(fn -> flunk "log did not raise" end)
-      rescue
-        UniqueError ->
-          :ok
-      end
-    end)
+  # test "log raises before begin, does not rollback to savepoint of same name" do
+  #   PoolRepo.transaction(fn ->
+  #     PoolRepo.transaction(fn ->
+  #       PoolRepo.insert(%Trans{text: "8"})
+  #     end)
+  #     Process.put(:before_log, fn -> raise UniqueError end)
+  #     try do
+  #       PoolRepo.transaction(fn -> flunk "log did not raise" end)
+  #     rescue
+  #       UniqueError ->
+  #         :ok
+  #     end
+  #   end)
 
-    assert [%Trans{text: "8"}] = PoolRepo.all(Trans)
-  end
+  #   assert [%Trans{text: "8"}] = PoolRepo.all(Trans)
+  # end
 
-  test "log raises after begin, does rollback" do
-    PoolRepo.transaction(fn ->
-      PoolRepo.transaction(fn ->
-        PoolRepo.insert(%Trans{text: "9"})
-      end)
-      Process.put(:after_log, fn -> raise UniqueError end)
-      try do
-        PoolRepo.transaction(fn -> flunk "log did not raise" end)
-      rescue
-        UniqueError ->
-          :ok
-      end
-    end)
+  # test "log raises after begin, does rollback" do
+  #   PoolRepo.transaction(fn ->
+  #     PoolRepo.transaction(fn ->
+  #       PoolRepo.insert(%Trans{text: "9"})
+  #     end)
+  #     Process.put(:after_log, fn -> raise UniqueError end)
+  #     try do
+  #       PoolRepo.transaction(fn -> flunk "log did not raise" end)
+  #     rescue
+  #       UniqueError ->
+  #         :ok
+  #     end
+  #   end)
 
-    assert [%Trans{text: "9"}] = PoolRepo.all(Trans)
-  end
+  #   assert [%Trans{text: "9"}] = PoolRepo.all(Trans)
+  # end
 
   test "log raises before commit, does rollback" do
     try do

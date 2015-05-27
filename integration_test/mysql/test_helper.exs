@@ -1,7 +1,10 @@
 Logger.configure(level: :info)
 ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive, :uses_usec]
 
+# Load support files
 Code.require_file "../support/repo.exs", __DIR__
+Code.require_file "../support/models.exs", __DIR__
+Code.require_file "../support/migration.exs", __DIR__
 
 # Basic test repo
 alias Ecto.Integration.TestRepo
@@ -9,8 +12,7 @@ alias Ecto.Integration.TestRepo
 Application.put_env(:ecto, TestRepo,
   adapter: Ecto.Adapters.MySQL,
   url: "ecto://root@localhost/ecto_test",
-  size: 1,
-  max_overflow: 0)
+  size: 1)
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
@@ -42,10 +44,6 @@ defmodule Ecto.Integration.Case do
     :ok
   end
 end
-
-# Load support models and migration
-Code.require_file "../support/models.exs", __DIR__
-Code.require_file "../support/migration.exs", __DIR__
 
 # Load up the repository, start it, and run migrations
 _   = Ecto.Storage.down(TestRepo)
