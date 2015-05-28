@@ -191,6 +191,9 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Model |> select([], "abc") |> normalize
     assert SQL.all(query) == ~s{SELECT 'abc' FROM "model" AS m0}
 
+    query = Model |> select([], <<0, ?a,?b,?c>>) |> normalize
+    assert SQL.all(query) == ~s{SELECT '\\x00616263'::bytea FROM "model" AS m0}
+
     query = Model |> select([], 123) |> normalize
     assert SQL.all(query) == ~s{SELECT 123 FROM "model" AS m0}
 
@@ -199,7 +202,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "tagged type" do
-    query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)) |> normalize
+    query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, Ecto.UUID)) |> normalize
     assert SQL.all(query) == ~s{SELECT $1::uuid FROM "model" AS m0}
 
     query = Model |> select([], type(^1, Custom.Permalink)) |> normalize

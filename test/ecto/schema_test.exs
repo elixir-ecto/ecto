@@ -260,7 +260,7 @@ defmodule Ecto.SchemaTest do
       has_many :posts, Post, references: :pk, foreign_key: :fk
       has_one :author, User, references: :pk, foreign_key: :fk
       belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk
-      belongs_to :permalink2, Permalink, references: :pk, type: :uuid
+      belongs_to :permalink2, Permalink, references: :pk, type: :string
     end
   end
 
@@ -286,7 +286,7 @@ defmodule Ecto.SchemaTest do
     assert :pk == refl.assoc_key
 
     assert ModelAssocOpts.__schema__(:field, :fk) == :string
-    assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :uuid
+    assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :string
   end
 
   test "has_* references option has to match a field on model" do

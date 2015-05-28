@@ -316,6 +316,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       raise ArgumentError, "Array type is not supported by MySQL"
     end
 
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
+      hex = Base.encode16(binary, case: :lower)
+      "x'#{hex}'"
+    end
+
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) when type in [:integer, :float] do
       expr(other, sources)
     end

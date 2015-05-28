@@ -53,6 +53,7 @@ defmodule Ecto.Query do
     * Integers: `1`, `2`, `3`
     * Floats: `1.0`, `2.0`, `3.0`
     * Booleans: `true`, `false`
+    * Binaries: `<<1, 2, 3>>`
     * Strings: `"foo bar"`, `~s(this is a string)`
     * Arrays: `[1, 2, 3]`, `~w(interpolate words)`
 
@@ -112,7 +113,7 @@ defmodule Ecto.Query do
   tag it with the type/2 function:
 
       type(^"1", :integer)
-      type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, :uuid)
+      type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, Ecto.UUID)
 
   It is important to keep in mind that Ecto cannot cast nil values in
   queries. Passing nil automatically causes the query to fail.

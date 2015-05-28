@@ -83,10 +83,10 @@ defmodule Ecto.Type do
   @type custom    :: atom
 
   @typep base      :: :any | :integer | :float | :boolean | :string |
-                      :binary | :uuid | :decimal | :datetime | :time | :date
+                      :binary | :decimal | :datetime | :time | :date
   @typep composite :: {:array, base}
 
-  @base     ~w(any integer float boolean string binary uuid decimal datetime time date)a
+  @base     ~w(any integer float boolean string binary decimal datetime time date)a
   @composite ~w(array)a
 
   @doc """
@@ -289,8 +289,8 @@ defmodule Ecto.Type do
     end
   end
 
-  defp tag(type, value) when type in ~w(uuid binary)a,
-    do: %Ecto.Query.Tagged{value: value, type: type}
+  defp tag(:binary, value),
+    do: %Ecto.Query.Tagged{type: :binary, value: value}
   defp tag(_type, value),
     do: value
 
@@ -420,8 +420,6 @@ defmodule Ecto.Type do
       :error
 
       iex> cast(:string, "beef")
-      {:ok, "beef"}
-      iex> cast(:uuid, "beef")
       {:ok, "beef"}
       iex> cast(:binary, "beef")
       {:ok, "beef"}

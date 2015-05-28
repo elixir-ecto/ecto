@@ -46,7 +46,7 @@ defmodule Ecto.Schema do
 
   The advantage of configuring the schema via those attributes
   is that they can be set with a macro to configure application wide
-  defaults. For example, if you would like to use `uuid`'s in all of
+  defaults. For example, if you would like to use `binary_id`'s in all of
   your application models, you can do:
 
       # Define a module to be used as base
@@ -54,8 +54,8 @@ defmodule Ecto.Schema do
         defmacro __using__(_) do
           quote do
             use Ecto.Model
-            @primary_key {:id, :uuid, read_after_writes: true}
-            @foreign_key_type :uuid
+            @primary_key {:id, :binary_id, autogenerate: true}
+            @foreign_key_type :binary_id
           end
         end
       end
@@ -92,7 +92,6 @@ defmodule Ecto.Schema do
   `:boolean`              | `boolean`               | true, false
   `:string`               | UTF-8 encoded `string`  | "hello"
   `:binary`               | `binary`                | `<<int, int, int, ...>>`
-  `:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
   `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
   `:datetime`             | `{{year, month, day}, {hour, min, sec}}`
@@ -107,15 +106,15 @@ defmodule Ecto.Schema do
   ### Custom types
 
   Sometimes the primitive types in Ecto are too primitive. For example,
-  `:uuid` relies on the underling binary representation instead of
-  representing itself as a readable string. That's where `Ecto.UUID`
-  comes in.
+  `:datetime` relies on the underling tuple representation instead of
+  representing itself as something nicer like a map/struct. That's where
+  `Ecto.DateTime` comes in.
 
-  `Ecto.UUID` is a  custom type. A custom type is a module that
+  `Ecto.DateTime` is a custom type. A custom type is a module that
   implements the `Ecto.Type` behaviour. By default, Ecto provides the
   following custom types:
 
-  Custom type             | Ecto type               | Elixir type
+  Custom type             | Database type           | Elixir type
   :---------------------- | :---------------------- | :---------------------
   `Ecto.DateTime`         | `:datetime`             | `%Ecto.DateTime{}`
   `Ecto.Date`             | `:date`                 | `%Ecto.Date{}`

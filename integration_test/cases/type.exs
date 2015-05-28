@@ -11,12 +11,11 @@ defmodule Ecto.Integration.TypeTest do
     integer  = 1
     float    = 0.1
     text     = <<0,1>>
-    uuid     = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
     decimal  = Decimal.new("1.0")
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26,
-      sec: 51, usec: 0}
+    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
+                              hour: 20, min: 26, sec: 51, usec: 0}
 
-    TestRepo.insert(%Post{text: text, uuid: uuid, public: true, visits: integer,
+    TestRepo.insert(%Post{text: text, public: true, visits: integer, uuid: Ecto.UUID.generate,
                           inserted_at: datetime, cost: decimal, intensity: float})
 
     # nil
@@ -42,10 +41,8 @@ defmodule Ecto.Integration.TypeTest do
     assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: p.public)
 
     # Binaries
+    assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)
     assert [^text] = TestRepo.all(from p in Post, where: p.text == ^text, select: p.text)
-
-    # UUID
-    assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == ^uuid, select: p.uuid)
 
     # Datetime
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
@@ -59,8 +56,8 @@ defmodule Ecto.Integration.TypeTest do
     assert [1.0] = TestRepo.all(from Post, select: type(^1.0, :float))
 
     # UUID
-    uuid = <<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>
-    assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, :uuid))
+    uuid = "00010203-0405-0607-0809-0a0b0c0d0e0f"
+    assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, Ecto.UUID))
 
     # Datetime
     datetime = {{2014, 04, 17}, {14, 00, 00, 00}}

@@ -13,6 +13,8 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Barebone
   alias Ecto.Schema.Metadata
 
+  @uuid "00010203-0405-0607-0809-0a0b0c0d0e0f"
+
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
   end
@@ -115,15 +117,15 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :read_after_writes
   test "insert and update with changeset read after writes" do
-    changeset = Ecto.Changeset.cast(%Custom{uuid: "0123456789abcdef"}, %{}, ~w(), ~w())
+    changeset = Ecto.Changeset.cast(%Custom{uuid: @uuid}, %{}, ~w(), ~w())
 
     # There is no dirty tracking on insert, even with changesets,
     # so database defaults kick in only with nil read after writes.
     # counter should be 10, visits should be nil, even with same defaults.
-    assert %Custom{uuid: cid, counter: 10, visits: nil} = custom = TestRepo.insert(changeset)
+    assert %Custom{uuid: @uuid, counter: 10, visits: nil} = custom = TestRepo.insert(changeset)
 
     # Make sure the values we see are actually the ones in the DB
-    assert %Custom{uuid: cid, counter: 10, visits: nil} = TestRepo.get!(Custom, "0123456789abcdef")
+    assert %Custom{uuid: @uuid, counter: 10, visits: nil} = TestRepo.get!(Custom, @uuid)
 
     # Set the counter to 11 behind the scenes, it shall be read again
     TestRepo.update(%{custom | counter: 11})
@@ -131,7 +133,7 @@ defmodule Ecto.Integration.RepoTest do
     # Now a combination of dirty tracking with read_after_writes
     # allow us to see the new counter value.
     changeset = Ecto.Changeset.cast(custom, %{"visits" => "13"}, ~w(visits), ~w())
-    assert %Custom{uuid: ^cid, counter: 11, visits: 13} = TestRepo.update(changeset)
+    assert %Custom{uuid: @uuid, counter: 11, visits: 13} = TestRepo.update(changeset)
   end
 
   test "validate_unique/3" do
@@ -199,25 +201,24 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "get(!) with custom primary key" do
-    TestRepo.insert(%Custom{uuid: "01abcdef01abcdef"})
-    TestRepo.insert(%Custom{uuid: "02abcdef02abcdef"})
+    TestRepo.insert(%Custom{uuid: @uuid})
 
-    assert %Custom{uuid: "01abcdef01abcdef", __meta__: %{state: :loaded}} =
-           TestRepo.get(Custom, "01abcdef01abcdef")
+    assert %Custom{uuid: @uuid, __meta__: %{state: :loaded}} =
+           TestRepo.get(Custom, @uuid)
 
-    assert %Custom{uuid: "02abcdef02abcdef", __meta__: %{state: :loaded}} =
-           TestRepo.get(Custom, "02abcdef02abcdef")
+    assert %Custom{uuid: @uuid, __meta__: %{state: :loaded}} =
+           TestRepo.get(Custom, <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>)
 
-    assert nil = TestRepo.get(Custom, "03abcdef03abcdef")
+    assert nil = TestRepo.get(Custom, "01010203-0405-0607-0809-0a0b0c0d0e0f")
   end
 
   test "get(!) with custom source" do
-    custom = %Custom{uuid: "01abcdef01abcdef"}
+    custom = %Custom{uuid: @uuid}
     custom = Ecto.Model.put_source(custom, "posts")
     TestRepo.insert(custom)
 
-    assert %Custom{uuid: "01abcdef01abcdef", __meta__: %{source: "posts"}} =
-           TestRepo.get(from(c in {"posts", Custom}), "01abcdef01abcdef")
+    assert %Custom{uuid: @uuid, __meta__: %{source: "posts"}} =
+           TestRepo.get(from(c in {"posts", Custom}), @uuid)
   end
 
   test "get_by(!)" do

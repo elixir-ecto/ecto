@@ -27,7 +27,7 @@ defmodule Ecto.Query.PlannerTest do
     schema "posts" do
       field :title, :string
       field :text, :string
-      field :code, :uuid
+      field :code, :binary
       has_many :comments, Ecto.Query.PlannerTest.Comment
     end
   end
@@ -120,10 +120,10 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1]
 
     {_query, params} = prepare(Post |> where([p], p.code in [^"abcd"]))
-    assert params == [%Ecto.Query.Tagged{tag: nil, type: :uuid, value: "abcd"}]
+    assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
 
     {_query, params} = prepare(Post |> where([p], p.code in ^["abcd"]))
-    assert params == [%Ecto.Query.Tagged{tag: nil, type: :uuid, value: "abcd"}]
+    assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
   end
 
   test "prepare: joins" do

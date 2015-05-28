@@ -28,6 +28,9 @@ defmodule Ecto.Query.BuilderTest do
     assert {quote(do: ~s"123"), %{}} ==
            escape(quote do ~s"123" end, [], __ENV__)
 
+    assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: {:<<>>, [], [0, 1, 2]}, type: :binary]}]}, %{}} ==
+           escape(quote do <<0,1,2>> end, [], __ENV__)
+
     assert quote(do: &0.z) ==
            escape(quote do field(x, :z) end, [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
   end

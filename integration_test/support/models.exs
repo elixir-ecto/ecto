@@ -16,12 +16,12 @@ defmodule Ecto.Integration.Post do
     field :title, :string
     field :counter, :integer
     field :text, :binary
-    field :uuid, :uuid
     field :temp, :string, default: "temp", virtual: true
     field :public, :boolean, default: true
     field :cost, :decimal
     field :visits, :integer
     field :intensity, :float
+    field :uuid, Ecto.UUID
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
     has_many :comments_authors, through: [:comments, :author]
@@ -97,7 +97,7 @@ defmodule Ecto.Integration.User do
   schema "users" do
     field :name, :string
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id
-    belongs_to :custom, Ecto.Integration.Custom, references: :uuid, type: :uuid
+    belongs_to :custom, Ecto.Integration.Custom, references: :uuid, type: Ecto.UUID
     timestamps
   end
 end
@@ -115,7 +115,7 @@ defmodule Ecto.Integration.Custom do
 
   use Ecto.Model
 
-  @primary_key {:uuid, :uuid, []}
+  @primary_key {:uuid, Ecto.UUID, []}
   schema "customs" do
     field :counter, :integer, read_after_writes: true
     field :visits, :integer
