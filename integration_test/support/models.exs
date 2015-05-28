@@ -1,6 +1,15 @@
 Code.require_file "types.exs", __DIR__
 
 defmodule Ecto.Integration.Post do
+  @moduledoc """
+  This module is used to test:
+
+    * Overall functionality
+    * Overall types
+    * Non-null timestamps
+    * Relationships
+
+  """
   use Ecto.Model
 
   schema "posts" do
@@ -21,6 +30,12 @@ defmodule Ecto.Integration.Post do
 end
 
 defmodule Ecto.Integration.PostUsecTimestamps do
+  @moduledoc """
+  This module is used to test:
+
+    * Usec timestamps
+
+  """
   use Ecto.Model
 
   schema "posts" do
@@ -30,6 +45,12 @@ defmodule Ecto.Integration.PostUsecTimestamps do
 end
 
 defmodule Ecto.Integration.Comment do
+  @moduledoc """
+  This module is used to test:
+
+    * Relationships
+
+  """
   use Ecto.Model
 
   schema "comments" do
@@ -42,6 +63,13 @@ defmodule Ecto.Integration.Comment do
 end
 
 defmodule Ecto.Integration.Permalink do
+  @moduledoc """
+  This module is used to test:
+
+    * Optimistic lock
+    * Relationships
+
+  """
   use Ecto.Model
 
   @foreign_key_type Custom.Permalink
@@ -56,6 +84,14 @@ defmodule Ecto.Integration.Permalink do
 end
 
 defmodule Ecto.Integration.User do
+  @moduledoc """
+  This module is used to test:
+
+    * Timestamps
+    * Relationships
+
+  """
+
   use Ecto.Model
 
   schema "users" do
@@ -67,9 +103,18 @@ defmodule Ecto.Integration.User do
 end
 
 defmodule Ecto.Integration.Custom do
+  @moduledoc """
+  This module is used to test:
+
+    * UUID primary key
+    * Read after writes
+    * Tying another schemas to an existing model
+
+  Due to the third item, it must be a subset of posts.
+  """
+
   use Ecto.Model
 
-  # Must be a subset of posts
   @primary_key {:uuid, :uuid, []}
   schema "customs" do
     field :counter, :integer, read_after_writes: true
@@ -78,6 +123,13 @@ defmodule Ecto.Integration.Custom do
 end
 
 defmodule Ecto.Integration.Barebone do
+  @moduledoc """
+  This module is used to test:
+
+    * A model wthout primary keys
+
+  """
+
   use Ecto.Model
 
   @primary_key false
@@ -87,6 +139,13 @@ defmodule Ecto.Integration.Barebone do
 end
 
 defmodule Ecto.Integration.Tag do
+  @moduledoc """
+  This module is used to test:
+
+    * The array type
+
+  """
+
   use Ecto.Model
 
   schema "tags" do
