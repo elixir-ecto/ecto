@@ -17,23 +17,33 @@ defmodule Ecto.LogEntryTest do
   end
 
   test "converts entry to iodata" do
-    entry = %LogEntry{query: fn _ -> "done" end, params: []}
-    assert to_binary(entry) == "done []"
+    entry = %LogEntry{query: "done", result: {:ok, []}}
+    assert to_binary(entry) == "done [] OK"
 
-    entry = %LogEntry{query: "done", params: [1, 2, 3]}
-    assert to_binary(entry) == "done [1, 2, 3]"
+    entry = %{entry | params: [1, 2, 3], result: {:ok, []}}
+    assert to_binary(entry) == "done [1, 2, 3] OK"
 
-    entry = %LogEntry{query: "done", params: [%Ecto.Query.Tagged{value: 1}, 2, 3]}
-    assert to_binary(entry) == "done [1, 2, 3]"
+    entry = %{entry | params: [%Ecto.Query.Tagged{value: 1}, 2, 3]}
+    assert to_binary(entry) == "done [1, 2, 3] OK"
 
-    entry = %LogEntry{query: "done", params: [1, 2, 3], query_time: 0}
-    assert to_binary(entry) == "done [1, 2, 3] query=0.0ms"
+    entry = %{entry | params: [1, 2, 3], query_time: 0}
+    assert to_binary(entry) == "done [1, 2, 3] OK query=0.0ms"
 
-    entry = %LogEntry{query: "done", params: [1, 2, 3], query_time: 0, queue_time: 0}
-    assert to_binary(entry) == "done [1, 2, 3] query=0.0ms"
+    entry = %{entry | params: [1, 2, 3], query_time: 0, queue_time: 0}
+    assert to_binary(entry) == "done [1, 2, 3] OK query=0.0ms"
 
-    entry = %LogEntry{query: "done", params: [1, 2, 3], query_time: 2100, queue_time: 100}
-    assert to_binary(entry) == "done [1, 2, 3] query=2.1ms queue=0.1ms"
+    entry = %{entry | params: [1, 2, 3], query_time: 2100, queue_time: 100}
+    assert to_binary(entry) == "done [1, 2, 3] OK query=2.1ms queue=0.1ms"
+
+    entry = %{entry | params: [1, 2, 3], query_time: 2100, queue_time: 100, result: {:error, :error}}
+    assert to_binary(entry) == "done [1, 2, 3] ERROR query=2.1ms queue=0.1ms"
+  end
+
+  test "resolves when converting entry to iodata" do
+    entry = %LogEntry{query: fn _ -> "done" end, params: [], result: {:ok, []}}
+    {entry, iodata} = to_iodata(entry)
+    assert entry.query == "done"
+    assert IO.iodata_to_binary(iodata) == "done [] OK"
   end
 
   defp to_binary(entry) do

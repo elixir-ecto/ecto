@@ -181,7 +181,7 @@ defmodule Ecto.Adapters.SQL do
 
   defp log_and_check(repo, sql, params, query_time, queue_time, opts, res) do
     if Keyword.get(opts, :log, true) do
-      repo.log(%Ecto.LogEntry{query: sql, params: params,
+      repo.log(%Ecto.LogEntry{query: sql, params: params, result: res,
                               query_time: query_time, queue_time: queue_time})
     end
 
