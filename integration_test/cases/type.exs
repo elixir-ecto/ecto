@@ -16,11 +16,14 @@ defmodule Ecto.Integration.TypeTest do
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
                               hour: 20, min: 26, sec: 51, usec: 0}
 
-    TestRepo.insert(%Post{text: text, public: true, visits: integer, uuid: uuid,
+    TestRepo.insert(%Post{text: text, public: true, visits: integer, uuid: uuid, counter: integer,
                           inserted_at: datetime, cost: decimal, intensity: float})
 
     # nil
     assert [nil] = TestRepo.all(from Post, select: nil)
+
+    # ID
+    assert [1] = TestRepo.all(from p in Post, where: p.counter == ^integer, select: p.counter)
 
     # Integers
     assert [1] = TestRepo.all(from p in Post, where: p.visits == ^integer, select: p.visits)

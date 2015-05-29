@@ -13,8 +13,8 @@ defmodule Ecto.Integration.Post do
   use Ecto.Model
 
   schema "posts" do
+    field :counter, :id
     field :title, :string
-    field :counter, :integer
     field :text, :binary
     field :temp, :string, default: "temp", virtual: true
     field :public, :boolean, default: true

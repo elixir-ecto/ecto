@@ -27,11 +27,11 @@ defmodule Ecto.SchemaTest do
   test "schema metadata" do
     assert MyModel.__schema__(:source)             == "mymodel"
     assert MyModel.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
-    assert MyModel.__schema__(:field, :id)         == :integer
+    assert MyModel.__schema__(:field, :id)         == :id
     assert MyModel.__schema__(:field, :name)       == :string
     assert MyModel.__schema__(:field, :email)      == :string
     assert MyModel.__schema__(:field, :array)      == {:array, :string}
-    assert MyModel.__schema__(:field, :comment_id) == :integer
+    assert MyModel.__schema__(:field, :comment_id) == :id
     assert MyModel.__schema__(:read_after_writes)  == [:id, :email, :count]
     assert MyModel.__schema__(:primary_key)        == [:id]
     assert MyModel.__schema__(:autogenerate)       == %{uuid: Ecto.UUID}
@@ -40,7 +40,7 @@ defmodule Ecto.SchemaTest do
   test "changeset metadata" do
     assert MyModel.__changeset__ ==
            %{name: :string, email: :string, count: :decimal, array: {:array, :string},
-             comment_id: :integer, temp: :any, id: :integer, uuid: Ecto.UUID}
+             comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID}
   end
 
   test "skip field with define_field false" do

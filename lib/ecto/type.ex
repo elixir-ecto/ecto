@@ -82,11 +82,12 @@ defmodule Ecto.Type do
   @type primitive :: base | composite
   @type custom    :: atom
 
-  @typep base      :: :any | :integer | :float | :boolean | :string |
-                      :binary | :decimal | :datetime | :time | :date
+  @typep base      :: :integer | :float | :boolean | :string |
+                      :binary | :decimal | :datetime | :time |
+                      :date | :id | :binary_id | :any
   @typep composite :: {:array, base}
 
-  @base     ~w(any integer float boolean string binary decimal datetime time date)a
+  @base      ~w(integer float boolean string binary decimal datetime time date id binary_id any)a
   @composite ~w(array)a
 
   @doc """
@@ -204,7 +205,8 @@ defmodule Ecto.Type do
   end
 
   @doc """
-  Checks if a given type matches with a primitive type.
+  Checks if a given type matches with a primitive type
+  that can be found in queries.
 
       iex> match?(:whatever, :any)
       true
@@ -223,6 +225,8 @@ defmodule Ecto.Type do
 
   """
   @spec match?(t, primitive) :: boolean
+  def match?(schema_type, query_type)
+
   def match?(_left, :any),  do: true
   def match?(:any, _right), do: true
 
@@ -236,6 +240,7 @@ defmodule Ecto.Type do
 
   defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
   defp do_match?(:decimal, type) when type in [:float, :integer], do: true
+  defp do_match?(:id, :integer), do: true
   defp do_match?(type, type), do: true
   defp do_match?(_, _), do: false
 
@@ -397,6 +402,13 @@ defmodule Ecto.Type do
       iex> cast(:integer, "1.0")
       :error
 
+      iex> cast(:id, 1)
+      {:ok, 1}
+      iex> cast(:id, "1")
+      {:ok, 1}
+      iex> cast(:id, "1.0")
+      :error
+
       iex> cast(:float, 1.0)
       {:ok, 1.0}
       iex> cast(:float, 1)
@@ -446,13 +458,6 @@ defmodule Ecto.Type do
     array(type, value, &cast/2, [])
   end
 
-  def cast(:integer, term) when is_binary(term) do
-    case Integer.parse(term) do
-      {int, ""} -> {:ok, int}
-      _         -> :error
-    end
-  end
-
   def cast(:float, term) when is_binary(term) do
     case Float.parse(term) do
       {float, ""} -> {:ok, float}
@@ -469,6 +474,13 @@ defmodule Ecto.Type do
     {:ok, Decimal.new(term)} # TODO: Add Decimal.parse/1
   rescue
     Decimal.Error -> :error
+  end
+
+  def cast(type, term) when type in [:id, :integer] and is_binary(term) do
+    case Integer.parse(term) do
+      {int, ""} -> {:ok, int}
+      _         -> :error
+    end
   end
 
   def cast(type, value) do
@@ -496,12 +508,13 @@ defmodule Ecto.Type do
   ## Helpers
 
   # Checks if a value is of the given primitive type.
-  defp of_base_type?(:any, _), do: true
+  defp of_base_type?(:any, _),        do: true
+  defp of_base_type?(:id, term),      do: is_integer(term)
   defp of_base_type?(:float, term),   do: is_float(term)
   defp of_base_type?(:integer, term), do: is_integer(term)
   defp of_base_type?(:boolean, term), do: is_boolean(term)
 
-  defp of_base_type?(binary, term) when binary in ~w(binary uuid string)a, do: is_binary(term)
+  defp of_base_type?(binary, term) when binary in ~w(binary string)a, do: is_binary(term)
 
   defp of_base_type?(:decimal, %Decimal{}), do: true
   defp of_base_type?(:date, {_, _, _}),  do: true

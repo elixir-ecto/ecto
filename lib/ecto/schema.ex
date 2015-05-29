@@ -87,6 +87,8 @@ defmodule Ecto.Schema do
 
   Ecto type               | Elixir type             | Literal syntax in query
   :---------------------- | :---------------------- | :---------------------
+  `:id`                   | `integer`               | 1, 2, 3
+  `:binary_id`            | `binary`                | `<<int, int, int, ...>>`
   `:integer`              | `integer`               | 1, 2, 3
   `:float`                | `float`                 | 1.0, 2.0, 3.0
   `:boolean`              | `boolean`               | true, false
@@ -102,6 +104,24 @@ defmodule Ecto.Schema do
   likely want to use `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` respectively.
   See the Custom types sections below about types that enhance the primitive
   ones.
+
+  ### ID types
+
+  In the table above, you may have noticed that Elixir supports two ID
+  types: `:id` and `:binary_id`. Those types are equivalent to `:id`
+  and `:binary_id` with the difference their semantics is specified by
+  the underlying adapter/database.
+
+  For example, if you use the `:id` type with `:autogenerate`, it means
+  the database will be responsible for auto-generation the id.
+
+  Similarly, `:binary_id` means the adapter/database will auto-generate
+  an ID in binary format, which may be `Ecto.UUID` for databases like
+  PostgreSQL and MySQL, or some specific ObjectID or RecordID often
+  imposed by NoSQL databases.
+
+  For those reasons, it is recommended to use those types for primary
+  keys and associations.
 
   ### Custom types
 
@@ -193,9 +213,9 @@ defmodule Ecto.Schema do
   defmacro __using__(_) do
     quote do
       import Ecto.Schema, only: [schema: 2]
-      @primary_key {:id, :integer, read_after_writes: true}
+      @primary_key {:id, :id, read_after_writes: true}
       @timestamps_opts []
-      @foreign_key_type :integer
+      @foreign_key_type :id
     end
   end
 

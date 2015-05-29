@@ -97,7 +97,7 @@ defmodule Ecto.RepoTest do
   test "repo validates get" do
     MockRepo.get(MyModel, 123)
 
-    message = ~r"value `:atom` in `where` cannot be cast to type :integer in query"
+    message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
     assert_raise Ecto.CastError, message, fn ->
       MockRepo.get(MyModel, :atom)
     end
