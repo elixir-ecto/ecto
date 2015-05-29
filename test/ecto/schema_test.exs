@@ -10,8 +10,9 @@ defmodule Ecto.SchemaTest do
       field :temp,  :any, default: "temp", virtual: true
       field :count, :decimal, read_after_writes: true
       field :array, {:array, :string}
+      field :uuid, Ecto.UUID, autogenerate: true
       belongs_to :comment, Comment
-      belongs_to :permalink, Permalink, auto_field: false
+      belongs_to :permalink, Permalink, define_field: false
     end
 
     def model_from do
@@ -25,7 +26,7 @@ defmodule Ecto.SchemaTest do
 
   test "schema metadata" do
     assert MyModel.__schema__(:source)             == "mymodel"
-    assert MyModel.__schema__(:fields)             == [:id, :name, :email, :count, :array, :comment_id]
+    assert MyModel.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
     assert MyModel.__schema__(:field, :id)         == :integer
     assert MyModel.__schema__(:field, :name)       == :string
     assert MyModel.__schema__(:field, :email)      == :string
@@ -33,15 +34,16 @@ defmodule Ecto.SchemaTest do
     assert MyModel.__schema__(:field, :comment_id) == :integer
     assert MyModel.__schema__(:read_after_writes)  == [:id, :email, :count]
     assert MyModel.__schema__(:primary_key)        == [:id]
+    assert MyModel.__schema__(:autogenerate)       == %{uuid: Ecto.UUID}
   end
 
   test "changeset metadata" do
     assert MyModel.__changeset__ ==
            %{name: :string, email: :string, count: :decimal, array: {:array, :string},
-             comment_id: :integer, temp: :any, id: :integer}
+             comment_id: :integer, temp: :any, id: :integer, uuid: Ecto.UUID}
   end
 
-  test "skip field with auto_field false" do
+  test "skip field with define_field false" do
     refute MyModel.__schema__(:field, :permalink_id)
   end
 
@@ -90,7 +92,7 @@ defmodule Ecto.SchemaTest do
   ## Errors
 
   test "field name clash" do
-    assert_raise ArgumentError, "field/association `name` is already set on schema", fn ->
+    assert_raise ArgumentError, "field/association :name is already set on schema", fn ->
       defmodule ModelFieldNameClash do
         use Ecto.Model
 
@@ -103,7 +105,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "invalid field type" do
-    assert_raise ArgumentError, "invalid field type `{:apa}`", fn ->
+    assert_raise ArgumentError, "invalid type {:apa} for field :name", fn ->
       defmodule ModelInvalidFieldType do
         use Ecto.Model
 
@@ -113,7 +115,7 @@ defmodule Ecto.SchemaTest do
       end
     end
 
-    assert_raise ArgumentError, "invalid or unknown field type `OMG`", fn ->
+    assert_raise ArgumentError, "invalid or unknown type OMG for field :name", fn ->
       defmodule ModelInvalidFieldType do
         use Ecto.Model
 
@@ -138,12 +140,37 @@ defmodule Ecto.SchemaTest do
   end
 
   test "fail invalid default" do
-    assert_raise ArgumentError, "invalid default argument `13` for `:string`", fn ->
+    assert_raise ArgumentError, "invalid default argument `13` for field :x of type :string", fn ->
       defmodule DefaultFail do
         use Ecto.Model
 
         schema "hello" do
           field :x, :string, default: 13
+        end
+      end
+    end
+  end
+
+  test "fail invalid autogenerate default" do
+    assert_raise ArgumentError,
+                 "field :x does not support :autogenerate because it uses a primitive type :string", fn ->
+      defmodule AutogenerateFail do
+        use Ecto.Model
+
+        schema "hello" do
+          field :x, :string, autogenerate: true
+        end
+      end
+    end
+
+    assert_raise ArgumentError,
+                 "field :x does not support :autogenerate because " <>
+                 "it uses a custom type Ecto.DateTime that does not define generate/0", fn ->
+      defmodule AutogenerateFail do
+        use Ecto.Model
+
+        schema "hello" do
+          field :x, Ecto.DateTime, autogenerate: true
         end
       end
     end

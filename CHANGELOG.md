@@ -10,6 +10,7 @@
 
 * Backwards incompatible changes
   * `Repo.log/2` is no longer invoked. Instead `Repo.log/1` is called with an `Ecto.LogEntry`
+  * `:auto_field` in `belongs_to/3` has been renamed to `:define_field`
 
 * Adapters backwards incompatible changes
   * fragment AST now tags each argument as raw or expr

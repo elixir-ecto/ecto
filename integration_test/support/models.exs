@@ -91,7 +91,6 @@ defmodule Ecto.Integration.User do
     * Relationships
 
   """
-
   use Ecto.Model
 
   schema "users" do
@@ -112,7 +111,6 @@ defmodule Ecto.Integration.Custom do
 
   Due to the third item, it must be a subset of posts.
   """
-
   use Ecto.Model
 
   @primary_key {:uuid, Ecto.UUID, []}
@@ -129,7 +127,6 @@ defmodule Ecto.Integration.Barebone do
     * A model wthout primary keys
 
   """
-
   use Ecto.Model
 
   @primary_key false
@@ -145,7 +142,6 @@ defmodule Ecto.Integration.Tag do
     * The array type
 
   """
-
   use Ecto.Model
 
   schema "tags" do
