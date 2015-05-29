@@ -12,10 +12,11 @@ defmodule Ecto.Integration.TypeTest do
     float    = 0.1
     text     = <<0,1>>
     decimal  = Decimal.new("1.0")
+    uuid     = Ecto.UUID.generate
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
                               hour: 20, min: 26, sec: 51, usec: 0}
 
-    TestRepo.insert(%Post{text: text, public: true, visits: integer, uuid: Ecto.UUID.generate,
+    TestRepo.insert(%Post{text: text, public: true, visits: integer, uuid: uuid,
                           inserted_at: datetime, cost: decimal, intensity: float})
 
     # nil
@@ -43,6 +44,9 @@ defmodule Ecto.Integration.TypeTest do
     # Binaries
     assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)
     assert [^text] = TestRepo.all(from p in Post, where: p.text == ^text, select: p.text)
+
+    # UUID
+    assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == ^uuid, select: p.uuid)
 
     # Datetime
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
