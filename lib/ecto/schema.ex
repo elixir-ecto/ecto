@@ -845,7 +845,7 @@ defmodule Ecto.Schema do
   defp store_autogenerate!(mod, name, type, false) do
     cond do
       _ = autogenerate_id(type) ->
-        raise ArgumentError, "only primary keys allow :autogenerate for type #{inspect type}, "
+        raise ArgumentError, "only primary keys allow :autogenerate for type #{inspect type}, " <>
                              "field #{inspect name} is not a primary key"
 
       Ecto.Type.primitive?(type) ->

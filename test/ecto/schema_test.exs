@@ -153,7 +153,7 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "fail invalid autogenerate default" do
+  test "fail invalid autogenerate" do
     assert_raise ArgumentError,
                  "field :x does not support :autogenerate because it uses a primitive type :string", fn ->
       defmodule AutogenerateFail do
@@ -173,6 +173,29 @@ defmodule Ecto.SchemaTest do
 
         schema "hello" do
           field :x, Ecto.DateTime, autogenerate: true
+        end
+      end
+    end
+
+    assert_raise ArgumentError,
+                 "only primary keys allow :autogenerate for type :id, " <>
+                 "field :x is not a primary key", fn ->
+      defmodule AutogenerateFail do
+        use Ecto.Model
+
+        schema "hello" do
+          field :x, :id, autogenerate: true
+        end
+      end
+    end
+
+    assert_raise ArgumentError,
+                 "cannot mark the same field as autogenerate and read_after_writes", fn ->
+      defmodule AutogenerateFail do
+        use Ecto.Model
+
+        schema "hello" do
+          field :x, Ecto.UUID, autogenerate: true, read_after_writes: true
         end
       end
     end
