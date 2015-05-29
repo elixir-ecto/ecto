@@ -32,7 +32,7 @@ defmodule Ecto.Schema do
 
     * `@primary_key` - configures the schema primary key. It expects
       a tuple with the primary key name, type and options. Defaults
-      to `{:id, :integer, read_after_writes: true}`. When set to
+      to `{:id, :integer, autogenerate: true}`. When set to
       false, does not define a primary key in the model;
 
     * `@foreign_key_type` - configures the default foreign key type
@@ -188,8 +188,10 @@ defmodule Ecto.Schema do
 
   * `__schema__(:autogenerate)` - Non-virtual fields that are auto generated on insert;
 
+  * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
+
   * `__schema__(:load, source, idx, values)` - Loads a new model from a tuple of non-virtual
-    field values starting at the given index. Typically used by adapter interfaces;
+    field values starting at the given index. Typically used by adapters;
 
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
@@ -213,7 +215,7 @@ defmodule Ecto.Schema do
   defmacro __using__(_) do
     quote do
       import Ecto.Schema, only: [schema: 2]
-      @primary_key {:id, :id, read_after_writes: true}
+      @primary_key {:id, :id, autogenerate: true}
       @timestamps_opts []
       @foreign_key_type :id
     end
@@ -237,15 +239,16 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
 
+      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
       Module.put_attribute(__MODULE__, :struct_fields,
                            {:__meta__, %Metadata{state: :built, source: source}})
 
-      primary_key_field =
+      primary_key_fields =
         case @primary_key do
           false ->
             []
           {name, type, opts} ->
-            Ecto.Schema.field(name, type, opts)
+            Ecto.Schema.__field__(__MODULE__, name, type, true, opts)
             [name]
           other ->
             raise ArgumentError, "@primary_key must be false or {name, type, opts}"
@@ -267,10 +270,10 @@ defmodule Ecto.Schema do
         Ecto.Schema.__source__(source),
         Ecto.Schema.__fields__(fields),
         Ecto.Schema.__assocs__(assocs),
-        Ecto.Schema.__primary_key__(primary_key_field),
+        Ecto.Schema.__primary_key__(primary_key_fields),
         Ecto.Schema.__load__(fields),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
-        Ecto.Schema.__autogenerate__(@ecto_autogenerate)]
+        Ecto.Schema.__autogenerate__(@ecto_autogenerate, @ecto_autogenerate_id)]
     end
   end
 
@@ -295,10 +298,7 @@ defmodule Ecto.Schema do
 
       For relational databases, this means the RETURNING option of those
       statements are used. For this reason, MySQL does not support this
-      option for any field besides the primary key (which must be of type
-      serial). Setting this option to true for MySQL on non-primary key
-      columns will cause the values to be ignored or, even worse, load
-      invalid values from the database.
+      option and will raise.
 
     * `:virtual` - When true, the field is not persisted to the database.
       Notice virtual fields do not support `:autogenerate` nor
@@ -307,7 +307,7 @@ defmodule Ecto.Schema do
   """
   defmacro field(name, type \\ :string, opts \\ []) do
     quote do
-      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
+      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), false, unquote(opts))
     end
   end
 
@@ -650,7 +650,7 @@ defmodule Ecto.Schema do
   ## Callbacks
 
   @doc false
-  def __field__(mod, name, type, opts) do
+  def __field__(mod, name, type, pk?, opts) do
     check_type!(name, type, opts[:virtual])
     check_default!(name, type, opts[:default])
 
@@ -658,13 +658,16 @@ defmodule Ecto.Schema do
     put_struct_field(mod, name, opts[:default])
 
     unless opts[:virtual] do
-      if opts[:read_after_writes] do
+      if raw = opts[:read_after_writes] do
         Module.put_attribute(mod, :ecto_raw, name)
       end
 
-      if opts[:autogenerate] do
-        check_autogenerate!(name, type)
-        Module.put_attribute(mod, :ecto_autogenerate, {name, type})
+      if gen = opts[:autogenerate] do
+        store_autogenerate!(mod, name, type, pk?)
+      end
+
+      if raw && gen do
+        raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
       end
 
       Module.put_attribute(mod, :ecto_fields, {name, type})
@@ -779,10 +782,11 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __autogenerate__(fields) do
+  def __autogenerate__(fields, id) do
     map = fields |> Enum.into(%{}) |> Macro.escape()
     quote do
-      def __schema__(:autogenerate), do: unquote(map)
+      def __schema__(:autogenerate),    do: unquote(map)
+      def __schema__(:autogenerate_id), do: unquote(id)
     end
   end
 
@@ -826,8 +830,24 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp check_autogenerate!(name, type) do
+  defp store_autogenerate!(mod, name, type, true) do
+    if id = autogenerate_id(type) do
+      if Module.get_attribute(mod, :ecto_autogenerate_id) do
+        raise ArgumentError, "only one primary key with ID type may be marked as autogenerated"
+      end
+
+      Module.put_attribute(mod, :ecto_autogenerate_id, {name, id})
+    else
+      store_autogenerate!(mod, name, type, false)
+    end
+  end
+
+  defp store_autogenerate!(mod, name, type, false) do
     cond do
+      _ = autogenerate_id(type) ->
+        raise ArgumentError, "only primary keys allow :autogenerate for type #{inspect type}, "
+                             "field #{inspect name} is not a primary key"
+
       Ecto.Type.primitive?(type) ->
         raise ArgumentError, "field #{inspect name} does not support :autogenerate because it uses a " <>
                              "primitive type #{inspect type}"
@@ -838,7 +858,12 @@ defmodule Ecto.Schema do
                              "custom type #{inspect type} that does not define generate/0"
 
       true ->
-        :ok
+        Module.put_attribute(mod, :ecto_autogenerate, {name, type})
     end
+  end
+
+  defp autogenerate_id(type) do
+    id = if Ecto.Type.primitive?(type), do: type, else: type.type
+    if id in [:id, :binary_id], do: id, else: nil
   end
 end

@@ -13,7 +13,7 @@ defmodule Ecto.Integration.Post do
   use Ecto.Model
 
   schema "posts" do
-    field :counter, :id
+    field :counter, :id # Same as integer
     field :title, :string
     field :text, :binary
     field :temp, :string, default: "temp", virtual: true
@@ -21,7 +21,7 @@ defmodule Ecto.Integration.Post do
     field :cost, :decimal
     field :visits, :integer
     field :intensity, :float
-    field :uuid, Ecto.UUID
+    field :uuid, Ecto.UUID, autogenerate: true
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
     has_many :comments_authors, through: [:comments, :author]
@@ -48,6 +48,7 @@ defmodule Ecto.Integration.Comment do
   @moduledoc """
   This module is used to test:
 
+    * Optimistic lock
     * Relationships
 
   """
@@ -56,31 +57,32 @@ defmodule Ecto.Integration.Comment do
   schema "comments" do
     field :text, :string
     field :posted, :datetime
+    field :lock_version, :integer, default: 1
     belongs_to :post, Ecto.Integration.Post
     belongs_to :author, Ecto.Integration.User
     has_one :post_permalink, through: [:post, :permalink]
   end
+
+  optimistic_lock :lock_version
 end
 
 defmodule Ecto.Integration.Permalink do
   @moduledoc """
   This module is used to test:
 
-    * Optimistic lock
+    * Custom id on primary key
     * Relationships
 
   """
   use Ecto.Model
 
+  @primary_key {:id, Custom.Permalink, autogenerate: true}
   @foreign_key_type Custom.Permalink
   schema "permalinks" do
     field :url, :string
-    field :lock_version, :integer, default: 1
     belongs_to :post, Ecto.Integration.Post
     has_many :post_comments_authors, through: [:post, :comments_authors]
   end
-
-  optimistic_lock :lock_version
 end
 
 defmodule Ecto.Integration.User do
@@ -105,18 +107,16 @@ defmodule Ecto.Integration.Custom do
   @moduledoc """
   This module is used to test:
 
-    * UUID primary key
-    * Read after writes
+    * binary_id primary key
     * Tying another schemas to an existing model
 
-  Due to the third item, it must be a subset of posts.
+  Due to the second item, it must be a subset of posts.
   """
   use Ecto.Model
 
-  @primary_key {:uuid, Ecto.UUID, []}
+  # TODO: Make me a binary id primary key
+  @primary_key {:uuid, Ecto.UUID, autogenerate: true}
   schema "customs" do
-    field :counter, :integer, read_after_writes: true
-    field :visits, :integer
   end
 end
 

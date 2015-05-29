@@ -201,7 +201,7 @@ defmodule Ecto.Query.PlannerTest do
 
     {query, params} = from(Post, []) |> select([p], type(^"1", Custom.Permalink)) |> prepare
     assert query.select.expr ==
-           %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: Custom.Permalink}
+           %Ecto.Query.Tagged{type: :id, value: {:^, [], [0]}, tag: Custom.Permalink}
     assert params == [1]
 
     assert_raise Ecto.QueryError, fn ->

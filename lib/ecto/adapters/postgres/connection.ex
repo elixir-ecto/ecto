@@ -582,6 +582,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp ecto_to_db({:array, t}), do: ecto_to_db(t) <> "[]"
+    defp ecto_to_db(:id),         do: "integer"
+    defp ecto_to_db(:binary_id),  do: "uuid"
     defp ecto_to_db(:string),     do: "varchar"
     defp ecto_to_db(:datetime),   do: "timestamp"
     defp ecto_to_db(:binary),     do: "bytea"

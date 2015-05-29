@@ -4,7 +4,6 @@
 
 * Enhancements
   * Add `put_source/2` function to `Ecto.Model`
-  * Do not send `nil` values for `read_after_writes` columns on `Ecto.Repo.insert/2`
   * Optimize SQL transactions by reducing the amount of messages passed around
   * Provide `Ecto.Adapters.Worker` which can work across adapters and provides transactional semantics
 

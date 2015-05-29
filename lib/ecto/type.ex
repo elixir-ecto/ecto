@@ -55,7 +55,7 @@ defmodule Ecto.Type do
       defmodule Post do
         use Ecto.Model
 
-        @primary_key {:id, Permalink, read_after_writes: true}
+        @primary_key {:id, Permalink, autogenerate: true}
         schema "posts" do
           ...
         end

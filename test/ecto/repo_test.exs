@@ -199,14 +199,17 @@ defmodule Ecto.RepoTest do
 
   test "autogenerates values" do
     model = MockRepo.insert(%MyModel{})
+    assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
     model = MockRepo.insert(changeset)
+    assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{z: nil}, [], [])
     model = MockRepo.insert(changeset)
+    assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{z: "0123456789abcdef"}, [:z], [])

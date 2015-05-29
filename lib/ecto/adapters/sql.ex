@@ -60,7 +60,11 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def insert(repo, source, params, returning, opts) do
+      def insert(repo, source, params, {key, :id, nil}, returning, opts) do
+        insert(repo, source, params, nil, [key|returning], opts)
+      end
+
+      def insert(repo, source, params, autogenerate, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(source, fields, returning)
         Ecto.Adapters.SQL.model(repo, sql, values, returning, opts)
@@ -109,7 +113,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       defoverridable [all: 4, update_all: 5, delete_all: 4,
-                      insert: 5, update: 6, delete: 4,
+                      insert: 6, update: 6, delete: 4,
                       execute_ddl: 3, ddl_exists?: 3]
     end
   end

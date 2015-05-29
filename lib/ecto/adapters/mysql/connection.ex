@@ -321,7 +321,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "x'#{hex}'"
     end
 
-    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) when type in [:integer, :float] do
+    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) when type in [:id, :integer, :float] do
       expr(other, sources)
     end
 
@@ -539,11 +539,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       |> :binary.replace("\\", "\\\\", [:global])
     end
 
+    defp ecto_to_db({:array, _}), do: raise(ArgumentError, "Array type is not supported by MySQL")
+    defp ecto_to_db(:id),         do: "integer"
+    defp ecto_to_db(:binary_id),  do: "binary(16)"
     defp ecto_to_db(:string),     do: "varchar"
     defp ecto_to_db(:float),      do: "double"
     defp ecto_to_db(:binary),     do: "blob"
     defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
-    defp ecto_to_db({:array, _}), do: raise(ArgumentError, "Array type is not supported by MySQL")
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end

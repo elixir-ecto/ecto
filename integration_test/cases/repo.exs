@@ -86,14 +86,14 @@ defmodule Ecto.Integration.RepoTest do
 
   test "insert and update with empty changeset" do
     # On insert we merge the fields and changes
-    changeset = Ecto.Changeset.cast(%Comment{}, %{}, ~w(), ~w())
-    assert %Comment{} = comment = TestRepo.insert(changeset)
+    changeset = Ecto.Changeset.cast(%Permalink{}, %{}, ~w(), ~w())
+    assert %Permalink{} = permalink = TestRepo.insert(changeset)
 
     # Assert we can update the same value twice,
     # without changes, without triggering stale errors.
-    changeset = Ecto.Changeset.cast(comment, %{}, ~w(), ~w())
-    assert TestRepo.update(changeset) == comment
-    assert TestRepo.update(changeset) == comment
+    changeset = Ecto.Changeset.cast(permalink, %{}, ~w(), ~w())
+    assert TestRepo.update(changeset) == permalink
+    assert TestRepo.update(changeset) == permalink
   end
 
   test "insert with no primary key" do
@@ -117,23 +117,58 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :read_after_writes
   test "insert and update with changeset read after writes" do
-    changeset = Ecto.Changeset.cast(%Custom{uuid: @uuid}, %{}, ~w(), ~w())
+    defmodule RAW do
+      use Ecto.Model
+
+      schema "posts" do
+        field :counter, :integer, read_after_writes: true
+        field :visits, :integer
+      end
+    end
+
+    changeset = Ecto.Changeset.cast(struct(RAW, %{}), %{}, ~w(), ~w())
 
     # There is no dirty tracking on insert, even with changesets,
-    # so database defaults kick in only with nil read after writes.
-    # counter should be 10, visits should be nil, even with same defaults.
-    assert %Custom{uuid: @uuid, counter: 10, visits: nil} = custom = TestRepo.insert(changeset)
+    # so database defaults never actually kick in.
+    assert %{id: cid, counter: nil} = raw = TestRepo.insert(changeset)
 
-    # Make sure the values we see are actually the ones in the DB
-    assert %Custom{uuid: @uuid, counter: 10, visits: nil} = TestRepo.get!(Custom, @uuid)
+    # Set the counter to 11, so we can read it soon
+    TestRepo.update(%{raw | counter: 11})
 
-    # Set the counter to 11 behind the scenes, it shall be read again
-    TestRepo.update(%{custom | counter: 11})
+    # Now, a combination of dirty tracking with read_after_writes,
+    # allow us to see the actual counter value.
+    changeset = Ecto.Changeset.cast(raw, %{"visits" => "0"}, ~w(visits), ~w())
+    assert %{id: ^cid, counter: 11, visits: 0} = TestRepo.update(changeset)
+  end
 
-    # Now a combination of dirty tracking with read_after_writes
-    # allow us to see the new counter value.
-    changeset = Ecto.Changeset.cast(custom, %{"visits" => "13"}, ~w(visits), ~w())
-    assert %Custom{uuid: @uuid, counter: 11, visits: 13} = TestRepo.update(changeset)
+  test "insert autogenerates for custom type" do
+    post = TestRepo.insert(%Post{uuid: nil})
+    assert byte_size(post.uuid) == 36
+    assert TestRepo.get_by!(Post, uuid: post.uuid) == post
+  end
+
+  test "insert autogenerates for custom id type" do
+    permalink = TestRepo.insert(%Permalink{id: nil})
+    assert permalink.id
+    assert TestRepo.get_by!(Permalink, id: "#{permalink.id}-hello") == permalink
+  end
+
+  @tag :uses_usec
+  test "insert and fetch a model with timestamps with usec" do
+    p1 = TestRepo.insert(%PostUsecTimestamps{title: "hello"})
+    assert [p1] == TestRepo.all(PostUsecTimestamps)
+  end
+
+  test "optimistic locking in update/delete operations" do
+    import Ecto.Changeset, only: [cast: 4]
+    base_post = TestRepo.insert(%Comment{})
+
+    cs_ok = cast(base_post, %{"text" => "foo.bar"}, ~w(text), ~w())
+    TestRepo.update(cs_ok)
+
+    cs_stale = cast(base_post, %{"text" => "foo.baz"}, ~w(text), ~w())
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.update(cs_stale) end
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(cs_stale) end
   end
 
   test "validate_unique/3" do
@@ -514,23 +549,5 @@ defmodule Ecto.Integration.RepoTest do
                             |> order_by([a], a.name)
     assert u1.id == uid1
     assert u2.id == uid2
-  end
-
-  test "optimistic locking in update/delete operations" do
-    import Ecto.Changeset, only: [cast: 4]
-    base_post = TestRepo.insert(%Permalink{})
-
-    cs_ok = cast(base_post, %{"url" => "http://foo.bar"}, ~w(url), ~w())
-    TestRepo.update(cs_ok)
-
-    cs_stale = cast(base_post, %{"url" => "http://foo.baz"}, ~w(url), ~w())
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.update(cs_stale) end
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete(cs_stale) end
-  end
-
-  @tag :uses_usec
-  test "insert and fetch a model with timestamps with usec" do
-    p1 = TestRepo.insert(%PostUsecTimestamps{title: "hello"})
-    assert [p1] == TestRepo.all(PostUsecTimestamps)
   end
 end

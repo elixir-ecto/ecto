@@ -65,10 +65,7 @@ defmodule Ecto.Adapters.MySQL do
 
   Because MySQL does not support RETURNING clauses in INSERT and
   UPDATE, it does not support the `:read_after_writes` option of
-  `Ecto.Schema.field/3`. MySQL can only return the a single serial
-  column after INSERT and UPDATE if one exists. Using
-  `:read_after_writes` with non-serial columns will lead to wrong
-  behaviour.
+  `Ecto.Schema.field/3`.
 
   ### DDL Transaction
 
@@ -152,18 +149,22 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(repo, source, params, [], opts) do
-    super(repo, source, params, [], opts)
+  def insert(_repo, source, _params, _autogen, [_|_] = returning, _opts) do
+    raise ArgumentError, "MySQL does not support :read_after_writes in models. " <>
+                         "The following fields in #{inspect source} have tagged as such: #{inspect returning}"
   end
 
-  @doc false
-  def insert(repo, source, params, [pk|_], opts) do
+  def insert(repo, source, params, {pk, :id, nil}, [], opts) do
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(source, fields, [])
     case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
       %{num_rows: 1, last_insert_id: last_insert_id} ->
         {:ok, [{pk, last_insert_id}]}
     end
+  end
+
+  def insert(repo, source, params, autogen, [], opts) do
+    super(repo, source, params, autogen, [], opts)
   end
 
   @doc false
