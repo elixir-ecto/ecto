@@ -27,6 +27,7 @@ defmodule Ecto.Repo.Model do
       # Callbacks.__apply__/3 "ignores" undefined callbacks and simply returns
       # the changeset unchanged in case the callback is missing.
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
+      changeset = merge_autogenerate(changeset, model)
       changes   = validate_changes(:insert, model, fields, changeset)
 
       {:ok, values} = adapter.insert(repo, source, changes, return, opts)
@@ -158,13 +159,25 @@ defmodule Ecto.Repo.Model do
     # Remove nil read after writes from changes
     changes =
       Enum.reduce return, changes, fn k, acc ->
-        case Map.fetch(changes, k) do
+        case Map.fetch(acc, k) do
           {:ok, nil} -> Map.delete(acc, k)
           _ -> acc
         end
       end
 
     update_in changeset.changes, &Map.merge(changes, &1)
+  end
+
+  defp merge_autogenerate(changeset, model) do
+    update_in changeset.changes, fn changes ->
+      Enum.reduce model.__schema__(:autogenerate), changes, fn {k, v}, acc ->
+        if Map.get(acc, k) == nil do
+          Map.put(acc, k, v.generate())
+        else
+          acc
+        end
+      end
+    end
   end
 
   defp validate_changes(kind, model, fields, changeset) do
