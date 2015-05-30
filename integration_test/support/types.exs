@@ -1,5 +1,5 @@
 defmodule Custom.Permalink do
-  def type, do: :integer
+  def type, do: :id
 
   def cast(string) when is_binary(string) do
     case Integer.parse(string) do

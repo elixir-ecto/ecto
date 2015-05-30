@@ -1,6 +1,9 @@
 Logger.configure(level: :info)
 ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive, :uses_usec]
 
+# Configure Ecto for support and tests
+Application.put_env(:ecto, :primary_key_type, :id)
+
 # Load support files
 Code.require_file "../support/repo.exs", __DIR__
 Code.require_file "../support/models.exs", __DIR__

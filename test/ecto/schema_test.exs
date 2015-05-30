@@ -1,7 +1,9 @@
+Code.require_file "../../integration_test/support/types.exs", __DIR__
+
 defmodule Ecto.SchemaTest do
   use ExUnit.Case, async: true
 
-  defmodule MyModel do
+  defmodule Model do
     use Ecto.Model
 
     schema "mymodel" do
@@ -10,8 +12,9 @@ defmodule Ecto.SchemaTest do
       field :temp,  :any, default: "temp", virtual: true
       field :count, :decimal, read_after_writes: true
       field :array, {:array, :string}
+      field :uuid, Ecto.UUID, autogenerate: true
       belongs_to :comment, Comment
-      belongs_to :permalink, Permalink, auto_field: false
+      belongs_to :permalink, Permalink, define_field: false
     end
 
     def model_from do
@@ -20,35 +23,49 @@ defmodule Ecto.SchemaTest do
   end
 
   test "imports Ecto.Query functions" do
-    assert %Ecto.Query{} = MyModel.model_from
+    assert %Ecto.Query{} = Model.model_from
   end
 
   test "schema metadata" do
-    assert MyModel.__schema__(:source)             == "mymodel"
-    assert MyModel.__schema__(:fields)             == [:id, :name, :email, :count, :array, :comment_id]
-    assert MyModel.__schema__(:field, :id)         == :integer
-    assert MyModel.__schema__(:field, :name)       == :string
-    assert MyModel.__schema__(:field, :email)      == :string
-    assert MyModel.__schema__(:field, :array)      == {:array, :string}
-    assert MyModel.__schema__(:field, :comment_id) == :integer
-    assert MyModel.__schema__(:read_after_writes)  == [:id, :email, :count]
-    assert MyModel.__schema__(:primary_key)        == [:id]
+    assert Model.__schema__(:source)             == "mymodel"
+    assert Model.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
+    assert Model.__schema__(:field, :id)         == :id
+    assert Model.__schema__(:field, :name)       == :string
+    assert Model.__schema__(:field, :email)      == :string
+    assert Model.__schema__(:field, :array)      == {:array, :string}
+    assert Model.__schema__(:field, :comment_id) == :id
+    assert Model.__schema__(:read_after_writes)  == [:email, :count]
+    assert Model.__schema__(:primary_key)        == [:id]
+    assert Model.__schema__(:autogenerate)       == %{uuid: Ecto.UUID}
+    assert Model.__schema__(:autogenerate_id)    == {:id, :id}
   end
 
   test "changeset metadata" do
-    assert MyModel.__changeset__ ==
+    assert Model.__changeset__ ==
            %{name: :string, email: :string, count: :decimal, array: {:array, :string},
-             comment_id: :integer, temp: :any, id: :integer}
+             comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID}
   end
 
-  test "skip field with auto_field false" do
-    refute MyModel.__schema__(:field, :permalink_id)
+  test "skip field with define_field false" do
+    refute Model.__schema__(:field, :permalink_id)
+  end
+
+  test "primary key" do
+    assert Ecto.Model.primary_key(%Model{}) == [id: nil]
+    assert Ecto.Model.primary_key(%Model{id: "hello"}) == [id: "hello"]
+  end
+
+  test "updates source with put_source" do
+    model = %Model{}
+    assert model.__meta__.source == "mymodel"
+    new_model = Ecto.Model.put_source(model, "new_model")
+    assert new_model.__meta__.source == "new_model"
   end
 
   defmodule SchemaModel do
     use Ecto.Model
 
-    @primary_key {:uuid, :string, []}
+    @primary_key {:perm, Custom.Permalink, autogenerate: true}
     @foreign_key_type :string
 
     schema "users" do
@@ -58,39 +75,26 @@ defmodule Ecto.SchemaTest do
   end
 
   test "uses schema attributes" do
-    assert %SchemaModel{uuid: "abc"}.uuid == "abc"
+    assert %SchemaModel{perm: "abc"}.perm == "abc"
+    assert SchemaModel.__schema__(:autogenerate_id) == {:perm, :id}
     assert SchemaModel.__schema__(:field, :comment_id) == :string
   end
 
-  test "primary key" do
-    assert Ecto.Model.primary_key(%MyModel{}) == [id: nil]
-    assert Ecto.Model.primary_key(%MyModel{id: "hello"}) == [id: "hello"]
-  end
-
   test "custom primary key" do
-    assert Ecto.Model.primary_key(%SchemaModel{}) == [uuid: nil]
-    assert Ecto.Model.primary_key(%SchemaModel{uuid: "hello"}) == [uuid: "hello"]
+    assert Ecto.Model.primary_key(%SchemaModel{}) == [perm: nil]
+    assert Ecto.Model.primary_key(%SchemaModel{perm: "hello"}) == [perm: "hello"]
   end
 
-  test "has __meta__ attribute" do
+  test "has __meta__ field" do
     assert %SchemaModel{}.__meta__.state == :built
     assert %SchemaModel{}.__meta__.source == "users"
-    meta = %Ecto.Schema.Metadata{source: "users", state: :built}
-    assert %SchemaModel{} = %SchemaModel{__meta__: meta}
     assert SchemaModel.__schema__(:field, :__meta__) == nil
-  end
-
-  test "updates source with put_source" do
-    model = %MyModel{}
-    assert model.__meta__.source == "mymodel"
-    new_model = Ecto.Model.put_source(model, "new_model")
-    assert new_model.__meta__.source == "new_model"
   end
 
   ## Errors
 
   test "field name clash" do
-    assert_raise ArgumentError, "field/association `name` is already set on schema", fn ->
+    assert_raise ArgumentError, "field/association :name is already set on schema", fn ->
       defmodule ModelFieldNameClash do
         use Ecto.Model
 
@@ -103,7 +107,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "invalid field type" do
-    assert_raise ArgumentError, "invalid field type `{:apa}`", fn ->
+    assert_raise ArgumentError, "invalid type {:apa} for field :name", fn ->
       defmodule ModelInvalidFieldType do
         use Ecto.Model
 
@@ -113,7 +117,7 @@ defmodule Ecto.SchemaTest do
       end
     end
 
-    assert_raise ArgumentError, "invalid or unknown field type `OMG`", fn ->
+    assert_raise ArgumentError, "invalid or unknown type OMG for field :name", fn ->
       defmodule ModelInvalidFieldType do
         use Ecto.Model
 
@@ -138,12 +142,60 @@ defmodule Ecto.SchemaTest do
   end
 
   test "fail invalid default" do
-    assert_raise ArgumentError, "invalid default argument `13` for `:string`", fn ->
+    assert_raise ArgumentError, "invalid default argument `13` for field :x of type :string", fn ->
       defmodule DefaultFail do
         use Ecto.Model
 
         schema "hello" do
           field :x, :string, default: 13
+        end
+      end
+    end
+  end
+
+  test "fail invalid autogenerate" do
+    assert_raise ArgumentError,
+                 "field :x does not support :autogenerate because it uses a primitive type :string", fn ->
+      defmodule AutogenerateFail do
+        use Ecto.Model
+
+        schema "hello" do
+          field :x, :string, autogenerate: true
+        end
+      end
+    end
+
+    assert_raise ArgumentError,
+                 "field :x does not support :autogenerate because " <>
+                 "it uses a custom type Ecto.DateTime that does not define generate/0", fn ->
+      defmodule AutogenerateFail do
+        use Ecto.Model
+
+        schema "hello" do
+          field :x, Ecto.DateTime, autogenerate: true
+        end
+      end
+    end
+
+    assert_raise ArgumentError,
+                 "only primary keys allow :autogenerate for type :id, " <>
+                 "field :x is not a primary key", fn ->
+      defmodule AutogenerateFail do
+        use Ecto.Model
+
+        schema "hello" do
+          field :x, :id, autogenerate: true
+        end
+      end
+    end
+
+    assert_raise ArgumentError,
+                 "cannot mark the same field as autogenerate and read_after_writes", fn ->
+      defmodule AutogenerateFail do
+        use Ecto.Model
+
+        schema "hello" do
+          field :x, Ecto.UUID, autogenerate: true, read_after_writes: true
         end
       end
     end
@@ -260,7 +312,7 @@ defmodule Ecto.SchemaTest do
       has_many :posts, Post, references: :pk, foreign_key: :fk
       has_one :author, User, references: :pk, foreign_key: :fk
       belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk
-      belongs_to :permalink2, Permalink, references: :pk, type: :uuid
+      belongs_to :permalink2, Permalink, references: :pk, type: :string
     end
   end
 
@@ -286,7 +338,7 @@ defmodule Ecto.SchemaTest do
     assert :pk == refl.assoc_key
 
     assert ModelAssocOpts.__schema__(:field, :fk) == :string
-    assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :uuid
+    assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :string
   end
 
   test "has_* references option has to match a field on model" do

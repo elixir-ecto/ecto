@@ -6,6 +6,14 @@ defmodule Ecto.RepoTest.MyModel do
   schema "my_model" do
     field :x, :string
     field :y, :binary
+    field :z, Ecto.UUID, autogenerate: true
+  end
+
+  before_insert :store_autogenerate
+
+  def store_autogenerate(changeset) do
+    Process.put(:autogenerate_z, changeset.changes.z)
+    changeset
   end
 end
 
@@ -89,7 +97,7 @@ defmodule Ecto.RepoTest do
   test "repo validates get" do
     MockRepo.get(MyModel, 123)
 
-    message = ~r"value `:atom` in `where` cannot be cast to type :integer in query"
+    message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
     assert_raise Ecto.CastError, message, fn ->
       MockRepo.get(MyModel, :atom)
     end
@@ -126,9 +134,9 @@ defmodule Ecto.RepoTest do
       MockRepo.update_all(from(e in MyModel, order_by: e.x), x: "123")
     end
 
-    message = "field `Ecto.RepoTest.MyModel.z` in `update_all` does not exist in the model source"
+    message = "field `Ecto.RepoTest.MyModel.w` in `update_all` does not exist in the model source"
     assert_raise Ecto.ChangeError, message, fn ->
-      MockRepo.update_all(MyModel, z: "123")
+      MockRepo.update_all(MyModel, w: "123")
     end
 
     message = "field `Ecto.RepoTest.MyModel.y` in `update_all` does not type check. " <>
@@ -185,5 +193,27 @@ defmodule Ecto.RepoTest do
     assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
       MockRepo.update(invalid)
     end
+  end
+
+  ## Autogenerate
+
+  test "autogenerates values" do
+    model = MockRepo.insert(%MyModel{})
+    assert Process.get(:autogenerate_z)
+    assert byte_size(model.z) == 36
+
+    changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
+    model = MockRepo.insert(changeset)
+    assert Process.get(:autogenerate_z)
+    assert byte_size(model.z) == 36
+
+    changeset = Ecto.Changeset.cast(%MyModel{}, %{z: nil}, [], [])
+    model = MockRepo.insert(changeset)
+    assert Process.get(:autogenerate_z)
+    assert byte_size(model.z) == 36
+
+    changeset = Ecto.Changeset.cast(%MyModel{}, %{z: "30313233-3435-3637-3839-616263646566"}, [:z], [])
+    model = MockRepo.insert(changeset)
+    assert model.z == "30313233-3435-3637-3839-616263646566"
   end
 end

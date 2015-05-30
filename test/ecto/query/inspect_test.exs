@@ -152,9 +152,12 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "container values" do
+    assert i(from(Post, select: <<1, 2, 3>>)) ==
+           "from p in Inspect.Post, select: <<1, 2, 3>>"
+
     foo = <<1, 2, 3>>
-    assert i(from(Post, select: type(^foo, :uuid))) ==
-           "from p in Inspect.Post, select: type(^<<1, 2, 3>>, :uuid)"
+    assert i(from(Post, select: ^foo)) ==
+           "from p in Inspect.Post, select: ^<<1, 2, 3>>"
   end
 
   test "params" do
@@ -164,7 +167,7 @@ defmodule Ecto.Query.InspectTest do
 
   test "params after planner" do
     query = from(x in Post, where: ^123 > ^(1 * 3) and x.id in ^[1, 2, 3])
-            |> Ecto.Query.Planner.prepare([])
+            |> Ecto.Query.Planner.prepare([], %{})
             |> elem(0)
             |> Ecto.Query.Planner.normalize([], [])
     assert i(query) ==

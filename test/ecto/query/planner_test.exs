@@ -15,6 +15,7 @@ defmodule Ecto.Query.PlannerTest do
       field :text, :string
       field :temp, :string, virtual: true
       field :posted, Ecto.DateTime
+      field :uuid, :binary_id
       belongs_to :post, Ecto.Query.PlannerTest.Post
       has_many :post_comments, through: [:post, :comments]
     end
@@ -27,13 +28,13 @@ defmodule Ecto.Query.PlannerTest do
     schema "posts" do
       field :title, :string
       field :text, :string
-      field :code, :uuid
+      field :code, :binary
       has_many :comments, Ecto.Query.PlannerTest.Comment
     end
   end
 
   defp prepare(query, params \\ []) do
-    Planner.prepare(query, params)
+    Planner.prepare(query, params, %{binary_id: Ecto.UUID})
   end
 
   defp normalize(query, params \\ [], opts \\ []) do
@@ -102,6 +103,13 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1]
   end
 
+  test "prepare: casts and dumps binary ids" do
+    uuid = "00010203-0405-0607-0809-0a0b0c0d0e0f"
+    {_query, params} = prepare(Comment |> where([c], c.uuid == ^uuid))
+    assert params == [%Ecto.Query.Tagged{type: :uuid,
+                        value: <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>}]
+  end
+
   test "prepare: casts and dumps custom types in in-expressions" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
     {_query, params} = prepare(Comment |> where([c], c.posted in ^[datetime]))
@@ -120,10 +128,10 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1]
 
     {_query, params} = prepare(Post |> where([p], p.code in [^"abcd"]))
-    assert params == [%Ecto.Query.Tagged{tag: nil, type: :uuid, value: "abcd"}]
+    assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
 
     {_query, params} = prepare(Post |> where([p], p.code in ^["abcd"]))
-    assert params == [%Ecto.Query.Tagged{tag: nil, type: :uuid, value: "abcd"}]
+    assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
   end
 
   test "prepare: joins" do
@@ -201,7 +209,7 @@ defmodule Ecto.Query.PlannerTest do
 
     {query, params} = from(Post, []) |> select([p], type(^"1", Custom.Permalink)) |> prepare
     assert query.select.expr ==
-           %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: Custom.Permalink}
+           %Ecto.Query.Tagged{type: :id, value: {:^, [], [0]}, tag: Custom.Permalink}
     assert params == [1]
 
     assert_raise Ecto.QueryError, fn ->

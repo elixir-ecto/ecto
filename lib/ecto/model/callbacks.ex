@@ -16,7 +16,7 @@ defmodule Ecto.Model.Callbacks do
   callbacks:
 
     * cannot abort
-    * always run inside the transaction
+    * run inside the transaction (if supported by the database/adapter)
     * are invoked only after the data is validated
 
   Therefore, don't use callbacks for validation, enforcing business

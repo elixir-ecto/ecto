@@ -4,6 +4,7 @@ defmodule Ecto.MockAdapter do
   defmacro __before_compile__(_opts), do: :ok
   def start_link(_repo, _opts), do: :ok
   def stop(_repo), do: :ok
+  def id_types(_repo), do: %{binary_id: Ecto.UUID}
 
   ## Queryable
 
@@ -17,13 +18,15 @@ defmodule Ecto.MockAdapter do
 
   ## Model
 
-  def insert(_repo, "schema_migrations", val, _, _) do
+  def insert(_repo, "schema_migrations", val, _, _, _) do
     version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, [version: 1]}
   end
 
-  def insert(_repo, _source, _fields, return, _opts),
+  def insert(repo, source, fields, {key, :id, nil}, return, opts),
+    do: insert(repo, source, fields, nil, [key|return], opts)
+  def insert(_repo, _source, _fields, _autogen, return, _opts),
     do: {:ok, Enum.zip(return, 1..length(return))}
 
   # Notice the list of changes is never empty.

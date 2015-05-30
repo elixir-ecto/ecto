@@ -360,6 +360,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "ARRAY[" <> Enum.map_join(list, ",", &expr(&1, sources)) <> "]"
     end
 
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
+      hex = Base.encode16(binary, case: :lower)
+      "'\\x#{hex}'::bytea"
+    end
+
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
       expr(other, sources) <> "::" <> ecto_to_db(type)
     end
@@ -577,6 +582,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp ecto_to_db({:array, t}), do: ecto_to_db(t) <> "[]"
+    defp ecto_to_db(:id),         do: "integer"
+    defp ecto_to_db(:binary_id),  do: "uuid"
     defp ecto_to_db(:string),     do: "varchar"
     defp ecto_to_db(:datetime),   do: "timestamp"
     defp ecto_to_db(:binary),     do: "bytea"

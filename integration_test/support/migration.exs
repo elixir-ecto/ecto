@@ -4,8 +4,9 @@ defmodule Ecto.Integration.Migration do
   def change do
     create table(:posts) do
       add :title, :string, size: 100
-      add :counter, :integer
+      add :counter, :integer, default: 10 # Do not propagate unless read_after_write
       add :text, :binary
+      add :bid, :binary_id
       add :uuid, :uuid
       add :public, :boolean
       add :cost, :decimal, precision: 2, scale: 1
@@ -25,14 +26,13 @@ defmodule Ecto.Integration.Migration do
     create table(:comments) do
       add :text, :string, size: 100
       add :posted, :datetime
+      add :lock_version, :integer, default: 1
       add :post_id, references(:posts)
       add :author_id, references(:users)
     end
 
     create table(:customs, primary_key: false) do
-      add :uuid, :uuid, primary_key: true
-      add :counter, :integer, default: 10
-      add :visits,  :integer, default: 10
+      add :bid, :binary_id, primary_key: true
     end
 
     create table(:barebones) do
@@ -107,7 +107,6 @@ defmodule Ecto.Integration.Migration do
     create table(:permalinks) do
       add :url
       add :post_id, :integer
-      add :lock_version, :integer, default: 1
     end
   end
 end

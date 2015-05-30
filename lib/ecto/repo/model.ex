@@ -11,27 +11,29 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.insert/2`.
   """
   def insert(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
-    struct = struct_from_changeset!(changeset)
-    model  = struct.__struct__
-    fields = model.__schema__(:fields)
-    source = struct.__meta__.source
-    return = model.__schema__(:read_after_writes)
+    struct   = struct_from_changeset!(changeset)
+    model    = struct.__struct__
+    fields   = model.__schema__(:fields)
+    source   = struct.__meta__.source
+    return   = model.__schema__(:read_after_writes)
+    id_types = adapter.id_types(repo)
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = %{changeset | repo: repo}
-    changeset = merge_into_changeset(struct, fields, changeset, return)
+    changeset = merge_into_changeset(struct, fields, changeset)
+
+    changeset = merge_autogenerate(changeset, model)
+    {autogen, changeset} = merge_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_insert after_insert)a, fn ->
-      # Callbacks.__apply__/3 "ignores" undefined callbacks and simply returns
-      # the changeset unchanged in case the callback is missing.
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
-      changes   = validate_changes(:insert, model, fields, changeset)
+      changes = validate_changes(:insert, changeset, model, fields, id_types)
 
-      {:ok, values} = adapter.insert(repo, source, changes, return, opts)
+      {:ok, values} = adapter.insert(repo, source, changes, autogen, return, opts)
 
-      changeset = load_into_changeset(changeset, model, values)
+      changeset = load_into_changeset(changeset, model, values, id_types)
       Callbacks.__apply__(model, :after_insert, changeset).model
     end
   end
@@ -44,11 +46,12 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.update/2`.
   """
   def update(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
-    struct = struct_from_changeset!(changeset)
-    model  = struct.__struct__
-    fields = model.__schema__(:fields)
-    source = struct.__meta__.source
-    return = model.__schema__(:read_after_writes)
+    struct   = struct_from_changeset!(changeset)
+    model    = struct.__struct__
+    fields   = model.__schema__(:fields)
+    source   = struct.__meta__.source
+    return   = model.__schema__(:read_after_writes)
+    id_types = adapter.id_types(repo)
 
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
@@ -57,13 +60,11 @@ defmodule Ecto.Repo.Model do
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_update after_update)a, fn ->
-      # Callbacks.__apply__/3 "ignores" undefined callbacks and simply returns
-      # the changeset unchanged in case the callback is missing.
       changeset = Callbacks.__apply__(model, :before_update, changeset)
-      changes   = validate_changes(:update, model, fields, changeset)
+      changes   = validate_changes(:update, changeset, model, fields, id_types)
 
       filters = add_pk_filter!(changeset.filters, struct)
-      filters = Planner.fields(:update, model, filters)
+      filters = Planner.fields(:update, model, filters, id_types)
 
       values =
         if changes != [] do
@@ -77,7 +78,7 @@ defmodule Ecto.Repo.Model do
           []
         end
 
-      changeset = load_into_changeset(changeset, model, values)
+      changeset = load_into_changeset(changeset, model, values, id_types)
       Callbacks.__apply__(model, :after_update, changeset).model
     end
   end
@@ -109,7 +110,7 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
       filters = add_pk_filter!(changeset.filters, struct)
-      filters = Planner.fields(:delete, model, filters)
+      filters = Planner.fields(:delete, model, filters, adapter.id_types(repo))
 
       case adapter.delete(repo, source, filters, opts) do
         {:ok, _} -> nil
@@ -135,40 +136,59 @@ defmodule Ecto.Repo.Model do
   defp struct_from_changeset!(%{model: struct}),
     do: struct
 
-  defp load_into_changeset(%{changes: changes} = changeset, model, values) do
-    update_in changeset.model, &do_load(struct(&1, changes), model, values)
+  defp load_into_changeset(%{changes: changes} = changeset, model, values, id_types) do
+    update_in changeset.model, &do_load(struct(&1, changes), model, values, id_types)
   end
 
-  defp do_load(struct, model, kv) do
+  defp do_load(struct, model, kv, id_types) do
     types = model.__changeset__
 
     model = Enum.reduce(kv, struct, fn
-      {k,v}, acc ->
-        value = Ecto.Type.load!(Map.fetch!(types, k), v)
+      {k, v}, acc ->
+        value =
+          types
+          |> Map.fetch!(k)
+          |> Ecto.Type.normalize(id_types)
+          |> Ecto.Type.load!(v)
         Map.put(acc, k, value)
     end)
 
     put_in model.__meta__.state, :loaded
   end
 
-  defp merge_into_changeset(struct, fields, changeset, return) do
-    # Get only the database fields from the struct
+  defp merge_into_changeset(struct, fields, changeset) do
     changes = Map.take(struct, fields)
-
-    # Remove nil read after writes from changes
-    changes =
-      Enum.reduce return, changes, fn k, acc ->
-        case Map.fetch(changes, k) do
-          {:ok, nil} -> Map.delete(acc, k)
-          _ -> acc
-        end
-      end
-
     update_in changeset.changes, &Map.merge(changes, &1)
   end
 
-  defp validate_changes(kind, model, fields, changeset) do
-    Planner.fields(kind, model, Map.take(changeset.changes, fields))
+  defp merge_autogenerate_id(changeset, model) do
+    case model.__schema__(:autogenerate_id) do
+      {key, id} ->
+        get_and_update_in changeset.changes, fn changes ->
+          case Map.pop(changes, key) do
+            {nil, changes} -> {{key, id, nil}, changes}
+            {value, _}     -> {{key, id, value}, changes}
+          end
+        end
+      nil ->
+        {nil, changeset}
+    end
+  end
+
+  defp merge_autogenerate(changeset, model) do
+    update_in changeset.changes, fn changes ->
+      Enum.reduce model.__schema__(:autogenerate), changes, fn {k, v}, acc ->
+        if Map.get(acc, k) == nil do
+          Map.put(acc, k, v.generate())
+        else
+          acc
+        end
+      end
+    end
+  end
+
+  defp validate_changes(kind, changeset, model, fields, id_types) do
+    Planner.fields(kind, model, Map.take(changeset.changes, fields), id_types)
   end
 
   defp add_pk_filter!(filters, struct) do
@@ -181,7 +201,8 @@ defmodule Ecto.Repo.Model do
   end
 
   defp with_transactions_if_callbacks(repo, adapter, model, opts, callbacks, fun) do
-    if Enum.any?(callbacks, &function_exported?(model, &1, 1)) do
+    if Enum.any?(callbacks, &function_exported?(model, &1, 1)) and
+       function_exported?(adapter, :transaction, 3) do
       {:ok, value} = adapter.transaction(repo, opts, fun)
       value
     else

@@ -45,8 +45,13 @@ defmodule Ecto.Adapters.SQL do
       ## Query
 
       @doc false
+      def id_types(_repo) do
+        %{binary_id: Ecto.UUID}
+      end
+
+      @doc false
       def all(repo, query, params, opts) do
-        Ecto.Adapters.SQL.all(repo, @conn.all(query), query, params, opts)
+        Ecto.Adapters.SQL.all(repo, @conn.all(query), query, params, id_types(repo), opts)
       end
 
       @doc false
@@ -60,7 +65,22 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def insert(repo, source, params, returning, opts) do
+      # Nil ids are generated in the database.
+      def insert(repo, source, params, {key, :id, nil}, returning, opts) do
+        insert(repo, source, params, nil, [key|returning], opts)
+      end
+
+      # Nil binary_ids are generated in the adapter.
+      def insert(repo, source, params, {key, :binary_id, nil}, returning, opts) do
+        %{binary_id: binary_id} = id_types(repo)
+        autogenerate = [{key, binary_id.bingenerate}]
+        case insert(repo, source, autogenerate ++ params, nil, returning, opts) do
+          {:ok, values}     -> {:ok, autogenerate ++ values}
+          {:error, _} = err -> err
+        end
+      end
+
+      def insert(repo, source, params, _autogenerate, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(source, fields, returning)
         Ecto.Adapters.SQL.model(repo, sql, values, returning, opts)
@@ -109,7 +129,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       defoverridable [all: 4, update_all: 5, delete_all: 4,
-                      insert: 5, update: 6, delete: 4,
+                      insert: 6, update: 6, delete: 4,
                       execute_ddl: 3, ddl_exists?: 3]
     end
   end
@@ -396,10 +416,10 @@ defmodule Ecto.Adapters.SQL do
   ## Query
 
   @doc false
-  def all(repo, sql, query, params, opts) do
+  def all(repo, sql, query, params, id_types, opts) do
     %{rows: rows} = query(repo, sql, params, opts)
     fields = extract_fields(query.select.fields, query.sources)
-    Enum.map(rows, &process_row(&1, fields))
+    Enum.map(rows, &process_row(&1, fields, id_types))
   end
 
   @doc false
@@ -430,7 +450,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp process_row(row, fields) do
+  defp process_row(row, fields, id_types) do
     Enum.map_reduce(fields, 0, fn
       {1, nil}, idx ->
         {elem(row, idx), idx + 1}
@@ -438,7 +458,7 @@ defmodule Ecto.Adapters.SQL do
         if all_nil?(row, idx, count) do
           {nil, idx + count}
         else
-          {model.__schema__(:load, source, idx, row), idx + count}
+          {model.__schema__(:load, source, idx, row, id_types), idx + count}
         end
     end) |> elem(0)
   end

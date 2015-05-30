@@ -32,7 +32,7 @@ defmodule Ecto.Schema do
 
     * `@primary_key` - configures the schema primary key. It expects
       a tuple with the primary key name, type and options. Defaults
-      to `{:id, :integer, read_after_writes: true}`. When set to
+      to `{:id, :integer, autogenerate: true}`. When set to
       false, does not define a primary key in the model;
 
     * `@foreign_key_type` - configures the default foreign key type
@@ -44,18 +44,21 @@ defmodule Ecto.Schema do
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
 
-  The advantage of configuring the schema via those attributes
-  is that they can be set with a macro to configure application wide
-  defaults. For example, if you would like to use `uuid`'s in all of
-  your application models, you can do:
+  The advantage of configuring the schema via those attributes is
+  that they can be set with a macro to configure application wide
+  defaults.
+
+  For example, if your database does not support autoincrementing
+  primary keys and requires something like UUID or a RecordID, you
+  configure and use`:binary_id` as your primary key type as follows:
 
       # Define a module to be used as base
       defmodule MyApp.Model do
         defmacro __using__(_) do
           quote do
             use Ecto.Model
-            @primary_key {:id, :uuid, read_after_writes: true}
-            @foreign_key_type :uuid
+            @primary_key {:id, :binary_id, autogenerate: true}
+            @foreign_key_type :binary_id
           end
         end
       end
@@ -70,11 +73,36 @@ defmodule Ecto.Schema do
       end
 
   Any models using `MyApp.Model` will get the `:id` field with type
-  `:uuid` as primary key.
+  `:binary_id` as primary key. We explain what the `:binary_id` type
+  entails in the next section.
 
   The `belongs_to` association on `MyApp.Comment` will also define
-  a `:post_id` field with `:uuid` type that references the `:id` of
-  the `MyApp.Post` model.
+  a `:post_id` field with `:binary_id` type that references the `:id`
+  field of the `MyApp.Post` model.
+
+  ## Primary keys
+
+  Ecto supports two ID types, called `:id` and `:binary_id` which are
+  often used as the type for primary keys and associations.
+
+  The `:id` type is used when the primary key is an integer while the
+  `:binary_id` is used when the primary key is in binary format, which
+  may be `Ecto.UUID` for databases like PostgreSQL and MySQL, or some
+  specific ObjectID or RecordID often imposed by NoSQL databases.
+
+  In both cases, both types have their semantics specified by the
+  underlying adapter/database. For example, if you use the `:id`
+  type with `:autogenerate`, it means the database will be responsible
+  for auto-generation the id if it supports it.
+
+  Similarly, the `:binary_id` type may be generated in the adapter
+  for cases like UUID but it may also be handled by the database if
+  required. In any case, both scenarios are handled transparently by
+  Ecto.
+
+  Besides `:id` and `:binary_id`, which are often used by primary
+  and foreign keys, Ecto provides a huge variety of types to be used
+  by the remaining columns.
 
   ## Types and casting
 
@@ -87,12 +115,13 @@ defmodule Ecto.Schema do
 
   Ecto type               | Elixir type             | Literal syntax in query
   :---------------------- | :---------------------- | :---------------------
+  `:id`                   | `integer`               | 1, 2, 3
+  `:binary_id`            | `binary`                | `<<int, int, int, ...>>`
   `:integer`              | `integer`               | 1, 2, 3
   `:float`                | `float`                 | 1.0, 2.0, 3.0
   `:boolean`              | `boolean`               | true, false
   `:string`               | UTF-8 encoded `string`  | "hello"
   `:binary`               | `binary`                | `<<int, int, int, ...>>`
-  `:uuid`                 | 16 byte `binary`        | `uuid(binary_or_string)`
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
   `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
   `:datetime`             | `{{year, month, day}, {hour, min, sec}}`
@@ -107,15 +136,15 @@ defmodule Ecto.Schema do
   ### Custom types
 
   Sometimes the primitive types in Ecto are too primitive. For example,
-  `:uuid` relies on the underling binary representation instead of
-  representing itself as a readable string. That's where `Ecto.UUID`
-  comes in.
+  `:datetime` relies on the underling tuple representation instead of
+  representing itself as something nicer like a map/struct. That's where
+  `Ecto.DateTime` comes in.
 
-  `Ecto.UUID` is a  custom type. A custom type is a module that
+  `Ecto.DateTime` is a custom type. A custom type is a module that
   implements the `Ecto.Type` behaviour. By default, Ecto provides the
   following custom types:
 
-  Custom type             | Ecto type               | Elixir type
+  Custom type             | Database type           | Elixir type
   :---------------------- | :---------------------- | :---------------------
   `Ecto.DateTime`         | `:datetime`             | `%Ecto.DateTime{}`
   `Ecto.Date`             | `:date`                 | `%Ecto.Date{}`
@@ -137,7 +166,8 @@ defmodule Ecto.Schema do
       "0"
 
   However, if you attempt to persist the struct above, an error will
-  be raised since Ecto validates the types when building the query.
+  be raised since Ecto validates the types when sending them to the
+  adapter/database.
 
   Therefore, when working and manipulating external data, it is
   recommended the usage of `Ecto.Changeset`'s that are able to filter
@@ -166,8 +196,12 @@ defmodule Ecto.Schema do
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
     from the database after every write (insert or update);
 
-  * `__schema__(:load, source, idx, values)` - Loads a new model from a tuple of non-virtual
-    field values starting at the given index. Typically used by adapter interfaces;
+  * `__schema__(:autogenerate)` - Non-virtual fields that are auto generated on insert;
+
+  * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
+
+  * `__schema__(:load, source, idx, values, id_types)` - Loads a new model from a tuple of non-virtual
+    field values starting at the given index. Typically used by adapters;
 
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
@@ -191,9 +225,9 @@ defmodule Ecto.Schema do
   defmacro __using__(_) do
     quote do
       import Ecto.Schema, only: [schema: 2]
-      @primary_key {:id, :integer, read_after_writes: true}
+      @primary_key {:id, :id, autogenerate: true}
       @timestamps_opts []
-      @foreign_key_type :integer
+      @foreign_key_type :id
     end
   end
 
@@ -213,16 +247,18 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
 
+      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
       Module.put_attribute(__MODULE__, :struct_fields,
                            {:__meta__, %Metadata{state: :built, source: source}})
 
-      primary_key_field =
+      primary_key_fields =
         case @primary_key do
           false ->
             []
           {name, type, opts} ->
-            Ecto.Schema.field(name, type, opts)
+            Ecto.Schema.__field__(__MODULE__, name, type, true, opts)
             [name]
           other ->
             raise ArgumentError, "@primary_key must be false or {name, type, opts}"
@@ -244,9 +280,10 @@ defmodule Ecto.Schema do
         Ecto.Schema.__source__(source),
         Ecto.Schema.__fields__(fields),
         Ecto.Schema.__assocs__(assocs),
-        Ecto.Schema.__primary_key__(primary_key_field),
+        Ecto.Schema.__primary_key__(primary_key_fields),
         Ecto.Schema.__load__(fields),
-        Ecto.Schema.__read_after_writes__(@ecto_raw)]
+        Ecto.Schema.__read_after_writes__(@ecto_raw),
+        Ecto.Schema.__autogenerate__(@ecto_autogenerate, @ecto_autogenerate_id)]
     end
   end
 
@@ -262,7 +299,8 @@ defmodule Ecto.Schema do
       expressions like `Ecto.DateTime.local` or `Ecto.UUID.generate` as
       they would then be the same for all records
 
-    * `:virtual` - When true, the field is not persisted to the database
+    * `:autogenerate` - Annotates the field to be autogenerated before
+      insertion if not value is set.
 
     * `:read_after_writes` - When true, the field only sent on insert
       if not nil and always read back from the repository during inserts
@@ -270,15 +308,17 @@ defmodule Ecto.Schema do
 
       For relational databases, this means the RETURNING option of those
       statements are used. For this reason, MySQL does not support this
-      option for any field besides the primary key (which must be of type
-      serial). Setting this option to true for MySQL on non-primary key
-      columns will cause the values to be ignored or, even worse, load
-      invalid values from the database.
+      option and will raise an error if a model is inserted/updated with
+      read after writes fields.
+
+    * `:virtual` - When true, the field is not persisted to the database.
+      Notice virtual fields do not support `:autogenerate` nor
+      `:read_after_writes`.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
     quote do
-      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
+      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), false, unquote(opts))
     end
   end
 
@@ -518,7 +558,7 @@ defmodule Ecto.Schema do
     * `:references` - Sets the key on the other model to be used for the
       association, defaults to: `:id`
 
-    * `:auto_field` - When false, does not automatically define a `:foreign_key`
+    * `:define_field` - When false, does not automatically define a `:foreign_key`
       field, implying the user is defining the field manually elsewhere
 
     * `:type` - Sets the type of automatically defined `:foreign_key`.
@@ -611,7 +651,7 @@ defmodule Ecto.Schema do
     quote bind_quoted: binding() do
       opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
       foreign_key_type = opts[:type] || @foreign_key_type
-      if Keyword.get(opts, :auto_field, true) do
+      if Keyword.get(opts, :define_field, true) do
         field(opts[:foreign_key], foreign_key_type, opts)
       end
       association(:one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
@@ -621,16 +661,26 @@ defmodule Ecto.Schema do
   ## Callbacks
 
   @doc false
-  def __field__(mod, name, type, opts) do
-    check_type!(type, opts[:virtual])
-    check_default!(type, opts[:default])
+  def __field__(mod, name, type, pk?, opts) do
+    check_type!(name, type, opts[:virtual])
+    check_default!(name, type, opts[:default])
 
     Module.put_attribute(mod, :changeset_fields, {name, type})
     put_struct_field(mod, name, opts[:default])
 
     unless opts[:virtual] do
-      if opts[:read_after_writes] do
+      if raw = opts[:read_after_writes] do
+        IO.puts :stderr, "[warning] :read_after_writes is deprecated. It was declared for " <>
+                         "field #{inspect name} in model #{inspect mod}"
         Module.put_attribute(mod, :ecto_raw, name)
+      end
+
+      if gen = opts[:autogenerate] do
+        store_autogenerate!(mod, name, type, pk?)
+      end
+
+      if raw && gen do
+        raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
       end
 
       Module.put_attribute(mod, :ecto_fields, {name, type})
@@ -647,15 +697,16 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __load__(struct, source, fields, idx, values) do
-    loaded = do_load(struct, fields, idx, values)
+  def __load__(struct, source, fields, idx, values, id_types) do
+    loaded = do_load(struct, fields, idx, values, id_types)
     loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
     Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
   end
 
-  defp do_load(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
+  defp do_load(struct, fields, idx, values, id_types) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
+        type  = Ecto.Type.normalize(type, id_types)
         value = Ecto.Type.load!(type, elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
@@ -731,8 +782,8 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(fields) do
     quote do
-      def __schema__(:load, source, idx, values) do
-        Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values)
+      def __schema__(:load, source, idx, values, id_types) do
+        Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values, id_types)
       end
     end
   end
@@ -744,41 +795,89 @@ defmodule Ecto.Schema do
     end
   end
 
+  @doc false
+  def __autogenerate__(fields, id) do
+    map = fields |> Enum.into(%{}) |> Macro.escape()
+    quote do
+      def __schema__(:autogenerate),    do: unquote(map)
+      def __schema__(:autogenerate_id), do: unquote(id)
+    end
+  end
+
   ## Private
 
   defp put_struct_field(mod, name, assoc) do
     fields = Module.get_attribute(mod, :struct_fields)
 
     if List.keyfind(fields, name, 0) do
-      raise ArgumentError, "field/association `#{name}` is already set on schema"
+      raise ArgumentError, "field/association #{inspect name} is already set on schema"
     end
 
     Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
-  defp check_type!(type, virtual?) do
+  defp check_type!(name, type, virtual?) do
     cond do
       type == :any and not virtual? ->
-        raise ArgumentError, "only virtual fields can have type :any"
+        raise ArgumentError, "only virtual fields can have type :any, " <>
+                             "invalid type for field #{inspect name}"
       Ecto.Type.primitive?(type) ->
         true
       is_atom(type) ->
         if Code.ensure_compiled?(type) and function_exported?(type, :type, 0) do
           type
         else
-          raise ArgumentError, "invalid or unknown field type `#{inspect type}`"
+          raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
         end
       true ->
-        raise ArgumentError, "invalid field type `#{inspect type}`"
+        raise ArgumentError, "invalid type #{inspect type} for field #{inspect name}"
     end
   end
 
-  defp check_default!(type, default) do
+  defp check_default!(name, type, default) do
     case Ecto.Type.dump(type, default) do
       {:ok, _} ->
         :ok
       :error ->
-        raise ArgumentError, "invalid default argument `#{inspect default}` for `#{inspect type}`"
+        raise ArgumentError, "invalid default argument `#{inspect default}` for " <>
+                             "field #{inspect name} of type #{inspect type}"
     end
+  end
+
+  defp store_autogenerate!(mod, name, type, true) do
+    if id = autogenerate_id(type) do
+      if Module.get_attribute(mod, :ecto_autogenerate_id) do
+        raise ArgumentError, "only one primary key with ID type may be marked as autogenerated"
+      end
+
+      Module.put_attribute(mod, :ecto_autogenerate_id, {name, id})
+    else
+      store_autogenerate!(mod, name, type, false)
+    end
+  end
+
+  defp store_autogenerate!(mod, name, type, false) do
+    cond do
+      _ = autogenerate_id(type) ->
+        raise ArgumentError, "only primary keys allow :autogenerate for type #{inspect type}, " <>
+                             "field #{inspect name} is not a primary key"
+
+      Ecto.Type.primitive?(type) ->
+        raise ArgumentError, "field #{inspect name} does not support :autogenerate because it uses a " <>
+                             "primitive type #{inspect type}"
+
+      # Note the custom type has already been loaded in check_type!/3
+      not function_exported?(type, :generate, 0) ->
+        raise ArgumentError, "field #{inspect name} does not support :autogenerate because it uses a " <>
+                             "custom type #{inspect type} that does not define generate/0"
+
+      true ->
+        Module.put_attribute(mod, :ecto_autogenerate, {name, type})
+    end
+  end
+
+  defp autogenerate_id(type) do
+    id = if Ecto.Type.primitive?(type), do: type, else: type.type
+    if id in [:id, :binary_id], do: id, else: nil
   end
 end

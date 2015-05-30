@@ -54,6 +54,11 @@ defmodule Ecto.Query.Builder do
   end
 
   # tagged types
+  def escape({:<<>>, _, _} = bin, _type, params, _vars, _env) do
+    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :binary]}]}
+    {expr, params}
+  end
+
   def escape({:type, _, [{:^, _, [arg]}, tag]}, _type, params, _vars, _env) do
     index  = Map.size(params)
     params = Map.put(params, index, {arg, tag})
@@ -363,6 +368,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), code}
 
   # Tagged
+  def quoted_type({:<<>>, _, _}, _vars), do: :binary
   def quoted_type({:type, _, [_, type]}, _vars), do: type
 
   # Sigils
