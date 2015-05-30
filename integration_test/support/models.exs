@@ -21,6 +21,7 @@ defmodule Ecto.Integration.Post do
     field :cost, :decimal
     field :visits, :integer
     field :intensity, :float
+    field :bid, :binary_id
     field :uuid, Ecto.UUID, autogenerate: true
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
@@ -98,7 +99,7 @@ defmodule Ecto.Integration.User do
   schema "users" do
     field :name, :string
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id
-    belongs_to :custom, Ecto.Integration.Custom, references: :uuid, type: Ecto.UUID
+    belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     timestamps
   end
 end
@@ -114,8 +115,7 @@ defmodule Ecto.Integration.Custom do
   """
   use Ecto.Model
 
-  # TODO: Make me a binary id primary key
-  @primary_key {:uuid, Ecto.UUID, autogenerate: true}
+  @primary_key {:bid, :binary_id, autogenerate: true}
   schema "customs" do
   end
 end

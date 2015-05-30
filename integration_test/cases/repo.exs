@@ -13,8 +13,6 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Barebone
   alias Ecto.Schema.Metadata
 
-  @uuid "00010203-0405-0607-0809-0a0b0c0d0e0f"
-
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
   end
@@ -144,13 +142,21 @@ defmodule Ecto.Integration.RepoTest do
   test "insert autogenerates for custom type" do
     post = TestRepo.insert(%Post{uuid: nil})
     assert byte_size(post.uuid) == 36
-    assert TestRepo.get_by!(Post, uuid: post.uuid) == post
+    assert TestRepo.get_by(Post, uuid: post.uuid) == post
   end
 
   test "insert autogenerates for custom id type" do
     permalink = TestRepo.insert(%Permalink{id: nil})
     assert permalink.id
-    assert TestRepo.get_by!(Permalink, id: "#{permalink.id}-hello") == permalink
+    assert TestRepo.get_by(Permalink, id: "#{permalink.id}-hello") == permalink
+  end
+
+  test "insert autogenerates for binary id type" do
+    custom = TestRepo.insert(%Custom{bid: nil})
+    assert custom.bid
+    assert TestRepo.get(Custom, custom.bid)
+    assert TestRepo.delete(custom)
+    refute TestRepo.get(Custom, custom.bid)
   end
 
   @tag :uses_usec
@@ -235,25 +241,12 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  test "get(!) with custom primary key" do
-    TestRepo.insert(%Custom{uuid: @uuid})
-
-    assert %Custom{uuid: @uuid, __meta__: %{state: :loaded}} =
-           TestRepo.get(Custom, @uuid)
-
-    assert %Custom{uuid: @uuid, __meta__: %{state: :loaded}} =
-           TestRepo.get(Custom, <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>)
-
-    assert nil = TestRepo.get(Custom, "01010203-0405-0607-0809-0a0b0c0d0e0f")
-  end
-
   test "get(!) with custom source" do
-    custom = %Custom{uuid: @uuid}
-    custom = Ecto.Model.put_source(custom, "posts")
-    TestRepo.insert(custom)
-
-    assert %Custom{uuid: @uuid, __meta__: %{source: "posts"}} =
-           TestRepo.get(from(c in {"posts", Custom}), @uuid)
+    custom = Ecto.Model.put_source(%Custom{}, "posts")
+    custom = TestRepo.insert(custom)
+    bid    = custom.bid
+    assert %Custom{bid: ^bid, __meta__: %{source: "posts"}} =
+           TestRepo.get(from(c in {"posts", Custom}), bid)
   end
 
   test "get_by(!)" do

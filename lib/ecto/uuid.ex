@@ -17,7 +17,6 @@ defmodule Ecto.UUID do
   Casts to UUID.
   """
   def cast(<< _::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96 >> = u), do: {:ok, u}
-  def cast(uuid = << _::128 >>), do: load(uuid)
   def cast(_), do: :error
 
   @doc """
@@ -47,8 +46,15 @@ defmodule Ecto.UUID do
   Generates a version 4 (random) UUID.
   """
   def generate do
+    bingenerate() |> encode
+  end
+
+  @doc """
+  Generates a version 4 (random) UUID in the binary format.
+  """
+  def bingenerate do
     <<u0::48, _::4, u1::12, _::2, u2::62>> = :crypto.strong_rand_bytes(16)
-    <<u0::48, 4::4, u1::12, 2::2, u2::62>> |> encode
+    <<u0::48, 4::4, u1::12, 2::2, u2::62>>
   end
 
   defp encode(<<u0::32, u1::16, u2::16, u3::16, u4::48>>) do

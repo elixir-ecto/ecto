@@ -6,6 +6,7 @@ defmodule Ecto.Integration.Migration do
       add :title, :string, size: 100
       add :counter, :integer, default: 10 # Do not propagate unless read_after_write
       add :text, :binary
+      add :bid, :binary_id
       add :uuid, :uuid
       add :public, :boolean
       add :cost, :decimal, precision: 2, scale: 1
@@ -31,7 +32,7 @@ defmodule Ecto.Integration.Migration do
     end
 
     create table(:customs, primary_key: false) do
-      add :uuid, :uuid, primary_key: true
+      add :bid, :binary_id, primary_key: true
     end
 
     create table(:barebones) do

@@ -33,7 +33,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   defp prepare(query, params \\ []) do
-    Planner.prepare(query, params)
+    Planner.prepare(query, params, %{})
   end
 
   defp normalize(query, params \\ [], opts \\ []) do

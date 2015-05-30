@@ -37,6 +37,14 @@ defmodule Ecto.Adapter do
   defcallback stop(repo) :: :ok
 
   @doc """
+  Returns the binary id type for this adapter.
+
+  If the database adapter does not support provide
+  binary id functionality, Ecto.UUID is recommended.
+  """
+  defcallback id_types(repo) :: %{binary_id: Ecto.Type.custom}
+
+  @doc """
   Fetches all results from the data store based on the given query.
   """
   defcallback all(repo, query :: Ecto.Query.t, params :: list(), options) :: [[term]] | no_return

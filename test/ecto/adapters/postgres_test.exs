@@ -45,7 +45,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   defp normalize(query) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, [])
+    {query, _params} = Ecto.Query.Planner.prepare(query, [], %{})
     Ecto.Query.Planner.normalize(query, [], [])
   end
 
@@ -202,7 +202,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "tagged type" do
-    query = Model |> select([], type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, Ecto.UUID)) |> normalize
+    query = Model |> select([], type(^"601d74e4-a8d3-4b6e-8365-eddb4c893327", Ecto.UUID)) |> normalize
     assert SQL.all(query) == ~s{SELECT $1::uuid FROM "model" AS m0}
 
     query = Model |> select([], type(^1, Custom.Permalink)) |> normalize

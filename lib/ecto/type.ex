@@ -205,6 +205,16 @@ defmodule Ecto.Type do
   end
 
   @doc """
+  Normalizes a type.
+
+  The only type normalizable is binary_id which comes
+  from the adapter.
+  """
+  def normalize({comp, :binary_id}, %{binary_id: binary_id}), do: {comp, binary_id}
+  def normalize(:binary_id, %{binary_id: binary_id}), do: binary_id
+  def normalize(type, _id_types), do: type
+
+  @doc """
   Checks if a given type matches with a primitive type
   that can be found in queries.
 
@@ -240,6 +250,7 @@ defmodule Ecto.Type do
 
   defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
   defp do_match?(:decimal, type) when type in [:float, :integer], do: true
+  defp do_match?(:binary_id, :binary), do: true
   defp do_match?(:id, :integer), do: true
   defp do_match?(type, type), do: true
   defp do_match?(_, _), do: false
@@ -514,12 +525,17 @@ defmodule Ecto.Type do
   defp of_base_type?(:integer, term), do: is_integer(term)
   defp of_base_type?(:boolean, term), do: is_boolean(term)
 
-  defp of_base_type?(binary, term) when binary in ~w(binary string)a, do: is_binary(term)
+  defp of_base_type?(:binary, term), do: is_binary(term)
+  defp of_base_type?(:string, term), do: is_binary(term)
 
   defp of_base_type?(:decimal, %Decimal{}), do: true
   defp of_base_type?(:date, {_, _, _}),  do: true
   defp of_base_type?(:time, {_, _, _, _}),  do: true
   defp of_base_type?(:datetime, {{_, _, _}, {_, _, _, _}}), do: true
+
+  defp of_base_type?(:binary_id, value) do
+    raise "cannot dump/cast/load :binary_id type, attempted value: #{inspect value}"
+  end
 
   defp of_base_type?(:date, %{__struct__: Ecto.Date} = d) do
     raise "trying to dump/cast Ecto.Date as a :date type: #{inspect d}. " <>

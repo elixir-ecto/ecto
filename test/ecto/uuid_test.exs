@@ -7,7 +7,7 @@ defmodule Ecto.UUIDTest do
 
   test "cast" do
     assert Ecto.UUID.cast(@test_uuid) == {:ok, @test_uuid}
-    assert Ecto.UUID.cast(@test_uuid_binary) == {:ok, @test_uuid}
+    assert Ecto.UUID.cast(@test_uuid_binary) == :error
     assert Ecto.UUID.cast(nil) == :error
   end
 

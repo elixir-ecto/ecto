@@ -6,13 +6,14 @@ defmodule Ecto.Integration.TypeTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.Tag
+  alias Ecto.Integration.Custom
 
   test "primitive types" do
     integer  = 1
     float    = 0.1
     text     = <<0,1>>
     decimal  = Decimal.new("1.0")
-    uuid     = Ecto.UUID.generate
+    uuid     = "00010203-0405-0607-0809-0a0b0c0d0e0f"
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
                               hour: 20, min: 26, sec: 51, usec: 0}
 
@@ -62,10 +63,6 @@ defmodule Ecto.Integration.TypeTest do
     assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
     assert [1.0] = TestRepo.all(from Post, select: type(^1.0, :float))
 
-    # UUID
-    uuid = "00010203-0405-0607-0809-0a0b0c0d0e0f"
-    assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, Ecto.UUID))
-
     # Datetime
     datetime = {{2014, 04, 17}, {14, 00, 00, 00}}
     assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, :datetime))
@@ -76,6 +73,13 @@ defmodule Ecto.Integration.TypeTest do
     # Custom types
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51, usec: 0}
     assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, Ecto.DateTime))
+  end
+
+  test "binary id type" do
+    assert %Custom{} = custom = TestRepo.insert(%Custom{})
+    bid = custom.bid
+    assert [^bid] = TestRepo.all(from c in Custom, select: c.bid)
+    assert [^bid] = TestRepo.all(from c in Custom, select: type(^bid, :binary_id))
   end
 
   test "composite types in select" do

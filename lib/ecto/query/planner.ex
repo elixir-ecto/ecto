@@ -12,11 +12,11 @@ defmodule Ecto.Query.Planner do
   @doc """
   Validates and cast the given fields belonging to the given model.
   """
-  def fields(kind, model, kw, dumper \\ &Ecto.Type.dump/2) do
+  def fields(kind, model, kw, id_types, dumper \\ &Ecto.Type.dump/2) do
     types = model.__changeset__
 
     for {field, value} <- kw do
-      type = Map.get(types, field)
+      type = Ecto.Type.normalize Map.get(types, field), id_types
 
       unless type do
         raise Ecto.ChangeError,
@@ -61,8 +61,8 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
-  def query(query, base, opts \\ []) do
-    {query, params} = prepare(query, base)
+  def query(query, base, id_types, opts \\ []) do
+    {query, params} = prepare(query, base, id_types)
     {normalize(query, base, opts), params}
   end
 
@@ -76,10 +76,10 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
-  def prepare(query, params) do
+  def prepare(query, params, id_types) do
     query
     |> prepare_sources
-    |> prepare_params(params)
+    |> prepare_params(params, id_types)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -89,58 +89,59 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_params(query, base) do
-    {query, params} = traverse_exprs(query, [], &{&3, merge_params(&1, &2, &3, &4)})
+  def prepare_params(query, base, id_types) do
+    {query, params} = traverse_exprs(query, [], &{&3, merge_params(&1, &2, &3, &4, id_types)})
     {query, base ++ Enum.reverse(params)}
   end
 
-  defp merge_params(kind, query, expr, params) when kind in ~w(select distinct limit offset)a do
+  defp merge_params(kind, query, expr, params, id_types) when kind in ~w(select distinct limit offset)a do
     if expr do
-      cast_and_merge_params(kind, query, expr, params)
+      cast_and_merge_params(kind, query, expr, params, id_types)
     else
       params
     end
   end
 
-  defp merge_params(kind, query, exprs, acc) when kind in ~w(where group_by having order_by)a do
+  defp merge_params(kind, query, exprs, acc, id_types) when kind in ~w(where group_by having order_by)a do
     Enum.reduce exprs, acc, fn expr, params ->
-      cast_and_merge_params(kind, query, expr, params)
+      cast_and_merge_params(kind, query, expr, params, id_types)
     end
   end
 
-  defp merge_params(:join, query, exprs, acc) do
+  defp merge_params(:join, query, exprs, acc, id_types) do
     Enum.reduce exprs, acc, fn %JoinExpr{on: on}, params ->
-      cast_and_merge_params(:join, query, on, params)
+      cast_and_merge_params(:join, query, on, params, id_types)
     end
   end
 
-  defp cast_and_merge_params(kind, query, expr, params) do
+  defp cast_and_merge_params(kind, query, expr, params, id_types) do
     Enum.reduce expr.params, params, fn
       {v, {:in, type}}, acc ->
-        unfold_in(cast_param(kind, query, expr, v, {:array, type}), acc)
+        unfold_in(cast_param(kind, query, expr, v, {:array, type}, id_types), acc)
       {v, type}, acc ->
-        [cast_param(kind, query, expr, v, type)|acc]
+        [cast_param(kind, query, expr, v, type, id_types)|acc]
     end
   end
 
-  defp cast_param(kind, query, expr, v, {composite, {ix, field}}) when is_integer(ix) do
+  defp cast_param(kind, query, expr, v, {composite, {ix, field}}, id_types) when is_integer(ix) do
     {_, model} = elem(query.sources, ix)
     type = type!(kind, query, expr, model, field)
-    cast_param(kind, query, expr, model, field, v, {composite, type})
+    cast_param(kind, query, expr, model, field, v, {composite, type}, id_types)
   end
 
-  defp cast_param(kind, query, expr, v, {ix, field}) when is_integer(ix) do
+  defp cast_param(kind, query, expr, v, {ix, field}, id_types) when is_integer(ix) do
     {_, model} = elem(query.sources, ix)
     type = type!(kind, query, expr, model, field)
-    cast_param(kind, query, expr, model, field, v, type)
+    cast_param(kind, query, expr, model, field, v, type, id_types)
   end
 
-  defp cast_param(kind, query, expr, nil, type) do
+  defp cast_param(kind, query, expr, nil, type, _id_types) do
     error! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
                         "(if you want to check for nils, use is_nil/1 instead)"
   end
 
-  defp cast_param(kind, query, expr, v, type) do
+  defp cast_param(kind, query, expr, v, type, id_types) do
+    type = Ecto.Type.normalize(type, id_types)
     case Ecto.Type.cast(type, v) do
       {:ok, v} ->
         Ecto.Type.dump!(type, v)
@@ -149,8 +150,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp cast_param(kind, query, expr, model, field, value, type) do
-    cast_param(kind, query, expr, value, type)
+  defp cast_param(kind, query, expr, model, field, value, type, id_types) do
+    cast_param(kind, query, expr, value, type, id_types)
   rescue
     e in [Ecto.QueryError] ->
       raise Ecto.CastError, model: model, field: field, value: value, type: type,

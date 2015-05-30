@@ -123,12 +123,12 @@ defmodule Ecto.Integration.PreloadTest do
     assert c.post == nil
   end
 
-  test "preload with uuid" do
-    c = TestRepo.insert(%Custom{uuid: "00010203-0405-0607-0809-0a0b0c0d0e0f"})
-    u = TestRepo.insert(%User{custom_id: c.uuid})
+  test "preload with binary_id" do
+    c = TestRepo.insert(%Custom{bid: "00010203-0405-0607-0809-0a0b0c0d0e0f"})
+    u = TestRepo.insert(%User{custom_id: c.bid})
 
     u = TestRepo.preload(u, :custom)
-    assert u.custom.uuid == c.uuid
+    assert u.custom.bid == c.bid
   end
 
   test "preload skips already loaded" do

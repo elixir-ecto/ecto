@@ -212,7 +212,7 @@ defmodule Ecto.RepoTest do
     assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
-    changeset = Ecto.Changeset.cast(%MyModel{}, %{z: "0123456789abcdef"}, [:z], [])
+    changeset = Ecto.Changeset.cast(%MyModel{}, %{z: "30313233-3435-3637-3839-616263646566"}, [:z], [])
     model = MockRepo.insert(changeset)
     assert model.z == "30313233-3435-3637-3839-616263646566"
   end

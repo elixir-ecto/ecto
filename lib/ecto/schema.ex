@@ -190,7 +190,7 @@ defmodule Ecto.Schema do
 
   * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
 
-  * `__schema__(:load, source, idx, values)` - Loads a new model from a tuple of non-virtual
+  * `__schema__(:load, source, idx, values, id_types)` - Loads a new model from a tuple of non-virtual
     field values starting at the given index. Typically used by adapters;
 
   Furthermore, both `__struct__` and `__changeset__` functions are
@@ -684,15 +684,16 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __load__(struct, source, fields, idx, values) do
-    loaded = do_load(struct, fields, idx, values)
+  def __load__(struct, source, fields, idx, values, id_types) do
+    loaded = do_load(struct, fields, idx, values, id_types)
     loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
     Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
   end
 
-  defp do_load(struct, fields, idx, values) when is_integer(idx) and is_tuple(values) do
+  defp do_load(struct, fields, idx, values, id_types) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
+        type  = Ecto.Type.normalize(type, id_types)
         value = Ecto.Type.load!(type, elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
@@ -768,8 +769,8 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(fields) do
     quote do
-      def __schema__(:load, source, idx, values) do
-        Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values)
+      def __schema__(:load, source, idx, values, id_types) do
+        Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values, id_types)
       end
     end
   end
