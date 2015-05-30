@@ -1,3 +1,5 @@
+Code.require_file "../support/types.exs", __DIR__
+
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case
 

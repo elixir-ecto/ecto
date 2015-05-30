@@ -1,4 +1,16 @@
-Code.require_file "types.exs", __DIR__
+defmodule Ecto.Integration.Model do
+  defmacro __using__(_) do
+    quote do
+      use Ecto.Model
+
+      type =
+        Application.get_env(:ecto, :primary_key_type) ||
+        raise ":primary_key_type not set in :ecto application"
+      @primary_key {:id, type, autogenerate: true}
+      @foreign_key_type type
+    end
+  end
+end
 
 defmodule Ecto.Integration.Post do
   @moduledoc """
@@ -10,7 +22,7 @@ defmodule Ecto.Integration.Post do
     * Relationships
 
   """
-  use Ecto.Model
+  use Ecto.Integration.Model
 
   schema "posts" do
     field :counter, :id # Same as integer
@@ -37,7 +49,7 @@ defmodule Ecto.Integration.PostUsecTimestamps do
     * Usec timestamps
 
   """
-  use Ecto.Model
+  use Ecto.Integration.Model
 
   schema "posts" do
     field :title, :string
@@ -53,7 +65,7 @@ defmodule Ecto.Integration.Comment do
     * Relationships
 
   """
-  use Ecto.Model
+  use Ecto.Integration.Model
 
   schema "comments" do
     field :text, :string
@@ -71,14 +83,11 @@ defmodule Ecto.Integration.Permalink do
   @moduledoc """
   This module is used to test:
 
-    * Custom id on primary key
     * Relationships
 
   """
-  use Ecto.Model
+  use Ecto.Integration.Model
 
-  @primary_key {:id, Custom.Permalink, autogenerate: true}
-  @foreign_key_type Custom.Permalink
   schema "permalinks" do
     field :url, :string
     belongs_to :post, Ecto.Integration.Post
@@ -94,7 +103,7 @@ defmodule Ecto.Integration.User do
     * Relationships
 
   """
-  use Ecto.Model
+  use Ecto.Integration.Model
 
   schema "users" do
     field :name, :string
@@ -113,7 +122,7 @@ defmodule Ecto.Integration.Custom do
 
   Due to the second item, it must be a subset of posts.
   """
-  use Ecto.Model
+  use Ecto.Integration.Model
 
   @primary_key {:bid, :binary_id, autogenerate: true}
   schema "customs" do
@@ -127,7 +136,7 @@ defmodule Ecto.Integration.Barebone do
     * A model wthout primary keys
 
   """
-  use Ecto.Model
+  use Ecto.Integration.Model
 
   @primary_key false
   schema "barebones" do
@@ -142,7 +151,7 @@ defmodule Ecto.Integration.Tag do
     * The array type
 
   """
-  use Ecto.Model
+  use Ecto.Integration.Model
 
   schema "tags" do
     field :ints, {:array, :integer}

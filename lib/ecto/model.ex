@@ -31,7 +31,6 @@ defmodule Ecto.Model do
   working with different models. For example, in a web application,
   you may want to import this module into your plugs to provide
   conveniences for building and accessing model information.
-
   """
 
   @doc false

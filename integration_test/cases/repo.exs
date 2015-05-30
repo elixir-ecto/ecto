@@ -145,10 +145,19 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.get_by(Post, uuid: post.uuid) == post
   end
 
+  @tag :id_type
   test "insert autogenerates for custom id type" do
-    permalink = TestRepo.insert(%Permalink{id: nil})
-    assert permalink.id
-    assert TestRepo.get_by(Permalink, id: "#{permalink.id}-hello") == permalink
+    defmodule ID do
+      use Ecto.Model
+
+      @primary_key {:id, Elixir.Custom.Permalink, autogenerate: true}
+      schema "posts" do
+      end
+    end
+
+    id = TestRepo.insert(struct(ID, id: nil))
+    assert id.id
+    assert TestRepo.get_by(ID, id: "#{id.id}-hello") == id
   end
 
   test "insert autogenerates for binary id type" do
