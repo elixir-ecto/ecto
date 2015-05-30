@@ -1,18 +1,28 @@
 # Changelog
 
-## v0.12.0-dev
+## v0.12.0-rc
+
+Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0-rc
 
 * Enhancements
   * Add `put_source/2` function to `Ecto.Model`
+  * Allow binary literal syntax in queries
   * Optimize SQL transactions by reducing the amount of messages passed around
   * Provide `Ecto.Adapters.Worker` which can work across adapters and provides transactional semantics
+  * Support `:autogenerate` for custom types
+  * Introduce new `:id` and `:binary_id` types that support autogeneration inside primary keys and are handled by the database
+
+* Deprecations
+  * `:read_after_writes` is deprecated in favor of `:autogenerate`
 
 * Backwards incompatible changes
   * `Repo.log/2` is no longer invoked. Instead `Repo.log/1` is called with an `Ecto.LogEntry`
   * `:auto_field` in `belongs_to/3` has been renamed to `:define_field`
+  * `:uuid` type has been removed in favor of `Ecto.UUID`
 
 * Adapters backwards incompatible changes
   * fragment AST now tags each argument as raw or expr
+  * `Ecto.Adapter.insert` now receives an extra argument telling which key to autogenerate. The value may be: `{field :: atom, type :: :id | :binary_id, value :: term | nil} | nil`. If `nil`, there is no key to autogenerate. If a tuple, it may have type `:id` or `:binary_id` with semantics to be specified by the adapter/database. Finally, if the value is `nil`, it means no value was supplied by the user and the database MUST return a new one.
 
 ## v0.11.3 (2015-05-19)
 
