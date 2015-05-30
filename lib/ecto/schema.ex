@@ -44,10 +44,13 @@ defmodule Ecto.Schema do
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
 
-  The advantage of configuring the schema via those attributes
-  is that they can be set with a macro to configure application wide
-  defaults. For example, if you would like to use `binary_id`'s in all of
-  your application models, you can do:
+  The advantage of configuring the schema via those attributes is
+  that they can be set with a macro to configure application wide
+  defaults.
+
+  For example, if your database does not support autoincrementing
+  primary keys and requires something like UUID or a RecordID, you
+  configure and use`:binary_id` as your primary key type as follows:
 
       # Define a module to be used as base
       defmodule MyApp.Model do
@@ -70,11 +73,36 @@ defmodule Ecto.Schema do
       end
 
   Any models using `MyApp.Model` will get the `:id` field with type
-  `:uuid` as primary key.
+  `:binary_id` as primary key. We explain what the `:binary_id` type
+  entails in the next section.
 
   The `belongs_to` association on `MyApp.Comment` will also define
-  a `:post_id` field with `:uuid` type that references the `:id` of
-  the `MyApp.Post` model.
+  a `:post_id` field with `:binary_id` type that references the `:id`
+  field of the `MyApp.Post` model.
+
+  ## Primary keys
+
+  Ecto supports two ID types, called `:id` and `:binary_id` which are
+  often used as the type for primary keys and associations.
+
+  The `:id` type is used when the primary key is an integer while the
+  `:binary_id` is used when the primary key is in binary format, which
+  may be `Ecto.UUID` for databases like PostgreSQL and MySQL, or some
+  specific ObjectID or RecordID often imposed by NoSQL databases.
+
+  In both cases, both types have their semantics specified by the
+  underlying adapter/database. For example, if you use the `:id`
+  type with `:autogenerate`, it means the database will be responsible
+  for auto-generation the id if it supports it.
+
+  Similarly, the `:binary_id` type may be generated in the adapter
+  for cases like UUID but it may also be handled by the database if
+  required. In any case, both scenarios are handled transparently by
+  Ecto.
+
+  Besides `:id` and `:binary_id`, which are often used by primary
+  and foreign keys, Ecto provides a huge variety of types to be used
+  by the remaining columns.
 
   ## Types and casting
 
@@ -104,24 +132,6 @@ defmodule Ecto.Schema do
   likely want to use `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` respectively.
   See the Custom types sections below about types that enhance the primitive
   ones.
-
-  ### ID types
-
-  In the table above, you may have noticed that Elixir supports two ID
-  types: `:id` and `:binary_id`. Those types are equivalent to `:id`
-  and `:binary_id` with the difference their semantics is specified by
-  the underlying adapter/database.
-
-  For example, if you use the `:id` type with `:autogenerate`, it means
-  the database will be responsible for auto-generation the id.
-
-  Similarly, `:binary_id` means the adapter/database will auto-generate
-  an ID in binary format, which may be `Ecto.UUID` for databases like
-  PostgreSQL and MySQL, or some specific ObjectID or RecordID often
-  imposed by NoSQL databases.
-
-  For those reasons, it is recommended to use those types for primary
-  keys and associations.
 
   ### Custom types
 
@@ -298,7 +308,8 @@ defmodule Ecto.Schema do
 
       For relational databases, this means the RETURNING option of those
       statements are used. For this reason, MySQL does not support this
-      option and will raise.
+      option and will raise an error if a model is inserted/updated with
+      read after writes fields.
 
     * `:virtual` - When true, the field is not persisted to the database.
       Notice virtual fields do not support `:autogenerate` nor
@@ -659,6 +670,8 @@ defmodule Ecto.Schema do
 
     unless opts[:virtual] do
       if raw = opts[:read_after_writes] do
+        IO.puts :stderr, "[warning] :read_after_writes is deprecated. It was declared for " <>
+                         "field #{inspect name} in model #{inspect mod}"
         Module.put_attribute(mod, :ecto_raw, name)
       end
 

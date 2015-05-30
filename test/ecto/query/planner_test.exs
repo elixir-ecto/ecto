@@ -15,6 +15,7 @@ defmodule Ecto.Query.PlannerTest do
       field :text, :string
       field :temp, :string, virtual: true
       field :posted, Ecto.DateTime
+      field :uuid, :binary_id
       belongs_to :post, Ecto.Query.PlannerTest.Post
       has_many :post_comments, through: [:post, :comments]
     end
@@ -33,7 +34,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   defp prepare(query, params \\ []) do
-    Planner.prepare(query, params, %{})
+    Planner.prepare(query, params, %{binary_id: Ecto.UUID})
   end
 
   defp normalize(query, params \\ [], opts \\ []) do
@@ -100,6 +101,13 @@ defmodule Ecto.Query.PlannerTest do
     permalink = "1-hello-world"
     {_query, params} = prepare(Post |> where([p], p.id == ^permalink))
     assert params == [1]
+  end
+
+  test "prepare: casts and dumps binary ids" do
+    uuid = "00010203-0405-0607-0809-0a0b0c0d0e0f"
+    {_query, params} = prepare(Comment |> where([c], c.uuid == ^uuid))
+    assert params == [%Ecto.Query.Tagged{type: :uuid,
+                        value: <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>}]
   end
 
   test "prepare: casts and dumps custom types in in-expressions" do

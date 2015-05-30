@@ -201,7 +201,8 @@ defmodule Ecto.Repo.Model do
   end
 
   defp with_transactions_if_callbacks(repo, adapter, model, opts, callbacks, fun) do
-    if Enum.any?(callbacks, &function_exported?(model, &1, 1)) do
+    if Enum.any?(callbacks, &function_exported?(model, &1, 1)) and
+       function_exported?(adapter, :transaction, 3) do
       {:ok, value} = adapter.transaction(repo, opts, fun)
       value
     else
