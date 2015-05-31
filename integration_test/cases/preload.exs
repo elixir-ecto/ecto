@@ -306,6 +306,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert [] = p3.comments
   end
 
+  @tag :right_join
   test "preload keyword query with missing entries" do
     %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
     %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})

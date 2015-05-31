@@ -326,6 +326,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "y"} = TestRepo.get(Post, id3)
   end
 
+  @tag :update_with_join
   test "update all with joins" do
     user = TestRepo.insert(%User{name: "Tester"})
     post = TestRepo.insert(%Post{title: "foo"})
@@ -418,6 +419,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Post{}] = TestRepo.all(Post)
   end
 
+  @tag :delete_with_join
   test "delete all with joins" do
     user = TestRepo.insert(%User{name: "Tester"})
     post = TestRepo.insert(%Post{title: "foo"})
