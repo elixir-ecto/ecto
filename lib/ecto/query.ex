@@ -8,7 +8,7 @@ defmodule Ecto.Query do
   most of the times developers need to import only the `from/2`
   macro.
 
-      # Imports only from/1 and from/2 from Ecto.Query
+      # Imports only from/2 from Ecto.Query
       import Ecto.Query, only: [from: 2]
 
       # Create a query
