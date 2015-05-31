@@ -18,11 +18,17 @@ defmodule Ecto.Adapter.Migration  do
     {:create, Index.t} |
     {:drop, Index.t}
 
+  @typedoc "All commands allowed within the block passed to `table/2`"
   @type table_subcommand ::
     {:add, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
     {:modify, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
     {:remove, field :: atom}
 
+  @typedoc """
+  A DDL object is a struct that represents a table or index in a database schema.
+  These database objects can be modified through the use of a Data Definition Language,
+  hence the name DDL object.
+  """
   @type ddl_object :: Table.t | Index.t
 
   @doc """
