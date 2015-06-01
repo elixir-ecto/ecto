@@ -3,7 +3,7 @@ defmodule Ecto.Migration.SchemaMigration do
   @moduledoc false
   use Ecto.Model
 
-  @primary_key {:version, :integer, []}
+  @primary_key {:version, :id, []}
   schema "schema_migrations" do
     timestamps updated_at: false
   end
