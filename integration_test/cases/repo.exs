@@ -326,18 +326,6 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "y"} = TestRepo.get(Post, id3)
   end
 
-  @tag :update_with_join
-  test "update all with joins" do
-    user = TestRepo.insert(%User{name: "Tester"})
-    post = TestRepo.insert(%Post{title: "foo"})
-    comment = TestRepo.insert(%Comment{text: "hey", author_id: user.id, post_id: post.id})
-
-    query = from(c in Comment, join: u in User, on: u.id == c.author_id, where: c.post_id in ^[post.id])
-    assert 1 = TestRepo.update_all(query, text: "hoo")
-
-    assert %Comment{text: "hoo"} = TestRepo.get(Comment, comment.id)
-  end
-
   test "update all with filter" do
     assert %Post{id: id1} = TestRepo.insert(%Post{title: "1"})
     assert %Post{id: id2} = TestRepo.insert(%Post{title: "2"})
@@ -419,20 +407,6 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Post{}] = TestRepo.all(Post)
   end
 
-  @tag :delete_with_join
-  test "delete all with joins" do
-    user = TestRepo.insert(%User{name: "Tester"})
-    post = TestRepo.insert(%Post{title: "foo"})
-    TestRepo.insert(%Comment{text: "hey", author_id: user.id, post_id: post.id})
-    TestRepo.insert(%Comment{text: "foo", author_id: user.id, post_id: post.id})
-    TestRepo.insert(%Comment{text: "bar", author_id: user.id})
-
-    query = from(c in Comment, join: u in User, on: u.id == c.author_id, where: c.post_id in ^[post.id])
-    assert 2 = TestRepo.delete_all(query)
-
-    assert [%Comment{}] = TestRepo.all(Comment)
-  end
-
   test "delete all no entries" do
     assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", text: "hai"})
@@ -448,47 +422,6 @@ defmodule Ecto.Integration.RepoTest do
   test "virtual field" do
     assert %Post{id: id} = TestRepo.insert(%Post{title: "1", text: "hai"})
     assert TestRepo.get(Post, id).temp == "temp"
-  end
-
-  ## Joins
-
-  test "joins" do
-    p1 = TestRepo.insert(%Post{title: "1"})
-    p2 = TestRepo.insert(%Post{title: "2"})
-    c1 = TestRepo.insert(%Permalink{url: "1", post_id: p2.id})
-
-    query = from(p in Post, join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
-    assert [{^p2, ^c1}] = TestRepo.all(query)
-
-    query = from(p in Post, left_join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
-    assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
-  end
-
-  test "has_many association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"})
-    c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
-    c2 = TestRepo.insert(%Comment{text: "heya", post_id: post.id})
-
-    query = from(p in Post, join: c in assoc(p, :comments), select: {p, c}, order_by: p.id)
-    [{^post, ^c1}, {^post, ^c2}] = TestRepo.all(query)
-  end
-
-  test "has_one association join" do
-    post = TestRepo.insert(%Post{title: "1", text: "hi"})
-    p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
-    p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
-
-    query = from(p in Post, join: c in assoc(p, :permalink), select: {p, c}, order_by: c.id)
-    [{^post, ^p1}, {^post, ^p2}] = TestRepo.all(query)
-  end
-
-  test "belongs_to association join" do
-    post = TestRepo.insert(%Post{title: "1"})
-    p1 = TestRepo.insert(%Permalink{url: "hey", post_id: post.id})
-    p2 = TestRepo.insert(%Permalink{url: "heya", post_id: post.id})
-
-    query = from(p in Permalink, join: c in assoc(p, :post), select: {p, c}, order_by: p.id)
-    [{^p1, ^post}, {^p2, ^post}] = TestRepo.all(query)
   end
 
   ## Assocs
@@ -535,23 +468,5 @@ defmodule Ecto.Integration.RepoTest do
     assert [p1, p2] = TestRepo.all Ecto.Model.assoc([l1, l2, l3], :post)
     assert p1.id == pid1
     assert p2.id == pid2
-  end
-
-  test "has_many through assoc" do
-    %Post{id: pid1} = p1 = TestRepo.insert(%Post{})
-    %Post{id: pid2} = p2 = TestRepo.insert(%Post{})
-
-    %User{id: uid1} = TestRepo.insert(%User{name: "zzz"})
-    %User{id: uid2} = TestRepo.insert(%User{name: "aaa"})
-
-    %Comment{} = TestRepo.insert(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert(%Comment{post_id: pid1, author_id: uid2})
-    %Comment{} = TestRepo.insert(%Comment{post_id: pid2, author_id: uid2})
-
-    [u2, u1] = TestRepo.all Ecto.Model.assoc([p1, p2], :comments_authors)
-                            |> order_by([a], a.name)
-    assert u1.id == uid1
-    assert u2.id == uid2
   end
 end
