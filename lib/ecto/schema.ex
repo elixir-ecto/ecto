@@ -781,6 +781,7 @@ defmodule Ecto.Schema do
 
   @doc false
   def __load__(fields) do
+    # TODO: Move this to SQL adapter itself.
     quote do
       def __schema__(:load, source, idx, values, id_types) do
         Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values, id_types)

@@ -212,6 +212,7 @@ defmodule Ecto.Type do
   """
   def normalize({comp, :binary_id}, %{binary_id: binary_id}), do: {comp, binary_id}
   def normalize(:binary_id, %{binary_id: binary_id}), do: binary_id
+  def normalize(:binary_id, %{}), do: raise "adapter did not provide a type for :binary_id"
   def normalize(type, _id_types), do: type
 
   @doc """
