@@ -966,6 +966,9 @@ defmodule Ecto.Changeset do
       validate_confirmation(changeset, :email)
       validate_confirmation(changeset, :password, message: "passwords do not match")
 
+      cast(params, model, ~w(password), ~w())
+      |> validate_confirmation(:password, message: "passwords do not match")  
+
   """
   @spec validate_confirmation(t, atom, Enum.t) :: t
   def validate_confirmation(changeset, field, opts \\ []) do
