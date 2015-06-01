@@ -274,7 +274,7 @@ defmodule Ecto.Schema do
       fields = @ecto_fields |> Enum.reverse
       assocs = @ecto_assocs |> Enum.reverse
 
-      Module.eval_quoted __MODULE__, [
+      Module.eval_quoted __ENV__, [
         Ecto.Schema.__struct__(@struct_fields),
         Ecto.Schema.__changeset__(@changeset_fields),
         Ecto.Schema.__source__(source),
