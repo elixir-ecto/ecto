@@ -42,7 +42,7 @@ defmodule Ecto.Integration.RepoTest do
     assert ["title1", "title2"] =
       TestRepo.all(from(p in "posts", order_by: p.title, select: p.title))
 
-    assert [^id] =
+    assert [_] =
       TestRepo.all(from(p in "posts", where: p.title == "title1", select: p.id))
   end
 
@@ -214,7 +214,7 @@ defmodule Ecto.Integration.RepoTest do
     on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo).errors == []
 
-    on_update = cast(%{post | id: post.id + 1}, %{"title" => "hello"}, ~w(title), ~w())
+    on_update = cast(%{post | id: nil}, %{"title" => "hello"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
   end
 
@@ -285,13 +285,13 @@ defmodule Ecto.Integration.RepoTest do
 
     assert post1 == TestRepo.one(from p in Post, where: p.id == ^post1.id)
     assert post2 == TestRepo.one(from p in Post, where: p.id == ^to_string post2.id) # With casting
-    assert nil   == TestRepo.one(from p in Post, where: p.id == ^-1)
+    assert nil   == TestRepo.one(from p in Post, where: is_nil(p.id))
 
     assert post1 == TestRepo.one!(from p in Post, where: p.id == ^post1.id)
     assert post2 == TestRepo.one!(from p in Post, where: p.id == ^to_string post2.id) # With casting
 
     assert_raise Ecto.NoResultsError, fn ->
-      TestRepo.one!(from p in Post, where: p.id == ^-1)
+      TestRepo.one!(from p in Post, where: is_nil(p.id))
     end
   end
 
