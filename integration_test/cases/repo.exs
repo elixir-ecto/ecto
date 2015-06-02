@@ -8,7 +8,6 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.PostUsecTimestamps
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
-  alias Ecto.Integration.User
   alias Ecto.Integration.Custom
   alias Ecto.Integration.Barebone
   alias Ecto.Schema.Metadata
@@ -36,7 +35,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "fetch without model" do
-    %Post{id: id} = TestRepo.insert(%Post{title: "title1"})
+    %Post{} = TestRepo.insert(%Post{title: "title1"})
     %Post{} = TestRepo.insert(%Post{title: "title2"})
 
     assert ["title1", "title2"] =

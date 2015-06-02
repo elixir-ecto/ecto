@@ -5,13 +5,9 @@ defmodule Ecto.Integration.JoinsTest do
   import Ecto.Query
 
   alias Ecto.Integration.Post
-  alias Ecto.Integration.PostUsecTimestamps
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
-  alias Ecto.Integration.Custom
-  alias Ecto.Integration.Barebone
-  alias Ecto.Schema.Metadata
 
   @tag :update_with_join
   test "update all with joins" do
