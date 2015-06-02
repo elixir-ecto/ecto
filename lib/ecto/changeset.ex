@@ -187,12 +187,6 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
   end
 
-  def cast(%{__struct__: _} = model, nil, required, optional) do
-    IO.puts :stderr, "passing nil as parameters to cast/4 is deprecated. " <>
-                     "Please pass the atom :empty instead.\n" <> Exception.format_stacktrace()
-    cast(model, :empty, required, optional)
-  end
-
   def cast(%{__struct__: _} = model, :empty, required, optional)
       when is_list(required) and is_list(optional) do
     to_atom = fn

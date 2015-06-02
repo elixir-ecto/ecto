@@ -47,6 +47,27 @@ defmodule Ecto.Integration.JoinsTest do
     assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
   end
 
+  @tag :right_join
+  test "right joins with missing entries" do
+    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
+
+    %Permalink{id: plid1} = TestRepo.insert(%Permalink{url: "1", post_id: pid2})
+
+    %Comment{id: _} = TestRepo.insert(%Comment{text: "1", post_id: pid1})
+    %Comment{id: _} = TestRepo.insert(%Comment{text: "2", post_id: pid2})
+    %Comment{id: _} = TestRepo.insert(%Comment{text: "3", post_id: nil})
+
+    query = from(p in Post, right_join: c in assoc(p, :comments),
+                 preload: :permalink, order_by: c.id)
+    assert [p1, p2, nil] = TestRepo.all(query)
+    assert p1.id == pid1
+    assert p2.id == pid2
+
+    assert p1.permalink == nil
+    assert p2.permalink.id == plid1
+  end
+
   test "has_many association join" do
     post = TestRepo.insert(%Post{title: "1", text: "hi"})
     c1 = TestRepo.insert(%Comment{text: "hey", post_id: post.id})
@@ -90,29 +111,6 @@ defmodule Ecto.Integration.JoinsTest do
                             |> order_by([a], a.name)
     assert u1.id == uid1
     assert u2.id == uid2
-  end
-
-  ## Preload
-
-  @tag :right_join
-  test "preload keyword query with missing entries" do
-    %Post{id: pid1} = TestRepo.insert(%Post{title: "1"})
-    %Post{id: pid2} = TestRepo.insert(%Post{title: "2"})
-
-    %Permalink{id: plid1} = TestRepo.insert(%Permalink{url: "1", post_id: pid2})
-
-    %Comment{id: _} = TestRepo.insert(%Comment{text: "1", post_id: pid1})
-    %Comment{id: _} = TestRepo.insert(%Comment{text: "2", post_id: pid2})
-    %Comment{id: _} = TestRepo.insert(%Comment{text: "3", post_id: nil})
-
-    query = from(p in Post, right_join: c in assoc(p, :comments),
-                 preload: :permalink, order_by: c.id)
-    assert [p1, p2, nil] = TestRepo.all(query)
-    assert p1.id == pid1
-    assert p2.id == pid2
-
-    assert p1.permalink == nil
-    assert p2.permalink.id == plid1
   end
 
   ## Preload assocs

@@ -98,20 +98,6 @@ defmodule Ecto.Integration.RepoTest do
     assert %Barebone{num: 13} = TestRepo.insert(%Barebone{num: 13})
   end
 
-  @tag :assigns_primary_key
-  test "insert with user-assigned primary key" do
-    assert %Post{id: 1} = TestRepo.insert(%Post{id: 1})
-  end
-
-  @tag :assigns_primary_key
-  test "insert and update with user-assigned primary key in changeset" do
-    changeset = Ecto.Changeset.cast(%Post{id: 11}, %{"id" => "13"}, ~w(id), ~w())
-    assert %Post{id: 13} = post = TestRepo.insert(changeset)
-
-    changeset = Ecto.Changeset.cast(post, %{"id" => "15"}, ~w(id), ~w())
-    assert %Post{id: 15} = TestRepo.update(changeset)
-  end
-
   @tag :read_after_writes
   test "insert and update with changeset read after writes" do
     defmodule RAW do
@@ -157,6 +143,22 @@ defmodule Ecto.Integration.RepoTest do
     id = TestRepo.insert(struct(ID, id: nil))
     assert id.id
     assert TestRepo.get_by(ID, id: "#{id.id}-hello") == id
+  end
+
+  @tag :id_type
+  @tag :assigns_id_type
+  test "insert with user-assigned primary key" do
+    assert %Post{id: 1} = TestRepo.insert(%Post{id: 1})
+  end
+
+  @tag :id_type
+  @tag :assigns_id_type
+  test "insert and update with user-assigned primary key in changeset" do
+    changeset = Ecto.Changeset.cast(%Post{id: 11}, %{"id" => "13"}, ~w(id), ~w())
+    assert %Post{id: 13} = post = TestRepo.insert(changeset)
+
+    changeset = Ecto.Changeset.cast(post, %{"id" => "15"}, ~w(id), ~w())
+    assert %Post{id: 15} = TestRepo.update(changeset)
   end
 
   test "insert autogenerates for binary id type" do
