@@ -253,7 +253,7 @@ defmodule Ecto.Integration.PreloadTest do
   end
 
   test "preload with binary_id" do
-    c = TestRepo.insert(%Custom{bid: "00010203-0405-0607-0809-0a0b0c0d0e0f"})
+    c = TestRepo.insert(%Custom{})
     u = TestRepo.insert(%User{custom_id: c.bid})
 
     u = TestRepo.preload(u, :custom)

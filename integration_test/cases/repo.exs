@@ -194,17 +194,23 @@ defmodule Ecto.Integration.RepoTest do
     on_insert = cast(%Post{}, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo).errors != []
 
-    on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w())
-    assert validate_unique(on_insert, :title, on: TestRepo, downcase: true).errors != []
-
     on_update = cast(post, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
 
     on_update = cast(post, %{"title" => nil}, ~w(), ~w(title))
     assert validate_unique(on_update, :title, on: TestRepo).errors == []
 
-    on_update = cast(%{post | id: post.id + 1, title: nil}, %{"title" => "HELLO"}, ~w(title), ~w())
+    on_update = cast(%{post | id: nil, title: nil}, %{"title" => "HELLO"}, ~w(title), ~w())
     assert validate_unique(on_update, :title, on: TestRepo).errors != []
+  end
+
+  @tag :sql_fragments
+  test "validate_unique/3 with downcasing" do
+    import Ecto.Changeset
+    post = TestRepo.insert(%Post{title: "HELLO"})
+
+    on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w())
+    assert validate_unique(on_insert, :title, on: TestRepo, downcase: true).errors != []
   end
 
   @tag :case_sensitive
@@ -241,13 +247,15 @@ defmodule Ecto.Integration.RepoTest do
 
     assert post1 == TestRepo.get(Post, post1.id)
     assert post2 == TestRepo.get(Post, to_string post2.id) # With casting
-    assert nil   == TestRepo.get(Post, -1)
 
     assert post1 == TestRepo.get!(Post, post1.id)
     assert post2 == TestRepo.get!(Post, to_string post2.id) # With casting
 
+    TestRepo.delete(post1)
+
+    assert nil   == TestRepo.get(Post, post1.id)
     assert_raise Ecto.NoResultsError, fn ->
-      TestRepo.get!(Post, -1)
+      TestRepo.get!(Post, post1.id)
     end
   end
 
