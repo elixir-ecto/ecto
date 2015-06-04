@@ -744,20 +744,14 @@ defmodule Ecto.ChangesetTest do
 
   test "validate_confirmation/3" do
     changeset = changeset(%{"title" => "title", "title_confirmation" => "title"})
-                |> validate_confirmation(:title, message: "password doesn't match")
-    assert changeset.valid?
-    assert changeset.errors == []
-
-    # With casting
-    changeset = changeset(%{"upvotes" => "1", "upvotes_confirmation" => "1"})
-                |> validate_confirmation(:upvotes)
+                |> validate_confirmation(:title)
     assert changeset.valid?
     assert changeset.errors == []
 
     changeset = changeset(%{"title" => "title", "title_confirmation" => nil})
-                |> validate_confirmation(:title, message: "password doesn't match")
-    assert changeset.valid?
-    assert changeset.errors == []
+                |> validate_confirmation(:title)
+    refute changeset.valid?
+    assert changeset.errors == [title: "does not match confirmation"]
 
     changeset = changeset(%{"title" => "title", "title_confirmation" => "not title"})
                 |> validate_confirmation(:title)
@@ -769,9 +763,16 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
     assert changeset.errors == [title: "doesn't match field below"]
 
-    changeset = changeset(%{"title" => "title", "title_confirmation" => "not title"})
-                |> validate_confirmation(:title)
-    refute changeset.valid?
-    assert changeset.errors == [title: "does not match confirmation"]
+    # Skip when no parameter
+    changeset = changeset(%{"title" => "title"})
+                |> validate_confirmation(:title, message: "password doesn't match")
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    # With casting
+    changeset = changeset(%{"upvotes" => "1", "upvotes_confirmation" => "1"})
+                |> validate_confirmation(:upvotes)
+    assert changeset.valid?
+    assert changeset.errors == []
   end
 end

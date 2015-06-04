@@ -968,11 +968,12 @@ defmodule Ecto.Changeset do
   def validate_confirmation(changeset, field, opts \\ []) do
     validate_change changeset, field, {:confirmation, opts}, fn _, _ ->
       param = Atom.to_string(field)
-      confirmation = changeset.params["#{param}_confirmation"]
-      if is_nil(confirmation) or confirmation == changeset.params[param] do
-        []
-      else
-        [{field, message(opts, "does not match confirmation")}]
+      value = Map.get(changeset.params, param)
+
+      case Map.fetch(changeset.params, "#{param}_confirmation") do
+        {:ok, ^value} -> []
+        {:ok, _}      -> [{field, message(opts, "does not match confirmation")}]
+        :error        -> []
       end
     end
   end
