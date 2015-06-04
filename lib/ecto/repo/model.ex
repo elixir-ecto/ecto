@@ -57,7 +57,7 @@ defmodule Ecto.Repo.Model do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = %{changeset | repo: repo}
-    {autogen, changeset} = merge_autogenerate_id(changeset, model)
+    autogen   = get_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_update after_update)a, fn ->
@@ -105,7 +105,7 @@ defmodule Ecto.Repo.Model do
 
     # There are no field changes on delete
     changeset = %{changeset | repo: repo}
-    {autogen, changeset} = merge_autogenerate_id(changeset, model)
+    autogen   = get_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_delete after_delete)a, fn ->
@@ -174,6 +174,13 @@ defmodule Ecto.Repo.Model do
         end
       nil ->
         {nil, changeset}
+    end
+  end
+
+  defp get_autogenerate_id(changeset, model) do
+    case model.__schema__(:autogenerate_id) do
+      {key, id} -> {key, id, Map.get(changeset.changes, key)}
+      nil -> nil
     end
   end
 
