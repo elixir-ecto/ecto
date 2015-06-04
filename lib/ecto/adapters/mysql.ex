@@ -168,7 +168,7 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def update(repo, source, fields, filter, returning, opts) do
+  def update(repo, source, fields, filter, _autogenerate, returning, opts) do
     {fields, values1} = :lists.unzip(fields)
     {filter, values2} = :lists.unzip(filter)
     sql = @conn.update(source, fields, filter, returning)
@@ -179,7 +179,7 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def delete(repo, source, filter, opts) do
+  def delete(repo, source, filter, _autogenerate, opts) do
     {filter, values} = :lists.unzip(filter)
     case Ecto.Adapters.SQL.query(repo, @conn.delete(source, filter, []), values, opts) do
       %{num_rows: 0} -> {:error, :stale}
