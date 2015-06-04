@@ -31,8 +31,8 @@ defmodule Ecto.Schema do
   Those attributes are:
 
     * `@primary_key` - configures the schema primary key. It expects
-      a tuple with the primary key name, type and options. Defaults
-      to `{:id, :integer, autogenerate: true}`. When set to
+      a tuple with the primary key name, type (:id or :binary_id) and options. Defaults
+      to `{:id, :id, autogenerate: true}`. When set to
       false, does not define a primary key in the model;
 
     * `@foreign_key_type` - configures the default foreign key type
