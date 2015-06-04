@@ -14,13 +14,12 @@ defmodule Ecto.Integration.TypeTest do
     integer  = 1
     float    = 0.1
     text     = <<0,1>>
-    decimal  = Decimal.new("1.0")
     uuid     = "00010203-0405-0607-0809-0a0b0c0d0e0f"
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
                               hour: 20, min: 26, sec: 51, usec: 0}
 
     TestRepo.insert(%Post{text: text, public: true, visits: integer, uuid: uuid, counter: integer,
-                          inserted_at: datetime, cost: decimal, intensity: float})
+                          inserted_at: datetime, intensity: float})
 
     # nil
     assert [nil] = TestRepo.all(from Post, select: nil)
@@ -36,13 +35,6 @@ defmodule Ecto.Integration.TypeTest do
     assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == ^float, select: p.intensity)
     assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == 0.1, select: p.intensity)
 
-    # Decimal
-    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^decimal, select: p.cost)
-    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^1.0, select: p.cost)
-    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^1, select: p.cost)
-    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1.0, select: p.cost)
-    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1, select: p.cost)
-
     # Booleans
     assert [true] = TestRepo.all(from p in Post, where: p.public == ^true, select: p.public)
     assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: p.public)
@@ -56,6 +48,19 @@ defmodule Ecto.Integration.TypeTest do
 
     # Datetime
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
+  end
+
+  @tag :decimal_type
+  test "decimal type" do
+    decimal = Decimal.new("1.0")
+
+    TestRepo.insert(%Post{cost: decimal})
+
+    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^decimal, select: p.cost)
+    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^1.0, select: p.cost)
+    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^1, select: p.cost)
+    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1.0, select: p.cost)
+    assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1, select: p.cost)
   end
 
   test "tagged types" do
