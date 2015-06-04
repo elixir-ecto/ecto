@@ -87,7 +87,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def update(repo, source, fields, filter, returning, opts) do
+      def update(repo, source, fields, filter, _autogenerate, returning, opts) do
         {fields, values1} = :lists.unzip(fields)
         {filter, values2} = :lists.unzip(filter)
         sql = @conn.update(source, fields, filter, returning)
@@ -95,7 +95,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def delete(repo, source, filter, opts) do
+      def delete(repo, source, filter, _autogenarate, opts) do
         {filter, values} = :lists.unzip(filter)
         Ecto.Adapters.SQL.model(repo, @conn.delete(source, filter, []), values, [], opts)
       end
@@ -129,7 +129,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       defoverridable [all: 4, update_all: 5, delete_all: 4,
-                      insert: 6, update: 6, delete: 4,
+                      insert: 6, update: 7, delete: 5,
                       execute_ddl: 3, ddl_exists?: 3]
     end
   end

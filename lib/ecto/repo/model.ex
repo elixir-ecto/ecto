@@ -57,6 +57,7 @@ defmodule Ecto.Repo.Model do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = %{changeset | repo: repo}
+    {autogen, changeset} = merge_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_update after_update)a, fn ->
@@ -68,7 +69,7 @@ defmodule Ecto.Repo.Model do
 
       values =
         if changes != [] do
-          case adapter.update(repo, source, changes, filters, return, opts) do
+          case adapter.update(repo, source, changes, filters, autogen, return, opts) do
             {:ok, values} ->
               values
             {:error, :stale} ->
@@ -104,6 +105,7 @@ defmodule Ecto.Repo.Model do
 
     # There are no field changes on delete
     changeset = %{changeset | repo: repo}
+    {autogen, changeset} = merge_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
                                    ~w(before_delete after_delete)a, fn ->
@@ -112,7 +114,7 @@ defmodule Ecto.Repo.Model do
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(:delete, model, filters, adapter.id_types(repo))
 
-      case adapter.delete(repo, source, filters, opts) do
+      case adapter.delete(repo, source, filters, autogen, opts) do
         {:ok, _} -> nil
         {:error, :stale} ->
           raise Ecto.StaleModelError, model: struct, action: :delete
