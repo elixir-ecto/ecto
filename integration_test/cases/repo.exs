@@ -361,12 +361,13 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
+  @tag :sql_fragments
   test "update all expression syntax" do
     assert %Post{id: id1} = TestRepo.insert(%Post{title: "1", visits: 0})
     assert %Post{id: id2} = TestRepo.insert(%Post{title: "2", visits: 1})
 
     # Expressions
-    query = from p in Post, where: p.id > 0
+    query = from p in Post, where: not is_nil(p.id)
     assert 2 = TestRepo.update_all(p in query, visits: fragment("? + 2", p.visits))
 
     assert %Post{visits: 2} = TestRepo.get(Post, id1)
@@ -379,13 +380,16 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{visits: nil} = TestRepo.get(Post, id2)
   end
 
-  test "update all with casting and dumping" do
+  @tag :id_type
+  test "update all with casting and dumping on id type field" do
     text = "hai"
     date = Ecto.DateTime.utc
     assert %Post{id: id1} = TestRepo.insert(%Post{})
     assert 1 = TestRepo.update_all(p in Post, text: ^text, counter: ^to_string(id1), inserted_at: ^date)
     assert %Post{text: "hai", counter: ^id1, inserted_at: ^date} = TestRepo.get(Post, id1)
+  end
 
+  test "update all with casting and dumping" do
     text = "hai"
     date = {{2010, 4, 17}, {14, 00, 00, 00}}
     assert %Comment{id: id2} = TestRepo.insert(%Comment{})
