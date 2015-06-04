@@ -94,8 +94,20 @@ defmodule Ecto.Adapter do
   identifies an existing record) to be given as filter. Therefore,
   in case there is no record matching the given filters,
   `{:error, :stale}` is returned.
+
+  ## Autogenerate
+
+  The `autogenerate_id` tells if there is a primary key and if so, its name
+  type and value. The type is `:id` or `:binary_id` and the adapter should
+  raise if it cannot handle those types.
+
+  If the value is `nil`, it means the primary key is not to be changed.
+
+  `autogenerate_id` also allows drivers to detect if a value was assigned
+  to a primary key that does not support assignment. In this case, `value`
+  will be a non `nil` value.
   """
-  defcallback update(repo, source, fields, filters, returning, options) ::
+  defcallback update(repo, source, fields, filters, autogenerate_id, returning, options) ::
                     {:ok, Keyword.t} | {:error, :stale} | no_return
 
   @doc """
@@ -106,7 +118,13 @@ defmodule Ecto.Adapter do
   identifies an existing record) to be given as filter. Therefore,
   in case there is no record matching the given filters,
   `{:error, :stale}` is returned.
+
+  ## Autogenerate
+
+  The `autogenerate_id` tells if there is a primary key and if so, its name
+  type and value. The type is `:id` or `:binary_id` and the adapter should
+  raise if it cannot handle those types.
   """
-  defcallback delete(repo, source, filters, options) ::
+  defcallback delete(repo, source, filters, autogenerate_id, options) ::
                      {:ok, Keyword.t} | {:error, :stale} | no_return
 end
