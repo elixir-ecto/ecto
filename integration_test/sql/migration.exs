@@ -110,36 +110,54 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule AlterColumnMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:migration_test_table) do
+        add :to_be_modified, :integer
+        add :to_be_removed, :integer
+      end
+
+      alter table(:migration_test_table) do
+        modify :to_be_modified, :string
+      end
+
+      execute "INSERT INTO migration_test_table (to_be_modified) VALUES ('foo')"
+    end
+  end
+
+  defmodule DropColumnMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:migration_test_table) do
+        add :to_be_modified, :string
+        add :to_be_removed, :integer
+      end
+
+      alter table(:migration_test_table) do
+        remove :to_be_removed
+      end
+
+      execute "INSERT INTO migration_test_table (to_be_modified) VALUES ('foo')"
+    end
+  end
+
   @tag :modify_column
   test "modify column" do
     import Ecto.Query, only: [from: 2]
 
-    in_tmp fn path ->
-      migrations = [
-        create_table(55),
-        modify_column(56),
-      ]
-
-      assert [55, 56] = run(TestRepo, path, :up, all: true, log: false)
-      purge migrations
-      assert "foo" == TestRepo.one from p in MigrationTestTable, select: p.to_be_modified
-    end
+    assert :ok == up(TestRepo, 20090906120000, AlterColumnMigration, log: false)
+    assert "foo" == TestRepo.one from p in MigrationTestTable, select: p.to_be_modified
   end
 
   @tag :remove_column
   test "remove column" do
     import Ecto.Query, only: [from: 2]
 
-    in_tmp fn path ->
-      migrations = [
-        create_table(57),
-        remove_column(58),
-      ]
-
-      assert [57, 58] = run(TestRepo, path, :up, all: true, log: false)
-      purge migrations
-      assert catch_error(TestRepo.one from p in MigrationTestTable, select: p.to_be_removed)
-    end
+    assert :ok == up(TestRepo, 20090906120000, DropColumnMigration, log: false)
+    assert catch_error(TestRepo.one from p in MigrationTestTable, select: p.to_be_removed)
   end
 
   defp count_entries() do
@@ -160,71 +178,6 @@ defmodule Ecto.Integration.MigrationTest do
 
       def down do
         execute "DELETE FROM barebones WHERE num = #{num}"
-      end
-    end
-    """
-
-    module
-  end
-
-  defp create_table(num) do
-    module = Module.concat(__MODULE__, "Migration#{num}")
-
-    File.write! "#{num}_migration_#{num}.exs", """
-    defmodule #{module} do
-      use Ecto.Migration
-
-      def change do
-        create table(:migration_test_table) do
-          add :to_be_modified, :integer
-          add :to_be_removed, :integer
-        end
-      end
-    end
-    """
-
-    module
-  end
-
-  defp modify_column(num) do
-    module = Module.concat(__MODULE__, "Migration#{num}")
-
-    File.write! "#{num}_migration_#{num}.exs", """
-    defmodule #{module} do
-      use Ecto.Migration
-
-      def up do
-        alter table(:migration_test_table) do
-          modify :to_be_modified, :string
-        end
-        execute "INSERT INTO migration_test_table (to_be_modified) VALUES ('foo')"
-      end
-
-      def down do
-        :ok
-      end
-    end
-    """
-
-    module
-  end
-
-  defp remove_column(num) do
-    module = Module.concat(__MODULE__, "Migration#{num}")
-
-    File.write! "#{num}_migration_#{num}.exs", """
-    defmodule #{module} do
-      use Ecto.Migration
-
-      def up do
-        alter table(:migration_test_table) do
-          remove :to_be_removed
-        end
-        execute "INSERT INTO migration_test_table (to_be_modified) VALUES (1)"
-      end
-
-      def down do
-        :ok
       end
     end
     """
