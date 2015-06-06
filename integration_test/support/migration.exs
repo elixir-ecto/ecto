@@ -67,18 +67,12 @@ defmodule Ecto.Integration.Migration do
     false = exists? table(:users)
 
     create table(:users) do
-      add :name, :string
-      add :to_be_removed, :string
+      add :name, :text
+      add :custom_id, :uuid
+      timestamps
     end
 
     true = exists? table(:users)
-
-    alter table(:users) do
-      modify :name, :text
-      add :custom_id, :uuid
-      remove :to_be_removed
-      timestamps
-    end
 
     index = index(:users, [:custom_id], unique: true)
     false = exists? index
