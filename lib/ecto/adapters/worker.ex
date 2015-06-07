@@ -71,25 +71,6 @@ defmodule Ecto.Adapters.Worker do
   end
 
   @doc """
-  Asks for the module and the underlying connection process.
-  """
-  @spec ask(pid, timeout) :: {:ok, modconn} | {:error, Exception.t}
-  def ask(worker, timeout) do
-    GenServer.call(worker, :ask, timeout)
-  end
-
-  @doc """
-  Asks for the module and the underlying connection process.
-  """
-  @spec ask!(pid, timeout) :: modconn | no_return
-  def ask!(worker, timeout) do
-    case ask(worker, timeout) do
-      {:ok, modconn} -> modconn
-      {:error, err}  -> raise err
-    end
-  end
-
-  @doc """
   Opens a transaction.
 
   Invoked when the client wants to open up a connection.
@@ -145,17 +126,11 @@ defmodule Ecto.Adapters.Worker do
   end
 
   @doc """
-  Starts a sandbox transaction.
-
-  A sandbox transaction is not monitored by the worker.
-  This functions returns an `:ok` tuple in case a sandbox
-  transaction has started, a `:sandbox` tuple if it was
-  already in sandbox mode or `:already_open` if it was
-  previously open.
+  Set the mode of the connection.
   """
-  @spec sandbox_transaction(pid, timeout) :: {:ok, modconn} | {:sandbox, modconn} | :already_open
-  def sandbox_transaction(worker, timeout) do
-    GenServer.call(worker, :sandbox_transaction, timeout)
+  @spec mode(pid, :raw | :sandbox, timeout) :: :ok
+  def mode(worker, mode, timeout) do
+    GenServer.call(worker, {:mode, mode}, timeout)
   end
 
   ## Callbacks
@@ -173,36 +148,54 @@ defmodule Ecto.Adapters.Worker do
       end
     end
 
-    {:ok, %{conn: conn, params: params, transaction: :closed, module: module}}
+    {:ok, %{conn: conn, params: params, transaction: nil, mode: :raw,
+            module: module}}
   end
 
   ## Break transaction
 
-  def handle_call(:break_transaction, _from, %{transaction: :sandbox} = s) do
-    {:reply, :sandbox, s}
+  def handle_call(:break_transaction, _from, %{mode: :sandbox} = s) do
+    {:reply, :sandbox, demonitor(s)}
   end
 
-  def handle_call(:break_transaction, _from, %{transaction: :closed} = s) do
+  def handle_call(:break_transaction, _from, %{transaction: nil} = s) do
     {:reply, :not_open, s}
   end
 
   def handle_call(:break_transaction, _from, s) do
-    {:reply, :broken, disconnect(s)}
+    s = s
+      |> demonitor()
+      |> disconnect()
+    {:reply, :broken, s}
   end
 
   ## Close transaction
 
-  def handle_call(:close_transaction, _from, %{transaction: :sandbox} = s) do
-    {:reply, :closed, %{s | transaction: :closed}}
+  def handle_call(:close_transaction, _from, %{mode: :sandbox} = s) do
+    {:reply, :closed, demonitor(s)}
   end
 
-  def handle_call(:close_transaction, _from, %{transaction: :closed} = s) do
+  def handle_call(:close_transaction, _from, %{transaction: nil} = s) do
     {:reply, :not_open, s}
   end
 
-  def handle_call(:close_transaction, _from, %{transaction: ref} = s) do
-    Process.demonitor(ref, [:flush])
-    {:reply, :closed, %{s | transaction: :closed}}
+  def handle_call(:close_transaction, _from, s) do
+    {:reply, :closed, demonitor(s)}
+  end
+
+  ## Mode change
+
+  def handle_call({:mode, _}, _from, %{conn: nil} = s) do
+    {:reply, :noconnect, s}
+  end
+  def handle_call({:mode, :raw}, _from, %{mode: :sandbox} = s) do
+    {:reply, :ok, %{s | mode: :raw}}
+  end
+  def handle_call({:mode, :sandbox}, _from, %{mode: :raw} = s) do
+    {:reply, :ok, %{s | mode: :sandbox}}
+  end
+  def handle_call({:mode, mode}, _from, %{mode: mode} = s) do
+    {:stop, :already_mode, s}
   end
 
   ## Lazy connection handling
@@ -214,39 +207,22 @@ defmodule Ecto.Adapters.Worker do
     end
   end
 
-  ## Ask
-
-  def handle_call(:ask, _from, s) do
-    {:reply, {:ok, modconn(s)}, s}
-  end
-
   ## Open transaction
 
-  def handle_call(:open_transaction, _from, %{transaction: :sandbox} = s) do
-    {:reply, {:sandbox, modconn(s)}, s}
+  def handle_call(:open_transaction, {pid, _},
+  %{transaction: nil, mode: mode} = s) do
+    {:reply, {mode, modconn(s)}, monitor(pid, s)}
   end
 
-  def handle_call(:open_transaction, {pid, _}, %{transaction: :closed} = s) do
-    ref = Process.monitor(pid)
-    {:reply, {:ok, modconn(s)}, %{s | transaction: ref}}
-  end
-
-  def handle_call(:open_transaction, from, %{transaction: _old_ref} = s) do
-    handle_call(:open_transaction, from, disconnect(s))
-  end
-
-  ## Sandbox transaction
-
-  def handle_call(:sandbox_transaction, _from, %{transaction: :sandbox} = s) do
-    {:reply, {:sandbox, modconn(s)}, s}
-  end
-
-  def handle_call(:sandbox_transaction, _from, %{transaction: :closed} = s) do
-    {:reply, {:ok, modconn(s)}, %{s | transaction: :sandbox}}
-  end
-
-  def handle_call(:sandbox_transaction, _from, %{transaction: _} = s) do
-    {:reply, :already_open, s}
+  def handle_call(:open_transaction, from, %{transaction: {client, _}} = s) do
+    if Process.is_alive?(client) do
+      {:stop, :busy_open, s}
+    else
+      s = s
+        |> demonitor()
+        |> disconnect()
+      handle_call(:open_transaction, from, s)
+    end
   end
 
   ## Info
@@ -256,13 +232,21 @@ defmodule Ecto.Adapters.Worker do
   # it will fail with noproc anyway. close_transaction
   # and break_transaction will return :not_open after this.
   def handle_info({:EXIT, conn, _reason}, %{conn: conn} = s) do
-    {:noreply, disconnect(%{s | conn: nil})}
+    s = %{s | conn: nil}
+      |> demonitor()
+      |> disconnect()
+    {:noreply, s}
   end
 
   # The transaction owner crashed without closing.
   # We need to assume we don't know the connection state.
-  def handle_info({:DOWN, ref, _, _, _}, %{transaction: ref} = s) do
-    {:noreply, disconnect(%{s | transaction: :closed})}
+  def handle_info({:DOWN, ref, _, _, _},
+  %{mode: :raw, transaction: {_, ref}} = s) do
+    {:noreply, disconnect(%{s | transaction: nil})}
+  end
+  def handle_info({:DOWN, ref, _, _, _},
+  %{mode: :sandbox, transaction: {_, ref}} = s) do
+    {:noreply, %{s | transaction: nil}}
   end
 
   def handle_info(_info, s) do
@@ -279,13 +263,19 @@ defmodule Ecto.Adapters.Worker do
     {module, conn}
   end
 
-  defp disconnect(%{conn: conn, transaction: ref, module: module} = s) do
+  defp monitor(pid,s) do
+    ref = Process.monitor(pid)
+    %{s | transaction: {pid, ref}}
+  end
+
+  defp demonitor(%{transaction: nil} = s), do: s
+  defp demonitor(%{transaction: {_, ref}} = s) do
+    Process.demonitor(ref, [:flush])
+    %{s | transaction: nil}
+  end
+
+  defp disconnect(%{conn: conn, module: module} = s) do
     conn && module.disconnect(conn)
-
-    if is_reference(ref) do
-      Process.demonitor(ref, [:flush])
-    end
-
-    %{s | conn: nil, transaction: :closed}
+    %{s | conn: nil, mode: :raw}
   end
 end
