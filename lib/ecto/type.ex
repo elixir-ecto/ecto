@@ -531,7 +531,9 @@ defmodule Ecto.Type do
 
   defp of_base_type?(:decimal, %Decimal{}), do: true
   defp of_base_type?(:date, {_, _, _}),  do: true
+  defp of_base_type?(:time, {_, _, _}),  do: true
   defp of_base_type?(:time, {_, _, _, _}),  do: true
+  defp of_base_type?(:datetime, {{_, _, _}, {_, _, _}}), do: true
   defp of_base_type?(:datetime, {{_, _, _}, {_, _, _, _}}), do: true
 
   defp of_base_type?(:binary_id, value) do
