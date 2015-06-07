@@ -22,6 +22,7 @@ defmodule Ecto.Adapter.Migration  do
   @type table_subcommand ::
     {:add, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
     {:modify, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
+    {:rename, field :: atom, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
     {:remove, field :: atom}
 
   @typedoc """

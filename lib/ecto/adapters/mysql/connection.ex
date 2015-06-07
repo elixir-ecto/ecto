@@ -454,6 +454,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble(["MODIFY", quote_name(name), column_type(type, opts)])
     end
 
+    defp column_change({:rename, old_name, new_name, type, opts}) do
+      assemble(["CHANGE", quote_name(old_name), quote_name(new_name), column_type(type, opts)])
+    end
+
     defp column_change({:remove, name}), do: "DROP #{quote_name(name)}"
 
     defp column_options(name, opts) do

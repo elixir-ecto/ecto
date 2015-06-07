@@ -112,6 +112,7 @@ defmodule Ecto.MigrationTest do
     alter table(:posts) do
       add :summary, :text
       modify :title, :text
+      rename :details, :description
       remove :views
     end
 
@@ -119,6 +120,7 @@ defmodule Ecto.MigrationTest do
            {:alter, %Table{name: :posts},
               [{:add, :summary, :text, []},
                {:modify, :title, :text, []},
+               {:rename, :details, :description, :string, []},
                {:remove, :views}]}
   end
 
