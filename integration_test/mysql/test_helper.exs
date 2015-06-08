@@ -43,7 +43,8 @@ defmodule Ecto.Integration.Case do
   end
 
   setup do
-    Ecto.Adapters.SQL.restart_test_transaction(TestRepo, [])
+    Ecto.Adapters.SQL.rollback_test_transaction(TestRepo, [])
+    Ecto.Adapters.SQL.begin_test_transaction(TestRepo, [])
     :ok
   end
 end
