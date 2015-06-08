@@ -43,4 +43,28 @@ defmodule Ecto.TypeTest do
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1) == {:ok, Decimal.new("1")}
   end
+
+  test "datetime types" do
+    erlang_datetime = {{2015, 5, 27}, {11, 30, 00}}
+    assert load(:datetime, erlang_datetime) == {:ok, erlang_datetime}
+    assert dump(:datetime, erlang_datetime) == {:ok, erlang_datetime}
+    assert cast(:datetime, erlang_datetime) == {:ok, erlang_datetime}
+
+    datetime_with_usec = {{2015, 5, 27}, {11, 30, 00, 27}}
+    assert load(:datetime, datetime_with_usec) == {:ok, datetime_with_usec}
+    assert dump(:datetime, datetime_with_usec) == {:ok, datetime_with_usec}
+    assert cast(:datetime, datetime_with_usec) == {:ok, datetime_with_usec}
+  end
+
+  test "time types" do
+    erlang_time = {11, 30, 00}
+    assert load(:time, erlang_time) == {:ok, erlang_time}
+    assert dump(:time, erlang_time) == {:ok, erlang_time}
+    assert cast(:time, erlang_time) == {:ok, erlang_time}
+
+    time_with_usec = {11, 30, 00, 27}
+    assert load(:time, time_with_usec) == {:ok, time_with_usec}
+    assert dump(:time, time_with_usec) == {:ok, time_with_usec}
+    assert cast(:time, time_with_usec) == {:ok, time_with_usec}
+  end
 end
