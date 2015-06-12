@@ -470,6 +470,12 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s|CREATE INDEX `posts$main` ON `posts` (`lower(permalink)`)|
   end
 
+  test "create index asserting concurrency" do
+    create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", concurrently: true)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX `posts$main` ON `posts` (`lower(permalink)`) LOCK=NONE|
+  end
+
   test "create unique index" do
     create = {:create, index(:posts, [:permalink], unique: true)}
     assert SQL.execute_ddl(create) ==
@@ -487,24 +493,17 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts`|
   end
 
+  test "drop index asserting concurrency" do
+    drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts` LOCK=NONE|
+  end
+
   # Unsupported types and clauses
 
   test "arrays" do
     assert_raise ArgumentError, "Array type is not supported by MySQL", fn ->
       query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
       SQL.all(query)
-    end
-  end
-
-  test "concurrently" do
-    assert_raise ArgumentError, "CONCURRENTLY is not supported by MySQL", fn ->
-      create = {:create, index(:posts, [:category_id, :permalink], concurrently: true)}
-      SQL.execute_ddl(create)
-    end
-
-    assert_raise ArgumentError, "CONCURRENTLY is not supported by MySQL", fn ->
-      create = {:drop, index(:posts, [:category_id, :permalink], concurrently: true)}
-      SQL.execute_ddl(create)
     end
   end
 end

@@ -408,23 +408,23 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     def execute_ddl({:create, %Index{}=index}) do
-      if index.concurrently, do: raise(ArgumentError, "CONCURRENTLY is not supported by MySQL")
-
       create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
       using  = if index.using, do: "USING #{index.using}", else: []
 
-      assemble([create, quote_name(index.name), "ON", quote_table(index.table),
-                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})", using])
+      assemble([create,
+                quote_name(index.name),
+                "ON",
+                quote_table(index.table),
+                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})",
+                using,
+                if_do(index.concurrently, "LOCK=NONE")])
     end
 
     def execute_ddl({:drop, %Index{}=index}) do
-      if index.concurrently, do: raise(ArgumentError, "CONCURRENTLY is not supported by MySQL")
-
-      assemble([
-        "DROP INDEX",
-        quote_name(index.name),
-        "ON #{quote_table(index.table)}"
-      ])
+      assemble(["DROP INDEX",
+                quote_name(index.name),
+                "ON #{quote_table(index.table)}",
+                if_do(index.concurrently, "LOCK=NONE")])
     end
 
     def execute_ddl(default) when is_binary(default), do: default
@@ -531,6 +531,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       list
       |> List.flatten
       |> Enum.join(" ")
+    end
+
+    defp if_do(condition, value) do
+      if condition, do: value, else: []
     end
 
     defp escape_string(value) when is_binary(value) do
