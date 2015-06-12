@@ -435,3 +435,10 @@ defimpl String.Chars, for: [Ecto.DateTime, Ecto.Date, Ecto.Time] do
     @for.to_string(dt)
   end
 end
+
+defimpl Inspect, for: [Ecto.DateTime, Ecto.Date, Ecto.Time] do
+  def inspect(dt, _opts) do
+    iso8601 = @for.to_iso8601(dt)
+    ~s(#{inspect(@for)}<#{iso8601}>)
+  end
+end
