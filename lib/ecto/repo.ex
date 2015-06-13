@@ -210,7 +210,7 @@ defmodule Ecto.Repo do
   defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
-  Similar to `get/3` but raises `Ecto.NotSingleResult` if no record was found.
+  Similar to `get/3` but raises `Ecto.NoResultsError` if no record was found.
 
   ## Options
 
@@ -240,7 +240,7 @@ defmodule Ecto.Repo do
   defcallback get_by(Ecto.Queryable.t, Keyword.t, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
-  Similar to `get_by/3` but raises `Ecto.NotSingleResult` if no record was found.
+  Similar to `get_by/3` but raises `Ecto.NoResultsError` if no record was found.
 
   ## Options
 
@@ -270,7 +270,7 @@ defmodule Ecto.Repo do
   defcallback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
-  Similar to `one/2` but raises `Ecto.NotSingleResult` if no record was found.
+  Similar to `one/2` but raises `Ecto.NoResultsError` if no record was found.
 
   ## Options
 
