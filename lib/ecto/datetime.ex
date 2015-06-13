@@ -437,9 +437,9 @@ defimpl String.Chars, for: [Ecto.DateTime, Ecto.Date, Ecto.Time] do
 end
 
 defimpl Inspect, for: [Ecto.DateTime, Ecto.Date, Ecto.Time] do
+  @inspected inspect(@for)
+
   def inspect(dt, _opts) do
-    iso8601 = @for.to_iso8601(dt)
-    module = inspect(@for)
-    ~s(##{module}<#{iso8601}>)
+    "#" <> @inspected <> "<" <> @for.to_iso8601(dt) <> ">"
   end
 end
