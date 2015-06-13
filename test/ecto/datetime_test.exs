@@ -42,7 +42,7 @@ defmodule Ecto.DateTest do
   end
 
   test "inspect protocol" do
-    assert inspect(@date) == "Ecto.Date<2015-12-31>"
+    assert inspect(@date) == "#Ecto.Date<2015-12-31>"
   end
 end
 
@@ -120,8 +120,8 @@ defmodule Ecto.TimeTest do
   end
 
   test "inspect protocol" do
-    assert inspect(@time) == "Ecto.Time<23:50:07>"
-    assert inspect(@time_usec) == "Ecto.Time<12:40:33.030000>"
+    assert inspect(@time) == "#Ecto.Time<23:50:07>"
+    assert inspect(@time_usec) == "#Ecto.Time<12:40:33.030000>"
   end
 end
 
@@ -203,7 +203,7 @@ defmodule Ecto.DateTimeTest do
   end
 
   test "inspect protocol" do
-    assert inspect(@datetime) == "Ecto.DateTime<2015-01-23T23:50:07Z>"
-    assert inspect(@datetime_usec) == "Ecto.DateTime<2015-01-23T23:50:07.008000Z>"
+    assert inspect(@datetime) == "#Ecto.DateTime<2015-01-23T23:50:07Z>"
+    assert inspect(@datetime_usec) == "#Ecto.DateTime<2015-01-23T23:50:07.008000Z>"
   end
 end
