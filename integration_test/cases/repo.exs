@@ -317,6 +317,48 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
+  test "struct in multiple results and no results errors" do
+    try do
+      TestRepo.get Post, 1
+    rescue
+      e in Ecto.NoResultsError ->
+        assert e.struct == Post
+    end
+
+    post1 = TestRepo.insert(%Post{title: "hai"})
+    post2 = TestRepo.insert(%Post{title: "hai"})
+
+    try do
+      TestRepo.one!(from p in Post, where: p.title == "hai")
+    rescue
+      e in Ecto.MultipleResultsError ->
+        assert e.struct == Post
+    end
+
+    TestRepo.delete post2
+
+    comment1 = TestRepo.insert(%Comment{})
+    TestRepo.delete comment1
+
+    try do
+      TestRepo.get! Post, post1.id
+      TestRepo.get! Comment, comment1.id
+    rescue
+      e in Ecto.NoResultsError ->
+        assert e.struct == Comment
+    end
+
+    TestRepo.delete post1
+    try do
+      TestRepo.get! Post, post1.id
+      TestRepo.get! Comment, comment1.id
+    rescue
+      e in Ecto.NoResultsError ->
+        assert e.struct == Post
+    end
+
+  end
+
   test "update all" do
     assert %Post{id: id1} = TestRepo.insert(%Post{title: "1"})
     assert %Post{id: id2} = TestRepo.insert(%Post{title: "2"})
