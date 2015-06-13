@@ -82,10 +82,11 @@ defmodule Ecto.ChangeError do
 end
 
 defmodule Ecto.NoResultsError do
-  defexception [:message]
+  defexception [:message, :struct]
 
   def exception(opts) do
     query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
+    {_table, struct} = Map.get(query, :from)
 
     msg = """
     expected at least one result but got none in query:
@@ -93,16 +94,17 @@ defmodule Ecto.NoResultsError do
     #{Inspect.Ecto.Query.to_string(query)}
     """
 
-    %__MODULE__{message: msg}
+    %__MODULE__{message: msg, struct: struct}
   end
 end
 
 defmodule Ecto.MultipleResultsError do
-  defexception [:message]
+  defexception [:message, :struct]
 
   def exception(opts) do
     query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
     count = Keyword.fetch!(opts, :count)
+    {_table, struct} = Map.get(query, :from)
 
     msg = """
     expected at most one result but got #{count} in query:
@@ -110,7 +112,7 @@ defmodule Ecto.MultipleResultsError do
     #{Inspect.Ecto.Query.to_string(query)}
     """
 
-    %__MODULE__{message: msg}
+    %__MODULE__{message: msg, struct: struct}
   end
 end
 
