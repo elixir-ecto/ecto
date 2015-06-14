@@ -16,7 +16,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
         |> Keyword.update(:port, @default_port, &normalize_port/1)
 
-      Postgrex.Connection.start_link(opts)
+      {:ok, conn} = Postgrex.Connection.start_link(opts)
+      :ok = after_connect(conn, opts)
+      {:ok, conn}
+    end
+
+    def after_connect(_conn, _opts) do
+      :ok
     end
 
     def disconnect(conn) do

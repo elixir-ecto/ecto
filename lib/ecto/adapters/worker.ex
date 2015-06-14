@@ -50,6 +50,12 @@ defmodule Ecto.Adapters.Worker do
   defcallback connect(Keyword.t) :: {:ok, pid} | {:error, term}
 
   @doc """
+  Called right after a connection has been opened with the pid of the connection
+  and the connect options.
+  """
+  defcallback after_connect(pid, Keywork.t) :: :ok
+
+  @doc """
   Disconnects the given `pid`.
 
   If the given `pid` no longer exists, it should not raise.
