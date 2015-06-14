@@ -16,7 +16,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
         |> Keyword.update(:port, @default_port, &normalize_port/1)
 
-      Postgrex.Connection.start_link(opts)
+      {:ok, conn} = Postgrex.Connection.start_link(opts)
+      :ok = after_connect(conn, opts)
+      {:ok, conn}
+    end
+
+    def after_connect(conn, opts) do
+      if search_path = opts[:search_path] do
+        {:ok, _} = query(conn, "SET search_path TO #{search_path}", [], opts)
+      end
+      :ok
     end
 
     def disconnect(conn) do

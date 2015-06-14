@@ -11,7 +11,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def connect(opts) do
       opts = Keyword.update(opts, :port, @default_port, &normalize_port/1)
-      Mariaex.Connection.start_link(opts)
+      {:ok, conn} = Mariaex.Connection.start_link(opts)
+      :ok = after_connect(conn, opts)
+      {:ok, conn}
+    end
+
+    def after_connect(_conn, _opts) do
+      :ok
     end
 
     def disconnect(conn) do
