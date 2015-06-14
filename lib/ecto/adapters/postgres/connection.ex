@@ -21,7 +21,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       {:ok, conn}
     end
 
-    def after_connect(_conn, _opts) do
+    def after_connect(conn, opts) do
+      if search_path = opts[:search_path] do
+        {:ok, _} = query(conn, "SET search_path TO #{search_path}", [], opts)
+      end
       :ok
     end
 
