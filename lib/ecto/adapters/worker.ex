@@ -168,7 +168,9 @@ defmodule Ecto.Adapters.Worker do
     unless lazy? do
       case module.connect(params) do
         {:ok, conn} ->
-          repo.after_connect(conn)
+          if repo do
+            repo.after_connect(conn)
+          end
           conn = conn
         _ ->
           :ok
@@ -214,7 +216,9 @@ defmodule Ecto.Adapters.Worker do
 
     case module.connect(params) do
       {:ok, conn}   ->
-        repo.after_connect(conn)
+        if repo do
+          repo.after_connect(conn)
+        end
         handle_call(request, from, %{s | conn: conn})
       {:error, err} -> {:reply, {:error, err}, s}
     end
