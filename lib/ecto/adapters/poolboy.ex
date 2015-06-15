@@ -54,9 +54,9 @@ defmodule Ecto.Adapters.Poolboy do
   end
 
   @doc false
-  def close_transaction(pool, {worker, _}, timeout) do
+  def close_transaction(pool, {worker, _}, _) do
     try do
-      Worker.close_transaction(worker, timeout)
+      Worker.close_transaction(worker)
     after
       :poolboy.checkin(pool, worker)
     end

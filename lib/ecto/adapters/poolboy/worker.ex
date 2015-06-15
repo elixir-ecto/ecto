@@ -15,9 +15,9 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     GenServer.call(worker, :open_transaction, timeout)
   end
 
-  @spec close_transaction(pid, timeout) :: :ok
-  def close_transaction(worker, timeout) do
-    GenServer.call(worker, :close_transaction, timeout)
+  @spec close_transaction(pid) :: :ok
+  def close_transaction(worker) do
+    GenServer.cast(worker, :close_transaction)
   end
 
   @spec disconnect_transaction(pid, timeout) :: :ok
@@ -67,20 +67,6 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     {:reply, :ok, s}
   end
 
-  ## Close transaction
-
-  def handle_call(:close_transaction, _from, %{mode: :sandbox} = s) do
-    {:reply, :ok, demonitor(s)}
-  end
-
-  def handle_call(:close_transaction, _from, %{transaction: nil} = s) do
-    {:stop, :notransaction, s}
-  end
-
-  def handle_call(:close_transaction, _from, s) do
-    {:reply, :ok, demonitor(s)}
-  end
-
   ## Mode change
 
   def handle_call({:transaction_mode, _}, _from, %{conn: nil} = s) do
@@ -121,6 +107,20 @@ defmodule Ecto.Adapters.Poolboy.Worker do
         |> disconnect()
       handle_call(:open_transaction, from, s)
     end
+  end
+
+  ## Close transaction
+
+  def handle_cast(:close_transaction, %{mode: :sandbox} = s) do
+    {:noreply, demonitor(s)}
+  end
+
+  def handle_cast(:close_transaction, %{transaction: nil} = s) do
+    {:stop, :notransaction, s}
+  end
+
+  def handle_cast(:close_transaction, s) do
+    {:noreply, demonitor(s)}
   end
 
   ## Info
