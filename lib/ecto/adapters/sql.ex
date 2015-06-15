@@ -11,7 +11,7 @@ defmodule Ecto.Adapters.SQL do
   to the database and also how to translate the queries
   to SQL.
 
-  See `Ecto.Adapters.Worker` for connection pooling and
+  See `Ecto.Adapters.Connection` for connection processes and
   `Ecto.Adapters.SQL.Query` for the query semantics.
   """
 
@@ -134,7 +134,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  alias Ecto.Adapters.Poolboy
+  alias Ecto.Adapters.Pool.Transaction
 
   @doc """
   Runs custom SQL query on given repo.
@@ -165,7 +165,7 @@ defmodule Ecto.Adapters.SQL do
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
              %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query(repo, sql, params, opts \\ []) do
-    {pool, timeout} = repo.__pool__
+    {pool_mod, pool, timeout} = repo.__pool__
     opts            = Keyword.put_new(opts, :timeout, timeout)
     timeout         = Keyword.fetch!(opts, :timeout)
     log?            = Keyword.get(opts, :log, true)
@@ -175,7 +175,7 @@ defmodule Ecto.Adapters.SQL do
       query(ref, queue_time, sql, params, log?, timeout, opts)
     end
 
-    case Poolboy.transaction(pool, timeout, query_fun) do
+    case Transaction.transaction(pool_mod, pool, timeout, query_fun) do
       {:ok, {{:ok, result}, entry}} ->
         log(repo, entry)
         result
@@ -194,7 +194,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp query(ref, queue_time, sql, params, log?, timeout, opts) do
-    case Poolboy.connection(ref) do
+    case Transaction.connection(ref, timeout) do
       {:ok, {mod, conn}} ->
         query(ref, mod, conn, queue_time, sql, params, log?, timeout, opts)
       {:error, :noconnect} ->
@@ -203,32 +203,15 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp query(ref, mod, conn, _queue_time, sql, params, false, timeout, opts) do
-    try do
-      mod.query(conn, sql, params, opts)
-    catch
-      class, reason ->
-        stack = System.stacktrace()
-        Poolboy.disconnect(ref, timeout)
-        :erlang.raise(class, reason, stack)
-    else
-      res ->
-        {res, nil}
-    end
+    query = fn() -> mod.query(conn, sql, params, opts) end
+    {Transaction.fuse(ref, timeout, query), nil}
   end
   defp query(ref, mod, conn, queue_time, sql, params, true, timeout, opts) do
-    try do
-      :timer.tc(mod, :query, [conn, sql, params, opts])
-    catch
-      class, reason ->
-        stack = System.stacktrace()
-        Poolboy.disconnect(ref, timeout)
-        :erlang.raise(class, reason, stack)
-    else
-      {query_time, res} ->
-        entry = %Ecto.LogEntry{query: sql, params: params, result: res,
-                               query_time: query_time, queue_time: queue_time}
-       {res, entry}
-    end
+    query = fn() -> :timer.tc(mod, :query, [conn, sql, params, opts]) end
+    {query_time, res} = Transaction.fuse(ref, timeout, query)
+    entry = %Ecto.LogEntry{query: sql, params: params, result: res,
+                           query_time: query_time, queue_time: queue_time}
+     {res, entry}
   end
 
   defp log(_repo, nil), do: :ok
@@ -331,26 +314,26 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp test_transaction(event, repo, opts) do
-    {pool, timeout} = repo.__pool__
+    {pool_mod, pool, timeout} = repo.__pool__
     opts = Keyword.put_new(opts, :timeout, timeout)
     timeout = Keyword.get(opts, :timeout)
 
     trans_fun =
-      fn(ref, :raw, 0, queue_time) when event in [:begin, :restart] ->
+      fn(ref, :raw, 1, queue_time) when event in [:begin, :restart] ->
           begin_sandbox(repo, ref, queue_time, timeout, opts)
-        (_ref, :raw, 0, _queue_time) when event === :rollback ->
+        (_ref, :raw, 1, _queue_time) when event === :rollback ->
           {:ok, nil}
-        (_ref, :sandbox, 0, _queue_time) when event === :begin ->
+        (_ref, :sandbox, 1, _queue_time) when event === :begin ->
           raise "cannot begin test transaction because we are already inside one"
-        (ref, :sandbox, 0, queue_time) when event === :restart ->
+        (ref, :sandbox, 1, queue_time) when event === :restart ->
           restart_sandbox(ref, queue_time, timeout, opts)
-        (ref, :sandbox, 0, queue_time) when event === :rollback ->
+        (ref, :sandbox, 1, queue_time) when event === :rollback ->
           rollback_sandbox(ref, queue_time, timeout, opts)
         (_ref, _mode, _depth, _queue_time) ->
           raise "cannot #{event} test transaction because we are already inside a regular transaction"
       end
 
-    case Poolboy.transaction(pool, timeout, trans_fun) do
+    case Transaction.transaction(pool_mod, pool, timeout, trans_fun) do
       {:ok, {:ok, entry}} ->
         log(repo, entry)
         :ok
@@ -367,19 +350,15 @@ defmodule Ecto.Adapters.SQL do
 
   defp begin_sandbox(repo, ref, queue_time, timeout, opts) do
     log? = Keyword.get(opts, :log, true)
-    case begin(ref, :raw, 0, queue_time, log?, timeout, opts) do
+    case begin(ref, :raw, 1, queue_time, log?, timeout, opts) do
       {{:ok, _}, entry} ->
-        try do
+        log_and_savepoint = fn() ->
           log(repo, entry)
           savepoint_sandbox(ref, log?, timeout, opts)
-        catch
-          class, reason ->
-            stack = System.stacktrace()
-            Poolboy.disconnect(ref, timeout)
-            :erlang.raise(class, reason, stack)
         end
+        Transaction.fuse(ref, timeout, log_and_savepoint)
       {{:error, _err}, _entry} = error ->
-        Poolboy.disconnect(ref, timeout)
+        Transaction.disconnect(ref, timeout)
         error
     end
   end
@@ -387,10 +366,10 @@ defmodule Ecto.Adapters.SQL do
   defp savepoint_sandbox(ref, log?, timeout, opts) do
     case begin(ref, :raw, :sandbox, nil, log?, timeout, opts) do
       {{:ok, _}, entry} ->
-        _ = Poolboy.mode(ref, :sandbox, timeout)
+        _ = Transaction.mode(ref, :sandbox, timeout)
         {:ok, entry}
       {{:error, _err}, _entry} = error ->
-        Poolboy.disconnect(ref, timeout)
+        Transaction.disconnect(ref, timeout)
         error
     end
   end
@@ -401,19 +380,19 @@ defmodule Ecto.Adapters.SQL do
       {{:ok, _}, entry} ->
         {:ok, entry}
       {{:error, _err}, _entry} = error ->
-        Poolboy.disconnect(ref, timeout)
+        Transaction.disconnect(ref, timeout)
         error
     end
   end
 
   defp rollback_sandbox(ref, queue_time, timeout, opts) do
     log? = Keyword.get(opts, :log, true)
-    case rollback(ref, :raw, 0, queue_time, log?, timeout, opts) do
+    case rollback(ref, :raw, 1, queue_time, log?, timeout, opts) do
       {{:ok, _}, entry} ->
-        _ = Poolboy.mode(ref, :raw, timeout)
+        _ = Transaction.mode(ref, :raw, timeout)
         {:ok, entry}
       {{:error, _err}, _entry} = error ->
-        Poolboy.disconnect(ref, timeout)
+        Transaction.disconnect(ref, timeout)
         error
     end
   end
@@ -422,14 +401,16 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def __before_compile__(env) do
-    timeout =
+    config =
       env.module
       |> Module.get_attribute(:config)
-      |> Keyword.get(:timeout, 5000)
+
+    timeout  = Keyword.get(config, :timeout, 5000)
+    pool_mod = Keyword.get(config, :pool, Ecto.Adapters.Poolboy)
 
     quote do
       def __pool__ do
-        {__MODULE__.Pool, unquote(timeout)}
+        {unquote(pool_mod), __MODULE__.Pool, unquote(timeout)}
       end
     end
   end
@@ -449,16 +430,19 @@ defmodule Ecto.Adapters.SQL do
           mix deps.clean ecto
       """
     end
+    {pool_mod, pool, _} = repo.__pool__
     opts = opts
       |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5000))
-      |> Keyword.put(:name, elem(repo.__pool__, 0))
+      |> Keyword.put(:name, pool)
+      |> Keyword.put_new(:size, 10)
 
-    Poolboy.start_link(connection, opts)
+    pool_mod.start_link(connection, opts)
   end
 
   @doc false
   def stop(repo) do
-    Poolboy.stop elem(repo.__pool__, 0)
+    {pool_mod, pool, _} = repo.__poo__
+    pool_mod.stop(pool)
   end
 
   ## Query
@@ -519,7 +503,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def transaction(repo, opts, fun) do
-    {pool, timeout} = repo.__pool__
+    {pool_mod, pool, timeout} = repo.__pool__
     opts            = Keyword.put_new(opts, :timeout, timeout)
     timeout         = Keyword.fetch!(opts, :timeout)
 
@@ -527,7 +511,7 @@ defmodule Ecto.Adapters.SQL do
       transaction(repo, ref, mode, depth, queue_time, timeout, opts, fun)
     end
 
-    case Poolboy.transaction(pool, timeout, trans_fun) do
+    case Transaction.transaction(pool_mod, pool, timeout, trans_fun) do
       {:ok, {{:return, result}, entry}} ->
         log(repo, entry)
         result
@@ -563,7 +547,7 @@ defmodule Ecto.Adapters.SQL do
             rollback(ref, mode, depth, nil, log?, timeout, opts, res)
         end
       {{:error, _err}, _entry} = result ->
-        Poolboy.disconnect(ref, timeout)
+        Transaction.disconnect(ref, timeout)
         result
       :noconnect ->
         :noconnect
@@ -571,7 +555,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp begin(ref, mode, depth, queue_time, log?, timeout, opts) do
-    case Poolboy.connection(ref) do
+    case Transaction.connection(ref, timeout) do
       {:ok, {mod, conn}} ->
         sql = begin_sql(mod, mode, depth)
         query(ref, mod, conn, queue_time, sql, [], log?, timeout, opts)
@@ -580,7 +564,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp begin_sql(mod, :raw, 0), do: mod.begin_transaction
+  defp begin_sql(mod, :raw, 1), do: mod.begin_transaction
   defp begin_sql(mod, :raw, :sandbox), do: mod.savepoint "ecto_sandbox"
   defp begin_sql(mod, _, depth), do: mod.savepoint "ecto_#{depth}"
 
@@ -589,7 +573,7 @@ defmodule Ecto.Adapters.SQL do
       {{:ok, _}, entry} ->
         {result, entry}
       {{:error, _err}, _entry} = error ->
-        Poolboy.disconnect(ref, timeout)
+        Transaction.disconnect(ref, timeout)
         error
       :nocommit ->
         {result, nil}
@@ -598,8 +582,8 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp commit(ref, :raw, 0, log?, timeout, opts) do
-    case Poolboy.connection(ref) do
+  defp commit(ref, :raw, 1, log?, timeout, opts) do
+    case Transaction.connection(ref, timeout) do
       {:ok, {mod, conn}} ->
         sql = mod.commit
         query(ref, mod, conn, nil, sql, [], log?, timeout, opts)
@@ -616,7 +600,7 @@ defmodule Ecto.Adapters.SQL do
       {{:ok, _}, entry} ->
         {result, entry}
       {{:error, _err}, _entry} = error ->
-        Poolboy.disconnect(ref, timeout)
+        Transaction.disconnect(ref, timeout)
         error
       :noconnect ->
         {result, nil}
@@ -624,7 +608,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp rollback(ref, mode, depth, queue_time, log?, timeout, opts) do
-    case Poolboy.connection(ref) do
+    case Transaction.connection(ref, timeout) do
       {:ok, {mod, conn}} ->
         sql = rollback_sql(mod, mode, depth)
         query(ref, mod, conn, queue_time, sql, [], log?, timeout, opts)
@@ -633,7 +617,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp rollback_sql(mod, :raw, 0), do: mod.rollback
+  defp rollback_sql(mod, :raw, 1), do: mod.rollback
   defp rollback_sql(mod, :sandbox, :sandbox) do
     mod.rollback_to_savepoint "ecto_sandbox"
   end

@@ -3,6 +3,7 @@ defmodule Ecto.Mixfile do
 
   @version "0.12.0-rc"
   @adapters [:pg, :mysql]
+  @pools [:poolboy]
 
   def project do
     [app: :ecto,
@@ -41,6 +42,7 @@ defmodule Ecto.Mixfile do
   end
 
   defp test_paths(adapter) when adapter in @adapters, do: ["integration_test/#{adapter}"]
+  defp test_paths(pool) when pool in @pools, do: ["integration_test/#{pool}"]
   defp test_paths(_), do: ["test"]
 
   defp description do
@@ -61,12 +63,12 @@ defmodule Ecto.Mixfile do
     args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
     Mix.Task.run "test", args
 
-    for adapter <- @adapters do
-      IO.puts "==> Running integration tests for MIX_ENV=#{adapter} mix test"
+    for env <- @pools ++ @adapters do
+      IO.puts "==> Running integration tests for MIX_ENV=#{env} mix test"
 
       {_, res} = System.cmd "mix", ["test"|args],
                             into: IO.binstream(:stdio, :line),
-                            env: [{"MIX_ENV", to_string(adapter)}]
+                            env: [{"MIX_ENV", to_string(env)}]
 
       if res > 0 do
         System.at_exit(fn _ -> exit({:shutdown, 1}) end)

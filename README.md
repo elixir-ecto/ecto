@@ -114,7 +114,7 @@ Besides the unit tests above, it is recommended to run the adapter integration t
 # Run only PostgreSQL tests
 MIX_ENV=pg mix test
 
-# Run all tests (unit and all adapters)
+# Run all tests (unit and all adapters/pools)
 mix test.all
 ```
 
