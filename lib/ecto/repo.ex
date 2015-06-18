@@ -441,7 +441,8 @@ defmodule Ecto.Repo do
   @doc """
   Runs the given function inside a transaction.
 
-  If an unhandled error occurs the transaction will be rolled back.
+  If an unhandled error occurs the transaction will be rolled back
+  and the error will bubble up from the transaction function.
   If no error occurred the transaction will be commited when the
   function returns. A transaction can be explicitly rolled back
   by calling `rollback/1`, this will immediately leave the function
