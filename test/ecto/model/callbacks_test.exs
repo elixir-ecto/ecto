@@ -87,36 +87,36 @@ defmodule Ecto.Model.CallbacksTest do
 
   test "wraps operations into transactions if callback present" do
     model = %SomeCallback{x: "x"}
-    MockRepo.insert model
+    MockRepo.insert! model
     refute_received {:transaction, _fun}
 
     model = %AllCallback{x: "x"}
-    MockRepo.insert model
+    MockRepo.insert! model
     assert_received {:transaction, _fun}
   end
 
   test "before_insert and after_insert with model" do
     model = %AllCallback{x: "x"}
-    model = MockRepo.insert model
+    model = MockRepo.insert! model
     assert model.before == %{x: "x", y: "", z: ""}
     assert model.after == %{x: "x", y: ""}
 
     model = %AllCallback{id: 1, x: "x"}
-    model = MockRepo.insert model
+    model = MockRepo.insert! model
     assert model.before == %{id: 1, x: "x", y: "", z: ""}
     assert model.after == %{id: 1, x: "x", y: ""}
   end
 
   test "before_update and after_update with model" do
     model = %AllCallback{id: 1, x: "x"}
-    model = MockRepo.update model
+    model = MockRepo.update! model
     assert model.before == %{x: "x", y: "", z: ""}
     assert model.after == %{x: "x", y: ""}
   end
 
   test "before_delete and after_delete with model" do
     model = %AllCallback{id: 1, x: "x"}
-    model = MockRepo.delete model
+    model = MockRepo.delete! model
     assert model.before == %{}
     assert model.after == %{}
   end
@@ -124,7 +124,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_insert and after_insert with changeset" do
     changeset = Ecto.Changeset.cast(%AllCallback{x: "x", y: "z"},
                                     %{"y" => "y", "z" => "z"}, ~w(y z), ~w())
-    model = MockRepo.insert changeset
+    model = MockRepo.insert! changeset
     assert model.before == %{x: "x", y: "y", z: "z"}
     assert model.after == %{x: "x", y: "y"}
     assert model.x == "x"
@@ -135,7 +135,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_update and after_update with changeset" do
     changeset = Ecto.Changeset.cast(%AllCallback{id: 1, x: "x", y: "z"},
                                     %{"y" => "y", "z" => "z"}, ~w(y z), ~w())
-    model = MockRepo.update changeset
+    model = MockRepo.update! changeset
     assert model.before == %{y: "y", z: "z"}
     assert model.after == %{y: "y"}
     assert model.x == "x"
@@ -146,7 +146,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_insert and after_insert with id in changeset" do
     changeset = Ecto.Changeset.cast(%AllCallback{},
                                     %{"id" => 1}, ~w(id), ~w())
-    model = MockRepo.insert changeset
+    model = MockRepo.insert! changeset
     assert model.before == %{id: 1, x: "", y: "", z: ""}
     assert model.after == %{id: 1, x: "", y: ""}
   end
@@ -154,7 +154,7 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_update and after_update with id in changeset" do
     changeset = Ecto.Changeset.cast(%AllCallback{id: 0},
                                     %{"id" => 1}, ~w(id), ~w())
-    model = MockRepo.update changeset
+    model = MockRepo.update! changeset
     assert model.before == %{id: 1}
     assert model.after == %{id: 1}
   end

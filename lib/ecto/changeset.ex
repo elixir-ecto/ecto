@@ -162,7 +162,7 @@ defmodule Ecto.Changeset do
 
       iex> changeset = cast(post, params, ~w(title), ~w())
       iex> if changeset.valid? do
-      ...>   Repo.update(changeset)
+      ...>   Repo.update!(changeset)
       ...> end
 
   Passing a changeset as the first argument:
@@ -592,8 +592,8 @@ defmodule Ecto.Changeset do
   @doc """
   Applies the changeset changes to the changeset model.
 
-  Note this operation is automatically performed on `Ecto.Repo.insert/2` and
-  `Ecto.Repo.update/2`, however this function is provided for
+  Note this operation is automatically performed on `Ecto.Repo.insert!/2` and
+  `Ecto.Repo.update!/2`, however this function is provided for
   debugging and testing purposes.
 
   ## Examples

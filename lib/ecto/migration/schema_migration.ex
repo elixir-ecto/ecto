@@ -31,10 +31,10 @@ defmodule Ecto.Migration.SchemaMigration do
   end
 
   def up(repo, version) do
-    repo.insert %__MODULE__{version: version}, @opts
+    repo.insert! %__MODULE__{version: version}, @opts
   end
 
   def down(repo, version) do
-    repo.delete %__MODULE__{version: version}, @opts
+    repo.delete! %__MODULE__{version: version}, @opts
   end
 end

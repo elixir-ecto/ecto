@@ -18,7 +18,7 @@ defmodule Ecto.Integration.TypeTest do
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
                               hour: 20, min: 26, sec: 51, usec: 0}
 
-    TestRepo.insert(%Post{text: text, public: true, visits: integer, uuid: uuid, counter: integer,
+    TestRepo.insert!(%Post{text: text, public: true, visits: integer, uuid: uuid, counter: integer,
                           inserted_at: datetime, intensity: float})
 
     # nil
@@ -54,7 +54,7 @@ defmodule Ecto.Integration.TypeTest do
   test "decimal type" do
     decimal = Decimal.new("1.0")
 
-    TestRepo.insert(%Post{cost: decimal})
+    TestRepo.insert!(%Post{cost: decimal})
 
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^decimal, select: p.cost)
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^1.0, select: p.cost)
@@ -64,7 +64,7 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "tagged types" do
-    TestRepo.insert(%Post{})
+    TestRepo.insert!(%Post{})
 
     # Integer
     assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
@@ -83,14 +83,14 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "binary id type" do
-    assert %Custom{} = custom = TestRepo.insert(%Custom{})
+    assert %Custom{} = custom = TestRepo.insert!(%Custom{})
     bid = custom.bid
     assert [^bid] = TestRepo.all(from c in Custom, select: c.bid)
     assert [^bid] = TestRepo.all(from c in Custom, select: type(^bid, :binary_id))
   end
 
   test "composite types in select" do
-    assert %Post{} = TestRepo.insert(%Post{title: "1", text: "hai"})
+    assert %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai"})
 
     assert [{"1", "hai"}] ==
            TestRepo.all(from p in Post, select: {p.title, p.text})
@@ -108,7 +108,7 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :array_type
   test "array type" do
-    TestRepo.insert(%Tag{ints: [1, 2, 3], uuids: ["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"]})
+    TestRepo.insert!(%Tag{ints: [1, 2, 3], uuids: ["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"]})
 
     assert [] = TestRepo.all(from p in Tag, where: p.ints == ^[], select: p.ints)
     assert [[1, 2, 3]] = TestRepo.all(from p in Tag, where: p.ints == ^[1, 2, 3], select: p.ints)

@@ -20,7 +20,7 @@ defmodule Ecto.Integration.LockTest do
   end
 
   test "lock for update" do
-    %{id: id} = PoolRepo.insert(%LockCounter{count: 1})
+    %{id: id} = PoolRepo.insert!(%LockCounter{count: 1})
     pid = self()
 
     lock_for_update =
@@ -39,7 +39,7 @@ defmodule Ecto.Integration.LockTest do
 
         PoolRepo.transaction(fn ->
           [post] = PoolRepo.all(query) # this should block until the other trans. commit
-          %{post | count: post.count + 1} |> PoolRepo.update
+          %{post | count: post.count + 1} |> PoolRepo.update!
         end)
 
         send pid, :updated
@@ -48,7 +48,7 @@ defmodule Ecto.Integration.LockTest do
     PoolRepo.transaction(fn ->
       [post] = PoolRepo.all(query)       # select and lock the row
       send new_pid, :select_for_update   # signal second process to begin a transaction
-      PoolRepo.update(%{post | count: post.count + 1})
+      PoolRepo.update!(%{post | count: post.count + 1})
     end)
 
     assert_receive :updated, 5000

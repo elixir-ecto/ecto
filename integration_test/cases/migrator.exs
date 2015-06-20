@@ -119,7 +119,7 @@ defmodule Ecto.Integration.MigratorTest do
       alias Ecto.Integration.Barebone
 
       def up do
-        TestRepo.insert(%Barebone{num: #{num}})
+        TestRepo.insert!(%Barebone{num: #{num}})
       end
 
       def down do

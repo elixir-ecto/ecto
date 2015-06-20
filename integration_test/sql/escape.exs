@@ -6,29 +6,29 @@ defmodule Ecto.Integration.EscapeTest do
   alias Ecto.Integration.Post
 
   test "Repo.all escape" do
-    TestRepo.insert(%Post{title: "hello"})
+    TestRepo.insert!(%Post{title: "hello"})
 
     query = from(p in Post, select: "'\\")
     assert ["'\\"] == TestRepo.all(query)
   end
 
-  test "Repo.insert escape" do
-    TestRepo.insert(%Post{title: "'"})
+  test "Repo.insert! escape" do
+    TestRepo.insert!(%Post{title: "'"})
 
     query = from(p in Post, select: p.title)
     assert ["'"] == TestRepo.all(query)
   end
 
-  test "Repo.update escape" do
-    p = TestRepo.insert(%Post{title: "hello"})
-    TestRepo.update(%{p | title: "'"})
+  test "Repo.update! escape" do
+    p = TestRepo.insert!(%Post{title: "hello"})
+    TestRepo.update!(%{p | title: "'"})
 
     query = from(p in Post, select: p.title)
     assert ["'"] == TestRepo.all(query)
   end
 
   test "Repo.update_all escape" do
-    TestRepo.insert(%Post{title: "hello"})
+    TestRepo.insert!(%Post{title: "hello"})
     TestRepo.update_all(Post, title: "'")
 
     query = from(p in Post, select: p.title)
@@ -39,7 +39,7 @@ defmodule Ecto.Integration.EscapeTest do
   end
 
   test "Repo.delete_all escape" do
-    TestRepo.insert(%Post{title: "hello"})
+    TestRepo.insert!(%Post{title: "hello"})
     assert [_] = TestRepo.all(Post)
 
     TestRepo.delete_all(from(Post, where: "'" == "'"))

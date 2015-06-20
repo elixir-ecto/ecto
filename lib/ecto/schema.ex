@@ -626,11 +626,11 @@ defmodule Ecto.Schema do
   When using this technique, the only limitation is that you cannot
   build comments directly. For example, the command below
 
-      Repo.insert(%Comment{})
+      Repo.insert!(%Comment{})
 
   will attempt to use the abstract table. Instead, one should
 
-      Repo.insert(build(post, :comments))
+      Repo.insert!(build(post, :comments))
 
   where `build/2` is defined in `Ecto.Model`. You can also
   use `assoc/2` in both `Ecto.Model` and in the query syntax

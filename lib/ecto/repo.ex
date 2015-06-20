@@ -127,16 +127,16 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.delete_all(__MODULE__, @adapter, queryable, opts)
       end
 
-      def insert(model, opts \\ []) do
-        Ecto.Repo.Model.insert(__MODULE__, @adapter, model, opts)
+      def insert!(model, opts \\ []) do
+        Ecto.Repo.Model.insert!(__MODULE__, @adapter, model, opts)
       end
 
-      def update(model, opts \\ []) do
-        Ecto.Repo.Model.update(__MODULE__, @adapter, model, opts)
+      def update!(model, opts \\ []) do
+        Ecto.Repo.Model.update!(__MODULE__, @adapter, model, opts)
       end
 
-      def delete(model, opts \\ []) do
-        Ecto.Repo.Model.delete(__MODULE__, @adapter, model, opts)
+      def delete!(model, opts \\ []) do
+        Ecto.Repo.Model.delete!(__MODULE__, @adapter, model, opts)
       end
 
       def preload(model_or_models, preloads) do
@@ -379,10 +379,10 @@ defmodule Ecto.Repo do
 
   ## Example
 
-      post = MyRepo.insert %Post{title: "Ecto is great"}
+      post = MyRepo.insert!! %Post{title: "Ecto is great"}
 
   """
-  defcallback insert(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
+  defcallback insert!(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
   Updates a model or changeset using its primary key.
@@ -412,9 +412,9 @@ defmodule Ecto.Repo do
 
       post = MyRepo.get!(Post, 42)
       post = %{post | title: "New title"}
-      MyRepo.update(post)
+      MyRepo.update!!(post)
   """
-  defcallback update(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
+  defcallback update!(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
   Deletes a model using its primary key.
@@ -433,10 +433,10 @@ defmodule Ecto.Repo do
   ## Example
 
       [post] = MyRepo.all(from(p in Post, where: p.id == 42))
-      MyRepo.delete(post)
+      MyRepo.delete!!(post)
 
   """
-  defcallback delete(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
+  defcallback delete!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
   Runs the given function inside a transaction.
@@ -460,23 +460,23 @@ defmodule Ecto.Repo do
   ## Examples
 
       MyRepo.transaction(fn ->
-        MyRepo.update(%{alice | balance: alice.balance - 10})
-        MyRepo.update(%{bob | balance: bob.balance + 10})
+        MyRepo.update!(%{alice | balance: alice.balance - 10})
+        MyRepo.update!(%{bob | balance: bob.balance + 10})
       end)
 
       # In the following example only the comment will be rolled back
       MyRepo.transaction(fn ->
-        MyRepo.insert(%Post{})
+        MyRepo.insert!(%Post{})
 
         MyRepo.transaction(fn ->
-          MyRepo.insert(%Comment{})
+          MyRepo.insert!(%Comment{})
           raise "error"
         end)
       end)
 
       # Roll back a transaction explicitly
       MyRepo.transaction(fn ->
-        p = MyRepo.insert(%Post{})
+        p = MyRepo.insert!(%Post{})
         if not Editor.post_allowed?(p) do
           MyRepo.rollback(:posting_not_allowed)
         end

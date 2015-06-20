@@ -59,13 +59,13 @@ defmodule Ecto.Model.OptimisticLock do
   updated, but that same record has been modified since it was fetched), an
   `Ecto.StaleModelError` exception is raised.
 
-      iex> post = Repo.insert(%Post{title: "foo"})
+      iex> post = Repo.insert!(%Post{title: "foo"})
       %Post{id: 1, title: "foo", lock_version: 1}
       iex> valid_change = cast(%{title: "bar"}, post, ~w(title), ~w())
       iex> stale_change = cast(%{title: "baz"}, post, ~w(title), ~w())
-      iex> Repo.update(valid_change)
+      iex> Repo.update!(valid_change)
       %Post{id: 1, title: "bar", lock_version: 2}
-      iex> Repo.update(stale_change)
+      iex> Repo.update!(stale_change)
       ** (Ecto.StaleModelError) attempted to update a stale model:
 
       %Post{id: 1, title: "baz", lock_version: 1}

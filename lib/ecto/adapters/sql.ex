@@ -254,7 +254,7 @@ defmodule Ecto.Adapters.SQL do
         end
 
         test "create comment" do
-          assert %Post{} = TestRepo.insert(%Post{})
+          assert %Post{} = TestRepo.insert!(%Post{})
         end
       end
 
@@ -284,7 +284,7 @@ defmodule Ecto.Adapters.SQL do
         end
 
         test "create comment" do
-          assert %Post{} = TestRepo.insert(%Post{})
+          assert %Post{} = TestRepo.insert!(%Post{})
         end
       end
 

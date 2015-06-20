@@ -8,9 +8,9 @@ defmodule Ecto.Repo.Model do
   alias Ecto.Changeset
 
   @doc """
-  Implementation for `Ecto.Repo.insert/2`.
+  Implementation for `Ecto.Repo.insert!/2`.
   """
-  def insert(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+  def insert!(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
     struct   = struct_from_changeset!(changeset)
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
@@ -38,14 +38,14 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  def insert(repo, adapter, %{__struct__: _} = struct, opts) do
-    insert(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
+  def insert!(repo, adapter, %{__struct__: _} = struct, opts) do
+    insert!(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
   end
 
   @doc """
-  Implementation for `Ecto.Repo.update/2`.
+  Implementation for `Ecto.Repo.update!/2`.
   """
-  def update(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+  def update!(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
     struct   = struct_from_changeset!(changeset)
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
@@ -84,7 +84,7 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  def update(repo, adapter, %{__struct__: model} = struct, opts) do
+  def update!(repo, adapter, %{__struct__: model} = struct, opts) do
     changes = Map.take(struct, model.__schema__(:fields))
 
     # Remove all primary key fields from the list of changes.
@@ -92,13 +92,13 @@ defmodule Ecto.Repo.Model do
       Enum.reduce model.__schema__(:primary_key), changes, &Map.delete(&2, &1)
 
     changeset = %Changeset{model: struct, valid?: true, changes: changes}
-    update(repo, adapter, changeset, opts)
+    update!(repo, adapter, changeset, opts)
   end
 
   @doc """
-  Implementation for `Ecto.Repo.delete/2`.
+  Implementation for `Ecto.Repo.delete!/2`.
   """
-  def delete(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+  def delete!(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     source = struct.__meta__.source
@@ -125,8 +125,8 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  def delete(repo, adapter, %{__struct__: _} = struct, opts) do
-    delete(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
+  def delete!(repo, adapter, %{__struct__: _} = struct, opts) do
+    delete!(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
   end
 
   ## Helpers

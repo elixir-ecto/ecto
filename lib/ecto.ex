@@ -95,7 +95,7 @@ defmodule Ecto do
   The schema also allows the model to interact with a repository:
 
       iex> weather = %Weather{temp_lo: 0, temp_hi: 23}
-      iex> Repo.insert(weather)
+      iex> Repo.insert!(weather)
       %Weather{...}
 
   After persisting `weather` to the database, it will return a new copy of
@@ -108,11 +108,11 @@ defmodule Ecto do
 
       # Update it
       iex> weather = %{weather | temp_lo: 10}
-      iex> Repo.update(weather)
+      iex> Repo.update!(weather)
       %Weather{...}
 
       # Delete it
-      iex> Repo.delete(weather)
+      iex> Repo.delete!(weather)
       %Weather{...}
 
   > NOTE: by using `Ecto.Model`, an `:id` field with type `:integer` is
@@ -187,7 +187,7 @@ defmodule Ecto do
         changeset = User.changeset Repo.get!(User, id), params["user"]
 
         if changeset.valid? do
-          user = Repo.update(changeset)
+          user = Repo.update!(changeset)
           send_resp conn, 200, "Ok"
         else
           send_resp conn, 400, "Bad request"
@@ -205,7 +205,7 @@ defmodule Ecto do
         changeset = User.changeset %User{}, params["user"]
 
         if changeset.valid? do
-          user = Repo.insert(changeset)
+          user = Repo.insert!(changeset)
           send_resp conn, 200, "Ok"
         else
           send_resp conn, 400, "Bad request"

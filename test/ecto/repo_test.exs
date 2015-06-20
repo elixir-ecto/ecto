@@ -39,11 +39,11 @@ defmodule Ecto.RepoTest do
     model = %MyModelNoPK{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKeyError, fn ->
-      MockRepo.update(model)
+      MockRepo.update!(model)
     end
 
     assert_raise Ecto.NoPrimaryKeyError, fn ->
-      MockRepo.delete(model)
+      MockRepo.delete!(model)
     end
 
     assert_raise Ecto.NoPrimaryKeyError, fn ->
@@ -53,30 +53,30 @@ defmodule Ecto.RepoTest do
 
   test "works with primary key value" do
     model = %MyModel{id: 1, x: "abc"}
-    MockRepo.update(model)
-    MockRepo.delete(model)
+    MockRepo.update!(model)
+    MockRepo.delete!(model)
     MockRepo.get(MyModel, 123)
     MockRepo.get_by(MyModel, x: "abc")
   end
 
   test "works with custom source model" do
     model = %MyModel{id: 1, x: "abc", __meta__: %Ecto.Schema.Metadata{source: "custom_model"}}
-    MockRepo.update(model)
-    MockRepo.delete(model)
+    MockRepo.update!(model)
+    MockRepo.delete!(model)
 
     to_insert = %MyModel{x: "abc", __meta__: %Ecto.Schema.Metadata{source: "custom_model"}}
-    MockRepo.insert(to_insert)
+    MockRepo.insert!(to_insert)
   end
 
   test "fails without primary key value" do
     model = %MyModel{x: "abc"}
 
     assert_raise Ecto.MissingPrimaryKeyError, fn ->
-      MockRepo.update(model)
+      MockRepo.update!(model)
     end
 
     assert_raise Ecto.MissingPrimaryKeyError, fn ->
-      MockRepo.delete(model)
+      MockRepo.delete!(model)
     end
   end
 
@@ -84,13 +84,13 @@ defmodule Ecto.RepoTest do
     model = %MyModel{x: 123}
 
     assert_raise Ecto.ChangeError, fn ->
-      MockRepo.insert(model)
+      MockRepo.insert!(model)
     end
 
     model = %MyModel{id: 1, x: 123}
 
     assert_raise Ecto.ChangeError, fn ->
-      MockRepo.update(model)
+      MockRepo.update!(model)
     end
   end
 
@@ -167,19 +167,19 @@ defmodule Ecto.RepoTest do
 
   test "create and update accepts changesets" do
     valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
-    MockRepo.insert(valid)
-    MockRepo.update(valid)
+    MockRepo.insert!(valid)
+    MockRepo.update!(valid)
   end
 
   test "create and update fail on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
 
     assert_raise ArgumentError, "cannot insert/update an invalid changeset", fn ->
-      MockRepo.insert(invalid)
+      MockRepo.insert!(invalid)
     end
 
     assert_raise ArgumentError, "cannot insert/update an invalid changeset", fn ->
-      MockRepo.update(invalid)
+      MockRepo.update!(invalid)
     end
   end
 
@@ -187,33 +187,33 @@ defmodule Ecto.RepoTest do
     invalid = %Ecto.Changeset{valid?: true, model: nil}
 
     assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
-      MockRepo.insert(invalid)
+      MockRepo.insert!(invalid)
     end
 
     assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
-      MockRepo.update(invalid)
+      MockRepo.update!(invalid)
     end
   end
 
   ## Autogenerate
 
   test "autogenerates values" do
-    model = MockRepo.insert(%MyModel{})
+    model = MockRepo.insert!(%MyModel{})
     assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
-    model = MockRepo.insert(changeset)
+    model = MockRepo.insert!(changeset)
     assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{z: nil}, [], [])
-    model = MockRepo.insert(changeset)
+    model = MockRepo.insert!(changeset)
     assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{z: "30313233-3435-3637-3839-616263646566"}, [:z], [])
-    model = MockRepo.insert(changeset)
+    model = MockRepo.insert!(changeset)
     assert model.z == "30313233-3435-3637-3839-616263646566"
   end
 end
