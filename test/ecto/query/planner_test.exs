@@ -29,6 +29,7 @@ defmodule Ecto.Query.PlannerTest do
       field :title, :string
       field :text, :string
       field :code, :binary
+      field :posted, :datetime
       has_many :comments, Ecto.Query.PlannerTest.Comment
     end
   end
@@ -101,6 +102,12 @@ defmodule Ecto.Query.PlannerTest do
     permalink = "1-hello-world"
     {_query, params} = prepare(Post |> where([p], p.id == ^permalink))
     assert params == [1]
+  end
+
+  test "prepare: casts and dumps custom types to native ones" do
+    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
+    {_query, params} = prepare(Post |> where([p], p.posted == ^datetime))
+    assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
   end
 
   test "prepare: casts and dumps binary ids" do

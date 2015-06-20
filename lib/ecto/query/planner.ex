@@ -142,8 +142,11 @@ defmodule Ecto.Query.Planner do
 
   defp cast_param(kind, query, expr, v, type, id_types) do
     type = Ecto.Type.normalize(type, id_types)
-    case Ecto.Type.cast(type, v) do
+
+    case cast_param(type, v) do
       {:ok, v} ->
+        Ecto.Type.dump!(type, v)
+      {:match, type} ->
         Ecto.Type.dump!(type, v)
       :error ->
         error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
@@ -157,6 +160,20 @@ defmodule Ecto.Query.Planner do
       raise Ecto.CastError, model: model, field: field, value: value, type: type,
                             message: Exception.message(e) <>
                                      "\nError when casting value to `#{inspect model}.#{field}`"
+  end
+
+  defp cast_param(type, v) do
+    # If the type is a primitive type and we are giving it
+    # a struct, we first check if the struct type and the
+    # given type are match and, if so, use the struct type
+    # when dumping.
+    if Ecto.Type.primitive?(type) and
+       match?(%{__struct__: _}, v) and
+       Ecto.Type.match?(v.__struct__.type, type) do
+      {:match, v.__struct__}
+    else
+      Ecto.Type.cast(type, v)
+    end
   end
 
   defp unfold_in(%Ecto.Query.Tagged{value: value, type: {:array, type}}, acc),

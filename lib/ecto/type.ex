@@ -466,8 +466,8 @@ defmodule Ecto.Type do
   @spec cast(t, term) :: {:ok, term} | :error
   def cast(_type, nil), do: {:ok, nil}
 
-  def cast({:array, type}, value) do
-    array(type, value, &cast/2, [])
+  def cast({:array, type}, term) when is_list(term) do
+    array(type, term, &cast/2, [])
   end
 
   def cast(:float, term) when is_binary(term) do
