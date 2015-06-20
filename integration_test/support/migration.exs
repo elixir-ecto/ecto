@@ -20,8 +20,16 @@ defmodule Ecto.Integration.Migration do
     # only matters if the UUID column is not NULL.
     create index(:posts, [:uuid], unique: true)
 
-    create_users_table()
-    create_permalinks_table()
+    create table(:users) do
+      add :name, :text
+      add :custom_id, :uuid
+      timestamps
+    end
+
+    create table(:permalinks) do
+      add :url
+      add :post_id, :integer
+    end
 
     create table(:comments) do
       add :text, :string, size: 100
@@ -52,61 +60,6 @@ defmodule Ecto.Integration.Migration do
         add :ints, {:array, :integer}
         add :uuids, {:array, :uuid}
       end
-    end
-  end
-
-  # For the users table, let's do a longer migration,
-  # checking other migration features.
-  #
-  #     create table(:users) do
-  #       add :name, :text
-  #       add :custom_id, :uuid
-  #     end
-  #
-  defp create_users_table do
-    false = exists? table(:users)
-
-    create table(:users) do
-      add :name, :string
-      add :to_be_removed, :string
-    end
-
-    true = exists? table(:users)
-
-    alter table(:users) do
-      modify :name, :text
-      add :custom_id, :uuid
-      remove :to_be_removed
-      timestamps
-    end
-
-    index = index(:users, [:custom_id], unique: true)
-    false = exists? index
-    create index
-    true = exists? index
-    drop index
-    false = exists? index
-  end
-
-  # For the permalinks table, let's create a table,
-  # drop it, and get a new one.
-  #
-  #     create table(:permalinks) do
-  #       add :url
-  #       add :post_id, :integer
-  #       add :lock_version, :integer, default: 1
-  #     end
-  #
-  defp create_permalinks_table do
-    create table(:permalinks) do
-      add :to_be_removed
-    end
-
-    drop table(:permalinks)
-
-    create table(:permalinks) do
-      add :url
-      add :post_id, :integer
     end
   end
 end
