@@ -450,12 +450,14 @@ defmodule Ecto.Adapters.MySQLTest do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
                 {:modify, :price, :numeric, [precision: 8, scale: 2]},
+                {:rename, :details, :description, :string, [size: 1000]},
                 {:remove, :summary}]}
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE `posts`
     ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
     MODIFY `price` numeric(8,2),
+    CHANGE `details` `description` varchar(1000),
     DROP `summary`
     """ |> String.strip |> String.replace("\n", " ")
   end

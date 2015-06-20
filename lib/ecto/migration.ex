@@ -185,6 +185,7 @@ defmodule Ecto.Migration do
       alter table(:posts) do
         add :summary, :text
         modify :title, :text
+        rename :details, :description, :text
         remove :views
       end
 
@@ -430,6 +431,27 @@ defmodule Ecto.Migration do
   """
   def modify(column, type, opts \\ []) when is_atom(column) do
     Runner.subcommand {:modify, column, type, opts}
+  end
+
+  @doc """
+  Rename the column when altering a table.
+
+  See `add/3` for more information on supported types.
+
+  ## Examples
+
+      alter table(:posts) do
+        rename :details, :description, :text
+      end
+
+  ## Options
+
+    * `:size` - the size of the type (for example the numbers of characters). Default is no size.
+    * `:precision` - the precision for a numberic type. Default is no precision.
+    * `:scale` - the scale of a numberic type. Default is 0 scale.
+  """
+  def rename(column, new_name, type \\ :string, opts \\ []) when is_atom(column) do
+    Runner.subcommand {:rename, column, new_name, type, opts}
   end
 
   @doc """

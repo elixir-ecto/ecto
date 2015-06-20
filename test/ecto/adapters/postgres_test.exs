@@ -469,12 +469,14 @@ defmodule Ecto.Adapters.PostgresTest do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
                 {:modify, :price, :numeric, [precision: 8, scale: 2]},
+                {:rename, :details, :description, :string, [size: 1000]},
                 {:remove, :summary}]}
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "posts"
     ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL,
     ALTER COLUMN "price" TYPE numeric(8,2),
+    RENAME COLUMN "details" TO "description",
     DROP COLUMN "summary"
     """ |> String.strip |> String.replace("\n", " ")
   end

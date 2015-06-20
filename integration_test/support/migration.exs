@@ -68,6 +68,7 @@ defmodule Ecto.Integration.Migration do
 
     create table(:users) do
       add :name, :string
+      add :details, :string
       add :to_be_removed, :string
     end
 
@@ -78,6 +79,10 @@ defmodule Ecto.Integration.Migration do
       add :custom_id, :uuid
       remove :to_be_removed
       timestamps
+    end
+
+    alter table(:users) do
+      rename :details, :description, :string
     end
 
     index = index(:users, [:custom_id], unique: true)
