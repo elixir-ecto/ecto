@@ -10,6 +10,7 @@ defmodule Ecto.ChangesetTest do
     schema "posts" do
       field :title
       field :body
+      field :uuid, :binary_id
       field :upvotes, :integer, default: 0
     end
   end
@@ -47,6 +48,13 @@ defmodule Ecto.ChangesetTest do
     assert changeset.validations == []
     assert changeset.required == [:title]
     assert changeset.optional == [:body]
+    assert changeset.valid?
+  end
+
+  test "cast/4: with binary id" do
+    changeset = cast(%Post{}, %{"uuid" => "hello"}, [:uuid])
+    assert changeset.changes == %{uuid: "hello"}
+    assert changeset.errors == []
     assert changeset.valid?
   end
 
