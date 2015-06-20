@@ -167,14 +167,19 @@ defmodule Ecto.Query.Planner do
     # a struct, we first check if the struct type and the
     # given type are match and, if so, use the struct type
     # when dumping.
-    if Ecto.Type.primitive?(type) and
-       match?(%{__struct__: _}, v) and
+    if Ecto.Type.primitive?(type) &&
+       (struct = param_struct(v)) &&
        Ecto.Type.match?(v.__struct__.type, type) do
       {:match, v.__struct__}
     else
       Ecto.Type.cast(type, v)
     end
   end
+
+  defp param_struct(%{__struct__: struct}) when not struct in [Decimal] do
+    struct
+  end
+  defp param_struct(_), do: nil
 
   defp unfold_in(%Ecto.Query.Tagged{value: value, type: {:array, type}}, acc),
     do: unfold_in(value, type, acc)
@@ -383,7 +388,6 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  # Normalize the select field.
   defp normalize_select(query, only_where) do
     cond do
       only_where ->
