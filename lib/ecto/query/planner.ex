@@ -169,8 +169,8 @@ defmodule Ecto.Query.Planner do
     # when dumping.
     if Ecto.Type.primitive?(type) &&
        (struct = param_struct(v)) &&
-       Ecto.Type.match?(v.__struct__.type, type) do
-      {:match, v.__struct__}
+       Ecto.Type.match?(struct.type, type) do
+      {:match, struct}
     else
       Ecto.Type.cast(type, v)
     end
