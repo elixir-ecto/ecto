@@ -5,7 +5,9 @@ defmodule Ecto.Integration.MigratorTest do
 
   import Support.FileHelpers
   import Ecto.Migrator, only: [migrated_versions: 1]
-  require Ecto.Integration.TestRepo, as: TestRepo
+
+  alias Ecto.Integration.Barebone
+  alias Ecto.Integration.TestRepo
 
   defmodule GoodMigration do
     use Ecto.Migration
@@ -102,8 +104,7 @@ defmodule Ecto.Integration.MigratorTest do
   end
 
   defp count_entries() do
-    import Ecto.Query, only: [from: 2]
-    TestRepo.one! from p in "barebones", select: count(1)
+    length TestRepo.all Barebone
   end
 
   defp create_migration(num) do
@@ -113,12 +114,16 @@ defmodule Ecto.Integration.MigratorTest do
     defmodule #{module} do
       use Ecto.Migration
 
+      import Ecto.Query, only: [from: 2]
+      alias Ecto.Integration.TestRepo
+      alias Ecto.Integration.Barebone
+
       def up do
-        execute "INSERT INTO barebones (num) VALUES (#{num})"
+        TestRepo.insert(%Barebone{num: #{num}})
       end
 
       def down do
-        execute "DELETE FROM barebones WHERE num = #{num}"
+        TestRepo.delete_all from b in Barebone, where: b.num == #{num}
       end
     end
     """
