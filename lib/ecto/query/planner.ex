@@ -12,7 +12,7 @@ defmodule Ecto.Query.Planner do
   @doc """
   Validates and cast the given fields belonging to the given model.
   """
-  def fields(kind, model, kw, id_types, dumper \\ &Ecto.Type.dump/2) do
+  def fields(kind, model, kw, id_types) do
     types = model.__changeset__
 
     for {field, value} <- kw do
@@ -23,7 +23,7 @@ defmodule Ecto.Query.Planner do
           message: "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
       end
 
-      case dumper.(type, value) do
+      case Ecto.Type.dump(type, value) do
         {:ok, value} ->
           {field, value}
         :error ->
