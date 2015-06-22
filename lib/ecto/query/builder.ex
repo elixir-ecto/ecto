@@ -70,11 +70,19 @@ defmodule Ecto.Query.Builder do
   end
 
   # fragments
-  def escape({:fragment, meta, [query|frags]}, _type, params, vars, env) do
-    unless is_binary(query) do
-      error! "fragment(...) expects the first argument to be a string, got: `#{Macro.to_string(query)}`"
-    end
+  def escape({:fragment, meta, [query]}, _type, params, vars, env) when is_list(query) do
+    {escaped, params} = Enum.map_reduce(query, params, &escape_pair(&1, :any, &2, vars, env))
 
+    {{:{}, [], [:fragment, meta, [escaped]]}, params}
+  end
+
+  def escape({:fragment, meta, [{:^, _, _} = expr]}, _type, params, vars, env) do
+    {escaped, params} = escape(expr, :any, params, vars, env)
+
+    {{:{}, [], [:fragment, meta, [escaped]]}, params}
+  end
+
+  def escape({:fragment, meta, [query|frags]}, _type, params, vars, env) when is_binary(query) do
     pieces = String.split(query, "?")
 
     if length(pieces) != length(frags) + 1 do
@@ -83,6 +91,11 @@ defmodule Ecto.Query.Builder do
 
     {frags, params} = Enum.map_reduce(frags, params, &escape(&1, :any, &2, vars, env))
     {{:{}, [], [:fragment, meta, merge_fragments(pieces, frags)]}, params}
+  end
+
+  def escape({:fragment, _, [query | _]}, _type, _params, _vars, _end) do
+    error! "fragment(...) expects the first argument to be a string for SQL fragments, " <>
+           "a keyword list, or an interpolated value, got: `#{Macro.to_string(query)}`"
   end
 
   # sigils
@@ -173,6 +186,20 @@ defmodule Ecto.Query.Builder do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
     expr = {:{}, [], [name, meta, args]}
     {expr, params}
+  end
+
+  defp escape_pair({key, [{_, _}|_] = exprs}, type, params, vars, env) when is_atom(key) do
+    {escaped, params} = Enum.map_reduce(exprs, params, &escape_pair(&1, type, &2, vars, env))
+    {{key, escaped}, params}
+  end
+
+  defp escape_pair({key, expr}, type, params, vars, env) when is_atom(key) do
+    {escaped, params} = escape(expr, type, params, vars, env)
+    {{key, escaped}, params}
+  end
+
+  defp escape_pair({key, _expr}, _type, _params, _vars, _env) do
+    error! "fragment(...) with keywords accepts only atoms as keys, got `#{Macro.to_string(key)}`"
   end
 
   defp merge_fragments([h1|t1], [h2|t2]),
