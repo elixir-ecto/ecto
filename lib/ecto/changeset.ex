@@ -800,7 +800,7 @@ defmodule Ecto.Changeset do
   ## Scope
 
   The `:scope` option allows specifying of other fields that are used to limit
-  the uniqueness check. For exmaple, if our use case limits a user to a single
+  the uniqueness check. For example, if our use case limits a user to a single
   comment per blog post, it would look something like:
 
       cast(params, model, ~w(comment), ~w())
