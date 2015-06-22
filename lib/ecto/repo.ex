@@ -127,6 +127,18 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.delete_all(__MODULE__, @adapter, queryable, opts)
       end
 
+      def insert(model, opts \\ []) do
+        Ecto.Repo.Model.insert(__MODULE__, @adapter, model, opts)
+      end
+
+      def update(model, opts \\ []) do
+        Ecto.Repo.Model.update(__MODULE__, @adapter, model, opts)
+      end
+
+      def delete(model, opts \\ []) do
+        Ecto.Repo.Model.delete(__MODULE__, @adapter, model, opts)
+      end
+
       def insert!(model, opts \\ []) do
         Ecto.Repo.Model.insert!(__MODULE__, @adapter, model, opts)
       end

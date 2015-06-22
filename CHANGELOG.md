@@ -1,8 +1,8 @@
 # Changelog
 
-## v0.12.0-rc
+## v0.12.0
 
-Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0-rc
+Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0
 
 * Enhancements
   * Add `put_source/2` function to `Ecto.Model`
@@ -12,8 +12,14 @@ Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0-rc
   * Support `:autogenerate` for custom types
   * Introduce new `:id` and `:binary_id` types that support autogeneration inside primary keys and are handled by the database
 
+* Bug fixes
+  * Ensure confirmation is required if field is given but nil
+
 * Deprecations
-  * `:read_after_writes` is deprecated in favor of `:autogenerate`
+  * `:read_after_writes` is deprecated in favor of `:autogenerate` in `Ecto.Schema.field/3`
+  * `Repo.insert/2` is deprecated in favor of `Repo.insert!/2`
+  * `Repo.update/2` is deprecated in favor of `Repo.update!/2`
+  * `Repo.delete/2` is deprecated in favor of `Repo.delete!/2`
 
 * Backwards incompatible changes
   * `Repo.log/2` is no longer invoked. Instead `Repo.log/1` is called with an `Ecto.LogEntry`

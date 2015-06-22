@@ -7,6 +7,24 @@ defmodule Ecto.Repo.Model do
   alias Ecto.Model.Callbacks
   alias Ecto.Changeset
 
+  def insert(repo, adapter, model_or_changeset, opts) do
+    IO.puts :stderr, "[warning] Repo.insert/2 is deprecated, please use Repo.insert!/2 instead\n" <>
+                     Exception.format_stacktrace()
+    insert!(repo, adapter, model_or_changeset, opts)
+  end
+
+  def update(repo, adapter, model_or_changeset, opts) do
+    IO.puts :stderr, "[warning] Repo.update/2 is deprecated, please use Repo.update!/2 instead\n" <>
+                     Exception.format_stacktrace()
+    update!(repo, adapter, model_or_changeset, opts)
+  end
+
+  def delete(repo, adapter, model_or_changeset, opts) do
+    IO.puts :stderr, "[warning] Repo.delete/2 is deprecated, please use Repo.delete!/2 instead\n" <>
+                     Exception.format_stacktrace()
+    delete!(repo, adapter, model_or_changeset, opts)
+  end
+
   @doc """
   Implementation for `Ecto.Repo.insert!/2`.
   """
