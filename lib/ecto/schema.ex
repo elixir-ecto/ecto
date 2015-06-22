@@ -670,8 +670,6 @@ defmodule Ecto.Schema do
 
     unless opts[:virtual] do
       if raw = opts[:read_after_writes] do
-        IO.puts :stderr, "[warning] :read_after_writes is deprecated. It was declared for " <>
-                         "field #{inspect name} in model #{inspect mod}"
         Module.put_attribute(mod, :ecto_raw, name)
       end
 
