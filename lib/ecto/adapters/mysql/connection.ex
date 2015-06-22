@@ -26,6 +26,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def query(conn, sql, params, opts \\ []) do
       params = Enum.map params, fn
         %Ecto.Query.Tagged{value: value} -> value
+        %{__struct__: _} = value -> value
+        %{} = value -> json_library.encode!(value)
         value -> value
       end
 
@@ -37,6 +39,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
     defp normalize_port(port) when is_integer(port), do: port
+
+    defp json_library do
+      Application.get_env(:ecto, :json_library)
+    end
 
     ## Transaction
 
@@ -550,6 +556,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp ecto_to_db(:float),      do: "double"
     defp ecto_to_db(:binary),     do: "blob"
     defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
+    defp ecto_to_db(:map),        do: "text"
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end

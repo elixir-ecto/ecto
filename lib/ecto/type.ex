@@ -84,10 +84,10 @@ defmodule Ecto.Type do
 
   @typep base      :: :integer | :float | :boolean | :string |
                       :binary | :decimal | :datetime | :time |
-                      :date | :id | :binary_id | :any
+                      :date | :id | :binary_id | :map | :any
   @typep composite :: {:array, base}
 
-  @base      ~w(integer float boolean string binary decimal datetime time date id binary_id any)a
+  @base      ~w(integer float boolean string binary decimal datetime time date id binary_id map any)a
   @composite ~w(array)a
 
   @doc """
@@ -363,6 +363,10 @@ defmodule Ecto.Type do
   def load(:boolean, 0), do: {:ok, false}
   def load(:boolean, 1), do: {:ok, true}
 
+  def load(:map, value) when is_binary(value) do
+    {:ok, Application.get_env(:ecto, :json_library).decode!(value)}
+  end
+
   def load({:array, type}, value) do
     array(type, value, &load/2, [])
   end
@@ -528,6 +532,7 @@ defmodule Ecto.Type do
 
   defp of_base_type?(:binary, term), do: is_binary(term)
   defp of_base_type?(:string, term), do: is_binary(term)
+  defp of_base_type?(:map, term),    do: is_map(term) and not Map.has_key?(term, :__struct__)
 
   defp of_base_type?(:decimal, %Decimal{}), do: true
   defp of_base_type?(:date, {_, _, _}),  do: true

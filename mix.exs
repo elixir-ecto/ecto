@@ -27,14 +27,16 @@ defmodule Ecto.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :decimal, :poolboy]]
+    [applications: [:logger, :decimal, :poolboy],
+     env: [json_library: Poison]]
   end
 
   defp deps do
     [{:poolboy, "~> 1.4"},
      {:decimal, "~> 1.0"},
-     {:postgrex, "~> 0.8.0", optional: true},
+     {:postgrex, "~> 0.8.3", optional: true},
      {:mariaex, "~> 0.2.2", optional: true},
+     {:poison, "~> 1.0", optional: true},
      {:ex_doc, "~> 0.7", only: :docs},
      {:earmark, "~> 0.1", only: :docs},
      {:inch_ex, only: :docs}]

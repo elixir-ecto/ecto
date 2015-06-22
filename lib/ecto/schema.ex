@@ -124,6 +124,7 @@ defmodule Ecto.Schema do
   `:binary`               | `binary`                | `<<int, int, int, ...>>`
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
   `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
+  `:map`                  | `map`
   `:datetime`             | `{{year, month, day}, {hour, min, sec}}`
   `:date`                 | `{year, month, day}`
   `:time`                 | `{hour, min, sec}`

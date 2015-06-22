@@ -28,6 +28,15 @@ defmodule Ecto.TypeTest do
     assert load(:boolean, 0) == {:ok, false}
   end
 
+  test "map types" do
+    assert load(:map, "{\"a\": 1}") == {:ok, %{"a" => 1}}
+    assert load(:map, %{"a" => 1}) == {:ok, %{"a" => 1}}
+    assert load(:map, 1) == :error
+
+    assert dump(:map, %{a: 1}) == {:ok, %{a: 1}}
+    assert dump(:map, 1) == :error
+  end
+
   test "custom types with array" do
     assert load({:array, Custom}, ["foo"]) == {:ok, [:load]}
     assert dump({:array, Custom}, ["foo"]) == {:ok, [:dump]}

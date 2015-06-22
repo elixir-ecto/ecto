@@ -35,6 +35,7 @@ defmodule Ecto.Integration.Post do
     field :intensity, :float
     field :bid, :binary_id
     field :uuid, Ecto.UUID, autogenerate: true
+    field :meta, :map
     has_many :comments, Ecto.Integration.Comment
     has_one :permalink, Ecto.Integration.Permalink
     has_many :comments_authors, through: [:comments, :author]

@@ -15,11 +15,12 @@ defmodule Ecto.Integration.TypeTest do
     float    = 0.1
     text     = <<0,1>>
     uuid     = "00010203-0405-0607-0809-0a0b0c0d0e0f"
+    meta     = %{"foo" => "bar", "baz" => "bat"}
     datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
                               hour: 20, min: 26, sec: 51, usec: 0}
 
     TestRepo.insert!(%Post{text: text, public: true, visits: integer, uuid: uuid, counter: integer,
-                          inserted_at: datetime, intensity: float})
+                           inserted_at: datetime, intensity: float, meta: meta})
 
     # nil
     assert [nil] = TestRepo.all(from Post, select: nil)
@@ -48,6 +49,9 @@ defmodule Ecto.Integration.TypeTest do
 
     # Datetime
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
+
+    # Maps
+    assert [^meta] = TestRepo.all(from p in Post, where: not is_nil(p.meta), select: p.meta)
   end
 
   @tag :decimal_type
