@@ -391,7 +391,7 @@ defmodule Ecto.Repo do
 
   ## Example
 
-      post = MyRepo.insert!! %Post{title: "Ecto is great"}
+      post = MyRepo.insert! %Post{title: "Ecto is great"}
 
   """
   defcallback insert!(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
