@@ -72,10 +72,9 @@ defmodule Ecto.Adapters.SQL do
 
       # Nil binary_ids are generated in the adapter.
       def insert(repo, source, params, {key, :binary_id, nil}, returning, opts) do
-        %{binary_id: binary_id} = id_types(repo)
-        autogenerate = [{key, binary_id.bingenerate}]
-        case insert(repo, source, autogenerate ++ params, nil, returning, opts) do
-          {:ok, values}     -> {:ok, autogenerate ++ values}
+        {req, resp} = Ecto.Adapters.SQL.bingenerate(key, id_types(repo))
+        case insert(repo, source, req ++ params, nil, returning, opts) do
+          {:ok, values}     -> {:ok, resp ++ values}
           {:error, _} = err -> err
         end
       end
@@ -414,6 +413,16 @@ defmodule Ecto.Adapters.SQL do
   end
 
   ## Query
+
+  @doc false
+  def bingenerate(key, id_types) do
+    %{binary_id: binary_id} = id_types
+    {:ok, value} = binary_id.dump(binary_id.generate)
+    {[{key, value}], [{key, unwrap(value)}]}
+  end
+
+  defp unwrap(%Ecto.Query.Tagged{value: value}), do: value
+  defp unwrap(value), do: value
 
   @doc false
   def all(repo, sql, query, params, id_types, opts) do
