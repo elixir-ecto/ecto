@@ -717,7 +717,7 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      validate_inclusion(changeset, :gender, ["male", "female", "who cares?"])
+      validate_inclusion(changeset, :gender, ["man", "woman", "other", "prefer not to say"])
       validate_inclusion(changeset, :age, 0..99)
 
   """
@@ -968,7 +968,7 @@ defmodule Ecto.Changeset do
       validate_confirmation(changeset, :password, message: "passwords do not match")
 
       cast(params, model, ~w(password), ~w())
-      |> validate_confirmation(:password, message: "passwords do not match")  
+      |> validate_confirmation(:password, message: "passwords do not match")
 
   """
   @spec validate_confirmation(t, atom, Enum.t) :: t
