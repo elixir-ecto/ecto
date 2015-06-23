@@ -1,6 +1,6 @@
 defmodule Ecto.Integration.Pool do
   alias Ecto.Integration.Connection
-  alias Ecto.Adapters.Pool.Transaction
+  alias Ecto.Adapters.Pool
 
   defmacro __using__(pool_mod) do
     quote do
@@ -9,7 +9,7 @@ defmodule Ecto.Integration.Pool do
       end
 
       def transaction(pool, timeout, fun) do
-        Transaction.transaction(unquote(pool_mod), pool, timeout, fun)
+        Pool.transaction(unquote(pool_mod), pool, timeout, fun)
       end
       defdelegate stop(pool), to: unquote(pool_mod)
 

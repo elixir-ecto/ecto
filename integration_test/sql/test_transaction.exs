@@ -54,7 +54,7 @@ defmodule Ecto.Integration.TestTransactionTest do
     TestRepo.transaction(fn ->
       {pool_mod, pool, _} = TestRepo.__pool__
       assert %{depth: ^depth, mode: ^mode} =
-        Process.get({Ecto.Adapters.Pool.Transaction, pool_mod, pool})
+        Process.get({Ecto.Adapters.Pool, pool_mod, pool})
     end)
   end
 end

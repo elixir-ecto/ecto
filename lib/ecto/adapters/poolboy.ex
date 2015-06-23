@@ -12,7 +12,6 @@ defmodule Ecto.Adapters.Poolboy do
 
   alias Ecto.Adapters.Poolboy.Worker
   @behaviour Ecto.Adapters.Pool
-  @behaviour Ecto.Adapters.Pool.Transaction
 
   @doc """
   Starts a pool of connections for the given connection module and options.
