@@ -67,28 +67,23 @@ defmodule Ecto.Adapters.Pool do
   @doc """
   Checkout a connection from a pool and open a transaction.
 
-  Returns `{mode, conn, queue_time}` on success, where `conn` is any connection
-  data associated with the transaction. The connection data can be retrieved
-  inside a `transaction/4` with `connection/2`.
+  Returns `{mode, worker, conn, queue_time}` on success, where `worker` is the
+  worker term and conn is a 2-tuple contain the connection's module and
+  pid. The `conn` tuple can be retrieved inside a `transaction/4` with
+  `connection/2`.
 
   Returns `{:error, :noproc}` if the pool is not alive and
   `{:error, :noconnect}` if a connection is not available.
   """
   defcallback open_transaction(t, timeout) ::
-    {mode, conn, queue_time} | {:error, :noproc | :noconnect} when conn: any
-
-  @doc """
-  Get the connection module and process from the connection data for the current
-  transaction.
-  """
-  defcallback transaction_connection(t, conn, timeout) ::
-    {:ok, {module, pid}} | {:error, :noconnect} when conn: any
+    {mode, worker, conn, queue_time} |
+    {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
 
   @doc """
   Sets the mode of transaction to `mode`.
   """
-  defcallback transaction_mode(t, conn, mode, timeout) ::
-    :ok | {:error, :noconnect} when conn: any
+  defcallback transaction_mode(t, worker, mode, timeout) ::
+    :ok | {:error, :noconnect} when worker: any
 
   @doc """
   Closes the transaction and returns the connection back into the pool.
@@ -96,7 +91,7 @@ defmodule Ecto.Adapters.Pool do
   Called once the transaction at `depth` `1` is finished, if the transaction
   is not broken with `disconnect/2`.
   """
-  defcallback close_transaction(t, conn, timeout) :: :ok when conn: any
+  defcallback close_transaction(t, worker, timeout) :: :ok when worker: any
 
   @doc """
   Disconnects the connection for the current transaction.
@@ -105,7 +100,7 @@ defmodule Ecto.Adapters.Pool do
   However when in `:sandbox` mode the connection is not closed but the
   transaction can no longer access the connection.
   """
-  defcallback disconnect_transaction(t, conn, timeout) :: :ok when conn: any
+  defcallback disconnect_transaction(t, worker, timeout) :: :ok when worker: any
 
   @doc """
   Carry out a transaction using a pool.
@@ -186,16 +181,16 @@ defmodule Ecto.Adapters.Pool do
 
       Pool.transaction(mod, pool, timeout,
         fn(ref, :raw, 1, _queue_time) ->
-          {:ok, {mod, conn}} = Pool.connection(ref, timeout)
+          {:ok, {mod, conn}} = Pool.connection(ref)
         end)
 
   """
-  @spec connection(ref, timeout) ::
-    {:ok, conn} | {:error, :noconnect} when conn: any
-  def connection(ref, timeout) do
+  @spec connection(ref) ::
+    {:ok, conn} | {:error, :noconnect} when conn: {module, pid}
+  def connection(ref) do
     case Process.get(ref) do
-      %{conn: _} = info ->
-        connection(ref, info, timeout)
+      %{conn: conn} ->
+        {:ok, conn}
       %{} ->
         {:error, :noconnect}
     end
@@ -211,9 +206,9 @@ defmodule Ecto.Adapters.Pool do
 
       Pool.transaction(mod, pool, timout,
         fn(ref, :raw, 1, _queue_time) ->
-          {:ok, {mod, conn}} = Pool.connection(ref, timeout)
+          {:ok, {mod, conn}} = Pool.connection(ref)
           :ok = Pool.disconnect(ref, timeout)
-          {:error, :noconnect} = Pool.connection(ref, timeout)
+          {:error, :noconnect} = Pool.connection(ref)
         end)
 
       Pool.transaction(mod, pool, timeout,
@@ -227,9 +222,9 @@ defmodule Ecto.Adapters.Pool do
   @spec disconnect(ref, timeout) :: :ok
   def disconnect({__MODULE__, pool_mod, pool} = ref, timeout) do
     case Process.get(ref) do
-      %{conn: conn} = info ->
+      %{conn: _, worker: worker} = info ->
         _ = Process.put(ref, Map.delete(info, :conn))
-        pool_mod.disconnect_transaction(pool, conn, timeout)
+        pool_mod.disconnect_transaction(pool, worker, timeout)
       %{} ->
         :ok
     end
@@ -247,7 +242,7 @@ defmodule Ecto.Adapters.Pool do
             Pool.fuse(ref, timeout, fn() -> "oops" end)
           rescue
             RuntimeError ->
-              {:error, :noconnect} = Pool.connection(ref, timeout)
+              {:error, :noconnect} = Pool.connection(ref)
           end
         end)
 
@@ -297,9 +292,9 @@ defmodule Ecto.Adapters.Pool do
 
   defp open_transaction(pool_mod, pool, timeout) do
     case pool_mod.open_transaction(pool, timeout) do
-      {mode, conn, time} when mode in [:raw, :sandbox] ->
+      {mode, worker, conn, time} when mode in [:raw, :sandbox] ->
         # We got permission to start a transaction
-        {:ok, %{conn: conn, depth: 0, mode: mode}, time}
+        {:ok, %{worker: worker, conn: conn, depth: 0, mode: mode}, time}
       {:error, reason} = error when reason in [:noproc, :noconnect] ->
         error
       {:error, err} ->
@@ -307,32 +302,20 @@ defmodule Ecto.Adapters.Pool do
     end
   end
 
-  defp close_transaction(pool_mod, pool, %{conn: conn}, timeout) do
-    pool_mod.close_transaction(pool, conn, timeout)
+  defp close_transaction(pool_mod, pool, %{conn: _, worker: worker}, timeout) do
+    pool_mod.close_transaction(pool, worker, timeout)
   end
   defp close_transaction(_, _, %{}, _) do
     :ok
   end
 
-  defp mode({__MODULE__, pool_mod, pool} = ref, %{conn: conn} = info,
+  defp mode({__MODULE__, pool_mod, pool} = ref, %{worker: worker} = info,
   mode, timeout) do
-    put_mode = fn() -> pool_mod.transaction_mode(pool, conn, mode, timeout) end
+    put_mode = fn() -> pool_mod.transaction_mode(pool, worker, mode, timeout) end
     case fuse(ref, timeout, put_mode) do
       :ok ->
         _ = Process.put(ref, %{info | mode: mode})
         :ok
-      {:error, :noconnect} = error ->
-        _ = Process.put(ref, Map.delete(info, :conn))
-        error
-    end
-  end
-
-  defp connection({__MODULE__, pool_mod, pool} = ref, %{conn: conn} = info,
-  timeout) do
-    get_conn = fn() -> pool_mod.transaction_connection(pool, conn, timeout) end
-    case fuse(ref, timeout, get_conn) do
-      {:ok, {_, _}} = ok ->
-        ok
       {:error, :noconnect} = error ->
         _ = Process.put(ref, Map.delete(info, :conn))
         error

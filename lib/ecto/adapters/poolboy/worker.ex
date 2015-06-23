@@ -7,7 +7,7 @@ defmodule Ecto.Adapters.Poolboy.Worker do
   @type modconn :: {module :: atom, conn :: pid}
 
   def start_link({module, params}) do
-    GenServer.start_link(__MODULE__, {module, params})
+    GenServer.start_link(__MODULE__, {module, params}, [debug: [:log]])
   end
 
   @spec open_transaction(pid, timeout) :: :ok
@@ -57,7 +57,7 @@ defmodule Ecto.Adapters.Poolboy.Worker do
   end
 
   def handle_call(:disconnect_transaction, _from, %{transaction: nil} = s) do
-    {:stop, :notransaction, s}
+    {:stop, :notransaction, :ok, s}
   end
 
   def handle_call(:disconnect_transaction, _from, s) do

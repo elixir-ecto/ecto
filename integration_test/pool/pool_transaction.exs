@@ -15,7 +15,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
         assert mode === :raw
         assert depth === 1
         assert is_integer(queue_time)
-        assert {:ok, {_mod, conn1}} = Pool.connection(ref, @timeout)
+        assert {:ok, {_mod, conn1}} = Pool.connection(ref)
         ref = Process.monitor(conn1)
         Process.exit(conn1, :kill)
         receive do: ({:DOWN, ^ref, _, _, _} -> :ok)
@@ -26,7 +26,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
       assert mode === :raw
       assert depth === 1
       assert is_integer(queue_time)
-      assert {:ok, {_mod, conn2}} = Pool.connection(ref, @timeout)
+      assert {:ok, {_mod, conn2}} = Pool.connection(ref)
       assert conn1 != conn2
       refute Process.alive?(conn1)
       assert Process.alive?(conn2)
@@ -41,10 +41,10 @@ defmodule Ecto.Integration.PoolTransactionTest do
         assert mode === :raw
         assert depth === 1
         assert is_integer(queue_time)
-        assert {:ok, {_mod, conn1}} = Pool.connection(ref, @timeout)
+        assert {:ok, {_mod, conn1}} = Pool.connection(ref)
         monitor = Process.monitor(conn1)
         assert Pool.disconnect(ref, @timeout) === :ok
-        assert Pool.connection(ref, @timeout) == {:error, :noconnect}
+        assert Pool.connection(ref) == {:error, :noconnect}
         assert receive do: ({:DOWN, ^monitor, _, _, _} -> :ok)
       end)
   end
@@ -53,12 +53,12 @@ defmodule Ecto.Integration.PoolTransactionTest do
     {:ok, pool} = TestPool.start_link([lazy: false])
 
     TestPool.transaction(pool, @timeout, fn(ref, _, _, _) ->
-      assert {:ok, {Connection, conn}} = Pool.connection(ref, @timeout)
+      assert {:ok, {Connection, conn}} = Pool.connection(ref)
       try do
         Pool.fuse(ref, @timeout, fn() -> raise "oops" end)
       rescue
         RuntimeError ->
-          assert Pool.connection(ref, @timeout) === {:error, :noconnect}
+          assert Pool.connection(ref) === {:error, :noconnect}
       end
       refute Process.alive?(conn)
     end)
@@ -71,7 +71,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
     parent = self()
     {:ok, task} = Task.start_link(fn ->
       TestPool.transaction(pool, @timeout, fn(ref, _, _, _) ->
-        {:ok, {_, conn1}} = Pool.connection(ref, @timeout)
+        {:ok, {_, conn1}} = Pool.connection(ref)
         send(parent, {:go, self(), conn1})
         :timer.sleep(:infinity)
       end)
@@ -82,7 +82,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
     assert_receive {:EXIT, ^task, :killed}, @timeout
 
     TestPool.transaction(pool, @timeout, fn(ref, _, _, _) ->
-      assert {:ok, {_, conn2}} = Pool.connection(ref, @timeout)
+      assert {:ok, {_, conn2}} = Pool.connection(ref)
       assert conn1 != conn2
       refute Process.alive?(conn1)
       assert Process.alive?(conn2)
@@ -94,14 +94,14 @@ defmodule Ecto.Integration.PoolTransactionTest do
 
     task = Task.async(fn ->
       TestPool.transaction(pool, @timeout, fn(ref, _, _, _) ->
-        {:ok, {_, conn}} = Pool.connection(ref, @timeout)
+        {:ok, {_, conn}} = Pool.connection(ref)
         conn
       end)
     end)
 
     assert {:ok, conn1} = Task.await(task, @timeout)
     TestPool.transaction(pool, @timeout, fn(ref, _, _, _) ->
-      assert {:ok, {_, ^conn1}} = Pool.connection(ref, @timeout)
+      assert {:ok, {_, ^conn1}} = Pool.connection(ref)
       assert Process.alive?(conn1)
     end)
   end
@@ -124,12 +124,12 @@ defmodule Ecto.Integration.PoolTransactionTest do
 
     TestPool.transaction(pool, @timeout, fn(ref, mode, _depth, _queue_time) ->
       assert mode === :raw
-      assert {:ok, {_, conn}} = Pool.connection(ref, @timeout)
+      assert {:ok, {_, conn}} = Pool.connection(ref)
       monitor = Process.monitor(conn)
       Process.exit(conn, :kill)
       receive do: ({:DOWN, ^monitor, _, _, _} -> :ok)
       assert Pool.mode(ref, :sandbox, @timeout) === {:error, :noconnect}
-      assert Pool.connection(ref, @timeout) === {:error, :noconnect}
+      assert Pool.connection(ref) === {:error, :noconnect}
     end)
   end
 
@@ -175,12 +175,12 @@ defmodule Ecto.Integration.PoolTransactionTest do
     TestPool.transaction(pool, @timeout, fn(ref, mode, _, _) ->
       assert mode === :raw
       assert Pool.mode(ref, :sandbox, @timeout) === :ok
-      assert {:ok, {Connection, conn}} = Pool.connection(ref, @timeout)
+      assert {:ok, {Connection, conn}} = Pool.connection(ref)
       try do
         Pool.fuse(ref, @timeout, fn() -> raise "oops" end)
       rescue
         RuntimeError ->
-          assert Pool.connection(ref, @timeout) === {:error, :noconnect}
+          assert Pool.connection(ref) === {:error, :noconnect}
       end
       assert Process.alive?(conn)
     end)
@@ -195,7 +195,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
       TestPool.transaction(pool, @timeout, fn(ref, mode, _, _) ->
         assert mode === :raw
         assert Pool.mode(ref, :sandbox, @timeout) === :ok
-        {:ok, {_, conn1}} = Pool.connection(ref, @timeout)
+        {:ok, {_, conn1}} = Pool.connection(ref)
         send(parent, {:go, self(), conn1})
         :timer.sleep(@timeout)
       end)
@@ -207,7 +207,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
 
     TestPool.transaction(pool, @timeout, fn(ref, mode, _, _) ->
       assert mode === :sandbox
-      assert {:ok, {_, ^conn1}} = Pool.connection(ref, @timeout)
+      assert {:ok, {_, ^conn1}} = Pool.connection(ref)
       assert Process.alive?(conn1)
     end)
   end
@@ -222,12 +222,12 @@ defmodule Ecto.Integration.PoolTransactionTest do
 
     TestPool.transaction(pool, @timeout, fn(ref, mode, _, _) ->
       assert mode === :sandbox
-      assert {:ok, {Connection, conn}} = Pool.connection(ref, @timeout)
+      assert {:ok, {Connection, conn}} = Pool.connection(ref)
       try do
         Pool.fuse(ref, @timeout, fn() -> raise "oops" end)
       rescue
         RuntimeError ->
-          assert Pool.connection(ref, @timeout) === {:error, :noconnect}
+          assert Pool.connection(ref) === {:error, :noconnect}
       end
       assert Process.alive?(conn)
     end)
@@ -246,7 +246,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
     {:ok, task} = Task.start_link(fn ->
       TestPool.transaction(pool, @timeout, fn(ref, mode, _, _) ->
         assert mode === :sandbox
-        assert {:ok, {_, conn1}} = Pool.connection(ref, @timeout)
+        assert {:ok, {_, conn1}} = Pool.connection(ref)
         send(parent, {:go, self(), conn1})
         :timer.sleep(@timeout)
       end)
@@ -258,7 +258,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
 
     TestPool.transaction(pool, @timeout, fn(ref, mode, _, _) ->
       assert mode === :sandbox
-      assert {:ok, {_, ^conn1}} = Pool.connection(ref, @timeout)
+      assert {:ok, {_, ^conn1}} = Pool.connection(ref)
       assert Process.alive?(conn1)
     end)
   end

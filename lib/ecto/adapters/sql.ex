@@ -194,7 +194,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp query(ref, queue_time, sql, params, log?, timeout, opts) do
-    case Pool.connection(ref, timeout) do
+    case Pool.connection(ref) do
       {:ok, {mod, conn}} ->
         query(ref, mod, conn, queue_time, sql, params, log?, timeout, opts)
       {:error, :noconnect} ->
@@ -555,7 +555,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp begin(ref, mode, depth, queue_time, log?, timeout, opts) do
-    case Pool.connection(ref, timeout) do
+    case Pool.connection(ref) do
       {:ok, {mod, conn}} ->
         sql = begin_sql(mod, mode, depth)
         query(ref, mod, conn, queue_time, sql, [], log?, timeout, opts)
@@ -583,7 +583,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp commit(ref, :raw, 1, log?, timeout, opts) do
-    case Pool.connection(ref, timeout) do
+    case Pool.connection(ref) do
       {:ok, {mod, conn}} ->
         sql = mod.commit
         query(ref, mod, conn, nil, sql, [], log?, timeout, opts)
@@ -608,7 +608,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp rollback(ref, mode, depth, queue_time, log?, timeout, opts) do
-    case Pool.connection(ref, timeout) do
+    case Pool.connection(ref) do
       {:ok, {mod, conn}} ->
         sql = rollback_sql(mod, mode, depth)
         query(ref, mod, conn, queue_time, sql, [], log?, timeout, opts)

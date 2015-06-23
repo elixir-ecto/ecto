@@ -15,7 +15,7 @@ defmodule Ecto.Integration.LazyTest do
     :poolboy.checkin(pool, worker)
 
     TestPool.transaction(pool, @timeout, fn(ref, _, _, _) ->
-      assert {:ok, {Connection, conn}} = Pool.connection(ref, @timeout)
+      assert {:ok, {Connection, conn}} = Pool.connection(ref)
       assert Process.alive?(conn)
     end)
   end

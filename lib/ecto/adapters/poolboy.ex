@@ -36,24 +36,19 @@ defmodule Ecto.Adapters.Poolboy do
   def open_transaction(pool, timeout) do
     case :timer.tc(fn() -> checkout(pool, timeout) end) do
       {queue_time, {mode, worker, mod_conn}} ->
-        {mode, {worker, mod_conn}, queue_time}
+        {mode, worker, mod_conn, queue_time}
       {_, {:error, :noproc} = error} ->
         error
     end
   end
 
   @doc false
-  def transaction_mode(_, {worker, _}, mode, timeout) do
+  def transaction_mode(_, worker, mode, timeout) do
     Worker.transaction_mode(worker, mode, timeout)
   end
 
   @doc false
-  def transaction_connection(_, {_, mod_conn}, _) do
-    {:ok, mod_conn}
-  end
-
-  @doc false
-  def close_transaction(pool, {worker, _}, _) do
+  def close_transaction(pool, worker, _) do
     try do
       Worker.close_transaction(worker)
     after
@@ -62,7 +57,7 @@ defmodule Ecto.Adapters.Poolboy do
   end
 
   @doc false
-  def disconnect_transaction(pool, {worker, _}, timeout) do
+  def disconnect_transaction(pool, worker, timeout) do
     try do
       Worker.disconnect_transaction(worker, timeout)
     after
