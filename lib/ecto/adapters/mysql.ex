@@ -3,7 +3,7 @@ defmodule Ecto.Adapters.MySQL do
   Adapter module for MySQL.
 
   It handles and pools the connections to the MySQL
-  database using `mariaex` with `poolboy`.
+  database using `mariaex` or `mysqlex` with `poolboy`.
 
   ## Options
 
@@ -85,7 +85,12 @@ defmodule Ecto.Adapters.MySQL do
   """
 
   # Inherit all behaviour from Ecto.Adapters.SQL
-  use Ecto.Adapters.SQL, :mariaex
+  cond do
+    Code.ensure_loaded?(Mysqlex.Connection) ->
+      use Ecto.Adapters.SQL, :mysqlex
+    Code.ensure_loaded?(Mariaex.Connection) ->
+      use Ecto.Adapters.SQL, :mariaex
+  end
 
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage

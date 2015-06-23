@@ -1,6 +1,18 @@
-if Code.ensure_loaded?(Mariaex.Connection) do
+# Does not compile without specifying this 
+alias Mysqlex, as: MysqlDriver
+#alias Mariaex, as: MysqlDriver
 
+# This doesn't work 
+cond do
+  Code.ensure_compiled?(Mysqlex.Connection) ->
+    alias Mysqlex, as: MysqlDriver
+  Code.ensure_compiled?(Mariaex.Connection) ->
+    alias Mariaex, as: MysqlDriver
+end
+
+if Code.ensure_loaded?(MysqlDriver.Connection) do
   defmodule Ecto.Adapters.MySQL.Connection do
+
     @moduledoc false
 
     @default_port 3306
@@ -11,12 +23,12 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def connect(opts) do
       opts = Keyword.update(opts, :port, @default_port, &normalize_port/1)
-      Mariaex.Connection.start_link(opts)
+      MysqlDriver.Connection.start_link(opts)
     end
 
     def disconnect(conn) do
       try do
-        Mariaex.Connection.stop(conn)
+        MysqlDriver.Connection.stop(conn)
       catch
         :exit, {:noproc, _} -> :ok
       end
@@ -31,9 +43,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         value -> value
       end
 
-      case Mariaex.Connection.query(conn, sql, params, opts) do
-        {:ok, %Mariaex.Result{} = result} -> {:ok, Map.from_struct(result)}
-        {:error, %Mariaex.Error{}} =  err -> err
+      case MysqlDriver.Connection.query(conn, sql, params, opts) do
+        {:ok, %MysqlDriver.Result{} = result} -> {:ok, Map.from_struct(result)}
+        {:error, %MysqlDriver.Error{}} =  err -> err
       end
     end
 
