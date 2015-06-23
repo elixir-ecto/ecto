@@ -729,6 +729,29 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Validates a change, of type enum, is a subset of the given enumerable. Like
+  validate_inclusion for lists.
+
+  ## Options
+
+    * `:message` - the message on failure, defaults to "\#{x} is invalid"
+
+  ## Examples
+
+      validate_subset(changeset, :pets, ["cat", "dog", "parrot"])
+      validate_subset(changeset, :lottery_numbers, 0..99)
+
+  """
+  @spec validate_subset(t, atom, Enum.t) :: t
+  def validate_subset(changeset, field, data, opts \\ []) do
+    validate_change changeset, field, {:subset, data}, fn _, values ->
+      Enum.flat_map values, fn(x) ->
+        if x in data, do: [], else: [{field, message(opts, "#{x} is invalid")}]
+      end
+    end
+  end
+
+  @doc """
   Validates a change is not included in given the enumerable.
 
   ## Options
