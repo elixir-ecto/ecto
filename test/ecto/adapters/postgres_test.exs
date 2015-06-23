@@ -170,6 +170,9 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "fragments" do
+    query = Model |> select([r], fragment("now")) |> normalize
+    assert SQL.all(query) == ~s{SELECT now FROM "model" AS m0}
+
     query = Model |> select([r], fragment("downcase(?)", r.x)) |> normalize
     assert SQL.all(query) == ~s{SELECT downcase(m0."x") FROM "model" AS m0}
 
