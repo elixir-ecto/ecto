@@ -339,6 +339,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "NOT (" <> expr(expr, sources) <> ")"
     end
 
+    defp expr({:fragment, _, [kw]}, _sources) when is_list(kw) or tuple_size(kw) == 3 do
+      raise ArgumentError, "PostgreSQL adapter does not support keyword or interpolated fragments"
+    end
+
     defp expr({:fragment, _, parts}, sources) do
       Enum.map_join(parts, "", fn
         {:raw, part}  -> part

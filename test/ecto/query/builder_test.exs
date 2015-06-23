@@ -21,10 +21,6 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do avg(0) end), %{}} ==
            escape(quote do avg(0) end, [], __ENV__)
 
-    assert {Macro.escape(quote do fragment({:raw, "date_add("}, {:expr, &0.created_at},
-                                           {:raw, ", "}, {:expr, ^0}, {:raw, ")"}) end), %{0 => {0, :any}}} ==
-           escape(quote do fragment("date_add(?, ?)", p.created_at, ^0) end, [p: 0], __ENV__)
-
     assert {quote(do: ~s"123"), %{}} ==
            escape(quote do ~s"123" end, [], __ENV__)
 
@@ -33,6 +29,26 @@ defmodule Ecto.Query.BuilderTest do
 
     assert quote(do: &0.z) ==
            escape(quote do field(x, :z) end, [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
+  end
+
+  test "escape fragments" do
+    assert {Macro.escape(quote do fragment({:raw, "date_add("}, {:expr, &0.created_at},
+                                           {:raw, ", "}, {:expr, ^0}, {:raw, ")"}) end), %{0 => {0, :any}}} ==
+      escape(quote do fragment("date_add(?, ?)", p.created_at, ^0) end, [p: 0], __ENV__)
+
+    assert {Macro.escape(quote do fragment(title: [foo: ^0]) end), %{0 => {0, :any}}} ==
+      escape(quote do fragment(title: [foo: ^0]) end, [], __ENV__)
+
+    assert {Macro.escape(quote do fragment(^0) end), %{0 => {[title: [foo: 0]], :any}}} ==
+      escape(quote do fragment(^[title: [foo: 0]]) end, [], __ENV__)
+
+    assert_raise Ecto.Query.CompileError, ~r"expects the first argument to be .* got: `:invalid`", fn ->
+      escape(quote do fragment(:invalid) end, [], __ENV__)
+    end
+
+    assert_raise Ecto.Query.CompileError, ~r"expects extra arguments in the same amount of question marks in string", fn ->
+      escape(quote do fragment("?") end, [], __ENV__)
+    end
   end
 
   test "escape type checks" do

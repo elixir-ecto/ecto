@@ -111,7 +111,8 @@ defimpl Inspect, for: Ecto.Query do
     Macro.to_string(expr, &expr_to_string(&1, &2, names, params))
   end
 
-  defp expr_to_string({:fragment, _, parts}, _, names, params) do
+  # For keyword and interpolated fragments use normal escaping
+  defp expr_to_string({:fragment, _, [{_, _}|_] = parts}, _, names, params) do
     "fragment(" <> unmerge_fragments(parts, "", [], names, params) <> ")"
   end
 

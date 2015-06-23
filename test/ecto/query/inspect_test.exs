@@ -110,6 +110,12 @@ defmodule Ecto.Query.InspectTest do
     value = "foobar"
     assert i(from(x in Post, where: fragment("downcase(?) == ?", x.id, ^value))) ==
            ~s{from p in Inspect.Post, where: fragment("downcase(?) == ?", p.id, ^"foobar")}
+
+    assert i(from(x in Post, where: fragment(^[title: [foo: "foobar"]]))) ==
+           ~s{from p in Inspect.Post, where: fragment(^[title: [foo: "foobar"]])}
+
+    assert i(from(x in Post, where: fragment(title: [foo: ^value]))) ==
+      ~s{from p in Inspect.Post, where: fragment(title: [foo: ^"foobar"])}
   end
 
   test "inspect all" do

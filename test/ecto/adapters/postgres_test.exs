@@ -176,6 +176,11 @@ defmodule Ecto.Adapters.PostgresTest do
     value = 13
     query = Model |> select([r], fragment("downcase(?, ?)", r.x, ^value)) |> normalize
     assert SQL.all(query) == ~s{SELECT downcase(m0."x", $1) FROM "model" AS m0}
+
+    query = Model |> select([], fragment(title: 2)) |> normalize
+    assert_raise ArgumentError, fn ->
+      SQL.all(query)
+    end
   end
 
   test "literals" do
