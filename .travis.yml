@@ -3,7 +3,10 @@ elixir:
   - 1.0.2
 otp_release:
   - 17.4
-services: mysql
+addons:
+  postgresql: "9.4"
+services:
+  - mysql
 sudo: false # to use faster container based build environment
 env:
   - ELIXIR_ERL_OPTIONS=""
