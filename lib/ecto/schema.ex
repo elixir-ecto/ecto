@@ -134,8 +134,6 @@ defmodule Ecto.Schema do
   See the Custom types sections below about types that enhance the primitive
   ones.
 
-  **Note:** We will go into details about the map type below.
-
   ### Custom types
 
   Sometimes the primitive types in Ecto are too primitive. For example,
@@ -175,22 +173,24 @@ defmodule Ecto.Schema do
       %User{data: %{"foo" => value}} = Repo.one(User)
       value #=> "bar"
 
-  In order to support maps, different databases may emply
-  different techniques. For example, PostgreSQL will store
-  those values in jsonb fields, allowing you to even query
-  parts of it. MySQL and MSSQL, on the other hand, do not
-  yet provide a JSON type, so the value will be stored in
-  a text field.
+  Keep in mind that we advise the map keys to be strings or integers
+  instead of atoms. Atoms may be accepted depending on how maps are
+  serialized but the database will always return atom keys as strings
+  due to security reasons.
 
-  For maps to work in such databases, Ecto will need a JSON
-  library. [Poison](http://github.com/devinus/poison) is the
-  default choice, you just need to add it to your deps in
-  `mix.exs`:
+  In order to support maps, different databases may employ different
+  techniques. For example, PostgreSQL will store those values in jsonb
+  fields, allowing you to even query parts of it. MySQL and MSSQL, on
+  the other hand, do not yet provide a JSON type, so the value will be
+  stored in a text field.
+
+  For maps to work in such databases, Ecto will need a JSON library.
+  By default Ecto will use [Poison](http://github.com/devinus/poison)
+  which needs to be added your deps in `mix.exs`:
 
       {:poison, "~> 1.0"}
 
-  You can however tell Ecto to use any other library by
-  configuring it:
+  You can however tell Ecto to use any other library by configuring it:
 
       config :ecto, :json_library, YourLibraryOfChoice
 
