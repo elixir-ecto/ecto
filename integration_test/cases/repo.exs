@@ -207,7 +207,7 @@ defmodule Ecto.Integration.RepoTest do
   @tag :sql_fragments
   test "validate_unique/3 with downcasing" do
     import Ecto.Changeset
-    post = TestRepo.insert!(%Post{title: "HELLO"})
+    TestRepo.insert!(%Post{title: "HELLO"})
 
     on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w())
     assert validate_unique(on_insert, :title, on: TestRepo, downcase: true).errors != []
