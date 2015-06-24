@@ -409,8 +409,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def execute_ddl({:create, %Table{} = table, columns}) do
       engine = engine_expr(table.engine)
+      options = options_expr(table.options)
 
-      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)}) " <> engine
+      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})" <> engine <> options
     end
 
     def execute_ddl({:drop, %Table{name: name}}) do
@@ -500,9 +501,14 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp engine_expr(nil),
-      do: "ENGINE = INNODB"
+      do: " ENGINE = INNODB"
     defp engine_expr(storage_engine),
-      do: String.upcase("ENGINE = #{storage_engine}")
+      do: String.upcase(" ENGINE = #{storage_engine}")
+
+    defp options_expr(nil),
+      do: ""
+    defp options_expr(options),
+      do: " #{options}"
 
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)

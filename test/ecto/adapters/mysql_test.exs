@@ -449,6 +449,23 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> String.strip |> String.replace("\n", " ")
   end
 
+  test "create table with options" do
+    create = {:create, table(:posts, options: "WITH FOO=BAR"),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :created_at, :datetime, []}]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `created_at` datetime) ENGINE = INNODB WITH FOO=BAR|
+  end
+
+  test "create table with both: engine and options" do
+    create = {:create, table(:posts, engine: :myisam, options: "WITH FOO=BAR"),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :created_at, :datetime, []}]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `created_at` datetime) ENGINE = MYISAM WITH FOO=BAR|
+  end
+
+
   test "drop table" do
     drop = {:drop, table(:posts)}
     assert SQL.execute_ddl(drop) == ~s|DROP TABLE `posts`|
