@@ -30,6 +30,7 @@ defmodule Ecto.Query.PlannerTest do
       field :text, :string
       field :code, :binary
       field :posted, :datetime
+      field :visits, :integer
       has_many :comments, Ecto.Query.PlannerTest.Comment
     end
   end
@@ -208,19 +209,27 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "prepare: tagged types" do
-    {query, params} = from(Post, []) |> select([p], type(^"1", :integer)) |> prepare
+  test "normalize: tagged types" do
+    {query, params} = from(Post, []) |> select([p], type(^"1", :integer))
+                                     |> normalize_with_params
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
 
-    {query, params} = from(Post, []) |> select([p], type(^"1", Custom.Permalink)) |> prepare
+    {query, params} = from(Post, []) |> select([p], type(^"1", Custom.Permalink))
+                                     |> normalize_with_params
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :id, value: {:^, [], [0]}, tag: Custom.Permalink}
     assert params == [1]
 
+    {query, params} = from(Post, []) |> select([p], type(^"1", p.visits))
+                                     |> normalize_with_params
+    assert query.select.expr ==
+           %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
+    assert params == [1]
+
     assert_raise Ecto.QueryError, fn ->
-      from(Post, []) |> select([p], type(^"1", :datetime)) |> prepare
+      from(Post, []) |> select([p], type(^"1", :datetime)) |> normalize
     end
   end
 

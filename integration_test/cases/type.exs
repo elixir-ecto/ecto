@@ -53,9 +53,11 @@ defmodule Ecto.Integration.TypeTest do
   test "tagged types" do
     TestRepo.insert!(%Post{})
 
-    # Integer
+    # Numbers
     assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
     assert [1.0] = TestRepo.all(from Post, select: type(^1.0, :float))
+    assert [1]   = TestRepo.all(from p in Post, select: type(^"1", p.visits))
+    assert [1.0] = TestRepo.all(from p in Post, select: type(^"1", p.intensity))
 
     # Datetime
     datetime = {{2014, 04, 17}, {14, 00, 00, 00}}

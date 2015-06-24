@@ -123,24 +123,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp cast_param(kind, query, expr, v, {composite, {ix, field}}, id_types) when is_integer(ix) do
-    {_, model} = elem(query.sources, ix)
-    type = type!(kind, query, expr, model, field)
-    cast_param(kind, query, expr, model, field, v, {composite, type}, id_types)
-  end
-
-  defp cast_param(kind, query, expr, v, {ix, field}, id_types) when is_integer(ix) do
-    {_, model} = elem(query.sources, ix)
-    type = type!(kind, query, expr, model, field)
-    cast_param(kind, query, expr, model, field, v, type, id_types)
-  end
-
-  defp cast_param(kind, query, expr, nil, type, _id_types) do
-    error! query, expr, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
-                        "(if you want to check for nils, use is_nil/1 instead)"
-  end
-
   defp cast_param(kind, query, expr, v, type, id_types) do
+    {model, field, type} = type_from_param!(kind, query, expr, type)
     type = Ecto.Type.normalize(type, id_types)
 
     case cast_param(type, v) do
@@ -149,17 +133,20 @@ defmodule Ecto.Query.Planner do
       {:match, type} ->
         Ecto.Type.dump!(type, v)
       :error ->
-        error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
+        try do
+          error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to " <>
+                              "type #{inspect type}" <> maybe_nil(v)
+        catch
+          :error, %Ecto.QueryError{} = e when not is_nil(model) ->
+            raise Ecto.CastError, model: model, field: field, value: v, type: type,
+                                  message: Exception.message(e) <>
+                                           "\nError when casting value to `#{inspect model}.#{field}`"
+        end
     end
   end
 
-  defp cast_param(kind, query, expr, model, field, value, type, id_types) do
-    cast_param(kind, query, expr, value, type, id_types)
-  rescue
-    e in [Ecto.QueryError] ->
-      raise Ecto.CastError, model: model, field: field, value: value, type: type,
-                            message: Exception.message(e) <>
-                                     "\nError when casting value to `#{inspect model}.#{field}`"
+  defp cast_param(_type, nil) do
+    :error
   end
 
   defp cast_param(type, v) do
@@ -175,6 +162,9 @@ defmodule Ecto.Query.Planner do
       Ecto.Type.cast(type, v)
     end
   end
+
+  defp maybe_nil(nil), do: " (if you want to check for nils, use is_nil/1 instead)"
+  defp maybe_nil(_),   do: ""
 
   defp param_struct(%{__struct__: struct}) when not struct in [Decimal] do
     struct
@@ -348,16 +338,8 @@ defmodule Ecto.Query.Planner do
   defp do_validate_and_increment(kind, query, expr, counter) do
     {inner, acc} = Macro.prewalk expr.expr, counter, fn
       {:in, in_meta, [left, {:^, meta, [param]}]}, acc ->
-        {v, _t} = Enum.fetch!(expr.params, param)
-        length  = length(v)
-
-        right =
-          case length do
-            0 -> []
-            _ -> {:^, meta, [acc, length]}
-          end
-
-        {{:in, in_meta, [left, right]}, acc + length}
+        {right, acc} = validate_in(meta, expr, param, acc)
+        {{:in, in_meta, [left, right]}, acc}
 
       {:^, meta, [ix]}, acc when is_integer(ix) ->
         {{:^, meta, [acc]}, acc + 1}
@@ -366,10 +348,25 @@ defmodule Ecto.Query.Planner do
         type = validate_field(kind, query, expr, source, field, meta)
         {{dot, [ecto_type: type] ++ meta, []}, acc}
 
+      {:type, _, [{:^, _, [param]} = v, _expr]}, acc ->
+        {_, t} = Enum.fetch!(expr.params, param)
+        {_, _, type} = type_from_param!(kind, query, expr, t)
+        {%Ecto.Query.Tagged{value: v, type: Ecto.Type.type(type), tag: type}, acc}
+
       other, acc ->
         {other, acc}
     end
     {%{expr | expr: inner, params: nil}, acc}
+  end
+
+  defp validate_in(meta, expr, param, acc) do
+    {v, _t} = Enum.fetch!(expr.params, param)
+    length  = length(v)
+
+    case length do
+      0 -> {[], acc}
+      _ -> {{:^, meta, [acc, length]}, acc + length}
+    end
   end
 
   defp validate_field(kind, query, expr, source, field, meta) do
@@ -540,6 +537,20 @@ defmodule Ecto.Query.Planner do
       error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` " <>
                           "does not exist in the model source"
     end
+  end
+
+  defp type_from_param!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
+    {_, model} = elem(query.sources, ix)
+    {model, field, {composite, type!(kind, query, expr, model, field)}}
+  end
+
+  defp type_from_param!(kind, query, expr, {ix, field}) when is_integer(ix) do
+    {_, model} = elem(query.sources, ix)
+    {model, field, type!(kind, query, expr, model, field)}
+  end
+
+  defp type_from_param!(_kind, _query, _expr, type) do
+    {nil, nil, type}
   end
 
   def cast!(query, expr, message) do

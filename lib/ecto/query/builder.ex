@@ -29,20 +29,13 @@ defmodule Ecto.Query.Builder do
   # var.x - where var is bound
   def escape({{:., _, [{var, _, context}, field]}, _, []}, type, params, vars, _env)
       when is_atom(var) and is_atom(context) and is_atom(field) do
-    var  = escape_var(var, vars)
-    dot  = {:{}, [], [:., [], [var, field]]}
-    expr = {:{}, [], [dot, field_meta(type), []]}
-    {expr, params}
+    {escape_field(var, field, type, vars), params}
   end
 
   # field macro
   def escape({:field, _, [{var, _, context}, field]}, type, params, vars, _env)
       when is_atom(var) and is_atom(context) do
-    var   = escape_var(var, vars)
-    field = quoted_field!(field)
-    dot   = {:{}, [], [:., [], [var, field]]}
-    expr  = {:{}, [], [dot, field_meta(type), []]}
-    {expr, params}
+    {escape_field(var, field, type, vars), params}
   end
 
   # param interpolation
@@ -59,19 +52,18 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
-  def escape({:type, _, [{:^, _, [arg]}, tag]}, _type, params, _vars, _env) do
+  def escape({:type, meta, [{:^, _, [arg]}, type]}, _type, params, vars, _env) do
+    {type, escaped} = validate_type!(type, vars)
     index  = Map.size(params)
-    params = Map.put(params, index, {arg, tag})
+    params = Map.put(params, index, {arg, type})
 
-    map  = [value: {:{}, [], [:^, [], [index]]}, type: validate_type!(tag), tag: tag]
-    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], map}]}
-
+    expr = {:{}, [], [:type, meta, [{:{}, [], [:^, [], [index]]}, escaped]]}
     {expr, params}
   end
 
   # fragments
   def escape({:fragment, meta, [query]}, _type, params, vars, env) when is_list(query) do
-    {escaped, params} = Enum.map_reduce(query, params, &escape_pair(&1, :any, &2, vars, env))
+    {escaped, params} = Enum.map_reduce(query, params, &escape_fragment(&1, :any, &2, vars, env))
 
     {{:{}, [], [:fragment, meta, [escaped]]}, params}
   end
@@ -188,17 +180,34 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
-  defp escape_pair({key, [{_, _}|_] = exprs}, type, params, vars, env) when is_atom(key) do
-    {escaped, params} = Enum.map_reduce(exprs, params, &escape_pair(&1, type, &2, vars, env))
+  defp escape_field(var, field, type, vars) do
+    var   = escape_var(var, vars)
+    field = quoted_field!(field)
+    dot   = {:{}, [], [:., [], [var, field]]}
+
+    # We don't embed the type in the field metadata if the type
+    # is :any or if the type requires checking another field.
+    #
+    # Ecto concerns itself with type casting of concrete types
+    # for security purposes. Comparing a field with another is
+    # left to the database.
+    type = extract_primitive_type(type)
+    meta = if type != :any, do: [ecto_type: type], else: []
+
+    {:{}, [], [dot, meta, []]}
+  end
+
+  defp escape_fragment({key, [{_, _}|_] = exprs}, type, params, vars, env) when is_atom(key) do
+    {escaped, params} = Enum.map_reduce(exprs, params, &escape_fragment(&1, type, &2, vars, env))
     {{key, escaped}, params}
   end
 
-  defp escape_pair({key, expr}, type, params, vars, env) when is_atom(key) do
+  defp escape_fragment({key, expr}, type, params, vars, env) when is_atom(key) do
     {escaped, params} = escape(expr, type, params, vars, env)
     {{key, escaped}, params}
   end
 
-  defp escape_pair({key, _expr}, _type, _params, _vars, _env) do
+  defp escape_fragment({key, _expr}, _type, _params, _vars, _env) do
     error! "fragment(...) with keywords accepts only atoms as keys, got `#{Macro.to_string(key)}`"
   end
 
@@ -206,17 +215,6 @@ defmodule Ecto.Query.Builder do
     do: [{:raw, h1}, {:expr, h2}|merge_fragments(t1, t2)]
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
-
-  # We don't embed the type in the field metadata if the type
-  # is :any or if the type requires checking another field.
-  #
-  # Ecto concerns itself with type casting of concrete types
-  # for security purposes. Comparing a field with another is
-  # left to the database.
-  defp field_meta(type) do
-    type = extract_primitive_type(type)
-    if type != :any, do: [ecto_type: type], else: []
-  end
 
   defp call_type(agg, 1)  when agg in ~w(max count sum min avg)a, do: {:any, :any}
   defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}
@@ -237,20 +235,20 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp validate_type!({:array, {:__aliases__, _, _}} = type) do
-    quote do: Ecto.Type.type(unquote(type))
-  end
-  defp validate_type!({:array, atom} = type) when is_atom(atom) do
-    quote do: Ecto.Type.type(unquote(type))
-  end
-  defp validate_type!({:__aliases__, _, _} = type) do
-    quote do: Ecto.Type.type(unquote(type))
-  end
-  defp validate_type!(type) when is_atom(type) do
-    quote do: Ecto.Type.type(unquote(type))
-  end
-  defp validate_type!(type) do
-    error! "type/2 expects an atom or alias as second argument, got: `#{Macro.to_string(type)}"
+  defp validate_type!({:array, {:__aliases__, _, _}} = type, _vars), do: {type, type}
+  defp validate_type!({:array, atom} = type, _vars) when is_atom(atom), do: {type, type}
+  defp validate_type!({:__aliases__, _, _} = type, _vars), do: {type, type}
+  defp validate_type!(type, _vars) when is_atom(type), do: {type, type}
+
+  defp validate_type!({{:., _, [{var, _, context}, field]}, _, []}, vars)
+    when is_atom(var) and is_atom(context) and is_atom(field),
+    do: {{find_var!(var, vars), field}, escape_field(var, field, :any, vars)}
+  defp validate_type!({:field, _, [{var, _, context}, field]}, vars)
+    when is_atom(var) and is_atom(context) and is_atom(field),
+    do: {{find_var!(var, vars), field}, escape_field(var, field, :any, vars)}
+
+  defp validate_type!(type, _vars) do
+    error! "type/2 expects an alias, atom or source.field as second argument, got: `#{Macro.to_string(type)}"
   end
 
   @doc """
