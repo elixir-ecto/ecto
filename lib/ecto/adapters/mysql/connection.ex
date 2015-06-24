@@ -290,6 +290,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       expr(left, sources) <> " IN (" <> args <> ")"
     end
 
+    defp expr({:in, _, [left, right]}, sources) do
+      expr(left, sources) <> " = ANY(" <> expr(right, sources) <> ")"
+    end
+
     defp expr({:is_nil, _, [arg]}, sources) do
       "#{expr(arg, sources)} IS NULL"
     end

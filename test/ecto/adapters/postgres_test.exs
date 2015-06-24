@@ -14,6 +14,7 @@ defmodule Ecto.Adapters.PostgresTest do
     schema "model" do
       field :x, :integer
       field :y, :integer
+      field :z, {:array, :integer}
 
       has_many :comments, Ecto.Adapters.PostgresTest.Model2,
         references: :x,
@@ -241,6 +242,12 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 IN (1,$1,3) FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in e.z) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 = ANY(m0."z") FROM "model" AS m0}
+
+    query = Model |> select([e], 1 in fragment("foo")) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 = ANY(foo) FROM "model" AS m0}
   end
 
   test "having" do

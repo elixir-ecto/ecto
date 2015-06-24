@@ -130,7 +130,9 @@ defmodule Ecto.Query.Builder do
   end
 
   # in operator
-  def escape({:in, meta, [left, right]} = expr, type, params, vars, env) when is_list(right) do
+  def escape({:in, meta, [left, right]} = expr, type, params, vars, env)
+      when is_list(right)
+      when is_tuple(right) and elem(right, 0) in ~w(sigil_w sigil_W)a do
     assert_type!(expr, type, :boolean)
 
     {:array, ltype} = quoted_type(right, vars)
@@ -146,6 +148,17 @@ defmodule Ecto.Query.Builder do
 
     ltype = :any
     rtype = {:in, quoted_type(left, vars)}
+
+    {left,  params} = escape(left, ltype, params, vars, env)
+    {right, params} = escape(right, rtype, params, vars, env)
+    {{:{}, [], [:in, meta, [left, right]]}, params}
+  end
+
+  def escape({:in, meta, [left, right]} = expr, type, params, vars, env) do
+    assert_type!(expr, type, :boolean)
+
+    ltype = quoted_type(right, vars)
+    rtype = {:array, quoted_type(left, vars)}
 
     {left,  params} = escape(left, ltype, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
@@ -222,7 +235,6 @@ defmodule Ecto.Query.Builder do
   defp call_type(bool, 2) when bool in ~w(and or)a,               do: {:boolean, :boolean}
   defp call_type(:not, 1),                                        do: {:boolean, :boolean}
   defp call_type(:is_nil, 1),                                     do: {:any, :boolean}
-  defp call_type(:in, 2),                                         do: {:any, :boolean}
   defp call_type(_, _),                                           do: nil
 
   defp assert_type!(expr, type, actual) do

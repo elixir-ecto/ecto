@@ -97,16 +97,21 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :array_type
   test "array type" do
-    TestRepo.insert!(%Tag{ints: [1, 2, 3], uuids: ["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"]})
+    ints  = [1, 2, 3]
+    uuids = ["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"]
+    TestRepo.insert!(%Tag{ints: [1, 2, 3], uuids: ["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"]})
 
-    assert [] = TestRepo.all(from p in Tag, where: p.ints == ^[], select: p.ints)
-    assert [[1, 2, 3]] = TestRepo.all(from p in Tag, where: p.ints == ^[1, 2, 3], select: p.ints)
-    assert [[1, 2, 3]] = TestRepo.all(from p in Tag, where: p.ints == [1, 2, 3], select: p.ints)
+    assert TestRepo.all(from t in Tag, where: t.ints == ^[], select: t.ints) == []
+    assert TestRepo.all(from t in Tag, where: t.ints == ^[1, 2, 3], select: t.ints) == [ints]
 
-    assert [] = TestRepo.all(from p in Tag, where: p.uuids == ^[], select: p.uuids)
-    assert [["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"]] =
-           TestRepo.all(from p in Tag, where: p.uuids == ^["51FCFBDD-AD60-4CCB-8BF9-47AABD66D075"],
-                                       select: p.uuids)
+    assert TestRepo.all(from t in Tag, where: t.uuids == ^[], select: t.uuids) == []
+    assert TestRepo.all(from t in Tag, where: t.uuids == ^["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"],
+                                      select: t.uuids) == [uuids]
+
+    # Querying
+    assert TestRepo.all(from t in Tag, where: t.ints == [1, 2, 3], select: t.ints) == [ints]
+    assert TestRepo.all(from t in Tag, where: 0 in t.ints, select: t.ints) == []
+    assert TestRepo.all(from t in Tag, where: 1 in t.ints, select: t.ints) == [ints]
   end
 
   @tag :map_type
