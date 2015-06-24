@@ -1,4 +1,4 @@
-Code.require_file "../../test/support/file_helpers.exs", __DIR__
+Code.require_file "../support/file_helpers.exs", __DIR__
 
 defmodule Ecto.Integration.MigratorTest do
   use Ecto.Integration.Case
