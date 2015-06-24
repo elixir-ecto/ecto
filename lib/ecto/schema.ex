@@ -134,6 +134,8 @@ defmodule Ecto.Schema do
   See the Custom types sections below about types that enhance the primitive
   ones.
 
+  **Note:** We will go into details about the map type below.
+
   ### Custom types
 
   Sometimes the primitive types in Ecto are too primitive. For example,
@@ -155,15 +157,52 @@ defmodule Ecto.Schema do
   Ecto allow developers to provide their own types too. Read the
   `Ecto.Type` documentation for more information.
 
+  ### The map type
+
+  The map type allows developers to store an Elixir map directly
+  in the database:
+
+      # In your migration
+      create table(:users) do
+        add :data, :map
+      end
+
+      # In your model
+      field :data, :map
+
+      # Now in your code
+      %User{data: %{"foo" => "bar"}} |> Repo.insert!
+      %User{data: %{"foo" => value}} = Repo.one(User)
+      value #=> "bar"
+
+  In order to support maps, different databases may emply
+  different techniques. For example, PostgreSQL will store
+  those values in jsonb fields, allowing you to even query
+  parts of it. MySQL and MSSQL, on the other hand, do not
+  yet provide a JSON type, so the value will be stored in
+  a text field.
+
+  For maps to work in such databases, Ecto will need a JSON
+  library. [Poison](http://github.com/devinus/poison) is the
+  default choice, you just need to add it to your deps in
+  `mix.exs`:
+
+      {:poison, "~> 1.0"}
+
+  You can however tell Ecto to use any other library by
+  configuring it:
+
+      config :ecto, :json_library, YourLibraryOfChoice
+
   ### Casting
 
   When directly manipulating the struct, it is the responsibility of
   the developer to ensure the field values have the proper type. For
-  example, you can create a weather struct with an invalid value
-  for `temp_lo`:
+  example, you can create a user struct with an invalid value
+  for `age`:
 
-      iex> weather = %Weather{temp_lo: "0"}
-      iex> weather.temp_lo
+      iex> user = %User{age: "0"}
+      iex> user.age
       "0"
 
   However, if you attempt to persist the struct above, an error will
@@ -172,8 +211,13 @@ defmodule Ecto.Schema do
 
   Therefore, when working and manipulating external data, it is
   recommended the usage of `Ecto.Changeset`'s that are able to filter
-  and properly cast external data. In fact, `Ecto.Changeset` and custom
-  types provide a powerful combination to extend Ecto types and queries.
+  and properly cast external data:
+
+      changeset = Ecto.Changeset.cast(%User{}, %{"age" => "0"}, [:age], [])
+      user = Repo.insert!(changeset)
+
+  In fact, `Ecto.Changeset` and custom types provide a powerful
+  combination to extend Ecto types and queries.
 
   Finally, models can also have virtual fields by passing the
   `virtual: true` option. These fields are not persisted to the database
