@@ -424,7 +424,7 @@ defmodule Ecto.Repo do
 
       post = MyRepo.get!(Post, 42)
       post = %{post | title: "New title"}
-      MyRepo.update!!(post)
+      MyRepo.update!(post)
   """
   defcallback update!(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
 
@@ -445,7 +445,7 @@ defmodule Ecto.Repo do
   ## Example
 
       [post] = MyRepo.all(from(p in Post, where: p.id == 42))
-      MyRepo.delete!!(post)
+      MyRepo.delete!(post)
 
   """
   defcallback delete!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
