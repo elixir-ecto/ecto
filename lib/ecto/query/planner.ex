@@ -385,14 +385,12 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(query, only_where) do
+  defp normalize_select(query, only_filters) do
     cond do
-      only_where ->
+      only_filters ->
         query
       select = query.select ->
         %{query | select: normalize_fields(query, select)}
-      ({source, model} = query.from) && is_nil model ->
-        error! query, "queries with a string source (#{inspect source}) expect an explicit select clause"
       true ->
         select = %SelectExpr{expr: {:&, [], [0]}}
         %{query | select: normalize_fields(query, select)}
@@ -426,10 +424,6 @@ defmodule Ecto.Query.Planner do
 
   defp collect_fields(query, {:&, _, [ix]} = expr, from?) do
     {source, model} = elem(query.sources, ix)
-
-    unless model do
-      error! query, "cannot `select` or `preload` #{inspect source} because it does not have a model"
-    end
 
     if ix == 0 do
       {[], true}

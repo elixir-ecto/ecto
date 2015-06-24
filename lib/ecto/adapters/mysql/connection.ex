@@ -271,7 +271,12 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp expr({:&, _, [idx]}, sources) do
-      {_table, name, model} = elem(sources, idx)
+      {table, name, model} = elem(sources, idx)
+      unless model do
+        raise ArgumentError, "MySQL requires a model when using selector #{inspect name} but " <>
+                             "only the table #{inspect table} was given. Please specify a model " <>
+                             "or specify exactly which fields from #{inspect name} you desire"
+      end
       fields = model.__schema__(:fields)
       Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
