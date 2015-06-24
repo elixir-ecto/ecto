@@ -387,15 +387,9 @@ defmodule Ecto.Adapters.MySQLTest do
   test "update" do
     query = SQL.update("model", [:id], [:x, :y], [])
     assert query == ~s{UPDATE `model` SET `id` = ? WHERE `x` = ? AND `y` = ?}
-
-    query = SQL.update("model", [:id], [:x, :y], [])
-    assert query == ~s{UPDATE `model` SET `id` = ? WHERE `x` = ? AND `y` = ?}
   end
 
   test "delete" do
-    query = SQL.delete("model", [:x, :y], [])
-    assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
-
     query = SQL.delete("model", [:x, :y], [])
     assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
   end
