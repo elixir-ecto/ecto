@@ -171,6 +171,11 @@ defmodule Ecto.Repo do
       end
 
       defoverridable [log: 1]
+
+      def after_connect(_conn) do
+      end
+
+      defoverridable [after_connect: 1]
     end
   end
 
@@ -522,4 +527,24 @@ defmodule Ecto.Repo do
 
   """
   defcallback log(Ecto.LogEntry.t) :: any
+
+  @doc """
+  Called right after a new connection is opened.
+
+  By default does nothing.
+
+  ## Examples
+
+  It could be used to set the search_path in Postgres like this:
+
+      def after_connect(conn) do
+        Ecto.Adapters.Postgres.Connection.query(
+          conn,
+          "SET search_path TO my_search_path",
+          [],
+          []
+        )
+      end
+  """
+  defcallback after_connect(pid) :: any
 end

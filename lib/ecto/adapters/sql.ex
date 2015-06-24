@@ -407,6 +407,7 @@ defmodule Ecto.Adapters.SQL do
        worker_module: Worker] ++ pool_opts
 
     worker_opts = worker_opts
+      |> Keyword.put(:repo, repo)
       |> Keyword.put(:timeout, Keyword.get(worker_opts, :connect_timeout, 5000))
 
     {pool_opts, worker_opts}

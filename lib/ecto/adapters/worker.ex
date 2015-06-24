@@ -163,10 +163,14 @@ defmodule Ecto.Adapters.Worker do
   def init({module, params}) do
     Process.flag(:trap_exit, true)
     lazy? = Keyword.get(params, :lazy, true)
+    repo = params[:repo]
 
     unless lazy? do
       case module.connect(params) do
         {:ok, conn} ->
+          if repo do
+            repo.after_connect(conn)
+          end
           conn = conn
         _ ->
           :ok
@@ -208,8 +212,14 @@ defmodule Ecto.Adapters.Worker do
   ## Lazy connection handling
 
   def handle_call(request, from, %{conn: nil, params: params, module: module} = s) do
+    repo = params[:repo]
+
     case module.connect(params) do
-      {:ok, conn}   -> handle_call(request, from, %{s | conn: conn})
+      {:ok, conn}   ->
+        if repo do
+          repo.after_connect(conn)
+        end
+        handle_call(request, from, %{s | conn: conn})
       {:error, err} -> {:reply, {:error, err}, s}
     end
   end
