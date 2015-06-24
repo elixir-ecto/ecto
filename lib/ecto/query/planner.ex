@@ -422,9 +422,7 @@ defmodule Ecto.Query.Planner do
     %{select | fields: fields}
   end
 
-  defp collect_fields(query, {:&, _, [ix]} = expr, from?) do
-    {source, model} = elem(query.sources, ix)
-
+  defp collect_fields(_query, {:&, _, [ix]} = expr, from?) do
     if ix == 0 do
       {[], true}
     else
