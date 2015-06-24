@@ -11,6 +11,11 @@ defmodule Ecto.Integration.Pool do
       def transaction(pool, timeout, fun) do
         Pool.transaction(unquote(pool_mod), pool, timeout, fun)
       end
+
+      def run(pool, timeout, fun) do
+        Pool.run(unquote(pool_mod), pool, timeout, fun)
+      end
+
       defdelegate stop(pool), to: unquote(pool_mod)
 
       defoverridable [start_link: 1, stop: 1]

@@ -175,7 +175,7 @@ defmodule Ecto.Adapters.SQL do
       query(ref, queue_time, sql, params, log?, timeout, opts)
     end
 
-    case Pool.transaction(pool_mod, pool, timeout, query_fun) do
+    case Pool.run(pool_mod, pool, timeout, query_fun) do
       {:ok, {{:ok, result}, entry}} ->
         log(repo, entry)
         result

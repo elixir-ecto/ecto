@@ -133,26 +133,6 @@ defmodule Ecto.Integration.PoolTransactionTest do
     end)
   end
 
-  test "transaction mode is :sandbox when in :sandbox mode" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
-
-    TestPool.transaction(pool, @timeout, fn(ref, mode, _depth, _queue_time) ->
-      assert mode === :raw
-      assert Pool.mode(ref, :sandbox, @timeout) === :ok
-      TestPool.transaction(pool, @timeout, fn(_ref, mode, depth, queue_time) ->
-        assert mode === :sandbox
-        assert depth === 2
-        assert is_nil(queue_time)
-      end)
-    end)
-
-    TestPool.transaction(pool, @timeout, fn(_ref, mode, depth, queue_time) ->
-      assert mode === :sandbox
-      assert depth === 1
-      assert is_integer(queue_time)
-   end)
-  end
-
   test "mode returns {:error, :already_mode} when setting mode to active mode" do
     {:ok, pool} = TestPool.start_link([lazy: false])
 

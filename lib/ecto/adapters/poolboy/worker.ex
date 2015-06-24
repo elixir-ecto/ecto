@@ -3,14 +3,22 @@ defmodule Ecto.Adapters.Poolboy.Worker do
 
   use GenServer
   use Behaviour
+  alias Ecto.Adapters.Pool
 
   @type modconn :: {module :: atom, conn :: pid}
 
+  @spec start_link({module, Keyword.t}) :: {:ok, pid}
   def start_link({module, params}) do
     GenServer.start_link(__MODULE__, {module, params}, [debug: [:log]])
   end
 
-  @spec open_transaction(pid, timeout) :: :ok
+  @spec ask(pid, timeout) :: {Pool.mode, modconn} | {:error, Exception.t}
+  def ask(worker, timeout) do
+    GenServer.call(worker, :ask, timeout)
+  end
+
+  @spec open_transaction(pid, timeout) ::
+    {Pool.mode, modconn} | {:error, Exception.t}
   def open_transaction(worker, timeout) do
     GenServer.call(worker, :open_transaction, timeout)
   end
@@ -20,9 +28,9 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     GenServer.cast(worker, :close_transaction)
   end
 
-  @spec disconnect_transaction(pid, timeout) :: :ok
-  def disconnect_transaction(worker, timeout) do
-    GenServer.call(worker, :disconnect_transaction, timeout)
+  @spec disconnect(pid, timeout) :: :ok
+  def disconnect(worker, timeout) do
+    GenServer.call(worker, :disconnect, timeout)
   end
 
   @spec transaction_mode(pid, :raw | :sandbox, timeout) ::
@@ -50,17 +58,13 @@ defmodule Ecto.Adapters.Poolboy.Worker do
             module: module}}
   end
 
-  ## Disconnect transaction
+  ## Disconnect
 
-  def handle_call(:disconnect_transaction, _from, %{mode: :sandbox} = s) do
+  def handle_call(:disconnect, _from, %{mode: :sandbox} = s) do
     {:reply, :ok, demonitor(s)}
   end
 
-  def handle_call(:disconnect_transaction, _from, %{transaction: nil} = s) do
-    {:stop, :notransaction, :ok, s}
-  end
-
-  def handle_call(:disconnect_transaction, _from, s) do
+  def handle_call(:disconnect, _from, s) do
     s = s
       |> demonitor()
       |> disconnect()
@@ -91,6 +95,12 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     end
   end
 
+  ## Ask
+
+  def handle_call(:ask, _, %{mode: mode} = s) do
+    {:reply, {mode, modconn(s)}, s}
+  end
+
   ## Open transaction
 
   def handle_call(:open_transaction, {pid, _},
@@ -98,9 +108,10 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     {:reply, {mode, modconn(s)}, monitor(pid, s)}
   end
 
-  def handle_call(:open_transaction, from, %{transaction: {client, _}} = s) do
-    if Process.is_alive?(client) do
-      {:stop, :already_transaction, s}
+  def handle_call(:open_transaction, from,
+  %{transaction: {client, _}, mode: mode} = s) do
+    if Process.is_alive?(client) or mode === :sandbox do
+      handle_call(:open_transaction, from, demonitor(s))
     else
       s = s
         |> demonitor()
