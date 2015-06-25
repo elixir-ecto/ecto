@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.12.1
+
+* Bug fix
+  * Improvements related to adapter compatibility
+
 ## v0.12.0
 
 Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0
