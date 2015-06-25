@@ -32,12 +32,13 @@ defmodule Mix.Tasks.Ecto.Migrate do
     * `--all` - run all pending migrations
     * `--step` / `-n` - run n number of pending migrations
     * `--to` / `-v` - run all migrations up to and including version
-    * `--no-start` - do not start applications
+
   """
 
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
-    Mix.Task.run "app.start", args
+    Mix.Task.run "app.start", ["--no-start"|args]
+    Application.ensure_all_started(:ecto)
     repo = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
