@@ -455,7 +455,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def execute_ddl({:create, %Table{}=table, columns}) do
-      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})"
+      options = options_expr(table.options)
+      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})" <> options
     end
 
     def execute_ddl({:drop, %Table{name: name}}) do
@@ -539,6 +540,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       do: literal
     defp index_expr(literal),
       do: quote_name(literal)
+
+    defp options_expr(nil),
+      do: ""
+    defp options_expr(options),
+      do: " #{options}"
 
     defp column_type(%Reference{} = ref, opts),
       do: "#{reference_column_type(ref.type, opts)} REFERENCES " <>

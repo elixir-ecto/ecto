@@ -441,7 +441,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   # DDL
 
-  import Ecto.Migration, only: [table: 1, index: 2, index: 3, references: 1]
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -477,6 +477,14 @@ defmodule Ecto.Adapters.PostgresTest do
     "on_hand" integer DEFAULT 0 NULL,
     "is_active" boolean DEFAULT true)
     """ |> String.strip |> String.replace("\n", " ")
+  end
+
+  test "create table with options" do
+    create = {:create, table(:posts, [options: "WITH FOO=BAR"]),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :created_at, :datetime, []}]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "created_at" timestamp) WITH FOO=BAR|
   end
 
   test "drop table" do

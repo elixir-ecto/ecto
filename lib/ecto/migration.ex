@@ -116,7 +116,7 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a table struct used in migrations.
     """
-    defstruct name: nil, primary_key: true, engine: nil
+    defstruct name: nil, primary_key: true, engine: nil, options: nil
     @type t :: %__MODULE__{name: atom, primary_key: boolean, engine: atom}
   end
 
@@ -248,6 +248,8 @@ defmodule Ecto.Migration do
     * `:primary_key` - when false, does not generate primary key on table creation
     * `:engine` - customizes the table storage for supported databases. For MySQL,
       the default is InnoDB
+    * `:options` - provide custom options that will be appended after generated
+      statement, for example "WITH", "INHERITS" or "ON COMMIT" clauses
 
   """
   def table(name, opts \\ []) when is_atom(name) do
