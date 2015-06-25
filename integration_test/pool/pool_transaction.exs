@@ -43,7 +43,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
         assert is_integer(queue_time)
         assert {:ok, {_mod, conn1}} = Pool.connection(ref)
         monitor = Process.monitor(conn1)
-        assert Pool.disconnect(ref, @timeout) === :ok
+        assert Pool.break(ref, @timeout) === :ok
         assert Pool.connection(ref) == {:error, :noconnect}
         assert receive do: ({:DOWN, ^monitor, _, _, _} -> :ok)
       end)
@@ -113,7 +113,7 @@ defmodule Ecto.Integration.PoolTransactionTest do
 
     TestPool.transaction(pool, @timeout, fn(ref, mode, _depth, _queue_time) ->
       assert mode === :raw
-      assert Pool.disconnect(ref, @timeout) ===:ok
+      assert Pool.break(ref, @timeout) ===:ok
       assert Pool.mode(ref, :sandbox, @timeout) === {:error, :noconnect}
     end)
   end

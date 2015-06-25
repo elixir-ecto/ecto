@@ -358,7 +358,7 @@ defmodule Ecto.Adapters.SQL do
         end
         Pool.fuse(ref, timeout, log_and_savepoint)
       {{:error, _err}, _entry} = error ->
-        Pool.disconnect(ref, timeout)
+        Pool.break(ref, timeout)
         error
     end
   end
@@ -369,7 +369,7 @@ defmodule Ecto.Adapters.SQL do
         _ = Pool.mode(ref, :sandbox, timeout)
         {:ok, entry}
       {{:error, _err}, _entry} = error ->
-        Pool.disconnect(ref, timeout)
+        Pool.break(ref, timeout)
         error
     end
   end
@@ -380,7 +380,7 @@ defmodule Ecto.Adapters.SQL do
       {{:ok, _}, entry} ->
         {:ok, entry}
       {{:error, _err}, _entry} = error ->
-        Pool.disconnect(ref, timeout)
+        Pool.break(ref, timeout)
         error
     end
   end
@@ -392,7 +392,7 @@ defmodule Ecto.Adapters.SQL do
         _ = Pool.mode(ref, :raw, timeout)
         {:ok, entry}
       {{:error, _err}, _entry} = error ->
-        Pool.disconnect(ref, timeout)
+        Pool.break(ref, timeout)
         error
     end
   end
@@ -547,7 +547,7 @@ defmodule Ecto.Adapters.SQL do
             rollback(ref, mode, depth, nil, log?, timeout, opts, res)
         end
       {{:error, _err}, _entry} = result ->
-        Pool.disconnect(ref, timeout)
+        Pool.break(ref, timeout)
         result
       :noconnect ->
         :noconnect
@@ -573,7 +573,7 @@ defmodule Ecto.Adapters.SQL do
       {{:ok, _}, entry} ->
         {result, entry}
       {{:error, _err}, _entry} = error ->
-        Pool.disconnect(ref, timeout)
+        Pool.break(ref, timeout)
         error
       :nocommit ->
         {result, nil}
@@ -600,7 +600,7 @@ defmodule Ecto.Adapters.SQL do
       {{:ok, _}, entry} ->
         {result, entry}
       {{:error, _err}, _entry} = error ->
-        Pool.disconnect(ref, timeout)
+        Pool.break(ref, timeout)
         error
       :noconnect ->
         {result, nil}

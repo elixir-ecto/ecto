@@ -33,8 +33,8 @@ defmodule Ecto.Adapters.Poolboy do
   end
 
   @doc false
-  def ask(pool, timeout) do
-    case :timer.tc(fn() -> ask_checkout(pool, timeout) end) do
+  def checkout(pool, timeout) do
+    case :timer.tc(fn() -> do_checkout(pool, timeout) end) do
       {queue_time, {mode, worker, mod_conn}} ->
         {mode, worker, mod_conn, queue_time}
       {_, {:error, :noproc} = error} ->
@@ -43,7 +43,7 @@ defmodule Ecto.Adapters.Poolboy do
   end
 
   @doc false
-  def done(pool, worker, _) do
+  def checkin(pool, worker, _) do
     :poolboy.checkin(pool, worker)
   end
 
@@ -72,9 +72,9 @@ defmodule Ecto.Adapters.Poolboy do
   end
 
   @doc false
-  def disconnect(pool, worker, timeout) do
+  def break(pool, worker, timeout) do
     try do
-      Worker.disconnect(worker, timeout)
+      Worker.break(worker, timeout)
     after
       :poolboy.checkin(pool, worker)
     end
@@ -100,7 +100,7 @@ defmodule Ecto.Adapters.Poolboy do
     {pool_opts, conn_opts}
   end
 
-  defp ask_checkout(pool, timeout) do
+  defp do_checkout(pool, timeout) do
     try do
       :poolboy.checkout(pool, :true, timeout)
     catch
@@ -108,13 +108,13 @@ defmodule Ecto.Adapters.Poolboy do
         {:error, :noproc}
     else
       worker ->
-        ask(pool, worker, timeout)
+        checkout(pool, worker, timeout)
     end
   end
 
-  defp ask(pool, worker, timeout) do
+  defp checkout(pool, worker, timeout) do
     try do
-      Worker.ask(worker, timeout)
+      Worker.checkout(worker, timeout)
     catch
       class, reason ->
         stack = System.stacktrace()

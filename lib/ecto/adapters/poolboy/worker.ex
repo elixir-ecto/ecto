@@ -12,9 +12,9 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     GenServer.start_link(__MODULE__, {module, params}, [debug: [:log]])
   end
 
-  @spec ask(pid, timeout) :: {Pool.mode, modconn} | {:error, Exception.t}
-  def ask(worker, timeout) do
-    GenServer.call(worker, :ask, timeout)
+  @spec checkout(pid, timeout) :: {Pool.mode, modconn} | {:error, Exception.t}
+  def checkout(worker, timeout) do
+    GenServer.call(worker, :checkout, timeout)
   end
 
   @spec open_transaction(pid, timeout) ::
@@ -28,9 +28,9 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     GenServer.cast(worker, :close_transaction)
   end
 
-  @spec disconnect(pid, timeout) :: :ok
-  def disconnect(worker, timeout) do
-    GenServer.call(worker, :disconnect, timeout)
+  @spec break(pid, timeout) :: :ok
+  def break(worker, timeout) do
+    GenServer.call(worker, :break, timeout)
   end
 
   @spec transaction_mode(pid, :raw | :sandbox, timeout) ::
@@ -58,13 +58,13 @@ defmodule Ecto.Adapters.Poolboy.Worker do
             module: module}}
   end
 
-  ## Disconnect
+  ## Break
 
-  def handle_call(:disconnect, _from, %{mode: :sandbox} = s) do
+  def handle_call(:break, _from, %{mode: :sandbox} = s) do
     {:reply, :ok, demonitor(s)}
   end
 
-  def handle_call(:disconnect, _from, s) do
+  def handle_call(:break, _from, s) do
     s = s
       |> demonitor()
       |> disconnect()
@@ -95,9 +95,9 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     end
   end
 
-  ## Ask
+  ## Checkout
 
-  def handle_call(:ask, _, %{mode: mode} = s) do
+  def handle_call(:checkout, _, %{mode: mode} = s) do
     {:reply, {mode, modconn(s)}, s}
   end
 
