@@ -55,10 +55,12 @@ Database                | Ecto Adapter           | Dependency
 PostgreSQL              | Ecto.Adapters.Postgres | [postgrex][postgrex]
 MySQL                   | Ecto.Adapters.MySQL    | [mariaex][mariaex]
 MSSQL                   | Tds.Ecto               | [tds_ecto][tds_ecto]
+SQLite3                 | Sqlite.Ecto            | [sqlite_ecto][sqlite_ecto]
 
 [postgrex]: http://github.com/ericmj/postgrex
 [mariaex]: http://github.com/xerions/mariaex
 [tds_ecto]: https://github.com/livehelpnow/tds_ecto
+[sqlite_ecto]: https://github.com/jazzyb/sqlite_ecto
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
