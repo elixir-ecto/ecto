@@ -38,7 +38,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     Mix.Task.run "app.start", ["--no-start"|args]
-    Application.ensure_all_started(:ecto)
+    {:ok, _} = Application.ensure_all_started(:ecto)
     repo = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,

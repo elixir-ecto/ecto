@@ -34,6 +34,7 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def start_link(repo, opts) do
+        {:ok, _} = Application.ensure_all_started(@adapter)
         Ecto.Adapters.SQL.start_link(@conn, @adapter, repo, opts)
       end
 

@@ -27,6 +27,13 @@ defmodule Ecto.Adapter do
 
   Returns `{:error, {:already_started, pid}}` if the repo already
   started or `{:error, term}` in case anything else goes wrong.
+
+  ## Adapter start
+
+  Because some Ecto tasks like migration may run without starting
+  the parent application, it is recommended that start_link in
+  adapters make sure the adapter application is started by calling
+  `Application.ensure_all_started/1`.
   """
   defcallback start_link(repo, options) ::
               {:ok, pid} | :ok | {:error, {:already_started, pid}} | {:error, term}
