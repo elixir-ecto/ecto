@@ -18,10 +18,13 @@ defmodule Ecto.Model.Dependent do
     changeset
   end
 
-  def nilify_all(%Changeset{repo: repo} = changeset, assoc_queryable, assoc_key) do
+  defmacro nilify_all(%Changeset{repo: repo} = changeset, assoc_queryable, assoc_key) do
     query = assoc_query(changeset, assoc_queryable, assoc_key)
-    repo.update_all(query, [{assoc_key, nil}])
-    changeset
+
+    quote do
+      repo.update_all(unquote(query), [{unquote(assoc_key), nil}])
+      unquote(changeset)
+    end
   end
 
   defp assoc_query(%Changeset{model: model}, assoc_queryable, assoc_key) do
@@ -31,7 +34,7 @@ defmodule Ecto.Model.Dependent do
   defmacro __before_compile__(env) do
     assocs = Module.get_attribute(env.module, :ecto_assocs) |> Enum.reverse
 
-    for {assoc_name, assoc} <- assocs, Map.from_struct(assoc)[:dependent] do
+    for {_assoc_name, assoc} <- assocs, Map.from_struct(assoc)[:dependent] do
       dependent = assoc.dependent
       queryable = assoc.queryable
       assoc_key = assoc.assoc_key
