@@ -449,7 +449,7 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Adds a foreign key.
+  Defines a foreign key.
 
   ## Examples
 
@@ -460,7 +460,7 @@ defmodule Ecto.Migration do
   ## Options
 
     * `:column` - The foreign key column, default is `:id`
-    * `:type`   - The foreign key type, default is `:integer`
+    * `:type`   - The foreign key type, default is `:serial`
 
   """
   def references(table, opts \\ []) when is_atom(table) do
