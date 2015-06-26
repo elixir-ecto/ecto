@@ -133,16 +133,14 @@ defmodule Ecto.Adapters.Pool do
   defcallback close_transaction(t, worker, timeout) :: :ok when worker: any
 
   @doc """
-  Run a fun using a connection from a pool.
+  Runs a fun using a connection from a pool.
 
-  Once inside a `run/4` any call to `run/4` for the same pool will reuse the
-  same worker/connection. If `break/2` is invoked, all operations will return
-  `{:error, :noconnect}` until the end of the top level run.
+  The connection will be taken from the pool unless we are inside
+  a `transaction/4` which, in this case, would already have a conn
+  attached to it.
 
   Returns the value returned by the function wrapped in a tuple
-  as `{:ok, value}`. A fun can be run inside or outside a transaction and
-  nested. The `depth` shows the depth of nested transactions for the module/pool
-  combination - outside a transaction the `depth` is `0`.
+  as `{:ok, value}`.
 
   Returns `{:error, :noproc}` if the pool is not alive or `{:error, :noconnect}`
   if no connection is available.
@@ -150,10 +148,10 @@ defmodule Ecto.Adapters.Pool do
   ## Examples
 
       Pool.run(mod, pool, timeout,
-        fn(ref, :sandbox, 0, _queue_time) -> :sandboxed_run end)
+        fn(conn, _queue_time) -> :sandboxed_run end)
 
       Pool.transaction(mod, pool, timeout,
-        fn(ref, :raw, 1, _queue_time) ->
+        fn(ref, conn, :raw, 1, _queue_time) ->
           {:ok, :nested} =
             Pool.run(mod, pool, timeout, fn(ref, :raw, 1, nil) ->
               :nested
@@ -161,23 +159,23 @@ defmodule Ecto.Adapters.Pool do
         end)
 
       Pool.run(mod, :pool1, timeout,
-        fn(ref, :raw, 0, _queue_time1) ->
+        fn(ref, conn, :raw, 0, _queue_time1) ->
           {:ok, :different_pool} =
             Pool.run(mod, :pool2, timeout,
               fn(ref, :raw, 0, _queue_time2) -> :different_pool end)
         end)
 
   """
-  @spec run(module, t, timeout,
-  ((ref, mode, depth, queue_time | nil) -> result)) ::
-    {:ok, result} | {:error, :noproc | :noconnect} when result: var
+  @spec run(module, t, timeout, ((conn, queue_time | nil) -> result)) ::
+        {:ok, result} | {:error, :noproc | :noconnect}
+        when result: var, conn: {module, pid}
   def run(pool_mod, pool, timeout, fun) do
     ref = {__MODULE__, pool_mod, pool}
     case Process.get(ref) do
       nil ->
-        run(pool_mod, pool, ref, timeout, fun)
+        do_run(pool_mod, pool, timeout, fun)
       %{conn: conn} ->
-        do_run(ref, conn, nil, timeout, fun)
+        {:ok, fuse(ref, timeout, fun, [conn, nil])}
       %{} ->
         {:error, :noconnect}
     end
@@ -227,8 +225,9 @@ defmodule Ecto.Adapters.Pool do
 
   """
   @spec transaction(module, t, timeout,
-  ((ref, mode, depth, queue_time | nil) -> result)) ::
-    {:ok, result} | {:error, :noproc | :noconnect | :notransaction} when result: var
+                    ((ref, conn, mode, depth, queue_time | nil) -> result)) ::
+        {:ok, result} | {:error, :noproc | :noconnect | :notransaction}
+        when result: var, conn: {module, pid}
   def transaction(pool_mod, pool, timeout, fun) do
     ref = {__MODULE__, pool_mod, pool}
     case Process.get(ref) do
@@ -257,35 +256,13 @@ defmodule Ecto.Adapters.Pool do
 
   """
   @spec mode(ref, mode, timeout) ::
-    :ok | {:error, :already_mode | :noconnect}
+        :ok | {:error, :already_mode | :noconnect}
   def mode({__MODULE__, _, _} = ref, mode, timeout) do
     case Process.get(ref) do
       %{conn: _ , mode: ^mode} ->
         {:error, :already_mode}
       %{conn: _} = info ->
         mode(ref, info, mode, timeout)
-      %{} ->
-        {:error, :noconnect}
-    end
-  end
-
-  @doc """
-  Get the connection module and pid for the active transaction or run.
-
-  ## Examples
-
-      Pool.transaction(mod, pool, timeout,
-        fn(ref, :raw, 1, _queue_time) ->
-          {:ok, {mod, conn}} = Pool.connection(ref)
-        end)
-
-  """
-  @spec connection(ref) ::
-    {:ok, conn} | {:error, :noconnect} when conn: {module, pid}
-  def connection(ref) do
-    case Process.get(ref) do
-      %{conn: conn} ->
-        {:ok, conn}
       %{} ->
         {:error, :noconnect}
     end
@@ -338,21 +315,22 @@ defmodule Ecto.Adapters.Pool do
     end
   end
 
-  defp run(pool_mod, pool, ref, timeout, fun) do
+  defp do_run(pool_mod, pool, timeout, fun) do
     case checkout(pool_mod, pool, timeout) do
-      {:ok, %{conn: conn} = info, time} ->
+      {:ok, %{conn: conn, worker: worker} = info, time} ->
         try do
-          do_run(ref, conn, time, timeout, fun)
+          {:ok, fun.(conn, time)}
+        catch
+          class, reason ->
+            stack = System.stacktrace()
+            pool_mod.break(pool, worker, timeout)
+            :erlang.raise(class, reason, stack)
         after
           checkin(pool_mod, pool, info, timeout)
         end
       {:error, _} = error ->
         error
     end
-  end
-
-  defp do_run(ref, conn, time, timeout, fun) do
-    {:ok, fuse(ref, timeout, fun, [conn, time])}
   end
 
   defp checkout(pool_mod, pool, timeout) do

@@ -166,8 +166,12 @@ defmodule Ecto.Adapters.SQL do
              %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query(repo, sql, params, opts \\ []) do
     case query(repo, sql, params, nil, opts) do
-      {:ok, result} -> result
-      {:error, err} -> raise err
+      {{:ok, result}, entry} ->
+        log(repo, entry)
+        result
+      {{:error, err}, entry} ->
+        log(repo, entry)
+        raise err
       :noconnect ->
         # :noconnect can never be the reason a call fails because
         # it is converted to {:nodedown, node}. This means the exit
@@ -183,13 +187,11 @@ defmodule Ecto.Adapters.SQL do
     log?    = Keyword.get(opts, :log, true)
 
     query_fun = fn({mod, conn}, inner_queue_time) ->
-      query(mod, conn, inner_queue_time || outer_queue_time,
-            sql, params, log?, opts)
+      query(mod, conn, inner_queue_time || outer_queue_time, sql, params, log?, opts)
     end
 
     case Pool.run(pool_mod, pool, timeout, query_fun) do
-      {:ok, {result, entry}} ->
-        log(repo, entry)
+      {:ok, result} ->
         result
       {:error, :noconnect} ->
         :noconnect
@@ -317,7 +319,7 @@ defmodule Ecto.Adapters.SQL do
       fn(ref, {mod, _conn}, :raw, 1, queue_time) when event in [:begin, :restart] ->
           begin_sandbox(repo, ref, mod, queue_time, timeout, opts)
         (_ref, _modconn, :raw, 1, _queue_time) when event === :rollback ->
-          :ok
+          {:ok, nil}
         (_ref, _modconn, :sandbox, 1, _queue_time) when event === :begin ->
           raise "cannot begin test transaction because we are already inside one"
         (ref, {mod, _conn}, :sandbox, 1, queue_time) when event === :restart ->
@@ -329,9 +331,11 @@ defmodule Ecto.Adapters.SQL do
       end
 
     case Pool.transaction(pool_mod, pool, timeout, trans_fun) do
-      {:ok, :ok} ->
+      {:ok, {:ok, entry}} ->
+        log(repo, entry)
         :ok
-      {:ok, {:error, err}} ->
+      {:ok, {{:error, err}, entry}} ->
+        log(repo, entry)
         raise err
       {:ok, :noconnect} ->
         exit({:noconnect, {__MODULE__, :test_transaction, [event, repo, opts]}})
@@ -343,20 +347,21 @@ defmodule Ecto.Adapters.SQL do
 
   defp begin_sandbox(repo, ref, mod, queue_time, timeout, opts) do
     case begin(repo, mod, :raw, 1, queue_time, opts) do
-      {:ok, _} ->
-        savepoint_sandbox(repo, ref, mod, timeout, opts)
-      {:error, _err} = error ->
+      {{:ok, _}, entry} ->
+        savepoint_sandbox(repo, ref, mod, entry, timeout, opts)
+      {{:error, _}, _entry} = error ->
         Pool.break(ref, timeout)
         error
     end
   end
 
-  defp savepoint_sandbox(repo, ref, mod, timeout, opts) do
+  defp savepoint_sandbox(repo, ref, mod, entry, timeout, opts) do
     case begin(repo, mod, :raw, :sandbox, nil, opts) do
-      {:ok, _} ->
+      # We ignore the entry, keeping only the begin transaction one
+      {{:ok, _}, _entry} ->
         _ = Pool.mode(ref, :sandbox, timeout)
-        :ok
-      {:error, _err} = error ->
+        {:ok, entry}
+      {{:error, _}, _entry} = error ->
         Pool.break(ref, timeout)
         error
     end
@@ -494,11 +499,14 @@ defmodule Ecto.Adapters.SQL do
     end
 
     case Pool.transaction(pool_mod, pool, timeout, trans_fun) do
-      {:ok, {:return, result}} ->
+      {:ok, {{:return, result}, entry}} ->
+        log(repo, entry)
         result
-      {:ok, {:raise, class, reason, stack}} ->
+      {:ok, {{:raise, class, reason, stack}, entry}} ->
+        log(repo, entry)
         :erlang.raise(class, reason, stack)
-      {:ok, {:error, err}} ->
+      {:ok, {{:error, err}, entry}} ->
+        log(repo, entry)
         raise err
       {:ok, :noconnect} ->
         exit({:noconnect, {__MODULE__, :transaction, [repo, opts, fun]}})
@@ -510,22 +518,23 @@ defmodule Ecto.Adapters.SQL do
 
   defp transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun) do
     case begin(repo, mod, mode, depth, queue_time, opts) do
-      {:ok, _} ->
+      {{:ok, _}, entry} ->
         try do
+          log(repo, entry)
           value = fun.()
           commit(repo, ref, mod, mode, depth, timeout, opts, {:return, {:ok, value}})
         catch
           :throw, {:ecto_rollback, value} ->
-            result = {:return, {:error, value}}
-            rollback(repo, ref, mod, mode, depth, nil, timeout, opts, result)
+            res = {:return, {:error, value}}
+            rollback(repo, ref, mod, mode, depth, nil, timeout, opts, res)
           class, reason ->
             stack = System.stacktrace()
             res = {:raise, class, reason, stack}
             rollback(repo, ref, mod, mode, depth, nil, timeout, opts, res)
         end
-      {:error, _err} = result ->
+      {{:error, _err}, _entry} = error ->
         Pool.break(ref, timeout)
-        result
+        error
       :noconnect ->
         :noconnect
     end
@@ -542,31 +551,31 @@ defmodule Ecto.Adapters.SQL do
 
   defp commit(repo, ref, mod, :raw, 1, timeout, opts, result) do
     case query(repo, mod.commit, [], nil, opts) do
-      {:ok, _} ->
-        result
-      {:error, _err} = error ->
+      {{:ok, _}, entry} ->
+        {result, entry}
+      {{:error, _}, _entry} = error ->
         Pool.break(ref, timeout)
         error
       :noconnect ->
-        result
+        {result, nil}
     end
   end
 
   defp commit(_repo, _ref, _mod, _mode, _depth, _timeout, _opts, result) do
-    result
+    {result, nil}
   end
 
   defp rollback(repo, ref, mod, mode, depth, queue_time, timeout, opts, result) do
     sql = rollback_sql(mod, mode, depth)
 
     case query(repo, sql, [], queue_time, opts) do
-      {:ok, _} ->
-        result
-      {:error, _err} = error ->
+      {{:ok, _}, entry} ->
+        {result, entry}
+      {{:error, _}, _entry} = error ->
         Pool.break(ref, timeout)
         error
       :noconnect ->
-        result
+        {result, nil}
     end
   end
 

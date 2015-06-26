@@ -1,5 +1,6 @@
 Logger.configure(level: :info)
-ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive, :uses_usec]
+ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive,
+                       :uses_usec, :strict_savepoint]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :primary_key_type, :id)

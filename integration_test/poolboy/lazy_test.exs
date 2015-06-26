@@ -1,7 +1,6 @@
 defmodule Ecto.Integration.LazyTest do
   use ExUnit.Case, async: true
 
-  alias Ecto.Adapters.Pool
   alias Ecto.Integration.TestPool
   alias Ecto.Integration.Pool.Connection
 
@@ -14,8 +13,7 @@ defmodule Ecto.Integration.LazyTest do
     refute :sys.get_state(worker).conn
     :poolboy.checkin(pool, worker)
 
-    TestPool.transaction(pool, @timeout, fn(ref, _, _, _) ->
-      assert {:ok, {Connection, conn}} = Pool.connection(ref)
+    TestPool.transaction(pool, @timeout, fn(_, {Connection, conn}, _, _, _) ->
       assert Process.alive?(conn)
     end)
   end
