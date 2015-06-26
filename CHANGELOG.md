@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.13.0
+
+* Enhancements
+  * Support a `:map` type. PostgreSQL will use `jsonb` columns for those while other SQL databases will emulate it with a text column until JSON support is added
+  * Add keyword query fragments: `fragment("$set": [foo: "bar"])`. This will be useful to databases who cannot express their queries as strings
+  * Allow type tagging with field name: `select: type(^some_value, p.uuid)`
+  * Support checking if a value exists in an array: `where: "ecto" in p.tags`
+  * Allow custom options to be given when creating a table: `create table(:posts, options: "WITH ...")`
+  * Add `Ecto.Adapter.Pool` which will support adpaters to work with different pools (upcoming)
+
+## v0.12.1
+
+* Bug fix
+  * Improvements related to adapter compatibility
+
 ## v0.12.0
 
 Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0
