@@ -4,23 +4,23 @@ defmodule Ecto.Integration.TestTransactionTest do
   require Ecto.Integration.TestRepo, as: TestRepo
 
   test "begin, restart and rollback" do
-    assert_transaction_threshold(0)
+    assert_transaction(1, :raw)
     assert :ok = Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
-    assert_transaction_threshold(1)
+    assert_transaction(1, :sandbox)
     assert :ok = Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-    assert_transaction_threshold(1)
+    assert_transaction(1, :sandbox)
     assert :ok = Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-    assert_transaction_threshold(0)
+    assert_transaction(1, :raw)
   after
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
 
   test "restart_test_transaction begins a transaction if one is not running" do
-    assert_transaction_threshold(0)
+    assert_transaction(1, :raw)
     assert :ok = Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-    assert_transaction_threshold(1)
+    assert_transaction(1, :sandbox)
     assert :ok = Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-    assert_transaction_threshold(0)
+    assert_transaction(1, :raw)
   after
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
@@ -50,10 +50,11 @@ defmodule Ecto.Integration.TestTransactionTest do
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
 
-  defp assert_transaction_threshold(value) do
+  defp assert_transaction(depth, mode) do
     TestRepo.transaction(fn ->
-      assert %{threshold: ^value} =
-        Process.get({:ecto_transaction_info, elem(TestRepo.__pool__, 0)})
+      {pool_mod, pool, _} = TestRepo.__pool__
+      assert %{depth: ^depth, mode: ^mode} =
+        Process.get({Ecto.Adapters.Pool, pool_mod, pool})
     end)
   end
 end

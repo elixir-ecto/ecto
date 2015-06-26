@@ -3,7 +3,7 @@ defmodule Ecto.Adapters.Postgres do
   Adapter module for PostgreSQL.
 
   It uses `postgrex` for communicating to the database
-  and manages a connection pool with `poolboy`.
+  and a connection pool, such as `poolboy`.
 
   ## Features
 
@@ -25,6 +25,7 @@ defmodule Ecto.Adapters.Postgres do
   recompilation in order to make an effect.
 
     * `:adapter` - The adapter name, in this case, `Ecto.Adapters.Postgres`
+    * `:pool` - The connection pool module, defaults to `Ecto.Adapters.Poolboy`
     * `:timeout` - The default timeout to use on queries, defaults to `5000`
     * `:log_level` - The level to use when logging queries (default: `:debug`)
 
@@ -42,9 +43,10 @@ defmodule Ecto.Adapters.Postgres do
 
   ### Pool options
 
+  All pools should support the following options and can support other options,
+  see `Ecto.Adapters.Poolboy`.
+
     * `:size` - The number of connections to keep in the pool (default: 10)
-    * `:lazy` - When true, connections to the repo are lazily started (default: true)
-    * `:max_overflow` - The maximum overflow of connections (default: 0) (see poolboy docs)
 
   ### Storage options
 
