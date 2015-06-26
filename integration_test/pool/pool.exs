@@ -1,6 +1,16 @@
 defmodule Ecto.Integration.Pool do
-  alias Ecto.Integration.Connection
   alias Ecto.Adapters.Pool
+
+  defmodule Connection do
+    @behaviour Ecto.Adapters.Connection
+    def connect(_opts) do
+      Agent.start_link(fn -> [] end)
+    end
+
+    def disconnect(conn) do
+      Agent.stop(conn)
+    end
+  end
 
   defmacro __using__(pool_mod) do
     quote do

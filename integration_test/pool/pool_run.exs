@@ -1,9 +1,9 @@
 defmodule Ecto.Integration.PoolRunTest do
   use ExUnit.Case, async: true
 
-  require Ecto.Integration.TestPool, as: TestPool
-  require Ecto.Integration.Connection, as: Connection
   alias Ecto.Adapters.Pool
+  alias Ecto.Integration.TestPool
+  alias Ecto.Integration.Pool.Connection
 
   @timeout :infinity
 
