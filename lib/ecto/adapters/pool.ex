@@ -137,7 +137,7 @@ defmodule Ecto.Adapters.Pool do
 
   Once inside a `run/4` any call to `run/4` for the same pool will reuse the
   same worker/connection. If `break/2` is invoked, all operations will return
-  `{:error, :noconnection}` until the end of the top level run.
+  `{:error, :noconnect}` until the end of the top level run.
 
   Returns the value returned by the function wrapped in a tuple
   as `{:ok, value}`. A fun can be run inside or outside a transaction and
@@ -188,7 +188,7 @@ defmodule Ecto.Adapters.Pool do
 
   Once a transaction is opened, all following calls to `run/4` or
   `transaction/4` will use the same connection/worker. If `break/2` is invoked,
-  all operations will return `{:error, :noconnection}` until the end of the
+  all operations will return `{:error, :noconnect}` until the end of the
   top level transaction.
 
   A transaction returns the value returned by the function wrapped in a tuple
