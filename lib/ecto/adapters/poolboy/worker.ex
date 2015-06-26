@@ -9,7 +9,7 @@ defmodule Ecto.Adapters.Poolboy.Worker do
 
   @spec start_link({module, Keyword.t}) :: {:ok, pid}
   def start_link({module, params}) do
-    GenServer.start_link(__MODULE__, {module, params}, [debug: [:log]])
+    GenServer.start_link(__MODULE__, {module, params}, [])
   end
 
   @spec checkout(pid, timeout) :: {Pool.mode, modconn} | {:error, Exception.t}
