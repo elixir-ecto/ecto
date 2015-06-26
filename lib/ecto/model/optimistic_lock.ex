@@ -34,7 +34,7 @@ defmodule Ecto.Model.OptimisticLock do
   The column name is arbitrary and doesn't need to be `:lock_version`. However,
   it **needs to be an integer**.
 
-  Now, a field must be added to the schema and the `optimistic_lock/1` macro has
+  Now a field must be added to the schema and the `optimistic_lock/1` macro has
   to be used in order to specify which column in the schema will be used as
   the "version" column.
 

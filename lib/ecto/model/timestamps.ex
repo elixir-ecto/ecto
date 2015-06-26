@@ -43,23 +43,28 @@ defmodule Ecto.Model.Timestamps do
     timestamps = Module.get_attribute(env.module, :ecto_timestamps)
 
     if timestamps do
-      type = timestamps[:type]
-      usec = timestamps[:usec]
+      args = [timestamps[:type], timestamps[:usec]]
 
-      inserted_at = if field = Keyword.fetch!(timestamps, :inserted_at) do
-        quote do
-          before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type), unquote(usec)]
+      inserted_at =
+        if field = Keyword.fetch!(timestamps, :inserted_at) do
+          quote do
+            before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field)|args]
+          end
         end
-      end
 
-      updated_at = if field = Keyword.fetch!(timestamps, :updated_at) do
-        quote do
-          before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type), unquote(usec)]
-          before_update Ecto.Model.Timestamps, :put_timestamp, [unquote(field), unquote(type), unquote(usec)]
+      updated_at =
+        if field = Keyword.fetch!(timestamps, :updated_at) do
+          quote do
+            before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field)|args]
+            before_update Ecto.Model.Timestamps, :put_timestamp, [unquote(field)|args]
+          end
         end
-      end
 
-      {inserted_at, updated_at}
+      quote do
+        args = unquote(args)
+        unquote(inserted_at)
+        unquote(updated_at)
+      end
     end
   end
 end
