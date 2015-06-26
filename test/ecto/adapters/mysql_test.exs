@@ -400,7 +400,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   # DDL
 
-  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1]
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, references: 2]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -430,6 +430,30 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :category_id, references(:categories), []} ]}
     assert SQL.execute_ddl(create) ==
            ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)) ENGINE = INNODB|
+  end
+
+  test "create table with reference and on_delete: :nothing clause" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, on_delete: :nothing), []} ]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)) ENGINE = INNODB|
+  end
+
+  test "create table with reference and on_delete: :nillify_all clause" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, on_delete: :nillify_all), []} ]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL) ENGINE = INNODB|
+  end
+
+  test "create table with reference and on_delete: :delete_all clause" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, on_delete: :delete_all), []} ]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE) ENGINE = INNODB|
   end
 
   test "create table with column options" do

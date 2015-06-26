@@ -548,7 +548,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp column_type(%Reference{} = ref, opts),
       do: "#{reference_column_type(ref.type, opts)} REFERENCES " <>
-          "#{quote_name(ref.table)}(#{quote_name(ref.column)})"
+          "#{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
+          reference_on_delete(ref.on_delete)
+
     defp column_type({:array, type}, opts),
       do: column_type(type, opts) <> "[]"
     defp column_type(type, opts) do
@@ -568,6 +570,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     # A reference pointing to a serial column becomes integer in postgres
     defp reference_column_type(:serial, _opts), do: "integer"
     defp reference_column_type(type, opts), do: column_type(type, opts)
+
+    defp reference_on_delete(:nillify_all), do: " ON DELETE SET NULL"
+    defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
+    defp reference_on_delete(_), do: ""
 
     ## Helpers
 
