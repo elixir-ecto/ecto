@@ -176,8 +176,8 @@ defmodule Ecto.Adapters.Pool do
     case Process.get(ref) do
       nil ->
         run(pool_mod, pool, ref, timeout, fun)
-      %{conn: _} = info ->
-        do_run(ref, info, nil, fun)
+      %{conn: conn} ->
+        do_run(ref, conn, nil, timeout, fun)
       %{} ->
         {:error, :noconnect}
     end
@@ -325,26 +325,11 @@ defmodule Ecto.Adapters.Pool do
     end
   end
 
-  @doc """
-  Apply a function inside a transaction (or run) and break the transaction
-  if the function raises.
+  ## Helpers
 
-  ## Examples
-
-      Pool.transaction(mod, pool, timeout,
-        fn(ref, :raw, 1, _queue_time) ->
-          try do
-            Pool.fuse(ref, timeout, fn() -> "oops" end)
-          rescue
-            RuntimeError ->
-              {:error, :noconnect} = Pool.connection(ref)
-          end
-        end)
-
-  """
-  def fuse(ref, timeout, fun) do
+  defp fuse(ref, timeout, fun, args) do
     try do
-      fun.()
+      apply(fun, args)
     catch
       class, reason ->
         stack = System.stacktrace()
@@ -353,16 +338,12 @@ defmodule Ecto.Adapters.Pool do
     end
   end
 
-  ## Helpers
-
   defp run(pool_mod, pool, ref, timeout, fun) do
     case checkout(pool_mod, pool, timeout) do
-      {:ok, info, time} ->
-        nil = Process.put(ref, info)
+      {:ok, %{conn: conn} = info, time} ->
         try do
-          do_run(ref, info, time, fun)
+          do_run(ref, conn, time, timeout, fun)
         after
-          info = Process.delete(ref)
           checkin(pool_mod, pool, info, timeout)
         end
       {:error, _} = error ->
@@ -370,8 +351,8 @@ defmodule Ecto.Adapters.Pool do
     end
   end
 
-  defp do_run(ref, %{depth: depth, mode: mode}, time, fun) do
-      {:ok, fun.(ref, mode, depth, time)}
+  defp do_run(ref, conn, time, timeout, fun) do
+    {:ok, fuse(ref, timeout, fun, [conn, time])}
   end
 
   defp checkout(pool_mod, pool, timeout) do
@@ -407,11 +388,11 @@ defmodule Ecto.Adapters.Pool do
     end
   end
 
-  defp do_transaction(ref, %{depth: depth, mode: mode} = info, time, fun) do
+  defp do_transaction(ref, %{depth: depth, mode: mode, conn: conn} = info, time, fun) do
     depth = depth + 1
     _ = Process.put(ref, %{info | depth: depth})
     try do
-      {:ok, fun.(ref, mode, depth, time)}
+      {:ok, fun.(ref, conn, mode, depth, time)}
     after
       case Process.put(ref, info) do
         %{conn: _} ->
@@ -445,10 +426,9 @@ defmodule Ecto.Adapters.Pool do
   defp mode(_, %{depth: 0}, _, _) do
     {:error, :notransaction}
   end
-  defp mode({__MODULE__, pool_mod, pool} = ref, %{worker: worker} = info,
-  mode, timeout) do
-    put_mode = fn() -> pool_mod.transaction_mode(pool, worker, mode, timeout) end
-    case fuse(ref, timeout, put_mode) do
+  defp mode({__MODULE__, pool_mod, pool} = ref, %{worker: worker} = info, mode, timeout) do
+    put_mode = fn -> pool_mod.transaction_mode(pool, worker, mode, timeout) end
+    case fuse(ref, timeout, put_mode, []) do
       :ok ->
         _ = Process.put(ref, %{info | mode: mode})
         :ok

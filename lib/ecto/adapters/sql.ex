@@ -165,53 +165,48 @@ defmodule Ecto.Adapters.SQL do
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
              %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query(repo, sql, params, opts \\ []) do
-    {pool_mod, pool, timeout} = repo.__pool__
-    opts            = Keyword.put_new(opts, :timeout, timeout)
-    timeout         = Keyword.fetch!(opts, :timeout)
-    log?            = Keyword.get(opts, :log, true)
-
-
-    query_fun = fn(ref, _mode, _depth, queue_time) ->
-      query(ref, queue_time, sql, params, log?, timeout, opts)
-    end
-
-    case Pool.run(pool_mod, pool, timeout, query_fun) do
-      {:ok, {{:ok, result}, entry}} ->
-        log(repo, entry)
-        result
-      {:ok, {{:error, err}, entry}} ->
-        log(repo, entry)
-        raise err
-      {:ok, :noconnect} ->
+    case query(repo, sql, params, nil, opts) do
+      {:ok, result} -> result
+      {:error, err} -> raise err
+      :noconnect ->
         # :noconnect can never be the reason a call fails because
         # it is converted to {:nodedown, node}. This means the exit
         # reason can be easily identified.
         exit({:noconnect, {__MODULE__, :query, [repo, sql, params, opts]}})
+    end
+  end
+
+  defp query(repo, sql, params, outer_queue_time, opts) do
+    {pool_mod, pool, timeout} = repo.__pool__
+    opts    = Keyword.put_new(opts, :timeout, timeout)
+    timeout = Keyword.fetch!(opts, :timeout)
+    log?    = Keyword.get(opts, :log, true)
+
+    query_fun = fn({mod, conn}, inner_queue_time) ->
+      query(mod, conn, inner_queue_time || outer_queue_time,
+            sql, params, log?, opts)
+    end
+
+    case Pool.run(pool_mod, pool, timeout, query_fun) do
+      {:ok, {result, entry}} ->
+        log(repo, entry)
+        result
+      {:error, :noconnect} ->
+        :noconnect
       {:error, :noproc} ->
         raise ArgumentError, "repo #{inspect repo} is not started, " <>
                              "please ensure it is part of your supervision tree"
     end
   end
 
-  defp query(ref, queue_time, sql, params, log?, timeout, opts) do
-    case Pool.connection(ref) do
-      {:ok, {mod, conn}} ->
-        query(ref, mod, conn, queue_time, sql, params, log?, timeout, opts)
-      {:error, :noconnect} ->
-        :noconnect
-    end
+  defp query(mod, conn, _queue_time, sql, params, false, opts) do
+    {mod.query(conn, sql, params, opts), nil}
   end
-
-  defp query(ref, mod, conn, _queue_time, sql, params, false, timeout, opts) do
-    query = fn() -> mod.query(conn, sql, params, opts) end
-    {Pool.fuse(ref, timeout, query), nil}
-  end
-  defp query(ref, mod, conn, queue_time, sql, params, true, timeout, opts) do
-    query = fn() -> :timer.tc(mod, :query, [conn, sql, params, opts]) end
-    {query_time, res} = Pool.fuse(ref, timeout, query)
+  defp query(mod, conn, queue_time, sql, params, true, opts) do
+    {query_time, res} = :timer.tc(mod, :query, [conn, sql, params, opts])
     entry = %Ecto.LogEntry{query: sql, params: params, result: res,
                            query_time: query_time, queue_time: queue_time}
-     {res, entry}
+    {res, entry}
   end
 
   defp log(_repo, nil), do: :ok
@@ -319,26 +314,24 @@ defmodule Ecto.Adapters.SQL do
     timeout = Keyword.get(opts, :timeout)
 
     trans_fun =
-      fn(ref, :raw, 1, queue_time) when event in [:begin, :restart] ->
-          begin_sandbox(repo, ref, queue_time, timeout, opts)
-        (_ref, :raw, 1, _queue_time) when event === :rollback ->
-          {:ok, nil}
-        (_ref, :sandbox, 1, _queue_time) when event === :begin ->
+      fn(ref, {mod, _conn}, :raw, 1, queue_time) when event in [:begin, :restart] ->
+          begin_sandbox(repo, ref, mod, queue_time, timeout, opts)
+        (_ref, _modconn, :raw, 1, _queue_time) when event === :rollback ->
+          :ok
+        (_ref, _modconn, :sandbox, 1, _queue_time) when event === :begin ->
           raise "cannot begin test transaction because we are already inside one"
-        (ref, :sandbox, 1, queue_time) when event === :restart ->
-          restart_sandbox(ref, queue_time, timeout, opts)
-        (ref, :sandbox, 1, queue_time) when event === :rollback ->
-          rollback_sandbox(ref, queue_time, timeout, opts)
-        (_ref, _mode, _depth, _queue_time) ->
+        (ref, {mod, _conn}, :sandbox, 1, queue_time) when event === :restart ->
+          restart_sandbox(repo, ref, mod, queue_time, timeout, opts)
+        (ref, {mod, _conn}, :sandbox, 1, queue_time) when event === :rollback ->
+          rollback_sandbox(repo, ref, mod, queue_time, timeout, opts)
+        (_ref, _modconn, _mode, _depth, _queue_time) ->
           raise "cannot #{event} test transaction because we are already inside a regular transaction"
       end
 
     case Pool.transaction(pool_mod, pool, timeout, trans_fun) do
-      {:ok, {:ok, entry}} ->
-        log(repo, entry)
+      {:ok, :ok} ->
         :ok
-      {:ok, {{:error, err}, entry}} ->
-        log(repo, entry)
+      {:ok, {:error, err}} ->
         raise err
       {:ok, :noconnect} ->
         exit({:noconnect, {__MODULE__, :test_transaction, [event, repo, opts]}})
@@ -348,63 +341,42 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp begin_sandbox(repo, ref, queue_time, timeout, opts) do
-    log? = Keyword.get(opts, :log, true)
-    case begin(ref, :raw, 1, queue_time, log?, timeout, opts) do
-      {{:ok, _}, entry} ->
-        log_and_savepoint = fn() ->
-          log(repo, entry)
-          savepoint_sandbox(ref, log?, timeout, opts)
-        end
-        Pool.fuse(ref, timeout, log_and_savepoint)
-      {{:error, _err}, _entry} = error ->
+  defp begin_sandbox(repo, ref, mod, queue_time, timeout, opts) do
+    case begin(repo, mod, :raw, 1, queue_time, opts) do
+      {:ok, _} ->
+        savepoint_sandbox(repo, ref, mod, timeout, opts)
+      {:error, _err} = error ->
         Pool.break(ref, timeout)
         error
     end
   end
 
-  defp savepoint_sandbox(ref, log?, timeout, opts) do
-    case begin(ref, :raw, :sandbox, nil, log?, timeout, opts) do
-      {{:ok, _}, entry} ->
+  defp savepoint_sandbox(repo, ref, mod, timeout, opts) do
+    case begin(repo, mod, :raw, :sandbox, nil, opts) do
+      {:ok, _} ->
         _ = Pool.mode(ref, :sandbox, timeout)
-        {:ok, entry}
-      {{:error, _err}, _entry} = error ->
+        :ok
+      {:error, _err} = error ->
         Pool.break(ref, timeout)
         error
     end
   end
 
-  defp restart_sandbox(ref, queue_time, timeout, opts) do
-    log? = Keyword.get(opts, :log, true)
-    case rollback(ref, :sandbox, :sandbox, queue_time, log?, timeout, opts) do
-      {{:ok, _}, entry} ->
-        {:ok, entry}
-      {{:error, _err}, _entry} = error ->
-        Pool.break(ref, timeout)
-        error
-    end
+  defp restart_sandbox(repo, ref, mod, queue_time, timeout, opts) do
+    rollback(repo, ref, mod, :sandbox, :sandbox, queue_time, timeout, opts, :ok)
   end
 
-  defp rollback_sandbox(ref, queue_time, timeout, opts) do
-    log? = Keyword.get(opts, :log, true)
-    case rollback(ref, :raw, 1, queue_time, log?, timeout, opts) do
-      {{:ok, _}, entry} ->
-        _ = Pool.mode(ref, :raw, timeout)
-        {:ok, entry}
-      {{:error, _err}, _entry} = error ->
-        Pool.break(ref, timeout)
-        error
-    end
+  defp rollback_sandbox(repo, ref, mod, queue_time, timeout, opts) do
+    res = rollback(repo, ref, mod, :raw, 1, queue_time, timeout, opts, :ok)
+    _   = Pool.mode(ref, :raw, timeout)
+    res
   end
 
   ## Worker
 
   @doc false
   def __before_compile__(env) do
-    config =
-      env.module
-      |> Module.get_attribute(:config)
-
+    config   = Module.get_attribute(env.module, :config)
     timeout  = Keyword.get(config, :timeout, 5000)
     pool_mod = Keyword.get(config, :pool, Ecto.Adapters.Poolboy)
 
@@ -514,22 +486,19 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def transaction(repo, opts, fun) do
     {pool_mod, pool, timeout} = repo.__pool__
-    opts            = Keyword.put_new(opts, :timeout, timeout)
-    timeout         = Keyword.fetch!(opts, :timeout)
+    opts    = Keyword.put_new(opts, :timeout, timeout)
+    timeout = Keyword.fetch!(opts, :timeout)
 
-    trans_fun = fn(ref, mode, depth, queue_time) ->
-      transaction(repo, ref, mode, depth, queue_time, timeout, opts, fun)
+    trans_fun = fn(ref, {mod, _conn}, mode, depth, queue_time) ->
+      transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun)
     end
 
     case Pool.transaction(pool_mod, pool, timeout, trans_fun) do
-      {:ok, {{:return, result}, entry}} ->
-        log(repo, entry)
+      {:ok, {:return, result}} ->
         result
-      {:ok, {{:raise, class, reason, stack}, entry}} ->
-        log(repo, entry)
+      {:ok, {:raise, class, reason, stack}} ->
         :erlang.raise(class, reason, stack)
-      {:ok, {{:error, err}, entry}} ->
-        log(repo, entry)
+      {:ok, {:error, err}} ->
         raise err
       {:ok, :noconnect} ->
         exit({:noconnect, {__MODULE__, :transaction, [repo, opts, fun]}})
@@ -539,24 +508,22 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp transaction(repo, ref, mode, depth, queue_time, timeout, opts, fun) do
-    log? = Keyword.get(opts, :log, true)
-    case begin(ref, mode, depth, queue_time, log?, timeout, opts) do
-      {{:ok, _}, entry} ->
+  defp transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun) do
+    case begin(repo, mod, mode, depth, queue_time, opts) do
+      {:ok, _} ->
         try do
-          log(repo, entry)
           value = fun.()
-          commit(ref, mode, depth, log?, timeout, opts, {:return, {:ok, value}})
+          commit(repo, ref, mod, mode, depth, timeout, opts, {:return, {:ok, value}})
         catch
           :throw, {:ecto_rollback, value} ->
             result = {:return, {:error, value}}
-            rollback(ref, mode, depth, nil, log?, timeout, opts, result)
+            rollback(repo, ref, mod, mode, depth, nil, timeout, opts, result)
           class, reason ->
             stack = System.stacktrace()
             res = {:raise, class, reason, stack}
-            rollback(ref, mode, depth, nil, log?, timeout, opts, res)
+            rollback(repo, ref, mod, mode, depth, nil, timeout, opts, res)
         end
-      {{:error, _err}, _entry} = result ->
+      {:error, _err} = result ->
         Pool.break(ref, timeout)
         result
       :noconnect ->
@@ -564,66 +531,42 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp begin(ref, mode, depth, queue_time, log?, timeout, opts) do
-    case Pool.connection(ref) do
-      {:ok, {mod, conn}} ->
-        sql = begin_sql(mod, mode, depth)
-        query(ref, mod, conn, queue_time, sql, [], log?, timeout, opts)
-      {:error, :noconnect} ->
-        :noconnect
-    end
+  defp begin(repo, mod, mode, depth, queue_time, opts) do
+    sql = begin_sql(mod, mode, depth)
+    query(repo, sql, [], queue_time, opts)
   end
 
   defp begin_sql(mod, :raw, 1), do: mod.begin_transaction
   defp begin_sql(mod, :raw, :sandbox), do: mod.savepoint "ecto_sandbox"
   defp begin_sql(mod, _, depth), do: mod.savepoint "ecto_#{depth}"
 
-  defp commit(ref, mode, depth, log?, timeout, opts, result) do
-    case commit(ref, mode, depth, log?, timeout, opts) do
-      {{:ok, _}, entry} ->
-        {result, entry}
-      {{:error, _err}, _entry} = error ->
-        Pool.break(ref, timeout)
-        error
-      :nocommit ->
-        {result, nil}
-      :noconnect ->
-        {result, nil}
-    end
-  end
-
-  defp commit(ref, :raw, 1, log?, timeout, opts) do
-    case Pool.connection(ref) do
-      {:ok, {mod, conn}} ->
-        sql = mod.commit
-        query(ref, mod, conn, nil, sql, [], log?, timeout, opts)
-      {:error, :noconnect} ->
-        :noconnect
-    end
-  end
-  defp commit(_ref, _mode, _depth, _log?, _timeout, _opts) do
-    :nocommit
-  end
-
-  defp rollback(ref, mode, depth, queue_time, log?, timeout, opts, result) do
-    case rollback(ref, mode, depth, queue_time, log?, timeout, opts) do
-      {{:ok, _}, entry} ->
-        {result, entry}
-      {{:error, _err}, _entry} = error ->
+  defp commit(repo, ref, mod, :raw, 1, timeout, opts, result) do
+    case query(repo, mod.commit, [], nil, opts) do
+      {:ok, _} ->
+        result
+      {:error, _err} = error ->
         Pool.break(ref, timeout)
         error
       :noconnect ->
-        {result, nil}
+        result
     end
   end
 
-  defp rollback(ref, mode, depth, queue_time, log?, timeout, opts) do
-    case Pool.connection(ref) do
-      {:ok, {mod, conn}} ->
-        sql = rollback_sql(mod, mode, depth)
-        query(ref, mod, conn, queue_time, sql, [], log?, timeout, opts)
-      {:error, :noconnect} ->
-        :noconnect
+  defp commit(_repo, _ref, _mod, _mode, _depth, _timeout, _opts, result) do
+    result
+  end
+
+  defp rollback(repo, ref, mod, mode, depth, queue_time, timeout, opts, result) do
+    sql = rollback_sql(mod, mode, depth)
+
+    case query(repo, sql, [], queue_time, opts) do
+      {:ok, _} ->
+        result
+      {:error, _err} = error ->
+        Pool.break(ref, timeout)
+        error
+      :noconnect ->
+        result
     end
   end
 
