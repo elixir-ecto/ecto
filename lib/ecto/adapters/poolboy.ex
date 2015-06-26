@@ -85,7 +85,6 @@ defmodule Ecto.Adapters.Poolboy do
 
   defp split_opts(opts) do
     {pool_opts, conn_opts} = Keyword.split(opts, [:name, :size, :max_overflow])
-
     {pool_name, pool_opts} = Keyword.pop(pool_opts, :name)
 
     pool_opts = pool_opts

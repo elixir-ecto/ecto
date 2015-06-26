@@ -139,6 +139,19 @@ defmodule Ecto.Integration.TransactionTest do
 
   ## Failures when logging
 
+  @tag :strict_savepoint
+  test "log raises after begin, drops transaction" do
+    try do
+      Process.put(:on_log, fn -> raise UniqueError end)
+      PoolRepo.transaction(fn -> end)
+    rescue
+      UniqueError -> :ok
+    end
+
+    # If it doesn't fail, the transaction was not closed properly.
+    catch_error(Ecto.Adapters.SQL.query(PoolRepo, "savepoint foobar", []))
+  end
+
   test "log raises after begin, drops the whole transaction" do
     try do
       PoolRepo.transaction(fn ->
