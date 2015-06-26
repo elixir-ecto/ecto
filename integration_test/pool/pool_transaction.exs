@@ -6,8 +6,15 @@ defmodule Ecto.Integration.PoolTransactionTest do
 
   @timeout :infinity
 
-  test "worker cleans up the connection when it crashes" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  setup context do
+    case = context[:case]
+    test = context[:test]
+    {:ok, [pool: Module.concat(case, test)]}
+  end
+
+  test "worker cleans up the connection when it crashes", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     assert {:ok, conn1} =
       TestPool.transaction(pool, @timeout, fn(_ref, {_mod, conn1}, depth, queue_time) ->
@@ -28,8 +35,9 @@ defmodule Ecto.Integration.PoolTransactionTest do
     end)
   end
 
-  test "transaction can disconnect connection" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "transaction can disconnect connection", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     TestPool.transaction(pool, @timeout,
       fn(ref, {_mod, conn1}, depth, queue_time) ->
@@ -42,22 +50,25 @@ defmodule Ecto.Integration.PoolTransactionTest do
       end)
   end
 
-  test "disconnects if fuse raises" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "disconnects if fuse raises", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     TestPool.transaction(pool, @timeout, fn(_ref, {_mod, conn}, _, _) ->
+      monitor = Process.monitor(conn)
       try do
         TestPool.run(pool, @timeout, fn _, _ -> raise "oops" end)
       rescue
         RuntimeError ->
           assert TestPool.run(pool, @timeout, fn _, _ -> :ok end) === {:error, :noconnect}
       end
-      refute Process.alive?(conn)
+      assert_receive {:DOWN, ^monitor, _, _, _}
     end)
   end
 
-  test "disconnects if caller dies during transaction" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "disconnects if caller dies during transaction", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     _ = Process.flag(:trap_exit, true)
     parent = self()
@@ -79,8 +90,9 @@ defmodule Ecto.Integration.PoolTransactionTest do
     end)
   end
 
-  test "do not disconnect if caller dies after closing" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "do not disconnect if caller dies after closing", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     task = Task.async(fn ->
       TestPool.transaction(pool, @timeout, fn(_ref, {_mod, conn1}, _, _) ->

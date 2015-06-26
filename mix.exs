@@ -3,7 +3,7 @@ defmodule Ecto.Mixfile do
 
   @version "0.14.0-dev"
   @adapters [:pg, :mysql]
-  @pools [:poolboy]
+  @pools [:poolboy, :sojourn_broker]
 
   def project do
     [app: :ecto,
@@ -34,6 +34,7 @@ defmodule Ecto.Mixfile do
 
   defp deps do
     [{:poolboy, "~> 1.4"},
+     {:sbroker, "~> 0.7"},
      {:decimal, "~> 1.0"},
      {:postgrex, "~> 0.8.3", optional: true},
      {:mariaex, "~> 0.3.0", optional: true},
