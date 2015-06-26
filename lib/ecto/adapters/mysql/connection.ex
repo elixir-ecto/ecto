@@ -501,9 +501,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp index_expr(literal), do: quote_name(literal)
 
-    defp reference_expr(%Reference{} = ref, foreign_key_name) do
-      ", FOREIGN KEY (#{quote_name(foreign_key_name)}) REFERENCES #{quote_table(ref.table)} (#{quote_name(ref.column)})"
-    end
+    defp reference_expr(%Reference{} = ref, foreign_key_name),
+      do: ", FOREIGN KEY (#{quote_name(foreign_key_name)}) REFERENCES " <>
+          "#{quote_table(ref.table)} (#{quote_name(ref.column)})" <>
+          reference_on_delete(ref.on_delete)
 
     defp engine_expr(nil),
       do: " ENGINE = INNODB"
@@ -531,6 +532,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp reference_column_type(:serial, _opts), do: "BIGINT UNSIGNED"
     defp reference_column_type(type, opts), do: column_type(type, opts)
+
+    defp reference_on_delete(:nillify_all), do: " ON DELETE SET NULL"
+    defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
+    defp reference_on_delete(_), do: ""
 
     ## Helpers
 
