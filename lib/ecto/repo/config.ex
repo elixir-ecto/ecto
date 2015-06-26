@@ -52,7 +52,7 @@ defmodule Ecto.Repo.Config do
   end
 
   def parse_url(url) when is_binary(url) do
-    info = URI.parse(url)
+    info = url |> URI.decode() |> URI.parse()
 
     unless info.host do
       raise Ecto.InvalidURLError, url: url, message: "host is not present"
