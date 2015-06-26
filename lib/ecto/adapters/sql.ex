@@ -441,7 +441,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def stop(repo) do
-    {pool_mod, pool, _} = repo.__poo__
+    {pool_mod, pool, _} = repo.__pool__
     pool_mod.stop(pool)
   end
 
