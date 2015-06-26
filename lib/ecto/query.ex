@@ -171,13 +171,12 @@ defmodule Ecto.Query do
 
   alias Ecto.Query.Builder
   alias Ecto.Query.Builder.From
-  alias Ecto.Query.Builder.Where
+  alias Ecto.Query.Builder.Filter
   alias Ecto.Query.Builder.Select
   alias Ecto.Query.Builder.Distinct
   alias Ecto.Query.Builder.OrderBy
   alias Ecto.Query.Builder.LimitOffset
   alias Ecto.Query.Builder.GroupBy
-  alias Ecto.Query.Builder.Having
   alias Ecto.Query.Builder.Preload
   alias Ecto.Query.Builder.Join
   alias Ecto.Query.Builder.Lock
@@ -454,7 +453,7 @@ defmodule Ecto.Query do
 
   """
   defmacro where(query, binding, expr) do
-    Where.build(query, binding, expr, __CALLER__)
+    Filter.build(:where, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -620,7 +619,7 @@ defmodule Ecto.Query do
       |> select([p], count(p.id))
   """
   defmacro having(query, binding, expr) do
-    Having.build(query, binding, expr, __CALLER__)
+    Filter.build(:having, query, binding, expr, __CALLER__)
   end
 
   @doc """

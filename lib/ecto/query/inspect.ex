@@ -37,9 +37,9 @@ defimpl Inspect, for: Ecto.Query do
     preloads  = preloads(query.preloads)
     assocs    = assocs(query.assocs, names)
 
-    wheres    = kw_exprs(:where, query.wheres, names)
+    wheres    = kw_exprs(:where, Enum.reverse(query.wheres), names)
     group_bys = kw_exprs(:group_by, query.group_bys, names)
-    havings   = kw_exprs(:having, query.havings, names)
+    havings   = kw_exprs(:having, Enum.reverse(query.havings), names)
     order_bys = kw_exprs(:order_by, query.order_bys, names)
 
     lock      = kw_inspect(:lock, query.lock)

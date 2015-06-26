@@ -29,7 +29,7 @@ defmodule Ecto.Query.Builder.GroupBy do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding          = Builder.escape_binding(binding)
+    binding        = Builder.escape_binding(binding)
     {expr, params} = escape(expr, binding, env)
     params         = Builder.escape_params(params)
 
