@@ -346,19 +346,19 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp begin_sandbox(repo, ref, mod, queue_time, timeout, opts) do
-    case begin(repo, mod, :raw, 1, queue_time, opts) do
-      {{:ok, _}, entry} ->
-        savepoint_sandbox(repo, ref, mod, entry, timeout, opts)
+    case begin(repo, mod, :raw, 1, nil, opts) do
+      # We ignore the entry, keeping only the sandbox one
+      {{:ok, _}, _entry} ->
+        savepoint_sandbox(repo, ref, mod, queue_time, timeout, opts)
       {{:error, _}, _entry} = error ->
         Pool.break(ref, timeout)
         error
     end
   end
 
-  defp savepoint_sandbox(repo, ref, mod, entry, timeout, opts) do
-    case begin(repo, mod, :raw, :sandbox, nil, opts) do
-      # We ignore the entry, keeping only the begin transaction one
-      {{:ok, _}, _entry} ->
+  defp savepoint_sandbox(repo, ref, mod, queue_time, timeout, opts) do
+    case begin(repo, mod, :raw, :sandbox, queue_time, opts) do
+      {{:ok, _}, entry} ->
         _ = Pool.mode(ref, :sandbox, timeout)
         {:ok, entry}
       {{:error, _}, _entry} = error ->
