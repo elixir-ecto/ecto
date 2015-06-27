@@ -874,6 +874,7 @@ defmodule Ecto.Changeset do
 
       validate_length(changeset, :title, min: 3)
       validate_length(changeset, :title, max: 100)
+      validate_length(changeset, :title, min: 3, max: 100)
       validate_length(changeset, :code, is: 9)
 
   """
