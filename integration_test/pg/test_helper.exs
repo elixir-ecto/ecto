@@ -10,6 +10,12 @@ Code.require_file "../support/repo.exs", __DIR__
 Code.require_file "../support/models.exs", __DIR__
 Code.require_file "../support/migration.exs", __DIR__
 
+pool =
+  case System.get_env("ECTO_POOL") || "poolboy" do
+    "poolboy"        -> Ecto.Adapters.Poolboy
+    "sojourn_broker" -> Ecto.Adapters.SojournBroker
+  end
+
 # Basic test repo
 alias Ecto.Integration.TestRepo
 
@@ -27,6 +33,7 @@ alias Ecto.Integration.PoolRepo
 
 Application.put_env(:ecto, PoolRepo,
   adapter: Ecto.Adapters.Postgres,
+  pool: pool,
   url: "ecto://postgres:postgres@localhost/ecto_test",
   size: 10)
 
