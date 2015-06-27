@@ -56,7 +56,7 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  def insert!(repo, adapter, %{__struct__: _} = struct, opts) do
+  def insert!(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
     insert!(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
   end
 
@@ -102,7 +102,7 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  def update!(repo, adapter, %{__struct__: model} = struct, opts) do
+  def update!(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
     changes = Map.take(struct, model.__schema__(:fields))
 
     # Remove all primary key fields from the list of changes.
@@ -143,7 +143,7 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  def delete!(repo, adapter, %{__struct__: _} = struct, opts) do
+  def delete!(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
     delete!(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
   end
 
