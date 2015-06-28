@@ -470,10 +470,19 @@ defmodule Ecto.Migration do
 
     * `:column` - The foreign key column, default is `:id`
     * `:type`   - The foreign key type, default is `:serial`
+    * `:on_delete` - What to perform if the entry is deleted.
+      May be `:nothing`, `:delete_all` or `:nilify_all`.
+      Defaults to `:nothing`.
 
   """
   def references(table, opts \\ []) when is_atom(table) do
-    struct(%Reference{table: table}, opts)
+    reference = struct(%Reference{table: table}, opts)
+
+    unless reference.on_delete in [:nothing, :delete_all, :nilify_all] do
+      raise ArgumentError, "unknown :on_delete value: #{inspect reference.on_delete}"
+    end
+
+    reference
   end
 
   @doc """

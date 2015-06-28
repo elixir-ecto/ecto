@@ -446,10 +446,10 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)) ENGINE = INNODB|
   end
 
-  test "create table with reference and on_delete: :nillify_all clause" do
+  test "create table with reference and on_delete: :nilify_all clause" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :nillify_all), []} ]}
+                {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
     assert SQL.execute_ddl(create) ==
            ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL) ENGINE = INNODB|
   end

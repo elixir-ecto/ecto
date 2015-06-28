@@ -36,8 +36,8 @@ defmodule Ecto.Integration.Migration do
       add :text, :string, size: 100
       add :posted, :datetime
       add :lock_version, :integer, default: 1
-      add :post_id, references(:posts)
-      add :author_id, references(:users)
+      add :post_id, references(:posts, on_delete: :nilify_all)
+      add :author_id, references(:users, on_delete: :delete_all)
     end
 
     create table(:customs, primary_key: false) do

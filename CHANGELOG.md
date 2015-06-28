@@ -1,14 +1,36 @@
 # Changelog
 
-## v0.13.0
+## v0.13.0-dev
 
 * Enhancements
   * Support a `:map` type. PostgreSQL will use `jsonb` columns for those while other SQL databases will emulate it with a text column until JSON support is added
-  * Add keyword query fragments: `fragment("$set": [foo: "bar"])`. This will be useful to databases who cannot express their queries as strings
+  * Add keyword query fragments: `fragment("$set": [foo: "bar"])`. This will be useful to databases which cannot express their queries as strings
   * Allow type tagging with field name: `select: type(^some_value, p.uuid)`
   * Support checking if a value exists in an array: `where: "ecto" in p.tags`
   * Allow custom options to be given when creating a table: `create table(:posts, options: "WITH ...")`
+  * Support `:on_delete` in `Ecto.Migration.references/2`. It may be one of `:nothing`, `:delete_all` or `:nilify_all`. Defaults to `:nothing`.
   * Add `Ecto.Adapter.Pool` which will support adpaters to work with different pools (upcoming)
+
+* Backwards incompatible changes
+  * `Ecto.Repo.update_all/3` and `Ecto.Repo.delete_all/3` now return `{counter, nil}` instead of simply `counter`. This is done to support RETURNING statements in the future.
+  * `Ecto.Repo.update_all/3` is no longer a macro. Instead of:
+
+        Repo.update_all queryable, foo: "bar"
+
+    One should write:
+
+        Repo.update_all queryable, set: [foo: "bar"]
+
+    Where `:set` is the update operator. `:inc` is also
+    supported to increment a given column by the given value:
+
+        Repo.update_all queryable, inc: [foo: 1]
+
+    For complex expressions, updates are now also supported in
+    queries:
+
+        query = from queryable, update: [set: [foo: p.bar]]
+        Repo.update_all query, []
 
 ## v0.12.1
 
@@ -311,7 +333,7 @@ Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0
   * Improve and relax type inference. Ecto no longer requires `array(array, type)`, `binary(...)` and so on for interpolated values. In fact, the functions above have been removed
 
 * Backwards incompatible changes
-  * `order_by` no longer accepts a negative value.  use `asc` or `desc` instead.  Eg.: `order_by: [asc: t.position]` 
+  * `order_by` no longer accepts a negative value.  use `asc` or `desc` instead.  Eg.: `order_by: [asc: t.position]`
   * `:virtual` type no longer exists, instead pass `virtual: true` as field option
   * Adapter API for `insert`, `update` and `delete` has been simplified
 

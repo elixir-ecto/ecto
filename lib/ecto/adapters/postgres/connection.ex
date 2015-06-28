@@ -587,7 +587,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp reference_column_type(:serial, _opts), do: "integer"
     defp reference_column_type(type, opts), do: column_type(type, opts)
 
-    defp reference_on_delete(:nillify_all), do: " ON DELETE SET NULL"
+    defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
     defp reference_on_delete(_), do: ""
 

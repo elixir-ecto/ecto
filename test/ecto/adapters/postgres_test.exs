@@ -478,10 +478,10 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer REFERENCES "categories"("id"))|
   end
 
-  test "create table with reference and on_delete: :nillify_all clause" do
+  test "create table with reference and on_delete: :nilify_all clause" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :nillify_all), []} ]}
+                {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
     assert SQL.execute_ddl(create) ==
            ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer REFERENCES "categories"("id") ON DELETE SET NULL)|
   end

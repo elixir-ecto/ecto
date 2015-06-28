@@ -86,14 +86,18 @@ defmodule Ecto.Repo.Queryable do
 
       One should write:
 
-          Repo.update_all queryable,
-            set: [foo: "bar"]
+          Repo.update_all queryable, set: [foo: "bar"]
 
       Where `:set` is the update operator. `:inc` is also
       supported to increment a given column by the given value:
 
-          Repo.update_all queryable,
-            inc: [foo: 1]
+          Repo.update_all queryable, inc: [foo: 1]
+
+      For complex expressions, updates are now also supported in
+      queries:
+
+          query = from queryable, update: [set: [foo: p.bar]]
+          Repo.update_all query, []
       """
     end
   end
