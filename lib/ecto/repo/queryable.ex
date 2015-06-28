@@ -4,7 +4,6 @@ defmodule Ecto.Repo.Queryable do
   @moduledoc false
 
   alias Ecto.Queryable
-  alias Ecto.Query.Builder
   alias Ecto.Query.Planner
 
   require Ecto.Query
@@ -69,44 +68,41 @@ defmodule Ecto.Repo.Queryable do
   end
 
   @doc """
-  Implementation for `Ecto.Repo.update_all/3`
+  Runtime callback for `Ecto.Repo.update_all/3`
   """
-  def update_all(repo, adapter, queryable, values, opts) do
-    {binds, expr} = Ecto.Query.Builder.From.escape(queryable)
+  def update_all(repo, adapter, queryable, [], opts) when is_list(opts) do
+    update_all(repo, adapter, queryable, opts)
+  end
 
-    {updates, params} =
-      Enum.map_reduce(values, %{}, fn {field, expr}, params ->
-        {expr, params} = Builder.escape(expr, {0, field}, params, binds, __ENV__)
-        {{field, {Builder.primitive_type(expr, binds), expr}}, params}
-      end)
+  def update_all(repo, adapter, queryable, updates, opts) when is_list(opts) do
+    if Keyword.has_key?(updates, :set) or Keyword.has_key?(updates, :inc) do
+      query = Ecto.Query.from q in queryable, update: ^updates
+      update_all(repo, adapter, query, opts)
+    else
+      raise ArgumentError, """
+      You are using the old update syntax. Instead of:
 
-    params = Builder.escape_params(params)
+          Repo.update_all queryable, foo: "bar"
 
-    quote do
-      Ecto.Repo.Queryable.update_all(unquote(repo), unquote(adapter),
-        unquote(expr), unquote(updates), unquote(params), unquote(opts))
+      One shuold write:
+
+          Repo.update_all queryable,
+            set: [foo: "bar"]
+
+      Where `:set` is the update operator. `:inc` is also
+      supported to increment a given column by the given value:
+
+          Repo.update_all queryable,
+            inc: [foo: 1]
+      """
     end
   end
 
-  @doc """
-  Runtime callback for `Ecto.Repo.update_all/3`
-  """
-  def update_all(repo, adapter, queryable, updates, params, opts) when is_list(opts) do
-    query = Queryable.to_query(queryable)
-    id_types = adapter.id_types(repo)
-
-    if updates == [] do
-      message = "no fields given to `update_all`"
-      raise ArgumentError, message
-    end
-
-    # If we have a model in the query, let's use it for casting.
-    {updates, params} = cast_update_all(query, updates, params, id_types)
-
+  defp update_all(repo, adapter, queryable, opts) do
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:update_all, params, id_types)
-    adapter.update_all(repo, query, updates, params, opts)
+      |> Planner.query(:update_all, [], adapter.id_types(repo))
+    adapter.update_all(repo, query, params, opts)
   end
 
   @doc """
@@ -196,42 +192,6 @@ defmodule Ecto.Repo.Queryable do
     end)
   end
 
-  defp cast_update_all(%{from: {_source, model}}, updates, params, id_types) when model != nil do
-    # Check all fields are valid but don't use dump as they are expressions
-    updates = for {field, {expected, expr}} <- updates do
-      type = model.__schema__(:field, field)
-
-      unless type do
-        raise Ecto.ChangeError,
-          message: "field `#{inspect model}.#{field}` in `update_all` does not exist in the model source"
-      end
-
-      if expected != :any and !Ecto.Type.match?(type, expected) do
-        raise Ecto.ChangeError,
-          message: "field `#{inspect model}.#{field}` in `update_all` does not type check. " <>
-                   "It has type #{inspect type} but a type #{inspect expected} was given"
-      end
-
-      {field, expr}
-    end
-
-    # Properly cast parameters.
-    params = Enum.map params, fn
-      {v, {0, field}} ->
-        type = model.__schema__(:field, field)
-        cast_and_dump(:update_all, type, v, id_types)
-      {v, type} ->
-        cast_and_dump(:update_all, type, v, id_types)
-    end
-
-    {updates, params}
-  end
-
-  defp cast_update_all(%{}, updates, params, _id_types) do
-    updates = for {field, {_type, expr}} <- updates, do: {field, expr}
-    {updates, params}
-  end
-
   defp assert_model!(query) do
     case query.from do
       {_source, model} when model != nil ->
@@ -240,17 +200,6 @@ defmodule Ecto.Repo.Queryable do
         raise Ecto.QueryError,
           query: query,
           message: "expected a from expression with a model"
-    end
-  end
-
-  defp cast_and_dump(kind, type, v, id_types) do
-    type = Ecto.Type.normalize(type, id_types)
-    case Ecto.Type.cast(type, v) do
-      {:ok, v} ->
-        Ecto.Type.dump!(type, v)
-      :error ->
-        raise ArgumentError,
-          "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
     end
   end
 

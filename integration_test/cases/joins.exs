@@ -11,13 +11,14 @@ defmodule Ecto.Integration.JoinsTest do
 
   @tag :update_with_join
   test "update all with joins" do
-    user = TestRepo.insert!(%User{name: "Tester"})
-    post = TestRepo.insert!(%Post{title: "foo"})
+    user    = TestRepo.insert!(%User{name: "Tester"})
+    post    = TestRepo.insert!(%Post{title: "foo"})
     comment = TestRepo.insert!(%Comment{text: "hey", author_id: user.id, post_id: post.id})
 
-    query = from(c in Comment, join: u in User, on: u.id == c.author_id, where: c.post_id in ^[post.id])
-    assert 1 = TestRepo.update_all(query, text: "hoo")
+    query = from(c in Comment, join: u in User, on: u.id == c.author_id,
+                               where: c.post_id in ^[post.id])
 
+    assert {1, nil} = TestRepo.update_all(query, set: [text: "hoo"])
     assert %Comment{text: "hoo"} = TestRepo.get(Comment, comment.id)
   end
 
@@ -29,9 +30,9 @@ defmodule Ecto.Integration.JoinsTest do
     TestRepo.insert!(%Comment{text: "foo", author_id: user.id, post_id: post.id})
     TestRepo.insert!(%Comment{text: "bar", author_id: user.id})
 
-    query = from(c in Comment, join: u in User, on: u.id == c.author_id, where: c.post_id in ^[post.id])
-    assert 2 = TestRepo.delete_all(query)
-
+    query = from(c in Comment, join: u in User, on: u.id == c.author_id,
+                               where: c.post_id in ^[post.id])
+    assert {2, nil} = TestRepo.delete_all(query)
     assert [%Comment{}] = TestRepo.all(Comment)
   end
 

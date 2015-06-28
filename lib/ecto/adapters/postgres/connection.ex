@@ -93,19 +93,15 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
-    def update_all(query, values) do
+    def update_all(query) do
       sources = create_names(query)
-      {table, name, _model} = elem(sources, 0)
 
-      zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
-        "#{quote_name(field)} = #{expr(expr, sources)}"
-      end)
-
-      update = update_expr(query.joins, table, name)
-      join   = update_all_join(query.joins, sources)
+      fields = update_fields(query.updates, sources)
+      update = update_expr(query.joins, elem(sources, 0))
+      join   = update_filter(query.joins, sources)
       where  = where(query.wheres, sources)
 
-      assemble([update, "SET", zipped_sql, join, where])
+      assemble([update, "SET", fields, join, where])
     end
 
     def delete_all(query) do
@@ -199,15 +195,35 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end)
     end
 
-    defp update_expr([], table, name) do
+    defp update_fields(updates, sources) do
+      for(%{expr: expr} <- updates,
+          {op, kw} <- expr,
+          {key, value} <- kw,
+          do: update_op(op, key, value, sources)) |> Enum.join(", ")
+    end
+
+    defp update_op(:set, key, value, sources) do
+      quote_name(key) <> " = " <> expr(value, sources)
+    end
+
+    defp update_op(:inc, key, value, sources) do
+      quoted = quote_name(key)
+      quoted <> " = " <> quoted <> " + " <> expr(value, sources)
+    end
+
+    defp update_op(command, _key, _value, _sources) do
+      raise ArgumentError, "Unknown update operation #{inspect command} for PostgreSQL"
+    end
+
+    defp update_expr([], {table, name, _model}) do
       "UPDATE #{quote_name(table)} AS #{name}"
     end
-    defp update_expr(_joins, table, _name) do
+    defp update_expr(_joins, {table, _name, _model}) do
       "UPDATE #{quote_name(table)}"
     end
 
-    defp update_all_join([], _sources), do: []
-    defp update_all_join(joins, sources) do
+    defp update_filter([], _sources), do: []
+    defp update_filter(joins, sources) do
       from(sources) <> " "  <> join(joins, sources)
     end
 

@@ -118,9 +118,8 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
       end
 
-      defmacro update_all(queryable, values, opts \\ []) do
-        Ecto.Repo.Queryable.update_all(__MODULE__, @adapter, queryable,
-                                       values, opts)
+      def update_all(queryable, updates, opts \\ []) do
+        Ecto.Repo.Queryable.update_all(__MODULE__, @adapter, queryable, updates, opts)
       end
 
       def delete_all(queryable, opts \\ []) do
@@ -330,6 +329,11 @@ defmodule Ecto.Repo do
   @doc """
   Updates all entries matching the given query with the given values.
 
+  It returns a tuple containing the number of entries
+  and any returned result as second element. If the database
+  does not support RETURNING in UPDATE statements or no
+  return result was selected, the second element will be nil.
+
   This operation does not run the model `before_update` and
   `after_update` callbacks.
 
@@ -341,17 +345,25 @@ defmodule Ecto.Repo do
 
   ## Examples
 
-      MyRepo.update_all(Post, title: "New title")
+      MyRepo.update_all(Post, set: [title: "New title"])
 
-      MyRepo.update_all(p in Post, visits: fragment("? + 1", p.visits))
+      MyRepo.update_all(Post, inc: [visits: 1])
 
       from(p in Post, where: p.id < 10)
-      |> MyRepo.update_all(title: "New title")
+      |> MyRepo.update_all(set: [title: "New title"])
+
+      from(p in Post, where: p.id < 10, update: [set: [title: "New title"]])
+      |> MyRepo.update_all([])
   """
-  defmacrocallback update_all(Macro.t, Keyword.t, Keyword.t) :: integer | no_return
+  defcallback update_all(Macro.t, Keyword.t, Keyword.t) :: {integer, nil} | no_return
 
   @doc """
   Deletes all entries matching the given query.
+
+  It returns a tuple containing the number of entries
+  and any returned result as second element. If the database
+  does not support RETURNING in DELETE statements or no
+  return result was selected, the second element will be nil.
 
   This operation does not run the model `before_delete` and
   `after_delete` callbacks.
@@ -368,7 +380,7 @@ defmodule Ecto.Repo do
 
       from(p in Post, where: p.id < 10) |> MyRepo.delete_all
   """
-  defcallback delete_all(Ecto.Queryable.t, Keyword.t) :: integer | no_return
+  defcallback delete_all(Ecto.Queryable.t, Keyword.t) :: {integer, nil} | no_return
 
   @doc """
   Inserts a model or a changeset.

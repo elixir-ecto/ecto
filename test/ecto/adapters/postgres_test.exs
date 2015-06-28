@@ -313,28 +313,34 @@ defmodule Ecto.Adapters.PostgresTest do
   ## *_all
 
   test "update all" do
-    query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: 0]) ==
+    query = from(m in Model, update: [set: [x: 0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0}
 
-    query = from(e in Model, where: e.x == 123) |> normalize
-    assert SQL.update_all(query, [x: 0]) ==
+    query = from(m in Model, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
+           ~s{UPDATE "model" AS m0 SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
+
+    query = from(e in Model, where: e.x == 123, update: [set: [x: 0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0 WHERE (m0."x" = 123)}
 
-    query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: 0, y: "123"]) ==
+    query = from(m in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0, "y" = '123'}
 
-    query = Model |> Queryable.to_query |> normalize
-    assert SQL.update_all(query, [x: quote(do: ^0)]) ==
+    query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
            ~s{UPDATE "model" AS m0 SET "x" = $1}
 
-    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
-    assert SQL.update_all(query, [x: 0]) ==
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z)
+                  |> update([_], set: [x: 0]) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
            ~s{UPDATE "model" SET "x" = 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
 
-    query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
-    assert SQL.update_all(query, [x: 0]) ==
+    query = from(e in Model, where: e.x == 123, update: [set: [x: 0]],
+                             join: q in Model2, on: e.x == q.z) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
            ~s{UPDATE "model" SET "x" = 0 FROM "model" AS m0 } <>
            ~s{INNER JOIN "model2" AS m1 ON m0."x" = m1."z" WHERE (m0."x" = 123)}
   end

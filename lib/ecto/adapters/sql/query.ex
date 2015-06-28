@@ -32,7 +32,7 @@ defmodule Ecto.Adapters.SQL.Query do
   @doc """
   Receives a query and values to update and must return an UPDATE query.
   """
-  defcallback update_all(Ecto.Query.t, values :: Keyword.t) :: String.t
+  defcallback update_all(Ecto.Query.t) :: String.t
 
   @doc """
   Receives a query and must return a DELETE query.

@@ -322,17 +322,17 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2"})
     assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3"})
 
-    assert 3 = TestRepo.update_all(Post, title: "x")
+    assert {3, nil} = TestRepo.update_all(Post, set: [title: "x"])
 
     assert %Post{title: "x"} = TestRepo.get(Post, id1)
     assert %Post{title: "x"} = TestRepo.get(Post, id2)
     assert %Post{title: "x"} = TestRepo.get(Post, id3)
 
-    assert 3 = TestRepo.update_all("posts", title: "y")
+    assert {3, nil} = TestRepo.update_all("posts", set: [title: nil])
 
-    assert %Post{title: "y"} = TestRepo.get(Post, id1)
-    assert %Post{title: "y"} = TestRepo.get(Post, id2)
-    assert %Post{title: "y"} = TestRepo.get(Post, id3)
+    assert %Post{title: nil} = TestRepo.get(Post, id1)
+    assert %Post{title: nil} = TestRepo.get(Post, id2)
+    assert %Post{title: nil} = TestRepo.get(Post, id3)
   end
 
   test "update all with filter" do
@@ -340,8 +340,9 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2"})
     assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3"})
 
-    query = from(p in Post, where: p.title == "1" or p.title == "2")
-    assert 2 = TestRepo.update_all(query, title: "x", text: ^"y")
+    query = from(p in Post, where: p.title == "1" or p.title == "2",
+                            update: [set: [text: ^"y"]])
+    assert {2, nil} = TestRepo.update_all(query, set: [title: "x"])
 
     assert %Post{title: "x", text: "y"} = TestRepo.get(Post, id1)
     assert %Post{title: "x", text: "y"} = TestRepo.get(Post, id2)
@@ -354,51 +355,46 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3"})
 
     query = from(p in Post, where: p.title == "4")
-    assert 0 = TestRepo.update_all(query, title: "x")
+    assert {0, nil} = TestRepo.update_all(query, set: [title: "x"])
 
     assert %Post{title: "1"} = TestRepo.get(Post, id1)
     assert %Post{title: "2"} = TestRepo.get(Post, id2)
     assert %Post{title: "3"} = TestRepo.get(Post, id3)
   end
 
-  @tag :sql_fragments
-  test "update all expression syntax" do
+  test "update all increment syntax" do
     assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1", visits: 0})
     assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2", visits: 1})
 
-    # Expressions
-    query = from p in Post, where: not is_nil(p.id)
-    assert 2 = TestRepo.update_all(p in query, visits: fragment("? + 2", p.visits))
+    # Positive
+    query = from p in Post, where: not is_nil(p.id), update: [inc: [visits: 2]]
+    assert {2, nil} = TestRepo.update_all(query, [])
 
     assert %Post{visits: 2} = TestRepo.get(Post, id1)
     assert %Post{visits: 3} = TestRepo.get(Post, id2)
 
-    # Nil values
-    assert 2 = TestRepo.update_all(p in Post, visits: nil)
+    # Negative
+    query = from p in Post, where: not is_nil(p.id), update: [inc: [visits: -1]]
+    assert {2, nil} = TestRepo.update_all(query, [])
 
-    assert %Post{visits: nil} = TestRepo.get(Post, id1)
-    assert %Post{visits: nil} = TestRepo.get(Post, id2)
+    assert %Post{visits: 1} = TestRepo.get(Post, id1)
+    assert %Post{visits: 2} = TestRepo.get(Post, id2)
   end
 
   @tag :id_type
   test "update all with casting and dumping on id type field" do
-    text = "hai"
-    date = Ecto.DateTime.utc
     assert %Post{id: id1} = TestRepo.insert!(%Post{})
-    assert 1 = TestRepo.update_all(p in Post, text: ^text, counter: ^to_string(id1), inserted_at: ^date)
-    assert %Post{text: "hai", counter: ^id1, inserted_at: ^date} = TestRepo.get(Post, id1)
+    assert {1, nil} = TestRepo.update_all(Post, set: [counter: to_string(id1)])
+    assert %Post{counter: ^id1} = TestRepo.get(Post, id1)
   end
 
   test "update all with casting and dumping" do
     text = "hai"
-    date = {{2010, 4, 17}, {14, 00, 00, 00}}
-    assert %Comment{id: id2} = TestRepo.insert!(%Comment{})
-    assert 1 = TestRepo.update_all(p in Comment, text: ^text, posted: ^date)
-    assert %Comment{text: "hai", posted: ^date} = TestRepo.get(Comment, id2)
+    date = Ecto.DateTime.utc
+    assert %Post{id: id1} = TestRepo.insert!(%Post{})
 
-    date = {{1955, 11, 12}, {6, 38, 01, 0}}
-    assert 1 = TestRepo.update_all(p in Comment, text: ^text, posted: ^date)
-    assert %Comment{text: "hai", posted: ^date} = TestRepo.get(Comment, id2)
+    assert {1, nil} = TestRepo.update_all(Post, set: [text: text, inserted_at: date])
+    assert %Post{text: "hai", inserted_at: ^date} = TestRepo.get(Post, id1)
   end
 
   test "delete all" do
@@ -406,7 +402,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{} = TestRepo.insert!(%Post{title: "2", text: "hai"})
     assert %Post{} = TestRepo.insert!(%Post{title: "3", text: "hai"})
 
-    assert 3 = TestRepo.delete_all(Post)
+    assert {3, nil} = TestRepo.delete_all(Post)
     assert [] = TestRepo.all(Post)
   end
 
@@ -416,7 +412,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{} = TestRepo.insert!(%Post{title: "3", text: "hai"})
 
     query = from(p in Post, where: p.title == "1" or p.title == "2")
-    assert 2 = TestRepo.delete_all(query)
+    assert {2, nil} = TestRepo.delete_all(query)
     assert [%Post{}] = TestRepo.all(Post)
   end
 
@@ -426,7 +422,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3", text: "hai"})
 
     query = from(p in Post, where: p.title == "4")
-    assert 0 = TestRepo.delete_all(query)
+    assert {0, nil} = TestRepo.delete_all(query)
     assert %Post{title: "1"} = TestRepo.get(Post, id1)
     assert %Post{title: "2"} = TestRepo.get(Post, id2)
     assert %Post{title: "3"} = TestRepo.get(Post, id3)
