@@ -19,16 +19,6 @@ defmodule Ecto.Adapters.Pool do
   @opaque ref :: {__MODULE__, module, t}
 
   @typedoc """
-  The mode of a transaction.
-
-  Supported modes:
-
-    * `:raw` - direct transaction without a sandbox
-    * `:sandbox` - transaction inside a sandbox
-  """
-  @type mode :: :raw | :sandbox
-
-  @typedoc """
   The depth of nested transactions.
   """
   @type depth :: non_neg_integer
@@ -70,7 +60,7 @@ defmodule Ecto.Adapters.Pool do
   The connection should not be closed if the calling process exits without
   returning the connection.
 
-  Returns `{mode, worker, conn, queue_time}` on success, where `worker` is the
+  Returns `{:ok, worker, conn, queue_time}` on success, where `worker` is the
   worker term and conn is a 2-tuple contain the connection's module and
   pid. The `conn` tuple can be retrieved inside a `transaction/4` with
   `connection/1`.
@@ -79,7 +69,7 @@ defmodule Ecto.Adapters.Pool do
   `{:error, :noconnect}` if a connection is not available.
   """
   defcallback checkout(t, timeout) ::
-    {mode, worker, conn, queue_time} |
+    {:ok, worker, conn, queue_time} |
     {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
 
   @doc """
@@ -94,8 +84,7 @@ defmodule Ecto.Adapters.Pool do
   Break the current transaction or run.
 
   Called when the function has failed and the connection should no longer be
-  available to to the calling process. When in `:raw` mode the connection
-  should reset.
+  available to to the calling process.
   """
   defcallback break(t, worker, timeout) :: :ok when worker: any
 
@@ -103,9 +92,9 @@ defmodule Ecto.Adapters.Pool do
   Open a transaction with a connection from the pool.
 
   The connection should be closed if the calling process exits without
-  returning the connection when in `:raw` mode.
+  returning the connection.
 
-  Returns `{mode, worker, conn, queue_time}` on success, where `worker` is the
+  Returns `{:ok, worker, conn, queue_time}` on success, where `worker` is the
   worker term and conn is a 2-tuple contain the connection's module and
   pid. The `conn` tuple can be retrieved inside a `transaction/4` with
   `connection/2`.
@@ -114,14 +103,8 @@ defmodule Ecto.Adapters.Pool do
   `{:error, :noconnect}` if a connection is not available.
   """
   defcallback open_transaction(t, timeout) ::
-    {mode, worker, conn, queue_time} |
+    {:ok, worker, conn, queue_time} |
     {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
-
-  @doc """
-  Sets the mode of transaction to `mode`.
-  """
-  defcallback transaction_mode(t, worker, mode, timeout) ::
-    :ok | {:error, :noconnect} when worker: any
 
   @doc """
   Close the transaction and signal to the worker the work with the connection
@@ -148,21 +131,21 @@ defmodule Ecto.Adapters.Pool do
   ## Examples
 
       Pool.run(mod, pool, timeout,
-        fn(conn, _queue_time) -> :sandboxed_run end)
+        fn(_conn, queue_time) -> queue_time end)
 
       Pool.transaction(mod, pool, timeout,
-        fn(ref, conn, :raw, 1, _queue_time) ->
+        fn(_ref, _conn, 1, _queue_time) ->
           {:ok, :nested} =
-            Pool.run(mod, pool, timeout, fn(ref, :raw, 1, nil) ->
+            Pool.run(mod, pool, timeout, fn(_conn, nil) ->
               :nested
             end)
         end)
 
       Pool.run(mod, :pool1, timeout,
-        fn(ref, conn, :raw, 0, _queue_time1) ->
+        fn(_conn1, _queue_time1) ->
           {:ok, :different_pool} =
             Pool.run(mod, :pool2, timeout,
-              fn(ref, :raw, 0, _queue_time2) -> :different_pool end)
+              fn(_conn2, _queue_time2) -> :different_pool end)
         end)
 
   """
@@ -200,32 +183,32 @@ defmodule Ecto.Adapters.Pool do
   ## Examples
 
       Pool.transaction(mod, pool, timeout,
-        fn(ref, :sandbox, 1, _queue_time) -> :sandboxed_transaction end)
+        fn(_ref, _conn, 1, queue_time) -> queue_time end)
 
       Pool.transaction(mod, pool, timeout,
-        fn(ref, :raw, 1, _queue_time) ->
+        fn(ref, _conn, 1, _queue_time) ->
           {:ok, :nested} =
-            Pool.transaction(mod, pool, timeout, fn(ref, :raw, 1, nil) ->
+            Pool.transaction(mod, pool, timeout, fn(_ref, _conn, 2, nil) ->
               :nested
             end)
         end)
 
       Pool.transaction(mod, :pool1, timeout,
-        fn(ref, :raw, 1, _queue_time1) ->
+        fn(_ref1, _conn1, 1, _queue_time1) ->
           {:ok, :different_pool} =
             Pool.transaction(mod, :pool2, timeout,
-              fn(ref, :raw, 1, _queue_time2) -> :different_pool end)
+              fn(_ref2, _conn2, 1, _queue_time2) -> :different_pool end)
         end)
 
       Pool.run(mod, pool, timeout,
-        fn(ref, :raw, 0, _queue_time) ->
+        fn(_conn, _queue_time) ->
           {:error, :notransaction} =
             Pool.transaction(mod, pool, timeout, fn(_, _, _, _) -> end)
         end)
 
   """
   @spec transaction(module, t, timeout,
-                    ((ref, conn, mode, depth, queue_time | nil) -> result)) ::
+                    ((ref, conn, depth, queue_time | nil) -> result)) ::
         {:ok, result} | {:error, :noproc | :noconnect | :notransaction}
         when result: var, conn: {module, pid}
   def transaction(pool_mod, pool, timeout, fun) do
@@ -243,32 +226,6 @@ defmodule Ecto.Adapters.Pool do
   end
 
   @doc """
-  Set the mode for the active transaction.
-
-  ## Examples
-
-      Pool.transaction(mod, pool, timeout,
-        fn(ref, :raw, 1, _queue_time) ->
-          :ok = Pool.mode(ref, :sandbox, timeout)
-          Pool.transaction(mod, pool, timeout,
-            fn(ref, :sandbox, 1, nil) -> :sandboxed end)
-        end)
-
-  """
-  @spec mode(ref, mode, timeout) ::
-        :ok | {:error, :already_mode | :noconnect}
-  def mode({__MODULE__, _, _} = ref, mode, timeout) do
-    case Process.get(ref) do
-      %{conn: _ , mode: ^mode} ->
-        {:error, :already_mode}
-      %{conn: _} = info ->
-        mode(ref, info, mode, timeout)
-      %{} ->
-        {:error, :noconnect}
-    end
-  end
-
-  @doc """
   Break the active transaction or run.
 
   Calling `connection/1` inside the same transaction or run (at any depth) will
@@ -277,14 +234,14 @@ defmodule Ecto.Adapters.Pool do
   ## Examples
 
       Pool.transaction(mod, pool, timout,
-        fn(ref, :raw, 1, _queue_time) ->
-          {:ok, {mod, conn}} = Pool.connection(ref)
+        fn(ref, conn, 1, _queue_time) ->
+          {:ok, {_mod, ^conn}} = Pool.connection(ref)
           :ok = Pool.break(ref, timeout)
           {:error, :noconnect} = Pool.connection(ref)
         end)
 
       Pool.transaction(mod, pool, timeout,
-        fn(ref, :raw, 1, _queue_time) ->
+        fn(ref, _conn, 1, _queue_time) ->
           :ok = Pool.break(ref, timeout)
           {:error, :noconnect} =
             Pool.transaction(mod, pool, timeout, fn(_, _, _, _) -> end)
@@ -335,9 +292,9 @@ defmodule Ecto.Adapters.Pool do
 
   defp checkout(pool_mod, pool, timeout) do
     case pool_mod.checkout(pool, timeout) do
-      {mode, worker, conn, time} when mode in [:raw, :sandbox] ->
+      {:ok, worker, conn, time} ->
         # We got permission to start a transaction
-        {:ok, %{worker: worker, conn: conn, depth: 0, mode: mode}, time}
+        {:ok, %{worker: worker, conn: conn, depth: 0}, time}
       {:error, reason} = error when reason in [:noproc, :noconnect] ->
         error
       {:error, err} ->
@@ -366,11 +323,11 @@ defmodule Ecto.Adapters.Pool do
     end
   end
 
-  defp do_transaction(ref, %{depth: depth, mode: mode, conn: conn} = info, time, fun) do
+  defp do_transaction(ref, %{depth: depth, conn: conn} = info, time, fun) do
     depth = depth + 1
     _ = Process.put(ref, %{info | depth: depth})
     try do
-      {:ok, fun.(ref, conn, mode, depth, time)}
+      {:ok, fun.(ref, conn, depth, time)}
     after
       case Process.put(ref, info) do
         %{conn: _} ->
@@ -384,9 +341,9 @@ defmodule Ecto.Adapters.Pool do
 
   defp open_transaction(pool_mod, pool, timeout) do
     case pool_mod.open_transaction(pool, timeout) do
-      {mode, worker, conn, time} when mode in [:raw, :sandbox] ->
+      {:ok, worker, conn, time} ->
         # We got permission to start a transaction
-        {:ok, %{worker: worker, conn: conn, depth: 0, mode: mode}, time}
+        {:ok, %{worker: worker, conn: conn, depth: 0}, time}
       {:error, reason} = error when reason in [:noproc, :noconnect] ->
         error
       {:error, err} ->
@@ -399,20 +356,5 @@ defmodule Ecto.Adapters.Pool do
   end
   defp close_transaction(_, _, %{}, _) do
     :ok
-  end
-
-  defp mode(_, %{depth: 0}, _, _) do
-    {:error, :notransaction}
-  end
-  defp mode({__MODULE__, pool_mod, pool} = ref, %{worker: worker} = info, mode, timeout) do
-    put_mode = fn -> pool_mod.transaction_mode(pool, worker, mode, timeout) end
-    case fuse(ref, timeout, put_mode, []) do
-      :ok ->
-        _ = Process.put(ref, %{info | mode: mode})
-        :ok
-      {:error, :noconnect} = error ->
-        _ = Process.put(ref, Map.delete(info, :conn))
-        error
-    end
   end
 end

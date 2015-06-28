@@ -16,7 +16,7 @@ alias Ecto.Integration.TestRepo
 Application.put_env(:ecto, TestRepo,
   adapter: Ecto.Adapters.MySQL,
   url: "ecto://root@localhost/ecto_test",
-  size: 1)
+  pool: Ecto.Adapters.SQL.Sandbox)
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
