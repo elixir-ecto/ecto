@@ -3,8 +3,6 @@ defmodule Ecto.Adapters.Poolboy.Worker do
 
   use GenServer
   use Behaviour
-  alias Ecto.Adapters.Pool
-
   @type modconn :: {module :: atom, conn :: pid}
 
   @spec start_link({module, Keyword.t}) :: {:ok, pid}
@@ -12,31 +10,20 @@ defmodule Ecto.Adapters.Poolboy.Worker do
     GenServer.start_link(__MODULE__, {module, params}, [])
   end
 
-  @spec checkout(pid, timeout) :: {Pool.mode, modconn} | {:error, Exception.t}
-  def checkout(worker, timeout) do
-    GenServer.call(worker, :checkout, timeout)
+  @spec checkout(pid, fun, timeout) ::
+  {:ok, modconn} | {:error, Exception.t} when fun: :run | :transaction
+  def checkout(worker, fun, timeout) do
+    GenServer.call(worker, {:checkout, fun}, timeout)
   end
 
-  @spec open_transaction(pid, timeout) ::
-    {Pool.mode, modconn} | {:error, Exception.t}
-  def open_transaction(worker, timeout) do
-    GenServer.call(worker, :open_transaction, timeout)
-  end
-
-  @spec close_transaction(pid) :: :ok
-  def close_transaction(worker) do
-    GenServer.cast(worker, :close_transaction)
+  @spec checkin(pid) :: :ok
+  def checkin(worker) do
+    GenServer.cast(worker, :checkin)
   end
 
   @spec break(pid, timeout) :: :ok
   def break(worker, timeout) do
     GenServer.call(worker, :break, timeout)
-  end
-
-  @spec transaction_mode(pid, :raw | :sandbox, timeout) ::
-    :ok | {:error, :noconnect}
-  def transaction_mode(worker, mode, timeout) do
-    GenServer.call(worker, {:transaction_mode, mode}, timeout)
   end
 
   ## Callbacks
@@ -54,36 +41,16 @@ defmodule Ecto.Adapters.Poolboy.Worker do
       end
     end
 
-    {:ok, %{conn: conn, params: params, transaction: nil, mode: :raw,
-            module: module}}
+    {:ok, %{conn: conn, params: params, transaction: nil, module: module}}
   end
 
   ## Break
-
-  def handle_call(:break, _from, %{mode: :sandbox} = s) do
-    {:reply, :ok, demonitor(s)}
-  end
 
   def handle_call(:break, _from, s) do
     s = s
       |> demonitor()
       |> disconnect()
     {:reply, :ok, s}
-  end
-
-  ## Mode change
-
-  def handle_call({:transaction_mode, _}, _from, %{conn: nil} = s) do
-    {:reply, {:error, :noconnect}, s}
-  end
-  def handle_call({:transaction_mode, :raw}, _from, %{mode: :sandbox} = s) do
-    {:reply, :ok, %{s | mode: :raw}}
-  end
-  def handle_call({:transaction_mode, :sandbox}, _from, %{mode: :raw} = s) do
-    {:reply, :ok, %{s | mode: :sandbox}}
-  end
-  def handle_call({:transaction_mode, mode}, _from, %{mode: mode} = s) do
-    {:stop, :already_mode, s}
   end
 
   ## Lazy connection handling
@@ -97,40 +64,37 @@ defmodule Ecto.Adapters.Poolboy.Worker do
 
   ## Checkout
 
-  def handle_call(:checkout, _, %{mode: mode} = s) do
-    {:reply, {mode, modconn(s)}, s}
+  def handle_call({:checkout, :run}, _, s) do
+    {:reply, {:ok, modconn(s)}, s}
   end
 
   ## Open transaction
 
-  def handle_call(:open_transaction, {pid, _},
-  %{transaction: nil, mode: mode} = s) do
-    {:reply, {mode, modconn(s)}, monitor(pid, s)}
+  def handle_call({:checkout, :transaction}, from, %{transaction: nil} = s) do
+    {pid, _} = from
+    {:reply, {:ok, modconn(s)}, monitor(pid, s)}
   end
 
-  def handle_call(:open_transaction, from,
-  %{transaction: {client, _}, mode: mode} = s) do
-    if Process.is_alive?(client) or mode === :sandbox do
-      handle_call(:open_transaction, from, demonitor(s))
+  def handle_call({:checkout, :transaction} = checkout, from, s) do
+    {client, _} = s.transaction
+    if Process.is_alive?(client) do
+      handle_call(checkout, from, demonitor(s))
     else
       s = s
         |> demonitor()
         |> disconnect()
-      handle_call(:open_transaction, from, s)
+      handle_call(checkout, from, s)
     end
   end
 
   ## Close transaction
 
-  def handle_cast(:close_transaction, %{mode: :sandbox} = s) do
-    {:noreply, demonitor(s)}
-  end
 
-  def handle_cast(:close_transaction, %{transaction: nil} = s) do
+  def handle_cast(:checkin, %{transaction: nil} = s) do
     {:stop, :notransaction, s}
   end
 
-  def handle_cast(:close_transaction, s) do
+  def handle_cast(:checkin, s) do
     {:noreply, demonitor(s)}
   end
 
@@ -147,13 +111,8 @@ defmodule Ecto.Adapters.Poolboy.Worker do
 
   # The transaction owner crashed without closing.
   # We need to assume we don't know the connection state.
-  def handle_info({:DOWN, ref, _, _, _},
-  %{mode: :raw, transaction: {_, ref}} = s) do
+  def handle_info({:DOWN, ref, _, _, _}, %{transaction: {_, ref}} = s) do
     {:noreply, disconnect(%{s | transaction: nil})}
-  end
-  def handle_info({:DOWN, ref, _, _, _},
-  %{mode: :sandbox, transaction: {_, ref}} = s) do
-    {:noreply, %{s | transaction: nil}}
   end
 
   def handle_info(_info, s) do
@@ -183,6 +142,6 @@ defmodule Ecto.Adapters.Poolboy.Worker do
 
   defp disconnect(%{conn: conn, module: module} = s) do
     conn && module.disconnect(conn)
-    %{s | conn: nil, mode: :raw}
+    %{s | conn: nil}
   end
 end

@@ -29,14 +29,14 @@ defmodule Ecto.Integration.PoolRunTest do
   test "nested run has no queue time" do
     {:ok, pool} = TestPool.start_link([lazy: false])
 
-    TestPool.transaction(pool, @timeout, fn(_, _, _, _, _) ->
+    TestPool.transaction(pool, @timeout, fn(_, _, _, _) ->
       TestPool.run(pool, @timeout, fn({_mod, _conn}, queue_time) ->
         assert is_nil(queue_time)
       end)
     end)
   end
 
-  test ":raw mode disconnects if run raises" do
+  test "disconnects if run raises" do
     {:ok, pool} = TestPool.start_link([lazy: false])
 
     assert {:ok, conn} =
@@ -55,7 +55,7 @@ defmodule Ecto.Integration.PoolRunTest do
     refute Process.alive?(conn)
   end
 
-  test ":raw mode does not disconnect if caller dies during run" do
+  test "do not disconnect if caller dies during run" do
     {:ok, pool} = TestPool.start_link([lazy: false])
 
     _ = Process.flag(:trap_exit, true)
@@ -73,59 +73,6 @@ defmodule Ecto.Integration.PoolRunTest do
 
     TestPool.run(pool, @timeout, fn({_mod, conn2}, _) ->
       assert assert conn1 == conn2
-      assert Process.alive?(conn1)
-    end)
-  end
-
-  ## Sandbox mode
-
-  test ":sandbox mode does not disconnect if run raises" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
-
-    TestPool.transaction(pool, @timeout, fn(ref, _, mode, _, _) ->
-      assert mode === :raw
-      assert Pool.mode(ref, :sandbox, @timeout) === :ok
-    end)
-
-    assert {:ok, conn} =
-      TestPool.run(pool, @timeout, fn({_mod, conn}, _) ->
-        conn
-      end)
-
-    assert Process.alive?(conn)
-
-    try do
-      TestPool.run(pool, @timeout, fn(_, _) -> raise "oops" end)
-    rescue
-      RuntimeError -> :ok
-    end
-
-    assert Process.alive?(conn)
-  end
-
-  test ":sandbox mode does not disconnect if caller dies" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
-
-    TestPool.transaction(pool, @timeout, fn(ref, _, mode, _, _) ->
-      assert mode === :raw
-      assert Pool.mode(ref, :sandbox, @timeout) === :ok
-    end)
-
-    _ = Process.flag(:trap_exit, true)
-    parent = self()
-    {:ok, task} = Task.start_link(fn ->
-      TestPool.run(pool, @timeout, fn({_mod, conn1}, _) ->
-        send(parent, {:go, self(), conn1})
-        :timer.sleep(@timeout)
-      end)
-    end)
-
-    assert_receive {:go, ^task, conn1}, @timeout
-    Process.exit(task, :kill)
-    assert_receive {:EXIT, ^task, :killed}, @timeout
-
-    TestPool.run(pool, @timeout, fn({_mod, conn2}, _) ->
-      assert conn1 == conn2
       assert Process.alive?(conn1)
     end)
   end

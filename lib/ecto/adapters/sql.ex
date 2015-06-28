@@ -135,6 +135,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   alias Ecto.Adapters.Pool
+  alias Ecto.Adapters.SQL.Sandbox
 
   @doc """
   Runs custom SQL query on given repo.
@@ -221,17 +222,18 @@ defmodule Ecto.Adapters.SQL do
   back in the pool with an open transaction. On every test, we restart
   the test transaction rolling back to the appropriate savepoint.
 
-  **IMPORTANT:** Test transactions only work if the connection pool has
-  size of 1 and does not support any overflow.
+
+  **IMPORTANT:** Test transactions only work if the connection pool is
+  `Ecto.Adapters.SQL.Sandbox`
 
   ## Example
 
-  The first step is to configure your database pool to have size of
-  1 and no max overflow. You set those options in your `config/config.exs`:
+  The first step is to configure your database to use the
+  `Ecto.Adapters.SQL.Sandbox` pool. You set those options in your
+  `config/config.exs`:
 
       config :my_app, Repo,
-        size: 1,
-        max_overflow: 0
+        pool: Ecto.Adapters.SQL.Sandbox
 
   Since you don't want those options in your production database, we
   typically recommend to create a `config/test.exs` and add the
@@ -310,71 +312,25 @@ defmodule Ecto.Adapters.SQL do
     test_transaction(:rollback, repo, opts)
   end
 
-  defp test_transaction(event, repo, opts) do
-    {pool_mod, pool, timeout} = repo.__pool__
-    opts = Keyword.put_new(opts, :timeout, timeout)
-    timeout = Keyword.get(opts, :timeout)
+  defp test_transaction(fun, repo, opts) do
+    case repo.__pool__ do
+      {Sandbox, pool, timeout} ->
+        opts = Keyword.put_new(opts, :timeout, timeout)
+        test_transaction(pool, fun, &repo.log/1, opts)
+      {pool_mod, _, _} ->
+        raise "cannot #{fun} test transaction with pool " <>
+          "#{inspect pool_mod}, use pool #{inspect Sandbox}"
+    end
+  end
 
-    trans_fun =
-      fn(ref, {mod, _conn}, :raw, 1, queue_time) when event in [:begin, :restart] ->
-          begin_sandbox(repo, ref, mod, queue_time, timeout, opts)
-        (_ref, _modconn, :raw, 1, _queue_time) when event === :rollback ->
-          {:ok, nil}
-        (_ref, _modconn, :sandbox, 1, _queue_time) when event === :begin ->
-          raise "cannot begin test transaction because we are already inside one"
-        (ref, {mod, _conn}, :sandbox, 1, queue_time) when event === :restart ->
-          restart_sandbox(repo, ref, mod, queue_time, timeout, opts)
-        (ref, {mod, _conn}, :sandbox, 1, queue_time) when event === :rollback ->
-          rollback_sandbox(repo, ref, mod, queue_time, timeout, opts)
-        (_ref, _modconn, _mode, _depth, _queue_time) ->
-          raise "cannot #{event} test transaction because we are already inside a regular transaction"
-      end
-
-    case Pool.transaction(pool_mod, pool, timeout, trans_fun) do
-      {:ok, {:ok, entry}} ->
-        log(repo, entry)
+  defp test_transaction(pool, fun, log, opts) do
+    timeout = Keyword.fetch!(opts, :timeout)
+    case apply(Sandbox, fun, [pool, log, opts, timeout]) do
+      :ok ->
         :ok
-      {:ok, {{:error, err}, entry}} ->
-        log(repo, entry)
-        raise err
-      {:ok, :noconnect} ->
-        exit({:noconnect, {__MODULE__, :test_transaction, [event, repo, opts]}})
-      {:error, :noproc} ->
-        raise ArgumentError, "repo #{inspect repo} is not started, " <>
-                             "please ensure it is part of your supervision tree"
+      {:error, :sandbox} when fun == :begin ->
+        raise "cannot begin test transaction because we are already inside one"
     end
-  end
-
-  defp begin_sandbox(repo, ref, mod, queue_time, timeout, opts) do
-    case begin(repo, mod, :raw, 1, nil, opts) do
-      # We ignore the entry, keeping only the sandbox one
-      {{:ok, _}, _entry} ->
-        savepoint_sandbox(repo, ref, mod, queue_time, timeout, opts)
-      {{:error, _}, _entry} = error ->
-        Pool.break(ref, timeout)
-        error
-    end
-  end
-
-  defp savepoint_sandbox(repo, ref, mod, queue_time, timeout, opts) do
-    case begin(repo, mod, :raw, :sandbox, queue_time, opts) do
-      {{:ok, _}, entry} ->
-        _ = Pool.mode(ref, :sandbox, timeout)
-        {:ok, entry}
-      {{:error, _}, _entry} = error ->
-        Pool.break(ref, timeout)
-        error
-    end
-  end
-
-  defp restart_sandbox(repo, ref, mod, queue_time, timeout, opts) do
-    rollback(repo, ref, mod, :sandbox, :sandbox, queue_time, timeout, opts, :ok)
-  end
-
-  defp rollback_sandbox(repo, ref, mod, queue_time, timeout, opts) do
-    res = rollback(repo, ref, mod, :raw, 1, queue_time, timeout, opts, :ok)
-    _   = Pool.mode(ref, :raw, timeout)
-    res
   end
 
   ## Worker
@@ -494,7 +450,8 @@ defmodule Ecto.Adapters.SQL do
     opts    = Keyword.put_new(opts, :timeout, timeout)
     timeout = Keyword.fetch!(opts, :timeout)
 
-    trans_fun = fn(ref, {mod, _conn}, mode, depth, queue_time) ->
+    trans_fun = fn(ref, {mod, _conn}, depth, queue_time) ->
+      mode = transaction_mode(pool_mod, pool, timeout)
       transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun)
     end
 
@@ -515,6 +472,9 @@ defmodule Ecto.Adapters.SQL do
                              "please ensure it is part of your supervision tree"
     end
   end
+
+  defp transaction_mode(Sandbox, pool, timeout), do: Sandbox.mode(pool, timeout)
+  defp transaction_mode(_, _, _), do: :raw
 
   defp transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun) do
     case begin(repo, mod, mode, depth, queue_time, opts) do

@@ -25,20 +25,24 @@ defmodule Ecto.Integration.TestTransactionTest do
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
 
-  test "being_test_transaction inside another transaction should fail" do
+  test "begin_test_transaction inside another transaction should timeout" do
     TestRepo.transaction(fn ->
-      assert_raise RuntimeError, ~r"cannot begin test transaction", fn ->
-        Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
-      end
+      assert {:timeout, _} =
+        catch_exit(Ecto.Adapters.SQL.restart_test_transaction(TestRepo,
+          [timeout: 200]))
     end)
+  after
+    Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
 
-  test "restart_test_transaction inside another transaction should fail" do
+  test "restart_test_transaction inside another transaction should timeout" do
     TestRepo.transaction(fn ->
-      assert_raise RuntimeError, ~r"cannot restart test transaction", fn ->
-        Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-      end
+      assert {:timeout, _} =
+        catch_exit(Ecto.Adapters.SQL.restart_test_transaction(TestRepo,
+                   [timeout: 200]))
     end)
+  after
+    Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
 
   test "begin_test_transaction should fail when it has already began" do
@@ -52,9 +56,10 @@ defmodule Ecto.Integration.TestTransactionTest do
 
   defp assert_transaction(depth, mode) do
     TestRepo.transaction(fn ->
-      {pool_mod, pool, _} = TestRepo.__pool__
-      assert %{depth: ^depth, mode: ^mode} =
-        Process.get({Ecto.Adapters.Pool, pool_mod, pool})
+      {Ecto.Adapters.SQL.Sandbox, pool, _} = TestRepo.__pool__
+      assert %{depth: ^depth} =
+        Process.get({Ecto.Adapters.Pool, Ecto.Adapters.SQL.Sandbox, pool})
+      assert Ecto.Adapters.SQL.Sandbox.mode(pool) === mode
     end)
   end
 end

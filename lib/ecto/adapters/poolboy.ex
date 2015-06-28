@@ -35,12 +35,7 @@ defmodule Ecto.Adapters.Poolboy do
 
   @doc false
   def checkout(pool, timeout) do
-    case :timer.tc(fn() -> do_checkout(pool, timeout) end) do
-      {queue_time, {mode, worker, mod_conn}} ->
-        {mode, worker, mod_conn, queue_time}
-      {_, {:error, :noproc} = error} ->
-        error
-    end
+    checkout(pool, :run, timeout)
   end
 
   @doc false
@@ -50,23 +45,13 @@ defmodule Ecto.Adapters.Poolboy do
 
   @doc false
   def open_transaction(pool, timeout) do
-    case :timer.tc(fn() -> trans_checkout(pool, timeout) end) do
-      {queue_time, {mode, worker, mod_conn}} ->
-        {mode, worker, mod_conn, queue_time}
-      {_, {:error, :noproc} = error} ->
-        error
-    end
-  end
-
-  @doc false
-  def transaction_mode(_, worker, mode, timeout) do
-    Worker.transaction_mode(worker, mode, timeout)
+    checkout(pool, :transaction, timeout)
   end
 
   @doc false
   def close_transaction(pool, worker, _) do
     try do
-      Worker.close_transaction(worker)
+      Worker.checkin(worker)
     after
       :poolboy.checkin(pool, worker)
     end
@@ -100,7 +85,16 @@ defmodule Ecto.Adapters.Poolboy do
     {pool_opts, conn_opts}
   end
 
-  defp do_checkout(pool, timeout) do
+  defp checkout(pool, fun, timeout) do
+    case :timer.tc(fn() -> do_checkout(pool, fun, timeout) end) do
+      {queue_time, {:ok, worker, mod_conn}} ->
+        {:ok, worker, mod_conn, queue_time}
+      {_queue_time, {:error, _} = error} ->
+        error
+    end
+  end
+
+  defp do_checkout(pool, fun, timeout) do
     try do
       :poolboy.checkout(pool, :true, timeout)
     catch
@@ -108,50 +102,21 @@ defmodule Ecto.Adapters.Poolboy do
         {:error, :noproc}
     else
       worker ->
-        checkout(pool, worker, timeout)
+        do_checkout(pool, worker, fun, timeout)
     end
   end
 
-  defp checkout(pool, worker, timeout) do
+  defp do_checkout(pool, worker, fun, timeout) do
     try do
-      Worker.checkout(worker, timeout)
+      Worker.checkout(worker, fun, timeout)
     catch
       class, reason ->
         stack = System.stacktrace()
         :poolboy.checkin(pool, worker)
         :erlang.raise(class, reason, stack)
     else
-      {mode, {_, _} = mod_conn} when mode in [:raw, :sandbox] ->
-        {mode, worker, mod_conn}
-      {:error, err} ->
-        :poolboy.checkin(pool, worker)
-        raise err
-    end
-  end
-
-  defp trans_checkout(pool, timeout) do
-    try do
-      :poolboy.checkout(pool, :true, timeout)
-    catch
-      :exit, {:noproc, _} ->
-        {:error, :noproc}
-    else
-      worker ->
-        open_transaction(pool, worker, timeout)
-    end
-  end
-
-  defp open_transaction(pool, worker, timeout) do
-    try do
-      Worker.open_transaction(worker, timeout)
-    catch
-      class, reason ->
-        stack = System.stacktrace()
-        :poolboy.checkin(pool, worker)
-        :erlang.raise(class, reason, stack)
-    else
-      {mode, {_, _} = mod_conn} when mode in [:raw, :sandbox] ->
-        {mode, worker, mod_conn}
+      {:ok, mod_conn} ->
+        {:ok, worker, mod_conn}
       {:error, err} ->
         :poolboy.checkin(pool, worker)
         raise err
