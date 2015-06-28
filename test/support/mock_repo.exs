@@ -13,8 +13,8 @@ defmodule Ecto.MockAdapter do
   def all(_repo, _query, _params, _opts),
     do: [[1]]
 
-  def update_all(_repo, _query, _values, _params, _opts), do: 1
-  def delete_all(_repo, _query, _params, _opts), do: 1
+  def update_all(_repo, _query, _params, _opts), do: {1, nil}
+  def delete_all(_repo, _query, _params, _opts), do: {1, nil}
 
   ## Model
 

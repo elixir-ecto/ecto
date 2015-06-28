@@ -5,14 +5,14 @@ defmodule Ecto.Query.Planner do
   alias Ecto.Query.SelectExpr
   alias Ecto.Query.JoinExpr
 
-  if map_size(%Ecto.Query{}) != 15 do
+  if map_size(%Ecto.Query{}) != 16 do
     raise "Ecto.Query match out of date in builder"
   end
 
   @doc """
   Validates and cast the given fields belonging to the given model.
   """
-  def fields(kind, model, kw, id_types) do
+  def fields(model, kind, kw, id_types) do
     types = model.__changeset__
 
     for {field, value} <- kw do
@@ -61,9 +61,9 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
-  def query(query, base, id_types, opts \\ []) do
-    {query, params} = prepare(query, base, id_types)
-    {normalize(query, base, opts), params}
+  def query(query, operation, base, id_types) do
+    {query, params} = prepare(query, operation, base, id_types)
+    {normalize(query, operation, base), params}
   end
 
   @doc """
@@ -76,10 +76,10 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
-  def prepare(query, params, id_types) do
+  def prepare(query, operation, params, id_types) do
     query
     |> prepare_sources
-    |> prepare_params(params, id_types)
+    |> prepare_params(operation, params, id_types)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -89,12 +89,13 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_params(query, base, id_types) do
-    {query, params} = traverse_exprs(query, [], &{&3, merge_params(&1, &2, &3, &4, id_types)})
+  def prepare_params(query, operation, base, id_types) do
+    {query, params} = traverse_exprs(query, operation, [], &{&3, merge_params(&1, &2, &3, &4, id_types)})
     {query, base ++ Enum.reverse(params)}
   end
 
-  defp merge_params(kind, query, expr, params, id_types) when kind in ~w(select distinct limit offset)a do
+  defp merge_params(kind, query, expr, params, id_types)
+      when kind in ~w(select distinct limit offset)a do
     if expr do
       cast_and_merge_params(kind, query, expr, params, id_types)
     else
@@ -102,7 +103,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp merge_params(kind, query, exprs, acc, id_types) when kind in ~w(where group_by having order_by)a do
+  defp merge_params(kind, query, exprs, acc, id_types)
+      when kind in ~w(where update group_by having order_by)a do
     Enum.reduce exprs, acc, fn expr, params ->
       cast_and_merge_params(kind, query, expr, params, id_types)
     end
@@ -127,7 +129,7 @@ defmodule Ecto.Query.Planner do
     {model, field, type} = type_from_param!(kind, query, expr, type)
     type = Ecto.Type.normalize(type, id_types)
 
-    case cast_param(type, v) do
+    case cast_param(kind, type, v) do
       {:ok, v} ->
         Ecto.Type.dump!(type, v)
       {:match, type} ->
@@ -145,11 +147,11 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp cast_param(_type, nil) do
+  defp cast_param(kind, _type, nil) when kind != :update do
     :error
   end
 
-  defp cast_param(type, v) do
+  defp cast_param(_kind, type, v) do
     # If the type is a primitive type and we are giving it
     # a struct, we first check if the struct type and the
     # given type are match and, if so, use the struct type
@@ -298,17 +300,22 @@ defmodule Ecto.Query.Planner do
   entry, we need to update its interpolations and check
   its fields and associations exist and are valid.
   """
-  def normalize(query, base, opts) do
-    only_filters = Keyword.get(opts, :only_filters)
-
-    if only_filters do
-      assert_filtered_expressions!(query, only_filters)
+  def normalize(query, operation, base) do
+    case operation do
+      :all ->
+        assert_no_update!(query, operation)
+      :update_all ->
+        assert_update!(query, operation)
+        assert_only_filter_expressions!(query, operation)
+      :delete_all ->
+        assert_no_update!(query, operation)
+        assert_only_filter_expressions!(query, operation)
     end
 
     query
-    |> traverse_exprs(length(base), &validate_and_increment/4)
+    |> traverse_exprs(operation, length(base), &validate_and_increment/4)
     |> elem(0)
-    |> normalize_select(only_filters)
+    |> normalize_select(operation)
     |> validate_assocs
   rescue
     e ->
@@ -316,27 +323,34 @@ defmodule Ecto.Query.Planner do
       raise e
   end
 
-  defp validate_and_increment(kind, query, expr, counter) when kind in ~w(select distinct limit offset)a do
+  defp validate_and_increment(kind, query, expr, counter)
+      when kind in ~w(select distinct limit offset)a do
     if expr do
-      do_validate_and_increment(kind, query, expr, counter)
+      validate_and_increment_each(kind, query, expr, counter)
     else
       {nil, counter}
     end
   end
 
-  defp validate_and_increment(kind, query, exprs, counter) when kind in ~w(where group_by having order_by)a do
-    Enum.map_reduce exprs, counter, &do_validate_and_increment(kind, query, &1, &2)
+  defp validate_and_increment(kind, query, exprs, counter)
+      when kind in ~w(where group_by having order_by update)a do
+    Enum.map_reduce exprs, counter, &validate_and_increment_each(kind, query, &1, &2)
   end
 
   defp validate_and_increment(:join, query, exprs, counter) do
     Enum.map_reduce exprs, counter, fn join, acc ->
-      {on, acc} = do_validate_and_increment(:join, query, join.on, acc)
+      {on, acc} = validate_and_increment_each(:join, query, join.on, acc)
       {%{join | on: on}, acc}
     end
   end
 
-  defp do_validate_and_increment(kind, query, expr, counter) do
-    {inner, acc} = Macro.prewalk expr.expr, counter, fn
+  defp validate_and_increment_each(kind, query, expr, counter) do
+    {inner, acc} = validate_and_increment_each(kind, query, expr, expr.expr, counter)
+    {%{expr | expr: inner, params: nil}, acc}
+  end
+
+  defp validate_and_increment_each(kind, query, expr, ast, counter) do
+    Macro.prewalk ast, counter, fn
       {:in, in_meta, [left, {:^, meta, [param]}]}, acc ->
         {right, acc} = validate_in(meta, expr, param, acc)
         {{:in, in_meta, [left, right]}, acc}
@@ -356,7 +370,6 @@ defmodule Ecto.Query.Planner do
       other, acc ->
         {other, acc}
     end
-    {%{expr | expr: inner, params: nil}, acc}
   end
 
   defp validate_in(meta, expr, param, acc) do
@@ -385,9 +398,9 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(query, only_filters) do
+  defp normalize_select(query, operation) do
     cond do
-      only_filters ->
+      operation in [:update_all, :delete_all] ->
         query
       select = query.select ->
         %{query | select: normalize_fields(query, select)}
@@ -489,8 +502,13 @@ defmodule Ecto.Query.Planner do
 
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
-  defp traverse_exprs(original, acc, fun) do
+  defp traverse_exprs(original, operation, acc, fun) do
     query = original
+
+    if operation == :update_all do
+      {updates, acc} = fun.(:update, original, original.updates, acc)
+      query = %{query | updates: updates}
+    end
 
     {select, acc} = fun.(:select, original, original.select, acc)
     query = %{query | select: select}
@@ -545,23 +563,39 @@ defmodule Ecto.Query.Planner do
     {nil, nil, type}
   end
 
-  def cast!(query, expr, message) do
-    message =
-      [message: message, query: query, file: expr.file, line: expr.line]
-      |> Ecto.QueryError.exception()
-      |> Exception.message
+  defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
+    changes =
+      Enum.reduce(updates, %{}, fn update, acc ->
+        Enum.reduce(update.expr, acc, fn {_op, kw}, acc ->
+          Enum.reduce(kw, acc, fn {k, v}, acc ->
+            Map.update(acc, k, v, fn _ ->
+              error! query, "duplicate field `#{k}` for `#{operation}`"
+            end)
+          end)
+        end)
+      end)
 
-    raise Ecto.CastError, message: message
+    if changes == %{} do
+      error! query, "`#{operation}` requires at least one field to be updated"
+    end
   end
 
-  defp assert_filtered_expressions!(query, context) do
+  defp assert_no_update!(query, operation) do
+    case query do
+      %Ecto.Query{updates: []} -> query
+      _ ->
+        error! query, "`#{operation}` does not allow `update` expressions"
+    end
+  end
+
+  defp assert_only_filter_expressions!(query, operation) do
     case query do
       %Ecto.Query{select: nil, order_bys: [], limit: nil, offset: nil,
                   group_bys: [], havings: [], preloads: [], assocs: [],
                   distinct: nil, lock: nil} ->
         query
       _ ->
-        error! query, "`#{context}` allows only `where` and `join` expressions"
+        error! query, "`#{operation}` allows only `where` and `join` expressions"
     end
   end
 

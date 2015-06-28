@@ -35,18 +35,18 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  defp prepare(query, params \\ []) do
-    Planner.prepare(query, params, %{binary_id: Ecto.UUID})
+  defp prepare(query, operation \\ :all, params \\ []) do
+    Planner.prepare(query, operation, params, %{binary_id: Ecto.UUID})
   end
 
-  defp normalize(query, params \\ [], opts \\ []) do
-    {query, params} = prepare(query, params)
-    Planner.normalize(query, params, opts)
+  defp normalize(query, operation \\ :all, params \\ []) do
+    {query, params} = prepare(query, operation, params)
+    Planner.normalize(query, operation, params)
   end
 
   defp normalize_with_params(query) do
-    {query, params} = prepare(query, [])
-    {Planner.normalize(query, [], []), params}
+    {query, params} = prepare(query, :all, [])
+    {Planner.normalize(query, :all, []), params}
   end
 
   test "prepare: merges all parameters" do
@@ -140,6 +140,17 @@ defmodule Ecto.Query.PlannerTest do
 
     {_query, params} = prepare(Post |> where([p], p.code in ^["abcd"]))
     assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
+  end
+
+  test "prepare: casts values on update_all" do
+    {_query, params} = prepare(Post |> update([p], set: [id: ^"1"]), :update_all)
+    assert params == [1]
+
+    {_query, params} = prepare(Post |> update([p], set: [title: ^nil]), :update_all)
+    assert params == [%Ecto.Query.Tagged{type: :string, value: nil}]
+
+    {_query, params} = prepare(Post |> update([p], set: [title: nil]), :update_all)
+    assert params == []
   end
 
   test "prepare: joins" do
@@ -306,17 +317,6 @@ defmodule Ecto.Query.PlannerTest do
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
   end
 
-  test "normalize: only filters" do
-    query = from(Post, []) |> normalize([], only_filters: :sample)
-    assert is_nil query.select
-
-    message = ~r"`sample` allows only `where` and `join` expressions in query"
-    assert_raise Ecto.QueryError, message, fn ->
-      query = from(p in Post, select: p)
-      normalize(query, [], only_filters: :sample)
-    end
-  end
-
   test "normalize: preload" do
     message = ~r"the binding used in `from` must be selected in `select` when using `preload`"
     assert_raise Ecto.QueryError, message, fn ->
@@ -338,6 +338,43 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.QueryError, message, fn ->
       query = from(p in Post, right_join: c in assoc(p, :comments), preload: [comments: c])
       normalize(query)
+    end
+  end
+
+  test "normalize: all does not allow updates" do
+    message = ~r"`all` does not allow `update` expressions"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in Post, update: [set: [name: "foo"]]) |> normalize(:all, [])
+    end
+  end
+
+  test "normalize: update all only allow filters and checks updates" do
+    message = ~r"`update_all` requires at least one field to be updated"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in Post, select: p, update: []) |> normalize(:update_all, [])
+    end
+
+    message = ~r"duplicate field `title` for `update_all`"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in Post, select: p, update: [set: [title: "foo", title: "bar"]])
+      |> normalize(:update_all, [])
+    end
+
+    message = ~r"`update_all` allows only `where` and `join` expressions in query"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in Post, select: p, update: [set: [title: "foo"]]) |> normalize(:update_all, [])
+    end
+  end
+
+  test "normalize: delete all only allow filters and forbids updates" do
+    message = ~r"`delete_all` does not allow `update` expressions"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in Post, update: [set: [name: "foo"]]) |> normalize(:delete_all, [])
+    end
+
+    message = ~r"`delete_all` allows only `where` and `join` expressions in query"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in Post, select: p) |> normalize(:delete_all, [])
     end
   end
 end

@@ -89,19 +89,16 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
-    def update_all(query, values) do
+    def update_all(query) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      zipped_sql = Enum.map_join(values, ", ", fn {field, expr} ->
-        "#{name}.#{quote_name(field)} = #{expr(expr, sources)}"
-      end)
-
       update = "UPDATE #{quote_table(table)} AS #{name}"
+      fields = update_fields(query.updates, sources)
       join   = join(query.joins, sources)
       where  = where(query.wheres, sources)
 
-      assemble([update, join, "SET", zipped_sql, where])
+      assemble([update, join, "SET", fields, where])
     end
 
     def delete_all(query) do
@@ -177,6 +174,26 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)
       "FROM #{quote_table(table)} AS #{name}"
+    end
+
+    defp update_fields(updates, sources) do
+      for(%{expr: expr} <- updates,
+          {op, kw} <- expr,
+          {key, value} <- kw,
+          do: update_op(op, key, value, sources)) |> Enum.join(", ")
+    end
+
+    defp update_op(:set, key, value, sources) do
+      quote_name(key) <> " = " <> expr(value, sources)
+    end
+
+    defp update_op(:inc, key, value, sources) do
+      quoted = quote_name(key)
+      quoted <> " = " <> quoted <> " + " <> expr(value, sources)
+    end
+
+    defp update_op(command, _key, _value, _sources) do
+      raise ArgumentError, "Unknown update operation #{inspect command} for PostgreSQL"
     end
 
     defp join([], _sources), do: []

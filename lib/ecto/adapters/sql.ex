@@ -56,8 +56,8 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def update_all(repo, query, values, params, opts) do
-        Ecto.Adapters.SQL.count_all(repo, @conn.update_all(query, values), params, opts)
+      def update_all(repo, query, params, opts) do
+        Ecto.Adapters.SQL.count_all(repo, @conn.update_all(query), params, opts)
       end
 
       @doc false
@@ -128,7 +128,7 @@ defmodule Ecto.Adapters.SQL do
         count > 0
       end
 
-      defoverridable [all: 4, update_all: 5, delete_all: 4,
+      defoverridable [all: 4, update_all: 4, delete_all: 4,
                       insert: 6, update: 7, delete: 5,
                       execute_ddl: 3, ddl_exists?: 3]
     end
@@ -444,7 +444,7 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def count_all(repo, sql, params, opts) do
     %{num_rows: num} = query(repo, sql, params, opts)
-    num
+    {num, nil}
   end
 
   @doc false

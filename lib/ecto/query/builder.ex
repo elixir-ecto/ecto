@@ -61,6 +61,10 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
+  def escape({:-, _, [number]}, _type, params, _vars, _env) when is_number(number) do
+    {-number, params}
+  end
+
   # fragments
   def escape({:fragment, meta, [query]}, _type, params, vars, env) when is_list(query) do
     {escaped, params} = Enum.map_reduce(query, params, &escape_fragment(&1, :any, &2, vars, env))
@@ -419,6 +423,10 @@ defmodule Ecto.Query.Builder do
       _      -> {:array, :any}
     end
   end
+
+  # Negative numbers
+  def quoted_type({:-, _, [number]}, _vars) when is_integer(number), do: :integer
+  def quoted_type({:-, _, [number]}, _vars) when is_float(number), do: :float
 
   # Literals
   def quoted_type(literal, _vars) when is_float(literal),   do: :float

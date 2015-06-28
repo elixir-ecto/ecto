@@ -54,25 +54,28 @@ defmodule Ecto.Adapter do
   @doc """
   Fetches all results from the data store based on the given query.
   """
-  defcallback all(repo, query :: Ecto.Query.t, params :: list(), options) :: [[term]] | no_return
+  defcallback all(repo, query :: Ecto.Query.t,
+                  params :: list(), options) :: [[term]] | no_return
 
   @doc """
-  Updates all entities matching the given query with the values given. The
-  query shall only have `where` expressions and a single `from` expression. Returns
-  the number of affected entities.
+  Updates all entities matching the given query with the values given.
+
+  The query shall only have `where` and `join` expressions and a
+  single `from` expression. It returns a tuple containing the number
+  of entries and any returned result as second element
   """
   defcallback update_all(repo, query :: Ecto.Query.t,
-                         updates :: Keyword.t, params :: list(),
-                         options) :: integer | no_return
+                         params :: list(), options) :: {integer, nil} | no_return
 
   @doc """
   Deletes all entities matching the given query.
 
-  The query shall only have `where` expressions and a `from` expression.
-  Returns the number of affected entities.
+  The query shall only have `where` and `join` expressions and a
+  single `from` expression. It returns a tuple containing the number
+  of entries and any returned result as second element
   """
   defcallback delete_all(repo, query :: Ecto.Query.t,
-                         params :: list(), options :: Keyword.t) :: integer | no_return
+                         params :: list(), options :: Keyword.t) :: {integer, nil} | no_return
 
   @doc """
   Inserts a single new model in the data store.

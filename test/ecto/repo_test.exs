@@ -110,39 +110,18 @@ defmodule Ecto.RepoTest do
 
   test "repo validates update_all" do
     # Success
-    MockRepo.update_all(e in MyModel, x: nil)
-    MockRepo.update_all(e in MyModel, x: e.x)
-    MockRepo.update_all(e in MyModel, x: "123")
-    MockRepo.update_all(MyModel, x: "123")
-    MockRepo.update_all("my_model", x: "123")
+    MockRepo.update_all(MyModel, set: [x: "321"])
 
-    query = from(e in MyModel, where: e.x == "123")
-    MockRepo.update_all(query, x: "")
+    query = from(e in MyModel, where: e.x == "123", update: [set: [x: "321"]])
+    MockRepo.update_all(query, [])
 
     # Failures
-    message = "no fields given to `update_all`"
-    assert_raise ArgumentError, message, fn ->
-      MockRepo.update_all(from(e in MyModel, select: e), [])
+    assert_raise Ecto.QueryError, fn ->
+      MockRepo.update_all from(e in MyModel, select: e), set: [x: "321"]
     end
 
-    assert_raise ArgumentError, "value `123` in `update_all` cannot be cast to type :string", fn ->
-      MockRepo.update_all(p in MyModel, x: ^123)
-    end
-
-    message = ~r"`update_all` allows only `where` and `join` expressions in query"
-    assert_raise Ecto.QueryError, message, fn ->
-      MockRepo.update_all(from(e in MyModel, order_by: e.x), x: "123")
-    end
-
-    message = "field `Ecto.RepoTest.MyModel.w` in `update_all` does not exist in the model source"
-    assert_raise Ecto.ChangeError, message, fn ->
-      MockRepo.update_all(MyModel, w: "123")
-    end
-
-    message = "field `Ecto.RepoTest.MyModel.y` in `update_all` does not type check. " <>
-              "It has type :binary but a type :string was given"
-    assert_raise Ecto.ChangeError, message, fn ->
-      MockRepo.update_all(MyModel, y: "123")
+    assert_raise Ecto.QueryError, fn ->
+      MockRepo.update_all from(e in MyModel, order_by: e.x), set: [x: "321"]
     end
   end
 

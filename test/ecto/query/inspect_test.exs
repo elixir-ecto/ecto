@@ -123,14 +123,16 @@ defmodule Ecto.Query.InspectTest do
     string = """
     from p in Inspect.Post, join: c in assoc(p, :comments), where: true,
     group_by: [p.id], having: true, order_by: [asc: p.id], limit: 1,
-    offset: 1, lock: "FOO", distinct: [1], select: 1, preload: [:likes], preload: [comments: c]
+    offset: 1, lock: "FOO", distinct: [1], update: [set: [id: ^3]], select: 1,
+    preload: [:likes], preload: [comments: c]
     """
     |> String.rstrip
     |> String.replace("\n", " ")
 
     assert i(from(x in Post, join: y in assoc(x, :comments), where: true, group_by: x.id,
                              having: true, order_by: x.id, limit: 1, offset: 1,
-                             lock: "FOO", select: 1, distinct: 1, preload: [:likes, comments: y])) == string
+                             lock: "FOO", select: 1, distinct: 1,
+                             update: [set: [id: ^3]], preload: [:likes, comments: y])) == string
   end
 
   test "to_string all" do
@@ -145,6 +147,7 @@ defmodule Ecto.Query.InspectTest do
       offset: 1,
       lock: "FOO",
       distinct: [1],
+      update: [set: [id: 3]],
       select: 1,
       preload: [:likes],
       preload: [comments: c]
@@ -153,7 +156,7 @@ defmodule Ecto.Query.InspectTest do
 
     assert Inspect.Ecto.Query.to_string(
       from(x in Post, join: y in assoc(x, :comments), where: true, group_by: x.id,
-                      having: true, order_by: x.id, limit: 1, offset: 1,
+                      having: true, order_by: x.id, limit: 1, offset: 1, update: [set: [id: 3]],
                       lock: "FOO", distinct: 1, select: 1, preload: [:likes, comments: y])
     ) == string
   end
@@ -194,9 +197,9 @@ defmodule Ecto.Query.InspectTest do
 
   def normalize(query) do
     query
-    |> Ecto.Query.Planner.prepare([], %{})
+    |> Ecto.Query.Planner.prepare(:all, [], %{})
     |> elem(0)
-    |> Ecto.Query.Planner.normalize([], [])
+    |> Ecto.Query.Planner.normalize(:all, [])
   end
 
   def i(query) do

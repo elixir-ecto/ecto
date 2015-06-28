@@ -29,13 +29,15 @@ defmodule Ecto.Integration.EscapeTest do
 
   test "Repo.update_all escape" do
     TestRepo.insert!(%Post{title: "hello"})
-    TestRepo.update_all(Post, title: "'")
+    TestRepo.update_all(Post, set: [title: "'"])
 
-    query = from(p in Post, select: p.title)
-    assert ["'"] == TestRepo.all(query)
+    reader = from(p in Post, select: p.title)
+    assert ["'"] == TestRepo.all(reader)
 
-    TestRepo.update_all(from(Post, where: "'" != ""), title: "''")
-    assert ["''"] == TestRepo.all(query)
+    query = from(Post, where: "'" != "")
+    TestRepo.update_all(query, set: [title: "''"])
+
+    assert ["''"] == TestRepo.all(reader)
   end
 
   test "Repo.delete_all escape" do
