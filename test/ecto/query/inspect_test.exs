@@ -194,9 +194,9 @@ defmodule Ecto.Query.InspectTest do
 
   def normalize(query) do
     query
-    |> Ecto.Query.Planner.prepare([], %{})
+    |> Ecto.Query.Planner.prepare(:all, [], %{})
     |> elem(0)
-    |> Ecto.Query.Planner.normalize([], [])
+    |> Ecto.Query.Planner.normalize(:all, [])
   end
 
   def i(query) do

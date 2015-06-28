@@ -83,7 +83,7 @@ defmodule Ecto.Repo.Model do
       changes   = validate_changes(:update, changeset, model, fields, id_types)
 
       filters = add_pk_filter!(changeset.filters, struct)
-      filters = Planner.fields(:update, model, filters, id_types)
+      filters = Planner.fields(model, :update, filters, id_types)
 
       values =
         if changes != [] do
@@ -130,7 +130,7 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
       filters = add_pk_filter!(changeset.filters, struct)
-      filters = Planner.fields(:delete, model, filters, adapter.id_types(repo))
+      filters = Planner.fields(model, :delete, filters, adapter.id_types(repo))
 
       case adapter.delete(repo, source, filters, autogen, opts) do
         {:ok, _} -> nil
@@ -215,7 +215,7 @@ defmodule Ecto.Repo.Model do
   end
 
   defp validate_changes(kind, changeset, model, fields, id_types) do
-    Planner.fields(kind, model, Map.take(changeset.changes, fields), id_types)
+    Planner.fields(model, kind, Map.take(changeset.changes, fields), id_types)
   end
 
   defp add_pk_filter!(filters, struct) do

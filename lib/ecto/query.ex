@@ -142,7 +142,7 @@ defmodule Ecto.Query do
   """
 
   defstruct [sources: nil, from: nil, joins: [], wheres: [], select: nil,
-             order_bys: [], limit: nil, offset: nil, group_bys: [],
+             order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
   @opaque t :: %__MODULE__{}
 
@@ -180,6 +180,7 @@ defmodule Ecto.Query do
   alias Ecto.Query.Builder.Preload
   alias Ecto.Query.Builder.Join
   alias Ecto.Query.Builder.Lock
+  alias Ecto.Query.Builder.Update
 
   @doc """
   Resets a previously set field on a query.
@@ -262,7 +263,8 @@ defmodule Ecto.Query do
     from(kw, __CALLER__, count_bind, quoted, binds)
   end
 
-  @binds    [:where, :select, :distinct, :order_by, :group_by, :having, :limit, :offset, :preload]
+  @binds    [:where, :select, :distinct, :order_by, :group_by,
+             :having, :limit, :offset, :preload, :update]
   @no_binds [:lock]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
@@ -562,6 +564,35 @@ defmodule Ecto.Query do
   """
   defmacro lock(query, expr) do
     Lock.build(query, expr, __CALLER__)
+  end
+
+  @doc ~S"""
+  An update query expression.
+
+  Updates are used to update the filtered entries. In order for
+  updates to be applied, `Ecto.Repo.update_all/3` must be invoked.
+
+  ## Keywords examples
+
+      from(u in User, update: [set: [name: "new name"]]
+
+  ## Expressions examples
+
+      User |> update([u], set: [name: "new name"])
+
+  ## Operators
+
+  Different databases support different operators. In the example above,
+  we have uset `:set` which sets a new value in the selected models. Most
+  databases support `:inc` too, that increaments a given field by a given
+  value:
+
+      User |> update([u], inc: [accesses: 1])
+
+  Check your database and adapters to know more about supported operators.
+  """
+  defmacro update(query, binding, expr) do
+    Update.build(query, binding, expr, __CALLER__)
   end
 
   @doc """

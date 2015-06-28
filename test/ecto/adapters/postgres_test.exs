@@ -45,9 +45,9 @@ defmodule Ecto.Adapters.PostgresTest do
     end
   end
 
-  defp normalize(query) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, [], %{})
-    Ecto.Query.Planner.normalize(query, [], [])
+  defp normalize(query, operation \\ :all) do
+    {query, _params} = Ecto.Query.Planner.prepare(query, operation, [], %{})
+    Ecto.Query.Planner.normalize(query, operation, [])
   end
 
   test "from" do
