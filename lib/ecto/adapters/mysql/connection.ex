@@ -193,7 +193,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp update_op(command, _key, _value, _sources) do
-      raise ArgumentError, "Unknown update operation #{inspect command} for PostgreSQL"
+      raise ArgumentError, "Unknown update operation #{inspect command} for MySQL"
     end
 
     defp join([], _sources), do: []
