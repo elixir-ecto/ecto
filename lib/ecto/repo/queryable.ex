@@ -80,11 +80,11 @@ defmodule Ecto.Repo.Queryable do
       update_all(repo, adapter, query, opts)
     else
       raise ArgumentError, """
-      You are using the old update syntax. Instead of:
+      You are using the deprecated update syntax. Instead of:
 
           Repo.update_all queryable, foo: "bar"
 
-      One shuold write:
+      One should write:
 
           Repo.update_all queryable,
             set: [foo: "bar"]

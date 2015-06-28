@@ -348,10 +348,21 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: update all only allow filters" do
+  test "normalize: update all only allow filters and checks updates" do
+    message = ~r"`update_all` requires at least one field to be updated"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in Post, select: p, update: []) |> normalize(:update_all, [])
+    end
+
+    message = ~r"duplicate field `title` for `update_all`"
+    assert_raise Ecto.QueryError, message, fn ->
+      from(p in Post, select: p, update: [set: [title: "foo", title: "bar"]])
+      |> normalize(:update_all, [])
+    end
+
     message = ~r"`update_all` allows only `where` and `join` expressions in query"
     assert_raise Ecto.QueryError, message, fn ->
-      from(p in Post, select: p) |> normalize(:update_all, [])
+      from(p in Post, select: p, update: [set: [title: "foo"]]) |> normalize(:update_all, [])
     end
   end
 

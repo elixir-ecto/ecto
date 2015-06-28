@@ -305,10 +305,11 @@ defmodule Ecto.Query.Planner do
       :all ->
         assert_no_update!(query, operation)
       :update_all ->
-        assert_filter_expressions!(query, operation)
+        assert_update!(query, operation)
+        assert_only_filter_expressions!(query, operation)
       :delete_all ->
         assert_no_update!(query, operation)
-        assert_filter_expressions!(query, operation)
+        assert_only_filter_expressions!(query, operation)
     end
 
     query
@@ -562,6 +563,23 @@ defmodule Ecto.Query.Planner do
     {nil, nil, type}
   end
 
+  defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
+    changes =
+      Enum.reduce(updates, %{}, fn update, acc ->
+        Enum.reduce(update.expr, acc, fn {_op, kw}, acc ->
+          Enum.reduce(kw, acc, fn {k, v}, acc ->
+            Map.update(acc, k, v, fn _ ->
+              error! query, "duplicate field `#{k}` for `#{operation}`"
+            end)
+          end)
+        end)
+      end)
+
+    if changes == %{} do
+      error! query, "`#{operation}` requires at least one field to be updated"
+    end
+  end
+
   defp assert_no_update!(query, operation) do
     case query do
       %Ecto.Query{updates: []} -> query
@@ -570,7 +588,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp assert_filter_expressions!(query, operation) do
+  defp assert_only_filter_expressions!(query, operation) do
     case query do
       %Ecto.Query{select: nil, order_bys: [], limit: nil, offset: nil,
                   group_bys: [], havings: [], preloads: [], assocs: [],
