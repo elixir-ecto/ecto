@@ -7,34 +7,55 @@ defmodule Ecto.Query.Builder.Update do
   Escapes a list of quoted expressions.
 
       iex> escape([], [], __ENV__)
-      {[], %{}}
+      {[], [], %{}}
 
       iex> escape([set: []], [], __ENV__)
-      {[set: []], %{}}
+      {[set: []], [], %{}}
 
       iex> escape([set: [foo: 1]], [], __ENV__)
-      {[set: [foo: 1]], %{}}
+      {[set: [foo: 1]], [], %{}}
+
+      iex> escape(quote(do: ^[set: []]), [], __ENV__)
+      {[], [set: []], %{}}
+
+      iex> escape(quote(do: [set: ^[foo: 1]]), [], __ENV__)
+      {[], [set: [foo: 1]], %{}}
 
       iex> escape(quote(do: [set: [foo: ^1]]), [], __ENV__)
-      {[set: [foo: {:{}, [], [:^, [], [0]]}]], %{0 => {1, {0, :foo}}}}
+      {[set: [foo: {:{}, [], [:^, [], [0]]}]], [], %{0 => {1, {0, :foo}}}}
 
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, Macro.t, %{}}
   def escape(expr, vars, env) when is_list(expr) do
-    Enum.map_reduce expr, %{}, fn
-      {k, v}, acc when is_atom(k) and is_list(v) ->
-        {v, params} = escape_each(k, v, acc, vars, env)
-        {{k, v}, params}
-      _, _acc ->
-        error! expr
-    end
+    escape_op(expr, [], [], %{}, vars, env)
+  end
+
+  def escape({:^, _, [v]}, _vars, _env) do
+    {[], v, %{}}
   end
 
   def escape(expr, _vars, _env) do
-    error! expr
+    compile_error!(expr)
   end
 
-  defp escape_each(key, kw, params, vars, env) do
+  defp escape_op([{k, v}|t], compile, runtime, params, vars, env) when is_atom(k) and is_list(v) do
+    {v, params} = escape_field(k, v, params, vars, env)
+    escape_op(t, [{k, v}|compile], runtime, params, vars, env)
+  end
+
+  defp escape_op([{k, {:^, _, [v]}}|t], compile, runtime, params, vars, env) when is_atom(k) do
+    escape_op(t, compile, [{k, v}|runtime], params, vars, env)
+  end
+
+  defp escape_op([], compile, runtime, params, _vars, _env) do
+    {Enum.reverse(compile), Enum.reverse(runtime), params}
+  end
+
+  defp escape_op(expr, _compile, _runtime, _params, _vars, _env) do
+    compile_error!(expr)
+  end
+
+  defp escape_field(key, kw, params, vars, env) do
     Enum.map_reduce kw, params, fn
       {k, v}, acc when is_atom(k) ->
         {v, params} = Builder.escape(v, {0, k}, acc, vars, env)
@@ -45,9 +66,9 @@ defmodule Ecto.Query.Builder.Update do
     end
   end
 
-  defp error!(expr) do
+  defp compile_error!(expr) do
     Builder.error! "malformed update `#{Macro.to_string(expr)}` in query expression, " <>
-                   "expected a keyword list with lists as values"
+                   "expected a keyword list with lists or interpolated expressions as values"
   end
 
   @doc """
@@ -59,16 +80,35 @@ defmodule Ecto.Query.Builder.Update do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding        = Builder.escape_binding(binding)
-    {expr, params} = escape(expr, binding, env)
-    params         = Builder.escape_params(params)
+    binding = Builder.escape_binding(binding)
+    {compile, runtime, params} = escape(expr, binding, env)
 
-    distinct = quote do: %Ecto.Query.QueryExpr{
-                           expr: unquote(expr),
-                           params: unquote(params),
-                           file: unquote(env.file),
-                           line: unquote(env.line)}
-    Builder.apply_query(query, __MODULE__, [distinct], env)
+    query =
+      if compile == [] do
+        query
+      else
+        params = Builder.escape_params(params)
+
+        update = quote do
+          %Ecto.Query.QueryExpr{expr: unquote(compile), params: unquote(params),
+                                file: unquote(env.file), line: unquote(env.line)}
+        end
+
+        Builder.apply_query(query, __MODULE__, [update], env)
+      end
+
+    query =
+      if runtime == [] do
+        query
+      else
+        update = quote do
+          Ecto.Query.Builder.Update.runtime(unquote(runtime), unquote(env.line), unquote(env.file))
+        end
+
+        Builder.apply_query(query, __MODULE__, [update], env)
+      end
+
+    query
   end
 
   @doc """
@@ -78,5 +118,45 @@ defmodule Ecto.Query.Builder.Update do
   def apply(query, updates) do
     query = Ecto.Queryable.to_query(query)
     %{query | updates: [updates|query.updates]}
+  end
+
+  @doc """
+  If there are interpolated updates at compile time,
+  we need to handle them at runtime. We do such in
+  this callback.
+  """
+  @spec runtime(term, line :: integer, file :: binary) :: Ecto.Query.t
+  def runtime(runtime, line, file) when is_list(runtime) do
+    {runtime, {params, _count}} =
+      Enum.map_reduce runtime, {[], 0}, fn
+        {k, v}, acc when is_atom(k) and is_list(v) ->
+          {v, params} = runtime_field(k, v, acc)
+          {{k, v}, params}
+        _, _acc ->
+          runtime_error! runtime
+      end
+
+    %Ecto.Query.QueryExpr{expr: runtime, params: Enum.reverse(params),
+                          file: file, line: line}
+  end
+
+  def runtime(runtime, _line, _file) do
+    runtime_error!(runtime)
+  end
+
+  defp runtime_field(key, kw, acc) do
+    Enum.map_reduce kw, acc, fn
+      {k, v}, {params, count} when is_atom(k) ->
+        params = [{v, {0, k}}|params]
+        {{k, {:^, [], [count]}}, {params, count+1}}
+      _, _acc ->
+        Builder.error! "malformed #{inspect key} in update `#{inspect(kw)}`, " <>
+                       "expected a keyword list"
+    end
+  end
+
+  defp runtime_error!(value) do
+    Builder.error! "malformed update `#{inspect(value)}` in query expression, " <>
+                   "expected a keyword list with lists or interpolated expressions as values"
   end
 end
