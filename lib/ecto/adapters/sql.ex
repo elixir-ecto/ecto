@@ -318,8 +318,14 @@ defmodule Ecto.Adapters.SQL do
         opts = Keyword.put_new(opts, :timeout, timeout)
         test_transaction(pool, fun, &repo.log/1, opts)
       {pool_mod, _, _} ->
-        raise "cannot #{fun} test transaction with pool " <>
-          "#{inspect pool_mod}, use pool #{inspect Sandbox}"
+        raise """
+        cannot #{fun} test transaction with pool #{inspect pool_mod}.
+        In order to use test transactions with Ecto SQL, you need to
+        configure your repository to use #{inspect Sandbox}:
+
+            pool: #{inspect Sandbox}
+
+        """
     end
   end
 
@@ -363,6 +369,7 @@ defmodule Ecto.Adapters.SQL do
           mix deps.clean ecto
       """
     end
+
     {pool_mod, pool, _} = repo.__pool__
     opts = opts
       |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5000))

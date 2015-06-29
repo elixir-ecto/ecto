@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.13.0-dev
+## v0.13.0
 
 * Enhancements
   * Support a `:map` type. PostgreSQL will use `jsonb` columns for those while other SQL databases will emulate it with a text column until JSON support is added
@@ -10,8 +10,11 @@
   * Allow custom options to be given when creating a table: `create table(:posts, options: "WITH ...")`
   * Support `:on_delete` in `Ecto.Migration.references/2`. It may be one of `:nothing`, `:delete_all` or `:nilify_all`. Defaults to `:nothing`.
   * Add `Ecto.Adapter.Pool` which will support adpaters to work with different pools (upcoming)
+  * Add `Ecto.Changeset.validate_subset/4` to validate a list is a subset of the given values
+  * Support encoded URLs in the repository configuration
 
 * Backwards incompatible changes
+  * `Ecto.Adapters.SQL` now requires using `Ecto.Adapters.SQL.Sandbox` for transactional tests. You will have to update your adapter tests to use `pool: Ecto.Adapters.SQL.Sandbox`.
   * `Ecto.Repo.update_all/3` and `Ecto.Repo.delete_all/3` now return `{counter, nil}` instead of simply `counter`. This is done to support RETURNING statements in the future.
   * `Ecto.Repo.update_all/3` is no longer a macro. Instead of:
 

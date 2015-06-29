@@ -1,5 +1,5 @@
 defmodule Ecto.Adapters.Connection do
-  @moduledoc"""
+  @moduledoc """
   Behaviour for connection processes.
 
   In order to use a connection, adapter developers need to implement
