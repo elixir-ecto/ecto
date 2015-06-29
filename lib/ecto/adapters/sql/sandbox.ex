@@ -106,12 +106,18 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   ## Break
 
-  def handle_call({:break, ref}, from, %{ref: ref} = s) do
+  def handle_call({:break, ref}, from, %{mode: :raw, ref: ref} = s) do
     s = demonitor(s)
     GenServer.reply(from, :ok)
     s = s
+      |> reset()
       |> dequeue()
     {:noreply, s}
+  end
+  def handle_call({:break, ref}, from, %{mode: :sandbox, ref: ref} = s) do
+    s = demonitor(s)
+    GenServer.reply(from, :ok)
+    {:noreply, dequeue(s)}
   end
 
   ## Query
