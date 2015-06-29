@@ -208,7 +208,8 @@ defmodule Ecto.Adapters.SQL do
   defp query(mod, conn, queue_time, sql, params, true, opts) do
     {query_time, res} = :timer.tc(mod, :query, [conn, sql, params, opts])
     entry = %Ecto.LogEntry{query: sql, params: params, result: res,
-                           query_time: query_time, queue_time: queue_time}
+                           query_time: query_time, queue_time: queue_time,
+                           connection_pid: conn}
     {res, entry}
   end
 

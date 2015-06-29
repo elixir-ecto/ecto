@@ -166,7 +166,7 @@ defmodule Ecto.Repo do
         Logger.unquote(@log_level)(fn ->
           {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
           iodata
-        end)
+        end, ecto_conn_pid: entry.connection_pid)
       end
 
       defoverridable [log: 1]
@@ -529,7 +529,7 @@ defmodule Ecto.Repo do
         Logger.debug(fn ->
           {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
           iodata
-        end)
+        end, ecto_conn_pid: entry.connection_pid)
       end
 
   """
