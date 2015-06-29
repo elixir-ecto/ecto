@@ -75,31 +75,8 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def update_all(repo, adapter, queryable, updates, opts) when is_list(opts) do
-    if Keyword.has_key?(updates, :set) or Keyword.has_key?(updates, :inc) do
-      query = Ecto.Query.from q in queryable, update: ^updates
-      update_all(repo, adapter, query, opts)
-    else
-      raise ArgumentError, """
-      You are using the deprecated update syntax. Instead of:
-
-          Repo.update_all queryable, foo: "bar"
-
-      One should write:
-
-          Repo.update_all queryable, set: [foo: "bar"]
-
-      Where `:set` is the update operator. `:inc` is also
-      supported to increment a given column by the given value:
-
-          Repo.update_all queryable, inc: [foo: 1]
-
-      For complex expressions, updates are now also supported in
-      queries:
-
-          query = from queryable, update: [set: [foo: p.bar]]
-          Repo.update_all query, []
-      """
-    end
+    query = Ecto.Query.from q in queryable, update: ^updates
+    update_all(repo, adapter, query, opts)
   end
 
   defp update_all(repo, adapter, queryable, opts) do
