@@ -284,7 +284,7 @@ defmodule Ecto.Association.Has do
                            "option, the model should not be passed as second argument"
     end
 
-    unless opts[:dependent] in @dependent_opts do
+    if opts[:dependent] && not opts[:dependent] in @dependent_opts do
       raise ArgumentError, "invalid :dependent option for #{inspect name}. The only valid options" <>
                            " are :fetch_and_delete, :nilify_all and :delete_all"
     end

@@ -4,11 +4,6 @@ alias Ecto.MockRepo
 defmodule Ecto.Model.DependentTest do
   use ExUnit.Case, async: true
 
-  def store_model(changeset) do
-    Process.put(:current_model, changeset.model.__struct__)
-    changeset
-  end
-
   defmodule Post do
     use Ecto.Model
     alias Ecto.Model.DependentTest.Comment
@@ -16,8 +11,6 @@ defmodule Ecto.Model.DependentTest do
     schema "dependent_posts" do
       has_many :comments, Comment, dependent: :delete_all
     end
-
-    before_insert Ecto.Model.DependentTest, :store_model, []
   end
 
   defmodule Comment do
@@ -28,7 +21,6 @@ defmodule Ecto.Model.DependentTest do
       belongs_to :post, Post
     end
 
-    before_insert Ecto.Model.DependentTest, :store_model, []
     before_delete :callback_check, []
 
     def callback_check(changeset) do
@@ -39,9 +31,9 @@ defmodule Ecto.Model.DependentTest do
   end
 
   test "delete_all deletes dependent w/o triggering callbacks" do
-    post = MockRepo.insert!(%Post{id: 1})
-    MockRepo.insert!(%Comment{id: 1, post_id: post.id})
-    MockRepo.insert!(%Comment{id: 2, post_id: post.id})
+    post = MockRepo.insert!(%Post{id: 1}, struct: Post)
+    MockRepo.insert!(%Comment{id: 1, post_id: post.id}, struct: Comment)
+    MockRepo.insert!(%Comment{id: 2, post_id: post.id}, struct: Comment)
 
     comments = MockRepo.all(Comment)
     assert Enum.count(comments) == 2
@@ -60,8 +52,6 @@ defmodule Ecto.Model.DependentTest do
     schema "dependent_pictures" do
       has_many :likes, Like, dependent: :fetch_and_delete
     end
-
-    before_insert Ecto.Model.DependentTest, :store_model, []
   end
 
   defmodule Like do
@@ -72,7 +62,6 @@ defmodule Ecto.Model.DependentTest do
       belongs_to :picture, Picture
     end
 
-    before_insert Ecto.Model.DependentTest, :store_model, []
     before_delete :callback_check, []
 
     def callback_check(changeset) do
@@ -83,9 +72,9 @@ defmodule Ecto.Model.DependentTest do
   end
 
   test "fetch_and_delete deletes dependents and triggers callbacks" do
-    picture = MockRepo.insert!(%Picture{id: 1})
-    MockRepo.insert!(%Like{id: 1, picture_id: picture.id})
-    MockRepo.insert!(%Like{id: 2, picture_id: picture.id})
+    picture = MockRepo.insert!(%Picture{id: 1}, struct: Picture)
+    MockRepo.insert!(%Like{id: 1, picture_id: picture.id}, struct: Like)
+    MockRepo.insert!(%Like{id: 2, picture_id: picture.id}, struct: Like)
 
     likes = MockRepo.all(Like)
     assert Enum.count(likes) == 2
@@ -97,14 +86,14 @@ defmodule Ecto.Model.DependentTest do
     assert Process.get(:callback_check) == [1, 2]
   end
 
-  # defmodule User do
-  #   use Ecto.Model
-  #   alias Ecto.Model.DependentTest.Role
+  defmodule User do
+    use Ecto.Model
+    alias Ecto.Model.DependentTest.Role
 
-  #   schema "dependent_users" do
-  #     has_many :roles, Role, dependent: :nilify_all
-  #   end
-  # end
+    schema "dependent_users" do
+      has_many :roles, Role, dependent: :nilify_all
+    end
+  end
 
   defmodule Role do
     use Ecto.Model
@@ -116,14 +105,17 @@ defmodule Ecto.Model.DependentTest do
   end
 
   test "nilify_all sets foreign keys on dependents to nil w/o triggering callbacks" do
-    # user = MockRepo.insert!(%User{id: 1})
-    # MockRepo.insert!(%Role{id: 1, user_id: user.id})
-    # MockRepo.insert!(%Role{id: 2, user_id: user.id})
+    user = MockRepo.insert!(%User{id: 1}, struct: User)
+    MockRepo.insert!(%Role{id: 1, user_id: user.id}, struct: Role)
+    MockRepo.insert!(%Role{id: 2, user_id: user.id}, struct: Role)
 
-    # roles = MockRepo.all(Role)
-    # assert Enum.count(roles) == 2
+    roles = MockRepo.all(Role)
+    assert Enum.count(roles) == 2
 
-    # MockRepo.delete!(user)
-    # roles = MockRepo.all(Role)
+    MockRepo.delete!(user)
+    roles = MockRepo.all(Role)
+    for role <- roles do
+      assert is_nil(role.user_id)
+    end
   end
 end

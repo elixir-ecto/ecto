@@ -18,13 +18,10 @@ defmodule Ecto.Model.Dependent do
     changeset
   end
 
-  defmacro nilify_all(%Changeset{repo: repo} = changeset, assoc_queryable, assoc_key) do
+  def nilify_all(%Changeset{repo: repo} = changeset, assoc_queryable, assoc_key) do
     query = assoc_query(changeset, assoc_queryable, assoc_key)
-
-    quote do
-      repo.update_all(unquote(query), [{unquote(assoc_key), nil}])
-      unquote(changeset)
-    end
+    repo.update_all(query, set: [{assoc_key, nil}])
+    changeset
   end
 
   defp assoc_query(%Changeset{model: model}, assoc_queryable, assoc_key) do
@@ -40,7 +37,7 @@ defmodule Ecto.Model.Dependent do
       assoc_key = assoc.assoc_key
 
       quote do
-        after_delete Ecto.Model.Dependent, unquote(dependent), [unquote(queryable), unquote(assoc_key)]
+        before_delete Ecto.Model.Dependent, unquote(dependent), [unquote(queryable), unquote(assoc_key)]
       end
     end
   end

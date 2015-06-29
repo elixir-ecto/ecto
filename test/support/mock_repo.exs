@@ -15,9 +15,14 @@ defmodule Ecto.MockAdapter do
   def all(_repo, _query, _params, _opts),
     do: [[1]]
 
+  def update_all(_repo, %{sources: {{"dependent_" <> _ = table, _}}, updates: _updates}, _params, _opts) do
+    records = for record <- dependent_records(table), do: %{record|user_id: nil}
+    update_dependent_records(table, records)
+    {1, nil}
+  end
   def update_all(_repo, _query, _params, _opts), do: {1, nil}
   def delete_all(_repo, %{sources: {{"dependent_" <> _ = table, _}}}, _params, _opts) do
-    Process.put(:"#{table}", [])
+    update_dependent_records(table, [])
     {1, nil}
   end
   def delete_all(_repo, _query, _params, _opts), do: {1, nil}
@@ -29,9 +34,9 @@ defmodule Ecto.MockAdapter do
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, [version: 1]}
   end
-  def insert(_repo, "dependent_" <> _ = table, val, _, _, opts) do
+  def insert(_repo, "dependent_" <> _ = table, val, _, _, struct: struct) do
     id = Keyword.fetch!(val, :id)
-    record = struct(current_model(), val)
+    record = struct(struct, val)
     records = dependent_records(table)
     Process.put(:"#{table}", [record|records])
     {:ok, [id: id]}
@@ -64,8 +69,8 @@ defmodule Ecto.MockAdapter do
 
   ## Dependent Helpers
 
-  def current_model() do
-    Process.get(:current_model)
+  def update_dependent_records(table, list) do
+    Process.put(:"#{table}", list)
   end
 
   def dependent_records(table) do
