@@ -16,34 +16,53 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   """
   @spec start_link(module, Keyword.t) :: {:ok, pid} | {:error, any}
-  def start_link(conn_mod, opts) do
-    name = Keyword.get(opts, :name)
-    GenServer.start_link(__MODULE__, {conn_mod, opts}, [name: name])
+  def start_link(module, params) do
+    {:ok, _} = Application.ensure_all_started(:poolboy)
+    opts = [worker_module: __MODULE__, size: 1, max_overflow: 0]
+    {name, params} = Keyword.pop(params, :name)
+    args = {module, params}
+    if is_nil(name) do
+        :poolboy.start_link(opts, args)
+    else
+        :poolboy.start_link([name: {:local, name}] ++ opts, args)
+    end
+  end
+
+  @doc false
+  @spec start_link({module, Keyword.t}) :: {:ok, pid} | {:error, any}
+  def start_link({_, _} = args) do
+    GenServer.start_link(__MODULE__, args)
   end
 
   @doc false
   @spec begin(pool, log, Keyword.t, timeout) ::
-    :ok | {:error, :sandbox} when pool: pid | atom
+    :ok | {:error, :sandbox | :noproc} when pool: pid | atom
   def begin(pool, log, opts, timeout) do
     query(pool, :begin, log, opts, timeout)
   end
 
   @doc false
-  @spec restart(pool, log, Keyword.t, timeout) :: :ok when pool: pid | atom
+  @spec restart(pool, log, Keyword.t, timeout) ::
+    :ok | {:error, :noproc} when pool: pid | atom
   def restart(pool, log, opts, timeout) do
     query(pool, :restart, log, opts, timeout)
   end
 
   @doc false
-  @spec rollback(pool, log, Keyword.t, timeout) :: :ok when pool: pid | atom
+  @spec rollback(pool, log, Keyword.t, timeout) ::
+    :ok | {:error, :noproc} when pool: pid | atom
   def rollback(pool, log, opts, timeout) do
     query(pool, :rollback, log, opts, timeout)
   end
 
   @doc false
-  @spec mode(pool, timeout) :: :raw | :sandbox when pool: pid | atom
-  def mode(pool, timeout \\ 5_000) do
-    GenServer.call(pool, :mode, timeout)
+  @spec mode(pool) :: :raw | :sandbox | :notransaction when pool: pid | atom
+  def mode(pool) do
+    case Process.get({__MODULE__, pool}) do
+      :raw     -> :raw
+      :sandbox -> :sandbox
+      nil      -> :notransaction
+    end
   end
 
   @doc false
@@ -52,8 +71,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   end
 
   @doc false
-  def checkin(pool, ref, _) do
-    GenServer.cast(pool, {:checkin, ref})
+  def checkin(pool, worker, _) do
+    checkin(pool, worker)
   end
 
   @doc false
@@ -62,18 +81,26 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   end
 
   @doc false
-  def close_transaction(pool, ref, _) do
-    GenServer.cast(pool, {:checkin, ref})
+  def close_transaction(pool, worker, _) do
+    try do
+      GenServer.cast(worker, :checkin)
+    after
+      checkin(pool, worker)
+    end
   end
 
   @doc false
-  def break(pool, ref, timeout) do
-    GenServer.call(pool, {:break, ref}, timeout)
+  def break(pool, worker, timeout) do
+    try do
+      GenServer.call(worker, :break, timeout)
+    after
+      checkin(pool, worker)
+    end
   end
 
   @doc false
   def stop(pool) do
-    GenServer.call(pool, :stop)
+    :poolboy.stop(pool)
   end
 
   ## GenServer
@@ -83,8 +110,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     _ = Process.flag(:trap_exit, true)
     case module.connect(params) do
       {:ok, conn} ->
-        {:ok, %{module: module, conn: conn, clients: :queue.new(), fun: nil,
-              ref: nil, monitor: nil, mode: :raw, queries: :queue.new()}}
+        {:ok, %{module: module, conn: conn, params: params, monitor: nil,
+                mode: :raw}}
       {:error, reason} ->
         {:stop, reason}
     end
@@ -93,36 +120,39 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   ## Checkout
 
   @doc false
-  def handle_call({:checkout, ref, fun}, {pid, _}, %{ref: nil} = s) do
+  def handle_call({:checkout, :run}, _, %{monitor: nil, mode: mode} = s) do
     %{module: module, conn: conn} = s
-    mon = Process.monitor(pid)
-    {:reply, {:ok, {module, conn}}, %{s | fun: fun, ref: ref, monitor: mon}}
+    {:reply, {mode, {module, conn}}, s}
   end
-  def handle_call({:checkout, ref, fun}, from, %{clients: clients} = s) do
-    {pid, _} = from
+  def handle_call({:checkout, :transaction}, {pid, _}, %{monitor: nil} = s) do
+    %{mode: mode, module: module, conn: conn} = s
     mon = Process.monitor(pid)
-    {:noreply, %{s | clients: :queue.in({from, ref, fun, mon}, clients)}}
+    {:reply, {mode, {module, conn}}, %{s | monitor: mon}}
   end
 
   ## Break
 
-  def handle_call({:break, ref}, from, %{ref: ref} = s) do
-    s = demonitor(s)
-    GenServer.reply(from, :ok)
+  def handle_call(:break, _, %{monitor: nil, mode: :sandbox} = s) do
+    {:reply, :ok, s}
+  end
+  def handle_call(:break, _, %{mode: :sandbox} =s) do
+    {:reply, :ok, demonitor(s)}
+  end
+  def handle_call(:break, _, %{monitor: nil, mode: :raw} = s) do
+    {:reply, :ok, reset(s)}
+  end
+  def handle_call(:break, _, %{mode: :raw} = s) do
     s = s
-      |> dequeue()
-    {:noreply, s}
+      |> demonitor()
+      |> reset()
+    {:reply, :ok, s}
   end
 
   ## Query
 
-  def handle_call({:query, query, log, opts}, _, %{ref: nil} = s) do
+  def handle_call({:query, query, log, opts}, _, %{monitor: nil} = s) do
     {reply, s} = handle_query(query, log, opts, s)
     {:reply, reply, s}
-  end
-
-  def handle_call({:query, query, log, opts}, from, %{queries: queries} = s) do
-    {:noreply, %{s | queries: :queue.in({query, log, opts, from}, queries)}}
   end
 
   ## Mode
@@ -131,51 +161,32 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     {:reply, mode, s}
   end
 
-  ## Stop
+  ## New client when monitorring a transaction
 
-  def handle_call(:stop, _, s) do
-    {:stop, :normal, :ok, s}
+  def handle_call(call, from, %{mode: :sandbox} = s) do
+    handle_call(call, from, demonitor(s))
   end
-
-  ## Cancel
-
-  @doc false
-  def handle_cast({:cancel, ref}, %{ref: ref} = s) do
-    handle_cast({:checkin, ref}, s)
-  end
-  def handle_cast({:cancel, ref}, %{clients: clients} = s) do
-    {:noreply, %{s | clients: :queue.filter(&cancel(&1, ref), clients)}}
+  def handle_call(call, from, %{mode: :raw} = s) do
+    s = s
+      |> demonitor()
+      |> reset()
+    handle_call(call, from, s)
   end
 
   ## Checkin
 
-  def handle_cast({:checkin, ref}, %{ref: ref} = s) do
-    s = s
-      |> demonitor()
-      |> dequeue()
-    {:noreply, s}
+  def handle_cast(:checkin, s) do
+    {:noreply, demonitor(s)}
   end
 
   ## DOWN
 
   @doc false
-  def handle_info({:DOWN, mon, _, _, _}, %{monitor: mon, fun: :run} = s) do
-    {:noreply, dequeue(%{s | fun: nil, monitor: nil, ref: nil})}
-  end
   def handle_info({:DOWN, mon, _, _, _}, %{monitor: mon, mode: :raw} = s) do
-    s = %{s | fun: nil, monitor: nil, ref: nil}
-      |> reset()
-      |> dequeue()
-    {:noreply, s}
+    {:noreply, reset(%{s | monitor: nil})}
   end
   def handle_info({:DOWN, mon, _, _, _}, %{monitor: mon, mode: :sandbox} = s) do
-    s = %{s | fun: nil, monitor: nil, ref: nil}
-      |> dequeue()
-    {:noreply, s}
-  end
-  def handle_info({:DOWN, mon, _, _, _}, %{clients: clients} = s) do
-    down = fn({_, _, _, mon2}) -> mon2 !== mon end
-    {:noreply, %{s | clients: :queue.filter(down, clients)}}
+    {:noreply, %{s | monitor: nil}}
   end
 
   ## EXIT
@@ -199,54 +210,75 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   ## Helpers
 
+
   defp checkout(pool, fun, timeout) do
-    ref = make_ref()
-    case :timer.tc(fn() -> do_checkout(pool, ref, fun, timeout) end) do
-      {queue_time, {:ok, mod_conn}} ->
-        {:ok, ref, mod_conn, queue_time}
-      {_, {:error, _} = error} ->
+    case :timer.tc(fn() -> do_checkout(pool, fun, timeout) end) do
+      {queue_time, {mode, worker, mod_conn}} ->
+        {:ok, worker, mod_conn, queue_time}
+      {_queue_time, {:error, _} = error} ->
         error
     end
   end
 
-  defp do_checkout(pool, ref, fun, timeout) do
+  defp do_checkout(pool, fun, timeout) do
     try do
-      GenServer.call(pool, {:checkout, ref, fun}, timeout)
+      :poolboy.checkout(pool, :true, timeout)
     catch
-      :exit, {:timeout, _} = reason ->
-        GenServer.cast(pool, {:cancel, ref})
-        exit(reason)
       :exit, {:noproc, _} ->
         {:error, :noproc}
+    else
+      worker ->
+        do_checkout(pool, worker, fun, timeout)
     end
   end
 
-  defp query(pool, query, log, opts, timeout) do
-    GenServer.call(pool, {:query, query, log, opts}, timeout)
+  defp do_checkout(pool, worker, fun, timeout) do
+    try do
+      GenServer.call(worker, {:checkout, fun}, timeout)
+    catch
+      class, reason ->
+        stack = System.stacktrace()
+        :poolboy.checkin(pool, worker)
+        :erlang.raise(class, reason, stack)
+    else
+      {mode, mod_conn} ->
+        Process.put({__MODULE__, pool}, mode)
+        {:ok, worker, mod_conn}
+    end
   end
 
-  defp cancel({_, ref, _, mon}, ref) do
-    Process.demonitor(mon, [:flush])
-    false
+  def checkin(pool, worker) do
+    _ = Process.delete({__MODULE__, pool})
+    :poolboy.checkin(pool, worker)
   end
-  defp cancel(_, _) do
-    true
+
+  defp query(pool, query, log, opts, timeout) do
+    call(pool, {:query, query, log, opts}, timeout)
+  end
+
+  defp call(pool, call, timeout) do
+    try do
+      :poolboy.checkout(pool, true, timeout)
+    catch
+      {:noproc, _} ->
+        {:error, :noproc}
+    else
+      worker ->
+        call(pool, worker, call, timeout)
+    end
+  end
+
+  defp call(pool, worker, call, timeout) do
+    try do
+      GenServer.call(worker, call, timeout)
+    after
+      :poolboy.checkin(pool, worker)
+    end
   end
 
   defp demonitor(%{monitor: mon} = s) do
     Process.demonitor(mon, [:flush])
-    %{s | fun: nil, ref: nil, monitor: nil}
-  end
-
-  defp dequeue(%{queries: queries} = s) do
-    case :queue.out(queries) do
-      {{:value, {query, log, opts, from}}, queries} ->
-        {reply, s} = handle_query(query, log, opts, %{s | queries: queries})
-        GenServer.reply(from, reply)
-        dequeue(s)
-      {:empty, _} ->
-        dequeue_client(s)
-    end
+    %{s | monitor: nil}
   end
 
   def handle_query(query, log, opts, s) do
@@ -258,21 +290,10 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
   end
 
-  defp dequeue_client(%{ref: nil, clients: clients} = s) do
-    case :queue.out(clients) do
-      {{:value, {from, ref, fun, mon}}, clients} ->
-        %{module: module, conn: conn} = s
-        GenServer.reply(from, {:ok, {module, conn}})
-        %{s | ref: ref, fun: fun, monitor: mon, clients: clients}
-      {:empty, _} ->
-        s
-    end
-  end
-
-  defp begin(%{ref: nil, mode: :sandbox} = s, _) do
+  defp begin(%{mode: :sandbox} = s, _) do
     {{:error, :sandbox}, s}
   end
-  defp begin(%{ref: nil, mode: :raw, module: module} = s, query!) do
+  defp begin(%{mode: :raw, module: module} = s, query!) do
     begin_sql = module.begin_transaction()
     query!.(s, begin_sql)
     savepoint_sql = module.savepoint("ecto_sandbox")
@@ -280,15 +301,15 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     {:ok, %{s | mode: :sandbox}}
   end
 
-  defp restart(%{ref: nil, mode: :raw} = s, query!), do: begin(s, query!)
-  defp restart(%{ref: nil, mode: :sandbox, module: module} = s, query!) do
+  defp restart(%{mode: :raw} = s, query!), do: begin(s, query!)
+  defp restart(%{mode: :sandbox, module: module} = s, query!) do
     sql = module.rollback_to_savepoint("ecto_sandbox")
     query!.(s, sql)
     {:ok, s}
   end
 
-  defp rollback(%{ref: nil, mode: :raw} = s, _), do: {:ok, s}
-  defp rollback(%{ref: nil, mode: :sandbox, module: module} = s, query!) do
+  defp rollback(%{mode: :raw} = s, _), do: {:ok, s}
+  defp rollback(%{mode: :sandbox, module: module} = s, query!) do
     sql = module.rollback_to_savepoint("ecto_sandbox")
     query!.(s, sql)
     {:ok, %{s | mode: :raw}}

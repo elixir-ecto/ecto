@@ -316,20 +316,23 @@ defmodule Ecto.Adapters.SQL do
     case repo.__pool__ do
       {Sandbox, pool, timeout} ->
         opts = Keyword.put_new(opts, :timeout, timeout)
-        test_transaction(pool, fun, &repo.log/1, opts)
+        test_transaction(fun, repo, pool, opts)
       {pool_mod, _, _} ->
         raise "cannot #{fun} test transaction with pool " <>
           "#{inspect pool_mod}, use pool #{inspect Sandbox}"
     end
   end
 
-  defp test_transaction(pool, fun, log, opts) do
+  defp test_transaction(fun, repo, pool, opts) do
     timeout = Keyword.fetch!(opts, :timeout)
-    case apply(Sandbox, fun, [pool, log, opts, timeout]) do
+    case apply(Sandbox, fun, [pool, &repo.log/1, opts, timeout]) do
       :ok ->
         :ok
       {:error, :sandbox} when fun == :begin ->
         raise "cannot begin test transaction because we are already inside one"
+      {:error, :noproc} ->
+        raise ArgumentError, "repo #{inspect repo} is not started, " <>
+                             "please ensure it is part of your supervision tree"
     end
   end
 
@@ -451,7 +454,7 @@ defmodule Ecto.Adapters.SQL do
     timeout = Keyword.fetch!(opts, :timeout)
 
     trans_fun = fn(ref, {mod, _conn}, depth, queue_time) ->
-      mode = transaction_mode(pool_mod, pool, timeout)
+      mode = transaction_mode(repo, pool_mod, pool)
       transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun)
     end
 
@@ -473,7 +476,14 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp transaction_mode(Sandbox, pool, timeout), do: Sandbox.mode(pool, timeout)
+  defp transaction_mode(repo, Sandbox, pool) do
+    case Sandbox.mode(pool) do
+      :raw -> :raw
+      :sandbox -> :sandbox
+      :notransaction ->
+        raise ArgumentError, "Not inside transaction for #{inspect repo}"
+    end
+  end
   defp transaction_mode(_, _, _), do: :raw
 
   defp transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun) do
