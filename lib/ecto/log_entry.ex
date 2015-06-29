@@ -10,14 +10,16 @@ defmodule Ecto.LogEntry do
     * result - the query result as an `:ok` or `:error` tuple;
     * query_time - the time spent executing the query in microseconds;
     * queue_time - the time spent to check the connection out in microseconds (it may be nil);
+    * connection_pid - the connection process that executed the query
   """
 
   alias Ecto.LogEntry
 
   @type t :: %LogEntry{query: iodata | (t -> iodata), params: [term],
-                       query_time: integer, queue_time: integer | nil,
+                       query_time: integer, queue_time: integer, connection_pid: pid | nil,
                        result: {:ok, term} | {:error, Exception.t}}
-  defstruct query: nil, params: [], query_time: nil, queue_time: nil, result: nil
+  defstruct query: nil, params: [], query_time: nil, queue_time: nil, result: nil,
+            connection_pid: nil
 
   @doc """
   Resolves a log entry.
