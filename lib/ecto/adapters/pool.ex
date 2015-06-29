@@ -274,16 +274,18 @@ defmodule Ecto.Adapters.Pool do
 
   defp do_run(pool_mod, pool, timeout, fun) do
     case checkout(pool_mod, pool, timeout) do
-      {:ok, %{conn: conn, worker: worker} = info, time} ->
+      {:ok, worker, conn, time} ->
         try do
-          {:ok, fun.(conn, time)}
+          fun.(conn, time)
         catch
           class, reason ->
             stack = System.stacktrace()
             pool_mod.break(pool, worker, timeout)
             :erlang.raise(class, reason, stack)
-        after
-          checkin(pool_mod, pool, info, timeout)
+        else
+          res ->
+            pool_mod.checkin(pool, worker, timeout)
+            {:ok, res}
         end
       {:error, _} = error ->
         error
@@ -292,21 +294,13 @@ defmodule Ecto.Adapters.Pool do
 
   defp checkout(pool_mod, pool, timeout) do
     case pool_mod.checkout(pool, timeout) do
-      {:ok, worker, conn, time} ->
-        # We got permission to start a transaction
-        {:ok, %{worker: worker, conn: conn, depth: 0}, time}
+      {:ok, _worker, _conn, _time} = ok ->
+        ok
       {:error, reason} = error when reason in [:noproc, :noconnect] ->
         error
       {:error, err} ->
         raise err
     end
-  end
-
-  defp checkin(pool_mod, pool, %{conn: _, worker: worker}, timeout) do
-    pool_mod.checkin(pool, worker, timeout)
-  end
-  defp checkin(_, _, %{}, _) do
-    :ok
   end
 
   defp transaction(pool_mod, pool, ref, timeout, fun) do
