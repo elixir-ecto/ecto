@@ -59,3 +59,4 @@ _   = Ecto.Storage.down(TestRepo)
 {:ok, _pid} = PoolRepo.start_link
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
+Process.flag(:trap_exit, true)
