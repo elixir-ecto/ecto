@@ -78,7 +78,7 @@ defmodule Ecto.Adapters.Poolboy do
 
     pool_opts = [worker_module: Worker] ++ pool_opts
 
-    unless is_nil(pool_name) do
+    if pool_name do
       pool_opts = [name: {:local, pool_name}] ++ pool_opts
     end
 
