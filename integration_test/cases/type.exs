@@ -97,21 +97,30 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :array_type
   test "array type" do
-    ints  = [1, 2, 3]
-    uuids = ["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"]
-    TestRepo.insert!(%Tag{ints: [1, 2, 3], uuids: ["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"]})
+    ints = [1, 2, 3]
+    tag = TestRepo.insert!(%Tag{ints: ints})
 
     assert TestRepo.all(from t in Tag, where: t.ints == ^[], select: t.ints) == []
     assert TestRepo.all(from t in Tag, where: t.ints == ^[1, 2, 3], select: t.ints) == [ints]
-
-    assert TestRepo.all(from t in Tag, where: t.uuids == ^[], select: t.uuids) == []
-    assert TestRepo.all(from t in Tag, where: t.uuids == ^["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"],
-                                      select: t.uuids) == [uuids]
 
     # Querying
     assert TestRepo.all(from t in Tag, where: t.ints == [1, 2, 3], select: t.ints) == [ints]
     assert TestRepo.all(from t in Tag, where: 0 in t.ints, select: t.ints) == []
     assert TestRepo.all(from t in Tag, where: 1 in t.ints, select: t.ints) == [ints]
+
+    # Update
+    tag = TestRepo.update!(%{tag | ints: [3, 2, 1]})
+    assert TestRepo.get!(Tag, tag.id).ints == [3, 2, 1]
+  end
+
+  @tag :array_type
+  test "array type with custom types" do
+    uuids = ["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"]
+    TestRepo.insert!(%Tag{uuids: ["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"]})
+
+    assert TestRepo.all(from t in Tag, where: t.uuids == ^[], select: t.uuids) == []
+    assert TestRepo.all(from t in Tag, where: t.uuids == ^["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"],
+                                       select: t.uuids) == [uuids]
   end
 
   @tag :map_type
@@ -121,9 +130,21 @@ defmodule Ecto.Integration.TypeTest do
 
     assert TestRepo.all(from p in Post, where: p.id == ^post1.id, select: p.meta) ==
            [%{"foo" => "bar", "baz" => "bat"}]
-
     assert TestRepo.all(from p in Post, where: p.id == ^post2.id, select: p.meta) ==
            [%{"foo" => "bar", "baz" => "bat"}]
+  end
+
+  @tag :map_type
+  test "map type on update" do
+    post = TestRepo.insert!(%Post{meta: %{"world" => "hello"}})
+    assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
+
+    post = TestRepo.update!(%{post | meta: %{hello: "world"}})
+    assert TestRepo.get!(Post, post.id).meta == %{"hello" => "world"}
+
+    query = from(p in Post, where: p.id == ^post.id)
+    TestRepo.update_all(query, set: [meta: %{world: "hello"}])
+    assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
   end
 
   @tag :decimal_type

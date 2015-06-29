@@ -73,7 +73,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{text: "x", title: "hello", temp: "unknown"} = post
     assert %Post{text: "x", title: "hello", temp: "temp"} = TestRepo.get!(Post, post.id)
 
-    # On update we merge only fields
+    # On update we merge only fields, direct model changes are discarded
     changeset = Ecto.Changeset.cast(%{post | text: "y"},
                                     %{"title" => "world", "temp" => "unknown"}, ~w(title temp), ~w())
 
