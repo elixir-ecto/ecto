@@ -12,11 +12,12 @@ defmodule Ecto.ChangesetTest do
       field :body
       field :uuid, :binary_id
       field :upvotes, :integer, default: 0
+      field :topics, {:array, :string}
     end
   end
 
   defp changeset(params, model \\ %Post{}) do
-    cast(model, params, ~w(), ~w(title body upvotes))
+    cast(model, params, ~w(), ~w(title body upvotes topics))
   end
 
   ## cast/4
@@ -538,6 +539,27 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: "yada"]
+  end
+
+  test "validate_subset/3" do
+    changeset =
+      changeset(%{"topics" => ["cat", "dog"]})
+      |> validate_subset(:topics, ~w(cat dog))
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert changeset.validations == [topics: {:subset, ~w(cat dog)}]
+
+    changeset =
+      changeset(%{"topics" => ["cat", "laptop"]})
+      |> validate_subset(:topics, ~w(cat dog))
+    refute changeset.valid?
+    assert changeset.errors == [topics: "has an invalid entry"]
+    assert changeset.validations == [topics: {:subset, ~w(cat dog)}]
+
+    changeset =
+      changeset(%{"topics" => ["laptop"]})
+      |> validate_subset(:topics, ~w(cat dog), message: "yada")
+    assert changeset.errors == [topics: "yada"]
   end
 
   test "validate_exclusion/3" do
