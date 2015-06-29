@@ -84,7 +84,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     case module.connect(params) do
       {:ok, conn} ->
         {:ok, %{module: module, conn: conn, queue: :queue.new(), fun: nil,
-              ref: nil, monitor: nil, mode: :raw}}
+                ref: nil, monitor: nil, mode: :raw, params: params}}
       {:error, reason} ->
         {:stop, reason}
     end
