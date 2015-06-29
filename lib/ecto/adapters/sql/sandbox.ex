@@ -83,8 +83,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     _ = Process.flag(:trap_exit, true)
     case module.connect(params) do
       {:ok, conn} ->
-        {:ok, %{module: module, conn: conn, clients: :queue.new(), fun: nil,
-              ref: nil, monitor: nil, mode: :raw, queries: :queue.new()}}
+        {:ok, %{module: module, conn: conn, queue: :queue.new(), fun: nil,
+              ref: nil, monitor: nil, mode: :raw}}
       {:error, reason} ->
         {:stop, reason}
     end
@@ -98,10 +98,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     mon = Process.monitor(pid)
     {:reply, {:ok, {module, conn}}, %{s | fun: fun, ref: ref, monitor: mon}}
   end
-  def handle_call({:checkout, ref, fun}, from, %{clients: clients} = s) do
-    {pid, _} = from
+  def handle_call({:checkout, ref, fun}, {pid, _} = from, %{queue: q} = s) do
     mon = Process.monitor(pid)
-    {:noreply, %{s | clients: :queue.in({from, ref, fun, mon}, clients)}}
+    {:noreply, %{s | queue: :queue.in({:checkout, from, ref, fun, mon}, q)}}
   end
 
   ## Break
@@ -127,8 +126,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     {:reply, reply, s}
   end
 
-  def handle_call({:query, query, log, opts}, from, %{queries: queries} = s) do
-    {:noreply, %{s | queries: :queue.in({query, log, opts, from}, queries)}}
+  def handle_call({:query, query, log, opts}, from, %{queue: q} = s) do
+    {:noreply, %{s | queue: :queue.in({query, log, opts, from}, q)}}
   end
 
   ## Mode
@@ -149,8 +148,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   def handle_cast({:cancel, ref}, %{ref: ref} = s) do
     handle_cast({:checkin, ref}, s)
   end
-  def handle_cast({:cancel, ref}, %{clients: clients} = s) do
-    {:noreply, %{s | clients: :queue.filter(&cancel(&1, ref), clients)}}
+  def handle_cast({:cancel, ref}, %{queue: q} = s) do
+    {:noreply, %{s | queue: :queue.filter(&cancel(&1, ref), q)}}
   end
 
   ## Checkin
@@ -179,9 +178,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       |> dequeue()
     {:noreply, s}
   end
-  def handle_info({:DOWN, mon, _, _, _}, %{clients: clients} = s) do
-    down = fn({_, _, _, mon2}) -> mon2 !== mon end
-    {:noreply, %{s | clients: :queue.filter(down, clients)}}
+  def handle_info({:DOWN, mon, _, _, _}, %{queue: q} = s) do
+    {:noreply, %{s | queue: :queue.filter(&down(&1, mon), q)}}
   end
 
   ## EXIT
@@ -231,11 +229,18 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     GenServer.call(pool, {:query, query, log, opts}, timeout)
   end
 
-  defp cancel({_, ref, _, mon}, ref) do
+  defp cancel({:checkout, _, ref, _, mon}, ref) do
     Process.demonitor(mon, [:flush])
     false
   end
   defp cancel(_, _) do
+    true
+  end
+
+  defp down({:checkout, _, _, _, mon}, mon) do
+    false
+  end
+  defp down(_, _) do
     true
   end
 
@@ -244,14 +249,18 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     %{s | fun: nil, ref: nil, monitor: nil}
   end
 
-  defp dequeue(%{queries: queries} = s) do
-    case :queue.out(queries) do
-      {{:value, {query, log, opts, from}}, queries} ->
-        {reply, s} = handle_query(query, log, opts, %{s | queries: queries})
+  defp dequeue(%{queue: q} = s) do
+    case :queue.out(q) do
+      {{:value, {:checkout, from, ref, fun, mon}}, q} ->
+        %{module: module, conn: conn} = s
+        GenServer.reply(from, {:ok, {module, conn}})
+        %{s | ref: ref, fun: fun, monitor: mon, queue: q}
+      {{:value, {query, log, opts, from}}, q} ->
+        {reply, s} = handle_query(query, log, opts, %{s | queue: q})
         GenServer.reply(from, reply)
         dequeue(s)
       {:empty, _} ->
-        dequeue_client(s)
+        s
     end
   end
 
@@ -261,17 +270,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       :begin    -> begin(s, query!)
       :restart  -> restart(s, query!)
       :rollback -> rollback(s, query!)
-    end
-  end
-
-  defp dequeue_client(%{ref: nil, clients: clients} = s) do
-    case :queue.out(clients) do
-      {{:value, {from, ref, fun, mon}}, clients} ->
-        %{module: module, conn: conn} = s
-        GenServer.reply(from, {:ok, {module, conn}})
-        %{s | ref: ref, fun: fun, monitor: mon, clients: clients}
-      {:empty, _} ->
-        s
     end
   end
 
