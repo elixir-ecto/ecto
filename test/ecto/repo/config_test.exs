@@ -28,8 +28,9 @@ defmodule Ecto.Repo.ConfigTest do
   end
 
   test "parse_url options" do
-    url = parse_url("ecto://eric:hunter2@host:12345/mydb")
-    assert {:password, "hunter2"} in url
+    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb")
+    url = parse_url(encoded_url)
+    assert {:password, "it+й"} in url
     assert {:username, "eric"} in url
     assert {:hostname, "host"} in url
     assert {:database, "mydb"} in url
