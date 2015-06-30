@@ -61,10 +61,11 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter, config} = Ecto.Repo.Config.parse(__MODULE__, opts)
+      {otp_app, adapter, pool, config} = Ecto.Repo.Config.parse(__MODULE__, opts)
       @otp_app otp_app
       @adapter adapter
       @config  config
+      @pool pool
       @before_compile adapter
 
       require Logger
@@ -158,6 +159,10 @@ defmodule Ecto.Repo do
         true
       end
 
+      def __pool__ do
+        @pool
+      end
+
       def log(entry) do
         Logger.unquote(@log_level)(fn ->
           {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
@@ -165,7 +170,7 @@ defmodule Ecto.Repo do
         end, ecto_conn_pid: entry.connection_pid)
       end
 
-      defoverridable [log: 1]
+      defoverridable [log: 1, __pool__: 0]
     end
   end
 

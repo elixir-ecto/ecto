@@ -28,8 +28,8 @@ defmodule Ecto.Adapters.SQL do
       ## Worker
 
       @doc false
-      defmacro __before_compile__(env) do
-        Ecto.Adapters.SQL.__before_compile__(env)
+      defmacro __before_compile__(_env) do
+        :ok
       end
 
       @doc false
@@ -335,19 +335,6 @@ defmodule Ecto.Adapters.SQL do
   end
 
   ## Worker
-
-  @doc false
-  def __before_compile__(env) do
-    config   = Module.get_attribute(env.module, :config)
-    timeout  = Keyword.get(config, :timeout, 5000)
-    pool_mod = Keyword.get(config, :pool, Ecto.Adapters.Poolboy)
-
-    quote do
-      def __pool__ do
-        {unquote(pool_mod), __MODULE__.Pool, unquote(timeout)}
-      end
-    end
-  end
 
   @doc false
   def start_link(connection, adapter, repo, opts) do
