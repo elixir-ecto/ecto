@@ -131,12 +131,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     {:reply, mode, s}
   end
 
-  ## Stop
-
-  def handle_call(:stop, _, s) do
-    {:stop, :normal, :ok, s}
-  end
-
   ## Cancel
 
   @doc false
