@@ -6,4 +6,5 @@ Code.require_file "../cases/joins.exs", __DIR__
 Code.require_file "../cases/migrator.exs", __DIR__
 Code.require_file "../cases/repo.exs", __DIR__
 Code.require_file "../cases/type.exs", __DIR__
+Code.require_file "../cases/pool.exs", __DIR__
 Code.require_file "../cases/preload.exs", __DIR__
