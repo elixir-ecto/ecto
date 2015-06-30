@@ -282,7 +282,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   defp rollback(%{ref: nil, mode: :raw} = s, _), do: {:ok, s}
   defp rollback(%{ref: nil, mode: :sandbox, module: module} = s, query!) do
-    sql = module.rollback_to_savepoint("ecto_sandbox")
+    sql = module.rollback()
     query!.(s, sql)
     {:ok, %{s | mode: :raw}}
   end

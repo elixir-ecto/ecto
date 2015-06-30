@@ -320,7 +320,6 @@ defmodule Ecto.Adapters.SQL do
         configure your repository to use #{inspect Sandbox}:
 
             pool: #{inspect Sandbox}
-
         """
     end
   end
