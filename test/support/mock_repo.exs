@@ -3,7 +3,6 @@ defmodule Ecto.MockAdapter do
 
   defmacro __before_compile__(_opts), do: :ok
   def start_link(_repo, _opts), do: :ok
-  def stop(_repo), do: :ok
   def id_types(_repo), do: %{binary_id: Ecto.UUID}
 
   ## Queryable

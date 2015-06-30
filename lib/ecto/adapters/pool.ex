@@ -50,11 +50,6 @@ defmodule Ecto.Adapters.Pool do
     {:ok, pid} | {:error, any} when opts: Keyword.t
 
   @doc """
-  Stop a pool.
-  """
-  defcallback stop(t) :: :ok
-
-  @doc """
   Checkout a worker/connection from the pool.
 
   The connection should not be closed if the calling process exits without
