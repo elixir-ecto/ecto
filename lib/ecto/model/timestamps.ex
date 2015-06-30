@@ -20,13 +20,8 @@ defmodule Ecto.Model.Timestamps do
   Puts a timestamp in the changeset with the given field and type.
   """
   def put_timestamp(changeset, field, type, use_usec, always_update) do
-    model = changeset.model
-
-    model_is_unchanged = changeset.changes == %{}
-    model_is_not_built = model.__meta__.state != :built
-
     cond do
-      model_is_unchanged and model_is_not_built and not always_update->
+      changeset.changes == %{} and not always_update->
         changeset
       get_change changeset, field ->
         changeset
