@@ -76,12 +76,19 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   @doc false
   def init({module, params}) do
     _ = Process.flag(:trap_exit, true)
+    {:ok, %{module: module, conn: nil, queue: :queue.new(), fun: nil,
+            ref: nil, monitor: nil, mode: :raw, params: params}}
+  end
+
+  ## Lazy connect
+
+  def handle_call(req, from, %{conn: nil} = s) do
+    %{module: module, params: params} = s
     case module.connect(params) do
       {:ok, conn} ->
-        {:ok, %{module: module, conn: conn, queue: :queue.new(), fun: nil,
-                ref: nil, monitor: nil, mode: :raw, params: params}}
+        handle_call(req, from, %{s | conn: conn})
       {:error, reason} ->
-        {:stop, reason}
+        {:stop, reason, s}
     end
   end
 
