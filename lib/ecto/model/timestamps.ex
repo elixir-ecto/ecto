@@ -22,7 +22,7 @@ defmodule Ecto.Model.Timestamps do
   def put_timestamp(changeset, field, type, use_usec, always_update) do
     model = changeset.model
 
-    model_is_unchanged = model == apply_changes(changeset)
+    model_is_unchanged = changeset.changes == %{}
     model_is_not_built = model.__meta__.state != :built
 
     cond do
