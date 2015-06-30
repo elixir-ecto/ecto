@@ -254,7 +254,7 @@ defmodule Ecto.Association.Has do
   """
 
   @behaviour Ecto.Association
-  @dependent_opts [:fetch_and_delete, :nilify_all, :delete_all]
+  @dependent_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
   defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable, :dependent]
 
   @doc false
@@ -276,7 +276,6 @@ defmodule Ecto.Association.Has do
     end
 
     queryable = Keyword.fetch!(opts, :queryable)
-
     assoc = Ecto.Association.assoc_from_query(queryable)
 
     if opts[:through] do
@@ -284,9 +283,11 @@ defmodule Ecto.Association.Has do
                            "option, the model should not be passed as second argument"
     end
 
-    if opts[:dependent] && not opts[:dependent] in @dependent_opts do
+    dependent = opts[:dependent] || :nothing
+
+    unless dependent in @dependent_opts do
       raise ArgumentError, "invalid :dependent option for #{inspect name}. The only valid options" <>
-                           " are :fetch_and_delete, :nilify_all and :delete_all"
+                           " are `:nothing`, `:fetch_and_delete`, `:nilify_all` and `:delete_all`"
     end
 
     %__MODULE__{
@@ -297,7 +298,7 @@ defmodule Ecto.Association.Has do
       owner_key: ref,
       assoc_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref),
       queryable: queryable,
-      dependent: opts[:dependent]
+      dependent: dependent
     }
   end
 

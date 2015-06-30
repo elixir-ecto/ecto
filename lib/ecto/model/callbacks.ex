@@ -70,6 +70,7 @@ defmodule Ecto.Model.Callbacks do
   defmacro __using__(_opts) do
     quote do
       import Ecto.Model.Callbacks
+      @before_compile Ecto.Model.Callbacks
       @ecto_callbacks %{}
     end
   end

@@ -43,7 +43,7 @@ defmodule Ecto.Model do
       import Ecto.Model
       use Ecto.Model.OptimisticLock
       use Ecto.Model.Timestamps
-      use Ecto.Model.Callbacks
+      import Ecto.Model.Callbacks
       require Ecto.Model.Dependent
 
       # The order of `@before_compile`s here is important since the model lifecycle
@@ -51,6 +51,7 @@ defmodule Ecto.Model do
       # `Ecto.Model.Callbacks` if its run prior to `Ecto.Model.Callbacks`.
       @before_compile Ecto.Model.Dependent
       @before_compile Ecto.Model.Callbacks
+      @ecto_callbacks %{}
     end
   end
 

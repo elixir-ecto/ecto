@@ -9,8 +9,9 @@ defmodule Ecto.Model.Dependent do
 
   ## Dependent options
 
-  There are three different behaviors you can set for your dependents. These are:
+  There are four different behaviors you can set for your dependents. These are:
 
+  * `:nothing` - Does nothing to dependents;
   * `:delete_all` - Deletes all dependents without triggering lifecycle callbacks;
   * `:fetch_and_delete` - Deletes dependents and triggers any `before_delete` and `after_delete`
     callbacks on each dependent;
@@ -31,26 +32,24 @@ defmodule Ecto.Model.Dependent do
   dependents.
   """
 
+  @dependent_callbacks [:fetch_and_delete, :nilify_all, :delete_all]
   alias Ecto.Changeset
-  import Ecto.Query, only: [from: 2]
 
   @doc """
   Deletes all records of dependent model and triggers `delete` lifecycle callbacks.
   """
-  def fetch_and_delete(%Changeset{repo: repo} = changeset, assoc_queryable, assoc_key) do
-    query  = assoc_query(changeset, assoc_queryable, assoc_key)
+  def fetch_and_delete(%Changeset{repo: repo, model: model} = changeset, assoc_field, _assoc_key) do
+    query  = Ecto.Model.assoc(model, assoc_field)
     assocs = repo.all(query)
-    Enum.each assocs, fn (assoc) ->
-      repo.delete!(assoc)
-    end
+    Enum.each assocs, fn (assoc) -> repo.delete!(assoc) end
     changeset
   end
 
   @doc """
   Deletes all records of dependent model while skipping their lifecycle callbacks.
   """
-  def delete_all(%Changeset{repo: repo} = changeset, assoc_queryable, assoc_key) do
-    query = assoc_query(changeset, assoc_queryable, assoc_key)
+  def delete_all(%Changeset{repo: repo, model: model} = changeset, assoc_field, _assoc_key) do
+    query = Ecto.Model.assoc(model, assoc_field)
     repo.delete_all(query)
     changeset
   end
@@ -60,26 +59,23 @@ defmodule Ecto.Model.Dependent do
 
   This also does not trigger any lifecycle callbacks on the dependent model.
   """
-  def nilify_all(%Changeset{repo: repo} = changeset, assoc_queryable, assoc_key) do
-    query = assoc_query(changeset, assoc_queryable, assoc_key)
+  def nilify_all(%Changeset{repo: repo, model: model} = changeset, assoc_field, assoc_key) do
+    query = Ecto.Model.assoc(model, assoc_field)
     repo.update_all(query, set: [{assoc_key, nil}])
     changeset
   end
 
-  defp assoc_query(%Changeset{model: model}, assoc_queryable, assoc_key) do
-    from(a in assoc_queryable, where: field(a, ^assoc_key) == ^model.id)
-  end
-
   defmacro __before_compile__(env) do
-    assocs = Module.get_attribute(env.module, :ecto_assocs) |> Enum.reverse
+    assocs        = Module.get_attribute(env.module, :ecto_assocs) |> Enum.reverse
+    has_callback? = fn (assoc) -> Map.get(assoc, :dependent) in @dependent_callbacks end
 
-    for {_assoc_name, assoc} <- assocs, Map.from_struct(assoc)[:dependent] do
-      dependent = assoc.dependent
-      queryable = assoc.queryable
-      assoc_key = assoc.assoc_key
+    for {_assoc_name, assoc} <- assocs, has_callback?.(assoc) do
+      dependent   = assoc.dependent
+      assoc_key   = assoc.assoc_key
+      assoc_field = assoc.field
 
       quote do
-        before_delete Ecto.Model.Dependent, unquote(dependent), [unquote(queryable), unquote(assoc_key)]
+        before_delete Ecto.Model.Dependent, unquote(dependent), [unquote(assoc_field), unquote(assoc_key)]
       end
     end
   end
