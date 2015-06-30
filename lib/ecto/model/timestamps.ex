@@ -19,11 +19,14 @@ defmodule Ecto.Model.Timestamps do
   @doc """
   Puts a timestamp in the changeset with the given field and type.
   """
-  def put_timestamp(changeset, field, type, use_usec) do
-    if get_change changeset, field do
-      changeset
-    else
-      force_change changeset, field, Ecto.Type.load!(type, timestamp_tuple(use_usec))
+  def put_timestamp(changeset, field, type, use_usec, always_update) do
+    cond do
+      changeset.changes == %{} and not always_update->
+        changeset
+      get_change changeset, field ->
+        changeset
+      true ->
+        force_change changeset, field, Ecto.Type.load!(type, timestamp_tuple(use_usec))
     end
   end
 
@@ -43,7 +46,7 @@ defmodule Ecto.Model.Timestamps do
     timestamps = Module.get_attribute(env.module, :ecto_timestamps)
 
     if timestamps do
-      args = [timestamps[:type], timestamps[:usec]]
+      args = [timestamps[:type], timestamps[:usec], timestamps[:always_update]]
 
       inserted_at =
         if field = Keyword.fetch!(timestamps, :inserted_at) do

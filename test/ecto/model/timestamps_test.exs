@@ -7,7 +7,21 @@ defmodule Ecto.Model.TimestampsTest do
   defmodule Default do
     use Ecto.Model
 
+    @timestamps_opts [usec: true]
     schema "default" do
+      field :data, :boolean
+
+      timestamps
+    end
+  end
+
+  defmodule DefaultAlwaysUpdate do
+    use Ecto.Model
+
+    @timestamps_opts [usec: true, always_update: true]
+    schema "default" do
+      field :data, :boolean
+
       timestamps
     end
   end
@@ -29,6 +43,32 @@ defmodule Ecto.Model.TimestampsTest do
     default = MockRepo.update!(%Default{id: 1})
     refute default.inserted_at
     assert %Ecto.DateTime{} = default.updated_at
+
+    old_updated_at = default.updated_at
+
+    # Since we're using usec timestamps, this should advance the timestamp by
+    # 50 ms if it gets set
+    :timer.sleep(50)
+
+    default = MockRepo.update!(Ecto.Changeset.change(default, %{data: nil}))
+    refute default.inserted_at
+    assert default.updated_at == old_updated_at
+  end
+
+  test "sets inserted_at and updated_at values when always_update is enabled" do
+    default = MockRepo.insert!(%DefaultAlwaysUpdate{})
+    assert %Ecto.DateTime{} = default.inserted_at
+    assert %Ecto.DateTime{} = default.updated_at
+
+    old_updated_at = default.updated_at
+
+    # Since we're using usec timestamps, this should advance the timestamp by
+    # 50 ms if it gets set
+    :timer.sleep(50)
+
+    default = MockRepo.update!(Ecto.Changeset.change(%DefaultAlwaysUpdate{id: 1}, %{data: nil}))
+    refute default.inserted_at
+    assert default.updated_at != old_updated_at
   end
 
   test "does not set inserted_at and updated_at values if they were previoously set" do
