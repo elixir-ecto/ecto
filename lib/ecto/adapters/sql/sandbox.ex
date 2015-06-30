@@ -17,7 +17,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   """
   @spec start_link(module, Keyword.t) :: {:ok, pid} | {:error, any}
   def start_link(conn_mod, opts) do
-    name = Keyword.get(opts, :name)
+    {name, opts} = Keyword.pop(opts, :name)
     GenServer.start_link(__MODULE__, {conn_mod, opts}, [name: name])
   end
 
