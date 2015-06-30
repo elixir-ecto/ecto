@@ -352,10 +352,12 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    {pool_mod, pool, _} = repo.__pool__
+    {default_pool_mod, default_pool_name, _} = repo.__pool__
+    pool_mod = Keyword.get(opts, :pool, default_pool_mod)
+
     opts = opts
       |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5000))
-      |> Keyword.put(:name, pool)
+      |> Keyword.put_new(:name, default_pool_name)
       |> Keyword.put_new(:size, 10)
 
     pool_mod.start_link(connection, opts)
