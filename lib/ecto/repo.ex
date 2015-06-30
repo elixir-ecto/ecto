@@ -58,7 +58,10 @@ defmodule Ecto.Repo do
 
   @doc false
   defmacro __using__(opts) do
-    quote bind_quoted: [opts: opts] do
+    {_, adapter, config} = Ecto.Repo.Config.parse(__CALLER__.module, opts)
+    extra_repo_funs = adapter.extra_repo_funs(config)
+
+    quote bind_quoted: [opts: opts, extra_repo_funs: extra_repo_funs] do
       @behaviour Ecto.Repo
 
       {otp_app, adapter, config} = Ecto.Repo.Config.parse(__MODULE__, opts)
@@ -170,6 +173,8 @@ defmodule Ecto.Repo do
       end
 
       defoverridable [log: 1]
+
+      extra_repo_funs
     end
   end
 
