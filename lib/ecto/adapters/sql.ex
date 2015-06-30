@@ -25,6 +25,10 @@ defmodule Ecto.Adapters.SQL do
       @conn __MODULE__.Connection
       @adapter unquote(adapter)
 
+      def extra_repo_funs(env) do
+        Ecto.Adapters.SQL.extra_repo_funs(env)
+      end
+
       ## Worker
 
       @doc false
@@ -337,8 +341,10 @@ defmodule Ecto.Adapters.SQL do
   ## Worker
 
   @doc false
-  def __before_compile__(env) do
-    config   = Module.get_attribute(env.module, :config)
+  def __before_compile__(_env) do
+  end
+
+  def extra_repo_funs(config) do
     timeout  = Keyword.get(config, :timeout, 5000)
     pool_mod = Keyword.get(config, :pool, Ecto.Adapters.Poolboy)
 
@@ -346,6 +352,8 @@ defmodule Ecto.Adapters.SQL do
       def __pool__ do
         {unquote(pool_mod), __MODULE__.Pool, unquote(timeout)}
       end
+
+      defoverridable [__pool__: 0]
     end
   end
 
@@ -365,10 +373,13 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    {pool_mod, pool, _} = repo.__pool__
+    {default_pool_mod, default_pool_name, _} = repo.__pool__
+    pool_mod = Keyword.get(opts, :pool_mod, default_pool_mod)
+    pool_name = Keyword.get(opts, :pool_name, default_pool_name)
+
     opts = opts
       |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5000))
-      |> Keyword.put(:name, pool)
+      |> Keyword.put(:name, pool_name)
       |> Keyword.put_new(:size, 10)
 
     pool_mod.start_link(connection, opts)

@@ -58,7 +58,10 @@ defmodule Ecto.Repo do
 
   @doc false
   defmacro __using__(opts) do
-    quote bind_quoted: [opts: opts] do
+    {_, adapter, config} = Ecto.Repo.Config.parse(__CALLER__.module, opts)
+    extra_repo_funs = adapter.extra_repo_funs(config)
+
+    quote bind_quoted: [opts: opts, extra_repo_funs: extra_repo_funs] do
       @behaviour Ecto.Repo
 
       {otp_app, adapter, config} = Ecto.Repo.Config.parse(__MODULE__, opts)
@@ -74,8 +77,9 @@ defmodule Ecto.Repo do
         Ecto.Repo.Config.config(@otp_app, __MODULE__)
       end
 
-      def start_link do
-        @adapter.start_link(__MODULE__, config())
+      def start_link(custom_config \\ []) do
+        config = Keyword.merge(config(), custom_config)
+        @adapter.start_link(__MODULE__, config)
       end
 
       def transaction(opts \\ [], fun) when is_list(opts) do
@@ -166,6 +170,8 @@ defmodule Ecto.Repo do
       end
 
       defoverridable [log: 1]
+
+      extra_repo_funs
     end
   end
 
