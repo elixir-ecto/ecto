@@ -9,22 +9,10 @@ defmodule Ecto.MockAdapter do
 
   def all(_repo, %{from: {_, Ecto.Migration.SchemaMigration}}, _, _),
     do: Enum.map(migrated_versions(), &List.wrap/1)
-  def all(_repo, %{sources: {{"dependent_" <> _ = table, _}}}, _params, _opts) do
-    for record <- dependent_records(table), do: [record]
-  end
   def all(_repo, _query, _params, _opts),
     do: [[1]]
 
-  def update_all(_repo, %{sources: {{"dependent_" <> _ = table, _}}, updates: _updates}, _params, _opts) do
-    records = for record <- dependent_records(table), do: %{record|user_id: nil}
-    update_dependent_records(table, records)
-    {1, nil}
-  end
   def update_all(_repo, _query, _params, _opts), do: {1, nil}
-  def delete_all(_repo, %{sources: {{"dependent_" <> _ = table, _}}}, _params, _opts) do
-    update_dependent_records(table, [])
-    {1, nil}
-  end
   def delete_all(_repo, _query, _params, _opts), do: {1, nil}
 
   ## Model
@@ -33,13 +21,6 @@ defmodule Ecto.MockAdapter do
     version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, [version: 1]}
-  end
-  def insert(_repo, "dependent_" <> _ = table, val, _, _, struct: struct) do
-    id = Keyword.fetch!(val, :id)
-    record = struct(struct, val)
-    records = dependent_records(table)
-    Process.put(:"#{table}", [record|records])
-    {:ok, [id: id]}
   end
 
   def insert(repo, source, fields, {key, :id, nil}, return, opts),
@@ -56,26 +37,9 @@ defmodule Ecto.MockAdapter do
     Process.put(:migrated_versions, List.delete(migrated_versions(), version))
     {:ok, []}
   end
-  def delete(_repo, "dependent_" <> _ = table, val, _autogen, _opts) do
-    id = Keyword.fetch!(val, :id)
-    records = dependent_records(table)
-    records = Enum.reject(records, fn (record) -> record.id == id end)
-    Process.put(:"#{table}", records)
-    {:ok, []}
-  end
-  def delete(_repo, _source, _filter, _autogen, _opts) do
-    {:ok, []}
-  end
 
-  ## Dependent Helpers
-
-  def update_dependent_records(table, list) do
-    Process.put(:"#{table}", list)
-  end
-
-  def dependent_records(table) do
-    Process.get(:"#{table}") || []
-  end
+  def delete(_repo, _source, _filter, _autogen, _opts),
+    do: {:ok, []}
 
   ## Transactions
 

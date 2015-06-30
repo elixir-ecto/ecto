@@ -2,6 +2,16 @@ defmodule Ecto.Integration.Migration do
   use Ecto.Migration
 
   def change do
+    create table(:users) do
+      add :name, :text
+      add :custom_id, :uuid
+      timestamps
+    end
+
+    create table(:addresses) do
+      add :user_id, :integer
+    end
+
     create table(:posts) do
       add :title, :string, size: 100
       add :counter, :integer, default: 10 # Do not propagate unless read_after_write
@@ -13,6 +23,7 @@ defmodule Ecto.Integration.Migration do
       add :cost, :decimal, precision: 2, scale: 1
       add :visits, :integer
       add :intensity, :float
+      add :author_id, :integer
       timestamps null: true
     end
 
@@ -20,12 +31,6 @@ defmodule Ecto.Integration.Migration do
     # to verify the behaviour that the index
     # only matters if the UUID column is not NULL.
     create index(:posts, [:uuid], unique: true)
-
-    create table(:users) do
-      add :name, :text
-      add :custom_id, :uuid
-      timestamps
-    end
 
     create table(:permalinks) do
       add :url
@@ -36,8 +41,8 @@ defmodule Ecto.Integration.Migration do
       add :text, :string, size: 100
       add :posted, :datetime
       add :lock_version, :integer, default: 1
-      add :post_id, references(:posts, on_delete: :nilify_all)
-      add :author_id, references(:users, on_delete: :delete_all)
+      add :post_id, references(:posts)
+      add :author_id, references(:users)
     end
 
     create table(:customs, primary_key: false) do

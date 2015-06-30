@@ -3,6 +3,7 @@ Code.require_file "../sql/migration.exs", __DIR__
 Code.require_file "../sql/escape.exs", __DIR__
 Code.require_file "../sql/transaction.exs", __DIR__
 Code.require_file "../sql/test_transaction.exs", __DIR__
+Code.require_file "../cases/dependent.exs", __DIR__
 Code.require_file "../cases/joins.exs", __DIR__
 Code.require_file "../cases/migrator.exs", __DIR__
 Code.require_file "../cases/repo.exs", __DIR__
