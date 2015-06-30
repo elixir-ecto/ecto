@@ -39,7 +39,7 @@ defmodule Ecto.Schema do
       used by `belongs_to` associations. Defaults to `:integer`;
 
     * `@timestamps_opts` - configures the default timestamps type
-      used by `timestamps`. Defaults to `[type: Ecto.DateTime, usec: false]`;
+      used by `timestamps`. Defaults to `[type: Ecto.DateTime, usec: false, always_update: false]`;
 
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
@@ -379,6 +379,8 @@ defmodule Ecto.Schema do
     * `:type` - the timestamps type, defaults to `Ecto.DateTime`.
     * `:usec` - boolean, sets whether microseconds are used in timestamps.
       Microseconds will be 0 if false. Defaults to false.
+    * `:always_update` - boolean, sets whether `updated_at` is always updated
+      in the DB, even when the changeset does not contain any other changes. Defaults to false.
     * `:inserted_at` - the name of the column for insertion times or `false`
     * `:updated_at` - the name of the column for update times or `false`
 
@@ -388,7 +390,7 @@ defmodule Ecto.Schema do
     quote bind_quoted: binding do
       timestamps =
         [inserted_at: :inserted_at, updated_at: :updated_at,
-         type: Ecto.DateTime, usec: false]
+         type: Ecto.DateTime, usec: false, always_update: false]
         |> Keyword.merge(@timestamps_opts)
         |> Keyword.merge(opts)
 

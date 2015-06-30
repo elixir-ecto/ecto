@@ -19,25 +19,19 @@ defmodule Ecto.Model.Timestamps do
   @doc """
   Puts a timestamp in the changeset with the given field and type.
   """
-  def put_timestamp(changeset, field, type, use_usec) do
-    if get_change changeset, field do
-      changeset
-    else
-      force_change changeset, field, Ecto.Type.load!(type, timestamp_tuple(use_usec))
-    end
-  end
-
-  @doc """
-  Puts a timestamp in the changeset with the given field and type for update
-  """
-  def update_timestamp(changeset, field, type, use_usec) do
-    # If the changeset does not update any fields of the model, do not add a timestamp.
+  def put_timestamp(changeset, field, type, use_usec, always_update) do
     model = changeset.model
 
-    if model == apply_changes(changeset) and model.__meta__.state != :built do
-      changeset
-    else
-      put_timestamp(changeset, field, type, use_usec)
+    model_is_unchanged = model == apply_changes(changeset)
+    model_is_not_built = model.__meta__.state != :built
+
+    cond do
+      model_is_unchanged and model_is_not_built and not always_update->
+        changeset
+      get_change changeset, field ->
+        changeset
+      true ->
+        force_change changeset, field, Ecto.Type.load!(type, timestamp_tuple(use_usec))
     end
   end
 
@@ -57,7 +51,7 @@ defmodule Ecto.Model.Timestamps do
     timestamps = Module.get_attribute(env.module, :ecto_timestamps)
 
     if timestamps do
-      args = [timestamps[:type], timestamps[:usec]]
+      args = [timestamps[:type], timestamps[:usec], timestamps[:always_update]]
 
       inserted_at =
         if field = Keyword.fetch!(timestamps, :inserted_at) do
@@ -70,7 +64,7 @@ defmodule Ecto.Model.Timestamps do
         if field = Keyword.fetch!(timestamps, :updated_at) do
           quote do
             before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field)|args]
-            before_update Ecto.Model.Timestamps, :update_timestamp, [unquote(field)|args]
+            before_update Ecto.Model.Timestamps, :put_timestamp, [unquote(field)|args]
           end
         end
 
