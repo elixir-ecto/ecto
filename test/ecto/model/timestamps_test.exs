@@ -56,7 +56,7 @@ defmodule Ecto.Model.TimestampsTest do
   end
 
   test "sets inserted_at and updated_at values when always_update is enabled" do
-    default = MockRepo.insert!(%DefaultAlwaysInsert{})
+    default = MockRepo.insert!(%DefaultAlwaysUpdate{})
     assert %Ecto.DateTime{} = default.inserted_at
     assert %Ecto.DateTime{} = default.updated_at
 
@@ -66,7 +66,7 @@ defmodule Ecto.Model.TimestampsTest do
     # 50 ms if it gets set
     :timer.sleep(50)
 
-    default = MockRepo.update!(Ecto.Changeset.change(%DefaultAlwaysInsert{id: 1}, %{data: nil}))
+    default = MockRepo.update!(Ecto.Changeset.change(%DefaultAlwaysUpdate{id: 1}, %{data: nil}))
     refute default.inserted_at
     assert default.updated_at != old_updated_at
   end
