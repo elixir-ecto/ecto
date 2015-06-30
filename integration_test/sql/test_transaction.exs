@@ -4,9 +4,12 @@ defmodule Ecto.Integration.TestTransactionTest do
   require Ecto.Integration.TestRepo, as: TestRepo
   alias Ecto.Adapters.Pool
 
-  @ref {Ecto.Adapters.Pool, Ecto.Adapters.SQL.Sandbox,
-    elem(TestRepo.__pool__, 1)}
+  @ref {Ecto.Adapters.Pool, Ecto.Adapters.SQL.Sandbox, elem(TestRepo.__pool__, 1)}
   @timeout :infinity
+
+  test "sandbox pool is lazy" do
+    assert {:ok, _} = Ecto.Adapters.SQL.Sandbox.start_link(UnknownModuleBecauseLazy, [])
+  end
 
   test "begin, restart and rollback" do
     assert_transaction(1, :raw)
