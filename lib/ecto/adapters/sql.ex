@@ -38,11 +38,6 @@ defmodule Ecto.Adapters.SQL do
         Ecto.Adapters.SQL.start_link(@conn, @adapter, repo, opts)
       end
 
-      @doc false
-      def stop(repo) do
-        Ecto.Adapters.SQL.stop(repo)
-      end
-
       ## Query
 
       @doc false
@@ -377,12 +372,6 @@ defmodule Ecto.Adapters.SQL do
       |> Keyword.put_new(:size, 10)
 
     pool_mod.start_link(connection, opts)
-  end
-
-  @doc false
-  def stop(repo) do
-    {pool_mod, pool, _} = repo.__pool__
-    pool_mod.stop(pool)
   end
 
   ## Query

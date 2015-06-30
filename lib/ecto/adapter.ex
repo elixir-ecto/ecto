@@ -39,11 +39,6 @@ defmodule Ecto.Adapter do
               {:ok, pid} | :ok | {:error, {:already_started, pid}} | {:error, term}
 
   @doc """
-  Stops any connection pooling or supervision started with `start_link/1`.
-  """
-  defcallback stop(repo) :: :ok
-
-  @doc """
   Returns the binary id type for this adapter.
 
   If the database adapter does not support provide

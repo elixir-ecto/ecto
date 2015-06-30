@@ -78,10 +78,6 @@ defmodule Ecto.Repo do
         @adapter.start_link(__MODULE__, config())
       end
 
-      def stop do
-        @adapter.stop(__MODULE__)
-      end
-
       def transaction(opts \\ [], fun) when is_list(opts) do
         @adapter.transaction(__MODULE__, opts, fun)
       end
@@ -198,11 +194,6 @@ defmodule Ecto.Repo do
   defcallback start_link() :: {:ok, pid} | :ok |
                               {:error, {:already_started, pid}} |
                               {:error, term}
-
-  @doc """
-  Stops any connection pooling or supervision started with `start_link/1`.
-  """
-  defcallback stop() :: :ok
 
   @doc """
   Fetches a single model from the data store where the primary key matches the

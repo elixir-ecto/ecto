@@ -71,11 +71,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     GenServer.call(pool, {:break, ref}, timeout)
   end
 
-  @doc false
-  def stop(pool) do
-    GenServer.call(pool, :stop)
-  end
-
   ## GenServer
 
   @doc false

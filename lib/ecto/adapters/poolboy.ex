@@ -26,13 +26,6 @@ defmodule Ecto.Adapters.Poolboy do
     :poolboy.start_link(pool_opts, {conn_mod, conn_opts})
   end
 
-  @doc """
-  Stop the pool.
-  """
-  def stop(pool) do
-    :poolboy.stop(pool)
-  end
-
   @doc false
   def checkout(pool, timeout) do
     checkout(pool, :run, timeout)
