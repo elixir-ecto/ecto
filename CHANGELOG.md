@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.13.1
+
+* Bug fixes
+  * Allow `Ecto.Adapters.SQL.Sandbox` to start lazily
+  * Fix race conditions in case of crashes in new sandbox pool
+
 ## v0.13.0
 
 * Enhancements
