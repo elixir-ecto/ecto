@@ -27,6 +27,20 @@ defmodule Ecto.Model.Timestamps do
     end
   end
 
+  @doc """
+  Puts a timestamp in the changeset with the given field and type for update
+  """
+  def update_timestamp(changeset, field, type, use_usec) do
+    # If the changeset does not update any fields of the model, do not add a timestamp.
+    model = changeset.model
+
+    if model == apply_changes(changeset) and model.__meta__.state != :built do
+      changeset
+    else
+      put_timestamp(changeset, field, type, use_usec)
+    end
+  end
+
   defp timestamp_tuple(_use_usec = true) do
     erl_timestamp = :os.timestamp
     {_, _, usec} = erl_timestamp
@@ -56,7 +70,7 @@ defmodule Ecto.Model.Timestamps do
         if field = Keyword.fetch!(timestamps, :updated_at) do
           quote do
             before_insert Ecto.Model.Timestamps, :put_timestamp, [unquote(field)|args]
-            before_update Ecto.Model.Timestamps, :put_timestamp, [unquote(field)|args]
+            before_update Ecto.Model.Timestamps, :update_timestamp, [unquote(field)|args]
           end
         end
 
