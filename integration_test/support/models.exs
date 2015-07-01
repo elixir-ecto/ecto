@@ -121,28 +121,11 @@ defmodule Ecto.Integration.User do
 
   schema "users" do
     field :name, :string
-    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id
+    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, dependent: :nilify_all
     has_many :posts, Ecto.Integration.Post, dependent: :nothing, foreign_key: :author_id
-    has_many :addresses, Ecto.Integration.Address, dependent: :nilify_all
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     timestamps
   end
-end
-
-defmodule Ecto.Integration.Address do
-  @moduledoc """
-  This module is used to test:
-
-    * Dependent callbacks
-
-  """
-  use Ecto.Integration.Model
-
-  schema "addresses" do
-    belongs_to :user, Ecto.Integration.User
-  end
-
-  before_delete Ecto.Integration.Model, :callback_check, []
 end
 
 defmodule Ecto.Integration.Custom do

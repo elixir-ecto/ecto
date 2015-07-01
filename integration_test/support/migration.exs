@@ -8,10 +8,6 @@ defmodule Ecto.Integration.Migration do
       timestamps
     end
 
-    create table(:addresses) do
-      add :user_id, :integer
-    end
-
     create table(:posts) do
       add :title, :string, size: 100
       add :counter, :integer, default: 10 # Do not propagate unless read_after_write

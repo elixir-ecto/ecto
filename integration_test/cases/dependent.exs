@@ -7,7 +7,6 @@ defmodule Ecto.Integration.DependentTest do
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
-  alias Ecto.Integration.Address
 
   def callback_triggered?, do: Process.get(:callback_check)
 
@@ -37,13 +36,13 @@ defmodule Ecto.Integration.DependentTest do
 
   test "nilify all" do
     user = TestRepo.insert!(%User{})
-    TestRepo.insert!(%Address{user_id: user.id})
-    TestRepo.insert!(%Address{user_id: user.id})
+    TestRepo.insert!(%Comment{author_id: user.id})
+    TestRepo.insert!(%Comment{author_id: user.id})
     TestRepo.delete!(user)
 
-    user_ids = Address |> TestRepo.all() |> Enum.map(fn(address) -> address.user_id end)
+    author_ids = Comment |> TestRepo.all() |> Enum.map(fn(comment) -> comment.author_id end)
 
-    assert user_ids == [nil, nil]
+    assert author_ids == [nil, nil]
     refute callback_triggered?
   end
 
