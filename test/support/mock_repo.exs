@@ -1,18 +1,25 @@
 defmodule Ecto.MockAdapter do
   @behaviour Ecto.Adapter
 
+  alias Ecto.Migration.SchemaMigration
+
   defmacro __before_compile__(_opts), do: :ok
   def start_link(_repo, _opts), do: :ok
   def id_types(_repo), do: %{binary_id: Ecto.UUID}
 
   ## Queryable
 
-  def all(_repo, %{from: {_, Ecto.Migration.SchemaMigration}}, _, _),
+  def all(_repo, %{from: {_, SchemaMigration}}, _, _),
     do: Enum.map(migrated_versions(), &List.wrap/1)
   def all(_repo, _query, _params, _opts),
     do: [[1]]
 
   def update_all(_repo, _query, _params, _opts), do: {1, nil}
+
+  def delete_all(_repo, %{from: {_, SchemaMigration}}, [version], _) do
+    Process.put(:migrated_versions, List.delete(migrated_versions(), version))
+    {1, nil}
+  end
   def delete_all(_repo, _query, _params, _opts), do: {1, nil}
 
   ## Model
@@ -31,12 +38,6 @@ defmodule Ecto.MockAdapter do
   # Notice the list of changes is never empty.
   def update(_repo, _source, [_|_], _filters, _autogen, return, _opts),
     do: {:ok, Enum.zip(return, 1..length(return))}
-
-  def delete(_repo, "schema_migrations", val, _autogen, _) do
-    version = Keyword.fetch!(val, :version)
-    Process.put(:migrated_versions, List.delete(migrated_versions(), version))
-    {:ok, []}
-  end
 
   def delete(_repo, _source, _filter, _autogen, _opts),
     do: {:ok, []}
