@@ -84,6 +84,12 @@ defmodule Ecto.Date do
   """
   def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes>>),
     do: from_parts(to_i(year), to_i(month), to_i(day))
+  def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::1-bytes>>),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
+  def cast(<<year::4-bytes, ?-, month::1-bytes, ?-, day::2-bytes>>),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
+  def cast(<<year::4-bytes, ?-, month::1-bytes, ?-, day::1-bytes>>),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
   def cast(%Ecto.Date{} = d),
     do: {:ok, d}
   def cast(%{"year" => year, "month" => month, "day" => day}),
