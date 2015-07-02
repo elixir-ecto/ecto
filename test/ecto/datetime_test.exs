@@ -8,6 +8,9 @@ defmodule Ecto.DateTest do
   end
 
   test "cast strings" do
+    assert Ecto.Date.cast("2015-8-31") == {:ok, %Ecto.Date{year: 2015, month: 8,  day: 31}}
+    assert Ecto.Date.cast("2015-12-5") == {:ok, %Ecto.Date{year: 2015, month: 12, day: 5}}
+    assert Ecto.Date.cast("2015-3-8")  == {:ok, %Ecto.Date{year: 2015, month: 3,  day: 8}}
     assert Ecto.Date.cast("2015-12-31") == {:ok, @date}
     assert Ecto.Date.cast("2015-00-23") == :error
     assert Ecto.Date.cast("2015-13-23") == :error
