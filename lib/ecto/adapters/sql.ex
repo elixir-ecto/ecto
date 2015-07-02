@@ -77,7 +77,7 @@ defmodule Ecto.Adapters.SQL do
 
       def insert(repo, source, params, _autogenerate, returning, opts) do
         {fields, values} = :lists.unzip(params)
-        sql = @conn.insert(source, fields, returning)
+        sql = @conn.insert(source, fields, returning, opts)
         Ecto.Adapters.SQL.model(repo, sql, values, returning, opts)
       end
 
@@ -390,13 +390,17 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def model(repo, sql, values, returning, opts) do
-    case query(repo, sql, values, opts) do
-      %{rows: nil, num_rows: 1} ->
-        {:ok, []}
-      %{rows: [values], num_rows: 1} ->
-        {:ok, Enum.zip(returning, Tuple.to_list(values))}
-      %{num_rows: 0} ->
-        {:error, :stale}
+    if opts[:if_exists] == :ignore do
+      {:ok, []}
+    else
+      case query(repo, sql, values, opts) do
+        %{rows: nil, num_rows: 1} ->
+          {:ok, []}
+        %{rows: [values], num_rows: 1} ->
+          {:ok, Enum.zip(returning, Tuple.to_list(values))}
+        %{num_rows: 0} ->
+          {:error, :stale}
+      end
     end
   end
 

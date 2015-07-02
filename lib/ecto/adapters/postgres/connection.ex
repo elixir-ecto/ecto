@@ -114,16 +114,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       assemble(["DELETE FROM #{quote_table(table)} AS #{name}", join, where])
     end
 
-    def insert(table, fields, returning) do
-      values =
-        if fields == [] do
-          "DEFAULT VALUES"
-        else
-          "(" <> Enum.map_join(fields, ", ", &quote_name/1) <> ") " <>
-          "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
-        end
-
-      "INSERT INTO #{quote_table(table)} " <> values <> returning(returning)
+    def insert(table, [], returning, _opts),
+      do: "INSERT INTO #{quote_table(table)} DEFAULT VALUES" <> returning(returning)
+    def insert(table, fields, returning, opts) do
+      upsert = update_on_insert(fields, opts)
+      values = "(" <> Enum.map_join(fields, ", ", &quote_name/1) <> ") " <>
+               "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
+      "INSERT INTO #{quote_table(table)} " <> values <> returning(returning) <> upsert
     end
 
     def update(table, fields, filters, returning) do
@@ -424,6 +421,20 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp op_to_binary(expr, sources) do
       expr(expr, sources)
     end
+
+    defp update_on_insert(fields, opts) do
+      if_exists = opts[:if_exists] || :error
+      do_update_on_insert(fields, if_exists)
+    end
+
+    defp do_update_on_insert(_fields, :error), do: ""
+    defp do_update_on_insert(fields, :update) do
+      "ON CONFLICT (id) DO UPDATE SET " <> Enum.map_join(fields, ", ", fn (field) ->
+        field = quote_name(field)
+        "#{field}=excluded.#{field}"
+      end)
+    end
+    defp do_update_on_insert(_fields, :ignore), do: "ON CONFLICT (id) DO NOTHING"
 
     defp returning([]),
       do: ""

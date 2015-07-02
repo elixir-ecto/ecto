@@ -43,7 +43,7 @@ defmodule Ecto.Adapters.SQL.Query do
   Returns an INSERT for the given `fields` in `table` returning
   the given `returning`.
   """
-  defcallback insert(table :: String.t, fields :: [atom], returning :: [atom]) :: String.t
+  defcallback insert(table :: String.t, fields :: [atom], returning :: [atom], opts :: Keyword.t) :: String.t
 
   @doc """
   Returns an UPDATE for the given `fields` in `table` filtered by

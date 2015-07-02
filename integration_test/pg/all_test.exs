@@ -9,3 +9,4 @@ Code.require_file "../cases/repo.exs", __DIR__
 Code.require_file "../cases/type.exs", __DIR__
 Code.require_file "../cases/pool.exs", __DIR__
 Code.require_file "../cases/preload.exs", __DIR__
+Code.require_file "../cases/upserts.exs", __DIR__
