@@ -120,8 +120,8 @@ defmodule Ecto.Adapters.Pool do
   Returns the value returned by the function wrapped in a tuple
   as `{:ok, value}`.
 
-  Returns `{:error, :noproc}` if the pool is not alive or `{:error, :noconnect}`
-  if no connection is available.
+  Returns `{:error, :noproc}` if the pool is not alive or
+  `{:error, :noconnect}` if no connection is available.
 
   ## Examples
 
@@ -129,18 +129,11 @@ defmodule Ecto.Adapters.Pool do
         fn(_conn, queue_time) -> queue_time end)
 
       Pool.transaction(mod, pool, timeout,
-        fn(_ref, _conn, 1, _queue_time) ->
+        fn(:opened, _ref, _conn, _queue_time) ->
           {:ok, :nested} =
             Pool.run(mod, pool, timeout, fn(_conn, nil) ->
               :nested
             end)
-        end)
-
-      Pool.run(mod, :pool1, timeout,
-        fn(_conn1, _queue_time1) ->
-          {:ok, :different_pool} =
-            Pool.run(mod, :pool2, timeout,
-              fn(_conn2, _queue_time2) -> :different_pool end)
         end)
 
   """
@@ -152,118 +145,10 @@ defmodule Ecto.Adapters.Pool do
     case Process.get(ref) do
       nil ->
         do_run(pool_mod, pool, timeout, fun)
-      %{conn: conn} ->
-        {:ok, fuse(ref, timeout, fun, [conn, nil])}
+      %{conn: conn, tainted: false} ->
+        {:ok, fun.(conn, nil)}
       %{} ->
         {:error, :noconnect}
-    end
-  end
-
-  @doc """
-  Carry out a transaction using a connection from a pool.
-
-  Once a transaction is opened, all following calls to `run/4` or
-  `transaction/4` will use the same connection/worker. If `break/2` is invoked,
-  all operations will return `{:error, :noconnect}` until the end of the
-  top level transaction.
-
-  A transaction returns the value returned by the function wrapped in a tuple
-  as `{:ok, value}`. Transactions can be nested and the `depth` shows the depth
-  of nested transaction for the module/pool combination.
-
-  Returns `{:error, :noproc}` if the pool is not alive, `{:error, :noconnect}`
-  if no connection is available or `{:error, :notransaction}` if called inside
-  a `run/4` fun at depth `0`.
-
-  ## Examples
-
-      Pool.transaction(mod, pool, timeout,
-        fn(_ref, _conn, 1, queue_time) -> queue_time end)
-
-      Pool.transaction(mod, pool, timeout,
-        fn(ref, _conn, 1, _queue_time) ->
-          {:ok, :nested} =
-            Pool.transaction(mod, pool, timeout, fn(_ref, _conn, 2, nil) ->
-              :nested
-            end)
-        end)
-
-      Pool.transaction(mod, :pool1, timeout,
-        fn(_ref1, _conn1, 1, _queue_time1) ->
-          {:ok, :different_pool} =
-            Pool.transaction(mod, :pool2, timeout,
-              fn(_ref2, _conn2, 1, _queue_time2) -> :different_pool end)
-        end)
-
-      Pool.run(mod, pool, timeout,
-        fn(_conn, _queue_time) ->
-          {:error, :notransaction} =
-            Pool.transaction(mod, pool, timeout, fn(_, _, _, _) -> end)
-        end)
-
-  """
-  @spec transaction(module, t, timeout,
-                    ((ref, conn, depth, queue_time | nil) -> result)) ::
-        {:ok, result} | {:error, :noproc | :noconnect | :notransaction}
-        when result: var, conn: {module, pid}
-  def transaction(pool_mod, pool, timeout, fun) do
-    ref = {__MODULE__, pool_mod, pool}
-    case Process.get(ref) do
-      nil ->
-        transaction(pool_mod, pool, ref, timeout, fun)
-      %{depth: 0} ->
-        {:error, :notransaction}
-      %{conn: _} = info ->
-        do_transaction(ref, info, nil, fun)
-      %{} ->
-        {:error, :noconnect}
-    end
-  end
-
-  @doc """
-  Break the active transaction or run.
-
-  Calling `connection/1` inside the same transaction or run (at any depth) will
-  return `{:error, :noconnect}`.
-
-  ## Examples
-
-      Pool.transaction(mod, pool, timout,
-        fn(ref, conn, 1, _queue_time) ->
-          {:ok, {_mod, ^conn}} = Pool.connection(ref)
-          :ok = Pool.break(ref, timeout)
-          {:error, :noconnect} = Pool.connection(ref)
-        end)
-
-      Pool.transaction(mod, pool, timeout,
-        fn(ref, _conn, 1, _queue_time) ->
-          :ok = Pool.break(ref, timeout)
-          {:error, :noconnect} =
-            Pool.transaction(mod, pool, timeout, fn(_, _, _, _) -> end)
-        end)
-
-  """
-  @spec break(ref, timeout) :: :ok
-  def break({__MODULE__, pool_mod, pool} = ref, timeout) do
-    case Process.get(ref) do
-      %{conn: _, worker: worker} = info ->
-        _ = Process.put(ref, Map.delete(info, :conn))
-        pool_mod.break(pool, worker, timeout)
-      %{} ->
-        :ok
-    end
-  end
-
-  ## Helpers
-
-  defp fuse(ref, timeout, fun, args) do
-    try do
-      apply(fun, args)
-    catch
-      class, reason ->
-        stack = System.stacktrace()
-        break(ref, timeout)
-        :erlang.raise(class, reason, stack)
     end
   end
 
@@ -271,16 +156,9 @@ defmodule Ecto.Adapters.Pool do
     case checkout(pool_mod, pool, timeout) do
       {:ok, worker, conn, time} ->
         try do
-          fun.(conn, time)
-        catch
-          class, reason ->
-            stack = System.stacktrace()
-            pool_mod.break(pool, worker, timeout)
-            :erlang.raise(class, reason, stack)
-        else
-          res ->
-            pool_mod.checkin(pool, worker, timeout)
-            {:ok, res}
+          {:ok, fun.(conn, time)}
+        after
+          pool_mod.checkin(pool, worker, timeout)
         end
       {:error, _} = error ->
         error
@@ -298,52 +176,179 @@ defmodule Ecto.Adapters.Pool do
     end
   end
 
-  defp transaction(pool_mod, pool, ref, timeout, fun) do
-    case open_transaction(pool_mod, pool, timeout) do
-      {:ok, info, time} ->
-        try do
-          do_transaction(ref, info, time, fun)
-        after
-          info = Process.delete(ref)
-          close_transaction(pool_mod, pool, info, timeout)
+  @doc """
+  Carries out a transaction using a connection from a pool.
+
+  Once a transaction is opened, all following calls to `run/4` or
+  `transaction/4` will use the same connection/worker. If `break/2` is invoked,
+  all operations will return `{:error, :noconnect}` until the end of the
+  top level transaction.
+
+  Nested calls to pool transaction will "flatten out" transactions. This means
+  nested calls are mostly no-op and just execute the given function passing
+  `:already_opened` as first argument. If there is any failure in a nested
+  transaction, the whole transaction is marked as tainted, ensuring the outer
+  most call fails.
+
+  Returns `{:error, :noproc}` if the pool is not alive, `{:error, :noconnect}`
+  if no connection is available. Otherwise just returns the given function value
+  without wrapping.
+
+  ## Examples
+
+      Pool.transaction(mod, pool, timeout,
+        fn(:opened, _ref, _conn, queue_time) -> queue_time end)
+
+      Pool.transaction(mod, pool, timeout,
+        fn(:opened, ref, _conn, _queue_time) ->
+          :nested =
+            Pool.transaction(mod, pool, timeout, fn(:already_opened, _ref, _conn, nil) ->
+              :nested
+            end)
+        end)
+
+      Pool.transaction(mod, :pool1, timeout,
+        fn(:opened, _ref1, _conn1, _queue_time1) ->
+          :different_pool =
+            Pool.transaction(mod, :pool2, timeout,
+              fn(:opened, _ref2, _conn2, _queue_time2) -> :different_pool end)
+        end)
+
+  """
+  @spec transaction(module, t, timeout, fun) ::
+        value | {:error, :noproc} | {:error, :noconnect} | no_return
+        when fun: (:opened | :already_open, ref, conn, queue_time | nil -> value),
+             conn: {module, pid},
+             value: var
+  def transaction(pool_mod, pool, timeout, fun) do
+    ref = {__MODULE__, pool_mod, pool}
+    case Process.get(ref) do
+      nil ->
+        case pool_mod.open_transaction(pool, timeout) do
+          {:ok, worker, conn, time} ->
+            outer_transaction(ref, worker, conn, time, timeout, fun)
+          {:error, reason} = error when reason in [:noproc, :noconnect] ->
+            error
+          {:error, err} ->
+            raise err
         end
-      {:error, _} = error ->
-        error
+      %{conn: conn} ->
+        inner_transaction(ref, conn, fun)
     end
   end
 
-  defp do_transaction(ref, %{depth: depth, conn: conn} = info, time, fun) do
-    depth = depth + 1
-    _ = Process.put(ref, %{info | depth: depth})
+  defp outer_transaction(ref, worker, conn, time, timeout, fun) do
+    Process.put(ref, %{worker: worker, conn: conn, tainted: false})
+
     try do
-      {:ok, fun.(ref, conn, depth, time)}
+      fun.(:opened, ref, conn, time)
+    catch
+      # If any error leaked, it should be a bug in Ecto.
+      kind, reason ->
+        stack = System.stacktrace()
+        break(ref, timeout)
+        :erlang.raise(kind, reason, stack)
+    else
+      res ->
+        close_transaction(ref, Process.get(ref), timeout)
+        res
     after
-      case Process.put(ref, info) do
-        %{conn: _} ->
-          :ok
-        %{} ->
-          _ = Process.put(ref, Map.delete(info, :conn))
-          :ok
-      end
+      Process.delete(ref)
     end
   end
 
-  defp open_transaction(pool_mod, pool, timeout) do
-    case pool_mod.open_transaction(pool, timeout) do
-      {:ok, worker, conn, time} ->
-        # We got permission to start a transaction
-        {:ok, %{worker: worker, conn: conn, depth: 0}, time}
-      {:error, reason} = error when reason in [:noproc, :noconnect] ->
-        error
-      {:error, err} ->
-        raise err
+  defp inner_transaction(ref, conn, fun) do
+    try do
+      fun.(:already_open, ref, conn, nil)
+    catch
+      kind, reason ->
+        stack = System.stacktrace()
+        tainted(ref, true)
+        :erlang.raise(kind, reason, stack)
     end
   end
 
-  defp close_transaction(pool_mod, pool, %{conn: _, worker: worker}, timeout) do
+  defp close_transaction({__MODULE__, pool_mod, pool}, %{conn: _, worker: worker}, timeout) do
     pool_mod.close_transaction(pool, worker, timeout)
-  end
-  defp close_transaction(_, _, %{}, _) do
     :ok
+  end
+
+  defp close_transaction(_, %{}, _) do
+    :ok
+  end
+
+  @doc """
+  Executes the given function giving it the ability to rollback.
+
+  Returns `{:ok, value}` if no transaction ocurred,
+  `{:error, value}` if the user rolled back or
+  `{:raise, kind, error, stack}` in case there was a failure.
+  """
+  @spec with_rollback(ref, (() -> return)) ::
+        {:ok, return} | {:error, term} | {:raise, atom, term, Exception.stacktrace}
+        when return: var
+  def with_rollback(ref, fun) do
+    try do
+      value = fun.()
+      case Process.get(ref) do
+        %{tainted: true}  -> {:error, :rollback}
+        %{tainted: false} -> {:ok, value}
+      end
+    catch
+      :throw, {:ecto_rollback, ^ref, value} ->
+        {:error, value}
+      kind, reason ->
+        stack = System.stacktrace()
+        {:raise, kind, reason, stack}
+    after
+      tainted(ref, false)
+    end
+  end
+
+  @doc """
+  Triggers a rollback that is handled by `with_rollback/2`.
+
+  Raises if outside a transaction.
+  """
+  def rollback(pool_mod, pool, value) do
+    ref = {__MODULE__, pool_mod, pool}
+    if Process.get(ref) do
+      throw {:ecto_rollback, ref, value}
+    else
+      raise "cannot call rollback outside of transaction"
+    end
+  end
+
+  defp tainted(ref, bool) do
+    map = Process.get(ref)
+    Process.put(ref, %{map | tainted: bool})
+    :ok
+  end
+
+  @doc """
+  Breaks the active connection.
+
+  Any attempt to use it inside the same transaction
+  Calling `run/1` inside the same transaction or run (at any depth) will
+  return `{:error, :noconnect}`.
+
+  ## Examples
+
+      Pool.transaction(mod, pool, timout,
+        fn(:opened, ref, conn, _queue_time) ->
+          :ok = Pool.break(ref, timeout)
+          {:error, :noconnect} = Pool.run(mod, pool, timeout, fn _, _ -> end)
+        end)
+
+  """
+  @spec break(ref, timeout) :: :ok
+  def break({__MODULE__, pool_mod, pool} = ref, timeout) do
+    case Process.get(ref) do
+      %{conn: _, worker: worker} = info ->
+        _ = Process.put(ref, Map.delete(info, :conn))
+        pool_mod.break(pool, worker, timeout)
+      %{} ->
+        :ok
+    end
   end
 end

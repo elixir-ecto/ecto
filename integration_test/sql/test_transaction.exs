@@ -12,23 +12,23 @@ defmodule Ecto.Integration.TestTransactionTest do
   end
 
   test "begin, restart and rollback" do
-    assert_transaction(1, :raw)
+    assert_transaction(:raw)
     assert :ok = Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
-    assert_transaction(1, :sandbox)
+    assert_transaction(:sandbox)
     assert :ok = Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-    assert_transaction(1, :sandbox)
+    assert_transaction(:sandbox)
     assert :ok = Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-    assert_transaction(1, :raw)
+    assert_transaction(:raw)
   after
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
 
   test "restart_test_transaction begins a transaction if one is not running" do
-    assert_transaction(1, :raw)
+    assert_transaction(:raw)
     assert :ok = Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-    assert_transaction(1, :sandbox)
+    assert_transaction(:sandbox)
     assert :ok = Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-    assert_transaction(1, :raw)
+    assert_transaction(:raw)
   after
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
@@ -160,21 +160,6 @@ defmodule Ecto.Integration.TestTransactionTest do
     end)
   end
 
- test "raw mode disconnects on run break" do
-   {_, pool_mod, pool} = @ref
-    try do
-      Pool.run(pool_mod, pool, @timeout, fn(conn1, _) ->
-        throw(conn1)
-      end)
-    catch
-      :throw, conn1 ->
-        TestRepo.transaction(fn() ->
-          assert %{conn: conn2} = Process.get(@ref)
-          assert conn1 !== conn2
-        end)
-    end
-  end
-
   test "raw mode disconnects if transaction caller dies" do
     _ = Process.flag(:trap_exit, true)
     parent = self()
@@ -223,9 +208,8 @@ defmodule Ecto.Integration.TestTransactionTest do
     end)
   end
 
-  defp assert_transaction(depth, mode) do
+  defp assert_transaction(mode) do
     TestRepo.transaction(fn ->
-      assert %{depth: ^depth} = Process.get(@ref)
       {_, pool, _} = TestRepo.__pool__
       assert Ecto.Adapters.SQL.Sandbox.mode(pool) === mode
     end)
