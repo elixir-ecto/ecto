@@ -817,7 +817,7 @@ defmodule Ecto.Changeset do
   before inserting them into the database and avoid the `:downcase` option
   in `validate_unique/3`:
 
-      cast(params, model, ~w(email), ~w())
+      cast(model, params, ~w(email), ~w())
       |> update_change(:email, &String.downcase/1)
       |> validate_unique(:email, on: Repo)
 
@@ -827,7 +827,7 @@ defmodule Ecto.Changeset do
   the uniqueness check. For example, if our use case limits a user to a single
   comment per blog post, it would look something like:
 
-      cast(params, model, ~w(comment), ~w())
+      cast(model, params, ~w(comment), ~w())
       |> validate_unique(:user_id, scope: [:post_id], on: Repo)
 
   """
@@ -992,7 +992,7 @@ defmodule Ecto.Changeset do
       validate_confirmation(changeset, :email)
       validate_confirmation(changeset, :password, message: "passwords do not match")
 
-      cast(params, model, ~w(password), ~w())
+      cast(model, params, ~w(password), ~w())
       |> validate_confirmation(:password, message: "passwords do not match")
 
   """
