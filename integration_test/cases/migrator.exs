@@ -8,6 +8,12 @@ defmodule Ecto.Integration.MigratorTest do
 
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.TestRepo
+  alias Ecto.Migration.SchemaMigration
+
+  setup do
+    TestRepo.delete_all(SchemaMigration)
+    :ok
+  end
 
   defmodule GoodMigration do
     use Ecto.Migration
@@ -32,22 +38,24 @@ defmodule Ecto.Integration.MigratorTest do
   import Ecto.Migrator
 
   test "schema migration" do
-    [migration] = TestRepo.all(Ecto.Migration.SchemaMigration)
-    assert migration.version == 0
+    up(TestRepo, 20080906120000, GoodMigration, log: false)
+
+    [migration] = TestRepo.all(SchemaMigration)
+    assert migration.version == 20080906120000
     assert migration.inserted_at
   end
 
   test "migrations up and down" do
-    assert migrated_versions(TestRepo) == [0]
+    assert migrated_versions(TestRepo) == []
     assert up(TestRepo, 20080906120000, GoodMigration, log: false) == :ok
 
-    assert migrated_versions(TestRepo) == [0, 20080906120000]
+    assert migrated_versions(TestRepo) == [20080906120000]
     assert up(TestRepo, 20080906120000, GoodMigration, log: false) == :already_up
-    assert migrated_versions(TestRepo) == [0, 20080906120000]
+    assert migrated_versions(TestRepo) == [20080906120000]
     assert down(TestRepo, 20080906120001, GoodMigration, log: false) == :already_down
-    assert migrated_versions(TestRepo) == [0, 20080906120000]
+    assert migrated_versions(TestRepo) == [20080906120000]
     assert down(TestRepo, 20080906120000, GoodMigration, log: false) == :ok
-    assert migrated_versions(TestRepo) == [0]
+    assert migrated_versions(TestRepo) == []
   end
 
   test "bad migration" do
