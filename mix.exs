@@ -33,8 +33,9 @@ defmodule Ecto.Mixfile do
   end
 
   defp deps do
+    ## TODO: make poolboy optional
     [{:poolboy, "~> 1.4"},
-     {:sbroker, "~> 0.7"},
+     {:sbroker, "~> 0.7", optional: true},
      {:decimal, "~> 1.0"},
      {:postgrex, "~> 0.8.3", optional: true},
      {:mariaex, "~> 0.3.0", optional: true},
