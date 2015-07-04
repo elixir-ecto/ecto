@@ -90,11 +90,11 @@ defmodule Ecto.Integration.MigrationTest do
     use Ecto.Migration
 
     def up do
-      assert_raise ArgumentError, ~r"does not support keyword options", fn ->
+      assert_raise ArgumentError, ~r"does not support keyword lists in :options", fn ->
         create table(:collection, options: [capped: true])
       end
 
-      assert_raise ArgumentError, ~r"does not support keyword execute", fn ->
+      assert_raise ArgumentError, ~r"does not support keyword lists in execute", fn ->
         execute create: "collection"
       end
     end
