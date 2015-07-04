@@ -31,12 +31,21 @@ defmodule Ecto.Integration.Upserts do
     end
   end
 
-  test "insert if record exists on update" do
+  test "insert if record does not exist on update" do
+    p1 = TestRepo.update!(%Post{id: 1, title: "1", visits: 1}, if_not_exists: :insert)
+    p1 = TestRepo.get(Post, p1.id)
+    assert p1
   end
 
-  test "ignore if record exists on update" do
+  test "ignore if record does not exist on update" do
+    p1 = TestRepo.update!(%Post{id: 1, title: "1", visits: 1}, if_not_exists: :ignore)
+    p1 = TestRepo.get(Post, p1.id)
+    refute p1
   end
 
-  test "error if record exists on update" do
+  test "error if record does not exist on update" do
+    assert_raise Ecto.StaleModelError, fn ->
+      TestRepo.update!(%Post{id: 1, title: "1", visits: 1}, if_not_exists: :error)
+    end
   end
 end

@@ -50,7 +50,7 @@ defmodule Ecto.Adapters.SQL.Query do
   `filters` returning the given `returning`.
   """
   defcallback update(table :: String.t, fields :: [atom],
-                     filters :: [atom], returning :: [atom]) :: String.t
+                     filters :: [atom], returning :: [atom], opts :: Keyword.t) :: String.t
 
   @doc """
   Returns a DELETE for the `filters` returning the given `returning`.

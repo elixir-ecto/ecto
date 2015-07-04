@@ -76,6 +76,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       def insert(repo, source, params, _autogenerate, returning, opts) do
+        Ecto.Adapters.SQL.verify_insert_opts(opts)
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(source, fields, returning, opts)
         Ecto.Adapters.SQL.model(repo, sql, values, returning, opts)
@@ -83,9 +84,10 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def update(repo, source, fields, filter, _autogenerate, returning, opts) do
+        Ecto.Adapters.SQL.verify_update_opts(opts)
         {fields, values1} = :lists.unzip(fields)
         {filter, values2} = :lists.unzip(filter)
-        sql = @conn.update(source, fields, filter, returning)
+        sql = @conn.update(source, fields, filter, returning, opts)
         Ecto.Adapters.SQL.model(repo, sql, values1 ++ values2, returning, opts)
       end
 
@@ -390,7 +392,8 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def model(repo, sql, values, returning, opts) do
-    if opts[:if_exists] == :ignore do
+    exists_opt = opts[:if_exists] || opts[:if_not_exists]
+    if exists_opt == :ignore do
       {:ok, []}
     else
       case query(repo, sql, values, opts) do
@@ -401,6 +404,24 @@ defmodule Ecto.Adapters.SQL do
         %{num_rows: 0} ->
           {:error, :stale}
       end
+    end
+  end
+
+  @if_exists_opts [:error, :ignore, :update]
+  @doc false
+  def verify_insert_opts(opts) do
+    if_exists = opts[:if_exists] || :error
+    unless if_exists in @if_exists_opts do
+      raise ArgumentError, "`:if_exists` only accepts :error, :ignore and :update"
+    end
+  end
+
+  @if_not_exists_opts [:error, :ignore, :insert]
+  @doc false
+  def verify_update_opts(opts) do
+    if_exists = opts[:if_not_exists] || :error
+    unless if_exists in @if_not_exists_opts do
+      raise ArgumentError, "`:if_not_exists` only accepts :error, :ignore and :insert"
     end
   end
 
