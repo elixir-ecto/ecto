@@ -432,7 +432,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp update_on_insert(fields, :update) do
       " ON CONFLICT (id) DO UPDATE SET " <> Enum.map_join(fields, ", ", fn (field) ->
         field = quote_name(field)
-        "#{field}=excluded.#{field}"
+        "#{field} = excluded.#{field}"
       end)
     end
     defp update_on_insert(_fields, :ignore), do: " ON CONFLICT (id) DO NOTHING"

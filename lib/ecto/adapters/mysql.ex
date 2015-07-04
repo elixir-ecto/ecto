@@ -159,7 +159,7 @@ defmodule Ecto.Adapters.MySQL do
 
   def insert(repo, source, params, {pk, :id, nil}, [], opts) do
     {fields, values} = :lists.unzip(params)
-    sql = @conn.insert(source, fields, [])
+    sql = @conn.insert(source, fields, [], opts)
     case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
       %{num_rows: 1, last_insert_id: last_insert_id} ->
         {:ok, [{pk, last_insert_id}]}
@@ -174,10 +174,15 @@ defmodule Ecto.Adapters.MySQL do
   def update(repo, source, fields, filter, _autogenerate, returning, opts) do
     {fields, values1} = :lists.unzip(fields)
     {filter, values2} = :lists.unzip(filter)
-    sql = @conn.update(source, fields, filter, returning)
-    case Ecto.Adapters.SQL.query(repo, sql, values1 ++ values2, opts) do
-      %{num_rows: 0} -> {:error, :stale}
-      %{num_rows: _} -> {:ok, []}
+    sql = @conn.update(source, fields, filter, returning, opts)
+    exists_opt = opts[:if_exists] || opts[:if_not_exists]
+    if exists_opt == :ignore do
+      {:ok, []}
+    else
+      case Ecto.Adapters.SQL.query(repo, sql, values1 ++ values2, opts) do
+        %{num_rows: 0} -> {:error, :stale}
+        %{num_rows: _} -> {:ok, []}
+      end
     end
   end
 

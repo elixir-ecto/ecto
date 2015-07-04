@@ -113,25 +113,31 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([delete, from, join, where])
     end
 
-    def insert(table, [], _returning), do: "INSERT INTO #{quote_table(table)} () VALUES ()"
-    def insert(table, fields, _returning) do
-      values = ~s{(#{Enum.map_join(fields, ", ", &quote_name/1)}) } <>
-               ~s{VALUES (#{Enum.map_join(1..length(fields), ", ", fn (_) -> "?" end)})}
+    def insert(table, [], _returning, _opts), do: "INSERT INTO #{quote_table(table)} () VALUES ()"
+    def insert(table, fields, _returning, opts) do
+      if_exists = opts[:if_exists] || :error
+      upsert    = update_on_insert(fields, if_exists)
+      values    = ~s{(#{Enum.map_join(fields, ", ", &quote_name/1)}) } <>
+                  ~s{VALUES (#{Enum.map_join(1..length(fields), ", ", fn (_) -> "?" end)})}
 
-      "INSERT INTO #{quote_table(table)} " <> values
+      "INSERT INTO #{quote_table(table)} " <> values <> upsert
     end
 
-    def update(table, fields, filters, _returning) do
-      filters = Enum.map filters, fn field  ->
-        "#{quote_name(field)} = ?"
-      end
+    def update(table, fields, filters, _returning, opts) do
+      if opts[:if_not_exists] == :insert do
+        insert(table, fields ++ filters, _returning, if_exists: :update)
+      else
+        filters = Enum.map filters, fn field  ->
+          "#{quote_name(field)} = ?"
+        end
 
-      fields = Enum.map fields, fn field ->
-        "#{quote_name(field)} = ?"
-      end
+        fields = Enum.map fields, fn field ->
+          "#{quote_name(field)} = ?"
+        end
 
-      "UPDATE #{quote_table(table)} SET " <> Enum.join(fields, ", ") <>
-        " WHERE " <> Enum.join(filters, " AND ")
+        "UPDATE #{quote_table(table)} SET " <> Enum.join(fields, ", ") <>
+          " WHERE " <> Enum.join(filters, " AND ")
+      end
     end
 
     def delete(table, filters, _returning) do
@@ -155,6 +161,15 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     Enum.map(binary_ops, fn {op, str} ->
       defp handle_call(unquote(op), 2), do: {:binary_op, unquote(str)}
     end)
+
+    defp update_on_insert(_fields, :error), do: ""
+    defp update_on_insert(fields, :update) do
+      " ON DUPLICATE KEY UPDATE " <> Enum.map_join(fields, ", ", fn (field) ->
+        field = quote_name(field)
+        "#{field} = values(#{field})"
+      end)
+    end
+    defp update_on_insert(_fields, :ignore), do: " ON DUPLICATE KEY UPDATE id=id"
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 

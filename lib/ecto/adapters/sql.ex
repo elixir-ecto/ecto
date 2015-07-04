@@ -399,6 +399,11 @@ defmodule Ecto.Adapters.SQL do
       case query(repo, sql, values, opts) do
         %{rows: nil, num_rows: 1} ->
           {:ok, []}
+        # With on duplicate key update in MySQL, the affected-rows value
+        # per row is 1 if the row is inserted as a new row, 2 if an existing
+        # row is updated, and 0 if an existing row is set to its current values.
+        %{rows: nil, num_rows: 2} ->
+          {:ok, []}
         %{rows: [values], num_rows: 1} ->
           {:ok, Enum.zip(returning, Tuple.to_list(values))}
         %{num_rows: 0} ->

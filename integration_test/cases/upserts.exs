@@ -26,8 +26,14 @@ defmodule Ecto.Integration.Upserts do
   test "error if record exists on insert" do
     p1 = TestRepo.insert!(%Post{title: "1", visits: 1})
 
-    assert_raise Postgrex.Error, fn ->
-      TestRepo.insert!(%Post{title: "2", id: p1.id, visits: 3}, if_exists: :error)
+    if Mix.env() == :pg do
+      assert_raise Postgrex.Error, fn ->
+        TestRepo.insert!(%Post{title: "2", id: p1.id, visits: 3}, if_exists: :error)
+      end
+    else
+      assert_raise Mariaex.Error, fn ->
+        TestRepo.insert!(%Post{title: "2", id: p1.id, visits: 3}, if_exists: :error)
+      end
     end
   end
 
