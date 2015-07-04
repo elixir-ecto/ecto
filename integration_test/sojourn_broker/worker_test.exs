@@ -12,6 +12,25 @@ defmodule Ecto.Integration.WorkerTest do
     {:ok, [pool: Module.concat(case, test)]}
   end
 
+  test "worker starts without an active connection but connects on go", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([name: pool, lazy: true])
+    assert {:go, _, {worker, :lazy}, _, _} = :sbroker.ask(pool, {:run, self()})
+    assert Process.alive?(worker)
+    conn = :sys.get_state(worker).conn
+    assert Process.alive?(conn)
+  end
+
+  test "worker starts with an active connection", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([name: pool, lazy: false])
+    assert {:go, _, {worker, {Connection, conn}}, _, _} =
+      :sbroker.ask(pool, {:run, self()})
+    assert Process.alive?(worker)
+    assert :sys.get_state(worker).conn == conn
+    assert Process.alive?(conn)
+  end
+
   test "worker restarts connection when waiting", context do
     pool = context[:pool]
     {:ok, _} = TestPool.start_link([name: pool])

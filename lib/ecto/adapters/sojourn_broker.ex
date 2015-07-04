@@ -8,6 +8,7 @@ defmodule Ecto.Adapters.SojournBroker do
     * `:min_backoff` - The minimum backoff on failed connect in milliseconds (default: 50)
     * `:max_backoff` - The maximum backoff on failed connect in milliseconds (default: 5000)
     * `:broker` - The `sbroker` module to use (default: `Ecto.Adapters.SojournBroker.Broker`)
+    * `:lazy` - When true, initial connections to the repo are lazily started (default: true)
 
   """
 
@@ -46,8 +47,8 @@ defmodule Ecto.Adapters.SojournBroker do
   end
  
   @doc false
-  def checkout(pool, _) do
-    ask(pool, :run)
+  def checkout(pool, timeout) do
+    ask(pool, :run, timeout)
   end
 
   @doc false
@@ -56,8 +57,8 @@ defmodule Ecto.Adapters.SojournBroker do
   end
 
   @doc false
-  def open_transaction(pool, _) do
-    ask(pool, :transaction)
+  def open_transaction(pool, timeout) do
+    ask(pool, :transaction, timeout)
   end
 
   @doc false
@@ -72,8 +73,10 @@ defmodule Ecto.Adapters.SojournBroker do
 
   ## Helpers
 
-  defp ask(pool, fun) do
+  defp ask(pool, fun, timeout) do
     case :sbroker.ask(pool, {fun, self()}) do
+      {:go, ref, {worker, :lazy}, _, queue_time} ->
+          lazy_connect(worker, ref, queue_time, timeout)
       {:go, ref, {worker, mod_conn}, _, queue_time} ->
           {:ok, {worker, ref}, mod_conn, queue_time}
       {:drop, _} ->
@@ -96,5 +99,22 @@ defmodule Ecto.Adapters.SojournBroker do
       |> Keyword.put(:name, Keyword.fetch!(opts, :name))
 
     {pool_opts, opts}
+  end
+
+  defp lazy_connect(worker, ref, queue_time, timeout) do
+    try do
+      :timer.tc(Worker, :mod_conn, [worker, ref, timeout])
+    catch
+      class, reason ->
+        stack = System.stacktrace()
+        Worker.done(worker, ref)
+        :erlang.raise(class, reason, stack)
+    else
+      {connect_time, {:ok, mod_conn}} ->
+        {:ok, {worker, ref}, mod_conn, queue_time + connect_time}
+      {_, {:error, :noconnect} = error} ->
+        Worker.done(worker, ref)
+        error
+    end
   end
 end
