@@ -843,7 +843,7 @@ defmodule Ecto.Changeset do
     if Enum.any?(fields, &Map.has_key?(changes, &1)) &&
        Enum.all?(fields, &not Keyword.has_key?(errors, &1)) do
       struct = model.__struct__
-      value  = Map.get(changes, field)
+      value  = get_field(changeset, field)
       query  = from m in struct, select: field(m, ^field), limit: 1
 
       if scope do
