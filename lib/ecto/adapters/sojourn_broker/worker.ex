@@ -203,10 +203,10 @@ defmodule Ecto.Adapters.SojournBroker.Worker do
     %{s | conn: nil}
   end
 
-  defp cancel_or_await(%{tag: tag}) do
-    case :sbroker.cancel(tag, @timeout) do
-      false -> :cancelled
-      1     -> :sbroker.await(tag, 0)
+  defp cancel_or_await(%{broker: broker, tag: tag}) do
+    case :sbroker.cancel(broker, tag, @timeout) do
+      false -> :sbroker.await(tag, 0)
+      1     -> :cancelled
     end
   end
 
