@@ -533,6 +533,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp options_expr(options),
       do: " #{options}"
 
+    defp column_type(%Reference{} = ref, opts),
+      do: "#{reference_column_type(ref.type, opts)} REFERENCES " <>
+      "#{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
+      reference_on_delete(ref.on_delete)
+
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)

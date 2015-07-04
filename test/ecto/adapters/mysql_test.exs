@@ -513,6 +513,15 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> String.strip |> String.replace("\n", " ")
   end
 
+  test "alter table with reference" do
+    alter = {:alter, table(:posts),
+               [{:add, :comment_id, references(:comments), []}]}
+
+    assert SQL.execute_ddl(alter) == """
+    ALTER TABLE `posts` ADD `comment_id` BIGINT UNSIGNED REFERENCES `comments`(`id`)
+    """ |> String.strip |> String.replace("\n", " ")
+  end
+
   test "create index" do
     create = {:create, index(:posts, [:category_id, :permalink])}
     assert SQL.execute_ddl(create) ==
