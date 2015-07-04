@@ -77,28 +77,32 @@ defmodule Ecto.Repo.Model do
     changeset = %{changeset | repo: repo}
     autogen   = get_autogenerate_id(changeset, model)
 
-    with_transactions_if_callbacks repo, adapter, model, opts,
-                                   ~w(before_update after_update)a, fn ->
-      changeset = Callbacks.__apply__(model, :before_update, changeset)
-      changes   = validate_changes(:update, changeset, model, fields, id_types)
+    if changeset.changes != %{} or opts[:force] do
+      with_transactions_if_callbacks repo, adapter, model, opts,
+                                     ~w(before_update after_update)a, fn ->
+        changeset = Callbacks.__apply__(model, :before_update, changeset)
+        changes   = validate_changes(:update, changeset, model, fields, id_types)
 
-      filters = add_pk_filter!(changeset.filters, struct)
-      filters = Planner.fields(model, :update, filters, id_types)
+        filters = add_pk_filter!(changeset.filters, struct)
+        filters = Planner.fields(model, :update, filters, id_types)
 
-      values =
-        if changes != [] do
-          case adapter.update(repo, source, changes, filters, autogen, return, opts) do
-            {:ok, values} ->
-              values
-            {:error, :stale} ->
-              raise Ecto.StaleModelError, model: struct, action: :update
+        values =
+          if changes != [] do
+            case adapter.update(repo, source, changes, filters, autogen, return, opts) do
+              {:ok, values} ->
+                values
+              {:error, :stale} ->
+                raise Ecto.StaleModelError, model: struct, action: :update
+            end
+          else
+            []
           end
-        else
-          []
-        end
 
-      changeset = load_into_changeset(changeset, model, values, id_types)
-      Callbacks.__apply__(model, :after_update, changeset).model
+        changeset = load_into_changeset(changeset, model, values, id_types)
+        Callbacks.__apply__(model, :after_update, changeset).model
+      end
+    else
+      changeset.model
     end
   end
 
