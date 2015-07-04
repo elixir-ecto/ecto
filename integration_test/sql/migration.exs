@@ -86,6 +86,20 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule NoSQLMigration do
+    use Ecto.Migration
+
+    def up do
+      assert_raise ArgumentError, ~r"does not support keyword options", fn ->
+        create table(:collection, options: [capped: true])
+      end
+
+      assert_raise ArgumentError, ~r"does not support keyword execute", fn ->
+        execute create: "collection"
+      end
+    end
+  end
+
   import Ecto.Query, only: [from: 2]
   import Ecto.Migrator, only: [up: 4, down: 4]
 
@@ -93,6 +107,10 @@ defmodule Ecto.Integration.MigrationTest do
     assert :ok == up(TestRepo, 20050906120000, CreateMigration, log: false)
   after
     assert :ok == down(TestRepo, 20050906120000, CreateMigration, log: false)
+  end
+
+  test "raises on NoSQL migrations" do
+    assert :ok == up(TestRepo, 20150704120000, NoSQLMigration, log: false)
   end
 
   @tag :add_column

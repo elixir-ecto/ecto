@@ -173,7 +173,7 @@ defmodule Ecto.Migration.Runner do
   defp log(false, _msg), do: :ok
   defp log(level, msg),  do: Logger.log(level, msg)
 
-  defp command(ddl) when is_binary(ddl),
+  defp command(ddl) when is_binary(ddl) or is_list(ddl),
     do: "execute #{inspect ddl}"
 
   defp command({:create, %Table{} = table, _}),

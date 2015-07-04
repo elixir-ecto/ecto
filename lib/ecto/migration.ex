@@ -208,7 +208,7 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Creates an index.
+  Creates an index or a table with only `:id` field.
 
   When reversing (in `change` running backward) indexes are only dropped if they
   exist and no errors are raised. To enforce dropping an index use `drop/1`.
@@ -217,10 +217,24 @@ defmodule Ecto.Migration do
 
       create index(:posts, [:name])
 
+      create table(:version)
+
   """
-  def create(%{} = object) do
-    Runner.execute {:create, object}
+  def create(%Index{} = index) do
+    Runner.execute {:create, index}
   end
+
+  def create(%Table{} = table) do
+    columns =
+      if table.primary_key do
+        [{:add, :id, :serial, primary_key: true}]
+      else
+        []
+      end
+
+    Runner.execute {:create, table, columns}
+  end
+
 
   @doc """
   Drops a table or index.
@@ -328,14 +342,16 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Executes arbitrary SQL.
+  Executes arbitrary SQL or a keyword command in NoSQL databases.
 
   ## Examples
 
       execute "UPDATE posts SET published_at = NULL"
 
+      execute create: "posts", capped: true, size: 1024
+
   """
-  def execute(command) when is_binary(command) do
+  def execute(command) when is_binary(command) or is_list(command) do
     Runner.execute command
   end
 
