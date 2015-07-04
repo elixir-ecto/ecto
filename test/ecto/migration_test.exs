@@ -72,6 +72,11 @@ defmodule Ecto.MigrationTest do
     assert last_command() == "HELLO, IS IT ME YOU ARE LOOKING FOR?"
   end
 
+  test "forward: executes given keyword command" do
+    execute create: "posts", capped: true, size: 1024
+    assert last_command() == [create: "posts", capped: true, size: 1024]
+  end
+
   test "forward: table exists?" do
     assert exists?(table(:hello))
     assert %Table{name: :hello} = last_exists()
@@ -106,6 +111,13 @@ defmodule Ecto.MigrationTest do
     assert last_command() ==
            {:create, table,
               [{:add, :title, :string, []}]}
+  end
+
+  test "forward: creates an empty table" do
+    create table = table(:posts)
+
+    assert last_command() ==
+           {:create, table, [{:add, :id, :serial, [primary_key: true]}]}
   end
 
   test "forward: alters a table" do
@@ -157,13 +169,18 @@ defmodule Ecto.MigrationTest do
   end
 
   test "backward: creates a table" do
-    create table(:posts) do
+    create table = table(:posts) do
       add :title
       add :cost, :decimal, precision: 3
     end
 
-    assert last_command() ==
-           {:drop, %Ecto.Migration.Table{name: :posts, primary_key: true}}
+    assert last_command() == {:drop, table}
+  end
+
+  test "backward: creates an empty table" do
+    create table = table(:posts)
+
+    assert last_command() == {:drop, table}
   end
 
   test "backward: alters a table" do

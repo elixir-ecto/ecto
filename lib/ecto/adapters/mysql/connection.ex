@@ -464,7 +464,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
                 if_do(index.concurrently, "LOCK=NONE")])
     end
 
-    def execute_ddl(default) when is_binary(default), do: default
+    def execute_ddl(string) when is_binary(string), do: string
+
+    def execute_ddl(keyword) when is_list(keyword),
+      do: raise(ArgumentError, "MySQL adapter does not support keyword execute")
 
     defp column_definitions(columns) do
       Enum.map_join(columns, ", ", &column_definition/1)
@@ -530,6 +533,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp options_expr(nil),
       do: ""
+    defp options_expr(keyword) when is_list(keyword),
+      do: raise(ArgumentError, "MySQL adapter does not support keyword options")
     defp options_expr(options),
       do: " #{options}"
 

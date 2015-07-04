@@ -3,8 +3,9 @@ defmodule Ecto.Migration.SchemaMigration do
   @moduledoc false
   use Ecto.Model
 
-  @primary_key {:version, :id, []}
+  @primary_key false
   schema "schema_migrations" do
+    field :version, :integer
     timestamps updated_at: false
   end
 
@@ -35,6 +36,6 @@ defmodule Ecto.Migration.SchemaMigration do
   end
 
   def down(repo, version) do
-    repo.delete! %__MODULE__{version: version}, @opts
+    repo.delete_all from(p in __MODULE__, where: p.version == ^version), @opts
   end
 end
