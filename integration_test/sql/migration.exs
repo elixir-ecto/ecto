@@ -86,6 +86,26 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule OnDeleteMigration do
+    use Ecto.Migration
+
+    def up do
+      create table(:parent1)
+      create table(:parent2)
+
+      create table(:ref_migration) do
+        add :parent1, references(:parent1, on_delete: :nilify_all)
+        add :parent2, references(:parent2, on_delete: :delete_all)
+      end
+    end
+
+    def down do
+      drop table(:ref_migration)
+      drop table(:parent1)
+      drop table(:parent2)
+    end
+  end
+
   defmodule NoSQLMigration do
     use Ecto.Migration
 
@@ -100,6 +120,13 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule Parent do
+    use Ecto.Model
+
+    schema "parent" do
+    end
+  end
+
   import Ecto.Query, only: [from: 2]
   import Ecto.Migrator, only: [up: 4, down: 4]
 
@@ -107,6 +134,27 @@ defmodule Ecto.Integration.MigrationTest do
     assert :ok == up(TestRepo, 20050906120000, CreateMigration, log: false)
   after
     assert :ok == down(TestRepo, 20050906120000, CreateMigration, log: false)
+  end
+
+  test "supports references" do
+    assert :ok == up(TestRepo, 20050906120000, OnDeleteMigration, log: false)
+
+    parent1 = TestRepo.insert! Ecto.Model.put_source(%Parent{}, "parent1")
+    parent2 = TestRepo.insert! Ecto.Model.put_source(%Parent{}, "parent2")
+
+    writer = "INSERT INTO ref_migration (parent1, parent2) VALUES (#{parent1.id}, #{parent2.id})"
+    Ecto.Adapters.SQL.query TestRepo, writer, []
+
+    reader = from r in "ref_migration", select: {r.parent1, r.parent2}
+    assert TestRepo.all(reader) == [{parent1.id, parent2.id}]
+
+    TestRepo.delete!(parent1)
+    assert TestRepo.all(reader) == [{nil, parent2.id}]
+
+    TestRepo.delete!(parent2)
+    assert TestRepo.all(reader) == []
+  after
+    assert :ok == down(TestRepo, 20050906120000, OnDeleteMigration, log: false)
   end
 
   test "raises on NoSQL migrations" do
