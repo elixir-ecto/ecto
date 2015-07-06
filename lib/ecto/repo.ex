@@ -474,7 +474,14 @@ defmodule Ecto.Repo do
   and return the value given to `rollback` as `{:error, value}`.
 
   A successful transaction returns the value returned by the function
-  wrapped in a tuple as `{:ok, value}`. Transactions can be nested.
+  wrapped in a tuple as `{:ok, value}`.
+
+  If `transaction/2` is called inside another transaction, the function
+  is simply executed, without wrapping the new transaction call in any
+  way. In fact, calling `rollback/1` inside the inner transaction will
+  propagate until the parent one. Finally, if there is an error in the
+  inner transaction and the error is rescued, the whole outer transaction
+  is marked as tainted, guaranteeing nothing will be comitted.
 
   ## Options
 

@@ -24,57 +24,6 @@ defmodule Ecto.Integration.DeadlockTest do
     assert Enum.sort([tx1_result, tx2_result]) == [{:error, :deadlocked}, {:ok, :acquired}]
   end
 
-  test "parent tx keeps locks when nested tx aborts" do
-    parent = self()
-
-    %Task{pid: other_tx} = other_tx_task = Task.async fn ->
-      PoolRepo.transaction fn ->
-        pg_advisory_xact_lock(1)
-        send(parent, :acquired1)
-        assert_receive :continue, @timeout
-
-        {:error, :continue} = PoolRepo.transaction fn ->
-          try do
-            pg_advisory_xact_lock(2)
-            send(parent, :acquired2)
-            assert_receive :continue, @timeout
-            Ecto.Adapters.SQL.query(PoolRepo, "INVALID SQL --> ABORTS TRANSACTION", [])
-          rescue
-            err in [Postgrex.Error] ->
-              # syntax error
-              assert %Postgrex.Error{postgres: %{code: :syntax_error}} = err
-              assert_tx_aborted
-              PoolRepo.rollback(:continue)
-          else
-            _ -> flunk "expected syntax error"
-          end
-        end
-
-        send(parent, :rollbacked_to_savepoint)
-        assert_receive :continue, @timeout
-      end
-    end
-
-    PoolRepo.transaction fn ->
-      assert_receive :acquired1, @timeout # other_tx has acquired lock on 1
-      refute pg_try_advisory_xact_lock(1) # we can't get lock on 1
-      send(other_tx, :continue)
-
-      assert_receive :acquired2, @timeout # other_tx has acquired lock on 2 in a nested tx
-      refute pg_try_advisory_xact_lock(1) # we still can't get lock on 1
-      refute pg_try_advisory_xact_lock(2) # we now can't get lock on 2
-      send(other_tx, :continue)
-
-      assert_receive :rollbacked_to_savepoint, @timeout # other tx has rolled back nested tx after it aborted
-      refute pg_try_advisory_xact_lock(1) # we still can't get lock on 1
-      assert pg_try_advisory_xact_lock(2) # but we can get lock on 2
-      send(other_tx, :continue)
-
-      Task.await(other_tx_task)
-      assert pg_try_advisory_xact_lock(1) # after other_tx is commited we can get a lock on 1
-    end
-  end
-
   defp acquire_deadlock(other_tx, [key1, key2] = _locks) do
     pg_advisory_xact_lock(key1)  # acquire first lock
     Logger.debug "#{inspect self()} acquired #{key1}"
@@ -128,11 +77,5 @@ defmodule Ecto.Integration.DeadlockTest do
   defp pg_advisory_xact_lock(key) do
     %{rows: [{:void}]} =
       Ecto.Adapters.SQL.query(PoolRepo, "SELECT pg_advisory_xact_lock($1);", [key])
-  end
-
-  defp pg_try_advisory_xact_lock(key) do
-    %{rows: [{result}]} =
-      Ecto.Adapters.SQL.query(PoolRepo, "SELECT pg_try_advisory_xact_lock($1);", [key])
-    result
   end
 end

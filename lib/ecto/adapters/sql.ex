@@ -103,8 +103,8 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def rollback(_repo, value) do
-        throw {:ecto_rollback, value}
+      def rollback(repo, value) do
+        Ecto.Adapters.SQL.rollback(repo, value)
       end
 
       ## Migration
@@ -435,22 +435,25 @@ defmodule Ecto.Adapters.SQL do
     opts    = Keyword.put_new(opts, :timeout, timeout)
     timeout = Keyword.fetch!(opts, :timeout)
 
-    trans_fun = fn(ref, {mod, _conn}, depth, queue_time) ->
-      mode = transaction_mode(pool_mod, pool, timeout)
-      transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun)
+    transaction = fn
+      :opened, ref, {mod, _conn}, queue_time ->
+        mode = transaction_mode(pool_mod, pool, timeout)
+        transaction(repo, ref, mod, mode, queue_time, timeout, opts, fun)
+      :already_open, _, _, _ ->
+        {{:return, {:ok, fun.()}}, nil}
     end
 
-    case Pool.transaction(pool_mod, pool, timeout, trans_fun) do
-      {:ok, {{:return, result}, entry}} ->
+    case Pool.transaction(pool_mod, pool, timeout, transaction) do
+      {{:return, result}, entry} ->
         log(repo, entry)
         result
-      {:ok, {{:raise, class, reason, stack}, entry}} ->
+      {{:raise, class, reason, stack}, entry} ->
         log(repo, entry)
         :erlang.raise(class, reason, stack)
-      {:ok, {{:error, err}, entry}} ->
+      {{:error, err}, entry} ->
         log(repo, entry)
         raise err
-      {:ok, :noconnect} ->
+      {:error, :noconnect} ->
         exit({:noconnect, {__MODULE__, :transaction, [repo, opts, fun]}})
       {:error, :noproc} ->
         raise ArgumentError, "repo #{inspect repo} is not started, " <>
@@ -458,43 +461,44 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
+  @doc false
+  def rollback(repo, value) do
+    {pool_mod, pool, _timeout} = repo.__pool__
+    Pool.rollback(pool_mod, pool, value)
+  end
+
   defp transaction_mode(Sandbox, pool, timeout), do: Sandbox.mode(pool, timeout)
   defp transaction_mode(_, _, _), do: :raw
 
-  defp transaction(repo, ref, mod, mode, depth, queue_time, timeout, opts, fun) do
-    case begin(repo, mod, mode, depth, queue_time, opts) do
+  defp transaction(repo, ref, mod, mode, queue_time, timeout, opts, fun) do
+    case begin(repo, mod, mode, queue_time, opts) do
       {{:ok, _}, entry} ->
-        try do
-          log(repo, entry)
-          value = fun.()
-          commit(repo, ref, mod, mode, depth, timeout, opts, {:return, {:ok, value}})
-        catch
-          :throw, {:ecto_rollback, value} ->
-            res = {:return, {:error, value}}
-            rollback(repo, ref, mod, mode, depth, nil, timeout, opts, res)
-          class, reason ->
-            stack = System.stacktrace()
-            res = {:raise, class, reason, stack}
-            rollback(repo, ref, mod, mode, depth, nil, timeout, opts, res)
+        safe = fn -> log(repo, entry); fun.() end
+        case Pool.with_rollback(ref, safe) do
+          {:ok, _} = ok ->
+            commit(repo, ref, mod, mode, timeout, opts, {:return, ok})
+          {:error, _} = error ->
+            rollback(repo, ref, mod, mode, timeout, opts, {:return, error})
+          {:raise, _kind, _reason, _stack} = raise ->
+            rollback(repo, ref, mod, mode, timeout, opts, raise)
         end
       {{:error, _err}, _entry} = error ->
         Pool.break(ref, timeout)
         error
       :noconnect ->
-        :noconnect
+        {:error, :noconnect}
     end
   end
 
-  defp begin(repo, mod, mode, depth, queue_time, opts) do
-    sql = begin_sql(mod, mode, depth)
+  defp begin(repo, mod, mode, queue_time, opts) do
+    sql = begin_sql(mod, mode)
     query(repo, sql, [], queue_time, opts)
   end
 
-  defp begin_sql(mod, :raw, 1), do: mod.begin_transaction
-  defp begin_sql(mod, :raw, :sandbox), do: mod.savepoint "ecto_sandbox"
-  defp begin_sql(mod, _, depth), do: mod.savepoint "ecto_#{depth}"
+  defp begin_sql(mod, :raw),     do: mod.begin_transaction
+  defp begin_sql(mod, :sandbox), do: mod.savepoint "ecto_trans"
 
-  defp commit(repo, ref, mod, :raw, 1, timeout, opts, result) do
+  defp commit(repo, ref, mod, :raw, timeout, opts, result) do
     case query(repo, mod.commit, [], nil, opts) do
       {{:ok, _}, entry} ->
         {result, entry}
@@ -506,14 +510,14 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp commit(_repo, _ref, _mod, _mode, _depth, _timeout, _opts, result) do
+  defp commit(_repo, _ref, _mod, _mode, _timeout, _opts, result) do
     {result, nil}
   end
 
-  defp rollback(repo, ref, mod, mode, depth, queue_time, timeout, opts, result) do
-    sql = rollback_sql(mod, mode, depth)
+  defp rollback(repo, ref, mod, mode, timeout, opts, result) do
+    sql = rollback_sql(mod, mode)
 
-    case query(repo, sql, [], queue_time, opts) do
+    case query(repo, sql, [], nil, opts) do
       {{:ok, _}, entry} ->
         {result, entry}
       {{:error, _}, _entry} = error ->
@@ -524,11 +528,8 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp rollback_sql(mod, :raw, 1), do: mod.rollback
-  defp rollback_sql(mod, :sandbox, :sandbox) do
-    mod.rollback_to_savepoint "ecto_sandbox"
-  end
-  defp rollback_sql(mod, _, depth) do
-    mod.rollback_to_savepoint "ecto_#{depth}"
+  defp rollback_sql(mod, :raw), do: mod.rollback
+  defp rollback_sql(mod, :sandbox) do
+    mod.rollback_to_savepoint "ecto_trans"
   end
 end

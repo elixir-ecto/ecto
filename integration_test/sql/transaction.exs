@@ -68,8 +68,22 @@ defmodule Ecto.Integration.TransactionTest do
     assert [] = TestRepo.all(Trans)
   end
 
+  test "transaction rolls back per repository" do
+    message = "cannot call rollback outside of transaction"
+
+    assert_raise RuntimeError, message, fn ->
+      PoolRepo.rollback(:done)
+    end
+
+    assert_raise RuntimeError, message, fn ->
+      TestRepo.transaction fn ->
+        PoolRepo.rollback(:done)
+      end
+    end
+  end
+
   test "nested transaction partial rollback" do
-    PoolRepo.transaction(fn ->
+    assert PoolRepo.transaction(fn ->
       e1 = PoolRepo.insert!(%Trans{text: "3"})
       assert [^e1] = PoolRepo.all(Trans)
 
@@ -83,20 +97,30 @@ defmodule Ecto.Integration.TransactionTest do
         UniqueError -> :ok
       end
 
-      e3 = PoolRepo.insert!(%Trans{text: "5"})
-      assert [^e1, ^e3] = PoolRepo.all(from(t in Trans, order_by: t.text))
-      assert [] = TestRepo.all(Trans)
-    end)
+      assert {:noconnect, _} = catch_exit(PoolRepo.insert!(%Trans{text: "5"}))
+    end) == {:error, :rollback}
 
-    assert [%Trans{text: "3"}, %Trans{text: "5"}] =
-           TestRepo.all(from(t in Trans, order_by: t.text))
+    assert TestRepo.all(Trans) == []
   end
 
-  test "manual rollback doesnt bubble up" do
+  test "manual rollback doesn't bubble up" do
     x = PoolRepo.transaction(fn ->
       e = PoolRepo.insert!(%Trans{text: "6"})
       assert [^e] = PoolRepo.all(Trans)
       PoolRepo.rollback(:oops)
+    end)
+
+    assert x == {:error, :oops}
+    assert [] = TestRepo.all(Trans)
+  end
+
+  test "manual rollback bubbles up on nested transaction" do
+    x = PoolRepo.transaction(fn ->
+      e = PoolRepo.insert!(%Trans{text: "6"})
+      assert [^e] = PoolRepo.all(Trans)
+      PoolRepo.transaction(fn ->
+        PoolRepo.rollback(:oops)
+      end)
     end)
 
     assert x == {:error, :oops}
@@ -197,8 +221,8 @@ defmodule Ecto.Integration.TransactionTest do
 
   test "transaction exit includes :timeout on begin timeout" do
     assert match?({:timeout, _},
-      catch_exit(PoolRepo.transaction(fn ->
-        PoolRepo.transaction([timeout: 0], fn -> flunk "did not timeout" end)
+      catch_exit(PoolRepo.transaction([timeout: 0], fn ->
+        flunk "did not timeout"
       end)))
   end
 

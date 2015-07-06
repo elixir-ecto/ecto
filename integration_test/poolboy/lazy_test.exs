@@ -13,7 +13,7 @@ defmodule Ecto.Integration.LazyTest do
     refute :sys.get_state(worker).conn
     :poolboy.checkin(pool, worker)
 
-    TestPool.transaction(pool, @timeout, fn(_, {Connection, conn}, _, _) ->
+    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {Connection, conn}, _) ->
       assert Process.alive?(conn)
     end)
   end

@@ -35,26 +35,7 @@ defmodule Ecto.Integration.PoolRunTest do
     end)
   end
 
-  test "disconnects if run raises" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
-
-    assert {:ok, conn} =
-      TestPool.run(pool, @timeout, fn({_mod, conn}, _) ->
-        conn
-      end)
-
-    assert Process.alive?(conn)
-
-    try do
-      TestPool.run(pool, @timeout, fn(_, _) -> raise "oops" end)
-    rescue
-      RuntimeError -> :ok
-    end
-
-    refute Process.alive?(conn)
-  end
-
-  test "do not disconnect if caller dies during run" do
+  test "does not disconnect if caller dies during run" do
     {:ok, pool} = TestPool.start_link([lazy: false])
 
     _ = Process.flag(:trap_exit, true)
