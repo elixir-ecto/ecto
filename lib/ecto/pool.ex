@@ -1,4 +1,4 @@
-defmodule Ecto.Adapters.Pool do
+defmodule Ecto.Pool do
   @moduledoc """
   Behaviour for using a pool of connections.
   """

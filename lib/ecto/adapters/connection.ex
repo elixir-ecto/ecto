@@ -1,11 +1,13 @@
 defmodule Ecto.Adapters.Connection do
   @moduledoc """
-  Behaviour for connection processes.
+  Behaviour for adapters that rely on connections.
 
   In order to use a connection, adapter developers need to implement
   two callbacks in a module, `connect/1` and `disconnect/1` defined
-  in this module. The connection is started by passing the module that
-  implements the callbacks and as well as the connection arguments.
+  in this module.
+
+  For example, Ecto pools rely on the functions defined in the module
+  in order to provide pooling.
   """
 
   use Behaviour

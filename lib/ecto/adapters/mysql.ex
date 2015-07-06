@@ -18,7 +18,7 @@ defmodule Ecto.Adapters.MySQL do
   recompilation in order to make an effect.
 
     * `:adapter` - The adapter name, in this case, `Ecto.Adapters.MySQL`
-    * `:pool` - The connection pool module, defaults to `Ecto.Adapters.Poolboy`
+    * `:pool` - The connection pool module, defaults to `Ecto.Pools.Poolboy`
     * `:timeout` - The default timeout to use on queries, defaults to `5000`
     * `:log_level` - The level to use when logging queries (default: `:debug`)
 
@@ -36,7 +36,7 @@ defmodule Ecto.Adapters.MySQL do
   ### Pool options
 
   All pools should support the following options and can support other options,
-  see `Ecto.Adapters.Poolboy`.
+  see `Ecto.Pools.Poolboy`.
 
     * `:size` - The number of connections to keep in the pool (default: 10)
 

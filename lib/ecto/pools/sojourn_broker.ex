@@ -1,4 +1,4 @@
-defmodule Ecto.Adapters.SojournBroker do
+defmodule Ecto.Pools.SojournBroker do
   @moduledoc """
   Start a pool of connections using `sbroker`.
 
@@ -7,7 +7,7 @@ defmodule Ecto.Adapters.SojournBroker do
     * `:size` - The number of connections to keep in the pool (default: 10)
     * `:min_backoff` - The minimum backoff on failed connect in milliseconds (default: 50)
     * `:max_backoff` - The maximum backoff on failed connect in milliseconds (default: 5000)
-    * `:broker` - The `sbroker` module to use (default: `Ecto.Adapters.SojournBroker.Broker`)
+    * `:broker` - The `sbroker` module to use (default: `Ecto.Pools.SojournBroker.Broker`)
     * `:lazy` - When true, initial connections to the repo are lazily started (default: true)
 
   ### Broker pptions
@@ -19,9 +19,9 @@ defmodule Ecto.Adapters.SojournBroker do
 
   """
 
-  alias Ecto.Adapters.SojournBroker.Broker
-  alias Ecto.Adapters.SojournBroker.Worker
-  @behaviour Ecto.Adapters.Pool
+  alias Ecto.Pools.SojournBroker.Broker
+  alias Ecto.Pools.SojournBroker.Worker
+  @behaviour Ecto.Pool
 
   @doc """
   Starts a pool of connections for the given connection module and options.

@@ -1,4 +1,4 @@
-defmodule Ecto.Adapters.Poolboy.Worker do
+defmodule Ecto.Pools.Poolboy.Worker do
   @moduledoc false
 
   use GenServer

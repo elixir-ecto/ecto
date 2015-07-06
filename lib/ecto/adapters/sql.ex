@@ -129,7 +129,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  alias Ecto.Adapters.Pool
+  alias Ecto.Pool
   alias Ecto.Adapters.SQL.Sandbox
 
   @doc """

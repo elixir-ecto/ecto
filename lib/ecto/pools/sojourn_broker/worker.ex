@@ -1,4 +1,4 @@
-defmodule Ecto.Adapters.SojournBroker.Worker do
+defmodule Ecto.Pools.SojournBroker.Worker do
   @moduledoc false
 
   use GenServer

@@ -3,7 +3,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   Start a pool with a single sandboxed SQL connection.
   """
 
-  @behaviour Ecto.Adapters.Pool
+  @behaviour Ecto.Pool
 
   @typep log :: (%Ecto.LogEntry{} -> any())
 

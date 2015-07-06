@@ -19,8 +19,8 @@ defmodule Ecto.Adapters.SQLTest do
   end
 
   test "stores __pool__ metadata" do
-    assert Repo.__pool__ == {Ecto.Adapters.Poolboy, Repo.Pool, 5000}
+    assert Repo.__pool__ == {Ecto.Pools.Poolboy, Repo.Pool, 5000}
     assert RepoWithTimeout.__pool__ ==
-      {Ecto.Adapters.Poolboy, RepoWithTimeout.Pool, 1500}
+      {Ecto.Pools.Poolboy, RepoWithTimeout.Pool, 1500}
   end
 end

@@ -1,6 +1,6 @@
 defmodule Ecto.TestPool do
-  alias Ecto.Adapters.Pool
-  @pool Application.get_env(:ecto, :pool, Ecto.Adapters.Poolboy)
+  alias Ecto.Pool
+  @pool Application.get_env(:ecto, :pool, Ecto.Pools.Poolboy)
 
   defmodule Connection do
     @behaviour Ecto.Adapters.Connection

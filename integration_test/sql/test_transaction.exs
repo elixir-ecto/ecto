@@ -2,9 +2,9 @@ defmodule Ecto.Integration.TestTransactionTest do
   use ExUnit.Case
 
   require Ecto.Integration.TestRepo, as: TestRepo
-  alias Ecto.Adapters.Pool
+  alias Ecto.Pool
 
-  @ref {Ecto.Adapters.Pool, Ecto.Adapters.SQL.Sandbox, elem(TestRepo.__pool__, 1)}
+  @ref {Ecto.Pool, Ecto.Adapters.SQL.Sandbox, elem(TestRepo.__pool__, 1)}
   @timeout :infinity
 
   test "sandbox pool is lazy" do

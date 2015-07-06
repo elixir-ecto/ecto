@@ -1,7 +1,7 @@
 defmodule Ecto.Pool.TransactionTest do
   use ExUnit.Case, async: true
 
-  alias Ecto.Adapters.Pool
+  alias Ecto.Pool
   alias Ecto.TestPool
 
   @timeout :infinity

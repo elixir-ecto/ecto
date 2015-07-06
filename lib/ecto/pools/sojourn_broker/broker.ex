@@ -1,4 +1,4 @@
-defmodule Ecto.Adapters.SojournBroker.Broker do
+defmodule Ecto.Pools.SojournBroker.Broker do
   @moduledoc false
   @behaviour :sbroker
 
