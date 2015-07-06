@@ -43,6 +43,11 @@ defmodule Ecto.Model do
       import Ecto.Model
       use Ecto.Model.OptimisticLock
       use Ecto.Model.Timestamps
+
+      # The `@before_compile Ecto.Model.Dependent` should always be loaded
+      # before `use Ecto.Model.Callbacks` since it depends on its callback
+      # registration.
+      @before_compile Ecto.Model.Dependent
       use Ecto.Model.Callbacks
     end
   end

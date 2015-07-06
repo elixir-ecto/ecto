@@ -10,6 +10,11 @@ defmodule Ecto.Integration.Model do
       @foreign_key_type type
     end
   end
+
+  def callback_check(changeset) do
+    Process.put(:callback_check, true)
+    changeset
+  end
 end
 
 defmodule Ecto.Integration.Post do
@@ -20,6 +25,7 @@ defmodule Ecto.Integration.Post do
     * Overall types
     * Non-null timestamps
     * Relationships
+    * Dependent callbacks
 
   """
   use Ecto.Integration.Model
@@ -36,9 +42,10 @@ defmodule Ecto.Integration.Post do
     field :bid, :binary_id
     field :uuid, Ecto.UUID, autogenerate: true
     field :meta, :map
-    has_many :comments, Ecto.Integration.Comment
-    has_one :permalink, Ecto.Integration.Permalink
+    has_many :comments, Ecto.Integration.Comment, dependent: :delete_all
+    has_one :permalink, Ecto.Integration.Permalink, dependent: :fetch_and_delete
     has_many :comments_authors, through: [:comments, :author]
+    belongs_to :author, Ecto.Integration.User
     timestamps
   end
 end
@@ -64,6 +71,7 @@ defmodule Ecto.Integration.Comment do
 
     * Optimistic lock
     * Relationships
+    * Dependent callbacks
 
   """
   use Ecto.Integration.Model
@@ -78,6 +86,7 @@ defmodule Ecto.Integration.Comment do
   end
 
   optimistic_lock :lock_version
+  before_delete Ecto.Integration.Model, :callback_check, []
 end
 
 defmodule Ecto.Integration.Permalink do
@@ -85,6 +94,7 @@ defmodule Ecto.Integration.Permalink do
   This module is used to test:
 
     * Relationships
+    * Dependent callbacks
 
   """
   use Ecto.Integration.Model
@@ -94,6 +104,8 @@ defmodule Ecto.Integration.Permalink do
     belongs_to :post, Ecto.Integration.Post
     has_many :post_comments_authors, through: [:post, :comments_authors]
   end
+
+  before_delete Ecto.Integration.Model, :callback_check, []
 end
 
 defmodule Ecto.Integration.User do
@@ -102,13 +114,15 @@ defmodule Ecto.Integration.User do
 
     * Timestamps
     * Relationships
+    * Dependent callbacks
 
   """
   use Ecto.Integration.Model
 
   schema "users" do
     field :name, :string
-    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id
+    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, dependent: :nilify_all
+    has_many :posts, Ecto.Integration.Post, dependent: :nothing, foreign_key: :author_id
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     timestamps
   end

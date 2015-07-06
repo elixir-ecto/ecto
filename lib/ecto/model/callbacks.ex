@@ -250,7 +250,7 @@ defmodule Ecto.Model.Callbacks do
   Since this will be invoked every time the model is loaded, the
   callback must execute very quickly to avoid drastic perfomance
   hits.
-  
+
   Another common misuse of `after_load` callbacks is to use it
   for loading fields which are not always required. For example,
   imagine you need to generate an access token based on the `User`
