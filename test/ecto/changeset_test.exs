@@ -664,17 +664,16 @@ defmodule Ecto.ChangesetTest do
     defmodule ScopeRepo do
       def all(query) do
         assert query.wheres |> Enum.count == 2
-        query_strings =  query.wheres |> Enum.map(&Macro.to_string(&1.expr))
+        query_strings = query.wheres |> Enum.map(&Macro.to_string(&1.expr))
         case Process.get(:compare_type) do
-          :value -> assert ("&0.title() == ^0" in query_strings)
-          nil    -> assert ("is_nil(&0.title())" in query_strings)
+          :value  -> assert "&0.title() == ^0" in query_strings
+          :is_nil -> assert "is_nil(&0.title())" in query_strings
         end
         assert "&0.body() == ^0" in query_strings
         assert query.limit.expr == 1
         Process.get(:scope_query)
       end
     end
-
 
     Process.put(:compare_type, :value)
     Process.put(:scope_query, [])
@@ -704,7 +703,7 @@ defmodule Ecto.ChangesetTest do
       |> validate_unique(:title, scope: [:body], on: ScopeRepo, message: "yada")
     assert changeset.errors == [title: "yada"]
 
-    Process.put(:compare_type, nil)
+    Process.put(:compare_type, :is_nil)
     changeset =
       changeset(%{"body" => "world"}) # Also validates when only scope changes
       |> validate_unique(:title, scope: [:body], on: ScopeRepo)
