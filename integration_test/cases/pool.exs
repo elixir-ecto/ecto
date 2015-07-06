@@ -3,12 +3,12 @@ Code.require_file "../support/file_helpers.exs", __DIR__
 defmodule Ecto.Integration.PoolTest do
   use Ecto.Integration.Case
 
-  require Ecto.Integration.PoolRepo, as: PoolRepo
+  require Ecto.Integration.TestRepo, as: TestRepo
 
   defmodule MockPool do
     def start_link(_conn_mod, opts) do
       # Custom options are passed through
-      assert PoolRepo.Third == opts[:name]
+      assert TestRepo.Alternative == opts[:name]
       assert :bar == opts[:foo]
       {:ok, MockPool}
     end
@@ -16,15 +16,15 @@ defmodule Ecto.Integration.PoolTest do
 
   test "can start multiple repos" do
     # Can't start a second Repo with the default name
-    {_, pool_name, _} = PoolRepo.__pool__
+    {_, pool_name, _} = TestRepo.__pool__
     pool_pid = Process.whereis(pool_name)
-    assert {:error, {:already_started, ^pool_pid}} = PoolRepo.start_link()
+    assert {:error, {:already_started, ^pool_pid}} = TestRepo.start_link()
 
     # Can start a second repo with a different name
-    assert {:ok, _second_pool} = PoolRepo.start_link(name: PoolRepo.Second)
+    assert {:ok, _second_pool} = TestRepo.start_link(name: TestRepo.Named)
 
     # Can start a third repo with a different name and different pool
     assert {:ok, MockPool} =
-      PoolRepo.start_link(name: PoolRepo.Third, pool: MockPool, foo: :bar)
+      TestRepo.start_link(name: TestRepo.Alternative, pool: MockPool, foo: :bar)
   end
 end
