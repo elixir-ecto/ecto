@@ -19,7 +19,7 @@ defmodule Ecto.QueryTest do
     assert "&0.title() == ^0" == Macro.to_string(hd(query.wheres).expr)
   end
 
-  test "vars are order dependent" do
+  test "vars are order on_delete" do
     from(p in "posts", []) |> select([q], q.title)
   end
 

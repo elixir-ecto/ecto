@@ -5,6 +5,7 @@
 * Enhancements
   * Store the connection PID in `Ecto.LogEntry`
   * Add `Ecto.Pools.SojournBroker` as a more flexible and customizable alternative to `Ecto.Pools.Poolboy`
+  * Support `:on_delete` when defining `has_many` and `belongs_to` in schema
 
 * Bug fixes
   * Ensure uniqueness validatior runs the proper check when a scope changed but the value is still the same

@@ -250,12 +250,12 @@ defmodule Ecto.Association.Has do
     * `owner_key` - The key on the `owner` model used for the association
     * `assoc_key` - The key on the `associated` model used for the association
     * `queryable` - The real query to use for querying association
-    * `dependent` - The action taken on associations when model is deleted
+    * `on_delete` - The action taken on associations when model is deleted
   """
 
   @behaviour Ecto.Association
-  @dependent_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
-  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable, :dependent]
+  @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
+  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable, :on_delete]
 
   @doc false
   def struct(module, name, opts) do
@@ -283,10 +283,10 @@ defmodule Ecto.Association.Has do
                            "option, the model should not be passed as second argument"
     end
 
-    dependent = opts[:dependent] || :nothing
+    on_delete = opts[:on_delete] || :nothing
 
-    unless dependent in @dependent_opts do
-      raise ArgumentError, "invalid :dependent option for #{inspect name}. The only valid options" <>
+    unless on_delete in @on_delete_opts do
+      raise ArgumentError, "invalid :on_delete option for #{inspect name}. The only valid options" <>
                            " are `:nothing`, `:fetch_and_delete`, `:nilify_all` and `:delete_all`"
     end
 
@@ -298,7 +298,7 @@ defmodule Ecto.Association.Has do
       owner_key: ref,
       assoc_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref),
       queryable: queryable,
-      dependent: dependent
+      on_delete: on_delete
     }
   end
 

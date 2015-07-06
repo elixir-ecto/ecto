@@ -225,7 +225,7 @@ defmodule Ecto.SchemaTest do
 
   test "has_many association" do
     assert AssocModel.__schema__(:association, :posts) ==
-           %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, dependent: :nothing,
+           %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, on_delete: :nothing,
                                   assoc: Post, owner_key: :id, assoc_key: :assoc_model_id, queryable: Post}
 
     posts = (%AssocModel{}).posts
@@ -235,7 +235,7 @@ defmodule Ecto.SchemaTest do
 
   test "has_many association via {source model}" do
     assert AssocModel.__schema__(:association, :emails) ==
-           %Ecto.Association.Has{field: :emails, owner: AssocModel, cardinality: :many, dependent: :nothing,
+           %Ecto.Association.Has{field: :emails, owner: AssocModel, cardinality: :many, on_delete: :nothing,
                                   assoc: Email, owner_key: :id, assoc_key: :assoc_model_id, queryable: {"users_emails", Email}}
 
     posts = (%AssocModel{}).posts
@@ -255,7 +255,7 @@ defmodule Ecto.SchemaTest do
 
   test "has_one association" do
     assert AssocModel.__schema__(:association, :author) ==
-           %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one, dependent: :nothing,
+           %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one, on_delete: :nothing,
                                   assoc: User, owner_key: :id, assoc_key: :assoc_model_id, queryable: User}
 
     author = (%AssocModel{}).author
@@ -265,7 +265,7 @@ defmodule Ecto.SchemaTest do
 
   test "has_one association via {source, model}" do
     assert AssocModel.__schema__(:association, :profile) ==
-           %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one, dependent: :nothing,
+           %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one, on_delete: :nothing,
                                   assoc: Profile, owner_key: :id, assoc_key: :assoc_model_id, queryable: {"users_profiles", Profile}}
 
     author = (%AssocModel{}).author

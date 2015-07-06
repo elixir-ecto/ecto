@@ -438,6 +438,10 @@ defmodule Ecto.Schema do
     * `:through` - If this association must be defined in terms of existing
       associations. Read below for more information
 
+    * `:on_delete` - The action taken on associations when model is deleted.
+      May be `:nothing` (default), `:nilify_all`, `:delete_all` or
+      `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
+
   ## Examples
 
       defmodule Post do
@@ -553,6 +557,10 @@ defmodule Ecto.Schema do
 
     * `:through` - If this association must be defined in terms of existing
       associations. Read the section in `has_many/3` for more information
+
+    * `:on_delete` - The action taken on associations when model is deleted.
+      May be `:nothing` (default), `:nilify_all`, `:delete_all` or
+      `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
   ## Examples
 

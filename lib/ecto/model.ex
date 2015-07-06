@@ -16,6 +16,7 @@ defmodule Ecto.Model do
   Plus all the modules existing in `Ecto.Model.*` are brought in
   too:
 
+    * `use Ecto.Model.Dependent` - perform dependency (associations) management
     * `use Ecto.Model.Callbacks` - provides lifecycle callbacks
     * `use Ecto.Model.Timestamps` - automatically set `inserted_at` and
       `updated_at` fields declared via `Ecto.Schema.timestamps/1`
@@ -43,11 +44,7 @@ defmodule Ecto.Model do
       import Ecto.Model
       use Ecto.Model.OptimisticLock
       use Ecto.Model.Timestamps
-
-      # The `@before_compile Ecto.Model.Dependent` should always be loaded
-      # before `use Ecto.Model.Callbacks` since it depends on its callback
-      # registration.
-      @before_compile Ecto.Model.Dependent
+      use Ecto.Model.Dependent
       use Ecto.Model.Callbacks
     end
   end

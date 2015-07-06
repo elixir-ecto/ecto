@@ -1,43 +1,51 @@
 defmodule Ecto.Model.Dependent do
   @moduledoc """
-  Defines callbacks for handling dependents when a model is deleted.
+  Defines callbacks for handling dependencies (associations).
 
-  Dependents for your model are typically declared via the `has_many/3` macro
-  in your model's `schema` block. Oftentimes you will find a need to define behavior
-  for a model's dependents when said model is deleted. This module defines the
-  most common behaviors for dealing with dependents of a deleted model.
+  Such callbacks are typically declared via the `has_many/3` macro
+  in your model's `schema` block. For example:
 
-  ## Dependent options
+      has_many :comments, MyApp.Comment, on_delete: :fetch_and_delete
 
-  There are four different behaviors you can set for your dependents. These are:
+  ## `:on_delete` options
 
-  * `:nothing` - Does nothing to dependents;
-  * `:delete_all` - Deletes all dependents without triggering lifecycle callbacks;
-  * `:fetch_and_delete` - Deletes dependents and triggers any `before_delete` and `after_delete`
-    callbacks on each dependent;
-  * `:nilify_all` - Sets model reference to nil for each dependent without triggering any
-    lifecycle callback;
+  There are four different behaviors you can set for your associations
+  when the parent is deleted:
+
+    * `:nothing` - Does nothing to the association;
+
+    * `:delete_all` - Deletes all associations without triggering lifecycle callbacks;
+
+    * `:nilify_all` - Sets model reference to nil for each association without triggering
+      any lifecycle callback;
+
+    * `:fetch_and_delete` - Explicitly fetch all associations and delete them one by one,
+      triggering any `before_delete` and `after_delete` callbacks;
 
   Keep in mind these options are only available for `has_many/3` macros.
 
   ## Alternatives
 
-  Ecto also provides an `:on_delete` option when using `references/2` in migrations. This allows
-  you to set what to perform when an entry is deleted in you schema and effectively, at the database
-  level. When you want to push as much responsibilty down to the schema, that approach would better
-  serve you.
+  Ecto also provides an `:on_delete` option when using `references/2` in migrations.
+  This allows you to set what to perform when an entry is deleted in your schema and
+  effectively, at the database level. When you want to push as much responsibilty
+  down to the schema, that approach would better serve you.
 
-  However, using the `:dependent` option in `has_many/3` would afford you more flexibility.
-  It does not require you to run migrations every time you want to change the behavior for handling
-  dependents.
+  However, using the `:on_delete` option in `has_many/3` would afford you more
+  flexibility. It does not require you to run migrations every time you want to change
+  the behavior and it is not database specific.
   """
 
-  @dependent_callbacks [:fetch_and_delete, :nilify_all, :delete_all]
+  @on_delete_callbacks [:fetch_and_delete, :nilify_all, :delete_all]
   alias Ecto.Changeset
 
-  @doc """
-  Deletes all records of dependent model and triggers `delete` lifecycle callbacks.
-  """
+  defmacro __using__(_) do
+    quote do
+      @before_compile Ecto.Model.Dependent
+    end
+  end
+
+  @doc false
   def fetch_and_delete(%Changeset{repo: repo, model: model} = changeset, assoc_field, _assoc_key) do
     query  = Ecto.Model.assoc(model, assoc_field)
     assocs = repo.all(query)
@@ -45,20 +53,14 @@ defmodule Ecto.Model.Dependent do
     changeset
   end
 
-  @doc """
-  Deletes all records of dependent model while skipping their lifecycle callbacks.
-  """
+  @doc false
   def delete_all(%Changeset{repo: repo, model: model} = changeset, assoc_field, _assoc_key) do
     query = Ecto.Model.assoc(model, assoc_field)
     repo.delete_all(query)
     changeset
   end
 
-  @doc """
-  Sets dependent's records reference to parent model to `nil`.
-
-  This also does not trigger any lifecycle callbacks on the dependent model.
-  """
+  @doc false
   def nilify_all(%Changeset{repo: repo, model: model} = changeset, assoc_field, assoc_key) do
     query = Ecto.Model.assoc(model, assoc_field)
     repo.update_all(query, set: [{assoc_key, nil}])
@@ -66,16 +68,17 @@ defmodule Ecto.Model.Dependent do
   end
 
   defmacro __before_compile__(env) do
-    assocs        = Module.get_attribute(env.module, :ecto_assocs) |> Enum.reverse
-    has_callback? = fn (assoc) -> Map.get(assoc, :dependent) in @dependent_callbacks end
+    assocs = Module.get_attribute(env.module, :ecto_assocs)
 
-    for {_assoc_name, assoc} <- assocs, has_callback?.(assoc) do
-      dependent   = assoc.dependent
+    for {_assoc_name, assoc} <- assocs,
+        Map.get(assoc, :on_delete) in @on_delete_callbacks do
+      on_delete   = assoc.on_delete
       assoc_key   = assoc.assoc_key
       assoc_field = assoc.field
 
       quote do
-        before_delete Ecto.Model.Dependent, unquote(dependent), [unquote(assoc_field), unquote(assoc_key)]
+        before_delete Ecto.Model.Dependent, unquote(on_delete),
+                      [unquote(assoc_field), unquote(assoc_key)]
       end
     end
   end

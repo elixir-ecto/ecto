@@ -5,6 +5,7 @@ defmodule Ecto.Integration.RepoTest do
   import Ecto.Query
 
   alias Ecto.Integration.Post
+  alias Ecto.Integration.User
   alias Ecto.Integration.PostUsecTimestamps
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
@@ -477,5 +478,46 @@ defmodule Ecto.Integration.RepoTest do
     assert [p1, p2] = TestRepo.all Ecto.Model.assoc([l1, l2, l3], :post)
     assert p1.id == pid1
     assert p2.id == pid2
+  end
+
+  ## Dependent
+
+  test "has_many assoc on delete deletes all" do
+    post = TestRepo.insert!(%Post{})
+    TestRepo.insert!(%Comment{post_id: post.id})
+    TestRepo.insert!(%Comment{post_id: post.id})
+    TestRepo.delete!(post)
+
+    assert TestRepo.all(Comment) == []
+    refute Process.get(Comment)
+  end
+
+  test "has_many assoc on delete fetches and deletes" do
+    post = TestRepo.insert!(%Post{})
+    TestRepo.insert!(%Permalink{post_id: post.id})
+    TestRepo.delete!(post)
+
+    assert TestRepo.all(Permalink) == []
+    assert Process.get(Permalink) == :on_delete
+  end
+
+  test "has_many assoc on delete nilifies all" do
+    user = TestRepo.insert!(%User{})
+    TestRepo.insert!(%Comment{author_id: user.id})
+    TestRepo.insert!(%Comment{author_id: user.id})
+    TestRepo.delete!(user)
+
+    author_ids = Comment |> TestRepo.all() |> Enum.map(fn(comment) -> comment.author_id end)
+
+    assert author_ids == [nil, nil]
+    refute Process.get(Comment)
+  end
+
+  test "has_many assoc on delete does nothing" do
+    user = TestRepo.insert!(%User{})
+    TestRepo.insert!(%Post{author_id: user.id})
+
+    TestRepo.delete!(user)
+    assert Enum.count(TestRepo.all(Post)) == 1
   end
 end
