@@ -5,10 +5,13 @@ defmodule Ecto.Integration.TypeTest do
 
   require Ecto.Integration.TestRepo, as: TestRepo
   import Ecto.Query
+  import Ecto.Model
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.Tag
   alias Ecto.Integration.Custom
+  alias Ecto.Integration.User
+  alias Ecto.Integration.Profile
 
   test "primitive types" do
     integer  = 1
@@ -145,6 +148,18 @@ defmodule Ecto.Integration.TypeTest do
     query = from(p in Post, where: p.id == ^post.id)
     TestRepo.update_all(query, set: [meta: %{world: "hello"}])
     assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
+  end
+
+  @tag :embedded
+  test "embeds one" do
+    profile = %Profile{location: "City"}
+    user = TestRepo.insert!(%User{profile: profile})
+    assert TestRepo.get!(User, user.id).profile.location == profile.location
+
+    user = %User{}
+    user = put_in(user.profile, build_embedded(user, :profile, location: "New"))
+    user = TestRepo.insert!(user)
+    assert TestRepo.get!(User, user.id).profile.location == "New"
   end
 
   @tag :decimal_type

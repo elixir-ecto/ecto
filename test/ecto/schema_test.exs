@@ -26,6 +26,33 @@ defmodule Ecto.SchemaTest do
     assert %Ecto.Query{} = Model.model_from
   end
 
+  test "load from row" do
+    data = {123, "name", "name@test.com", Decimal.new(5), ["array"],
+            <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>, 1}
+    loaded = Model.__schema__(:load, "mymodel", 0, data, %{})
+
+    assert "name" == loaded.name
+    assert "name@test.com" == loaded.email
+    assert Decimal.new(5) == loaded.count
+    assert ["array"] == loaded.array
+    assert %Ecto.Association.NotLoaded{} = loaded.comment
+    assert "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7" == loaded.uuid
+  end
+
+  test "load from map" do
+    data = %{"id" => 123, "name" => "name", "email" => "name@test.com",
+             "count" => Decimal.new(5), "array" => ["array"], "comment_id" => 1,
+             "uuid" => <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>}
+    loaded = Model.__schema__(:load, "mymodel", data, %{})
+
+    assert "name" == loaded.name
+    assert "name@test.com" == loaded.email
+    assert Decimal.new(5) == loaded.count
+    assert ["array"] == loaded.array
+    assert %Ecto.Association.NotLoaded{} = loaded.comment
+    assert "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7" == loaded.uuid
+  end
+
   test "schema metadata" do
     assert Model.__schema__(:source)             == "mymodel"
     assert Model.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]

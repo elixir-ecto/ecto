@@ -291,6 +291,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
 
@@ -318,6 +319,7 @@ defmodule Ecto.Schema do
 
       fields = @ecto_fields |> Enum.reverse
       assocs = @ecto_assocs |> Enum.reverse
+      embeds = @ecto_embeds |> Enum.reverse
 
       Module.eval_quoted __ENV__, [
         Ecto.Schema.__struct__(@struct_fields),
@@ -325,6 +327,7 @@ defmodule Ecto.Schema do
         Ecto.Schema.__source__(source),
         Ecto.Schema.__fields__(fields),
         Ecto.Schema.__assocs__(assocs),
+        Ecto.Schema.__embeds__(embeds),
         Ecto.Schema.__primary_key__(primary_key_fields),
         Ecto.Schema.__load__(fields),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
@@ -711,6 +714,19 @@ defmodule Ecto.Schema do
     end
   end
 
+  ## Embeds
+
+  def embed(cardinality, name, model, opts) do
+    quote bind_quoted: binding() do
+      Ecto.Schema.__embed__(__MODULE__, cardinality, name, model, opts)
+    end
+  end
+
+  defmacro embeds_one(name, model, opts \\ []) do
+    embed(:one, name, model, opts)
+  end
+
+
   ## Callbacks
 
   @doc false
@@ -739,6 +755,16 @@ defmodule Ecto.Schema do
   end
 
   @doc false
+  def __embed__(mod, cardinality, name, model, opts) do
+    __field__(mod, name, {:map, model}, false, opts)
+
+    opts = [cardinality: cardinality, embedded: model] ++ opts
+    struct = Ecto.Embedded.struct(mod, name, opts)
+
+    Module.put_attribute(mod, :ecto_embeds, {name, struct})
+  end
+
+  @doc false
   def __association__(mod, cardinality, name, association, opts) do
     not_loaded  = %Ecto.Association.NotLoaded{__owner__: mod,
                     __field__: name, __cardinality__: cardinality}
@@ -754,6 +780,12 @@ defmodule Ecto.Schema do
     Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
   end
 
+  def __load__(struct, source, fields, map, id_types) do
+    loaded = do_load(struct, fields, map, id_types)
+    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
+    Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
+  end
+
   defp do_load(struct, fields, idx, values, id_types) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
@@ -761,6 +793,15 @@ defmodule Ecto.Schema do
         value = Ecto.Type.load!(type, elem(values, idx))
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
+  end
+
+  defp do_load(struct, fields, map, id_types) do
+    Enum.reduce(fields, struct, fn
+      {field, type}, acc ->
+        type  = Ecto.Type.normalize(type, id_types)
+        value = Ecto.Type.load!(type, Map.get(map, Atom.to_string(field)))
+        Map.put(acc, field, value)
+    end)
   end
 
   ## Quoted callbacks
@@ -824,6 +865,25 @@ defmodule Ecto.Schema do
   end
 
   @doc false
+  def __embeds__(embeds) do
+    quoted = Enum.map(embeds, fn {name, refl} ->
+      quote do
+        def __schema__(:embed, unquote(name)) do
+          unquote(Macro.escape(refl))
+        end
+      end
+    end)
+
+    embed_names = Enum.map(embeds, &elem(&1, 0))
+
+    quote do
+      def __schema__(:embeds), do: unquote(embed_names)
+      unquote(quoted)
+      def __schema__(:embed, _), do: nil
+    end
+  end
+
+  @doc false
   def __primary_key__(primary_key) do
     quote do
       def __schema__(:primary_key), do: unquote(primary_key)
@@ -836,6 +896,9 @@ defmodule Ecto.Schema do
     quote do
       def __schema__(:load, source, idx, values, id_types) do
         Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values, id_types)
+      end
+      def __schema__(:load, source, map, id_types) do
+        Ecto.Schema.__load__(__struct__(), source, unquote(fields), map, id_types)
       end
     end
   end

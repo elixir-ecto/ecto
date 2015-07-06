@@ -115,6 +115,7 @@ defmodule Ecto.Integration.User do
     * Timestamps
     * Relationships
     * Dependent callbacks
+    * Embedding
 
   """
   use Ecto.Integration.Model
@@ -124,6 +125,7 @@ defmodule Ecto.Integration.User do
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all
     has_many :posts, Ecto.Integration.Post, on_delete: :nothing, foreign_key: :author_id
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
+    embeds_one :profile, Ecto.Integration.Profile
     timestamps
   end
 end
@@ -171,5 +173,19 @@ defmodule Ecto.Integration.Tag do
   schema "tags" do
     field :ints, {:array, :integer}
     field :uuids, {:array, Ecto.UUID}
+  end
+end
+
+defmodule Ecto.Integration.Profile do
+  @moduledoc """
+  This module is used to array
+
+    * Embedding
+
+  """
+  use Ecto.Integration.Model
+
+  schema "" do
+    field :location
   end
 end

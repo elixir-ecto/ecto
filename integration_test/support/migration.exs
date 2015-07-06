@@ -5,6 +5,7 @@ defmodule Ecto.Integration.Migration do
     create table(:users) do
       add :name, :text
       add :custom_id, :uuid
+      add :profile, :map
       timestamps
     end
 

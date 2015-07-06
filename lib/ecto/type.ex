@@ -89,7 +89,7 @@ defmodule Ecto.Type do
   @typep composite :: {:array, base}
 
   @base      ~w(integer float boolean string binary decimal datetime time date id binary_id map any)a
-  @composite ~w(array)a
+  @composite ~w(array map)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -300,6 +300,10 @@ defmodule Ecto.Type do
     end
   end
 
+  def dump({:map, model}, %{__struct__: model} = struct) do
+    {:ok, struct |> Map.from_struct |> Map.delete(:__meta__)}
+  end
+
   def dump(type, value) do
     cond do
       not primitive?(type) ->
@@ -370,6 +374,14 @@ defmodule Ecto.Type do
 
   def load(:map, value) when is_binary(value) do
     {:ok, Application.get_env(:ecto, :json_library).decode!(value)}
+  end
+
+  def load({:map, model}, value) when is_binary(value) do
+    load({:map, model}, Application.get_env(:ecto, :json_library).decode!(value))
+  end
+
+  def load({:map, model}, map) when is_map(map) do
+    {:ok, model.__schema__(:load, "", map, %{})}
   end
 
   def load({:array, type}, value) do
