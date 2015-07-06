@@ -1,0 +1,65 @@
+defmodule Ecto.Integration.WorkerTest do
+  use ExUnit.Case, async: true
+
+  alias Ecto.Integration.TestPool
+  alias Ecto.Integration.Pool.Connection
+
+  @timeout :infinity
+
+  setup context do
+    case = context[:case]
+    test = context[:test]
+    {:ok, [pool: Module.concat(case, test)]}
+  end
+
+  test "worker starts without an active connection but connects on go", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([name: pool, lazy: true])
+    assert {:go, _, {worker, :lazy}, _, _} = :sbroker.ask(pool, {:run, self()})
+    assert Process.alive?(worker)
+    conn = :sys.get_state(worker).conn
+    assert Process.alive?(conn)
+  end
+
+  test "worker starts with an active connection", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([name: pool, lazy: false])
+    assert {:go, _, {worker, {Connection, conn}}, _, _} =
+      :sbroker.ask(pool, {:run, self()})
+    assert Process.alive?(worker)
+    assert :sys.get_state(worker).conn == conn
+    assert Process.alive?(conn)
+  end
+
+  test "worker restarts connection when waiting", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([name: pool])
+
+    conn1 = TestPool.transaction(pool, @timeout,
+      fn(:opened, _ref, {Connection, conn}, _) ->
+        conn
+      end)
+
+    await_len_r(pool, 1)
+
+    ref = Process.monitor(conn1)
+    Process.exit(conn1, :kill)
+    receive do: ({:DOWN, ^ref, _, _, _} -> :ok)
+
+    await_len_r(pool, 0)
+
+    conn2 = TestPool.transaction(pool, @timeout,
+      fn(:opened, _ref, {Connection, conn}, _) ->
+        conn
+      end)
+
+    assert conn1 != conn2
+  end
+
+  defp await_len_r(pool, len) do
+    case :sbroker.len_r(pool, @timeout) do
+      ^len -> :ok
+      _    -> await_len_r(pool, len)
+    end
+  end
+end

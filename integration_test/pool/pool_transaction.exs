@@ -6,8 +6,15 @@ defmodule Ecto.Integration.PoolTransactionTest do
 
   @timeout :infinity
 
-  test "worker cleans up the connection when it crashes" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  setup context do
+    case = context[:case]
+    test = context[:test]
+    {:ok, [pool: Module.concat(case, test)]}
+  end
+
+  test "worker cleans up the connection when it crashes", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     conn1 =
       TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, queue_time) ->
@@ -26,8 +33,9 @@ defmodule Ecto.Integration.PoolTransactionTest do
     end)
   end
 
-  test "transaction can disconnect connection" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "transaction can disconnect connection", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     TestPool.transaction(pool, @timeout,
       fn(:opened, ref, {_mod, conn1}, queue_time) ->
@@ -39,8 +47,9 @@ defmodule Ecto.Integration.PoolTransactionTest do
       end)
   end
 
-  test "disconnects if caller dies during transaction" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "disconnects if caller dies during transaction", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     _ = Process.flag(:trap_exit, true)
     parent = self()
@@ -62,8 +71,9 @@ defmodule Ecto.Integration.PoolTransactionTest do
     end)
   end
 
-  test "does not disconnect if caller dies after closing" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "does not disconnect if caller dies after closing", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     task = Task.async(fn ->
       TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, _) ->
@@ -79,8 +89,9 @@ defmodule Ecto.Integration.PoolTransactionTest do
     end)
   end
 
-  test "transactions can be nested" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "transactions can be nested", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, queue_time) ->
       assert is_integer(queue_time)

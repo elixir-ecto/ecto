@@ -16,9 +16,7 @@ defmodule Ecto.Integration.PoolTest do
 
   test "can start multiple repos" do
     # Can't start a second Repo with the default name
-    {_, pool_name, _} = TestRepo.__pool__
-    pool_pid = Process.whereis(pool_name)
-    assert {:error, {:already_started, ^pool_pid}} = TestRepo.start_link()
+    assert {:error, {:already_started, _}} = TestRepo.start_link()
 
     # Can start a second repo with a different name
     assert {:ok, _second_pool} = TestRepo.start_link(name: TestRepo.Named)

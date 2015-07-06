@@ -5,8 +5,15 @@ defmodule Ecto.Integration.PoolRunTest do
 
   @timeout :infinity
 
-  test "worker cleans up the connection when it crashes" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  setup context do
+    case = context[:case]
+    test = context[:test]
+    {:ok, [pool: Module.concat(case, test)]}
+  end
+
+  test "worker cleans up the connection when it crashes", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     assert {:ok, conn1} =
       TestPool.run(pool, @timeout, fn({_mod, conn1}, queue_time) ->
@@ -25,8 +32,9 @@ defmodule Ecto.Integration.PoolRunTest do
     end)
   end
 
-  test "nested run has no queue time" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "nested run has no queue time", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     TestPool.transaction(pool, @timeout, fn(_, _, _, _) ->
       TestPool.run(pool, @timeout, fn({_mod, _conn}, queue_time) ->
@@ -35,8 +43,9 @@ defmodule Ecto.Integration.PoolRunTest do
     end)
   end
 
-  test "does not disconnect if caller dies during run" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+  test "does not disconnect if caller dies during run", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     _ = Process.flag(:trap_exit, true)
     parent = self()
