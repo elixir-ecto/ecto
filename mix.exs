@@ -14,7 +14,9 @@ defmodule Ecto.Mixfile do
      test_paths: test_paths(Mix.env),
 
      # Custom testing
-     aliases: ["test.all": &test_all/1],
+     aliases: ["test.all": ["test", "test.pools", "test.adapters"],
+               "test.pools": &test_pools/1,
+               "test.adapters": &test_adapters/1],
      preferred_cli_env: ["test.all": :test],
 
      # Hex
@@ -46,8 +48,8 @@ defmodule Ecto.Mixfile do
   end
 
   defp test_paths(adapter) when adapter in @adapters, do: ["integration_test/#{adapter}"]
-  defp test_paths(pool) when pool in @pools, do: ["integration_test/#{pool}"]
-  defp test_paths(_), do: ["test"]
+  defp test_paths(pool) when pool in @pools, do: ["test/pool/#{pool}"]
+  defp test_paths(_), do: ["test/ecto", "test/mix"]
 
   defp description do
     """
@@ -63,20 +65,25 @@ defmodule Ecto.Mixfile do
             ~w(integration_test/cases integration_test/sql integration_test/support)]
   end
 
-  defp test_all(args) do
+  defp test_pools(args) do
+    for env <- @pools, do: env_run(env, args)
+  end
+
+  defp test_adapters(args) do
+    for env <- @adapters, do: env_run(env, args)
+  end
+
+  defp env_run(env, args) do
     args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
-    Mix.Task.run "test", args
 
-    for env <- @pools ++ @adapters do
-      IO.puts "==> Running integration tests for MIX_ENV=#{env} mix test"
+    IO.puts "==> Running tests for MIX_ENV=#{env} mix test"
 
-      {_, res} = System.cmd "mix", ["test"|args],
-                            into: IO.binstream(:stdio, :line),
-                            env: [{"MIX_ENV", to_string(env)}]
+    {_, res} = System.cmd "mix", ["test"|args],
+                          into: IO.binstream(:stdio, :line),
+                          env: [{"MIX_ENV", to_string(env)}]
 
-      if res > 0 do
-        System.at_exit(fn _ -> exit({:shutdown, 1}) end)
-      end
+    if res > 0 do
+      System.at_exit(fn _ -> exit({:shutdown, 1}) end)
     end
   end
 end

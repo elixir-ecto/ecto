@@ -1,4 +1,4 @@
-Code.require_file "../support/mock_repo.exs", __DIR__
+Code.require_file "../support/test_repo.exs", __DIR__
 
 defmodule Ecto.MigrationTest do
   # Although this test uses the Ecto.Migration.Runner which
@@ -8,14 +8,14 @@ defmodule Ecto.MigrationTest do
 
   use Ecto.Migration
 
-  alias Ecto.MockRepo
+  alias Ecto.TestRepo
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference
   alias Ecto.Migration.Runner
 
   setup meta do
-    {:ok, _} = Runner.start_link(MockRepo, meta[:direction] || :forward, :up, false)
+    {:ok, _} = Runner.start_link(TestRepo, meta[:direction] || :forward, :up, false)
 
     on_exit fn ->
       try do

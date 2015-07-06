@@ -12,8 +12,10 @@ env:
   - ELIXIR_ERL_OPTIONS=""
   - ELIXIR_ERL_OPTIONS="+T 9"
 script:
-  - ECTO_POOL=poolboy mix test.all
-  - ECTO_POOL=sojourn_broker mix test.all
+  - mix test
+  - mix test.pools
+  - ECTO_POOL=poolboy mix test.adapters
+  - ECTO_POOL=sojourn_broker mix test.adapters
 after_script:
   - mix deps.get --only docs
   - MIX_ENV=docs mix inch.report

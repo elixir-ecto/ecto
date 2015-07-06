@@ -1,8 +1,8 @@
 defmodule Ecto.Integration.WorkerTest do
   use ExUnit.Case, async: true
 
-  alias Ecto.Integration.TestPool
-  alias Ecto.Integration.Pool.Connection
+  alias Ecto.TestPool
+  alias Ecto.TestPool.Connection
 
   @timeout :infinity
 

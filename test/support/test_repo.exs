@@ -1,4 +1,4 @@
-defmodule Ecto.MockAdapter do
+defmodule Ecto.TestAdapter do
   @behaviour Ecto.Adapter
 
   alias Ecto.Migration.SchemaMigration
@@ -71,8 +71,8 @@ defmodule Ecto.MockAdapter do
   end
 end
 
-Application.put_env(:ecto, Ecto.MockRepo, [])
+Application.put_env(:ecto, Ecto.TestRepo, [])
 
-defmodule Ecto.MockRepo do
-  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.MockAdapter
+defmodule Ecto.TestRepo do
+  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
 end

@@ -1,4 +1,4 @@
-Code.require_file "../support/mock_repo.exs", __DIR__
+Code.require_file "../support/test_repo.exs", __DIR__
 
 defmodule Ecto.RepoTest.MyModel do
   use Ecto.Model
@@ -30,7 +30,7 @@ defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  require Ecto.MockRepo, as: MockRepo
+  require Ecto.TestRepo, as: TestRepo
 
   alias Ecto.RepoTest.MyModel
   alias Ecto.RepoTest.MyModelNoPK
@@ -39,44 +39,44 @@ defmodule Ecto.RepoTest do
     model = %MyModelNoPK{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKeyError, fn ->
-      MockRepo.update!(model)
+      TestRepo.update!(model)
     end
 
     assert_raise Ecto.NoPrimaryKeyError, fn ->
-      MockRepo.delete!(model)
+      TestRepo.delete!(model)
     end
 
     assert_raise Ecto.NoPrimaryKeyError, fn ->
-      MockRepo.get(MyModelNoPK, 123)
+      TestRepo.get(MyModelNoPK, 123)
     end
   end
 
   test "works with primary key value" do
     model = %MyModel{id: 1, x: "abc"}
-    MockRepo.update!(model)
-    MockRepo.delete!(model)
-    MockRepo.get(MyModel, 123)
-    MockRepo.get_by(MyModel, x: "abc")
+    TestRepo.update!(model)
+    TestRepo.delete!(model)
+    TestRepo.get(MyModel, 123)
+    TestRepo.get_by(MyModel, x: "abc")
   end
 
   test "works with custom source model" do
     model = %MyModel{id: 1, x: "abc", __meta__: %Ecto.Schema.Metadata{source: "custom_model"}}
-    MockRepo.update!(model)
-    MockRepo.delete!(model)
+    TestRepo.update!(model)
+    TestRepo.delete!(model)
 
     to_insert = %MyModel{x: "abc", __meta__: %Ecto.Schema.Metadata{source: "custom_model"}}
-    MockRepo.insert!(to_insert)
+    TestRepo.insert!(to_insert)
   end
 
   test "fails without primary key value" do
     model = %MyModel{x: "abc"}
 
     assert_raise Ecto.MissingPrimaryKeyError, fn ->
-      MockRepo.update!(model)
+      TestRepo.update!(model)
     end
 
     assert_raise Ecto.MissingPrimaryKeyError, fn ->
-      MockRepo.delete!(model)
+      TestRepo.delete!(model)
     end
   end
 
@@ -84,61 +84,61 @@ defmodule Ecto.RepoTest do
     model = %MyModel{x: 123}
 
     assert_raise Ecto.ChangeError, fn ->
-      MockRepo.insert!(model)
+      TestRepo.insert!(model)
     end
 
     model = %MyModel{id: 1, x: 123}
 
     assert_raise Ecto.ChangeError, fn ->
-      MockRepo.update!(model)
+      TestRepo.update!(model)
     end
   end
 
   test "repo validates get" do
-    MockRepo.get(MyModel, 123)
+    TestRepo.get(MyModel, 123)
 
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
     assert_raise Ecto.CastError, message, fn ->
-      MockRepo.get(MyModel, :atom)
+      TestRepo.get(MyModel, :atom)
     end
 
     message = ~r"expected a from expression with a model in query"
     assert_raise Ecto.QueryError, message, fn ->
-      MockRepo.get(%Ecto.Query{}, :atom)
+      TestRepo.get(%Ecto.Query{}, :atom)
     end
   end
 
   test "repo validates update_all" do
     # Success
-    MockRepo.update_all(MyModel, set: [x: "321"])
+    TestRepo.update_all(MyModel, set: [x: "321"])
 
     query = from(e in MyModel, where: e.x == "123", update: [set: [x: "321"]])
-    MockRepo.update_all(query, [])
+    TestRepo.update_all(query, [])
 
     # Failures
     assert_raise Ecto.QueryError, fn ->
-      MockRepo.update_all from(e in MyModel, select: e), set: [x: "321"]
+      TestRepo.update_all from(e in MyModel, select: e), set: [x: "321"]
     end
 
     assert_raise Ecto.QueryError, fn ->
-      MockRepo.update_all from(e in MyModel, order_by: e.x), set: [x: "321"]
+      TestRepo.update_all from(e in MyModel, order_by: e.x), set: [x: "321"]
     end
   end
 
   test "repo validates delete_all" do
     # Success
-    MockRepo.delete_all(MyModel)
+    TestRepo.delete_all(MyModel)
 
     query = from(e in MyModel, where: e.x == "123")
-    MockRepo.delete_all(query)
+    TestRepo.delete_all(query)
 
     # Failures
     assert_raise Ecto.QueryError, fn ->
-      MockRepo.delete_all from(e in MyModel, select: e)
+      TestRepo.delete_all from(e in MyModel, select: e)
     end
 
     assert_raise Ecto.QueryError, fn ->
-      MockRepo.delete_all from(e in MyModel, order_by: e.x)
+      TestRepo.delete_all from(e in MyModel, order_by: e.x)
     end
   end
 
@@ -146,19 +146,19 @@ defmodule Ecto.RepoTest do
 
   test "create and update accepts changesets" do
     valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
-    MockRepo.insert!(valid)
-    MockRepo.update!(valid)
+    TestRepo.insert!(valid)
+    TestRepo.update!(valid)
   end
 
   test "create and update fail on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
 
     assert_raise ArgumentError, "cannot insert/update an invalid changeset", fn ->
-      MockRepo.insert!(invalid)
+      TestRepo.insert!(invalid)
     end
 
     assert_raise ArgumentError, "cannot insert/update an invalid changeset", fn ->
-      MockRepo.update!(invalid)
+      TestRepo.update!(invalid)
     end
   end
 
@@ -166,33 +166,33 @@ defmodule Ecto.RepoTest do
     invalid = %Ecto.Changeset{valid?: true, model: nil}
 
     assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
-      MockRepo.insert!(invalid)
+      TestRepo.insert!(invalid)
     end
 
     assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
-      MockRepo.update!(invalid)
+      TestRepo.update!(invalid)
     end
   end
 
   ## Autogenerate
 
   test "autogenerates values" do
-    model = MockRepo.insert!(%MyModel{})
+    model = TestRepo.insert!(%MyModel{})
     assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
-    model = MockRepo.insert!(changeset)
+    model = TestRepo.insert!(changeset)
     assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{z: nil}, [], [])
-    model = MockRepo.insert!(changeset)
+    model = TestRepo.insert!(changeset)
     assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{z: "30313233-3435-3637-3839-616263646566"}, [:z], [])
-    model = MockRepo.insert!(changeset)
+    model = TestRepo.insert!(changeset)
     assert model.z == "30313233-3435-3637-3839-616263646566"
   end
 end

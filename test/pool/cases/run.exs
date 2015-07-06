@@ -1,7 +1,7 @@
-defmodule Ecto.Integration.PoolRunTest do
+defmodule Ecto.Pool.RunTest do
   use ExUnit.Case, async: true
 
-  alias Ecto.Integration.TestPool
+  alias Ecto.TestPool
 
   @timeout :infinity
 
