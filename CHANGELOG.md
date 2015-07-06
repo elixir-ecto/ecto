@@ -4,6 +4,14 @@
 
 * Enhancements
   * Store the connection PID in `Ecto.LogEntry`
+  * Add `Ecto.Pools.SojournBroker` as a more flexible and customizable alternative to `Ecto.Pools.Poolboy`
+
+* Bug fixes
+  * Ensure uniqueness validatior runs the proper check when a scope changed but the value is still the same
+
+* Backwards incompatible changes
+  * `Ecto.Repo.update!/2` no longer invokes callbacks if there were no changes, avoiding writing to the database at all (use `:force` to force callback execution)
+  * `Ecto.Repo.transaction/2` is now flattened. This means that multiple transaction calls will no longer use savepoins, instead if will be considered as a single transaction, where a failure in any transaction block will trigger the outmost transaction to rollback, even if failures are rescued. This should only affect users that were explicitly relying on the savepoints.
 
 ## v0.13.1
 

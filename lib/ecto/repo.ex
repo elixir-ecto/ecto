@@ -426,7 +426,7 @@ defmodule Ecto.Repo do
   ## Options
 
     * `:force` - By default, if there are no changes in the changeset,
-      `update!` is a no-op. By setting this option to true, update
+      `update!/2` is a no-op. By setting this option to true, update
       callbacks will always be executed, even if there are no changes
       (including timestamps).
     * `:timeout` - The time in milliseconds to wait for the call to finish,
