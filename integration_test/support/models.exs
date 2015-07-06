@@ -115,7 +115,6 @@ defmodule Ecto.Integration.User do
     * Timestamps
     * Relationships
     * Dependent callbacks
-    * Embedding
 
   """
   use Ecto.Integration.Model
@@ -125,7 +124,6 @@ defmodule Ecto.Integration.User do
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all
     has_many :posts, Ecto.Integration.Post, on_delete: :nothing, foreign_key: :author_id
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
-    embeds_one :profile, Ecto.Integration.Profile
     timestamps
   end
 end
@@ -151,6 +149,7 @@ defmodule Ecto.Integration.Barebone do
   This module is used to test:
 
     * A model wthout primary keys
+    * Embedding
 
   """
   use Ecto.Integration.Model
@@ -176,16 +175,32 @@ defmodule Ecto.Integration.Tag do
   end
 end
 
-defmodule Ecto.Integration.Profile do
+defmodule Ecto.Integration.Item do
   @moduledoc """
-  This module is used to array
+  This module is used to test:
 
     * Embedding
 
   """
   use Ecto.Integration.Model
 
-  schema "" do
-    field :location
+  # TODO decide what to do with source here
+  schema "whatever" do
+    field :price, :integer
+  end
+end
+
+defmodule Ecto.Integration.Order do
+  @moduledoc """
+  This module is used to test:
+
+    * Embedding
+
+  """
+  use Ecto.Integration.Model
+
+  schema "orders" do
+    embeds_one :item, Ecto.Integration.Item
+    embeds_many :items, Ecto.Integration.Item
   end
 end

@@ -195,6 +195,8 @@ defmodule Ecto.Type do
   @spec type(t) :: t
   def type(type)
 
+  def type({:array, {:map, _}}), do: :map
+  def type({:map, _}), do: :map
   def type({:array, type}), do: {:array, type(type)}
 
   def type(type) do
@@ -300,8 +302,13 @@ defmodule Ecto.Type do
     end
   end
 
+  def dump({:array, {:map, _}}, []) do
+    {:ok, %Ecto.Query.Tagged{value: [], type: :map}}
+  end
+
   def dump({:map, model}, %{__struct__: model} = struct) do
-    {:ok, struct |> Map.from_struct |> Map.delete(:__meta__)}
+    value = Map.take(struct, model.__schema__(:fields))
+    {:ok, %Ecto.Query.Tagged{value: value, type: :map}}
   end
 
   def dump(type, value) do
@@ -332,7 +339,7 @@ defmodule Ecto.Type do
   end
 
   defp dump_array(type, [], acc, true) do
-    {:ok, %Ecto.Query.Tagged{value: Enum.reverse(acc), type: {:array, type(type)}}}
+    {:ok, %Ecto.Query.Tagged{value: Enum.reverse(acc), type: type({:array, type})}}
   end
 
   defp dump_array(_type, [], acc, false) do
@@ -373,15 +380,19 @@ defmodule Ecto.Type do
   def load(:boolean, 1), do: {:ok, true}
 
   def load(:map, value) when is_binary(value) do
-    {:ok, Application.get_env(:ecto, :json_library).decode!(value)}
+    {:ok, json_library.decode!(value)}
   end
 
-  def load({:map, model}, value) when is_binary(value) do
-    load({:map, model}, Application.get_env(:ecto, :json_library).decode!(value))
+  def load({:map, _} = type, value) when is_binary(value) do
+    load(type, json_library.decode!(value))
   end
 
   def load({:map, model}, map) when is_map(map) do
-    {:ok, model.__schema__(:load, "", map, %{})}
+    {:ok, model.__schema__(:load, nil, map, %{})}
+  end
+
+  def load({:array, {:map, _}} = type, value) when is_binary(value) do
+    load(type, json_library.decode!(value))
   end
 
   def load({:array, type}, value) do
@@ -401,6 +412,10 @@ defmodule Ecto.Type do
       true ->
         :error
     end
+  end
+
+  defp json_library do
+    Application.get_env(:ecto, :json_library)
   end
 
   @doc """
@@ -558,6 +573,8 @@ defmodule Ecto.Type do
   defp of_base_type?(:binary, term), do: is_binary(term)
   defp of_base_type?(:string, term), do: is_binary(term)
   defp of_base_type?(:map, term),    do: is_map(term) and not Map.has_key?(term, :__struct__)
+
+  defp of_base_type?({:map, model}, %{__struct___: struct}), do: model == struct
 
   defp of_base_type?(:decimal, %Decimal{}), do: true
   defp of_base_type?(:date, {_, _, _}),  do: true

@@ -716,14 +716,19 @@ defmodule Ecto.Schema do
 
   ## Embeds
 
-  def embed(cardinality, name, model, opts) do
+  def embed(cardinality, name, model, type, opts) do
     quote bind_quoted: binding() do
-      Ecto.Schema.__embed__(__MODULE__, cardinality, name, model, opts)
+      Ecto.Schema.__embed__(__MODULE__, cardinality, name, model, type, opts)
     end
   end
 
   defmacro embeds_one(name, model, opts \\ []) do
-    embed(:one, name, model, opts)
+    embed(:one, name, model, {:map, model}, opts)
+  end
+
+  defmacro embeds_many(name, model, opts \\ []) do
+    opts = Keyword.put_new(opts, :default, [])
+    embed(:many, name, model, {:array, {:map, model}}, opts)
   end
 
 
@@ -755,8 +760,8 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __embed__(mod, cardinality, name, model, opts) do
-    __field__(mod, name, {:map, model}, false, opts)
+  def __embed__(mod, cardinality, name, model, type, opts) do
+    __field__(mod, name, type, false, opts)
 
     opts = [cardinality: cardinality, embedded: model] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
@@ -781,9 +786,12 @@ defmodule Ecto.Schema do
   end
 
   def __load__(struct, source, fields, map, id_types) do
+    model = struct.__struct__
+    source = source || model.__schema__(:source)
+
     loaded = do_load(struct, fields, map, id_types)
     loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
-    Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
+    Ecto.Model.Callbacks.__apply__(model, :after_load, loaded)
   end
 
   defp do_load(struct, fields, idx, values, id_types) when is_integer(idx) and is_tuple(values) do

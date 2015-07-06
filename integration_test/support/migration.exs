@@ -5,7 +5,6 @@ defmodule Ecto.Integration.Migration do
     create table(:users) do
       add :name, :text
       add :custom_id, :uuid
-      add :profile, :map
       timestamps
     end
 
@@ -56,6 +55,11 @@ defmodule Ecto.Integration.Migration do
 
     create table(:lock_counters) do
       add :count, :integer
+    end
+
+    create table(:orders) do
+      add :item, :map
+      add :items, :map
     end
 
     unless :array_type in ExUnit.configuration[:exclude] do

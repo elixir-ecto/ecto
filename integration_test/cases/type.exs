@@ -10,8 +10,8 @@ defmodule Ecto.Integration.TypeTest do
   alias Ecto.Integration.Post
   alias Ecto.Integration.Tag
   alias Ecto.Integration.Custom
-  alias Ecto.Integration.User
-  alias Ecto.Integration.Profile
+  alias Ecto.Integration.Order
+  alias Ecto.Integration.Item
 
   test "primitive types" do
     integer  = 1
@@ -152,14 +152,28 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :embedded
   test "embeds one" do
-    profile = %Profile{location: "City"}
-    user = TestRepo.insert!(%User{profile: profile})
-    assert TestRepo.get!(User, user.id).profile.location == profile.location
+    order = TestRepo.insert!(%Order{item: %Item{price: 123}})
+    assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
+    assert [%Item{price: 123}] =
+      TestRepo.all(from o in Order, select: o.item)
 
-    user = %User{}
-    user = put_in(user.profile, build_embedded(user, :profile, location: "New"))
-    user = TestRepo.insert!(user)
-    assert TestRepo.get!(User, user.id).profile.location == "New"
+    order = %Order{}
+    order = put_in(order.item, build_embedded(order, :item, price: 123))
+    order = TestRepo.insert!(order)
+    assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
+  end
+
+  @tag :embedded
+  test "embeds many" do
+    order = TestRepo.insert!(%Order{items: [%Item{price: 123}]})
+    assert [%Item{price: 123}] = TestRepo.get!(Order, order.id).items
+    assert [[%Item{price: 123}]] =
+      TestRepo.all(from a in Order, select: a.items)
+
+    order = %Order{}
+    order = put_in(order.items, [build_embedded(order, :items, price: 123)])
+    order = TestRepo.insert!(order)
+    assert [%Item{price: 123}] = TestRepo.get!(Order, order.id).items
   end
 
   @tag :decimal_type
