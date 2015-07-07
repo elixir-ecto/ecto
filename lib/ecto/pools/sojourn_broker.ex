@@ -10,7 +10,7 @@ defmodule Ecto.Pools.SojournBroker do
     * `:broker` - The `sbroker` module to use (default: `Ecto.Pools.SojournBroker.Broker`)
     * `:lazy` - When true, initial connections to the repo are lazily started (default: true)
 
-  ### Broker pptions
+  ### Broker options
 
     * `:queue_timeout` - The amount of time in milliseconds to wait in queue (default: 5000)
     * `:queue_out` - Either `:out` for a FIFO queue or `:out_r` for a LIFO queue (default: :out)
