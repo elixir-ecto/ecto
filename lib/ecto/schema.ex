@@ -803,8 +803,7 @@ defmodule Ecto.Schema do
   defp do_load(struct, fields, idx, values, id_types) when is_integer(idx) and is_tuple(values) do
     Enum.reduce(fields, {struct, idx}, fn
       {field, type}, {acc, idx} ->
-        type  = Ecto.Type.normalize(type, id_types)
-        value = Ecto.Type.load!(type, elem(values, idx))
+        value = Ecto.Type.load!(type, elem(values, idx), id_types)
         {Map.put(acc, field, value), idx + 1}
     end) |> elem(0)
   end
@@ -812,8 +811,7 @@ defmodule Ecto.Schema do
   defp do_load(struct, fields, map, id_types) do
     Enum.reduce(fields, struct, fn
       {field, type}, acc ->
-        type  = Ecto.Type.normalize(type, id_types)
-        value = Ecto.Type.load!(type, Map.get(map, Atom.to_string(field)))
+        value = Ecto.Type.load!(type, Map.get(map, Atom.to_string(field)), id_types)
         Map.put(acc, field, value)
     end)
   end
@@ -966,7 +964,7 @@ defmodule Ecto.Schema do
   end
 
   defp check_default!(name, type, default) do
-    case Ecto.Type.dump(type, default) do
+    case Ecto.Type.dump(type, default, %{}) do
       {:ok, _} ->
         :ok
       :error ->

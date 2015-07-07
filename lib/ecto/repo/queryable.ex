@@ -136,8 +136,7 @@ defmodule Ecto.Repo.Queryable do
 
   defp transform_row(%Ecto.Query.Tagged{tag: tag}, _from, values, id_types) when not is_nil(tag) do
     [value|values] = values
-    type = Ecto.Type.normalize(tag, id_types)
-    {Ecto.Type.load!(type, value), values}
+    {Ecto.Type.load!(tag, value, id_types), values}
   end
 
   defp transform_row({:&, _, [0]}, from, values, _id_types) do
@@ -148,8 +147,7 @@ defmodule Ecto.Repo.Queryable do
     [value|values] = values
 
     if type = Keyword.get(meta, :ecto_type) do
-      type = Ecto.Type.normalize(type, id_types)
-      {Ecto.Type.load!(type, value), values}
+      {Ecto.Type.load!(type, value, id_types), values}
     else
       {value, values}
     end

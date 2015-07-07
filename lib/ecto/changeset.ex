@@ -262,7 +262,7 @@ defmodule Ecto.Changeset do
   defp cast_field(param_key, type, params) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Ecto.Type.cast(type, value) do
+        case Ecto.Type.cast(type, value, %{}) do
           {:ok, value} -> {:ok, value}
           :error       -> :invalid
         end
