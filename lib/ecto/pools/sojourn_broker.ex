@@ -7,19 +7,12 @@ defmodule Ecto.Pools.SojournBroker do
     * `:size` - The number of connections to keep in the pool (default: 10)
     * `:min_backoff` - The minimum backoff on failed connect in milliseconds (default: 50)
     * `:max_backoff` - The maximum backoff on failed connect in milliseconds (default: 5000)
-    * `:broker` - The `sbroker` module to use (default: `Ecto.Pools.SojournBroker.Broker`)
+    * `:broker` - The `sbroker` module to use (default: `Ecto.Pools.SojournBroker.Timeout`)
     * `:lazy` - When true, initial connections to the repo are lazily started (default: true)
-
-  ### Broker options
-
-    * `:queue_timeout` - The amount of time in milliseconds to wait in queue (default: 5000)
-    * `:queue_out` - Either `:out` for a FIFO queue or `:out_r` for a LIFO queue (default: :out)
-    * `:queue_drop` - Either `:drop` for head drop on max size or `:drop_r` for tail drop (default: :drop)
-    * `:queue_size` - The maximum size of the queue (default: 64)
 
   """
 
-  alias Ecto.Pools.SojournBroker.Broker
+  alias Ecto.Pools.SojournBroker.Timeout, as: Broker
   alias Ecto.Pools.SojournBroker.Worker
   @behaviour Ecto.Pool
 
