@@ -172,6 +172,7 @@ defmodule Ecto.Repo do
       end
 
       defoverridable [log: 1, __pool__: 0]
+
     end
   end
 
