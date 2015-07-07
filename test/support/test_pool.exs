@@ -3,7 +3,7 @@ defmodule Ecto.TestPool do
   @pool Application.get_env(:ecto, :pool, Ecto.Pools.Poolboy)
 
   defmodule Connection do
-    @behaviour Ecto.Adapters.Connection
+    use Ecto.Adapters.Connection
 
     def connect(_opts) do
       Agent.start_link(fn -> [] end)
