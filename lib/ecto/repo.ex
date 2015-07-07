@@ -171,7 +171,11 @@ defmodule Ecto.Repo do
         end, ecto_conn_pid: entry.connection_pid)
       end
 
-      defoverridable [log: 1, __pool__: 0]
+      def after_connect(conn) do
+      end
+
+      defoverridable [log: 1, __pool__: 0, after_connect: 1]
+
     end
   end
 
@@ -542,4 +546,31 @@ defmodule Ecto.Repo do
 
   """
   defcallback log(Ecto.LogEntry.t) :: any
+
+  @doc ~S"""
+  Called right after a new connection is opened.
+
+  This function is called synchronously before the connection pid is returned
+  to the pool module, this means it should return faster than the pool timeout
+  for new connection.
+
+  Moreover you can't use `Ecto.Adapters.SQL` function to query the database,
+  you should use the driver functions directly.
+
+  By default it does nothing.
+
+  ## Examples
+
+  It could be used to set the search_path in Postgres like this:
+
+      def after_connect(conn) do
+        Ecto.Adapters.Postgres.Connection.query(
+          conn,
+          "SET search_path TO my_search_path",
+          [],
+          []
+        )
+      end
+  """
+  defcallback after_connect(pid) :: no_return
 end

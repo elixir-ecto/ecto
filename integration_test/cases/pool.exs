@@ -10,6 +10,7 @@ defmodule Ecto.Integration.PoolTest do
       # Custom options are passed through
       assert TestRepo.Alternative == opts[:name]
       assert :bar == opts[:foo]
+      assert TestRepo == opts[:repo]
       {:ok, MockPool}
     end
   end
