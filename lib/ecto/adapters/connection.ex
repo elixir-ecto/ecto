@@ -28,10 +28,8 @@ defmodule Ecto.Adapters.Connection do
               Process.exit(task_pid, :kill)
               {:error, :timeout}
             :exit, {reason, {Task, :await, _}} ->
-              {:error, reason}
-            class, reason ->
               disconnect(conn)
-              {class, reason, System.stacktrace()}
+              {:error, reason}
           else
             _ -> {:ok, conn}
           end
