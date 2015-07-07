@@ -14,7 +14,8 @@ defmodule Ecto.Adapters.PostgresTest do
     schema "model" do
       field :x, :integer
       field :y, :integer
-      field :z, {:array, :integer}
+      field :z, :integer
+      field :w, {:array, :integer}
 
       has_many :comments, Ecto.Adapters.PostgresTest.Model2,
         references: :x,
@@ -46,8 +47,8 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   defp normalize(query, operation \\ :all) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, operation, [], %{})
-    Ecto.Query.Planner.normalize(query, operation, [])
+    {query, _params} = Ecto.Query.Planner.prepare(query, operation, %{})
+    Ecto.Query.Planner.normalize(query, operation, %{})
   end
 
   test "from" do
@@ -247,8 +248,8 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Model |> select([e], 1 in [1, ^2, 3]) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 IN (1,$1,3) FROM "model" AS m0}
 
-    query = Model |> select([e], 1 in e.z) |> normalize
-    assert SQL.all(query) == ~s{SELECT 1 = ANY(m0."z") FROM "model" AS m0}
+    query = Model |> select([e], 1 in e.w) |> normalize
+    assert SQL.all(query) == ~s{SELECT 1 = ANY(m0."w") FROM "model" AS m0}
 
     query = Model |> select([e], 1 in fragment("foo")) |> normalize
     assert SQL.all(query) == ~s{SELECT 1 = ANY(foo) FROM "model" AS m0}
@@ -327,7 +328,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = from(m in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "model" AS m0 SET "x" = 0, "y" = '123'}
+           ~s{UPDATE "model" AS m0 SET "x" = 0, "y" = 123}
 
     query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==

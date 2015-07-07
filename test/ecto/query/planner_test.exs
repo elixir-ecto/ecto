@@ -31,22 +31,22 @@ defmodule Ecto.Query.PlannerTest do
       field :code, :binary
       field :posted, :datetime
       field :visits, :integer
+      field :links, {:array, Custom.Permalink}
       has_many :comments, Ecto.Query.PlannerTest.Comment
     end
   end
 
-  defp prepare(query, operation \\ :all, params \\ []) do
-    Planner.prepare(query, operation, params, %{binary_id: Ecto.UUID})
+  defp prepare(query, operation \\ :all) do
+    Planner.prepare(query, operation, %{binary_id: Ecto.UUID})
   end
 
-  defp normalize(query, operation \\ :all, params \\ []) do
-    {query, params} = prepare(query, operation, params)
-    Planner.normalize(query, operation, params)
+  defp normalize(query, operation \\ :all) do
+    normalize_with_params(query, operation) |> elem(0)
   end
 
-  defp normalize_with_params(query) do
-    {query, params} = prepare(query, :all, [])
-    {Planner.normalize(query, :all, []), params}
+  defp normalize_with_params(query, operation \\ :all) do
+    {query, params} = prepare(query, operation)
+    {Planner.normalize(query, operation, %{binary_id: Ecto.UUID}), params}
   end
 
   test "prepare: merges all parameters" do
@@ -118,7 +118,13 @@ defmodule Ecto.Query.PlannerTest do
                         value: <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>}]
   end
 
-  test "prepare: casts and dumps custom types in in-expressions" do
+  test "prepare: casts and dumps custom types in left side of in-expressions" do
+    permalink = "1-hello-world"
+    {_query, params} = prepare(Post |> where([p], ^permalink in p.links))
+    assert params == [1]
+  end
+
+  test "prepare: casts and dumps custom types in right side of in-expressions" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
     {_query, params} = prepare(Comment |> where([c], c.posted in ^[datetime]))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
@@ -244,16 +250,20 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: casts and dumps query expressions" do
+    query = normalize(from p in Post, where: p.id == "1-hello-world")
+    [where] = query.wheres
+    assert Macro.to_string(where.expr) == "&0.id() == 1"
+
+    query = normalize(from p in Post, where: "1-hello-world" in p.links)
+    [where] = query.wheres
+    assert Macro.to_string(where.expr) == "1 in &0.links()"
+  end
+
   test "normalize: validate fields" do
     message = ~r"field `Ecto.Query.PlannerTest.Comment.temp` in `select` does not exist in the model source"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(Comment, []) |> select([c], c.temp)
-      normalize(query)
-    end
-
-    message = ~r"field `Ecto.Query.PlannerTest.Comment.text` in `where` does not type check"
-    assert_raise Ecto.QueryError, message, fn ->
-      query = from(Comment, []) |> where([c], c.text)
       normalize(query)
     end
   end
@@ -262,8 +272,8 @@ defmodule Ecto.Query.PlannerTest do
     query = from(Post, []) |> where([p], p.id in [1, 2, 3])
     normalize(query)
 
-    message = ~r"field `Ecto.Query.PlannerTest.Comment.text` in `where` does not type check"
-    assert_raise Ecto.QueryError, message, fn ->
+    message = ~r"value `1` in `where` cannot be cast to type :string in query"
+    assert_raise Ecto.CastError, message, fn ->
       query = from(Comment, []) |> where([c], c.text in [1, 2, 3])
       normalize(query)
     end
@@ -344,37 +354,37 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: all does not allow updates" do
     message = ~r"`all` does not allow `update` expressions"
     assert_raise Ecto.QueryError, message, fn ->
-      from(p in Post, update: [set: [name: "foo"]]) |> normalize(:all, [])
+      from(p in Post, update: [set: [name: "foo"]]) |> normalize(:all)
     end
   end
 
   test "normalize: update all only allow filters and checks updates" do
     message = ~r"`update_all` requires at least one field to be updated"
     assert_raise Ecto.QueryError, message, fn ->
-      from(p in Post, select: p, update: []) |> normalize(:update_all, [])
+      from(p in Post, select: p, update: []) |> normalize(:update_all)
     end
 
     message = ~r"duplicate field `title` for `update_all`"
     assert_raise Ecto.QueryError, message, fn ->
       from(p in Post, select: p, update: [set: [title: "foo", title: "bar"]])
-      |> normalize(:update_all, [])
+      |> normalize(:update_all)
     end
 
     message = ~r"`update_all` allows only `where` and `join` expressions in query"
     assert_raise Ecto.QueryError, message, fn ->
-      from(p in Post, select: p, update: [set: [title: "foo"]]) |> normalize(:update_all, [])
+      from(p in Post, select: p, update: [set: [title: "foo"]]) |> normalize(:update_all)
     end
   end
 
   test "normalize: delete all only allow filters and forbids updates" do
     message = ~r"`delete_all` does not allow `update` expressions"
     assert_raise Ecto.QueryError, message, fn ->
-      from(p in Post, update: [set: [name: "foo"]]) |> normalize(:delete_all, [])
+      from(p in Post, update: [set: [name: "foo"]]) |> normalize(:delete_all)
     end
 
     message = ~r"`delete_all` allows only `where` and `join` expressions in query"
     assert_raise Ecto.QueryError, message, fn ->
-      from(p in Post, select: p) |> normalize(:delete_all, [])
+      from(p in Post, select: p) |> normalize(:delete_all)
     end
   end
 end

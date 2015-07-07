@@ -176,7 +176,7 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "params after planner" do
-    query = normalize from(x in Post, where: ^123 > ^(1 * 3) and x.id in ^[1, 2, 3])
+    query = plan from(x in Post, where: ^123 > ^(1 * 3) and x.id in ^[1, 2, 3])
     assert i(query) ==
            ~s{from p in Inspect.Post, where: ^... > ^... and p.id in ^..., select: p}
   end
@@ -189,17 +189,16 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "tagged types after planner" do
-    query = from(x in Post, select: type(^"1", :integer)) |> normalize
+    query = from(x in Post, select: type(^"1", :integer)) |> plan
     assert i(query) == ~s{from p in Inspect.Post, select: type(^..., :integer)}
-    query = from(x in Post, select: type(^"1", x.visits)) |> normalize
+    query = from(x in Post, select: type(^"1", x.visits)) |> plan
     assert i(query) == ~s{from p in Inspect.Post, select: type(^..., :integer)}
   end
 
-  def normalize(query) do
+  def plan(query) do
     query
-    |> Ecto.Query.Planner.prepare(:all, [], %{})
+    |> Ecto.Query.Planner.query(:all, %{})
     |> elem(0)
-    |> Ecto.Query.Planner.normalize(:all, [])
   end
 
   def i(query) do

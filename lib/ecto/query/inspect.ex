@@ -146,8 +146,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Tagged values
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, type: :binary}, _, _names, _params)
-      when is_binary(value) do
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: nil}, _, _names, _params) do
     inspect value
   end
 

@@ -12,9 +12,6 @@ defmodule Ecto.Query.Builder.Update do
       iex> escape([set: []], [], __ENV__)
       {[set: []], [], %{}}
 
-      iex> escape([set: [foo: 1]], [], __ENV__)
-      {[set: [foo: 1]], [], %{}}
-
       iex> escape(quote(do: ^[set: []]), [], __ENV__)
       {[], [set: []], %{}}
 
