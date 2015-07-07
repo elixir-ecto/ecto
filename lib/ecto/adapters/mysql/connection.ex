@@ -4,7 +4,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     @moduledoc false
 
     @default_port 3306
-    use Ecto.Adapters.Connection
+    @behaviour Ecto.Adapters.Connection
     @behaviour Ecto.Adapters.SQL.Query
 
     ## Connection
@@ -12,7 +12,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def connect(opts) do
       opts = Keyword.update(opts, :port, @default_port, &normalize_port/1)
       case Mariaex.Connection.start_link(opts) do
-        {:ok, pid} -> after_connect(pid, opts)
+        {:ok, pid} -> Ecto.Adapters.Connection.after_connect(__MODULE__, pid, opts)
         {:error, _} = err -> err
       end
     end
