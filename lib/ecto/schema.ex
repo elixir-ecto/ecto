@@ -716,19 +716,25 @@ defmodule Ecto.Schema do
 
   ## Embeds
 
-  def embed(cardinality, name, model, type, opts) do
+  def embed(cardinality, name, model, opts) do
     quote bind_quoted: binding() do
-      Ecto.Schema.__embed__(__MODULE__, cardinality, name, model, type, opts)
+      Ecto.Schema.__embed__(__MODULE__, cardinality, name, model, opts)
     end
   end
 
   defmacro embeds_one(name, model, opts \\ []) do
-    embed(:one, name, model, {:map, model}, opts)
+    opts = Keyword.put_new(opts, :container, nil)
+
+    embed(:one, name, model, opts)
   end
 
   defmacro embeds_many(name, model, opts \\ []) do
-    opts = Keyword.put_new(opts, :default, [])
-    embed(:many, name, model, {:array, {:map, model}}, opts)
+    opts =
+      opts
+      |> Keyword.put_new(:default, [])
+      |> Keyword.put_new(:container, :array)
+
+    embed(:many, name, model, opts)
   end
 
 
@@ -760,11 +766,11 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __embed__(mod, cardinality, name, model, type, opts) do
-    __field__(mod, name, type, false, opts)
-
-    opts = [cardinality: cardinality, embedded: model] ++ opts
+  def __embed__(mod, cardinality, name, model, opts) do
+    opts   = [cardinality: cardinality, embed: model] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
+
+    __field__(mod, name, {:embed, struct}, false, opts)
 
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
   end
@@ -840,7 +846,8 @@ defmodule Ecto.Schema do
   def __fields__(fields) do
     quoted = Enum.map(fields, fn {name, type} ->
       quote do
-        def __schema__(:field, unquote(name)), do: unquote(type)
+        def __schema__(:field, unquote(name)),
+          do: unquote(Macro.escape(type))
       end
     end)
 
@@ -901,6 +908,7 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(fields) do
     # TODO: Move this to SQL adapter itself.
+    fields = Macro.escape(fields)
     quote do
       def __schema__(:load, source, idx, values, id_types) do
         Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values, id_types)

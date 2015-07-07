@@ -9,6 +9,15 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
   end
 
+  defmodule Model do
+    use Ecto.Model
+
+    @primary_key false
+    schema "" do
+      field :a, :integer
+    end
+  end
+
   import Kernel, except: [match?: 2], warn: false
   import Ecto.Type
   doctest Ecto.Type
@@ -35,6 +44,26 @@ defmodule Ecto.TypeTest do
 
     assert dump(:map, %{a: 1}) == {:ok, %{a: 1}}
     assert dump(:map, 1) == :error
+  end
+
+  test "embeds_one" do
+    type = {:embed, %{cardinality: :one, embed: Model}}
+    assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1})
+    assert {:ok, %Model{a: 1}} = load(type, "{\"a\": 1}")
+    assert :error = load(type, 1)
+
+    assert dump(type, %Model{a: 1}) == {:ok, %{a: 1}}
+    assert dump(type, 1) == :error
+  end
+
+  test "embeds_many with array" do
+    type = {:embed, %{cardinality: :many, container: :array, embed: Model}}
+    assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}])
+    assert {:ok, [%Model{a: 1}]} = load(type, ["{\"a\": 1}"])
+    assert :error = load(type, 1)
+
+    assert dump(type, [%Model{a: 1}]) == {:ok, [%{a: 1}]}
+    assert dump(type, 1) == :error
   end
 
   test "custom types with array" do

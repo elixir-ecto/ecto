@@ -10,7 +10,7 @@ defmodule Ecto.Embedded do
   * `embedded` - The model that is embedded
   """
 
-  defstruct [:cardinality, :field, :owner, :embedded]
+  defstruct [:cardinality, :field, :owner, :embed, :container]
 
   @doc """
   Builds the embedded struct.
@@ -29,7 +29,8 @@ defmodule Ecto.Embedded do
       field: name,
       cardinality: Keyword.fetch!(opts, :cardinality),
       owner: module,
-      embedded: Keyword.fetch!(opts, :embedded),
+      embed: Keyword.fetch!(opts, :embed),
+      container: Keyword.get(opts, :container)
     }
   end
 
@@ -42,9 +43,8 @@ defmodule Ecto.Embedded do
 
   Invoked by `Ecto.Model.build_embedded/3`.
   """
-  def build(%{embedded: embedded}, _struct, attributes) do
-    embedded
-    |> struct(attributes)
+  def build(%{embed: embed}, _struct, attributes) do
+    struct(embed, attributes)
   end
 
   @doc """

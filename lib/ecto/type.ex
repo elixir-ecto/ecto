@@ -89,7 +89,7 @@ defmodule Ecto.Type do
   @typep composite :: {:array, base}
 
   @base      ~w(integer float boolean string binary decimal datetime time date id binary_id map any)a
-  @composite ~w(array map)a
+  @composite ~w(array embed)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -302,13 +302,17 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump({:array, {:map, _}}, []) do
-    {:ok, %Ecto.Query.Tagged{value: [], type: :map}}
+  def dump({:embed, %{embed: model}}, %{__struct__: model} = struct) do
+    {:ok, Map.take(struct, model.__schema__(:fields))}
   end
 
-  def dump({:map, model}, %{__struct__: model} = struct) do
-    value = Map.take(struct, model.__schema__(:fields))
-    {:ok, %Ecto.Query.Tagged{value: value, type: :map}}
+  def dump({:embed, %{cardinality: :many, container: :array}} = type, value)
+      when is_list(value) do
+    dump_array(type, value, [], false)
+  end
+
+  def dump({:embed, _}, _value) do
+    :error
   end
 
   def dump(type, value) do
@@ -383,24 +387,34 @@ defmodule Ecto.Type do
     {:ok, json_library.decode!(value)}
   end
 
-  def load({:map, _} = type, value) when is_binary(value) do
+  def load({:embed, _} = type, value) when is_binary(value) do
     load(type, json_library.decode!(value))
   end
 
-  def load({:map, model}, map) when is_map(map) do
-    {:ok, model.__schema__(:load, nil, map, %{})}
+  def load({:embed, %{embed: model}}, value) when is_map(value) do
+    {:ok, model.__schema__(:load, nil, value, %{})}
   end
 
-  def load({:array, {:map, _}} = type, value) when is_binary(value) do
-    load(type, json_library.decode!(value))
+  def load({:embed, %{cardinality: :many, container: :array}} = type, value)
+      when is_list(value) do
+    array(type, value, &load/2, [])
   end
 
+<<<<<<< HEAD
   def load({:array, type}, value) do
     if is_list(value) do
       array(type, value, &load/2, [])
     else
       :error
     end
+=======
+  def load({:embed, _}, _value) do
+    :error
+  end
+
+  def load({:array, type}, value) when is_list(value) do
+    array(type, value, &load/2, [])
+>>>>>>> Change embeds to use new structure, add type tests
   end
 
   def load(type, value) do
@@ -573,8 +587,6 @@ defmodule Ecto.Type do
   defp of_base_type?(:binary, term), do: is_binary(term)
   defp of_base_type?(:string, term), do: is_binary(term)
   defp of_base_type?(:map, term),    do: is_map(term) and not Map.has_key?(term, :__struct__)
-
-  defp of_base_type?({:map, model}, %{__struct___: struct}), do: model == struct
 
   defp of_base_type?(:decimal, %Decimal{}), do: true
   defp of_base_type?(:date, {_, _, _}),  do: true

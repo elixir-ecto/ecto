@@ -28,8 +28,8 @@ defmodule Ecto.EmbeddedTest do
 
   test "__schema__" do
     assert Author.__schema__(:embeds) == [:profile, :profiles]
-    assert Author.__schema__(:embed, :profile).embedded == Profile
-    assert Author.__schema__(:embed, :profile).embedded == Profile
+    assert Author.__schema__(:embed, :profile).embed == Profile
+    assert Author.__schema__(:embed, :profile).embed == Profile
   end
 
   ## Integration tests through Ecto.Model

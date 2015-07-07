@@ -16,8 +16,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def query(conn, sql, params, opts \\ []) do
       params = Enum.map params, fn
-        %Ecto.Query.Tagged{type: :map, value: value} ->
-          json_library.encode!(value)
         %Ecto.Query.Tagged{value: value} -> value
         %{__struct__: _} = value -> value
         %{} = value -> json_library.encode!(value)

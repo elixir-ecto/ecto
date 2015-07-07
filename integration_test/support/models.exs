@@ -149,7 +149,6 @@ defmodule Ecto.Integration.Barebone do
   This module is used to test:
 
     * A model wthout primary keys
-    * Embedding
 
   """
   use Ecto.Integration.Model
@@ -165,6 +164,7 @@ defmodule Ecto.Integration.Tag do
   This module is used to test:
 
     * The array type
+    * Embedding many models with array type
 
   """
   use Ecto.Integration.Model
@@ -172,6 +172,7 @@ defmodule Ecto.Integration.Tag do
   schema "tags" do
     field :ints, {:array, :integer}
     field :uuids, {:array, Ecto.UUID}
+    embeds_many :items, Ecto.Integration.Item
   end
 end
 
@@ -194,13 +195,15 @@ defmodule Ecto.Integration.Order do
   @moduledoc """
   This module is used to test:
 
-    * Embedding
+    * Embedding one model
+    * Embedding many models with map type
 
   """
   use Ecto.Integration.Model
 
   schema "orders" do
     embeds_one :item, Ecto.Integration.Item
-    embeds_many :items, Ecto.Integration.Item
+    # TODO
+    # embeds_many :items, Ecto.Integration.Item, container: :map
   end
 end

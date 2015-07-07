@@ -66,6 +66,7 @@ defmodule Ecto.Integration.Migration do
       create table(:tags) do
         add :ints, {:array, :integer}
         add :uuids, {:array, :uuid}
+        add :items, {:array, :map}
       end
     end
   end

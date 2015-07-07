@@ -150,7 +150,7 @@ defmodule Ecto.Integration.TypeTest do
     assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
   end
 
-  @tag :embedded
+  @tag :map_type
   test "embeds one" do
     order = TestRepo.insert!(%Order{item: %Item{price: 123}})
     assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
@@ -163,17 +163,18 @@ defmodule Ecto.Integration.TypeTest do
     assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
   end
 
-  @tag :embedded
-  test "embeds many" do
-    order = TestRepo.insert!(%Order{items: [%Item{price: 123}]})
-    assert [%Item{price: 123}] = TestRepo.get!(Order, order.id).items
+  @tag :map_type
+  @tag :array_type
+  test "embeds many with array" do
+    tag = TestRepo.insert!(%Tag{items: [%Item{price: 123}]})
+    assert [%Item{price: 123}] = TestRepo.get!(Tag, tag.id).items
     assert [[%Item{price: 123}]] =
-      TestRepo.all(from a in Order, select: a.items)
+      TestRepo.all(from t in Tag, select: t.items)
 
-    order = %Order{}
-    order = put_in(order.items, [build_embedded(order, :items, price: 123)])
-    order = TestRepo.insert!(order)
-    assert [%Item{price: 123}] = TestRepo.get!(Order, order.id).items
+    tag = %Tag{}
+    tag = put_in(tag.items, [build_embedded(tag, :items, price: 123)])
+    tag = TestRepo.insert!(tag)
+    assert [%Item{price: 123}] = TestRepo.get!(Tag, tag.id).items
   end
 
   @tag :decimal_type
