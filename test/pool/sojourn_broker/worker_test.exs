@@ -1,4 +1,4 @@
-defmodule Ecto.Integration.WorkerTest do
+defmodule Ecto.Pools.SojournBroker.WorkerTest do
   use ExUnit.Case, async: true
 
   alias Ecto.TestPool
