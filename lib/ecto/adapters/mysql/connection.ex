@@ -11,7 +11,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def connect(opts) do
       opts = Keyword.update(opts, :port, @default_port, &normalize_port/1)
-      Mariaex.Connection.start_link(opts)
+      case Mariaex.Connection.start_link(opts) do
+        {:ok, pid} -> Ecto.Adapters.Connection.after_connect(__MODULE__, pid, opts)
+        {:error, _} = err -> err
+      end
     end
 
     def disconnect(conn) do

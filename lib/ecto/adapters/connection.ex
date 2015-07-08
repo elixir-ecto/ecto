@@ -12,6 +12,27 @@ defmodule Ecto.Adapters.Connection do
 
   use Behaviour
 
+  def after_connect(mod, conn, opts) do
+    repo = opts[:repo]
+    if function_exported?(repo, :after_connect, 1) do
+      try do
+        Task.async(fn -> repo.after_connect(conn) end)
+        |> Task.await(opts[:timeout])
+      catch
+        :exit, {:timeout, [Task, :await, [%Task{pid: task_pid}, _]]} ->
+          Process.exit(task_pid, :kill)
+          {:error, :timeout}
+        :exit, {reason, {Task, :await, _}} ->
+          mod.disconnect(conn)
+          {:error, reason}
+      else
+        _ -> {:ok, conn}
+      end
+    else
+      {:ok, conn}
+    end
+  end
+
   @doc """
   Connects to the underlying database.
 
