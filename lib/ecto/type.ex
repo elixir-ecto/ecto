@@ -557,19 +557,19 @@ defmodule Ecto.Type do
     raise "cannot dump/cast/load :binary_id type, attempted value: #{inspect value}"
   end
 
-  defp of_base_type?(:date, %{__struct__: Ecto.Date} = d) do
-    raise "trying to dump/cast Ecto.Date as a :date type: #{inspect d}. " <>
-          "Maybe you wanted to declare Ecto.Date in your schema?"
+  defp of_base_type?(:date, %{} = d) do
+    raise "trying to dump/cast a map as a :date type: #{inspect d}. " <>
+          "Maybe you wanted to declare Ecto.Date instead of :date in your schema?"
   end
 
-  defp of_base_type?(:time, %{__struct__: Ecto.Time} = t) do
-    raise "trying to dump/cast Ecto.Time as a :time type: #{inspect t}. " <>
-          "Maybe you wanted to declare Ecto.Time in your schema?"
+  defp of_base_type?(:time, %{} = t) do
+    raise "trying to dump/cast a map as a :time type: #{inspect t}. " <>
+          "Maybe you wanted to declare Ecto.Time instead of :time in your schema?"
   end
 
-  defp of_base_type?(:datetime, %{__struct__: Ecto.DateTime} = dt) do
-    raise "trying to dump/cast Ecto.DateTime as a :datetime type: #{inspect dt}. " <>
-          "Maybe you wanted to declare Ecto.DateTime in your schema?"
+  defp of_base_type?(:datetime, %{} = dt) do
+    raise "trying to dump/cast a map as a :datetime type: #{inspect dt}. " <>
+          "Maybe you wanted to declare Ecto.DateTime instead of :datetime in your schema?"
   end
 
   defp of_base_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
