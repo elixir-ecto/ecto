@@ -19,10 +19,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
         |> Keyword.update(:port, @default_port, &normalize_port/1)
 
-      case Postgrex.Connection.start_link(opts) do
-        {:ok, pid} -> Ecto.Adapters.Connection.after_connect(__MODULE__, pid, opts)
-        {:error, _} = err -> err
-      end
+      Postgrex.Connection.start_link(opts)
     end
 
     def disconnect(conn) do

@@ -3,6 +3,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   Start a pool with a single sandboxed SQL connection.
   """
 
+  alias Ecto.Adapters.Connection
   @behaviour Ecto.Pool
 
   @typep log :: (%Ecto.LogEntry{} -> any())
@@ -84,7 +85,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   def handle_call(req, from, %{conn: nil} = s) do
     %{module: module, params: params} = s
-    case module.connect(params) do
+    case Connection.connect(module, params) do
       {:ok, conn} ->
         handle_call(req, from, %{s | conn: conn})
       {:error, reason} ->
@@ -312,7 +313,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   defp reset(%{module: module, conn: conn, params: params} = s) do
     module.disconnect(conn)
-    case module.connect(params) do
+    case Connection.connect(module, params) do
       {:ok, conn}     -> %{s | conn: conn}
       {:error, error} -> raise error
     end

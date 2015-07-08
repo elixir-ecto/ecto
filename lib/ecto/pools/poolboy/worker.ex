@@ -3,6 +3,8 @@ defmodule Ecto.Pools.Poolboy.Worker do
 
   use GenServer
   use Behaviour
+  alias Ecto.Adapters.Connection
+
   @type modconn :: {module :: atom, conn :: pid}
 
   @spec start_link({module, Keyword.t}) :: {:ok, pid}
@@ -33,7 +35,7 @@ defmodule Ecto.Pools.Poolboy.Worker do
     lazy? = Keyword.get(params, :lazy, true)
 
     unless lazy? do
-      case module.connect(params) do
+      case Connection.connect(module, params) do
         {:ok, conn} ->
           conn = conn
         _ ->
@@ -56,7 +58,7 @@ defmodule Ecto.Pools.Poolboy.Worker do
   ## Lazy connection handling
 
   def handle_call(request, from, %{conn: nil, params: params, module: module} = s) do
-    case module.connect(params) do
+    case Connection.connect(module, params) do
       {:ok, conn}   -> handle_call(request, from, %{s | conn: conn})
       {:error, err} -> {:reply, {:error, err}, s}
     end

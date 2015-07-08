@@ -12,7 +12,6 @@ defmodule Ecto.Pools.SojournBroker do
 
   """
 
-  alias Ecto.Pools.SojournBroker.Timeout, as: Broker
   alias Ecto.Pools.SojournBroker.Worker
   @behaviour Ecto.Pool
 
@@ -29,7 +28,7 @@ defmodule Ecto.Pools.SojournBroker do
 
     import Supervisor.Spec
     name = Keyword.fetch!(pool_opts, :name)
-    mod = Keyword.get(pool_opts, :broker, Broker)
+    mod  = Keyword.fetch!(pool_opts, :broker)
     args = [{:local, name}, mod, opts, [time_unit: :micro_seconds]]
     broker = worker(:sbroker, args)
 
@@ -39,7 +38,6 @@ defmodule Ecto.Pools.SojournBroker do
     end
     worker_sup_opts = [strategy: :one_for_one, max_restarts: size]
     worker_sup = supervisor(Supervisor, [workers, worker_sup_opts])
-
 
     children = [broker, worker_sup]
     sup_opts = [strategy: :rest_for_one, name: Module.concat(name, Supervisor)]
@@ -95,7 +93,7 @@ defmodule Ecto.Pools.SojournBroker do
 
     pool_opts = pool_opts
       |> Keyword.put_new(:size, 10)
-      |> Keyword.put_new(:broker, Broker)
+      |> Keyword.put_new(:broker, Ecto.Pools.SojournBroker.Timeout)
       |> Keyword.put(:name, Keyword.fetch!(opts, :name))
 
     {pool_opts, opts}

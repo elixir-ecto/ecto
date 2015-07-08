@@ -35,7 +35,7 @@ defmodule Ecto.Repo.Config do
   def config(otp_app, module) do
     if config = Application.get_env(otp_app, module) do
       {url, config} = Keyword.pop(config, :url)
-      [otp_app: otp_app] ++ Keyword.merge(config, parse_url(url || ""))
+      [otp_app: otp_app, repo: module] ++ Keyword.merge(config, parse_url(url || ""))
     else
       raise ArgumentError,
         "configuration for #{inspect module} not specified in #{inspect otp_app} environment"

@@ -6,13 +6,41 @@ defmodule Ecto.Adapters.Connection do
   two callbacks in a module, `connect/1` and `disconnect/1` defined
   in this module.
 
-  For example, Ecto pools rely on the functions defined in the module
-  in order to provide pooling.
+  The benefits of implementing this module is that the adapter can
+  then be used with all the different pools provided by Ecto.
   """
 
   use Behaviour
 
-  def after_connect(mod, conn, opts) do
+  @doc """
+  Connects to the underlying database.
+
+  Should return a process which is linked to
+  the caller process or an error.
+  """
+  defcallback connect(Keyword.t) :: {:ok, pid} | {:error, term}
+
+  @doc """
+  Disconnects the given `pid`.
+
+  If the given `pid` no longer exists, it should not raise.
+  """
+  defcallback disconnect(pid) :: :ok
+
+  @doc """
+  Executes the connect in the given module, ensuring the repository's
+  `after_connect/1` is invoked in the process.
+  """
+  def connect(module, opts) do
+    case module.connect(opts) do
+      {:ok, conn} ->
+        after_connect(module, conn, opts)
+      {:error, _} = error ->
+        error
+    end
+  end
+
+  defp after_connect(mod, conn, opts) do
     repo = opts[:repo]
     if function_exported?(repo, :after_connect, 1) do
       try do
@@ -32,19 +60,4 @@ defmodule Ecto.Adapters.Connection do
       {:ok, conn}
     end
   end
-
-  @doc """
-  Connects to the underlying database.
-
-  Should return a process which is linked to
-  the caller process or an error.
-  """
-  defcallback connect(Keyword.t) :: {:ok, pid} | {:error, term}
-
-  @doc """
-  Disconnects the given `pid`.
-
-  If the given `pid` no longer exists, it should not raise.
-  """
-  defcallback disconnect(pid) :: :ok
 end
