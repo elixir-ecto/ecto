@@ -5,12 +5,12 @@ defmodule Ecto.TestPool do
   defmodule Connection do
     @behaviour Ecto.Adapters.Connection
 
-    def connect(_opts) do
-      Agent.start_link(fn -> [] end)
-    end
-
-    def disconnect(conn) do
-      Agent.stop(conn)
+    def connect(opts) do
+      trap = Keyword.get(opts, :trap_exit, false)
+      Agent.start_link(fn ->
+        Process.flag(:trap_exit, trap)
+        []
+      end)
     end
   end
 
@@ -22,9 +22,9 @@ defmodule Ecto.TestPool do
     Pool.transaction(@pool, pool, timeout, fun)
   end
 
+  defdelegate break(ref, timeout), to: Pool
+
   def run(pool, timeout, fun) do
     Pool.run(@pool, pool, timeout, fun)
   end
-
-  defdelegate stop(pool), to: @pool
 end

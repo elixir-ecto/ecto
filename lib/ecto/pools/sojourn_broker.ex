@@ -9,6 +9,7 @@ defmodule Ecto.Pools.SojournBroker do
     * `:max_backoff` - The maximum backoff on failed connect in milliseconds (default: 5000)
     * `:broker` - The `sbroker` module to use (default: `Ecto.Pools.SojournBroker.Timeout`)
     * `:lazy` - When true, initial connections to the repo are lazily started (default: true)
+    * `:shutdown` - The shutdown method for the connections (default: 5000) (see Supervisor.Spec)
 
   """
 

@@ -100,4 +100,38 @@ defmodule Ecto.Pool.TransactionTest do
       end)
     end)
   end
+
+  test "shutdowns connection on break", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([name: pool])
+
+    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
+      mon = Process.monitor(conn)
+      TestPool.break(ref, @timeout)
+      assert_receive {:DOWN, ^mon, _, _, :shutdown}
+    end)
+  end
+
+  test "kill connection on break", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([name: pool, shutdown: :brutal_kill])
+
+    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
+      mon = Process.monitor(conn)
+      TestPool.break(ref, @timeout)
+      assert_receive {:DOWN, ^mon, _, _, :killed}
+    end)
+  end
+
+  test "shutdown timeout and kill connection on break", context do
+    pool = context[:pool]
+    {:ok, _} = TestPool.start_link([name: pool, shutdown: 1, trap_exit: true])
+
+    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
+      mon = Process.monitor(conn)
+      :erlang.suspend_process(conn)
+      TestPool.break(ref, @timeout)
+      assert_receive {:DOWN, ^mon, _, _, :killed}
+    end)
+  end
 end

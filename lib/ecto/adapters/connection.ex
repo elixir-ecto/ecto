@@ -3,8 +3,7 @@ defmodule Ecto.Adapters.Connection do
   Behaviour for adapters that rely on connections.
 
   In order to use a connection, adapter developers need to implement
-  two callbacks in a module, `connect/1` and `disconnect/1` defined
-  in this module.
+  a single callback in a module: `connect/1` defined in this module.
 
   The benefits of implementing this module is that the adapter can
   then be used with all the different pools provided by Ecto.
@@ -21,26 +20,19 @@ defmodule Ecto.Adapters.Connection do
   defcallback connect(Keyword.t) :: {:ok, pid} | {:error, term}
 
   @doc """
-  Disconnects the given `pid`.
-
-  If the given `pid` no longer exists, it should not raise.
-  """
-  defcallback disconnect(pid) :: :ok
-
-  @doc """
   Executes the connect in the given module, ensuring the repository's
   `after_connect/1` is invoked in the process.
   """
   def connect(module, opts) do
     case module.connect(opts) do
       {:ok, conn} ->
-        after_connect(module, conn, opts)
+        after_connect(conn, opts)
       {:error, _} = error ->
         error
     end
   end
 
-  defp after_connect(mod, conn, opts) do
+  defp after_connect(conn, opts) do
     repo = opts[:repo]
     if function_exported?(repo, :after_connect, 1) do
       try do
@@ -48,16 +40,48 @@ defmodule Ecto.Adapters.Connection do
         |> Task.await(opts[:timeout])
       catch
         :exit, {:timeout, [Task, :await, [%Task{pid: task_pid}, _]]} ->
-          Process.exit(task_pid, :kill)
+          shutdown(task_pid, :brutal_kill)
+          shutdown(conn, :brutal_kill)
           {:error, :timeout}
         :exit, {reason, {Task, :await, _}} ->
-          mod.disconnect(conn)
+          shutdown(conn, :brutal_kill)
           {:error, reason}
       else
         _ -> {:ok, conn}
       end
     else
       {:ok, conn}
+    end
+  end
+
+  @doc """
+  Shutdown the given connection `pid`.
+
+  If `pid` does not exit within `timeout` it is killed, or it is killed
+  immediately if `:brutal_kill`.
+  """
+  @spec shutdown(pid, timeout | :brutal_kill) :: :ok
+  def shutdown(pid, shutdown \\ 5_000)
+
+  def shutdown(pid, :brutal_kill) do
+    ref = Process.monitor(pid)
+    Process.exit(pid, :kill)
+    receive do
+      {:DOWN, ^ref, _, _, _} -> :ok
+    end
+  end
+
+  def shutdown(pid, timeout) do
+    ref = Process.monitor(pid)
+    Process.exit(pid, :shutdown)
+    receive do
+      {:DOWN, ^ref, _, _, _} -> :ok
+    after
+      timeout ->
+        Process.exit(pid, :kill)
+        receive do
+          {:DOWN, ^ref, _, _, _} -> :ok
+        end
     end
   end
 end
