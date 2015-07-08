@@ -43,6 +43,10 @@ defmodule Ecto.Pools.SojournBroker.Worker do
     backoff_threshold = div(max_backoff, 3)
     lazy = Keyword.get(worker_opts, :lazy, true)
 
+    # Seed random number generator for backoff. Can't use `now()` since it warns on Erlang 18.
+    {_, sec, micro} = :os.timestamp()
+    :random.seed({sec, micro, :erlang.phash2([make_ref()])})
+
     s = %{conn: nil, module: module, params: params, transaction: nil,
           broker: Process.whereis(broker), tag: tag, ref: nil, fun: nil,
           monitor: nil, backoff: min_backoff, min_backoff: min_backoff,
