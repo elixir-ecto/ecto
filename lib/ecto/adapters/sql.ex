@@ -418,7 +418,8 @@ defmodule Ecto.Adapters.SQL do
         if all_nil?(row, idx, count) do
           {nil, idx + count}
         else
-          {model.__schema__(:load, source, idx, row, id_types), idx + count}
+          loaded = Ecto.Schema.Serializer.load!(model, source, {idx, row}, id_types)
+          {loaded, idx + count}
         end
     end) |> elem(0)
   end

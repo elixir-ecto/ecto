@@ -258,6 +258,10 @@ defmodule Ecto.Type do
   defp do_match?(type, type), do: true
   defp do_match?(_, _), do: false
 
+  ## load/dump/cast
+
+  alias Ecto.Schema.Serializer
+
   @doc """
   Dumps a value to the given type.
 
@@ -297,6 +301,10 @@ defmodule Ecto.Type do
     {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
   end
 
+  def dump({:embed, embed}, value, id_types) do
+    dump_embed(embed, value, id_types)
+  end
+
   def dump(type, value, id_types) do
     dump(normalize(type, id_types), value)
   end
@@ -311,19 +319,6 @@ defmodule Ecto.Type do
     else
       :error
     end
-  end
-
-  defp dump({:embed, %{embed: model}}, %{__struct__: model} = struct) do
-    {:ok, Map.take(struct, model.__schema__(:fields))}
-  end
-
-  defp dump({:embed, %{cardinality: :many, container: :array}} = type, value)
-      when is_list(value) do
-    dump_array(type, value, [], false)
-  end
-
-  defp dump({:embed, _}, _value) do
-    :error
   end
 
   defp dump(type, value) do
@@ -361,6 +356,24 @@ defmodule Ecto.Type do
     {:ok, Enum.reverse(acc)}
   end
 
+  defp dump_embed(%{cardinality: :one, embed: model}, struct, id_types) do
+    dump_model(model, struct, id_types)
+  end
+
+  defp dump_embed(%{cardinality: :many, container: :array, embed: model}, value, id_types)
+      when is_list(value) do
+    array(value, &dump_model(model, &1, id_types), [])
+  end
+
+  defp dump_embed(_embed, _value, _id_types) do
+    :error
+  end
+
+  defp dump_model(model, %{__struct__: model} = struct, id_types),
+    do: {:ok, Serializer.dump!(struct, id_types, skip_pk: true)}
+  defp dump_model(_model, _struct, _id_types),
+    do: :error
+
   @doc """
   Same as `dump/2` but raises if value can't be dumped.
   """
@@ -393,6 +406,10 @@ defmodule Ecto.Type do
 
   """
   @spec load(t, term, map) :: {:ok, term} | :error
+  def load({:embed, embed}, value, id_types) do
+    load_embed(embed, value, id_types)
+  end
+
   def load(type, value, id_types) do
     load(normalize(type, id_types), value)
   end
@@ -406,26 +423,9 @@ defmodule Ecto.Type do
     {:ok, json_library.decode!(value)}
   end
 
-  defp load({:embed, _} = type, value) when is_binary(value) do
-    load(type, json_library.decode!(value))
-  end
-
-  defp load({:embed, %{embed: model}}, value) when is_map(value) do
-    {:ok, model.__schema__(:load, nil, value, %{})}
-  end
-
-  defp load({:embed, %{cardinality: :many, container: :array}} = type, value)
-      when is_list(value) do
-    array(type, value, &load/2, [])
-  end
-
-  defp load({:embed, _}, _value) do
-    :error
-  end
-
   defp load({:array, type}, value) do
     if is_list(value) do
-      array(type, value, &load/2, [])
+      array(value, &load(type, &1), [])
     else
       :error
     end
@@ -442,9 +442,27 @@ defmodule Ecto.Type do
     end
   end
 
-  defp json_library do
-    Application.get_env(:ecto, :json_library)
+  defp load_embed(%{cardinality: :one, embed: model}, value, id_types) do
+    load_model(model, value, id_types)
   end
+
+  defp load_embed(%{cardinality: :many, container: :array, embed: model}, value, id_types)
+      when is_list(value) do
+    array(value, &load_model(model, &1, id_types), [])
+  end
+
+  defp load_embed(_embed, _value, _id_types) do
+    :error
+  end
+
+  defp load_model(model, value, id_types) when is_binary(value),
+    do: load_model(model, json_library.decode!(value), id_types)
+  defp load_model(model, value, id_types) when is_map(value),
+    do: {:ok, Serializer.load!(model, nil, value, id_types)}
+  defp load_model(_model, _value, _id_types),
+    do: :error
+
+  defp json_library, do: Application.get_env(:ecto, :json_library)
 
   @doc """
   Same as `load/2` but raises if value can't be loaded.
@@ -541,7 +559,7 @@ defmodule Ecto.Type do
 
   defp cast({:array, type}, term) do
     if is_list(term) do
-      array(type, term, &cast/2, [])
+      array(term, &cast(type, &1), [])
     else
       :error
     end
@@ -637,14 +655,14 @@ defmodule Ecto.Type do
 
   defp of_base_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
 
-  defp array(type, [h|t], fun, acc) do
-    case fun.(type, h) do
-      {:ok, h} -> array(type, t, fun, [h|acc])
+  defp array([h|t], fun, acc) do
+    case fun.(h) do
+      {:ok, h} -> array(t, fun, [h|acc])
       :error   -> :error
     end
   end
 
-  defp array(_type, [], _fun, acc) do
+  defp array([], _fun, acc) do
     {:ok, Enum.reverse(acc)}
   end
 end

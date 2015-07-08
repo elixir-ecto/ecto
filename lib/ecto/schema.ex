@@ -234,6 +234,8 @@ defmodule Ecto.Schema do
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
   * `__schema__(:field, field)` - Returns the type of the given non-virtual field;
+  * `__schema__(:fields_with_types)` - Returns a keyword list of all non-virtual
+    field names and their type;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
@@ -329,7 +331,6 @@ defmodule Ecto.Schema do
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
         Ecto.Schema.__primary_key__(primary_key_fields),
-        Ecto.Schema.__load__(fields),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
         Ecto.Schema.__autogenerate__(@ecto_autogenerate, @ecto_autogenerate_id)]
     end
@@ -784,38 +785,6 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
   end
 
-  @doc false
-  def __load__(struct, source, fields, idx, values, id_types) do
-    loaded = do_load(struct, fields, idx, values, id_types)
-    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
-    Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
-  end
-
-  def __load__(struct, source, fields, map, id_types) do
-    model = struct.__struct__
-    source = source || model.__schema__(:source)
-
-    loaded = do_load(struct, fields, map, id_types)
-    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
-    Ecto.Model.Callbacks.__apply__(model, :after_load, loaded)
-  end
-
-  defp do_load(struct, fields, idx, values, id_types) when is_integer(idx) and is_tuple(values) do
-    Enum.reduce(fields, {struct, idx}, fn
-      {field, type}, {acc, idx} ->
-        value = Ecto.Type.load!(type, elem(values, idx), id_types)
-        {Map.put(acc, field, value), idx + 1}
-    end) |> elem(0)
-  end
-
-  defp do_load(struct, fields, map, id_types) do
-    Enum.reduce(fields, struct, fn
-      {field, type}, acc ->
-        value = Ecto.Type.load!(type, Map.get(map, Atom.to_string(field)), id_types)
-        Map.put(acc, field, value)
-    end)
-  end
-
   ## Quoted callbacks
 
   @doc false
@@ -854,6 +823,7 @@ defmodule Ecto.Schema do
     quoted ++ [quote do
       def __schema__(:field, _), do: nil
       def __schema__(:fields), do: unquote(field_names)
+      def __schema__(:fields_with_types), do: unquote(Macro.escape(fields))
     end]
   end
 
@@ -900,20 +870,6 @@ defmodule Ecto.Schema do
   def __primary_key__(primary_key) do
     quote do
       def __schema__(:primary_key), do: unquote(primary_key)
-    end
-  end
-
-  @doc false
-  def __load__(fields) do
-    # TODO: Move this to SQL adapter itself.
-    fields = Macro.escape(fields)
-    quote do
-      def __schema__(:load, source, idx, values, id_types) do
-        Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values, id_types)
-      end
-      def __schema__(:load, source, map, id_types) do
-        Ecto.Schema.__load__(__struct__(), source, unquote(fields), map, id_types)
-      end
     end
   end
 
