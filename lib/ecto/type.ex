@@ -22,6 +22,7 @@ defmodule Ecto.Type do
   still keeping the underlying Ecto type the same:
 
       defmodule Permalink do
+        @behaviour Ecto.Type
         def type, do: :integer
 
         # Provide our own casting rules.
