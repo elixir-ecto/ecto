@@ -30,9 +30,11 @@ defmodule Ecto.Pools.Poolboy.Worker do
 
   ## Callbacks
 
-  def init({module, params}) do
+  def init({module, opts}) do
     Process.flag(:trap_exit, true)
-    lazy? = Keyword.get(params, :lazy, true)
+    {opts, params} = Keyword.split(opts, [:lazy, :shutdown])
+    lazy?    = Keyword.get(opts, :lazy, true)
+    shutdown = Keyword.get(opts, :shutdown, 5_000)
 
     unless lazy? do
       case Connection.connect(module, params) do
@@ -43,7 +45,8 @@ defmodule Ecto.Pools.Poolboy.Worker do
       end
     end
 
-    {:ok, %{conn: conn, params: params, transaction: nil, module: module}}
+    {:ok, %{conn: conn, params: params, shutdown: shutdown, transaction: nil,
+            module: module}}
   end
 
   ## Break
@@ -121,9 +124,7 @@ defmodule Ecto.Pools.Poolboy.Worker do
     {:noreply, s}
   end
 
-  def terminate(_reason, %{conn: conn, module: module}) do
-    conn && module.disconnect(conn)
-  end
+  def terminate(_reason, s), do: disconnect(s)
 
   ## Helpers
 
@@ -142,8 +143,8 @@ defmodule Ecto.Pools.Poolboy.Worker do
     %{s | transaction: nil}
   end
 
-  defp disconnect(%{conn: conn, module: module} = s) do
-    conn && module.disconnect(conn)
+  defp disconnect(%{conn: conn, shutdown: shutdown} = s) do
+    _ = conn && Connection.shutdown(conn, shutdown)
     %{s | conn: nil}
   end
 end

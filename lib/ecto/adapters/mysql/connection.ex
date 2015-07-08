@@ -14,15 +14,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       Mariaex.Connection.start_link(opts)
     end
 
-    def disconnect(conn) do
-      try do
-        Mariaex.Connection.stop(conn)
-      catch
-        :exit, {:noproc, _} -> :ok
-      end
-      :ok
-    end
-
     def query(conn, sql, params, opts \\ []) do
       params = Enum.map params, fn
         %Ecto.Query.Tagged{value: value} -> value

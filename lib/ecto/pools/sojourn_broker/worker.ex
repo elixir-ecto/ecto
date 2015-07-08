@@ -34,7 +34,7 @@ defmodule Ecto.Pools.SojournBroker.Worker do
 
   def init({module, opts}) do
     Process.flag(:trap_exit, true)
-    worker_keys = [:name, :lazy, :min_backoff, :max_backoff]
+    worker_keys = [:name, :lazy, :shutdown, :min_backoff, :max_backoff]
     {worker_opts, params} = Keyword.split(opts, worker_keys)
     broker = Keyword.fetch!(worker_opts, :name)
     tag = make_ref()
@@ -42,6 +42,7 @@ defmodule Ecto.Pools.SojournBroker.Worker do
     max_backoff = Keyword.get(worker_opts, :max_backoff, 5_000)
     backoff_threshold = div(max_backoff, 3)
     lazy = Keyword.get(worker_opts, :lazy, true)
+    shutdown = Keyword.get(worker_opts, :shutdown, 5_000)
 
     # Seed random number generator for backoff. Can't use `now()` since it warns on Erlang 18.
     {_, sec, micro} = :os.timestamp()
@@ -51,7 +52,7 @@ defmodule Ecto.Pools.SojournBroker.Worker do
           broker: Process.whereis(broker), tag: tag, ref: nil, fun: nil,
           monitor: nil, backoff: min_backoff, min_backoff: min_backoff,
           max_backoff: max_backoff, backoff_threshold: backoff_threshold,
-          lazy: lazy}
+          lazy: lazy, shutdown: shutdown}
 
     if lazy do
       {:ok, lazy_ask(s)}
@@ -160,8 +161,8 @@ defmodule Ecto.Pools.SojournBroker.Worker do
     {:noreply, s}
   end
 
-  def terminate(_reason, %{conn: conn, module: module}) do
-    conn && module.disconnect(conn)
+  def terminate(_reason, %{conn: conn} = s) do
+    conn && disconnect(s)
   end
 
   ## Helpers
@@ -268,8 +269,8 @@ defmodule Ecto.Pools.SojournBroker.Worker do
     %{s | monitor: nil, fun: nil, ref: nil}
   end
 
-  defp disconnect(%{module: module, conn: conn} = s) do
-    module.disconnect(conn)
+  defp disconnect(%{conn: conn, shutdown: shutdown} = s) do
+    _ = Connection.shutdown(conn, shutdown)
     %{s | conn: nil}
   end
 end

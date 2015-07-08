@@ -7,6 +7,7 @@ defmodule Ecto.Pools.Poolboy do
     * `:size` - The number of connections to keep in the pool (default: 10)
     * `:lazy` - When true, connections to the repo are lazily started (default: true)
     * `:max_overflow` - The maximum overflow of connections (default: 0) (see poolboy docs)
+    * `:shutdown` - The shutdown method for the connections (default: 5000) (see Supervisor.Spec)
 
   """
 

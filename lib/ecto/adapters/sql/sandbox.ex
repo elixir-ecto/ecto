@@ -1,6 +1,11 @@
 defmodule Ecto.Adapters.SQL.Sandbox do
   @moduledoc """
   Start a pool with a single sandboxed SQL connection.
+
+  ### Options
+
+  * `:shutdown` - The shutdown method for the connections (default: 5000) (see Supervisor.Spec)
+
   """
 
   alias Ecto.Adapters.Connection
@@ -75,10 +80,12 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   ## GenServer
 
   @doc false
-  def init({module, params}) do
+  def init({module, opts}) do
     _ = Process.flag(:trap_exit, true)
+    {shutdown, params} = Keyword.pop(opts, :shutdown, 5_000)
     {:ok, %{module: module, conn: nil, queue: :queue.new(), fun: nil,
-            ref: nil, monitor: nil, mode: :raw, params: params}}
+            ref: nil, monitor: nil, mode: :raw, params: params,
+            shutdown: shutdown}}
   end
 
   ## Lazy connect
@@ -194,8 +201,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   ## Terminate
 
   @doc false
-  def terminate(_, %{module: module, conn: conn}) do
-    conn && module.disconnect(conn)
+  def terminate(_, %{conn: conn, shutdown: shutdown}) do
+    conn && Connection.shutdown(conn, shutdown)
   end
 
   ## Helpers
@@ -311,8 +318,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
   end
 
-  defp reset(%{module: module, conn: conn, params: params} = s) do
-    module.disconnect(conn)
+  defp reset(s) do
+    %{module: module, conn: conn, params: params, shutdown: shutdown} = s
+    Connection.shutdown(conn, shutdown)
     case Connection.connect(module, params) do
       {:ok, conn}     -> %{s | conn: conn}
       {:error, error} -> raise error
