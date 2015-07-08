@@ -35,7 +35,7 @@ defmodule Ecto.Integration.PoolTest do
   end
 
   test "starts repo with after_connect" do
-    assert {:ok, _} = MockRepo.start_link(lazy: false)
+    assert {:ok, _} = MockRepo.start_link(lazy: false, name: MockRepo.AfterConnect)
     assert_received {:after_connect, pid} when is_pid(pid)
   end
 
