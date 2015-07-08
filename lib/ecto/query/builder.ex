@@ -27,15 +27,15 @@ defmodule Ecto.Query.Builder do
   def escape(expr, type, params, vars, env)
 
   # var.x - where var is bound
-  def escape({{:., _, [{var, _, context}, field]}, _, []}, type, params, vars, _env)
+  def escape({{:., _, [{var, _, context}, field]}, _, []}, _type, params, vars, _env)
       when is_atom(var) and is_atom(context) and is_atom(field) do
-    {escape_field(var, field, type, vars), params}
+    {escape_field(var, field, vars), params}
   end
 
   # field macro
-  def escape({:field, _, [{var, _, context}, field]}, type, params, vars, _env)
+  def escape({:field, _, [{var, _, context}, field]}, _type, params, vars, _env)
       when is_atom(var) and is_atom(context) do
-    {escape_field(var, field, type, vars), params}
+    {escape_field(var, field, vars), params}
   end
 
   # param interpolation
@@ -47,11 +47,6 @@ defmodule Ecto.Query.Builder do
   end
 
   # tagged types
-  def escape({:<<>>, _, _} = bin, _type, params, _vars, _env) do
-    expr = {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: bin, type: :binary]}]}
-    {expr, params}
-  end
-
   def escape({:type, meta, [{:^, _, [arg]}, type]}, _type, params, vars, _env) do
     {type, escaped} = validate_type!(type, vars)
     index  = Map.size(params)
@@ -59,10 +54,6 @@ defmodule Ecto.Query.Builder do
 
     expr = {:{}, [], [:type, meta, [{:{}, [], [:^, [], [index]]}, escaped]]}
     {expr, params}
-  end
-
-  def escape({:-, _, [number]}, _type, params, _vars, _env) when is_number(number) do
-    {-number, params}
   end
 
   # fragments
@@ -95,9 +86,9 @@ defmodule Ecto.Query.Builder do
   end
 
   # sigils
-  def escape({name, _, [_, _]} = sigil, _type, params, _vars, _env)
+  def escape({name, _, [_, []]} = sigil, type, params, vars, _env)
       when name in ~w(sigil_s sigil_S sigil_w sigil_W)a do
-    {sigil, params}
+    {literal(sigil, type, vars), params}
   end
 
   # lists
@@ -107,12 +98,16 @@ defmodule Ecto.Query.Builder do
     do: Enum.map_reduce(list, params, &escape(&1, :any, &2, vars, env))
 
   # literals
-  def escape(literal, _type, params, _vars, _env) when is_binary(literal),
-    do: {literal, params}
-  def escape(literal, _type, params, _vars, _env) when is_boolean(literal),
-    do: {literal, params}
-  def escape(literal, _type, params, _vars, _env) when is_number(literal),
-    do: {literal, params}
+  def escape({:<<>>, _, _} = expr, type, params, vars, _env),
+    do: {literal(expr, type, vars), params}
+  def escape({:-, _, [number]}, type, params, vars, _env) when is_number(number),
+    do: {literal(-number, type, vars), params}
+  def escape(number, type, params, vars, _env) when is_number(number),
+    do: {literal(number, type, vars), params}
+  def escape(binary, type, params, vars, _env) when is_binary(binary),
+    do: {literal(binary, type, vars), params}
+  def escape(boolean, type, params, vars, _env) when is_boolean(boolean),
+    do: {literal(boolean, type, vars), params}
   def escape(nil, _type, params, _vars, _env),
     do: {nil, params}
 
@@ -150,8 +145,9 @@ defmodule Ecto.Query.Builder do
   def escape({:in, meta, [left, {:^, _, _} = right]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :boolean)
 
+    # The rtype in will be unwrapped in the query planner
     ltype = :any
-    rtype = {:in, quoted_type(left, vars)}
+    rtype = {:right_in, quoted_type(left, vars)}
 
     {left,  params} = escape(left, ltype, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
@@ -164,7 +160,8 @@ defmodule Ecto.Query.Builder do
     ltype = quoted_type(right, vars)
     rtype = {:array, quoted_type(left, vars)}
 
-    {left,  params} = escape(left, ltype, params, vars, env)
+    # The ltype in will be unwrapped in the query planner
+    {left,  params} = escape(left, {:left_in, ltype}, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
     {{:{}, [], [:in, meta, [left, right]]}, params}
   end
@@ -197,21 +194,11 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
-  defp escape_field(var, field, type, vars) do
+  defp escape_field(var, field, vars) do
     var   = escape_var(var, vars)
     field = quoted_field!(field)
     dot   = {:{}, [], [:., [], [var, field]]}
-
-    # We don't embed the type in the field metadata if the type
-    # is :any or if the type requires checking another field.
-    #
-    # Ecto concerns itself with type casting of concrete types
-    # for security purposes. Comparing a field with another is
-    # left to the database.
-    type = extract_primitive_type(type)
-    meta = if type != :any, do: [ecto_type: type], else: []
-
-    {:{}, [], [dot, meta, []]}
+    {:{}, [], [dot, [], []]}
   end
 
   defp escape_fragment({key, [{_, _}|_] = exprs}, type, params, vars, env) when is_atom(key) do
@@ -258,14 +245,28 @@ defmodule Ecto.Query.Builder do
 
   defp validate_type!({{:., _, [{var, _, context}, field]}, _, []}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
-    do: {{find_var!(var, vars), field}, escape_field(var, field, :any, vars)}
+    do: {{find_var!(var, vars), field}, escape_field(var, field, vars)}
   defp validate_type!({:field, _, [{var, _, context}, field]}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
-    do: {{find_var!(var, vars), field}, escape_field(var, field, :any, vars)}
+    do: {{find_var!(var, vars), field}, escape_field(var, field, vars)}
 
   defp validate_type!(type, _vars) do
     error! "type/2 expects an alias, atom or source.field as second argument, got: `#{Macro.to_string(type)}"
   end
+
+  @always_tagged [:binary]
+
+  defp literal(value, expected, vars),
+    do: do_literal(value, expected, quoted_type(value, vars))
+
+  defp do_literal(value, :any, current) when current in @always_tagged,
+    do: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: value, type: current]}]}
+  defp do_literal(value, :any, _current),
+    do: value
+  defp do_literal(value, expected, expected),
+    do: value
+  defp do_literal(value, expected, _current),
+    do: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: value, type: expected]}]}
 
   @doc """
   Escape the params entries map.
@@ -375,18 +376,6 @@ defmodule Ecto.Query.Builder do
     do: error!("expected atom in field/2, got: `#{inspect other}`")
 
   @doc """
-  Returns the primitive type of an expression at build time.
-  """
-  @spec primitive_type(Macro.t, Keyword.t) :: quoted_type
-  def primitive_type(expr, vars) do
-    extract_primitive_type quoted_type(expr, vars)
-  end
-
-  defp extract_primitive_type({composite, _} = type) when is_atom(composite), do: type
-  defp extract_primitive_type(type) when is_atom(type), do: type
-  defp extract_primitive_type(_), do: :any
-
-  @doc """
   Returns the type of an expression at build time.
   """
   @spec quoted_type(Macro.t, Keyword.t) :: quoted_type
@@ -413,8 +402,8 @@ defmodule Ecto.Query.Builder do
   def quoted_type({:type, _, [_, type]}, _vars), do: type
 
   # Sigils
-  def quoted_type({sigil, _, _}, _vars) when sigil in ~w(sigil_s sigil_S)a, do: :string
-  def quoted_type({sigil, _, _}, _vars) when sigil in ~w(sigil_w sigil_W)a, do: {:array, :string}
+  def quoted_type({sigil, _, [_, []]}, _vars) when sigil in ~w(sigil_s sigil_S)a, do: :string
+  def quoted_type({sigil, _, [_, []]}, _vars) when sigil in ~w(sigil_w sigil_W)a, do: {:array, :string}
 
   # Lists
   def quoted_type(list, vars) when is_list(list) do

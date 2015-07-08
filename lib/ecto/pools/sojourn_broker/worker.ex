@@ -2,8 +2,10 @@ defmodule Ecto.Pools.SojournBroker.Worker do
   @moduledoc false
 
   use GenServer
-  require Logger
   use Bitwise
+
+  require Logger
+  alias Ecto.Adapters.Connection
 
   @timeout 5_000
 
@@ -162,7 +164,7 @@ defmodule Ecto.Pools.SojournBroker.Worker do
 
   defp lazy_connect(%{lazy: true, conn: nil} = s) do
     %{module: module, params: params} = s
-    case module.connect(params) do
+    case Connection.connect(module, params) do
       {:ok, conn} ->
         %{s | lazy: false, conn: conn}
       {:error, error} ->
@@ -173,7 +175,7 @@ defmodule Ecto.Pools.SojournBroker.Worker do
 
   defp connect(%{conn: nil} = s) do
     %{module: module, params: params, min_backoff: min_backoff} = s
-    case module.connect(params) do
+    case Connection.connect(module, params) do
       {:ok, conn} ->
         ask(%{s | conn: conn, backoff: min_backoff})
       {:error, error} ->

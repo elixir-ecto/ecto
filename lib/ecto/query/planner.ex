@@ -61,9 +61,9 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
-  def query(query, operation, base, id_types) do
-    {query, params} = prepare(query, operation, base, id_types)
-    {normalize(query, operation, base), params}
+  def query(query, operation, id_types) do
+    {query, params} = prepare(query, operation, id_types)
+    {normalize(query, operation, id_types), params}
   end
 
   @doc """
@@ -76,10 +76,10 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
-  def prepare(query, operation, params, id_types) do
+  def prepare(query, operation, id_types) do
     query
     |> prepare_sources
-    |> prepare_params(operation, params, id_types)
+    |> prepare_params(operation, id_types)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -89,9 +89,9 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_params(query, operation, base, id_types) do
+  def prepare_params(query, operation, id_types) do
     {query, params} = traverse_exprs(query, operation, [], &{&3, merge_params(&1, &2, &3, &4, id_types)})
-    {query, base ++ Enum.reverse(params)}
+    {query, Enum.reverse(params)}
   end
 
   defp merge_params(kind, query, expr, params, id_types)
@@ -118,7 +118,7 @@ defmodule Ecto.Query.Planner do
 
   defp cast_and_merge_params(kind, query, expr, params, id_types) do
     Enum.reduce expr.params, params, fn
-      {v, {:in, type}}, acc ->
+      {v, {:right_in, type}}, acc ->
         unfold_in(cast_param(kind, query, expr, v, {:array, type}, id_types), acc)
       {v, type}, acc ->
         [cast_param(kind, query, expr, v, type, id_types)|acc]
@@ -126,8 +126,8 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cast_param(kind, query, expr, v, type, id_types) do
-    {model, field, type} = type_from_param!(kind, query, expr, type)
-    type = Ecto.Type.normalize(type, id_types)
+    {model, field, type} = type_for_param!(kind, query, expr, type)
+    type = normalize_type(type, id_types)
 
     case cast_param(kind, type, v) do
       {:ok, v} ->
@@ -146,6 +146,13 @@ defmodule Ecto.Query.Planner do
         end
     end
   end
+
+  defp normalize_type({:left_in, {:array, type}}, id_types),
+    do: normalize_type(type, id_types)
+  defp normalize_type({:left_in, _}, id_types),
+    do: normalize_type(:any, id_types)
+  defp normalize_type(type, id_types),
+    do: Ecto.Type.normalize(type, id_types)
 
   defp cast_param(kind, _type, nil) when kind != :update do
     :error
@@ -300,7 +307,7 @@ defmodule Ecto.Query.Planner do
   entry, we need to update its interpolations and check
   its fields and associations exist and are valid.
   """
-  def normalize(query, operation, base) do
+  def normalize(query, operation, id_types) do
     case operation do
       :all ->
         assert_no_update!(query, operation)
@@ -313,7 +320,7 @@ defmodule Ecto.Query.Planner do
     end
 
     query
-    |> traverse_exprs(operation, length(base), &validate_and_increment/4)
+    |> traverse_exprs(operation, 0, &validate_and_increment(&1, &2, &3, &4, id_types))
     |> elem(0)
     |> normalize_select(operation)
     |> validate_assocs
@@ -323,33 +330,33 @@ defmodule Ecto.Query.Planner do
       raise e
   end
 
-  defp validate_and_increment(kind, query, expr, counter)
+  defp validate_and_increment(kind, query, expr, counter, id_types)
       when kind in ~w(select distinct limit offset)a do
     if expr do
-      validate_and_increment_each(kind, query, expr, counter)
+      validate_and_increment_each(kind, query, expr, counter, id_types)
     else
       {nil, counter}
     end
   end
 
-  defp validate_and_increment(kind, query, exprs, counter)
+  defp validate_and_increment(kind, query, exprs, counter, id_types)
       when kind in ~w(where group_by having order_by update)a do
-    Enum.map_reduce exprs, counter, &validate_and_increment_each(kind, query, &1, &2)
+    Enum.map_reduce exprs, counter, &validate_and_increment_each(kind, query, &1, &2, id_types)
   end
 
-  defp validate_and_increment(:join, query, exprs, counter) do
+  defp validate_and_increment(:join, query, exprs, counter, id_types) do
     Enum.map_reduce exprs, counter, fn join, acc ->
-      {on, acc} = validate_and_increment_each(:join, query, join.on, acc)
+      {on, acc} = validate_and_increment_each(:join, query, join.on, acc, id_types)
       {%{join | on: on}, acc}
     end
   end
 
-  defp validate_and_increment_each(kind, query, expr, counter) do
-    {inner, acc} = validate_and_increment_each(kind, query, expr, expr.expr, counter)
+  defp validate_and_increment_each(kind, query, expr, counter, id_types) do
+    {inner, acc} = validate_and_increment_each(kind, query, expr, expr.expr, counter, id_types)
     {%{expr | expr: inner, params: nil}, acc}
   end
 
-  defp validate_and_increment_each(kind, query, expr, ast, counter) do
+  defp validate_and_increment_each(kind, query, expr, ast, counter, id_types) do
     Macro.prewalk ast, counter, fn
       {:in, in_meta, [left, {:^, meta, [param]}]}, acc ->
         {right, acc} = validate_in(meta, expr, param, acc)
@@ -359,13 +366,16 @@ defmodule Ecto.Query.Planner do
         {{:^, meta, [acc]}, acc + 1}
 
       {{:., _, [{:&, _, [source]}, field]} = dot, meta, []}, acc ->
-        type = validate_field(kind, query, expr, source, field, meta)
+        type = type!(kind, query, expr, source, field)
         {{dot, [ecto_type: type] ++ meta, []}, acc}
 
       {:type, _, [{:^, _, [param]} = v, _expr]}, acc ->
         {_, t} = Enum.fetch!(expr.params, param)
-        {_, _, type} = type_from_param!(kind, query, expr, t)
+        {_, _, type} = type_for_param!(kind, query, expr, t)
         {%Ecto.Query.Tagged{value: v, type: Ecto.Type.type(type), tag: type}, acc}
+
+      %Ecto.Query.Tagged{value: v, type: type}, acc ->
+        {cast_param(kind, query, expr, v, type, id_types), acc}
 
       other, acc ->
         {other, acc}
@@ -379,22 +389,6 @@ defmodule Ecto.Query.Planner do
     case length do
       0 -> {[], acc}
       _ -> {{:^, meta, [acc, length]}, acc + length}
-    end
-  end
-
-  defp validate_field(kind, query, expr, source, field, meta) do
-    {_, model} = elem(query.sources, source)
-
-    if model do
-      type = type!(kind, query, expr, model, field)
-
-      if (expected = Keyword.get(meta, :ecto_type)) &&
-         !Ecto.Type.match?(type, expected) do
-        error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` does not type check. " <>
-                            "It has type #{inspect type} but a type #{inspect expected} is expected"
-      end
-
-      type
     end
   end
 
@@ -540,7 +534,12 @@ defmodule Ecto.Query.Planner do
 
   defp type!(_kind, _query, _expr, nil, _field), do: :any
 
-  defp type!(kind, query, expr, model, field) do
+  defp type!(kind, query, expr, source, field) when is_integer(source) do
+    {_, model} = elem(query.sources, source)
+    type!(kind, query, expr, model, field)
+  end
+
+  defp type!(kind, query, expr, model, field) when is_atom(model) do
     if type = model.__schema__(:field, field) do
       type
     else
@@ -549,17 +548,17 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp type_from_param!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
+  defp type_for_param!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
     {_, model} = elem(query.sources, ix)
     {model, field, {composite, type!(kind, query, expr, model, field)}}
   end
 
-  defp type_from_param!(kind, query, expr, {ix, field}) when is_integer(ix) do
+  defp type_for_param!(kind, query, expr, {ix, field}) when is_integer(ix) do
     {_, model} = elem(query.sources, ix)
     {model, field, type!(kind, query, expr, model, field)}
   end
 
-  defp type_from_param!(_kind, _query, _expr, type) do
+  defp type_for_param!(_kind, _query, _expr, type) do
     {nil, nil, type}
   end
 

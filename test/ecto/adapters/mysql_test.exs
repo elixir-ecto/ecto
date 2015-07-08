@@ -14,6 +14,7 @@ defmodule Ecto.Adapters.MySQLTest do
     schema "model" do
       field :x, :integer
       field :y, :integer
+      field :z, :integer
 
       has_many :comments, Ecto.Adapters.MySQLTest.Model2,
         references: :x,
@@ -43,8 +44,8 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   defp normalize(query, operation \\ :all) do
-    {query, _params} = Ecto.Query.Planner.prepare(query, operation, [], %{})
-    Ecto.Query.Planner.normalize(query, operation, [])
+    {query, _params} = Ecto.Query.Planner.prepare(query, operation, %{})
+    Ecto.Query.Planner.normalize(query, operation, %{})
   end
 
   test "from" do
@@ -294,7 +295,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = from(m in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE `model` AS m0 SET `x` = 0, `y` = '123'}
+           ~s{UPDATE `model` AS m0 SET `x` = 0, `y` = 123}
 
     query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==

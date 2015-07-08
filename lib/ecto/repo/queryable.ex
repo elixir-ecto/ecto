@@ -16,7 +16,7 @@ defmodule Ecto.Repo.Queryable do
 
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:all, [], id_types)
+      |> Planner.query(:all, id_types)
 
     adapter.all(repo, query, params, opts)
     |> Ecto.Repo.Assoc.query(query)
@@ -82,7 +82,7 @@ defmodule Ecto.Repo.Queryable do
   defp update_all(repo, adapter, queryable, opts) do
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:update_all, [], adapter.id_types(repo))
+      |> Planner.query(:update_all, adapter.id_types(repo))
     adapter.update_all(repo, query, params, opts)
   end
 
@@ -92,7 +92,7 @@ defmodule Ecto.Repo.Queryable do
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:delete_all, [], adapter.id_types(repo))
+      |> Planner.query(:delete_all, adapter.id_types(repo))
     adapter.delete_all(repo, query, params, opts)
   end
 

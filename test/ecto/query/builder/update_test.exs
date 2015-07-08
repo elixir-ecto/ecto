@@ -6,8 +6,11 @@ defmodule Ecto.Query.Builder.UpdateTest do
   doctest Ecto.Query.Builder.Update
 
   test "escape" do
-    assert {Macro.escape(quote do [set: [foo: &0.bar]] end), [], %{}} ==
-           escape(quote do [set: [foo: x.bar]] end, [x: 0], __ENV__)
+    assert escape(quote do [set: [foo: 1]] end, [x: 0], __ENV__) |> elem(0) ==
+           [set: [foo: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: 1, type: {0, :foo}]}]}]]
+
+    assert escape(quote do [set: [foo: x.bar]] end, [x: 0], __ENV__) |> elem(0) ==
+           Macro.escape(quote do [set: [foo: &0.bar]] end)
   end
 
   test "escape with compile time interpolation" do

@@ -7,19 +7,11 @@ defmodule Ecto.Pools.SojournBroker do
     * `:size` - The number of connections to keep in the pool (default: 10)
     * `:min_backoff` - The minimum backoff on failed connect in milliseconds (default: 50)
     * `:max_backoff` - The maximum backoff on failed connect in milliseconds (default: 5000)
-    * `:broker` - The `sbroker` module to use (default: `Ecto.Pools.SojournBroker.Broker`)
+    * `:broker` - The `sbroker` module to use (default: `Ecto.Pools.SojournBroker.Timeout`)
     * `:lazy` - When true, initial connections to the repo are lazily started (default: true)
-
-  ### Broker pptions
-
-    * `:queue_timeout` - The amount of time in milliseconds to wait in queue (default: 5000)
-    * `:queue_out` - Either `:out` for a FIFO queue or `:out_r` for a LIFO queue (default: :out)
-    * `:queue_drop` - Either `:drop` for head drop on max size or `:drop_r` for tail drop (default: :drop)
-    * `:queue_size` - The maximum size of the queue (default: 64)
 
   """
 
-  alias Ecto.Pools.SojournBroker.Broker
   alias Ecto.Pools.SojournBroker.Worker
   @behaviour Ecto.Pool
 
@@ -36,7 +28,7 @@ defmodule Ecto.Pools.SojournBroker do
 
     import Supervisor.Spec
     name = Keyword.fetch!(pool_opts, :name)
-    mod = Keyword.get(pool_opts, :broker, Broker)
+    mod  = Keyword.fetch!(pool_opts, :broker)
     args = [{:local, name}, mod, opts, [time_unit: :micro_seconds]]
     broker = worker(:sbroker, args)
 
@@ -46,7 +38,6 @@ defmodule Ecto.Pools.SojournBroker do
     end
     worker_sup_opts = [strategy: :one_for_one, max_restarts: size]
     worker_sup = supervisor(Supervisor, [workers, worker_sup_opts])
-
 
     children = [broker, worker_sup]
     sup_opts = [strategy: :rest_for_one, name: Module.concat(name, Supervisor)]
@@ -102,7 +93,7 @@ defmodule Ecto.Pools.SojournBroker do
 
     pool_opts = pool_opts
       |> Keyword.put_new(:size, 10)
-      |> Keyword.put_new(:broker, Broker)
+      |> Keyword.put_new(:broker, Ecto.Pools.SojournBroker.Timeout)
       |> Keyword.put(:name, Keyword.fetch!(opts, :name))
 
     {pool_opts, opts}

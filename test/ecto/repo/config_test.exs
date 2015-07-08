@@ -9,13 +9,13 @@ defmodule Ecto.Repo.ConfigTest do
 
   test "reads otp app configuration" do
     put_env(database: "hello")
-    assert config(:ecto, __MODULE__) == [otp_app: :ecto, database: "hello"]
+    assert config(:ecto, __MODULE__) == [otp_app: :ecto, repo: __MODULE__, database: "hello"]
   end
 
   test "merges url into configuration" do
     put_env(database: "hello", url: "ecto://eric:hunter2@host:12345/mydb")
     assert config(:ecto, __MODULE__) ==
-           [otp_app: :ecto, username: "eric", password: "hunter2",
+           [otp_app: :ecto, repo: __MODULE__, username: "eric", password: "hunter2",
             database: "mydb", hostname: "host", port: 12345]
   end
 
@@ -23,7 +23,7 @@ defmodule Ecto.Repo.ConfigTest do
     System.put_env("ECTO_REPO_CONFIG_URL", "ecto://eric:hunter2@host:12345/mydb")
     put_env(database: "hello", url: {:system, "ECTO_REPO_CONFIG_URL"})
     assert config(:ecto, __MODULE__) ==
-           [otp_app: :ecto, username: "eric", password: "hunter2",
+           [otp_app: :ecto, repo: __MODULE__, username: "eric", password: "hunter2",
             database: "mydb", hostname: "host", port: 12345]
   end
 

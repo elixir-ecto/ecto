@@ -292,7 +292,11 @@ defmodule Ecto.Type do
   end
 
   def dump({:array, type}, value) do
-    dump_array(type, value, [], false)
+    if is_list(value) do
+      dump_array(type, value, [], false)
+    else
+      :error
+    end
   end
 
   def dump(type, value) do
@@ -368,7 +372,11 @@ defmodule Ecto.Type do
   end
 
   def load({:array, type}, value) do
-    array(type, value, &load/2, [])
+    if is_list(value) do
+      array(type, value, &load/2, [])
+    else
+      :error
+    end
   end
 
   def load(type, value) do
@@ -470,8 +478,12 @@ defmodule Ecto.Type do
   @spec cast(t, term) :: {:ok, term} | :error
   def cast(_type, nil), do: {:ok, nil}
 
-  def cast({:array, type}, term) when is_list(term) do
-    array(type, term, &cast/2, [])
+  def cast({:array, type}, term) do
+    if is_list(term) do
+      array(type, term, &cast/2, [])
+    else
+      :error
+    end
   end
 
   def cast(:float, term) when is_binary(term) do
