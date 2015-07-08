@@ -154,7 +154,7 @@ defmodule Ecto.Adapters.SQL do
 
   ## Examples
 
-      iex> Ecto.Adapters.SQL.query(MyRepo, "SELECT $1 + $2", [40, 2])
+      iex> Ecto.Adapters.SQL.query(MyRepo, "SELECT $1::integer + $2", [40, 2])
       %{rows: [{42}], num_rows: 1}
 
   """
