@@ -9,9 +9,9 @@ defmodule Ecto.TestAdapter do
 
   ## Queryable
 
-  def all(_repo, %{from: {_, SchemaMigration}}, _, _),
+  def all(_repo, %{from: {_, SchemaMigration}}, _, _, _),
     do: Enum.map(migrated_versions(), &List.wrap/1)
-  def all(_repo, _query, _params, _opts),
+  def all(_repo, _query, _params, _preprocess, _opts),
     do: [[1]]
 
   def update_all(_repo, _query, _params, _opts), do: {1, nil}

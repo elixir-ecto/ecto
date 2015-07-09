@@ -234,7 +234,7 @@ defmodule Ecto.Schema do
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
   * `__schema__(:field, field)` - Returns the type of the given non-virtual field;
-  * `__schema__(:fields_with_types)` - Returns a keyword list of all non-virtual
+  * `__schema__(:types)` - Returns a keyword list of all non-virtual
     field names and their type;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
@@ -904,7 +904,7 @@ defmodule Ecto.Schema do
     quoted ++ [quote do
       def __schema__(:field, _), do: nil
       def __schema__(:fields), do: unquote(field_names)
-      def __schema__(:fields_with_types), do: unquote(Macro.escape(fields))
+      def __schema__(:types), do: unquote(Macro.escape(fields))
     end]
   end
 

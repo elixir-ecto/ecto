@@ -1,7 +1,5 @@
 defmodule Ecto.Schema.Serializer do
-  @moduledoc """
-  Callbacks used by `Ecto.Type` and adapters to serialize and cast models.
-  """
+  @moduledoc false
   alias Ecto.Schema.Metadata
 
   @doc """
@@ -14,7 +12,7 @@ defmodule Ecto.Schema.Serializer do
   def load!(model, source, data, id_types) do
     source = source || model.__schema__(:source)
     struct = model.__struct__()
-    fields = model.__schema__(:fields_with_types)
+    fields = model.__schema__(:types)
 
     loaded = do_load(struct, fields, data, id_types)
     loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
@@ -40,18 +38,12 @@ defmodule Ecto.Schema.Serializer do
   @doc """
   Dumps recursively given model's struct.
 
-  ## Options:
-
-    * `:skip_pk` - whether primary keys should be dumped (default: `false`)
-
+  Primary keys are not included in the dumped model.
   """
-  def dump!(struct, id_types, opts \\ []) do
+  def dump!(struct, id_types) do
     model  = struct.__struct__
-    fields = model.__schema__(:fields_with_types)
-    pks = if Keyword.get(opts, :skip_pk, false),
-            do: model.__schema__(:primary_key),
-            else: []
-
+    fields = model.__schema__(:types)
+    pks    = model.__schema__(:primary_key)
     Enum.reduce(fields, %{}, &do_dump(struct, &1, &2, pks, id_types))
   end
 

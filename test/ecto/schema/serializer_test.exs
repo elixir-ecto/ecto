@@ -48,11 +48,7 @@ defmodule Ecto.Schema.SerializerTest do
     dumped_uuid = %Ecto.Query.Tagged{tag: nil, type: :uuid, value: @uuid_binary}
 
     dumped = Serializer.dump!(model, %{})
-    assert dumped == %{id: 123, name: "michal", count: Decimal.new(5),
+    assert dumped == %{name: "michal", count: Decimal.new(5),
                        array: ["array"], embed: %{type: "one"}, uuid: dumped_uuid}
-
-    dumpled = Serializer.dump!(model, %{}, skip_pk: true)
-    assert dumpled == %{name: "michal", count: Decimal.new(5),
-                        array: ["array"], embed: %{type: "one"}, uuid: dumped_uuid}
   end
 end

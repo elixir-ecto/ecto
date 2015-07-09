@@ -11,6 +11,7 @@ defmodule Ecto.Adapter do
   @type fields :: Keyword.t
   @type filters :: Keyword.t
   @type returning :: [atom]
+  @type preprocess :: (Macro.t, term -> term)
   @type autogenerate_id :: {field :: atom, type :: :id | :binary_id, value :: term} | nil
 
   @typep repo :: Ecto.Repo.t
@@ -48,9 +49,13 @@ defmodule Ecto.Adapter do
 
   @doc """
   Fetches all results from the data store based on the given query.
+
+  It receives a preprocess function responsible that should be
+  invoked for each selected field in the query result in order
+  to convert them to the expected Ecto type.
   """
   defcallback all(repo, query :: Ecto.Query.t,
-                  params :: list(), options) :: [[term]] | no_return
+                  params :: list(), preprocess, options) :: [[term]] | no_return
 
   @doc """
   Updates all entities matching the given query with the values given.

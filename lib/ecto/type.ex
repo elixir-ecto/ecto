@@ -364,7 +364,7 @@ defmodule Ecto.Type do
   end
 
   defp dump_model(model, %{__struct__: model} = struct, id_types),
-    do: {:ok, Serializer.dump!(struct, id_types, skip_pk: true)}
+    do: {:ok, Serializer.dump!(struct, id_types)}
   defp dump_model(_model, _struct, _id_types),
     do: :error
 

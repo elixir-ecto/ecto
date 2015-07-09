@@ -46,8 +46,8 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def all(repo, query, params, opts) do
-        Ecto.Adapters.SQL.all(repo, @conn.all(query), query, params, id_types(repo), opts)
+      def all(repo, query, params, preprocess, opts) do
+        Ecto.Adapters.SQL.all(repo, @conn.all(query), query, params, preprocess, opts)
       end
 
       @doc false
@@ -123,7 +123,7 @@ defmodule Ecto.Adapters.SQL do
         count > 0
       end
 
-      defoverridable [all: 4, update_all: 4, delete_all: 4,
+      defoverridable [all: 5, update_all: 4, delete_all: 4,
                       insert: 6, update: 7, delete: 5,
                       execute_ddl: 3, ddl_exists?: 3]
     end
@@ -376,10 +376,10 @@ defmodule Ecto.Adapters.SQL do
   defp unwrap(value), do: value
 
   @doc false
-  def all(repo, sql, query, params, id_types, opts) do
+  def all(repo, sql, query, params, preprocess, opts) do
     %{rows: rows} = query(repo, sql, params, opts)
-    fields = extract_fields(query.select.fields, query.sources)
-    Enum.map(rows, &process_row(&1, fields, id_types))
+    fields = count_fields(query.select.fields, query.sources)
+    Enum.map(rows, &process_row(&1, preprocess, fields))
   end
 
   @doc false
@@ -400,26 +400,25 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp extract_fields(fields, sources) do
+  defp count_fields(fields, sources) do
     Enum.map fields, fn
-      {:&, _, [idx]} ->
-        {_source, model} = pair = elem(sources, idx)
-        {length(model.__schema__(:fields)), pair}
-      _ ->
-        {1, nil}
+      {:&, _, [idx]} = field ->
+        {_source, model} = elem(sources, idx)
+        {field, length(model.__schema__(:fields))}
+      field ->
+        {field, 0}
     end
   end
 
-  defp process_row(row, fields, id_types) do
+  defp process_row(row, preprocess, fields) do
     Enum.map_reduce(fields, 0, fn
-      {1, nil}, idx ->
-        {elem(row, idx), idx + 1}
-      {count, {source, model}}, idx ->
+      {field, 0}, idx ->
+        {preprocess.(field, elem(row, idx)), idx + 1}
+      {field, count}, idx ->
         if all_nil?(row, idx, count) do
           {nil, idx + count}
         else
-          loaded = Ecto.Schema.Serializer.load!(model, source, {idx, row}, id_types)
-          {loaded, idx + count}
+          {preprocess.(field, {idx, row}), idx + count}
         end
     end) |> elem(0)
   end

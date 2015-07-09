@@ -18,9 +18,9 @@ defmodule Ecto.Repo.Queryable do
       Queryable.to_query(queryable)
       |> Planner.query(:all, id_types)
 
-    adapter.all(repo, query, params, opts)
+    adapter.all(repo, query, params, preprocess(query.sources, id_types), opts)
     |> Ecto.Repo.Assoc.query(query)
-    |> Ecto.Repo.Preloader.query(repo, query, to_select(query.select, id_types))
+    |> Ecto.Repo.Preloader.query(repo, query, postprocess(query.select))
   end
 
   @doc """
@@ -98,62 +98,70 @@ defmodule Ecto.Repo.Queryable do
 
   ## Helpers
 
-  defp to_select(select, id_types) do
-    expr  = select.expr
+  defp preprocess(sources, id_types) do
+    &preprocess(&1, &2, sources, id_types)
+  end
+
+  defp preprocess({:&, _, [ix]}, value, sources, id_types) do
+    {source, model} = elem(sources, ix)
+    Ecto.Schema.Serializer.load!(model, source, value, id_types)
+  end
+
+  defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _sources, id_types) do
+    case Keyword.fetch(meta, :ecto_type) do
+      {:ok, type} -> Ecto.Type.load!(type, value, id_types)
+      :error      -> value
+    end
+  end
+
+  defp preprocess(%Ecto.Query.Tagged{tag: tag}, value, _sources, id_types) do
+    Ecto.Type.load!(tag, value, id_types)
+  end
+
+  defp preprocess(_key, value, _sources, _id_types) do
+    value
+  end
+
+  defp postprocess(%{expr: expr, fields: fields}) do
     # The planner always put the from as the first
     # entry in the query, avoiding fetching it multiple
     # times even if it appears multiple times in the query.
     # So we always need to handle it specially.
-    from? = match?([{:&, _, [0]}|_], select.fields)
-    &to_select(&1, expr, from?, id_types)
+    from? = match?([{:&, _, [0]}|_], fields)
+    &postprocess(&1, expr, from?)
   end
 
-  defp to_select(row, expr, true, id_types),
-    do: transform_row(expr, hd(row), tl(row), id_types) |> elem(0)
-  defp to_select(row, expr, false, id_types),
-    do: transform_row(expr, nil, row, id_types) |> elem(0)
+  defp postprocess(row, expr, true),
+    do: transform_row(expr, hd(row), tl(row)) |> elem(0)
+  defp postprocess(row, expr, false),
+    do: transform_row(expr, nil, row) |> elem(0)
 
-  defp transform_row({:{}, _, list}, from, values, id_types) do
-    {result, values} = transform_row(list, from, values, id_types)
+  defp transform_row({:{}, _, list}, from, values) do
+    {result, values} = transform_row(list, from, values)
     {List.to_tuple(result), values}
   end
 
-  defp transform_row({left, right}, from, values, id_types) do
-    {[left, right], values} = transform_row([left, right], from, values, id_types)
+  defp transform_row({left, right}, from, values) do
+    {[left, right], values} = transform_row([left, right], from, values)
     {{left, right}, values}
   end
 
-  defp transform_row({:%{}, _, pairs}, from, values, id_types) do
+  defp transform_row({:%{}, _, pairs}, from, values) do
     Enum.reduce pairs, {%{}, values}, fn({key, value}, {map, values_acc}) ->
-      {value, new_values} = transform_row(value, from, values_acc, id_types)
+      {value, new_values} = transform_row(value, from, values_acc)
       {Map.put(map, key, value), new_values}
     end
   end
 
-  defp transform_row(list, from, values, id_types) when is_list(list) do
-    Enum.map_reduce(list, values, &transform_row(&1, from, &2, id_types))
+  defp transform_row(list, from, values) when is_list(list) do
+    Enum.map_reduce(list, values, &transform_row(&1, from, &2))
   end
 
-  defp transform_row(%Ecto.Query.Tagged{tag: tag}, _from, values, id_types) when not is_nil(tag) do
-    [value|values] = values
-    {Ecto.Type.load!(tag, value, id_types), values}
-  end
-
-  defp transform_row({:&, _, [0]}, from, values, _id_types) do
+  defp transform_row({:&, _, [0]}, from, values) do
     {from, values}
   end
 
-  defp transform_row({{:., _, [{:&, _, [_]}, _]}, meta, []}, _from, values, id_types) do
-    [value|values] = values
-
-    if type = Keyword.get(meta, :ecto_type) do
-      {Ecto.Type.load!(type, value, id_types), values}
-    else
-      {value, values}
-    end
-  end
-
-  defp transform_row(_, _from, values, _id_types) do
+  defp transform_row(_, _from, values) do
     [value|values] = values
     {value, values}
   end
