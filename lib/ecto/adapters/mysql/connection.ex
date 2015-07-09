@@ -603,6 +603,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp ecto_to_db(:binary),     do: "blob"
     defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
     defp ecto_to_db(:map),        do: "text"
+    defp ecto_to_db(:embed),      do: "text"
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end

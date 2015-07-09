@@ -77,6 +77,8 @@ defmodule Ecto.Type do
   """
 
   import Kernel, except: [match?: 2]
+  alias Ecto.Schema.Serializer
+
   use Behaviour
 
   @type t         :: primitive | custom
@@ -195,10 +197,6 @@ defmodule Ecto.Type do
   @spec type(t) :: t
   def type(type)
 
-  def type({:embed, %{cardinality: :one}}), do: :map
-  def type({:embed, %{cardinality: :many, container: :map}}), do: :map
-  def type({:embed, %{cardinality: :many, container: :array}}), do: {:array, :map}
-
   def type({:array, type}), do: {:array, type(type)}
 
   def type(type) do
@@ -257,10 +255,6 @@ defmodule Ecto.Type do
   defp do_match?(:id, :integer), do: true
   defp do_match?(type, type), do: true
   defp do_match?(_, _), do: false
-
-  ## load/dump/cast
-
-  alias Ecto.Schema.Serializer
 
   @doc """
   Dumps a value to the given type.

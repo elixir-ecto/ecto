@@ -33,26 +33,4 @@ defmodule Ecto.Embedded do
       container: Keyword.get(opts, :container)
     }
   end
-
-
-  @doc """
-  Builds a model for the given embedding.
-
-  The struct to build from is given as argument in case default values
-  should be set in the struct.
-
-  Invoked by `Ecto.Model.build_embedded/3`.
-  """
-  def build(%{embed: embed}, _struct, attributes) do
-    struct(embed, attributes)
-  end
-
-  @doc """
-  Retrieves the association from the given model.
-  """
-  def embedded_from_model!(model, embed) do
-    model.__schema__(:embed, embed) ||
-      raise ArgumentError,
-        "model #{inspect model} does not have embedded #{inspect embed}"
-  end
 end

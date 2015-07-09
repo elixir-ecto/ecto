@@ -28,21 +28,13 @@ defmodule Ecto.EmbeddedTest do
 
   test "__schema__" do
     assert Author.__schema__(:embeds) == [:profile, :profiles]
-    assert Author.__schema__(:embed, :profile).embed == Profile
-    assert Author.__schema__(:embed, :profile).embed == Profile
-  end
 
-  ## Integration tests through Ecto.Model
+    assert Author.__schema__(:embed, :profile) ==
+      %Ecto.Embedded{field: :profile, cardinality: :one, owner: Author,
+                     embed: Profile, container: nil}
 
-  test "build_embedded/2" do
-    assert build_embedded(%Author{}, :profile) == %Profile{}
-    assert build_embedded(%Author{}, :profiles) == %Profile{}
-  end
-
-  test "build_embedded/3 with custom attributes" do
-    assert build_embedded(%Author{}, :profile, name: "Michal") ==
-      %Profile{name: "Michal"}
-    assert build_embedded(%Author{}, :profiles, name: "Michal") ==
-      %Profile{name: "Michal"}
+    assert Author.__schema__(:embed, :profiles) ==
+      %Ecto.Embedded{field: :profiles, cardinality: :many, owner: Author,
+                     embed: Profile, container: :array}
   end
 end

@@ -240,6 +240,9 @@ defmodule Ecto.Schema do
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
 
+  * `__schema__(:embeds)` - Returns a list of all embedded field names;
+  * `__schema__(:embed, embed)` - Returns the embedding reflection of the given embed;
+
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
     from the database after every write (insert or update);
 
@@ -717,18 +720,97 @@ defmodule Ecto.Schema do
 
   ## Embeds
 
+
+  @doc """
+  Defines an embedding.
+
+  This macro is used by `embeds_one/3` and `embeds_many/3` to define
+  embeddings However, custom embedding mechanisms can be provided
+  by developers and hooked in via this macro.
+  """
   def embed(cardinality, name, model, opts) do
     quote bind_quoted: binding() do
       Ecto.Schema.__embed__(__MODULE__, cardinality, name, model, opts)
     end
   end
 
+  @doc ~S"""
+  Indicates an embedding of one model.
+
+  The current model has zero ot one records of the other model embedded
+  inside of it. It uses a field similar to the `:map` type for storage,
+  but allows embedded models to have all the things regular models can -
+  callbacks, structured fields, etc. All typecasting operations are
+  performed on an embedded model alongside the operations on the parent
+  model.
+
+  Usage requires support for `:map` type from the database.
+
+  ## Examples
+
+      defmodule Order do
+        use Ecto.Model
+        schema "orders" do
+          embeds_one :item, Item
+        end
+      end
+
+      # The item is loaded with the order
+      [order] = Repo.all(from(o in Order, where: p.id == 42))
+      order.item #=> %Item{...}
+
+  """
   defmacro embeds_one(name, model, opts \\ []) do
     opts = Keyword.put_new(opts, :container, nil)
 
     embed(:one, name, model, opts)
   end
 
+  @doc ~S"""
+  Indicates an embedding of many models.
+
+  The current model has zero or more records of the other model embedded
+  inside of it. Depending on the choice of container it uses a combination
+  of `:array` and `:map` types for storage, but allows embedded models to
+  habe all the things regular models can - callbacks, structured fields, etc.
+  All typecasting operations are performed recursively on embedded models
+  alongside the operations on the parent model.
+
+  ## Options
+
+    * `:container` - the type of container used for model storage. Can be
+      either `:map` or `:array`.
+
+  ## Examples
+
+      defmodule Order do
+        use Ecto.Model
+        schema "orders" do
+          embeds_many :items, Item
+        end
+      end
+
+      # The items are loaded with the order
+      [order] = Repo.all(from(o in Order, where: p.id == 42))
+      order.items #=> [%Item{...}, ...]
+
+  ## Container `:array`
+
+  Usage requires support for both `:map` and `:array` types from the database.
+  It's best suited for situations when order of embedded items is important,
+  but it requires the whole set of embedded models to be send to the database
+  on updates.
+
+  ## Container `:map`
+
+  Usage requires support for only `:map` type. Models are stored in a map,
+  where keys are generated using stringified `:binary_id` type of the
+  underlaying database. It allows easy concurrent updates, as a subset
+  of embedded models can be send to the database, but the ordering is lost.
+  You can implement custom ordering mechanism on top of it, by using an
+  order field in embedded models, and sorting by it.
+
+  """
   defmacro embeds_many(name, model, opts \\ []) do
     opts =
       opts
@@ -737,7 +819,6 @@ defmodule Ecto.Schema do
 
     embed(:many, name, model, opts)
   end
-
 
   ## Callbacks
 

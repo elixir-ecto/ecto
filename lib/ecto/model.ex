@@ -154,11 +154,6 @@ defmodule Ecto.Model do
     assoc.__struct__.assoc_query(assoc, values)
   end
 
-  def build_embedded(%{__struct__: model} = struct, assoc, attributes \\ %{}) do
-    assoc = Ecto.Embedded.embedded_from_model!(model, assoc)
-    assoc.__struct__.build(assoc, struct, attributes)
-  end
-
   @doc """
   Update the database source of the model
 

@@ -5,7 +5,6 @@ defmodule Ecto.Integration.TypeTest do
 
   require Ecto.Integration.TestRepo, as: TestRepo
   import Ecto.Query
-  import Ecto.Model
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.Tag
@@ -156,11 +155,6 @@ defmodule Ecto.Integration.TypeTest do
     assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
     assert [%Item{price: 123}] =
       TestRepo.all(from o in Order, select: o.item)
-
-    order = %Order{}
-    order = put_in(order.item, build_embedded(order, :item, price: 123))
-    order = TestRepo.insert!(order)
-    assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
   end
 
   @tag :map_type
@@ -170,11 +164,6 @@ defmodule Ecto.Integration.TypeTest do
     assert [%Item{price: 123}] = TestRepo.get!(Tag, tag.id).items
     assert [[%Item{price: 123}]] =
       TestRepo.all(from t in Tag, select: t.items)
-
-    tag = %Tag{}
-    tag = put_in(tag.items, [build_embedded(tag, :items, price: 123)])
-    tag = TestRepo.insert!(tag)
-    assert [%Item{price: 123}] = TestRepo.get!(Tag, tag.id).items
   end
 
   @tag :decimal_type

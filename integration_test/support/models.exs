@@ -185,7 +185,6 @@ defmodule Ecto.Integration.Item do
   """
   use Ecto.Integration.Model
 
-  # TODO decide what to do with source here
   schema "whatever" do
     field :price, :integer
   end
@@ -196,14 +195,11 @@ defmodule Ecto.Integration.Order do
   This module is used to test:
 
     * Embedding one model
-    * Embedding many models with map type
 
   """
   use Ecto.Integration.Model
 
   schema "orders" do
     embeds_one :item, Ecto.Integration.Item
-    # TODO
-    # embeds_many :items, Ecto.Integration.Item, container: :map
   end
 end
