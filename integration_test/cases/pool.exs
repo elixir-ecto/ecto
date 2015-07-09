@@ -9,8 +9,11 @@ defmodule Ecto.Integration.PoolTest do
       "sojourn_broker" -> Ecto.Pools.SojournBroker
     end
 
+  repo = Application.get_env(:ecto, Ecto.Integration.TestRepo) ||
+         raise "could not find configuration for Ecto.Integration.TestRepo"
+
   Application.put_env(:ecto, __MODULE__.MockRepo,
-                      [pool: pool, size: 1] ++ Application.get_env(:ecto, Ecto.Integration.TestRepo))
+                      [pool: pool, size: 1] ++ repo)
 
   defmodule MockRepo do
     use Ecto.Repo, otp_app: :ecto
