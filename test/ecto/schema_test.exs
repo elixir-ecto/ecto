@@ -29,6 +29,7 @@ defmodule Ecto.SchemaTest do
   test "schema metadata" do
     assert Model.__schema__(:source)             == "mymodel"
     assert Model.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
+    assert Model.__schema__(:fields_with_types)  == [id: :id, name: :string, email: :string, count: :decimal, array: {:array, :string}, uuid: Ecto.UUID, comment_id: :id]
     assert Model.__schema__(:field, :id)         == :id
     assert Model.__schema__(:field, :name)       == :string
     assert Model.__schema__(:field, :email)      == :string

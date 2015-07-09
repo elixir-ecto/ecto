@@ -164,6 +164,7 @@ defmodule Ecto.Integration.Tag do
   This module is used to test:
 
     * The array type
+    * Embedding many models with array type
 
   """
   use Ecto.Integration.Model
@@ -171,5 +172,34 @@ defmodule Ecto.Integration.Tag do
   schema "tags" do
     field :ints, {:array, :integer}
     field :uuids, {:array, Ecto.UUID}
+    embeds_many :items, Ecto.Integration.Item
+  end
+end
+
+defmodule Ecto.Integration.Item do
+  @moduledoc """
+  This module is used to test:
+
+    * Embedding
+
+  """
+  use Ecto.Integration.Model
+
+  schema "whatever" do
+    field :price, :integer
+  end
+end
+
+defmodule Ecto.Integration.Order do
+  @moduledoc """
+  This module is used to test:
+
+    * Embedding one model
+
+  """
+  use Ecto.Integration.Model
+
+  schema "orders" do
+    embeds_one :item, Ecto.Integration.Item
   end
 end

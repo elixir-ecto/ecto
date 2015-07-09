@@ -172,8 +172,7 @@ defmodule Ecto.Repo.Model do
         value =
           types
           |> Map.fetch!(k)
-          |> Ecto.Type.normalize(id_types)
-          |> Ecto.Type.load!(v)
+          |> Ecto.Type.load!(v, id_types)
         Map.put(acc, k, value)
     end)
 

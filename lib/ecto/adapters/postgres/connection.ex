@@ -632,6 +632,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp ecto_to_db(:datetime),   do: "timestamp"
     defp ecto_to_db(:binary),     do: "bytea"
     defp ecto_to_db(:map),        do: "jsonb"
+    defp ecto_to_db(:embed),      do: "jsonb"
     defp ecto_to_db(other),       do: Atom.to_string(other)
   end
 end

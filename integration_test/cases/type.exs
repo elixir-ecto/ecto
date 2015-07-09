@@ -9,6 +9,8 @@ defmodule Ecto.Integration.TypeTest do
   alias Ecto.Integration.Post
   alias Ecto.Integration.Tag
   alias Ecto.Integration.Custom
+  alias Ecto.Integration.Order
+  alias Ecto.Integration.Item
 
   test "primitive types" do
     integer  = 1
@@ -145,6 +147,23 @@ defmodule Ecto.Integration.TypeTest do
     query = from(p in Post, where: p.id == ^post.id)
     TestRepo.update_all(query, set: [meta: %{world: "hello"}])
     assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
+  end
+
+  @tag :map_type
+  test "embeds one" do
+    order = TestRepo.insert!(%Order{item: %Item{price: 123}})
+    assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
+    assert [%Item{price: 123}] =
+      TestRepo.all(from o in Order, select: o.item)
+  end
+
+  @tag :map_type
+  @tag :array_type
+  test "embeds many with array" do
+    tag = TestRepo.insert!(%Tag{items: [%Item{price: 123}]})
+    assert [%Item{price: 123}] = TestRepo.get!(Tag, tag.id).items
+    assert [[%Item{price: 123}]] =
+      TestRepo.all(from t in Tag, select: t.items)
   end
 
   @tag :decimal_type

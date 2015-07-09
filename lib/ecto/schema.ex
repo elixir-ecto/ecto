@@ -234,9 +234,14 @@ defmodule Ecto.Schema do
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
   * `__schema__(:field, field)` - Returns the type of the given non-virtual field;
+  * `__schema__(:fields_with_types)` - Returns a keyword list of all non-virtual
+    field names and their type;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
+
+  * `__schema__(:embeds)` - Returns a list of all embedded field names;
+  * `__schema__(:embed, embed)` - Returns the embedding reflection of the given embed;
 
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
     from the database after every write (insert or update);
@@ -291,6 +296,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
 
@@ -318,6 +324,7 @@ defmodule Ecto.Schema do
 
       fields = @ecto_fields |> Enum.reverse
       assocs = @ecto_assocs |> Enum.reverse
+      embeds = @ecto_embeds |> Enum.reverse
 
       Module.eval_quoted __ENV__, [
         Ecto.Schema.__struct__(@struct_fields),
@@ -325,8 +332,8 @@ defmodule Ecto.Schema do
         Ecto.Schema.__source__(source),
         Ecto.Schema.__fields__(fields),
         Ecto.Schema.__assocs__(assocs),
+        Ecto.Schema.__embeds__(embeds),
         Ecto.Schema.__primary_key__(primary_key_fields),
-        Ecto.Schema.__load__(fields),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
         Ecto.Schema.__autogenerate__(@ecto_autogenerate, @ecto_autogenerate_id)]
     end
@@ -711,6 +718,108 @@ defmodule Ecto.Schema do
     end
   end
 
+  ## Embeds
+
+
+  @doc """
+  Defines an embedding.
+
+  This macro is used by `embeds_one/3` and `embeds_many/3` to define
+  embeddings However, custom embedding mechanisms can be provided
+  by developers and hooked in via this macro.
+  """
+  def embed(cardinality, name, model, opts) do
+    quote bind_quoted: binding() do
+      Ecto.Schema.__embed__(__MODULE__, cardinality, name, model, opts)
+    end
+  end
+
+  @doc ~S"""
+  Indicates an embedding of one model.
+
+  The current model has zero ot one records of the other model embedded
+  inside of it. It uses a field similar to the `:map` type for storage,
+  but allows embedded models to have all the things regular models can -
+  callbacks, structured fields, etc. All typecasting operations are
+  performed on an embedded model alongside the operations on the parent
+  model.
+
+  Usage requires support for `:map` type from the database.
+
+  ## Examples
+
+      defmodule Order do
+        use Ecto.Model
+        schema "orders" do
+          embeds_one :item, Item
+        end
+      end
+
+      # The item is loaded with the order
+      [order] = Repo.all(from(o in Order, where: p.id == 42))
+      order.item #=> %Item{...}
+
+  """
+  defmacro embeds_one(name, model, opts \\ []) do
+    opts = Keyword.put_new(opts, :container, nil)
+
+    embed(:one, name, model, opts)
+  end
+
+  @doc ~S"""
+  Indicates an embedding of many models.
+
+  The current model has zero or more records of the other model embedded
+  inside of it. Depending on the choice of container it uses a combination
+  of `:array` and `:map` types for storage, but allows embedded models to
+  habe all the things regular models can - callbacks, structured fields, etc.
+  All typecasting operations are performed recursively on embedded models
+  alongside the operations on the parent model.
+
+  ## Options
+
+    * `:container` - the type of container used for model storage. Can be
+      either `:map` or `:array`.
+
+  ## Examples
+
+      defmodule Order do
+        use Ecto.Model
+        schema "orders" do
+          embeds_many :items, Item
+        end
+      end
+
+      # The items are loaded with the order
+      [order] = Repo.all(from(o in Order, where: p.id == 42))
+      order.items #=> [%Item{...}, ...]
+
+  ## Container `:array`
+
+  Usage requires support for both `:map` and `:array` types from the database.
+  It's best suited for situations when order of embedded items is important,
+  but it requires the whole set of embedded models to be send to the database
+  on updates.
+
+  ## Container `:map`
+
+  Usage requires support for only `:map` type. Models are stored in a map,
+  where keys are generated using stringified `:binary_id` type of the
+  underlaying database. It allows easy concurrent updates, as a subset
+  of embedded models can be send to the database, but the ordering is lost.
+  You can implement custom ordering mechanism on top of it, by using an
+  order field in embedded models, and sorting by it.
+
+  """
+  defmacro embeds_many(name, model, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.put_new(:default, [])
+      |> Keyword.put_new(:container, :array)
+
+    embed(:many, name, model, opts)
+  end
+
   ## Callbacks
 
   @doc false
@@ -739,28 +848,22 @@ defmodule Ecto.Schema do
   end
 
   @doc false
+  def __embed__(mod, cardinality, name, model, opts) do
+    opts   = [cardinality: cardinality, embed: model] ++ opts
+    struct = Ecto.Embedded.struct(mod, name, opts)
+
+    __field__(mod, name, {:embed, struct}, false, opts)
+
+    Module.put_attribute(mod, :ecto_embeds, {name, struct})
+  end
+
+  @doc false
   def __association__(mod, cardinality, name, association, opts) do
     not_loaded  = %Ecto.Association.NotLoaded{__owner__: mod,
                     __field__: name, __cardinality__: cardinality}
     put_struct_field(mod, name, not_loaded)
     opts = [cardinality: cardinality] ++ opts
     Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
-  end
-
-  @doc false
-  def __load__(struct, source, fields, idx, values, id_types) do
-    loaded = do_load(struct, fields, idx, values, id_types)
-    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
-    Ecto.Model.Callbacks.__apply__(struct.__struct__, :after_load, loaded)
-  end
-
-  defp do_load(struct, fields, idx, values, id_types) when is_integer(idx) and is_tuple(values) do
-    Enum.reduce(fields, {struct, idx}, fn
-      {field, type}, {acc, idx} ->
-        type  = Ecto.Type.normalize(type, id_types)
-        value = Ecto.Type.load!(type, elem(values, idx))
-        {Map.put(acc, field, value), idx + 1}
-    end) |> elem(0)
   end
 
   ## Quoted callbacks
@@ -791,7 +894,8 @@ defmodule Ecto.Schema do
   def __fields__(fields) do
     quoted = Enum.map(fields, fn {name, type} ->
       quote do
-        def __schema__(:field, unquote(name)), do: unquote(type)
+        def __schema__(:field, unquote(name)),
+          do: unquote(Macro.escape(type))
       end
     end)
 
@@ -800,6 +904,7 @@ defmodule Ecto.Schema do
     quoted ++ [quote do
       def __schema__(:field, _), do: nil
       def __schema__(:fields), do: unquote(field_names)
+      def __schema__(:fields_with_types), do: unquote(Macro.escape(fields))
     end]
   end
 
@@ -824,19 +929,28 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __primary_key__(primary_key) do
+  def __embeds__(embeds) do
+    quoted = Enum.map(embeds, fn {name, refl} ->
+      quote do
+        def __schema__(:embed, unquote(name)) do
+          unquote(Macro.escape(refl))
+        end
+      end
+    end)
+
+    embed_names = Enum.map(embeds, &elem(&1, 0))
+
     quote do
-      def __schema__(:primary_key), do: unquote(primary_key)
+      def __schema__(:embeds), do: unquote(embed_names)
+      unquote(quoted)
+      def __schema__(:embed, _), do: nil
     end
   end
 
   @doc false
-  def __load__(fields) do
-    # TODO: Move this to SQL adapter itself.
+  def __primary_key__(primary_key) do
     quote do
-      def __schema__(:load, source, idx, values, id_types) do
-        Ecto.Schema.__load__(__struct__(), source, unquote(fields), idx, values, id_types)
-      end
+      def __schema__(:primary_key), do: unquote(primary_key)
     end
   end
 
@@ -887,7 +1001,7 @@ defmodule Ecto.Schema do
   end
 
   defp check_default!(name, type, default) do
-    case Ecto.Type.dump(type, default) do
+    case Ecto.Type.dump(type, default, %{}) do
       {:ok, _} ->
         :ok
       :error ->

@@ -57,10 +57,15 @@ defmodule Ecto.Integration.Migration do
       add :count, :integer
     end
 
+    create table(:orders) do
+      add :item, :embed
+    end
+
     unless :array_type in ExUnit.configuration[:exclude] do
       create table(:tags) do
         add :ints, {:array, :integer}
         add :uuids, {:array, :uuid}
+        add :items, {:array, :embed}
       end
     end
   end

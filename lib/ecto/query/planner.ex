@@ -16,14 +16,14 @@ defmodule Ecto.Query.Planner do
     types = model.__changeset__
 
     for {field, value} <- kw do
-      type = Ecto.Type.normalize Map.get(types, field), id_types
+      type = Map.get(types, field)
 
       unless type do
         raise Ecto.ChangeError,
           message: "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
       end
 
-      case Ecto.Type.dump(type, value) do
+      case Ecto.Type.dump(type, value, id_types) do
         {:ok, value} ->
           {field, value}
         :error ->
@@ -127,13 +127,13 @@ defmodule Ecto.Query.Planner do
 
   defp cast_param(kind, query, expr, v, type, id_types) do
     {model, field, type} = type_for_param!(kind, query, expr, type)
-    type = normalize_type(type, id_types)
+    type = normalize_type(type)
 
-    case cast_param(kind, type, v) do
+    case cast_param(kind, type, v, id_types) do
       {:ok, v} ->
-        Ecto.Type.dump!(type, v)
+        Ecto.Type.dump!(type, v, id_types)
       {:match, type} ->
-        Ecto.Type.dump!(type, v)
+        Ecto.Type.dump!(type, v, id_types)
       :error ->
         try do
           error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to " <>
@@ -147,18 +147,18 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_type({:left_in, {:array, type}}, id_types),
-    do: normalize_type(type, id_types)
-  defp normalize_type({:left_in, _}, id_types),
-    do: normalize_type(:any, id_types)
-  defp normalize_type(type, id_types),
-    do: Ecto.Type.normalize(type, id_types)
+  defp normalize_type({:left_in, {:array, type}}),
+    do: type
+  defp normalize_type({:left_in, _}),
+    do: :any
+  defp normalize_type(type),
+    do: type
 
-  defp cast_param(kind, _type, nil) when kind != :update do
+  defp cast_param(kind, _type, nil, _id_types) when kind != :update do
     :error
   end
 
-  defp cast_param(_kind, type, v) do
+  defp cast_param(_kind, type, v, id_types) do
     # If the type is a primitive type and we are giving it
     # a struct, we first check if the struct type and the
     # given type are match and, if so, use the struct type
@@ -168,7 +168,7 @@ defmodule Ecto.Query.Planner do
        Ecto.Type.match?(struct.type, type) do
       {:match, struct}
     else
-      Ecto.Type.cast(type, v)
+      Ecto.Type.cast(type, v, id_types)
     end
   end
 
