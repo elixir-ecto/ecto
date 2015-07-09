@@ -152,12 +152,12 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(_repo, source, _params, _autogen, [_|_] = returning, _opts) do
+  def insert(_repo, {source, _model}, _params, _autogen, [_|_] = returning, _opts) do
     raise ArgumentError, "MySQL does not support :read_after_writes in models. " <>
                          "The following fields in #{inspect source} have tagged as such: #{inspect returning}"
   end
 
-  def insert(repo, source, params, {pk, :id, nil}, [], opts) do
+  def insert(repo, {source, _model}, params, {pk, :id, nil}, [], opts) do
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(source, fields, [])
     case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
@@ -171,7 +171,7 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def update(repo, source, fields, filter, _autogenerate, returning, opts) do
+  def update(repo, {source, _model}, fields, filter, _autogenerate, returning, opts) do
     {fields, values1} = :lists.unzip(fields)
     {filter, values2} = :lists.unzip(filter)
     sql = @conn.update(source, fields, filter, returning)
@@ -182,7 +182,7 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def delete(repo, source, filter, _autogenerate, opts) do
+  def delete(repo, {source, _model}, filter, _autogenerate, opts) do
     {filter, values} = :lists.unzip(filter)
     case Ecto.Adapters.SQL.query(repo, @conn.delete(source, filter, []), values, opts) do
       %{num_rows: 0} -> {:error, :stale}
