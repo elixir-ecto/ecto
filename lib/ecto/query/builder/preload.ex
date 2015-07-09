@@ -68,35 +68,48 @@ defmodule Ecto.Query.Builder.Preload do
                    "Use ^ if you want to interpolate a value"
   end
 
-  defp escape_each({atom, {var, _, context}}, mode, {preloads, assocs}, vars)
-      when is_atom(atom) and is_atom(context) do
-    assert_assoc!(mode, atom, var)
+  defp escape_each({key, {var, _, context}}, mode, {preloads, assocs}, vars) when is_atom(context) do
+    assert_assoc!(mode, key, var)
+    key = escape_key(key)
     idx = Builder.find_var!(var, vars)
-    {preloads, [{atom, {idx, []}}|assocs]}
+    {preloads, [{key, {idx, []}}|assocs]}
   end
 
-  defp escape_each({atom, {{var, _, context}, list}}, mode, {preloads, assocs}, vars)
-      when is_atom(atom) and is_atom(context) do
-    assert_assoc!(mode, atom, var)
+  defp escape_each({key, {{var, _, context}, list}}, mode, {preloads, assocs}, vars) when is_atom(context) do
+    assert_assoc!(mode, key, var)
+    key = escape_key(key)
     idx = Builder.find_var!(var, vars)
     {[], inner_assocs} = escape(list, :assoc, [], [], vars)
     {preloads,
-     [{atom, {idx, Enum.reverse(inner_assocs)}}|assocs]}
+     [{key, {idx, Enum.reverse(inner_assocs)}}|assocs]}
   end
 
-  defp escape_each({atom, list}, mode, {preloads, assocs}, vars) when is_atom(atom) do
-    assert_preload!(mode, {atom, list})
+  defp escape_each({key, list}, mode, {preloads, assocs}, vars) do
+    assert_preload!(mode, {key, list})
+    key = escape_key(key)
     {inner_preloads, []} = escape(list, :preload, [], [], vars)
-    {[{atom, Enum.reverse(inner_preloads)}|preloads], assocs}
+    {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
   end
 
   defp escape_each(other, mode, {preloads, assocs}, vars) do
     escape(other, mode, preloads, assocs, vars)
   end
 
+  defp escape_key(atom) when is_atom(atom) do
+    atom
+  end
+
+  defp escape_key({:^, _, [expr]}) do
+    quote(do: Ecto.Query.Builder.Preload.key!(unquote(expr)))
+  end
+
+  defp escape_key(other) do
+    Builder.error! "malformed key in preload `#{Macro.to_string(other)}` in query expression"
+  end
+
   defp assert_assoc!(mode, _atom, _var) when mode in [:both, :assoc], do: :ok
   defp assert_assoc!(_mode, atom, var) do
-    Builder.error! "cannot preload join association `#{inspect atom}` with binding `#{var}` " <>
+    Builder.error! "cannot preload join association `#{Macro.to_string atom}` with binding `#{var}` " <>
                    "because parent preload is not a join association"
   end
 
@@ -104,6 +117,14 @@ defmodule Ecto.Query.Builder.Preload do
   defp assert_preload!(_mode, term) do
     Builder.error! "cannot preload `#{Macro.to_string(term)}` inside join association preload"
   end
+
+  @doc """
+  Called at runtime to check dynamic preload keys.
+  """
+  def key!(key) when is_atom(key),
+    do: key
+  def key!(key),
+    do: Builder.error!("expected key in preload to be an atom, got: `#{inspect key}`")
 
   @doc """
   Applies the preloaded value into the query.

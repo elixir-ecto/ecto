@@ -26,5 +26,6 @@ defmodule Ecto.Query.Builder.PreloadTest do
     assert preload("posts", ^[comments]).preloads == [[:comments]]
     assert preload("posts", [users: ^comments]).preloads == [users: [:comments]]
     assert preload("posts", [users: ^[comments]]).preloads == [users: [[:comments]]]
+    assert preload("posts", [{^:users, ^comments}]).preloads == [users: [:comments]]
   end
 end
