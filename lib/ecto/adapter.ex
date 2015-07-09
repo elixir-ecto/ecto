@@ -7,7 +7,7 @@ defmodule Ecto.Adapter do
   use Behaviour
 
   @type t :: module
-  @type source :: binary
+  @type source :: {table :: binary, model :: atom}
   @type fields :: Keyword.t
   @type filters :: Keyword.t
   @type returning :: [atom]

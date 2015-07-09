@@ -75,14 +75,14 @@ defmodule Ecto.Adapters.SQL do
         end
       end
 
-      def insert(repo, source, params, _autogenerate, returning, opts) do
+      def insert(repo, {source, _model}, params, _autogenerate, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(source, fields, returning)
         Ecto.Adapters.SQL.model(repo, sql, values, returning, opts)
       end
 
       @doc false
-      def update(repo, source, fields, filter, _autogenerate, returning, opts) do
+      def update(repo, {source, _model}, fields, filter, _autogenerate, returning, opts) do
         {fields, values1} = :lists.unzip(fields)
         {filter, values2} = :lists.unzip(filter)
         sql = @conn.update(source, fields, filter, returning)
@@ -90,7 +90,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def delete(repo, source, filter, _autogenarate, opts) do
+      def delete(repo, {source, _model}, filter, _autogenarate, opts) do
         {filter, values} = :lists.unzip(filter)
         Ecto.Adapters.SQL.model(repo, @conn.delete(source, filter, []), values, [], opts)
       end
