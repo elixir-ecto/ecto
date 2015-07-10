@@ -225,32 +225,85 @@ defmodule Ecto.Changeset do
                optional: optional}
   end
 
-  defp process_param(key, kind, params, types, model, {changes, errors}) do
+  defp process_param({key, fun}, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)
+    type = type!(types, key, fun)
     current = Map.get(model, key)
-    type = type!(types, key)
 
-    {key,
-      case cast_field(param_key, type, params) do
-        {:ok, ^current} ->
-          {changes, error_on_nil(kind, key, current, errors)}
-        {:ok, value} ->
-          {Map.put(changes, key, value), error_on_nil(kind, key, value, errors)}
-        :missing ->
-          {changes, error_on_nil(kind, key, current, errors)}
-        :invalid ->
-          {changes, [{key, "is invalid"}|errors]}
-      end}
+    do_process_param(key, param_key, kind, params, type, current, acc)
   end
 
-  defp type!(types, key),
-    do: Map.get(types, key) ||
-          raise ArgumentError, "unknown field `#{key}` (note only fields are supported in cast, associations are not)"
+  defp process_param(key, kind, params, types, model, acc) do
+    {key, param_key} = cast_key(key)
+    type = type!(types, key, nil)
+    current = Map.get(model, key)
+
+    do_process_param(key, param_key, kind, params, type, current, acc)
+  end
+
+  defp do_process_param(key, param_key, kind, params, {:embed, embed}, current, {changes, errors}) do
+
+    {key,
+     case cast_embed(param_key, embed, params, current) do
+       :missing ->
+         {changes, error_on_nil(kind, key, current, errors)}
+       {embed_changes, embed_errors} ->
+         {merge_embed(changes, key, embed_changes, &Map.put/3),
+          merge_embed(errors, key, embed_errors, &[{&2, &3}|&1])}
+       ^current ->
+         {changes, error_on_nil(kind, key, current, errors)}
+     end}
+  end
+
+  defp do_process_param(key, param_key, kind, params, type, current, {changes, errors}) do
+    {key,
+     case cast_field(param_key, type, params) do
+       {:ok, ^current} ->
+         {changes, error_on_nil(kind, key, current, errors)}
+       {:ok, value} ->
+         {Map.put(changes, key, value), error_on_nil(kind, key, value, errors)}
+       :missing ->
+         {changes, error_on_nil(kind, key, current, errors)}
+       :invalid ->
+         {changes, [{key, "is invalid"}|errors]}
+     end}
+  end
+
+  defp merge_embed(map, key, embedded, add) do
+    Enum.reduce(embedded, map, fn {embed_key, value}, acc ->
+      new_key = List.flatten([key, embed_key])
+      add.(acc, new_key, value)
+    end)
+  end
+
+  defp type!(types, key, value) do
+    case Map.fetch(types, key) do
+      {:ok, {:embed, embed}} ->
+        {:embed, Ecto.Embedded.normalize_changeset(embed, value)}
+      {:ok, type} ->
+        type
+      :error ->
+        raise ArgumentError, "unknown field `#{key}` (note only fields and embeds are supported in cast, associations are not)"
+    end
+  end
 
   defp cast_key(key) when is_binary(key),
     do: {String.to_atom(key), key}
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
+
+  defp cast_embed(param_key, %{changeset: fun}, params, model) do
+    case Map.fetch(params, param_key) do
+      {:ok, nil} ->
+        model
+      {:ok, value} ->
+        args = if is_nil(model), do: [value], else: [value, model]
+        changeset = fun.(args)
+        {changeset.changes, changeset.errors}
+      :error ->
+        :missing
+    end
+  end
 
   defp cast_field(param_key, :binary_id, params) do
     # Since we don't have the adapter types here,

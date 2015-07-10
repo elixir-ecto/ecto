@@ -547,6 +547,10 @@ defmodule Ecto.Type do
 
   """
   @spec cast(t, term, map) :: {:ok, term} | :error
+  def cast({:embed, embed}, value, id_types) do
+    cast_embed(Ecto.Embedded.normalize_changeset(embed, nil), value, id_types)
+  end
+
   def cast(type, value, id_types) do
     cast(normalize(type, id_types), value)
   end
@@ -595,6 +599,19 @@ defmodule Ecto.Type do
       true ->
         :error
     end
+  end
+
+  defp cast_embed(%{cardinality: :one, changeset: fun}, value, _id_types) do
+    changeset = fun.([value])
+    if changeset.valid? do
+      {:ok, Ecto.Changeset.apply_changes(changeset)}
+    else
+      :error
+    end
+  end
+
+  defp cast_embed(_embed, _value, _id_types) do
+    :error
   end
 
   @doc """
