@@ -28,10 +28,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         value -> value
       end
 
-      case Postgrex.Connection.query(conn, sql, params, [decode: :manual] ++ opts) do
-        {:ok, %Postgrex.Result{} = result} -> {:ok, result}
-        {:error, %Postgrex.Error{}} = err  -> err
-      end
+      Postgrex.Connection.query(conn, sql, params, [decode: :manual] ++ opts)
     end
 
     def decode({:ok, res}, mapper) do
