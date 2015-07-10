@@ -229,15 +229,6 @@ defmodule Ecto.Integration.TransactionTest do
   test "transaction exit includes :timeout on query timeout" do
     assert match?({:timeout, _},
       catch_exit(PoolRepo.transaction(fn ->
-        PoolRepo.insert!(%Trans{text: "12"}, [timeout: 0])
-      end)))
-
-    assert [] = PoolRepo.all(Trans)
-  end
-
-  test "transaction exit includes :timeout on nested query timeout" do
-    assert match?({:timeout, _},
-      catch_exit(PoolRepo.transaction(fn ->
         PoolRepo.transaction(fn ->
           PoolRepo.insert!(%Trans{text: "13"}, [timeout: 0])
         end)
