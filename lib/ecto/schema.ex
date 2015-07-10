@@ -476,14 +476,15 @@ defmodule Ecto.Schema do
         schema "posts" do
           has_many :comments, Comment
           has_one :permalink, Permalink
-          has_many :comments_authors, through: [:comments, :author]
 
-          # From the has_many :through example above, in the list
+          # In the has_many :through example below, in the list
           # `[:comments, :author]` the `:comments` refers to the
           # `has_many :comments` in the Post model's own schema
           # and the `:author` refers to the `belongs_to :author`
-          # of the Comment module's schema below.
+          # of the Comment module's schema (the module below).
           # (see the description below for more details)
+
+          has_many :comments_authors, through: [:comments, :author]
 
           # Specify the association with custom source
           has_many :tags, {"posts_tags", Tag}
