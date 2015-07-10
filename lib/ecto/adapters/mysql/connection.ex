@@ -28,6 +28,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
+    def decode({:ok, %{rows: rows} = res}, mapper) when is_list(rows) do
+      {:ok, %{res | rows: Enum.map(rows, mapper)}}
+    end
+    def decode(other, _mapper), do: other
+
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
     defp normalize_port(port) when is_integer(port), do: port
 

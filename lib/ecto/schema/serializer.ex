@@ -27,11 +27,11 @@ defmodule Ecto.Schema.Serializer do
     end)
   end
 
-  defp do_load(struct, fields, {idx, values}, id_types) when is_integer(idx) and is_tuple(values) do
-    Enum.reduce(fields, {struct, idx}, fn
-      {field, type}, {acc, idx} ->
-        value = Ecto.Type.load!(type, elem(values, idx), id_types)
-        {Map.put(acc, field, value), idx + 1}
+  defp do_load(struct, fields, list, id_types) when is_list(list) do
+    Enum.reduce(fields, {struct, list}, fn
+      {field, type}, {acc, [h|t]} ->
+        value = Ecto.Type.load!(type, h, id_types)
+        {Map.put(acc, field, value), t}
     end) |> elem(0)
   end
 

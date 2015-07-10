@@ -75,7 +75,7 @@ defmodule Ecto.Integration.DeadlockTest do
   end
 
   defp pg_advisory_xact_lock(key) do
-    %{rows: [{:void}]} =
+    %{rows: [[:void]]} =
       Ecto.Adapters.SQL.query(PoolRepo, "SELECT pg_advisory_xact_lock($1);", [key])
   end
 end
