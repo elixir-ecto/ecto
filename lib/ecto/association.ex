@@ -388,11 +388,11 @@ defmodule Ecto.Association.HasThrough do
 
   @doc false
   def joins_query(%{owner: owner, through: through}) do
-    joins_query(owner, through)
+    joins_query(owner, through, 0)
   end
 
-  defp joins_query(query, through) do
-    Enum.reduce(through, {query, 0}, fn current, {acc, counter} ->
+  defp joins_query(query, through, counter) do
+    Enum.reduce(through, {query, counter}, fn current, {acc, counter} ->
       {join(acc, :inner, [x: counter], assoc(x, ^current)), counter + 1}
     end) |> elem(0)
   end
@@ -401,40 +401,60 @@ defmodule Ecto.Association.HasThrough do
   def assoc_query(%{owner: owner, through: [h|t]}, values) do
     refl  = owner.__schema__(:association, h)
 
+    # Start the query from the first association
+    query = refl.__struct__.assoc_query(refl, values)
+
+    # The first association must become a join,
+    # so we convert the last where (that comes
+    # from assoc_query) to the join expression.
+    #
+    # We are considering there are no join expressions
+    # in the query so far as they are not allowed.
+    mapping = %{0 => 1}
+    {join, wheres} = wheres_to_join(query, mapping)
+
+    # Update the query with the new join and where
+    # and traverse the remaining of the :through.
     query =
-      refl.__struct__.assoc_query(refl, values)
-      |> joins_query(t)
+      %{query | joins: [join], wheres: wheres}
+      |> joins_query(t, 1)
       |> Ecto.Query.Planner.prepare_sources()
 
-    {joins, {mapping, last}} = rewrite_joins(query)
-    wheres = rewrite_many(query.wheres, mapping)
+    # Our source is going to be the last join after
+    # traversing them all.
+    {joins, [assoc]} = Enum.split(query.joins, -1)
 
-    from      = last.source
-    [_|joins] = Enum.reverse([%{last | source: query.from}|joins])
+    # Update the mapping and start rewriting
+    # expressions allowed in queries.
+    mapping   = Map.put(mapping, length(joins) + 1, 0)
+    wheres    = rewrite_many([assoc.on|query.wheres], mapping)
+    order_bys = rewrite_many(query.order_bys, mapping)
 
-    %{query | from: from, joins: joins, wheres: wheres, sources: nil}
+    %{query | wheres: wheres, order_bys: order_bys,
+              from: assoc.source, joins: joins, sources: nil}
     |> distinct([x], true)
     |> select([x], x)
   end
 
   alias Ecto.Query.JoinExpr
 
-  defp rewrite_joins(query) do
-    count = length(query.joins)
+  defp wheres_to_join(query, mapping) do
+    {wheres, [on]} = Enum.split(query.wheres, -1)
+    join = %JoinExpr{ix: Map.fetch!(mapping, 0), qual: :inner,
+                     on: rewrite_expr(on, mapping), source: query.from,
+                     file: on.file, line: on.line}
+    {join, wheres}
+  end
 
-    Enum.map_reduce(query.joins, {%{0 => count}, nil}, fn
-      %JoinExpr{ix: ix, on: on} = join, {acc, _} ->
-        acc  = Map.put(acc, ix, count - Map.size(acc))
-        join = %{join | ix: nil, on: rewrite_expr(on, acc)}
-        {join, {acc, join}}
-    end)
+  defp rewrite_many(exprs, acc) do
+    Enum.map(exprs, &rewrite_expr(&1, acc))
   end
 
   defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
     expr =
       Macro.prewalk expr, fn
         {:&, meta, [ix]} ->
-          {:&, meta, [Map.fetch!(mapping, ix)]}
+          {:&, meta, [Map.get(mapping, ix, ix)]}
         other ->
           other
       end
@@ -442,18 +462,14 @@ defmodule Ecto.Association.HasThrough do
     params =
       Enum.map params, fn
         {val, {composite, {ix, field}}} when is_integer(ix) ->
-          {val, {composite, {Map.fetch!(mapping, ix), field}}}
+          {val, {composite, {Map.get(mapping, ix, ix), field}}}
         {val, {ix, field}} when is_integer(ix) ->
-          {val, {Map.fetch!(mapping, ix), field}}
+          {val, {Map.get(mapping, ix, ix), field}}
         val ->
           val
       end
 
     %{part | expr: expr, params: params}
-  end
-
-  defp rewrite_many(exprs, acc) do
-    Enum.map(exprs, &rewrite_expr(&1, acc))
   end
 end
 
