@@ -11,4 +11,5 @@ Then, from the command line:
 
 Inside IEx, run:
 
-* `Simple.sample_query`
+* `Simple.no_prcp_query` for a list of all weather rows in the weather table with no prcp.
+* `Simple.countries_with_weather_query` for all countries and their weather.
