@@ -11,7 +11,7 @@ defmodule Ecto.Pools.SojournBroker.CoDel do
   * `:queue_target` - The target time in milliseconds for requests to wait in the queue (default: `div(queue_interval, 10)`)
   * `:queue_out` - Either `:out` for a FIFO queue or `:out_r` for a LIFO queue (default: `:out`)
   * `:queue_drop` - Either `:drop` for head drop on max size or `:drop_r` for tail drop (default: `:drop`)
-  * `:queue_size` - The maximum size of the queue (default: `32`)
+  * `:queue_size` - The maximum size of the queue (default: `128`)
 
   """
   @behaviour :sbroker
@@ -22,7 +22,7 @@ defmodule Ecto.Pools.SojournBroker.CoDel do
     interval = Keyword.get(opts, :queue_interval, 100)
     target   = Keyword.get(opts, :queue_target, div(interval, 10))
     drop     = Keyword.get(opts, :queue_drop, :drop)
-    size     = Keyword.get(opts, :queue_size, 32)
+    size     = Keyword.get(opts, :queue_size, 128)
 
     client_queue = {:sbroker_codel_queue, {out, target * 1_000, interval * 1_000, drop, size}}
     worker_queue = {:sbroker_drop_queue, {:out_r, :drop, :infinity}}
