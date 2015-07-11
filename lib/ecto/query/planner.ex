@@ -341,7 +341,15 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(kind, query, exprs, counter, id_types)
       when kind in ~w(where group_by having order_by update)a do
-    Enum.map_reduce exprs, counter, &validate_and_increment_each(kind, query, &1, &2, id_types)
+    {exprs, counter} =
+      Enum.reduce(exprs, {[], counter}, fn
+        %{expr: []}, {list, acc} ->
+          {list, acc}
+        expr, {list, acc} ->
+          {expr, acc} = validate_and_increment_each(kind, query, expr, acc, id_types)
+          {[expr|list], acc}
+      end)
+    {Enum.reverse(exprs), counter}
   end
 
   defp validate_and_increment(:join, query, exprs, counter, id_types) do

@@ -10,7 +10,7 @@ defmodule Ecto.Pools.SojournBroker.Timeout do
     * `:queue_timeout` - The amount of time in milliseconds to wait in queue (default: `5_000`)
     * `:queue_out` - Either `:out` for a FIFO queue or `:out_r` for a LIFO queue (default: `:out`)
     * `:queue_drop` - Either `:drop` for head drop on max size or `:drop_r` for tail drop (default: `:drop`)
-    * `:queue_size` - The maximum size of the queue (default: `32`)
+    * `:queue_size` - The maximum size of the queue (default: `128`)
 
   """
 
@@ -21,7 +21,7 @@ defmodule Ecto.Pools.SojournBroker.Timeout do
     out     = Keyword.get(opts, :queue_out, :out)
     timeout = Keyword.get(opts, :queue_timeout, 5_000)
     drop    = Keyword.get(opts, :queue_drop, :drop)
-    size    = Keyword.get(opts, :queue_size, 32)
+    size    = Keyword.get(opts, :queue_size, 128)
 
     if timeout != :infinity, do: timeout = timeout * 1_000
     client_queue = {:sbroker_timeout_queue, {out, timeout, drop, size}}

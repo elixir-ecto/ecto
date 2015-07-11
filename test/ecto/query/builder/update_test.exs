@@ -44,7 +44,7 @@ defmodule Ecto.Query.Builder.UpdateTest do
 
   test "escape with both compile and runtime time interpolation" do
     query = "foo" |> update([_], set: ^[foo: "foo"], inc: [bar: ^"bar"])
-    [runtime, compile] = query.updates
+    [compile, runtime] = query.updates
     assert runtime.expr == [set: [foo: {:^, [], [0]}]]
     assert runtime.params == [{"foo", {0, :foo}}]
     assert compile.expr == [inc: [bar: {:^, [], [0]}]]

@@ -303,6 +303,17 @@ defmodule Ecto.Query.PlannerTest do
     assert params == ["foo", 1, 2, 3, "bar"]
   end
 
+  test "normalize: reject empty order by and group by" do
+    query = order_by(Post, [], []) |> normalize()
+    assert query.order_bys == []
+
+    query = order_by(Post, [], ^[]) |> normalize()
+    assert query.order_bys == []
+
+    query = group_by(Post, [], []) |> normalize()
+    assert query.group_bys == []
+  end
+
   test "normalize: select" do
     query = from(Post, []) |> normalize()
     assert query.select.expr == {:&, [], [0]}

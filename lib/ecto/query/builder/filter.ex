@@ -30,11 +30,11 @@ defmodule Ecto.Query.Builder.Filter do
   @spec apply(Ecto.Queryable.t, :where | :having, term) :: Ecto.Query.t
   def apply(query, :where, expr) do
     query = Ecto.Queryable.to_query(query)
-    %{query | wheres: [expr|query.wheres]}
+    %{query | wheres: query.wheres ++ [expr]}
   end
 
   def apply(query, :having, expr) do
     query = Ecto.Queryable.to_query(query)
-    %{query | havings: [expr|query.havings]}
+    %{query | havings: query.havings ++ [expr]}
   end
 end
