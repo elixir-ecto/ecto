@@ -102,7 +102,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "where" do
-    query = Model |> where([r], r.y != 43) |> where([r], r.x == 42) |> select([r], r.x) |> normalize
+    query = Model |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0 WHERE (m0."x" = 42) AND (m0."y" != 43)}
   end
 
@@ -259,7 +259,7 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Model |> having([p], p.x == p.x) |> select([], 0) |> normalize
     assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x")}
 
-    query = Model |> having([p], p.y == p.y) |> having([p], p.x == p.x) |> select([], 0) |> normalize
+    query = Model |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([], 0) |> normalize
     assert SQL.all(query) == ~s{SELECT 0 FROM "model" AS m0 HAVING (m0."x" = m0."x") AND (m0."y" = m0."y")}
   end
 

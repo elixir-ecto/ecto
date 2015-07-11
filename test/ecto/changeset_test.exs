@@ -628,7 +628,7 @@ defmodule Ecto.ChangesetTest do
   test "validate_unique/3 with primary key" do
     defmodule UniquePKRepo do
       def all(query) do
-        [pk_where, where] = query.wheres
+        [where, pk_where] = query.wheres
         assert Macro.to_string(where.expr) == "&0.title() == ^0"
         assert Macro.to_string(pk_where.expr) == "&0.id() != ^0"
         []

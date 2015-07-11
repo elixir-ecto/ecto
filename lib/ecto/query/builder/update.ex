@@ -114,7 +114,7 @@ defmodule Ecto.Query.Builder.Update do
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(query, updates) do
     query = Ecto.Queryable.to_query(query)
-    %{query | updates: [updates|query.updates]}
+    %{query | updates: query.updates ++ [updates]}
   end
 
   @doc """
