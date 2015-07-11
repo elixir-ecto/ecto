@@ -483,7 +483,6 @@ defmodule Ecto.Schema do
           # and the `:author` refers to the `belongs_to :author`
           # of the Comment module's schema (the module below).
           # (see the description below for more details)
-
           has_many :comments_authors, through: [:comments, :author]
 
           # Specify the association with custom source
