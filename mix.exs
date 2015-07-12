@@ -3,7 +3,7 @@ defmodule Ecto.Mixfile do
 
   @version "0.14.0-dev"
   @adapters [:pg, :mysql]
-  @pools [:poolboy, :sojourn_broker]
+  @pools [:poolboy, :sojourn_timeout, :sojourn_codel]
 
   def project do
     [app: :ecto,
@@ -47,8 +47,12 @@ defmodule Ecto.Mixfile do
   end
 
   defp test_paths(adapter) when adapter in @adapters, do: ["integration_test/#{adapter}"]
-  defp test_paths(pool) when pool in @pools, do: ["test/pool/#{pool}"]
+  defp test_paths(pool) when pool in @pools, do: ["test/pool/#{pool(pool)}"]
   defp test_paths(_), do: ["test/ecto", "test/mix"]
+
+  defp pool(:sojourn_timeout), do: "sojourn_broker"
+  defp pool(:sojourn_codel),   do: "sojourn_broker"
+  defp pool(:poolboy),         do: "poolboy"
 
   defp description do
     """

@@ -1,6 +1,8 @@
 defmodule Ecto.TestPool do
   alias Ecto.Pool
-  @pool Application.get_env(:ecto, :pool, Ecto.Pools.Poolboy)
+
+  @pool_opts Application.get_env(:ecto, :pool_opts, [pool: Ecto.Pools.Poolboy])
+  @pool @pool_opts[:pool]
 
   defmodule Connection do
     @behaviour Ecto.Adapters.Connection
@@ -15,7 +17,7 @@ defmodule Ecto.TestPool do
   end
 
   def start_link(opts) do
-    @pool.start_link(Connection, [size: 1] ++ opts)
+    @pool.start_link(Connection, [size: 1] ++ @pool_opts ++ opts)
   end
 
   def transaction(pool, timeout, fun) do
