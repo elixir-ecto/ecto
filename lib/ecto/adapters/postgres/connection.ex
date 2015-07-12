@@ -28,10 +28,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         value -> value
       end
 
-      case Postgrex.Connection.query(conn, sql, params, opts) do
-        {:ok, %Postgrex.Result{} = result} -> {:ok, Map.from_struct(result)}
-        {:error, %Postgrex.Error{}} = err  -> err
-      end
+      Postgrex.Connection.query(conn, sql, params, [decode: :manual] ++ opts)
+    end
+
+    def decode({:ok, res}, mapper) do
+      {:ok, Postgrex.Connection.decode(res, mapper) |> Map.from_struct}
+    end
+    def decode({:error, _} = err, _mapper) do
+      err
     end
 
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)

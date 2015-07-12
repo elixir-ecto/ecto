@@ -119,7 +119,7 @@ defmodule Ecto.Adapters.SQL do
       @doc false
       def ddl_exists?(repo, object, opts) do
         sql = @conn.ddl_exists(object)
-        %{rows: [{count}]} = Ecto.Adapters.SQL.query(repo, sql, [], opts)
+        %{rows: [[count]]} = Ecto.Adapters.SQL.query(repo, sql, [], opts)
         count > 0
       end
 
@@ -161,7 +161,11 @@ defmodule Ecto.Adapters.SQL do
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
              %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query(repo, sql, params, opts \\ []) do
-    case query(repo, sql, params, nil, opts) do
+    query(repo, sql, params, fn x -> x end, opts)
+  end
+
+  defp query(repo, sql, params, mapper, opts) do
+    case query(repo, sql, params, nil, mapper, opts) do
       {{:ok, result}, entry} ->
         log(repo, entry)
         result
@@ -176,7 +180,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp query(repo, sql, params, outer_queue_time, opts) do
+  defp query(repo, sql, params, outer_queue_time, mapper, opts) do
     {pool_mod, pool, timeout} = repo.__pool__
     opts    = Keyword.put_new(opts, :timeout, timeout)
     timeout = Keyword.fetch!(opts, :timeout)
@@ -187,8 +191,8 @@ defmodule Ecto.Adapters.SQL do
     end
 
     case Pool.run(pool_mod, pool, timeout, query_fun) do
-      {:ok, result} ->
-        result
+      {:ok, {mod, result, entry}} ->
+        decode(mod, result, entry, mapper)
       {:error, :noconnect} ->
         :noconnect
       {:error, :noproc} ->
@@ -198,14 +202,21 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp query(mod, conn, _queue_time, sql, params, false, opts) do
-    {mod.query(conn, sql, params, opts), nil}
+    {mod, mod.query(conn, sql, params, opts), nil}
   end
   defp query(mod, conn, queue_time, sql, params, true, opts) do
-    {query_time, res} = :timer.tc(mod, :query, [conn, sql, params, opts])
-    entry = %Ecto.LogEntry{query: sql, params: params, result: res,
-                           query_time: query_time, queue_time: queue_time,
-                           connection_pid: conn}
-    {res, entry}
+    {query_time, result} = :timer.tc(mod, :query, [conn, sql, params, opts])
+    entry = %Ecto.LogEntry{query: sql, params: params, connection_pid: conn,
+                           query_time: query_time, queue_time: queue_time}
+    {mod, result, entry}
+  end
+
+  defp decode(mod, result, nil, mapper) do
+    {mod.decode(result, mapper), nil}
+  end
+  defp decode(mod, result, %{query_time: query_time} = entry, mapper) do
+    {decode_time, decoded} = :timer.tc(mod, :decode, [result, mapper])
+    {decoded, %{entry | result: decoded, query_time: query_time + decode_time}}
   end
 
   defp log(_repo, nil), do: :ok
@@ -377,9 +388,10 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def all(repo, sql, query, params, preprocess, opts) do
-    %{rows: rows} = query(repo, sql, params, opts)
     fields = count_fields(query.select.fields, query.sources)
-    Enum.map(rows, &process_row(&1, preprocess, fields))
+    mapper = &process_row(&1, preprocess, fields)
+    %{rows: rows} = query(repo, sql, params, mapper, opts)
+    rows
   end
 
   @doc false
@@ -394,7 +406,7 @@ defmodule Ecto.Adapters.SQL do
       %{rows: nil, num_rows: 1} ->
         {:ok, []}
       %{rows: [values], num_rows: 1} ->
-        {:ok, Enum.zip(returning, Tuple.to_list(values))}
+        {:ok, Enum.zip(returning, values)}
       %{num_rows: 0} ->
         {:error, :stale}
     end
@@ -411,21 +423,27 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp process_row(row, preprocess, fields) do
-    Enum.map_reduce(fields, 0, fn
-      {field, 0}, idx ->
-        {preprocess.(field, elem(row, idx)), idx + 1}
-      {field, count}, idx ->
-        if all_nil?(row, idx, count) do
-          {nil, idx + count}
-        else
-          {preprocess.(field, {idx, row}), idx + count}
+    Enum.map_reduce(fields, row, fn
+      {field, 0}, [h|t] ->
+        {preprocess.(field, h), t}
+      {field, count}, acc ->
+        case split_and_not_nil(acc, count, true, []) do
+          {nil, rest} -> {nil, rest}
+          {val, rest} -> {preprocess.(field, val), rest}
         end
     end) |> elem(0)
   end
 
-  defp all_nil?(_tuple, _idx, 0), do: true
-  defp all_nil?(tuple, idx, _count) when elem(tuple, idx) != nil, do: false
-  defp all_nil?(tuple, idx, count), do: all_nil?(tuple, idx + 1, count - 1)
+  defp split_and_not_nil(rest, 0, true, _acc), do: {nil, rest}
+  defp split_and_not_nil(rest, 0, false, acc), do: {:lists.reverse(acc), rest}
+
+  defp split_and_not_nil([nil|t], count, all_nil?, acc) do
+    split_and_not_nil(t, count - 1, all_nil?, [nil|acc])
+  end
+
+  defp split_and_not_nil([h|t], count, _all_nil?, acc) do
+    split_and_not_nil(t, count - 1, false, [h|acc])
+  end
 
   ## Transactions
 
@@ -492,14 +510,14 @@ defmodule Ecto.Adapters.SQL do
 
   defp begin(repo, mod, mode, queue_time, opts) do
     sql = begin_sql(mod, mode)
-    query(repo, sql, [], queue_time, opts)
+    query(repo, sql, [], queue_time, fn x -> x end, opts)
   end
 
   defp begin_sql(mod, :raw),     do: mod.begin_transaction
   defp begin_sql(mod, :sandbox), do: mod.savepoint "ecto_trans"
 
   defp commit(repo, ref, mod, :raw, timeout, opts, result) do
-    case query(repo, mod.commit, [], nil, opts) do
+    case query(repo, mod.commit, [], nil, fn x -> x end, opts) do
       {{:ok, _}, entry} ->
         {result, entry}
       {{:error, _}, _entry} = error ->
@@ -517,7 +535,7 @@ defmodule Ecto.Adapters.SQL do
   defp rollback(repo, ref, mod, mode, timeout, opts, result) do
     sql = rollback_sql(mod, mode)
 
-    case query(repo, sql, [], nil, opts) do
+    case query(repo, sql, [], nil, fn x -> x end, opts) do
       {{:ok, _}, entry} ->
         {result, entry}
       {{:error, _}, _entry} = error ->

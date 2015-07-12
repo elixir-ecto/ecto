@@ -22,10 +22,14 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         value -> value
       end
 
-      case Mariaex.Connection.query(conn, sql, params, opts) do
-        {:ok, %Mariaex.Result{} = result} -> {:ok, Map.from_struct(result)}
-        {:error, %Mariaex.Error{}} =  err -> err
-      end
+      Mariaex.Connection.query(conn, sql, params, [decode: :manual] ++ opts)
+    end
+
+    def decode({:ok, res}, mapper) do
+      {:ok, Mariaex.Connection.decode(res, mapper) |> Map.from_struct}
+    end
+    def decode({:error, _} = err, _mapper) do
+      err
     end
 
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)

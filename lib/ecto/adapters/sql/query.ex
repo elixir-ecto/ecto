@@ -6,6 +6,9 @@ defmodule Ecto.Adapters.SQL.Query do
 
   use Behaviour
 
+  @type result :: {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} |
+                  {:error, Exception.t}
+
   @doc """
   Executes the given query with params in connection.
 
@@ -19,8 +22,12 @@ defmodule Ecto.Adapters.SQL.Query do
       as result (but still yields the number of affected rows,
       like a `delete` command without returning would)
   """
-  defcallback query(pid, query :: binary, params :: list(), opts :: Keyword.t) ::
-              {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
+  defcallback query(pid, query :: binary, params :: list(), opts :: Keyword.t) :: result
+
+  @doc """
+  Decodes the given result set given the mapper function.
+  """
+  defcallback decode(result, mapper :: (term -> term)) :: result
 
   ## Queries
 
