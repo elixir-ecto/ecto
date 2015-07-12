@@ -23,6 +23,9 @@ defmodule Ecto.LogEntryTest do
     entry = %{entry | params: [1, 2, 3], result: {:ok, []}}
     assert to_binary(entry) == "done [1, 2, 3] OK"
 
+    entry = %{entry | params: [9, 10, 11]}
+    assert to_binary(entry) == "done [9, 10, 11] OK"
+
     entry = %{entry | params: [%Ecto.Query.Tagged{value: 1}, 2, 3]}
     assert to_binary(entry) == "done [1, 2, 3] OK"
 

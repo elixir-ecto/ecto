@@ -49,8 +49,8 @@ defmodule Ecto.LogEntry do
       value -> value
     end
 
-    {entry, [query, ?\s, inspect(params), ?\s, ok_error(result),
-             time("query", query_time, true), time("queue", queue_time, false), ]}
+    {entry, [query, ?\s, inspect(params, char_lists: false), ?\s, ok_error(result),
+             time("query", query_time, true), time("queue", queue_time, false)]}
   end
 
   defp ok_error({:ok, _}),    do: "OK"
