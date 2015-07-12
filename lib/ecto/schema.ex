@@ -712,9 +712,8 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:changeset` - the default changeset function to call during casting,
-      can be overriden in cast/4. Can be either an atom of function name
-      defined in embedded model, or a {module, function} tuple
-      (default: `:changeset`).
+      can be overriden in cast/4. It's an atom representing function name
+      in the embedded model's module (default: `:changeset`).
 
   ## Examples
 
@@ -749,9 +748,8 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:changeset` - the default changeset function to call during casting,
-      can be overriden in cast/4. Can be either an atom of function name
-      defined in embedded model, or a {module, function} tuple
-      (default: `:changeset`).
+      can be overriden in cast/4. It's an atom representing function name
+      in the embedded model's module (default: `:changeset`).
     * `:container` - the type of container used for model storage. Can be
       either `:map` or `:array`.
 

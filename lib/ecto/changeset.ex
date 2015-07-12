@@ -220,14 +220,22 @@ defmodule Ecto.Changeset do
       Enum.map_reduce(required, {changes, errors},
                       &process_param(&1, :required, params, types, model, &2))
 
-    %Changeset{params: params, model: model, valid?: errors == [],
+    %Changeset{params: params, model: model, valid?: valid?(changes, errors),
                errors: Enum.reverse(errors), changes: changes, required: required,
                optional: optional}
   end
 
+  defp valid?(_changes, [_|_]), do: false
+  defp valid?(changes, []), do: Enum.all?(changes, fn
+    {_, [%Changeset{} | _] = changesets} ->
+      Enum.all?(changesets, &Map.get(&1, :valid?))
+    {_, %Changeset{valid?: value}} -> value
+    _                              -> true
+  end)
+
   defp process_param({key, fun}, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)
-    type = type!(types, key, fun)
+    type = embed!(types, key, fun)
     current = Map.get(model, key)
 
     do_process_param(key, param_key, kind, params, type, current, acc)
@@ -235,23 +243,22 @@ defmodule Ecto.Changeset do
 
   defp process_param(key, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)
-    type = type!(types, key, nil)
+    type = type!(types, key)
     current = Map.get(model, key)
 
     do_process_param(key, param_key, kind, params, type, current, acc)
   end
 
-  defp do_process_param(key, param_key, kind, params, {:embed, embed}, current, {changes, errors}) do
-
+  defp do_process_param(key, param_key, kind, params, {:embed, embed},
+                        current, {changes, errors}) do
     {key,
      case cast_embed(param_key, embed, params, current) do
+       {:ok, embed_changes} ->
+         {Map.put(changes, key, embed_changes), errors}
        :missing ->
          {changes, error_on_nil(kind, key, current, errors)}
-       {embed_changes, embed_errors} ->
-         {merge_embed(changes, key, embed_changes, &Map.put/3),
-          merge_embed(errors, key, embed_errors, &[{&2, &3}|&1])}
-       ^current ->
-         {changes, error_on_nil(kind, key, current, errors)}
+       :invalid ->
+         {changes, [{key, "is invalid"}|errors]}
      end}
   end
 
@@ -269,21 +276,27 @@ defmodule Ecto.Changeset do
      end}
   end
 
-  defp merge_embed(map, key, embedded, add) do
-    Enum.reduce(embedded, map, fn {embed_key, value}, acc ->
-      new_key = List.flatten([key, embed_key])
-      add.(acc, new_key, value)
-    end)
-  end
-
-  defp type!(types, key, value) do
+  defp embed!(types, key, fun) do
     case Map.fetch(types, key) do
       {:ok, {:embed, embed}} ->
-        {:embed, Ecto.Embedded.normalize_changeset(embed, value)}
+        {:embed, %{embed | changeset: fun}}
+      {:ok, _} ->
+        raise ArgumentError, "only embedded fields can be given a cast function"
+      :error ->
+        raise ArgumentError, "unknown field `#{key}` (note only fields and " <>
+          "embeds are supported in cast, associations are not)"
+    end
+  end
+
+  defp type!(types, key) do
+    case Map.fetch(types, key) do
+      {:ok, {:embed, _} = embed} ->
+        embed
       {:ok, type} ->
         type
       :error ->
-        raise ArgumentError, "unknown field `#{key}` (note only fields and embeds are supported in cast, associations are not)"
+        raise ArgumentError, "unknown field `#{key}` (note only fields and " <>
+          "embeds are supported in cast, associations are not)"
     end
   end
 
@@ -292,18 +305,66 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_embed(param_key, %{changeset: fun}, params, model) do
+  defp cast_embed(param_key, %{cardinality: :one, embed: embed, changeset: fun},
+                  params, current) do
     case Map.fetch(params, param_key) do
-      {:ok, nil} ->
-        model
       {:ok, value} ->
-        args = if is_nil(model), do: [value], else: [value, model]
-        changeset = fun.(args)
-        {changeset.changes, changeset.errors}
+        {:ok, apply(embed, fun, [value, current || embed.__struct__()])}
       :error ->
         :missing
     end
   end
+
+  defp cast_embed(param_key, %{container: :array, embed: embed, changeset: fun},
+                  params, current) do
+    case Map.fetch(params, param_key) do
+      {:ok, value} when is_list(value) ->
+        [pk] = embed.__schema__(:primary_key)
+        {pk, param_pk} = cast_key(pk)
+        current = Enum.into(current, %{}, &{Map.get(&1, pk), &1})
+        process_embeds(process_embed_params(value, param_pk, []),
+                       embed, fun, current, [])
+      {:ok, _value} ->
+        :invalid
+      :error ->
+        :missing
+    end
+  end
+
+  defp process_embeds(:error, _mod, _fun,  _current, _acc), do: :invalid
+
+  defp process_embeds([], mod, fun, current, acc) do
+    previous = Enum.map(current, &apply(mod, fun, [%{}, elem(&1, 1)]))
+    {:ok, Enum.reverse(acc, previous)}
+  end
+
+  defp process_embeds([{key, params} | rest], mod, fun, current, acc) do
+    case Map.pop(current, key) do
+      {nil, _current} ->
+        :invalid
+      {model, current} ->
+        changeset = apply(mod, fun, [params, model])
+        process_embeds(rest, mod, fun, current, [changeset | acc])
+    end
+  end
+
+  defp process_embeds([params | rest], mod, fun, current, acc) do
+    changeset = apply(mod, fun, [params, mod.__struct__()])
+    process_embeds(rest, mod, fun, current, [changeset | acc])
+  end
+
+  defp process_embed_params([], _pk, acc), do: Enum.reverse(acc)
+
+  defp process_embed_params([map | rest], pk, acc) when is_map(map) do
+    case Map.fetch(map, pk) do
+      {:ok, value} ->
+        process_embed_params(rest, pk, [{value, map} | acc])
+      :error ->
+        process_embed_params(rest, pk, [map | acc])
+    end
+  end
+
+  defp process_embed_params(_params, _pk, _acc), do: :error
 
   defp cast_field(param_key, :binary_id, params) do
     # Since we don't have the adapter types here,
