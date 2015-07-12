@@ -6,6 +6,7 @@ defmodule Ecto.TestAdapter do
   defmacro __before_compile__(_opts), do: :ok
   def start_link(_repo, _opts), do: :ok
   def id_types(_repo), do: %{binary_id: Ecto.UUID}
+  def fetch_conn_id(conn_pid), do: {:ok, {:test, conn_pid}}
 
   ## Queryable
 

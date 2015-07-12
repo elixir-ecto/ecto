@@ -8,12 +8,14 @@ defmodule Ecto.Pool.RunTest do
   setup context do
     case = context[:case]
     test = context[:test]
-    {:ok, [pool: Module.concat(case, test)]}
+    pool = Module.concat(case, test)
+    {:ok, _} = TestPool.start_link([lazy: false, name: pool,
+                                    timeout: @timeout, adapter: Ecto.TestAdapter])
+    {:ok, [pool: pool]}
   end
 
   test "worker cleans up the connection when it crashes", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     assert {:ok, conn1} =
       TestPool.run(pool, @timeout, fn({_mod, conn1}, queue_time) ->
@@ -34,7 +36,6 @@ defmodule Ecto.Pool.RunTest do
 
   test "nested run has no queue time", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     TestPool.transaction(pool, @timeout, fn(_, _, _, _) ->
       TestPool.run(pool, @timeout, fn({_mod, _conn}, queue_time) ->
@@ -45,7 +46,6 @@ defmodule Ecto.Pool.RunTest do
 
   test "does not disconnect if caller dies during run", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
 
     _ = Process.flag(:trap_exit, true)
     parent = self()

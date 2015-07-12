@@ -4,6 +4,7 @@ defmodule Ecto.Adapters.SQLTest do
   defmodule Adapter do
     use Ecto.Adapters.SQL
     def supports_ddl_transaction?, do: false
+    def fetch_conn_id(conn_pid), do: {:ok, {:test, conn_pid}}
   end
 
   Application.put_env(:ecto, __MODULE__.Repo, adapter: Adapter)

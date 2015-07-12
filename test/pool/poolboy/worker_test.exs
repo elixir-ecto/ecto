@@ -7,7 +7,7 @@ defmodule Ecto.Pools.Poolboy.WorkerTest do
   @timeout :infinity
 
   test "worker starts without an active connection but connects on transaction" do
-    {:ok, pool} = TestPool.start_link([])
+    {:ok, pool} = TestPool.start_link([timeout: @timeout, adapter: Ecto.TestAdapter])
     worker = :poolboy.checkout(pool, false)
     assert Process.alive?(worker)
     refute :sys.get_state(worker).conn
@@ -19,7 +19,7 @@ defmodule Ecto.Pools.Poolboy.WorkerTest do
   end
 
   test "worker starts with an active connection" do
-    {:ok, pool} = TestPool.start_link([lazy: false])
+    {:ok, pool} = TestPool.start_link([lazy: false, timeout: @timeout, adapter: Ecto.TestAdapter])
     worker = :poolboy.checkout(pool, false)
     assert Process.alive?(worker)
     assert :sys.get_state(worker).conn
