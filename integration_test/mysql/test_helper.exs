@@ -1,4 +1,4 @@
-Logger.configure(level: :info)
+Logger.configure(level: :debug)
 ExUnit.start exclude: [:array_type, :read_after_writes, :case_sensitive,
                        :uses_usec, :strict_savepoint]
 

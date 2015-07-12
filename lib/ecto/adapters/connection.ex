@@ -34,23 +34,33 @@ defmodule Ecto.Adapters.Connection do
 
   defp after_connect(conn, opts) do
     repo = opts[:repo]
-    if function_exported?(repo, :after_connect, 1) do
-      try do
-        Task.async(fn -> repo.after_connect(conn) end)
-        |> Task.await(opts[:timeout])
-      catch
-        :exit, {:timeout, [Task, :await, [%Task{pid: task_pid}, _]]} ->
-          shutdown(task_pid, :brutal_kill)
-          shutdown(conn, :brutal_kill)
-          {:error, :timeout}
-        :exit, {reason, {Task, :await, _}} ->
-          shutdown(conn, :brutal_kill)
-          {:error, reason}
-      else
-        _ -> {:ok, conn}
-      end
+    adapter = opts[:adapter]
+    try do
+      Task.async(fn ->
+        register_conn_id(adapter, conn)
+        if function_exported?(repo, :after_connect, 1) do
+          repo.after_connect(conn)
+        end
+      end)
+      |> Task.await(opts[:timeout])
+    catch
+      :exit, {:timeout, [Task, :await, [%Task{pid: task_pid}, _]]} ->
+        shutdown(task_pid, :brutal_kill)
+        shutdown(conn, :brutal_kill)
+        {:error, :timeout}
+      :exit, {reason, {Task, :await, _}} ->
+        shutdown(conn, :brutal_kill)
+        {:error, reason}
     else
-      {:ok, conn}
+      _ -> {:ok, conn}
+    end
+  end
+
+  defp register_conn_id(adapter, conn) do
+    case adapter.fetch_conn_id(conn) do
+      {:ok, conn_id} ->
+        Ecto.Adapters.SQL.DBConnIdMap.register(conn, conn_id)
+      :ignore -> nil
     end
   end
 

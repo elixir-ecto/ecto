@@ -63,6 +63,13 @@ defmodule Ecto.Adapters.Postgres do
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
 
+  def fetch_conn_id(conn) do
+    case Postgrex.Connection.query(conn, "SELECT pg_backend_pid();", []) do
+      {:ok, %{rows: [{conn_id}]}} -> {:ok, conn_id}
+      {:error, _} = error -> error
+    end
+  end
+
   ## Storage API
 
   @doc false

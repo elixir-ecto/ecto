@@ -41,7 +41,7 @@ defmodule Ecto.LogEntry do
   The entry is automatically resolved if it hasn't been yet.
   """
   def to_iodata(entry) do
-    %{query_time: query_time, queue_time: queue_time,
+    %{query_time: query_time, queue_time: queue_time, connection_pid: conn_pid,
       params: params, query: query, result: result} = entry = resolve(entry)
 
     params = Enum.map params, fn
@@ -49,7 +49,10 @@ defmodule Ecto.LogEntry do
       value -> value
     end
 
-    {entry, [query, ?\s, inspect(params, char_lists: false), ?\s, ok_error(result),
+    maybe_conn_id = Ecto.Adapters.SQL.DBConnIdMap.fetch(conn_pid)
+
+    {entry, [query, ?\s, inspect(params, char_lists: false), ?\s,
+             ok_error(result), conn_id(maybe_conn_id),
              time("query", query_time, true), time("queue", queue_time, false)]}
   end
 
@@ -65,4 +68,7 @@ defmodule Ecto.LogEntry do
       []
     end
   end
+
+  defp conn_id(:error), do: []
+  defp conn_id({:ok, conn_id}), do: [" conn_id=", inspect(conn_id)]
 end

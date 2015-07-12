@@ -76,6 +76,9 @@ defmodule Ecto.Repo do
       end
 
       def start_link(custom_config \\ []) do
+        # Hackety hack
+        Ecto.Adapters.SQL.DBConnIdMap.start_link()
+
         config = Keyword.merge(config(), custom_config)
         @adapter.start_link(__MODULE__, config)
       end
