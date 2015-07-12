@@ -1,4 +1,4 @@
-Logger.configure(level: :info)
+Logger.configure(level: :debug)
 ExUnit.start
 
 # Configure Ecto for support and tests

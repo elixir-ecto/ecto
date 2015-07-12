@@ -39,6 +39,8 @@ defmodule Ecto.Adapter do
   defcallback start_link(repo, options) ::
               {:ok, pid} | :ok | {:error, {:already_started, pid}} | {:error, term}
 
+  defcallback fetch_conn_id(pid) :: {:ok, term} | :ignore | {:error, term}
+
   @doc """
   Returns the binary id type for this adapter.
 

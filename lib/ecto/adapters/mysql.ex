@@ -93,6 +93,13 @@ defmodule Ecto.Adapters.MySQL do
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
 
+  def fetch_conn_id(conn) do
+    case Mariaex.Connection.query(conn, "SELECT CONNECTION_ID();", []) do
+      {:ok, %{rows: [{conn_id}]}} -> {:ok, conn_id}
+      {:error, _} = error -> error
+    end
+  end
+
   ## Storage API
 
   @doc false
