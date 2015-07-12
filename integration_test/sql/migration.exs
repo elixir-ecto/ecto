@@ -106,6 +106,26 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule RenameMigration do
+    use Ecto.Migration
+
+    @table_current table(:posts_migration)
+    @table_new table(:new_posts_migration)
+
+    def up do
+      assert false == exists? @table_current
+      create @table_current
+      rename @table_current, @table_new
+      assert true == exists? @table_new
+      assert false == exists? @table_current
+    end
+
+    def down do
+      drop @table_new
+      assert false == exists? @table_new
+    end
+  end
+
   defmodule NoSQLMigration do
     use Ecto.Migration
 
@@ -183,5 +203,12 @@ defmodule Ecto.Integration.MigrationTest do
     assert catch_error(TestRepo.one from p in "drop_col_migration", select: p.to_be_removed)
   after
     :ok = down(TestRepo, 20090906120000, DropColumnMigration, log: false)
+  end
+
+  @tag :rename
+  test "rename table" do
+    assert :ok == up(TestRepo, 20150712120000, RenameMigration, log: false)
+  after
+    assert :ok == down(TestRepo, 20150712120000, RenameMigration, log: false)
   end
 end
