@@ -24,11 +24,6 @@ defmodule Ecto.Adapters.SQL.Query do
   """
   defcallback query(pid, query :: binary, params :: list(), opts :: Keyword.t) :: result
 
-  @doc """
-  Decodes the given result set given the mapper function.
-  """
-  defcallback decode(result, mapper :: (term -> term)) :: result
-
   ## Queries
 
   @doc """
