@@ -523,6 +523,18 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> String.strip |> String.replace("\n", " ")
   end
 
+  test "alter table with adding foreign key constraint" do
+    alter = {:alter, table(:posts),
+              [{:modify, :user_id, references(:users, on_delete: :delete_all), []}]
+            }
+
+    assert SQL.execute_ddl(alter) == """
+    ALTER TABLE `posts`
+    MODIFY `user_id` BIGINT UNSIGNED,
+    ADD CONSTRAINT `user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+    """ |> String.strip |> String.replace("\n", " ")
+  end
+
   test "create index" do
     create = {:create, index(:posts, [:category_id, :permalink])}
     assert SQL.execute_ddl(create) ==

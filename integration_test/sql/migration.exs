@@ -65,6 +65,32 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule AlterForeignKeyMigration do
+    use Ecto.Migration
+
+    def up do
+      create table(:alter_fk_migration_users)
+
+      create table(:alter_fk_migration_posts) do
+        add :alter_fk_migration_user_id, :integer
+      end
+
+      alter table(:alter_fk_migration_posts) do
+        add :content, :text
+        modify :alter_fk_migration_user_id, references(:alter_fk_migration_users, on_delete: :nilify_all)
+      end
+
+      execute "INSERT INTO alter_fk_migration_users (id) VALUES ('1')"
+      execute "INSERT INTO alter_fk_migration_posts (id, content, alter_fk_migration_user_id) VALUES ('1', 'text', '1')"
+      execute "DELETE FROM alter_fk_migration_users"
+    end
+
+    def down do
+      drop table(:alter_fk_migration_posts)
+      drop table(:alter_fk_migration_users)
+    end
+  end
+
   defmodule DropColumnMigration do
     use Ecto.Migration
 
@@ -175,6 +201,14 @@ defmodule Ecto.Integration.MigrationTest do
     assert "foo" == TestRepo.one from p in "alter_col_migration", select: p.to_be_modified
   after
     :ok = down(TestRepo, 20080906120000, AlterColumnMigration, log: false)
+  end
+
+  @tag :modify_foreign_key
+  test "modify foreign key" do
+    assert :ok == up(TestRepo, 20130802170000, AlterForeignKeyMigration, log: false)
+    assert nil == TestRepo.one from p in "alter_fk_migration_posts", select: p.alter_fk_migration_user_id
+  after
+    :ok = down(TestRepo, 20130802170000, AlterForeignKeyMigration, log: false)
   end
 
   @tag :remove_column
