@@ -231,9 +231,9 @@ defmodule Ecto.Schema do
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
   * `__schema__(:primary_key)` - Returns a list of the field that is the primary
     key or [] if there is none;
-
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
-  * `__schema__(:field, field)` - Returns the type of the given non-virtual field;
+
+  * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
   * `__schema__(:types)` - Returns a keyword list of all non-virtual
     field names and their type;
 
@@ -329,11 +329,10 @@ defmodule Ecto.Schema do
       Module.eval_quoted __ENV__, [
         Ecto.Schema.__struct__(@struct_fields),
         Ecto.Schema.__changeset__(@changeset_fields),
-        Ecto.Schema.__source__(source),
-        Ecto.Schema.__fields__(fields),
+        Ecto.Schema.__schema__(source, fields, primary_key_fields),
+        Ecto.Schema.__types__(fields),
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
-        Ecto.Schema.__primary_key__(primary_key_fields),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
         Ecto.Schema.__autogenerate__(@ecto_autogenerate, @ecto_autogenerate_id)]
     end
@@ -879,28 +878,34 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __source__(source) do
+  def __schema__(source, fields, primary_key) do
+    field_names = Enum.map(fields, &elem(&1, 0))
+
     quote do
-      def __schema__(:source), do: unquote(Macro.escape(source))
+      def __schema__(:source),      do: unquote(Macro.escape(source))
+      def __schema__(:fields),      do: unquote(field_names)
+      def __schema__(:primary_key), do: unquote(primary_key)
     end
   end
 
   @doc false
-  def __fields__(fields) do
-    quoted = Enum.map(fields, fn {name, type} ->
-      quote do
-        def __schema__(:field, unquote(name)),
-          do: unquote(Macro.escape(type))
-      end
-    end)
+  def __types__(fields) do
+    quoted =
+      Enum.map(fields, fn {name, type} ->
+        quote do
+          def __schema__(:type, unquote(name)) do
+            unquote(Macro.escape(type))
+          end
+        end
+      end)
 
-    field_names = Enum.map(fields, &elem(&1, 0))
+    types = fields |> Enum.into(%{}) |> Macro.escape()
 
-    quoted ++ [quote do
-      def __schema__(:field, _), do: nil
-      def __schema__(:fields), do: unquote(field_names)
-      def __schema__(:types), do: unquote(Macro.escape(fields))
-    end]
+    quote do
+      def __schema__(:types), do: unquote(types)
+      unquote(quoted)
+      def __schema__(:type, _), do: nil
+    end
   end
 
   @doc false
@@ -925,13 +930,14 @@ defmodule Ecto.Schema do
 
   @doc false
   def __embeds__(embeds) do
-    quoted = Enum.map(embeds, fn {name, refl} ->
-      quote do
-        def __schema__(:embed, unquote(name)) do
-          unquote(Macro.escape(refl))
+    quoted =
+      Enum.map(embeds, fn {name, refl} ->
+        quote do
+          def __schema__(:embed, unquote(name)) do
+            unquote(Macro.escape(refl))
+          end
         end
-      end
-    end)
+      end)
 
     embed_names = Enum.map(embeds, &elem(&1, 0))
 
@@ -939,13 +945,6 @@ defmodule Ecto.Schema do
       def __schema__(:embeds), do: unquote(embed_names)
       unquote(quoted)
       def __schema__(:embed, _), do: nil
-    end
-  end
-
-  @doc false
-  def __primary_key__(primary_key) do
-    quote do
-      def __schema__(:primary_key), do: unquote(primary_key)
     end
   end
 

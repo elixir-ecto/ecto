@@ -13,7 +13,7 @@ defmodule Ecto.Query.Planner do
   Validates and cast the given fields belonging to the given model.
   """
   def fields(model, kind, kw, id_types) do
-    types = model.__changeset__
+    types = model.__schema__(:types)
 
     for {field, value} <- kw do
       type = Map.get(types, field)
@@ -548,7 +548,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp type!(kind, query, expr, model, field) when is_atom(model) do
-    if type = model.__schema__(:field, field) do
+    if type = model.__schema__(:type, field) do
       type
     else
       error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` " <>

@@ -29,16 +29,21 @@ defmodule Ecto.SchemaTest do
   test "schema metadata" do
     assert Model.__schema__(:source)             == "mymodel"
     assert Model.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
-    assert Model.__schema__(:types)  == [id: :id, name: :string, email: :string, count: :decimal, array: {:array, :string}, uuid: Ecto.UUID, comment_id: :id]
-    assert Model.__schema__(:field, :id)         == :id
-    assert Model.__schema__(:field, :name)       == :string
-    assert Model.__schema__(:field, :email)      == :string
-    assert Model.__schema__(:field, :array)      == {:array, :string}
-    assert Model.__schema__(:field, :comment_id) == :id
     assert Model.__schema__(:read_after_writes)  == [:email, :count]
     assert Model.__schema__(:primary_key)        == [:id]
     assert Model.__schema__(:autogenerate)       == %{uuid: Ecto.UUID}
     assert Model.__schema__(:autogenerate_id)    == {:id, :id}
+  end
+
+  test "types metadata" do
+    assert Model.__schema__(:types) ==
+           %{id: :id, name: :string, email: :string, count: :decimal,
+             array: {:array, :string}, uuid: Ecto.UUID, comment_id: :id}
+    assert Model.__schema__(:type, :id)         == :id
+    assert Model.__schema__(:type, :name)       == :string
+    assert Model.__schema__(:type, :email)      == :string
+    assert Model.__schema__(:type, :array)      == {:array, :string}
+    assert Model.__schema__(:type, :comment_id) == :id
   end
 
   test "changeset metadata" do
@@ -48,7 +53,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "skip field with define_field false" do
-    refute Model.__schema__(:field, :permalink_id)
+    refute Model.__schema__(:type, :permalink_id)
   end
 
   test "primary key" do
@@ -78,7 +83,7 @@ defmodule Ecto.SchemaTest do
   test "uses schema attributes" do
     assert %SchemaModel{perm: "abc"}.perm == "abc"
     assert SchemaModel.__schema__(:autogenerate_id) == {:perm, :id}
-    assert SchemaModel.__schema__(:field, :comment_id) == :string
+    assert SchemaModel.__schema__(:type, :comment_id) == :string
   end
 
   test "custom primary key" do
@@ -89,7 +94,7 @@ defmodule Ecto.SchemaTest do
   test "has __meta__ field" do
     assert %SchemaModel{}.__meta__.state == :built
     assert %SchemaModel{}.__meta__.source == "users"
-    assert SchemaModel.__schema__(:field, :__meta__) == nil
+    assert SchemaModel.__schema__(:type, :__meta__) == nil
   end
 
   ## Errors
@@ -338,8 +343,8 @@ defmodule Ecto.SchemaTest do
     assert :permalink2_id == refl.owner_key
     assert :pk == refl.assoc_key
 
-    assert ModelAssocOpts.__schema__(:field, :fk) == :string
-    assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :string
+    assert ModelAssocOpts.__schema__(:type, :fk) == :string
+    assert ModelAssocOpts.__schema__(:type, :permalink2_id) == :string
   end
 
   test "has_* validates option" do

@@ -165,7 +165,7 @@ defmodule Ecto.Repo.Model do
   end
 
   defp do_load(struct, model, kv, id_types) do
-    types = model.__changeset__
+    types = model.__schema__(:types)
 
     model = Enum.reduce(kv, struct, fn
       {k, v}, acc ->
