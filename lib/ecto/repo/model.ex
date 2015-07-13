@@ -165,6 +165,9 @@ defmodule Ecto.Repo.Model do
   end
 
   defp do_load(struct, model, kv, id_types) do
+    # It is ok to use __changeset__ because
+    # we have already filtered the results
+    # to be only about fields.
     types = model.__changeset__
 
     model = Enum.reduce(kv, struct, fn

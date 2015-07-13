@@ -13,6 +13,9 @@ defmodule Ecto.Query.Planner do
   Validates and cast the given fields belonging to the given model.
   """
   def fields(model, kind, kw, id_types) do
+    # It is ok to use __changeset__ because
+    # we have already filtered the results
+    # to be only about fields.
     types = model.__changeset__
 
     for {field, value} <- kw do
