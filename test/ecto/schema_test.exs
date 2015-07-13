@@ -342,6 +342,18 @@ defmodule Ecto.SchemaTest do
     assert ModelAssocOpts.__schema__(:field, :permalink2_id) == :string
   end
 
+  test "has_* validates option" do
+    assert_raise ArgumentError, "invalid option :unknown for has_many/3", fn ->
+      defmodule InvalidHasOption do
+        use Ecto.Model
+
+        schema "assoc" do
+          has_many :posts, Post, unknown: :option
+        end
+      end
+    end
+  end
+
   test "has_* references option has to match a field on model" do
     message = ~r"model does not have the field :pk used by association :posts"
     assert_raise ArgumentError, message, fn ->

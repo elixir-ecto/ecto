@@ -411,22 +411,6 @@ defmodule Ecto.Schema do
     end
   end
 
-  @doc """
-  Defines an association.
-
-  This macro is used by `belongs_to/3`, `has_one/3` and `has_many/3` to
-  define associations. However, custom association mechanisms can be provided
-  by developers and hooked in via this macro.
-
-  Read more about custom associations in `Ecto.Association`.
-  """
-  defmacro association(cardinality, name, association, opts \\ []) do
-    quote do
-      Ecto.Schema.__association__(__MODULE__, unquote(cardinality), unquote(name),
-                                  unquote(association), unquote(opts))
-    end
-  end
-
   @doc ~S"""
   Indicates a one-to-many association with another model.
 
@@ -545,12 +529,8 @@ defmodule Ecto.Schema do
 
   """
   defmacro has_many(name, queryable, opts \\ []) do
-    quote bind_quoted: binding() do
-      if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-        association(:many, name, Ecto.Association.HasThrough, queryable)
-      else
-        association(:many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
-      end
+    quote do
+      Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
   end
 
@@ -594,12 +574,8 @@ defmodule Ecto.Schema do
 
   """
   defmacro has_one(name, queryable, opts \\ []) do
-    quote bind_quoted: binding() do
-      if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-        association(:one, name, Ecto.Association.HasThrough, queryable)
-      else
-        association(:one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
-      end
+    quote do
+      Ecto.Schema.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
   end
 
@@ -715,31 +691,12 @@ defmodule Ecto.Schema do
 
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
-    quote bind_quoted: binding() do
-      opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
-      foreign_key_type = opts[:type] || @foreign_key_type
-      if Keyword.get(opts, :define_field, true) do
-        field(opts[:foreign_key], foreign_key_type, opts)
-      end
-      association(:one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+    quote do
+      Ecto.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
   end
 
   ## Embeds
-
-
-  @doc """
-  Defines an embedding.
-
-  This macro is used by `embeds_one/3` and `embeds_many/3` to define
-  embeddings However, custom embedding mechanisms can be provided
-  by developers and hooked in via this macro.
-  """
-  def embed(cardinality, name, model, opts) do
-    quote bind_quoted: binding() do
-      Ecto.Schema.__embed__(__MODULE__, cardinality, name, model, opts)
-    end
-  end
 
   @doc ~S"""
   Indicates an embedding of one model.
@@ -768,9 +725,9 @@ defmodule Ecto.Schema do
 
   """
   defmacro embeds_one(name, model, opts \\ []) do
-    opts = Keyword.put_new(opts, :container, nil)
-
-    embed(:one, name, model, opts)
+    quote do
+      Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), unquote(model), unquote(opts))
+    end
   end
 
   @doc ~S"""
@@ -819,12 +776,9 @@ defmodule Ecto.Schema do
 
   """
   defmacro embeds_many(name, model, opts \\ []) do
-    opts =
-      opts
-      |> Keyword.put_new(:default, [])
-      |> Keyword.put_new(:container, :array)
-
-    embed(:many, name, model, opts)
+    quote do
+      Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), unquote(model), unquote(opts))
+    end
   end
 
   ## Callbacks
@@ -855,22 +809,56 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __embed__(mod, cardinality, name, model, opts) do
-    opts   = [cardinality: cardinality, embed: model] ++ opts
-    struct = Ecto.Embedded.struct(mod, name, opts)
+  def __has_many__(mod, name, queryable, opts) do
+    check_options!(opts, [:foreign_key, :references, :through, :on_delete], "has_many/3")
 
-    __field__(mod, name, {:embed, struct}, false, opts)
-
-    Module.put_attribute(mod, :ecto_embeds, {name, struct})
+    if is_list(queryable) and Keyword.has_key?(queryable, :through) do
+      association(mod, :many, name, Ecto.Association.HasThrough, queryable)
+    else
+      association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+    end
   end
 
   @doc false
-  def __association__(mod, cardinality, name, association, opts) do
-    not_loaded  = %Ecto.Association.NotLoaded{__owner__: mod,
-                    __field__: name, __cardinality__: cardinality}
-    put_struct_field(mod, name, not_loaded)
-    opts = [cardinality: cardinality] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
+  def __has_one__(mod, name, queryable, opts) do
+    check_options!(opts, [:foreign_key, :references, :through, :on_delete], "has_one/3")
+
+    if is_list(queryable) and Keyword.has_key?(queryable, :through) do
+      association(mod, :one, name, Ecto.Association.HasThrough, queryable)
+    else
+      association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+    end
+  end
+
+  @doc false
+  def __belongs_to__(mod, name, queryable, opts) do
+    check_options!(opts, [:foreign_key, :references, :define_field, :type], "belongs_to/3")
+
+    opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
+    foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
+
+    if Keyword.get(opts, :define_field, true) do
+      __field__(mod, opts[:foreign_key], foreign_key_type, false, opts)
+    end
+
+    association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+  end
+
+  @doc false
+  def __embeds_one__(mod, name, model, opts) do
+    check_options!(opts, [:changeset], "embeds_one/3")
+    opts = Keyword.put(opts, :container, nil)
+    embed(mod, :one, name, model, opts)
+  end
+
+  @doc false
+  def __embeds_many__(mod, name, model, opts) do
+    check_options!(opts, [:changeset, :container], "embeds_many/3")
+    opts =
+      opts
+      |> Keyword.put(:default, [])
+      |> Keyword.put_new(:container, :array)
+    embed(mod, :many, name, model, opts)
   end
 
   ## Quoted callbacks
@@ -979,6 +967,22 @@ defmodule Ecto.Schema do
 
   ## Private
 
+  defp association(mod, cardinality, name, association, opts) do
+    not_loaded  = %Ecto.Association.NotLoaded{__owner__: mod,
+                    __field__: name, __cardinality__: cardinality}
+    put_struct_field(mod, name, not_loaded)
+    opts = [cardinality: cardinality] ++ opts
+    Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
+  end
+
+  defp embed(mod, cardinality, name, model, opts) do
+    opts   = [cardinality: cardinality, embed: model] ++ opts
+    struct = Ecto.Embedded.struct(mod, name, opts)
+
+    __field__(mod, name, {:embed, struct}, false, opts)
+    Module.put_attribute(mod, :ecto_embeds, {name, struct})
+  end
+
   defp put_struct_field(mod, name, assoc) do
     fields = Module.get_attribute(mod, :struct_fields)
 
@@ -987,6 +991,15 @@ defmodule Ecto.Schema do
     end
 
     Module.put_attribute(mod, :struct_fields, {name, assoc})
+  end
+
+  defp check_options!(opts, valid, fun_arity) do
+    case Enum.find(opts, fn {k, _} -> not k in valid end) do
+      {k, _} ->
+        raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"
+      nil ->
+        :ok
+    end
   end
 
   defp check_type!(name, type, virtual?) do
