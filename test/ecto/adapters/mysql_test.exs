@@ -561,6 +561,11 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts` LOCK=NONE|
   end
 
+  test "rename table" do
+    rename = {:rename, table(:posts), table(:new_posts)}
+    assert SQL.execute_ddl(rename) == ~s|RENAME TABLE `posts` TO `new_posts`|
+  end
+
   # Unsupported types and clauses
 
   test "arrays" do

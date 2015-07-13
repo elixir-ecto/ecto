@@ -580,4 +580,9 @@ defmodule Ecto.Adapters.PostgresTest do
     drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX CONCURRENTLY "posts$main"|
   end
+
+  test "rename table" do
+    rename = {:rename, table(:posts), table(:new_posts)}
+    assert SQL.execute_ddl(rename) == ~s|ALTER TABLE "posts" RENAME TO "new_posts"|
+  end
 end

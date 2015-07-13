@@ -413,6 +413,17 @@ defmodule Ecto.Migration do
   end
 
   @doc """
+  Renames a table.
+
+  ## Examples
+
+      rename table(:posts), table(:new_posts)
+  """
+  def rename(%Table{} = table_current, %Table{} = table_new) do
+    Runner.execute {:rename, table_current, table_new}
+  end
+
+  @doc """
   Generates a fragment to be used as default value.
 
   ## Examples

@@ -149,6 +149,11 @@ defmodule Ecto.MigrationTest do
     assert {:drop, %Index{}} = last_command()
   end
 
+  test "forward: renames a table" do
+    rename table(:posts), table(:new_posts)
+    assert {:rename, %Table{name: :posts}, %Table{name: :new_posts}} = last_command()
+  end
+
   ## Reverse
   @moduletag direction: :backward
 
@@ -220,6 +225,11 @@ defmodule Ecto.MigrationTest do
   test "backward: drops an index" do
     drop index(:posts, [:title])
     assert {:create, %Index{}} = last_command()
+  end
+
+  test "backward: renames a table" do
+    rename table(:posts), table(:new_posts)
+    assert {:rename, %Table{name: :new_posts}, %Table{name: :posts}} = last_command()
   end
 
   defp last_exists(), do: Process.get(:last_exists)
