@@ -155,7 +155,7 @@ defmodule Ecto.Changeset do
   Note that if a field is marked both as *required* as well as *optional* (for
   example by being in the `:required` field of the argument changeset and also
   in the `optional` list passed to `cast/4`), then it will be marked as required
-  and not optional). This represents the fact that required fields are
+  and not optional. This represents the fact that required fields are
   "stronger" than optional fields.
 
   ## Examples
