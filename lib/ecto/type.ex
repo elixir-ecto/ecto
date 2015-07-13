@@ -88,7 +88,7 @@ defmodule Ecto.Type do
   @typep base      :: :integer | :float | :boolean | :string |
                       :binary | :decimal | :datetime | :time |
                       :date | :id | :binary_id | :map | :any
-  @typep composite :: {:array, base}
+  @typep composite :: {:array, base} | {:embed, Ecto.Embedded.t}
 
   @base      ~w(integer float boolean string binary decimal datetime time date id binary_id map any)a
   @composite ~w(array embed)a

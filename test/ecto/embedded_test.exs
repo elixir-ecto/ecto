@@ -13,7 +13,7 @@ defmodule Ecto.EmbeddedTest do
     use Ecto.Model
 
     schema "authors" do
-      embeds_one :profile, Profile, changeset: :required_changeset
+      embeds_one :profile, Profile, on_cast: :required_changeset
       embeds_many :profiles, Profile
     end
   end
@@ -44,11 +44,11 @@ defmodule Ecto.EmbeddedTest do
 
     assert Author.__schema__(:embed, :profile) ==
       %Ecto.Embedded{field: :profile, cardinality: :one, owner: Author,
-                     embed: Profile, container: nil, changeset: :required_changeset}
+                     embed: Profile, container: nil, on_cast: :required_changeset}
 
     assert Author.__schema__(:embed, :profiles) ==
       %Ecto.Embedded{field: :profiles, cardinality: :many, owner: Author,
-                     embed: Profile, container: :array, changeset: :changeset}
+                     embed: Profile, container: :array, on_cast: :changeset}
   end
 
 
@@ -168,6 +168,7 @@ defmodule Ecto.EmbeddedTest do
     assert other.status == :update
     assert other.valid?
     assert michal.model.id == "michal"
+    assert michal.required == [] # Check for not running chgangeset function
     assert michal.status == :delete
     assert michal.valid?
     refute changeset.valid?
@@ -179,6 +180,10 @@ defmodule Ecto.EmbeddedTest do
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"profiles" => ["value"]}, ~w(profiles))
+    assert changeset.errors == [profiles: "is invalid"]
+    refute changeset.valid?
+
+    changeset = cast(%Author{}, %{"profiles" => nil}, ~w(profiles))
     assert changeset.errors == [profiles: "is invalid"]
     refute changeset.valid?
   end

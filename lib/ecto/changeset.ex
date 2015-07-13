@@ -19,6 +19,8 @@ defmodule Ecto.Changeset do
   * `required`    - All required fields as a list of atoms
   * `optional`    - All optional fields as a list of atoms
   * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
+  * `status`      - The lifecycle of the embedded changeset
+  * `types`       - Cache of the model's field types
   """
 
   alias __MODULE__
@@ -27,7 +29,7 @@ defmodule Ecto.Changeset do
 
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: [],
-            filters: %{}, status: nil
+            filters: %{}, status: nil, types: nil
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
@@ -39,7 +41,8 @@ defmodule Ecto.Changeset do
                         errors: [error],
                         validations: [{atom, String.t | {String.t, [term]}}],
                         filters: %{atom => term},
-                        status: nil | status}
+                        status: nil | status,
+                        types: nil | %{atom => Ecto.Type.t}}
 
   @type error :: {atom, error_message}
   @type error_message :: String.t | {String.t, integer}
@@ -108,17 +111,19 @@ defmodule Ecto.Changeset do
 
   def change(%Changeset{changes: changes} = changeset, new_changes)
       when is_map(new_changes) do
-    %{changeset | changes: get_changed(changeset.model, changes, new_changes)}
+    changeset = ensure_has_types(changeset)
+    %{changeset | changes: get_changed(changeset.model, changeset.types, changes, new_changes)}
   end
 
-  def change(%{__struct__: _} = model, changes) when is_map(changes) do
-    changed = get_changed(model, %{}, changes)
-    %Changeset{valid?: true, model: model, changes: changed}
+  def change(%{__struct__: struct} = model, changes) when is_map(changes) do
+    types = struct.__changeset__
+    changed = get_changed(model, types, %{}, changes)
+    %Changeset{valid?: true, model: model, changes: changed, types: types}
   end
 
-  defp get_changed(model, old_changes, new_changes) do
+  defp get_changed(model, types, old_changes, new_changes) do
     Enum.reduce(new_changes, old_changes, fn({key, value}, acc) ->
-      put_change(model, acc, key, value)
+      put_change(model, acc, key, value, Map.get(types, key))
     end)
   end
 
@@ -224,7 +229,7 @@ defmodule Ecto.Changeset do
 
     %Changeset{params: params, model: model, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, required: required,
-               optional: optional}
+               optional: optional, types: types}
   end
 
   defp process_param({key, fun}, kind, params, types, model, acc) do
@@ -278,7 +283,7 @@ defmodule Ecto.Changeset do
   defp embed!(types, key, fun) do
     case Map.fetch(types, key) do
       {:ok, {:embed, embed}} ->
-        {:embed, %{embed | changeset: fun}}
+        {:embed, %Ecto.Embedded{embed | on_cast: fun}}
       {:ok, _} ->
         raise ArgumentError, "only embedded fields can be given a cast function"
       :error ->
@@ -402,20 +407,21 @@ defmodule Ecto.Changeset do
   @spec merge(t, t) :: t
   def merge(changeset1, changeset2)
 
-  def merge(%Changeset{model: model, repo: repo1} = cs1, %Changeset{model: model, repo: repo2} = cs2)
-      when is_nil(repo1) or is_nil(repo2) or repo1 == repo2 do
-    new_repo        = repo1 || repo2
+  def merge(%Changeset{model: model} = cs1, %Changeset{model: model} = cs2) do
+    new_repo        = merge_identical(cs1.repo, cs2.repo, "repos")
     new_params      = cs1.params && cs2.params && Map.merge(cs1.params, cs2.params)
     new_changes     = Map.merge(cs1.changes, cs2.changes)
     new_validations = cs1.validations ++ cs2.validations
     new_errors      = cs1.errors ++ cs2.errors
     new_required    = Enum.uniq(cs1.required ++ cs2.required)
     new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
+    new_status      = merge_identical(cs1.status, cs2.status, "statuses")
+    new_types       = cs1.types || cs2.types
 
     %Changeset{params: new_params, model: model, valid?: new_errors == [],
                errors: new_errors, changes: new_changes, repo: new_repo,
-               required: new_required, optional: new_optional,
-               validations: new_validations}
+               required: new_required, optional: new_optional, status: new_status,
+               validations: new_validations, types: new_types}
   end
 
   def merge(%Changeset{model: m1}, %Changeset{model: m2}) when m1 != m2 do
@@ -424,6 +430,13 @@ defmodule Ecto.Changeset do
 
   def merge(%Changeset{repo: r1}, %Changeset{repo: r2}) when r1 != r2 do
     raise ArgumentError, message: "different repos when merging changesets"
+  end
+
+  defp merge_identical(object, nil, _thing), do: object
+  defp merge_identical(nil, object, _thing), do: object
+  defp merge_identical(object, object, _thing), do: object
+  defp merge_identical(_, _, thing) do
+    raise ArgumentError, message: "different #{thing} when merging changesets"
   end
 
   @doc """
@@ -570,10 +583,17 @@ defmodule Ecto.Changeset do
   """
   @spec put_change(t, atom, term) :: t
   def put_change(%Changeset{} = changeset, key, value) do
-    update_in changeset.changes, &put_change(changeset.model, &1, key, value)
+    changeset = ensure_has_types(changeset)
+    type = Map.get(changeset.types, key)
+    update_in changeset.changes, &put_change(changeset.model, &1, key, value, type)
   end
 
-  defp put_change(model, acc, key, value) do
+  defp put_change(_model, acc, key, value, {:embed, embed}) do
+    value = Ecto.Embedded.wrap_change(embed, value)
+    Map.put(acc, key, value)
+  end
+
+  defp put_change(model, acc, key, value, _type) do
     cond do
       Map.get(model, key) != value ->
         Map.put(acc, key, value)
@@ -581,6 +601,13 @@ defmodule Ecto.Changeset do
         Map.delete(acc, key)
       true ->
         acc
+    end
+  end
+
+  defp ensure_has_types(changeset) do
+    update_in changeset.types, fn
+      nil   -> changeset.model.__struct__.__changeset__
+      types -> types
     end
   end
 
@@ -593,17 +620,23 @@ defmodule Ecto.Changeset do
   ## Examples
 
       iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
-      iex> changeset = put_change(changeset, :title, "bar")
+      iex> changeset = force_change(changeset, :title, "bar")
       iex> changeset.changes
       %{title: "bar"}
 
-      iex> changeset = put_change(changeset, :author, "bar")
+      iex> changeset = force_change(changeset, :author, "bar")
       iex> changeset.changes
       %{title: "bar", author: "bar"}
 
   """
   @spec force_change(t, atom, term) :: t
   def force_change(%Changeset{} = changeset, key, value) do
+    changeset = ensure_has_types(changeset)
+    value =
+      case Map.get(changeset.types, key) do
+        {:embed, embed} -> Ecto.Embedded.wrap_change(embed, value)
+        _               -> value
+      end
     update_in changeset.changes, &Map.put(&1, key, value)
   end
 

@@ -52,7 +52,7 @@ defmodule Ecto.TypeTest do
 
   test "embeds_one" do
     type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed, cardinality: :one,
-                                         embed: Model, changeset: :changeset)}
+                                         embed: Model, on_cast: :changeset)}
     id_types = %{binary_id: :string}
     assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, id_types)
     assert {:ok, %Model{a: 1}} = load(type, "{\"a\": 1}", id_types)
@@ -69,7 +69,7 @@ defmodule Ecto.TypeTest do
   test "embeds_many with array" do
     type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed,
                                          cardinality: :many, container: :array,
-                                         embed: Model, changeset: :changeset)}
+                                         embed: Model, on_cast: :changeset)}
     id_types = %{binary_id: :string}
     assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], id_types)
     assert {:ok, [%Model{a: 1}]} = load(type, ["{\"a\": 1}"], id_types)

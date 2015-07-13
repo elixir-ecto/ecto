@@ -711,7 +711,7 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:changeset` - the default changeset function to call during casting,
+    * `:on_cast` - the default changeset function to call during casting,
       can be overriden in cast/4. It's an atom representing function name
       in the embedded model's module (default: `:changeset`).
 
@@ -747,7 +747,7 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:changeset` - the default changeset function to call during casting,
+    * `:on_cast` - the default changeset function to call during casting,
       can be overriden in cast/4. It's an atom representing function name
       in the embedded model's module (default: `:changeset`).
     * `:container` - the type of container used for model storage. Can be
@@ -854,14 +854,14 @@ defmodule Ecto.Schema do
 
   @doc false
   def __embeds_one__(mod, name, model, opts) do
-    check_options!(opts, [:changeset], "embeds_one/3")
+    check_options!(opts, [:on_cast], "embeds_one/3")
     opts = Keyword.put(opts, :container, nil)
     embed(mod, :one, name, model, opts)
   end
 
   @doc false
   def __embeds_many__(mod, name, model, opts) do
-    check_options!(opts, [:changeset, :container], "embeds_many/3")
+    check_options!(opts, [:on_cast, :container], "embeds_many/3")
     opts =
       opts
       |> Keyword.put(:default, [])
@@ -984,6 +984,7 @@ defmodule Ecto.Schema do
   end
 
   defp embed(mod, cardinality, name, model, opts) do
+    opts   = Keyword.put_new(opts, :on_cast, :changeset)
     opts   = [cardinality: cardinality, embed: model] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
 
