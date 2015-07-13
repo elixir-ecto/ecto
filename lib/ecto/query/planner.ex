@@ -13,7 +13,7 @@ defmodule Ecto.Query.Planner do
   Validates and cast the given fields belonging to the given model.
   """
   def fields(model, kind, kw, id_types) do
-    types = model.__schema__(:types)
+    types = model.__changeset__
 
     for {field, value} <- kw do
       type = Map.get(types, field)

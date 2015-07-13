@@ -899,7 +899,7 @@ defmodule Ecto.Schema do
         end
       end)
 
-    types = fields |> Enum.into(%{}) |> Macro.escape()
+    types = Macro.escape(fields)
 
     quote do
       def __schema__(:types), do: unquote(types)

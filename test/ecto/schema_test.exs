@@ -37,8 +37,8 @@ defmodule Ecto.SchemaTest do
 
   test "types metadata" do
     assert Model.__schema__(:types) ==
-           %{id: :id, name: :string, email: :string, count: :decimal,
-             array: {:array, :string}, uuid: Ecto.UUID, comment_id: :id}
+           [id: :id, name: :string, email: :string, count: :decimal,
+            array: {:array, :string}, uuid: Ecto.UUID, comment_id: :id]
     assert Model.__schema__(:type, :id)         == :id
     assert Model.__schema__(:type, :name)       == :string
     assert Model.__schema__(:type, :email)      == :string
