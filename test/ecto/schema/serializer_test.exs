@@ -4,6 +4,7 @@ defmodule Ecto.Schema.SerializerTest do
   defmodule Embed do
     use Ecto.Model
 
+    @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
       field :type, :string
     end
@@ -29,26 +30,26 @@ defmodule Ecto.Schema.SerializerTest do
   test "load!" do
     data = %{"id" => 123, "name" => "michal", "count" => Decimal.new(5),
              "array" => ["array"], "uuid" => @uuid_binary,
-             "embed" => %{"type" => "one"}}
-    loaded = Serializer.load!(Model, "mymodel", data, %{})
+             "embed" => %{"type" => "one", "id" => "two"}}
+    loaded = Serializer.load!(Model, "mymodel", data, %{binary_id: :string})
 
 
     assert loaded.name  == "michal"
     assert loaded.count == Decimal.new(5)
     assert loaded.array == ["array"]
     assert loaded.uuid  == @uuid_string
-    assert %Embed{type: "one"} = loaded.embed
+    assert %Embed{type: "one", id: "two"} = loaded.embed
   end
 
   test "dump!" do
-    embed = %Embed{type: "one"}
+    embed = %Embed{type: "one", id: "two"}
     model = %Model{id: 123, name: "michal", count: Decimal.new(5), array: ["array"],
                    uuid: @uuid_string, embed: embed}
 
     dumped_uuid = %Ecto.Query.Tagged{tag: nil, type: :uuid, value: @uuid_binary}
 
-    dumped = Serializer.dump!(model, %{})
-    assert dumped == %{name: "michal", count: Decimal.new(5),
-                       array: ["array"], embed: %{type: "one"}, uuid: dumped_uuid}
+    dumped = Serializer.dump!(model, %{binary_id: :string})
+    assert dumped == %{name: "michal", count: Decimal.new(5), uuid: dumped_uuid,
+                       array: ["array"], embed: %{type: "one", id: "two"}, id: 123}
   end
 end

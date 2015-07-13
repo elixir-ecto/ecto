@@ -601,17 +601,15 @@ defmodule Ecto.Type do
     end
   end
 
-  defp cast_embed(%{cardinality: :one, changeset: fun, embed: embed}, value, _id_types) do
-    changeset = apply(embed, fun, [value, embed.__struct__()])
-    if changeset.valid? do
-      {:ok, Ecto.Changeset.apply_changes(changeset)}
-    else
-      :error
+  defp cast_embed(embed, value, _id_types) do
+    case Ecto.Embedded.cast(embed, value, nil) do
+      {:ok, changesets, true} when is_list(changesets) ->
+        Enum.map(changesets, &Ecto.Changeset.apply_changes/1)
+      {:ok, changeset, true} ->
+        Ecto.Changeset.apply_changes(changeset)
+      _ ->
+        :error
     end
-  end
-
-  defp cast_embed(_embed, _value, _id_types) do
-    :error
   end
 
   @doc """

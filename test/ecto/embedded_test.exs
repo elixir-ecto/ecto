@@ -31,7 +31,7 @@ defmodule Ecto.EmbeddedTest do
     end
 
     def required_changeset(params, model) do
-      cast(model, params, ~w(name), ~w())
+      cast(model, params, ~w(name), ~w(id))
     end
 
     def optional_changeset(params, model) do
@@ -52,38 +52,76 @@ defmodule Ecto.EmbeddedTest do
   end
 
 
-  test "cast embeds_one" do
+  test "cast embeds_one with valid params" do
     changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, ~w(profile))
-    assert changeset.changes.profile.changes == %{name: "michal"}
-    assert changeset.changes.profile.errors == []
-    assert changeset.changes.profile.valid?
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "michal"}
+    assert profile.errors == []
+    assert profile.status  == :insert
+    assert profile.valid?
     assert changeset.valid?
+  end
 
+  test "cast embeds_one with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{}}, ~w(profile))
     assert changeset.changes.profile.changes == %{}
     assert changeset.changes.profile.errors  == [name: "can't be blank"]
+    assert changeset.changes.profile.status  == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
 
-    changeset = cast(%Author{profile: %Profile{name: "michal"}},
-                     %{"profile" => %{}}, ~w(profile))
-    assert changeset.changes.profile.changes == %{}
-    assert changeset.changes.profile.errors  == []
-    assert changeset.changes.profile.valid?
+    changeset = cast(%Author{}, %{"profile" => "value"}, ~w(profile))
+    assert changeset.errors == [profile: "is invalid"]
+    refute changeset.valid?
+  end
+
+  test "cast embeds_one with existing model updating" do
+    changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"name" => "new", "id" => "michal"}}, ~w(profile))
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new"}
+    assert profile.errors  == []
+    assert profile.status  == :update
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
+  test "cast embeds_one with existing model replacing" do
+    changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"name" => "new"}}, ~w(profile))
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new"}
+    assert profile.errors  == []
+    assert profile.status  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+
+    changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"name" => "new", "id" => "new"}}, ~w(profile))
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new", id: "new"}
+    assert profile.errors  == []
+    assert profile.status  == :insert
+    assert profile.valid?
     assert changeset.valid?
   end
 
   test "cast embeds_one with custom changeset" do
-    changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, [profile: :optional_changeset])
-    assert changeset.changes.profile.changes == %{name: "michal"}
-    assert changeset.changes.profile.errors == []
-    assert changeset.changes.profile.valid?
+    changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}},
+                     [profile: :optional_changeset])
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "michal"}
+    assert profile.errors  == []
+    assert profile.status  == :insert
+    assert profile.valid?
     assert changeset.valid?
 
     changeset = cast(%Author{}, %{"profile" => %{}}, [profile: :optional_changeset])
-    assert changeset.changes.profile.changes == %{}
-    assert changeset.changes.profile.errors == []
-    assert changeset.changes.profile.valid?
+    profile = changeset.changes.profile
+    assert profile.changes == %{}
+    assert profile.errors  == []
+    assert profile.status  == :insert
+    assert profile.valid?
     assert changeset.valid?
   end
 
@@ -91,28 +129,57 @@ defmodule Ecto.EmbeddedTest do
     changeset = cast(%Author{}, %{"profiles" => [%{"name" => "michal"}]}, ~w(profiles))
     [profile_change] = changeset.changes.profiles
     assert profile_change.changes == %{name: "michal"}
-    assert profile_change.errors == []
+    assert profile_change.errors  == []
+    assert profile_change.status  == :insert
+    assert profile_change.valid?
+    assert changeset.valid?
+  end
+
+  test "cast embeds_many with custom changeset" do
+    changeset = cast(%Author{}, %{"profiles" => [%{"name" => "michal"}]},
+                     [profiles: :optional_changeset])
+    [profile_change] = changeset.changes.profiles
+    assert profile_change.changes == %{name: "michal"}
+    assert profile_change.errors  == []
+    assert profile_change.status  == :insert
     assert profile_change.valid?
     assert changeset.valid?
   end
 
   # Please note the order is important in this test.
-  test "cast embeds_many updating old models" do
+  test "cast embeds_many changing models" do
     profiles = [%Profile{name: "michal", id: "michal"},
                 %Profile{name: "unknown", id: "unknown"},
                 %Profile{name: "other", id: "other"}]
-    params = [%{"id" => "unknown", "name" => nil},
+    params = [%{"id" => "new", "name" => "new"},
+              %{"id" => "unknown", "name" => nil},
               %{"id" => "other", "name" => "new name"}]
 
     changeset = cast(%Author{profiles: profiles}, %{"profiles" => params}, ~w(profiles))
-    [unknown, other, michal] = changeset.changes.profiles
+    [new, unknown, other, michal] = changeset.changes.profiles
+    assert new.changes == %{name: "new"}
+    assert new.status == :insert
+    assert new.valid?
     assert unknown.model.id == "unknown"
     assert unknown.errors == [name: "can't be blank"]
+    assert unknown.status == :update
     refute unknown.valid?
     assert other.model.id == "other"
+    assert other.status == :update
     assert other.valid?
     assert michal.model.id == "michal"
+    assert michal.status == :delete
     assert michal.valid?
+    refute changeset.valid?
+  end
+
+  test "cast embeds_many with invalid params" do
+    changeset = cast(%Author{}, %{"profiles" => "value"}, ~w(profiles))
+    assert changeset.errors == [profiles: "is invalid"]
+    refute changeset.valid?
+
+    changeset = cast(%Author{}, %{"profiles" => ["value"]}, ~w(profiles))
+    assert changeset.errors == [profiles: "is invalid"]
     refute changeset.valid?
   end
 end

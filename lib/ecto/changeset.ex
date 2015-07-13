@@ -27,7 +27,7 @@ defmodule Ecto.Changeset do
 
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: [],
-            filters: %{}
+            filters: %{}, status: nil
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
@@ -38,10 +38,12 @@ defmodule Ecto.Changeset do
                         optional: [atom],
                         errors: [error],
                         validations: [{atom, String.t | {String.t, [term]}}],
-                        filters: %{atom => term}}
+                        filters: %{atom => term},
+                        status: nil | status}
 
   @type error :: {atom, error_message}
   @type error_message :: String.t | {String.t, integer}
+  @type status :: :insert | :update | :delete
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{count}"},
@@ -212,26 +214,18 @@ defmodule Ecto.Changeset do
     params = convert_params(params)
     types  = module.__changeset__
 
-    {optional, {changes, errors}} =
-      Enum.map_reduce(optional, {%{}, []},
+    {optional, {changes, errors, valid?}} =
+      Enum.map_reduce(optional, {%{}, [], true},
                       &process_param(&1, :optional, params, types, model, &2))
 
-    {required, {changes, errors}} =
-      Enum.map_reduce(required, {changes, errors},
+    {required, {changes, errors, valid?}} =
+      Enum.map_reduce(required, {changes, errors, valid?},
                       &process_param(&1, :required, params, types, model, &2))
 
-    %Changeset{params: params, model: model, valid?: valid?(changes, errors),
+    %Changeset{params: params, model: model, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, required: required,
                optional: optional}
   end
-
-  defp valid?(_changes, [_|_]), do: false
-  defp valid?(changes, []), do: Enum.all?(changes, fn
-    {_, [%Changeset{} | _] = changesets} ->
-      Enum.all?(changesets, &Map.get(&1, :valid?))
-    {_, %Changeset{valid?: value}} -> value
-    _                              -> true
-  end)
 
   defp process_param({key, fun}, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)
@@ -250,29 +244,34 @@ defmodule Ecto.Changeset do
   end
 
   defp do_process_param(key, param_key, kind, params, {:embed, embed},
-                        current, {changes, errors}) do
+                        current, {changes, errors, valid?}) do
     {key,
      case cast_embed(param_key, embed, params, current) do
-       {:ok, embed_changes} ->
-         {Map.put(changes, key, embed_changes), errors}
+       {:ok, embed_changes, embed_valid?} ->
+         {Map.put(changes, key, embed_changes), errors, valid? && embed_valid?}
        :missing ->
-         {changes, error_on_nil(kind, key, current, errors)}
+         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {changes, errors, valid?}
        :invalid ->
-         {changes, [{key, "is invalid"}|errors]}
+         {changes, [{key, "is invalid"}|errors], false}
      end}
   end
 
-  defp do_process_param(key, param_key, kind, params, type, current, {changes, errors}) do
+  defp do_process_param(key, param_key, kind, params, type, current,
+                        {changes, errors, valid?}) do
     {key,
      case cast_field(param_key, type, params) do
        {:ok, ^current} ->
-         {changes, error_on_nil(kind, key, current, errors)}
+         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {changes, errors, valid?}
        {:ok, value} ->
-         {Map.put(changes, key, value), error_on_nil(kind, key, value, errors)}
+         {errors, valid?} = error_on_nil(kind, key, value, errors, valid?)
+         {Map.put(changes, key, value), errors, valid?}
        :missing ->
-         {changes, error_on_nil(kind, key, current, errors)}
+         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {changes, errors, valid?}
        :invalid ->
-         {changes, [{key, "is invalid"}|errors]}
+         {changes, [{key, "is invalid"}|errors], false}
      end}
   end
 
@@ -305,66 +304,17 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_embed(param_key, %{cardinality: :one, embed: embed, changeset: fun},
-                  params, current) do
+  defp cast_embed(param_key, embedded, params, current) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        {:ok, apply(embed, fun, [value, current || embed.__struct__()])}
+        case Ecto.Embedded.cast(embedded, value, current) do
+          :error -> :invalid
+          result -> result
+        end
       :error ->
         :missing
     end
   end
-
-  defp cast_embed(param_key, %{container: :array, embed: embed, changeset: fun},
-                  params, current) do
-    case Map.fetch(params, param_key) do
-      {:ok, value} when is_list(value) ->
-        [pk] = embed.__schema__(:primary_key)
-        {pk, param_pk} = cast_key(pk)
-        current = Enum.into(current, %{}, &{Map.get(&1, pk), &1})
-        process_embeds(process_embed_params(value, param_pk, []),
-                       embed, fun, current, [])
-      {:ok, _value} ->
-        :invalid
-      :error ->
-        :missing
-    end
-  end
-
-  defp process_embeds(:error, _mod, _fun,  _current, _acc), do: :invalid
-
-  defp process_embeds([], mod, fun, current, acc) do
-    previous = Enum.map(current, &apply(mod, fun, [%{}, elem(&1, 1)]))
-    {:ok, Enum.reverse(acc, previous)}
-  end
-
-  defp process_embeds([{key, params} | rest], mod, fun, current, acc) do
-    case Map.pop(current, key) do
-      {nil, _current} ->
-        :invalid
-      {model, current} ->
-        changeset = apply(mod, fun, [params, model])
-        process_embeds(rest, mod, fun, current, [changeset | acc])
-    end
-  end
-
-  defp process_embeds([params | rest], mod, fun, current, acc) do
-    changeset = apply(mod, fun, [params, mod.__struct__()])
-    process_embeds(rest, mod, fun, current, [changeset | acc])
-  end
-
-  defp process_embed_params([], _pk, acc), do: Enum.reverse(acc)
-
-  defp process_embed_params([map | rest], pk, acc) when is_map(map) do
-    case Map.fetch(map, pk) do
-      {:ok, value} ->
-        process_embed_params(rest, pk, [{value, map} | acc])
-      :error ->
-        process_embed_params(rest, pk, [map | acc])
-    end
-  end
-
-  defp process_embed_params(_params, _pk, _acc), do: :error
 
   defp cast_field(param_key, :binary_id, params) do
     # Since we don't have the adapter types here,
@@ -400,10 +350,10 @@ defmodule Ecto.Changeset do
     end) || params
   end
 
-  defp error_on_nil(:required, key, nil, errors),
-    do: [{key, "can't be blank"}|errors]
-  defp error_on_nil(_kind, _key, _value, errors),
-    do: errors
+  defp error_on_nil(:required, key, nil, errors, _valid?),
+    do: {[{key, "can't be blank"}|errors], false}
+  defp error_on_nil(_kind, _key, _value, errors, valid?),
+    do: {errors, valid?}
 
   ## Working with changesets
 

@@ -185,6 +185,7 @@ defmodule Ecto.Integration.Item do
   """
   use Ecto.Integration.Model
 
+  @primary_key false
   schema "whatever" do
     field :price, :integer
   end
