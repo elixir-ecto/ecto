@@ -130,7 +130,7 @@ defmodule Ecto.Adapters.Postgres do
     end
 
     host = database[:hostname] || System.get_env("PGHOST") || "localhost"
-    args = args ++ ["--quiet", "--host", host, "-d", "template1", "-c", sql_command]
+    args = args ++ ["--quiet", "--host", host, "--set", "ON_ERROR_STOP=1", "--no-psqlrc", "-d", "template1", "-c", sql_command]
     System.cmd("psql", args, env: env, stderr_to_stdout: true)
   end
 
