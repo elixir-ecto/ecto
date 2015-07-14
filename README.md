@@ -120,6 +120,12 @@ MIX_ENV=pg mix test
 mix test.all
 ```
 
+In addition, build the docs locally to review any changes:
+
+```
+$ MIX_ENV=docs mix docs
+```
+
 ## License
 
 Copyright 2012 Plataformatec
