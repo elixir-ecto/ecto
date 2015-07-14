@@ -258,15 +258,15 @@ defmodule Ecto.ChangesetTest do
     assert changeset.repo == :bar
   end
 
-  test "merge/2: merges the :status field when either one is nil" do
-    changeset = merge(%Ecto.Changeset{status: :insert}, %Ecto.Changeset{repo: nil})
-    assert changeset.status == :insert
+  test "merge/2: merges the :action field when either one is nil" do
+    changeset = merge(%Ecto.Changeset{action: :insert}, %Ecto.Changeset{repo: nil})
+    assert changeset.action == :insert
 
-    changeset = merge(%Ecto.Changeset{status: nil}, %Ecto.Changeset{status: :update})
-    assert changeset.status == :update
+    changeset = merge(%Ecto.Changeset{action: nil}, %Ecto.Changeset{action: :update})
+    assert changeset.action == :update
   end
 
-  test "merge/2: fails when the :model, :repo or :status field are not equal" do
+  test "merge/2: fails when the :model, :repo or :action field are not equal" do
     cs1 = cast(%Post{title: "foo"}, %{}, ~w(title), ~w())
     cs2 = cast(%Post{title: "bar"}, %{}, ~w(title), ~w())
     assert_raise ArgumentError, "different models when merging changesets", fn ->
@@ -275,8 +275,8 @@ defmodule Ecto.ChangesetTest do
     assert_raise ArgumentError, "different repos (`:foo` and `:bar`) when merging changesets", fn ->
       merge(%Ecto.Changeset{repo: :foo}, %Ecto.Changeset{repo: :bar})
     end
-    assert_raise ArgumentError, "different statuses (`:insert` and `:update`) when merging changesets", fn ->
-      merge(%Ecto.Changeset{status: :insert}, %Ecto.Changeset{status: :update})
+    assert_raise ArgumentError, "different actions (`:insert` and `:update`) when merging changesets", fn ->
+      merge(%Ecto.Changeset{action: :insert}, %Ecto.Changeset{action: :update})
     end
   end
 

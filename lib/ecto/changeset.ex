@@ -19,7 +19,7 @@ defmodule Ecto.Changeset do
   * `required`    - All required fields as a list of atoms
   * `optional`    - All optional fields as a list of atoms
   * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
-  * `status`      - The lifecycle of the embedded changeset
+  * `action`      - The action to be performed with the changeset
   * `types`       - Cache of the model's field types
   """
 
@@ -29,7 +29,7 @@ defmodule Ecto.Changeset do
 
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: [],
-            filters: %{}, status: nil, types: nil
+            filters: %{}, action: nil, types: nil
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
@@ -41,12 +41,12 @@ defmodule Ecto.Changeset do
                         errors: [error],
                         validations: [{atom, String.t | {String.t, [term]}}],
                         filters: %{atom => term},
-                        status: status,
+                        action: action,
                         types: nil | %{atom => Ecto.Type.t}}
 
   @type error :: {atom, error_message}
   @type error_message :: String.t | {String.t, integer}
-  @type status :: nil | :insert | :update | :delete
+  @type action :: nil | :insert | :update | :delete
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{count}"},
@@ -419,12 +419,12 @@ defmodule Ecto.Changeset do
     new_errors      = cs1.errors ++ cs2.errors
     new_required    = Enum.uniq(cs1.required ++ cs2.required)
     new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
-    new_status      = merge_identical(cs1.status, cs2.status, "statuses")
+    new_action      = merge_identical(cs1.action, cs2.action, "actions")
     new_types       = cs1.types || cs2.types
 
     %Changeset{params: new_params, model: model, valid?: new_errors == [],
                errors: new_errors, changes: new_changes, repo: new_repo,
-               required: new_required, optional: new_optional, status: new_status,
+               required: new_required, optional: new_optional, action: new_action,
                validations: new_validations, types: new_types}
   end
 

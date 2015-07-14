@@ -38,7 +38,7 @@ defmodule Ecto.Repo.Model do
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
-    changeset = %{changeset | repo: repo, status: :insert}
+    changeset = %{changeset | repo: repo, action: :insert}
     changeset = merge_into_changeset(struct, fields, changeset)
 
     changeset = merge_autogenerate(changeset, model)
@@ -74,7 +74,7 @@ defmodule Ecto.Repo.Model do
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
     # changeset before hand.
-    changeset = %{changeset | repo: repo, status: :update}
+    changeset = %{changeset | repo: repo, action: :update}
     autogen   = get_autogenerate_id(changeset, model)
 
     if changeset.changes != %{} or opts[:force] do
@@ -126,7 +126,7 @@ defmodule Ecto.Repo.Model do
     source = struct.__meta__.source
 
     # There are no field changes on delete
-    changeset = %{changeset | repo: repo, status: :delete}
+    changeset = %{changeset | repo: repo, action: :delete}
     autogen   = get_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts,

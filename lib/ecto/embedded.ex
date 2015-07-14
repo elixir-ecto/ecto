@@ -43,9 +43,9 @@ defmodule Ecto.Embedded do
     {pk, param_pk} = primary_key(mod)
     changeset =
       if current && Map.get(current, pk) == Map.get(params, param_pk) do
-        changeset_status(mod, fun, params, current)
+        changeset_action(mod, fun, params, current)
       else
-        changeset_status(mod, fun, params, nil)
+        changeset_action(mod, fun, params, nil)
       end
     {:ok, changeset, changeset.valid?}
   end
@@ -75,7 +75,7 @@ defmodule Ecto.Embedded do
   defp map_changes([], _pk, mod, fun, current, acc, valid?) do
     {previous, valid?} =
       Enum.map_reduce(current, valid?, fn {_, model}, valid? ->
-        changeset = changeset_status(mod, fun, nil, model)
+        changeset = changeset_action(mod, fun, nil, model)
         {changeset, valid? && changeset.valid?}
       end)
 
@@ -86,11 +86,11 @@ defmodule Ecto.Embedded do
     case Map.fetch(map, pk) do
       {:ok, pk_value} ->
         {model, current} = Map.pop(current, pk_value)
-        changeset = changeset_status(mod, fun, map, model)
+        changeset = changeset_action(mod, fun, map, model)
         map_changes(rest, pk, mod, fun, current,
                     [changeset | acc], valid? && changeset.valid?)
       :error ->
-        changeset = changeset_status(mod, fun, map, nil)
+        changeset = changeset_action(mod, fun, map, nil)
         map_changes(rest, pk, mod, fun, current,
                     [changeset | acc], valid? && changeset.valid?)
     end
@@ -114,18 +114,18 @@ defmodule Ecto.Embedded do
     do: Enum.into(current, %{}, &{Map.get(&1, pk), &1})
 
 
-  defp changeset_status(mod, fun, params, nil) do
+  defp changeset_action(mod, fun, params, nil) do
     changeset = apply(mod, fun, [params, mod.__struct__()])
-    %{changeset | status: :insert}
+    %{changeset | action: :insert}
   end
 
-  defp changeset_status(_mod, _fun, nil, model) do
+  defp changeset_action(_mod, _fun, nil, model) do
     changeset = Ecto.Changeset.change(model)
-    %{changeset | status: :delete}
+    %{changeset | action: :delete}
   end
 
-  defp changeset_status(mod, fun, params, model) do
+  defp changeset_action(mod, fun, params, model) do
     changeset = apply(mod, fun, [params, model])
-    %{changeset | status: :update}
+    %{changeset | action: :update}
   end
 end

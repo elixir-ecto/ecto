@@ -56,7 +56,7 @@ defmodule Ecto.EmbeddedTest do
     profile = changeset.changes.profile
     assert profile.changes == %{name: "michal"}
     assert profile.errors == []
-    assert profile.status  == :insert
+    assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
   end
@@ -65,7 +65,7 @@ defmodule Ecto.EmbeddedTest do
     changeset = cast(%Author{}, %{"profile" => %{}}, ~w(profile))
     assert changeset.changes.profile.changes == %{}
     assert changeset.changes.profile.errors  == [name: "can't be blank"]
-    assert changeset.changes.profile.status  == :insert
+    assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
 
@@ -80,7 +80,7 @@ defmodule Ecto.EmbeddedTest do
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new"}
     assert profile.errors  == []
-    assert profile.status  == :update
+    assert profile.action  == :update
     assert profile.valid?
     assert changeset.valid?
   end
@@ -91,7 +91,7 @@ defmodule Ecto.EmbeddedTest do
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new"}
     assert profile.errors  == []
-    assert profile.status  == :insert
+    assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
 
@@ -100,7 +100,7 @@ defmodule Ecto.EmbeddedTest do
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new", id: "new"}
     assert profile.errors  == []
-    assert profile.status  == :insert
+    assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
   end
@@ -111,7 +111,7 @@ defmodule Ecto.EmbeddedTest do
     profile = changeset.changes.profile
     assert profile.changes == %{name: "michal"}
     assert profile.errors  == []
-    assert profile.status  == :insert
+    assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
 
@@ -119,7 +119,7 @@ defmodule Ecto.EmbeddedTest do
     profile = changeset.changes.profile
     assert profile.changes == %{}
     assert profile.errors  == []
-    assert profile.status  == :insert
+    assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
   end
@@ -129,7 +129,7 @@ defmodule Ecto.EmbeddedTest do
     [profile_change] = changeset.changes.profiles
     assert profile_change.changes == %{name: "michal"}
     assert profile_change.errors  == []
-    assert profile_change.status  == :insert
+    assert profile_change.action  == :insert
     assert profile_change.valid?
     assert changeset.valid?
   end
@@ -140,7 +140,7 @@ defmodule Ecto.EmbeddedTest do
     [profile_change] = changeset.changes.profiles
     assert profile_change.changes == %{name: "michal"}
     assert profile_change.errors  == []
-    assert profile_change.status  == :insert
+    assert profile_change.action  == :insert
     assert profile_change.valid?
     assert changeset.valid?
   end
@@ -157,18 +157,18 @@ defmodule Ecto.EmbeddedTest do
     changeset = cast(%Author{profiles: profiles}, %{"profiles" => params}, ~w(profiles))
     [new, unknown, other, michal] = changeset.changes.profiles
     assert new.changes == %{name: "new"}
-    assert new.status == :insert
+    assert new.action == :insert
     assert new.valid?
     assert unknown.model.id == "unknown"
     assert unknown.errors == [name: "can't be blank"]
-    assert unknown.status == :update
+    assert unknown.action == :update
     refute unknown.valid?
     assert other.model.id == "other"
-    assert other.status == :update
+    assert other.action == :update
     assert other.valid?
     assert michal.model.id == "michal"
     assert michal.required == [] # Check for not running chgangeset function
-    assert michal.status == :delete
+    assert michal.action == :delete
     assert michal.valid?
     refute changeset.valid?
   end

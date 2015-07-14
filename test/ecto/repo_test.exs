@@ -11,17 +11,17 @@ defmodule Ecto.RepoTest.MyModel do
 
   before_insert :store_autogenerate
 
-  before_insert :store_status
-  before_update :store_status
-  before_delete :store_status
+  before_insert :store_action
+  before_update :store_action
+  before_delete :store_action
 
   def store_autogenerate(changeset) do
     Process.put(:autogenerate_z, changeset.changes.z)
     changeset
   end
 
-  def store_status(changeset) do
-    Process.put(:changeset_status, changeset.status)
+  def store_action(changeset) do
+    Process.put(:changeset_action, changeset.action)
     changeset
   end
 end
@@ -207,26 +207,26 @@ defmodule Ecto.RepoTest do
 
   ## Status
 
-  test "uses correct status" do
+  test "uses correct action" do
     TestRepo.insert!(%MyModel{})
-    assert Process.get(:changeset_status) == :insert
+    assert Process.get(:changeset_action) == :insert
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
     TestRepo.insert!(changeset)
-    assert Process.get(:changeset_status) == :insert
+    assert Process.get(:changeset_action) == :insert
 
     TestRepo.update!(%MyModel{id: 1})
-    assert Process.get(:changeset_status) == :update
+    assert Process.get(:changeset_action) == :update
 
     changeset = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     TestRepo.update!(changeset)
-    assert Process.get(:changeset_status) == :update
+    assert Process.get(:changeset_action) == :update
 
     TestRepo.delete!(%MyModel{id: 1})
-    assert Process.get(:changeset_status) == :delete
+    assert Process.get(:changeset_action) == :delete
 
     changeset = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     TestRepo.delete!(changeset)
-    assert Process.get(:changeset_status) == :delete
+    assert Process.get(:changeset_action) == :delete
   end
 end
