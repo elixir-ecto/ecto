@@ -12,9 +12,13 @@ defmodule Ecto.TypeTest do
   defmodule Model do
     use Ecto.Model
 
-    @primary_key false
+    @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
       field :a, :integer
+    end
+
+    def changeset(params, model) do
+      Ecto.Changeset.cast(model, params, ~w(a))
     end
   end
 
@@ -47,23 +51,36 @@ defmodule Ecto.TypeTest do
   end
 
   test "embeds_one" do
-    type = {:embed, %{cardinality: :one, embed: Model}}
-    assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, %{})
-    assert {:ok, %Model{a: 1}} = load(type, "{\"a\": 1}", %{})
-    assert :error = load(type, 1, %{})
+    type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed, cardinality: :one,
+                                         embed: Model, on_cast: :changeset)}
+    id_types = %{binary_id: :string}
+    assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, id_types)
+    assert {:ok, %Model{a: 1}} = load(type, "{\"a\": 1}", id_types)
+    assert :error == load(type, 1, id_types)
 
-    assert dump(type, %Model{a: 1}, %{}) == {:ok, %{a: 1}}
-    assert dump(type, 1, %{}) == :error
+    assert {:ok, %{a: 1, id: %{value: nil}}} = dump(type, %Model{a: 1}, id_types)
+    assert :error == dump(type, 1, id_types)
+
+    assert %Model{a: 1} = cast(type, %{"a" => 1}, %{})
+    assert :error == cast(type, %{}, %{})
+    assert :error == cast(type, 1, %{})
   end
 
   test "embeds_many with array" do
-    type = {:embed, %{cardinality: :many, container: :array, embed: Model}}
-    assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], %{})
-    assert {:ok, [%Model{a: 1}]} = load(type, ["{\"a\": 1}"], %{})
-    assert :error = load(type, 1, %{})
+    type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed,
+                                         cardinality: :many, container: :array,
+                                         embed: Model, on_cast: :changeset)}
+    id_types = %{binary_id: :string}
+    assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], id_types)
+    assert {:ok, [%Model{a: 1}]} = load(type, ["{\"a\": 1}"], id_types)
+    assert :error == load(type, 1, id_types)
 
-    assert dump(type, [%Model{a: 1}], %{}) == {:ok, [%{a: 1}]}
-    assert dump(type, 1, %{}) == :error
+    assert {:ok, [%{a: 1, id: "a"}]} = dump(type, [%Model{a: 1, id: "a"}], id_types)
+    assert :error == dump(type, 1, id_types)
+
+    assert [%Model{a: 1}] = cast(type, [%{"a" => 1}], %{})
+    assert :error == cast(type, [%{}], %{})
+    assert :error == cast(type, [[]], %{})
   end
 
   test "custom types with array" do

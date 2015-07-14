@@ -38,7 +38,7 @@ defmodule Ecto.Repo.Model do
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
-    changeset = %{changeset | repo: repo}
+    changeset = %{changeset | repo: repo, status: :insert}
     changeset = merge_into_changeset(struct, fields, changeset)
 
     changeset = merge_autogenerate(changeset, model)
@@ -57,7 +57,7 @@ defmodule Ecto.Repo.Model do
   end
 
   def insert!(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
-    insert!(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
+    insert!(repo, adapter, Ecto.Changeset.change(struct), opts)
   end
 
   @doc """
@@ -74,7 +74,7 @@ defmodule Ecto.Repo.Model do
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
     # changeset before hand.
-    changeset = %{changeset | repo: repo}
+    changeset = %{changeset | repo: repo, status: :update}
     autogen   = get_autogenerate_id(changeset, model)
 
     if changeset.changes != %{} or opts[:force] do
@@ -113,7 +113,7 @@ defmodule Ecto.Repo.Model do
     changes =
       Enum.reduce model.__schema__(:primary_key), changes, &Map.delete(&2, &1)
 
-    changeset = %Changeset{model: struct, valid?: true, changes: changes}
+    changeset = %{Ecto.Changeset.change(struct) | changes: changes}
     update!(repo, adapter, changeset, opts)
   end
 
@@ -126,7 +126,7 @@ defmodule Ecto.Repo.Model do
     source = struct.__meta__.source
 
     # There are no field changes on delete
-    changeset = %{changeset | repo: repo}
+    changeset = %{changeset | repo: repo, status: :delete}
     autogen   = get_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts,
@@ -148,7 +148,7 @@ defmodule Ecto.Repo.Model do
   end
 
   def delete!(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
-    delete!(repo, adapter, %Changeset{model: struct, valid?: true}, opts)
+    delete!(repo, adapter, Ecto.Changeset.change(struct), opts)
   end
 
   ## Helpers

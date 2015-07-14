@@ -19,6 +19,8 @@ defmodule Ecto.Changeset do
   * `required`    - All required fields as a list of atoms
   * `optional`    - All optional fields as a list of atoms
   * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
+  * `status`      - The lifecycle of the embedded changeset
+  * `types`       - Cache of the model's field types
   """
 
   alias __MODULE__
@@ -27,7 +29,7 @@ defmodule Ecto.Changeset do
 
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: [],
-            filters: %{}
+            filters: %{}, status: nil, types: nil
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
@@ -38,10 +40,13 @@ defmodule Ecto.Changeset do
                         optional: [atom],
                         errors: [error],
                         validations: [{atom, String.t | {String.t, [term]}}],
-                        filters: %{atom => term}}
+                        filters: %{atom => term},
+                        status: status,
+                        types: nil | %{atom => Ecto.Type.t}}
 
   @type error :: {atom, error_message}
   @type error_message :: String.t | {String.t, integer}
+  @type status :: nil | :insert | :update | :delete
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{count}"},
@@ -104,19 +109,24 @@ defmodule Ecto.Changeset do
     change(model_or_changeset, Enum.into(changes, %{}))
   end
 
-  def change(%Changeset{changes: changes} = changeset, new_changes)
+  def change(%Changeset{types: nil}, _changes) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
       when is_map(new_changes) do
-    %{changeset | changes: get_changed(changeset.model, changes, new_changes)}
+    %{changeset | changes: get_changed(changeset.model, types, changes, new_changes)}
   end
 
-  def change(%{__struct__: _} = model, changes) when is_map(changes) do
-    changed = get_changed(model, %{}, changes)
-    %Changeset{valid?: true, model: model, changes: changed}
+  def change(%{__struct__: struct} = model, changes) when is_map(changes) do
+    types = struct.__changeset__
+    changed = get_changed(model, types, %{}, changes)
+    %Changeset{valid?: true, model: model, changes: changed, types: types}
   end
 
-  defp get_changed(model, old_changes, new_changes) do
+  defp get_changed(model, types, old_changes, new_changes) do
     Enum.reduce(new_changes, old_changes, fn({key, value}, acc) ->
-      put_change(model, acc, key, value)
+      put_change(model, acc, key, value, Map.get(types, key))
     end)
   end
 
@@ -187,7 +197,7 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
   end
 
-  def cast(%{__struct__: _} = model, :empty, required, optional)
+  def cast(%{__struct__: module} = model, :empty, required, optional)
       when is_list(required) and is_list(optional) do
     to_atom = fn
       key when is_atom(key) -> key
@@ -196,9 +206,10 @@ defmodule Ecto.Changeset do
 
     required = Enum.map(required, to_atom)
     optional = Enum.map(optional, to_atom)
+    types    = module.__changeset__
 
     %Changeset{params: nil, model: model, valid?: false, errors: [],
-               changes: %{}, required: required, optional: optional}
+               changes: %{}, required: required, optional: optional, types: types}
   end
 
   def cast(%Changeset{} = changeset, %{} = params, required, optional)
@@ -212,45 +223,107 @@ defmodule Ecto.Changeset do
     params = convert_params(params)
     types  = module.__changeset__
 
-    {optional, {changes, errors}} =
-      Enum.map_reduce(optional, {%{}, []},
+    {optional, {changes, errors, valid?}} =
+      Enum.map_reduce(optional, {%{}, [], true},
                       &process_param(&1, :optional, params, types, model, &2))
 
-    {required, {changes, errors}} =
-      Enum.map_reduce(required, {changes, errors},
+    {required, {changes, errors, valid?}} =
+      Enum.map_reduce(required, {changes, errors, valid?},
                       &process_param(&1, :required, params, types, model, &2))
 
-    %Changeset{params: params, model: model, valid?: errors == [],
+    %Changeset{params: params, model: model, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, required: required,
-               optional: optional}
+               optional: optional, types: types}
   end
 
-  defp process_param(key, kind, params, types, model, {changes, errors}) do
+  defp process_param({key, fun}, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)
+    type = embed!(types, key, fun)
     current = Map.get(model, key)
-    type = type!(types, key)
 
-    {key,
-      case cast_field(param_key, type, params) do
-        {:ok, ^current} ->
-          {changes, error_on_nil(kind, key, current, errors)}
-        {:ok, value} ->
-          {Map.put(changes, key, value), error_on_nil(kind, key, value, errors)}
-        :missing ->
-          {changes, error_on_nil(kind, key, current, errors)}
-        :invalid ->
-          {changes, [{key, "is invalid"}|errors]}
-      end}
+    do_process_param(key, param_key, kind, params, type, current, acc)
   end
 
-  defp type!(types, key),
-    do: Map.get(types, key) ||
-          raise ArgumentError, "unknown field `#{key}` (note only fields are supported in cast, associations are not)"
+  defp process_param(key, kind, params, types, model, acc) do
+    {key, param_key} = cast_key(key)
+    type = type!(types, key)
+    current = Map.get(model, key)
+
+    do_process_param(key, param_key, kind, params, type, current, acc)
+  end
+
+  defp do_process_param(key, param_key, kind, params, {:embed, embed},
+                        current, {changes, errors, valid?}) do
+    {key,
+     case cast_embed(param_key, embed, params, current) do
+       {:ok, embed_changes, embed_valid?} ->
+         {Map.put(changes, key, embed_changes), errors, valid? && embed_valid?}
+       :missing ->
+         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {changes, errors, valid?}
+       :invalid ->
+         {changes, [{key, "is invalid"}|errors], false}
+     end}
+  end
+
+  defp do_process_param(key, param_key, kind, params, type, current,
+                        {changes, errors, valid?}) do
+    {key,
+     case cast_field(param_key, type, params) do
+       {:ok, ^current} ->
+         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {changes, errors, valid?}
+       {:ok, value} ->
+         {errors, valid?} = error_on_nil(kind, key, value, errors, valid?)
+         {Map.put(changes, key, value), errors, valid?}
+       :missing ->
+         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {changes, errors, valid?}
+       :invalid ->
+         {changes, [{key, "is invalid"}|errors], false}
+     end}
+  end
+
+  defp embed!(types, key, fun) do
+    case Map.fetch(types, key) do
+      {:ok, {:embed, embed}} ->
+        {:embed, %Ecto.Embedded{embed | on_cast: fun}}
+      {:ok, _} ->
+        raise ArgumentError, "only embedded fields can be given a cast function"
+      :error ->
+        raise ArgumentError, "unknown field `#{key}` (note only fields and " <>
+          "embeds are supported in cast, associations are not)"
+    end
+  end
+
+  defp type!(types, key) do
+    case Map.fetch(types, key) do
+      {:ok, {:embed, _} = embed} ->
+        embed
+      {:ok, type} ->
+        type
+      :error ->
+        raise ArgumentError, "unknown field `#{key}` (note only fields and " <>
+          "embeds are supported in cast, associations are not)"
+    end
+  end
 
   defp cast_key(key) when is_binary(key),
     do: {String.to_atom(key), key}
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
+
+  defp cast_embed(param_key, embedded, params, current) do
+    case Map.fetch(params, param_key) do
+      {:ok, value} ->
+        case Ecto.Embedded.cast(embedded, value, current) do
+          :error -> :invalid
+          result -> result
+        end
+      :error ->
+        :missing
+    end
+  end
 
   defp cast_field(param_key, :binary_id, params) do
     # Since we don't have the adapter types here,
@@ -286,10 +359,10 @@ defmodule Ecto.Changeset do
     end) || params
   end
 
-  defp error_on_nil(:required, key, nil, errors),
-    do: [{key, "can't be blank"}|errors]
-  defp error_on_nil(_kind, _key, _value, errors),
-    do: errors
+  defp error_on_nil(:required, key, nil, errors, _valid?),
+    do: {[{key, "can't be blank"}|errors], false}
+  defp error_on_nil(_kind, _key, _value, errors, valid?),
+    do: {errors, valid?}
 
   ## Working with changesets
 
@@ -338,28 +411,33 @@ defmodule Ecto.Changeset do
   @spec merge(t, t) :: t
   def merge(changeset1, changeset2)
 
-  def merge(%Changeset{model: model, repo: repo1} = cs1, %Changeset{model: model, repo: repo2} = cs2)
-      when is_nil(repo1) or is_nil(repo2) or repo1 == repo2 do
-    new_repo        = repo1 || repo2
+  def merge(%Changeset{model: model} = cs1, %Changeset{model: model} = cs2) do
+    new_repo        = merge_identical(cs1.repo, cs2.repo, "repos")
     new_params      = cs1.params && cs2.params && Map.merge(cs1.params, cs2.params)
     new_changes     = Map.merge(cs1.changes, cs2.changes)
     new_validations = cs1.validations ++ cs2.validations
     new_errors      = cs1.errors ++ cs2.errors
     new_required    = Enum.uniq(cs1.required ++ cs2.required)
     new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
+    new_status      = merge_identical(cs1.status, cs2.status, "statuses")
+    new_types       = cs1.types || cs2.types
 
     %Changeset{params: new_params, model: model, valid?: new_errors == [],
                errors: new_errors, changes: new_changes, repo: new_repo,
-               required: new_required, optional: new_optional,
-               validations: new_validations}
+               required: new_required, optional: new_optional, status: new_status,
+               validations: new_validations, types: new_types}
   end
 
-  def merge(%Changeset{model: m1}, %Changeset{model: m2}) when m1 != m2 do
+  def merge(%Changeset{}, %Changeset{}) do
     raise ArgumentError, message: "different models when merging changesets"
   end
 
-  def merge(%Changeset{repo: r1}, %Changeset{repo: r2}) when r1 != r2 do
-    raise ArgumentError, message: "different repos when merging changesets"
+  defp merge_identical(object, nil, _thing), do: object
+  defp merge_identical(nil, object, _thing), do: object
+  defp merge_identical(object, object, _thing), do: object
+  defp merge_identical(lhs, rhs, thing) do
+    raise ArgumentError, "different #{thing} (`#{inspect lhs}` and " <>
+                         "`#{inspect rhs}`) when merging changesets"
   end
 
   @doc """
@@ -505,11 +583,21 @@ defmodule Ecto.Changeset do
 
   """
   @spec put_change(t, atom, term) :: t
-  def put_change(%Changeset{} = changeset, key, value) do
-    update_in changeset.changes, &put_change(changeset.model, &1, key, value)
+  def put_change(%Changeset{types: nil}, _key, _value) do
+    raise ArgumentError, "changeset does not have types information"
   end
 
-  defp put_change(model, acc, key, value) do
+  def put_change(%Changeset{types: types} = changeset, key, value) do
+    type = Map.get(types, key)
+    update_in changeset.changes, &put_change(changeset.model, &1, key, value, type)
+  end
+
+  defp put_change(_model, acc, key, value, {:embed, embed}) do
+    value = Ecto.Embedded.change(embed, value)
+    Map.put(acc, key, value)
+  end
+
+  defp put_change(model, acc, key, value, _type) do
     cond do
       Map.get(model, key) != value ->
         Map.put(acc, key, value)
@@ -529,17 +617,26 @@ defmodule Ecto.Changeset do
   ## Examples
 
       iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
-      iex> changeset = put_change(changeset, :title, "bar")
+      iex> changeset = force_change(changeset, :title, "bar")
       iex> changeset.changes
       %{title: "bar"}
 
-      iex> changeset = put_change(changeset, :author, "bar")
+      iex> changeset = force_change(changeset, :author, "bar")
       iex> changeset.changes
       %{title: "bar", author: "bar"}
 
   """
   @spec force_change(t, atom, term) :: t
-  def force_change(%Changeset{} = changeset, key, value) do
+  def force_change(%Changeset{types: nil}, _key, _value) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  def force_change(%Changeset{types: types} = changeset, key, value) do
+    value =
+      case Map.get(types, key) do
+        {:embed, embed} -> Ecto.Embedded.change(embed, value)
+        _               -> value
+      end
     update_in changeset.changes, &Map.put(&1, key, value)
   end
 

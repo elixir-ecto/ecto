@@ -88,7 +88,7 @@ defmodule Ecto.Type do
   @typep base      :: :integer | :float | :boolean | :string |
                       :binary | :decimal | :datetime | :time |
                       :date | :id | :binary_id | :map | :any
-  @typep composite :: {:array, base}
+  @typep composite :: {:array, base} | {:embed, Ecto.Embedded.t}
 
   @base      ~w(integer float boolean string binary decimal datetime time date id binary_id map any)a
   @composite ~w(array embed)a
@@ -547,6 +547,10 @@ defmodule Ecto.Type do
 
   """
   @spec cast(t, term, map) :: {:ok, term} | :error
+  def cast({:embed, embed}, value, id_types) do
+    cast_embed(embed, value, id_types)
+  end
+
   def cast(type, value, id_types) do
     cast(normalize(type, id_types), value)
   end
@@ -593,6 +597,17 @@ defmodule Ecto.Type do
       of_base_type?(type, value) ->
         {:ok, value}
       true ->
+        :error
+    end
+  end
+
+  defp cast_embed(embed, value, _id_types) do
+    case Ecto.Embedded.cast(embed, value, nil) do
+      {:ok, changesets, true} when is_list(changesets) ->
+        Enum.map(changesets, &Ecto.Changeset.apply_changes/1)
+      {:ok, changeset, true} ->
+        Ecto.Changeset.apply_changes(changeset)
+      _ ->
         :error
     end
   end

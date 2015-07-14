@@ -13,6 +13,15 @@ defmodule Ecto.ChangesetTest do
       field :uuid, :binary_id
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
+      embeds_one :author, Author
+    end
+  end
+
+  defmodule Author do
+    use Ecto.Model
+
+    schema "" do
+      field :name
     end
   end
 
@@ -249,14 +258,25 @@ defmodule Ecto.ChangesetTest do
     assert changeset.repo == :bar
   end
 
-  test "merge/2: fails when the :model or :repo field are not equal" do
+  test "merge/2: merges the :status field when either one is nil" do
+    changeset = merge(%Ecto.Changeset{status: :insert}, %Ecto.Changeset{repo: nil})
+    assert changeset.status == :insert
+
+    changeset = merge(%Ecto.Changeset{status: nil}, %Ecto.Changeset{status: :update})
+    assert changeset.status == :update
+  end
+
+  test "merge/2: fails when the :model, :repo or :status field are not equal" do
     cs1 = cast(%Post{title: "foo"}, %{}, ~w(title), ~w())
     cs2 = cast(%Post{title: "bar"}, %{}, ~w(title), ~w())
     assert_raise ArgumentError, "different models when merging changesets", fn ->
       merge(cs1, cs2)
     end
-    assert_raise ArgumentError, "different repos when merging changesets", fn ->
+    assert_raise ArgumentError, "different repos (`:foo` and `:bar`) when merging changesets", fn ->
       merge(%Ecto.Changeset{repo: :foo}, %Ecto.Changeset{repo: :bar})
+    end
+    assert_raise ArgumentError, "different statuses (`:insert` and `:update`) when merging changesets", fn ->
+      merge(%Ecto.Changeset{status: :insert}, %Ecto.Changeset{status: :update})
     end
   end
 
@@ -393,6 +413,19 @@ defmodule Ecto.ChangesetTest do
 
     changeset = put_change(base_changeset, :upvotes, nil)
     assert changeset.changes.upvotes == nil
+  end
+
+  test "change/2 put_change/3 force_change/3 wth embeds" do
+    base_changeset = change(%Post{upvotes: 5})
+
+    changeset = change(base_changeset, author: %Author{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.author
+
+    changeset = put_change(base_changeset, :author, %Author{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.author
+
+    changeset = force_change(base_changeset, :author, %Author{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.author
   end
 
   test "force_change/3" do

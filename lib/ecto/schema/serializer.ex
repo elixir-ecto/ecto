@@ -43,16 +43,11 @@ defmodule Ecto.Schema.Serializer do
   def dump!(struct, id_types) do
     model  = struct.__struct__
     fields = model.__schema__(:types)
-    pks    = model.__schema__(:primary_key)
-    Enum.reduce(fields, %{}, &do_dump(struct, &1, &2, pks, id_types))
+    Enum.reduce(fields, %{}, &do_dump(struct, &1, &2, id_types))
   end
 
-  defp do_dump(struct, {field, type}, acc, pks, id_types) do
-    if field in pks do
-      acc
-    else
-      value = Map.get(struct, field)
-      Map.put(acc, field, Ecto.Type.dump!(type, value, id_types))
-    end
+  defp do_dump(struct, {field, type}, acc, id_types) do
+    value = Map.get(struct, field)
+    Map.put(acc, field, Ecto.Type.dump!(type, value, id_types))
   end
 end
