@@ -41,12 +41,12 @@ defmodule Ecto.Changeset do
                         errors: [error],
                         validations: [{atom, String.t | {String.t, [term]}}],
                         filters: %{atom => term},
-                        status: nil | status,
+                        status: status,
                         types: nil | %{atom => Ecto.Type.t}}
 
   @type error :: {atom, error_message}
   @type error_message :: String.t | {String.t, integer}
-  @type status :: :insert | :update | :delete
+  @type status :: nil | :insert | :update | :delete
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{count}"},
@@ -109,10 +109,13 @@ defmodule Ecto.Changeset do
     change(model_or_changeset, Enum.into(changes, %{}))
   end
 
-  def change(%Changeset{changes: changes} = changeset, new_changes)
+  def change(%Changeset{types: nil}, _changes) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
       when is_map(new_changes) do
-    changeset = ensure_has_types(changeset)
-    %{changeset | changes: get_changed(changeset.model, changeset.types, changes, new_changes)}
+    %{changeset | changes: get_changed(changeset.model, types, changes, new_changes)}
   end
 
   def change(%{__struct__: struct} = model, changes) when is_map(changes) do
@@ -194,7 +197,7 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
   end
 
-  def cast(%{__struct__: _} = model, :empty, required, optional)
+  def cast(%{__struct__: module} = model, :empty, required, optional)
       when is_list(required) and is_list(optional) do
     to_atom = fn
       key when is_atom(key) -> key
@@ -203,9 +206,10 @@ defmodule Ecto.Changeset do
 
     required = Enum.map(required, to_atom)
     optional = Enum.map(optional, to_atom)
+    types    = module.__changeset__
 
     %Changeset{params: nil, model: model, valid?: false, errors: [],
-               changes: %{}, required: required, optional: optional}
+               changes: %{}, required: required, optional: optional, types: types}
   end
 
   def cast(%Changeset{} = changeset, %{} = params, required, optional)
@@ -424,19 +428,16 @@ defmodule Ecto.Changeset do
                validations: new_validations, types: new_types}
   end
 
-  def merge(%Changeset{model: m1}, %Changeset{model: m2}) when m1 != m2 do
+  def merge(%Changeset{}, %Changeset{}) do
     raise ArgumentError, message: "different models when merging changesets"
-  end
-
-  def merge(%Changeset{repo: r1}, %Changeset{repo: r2}) when r1 != r2 do
-    raise ArgumentError, message: "different repos when merging changesets"
   end
 
   defp merge_identical(object, nil, _thing), do: object
   defp merge_identical(nil, object, _thing), do: object
   defp merge_identical(object, object, _thing), do: object
-  defp merge_identical(_, _, thing) do
-    raise ArgumentError, message: "different #{thing} when merging changesets"
+  defp merge_identical(lhs, rhs, thing) do
+    raise ArgumentError, "different #{thing} (`#{inspect lhs}` and " <>
+                         "`#{inspect rhs}`) when merging changesets"
   end
 
   @doc """
@@ -582,14 +583,17 @@ defmodule Ecto.Changeset do
 
   """
   @spec put_change(t, atom, term) :: t
-  def put_change(%Changeset{} = changeset, key, value) do
-    changeset = ensure_has_types(changeset)
-    type = Map.get(changeset.types, key)
+  def put_change(%Changeset{types: nil}, _key, _value) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  def put_change(%Changeset{types: types} = changeset, key, value) do
+    type = Map.get(types, key)
     update_in changeset.changes, &put_change(changeset.model, &1, key, value, type)
   end
 
   defp put_change(_model, acc, key, value, {:embed, embed}) do
-    value = Ecto.Embedded.wrap_change(embed, value)
+    value = Ecto.Embedded.change(embed, value)
     Map.put(acc, key, value)
   end
 
@@ -601,13 +605,6 @@ defmodule Ecto.Changeset do
         Map.delete(acc, key)
       true ->
         acc
-    end
-  end
-
-  defp ensure_has_types(changeset) do
-    update_in changeset.types, fn
-      nil   -> changeset.model.__struct__.__changeset__
-      types -> types
     end
   end
 
@@ -630,11 +627,14 @@ defmodule Ecto.Changeset do
 
   """
   @spec force_change(t, atom, term) :: t
-  def force_change(%Changeset{} = changeset, key, value) do
-    changeset = ensure_has_types(changeset)
+  def force_change(%Changeset{types: nil}, _key, _value) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  def force_change(%Changeset{types: types} = changeset, key, value) do
     value =
-      case Map.get(changeset.types, key) do
-        {:embed, embed} -> Ecto.Embedded.wrap_change(embed, value)
+      case Map.get(types, key) do
+        {:embed, embed} -> Ecto.Embedded.change(embed, value)
         _               -> value
       end
     update_in changeset.changes, &Map.put(&1, key, value)

@@ -51,7 +51,6 @@ defmodule Ecto.EmbeddedTest do
                      embed: Profile, container: :array, on_cast: :changeset}
   end
 
-
   test "cast embeds_one with valid params" do
     changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, ~w(profile))
     profile = changeset.changes.profile

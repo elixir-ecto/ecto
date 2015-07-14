@@ -73,10 +73,14 @@ defmodule Ecto.Embedded do
     :error
   end
 
-  def wrap_change(%Embedded{cardinality: :one}, value) do
+  @doc """
+  Wraps embedded models in changesets
+  """
+  def change(%Embedded{cardinality: :one}, value) do
     Ecto.Changeset.change(value)
   end
-  def wrap_change(%Embedded{cardinality: :many, container: :array}, value) do
+
+  def change(%Embedded{cardinality: :many, container: :array}, value) do
     Enum.map(value, &Ecto.Changeset.change/1)
   end
 

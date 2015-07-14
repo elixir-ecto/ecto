@@ -272,10 +272,10 @@ defmodule Ecto.ChangesetTest do
     assert_raise ArgumentError, "different models when merging changesets", fn ->
       merge(cs1, cs2)
     end
-    assert_raise ArgumentError, "different repos when merging changesets", fn ->
+    assert_raise ArgumentError, "different repos (`:foo` and `:bar`) when merging changesets", fn ->
       merge(%Ecto.Changeset{repo: :foo}, %Ecto.Changeset{repo: :bar})
     end
-    assert_raise ArgumentError, "different statuses when merging changesets", fn ->
+    assert_raise ArgumentError, "different statuses (`:insert` and `:update`) when merging changesets", fn ->
       merge(%Ecto.Changeset{status: :insert}, %Ecto.Changeset{status: :update})
     end
   end
