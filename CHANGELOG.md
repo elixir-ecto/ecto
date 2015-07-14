@@ -6,13 +6,24 @@
   * Store the connection PID in `Ecto.LogEntry`
   * Add `Ecto.Pools.SojournBroker` as a more flexible and customizable alternative to `Ecto.Pools.Poolboy`
   * Support `:on_delete` when defining `has_many` and `belongs_to` in schema
+  * Allow renaming tables in migration
+  * Include Ecto's processing time along side adapter processing on `Ecto.LogEntry.query_time`
+  * Introduce `Ecto.Repo.after_connect/1`
 
 * Bug fixes
   * Ensure uniqueness validatior runs the proper check when a scope changed but the value is still the same
+  * Fix a bug where it was not possible to add a references column in MySQL in an alter table
+  * Minimize query rewriting in has_many/one :through, ensuring a wilder variety of associations are supported
+  * Do not fail when compiling queries with empty order or group by expressions
+  * Ensure literals in queries are also cast/dump
 
 * Backwards incompatible changes
   * `Ecto.Repo.update!/2` no longer invokes callbacks if there were no changes, avoiding writing to the database at all (use `:force` to force callback execution)
   * `Ecto.Repo.transaction/2` is now flattened. This means that multiple transaction calls will no longer use savepoins, instead if will be considered as a single transaction, where a failure in any transaction block will trigger the outmost transaction to rollback, even if failures are rescued. This should only affect users that were explicitly relying on the savepoints.
+
+* Adapter backwards incompatible changes
+  * Pass `{source, model}` in `Ecto.Adapter.insert/update/delete`
+  * SQL adapters are not expected to return each row as a list instead of a tuple
 
 ## v0.13.1
 

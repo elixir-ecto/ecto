@@ -22,26 +22,7 @@ defmodule Ecto.Association.NotLoaded do
 end
 
 defmodule Ecto.Association do
-  @moduledoc """
-  Conveniences for working with associations.
-
-  This module contains functions for working with association data.
-  If you are interested in an overview about associations in Ecto,
-  you should rather look into the documentation for `Ecto` and
-  `Ecto.Schema` modules.
-
-  ## Behaviour
-
-  This module also specifies the behaviour to be implemented by
-  associations and is useful for those interested in understanding
-  how Ecto associations work internally.
-
-  Although theoreticaly anyone can add new associations to Ecto,
-  some components (like the preloader) still make assumptions about
-  the association structure which may limit how associations work.
-  Furthermore, this behaviour is experimental and may change without
-  notice.
-  """
+  @moduledoc false
 
   @type t :: %{__struct__: atom, cardinality: :one | :many,
                field: atom, owner_key: atom, owner: atom}

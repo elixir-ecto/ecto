@@ -1,17 +1,5 @@
 defmodule Ecto.Embedded do
-  @moduledoc """
-  The embedding struct for `embeds_one` and `embeds_many`.
-
-  Its fields are:
-
-    * `cardinality` - The association cardinality
-    * `field` - The name of the association field on the model
-    * `owner` - The model where the association was defined
-    * `embed` - The model that is embedded
-    * `container` - The type of a container many embeds are stored in
-    * `on_cast` - Function name to call by default when casting embeds
-
-  """
+  @moduledoc false
 
   alias __MODULE__
 
@@ -74,7 +62,7 @@ defmodule Ecto.Embedded do
   end
 
   @doc """
-  Wraps embedded models in changesets
+  Wraps embedded models in changesets.
   """
   def change(%Embedded{cardinality: :one}, value) do
     Ecto.Changeset.change(value)

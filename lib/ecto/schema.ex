@@ -709,6 +709,9 @@ defmodule Ecto.Schema do
 
   Usage requires support for `:map` type from the database.
 
+  **Note:** embedding is experimental and its API may still change
+  in future releases.
+
   ## Options
 
     * `:on_cast` - the default changeset function to call during casting,
@@ -744,6 +747,9 @@ defmodule Ecto.Schema do
   habe all the things regular models can - callbacks, structured fields, etc.
   All typecasting operations are performed recursively on embedded models
   alongside the operations on the parent model.
+
+  **Note:** embedding is experimental and its API may still change
+  in future releases.
 
   ## Options
 
