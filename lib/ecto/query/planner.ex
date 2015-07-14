@@ -121,7 +121,7 @@ defmodule Ecto.Query.Planner do
 
   defp cast_and_merge_params(kind, query, expr, params, id_types) do
     Enum.reduce expr.params, params, fn
-      {v, {:right_in, type}}, acc ->
+      {v, {:in_spread, type}}, acc ->
         unfold_in(cast_param(kind, query, expr, v, {:array, type}, id_types), acc)
       {v, type}, acc ->
         [cast_param(kind, query, expr, v, type, id_types)|acc]
@@ -130,17 +130,13 @@ defmodule Ecto.Query.Planner do
 
   defp cast_param(kind, query, expr, v, type, id_types) do
     {model, field, type} = type_for_param!(kind, query, expr, type)
-    type = normalize_type(type)
 
     case cast_param(kind, type, v, id_types) do
-      {:ok, v} ->
+      {:dump, type, v} ->
         Ecto.Type.dump!(type, v, id_types)
-      {:match, type} ->
-        Ecto.Type.dump!(type, v, id_types)
-      :error ->
+      {:error, error} ->
         try do
-          error! query, expr, "value `#{inspect v}` in `#{kind}` cannot be cast to " <>
-                              "type #{inspect type}" <> maybe_nil(v)
+          error! query, expr, error
         catch
           :error, %Ecto.QueryError{} = e when not is_nil(model) ->
             raise Ecto.CastError, model: model, field: field, value: v, type: type,
@@ -150,18 +146,25 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_type({:left_in, {:array, type}}),
-    do: type
-  defp normalize_type({:left_in, _}),
-    do: :any
-  defp normalize_type(type),
-    do: type
-
-  defp cast_param(kind, _type, nil, _id_types) when kind != :update do
-    :error
+  defp cast_param(kind, {:in_array, {:array, type}}, value, id_types) do
+    cast_param(kind, type, value, id_types)
   end
 
-  defp cast_param(_kind, type, v, id_types) do
+  defp cast_param(kind, {:in_array, :any}, value, id_types) do
+    cast_param(kind, :any, value, id_types)
+  end
+
+  defp cast_param(kind, {:in_array, other}, value, _id_types) do
+    {:error, "value `#{inspect value}` in `#{kind}` expected to be part of an array " <>
+             "but matched type is #{inspect other}"}
+  end
+
+  defp cast_param(kind, type, nil, _id_types) when kind != :update do
+    {:error, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
+             " (if you want to check for nils, use is_nil/1 instead)"}
+  end
+
+  defp cast_param(kind, type, v, id_types) do
     # If the type is a primitive type and we are giving it
     # a struct, we first check if the struct type and the
     # given type are match and, if so, use the struct type
@@ -169,14 +172,16 @@ defmodule Ecto.Query.Planner do
     if Ecto.Type.primitive?(type) &&
        (struct = param_struct(v)) &&
        Ecto.Type.match?(struct.type, type) do
-      {:match, struct}
+      {:dump, struct, v}
     else
-      Ecto.Type.cast(type, v, id_types)
+      case Ecto.Type.cast(type, v, id_types) do
+        {:ok, v} ->
+          {:dump, type, v}
+        :error ->
+          {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"}
+      end
     end
   end
-
-  defp maybe_nil(nil), do: " (if you want to check for nils, use is_nil/1 instead)"
-  defp maybe_nil(_),   do: ""
 
   defp param_struct(%{__struct__: struct}) when not struct in [Decimal] do
     struct

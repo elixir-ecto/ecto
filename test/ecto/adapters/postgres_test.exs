@@ -346,6 +346,16 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s{INNER JOIN "model2" AS m1 ON m0."x" = m1."z" WHERE (m0."x" = 123)}
   end
 
+  test "update all array ops" do
+    query = from(m in Model, update: [push: [w: 0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
+           ~s{UPDATE "model" AS m0 SET "w" = array_append("w", 0)}
+
+    query = from(m in Model, update: [pull: [w: 0]]) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
+           ~s{UPDATE "model" AS m0 SET "w" = array_remove("w", 0)}
+  end
+
   test "delete all" do
     query = Model |> Queryable.to_query |> normalize
     assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0}

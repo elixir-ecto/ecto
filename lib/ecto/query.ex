@@ -582,14 +582,24 @@ defmodule Ecto.Query do
 
   ## Operators
 
-  Different databases support different operators. In the example above,
-  we have uset `:set` which sets a new value in the selected models. Most
-  databases support `:inc` too, that increaments a given field by a given
-  value:
+  The update expression in Ecto supports the following operators:
 
-      User |> update([u], inc: [accesses: 1])
+    * `set` - sets the given field in table to the given value
 
-  Check your database and adapters to know more about supported operators.
+          from(u in User, update: [set: [name: "new name"]]
+
+    * `inc` - increments the given field in table by the given value
+
+          from(u in User, update: [inc: [accesses: 1]]
+
+    * `push` - pushes (appends) the given value to the end of the array field
+
+          from(u in User, update: [push: [tags: "cool"]]
+
+    * `pull` - pulls (removes) the given value from the array field
+
+          from(u in User, update: [pull: [tags: "not cool"]]
+
   """
   defmacro update(query, binding, expr) do
     Update.build(query, binding, expr, __CALLER__)

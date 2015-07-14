@@ -58,7 +58,7 @@ defmodule Ecto.Query.Builder.Update do
   defp escape_field(key, kw, params, vars, env) do
     Enum.map_reduce kw, params, fn
       {k, v}, acc when is_atom(k) ->
-        {v, params} = Builder.escape(v, {0, k}, acc, vars, env)
+        {v, params} = Builder.escape(v, type_for_key(key, {0, k}), acc, vars, env)
         {{k, v}, params}
       _, _acc ->
         Builder.error! "malformed #{inspect key} in update `#{Macro.to_string(kw)}`, " <>
@@ -148,7 +148,7 @@ defmodule Ecto.Query.Builder.Update do
   defp runtime_field(key, kw, acc) do
     Enum.map_reduce kw, acc, fn
       {k, v}, {params, count} when is_atom(k) ->
-        params = [{v, {0, k}}|params]
+        params = [{v, type_for_key(key, {0, k})}|params]
         {{k, {:^, [], [count]}}, {params, count+1}}
       _, _acc ->
         Builder.error! "malformed #{inspect key} in update `#{inspect(kw)}`, " <>
@@ -165,4 +165,8 @@ defmodule Ecto.Query.Builder.Update do
   defp validate_key!(key) do
     Builder.error! "unknown key `#{inspect(key)}` in update"
   end
+
+  defp type_for_key(:push, type), do: {:in_array, type}
+  defp type_for_key(:pull, type), do: {:in_array, type}
+  defp type_for_key(_, type),     do: type
 end

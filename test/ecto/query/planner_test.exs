@@ -122,6 +122,11 @@ defmodule Ecto.Query.PlannerTest do
     permalink = "1-hello-world"
     {_query, params} = prepare(Post |> where([p], ^permalink in p.links))
     assert params == [1]
+
+    message = ~r"value `\"1-hello-world\"` in `where` expected to be part of an array but matched type is :string"
+    assert_raise Ecto.CastError, message, fn ->
+      prepare(Post |> where([p], ^permalink in p.text))
+    end
   end
 
   test "prepare: casts and dumps custom types in right side of in-expressions" do
@@ -268,7 +273,7 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: validate fields in composite types" do
+  test "normalize: validate fields in left side of in expressions" do
     query = from(Post, []) |> where([p], p.id in [1, 2, 3])
     normalize(query)
 
@@ -279,7 +284,7 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: flattens and expands in expressions" do
+  test "normalize: flattens and expands right side of in expressions" do
     {query, params} = where(Post, [p], p.id in [1, 2, 3]) |> normalize_with_params()
     assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in [1, 2, 3]"
     assert params == []

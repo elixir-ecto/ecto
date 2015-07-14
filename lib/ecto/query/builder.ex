@@ -147,7 +147,7 @@ defmodule Ecto.Query.Builder do
 
     # The rtype in will be unwrapped in the query planner
     ltype = :any
-    rtype = {:right_in, quoted_type(left, vars)}
+    rtype = {:in_spread, quoted_type(left, vars)}
 
     {left,  params} = escape(left, ltype, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
@@ -161,7 +161,7 @@ defmodule Ecto.Query.Builder do
     rtype = {:array, quoted_type(left, vars)}
 
     # The ltype in will be unwrapped in the query planner
-    {left,  params} = escape(left, {:left_in, ltype}, params, vars, env)
+    {left,  params} = escape(left, {:in_array, ltype}, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
     {{:{}, [], [:in, meta, [left, right]]}, params}
   end

@@ -204,6 +204,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       quoted <> " = " <> quoted <> " + " <> expr(value, sources, query)
     end
 
+    defp update_op(:push, key, value, sources, query) do
+      quoted = quote_name(key, query)
+      quoted <> " = array_append(" <> quoted <> ", " <> expr(value, sources, query) <> ")"
+    end
+
+    defp update_op(:pull, key, value, sources, query) do
+      quoted = quote_name(key, query)
+      quoted <> " = array_remove(" <> quoted <> ", " <> expr(value, sources, query) <> ")"
+    end
+
     defp update_op(command, _key, _value, _sources, query) do
       error!(query, "Unknown update operation #{inspect command} for PostgreSQL")
     end

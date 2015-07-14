@@ -113,6 +113,13 @@ defmodule Ecto.Integration.TypeTest do
     # Update
     tag = TestRepo.update!(%{tag | ints: [3, 2, 1]})
     assert TestRepo.get!(Tag, tag.id).ints == [3, 2, 1]
+
+    # Update all
+    {1, _} = TestRepo.update_all(Tag, push: [ints: 0])
+    assert TestRepo.get!(Tag, tag.id).ints == [3, 2, 1, 0]
+
+    {1, _} = TestRepo.update_all(Tag, pull: [ints: 2])
+    assert TestRepo.get!(Tag, tag.id).ints == [3, 1, 0]
   end
 
   @tag :array_type
