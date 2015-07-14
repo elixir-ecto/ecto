@@ -129,6 +129,8 @@ defmodule Ecto.Schema do
   `:date`                 | `{year, month, day}`
   `:time`                 | `{hour, min, sec}`
 
+  **Note:** For the `:array` type, replace `inner_type` with one of the valid types, such as `:string`.
+
   **Note:** Although Ecto provides `:date`, `:time` and `:datetime`, you
   likely want to use `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` respectively.
   See the Custom types sections below about types that enhance the primitive
