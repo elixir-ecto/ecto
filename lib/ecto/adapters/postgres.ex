@@ -85,8 +85,8 @@ defmodule Ecto.Adapters.Postgres do
     end
 
     {output, status} =
-      run_with_psql opts, "CREATE DATABASE " <> database <>
-                          " ENCODING='#{encoding}'" <> extra
+      run_with_psql opts, "CREATE DATABASE \"" <> database <>
+                          "\" ENCODING='#{encoding}'" <> extra
 
     cond do
       status == 0                                -> :ok
@@ -97,7 +97,7 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def storage_down(opts) do
-    {output, status} = run_with_psql(opts, "DROP DATABASE #{opts[:database]}")
+    {output, status} = run_with_psql(opts, "DROP DATABASE \"#{opts[:database]}\"")
 
     cond do
       status == 0                                -> :ok

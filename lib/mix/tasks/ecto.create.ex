@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Ecto.Create do
           Mix.shell.info "The database for #{inspect repo} has already been created."
         end
       {:error, term} ->
-        Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{term}."
+        Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{inspect term}."
     end
   end
 end

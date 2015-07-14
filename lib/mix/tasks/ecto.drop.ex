@@ -40,7 +40,7 @@ defmodule Mix.Tasks.Ecto.Drop do
           Mix.shell.info "The database for #{inspect repo} has already been dropped."
         end
       {:error, term} ->
-        Mix.raise "The database for #{inspect repo} couldn't be dropped, reason given: #{term}."
+        Mix.raise "The database for #{inspect repo} couldn't be dropped, reason given: #{inspect term}."
     end
   end
 end
