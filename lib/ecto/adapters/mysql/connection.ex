@@ -495,6 +495,16 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble(["ADD", quote_name(name), column_type(type, opts), column_options(name, opts)])
     end
 
+    defp column_change({:modify, name, %Reference{} = ref, opts}) do
+      assemble([
+        "MODIFY", quote_name(name), "BIGINT UNSIGNED,",
+        "ADD CONSTRAINT", quote_name("#{name}_fk"),
+        "FOREIGN KEY (#{quote_name(name)}) REFERENCES",
+        "#{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
+        reference_on_delete(ref.on_delete)
+      ])
+    end
+
     defp column_change({:modify, name, type, opts}) do
       assemble(["MODIFY", quote_name(name), column_type(type, opts)])
     end
