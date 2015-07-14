@@ -12,7 +12,7 @@ defmodule Ecto.Storage do
   """
   @spec up(Ecto.Repo.t) :: :ok | {:error, :already_up} | {:error, term}
   def up(repo) do
-    repo.adapter.storage_up(repo.config)
+    repo.__adapter__.storage_up(repo.config)
   end
 
   @doc """
@@ -24,6 +24,6 @@ defmodule Ecto.Storage do
   """
   @spec down(Ecto.Repo.t) :: :ok | {:error, :already_down} | {:error, term}
   def down(repo) do
-    repo.adapter.storage_down(repo.config)
+    repo.__adapter__.storage_down(repo.config)
   end
 end

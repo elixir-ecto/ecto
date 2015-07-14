@@ -1,7 +1,7 @@
 defmodule Ecto.Integration.TestTransactionTest do
   use ExUnit.Case
 
-  require Ecto.Integration.TestRepo, as: TestRepo
+  alias Ecto.Integration.TestRepo
   alias Ecto.Pool
 
   @ref {Ecto.Pool, Ecto.Adapters.SQL.Sandbox, elem(TestRepo.__pool__, 1)}

@@ -25,7 +25,8 @@ defmodule Mix.Tasks.Ecto.Drop do
 
     repo = parse_repo(args)
     ensure_repo(repo)
-    ensure_implements(repo.adapter, Ecto.Adapter.Storage, "to create storage for #{inspect repo}")
+    ensure_implements(repo.__adapter__, Ecto.Adapter.Storage,
+                      "to drop storage for #{inspect repo}")
 
     {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean]
 

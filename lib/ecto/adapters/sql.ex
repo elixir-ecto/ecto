@@ -46,6 +46,11 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
+      def to_sql(:all, query), do: @conn.all(query)
+      def to_sql(:update_all, query), do: @conn.update_all(query)
+      def to_sql(:delete_all, query), do: @conn.delete_all(query)
+
+      @doc false
       def all(repo, query, params, preprocess, opts) do
         Ecto.Adapters.SQL.all(repo, @conn.all(query), query, params, preprocess, opts)
       end
@@ -131,6 +136,35 @@ defmodule Ecto.Adapters.SQL do
 
   alias Ecto.Pool
   alias Ecto.Adapters.SQL.Sandbox
+
+  @doc """
+  Converts the given query to SQL according to its kind and the
+  adapter in the given repository.
+
+  ## Examples
+
+  The examples below are meant for reference. Each adapter will
+  return a different result:
+
+      Ecto.Adapters.SQL.to_sql(:all, repo, Post)
+      {"SELECT p.id, p.title, p.inserted_at, p.created_at FROM posts as p", []}
+
+      Ecto.Adapters.SQL.to_sql(:update_all, repo,
+                              from(p in Post, update: [set: [title: ^"hello"]]))
+      {"UPDATE posts AS p SET title = $1", ["hello"]}
+
+  """
+  @spec to_sql(:all | :update_all | :delete_all, Ecto.Repo.t, Ecto.Queryable.t) ::
+               {String.t, [term]}
+  def to_sql(kind, repo, queryable) do
+    adapter = repo.__adapter__
+
+    {query, params} =
+      Ecto.Queryable.to_query(queryable)
+      |> Ecto.Query.Planner.query(kind, adapter.id_types(repo))
+
+    {adapter.to_sql(kind, query), params}
+  end
 
   @doc """
   Runs custom SQL query on given repo.

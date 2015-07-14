@@ -1,7 +1,7 @@
 defmodule Ecto.Integration.MigrationTest do
   use ExUnit.Case
 
-  require Ecto.Integration.TestRepo, as: TestRepo
+  alias Ecto.Integration.TestRepo
 
   defmodule CreateMigration do
     use Ecto.Migration

@@ -111,7 +111,7 @@ defmodule Ecto.Migration.Runner do
   """
   def exists?(object) do
     {repo, direction, _level} = repo_and_direction_and_level()
-    exists = repo.adapter.ddl_exists?(repo, object, @opts)
+    exists = repo.__adapter__.ddl_exists?(repo, object, @opts)
     if direction == :forward, do: exists, else: !exists
   end
 
@@ -122,7 +122,7 @@ defmodule Ecto.Migration.Runner do
   end
 
   defp execute_in_direction(repo, :backward, level, {:create, %Index{}=index}) do
-    if repo.adapter.ddl_exists?(repo, index, @opts) do
+    if repo.__adapter__.ddl_exists?(repo, index, @opts) do
       log_and_execute_ddl(repo, level, {:drop, index})
     end
   end
@@ -168,7 +168,7 @@ defmodule Ecto.Migration.Runner do
 
   defp log_and_execute_ddl(repo, level, command) do
     log(level, command(command))
-    repo.adapter.execute_ddl(repo, command, @opts)
+    repo.__adapter__.execute_ddl(repo, command, @opts)
   end
 
   defp log(false, _msg), do: :ok

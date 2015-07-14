@@ -152,7 +152,7 @@ defmodule Ecto.Repo do
         Ecto.Repo.Preloader.preload(model_or_models, __MODULE__, preloads)
       end
 
-      def adapter do
+      def __adapter__ do
         @adapter
       end
 
@@ -178,12 +178,17 @@ defmodule Ecto.Repo do
   @doc """
   Returns the adapter tied to the repository.
   """
-  defcallback adapter() :: Ecto.Adapter.t
+  defcallback __adapter__ :: Ecto.Adapter.t
 
   @doc """
   Simply returns true to mark this module as a repository.
   """
   defcallback __repo__ :: true
+
+  @doc """
+  Returns the pool information this repository should run under.
+  """
+  defcallback __pool__ :: {module, atom, timeout}
 
   @doc """
   Returns the adapter configuration stored in the `:otp_app` environment.

@@ -13,7 +13,7 @@ defmodule Ecto.Migration.SchemaMigration do
   @opts [timeout: :infinity, log: false]
 
   def ensure_schema_migrations_table!(repo) do
-    adapter = repo.adapter
+    adapter = repo.__adapter__
 
     # DDL queries do not log, so we do not need
     # to pass log: false here.
