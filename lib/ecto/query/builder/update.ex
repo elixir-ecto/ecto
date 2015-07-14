@@ -1,6 +1,7 @@
 defmodule Ecto.Query.Builder.Update do
   @moduledoc false
 
+  @keys [:set, :inc, :push, :pull]
   alias Ecto.Query.Builder
 
   @doc """
@@ -36,11 +37,13 @@ defmodule Ecto.Query.Builder.Update do
   end
 
   defp escape_op([{k, v}|t], compile, runtime, params, vars, env) when is_atom(k) and is_list(v) do
+    validate_key!(k)
     {v, params} = escape_field(k, v, params, vars, env)
     escape_op(t, [{k, v}|compile], runtime, params, vars, env)
   end
 
   defp escape_op([{k, {:^, _, [v]}}|t], compile, runtime, params, vars, env) when is_atom(k) do
+    validate_key!(k)
     escape_op(t, compile, [{k, v}|runtime], params, vars, env)
   end
 
@@ -127,6 +130,7 @@ defmodule Ecto.Query.Builder.Update do
     {runtime, {params, _count}} =
       Enum.map_reduce runtime, {[], 0}, fn
         {k, v}, acc when is_atom(k) and is_list(v) ->
+          validate_key!(k)
           {v, params} = runtime_field(k, v, acc)
           {{k, v}, params}
         _, _acc ->
@@ -155,5 +159,10 @@ defmodule Ecto.Query.Builder.Update do
   defp runtime_error!(value) do
     Builder.error! "malformed update `#{inspect(value)}` in query expression, " <>
                    "expected a keyword list with lists or interpolated expressions as values"
+  end
+
+  defp validate_key!(key) when key in @keys, do: :ok
+  defp validate_key!(key) do
+    Builder.error! "unknown key `#{inspect(key)}` in update"
   end
 end

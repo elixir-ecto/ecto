@@ -62,4 +62,14 @@ defmodule Ecto.Query.Builder.UpdateTest do
       escape(quote do [set: [1]] end, [], __ENV__)
     end
   end
+
+  test "update operations are validated" do
+    assert_raise Ecto.Query.CompileError, "unknown key `:unknown` in update", fn ->
+      escape(quote do [unknown: [1]] end, [], __ENV__)
+    end
+
+    assert_raise Ecto.Query.CompileError, "unknown key `:unknown` in update", fn ->
+      update("foo", [_], ^[unknown: [1]])
+    end
+  end
 end
