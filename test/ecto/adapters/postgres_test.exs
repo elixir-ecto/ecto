@@ -60,7 +60,7 @@ defmodule Ecto.Adapters.PostgresTest do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 
-    assert_raise ArgumentError, ~r"PostgreSQL requires a model", fn ->
+    assert_raise Ecto.QueryError, ~r"PostgreSQL requires a model", fn ->
       SQL.all from(p in "posts", select: p) |> normalize()
     end
   end
@@ -187,7 +187,7 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == ~s{SELECT downcase(m0."x", $1) FROM "model" AS m0}
 
     query = Model |> select([], fragment(title: 2)) |> normalize
-    assert_raise ArgumentError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       SQL.all(query)
     end
   end
