@@ -876,6 +876,11 @@ defmodule Ecto.Changeset do
   reason, you may want to trigger the unique validations as last
   in your validation pipeline.
 
+  This validation does not guarantee the absence of duplicate record insertions,
+  because uniqueness checks on the application level are inherently prone to race conditions.
+  The best way to work around this problem is to rely on the database to guarantee the uniqueness.
+  In SQL databases this can be achieved by creating a unique index on a given field.
+
   ## Examples
 
       validate_unique(changeset, :email, on: Repo)
