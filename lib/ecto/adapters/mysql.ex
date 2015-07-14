@@ -107,8 +107,8 @@ defmodule Ecto.Adapters.MySQL do
     end
 
     {output, status} =
-      run_with_mysql opts, "CREATE DATABASE " <> database <>
-                           " DEFAULT CHARACTER SET = #{charset} " <> extra
+      run_with_mysql opts, "CREATE DATABASE `" <> database <>
+                           "` DEFAULT CHARACTER SET = #{charset} " <> extra
 
     cond do
       status == 0 -> :ok
@@ -119,7 +119,7 @@ defmodule Ecto.Adapters.MySQL do
 
   @doc false
   def storage_down(opts) do
-    {output, status} = run_with_mysql(opts, "DROP DATABASE #{opts[:database]}")
+    {output, status} = run_with_mysql(opts, "DROP DATABASE `#{opts[:database]}`")
 
     cond do
       status == 0                               -> :ok
