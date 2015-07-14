@@ -59,6 +59,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Query
 
+    alias Ecto.Query
     alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.JoinExpr
@@ -66,15 +67,15 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def all(query) do
       sources = create_names(query)
 
-      from     = from(sources)
-      select   = select(query.select, query.distinct, sources)
-      join     = join(query.joins, sources)
-      where    = where(query.wheres, sources)
-      group_by = group_by(query.group_bys, sources)
-      having   = having(query.havings, sources)
-      order_by = order_by(query.order_bys, sources)
-      limit    = limit(query.limit, sources)
-      offset   = offset(query.offset, sources)
+      from     = from(sources, query)
+      select   = select(query, sources)
+      join     = join(query, sources)
+      where    = where(query, sources)
+      group_by = group_by(query, sources)
+      having   = having(query, sources)
+      order_by = order_by(query, sources)
+      limit    = limit(query, sources)
+      offset   = offset(query, sources)
       lock     = lock(query.lock)
 
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
@@ -84,10 +85,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      update = "UPDATE #{quote_table(table)} AS #{name}"
-      fields = update_fields(query.updates, sources)
-      join   = join(query.joins, sources)
-      where  = where(query.wheres, sources)
+      update = "UPDATE #{quote_table(table, query)} AS #{name}"
+      fields = update_fields(query, sources)
+      join   = join(query, sources)
+      where  = where(query, sources)
 
       assemble([update, join, "SET", fields, where])
     end
@@ -97,9 +98,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       {_table, name, _model} = elem(sources, 0)
 
       delete = "DELETE #{name}.*"
-      from   = from(sources)
-      join   = join(query.joins, sources)
-      where  = where(query.wheres, sources)
+      from   = from(sources, query)
+      join   = join(query, sources)
+      where  = where(query, sources)
 
       assemble([delete, from, join, where])
     end
@@ -149,54 +150,55 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%SelectExpr{fields: fields}, distinct, sources) do
+    defp select(%Query{select: %SelectExpr{fields: fields}, distinct: distinct} = query,
+                sources) do
       "SELECT " <>
-        distinct(distinct, sources) <>
-        Enum.map_join(fields, ", ", &expr(&1, sources))
+        distinct(distinct, sources, query) <>
+        Enum.map_join(fields, ", ", &expr(&1, sources, query))
     end
 
-    defp distinct(nil, _sources), do: ""
-    defp distinct(%QueryExpr{expr: true}, _sources),  do: "DISTINCT "
-    defp distinct(%QueryExpr{expr: false}, _sources), do: ""
-    defp distinct(%QueryExpr{expr: exprs}, _sources) when is_list(exprs) do
-      raise ArgumentError, "DISTINCT with multiple columns is not supported by MySQL"
+    defp distinct(nil, _sources, _query), do: ""
+    defp distinct(%QueryExpr{expr: true}, _sources, _query),  do: "DISTINCT "
+    defp distinct(%QueryExpr{expr: false}, _sources, _quety), do: ""
+    defp distinct(%QueryExpr{expr: exprs}, _sources, query) when is_list(exprs) do
+      error!(query, "DISTINCT with multiple columns is not supported by MySQL")
     end
 
-    defp from(sources) do
+    defp from(sources, query) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{quote_table(table)} AS #{name}"
+      "FROM #{quote_table(table, query)} AS #{name}"
     end
 
-    defp update_fields(updates, sources) do
+    defp update_fields(%Query{updates: updates} = query, sources) do
       for(%{expr: expr} <- updates,
           {op, kw} <- expr,
           {key, value} <- kw,
-          do: update_op(op, key, value, sources)) |> Enum.join(", ")
+          do: update_op(op, key, value, sources, query)) |> Enum.join(", ")
     end
 
-    defp update_op(:set, key, value, sources) do
-      quote_name(key) <> " = " <> expr(value, sources)
+    defp update_op(:set, key, value, sources, query) do
+      quote_name(key, query) <> " = " <> expr(value, sources, query)
     end
 
-    defp update_op(:inc, key, value, sources) do
-      quoted = quote_name(key)
-      quoted <> " = " <> quoted <> " + " <> expr(value, sources)
+    defp update_op(:inc, key, value, sources, query) do
+      quoted = quote_name(key, query)
+      quoted <> " = " <> quoted <> " + " <> expr(value, sources, query)
     end
 
-    defp update_op(command, _key, _value, _sources) do
-      raise ArgumentError, "Unknown update operation #{inspect command} for MySQL"
+    defp update_op(command, _key, _value, _sources, query) do
+      error!(query, "Unknown update operation #{inspect command} for MySQL")
     end
 
-    defp join([], _sources), do: []
-    defp join(joins, sources) do
+    defp join(%Query{joins: []}, _sources), do: []
+    defp join(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
           {table, name, _model} = elem(sources, ix)
 
-          on   = expr(expr, sources)
+          on   = expr(expr, sources, query)
           qual = join_qual(qual)
 
-          "#{qual} JOIN #{quote_table(table)} AS #{name} ON " <> on
+          "#{qual} JOIN #{quote_table(table, query)} AS #{name} ON " <> on
       end)
     end
 
@@ -205,19 +207,19 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp join_qual(:right), do: "RIGHT OUTER"
     defp join_qual(:full),  do: "FULL OUTER"
 
-    defp where(wheres, sources) do
-      boolean("WHERE", wheres, sources)
+    defp where(%Query{wheres: wheres} = query, sources) do
+      boolean("WHERE", wheres, sources, query)
     end
 
-    defp having(havings, sources) do
-      boolean("HAVING", havings, sources)
+    defp having(%Query{havings: havings} = query, sources) do
+      boolean("HAVING", havings, sources, query)
     end
 
-    defp group_by(group_bys, sources) do
+    defp group_by(%Query{group_bys: group_bys} = query, sources) do
       exprs =
         Enum.map_join(group_bys, ", ", fn
           %QueryExpr{expr: expr} ->
-            Enum.map_join(expr, ", ", &expr(&1, sources))
+            Enum.map_join(expr, ", ", &expr(&1, sources, query))
         end)
 
       case exprs do
@@ -226,11 +228,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
-    defp order_by(order_bys, sources) do
+    defp order_by(%Query{order_bys: order_bys} = query, sources) do
       exprs =
         Enum.map_join(order_bys, ", ", fn
           %QueryExpr{expr: expr} ->
-            Enum.map_join(expr, ", ", &order_by_expr(&1, sources))
+            Enum.map_join(expr, ", ", &order_by_expr(&1, sources, query))
         end)
 
       case exprs do
@@ -239,151 +241,155 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end
     end
 
-    defp order_by_expr({dir, expr}, sources) do
-      str = expr(expr, sources)
+    defp order_by_expr({dir, expr}, sources, query) do
+      str = expr(expr, sources, query)
       case dir do
         :asc  -> str
         :desc -> str <> " DESC"
       end
     end
 
-    defp limit(nil, _sources), do: []
-    defp limit(%Ecto.Query.QueryExpr{expr: expr}, sources) do
-      "LIMIT " <> expr(expr, sources)
+    defp limit(%Query{limit: nil}, _sources), do: []
+    defp limit(%Query{limit: %QueryExpr{expr: expr}} = query, sources) do
+      "LIMIT " <> expr(expr, sources, query)
     end
 
-    defp offset(nil, _sources), do: []
-    defp offset(%Ecto.Query.QueryExpr{expr: expr}, sources) do
-      "OFFSET " <> expr(expr, sources)
+    defp offset(%Query{offset: nil}, _sources), do: []
+    defp offset(%Query{offset: %QueryExpr{expr: expr}} = query, sources) do
+      "OFFSET " <> expr(expr, sources, query)
     end
 
     defp lock(nil), do: []
     defp lock(lock_clause), do: lock_clause
 
-    defp boolean(_name, [], _sources), do: []
-    defp boolean(name, query_exprs, sources) do
+    defp boolean(_name, [], _sources, _query), do: []
+    defp boolean(name, query_exprs, sources, query) do
       name <> " " <>
         Enum.map_join(query_exprs, " AND ", fn
           %QueryExpr{expr: expr} ->
-            "(" <> expr(expr, sources) <> ")"
+            "(" <> expr(expr, sources, query) <> ")"
         end)
     end
 
-    defp expr({:^, [], [_ix]}, _sources) do
+    defp expr({:^, [], [_ix]}, _sources, _query) do
       "?"
     end
 
-    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources) when is_atom(field) do
+    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, query)
+        when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_name(field)}"
+      "#{name}.#{quote_name(field, query)}"
     end
 
-    defp expr({:&, _, [idx]}, sources) do
+    defp expr({:&, _, [idx]}, sources, query) do
       {table, name, model} = elem(sources, idx)
       unless model do
-        raise ArgumentError, "MySQL requires a model when using selector #{inspect name} but " <>
-                             "only the table #{inspect table} was given. Please specify a model " <>
-                             "or specify exactly which fields from #{inspect name} you desire"
+        error!(query, "MySQL requires a model when using selector " <>
+          "#{inspect name} but only the table #{inspect table} was given. " <>
+          "Please specify a model or specify exactly which fields from " <>
+          "#{inspect name} you desire")
       end
       fields = model.__schema__(:fields)
-      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
+      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1, query)}")
     end
 
-    defp expr({:in, _, [_left, []]}, _sources) do
+    defp expr({:in, _, [_left, []]}, _sources, _query) do
       "false"
     end
 
-    defp expr({:in, _, [left, right]}, sources) when is_list(right) do
-      args = Enum.map_join right, ",", &expr(&1, sources)
-      expr(left, sources) <> " IN (" <> args <> ")"
+    defp expr({:in, _, [left, right]}, sources, query) when is_list(right) do
+      args = Enum.map_join right, ",", &expr(&1, sources, query)
+      expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 
-    defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources) do
+    defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources, query) do
       args = Enum.map_join(ix+1..ix+length, ",", fn (_) -> "?" end)
-      expr(left, sources) <> " IN (" <> args <> ")"
+      expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 
-    defp expr({:in, _, [left, right]}, sources) do
-      expr(left, sources) <> " = ANY(" <> expr(right, sources) <> ")"
+    defp expr({:in, _, [left, right]}, sources, query) do
+      expr(left, sources, query) <> " = ANY(" <> expr(right, sources, query) <> ")"
     end
 
-    defp expr({:is_nil, _, [arg]}, sources) do
-      "#{expr(arg, sources)} IS NULL"
+    defp expr({:is_nil, _, [arg]}, sources, query) do
+      "#{expr(arg, sources, query)} IS NULL"
     end
 
-    defp expr({:not, _, [expr]}, sources) do
-      "NOT (" <> expr(expr, sources) <> ")"
+    defp expr({:not, _, [expr]}, sources, query) do
+      "NOT (" <> expr(expr, sources, query) <> ")"
     end
 
-    defp expr({:fragment, _, [kw]}, _sources) when is_list(kw) or tuple_size(kw) == 3 do
-      raise ArgumentError, "MySQL adapter does not support keyword or interpolated fragments"
+    defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
+      error!(query, "MySQL adapter does not support keyword or interpolated fragments")
     end
 
-    defp expr({:fragment, _, parts}, sources) do
+    defp expr({:fragment, _, parts}, sources, query) do
       Enum.map_join(parts, "", fn
         {:raw, part}  -> part
-        {:expr, expr} -> expr(expr, sources)
+        {:expr, expr} -> expr(expr, sources, query)
       end)
     end
 
-    defp expr({fun, _, args}, sources) when is_atom(fun) and is_list(args) do
+    defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
       case handle_call(fun, length(args)) do
         {:binary_op, op} ->
           [left, right] = args
-          op_to_binary(left, sources) <>
+          op_to_binary(left, sources, query) <>
           " #{op} "
-          <> op_to_binary(right, sources)
+          <> op_to_binary(right, sources, query)
 
         {:fun, fun} ->
-          "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, sources)) <> ")"
+          "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, sources, query)) <> ")"
       end
     end
 
-    defp expr(list, _sources) when is_list(list) do
-      raise ArgumentError, "Array type is not supported by MySQL"
+    defp expr(list, _sources, query) when is_list(list) do
+      error!(query, "Array type is not supported by MySQL")
     end
 
-    defp expr(%Decimal{} = decimal, _sources) do
+    defp expr(%Decimal{} = decimal, _sources, _query) do
       Decimal.to_string(decimal, :normal)
     end
 
-    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources) when is_binary(binary) do
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query)
+        when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
       "x'#{hex}'"
     end
 
-    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) when type in [:id, :integer, :float] do
-      expr(other, sources)
+    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query)
+        when type in [:id, :integer, :float] do
+      expr(other, sources, query)
     end
 
-    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources) do
-      "CAST(#{expr(other, sources)} AS " <> ecto_to_db(type) <> ")"
+    defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
+      "CAST(#{expr(other, sources, query)} AS " <> ecto_to_db(type, query) <> ")"
     end
 
-    defp expr(nil, _sources),   do: "NULL"
-    defp expr(true, _sources),  do: "TRUE"
-    defp expr(false, _sources), do: "FALSE"
+    defp expr(nil, _sources, _query),   do: "NULL"
+    defp expr(true, _sources, _query),  do: "TRUE"
+    defp expr(false, _sources, _query), do: "FALSE"
 
-    defp expr(literal, _sources) when is_binary(literal) do
+    defp expr(literal, _sources, _query) when is_binary(literal) do
       "'#{escape_string(literal)}'"
     end
 
-    defp expr(literal, _sources) when is_integer(literal) do
+    defp expr(literal, _sources, _query) when is_integer(literal) do
       String.Chars.Integer.to_string(literal)
     end
 
-    defp expr(literal, _sources) when is_float(literal) do
+    defp expr(literal, _sources, _query) when is_float(literal) do
       # MySQL doesn't support float cast
       expr = String.Chars.Float.to_string(literal)
       "(0 + #{expr})"
     end
 
-    defp op_to_binary({op, _, [_, _]} = expr, sources) when op in @binary_ops do
-      "(" <> expr(expr, sources) <> ")"
+    defp op_to_binary({op, _, [_, _]} = expr, sources, query) when op in @binary_ops do
+      "(" <> expr(expr, sources, query) <> ")"
     end
 
-    defp op_to_binary(expr, sources) do
-      expr(expr, sources)
+    defp op_to_binary(expr, sources, query) do
+      expr(expr, sources, query)
     end
 
     defp create_names(%{sources: sources}) do
@@ -466,7 +472,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def execute_ddl(string) when is_binary(string), do: string
 
     def execute_ddl(keyword) when is_list(keyword),
-      do: raise(ArgumentError, "MySQL adapter does not support keyword lists in execute")
+      do: error!(nil, "MySQL adapter does not support keyword lists in execute")
 
     defp column_definitions(columns) do
       Enum.map_join(columns, ", ", &column_definition/1)
@@ -533,7 +539,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp options_expr(nil),
       do: ""
     defp options_expr(keyword) when is_list(keyword),
-      do: raise(ArgumentError, "MySQL adapter does not support keyword lists in :options")
+      do: error!(nil, "MySQL adapter does not support keyword lists in :options")
     defp options_expr(options),
       do: " #{options}"
 
@@ -565,19 +571,23 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Helpers
 
-    defp quote_name(name) when is_atom(name), do: quote_name(Atom.to_string(name))
-    defp quote_name(name) do
+    defp quote_name(name, query \\ nil)
+    defp quote_name(name, query) when is_atom(name),
+      do: quote_name(Atom.to_string(name), query)
+    defp quote_name(name, query) do
       if String.contains?(name, "`") do
-        raise ArgumentError, "bad field name #{inspect name}"
+        error!(query, "bad field name #{inspect name}")
       end
 
       <<?`, name::binary, ?`>>
     end
 
-    defp quote_table(name) when is_atom(name), do: quote_table(Atom.to_string(name))
-    defp quote_table(name) do
+    defp quote_table(name, query \\ nil)
+    defp quote_table(name, query) when is_atom(name),
+      do: quote_table(Atom.to_string(name), query)
+    defp quote_table(name, query) do
       if String.contains?(name, "`") do
-        raise ArgumentError, "bad table name #{inspect name}"
+        error!(query, "bad table name #{inspect name}")
       end
 
       <<?`, String.replace(name, ".", "`.`")::binary, ?`>>
@@ -599,14 +609,23 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       |> :binary.replace("\\", "\\\\", [:global])
     end
 
-    defp ecto_to_db({:array, _}), do: raise(ArgumentError, "Array type is not supported by MySQL")
-    defp ecto_to_db(:id),         do: "integer"
-    defp ecto_to_db(:binary_id),  do: "binary(16)"
-    defp ecto_to_db(:string),     do: "varchar"
-    defp ecto_to_db(:float),      do: "double"
-    defp ecto_to_db(:binary),     do: "blob"
-    defp ecto_to_db(:uuid),       do: "binary(16)" # MySQL does not support uuid
-    defp ecto_to_db(:map),        do: "text"
-    defp ecto_to_db(other),       do: Atom.to_string(other)
+    defp ecto_to_db(type, query \\ nil)
+    defp ecto_to_db({:array, _}, query),
+      do: error!(query, "Array type is not supported by MySQL")
+    defp ecto_to_db(:id, _query),        do: "integer"
+    defp ecto_to_db(:binary_id, _query), do: "binary(16)"
+    defp ecto_to_db(:string, _query),    do: "varchar"
+    defp ecto_to_db(:float, _query),     do: "double"
+    defp ecto_to_db(:binary, _query),    do: "blob"
+    defp ecto_to_db(:uuid, _query),      do: "binary(16)" # MySQL does not support uuid
+    defp ecto_to_db(:map, _query),       do: "text"
+    defp ecto_to_db(other, _query),      do: Atom.to_string(other)
+
+    defp error!(nil, message) do
+      raise ArgumentError, message
+    end
+    defp error!(query, message) do
+      raise Ecto.QueryError, query: query, message: message
+    end
   end
 end

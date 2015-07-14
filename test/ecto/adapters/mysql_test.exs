@@ -57,7 +57,7 @@ defmodule Ecto.Adapters.MySQLTest do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0.`x` FROM `posts` AS p0}
 
-    assert_raise ArgumentError, ~r"MySQL requires a model", fn ->
+    assert_raise Ecto.QueryError, ~r"MySQL requires a model", fn ->
       SQL.all from(p in "posts", select: p) |> normalize()
     end
   end
@@ -88,7 +88,7 @@ defmodule Ecto.Adapters.MySQLTest do
     query = Model |> distinct(false) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0.`x`, m0.`y` FROM `model` AS m0}
 
-    assert_raise ArgumentError, "DISTINCT with multiple columns is not supported by MySQL", fn ->
+    assert_raise Ecto.QueryError, ~r"DISTINCT with multiple columns is not supported by MySQL", fn ->
       query = Model |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
       SQL.all(query)
     end
@@ -174,7 +174,7 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.all(query) == ~s{SELECT lcase(m0.`x`, ?) FROM `model` AS m0}
 
     query = Model |> select([], fragment(title: 2)) |> normalize
-    assert_raise ArgumentError, fn ->
+    assert_raise Ecto.QueryError, fn ->
       SQL.all(query)
     end
   end
@@ -569,7 +569,7 @@ defmodule Ecto.Adapters.MySQLTest do
   # Unsupported types and clauses
 
   test "arrays" do
-    assert_raise ArgumentError, "Array type is not supported by MySQL", fn ->
+    assert_raise Ecto.QueryError, ~r"Array type is not supported by MySQL", fn ->
       query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
       SQL.all(query)
     end

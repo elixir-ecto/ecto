@@ -390,7 +390,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       Decimal.to_string(decimal, :normal)
     end
 
-    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query) when is_binary(binary) do
+    defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query)
+        when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
       "'\\x#{hex}'::bytea"
     end
