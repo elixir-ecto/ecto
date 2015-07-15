@@ -297,13 +297,19 @@ defmodule Ecto.Repo do
   @doc """
   Preloads all associations on the given model or models.
 
-  `preloads` is a list of associations that can be nested in rose
-  tree structure:
-
-      node :: atom | {atom, node} | [node]
+  This is similar to `Ecto.Query.preload/3` except it allows
+  you to preload models after they have been fetched from the
+  database.
 
   In case the association was already loaded, preload won't attempt
   to reload it.
+
+  ## Examples
+
+      Repo.preload posts, :comments
+      Repo.preload posts, comments: :permalinks
+      Repo.preload posts, comments: from(c in Comment, order_by: c.published_at)
+
   """
   defcallback preload([Ecto.Model.t] | Ecto.Model.t, preloads :: term) ::
                       [Ecto.Model.t] | Ecto.Model.t

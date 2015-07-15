@@ -681,9 +681,9 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Pre-loads the associations into the given model.
+  Preloads the associations into the given model.
 
-  Pre-loading allow developers to specify associations that are pre-loaded
+  Preloading allow developers to specify associations that are preloaded
   into the model. Consider this example:
 
       Repo.all from p in Post, preload: [:comments]
@@ -693,7 +693,7 @@ defmodule Ecto.Query do
 
   However, often times, you want posts and comments to be selected and
   filtered in the same query. For such cases, you can explicitly tell
-  the association to be pre-loaded into the model:
+  the association to be preloaded into the model:
 
       Repo.all from p in Post,
                  join: c in assoc(p, :comments),
@@ -721,6 +721,28 @@ defmodule Ecto.Query do
       Repo.all from p in Post,
                  join: c in assoc(p, :comments),
                  preload: [comments: {c, :likes}]
+
+  ## Preload queries
+
+  Preload also allows queries to be given, allow you to filter or
+  customize how the preloads are fetched:
+
+      comments_query = from c in Comment, order_by: c.published_at
+      Repo.all from p in Post, preload: [comments: ^comments_query]
+
+  The example above will issue two queries, one for loading posts and
+  then another for loading the comments associated to the posts,
+  where they will be ordered by `published_at`.
+
+  Note: keep in mind operations like limit and offset in the preload
+  query will affect the whole result set and not each association. For
+  example, the query below:
+
+      comments_query = from c in Comment, order_by: c.popularity, limit: 5
+      Repo.all from p in Post, preload: [comments: ^comments_query]
+
+  won't bring the top of comments per post. Rather, it will only bring
+  the 5 top comments across all posts.
 
   ## Keywords examples
 

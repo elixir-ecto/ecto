@@ -81,21 +81,25 @@ defmodule Ecto.Repo.Preloader do
 
   ## Association preloading
 
-  defp preload_assoc(structs, module, repo, assoc, assoc_key, sub_preloads) do
+  defp preload_assoc(structs, module, repo, assoc, assoc_key, preloads_or_query) do
     case ids(structs, module, assoc) do
       [] ->
         {:assoc, assoc, HashDict.new}
-      ids ->
+      ids when is_list(preloads_or_query) ->
         query = assoc.__struct__.assoc_query(assoc, ids)
-        card  = assoc.cardinality
-
-        if card == :many do
-          query = Ecto.Query.from q in query, order_by: field(q, ^assoc_key)
-        end
-
-        loaded = preload_each(repo.all(query), repo, sub_preloads)
-        {:assoc, assoc, assoc_dict(card, assoc_key, loaded)}
+        preload_assoc(repo, query, assoc, assoc_key, preloads_or_query)
+      ids ->
+        query = assoc.__struct__.assoc_query(assoc, preloads_or_query, ids)
+        preload_assoc(repo, query, assoc, assoc_key, [])
     end
+  end
+
+  defp preload_assoc(repo, query, %{cardinality: card} = assoc, assoc_key, preloads) do
+    if card == :many do
+      query = Ecto.Query.from q in query, order_by: field(q, ^assoc_key)
+    end
+    loaded = preload_each(repo.all(query), repo, preloads)
+    {:assoc, assoc, assoc_dict(card, assoc_key, loaded)}
   end
 
   defp ids(structs, module, assoc) do
@@ -194,6 +198,11 @@ defmodule Ecto.Repo.Preloader do
     normalize_each(List.wrap(preload), [], assocs, original)
   end
 
+  defp normalize_each({atom, %Ecto.Query{} = query}, acc, assocs, _original) when is_atom(atom) do
+    no_assoc!(assocs, atom)
+    [{atom, query}|acc]
+  end
+
   defp normalize_each({atom, list}, acc, assocs, original) when is_atom(atom) do
     no_assoc!(assocs, atom)
     [{atom, normalize_each(List.wrap(list), [], nil, original)}|acc]
@@ -227,7 +236,8 @@ defmodule Ecto.Repo.Preloader do
     Enum.reduce(preloads, acc, fn {preload, sub_preloads}, acc ->
       case List.keyfind(acc, preload, 0) do
         {^preload, info, extra_preloads} ->
-          List.keyreplace(acc, preload, 0, {preload, info, sub_preloads ++ extra_preloads})
+          List.keyreplace(acc, preload, 0,
+                          {preload, info, merge_preloads(preload, sub_preloads, extra_preloads)})
         nil ->
           assoc = Ecto.Association.association_from_model!(model, preload)
           info  = assoc.__struct__.preload_info(assoc)
@@ -241,5 +251,13 @@ defmodule Ecto.Repo.Preloader do
           end
       end
     end)
+  end
+
+  defp merge_preloads(_preload, left, right) when is_list(left) and is_list(right) do
+    left ++ right
+  end
+  defp merge_preloads(preload, left, right) do
+    raise ArgumentError, "cannot preload `#{preload}` as it has been supplied more than once " <>
+                         "with different argument types: #{inspect left} and #{inspect right}"
   end
 end

@@ -369,6 +369,9 @@ defmodule Ecto.AssociationTest do
     assert Preloader.normalize([foo: :bar], [], []) == [foo: [bar: []]]
     assert Preloader.normalize([foo: [:bar, baz: :bat], this: :that], [], []) ==
            [this: [that: []], foo: [baz: [bat: []], bar: []]]
+
+    query = from(p in Post, limit: 1)
+    assert Preloader.normalize([foo: query], [], []) == [foo: query]
   end
 
   test "preload: raises on assoc conflict" do
@@ -407,5 +410,17 @@ defmodule Ecto.AssociationTest do
     assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, [comments: _, comments: _]},
            {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, []}] =
            expand(Author, [:posts, posts_comments: :post, posts: [comments: :post]])
+
+    query = from(c in Comment, limit: 1)
+    assert [{:permalink, {:assoc, %Ecto.Association.Has{}, :post_id}, []},
+            {:comments, {:assoc, %Ecto.Association.Has{}, :post_id}, ^query}] =
+           expand(Post, [:permalink, comments: query])
+  end
+
+  test "preload: expand raises on duplicated entries" do
+    message = ~r"cannot preload `comments` as it has been supplied more than once with different argument types"
+    assert_raise ArgumentError, message, fn ->
+      expand(Post, [comments: [], comments: from(c in Comment, limit: 1)])
+    end
   end
 end

@@ -18,7 +18,7 @@ defmodule Ecto.Query.Builder.Preload do
       {[foo: [:bar, bar: [:bat]]], []}
 
       iex> escape([foo: {:^, [], ["external"]}], [])
-      {[foo: ["external"]], []}
+      {[foo: "external"], []}
 
       iex> escape([foo: [:bar, {:^, [], ["external"]}], baz: :bat], [])
       {[foo: [:bar, "external"], baz: [:bat]], []}
@@ -66,6 +66,12 @@ defmodule Ecto.Query.Builder.Preload do
                    "preload expects an atom, a (nested) list of atoms or a (nested) " <>
                    "keyword list with a binding, atoms or lists as values. " <>
                    "Use ^ if you want to interpolate a value"
+  end
+
+  defp escape_each({key, {:^, _, [inner]}} = expr, mode, {preloads, assocs}, _vars) do
+    assert_preload!(mode, expr)
+    key = escape_key(key)
+    {[{key, inner}|preloads], assocs}
   end
 
   defp escape_each({key, {var, _, context}}, mode, {preloads, assocs}, vars) when is_atom(context) do
