@@ -232,7 +232,7 @@ defmodule Ecto.SchemaTest do
   test "has_many association" do
     assert AssocModel.__schema__(:association, :posts) ==
            %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, on_delete: :nothing,
-                                  assoc: Post, owner_key: :id, assoc_key: :assoc_model_id, queryable: Post}
+                                 assoc: Post, owner_key: :id, assoc_key: :assoc_model_id, queryable: Post}
 
     posts = (%AssocModel{}).posts
     assert %Ecto.Association.NotLoaded{} = posts

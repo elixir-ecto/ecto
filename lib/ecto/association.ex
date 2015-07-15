@@ -97,7 +97,7 @@ defmodule Ecto.Association do
 
   This callback is used by preloading.
   """
-  defcallback assoc_query(t, Ecto.Queryable.t, values :: [term]) :: Ecto.Query.t
+  defcallback assoc_query(t, Ecto.Query.t, values :: [term]) :: Ecto.Query.t
 
   @doc """
   Returns information used by the preloader.
@@ -243,11 +243,13 @@ defmodule Ecto.Association.Has do
     * `assoc_key` - The key on the `associated` model used for the association
     * `queryable` - The real query to use for querying association
     * `on_delete` - The action taken on associations when model is deleted
+    * `defaults` - Default fields used when building the association
   """
 
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
-  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable, :on_delete]
+  defstruct [:cardinality, :field, :owner, :assoc, :owner_key,
+             :assoc_key, :queryable, :on_delete, defaults: []]
 
   @doc false
   def struct(module, name, opts) do
@@ -290,14 +292,16 @@ defmodule Ecto.Association.Has do
       owner_key: ref,
       assoc_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref),
       queryable: queryable,
-      on_delete: on_delete
+      on_delete: on_delete,
+      defaults: opts[:defaults] || []
     }
   end
 
   @doc false
   def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key,
-              queryable: queryable}, struct, attributes) do
+              queryable: queryable, defaults: defaults}, struct, attributes) do
     assoc
+    |> struct(defaults)
     |> struct(attributes)
     |> Map.put(assoc_key, Map.get(struct, owner_key))
     |> Ecto.Association.merge_source(queryable)
@@ -438,10 +442,6 @@ defmodule Ecto.Association.HasThrough do
     |> select([x], x)
   end
 
-  def assoc_query(assoc, query, values) do
-    assoc_query(assoc, Ecto.Queryable.to_query(query), values)
-  end
-
   defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: []}, position) do
     %JoinExpr{ix: position, qual: :inner, source: from,
               on: rewrite_expr(on, %{0 => position}),
@@ -487,10 +487,11 @@ defmodule Ecto.Association.BelongsTo do
     * `owner_key` - The key on the `owner` model used for the association
     * `assoc_key` - The key on the `assoc` model used for the association
     * `queryable` - The real query to use for querying association
+    * `defaults` - Default fields used when building the association
   """
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable]
+  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable, defaults: []]
 
   @doc false
   def struct(module, name, opts) do
@@ -520,13 +521,15 @@ defmodule Ecto.Association.BelongsTo do
       assoc: assoc,
       owner_key: Keyword.fetch!(opts, :foreign_key),
       assoc_key: ref,
-      queryable: queryable
+      queryable: queryable,
+      defaults: opts[:defaults] || []
     }
   end
 
   @doc false
-  def build(%{assoc: assoc, queryable: queryable}, _struct, attributes) do
+  def build(%{assoc: assoc, queryable: queryable, defaults: defaults}, _struct, attributes) do
     assoc
+    |> struct(defaults)
     |> struct(attributes)
     |> Ecto.Association.merge_source(queryable)
   end

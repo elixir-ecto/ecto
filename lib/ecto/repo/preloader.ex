@@ -98,7 +98,7 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  def ids(structs, module, assoc) do
+  defp ids(structs, module, assoc) do
     field = assoc.field
     owner_key = assoc.owner_key
 
@@ -196,7 +196,7 @@ defmodule Ecto.Repo.Preloader do
 
   defp normalize_each({atom, list}, acc, assocs, original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    [{atom, normalize_each(List.wrap(list), [], assocs, original)}|acc]
+    [{atom, normalize_each(List.wrap(list), [], nil, original)}|acc]
   end
 
   defp normalize_each(atom, acc, assocs, _original) when is_atom(atom) do

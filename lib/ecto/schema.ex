@@ -252,9 +252,6 @@ defmodule Ecto.Schema do
 
   * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
 
-  * `__schema__(:load, source, idx, values, id_types)` - Loads a new model from a tuple of non-virtual
-    field values starting at the given index. Typically used by adapters;
-
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
   """
@@ -434,6 +431,8 @@ defmodule Ecto.Schema do
       May be `:nothing` (default), `:nilify_all`, `:delete_all` or
       `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
+    *  `:defaults` - Default values to use when building the association
+
   ## Examples
 
       defmodule Post do
@@ -557,6 +556,8 @@ defmodule Ecto.Schema do
       May be `:nothing` (default), `:nilify_all`, `:delete_all` or
       `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
+    *  `:defaults` - Default values to use when building the association
+
   ## Examples
 
       defmodule Post do
@@ -607,6 +608,8 @@ defmodule Ecto.Schema do
 
     * `:type` - Sets the type of automatically defined `:foreign_key`.
       Defaults to: `:integer` and be set per schema via `@foreign_key_type`
+
+    *  `:defaults` - Default values to use when building the association
 
   All other options are forwarded to the underlying foreign key definition
   and therefore accept the same options as `field/3`.
@@ -826,7 +829,7 @@ defmodule Ecto.Schema do
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :through, :on_delete], "has_many/3")
+    check_options!(opts, [:foreign_key, :references, :through, :on_delete, :defaults], "has_many/3")
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
@@ -837,7 +840,7 @@ defmodule Ecto.Schema do
 
   @doc false
   def __has_one__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :through, :on_delete], "has_one/3")
+    check_options!(opts, [:foreign_key, :references, :through, :on_delete, :defaults], "has_one/3")
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :one, name, Ecto.Association.HasThrough, queryable)
@@ -848,7 +851,7 @@ defmodule Ecto.Schema do
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :define_field, :type], "belongs_to/3")
+    check_options!(opts, [:foreign_key, :references, :define_field, :type, :defaults], "belongs_to/3")
 
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)

@@ -50,6 +50,7 @@ defmodule Ecto.AssociationTest do
     use Ecto.Model
 
     schema "authors" do
+      field :title, :string
       has_many :posts, Post
       has_many :posts_comments, through: [:posts, :comments]    # many -> many
       has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
@@ -62,7 +63,7 @@ defmodule Ecto.AssociationTest do
     use Ecto.Model
 
     schema "summaries" do
-      has_one :post, Post
+      has_one :post, Post, defaults: [title: "default"]
       has_one :post_author, through: [:post, :author]        # one -> belongs
       has_many :post_comments, through: [:post, :comments]   # one -> many
     end
@@ -72,7 +73,7 @@ defmodule Ecto.AssociationTest do
     use Ecto.Model
 
     schema "emails" do
-      belongs_to :author, {"post_authors", Author}
+      belongs_to :author, {"post_authors", Author}, defaults: [title: "default"]
     end
   end
 
@@ -281,16 +282,17 @@ defmodule Ecto.AssociationTest do
            %Comment{post_id: 1}
 
     assert build(%Summary{id: 1}, :post) ==
-           %Post{summary_id: 1}
+           %Post{summary_id: 1, title: "default"}
 
     assert build(%Comment{post_id: 1}, :post) ==
            %Post{id: nil}
 
     assert build(%Author{id: 1}, :emails) ==
-      %Email{author_id: 1, __meta__: %Ecto.Schema.Metadata{source: "users_emails", state: :built}}
+      %Email{author_id: 1,  __meta__: %Ecto.Schema.Metadata{source: "users_emails", state: :built}}
 
     assert build(%Email{id: 1}, :author) ==
-      %Author{id: nil, __meta__: %Ecto.Schema.Metadata{source: "post_authors", state: :built}}
+      %Author{id: nil, title: "default",
+              __meta__: %Ecto.Schema.Metadata{source: "post_authors", state: :built}}
 
     assert_raise ArgumentError, ~r"cannot build through association :post_author", fn ->
       build(%Comment{}, :post_author)
@@ -312,6 +314,10 @@ defmodule Ecto.AssociationTest do
 
     assert build(%Comment{post_id: 1}, :post, %{title: "Hello"}) ==
            %Post{id: nil, title: "Hello"}
+
+    # Overriding defaults
+    assert build(%Summary{id: 1}, :post, title: "Hello").title == "Hello"
+    assert build(%Email{id: 1}, :author, title: "Hello").title == "Hello"
   end
 
   test "assoc/2" do
