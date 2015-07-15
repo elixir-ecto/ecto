@@ -61,7 +61,7 @@ defmodule Ecto.Association do
   Returns an association join query.
 
   This callback receives the association struct and it must return
-  a query that retrieves all associated objects using joins up to
+  a query that retrieves all associated entries using joins up to
   the owner association.
 
   For example, a `has_many :comments` inside a `Post` module would
@@ -81,12 +81,23 @@ defmodule Ecto.Association do
   Returns the association query.
 
   This callback receives the association struct and it must return
-  a query that retrieves all associated objects with the given
+  a query that retrieves all associated entries with the given
   values for the owner key.
 
   This callback is used by `Ecto.Model.assoc/2`.
   """
   defcallback assoc_query(t, values :: [term]) :: Ecto.Query.t
+
+  @doc """
+  Returns the association query on top of the given query.
+
+  This callback receives the association struct and it must return
+  a query that retrieves all associated entries with the given
+  values for the owner key.
+
+  This callback is used by preloading.
+  """
+  defcallback assoc_query(t, Ecto.Queryable.t, values :: [term]) :: Ecto.Query.t
 
   @doc """
   Returns information used by the preloader.
@@ -301,7 +312,12 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def assoc_query(refl, values) do
-    from x in refl.queryable,
+    assoc_query(refl, refl.queryable, values)
+  end
+
+  @doc false
+  def assoc_query(refl, query, values) do
+    from x in query,
       where: field(x, ^refl.assoc_key) in ^values
   end
 
@@ -323,6 +339,8 @@ defmodule Ecto.Association.HasThrough do
     * `owner_key` - The key on the `owner` model used for the association
     * `through` - The through associations
   """
+
+  alias Ecto.Query.JoinExpr
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through]
@@ -379,57 +397,59 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def assoc_query(%{owner: owner, through: [h|t]}, values) do
-    refl  = owner.__schema__(:association, h)
+  def assoc_query(refl, values) do
+    assoc_query(refl, %Ecto.Query{from: {"join expression", nil}}, values)
+  end
 
-    # Start the query from the first association
-    query = refl.__struct__.assoc_query(refl, values)
+  @doc false
+  def assoc_query(%{owner: owner, through: [h|t]}, %Ecto.Query{} = query, values) do
+    refl = owner.__schema__(:association, h)
+
+    # Find the position for upcoming joins
+    position = length(query.joins) + 1
 
     # The first association must become a join,
-    # so we convert the last where (that comes
-    # from assoc_query) to the join expression.
+    # so we convert its where (that comes from assoc_query)
+    # to a join expression.
     #
-    # We are considering there are no join expressions
-    # in the query so far as they are not allowed.
-    mapping = %{0 => 1}
-    {join, wheres} = wheres_to_join(query, mapping)
+    # Note we are being restrictive on the format
+    # expected from assoc_query.
+    join = assoc_to_join(refl.__struct__.assoc_query(refl, values), position)
 
-    # Update the query with the new join and where
-    # and traverse the remaining of the :through.
+    # Add the new join to the query and traverse the remaining
+    # joins that will start counting from the added join position.
     query =
-      %{query | joins: [join], wheres: wheres}
-      |> joins_query(t, 1)
+      %{query | joins: query.joins ++ [join]}
+      |> joins_query(t, position)
       |> Ecto.Query.Planner.prepare_sources()
 
     # Our source is going to be the last join after
     # traversing them all.
     {joins, [assoc]} = Enum.split(query.joins, -1)
 
-    # Update the mapping and start rewriting
-    # expressions allowed in queries.
-    mapping   = Map.put(mapping, length(joins) + 1, 0)
-    wheres    = rewrite_many([assoc.on|query.wheres], mapping)
-    order_bys = rewrite_many(query.order_bys, mapping)
+    # Update the mapping and start rewriting expressions
+    # to make the last join point to the new from source.
+    mapping  = Map.put(%{}, length(joins) + 1, 0)
+    assoc_on = rewrite_expr(assoc.on, mapping)
 
-    %{query | wheres: wheres, order_bys: order_bys,
-              from: assoc.source, joins: joins, sources: nil}
+    %{query | wheres: [assoc_on|query.wheres], joins: joins,
+              from: merge_from(query.from, assoc.source), sources: nil}
     |> distinct([x], true)
     |> select([x], x)
   end
 
-  alias Ecto.Query.JoinExpr
-
-  defp wheres_to_join(query, mapping) do
-    {wheres, [on]} = Enum.split(query.wheres, -1)
-    join = %JoinExpr{ix: Map.fetch!(mapping, 0), qual: :inner,
-                     on: rewrite_expr(on, mapping), source: query.from,
-                     file: on.file, line: on.line}
-    {join, wheres}
+  def assoc_query(assoc, query, values) do
+    assoc_query(assoc, Ecto.Queryable.to_query(query), values)
   end
 
-  defp rewrite_many(exprs, acc) do
-    Enum.map(exprs, &rewrite_expr(&1, acc))
+  defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: []}, position) do
+    %JoinExpr{ix: position, qual: :inner, source: from,
+              on: rewrite_expr(on, %{0 => position}),
+              file: on.file, line: on.line}
   end
+
+  defp merge_from({"join expression", _}, assoc_source), do: assoc_source
+  defp merge_from(from, _assoc_source), do: from
 
   defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
     expr =
@@ -520,7 +540,12 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def assoc_query(refl, values) do
-    from x in refl.queryable,
+    assoc_query(refl, refl.queryable, values)
+  end
+
+  @doc false
+  def assoc_query(refl, query, values) do
+    from x in query,
       where: field(x, ^refl.assoc_key) in ^values
   end
 

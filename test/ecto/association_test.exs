@@ -33,6 +33,7 @@ defmodule Ecto.AssociationTest do
       field :text, :string
 
       belongs_to :post, Post
+      has_one :permalink, Permalink
       has_one :post_author, through: [:post, :author]       # belongs -> belongs
       has_one :post_permalink, through: [:post, :permalink] # belongs -> one
     end
@@ -110,6 +111,13 @@ defmodule Ecto.AssociationTest do
            inspect(from e in {"users_emails", Email}, where: e.author_id in ^[1, 2, 3])
   end
 
+  test "has many custom assoc query" do
+    assoc = Post.__schema__(:association, :comments)
+    query = from c in Comment, limit: 5
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from c in Comment, where: c.post_id in ^[1, 2, 3], limit: 5)
+  end
+
   test "has one" do
     assoc = Post.__schema__(:association, :permalink)
 
@@ -136,6 +144,13 @@ defmodule Ecto.AssociationTest do
            inspect(from p in {"users_profiles", Profile}, where: p.author_id in ^[1, 2, 3])
   end
 
+  test "has one custom assoc query" do
+    assoc = Post.__schema__(:association, :permalink)
+    query = from c in Permalink, limit: 5
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from c in Permalink, where: c.post_id in ^[1, 2, 3], limit: 5)
+  end
+
   test "belongs to" do
     assoc = Post.__schema__(:association, :author)
 
@@ -160,6 +175,13 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
            inspect(from a in {"post_authors", Author}, where: a.id in ^[1, 2, 3])
+  end
+
+  test "belongs to custom assoc query" do
+    assoc = Post.__schema__(:association, :author)
+    query = from a in Author, limit: 5
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from a in Author, where: a.id in ^[1, 2, 3], limit: 5)
   end
 
   test "has many through many to many" do
@@ -226,6 +248,30 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, [1,2,3])) ==
            inspect(from a in Author, join: p in Post, on: p.summary_id in ^[1, 2, 3],
                         where: a.id == p.author_id, distinct: true, select: a)
+  end
+
+  test "has many through custom assoc many to many query" do
+    assoc = Author.__schema__(:association, :posts_comments)
+    query = from c in Comment, where: c.text == "foo", limit: 5
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, query, [1,2,3])) ==
+           inspect(from c in Comment, join: p in Post,
+                        on: p.author_id in ^[1, 2, 3],
+                        where: c.post_id == p.id, where: c.text == "foo",
+                        distinct: true, select: c, limit: 5)
+
+    query = from c in {"custom", Comment}, where: c.text == "foo", limit: 5
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, query, [1,2,3])) ==
+           inspect(from c in {"custom", Comment}, join: p in Post,
+                        on: p.author_id in ^[1, 2, 3],
+                        where: c.post_id == p.id, where: c.text == "foo",
+                        distinct: true, select: c, limit: 5)
+
+    query = from c in Comment, join: p in assoc(c, :permalink), limit: 5
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, query, [1,2,3])) ==
+           inspect(from c in Comment, join: p0 in Permalink, on: p0.comment_id == c.id,
+                        join: p1 in Post, on: p1.author_id in ^[1, 2, 3],
+                        where: c.post_id == p1.id,
+                        distinct: true, select: c, limit: 5)
   end
 
   ## Integration tests through Ecto.Model
