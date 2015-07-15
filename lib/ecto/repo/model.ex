@@ -52,6 +52,9 @@ defmodule Ecto.Repo.Model do
 
       {:ok, values} = adapter.insert(repo, {prefix, source, model}, changes, autogen, return, opts)
 
+      # Embeds can't be `read_after_writes` so we don't have to be concerned
+      # with values returned from the adapter
+      changeset = apply_embedded_callbacks(embeds, changeset, :after_insert)
       changeset = load_into_changeset(changeset, values, id_types)
       Callbacks.__apply__(model, :after_insert, changeset).model
     end
@@ -164,11 +167,15 @@ defmodule Ecto.Repo.Model do
   defp struct_from_changeset!(%{model: struct}),
     do: struct
 
-  defp load_into_changeset(%{changes: changes, types: types} = changeset, values, id_types) do
-    # It is ok to use types from changeset because
-    # we have already filtered the results
-    # to be only about fields.
-    update_in changeset.model, &do_load(struct(&1, changes), values, types, id_types)
+  defp load_into_changeset(%{types: types} = changeset, values, id_types) do
+    # It is ok to use types from changeset because we have
+    # already filtered the results to be only about fields.
+    model =
+      changeset
+      |> Ecto.Changeset.apply_changes
+      |> do_load(values, types, id_types)
+
+    Map.put(changeset, :model, model)
   end
 
   defp do_load(struct, kv, types, id_types) do

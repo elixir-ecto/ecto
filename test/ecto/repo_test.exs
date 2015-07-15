@@ -14,9 +14,12 @@ defmodule Ecto.RepoTest do
       field :x, :string
     end
 
-    before_insert :store_changeset, [:insert]
-    before_update :store_changeset, [:update]
-    before_delete :store_changeset, [:delete]
+    before_insert :store_changeset, [:before_insert]
+    after_insert  :store_changeset, [:after_insert]
+    before_update :store_changeset, [:before_update]
+    after_update  :store_changeset, [:after_update]
+    before_delete :store_changeset, [:before_delete]
+    after_delete  :store_changeset, [:after_delete]
 
     def store_changeset(changeset, stage) do
       Agent.update(CallbackAgent, &[{stage, changeset}|&1])
@@ -36,9 +39,12 @@ defmodule Ecto.RepoTest do
 
     before_insert :store_autogenerate
 
-    before_insert :store_changeset, [:insert]
-    before_update :store_changeset, [:update]
-    before_delete :store_changeset, [:delete]
+    before_insert :store_changeset, [:before_insert]
+    after_insert  :store_changeset, [:after_insert]
+    before_update :store_changeset, [:before_update]
+    after_update  :store_changeset, [:after_update]
+    before_delete :store_changeset, [:before_delete]
+    after_delete  :store_changeset, [:after_delete]
 
     def store_autogenerate(changeset) do
       Process.put(:autogenerate_z, changeset.changes.z)
@@ -236,25 +242,25 @@ defmodule Ecto.RepoTest do
     end
 
     TestRepo.insert!(%MyModel{})
-    assert Agent.get(CallbackAgent, get_action) == {:insert, :insert}
+    assert Agent.get(CallbackAgent, get_action) == {:after_insert, :insert}
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
     TestRepo.insert!(changeset)
-    assert Agent.get(CallbackAgent, get_action) == {:insert, :insert}
+    assert Agent.get(CallbackAgent, get_action) == {:after_insert, :insert}
 
     TestRepo.update!(%MyModel{id: 1})
-    assert Agent.get(CallbackAgent, get_action) == {:update, :update}
+    assert Agent.get(CallbackAgent, get_action) == {:after_update, :update}
 
     changeset = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     TestRepo.update!(changeset)
-    assert Agent.get(CallbackAgent, get_action) == {:update, :update}
+    assert Agent.get(CallbackAgent, get_action) == {:after_update, :update}
 
     TestRepo.delete!(%MyModel{id: 1})
-    assert Agent.get(CallbackAgent, get_action) == {:delete, :delete}
+    assert Agent.get(CallbackAgent, get_action) == {:after_delete, :delete}
 
     changeset = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     TestRepo.delete!(changeset)
-    assert Agent.get(CallbackAgent, get_action) == {:delete, :delete}
+    assert Agent.get(CallbackAgent, get_action) == {:after_delete, :delete}
   end
 
   test "doesn't add embeds to changeset on insert and update with model" do
@@ -269,14 +275,16 @@ defmodule Ecto.RepoTest do
 
   test "runs callbacks in correct order with embeds" do
     get_models = fn changesets ->
-      Enum.map(changesets, fn {_, changeset} -> changeset.model.__struct__ end)
+      Enum.map(changesets, fn {stage, changeset} ->
+        {stage, changeset.model.__struct__}
+      end)
     end
 
-    changeset =
-      Ecto.Changeset.cast(%MyModel{}, %{"x" => "abc"}, [:x])
-      |> Ecto.Changeset.put_change(:embed, %MyEmbed{x: "xyz"})
+    changeset = Ecto.Changeset.change(%MyModel{}, embed: %MyEmbed{x: "xyz"})
 
     TestRepo.insert!(changeset)
-    assert [MyModel, MyEmbed | _] = Agent.get(CallbackAgent, get_models)
+    assert [{:after_insert, MyModel}, {:after_insert, MyEmbed},
+            {:before_insert, MyModel}, {:before_insert, MyEmbed} | _] =
+      Agent.get(CallbackAgent, get_models)
   end
 end

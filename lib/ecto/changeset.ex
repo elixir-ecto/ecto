@@ -706,7 +706,13 @@ defmodule Ecto.Changeset do
 
   """
   @spec apply_changes(t) :: Ecto.Model.t
-  def apply_changes(%Changeset{changes: changes, model: model} = _changeset) do
+  def apply_changes(%Changeset{changes: changes, model: model}) do
+    changes =
+      Enum.map(changes, fn
+        {key, %Changeset{} = value} -> {key, apply_changes(value)}
+        kv                          -> kv
+      end)
+
     struct(model, changes)
   end
 
