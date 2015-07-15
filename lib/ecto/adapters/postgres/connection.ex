@@ -564,10 +564,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp column_change({:modify, name, %Reference{} = ref, opts}) do
       assemble([
-        "ADD CONSTRAINT", quote_name("#{name}_fk"),
+        "ALTER COLUMN", quote_name(name), "TYPE", reference_column_type(ref.type, opts),
+        ", ADD CONSTRAINT", quote_name("#{name}_fkey"),
         "FOREIGN KEY (#{quote_name(name)}) REFERENCES",
         "#{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
-        reference_on_delete(ref.on_delete)
+        reference_on_delete(ref.on_delete),
       ])
     end
 

@@ -517,7 +517,7 @@ defmodule Ecto.Adapters.PostgresTest do
     "price" numeric(8,2) DEFAULT expr,
     "on_hand" integer DEFAULT 0 NULL,
     "is_active" boolean DEFAULT true)
-    """ |> String.strip |> String.replace("\n", " ")
+    """ |> remove_newlines
   end
 
   test "create table with options" do
@@ -544,7 +544,7 @@ defmodule Ecto.Adapters.PostgresTest do
     ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL,
     ALTER COLUMN "price" TYPE numeric(8,2),
     DROP COLUMN "summary"
-    """ |> String.strip |> String.replace("\n", " ")
+    """ |> remove_newlines
   end
 
   test "alter table with reference" do
@@ -553,7 +553,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "posts" ADD COLUMN "comment_id" integer REFERENCES "comments"("id")
-    """ |> String.strip |> String.replace("\n", " ")
+    """ |> remove_newlines
   end
 
   test "alter table with adding foreign key constraint" do
@@ -563,8 +563,9 @@ defmodule Ecto.Adapters.PostgresTest do
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "posts"
-    ADD CONSTRAINT "user_id_fk" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
-    """ |> String.strip |> String.replace("\n", " ")
+    ALTER COLUMN \"user_id\" TYPE integer ,
+    ADD CONSTRAINT "user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
+    """ |> remove_newlines
   end
 
   test "create index" do
@@ -614,5 +615,9 @@ defmodule Ecto.Adapters.PostgresTest do
   test "rename table" do
     rename = {:rename, table(:posts), table(:new_posts)}
     assert SQL.execute_ddl(rename) == ~s|ALTER TABLE "posts" RENAME TO "new_posts"|
+  end
+
+  defp remove_newlines(string) do
+    string |> String.strip |> String.replace("\n", " ")
   end
 end

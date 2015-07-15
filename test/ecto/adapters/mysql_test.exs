@@ -475,7 +475,7 @@ defmodule Ecto.Adapters.MySQLTest do
     `price` numeric(8,2) DEFAULT expr,
     `on_hand` integer DEFAULT 0,
     `is_active` boolean DEFAULT true) ENGINE = INNODB
-    """ |> String.strip |> String.replace("\n", " ")
+    """ |> remove_newlines
   end
 
   test "create table with options" do
@@ -511,7 +511,7 @@ defmodule Ecto.Adapters.MySQLTest do
     ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
     MODIFY `price` numeric(8,2),
     DROP `summary`
-    """ |> String.strip |> String.replace("\n", " ")
+    """ |> remove_newlines
   end
 
   test "alter table with reference" do
@@ -520,7 +520,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE `posts` ADD `comment_id` BIGINT UNSIGNED REFERENCES `comments`(`id`)
-    """ |> String.strip |> String.replace("\n", " ")
+    """ |> remove_newlines
   end
 
   test "alter table with adding foreign key constraint" do
@@ -530,9 +530,9 @@ defmodule Ecto.Adapters.MySQLTest do
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE `posts`
-    MODIFY `user_id` BIGINT UNSIGNED,
-    ADD CONSTRAINT `user_id_fk` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
-    """ |> String.strip |> String.replace("\n", " ")
+    MODIFY `user_id` BIGINT UNSIGNED ,
+    ADD CONSTRAINT `user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+    """ |> remove_newlines
   end
 
   test "create index" do
@@ -585,5 +585,9 @@ defmodule Ecto.Adapters.MySQLTest do
       query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize
       SQL.all(query)
     end
+  end
+
+  defp remove_newlines(string) do
+    string |> String.strip |> String.replace("\n", " ")
   end
 end

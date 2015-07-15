@@ -69,25 +69,24 @@ defmodule Ecto.Integration.MigrationTest do
     use Ecto.Migration
 
     def up do
-      create table(:alter_fk_migration_users)
+      create table(:alfter_fk_users)
 
-      create table(:alter_fk_migration_posts) do
-        add :alter_fk_migration_user_id, :integer
+      create table(:alfter_fk_posts) do
+        add :alfter_fk_user_id, :id
       end
 
-      alter table(:alter_fk_migration_posts) do
-        add :content, :text
-        modify :alter_fk_migration_user_id, references(:alter_fk_migration_users, on_delete: :nilify_all)
+      alter table(:alfter_fk_posts) do
+        modify :alfter_fk_user_id, references(:alfter_fk_users, on_delete: :nilify_all)
       end
 
-      execute "INSERT INTO alter_fk_migration_users (id) VALUES ('1')"
-      execute "INSERT INTO alter_fk_migration_posts (id, content, alter_fk_migration_user_id) VALUES ('1', 'text', '1')"
-      execute "DELETE FROM alter_fk_migration_users"
+      execute "INSERT INTO alfter_fk_users (id) VALUES ('1')"
+      execute "INSERT INTO alfter_fk_posts (id, alfter_fk_user_id) VALUES ('1', '1')"
+      execute "DELETE FROM alfter_fk_users"
     end
 
     def down do
-      drop table(:alter_fk_migration_posts)
-      drop table(:alter_fk_migration_users)
+      drop table(:alfter_fk_posts)
+      drop table(:alfter_fk_users)
     end
   end
 
@@ -178,7 +177,6 @@ defmodule Ecto.Integration.MigrationTest do
 
   test "create and drop table and indexes" do
     assert :ok == up(TestRepo, 20050906120000, CreateMigration, log: false)
-  after
     assert :ok == down(TestRepo, 20050906120000, CreateMigration, log: false)
   end
 
@@ -199,7 +197,7 @@ defmodule Ecto.Integration.MigrationTest do
 
     TestRepo.delete!(parent2)
     assert TestRepo.all(reader) == []
-  after
+
     assert :ok == down(TestRepo, 20050906120000, OnDeleteMigration, log: false)
   end
 
@@ -211,7 +209,6 @@ defmodule Ecto.Integration.MigrationTest do
   test "add column" do
     assert :ok == up(TestRepo, 20070906120000, AddColumnMigration, log: false)
     assert 2 == TestRepo.one from p in "add_col_migration", select: p.to_be_added
-  after
     :ok = down(TestRepo, 20070906120000, AddColumnMigration, log: false)
   end
 
@@ -219,15 +216,13 @@ defmodule Ecto.Integration.MigrationTest do
   test "modify column" do
     assert :ok == up(TestRepo, 20080906120000, AlterColumnMigration, log: false)
     assert "foo" == TestRepo.one from p in "alter_col_migration", select: p.to_be_modified
-  after
     :ok = down(TestRepo, 20080906120000, AlterColumnMigration, log: false)
   end
 
   @tag :modify_foreign_key
   test "modify foreign key" do
     assert :ok == up(TestRepo, 20130802170000, AlterForeignKeyMigration, log: false)
-    assert nil == TestRepo.one from p in "alter_fk_migration_posts", select: p.alter_fk_migration_user_id
-  after
+    assert nil == TestRepo.one from p in "alfter_fk_posts", select: p.alfter_fk_user_id
     :ok = down(TestRepo, 20130802170000, AlterForeignKeyMigration, log: false)
   end
 
@@ -235,14 +230,12 @@ defmodule Ecto.Integration.MigrationTest do
   test "remove column" do
     assert :ok == up(TestRepo, 20090906120000, DropColumnMigration, log: false)
     assert catch_error(TestRepo.one from p in "drop_col_migration", select: p.to_be_removed)
-  after
     :ok = down(TestRepo, 20090906120000, DropColumnMigration, log: false)
   end
 
   @tag :rename
   test "rename table" do
     assert :ok == up(TestRepo, 20150712120000, RenameMigration, log: false)
-  after
     assert :ok == down(TestRepo, 20150712120000, RenameMigration, log: false)
   end
 end
