@@ -160,7 +160,8 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :map_type
   test "embeds one" do
-    order = TestRepo.insert!(%Order{item: %Item{price: 123}})
+    order = Ecto.Changeset.change(%Order{}, item: %Item{price: 123})
+    order = TestRepo.insert!(order)
     assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
     assert [%Item{price: 123}] =
       TestRepo.all(from o in Order, select: o.item)
@@ -169,7 +170,8 @@ defmodule Ecto.Integration.TypeTest do
   @tag :map_type
   @tag :array_type
   test "embeds many with array" do
-    tag = TestRepo.insert!(%Tag{items: [%Item{price: 123}]})
+    tag = Ecto.Changeset.change(%Tag{}, items: [%Item{price: 123}])
+    tag = TestRepo.insert!(tag)
     assert [%Item{price: 123}] = TestRepo.get!(Tag, tag.id).items
     assert [[%Item{price: 123}]] =
       TestRepo.all(from t in Tag, select: t.items)

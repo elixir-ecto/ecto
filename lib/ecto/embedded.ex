@@ -15,10 +15,8 @@ defmodule Ecto.Embedded do
   ## Options
 
     * `:cardinality` - tells if there is one embedded model or many
-    * `:field` - tells the field in the owner struct where the
-      embeds should be stored
-    * `:owner` - the owner module of the embedding
-    * `:owner_key` - the key in the owner with the association value
+    * `:container` - container to store many embeds
+    * `:embed` - name of the embedded model
     * `:on_cast` - the changeset function to call during casting
 
   """
@@ -70,6 +68,30 @@ defmodule Ecto.Embedded do
 
   def change(%Embedded{cardinality: :many, container: :array}, value) do
     Enum.map(value, &Ecto.Changeset.change/1)
+  end
+
+  @doc """
+  Applies given callback to all models
+  """
+  def apply_callback(%Embedded{cardinality: :one, embed: module}, changeset, callback) do
+    do_apply_callback(changeset, callback, module)
+  end
+
+  def apply_callback(%Embedded{cardinality: :many, container: :array, embed: module},
+                     changesets, callback) do
+    Enum.map(changesets, &do_apply_callback(&1, callback, module))
+  end
+
+  defp do_apply_callback(%{valid?: false}, _callback, embed) do
+    raise ArgumentError, "Changeset for #{embed} is invalid, " <>
+      "but the parent changeset was not marked as invalid"
+  end
+  defp do_apply_callback(%{model: %{__struct__: embed}} = changeset, callback, embed) do
+    Ecto.Model.Callbacks.__apply__(embed, callback, changeset)
+  end
+  defp do_apply_callback(%{model: model}, _callback, embed) do
+    raise ArgumentError, "Expected changeset for embedded model #{embed}, " <>
+      "got #{inspect model}"
   end
 
   defp map_changes([], _pk, mod, fun, current, acc, valid?) do

@@ -359,6 +359,8 @@ defmodule Ecto.Type do
     :error
   end
 
+  defp dump_model(model, %Ecto.Changeset{} = changeset, id_types),
+    do: dump_model(model, Ecto.Changeset.apply_changes(changeset), id_types)
   defp dump_model(model, %{__struct__: model} = struct, id_types),
     do: {:ok, Serializer.dump!(struct, id_types)}
   defp dump_model(_model, _struct, _id_types),
@@ -396,6 +398,8 @@ defmodule Ecto.Type do
 
   """
   @spec load(t, term, map) :: {:ok, term} | :error
+  def load(_type, nil, _id_types), do: {:ok, nil}
+
   def load({:embed, embed}, value, id_types) do
     load_embed(embed, value, id_types)
   end

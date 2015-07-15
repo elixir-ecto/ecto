@@ -1,48 +1,69 @@
 Code.require_file "../support/test_repo.exs", __DIR__
 
-defmodule Ecto.RepoTest.MyModel do
-  use Ecto.Model
-
-  schema "my_model" do
-    field :x, :string
-    field :y, :binary
-    field :z, Ecto.UUID, autogenerate: true
-  end
-
-  before_insert :store_autogenerate
-
-  before_insert :store_action
-  before_update :store_action
-  before_delete :store_action
-
-  def store_autogenerate(changeset) do
-    Process.put(:autogenerate_z, changeset.changes.z)
-    changeset
-  end
-
-  def store_action(changeset) do
-    Process.put(:changeset_action, changeset.action)
-    changeset
-  end
-end
-
-defmodule Ecto.RepoTest.MyModelNoPK do
-  use Ecto.Model
-
-  @primary_key false
-  schema "my_model" do
-    field :x, :string
-  end
-end
-
 defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
   require Ecto.TestRepo, as: TestRepo
 
-  alias Ecto.RepoTest.MyModel
-  alias Ecto.RepoTest.MyModelNoPK
+  defmodule MyEmbed do
+    use Ecto.Model
+
+    @primary_key {:id, :binary_id, autogenerate: true}
+    schema "" do
+      field :x, :string
+    end
+
+    before_insert :store_changeset, [:insert]
+    before_update :store_changeset, [:update]
+    before_delete :store_changeset, [:delete]
+
+    def store_changeset(changeset, stage) do
+      Agent.update(CallbackAgent, &[{stage, changeset}|&1])
+      changeset
+    end
+  end
+
+  defmodule MyModel do
+    use Ecto.Model
+
+    schema "my_model" do
+      field :x, :string
+      field :y, :binary
+      field :z, Ecto.UUID, autogenerate: true
+      embeds_one :embed, MyEmbed
+    end
+
+    before_insert :store_autogenerate
+
+    before_insert :store_changeset, [:insert]
+    before_update :store_changeset, [:update]
+    before_delete :store_changeset, [:delete]
+
+    def store_autogenerate(changeset) do
+      Process.put(:autogenerate_z, changeset.changes.z)
+      changeset
+    end
+
+    def store_changeset(changeset, stage) do
+      Agent.update(CallbackAgent, &[{stage, changeset}|&1])
+      changeset
+    end
+  end
+
+  defmodule MyModelNoPK do
+    use Ecto.Model
+
+    @primary_key false
+    schema "my_model" do
+      field :x, :string
+    end
+  end
+
+  setup do
+    Agent.start(fn -> [] end, name: CallbackAgent)
+    :ok
+  end
 
   test "needs model with primary key field" do
     model = %MyModelNoPK{x: "abc"}
@@ -185,6 +206,8 @@ defmodule Ecto.RepoTest do
 
   ## Autogenerate
 
+  @uuid "30313233-3435-3637-3839-616263646566"
+
   test "autogenerates values" do
     model = TestRepo.insert!(%MyModel{})
     assert Process.get(:autogenerate_z)
@@ -200,33 +223,60 @@ defmodule Ecto.RepoTest do
     assert Process.get(:autogenerate_z)
     assert byte_size(model.z) == 36
 
-    changeset = Ecto.Changeset.cast(%MyModel{}, %{z: "30313233-3435-3637-3839-616263646566"}, [:z], [])
+    changeset = Ecto.Changeset.cast(%MyModel{}, %{z: @uuid}, [:z], [])
     model = TestRepo.insert!(changeset)
-    assert model.z == "30313233-3435-3637-3839-616263646566"
+    assert model.z == @uuid
   end
 
-  ## Status
+  ## Changesets
 
-  test "uses correct action" do
+  test "uses correct status" do
+    get_action = fn [{stage, changeset}|_] ->
+      {stage, changeset.action}
+    end
+
     TestRepo.insert!(%MyModel{})
-    assert Process.get(:changeset_action) == :insert
+    assert Agent.get(CallbackAgent, get_action) == {:insert, :insert}
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
     TestRepo.insert!(changeset)
-    assert Process.get(:changeset_action) == :insert
+    assert Agent.get(CallbackAgent, get_action) == {:insert, :insert}
 
     TestRepo.update!(%MyModel{id: 1})
-    assert Process.get(:changeset_action) == :update
+    assert Agent.get(CallbackAgent, get_action) == {:update, :update}
 
     changeset = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     TestRepo.update!(changeset)
-    assert Process.get(:changeset_action) == :update
+    assert Agent.get(CallbackAgent, get_action) == {:update, :update}
 
     TestRepo.delete!(%MyModel{id: 1})
-    assert Process.get(:changeset_action) == :delete
+    assert Agent.get(CallbackAgent, get_action) == {:delete, :delete}
 
     changeset = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     TestRepo.delete!(changeset)
-    assert Process.get(:changeset_action) == :delete
+    assert Agent.get(CallbackAgent, get_action) == {:delete, :delete}
+  end
+
+  test "doesn't add embeds to changeset on insert and update with model" do
+    get_changes = fn [{_, changeset}|_] -> changeset.changes end
+
+    TestRepo.insert!(%MyModel{embed: %MyEmbed{}, z: @uuid})
+    assert Agent.get(CallbackAgent, get_changes) == %{x: nil, y: nil, z: @uuid}
+
+    TestRepo.update!(%MyModel{id: 5, embed: %MyEmbed{}, z: @uuid})
+    assert Agent.get(CallbackAgent, get_changes) == %{x: nil, y: nil, z: @uuid}
+  end
+
+  test "runs callbacks in correct order with embeds" do
+    get_models = fn changesets ->
+      Enum.map(changesets, fn {_, changeset} -> changeset.model.__struct__ end)
+    end
+
+    changeset =
+      Ecto.Changeset.cast(%MyModel{}, %{"x" => "abc"}, [:x])
+      |> Ecto.Changeset.put_change(:embed, %MyEmbed{x: "xyz"})
+
+    TestRepo.insert!(changeset)
+    assert [MyModel, MyEmbed | _] = Agent.get(CallbackAgent, get_models)
   end
 end
