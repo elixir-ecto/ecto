@@ -42,6 +42,7 @@ defmodule Ecto.Integration.Post do
     field :bid, :binary_id
     field :uuid, Ecto.UUID, autogenerate: true
     field :meta, :map
+    field :posted, Ecto.Date # TODO: Rename this to :date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :fetch_and_delete
     has_many :comments_authors, through: [:comments, :author]
@@ -78,7 +79,6 @@ defmodule Ecto.Integration.Comment do
 
   schema "comments" do
     field :text, :string
-    field :posted, :datetime
     field :lock_version, :integer, default: 1
     belongs_to :post, Ecto.Integration.Post
     belongs_to :author, Ecto.Integration.User

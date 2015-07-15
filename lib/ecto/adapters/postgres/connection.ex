@@ -379,6 +379,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end)
     end
 
+    defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
+      "(" <> expr(datetime, sources, query) <> "::timestamp + "
+          <> interval(count, interval, sources, query) <> ")::timestamp"
+    end
+
+    defp expr({:date_add, _, [date, count, interval]}, sources, query) do
+      "(" <> expr(date, sources, query) <> "::date + "
+          <> interval(count, interval, sources, query) <> ")::date"
+    end
+
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
       case handle_call(fun, length(args)) do
         {:binary_op, op} ->
@@ -424,6 +434,20 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp expr(literal, _sources, _query) when is_float(literal) do
       String.Chars.Float.to_string(literal) <> "::float"
+    end
+
+    defp interval(count, interval, _sources, _query) when is_integer(count) do
+      "interval '" <> String.Chars.Integer.to_string(count) <> " " <> interval <> "'"
+    end
+
+    defp interval(count, interval, _sources, _query) when is_float(count) do
+      count = :erlang.float_to_binary(count, [:compact, decimals: 16])
+      "interval '" <> count <> " " <> interval <> "'"
+    end
+
+    defp interval(count, interval, sources, query) do
+      "(" <> expr(count, sources, query) <> "::numeric * "
+          <> interval(1, interval, sources, query) <> ")"
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, sources, query) when op in @binary_ops do

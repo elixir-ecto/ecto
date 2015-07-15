@@ -47,6 +47,7 @@ defmodule Ecto.Query do
     * Search functions: `like/2` and `ilike/2`
     * Null check functions: `is_nil/1`
     * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
+    * Date/time intervals: `datetime_add/3`, `date_add/3`
 
   Futhermore, Ecto allows the following literals inside queries:
 
@@ -118,7 +119,23 @@ defmodule Ecto.Query do
   It is important to keep in mind that Ecto cannot cast nil values in
   queries. Passing nil automatically causes the query to fail.
 
-  ## Query expansion
+  ## Date/time intervals
+
+  In Ecto, it is possible to perform interval based operation on both
+  date and datetime as long it is supported by the underlying storage:
+
+      # Get all items published since the last month
+      from p in Post, where: p.published_at >
+                             datetime_add(^Ecto.DateTime.utc, -1, "month")
+
+  In the example above, we used `datetime_add/3` to subtract one month
+  from the current datetime and compared it with the `p.published_at`.
+  If you want to perform operations on date, `date_add/3` could be used.
+
+  The following intervals are supported: year, month, week, day, hour,
+  minute, second, millisecond and microsecond.
+
+  ## Query expressions
 
   In all examples so far, we have used the **keywords query syntax** to create
   a query. Our first example:

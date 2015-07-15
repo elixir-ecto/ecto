@@ -330,6 +330,16 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       end)
     end
 
+    defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
+      "CAST(date_add(" <> expr(datetime, sources, query) <> ", "
+                       <> interval(count, interval, sources, query) <> ") AS datetime)"
+    end
+
+    defp expr({:date_add, _, [date, count, interval]}, sources, query) do
+      "CAST(date_add(" <> expr(date, sources, query) <> ", "
+                       <> interval(count, interval, sources, query) <> ") AS date)"
+    end
+
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
       case handle_call(fun, length(args)) do
         {:binary_op, op} ->
@@ -382,6 +392,14 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       # MySQL doesn't support float cast
       expr = String.Chars.Float.to_string(literal)
       "(0 + #{expr})"
+    end
+
+    defp interval(count, "millisecond", sources, query) do
+      "INTERVAL (" <> expr(count, sources, query) <> " * 1000) microsecond"
+    end
+
+    defp interval(count, interval, sources, query) do
+      "INTERVAL " <> expr(count, sources, query) <> " " <> interval
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, sources, query) when op in @binary_ops do

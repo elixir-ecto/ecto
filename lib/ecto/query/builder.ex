@@ -80,9 +80,24 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:fragment, meta, merge_fragments(pieces, frags)]}, params}
   end
 
-  def escape({:fragment, _, [query | _]}, _type, _params, _vars, _end) do
+  def escape({:fragment, _, [query | _]}, _type, _params, _vars, _env) do
     error! "fragment(...) expects the first argument to be a string for SQL fragments, " <>
            "a keyword list, or an interpolated value, got: `#{Macro.to_string(query)}`"
+  end
+
+  # interval
+  def escape({:datetime_add, meta, [datetime, count, interval]} = expr, type, params, vars, env) do
+    assert_type!(expr, type, :datetime)
+    {datetime, params} = escape(datetime, :datetime, params, vars, env)
+    {count, interval, params} = escape_interval(count, interval, params, vars, env)
+    {{:{}, [], [:datetime_add, meta, [datetime, count, interval]]}, params}
+  end
+
+  def escape({:date_add, meta, [date, count, interval]} = expr, type, params, vars, env) do
+    assert_type!(expr, type, :date)
+    {date, params} = escape(date, :date, params, vars, env)
+    {count, interval, params} = escape_interval(count, interval, params, vars, env)
+    {{:{}, [], [:date_add, meta, [date, count, interval]]}, params}
   end
 
   # sigils
@@ -199,6 +214,18 @@ defmodule Ecto.Query.Builder do
     field = quoted_field!(field)
     dot   = {:{}, [], [:., [], [var, field]]}
     {:{}, [], [dot, [], []]}
+  end
+
+  defp escape_interval(count, interval, params, vars, env) do
+    type =
+      cond do
+        is_float(count)   -> :float
+        is_integer(count) -> :integer
+        true              -> :decimal
+      end
+
+    {count, params} = escape(count, type, params, vars, env)
+    {count, quoted_interval!(interval), params}
   end
 
   defp escape_fragment({key, [{_, _}|_] = exprs}, type, params, vars, env) when is_atom(key) do
@@ -376,6 +403,24 @@ defmodule Ecto.Query.Builder do
     do: error!("expected atom in field/2, got: `#{inspect other}`")
 
   @doc """
+  Checks if the field is a valid interval at compilation time or
+  delegate the check to runtime for interpolation.
+  """
+  def quoted_interval!({:^, _, [expr]}),
+    do: quote(do: Ecto.Query.Builder.interval!(unquote(expr)))
+  def quoted_interval!(other),
+    do: interval!(other)
+
+  @doc """
+  Called by escaper at runtime to verify that value is an atom.
+  """
+  @interval ~w(year month week day hour minute second millisecond microsecond)
+  def interval!(interval) when interval in @interval,
+    do: interval
+  def interval!(other),
+    do: error!("invalid interval: `#{inspect other}` (expected one of #{Enum.join(@interval, ", ")})")
+
+  @doc """
   Returns the type of an expression at build time.
   """
   @spec quoted_type(Macro.t, Keyword.t) :: quoted_type
@@ -396,6 +441,10 @@ defmodule Ecto.Query.Builder do
   def quoted_type({:field, _, [{var, _, context}, {:^, _, [code]}]}, vars)
     when is_atom(var) and is_atom(context),
     do: {find_var!(var, vars), code}
+
+  # Interval
+  def quoted_type({:datetime_add, _, [_, _, __]}, _vars), do: :datetime
+  def quoted_type({:date_add, _, [_, _, __]}, _vars), do: :date
 
   # Tagged
   def quoted_type({:<<>>, _, _}, _vars), do: :binary

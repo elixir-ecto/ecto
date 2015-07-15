@@ -20,6 +20,7 @@ defmodule Ecto.Integration.Migration do
       add :visits, :integer
       add :intensity, :float
       add :author_id, :integer
+      add :posted, :date
       timestamps null: true
     end
 
@@ -35,7 +36,6 @@ defmodule Ecto.Integration.Migration do
 
     create table(:comments) do
       add :text, :string, size: 100
-      add :posted, :datetime
       add :lock_version, :integer, default: 1
       add :post_id, references(:posts)
       add :author_id, references(:users)

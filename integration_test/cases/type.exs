@@ -36,6 +36,7 @@ defmodule Ecto.Integration.TypeTest do
     # Floats
     assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == ^float, select: p.intensity)
     assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == 0.1, select: p.intensity)
+    assert [1500.0] = TestRepo.all(from p in Post, select: 1500.0)
 
     # Booleans
     assert [true] = TestRepo.all(from p in Post, where: p.public == ^true, select: p.public)
