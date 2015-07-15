@@ -2,6 +2,7 @@ defmodule Ecto.Embedded do
   @moduledoc false
 
   alias __MODULE__
+  alias Ecto.Changeset
 
   defstruct [:cardinality, :container, :field, :owner, :embed, :on_cast]
 
@@ -52,7 +53,7 @@ defmodule Ecto.Embedded do
            params, current) when is_list(params) do
     {pk, param_pk} = primary_key(mod)
     current = process_current(current, pk)
-    map_changes(params, param_pk, mod, fun, current, [], true)
+    map_changes(params, param_pk, &changeset_action(mod, fun, &1, &2), current, [], true)
   end
 
   def cast(_embed, _params, _current) do
@@ -62,63 +63,108 @@ defmodule Ecto.Embedded do
   @doc """
   Wraps embedded models in changesets.
   """
-  def change(%Embedded{cardinality: :one}, value) do
-    Ecto.Changeset.change(value)
+  def change(%Embedded{cardinality: :one}, value, current) do
+    do_change(value, current)
   end
 
-  def change(%Embedded{cardinality: :many, container: :array}, value) do
-    Enum.map(value, &Ecto.Changeset.change/1)
+  def change(%Embedded{cardinality: :many, container: :array, embed: mod},
+             value, current) when is_list(value) do
+    {pk, _} = primary_key(mod)
+    current = process_current(current, pk)
+    map_changes(value, pk, &do_change/2, current, [], true) |> elem(1)
+  end
+
+  defp do_change(value, nil) do
+    %{Changeset.change(value) | action: :insert}
+  end
+
+  defp do_change(nil, current) do
+    %{Changeset.change(current) | action: :delete}
+  end
+
+  defp do_change(%Changeset{model: current} = changeset, current) do
+    %{changeset | action: :update}
+  end
+
+  defp do_change(%Changeset{}, _current) do
+    raise ArgumentError, "embedded changeset does not change the model already" <>
+      "preset in the parent model"
+  end
+
+  # defp do_change(current, current) do
+  # TODO: What action do we set in that case?
+  # end
+
+  defp do_change(value, _current) do
+    %{Changeset.change(value) | action: :insert}
   end
 
   @doc """
-  Applies given callback to all models
+  Applies given callback to all models based on changeset action
   """
-  def apply_callback(%Embedded{cardinality: :one, embed: module}, changeset, callback) do
-    do_apply_callback(changeset, callback, module)
+  def apply_callback(%Embedded{cardinality: :one, embed: module}, changeset, type) do
+    do_apply_callback(changeset, type, module)
   end
 
   def apply_callback(%Embedded{cardinality: :many, container: :array, embed: module},
-                     changesets, callback) do
-    Enum.map(changesets, &do_apply_callback(&1, callback, module))
+                     changesets, type) do
+    Enum.map(changesets, &do_apply_callback(&1, type, module))
   end
 
-  defp do_apply_callback(%{valid?: false}, _callback, embed) do
-    raise ArgumentError, "Changeset for #{embed} is invalid, " <>
+  defp do_apply_callback(%{valid?: false}, _type, embed) do
+    raise ArgumentError, "changeset for #{embed} is invalid, " <>
       "but the parent changeset was not marked as invalid"
   end
-  defp do_apply_callback(%{model: %{__struct__: embed}} = changeset, callback, embed) do
-    Ecto.Model.Callbacks.__apply__(embed, callback, changeset)
+
+  defp do_apply_callback(%{model: %{__struct__: embed}, action: action} = changeset,
+                         type, embed) do
+    Ecto.Model.Callbacks.__apply__(embed, callback_for(type, action), changeset)
   end
+
   defp do_apply_callback(%{model: model}, _callback, embed) do
-    raise ArgumentError, "Expected changeset for embedded model #{embed}, " <>
+    raise ArgumentError, "expected changeset for embedded model #{embed}, " <>
       "got #{inspect model}"
   end
 
-  defp map_changes([], _pk, mod, fun, current, acc, valid?) do
+  types = [:before, :after]
+  actions = [:insert, :update, :delete]
+
+  Enum.map(types, fn type ->
+    Enum.map(actions, fn action ->
+      callback = :"#{type}_#{action}"
+      defp callback_for(unquote(type), unquote(action)), do: unquote(callback)
+    end)
+  end)
+
+  defp callback_for(_type, nil) do
+    raise ArgumentError, "embedded changeset action not set"
+  end
+
+  defp map_changes([], _pk, fun, current, acc, valid?) do
     {previous, valid?} =
       Enum.map_reduce(current, valid?, fn {_, model}, valid? ->
-        changeset = changeset_action(mod, fun, nil, model)
+        changeset = fun.(nil, model)
         {changeset, valid? && changeset.valid?}
       end)
 
     {:ok, Enum.reverse(acc, previous), valid?}
   end
 
-  defp map_changes([map | rest], pk, mod, fun, current, acc, valid?) when is_map(map) do
+  defp map_changes([map | rest], pk, fun, current, acc, valid?) when is_map(map) do
     case Map.fetch(map, pk) do
       {:ok, pk_value} ->
         {model, current} = Map.pop(current, pk_value)
-        changeset = changeset_action(mod, fun, map, model)
-        map_changes(rest, pk, mod, fun, current,
+        changeset = fun.(map, model)
+        map_changes(rest, pk, fun, current,
                     [changeset | acc], valid? && changeset.valid?)
       :error ->
-        changeset = changeset_action(mod, fun, map, nil)
-        map_changes(rest, pk, mod, fun, current,
+        changeset = fun.(map, nil)
+        map_changes(rest, pk, fun, current,
                     [changeset | acc], valid? && changeset.valid?)
     end
   end
 
-  defp map_changes(_params, _pk, _mod, _fun, _current, _acc, _valid?) do
+  defp map_changes(_params, _pk, _fun, _current, _acc, _valid?) do
     :error
   end
 
@@ -142,8 +188,7 @@ defmodule Ecto.Embedded do
   end
 
   defp changeset_action(_mod, _fun, nil, model) do
-    changeset = Ecto.Changeset.change(model)
-    %{changeset | action: :delete}
+    %{Changeset.change(model) | action: :delete}
   end
 
   defp changeset_action(mod, fun, params, model) do

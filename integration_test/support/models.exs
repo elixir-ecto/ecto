@@ -185,7 +185,7 @@ defmodule Ecto.Integration.Item do
   """
   use Ecto.Integration.Model
 
-  @primary_key false
+  @primary_key {:id, :binary_id, autogenerate: true}
   schema "whatever" do
     field :price, :integer
   end

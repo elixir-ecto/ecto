@@ -599,8 +599,8 @@ defmodule Ecto.Changeset do
     update_in changeset.changes, &put_change(changeset.model, &1, key, value, type)
   end
 
-  defp put_change(_model, acc, key, value, {:embed, embed}) do
-    value = Ecto.Embedded.change(embed, value)
+  defp put_change(model, acc, key, value, {:embed, embed}) do
+    value = Ecto.Embedded.change(embed, value, Map.get(model, key))
     Map.put(acc, key, value)
   end
 
@@ -641,8 +641,10 @@ defmodule Ecto.Changeset do
   def force_change(%Changeset{types: types} = changeset, key, value) do
     value =
       case Map.get(types, key) do
-        {:embed, embed} -> Ecto.Embedded.change(embed, value)
-        _               -> value
+        {:embed, embed} ->
+          Ecto.Embedded.change(embed, value, Map.get(changeset.model, key))
+        _ ->
+          value
       end
     update_in changeset.changes, &Map.put(&1, key, value)
   end
