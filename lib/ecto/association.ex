@@ -439,7 +439,6 @@ defmodule Ecto.Association.HasThrough do
     %{query | wheres: [assoc_on|query.wheres], joins: joins,
               from: merge_from(query.from, assoc.source), sources: nil}
     |> distinct([x], true)
-    |> select([x], x)
   end
 
   defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: []}, position) do
