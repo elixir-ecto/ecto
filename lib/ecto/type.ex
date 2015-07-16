@@ -350,8 +350,8 @@ defmodule Ecto.Type do
     dump_model(model, struct, id_types)
   end
 
-  defp dump_embed(%{cardinality: :many, container: :array, embed: model}, value, id_types)
-      when is_list(value) do
+  defp dump_embed(%{cardinality: :many, container: :array, embed: model},
+                  value, id_types) when is_list(value) do
     array(value, &dump_model(model, &1, id_types), [])
   end
 
@@ -398,8 +398,6 @@ defmodule Ecto.Type do
 
   """
   @spec load(t, term, map) :: {:ok, term} | :error
-  def load(_type, nil, _id_types), do: {:ok, nil}
-
   def load({:embed, embed}, value, id_types) do
     load_embed(embed, value, id_types)
   end
@@ -435,6 +433,8 @@ defmodule Ecto.Type do
         :error
     end
   end
+
+  defp load_embed(_embed, nil, _id_types), do: {:ok, nil}
 
   defp load_embed(%{cardinality: :one, embed: model}, value, id_types) do
     load_model(model, value, id_types)

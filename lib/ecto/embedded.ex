@@ -53,7 +53,10 @@ defmodule Ecto.Embedded do
            params, current) when is_list(params) do
     {pk, param_pk} = primary_key(mod)
     current = process_current(current, pk)
-    map_changes(params, param_pk, &changeset_action(mod, fun, &1, &2), current, [], true)
+
+    changeset_fun = &changeset_action(mod, fun, &1, &2)
+    pk_fun = &Map.fetch(&1, param_pk)
+    map_changes(params, pk_fun, changeset_fun, current, [], true)
   end
 
   def cast(_embed, _params, _current) do
@@ -73,11 +76,29 @@ defmodule Ecto.Embedded do
              value, current) when is_list(value) or is_nil(value) do
     {pk, _} = primary_key(mod)
     current = process_current(current, pk)
-    map_changes(value || [], pk, &do_change(&1, &2, mod), current, [], true) |> elem(1)
+
+    changeset_fun = &do_change(&1, &2, mod)
+    pk_fun = fn
+      %Changeset{model: model} -> Map.fetch(model, pk)
+      model -> Map.fetch(model, pk)
+    end
+    map_changes(value || [], pk_fun, changeset_fun, current, [], true) |> elem(1)
   end
 
-  defp do_change(value, nil, _mod) do
-    %{Changeset.change(value) | action: :insert}
+  defp do_change(value, nil, mod) do
+    fields    = mod.__schema__(:fields)
+    embeds    = mod.__schema__(:embeds)
+    changeset = Changeset.change(value)
+    types     = changeset.types
+
+    changes =
+      Enum.reduce(embeds, Map.take(changeset.model, fields), fn field, acc ->
+        {:embed, embed} = Map.get(types, field)
+        Map.put(acc, field, change(embed, Map.get(acc, field), nil))
+      end)
+      |> Map.merge(changeset.changes)
+
+    %{changeset | changes: changes, action: :insert}
   end
 
   defp do_change(nil, current, mod) do
@@ -91,7 +112,7 @@ defmodule Ecto.Embedded do
   end
 
   defp do_change(%Changeset{}, _current, _mod) do
-    raise ArgumentError, "embedded changeset does not change the model already" <>
+    raise ArgumentError, "embedded changeset does not change the model already " <>
       "preset in the parent model"
   end
 
@@ -182,7 +203,7 @@ defmodule Ecto.Embedded do
   end
 
   defp map_changes([map | rest], pk, fun, current, acc, valid?) when is_map(map) do
-    case Map.fetch(map, pk) do
+    case pk.(map) do
       {:ok, pk_value} ->
         {model, current} = Map.pop(current, pk_value)
         changeset = fun.(map, model)

@@ -61,6 +61,9 @@ defmodule Ecto.TypeTest do
     assert {:ok, %{a: 1, id: %{value: nil}}} = dump(type, %Model{a: 1}, id_types)
     assert :error == dump(type, 1, id_types)
 
+    changeset = Ecto.Changeset.change(%Model{id: "a"}, a: 1)
+    assert {:ok, %{a: 1, id: "a"}} = dump(type, changeset, id_types)
+
     assert %Model{a: 1} = cast(type, %{"a" => 1}, %{})
     assert :error == cast(type, %{}, %{})
     assert :error == cast(type, 1, %{})
@@ -77,6 +80,9 @@ defmodule Ecto.TypeTest do
 
     assert {:ok, [%{a: 1, id: "a"}]} = dump(type, [%Model{a: 1, id: "a"}], id_types)
     assert :error == dump(type, 1, id_types)
+
+    changeset = Ecto.Changeset.change(%Model{id: "a"}, a: 1)
+    assert {:ok, [%{a: 1, id: "a"}]} = dump(type, [changeset], id_types)
 
     assert [%Model{a: 1}] = cast(type, [%{"a" => 1}], %{})
     assert :error == cast(type, [%{}], %{})
