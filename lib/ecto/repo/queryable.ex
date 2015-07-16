@@ -18,7 +18,7 @@ defmodule Ecto.Repo.Queryable do
       Queryable.to_query(queryable)
       |> Planner.query(:all, id_types)
 
-    adapter.all(repo, query, params, preprocess(query.sources, id_types), opts)
+    adapter.all(repo, query, params, preprocess(query.prefix, query.sources, id_types), opts)
     |> Ecto.Repo.Assoc.query(query)
     |> Ecto.Repo.Preloader.query(repo, query, postprocess(query.select))
   end
@@ -98,27 +98,27 @@ defmodule Ecto.Repo.Queryable do
 
   ## Helpers
 
-  defp preprocess(sources, id_types) do
-    &preprocess(&1, &2, sources, id_types)
+  defp preprocess(prefix, sources, id_types) do
+    &preprocess(&1, &2, prefix, sources, id_types)
   end
 
-  defp preprocess({:&, _, [ix]}, value, sources, id_types) do
+  defp preprocess({:&, _, [ix]}, value, prefix, sources, id_types) do
     {source, model} = elem(sources, ix)
-    Ecto.Schema.Serializer.load!(model, source, value, id_types)
+    Ecto.Schema.Serializer.load!(model, prefix, source, value, id_types)
   end
 
-  defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _sources, id_types) do
+  defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _sources, id_types) do
     case Keyword.fetch(meta, :ecto_type) do
       {:ok, type} -> Ecto.Type.load!(type, value, id_types)
       :error      -> value
     end
   end
 
-  defp preprocess(%Ecto.Query.Tagged{tag: tag}, value, _sources, id_types) do
+  defp preprocess(%Ecto.Query.Tagged{tag: tag}, value, _prefix, _sources, id_types) do
     Ecto.Type.load!(tag, value, id_types)
   end
 
-  defp preprocess(_key, value, _sources, _id_types) do
+  defp preprocess(_key, value, _prefix, _sources, _id_types) do
     value
   end
 

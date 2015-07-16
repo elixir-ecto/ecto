@@ -80,24 +80,24 @@ defmodule Ecto.Adapters.SQL do
         end
       end
 
-      def insert(repo, {source, _model}, params, _autogenerate, returning, opts) do
+      def insert(repo, {prefix, source, _model}, params, _autogenerate, returning, opts) do
         {fields, values} = :lists.unzip(params)
-        sql = @conn.insert(source, fields, returning)
+        sql = @conn.insert(prefix, source, fields, returning)
         Ecto.Adapters.SQL.model(repo, sql, values, returning, opts)
       end
 
       @doc false
-      def update(repo, {source, _model}, fields, filter, _autogenerate, returning, opts) do
+      def update(repo, {prefix, source, _model}, fields, filter, _autogenerate, returning, opts) do
         {fields, values1} = :lists.unzip(fields)
         {filter, values2} = :lists.unzip(filter)
-        sql = @conn.update(source, fields, filter, returning)
+        sql = @conn.update(prefix, source, fields, filter, returning)
         Ecto.Adapters.SQL.model(repo, sql, values1 ++ values2, returning, opts)
       end
 
       @doc false
-      def delete(repo, {source, _model}, filter, _autogenarate, opts) do
+      def delete(repo, {prefix, source, _model}, filter, _autogenarate, opts) do
         {filter, values} = :lists.unzip(filter)
-        Ecto.Adapters.SQL.model(repo, @conn.delete(source, filter, []), values, [], opts)
+        Ecto.Adapters.SQL.model(repo, @conn.delete(prefix, source, filter, []), values, [], opts)
       end
 
       ## Transaction

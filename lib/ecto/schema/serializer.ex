@@ -9,13 +9,13 @@ defmodule Ecto.Schema.Serializer do
   where index specifies the place in the row, where data for loading model
   starts.
   """
-  def load!(model, source, data, id_types) do
+  def load!(model, prefix, source, data, id_types) do
     source = source || model.__schema__(:source)
     struct = model.__struct__()
     fields = model.__schema__(:types)
 
     loaded = do_load(struct, fields, data, id_types)
-    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: source})
+    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: {prefix, source}})
     Ecto.Model.Callbacks.__apply__(model, :after_load, loaded)
   end
 

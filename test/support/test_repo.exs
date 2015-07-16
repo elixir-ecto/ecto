@@ -24,7 +24,7 @@ defmodule Ecto.TestAdapter do
 
   ## Model
 
-  def insert(_repo, {"schema_migrations", _}, val, _, _, _) do
+  def insert(_repo, {nil, "schema_migrations", _}, val, _, _, _) do
     version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, [version: 1]}

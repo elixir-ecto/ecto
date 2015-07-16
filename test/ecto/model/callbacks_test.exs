@@ -178,9 +178,9 @@ defmodule Ecto.Model.CallbacksTest do
   end
 
   test "after_load with model" do
-    model = Ecto.Schema.Serializer.load!(AllCallback, "hello", [1, "x", "y", "z"], %{})
+    model = Ecto.Schema.Serializer.load!(AllCallback, "prefix", "hello", [1, "x", "y", "z"], %{})
     assert model.id == 1
     assert model.xyz == "xyz"
-    assert model.__meta__ == %Ecto.Schema.Metadata{source: "hello", state: :loaded}
+    assert model.__meta__ == %Ecto.Schema.Metadata{source: {"prefix", "hello"}, state: :loaded}
   end
 end

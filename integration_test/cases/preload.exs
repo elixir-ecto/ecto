@@ -241,6 +241,13 @@ defmodule Ecto.Integration.PreloadTest do
     assert %Post{id: ^pid2} = c3.post
   end
 
+  test "preload custom prefix" do
+    p = TestRepo.insert!(%Post{title: "1"})
+    p = Ecto.Model.put_source(p, "posts", "this_surely_does_not_exist")
+    # This preload should fail because it points to a prefix that does not exist
+    assert catch_error(TestRepo.preload(p, [:comments]))
+  end
+
   test "preload nested" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})

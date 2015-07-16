@@ -67,7 +67,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def all(query) do
       sources = create_names(query)
 
-      from     = from(sources, query)
+      from     = from(sources)
       select   = select(query, sources)
       join     = join(query, sources)
       where    = where(query, sources)
@@ -85,7 +85,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       sources = create_names(query)
       {table, name, _model} = elem(sources, 0)
 
-      update = "UPDATE #{quote_table(table, query)} AS #{name}"
+      update = "UPDATE #{table} AS #{name}"
       fields = update_fields(query, sources)
       join   = join(query, sources)
       where  = where(query, sources)
@@ -98,22 +98,23 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       {_table, name, _model} = elem(sources, 0)
 
       delete = "DELETE #{name}.*"
-      from   = from(sources, query)
+      from   = from(sources)
       join   = join(query, sources)
       where  = where(query, sources)
 
       assemble([delete, from, join, where])
     end
 
-    def insert(table, [], _returning), do: "INSERT INTO #{quote_table(table)} () VALUES ()"
-    def insert(table, fields, _returning) do
+    def insert(prefix, table, [], _returning),
+      do: "INSERT INTO #{quote_table(prefix, table)} () VALUES ()"
+    def insert(prefix, table, fields, _returning) do
       values = ~s{(#{Enum.map_join(fields, ", ", &quote_name/1)}) } <>
                ~s{VALUES (#{Enum.map_join(1..length(fields), ", ", fn (_) -> "?" end)})}
 
-      "INSERT INTO #{quote_table(table)} " <> values
+      "INSERT INTO #{quote_table(prefix, table)} " <> values
     end
 
-    def update(table, fields, filters, _returning) do
+    def update(prefix, table, fields, filters, _returning) do
       filters = Enum.map filters, fn field  ->
         "#{quote_name(field)} = ?"
       end
@@ -122,16 +123,16 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         "#{quote_name(field)} = ?"
       end
 
-      "UPDATE #{quote_table(table)} SET " <> Enum.join(fields, ", ") <>
+      "UPDATE #{quote_table(prefix, table)} SET " <> Enum.join(fields, ", ") <>
         " WHERE " <> Enum.join(filters, " AND ")
     end
 
-    def delete(table, filters, _returning) do
+    def delete(prefix, table, filters, _returning) do
       filters = Enum.map filters, fn field ->
         "#{quote_name(field)} = ?"
       end
 
-      "DELETE FROM #{quote_table(table)} WHERE " <>
+      "DELETE FROM #{quote_table(prefix, table)} WHERE " <>
         Enum.join(filters, " AND ")
     end
 
@@ -164,9 +165,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       error!(query, "DISTINCT with multiple columns is not supported by MySQL")
     end
 
-    defp from(sources, query) do
+    defp from(sources) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{quote_table(table, query)} AS #{name}"
+      "FROM #{table} AS #{name}"
     end
 
     defp update_fields(%Query{updates: updates} = query, sources) do
@@ -177,11 +178,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp update_op(:set, key, value, sources, query) do
-      quote_name(key, query) <> " = " <> expr(value, sources, query)
+      quote_name(key) <> " = " <> expr(value, sources, query)
     end
 
     defp update_op(:inc, key, value, sources, query) do
-      quoted = quote_name(key, query)
+      quoted = quote_name(key)
       quoted <> " = " <> quoted <> " + " <> expr(value, sources, query)
     end
 
@@ -198,7 +199,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
           on   = expr(expr, sources, query)
           qual = join_qual(qual)
 
-          "#{qual} JOIN #{quote_table(table, query)} AS #{name} ON " <> on
+          "#{qual} JOIN #{table} AS #{name} ON " <> on
       end)
     end
 
@@ -275,10 +276,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "?"
     end
 
-    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, query)
+    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query)
         when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_name(field, query)}"
+      "#{name}.#{quote_name(field)}"
     end
 
     defp expr({:&, _, [idx]}, sources, query) do
@@ -290,7 +291,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
           "#{inspect name} you desire")
       end
       fields = model.__schema__(:fields)
-      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1, query)}")
+      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
     defp expr({:in, _, [_left, []]}, _sources, _query) do
@@ -410,17 +411,18 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       expr(expr, sources, query)
     end
 
-    defp create_names(%{sources: sources}) do
-      create_names(sources, 0, tuple_size(sources)) |> List.to_tuple()
+    defp create_names(%{prefix: prefix, sources: sources}) do
+      create_names(prefix, sources, 0, tuple_size(sources)) |> List.to_tuple()
     end
 
-    defp create_names(sources, pos, limit) when pos < limit do
+    defp create_names(prefix, sources, pos, limit) when pos < limit do
       {table, model} = elem(sources, pos)
       name = String.first(table) <> Integer.to_string(pos)
-      [{table, name, model}|create_names(sources, pos + 1, limit)]
+      [{quote_table(prefix, table), name, model}|
+        create_names(prefix, sources, pos + 1, limit)]
     end
 
-    defp create_names(_sources, pos, pos) do
+    defp create_names(_prefix, _sources, pos, pos) do
       []
     end
 
@@ -599,25 +601,28 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Helpers
 
-    defp quote_name(name, query \\ nil)
-    defp quote_name(name, query) when is_atom(name),
-      do: quote_name(Atom.to_string(name), query)
-    defp quote_name(name, query) do
+    defp quote_name(name)
+    defp quote_name(name) when is_atom(name),
+      do: quote_name(Atom.to_string(name))
+    defp quote_name(name) do
       if String.contains?(name, "`") do
-        error!(query, "bad field name #{inspect name}")
+        error!(nil, "bad field name #{inspect name}")
       end
 
       <<?`, name::binary, ?`>>
     end
 
-    defp quote_table(name, query \\ nil)
-    defp quote_table(name, query) when is_atom(name),
-      do: quote_table(Atom.to_string(name), query)
-    defp quote_table(name, query) do
+    defp quote_table(nil, name),    do: quote_table(name)
+    defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
+
+    defp quote_table(name) when is_atom(name),
+      do: quote_table(Atom.to_string(name))
+    defp quote_table(name) do
       if String.contains?(name, "`") do
-        error!(query, "bad table name #{inspect name}")
+        error!(nil, "bad table name #{inspect name}")
       end
 
+      # TODO: Remove replace once v0.14.0 is out
       <<?`, String.replace(name, ".", "`.`")::binary, ?`>>
     end
 

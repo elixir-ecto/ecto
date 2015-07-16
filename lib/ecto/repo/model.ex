@@ -32,7 +32,7 @@ defmodule Ecto.Repo.Model do
     struct   = struct_from_changeset!(changeset)
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
-    source   = struct.__meta__.source
+    {prefix, source} = struct.__meta__.source
     return   = model.__schema__(:read_after_writes)
     id_types = adapter.id_types(repo)
 
@@ -49,7 +49,7 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
       changes = validate_changes(:insert, changeset, model, fields, id_types)
 
-      {:ok, values} = adapter.insert(repo, {source, model}, changes, autogen, return, opts)
+      {:ok, values} = adapter.insert(repo, {prefix, source, model}, changes, autogen, return, opts)
 
       changeset = load_into_changeset(changeset, model, values, id_types)
       Callbacks.__apply__(model, :after_insert, changeset).model
@@ -67,7 +67,7 @@ defmodule Ecto.Repo.Model do
     struct   = struct_from_changeset!(changeset)
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
-    source   = struct.__meta__.source
+    {prefix, source} = struct.__meta__.source
     return   = model.__schema__(:read_after_writes)
     id_types = adapter.id_types(repo)
 
@@ -88,7 +88,7 @@ defmodule Ecto.Repo.Model do
 
         values =
           if changes != [] do
-            case adapter.update(repo, {source, model}, changes, filters, autogen, return, opts) do
+            case adapter.update(repo, {prefix, source, model}, changes, filters, autogen, return, opts) do
               {:ok, values} ->
                 values
               {:error, :stale} ->
@@ -123,7 +123,7 @@ defmodule Ecto.Repo.Model do
   def delete!(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
-    source = struct.__meta__.source
+    {prefix, source} = struct.__meta__.source
 
     # There are no field changes on delete
     changeset = %{changeset | repo: repo, action: :delete}
@@ -136,7 +136,7 @@ defmodule Ecto.Repo.Model do
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter.id_types(repo))
 
-      case adapter.delete(repo, {source, model}, filters, autogen, opts) do
+      case adapter.delete(repo, {prefix, source, model}, filters, autogen, opts) do
         {:ok, _} -> nil
         {:error, :stale} ->
           raise Ecto.StaleModelError, model: struct, action: :delete

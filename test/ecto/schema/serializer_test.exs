@@ -31,8 +31,7 @@ defmodule Ecto.Schema.SerializerTest do
     data = %{"id" => 123, "name" => "michal", "count" => Decimal.new(5),
              "array" => ["array"], "uuid" => @uuid_binary,
              "embed" => %{"type" => "one", "id" => "two"}}
-    loaded = Serializer.load!(Model, "mymodel", data, %{binary_id: :string})
-
+    loaded = Serializer.load!(Model, nil, "mymodel", data, %{binary_id: :string})
 
     assert loaded.name  == "michal"
     assert loaded.count == Decimal.new(5)

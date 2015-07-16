@@ -11,7 +11,6 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.Custom
   alias Ecto.Integration.Barebone
-  alias Ecto.Schema.Metadata
 
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
@@ -48,12 +47,13 @@ defmodule Ecto.Integration.RepoTest do
 
   test "insert, update and delete" do
     post = %Post{title: "create and delete single", text: "fetch empty"}
+    meta = post.__meta__
 
-    deleted_meta = %Metadata{state: :deleted, source: "posts"}
+    deleted_meta = put_in meta.state, :deleted
     assert %Post{} = to_be_deleted = TestRepo.insert!(post)
     assert %Post{__meta__: ^deleted_meta} = TestRepo.delete!(to_be_deleted)
 
-    loaded_meta = %Metadata{state: :loaded, source: "posts"}
+    loaded_meta = put_in meta.state, :loaded
     assert %Post{__meta__: ^loaded_meta} = TestRepo.insert!(post)
 
     post = TestRepo.one(Post)
@@ -264,7 +264,7 @@ defmodule Ecto.Integration.RepoTest do
     custom = Ecto.Model.put_source(%Custom{}, "posts")
     custom = TestRepo.insert!(custom)
     bid    = custom.bid
-    assert %Custom{bid: ^bid, __meta__: %{source: "posts"}} =
+    assert %Custom{bid: ^bid, __meta__: %{source: {nil, "posts"}}} =
            TestRepo.get(from(c in {"posts", Custom}), bid)
   end
 

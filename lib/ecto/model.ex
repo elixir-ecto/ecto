@@ -155,15 +155,19 @@ defmodule Ecto.Model do
   end
 
   @doc """
-  Update the database source of the model
+  Update the database source of the model.
+
+  A prefix (representing a schema or a database in storages)
+  may also be given as argument. If none is given, defaults
+  to nil.
 
   ## Examples
 
       post = Repo.get Post, 1
       new_post = Ecto.Model.put_source(post, "user_posts")
   """
-  def put_source(model, new_source) do
-    put_in model.__meta__.source, new_source
+  def put_source(model, new_source, new_prefix \\ nil) do
+    put_in model.__meta__.source, {new_prefix, new_source}
   end
 
   defp assert_struct!(model, %{__struct__: struct}) do

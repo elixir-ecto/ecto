@@ -53,14 +53,15 @@ defmodule Ecto.Repo.Preloader do
 
   defp preload_each(structs, _repo, []),   do: structs
   defp preload_each([], _repo, _preloads), do: []
-  defp preload_each(structs, repo, preloads) do
-    module   = hd(structs).__struct__
-    preloads = expand(module, preloads, [])
+  defp preload_each([sample|_] = structs, repo, preloads) do
+    module      = sample.__struct__
+    {prefix, _} = sample.__meta__.source
+    preloads    = expand(module, preloads, [])
 
     entries =
       Enum.map preloads, fn
         {_, {:assoc, assoc, assoc_key}, sub_preloads} ->
-          preload_assoc(structs, module, repo, assoc, assoc_key, sub_preloads)
+          preload_assoc(structs, module, repo, prefix, assoc, assoc_key, sub_preloads)
         {_, {:through, _, _} = info, []} ->
           info
       end
@@ -81,24 +82,24 @@ defmodule Ecto.Repo.Preloader do
 
   ## Association preloading
 
-  defp preload_assoc(structs, module, repo, assoc, assoc_key, preloads_or_query) do
+  defp preload_assoc(structs, module, repo, prefix, assoc, assoc_key, preloads_or_query) do
     case ids(structs, module, assoc) do
       [] ->
         {:assoc, assoc, HashDict.new}
       ids when is_list(preloads_or_query) ->
         query = assoc.__struct__.assoc_query(assoc, ids)
-        preload_assoc(repo, query, assoc, assoc_key, preloads_or_query)
+        preload_assoc(repo, query, prefix, assoc, assoc_key, preloads_or_query)
       ids ->
         query = assoc.__struct__.assoc_query(assoc, preloads_or_query, ids)
-        preload_assoc(repo, query, assoc, assoc_key, [])
+        preload_assoc(repo, query, prefix, assoc, assoc_key, [])
     end
   end
 
-  defp preload_assoc(repo, query, %{cardinality: card} = assoc, assoc_key, preloads) do
+  defp preload_assoc(repo, query, prefix, %{cardinality: card} = assoc, assoc_key, preloads) do
     if card == :many do
       query = Ecto.Query.from q in query, order_by: field(q, ^assoc_key)
     end
-    loaded = preload_each(repo.all(query), repo, preloads)
+    loaded = preload_each(repo.all(%{query | prefix: prefix}), repo, preloads)
     {:assoc, assoc, assoc_dict(card, assoc_key, loaded)}
   end
 

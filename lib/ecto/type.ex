@@ -448,7 +448,7 @@ defmodule Ecto.Type do
   defp load_model(model, value, id_types) when is_binary(value),
     do: load_model(model, json_library.decode!(value), id_types)
   defp load_model(model, value, id_types) when is_map(value),
-    do: {:ok, Serializer.load!(model, nil, value, id_types)}
+    do: {:ok, Serializer.load!(model, nil, nil, value, id_types)}
   defp load_model(_model, _value, _id_types),
     do: :error
 

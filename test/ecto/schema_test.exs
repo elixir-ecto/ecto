@@ -63,9 +63,11 @@ defmodule Ecto.SchemaTest do
 
   test "updates source with put_source" do
     model = %Model{}
-    assert model.__meta__.source == "mymodel"
-    new_model = Ecto.Model.put_source(model, "new_model")
-    assert new_model.__meta__.source == "new_model"
+    assert model.__meta__.source == {nil, "mymodel"}
+    model = Ecto.Model.put_source(model, "new_model")
+    assert model.__meta__.source == {nil, "new_model"}
+    model = Ecto.Model.put_source(model, "new_model", "prefix")
+    assert model.__meta__.source == {"prefix", "new_model"}
   end
 
   defmodule SchemaModel do
@@ -93,7 +95,7 @@ defmodule Ecto.SchemaTest do
 
   test "has __meta__ field" do
     assert %SchemaModel{}.__meta__.state == :built
-    assert %SchemaModel{}.__meta__.source == "users"
+    assert %SchemaModel{}.__meta__.source == {nil, "users"}
     assert SchemaModel.__schema__(:type, :__meta__) == nil
   end
 

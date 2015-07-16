@@ -357,6 +357,12 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s{SELECT 0 FROM `posts` AS p0 INNER JOIN `comments` AS c1 ON p0.`x` = c1.`z`}
   end
 
+  test "join with prefix" do
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
+    assert SQL.all(%{query | prefix: "prefix"}) ==
+           ~s{SELECT 0 FROM `prefix`.`model` AS m0 INNER JOIN `prefix`.`model2` AS m1 ON m0.`x` = m1.`z`}
+  end
+
   ## Associations
 
   test "association join belongs_to" do
@@ -388,21 +394,30 @@ defmodule Ecto.Adapters.MySQLTest do
   # Model based
 
   test "insert" do
-    query = SQL.insert("model", [:x, :y], [])
+    query = SQL.insert(nil, "model", [:x, :y], [])
     assert query == ~s{INSERT INTO `model` (`x`, `y`) VALUES (?, ?)}
 
-    query = SQL.insert("model", [], [])
+    query = SQL.insert(nil, "model", [], [])
     assert query == ~s{INSERT INTO `model` () VALUES ()}
+
+    query = SQL.insert("prefix", "model", [], [])
+    assert query == ~s{INSERT INTO `prefix`.`model` () VALUES ()}
   end
 
   test "update" do
-    query = SQL.update("model", [:id], [:x, :y], [])
+    query = SQL.update(nil, "model", [:id], [:x, :y], [])
     assert query == ~s{UPDATE `model` SET `id` = ? WHERE `x` = ? AND `y` = ?}
+
+    query = SQL.update("prefix", "model", [:id], [:x, :y], [])
+    assert query == ~s{UPDATE `prefix`.`model` SET `id` = ? WHERE `x` = ? AND `y` = ?}
   end
 
   test "delete" do
-    query = SQL.delete("model", [:x, :y], [])
+    query = SQL.delete(nil, "model", [:x, :y], [])
     assert query == ~s{DELETE FROM `model` WHERE `x` = ? AND `y` = ?}
+
+    query = SQL.delete("prefix", "model", [:x, :y], [])
+    assert query == ~s{DELETE FROM `prefix`.`model` WHERE `x` = ? AND `y` = ?}
   end
 
   # DDL

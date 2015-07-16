@@ -399,6 +399,12 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s{SELECT 0 FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
   end
 
+  test "join with prefix" do
+    query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> select([], 0) |> normalize
+    assert SQL.all(%{query | prefix: "prefix"}) ==
+           ~s{SELECT 0 FROM "prefix"."model" AS m0 INNER JOIN "prefix"."model2" AS m1 ON m0."x" = m1."z"}
+  end
+
   ## Associations
 
   test "association join belongs_to" do
@@ -430,30 +436,39 @@ defmodule Ecto.Adapters.PostgresTest do
   # Model based
 
   test "insert" do
-    query = SQL.insert("model", [:x, :y], [:id])
+    query = SQL.insert(nil, "model", [:x, :y], [:id])
     assert query == ~s{INSERT INTO "model" ("x", "y") VALUES ($1, $2) RETURNING "id"}
 
-    query = SQL.insert("model", [], [:id])
+    query = SQL.insert(nil, "model", [], [:id])
     assert query == ~s{INSERT INTO "model" DEFAULT VALUES RETURNING "id"}
 
-    query = SQL.insert("model", [], [])
+    query = SQL.insert(nil, "model", [], [])
     assert query == ~s{INSERT INTO "model" DEFAULT VALUES}
+
+    query = SQL.insert("prefix", "model", [], [])
+    assert query == ~s{INSERT INTO "prefix"."model" DEFAULT VALUES}
   end
 
   test "update" do
-    query = SQL.update("model", [:x, :y], [:id], [:z])
+    query = SQL.update(nil, "model", [:x, :y], [:id], [])
+    assert query == ~s{UPDATE "model" SET "x" = $1, "y" = $2 WHERE "id" = $3}
+
+    query = SQL.update(nil, "model", [:x, :y], [:id], [:z])
     assert query == ~s{UPDATE "model" SET "x" = $1, "y" = $2 WHERE "id" = $3 RETURNING "z"}
 
-    query = SQL.update("model", [:x, :y], [:id], [])
-    assert query == ~s{UPDATE "model" SET "x" = $1, "y" = $2 WHERE "id" = $3}
+    query = SQL.update("prefix", "model", [:x, :y], [:id], [])
+    assert query == ~s{UPDATE "prefix"."model" SET "x" = $1, "y" = $2 WHERE "id" = $3}
   end
 
   test "delete" do
-    query = SQL.delete("model", [:x, :y], [:z])
+    query = SQL.delete(nil, "model", [:x, :y], [])
+    assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2}
+
+    query = SQL.delete(nil, "model", [:x, :y], [:z])
     assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2 RETURNING "z"}
 
-    query = SQL.delete("model", [:x, :y], [])
-    assert query == ~s{DELETE FROM "model" WHERE "x" = $1 AND "y" = $2}
+    query = SQL.delete("prefix", "model", [:x, :y], [])
+    assert query == ~s{DELETE FROM "prefix"."model" WHERE "x" = $1 AND "y" = $2}
   end
 
   # DDL

@@ -70,7 +70,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       sources        = create_names(query)
       distinct_exprs = distinct_exprs(query, sources)
 
-      from     = from(sources, query)
+      from     = from(sources)
       select   = select(query, distinct_exprs, sources)
       join     = join(query, sources)
       where    = where(query, sources)
@@ -102,10 +102,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       join  = using(query, sources)
       where = delete_all_where(query.joins, query, sources)
 
-      assemble(["DELETE FROM #{quote_table(table, query)} AS #{name}", join, where])
+      assemble(["DELETE FROM #{table} AS #{name}", join, where])
     end
 
-    def insert(table, fields, returning) do
+    def insert(prefix, table, fields, returning) do
       values =
         if fields == [] do
           "DEFAULT VALUES"
@@ -114,10 +114,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
         end
 
-      "INSERT INTO #{quote_table(table)} " <> values <> returning(returning)
+      "INSERT INTO #{quote_table(prefix, table)} " <> values <> returning(returning)
     end
 
-    def update(table, fields, filters, returning) do
+    def update(prefix, table, fields, filters, returning) do
       {fields, count} = Enum.map_reduce fields, 1, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
@@ -126,17 +126,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "UPDATE #{quote_table(table)} SET " <> Enum.join(fields, ", ") <>
+      "UPDATE #{quote_table(prefix, table)} SET " <> Enum.join(fields, ", ") <>
         " WHERE " <> Enum.join(filters, " AND ") <>
         returning(returning)
     end
 
-    def delete(table, filters, returning) do
+    def delete(prefix, table, filters, returning) do
       {filters, _} = Enum.map_reduce filters, 1, fn field, acc ->
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "DELETE FROM #{quote_table(table)} WHERE " <>
+      "DELETE FROM #{quote_table(prefix, table)} WHERE " <>
         Enum.join(filters, " AND ") <> returning(returning)
     end
 
@@ -173,9 +173,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp distinct(%QueryExpr{expr: false}, _exprs), do: ""
     defp distinct(_query, exprs), do: "DISTINCT ON (" <> exprs <> ") "
 
-    defp from(sources, query) do
+    defp from(sources) do
       {table, name, _model} = elem(sources, 0)
-      "FROM #{quote_table(table, query)} AS #{name}"
+      "FROM #{table} AS #{name}"
     end
 
     defp using(%Query{joins: []}, _sources), do: []
@@ -184,7 +184,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         %JoinExpr{on: %QueryExpr{expr: expr}, ix: ix} ->
           {table, name, _model} = elem(sources, ix)
           where = expr(expr, sources, query)
-          "USING #{quote_name(table, query)} AS #{name} WHERE " <> where
+          "USING #{table} AS #{name} WHERE " <> where
       end)
     end
 
@@ -196,21 +196,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp update_op(:set, key, value, sources, query) do
-      quote_name(key, query) <> " = " <> expr(value, sources, query)
+      quote_name(key) <> " = " <> expr(value, sources, query)
     end
 
     defp update_op(:inc, key, value, sources, query) do
-      quoted = quote_name(key, query)
+      quoted = quote_name(key)
       quoted <> " = " <> quoted <> " + " <> expr(value, sources, query)
     end
 
     defp update_op(:push, key, value, sources, query) do
-      quoted = quote_name(key, query)
+      quoted = quote_name(key)
       quoted <> " = array_append(" <> quoted <> ", " <> expr(value, sources, query) <> ")"
     end
 
     defp update_op(:pull, key, value, sources, query) do
-      quoted = quote_name(key, query)
+      quoted = quote_name(key)
       quoted <> " = array_remove(" <> quoted <> ", " <> expr(value, sources, query) <> ")"
     end
 
@@ -218,16 +218,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       error!(query, "Unknown update operation #{inspect command} for PostgreSQL")
     end
 
-    defp update_expr(%Query{joins: []} = query, {table, name, _model}) do
-      "UPDATE #{quote_name(table, query)} AS #{name}"
+    defp update_expr(%Query{joins: []}, {table, name, _model}) do
+      "UPDATE #{table} AS #{name}"
     end
-    defp update_expr(query, {table, _name, _model}) do
-      "UPDATE #{quote_name(table, query)}"
+    defp update_expr(_query, {table, _name, _model}) do
+      "UPDATE #{table}"
     end
 
     defp update_filter(%Query{joins: []}, _sources), do: []
     defp update_filter(query, sources) do
-      from(sources, query) <> " "  <> join(query, sources)
+      from(sources) <> " "  <> join(query, sources)
     end
 
     defp join(%Query{joins: []}, _sources), do: []
@@ -239,7 +239,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           on   = expr(expr, sources, query)
           qual = join_qual(qual)
 
-          "#{qual} JOIN #{quote_table(table, query)} AS #{name} ON " <> on
+          "#{qual} JOIN #{table} AS #{name} ON " <> on
       end)
     end
 
@@ -325,9 +325,9 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "$#{ix+1}"
     end
 
-    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, query) when is_atom(field) do
+    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_name(field, query)}"
+      "#{name}.#{quote_name(field)}"
     end
 
     defp expr({:&, _, [idx]}, sources, query) do
@@ -339,7 +339,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           "#{inspect name} you desire")
       end
       fields = model.__schema__(:fields)
-      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1, query)}")
+      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 
     defp expr({:in, _, [_left, []]}, _sources, _query) do
@@ -463,17 +463,18 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp returning(returning),
       do: " RETURNING " <> Enum.map_join(returning, ", ", &quote_name/1)
 
-    defp create_names(%{sources: sources}) do
-      create_names(sources, 0, tuple_size(sources)) |> List.to_tuple()
+    defp create_names(%{prefix: prefix, sources: sources}) do
+      create_names(prefix, sources, 0, tuple_size(sources)) |> List.to_tuple()
     end
 
-    defp create_names(sources, pos, limit) when pos < limit do
+    defp create_names(prefix, sources, pos, limit) when pos < limit do
       {table, model} = elem(sources, pos)
       name = String.first(table) <> Integer.to_string(pos)
-      [{table, name, model}|create_names(sources, pos + 1, limit)]
+      [{quote_table(prefix, table), name, model}|
+        create_names(prefix, sources, pos + 1, limit)]
     end
 
-    defp create_names(_sources, pos, pos) do
+    defp create_names(_prefix, _sources, pos, pos) do
       []
     end
 
@@ -645,25 +646,27 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Helpers
 
-    defp quote_name(name, query \\ nil)
-    defp quote_name(name, query) when is_atom(name),
-      do: quote_name(Atom.to_string(name), query)
-    defp quote_name(name, query) do
+    defp quote_name(name)
+    defp quote_name(name) when is_atom(name),
+      do: quote_name(Atom.to_string(name))
+    defp quote_name(name) do
       if String.contains?(name, "\"") do
-        error!(query, "bad field name #{inspect name}")
+        error!(nil, "bad field name #{inspect name}")
       end
-
       <<?", name::binary, ?">>
     end
 
-    defp quote_table(name, query \\ nil)
-    defp quote_table(name, query) when is_atom(name),
-      do: quote_table(Atom.to_string(name), query)
-    defp quote_table(name, query) do
+    defp quote_table(nil, name),    do: quote_table(name)
+    defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
+
+    defp quote_table(name) when is_atom(name),
+      do: quote_table(Atom.to_string(name))
+    defp quote_table(name) do
       if String.contains?(name, "\"") do
-        error!(query, "bad table name #{inspect name}")
+        error!(nil, "bad table name #{inspect name}")
       end
 
+      # TODO: Remove replace once v0.14.0 is out
       <<?", String.replace(name, ".", "\".\"")::binary, ?">>
     end
 

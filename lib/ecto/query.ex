@@ -158,7 +158,7 @@ defmodule Ecto.Query do
   in the keywords query and in the query expression formats.
   """
 
-  defstruct [sources: nil, from: nil, joins: [], wheres: [], select: nil,
+  defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
   @opaque t :: %__MODULE__{}

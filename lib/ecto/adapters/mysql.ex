@@ -152,14 +152,14 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(_repo, {source, _model}, _params, _autogen, [_|_] = returning, _opts) do
+  def insert(_repo, {_prefix, source, _model}, _params, _autogen, [_|_] = returning, _opts) do
     raise ArgumentError, "MySQL does not support :read_after_writes in models. " <>
                          "The following fields in #{inspect source} have tagged as such: #{inspect returning}"
   end
 
-  def insert(repo, {source, _model}, params, {pk, :id, nil}, [], opts) do
+  def insert(repo, {prefix, source, _model}, params, {pk, :id, nil}, [], opts) do
     {fields, values} = :lists.unzip(params)
-    sql = @conn.insert(source, fields, [])
+    sql = @conn.insert(prefix, source, fields, [])
     case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
       %{num_rows: 1, last_insert_id: last_insert_id} ->
         {:ok, [{pk, last_insert_id}]}
@@ -171,10 +171,10 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def update(repo, {source, _model}, fields, filter, _autogenerate, returning, opts) do
+  def update(repo, {prefix, source, _model}, fields, filter, _autogenerate, returning, opts) do
     {fields, values1} = :lists.unzip(fields)
     {filter, values2} = :lists.unzip(filter)
-    sql = @conn.update(source, fields, filter, returning)
+    sql = @conn.update(prefix, source, fields, filter, returning)
     case Ecto.Adapters.SQL.query(repo, sql, values1 ++ values2, opts) do
       %{num_rows: 0} -> {:error, :stale}
       %{num_rows: _} -> {:ok, []}
@@ -182,9 +182,9 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def delete(repo, {source, _model}, filter, _autogenerate, opts) do
+  def delete(repo, {prefix, source, _model}, filter, _autogenerate, opts) do
     {filter, values} = :lists.unzip(filter)
-    case Ecto.Adapters.SQL.query(repo, @conn.delete(source, filter, []), values, opts) do
+    case Ecto.Adapters.SQL.query(repo, @conn.delete(prefix, source, filter, []), values, opts) do
       %{num_rows: 0} -> {:error, :stale}
       %{num_rows: _} -> {:ok, []}
     end
