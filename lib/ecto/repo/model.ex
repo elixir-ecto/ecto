@@ -43,6 +43,7 @@ defmodule Ecto.Repo.Model do
     changeset = %{changeset | repo: repo, action: :insert}
     changeset = insert_changes(struct, fields, embeds, changeset)
 
+    changeset = merge_autogenerate_embeds(changeset, embeds, id_types)
     changeset = merge_autogenerate(changeset, model)
     {autogen, changeset} = merge_autogenerate_id(changeset, model)
 
@@ -267,6 +268,22 @@ defmodule Ecto.Repo.Model do
           acc
         end
       end
+    end
+  end
+
+  defp merge_autogenerate_embeds(changeset, embeds, id_types) do
+    types = changeset.types
+
+    update_in changeset.changes, fn changes ->
+      Enum.reduce(embeds, changes, fn field, acc ->
+        case Map.fetch(acc, field) do
+          {:ok, changeset} ->
+            {:embed, embed} = Map.get(types, field)
+            Map.put(acc, field, Ecto.Embedded.autogenerate(embed, changeset, id_types))
+          :error ->
+            acc
+        end
+      end)
     end
   end
 

@@ -302,7 +302,9 @@ defmodule Ecto.RepoTest do
     assert [{:after_insert, MyModel}, {:after_insert, MyEmbed},
             {:before_insert, MyEmbed}, {:before_insert, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == embed
+    id = model.embed.id
+    assert id
+    assert model.embed == %{embed | id: id}
   end
 
   test "handled embeds on update" do

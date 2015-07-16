@@ -122,6 +122,64 @@ defmodule Ecto.Embedded do
   end
 
   @doc """
+  Goes though embedded changesets and autogenerates field for insert ones
+  """
+  def autogenerate(%Embedded{cardinality: :one, embed: model}, changeset, id_types) do
+    autogenerate = get_autogenerate(model, id_types)
+    embeds       = model.__schema__(:embeds)
+
+    do_autogenerate(changeset, autogenerate, embeds, id_types)
+  end
+
+  def autogenerate(%Embedded{cardinality: :many, container: :array, embed: model},
+                   changesets, id_types) do
+    autogenerate = get_autogenerate(model, id_types)
+    embeds       = model.__schema__(:embeds)
+    Enum.map(changesets, &do_autogenerate(&1, autogenerate, embeds, id_types))
+  end
+
+  defp do_autogenerate(%Changeset{action: :insert} = changeset, fields, embeds, id_types) do
+    types = changeset.types
+
+    update_in changeset.changes, fn changes ->
+      changes =
+        Enum.reduce fields, changes, fn {k, v}, acc ->
+          if Map.get(acc, k) == nil do
+            Map.put(acc, k, v.generate())
+          else
+            acc
+          end
+        end
+
+      Enum.reduce embeds, changes, fn field, acc ->
+        case Map.fetch(acc, field) do
+          {:ok, changeset} ->
+            {:embed, embed} = Map.get(types, field)
+            Map.put(acc, field, autogenerate(embed, changeset, id_types))
+          :error ->
+            acc
+        end
+      end
+    end
+  end
+
+  defp do_autogenerate(changeset, _fields, _embeds, _id_types), do: changeset
+
+  defp get_autogenerate(model, id_types) do
+    id =
+      case model.__schema__(:autogenerate_id) do
+        nil -> []
+        {key, type} ->
+          case Map.fetch(id_types, type) do
+            {:ok, type} -> [{key, type}]
+            :error ->
+              raise ArgumentEror, "adapter did not provide a type for #{inspect type}"
+          end
+      end
+    id ++ Enum.to_list(model.__schema__(:autogenerate))
+  end
+
+  @doc """
   Returns empty container for embed
   """
   def empty(%Embedded{cardinality: :one}), do: nil
