@@ -90,6 +90,7 @@ defmodule Ecto.Date do
     do: from_parts(to_i(year), to_i(month), to_i(day))
   def cast(%{year: year, month: month, day: day}),
     do: from_parts(to_i(year), to_i(month), to_i(day))
+  def cast({year, month, day}), do: from_parts(to_i(year), to_i(month), to_i(day))
   def cast(_),
     do: :error
 
@@ -190,6 +191,8 @@ defmodule Ecto.Time do
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), to_i(Map.get(map, "usec", 0)))
   def cast(%{hour: hour, min: min} = map),
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)), to_i(Map.get(map, :usec, 0)))
+  def cast({hour, min, sec}), do: from_parts(to_i(hour), to_i(min), to_i(sec), 0)
+  def cast({hour, min, sec, usec}), do: from_parts(to_i(hour), to_i(min), to_i(sec), to_i(usec))
   def cast(_),
     do: :error
 
@@ -211,6 +214,9 @@ defmodule Ecto.Time do
   """
   def load({hour, min, sec, usec}) do
     {:ok, %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}}
+  end
+  def load({_, _, _} = time) do
+    {:ok, from_erl(time)}
   end
 
   @doc """
@@ -310,6 +316,16 @@ defmodule Ecto.DateTime do
                to_i(Map.get(map, :usec, 0)))
   end
 
+  def cast({{year, month, day}, {hour, min, sec}}) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(sec), 0)
+  end
+
+  def cast({{year, month, day}, {hour, min, sec, usec}}) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(sec), to_i(usec))
+  end
+
   def cast(_) do
     :error
   end
@@ -333,6 +349,9 @@ defmodule Ecto.DateTime do
   def load({{year, month, day}, {hour, min, sec, usec}}) do
     {:ok, %Ecto.DateTime{year: year, month: month, day: day,
                          hour: hour, min: min, sec: sec, usec: usec}}
+  end
+  def load({{_, _, _}, {_, _, _}} = datetime) do
+    {:ok, erl_load(datetime)}
   end
 
   @doc """

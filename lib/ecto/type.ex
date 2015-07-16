@@ -289,6 +289,18 @@ defmodule Ecto.Type do
       {:ok, %Ecto.Query.Tagged{tag: nil, type: :uuid,
         value: <<125, 91, 237, 80, 232, 236, 74, 116, 184, 99, 235, 151, 127, 61, 185, 46>>}}
 
+      iex> datetime = %Ecto.DateTime{year: 2015, month: 5, day: 27, hour: 11, min: 30, sec: 00, usec: 27}
+      iex> dump(:datetime, datetime, %{})
+      {:ok, {{2015, 5, 27}, {11, 30, 0, 27}}}
+
+      iex> date = %Ecto.Date{year: 2015, month: 5, day: 27}
+      iex> dump(:date, date, %{})
+      {:ok, {2015, 5, 27}}
+
+      iex> time = %Ecto.Time{hour: 11, min: 30, sec: 00, usec: 27}
+      iex> dump(:time, time, %{})
+      {:ok, {11, 30, 0, 27}}
+
   """
   @spec dump(t, term, map) :: {:ok, term} | :error
   def dump(type, nil, _id_types) do
@@ -314,6 +326,12 @@ defmodule Ecto.Type do
       :error
     end
   end
+
+  defp dump(:date, term), do: Ecto.Date.dump(term)
+
+  defp dump(:time, term), do: Ecto.Time.dump(term)
+
+  defp dump(:datetime, term), do: Ecto.DateTime.dump(term)
 
   defp dump(type, value) do
     cond do
@@ -398,6 +416,18 @@ defmodule Ecto.Type do
       iex> load(:binary_id, <<125, 91, 237, 80, 232, 236, 74, 116, 184, 99, 235, 151, 127, 61, 185, 46>>, %{binary_id: Ecto.UUID})
       {:ok, "7d5bed50-e8ec-4a74-b863-eb977f3db92e"}
 
+      iex> datetime = {{2015, 5, 27}, {11, 30, 0, 27}}
+      iex> load(:datetime, datetime, %{})
+      {:ok, %Ecto.DateTime{year: 2015, month: 5, day: 27, hour: 11, min: 30, sec: 00, usec: 27}}
+
+      iex> date = {2015, 5, 27}
+      iex> load(:date, date, %{})
+      {:ok, %Ecto.Date{year: 2015, month: 5, day: 27}}
+
+      iex> time = {11, 30, 0, 27}
+      iex> load(:time, time, %{})
+      {:ok, %Ecto.Time{hour: 11, min: 30, sec: 00, usec: 27}}
+
   """
   @spec load(t, term, map) :: {:ok, term} | :error
   def load({:embed, embed}, value, id_types) do
@@ -424,6 +454,12 @@ defmodule Ecto.Type do
       :error
     end
   end
+
+  defp load(:date, term), do: Ecto.Date.load(term)
+
+  defp load(:time, term), do: Ecto.Time.load(term)
+
+  defp load(:datetime, term), do: Ecto.DateTime.load(term)
 
   defp load(type, value) do
     cond do
@@ -545,6 +581,18 @@ defmodule Ecto.Type do
       iex> cast(:binary_id, "7d5bed50-e8ec-4a74-b863-eb977f3db92e", %{binary_id: Ecto.UUID})
       {:ok, "7d5bed50-e8ec-4a74-b863-eb977f3db92e"}
 
+      iex> datetime = {{2015, 5, 27}, {11, 30, 0, 27}}
+      iex> cast(:datetime, datetime, %{})
+      {:ok, %Ecto.DateTime{year: 2015, month: 5, day: 27, hour: 11, min: 30, sec: 00, usec: 27}}
+
+      iex> date = {2015, 5, 27}
+      iex> cast(:date, date, %{})
+      {:ok, %Ecto.Date{year: 2015, month: 5, day: 27}}
+
+      iex> time = {11, 30, 0, 27}
+      iex> cast(:time, time, %{})
+      {:ok, %Ecto.Time{hour: 11, min: 30, sec: 00, usec: 27}}
+
   """
   @spec cast(t, term, map) :: {:ok, term} | :error
   def cast({:embed, embed}, value, id_types) do
@@ -589,6 +637,12 @@ defmodule Ecto.Type do
       _         -> :error
     end
   end
+
+  defp cast(:date, term), do: Ecto.Date.cast(term)
+
+  defp cast(:time, term), do: Ecto.Time.cast(term)
+
+  defp cast(:datetime, term), do: Ecto.DateTime.cast(term)
 
   defp cast(type, value) do
     cond do
