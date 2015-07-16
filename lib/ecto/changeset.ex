@@ -1025,15 +1025,15 @@ defmodule Ecto.Changeset do
 
   defp wrong_length(value, value, _opts), do: nil
   defp wrong_length(_length, value, opts), do:
-    {message(opts, "should be %{count} characters"), value}
+    {message(opts, "should be %{count} characters"), count: value}
 
   defp too_short(length, value, _opts) when length >= value, do: nil
   defp too_short(_length, value, opts), do:
-    {message(opts, "should be at least %{count} characters"), value}
+    {message(opts, "should be at least %{count} characters"), count: value}
 
   defp too_long(length, value, _opts) when length <= value, do: nil
   defp too_long(_length, value, opts), do:
-    {message(opts, "should be at most %{count} characters"), value}
+    {message(opts, "should be at most %{count} characters"), count: value}
 
   @doc """
   Validates the properties of a number.
@@ -1074,7 +1074,7 @@ defmodule Ecto.Changeset do
       {:ok, {spec_function, error_message}} ->
         case apply(spec_function, [value, target_value]) do
           true  -> nil
-          false -> [{field, {message(opts, error_message), target_value}}]
+          false -> [{field, {message(opts, error_message), count: target_value}}]
         end
       _ -> nil # if the spec_key isn't in the validators_map just ignore it
     end
