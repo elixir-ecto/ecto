@@ -96,7 +96,7 @@ defmodule Ecto.Embedded do
   end
 
   defp do_change(value, current, _mod) do
-    changes = Map.from_struct(value)
+    changes = Map.take(value, value.__struct__.__schema__(:fields))
     %{Changeset.change(current, changes) | action: :update}
   end
 
@@ -113,7 +113,7 @@ defmodule Ecto.Embedded do
     do_apply_changes(changeset)
   end
 
-  def apply_changes(%Embedded{cardinality: :one, container: :array}, changesets) do
+  def apply_changes(%Embedded{cardinality: :many, container: :array}, changesets) do
     changesets
     |> Enum.reduce([], fn changeset, acc ->
       case do_apply_changes(changeset) do
@@ -121,9 +121,10 @@ defmodule Ecto.Embedded do
         value -> [value | acc]
       end
     end)
-    |> Enum.reverese
+    |> Enum.reverse
   end
 
+  defp do_apply_changes(nil), do: nil
   defp do_apply_changes(%Changeset{action: :delete}), do: nil
   defp do_apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
@@ -138,6 +139,11 @@ defmodule Ecto.Embedded do
                      changesets, type) do
     Enum.map(changesets, &do_apply_callback(&1, type, module))
   end
+
+  defp do_apply_callback(nil, _type, _embed), do: nil
+
+  defp do_apply_callback(%{action: :update, changes: changes} = changeset, _, _)
+    when changes == %{}, do: changeset
 
   defp do_apply_callback(%{valid?: false}, _type, embed) do
     raise ArgumentError, "changeset for #{embed} is invalid, " <>
@@ -157,12 +163,9 @@ defmodule Ecto.Embedded do
   types = [:before, :after]
   actions = [:insert, :update, :delete]
 
-  Enum.map(types, fn type ->
-    Enum.map(actions, fn action ->
-      callback = :"#{type}_#{action}"
-      defp callback_for(unquote(type), unquote(action)), do: unquote(callback)
-    end)
-  end)
+  for type <- types, action <- actions do
+    defp callback_for(unquote(type), unquote(action)), do: unquote(:"#{type}_#{action}")
+  end
 
   defp callback_for(_type, nil) do
     raise ArgumentError, "embedded changeset action not set"

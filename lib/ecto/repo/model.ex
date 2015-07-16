@@ -41,15 +41,15 @@ defmodule Ecto.Repo.Model do
     # changeset as changes, except the primary key if it is nil.
     # We also remove all embeds that are not in the changes
     changeset = %{changeset | repo: repo, action: :insert}
-    changeset = sanitize_insert_changeset(struct, fields, embeds, changeset)
+    changeset = insert_changes(struct, fields, embeds, changeset)
 
     changeset = merge_autogenerate(changeset, model)
     {autogen, changeset} = merge_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                    ~w(before_insert after_insert)a, fn ->
-      changeset = apply_embedded_callbacks(embeds, changeset, :before)
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
+      changeset = apply_embedded_callbacks(embeds, changeset, :before)
       changes = validate_changes(:insert, changeset, model, fields, id_types)
 
       {:ok, values} = adapter.insert(repo, {prefix, source, model}, changes, autogen, return, opts)
@@ -87,8 +87,8 @@ defmodule Ecto.Repo.Model do
     if changeset.changes != %{} or opts[:force] do
       with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                      ~w(before_update after_update)a, fn ->
-        changeset = apply_embedded_callbacks(embeds, changeset, :before)
         changeset = Callbacks.__apply__(model, :before_update, changeset)
+        changeset = apply_embedded_callbacks(embeds, changeset, :before)
         changes   = validate_changes(:update, changeset, model, fields, id_types)
 
         filters = add_pk_filter!(changeset.filters, struct)
@@ -140,13 +140,13 @@ defmodule Ecto.Repo.Model do
 
     # We mark all embeds for deletion, and ignore other changes in changeset
     changeset = %{changeset | repo: repo, action: :delete}
-    changeset = sanitize_delete_changeset(changeset, model)
+    changeset = delete_changes(changeset, model)
     autogen   = get_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                    ~w(before_delete after_delete)a, fn ->
-      changeset = apply_embedded_callbacks(embeds, changeset, :before)
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
+      changeset = apply_embedded_callbacks(embeds, changeset, :before)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter.id_types(repo))
@@ -202,35 +202,21 @@ defmodule Ecto.Repo.Model do
     put_in model.__meta__.state, :loaded
   end
 
-  defp sanitize_delete_changeset(changeset, model) do
+  defp delete_changes(changeset, model) do
     embeds    = model.__schema__(:embeds) |> Enum.map(&{&1, nil})
     changeset = %{changeset | changes: %{}}
     Ecto.Changeset.change(changeset, embeds)
   end
 
-  defp sanitize_insert_changeset(struct, fields, embeds, changeset) do
-    old_changes = changeset.changes
-    types       = changeset.types
-    changes =
-      struct
-      |> Map.take(fields)
-      |> Map.drop(embeds)
-      |> Map.merge(old_changes)
-
-    changeset
-    |> Map.update!(:model, &reset_unchanged_embeds(&1, embeds, old_changes, types))
-    |> Map.put(:changes, changes)
-  end
-
-  defp reset_unchanged_embeds(model, embeds, changes, types) do
-    Enum.reduce(embeds, model, fn field, model ->
-      if Map.has_key?(changes, field) do
-        model
-      else
+  defp insert_changes(struct, fields, embeds, changeset) do
+    types = changeset.types
+    model_base_changes =
+      Enum.reduce embeds, Map.take(struct, fields), fn field, acc ->
         {:embed, embed} = Map.get(types, field)
-        Map.put(model, field, Ecto.Embedded.empty(embed))
+        Map.put(acc, field, Ecto.Embedded.empty(embed))
       end
-    end)
+
+    update_in changeset.changes, &Map.merge(model_base_changes, &1)
   end
 
   defp apply_embedded_callbacks([], changeset, _type), do: changeset
