@@ -356,6 +356,12 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s{UPDATE "model" AS m0 SET "w" = array_remove("w", 0)}
   end
 
+  test "update all with prefix" do
+    query = from(m in Model, update: [set: [x: 0]]) |> normalize(:update_all)
+    assert SQL.update_all(%{query | prefix: "prefix"}) ==
+           ~s{UPDATE "prefix"."model" AS m0 SET "x" = 0}
+  end
+
   test "delete all" do
     query = Model |> Queryable.to_query |> normalize
     assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0}
@@ -371,6 +377,11 @@ defmodule Ecto.Adapters.PostgresTest do
     query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
     assert SQL.delete_all(query) ==
            ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z" AND (m0."x" = 123)}
+  end
+
+  test "delete all with prefix" do
+    query = Model |> Queryable.to_query |> normalize
+    assert SQL.delete_all(%{query | prefix: "prefix"}) == ~s{DELETE FROM "prefix"."model" AS m0}
   end
 
   ## Joins

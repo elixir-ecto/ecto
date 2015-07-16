@@ -313,6 +313,12 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s{SET `x` = 0 WHERE (m0.`x` = 123)}
   end
 
+  test "update all with prefix" do
+    query = from(m in Model, update: [set: [x: 0]]) |> normalize(:update_all)
+    assert SQL.update_all(%{query | prefix: "prefix"}) ==
+           ~s{UPDATE `prefix`.`model` AS m0 SET `x` = 0}
+  end
+
   test "delete all" do
     query = Model |> Queryable.to_query |> normalize
     assert SQL.delete_all(query) == ~s{DELETE m0.* FROM `model` AS m0}
@@ -329,6 +335,11 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.delete_all(query) ==
            ~s{DELETE m0.* FROM `model` AS m0 } <>
            ~s{INNER JOIN `model2` AS m1 ON m0.`x` = m1.`z` WHERE (m0.`x` = 123)}
+  end
+
+  test "delete all with prefix" do
+    query = Model |> Queryable.to_query |> normalize
+    assert SQL.delete_all(%{query | prefix: "prefix"}) == ~s{DELETE m0.* FROM `prefix`.`model` AS m0}
   end
 
   ## Joins
