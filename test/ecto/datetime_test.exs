@@ -28,6 +28,21 @@ defmodule Ecto.DateTest do
            :error
   end
 
+  test "cast erl date" do
+    assert Ecto.Date.cast({2015, 12, 31}) == {:ok, @date}
+    assert Ecto.Date.cast({2015, 13, 31}) == :error
+  end
+
+  test "dump itself into a date triplet" do
+    assert Ecto.Date.dump(@date) == {:ok, {2015, 12, 31}}
+    assert Ecto.Date.dump({2015, 12, 31}) == :error
+  end
+
+  test "load a date triplet" do
+    assert Ecto.Date.load({2015, 12, 31}) == {:ok, @date}
+    assert Ecto.Date.load(@date) == :error
+  end
+
   test "to_string" do
     assert to_string(@date) == "2015-12-31"
     assert Ecto.Date.to_string(@date) == "2015-12-31"
@@ -95,6 +110,24 @@ defmodule Ecto.TimeTest do
            :error
     assert Ecto.Time.cast(%{hour: 23, min: nil}) ==
            :error
+  end
+
+  test "cast tuple" do
+    assert Ecto.Time.cast({23, 50, 07}) == {:ok, @time}
+    assert Ecto.Time.cast({12, 40, 33, 30000}) == {:ok, @time_usec}
+    assert Ecto.Time.cast({00, 61, 33}) == :error
+  end
+
+  test "dump itself into a time tuple" do
+    assert Ecto.Time.dump(@time) == {:ok, {23, 50, 7, 0}}
+    assert Ecto.Time.dump(@time_usec) == {:ok, {12, 40, 33, 30000}}
+    assert Ecto.Time.dump({23, 50, 07}) == :error
+  end
+
+  test "load tuple" do
+    assert Ecto.Time.load({23, 50, 07}) == {:ok, @time}
+    assert Ecto.Time.load({12, 40, 33, 30000}) == {:ok, @time_usec}
+    assert Ecto.Time.load(@time) == :error
   end
 
   test "to_string" do
@@ -179,6 +212,24 @@ defmodule Ecto.DateTimeTest do
 
     assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: nil}) ==
            :error
+  end
+
+  test "cast tuple" do
+    assert Ecto.DateTime.cast({{2015, 1, 23}, {23, 50, 07}}) == {:ok, @datetime}
+    assert Ecto.DateTime.cast({{2015, 1, 23}, {23, 50, 07, 8000}}) == {:ok, @datetime_usec}
+    assert Ecto.DateTime.cast({{2015, 1, 23}, {25, 50, 07, 8000}}) == :error
+  end
+
+  test "dump itself to a tuple" do
+    assert Ecto.DateTime.dump(@datetime) == {:ok, {{2015, 1, 23}, {23, 50, 07, 0}}}
+    assert Ecto.DateTime.dump(@datetime_usec) == {:ok, {{2015, 1, 23}, {23, 50, 07, 8000}}}
+    assert Ecto.DateTime.dump({{2015, 1, 23}, {23, 50, 07}}) == :error
+  end
+
+  test "load tuple" do
+    assert Ecto.DateTime.load({{2015, 1, 23}, {23, 50, 07}}) == {:ok, @datetime}
+    assert Ecto.DateTime.load({{2015, 1, 23}, {23, 50, 07, 8000}}) == {:ok, @datetime_usec}
+    assert Ecto.DateTime.load(@datetime) == :error
   end
 
   test "from_date" do

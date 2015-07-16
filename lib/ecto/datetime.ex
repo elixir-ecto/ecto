@@ -105,6 +105,7 @@ defmodule Ecto.Date do
   def dump(%Ecto.Date{year: year, month: month, day: day}) do
     {:ok, {year, month, day}}
   end
+  def dump(_), do: :error
 
   @doc """
   Converts a date triplet into an `Ecto.Date`.
@@ -112,6 +113,7 @@ defmodule Ecto.Date do
   def load({year, month, day}) do
     {:ok, %Ecto.Date{year: year, month: month, day: day}}
   end
+  def load(_), do: :error
 
   @doc """
   Converts `Ecto.Date` to a readable string representation.
@@ -208,6 +210,7 @@ defmodule Ecto.Time do
   def dump(%Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}) do
     {:ok, {hour, min, sec, usec}}
   end
+  def dump(_), do: :error
 
   @doc """
   Converts a time tuple like the one returned by `dump/1` into an `Ecto.Time`.
@@ -218,6 +221,7 @@ defmodule Ecto.Time do
   def load({_, _, _} = time) do
     {:ok, from_erl(time)}
   end
+  def load(_), do: :error
 
   @doc """
   Converts `Ecto.Time` to a string representation.
@@ -342,6 +346,7 @@ defmodule Ecto.DateTime do
   def dump(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}) do
     {:ok, {{year, month, day}, {hour, min, sec, usec}}}
   end
+  def dump(_), do: :error
 
   @doc """
   Converts a `{date, time}` tuple into an `Ecto.DateTime`.
@@ -353,6 +358,7 @@ defmodule Ecto.DateTime do
   def load({{_, _, _}, {_, _, _}} = datetime) do
     {:ok, erl_load(datetime)}
   end
+  def load(_), do: :error
 
   @doc """
   Converts `Ecto.DateTime` into an `Ecto.Date`.
