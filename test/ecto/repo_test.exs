@@ -273,18 +273,94 @@ defmodule Ecto.RepoTest do
     assert Agent.get(CallbackAgent, get_changes) == %{x: nil, y: nil, z: @uuid}
   end
 
-  test "runs callbacks in correct order with embeds" do
-    get_models = fn changesets ->
-      Enum.map(changesets, fn {stage, changeset} ->
-        {stage, changeset.model.__struct__}
-      end)
-    end
+  defp get_models(changesets) do
+    Enum.map(changesets, fn {stage, changeset} ->
+      {stage, changeset.model.__struct__}
+    end)
+  end
 
-    changeset = Ecto.Changeset.change(%MyModel{}, embed: %MyEmbed{x: "xyz"})
+  test "handles embeds on insert" do
+    embed = %MyEmbed{x: "xyz"}
 
-    TestRepo.insert!(changeset)
+    # Rejects embeds when inserting model
+    model = TestRepo.insert!(%MyModel{embed: embed})
+    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == nil
+
+    # Only if embed is in changeset
+    changeset = Ecto.Changeset.change(%MyModel{embed: embed})
+    model = TestRepo.insert!(changeset)
+    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == nil
+
+    changeset = Ecto.Changeset.change(%MyModel{}, embed: embed)
+    model = TestRepo.insert!(changeset)
     assert [{:after_insert, MyModel}, {:after_insert, MyEmbed},
             {:before_insert, MyModel}, {:before_insert, MyEmbed} | _] =
-      Agent.get(CallbackAgent, get_models)
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == embed
+  end
+
+  test "handled embeds on update" do
+    embed = %MyEmbed{id: @uuid, x: "xyz"}
+
+    # Leaves embeds untouched when updatting model
+    model = TestRepo.update!(%MyModel{id: 1, embed: embed})
+    assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == embed
+
+    # If embed is not in changeset, embeds are left out
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, x: "abc")
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == embed
+
+    # Inserting the embed
+    changeset = Ecto.Changeset.change(%MyModel{id: 1}, embed: embed)
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_insert, MyEmbed},
+            {:before_update, MyModel}, {:before_insert, MyEmbed} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == embed
+
+    # Changeing the embed
+    embed_changeset = Ecto.Changeset.change(embed, x: "abc")
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: embed_changeset)
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_update, MyEmbed},
+            {:before_update, MyModel}, {:before_update, MyEmbed} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == %MyEmbed{x: "abc", id: @uuid}
+
+    # Deleting the embed
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: nil)
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_delete, MyEmbed},
+            {:before_update, MyModel}, {:before_delete, MyEmbed} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == nil
+  end
+
+  test "handles embeds on delete" do
+    embed = %MyEmbed{id: @uuid, x: "xyz"}
+
+    # With model runs all callbacks
+    model = TestRepo.delete!(%MyModel{id: 1, embed: embed})
+    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
+            {:before_delete, MyModel}, {:before_delete, MyEmbed} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == nil
+
+    # With changeset runs all callbacks
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed})
+    model = TestRepo.delete!(changeset)
+    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
+            {:before_delete, MyModel}, {:before_delete, MyEmbed} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == nil
   end
 end

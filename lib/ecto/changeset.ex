@@ -600,8 +600,13 @@ defmodule Ecto.Changeset do
   end
 
   defp put_change(model, acc, key, value, {:embed, embed}) do
-    value = Ecto.Embedded.change(embed, value, Map.get(model, key))
-    Map.put(acc, key, value)
+    old_value = Map.get(model, key)
+    if value == old_value do
+      acc
+    else
+      value = Ecto.Embedded.change(embed, value, old_value)
+      Map.put(acc, key, value)
+    end
   end
 
   defp put_change(model, acc, key, value, _type) do
@@ -708,11 +713,15 @@ defmodule Ecto.Changeset do
 
   """
   @spec apply_changes(t) :: Ecto.Model.t
-  def apply_changes(%Changeset{changes: changes, model: model}) do
+  def apply_changes(%Changeset{changes: changes, model: model, types: types}) do
     changes =
-      Enum.map(changes, fn
-        {key, %Changeset{} = value} -> {key, apply_changes(value)}
-        kv                          -> kv
+      Enum.map(changes, fn {key, value} = kv ->
+        case Map.get(types, key) do
+          {:embed, embed} ->
+            {key, Ecto.Embedded.apply_changes(embed, value)}
+          _ ->
+            kv
+        end
       end)
 
     struct(model, changes)

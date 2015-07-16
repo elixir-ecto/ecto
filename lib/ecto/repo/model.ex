@@ -38,9 +38,10 @@ defmodule Ecto.Repo.Model do
     id_types = adapter.id_types(repo)
 
     # On insert, we always merge the whole struct into the
-    # changeset as changes, except the primary key if it is nil, and embeds.
+    # changeset as changes, except the primary key if it is nil.
+    # We also remove all embeds that are not in the changes
     changeset = %{changeset | repo: repo, action: :insert}
-    changeset = merge_into_changeset(struct, fields, embeds, changeset)
+    changeset = sanitize_insert_changeset(struct, fields, embeds, changeset)
 
     changeset = merge_autogenerate(changeset, model)
     {autogen, changeset} = merge_autogenerate_id(changeset, model)
@@ -56,7 +57,7 @@ defmodule Ecto.Repo.Model do
       # Embeds can't be `read_after_writes` so we don't have to be concerned
       # with values returned from the adapter
       changeset = apply_embedded_callbacks(embeds, changeset, :after)
-      changeset = load_into_changeset(changeset, values, id_types)
+      changeset = load_changes(changeset, values, id_types)
       Callbacks.__apply__(model, :after_insert, changeset).model
     end
   end
@@ -86,6 +87,7 @@ defmodule Ecto.Repo.Model do
     if changeset.changes != %{} or opts[:force] do
       with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                      ~w(before_update after_update)a, fn ->
+        changeset = apply_embedded_callbacks(embeds, changeset, :before)
         changeset = Callbacks.__apply__(model, :before_update, changeset)
         changes   = validate_changes(:update, changeset, model, fields, id_types)
 
@@ -104,7 +106,10 @@ defmodule Ecto.Repo.Model do
             []
           end
 
-        changeset = load_into_changeset(changeset, values, id_types)
+        # As in insert embeds can't be `read_after_writes` so we don't have
+        # to be concerned with values returned from the adapter
+        changeset = apply_embedded_callbacks(embeds, changeset, :after)
+        changeset = load_changes(changeset, values, id_types)
         Callbacks.__apply__(model, :after_update, changeset).model
       end
     else
@@ -131,13 +136,16 @@ defmodule Ecto.Repo.Model do
     model  = struct.__struct__
     {prefix, source} = struct.__meta__.source
     embeds = model.__schema__(:embeds)
+    id_types = adapter.id_types(repo)
 
-    # There are no field changes on delete
+    # We mark all embeds for deletion, and ignore other changes in changeset
     changeset = %{changeset | repo: repo, action: :delete}
+    changeset = sanitize_delete_changeset(changeset, model)
     autogen   = get_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                    ~w(before_delete after_delete)a, fn ->
+      changeset = apply_embedded_callbacks(embeds, changeset, :before)
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
       filters = add_pk_filter!(changeset.filters, struct)
@@ -149,6 +157,9 @@ defmodule Ecto.Repo.Model do
           raise Ecto.StaleModelError, model: struct, action: :delete
       end
 
+      # We load_changes as we need to remove all embeds
+      changeset = apply_embedded_callbacks(embeds, changeset, :after)
+      changeset = load_changes(changeset, [], id_types)
       model = Callbacks.__apply__(model, :after_delete, changeset).model
       put_in model.__meta__.state, :deleted
     end
@@ -167,7 +178,7 @@ defmodule Ecto.Repo.Model do
   defp struct_from_changeset!(%{model: struct}),
     do: struct
 
-  defp load_into_changeset(%{types: types} = changeset, values, id_types) do
+  defp load_changes(%{types: types} = changeset, values, id_types) do
     # It is ok to use types from changeset because we have
     # already filtered the results to be only about fields.
     model =
@@ -191,13 +202,35 @@ defmodule Ecto.Repo.Model do
     put_in model.__meta__.state, :loaded
   end
 
-  defp merge_into_changeset(struct, fields, embeds, changeset) do
+  defp sanitize_delete_changeset(changeset, model) do
+    embeds    = model.__schema__(:embeds) |> Enum.map(&{&1, nil})
+    changeset = %{changeset | changes: %{}}
+    Ecto.Changeset.change(changeset, embeds)
+  end
+
+  defp sanitize_insert_changeset(struct, fields, embeds, changeset) do
+    old_changes = changeset.changes
+    types       = changeset.types
     changes =
       struct
       |> Map.take(fields)
       |> Map.drop(embeds)
+      |> Map.merge(old_changes)
 
-    update_in changeset.changes, &Map.merge(changes, &1)
+    changeset
+    |> Map.update!(:model, &reset_unchanged_embeds(&1, embeds, old_changes, types))
+    |> Map.put(:changes, changes)
+  end
+
+  defp reset_unchanged_embeds(model, embeds, changes, types) do
+    Enum.reduce(embeds, model, fn field, model ->
+      if Map.has_key?(changes, field) do
+        model
+      else
+        {:embed, embed} = Map.get(types, field)
+        Map.put(model, field, Ecto.Embedded.empty(embed))
+      end
+    end)
   end
 
   defp apply_embedded_callbacks([], changeset, _type), do: changeset

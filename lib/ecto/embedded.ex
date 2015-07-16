@@ -63,41 +63,69 @@ defmodule Ecto.Embedded do
   @doc """
   Wraps embedded models in changesets.
   """
-  def change(%Embedded{cardinality: :one}, value, current) do
-    do_change(value, current)
+  def change(%Embedded{cardinality: :one, embed: mod}, value, current) do
+    do_change(value, current, mod)
   end
 
+  # We accept nil here to make is easier to mark embeds recursively
+  # for deletion, otherwise we would need to guess what to pass [] or nil
   def change(%Embedded{cardinality: :many, container: :array, embed: mod},
-             value, current) when is_list(value) do
+             value, current) when is_list(value) or is_nil(value) do
     {pk, _} = primary_key(mod)
     current = process_current(current, pk)
-    map_changes(value, pk, &do_change/2, current, [], true) |> elem(1)
+    map_changes(value || [], pk, &do_change(&1, &2, mod), current, [], true) |> elem(1)
   end
 
-  defp do_change(value, nil) do
+  defp do_change(value, nil, _mod) do
     %{Changeset.change(value) | action: :insert}
   end
 
-  defp do_change(nil, current) do
-    %{Changeset.change(current) | action: :delete}
+  defp do_change(nil, current, mod) do
+    # We need to mark all embeds for deletion too
+    changes = mod.__schema__(:embeds) |> Enum.map(&{&1, nil})
+    %{Changeset.change(current, changes) | action: :delete}
   end
 
-  defp do_change(%Changeset{model: current} = changeset, current) do
+  defp do_change(%Changeset{model: current} = changeset, current, _mod) do
     %{changeset | action: :update}
   end
 
-  defp do_change(%Changeset{}, _current) do
+  defp do_change(%Changeset{}, _current, _mod) do
     raise ArgumentError, "embedded changeset does not change the model already" <>
       "preset in the parent model"
   end
 
-  # defp do_change(current, current) do
-  # TODO: What action do we set in that case?
-  # end
-
-  defp do_change(value, _current) do
-    %{Changeset.change(value) | action: :insert}
+  defp do_change(value, current, _mod) do
+    changes = Map.from_struct(value)
+    %{Changeset.change(current, changes) | action: :update}
   end
+
+  @doc """
+  Returns empty container for embed
+  """
+  def empty(%Embedded{cardinality: :one}), do: nil
+  def empty(%Embedded{cardinality: :many, container: :array}), do: []
+
+  @doc """
+  Applies embedded changeset changes
+  """
+  def apply_changes(%Embedded{cardinality: :one}, changeset) do
+    do_apply_changes(changeset)
+  end
+
+  def apply_changes(%Embedded{cardinality: :one, container: :array}, changesets) do
+    changesets
+    |> Enum.reduce([], fn changeset, acc ->
+      case do_apply_changes(changeset) do
+        nil   -> acc
+        value -> [value | acc]
+      end
+    end)
+    |> Enum.reverese
+  end
+
+  defp do_apply_changes(%Changeset{action: :delete}), do: nil
+  defp do_apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
   @doc """
   Applies given callback to all models based on changeset action
