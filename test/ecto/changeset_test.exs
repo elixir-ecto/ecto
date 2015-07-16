@@ -13,7 +13,7 @@ defmodule Ecto.ChangesetTest do
       field :uuid, :binary_id
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
-      field :published_at, :datetime
+      field :published_at, Ecto.DateTime
       embeds_one :author, Author
     end
   end

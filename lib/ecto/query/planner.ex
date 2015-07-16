@@ -165,13 +165,11 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cast_param(kind, type, v, id_types) do
-    # If the type is a primitive type and we are giving it
-    # a struct, we first check if the struct type and the
-    # given type are match and, if so, use the struct type
-    # when dumping.
-    if Ecto.Type.primitive?(type) &&
-       (struct = param_struct(v)) &&
-       Ecto.Type.match?(struct.type, type) do
+    # If we are giving a struct, we first check if the struct
+    # type and the given type are match and, if so, use the
+    # struct type when dumping.
+    if (struct = param_struct(v)) &&
+       Ecto.Type.match?(struct, type) do
       {:dump, struct, v}
     else
       case Ecto.Type.cast(type, v, id_types) do

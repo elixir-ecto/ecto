@@ -90,7 +90,8 @@ defmodule Ecto.Date do
     do: from_parts(to_i(year), to_i(month), to_i(day))
   def cast(%{year: year, month: month, day: day}),
     do: from_parts(to_i(year), to_i(month), to_i(day))
-  def cast({year, month, day}), do: from_parts(to_i(year), to_i(month), to_i(day))
+  def cast({year, month, day}),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
   def cast(_),
     do: :error
 
@@ -193,8 +194,10 @@ defmodule Ecto.Time do
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), to_i(Map.get(map, "usec", 0)))
   def cast(%{hour: hour, min: min} = map),
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)), to_i(Map.get(map, :usec, 0)))
-  def cast({hour, min, sec}), do: from_parts(to_i(hour), to_i(min), to_i(sec), 0)
-  def cast({hour, min, sec, usec}), do: from_parts(to_i(hour), to_i(min), to_i(sec), to_i(usec))
+  def cast({hour, min, sec}),
+    do: from_parts(to_i(hour), to_i(min), to_i(sec), 0)
+  def cast({hour, min, sec, usec}),
+    do: from_parts(to_i(hour), to_i(min), to_i(sec), to_i(usec))
   def cast(_),
     do: :error
 

@@ -102,40 +102,4 @@ defmodule Ecto.TypeTest do
     assert cast(:decimal, 1.0, %{}) == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1, %{}) == {:ok, Decimal.new("1")}
   end
-
-  test "datetime types" do
-    erlang_datetime = {{2015, 5, 27}, {11, 30, 00}}
-    datetime = Ecto.DateTime.from_erl(erlang_datetime)
-    assert load(:datetime, erlang_datetime, %{}) == {:ok, datetime}
-    assert dump(:datetime, datetime, %{}) == {:ok, {{2015, 5, 27}, {11, 30, 0, 0}}}
-    assert cast(:datetime, erlang_datetime, %{}) == {:ok, datetime}
-
-    datetime_with_usec = {{2015, 5, 27}, {11, 30, 00, 27}}
-    ecto_datetime = %Ecto.DateTime{year: 2015, month: 5, day: 27, hour: 11, min: 30, sec: 00, usec: 27}
-    assert load(:datetime, datetime_with_usec, %{}) == {:ok, ecto_datetime}
-    assert dump(:datetime, ecto_datetime, %{}) == {:ok, datetime_with_usec}
-    assert cast(:datetime, datetime_with_usec, %{}) == {:ok, ecto_datetime}
-  end
-
-  test "time types" do
-    erlang_time = {11, 30, 00}
-    time = Ecto.Time.from_erl(erlang_time)
-    assert load(:time, erlang_time, %{}) == {:ok, time}
-    assert dump(:time, time, %{}) == {:ok, {11, 30, 0, 0}}
-    assert cast(:time, erlang_time, %{}) == {:ok, time}
-
-    time_with_usec = {11, 30, 00, 27}
-    ecto_time = %Ecto.Time{hour: 11, min: 30, sec: 00, usec: 27}
-    assert load(:time, time_with_usec, %{}) == {:ok, ecto_time}
-    assert dump(:time, ecto_time, %{}) == {:ok, time_with_usec}
-    assert cast(:time, time_with_usec, %{}) == {:ok, ecto_time}
-  end
-
-  test "date types" do
-    erlang_date = {2015, 5, 27}
-    date = Ecto.Date.from_erl(erlang_date)
-    assert load(:date, erlang_date, %{}) == {:ok, date}
-    assert dump(:date, date, %{}) == {:ok, {2015, 5, 27}}
-    assert cast(:date, erlang_date, %{}) == {:ok, date}
-  end
 end

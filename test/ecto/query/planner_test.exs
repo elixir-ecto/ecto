@@ -29,7 +29,7 @@ defmodule Ecto.Query.PlannerTest do
       field :title, :string
       field :text, :string
       field :code, :binary
-      field :posted, :datetime
+      field :posted, Ecto.DateTime
       field :visits, :integer
       field :links, {:array, Custom.Permalink}
       has_many :comments, Ecto.Query.PlannerTest.Comment
@@ -251,7 +251,7 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1]
 
     assert_raise Ecto.QueryError, fn ->
-      from(Post, []) |> select([p], type(^"1", :datetime)) |> normalize
+      from(Post, []) |> select([p], type(^"1", Ecto.DateTime)) |> normalize
     end
   end
 

@@ -125,27 +125,17 @@ defmodule Ecto.Schema do
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
   `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
   `:map`                  | `map`
-  `:datetime`             | `{{year, month, day}, {hour, min, sec}}`
-  `:date`                 | `{year, month, day}`
-  `:time`                 | `{hour, min, sec}`
 
-  **Note:** For the `:array` type, replace `inner_type` with one of the valid types, such as `:string`.
-
-  **Note:** Although Ecto provides `:date`, `:time` and `:datetime`, you
-  likely want to use `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` respectively.
-  See the Custom types sections below about types that enhance the primitive
-  ones.
+  **Note:** For the `:array` type, replace `inner_type` with one of
+  the valid types, such as `:string`.
 
   ### Custom types
 
-  Sometimes the primitive types in Ecto are too primitive. For example,
-  `:datetime` relies on the underling tuple representation instead of
-  representing itself as something nicer like a map/struct. That's where
-  `Ecto.DateTime` comes in.
+  Besides providing primitive types, Ecto allows custom types to be
+  implemented by developers, allowing Ecto behaviour to be extended.
 
-  `Ecto.DateTime` is a custom type. A custom type is a module that
-  implements the `Ecto.Type` behaviour. By default, Ecto provides the
-  following custom types:
+  A custom type is a module that implements the `Ecto.Type` behaviour.
+  By default, Ecto provides the following custom types:
 
   Custom type             | Database type           | Elixir type
   :---------------------- | :---------------------- | :---------------------
@@ -154,8 +144,8 @@ defmodule Ecto.Schema do
   `Ecto.Time`             | `:time`                 | `%Ecto.Time{}`
   `Ecto.UUID`             | `:uuid`                 | "uuid-string"
 
-  Ecto allow developers to provide their own types too. Read the
-  `Ecto.Type` documentation for more information.
+  Read the `Ecto.Type` documentation for more information on implementing
+  your own types.
 
   ### The map type
 

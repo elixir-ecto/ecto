@@ -65,7 +65,7 @@ defmodule Ecto.Integration.TypeTest do
     # Datetime
     datetime = {{2014, 04, 17}, {14, 00, 00, 00}}
     ecto_datetime = %Ecto.DateTime{year: 2014, month: 4, day: 17, hour: 14, min: 0, sec: 0, usec: 0}
-    assert [^ecto_datetime] = TestRepo.all(from Post, select: type(^datetime, :datetime))
+    assert [^ecto_datetime] = TestRepo.all(from Post, select: type(^datetime, Ecto.DateTime))
 
     # Custom wrappers
     assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
