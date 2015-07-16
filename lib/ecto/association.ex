@@ -526,6 +526,8 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
+  # TODO: Consider if we should support this given
+  #       we always run parent callbacks earlier
   def build(%{assoc: assoc, queryable: queryable, defaults: defaults}, _struct, attributes) do
     assoc
     |> struct(defaults)

@@ -415,7 +415,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.upvotes == nil
   end
 
-  test "change/2 put_change/3 force_change/3 wth embeds" do
+  test "change/2, put_change/3, force_change/3 wth embeds" do
     base_changeset = change(%Post{upvotes: 5})
 
     changeset = change(base_changeset, author: %Author{name: "michal"})

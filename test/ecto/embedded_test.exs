@@ -54,6 +54,7 @@ defmodule Ecto.EmbeddedTest do
   test "cast embeds_one with valid params" do
     changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, ~w(profile))
     profile = changeset.changes.profile
+    assert changeset.required == [:profile]
     assert profile.changes == %{name: "michal"}
     assert profile.errors == []
     assert profile.action  == :insert
@@ -109,6 +110,7 @@ defmodule Ecto.EmbeddedTest do
     changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}},
                      [profile: :optional_changeset])
     profile = changeset.changes.profile
+    assert changeset.required == [:profile]
     assert profile.changes == %{name: "michal"}
     assert profile.errors  == []
     assert profile.action  == :insert
@@ -117,6 +119,7 @@ defmodule Ecto.EmbeddedTest do
 
     changeset = cast(%Author{}, %{"profile" => %{}}, [profile: :optional_changeset])
     profile = changeset.changes.profile
+    assert changeset.required == [:profile]
     assert profile.changes == %{}
     assert profile.errors  == []
     assert profile.action  == :insert

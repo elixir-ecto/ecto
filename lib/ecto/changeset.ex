@@ -146,28 +146,6 @@ defmodule Ecto.Changeset do
   are present either in the model or in the given params, the
   changeset is returned as valid.
 
-  ## Empty parameters
-
-  The `params` argument can also be the atom `:empty`. In such cases, the
-  changeset is automatically marked as invalid, with an empty `:changes` map.
-  This is useful to run the changeset through all validation steps for
-  introspection.
-
-  ## Composing casts
-
-  `cast/4` also accepts a changeset instead of a model as its first argument.
-  In such cases, all the effects caused by the call to `cast/4` (additional and
-  optional fields, errors and changes) are simply added to the ones already
-  present in the argument changeset. Parameters are merged (**not deep-merged**)
-  and the ones passed to `cast/4` take precedence over the ones already in the
-  changeset.
-
-  Note that if a field is marked both as *required* as well as *optional* (for
-  example by being in the `:required` field of the argument changeset and also
-  in the `optional` list passed to `cast/4`), then it will be marked as required
-  and not optional. This represents the fact that required fields are
-  "stronger" than optional fields.
-
   ## Examples
 
       iex> changeset = cast(post, params, ~w(title), ~w())
@@ -185,6 +163,35 @@ defmodule Ecto.Changeset do
       [:title]
       iex> new_changeset.optional
       [:body]
+
+  ## Empty parameters
+
+  The `params` argument can also be the atom `:empty`. In such cases, the
+  changeset is automatically marked as invalid, with an empty `:changes` map.
+  This is useful to run the changeset through all validation steps for
+  introspection:
+
+      iex> changeset = cast(post, :empty, ~w(title), ~w())
+      iex> changeset = validate_length(post, :title, min: 3)
+      iex> changeset.validations
+      [title: [min: 3]]
+
+  ## Composing casts
+
+  `cast/4` also accepts a changeset instead of a model as its first argument.
+  In such cases, all the effects caused by the call to `cast/4` (additional and
+  optional fields, errors and changes) are simply added to the ones already
+  present in the argument changeset. Parameters are merged (**not deep-merged**)
+  and the ones passed to `cast/4` take precedence over the ones already in the
+  changeset.
+
+  Note that if a field is marked both as *required* as well as *optional* (for
+  example by being in the `:required` field of the argument changeset and also
+  in the `optional` list passed to `cast/4`), then it will be marked as required
+  and not optional. This represents the fact that required fields are
+  "stronger" than optional fields.
+
+
 
   """
   @spec cast(Ecto.Model.t | t,
