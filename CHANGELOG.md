@@ -4,12 +4,15 @@
 
 * Enhancements
   * Add `Ecto.Adapters.SQL.to_sql/3`
+  * Allow preloads to be customized with queries
   * Store the connection PID in `Ecto.LogEntry`
   * Add `Ecto.Pools.SojournBroker` as a more flexible and customizable alternative to `Ecto.Pools.Poolboy`
   * Support `:on_delete` when defining `has_many` and `belongs_to` in schema
   * Allow renaming tables in migration
   * Include Ecto's processing time along side adapter processing on `Ecto.LogEntry.query_time`
   * Introduce `Ecto.Repo.after_connect/1`
+  * Support `date_add/3` and `datetime_add/3` for interval based datetime operations
+  * Support `:push` and `:pull` array operations in `Ecto.Repo.update_all/3`
 
 * Bug fixes
   * Ensure uniqueness validatior runs the proper check when a scope changed but the value is still the same
@@ -21,6 +24,7 @@
 * Backwards incompatible changes
   * `Ecto.Repo.update!/2` no longer invokes callbacks if there were no changes, avoiding writing to the database at all (use `:force` to force callback execution)
   * `Ecto.Repo.transaction/2` is now flattened. This means that multiple transaction calls will no longer use savepoins, instead if will be considered as a single transaction, where a failure in any transaction block will trigger the outmost transaction to rollback, even if failures are rescued. This should only affect users that were explicitly relying on the savepoints.
+  * `:date`, `:time` and `:datetime` were removed in favor of `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime`
 
 * Adapter backwards incompatible changes
   * Pass `{source, model}` in `Ecto.Adapter.insert/update/delete`
