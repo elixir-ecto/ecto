@@ -44,11 +44,11 @@ defmodule Ecto.Model.TimestampsTest do
 
   test "sets custom inserted_at and updated_at values" do
     default = TestRepo.insert!(%Config{})
-    assert {_, _} = default.created_on
-    assert {_, _} = default.updated_on
+    assert %Ecto.DateTime{} = default.created_on
+    assert %Ecto.DateTime{} = default.updated_on
 
     default = TestRepo.update!(%Config{id: 1})
     refute default.created_on
-    assert {_, _} = default.updated_on
+    assert %Ecto.DateTime{} = default.updated_on
   end
 end

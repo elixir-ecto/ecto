@@ -13,6 +13,7 @@ defmodule Ecto.ChangesetTest do
       field :uuid, :binary_id
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
+      field :published_at, :datetime
       embeds_one :author, Author
     end
   end
@@ -194,6 +195,18 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes  == %{body: "new body"}
     assert changeset.required == [:title]
     assert changeset.optional == [:body]
+  end
+
+  test "cast/4: works on casting a datetime field" do
+    date = %Ecto.DateTime{year: 2015, month: 5, day: 1, hour: 10, min: 8, sec: 0}
+    params = %{"published_at" => date}
+    struct = %Post{}
+
+    changeset = cast(struct, params, ~w(published_at), ~w())
+    assert changeset.params == params
+    assert changeset.model  == struct
+    assert changeset.changes == %{published_at: date}
+    assert changeset.valid?
   end
 
   ## Changeset functions
