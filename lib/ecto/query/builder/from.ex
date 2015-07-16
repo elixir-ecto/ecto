@@ -59,14 +59,14 @@ defmodule Ecto.Query.Builder.From do
           # Get the source at runtime so no unnecessary compile time
           # dependencies between modules are added
           source = quote do: unquote(model).__schema__(:source)
-          {1, query(source, model)}
+          {1, query(nil, source, model)}
 
         source when is_binary(source) ->
           # When a binary is used, there is no model
-          {1, query(source, nil)}
+          {1, query(nil, source, nil)}
 
         {source, model} when is_binary(source) ->
-          {1, query(source, model)}
+          {1, query(nil, source, model)}
 
         other ->
           {nil, other}
@@ -76,8 +76,8 @@ defmodule Ecto.Query.Builder.From do
     {quoted, binds, count_bind}
   end
 
-  defp query(source, model) do
-    {:%, [], [Ecto.Query, {:%{}, [], [from: {source, model}]}]}
+  defp query(search_path, source, model) do
+    {:%, [], [Ecto.Query, {:%{}, [], [from: {search_path, source, model}]}]}
   end
 
   @doc """
