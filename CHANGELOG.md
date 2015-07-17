@@ -23,7 +23,7 @@
 
 * Backwards incompatible changes
   * `Ecto.Repo.update!/2` no longer invokes callbacks if there were no changes, avoiding writing to the database at all (use `:force` to force callback execution)
-  * `Ecto.Repo.transaction/2` is now flattened. This means that multiple transaction calls will no longer use savepoins, instead if will be considered as a single transaction, where a failure in any transaction block will trigger the outmost transaction to rollback, even if failures are rescued. This should only affect users that were explicitly relying on the savepoints.
+  * `Ecto.Repo.transaction/2` is now flattened. This means that multiple transaction calls will no longer use savepoints, instead it will be considered as a single transaction, where a failure in any transaction block will trigger the outmost transaction to rollback, even if failures are rescued. This should only affect users that were explicitly relying on the savepoints.
   * `:date`, `:time` and `:datetime` were removed in favor of `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime`
   * `Ecto.Changeset.errors` now return `{"shuold be less than %{count}", count: 3}` instead of `{"shuold be less than %{count}", 3}`
 
