@@ -14,6 +14,17 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       Mariaex.Connection.start_link(opts)
     end
 
+    def query(conn, sqls, params, opts) when is_list(sqls) do
+      Enum.reduce sqls, {}, fn(sql, response) ->
+        case response do
+          {:error, _} ->
+            response
+          _ ->
+            query(conn, sql, params, opts)
+        end
+      end
+    end
+
     def query(conn, sql, params, opts \\ []) do
       params = Enum.map params, fn
         %Ecto.Query.Tagged{value: value} -> value
@@ -478,6 +489,15 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
       "RENAME TABLE #{quote_table(current_table.name)} TO #{quote_table(new_table.name)}"
+    end
+
+    def execute_ddl({:rename, %Table{}=table, current_column, new_column}) do
+      [
+        "SELECT @column_type := COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '#{table.name}' AND COLUMN_NAME = '#{current_column}' LIMIT 1",
+        "SET @rename_stmt = concat('ALTER TABLE `#{table.name}` CHANGE COLUMN `#{current_column}` `#{new_column}` ', @column_type)",
+        "PREPARE rename_stmt FROM @rename_stmt",
+        "EXECUTE rename_stmt"
+      ]
     end
 
     def execute_ddl(string) when is_binary(string), do: string

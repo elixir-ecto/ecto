@@ -137,6 +137,13 @@ defmodule Ecto.MigrationTest do
                {:remove, :views}]}
   end
 
+  test "forward: rename column" do
+    rename table(:posts), :given_name, to: :first_name
+    flush
+
+    assert last_command() == {:rename, %Table{name: :posts}, :given_name, :first_name}
+  end
+
   test "forward: drops a table" do
     drop table(:posts)
     flush
@@ -204,6 +211,13 @@ defmodule Ecto.MigrationTest do
       end
       flush
     end
+  end
+
+  test "backward: rename column" do
+    rename table(:posts), :given_name, to: :first_name
+    flush
+
+    assert last_command() == {:rename, %Table{name: :posts}, :first_name, :given_name}
   end
 
   test "backward: drops a table" do

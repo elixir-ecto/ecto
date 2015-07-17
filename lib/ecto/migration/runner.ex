@@ -157,6 +157,10 @@ defmodule Ecto.Migration.Runner do
   end
   defp reverse({:rename, %Table{}=table_current, %Table{}=table_new}),
     do: {:rename, table_new, table_current}
+  defp reverse({:rename, %Table{}=table_current, %Table{}=table_new}),
+    do: {:rename, table_new, table_current}
+  defp reverse({:rename, %Table{}=table, current_column, new_column}),
+    do: {:rename, table, new_column, current_column}
   defp reverse(_command), do: false
 
   defp table_reverse([]),   do: []
@@ -209,4 +213,6 @@ defmodule Ecto.Migration.Runner do
     do: "drop index if exists #{index.name}"
   defp command({:rename, %Table{} = current_table, %Table{} = new_table}),
     do: "rename table #{current_table.name} to #{new_table.name}"
+  defp command({:rename, %Table{} = table, current_column, new_column}),
+    do: "rename column #{current_column} to #{new_column} on table #{table.name}"
 end

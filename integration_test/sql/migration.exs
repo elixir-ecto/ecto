@@ -108,6 +108,24 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule RenameColumnMigration do
+    use Ecto.Migration
+
+    def up do
+      create table(:rename_col_migration) do
+        add :to_be_renamed, :integer
+      end
+
+      rename table(:rename_col_migration), :to_be_renamed, to: :was_renamed
+
+      execute "INSERT INTO rename_col_migration (was_renamed) VALUES (1)"
+    end
+
+    def down do
+      drop table(:rename_col_migration)
+    end
+  end
+
   defmodule OnDeleteMigration do
     use Ecto.Migration
 
@@ -281,7 +299,14 @@ defmodule Ecto.Integration.MigrationTest do
     :ok = down(TestRepo, 20090906120000, DropColumnMigration, log: false)
   end
 
-  @tag :rename
+  @tag :rename_column
+  test "rename column" do
+    assert :ok == up(TestRepo, 20150718120000, RenameColumnMigration, log: false)
+    assert 1 == TestRepo.one from p in "rename_col_migration", select: p.was_renamed
+    :ok = down(TestRepo, 20150718120000, RenameColumnMigration, log: false)
+  end
+
+  @tag :rename_table
   test "rename table" do
     assert :ok == up(TestRepo, 20150712120000, RenameMigration, log: false)
     assert :ok == down(TestRepo, 20150712120000, RenameMigration, log: false)
