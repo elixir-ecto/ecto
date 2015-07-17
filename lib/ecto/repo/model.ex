@@ -42,18 +42,19 @@ defmodule Ecto.Repo.Model do
     # We also remove all embeds that are not in the changes
     changeset = %{changeset | repo: repo, action: :insert}
     changeset = insert_changes(struct, fields, embeds, changeset)
-    {autogen, changeset} = merge_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                    ~w(before_insert after_insert)a, fn ->
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
       changeset = apply_embedded_callbacks(embeds, changeset, :before)
-      changes = validate_changes(:insert, changeset, model, fields, id_types)
+
+      {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
+      changes = validate_changes(:insert, changes, model, fields, id_types)
 
       {:ok, values} = adapter.insert(repo, {prefix, source, model}, changes, autogen, return, opts)
 
-      # Embeds can't be `read_after_writes` so we don't have to be concerned
-      # with values returned from the adapter
+      # Embeds can't be `read_after_writes` so we don't care
+      # about values returned from the adapter
       changeset = apply_embedded_callbacks(embeds, changeset, :after)
       changeset = load_changes(changeset, values, id_types)
       Callbacks.__apply__(model, :after_insert, changeset).model
@@ -80,14 +81,15 @@ defmodule Ecto.Repo.Model do
     # fields into the changeset. All changes must be in the
     # changeset before hand.
     changeset = %{changeset | repo: repo, action: :update}
-    autogen   = get_autogenerate_id(changeset, model)
 
     if changeset.changes != %{} or opts[:force] do
       with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                      ~w(before_update after_update)a, fn ->
         changeset = Callbacks.__apply__(model, :before_update, changeset)
         changeset = apply_embedded_callbacks(embeds, changeset, :before)
-        changes   = validate_changes(:update, changeset, model, fields, id_types)
+
+        autogen = get_autogenerate_id(changeset.changes, model)
+        changes = validate_changes(:update, changeset.changes, model, fields, id_types)
 
         filters = add_pk_filter!(changeset.filters, struct)
         filters = Planner.fields(model, :update, filters, id_types)
@@ -104,8 +106,8 @@ defmodule Ecto.Repo.Model do
             []
           end
 
-        # As in insert embeds can't be `read_after_writes` so we don't have
-        # to be concerned with values returned from the adapter
+        # As in inserts, embeds can't be `read_after_writes` so we don't care
+        # about values returned from the adapter
         changeset = apply_embedded_callbacks(embeds, changeset, :after)
         changeset = load_changes(changeset, values, id_types)
         Callbacks.__apply__(model, :after_update, changeset).model
@@ -235,29 +237,27 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  defp merge_autogenerate_id(changeset, model) do
+  defp pop_autogenerate_id(changes, model) do
     case model.__schema__(:autogenerate_id) do
       {key, id} ->
-        get_and_update_in changeset.changes, fn changes ->
-          case Map.pop(changes, key) do
-            {nil, changes} -> {{key, id, nil}, changes}
-            {value, _}     -> {{key, id, value}, changes}
-          end
+        case Map.pop(changes, key) do
+          {nil, changes} -> {{key, id, nil}, changes}
+          {value, _}     -> {{key, id, value}, changes}
         end
       nil ->
-        {nil, changeset}
+        {nil, changes}
     end
   end
 
-  defp get_autogenerate_id(changeset, model) do
+  defp get_autogenerate_id(changes, model) do
     case model.__schema__(:autogenerate_id) do
-      {key, id} -> {key, id, Map.get(changeset.changes, key)}
+      {key, id} -> {key, id, Map.get(changes, key)}
       nil -> nil
     end
   end
 
-  defp validate_changes(kind, changeset, model, fields, id_types) do
-    Planner.fields(model, kind, Map.take(changeset.changes, fields), id_types)
+  defp validate_changes(kind, changes, model, fields, id_types) do
+    Planner.fields(model, kind, Map.take(changes, fields), id_types)
   end
 
   defp add_pk_filter!(filters, struct) do

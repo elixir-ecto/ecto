@@ -98,8 +98,8 @@ defmodule Ecto.Model.CallbacksTest do
   test "before_insert and after_insert with model" do
     model = %AllCallback{x: "x"}
     model = TestRepo.insert! model
-    assert model.before == %{x: "x", y: "", z: ""}
-    assert model.after == %{x: "x", y: ""}
+    assert model.before == %{id: nil, x: "x", y: "", z: ""}
+    assert model.after == %{id: nil, x: "x", y: ""}
 
     model = %AllCallback{id: 1, x: "x"}
     model = TestRepo.insert! model
@@ -125,8 +125,8 @@ defmodule Ecto.Model.CallbacksTest do
     changeset = Ecto.Changeset.cast(%AllCallback{x: "x", y: "z"},
                                     %{"y" => "y", "z" => "z"}, ~w(y z), ~w())
     model = TestRepo.insert! changeset
-    assert model.before == %{x: "x", y: "y", z: "z"}
-    assert model.after == %{x: "x", y: "y"}
+    assert model.before == %{id: nil, x: "x", y: "y", z: "z"}
+    assert model.after == %{id: nil, x: "x", y: "y"}
     assert model.x == "x"
     assert model.y == "y"
     assert model.z == ""
