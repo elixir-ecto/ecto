@@ -33,11 +33,8 @@ defmodule Ecto.RepoTest do
     schema "my_model" do
       field :x, :string
       field :y, :binary
-      field :z, Ecto.UUID, autogenerate: true
       embeds_one :embed, MyEmbed
     end
-
-    before_insert :store_autogenerate
 
     before_insert :store_changeset, [:before_insert]
     after_insert  :store_changeset, [:after_insert]
@@ -45,11 +42,6 @@ defmodule Ecto.RepoTest do
     after_update  :store_changeset, [:after_update]
     before_delete :store_changeset, [:before_delete]
     after_delete  :store_changeset, [:after_delete]
-
-    def store_autogenerate(changeset) do
-      Process.put(:autogenerate_z, changeset.changes.z)
-      changeset
-    end
 
     def store_changeset(changeset, stage) do
       Agent.update(CallbackAgent, &[{stage, changeset}|&1])
@@ -210,31 +202,9 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  ## Autogenerate
+  ## Changesets
 
   @uuid "30313233-3435-3637-3839-616263646566"
-
-  test "autogenerates values" do
-    model = TestRepo.insert!(%MyModel{})
-    assert Process.get(:autogenerate_z)
-    assert byte_size(model.z) == 36
-
-    changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
-    model = TestRepo.insert!(changeset)
-    assert Process.get(:autogenerate_z)
-    assert byte_size(model.z) == 36
-
-    changeset = Ecto.Changeset.cast(%MyModel{}, %{z: nil}, [], [])
-    model = TestRepo.insert!(changeset)
-    assert Process.get(:autogenerate_z)
-    assert byte_size(model.z) == 36
-
-    changeset = Ecto.Changeset.cast(%MyModel{}, %{z: @uuid}, [:z], [])
-    model = TestRepo.insert!(changeset)
-    assert model.z == @uuid
-  end
-
-  ## Changesets
 
   test "uses correct status" do
     get_action = fn [{stage, changeset}|_] ->
@@ -266,13 +236,13 @@ defmodule Ecto.RepoTest do
   defp get_changes([{_, changeset} | _]), do: changeset.changes
 
   test "adds embeds to changeset as empty on insert" do
-    TestRepo.insert!(%MyModel{embed: %MyEmbed{}, z: @uuid})
-    assert Agent.get(CallbackAgent, &get_changes/1) == %{embed: nil, x: nil, y: nil, z: @uuid}
+    TestRepo.insert!(%MyModel{embed: %MyEmbed{}})
+    assert Agent.get(CallbackAgent, &get_changes/1) == %{embed: nil, x: nil, y: nil}
   end
 
   test "skip adding embeds to changeset on update" do
-    TestRepo.update!(%MyModel{id: 5, embed: %MyEmbed{}, z: @uuid})
-    assert Agent.get(CallbackAgent, &get_changes/1) == %{x: nil, y: nil, z: @uuid}
+    TestRepo.update!(%MyModel{id: 5, embed: %MyEmbed{}})
+    assert Agent.get(CallbackAgent, &get_changes/1) == %{x: nil, y: nil}
   end
 
   defp get_models(changesets) do
@@ -302,9 +272,7 @@ defmodule Ecto.RepoTest do
     assert [{:after_insert, MyModel}, {:after_insert, MyEmbed},
             {:before_insert, MyEmbed}, {:before_insert, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    id = model.embed.id
-    assert id
-    assert model.embed == %{embed | id: id}
+    assert model.embed == embed
   end
 
   test "handled embeds on update" do

@@ -31,7 +31,6 @@ defmodule Ecto.SchemaTest do
     assert Model.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
     assert Model.__schema__(:read_after_writes)  == [:email, :count]
     assert Model.__schema__(:primary_key)        == [:id]
-    assert Model.__schema__(:autogenerate)       == %{uuid: Ecto.UUID}
     assert Model.__schema__(:autogenerate_id)    == {:id, :id}
   end
 

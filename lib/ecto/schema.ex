@@ -324,7 +324,7 @@ defmodule Ecto.Schema do
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
-        Ecto.Schema.__autogenerate__(@ecto_autogenerate, @ecto_autogenerate_id)]
+        Ecto.Schema.__autogenerate__(@ecto_autogenerate_id)]
     end
   end
 
@@ -967,10 +967,8 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __autogenerate__(fields, id) do
-    map = fields |> Enum.into(%{}) |> Macro.escape()
+  def __autogenerate__(id) do
     quote do
-      def __schema__(:autogenerate),    do: unquote(map)
       def __schema__(:autogenerate_id), do: unquote(id)
     end
   end

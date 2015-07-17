@@ -42,9 +42,6 @@ defmodule Ecto.Repo.Model do
     # We also remove all embeds that are not in the changes
     changeset = %{changeset | repo: repo, action: :insert}
     changeset = insert_changes(struct, fields, embeds, changeset)
-
-    changeset = merge_autogenerate_embeds(changeset, embeds, id_types)
-    changeset = merge_autogenerate(changeset, model)
     {autogen, changeset} = merge_autogenerate_id(changeset, model)
 
     with_transactions_if_callbacks repo, adapter, model, opts, embeds,
@@ -256,34 +253,6 @@ defmodule Ecto.Repo.Model do
     case model.__schema__(:autogenerate_id) do
       {key, id} -> {key, id, Map.get(changeset.changes, key)}
       nil -> nil
-    end
-  end
-
-  defp merge_autogenerate(changeset, model) do
-    update_in changeset.changes, fn changes ->
-      Enum.reduce model.__schema__(:autogenerate), changes, fn {k, v}, acc ->
-        if Map.get(acc, k) == nil do
-          Map.put(acc, k, v.generate())
-        else
-          acc
-        end
-      end
-    end
-  end
-
-  defp merge_autogenerate_embeds(changeset, embeds, id_types) do
-    types = changeset.types
-
-    update_in changeset.changes, fn changes ->
-      Enum.reduce(embeds, changes, fn field, acc ->
-        case Map.fetch(acc, field) do
-          {:ok, changeset} ->
-            {:embed, embed} = Map.get(types, field)
-            Map.put(acc, field, Ecto.Embedded.autogenerate(embed, changeset, id_types))
-          :error ->
-            acc
-        end
-      end)
     end
   end
 

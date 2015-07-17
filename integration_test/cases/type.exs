@@ -166,12 +166,12 @@ defmodule Ecto.Integration.TypeTest do
     dbitem = TestRepo.get!(Order, order.id).item
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
-    assert dbitem.id
+    refute dbitem.id
 
     [dbitem] = TestRepo.all(from o in Order, select: o.item)
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
-    assert dbitem.id
+    refute dbitem.id
   end
 
   @tag :map_type
@@ -184,12 +184,12 @@ defmodule Ecto.Integration.TypeTest do
     [dbitem] = TestRepo.get!(Tag, tag.id).items
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
-    assert dbitem.id
+    refute dbitem.id
 
     [[dbitem]] = TestRepo.all(from t in Tag, select: t.items)
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
-    assert dbitem.id
+    refute dbitem.id
   end
 
   @tag :decimal_type
