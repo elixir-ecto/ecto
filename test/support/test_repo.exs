@@ -5,7 +5,16 @@ defmodule Ecto.TestAdapter do
 
   defmacro __before_compile__(_opts), do: :ok
   def start_link(_repo, _opts), do: :ok
-  def id_types(_repo), do: %{binary_id: Ecto.UUID, adapter: __MODULE__}
+
+  ## Types
+
+  def load({:embed, type}, data), do: Ecto.Embedded.load(type, data, __MODULE__, &load/2)
+  def load(:binary_id, data), do: Ecto.Type.load(Ecto.UUID, data)
+  def load(type, data), do: Ecto.Type.load(type, data)
+
+  def dump({:embed, type}, data), do: Ecto.Embedded.dump(type, data, __MODULE__, &dump/2)
+  def dump(:binary_id, data), do: Ecto.Type.dump(Ecto.UUID, data)
+  def dump(type, data), do: Ecto.Type.dump(type, data)
 
   ## Queryable
 
@@ -68,12 +77,6 @@ defmodule Ecto.TestAdapter do
 
   defp migrated_versions do
     Process.get(:migrated_versions) || []
-  end
-
-  ## Embeds
-
-  def dump_embed(value, model, _types, _id_types) do
-    Map.take(value, model.__schema__(:fields))
   end
 end
 

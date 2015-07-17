@@ -197,7 +197,7 @@ defmodule Ecto.Query.InspectTest do
 
   def plan(query) do
     query
-    |> Ecto.Query.Planner.query(:all, %{})
+    |> Ecto.Query.Planner.query(:all, Ecto.TestAdapter)
     |> elem(0)
   end
 
