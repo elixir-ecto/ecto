@@ -14,7 +14,10 @@ defmodule Ecto.Pools.SojournBroker.CoDel do
   * `:queue_size` - The maximum size of the queue (default: `128`)
 
   """
-  @behaviour :sbroker
+
+  if Code.ensure_loaded?(:sbroker) do
+    @behaviour :sbroker
+  end
 
   @doc false
   def init(opts) do
@@ -28,5 +31,5 @@ defmodule Ecto.Pools.SojournBroker.CoDel do
     worker_queue = {:sbroker_drop_queue, {:out_r, :drop, :infinity}}
 
     {:ok, {client_queue, worker_queue, 100}}
-    end
+  end
 end

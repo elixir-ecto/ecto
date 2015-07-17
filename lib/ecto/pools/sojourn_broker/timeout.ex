@@ -14,7 +14,9 @@ defmodule Ecto.Pools.SojournBroker.Timeout do
 
   """
 
-  @behaviour :sbroker
+  if Code.ensure_loaded?(:sbroker) do
+    @behaviour :sbroker
+  end
 
   @doc false
   def init(opts) do
