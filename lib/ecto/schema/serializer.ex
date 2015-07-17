@@ -34,20 +34,4 @@ defmodule Ecto.Schema.Serializer do
         {Map.put(acc, field, value), t}
     end) |> elem(0)
   end
-
-  @doc """
-  Dumps recursively given model's struct.
-
-  Primary keys are not included in the dumped model.
-  """
-  def dump!(struct, id_types) do
-    model  = struct.__struct__
-    fields = model.__schema__(:types)
-    Enum.reduce(fields, %{}, &do_dump(struct, &1, &2, id_types))
-  end
-
-  defp do_dump(struct, {field, type}, acc, id_types) do
-    value = Map.get(struct, field)
-    Map.put(acc, field, Ecto.Type.dump!(type, value, id_types))
-  end
 end

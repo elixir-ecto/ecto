@@ -21,6 +21,7 @@ defmodule Ecto.Adapters.SQL do
       @behaviour Ecto.Adapter
       @behaviour Ecto.Adapter.Migration
       @behaviour Ecto.Adapter.Transaction
+      @behaviour Ecto.Adapter.Embedded
 
       @conn __MODULE__.Connection
       @adapter unquote(adapter)
@@ -42,7 +43,7 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def id_types(_repo) do
-        %{binary_id: Ecto.UUID}
+        %{adapter: __MODULE__, binary_id: Ecto.UUID}
       end
 
       @doc false
@@ -128,9 +129,22 @@ defmodule Ecto.Adapters.SQL do
         count > 0
       end
 
+      ## Embedded
+
+      @doc false
+      def dump_embed(value, model, types, id_types) do
+        Ecto.Adapters.SQL.dump_embed(value, model, types, id_types)
+      end
+
+      @doc false
+      def load_embed(value, model, types, id_types) do
+        Ecto.Adapters.SQL.load_embed(value, model, types, id_types)
+      end
+
       defoverridable [all: 5, update_all: 4, delete_all: 4,
                       insert: 6, update: 7, delete: 5,
-                      execute_ddl: 3, ddl_exists?: 3]
+                      execute_ddl: 3, ddl_exists?: 3,
+                      dump_embed: 4, load_embed: 4]
     end
   end
 
@@ -596,5 +610,21 @@ defmodule Ecto.Adapters.SQL do
   defp rollback_sql(mod, :raw), do: mod.rollback
   defp rollback_sql(mod, :sandbox) do
     mod.rollback_to_savepoint "ecto_trans"
+  end
+
+  ## Embedded
+
+  @doc false
+  def dump_embed(value, model, _types, _id_types) do
+    Map.take(value, model.__schema__(:fields))
+  end
+
+  @doc false
+  def load_embed(data, _model, types, id_types) do
+    Enum.reduce(types, %{}, fn
+      {field, type}, acc ->
+        value = Map.get(data, Atom.to_string(field))
+        Map.put(acc, field, Ecto.Type.cast!(type, value, id_types))
+    end)
   end
 end

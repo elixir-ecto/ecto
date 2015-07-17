@@ -160,21 +160,36 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :map_type
   test "embeds one" do
-    order = Ecto.Changeset.change(%Order{}, item: %Item{price: 123})
+    item = %Item{price: Decimal.new(123), valid_at: Ecto.Date.local}
+    order = Ecto.Changeset.change(%Order{}, item: item)
     order = TestRepo.insert!(order)
-    assert %Item{price: 123} = TestRepo.get!(Order, order.id).item
-    assert [%Item{price: 123}] =
-      TestRepo.all(from o in Order, select: o.item)
+    dbitem = TestRepo.get!(Order, order.id).item
+    assert item.price == dbitem.price
+    assert item.valid_at == dbitem.valid_at
+    assert dbitem.id
+
+    [dbitem] = TestRepo.all(from o in Order, select: o.item)
+    assert item.price == dbitem.price
+    assert item.valid_at == dbitem.valid_at
+    assert dbitem.id
   end
 
   @tag :map_type
   @tag :array_type
   test "embeds many with array" do
-    tag = Ecto.Changeset.change(%Tag{}, items: [%Item{price: 123}])
+    item = %Item{price: Decimal.new(123), valid_at: Ecto.Date.local}
+    tag = Ecto.Changeset.change(%Tag{}, items: [item])
     tag = TestRepo.insert!(tag)
-    assert [%Item{price: 123}] = TestRepo.get!(Tag, tag.id).items
-    assert [[%Item{price: 123}]] =
-      TestRepo.all(from t in Tag, select: t.items)
+
+    [dbitem] = TestRepo.get!(Tag, tag.id).items
+    assert item.price == dbitem.price
+    assert item.valid_at == dbitem.valid_at
+    assert dbitem.id
+
+    [[dbitem]] = TestRepo.all(from t in Tag, select: t.items)
+    assert item.price == dbitem.price
+    assert item.valid_at == dbitem.valid_at
+    assert dbitem.id
   end
 
   @tag :decimal_type
