@@ -26,6 +26,14 @@ defmodule Ecto.TypeTest do
   import Ecto.Type
   doctest Ecto.Type
 
+  def dump_embed(value, model, _types, _id_types) do
+    Map.take(value, model.__schema__(:fields))
+  end
+
+  def load_embed(value, _model, _types, _id_types) do
+    Enum.into(value, %{}, fn {k, v} -> {String.to_atom(k), v} end)
+  end
+
   test "custom types" do
     assert load(Custom, "foo", %{}) == {:ok, :load}
     assert dump(Custom, "foo", %{}) == {:ok, :dump}
@@ -53,13 +61,16 @@ defmodule Ecto.TypeTest do
   test "embeds_one" do
     type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed, cardinality: :one,
                                          embed: Model, on_cast: :changeset)}
-    id_types = %{binary_id: :string}
+    id_types = %{binary_id: Ecto.UUID, adapter: __MODULE__}
     assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, id_types)
     assert {:ok, %Model{a: 1}} = load(type, "{\"a\": 1}", id_types)
     assert :error == load(type, 1, id_types)
 
-    assert {:ok, %{a: 1, id: %{value: nil}}} = dump(type, %Model{a: 1}, id_types)
+    assert {:ok, %{a: 1, id: nil}} = dump(type, %Model{a: 1}, id_types)
     assert :error == dump(type, 1, id_types)
+
+    changeset = Ecto.Changeset.change(%Model{id: "a"}, a: 1)
+    assert {:ok, %{a: 1, id: "a"}} = dump(type, changeset, id_types)
 
     assert %Model{a: 1} = cast(type, %{"a" => 1}, %{})
     assert :error == cast(type, %{}, %{})
@@ -70,13 +81,16 @@ defmodule Ecto.TypeTest do
     type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed,
                                          cardinality: :many, container: :array,
                                          embed: Model, on_cast: :changeset)}
-    id_types = %{binary_id: :string}
+    id_types = %{binary_id: Ecto.UUID, adapter: __MODULE__}
     assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], id_types)
     assert {:ok, [%Model{a: 1}]} = load(type, ["{\"a\": 1}"], id_types)
     assert :error == load(type, 1, id_types)
 
     assert {:ok, [%{a: 1, id: "a"}]} = dump(type, [%Model{a: 1, id: "a"}], id_types)
     assert :error == dump(type, 1, id_types)
+
+    changeset = Ecto.Changeset.change(%Model{id: "a"}, a: 1)
+    assert {:ok, [%{a: 1, id: "a"}]} = dump(type, [changeset], id_types)
 
     assert [%Model{a: 1}] = cast(type, [%{"a" => 1}], %{})
     assert :error == cast(type, [%{}], %{})

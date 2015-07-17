@@ -13,6 +13,7 @@ defmodule Ecto.Adapter do
   @type returning :: [atom]
   @type preprocess :: (Macro.t, term -> term)
   @type autogenerate_id :: {field :: atom, type :: :id | :binary_id, value :: term} | nil
+  @type id_types :: %{adapter: t, binary_id: Ecto.Type.custom}
 
   @typep repo :: Ecto.Repo.t
   @typep options :: Keyword.t
@@ -45,7 +46,7 @@ defmodule Ecto.Adapter do
   If the database adapter does not support provide
   binary id functionality, Ecto.UUID is recommended.
   """
-  defcallback id_types(repo) :: %{binary_id: Ecto.Type.custom}
+  defcallback id_types(repo) :: id_types
 
   @doc """
   Fetches all results from the data store based on the given query.

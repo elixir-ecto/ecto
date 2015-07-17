@@ -4,6 +4,15 @@ defmodule Ecto.ChangesetTest do
   import Ecto.Changeset
   import Ecto.Query
 
+  defmodule Author do
+    use Ecto.Model
+
+    schema "" do
+      field :name
+    end
+  end
+
+
   defmodule Post do
     use Ecto.Model
 
@@ -15,14 +24,6 @@ defmodule Ecto.ChangesetTest do
       field :topics, {:array, :string}
       field :published_at, Ecto.DateTime
       embeds_one :author, Author
-    end
-  end
-
-  defmodule Author do
-    use Ecto.Model
-
-    schema "" do
-      field :name
     end
   end
 

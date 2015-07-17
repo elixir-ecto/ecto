@@ -74,7 +74,6 @@ defmodule Ecto.Type do
   """
 
   import Kernel, except: [match?: 2]
-  alias Ecto.Schema.Serializer
 
   use Behaviour
 
@@ -350,8 +349,8 @@ defmodule Ecto.Type do
     dump_model(model, struct, id_types)
   end
 
-  defp dump_embed(%{cardinality: :many, container: :array, embed: model}, value, id_types)
-      when is_list(value) do
+  defp dump_embed(%{cardinality: :many, container: :array, embed: model},
+                  value, id_types) when is_list(value) do
     array(value, &dump_model(model, &1, id_types), [])
   end
 
@@ -359,10 +358,32 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp dump_model(model, %{__struct__: model} = struct, id_types),
-    do: {:ok, Serializer.dump!(struct, id_types)}
-  defp dump_model(_model, _struct, _id_types),
-    do: :error
+  defp dump_model(model, %Ecto.Changeset{} = changeset, id_types) do
+    dump_model(model, Ecto.Changeset.apply_changes(changeset), id_types)
+  end
+
+  defp dump_model(model, %{__struct__: model} = struct, id_types) do
+    types = model.__schema__(:types)
+    embeds = model.__schema__(:embeds)
+
+    dumped =
+      id_types.adapter.dump_embed(struct, model, types, id_types)
+
+    dumped =
+      Enum.reduce(embeds, dumped, fn field, acc ->
+        {:embed, embed} = type = Map.get(types, field)
+        case Map.get(field, acc) do
+          nil   -> Map.put(acc, Ecto.Embedded.empty(embed))
+          # TODO use dump! in stead of dump, and catch errors
+          value -> dump!(type, value, id_types)
+        end
+      end)
+    {:ok, dumped}
+  end
+
+  defp dump_model(_model, _struct, _id_types) do
+    :error
+  end
 
   @doc """
   Same as `dump/2` but raises if value can't be dumped.
@@ -432,6 +453,8 @@ defmodule Ecto.Type do
     end
   end
 
+  defp load_embed(_embed, nil, _id_types), do: {:ok, nil}
+
   defp load_embed(%{cardinality: :one, embed: model}, value, id_types) do
     load_model(model, value, id_types)
   end
@@ -445,12 +468,27 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp load_model(model, value, id_types) when is_binary(value),
-    do: load_model(model, json_library.decode!(value), id_types)
-  defp load_model(model, value, id_types) when is_map(value),
-    do: {:ok, Serializer.load!(model, nil, nil, value, id_types)}
-  defp load_model(_model, _value, _id_types),
-    do: :error
+  defp load_model(model, value, id_types) when is_binary(value) do
+    load_model(model, json_library.decode!(value), id_types)
+  end
+
+  defp load_model(model, value, id_types) when is_map(value) do
+    types = model.__schema__(:types)
+    embeds = model.__schema__(:embeds)
+
+    loaded = id_types.adapter.load_embed(value, model, types, id_types)
+
+    {:ok,
+      Enum.reduce(embeds, struct(model, loaded), fn field, acc ->
+        type = Map.get(types, field)
+        # TODO use load instead of load! and catch errors
+        Map.put(acc, field, load!(type, Map.get(acc, field), id_types))
+      end)}
+  end
+
+  defp load_model(_model, _value, _id_types) do
+    :error
+  end
 
   defp json_library, do: Application.get_env(:ecto, :json_library)
 

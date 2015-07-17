@@ -27,28 +27,22 @@ defmodule Ecto.Schema.SerializerTest do
   @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
   @uuid_binary <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>
 
+  @binary_id %{binary_id: Ecto.UUID, adapter: __MODULE__}
+
+  def load_embed(value, _model, _types, _id_types) do
+    Enum.into(value, %{}, fn {k, v} -> {String.to_atom(k), v} end)
+  end
+
   test "load!" do
     data = %{"id" => 123, "name" => "michal", "count" => Decimal.new(5),
              "array" => ["array"], "uuid" => @uuid_binary,
-             "embed" => %{"type" => "one", "id" => "two"}}
-    loaded = Serializer.load!(Model, nil, "mymodel", data, %{binary_id: :string})
+             "embed" => %{"type" => "one", "id" => @uuid_string}}
+    loaded = Serializer.load!(Model, nil, "mymodel", data, @binary_id)
 
     assert loaded.name  == "michal"
     assert loaded.count == Decimal.new(5)
     assert loaded.array == ["array"]
     assert loaded.uuid  == @uuid_string
-    assert %Embed{type: "one", id: "two"} = loaded.embed
-  end
-
-  test "dump!" do
-    embed = %Embed{type: "one", id: "two"}
-    model = %Model{id: 123, name: "michal", count: Decimal.new(5), array: ["array"],
-                   uuid: @uuid_string, embed: embed}
-
-    dumped_uuid = %Ecto.Query.Tagged{tag: nil, type: :uuid, value: @uuid_binary}
-
-    dumped = Serializer.dump!(model, %{binary_id: :string})
-    assert dumped == %{name: "michal", count: Decimal.new(5), uuid: dumped_uuid,
-                       array: ["array"], embed: %{type: "one", id: "two"}, id: 123}
+    assert %{type: "one", id: @uuid_string} = loaded.embed
   end
 end
