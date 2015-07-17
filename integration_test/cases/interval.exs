@@ -175,7 +175,7 @@ defmodule Ecto.Integration.IntervalTest do
            TestRepo.all(from p in Post, select: datetime_add(p.inserted_at, ^dec, "second"))
   end
 
-  @tag :uses_usec
+  @tag :uses_msec
   test "datetime_add with millisecond" do
     dec = Decimal.new(1500)
     assert [{{2014, 1, 1}, {2, 0, 1, 500_000}}] =
