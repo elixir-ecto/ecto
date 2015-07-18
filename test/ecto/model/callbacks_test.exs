@@ -1,8 +1,7 @@
-Code.require_file "../../support/test_repo.exs", __DIR__
-alias Ecto.TestRepo
-
 defmodule Ecto.Model.CallbacksTest do
   use ExUnit.Case, async: true
+
+  alias Ecto.TestRepo
 
   defmodule SomeCallback do
     use Ecto.Model

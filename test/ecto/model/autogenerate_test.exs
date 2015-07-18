@@ -1,4 +1,3 @@
-Code.require_file "../../support/test_repo.exs", __DIR__
 alias Ecto.TestRepo
 
 defmodule Ecto.Model.AutogenerateTest do

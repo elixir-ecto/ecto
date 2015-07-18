@@ -1,5 +1,3 @@
-Code.require_file "../support/test_repo.exs", __DIR__
-
 defmodule Ecto.MigrationTest do
   # Although this test uses the Ecto.Migration.Runner which
   # is global state, we can run it async as long as this is

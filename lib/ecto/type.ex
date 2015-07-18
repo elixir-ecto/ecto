@@ -575,9 +575,6 @@ defmodule Ecto.Type do
   defp of_base_type?(:binary_id, value) do
     raise "cannot dump/load :binary_id type directly, attempted value: #{inspect value}"
   end
-  defp of_base_type?({:embed, _}, value) do
-    raise "cannot dump/load embed directly, attempted value: #{inspect value}"
-  end
 
   defp of_base_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
 

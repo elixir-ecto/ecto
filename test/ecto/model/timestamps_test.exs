@@ -1,8 +1,7 @@
-Code.require_file "../../support/test_repo.exs", __DIR__
-alias Ecto.TestRepo
-
 defmodule Ecto.Model.TimestampsTest do
   use ExUnit.Case, async: true
+
+  alias Ecto.TestRepo
 
   defmodule Default do
     use Ecto.Model

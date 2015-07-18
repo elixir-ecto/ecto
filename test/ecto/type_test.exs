@@ -63,4 +63,47 @@ defmodule Ecto.TypeTest do
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1) == {:ok, Decimal.new("1")}
   end
+
+  @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
+  @uuid_binary <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>
+
+  test "embeds_one" do
+    type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed, cardinality: :one,
+                                         embed: Model, on_cast: :changeset)}
+    assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, &Ecto.TestAdapter.load/2)
+    assert :error == load(type, 1)
+
+    assert {:ok, %{a: 1, id: %Ecto.Query.Tagged{value: nil}}} =
+           dump(type, %Model{a: 1}, &Ecto.TestAdapter.dump/2)
+    assert :error == dump(type, 1)
+
+    changeset = Ecto.Changeset.change(%Model{id: @uuid_string}, a: 1)
+    assert {:ok, %{a: 1, id: %Ecto.Query.Tagged{value: @uuid_binary}}} =
+           dump(type, changeset, &Ecto.TestAdapter.dump/2)
+
+    assert %Model{a: 1} = cast(type, %{"a" => 1})
+    assert :error == cast(type, %{})
+    assert :error == cast(type, 1)
+  end
+
+  test "embeds_many with array" do
+    type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed,
+                                         cardinality: :many, container: :array,
+                                         embed: Model, on_cast: :changeset)}
+
+    assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], &Ecto.TestAdapter.load/2)
+    assert :error == load(type, 1, &Ecto.TestAdapter.load/2)
+
+    assert {:ok, [%{a: 1, id: %Ecto.Query.Tagged{value: @uuid_binary}}]} =
+           dump(type, [%Model{a: 1, id: @uuid_string}], &Ecto.TestAdapter.dump/2)
+    assert :error == dump(type, 1, &Ecto.TestAdapter.dump/2)
+
+    changeset = Ecto.Changeset.change(%Model{id: @uuid_string}, a: 1)
+    assert {:ok, [%{a: 1, id: %Ecto.Query.Tagged{value: @uuid_binary}}]} =
+           dump(type, [changeset], &Ecto.TestAdapter.dump/2)
+
+    assert [%Model{a: 1}] = cast(type, [%{"a" => 1}])
+    assert :error == cast(type, [%{}])
+    assert :error == cast(type, [[]])
+  end
 end

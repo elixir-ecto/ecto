@@ -1,5 +1,3 @@
-Code.require_file "../support/test_repo.exs", __DIR__
-
 defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
