@@ -206,17 +206,15 @@ defmodule Ecto.Changeset do
 
   def cast(%{__struct__: module} = model, :empty, required, optional)
       when is_list(required) and is_list(optional) do
-    to_atom = fn
-      key when is_atom(key) -> key
-      key when is_binary(key) -> String.to_atom(key)
-    end
-
-    required = Enum.map(required, to_atom)
-    optional = Enum.map(optional, to_atom)
     types    = module.__changeset__
 
+    {optional, changes} =
+      Enum.map_reduce(optional, %{}, &process_empty_embeds(&1, types, model, &2))
+    {required, changes} =
+      Enum.map_reduce(required, changes, &process_empty_embeds(&1, types, model, &2))
+
     %Changeset{params: nil, model: model, valid?: false, errors: [],
-               changes: %{}, required: required, optional: optional, types: types}
+               changes: changes, required: required, optional: optional, types: types}
   end
 
   def cast(%Changeset{} = changeset, %{} = params, required, optional)
@@ -242,6 +240,27 @@ defmodule Ecto.Changeset do
                errors: Enum.reverse(errors), changes: changes, required: required,
                optional: optional, types: types}
   end
+
+  defp process_empty_embeds({key, fun}, types, model, changes) do
+    {key, _param_key} = cast_key(key)
+
+    {:embed, embed} = embed!(types, key, fun)
+    {:ok, result, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
+    {key, Map.put(changes, key, result)}
+  end
+
+  defp process_empty_embeds(key, types, model, changes) do
+    {key, _param_key} = cast_key(key)
+
+    case type!(types, key) do
+      {:embed, embed} ->
+        {:ok, result, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
+        {key, Map.put(changes, key, result)}
+      _ ->
+        {key, changes}
+    end
+  end
+
 
   defp process_param({key, fun}, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)

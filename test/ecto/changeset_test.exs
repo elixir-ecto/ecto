@@ -10,6 +10,14 @@ defmodule Ecto.ChangesetTest do
     schema "" do
       field :name
     end
+
+    def changeset(params, model \\ %Author{}) do
+      cast(model, params, ~w(name))
+    end
+
+    def custom_changeset(params, model \\ %Author{}) do
+      cast(model, params, ~w(), ~w(name))
+    end
   end
 
   defmodule Post do
@@ -23,6 +31,7 @@ defmodule Ecto.ChangesetTest do
       field :topics, {:array, :string}
       field :published_at, Ecto.DateTime
       embeds_one :author, Author
+      embeds_many :authors, Author
     end
   end
 
@@ -115,6 +124,37 @@ defmodule Ecto.ChangesetTest do
     assert changeset.required == [:title]
     assert changeset.optional == [:body]
     refute changeset.valid?
+  end
+
+  test "cast/4: empty parameters are passed to embeds" do
+    changeset = cast(%Post{}, :empty, ~w(authors))
+    assert changeset.changes.authors == []
+
+    changeset = cast(%Post{authors: [%Author{}]}, :empty, ~w(authors))
+    [author_changeset] = changeset.changes.authors
+    assert author_changeset.model == %Author{}
+    assert author_changeset.params == nil
+    assert author_changeset.changes == %{}
+    assert author_changeset.errors == []
+    assert author_changeset.validations == []
+    assert author_changeset.required == [:name]
+    assert author_changeset.optional == []
+    assert author_changeset.action == :update
+    refute author_changeset.valid?
+  end
+
+  test "cast/4: empty parameters are passed to embeds with custom changeset" do
+    changeset = cast(%Post{}, :empty, author: :custom_changeset)
+    author_changeset = changeset.changes.author
+    assert author_changeset.model == %Author{}
+    assert author_changeset.params == nil
+    assert author_changeset.changes == %{}
+    assert author_changeset.errors == []
+    assert author_changeset.validations == []
+    assert author_changeset.required == []
+    assert author_changeset.optional == [:name]
+    assert author_changeset.action == :insert
+    refute author_changeset.valid?
   end
 
   test "cast/4: can't cast required field" do
