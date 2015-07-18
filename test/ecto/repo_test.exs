@@ -237,7 +237,7 @@ defmodule Ecto.RepoTest do
 
   test "adds embeds to changeset as empty on insert" do
     TestRepo.insert!(%MyModel{embed: %MyEmbed{}})
-    assert Agent.get(CallbackAgent, &get_changes/1) == %{embed: nil, x: nil, y: nil}
+    assert Agent.get(CallbackAgent, &get_changes/1) == %{id: nil, embed: nil, x: nil, y: nil}
   end
 
   test "skip adding embeds to changeset on update" do
