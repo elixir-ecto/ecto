@@ -796,10 +796,12 @@ defmodule Ecto.Schema do
   @doc false
   def __field__(mod, name, type, pk?, opts) do
     check_type!(name, type, opts[:virtual])
-    check_default!(name, type, opts[:default])
+
+    default = default_for_type(type, opts)
+    check_default!(name, type, default)
 
     Module.put_attribute(mod, :changeset_fields, {name, type})
-    put_struct_field(mod, name, opts[:default])
+    put_struct_field(mod, name, default)
 
     unless opts[:virtual] do
       if raw = opts[:read_after_writes] do
@@ -1076,5 +1078,13 @@ defmodule Ecto.Schema do
   defp autogenerate_id(type) do
     id = if Ecto.Type.primitive?(type), do: type, else: type.type
     if id in [:id, :binary_id], do: id, else: nil
+  end
+
+  defp default_for_type({:array, _}, opts) do
+    Keyword.get(opts, :default, [])
+  end
+
+  defp default_for_type(_, opts) do
+    Keyword.get(opts, :default)
   end
 end

@@ -276,11 +276,6 @@ defmodule Ecto.Type do
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(type, value, dumper \\ &dump/2)
 
-  # TODO: Should this go after embed/array?
-  def dump(type, nil, _dumper) do
-    {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
-  end
-
   def dump({:embed, embed}, value, dumper) do
     dump_embed(embed, value, dumper)
   end
@@ -291,6 +286,10 @@ defmodule Ecto.Type do
     else
       :error
     end
+  end
+
+  def dump(type, nil, _dumper) do
+    {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
   end
 
   def dump(type, value, _dumper) do
@@ -326,6 +325,10 @@ defmodule Ecto.Type do
 
   defp dump_array(_type, [], _dumper, acc, false) do
     {:ok, Enum.reverse(acc)}
+  end
+
+  defp dump_embed(%{cardinality: :one} = embed, nil, _fun) do
+    {:ok, %Ecto.Query.Tagged{value: nil, type: type({:embed, embed})}}
   end
 
   defp dump_embed(%{cardinality: :one, embed: model, field: field},
@@ -374,11 +377,12 @@ defmodule Ecto.Type do
   @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def load(type, value, loader \\ &load/2)
 
-  # TODO: Should this come after embed?
-  def load(_type, nil, _loader), do: {:ok, nil}
-
   def load({:embed, embed}, value, loader) do
     load_embed(embed, value, loader)
+  end
+
+  def load({:array, _}, nil, _loader) do
+    {:ok, []}
   end
 
   def load({:array, type}, value, loader) do
@@ -388,6 +392,8 @@ defmodule Ecto.Type do
       :error
     end
   end
+
+  def load(_type, nil, _loader), do: {:ok, nil}
 
   def load(type, value, _loader) do
     cond do
@@ -400,10 +406,14 @@ defmodule Ecto.Type do
     end
   end
 
+  defp load_embed(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
+
   defp load_embed(%{cardinality: :one, embed: model, field: field},
                   value, fun) when is_map(value) do
     {:ok, load_embed(field, model, value, fun)}
   end
+
+  defp load_embed(%{cardinality: :many, container: :array}, nil, _fun), do: {:ok, []}
 
   defp load_embed(%{cardinality: :many, container: :array, embed: model, field: field},
                   value, fun) when is_list(value) do
@@ -516,7 +526,6 @@ defmodule Ecto.Type do
     end
   end
 
-  # TODO: Should this come before {:array, _} and embed?
   def cast(_type, nil), do: {:ok, nil}
 
   def cast(:binary_id, term) when is_binary(term) do

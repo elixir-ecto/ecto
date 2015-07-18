@@ -200,7 +200,13 @@ defmodule Ecto.Repo.Model do
   end
 
   defp delete_changes(changeset, model) do
-    embeds    = model.__schema__(:embeds) |> Enum.map(&{&1, nil})
+    types = changeset.types
+    embeds =
+      Enum.map(model.__schema__(:embeds), fn field ->
+        {:embed, embed} = Map.get(types, field)
+        {field, Ecto.Embedded.empty(embed)}
+      end)
+
     changeset = %{changeset | changes: %{}}
     Ecto.Changeset.change(changeset, embeds)
   end
