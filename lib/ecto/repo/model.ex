@@ -7,28 +7,43 @@ defmodule Ecto.Repo.Model do
   alias Ecto.Model.Callbacks
   alias Ecto.Changeset
 
-  def insert(repo, adapter, model_or_changeset, opts) do
-    IO.puts :stderr, "[warning] Repo.insert/2 is deprecated, please use Repo.insert!/2 instead\n" <>
-                     Exception.format_stacktrace()
-    insert!(repo, adapter, model_or_changeset, opts)
-  end
-
-  def update(repo, adapter, model_or_changeset, opts) do
-    IO.puts :stderr, "[warning] Repo.update/2 is deprecated, please use Repo.update!/2 instead\n" <>
-                     Exception.format_stacktrace()
-    update!(repo, adapter, model_or_changeset, opts)
-  end
-
-  def delete(repo, adapter, model_or_changeset, opts) do
-    IO.puts :stderr, "[warning] Repo.delete/2 is deprecated, please use Repo.delete!/2 instead\n" <>
-                     Exception.format_stacktrace()
-    delete!(repo, adapter, model_or_changeset, opts)
-  end
-
   @doc """
   Implementation for `Ecto.Repo.insert!/2`.
   """
-  def insert!(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+  def insert!(repo, adapter, model_or_changeset, opts) do
+    case insert(repo, adapter, model_or_changeset, opts) do
+      {:ok, model} -> model
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+    end
+  end
+
+  @doc """
+  Implementation for `Ecto.Repo.update!/2`.
+  """
+  def update!(repo, adapter, model_or_changeset, opts) do
+    case update(repo, adapter, model_or_changeset, opts) do
+      {:ok, model} -> model
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: :update, changeset: changeset
+    end
+  end
+
+  @doc """
+  Implementation for `Ecto.Repo.delete!/2`.
+  """
+  def delete!(repo, adapter, model_or_changeset, opts) do
+    case delete(repo, adapter, model_or_changeset, opts) do
+      {:ok, model} -> model
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: :delete, changeset: changeset
+    end
+  end
+
+  @doc """
+  Implementation for `Ecto.Repo.insert/2`.
+  """
+  def insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
     struct   = struct_from_changeset!(changeset)
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
@@ -56,18 +71,22 @@ defmodule Ecto.Repo.Model do
       # about values returned from the adapter
       changeset = apply_embedded_callbacks(embeds, changeset, :after)
       changeset = load_changes(changeset, values, adapter)
-      Callbacks.__apply__(model, :after_insert, changeset).model
+      {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
     end
   end
 
-  def insert!(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
-    insert!(repo, adapter, Ecto.Changeset.change(struct), opts)
+  def insert(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
+    {:error, changeset}
+  end
+
+  def insert(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
+    insert(repo, adapter, Ecto.Changeset.change(struct), opts)
   end
 
   @doc """
-  Implementation for `Ecto.Repo.update!/2`.
+  Implementation for `Ecto.Repo.update/2`.
   """
-  def update!(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+  def update(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
     struct   = struct_from_changeset!(changeset)
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
@@ -108,14 +127,18 @@ defmodule Ecto.Repo.Model do
         # about values returned from the adapter
         changeset = apply_embedded_callbacks(embeds, changeset, :after)
         changeset = load_changes(changeset, values, adapter)
-        Callbacks.__apply__(model, :after_update, changeset).model
+        {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
       end
     else
-      changeset.model
+      {:ok, changeset.model}
     end
   end
 
-  def update!(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
+  def update(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
+    {:error, changeset}
+  end
+
+  def update(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
     changes =
       struct
       |> Map.take(model.__schema__(:fields))
@@ -123,13 +146,13 @@ defmodule Ecto.Repo.Model do
       |> Map.drop(model.__schema__(:embeds))
 
     changeset = %{Ecto.Changeset.change(struct) | changes: changes}
-    update!(repo, adapter, changeset, opts)
+    update(repo, adapter, changeset, opts)
   end
 
   @doc """
-  Implementation for `Ecto.Repo.delete!/2`.
+  Implementation for `Ecto.Repo.delete/2`.
   """
-  def delete!(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+  def delete(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
     struct = struct_from_changeset!(changeset)
     model  = struct.__struct__
     {prefix, source} = struct.__meta__.source
@@ -158,18 +181,20 @@ defmodule Ecto.Repo.Model do
       changeset = apply_embedded_callbacks(embeds, changeset, :after)
       changeset = load_changes(changeset, [], adapter)
       model = Callbacks.__apply__(model, :after_delete, changeset).model
-      put_in model.__meta__.state, :deleted
+      {:ok, put_in(model.__meta__.state, :deleted)}
     end
   end
 
-  def delete!(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
-    delete!(repo, adapter, Ecto.Changeset.change(struct), opts)
+  def delete(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
+    {:error, changeset}
+  end
+
+  def delete(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
+    delete(repo, adapter, Ecto.Changeset.change(struct), opts)
   end
 
   ## Helpers
 
-  defp struct_from_changeset!(%{valid?: false}),
-    do: raise(ArgumentError, "cannot insert/update an invalid changeset")
   defp struct_from_changeset!(%{model: nil}),
     do: raise(ArgumentError, "cannot insert/update a changeset without a model")
   defp struct_from_changeset!(%{model: struct}),

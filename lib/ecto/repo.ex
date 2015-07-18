@@ -403,6 +403,10 @@ defmodule Ecto.Repo do
   If any `before_insert` or `after_insert` callback is registered
   in the given model, they will be invoked with the changeset.
 
+  It returns `{:ok, model}` if the model has been successfully
+  inserted or `{:error, changeset}` if there was a validation
+  or a known constraint error.
+
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
@@ -411,10 +415,14 @@ defmodule Ecto.Repo do
 
   ## Example
 
-      post = MyRepo.insert! %Post{title: "Ecto is great"}
+      case MyRepo.insert %Post{title: "Ecto is great"} do
+        {:ok, model}        -> # Inserted with success
+        {:error, changeset} -> # Something went wrong
+      end
 
   """
-  defcallback insert!(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
+  defcallback insert(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) ::
+              {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Updates a model or changeset using its primary key.
@@ -434,6 +442,10 @@ defmodule Ecto.Repo do
 
   If the model has no primary key, `Ecto.NoPrimaryKeyError` will be raised.
 
+  It returns `{:ok, model}` if the model has been successfully
+  updated or `{:error, changeset}` if there was a validation
+  or a known constraint error.
+
   ## Options
 
     * `:force` - By default, if there are no changes in the changeset,
@@ -448,9 +460,13 @@ defmodule Ecto.Repo do
 
       post = MyRepo.get!(Post, 42)
       post = %{post | title: "New title"}
-      MyRepo.update!(post)
+      case MyRepo.update post do
+        {:ok, model}        -> # Updated with success
+        {:error, changeset} -> # Something went wrong
+      end
   """
-  defcallback update!(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) :: Ecto.Model.t | no_return
+  defcallback update(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) ::
+              {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Deletes a model using its primary key.
@@ -459,6 +475,10 @@ defmodule Ecto.Repo do
   in the given model, they will be invoked with the changeset.
 
   If the model has no primary key, `Ecto.NoPrimaryKeyError` will be raised.
+
+  It returns `{:ok, model}` if the model has been successfully
+  deleted or `{:error, changeset}` if there was a validation
+  or a known constraint error.
 
   ## Options
 
@@ -469,8 +489,27 @@ defmodule Ecto.Repo do
   ## Example
 
       [post] = MyRepo.all(from(p in Post, where: p.id == 42))
-      MyRepo.delete!(post)
+      case MyRepo.delete post do
+        {:ok, model}        -> # Deleted with success
+        {:error, changeset} -> # Something went wrong
+      end
 
+  """
+  defcallback delete(Ecto.Model.t, Keyword.t) ::
+              {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
+
+  @doc """
+  Same as `insert/2` but raises if the changeset is invalid.
+  """
+  defcallback insert!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
+
+  @doc """
+  Same as `update/2` but raises if the changeset is invalid.
+  """
+  defcallback update!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
+
+  @doc """
+  Same as `delete/2` but raises if the changeset is invalid.
   """
   defcallback delete!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 

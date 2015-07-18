@@ -29,6 +29,32 @@ defmodule Ecto.QueryError do
   end
 end
 
+defmodule Ecto.InvalidChangesetError do
+  @moduledoc """
+  Raised when we cannot perform an action because the
+  changeset is invalid.
+  """
+  defexception [:action, :changeset]
+
+  def message(%{action: action, changeset: changeset}) do
+    """
+    could not perform #{action} because changeset is invalid.
+
+    * Changeset changes
+
+    #{inspect changeset.changes}
+
+    * Changeset params
+
+    #{inspect changeset.params}
+
+    * Changeset errors
+
+    #{inspect changeset.errors}
+    """
+  end
+end
+
 defmodule Ecto.CastError do
   @moduledoc """
   Raised at runtime when a value cannot be cast.

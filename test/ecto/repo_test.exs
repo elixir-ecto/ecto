@@ -79,10 +79,10 @@ defmodule Ecto.RepoTest do
 
   test "works with primary key value" do
     model = %MyModel{id: 1, x: "abc"}
-    TestRepo.update!(model)
-    TestRepo.delete!(model)
     TestRepo.get(MyModel, 123)
     TestRepo.get_by(MyModel, x: "abc")
+    TestRepo.update!(model)
+    TestRepo.delete!(model)
   end
 
   test "works with custom source model" do
@@ -106,7 +106,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "validate model types" do
+  test "validates model types" do
     model = %MyModel{x: 123}
 
     assert_raise Ecto.ChangeError, fn ->
@@ -120,7 +120,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "repo validates get" do
+  test "validates get" do
     TestRepo.get(MyModel, 123)
 
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
@@ -134,7 +134,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "repo validates update_all" do
+  test "validates update_all" do
     # Success
     TestRepo.update_all(MyModel, set: [x: "321"])
 
@@ -151,7 +151,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "repo validates delete_all" do
+  test "validates delete_all" do
     # Success
     TestRepo.delete_all(MyModel)
 
@@ -170,25 +170,39 @@ defmodule Ecto.RepoTest do
 
   ## Changesets
 
-  test "create and update accepts changesets" do
+  test "insert and update accepts changesets" do
     valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
-    TestRepo.insert!(valid)
-    TestRepo.update!(valid)
+    assert {:ok, %MyModel{}} = TestRepo.insert(valid)
+    assert {:ok, %MyModel{}} = TestRepo.update(valid)
   end
 
-  test "create and update fail on invalid changeset" do
+  test "insert and update error on invalid changeset" do
+    invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
+    assert {:error, ^invalid} = TestRepo.insert(invalid)
+    assert {:error, ^invalid} = TestRepo.update(invalid)
+  end
+
+  test "insert! and update! accepts changesets" do
+    valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
+    assert %MyModel{} = TestRepo.insert!(valid)
+    assert %MyModel{} = TestRepo.update!(valid)
+  end
+
+  test "insert! and update! fail on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
 
-    assert_raise ArgumentError, "cannot insert/update an invalid changeset", fn ->
+    assert_raise Ecto.InvalidChangesetError,
+                 ~r"could not perform insert because changeset is invalid", fn ->
       TestRepo.insert!(invalid)
     end
 
-    assert_raise ArgumentError, "cannot insert/update an invalid changeset", fn ->
+    assert_raise Ecto.InvalidChangesetError,
+                 ~r"could not perform update because changeset is invalid", fn ->
       TestRepo.update!(invalid)
     end
   end
 
-  test "create and update fail on changeset without model" do
+  test "insert and update fail on changeset without model" do
     invalid = %Ecto.Changeset{valid?: true, model: nil}
 
     assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
