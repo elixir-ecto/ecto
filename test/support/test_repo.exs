@@ -8,13 +8,11 @@ defmodule Ecto.TestAdapter do
 
   ## Types
 
-  def load({:embed, type}, data), do: Ecto.Embedded.load(type, data, __MODULE__, &load/2)
-  def load(:binary_id, data), do: Ecto.Type.load(Ecto.UUID, data)
-  def load(type, data), do: Ecto.Type.load(type, data)
+  def load(:binary_id, data), do: Ecto.Type.load(Ecto.UUID, data, &load/2)
+  def load(type, data), do: Ecto.Type.load(type, data, &load/2)
 
-  def dump({:embed, type}, data), do: Ecto.Embedded.dump(type, data, __MODULE__, &dump/2)
-  def dump(:binary_id, data), do: Ecto.Type.dump(Ecto.UUID, data)
-  def dump(type, data), do: Ecto.Type.dump(type, data)
+  def dump(:binary_id, data), do: Ecto.Type.dump(Ecto.UUID, data, &dump/2)
+  def dump(type, data), do: Ecto.Type.dump(type, data, &dump/2)
 
   ## Queryable
 

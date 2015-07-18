@@ -49,7 +49,11 @@ defmodule Ecto.Schema.Serializer do
     fields = model.__schema__(:types)
     Enum.reduce(fields, %{}, fn {field, type}, acc ->
       value = Map.get(data, field)
-      Map.put(acc, field, dumper.(type, value))
+
+      case dumper.(type, value) do
+        {:ok, value} -> Map.put(acc, field, value)
+        :error -> raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type}"
+      end
     end)
   end
 end

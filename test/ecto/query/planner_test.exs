@@ -1,3 +1,4 @@
+Code.require_file "../../support/test_repo.exs", __DIR__
 Code.require_file "../../../integration_test/support/types.exs", __DIR__
 
 defmodule Ecto.Query.PlannerTest do

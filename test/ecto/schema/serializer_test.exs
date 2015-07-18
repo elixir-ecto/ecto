@@ -1,3 +1,5 @@
+Code.require_file "../../support/test_repo.exs", __DIR__
+
 defmodule Ecto.Schema.SerializerTest do
   use ExUnit.Case, async: true
 
@@ -30,8 +32,8 @@ defmodule Ecto.Schema.SerializerTest do
   test "load!" do
     data = %{"id" => 123, "name" => "michal", "count" => Decimal.new(5),
              "array" => ["array"], "uuid" => @uuid_binary,
-             "embed" => %{"type" => "one", "id" => @uuid_string}}
-    loaded = Serializer.load!(Model, nil, "mymodel", data, &Ecto.Type.load/2)
+             "embed" => %{"type" => "one", "id" => @uuid_binary}}
+    loaded = Serializer.load!(Model, nil, "mymodel", data, &Ecto.TestAdapter.load/2)
 
     assert loaded.name  == "michal"
     assert loaded.count == Decimal.new(5)
@@ -41,14 +43,14 @@ defmodule Ecto.Schema.SerializerTest do
   end
 
   test "dump!" do
-    embed = %Embed{type: "one", id: "two"}
+    embed = %Embed{type: "one", id: @uuid_string}
     model = %Model{id: 123, name: "michal", count: Decimal.new(5), array: ["array"],
                    uuid: @uuid_string, embed: embed}
 
     dumped_uuid = %Ecto.Query.Tagged{tag: nil, type: :uuid, value: @uuid_binary}
 
-    dumped = Serializer.dump!(Model, model, &Ecto.Type.dump/2)
+    dumped = Serializer.dump!(Model, model, &Ecto.TestAdapter.dump/2)
     assert dumped == %{name: "michal", count: Decimal.new(5), uuid: dumped_uuid,
-                       array: ["array"], embed: %{type: "one", id: "two"}, id: 123}
+                       array: ["array"], embed: %{type: "one", id: dumped_uuid}, id: 123}
   end
 end

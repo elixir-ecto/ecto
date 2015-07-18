@@ -36,11 +36,6 @@ defmodule Ecto.TypeTest do
     assert cast(Custom, nil) == {:ok, nil}
   end
 
-  test "boolean types" do
-    assert load(:boolean, 1) == {:ok, true}
-    assert load(:boolean, 0) == {:ok, false}
-  end
-
   test "map types" do
     assert load(:map, %{"a" => 1}) == {:ok, %{"a" => 1}}
     assert load(:map, 1) == :error

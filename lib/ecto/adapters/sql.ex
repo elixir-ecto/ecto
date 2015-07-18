@@ -40,8 +40,8 @@ defmodule Ecto.Adapters.SQL do
 
       ## Types
 
-      def load(type, value), do: Ecto.Adapters.SQL.load(type, value, __MODULE__)
-      def dump(type, value), do: Ecto.Adapters.SQL.dump(type, value, __MODULE__)
+      def load(type, value), do: Ecto.Adapters.SQL.load(type, value, &load/2)
+      def dump(type, value), do: Ecto.Adapters.SQL.dump(type, value, &dump/2)
 
       ## Query
 
@@ -425,28 +425,32 @@ defmodule Ecto.Adapters.SQL do
   ## Types
 
   @doc false
-  def load({:embed, type}, data, adapter),
-    do: Ecto.Embedded.load(type, data, adapter, fn type, value -> {:ok, Ecto.Type.cast!(type, value)} end)
-  def load(:binary_id, data, _adapter),
-    do: Ecto.Type.load(Ecto.UUID, data)
-  def load(type, data, _adapter),
-    do: Ecto.Type.load(type, data)
+  def load({:embed, _} = type, data, loader),
+    do: Ecto.Type.load(type, data, fn
+          {:embed, _} = type, value -> loader.(type, value)
+          type, value -> Ecto.Type.cast(type, value)
+        end)
+  def load(:binary_id, data, loader),
+    do: Ecto.Type.load(Ecto.UUID, data, loader)
+  def load(type, data, loader),
+    do: Ecto.Type.load(type, data, loader)
 
   @doc false
-  def dump({:embed, type}, data, adapter),
-    do: Ecto.Embedded.dump(type, data, adapter, fn _type, value -> {:ok, value} end)
-  def dump(:binary_id, data, _adapter),
-    do: Ecto.Type.dump(Ecto.UUID, data)
-  def dump(type, data, _adapter),
-    do: Ecto.Type.dump(type, data)
+  def dump({:embed, _} = type, data, dumper),
+    do: Ecto.Type.dump(type, data, fn
+          {:embed, _} = type, value -> dumper.(type, value)
+          _type, value -> {:ok, value}
+        end)
+  def dump(:binary_id, data, dumper),
+    do: Ecto.Type.dump(Ecto.UUID, data, dumper)
+  def dump(type, data, dumper),
+    do: Ecto.Type.dump(type, data, dumper)
 
   @doc false
   def bingenerate(key) do
     {:ok, value} = Ecto.UUID.dump(Ecto.UUID.generate)
     {[{key, value}], [{key, unwrap(value)}]}
   end
-
-  defp json_library, do: Application.get_env(:ecto, :json_library)
 
   defp unwrap(%Ecto.Query.Tagged{value: value}), do: value
   defp unwrap(value), do: value

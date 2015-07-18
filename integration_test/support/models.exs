@@ -42,7 +42,7 @@ defmodule Ecto.Integration.Post do
     field :bid, :binary_id
     field :uuid, Ecto.UUID, autogenerate: true
     field :meta, :map
-    field :posted, Ecto.Date # TODO: Rename this to :date
+    field :posted, Ecto.Date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :fetch_and_delete
     has_many :comments_authors, through: [:comments, :author]

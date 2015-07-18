@@ -332,13 +332,6 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp cast_field(param_key, :binary_id, params) do
-    # Since we don't have the adapter types here,
-    # we can't normalize the binary_id, so we just
-    # assume it is a binary.
-    cast_field(param_key, :binary, params)
-  end
-
   defp cast_field(param_key, type, params) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->

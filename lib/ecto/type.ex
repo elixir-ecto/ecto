@@ -273,20 +273,27 @@ defmodule Ecto.Type do
       {:ok, %Ecto.Query.Tagged{value: ["1", "2", "3"], type: {:array, :binary}}}
 
   """
-  @spec dump(t, term) :: {:ok, term} | :error
-  def dump(type, nil) do
+  @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
+  def dump(type, value, dumper \\ &dump/2)
+
+  # TODO: Should this go after embed/array?
+  def dump(type, nil, _dumper) do
     {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
   end
 
-  def dump({:array, type}, value) do
+  def dump({:embed, embed}, value, dumper) do
+    dump_embed(embed, value, dumper)
+  end
+
+  def dump({:array, type}, value, dumper) do
     if is_list(value) do
-      dump_array(type, value, [], false)
+      dump_array(type, value, dumper, [], false)
     else
       :error
     end
   end
 
-  def dump(type, value) do
+  def dump(type, value, _dumper) do
     cond do
       not primitive?(type) ->
         type.dump(value)
@@ -302,34 +309,49 @@ defmodule Ecto.Type do
   defp tag(_type, value),
     do: value
 
-  defp dump_array(type, [h|t], acc, tagged) do
-    case dump(type, h) do
+  defp dump_array(type, [h|t], dumper, acc, tagged) do
+    case dumper.(type, h) do
       {:ok, %Ecto.Query.Tagged{value: h}} ->
-        dump_array(type, t, [h|acc], true)
+        dump_array(type, t, dumper, [h|acc], true)
       {:ok, h} ->
-        dump_array(type, t, [h|acc], tagged)
+        dump_array(type, t, dumper, [h|acc], tagged)
       :error ->
         :error
     end
   end
 
-  defp dump_array(type, [], acc, true) do
+  defp dump_array(type, [], _dumper, acc, true) do
     {:ok, %Ecto.Query.Tagged{value: Enum.reverse(acc), type: type({:array, type})}}
   end
 
-  defp dump_array(_type, [], acc, false) do
+  defp dump_array(_type, [], _dumper, acc, false) do
     {:ok, Enum.reverse(acc)}
   end
 
-  @doc """
-  Same as `dump/2` but raises if value can't be dumped.
-  """
-  @spec dump!(t, term) :: term | no_return
-  def dump!(type, term) do
-    case dump(type, term) do
-      {:ok, value} -> value
-      :error -> raise ArgumentError, "cannot dump `#{inspect term}` to type #{inspect type}"
-    end
+  defp dump_embed(%{cardinality: :one, embed: model, field: field},
+                  value, fun) when is_map(value) do
+    {:ok, dump_embed(field, model, value, fun)}
+  end
+
+  defp dump_embed(%{cardinality: :many, container: :array, embed: model, field: field},
+                  value, fun) when is_list(value) do
+    {:ok, Enum.map(value, &dump_embed(field, model, &1, fun))}
+  end
+
+  defp dump_embed(_embed, _value, _fun) do
+    :error
+  end
+
+  defp dump_embed(field, model, %Ecto.Changeset{} = changeset, fun) do
+    dump_embed(field, model, Ecto.Changeset.apply_changes(changeset), fun)
+  end
+
+  defp dump_embed(_field, model, %{__struct__: model} = value, dumper) when is_map(value) do
+    Ecto.Schema.Serializer.dump!(model, value, dumper)
+  end
+
+  defp dump_embed(field, _model, value, _fun) do
+    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
   end
 
   @doc """
@@ -349,18 +371,25 @@ defmodule Ecto.Type do
       :error
 
   """
-  @spec load(t, term) :: {:ok, term} | :error
-  def load(_type, nil), do: {:ok, nil}
+  @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
+  def load(type, value, loader \\ &load/2)
 
-  def load({:array, type}, value) do
+  # TODO: Should this come after embed?
+  def load(_type, nil, _loader), do: {:ok, nil}
+
+  def load({:embed, embed}, value, loader) do
+    load_embed(embed, value, loader)
+  end
+
+  def load({:array, type}, value, loader) do
     if is_list(value) do
-      array(value, &load(type, &1), [])
+      array(value, &loader.(type, &1), [])
     else
       :error
     end
   end
 
-  def load(type, value) do
+  def load(type, value, _loader) do
     cond do
       not primitive?(type) ->
         type.load(value)
@@ -371,15 +400,26 @@ defmodule Ecto.Type do
     end
   end
 
-  @doc """
-  Same as `load/2` but raises if value can't be loaded.
-  """
-  @spec load!(t, term) :: term | no_return
-  def load!(type, term) do
-    case load(type, term) do
-      {:ok, value} -> value
-      :error -> raise ArgumentError, "cannot load `#{inspect term}` as type #{inspect type}"
-    end
+  defp load_embed(%{cardinality: :one, embed: model, field: field},
+                  value, fun) when is_map(value) do
+    {:ok, load_embed(field, model, value, fun)}
+  end
+
+  defp load_embed(%{cardinality: :many, container: :array, embed: model, field: field},
+                  value, fun) when is_list(value) do
+    {:ok, Enum.map(value, &load_embed(field, model, &1, fun))}
+  end
+
+  defp load_embed(_embed, _value, _fun) do
+    :error
+  end
+
+  defp load_embed(_field, model, value, loader) when is_map(value) do
+    Ecto.Schema.Serializer.load!(model, nil, nil, value, loader)
+  end
+
+  defp load_embed(field, _model, value, _fun) do
+    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
   end
 
   @doc """
@@ -476,7 +516,12 @@ defmodule Ecto.Type do
     end
   end
 
+  # TODO: Should this come before {:array, _} and embed?
   def cast(_type, nil), do: {:ok, nil}
+
+  def cast(:binary_id, term) when is_binary(term) do
+    {:ok, term}
+  end
 
   def cast(:float, term) when is_binary(term) do
     case Float.parse(term) do
@@ -513,17 +558,6 @@ defmodule Ecto.Type do
     end
   end
 
-  @doc """
-  Same as `cast/2` but raises if value can't be cast.
-  """
-  @spec cast!(t, term) :: term | no_return
-  def cast!(type, term) do
-    case cast(type, term) do
-      {:ok, value} -> value
-      :error -> raise ArgumentError, "cannot cast `#{inspect term}` to type #{inspect type}"
-    end
-  end
-
   ## Helpers
 
   # Checks if a value is of the given primitive type.
@@ -539,7 +573,7 @@ defmodule Ecto.Type do
 
   defp of_base_type?(:decimal, %Decimal{}), do: true
   defp of_base_type?(:binary_id, value) do
-    raise "cannot dump/cast/load :binary_id type directly, attempted value: #{inspect value}"
+    raise "cannot dump/load :binary_id type directly, attempted value: #{inspect value}"
   end
   defp of_base_type?({:embed, _}, value) do
     raise "cannot dump/load embed directly, attempted value: #{inspect value}"

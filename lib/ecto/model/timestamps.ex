@@ -23,7 +23,8 @@ defmodule Ecto.Model.Timestamps do
     if get_change changeset, field do
       changeset
     else
-      force_change changeset, field, Ecto.Type.load!(type, timestamp_tuple(use_usec))
+      {:ok, value} = Ecto.Type.load(type, timestamp_tuple(use_usec))
+      force_change changeset, field, value
     end
   end
 
