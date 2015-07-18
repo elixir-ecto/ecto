@@ -1,5 +1,3 @@
-Code.require_file "../support/test_repo.exs", __DIR__
-
 defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
@@ -275,7 +273,7 @@ defmodule Ecto.RepoTest do
     assert model.embed == embed
   end
 
-  test "handled embeds on update" do
+  test "handles embeds on update" do
     embed = %MyEmbed{id: @uuid, x: "xyz"}
 
     # Leaves embeds untouched when updatting model

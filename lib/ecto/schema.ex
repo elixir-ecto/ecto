@@ -1029,8 +1029,10 @@ defmodule Ecto.Schema do
     end
   end
 
+  defp check_default!(_name, :binary_id, _default), do: :ok
+  defp check_default!(_name, {:embed, _}, _default), do: :ok
   defp check_default!(name, type, default) do
-    case Ecto.Type.dump(type, default, %{}) do
+    case Ecto.Type.dump(type, default) do
       {:ok, _} ->
         :ok
       :error ->

@@ -12,13 +12,11 @@ defmodule Ecto.Repo.Queryable do
   Implementation for `Ecto.Repo.all/2`
   """
   def all(repo, adapter, queryable, opts) when is_list(opts) do
-    id_types = adapter.id_types(repo)
-
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:all, id_types)
+      |> Planner.query(:all, adapter)
 
-    adapter.all(repo, query, params, preprocess(query.prefix, query.sources, id_types), opts)
+    adapter.all(repo, query, params, preprocess(query.prefix, query.sources, adapter), opts)
     |> Ecto.Repo.Assoc.query(query)
     |> Ecto.Repo.Preloader.query(repo, query, postprocess(query.select))
   end
@@ -82,7 +80,7 @@ defmodule Ecto.Repo.Queryable do
   defp update_all(repo, adapter, queryable, opts) do
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:update_all, adapter.id_types(repo))
+      |> Planner.query(:update_all, adapter)
     adapter.update_all(repo, query, params, opts)
   end
 
@@ -92,34 +90,41 @@ defmodule Ecto.Repo.Queryable do
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
     {query, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:delete_all, adapter.id_types(repo))
+      |> Planner.query(:delete_all, adapter)
     adapter.delete_all(repo, query, params, opts)
   end
 
   ## Helpers
 
-  defp preprocess(prefix, sources, id_types) do
-    &preprocess(&1, &2, prefix, sources, id_types)
+  defp preprocess(prefix, sources, adapter) do
+    &preprocess(&1, &2, prefix, sources, adapter)
   end
 
-  defp preprocess({:&, _, [ix]}, value, prefix, sources, id_types) do
+  defp preprocess({:&, _, [ix]}, value, prefix, sources, adapter) do
     {source, model} = elem(sources, ix)
-    Ecto.Schema.Serializer.load!(model, prefix, source, value, id_types)
+    Ecto.Schema.Serializer.load!(model, prefix, source, value, &adapter.load/2)
   end
 
-  defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _sources, id_types) do
+  defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _sources, adapter) do
     case Keyword.fetch(meta, :ecto_type) do
-      {:ok, type} -> Ecto.Type.load!(type, value, id_types)
+      {:ok, type} -> load!(type, value, adapter)
       :error      -> value
     end
   end
 
-  defp preprocess(%Ecto.Query.Tagged{tag: tag}, value, _prefix, _sources, id_types) do
-    Ecto.Type.load!(tag, value, id_types)
+  defp preprocess(%Ecto.Query.Tagged{tag: tag}, value, _prefix, _sources, adapter) do
+    load!(tag, value, adapter)
   end
 
-  defp preprocess(_key, value, _prefix, _sources, _id_types) do
+  defp preprocess(_key, value, _prefix, _sources, _adapter) do
     value
+  end
+
+  defp load!(type, value, adapter) do
+    case adapter.load(type, value) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type}"
+    end
   end
 
   defp postprocess(%{expr: expr, fields: fields}) do

@@ -93,6 +93,18 @@ defmodule Ecto.Adapters.MySQL do
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
 
+  ## Custom MySQL types
+
+  def load({:embed, _} = type, binary) when is_binary(binary),
+    do: super(type, json_library.decode!(binary))
+  def load(:map, binary) when is_binary(binary),
+    do: super(:map, json_library.decode!(binary))
+  def load(:boolean, 0), do: {:ok, false}
+  def load(:boolean, 1), do: {:ok, true}
+  def load(type, value), do: super(type, value)
+
+  defp json_library, do: Application.get_env(:ecto, :json_library)
+
   ## Storage API
 
   @doc false

@@ -37,7 +37,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   defp prepare(query, operation \\ :all) do
-    Planner.prepare(query, operation, %{binary_id: Ecto.UUID})
+    Planner.prepare(query, operation, Ecto.TestAdapter)
   end
 
   defp normalize(query, operation \\ :all) do
@@ -46,7 +46,7 @@ defmodule Ecto.Query.PlannerTest do
 
   defp normalize_with_params(query, operation \\ :all) do
     {query, params} = prepare(query, operation)
-    {Planner.normalize(query, operation, %{binary_id: Ecto.UUID}), params}
+    {Planner.normalize(query, operation, Ecto.TestAdapter), params}
   end
 
   test "prepare: merges all parameters" do

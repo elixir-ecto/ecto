@@ -12,7 +12,6 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-
   defmodule Post do
     use Ecto.Model
 

@@ -21,7 +21,6 @@ defmodule Ecto.Adapters.SQL do
       @behaviour Ecto.Adapter
       @behaviour Ecto.Adapter.Migration
       @behaviour Ecto.Adapter.Transaction
-      @behaviour Ecto.Adapter.Embedded
 
       @conn __MODULE__.Connection
       @adapter unquote(adapter)
@@ -39,12 +38,12 @@ defmodule Ecto.Adapters.SQL do
         Ecto.Adapters.SQL.start_link(@conn, @adapter, repo, opts)
       end
 
-      ## Query
+      ## Types
 
-      @doc false
-      def id_types(_repo) do
-        %{adapter: __MODULE__, binary_id: Ecto.UUID}
-      end
+      def load(type, value), do: Ecto.Adapters.SQL.load(type, value, &load/2)
+      def dump(type, value), do: Ecto.Adapters.SQL.dump(type, value, &dump/2)
+
+      ## Query
 
       @doc false
       def to_sql(:all, query), do: @conn.all(query)
@@ -74,7 +73,7 @@ defmodule Ecto.Adapters.SQL do
 
       # Nil binary_ids are generated in the adapter.
       def insert(repo, source, params, {key, :binary_id, nil}, returning, opts) do
-        {req, resp} = Ecto.Adapters.SQL.bingenerate(key, id_types(repo))
+        {req, resp} = Ecto.Adapters.SQL.bingenerate(key)
         case insert(repo, source, req ++ params, nil, returning, opts) do
           {:ok, values}     -> {:ok, resp ++ values}
           {:error, _} = err -> err
@@ -129,22 +128,10 @@ defmodule Ecto.Adapters.SQL do
         count > 0
       end
 
-      ## Embedded
-
-      @doc false
-      def dump_embed(value, model, types, id_types) do
-        Ecto.Adapters.SQL.dump_embed(value, model, types, id_types)
-      end
-
-      @doc false
-      def load_embed(value, model, types, id_types) do
-        Ecto.Adapters.SQL.load_embed(value, model, types, id_types)
-      end
-
       defoverridable [all: 5, update_all: 4, delete_all: 4,
                       insert: 6, update: 7, delete: 5,
                       execute_ddl: 3, ddl_exists?: 3,
-                      dump_embed: 4, load_embed: 4]
+                      load: 2, dump: 2]
     end
   end
 
@@ -175,7 +162,7 @@ defmodule Ecto.Adapters.SQL do
 
     {query, params} =
       Ecto.Queryable.to_query(queryable)
-      |> Ecto.Query.Planner.query(kind, adapter.id_types(repo))
+      |> Ecto.Query.Planner.query(kind, adapter)
 
     {adapter.to_sql(kind, query), params}
   end
@@ -435,17 +422,40 @@ defmodule Ecto.Adapters.SQL do
     pool_mod.start_link(connection, opts)
   end
 
-  ## Query
+  ## Types
 
   @doc false
-  def bingenerate(key, id_types) do
-    %{binary_id: binary_id} = id_types
-    {:ok, value} = binary_id.dump(binary_id.generate)
+  def load({:embed, _} = type, data, loader),
+    do: Ecto.Type.load(type, data, fn
+          {:embed, _} = type, value -> loader.(type, value)
+          type, value -> Ecto.Type.cast(type, value)
+        end)
+  def load(:binary_id, data, loader),
+    do: Ecto.Type.load(Ecto.UUID, data, loader)
+  def load(type, data, loader),
+    do: Ecto.Type.load(type, data, loader)
+
+  @doc false
+  def dump({:embed, _} = type, data, dumper),
+    do: Ecto.Type.dump(type, data, fn
+          {:embed, _} = type, value -> dumper.(type, value)
+          _type, value -> {:ok, value}
+        end)
+  def dump(:binary_id, data, dumper),
+    do: Ecto.Type.dump(Ecto.UUID, data, dumper)
+  def dump(type, data, dumper),
+    do: Ecto.Type.dump(type, data, dumper)
+
+  @doc false
+  def bingenerate(key) do
+    {:ok, value} = Ecto.UUID.dump(Ecto.UUID.generate)
     {[{key, value}], [{key, unwrap(value)}]}
   end
 
   defp unwrap(%Ecto.Query.Tagged{value: value}), do: value
   defp unwrap(value), do: value
+
+  ## Query
 
   @doc false
   def all(repo, sql, query, params, preprocess, opts) do
@@ -610,21 +620,5 @@ defmodule Ecto.Adapters.SQL do
   defp rollback_sql(mod, :raw), do: mod.rollback
   defp rollback_sql(mod, :sandbox) do
     mod.rollback_to_savepoint "ecto_trans"
-  end
-
-  ## Embedded
-
-  @doc false
-  def dump_embed(value, model, _types, _id_types) do
-    Map.take(value, model.__schema__(:fields))
-  end
-
-  @doc false
-  def load_embed(data, _model, types, id_types) do
-    Enum.reduce(types, %{}, fn
-      {field, type}, acc ->
-        value = Map.get(data, Atom.to_string(field))
-        Map.put(acc, field, Ecto.Type.cast!(type, value, id_types))
-    end)
   end
 end
