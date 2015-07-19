@@ -43,7 +43,8 @@ defmodule Ecto.Adapters.SQL do
       def load(type, value), do: Ecto.Adapters.SQL.load(type, value, &load/2)
       def dump(type, value), do: Ecto.Adapters.SQL.dump(type, value, &dump/2)
 
-      def generate_id(type), do: Ecto.Adapters.SQL.generate_id(type)
+      def generate_id({:embed, _}), do: Ecto.UUID.generate
+      def generate_id(:binary_id),  do: Ecto.UUID.generate
 
       ## Query
 
@@ -447,8 +448,6 @@ defmodule Ecto.Adapters.SQL do
     do: Ecto.Type.dump(Ecto.UUID, data, dumper)
   def dump(type, data, dumper),
     do: Ecto.Type.dump(type, data, dumper)
-
-  def generate_id({:embed, :binary_id}), do: Ecto.UUID.generate
 
   @doc false
   def bingenerate(key) do
