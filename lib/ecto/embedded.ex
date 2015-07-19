@@ -79,20 +79,18 @@ defmodule Ecto.Embedded do
     do_change(value, current, mod)
   end
 
-  # We accept nil here to make is easier to mark embeds recursively
-  # for deletion, otherwise we would need to guess what to pass [] or nil
   def change(%Embedded{cardinality: :many, container: :array, embed: mod},
-             value, current) when is_list(value) or is_nil(value) do
+             value, current) when is_list(value) do
     {pk, _} = primary_key(mod)
     current = process_current(current, pk)
 
     changeset_fun = &do_change(&1, &2, mod)
-    pk_fun = fn
-      %Changeset{model: model} -> Map.fetch(model, pk)
-      model -> Map.fetch(model, pk)
-    end
-    map_changes(value || [], pk_fun, changeset_fun, current, [], true) |> elem(1)
+    pk_fun = &model_or_changeset_pk(&1, pk)
+    map_changes(value, pk_fun, changeset_fun, current, [], true) |> elem(1)
   end
+
+  defp model_or_changeset_pk(%Changeset{model: model}, pk), do: Map.fetch(model, pk)
+  defp model_or_changeset_pk(model, pk), do: Map.fetch(model, pk)
 
   defp do_change(value, nil, mod) do
     fields    = mod.__schema__(:fields)

@@ -56,6 +56,10 @@ defmodule Ecto.TypeTest do
     assert load({:array, Custom}, 1) == :error
     assert dump({:array, Custom}, 1) == :error
     assert cast({:array, Custom}, 1) == :error
+
+    assert load({:array, Custom}, nil) == {:ok, []}
+    assert dump({:array, Custom}, nil) == :error
+    assert cast({:array, Custom}, nil) == :error
   end
 
   test "decimal casting" do
@@ -66,11 +70,13 @@ defmodule Ecto.TypeTest do
 
   @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
   @uuid_binary <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>
+  @uuid_tagged %Ecto.Query.Tagged{value: @uuid_binary, type: :uuid}
 
   test "embeds_one" do
     type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed, cardinality: :one,
                                          embed: Model, on_cast: :changeset)}
     assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, &Ecto.TestAdapter.load/2)
+    assert {:ok, nil} == load(type, nil, &Ecto.TestAdapter.load/2)
     assert :error == load(type, 1)
 
     assert {:ok, %{a: 1, id: %Ecto.Query.Tagged{value: nil}}} =
@@ -78,7 +84,7 @@ defmodule Ecto.TypeTest do
     assert :error == dump(type, 1)
 
     changeset = Ecto.Changeset.change(%Model{id: @uuid_string}, a: 1)
-    assert {:ok, %{a: 1, id: %Ecto.Query.Tagged{value: @uuid_binary}}} =
+    assert {:ok, %{a: 1, id: @uuid_tagged}} ==
            dump(type, changeset, &Ecto.TestAdapter.dump/2)
 
     assert %Model{a: 1} = cast(type, %{"a" => 1})
@@ -92,17 +98,20 @@ defmodule Ecto.TypeTest do
                                          embed: Model, on_cast: :changeset)}
 
     assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], &Ecto.TestAdapter.load/2)
+    assert {:ok, []} == load(type, nil, &Ecto.TestAdapter.load/2)
     assert :error == load(type, 1, &Ecto.TestAdapter.load/2)
 
-    assert {:ok, [%{a: 1, id: %Ecto.Query.Tagged{value: @uuid_binary}}]} =
+    assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
            dump(type, [%Model{a: 1, id: @uuid_string}], &Ecto.TestAdapter.dump/2)
+    assert :error == dump(type, nil, &Ecto.TestAdapter.dump/2)
     assert :error == dump(type, 1, &Ecto.TestAdapter.dump/2)
 
     changeset = Ecto.Changeset.change(%Model{id: @uuid_string}, a: 1)
-    assert {:ok, [%{a: 1, id: %Ecto.Query.Tagged{value: @uuid_binary}}]} =
+    assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
            dump(type, [changeset], &Ecto.TestAdapter.dump/2)
 
     assert [%Model{a: 1}] = cast(type, [%{"a" => 1}])
+    assert :error == cast(type, nil)
     assert :error == cast(type, [%{}])
     assert :error == cast(type, [[]])
   end
