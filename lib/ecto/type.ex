@@ -272,6 +272,7 @@ defmodule Ecto.Type do
       iex> dump({:array, :binary}, ["1", "2", "3"])
       {:ok, %Ecto.Query.Tagged{value: ["1", "2", "3"], type: {:array, :binary}}}
 
+  A `dumper` function may be given for handling recursive types.
   """
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(type, value, dumper \\ &dump/2)
@@ -357,9 +358,6 @@ defmodule Ecto.Type do
   @doc """
   Loads a value with the given type.
 
-  Load is invoked when loading database native types
-  into a struct.
-
       iex> load(:string, nil)
       {:ok, nil}
       iex> load(:string, "foo")
@@ -370,6 +368,7 @@ defmodule Ecto.Type do
       iex> load(:integer, "10")
       :error
 
+  A `loader` function may be given for handling recursive types.
   """
   @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def load(type, value, loader \\ &load/2)

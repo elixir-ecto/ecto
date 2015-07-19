@@ -22,6 +22,60 @@ defmodule Ecto.Adapter do
   """
   defmacrocallback __before_compile__(Macro.Env.t) :: Macro.t
 
+  ## Types
+
+  @doc """
+  Called for every known Ecto type when loading data from the adapter.
+
+  This allows developers to properly translate values coming from
+  the adapters into Ecto ones. For example, if the database does not
+  support booleans but instead returns 0 and 1 for them, you could
+  add:
+
+      def load(:boolean, 0), do: {:ok, false}
+      def load(:boolean, 1), do: {:ok, true}
+      def load(type, value), do: Ecto.Type.load(type, value, &load/2)
+
+  Notice the `Ecte.Type.load/3` provides a default implementation
+  which also expects the current `load/2` for handling recursive
+  types like arrays and embeds.
+
+  Finally, notice all adapters are required to implement a clause
+  for :binary_id types, since they are adapter specific. If your
+  adapter does not provide binary ids, you may simply use Ecto.UUID:
+
+      def load(:binary_id, value), do: load(Ecto.UUID, value)
+      def load(type, value), do: Ecto.Type.load(type, value, &load/2)
+
+  """
+  defcallback load(Ecto.Type.t, term) :: {:ok, term} | :error
+
+  @doc """
+  Called for every known Ecto type when dumping data to the adapter.
+
+  This allows developers to properly translate values coming from
+  the Ecto into adapter ones. For example, if the database does not
+  support booleans but instead returns 0 and 1 for them, you could
+  add:
+
+      def dump(:boolean, false), do: {:ok, 0}
+      def dump(:boolean, true), do: {:ok, 1}
+      def dump(type, value), do: Ecto.Type.dump(type, value, &dump/2)
+
+  Notice the `Ecte.Type.dump/3` provides a default implementation
+  which also expects the current `dump/2` for handling recursive
+  types like arrays and embeds.
+
+  Finally, notice all adapters are required to implement a clause
+  for :binary_id types, since they are adapter specific. If your
+  adapter does not provide binary ids, you may simply use Ecto.UUID:
+
+      def dump(:binary_id, value), do: dump(Ecto.UUID, value)
+      def dump(type, value), do: Ecto.Type.dump(type, value, &dump/2)
+
+  """
+  defcallback dump(Ecto.Type.t, term) :: {:ok, term} | :error
+
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`
   or just `:ok` if nothing needs to be done.
