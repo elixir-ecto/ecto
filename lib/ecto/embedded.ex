@@ -207,7 +207,7 @@ defmodule Ecto.Embedded do
        Map.get(changeset.model, pk) == nil do
       case model.__schema__(:autogenerate_id) do
         {key, :binary_id} ->
-          update_in changeset.changes, &Map.put(&1, key, adapter.generate_id({:embed, embed}))
+          update_in changeset.changes, &Map.put(&1, key, adapter.embed_id(embed))
         other ->
           raise ArgumentError, "embedded model `#{inspect model}` must have binary id " <>
                                "primary key with autogenerate: true, got: #{inspect other}"

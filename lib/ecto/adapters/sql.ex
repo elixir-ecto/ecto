@@ -40,11 +40,9 @@ defmodule Ecto.Adapters.SQL do
 
       ## Types
 
+      def embed_id(_), do: Ecto.UUID.generate
       def load(type, value), do: Ecto.Adapters.SQL.load(type, value, &load/2)
       def dump(type, value), do: Ecto.Adapters.SQL.dump(type, value, &dump/2)
-
-      def generate_id({:embed, _}), do: Ecto.UUID.generate
-      def generate_id(:binary_id),  do: Ecto.UUID.generate
 
       ## Query
 
@@ -134,7 +132,7 @@ defmodule Ecto.Adapters.SQL do
       defoverridable [all: 5, update_all: 4, delete_all: 4,
                       insert: 6, update: 7, delete: 5,
                       execute_ddl: 3, ddl_exists?: 3,
-                      load: 2, dump: 2, generate_id: 1]
+                      load: 2, dump: 2, embed_id: 1]
     end
   end
 

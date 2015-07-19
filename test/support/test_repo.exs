@@ -14,7 +14,7 @@ defmodule Ecto.TestAdapter do
   def dump(:binary_id, data), do: Ecto.Type.dump(Ecto.UUID, data, &dump/2)
   def dump(type, data), do: Ecto.Type.dump(type, data, &dump/2)
 
-  def generate_id({:embed, _}), do: Ecto.UUID.generate
+  def embed_id(%Ecto.Embedded{}), do: Ecto.UUID.generate
 
   ## Queryable
 
