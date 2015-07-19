@@ -76,7 +76,7 @@ defmodule Ecto.Repo.Model do
   end
 
   def insert(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
-    {:error, changeset}
+    {:error, %{changeset | action: :insert}}
   end
 
   def insert(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
@@ -135,7 +135,7 @@ defmodule Ecto.Repo.Model do
   end
 
   def update(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
-    {:error, changeset}
+    {:error, %{changeset | action: :update}}
   end
 
   def update(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
@@ -186,7 +186,7 @@ defmodule Ecto.Repo.Model do
   end
 
   def delete(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
-    {:error, changeset}
+    {:error, %{changeset | action: :delete}}
   end
 
   def delete(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do

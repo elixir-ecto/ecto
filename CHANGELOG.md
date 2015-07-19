@@ -1,5 +1,10 @@
 # Changelog
 
+## V0.14.1
+
+* Bug fixes
+  * Also tag action in changeset when changeset is invalid
+
 ## v0.14.0
 
 * Experimental features (please try them out and give feedback)
