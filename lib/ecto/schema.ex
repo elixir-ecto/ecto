@@ -622,11 +622,32 @@ defmodule Ecto.Schema do
 
   One common use case for belongs to associations is to handle
   polymorphism. For example, imagine you have defined a Comment
-  model and you wish to use it for commenting on tasks and posts.
+  model and you wish to use it for commenting on both tasks and
+  posts.
 
-  Because Ecto does not tie a model to a given table, we can
-  achieve this by specifying the table on the association
-  definition. Let's start over and define a new Comment model:
+  Some abstractions would force you to define some sort of
+  polymorphic association with two fields in your database:
+
+      * commentable_type
+      * commentable_id
+
+  The problem with this approach is that it breaks references in
+  the database. You can't use foreign keys and it is very inneficient
+  both in terms of query time and storage.
+
+  In Ecto, we have two ways to solve this issue. The simplest one
+  is to define multiple fields in the Comment model, one for each
+  association:
+
+      * task_id
+      * post_id
+
+  Unless you have dozens of columns, this is simpler for the developer,
+  more DB friendly and more efficient on all aspects.
+
+  Alternatively, because Ecto does not tie a model to a given table,
+  we can use separate tables for each association. Let's start over
+  and define a new Comment model:
 
       defmodule Comment do
         use Ecto.Model
@@ -659,7 +680,7 @@ defmodule Ecto.Schema do
   Now each association uses its own specific table, "posts_comments"
   and "tasks_comments", which must be created on migrations. The
   advantage of this approach is that we never store unrelated data
-  together, ensuring we keep databases references fast and correct.
+  together, also ensuring we keep databases references fast and correct.
 
   When using this technique, the only limitation is that you cannot
   build comments directly. For example, the command below
