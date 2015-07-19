@@ -149,30 +149,54 @@ defmodule Ecto.Embedded do
   @doc """
   Applies given callback to all models based on changeset action
   """
-  def apply_callback(%Embedded{cardinality: :one, embed: module}, changeset, type) do
-    do_apply_callback(changeset, type, module)
+  def apply_each_callback(changeset, [], _adapter, _type), do: changeset
+
+  def apply_each_callback(changeset, embeds, adapter, type) do
+    types = changeset.types
+
+    update_in changeset.changes, fn changes ->
+      Enum.reduce(embeds, changes, fn name, changes ->
+        case Map.fetch(changes, name) do
+          {:ok, changeset} ->
+            {:embed, embed} = Map.get(types, name)
+            Map.put(changes, name, apply_callback(embed, changeset, adapter, type))
+          :error ->
+            changes
+        end
+      end)
+    end
   end
 
-  def apply_callback(%Embedded{cardinality: :many, embed: module}, changesets, type) do
-    Enum.map(changesets, &do_apply_callback(&1, type, module))
+  defp apply_callback(%Embedded{cardinality: :one, embed: module}, changeset, adapter, type) do
+    apply_callback(changeset, adapter, type, module)
   end
 
-  defp do_apply_callback(nil, _type, _embed), do: nil
+  defp apply_callback(%Embedded{cardinality: :many, embed: module}, changesets, adapter, type) do
+    Enum.map(changesets, &apply_callback(&1, adapter, type, module))
+  end
 
-  defp do_apply_callback(%{action: :update, changes: changes} = changeset, _, _)
+  defp apply_callback(nil, _type, _adapter, _embed), do: nil
+
+  defp apply_callback(%Changeset{action: :update, changes: changes} = changeset, _, _, _)
     when changes == %{}, do: changeset
 
-  defp do_apply_callback(%{valid?: false}, _type, embed) do
+  defp apply_callback(%Changeset{valid?: false}, _adapter, _type, embed) do
     raise ArgumentError, "changeset for #{embed} is invalid, " <>
       "but the parent changeset was not marked as invalid"
   end
 
-  defp do_apply_callback(%{model: %{__struct__: embed}, action: action} = changeset,
-                         type, embed) do
-    Ecto.Model.Callbacks.__apply__(embed, callback_for(type, action), changeset)
+  defp apply_callback(%Changeset{model: %{__struct__: embed}, action: action} = changeset,
+                         adapter, type, embed) do
+    case callback_for(type, action) do
+      :before_insert ->
+        Ecto.Model.Callbacks.__apply__(embed, :before_insert, changeset)
+      callback ->
+        Ecto.Model.Callbacks.__apply__(embed, callback, changeset)
+    end
+    |> apply_each_callback(embed.__schema__(:embeds), adapter, type)
   end
 
-  defp do_apply_callback(%{model: model}, _callback, embed) do
+  defp apply_callback(%Changeset{model: model}, _adapter, _type, embed) do
     raise ArgumentError, "expected changeset for embedded model #{embed}, " <>
       "got #{inspect model}"
   end
