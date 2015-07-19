@@ -176,7 +176,7 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :map_type
   @tag :array_type
-  test "embeds many with array" do
+  test "embeds many" do
     item = %Item{price: Decimal.new(123), valid_at: Ecto.Date.local}
     tag = Ecto.Changeset.change(%Tag{}, items: [item])
     tag = TestRepo.insert!(tag)

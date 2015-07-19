@@ -714,6 +714,10 @@ defmodule Ecto.Schema do
       can be overriden in cast/4. It's an atom representing function name
       in the embedded model's module (default: `:changeset`).
 
+    * `:strategy` - the strategy for storing models in the database.
+      Ecto supports only the `:replace` strategy out of the box which is the
+      default. Read the strategy in `embeds_many/3` for more info.
+
   ## Examples
 
       defmodule Order do
@@ -738,9 +742,9 @@ defmodule Ecto.Schema do
   Indicates an embedding of many models.
 
   The current model has zero or more records of the other model embedded
-  inside of it. Depending on the choice of container it uses a combination
-  of `:array` and `:map` types for storage, but allows embedded models to
-  habe all the things regular models can - callbacks, structured fields, etc.
+  inside of it, containined in a list. Embedded models have all the things
+  regular models do - callbacks, structured fields, etc.
+
   All typecasting operations are performed recursively on embedded models
   alongside the operations on the parent model.
 
@@ -752,8 +756,10 @@ defmodule Ecto.Schema do
     * `:on_cast` - the default changeset function to call during casting,
       can be overriden in cast/4. It's an atom representing function name
       in the embedded model's module (default: `:changeset`).
-    * `:container` - the type of container used for model storage. Can be
-      either `:map` or `:array`.
+
+    * `:strategy` - the strategy for storing models in the database.
+      Ecto supports only the `:replace` strategy out of the box which is the
+      default. Read strategy section below for more info.
 
   ## Examples
 
@@ -768,22 +774,26 @@ defmodule Ecto.Schema do
       [order] = Repo.all(from(o in Order, where: p.id == 42))
       order.items #=> [%Item{...}, ...]
 
-  ## Container `:array`
+  ## Strategy
 
-  Usage requires support for both `:map` and `:array` types from the database.
-  It's best suited for situations when order of embedded items is important,
-  but it requires the whole set of embedded models to be send to the database
-  on updates.
+  A strategy configures how modules should be inserted, updated and deleted
+  from the database. Changing the strategy may affect how items are stored in
+  the database, although embeds_many will always have them as a list in the
+  model.
 
-  ## Container `:map`
+  Ecto supports only the `:replace` strategy out of the box which is the
+  default. This means all embeds in the model always fully replace the entries
+  in the database.
 
-  Usage requires support for only `:map` type. Models are stored in a map,
-  where keys are generated using stringified `:binary_id` type of the
-  underlaying database. It allows easy concurrent updates, as a subset
-  of embedded models can be send to the database, but the ordering is lost.
-  You can implement custom ordering mechanism on top of it, by using an
-  order field in embedded models, and sorting by it.
+  For example, if you have a collection with a 100 items, the 100 items will
+  be sent whenever any of them change. The approach is useful when you need the
+  parent and embeds to always be consistent.
 
+  Other databases may support different strategies, like one that only changes
+  the embeds that have effectively changed, also reducing the amount of data
+  send to the database. This is specially common in NoSQL databases.
+
+  Please check your adapter documentation in case it supports other strategies.
   """
   defmacro embeds_many(name, model, opts \\ []) do
     quote do
@@ -792,6 +802,40 @@ defmodule Ecto.Schema do
   end
 
   ## Callbacks
+
+  @doc false
+  def __load__(model, prefix, source, data, loader) do
+    source = source || model.__schema__(:source)
+    struct = model.__struct__()
+    fields = model.__schema__(:types)
+
+    loaded = do_load(struct, fields, data, loader)
+    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: {prefix, source}})
+    Ecto.Model.Callbacks.__apply__(model, :after_load, loaded)
+  end
+
+  defp do_load(struct, fields, map, loader) when is_map(map) do
+    Enum.reduce(fields, struct, fn
+      {field, type}, acc ->
+        value = load!(type, Map.get(map, Atom.to_string(field)), loader)
+        Map.put(acc, field, value)
+    end)
+  end
+
+  defp do_load(struct, fields, list, loader) when is_list(list) do
+    Enum.reduce(fields, {struct, list}, fn
+      {field, type}, {acc, [h|t]} ->
+        value = load!(type, h, loader)
+        {Map.put(acc, field, value), t}
+    end) |> elem(0)
+  end
+
+  defp load!(type, value, loader) do
+    case loader.(type, value) do
+      {:ok, value} -> value
+      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type}"
+    end
+  end
 
   @doc false
   def __field__(mod, name, type, pk?, opts) do
@@ -858,18 +902,14 @@ defmodule Ecto.Schema do
 
   @doc false
   def __embeds_one__(mod, name, model, opts) do
-    check_options!(opts, [:on_cast], "embeds_one/3")
-    opts = Keyword.put(opts, :container, nil)
+    check_options!(opts, [:on_cast, :strategy], "embeds_one/3")
     embed(mod, :one, name, model, opts)
   end
 
   @doc false
   def __embeds_many__(mod, name, model, opts) do
-    check_options!(opts, [:on_cast, :container], "embeds_many/3")
-    opts =
-      opts
-      |> Keyword.put(:default, [])
-      |> Keyword.put_new(:container, :array)
+    check_options!(opts, [:on_cast, :strategy], "embeds_many/3")
+    opts = Keyword.put(opts, :default, [])
     embed(mod, :many, name, model, opts)
   end
 

@@ -73,15 +73,13 @@ defmodule Ecto.TypeTest do
   @uuid_tagged %Ecto.Query.Tagged{value: @uuid_binary, type: :uuid}
 
   test "embeds_one" do
-    type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed, cardinality: :one,
-                                         embed: Model, on_cast: :changeset)}
+    embed = %Ecto.Embedded{field: :embed, cardinality: :one,
+                           owner: __MODULE__, embed: Model, on_cast: :changeset}
+    type  = {:embed, embed}
+
     assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, &Ecto.TestAdapter.load/2)
     assert {:ok, nil} == load(type, nil, &Ecto.TestAdapter.load/2)
     assert :error == load(type, 1)
-
-    assert {:ok, %{a: 1, id: %Ecto.Query.Tagged{value: nil}}} =
-           dump(type, %Model{a: 1}, &Ecto.TestAdapter.dump/2)
-    assert :error == dump(type, 1)
 
     changeset = Ecto.Changeset.change(%Model{id: @uuid_string}, a: 1)
     assert {:ok, %{a: 1, id: @uuid_tagged}} ==
@@ -92,23 +90,22 @@ defmodule Ecto.TypeTest do
     assert :error == cast(type, 1)
   end
 
-  test "embeds_many with array" do
-    type = {:embed, Ecto.Embedded.struct(__MODULE__, :embed,
-                                         cardinality: :many, container: :array,
-                                         embed: Model, on_cast: :changeset)}
+  test "embeds_many" do
+    embed = %Ecto.Embedded{field: :embed, cardinality: :many,
+                           owner: __MODULE__, embed: Model, on_cast: :changeset}
+    type  = {:embed, embed}
 
     assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], &Ecto.TestAdapter.load/2)
     assert {:ok, []} == load(type, nil, &Ecto.TestAdapter.load/2)
     assert :error == load(type, 1, &Ecto.TestAdapter.load/2)
 
-    assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
-           dump(type, [%Model{a: 1, id: @uuid_string}], &Ecto.TestAdapter.dump/2)
-    assert :error == dump(type, nil, &Ecto.TestAdapter.dump/2)
-    assert :error == dump(type, 1, &Ecto.TestAdapter.dump/2)
-
     changeset = Ecto.Changeset.change(%Model{id: @uuid_string}, a: 1)
     assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
            dump(type, [changeset], &Ecto.TestAdapter.dump/2)
+
+    deleted = %{changeset | action: :delete}
+    assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
+           dump(type, [changeset, deleted], &Ecto.TestAdapter.dump/2)
 
     assert [%Model{a: 1}] = cast(type, [%{"a" => 1}])
     assert :error == cast(type, nil)

@@ -332,26 +332,43 @@ defmodule Ecto.Type do
     {:ok, %Ecto.Query.Tagged{value: nil, type: type({:embed, embed})}}
   end
 
-  defp dump_embed(%{cardinality: :one, embed: model, field: field},
+  defp dump_embed(%{cardinality: :one, embed: model, field: field} = embed,
                   value, fun) when is_map(value) do
+    assert_replace_strategy!(embed)
     {:ok, dump_embed(field, model, value, fun)}
   end
 
-  defp dump_embed(%{cardinality: :many, container: :array, embed: model, field: field},
+  defp dump_embed(%{cardinality: :many, embed: model, field: field} = embed,
                   value, fun) when is_list(value) do
-    {:ok, Enum.map(value, &dump_embed(field, model, &1, fun))}
+    assert_replace_strategy!(embed)
+    {:ok, for(changeset <- value,
+              model = dump_embed(field, model, changeset, fun),
+              do: model)}
   end
 
   defp dump_embed(_embed, _value, _fun) do
     :error
   end
 
-  defp dump_embed(field, model, %Ecto.Changeset{} = changeset, fun) do
-    dump_embed(field, model, Ecto.Changeset.apply_changes(changeset), fun)
+  defp dump_embed(_field, _model, %Ecto.Changeset{action: :delete}, _fun) do
+    nil
   end
 
-  defp dump_embed(_field, model, %{__struct__: model} = value, dumper) when is_map(value) do
-    Ecto.Schema.Serializer.dump!(model, value, dumper)
+  defp dump_embed(_field, model, %Ecto.Changeset{model: %{__struct__: model}} = changeset, dumper) do
+    %{model: struct, changes: changes, types: types} = changeset
+
+    Enum.reduce(types, %{}, fn {field, type}, acc ->
+      value =
+        case Map.fetch(changes, field) do
+          {:ok, change} -> change
+          :error        -> Map.get(struct, field)
+        end
+
+      case dumper.(type, value) do
+        {:ok, value} -> Map.put(acc, field, value)
+        :error       -> raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type}"
+      end
+    end)
   end
 
   defp dump_embed(field, _model, value, _fun) do
@@ -407,15 +424,17 @@ defmodule Ecto.Type do
 
   defp load_embed(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
 
-  defp load_embed(%{cardinality: :one, embed: model, field: field},
+  defp load_embed(%{cardinality: :one, embed: model, field: field} = embed,
                   value, fun) when is_map(value) do
+    assert_replace_strategy!(embed)
     {:ok, load_embed(field, model, value, fun)}
   end
 
-  defp load_embed(%{cardinality: :many, container: :array}, nil, _fun), do: {:ok, []}
+  defp load_embed(%{cardinality: :many}, nil, _fun), do: {:ok, []}
 
-  defp load_embed(%{cardinality: :many, container: :array, embed: model, field: field},
+  defp load_embed(%{cardinality: :many, embed: model, field: field} = embed,
                   value, fun) when is_list(value) do
+    assert_replace_strategy!(embed)
     {:ok, Enum.map(value, &load_embed(field, model, &1, fun))}
   end
 
@@ -424,7 +443,7 @@ defmodule Ecto.Type do
   end
 
   defp load_embed(_field, model, value, loader) when is_map(value) do
-    Ecto.Schema.Serializer.load!(model, nil, nil, value, loader)
+    Ecto.Schema.__load__(model, nil, nil, value, loader)
   end
 
   defp load_embed(field, _model, value, _fun) do
@@ -595,5 +614,11 @@ defmodule Ecto.Type do
 
   defp array([], _fun, acc) do
     {:ok, Enum.reverse(acc)}
+  end
+
+  defp assert_replace_strategy!(%{strategy: :replace}), do: :ok
+  defp assert_replace_strategy!(%{strategy: strategy, field: field}) do
+    raise ArgumentError, "could not load/dump embed `#{field}` because the current adapter " <>
+                         "does not support strategy `#{strategy}`"
   end
 end

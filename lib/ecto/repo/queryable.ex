@@ -102,7 +102,7 @@ defmodule Ecto.Repo.Queryable do
 
   defp preprocess({:&, _, [ix]}, value, prefix, sources, adapter) do
     {source, model} = elem(sources, ix)
-    Ecto.Schema.Serializer.load!(model, prefix, source, value, &adapter.load/2)
+    Ecto.Schema.__load__(model, prefix, source, value, &adapter.load/2)
   end
 
   defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _sources, adapter) do

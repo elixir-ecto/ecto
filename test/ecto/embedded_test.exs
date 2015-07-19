@@ -43,11 +43,11 @@ defmodule Ecto.EmbeddedTest do
 
     assert Author.__schema__(:embed, :profile) ==
       %Embedded{field: :profile, cardinality: :one, owner: Author,
-                embed: Profile, container: nil, on_cast: :required_changeset}
+                embed: Profile, strategy: :replace, on_cast: :required_changeset}
 
     assert Author.__schema__(:embed, :profiles) ==
       %Embedded{field: :profiles, cardinality: :many, owner: Author,
-                embed: Profile, container: :array, on_cast: :changeset}
+                embed: Profile, strategy: :replace, on_cast: :changeset}
   end
 
   test "cast embeds_one with valid params" do
@@ -197,8 +197,7 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "change embeds_one" do
-    embed = %Embedded{field: :profile, cardinality: :one, owner: Author,
-                      embed: Profile, container: nil}
+    embed = %Embedded{field: :profile, cardinality: :one, owner: Author, embed: Profile}
 
     changeset = Embedded.change(embed, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
@@ -224,8 +223,7 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "change embeds_many" do
-    embed = %Embedded{field: :profiles, cardinality: :many, owner: Author,
-                      embed: Profile, container: :array}
+    embed = %Embedded{field: :profiles, cardinality: :many, owner: Author, embed: Profile}
 
     [changeset] = Embedded.change(embed, [%Profile{name: "michal"}], [])
     assert changeset.action == :insert
@@ -259,12 +257,11 @@ defmodule Ecto.EmbeddedTest do
 
   test "empty" do
     assert Embedded.empty(%Embedded{cardinality: :one}) == nil
-    assert Embedded.empty(%Embedded{cardinality: :many, container: :array}) == []
+    assert Embedded.empty(%Embedded{cardinality: :many}) == []
   end
 
   test "apply_changes" do
-    embed = %Embedded{field: :profile, cardinality: :one, owner: Author,
-                      embed: Profile, container: nil}
+    embed = %Embedded{field: :profile, cardinality: :one, owner: Author, embed: Profile}
 
     changeset = Changeset.change(%Profile{}, name: "michal")
     model = Embedded.apply_changes(embed, changeset)
@@ -273,8 +270,7 @@ defmodule Ecto.EmbeddedTest do
     changeset2 = %{changeset | action: :delete}
     assert Embedded.apply_changes(embed, changeset2) == nil
 
-    embed = %Embedded{field: :profiles, cardinality: :many, owner: Author,
-                      embed: Profile, container: :array}
+    embed = %Embedded{field: :profiles, cardinality: :many, owner: Author, embed: Profile}
     [model] = Embedded.apply_changes(embed, [changeset, changeset2])
     assert model == %Profile{name: "michal"}
   end

@@ -4,10 +4,10 @@ defmodule Ecto.Embedded do
   alias __MODULE__
   alias Ecto.Changeset
 
-  defstruct [:cardinality, :container, :field, :owner, :embed, :on_cast]
+  defstruct [:cardinality, :field, :owner, :embed, :on_cast, strategy: :replace]
 
   @type t :: %Embedded{cardinality: :one | :many,
-                       container: nil | :array | :map,
+                       strategy: :replace | atom,
                        field: atom, owner: atom, embed: atom, on_cast: atom}
 
   @doc """
@@ -16,20 +16,13 @@ defmodule Ecto.Embedded do
   ## Options
 
     * `:cardinality` - tells if there is one embedded model or many
-    * `:container` - container to store many embeds
+    * `:strategy` - which strategy to use when storing items
     * `:embed` - name of the embedded model
     * `:on_cast` - the changeset function to call during casting
 
   """
   def struct(module, name, opts) do
-    %__MODULE__{
-      cardinality: Keyword.fetch!(opts, :cardinality),
-      container: Keyword.get(opts, :container),
-      field: name,
-      owner: module,
-      embed: Keyword.fetch!(opts, :embed),
-      on_cast: Keyword.fetch!(opts, :on_cast)
-    }
+    struct(%__MODULE__{field: name, owner: module}, opts)
   end
 
   @doc """
@@ -41,8 +34,7 @@ defmodule Ecto.Embedded do
     {:ok, changeset_action(mod, fun, :empty, current), false}
   end
 
-  def cast(%Embedded{cardinality: :many, container: :array, embed: mod, on_cast: fun},
-           :empty, current) do
+  def cast(%Embedded{cardinality: :many, embed: mod, on_cast: fun}, :empty, current) do
     {:ok, Enum.map(current, &changeset_action(mod, fun, :empty, &1)), false}
   end
 
@@ -58,7 +50,7 @@ defmodule Ecto.Embedded do
     {:ok, changeset, changeset.valid?}
   end
 
-  def cast(%Embedded{cardinality: :many, container: :array, embed: mod, on_cast: fun},
+  def cast(%Embedded{cardinality: :many, embed: mod, on_cast: fun},
            params, current) when is_list(params) do
     {pk, param_pk} = primary_key(mod)
     current = process_current(current, pk)
@@ -79,7 +71,7 @@ defmodule Ecto.Embedded do
     do_change(value, current, mod)
   end
 
-  def change(%Embedded{cardinality: :many, container: :array, embed: mod},
+  def change(%Embedded{cardinality: :many, embed: mod},
              value, current) when is_list(value) do
     {pk, _} = primary_key(mod)
     current = process_current(current, pk)
@@ -129,32 +121,30 @@ defmodule Ecto.Embedded do
   end
 
   @doc """
-  Returns empty container for embed
+  Returns empty container for embed.
   """
   def empty(%Embedded{cardinality: :one}), do: nil
-  def empty(%Embedded{cardinality: :many, container: :array}), do: []
+  def empty(%Embedded{cardinality: :many}), do: []
 
   @doc """
   Applies embedded changeset changes
   """
+  def apply_changes(%Embedded{cardinality: :one}, nil) do
+    nil
+  end
+
   def apply_changes(%Embedded{cardinality: :one}, changeset) do
-    do_apply_changes(changeset)
+    apply_changes(changeset)
   end
 
-  def apply_changes(%Embedded{cardinality: :many, container: :array}, changesets) do
-    changesets
-    |> Enum.reduce([], fn changeset, acc ->
-      case do_apply_changes(changeset) do
-        nil   -> acc
-        value -> [value | acc]
-      end
-    end)
-    |> Enum.reverse
+  def apply_changes(%Embedded{cardinality: :many}, changesets) do
+    for changeset <- changesets,
+        model = apply_changes(changeset),
+        do: model
   end
 
-  defp do_apply_changes(nil), do: nil
-  defp do_apply_changes(%Changeset{action: :delete}), do: nil
-  defp do_apply_changes(changeset), do: Changeset.apply_changes(changeset)
+  defp apply_changes(%Changeset{action: :delete}), do: nil
+  defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
   @doc """
   Applies given callback to all models based on changeset action
@@ -163,8 +153,7 @@ defmodule Ecto.Embedded do
     do_apply_callback(changeset, type, module)
   end
 
-  def apply_callback(%Embedded{cardinality: :many, container: :array, embed: module},
-                     changesets, type) do
+  def apply_callback(%Embedded{cardinality: :many, embed: module}, changesets, type) do
     Enum.map(changesets, &do_apply_callback(&1, type, module))
   end
 
@@ -239,7 +228,6 @@ defmodule Ecto.Embedded do
     do: %{}
   defp process_current(current, pk),
     do: Enum.into(current, %{}, &{Map.get(&1, pk), &1})
-
 
   defp changeset_action(mod, fun, params, nil) do
     changeset = apply(mod, fun, [params, mod.__struct__()])
