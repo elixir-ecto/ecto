@@ -1,12 +1,15 @@
 # Changelog
 
-## v0.14.0-dev
+## v0.14.0
+
+* Experimental features (please try them out and give feedback)
+  * Add `Ecto.Pools.SojournBroker` as a more flexible and customizable alternative to `Ecto.Pools.Poolboy`
+  * Support for `embeds_one` and `embeds_many`
 
 * Enhancements
   * Add `Ecto.Adapters.SQL.to_sql/3`
   * Allow preloads to be customized with queries
   * Store the connection PID in `Ecto.LogEntry`
-  * Add `Ecto.Pools.SojournBroker` as a more flexible and customizable alternative to `Ecto.Pools.Poolboy`
   * Support `:on_delete` when defining `has_many` and `belongs_to` in schema
   * Allow renaming tables in migration
   * Include Ecto's processing time along side adapter processing on `Ecto.LogEntry.query_time`
@@ -20,6 +23,7 @@
   * Minimize query rewriting in has_many/one :through, ensuring a wilder variety of associations are supported
   * Do not fail when compiling queries with empty order or group by expressions
   * Ensure literals in queries are also cast/dump
+  * `Ecto.Adapters.SQL.query/4` now returns a list of lists instead of a list of tuples
 
 * Backwards incompatible changes
   * `Ecto.Repo.update!/2` no longer invokes callbacks if there were no changes, avoiding writing to the database at all (use `:force` to force callback execution)
@@ -30,6 +34,7 @@
 * Adapter backwards incompatible changes
   * Pass `{source, model}` in `Ecto.Adapter.insert/update/delete`
   * SQL adapters are not expected to return each row as a list instead of a tuple
+  * `id_types/0` were removed in favor of `load/2` and `dump/2`
 
 ## v0.13.1
 
