@@ -696,7 +696,7 @@ defmodule Ecto.Schema do
   @doc ~S"""
   Indicates an embedding of one model.
 
-  The current model has zero ot one records of the other model embedded
+  The current model has zero or one records of the other model embedded
   inside of it. It uses a field similar to the `:map` type for storage,
   but allows embedded models to have all the things regular models can -
   callbacks, structured fields, etc. All typecasting operations are
@@ -711,7 +711,7 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:on_cast` - the default changeset function to call during casting,
-      can be overriden in cast/4. It's an atom representing function name
+      can be overridden in cast/4. It's an atom representing function name
       in the embedded model's module (default: `:changeset`).
 
     * `:strategy` - the strategy for storing models in the database.
@@ -742,7 +742,7 @@ defmodule Ecto.Schema do
   Indicates an embedding of many models.
 
   The current model has zero or more records of the other model embedded
-  inside of it, containined in a list. Embedded models have all the things
+  inside of it, contained in a list. Embedded models have all the things
   regular models do - callbacks, structured fields, etc.
 
   All typecasting operations are performed recursively on embedded models
@@ -754,7 +754,7 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:on_cast` - the default changeset function to call during casting,
-      can be overriden in cast/4. It's an atom representing function name
+      can be overridden in cast/4. It's an atom representing function name
       in the embedded model's module (default: `:changeset`).
 
     * `:strategy` - the strategy for storing models in the database.
