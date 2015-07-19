@@ -636,7 +636,7 @@ defmodule Ecto.Schema do
         end
       end
 
-  Notice we have changed the table name to "abstract table: comment".
+  Notice we have changed the table name to "abstract table: comments".
   You can choose whatever name you want, the point here is that this
   particular table will never exist.
 
