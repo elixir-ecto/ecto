@@ -77,6 +77,19 @@ defmodule Ecto.Adapter do
   defcallback dump(Ecto.Type.t, term) :: {:ok, term} | :error
 
   @doc """
+  Called every time an id is needed, that can't be generated
+  in the database.
+
+  It is called with the type provided in the `@primary_key` attribute of
+  the model. For embedded models the type is wraped in a `{:embed, type}`
+  tuple for adapters that need a distinction.
+
+  Currently only called for embedded models when they are being inserted
+  and a primary key was not provided by the user.
+  """
+  defcallback generate_id(Ecto.Type.t) :: term
+
+  @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`
   or just `:ok` if nothing needs to be done.
 

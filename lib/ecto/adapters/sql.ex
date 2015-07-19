@@ -43,6 +43,8 @@ defmodule Ecto.Adapters.SQL do
       def load(type, value), do: Ecto.Adapters.SQL.load(type, value, &load/2)
       def dump(type, value), do: Ecto.Adapters.SQL.dump(type, value, &dump/2)
 
+      def generate_id(type), do: Ecto.Adapters.SQL.generate_id(type)
+
       ## Query
 
       @doc false
@@ -131,7 +133,7 @@ defmodule Ecto.Adapters.SQL do
       defoverridable [all: 5, update_all: 4, delete_all: 4,
                       insert: 6, update: 7, delete: 5,
                       execute_ddl: 3, ddl_exists?: 3,
-                      load: 2, dump: 2]
+                      load: 2, dump: 2, generate_id: 1]
     end
   end
 
@@ -445,6 +447,8 @@ defmodule Ecto.Adapters.SQL do
     do: Ecto.Type.dump(Ecto.UUID, data, dumper)
   def dump(type, data, dumper),
     do: Ecto.Type.dump(type, data, dumper)
+
+  def generate_id({:embed, :binary_id}), do: Ecto.UUID.generate
 
   @doc false
   def bingenerate(key) do

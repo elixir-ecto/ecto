@@ -60,7 +60,7 @@ defmodule Ecto.Repo.Model do
     with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                    ~w(before_insert after_insert)a, fn ->
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
-      changeset = apply_embedded_callbacks(embeds, changeset, :before)
+      changeset = Ecto.Embedded.apply_each_callback(changeset, embeds, adapter, :before)
 
       {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
       changes = validate_changes(:insert, changes, model, fields, adapter)
@@ -69,7 +69,7 @@ defmodule Ecto.Repo.Model do
 
       # Embeds can't be `read_after_writes` so we don't care
       # about values returned from the adapter
-      changeset = apply_embedded_callbacks(embeds, changeset, :after)
+      changeset = Ecto.Embedded.apply_each_callback(changeset, embeds, adapter, :after)
       changeset = load_changes(changeset, values, adapter)
       {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
     end
@@ -103,7 +103,7 @@ defmodule Ecto.Repo.Model do
       with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                      ~w(before_update after_update)a, fn ->
         changeset = Callbacks.__apply__(model, :before_update, changeset)
-        changeset = apply_embedded_callbacks(embeds, changeset, :before)
+        changeset = Ecto.Embedded.apply_each_callback(changeset, embeds, adapter, :before)
 
         autogen = get_autogenerate_id(changeset.changes, model)
         changes = validate_changes(:update, changeset.changes, model, fields, adapter)
@@ -125,7 +125,7 @@ defmodule Ecto.Repo.Model do
 
         # As in inserts, embeds can't be `read_after_writes` so we don't care
         # about values returned from the adapter
-        changeset = apply_embedded_callbacks(embeds, changeset, :after)
+        changeset = Ecto.Embedded.apply_each_callback(changeset, embeds, adapter, :after)
         changeset = load_changes(changeset, values, adapter)
         {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
       end
@@ -166,7 +166,7 @@ defmodule Ecto.Repo.Model do
     with_transactions_if_callbacks repo, adapter, model, opts, embeds,
                                    ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
-      changeset = apply_embedded_callbacks(embeds, changeset, :before)
+      changeset = Ecto.Embedded.apply_each_callback(changeset, embeds, adapter, :before)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
@@ -178,7 +178,7 @@ defmodule Ecto.Repo.Model do
       end
 
       # We load_changes as we need to remove all embeds
-      changeset = apply_embedded_callbacks(embeds, changeset, :after)
+      changeset = Ecto.Embedded.apply_each_callback(changeset, embeds, adapter, :after)
       changeset = load_changes(changeset, [], adapter)
       model = Callbacks.__apply__(model, :after_delete, changeset).model
       {:ok, put_in(model.__meta__.state, :deleted)}
@@ -246,24 +246,6 @@ defmodule Ecto.Repo.Model do
       end
 
     update_in changeset.changes, &Map.merge(base, &1)
-  end
-
-  defp apply_embedded_callbacks([], changeset, _type), do: changeset
-
-  defp apply_embedded_callbacks(embeds, changeset, type) do
-    types = changeset.types
-
-    update_in changeset.changes, fn changes ->
-      Enum.reduce(embeds, changes, fn name, changes ->
-        case Map.fetch(changes, name) do
-          {:ok, changeset} ->
-            {:embed, embed} = Map.get(types, name)
-            Map.put(changes, name, Ecto.Embedded.apply_callback(embed, changeset, type))
-          :error ->
-            changes
-        end
-      end)
-    end
   end
 
   defp pop_autogenerate_id(changes, model) do
