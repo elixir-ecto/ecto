@@ -187,7 +187,7 @@ defmodule Ecto.Integration.Item do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   schema "whatever" do
-    field :price, :decimal
+    field :price, :integer
     field :valid_at, Ecto.Date
   end
 end
