@@ -589,6 +589,9 @@ defmodule Ecto.Changeset do
   the new value, also, if the change has the same value as
   the model, it is not added to the list of changes.
 
+  For embedded models if the produced changeset would result in
+  update without changes, the change is skipped.
+
   ## Examples
 
       iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
@@ -612,12 +615,11 @@ defmodule Ecto.Changeset do
   end
 
   defp put_change(model, acc, key, value, {:embed, embed}) do
-    old_value = Map.get(model, key)
-    if value == old_value do
-      acc
-    else
-      value = Ecto.Embedded.change(embed, value, old_value)
-      Map.put(acc, key, value)
+    case Ecto.Embedded.change(embed, value, Map.get(model, key)) do
+      {:change, change} ->
+        Map.put(acc, key, change)
+      {:skip, _change} ->
+        acc
     end
   end
 
@@ -659,10 +661,13 @@ defmodule Ecto.Changeset do
     value =
       case Map.get(types, key) do
         {:embed, embed} ->
-          Ecto.Embedded.change(embed, value, Map.get(changeset.model, key))
+          {_, change} =
+            Ecto.Embedded.change(embed, value, Map.get(changeset.model, key))
+          change
         _ ->
           value
       end
+
     update_in changeset.changes, &Map.put(&1, key, value)
   end
 

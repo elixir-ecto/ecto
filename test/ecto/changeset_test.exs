@@ -479,6 +479,15 @@ defmodule Ecto.ChangesetTest do
 
     changeset = force_change(base_changeset, :author, %Author{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.author
+
+    base_changeset = change(%Post{author: %Author{name: "michal"}})
+    empty_update_changeset = change(%Author{name: "michal"})
+
+    changeset = put_change(base_changeset, :author, empty_update_changeset)
+    assert changeset.changes == %{}
+
+    changeset = force_change(base_changeset, :author, empty_update_changeset)
+    assert %Ecto.Changeset{} = changeset.changes.author
   end
 
   test "force_change/3" do
