@@ -37,7 +37,7 @@ defmodule Ecto.Integration.MigrationTest do
         add :to_be_added, :integer
       end
 
-      execute "INSERT INTO add_col_migration (value, to_be_added) VALUES (1, 2)"
+      queue "INSERT INTO add_col_migration (value, to_be_added) VALUES (1, 2)"
     end
 
     def down do
@@ -57,7 +57,7 @@ defmodule Ecto.Integration.MigrationTest do
         modify :to_be_modified, :string
       end
 
-      execute "INSERT INTO alter_col_migration (to_be_modified) VALUES ('foo')"
+      queue "INSERT INTO alter_col_migration (to_be_modified) VALUES ('foo')"
     end
 
     def down do
@@ -79,9 +79,9 @@ defmodule Ecto.Integration.MigrationTest do
         modify :alfter_fk_user_id, references(:alfter_fk_users, on_delete: :nilify_all)
       end
 
-      execute "INSERT INTO alfter_fk_users (id) VALUES ('1')"
-      execute "INSERT INTO alfter_fk_posts (id, alfter_fk_user_id) VALUES ('1', '1')"
-      execute "DELETE FROM alfter_fk_users"
+      queue "INSERT INTO alfter_fk_users (id) VALUES ('1')"
+      queue "INSERT INTO alfter_fk_posts (id, alfter_fk_user_id) VALUES ('1', '1')"
+      queue "DELETE FROM alfter_fk_users"
     end
 
     def down do
@@ -99,7 +99,7 @@ defmodule Ecto.Integration.MigrationTest do
         add :to_be_removed, :integer
       end
 
-      execute "INSERT INTO drop_col_migration (value, to_be_removed) VALUES (1, 2)"
+      queue "INSERT INTO drop_col_migration (value, to_be_removed) VALUES (1, 2)"
 
       alter table(:drop_col_migration) do
         remove :to_be_removed
@@ -131,6 +131,20 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule ReferencesRollbackMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:parent) do
+        add :name, :string
+      end
+
+      create table(:child) do
+        add :parent_id, references(:parent)
+      end
+    end
+  end
+
   defmodule RenameMigration do
     use Ecto.Migration
 
@@ -155,13 +169,8 @@ defmodule Ecto.Integration.MigrationTest do
     use Ecto.Migration
 
     def up do
-      assert_raise ArgumentError, ~r"does not support keyword lists in :options", fn ->
-        create table(:collection, options: [capped: true])
-      end
-
-      assert_raise ArgumentError, ~r"does not support keyword lists in execute", fn ->
-        execute create: "collection"
-      end
+      create table(:collection, options: [capped: true])
+      queue create: "collection"
     end
   end
 
@@ -201,8 +210,15 @@ defmodule Ecto.Integration.MigrationTest do
     assert :ok == down(TestRepo, 20050906120000, OnDeleteMigration, log: false)
   end
 
+  test "rolls back references in change/1" do
+    assert :ok == up(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
+    assert :ok == down(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
+  end
+
   test "raises on NoSQL migrations" do
-    assert :ok == up(TestRepo, 20150704120000, NoSQLMigration, log: false)
+    assert_raise ArgumentError, ~r"does not support keyword lists in :options", fn ->
+      up(TestRepo, 20150704120000, NoSQLMigration, log: false)
+    end
   end
 
   @tag :add_column

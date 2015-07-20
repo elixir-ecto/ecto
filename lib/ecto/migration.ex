@@ -221,7 +221,7 @@ defmodule Ecto.Migration do
 
   """
   def create(%Index{} = index) do
-    Runner.execute {:create, index}
+    Runner.queue {:create, index}
   end
 
   def create(%Table{} = table) do
@@ -232,7 +232,7 @@ defmodule Ecto.Migration do
         []
       end
 
-    Runner.execute {:create, table, columns}
+    Runner.queue {:create, table, columns}
   end
 
 
@@ -246,7 +246,7 @@ defmodule Ecto.Migration do
 
   """
   def drop(%{} = object) do
-    Runner.execute {:drop, object}
+    Runner.queue {:drop, object}
   end
 
   @doc """
@@ -342,17 +342,17 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Executes arbitrary SQL or a keyword command in NoSQL databases.
+  Queues arbitrary SQL or a keyword command in NoSQL databases.
 
   ## Examples
 
-      execute "UPDATE posts SET published_at = NULL"
+      queue "UPDATE posts SET published_at = NULL"
 
-      execute create: "posts", capped: true, size: 1024
+      queue create: "posts", capped: true, size: 1024
 
   """
-  def execute(command) when is_binary(command) or is_list(command) do
-    Runner.execute command
+  def queue(command) when is_binary(command) or is_list(command) do
+    Runner.queue command
   end
 
   @doc """
@@ -420,7 +420,7 @@ defmodule Ecto.Migration do
       rename table(:posts), table(:new_posts)
   """
   def rename(%Table{} = table_current, %Table{} = table_new) do
-    Runner.execute {:rename, table_current, table_new}
+    Runner.queue {:rename, table_current, table_new}
   end
 
   @doc """

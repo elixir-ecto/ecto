@@ -19,7 +19,9 @@ defmodule Ecto.Migration.Runner do
     start_link(repo, direction, migrator_direction, level)
 
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
-    {time, _} = :timer.tc(module, operation, [])
+    {time1, _} = :timer.tc(module, operation, [])
+    {time2, _} = :timer.tc(&execute_commands/0, [])
+    time = time1 + time2
     log(level, "== Migrated in #{inspect(div(time, 10000) / 10)}s")
 
     stop()
@@ -31,7 +33,7 @@ defmodule Ecto.Migration.Runner do
   def start_link(repo, direction, migrator_direction, level) do
     Agent.start_link(fn ->
       %{direction: direction, repo: repo, migrator_direction: migrator_direction,
-        command: nil, subcommands: [], level: level}
+        command: nil, subcommands: [], level: level, commands: []}
     end, name: __MODULE__)
   end
 
@@ -55,15 +57,27 @@ defmodule Ecto.Migration.Runner do
     Agent.get(__MODULE__, & &1.migrator_direction)
   end
 
+  def execute_commands do
+    commands  = Agent.get(__MODULE__, & &1.commands)
+    direction = Agent.get(__MODULE__, & &1.direction)
+    commands  =
+      if direction == :backward, do: commands, else: Enum.reverse(commands)
+    for command <- commands do
+      {repo, direction, level} = repo_and_direction_and_level()
+      execute_in_direction(repo, direction, level, command)
+    end
+  end
+
   @doc """
   Executes command tuples or strings.
 
   Ecto.MigrationError will be raised when the server
   is in `:backward` direction and `command` is irreversible.
   """
-  def execute(command) do
-    {repo, direction, level} = repo_and_direction_and_level()
-    execute_in_direction(repo, direction, level, command)
+  def queue(command) do
+    Agent.update __MODULE__, fn state ->
+      %{state|command: nil, subcommands: [], commands: [command|state.commands]}
+    end
   end
 
   @doc """
@@ -77,13 +91,11 @@ defmodule Ecto.Migration.Runner do
   Executes and clears current command. Must call `start_command/1` first.
   """
   def end_command do
-    command =
-      Agent.get_and_update __MODULE__, fn state ->
-        {operation, object} = state.command
-        {{operation, object, Enum.reverse(state.subcommands)},
-         %{state | command: nil, subcommands: []}}
-      end
-    execute(command)
+    Agent.update __MODULE__, fn state ->
+      {operation, object} = state.command
+      command = {operation, object, Enum.reverse(state.subcommands)}
+      %{state|command: nil, subcommands: [], commands: [command|state.commands]}
+    end
   end
 
   @doc """
@@ -110,6 +122,8 @@ defmodule Ecto.Migration.Runner do
   Checks if a table or index exists.
   """
   def exists?(object) do
+    execute_commands()
+    Agent.update __MODULE__, fn state -> %{state|commands: []} end
     {repo, direction, _level} = repo_and_direction_and_level()
     exists = repo.__adapter__.ddl_exists?(repo, object, @opts)
     if direction == :forward, do: exists, else: !exists
