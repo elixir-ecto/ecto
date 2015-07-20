@@ -199,41 +199,49 @@ defmodule Ecto.EmbeddedTest do
   test "change embeds_one" do
     embed = %Embedded{field: :profile, cardinality: :one, owner: Author, embed: Profile}
 
-    changeset = Embedded.change(embed, %Profile{name: "michal"}, nil)
+    assert {:change, changeset} =
+      Embedded.change(embed, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
-    changeset = Embedded.change(embed, %Profile{name: "michal"}, %Profile{})
+    assert {:change, changeset} =
+      Embedded.change(embed, %Profile{name: "michal"}, %Profile{})
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    changeset = Embedded.change(embed, nil, %Profile{})
+    assert {:change, changeset} = Embedded.change(embed, nil, %Profile{})
     assert changeset.action == :delete
 
     model = %Profile{}
     model_changeset = Changeset.change(model, name: "michal")
 
-    changeset = Embedded.change(embed, model_changeset, nil)
+    assert {:change, changeset} = Embedded.change(embed, model_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
-    changeset = Embedded.change(embed, model_changeset, model)
+    assert {:change, changeset} = Embedded.change(embed, model_changeset, model)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
+
+    empty_changeset = Changeset.change(model)
+    assert {:skip, _} = Embedded.change(embed, empty_changeset, model)
   end
 
   test "change embeds_many" do
     embed = %Embedded{field: :profiles, cardinality: :many, owner: Author, embed: Profile}
 
-    [changeset] = Embedded.change(embed, [%Profile{name: "michal"}], [])
+    assert {:change, [changeset]} =
+      Embedded.change(embed, [%Profile{name: "michal"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
-    [changeset] = Embedded.change(embed, [%Profile{id: 1, name: "michal"}], [%Profile{id: 1}])
+    assert {:change, [changeset]} =
+      Embedded.change(embed, [%Profile{id: 1, name: "michal"}], [%Profile{id: 1}])
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    [new, old] = Embedded.change(embed, [%Profile{name: "michal"}], [%Profile{id: 1}])
+    assert {:change, [new, old]} =
+      Embedded.change(embed, [%Profile{name: "michal"}], [%Profile{id: 1}])
     assert new.action == :insert
     assert new.changes == %{id: nil, name: "michal"}
     assert old.action == :delete
@@ -241,18 +249,22 @@ defmodule Ecto.EmbeddedTest do
 
     model_changeset = Changeset.change(%Profile{}, name: "michal")
 
-    [changeset] = Embedded.change(embed, [model_changeset], [])
+    assert {:change, [changeset]} = Embedded.change(embed, [model_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
     model = %Profile{id: 1}
     model_changeset = Changeset.change(model, name: "michal")
-    [changeset] = Embedded.change(embed, [model_changeset], [model])
+    assert {:change, [changeset]} = Embedded.change(embed, [model_changeset], [model])
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    [changeset] = Embedded.change(embed, [], [model_changeset])
+    assert {:change, [changeset]} = Embedded.change(embed, [], [model_changeset])
     assert changeset.action == :delete
+
+    empty_changeset = Changeset.change(model)
+    assert {:skip, _} = Embedded.change(embed, [empty_changeset], [model])
+    assert {:change, _} = Embedded.change(embed, [empty_changeset, model_changeset], [model, model])
   end
 
   test "empty" do

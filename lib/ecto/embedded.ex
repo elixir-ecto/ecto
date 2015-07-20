@@ -57,7 +57,10 @@ defmodule Ecto.Embedded do
 
     changeset_fun = &changeset_action(mod, fun, &1, &2)
     pk_fun = &Map.fetch(&1, param_pk)
-    map_changes(params, pk_fun, changeset_fun, current, [], true)
+    case map_changes(params, pk_fun, changeset_fun, current, [], true, true) do
+      {:ok, changesets, valid?, _skip?} -> {:ok, changesets, valid?}
+      :error                            -> :error
+    end
   end
 
   def cast(_embed, _params, _current) do
@@ -67,8 +70,16 @@ defmodule Ecto.Embedded do
   @doc """
   Wraps embedded models in changesets.
   """
+  def change(_embed, nil, nil), do: {:skip, nil}
+
   def change(%Embedded{cardinality: :one, embed: mod}, value, current) do
-    do_change(value, current, mod)
+    changeset = do_change(value, current, mod)
+
+    if skip?(changeset) do
+      {:skip, changeset}
+    else
+      {:change, changeset}
+    end
   end
 
   def change(%Embedded{cardinality: :many, embed: mod},
@@ -78,7 +89,14 @@ defmodule Ecto.Embedded do
 
     changeset_fun = &do_change(&1, &2, mod)
     pk_fun = &model_or_changeset_pk(&1, pk)
-    map_changes(value, pk_fun, changeset_fun, current, [], true) |> elem(1)
+    {:ok, changesets, _valid?, skip?} =
+      map_changes(value, pk_fun, changeset_fun, current, [], true, true)
+
+    if skip? do
+      {:skip, changesets}
+    else
+      {:change, changesets}
+    end
   end
 
   defp model_or_changeset_pk(%Changeset{model: model}, pk), do: Map.fetch(model, pk)
@@ -232,31 +250,31 @@ defmodule Ecto.Embedded do
     raise ArgumentError, "embedded changeset action not set"
   end
 
-  defp map_changes([], _pk, fun, current, acc, valid?) do
-    {previous, valid?} =
-      Enum.map_reduce(current, valid?, fn {_, model}, valid? ->
+  defp map_changes([], _pk, fun, current, acc, valid?, skip?) do
+    {previous, {valid?, skip?}} =
+      Enum.map_reduce(current, {valid?, skip?}, fn {_, model}, {valid?, skip?} ->
         changeset = fun.(nil, model)
-        {changeset, valid? && changeset.valid?}
+        {changeset, {valid? && changeset.valid?, skip? && skip?(changeset)}}
       end)
 
-    {:ok, Enum.reverse(acc, previous), valid?}
+    {:ok, Enum.reverse(acc, previous), valid?, skip?}
   end
 
-  defp map_changes([map | rest], pk, fun, current, acc, valid?) when is_map(map) do
+  defp map_changes([map | rest], pk, fun, current, acc, valid?, skip?) when is_map(map) do
     case pk.(map) do
       {:ok, pk_value} ->
         {model, current} = Map.pop(current, pk_value)
         changeset = fun.(map, model)
-        map_changes(rest, pk, fun, current,
-                    [changeset | acc], valid? && changeset.valid?)
+        map_changes(rest, pk, fun, current, [changeset | acc],
+                    valid? && changeset.valid?, skip? && skip?(changeset))
       :error ->
         changeset = fun.(map, nil)
-        map_changes(rest, pk, fun, current,
-                    [changeset | acc], valid? && changeset.valid?)
+        map_changes(rest, pk, fun, current, [changeset | acc],
+                    valid? && changeset.valid?, skip? && skip?(changeset))
     end
   end
 
-  defp map_changes(_params, _pk, _fun, _current, _acc, _valid?) do
+  defp map_changes(_params, _pk, _fun, _current, _acc, _valid?, _skip?) do
     :error
   end
 
@@ -286,4 +304,9 @@ defmodule Ecto.Embedded do
     changeset = apply(mod, fun, [params, model])
     %{changeset | action: :update}
   end
+
+  defp skip?(%{valid?: true, changes: empty, action: :update}) when empty == %{},
+    do: true
+  defp skip?(_changeset),
+    do: false
 end
