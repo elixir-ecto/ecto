@@ -9,6 +9,14 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
   end
 
+  defmodule CustomAny do
+    @behaviour Ecto.Type
+    def type,      do: :any
+    def load(_),   do: {:ok, :load}
+    def dump(_),   do: {:ok, :dump}
+    def cast(_),   do: {:ok, :cast}
+  end
+
   defmodule Model do
     use Ecto.Model
 
@@ -34,6 +42,11 @@ defmodule Ecto.TypeTest do
     assert load(Custom, nil) == {:ok, nil}
     assert dump(Custom, nil) == {:ok, %Ecto.Query.Tagged{type: :custom, value: nil}}
     assert cast(Custom, nil) == {:ok, nil}
+
+    assert match?(Custom, :any)
+    assert match?(:any, Custom)
+
+    assert match?(CustomAny, :boolean)
   end
 
   test "map types" do

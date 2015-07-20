@@ -206,9 +206,9 @@ defmodule Ecto.Type do
   Checks if a given type matches with a primitive type
   that can be found in queries.
 
-      iex> match?(:whatever, :any)
+      iex> match?(:string, :any)
       true
-      iex> match?(:any, :whatever)
+      iex> match?(:any, :string)
       true
       iex> match?(:string, :string)
       true
@@ -225,9 +225,6 @@ defmodule Ecto.Type do
   @spec match?(t, primitive) :: boolean
   def match?(schema_type, query_type)
 
-  def match?(_left, :any),  do: true
-  def match?(:any, _right), do: true
-
   def match?(type, primitive) do
     if primitive?(type) do
       do_match?(type, primitive)
@@ -236,6 +233,8 @@ defmodule Ecto.Type do
     end
   end
 
+  defp do_match?(_left, :any),  do: true
+  defp do_match?(:any, _right), do: true
   defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
   defp do_match?(:decimal, type) when type in [:float, :integer], do: true
   defp do_match?(:binary_id, :binary), do: true
