@@ -519,6 +519,8 @@ defmodule Ecto.Migration do
 
       exists? table(:products)
 
+  This immediately executes any queued migration commands before
+  doing the check.
   """
   def exists?(%{} = object) do
     Runner.exists?(object)

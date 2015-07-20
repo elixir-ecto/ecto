@@ -57,11 +57,16 @@ defmodule Ecto.Migration.Runner do
     Agent.get(__MODULE__, & &1.migrator_direction)
   end
 
+  @doc """
+  Queued migration commands are executed.
+
+  Reverses the order commands are executed when doing a rollback
+  on a change/0 function.
+  """
   def execute_commands do
     commands  = Agent.get(__MODULE__, & &1.commands)
     direction = Agent.get(__MODULE__, & &1.direction)
-    commands  =
-      if direction == :backward, do: commands, else: Enum.reverse(commands)
+    commands  = if direction == :backward, do: commands, else: Enum.reverse(commands)
     for command <- commands do
       {repo, direction, level} = repo_and_direction_and_level()
       execute_in_direction(repo, direction, level, command)
@@ -69,7 +74,7 @@ defmodule Ecto.Migration.Runner do
   end
 
   @doc """
-  Executes command tuples or strings.
+  Queues command tuples or strings.
 
   Ecto.MigrationError will be raised when the server
   is in `:backward` direction and `command` is irreversible.
@@ -88,7 +93,7 @@ defmodule Ecto.Migration.Runner do
   end
 
   @doc """
-  Executes and clears current command. Must call `start_command/1` first.
+  Queues and clears current command. Must call `start_command/1` first.
   """
   def end_command do
     Agent.update __MODULE__, fn state ->
