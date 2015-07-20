@@ -465,6 +465,8 @@ defmodule Ecto.Migration do
     * `:size` - the size of the type (for example the numbers of characters). Default is no size.
     * `:precision` - the precision for a numberic type. Default is no precision.
     * `:scale` - the scale of a numberic type. Default is 0 scale.
+    * `:using` - casting you'd like postgres to use if modifying type. String is sent directly 
+    to the postgres adapter. Default is no using. 
   """
   def modify(column, type, opts \\ []) when is_atom(column) do
     Runner.subcommand {:modify, column, type, opts}

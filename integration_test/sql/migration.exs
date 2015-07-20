@@ -65,6 +65,25 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule AlterColumnMigrationWithUsing do
+    use Ecto.Migration
+
+    def up do
+      create table(:alter_col_migration_with_using) do
+        add :to_be_modified, :json
+      end
+      execute "INSERT INTO alter_col_migration_with_using (to_be_modified) VALUES ('{\"foo\":\"bar\"}')"
+
+      alter table(:alter_col_migration_with_using) do
+        modify :to_be_modified, :jsonb, using: "to_be_modified::jsonb"
+      end
+    end
+
+    def down do
+      drop table(:alter_col_migration_with_using)
+    end
+  end
+
   defmodule AlterForeignKeyMigration do
     use Ecto.Migration
 
@@ -217,6 +236,13 @@ defmodule Ecto.Integration.MigrationTest do
     assert :ok == up(TestRepo, 20080906120000, AlterColumnMigration, log: false)
     assert "foo" == TestRepo.one from p in "alter_col_migration", select: p.to_be_modified
     :ok = down(TestRepo, 20080906120000, AlterColumnMigration, log: false)
+  end
+
+  @tag :modify_column
+  test "modify column with using" do
+    assert :ok == up(TestRepo, 20080906120000, AlterColumnMigrationWithUsing, log: false)
+    assert %{"foo" => "bar"} == TestRepo.one from p in "alter_col_migration_with_using", select: p.to_be_modified
+    :ok = down(TestRepo, 20080906120000, AlterColumnMigrationWithUsing, log: false)
   end
 
   @tag :modify_foreign_key

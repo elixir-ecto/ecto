@@ -574,7 +574,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp column_change({:modify, name, type, opts}) do
-      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts)])
+      using = Keyword.get(opts, :using, nil)
+      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts), if_do(using, "USING #{using}")])
     end
 
     defp column_change({:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
