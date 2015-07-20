@@ -241,6 +241,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert %Post{id: ^pid2} = c3.post
   end
 
+  @tag :invalid_prefix
   test "preload custom prefix" do
     p = TestRepo.insert!(%Post{title: "1"})
     p = Ecto.Model.put_source(p, "posts", "this_surely_does_not_exist")
