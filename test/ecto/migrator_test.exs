@@ -9,11 +9,11 @@ defmodule Ecto.MigratorTest do
     use Ecto.Migration
 
     def up do
-      queue "up"
+      execute "up"
     end
 
     def down do
-      queue "down"
+      execute "down"
     end
   end
 
@@ -39,7 +39,7 @@ defmodule Ecto.MigratorTest do
     end
 
     def down do
-      queue "foo"
+      execute "foo"
     end
   end
 
@@ -281,11 +281,11 @@ defmodule Ecto.MigratorTest do
       use Ecto.Migration
 
       def up do
-        queue "up"
+        execute "up"
       end
 
       def down do
-        queue "down"
+        execute "down"
       end
     end
     """

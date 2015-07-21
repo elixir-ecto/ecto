@@ -37,7 +37,7 @@ defmodule Ecto.Integration.MigrationTest do
         add :to_be_added, :integer
       end
 
-      queue "INSERT INTO add_col_migration (value, to_be_added) VALUES (1, 2)"
+      execute "INSERT INTO add_col_migration (value, to_be_added) VALUES (1, 2)"
     end
 
     def down do
@@ -57,7 +57,7 @@ defmodule Ecto.Integration.MigrationTest do
         modify :to_be_modified, :string
       end
 
-      queue "INSERT INTO alter_col_migration (to_be_modified) VALUES ('foo')"
+      execute "INSERT INTO alter_col_migration (to_be_modified) VALUES ('foo')"
     end
 
     def down do
@@ -79,9 +79,9 @@ defmodule Ecto.Integration.MigrationTest do
         modify :alfter_fk_user_id, references(:alfter_fk_users, on_delete: :nilify_all)
       end
 
-      queue "INSERT INTO alfter_fk_users (id) VALUES ('1')"
-      queue "INSERT INTO alfter_fk_posts (id, alfter_fk_user_id) VALUES ('1', '1')"
-      queue "DELETE FROM alfter_fk_users"
+      execute "INSERT INTO alfter_fk_users (id) VALUES ('1')"
+      execute "INSERT INTO alfter_fk_posts (id, alfter_fk_user_id) VALUES ('1', '1')"
+      execute "DELETE FROM alfter_fk_users"
     end
 
     def down do
@@ -99,7 +99,7 @@ defmodule Ecto.Integration.MigrationTest do
         add :to_be_removed, :integer
       end
 
-      queue "INSERT INTO drop_col_migration (value, to_be_removed) VALUES (1, 2)"
+      execute "INSERT INTO drop_col_migration (value, to_be_removed) VALUES (1, 2)"
 
       alter table(:drop_col_migration) do
         remove :to_be_removed
@@ -170,7 +170,7 @@ defmodule Ecto.Integration.MigrationTest do
 
     def up do
       create table(:collection, options: [capped: true])
-      queue create: "collection"
+      execute create: "collection"
     end
   end
 

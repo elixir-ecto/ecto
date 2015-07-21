@@ -221,7 +221,7 @@ defmodule Ecto.Migration do
 
   """
   def create(%Index{} = index) do
-    Runner.queue {:create, index}
+    Runner.execute {:create, index}
   end
 
   def create(%Table{} = table) do
@@ -232,7 +232,7 @@ defmodule Ecto.Migration do
         []
       end
 
-    Runner.queue {:create, table, columns}
+    Runner.execute {:create, table, columns}
   end
 
 
@@ -246,7 +246,7 @@ defmodule Ecto.Migration do
 
   """
   def drop(%{} = object) do
-    Runner.queue {:drop, object}
+    Runner.execute {:drop, object}
   end
 
   @doc """
@@ -351,8 +351,8 @@ defmodule Ecto.Migration do
       queue create: "posts", capped: true, size: 1024
 
   """
-  def queue(command) when is_binary(command) or is_list(command) do
-    Runner.queue command
+  def execute(command) when is_binary(command) or is_list(command) do
+    Runner.execute command
   end
 
   @doc """
@@ -420,7 +420,7 @@ defmodule Ecto.Migration do
       rename table(:posts), table(:new_posts)
   """
   def rename(%Table{} = table_current, %Table{} = table_new) do
-    Runner.queue {:rename, table_current, table_new}
+    Runner.execute {:rename, table_current, table_new}
   end
 
   @doc """
@@ -510,6 +510,16 @@ defmodule Ecto.Migration do
     end
 
     reference
+  end
+
+  @doc """
+  Queued migration commands are executed.
+
+  Reverses the order commands are executed when doing a rollback
+  on a change/0 function.
+  """
+  def flush do
+    Runner.flush
   end
 
   @doc """

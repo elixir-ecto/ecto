@@ -31,7 +31,7 @@ defmodule Ecto.Integration.MigratorTest do
     use Ecto.Migration
 
     def change do
-      queue "CREATE WHAT"
+      execute "CREATE WHAT"
     end
   end
 

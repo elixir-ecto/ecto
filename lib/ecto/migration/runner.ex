@@ -20,7 +20,7 @@ defmodule Ecto.Migration.Runner do
 
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
     {time1, _} = :timer.tc(module, operation, [])
-    {time2, _} = :timer.tc(&execute_commands/0, [])
+    {time2, _} = :timer.tc(&flush/0, [])
     time = time1 + time2
     log(level, "== Migrated in #{inspect(div(time, 10000) / 10)}s")
 
@@ -63,7 +63,7 @@ defmodule Ecto.Migration.Runner do
   Reverses the order commands are executed when doing a rollback
   on a change/0 function.
   """
-  def execute_commands do
+  def flush do
     commands  = Agent.get(__MODULE__, & &1.commands)
     direction = Agent.get(__MODULE__, & &1.direction)
     commands  = if direction == :backward, do: commands, else: Enum.reverse(commands)
@@ -74,12 +74,12 @@ defmodule Ecto.Migration.Runner do
   end
 
   @doc """
-  Queues command tuples or strings.
+  Queues command tuples or strings for execution.
 
   Ecto.MigrationError will be raised when the server
   is in `:backward` direction and `command` is irreversible.
   """
-  def queue(command) do
+  def execute(command) do
     Agent.update __MODULE__, fn state ->
       %{state|command: nil, subcommands: [], commands: [command|state.commands]}
     end
@@ -127,7 +127,7 @@ defmodule Ecto.Migration.Runner do
   Checks if a table or index exists.
   """
   def exists?(object) do
-    execute_commands()
+    flush()
     Agent.update __MODULE__, fn state -> %{state|commands: []} end
     {repo, direction, _level} = repo_and_direction_and_level()
     exists = repo.__adapter__.ddl_exists?(repo, object, @opts)
