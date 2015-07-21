@@ -223,19 +223,18 @@ defmodule Ecto.Type do
 
   """
   @spec match?(t, primitive) :: boolean
-  def match?(schema_type, query_type)
-
-  def match?(type, primitive) do
-    if primitive?(type) do
-      do_match?(type, primitive)
+  def match?(schema_type, query_type) do
+    if primitive?(schema_type) do
+      do_match?(schema_type, query_type)
     else
-      do_match?(type.type, primitive)
+      do_match?(schema_type.type, query_type)
     end
   end
 
   defp do_match?(_left, :any),  do: true
   defp do_match?(:any, _right), do: true
   defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
+  defp do_match?({:array, :any}, {:embed, %{cardinality: :many}}), do: true
   defp do_match?(:decimal, type) when type in [:float, :integer], do: true
   defp do_match?(:binary_id, :binary), do: true
   defp do_match?(:id, :integer), do: true
@@ -524,15 +523,8 @@ defmodule Ecto.Type do
 
   """
   @spec cast(t, term) :: {:ok, term} | :error
-  def cast({:embed, embed}, value) do
-    case Ecto.Embedded.cast(embed, value, nil) do
-      {:ok, changesets, true} when is_list(changesets) ->
-        Enum.map(changesets, &Ecto.Changeset.apply_changes/1)
-      {:ok, changeset, true} ->
-        Ecto.Changeset.apply_changes(changeset)
-      _ ->
-        :error
-    end
+  def cast({:embed, _}, _) do
+    :error
   end
 
   def cast({:array, type}, term) do
