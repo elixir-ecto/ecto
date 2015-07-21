@@ -98,9 +98,9 @@ defmodule Ecto.TypeTest do
     assert {:ok, %{a: 1, id: @uuid_tagged}} ==
            dump(type, changeset, &Ecto.TestAdapter.dump/2)
 
-    assert %Model{a: 1} = cast(type, %{"a" => 1})
-    assert :error == cast(type, %{})
-    assert :error == cast(type, 1)
+    assert :error == cast(type, %{"a" => 1})
+
+    assert match?(:any, type)
   end
 
   test "embeds_many" do
@@ -120,9 +120,8 @@ defmodule Ecto.TypeTest do
     assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
            dump(type, [changeset, deleted], &Ecto.TestAdapter.dump/2)
 
-    assert [%Model{a: 1}] = cast(type, [%{"a" => 1}])
-    assert :error == cast(type, nil)
-    assert :error == cast(type, [%{}])
-    assert :error == cast(type, [[]])
+    assert :error == cast(type, [%{"a" => 1}])
+
+    assert match?({:array, :any}, type)
   end
 end
