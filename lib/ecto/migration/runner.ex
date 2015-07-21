@@ -123,27 +123,15 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
-  @doc """
-  Checks if a table or index exists.
-  """
-  def exists?(object) do
-    flush()
-    Agent.update __MODULE__, fn state -> %{state|commands: []} end
-    {repo, direction, _level} = repo_and_direction_and_level()
-    exists = repo.__adapter__.ddl_exists?(repo, object, @opts)
-    if direction == :forward, do: exists, else: !exists
-  end
-
   ## Execute
+  @creates [:create, :create_if_not_exists]
 
   defp execute_in_direction(repo, :forward, level, command) do
     log_and_execute_ddl(repo, level, command)
   end
 
-  defp execute_in_direction(repo, :backward, level, {:create, %Index{}=index}) do
-    if repo.__adapter__.ddl_exists?(repo, index, @opts) do
-      log_and_execute_ddl(repo, level, {:drop, index})
-    end
+  defp execute_in_direction(repo, :backward, level, {command, %Index{}=index}) when command in @creates do
+    log_and_execute_ddl(repo, level, {:drop_if_exists, index})
   end
 
   defp execute_in_direction(repo, :backward, level, {:drop, %Index{}=index}) do
@@ -158,13 +146,15 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
-  defp reverse({:create, %Table{}=table, _columns}), do: {:drop, table}
+  defp reverse({command, %Table{}=table, _columns}) when command in @creates,
+    do: {:drop, table}
   defp reverse({:alter,  %Table{}=table, changes}) do
     if reversed = table_reverse(changes) do
       {:alter, table, reversed}
     end
   end
-  defp reverse({:rename, %Table{}=table_current, %Table{}=table_new}), do: {:rename, table_new, table_current}
+  defp reverse({:rename, %Table{}=table_current, %Table{}=table_new}),
+    do: {:rename, table_new, table_current}
   defp reverse(_command), do: false
 
   defp table_reverse([]),   do: []
@@ -198,15 +188,23 @@ defmodule Ecto.Migration.Runner do
 
   defp command({:create, %Table{} = table, _}),
     do: "create table #{table.name}"
+  defp command({:create_if_not_exists, %Table{} = table, _}),
+    do: "create table if not exists #{table.name}"
   defp command({:alter, %Table{} = table, _}),
     do: "alter table #{table.name}"
   defp command({:drop, %Table{} = table}),
     do: "drop table #{table.name}"
+  defp command({:drop_if_exists, %Table{} = table}),
+    do: "drop table if exists #{table.name}"
 
   defp command({:create, %Index{} = index}),
     do: "create index #{index.name}"
+  defp command({:create_if_not_exists, %Index{} = index}),
+    do: "create index if not exists #{index.name}"
   defp command({:drop, %Index{} = index}),
     do: "drop index #{index.name}"
+  defp command({:drop_if_exists, %Index{} = index}),
+    do: "drop index if exists #{index.name}"
   defp command({:rename, %Table{} = current_table, %Table{} = new_table}),
     do: "rename table #{current_table.name} to #{new_table.name}"
 end

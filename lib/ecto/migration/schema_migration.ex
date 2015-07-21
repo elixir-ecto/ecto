@@ -17,13 +17,10 @@ defmodule Ecto.Migration.SchemaMigration do
 
     # DDL queries do not log, so we do not need
     # to pass log: false here.
-    unless adapter.ddl_exists?(repo, @table, @opts) do
-      adapter.execute_ddl(repo,
-        {:create, @table, [
-          {:add, :version, :bigint, primary_key: true},
-          {:add, :inserted_at, :datetime, []}]}, @opts)
-    end
-
+    adapter.execute_ddl(repo,
+      {:create_if_not_exists, @table, [
+        {:add, :version, :bigint, primary_key: true},
+        {:add, :inserted_at, :datetime, []}]}, @opts)
     :ok
   end
 

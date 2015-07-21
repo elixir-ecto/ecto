@@ -10,18 +10,15 @@ defmodule Ecto.Integration.MigrationTest do
     @index index(:create_table_migration, [:value], unique: true)
 
     def up do
-      assert false == exists? @table
       create @table do
         add :value, :integer
       end
       create @index
-      assert true == exists? @table
     end
 
     def down do
       drop @index
       drop @table
-      assert false == exists? @table
     end
   end
 
@@ -152,16 +149,12 @@ defmodule Ecto.Integration.MigrationTest do
     @table_new table(:new_posts_migration)
 
     def up do
-      assert false == exists? @table_current
       create @table_current
       rename @table_current, @table_new
-      assert true == exists? @table_new
-      assert false == exists? @table_current
     end
 
     def down do
       drop @table_new
-      assert false == exists? @table_new
     end
   end
 
@@ -178,6 +171,35 @@ defmodule Ecto.Integration.MigrationTest do
     use Ecto.Model
 
     schema "parent" do
+    end
+  end
+
+  defmodule NoErrorTableMigration do
+    use Ecto.Migration
+
+    def change do
+      create_if_not_exists table(:existing) do
+        add :name, :string
+      end
+
+      create_if_not_exists table(:existing) do
+        add :name, :string
+      end
+
+      create_if_not_exists table(:existing)
+      drop_if_exists table(:existing)
+      drop_if_exists table(:existing)
+    end
+  end
+
+  defmodule NoErrorIndexMigration do
+    use Ecto.Migration
+
+    def change do
+      create_if_not_exists index(:posts, [:title])
+      create_if_not_exists index(:posts, [:title])
+      drop_if_exists index(:posts, [:title])
+      drop_if_exists index(:posts, [:title])
     end
   end
 
@@ -213,6 +235,16 @@ defmodule Ecto.Integration.MigrationTest do
   test "rolls back references in change/1" do
     assert :ok == up(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
     assert :ok == down(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
+  end
+
+  test "create if not exists does not raise on failure" do
+    assert :ok == up(TestRepo, 19850423000001, NoErrorTableMigration, log: false)
+    assert :ok == up(TestRepo, 19850423000002, NoErrorIndexMigration, log: false)
+  end
+
+  test "drop if exists does not raise on failure" do
+    # assert :ok == up(TestRepo, 19850423000001, NoErrorTableMigration, log: false)
+    # assert :ok == up(TestRepo, 19850423000002, NoErrorIndexMigration, log: false)
   end
 
   test "raises on NoSQL migrations" do

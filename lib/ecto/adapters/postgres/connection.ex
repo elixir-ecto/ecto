@@ -484,33 +484,22 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Migration.Index
     alias Ecto.Migration.Reference
 
-    def ddl_exists(%Table{name: name}) do
-      """
-      SELECT count(1) FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE c.relkind IN ('r','v','m')
-             AND c.relname = '#{escape_string(to_string(name))}'
-             AND n.nspname = ANY (current_schemas(false))
-      """
-    end
-
-    def ddl_exists(%Index{name: name}) do
-      """
-      SELECT count(1) FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE c.relkind IN ('i')
-             AND c.relname = '#{escape_string(to_string(name))}'
-             AND n.nspname = ANY (current_schemas(false))
-      """
-    end
-
     def execute_ddl({:create, %Table{}=table, columns}) do
       options = options_expr(table.options)
       "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})" <> options
     end
 
+    def execute_ddl({:create_if_not_exists, %Table{}=table, columns}) do
+      options = options_expr(table.options)
+      "CREATE TABLE IF NOT EXISTS #{quote_table(table.name)} (#{column_definitions(columns)})" <> options
+    end
+
     def execute_ddl({:drop, %Table{name: name}}) do
       "DROP TABLE #{quote_table(name)}"
+    end
+
+    def execute_ddl({:drop_if_exists, %Table{name: name}}) do
+      "DROP TABLE IF EXISTS #{quote_table(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
@@ -531,10 +520,25 @@ if Code.ensure_loaded?(Postgrex.Connection) do
                 "(#{fields})"])
     end
 
+    def execute_ddl({:create_if_not_exists, %Index{}=index}) do
+      assemble(["DO $$",
+                "BEGIN",
+                execute_ddl({:create, index}) <> ";",
+                "EXCEPTION WHEN duplicate_table THEN END; $$;"])
+    end
+
     def execute_ddl({:drop, %Index{}=index}) do
       assemble(["DROP",
                 "INDEX",
                 if_do(index.concurrently, "CONCURRENTLY"),
+                quote_name(index.name)])
+    end
+
+    def execute_ddl({:drop_if_exists, %Index{}=index}) do
+      assemble(["DROP",
+                "INDEX",
+                if_do(index.concurrently, "CONCURRENTLY"),
+                "IF EXISTS",
                 quote_name(index.name)])
     end
 

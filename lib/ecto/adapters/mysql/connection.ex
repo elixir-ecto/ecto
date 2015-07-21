@@ -432,24 +432,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     alias Ecto.Migration.Index
     alias Ecto.Migration.Reference
 
-    def ddl_exists(%Table{name: name}) do
-      """
-      SELECT COUNT(1)
-        FROM information_schema.tables
-       WHERE table_schema = SCHEMA()
-             AND table_name = '#{escape_string(to_string(name))}'
-      """
-    end
-
-    def ddl_exists(%Index{name: name}) do
-      """
-      SELECT COUNT(1)
-        FROM information_schema.statistics
-       WHERE table_schema = SCHEMA()
-         AND index_name = '#{escape_string(to_string(name))}'
-      """
-    end
-
     def execute_ddl({:create, %Table{} = table, columns}) do
       engine = engine_expr(table.engine)
       options = options_expr(table.options)
@@ -457,8 +439,19 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})" <> engine <> options
     end
 
+    def execute_ddl({:create_if_not_exists, %Table{}=table, columns}) do
+      engine = engine_expr(table.engine)
+      options = options_expr(table.options)
+
+      "CREATE TABLE IF NOT EXISTS #{quote_table(table.name)} (#{column_definitions(columns)})" <> engine <> options
+    end
+
     def execute_ddl({:drop, %Table{name: name}}) do
       "DROP TABLE #{quote_table(name)}"
+    end
+
+    def execute_ddl({:drop_if_exists, %Table{name: name}}) do
+      "DROP TABLE IF EXISTS #{quote_table(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
@@ -478,8 +471,30 @@ if Code.ensure_loaded?(Mariaex.Connection) do
                 if_do(index.concurrently, "LOCK=NONE")])
     end
 
+    def execute_ddl({:create_if_not_exists, %Index{}=index}) do
+      create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
+      using  = if index.using, do: "USING #{index.using}", else: []
+
+      assemble([create,
+                "IF NOT EXISTS",
+                quote_name(index.name),
+                "ON",
+                quote_table(index.table),
+                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})",
+                using,
+                if_do(index.concurrently, "LOCK=NONE")])
+    end
+
     def execute_ddl({:drop, %Index{}=index}) do
       assemble(["DROP INDEX",
+                quote_name(index.name),
+                "ON #{quote_table(index.table)}",
+                if_do(index.concurrently, "LOCK=NONE")])
+    end
+
+    def execute_ddl({:drop_if_exists, %Index{}=index}) do
+      assemble(["DROP INDEX",
+                "IF EXISTS",
                 quote_name(index.name),
                 "ON #{quote_table(index.table)}",
                 if_do(index.concurrently, "LOCK=NONE")])

@@ -77,16 +77,6 @@ defmodule Ecto.MigrationTest do
     assert last_command() == [create: "posts", capped: true, size: 1024]
   end
 
-  test "forward: table exists?" do
-    assert exists?(table(:hello))
-    assert %Table{name: :hello} = last_exists()
-  end
-
-  test "forward: index exists?" do
-    assert exists?(index(:hello, [:world]))
-    assert %Index{table: :hello} = last_exists()
-  end
-
   test "forward: creates a table" do
     create table = table(:posts) do
       add :title
@@ -172,16 +162,6 @@ defmodule Ecto.MigrationTest do
     end
   end
 
-  test "backward: table exists?" do
-    refute exists?(table(:hello))
-    assert %Table{name: :hello} = last_exists()
-  end
-
-  test "backward: index exists?" do
-    refute exists?(index(:hello, [:world]))
-    assert %Index{table: :hello} = last_exists()
-  end
-
   test "backward: creates a table" do
     create table = table(:posts) do
       add :title
@@ -227,15 +207,7 @@ defmodule Ecto.MigrationTest do
   test "backward: creates an index" do
     create index(:posts, [:title])
     flush
-    assert {:drop, %Index{}} = last_command()
-  end
-
-  test "backward: creates an index (does not exist)" do
-    Process.put(:ddl_exists, false)
-    create index(:posts, [:title])
-    flush
-    assert last_exists()
-    refute last_command()
+    assert {:drop_if_exists, %Index{}} = last_command()
   end
 
   test "backward: drops an index" do
@@ -250,6 +222,5 @@ defmodule Ecto.MigrationTest do
     assert {:rename, %Table{name: :new_posts}, %Table{name: :posts}} = last_command()
   end
 
-  defp last_exists(), do: Process.get(:last_exists)
   defp last_command(), do: Process.get(:last_command)
 end

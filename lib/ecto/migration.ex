@@ -173,9 +173,23 @@ defmodule Ecto.Migration do
 
   """
   defmacro create(object, do: block) do
+    do_create(object, :create, block)
+  end
+
+  @doc """
+  Creates a table if it does not exist.
+
+  Works just like `create/2` but does not raise an error when table
+  already exists.
+  """
+  defmacro create_if_not_exists(object, do: block) do
+    do_create(object, :create_if_not_exists, block)
+  end
+
+  defp do_create(object, command, block) do
     quote do
       table = %Table{} = unquote(object)
-      Runner.start_command({:create, table})
+      Runner.start_command({unquote(command), table})
 
       if table.primary_key do
         add(:id, :serial, primary_key: true)
@@ -225,6 +239,18 @@ defmodule Ecto.Migration do
   end
 
   def create(%Table{} = table) do
+    do_create table, :create
+  end
+
+  def create_if_not_exists(%Index{} = index) do
+    Runner.execute {:create_if_not_exists, index}
+  end
+
+  def create_if_not_exists(%Table{} = table) do
+    do_create table, :create_if_not_exists
+  end
+
+  defp do_create(table, command) do
     columns =
       if table.primary_key do
         [{:add, :id, :serial, primary_key: true}]
@@ -232,7 +258,7 @@ defmodule Ecto.Migration do
         []
       end
 
-    Runner.execute {:create, table, columns}
+    Runner.execute {command, table, columns}
   end
 
 
@@ -247,6 +273,21 @@ defmodule Ecto.Migration do
   """
   def drop(%{} = object) do
     Runner.execute {:drop, object}
+  end
+
+  @doc """
+  Drops a table or index if it exists.
+
+  Does not raise an error if table or index does not exist.
+
+  ## Examples
+
+      drop_if_exists index(:posts, [:name])
+      drop_if_exists table(:posts)
+
+  """
+  def drop_if_exists(%{} = object) do
+    Runner.execute {:drop_if_exists, object}
   end
 
   @doc """
@@ -520,20 +561,6 @@ defmodule Ecto.Migration do
   """
   def flush do
     Runner.flush
-  end
-
-  @doc """
-  Checks if a table or index exists.
-
-  ## Examples
-
-      exists? table(:products)
-
-  This immediately executes any queued migration commands before
-  doing the check.
-  """
-  def exists?(%{} = object) do
-    Runner.exists?(object)
   end
 
   defp validate_type!(type) when is_atom(type) do
