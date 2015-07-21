@@ -748,6 +748,16 @@ defmodule Ecto.Schema do
         end
       end
 
+      defmodule Item do
+        use Ecto.model
+
+        # A required field for all embedded documents
+        @primary_key {:id, :binary_id, autogenerate: true}
+        schema "" do
+          field :name
+        end
+      end
+
       # The item is loaded with the order
       [order] = Repo.all(from(o in Order, where: p.id == 42))
       order.item #=> %Item{...}
@@ -790,6 +800,17 @@ defmodule Ecto.Schema do
           embeds_many :items, Item
         end
       end
+
+      defmodule Item do
+        use Ecto.model
+
+        # A required field for all embedded documents
+        @primary_key {:id, :binary_id, autogenerate: true}
+        schema "" do
+          field :name
+        end
+      end
+
 
       # The items are loaded with the order
       [order] = Repo.all(from(o in Order, where: p.id == 42))
