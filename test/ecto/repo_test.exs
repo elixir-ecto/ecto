@@ -150,6 +150,10 @@ defmodule Ecto.RepoTest do
     assert_raise Ecto.QueryError, fn ->
       TestRepo.update_all from(e in MyModel, order_by: e.x), set: [x: "321"]
     end
+
+    changeset = Ecto.Changeset.change(%MyEmbed{})
+    assert catch_error(TestRepo.update_all MyModel, set: [embed: %MyEmbed{}])
+    assert catch_error(TestRepo.update_all MyModel, set: [embed: changeset])
   end
 
   test "validates delete_all" do
