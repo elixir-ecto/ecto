@@ -62,6 +62,15 @@ defmodule Ecto.MigrationTest do
     end
   end
 
+  test "flush clears out commands" do
+    execute "TEST"
+    commands = Agent.get(Runner, & &1.commands)
+    assert commands == ["TEST"]
+    flush
+    commands = Agent.get(Runner, & &1.commands)
+    assert commands == []
+  end
+
   ## Forward
   @moduletag direction: :forward
 

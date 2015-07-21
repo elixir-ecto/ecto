@@ -432,26 +432,18 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     alias Ecto.Migration.Index
     alias Ecto.Migration.Reference
 
-    def execute_ddl({:create, %Table{} = table, columns}) do
-      engine = engine_expr(table.engine)
+    def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
+      engine  = engine_expr(table.engine)
       options = options_expr(table.options)
+      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
 
-      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})" <> engine <> options
+      "CREATE TABLE" <> if_not_exists <> " #{quote_table(table.name)} (#{column_definitions(columns)})" <> engine <> options
     end
 
-    def execute_ddl({:create_if_not_exists, %Table{}=table, columns}) do
-      engine = engine_expr(table.engine)
-      options = options_expr(table.options)
+    def execute_ddl({command, %Table{name: name}}) when command in [:drop, :drop_if_exists] do
+      if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
 
-      "CREATE TABLE IF NOT EXISTS #{quote_table(table.name)} (#{column_definitions(columns)})" <> engine <> options
-    end
-
-    def execute_ddl({:drop, %Table{name: name}}) do
-      "DROP TABLE #{quote_table(name)}"
-    end
-
-    def execute_ddl({:drop_if_exists, %Table{name: name}}) do
-      "DROP TABLE IF EXISTS #{quote_table(name)}"
+      "DROP TABLE" <> if_exists <> " #{quote_table(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
@@ -471,18 +463,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
                 if_do(index.concurrently, "LOCK=NONE")])
     end
 
-    def execute_ddl({:create_if_not_exists, %Index{}=index}) do
-      create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
-      using  = if index.using, do: "USING #{index.using}", else: []
-
-      assemble([create,
-                "IF NOT EXISTS",
-                quote_name(index.name),
-                "ON",
-                quote_table(index.table),
-                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})",
-                using,
-                if_do(index.concurrently, "LOCK=NONE")])
+    def execute_ddl({:create_if_not_exists, %Index{}}) do
+      raise Ecto.QueryError, query: "CREATE INDEX IF NOT EXISTS", message: "Not supported in MySQL"
     end
 
     def execute_ddl({:drop, %Index{}=index}) do
@@ -492,12 +474,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
                 if_do(index.concurrently, "LOCK=NONE")])
     end
 
-    def execute_ddl({:drop_if_exists, %Index{}=index}) do
-      assemble(["DROP INDEX",
-                "IF EXISTS",
-                quote_name(index.name),
-                "ON #{quote_table(index.table)}",
-                if_do(index.concurrently, "LOCK=NONE")])
+    def execute_ddl({:drop_if_exists, %Index{}}) do
+      raise Ecto.QueryError, query: "DROP INDEX IF EXISTS", message: "Not supported in MySQL"
     end
 
     def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do

@@ -187,6 +187,7 @@ defmodule Ecto.Integration.MigrationTest do
       end
 
       create_if_not_exists table(:existing)
+
       drop_if_exists table(:existing)
       drop_if_exists table(:existing)
     end
@@ -237,14 +238,13 @@ defmodule Ecto.Integration.MigrationTest do
     assert :ok == down(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
   end
 
-  test "create if not exists does not raise on failure" do
+  test "create table if not exists and drop table if exists does not raise on failure" do
     assert :ok == up(TestRepo, 19850423000001, NoErrorTableMigration, log: false)
-    assert :ok == up(TestRepo, 19850423000002, NoErrorIndexMigration, log: false)
   end
 
-  test "drop if exists does not raise on failure" do
-    # assert :ok == up(TestRepo, 19850423000001, NoErrorTableMigration, log: false)
-    # assert :ok == up(TestRepo, 19850423000002, NoErrorIndexMigration, log: false)
+  @tag :create_index_if_not_exists
+  test "create index if not exists and drop index if exists does not raise on failure" do
+    assert :ok == up(TestRepo, 19850423000002, NoErrorIndexMigration, log: false)
   end
 
   test "raises on NoSQL migrations" do

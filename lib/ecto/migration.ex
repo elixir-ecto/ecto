@@ -554,7 +554,7 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Queued migration commands are executed.
+  Executes queue migration commands.
 
   Reverses the order commands are executed when doing a rollback
   on a change/0 function.

@@ -64,9 +64,11 @@ defmodule Ecto.Migration.Runner do
   on a change/0 function.
   """
   def flush do
-    commands  = Agent.get(__MODULE__, & &1.commands)
-    direction = Agent.get(__MODULE__, & &1.direction)
+    %{commands: commands, direction: direction} = Agent.get_and_update(__MODULE__, fn (state) ->
+      {state, %{state | commands: []}}
+    end)
     commands  = if direction == :backward, do: commands, else: Enum.reverse(commands)
+
     for command <- commands do
       {repo, direction, level} = repo_and_direction_and_level()
       execute_in_direction(repo, direction, level, command)
@@ -81,7 +83,7 @@ defmodule Ecto.Migration.Runner do
   """
   def execute(command) do
     Agent.update __MODULE__, fn state ->
-      %{state|command: nil, subcommands: [], commands: [command|state.commands]}
+      %{state | command: nil, subcommands: [], commands: [command|state.commands]}
     end
   end
 
