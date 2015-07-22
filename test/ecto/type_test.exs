@@ -23,6 +23,7 @@ defmodule Ecto.TypeTest do
     @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
       field :a, :integer
+      field :b, :integer, virtual: true
     end
 
     def changeset(params, model) do

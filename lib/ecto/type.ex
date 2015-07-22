@@ -333,14 +333,15 @@ defmodule Ecto.Type do
   defp dump_embed(%{cardinality: :one, embed: model, field: field} = embed,
                   value, fun) when is_map(value) do
     assert_replace_strategy!(embed)
-    {:ok, dump_embed(field, model, value, fun)}
+    {:ok, dump_embed(field, model, value, model.__schema__(:types), fun)}
   end
 
   defp dump_embed(%{cardinality: :many, embed: model, field: field} = embed,
                   value, fun) when is_list(value) do
     assert_replace_strategy!(embed)
+    types = model.__schema__(:types)
     {:ok, for(changeset <- value,
-              model = dump_embed(field, model, changeset, fun),
+              model = dump_embed(field, model, changeset, types, fun),
               do: model)}
   end
 
@@ -348,12 +349,12 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp dump_embed(_field, _model, %Ecto.Changeset{action: :delete}, _fun) do
+  defp dump_embed(_field, _model, %Ecto.Changeset{action: :delete}, _types, _fun) do
     nil
   end
 
-  defp dump_embed(_field, model, %Ecto.Changeset{model: %{__struct__: model}} = changeset, dumper) do
-    %{model: struct, changes: changes, types: types} = changeset
+  defp dump_embed(_field, model, %Ecto.Changeset{model: %{__struct__: model}} = changeset, types, dumper) do
+    %{model: struct, changes: changes} = changeset
 
     Enum.reduce(types, %{}, fn {field, type}, acc ->
       value =
@@ -369,7 +370,7 @@ defmodule Ecto.Type do
     end)
   end
 
-  defp dump_embed(field, _model, value, _fun) do
+  defp dump_embed(field, _model, value, _types, _fun) do
     raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
   end
 
