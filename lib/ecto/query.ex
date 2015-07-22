@@ -73,9 +73,8 @@ defmodule Ecto.Query do
 
       with_minimum(18, 5.0)
 
-  Finally, Ecto provides two conveniences for dynamically generating
-  queries. The first is the `field/2` function which allows developers
-  to dynamically choose a field to query:
+  Interpolation can also be used with the `field/2` function which allows
+  developers to dynamically choose a field to query:
 
       def at_least_four(doors_or_tires) do
           from c in Car,
@@ -84,18 +83,6 @@ defmodule Ecto.Query do
 
   In the example above, both `at_least_four(:doors)` and `at_least_four(:tires)`
   would be valid calls as the field is dynamically inserted.
-
-  The other convenience is called fragments which allows developers to send
-  any expression to the database via the `fragment(...)` function:
-
-      def unpublished_by_title(title) do
-        from p in Post,
-          where: is_nil(p.published_at) and
-                 fragment("downcase(?) == ?", p.title, ^title)
-      end
-
-  Fragments are sent directly to the database while also allowing field names
-  like `p.title` and values like `^title` to be interpolated.
 
   ## Casting
 
@@ -156,6 +143,32 @@ defmodule Ecto.Query do
 
   This module documents each of those macros, providing examples both
   in the keywords query and in the query expression formats.
+
+  ## Fragments
+
+  It is not possible to represent all possible queries in Ecto's query
+  syntax. When such is required, it is possible to use fragments to send
+  any expression to the database:
+
+      def unpublished_by_title(title) do
+        from p in Post,
+          where: is_nil(p.published_at) and
+                 fragment("downcase(?)", p.title) == ^title
+      end
+
+  In the example above, we are using the downcase procedure in the database
+  to downcase the title column.
+
+  It is very important to keep in mind that Ecto is unable to do any type
+  casting described above when fragments are used. You can however use the
+  `type/2` function to give Ecto some hints:
+
+      fragment("downcase(?)", p.title) == type(^title, :string)
+
+  Or even say the right side is of the same type as `p.title`:
+
+      fragment("downcase(?)", p.title) == type(^title, p.title)
+
   """
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,
