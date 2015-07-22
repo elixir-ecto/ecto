@@ -164,7 +164,7 @@ defmodule Ecto.Integration.Tag do
   This module is used to test:
 
     * The array type
-    * Embedding many models with array type
+    * Embedding many models (uses array)
 
   """
   use Ecto.Integration.Model
@@ -185,8 +185,7 @@ defmodule Ecto.Integration.Item do
   """
   use Ecto.Integration.Model
 
-  @primary_key {:id, :binary_id, autogenerate: true}
-  schema "whatever" do
+  embedded_schema do
     field :price, :integer
     field :valid_at, Ecto.Date
   end
