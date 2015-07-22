@@ -33,13 +33,6 @@ defmodule Ecto.Adapters.MySQL do
     * `:ssl_opts` - A list of ssl options, see ssl docs
     * `:connect_timeout` - The timeout in miliseconds for establishing new connections (default: 5000)
 
-  ### Pool options
-
-  All pools should support the following options and can support other options,
-  see `Ecto.Pools.Poolboy`.
-
-    * `:size` - The number of connections to keep in the pool (default: 10)
-
   ### Storage options
 
     * `:charset` - the database encoding (default: "utf8")

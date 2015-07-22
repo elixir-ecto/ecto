@@ -41,13 +41,6 @@ defmodule Ecto.Adapters.Postgres do
     * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
     * `:extensions` - Specify extensions to the postgres adapter
 
-  ### Pool options
-
-  All pools should support the following options and can support other options,
-  see `Ecto.Pools.Poolboy`.
-
-    * `:size` - The number of connections to keep in the pool (default: 10)
-
   ### Storage options
 
     * `:encoding` - the database encoding (default: "UTF8")

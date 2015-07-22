@@ -36,7 +36,7 @@ Application.put_env(:ecto, PoolRepo,
   adapter: Ecto.Adapters.MySQL,
   pool: pool,
   url: "ecto://root@localhost/ecto_test",
-  size: 10)
+  pool_size: 10)
 
 defmodule Ecto.Integration.PoolRepo do
   use Ecto.Integration.Repo, otp_app: :ecto

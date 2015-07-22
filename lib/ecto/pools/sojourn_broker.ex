@@ -4,7 +4,7 @@ defmodule Ecto.Pools.SojournBroker do
 
   ### Options
 
-    * `:size` - The number of connections to keep in the pool (default: 10)
+    * `:pool_size` - The number of connections to keep in the pool (default: 10)
     * `:min_backoff` - The minimum backoff on failed connect in milliseconds (default: 50)
     * `:max_backoff` - The maximum backoff on failed connect in milliseconds (default: 5000)
     * `:broker` - The `sbroker` module to use (default: `Ecto.Pools.SojournBroker.Timeout`)
@@ -86,16 +86,28 @@ defmodule Ecto.Pools.SojournBroker do
   ## Helpers
 
   defp split_opts(opts) do
-    {pool_opts, opts} = Keyword.split(opts, [:size, :broker])
+    opts =
+      case Keyword.pop(opts, :size) do
+        {nil, opts} ->
+          opts
+        {size, opts} ->
+          repo = Keyword.get(opts, :repo, Ecto.Pool)
+          IO.puts "[warning] the :size option when configuring #{inspect repo} is deprecated, " <>
+                  "please use :pool_size instead"
+          Keyword.put(opts, :pool_size, size)
+      end
+
+    {pool_opts, opts} = Keyword.split(opts, [:pool_size, :broker])
 
     opts = opts
       |> Keyword.put_new(:queue_timeout, Keyword.get(opts, :timeout, 5_000))
       |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5_000))
 
     pool_opts = pool_opts
-      |> Keyword.put_new(:size, 10)
-      |> Keyword.put_new(:broker, Ecto.Pools.SojournBroker.Timeout)
       |> Keyword.put(:name, Keyword.fetch!(opts, :name))
+      |> Keyword.put(:size, Keyword.get(pool_opts, :pool_size, 10))
+      |> Keyword.delete(:pool_size)
+      |> Keyword.put_new(:broker, Ecto.Pools.SojournBroker.Timeout)
 
     {pool_opts, opts}
   end

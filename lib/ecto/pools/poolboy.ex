@@ -4,7 +4,7 @@ defmodule Ecto.Pools.Poolboy do
 
   ### Options
 
-    * `:size` - The number of connections to keep in the pool (default: 10)
+    * `:pool_size` - The number of connections to keep in the pool (default: 10)
     * `:lazy` - When true, connections to the repo are lazily started (default: true)
     * `:max_overflow` - The maximum overflow of connections (default: 0) (see poolboy docs)
     * `:shutdown` - The shutdown method for the connections (default: 5000) (see Supervisor.Spec)
@@ -63,11 +63,23 @@ defmodule Ecto.Pools.Poolboy do
   ## Helpers
 
   defp split_opts(opts) do
-    {pool_opts, conn_opts} = Keyword.split(opts, [:name, :size, :max_overflow])
+    opts =
+      case Keyword.pop(opts, :size) do
+        {nil, opts} ->
+          opts
+        {size, opts} ->
+          repo = Keyword.get(opts, :repo, Ecto.Pool)
+          IO.puts "[warning] the :size option when configuring #{inspect repo} is deprecated, " <>
+                  "please use :pool_size instead"
+          Keyword.put(opts, :pool_size, size)
+      end
+
+    {pool_opts, conn_opts} = Keyword.split(opts, [:name, :pool_size, :max_overflow])
     {pool_name, pool_opts} = Keyword.pop(pool_opts, :name)
 
     pool_opts = pool_opts
-      |> Keyword.put_new(:size, 10)
+      |> Keyword.put(:size, Keyword.get(pool_opts, :pool_size, 10))
+      |> Keyword.delete(:pool_size)
       |> Keyword.put_new(:max_overflow, 0)
 
     pool_opts = [worker_module: Worker] ++ pool_opts

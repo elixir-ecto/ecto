@@ -17,7 +17,7 @@ defmodule Ecto.TestPool do
   end
 
   def start_link(opts) do
-    @pool.start_link(Connection, [size: 1] ++ @pool_opts ++ opts)
+    @pool.start_link(Connection, [pool_size: 1] ++ @pool_opts ++ opts)
   end
 
   def transaction(pool, timeout, fun) do

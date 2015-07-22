@@ -38,7 +38,7 @@ defmodule Ecto.Pool do
   A pool should support the following options:
 
     * `:name` - The name of the pool
-    * `:size` - The number of connections to keep in the pool
+    * `:pool_size` - The number of connections to keep in the pool
 
   Returns `{:ok, pid}` on starting the pool.
 

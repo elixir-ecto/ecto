@@ -13,7 +13,7 @@ defmodule Ecto.Integration.PoolTest do
          raise "could not find configuration for Ecto.Integration.TestRepo"
 
   Application.put_env(:ecto, __MODULE__.MockRepo,
-                      [pool: pool, size: 1] ++ repo)
+                      [pool: pool, pool_size: 1] ++ repo)
 
   defmodule MockRepo do
     use Ecto.Repo, otp_app: :ecto
