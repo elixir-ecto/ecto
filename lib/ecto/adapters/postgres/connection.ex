@@ -525,7 +525,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def execute_ddl({command, %Index{}=index}) when command in @drops do
-      if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: ""
+      if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: []
 
       assemble(["DROP",
                 "INDEX",
@@ -668,7 +668,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp assemble(list) do
       list
-      |> Enum.reject(& &1 == "")
       |> List.flatten
       |> Enum.join(" ")
     end

@@ -58,10 +58,10 @@ defmodule Ecto.Migration.Runner do
   end
 
   @doc """
-  Queued migration commands are executed.
+  Executes queue migration commands.
 
   Reverses the order commands are executed when doing a rollback
-  on a change/0 function.
+  on a change/0 function and resets commands queue.
   """
   def flush do
     %{commands: commands, direction: direction} = Agent.get_and_update(__MODULE__, fn (state) ->

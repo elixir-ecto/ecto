@@ -383,13 +383,13 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Queues arbitrary SQL or a keyword command in NoSQL databases.
+  Executes arbitrary SQL or a keyword command in NoSQL databases.
 
   ## Examples
 
-      queue "UPDATE posts SET published_at = NULL"
+      execute "UPDATE posts SET published_at = NULL"
 
-      queue create: "posts", capped: true, size: 1024
+      execute create: "posts", capped: true, size: 1024
 
   """
   def execute(command) when is_binary(command) or is_list(command) do
@@ -557,7 +557,7 @@ defmodule Ecto.Migration do
   Executes queue migration commands.
 
   Reverses the order commands are executed when doing a rollback
-  on a change/0 function.
+  on a change/0 function and resets commands queue.
   """
   def flush do
     Runner.flush

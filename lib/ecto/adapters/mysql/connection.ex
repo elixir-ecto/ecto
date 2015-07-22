@@ -463,9 +463,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
                 if_do(index.concurrently, "LOCK=NONE")])
     end
 
-    def execute_ddl({:create_if_not_exists, %Index{}}) do
-      raise Ecto.QueryError, query: "CREATE INDEX IF NOT EXISTS", message: "Not supported in MySQL"
-    end
+    def execute_ddl({:create_if_not_exists, %Index{}}),
+      do: error!(nil, "MySQL adapter does not support create if not exists for index")
 
     def execute_ddl({:drop, %Index{}=index}) do
       assemble(["DROP INDEX",
@@ -474,9 +473,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
                 if_do(index.concurrently, "LOCK=NONE")])
     end
 
-    def execute_ddl({:drop_if_exists, %Index{}}) do
-      raise Ecto.QueryError, query: "DROP INDEX IF EXISTS", message: "Not supported in MySQL"
-    end
+    def execute_ddl({:drop_if_exists, %Index{}}),
+      do: error!(nil, "MySQL adapter does not support drop if exists for index")
 
     def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
       "RENAME TABLE #{quote_table(current_table.name)} TO #{quote_table(new_table.name)}"
