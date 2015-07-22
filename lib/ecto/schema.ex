@@ -264,10 +264,25 @@ defmodule Ecto.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
-      import Ecto.Schema, only: [schema: 2]
+      import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
       @primary_key {:id, :id, autogenerate: true}
       @timestamps_opts []
       @foreign_key_type :id
+    end
+  end
+
+  @doc """
+  Defines an embedded schema.
+
+  This function is literally a shortcut for:
+
+        @primary_key {:id, :binary_id, autogenerate: true}
+        schema "embedded Model" do
+  """
+  defmacro embedded_schema(opts) do
+    quote do
+      @primary_key {:id, :binary_id, autogenerate: true}
+      schema "embedded #{inspect __MODULE__}", unquote(opts)
     end
   end
 
@@ -806,13 +821,15 @@ defmodule Ecto.Schema do
       defmodule Item do
         use Ecto.model
 
-        # A required field for all embedded documents
-        @primary_key {:id, :binary_id, autogenerate: true}
-        schema "" do
+        # embedded_schema is a shorcut for:
+        #
+        #   @primary_key {:id, :binary_id, autogenerate: true}
+        #   schema "embedded Item" do
+        #
+        embedded_schema do
           field :name
         end
       end
-
 
       # The items are loaded with the order
       [order] = Repo.all(from(o in Order, where: p.id == 42))
