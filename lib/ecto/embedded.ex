@@ -54,6 +54,14 @@ defmodule Ecto.Embedded do
     {:ok, changeset, changeset.valid?}
   end
 
+  def cast(%Embedded{cardinality: :many} = embed, params, current) when is_map(params) do
+    params =
+      params
+      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.map(&elem(&1, 1))
+    cast(embed, params, current)
+  end
+
   def cast(%Embedded{cardinality: :many, embed: mod, on_cast: fun},
            params, current) when is_list(params) do
     {pk, param_pk} = primary_key(mod)
