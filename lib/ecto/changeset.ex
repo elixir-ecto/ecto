@@ -206,7 +206,7 @@ defmodule Ecto.Changeset do
 
   def cast(%{__struct__: module} = model, :empty, required, optional)
       when is_list(required) and is_list(optional) do
-    types    = module.__changeset__
+    types = module.__changeset__
 
     {optional, changes} =
       Enum.map_reduce(optional, %{}, &process_empty_embeds(&1, types, model, &2))
@@ -243,7 +243,6 @@ defmodule Ecto.Changeset do
 
   defp process_empty_embeds({key, fun}, types, model, changes) do
     {key, _param_key} = cast_key(key)
-
     {:embed, embed} = embed!(types, key, fun)
     {:ok, result, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
     {key, Map.put(changes, key, result)}
@@ -260,7 +259,6 @@ defmodule Ecto.Changeset do
         {key, changes}
     end
   end
-
 
   defp process_param({key, fun}, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)

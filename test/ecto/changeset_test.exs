@@ -11,11 +11,11 @@ defmodule Ecto.ChangesetTest do
       field :name
     end
 
-    def changeset(params, model \\ %Author{}) do
+    def changeset(model \\ %Author{}, params) do
       cast(model, params, ~w(name))
     end
 
-    def custom_changeset(params, model \\ %Author{}) do
+    def custom_changeset(model \\ %Author{}, params) do
       cast(model, params, ~w(), ~w(name))
     end
   end
@@ -35,7 +35,7 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  defp changeset(params, model \\ %Post{}) do
+  defp changeset(model \\ %Post{}, params) do
     cast(model, params, ~w(), ~w(title body upvotes topics))
   end
 
@@ -145,6 +145,9 @@ defmodule Ecto.ChangesetTest do
 
   test "cast/4: empty parameters are passed to embeds with custom changeset" do
     changeset = cast(%Post{}, :empty, author: :custom_changeset)
+    refute changeset.changes.author
+
+    changeset = cast(%Post{author: %Author{}}, :empty, author: :custom_changeset)
     author_changeset = changeset.changes.author
     assert author_changeset.model == %Author{}
     assert author_changeset.params == nil
@@ -153,7 +156,7 @@ defmodule Ecto.ChangesetTest do
     assert author_changeset.validations == []
     assert author_changeset.required == []
     assert author_changeset.optional == [:name]
-    assert author_changeset.action == :insert
+    assert author_changeset.action == :update
     refute author_changeset.valid?
   end
 
@@ -391,7 +394,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "fetch_field/2" do
-    changeset = changeset(%{"title" => "foo"}, %Post{body: "bar"})
+    changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
 
     assert fetch_field(changeset, :title) == {:changes, "foo"}
     assert fetch_field(changeset, :body) == {:model, "bar"}
@@ -399,7 +402,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "get_field/3" do
-    changeset = changeset(%{"title" => "foo"}, %Post{body: "bar"})
+    changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
 
     assert get_field(changeset, :title) == "foo"
     assert get_field(changeset, :body) == "bar"
@@ -526,7 +529,7 @@ defmodule Ecto.ChangesetTest do
     post = %Post{}
     assert post.title == nil
 
-    changeset = changeset(%{"title" => "foo"}, post)
+    changeset = changeset(post, %{"title" => "foo"})
     changed_post = apply_changes(changeset)
 
     assert changed_post.__struct__ == post.__struct__
@@ -731,7 +734,7 @@ defmodule Ecto.ChangesetTest do
     end
 
     changeset =
-      changeset(%{"title" => "hello"}, %Post{id: 1})
+      changeset(%Post{id: 1}, %{"title" => "hello"})
       |> validate_unique(:title, on: UniquePKRepo)
     assert changeset.valid?
     assert changeset.errors == []
@@ -780,7 +783,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]
 
     changeset =
-      changeset(%{"body" => "world"}, %Post{title: "hello"})
+      changeset(%Post{title: "hello"}, %{"body" => "world"})
       |> validate_unique(:title, scope: [:body], on: ScopeRepo)
     assert changeset.errors == []
     assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]
@@ -806,7 +809,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]
 
     changeset =
-      changeset(%{"body" => "world"}, %Post{title: nil})
+      changeset(%Post{title: nil}, %{"body" => "world"})
       |> validate_unique(:title, scope: [:body], on: ScopeRepo)
     assert changeset.errors == [title: "has already been taken"]
     assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]

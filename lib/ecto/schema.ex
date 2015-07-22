@@ -732,8 +732,9 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:on_cast` - the default changeset function to call during casting,
-      can be overridden in cast/4. It's an atom representing function name
-      in the embedded model's module (default: `:changeset`).
+      which can be overridden in `Ecto.Changeset.cast/4`. It's an atom representing
+      the function name in the embedded model's module which will receive
+      the module and the parameters for casting (default: `:changeset`).
 
     * `:strategy` - the strategy for storing models in the database.
       Ecto supports only the `:replace` strategy out of the box which is the
@@ -785,8 +786,9 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:on_cast` - the default changeset function to call during casting,
-      can be overridden in cast/4. It's an atom representing function name
-      in the embedded model's module (default: `:changeset`).
+      which can be overridden in `Ecto.Changeset.cast/4`. It's an atom representing
+      the function name in the embedded model's module which will receive
+      the module and the parameters for casting (default: `:changeset`).
 
     * `:strategy` - the strategy for storing models in the database.
       Ecto supports only the `:replace` strategy out of the box which is the
