@@ -386,10 +386,11 @@ defmodule Ecto.Query.Planner do
         type = type!(kind, query, expr, source, field)
         {{dot, [ecto_type: type] ++ meta, []}, acc}
 
-      {:type, _, [{:^, _, [param]} = v, _expr]}, acc ->
-        {_, t} = Enum.fetch!(expr.params, param)
+      {:type, _, [{:^, meta, [ix]}, _expr]}, acc when is_integer(ix) ->
+        {_, t} = Enum.fetch!(expr.params, ix)
         {_, _, type} = type_for_param!(kind, query, expr, t)
-        {%Ecto.Query.Tagged{value: v, type: Ecto.Type.type(type), tag: type}, acc}
+        {%Ecto.Query.Tagged{value: {:^, meta, [acc]}, tag: type,
+                            type: Ecto.Type.type(type)}, acc + 1}
 
       %Ecto.Query.Tagged{value: v, type: type}, acc ->
         {cast_param(kind, query, expr, v, type, adapter), acc}
