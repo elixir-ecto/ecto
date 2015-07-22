@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.14.2
+
+* Bug fixes
+  * Fix an error where using `type/2` in queries was not offsetting parameters properly
+  * Do not allow casting of embeds in queries
+  * Do not store embed as change if it is on update, it is valid and its changeset has no changes
+  * Make sure :any type works correctly with custom types on `Ecto.Type.match?/2`
+
 ## V0.14.1
 
 * Bug fixes
