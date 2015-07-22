@@ -25,15 +25,15 @@ defmodule Ecto.EmbeddedTest do
       field :name
     end
 
-    def changeset(params, model) do
+    def changeset(model, params) do
       cast(model, params, ~w(name))
     end
 
-    def required_changeset(params, model) do
+    def required_changeset(model, params) do
       cast(model, params, ~w(name), ~w(id))
     end
 
-    def optional_changeset(params, model) do
+    def optional_changeset(model, params) do
       cast(model, params, ~w(), ~w(name))
     end
   end

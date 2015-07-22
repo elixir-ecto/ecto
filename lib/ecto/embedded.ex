@@ -31,7 +31,11 @@ defmodule Ecto.Embedded do
   Sets correct `state` on the returned changeset
   """
   def cast(%Embedded{cardinality: :one, embed: mod, on_cast: fun}, :empty, current) do
-    {:ok, changeset_action(mod, fun, :empty, current), false}
+    if current do
+      {:ok, changeset_action(mod, fun, :empty, current), false}
+    else
+      {:ok, nil, false}
+    end
   end
 
   def cast(%Embedded{cardinality: :many, embed: mod, on_cast: fun}, :empty, current) do
@@ -292,7 +296,7 @@ defmodule Ecto.Embedded do
     do: Enum.into(current, %{}, &{Map.get(&1, pk), &1})
 
   defp changeset_action(mod, fun, params, nil) do
-    changeset = apply(mod, fun, [params, mod.__struct__()])
+    changeset = apply(mod, fun, [mod.__struct__(), params])
     %{changeset | action: :insert}
   end
 
@@ -301,7 +305,7 @@ defmodule Ecto.Embedded do
   end
 
   defp changeset_action(mod, fun, params, model) do
-    changeset = apply(mod, fun, [params, model])
+    changeset = apply(mod, fun, [model, params])
     %{changeset | action: :update}
   end
 
