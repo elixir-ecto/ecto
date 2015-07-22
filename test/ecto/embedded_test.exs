@@ -142,6 +142,16 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.valid?
   end
 
+  test "cast embeds_many with map" do
+    changeset = Changeset.cast(%Author{}, %{"profiles" => %{0 => %{"name" => "michal"}}}, ~w(profiles))
+    [profile_change] = changeset.changes.profiles
+    assert profile_change.changes == %{name: "michal"}
+    assert profile_change.errors  == []
+    assert profile_change.action  == :insert
+    assert profile_change.valid?
+    assert changeset.valid?
+  end
+
   test "cast embeds_many with custom changeset" do
     changeset = Changeset.cast(%Author{}, %{"profiles" => [%{"name" => "michal"}]},
                                [profiles: :optional_changeset])
