@@ -4,12 +4,22 @@ defmodule Ecto.RepoTest do
   import Ecto.Query
   require Ecto.TestRepo, as: TestRepo
 
+  defmodule SubEmbed do
+    use Ecto.Model
+
+    @primary_key {:id, :binary_id, autogenerate: true}
+    schema "" do
+      field :y, :string
+    end
+  end
+
   defmodule MyEmbed do
     use Ecto.Model
 
     @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
       field :x, :string
+      embeds_one :sub_embed, SubEmbed
     end
 
     before_insert :store_changeset, [:before_insert]
@@ -327,6 +337,16 @@ defmodule Ecto.RepoTest do
     assert model.embeds == [%{embed | id: id}]
   end
 
+  test "handles nested embeds on insert" do
+    sub_embed = %SubEmbed{y: "xyz"}
+    embed = Ecto.Changeset.change(%MyEmbed{x: "xyz"}, sub_embed: sub_embed)
+    changeset = Ecto.Changeset.change(%MyModel{}, embed: embed)
+    model = TestRepo.insert!(changeset)
+    id = model.embed.sub_embed.id
+    assert id
+    assert model.embed.sub_embed == %{sub_embed | id: id}
+  end
+
   test "handles embeds on update" do
     embed = %MyEmbed{x: "xyz"}
 
@@ -412,6 +432,16 @@ defmodule Ecto.RepoTest do
             {:before_delete, MyEmbed}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
     assert model.embeds == []
+  end
+
+  test "handles nested embeds on update" do
+    sub_embed = %SubEmbed{y: "xyz"}
+    embed = %MyEmbed{x: "xyz"}
+    embed_changeset = Ecto.Changeset.change(embed, sub_embed: sub_embed)
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: embed_changeset)
+    model = TestRepo.update!(changeset)
+    id = model.embed.sub_embed.id
+    assert model.embed.sub_embed == %{sub_embed | id: id}
   end
 
   test "handles embeds on delete" do

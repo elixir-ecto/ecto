@@ -111,7 +111,10 @@ defmodule Ecto.Embedded do
     changes =
       Enum.reduce(embeds, Map.take(changeset.model, fields), fn field, acc ->
         {:embed, embed} = Map.get(types, field)
-        Map.put(acc, field, change(embed, Map.get(acc, field), nil))
+        case change(embed, Map.get(acc, field), nil) do
+          {:skip, _}        -> acc
+          {:change, change} -> Map.put(acc, field, change)
+        end
       end)
       |> Map.merge(changeset.changes)
 
