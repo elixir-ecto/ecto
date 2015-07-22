@@ -311,6 +311,21 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == String.rstrip(result)
   end
 
+  test "fragments and types" do
+    query =
+      normalize from(e in "model",
+        where: fragment("extract(? from ?) = ?", ^"month", e.start_time, type(^"4", :integer)),
+        where: fragment("extract(? from ?) = ?", ^"year", e.start_time, type(^"2015", :integer)),
+        select: 1)
+
+    result =
+      "SELECT 1 FROM \"model\" AS m0 " <>
+      "WHERE (extract($1 from m0.\"start_time\") = $2::integer) " <>
+      "AND (extract($3 from m0.\"start_time\") = $4::integer)"
+
+    assert SQL.all(query) == String.rstrip(result)
+  end
+
   ## *_all
 
   test "update all" do
