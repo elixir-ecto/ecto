@@ -257,12 +257,12 @@ defmodule Ecto.Changeset do
   end
 
   defp cast_empty_embed(embed, changes, model, key) do
-    {:ok, result, _, skip?} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
-
-    if skip? do
-      {key, changes}
-    else
-      {key, Map.put(changes, key, result)}
+    current = Map.get(model, key)
+    case Ecto.Embedded.cast(embed, :empty, current) do
+      {:ok, ^current, _, _} ->
+        {key, changes}
+      {:ok, result, _, _} ->
+        {key, Map.put(changes, key, result)}
     end
   end
 
@@ -282,32 +282,16 @@ defmodule Ecto.Changeset do
     do_process_param(key, param_key, kind, params, type, current, acc)
   end
 
-  defp do_process_param(key, param_key, kind, params, {:embed, embed},
-                        current, {changes, errors, valid?}) do
-    {key,
-     case cast_embed(param_key, embed, params, current) do
-       {:ok, _embed_changes, _embed_valid?, true} ->
-         {changes, errors, valid?}
-       {:ok, embed_changes, embed_valid?, false} ->
-         {Map.put(changes, key, embed_changes), errors, valid? && embed_valid?}
-       :missing ->
-         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
-         {changes, errors, valid?}
-       :invalid ->
-         {changes, [{key, "is invalid"}|errors], false}
-     end}
-  end
-
   defp do_process_param(key, param_key, kind, params, type, current,
                         {changes, errors, valid?}) do
     {key,
-     case cast_field(param_key, type, params) do
-       {:ok, ^current} ->
-         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
-         {changes, errors, valid?}
-       {:ok, value} ->
+     case cast_field(param_key, type, params, current, valid?) do
+       {:ok, value, valid?} ->
          {errors, valid?} = error_on_nil(kind, key, value, errors, valid?)
          {Map.put(changes, key, value), errors, valid?}
+       :skip ->
+         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {changes, errors, valid?}
        :missing ->
          {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
          {changes, errors, valid?}
@@ -345,24 +329,27 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_embed(param_key, embedded, params, current) do
+  defp cast_field(param_key, {:embed, embed}, params, current, valid?) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Ecto.Embedded.cast(embedded, value, current) do
+        case Ecto.Embedded.cast(embed, value, current) do
           :error -> :invalid
-          result -> result
+          {:ok, _, _, true} -> :skip
+          {:ok, ^current, _, _} -> :skip
+          {:ok, result, embedded_valid?, false} -> {:ok, result, valid? and embedded_valid?}
         end
       :error ->
         :missing
     end
   end
 
-  defp cast_field(param_key, type, params) do
+  defp cast_field(param_key, type, params, current, valid?) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
         case Ecto.Type.cast(type, value) do
-          {:ok, value} -> {:ok, value}
-          :error       -> :invalid
+          {:ok, ^current} -> :skip
+          {:ok, value} -> {:ok, value, valid?}
+          :error -> :invalid
         end
       :error ->
         :missing
