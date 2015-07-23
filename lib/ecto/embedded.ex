@@ -184,8 +184,7 @@ defmodule Ecto.Embedded do
   defp apply_callback(%Embedded{cardinality: :many, embed: model} = embed,
                       changesets, adapter, function, type) do
     for changeset <- changesets,
-        changeset = apply_callback(changeset, model, embed, adapter, function, type),
-        do: changeset
+        do: apply_callback(changeset, model, embed, adapter, function, type)
   end
 
   defp apply_callback(%Changeset{action: :update, changes: changes} = changeset,
@@ -196,9 +195,6 @@ defmodule Ecto.Embedded do
     raise ArgumentError, "changeset for embedded #{model} is invalid, " <>
                          "but the parent changeset was not marked as invalid"
   end
-
-  defp apply_callback(%Changeset{action: :delete}, _, _, _, :insert, _),
-    do: nil
 
   defp apply_callback(%Changeset{model: %{__struct__: model}, action: action} = changeset,
                       model, embed, adapter, function, type) do
@@ -215,7 +211,9 @@ defmodule Ecto.Embedded do
   end
 
   defp check_action!(:update, :insert, model),
-    do: raise(ArgumentError, "got update changeset for embedded #{model} while inserting")
+    do: raise(ArgumentError, "got action :update in changeset for embedded #{model} while inserting")
+  defp check_action!(:delete, :insert, model),
+    do: raise(ArgumentError, "got action :delete in changeset for embedded #{model} while inserting")
   defp check_action!(_, _, _), do: :ok
 
   defp generate_id(changeset, :before_insert, model, embed, adapter) do
