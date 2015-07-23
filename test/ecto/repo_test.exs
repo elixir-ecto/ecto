@@ -335,6 +335,20 @@ defmodule Ecto.RepoTest do
     [%{id: id}] = model.embeds
     assert id
     assert model.embeds == [%{embed | id: id}]
+
+    # Raises if action is update
+    embed_changeset = Ecto.Changeset.change(embed) |> Map.put(:action, :update)
+    changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
+    assert_raise ArgumentError, ~r"got update changeset for embedded .* while inserting", fn ->
+      TestRepo.insert!(changeset)
+    end
+
+    # Skips if action is delete
+    embed_changeset = Ecto.Changeset.change(embed) |> Map.put(:action, :delete)
+    changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
+    TestRepo.insert!(changeset)
+    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
   end
 
   test "handles nested embeds on insert" do

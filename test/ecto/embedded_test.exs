@@ -36,6 +36,11 @@ defmodule Ecto.EmbeddedTest do
     def optional_changeset(model, params) do
       cast(model, params, ~w(), ~w(name))
     end
+
+    def set_action(model, params) do
+      cast(model, params, ~w(name), ~w(id))
+      |> Map.put(:action, :update)
+    end
   end
 
   test "__schema__" do
@@ -138,6 +143,12 @@ defmodule Ecto.EmbeddedTest do
     assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
+  end
+
+  test "cast embeds_one keeps action from changeset" do
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}},
+                               [profile: :set_action])
+    assert changeset.changes.profile.action == :update
   end
 
   test "cast embeds_many with only new models" do
@@ -252,6 +263,19 @@ defmodule Ecto.EmbeddedTest do
     empty_changeset = Changeset.change(model)
     assert {:ok, _, true, true} = Embedded.change(embed, empty_changeset, model)
   end
+
+  test "change embeds_one keeps action from changeset" do
+    embed = %Embedded{field: :profile, cardinality: :one, owner: Author, embed: Profile}
+
+    changeset =
+      %Profile{}
+      |> Changeset.change(name: "michal")
+      |> Map.put(:action, :update)
+
+    {:ok, changeset, _, _} = Embedded.change(embed, changeset, nil)
+    assert changeset.action == :update
+  end
+
 
   test "change embeds_many" do
     embed = %Embedded{field: :profiles, cardinality: :many, owner: Author, embed: Profile}
