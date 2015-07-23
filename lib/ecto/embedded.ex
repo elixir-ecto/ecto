@@ -144,8 +144,7 @@ defmodule Ecto.Embedded do
   end
 
   defp do_change(%Changeset{}, _current, _mod) do
-    raise ArgumentError, "embedded changeset does not change the model already " <>
-      "preset in the parent model"
+    raise ArgumentError, "embedded changeset has a different model than the one specified in the schema"
   end
 
   defp do_change(value, current, _mod) do
