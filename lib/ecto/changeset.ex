@@ -244,19 +244,25 @@ defmodule Ecto.Changeset do
   defp process_empty_embeds({key, fun}, types, model, changes) do
     {key, _param_key} = cast_key(key)
     {:embed, embed} = embed!(types, key, fun)
-    {:ok, result, _, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
-    {key, Map.put(changes, key, result)}
+    cast_empty_embed(embed, changes, model, key)
   end
 
   defp process_empty_embeds(key, types, model, changes) do
     {key, _param_key} = cast_key(key)
 
     case type!(types, key) do
-      {:embed, embed} ->
-        {:ok, result, _, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
-        {key, Map.put(changes, key, result)}
-      _ ->
-        {key, changes}
+      {:embed, embed} -> cast_empty_embed(embed, changes, model, key)
+      _ -> {key, changes}
+    end
+  end
+
+  defp cast_empty_embed(embed, changes, model, key) do
+    {:ok, result, _, skip?} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
+
+    if skip? do
+      {key, changes}
+    else
+      {key, Map.put(changes, key, result)}
     end
   end
 

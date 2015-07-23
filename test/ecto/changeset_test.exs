@@ -126,10 +126,12 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: empty parameters are passed to embeds" do
-    changeset = cast(%Post{}, :empty, ~w(authors))
-    assert changeset.changes.authors == []
+  test "cast/4: empty parameters are not passed to empty embeds" do
+    changeset = cast(%Post{}, :empty, ~w(author authors))
+    assert changeset.changes == %{}
+  end
 
+  test "cast/4: empty parameters are passed to embeds many" do
     changeset = cast(%Post{authors: [%Author{}]}, :empty, ~w(authors))
     [author_changeset] = changeset.changes.authors
     assert author_changeset.model == %Author{}
@@ -143,10 +145,7 @@ defmodule Ecto.ChangesetTest do
     refute author_changeset.valid?
   end
 
-  test "cast/4: empty parameters are passed to embeds with custom changeset" do
-    changeset = cast(%Post{}, :empty, author: :custom_changeset)
-    refute changeset.changes.author
-
+  test "cast/4: empty parameters are passed to embeds one" do
     changeset = cast(%Post{author: %Author{}}, :empty, author: :custom_changeset)
     author_changeset = changeset.changes.author
     assert author_changeset.model == %Author{}
