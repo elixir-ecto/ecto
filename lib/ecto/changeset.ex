@@ -244,7 +244,7 @@ defmodule Ecto.Changeset do
   defp process_empty_embeds({key, fun}, types, model, changes) do
     {key, _param_key} = cast_key(key)
     {:embed, embed} = embed!(types, key, fun)
-    {:ok, result, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
+    {:ok, result, _, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
     {key, Map.put(changes, key, result)}
   end
 
@@ -253,7 +253,7 @@ defmodule Ecto.Changeset do
 
     case type!(types, key) do
       {:embed, embed} ->
-        {:ok, result, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
+        {:ok, result, _, _} = Ecto.Embedded.cast(embed, :empty, Map.get(model, key))
         {key, Map.put(changes, key, result)}
       _ ->
         {key, changes}
@@ -280,7 +280,9 @@ defmodule Ecto.Changeset do
                         current, {changes, errors, valid?}) do
     {key,
      case cast_embed(param_key, embed, params, current) do
-       {:ok, embed_changes, embed_valid?} ->
+       {:ok, _embed_changes, _embed_valid?, true} ->
+         {changes, errors, valid?}
+       {:ok, embed_changes, embed_valid?, false} ->
          {Map.put(changes, key, embed_changes), errors, valid? && embed_valid?}
        :missing ->
          {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
@@ -614,10 +616,10 @@ defmodule Ecto.Changeset do
 
   defp put_change(model, acc, key, value, {:embed, embed}) do
     case Ecto.Embedded.change(embed, value, Map.get(model, key)) do
-      {:change, change} ->
-        Map.put(acc, key, change)
-      {:skip, _change} ->
+      {:ok, _, _, true} ->
         acc
+      {:ok, change, _, false} ->
+        Map.put(acc, key, change)
     end
   end
 
@@ -659,9 +661,9 @@ defmodule Ecto.Changeset do
     value =
       case Map.get(types, key) do
         {:embed, embed} ->
-          {_, change} =
+          {:ok, changes, _, _} =
             Ecto.Embedded.change(embed, value, Map.get(changeset.model, key))
-          change
+          changes
         _ ->
           value
       end
