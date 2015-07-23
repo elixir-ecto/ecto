@@ -240,7 +240,8 @@ defmodule Ecto.Migrator do
   defp ensure_no_duplication([]), do: :ok
 
   defp raise_no_migration_in_file(file) do
-    raise Ecto.MigrationError, message: "file #{Path.relative_to_cwd(file)} does not contain any Ecto.Migration"
+    raise Ecto.MigrationError,
+      message: "file #{Path.relative_to_cwd(file)} does not contain any Ecto.Migration"
   end
 
   defp log(false, _msg), do: :ok

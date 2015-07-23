@@ -484,33 +484,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     alias Ecto.Migration.Index
     alias Ecto.Migration.Reference
 
-    def ddl_exists(%Table{name: name}) do
-      """
-      SELECT count(1) FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE c.relkind IN ('r','v','m')
-             AND c.relname = '#{escape_string(to_string(name))}'
-             AND n.nspname = ANY (current_schemas(false))
-      """
+    @drops [:drop, :drop_if_exists]
+
+    def execute_ddl({command, %Table{}=table, columns}) when command in [:create, :create_if_not_exists] do
+      options       = options_expr(table.options)
+      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
+
+      "CREATE TABLE" <> if_not_exists <> " #{quote_table(table.name)} (#{column_definitions(columns)})" <> options
     end
 
-    def ddl_exists(%Index{name: name}) do
-      """
-      SELECT count(1) FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-       WHERE c.relkind IN ('i')
-             AND c.relname = '#{escape_string(to_string(name))}'
-             AND n.nspname = ANY (current_schemas(false))
-      """
-    end
+    def execute_ddl({command, %Table{name: name}}) when command in @drops do
+      if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
 
-    def execute_ddl({:create, %Table{}=table, columns}) do
-      options = options_expr(table.options)
-      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})" <> options
-    end
-
-    def execute_ddl({:drop, %Table{name: name}}) do
-      "DROP TABLE #{quote_table(name)}"
+      "DROP TABLE" <> if_exists <> " #{quote_table(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
@@ -531,10 +517,20 @@ if Code.ensure_loaded?(Postgrex.Connection) do
                 "(#{fields})"])
     end
 
-    def execute_ddl({:drop, %Index{}=index}) do
+    def execute_ddl({:create_if_not_exists, %Index{}=index}) do
+      assemble(["DO $$",
+                "BEGIN",
+                execute_ddl({:create, index}) <> ";",
+                "EXCEPTION WHEN duplicate_table THEN END; $$;"])
+    end
+
+    def execute_ddl({command, %Index{}=index}) when command in @drops do
+      if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: []
+
       assemble(["DROP",
                 "INDEX",
                 if_do(index.concurrently, "CONCURRENTLY"),
+                if_exists,
                 quote_name(index.name)])
     end
 

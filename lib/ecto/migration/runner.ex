@@ -19,7 +19,9 @@ defmodule Ecto.Migration.Runner do
     start_link(repo, direction, migrator_direction, level)
 
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
-    {time, _} = :timer.tc(module, operation, [])
+    {time1, _} = :timer.tc(module, operation, [])
+    {time2, _} = :timer.tc(&flush/0, [])
+    time = time1 + time2
     log(level, "== Migrated in #{inspect(div(time, 10000) / 10)}s")
 
     stop()
@@ -31,7 +33,7 @@ defmodule Ecto.Migration.Runner do
   def start_link(repo, direction, migrator_direction, level) do
     Agent.start_link(fn ->
       %{direction: direction, repo: repo, migrator_direction: migrator_direction,
-        command: nil, subcommands: [], level: level}
+        command: nil, subcommands: [], level: level, commands: []}
     end, name: __MODULE__)
   end
 
@@ -56,14 +58,33 @@ defmodule Ecto.Migration.Runner do
   end
 
   @doc """
-  Executes command tuples or strings.
+  Executes queue migration commands.
+
+  Reverses the order commands are executed when doing a rollback
+  on a change/0 function and resets commands queue.
+  """
+  def flush do
+    %{commands: commands, direction: direction} = Agent.get_and_update(__MODULE__, fn (state) ->
+      {state, %{state | commands: []}}
+    end)
+    commands  = if direction == :backward, do: commands, else: Enum.reverse(commands)
+
+    for command <- commands do
+      {repo, direction, level} = repo_and_direction_and_level()
+      execute_in_direction(repo, direction, level, command)
+    end
+  end
+
+  @doc """
+  Queues command tuples or strings for execution.
 
   Ecto.MigrationError will be raised when the server
   is in `:backward` direction and `command` is irreversible.
   """
   def execute(command) do
-    {repo, direction, level} = repo_and_direction_and_level()
-    execute_in_direction(repo, direction, level, command)
+    Agent.update __MODULE__, fn state ->
+      %{state | command: nil, subcommands: [], commands: [command|state.commands]}
+    end
   end
 
   @doc """
@@ -74,16 +95,14 @@ defmodule Ecto.Migration.Runner do
   end
 
   @doc """
-  Executes and clears current command. Must call `start_command/1` first.
+  Queues and clears current command. Must call `start_command/1` first.
   """
   def end_command do
-    command =
-      Agent.get_and_update __MODULE__, fn state ->
-        {operation, object} = state.command
-        {{operation, object, Enum.reverse(state.subcommands)},
-         %{state | command: nil, subcommands: []}}
-      end
-    execute(command)
+    Agent.update __MODULE__, fn state ->
+      {operation, object} = state.command
+      command = {operation, object, Enum.reverse(state.subcommands)}
+      %{state | command: nil, subcommands: [], commands: [command|state.commands]}
+    end
   end
 
   @doc """
@@ -106,25 +125,15 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
-  @doc """
-  Checks if a table or index exists.
-  """
-  def exists?(object) do
-    {repo, direction, _level} = repo_and_direction_and_level()
-    exists = repo.__adapter__.ddl_exists?(repo, object, @opts)
-    if direction == :forward, do: exists, else: !exists
-  end
-
   ## Execute
+  @creates [:create, :create_if_not_exists]
 
   defp execute_in_direction(repo, :forward, level, command) do
     log_and_execute_ddl(repo, level, command)
   end
 
-  defp execute_in_direction(repo, :backward, level, {:create, %Index{}=index}) do
-    if repo.__adapter__.ddl_exists?(repo, index, @opts) do
-      log_and_execute_ddl(repo, level, {:drop, index})
-    end
+  defp execute_in_direction(repo, :backward, level, {command, %Index{}=index}) when command in @creates do
+    log_and_execute_ddl(repo, level, {:drop_if_exists, index})
   end
 
   defp execute_in_direction(repo, :backward, level, {:drop, %Index{}=index}) do
@@ -139,13 +148,15 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
-  defp reverse({:create, %Table{}=table, _columns}), do: {:drop, table}
+  defp reverse({command, %Table{}=table, _columns}) when command in @creates,
+    do: {:drop, table}
   defp reverse({:alter,  %Table{}=table, changes}) do
     if reversed = table_reverse(changes) do
       {:alter, table, reversed}
     end
   end
-  defp reverse({:rename, %Table{}=table_current, %Table{}=table_new}), do: {:rename, table_new, table_current}
+  defp reverse({:rename, %Table{}=table_current, %Table{}=table_new}),
+    do: {:rename, table_new, table_current}
   defp reverse(_command), do: false
 
   defp table_reverse([]),   do: []
@@ -179,15 +190,23 @@ defmodule Ecto.Migration.Runner do
 
   defp command({:create, %Table{} = table, _}),
     do: "create table #{table.name}"
+  defp command({:create_if_not_exists, %Table{} = table, _}),
+    do: "create table if not exists #{table.name}"
   defp command({:alter, %Table{} = table, _}),
     do: "alter table #{table.name}"
   defp command({:drop, %Table{} = table}),
     do: "drop table #{table.name}"
+  defp command({:drop_if_exists, %Table{} = table}),
+    do: "drop table if exists #{table.name}"
 
   defp command({:create, %Index{} = index}),
     do: "create index #{index.name}"
+  defp command({:create_if_not_exists, %Index{} = index}),
+    do: "create index if not exists #{index.name}"
   defp command({:drop, %Index{} = index}),
     do: "drop index #{index.name}"
+  defp command({:drop_if_exists, %Index{} = index}),
+    do: "drop index if exists #{index.name}"
   defp command({:rename, %Table{} = current_table, %Table{} = new_table}),
     do: "rename table #{current_table.name} to #{new_table.name}"
 end

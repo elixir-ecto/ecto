@@ -14,17 +14,7 @@ defmodule Ecto.Migration.SchemaMigration do
 
   def ensure_schema_migrations_table!(repo) do
     adapter = repo.__adapter__
-
-    # DDL queries do not log, so we do not need
-    # to pass log: false here.
-    unless adapter.ddl_exists?(repo, @table, @opts) do
-      adapter.execute_ddl(repo,
-        {:create, @table, [
-          {:add, :version, :bigint, primary_key: true},
-          {:add, :inserted_at, :datetime, []}]}, @opts)
-    end
-
-    :ok
+    create_migrations_table(adapter, repo)
   end
 
   def migrated_versions(repo) do
@@ -37,5 +27,14 @@ defmodule Ecto.Migration.SchemaMigration do
 
   def down(repo, version) do
     repo.delete_all from(p in __MODULE__, where: p.version == ^version), @opts
+  end
+
+  defp create_migrations_table(adapter, repo) do
+    # DDL queries do not log, so we do not need
+    # to pass log: false here.
+    adapter.execute_ddl(repo,
+      {:create_if_not_exists, @table, [
+        {:add, :version, :bigint, primary_key: true},
+        {:add, :inserted_at, :datetime, []}]}, @opts)
   end
 end

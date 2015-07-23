@@ -432,33 +432,18 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     alias Ecto.Migration.Index
     alias Ecto.Migration.Reference
 
-    def ddl_exists(%Table{name: name}) do
-      """
-      SELECT COUNT(1)
-        FROM information_schema.tables
-       WHERE table_schema = SCHEMA()
-             AND table_name = '#{escape_string(to_string(name))}'
-      """
-    end
-
-    def ddl_exists(%Index{name: name}) do
-      """
-      SELECT COUNT(1)
-        FROM information_schema.statistics
-       WHERE table_schema = SCHEMA()
-         AND index_name = '#{escape_string(to_string(name))}'
-      """
-    end
-
-    def execute_ddl({:create, %Table{} = table, columns}) do
-      engine = engine_expr(table.engine)
+    def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
+      engine  = engine_expr(table.engine)
       options = options_expr(table.options)
+      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
 
-      "CREATE TABLE #{quote_table(table.name)} (#{column_definitions(columns)})" <> engine <> options
+      "CREATE TABLE" <> if_not_exists <> " #{quote_table(table.name)} (#{column_definitions(columns)})" <> engine <> options
     end
 
-    def execute_ddl({:drop, %Table{name: name}}) do
-      "DROP TABLE #{quote_table(name)}"
+    def execute_ddl({command, %Table{name: name}}) when command in [:drop, :drop_if_exists] do
+      if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
+
+      "DROP TABLE" <> if_exists <> " #{quote_table(name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
@@ -478,12 +463,18 @@ if Code.ensure_loaded?(Mariaex.Connection) do
                 if_do(index.concurrently, "LOCK=NONE")])
     end
 
+    def execute_ddl({:create_if_not_exists, %Index{}}),
+      do: error!(nil, "MySQL adapter does not support create if not exists for index")
+
     def execute_ddl({:drop, %Index{}=index}) do
       assemble(["DROP INDEX",
                 quote_name(index.name),
                 "ON #{quote_table(index.table)}",
                 if_do(index.concurrently, "LOCK=NONE")])
     end
+
+    def execute_ddl({:drop_if_exists, %Index{}}),
+      do: error!(nil, "MySQL adapter does not support drop if exists for index")
 
     def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
       "RENAME TABLE #{quote_table(current_table.name)} TO #{quote_table(new_table.name)}"

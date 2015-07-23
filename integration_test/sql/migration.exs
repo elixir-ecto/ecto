@@ -10,18 +10,15 @@ defmodule Ecto.Integration.MigrationTest do
     @index index(:create_table_migration, [:value], unique: true)
 
     def up do
-      assert false == exists? @table
       create @table do
         add :value, :integer
       end
       create @index
-      assert true == exists? @table
     end
 
     def down do
       drop @index
       drop @table
-      assert false == exists? @table
     end
   end
 
@@ -131,6 +128,20 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule ReferencesRollbackMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:parent) do
+        add :name, :string
+      end
+
+      create table(:child) do
+        add :parent_id, references(:parent)
+      end
+    end
+  end
+
   defmodule RenameMigration do
     use Ecto.Migration
 
@@ -138,16 +149,12 @@ defmodule Ecto.Integration.MigrationTest do
     @table_new table(:new_posts_migration)
 
     def up do
-      assert false == exists? @table_current
       create @table_current
       rename @table_current, @table_new
-      assert true == exists? @table_new
-      assert false == exists? @table_current
     end
 
     def down do
       drop @table_new
-      assert false == exists? @table_new
     end
   end
 
@@ -155,13 +162,8 @@ defmodule Ecto.Integration.MigrationTest do
     use Ecto.Migration
 
     def up do
-      assert_raise ArgumentError, ~r"does not support keyword lists in :options", fn ->
-        create table(:collection, options: [capped: true])
-      end
-
-      assert_raise ArgumentError, ~r"does not support keyword lists in execute", fn ->
-        execute create: "collection"
-      end
+      create table(:collection, options: [capped: true])
+      execute create: "collection"
     end
   end
 
@@ -169,6 +171,36 @@ defmodule Ecto.Integration.MigrationTest do
     use Ecto.Model
 
     schema "parent" do
+    end
+  end
+
+  defmodule NoErrorTableMigration do
+    use Ecto.Migration
+
+    def change do
+      create_if_not_exists table(:existing) do
+        add :name, :string
+      end
+
+      create_if_not_exists table(:existing) do
+        add :name, :string
+      end
+
+      create_if_not_exists table(:existing)
+
+      drop_if_exists table(:existing)
+      drop_if_exists table(:existing)
+    end
+  end
+
+  defmodule NoErrorIndexMigration do
+    use Ecto.Migration
+
+    def change do
+      create_if_not_exists index(:posts, [:title])
+      create_if_not_exists index(:posts, [:title])
+      drop_if_exists index(:posts, [:title])
+      drop_if_exists index(:posts, [:title])
     end
   end
 
@@ -201,8 +233,24 @@ defmodule Ecto.Integration.MigrationTest do
     assert :ok == down(TestRepo, 20050906120000, OnDeleteMigration, log: false)
   end
 
+  test "rolls back references in change/1" do
+    assert :ok == up(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
+    assert :ok == down(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
+  end
+
+  test "create table if not exists and drop table if exists does not raise on failure" do
+    assert :ok == up(TestRepo, 19850423000001, NoErrorTableMigration, log: false)
+  end
+
+  @tag :create_index_if_not_exists
+  test "create index if not exists and drop index if exists does not raise on failure" do
+    assert :ok == up(TestRepo, 19850423000002, NoErrorIndexMigration, log: false)
+  end
+
   test "raises on NoSQL migrations" do
-    assert :ok == up(TestRepo, 20150704120000, NoSQLMigration, log: false)
+    assert_raise ArgumentError, ~r"does not support keyword lists in :options", fn ->
+      up(TestRepo, 20150704120000, NoSQLMigration, log: false)
+    end
   end
 
   @tag :add_column

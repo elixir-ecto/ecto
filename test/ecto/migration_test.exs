@@ -62,27 +62,28 @@ defmodule Ecto.MigrationTest do
     end
   end
 
+  test "flush clears out commands" do
+    execute "TEST"
+    commands = Agent.get(Runner, & &1.commands)
+    assert commands == ["TEST"]
+    flush
+    commands = Agent.get(Runner, & &1.commands)
+    assert commands == []
+  end
+
   ## Forward
   @moduletag direction: :forward
 
   test "forward: executes the given SQL" do
     execute "HELLO, IS IT ME YOU ARE LOOKING FOR?"
+    flush
     assert last_command() == "HELLO, IS IT ME YOU ARE LOOKING FOR?"
   end
 
   test "forward: executes given keyword command" do
     execute create: "posts", capped: true, size: 1024
+    flush
     assert last_command() == [create: "posts", capped: true, size: 1024]
-  end
-
-  test "forward: table exists?" do
-    assert exists?(table(:hello))
-    assert %Table{name: :hello} = last_exists()
-  end
-
-  test "forward: index exists?" do
-    assert exists?(index(:hello, [:world]))
-    assert %Index{table: :hello} = last_exists()
   end
 
   test "forward: creates a table" do
@@ -92,6 +93,7 @@ defmodule Ecto.MigrationTest do
       add :author_id, references(:authors)
       timestamps
     end
+    flush
 
     assert last_command() ==
            {:create, table,
@@ -105,6 +107,7 @@ defmodule Ecto.MigrationTest do
     create table = table(:posts, primary_key: false, timestamps: false) do
       add :title
     end
+    flush
 
     assert last_command() ==
            {:create, table,
@@ -113,6 +116,7 @@ defmodule Ecto.MigrationTest do
 
   test "forward: creates an empty table" do
     create table = table(:posts)
+    flush
 
     assert last_command() ==
            {:create, table, [{:add, :id, :serial, [primary_key: true]}]}
@@ -124,6 +128,7 @@ defmodule Ecto.MigrationTest do
       modify :title, :text
       remove :views
     end
+    flush
 
     assert last_command() ==
            {:alter, %Table{name: :posts},
@@ -134,21 +139,25 @@ defmodule Ecto.MigrationTest do
 
   test "forward: drops a table" do
     drop table(:posts)
+    flush
     assert {:drop, %Table{}} = last_command()
   end
 
   test "forward: creates an index" do
     create index(:posts, [:title])
+    flush
     assert {:create, %Index{}} = last_command()
   end
 
   test "forward: drops an index" do
     drop index(:posts, [:title])
+    flush
     assert {:drop, %Index{}} = last_command()
   end
 
   test "forward: renames a table" do
     rename table(:posts), table(:new_posts)
+    flush
     assert {:rename, %Table{name: :posts}, %Table{name: :new_posts}} = last_command()
   end
 
@@ -158,17 +167,8 @@ defmodule Ecto.MigrationTest do
   test "backward: fails when executing SQL" do
     assert_raise Ecto.MigrationError, ~r/cannot reverse migration command/, fn ->
       execute "HELLO, IS IT ME YOU ARE LOOKING FOR?"
+      flush
     end
-  end
-
-  test "backward: table exists?" do
-    refute exists?(table(:hello))
-    assert %Table{name: :hello} = last_exists()
-  end
-
-  test "backward: index exists?" do
-    refute exists?(index(:hello, [:world]))
-    assert %Index{table: :hello} = last_exists()
   end
 
   test "backward: creates a table" do
@@ -176,12 +176,14 @@ defmodule Ecto.MigrationTest do
       add :title
       add :cost, :decimal, precision: 3
     end
+    flush
 
     assert last_command() == {:drop, table}
   end
 
   test "backward: creates an empty table" do
     create table = table(:posts)
+    flush
 
     assert last_command() == {:drop, table}
   end
@@ -190,6 +192,7 @@ defmodule Ecto.MigrationTest do
     alter table(:posts) do
       add :summary, :text
     end
+    flush
 
     assert last_command() ==
            {:alter, %Table{name: :posts},
@@ -199,37 +202,34 @@ defmodule Ecto.MigrationTest do
       alter table(:posts) do
         remove :summary
       end
+      flush
     end
   end
 
   test "backward: drops a table" do
     assert_raise Ecto.MigrationError, ~r/cannot reverse migration command/, fn ->
       drop table(:posts)
+      flush
     end
   end
 
   test "backward: creates an index" do
     create index(:posts, [:title])
-    assert {:drop, %Index{}} = last_command()
-  end
-
-  test "backward: creates an index (does not exist)" do
-    Process.put(:ddl_exists, false)
-    create index(:posts, [:title])
-    assert last_exists()
-    refute last_command()
+    flush
+    assert {:drop_if_exists, %Index{}} = last_command()
   end
 
   test "backward: drops an index" do
     drop index(:posts, [:title])
+    flush
     assert {:create, %Index{}} = last_command()
   end
 
   test "backward: renames a table" do
     rename table(:posts), table(:new_posts)
+    flush
     assert {:rename, %Table{name: :new_posts}, %Table{name: :posts}} = last_command()
   end
 
-  defp last_exists(), do: Process.get(:last_exists)
   defp last_command(), do: Process.get(:last_command)
 end

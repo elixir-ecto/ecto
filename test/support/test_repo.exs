@@ -70,11 +70,6 @@ defmodule Ecto.TestAdapter do
     :ok
   end
 
-  def ddl_exists?(_repo, object, _) do
-    Process.put(:last_exists, object)
-    Process.get(:ddl_exists, true)
-  end
-
   defp migrated_versions do
     Process.get(:migrated_versions) || []
   end
