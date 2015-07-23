@@ -4,22 +4,6 @@ defmodule Ecto.ChangesetTest do
   import Ecto.Changeset
   import Ecto.Query
 
-  defmodule Author do
-    use Ecto.Model
-
-    schema "" do
-      field :name
-    end
-
-    def changeset(model \\ %Author{}, params) do
-      cast(model, params, ~w(name))
-    end
-
-    def custom_changeset(model \\ %Author{}, params) do
-      cast(model, params, ~w(), ~w(name))
-    end
-  end
-
   defmodule Post do
     use Ecto.Model
 
@@ -30,8 +14,6 @@ defmodule Ecto.ChangesetTest do
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
       field :published_at, Ecto.DateTime
-      embeds_one :author, Author
-      embeds_many :authors, Author
     end
   end
 
@@ -124,39 +106,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.required == [:title]
     assert changeset.optional == [:body]
     refute changeset.valid?
-  end
-
-  test "cast/4: empty parameters are not passed to empty embeds" do
-    changeset = cast(%Post{}, :empty, ~w(author authors))
-    assert changeset.changes == %{}
-  end
-
-  test "cast/4: empty parameters are passed to embeds many" do
-    changeset = cast(%Post{authors: [%Author{}]}, :empty, ~w(authors))
-    [author_changeset] = changeset.changes.authors
-    assert author_changeset.model == %Author{}
-    assert author_changeset.params == nil
-    assert author_changeset.changes == %{}
-    assert author_changeset.errors == []
-    assert author_changeset.validations == []
-    assert author_changeset.required == [:name]
-    assert author_changeset.optional == []
-    assert author_changeset.action == :update
-    refute author_changeset.valid?
-  end
-
-  test "cast/4: empty parameters are passed to embeds one" do
-    changeset = cast(%Post{author: %Author{}}, :empty, author: :custom_changeset)
-    author_changeset = changeset.changes.author
-    assert author_changeset.model == %Author{}
-    assert author_changeset.params == nil
-    assert author_changeset.changes == %{}
-    assert author_changeset.errors == []
-    assert author_changeset.validations == []
-    assert author_changeset.required == []
-    assert author_changeset.optional == [:name]
-    assert author_changeset.action == :update
-    refute author_changeset.valid?
   end
 
   test "cast/4: can't cast required field" do
@@ -468,28 +417,6 @@ defmodule Ecto.ChangesetTest do
 
     changeset = put_change(base_changeset, :upvotes, nil)
     assert changeset.changes.upvotes == nil
-  end
-
-  test "change/2, put_change/3, force_change/3 wth embeds" do
-    base_changeset = change(%Post{upvotes: 5})
-
-    changeset = change(base_changeset, author: %Author{name: "michal"})
-    assert %Ecto.Changeset{} = changeset.changes.author
-
-    changeset = put_change(base_changeset, :author, %Author{name: "michal"})
-    assert %Ecto.Changeset{} = changeset.changes.author
-
-    changeset = force_change(base_changeset, :author, %Author{name: "michal"})
-    assert %Ecto.Changeset{} = changeset.changes.author
-
-    base_changeset = change(%Post{author: %Author{name: "michal"}})
-    empty_update_changeset = change(%Author{name: "michal"})
-
-    changeset = put_change(base_changeset, :author, empty_update_changeset)
-    assert changeset.changes == %{}
-
-    changeset = force_change(base_changeset, :author, empty_update_changeset)
-    assert %Ecto.Changeset{} = changeset.changes.author
   end
 
   test "force_change/3" do
