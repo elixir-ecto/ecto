@@ -242,6 +242,16 @@ defmodule Ecto.Migration do
     do_create table, :create
   end
 
+  @doc """
+  Creates an index or a table with only `:id` field if one does not yet exist.
+
+  ## Examples
+
+      create_if_not_exists index(:posts, [:name])
+
+      create_if_not_exists table(:version)
+
+  """
   def create_if_not_exists(%Index{} = index) do
     Runner.execute {:create_if_not_exists, index}
   end
@@ -260,7 +270,6 @@ defmodule Ecto.Migration do
 
     Runner.execute {command, table, columns}
   end
-
 
   @doc """
   Drops a table or index.

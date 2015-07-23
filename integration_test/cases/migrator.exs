@@ -1,12 +1,11 @@
 Code.require_file "../support/file_helpers.exs", __DIR__
 
 defmodule Ecto.Integration.MigratorTest do
-  use Ecto.Integration.Case
+  use ExUnit.Case
 
   import Support.FileHelpers
   import Ecto.Migrator, only: [migrated_versions: 1]
 
-  alias Ecto.Integration.Barebone
   alias Ecto.Integration.TestRepo
   alias Ecto.Migration.SchemaMigration
 
@@ -112,7 +111,7 @@ defmodule Ecto.Integration.MigratorTest do
   end
 
   defp count_entries() do
-    length TestRepo.all Barebone
+    length Process.get(:migrations)
   end
 
   defp create_migration(num) do
@@ -122,16 +121,17 @@ defmodule Ecto.Integration.MigratorTest do
     defmodule #{module} do
       use Ecto.Migration
 
-      import Ecto.Query, only: [from: 2]
-      alias Ecto.Integration.TestRepo
-      alias Ecto.Integration.Barebone
 
       def up do
-        TestRepo.insert!(%Barebone{num: #{num}})
+        update &[#{num}|&1]
       end
 
       def down do
-        TestRepo.delete_all from b in Barebone, where: b.num == #{num}
+        update &List.delete(&1, #{num})
+      end
+
+      defp update(fun) do
+        Process.put(:migrations, fun.(Process.get(:migrations) || []))
       end
     end
     """

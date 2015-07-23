@@ -101,7 +101,7 @@ defmodule Ecto.Migration.Runner do
     Agent.update __MODULE__, fn state ->
       {operation, object} = state.command
       command = {operation, object, Enum.reverse(state.subcommands)}
-      %{state|command: nil, subcommands: [], commands: [command|state.commands]}
+      %{state | command: nil, subcommands: [], commands: [command|state.commands]}
     end
   end
 
