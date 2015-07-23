@@ -31,11 +31,15 @@ defmodule Ecto.Embedded do
   Sets correct `state` on the returned changeset
   """
   def cast(%Embedded{cardinality: :one}, :empty, nil) do
-    {:ok, nil, false, false}
+    {:ok, nil, false, true}
   end
 
   def cast(%Embedded{cardinality: :one, embed: mod, on_cast: fun}, :empty, current) do
     {:ok, do_cast(mod, fun, :empty, current), false, false}
+  end
+
+  def cast(%Embedded{cardinality: :many}, :empty, []) do
+    {:ok, [], false, true}
   end
 
   def cast(%Embedded{cardinality: :many, embed: mod, on_cast: fun}, :empty, current) do
