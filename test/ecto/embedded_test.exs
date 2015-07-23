@@ -120,8 +120,30 @@ defmodule Ecto.EmbeddedTest do
     changeset =
       Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
                      %{"profile" => %{"id" => "michal"}}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+  end
 
-    refute Map.has_key?(changeset.changes, :profile)
+  test "cast embeds_one when required" do
+    changeset =
+      Changeset.cast(%Author{profile: nil}, %{}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == [profile: "can't be blank"]
+
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{}}, %{}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+
+    changeset =
+      Changeset.cast(%Author{profile: nil}, %{"profile" => nil}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == [profile: "can't be blank"]
+
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{}}, %{"profile" => nil}, ~w(profile))
+    assert changeset.changes == %{profile: nil}
+    assert changeset.errors == [profile: "can't be blank"]
   end
 
   test "cast embeds_one with custom changeset" do
@@ -233,6 +255,18 @@ defmodule Ecto.EmbeddedTest do
     refute Map.has_key?(changeset.changes, :profiles)
   end
 
+  test "cast embeds_many when required" do
+    changeset =
+      Changeset.cast(%Author{profiles: []}, %{}, ~w(profiles))
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+
+    changeset =
+      Changeset.cast(%Author{profiles: []}, %{"profiles" => nil}, ~w(profiles))
+    assert changeset.changes == %{}
+    assert changeset.errors == [profiles: "is invalid"]
+  end
+
   test "change embeds_one" do
     embed = %Embedded{field: :profile, cardinality: :one, owner: Author, embed: Profile}
 
@@ -275,7 +309,6 @@ defmodule Ecto.EmbeddedTest do
     {:ok, changeset, _, _} = Embedded.change(embed, changeset, nil)
     assert changeset.action == :update
   end
-
 
   test "change embeds_many" do
     embed = %Embedded{field: :profiles, cardinality: :many, owner: Author, embed: Profile}

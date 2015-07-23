@@ -30,20 +30,16 @@ defmodule Ecto.Embedded do
 
   Sets correct `state` on the returned changeset
   """
-  def cast(%Embedded{cardinality: :one}, :empty, nil) do
-    {:ok, nil, false, true}
-  end
-
   def cast(%Embedded{cardinality: :one, embed: mod, on_cast: fun}, :empty, current) do
-    {:ok, do_cast(mod, fun, :empty, current), false, false}
-  end
-
-  def cast(%Embedded{cardinality: :many}, :empty, []) do
-    {:ok, [], false, true}
+    {:ok, current && do_cast(mod, fun, :empty, current), false, false}
   end
 
   def cast(%Embedded{cardinality: :many, embed: mod, on_cast: fun}, :empty, current) do
     {:ok, Enum.map(current, &do_cast(mod, fun, :empty, &1)), false, false}
+  end
+
+  def cast(%Embedded{cardinality: :one}, nil, _current) do
+    {:ok, nil, false, false}
   end
 
   def cast(%Embedded{cardinality: :many} = embed, params, current) when is_map(params) do
