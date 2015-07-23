@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.15.0-dev
+
+* Deprecations
+  * `:size` option in adapter configuration has been renamed to the more obvious `:pool_size`
+
+* Backwards incompatible change
+  * `exists?/1` helper in migration has been removed in favor of `create_if_not_exists` and `drop_if_exists`
+
 ## v0.14.3
 
 * Enhancements
