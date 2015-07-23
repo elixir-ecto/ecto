@@ -185,35 +185,34 @@ defmodule Ecto.RepoTest do
 
   ## Changesets
 
-  test "insert and update accepts changesets" do
+  test "insert, update and delete accepts changesets" do
     valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     assert {:ok, %MyModel{}} = TestRepo.insert(valid)
     assert {:ok, %MyModel{}} = TestRepo.update(valid)
+    assert {:ok, %MyModel{}} = TestRepo.delete(valid)
   end
 
-  test "insert and update error on invalid changeset" do
+  test "insert, update and delete errors on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
 
     insert = %{invalid | action: :insert}
     assert {:error, ^insert} = TestRepo.insert(invalid)
-    assert {:error, ^insert} = TestRepo.insert(%{invalid | action: :other})
 
     update = %{invalid | action: :update}
     assert {:error, ^update} = TestRepo.update(invalid)
-    assert {:error, ^update} = TestRepo.update(%{invalid | action: :other})
 
     delete = %{invalid | action: :delete}
     assert {:error, ^delete} = TestRepo.delete(invalid)
-    assert {:error, ^delete} = TestRepo.delete(%{invalid | action: :other})
   end
 
-  test "insert! and update! accepts changesets" do
+  test "insert!, update! and delete! accepts changesets" do
     valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     assert %MyModel{} = TestRepo.insert!(valid)
     assert %MyModel{} = TestRepo.update!(valid)
+    assert %MyModel{} = TestRepo.delete!(valid)
   end
 
-  test "insert! and update! fail on invalid changeset" do
+  test "insert!, update! and delete! fail on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
 
     assert_raise Ecto.InvalidChangesetError,
@@ -225,17 +224,42 @@ defmodule Ecto.RepoTest do
                  ~r"could not perform update because changeset is invalid", fn ->
       TestRepo.update!(invalid)
     end
+
+    assert_raise Ecto.InvalidChangesetError,
+                 ~r"could not perform delete because changeset is invalid", fn ->
+      TestRepo.delete!(invalid)
+    end
   end
 
-  test "insert and update fail on changeset without model" do
+  test "insert!, update! and delete! fail on changeset without model" do
     invalid = %Ecto.Changeset{valid?: true, model: nil}
 
-    assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
+    assert_raise ArgumentError, "cannot insert a changeset without a model", fn ->
       TestRepo.insert!(invalid)
     end
 
-    assert_raise ArgumentError, "cannot insert/update a changeset without a model", fn ->
+    assert_raise ArgumentError, "cannot update a changeset without a model", fn ->
       TestRepo.update!(invalid)
+    end
+
+    assert_raise ArgumentError, "cannot delete a changeset without a model", fn ->
+      TestRepo.delete!(invalid)
+    end
+  end
+
+  test "insert!, update! and delete! fail on changeset with wrong action" do
+    invalid = %Ecto.Changeset{valid?: true, model: %MyModel{}, action: :other}
+
+    assert_raise ArgumentError, "a changeset with action :other was given to Repo.insert", fn ->
+      TestRepo.insert!(invalid)
+    end
+
+    assert_raise ArgumentError, "a changeset with action :other was given to Repo.update", fn ->
+      TestRepo.update!(invalid)
+    end
+
+    assert_raise ArgumentError, "a changeset with action :other was given to Repo.delete", fn ->
+      TestRepo.delete!(invalid)
     end
   end
 
@@ -342,16 +366,16 @@ defmodule Ecto.RepoTest do
     # Raises if action is update
     embed_changeset = Ecto.Changeset.change(embed) |> Map.put(:action, :update)
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
-    assert_raise ArgumentError, ~r"got update changeset for embedded .* while inserting", fn ->
+    assert_raise ArgumentError, ~r"got action :update in changeset for embedded .* while inserting", fn ->
       TestRepo.insert!(changeset)
     end
 
-    # Skips if action is delete
+    # Raises if action is delete
     embed_changeset = Ecto.Changeset.change(embed) |> Map.put(:action, :delete)
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
-    TestRepo.insert!(changeset)
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
+    assert_raise ArgumentError, ~r"got action :delete in changeset for embedded .* while inserting", fn ->
+      TestRepo.insert!(changeset)
+    end
   end
 
   test "handles nested embeds on insert" do

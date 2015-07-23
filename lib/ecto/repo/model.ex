@@ -44,7 +44,7 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.insert/2`.
   """
   def insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
-    struct   = struct_from_changeset!(changeset)
+    struct   = struct_from_changeset!(:insert, changeset)
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
     embeds   = model.__schema__(:embeds)
@@ -87,7 +87,7 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.update/2`.
   """
   def update(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
-    struct   = struct_from_changeset!(changeset)
+    struct   = struct_from_changeset!(:update, changeset)
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
     embeds   = model.__schema__(:embeds)
@@ -153,7 +153,7 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.delete/2`.
   """
   def delete(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
-    struct = struct_from_changeset!(changeset)
+    struct = struct_from_changeset!(:delete, changeset)
     model  = struct.__struct__
     {prefix, source} = struct.__meta__.source
     embeds = model.__schema__(:embeds)
@@ -195,9 +195,11 @@ defmodule Ecto.Repo.Model do
 
   ## Helpers
 
-  defp struct_from_changeset!(%{model: nil}),
-    do: raise(ArgumentError, "cannot insert/update a changeset without a model")
-  defp struct_from_changeset!(%{model: struct}),
+  defp struct_from_changeset!(action, %{action: given}) when given != nil and given != action,
+    do: raise(ArgumentError, "a changeset with action #{inspect given} was given to Repo.#{action}")
+  defp struct_from_changeset!(action, %{model: nil}),
+    do: raise(ArgumentError, "cannot #{action} a changeset without a model")
+  defp struct_from_changeset!(_action, %{model: struct}),
     do: struct
 
   defp load_changes(%{types: types} = changeset, values, adapter) do
