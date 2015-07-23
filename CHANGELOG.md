@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.14.3
+
+* Enhancements
+  * Add `Ecto.Schema.embedded_schema/0`
+
+* Bug fixes
+  * Multiple bug fixes when working with embeds
+
 ## v0.14.2
 
 * Bug fixes
