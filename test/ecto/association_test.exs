@@ -73,7 +73,7 @@ defmodule Ecto.AssociationTest do
     use Ecto.Model
 
     schema "emails" do
-      belongs_to :author, {"post_authors", Author}, defaults: [title: "default"]
+      belongs_to :author, {"post_authors", Author}
     end
   end
 
@@ -284,16 +284,9 @@ defmodule Ecto.AssociationTest do
     assert build(%Summary{id: 1}, :post) ==
            %Post{summary_id: 1, title: "default"}
 
-    assert build(%Comment{post_id: 1}, :post) ==
-           %Post{id: nil}
-
-    assert build(%Author{id: 1}, :emails) ==
-      %Email{author_id: 1,
-             __meta__: %Ecto.Schema.Metadata{source: {nil, "users_emails"}, state: :built}}
-
-    assert build(%Email{id: 1}, :author) ==
-      %Author{id: nil, title: "default",
-              __meta__: %Ecto.Schema.Metadata{source: {nil, "post_authors"}, state: :built}}
+    assert_raise ArgumentError, ~r"cannot build belongs_to association :author", fn ->
+      assert build(%Email{id: 1}, :author)
+    end
 
     assert_raise ArgumentError, ~r"cannot build through association :post_author", fn ->
       build(%Comment{}, :post_author)
@@ -310,15 +303,8 @@ defmodule Ecto.AssociationTest do
     assert build(%Post{id: 1}, :comments, post_id: 2) ==
            %Comment{post_id: 1}
 
-    assert build(%Comment{post_id: 1}, :post, title: "Hello") ==
-           %Post{id: nil, title: "Hello"}
-
-    assert build(%Comment{post_id: 1}, :post, %{title: "Hello"}) ==
-           %Post{id: nil, title: "Hello"}
-
     # Overriding defaults
     assert build(%Summary{id: 1}, :post, title: "Hello").title == "Hello"
-    assert build(%Email{id: 1}, :author, title: "Hello").title == "Hello"
   end
 
   test "assoc/2" do

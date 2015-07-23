@@ -615,8 +615,6 @@ defmodule Ecto.Schema do
     * `:type` - Sets the type of automatically defined `:foreign_key`.
       Defaults to: `:integer` and be set per schema via `@foreign_key_type`
 
-    *  `:defaults` - Default values to use when building the association
-
   All other options are forwarded to the underlying foreign key definition
   and therefore accept the same options as `field/3`.
 
@@ -949,7 +947,7 @@ defmodule Ecto.Schema do
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :define_field, :type, :defaults], "belongs_to/3")
+    check_options!(opts, [:foreign_key, :references, :define_field, :type], "belongs_to/3")
 
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)

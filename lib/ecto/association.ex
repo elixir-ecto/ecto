@@ -520,19 +520,15 @@ defmodule Ecto.Association.BelongsTo do
       assoc: assoc,
       owner_key: Keyword.fetch!(opts, :foreign_key),
       assoc_key: ref,
-      queryable: queryable,
-      defaults: opts[:defaults] || []
+      queryable: queryable
     }
   end
 
   @doc false
-  # TODO: Consider if we should support this given
-  #       we always run parent callbacks earlier
-  def build(%{assoc: assoc, queryable: queryable, defaults: defaults}, _struct, attributes) do
-    assoc
-    |> struct(defaults)
-    |> struct(attributes)
-    |> Ecto.Association.merge_source(queryable)
+  def build(%{field: name}, %{__struct__: struct}, _attributes) do
+    raise ArgumentError,
+      "cannot build belongs_to association #{inspect name} for #{inspect struct}. " <>
+      "Belongs to associations cannot be built with build/3, only the opposide side (has_one/has_many)"
   end
 
   @doc false

@@ -665,9 +665,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       if String.contains?(name, "\"") do
         error!(nil, "bad table name #{inspect name}")
       end
-
-      # TODO: Remove replace once v0.14.0 is out
-      <<?", String.replace(name, ".", "\".\"")::binary, ?">>
+      <<?", name::binary, ?">>
     end
 
     defp assemble(list) do
