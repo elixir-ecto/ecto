@@ -36,6 +36,11 @@ defmodule Ecto.EmbeddedTest do
     def optional_changeset(model, params) do
       cast(model, params, ~w(), ~w(name))
     end
+
+    def set_action(model, params) do
+      cast(model, params, ~w(name), ~w(id))
+      |> Map.put(:action, :update)
+    end
   end
 
   test "__schema__" do
@@ -111,6 +116,14 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.valid?
   end
 
+  test "cast embeds_one without changes skips" do
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"id" => "michal"}}, ~w(profile))
+
+    refute Map.has_key?(changeset.changes, :profile)
+  end
+
   test "cast embeds_one with custom changeset" do
     changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}},
                      [profile: :optional_changeset])
@@ -130,6 +143,12 @@ defmodule Ecto.EmbeddedTest do
     assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
+  end
+
+  test "cast embeds_one keeps action from changeset" do
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}},
+                               [profile: :set_action])
+    assert changeset.changes.profile.action == :update
   end
 
   test "cast embeds_many with only new models" do
@@ -206,51 +225,72 @@ defmodule Ecto.EmbeddedTest do
     refute changeset.valid?
   end
 
+  test "cast embeds_many without changes skips" do
+    changeset =
+      Changeset.cast(%Author{profiles: [%Profile{name: "michal", id: "michal"}]},
+                     %{"profiles" => [%{"id" => "michal"}]}, ~w(profiles))
+
+    refute Map.has_key?(changeset.changes, :profiles)
+  end
+
   test "change embeds_one" do
     embed = %Embedded{field: :profile, cardinality: :one, owner: Author, embed: Profile}
 
-    assert {:change, changeset} =
+    assert {:ok, changeset, true, false} =
       Embedded.change(embed, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
-    assert {:change, changeset} =
+    assert {:ok, changeset, true, false} =
       Embedded.change(embed, %Profile{name: "michal"}, %Profile{})
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    assert {:change, changeset} = Embedded.change(embed, nil, %Profile{})
+    assert {:ok, changeset, true, false} = Embedded.change(embed, nil, %Profile{})
     assert changeset.action == :delete
 
     model = %Profile{}
     model_changeset = Changeset.change(model, name: "michal")
 
-    assert {:change, changeset} = Embedded.change(embed, model_changeset, nil)
+    assert {:ok, changeset, true, false} = Embedded.change(embed, model_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
-    assert {:change, changeset} = Embedded.change(embed, model_changeset, model)
+    assert {:ok, changeset, true, false} = Embedded.change(embed, model_changeset, model)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     empty_changeset = Changeset.change(model)
-    assert {:skip, _} = Embedded.change(embed, empty_changeset, model)
+    assert {:ok, _, true, true} = Embedded.change(embed, empty_changeset, model)
   end
+
+  test "change embeds_one keeps action from changeset" do
+    embed = %Embedded{field: :profile, cardinality: :one, owner: Author, embed: Profile}
+
+    changeset =
+      %Profile{}
+      |> Changeset.change(name: "michal")
+      |> Map.put(:action, :update)
+
+    {:ok, changeset, _, _} = Embedded.change(embed, changeset, nil)
+    assert changeset.action == :update
+  end
+
 
   test "change embeds_many" do
     embed = %Embedded{field: :profiles, cardinality: :many, owner: Author, embed: Profile}
 
-    assert {:change, [changeset]} =
+    assert {:ok, [changeset], true, false} =
       Embedded.change(embed, [%Profile{name: "michal"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
-    assert {:change, [changeset]} =
+    assert {:ok, [changeset], true, false} =
       Embedded.change(embed, [%Profile{id: 1, name: "michal"}], [%Profile{id: 1}])
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    assert {:change, [new, old]} =
+    assert {:ok, [new, old], true, false} =
       Embedded.change(embed, [%Profile{name: "michal"}], [%Profile{id: 1}])
     assert new.action == :insert
     assert new.changes == %{id: nil, name: "michal"}
@@ -259,22 +299,22 @@ defmodule Ecto.EmbeddedTest do
 
     model_changeset = Changeset.change(%Profile{}, name: "michal")
 
-    assert {:change, [changeset]} = Embedded.change(embed, [model_changeset], [])
+    assert {:ok, [changeset], true, false} = Embedded.change(embed, [model_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
     model = %Profile{id: 1}
     model_changeset = Changeset.change(model, name: "michal")
-    assert {:change, [changeset]} = Embedded.change(embed, [model_changeset], [model])
+    assert {:ok, [changeset], true, false} = Embedded.change(embed, [model_changeset], [model])
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    assert {:change, [changeset]} = Embedded.change(embed, [], [model_changeset])
+    assert {:ok, [changeset], true, false} = Embedded.change(embed, [], [model_changeset])
     assert changeset.action == :delete
 
     empty_changeset = Changeset.change(model)
-    assert {:skip, _} = Embedded.change(embed, [empty_changeset], [model])
-    assert {:change, _} = Embedded.change(embed, [empty_changeset, model_changeset], [model, model])
+    assert {:ok, _, true, true} = Embedded.change(embed, [empty_changeset], [model])
+    assert {:ok, _, true, false} = Embedded.change(embed, [empty_changeset, model_changeset], [model, model])
   end
 
   test "empty" do
