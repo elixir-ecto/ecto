@@ -233,6 +233,16 @@ defmodule Ecto.Embedded do
     end
   end
 
+  defp generate_id(changeset, callback, model, _embed, _adapter)
+      when callback in [:before_update, :before_delete] do
+    case get_pk(changeset, model |> primary_key |> elem(0)) do
+      {:ok, value} when not is_nil(value) ->
+        changeset
+      _other ->
+        raise Ecto.MissingPrimaryKeyError, struct: changeset.model
+    end
+  end
+
   defp generate_id(changeset, _callback, _model, _embed, _adapter) do
     changeset
   end

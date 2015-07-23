@@ -388,7 +388,7 @@ defmodule Ecto.RepoTest do
     assert model.embed.sub_embed == %{sub_embed | id: id}
   end
 
-  test "handles embeds on update" do
+  test "skips embeds on update when not changing" do
     embed = %MyEmbed{x: "xyz"}
 
     # Leaves embeds untouched when updatting model
@@ -414,6 +414,10 @@ defmodule Ecto.RepoTest do
     assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
     assert model.embeds == [embed]
+  end
+
+  test "inserting embeds on update" do
+    embed = %MyEmbed{x: "xyz"}
 
     # Inserting the embed
     changeset = Ecto.Changeset.change(%MyModel{id: 1}, embed: embed)
@@ -434,14 +438,28 @@ defmodule Ecto.RepoTest do
     assert id
     assert model.embeds == [%{embed | id: id}]
 
+    embed = %{embed | id: @uuid}
+
     # Inserting embed with id already provided
-    embed_id = %{embed | id: @uuid}
-    changeset = Ecto.Changeset.change(%MyModel{id: 1}, embed: embed_id)
+    changeset = Ecto.Changeset.change(%MyModel{id: 1}, embed: embed)
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_insert, MyEmbed},
             {:before_insert, MyEmbed}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == embed_id
+    assert model.embed == embed
+  end
+
+  test "changing embeds on update" do
+    embed = %MyEmbed{x: "xyz"}
+
+    # Raises if there's no id
+    embed_changeset = Ecto.Changeset.change(embed, x: "abc")
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: embed_changeset)
+    assert_raise Ecto.MissingPrimaryKeyError, fn ->
+      TestRepo.update!(changeset)
+    end
+
+    embed = %{embed | id: @uuid}
 
     # Changing the embed
     embed_changeset = Ecto.Changeset.change(embed, x: "abc")
@@ -450,14 +468,26 @@ defmodule Ecto.RepoTest do
     assert [{:after_update, MyModel}, {:after_update, MyEmbed},
             {:before_update, MyEmbed}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == %MyEmbed{x: "abc"}
+    assert model.embed == %{embed | x: "abc"}
 
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embeds: [embed]}, embeds: [embed_changeset])
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_update, MyEmbed},
             {:before_update, MyEmbed}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.embeds == [%MyEmbed{x: "abc"}]
+    assert model.embeds == [%{embed | x: "abc"}]
+  end
+
+  test "removing embeds on update" do
+    embed = %MyEmbed{x: "xyz"}
+
+    # Raises if there's no id
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: nil)
+    assert_raise Ecto.MissingPrimaryKeyError, fn ->
+      TestRepo.update!(changeset)
+    end
+
+    embed = %{embed | id: @uuid}
 
     # Deleting the embed
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: nil)
@@ -477,7 +507,7 @@ defmodule Ecto.RepoTest do
 
   test "handles nested embeds on update" do
     sub_embed = %SubEmbed{y: "xyz"}
-    embed = %MyEmbed{x: "xyz"}
+    embed = %MyEmbed{id: @uuid, x: "xyz"}
     embed_changeset = Ecto.Changeset.change(embed, sub_embed: sub_embed)
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: embed_changeset)
     model = TestRepo.update!(changeset)
