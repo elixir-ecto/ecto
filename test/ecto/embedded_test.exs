@@ -20,8 +20,7 @@ defmodule Ecto.EmbeddedTest do
   defmodule Profile do
     use Ecto.Model
 
-    @primary_key {:id, :binary_id, autogenerate: true}
-    schema "" do
+    embedded_schema do
       field :name
     end
 
@@ -54,6 +53,8 @@ defmodule Ecto.EmbeddedTest do
       %Embedded{field: :profiles, cardinality: :many, owner: Author,
                 embed: Profile, strategy: :replace, on_cast: :changeset}
   end
+
+  ## Cast embeds one
 
   test "cast embeds_one with valid params" do
     changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}}, ~w(profile))
@@ -173,6 +174,25 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.changes.profile.action == :update
   end
 
+  test "cast embeds_one with empty parameters" do
+    changeset = Changeset.cast(%Author{profile: nil}, :empty, profile: :optional_changeset)
+    assert changeset.changes == %{}
+
+    changeset = Changeset.cast(%Author{profile: %Profile{}}, :empty, profile: :optional_changeset)
+    profile_changeset = changeset.changes.profile
+    assert profile_changeset.model == %Profile{}
+    assert profile_changeset.params == nil
+    assert profile_changeset.changes == %{}
+    assert profile_changeset.errors == []
+    assert profile_changeset.validations == []
+    assert profile_changeset.required == []
+    assert profile_changeset.optional == [:name]
+    assert profile_changeset.action == :update
+    refute profile_changeset.valid?
+  end
+
+  ## cast embeds many
+
   test "cast embeds_many with only new models" do
     changeset = Changeset.cast(%Author{}, %{"profiles" => [%{"name" => "michal"}]}, ~w(profiles))
     [profile_change] = changeset.changes.profiles
@@ -267,6 +287,27 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.errors == [profiles: "is invalid"]
   end
 
+  test "cast embeds_many with :empty parameters" do
+    changeset =
+      Changeset.cast(%Author{profiles: []}, :empty, ~w(profiles))
+    assert changeset.changes == %{}
+
+    changeset =
+      Changeset.cast(%Author{profiles: [%Profile{}]}, :empty, ~w(profiles))
+    [profile_changeset] = changeset.changes.profiles
+    assert profile_changeset.model == %Profile{}
+    assert profile_changeset.params == nil
+    assert profile_changeset.changes == %{}
+    assert profile_changeset.errors == []
+    assert profile_changeset.validations == []
+    assert profile_changeset.required == [:name]
+    assert profile_changeset.optional == []
+    assert profile_changeset.action == :update
+    refute profile_changeset.valid?
+  end
+
+  ## Others
+
   test "change embeds_one" do
     embed = %Embedded{field: :profile, cardinality: :one, owner: Author, embed: Profile}
 
@@ -348,6 +389,28 @@ defmodule Ecto.EmbeddedTest do
     empty_changeset = Changeset.change(model)
     assert {:ok, _, true, true} = Embedded.change(embed, [empty_changeset], [model])
     assert {:ok, _, true, false} = Embedded.change(embed, [empty_changeset, model_changeset], [model, model])
+  end
+
+  test "change/2, put_change/3, force_change/3 wth embeds" do
+    base_changeset = Changeset.change(%Author{})
+
+    changeset = Changeset.change(base_changeset, profile: %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    changeset = Changeset.put_change(base_changeset, :profile, %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    changeset = Changeset.force_change(base_changeset, :profile, %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
+    empty_update_changeset = Changeset.change(%Profile{name: "michal"})
+
+    changeset = Changeset.put_change(base_changeset, :profile, empty_update_changeset)
+    assert changeset.changes == %{}
+
+    changeset = Changeset.force_change(base_changeset, :profile, empty_update_changeset)
+    assert %Ecto.Changeset{} = changeset.changes.profile
   end
 
   test "empty" do
