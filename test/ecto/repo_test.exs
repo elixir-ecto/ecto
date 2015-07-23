@@ -196,12 +196,15 @@ defmodule Ecto.RepoTest do
 
     insert = %{invalid | action: :insert}
     assert {:error, ^insert} = TestRepo.insert(invalid)
+    assert {:error, ^insert} = TestRepo.insert(%{invalid | action: :other})
 
     update = %{invalid | action: :update}
     assert {:error, ^update} = TestRepo.update(invalid)
+    assert {:error, ^update} = TestRepo.update(%{invalid | action: :other})
 
     delete = %{invalid | action: :delete}
     assert {:error, ^delete} = TestRepo.delete(invalid)
+    assert {:error, ^delete} = TestRepo.delete(%{invalid | action: :other})
   end
 
   test "insert! and update! accepts changesets" do
