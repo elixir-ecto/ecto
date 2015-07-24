@@ -225,14 +225,15 @@ defmodule Ecto.Integration.IntervalTest do
 
   test "datetime_add with dynamic in filters" do
     inserted_at = @inserted_at
+    field = :inserted_at
     assert [_]  =
            TestRepo.all(from p in Post, where: p.inserted_at > datetime_add(^inserted_at, ^-1, "year"))
     assert [_]  =
            TestRepo.all(from p in Post, where: p.inserted_at > datetime_add(^inserted_at, -3, "month"))
     assert [_]  =
-           TestRepo.all(from p in Post, where: p.inserted_at > datetime_add(^inserted_at, ^-3, ^"week"))
+           TestRepo.all(from p in Post, where: field(p, ^field) > datetime_add(^inserted_at, ^-3, ^"week"))
     assert [_]  =
-           TestRepo.all(from p in Post, where: p.inserted_at > datetime_add(^inserted_at, -5, ^"day"))
+           TestRepo.all(from p in Post, where: field(p, ^field) > datetime_add(^inserted_at, -5, ^"day"))
   end
 
   test "datetime_add with negative interval" do
