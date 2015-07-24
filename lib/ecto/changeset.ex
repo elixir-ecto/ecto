@@ -24,6 +24,7 @@ defmodule Ecto.Changeset do
   """
 
   alias __MODULE__
+  alias Ecto.Changeset.Relation
 
   import Ecto.Query, only: [from: 2]
 
@@ -55,6 +56,8 @@ defmodule Ecto.Changeset do
     greater_than_or_equal_to: {&>=/2, "must be greater than or equal to %{count}"},
     equal_to:                 {&==/2, "must be equal to %{count}"},
   }
+
+  @relations [:embed, :assoc]
 
   @doc """
   Wraps the given model in a changeset or adds changes to a changeset.
@@ -206,9 +209,9 @@ defmodule Ecto.Changeset do
     types = module.__changeset__
 
     {optional, changes} =
-      Enum.map_reduce(optional, %{}, &process_empty_embeds(&1, types, model, &2))
+      Enum.map_reduce(optional, %{}, &process_empty_relations(&1, types, model, &2))
     {required, changes} =
-      Enum.map_reduce(required, changes, &process_empty_embeds(&1, types, model, &2))
+      Enum.map_reduce(required, changes, &process_empty_relations(&1, types, model, &2))
 
     %Changeset{params: nil, model: model, valid?: false, errors: [],
                changes: changes, required: required, optional: optional, types: types}
@@ -238,24 +241,26 @@ defmodule Ecto.Changeset do
                optional: optional, types: types}
   end
 
-  defp process_empty_embeds({key, fun}, types, model, changes) do
+  defp process_empty_relations({key, fun}, types, model, changes) do
     {key, _param_key} = cast_key(key)
-    {:embed, embed} = embed!(types, key, fun)
-    cast_empty_embed(embed, changes, model, key)
+    {_tag, relation} = relation!(types, key, fun)
+    cast_empty_relation(relation, changes, model, key)
   end
 
-  defp process_empty_embeds(key, types, model, changes) do
+  defp process_empty_relations(key, types, model, changes) do
     {key, _param_key} = cast_key(key)
 
     case type!(types, key) do
-      {:embed, embed} -> cast_empty_embed(embed, changes, model, key)
-      _ -> {key, changes}
+      {tag, relation} when tag in @relations ->
+        cast_empty_relation(relation, changes, model, key)
+      _ ->
+        {key, changes}
     end
   end
 
-  defp cast_empty_embed(embed, changes, model, key) do
+  defp cast_empty_relation(relation, changes, model, key) do
     current = Map.get(model, key)
-    case Ecto.Embedded.cast(embed, :empty, current) do
+    case Relation.cast(relation, :empty, current) do
       {:ok, ^current, _, _} ->
         {key, changes}
       {:ok, result, _, _} ->
@@ -265,7 +270,7 @@ defmodule Ecto.Changeset do
 
   defp process_param({key, fun}, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)
-    type = embed!(types, key, fun)
+    type = relation!(types, key, fun)
     current = Map.get(model, key)
 
     do_process_param(key, param_key, kind, params, type, current, acc)
@@ -299,27 +304,30 @@ defmodule Ecto.Changeset do
      end}
   end
 
-  defp embed!(types, key, fun) do
+  defp relation!(types, key, fun) do
     case Map.fetch(types, key) do
       {:ok, {:embed, embed}} ->
         {:embed, %Ecto.Embedded{embed | on_cast: fun}}
+      {:ok, {:assoc, assoc}} ->
+        {:assoc, %Ecto.Association.Has{assoc | on_cast: fun}}
       {:ok, _} ->
-        raise ArgumentError, "only embedded fields can be given a cast function"
+        raise ArgumentError, "only embedded fields and associations can be " <>
+          "given a cast function"
       :error ->
-        raise ArgumentError, "unknown field `#{key}` (note only fields and " <>
-          "embeds are supported in cast, associations are not)"
+        raise ArgumentError, "unknown field `#{key}` (note only fields, " <>
+          "embedded models, has_one and has_many associations are supported in cast)"
     end
   end
 
   defp type!(types, key) do
     case Map.fetch(types, key) do
-      {:ok, {:embed, _} = embed} ->
-        embed
+      {:ok, {tag, _} = relation} when tag in @relations ->
+        relation
       {:ok, type} ->
         type
       :error ->
-        raise ArgumentError, "unknown field `#{key}` (note only fields and " <>
-          "embeds are supported in cast, associations are not)"
+        raise ArgumentError, "unknown field `#{key}` (note only fields, " <>
+          "embedded models, has_one and has_many associations are supported in cast)"
     end
   end
 
@@ -328,14 +336,15 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_field(param_key, {:embed, embed}, params, current, valid?) do
+  defp cast_field(param_key, {tag, relation}, params, current, valid?)
+      when tag in @relations do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Ecto.Embedded.cast(embed, value, current) do
+        case Relation.cast(relation, value, current) do
           :error -> :invalid
           {:ok, _, _, true} -> :skip
           {:ok, ^current, _, _} -> :skip
-          {:ok, result, embedded_valid?, false} -> {:ok, result, valid? and embedded_valid?}
+          {:ok, result, relation_valid?, false} -> {:ok, result, valid? and relation_valid?}
         end
       :error ->
         :missing
@@ -606,8 +615,8 @@ defmodule Ecto.Changeset do
     update_in changeset.changes, &put_change(changeset.model, &1, key, value, type)
   end
 
-  defp put_change(model, acc, key, value, {:embed, embed}) do
-    case Ecto.Embedded.change(embed, value, Map.get(model, key)) do
+  defp put_change(model, acc, key, value, {tag, relation}) when tag in @relations do
+    case Relation.change(relation, value, Map.get(model, key)) do
       {:ok, _, _, true} ->
         acc
       {:ok, change, _, false} ->
@@ -652,9 +661,9 @@ defmodule Ecto.Changeset do
   def force_change(%Changeset{types: types} = changeset, key, value) do
     value =
       case Map.get(types, key) do
-        {:embed, embed} ->
+        {tag, relation} when tag in @relations ->
           {:ok, changes, _, _} =
-            Ecto.Embedded.change(embed, value, Map.get(changeset.model, key))
+            Relation.change(relation, value, Map.get(changeset.model, key))
           changes
         _ ->
           value
@@ -698,6 +707,9 @@ defmodule Ecto.Changeset do
         case Map.get(types, key) do
           {:embed, embed} ->
             {key, Ecto.Embedded.apply_changes(embed, value)}
+          {:assoc, _assoc} ->
+            raise ArgumentError, "associations should be removed from changeset" <>
+              "before aplying changes"
           _ ->
             kv
         end

@@ -330,13 +330,13 @@ defmodule Ecto.Type do
     {:ok, %Ecto.Query.Tagged{value: nil, type: type({:embed, embed})}}
   end
 
-  defp dump_embed(%{cardinality: :one, embed: model, field: field} = embed,
+  defp dump_embed(%{cardinality: :one, related: model, field: field} = embed,
                   value, fun) when is_map(value) do
     assert_replace_strategy!(embed)
     {:ok, dump_embed(field, model, value, model.__schema__(:types), fun)}
   end
 
-  defp dump_embed(%{cardinality: :many, embed: model, field: field} = embed,
+  defp dump_embed(%{cardinality: :many, related: model, field: field} = embed,
                   value, fun) when is_list(value) do
     assert_replace_strategy!(embed)
     types = model.__schema__(:types)
@@ -419,7 +419,7 @@ defmodule Ecto.Type do
 
   defp load_embed(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
 
-  defp load_embed(%{cardinality: :one, embed: model, field: field} = embed,
+  defp load_embed(%{cardinality: :one, related: model, field: field} = embed,
                   value, fun) when is_map(value) do
     assert_replace_strategy!(embed)
     {:ok, load_embed(field, model, value, fun)}
@@ -427,7 +427,7 @@ defmodule Ecto.Type do
 
   defp load_embed(%{cardinality: :many}, nil, _fun), do: {:ok, []}
 
-  defp load_embed(%{cardinality: :many, embed: model, field: field} = embed,
+  defp load_embed(%{cardinality: :many, related: model, field: field} = embed,
                   value, fun) when is_list(value) do
     assert_replace_strategy!(embed)
     {:ok, Enum.map(value, &load_embed(field, model, &1, fun))}

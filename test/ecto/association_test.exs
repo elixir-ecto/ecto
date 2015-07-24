@@ -24,6 +24,14 @@ defmodule Ecto.AssociationTest do
       belongs_to :author, Author
       belongs_to :summary, Summary
     end
+
+    def changeset(model, params) do
+      cast(model, params, ~w(title), ~w(author_id))
+    end
+
+    def optional_changeset(model, params) do
+      cast(model, params, ~w(), ~w(title author_id))
+    end
   end
 
   defmodule Comment do
@@ -55,7 +63,7 @@ defmodule Ecto.AssociationTest do
       has_many :posts_comments, through: [:posts, :comments]    # many -> many
       has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
       has_many :emails, {"users_emails", Email}
-      has_one :profile, {"users_profiles", Profile}
+      has_one :profile, {"users_profiles", Profile}, on_cast: :required_changeset
     end
   end
 
@@ -81,6 +89,24 @@ defmodule Ecto.AssociationTest do
     use Ecto.Model
 
     schema "profiles" do
+      field :name
+    end
+
+    def changeset(model, params) do
+      cast(model, params, ~w(name))
+    end
+
+    def required_changeset(model, params) do
+      cast(model, params, ~w(name), ~w(id))
+    end
+
+    def optional_changeset(model, params) do
+      cast(model, params, ~w(), ~w(name))
+    end
+
+    def set_action(model, params) do
+      cast(model, params, ~w(name), ~w(id))
+      |> Map.put(:action, :update)
     end
   end
 
@@ -409,5 +435,258 @@ defmodule Ecto.AssociationTest do
     assert_raise ArgumentError, message, fn ->
       expand(Post, [comments: [], comments: from(c in Comment, limit: 1)])
     end
+  end
+
+  ## cast has_one
+
+  alias Ecto.Changeset
+
+  test "cast has_one with valid params" do
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}}, ~w(profile))
+    profile = changeset.changes.profile
+    assert changeset.required == [:profile]
+    assert profile.changes == %{name: "michal"}
+    assert profile.errors == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
+  test "cast has_one with invalid params" do
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{}}, ~w(profile))
+    assert changeset.changes.profile.changes == %{}
+    assert changeset.changes.profile.errors  == [name: "can't be blank"]
+    assert changeset.changes.profile.action  == :insert
+    refute changeset.changes.profile.valid?
+    refute changeset.valid?
+
+    changeset = Changeset.cast(%Author{}, %{"profile" => "value"}, ~w(profile))
+    assert changeset.errors == [profile: "is invalid"]
+    refute changeset.valid?
+  end
+
+  test "cast has_one with existing model updating" do
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
+                     %{"profile" => %{"name" => "new", "id" => 1}}, ~w(profile))
+
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new"}
+    assert profile.errors  == []
+    assert profile.action  == :update
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
+  test "cast has_one with existing model replacing" do
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
+                     %{"profile" => %{"name" => "new"}}, ~w(profile))
+
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new"}
+    assert profile.errors  == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
+                     %{"profile" => %{"name" => "new", "id" => 2}}, ~w(profile))
+
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new", id: 2}
+    assert profile.errors  == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
+  test "cast has_one without changes skips" do
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
+                     %{"profile" => %{"id" => 1}}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+  end
+
+  test "cast has_one when required" do
+    changeset =
+      Changeset.cast(%Author{profile: nil}, %{}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == [profile: "can't be blank"]
+
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{}}, %{}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+
+    changeset =
+      Changeset.cast(%Author{profile: nil}, %{"profile" => nil}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == [profile: "can't be blank"]
+
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{}}, %{"profile" => nil}, ~w(profile))
+    assert changeset.changes == %{profile: nil}
+    assert changeset.errors == [profile: "can't be blank"]
+  end
+
+  test "cast has_one with custom changeset" do
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}},
+                     [profile: :optional_changeset])
+    profile = changeset.changes.profile
+    assert changeset.required == [:profile]
+    assert profile.changes == %{name: "michal"}
+    assert profile.errors  == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{}}, [profile: :optional_changeset])
+    profile = changeset.changes.profile
+    assert changeset.required == [:profile]
+    assert profile.changes == %{}
+    assert profile.errors  == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
+  test "cast has_one keeps action from changeset" do
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}},
+                               [profile: :set_action])
+    assert changeset.changes.profile.action == :update
+  end
+
+  test "cast has_one with empty parameters" do
+    changeset = Changeset.cast(%Author{profile: nil}, :empty, profile: :optional_changeset)
+    assert changeset.changes == %{}
+
+    changeset = Changeset.cast(%Author{profile: %Profile{}}, :empty, profile: :optional_changeset)
+    profile_changeset = changeset.changes.profile
+    assert profile_changeset.model == %Profile{}
+    assert profile_changeset.params == nil
+    assert profile_changeset.changes == %{}
+    assert profile_changeset.errors == []
+    assert profile_changeset.validations == []
+    assert profile_changeset.required == []
+    assert profile_changeset.optional == [:name]
+    assert profile_changeset.action == :update
+    refute profile_changeset.valid?
+  end
+
+  ## cast has_many
+
+  test "cast has_many with only new models" do
+    changeset = Changeset.cast(%Author{}, %{"posts" => [%{"title" => "hello"}]}, ~w(posts))
+    [post_change] = changeset.changes.posts
+    assert post_change.changes == %{title: "hello"}
+    assert post_change.errors  == []
+    assert post_change.action  == :insert
+    assert post_change.valid?
+    assert changeset.valid?
+  end
+
+  test "cast has_many with map" do
+    changeset = Changeset.cast(%Author{}, %{"posts" => %{0 => %{"title" => "hello"}}}, ~w(posts))
+    [post_change] = changeset.changes.posts
+    assert post_change.changes == %{title: "hello"}
+    assert post_change.errors  == []
+    assert post_change.action  == :insert
+    assert post_change.valid?
+    assert changeset.valid?
+  end
+
+  test "cast has_many with custom changeset" do
+    changeset = Changeset.cast(%Author{}, %{"posts" => [%{"title" => "hello"}]},
+                               [posts: :optional_changeset])
+    [post_change] = changeset.changes.posts
+    assert post_change.changes == %{title: "hello"}
+    assert post_change.errors  == []
+    assert post_change.action  == :insert
+    assert post_change.valid?
+    assert changeset.valid?
+  end
+
+  # Please note the order is important in this test.
+  test "cast has_many changing models" do
+    posts = [%Post{title: "hello", id: 1},
+             %Post{title: "unknown", id: 2},
+             %Post{title: "other", id: 3}]
+    params = [%{"id" => 4, "title" => "new"},
+              %{"id" => 2, "title" => nil},
+              %{"id" => 3, "title" => "new name"}]
+
+    changeset = Changeset.cast(%Author{posts: posts}, %{"posts" => params}, ~w(posts))
+    [new, unknown, other, hello] = changeset.changes.posts
+    assert new.changes == %{title: "new"}
+    assert new.action == :insert
+    assert new.valid?
+    assert unknown.model.id == 2
+    assert unknown.errors == [title: "can't be blank"]
+    assert unknown.action == :update
+    refute unknown.valid?
+    assert other.model.id == 3
+    assert other.action == :update
+    assert other.valid?
+    assert hello.model.id == 1
+    assert hello.required == [] # Check for not running chgangeset function
+    assert hello.action == :delete
+    assert hello.valid?
+    refute changeset.valid?
+  end
+
+  test "cast has_many with invalid params" do
+    changeset = Changeset.cast(%Author{}, %{"posts" => "value"}, ~w(posts))
+    assert changeset.errors == [posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.cast(%Author{}, %{"posts" => ["value"]}, ~w(posts))
+    assert changeset.errors == [posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.cast(%Author{}, %{"posts" => nil}, ~w(posts))
+    assert changeset.errors == [posts: "is invalid"]
+    refute changeset.valid?
+  end
+
+  test "cast has_many without changes skips" do
+    changeset =
+      Changeset.cast(%Author{posts: [%Post{title: "hello", id: 1}]},
+                     %{"posts" => [%{"id" => 1}]}, ~w(posts))
+
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "cast has_many when required" do
+    changeset =
+      Changeset.cast(%Author{posts: []}, %{}, ~w(posts))
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+
+    changeset =
+      Changeset.cast(%Author{posts: []}, %{"posts" => nil}, ~w(posts))
+    assert changeset.changes == %{}
+    assert changeset.errors == [posts: "is invalid"]
+  end
+
+  test "cast has_many with :empty parameters" do
+    changeset =
+      Changeset.cast(%Author{posts: []}, :empty, ~w(posts))
+    assert changeset.changes == %{}
+
+    changeset =
+      Changeset.cast(%Author{posts: [%Post{}]}, :empty, ~w(posts))
+    [post_changeset] = changeset.changes.posts
+    assert post_changeset.model == %Post{}
+    assert post_changeset.params == nil
+    assert post_changeset.changes == %{}
+    assert post_changeset.errors == []
+    assert post_changeset.validations == []
+    assert post_changeset.required == [:title]
+    assert post_changeset.optional == [:author_id]
+    assert post_changeset.action == :update
+    refute post_changeset.valid?
   end
 end

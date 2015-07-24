@@ -60,8 +60,8 @@ defmodule Ecto.Repo.Preloader do
 
     entries =
       Enum.map preloads, fn
-        {_, {:assoc, assoc, assoc_key}, sub_preloads} ->
-          preload_assoc(structs, module, repo, prefix, assoc, assoc_key, sub_preloads)
+        {_, {:assoc, assoc, related_key}, sub_preloads} ->
+          preload_assoc(structs, module, repo, prefix, assoc, related_key, sub_preloads)
         {_, {:through, _, _} = info, []} ->
           info
       end
@@ -82,25 +82,25 @@ defmodule Ecto.Repo.Preloader do
 
   ## Association preloading
 
-  defp preload_assoc(structs, module, repo, prefix, assoc, assoc_key, preloads_or_query) do
+  defp preload_assoc(structs, module, repo, prefix, assoc, related_key, preloads_or_query) do
     case ids(structs, module, assoc) do
       [] ->
         {:assoc, assoc, HashDict.new}
       ids when is_list(preloads_or_query) ->
         query = assoc.__struct__.assoc_query(assoc, ids)
-        preload_assoc(repo, query, prefix, assoc, assoc_key, preloads_or_query)
+        preload_assoc(repo, query, prefix, assoc, related_key, preloads_or_query)
       ids ->
         query = assoc.__struct__.assoc_query(assoc, preloads_or_query, ids)
-        preload_assoc(repo, query, prefix, assoc, assoc_key, [])
+        preload_assoc(repo, query, prefix, assoc, related_key, [])
     end
   end
 
-  defp preload_assoc(repo, query, prefix, %{cardinality: card} = assoc, assoc_key, preloads) do
+  defp preload_assoc(repo, query, prefix, %{cardinality: card} = assoc, related_key, preloads) do
     if card == :many do
-      query = Ecto.Query.from q in query, order_by: field(q, ^assoc_key)
+      query = Ecto.Query.from q in query, order_by: field(q, ^related_key)
     end
     loaded = preload_each(repo.all(%{query | prefix: prefix}), repo, preloads)
-    {:assoc, assoc, assoc_dict(card, assoc_key, loaded)}
+    {:assoc, assoc, assoc_dict(card, related_key, loaded)}
   end
 
   defp ids(structs, module, assoc) do

@@ -927,25 +927,32 @@ defmodule Ecto.Schema do
     end
   end
 
+  @valid_has_options [:foreign_key, :references, :through, :on_delete,
+                      :defaults, :on_cast]
+
   @doc false
   def __has_many__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :through, :on_delete, :defaults], "has_many/3")
+    check_options!(opts, @valid_has_options, "has_many/3")
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
     else
-      association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      struct =
+        association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
 
   @doc false
   def __has_one__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :through, :on_delete, :defaults], "has_one/3")
+    check_options!(opts, @valid_has_options, "has_one/3")
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :one, name, Ecto.Association.HasThrough, queryable)
     else
-      association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      struct =
+        association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
 
@@ -1085,12 +1092,14 @@ defmodule Ecto.Schema do
                     __field__: name, __cardinality__: cardinality}
     put_struct_field(mod, name, not_loaded)
     opts = [cardinality: cardinality] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
+    struct = association.struct(mod, name, opts)
+    Module.put_attribute(mod, :ecto_assocs, {name, struct})
+
+    struct
   end
 
   defp embed(mod, cardinality, name, model, opts) do
-    opts   = Keyword.put_new(opts, :on_cast, :changeset)
-    opts   = [cardinality: cardinality, embed: model] ++ opts
+    opts   = [cardinality: cardinality, related: model] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
 
     __field__(mod, name, {:embed, struct}, false, opts)
