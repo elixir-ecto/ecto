@@ -51,7 +51,7 @@ defmodule Ecto.Integration.MigratorTest do
     assert migrated_versions(TestRepo) == [20100906120000]
     assert up(TestRepo, 20100906120000, GoodMigration, log: false) == :already_up
     assert migrated_versions(TestRepo) == [20100906120000]
-    assert down(TestRepo, 20100906120000, GoodMigration, log: false) == :already_down
+    assert down(TestRepo, 21100906120000, GoodMigration, log: false) == :already_down
     assert migrated_versions(TestRepo) == [20100906120000]
     assert down(TestRepo, 20100906120000, GoodMigration, log: false) == :ok
     assert migrated_versions(TestRepo) == []
