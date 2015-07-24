@@ -255,6 +255,10 @@ defmodule Ecto.Query.Builder do
   defp call_type(:is_nil, 1),                                     do: {:any, :boolean}
   defp call_type(_, _),                                           do: nil
 
+  defp assert_type!(_expr, {int, field}, _actual) when is_integer(int) and is_atom(field) do
+    :ok
+  end
+
   defp assert_type!(expr, type, actual) do
     if Ecto.Type.match?(type, actual) do
       :ok
