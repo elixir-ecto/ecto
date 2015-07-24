@@ -231,7 +231,7 @@ defmodule Ecto.Repo.Model do
     embeds =
       Enum.map(model.__schema__(:embeds), fn field ->
         {:embed, embed} = Map.get(types, field)
-        {field, Ecto.Embedded.empty(embed)}
+        {field, Ecto.Changeset.Relation.empty(embed)}
       end)
 
     changeset = %{changeset | changes: %{}}
@@ -240,11 +240,10 @@ defmodule Ecto.Repo.Model do
 
   defp insert_changes(struct, fields, embeds, changeset) do
     types = changeset.types
-
-    base  =
+    base =
       Enum.reduce embeds, Map.take(struct, fields), fn field, acc ->
         {:embed, embed} = Map.get(types, field)
-        Map.put(acc, field, Ecto.Embedded.empty(embed))
+        Map.put(acc, field, Ecto.Changeset.Relation.empty(embed))
       end
 
     update_in changeset.changes, &Map.merge(base, &1)

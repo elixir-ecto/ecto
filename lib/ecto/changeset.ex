@@ -193,6 +193,7 @@ defmodule Ecto.Changeset do
   in the `optional` list passed to `cast/4`), then it will be marked as required
   and not optional. This represents the fact that required fields are
   "stronger" than optional fields.
+
   """
   @spec cast(Ecto.Model.t | t,
              %{binary => term} | %{atom => term} | nil,
@@ -260,7 +261,7 @@ defmodule Ecto.Changeset do
 
   defp cast_empty_relation(relation, changes, model, key) do
     current = Map.get(model, key)
-    case Relation.cast(relation, :empty, current) do
+    case Relation.cast(relation, model, :empty, current) do
       {:ok, ^current, _, _} ->
         {key, changes}
       {:ok, result, _, _} ->
@@ -273,7 +274,7 @@ defmodule Ecto.Changeset do
     type = relation!(types, key, fun)
     current = Map.get(model, key)
 
-    do_process_param(key, param_key, kind, params, type, current, acc)
+    do_process_param(key, param_key, kind, params, type, current, model, acc)
   end
 
   defp process_param(key, kind, params, types, model, acc) do
@@ -281,13 +282,13 @@ defmodule Ecto.Changeset do
     type = type!(types, key)
     current = Map.get(model, key)
 
-    do_process_param(key, param_key, kind, params, type, current, acc)
+    do_process_param(key, param_key, kind, params, type, current, model, acc)
   end
 
   defp do_process_param(key, param_key, kind, params, type, current,
-                        {changes, errors, valid?}) do
+                        model, {changes, errors, valid?}) do
     {key,
-     case cast_field(param_key, type, params, current, valid?) do
+     case cast_field(param_key, type, params, current, model, valid?) do
        {:ok, nil, valid?} when kind == :required ->
          {errors, valid?} = error_on_nil(kind, key, nil, errors, valid?)
          {changes, errors, valid?}
@@ -336,11 +337,11 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_field(param_key, {tag, relation}, params, current, valid?)
+  defp cast_field(param_key, {tag, relation}, params, current, model, valid?)
       when tag in @relations do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Relation.cast(relation, value, current) do
+        case Relation.cast(relation, model, value, current) do
           :error -> :invalid
           {:ok, _, _, true} -> :skip
           {:ok, ^current, _, _} -> :skip
@@ -351,7 +352,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp cast_field(param_key, type, params, current, valid?) do
+  defp cast_field(param_key, type, params, current, _model, valid?) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
         case Ecto.Type.cast(type, value) do

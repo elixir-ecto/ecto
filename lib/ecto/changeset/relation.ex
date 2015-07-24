@@ -4,23 +4,48 @@ defmodule Ecto.Changeset.Relation do
   alias Ecto.Changeset
 
   @doc """
+  Returns empty container for relation.
+
+  Handles both the relation structs as well as Ecto.Association.NotLoaded.
+  """
+  def empty(%{cardinality: cardinality}), do: empty(cardinality)
+  def empty(%{__cardinality__: cardinality}), do: empty(cardinality)
+
+  def empty(:one), do: nil
+  def empty(:many), do: []
+
+  @doc """
   Casts embedded models according to the `on_cast` function.
 
   Sets correct `state` on the returned changeset
   """
-  def cast(%{cardinality: :one, related: mod, on_cast: fun}, :empty, current) do
+  def cast(relation, %{__meta__: %{state: :built}}, params,
+           %Ecto.Association.NotLoaded{} = not_loaded) do
+    cast(relation, params, empty(not_loaded))
+  end
+
+  def cast(_relation, model, _params, %Ecto.Association.NotLoaded{__field__: field}) do
+    raise ArgumentError, "attempting to cast association `#{field}` of `#{inspect model}` " <>
+      "that was not loaded. Please preload your associations before casting the model."
+  end
+
+  def cast(relation, _model, params, current) do
+    cast(relation, params, current)
+  end
+
+  defp cast(%{cardinality: :one, related: mod, on_cast: fun}, :empty, current) do
     {:ok, current && do_cast(mod, fun, :empty, current), false, false}
   end
 
-  def cast(%{cardinality: :many, related: mod, on_cast: fun}, :empty, current) do
+  defp cast(%{cardinality: :many, related: mod, on_cast: fun}, :empty, current) do
     {:ok, Enum.map(current, &do_cast(mod, fun, :empty, &1)), false, false}
   end
 
-  def cast(%{cardinality: :one}, nil, _current) do
+  defp cast(%{cardinality: :one}, nil, _current) do
     {:ok, nil, false, false}
   end
 
-  def cast(%{cardinality: :many} = related, params, current) when is_map(params) do
+  defp cast(%{cardinality: :many} = related, params, current) when is_map(params) do
     params =
       params
       |> Enum.sort_by(&elem(&1, 0))
@@ -28,7 +53,7 @@ defmodule Ecto.Changeset.Relation do
     cast(related, params, current)
   end
 
-  def cast(%{related: mod, on_cast: fun} = related, params, current) do
+  defp cast(%{related: mod, on_cast: fun} = related, params, current) do
     {pk, param_pk} = primary_key(mod)
     cast_or_change(related, params, current, param_pk, pk, &do_cast(mod, fun, &1, &2))
   end
@@ -58,25 +83,45 @@ defmodule Ecto.Changeset.Relation do
   defp do_change(value, nil, mod) do
     fields    = mod.__schema__(:fields)
     embeds    = mod.__schema__(:embeds)
+    assocs    = mod.__schema__(:associations)
     changeset = Changeset.change(value)
+    model     = changeset.model
     types     = changeset.types
 
     changes =
-      Enum.reduce(embeds, Map.take(changeset.model, fields), fn field, acc ->
+      Enum.reduce(embeds, Map.take(model, fields), fn field, acc ->
         {:embed, embed} = Map.get(types, field)
         case change(embed, Map.get(acc, field), nil) do
           {:ok, _, _, true}       -> acc
-          {:ok, change, _, false} -> Map.put(acc, field, change)
+          {:ok, change, _, false} -> Map.put(acc, field, change) |> IO.inspect
         end
       end)
-      |> Map.merge(changeset.changes)
 
-    %{changeset | changes: changes} |> put_new_action(:insert)
+    changes =
+      Enum.reduce(assocs, changes, fn field, acc ->
+        # We use fetch to filter has through and belongs_to associations,
+        # as they are not in the changeset types
+        case Map.fetch(types, field) do
+          {:ok, {:assoc, assoc}} ->
+            case change(assoc, Map.get(model, field), nil) do
+              {:ok, _, _, true}       -> acc
+              {:ok, change, _, false} -> Map.put(acc, field, change)
+            end
+          :error ->
+            acc
+        end
+      end)
+
+    update_in(changeset.changes, &Map.merge(changes, &1)) |> put_new_action(:insert)
   end
 
   defp do_change(nil, current, mod) do
     # We need to mark all embeds for deletion too
-    changes = mod.__schema__(:embeds) |> Enum.map(&{&1, nil})
+    changes =
+      Enum.map(mod.__schema__(:embeds), fn field ->
+        {field, Changeset.Relation.empty(mod.__schema__(:embed, field))}
+      end)
+
     Changeset.change(current, changes) |> put_new_action(:delete)
   end
 

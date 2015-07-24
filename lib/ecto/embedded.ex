@@ -27,12 +27,6 @@ defmodule Ecto.Embedded do
   end
 
   @doc """
-  Returns empty container for embed.
-  """
-  def empty(%Embedded{cardinality: :one}), do: nil
-  def empty(%Embedded{cardinality: :many}), do: []
-
-  @doc """
   Applies embedded changeset changes
   """
   def apply_changes(%Embedded{cardinality: :one}, nil) do
