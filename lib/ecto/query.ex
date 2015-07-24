@@ -39,17 +39,15 @@ defmodule Ecto.Query do
 
   ## Query expressions
 
-  Ecto allows a limitted set of expressions to be used inside queries:
+  Ecto allows a limitted set of expressions inside queries. In the
+  query below, for example, we use `w.prcp` to access a field, the
+  `>` comparison operator and the literal `0`:
 
-    * Comparison operators: `==`, `!=`, `<=`, `>=`, `<`, `>`
-    * Boolean operators: `and`, `or`, `not`
-    * Inclusion operator: `in/2`
-    * Search functions: `like/2` and `ilike/2`
-    * Null check functions: `is_nil/1`
-    * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
-    * Date/time intervals: `datetime_add/3`, `date_add/3`
+      query = from w in Weather, where: w.prcp > 0
 
-  Futhermore, Ecto allows the following literals inside queries:
+  You can find the full list of operations in `Ecto.Query.API`.
+  Besides the operations listed here, the following literals are
+  supported in queries:
 
     * Integers: `1`, `2`, `3`
     * Floats: `1.0`, `2.0`, `3.0`
@@ -106,69 +104,25 @@ defmodule Ecto.Query do
   It is important to keep in mind that Ecto cannot cast nil values in
   queries. Passing nil automatically causes the query to fail.
 
-  ## Date/time intervals
+  ## Macro API
 
-  In Ecto, it is possible to perform interval based operation on both
-  date and datetime as long it is supported by the underlying storage:
-
-      # Get all items published since the last month
-      from p in Post, where: p.published_at >
-                             datetime_add(^Ecto.DateTime.utc, -1, "month")
-
-  In the example above, we used `datetime_add/3` to subtract one month
-  from the current datetime and compared it with the `p.published_at`.
-  If you want to perform operations on date, `date_add/3` could be used.
-
-  The following intervals are supported: year, month, week, day, hour,
-  minute, second, millisecond and microsecond.
-
-  ## Query expressions
-
-  In all examples so far, we have used the **keywords query syntax** to create
-  a query. Our first example:
+  In all examples so far we have used the **keywords query syntax** to
+  create a query:
 
       import Ecto.Query
+      from w in Weather, where: w.prcp > 0, select: w.city
 
-         from w in Weather,
-       where: w.prcp > 0,
-      select: w.city
-
-  Simply expands to the following **query expressions**:
+  Behind the scenes, the query above expands to the set of macros defined
+  in this module:
 
       from(w in Weather) |> where([w], w.prcp > 0) |> select([w], w.city)
 
-  Which then expands to:
+  which then expands to:
 
       select(where(from(w in Weather), [w], w.prcp > 0), [w], w.city)
 
   This module documents each of those macros, providing examples both
   in the keywords query and in the query expression formats.
-
-  ## Fragments
-
-  It is not possible to represent all possible queries in Ecto's query
-  syntax. When such is required, it is possible to use fragments to send
-  any expression to the database:
-
-      def unpublished_by_title(title) do
-        from p in Post,
-          where: is_nil(p.published_at) and
-                 fragment("downcase(?)", p.title) == ^title
-      end
-
-  In the example above, we are using the downcase procedure in the database
-  to downcase the title column.
-
-  It is very important to keep in mind that Ecto is unable to do any type
-  casting described above when fragments are used. You can however use the
-  `type/2` function to give Ecto some hints:
-
-      fragment("downcase(?)", p.title) == type(^title, :string)
-
-  Or even say the right side is of the same type as `p.title`:
-
-      fragment("downcase(?)", p.title) == type(^title, p.title)
-
   """
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,

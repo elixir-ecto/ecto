@@ -258,7 +258,7 @@ defmodule Ecto do
   `Ecto.Query` module.
 
   When writing a query, you are inside Ecto's query syntax. In order to
-  access params values or invoke functions, you need to use the `^`
+  access params values or invoke Elixir functions, you need to use the `^`
   operator, which is overloaded by Ecto:
 
       def min_prcp(min) do
