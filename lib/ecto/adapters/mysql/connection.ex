@@ -14,17 +14,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       Mariaex.Connection.start_link(opts)
     end
 
-    def query(conn, sqls, params, opts) when is_list(sqls) do
-      Enum.reduce sqls, {}, fn(sql, response) ->
-        case response do
-          {:error, _} ->
-            response
-          _ ->
-            query(conn, sql, params, opts)
-        end
-      end
-    end
-
     def query(conn, sql, params, opts \\ []) do
       params = Enum.map params, fn
         %Ecto.Query.Tagged{value: value} -> value

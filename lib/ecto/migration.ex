@@ -474,10 +474,10 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Renames a column outside of the `alter` statement. Note that unlike `rename/3` it is not necessary
-  to include a column type for this command as the type will always be inferred from the current column.
+  Renames a column outside of the `alter` statement.
 
   ## Examples
+
       rename table(:posts), :title, to: :summary
   """
   def rename(%Table{} = table, current_column, to: new_column) when is_atom(current_column) and is_atom(new_column) do

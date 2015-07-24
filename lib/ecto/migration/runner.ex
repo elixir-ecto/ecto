@@ -157,8 +157,6 @@ defmodule Ecto.Migration.Runner do
   end
   defp reverse({:rename, %Table{}=table_current, %Table{}=table_new}),
     do: {:rename, table_new, table_current}
-  defp reverse({:rename, %Table{}=table_current, %Table{}=table_new}),
-    do: {:rename, table_new, table_current}
   defp reverse({:rename, %Table{}=table, current_column, new_column}),
     do: {:rename, table, new_column, current_column}
   defp reverse(_command), do: false
