@@ -150,7 +150,7 @@ defmodule Ecto.Integration.MigrationTest do
 
     def up do
       create @table_current
-      rename @table_current, @table_new
+      rename @table_current, to: @table_new
     end
 
     def down do

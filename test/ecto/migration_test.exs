@@ -156,7 +156,7 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: renames a table" do
-    rename table(:posts), table(:new_posts)
+    rename table(:posts), to: table(:new_posts)
     flush
     assert {:rename, %Table{name: :posts}, %Table{name: :new_posts}} = last_command()
   end
@@ -226,7 +226,7 @@ defmodule Ecto.MigrationTest do
   end
 
   test "backward: renames a table" do
-    rename table(:posts), table(:new_posts)
+    rename table(:posts), to: table(:new_posts)
     flush
     assert {:rename, %Table{name: :new_posts}, %Table{name: :posts}} = last_command()
   end

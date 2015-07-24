@@ -467,9 +467,9 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      rename table(:posts), table(:new_posts)
+      rename table(:posts), to: table(:new_posts)
   """
-  def rename(%Table{} = table_current, %Table{} = table_new) do
+  def rename(%Table{} = table_current, to: %Table{} = table_new) do
     Runner.execute {:rename, table_current, table_new}
   end
 
