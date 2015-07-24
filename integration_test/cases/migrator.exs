@@ -37,28 +37,28 @@ defmodule Ecto.Integration.MigratorTest do
   import Ecto.Migrator
 
   test "schema migration" do
-    up(TestRepo, 20080906120000, GoodMigration, log: false)
+    up(TestRepo, 20100906120000, GoodMigration, log: false)
 
     [migration] = TestRepo.all(SchemaMigration)
-    assert migration.version == 20080906120000
+    assert migration.version == 20100906120000
     assert migration.inserted_at
   end
 
   test "migrations up and down" do
     assert migrated_versions(TestRepo) == []
-    assert up(TestRepo, 20080906120000, GoodMigration, log: false) == :ok
+    assert up(TestRepo, 20100906120000, GoodMigration, log: false) == :ok
 
-    assert migrated_versions(TestRepo) == [20080906120000]
-    assert up(TestRepo, 20080906120000, GoodMigration, log: false) == :already_up
-    assert migrated_versions(TestRepo) == [20080906120000]
-    assert down(TestRepo, 20080906120001, GoodMigration, log: false) == :already_down
-    assert migrated_versions(TestRepo) == [20080906120000]
-    assert down(TestRepo, 20080906120000, GoodMigration, log: false) == :ok
+    assert migrated_versions(TestRepo) == [20100906120000]
+    assert up(TestRepo, 20100906120000, GoodMigration, log: false) == :already_up
+    assert migrated_versions(TestRepo) == [20100906120000]
+    assert down(TestRepo, 20100906120000, GoodMigration, log: false) == :already_down
+    assert migrated_versions(TestRepo) == [20100906120000]
+    assert down(TestRepo, 20100906120000, GoodMigration, log: false) == :ok
     assert migrated_versions(TestRepo) == []
   end
 
   test "bad migration" do
-    assert catch_error(up(TestRepo, 20080906120000, BadMigration, log: false))
+    assert catch_error(up(TestRepo, 20100906120000, BadMigration, log: false))
   end
 
   test "run up to/step migration" do
