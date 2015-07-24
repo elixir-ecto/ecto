@@ -538,6 +538,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       "ALTER TABLE #{quote_table(current_table.name)} RENAME TO #{quote_table(new_table.name)}"
     end
 
+    def execute_ddl({:rename, %Table{}=table, current_column, new_column}) do
+      "ALTER TABLE #{quote_table(table.name)} RENAME #{quote_name(current_column)} TO #{quote_name(new_column)}"
+    end
+
     def execute_ddl(string) when is_binary(string), do: string
 
     def execute_ddl(keyword) when is_list(keyword),

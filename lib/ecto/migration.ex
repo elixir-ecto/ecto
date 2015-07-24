@@ -474,6 +474,17 @@ defmodule Ecto.Migration do
   end
 
   @doc """
+  Renames a column outside of the `alter` statement.
+
+  ## Examples
+
+      rename table(:posts), :title, to: :summary
+  """
+  def rename(%Table{} = table, current_column, to: new_column) when is_atom(current_column) and is_atom(new_column) do
+    Runner.execute {:rename, table, current_column, new_column}
+  end
+
+  @doc """
   Generates a fragment to be used as default value.
 
   ## Examples

@@ -653,6 +653,11 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.execute_ddl(rename) == ~s|ALTER TABLE "posts" RENAME TO "new_posts"|
   end
 
+  test "rename column" do
+    rename = {:rename, table(:posts), :given_name, :first_name}
+    assert SQL.execute_ddl(rename) == ~s|ALTER TABLE "posts" RENAME "given_name" TO "first_name"|
+  end
+
   defp remove_newlines(string) do
     string |> String.strip |> String.replace("\n", " ")
   end
