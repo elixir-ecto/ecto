@@ -9,10 +9,12 @@ defmodule Ecto.Query.API do
     * Null check functions: `is_nil/1`
     * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`
-    * Fragments: `fragment/1`
+    * General: `fragment/1`, `field/2` and `type/2`
 
-  The functions in this module exist for documentation purposes.
-  One should never need to invoke them directly.
+  Note the functions in this module exist for documentation
+  purposes and one should never need to invoke them directly.
+  Furthermore, it is possible to define your own macros and
+  use them in Ecto queries.
   """
 
   @doc """
@@ -195,6 +197,35 @@ defmodule Ecto.Query.API do
     
   """
   def fragment(fragments), do: doc! [fragments]
+
+  @doc """
+  Allows a field to be dynamically accessed.
+
+      def at_least_four(doors_or_tires) do
+          from c in Car,
+        where: field(c, ^doors_or_tires) >= 4
+      end
+
+  In the example above, both `at_least_four(:doors)` and `at_least_four(:tires)`
+  would be valid calls as the field is dynamically generated.
+  """
+  def field(source, field), do: doc! [source, field]
+
+  @doc """
+  Casts the given value to the given type.
+
+  Most of the times, Ecto is able to proper cast interpolated
+  values due to its type checking mechanism. In some situations
+  though, in particular when using fragments with `fragment/1`,
+  you may want to tell Ecto you are expecting a particular type:
+
+      fragment("downcase(?)", p.title) == type(^title, :string)
+
+  It is also possible to say the type must match the same of a column:
+
+      fragment("downcase(?)", p.title) == type(^title, p.title)
+  """
+  def type(interpolated_value, type), do: doc! [interpolated_value, type]
 
   defp doc!(_) do
     raise "the functions in Ecto.Query.API should not be invoked directly, " <>
