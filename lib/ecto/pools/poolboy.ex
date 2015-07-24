@@ -4,6 +4,7 @@ defmodule Ecto.Pools.Poolboy do
 
   ### Options
 
+    * `:pool_name` - The name of the pool supervisor
     * `:pool_size` - The number of connections to keep in the pool (default: 10)
     * `:lazy` - When true, connections to the repo are lazily started (default: true)
     * `:max_overflow` - The maximum overflow of connections (default: 0) (see poolboy docs)
@@ -74,19 +75,16 @@ defmodule Ecto.Pools.Poolboy do
           Keyword.put(opts, :pool_size, size)
       end
 
-    {pool_opts, conn_opts} = Keyword.split(opts, [:name, :pool_size, :max_overflow])
-    {pool_name, pool_opts} = Keyword.pop(pool_opts, :name)
+    {pool_opts, conn_opts} = Keyword.split(opts, [:pool_name, :pool_size, :max_overflow])
 
-    pool_opts = pool_opts
-      |> Keyword.put(:size, Keyword.get(pool_opts, :pool_size, 10))
-      |> Keyword.delete(:pool_size)
-      |> Keyword.put_new(:max_overflow, 0)
+    conn_opts =
+      conn_opts
+      |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5_000))
 
-    pool_opts = [worker_module: Worker] ++ pool_opts
-
-    if pool_name do
-      pool_opts = [name: {:local, pool_name}] ++ pool_opts
-    end
+    pool_opts = [worker_module: Worker,
+                 name: {:local, Keyword.fetch!(pool_opts, :pool_name)},
+                 size: Keyword.get(pool_opts, :pool_size, 10),
+                 max_overflow: Keyword.get(pool_opts, :max_overflow, 0)]
 
     {pool_opts, conn_opts}
   end

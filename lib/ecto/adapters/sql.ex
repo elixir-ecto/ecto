@@ -394,7 +394,7 @@ defmodule Ecto.Adapters.SQL do
   ## Worker
 
   @doc false
-  def start_link(connection, adapter, repo, opts) do
+  def start_link(connection, adapter, _repo, opts) do
     unless Code.ensure_loaded?(connection) do
       raise """
       could not find #{inspect connection}.
@@ -409,14 +409,8 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    {default_pool_mod, default_pool_name, _} = repo.__pool__
-    pool_mod = Keyword.get(opts, :pool, default_pool_mod)
-
-    opts = opts
-      |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5000))
-      |> Keyword.put_new(:name, default_pool_name)
-
-    pool_mod.start_link(connection, opts)
+    {pool, opts} = Keyword.pop(opts, :pool)
+    pool.start_link(connection, opts)
   end
 
   ## Types
