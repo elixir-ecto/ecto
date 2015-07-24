@@ -77,7 +77,7 @@ defmodule Ecto.Repo do
 
       def start_link(custom_config \\ []) do
         config = Keyword.merge(config(), custom_config)
-        @adapter.start_link(__MODULE__, config)
+        Ecto.Repo.Supervisor.start_link(__MODULE__, @adapter, config)
       end
 
       def transaction(opts \\ [], fun) when is_list(opts) do

@@ -25,10 +25,10 @@ defmodule Ecto.Integration.PoolTest do
 
   defmodule MockPool do
     def start_link(_conn_mod, opts) do
-      assert opts[:name] == MockRepo.Alternative
+      assert opts[:pool_name] == MockRepo.Alternative.Pool
       assert opts[:repo] == MockRepo
       assert opts[:foo] == :bar # Custom options are passed through
-      {:ok, MockPool}
+      Task.start_link(fn -> :timer.sleep(:infinity) end)
     end
   end
 
@@ -51,7 +51,7 @@ defmodule Ecto.Integration.PoolTest do
   end
 
   test "starts repo with custom pool" do
-    assert {:ok, MockPool} =
+    assert {:ok, _} =
       MockRepo.start_link(name: MockRepo.Alternative, pool: MockPool, foo: :bar)
   end
 end

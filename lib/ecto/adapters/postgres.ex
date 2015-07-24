@@ -25,6 +25,7 @@ defmodule Ecto.Adapters.Postgres do
   recompilation in order to make an effect.
 
     * `:adapter` - The adapter name, in this case, `Ecto.Adapters.Postgres`
+    * `:name`- The name of the Repo supervisor process
     * `:pool` - The connection pool module, defaults to `Ecto.Pools.Poolboy`
     * `:timeout` - The default timeout to use on queries, defaults to `5000`
     * `:log_level` - The level to use when logging queries (default: `:debug`)

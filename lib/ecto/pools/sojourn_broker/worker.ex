@@ -9,9 +9,9 @@ defmodule Ecto.Pools.SojournBroker.Worker do
 
   @timeout 5_000
 
-  @spec start_link(module, Keyword.t) :: {:ok, pid}
-  def start_link(module, params) do
-    GenServer.start_link(__MODULE__, {module, params}, [])
+  @spec start_link(module, module, Keyword.t) :: {:ok, pid}
+  def start_link(module, broker, params) do
+    GenServer.start_link(__MODULE__, {module, broker, params}, [])
   end
 
   @spec mod_conn(pid, reference, timeout) ::
@@ -32,11 +32,10 @@ defmodule Ecto.Pools.SojournBroker.Worker do
 
   ## Callbacks
 
-  def init({module, opts}) do
+  def init({module, broker, opts}) do
     Process.flag(:trap_exit, true)
     worker_keys = [:name, :lazy, :shutdown, :min_backoff, :max_backoff]
     {worker_opts, params} = Keyword.split(opts, worker_keys)
-    broker = Keyword.fetch!(worker_opts, :name)
     tag = make_ref()
     min_backoff = Keyword.get(worker_opts, :min_backoff, 500)
     max_backoff = Keyword.get(worker_opts, :max_backoff, 5_000)
