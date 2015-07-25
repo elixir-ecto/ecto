@@ -15,6 +15,10 @@ defmodule Mix.Tasks.Ecto.Migrate do
   to a version number, supply `--to version_number`.
   To migrate up a specific number of times, use `--step n`.
 
+  If the repository has not been started yet, one will be
+  started outside our application supervision tree and shutdown
+  afterwards.
+
   ## Examples
 
       mix ecto.migrate
@@ -37,16 +41,14 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
-    Mix.Task.run "app.start", ["--no-start"|args]
-    {:ok, _} = Application.ensure_all_started(:ecto)
     repo = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer, quiet: :boolean],
       aliases: [n: :step, v: :to]
 
-    ensure_repo(repo)
-    ensure_started(repo)
+    ensure_repo(repo, args)
+    {:ok, pid} = ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
       opts = Keyword.put(opts, :all, true)
@@ -57,5 +59,6 @@ defmodule Mix.Tasks.Ecto.Migrate do
     end
 
     migrator.(repo, migrations_path(repo), :up, opts)
+    ensure_stopped(pid)
   end
 end

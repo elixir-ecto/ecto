@@ -15,17 +15,15 @@ defmodule Mix.Tasks.Ecto.Create do
   ## Command line options
 
     * `-r`, `--repo` - the repo to create (defaults to `YourApp.Repo`)
-    * `--no-start` - do not start applications
+    * `--no-compile` - do not compile before creating
     * `--quiet` - do no log output
 
   """
 
   @doc false
   def run(args) do
-    Mix.Task.run "app.start", args
-
     repo = parse_repo(args)
-    ensure_repo(repo)
+    ensure_repo(repo, args)
     ensure_implements(repo.__adapter__, Ecto.Adapter.Storage,
                       "to create storage for #{inspect repo}")
 

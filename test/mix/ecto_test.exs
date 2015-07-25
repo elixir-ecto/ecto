@@ -28,20 +28,20 @@ defmodule Mix.EctoTest do
   end
 
   test :ensure_repo do
-    assert ensure_repo(Repo) == Repo
-    assert_raise Mix.Error, fn -> ensure_repo(String) end
-    assert_raise Mix.Error, fn -> ensure_repo(NotLoaded) end
+    assert ensure_repo(Repo, []) == Repo
+    assert_raise Mix.Error, fn -> ensure_repo(String, []) end
+    assert_raise Mix.Error, fn -> ensure_repo(NotLoaded, []) end
   end
 
   test :ensure_started do
     Process.put(:start_link, :ok)
-    assert ensure_started(Repo) == Repo
+    assert ensure_started(Repo) == {:ok, nil}
 
     Process.put(:start_link, {:ok, self})
-    assert ensure_started(Repo) == Repo
+    assert ensure_started(Repo) == {:ok, self}
 
     Process.put(:start_link, {:error, {:already_started, self}})
-    assert ensure_started(Repo) == Repo
+    assert ensure_started(Repo) == {:ok, nil}
 
     Process.put(:start_link, {:error, self})
     assert_raise Mix.Error, fn -> ensure_started(Repo) end

@@ -28,8 +28,15 @@ defmodule Mix.Ecto do
   @doc """
   Ensures the given module is a repository.
   """
-  @spec ensure_repo(module) :: Ecto.Repo.t | no_return
-  def ensure_repo(repo) do
+  @spec ensure_repo(module, list) :: Ecto.Repo.t | no_return
+  def ensure_repo(repo, args) do
+    Mix.Task.run "loadpaths", args
+
+    unless "--no-compile" in args do
+      # TODO: Use Mix.Project.compile(args) with v1.1
+      Mix.Task.run "compile", args
+    end
+
     case Code.ensure_compiled(repo) do
       {:module, _} ->
         if function_exported?(repo, :__repo__, 0) do
@@ -49,12 +56,31 @@ defmodule Mix.Ecto do
   """
   @spec ensure_started(Ecto.Repo.t) :: Ecto.Repo.t | no_return
   def ensure_started(repo) do
+    {:ok, _} = Application.ensure_all_started(:ecto)
+
     case repo.start_link do
-      :ok -> repo
-      {:ok, _} -> repo
-      {:error, {:already_started, _}} -> repo
+      :ok -> {:ok, nil}
+      {:ok, pid} -> {:ok, pid}
+      {:error, {:already_started, _}} -> {:ok, nil}
       {:error, error} ->
         Mix.raise "could not start repo #{inspect repo}, error: #{inspect error}"
+    end
+  end
+
+  @doc """
+  Ensure the repository is stopped.
+  """
+  @spec ensure_stopped(pid | nil) :: :ok
+  def ensure_stopped(nil), do: :ok
+  def ensure_stopped(pid) do
+    ref = Process.monitor(pid)
+    Process.exit(pid, :normal)
+    receive do
+      {:DOWN, ^ref, _, _, _} ->
+        :ok
+    after
+      30_000 ->
+        Mix.raise "repository did not shutdown after running command"
     end
   end
 

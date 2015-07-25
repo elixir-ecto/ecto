@@ -32,13 +32,11 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   @doc false
   def run(args) do
     no_umbrella!("ecto.gen.migration")
-
-    Mix.Task.run "app.start", args
     repo = parse_repo(args)
 
     case OptionParser.parse(args) do
       {_, [name], _} ->
-        ensure_repo(repo)
+        ensure_repo(repo, args)
         path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
         file = Path.join(path, "#{timestamp}_#{name}.exs")
         create_directory path
