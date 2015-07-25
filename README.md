@@ -67,7 +67,7 @@ For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 ```elixir
 defp deps do
   [{:postgrex, ">= 0.0.0"},
-   {:ecto, "~> 0.13.1"}]
+   {:ecto, "~> 0.14.3"}]
 end
 ```
 
