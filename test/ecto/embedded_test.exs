@@ -143,7 +143,7 @@ defmodule Ecto.EmbeddedTest do
 
     changeset =
       Changeset.cast(%Author{profile: %Profile{}}, %{"profile" => nil}, ~w(profile))
-    assert changeset.changes == %{profile: nil}
+    assert changeset.changes == %{}
     assert changeset.errors == [profile: "can't be blank"]
   end
 

@@ -131,14 +131,17 @@ defmodule Ecto.ChangesetTest do
   test "cast/4: required errors" do
     changeset = cast(%Post{}, %{"title" => nil}, ~w(title), ~w())
     assert changeset.errors == [title: "can't be blank"]
+    assert changeset.changes == %{}
     refute changeset.valid?
 
     changeset = cast(%Post{title: nil}, %{}, ~w(title), ~w())
     assert changeset.errors == [title: "can't be blank"]
+    assert changeset.changes == %{}
     refute changeset.valid?
 
     changeset = cast(%Post{title: "valid"}, %{"title" => nil}, ~w(title), ~w())
     assert changeset.errors == [title: "can't be blank"]
+    assert changeset.changes == %{}
     refute changeset.valid?
   end
 

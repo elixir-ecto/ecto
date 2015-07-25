@@ -190,9 +190,6 @@ defmodule Ecto.Changeset do
   in the `optional` list passed to `cast/4`), then it will be marked as required
   and not optional. This represents the fact that required fields are
   "stronger" than optional fields.
-
-
-
   """
   @spec cast(Ecto.Model.t | t,
              %{binary => term} | %{atom => term} | nil,
@@ -286,8 +283,10 @@ defmodule Ecto.Changeset do
                         {changes, errors, valid?}) do
     {key,
      case cast_field(param_key, type, params, current, valid?) do
+       {:ok, nil, valid?} when kind == :required ->
+         {errors, valid?} = error_on_nil(kind, key, nil, errors, valid?)
+         {changes, errors, valid?}
        {:ok, value, valid?} ->
-         {errors, valid?} = error_on_nil(kind, key, value, errors, valid?)
          {Map.put(changes, key, value), errors, valid?}
        :skip ->
          {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
