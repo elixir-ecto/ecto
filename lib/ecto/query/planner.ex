@@ -49,12 +49,10 @@ defmodule Ecto.Query.Planner do
        cached, we are done
 
     3. If there is no cache, we need to actually
-       normalize and validate the query, before sending
-       it to the adapter
+       normalize and validate the query, asking the
+       adapter to prepare it
 
     4. The query is sent to the adapter to be generated
-
-  Currently only steps 1 and 3 are implemented.
 
   ## Cache
 
@@ -64,9 +62,35 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
-  def query(query, operation, adapter) do
-    {query, params} = prepare(query, operation, adapter)
-    {normalize(query, operation, adapter), params}
+  def query(query, operation, repo, adapter) do
+    {query, params, key} = prepare(query, operation, adapter)
+    if key == :nocache do
+      {_, meta, prepared} = query_without_cache(query, operation, adapter)
+      {meta, prepared, params}
+    else
+      case :ets.lookup(repo, key) do
+        [{_, meta, prepared}] ->
+          {meta, prepared, params}
+        [] ->
+          case query_without_cache(query, operation, adapter) do
+            {:cache, meta, prepared} ->
+              :ets.insert(repo, {key, meta, prepared})
+              {meta, prepared, params}
+            {:nocache, meta, prepared} ->
+              {meta, prepared, params}
+          end
+      end
+    end
+  end
+
+  defp query_without_cache(query, operation, adapter) do
+    query = normalize(query, operation, adapter)
+    {cache, prepared} = adapter.prepare(operation, query)
+    {cache, query_to_meta(query), prepared}
+  end
+
+  defp query_to_meta(%{prefix: prefix, sources: sources, select: select}) do
+    %{prefix: prefix, sources: sources, select: select}
   end
 
   @doc """
@@ -82,7 +106,7 @@ defmodule Ecto.Query.Planner do
   def prepare(query, operation, adapter) do
     query
     |> prepare_sources
-    |> prepare_params(operation, adapter)
+    |> prepare_cache(operation, adapter)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -92,40 +116,81 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_params(query, operation, adapter) do
-    {query, params} = traverse_exprs(query, operation, [], &{&3, merge_params(&1, &2, &3, &4, adapter)})
-    {query, Enum.reverse(params)}
+  def prepare_cache(query, operation, adapter) do
+    {query, {cache, params}} =
+      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
+    {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
   end
 
-  defp merge_params(kind, query, expr, params, adapter)
+  defp merge_cache(kind, query, expr, {cache, params}, adapter)
       when kind in ~w(select distinct limit offset)a do
     if expr do
-      cast_and_merge_params(kind, query, expr, params, adapter)
+      {params, cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
+      {merge_cache({kind, expr.expr}, cache, cacheable?), params}
     else
-      params
+      {cache, params}
     end
   end
 
-  defp merge_params(kind, query, exprs, acc, adapter)
+  defp merge_cache(kind, query, exprs, {cache, params}, adapter)
       when kind in ~w(where update group_by having order_by)a do
-    Enum.reduce exprs, acc, fn expr, params ->
-      cast_and_merge_params(kind, query, expr, params, adapter)
+    {expr_cache, {params, cacheable?}} =
+      Enum.map_reduce exprs, {params, true}, fn expr, {params, cacheable?} ->
+        {params, current_cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
+        {expr, {params, cacheable? and current_cacheable?}}
+      end
+
+    case expr_cache do
+      [] -> {cache, params}
+      _  -> {merge_cache({kind, expr_cache}, cache, cacheable?), params}
     end
   end
 
-  defp merge_params(:join, query, exprs, acc, adapter) do
-    Enum.reduce exprs, acc, fn %JoinExpr{on: on}, params ->
-      cast_and_merge_params(:join, query, on, params, adapter)
+  defp merge_cache(:join, query, exprs, {cache, params}, adapter) do
+    {expr_cache, {params, cacheable?}} =
+      Enum.map_reduce exprs, {params, true}, fn
+        %JoinExpr{on: on, qual: qual, source: source}, {params, cacheable?} ->
+          {params, current_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
+          {{qual, source, on.expr}, {params, cacheable? and current_cacheable?}}
+      end
+
+    case expr_cache do
+      [] -> {cache, params}
+      _  -> {merge_cache({:join, expr_cache}, cache, cacheable?), params}
     end
   end
 
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
-    Enum.reduce expr.params, params, fn
-      {v, {:in_spread, type}}, acc ->
-        unfold_in(cast_param(kind, query, expr, v, {:array, type}, adapter), acc)
-      {v, type}, acc ->
-        [cast_param(kind, query, expr, v, type, adapter)|acc]
+    Enum.reduce expr.params, {params, true}, fn
+      {v, {:in_spread, type}}, {acc, _cacheable?} ->
+        {unfold_in(cast_param(kind, query, expr, v, {:array, type}, adapter), acc), false}
+      {v, type}, {acc, cacheable?} ->
+        {[cast_param(kind, query, expr, v, type, adapter)|acc], cacheable?}
     end
+  end
+
+  defp merge_cache(_left, _right, false),  do: :nocache
+  defp merge_cache(_left, :nocache, true), do: :nocache
+  defp merge_cache(left, right, true),     do: [left|right]
+
+  defp finalize_cache(_query, _operation, :nocache) do
+    :nocache
+  end
+
+  defp finalize_cache(query, operation, cache) do
+    if (assocs = query.assocs) && assocs != [] do
+      cache = [assocs: assocs] ++ cache
+    end
+
+    if prefix = query.prefix do
+      cache = [prefix: prefix] ++ cache
+    end
+
+    if lock = query.lock do
+      cache = [lock: lock] ++ cache
+    end
+
+    [operation, query.from|cache]
   end
 
   defp cast_param(kind, query, expr, v, type, adapter) do

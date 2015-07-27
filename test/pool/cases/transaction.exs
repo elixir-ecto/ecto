@@ -14,7 +14,7 @@ defmodule Ecto.Pool.TransactionTest do
 
   test "worker cleans up the connection when it crashes", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
+    {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
     conn1 =
       TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, queue_time) ->
@@ -35,7 +35,7 @@ defmodule Ecto.Pool.TransactionTest do
 
   test "transaction can disconnect connection", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
+    {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
     TestPool.transaction(pool, @timeout,
       fn(:opened, ref, {_mod, conn1}, queue_time) ->
@@ -49,7 +49,7 @@ defmodule Ecto.Pool.TransactionTest do
 
   test "disconnects if caller dies during transaction", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
+    {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
     _ = Process.flag(:trap_exit, true)
     parent = self()
@@ -73,7 +73,7 @@ defmodule Ecto.Pool.TransactionTest do
 
   test "does not disconnect if caller dies after closing", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
+    {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
     task = Task.async(fn ->
       TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, _) ->
@@ -91,7 +91,7 @@ defmodule Ecto.Pool.TransactionTest do
 
   test "transactions can be nested", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([lazy: false, name: pool])
+    {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
     TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, queue_time) ->
       assert is_integer(queue_time)
@@ -103,7 +103,7 @@ defmodule Ecto.Pool.TransactionTest do
 
   test "shutdowns connection on break", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([name: pool])
+    {:ok, _} = TestPool.start_link([pool_name: pool])
 
     TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
       mon = Process.monitor(conn)
@@ -114,7 +114,7 @@ defmodule Ecto.Pool.TransactionTest do
 
   test "kill connection on break", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([name: pool, shutdown: :brutal_kill])
+    {:ok, _} = TestPool.start_link([pool_name: pool, shutdown: :brutal_kill])
 
     TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
       mon = Process.monitor(conn)
@@ -125,7 +125,7 @@ defmodule Ecto.Pool.TransactionTest do
 
   test "shutdown timeout and kill connection on break", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([name: pool, shutdown: 1, trap_exit: true])
+    {:ok, _} = TestPool.start_link([pool_name: pool, shutdown: 1, trap_exit: true])
 
     TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
       mon = Process.monitor(conn)

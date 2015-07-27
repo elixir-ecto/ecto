@@ -47,23 +47,23 @@ defmodule Ecto.Adapters.SQL do
       ## Query
 
       @doc false
-      def to_sql(:all, query), do: @conn.all(query)
-      def to_sql(:update_all, query), do: @conn.update_all(query)
-      def to_sql(:delete_all, query), do: @conn.delete_all(query)
+      def prepare(:all, query),        do: {:cache, @conn.all(query)}
+      def prepare(:update_all, query), do: {:cache, @conn.update_all(query)}
+      def prepare(:delete_all, query), do: {:cache, @conn.delete_all(query)}
 
       @doc false
-      def all(repo, query, params, preprocess, opts) do
-        Ecto.Adapters.SQL.all(repo, @conn.all(query), query, params, preprocess, opts)
+      def all(repo, meta, prepared, params, preprocess, opts) do
+        Ecto.Adapters.SQL.all(repo, meta, prepared, params, preprocess, opts)
       end
 
       @doc false
-      def update_all(repo, query, params, opts) do
-        Ecto.Adapters.SQL.count_all(repo, @conn.update_all(query), params, opts)
+      def update_all(repo, prepared, params, opts) do
+        Ecto.Adapters.SQL.count_all(repo, prepared, params, opts)
       end
 
       @doc false
-      def delete_all(repo, query, params, opts) do
-        Ecto.Adapters.SQL.count_all(repo, @conn.delete_all(query), params, opts)
+      def delete_all(repo, prepared, params, opts) do
+        Ecto.Adapters.SQL.count_all(repo, prepared, params, opts)
       end
 
       @doc false
@@ -126,8 +126,8 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
-      defoverridable [all: 5, update_all: 4, delete_all: 4,
-                      insert: 6, update: 7, delete: 5,
+      defoverridable [all: 6, update_all: 4, delete_all: 4,
+                      insert: 6, update: 7, delete: 5, prepare: 2,
                       execute_ddl: 3, load: 2, dump: 2,
                       embed_id: 1]
     end
@@ -158,11 +158,11 @@ defmodule Ecto.Adapters.SQL do
   def to_sql(kind, repo, queryable) do
     adapter = repo.__adapter__
 
-    {query, params} =
+    {_meta, prepared, params} =
       Ecto.Queryable.to_query(queryable)
-      |> Ecto.Query.Planner.query(kind, adapter)
+      |> Ecto.Query.Planner.query(kind, repo, adapter)
 
-    {adapter.to_sql(kind, query), params}
+    {prepared, params}
   end
 
   @doc """
@@ -394,7 +394,7 @@ defmodule Ecto.Adapters.SQL do
   ## Worker
 
   @doc false
-  def start_link(connection, adapter, repo, opts) do
+  def start_link(connection, adapter, _repo, opts) do
     unless Code.ensure_loaded?(connection) do
       raise """
       could not find #{inspect connection}.
@@ -409,14 +409,8 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    {default_pool_mod, default_pool_name, _} = repo.__pool__
-    pool_mod = Keyword.get(opts, :pool, default_pool_mod)
-
-    opts = opts
-      |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5000))
-      |> Keyword.put_new(:name, default_pool_name)
-
-    pool_mod.start_link(connection, opts)
+    {pool, opts} = Keyword.pop(opts, :pool)
+    pool.start_link(connection, opts)
   end
 
   ## Types
@@ -455,10 +449,10 @@ defmodule Ecto.Adapters.SQL do
   ## Query
 
   @doc false
-  def all(repo, sql, query, params, preprocess, opts) do
-    fields = count_fields(query.select.fields, query.sources)
+  def all(repo, meta, prepared, params, preprocess, opts) do
+    fields = count_fields(meta.select.fields, meta.sources)
     mapper = &process_row(&1, preprocess, fields)
-    %{rows: rows} = query(repo, sql, params, mapper, opts)
+    %{rows: rows} = query(repo, prepared, params, mapper, opts)
     rows
   end
 

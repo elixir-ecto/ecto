@@ -9,14 +9,14 @@ defmodule Ecto.Repo.Preloader do
   Transforms a result set based on query preloads, loading
   the associations onto their parent model.
   """
-  @spec query([list], Ecto.Repo.t, Ecto.Query.t, fun) :: [list]
-  def query([], _repo, _query, _fun),           do: []
-  def query(rows, _repo, %{preloads: []}, fun), do: Enum.map(rows, fun)
+  @spec query([list], Ecto.Repo.t, list, list, fun) :: [list]
+  def query([], _repo, _preloads, _assocs, _fun), do: []
+  def query(rows, _repo, [], _assocs, fun), do: Enum.map(rows, fun)
 
-  def query(rows, repo, query, fun) do
+  def query(rows, repo, preloads, assocs, fun) do
     rows
     |> extract
-    |> do_preload(repo, query.preloads, query.assocs)
+    |> do_preload(repo, preloads, assocs)
     |> unextract(rows, fun)
   end
 

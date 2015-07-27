@@ -24,9 +24,13 @@ defmodule Ecto.Repo.Config do
 
   defp pool(module, config) do
     pool    = Keyword.get(config, :pool, Ecto.Pools.Poolboy)
-    name    = Keyword.get(config, :name, Module.concat(module, Pool))
+    name    = Keyword.get(config, :pool_name, default_pool_name(module, config))
     timeout = Keyword.get(config, :timeout, 5000)
     {pool, name, timeout}
+  end
+
+  defp default_pool_name(module, config) do
+    Module.concat(Keyword.get(config, :name, module), Pool)
   end
 
   @doc """

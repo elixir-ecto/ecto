@@ -45,7 +45,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   defp normalize_with_params(query, operation \\ :all) do
-    {query, params} = prepare(query, operation)
+    {query, params, _key} = prepare(query, operation)
     {Planner.normalize(query, operation, Ecto.TestAdapter), params}
   end
 
@@ -64,7 +64,7 @@ defmodule Ecto.Query.PlannerTest do
         offset: ^7,
         preload: [post: d]
 
-    {_query, params} = prepare(query)
+    {_query, params, _key} = prepare(query)
     assert params == ["0", "1", "2", "3", "4", "5", 6, 7]
   end
 
@@ -75,7 +75,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: casts values" do
-    {_query, params} = prepare(Post |> where([p], p.id == ^"1"))
+    {_query, params, _key} = prepare(Post |> where([p], p.id == ^"1"))
     assert params == [1]
 
     exception = assert_raise Ecto.CastError, fn ->
@@ -97,30 +97,30 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: casts and dumps custom types" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
-    {_query, params} = prepare(Comment |> where([c], c.posted == ^datetime))
+    {_query, params, _key} = prepare(Comment |> where([c], c.posted == ^datetime))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 
     permalink = "1-hello-world"
-    {_query, params} = prepare(Post |> where([p], p.id == ^permalink))
+    {_query, params, _key} = prepare(Post |> where([p], p.id == ^permalink))
     assert params == [1]
   end
 
   test "prepare: casts and dumps custom types to native ones" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
-    {_query, params} = prepare(Post |> where([p], p.posted == ^datetime))
+    {_query, params, _key} = prepare(Post |> where([p], p.posted == ^datetime))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
   end
 
   test "prepare: casts and dumps binary ids" do
     uuid = "00010203-0405-0607-0809-0a0b0c0d0e0f"
-    {_query, params} = prepare(Comment |> where([c], c.uuid == ^uuid))
+    {_query, params, _key} = prepare(Comment |> where([c], c.uuid == ^uuid))
     assert params == [%Ecto.Query.Tagged{type: :uuid,
                         value: <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>}]
   end
 
   test "prepare: casts and dumps custom types in left side of in-expressions" do
     permalink = "1-hello-world"
-    {_query, params} = prepare(Post |> where([p], ^permalink in p.links))
+    {_query, params, _key} = prepare(Post |> where([p], ^permalink in p.links))
     assert params == [1]
 
     message = ~r"value `\"1-hello-world\"` in `where` expected to be part of an array but matched type is :string"
@@ -131,36 +131,36 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: casts and dumps custom types in right side of in-expressions" do
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
-    {_query, params} = prepare(Comment |> where([c], c.posted in ^[datetime]))
+    {_query, params, _key} = prepare(Comment |> where([c], c.posted in ^[datetime]))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 
     permalink = "1-hello-world"
-    {_query, params} = prepare(Post |> where([p], p.id in ^[permalink]))
+    {_query, params, _key} = prepare(Post |> where([p], p.id in ^[permalink]))
     assert params == [1]
 
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
-    {_query, params} = prepare(Comment |> where([c], c.posted in [^datetime]))
+    {_query, params, _key} = prepare(Comment |> where([c], c.posted in [^datetime]))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 
     permalink = "1-hello-world"
-    {_query, params} = prepare(Post |> where([p], p.id in [^permalink]))
+    {_query, params, _key} = prepare(Post |> where([p], p.id in [^permalink]))
     assert params == [1]
 
-    {_query, params} = prepare(Post |> where([p], p.code in [^"abcd"]))
+    {_query, params, _key} = prepare(Post |> where([p], p.code in [^"abcd"]))
     assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
 
-    {_query, params} = prepare(Post |> where([p], p.code in ^["abcd"]))
+    {_query, params, _key} = prepare(Post |> where([p], p.code in ^["abcd"]))
     assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
   end
 
   test "prepare: casts values on update_all" do
-    {_query, params} = prepare(Post |> update([p], set: [id: ^"1"]), :update_all)
+    {_query, params, _key} = prepare(Post |> update([p], set: [id: ^"1"]), :update_all)
     assert params == [1]
 
-    {_query, params} = prepare(Post |> update([p], set: [title: ^nil]), :update_all)
+    {_query, params, _key} = prepare(Post |> update([p], set: [title: ^nil]), :update_all)
     assert params == [%Ecto.Query.Tagged{type: :string, value: nil}]
 
-    {_query, params} = prepare(Post |> update([p], set: [title: nil]), :update_all)
+    {_query, params, _key} = prepare(Post |> update([p], set: [title: nil]), :update_all)
     assert params == []
   end
 

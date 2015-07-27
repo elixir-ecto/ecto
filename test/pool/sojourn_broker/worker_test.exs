@@ -14,7 +14,7 @@ defmodule Ecto.Pools.SojournBroker.WorkerTest do
 
   test "worker starts without an active connection but connects on go", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([name: pool, lazy: true])
+    {:ok, _} = TestPool.start_link([pool_name: pool, lazy: true])
     assert {:go, _, {worker, :lazy}, _, _} = :sbroker.ask(pool, {:run, self()})
     assert Process.alive?(worker)
     conn = :sys.get_state(worker).conn
@@ -23,7 +23,7 @@ defmodule Ecto.Pools.SojournBroker.WorkerTest do
 
   test "worker starts with an active connection", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([name: pool, lazy: false])
+    {:ok, _} = TestPool.start_link([pool_name: pool, lazy: false])
     assert {:go, _, {worker, {Connection, conn}}, _, _} =
       :sbroker.ask(pool, {:run, self()})
     assert Process.alive?(worker)
@@ -33,7 +33,7 @@ defmodule Ecto.Pools.SojournBroker.WorkerTest do
 
   test "worker restarts connection when waiting", context do
     pool = context[:pool]
-    {:ok, _} = TestPool.start_link([name: pool])
+    {:ok, _} = TestPool.start_link([pool_name: pool])
 
     conn1 = TestPool.transaction(pool, @timeout,
       fn(:opened, _ref, {Connection, conn}, _) ->

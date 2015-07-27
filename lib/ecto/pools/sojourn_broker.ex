@@ -4,6 +4,7 @@ defmodule Ecto.Pools.SojournBroker do
 
   ### Options
 
+    * `:pool_name` - The name of the pool supervisor
     * `:pool_size` - The number of connections to keep in the pool (default: 10)
     * `:min_backoff` - The minimum backoff on failed connect in milliseconds (default: 50)
     * `:max_backoff` - The maximum backoff on failed connect in milliseconds (default: 5000)
@@ -25,17 +26,15 @@ defmodule Ecto.Pools.SojournBroker do
   """
   def start_link(conn_mod, opts) do
     {:ok, _} = Application.ensure_all_started(:sbroker)
-    {pool_opts, opts} = split_opts(opts)
+    {name, mod, size, opts} = split_opts(opts)
 
     import Supervisor.Spec
-    name = Keyword.fetch!(pool_opts, :name)
-    mod  = Keyword.fetch!(pool_opts, :broker)
-    args = [{:local, name}, mod, opts, [time_unit: :micro_seconds]]
+
+    args   = [{:local, name}, mod, opts, [time_unit: :micro_seconds]]
     broker = worker(:sbroker, args)
 
-    size = Keyword.fetch!(pool_opts, :size)
     workers = for id <- 1..size do
-      worker(Worker, [conn_mod, opts], [id: id])
+      worker(Worker, [conn_mod, name, opts], [id: id])
     end
     worker_sup_opts = [strategy: :one_for_one, max_restarts: size]
     worker_sup = supervisor(Supervisor, [workers, worker_sup_opts])
@@ -97,19 +96,18 @@ defmodule Ecto.Pools.SojournBroker do
           Keyword.put(opts, :pool_size, size)
       end
 
-    {pool_opts, opts} = Keyword.split(opts, [:pool_size, :broker])
+    {pool_opts, conn_opts} = Keyword.split(opts, [:pool_name, :pool_size, :broker])
 
-    opts = opts
+    conn_opts =
+      conn_opts
       |> Keyword.put_new(:queue_timeout, Keyword.get(opts, :timeout, 5_000))
       |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5_000))
 
-    pool_opts = pool_opts
-      |> Keyword.put(:name, Keyword.fetch!(opts, :name))
-      |> Keyword.put(:size, Keyword.get(pool_opts, :pool_size, 10))
-      |> Keyword.delete(:pool_size)
-      |> Keyword.put_new(:broker, Ecto.Pools.SojournBroker.Timeout)
+    name   = Keyword.fetch!(pool_opts, :pool_name)
+    broker = Keyword.get(pool_opts, :broker, Ecto.Pools.SojournBroker.Timeout)
+    size   = Keyword.get(pool_opts, :pool_size, 10)
 
-    {pool_opts, opts}
+    {name, broker, size, conn_opts}
   end
 
   defp lazy_connect(worker, ref, queue_time, timeout) do
