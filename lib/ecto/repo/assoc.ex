@@ -7,13 +7,13 @@ defmodule Ecto.Repo.Assoc do
   Transforms a result set based on query assocs, loading
   the associations onto their parent model.
   """
-  @spec query([Ecto.Model.t], Ecto.Query.t) :: [Ecto.Model.t]
-  def query(rows, query)
+  @spec query([Ecto.Model.t], list, tuple) :: [Ecto.Model.t]
+  def query(rows, assocs, sources)
 
-  def query([], _query), do: []
-  def query(rows, %{assocs: []}), do: rows
+  def query([], _assocs, _sources), do: []
+  def query(rows, [], _sources), do: rows
 
-  def query(rows, %{assocs: assocs, sources: sources}) do
+  def query(rows, assocs, sources) do
     # Pre-create rose tree of reflections and accumulator
     # dicts in the same structure as the fields tree
     refls = create_refls(0, assocs, sources)
