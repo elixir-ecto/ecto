@@ -79,7 +79,7 @@ defmodule Ecto.Query.API do
 
   Translates to the underlying SQL LIKE query.
 
-      from p in Post, where: like(p.body, "Chapter*")
+      from p in Post, where: like(p.body, "Chapter%")
   """
   def like(string, search), do: doc! [string, search]
 
@@ -88,7 +88,7 @@ defmodule Ecto.Query.API do
 
   Translates to the underlying SQL ILIKE query.
 
-      from p in Post, where: ilike(p.body, "Chapter*")
+      from p in Post, where: ilike(p.body, "Chapter%")
   """
   def ilike(string, search), do: doc! [string, search]
 
