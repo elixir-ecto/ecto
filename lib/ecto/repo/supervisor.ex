@@ -20,7 +20,10 @@ defmodule Ecto.Repo.Supervisor do
       supervisor(adapter, [repo, opts])
     ]
 
-    :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+    if Keyword.get(opts, :query_cache_owner, repo == repo.__query_cache__) do
+      :ets.new(repo.__query_cache__, [:set, :public, :named_table, read_concurrency: true])
+    end
+
     supervise(children, strategy: :one_for_one)
   end
 end

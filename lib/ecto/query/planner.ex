@@ -65,32 +65,37 @@ defmodule Ecto.Query.Planner do
   def query(query, operation, repo, adapter) do
     {query, params, key} = prepare(query, operation, adapter)
     if key == :nocache do
-      {_, meta, prepared} = query_without_cache(query, operation, adapter)
-      {meta, prepared, params}
+      {_, select, prepared} = query_without_cache(query, operation, adapter)
+      {build_meta(query, select), prepared, params}
     else
-      case :ets.lookup(repo, key) do
-        [{_, meta, prepared}] ->
-          {meta, prepared, params}
+      table = repo.__query_cache__
+      case :ets.lookup(table, key) do
+        [{_, select, prepared}] ->
+          {build_meta(query, select), prepared, params}
         [] ->
           case query_without_cache(query, operation, adapter) do
-            {:cache, meta, prepared} ->
-              :ets.insert(repo, {key, meta, prepared})
-              {meta, prepared, params}
-            {:nocache, meta, prepared} ->
-              {meta, prepared, params}
+            {:cache, select, prepared} ->
+              :ets.insert(table, {key, select, prepared})
+              {build_meta(query, select), prepared, params}
+            {:nocache, select, prepared} ->
+              {build_meta(query, select), prepared, params}
           end
       end
     end
   end
 
   defp query_without_cache(query, operation, adapter) do
-    query = normalize(query, operation, adapter)
+    %{select: select} = query = normalize(query, operation, adapter)
     {cache, prepared} = adapter.prepare(operation, query)
-    {cache, query_to_meta(query), prepared}
+    {cache, select && %{select | file: nil, line: nil}, prepared}
   end
 
-  defp query_to_meta(%{prefix: prefix, sources: sources, select: select}) do
-    %{prefix: prefix, sources: sources, select: select}
+  # TODO: Add execute to adapters
+  # TODO: Remove metadata from expressions
+  defp build_meta(%{prefix: prefix, sources: sources,
+                    assocs: assocs, preloads: preloads}, select) do
+    %{prefix: prefix, sources: sources,
+      assocs: assocs, preloads: preloads, select: select}
   end
 
   @doc """

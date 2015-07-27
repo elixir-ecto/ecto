@@ -46,7 +46,7 @@ defmodule Ecto.Integration.PoolTest do
     assert {:ok, pool1} = MockRepo.start_link()
     assert {:error, {:already_started, _}} = MockRepo.start_link()
 
-    assert {:ok, pool2} = MockRepo.start_link(name: MockRepo.Named)
+    assert {:ok, pool2} = MockRepo.start_link(name: MockRepo.Named, query_cache_owner: false)
     assert pool1 != pool2
   end
 
