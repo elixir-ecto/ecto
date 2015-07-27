@@ -90,8 +90,6 @@ defmodule Ecto.Query.Planner do
     {cache, select && %{select | file: nil, line: nil}, prepared}
   end
 
-  # TODO: Add execute to adapters
-  # TODO: Remove metadata from expressions
   defp build_meta(%{prefix: prefix, sources: sources,
                     assocs: assocs, preloads: preloads}, select) do
     %{prefix: prefix, sources: sources,
@@ -142,7 +140,7 @@ defmodule Ecto.Query.Planner do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn expr, {params, cacheable?} ->
         {params, current_cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
-        {expr, {params, cacheable? and current_cacheable?}}
+        {expr.expr, {params, cacheable? and current_cacheable?}}
       end
 
     case expr_cache do

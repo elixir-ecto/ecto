@@ -25,8 +25,9 @@ defmodule Ecto.Query.Builder.OrderByTest do
     assert {Macro.escape(quote do [asc: &0.x, desc: &0.y] end), %{}} ==
            escape(quote do [:x, desc: :y] end, [x: 0], __ENV__)
 
-    assert {Macro.escape(quote do [asc: 1 == 2] end), %{}} ==
-           escape(quote do 1 == 2 end, [], __ENV__)
+    import Kernel, except: [>: 2]
+    assert {Macro.escape(quote do [asc: 1 > 2] end), %{}} ==
+           escape(quote do 1 > 2 end, [], __ENV__)
   end
 
   test "invalid order_by" do
