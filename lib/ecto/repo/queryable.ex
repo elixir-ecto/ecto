@@ -12,12 +12,14 @@ defmodule Ecto.Repo.Queryable do
   Implementation for `Ecto.Repo.all/2`
   """
   def all(repo, adapter, queryable, opts) when is_list(opts) do
-    query = Queryable.to_query(queryable)
-    {meta, prepared, params} = Planner.query(query, :all, repo, adapter)
+    {meta, prepared, params} =
+      queryable
+      |> Queryable.to_query()
+      |> Planner.query(:all, repo, adapter)
 
     adapter.all(repo, meta, prepared, params, preprocess(meta.prefix, meta.sources, adapter), opts)
-    |> Ecto.Repo.Assoc.query(query.assocs, meta.sources)
-    |> Ecto.Repo.Preloader.query(repo, query.preloads, query.assocs, postprocess(meta.select))
+    |> Ecto.Repo.Assoc.query(meta.assocs, meta.sources)
+    |> Ecto.Repo.Preloader.query(repo, meta.preloads, meta.assocs, postprocess(meta.select))
   end
 
   @doc """

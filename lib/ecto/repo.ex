@@ -66,6 +66,7 @@ defmodule Ecto.Repo do
       @adapter adapter
       @config  config
       @pool pool
+      @query_cache config[:query_cache] || __MODULE__
       @before_compile adapter
 
       require Logger
@@ -156,6 +157,10 @@ defmodule Ecto.Repo do
         @adapter
       end
 
+      def __query_cache__ do
+        @query_cache
+      end
+
       def __repo__ do
         true
       end
@@ -189,6 +194,13 @@ defmodule Ecto.Repo do
   Returns the pool information this repository should run under.
   """
   defcallback __pool__ :: {module, atom, timeout}
+
+  @doc """
+  Returns the name of the ETS table used for query caching.
+
+  The name can be configured with the `:query_cache` option.
+  """
+  defcallback __query_cache__ :: atom
 
   @doc """
   Returns the adapter configuration stored in the `:otp_app` environment.
