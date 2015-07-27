@@ -4,6 +4,7 @@ defmodule Ecto.AssociationTest do
 
   import Ecto.Model
   import Ecto.Query, only: [from: 2]
+  alias Ecto.Changeset.Relation
 
   alias __MODULE__.Author
   alias __MODULE__.Comment
@@ -688,5 +689,125 @@ defmodule Ecto.AssociationTest do
     assert post_changeset.optional == [:author_id]
     assert post_changeset.action == :update
     refute post_changeset.valid?
+  end
+
+  ## Change
+
+  test "change assocs_one" do
+    model = %Author{}
+    assoc = Author.__schema__(:association, :profile)
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, model, %Profile{name: "michal"}, nil)
+    assert changeset.action == :insert
+    assert changeset.changes == %{id: nil, name: "michal"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, model, %Profile{name: "michal"}, %Profile{})
+    assert changeset.action == :update
+    assert changeset.changes == %{name: "michal"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, model, nil, %Profile{})
+    assert changeset.action == :delete
+
+    assoc_model = %Profile{}
+    assoc_model_changeset = Changeset.change(assoc_model, name: "michal")
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, model, assoc_model_changeset, nil)
+    assert changeset.action == :insert
+    assert changeset.changes == %{id: nil, name: "michal"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, model, assoc_model_changeset, assoc_model)
+    assert changeset.action == :update
+    assert changeset.changes == %{name: "michal"}
+
+    empty_changeset = Changeset.change(assoc_model)
+    assert {:ok, _, true, true} =
+      Relation.change(assoc, model, empty_changeset, assoc_model)
+  end
+
+  test "change assocs_one keeps action from changeset" do
+    model = %Author{}
+    assoc = Author.__schema__(:association, :profile)
+
+    changeset =
+      %Profile{}
+      |> Changeset.change(name: "michal")
+      |> Map.put(:action, :update)
+
+    {:ok, changeset, _, _} = Relation.change(assoc, model, changeset, nil)
+    assert changeset.action == :update
+  end
+
+  test "change assocs_many" do
+    model = %Author{}
+    assoc = Author.__schema__(:association, :posts)
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, model, [%Post{title: "hello"}], [])
+    assert changeset.action == :insert
+    assert changeset.changes == %{id: nil, title: "hello", summary_id: nil, author_id: nil}
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, model, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
+    assert changeset.action == :update
+    assert changeset.changes == %{title: "hello"}
+
+    assert {:ok, [new, old], true, false} =
+      Relation.change(assoc, model, [%Post{title: "hello"}], [%Post{id: 1}])
+    assert new.action == :insert
+    assert new.changes == %{id: nil, title: "hello", summary_id: nil, author_id: nil}
+    assert old.action == :delete
+    assert old.model.id == 1
+
+    assoc_model_changeset = Changeset.change(%Post{}, title: "hello")
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, model, [assoc_model_changeset], [])
+    assert changeset.action == :insert
+    assert changeset.changes == %{id: nil, title: "hello", summary_id: nil, author_id: nil}
+
+    assoc_model = %Post{id: 1}
+    assoc_model_changeset = Changeset.change(assoc_model, title: "hello")
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, model, [assoc_model_changeset], [assoc_model])
+    assert changeset.action == :update
+    assert changeset.changes == %{title: "hello"}
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, model, [], [assoc_model_changeset])
+    assert changeset.action == :delete
+
+    empty_changeset = Changeset.change(assoc_model)
+    assert {:ok, _, true, true} =
+      Relation.change(assoc, model, [empty_changeset], [assoc_model])
+    assert {:ok, _, true, false} =
+      Relation.change(assoc, model, [empty_changeset, assoc_model_changeset],
+                      [assoc_model, assoc_model])
+  end
+
+  test "change/2, put_change/3, force_change/3 wth assocs" do
+    base_changeset = Changeset.change(%Author{})
+
+    changeset = Changeset.change(base_changeset, profile: %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    changeset = Changeset.put_change(base_changeset, :profile, %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    changeset = Changeset.force_change(base_changeset, :profile, %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
+    empty_update_changeset = Changeset.change(%Profile{name: "michal"})
+
+    changeset = Changeset.put_change(base_changeset, :profile, empty_update_changeset)
+    assert changeset.changes == %{}
+
+    changeset = Changeset.force_change(base_changeset, :profile, empty_update_changeset)
+    assert %Ecto.Changeset{} = changeset.changes.profile
   end
 end

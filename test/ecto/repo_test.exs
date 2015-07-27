@@ -35,6 +35,27 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MyAssoc do
+    use Ecto.Model
+
+    schema "my_assoc" do
+      field :x, :string
+      belongs_to :my_model, MyModel
+    end
+
+    before_insert :store_changeset, [:before_insert]
+    after_insert  :store_changeset, [:after_insert]
+    before_update :store_changeset, [:before_update]
+    after_update  :store_changeset, [:after_update]
+    before_delete :store_changeset, [:before_delete]
+    after_delete  :store_changeset, [:after_delete]
+
+    def store_changeset(changeset, stage) do
+      Agent.update(CallbackAgent, &[{stage, changeset}|&1])
+      changeset
+    end
+  end
+
   defmodule MyModel do
     use Ecto.Model
 
@@ -43,6 +64,8 @@ defmodule Ecto.RepoTest do
       field :y, :binary
       embeds_one :embed, MyEmbed
       embeds_many :embeds, MyEmbed
+      has_one :assoc, MyAssoc
+      has_many :assocs, MyAssoc
     end
 
     before_insert :store_changeset, [:before_insert]
@@ -325,8 +348,23 @@ defmodule Ecto.RepoTest do
       %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
   end
 
+  test "skips adding assocs to changeset on insert" do
+    TestRepo.insert!(%MyModel{assoc: %MyAssoc{}})
+    assert Agent.get(CallbackAgent, &get_changes/1) ==
+      %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
+
+    TestRepo.insert!(%MyModel{assocs: [%MyAssoc{}]})
+    assert Agent.get(CallbackAgent, &get_changes/1) ==
+      %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
+  end
+
   test "skip adding embeds to changeset on update" do
     TestRepo.update!(%MyModel{id: 5, embed: %MyEmbed{}, embeds: [%MyEmbed{}]})
+    assert Agent.get(CallbackAgent, &get_changes/1) == %{x: nil, y: nil}
+  end
+
+  test "skip adding assocs to changeset on update" do
+    TestRepo.update!(%MyModel{id: 5, assoc: %MyAssoc{}, assocs: [%MyAssoc{}]})
     assert Agent.get(CallbackAgent, &get_changes/1) == %{x: nil, y: nil}
   end
 
@@ -393,6 +431,81 @@ defmodule Ecto.RepoTest do
     embed_changeset = Ecto.Changeset.change(embed) |> Map.put(:action, :delete)
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
     assert_raise ArgumentError, ~r"got action :delete in changeset for embedded .* while inserting", fn ->
+      TestRepo.insert!(changeset)
+    end
+  end
+
+  test "handles assocs on insert" do
+    assoc = %MyAssoc{x: "xyz"}
+
+    # Rejects assocs when inserting model
+    model = TestRepo.insert!(%MyModel{assoc: assoc})
+    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.assoc == assoc
+
+    model = TestRepo.insert!(%MyModel{assocs: [assoc]})
+    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.assocs == [assoc]
+
+    # Rejects if not in changes
+    changeset = Ecto.Changeset.change(%MyModel{assoc: assoc})
+    model = TestRepo.insert!(changeset)
+    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.assoc == assoc
+
+    changeset = Ecto.Changeset.change(%MyModel{assocs: [assoc]})
+    model = TestRepo.insert!(changeset)
+    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.assocs == [assoc]
+
+    # Inserts when in changes
+    changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc)
+    model = TestRepo.insert!(changeset)
+    assert [{:after_insert, MyModel}, {:after_insert, MyAssoc},
+            {:before_insert, MyAssoc}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    %{id: id, my_model_id: model_id} = model.assoc
+    inserted_assoc = put_in assoc.__meta__.state, :loaded
+    inserted_assoc = %{inserted_assoc | id: id, my_model_id: model_id}
+    assert id
+    assert model.id == model_id
+    assert model.assoc == inserted_assoc
+
+    changeset = Ecto.Changeset.change(%MyModel{}, assocs: [assoc])
+    model = TestRepo.insert!(changeset)
+    assert [{:after_insert, MyModel}, {:after_insert, MyAssoc},
+            {:before_insert, MyAssoc}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    [%{id: id, my_model_id: model_id}] = model.assocs
+    inserted_assoc = put_in assoc.__meta__.state, :loaded
+    inserted_assoc = %{inserted_assoc | id: id, my_model_id: model_id}
+    assert id
+    assert model.id == model_id
+    assert model.assocs == [inserted_assoc]
+
+    assoc = %{assoc | id: 1}
+
+    # Action update -> moving from one model to another
+    assoc_changeset = Ecto.Changeset.change(assoc) |> Map.put(:action, :update)
+    changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
+    model = TestRepo.insert!(changeset)
+    assert [{:after_insert, MyModel}, {:after_update, MyAssoc},
+            {:before_update, MyAssoc}, {:before_insert, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    model_id = model.assoc.my_model_id
+    inserted_assoc = put_in assoc.__meta__.state, :loaded
+    inserted_assoc = %{inserted_assoc | my_model_id: model_id}
+    assert model.id == model_id
+    assert model.assoc == inserted_assoc
+
+    # Raises if action is delete
+    assoc_changeset = Ecto.Changeset.change(assoc) |> Map.put(:action, :delete)
+    changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
+    assert_raise ArgumentError, ~r"got action :delete in changeset for associated .* while inserting", fn ->
       TestRepo.insert!(changeset)
     end
   end

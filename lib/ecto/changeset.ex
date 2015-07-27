@@ -617,7 +617,7 @@ defmodule Ecto.Changeset do
   end
 
   defp put_change(model, acc, key, value, {tag, relation}) when tag in @relations do
-    case Relation.change(relation, value, Map.get(model, key)) do
+    case Relation.change(relation, model, value, Map.get(model, key)) do
       {:ok, _, _, true} ->
         acc
       {:ok, change, _, false} ->
@@ -660,11 +660,13 @@ defmodule Ecto.Changeset do
   end
 
   def force_change(%Changeset{types: types} = changeset, key, value) do
+    model = changeset.model
+
     value =
       case Map.get(types, key) do
         {tag, relation} when tag in @relations ->
           {:ok, changes, _, _} =
-            Relation.change(relation, value, Map.get(changeset.model, key))
+            Relation.change(relation, model, value, Map.get(model, key))
           changes
         _ ->
           value

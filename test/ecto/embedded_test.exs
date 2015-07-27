@@ -326,37 +326,43 @@ defmodule Ecto.EmbeddedTest do
   ## Others
 
   test "change embeds_one" do
+    model = %Author{}
     embed = Author.__schema__(:embed, :profile)
 
     assert {:ok, changeset, true, false} =
-      Relation.change(embed, %Profile{name: "michal"}, nil)
+      Relation.change(embed, model, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(embed, %Profile{name: "michal"}, %Profile{})
+      Relation.change(embed, model, %Profile{name: "michal"}, %Profile{})
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} = Relation.change(embed, nil, %Profile{})
+    assert {:ok, changeset, true, false} =
+      Relation.change(embed, model, nil, %Profile{})
     assert changeset.action == :delete
 
-    model = %Profile{}
-    model_changeset = Changeset.change(model, name: "michal")
+    embed_model = %Profile{}
+    embed_model_changeset = Changeset.change(embed_model, name: "michal")
 
-    assert {:ok, changeset, true, false} = Relation.change(embed, model_changeset, nil)
+    assert {:ok, changeset, true, false} =
+      Relation.change(embed, model, embed_model_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
-    assert {:ok, changeset, true, false} = Relation.change(embed, model_changeset, model)
+    assert {:ok, changeset, true, false} =
+      Relation.change(embed, model, embed_model_changeset, embed_model)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    empty_changeset = Changeset.change(model)
-    assert {:ok, _, true, true} = Relation.change(embed, empty_changeset, model)
+    empty_changeset = Changeset.change(embed_model)
+    assert {:ok, _, true, true} =
+      Relation.change(embed, model, empty_changeset, embed_model)
   end
 
   test "change embeds_one keeps action from changeset" do
+    model = %Author{}
     embed = Author.__schema__(:embed, :profile)
 
     changeset =
@@ -364,48 +370,55 @@ defmodule Ecto.EmbeddedTest do
       |> Changeset.change(name: "michal")
       |> Map.put(:action, :update)
 
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
+    {:ok, changeset, _, _} = Relation.change(embed, model, changeset, nil)
     assert changeset.action == :update
   end
 
   test "change embeds_many" do
+    model = %Author{}
     embed = Author.__schema__(:embed, :posts)
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(embed, [%Post{title: "hello"}], [])
+      Relation.change(embed, model, [%Post{title: "hello"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, title: "hello"}
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(embed, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
+      Relation.change(embed, model, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
     assert {:ok, [new, old], true, false} =
-      Relation.change(embed, [%Post{title: "hello"}], [%Post{id: 1}])
+      Relation.change(embed, model, [%Post{title: "hello"}], [%Post{id: 1}])
     assert new.action == :insert
     assert new.changes == %{id: nil, title: "hello"}
     assert old.action == :delete
     assert old.model.id == 1
 
-    model_changeset = Changeset.change(%Post{}, title: "hello")
+    embed_model_changeset = Changeset.change(%Post{}, title: "hello")
 
-    assert {:ok, [changeset], true, false} = Relation.change(embed, [model_changeset], [])
+    assert {:ok, [changeset], true, false} =
+      Relation.change(embed, model, [embed_model_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, title: "hello"}
 
-    model = %Post{id: 1}
-    model_changeset = Changeset.change(model, title: "hello")
-    assert {:ok, [changeset], true, false} = Relation.change(embed, [model_changeset], [model])
+    embed_model = %Post{id: 1}
+    embed_model_changeset = Changeset.change(embed_model, title: "hello")
+    assert {:ok, [changeset], true, false} =
+      Relation.change(embed, model, [embed_model_changeset], [embed_model])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} = Relation.change(embed, [], [model_changeset])
+    assert {:ok, [changeset], true, false} =
+      Relation.change(embed, model, [], [embed_model_changeset])
     assert changeset.action == :delete
 
-    empty_changeset = Changeset.change(model)
-    assert {:ok, _, true, true} = Relation.change(embed, [empty_changeset], [model])
-    assert {:ok, _, true, false} = Relation.change(embed, [empty_changeset, model_changeset], [model, model])
+    empty_changeset = Changeset.change(embed_model)
+    assert {:ok, _, true, true} =
+      Relation.change(embed, model, [empty_changeset], [embed_model])
+    assert {:ok, _, true, false} =
+      Relation.change(embed, model, [empty_changeset, embed_model_changeset],
+                      [embed_model, embed_model])
   end
 
   test "change/2, put_change/3, force_change/3 wth embeds" do

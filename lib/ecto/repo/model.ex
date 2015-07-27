@@ -48,6 +48,7 @@ defmodule Ecto.Repo.Model do
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
     embeds   = model.__schema__(:embeds)
+    assocs   = model.__schema__(:associations)
     {prefix, source} = struct.__meta__.source
     return   = model.__schema__(:read_after_writes)
 
@@ -62,6 +63,7 @@ defmodule Ecto.Repo.Model do
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
       changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :insert, :before)
 
+      {assoc_changes, changeset} = pop_assoc_changesets(changeset, assocs)
       {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
       changes = validate_changes(:insert, changes, model, fields, adapter)
 
@@ -69,9 +71,19 @@ defmodule Ecto.Repo.Model do
 
       # Embeds can't be `read_after_writes` so we don't care
       # about values returned from the adapter
-      changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :insert, :after)
-      changeset = load_changes(changeset, values, adapter)
-      {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
+      return =
+        changeset
+        |> Ecto.Embedded.apply_callbacks(embeds, adapter, :insert, :after)
+        |> load_changes(values, adapter)
+        |> process_nested(assoc_changes, repo, opts)
+
+      case return do
+        {:ok, changeset} ->
+          {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
+        {:error, changeset} ->
+          # Rollback?
+          {:error, %{changeset | valid?: false}}
+      end
     end
   end
 
@@ -248,6 +260,85 @@ defmodule Ecto.Repo.Model do
 
     update_in changeset.changes, &Map.merge(base, &1)
   end
+
+  def pop_assoc_changesets(changeset, assocs) do
+    # It's safe to map over all associations, as only has_one and has_many,
+    # can be added to changeset
+    get_and_update_in(changeset.changes, &Map.split(&1, assocs))
+  end
+
+  def process_nested(changeset, assocs, _repo, _opts) when assocs == %{} do
+    {:ok, changeset}
+  end
+
+  def process_nested(%Changeset{action: action} = changeset, assocs, repo, opts) do
+    types = changeset.types
+    model = changeset.model
+    changes = changeset.changes
+
+    {model, changes, valid?} =
+      Enum.reduce(assocs, {model, changes, true}, fn {field, changes}, acc ->
+        {:assoc, assoc} = Map.get(types, field)
+        process_nested(assoc, field, changes, parent_key(assoc, model), repo, opts,
+                       action, acc)
+      end)
+
+    if valid? do
+      {:ok, %{changeset | model: model}}
+    else
+      {:error, %{changeset | changes: changes}}
+    end
+  end
+
+  defp process_nested(%Ecto.Association.Has{cardinality: :one}, field, changeset,
+                      parent_key, repo, opts, action, {parent, changes, valid?}) do
+    case do_process_nested(changeset, parent_key, repo, opts, action) do
+      {:ok, model} ->
+        {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
+      {:error, changeset} ->
+        {parent, Map.put(changes, field, changeset), false}
+    end
+  end
+
+  defp process_nested(%Ecto.Association.Has{cardinality: :many}, field, changesets,
+                      parent_key, repo, opts, action, {parent, changes, valid?}) do
+    {changesets, {models, models_valid?}} =
+      Enum.map_reduce(changesets, {[], true}, fn changeset, {models, models_valid?} ->
+        case do_process_nested(changeset, parent_key, repo, opts, action) do
+          {:ok, model} ->
+            {changeset, {[model | models], models_valid?}}
+          {:error, changeset} ->
+            {changeset, {models, false}}
+        end
+      end)
+
+    if models_valid? do
+      {Map.put(parent, field, models), Map.put(changes, field, changesets), valid?}
+    else
+      {parent, Map.put(changes, field, changesets), false}
+    end
+  end
+
+  defp do_process_nested(%Ecto.Changeset{action: action} = changeset, {key, value},
+                         repo, opts, parent_action) do
+    check_action!(action, parent_action, changeset.model.__struct__)
+    new_changeset = update_in changeset.changes, &Map.put(&1, key, value)
+    case apply(repo, action, [new_changeset, opts]) do
+      {:ok, _} = success ->
+        success
+      {:error, changeset} ->
+        # We don't want to have the parent key there, as we're not saving
+        {:error, update_in(changeset.changes, &Map.delete(&1, key))}
+    end
+  end
+
+  defp parent_key(%{owner_key: owner_key, related_key: related_key}, owner) do
+    {related_key, Map.get(owner, owner_key)}
+  end
+
+  defp check_action!(:delete, :insert, model),
+    do: raise(ArgumentError, "got action :delete in changeset for associated #{model} while inserting")
+  defp check_action!(_, _, _), do: :ok
 
   defp pop_autogenerate_id(changes, model) do
     case model.__schema__(:autogenerate_id) do
