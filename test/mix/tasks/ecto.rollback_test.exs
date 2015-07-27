@@ -6,7 +6,12 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   defmodule Repo do
     def start_link do
       Process.put(:started, true)
-      Task.start_link fn -> :timer.sleep(:infinity) end
+      Task.start_link fn ->
+        Process.flag(:trap_exit, true)
+        receive do
+          {:EXIT, _, :normal} -> :ok
+        end
+      end
     end
 
     def __repo__ do
