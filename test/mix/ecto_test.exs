@@ -34,9 +34,6 @@ defmodule Mix.EctoTest do
   end
 
   test :ensure_started do
-    Process.put(:start_link, :ok)
-    assert ensure_started(Repo) == {:ok, nil}
-
     Process.put(:start_link, {:ok, self})
     assert ensure_started(Repo) == {:ok, self}
 

@@ -12,14 +12,7 @@ defmodule Ecto.Repo.Queryable do
   Implementation for `Ecto.Repo.all/2`
   """
   def all(repo, adapter, queryable, opts) when is_list(opts) do
-    {meta, prepared, params} =
-      queryable
-      |> Queryable.to_query()
-      |> Planner.query(:all, repo, adapter)
-
-    adapter.all(repo, meta, prepared, params, preprocess(meta.prefix, meta.sources, adapter), opts)
-    |> Ecto.Repo.Assoc.query(meta.assocs, meta.sources)
-    |> Ecto.Repo.Preloader.query(repo, meta.preloads, meta.assocs, postprocess(meta.select))
+    execute(:all, repo, adapter, queryable, opts) |> elem(1)
   end
 
   @doc """
@@ -79,23 +72,35 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp update_all(repo, adapter, queryable, opts) do
-    {_meta, prepared, params} =
-      Queryable.to_query(queryable)
-      |> Planner.query(:update_all, repo, adapter)
-    adapter.update_all(repo, prepared, params, opts)
+    execute(:update_all, repo, adapter, queryable, opts)
   end
 
   @doc """
   Implementation for `Ecto.Repo.delete_all/2`
   """
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
-    {_meta, prepared, params} =
-      Queryable.to_query(queryable)
-      |> Planner.query(:delete_all, repo, adapter)
-    adapter.delete_all(repo, prepared, params, opts)
+    execute(:delete_all, repo, adapter, queryable, opts)
   end
 
   ## Helpers
+
+  def execute(operation, repo, adapter, queryable, opts) when is_list(opts) do
+    {meta, prepared, params} =
+      queryable
+      |> Queryable.to_query()
+      |> Planner.query(operation, repo, adapter)
+
+    if meta.select do
+      preprocess = preprocess(meta.prefix, meta.sources, adapter)
+      {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
+      {count,
+        rows
+        |> Ecto.Repo.Assoc.query(meta.assocs, meta.sources)
+        |> Ecto.Repo.Preloader.query(repo, meta.preloads, meta.assocs, postprocess(meta.select))}
+    else
+      adapter.execute(repo, meta, prepared, params, nil, opts)
+    end
+  end
 
   defp preprocess(prefix, sources, adapter) do
     &preprocess(&1, &2, prefix, sources, adapter)

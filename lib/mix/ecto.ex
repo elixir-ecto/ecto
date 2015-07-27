@@ -59,7 +59,6 @@ defmodule Mix.Ecto do
     {:ok, _} = Application.ensure_all_started(:ecto)
 
     case repo.start_link do
-      :ok -> {:ok, nil}
       {:ok, pid} -> {:ok, pid}
       {:error, {:already_started, _}} -> {:ok, nil}
       {:error, error} ->

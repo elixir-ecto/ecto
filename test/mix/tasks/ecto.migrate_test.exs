@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   defmodule Repo do
     def start_link do
       Process.put(:started, true)
-      :ok
+      Task.start_link fn -> :timer.sleep(:infinity) end
     end
 
     def __repo__ do

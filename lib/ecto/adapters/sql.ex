@@ -52,18 +52,8 @@ defmodule Ecto.Adapters.SQL do
       def prepare(:delete_all, query), do: {:cache, @conn.delete_all(query)}
 
       @doc false
-      def all(repo, meta, prepared, params, preprocess, opts) do
-        Ecto.Adapters.SQL.all(repo, meta, prepared, params, preprocess, opts)
-      end
-
-      @doc false
-      def update_all(repo, prepared, params, opts) do
-        Ecto.Adapters.SQL.count_all(repo, prepared, params, opts)
-      end
-
-      @doc false
-      def delete_all(repo, prepared, params, opts) do
-        Ecto.Adapters.SQL.count_all(repo, prepared, params, opts)
+      def execute(repo, meta, prepared, params, preprocess, opts) do
+        Ecto.Adapters.SQL.execute(repo, meta, prepared, params, preprocess, opts)
       end
 
       @doc false
@@ -126,10 +116,10 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
-      defoverridable [all: 6, update_all: 4, delete_all: 4,
-                      insert: 6, update: 7, delete: 5, prepare: 2,
-                      execute_ddl: 3, load: 2, dump: 2,
-                      embed_id: 1]
+      defoverridable [prepare: 2, execute: 6,
+                      insert: 6, update: 7, delete: 5,
+                      execute_ddl: 3, embed_id: 1,
+                      load: 2, dump: 2]
     end
   end
 
@@ -449,17 +439,16 @@ defmodule Ecto.Adapters.SQL do
   ## Query
 
   @doc false
-  def all(repo, meta, prepared, params, preprocess, opts) do
-    fields = count_fields(meta.select.fields, meta.sources)
-    mapper = &process_row(&1, preprocess, fields)
-    %{rows: rows} = query(repo, prepared, params, mapper, opts)
-    rows
+  def execute(repo, _meta, prepared, params, nil, opts) do
+    %{rows: rows, num_rows: num} = query(repo, prepared, params, nil, opts)
+    {num, rows}
   end
 
-  @doc false
-  def count_all(repo, sql, params, opts) do
-    %{num_rows: num} = query(repo, sql, params, opts)
-    {num, nil}
+  def execute(repo, meta, prepared, params, preprocess, opts) do
+    fields = count_fields(meta.select.fields, meta.sources)
+    mapper = &process_row(&1, preprocess, fields)
+    %{rows: rows, num_rows: num} = query(repo, prepared, params, mapper, opts)
+    {num, rows}
   end
 
   @doc false
