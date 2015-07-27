@@ -4,7 +4,10 @@ defmodule Ecto.TestAdapter do
   alias Ecto.Migration.SchemaMigration
 
   defmacro __before_compile__(_opts), do: :ok
-  def start_link(_repo, _opts), do: :ok
+
+  def start_link(_repo, _opts) do
+    Task.start_link(fn -> :timer.sleep(:infinity) end)
+  end
 
   ## Types
 
@@ -18,18 +21,25 @@ defmodule Ecto.TestAdapter do
 
   ## Queryable
 
-  def all(_repo, %{from: {_, SchemaMigration}}, _, _, _),
-    do: Enum.map(migrated_versions(), &List.wrap/1)
-  def all(_repo, _query, _params, _preprocess, _opts),
-    do: [[1]]
+  def prepare(operation, query), do: {:nocache, {operation, query}}
 
-  def update_all(_repo, _query, _params, _opts), do: {1, nil}
+  def execute(_repo, _, {:all, %{from: {_, SchemaMigration}}}, _, _, _) do
+    {length(migrated_versions()),
+     Enum.map(migrated_versions(), &List.wrap/1)}
+   end
 
-  def delete_all(_repo, %{from: {_, SchemaMigration}}, [version], _) do
+  def execute(_repo, _, {:all, _}, _, _, _) do
+    {1, [[1]]}
+  end
+
+  def execute(_repo, _meta, {:delete_all, %{from: {_, SchemaMigration}}}, [version], _, _) do
     Process.put(:migrated_versions, List.delete(migrated_versions(), version))
     {1, nil}
   end
-  def delete_all(_repo, _query, _params, _opts), do: {1, nil}
+
+  def execute(_repo, _meta, {_, _}, _params, _preprocess, _opts) do
+    {1, nil}
+  end
 
   ## Model
 
@@ -80,3 +90,5 @@ Application.put_env(:ecto, Ecto.TestRepo, [])
 defmodule Ecto.TestRepo do
   use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
 end
+
+Ecto.TestRepo.start_link()

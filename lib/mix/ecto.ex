@@ -50,7 +50,6 @@ defmodule Mix.Ecto do
   @spec ensure_started(Ecto.Repo.t) :: Ecto.Repo.t | no_return
   def ensure_started(repo) do
     case repo.start_link do
-      :ok -> repo
       {:ok, _} -> repo
       {:error, {:already_started, _}} -> repo
       {:error, error} ->

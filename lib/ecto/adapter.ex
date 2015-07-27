@@ -11,6 +11,7 @@ defmodule Ecto.Adapter do
   @type fields :: Keyword.t
   @type filters :: Keyword.t
   @type returning :: [atom]
+  @type prepared :: term
   @type preprocess :: (Macro.t, term -> term)
   @type autogenerate_id :: {field :: atom, type :: :id | :binary_id, value :: term} | nil
 
@@ -101,34 +102,30 @@ defmodule Ecto.Adapter do
               {:ok, pid} | :ok | {:error, {:already_started, pid}} | {:error, term}
 
   @doc """
-  Fetches all results from the data store based on the given query.
+  Commands invoked to prepare a query for `all`, `update_all` and `delete_all`.
 
-  It receives a preprocess function responsible that should be
-  invoked for each selected field in the query result in order
-  to convert them to the expected Ecto type.
+  The returned result is given to `execute/6`.
   """
-  defcallback all(repo, query :: Ecto.Query.t,
-                  params :: list(), preprocess, options) :: [[term]] | no_return
+  defcallback prepare(:all | :update_all | :delete_all, query :: Ecto.Query.t) ::
+              {:cache, prepared} | {:nocache, prepared}
 
   @doc """
-  Updates all entities matching the given query with the values given.
+  Executes a previously prepared query.
 
-  The query shall only have `where` and `join` expressions and a
-  single `from` expression. It returns a tuple containing the number
-  of entries and any returned result as second element
+  It must return a tuple containing the number of entries and
+  the result set as a list of lists. The result set may also be
+  `nil` if a particular operation does not support them.
+
+  The `meta` field is a map containing some of the fields found
+  in the `Ecto.Query` struct.
+
+  It receives a preprocess function that should be invoked for each
+  selected field in the query result in order to convert them to the
+  expected Ecto type. The `preprocess` function will be nil if no
+  result set is expected from the query.
   """
-  defcallback update_all(repo, query :: Ecto.Query.t,
-                         params :: list(), options) :: {integer, nil} | no_return
-
-  @doc """
-  Deletes all entities matching the given query.
-
-  The query shall only have `where` and `join` expressions and a
-  single `from` expression. It returns a tuple containing the number
-  of entries and any returned result as second element
-  """
-  defcallback delete_all(repo, query :: Ecto.Query.t,
-                         params :: list(), options :: Keyword.t) :: {integer, nil} | no_return
+  defcallback execute(repo, meta :: map, prepared, params :: list(), preprocess | nil, options) ::
+              {integer, [[term]] | nil} | no_return
 
   @doc """
   Inserts a single new model in the data store.
