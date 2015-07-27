@@ -39,7 +39,7 @@ defmodule Ecto.Query do
 
   ## Query expressions
 
-  Ecto allows a limitted set of expressions inside queries. In the
+  Ecto allows a limited set of expressions inside queries. In the
   query below, for example, we use `w.prcp` to access a field, the
   `>` comparison operator and the literal `0`:
 
