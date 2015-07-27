@@ -11,8 +11,9 @@ defmodule Ecto.Query.Builder.DistinctTest do
     assert {Macro.escape(quote do [&0.x, &1.y] end), %{}} ==
            escape(quote do [x.x, y.y] end, [x: 0, y: 1], __ENV__)
 
-    assert {Macro.escape(quote do [1 == 2] end), %{}} ==
-      escape(quote do 1 == 2 end, [], __ENV__)
+    import Kernel, except: [>: 2]
+    assert {Macro.escape(quote do [1 > 2] end), %{}} ==
+           escape(quote do 1 > 2 end, [], __ENV__)
   end
 
   test "escape raise" do

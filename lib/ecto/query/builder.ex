@@ -47,29 +47,29 @@ defmodule Ecto.Query.Builder do
   end
 
   # tagged types
-  def escape({:type, meta, [{:^, _, [arg]}, type]}, _type, params, vars, _env) do
+  def escape({:type, _, [{:^, _, [arg]}, type]}, _type, params, vars, _env) do
     {type, escaped} = validate_type!(type, vars)
     index  = Map.size(params)
     params = Map.put(params, index, {arg, type})
 
-    expr = {:{}, [], [:type, meta, [{:{}, [], [:^, [], [index]]}, escaped]]}
+    expr = {:{}, [], [:type, [], [{:{}, [], [:^, [], [index]]}, escaped]]}
     {expr, params}
   end
 
   # fragments
-  def escape({:fragment, meta, [query]}, _type, params, vars, env) when is_list(query) do
+  def escape({:fragment, _, [query]}, _type, params, vars, env) when is_list(query) do
     {escaped, params} = Enum.map_reduce(query, params, &escape_fragment(&1, :any, &2, vars, env))
 
-    {{:{}, [], [:fragment, meta, [escaped]]}, params}
+    {{:{}, [], [:fragment, [], [escaped]]}, params}
   end
 
-  def escape({:fragment, meta, [{:^, _, _} = expr]}, _type, params, vars, env) do
+  def escape({:fragment, _, [{:^, _, _} = expr]}, _type, params, vars, env) do
     {escaped, params} = escape(expr, :any, params, vars, env)
 
-    {{:{}, [], [:fragment, meta, [escaped]]}, params}
+    {{:{}, [], [:fragment, [], [escaped]]}, params}
   end
 
-  def escape({:fragment, meta, [query|frags]}, _type, params, vars, env) when is_binary(query) do
+  def escape({:fragment, _, [query|frags]}, _type, params, vars, env) when is_binary(query) do
     pieces = String.split(query, "?")
 
     if length(pieces) != length(frags) + 1 do
@@ -77,7 +77,7 @@ defmodule Ecto.Query.Builder do
     end
 
     {frags, params} = Enum.map_reduce(frags, params, &escape(&1, :any, &2, vars, env))
-    {{:{}, [], [:fragment, meta, merge_fragments(pieces, frags)]}, params}
+    {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params}
   end
 
   def escape({:fragment, _, [query | _]}, _type, _params, _vars, _env) do
@@ -86,18 +86,18 @@ defmodule Ecto.Query.Builder do
   end
 
   # interval
-  def escape({:datetime_add, meta, [datetime, count, interval]} = expr, type, params, vars, env) do
+  def escape({:datetime_add, _, [datetime, count, interval]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :datetime)
     {datetime, params} = escape(datetime, :datetime, params, vars, env)
     {count, interval, params} = escape_interval(count, interval, params, vars, env)
-    {{:{}, [], [:datetime_add, meta, [datetime, count, interval]]}, params}
+    {{:{}, [], [:datetime_add, [], [datetime, count, interval]]}, params}
   end
 
-  def escape({:date_add, meta, [date, count, interval]} = expr, type, params, vars, env) do
+  def escape({:date_add, _, [date, count, interval]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :date)
     {date, params} = escape(date, :date, params, vars, env)
     {count, interval, params} = escape_interval(count, interval, params, vars, env)
-    {{:{}, [], [:date_add, meta, [date, count, interval]]}, params}
+    {{:{}, [], [:date_add, [], [date, count, interval]]}, params}
   end
 
   # sigils
@@ -127,7 +127,7 @@ defmodule Ecto.Query.Builder do
     do: {nil, params}
 
   # comparison operators
-  def escape({comp_op, meta, [left, right]} = expr, type, params, vars, env) when comp_op in ~w(== != < > <= >=)a do
+  def escape({comp_op, _, [left, right]} = expr, type, params, vars, env) when comp_op in ~w(== != < > <= >=)a do
     assert_type!(expr, type, :boolean)
 
     if is_nil(left) or is_nil(right) do
@@ -140,11 +140,11 @@ defmodule Ecto.Query.Builder do
 
     {left,  params} = escape(left, ltype, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
-    {{:{}, [], [comp_op, meta, [left, right]]}, params}
+    {{:{}, [], [comp_op, [], [left, right]]}, params}
   end
 
   # in operator
-  def escape({:in, meta, [left, right]} = expr, type, params, vars, env)
+  def escape({:in, _, [left, right]} = expr, type, params, vars, env)
       when is_list(right)
       when is_tuple(right) and elem(right, 0) in ~w(sigil_w sigil_W)a do
     assert_type!(expr, type, :boolean)
@@ -154,10 +154,10 @@ defmodule Ecto.Query.Builder do
 
     {left,  params} = escape(left, ltype, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
-    {{:{}, [], [:in, meta, [left, right]]}, params}
+    {{:{}, [], [:in, [], [left, right]]}, params}
   end
 
-  def escape({:in, meta, [left, {:^, _, _} = right]} = expr, type, params, vars, env) do
+  def escape({:in, _, [left, {:^, _, _} = right]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :boolean)
 
     # The rtype in will be unwrapped in the query planner
@@ -166,10 +166,10 @@ defmodule Ecto.Query.Builder do
 
     {left,  params} = escape(left, ltype, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
-    {{:{}, [], [:in, meta, [left, right]]}, params}
+    {{:{}, [], [:in, [], [left, right]]}, params}
   end
 
-  def escape({:in, meta, [left, right]} = expr, type, params, vars, env) do
+  def escape({:in, _, [left, right]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :boolean)
 
     ltype = quoted_type(right, vars)
@@ -178,7 +178,7 @@ defmodule Ecto.Query.Builder do
     # The ltype in will be unwrapped in the query planner
     {left,  params} = escape(left, {:in_array, ltype}, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
-    {{:{}, [], [:in, meta, [left, right]]}, params}
+    {{:{}, [], [:in, [], [left, right]]}, params}
   end
 
   # Other functions - no type casting
@@ -203,9 +203,9 @@ defmodule Ecto.Query.Builder do
     error! "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
-  defp escape_call({name, meta, args}, type, params, vars, env) do
+  defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
-    expr = {:{}, [], [name, meta, args]}
+    expr = {:{}, [], [name, [], args]}
     {expr, params}
   end
 

@@ -231,6 +231,25 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "prepare: generates a cache key if appropriate" do
+    {_query, _params, key} = prepare(from(Post, []))
+    assert key == [:all, {"posts", Post}]
+
+    query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil),
+                            join: c in Comment, preload: :comments)
+    {_query, _params, key} = prepare(%{query | prefix: "foo"})
+    assert key == [:all, {"posts", Ecto.Query.PlannerTest.Post},
+                   lock: "foo",
+                   prefix: "foo",
+                   where: [{:is_nil, [], [nil]}],
+                   join: [{:inner, {"comments", Ecto.Query.PlannerTest.Comment}, true}],
+                   select: 1]
+
+    query = from(p in Post, where: p.id in ^[1, 2, 3])
+    {_query, _params, key} = prepare(query)
+    assert key == :nocache
+  end
+
   test "normalize: tagged types" do
     {query, params} = from(Post, []) |> select([p], type(^"1", :integer))
                                      |> normalize_with_params

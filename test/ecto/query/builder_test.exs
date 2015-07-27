@@ -12,11 +12,12 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do &0.y end), %{}} ==
            escape(quote do x.y end, [x: 0], __ENV__)
 
-    assert {Macro.escape(quote do &0.y == &0.z end), %{}} ==
-           escape(quote do x.y == x.z end, [x: 0], __ENV__)
+    import Kernel, except: [>: 2]
+    assert {Macro.escape(quote do &0.y > &0.z end), %{}} ==
+           escape(quote do x.y > x.z end, [x: 0], __ENV__)
 
-    assert {Macro.escape(quote do &0.y == &1.z end), %{}} ==
-           escape(quote do x.y == y.z end, [x: 0, y: 1], __ENV__)
+    assert {Macro.escape(quote do &0.y > &1.z end), %{}} ==
+           escape(quote do x.y > y.z end, [x: 0, y: 1], __ENV__)
 
     assert {Macro.escape(quote do avg(0) end), %{}} ==
            escape(quote do avg(0) end, [], __ENV__)
@@ -28,7 +29,10 @@ defmodule Ecto.Query.BuilderTest do
            escape(quote do <<0,1,2>> end, [], __ENV__)
 
     assert quote(do: &0.z) ==
-           escape(quote do field(x, :z) end, [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__) |> elem(0)
+           escape(quote do field(x, :z) end, [x: 0], __ENV__)
+           |> elem(0)
+           |> Code.eval_quoted([], __ENV__)
+           |> elem(0)
   end
 
   test "escape fragments" do
@@ -88,14 +92,15 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "doesn't escape interpolation" do
-    assert {Macro.escape(quote(do: ^0)), %{0 => {quote(do: 1 == 2), :any}}} ==
-           escape(quote(do: ^(1 == 2)), [], __ENV__)
+    import Kernel, except: [>: 2, ++: 2]
+    assert {Macro.escape(quote(do: ^0)), %{0 => {quote(do: 1 > 2), :any}}} ==
+           escape(quote(do: ^(1 > 2)), [], __ENV__)
 
     assert {Macro.escape(quote(do: ^0)), %{0 => {quote(do: [] ++ []), :any}}} ==
            escape(quote(do: ^([] ++ [])), [], __ENV__)
 
-    assert {Macro.escape(quote(do: ^0 == ^1)), %{0 => {1, :any}, 1 => {2, :any}}} ==
-           escape(quote(do: ^1 == ^2), [], __ENV__)
+    assert {Macro.escape(quote(do: ^0 > ^1)), %{0 => {1, :any}, 1 => {2, :any}}} ==
+           escape(quote(do: ^1 > ^2), [], __ENV__)
   end
 
   defp params(quoted, type, vars \\ []) do
