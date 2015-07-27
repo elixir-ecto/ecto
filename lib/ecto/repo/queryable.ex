@@ -12,13 +12,12 @@ defmodule Ecto.Repo.Queryable do
   Implementation for `Ecto.Repo.all/2`
   """
   def all(repo, adapter, queryable, opts) when is_list(opts) do
-    {query, params} =
-      Queryable.to_query(queryable)
-      |> Planner.query(:all, adapter)
+    query = Queryable.to_query(queryable)
+    {meta, prepared, params} = Planner.query(query, :all, repo, adapter)
 
-    adapter.all(repo, query, params, preprocess(query.prefix, query.sources, adapter), opts)
-    |> Ecto.Repo.Assoc.query(query)
-    |> Ecto.Repo.Preloader.query(repo, query, postprocess(query.select))
+    adapter.all(repo, meta, prepared, params, preprocess(meta.prefix, meta.sources, adapter), opts)
+    |> Ecto.Repo.Assoc.query(query.assocs, meta.sources)
+    |> Ecto.Repo.Preloader.query(repo, query.preloads, query.assocs, postprocess(meta.select))
   end
 
   @doc """
@@ -78,20 +77,20 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp update_all(repo, adapter, queryable, opts) do
-    {query, params} =
+    {_meta, prepared, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:update_all, adapter)
-    adapter.update_all(repo, query, params, opts)
+      |> Planner.query(:update_all, repo, adapter)
+    adapter.update_all(repo, prepared, params, opts)
   end
 
   @doc """
   Implementation for `Ecto.Repo.delete_all/2`
   """
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
-    {query, params} =
+    {_meta, prepared, params} =
       Queryable.to_query(queryable)
-      |> Planner.query(:delete_all, adapter)
-    adapter.delete_all(repo, query, params, opts)
+      |> Planner.query(:delete_all, repo, adapter)
+    adapter.delete_all(repo, prepared, params, opts)
   end
 
   ## Helpers

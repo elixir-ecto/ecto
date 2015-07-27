@@ -20,6 +20,7 @@ defmodule Ecto.Repo.Supervisor do
       supervisor(adapter, [repo, opts])
     ]
 
+    :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
     supervise(children, strategy: :one_for_one)
   end
 end
