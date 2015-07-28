@@ -1,7 +1,7 @@
-defmodule Ecto.Repo.ConfigTest do
+defmodule Ecto.Repo.SupervisorTest do
   use ExUnit.Case, async: true
 
-  import Ecto.Repo.Config
+  import Ecto.Repo.Supervisor
 
   defp put_env(env) do
     Application.put_env(:ecto, __MODULE__, env)
@@ -9,20 +9,20 @@ defmodule Ecto.Repo.ConfigTest do
 
   test "reads otp app configuration" do
     put_env(database: "hello")
-    assert config(:ecto, __MODULE__) == [otp_app: :ecto, repo: __MODULE__, database: "hello"]
+    assert config(__MODULE__, :ecto, []) == [otp_app: :ecto, repo: __MODULE__, database: "hello"]
   end
 
   test "merges url into configuration" do
     put_env(database: "hello", url: "ecto://eric:hunter2@host:12345/mydb")
-    assert config(:ecto, __MODULE__) ==
+    assert config(__MODULE__, :ecto, [extra: "extra"]) ==
            [otp_app: :ecto, repo: __MODULE__, username: "eric", password: "hunter2",
-            database: "mydb", hostname: "host", port: 12345]
+            database: "mydb", hostname: "host", port: 12345, extra: "extra"]
   end
 
   test "merges system url into configuration" do
     System.put_env("ECTO_REPO_CONFIG_URL", "ecto://eric:hunter2@host:12345/mydb")
     put_env(database: "hello", url: {:system, "ECTO_REPO_CONFIG_URL"})
-    assert config(:ecto, __MODULE__) ==
+    assert config(__MODULE__, :ecto, []) ==
            [otp_app: :ecto, repo: __MODULE__, username: "eric", password: "hunter2",
             database: "mydb", hostname: "host", port: 12345]
   end

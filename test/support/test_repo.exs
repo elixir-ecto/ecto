@@ -5,7 +5,17 @@ defmodule Ecto.TestAdapter do
 
   defmacro __before_compile__(_opts), do: :ok
 
-  def start_link(_repo, _opts) do
+  def start_link(_repo, opts) do
+    Ecto.TestRepo.Pool = opts[:pool_name]
+    Ecto.Pools.Poolboy = opts[:pool]
+    Ecto.TestRepo      = opts[:repo]
+
+    :ecto   = opts[:otp_app]
+    "user"  = opts[:username]
+    "pass"  = opts[:password]
+    "hello" = opts[:database]
+    "local" = opts[:hostname]
+
     Task.start_link(fn -> :timer.sleep(:infinity) end)
   end
 
@@ -85,10 +95,10 @@ defmodule Ecto.TestAdapter do
   end
 end
 
-Application.put_env(:ecto, Ecto.TestRepo, [])
+Application.put_env(:ecto, Ecto.TestRepo, [user: "invalid"])
 
 defmodule Ecto.TestRepo do
   use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
 end
 
-Ecto.TestRepo.start_link()
+Ecto.TestRepo.start_link(url: "ecto://user:pass@local/hello")

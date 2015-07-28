@@ -61,7 +61,7 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter, pool, config} = Ecto.Repo.Config.parse(__MODULE__, opts)
+      {otp_app, adapter, pool, config} = Ecto.Repo.Supervisor.parse_config(__MODULE__, opts)
       @otp_app otp_app
       @adapter adapter
       @config  config
@@ -73,12 +73,11 @@ defmodule Ecto.Repo do
       @log_level config[:log_level] || :debug
 
       def config do
-        Ecto.Repo.Config.config(@otp_app, __MODULE__)
+        Ecto.Repo.Supervisor.config(__MODULE__, @otp_app, [])
       end
 
-      def start_link(custom_config \\ []) do
-        config = Keyword.merge(config(), custom_config)
-        Ecto.Repo.Supervisor.start_link(__MODULE__, @adapter, config)
+      def start_link(opts \\ []) do
+        Ecto.Repo.Supervisor.start_link(__MODULE__, @otp_app, @adapter, opts)
       end
 
       def transaction(opts \\ [], fun) when is_list(opts) do
