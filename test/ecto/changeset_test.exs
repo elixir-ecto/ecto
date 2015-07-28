@@ -11,6 +11,7 @@ defmodule Ecto.ChangesetTest do
       field :title
       field :body
       field :uuid, :binary_id
+      field :decimal, :decimal
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
       field :published_at, Ecto.DateTime
@@ -18,7 +19,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(model \\ %Post{}, params) do
-    cast(model, params, ~w(), ~w(title body upvotes topics))
+    cast(model, params, ~w(), ~w(title body upvotes topics decimal))
   end
 
   ## cast/4
@@ -813,6 +814,33 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0, message: "yada")
     assert changeset.errors == [upvotes: {"yada", count: 100}]
+
+    # Validations on Decimal
+    changeset = changeset(%{"decimal" => Decimal.new(1)})
+                |> validate_number(:decimal, greater_than: Decimal.new(-3))
+    assert changeset.valid?
+
+    changeset = changeset(%{"decimal" => Decimal.new(-3)})
+                |> validate_number(:decimal, less_than: Decimal.new(1))
+    assert changeset.valid?
+
+    changeset = changeset(%{"decimal" => Decimal.new(-1)})
+                |> validate_number(:decimal, equal_to: Decimal.new(-1))
+    assert changeset.valid?
+
+    changeset = changeset(%{"decimal" => Decimal.new(-3)})
+                |> validate_number(:decimal, less_than_or_equal_to: Decimal.new(-1))
+    assert changeset.valid?
+    changeset = changeset(%{"decimal" => Decimal.new(-3)})
+                |> validate_number(:decimal, less_than_or_equal_to: Decimal.new(-3))
+    assert changeset.valid?
+
+    changeset = changeset(%{"decimal" => Decimal.new(-1)})
+                |> validate_number(:decimal, greater_than_or_equal_to: Decimal.new(-1.5))
+    assert changeset.valid?
+    changeset = changeset(%{"decimal" => Decimal.new(1.5)})
+                |> validate_number(:decimal, greater_than_or_equal_to: Decimal.new(1.5))
+    assert changeset.valid?
   end
 
   test "validate_confirmation/3" do
