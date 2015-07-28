@@ -1095,6 +1095,18 @@ defmodule Ecto.Changeset do
     end
   end
 
+  defp validate_number(field, %Decimal{} = value, opts, spec_key, target_value) do
+    case Map.fetch(@number_validators, spec_key) do
+      {:ok, {_spec_function, error_message}} ->
+        result = Decimal.compare(value, target_value)
+        case decimal_compare(result, spec_key) do
+          true  -> nil
+          false -> [{field, {message(opts, error_message), count: target_value}}]
+        end
+      _ -> nil
+    end
+  end
+
   defp validate_number(field, value, opts, spec_key, target_value) do
     case Map.fetch(@number_validators, spec_key) do
       {:ok, {spec_function, error_message}} ->
@@ -1104,6 +1116,26 @@ defmodule Ecto.Changeset do
         end
       _ -> nil # if the spec_key isn't in the validators_map just ignore it
     end
+  end
+
+  defp decimal_compare(result, :less_than) do
+    Decimal.equal?(result, Decimal.new(-1))
+  end
+
+  defp decimal_compare(result, :greater_than) do
+    Decimal.equal?(result, Decimal.new(1))
+  end
+
+  defp decimal_compare(result, :equal_to) do
+    Decimal.equal?(result, Decimal.new(0))
+  end
+
+  defp decimal_compare(result, :less_than_or_equal_to) do
+    decimal_compare(result, :less_than) or decimal_compare(result, :equal_to)
+  end
+
+  defp decimal_compare(result, :greater_than_or_equal_to) do
+    decimal_compare(result, :greater_than) or decimal_compare(result, :equal_to)
   end
 
   @doc """
