@@ -94,7 +94,7 @@ defmodule Ecto.Type do
   For example, if you want to provide your own datetime
   structures, the type function should return `:datetime`.
   """
-  defcallback type :: base | custom
+  defcallback type :: t
 
   @doc """
   Casts the given input to the custom type.
