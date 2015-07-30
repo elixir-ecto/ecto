@@ -58,8 +58,8 @@ defmodule Ecto.Repo.Model do
     changeset = %{changeset | repo: repo, action: :insert}
     changeset = insert_changes(struct, fields, embeds, changeset)
 
-    with_transactions_if_callbacks repo, adapter, model, opts, embeds,
-                                   ~w(before_insert after_insert)a, fn ->
+    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
+                        ~w(before_insert after_insert)a, fn ->
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
       changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :insert, :before)
 
@@ -81,10 +81,9 @@ defmodule Ecto.Repo.Model do
         {:ok, changeset} ->
           {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
         {:error, changeset} ->
-          # Rollback?
           {:error, %{changeset | valid?: false}}
       end
-    end
+    end)
   end
 
   def insert(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
@@ -103,6 +102,7 @@ defmodule Ecto.Repo.Model do
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
     embeds   = model.__schema__(:embeds)
+    assocs   = model.__schema__(:associations)
     {prefix, source} = struct.__meta__.source
     return   = model.__schema__(:read_after_writes)
 
@@ -112,8 +112,8 @@ defmodule Ecto.Repo.Model do
     changeset = %{changeset | repo: repo, action: :update}
 
     if changeset.changes != %{} or opts[:force] do
-      with_transactions_if_callbacks repo, adapter, model, opts, embeds,
-                                     ~w(before_update after_update)a, fn ->
+      wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
+                          ~w(before_update after_update)a, fn ->
         changeset = Callbacks.__apply__(model, :before_update, changeset)
         changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :update, :before)
 
@@ -140,7 +140,7 @@ defmodule Ecto.Repo.Model do
         changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :update, :after)
         changeset = load_changes(changeset, values, adapter)
         {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
-      end
+      end)
     else
       {:ok, changeset.model}
     end
@@ -169,14 +169,15 @@ defmodule Ecto.Repo.Model do
     model  = struct.__struct__
     {prefix, source} = struct.__meta__.source
     embeds = model.__schema__(:embeds)
+    assocs = model.__schema__(:associations)
 
     # We mark all embeds for deletion, and ignore other changes in changeset
     changeset = %{changeset | repo: repo, action: :delete}
     changeset = delete_changes(changeset, model)
     autogen   = get_autogenerate_id(changeset, model)
 
-    with_transactions_if_callbacks repo, adapter, model, opts, embeds,
-                                   ~w(before_delete after_delete)a, fn ->
+    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
+                        ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
       changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :delete, :before)
 
@@ -194,7 +195,7 @@ defmodule Ecto.Repo.Model do
       changeset = load_changes(changeset, [], adapter)
       model = Callbacks.__apply__(model, :after_delete, changeset).model
       {:ok, put_in(model.__meta__.state, :deleted)}
-    end
+    end)
   end
 
   def delete(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
@@ -372,11 +373,18 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  defp with_transactions_if_callbacks(repo, adapter, model, opts, embeds, callbacks, fun) do
-    if (embeds != [] or Enum.any?(callbacks, &function_exported?(model, &1, 1))) and
+  defp wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, callbacks, fun) do
+    if (embeds != [] or
+        assocs != [] or
+        Enum.any?(callbacks, &function_exported?(model, &1, 1))) and
        function_exported?(adapter, :transaction, 3) do
-      {:ok, value} = adapter.transaction(repo, opts, fun)
-      value
+
+      adapter.transaction(repo, opts, fn ->
+        case fun.() do
+          {:ok, model} -> model
+          {:error, _} = error -> adapter.rollback(repo, error)
+        end
+      end)
     else
       fun.()
     end

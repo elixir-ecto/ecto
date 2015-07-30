@@ -421,14 +421,14 @@ defmodule Ecto.RepoTest do
     assert model.embeds == [%{embed | id: id}]
 
     # Raises if action is update
-    embed_changeset = Ecto.Changeset.change(embed) |> Map.put(:action, :update)
+    embed_changeset = %{Ecto.Changeset.change(embed) | action: :update}
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
     assert_raise ArgumentError, ~r"got action :update in changeset for embedded .* while inserting", fn ->
       TestRepo.insert!(changeset)
     end
 
     # Raises if action is delete
-    embed_changeset = Ecto.Changeset.change(embed) |> Map.put(:action, :delete)
+    embed_changeset = %{Ecto.Changeset.change(embed) | action: :delete}
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
     assert_raise ArgumentError, ~r"got action :delete in changeset for embedded .* while inserting", fn ->
       TestRepo.insert!(changeset)
@@ -490,7 +490,7 @@ defmodule Ecto.RepoTest do
     assoc = %{assoc | id: 1}
 
     # Action update -> moving from one model to another
-    assoc_changeset = Ecto.Changeset.change(assoc) |> Map.put(:action, :update)
+    assoc_changeset = %{Ecto.Changeset.change(assoc) | action: :update}
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
     model = TestRepo.insert!(changeset)
     assert [{:after_insert, MyModel}, {:after_update, MyAssoc},
@@ -503,11 +503,18 @@ defmodule Ecto.RepoTest do
     assert model.assoc == inserted_assoc
 
     # Raises if action is delete
-    assoc_changeset = Ecto.Changeset.change(assoc) |> Map.put(:action, :delete)
+    assoc_changeset = %{Ecto.Changeset.change(assoc) | action: :delete}
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
     assert_raise ArgumentError, ~r"got action :delete in changeset for associated .* while inserting", fn ->
       TestRepo.insert!(changeset)
     end
+
+    # Returns error and rollbacks on invalid children
+    assoc_changeset = %{Ecto.Changeset.change(assoc) | valid?: false}
+    changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
+    assert {:error, changeset} = TestRepo.insert(changeset)
+    assert_received {:rollback, {:error, changeset}}
+    refute changeset.valid?
   end
 
   test "handles nested embeds on insert" do

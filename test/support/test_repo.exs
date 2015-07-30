@@ -76,7 +76,17 @@ defmodule Ecto.TestAdapter do
   def transaction(_repo, _opts, fun) do
     # Makes transactions "trackable" in tests
     send self, {:transaction, fun}
-    {:ok, fun.()}
+    try do
+      {:ok, fun.()}
+    catch
+      :throw, {:ecto_rollback, value} ->
+        value
+    end
+  end
+
+  def rollback(_repo, value) do
+    send self, {:rollback, value}
+    throw {:ecto_rollback, value}
   end
 
   ## Migrations
