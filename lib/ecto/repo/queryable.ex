@@ -19,22 +19,22 @@ defmodule Ecto.Repo.Queryable do
   Implementation for `Ecto.Repo.get/3`
   """
   def get(repo, adapter, queryable, id, opts) do
-    one(repo, adapter, query_for_get(queryable, id), opts)
+    one(repo, adapter, query_for_get(repo, queryable, id), opts)
   end
 
   @doc """
   Implementation for `Ecto.Repo.get!/3`
   """
   def get!(repo, adapter, queryable, id, opts) do
-    one!(repo, adapter, query_for_get(queryable, id), opts)
+    one!(repo, adapter, query_for_get(repo, queryable, id), opts)
   end
 
   def get_by(repo, adapter, queryable, clauses, opts) do
-    one(repo, adapter, query_for_get_by(queryable, clauses), opts)
+    one(repo, adapter, query_for_get_by(repo, queryable, clauses), opts)
   end
 
   def get_by!(repo, adapter, queryable, clauses, opts) do
-    one!(repo, adapter, query_for_get_by(queryable, clauses), opts)
+    one!(repo, adapter, query_for_get_by(repo, queryable, clauses), opts)
   end
 
   @doc """
@@ -177,16 +177,23 @@ defmodule Ecto.Repo.Queryable do
     {value, values}
   end
 
-  defp query_for_get(queryable, id) do
+  defp query_for_get(repo, _queryable, nil) do
+    raise ArgumentError, "cannot perform #{inspect repo}.get/2 because the given value is nil"
+  end
+
+  defp query_for_get(_repo, queryable, id) do
     query = Queryable.to_query(queryable)
     model = assert_model!(query)
     primary_key = primary_key_field!(model)
     Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
   end
 
-  defp query_for_get_by(queryable, clauses) do
-    Enum.reduce(clauses, queryable, fn({field, value}, query) ->
-      query |> Ecto.Query.where([x], field(x, ^field) == ^value)
+  defp query_for_get_by(repo, queryable, clauses) do
+    Enum.reduce(clauses, queryable, fn
+      {field, nil}, query ->
+        raise ArgumentError, "cannot perform #{inspect repo}.get_by/2 because #{inspect field} is nil"
+      {field, value}, query ->
+        query |> Ecto.Query.where([x], field(x, ^field) == ^value)
     end)
   end
 

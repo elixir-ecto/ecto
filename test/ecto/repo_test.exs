@@ -134,6 +134,11 @@ defmodule Ecto.RepoTest do
   test "validates get" do
     TestRepo.get(MyModel, 123)
 
+    message = "cannot perform Ecto.TestRepo.get/2 because the given value is nil"
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.get(MyModel, nil)
+    end
+
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
     assert_raise Ecto.CastError, message, fn ->
       TestRepo.get(MyModel, :atom)
@@ -142,6 +147,20 @@ defmodule Ecto.RepoTest do
     message = ~r"expected a from expression with a model in query"
     assert_raise Ecto.QueryError, message, fn ->
       TestRepo.get(%Ecto.Query{}, :atom)
+    end
+  end
+
+  test "validates get_by" do
+    TestRepo.get_by(MyModel, id: 123)
+
+    message = "cannot perform Ecto.TestRepo.get_by/2 because :id is nil"
+    assert_raise ArgumentError, message, fn ->
+      TestRepo.get_by(MyModel, id: nil)
+    end
+
+    message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
+    assert_raise Ecto.CastError, message, fn ->
+      TestRepo.get_by(MyModel, id: :atom)
     end
   end
 
