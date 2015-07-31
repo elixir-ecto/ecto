@@ -165,7 +165,7 @@ Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0
   * Add `force_change/3` to force a change into a changeset
 
 * Bug fixes
-  * `put_change/3`, `put_new_change/3` and `change/2` in `Ecto.Changeset` also verify the model value before storing the change
+  * `put_change/3` and `change/2` in `Ecto.Changeset` also verify the model value before storing the change
 
 ## v0.11.0 (2015-05-04)
 
@@ -268,7 +268,6 @@ Release notes at: https://github.com/elixir-lang/ecto/releases/tag/v0.12.0
 
 * Enhancements
   * Allow changesets to be merged with `Ecto.Changeset.merge/2`
-  * Add `Ecto.Changeset.put_new_change/3`
   * Support the `:using` option for indexes in Postgres
   * Support adding/dropping indexes concurrently with Postgres
   * Allow expressions to be given as default when adding columns via `fragment/1`

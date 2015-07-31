@@ -436,25 +436,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.upvotes == 5
   end
 
-  test "put_new_change/3" do
-    changeset = change(%Post{upvotes: 5})
-
-    changeset = put_change(changeset, :title, "foo")
-    assert changeset.changes.title == "foo"
-
-    changeset = put_new_change(changeset, :title, "bar")
-    assert changeset.changes.title == "foo"
-
-    changeset = put_new_change(changeset, :body, "body")
-    assert changeset.changes.body == "body"
-
-    changeset = put_new_change(changeset, :upvotes, 5)
-    refute Map.has_key?(changeset.changes, :upvotes)
-
-    changeset = put_new_change(changeset, :upvotes, 10)
-    assert changeset.changes.upvotes == 10
-  end
-
   test "apply_changes/1" do
     post = %Post{}
     assert post.title == nil
