@@ -117,6 +117,7 @@ defmodule Ecto.Repo.Model do
         changeset = Callbacks.__apply__(model, :before_update, changeset)
         changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :update, :before)
 
+        {assoc_changes, changeset} = pop_assoc_changesets(changeset, assocs)
         autogen = get_autogenerate_id(changeset.changes, model)
         changes = validate_changes(:update, changeset.changes, model, fields, adapter)
 
@@ -137,9 +138,18 @@ defmodule Ecto.Repo.Model do
 
         # As in inserts, embeds can't be `read_after_writes` so we don't care
         # about values returned from the adapter
-        changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :update, :after)
-        changeset = load_changes(changeset, values, adapter)
-        {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
+        return =
+          changeset
+          |> Ecto.Embedded.apply_callbacks(embeds, adapter, :update, :after)
+          |> load_changes(values, adapter)
+          |> process_nested(assoc_changes, repo, opts)
+
+        case return do
+          {:ok, changeset} ->
+            {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
+          {:error, changeset} ->
+            {:error, %{changeset | valid?: false}}
+        end
       end)
     else
       {:ok, changeset.model}
@@ -173,10 +183,11 @@ defmodule Ecto.Repo.Model do
 
     # We mark all embeds for deletion, and ignore other changes in changeset
     changeset = %{changeset | repo: repo, action: :delete}
-    changeset = delete_changes(changeset, model)
+    changeset = delete_changes(changeset, embeds, assocs)
     autogen   = get_autogenerate_id(changeset, model)
 
-    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
+    # We eliminate all assocs, so no need to check here
+    wrap_in_transaction(repo, adapter, model, opts, embeds, [],
                         ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
       changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :delete, :before)
@@ -239,13 +250,19 @@ defmodule Ecto.Repo.Model do
     put_in model.__meta__.state, :loaded
   end
 
-  defp delete_changes(changeset, model) do
+  defp delete_changes(changeset, embeds, assocs) do
     types = changeset.types
     embeds =
-      Enum.map(model.__schema__(:embeds), fn field ->
+      Enum.map(embeds, fn field ->
         {:embed, embed} = Map.get(types, field)
         {field, Ecto.Changeset.Relation.empty(embed)}
       end)
+
+    {assoc_changes, changeset} = pop_assoc_changesets(changeset, assocs)
+    if map_size(assoc_changes) > 0 do
+      raise ArgumentError, "nested association changes are not allowed on delete, but got `#{inspect assoc_changes}`"
+    end
+
 
     changeset = %{changeset | changes: %{}}
     Ecto.Changeset.change(changeset, embeds)
@@ -278,10 +295,10 @@ defmodule Ecto.Repo.Model do
     changes = changeset.changes
 
     {model, changes, valid?} =
-      Enum.reduce(assocs, {model, changes, true}, fn {field, changes}, acc ->
+      Enum.reduce(assocs, {model, changes, true}, fn {field, changeset}, acc ->
         {:assoc, assoc} = Map.get(types, field)
-        process_nested(assoc, field, changes, parent_key(assoc, model), repo, opts,
-                       action, acc)
+        process_nested(assoc, field, changeset, parent_key(assoc, model),
+                       repo, opts, action, acc)
       end)
 
     if valid? do
@@ -323,13 +340,14 @@ defmodule Ecto.Repo.Model do
   defp do_process_nested(%Ecto.Changeset{action: action} = changeset, {key, value},
                          repo, opts, parent_action) do
     check_action!(action, parent_action, changeset.model.__struct__)
-    new_changeset = update_in changeset.changes, &Map.put(&1, key, value)
-    case apply(repo, action, [new_changeset, opts]) do
+
+    original = Map.get(changeset.changes, key)
+    changeset = update_in changeset.changes, &Map.put(&1, key, value)
+    case apply(repo, action, [changeset, opts]) do
       {:ok, _} = success ->
         success
       {:error, changeset} ->
-        # We don't want to have the parent key there, as we're not saving
-        {:error, update_in(changeset.changes, &Map.delete(&1, key))}
+        {:error, update_in(changeset.changes, &Map.put(&1, key, original))}
     end
   end
 

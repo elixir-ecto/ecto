@@ -184,7 +184,7 @@ defmodule Ecto.Changeset.Relation do
     do: get_pk(new, new_pk) == get_pk(current, current_pk)
 
   defp get_pk(%Changeset{model: model}, pk), do: Map.fetch(model, pk)
-  defp get_pk(model, pk), do: Map.fetch(model, pk)
+  defp get_pk(model_or_params, pk), do: Map.fetch(model_or_params, pk)
 
   defp primary_key(module) do
     case module.__schema__(:primary_key) do
