@@ -737,7 +737,8 @@ defmodule Ecto.Schema do
   performed on an embedded model alongside the operations on the parent
   model.
 
-  Usage requires support for `:map` type from the database.
+  You must declare your `embeds_one/3` field with type `:map` at the
+  database level.
 
   **Note:** embedding is experimental and its API may still change
   in future releases.
@@ -790,8 +791,11 @@ defmodule Ecto.Schema do
   inside of it, contained in a list. Embedded models have all the things
   regular models do - callbacks, structured fields, etc.
 
-  All typecasting operations are performed recursively on embedded models
-  alongside the operations on the parent model.
+  It is recommended to declare your `embeds_many/3` field with type
+  `{:array, :map}` and default value of `[]` at the database level.
+  In fact, Ecto will automatically translate `nil` values from the
+  database into empty lists for embeds many (this behaviour is specific
+  to `embeds_many/3` fields in order to mimic `has_many/3`).
 
   **Note:** embedding is experimental and its API may still change
   in future releases.
