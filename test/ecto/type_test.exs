@@ -67,13 +67,13 @@ defmodule Ecto.TypeTest do
     assert dump({:array, Custom}, [nil]) == {:ok, %Ecto.Query.Tagged{type: {:array, :custom}, value: [nil]}}
     assert cast({:array, Custom}, [nil]) == {:ok, [nil]}
 
+    assert load({:array, Custom}, nil) == {:ok, nil}
+    assert dump({:array, Custom}, nil) == {:ok, %Ecto.Query.Tagged{type: {:array, :custom}, value: nil}}
+    assert cast({:array, Custom}, nil) == {:ok, nil}
+
     assert load({:array, Custom}, 1) == :error
     assert dump({:array, Custom}, 1) == :error
     assert cast({:array, Custom}, 1) == :error
-
-    assert load({:array, Custom}, nil) == {:ok, []}
-    assert dump({:array, Custom}, nil) == :error
-    assert cast({:array, Custom}, nil) == :error
   end
 
   test "decimal casting" do

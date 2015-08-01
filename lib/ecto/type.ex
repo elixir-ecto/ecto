@@ -279,16 +279,16 @@ defmodule Ecto.Type do
     dump_embed(embed, value, dumper)
   end
 
+  def dump(type, nil, _dumper) do
+    {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
+  end
+
   def dump({:array, type}, value, dumper) do
     if is_list(value) do
       dump_array(type, value, dumper, [], false)
     else
       :error
     end
-  end
-
-  def dump(type, nil, _dumper) do
-    {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
   end
 
   def dump(type, value, _dumper) do
@@ -396,9 +396,7 @@ defmodule Ecto.Type do
     load_embed(embed, value, loader)
   end
 
-  def load({:array, _}, nil, _loader) do
-    {:ok, []}
-  end
+  def load(_type, nil, _loader), do: {:ok, nil}
 
   def load({:array, type}, value, loader) do
     if is_list(value) do
@@ -407,8 +405,6 @@ defmodule Ecto.Type do
       :error
     end
   end
-
-  def load(_type, nil, _loader), do: {:ok, nil}
 
   def load(type, value, _loader) do
     cond do
@@ -528,6 +524,8 @@ defmodule Ecto.Type do
     :error
   end
 
+  def cast(_type, nil), do: {:ok, nil}
+
   def cast({:array, type}, term) do
     if is_list(term) do
       array(term, &cast(type, &1), [])
@@ -535,8 +533,6 @@ defmodule Ecto.Type do
       :error
     end
   end
-
-  def cast(_type, nil), do: {:ok, nil}
 
   def cast(:binary_id, term) when is_binary(term) do
     {:ok, term}
