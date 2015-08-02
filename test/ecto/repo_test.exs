@@ -75,15 +75,15 @@ defmodule Ecto.RepoTest do
   test "needs model with primary key field" do
     model = %MyModelNoPK{x: "abc"}
 
-    assert_raise Ecto.NoPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
       TestRepo.update!(model)
     end
 
-    assert_raise Ecto.NoPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
       TestRepo.delete!(model)
     end
 
-    assert_raise Ecto.NoPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
       TestRepo.get(MyModelNoPK, 123)
     end
   end
@@ -108,11 +108,11 @@ defmodule Ecto.RepoTest do
   test "fails without primary key value" do
     model = %MyModel{x: "abc"}
 
-    assert_raise Ecto.MissingPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.update!(model)
     end
 
-    assert_raise Ecto.MissingPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.delete!(model)
     end
   end
@@ -474,7 +474,7 @@ defmodule Ecto.RepoTest do
     # Raises if there's no id
     embed_changeset = Ecto.Changeset.change(embed, x: "abc")
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: embed_changeset)
-    assert_raise Ecto.MissingPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.update!(changeset)
     end
 
@@ -502,7 +502,7 @@ defmodule Ecto.RepoTest do
 
     # Raises if there's no id
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: nil)
-    assert_raise Ecto.MissingPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.update!(changeset)
     end
 

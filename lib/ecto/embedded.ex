@@ -239,7 +239,7 @@ defmodule Ecto.Embedded do
       {:ok, value} when not is_nil(value) ->
         changeset
       _other ->
-        raise Ecto.MissingPrimaryKeyError, struct: changeset.model
+        raise Ecto.NoPrimaryKeyValueError, struct: changeset.model
     end
   end
 

@@ -222,7 +222,7 @@ defmodule Ecto.Repo do
   given id.
 
   Returns `nil` if no result was found. If the model in the queryable
-  has no primary key `Ecto.NoPrimaryKeyError` will be raised.
+  has no primary key `Ecto.NoPrimaryKeyFieldError` will be raised.
 
   ## Options
 
@@ -451,7 +451,8 @@ defmodule Ecto.Repo do
   If any `before_update` or `after_update` callback are registered
   in the given model, they will be invoked with the changeset.
 
-  If the model has no primary key, `Ecto.NoPrimaryKeyError` will be raised.
+  If the model has no primary key, `Ecto.NoPrimaryKeyFieldError`
+  will be raised.
 
   It returns `{:ok, model}` if the model has been successfully
   updated or `{:error, changeset}` if there was a validation
@@ -485,7 +486,8 @@ defmodule Ecto.Repo do
   If any `before_delete` or `after_delete` callback are registered
   in the given model, they will be invoked with the changeset.
 
-  If the model has no primary key, `Ecto.NoPrimaryKeyError` will be raised.
+  If the model has no primary key, `Ecto.NoPrimaryKeyFieldError`
+  will be raised.
 
   It returns `{:ok, model}` if the model has been successfully
   deleted or `{:error, changeset}` if there was a validation

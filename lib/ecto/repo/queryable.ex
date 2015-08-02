@@ -190,7 +190,7 @@ defmodule Ecto.Repo.Queryable do
 
   defp query_for_get_by(repo, queryable, clauses) do
     Enum.reduce(clauses, queryable, fn
-      {field, nil}, query ->
+      {field, nil}, _query ->
         raise ArgumentError, "cannot perform #{inspect repo}.get_by/2 because #{inspect field} is nil"
       {field, value}, query ->
         query |> Ecto.Query.where([x], field(x, ^field) == ^value)
@@ -211,7 +211,7 @@ defmodule Ecto.Repo.Queryable do
   defp primary_key_field!(model) when is_atom(model) do
     case model.__schema__(:primary_key) do
       [field] -> field
-      _ -> raise Ecto.NoPrimaryKeyError, model: model
+      _ -> raise Ecto.NoPrimaryKeyFieldError, model: model
     end
   end
 end

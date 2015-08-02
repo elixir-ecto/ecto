@@ -182,7 +182,7 @@ defmodule Ecto.Repo.Preloader do
 
       Enum.reduce children, acc, fn child, {fresh, set} ->
         [{_, pk}] = Ecto.Model.primary_key!(child)
-        pk || raise Ecto.MissingPrimaryKeyError, struct: child
+        pk || raise Ecto.NoPrimaryKeyValueError, struct: child
 
         if HashSet.member?(set, pk) do
           {fresh, set}

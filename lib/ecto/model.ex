@@ -66,13 +66,13 @@ defmodule Ecto.Model do
   @doc """
   Returns the model primary keys as a keyword list.
 
-  Raises `Ecto.NoPrimaryKeyError` if the model has no
+  Raises `Ecto.NoPrimaryKeyFieldError` if the model has no
   primary key field.
   """
   @spec primary_key!(t) :: Keyword.t | no_return
   def primary_key!(struct) do
     case primary_key(struct) do
-      [] -> raise Ecto.NoPrimaryKeyError, model: struct
+      [] -> raise Ecto.NoPrimaryKeyFieldError, model: struct
       pk -> pk
     end
   end
