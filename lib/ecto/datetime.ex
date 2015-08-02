@@ -1,6 +1,6 @@
 import Kernel, except: [to_string: 1]
 
-defmodule Ecto.DateTime.Util do
+defmodule Ecto.DateTime.Utils do
   @moduledoc false
 
   @doc "Pads with zero"
@@ -65,7 +65,7 @@ defmodule Ecto.DateTime.Util do
 end
 
 defmodule Ecto.Date do
-  import Ecto.DateTime.Util
+  import Ecto.DateTime.Utils
 
   @moduledoc """
   An Ecto type for dates.
@@ -164,7 +164,7 @@ defmodule Ecto.Date do
 end
 
 defmodule Ecto.Time do
-  import Ecto.DateTime.Util
+  import Ecto.DateTime.Utils
 
   @moduledoc """
   An Ecto type for time.
@@ -280,7 +280,7 @@ defmodule Ecto.Time do
 end
 
 defmodule Ecto.DateTime do
-  import Ecto.DateTime.Util
+  import Ecto.DateTime.Utils
 
   @moduledoc """
   An Ecto type that includes a date and a time.
