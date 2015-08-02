@@ -82,7 +82,11 @@ defmodule Ecto.InvalidURLError do
   end
 end
 
-defmodule Ecto.NoPrimaryKeyError do
+defmodule Ecto.NoPrimaryKeyFieldError do
+  @moduledoc """
+  Raised at runtime when an operation that requires a primary key is invoked
+  with a model that does not define a primary key by using `@primary_key false`
+  """
   defexception [:message, :model]
 
   def exception(opts) do
@@ -92,7 +96,11 @@ defmodule Ecto.NoPrimaryKeyError do
   end
 end
 
-defmodule Ecto.MissingPrimaryKeyError do
+defmodule Ecto.NoPrimaryKeyValueError do
+  @moduledoc """
+  Raised at runtime when an operation that requires a primary key is invoked
+  with a model missing value for it's primary key
+  """
   defexception [:message, :struct]
 
   def exception(opts) do

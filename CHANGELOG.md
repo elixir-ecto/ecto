@@ -8,6 +8,8 @@
 * Backwards incompatible change
   * `exists?/1` helper in migration has been removed in favor of `create_if_not_exists` and `drop_if_exists`
   * `rename table(:foo), table(:bar)` in migrations has been changed to `rename table(:foo), to: table(:bar)`
+  * `Ecto.NoPrimaryKeyError` was renamed to `Ecto.NoPrimaryKeyFieldError`
+  * `Ecto.MissingPrimaryKeyError` was renamed to `Ecto.NoPrimaryKeyValueError`
 
 ## v0.14.3
 

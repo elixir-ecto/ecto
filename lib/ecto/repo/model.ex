@@ -276,7 +276,7 @@ defmodule Ecto.Repo.Model do
   defp add_pk_filter!(filters, struct) do
     Enum.reduce Ecto.Model.primary_key!(struct), filters, fn
       {_k, nil}, _acc ->
-        raise Ecto.MissingPrimaryKeyError, struct: struct
+        raise Ecto.NoPrimaryKeyValueError, struct: struct
       {k, v}, acc ->
         Map.put(acc, k, v)
     end
