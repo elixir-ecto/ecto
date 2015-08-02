@@ -60,12 +60,30 @@ defmodule Ecto.DateTime.Utils do
   def usec(rest) when is_iso_8601(rest), do: 0
   def usec(_), do: nil
 
+  @doc """
+  Compare two datetimes.
+
+  Receives two datetimes and compares the `t1`
+  against `t2` and returns `:lt`, `:eq` or `:gt`.
+  """
+  def compare(%{__struct__: module} = t1, %{__struct__: module} = t2) do
+    {:ok, t1} = module.dump(t1)
+    {:ok, t2} = module.dump(t2)
+    cond do
+      t1 == t2 -> :eq
+      t1 > t2 -> :gt
+      true -> :lt
+    end
+  end
+
   defp parse(<<h, t::binary>>, acc) when h in ?0..?9, do: parse(t, <<acc::binary, h>>)
   defp parse(rest, acc), do: {acc, rest}
 end
 
 defmodule Ecto.Date do
   import Ecto.DateTime.Utils
+
+  defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
 
   @moduledoc """
   An Ecto type for dates.
@@ -165,6 +183,8 @@ end
 
 defmodule Ecto.Time do
   import Ecto.DateTime.Utils
+
+  defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
 
   @moduledoc """
   An Ecto type for time.
@@ -281,6 +301,8 @@ end
 
 defmodule Ecto.DateTime do
   import Ecto.DateTime.Utils
+
+  defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
 
   @moduledoc """
   An Ecto type that includes a date and a time.
