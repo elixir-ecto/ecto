@@ -112,32 +112,27 @@ defmodule Ecto.Embedded do
   defp check_action!(_, _, _), do: :ok
 
   defp generate_id(changeset, :before_insert, model, embed, adapter) do
-    pk = primary_key(model)
-
-    if Map.get(changeset.changes, pk) == nil and
-       Map.get(changeset.model, pk) == nil do
-      case model.__schema__(:autogenerate_id) do
-        {key, :binary_id} ->
+    case model.__schema__(:autogenerate_id) do
+      {key, :binary_id} ->
+        if Map.get(changeset.changes, key) || Map.get(changeset.model, key) do
+          changeset
+        else
           update_in changeset.changes, &Map.put(&1, key, adapter.embed_id(embed))
-        other ->
-          raise ArgumentError, "embedded model `#{inspect model}` must have binary id " <>
-                               "primary key with autogenerate: true, got: #{inspect other}"
-      end
-    else
-      changeset
+        end
+      other ->
+        raise ArgumentError, "embedded model `#{inspect model}` must have " <>
+          "`:binary_id` primary key with `autogenerate: true`, got: #{inspect other}"
     end
   end
 
-  defp generate_id(changeset, callback, model, _embed, _adapter)
+  defp generate_id(changeset, callback, _model, _embed, _adapter)
       when callback in [:before_update, :before_delete] do
-    pk = primary_key(model)
+    Enum.each(Ecto.Model.primary_key(changeset.model), fn
+      {_, nil} -> raise Ecto.NoPrimaryKeyValueError, struct: changeset.model
+      _        -> :ok
+    end)
 
-    case Map.get(changeset.model, pk) do
-      nil ->
-        raise Ecto.MissingPrimaryKeyError, struct: changeset.model
-      _value ->
-        changeset
-    end
+    changeset
   end
 
   defp generate_id(changeset, _callback, _model, _embed, _adapter) do
@@ -153,13 +148,5 @@ defmodule Ecto.Embedded do
 
   defp callback_for(_type, nil) do
     raise ArgumentError, "embedded changeset action not set"
-  end
-
-  defp primary_key(module) do
-    case module.__schema__(:primary_key) do
-      [pk] -> pk
-      _    -> raise ArgumentError,
-                "embeded models must have exactly one primary key field"
-    end
   end
 end

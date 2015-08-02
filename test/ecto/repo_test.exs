@@ -715,7 +715,7 @@ defmodule Ecto.RepoTest do
     # Raises if there's no id
     assoc_changeset = Ecto.Changeset.change(assoc, x: "abc")
     changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: assoc_changeset)
-    assert_raise Ecto.MissingPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.update!(changeset)
     end
 
@@ -771,7 +771,7 @@ defmodule Ecto.RepoTest do
 
     # Raises if there's no id
     changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: nil)
-    assert_raise Ecto.MissingPrimaryKeyError, fn ->
+    assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.update!(changeset)
     end
 
