@@ -155,7 +155,19 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp map_changes([map | rest], pks, fun, current, acc, valid?, skip?) when is_map(map) do
-    {model, current} = Map.pop(current, get_pks(map, pks))
+    pk_values = get_pks(map, pks)
+    {model, current} =
+      case Map.fetch(current, pk_values) do
+        {:ok, model} ->
+          {model, Map.delete(current, pk_values)}
+        :error ->
+          if Enum.all?(pk_values, &is_nil/1) do
+            {nil, current}
+          else
+            raise Ecto.UnmachedRelationError, new_value: map, old_value: Map.values(current), cardinality: :many
+          end
+      end
+
     changeset = fun.(map, model)
     map_changes(rest, pks, fun, current, [changeset | acc],
                 valid? && changeset.valid?, skip? && skip?(changeset))
@@ -166,15 +178,27 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp single_change(new, current_pks, new_pks, fun, current) do
-    current = if matching_new(new, new_pks, current, current_pks), do: current, else: nil
+    current = current_or_nil(new, new_pks, current, current_pks)
+
     changeset = fun.(new, current)
     {:ok, changeset, changeset.valid?, skip?(changeset)}
   end
 
-  defp matching_new(nil, _new_pks, _current, _current_pks), do: true
-  defp matching_new(_new, _new_pks, nil, _current_pks), do: false
-  defp matching_new(new, new_pks, current, current_pks),
-    do: get_pks(new, new_pks) == get_pks(current, current_pks)
+  defp current_or_nil(nil, _new_pks, current, _current_pks), do: current
+  defp current_or_nil(_new, _new_pks, nil, _current_pks), do: nil
+  defp current_or_nil(new, new_pks, current, current_pks) do
+    new_pk_values = get_pks(new, new_pks)
+    current_pk_values = get_pks(current, current_pks)
+
+    cond do
+      new_pk_values == current_pk_values ->
+        current
+      Enum.all?(new_pk_values, &is_nil/1) ->
+        nil
+      true ->
+        raise Ecto.UnmachedRelationError, new_value: new, old_value: current, cardinality: :one
+    end
+  end
 
   defp get_pks(%Changeset{model: model}, pks),
     do: get_pks(model, pks)
@@ -209,7 +233,6 @@ defmodule Ecto.Changeset.Relation do
     do: true
   defp skip?(_changeset),
     do: false
-
 
   defp loaded_or_empty!(%{__meta__: %{state: :built}},
                         %Ecto.Association.NotLoaded{} = not_loaded) do

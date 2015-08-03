@@ -123,16 +123,10 @@ defmodule Ecto.EmbeddedTest do
     assert profile.valid?
     assert changeset.valid?
 
-    changeset =
+    assert_raise Ecto.UnmachedRelationError, fn ->
       Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
                      %{"profile" => %{"name" => "new", "id" => "new"}}, ~w(profile))
-
-    profile = changeset.changes.profile
-    assert profile.changes == %{name: "new", id: "new"}
-    assert profile.errors  == []
-    assert profile.action  == :insert
-    assert profile.valid?
-    assert changeset.valid?
+    end
   end
 
   test "cast embeds_one without changes skips" do
@@ -247,7 +241,7 @@ defmodule Ecto.EmbeddedTest do
     posts = [%Post{title: "hello", id: "hello"},
              %Post{title: "unknown", id: "unknown"},
              %Post{title: "other", id: "other"}]
-    params = [%{"id" => "new", "title" => "new"},
+    params = [%{"title" => "new"},
               %{"id" => "unknown", "title" => nil},
               %{"id" => "other", "title" => "new name"}]
 
@@ -268,6 +262,10 @@ defmodule Ecto.EmbeddedTest do
     assert hello.action == :delete
     assert hello.valid?
     refute changeset.valid?
+
+    assert_raise Ecto.UnmachedRelationError, fn ->
+      Changeset.cast(%Author{posts: posts}, %{"posts" => [%{"id" => "new"}]}, ~w(posts))
+    end
   end
 
   test "cast embeds_many with invalid params" do
@@ -359,6 +357,10 @@ defmodule Ecto.EmbeddedTest do
     empty_changeset = Changeset.change(embed_model)
     assert {:ok, _, true, true} =
       Relation.change(embed, model, empty_changeset, embed_model)
+
+    assert_raise Ecto.UnmachedRelationError, fn ->
+      Relation.change(embed, model, %Profile{id: 1}, %Profile{id: 2})
+    end
   end
 
   test "change embeds_one keeps action from changeset" do
@@ -388,12 +390,9 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [new, old], true, false} =
-      Relation.change(embed, model, [%Post{title: "hello"}], [%Post{id: 1}])
-    assert new.action == :insert
-    assert new.changes == %{id: nil, title: "hello"}
-    assert old.action == :delete
-    assert old.model.id == 1
+    assert_raise Ecto.UnmachedRelationError, fn ->
+      Relation.change(embed, model, [%Post{id: 1}], [%Post{id: 2}])
+    end
 
     embed_model_changeset = Changeset.change(%Post{}, title: "hello")
 
@@ -416,9 +415,6 @@ defmodule Ecto.EmbeddedTest do
     empty_changeset = Changeset.change(embed_model)
     assert {:ok, _, true, true} =
       Relation.change(embed, model, [empty_changeset], [embed_model])
-    assert {:ok, _, true, false} =
-      Relation.change(embed, model, [empty_changeset, embed_model_changeset],
-                      [embed_model, embed_model])
   end
 
   test "change/2, put_change/3, force_change/3 wth embeds" do

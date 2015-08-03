@@ -491,16 +491,10 @@ defmodule Ecto.AssociationTest do
     assert profile.valid?
     assert changeset.valid?
 
-    changeset =
+    assert_raise Ecto.UnmachedRelationError, fn ->
       Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
                      %{"profile" => %{"name" => "new", "id" => 2}}, ~w(profile))
-
-    profile = changeset.changes.profile
-    assert profile.changes == %{name: "new", id: 2}
-    assert profile.errors  == []
-    assert profile.action  == :insert
-    assert profile.valid?
-    assert changeset.valid?
+    end
   end
 
   test "cast has_one without changes skips" do
@@ -615,7 +609,7 @@ defmodule Ecto.AssociationTest do
     posts = [%Post{title: "hello", id: 1},
              %Post{title: "unknown", id: 2},
              %Post{title: "other", id: 3}]
-    params = [%{"id" => 4, "title" => "new"},
+    params = [%{"title" => "new"},
               %{"id" => 2, "title" => nil},
               %{"id" => 3, "title" => "new name"}]
 
@@ -636,6 +630,10 @@ defmodule Ecto.AssociationTest do
     assert hello.action == :delete
     assert hello.valid?
     refute changeset.valid?
+
+    assert_raise Ecto.UnmachedRelationError, fn ->
+      Changeset.cast(%Author{posts: posts}, %{"posts" => [%{"id" => 4}]}, ~w(posts))
+    end
   end
 
   test "cast has_many with invalid params" do
@@ -727,6 +725,10 @@ defmodule Ecto.AssociationTest do
     empty_changeset = Changeset.change(assoc_model)
     assert {:ok, _, true, true} =
       Relation.change(assoc, model, empty_changeset, assoc_model)
+
+    assert_raise Ecto.UnmachedRelationError, fn ->
+      Relation.change(assoc, model, %Profile{id: 1}, %Profile{id: 2})
+    end
   end
 
   test "change assocs_one keeps action from changeset" do
@@ -756,12 +758,9 @@ defmodule Ecto.AssociationTest do
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [new, old], true, false} =
-      Relation.change(assoc, model, [%Post{title: "hello"}], [%Post{id: 1}])
-    assert new.action == :insert
-    assert new.changes == %{id: nil, title: "hello", summary_id: nil, author_id: nil}
-    assert old.action == :delete
-    assert old.model.id == 1
+    assert_raise Ecto.UnmachedRelationError, fn ->
+      Relation.change(assoc, model, [%Post{id: 1}], [%Post{id: 2}])
+    end
 
     assoc_model_changeset = Changeset.change(%Post{}, title: "hello")
 
@@ -784,9 +783,6 @@ defmodule Ecto.AssociationTest do
     empty_changeset = Changeset.change(assoc_model)
     assert {:ok, _, true, true} =
       Relation.change(assoc, model, [empty_changeset], [assoc_model])
-    assert {:ok, _, true, false} =
-      Relation.change(assoc, model, [empty_changeset, assoc_model_changeset],
-                      [assoc_model, assoc_model])
   end
 
   test "change/2, put_change/3, force_change/3 wth assocs" do
