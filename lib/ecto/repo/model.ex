@@ -425,7 +425,7 @@ defmodule Ecto.Repo.Model do
       adapter.transaction(repo, opts, fn ->
         case fun.() do
           {:ok, model} -> model
-          {:error, _} = error -> adapter.rollback(repo, error)
+          {:error, changeset} -> adapter.rollback(repo, changeset)
         end
       end)
     else

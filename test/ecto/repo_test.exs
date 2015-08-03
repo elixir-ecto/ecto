@@ -516,7 +516,7 @@ defmodule Ecto.RepoTest do
     assoc_changeset = %{Ecto.Changeset.change(assoc) | valid?: false}
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
     assert {:error, changeset} = TestRepo.insert(changeset)
-    assert_received {:rollback, {:error, ^changeset}}
+    assert_received {:rollback, ^changeset}
     refute changeset.valid?
   end
 
@@ -545,7 +545,7 @@ defmodule Ecto.RepoTest do
     assoc = Ecto.Changeset.change(%MyAssoc{x: "xyz"}, sub_assoc: sub_assoc_change)
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc)
     assert {:error, changeset} = TestRepo.insert(changeset)
-    assert_received {:rollback, {:error, ^changeset}}
+    assert_received {:rollback, ^changeset}
     refute changeset.changes.id
     refute changeset.changes.assoc.changes.id
     refute changeset.changes.assoc.changes.my_model_id
@@ -845,7 +845,7 @@ defmodule Ecto.RepoTest do
     assoc_changeset = Ecto.Changeset.change(assoc, sub_assoc: sub_assoc_change)
     changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: assoc_changeset)
     assert {:error, changeset} = TestRepo.update(changeset)
-    assert_received {:rollback, {:error, ^changeset}}
+    assert_received {:rollback, ^changeset}
     refute changeset.changes.assoc.changes.sub_assoc.changes.id
     refute changeset.changes.assoc.changes.sub_assoc.changes.my_assoc_id
     refute changeset.valid?

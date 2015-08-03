@@ -480,6 +480,75 @@ defmodule Ecto.Integration.RepoTest do
     assert p2.id == pid2
   end
 
+  test "has_one nested assoc" do
+    changeset = Ecto.Changeset.change(%Post{title: "1"}, permalink: %Permalink{url: "1"})
+    p1 = TestRepo.insert!(changeset)
+    assert p1.permalink.id
+    assert p1.permalink.post_id == p1.id
+    assert p1.permalink.url == "1"
+    p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
+    assert p1.permalink.url == "1"
+
+    changeset = Ecto.Changeset.change(p1, permalink: %Permalink{url: "2"})
+    p1 = TestRepo.update!(changeset)
+    assert p1.permalink.id
+    assert p1.permalink.post_id == p1.id
+    assert p1.permalink.url == "2"
+    p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
+    assert p1.permalink.url == "2"
+
+    changeset = Ecto.Changeset.change(p1, permalink: nil)
+    p1 = TestRepo.update!(changeset)
+    assert p1.permalink.__meta__.state == :deleted
+    p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
+    refute p1.permalink
+
+    assert [0] == TestRepo.all(from(p in Permalink, select: count(p.id)))
+  end
+
+  test "has_many nested assoc" do
+    c1 = %Comment{text: "1"}
+    c2 = %Comment{text: "2"}
+
+    changeset = Ecto.Changeset.change(%Post{title: "1"}, comments: [c1])
+    p1 = TestRepo.insert!(changeset)
+    [c1] = p1.comments
+    assert c1.id
+    assert c1.post_id == p1.id
+    p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
+    [c1] = p1.comments
+    assert c1.text == "1"
+
+    changeset = Ecto.Changeset.change(p1, comments: [c1, c2])
+    p1 = TestRepo.update!(changeset)
+    [_c1, c2] = p1.comments
+    assert c2.id
+    assert c2.post_id == p1.id
+    p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
+    [c1, c2] = p1.comments
+    assert c1.text == "1"
+    assert c2.text == "2"
+
+    changeset = Ecto.Changeset.change(p1, comments: [])
+    p1 = TestRepo.update!(changeset)
+    assert Enum.all?(p1.comments, &(&1.__meta__.state == :deleted))
+    p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
+    assert p1.comments == []
+
+    assert [0] == TestRepo.all(from(c in Comment, select: count(c.id)))
+  end
+
+  @tag :transaction
+  test "rollbacks failed nested assocs" do
+    permalink_changeset = %{Ecto.Changeset.change(%Permalink{url: "1"}) | valid?: false}
+    changeset = Ecto.Changeset.change(%Post{title: "1"}, permalink: permalink_changeset)
+    assert {:error, changeset} = TestRepo.insert(changeset)
+    assert changeset.model.__struct__ == Post
+    refute changeset.valid?
+    assert [0] == TestRepo.all(from(p in Post, select: count(p.id)))
+    assert [0] == TestRepo.all(from(p in Permalink, select: count(p.id)))
+  end
+
   ## Dependent
 
   test "has_many assoc on delete deletes all" do

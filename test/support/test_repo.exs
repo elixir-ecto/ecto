@@ -80,7 +80,7 @@ defmodule Ecto.TestAdapter do
       {:ok, fun.()}
     catch
       :throw, {:ecto_rollback, value} ->
-        value
+        {:error, value}
     end
   end
 
