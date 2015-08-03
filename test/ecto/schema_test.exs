@@ -234,7 +234,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, on_delete: :nothing,
                             related: Post, owner_key: :id, related_key: :assoc_model_id, queryable: Post,
-                            on_cast: :changeset}
+                            on_cast: :changeset, on_replace: :delete}
 
     assert AssocModel.__schema__(:association, :posts) == struct
     assert AssocModel.__changeset__.posts == {:assoc, struct}
@@ -248,7 +248,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :emails, owner: AssocModel, cardinality: :many, on_delete: :nothing,
                             related: Email, owner_key: :id, related_key: :assoc_model_id,
-                            queryable: {"users_emails", Email}, on_cast: :changeset}
+                            queryable: {"users_emails", Email}, on_cast: :changeset, on_replace: :delete}
 
     assert AssocModel.__schema__(:association, :emails) == struct
     assert AssocModel.__changeset__.emails == {:assoc, struct}
@@ -274,7 +274,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one, on_delete: :nothing,
                             related: User, owner_key: :id, related_key: :assoc_model_id, queryable: User,
-                            on_cast: :assoc_author_changeset}
+                            on_cast: :assoc_author_changeset, on_replace: :delete}
 
     assert AssocModel.__schema__(:association, :author) == struct
     assert AssocModel.__changeset__.author == {:assoc, struct}
@@ -288,7 +288,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one, on_delete: :nothing,
                             related: Profile, owner_key: :id, related_key: :assoc_model_id,
-                            queryable: {"users_profiles", Profile}, on_cast: :changeset}
+                            queryable: {"users_profiles", Profile}, on_cast: :changeset, on_replace: :delete}
 
     assert AssocModel.__schema__(:association, :profile) == struct
     assert AssocModel.__changeset__.profile == {:assoc, struct}

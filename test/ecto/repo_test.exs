@@ -641,6 +641,18 @@ defmodule Ecto.RepoTest do
             {:before_insert, MyEmbed}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
     assert model.embed == embed
+
+    # Replacing assoc with a new one
+    new_embed = %MyEmbed{x: "abc"}
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: new_embed)
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_delete, MyEmbed},
+            {:before_delete, MyEmbed}, {:after_insert, MyEmbed},
+            {:before_insert, MyEmbed}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    id = model.embed.id
+    assert id
+    assert model.embed == %{new_embed | id: id}
   end
 
   test "inserting assocs on update" do
@@ -678,6 +690,19 @@ defmodule Ecto.RepoTest do
     %{my_model_id: model_id} = model.assoc
     assert model_id == model.id
     assert model.assoc == %{inserted_assoc | my_model_id: model_id}
+
+    # Replacing assoc with a new one
+    new_assoc = %MyAssoc{x: "abc"}
+    inserted_assoc = put_in new_assoc.__meta__.state, :loaded
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: new_assoc)
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_delete, MyAssoc},
+            {:before_delete, MyAssoc}, {:after_insert, MyAssoc},
+            {:before_insert, MyAssoc}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    %{id: id, my_model_id: model_id} = model.assoc
+    assert model_id == model.id
+    assert model.assoc == %{inserted_assoc | my_model_id: model_id, id: id}
   end
 
   test "changing embeds on update" do

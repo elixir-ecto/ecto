@@ -4,11 +4,21 @@ defmodule Ecto.Embedded do
   alias __MODULE__
   alias Ecto.Changeset
 
-  defstruct [:cardinality, :field, :owner, :related, :on_cast, strategy: :replace]
+  defstruct [:cardinality, :field, :owner, :related, :on_cast,
+             strategy: :replace, on_replace: :delete, on_delete: :fetch_and_delete]
 
   @type t :: %Embedded{cardinality: :one | :many,
                        strategy: :replace | atom,
+                       on_replace: :delete,
+                       on_delete: :fetch_and_delete,
                        field: atom, owner: atom, related: atom, on_cast: atom}
+
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def on_replace(%Embedded{on_replace: :delete}, changeset) do
+    {:delete, changeset}
+  end
 
   @doc """
   Builds the embedded struct.
@@ -53,13 +63,15 @@ defmodule Ecto.Embedded do
 
   def apply_callbacks(changeset, embeds, adapter, function, type) do
     types = changeset.types
+    model = changeset.model
 
     update_in changeset.changes, fn changes ->
       Enum.reduce(embeds, changes, fn name, changes ->
         case Map.fetch(changes, name) do
           {:ok, changeset} ->
             {:embed, embed} = Map.get(types, name)
-            Map.put(changes, name, apply_callback(embed, changeset, adapter, function, type))
+            current = Map.get(model, name)
+            Map.put(changes, name, apply_callback(embed, changeset, current, adapter, function, type))
           :error ->
             changes
         end
@@ -67,17 +79,27 @@ defmodule Ecto.Embedded do
     end
   end
 
-  defp apply_callback(%Embedded{cardinality: :one}, nil, _adapter, _function, _type) do
+  defp callback_one_replace!(_action, _type, _embed, nil), do: :ok
+  defp callback_one_replace!(:insert, :after, %{related: model}, current) do
+    changeset = Changeset.change(current)
+    changeset = Ecto.Model.Callbacks.__apply__(model, :before_delete, changeset)
+    Ecto.Model.Callbacks.__apply__(model, :after_delete, changeset)
+  end
+  defp callback_one_replace!(_action, _type, _embed, _current), do: :ok
+
+  defp apply_callback(%Embedded{cardinality: :one}, nil, _current, _adapter, _function, _type) do
     nil
   end
 
   defp apply_callback(%Embedded{cardinality: :one, related: model} = embed,
-                      changeset, adapter, function, type) do
-    apply_callback(changeset, model, embed, adapter, function, type)
+                      changeset, current, adapter, function, type) do
+    changeset = apply_callback(changeset, model, embed, adapter, function, type)
+    callback_one_replace!(changeset.action, type, embed, current)
+    changeset
   end
 
   defp apply_callback(%Embedded{cardinality: :many, related: model} = embed,
-                      changesets, adapter, function, type) do
+                      changesets, _current, adapter, function, type) do
     for changeset <- changesets,
         do: apply_callback(changeset, model, embed, adapter, function, type)
   end

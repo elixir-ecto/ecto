@@ -3,6 +3,15 @@ defmodule Ecto.Changeset.Relation do
 
   alias Ecto.Changeset
 
+  use Behaviour
+
+  @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_cast: atom}
+
+  @doc """
+  Updates the changeset accordingly to the relation's on_replace strategy
+  """
+  defcallback on_replace(t, Changeset.t) :: {:update | :delete, Changeset.t}
+
   @doc """
   Returns empty container for relation.
 
@@ -23,66 +32,71 @@ defmodule Ecto.Changeset.Relation do
     cast(relation, params, loaded_or_empty!(model, current))
   end
 
-  defp cast(%{cardinality: :one, related: mod, on_cast: fun}, :empty, current) do
-    {:ok, current && do_cast(mod, fun, :empty, current), false, false}
+  defp cast(%{cardinality: :one} = relation, :empty, current) do
+    {:ok, current && do_cast(relation, :empty, current), false, false}
   end
 
-  defp cast(%{cardinality: :many, related: mod, on_cast: fun}, :empty, current) do
-    {:ok, Enum.map(current, &do_cast(mod, fun, :empty, &1)), false, false}
+  defp cast(%{cardinality: :many} = relation, :empty, current) do
+    {:ok, Enum.map(current, &do_cast(relation, :empty, &1)), false, false}
   end
 
   defp cast(%{cardinality: :one}, nil, _current) do
     {:ok, nil, false, false}
   end
 
-  defp cast(%{cardinality: :many} = related, params, current) when is_map(params) do
+  defp cast(%{cardinality: :many} = relation, params, current) when is_map(params) do
     params =
       params
       |> Enum.sort_by(&elem(&1, 0))
       |> Enum.map(&elem(&1, 1))
-    cast(related, params, current)
+    cast(relation, params, current)
   end
 
-  defp cast(%{related: mod, on_cast: fun} = related, params, current) do
-    {pks, param_pks} = primary_keys(mod)
-    cast_or_change(related, params, current, param_pks, pks, &do_cast(mod, fun, &1, &2))
+  defp cast(%{related: model} = relation, params, current) do
+    {pks, param_pks} = primary_keys(model)
+    cast_or_change(relation, params, current, param_pks, pks,
+                   &do_cast(relation, &1, &2))
   end
 
-  defp do_cast(mod, fun, params, nil) do
-    apply(mod, fun, [mod.__struct__(), params]) |> put_new_action(:insert)
+  defp do_cast(%{related: model, on_cast: fun}, params, nil) do
+    apply(model, fun, [model.__struct__(), params]) |> put_new_action(:insert)
   end
 
-  defp do_cast(_mod, _fun, nil, model) do
-    Changeset.change(model) |> put_new_action(:delete)
+  defp do_cast(%{__struct__: module} = relation, nil, struct) do
+    changeset = Changeset.change(struct)
+
+    {action, changeset} = module.on_replace(relation, changeset)
+    changeset |> put_new_action(action)
   end
 
-  defp do_cast(mod, fun, params, model) do
-    apply(mod, fun, [model, params]) |> put_new_action(:update)
+  defp do_cast(%{related: model, on_cast: fun}, params, struct) do
+    apply(model, fun, [struct, params]) |> put_new_action(:update)
   end
 
   @doc """
   Wraps embedded models in changesets.
   """
-  def change(_related, _model, nil, nil), do: {:ok, nil, false, true}
+  def change(_relation, _model, nil, nil), do: {:ok, nil, false, true}
 
-  def change(%{related: mod} = related, model, value, current) do
+  def change(%{related: mod} = relation, model, value, current) do
     current = loaded_or_empty!(model, current)
     {pks, _} = primary_keys(mod)
-    cast_or_change(related, value, current, pks, pks, &do_change(&1, &2, mod))
+    cast_or_change(relation, value, current, pks, pks,
+                   &do_change(&1, &2, relation))
   end
 
-  defp do_change(value, nil, mod) do
-    fields    = mod.__schema__(:fields)
-    embeds    = mod.__schema__(:embeds)
-    assocs    = mod.__schema__(:associations)
-    changeset = Changeset.change(value)
-    model     = changeset.model
+  defp do_change(struct, nil, %{related: model}) do
+    fields    = model.__schema__(:fields)
+    embeds    = model.__schema__(:embeds)
+    assocs    = model.__schema__(:associations)
+    changeset = Changeset.change(struct)
+    struct    = changeset.model
     types     = changeset.types
 
     changes =
-      Enum.reduce(embeds, Map.take(model, fields), fn field, acc ->
+      Enum.reduce(embeds, Map.take(struct, fields), fn field, acc ->
         {:embed, embed} = Map.get(types, field)
-        case change(embed, model, Map.get(acc, field), nil) do
+        case change(embed, struct, Map.get(acc, field), nil) do
           {:ok, _, _, true}       -> acc
           {:ok, change, _, false} -> Map.put(acc, field, change)
         end
@@ -94,8 +108,8 @@ defmodule Ecto.Changeset.Relation do
         # as they are not in the changeset types
         case Map.fetch(types, field) do
           {:ok, {:assoc, assoc}} ->
-            value = loaded_or_empty!(model, Map.get(model, field))
-            case change(assoc, model, value, nil) do
+            value = loaded_or_empty!(struct, Map.get(struct, field))
+            case change(assoc, struct, value, nil) do
               {:ok, _, _, true}       -> acc
               {:ok, change, _, false} -> Map.put(acc, field, change)
             end
@@ -104,29 +118,34 @@ defmodule Ecto.Changeset.Relation do
         end
       end)
 
-    update_in(changeset.changes, &Map.merge(changes, &1)) |> put_new_action(:insert)
+    update_in(changeset.changes, &Map.merge(changes, &1))
+    |> put_new_action(:insert)
   end
 
-  defp do_change(nil, current, mod) do
-    # We need to mark all embeds for deletion too
-    changes =
-      Enum.map(mod.__schema__(:embeds), fn field ->
-        {field, Changeset.Relation.empty(mod.__schema__(:embed, field))}
-      end)
-
-    Changeset.change(current, changes) |> put_new_action(:delete)
+  defp do_change(nil, current, %{__struct__: module, related: model} = relation) do
+    case module.on_replace(relation, Changeset.change(current)) do
+      {:delete, changeset} ->
+        # We need to mark all embeds for deletion too
+        changes =
+          Enum.map(model.__schema__(:embeds), fn field ->
+            {field, Changeset.Relation.empty(model.__schema__(:embed, field))}
+          end)
+        Changeset.change(changeset, changes) |> put_new_action(:delete)
+      {action, changeset} ->
+        changeset |> put_new_action(action)
+    end
   end
 
-  defp do_change(%Changeset{model: current} = changeset, current, _mod) do
+  defp do_change(%Changeset{model: current} = changeset, current, _relation) do
     changeset |> put_new_action(:update)
   end
 
-  defp do_change(%Changeset{}, _current, _mod) do
-    raise ArgumentError, "embedded changeset has a different model than the one specified in the schema"
+  defp do_change(%Changeset{}, _current, _relation) do
+    raise ArgumentError, "related changeset has a different model than the one specified in the schema"
   end
 
-  defp do_change(value, current, _mod) do
-    changes = Map.take(value, value.__struct__.__schema__(:fields))
+  defp do_change(struct, current, _relation) do
+    changes = Map.take(struct, struct.__struct__.__schema__(:fields))
     Changeset.change(current, changes) |> put_new_action(:update)
   end
 

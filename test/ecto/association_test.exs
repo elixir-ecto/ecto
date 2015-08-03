@@ -72,7 +72,8 @@ defmodule Ecto.AssociationTest do
     use Ecto.Model
 
     schema "summaries" do
-      has_one :post, Post, defaults: [title: "default"]
+      has_one :post, Post, defaults: [title: "default"], on_replace: :nilify
+      has_many :profiles, Profile, on_replace: :nilify
       has_one :post_author, through: [:post, :author]        # one -> belongs
       has_many :post_comments, through: [:post, :comments]   # one -> many
     end
@@ -91,6 +92,8 @@ defmodule Ecto.AssociationTest do
 
     schema "profiles" do
       field :name
+      belongs_to :author, Author
+      belongs_to :summary, Summary
     end
 
     def changeset(model, params) do
@@ -698,7 +701,7 @@ defmodule Ecto.AssociationTest do
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, model, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
-    assert changeset.changes == %{id: nil, name: "michal"}
+    assert changeset.changes == %{id: nil, name: "michal", summary_id: nil, author_id: nil}
 
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, model, %Profile{name: "michal"}, %Profile{})
@@ -715,7 +718,7 @@ defmodule Ecto.AssociationTest do
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, model, assoc_model_changeset, nil)
     assert changeset.action == :insert
-    assert changeset.changes == %{id: nil, name: "michal"}
+    assert changeset.changes == %{id: nil, name: "michal", summary_id: nil, author_id: nil}
 
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, model, assoc_model_changeset, assoc_model)
@@ -785,6 +788,8 @@ defmodule Ecto.AssociationTest do
       Relation.change(assoc, model, [empty_changeset], [assoc_model])
   end
 
+  ## Other
+
   test "change/2, put_change/3, force_change/3 wth assocs" do
     base_changeset = Changeset.change(%Author{})
 
@@ -805,5 +810,18 @@ defmodule Ecto.AssociationTest do
 
     changeset = Changeset.force_change(base_changeset, :profile, empty_update_changeset)
     assert %Ecto.Changeset{} = changeset.changes.profile
+  end
+
+  test "on_replace: :nilify" do
+    # one case is handled inside repo
+    post = %Post{id: 1, summary_id: 5}
+    changeset = Changeset.cast(%Summary{post: post}, %{"post" => nil}, ~w(), ~w(post))
+    assert changeset.changes.post == nil
+
+    profile = %Profile{id: 1, summary_id: 3}
+    changeset = Changeset.cast(%Summary{profiles: [profile]}, %{"profiles" => []}, ~w(profiles))
+    [profile_change] = changeset.changes.profiles
+    assert profile_change.action == :update
+    assert profile_change.changes == %{summary_id: nil}
   end
 end

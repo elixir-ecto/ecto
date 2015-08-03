@@ -243,14 +243,16 @@ defmodule Ecto.Association.Has do
     * `related_key` - The key on the `associated` model used for the association
     * `queryable` - The real query to use for querying association
     * `on_delete` - The action taken on associations when model is deleted
+    * `on_replace` - The action taken on associations when model is replaced
     * `on_cast` - The changeset function to call during casting
     * `defaults` - Default fields used when building the association
   """
 
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
-  defstruct [:cardinality, :field, :owner, :related, :owner_key,
-             :related_key, :queryable, :on_delete, :on_cast, defaults: []]
+  @on_replace_opts [:delete, :nilify]
+  defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key,
+             :queryable, :on_delete, :on_replace, :on_cast, defaults: []]
 
   @doc false
   def struct(module, name, opts) do
@@ -278,12 +280,20 @@ defmodule Ecto.Association.Has do
                            "option, the model should not be passed as second argument"
     end
 
-    on_delete = Keyword.get(opts, :on_delete, :nothing)
-    on_cast   = Keyword.get(opts, :on_cast, :changeset)
+    on_delete  = Keyword.get(opts, :on_delete, :nothing)
+    on_replace = Keyword.get(opts, :on_replace, :delete)
+    on_cast    = Keyword.get(opts, :on_cast, :changeset)
 
     unless on_delete in @on_delete_opts do
-      raise ArgumentError, "invalid :on_delete option for #{inspect name}. The only valid options" <>
-                           " are `:nothing`, `:fetch_and_delete`, `:nilify_all` and `:delete_all`"
+      raise ArgumentError, "invalid :on_delete option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_delete_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    unless on_replace in @on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
     %__MODULE__{
@@ -295,6 +305,7 @@ defmodule Ecto.Association.Has do
       related_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref),
       queryable: queryable,
       on_delete: on_delete,
+      on_replace: on_replace,
       on_cast: on_cast,
       defaults: opts[:defaults] || []
     }
@@ -331,6 +342,18 @@ defmodule Ecto.Association.Has do
   @doc false
   def preload_info(refl) do
     {:assoc, refl, refl.related_key}
+  end
+
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def on_replace(%{on_replace: :delete}, changeset) do
+    {:delete, changeset}
+  end
+
+  def on_replace(%{on_replace: :nilify, related_key: related_key}, changeset) do
+    changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
+    {:update, changeset}
   end
 end
 

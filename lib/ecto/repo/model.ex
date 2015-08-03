@@ -71,13 +71,15 @@ defmodule Ecto.Repo.Model do
 
       # Embeds can't be `read_after_writes` so we don't care
       # about values returned from the adapter
-      return =
+      {success, changeset} =
         changeset
         |> Ecto.Embedded.apply_callbacks(embeds, adapter, :insert, :after)
         |> load_changes(values, adapter)
         |> process_nested(assoc_changes, repo, opts)
 
-      case return do
+      changeset = put_in changeset.model.__meta__.state, :loaded
+
+      case {success, changeset} do
         {:ok, changeset} ->
           {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
         {:error, changeset} ->
@@ -138,13 +140,15 @@ defmodule Ecto.Repo.Model do
 
         # As in inserts, embeds can't be `read_after_writes` so we don't care
         # about values returned from the adapter
-        return =
+        {success, changeset} =
           changeset
           |> Ecto.Embedded.apply_callbacks(embeds, adapter, :update, :after)
           |> load_changes(values, adapter)
           |> process_nested(assoc_changes, repo, opts)
 
-        case return do
+        changeset = put_in changeset.model.__meta__.state, :loaded
+
+        case {success, changeset} do
           {:ok, changeset} ->
             {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
           {:error, changeset} ->
@@ -238,7 +242,7 @@ defmodule Ecto.Repo.Model do
   end
 
   defp do_load(struct, kv, types, adapter) do
-    model = Enum.reduce(kv, struct, fn
+    Enum.reduce(kv, struct, fn
       {k, v}, acc ->
         type = Map.fetch!(types, k)
         case adapter.load(type, v) do
@@ -246,8 +250,6 @@ defmodule Ecto.Repo.Model do
           :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"
         end
     end)
-
-    put_in model.__meta__.state, :loaded
   end
 
   defp delete_changes(changeset, embeds, assocs) do
@@ -308,10 +310,11 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  defp process_nested(%Ecto.Association.Has{cardinality: :one}, field, changeset,
+  defp process_nested(%Ecto.Association.Has{cardinality: :one} = relation, field, changeset,
                       parent_key, repo, opts, action, {parent, changes, valid?}) do
     case do_process_nested(changeset, parent_key, repo, opts, action) do
       {:ok, model} ->
+        process_one_replace!(changeset, relation, field, parent, repo, opts)
         {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
       {:error, changeset} ->
         {parent, Map.put(changes, field, changeset), false}
@@ -350,6 +353,28 @@ defmodule Ecto.Repo.Model do
         {:error, update_in(changeset.changes, &Map.put(&1, key, original))}
     end
   end
+
+  defp process_one_replace!(%{action: :insert}, relation, name, parent, repo, opts) do
+    case Map.get(parent, name) do
+      # It can only be not loaded if freshly built, because we check in
+      # Ecto.Changeset.Relation for it
+      %Ecto.Association.NotLoaded{} ->
+        :ok
+      nil ->
+        :ok
+      previous ->
+        {:ok, %{action: action} = changeset, _, _} =
+          Ecto.Changeset.Relation.change(relation, parent, nil, previous)
+        case apply(repo, action, [changeset, opts]) do
+          {:error, changeset} ->
+            raise Ecto.InvalidChangesetError, action: action, changeset: changeset
+          _success ->
+            :ok
+        end
+    end
+  end
+
+  defp process_one_replace!(_, _, _, _, _, _), do: :ok
 
   defp parent_key(%{owner_key: owner_key, related_key: related_key}, owner) do
     {related_key, Map.get(owner, owner_key)}

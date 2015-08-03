@@ -437,6 +437,17 @@ defmodule Ecto.Schema do
       May be `:nothing` (default), `:nilify_all`, `:delete_all` or
       `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
+    * `:on_replace` - The action taken on associations when model is replaced
+      as a nested association during casting or manipulating parent changeset.
+      May be `:delete` (default), `:nilify`, `:nothing`.
+      See `Ecto.Changeset`'s section on related models for more info.
+
+    * `:on_cast` - The default changeset function to call during casting
+      of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
+      It's an atom representing the function name in the associated model's
+      module which will receive the module and the parameters for casting
+      (default: `:changeset`).
+
     *  `:defaults` - Default values to use when building the association
 
   ## Examples
@@ -562,7 +573,18 @@ defmodule Ecto.Schema do
       May be `:nothing` (default), `:nilify_all`, `:delete_all` or
       `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
-    *  `:defaults` - Default values to use when building the association
+    * `:on_replace` - The action taken on associations when model is replaced
+      as a nested association during casting or manipulating parent changeset.
+      May be `:delete` (default), `:nilify`, `:nothing`.
+      See `Ecto.Changeset`'s section on related models for more info.
+
+    * `:on_cast` - The default changeset function to call during casting
+      of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
+      It's an atom representing the function name in the associated model's
+      module which will receive the module and the parameters for casting
+      (default: `:changeset`).
+
+    * `:defaults` - Default values to use when building the association
 
   ## Examples
 
@@ -928,7 +950,7 @@ defmodule Ecto.Schema do
   end
 
   @valid_has_options [:foreign_key, :references, :through, :on_delete,
-                      :defaults, :on_cast]
+                      :defaults, :on_cast, :on_replace]
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
