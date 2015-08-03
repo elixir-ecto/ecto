@@ -24,6 +24,26 @@ defmodule Ecto.Changeset.Relation do
   def empty(:many), do: []
 
   @doc """
+  Applies related changeset changes
+  """
+  def apply_changes(%{cardinality: :one}, nil) do
+    nil
+  end
+
+  def apply_changes(%{cardinality: :one}, changeset) do
+    apply_changes(changeset)
+  end
+
+  def apply_changes(%{cardinality: :many}, changesets) do
+    for changeset <- changesets,
+      model = apply_changes(changeset),
+      do: model
+  end
+
+  defp apply_changes(%Changeset{action: :delete}), do: nil
+  defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
+
+  @doc """
   Casts embedded models according to the `on_cast` function.
 
   Sets correct `state` on the returned changeset

@@ -824,4 +824,20 @@ defmodule Ecto.AssociationTest do
     assert profile_change.action == :update
     assert profile_change.changes == %{summary_id: nil}
   end
+
+  test "apply_changes" do
+    embed = Author.__schema__(:association, :profile)
+
+    changeset = Changeset.change(%Profile{}, name: "michal")
+    model = Relation.apply_changes(embed, changeset)
+    assert model == %Profile{name: "michal"}
+
+    changeset = Changeset.change(%Post{}, title: "hello")
+    changeset2 = %{changeset | action: :delete}
+    assert Relation.apply_changes(embed, changeset2) == nil
+
+    embed = Author.__schema__(:association, :posts)
+    [model] = Relation.apply_changes(embed, [changeset, changeset2])
+    assert model == %Post{title: "hello"}
+  end
 end

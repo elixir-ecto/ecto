@@ -448,15 +448,15 @@ defmodule Ecto.EmbeddedTest do
     embed = Author.__schema__(:embed, :profile)
 
     changeset = Changeset.change(%Profile{}, name: "michal")
-    model = Embedded.apply_changes(embed, changeset)
+    model = Relation.apply_changes(embed, changeset)
     assert model == %Profile{name: "michal"}
 
     changeset = Changeset.change(%Post{}, title: "hello")
     changeset2 = %{changeset | action: :delete}
-    assert Embedded.apply_changes(embed, changeset2) == nil
+    assert Relation.apply_changes(embed, changeset2) == nil
 
     embed = Author.__schema__(:embed, :posts)
-    [model] = Embedded.apply_changes(embed, [changeset, changeset2])
+    [model] = Relation.apply_changes(embed, [changeset, changeset2])
     assert model == %Post{title: "hello"}
   end
 end

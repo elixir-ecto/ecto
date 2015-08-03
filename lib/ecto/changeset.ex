@@ -724,11 +724,8 @@ defmodule Ecto.Changeset do
     changes =
       Enum.map(changes, fn {key, value} = kv ->
         case Map.get(types, key) do
-          {:embed, embed} ->
-            {key, Ecto.Embedded.apply_changes(embed, value)}
-          {:assoc, _assoc} ->
-            raise ArgumentError, "associations should be removed from changeset" <>
-              "before aplying changes"
+          {tag, relation} when tag in @relations ->
+            {key, Relation.apply_changes(relation, value)}
           _ ->
             kv
         end

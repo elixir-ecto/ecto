@@ -37,26 +37,6 @@ defmodule Ecto.Embedded do
   end
 
   @doc """
-  Applies embedded changeset changes
-  """
-  def apply_changes(%Embedded{cardinality: :one}, nil) do
-    nil
-  end
-
-  def apply_changes(%Embedded{cardinality: :one}, changeset) do
-    apply_changes(changeset)
-  end
-
-  def apply_changes(%Embedded{cardinality: :many}, changesets) do
-    for changeset <- changesets,
-        model = apply_changes(changeset),
-        do: model
-  end
-
-  defp apply_changes(%Changeset{action: :delete}), do: nil
-  defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
-
-  @doc """
   Applies given callback to all models based on changeset action
   """
   def apply_callbacks(changeset, [], _adapter, _function, _type), do: changeset
