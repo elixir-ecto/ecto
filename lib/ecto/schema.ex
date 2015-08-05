@@ -433,14 +433,14 @@ defmodule Ecto.Schema do
     * `:through` - If this association must be defined in terms of existing
       associations. Read below for more information
 
-    * `:on_delete` - The action taken on associations when model is deleted.
+    * `:on_delete` - The action taken on associations when parent model is deleted.
       May be `:nothing` (default), `:nilify_all`, `:delete_all` or
       `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
-    * `:on_replace` - The action taken on associations when model is replaced
-      as a nested association during casting or manipulating parent changeset.
-      May be `:delete` (default), `:nilify`, `:nothing`.
-      See `Ecto.Changeset`'s section on related models for more info.
+    * `:on_replace` - The action taken on associations when the model is
+      replaced   when casting or manipulating parent changeset. May be
+      `:delete` (default) or `:nilify`. See `Ecto.Changeset`'s section on
+      related models for more info.
 
     * `:on_cast` - The default changeset function to call during casting
       of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
@@ -448,7 +448,7 @@ defmodule Ecto.Schema do
       module which will receive the module and the parameters for casting
       (default: `:changeset`).
 
-    *  `:defaults` - Default values to use when building the association
+    * `:defaults` - Default values to use when building the association
 
   ## Examples
 
@@ -569,14 +569,14 @@ defmodule Ecto.Schema do
     * `:through` - If this association must be defined in terms of existing
       associations. Read the section in `has_many/3` for more information
 
-    * `:on_delete` - The action taken on associations when model is deleted.
+    * `:on_delete` - The action taken on associations when parent model is deleted.
       May be `:nothing` (default), `:nilify_all`, `:delete_all` or
       `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
-    * `:on_replace` - The action taken on associations when model is replaced
-      as a nested association during casting or manipulating parent changeset.
-      May be `:delete` (default), `:nilify`, `:nothing`.
-      See `Ecto.Changeset`'s section on related models for more info.
+    * `:on_replace` - The action taken on associations when the model is
+      replaced   when casting or manipulating parent changeset. May be
+      `:delete` (default) or `:nilify`. See `Ecto.Changeset`'s section on
+      related models for more info.
 
     * `:on_cast` - The default changeset function to call during casting
       of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
@@ -776,6 +776,14 @@ defmodule Ecto.Schema do
       Ecto supports only the `:replace` strategy out of the box which is the
       default. Read the strategy in `embeds_many/3` for more info.
 
+    * `:on_delete` - The action taken on embeds when parent model is deleted.
+      For now it only supports `:nothing` as value, which means no callback
+      will be invoked, similar to `has_one/3` default.
+
+    * `:on_replace` - The action taken on embeds when it is replaced
+      during casting or manipulating parent changeset. For now, it
+      supports `:delete`, implying delete callbacks will be invoked.
+
   ## Examples
 
       defmodule Order do
@@ -832,6 +840,14 @@ defmodule Ecto.Schema do
     * `:strategy` - the strategy for storing models in the database.
       Ecto supports only the `:replace` strategy out of the box which is the
       default. Read strategy section below for more info.
+
+    * `:on_delete` - The action taken on embeds when parent model is deleted.
+      For now it only supports `:nothing` as value, which means no callback
+      will be invoked, similar to `has_many/3` default.
+
+    * `:on_replace` - The action taken on embeds when it is replaced
+      during casting or manipulating parent changeset. For now, it
+      supports `:delete`, implying delete callbacks will be invoked.
 
   ## Examples
 

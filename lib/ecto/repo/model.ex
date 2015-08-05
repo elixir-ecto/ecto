@@ -70,8 +70,6 @@ defmodule Ecto.Repo.Model do
 
       {:ok, values} = adapter.insert(repo, {prefix, source, model}, changes, autogen, return, opts)
 
-      # Embeds can't be `read_after_writes` so we don't care
-      # about values returned from the adapter
       {success, changeset} =
         changeset
         |> load_changes(values, adapter)
@@ -140,8 +138,6 @@ defmodule Ecto.Repo.Model do
             []
           end
 
-        # As in inserts, embeds can't be `read_after_writes` so we don't care
-        # about values returned from the adapter
         {success, changeset} =
           changeset
           |> load_changes(values, adapter)
@@ -195,7 +191,6 @@ defmodule Ecto.Repo.Model do
                         ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
       changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :delete, :before)
-      {embed_changes, changeset} = pop_from_changes(changeset, embeds)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
@@ -206,12 +201,7 @@ defmodule Ecto.Repo.Model do
           raise Ecto.StaleModelError, model: struct, action: :delete
       end
 
-      # TODO: Should this also mirror assocs
-      changeset =
-        put_in(changeset.model.__meta__.state, :deleted)
-        |> process_embeds(embed_changes, adapter, repo, opts)
-
-      changeset = put_in changeset.model.__meta__.state, :deleted
+      changeset = put_in(changeset.model.__meta__.state, :deleted)
       {:ok, Callbacks.__apply__(model, :after_delete, changeset).model}
     end)
   end

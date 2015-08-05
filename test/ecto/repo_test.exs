@@ -880,54 +880,38 @@ defmodule Ecto.RepoTest do
 
     # With model runs all callbacks
     model = TestRepo.delete!(%MyModel{id: 1, embed: embed})
-    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
-            {:before_delete, MyEmbed}, {:before_delete, MyModel} | _] =
+    assert [{:after_delete, MyModel}, {:before_delete, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == nil
+    assert model.embed == embed
 
     model = TestRepo.delete!(%MyModel{id: 1, embeds: [embed]})
-    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
-            {:before_delete, MyEmbed}, {:before_delete, MyModel} | _] =
+    assert [{:after_delete, MyModel}, {:before_delete, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.embeds == []
+    assert model.embeds == [embed]
 
     # With changeset runs all callbacks
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed})
     model = TestRepo.delete!(changeset)
-    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
-            {:before_delete, MyEmbed}, {:before_delete, MyModel} | _] =
+    assert [{:after_delete, MyModel}, {:before_delete, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == nil
+    assert model.embed == embed
 
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embeds: [embed]})
     model = TestRepo.delete!(changeset)
-    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
-            {:before_delete, MyEmbed}, {:before_delete, MyModel} | _] =
+    assert [{:after_delete, MyModel}, {:before_delete, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.embeds == []
+    assert model.embeds == [embed]
   end
 
   test "handles assocs on delete" do
     assoc = %MyAssoc{id: 1, x: "xyz"}
 
-    # With model leaves it be (probably running on delete)
-    assert {:ok, _} = TestRepo.delete(%MyModel{id: 1, assoc: assoc})
+    model = TestRepo.delete!(%MyModel{id: 1, assoc: assoc})
+    assert model.assoc == assoc
 
     changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: nil)
     assert_raise ArgumentError, ~r"nested association changes are not allowed on delete, but got .*" , fn ->
       TestRepo.delete!(changeset)
     end
   end
-
-  test "handles nested embeds on delete" do
-    sub_embed = %SubEmbed{id: @uuid, y: "xyz"}
-    embed = %MyEmbed{id: @uuid, x: "xyz", sub_embed: sub_embed}
-    TestRepo.delete!(%MyModel{id: 1, embed: embed})
-    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
-            {:after_delete, SubEmbed}, {:before_delete, SubEmbed},
-            {:before_delete, MyEmbed}, {:before_delete, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-  end
-
-  # Nested assocs on delete are handled with the on_delete setting and tested there
 end
