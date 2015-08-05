@@ -59,34 +59,27 @@ defmodule Ecto.Embedded do
     end
   end
 
-  defp callback_one_replace!(_action, _type, _embed, nil), do: :ok
-  defp callback_one_replace!(:insert, :after, %{related: model}, current) do
-    changeset = Changeset.change(current)
-    changeset = Ecto.Model.Callbacks.__apply__(model, :before_delete, changeset)
-    Ecto.Model.Callbacks.__apply__(model, :after_delete, changeset)
-  end
-  defp callback_one_replace!(_action, _type, _embed, _current), do: :ok
-
-  defp apply_callback(%Embedded{cardinality: :one}, nil, _current, _adapter, _function, _type) do
+  defp apply_callback(%{cardinality: :one}, nil, _current, _adapter, _function, _type) do
     nil
   end
 
-  defp apply_callback(%Embedded{cardinality: :one, related: model} = embed,
+  defp apply_callback(%{cardinality: :one, related: model} = embed,
                       changeset, current, adapter, function, type) do
     changeset = apply_callback(changeset, model, embed, adapter, function, type)
     callback_one_replace!(changeset.action, type, embed, current)
     changeset
   end
 
-  defp apply_callback(%Embedded{cardinality: :many, related: model} = embed,
+  defp apply_callback(%{cardinality: :many, related: model} = embed,
                       changesets, _current, adapter, function, type) do
     for changeset <- changesets,
-        do: apply_callback(changeset, model, embed, adapter, function, type)
+      do: apply_callback(changeset, model, embed, adapter, function, type)
   end
 
   defp apply_callback(%Changeset{action: :update, changes: changes} = changeset,
-                      _model, _embed, _adapter, _function, _type) when changes == %{},
-    do: changeset
+                      _model, _embed, _adapter, _function, _type) when changes == %{} do
+    changeset
+  end
 
   defp apply_callback(%Changeset{valid?: false}, model, _embed, _adapter, _function, _type) do
     raise ArgumentError, "changeset for embedded #{model} is invalid, " <>
@@ -112,6 +105,13 @@ defmodule Ecto.Embedded do
   defp check_action!(:delete, :insert, model),
     do: raise(ArgumentError, "got action :delete in changeset for embedded #{model} while inserting")
   defp check_action!(_, _, _), do: :ok
+
+  defp callback_one_replace!(:insert, :after, %{related: model}, current) when current != nil do
+    changeset = Changeset.change(current)
+    changeset = Ecto.Model.Callbacks.__apply__(model, :before_delete, changeset)
+    Ecto.Model.Callbacks.__apply__(model, :after_delete, changeset)
+  end
+  defp callback_one_replace!(_action, _type, _embed, _current), do: :ok
 
   defp generate_id(changeset, :before_insert, model, embed, adapter) do
     case model.__schema__(:autogenerate_id) do

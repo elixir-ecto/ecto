@@ -355,6 +355,54 @@ defmodule Ecto.Association.Has do
     changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
     {:update, changeset}
   end
+
+  @doc false
+  # TODO: This should be spec'ed somewhere
+  def on_repo_action(assoc, changeset, parent, repo, repo_action, opts) do
+    %{model: model, action: action, changes: changes} = changeset
+    check_action!(action, repo_action, model.__struct__)
+
+    {key, value} = parent_key(assoc, parent)
+    changeset    = update_in changeset.changes, &Map.put(&1, key, value)
+
+    case apply(repo, action, [changeset, opts]) do
+      {:ok, _} = ok ->
+        maybe_replace_one!(assoc, changeset, parent, repo, opts)
+        ok
+      {:error, changeset} ->
+        original = Map.get(changes, key)
+        {:error, update_in(changeset.changes, &Map.put(&1, key, original))}
+    end
+  end
+
+  defp parent_key(%{owner_key: owner_key, related_key: related_key}, owner) do
+    {related_key, Map.get(owner, owner_key)}
+  end
+
+  defp check_action!(:delete, :insert, model),
+    do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect model} while inserting")
+  defp check_action!(_, _, _), do: :ok
+
+  defp maybe_replace_one!(%{cardinality: :one, field: field} = assoc,
+                          %{action: :insert}, parent, repo, opts) do
+    case Map.get(parent, field) do
+      %Ecto.Association.NotLoaded{} ->
+        :ok
+      nil ->
+        :ok
+      previous ->
+        {action, changeset} = on_replace(assoc, Ecto.Changeset.change(previous))
+
+        case apply(repo, action, [changeset, opts]) do
+          {:ok, _} ->
+            :ok
+          {:error, changeset} ->
+            raise Ecto.InvalidChangesetError, action: action, changeset: changeset
+        end
+    end
+  end
+
+  defp maybe_replace_one!(_, _, _, _, _), do: :ok
 end
 
 defmodule Ecto.Association.HasThrough do
