@@ -330,7 +330,7 @@ defmodule Ecto.RepoTest do
   test "delete fail on changeset with changes" do
     invalid = %Ecto.Changeset{model: %MyModel{}, changes: %{x: "abc"}, valid?: true}
 
-    assert_raise ArgumentError, ~S(Repo.delete does not support changesets with changes, got `%{x: "abc"}`), fn ->
+    assert_raise ArgumentError, ~s(Ecto.TestRepo.delete does not support changesets with changes, got `%{x: "abc"}`), fn ->
       TestRepo.delete(invalid)
     end
   end
@@ -881,5 +881,47 @@ defmodule Ecto.RepoTest do
     refute changeset.changes.assoc.changes.sub_assoc.changes.id
     refute changeset.changes.assoc.changes.sub_assoc.changes.my_assoc_id
     refute changeset.valid?
+  end
+
+  test "handles embeds on delete" do
+    embed = %MyEmbed{id: @uuid, x: "xyz"}
+
+    # With model runs all callbacks
+    model = TestRepo.delete!(%MyModel{id: 1, embed: embed})
+    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
+            {:before_delete, MyEmbed},{:before_delete, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == embed
+
+    model = TestRepo.delete!(%MyModel{id: 1, embeds: [embed]})
+    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
+            {:before_delete, MyEmbed},{:before_delete, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embeds == [embed]
+
+    # With changeset runs all callbacks
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed})
+    model = TestRepo.delete!(changeset)
+    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
+            {:before_delete, MyEmbed},{:before_delete, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == embed
+
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embeds: [embed]})
+    model = TestRepo.delete!(changeset)
+    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
+            {:before_delete, MyEmbed},{:before_delete, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embeds == [embed]
+  end
+
+  test "handles nested embeds on delete" do
+    sub_embed = %SubEmbed{id: @uuid, y: "xyz"}
+    embed = %MyEmbed{id: @uuid, x: "xyz", sub_embed: sub_embed}
+    TestRepo.delete!(%MyModel{id: 1, embed: embed})
+    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
+            {:after_delete, SubEmbed}, {:before_delete, SubEmbed},
+            {:before_delete, MyEmbed}, {:before_delete, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
   end
 end

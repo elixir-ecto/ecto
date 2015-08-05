@@ -777,8 +777,8 @@ defmodule Ecto.Schema do
       default. Read the strategy in `embeds_many/3` for more info.
 
     * `:on_delete` - The action taken on embeds when parent model is deleted.
-      For now it only supports `:nothing` as value, which means no callback
-      will be invoked, similar to `has_one/3` default.
+      The only supported value is `:fetch_and_delete`, meaning callbacks are
+      always executed.
 
     * `:on_replace` - The action taken on embeds when it is replaced
       during casting or manipulating parent changeset. For now, it
@@ -842,8 +842,8 @@ defmodule Ecto.Schema do
       default. Read strategy section below for more info.
 
     * `:on_delete` - The action taken on embeds when parent model is deleted.
-      For now it only supports `:nothing` as value, which means no callback
-      will be invoked, similar to `has_many/3` default.
+      The only supported value is `:fetch_and_delete`, meaning callbacks are
+      always executed.
 
     * `:on_replace` - The action taken on embeds when it is replaced
       during casting or manipulating parent changeset. For now, it

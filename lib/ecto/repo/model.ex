@@ -178,13 +178,15 @@ defmodule Ecto.Repo.Model do
     autogen   = get_autogenerate_id(changeset, model)
 
     if changeset.changes != %{} do
-      raise ArgumentError, "Repo.delete does not support changesets with " <>
-        "changes, got `#{inspect changeset.changes}`"
+      raise ArgumentError,
+        "#{inspect repo}.delete does not support changesets with changes, " <>
+        "got `#{inspect changeset.changes}`"
     end
 
     wrap_in_transaction(repo, adapter, model, opts, embeds, [],
                         ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
+      changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :delete)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
@@ -194,6 +196,11 @@ defmodule Ecto.Repo.Model do
         {:error, :stale} ->
           raise Ecto.StaleModelError, model: struct, action: :delete
       end
+
+      # We ignore the results because we still want to keep
+      # the embed values in the model. Also note we don't
+      # process associations because they are handled externally.
+      _ = process_embeds(changeset, Map.take(changeset.changes, embeds), adapter, repo, opts)
 
       changeset = put_in(changeset.model.__meta__.state, :deleted)
       {:ok, Callbacks.__apply__(model, :after_delete, changeset).model}

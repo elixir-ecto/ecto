@@ -378,7 +378,7 @@ defmodule Ecto.Association.Has do
   defp update_parent_key(changeset, :delete, _key, _value),
     do: changeset
   defp update_parent_key(changeset, _action, key, value),
-    do: update_in changeset.changes, &Map.put(&1, key, value)
+    do: update_in(changeset.changes, &Map.put(&1, key, value))
 
   defp parent_key(%{owner_key: owner_key, related_key: related_key}, owner) do
     {related_key, Map.get(owner, owner_key)}

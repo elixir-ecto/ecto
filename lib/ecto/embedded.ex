@@ -1,16 +1,15 @@
 defmodule Ecto.Embedded do
   @moduledoc false
-
   alias __MODULE__
   alias Ecto.Changeset
 
   defstruct [:cardinality, :field, :owner, :related, :on_cast,
-             strategy: :replace, on_replace: :delete, on_delete: :nothing]
+             strategy: :replace, on_replace: :delete, on_delete: :fetch_and_delete]
 
   @type t :: %Embedded{cardinality: :one | :many,
                        strategy: :replace | atom,
                        on_replace: :delete,
-                       on_delete: :nothing,
+                       on_delete: :fetch_and_delete,
                        field: atom, owner: atom, related: atom, on_cast: atom}
 
   @behaviour Ecto.Changeset.Relation
@@ -37,7 +36,8 @@ defmodule Ecto.Embedded do
   def prepare(changeset, [], _adapter, _repo_action), do: changeset
 
   def prepare(changeset, embeds, adapter, repo_action) do
-    types = changeset.types
+    types     = changeset.types
+    changeset = merge_delete_changes(changeset, embeds, types, repo_action)
 
     update_in changeset.changes, fn changes ->
       Enum.reduce(embeds, changes, fn name, changes ->
@@ -51,6 +51,17 @@ defmodule Ecto.Embedded do
       end)
     end
   end
+
+  defp merge_delete_changes(changeset, embeds, types, :delete) do
+    changes =
+      Enum.map(embeds, fn field ->
+        {:embed, embed} = Map.get(types, field)
+        {field, Ecto.Changeset.Relation.empty(embed)}
+      end)
+    Changeset.change(changeset, changes)
+  end
+
+  defp merge_delete_changes(changeset, _, _, _), do: changeset
 
   defp prepare_each(%{cardinality: :one}, nil, _adapter, _action) do
     nil
@@ -132,7 +143,7 @@ defmodule Ecto.Embedded do
     if changeset.action == :delete do
       {:ok, nil}
     else
-      {:ok, Ecto.Changeset.apply_changes(changeset)}
+      {:ok, Changeset.apply_changes(changeset)}
     end
   end
 
