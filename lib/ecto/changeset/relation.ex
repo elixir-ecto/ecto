@@ -130,19 +130,10 @@ defmodule Ecto.Changeset.Relation do
     |> put_new_action(:insert)
   end
 
-  defp do_change(%{__struct__: module, related: model} = relation, nil, current) do
-    case module.on_replace(relation, Changeset.change(current)) do
-      {:delete, changeset} ->
-        # TODO: This should likely be handled in the repository.
-        # We need to mark all embeds for deletion too
-        changes =
-          Enum.map(model.__schema__(:embeds), fn field ->
-            {field, Changeset.Relation.empty(model.__schema__(:embed, field))}
-          end)
-        Changeset.change(changeset, changes) |> put_new_action(:delete)
-      {action, changeset} ->
-        changeset |> put_new_action(action)
-    end
+  defp do_change(%{__struct__: module} = relation, nil, current) do
+    {action, changeset} =
+      module.on_replace(relation, Changeset.change(current))
+    changeset |> put_new_action(action)
   end
 
   defp do_change(_relation, %Changeset{model: current} = changeset, current) do

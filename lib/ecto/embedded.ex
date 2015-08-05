@@ -45,6 +45,8 @@ defmodule Ecto.Embedded do
     types = changeset.types
     model = changeset.model
 
+    changeset = merge_delete_changes(changeset, embeds, types, function, type)
+
     update_in changeset.changes, fn changes ->
       Enum.reduce(embeds, changes, fn name, changes ->
         case Map.fetch(changes, name) do
@@ -58,6 +60,18 @@ defmodule Ecto.Embedded do
       end)
     end
   end
+
+  defp merge_delete_changes(changeset, embeds, types, :delete, :before) do
+    changes =
+      Enum.map(embeds, fn field ->
+        {:embed, embed} = Map.get(types, field)
+        {field, Changeset.Relation.empty(embed)}
+      end)
+
+    Ecto.Changeset.change(changeset, changes)
+  end
+
+  defp merge_delete_changes(changeset, _, _, _, _), do: changeset
 
   defp apply_callback(%{cardinality: :one}, nil, _current, _adapter, _function, _type) do
     nil
@@ -87,12 +101,20 @@ defmodule Ecto.Embedded do
   end
 
   defp apply_callback(%Changeset{model: %{__struct__: model}, action: action} = changeset,
-                      model, embed, adapter, function, type) do
+                      model, embed, adapter, function, :before) do
     check_action!(action, function, model)
-    callback = callback_for(type, action)
+    callback = callback_for(:before, action)
     Ecto.Model.Callbacks.__apply__(model, callback, changeset)
     |> generate_id(callback, model, embed, adapter)
-    |> apply_callbacks(model.__schema__(:embeds), adapter, function, type)
+    |> apply_callbacks(model.__schema__(:embeds), adapter, function, :before)
+  end
+
+  defp apply_callback(%Changeset{model: %{__struct__: model}, action: action} = changeset,
+                      _model, _embed, adapter, function, :after) do
+    callback = callback_for(:after, action)
+    changeset =
+      apply_callbacks(changeset, model.__schema__(:embeds), adapter, function, :after)
+    Ecto.Model.Callbacks.__apply__(model, callback, changeset)
   end
 
   defp apply_callback(%Changeset{model: model}, expected, _embed, _adapter, _function, _type) do
