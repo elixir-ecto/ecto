@@ -61,7 +61,7 @@ defmodule Ecto.Repo.Model do
     wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
                         ~w(before_insert after_insert)a, fn ->
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
-      changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :insert, :before)
+      changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
 
       {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
       {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
@@ -70,15 +70,11 @@ defmodule Ecto.Repo.Model do
 
       {:ok, values} = adapter.insert(repo, {prefix, source, model}, changes, autogen, return, opts)
 
-      {success, changeset} =
-        changeset
-        |> load_changes(values, adapter)
-        |> process_embeds(embed_changes, adapter, repo, opts)
-        |> process_assocs(assoc_changes, adapter, repo, opts)
-
-      changeset = put_in changeset.model.__meta__.state, :loaded
-
-      case {success, changeset} do
+      changeset
+      |> load_changes(values, adapter)
+      |> process_embeds(embed_changes, adapter, repo, opts)
+      |> process_assocs(assoc_changes, adapter, repo, opts)
+      |> case do
         {:ok, changeset} ->
           {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
         {:error, changeset} ->
@@ -116,7 +112,7 @@ defmodule Ecto.Repo.Model do
       wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
                           ~w(before_update after_update)a, fn ->
         changeset = Callbacks.__apply__(model, :before_update, changeset)
-        changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :update, :before)
+        changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
 
         {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
         autogen = get_autogenerate_id(changeset.changes, model)
@@ -138,13 +134,11 @@ defmodule Ecto.Repo.Model do
             []
           end
 
-        {success, changeset} =
-          changeset
-          |> load_changes(values, adapter)
-          |> process_embeds(embed_changes, adapter, repo, opts)
-          |> process_assocs(assoc_changes, adapter, repo, opts)
-
-        case {success, changeset} do
+        changeset
+        |> load_changes(values, adapter)
+        |> process_embeds(embed_changes, adapter, repo, opts)
+        |> process_assocs(assoc_changes, adapter, repo, opts)
+        |> case do
           {:ok, changeset} ->
             {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
           {:error, changeset} ->
@@ -190,7 +184,7 @@ defmodule Ecto.Repo.Model do
     wrap_in_transaction(repo, adapter, model, opts, embeds, [],
                         ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
-      changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :delete, :before)
+      changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :delete)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
@@ -230,8 +224,7 @@ defmodule Ecto.Repo.Model do
       changeset
       |> Ecto.Changeset.apply_changes
       |> do_load(values, types, adapter)
-
-    model = put_in model.__meta__.state, :loaded
+    model = put_in(model.__meta__.state, :loaded)
     Map.put(changeset, :model, model)
   end
 
@@ -270,68 +263,13 @@ defmodule Ecto.Repo.Model do
   end
 
   defp process_embeds(changeset, embeds, adapter, repo, opts) do
-    {:ok, changeset} = process_children(changeset, embeds, adapter, repo, opts)
+    {:ok, changeset} =
+      Ecto.Changeset.Relation.on_repo_action(changeset, embeds, adapter, repo, opts)
     changeset
   end
 
-  defp process_assocs(changeset, embeds, adapter, repo, opts) do
-    process_children(changeset, embeds, adapter, repo, opts)
-  end
-
-  defp process_children(changeset, related, _adapter, _repo, _opts) when related == %{} do
-    {:ok, changeset}
-  end
-
-  defp process_children(changeset, related, adapter, repo, opts) do
-    %Changeset{types: types, model: model, changes: changes, action: action} = changeset
-
-    {model, changes, valid?} =
-      Enum.reduce(related, {model, changes, true}, fn {field, changeset}, acc ->
-        {_, related} = Map.get(types, field)
-        process_children(related, field, changeset, adapter, repo, action, opts, acc)
-      end)
-
-    if valid? do
-      {:ok, %{changeset | model: model}}
-    else
-      {:error, %{changeset | changes: changes}}
-    end
-  end
-
-  defp process_children(%{cardinality: :one}, field, nil,
-                        _adapter, _repo, _action, _opts, {parent, changes, valid?}) do
-    {Map.put(parent, field, nil), Map.put(changes, field, nil), valid?}
-  end
-
-  defp process_children(%{cardinality: :one} = meta, field, changeset,
-                        adapter, repo, action, opts, {parent, changes, valid?}) do
-    case meta.__struct__.on_repo_action(meta, changeset, parent, adapter, repo, action, opts) do
-      {:ok, model} ->
-        {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
-      {:error, changeset} ->
-        {parent, Map.put(changes, field, changeset), false}
-    end
-  end
-
-  defp process_children(%{cardinality: :many} = meta, field, changesets,
-                        adapter, repo, action, opts, {parent, changes, valid?}) do
-    {changesets, {models, models_valid?}} =
-      Enum.map_reduce(changesets, {[], true}, fn changeset, {models, models_valid?} ->
-        case meta.__struct__.on_repo_action(meta, changeset, parent, adapter, repo, action, opts) do
-          {:ok, nil} ->
-            {changeset, {models, models_valid?}}
-          {:ok, model} ->
-            {changeset, {[model | models], models_valid?}}
-          {:error, changeset} ->
-            {changeset, {models, false}}
-        end
-      end)
-
-    if models_valid? do
-      {Map.put(parent, field, Enum.reverse(models)), Map.put(changes, field, changesets), valid?}
-    else
-      {parent, Map.put(changes, field, changesets), false}
-    end
+  defp process_assocs(changeset, assocs, adapter, repo, opts) do
+    Ecto.Changeset.Relation.on_repo_action(changeset, assocs, adapter, repo, opts)
   end
 
   defp pop_autogenerate_id(changes, model) do

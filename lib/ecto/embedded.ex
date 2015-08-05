@@ -15,26 +15,6 @@ defmodule Ecto.Embedded do
 
   @behaviour Ecto.Changeset.Relation
 
-  @doc false
-  def on_replace(%Embedded{on_replace: :delete}, changeset) do
-    {:delete, changeset}
-  end
-
-  def on_repo_action(%{cardinality: cardinality, field: field, related: model} = embed,
-                     changeset, parent, adapter, _repo, repo_action, _opts) do
-    changeset = apply_callback(changeset, model, embed, adapter, repo_action, :after)
-
-    if cardinality == :one do
-      callback_one_replace!(changeset.action, :after, embed, Map.get(parent, field))
-    end
-
-    if changeset.action == :delete do
-      {:ok, nil}
-    else
-      {:ok, Ecto.Changeset.apply_changes(changeset)}
-    end
-  end
-
   @doc """
   Builds the embedded struct.
 
@@ -52,21 +32,19 @@ defmodule Ecto.Embedded do
   end
 
   @doc """
-  Applies given callback to all models based on changeset action
+  Callback invoked by repository to prepare embeds.
   """
-  def apply_callbacks(changeset, [], _adapter, _function, _type), do: changeset
+  def prepare(changeset, [], _adapter, _repo_action), do: changeset
 
-  def apply_callbacks(changeset, embeds, adapter, function, type) do
+  def prepare(changeset, embeds, adapter, repo_action) do
     types = changeset.types
-    model = changeset.model
 
     update_in changeset.changes, fn changes ->
       Enum.reduce(embeds, changes, fn name, changes ->
         case Map.fetch(changes, name) do
           {:ok, changeset} ->
             {:embed, embed} = Map.get(types, name)
-            current = Map.get(model, name)
-            Map.put(changes, name, apply_callback(embed, changeset, current, adapter, function, type))
+            Map.put(changes, name, prepare_each(embed, changeset, adapter, repo_action))
           :error ->
             changes
         end
@@ -74,69 +52,52 @@ defmodule Ecto.Embedded do
     end
   end
 
-  defp apply_callback(%{cardinality: :one}, nil, _current, _adapter, _function, _type) do
+  defp prepare_each(%{cardinality: :one}, nil, _adapter, _action) do
     nil
   end
 
-  defp apply_callback(%{cardinality: :one, related: model} = embed,
-                      changeset, current, adapter, function, type) do
-    changeset = apply_callback(changeset, model, embed, adapter, function, type)
-    callback_one_replace!(changeset.action, type, embed, current)
-    changeset
+  defp prepare_each(%{cardinality: :one} = embed, changeset, adapter, action) do
+    check_action!(changeset.action, action, embed)
+    prepare_each(changeset, embed, adapter)
   end
 
-  defp apply_callback(%{cardinality: :many, related: model} = embed,
-                      changesets, _current, adapter, function, type) do
-    for changeset <- changesets,
-      do: apply_callback(changeset, model, embed, adapter, function, type)
+  defp prepare_each(%{cardinality: :many} = embed, changesets, adapter, action) do
+    for changeset <- changesets do
+      check_action!(changeset.action, action, embed)
+      prepare_each(changeset, embed, adapter)
+    end
   end
 
-  defp apply_callback(%Changeset{action: :update, changes: changes} = changeset,
-                      _model, _embed, _adapter, _function, _type) when changes == %{} do
-    changeset
-  end
-
-  defp apply_callback(%Changeset{valid?: false}, model, _embed, _adapter, _function, _type) do
+  defp prepare_each(%Changeset{valid?: false}, %{related: model}, _adapter) do
     raise ArgumentError, "changeset for embedded #{model} is invalid, " <>
                          "but the parent changeset was not marked as invalid"
   end
 
-  defp apply_callback(%Changeset{model: %{__struct__: model}, action: action} = changeset,
-                      model, embed, adapter, function, :before) do
-    check_action!(action, function, model)
+  defp prepare_each(%Changeset{action: :update, changes: changes} = changeset,
+                    _embed, _adapter) when changes == %{} do
+    {:ok, changeset}
+  end
+
+  defp prepare_each(%Changeset{model: %{__struct__: model}, action: action} = changeset,
+                    %{related: model} = embed, adapter) do
     callback = callback_for(:before, action)
     Ecto.Model.Callbacks.__apply__(model, callback, changeset)
-    |> generate_id(callback, model, embed, adapter)
-    |> apply_callbacks(model.__schema__(:embeds), adapter, function, :before)
+    |> generate_id(action, model, embed, adapter)
+    |> prepare(model.__schema__(:embeds), adapter, action)
   end
 
-  defp apply_callback(%Changeset{model: %{__struct__: model}, action: action} = changeset,
-                      _model, _embed, adapter, function, :after) do
-    callback = callback_for(:after, action)
-    changeset =
-      apply_callbacks(changeset, model.__schema__(:embeds), adapter, function, :after)
-    Ecto.Model.Callbacks.__apply__(model, callback, changeset)
-  end
-
-  defp apply_callback(%Changeset{model: model}, expected, _embed, _adapter, _function, _type) do
+  defp prepare_each(%Changeset{model: model}, %{related: expected}, _adapter) do
     raise ArgumentError, "expected changeset for embedded model `#{inspect expected}`, " <>
                          "got: #{inspect model}"
   end
 
-  defp check_action!(:update, :insert, model),
+  defp check_action!(:update, :insert, %{related: model}),
     do: raise(ArgumentError, "got action :update in changeset for embedded #{model} while inserting")
-  defp check_action!(:delete, :insert, model),
+  defp check_action!(:delete, :insert, %{related: model}),
     do: raise(ArgumentError, "got action :delete in changeset for embedded #{model} while inserting")
   defp check_action!(_, _, _), do: :ok
 
-  defp callback_one_replace!(:insert, :after, %{related: model}, current) when current != nil do
-    changeset = Changeset.change(current)
-    changeset = Ecto.Model.Callbacks.__apply__(model, :before_delete, changeset)
-    Ecto.Model.Callbacks.__apply__(model, :after_delete, changeset)
-  end
-  defp callback_one_replace!(_action, _type, _embed, _current), do: :ok
-
-  defp generate_id(changeset, :before_insert, model, embed, adapter) do
+  defp generate_id(changeset, :insert, model, embed, adapter) do
     case model.__schema__(:autogenerate_id) do
       {key, :binary_id} ->
         if Map.get(changeset.changes, key) || Map.get(changeset.model, key) do
@@ -150,19 +111,52 @@ defmodule Ecto.Embedded do
     end
   end
 
-  defp generate_id(changeset, callback, _model, _embed, _adapter)
-      when callback in [:before_update, :before_delete] do
-    Enum.each(Ecto.Model.primary_key(changeset.model), fn
-      {_, nil} -> raise Ecto.NoPrimaryKeyValueError, struct: changeset.model
-      _        -> :ok
-    end)
-
+  defp generate_id(changeset, action, _model, _embed, _adapter) when action in [:update, :delete] do
+    for {_, nil} <- Ecto.Model.primary_key(changeset.model) do
+      raise Ecto.NoPrimaryKeyValueError, struct: changeset.model
+    end
     changeset
   end
 
-  defp generate_id(changeset, _callback, _model, _embed, _adapter) do
+  @doc false
+  def on_replace(%Embedded{on_replace: :delete}, changeset) do
+    {:delete, changeset}
+  end
+
+  @doc false
+  def on_repo_action(%{field: field, related: model} = embed,
+                     changeset, parent, adapter, repo, _repo_action, opts) do
+    changeset = on_repo_action(changeset, model, adapter, repo, opts)
+    maybe_replace_one!(embed, changeset.action, Map.get(parent, field))
+
+    if changeset.action == :delete do
+      {:ok, nil}
+    else
+      {:ok, Ecto.Changeset.apply_changes(changeset)}
+    end
+  end
+
+  defp on_repo_action(%Changeset{action: :update, changes: changes} = changeset,
+                      _model, _adapter, _repo, _opts) when changes == %{} do
     changeset
   end
+
+  defp on_repo_action(%Changeset{action: action, changes: changes} = changeset,
+                      model, adapter, repo, opts) do
+    callback = callback_for(:after, action)
+    related  = Map.take(changes, model.__schema__(:embeds))
+    {:ok, changeset} =
+      Ecto.Changeset.Relation.on_repo_action(changeset, related, adapter, repo, opts)
+    Ecto.Model.Callbacks.__apply__(model, callback, changeset)
+  end
+
+  defp maybe_replace_one!(%{cardinality: :one, related: model}, :insert, current) when current != nil do
+    changeset = Changeset.change(current)
+    changeset = Ecto.Model.Callbacks.__apply__(model, :before_delete, changeset)
+    Ecto.Model.Callbacks.__apply__(model, :after_delete, changeset)
+    :ok
+  end
+  defp maybe_replace_one!(_embed, _action, _current), do: :ok
 
   types   = [:before, :after]
   actions = [:insert, :update, :delete]

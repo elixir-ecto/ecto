@@ -359,8 +359,8 @@ defmodule Ecto.Association.Has do
   @doc false
   # TODO: This should be spec'ed somewhere
   def on_repo_action(assoc, changeset, parent, _adapter, repo, repo_action, opts) do
-    %{model: model, action: action, changes: changes} = changeset
-    check_action!(action, repo_action, model.__struct__)
+    %{action: action, changes: changes} = changeset
+    check_action!(action, repo_action, assoc)
 
     {key, value} = parent_key(assoc, parent)
     changeset    = update_in changeset.changes, &Map.put(&1, key, value)
@@ -379,7 +379,7 @@ defmodule Ecto.Association.Has do
     {related_key, Map.get(owner, owner_key)}
   end
 
-  defp check_action!(:delete, :insert, model),
+  defp check_action!(:delete, :insert, %{related: model}),
     do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect model} while inserting")
   defp check_action!(_, _, _), do: :ok
 
