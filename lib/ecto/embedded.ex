@@ -20,6 +20,21 @@ defmodule Ecto.Embedded do
     {:delete, changeset}
   end
 
+  def on_repo_action(%{cardinality: cardinality, field: field, related: model} = embed,
+                     changeset, parent, adapter, _repo, repo_action, _opts) do
+    changeset = apply_callback(changeset, model, embed, adapter, repo_action, :after)
+
+    if cardinality == :one do
+      callback_one_replace!(changeset.action, :after, embed, Map.get(parent, field))
+    end
+
+    if changeset.action == :delete do
+      {:ok, nil}
+    else
+      {:ok, Ecto.Changeset.apply_changes(changeset)}
+    end
+  end
+
   @doc """
   Builds the embedded struct.
 

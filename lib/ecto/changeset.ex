@@ -720,6 +720,10 @@ defmodule Ecto.Changeset do
 
   """
   @spec apply_changes(t) :: Ecto.Model.t
+  def apply_changes(%Changeset{changes: changes, model: model}) when changes == %{} do
+    model
+  end
+
   def apply_changes(%Changeset{changes: changes, model: model, types: types}) do
     changes =
       Enum.map(changes, fn {key, value} = kv ->

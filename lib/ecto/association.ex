@@ -358,7 +358,7 @@ defmodule Ecto.Association.Has do
 
   @doc false
   # TODO: This should be spec'ed somewhere
-  def on_repo_action(assoc, changeset, parent, repo, repo_action, opts) do
+  def on_repo_action(assoc, changeset, parent, _adapter, repo, repo_action, opts) do
     %{model: model, action: action, changes: changes} = changeset
     check_action!(action, repo_action, model.__struct__)
 
@@ -368,7 +368,7 @@ defmodule Ecto.Association.Has do
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         maybe_replace_one!(assoc, changeset, parent, repo, opts)
-        ok
+        if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
         original = Map.get(changes, key)
         {:error, update_in(changeset.changes, &Map.put(&1, key, original))}

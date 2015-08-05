@@ -113,7 +113,7 @@ defmodule Ecto.RepoTest do
   end
 
   setup do
-    Agent.start(fn -> [] end, name: CallbackAgent)
+    {:ok, _} = Agent.start_link(fn -> [] end, name: CallbackAgent)
     :ok
   end
 
@@ -358,36 +358,33 @@ defmodule Ecto.RepoTest do
     assert Agent.get(CallbackAgent, get_action) == {:after_delete, :delete}
   end
 
-  defp get_changes([{_, changeset} | _]), do: changeset.changes
+  defp get_before_changes([_, {_, changeset} | _]), do: changeset.changes
+  defp get_after_changes([{_, changeset} | _]), do: changeset.changes
 
   test "adds embeds to changeset as empty on insert" do
-    TestRepo.insert!(%MyModel{embed: %MyEmbed{}})
-    assert Agent.get(CallbackAgent, &get_changes/1) ==
+    TestRepo.insert!(%MyModel{embed: %MyEmbed{}, embeds: [%MyEmbed{}]})
+    assert Agent.get(CallbackAgent, &get_before_changes/1) ==
       %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
-
-    TestRepo.insert!(%MyModel{embeds: [%MyEmbed{}]})
-    assert Agent.get(CallbackAgent, &get_changes/1) ==
-      %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
+    assert Agent.get(CallbackAgent, &get_after_changes/1) ==
+      %{id: nil, x: nil, y: nil}
   end
 
   test "skips adding assocs to changeset on insert" do
-    TestRepo.insert!(%MyModel{assoc: %MyAssoc{}})
-    assert Agent.get(CallbackAgent, &get_changes/1) ==
+    TestRepo.insert!(%MyModel{assoc: %MyAssoc{}, assocs: [%MyAssoc{}]})
+    assert Agent.get(CallbackAgent, &get_before_changes/1) ==
       %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
-
-    TestRepo.insert!(%MyModel{assocs: [%MyAssoc{}]})
-    assert Agent.get(CallbackAgent, &get_changes/1) ==
-      %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
+    assert Agent.get(CallbackAgent, &get_after_changes/1) ==
+      %{id: nil, x: nil, y: nil}
   end
 
   test "skip adding embeds to changeset on update" do
     TestRepo.update!(%MyModel{id: 5, embed: %MyEmbed{}, embeds: [%MyEmbed{}]})
-    assert Agent.get(CallbackAgent, &get_changes/1) == %{x: nil, y: nil}
+    assert Agent.get(CallbackAgent, &get_before_changes/1) == %{x: nil, y: nil}
   end
 
   test "skip adding assocs to changeset on update" do
     TestRepo.update!(%MyModel{id: 5, assoc: %MyAssoc{}, assocs: [%MyAssoc{}]})
-    assert Agent.get(CallbackAgent, &get_changes/1) == %{x: nil, y: nil}
+    assert Agent.get(CallbackAgent, &get_before_changes/1) == %{x: nil, y: nil}
   end
 
   defp get_models(changesets) do
@@ -665,6 +662,14 @@ defmodule Ecto.RepoTest do
     id = model.embed.id
     assert id
     assert model.embed == %{new_embed | id: id}
+
+    # Replacing assoc with nil
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: nil)
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_delete, MyEmbed},
+            {:before_delete, MyEmbed}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    refute model.embed
   end
 
   test "inserting assocs on update" do
@@ -715,6 +720,14 @@ defmodule Ecto.RepoTest do
     %{id: id, my_model_id: model_id} = model.assoc
     assert model_id == model.id
     assert model.assoc == %{inserted_assoc | my_model_id: model_id, id: id}
+
+    # Replacing assoc with nil
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: nil)
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_delete, MyAssoc},
+            {:before_delete, MyAssoc}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    refute model.assoc
   end
 
   test "changing embeds on update" do
@@ -820,15 +833,14 @@ defmodule Ecto.RepoTest do
     assert [{:after_update, MyModel}, {:after_delete, MyAssoc},
             {:before_delete, MyAssoc}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.assoc.__meta__.state == :deleted
+    assert model.assoc == nil
 
     changeset = Ecto.Changeset.change(%MyModel{id: 1, assocs: [assoc]}, assocs: [])
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_delete, MyAssoc},
             {:before_delete, MyAssoc}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    [assoc] = model.assocs
-    assert assoc.__meta__.state == :deleted
+    assert model.assocs == []
   end
 
   test "handles nested embeds on update" do
