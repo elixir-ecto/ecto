@@ -185,7 +185,8 @@ defmodule Ecto.Integration.RepoTest do
 
     cs_stale = cast(base_post, %{"text" => "foo.baz"}, ~w(text), ~w())
     assert_raise Ecto.StaleModelError, fn -> TestRepo.update!(cs_stale) end
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(cs_stale) end
+
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(base_post) end
   end
 
   test "validate_unique/3" do
@@ -499,7 +500,7 @@ defmodule Ecto.Integration.RepoTest do
 
     changeset = Ecto.Changeset.change(p1, permalink: nil)
     p1 = TestRepo.update!(changeset)
-    assert p1.permalink.__meta__.state == :deleted
+    refute p1.permalink
     p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
     refute p1.permalink
 

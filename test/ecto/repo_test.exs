@@ -327,6 +327,14 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  test "delete fail on changeset with changes" do
+    invalid = %Ecto.Changeset{model: %MyModel{}, changes: %{x: "abc"}, valid?: true}
+
+    assert_raise ArgumentError, ~S(Repo.delete does not support changesets with changes, got `%{x: "abc"}`), fn ->
+      TestRepo.delete(invalid)
+    end
+  end
+
   ## Changesets
 
   @uuid "30313233-3435-3637-3839-616263646566"
@@ -873,45 +881,5 @@ defmodule Ecto.RepoTest do
     refute changeset.changes.assoc.changes.sub_assoc.changes.id
     refute changeset.changes.assoc.changes.sub_assoc.changes.my_assoc_id
     refute changeset.valid?
-  end
-
-  test "handles embeds on delete" do
-    embed = %MyEmbed{id: @uuid, x: "xyz"}
-
-    # With model runs all callbacks
-    model = TestRepo.delete!(%MyModel{id: 1, embed: embed})
-    assert [{:after_delete, MyModel}, {:before_delete, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == embed
-
-    model = TestRepo.delete!(%MyModel{id: 1, embeds: [embed]})
-    assert [{:after_delete, MyModel}, {:before_delete, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embeds == [embed]
-
-    # With changeset runs all callbacks
-    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed})
-    model = TestRepo.delete!(changeset)
-    assert [{:after_delete, MyModel}, {:before_delete, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == embed
-
-    changeset = Ecto.Changeset.change(%MyModel{id: 1, embeds: [embed]})
-    model = TestRepo.delete!(changeset)
-    assert [{:after_delete, MyModel}, {:before_delete, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embeds == [embed]
-  end
-
-  test "handles assocs on delete" do
-    assoc = %MyAssoc{id: 1, x: "xyz"}
-
-    model = TestRepo.delete!(%MyModel{id: 1, assoc: assoc})
-    assert model.assoc == assoc
-
-    changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: nil)
-    assert_raise ArgumentError, ~r"nested association changes are not allowed on delete, but got .*" , fn ->
-      TestRepo.delete!(changeset)
-    end
   end
 end

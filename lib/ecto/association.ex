@@ -363,7 +363,7 @@ defmodule Ecto.Association.Has do
     check_action!(action, repo_action, model.__struct__)
 
     {key, value} = parent_key(assoc, parent)
-    changeset    = update_in changeset.changes, &Map.put(&1, key, value)
+    changeset = update_parent_key(changeset, action, key, value)
 
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
@@ -374,6 +374,11 @@ defmodule Ecto.Association.Has do
         {:error, update_in(changeset.changes, &Map.put(&1, key, original))}
     end
   end
+
+  defp update_parent_key(changeset, :delete, _key, _value),
+    do: changeset
+  defp update_parent_key(changeset, _action, key, value),
+    do: update_in changeset.changes, &Map.put(&1, key, value)
 
   defp parent_key(%{owner_key: owner_key, related_key: related_key}, owner) do
     {related_key, Map.get(owner, owner_key)}
