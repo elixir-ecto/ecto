@@ -252,21 +252,14 @@ defmodule Ecto.Repo.Model do
     end)
   end
 
-  defp delete_changes(%{types: types} = changeset, embeds, assocs) do
-    embeds =
-      Enum.map(embeds, fn field ->
-        {:embed, embed} = Map.get(types, field)
-        {field, Ecto.Changeset.Relation.empty(embed)}
-      end)
-
+  defp delete_changes(changeset, _embeds, assocs) do
     {assoc_changes, changeset} = pop_assoc_changesets(changeset, assocs)
     if map_size(assoc_changes) > 0 do
       raise ArgumentError, "nested association changes are not allowed on delete, " <>
                            "but got `#{inspect assoc_changes}`"
     end
 
-    changeset = %{changeset | changes: %{}}
-    Ecto.Changeset.change(changeset, embeds)
+    %{changeset | changes: %{}}
   end
 
   defp insert_changes(struct, fields, embeds, changeset) do
@@ -334,7 +327,6 @@ defmodule Ecto.Repo.Model do
       {parent, Map.put(changes, field, changesets), false}
     end
   end
-
   defp pop_autogenerate_id(changes, model) do
     case model.__schema__(:autogenerate_id) do
       {key, id} ->

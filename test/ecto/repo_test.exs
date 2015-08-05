@@ -11,6 +11,18 @@ defmodule Ecto.RepoTest do
     schema "" do
       field :y, :string
     end
+
+    before_insert :store_changeset, [:before_insert]
+    after_insert  :store_changeset, [:after_insert]
+    before_update :store_changeset, [:before_update]
+    after_update  :store_changeset, [:after_update]
+    before_delete :store_changeset, [:before_delete]
+    after_delete  :store_changeset, [:after_delete]
+
+    def store_changeset(changeset, stage) do
+      Agent.update(CallbackAgent, &[{stage, changeset}|&1])
+      changeset
+    end
   end
 
   defmodule MyEmbed do
@@ -894,4 +906,16 @@ defmodule Ecto.RepoTest do
       TestRepo.delete!(changeset)
     end
   end
+
+  test "handles nested embeds on delete" do
+    sub_embed = %SubEmbed{id: @uuid, y: "xyz"}
+    embed = %MyEmbed{id: @uuid, x: "xyz", sub_embed: sub_embed}
+    TestRepo.delete!(%MyModel{id: 1, embed: embed})
+    assert [{:after_delete, MyModel}, {:after_delete, MyEmbed},
+            {:after_delete, SubEmbed}, {:before_delete, SubEmbed},
+            {:before_delete, MyEmbed}, {:before_delete, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+  end
+
+  # Nested assocs on delete are handled with the on_delete setting and tested there
 end
