@@ -499,7 +499,7 @@ defmodule Ecto.Integration.RepoTest do
 
     changeset = Ecto.Changeset.change(p1, permalink: nil)
     p1 = TestRepo.update!(changeset)
-    assert p1.permalink.__meta__.state == :deleted
+    refute p1.permalink
     p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
     refute p1.permalink
 
@@ -531,7 +531,7 @@ defmodule Ecto.Integration.RepoTest do
 
     changeset = Ecto.Changeset.change(p1, comments: [])
     p1 = TestRepo.update!(changeset)
-    assert Enum.all?(p1.comments, &(&1.__meta__.state == :deleted))
+    assert p1.comments == []
     p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
     assert p1.comments == []
 
