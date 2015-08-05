@@ -185,7 +185,8 @@ defmodule Ecto.Integration.RepoTest do
 
     cs_stale = cast(base_post, %{"text" => "foo.baz"}, ~w(text), ~w())
     assert_raise Ecto.StaleModelError, fn -> TestRepo.update!(cs_stale) end
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(cs_stale) end
+
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(base_post) end
   end
 
   test "validate_unique/3" do
