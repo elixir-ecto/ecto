@@ -1,14 +1,13 @@
 defmodule Ecto.Changeset.Relation do
   @moduledoc false
 
-  alias Ecto.Changeset
-
   use Behaviour
+  alias Ecto.Changeset
 
   @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_cast: atom}
 
   @doc """
-  Updates the changeset accordingly to the relation's on_replace strategy
+  Updates the changeset accordingly to the relation's on_replace strategy.
   """
   defcallback on_replace(t, Changeset.t) :: {:update | :delete, Changeset.t}
 
@@ -84,7 +83,6 @@ defmodule Ecto.Changeset.Relation do
 
   defp do_cast(%{__struct__: module} = relation, nil, struct) do
     changeset = Changeset.change(struct)
-
     {action, changeset} = module.on_replace(relation, changeset)
     changeset |> put_new_action(action)
   end
@@ -102,10 +100,10 @@ defmodule Ecto.Changeset.Relation do
     current = loaded_or_empty!(model, current)
     {pks, _} = primary_keys(mod)
     cast_or_change(relation, value, current, pks, pks,
-                   &do_change(&1, &2, relation))
+                   &do_change(relation, &1, &2))
   end
 
-  defp do_change(struct, nil, %{related: model}) do
+  defp do_change(%{related: model}, struct, nil) do
     fields    = model.__schema__(:fields)
     embeds    = model.__schema__(:embeds)
     assocs    = model.__schema__(:associations)
@@ -114,22 +112,11 @@ defmodule Ecto.Changeset.Relation do
     types     = changeset.types
 
     changes =
-      Enum.reduce(embeds, Map.take(struct, fields), fn field, acc ->
-        {:embed, embed} = Map.get(types, field)
-        case change(embed, struct, Map.get(acc, field), nil) do
-          {:ok, _, _, true}       -> acc
-          {:ok, change, _, false} -> Map.put(acc, field, change)
-        end
-      end)
-
-    changes =
-      Enum.reduce(assocs, changes, fn field, acc ->
-        # We use fetch to filter has through and belongs_to associations,
-        # as they are not in the changeset types
+      Enum.reduce(embeds ++ assocs, Map.take(struct, fields), fn field, acc ->
         case Map.fetch(types, field) do
-          {:ok, {:assoc, assoc}} ->
+          {:ok, {_, embed_or_assoc}} ->
             value = loaded_or_empty!(struct, Map.get(struct, field))
-            case change(assoc, struct, value, nil) do
+            case change(embed_or_assoc, struct, value, nil) do
               {:ok, _, _, true}       -> acc
               {:ok, change, _, false} -> Map.put(acc, field, change)
             end
@@ -138,13 +125,15 @@ defmodule Ecto.Changeset.Relation do
         end
       end)
 
-    update_in(changeset.changes, &Map.merge(changes, &1))
+    changeset.changes
+    |> update_in(&Map.merge(changes, &1))
     |> put_new_action(:insert)
   end
 
-  defp do_change(nil, current, %{__struct__: module, related: model} = relation) do
+  defp do_change(%{__struct__: module, related: model} = relation, nil, current) do
     case module.on_replace(relation, Changeset.change(current)) do
       {:delete, changeset} ->
+        # TODO: This should likely be handled in the repository.
         # We need to mark all embeds for deletion too
         changes =
           Enum.map(model.__schema__(:embeds), fn field ->
@@ -156,15 +145,15 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  defp do_change(%Changeset{model: current} = changeset, current, _relation) do
+  defp do_change(_relation, %Changeset{model: current} = changeset, current) do
     changeset |> put_new_action(:update)
   end
 
-  defp do_change(%Changeset{}, _current, _relation) do
+  defp do_change(_relation, %Changeset{}, _current) do
     raise ArgumentError, "related changeset has a different model than the one specified in the schema"
   end
 
-  defp do_change(struct, current, _relation) do
+  defp do_change(_relation, struct, current) do
     changes = Map.take(struct, struct.__struct__.__schema__(:fields))
     Changeset.change(current, changes) |> put_new_action(:update)
   end
@@ -195,6 +184,7 @@ defmodule Ecto.Changeset.Relation do
 
   defp map_changes([map | rest], pks, fun, current, acc, valid?, skip?) when is_map(map) do
     pk_values = get_pks(map, pks)
+
     {model, current} =
       case Map.fetch(current, pk_values) do
         {:ok, model} ->
@@ -218,7 +208,6 @@ defmodule Ecto.Changeset.Relation do
 
   defp single_change(new, current_pks, new_pks, fun, current) do
     current = current_or_nil(new, new_pks, current, current_pks)
-
     changeset = fun.(new, current)
     {:ok, changeset, changeset.valid?, skip?(changeset)}
   end
