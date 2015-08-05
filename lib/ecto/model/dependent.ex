@@ -46,7 +46,7 @@ defmodule Ecto.Model.Dependent do
   end
 
   @doc false
-  def fetch_and_delete(%Changeset{repo: repo, model: model} = changeset, assoc_field, _assoc_key) do
+  def fetch_and_delete(%Changeset{repo: repo, model: model} = changeset, assoc_field, _related_key) do
     query  = Ecto.Model.assoc(model, assoc_field)
     assocs = repo.all(query)
     Enum.each assocs, fn (assoc) -> repo.delete!(assoc) end
@@ -54,16 +54,16 @@ defmodule Ecto.Model.Dependent do
   end
 
   @doc false
-  def delete_all(%Changeset{repo: repo, model: model} = changeset, assoc_field, _assoc_key) do
+  def delete_all(%Changeset{repo: repo, model: model} = changeset, assoc_field, _related_key) do
     query = Ecto.Model.assoc(model, assoc_field)
     repo.delete_all(query)
     changeset
   end
 
   @doc false
-  def nilify_all(%Changeset{repo: repo, model: model} = changeset, assoc_field, assoc_key) do
+  def nilify_all(%Changeset{repo: repo, model: model} = changeset, assoc_field, related_key) do
     query = Ecto.Model.assoc(model, assoc_field)
-    repo.update_all(query, set: [{assoc_key, nil}])
+    repo.update_all(query, set: [{related_key, nil}])
     changeset
   end
 
@@ -73,12 +73,12 @@ defmodule Ecto.Model.Dependent do
     for {_assoc_name, assoc} <- assocs,
         Map.get(assoc, :on_delete) in @on_delete_callbacks do
       on_delete   = assoc.on_delete
-      assoc_key   = assoc.assoc_key
+      related_key   = assoc.related_key
       assoc_field = assoc.field
 
       quote do
         before_delete Ecto.Model.Dependent, unquote(on_delete),
-                      [unquote(assoc_field), unquote(assoc_key)]
+                      [unquote(assoc_field), unquote(related_key)]
       end
     end
   end

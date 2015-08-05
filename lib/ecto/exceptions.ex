@@ -168,3 +168,31 @@ defmodule Ecto.StaleModelError do
     %__MODULE__{message: msg}
   end
 end
+
+defmodule Ecto.UnmachedRelationError do
+  defexception [:message]
+
+  def exception(opts) do
+    old_value = Keyword.fetch!(opts, :old_value)
+    new_value = Keyword.fetch!(opts, :new_value)
+
+    msg =
+      case Keyword.fetch!(opts, :cardinality) do
+        :one  -> "attempted to update model:"
+        :many -> "attempted to update one of the models:"
+      end
+
+    msg = """
+    #{msg}
+
+    #{inspect old_value}
+
+    with:
+
+    #{inspect new_value}
+
+    but primary keys did not match.
+    """
+    %__MODULE__{message: msg}
+  end
+end

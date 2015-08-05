@@ -48,6 +48,7 @@ defmodule Ecto.Repo.Model do
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
     embeds   = model.__schema__(:embeds)
+    assocs   = model.__schema__(:associations)
     {prefix, source} = struct.__meta__.source
     return   = model.__schema__(:read_after_writes)
 
@@ -57,11 +58,12 @@ defmodule Ecto.Repo.Model do
     changeset = %{changeset | repo: repo, action: :insert}
     changeset = insert_changes(struct, fields, embeds, changeset)
 
-    with_transactions_if_callbacks repo, adapter, model, opts, embeds,
-                                   ~w(before_insert after_insert)a, fn ->
+    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
+                        ~w(before_insert after_insert)a, fn ->
       changeset = Callbacks.__apply__(model, :before_insert, changeset)
       changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :insert, :before)
 
+      {assoc_changes, changeset} = pop_assoc_changesets(changeset, assocs)
       {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
       changes = validate_changes(:insert, changes, model, fields, adapter)
 
@@ -69,10 +71,21 @@ defmodule Ecto.Repo.Model do
 
       # Embeds can't be `read_after_writes` so we don't care
       # about values returned from the adapter
-      changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :insert, :after)
-      changeset = load_changes(changeset, values, adapter)
-      {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
-    end
+      {success, changeset} =
+        changeset
+        |> Ecto.Embedded.apply_callbacks(embeds, adapter, :insert, :after)
+        |> load_changes(values, adapter)
+        |> process_nested(assoc_changes, repo, opts)
+
+      changeset = put_in changeset.model.__meta__.state, :loaded
+
+      case {success, changeset} do
+        {:ok, changeset} ->
+          {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
+        {:error, changeset} ->
+          {:error, %{changeset | valid?: false}}
+      end
+    end)
   end
 
   def insert(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
@@ -91,6 +104,7 @@ defmodule Ecto.Repo.Model do
     model    = struct.__struct__
     fields   = model.__schema__(:fields)
     embeds   = model.__schema__(:embeds)
+    assocs   = model.__schema__(:associations)
     {prefix, source} = struct.__meta__.source
     return   = model.__schema__(:read_after_writes)
 
@@ -100,11 +114,12 @@ defmodule Ecto.Repo.Model do
     changeset = %{changeset | repo: repo, action: :update}
 
     if changeset.changes != %{} or opts[:force] do
-      with_transactions_if_callbacks repo, adapter, model, opts, embeds,
-                                     ~w(before_update after_update)a, fn ->
+      wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
+                          ~w(before_update after_update)a, fn ->
         changeset = Callbacks.__apply__(model, :before_update, changeset)
         changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :update, :before)
 
+        {assoc_changes, changeset} = pop_assoc_changesets(changeset, assocs)
         autogen = get_autogenerate_id(changeset.changes, model)
         changes = validate_changes(:update, changeset.changes, model, fields, adapter)
 
@@ -125,10 +140,21 @@ defmodule Ecto.Repo.Model do
 
         # As in inserts, embeds can't be `read_after_writes` so we don't care
         # about values returned from the adapter
-        changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :update, :after)
-        changeset = load_changes(changeset, values, adapter)
-        {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
-      end
+        {success, changeset} =
+          changeset
+          |> Ecto.Embedded.apply_callbacks(embeds, adapter, :update, :after)
+          |> load_changes(values, adapter)
+          |> process_nested(assoc_changes, repo, opts)
+
+        changeset = put_in changeset.model.__meta__.state, :loaded
+
+        case {success, changeset} do
+          {:ok, changeset} ->
+            {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
+          {:error, changeset} ->
+            {:error, %{changeset | valid?: false}}
+        end
+      end)
     else
       {:ok, changeset.model}
     end
@@ -157,14 +183,16 @@ defmodule Ecto.Repo.Model do
     model  = struct.__struct__
     {prefix, source} = struct.__meta__.source
     embeds = model.__schema__(:embeds)
+    assocs = model.__schema__(:associations)
 
     # We mark all embeds for deletion, and ignore other changes in changeset
     changeset = %{changeset | repo: repo, action: :delete}
-    changeset = delete_changes(changeset, model)
+    changeset = delete_changes(changeset, embeds, assocs)
     autogen   = get_autogenerate_id(changeset, model)
 
-    with_transactions_if_callbacks repo, adapter, model, opts, embeds,
-                                   ~w(before_delete after_delete)a, fn ->
+    # We eliminate all assocs, so no need to check here
+    wrap_in_transaction(repo, adapter, model, opts, embeds, [],
+                        ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
       changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :delete, :before)
 
@@ -182,7 +210,7 @@ defmodule Ecto.Repo.Model do
       changeset = load_changes(changeset, [], adapter)
       model = Callbacks.__apply__(model, :after_delete, changeset).model
       {:ok, put_in(model.__meta__.state, :deleted)}
-    end
+    end)
   end
 
   def delete(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
@@ -214,7 +242,7 @@ defmodule Ecto.Repo.Model do
   end
 
   defp do_load(struct, kv, types, adapter) do
-    model = Enum.reduce(kv, struct, fn
+    Enum.reduce(kv, struct, fn
       {k, v}, acc ->
         type = Map.fetch!(types, k)
         case adapter.load(type, v) do
@@ -222,17 +250,21 @@ defmodule Ecto.Repo.Model do
           :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"
         end
     end)
-
-    put_in model.__meta__.state, :loaded
   end
 
-  defp delete_changes(changeset, model) do
+  defp delete_changes(changeset, embeds, assocs) do
     types = changeset.types
     embeds =
-      Enum.map(model.__schema__(:embeds), fn field ->
+      Enum.map(embeds, fn field ->
         {:embed, embed} = Map.get(types, field)
-        {field, Ecto.Embedded.empty(embed)}
+        {field, Ecto.Changeset.Relation.empty(embed)}
       end)
+
+    {assoc_changes, changeset} = pop_assoc_changesets(changeset, assocs)
+    if map_size(assoc_changes) > 0 do
+      raise ArgumentError, "nested association changes are not allowed on delete, but got `#{inspect assoc_changes}`"
+    end
+
 
     changeset = %{changeset | changes: %{}}
     Ecto.Changeset.change(changeset, embeds)
@@ -240,15 +272,117 @@ defmodule Ecto.Repo.Model do
 
   defp insert_changes(struct, fields, embeds, changeset) do
     types = changeset.types
-
-    base  =
+    base =
       Enum.reduce embeds, Map.take(struct, fields), fn field, acc ->
         {:embed, embed} = Map.get(types, field)
-        Map.put(acc, field, Ecto.Embedded.empty(embed))
+        Map.put(acc, field, Ecto.Changeset.Relation.empty(embed))
       end
 
     update_in changeset.changes, &Map.merge(base, &1)
   end
+
+  def pop_assoc_changesets(changeset, assocs) do
+    # It's safe to map over all associations, as only has_one and has_many,
+    # can be added to changeset
+    get_and_update_in(changeset.changes, &Map.split(&1, assocs))
+  end
+
+  def process_nested(changeset, assocs, _repo, _opts) when assocs == %{} do
+    {:ok, changeset}
+  end
+
+  def process_nested(%Changeset{action: action} = changeset, assocs, repo, opts) do
+    types = changeset.types
+    model = changeset.model
+    changes = changeset.changes
+
+    {model, changes, valid?} =
+      Enum.reduce(assocs, {model, changes, true}, fn {field, changeset}, acc ->
+        {:assoc, assoc} = Map.get(types, field)
+        process_nested(assoc, field, changeset, parent_key(assoc, model),
+                       repo, opts, action, acc)
+      end)
+
+    if valid? do
+      {:ok, %{changeset | model: model}}
+    else
+      {:error, %{changeset | changes: changes}}
+    end
+  end
+
+  defp process_nested(%Ecto.Association.Has{cardinality: :one} = relation, field, changeset,
+                      parent_key, repo, opts, action, {parent, changes, valid?}) do
+    case do_process_nested(changeset, parent_key, repo, opts, action) do
+      {:ok, model} ->
+        process_one_replace!(changeset, relation, field, parent, repo, opts)
+        {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
+      {:error, changeset} ->
+        {parent, Map.put(changes, field, changeset), false}
+    end
+  end
+
+  defp process_nested(%Ecto.Association.Has{cardinality: :many}, field, changesets,
+                      parent_key, repo, opts, action, {parent, changes, valid?}) do
+    {changesets, {models, models_valid?}} =
+      Enum.map_reduce(changesets, {[], true}, fn changeset, {models, models_valid?} ->
+        case do_process_nested(changeset, parent_key, repo, opts, action) do
+          {:ok, model} ->
+            {changeset, {[model | models], models_valid?}}
+          {:error, changeset} ->
+            {changeset, {models, false}}
+        end
+      end)
+
+    if models_valid? do
+      {Map.put(parent, field, models), Map.put(changes, field, changesets), valid?}
+    else
+      {parent, Map.put(changes, field, changesets), false}
+    end
+  end
+
+  defp do_process_nested(%Ecto.Changeset{action: action} = changeset, {key, value},
+                         repo, opts, parent_action) do
+    check_action!(action, parent_action, changeset.model.__struct__)
+
+    original = Map.get(changeset.changes, key)
+    changeset = update_in changeset.changes, &Map.put(&1, key, value)
+    case apply(repo, action, [changeset, opts]) do
+      {:ok, _} = success ->
+        success
+      {:error, changeset} ->
+        {:error, update_in(changeset.changes, &Map.put(&1, key, original))}
+    end
+  end
+
+  defp process_one_replace!(%{action: :insert}, relation, name, parent, repo, opts) do
+    case Map.get(parent, name) do
+      # It can only be not loaded if freshly built, because we check in
+      # Ecto.Changeset.Relation for it
+      %Ecto.Association.NotLoaded{} ->
+        :ok
+      nil ->
+        :ok
+      previous ->
+        {:ok, %{action: action} = changeset, _, _} =
+          Ecto.Changeset.Relation.change(relation, parent, nil, previous)
+        case apply(repo, action, [changeset, opts]) do
+          {:error, changeset} ->
+            raise Ecto.InvalidChangesetError, action: action, changeset: changeset
+          _success ->
+            :ok
+        end
+    end
+  end
+
+  defp process_one_replace!(_, _, _, _, _, _), do: :ok
+
+  defp parent_key(%{owner_key: owner_key, related_key: related_key}, owner) do
+    {related_key, Map.get(owner, owner_key)}
+  end
+
+  defp check_action!(:delete, :insert, model),
+    do: raise(ArgumentError, "got action :delete in changeset for associated #{model} while inserting")
+  defp check_action!(_, _, _), do: :ok
 
   defp pop_autogenerate_id(changes, model) do
     case model.__schema__(:autogenerate_id) do
@@ -282,11 +416,18 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  defp with_transactions_if_callbacks(repo, adapter, model, opts, embeds, callbacks, fun) do
-    if (embeds != [] or Enum.any?(callbacks, &function_exported?(model, &1, 1))) and
+  defp wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, callbacks, fun) do
+    if (embeds != [] or
+        assocs != [] or
+        Enum.any?(callbacks, &function_exported?(model, &1, 1))) and
        function_exported?(adapter, :transaction, 3) do
-      {:ok, value} = adapter.transaction(repo, opts, fun)
-      value
+
+      adapter.transaction(repo, opts, fn ->
+        case fun.() do
+          {:ok, model} -> model
+          {:error, changeset} -> adapter.rollback(repo, changeset)
+        end
+      end)
     else
       fun.()
     end

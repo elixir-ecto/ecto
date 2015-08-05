@@ -437,6 +437,17 @@ defmodule Ecto.Schema do
       May be `:nothing` (default), `:nilify_all`, `:delete_all` or
       `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
+    * `:on_replace` - The action taken on associations when model is replaced
+      as a nested association during casting or manipulating parent changeset.
+      May be `:delete` (default), `:nilify`, `:nothing`.
+      See `Ecto.Changeset`'s section on related models for more info.
+
+    * `:on_cast` - The default changeset function to call during casting
+      of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
+      It's an atom representing the function name in the associated model's
+      module which will receive the module and the parameters for casting
+      (default: `:changeset`).
+
     *  `:defaults` - Default values to use when building the association
 
   ## Examples
@@ -562,7 +573,18 @@ defmodule Ecto.Schema do
       May be `:nothing` (default), `:nilify_all`, `:delete_all` or
       `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
 
-    *  `:defaults` - Default values to use when building the association
+    * `:on_replace` - The action taken on associations when model is replaced
+      as a nested association during casting or manipulating parent changeset.
+      May be `:delete` (default), `:nilify`, `:nothing`.
+      See `Ecto.Changeset`'s section on related models for more info.
+
+    * `:on_cast` - The default changeset function to call during casting
+      of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
+      It's an atom representing the function name in the associated model's
+      module which will receive the module and the parameters for casting
+      (default: `:changeset`).
+
+    * `:defaults` - Default values to use when building the association
 
   ## Examples
 
@@ -927,25 +949,32 @@ defmodule Ecto.Schema do
     end
   end
 
+  @valid_has_options [:foreign_key, :references, :through, :on_delete,
+                      :defaults, :on_cast, :on_replace]
+
   @doc false
   def __has_many__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :through, :on_delete, :defaults], "has_many/3")
+    check_options!(opts, @valid_has_options, "has_many/3")
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
     else
-      association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      struct =
+        association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
 
   @doc false
   def __has_one__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :through, :on_delete, :defaults], "has_one/3")
+    check_options!(opts, @valid_has_options, "has_one/3")
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :one, name, Ecto.Association.HasThrough, queryable)
     else
-      association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      struct =
+        association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
 
@@ -1085,12 +1114,14 @@ defmodule Ecto.Schema do
                     __field__: name, __cardinality__: cardinality}
     put_struct_field(mod, name, not_loaded)
     opts = [cardinality: cardinality] ++ opts
-    Module.put_attribute(mod, :ecto_assocs, {name, association.struct(mod, name, opts)})
+    struct = association.struct(mod, name, opts)
+    Module.put_attribute(mod, :ecto_assocs, {name, struct})
+
+    struct
   end
 
   defp embed(mod, cardinality, name, model, opts) do
-    opts   = Keyword.put_new(opts, :on_cast, :changeset)
-    opts   = [cardinality: cardinality, embed: model] ++ opts
+    opts   = [cardinality: cardinality, related: model] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
 
     __field__(mod, name, {:embed, struct}, false, opts)

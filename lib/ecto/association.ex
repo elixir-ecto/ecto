@@ -191,23 +191,23 @@ defmodule Ecto.Association do
   defp to_lower_char(char), do: char
 
   @doc """
-  Retrieves assoc from queryable.
+  Retrieves related module from queryable.
 
   ## Examples
 
-      iex> Ecto.Association.assoc_from_query({"custom_source", Model})
+      iex> Ecto.Association.related_from_query({"custom_source", Model})
       Model
 
-      iex> Ecto.Association.assoc_from_query(Model)
+      iex> Ecto.Association.related_from_query(Model)
       Model
 
-      iex> Ecto.Association.assoc_from_query("wrong")
+      iex> Ecto.Association.related_from_query("wrong")
       ** (ArgumentError) association queryable must be a model or {source, model}, got: "wrong"
 
   """
-  def assoc_from_query(atom) when is_atom(atom), do: atom
-  def assoc_from_query({source, model}) when is_binary(source) and is_atom(model), do: model
-  def assoc_from_query(queryable) do
+  def related_from_query(atom) when is_atom(atom), do: atom
+  def related_from_query({source, model}) when is_binary(source) and is_atom(model), do: model
+  def related_from_query(queryable) do
     raise ArgumentError, "association queryable must be a model " <>
       "or {source, model}, got: #{inspect queryable}"
   end
@@ -238,18 +238,21 @@ defmodule Ecto.Association.Has do
     * `cardinality` - The association cardinality
     * `field` - The name of the association field on the model
     * `owner` - The model where the association was defined
-    * `assoc` - The model that is associated
+    * `related` - The model that is associated
     * `owner_key` - The key on the `owner` model used for the association
-    * `assoc_key` - The key on the `associated` model used for the association
+    * `related_key` - The key on the `associated` model used for the association
     * `queryable` - The real query to use for querying association
     * `on_delete` - The action taken on associations when model is deleted
+    * `on_replace` - The action taken on associations when model is replaced
+    * `on_cast` - The changeset function to call during casting
     * `defaults` - Default fields used when building the association
   """
 
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
-  defstruct [:cardinality, :field, :owner, :assoc, :owner_key,
-             :assoc_key, :queryable, :on_delete, defaults: []]
+  @on_replace_opts [:delete, :nilify]
+  defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key,
+             :queryable, :on_delete, :on_replace, :on_cast, defaults: []]
 
   @doc false
   def struct(module, name, opts) do
@@ -270,40 +273,51 @@ defmodule Ecto.Association.Has do
     end
 
     queryable = Keyword.fetch!(opts, :queryable)
-    assoc = Ecto.Association.assoc_from_query(queryable)
+    related = Ecto.Association.related_from_query(queryable)
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
                            "option, the model should not be passed as second argument"
     end
 
-    on_delete = opts[:on_delete] || :nothing
+    on_delete  = Keyword.get(opts, :on_delete, :nothing)
+    on_replace = Keyword.get(opts, :on_replace, :delete)
+    on_cast    = Keyword.get(opts, :on_cast, :changeset)
 
     unless on_delete in @on_delete_opts do
-      raise ArgumentError, "invalid :on_delete option for #{inspect name}. The only valid options" <>
-                           " are `:nothing`, `:fetch_and_delete`, `:nilify_all` and `:delete_all`"
+      raise ArgumentError, "invalid :on_delete option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_delete_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    unless on_replace in @on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
     %__MODULE__{
       field: name,
       cardinality: Keyword.fetch!(opts, :cardinality),
       owner: module,
-      assoc: assoc,
+      related: related,
       owner_key: ref,
-      assoc_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref),
+      related_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref),
       queryable: queryable,
       on_delete: on_delete,
+      on_replace: on_replace,
+      on_cast: on_cast,
       defaults: opts[:defaults] || []
     }
   end
 
   @doc false
-  def build(%{assoc: assoc, owner_key: owner_key, assoc_key: assoc_key,
+  def build(%{related: related, owner_key: owner_key, related_key: related_key,
               queryable: queryable, defaults: defaults}, struct, attributes) do
-    assoc
+    related
     |> struct(defaults)
     |> struct(attributes)
-    |> Map.put(assoc_key, Map.get(struct, owner_key))
+    |> Map.put(related_key, Map.get(struct, owner_key))
     |> Ecto.Association.merge_source(queryable)
   end
 
@@ -311,7 +325,7 @@ defmodule Ecto.Association.Has do
   def joins_query(refl) do
     from o in refl.owner,
       join: q in ^refl.queryable,
-      on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
+      on: field(q, ^refl.related_key) == field(o, ^refl.owner_key)
   end
 
   @doc false
@@ -322,12 +336,24 @@ defmodule Ecto.Association.Has do
   @doc false
   def assoc_query(refl, query, values) do
     from x in query,
-      where: field(x, ^refl.assoc_key) in ^values
+      where: field(x, ^refl.related_key) in ^values
   end
 
   @doc false
   def preload_info(refl) do
-    {:assoc, refl, refl.assoc_key}
+    {:assoc, refl, refl.related_key}
+  end
+
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def on_replace(%{on_replace: :delete}, changeset) do
+    {:delete, changeset}
+  end
+
+  def on_replace(%{on_replace: :nilify, related_key: related_key}, changeset) do
+    changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
+    {:update, changeset}
   end
 end
 
@@ -482,15 +508,15 @@ defmodule Ecto.Association.BelongsTo do
     * `cardinality` - The association cardinality
     * `field` - The name of the association field on the model
     * `owner` - The model where the association was defined
-    * `assoc` - The model that is associated
+    * `related` - The model that is associated
     * `owner_key` - The key on the `owner` model used for the association
-    * `assoc_key` - The key on the `assoc` model used for the association
+    * `related_key` - The key on the `related` model used for the association
     * `queryable` - The real query to use for querying association
     * `defaults` - Default fields used when building the association
   """
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :assoc, :owner_key, :assoc_key, :queryable, defaults: []]
+  defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :queryable, defaults: []]
 
   @doc false
   def struct(module, name, opts) do
@@ -507,19 +533,19 @@ defmodule Ecto.Association.BelongsTo do
 
     queryable = Keyword.fetch!(opts, :queryable)
 
-    assoc = Ecto.Association.assoc_from_query(queryable)
+    related = Ecto.Association.related_from_query(queryable)
 
-    unless is_atom(assoc) do
-      raise ArgumentError, "association queryable must be a model, got: #{inspect assoc}"
+    unless is_atom(related) do
+      raise ArgumentError, "association queryable must be a model, got: #{inspect related}"
     end
 
     %__MODULE__{
       field: name,
       cardinality: :one,
       owner: module,
-      assoc: assoc,
+      related: related,
       owner_key: Keyword.fetch!(opts, :foreign_key),
-      assoc_key: ref,
+      related_key: ref,
       queryable: queryable
     }
   end
@@ -535,7 +561,7 @@ defmodule Ecto.Association.BelongsTo do
   def joins_query(refl) do
     from o in refl.owner,
       join: q in ^refl.queryable,
-      on: field(q, ^refl.assoc_key) == field(o, ^refl.owner_key)
+      on: field(q, ^refl.related_key) == field(o, ^refl.owner_key)
   end
 
   @doc false
@@ -546,11 +572,11 @@ defmodule Ecto.Association.BelongsTo do
   @doc false
   def assoc_query(refl, query, values) do
     from x in query,
-      where: field(x, ^refl.assoc_key) in ^values
+      where: field(x, ^refl.related_key) in ^values
   end
 
   @doc false
   def preload_info(refl) do
-    {:assoc, refl, refl.assoc_key}
+    {:assoc, refl, refl.related_key}
   end
 end

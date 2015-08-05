@@ -215,7 +215,7 @@ defmodule Ecto.SchemaTest do
 
     schema "assocs" do
       has_many :posts, Post
-      has_one :author, User
+      has_one :author, User, on_cast: :assoc_author_changeset
       belongs_to :comment, Comment
       has_many :comment_authors, through: [:comment, :authors]
       has_one :comment_main_author, through: [:comment, :main_author]
@@ -231,9 +231,13 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_many association" do
-    assert AssocModel.__schema__(:association, :posts) ==
-           %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, on_delete: :nothing,
-                                 assoc: Post, owner_key: :id, assoc_key: :assoc_model_id, queryable: Post}
+    struct =
+      %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, on_delete: :nothing,
+                            related: Post, owner_key: :id, related_key: :assoc_model_id, queryable: Post,
+                            on_cast: :changeset, on_replace: :delete}
+
+    assert AssocModel.__schema__(:association, :posts) == struct
+    assert AssocModel.__changeset__.posts == {:assoc, struct}
 
     posts = (%AssocModel{}).posts
     assert %Ecto.Association.NotLoaded{} = posts
@@ -241,9 +245,13 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_many association via {source model}" do
-    assert AssocModel.__schema__(:association, :emails) ==
-           %Ecto.Association.Has{field: :emails, owner: AssocModel, cardinality: :many, on_delete: :nothing,
-                                  assoc: Email, owner_key: :id, assoc_key: :assoc_model_id, queryable: {"users_emails", Email}}
+    struct =
+      %Ecto.Association.Has{field: :emails, owner: AssocModel, cardinality: :many, on_delete: :nothing,
+                            related: Email, owner_key: :id, related_key: :assoc_model_id,
+                            queryable: {"users_emails", Email}, on_cast: :changeset, on_replace: :delete}
+
+    assert AssocModel.__schema__(:association, :emails) == struct
+    assert AssocModel.__changeset__.emails == {:assoc, struct}
 
     posts = (%AssocModel{}).posts
     assert %Ecto.Association.NotLoaded{__cardinality__: :many} = posts
@@ -255,15 +263,21 @@ defmodule Ecto.SchemaTest do
            %Ecto.Association.HasThrough{field: :comment_authors, owner: AssocModel, cardinality: :many,
                                          through: [:comment, :authors], owner_key: :comment_id}
 
+    refute Map.has_key?(AssocModel.__changeset__, :comment_authors)
+
     authors = (%AssocModel{}).comment_authors
     assert %Ecto.Association.NotLoaded{} = authors
     assert inspect(authors) == "#Ecto.Association.NotLoaded<association :comment_authors is not loaded>"
   end
 
   test "has_one association" do
-    assert AssocModel.__schema__(:association, :author) ==
-           %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one, on_delete: :nothing,
-                                  assoc: User, owner_key: :id, assoc_key: :assoc_model_id, queryable: User}
+    struct =
+      %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one, on_delete: :nothing,
+                            related: User, owner_key: :id, related_key: :assoc_model_id, queryable: User,
+                            on_cast: :assoc_author_changeset, on_replace: :delete}
+
+    assert AssocModel.__schema__(:association, :author) == struct
+    assert AssocModel.__changeset__.author == {:assoc, struct}
 
     author = (%AssocModel{}).author
     assert %Ecto.Association.NotLoaded{} = author
@@ -271,9 +285,13 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_one association via {source, model}" do
-    assert AssocModel.__schema__(:association, :profile) ==
-           %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one, on_delete: :nothing,
-                                  assoc: Profile, owner_key: :id, assoc_key: :assoc_model_id, queryable: {"users_profiles", Profile}}
+    struct =
+      %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one, on_delete: :nothing,
+                            related: Profile, owner_key: :id, related_key: :assoc_model_id,
+                            queryable: {"users_profiles", Profile}, on_cast: :changeset, on_replace: :delete}
+
+    assert AssocModel.__schema__(:association, :profile) == struct
+    assert AssocModel.__changeset__.profile == {:assoc, struct}
 
     author = (%AssocModel{}).author
     assert %Ecto.Association.NotLoaded{__cardinality__: :one} = author
@@ -285,6 +303,8 @@ defmodule Ecto.SchemaTest do
            %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocModel, cardinality: :one,
                                          through: [:comment, :main_author], owner_key: :comment_id}
 
+    refute Map.has_key?(AssocModel.__changeset__, :comment_main_author)
+
     author = (%AssocModel{}).comment_main_author
     assert %Ecto.Association.NotLoaded{} = author
     assert inspect(author) == "#Ecto.Association.NotLoaded<association :comment_main_author is not loaded>"
@@ -293,7 +313,9 @@ defmodule Ecto.SchemaTest do
   test "belongs_to association" do
     assert AssocModel.__schema__(:association, :comment) ==
            %Ecto.Association.BelongsTo{field: :comment, owner: AssocModel, cardinality: :one,
-                                        assoc: Comment, owner_key: :comment_id, assoc_key: :id, queryable: Comment}
+                                        related: Comment, owner_key: :comment_id, related_key: :id, queryable: Comment}
+
+    refute Map.has_key?(AssocModel.__changeset__, :comment)
 
     comment = (%AssocModel{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
@@ -303,7 +325,9 @@ defmodule Ecto.SchemaTest do
   test "belongs_to association via {source, model}" do
     assert AssocModel.__schema__(:association, :summary) ==
            %Ecto.Association.BelongsTo{field: :summary, owner: AssocModel, cardinality: :one,
-                                        assoc: Summary, owner_key: :summary_id, assoc_key: :id, queryable: {"post_summary", Summary}}
+                                        related: Summary, owner_key: :summary_id, related_key: :id, queryable: {"post_summary", Summary}}
+
+    refute Map.has_key?(AssocModel.__changeset__, :summary)
 
     comment = (%AssocModel{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
@@ -316,8 +340,8 @@ defmodule Ecto.SchemaTest do
     @primary_key {:pk, :integer, []}
     @foreign_key_type :string
     schema "assoc" do
-      has_many :posts, Post, references: :pk, foreign_key: :fk
-      has_one :author, User, references: :pk, foreign_key: :fk
+      has_many :posts, Post, references: :pk, foreign_key: :fk, on_cast: :my_changeset
+      has_one :author, User, references: :pk, foreign_key: :fk, on_cast: :my_changeset
       belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk
       belongs_to :permalink2, Permalink, references: :pk, type: :string
     end
@@ -326,23 +350,25 @@ defmodule Ecto.SchemaTest do
   test "has_many options" do
     refl = ModelAssocOpts.__schema__(:association, :posts)
     assert :pk == refl.owner_key
-    assert :fk == refl.assoc_key
+    assert :fk == refl.related_key
+    assert :my_changeset == refl.on_cast
   end
 
   test "has_one options" do
     refl = ModelAssocOpts.__schema__(:association, :author)
     assert :pk == refl.owner_key
-    assert :fk == refl.assoc_key
+    assert :fk == refl.related_key
+    assert :my_changeset == refl.on_cast
   end
 
   test "belongs_to options" do
     refl = ModelAssocOpts.__schema__(:association, :permalink1)
     assert :fk == refl.owner_key
-    assert :pk == refl.assoc_key
+    assert :pk == refl.related_key
 
     refl = ModelAssocOpts.__schema__(:association, :permalink2)
     assert :permalink2_id == refl.owner_key
-    assert :pk == refl.assoc_key
+    assert :pk == refl.related_key
 
     assert ModelAssocOpts.__schema__(:type, :fk) == :string
     assert ModelAssocOpts.__schema__(:type, :permalink2_id) == :string
