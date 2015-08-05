@@ -179,18 +179,18 @@ defmodule Ecto.Repo.Model do
     model  = struct.__struct__
     {prefix, source} = struct.__meta__.source
     embeds = model.__schema__(:embeds)
-    assocs = model.__schema__(:associations)
 
-    # We mark all embeds for deletion, and ignore other changes in changeset
     changeset = %{changeset | repo: repo, action: :delete}
-    changeset = delete_changes(changeset, embeds, assocs)
     autogen   = get_autogenerate_id(changeset, model)
 
-    # We eliminate all assocs, so no need to check here
+    if changeset.changes != %{} do
+      raise ArgumentError, "Repo.delete does not support changesets with " <>
+        "changes, got `#{inspect changeset.changes}`"
+    end
+
     wrap_in_transaction(repo, adapter, model, opts, embeds, [],
                         ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
-      changeset = Ecto.Embedded.apply_callbacks(changeset, embeds, adapter, :delete, :before)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
@@ -254,15 +254,6 @@ defmodule Ecto.Repo.Model do
         Map.put(acc, field, Ecto.Changeset.Relation.empty(embed))
       end
     update_in changeset.changes, &Map.merge(base, &1)
-  end
-
-  defp delete_changes(changeset, _embeds, assocs) do
-    {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
-    if map_size(assoc_changes) > 0 do
-      raise ArgumentError, "nested association changes are not allowed on delete, " <>
-                           "but got `#{inspect assoc_changes}`"
-    end
-    changeset
   end
 
   defp pop_from_changes(changeset, fields) do
