@@ -113,7 +113,8 @@ defmodule Ecto.RepoTest do
   end
 
   setup do
-    {:ok, _} = Agent.start_link(fn -> [] end, name: CallbackAgent)
+    {:ok, pid} = Agent.start_link(fn -> [] end, name: CallbackAgent)
+    on_exit fn -> Process.alive?(pid) && Agent.stop(pid) end
     :ok
   end
 
