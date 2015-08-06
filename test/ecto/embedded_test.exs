@@ -96,6 +96,10 @@ defmodule Ecto.EmbeddedTest do
     changeset = Changeset.cast(%Author{}, %{"profile" => "value"}, ~w(profile))
     assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
+
+    assert_raise Ecto.UnmachedRelationError, fn ->
+      Changeset.cast(%Author{}, %{"profile" => %{"id" => 3}}, ~w(profile))
+    end
   end
 
   test "cast embeds_one with existing model updating" do
@@ -238,33 +242,33 @@ defmodule Ecto.EmbeddedTest do
 
   # Please note the order is important in this test.
   test "cast embeds_many changing models" do
-    posts = [%Post{title: "hello", id: "hello"},
-             %Post{title: "unknown", id: "unknown"},
-             %Post{title: "other", id: "other"}]
+    posts = [%Post{title: "hello",   id: 1},
+             %Post{title: "unknown", id: 2},
+             %Post{title: "other",   id: 3}]
     params = [%{"title" => "new"},
-              %{"id" => "unknown", "title" => nil},
-              %{"id" => "other", "title" => "new name"}]
+              %{"id" => "2", "title" => nil},
+              %{"id" => "3", "title" => "new name"}]
 
     changeset = Changeset.cast(%Author{posts: posts}, %{"posts" => params}, ~w(posts))
     [new, unknown, other, hello] = changeset.changes.posts
     assert new.changes == %{title: "new"}
     assert new.action == :insert
     assert new.valid?
-    assert unknown.model.id == "unknown"
+    assert unknown.model.id == 2
     assert unknown.errors == [title: "can't be blank"]
     assert unknown.action == :update
     refute unknown.valid?
-    assert other.model.id == "other"
+    assert other.model.id == 3
     assert other.action == :update
     assert other.valid?
-    assert hello.model.id == "hello"
+    assert hello.model.id == 1
     assert hello.required == [] # Check for not running chgangeset function
     assert hello.action == :delete
     assert hello.valid?
     refute changeset.valid?
 
     assert_raise Ecto.UnmachedRelationError, fn ->
-      Changeset.cast(%Author{posts: posts}, %{"posts" => [%{"id" => "new"}]}, ~w(posts))
+      Changeset.cast(%Author{posts: posts}, %{"posts" => [%{"id" => "10"}]}, ~w(posts))
     end
   end
 
@@ -280,12 +284,16 @@ defmodule Ecto.EmbeddedTest do
     changeset = Changeset.cast(%Author{}, %{"posts" => nil}, ~w(posts))
     assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
+
+    changeset = Changeset.cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, ~w(posts))
+    assert changeset.errors == [posts: "is invalid"]
+    refute changeset.valid?
   end
 
   test "cast embeds_many without changes skips" do
     changeset =
-      Changeset.cast(%Author{posts: [%Post{title: "hello", id: "hello"}]},
-                     %{"posts" => [%{"id" => "hello"}]}, ~w(posts))
+      Changeset.cast(%Author{posts: [%Post{title: "hello", id: 1}]},
+                     %{"posts" => [%{"id" => 1}]}, ~w(posts))
 
     refute Map.has_key?(changeset.changes, :posts)
   end

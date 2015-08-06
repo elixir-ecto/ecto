@@ -3,6 +3,7 @@ defmodule Ecto.Changeset.Relation do
 
   use Behaviour
   alias Ecto.Changeset
+  alias Ecto.Association.NotLoaded
 
   @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_cast: atom}
 
@@ -115,6 +116,10 @@ defmodule Ecto.Changeset.Relation do
 
   Sets correct `state` on the returned changeset
   """
+  def cast(_relation, _model, :empty, %NotLoaded{} = current) do
+    {:ok, current, false, false}
+  end
+
   def cast(relation, model, params, current) do
     cast(relation, params, loaded_or_empty!(model, current))
   end
@@ -140,7 +145,8 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp cast(%{related: model} = relation, params, current) do
-    {pks, param_pks} = primary_keys(model)
+    pks = primary_keys!(model)
+    param_pks = Enum.map(pks, &{Atom.to_string(&1), model.__schema__(:type, &1)})
     cast_or_change(relation, params, current, param_pks, pks,
                    &do_cast(relation, &1, &2))
   end
@@ -166,7 +172,7 @@ defmodule Ecto.Changeset.Relation do
 
   def change(%{related: mod} = relation, model, value, current) do
     current = loaded_or_empty!(model, current)
-    {pks, _} = primary_keys(mod)
+    pks     = primary_keys!(mod)
     cast_or_change(relation, value, current, pks, pks,
                    &do_change(relation, &1, &2))
   end
@@ -272,35 +278,39 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp current_or_nil(nil, _new_pks, current, _current_pks), do: current
-  defp current_or_nil(_new, _new_pks, nil, _current_pks), do: nil
   defp current_or_nil(new, new_pks, current, current_pks) do
     new_pk_values = get_pks(new, new_pks)
-    current_pk_values = get_pks(current, current_pks)
 
     cond do
-      new_pk_values == current_pk_values ->
+      current && new_pk_values == get_pks(current, current_pks) ->
         current
       Enum.all?(new_pk_values, &is_nil/1) ->
         nil
       true ->
-        raise Ecto.UnmachedRelationError, new_value: new, old_value: current, cardinality: :one
+        raise Ecto.UnmachedRelationError, new_value: new, old_value: current,
+                                          cardinality: :one
     end
   end
 
   defp get_pks(%Changeset{model: model}, pks),
     do: get_pks(model, pks)
   defp get_pks(model_or_params, pks),
-    do: Enum.map(pks, &Map.get(model_or_params, &1))
+    do: Enum.map(pks, &do_get_pk(model_or_params, &1))
 
-  defp primary_keys(module) do
-    primary_keys =
-      case module.__schema__(:primary_key) do
-        []  -> raise Ecto.NoPrimaryKeyFieldError, model: module
-        pks -> pks
-      end
-    param_keys = Enum.map(primary_keys, &Atom.to_string/1)
+  defp do_get_pk(model_or_params, {key, type}) do
+    original = do_get_pk(model_or_params, key)
+    case Ecto.Type.cast(type, original) do
+      {:ok, value} -> value
+      :error       -> original
+    end
+  end
+  defp do_get_pk(model_or_params, key), do: Map.get(model_or_params, key)
 
-    {primary_keys, param_keys}
+  defp primary_keys!(module) do
+    case module.__schema__(:primary_key) do
+      []  -> raise Ecto.NoPrimaryKeyFieldError, model: module
+      pks -> pks
+    end
   end
 
   defp put_new_action(%{action: action} = changeset, new_action) when is_nil(action),
@@ -321,12 +331,11 @@ defmodule Ecto.Changeset.Relation do
   defp skip?(_changeset),
     do: false
 
-  defp loaded_or_empty!(%{__meta__: %{state: :built}},
-                        %Ecto.Association.NotLoaded{} = not_loaded) do
+  defp loaded_or_empty!(%{__meta__: %{state: :built}}, %NotLoaded{} = not_loaded) do
     empty(not_loaded)
   end
 
-  defp loaded_or_empty!(model, %Ecto.Association.NotLoaded{__field__: field}) do
+  defp loaded_or_empty!(model, %NotLoaded{__field__: field}) do
     raise ArgumentError, "attempting to cast or change association `#{field}` " <>
       "of `#{inspect model}` that was not loaded. Please preload your " <>
       "associations before casting or changing the model."
