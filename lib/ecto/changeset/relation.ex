@@ -12,6 +12,14 @@ defmodule Ecto.Changeset.Relation do
   defcallback on_replace(t, Changeset.t) :: {:update | :delete, Changeset.t}
 
   @doc """
+  The action to be performed when the relation is modified given the changeset
+  on the repo insert/update/delete.
+  """
+  defcallback on_repo_action(t, Changeset.t, Ecto.Model.t, Ecto.Adapter.t, Ecto.Repo.t,
+                             repo_action :: :insert | :update | :delete, Keyword.t) ::
+              {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
+
+  @doc """
   Returns empty container for relation.
 
   Handles both the relation structs as well as Ecto.Association.NotLoaded.

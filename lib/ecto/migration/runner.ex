@@ -144,7 +144,9 @@ defmodule Ecto.Migration.Runner do
     if reversed = reverse(command) do
       log_and_execute_ddl(repo, level, reversed)
     else
-      raise Ecto.MigrationError, message: "cannot reverse migration command: #{command command}"
+      raise Ecto.MigrationError, message:
+        "cannot reverse migration command: #{command command}. " <>
+        "You will need to explicitly define up/1 and down/1 in your migration"
     end
   end
 
