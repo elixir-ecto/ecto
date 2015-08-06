@@ -510,18 +510,6 @@ defmodule Ecto.RepoTest do
     assert model.id == model_id
     assert model.assocs == [%{inserted_assoc | id: id, my_model_id: model_id}]
 
-    assoc = %{assoc | id: 1}
-    inserted_assoc = put_in assoc.__meta__.state, :loaded
-
-    # Action update -> moving from one model to another
-    assoc_changeset = %{Ecto.Changeset.change(assoc) | action: :update}
-    changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
-    model = TestRepo.insert!(changeset)
-    assert [{:after_insert, MyModel}, {:after_update, MyAssoc},
-            {:before_update, MyAssoc}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.assoc == %{inserted_assoc | my_model_id: model.id}
-
     # Raises if action is delete
     assoc_changeset = %{Ecto.Changeset.change(assoc) | action: :delete}
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
@@ -651,15 +639,7 @@ defmodule Ecto.RepoTest do
 
     embed = %{embed | id: @uuid}
 
-    # Inserting embed with id already provided
-    changeset = Ecto.Changeset.change(%MyModel{id: 1}, embed: embed)
-    model = TestRepo.update!(changeset)
-    assert [{:after_update, MyModel}, {:after_insert, MyEmbed},
-            {:before_insert, MyEmbed}, {:before_update, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == embed
-
-    # Replacing assoc with a new one
+    # Replacing embed with a new one
     new_embed = %MyEmbed{x: "abc"}
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: new_embed)
     model = TestRepo.update!(changeset)
@@ -671,7 +651,7 @@ defmodule Ecto.RepoTest do
     assert id
     assert model.embed == %{new_embed | id: id}
 
-    # Replacing assoc with nil
+    # Replacing embed with nil
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: nil)
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_delete, MyEmbed},
@@ -704,17 +684,6 @@ defmodule Ecto.RepoTest do
     assert model.assocs == [%{inserted_assoc | id: id, my_model_id: model.id}]
 
     assoc = %{assoc | id: 1}
-    inserted_assoc = put_in assoc.__meta__.state, :loaded
-
-    # Inserting assoc with id already provided
-    changeset = Ecto.Changeset.change(%MyModel{id: 1}, assoc: assoc)
-    model = TestRepo.update!(changeset)
-    assert [{:after_update, MyModel}, {:after_insert, MyAssoc},
-            {:before_insert, MyAssoc}, {:before_update, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    %{my_model_id: model_id} = model.assoc
-    assert model_id == model.id
-    assert model.assoc == %{inserted_assoc | my_model_id: model_id}
 
     # Replacing assoc with a new one
     new_assoc = %MyAssoc{x: "abc"}

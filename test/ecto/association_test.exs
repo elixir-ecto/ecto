@@ -467,6 +467,10 @@ defmodule Ecto.AssociationTest do
     changeset = Changeset.cast(%Author{}, %{"profile" => "value"}, ~w(profile))
     assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
+
+    assert_raise Ecto.UnmachedRelationError, fn ->
+      Changeset.cast(%Author{}, %{"profile" => %{"id" => "invalid"}}, ~w(profile))
+    end
   end
 
   test "cast has_one with existing model updating" do
@@ -504,6 +508,12 @@ defmodule Ecto.AssociationTest do
     changeset =
       Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
                      %{"profile" => %{"id" => 1}}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
+                     %{"profile" => %{"id" => "1"}}, ~w(profile))
     assert changeset.changes == %{}
     assert changeset.errors == []
   end
@@ -652,6 +662,10 @@ defmodule Ecto.AssociationTest do
     refute changeset.valid?
 
     changeset = Changeset.cast(%Author{}, %{"posts" => nil}, ~w(posts))
+    assert changeset.errors == [posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, ~w(posts))
     assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
   end

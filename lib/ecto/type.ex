@@ -534,8 +534,12 @@ defmodule Ecto.Type do
     end
   end
 
-  def cast(:binary_id, term) when is_binary(term) do
-    {:ok, term}
+  def cast(:binary_id, term) do
+    if is_binary(term) do
+      {:ok, term}
+    else
+      :error
+    end
   end
 
   def cast(:float, term) when is_binary(term) do
