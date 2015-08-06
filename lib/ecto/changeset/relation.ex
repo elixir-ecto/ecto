@@ -116,7 +116,7 @@ defmodule Ecto.Changeset.Relation do
 
   Sets correct `state` on the returned changeset
   """
-  def cast(_relation, _model, :empty, %NotLoaded{} = current) do
+  def cast(_relation, %{__meta__: %{state: :built}}, :empty, %NotLoaded{} = current) do
     {:ok, current, false, false}
   end
 

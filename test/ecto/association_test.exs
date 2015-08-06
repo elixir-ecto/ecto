@@ -369,7 +369,6 @@ defmodule Ecto.AssociationTest do
   end
 
   test "Ecto.Association.loaded?/1 returns false if association is not loaded" do
-    # refute Ecto.Association.loaded?(%Post{}.comments)
     refute Ecto.Association.loaded?(%Post{}.comments)
   end
 
@@ -585,6 +584,12 @@ defmodule Ecto.AssociationTest do
     assert profile_changeset.optional == [:name]
     assert profile_changeset.action == :update
     refute profile_changeset.valid?
+
+    # This simulates update
+    loaded = put_in %Author{}.__meta__.state, :loaded
+    assert_raise ArgumentError, ~r"attempting to cast or change association .* that was not loaded. Please preload your associations before casting or changing the model", fn ->
+      Changeset.cast(loaded, :empty, ~w(profile))
+    end
   end
 
   ## cast has_many
