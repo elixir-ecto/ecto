@@ -561,6 +561,9 @@ defmodule Ecto.AssociationTest do
     changeset = Changeset.cast(%Author{profile: nil}, :empty, profile: :optional_changeset)
     assert changeset.changes == %{}
 
+    changeset = Changeset.cast(%Author{}, :empty, ~w(profile))
+    assert changeset.changes == %{}
+
     changeset = Changeset.cast(%Author{profile: %Profile{}}, :empty, profile: :optional_changeset)
     profile_changeset = changeset.changes.profile
     assert profile_changeset.model == %Profile{}
@@ -676,6 +679,10 @@ defmodule Ecto.AssociationTest do
   test "cast has_many with :empty parameters" do
     changeset =
       Changeset.cast(%Author{posts: []}, :empty, ~w(posts))
+    assert changeset.changes == %{}
+
+    changeset =
+      Changeset.cast(%Author{}, :empty, ~w(posts))
     assert changeset.changes == %{}
 
     changeset =

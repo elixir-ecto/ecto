@@ -3,6 +3,7 @@ defmodule Ecto.Changeset.Relation do
 
   use Behaviour
   alias Ecto.Changeset
+  alias Ecto.Association.NotLoaded
 
   @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_cast: atom}
 
@@ -115,6 +116,10 @@ defmodule Ecto.Changeset.Relation do
 
   Sets correct `state` on the returned changeset
   """
+  def cast(_relation, _model, :empty, %NotLoaded{} = current) do
+    {:ok, current, false, false}
+  end
+
   def cast(relation, model, params, current) do
     cast(relation, params, loaded_or_empty!(model, current))
   end
@@ -321,12 +326,11 @@ defmodule Ecto.Changeset.Relation do
   defp skip?(_changeset),
     do: false
 
-  defp loaded_or_empty!(%{__meta__: %{state: :built}},
-                        %Ecto.Association.NotLoaded{} = not_loaded) do
+  defp loaded_or_empty!(%{__meta__: %{state: :built}}, %NotLoaded{} = not_loaded) do
     empty(not_loaded)
   end
 
-  defp loaded_or_empty!(model, %Ecto.Association.NotLoaded{__field__: field}) do
+  defp loaded_or_empty!(model, %NotLoaded{__field__: field}) do
     raise ArgumentError, "attempting to cast or change association `#{field}` " <>
       "of `#{inspect model}` that was not loaded. Please preload your " <>
       "associations before casting or changing the model."
