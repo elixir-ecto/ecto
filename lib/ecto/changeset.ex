@@ -27,16 +27,17 @@ defmodule Ecto.Changeset do
   Using changesets you can work with `has_one` and `has_many` associations
   as well as with embedded models. Those relations have two additional options:
 
-    * `on_cast` - specifies function that will be called when casting to
-      produce a changeset for nested relation;
-    * `on_replace` - action that should be taken, when in the effect of
-      applying changes one of the models in nested relation would be no
-      longer related to the parent model (i.e. it has been ommited in the
-      list of models for a many relation, or new model was specified for
-      a one relation). Valid values are: `:delete` (default for associations,
-      and the only one available for embedded models) that deletes the
-      related model from the database, and `:nilify` that sets the
-      corresponding owner reference column to `nil`.
+    * `:on_cast` - specifies function that will be called when casting to
+      a child changeset
+
+    * `:on_replace` - action that should be taken when the child model is
+      no longer associated to the parent one. This may be invoked in different
+      occasions, for example, when it has been ommited in the list of models
+      for a many relation, or new model was specified for a one relation.
+      Valid values are: `:delete` (default for associations, and the only
+      one available for embedded models) that deletes the related model
+      from the database, and `:nilify` that sets the corresponding owner
+      reference column to `nil`.
   """
 
   alias __MODULE__

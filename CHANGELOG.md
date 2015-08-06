@@ -2,6 +2,13 @@
 
 ## v0.15.0-dev
 
+* Enhancements
+  * Add query caching
+  * Add `compare/2` to `Ecto.DateTime` and friends
+  * Add `Ecto.Query.API` with the purpose of documenting query functions
+  * Add `Ecto.Migrationrename/3` to rename columns
+  * Support changing `has_one` and `has_many` via changesets
+
 * Deprecations
   * `:size` option in adapter configuration has been renamed to the more obvious `:pool_size`
 

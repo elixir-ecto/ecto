@@ -762,9 +762,6 @@ defmodule Ecto.Schema do
   You must declare your `embeds_one/3` field with type `:map` at the
   database level.
 
-  **Note:** embedding is experimental and its API may still change
-  in future releases.
-
   ## Options
 
     * `:on_cast` - the default changeset function to call during casting,
@@ -804,9 +801,22 @@ defmodule Ecto.Schema do
       end
 
       # The item is loaded with the order
-      [order] = Repo.all(from(o in Order, where: p.id == 42))
+      order = Repo.get!(Order, 42)
       order.item #=> %Item{...}
 
+  Adding and removal of embeds can only be done via the `Ecto.Changeset`
+  API so Ecto can properly track the embeded model life-cycle:
+
+      order = Repo.get!(Order, 42)
+
+      # Generate a changeset
+      changeset = Ecto.Changeset.change(order)
+
+      # Change, put a new one or remove an item
+      changeset = Ecto.Changeset.put_change(order, :item, nil)
+
+      # Update the order
+      changeset = Repo.update!(changeset)
   """
   defmacro embeds_one(name, model, opts \\ []) do
     quote do
@@ -826,9 +836,6 @@ defmodule Ecto.Schema do
   In fact, Ecto will automatically translate `nil` values from the
   database into empty lists for embeds many (this behaviour is specific
   to `embeds_many/3` fields in order to mimic `has_many/3`).
-
-  **Note:** embedding is experimental and its API may still change
-  in future releases.
 
   ## Options
 
@@ -872,8 +879,22 @@ defmodule Ecto.Schema do
       end
 
       # The items are loaded with the order
-      [order] = Repo.all(from(o in Order, where: p.id == 42))
+      order = Repo.get!(Order, 42)
       order.items #=> [%Item{...}, ...]
+
+  Adding and removal of embeds can only be done via the `Ecto.Changeset`
+  API so Ecto can properly track the embeded models life-cycle:
+
+      order = Repo.get!(Order, 42)
+
+      # Generate a changeset
+      changeset = Ecto.Changeset.change(order)
+
+      # Change, put a new one or remove all items
+      changeset = Ecto.Changeset.put_change(order, :items, [])
+
+      # Update the order
+      changeset = Repo.update!(changeset)
 
   ## Strategy
 

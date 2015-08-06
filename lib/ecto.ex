@@ -254,8 +254,9 @@ defmodule Ecto do
     * `:select`
     * `:preload`
 
-  Examples and detailed documentation for each of those are available in the
-  `Ecto.Query` module.
+  Examples and detailed documentation for each of those are available
+  in the `Ecto.Query` module. Functions supported in queries are listed
+  in `Ecto.Query.API`.
 
   When writing a query, you are inside Ecto's query syntax. In order to
   access params values or invoke Elixir functions, you need to use the `^`
@@ -301,27 +302,6 @@ defmodule Ecto do
         end
       end
 
-  Once an association is defined, Ecto provides a couple conveniences. The
-  first one is the `Ecto.Model.assoc/2` function that allows us to easily
-  retrieve all associated data to a given struct:
-
-      import Ecto.Model
-
-      # Get all comments for the given post
-      Repo.all assoc(post, :comments)
-
-      # Or build a query on top of the associated comments
-      query = from c in assoc(post, :comments), where: c.title != nil
-      Repo.all(query)
-
-  Ecto also supports joins with associations:
-
-      query = from p in Post,
-             join: c in assoc(p, :comments),
-           select: {p, c}
-
-      [{post, comment}] = Repo.all(query)
-
   When an association is defined, Ecto also defines a field in the model
   with the association name. By default, associations are not loaded into
   this field:
@@ -333,16 +313,68 @@ defmodule Ecto do
   However, developers can use the preload functionality in queries to
   automatically pre-populate the field:
 
-      iex> post = Repo.get from(p in Post, preload: [:comments]), 42
-      iex> post.comments
-      [%Comment{...}, %Comment{...}]
+      Repo.all from p in Post, preload: [:comments]
 
-  You can find more information about defining associations and each respective
-  association module in `Ecto.Schema` docs.
+  Preloading can also be done with a pre-defined join value:
+
+      Repo.all from p in Post,
+                join: c in assoc(p, :comments),
+                where: c.votes > p.votes,
+                preload: [comments: c]
+
+  Finally, for the simple cases, preloading can also be done after
+  a collection was fetched:
+
+      posts = Repo.all(Post) |> Repo.preload(:comments)
+
+  The `Ecto.Model` module also provides conveniences for working
+  with associations. For example, `Ecto.Model.assoc/2` returns a query
+  with all associated data to a given struct:
+
+      import Ecto.Model
+
+      # Get all comments for the given post
+      Repo.all assoc(post, :comments)
+
+      # Or build a query on top of the associated comments
+      query = from c in assoc(post, :comments), where: c.title != nil
+      Repo.all(query)
+
+  Another function in `Ecto.Model` is `build/3`, which allows someone
+  to build an associated model with the proper fields:
+
+      Repo.transaction fn ->
+        post = Repo.insert!(%Post{title: "Hello", body: "world"})
+
+        # Build a comment from the post model
+        comment = Ecto.Model.build(post, :comments, body: "Excellent!")
+
+        Repo.insert!(comment)
+      end
+
+  In the example above, `Ecto.Model.build/3` is equivalent to:
+
+      %Comment{post_id: post.id, body: "Excellent!"}
+
+  You can find more information about defining associations and each
+  respective association module in `Ecto.Schema` docs.
 
   > NOTE: Ecto does not lazy load associations. While lazily loading associations
   > may sound convenient at first, in the long run it becomes a source of confusion
   > and performance issues.
+
+  ### Embeds
+
+  Ecto also supports embeds. While associations keep parent and child
+  entries in different tables, embeds stores the child along side the
+  parent.
+
+  Databases like Mongo have native support for embeds. Databases
+  like PostgreSQL uses a mixture of JSONB (`embeds_one/3`) and ARRAY
+  columns to provide this functionality.
+
+  Check `Ecto.Schema.embeds_one/3` and `Ecto.Schema.embeds_many/3`
+  for more information.
 
   ### Migrations
 
