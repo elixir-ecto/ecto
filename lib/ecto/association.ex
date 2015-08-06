@@ -240,7 +240,7 @@ defmodule Ecto.Association.Has do
     * `owner` - The model where the association was defined
     * `related` - The model that is associated
     * `owner_key` - The key on the `owner` model used for the association
-    * `related_key` - The key on the `associated` model used for the association
+    * `related_key` - The key on the `related` model used for the association
     * `queryable` - The real query to use for querying association
     * `on_delete` - The action taken on associations when model is deleted
     * `on_replace` - The action taken on associations when model is replaced
