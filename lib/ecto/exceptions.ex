@@ -178,20 +178,18 @@ defmodule Ecto.UnmachedRelationError do
 
     msg =
       case Keyword.fetch!(opts, :cardinality) do
-        :one  -> "attempted to update model:"
-        :many -> "attempted to update one of the models:"
+        :one  -> "attempted to update model with:"
+        :many -> "attempted to update one of the models with:"
       end
 
     msg = """
     #{msg}
 
-    #{inspect old_value}
-
-    with:
-
     #{inspect new_value}
 
-    but primary keys did not match.
+    but could not find matching key in:
+
+    #{inspect old_value}
     """
     %__MODULE__{message: msg}
   end

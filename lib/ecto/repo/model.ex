@@ -174,14 +174,8 @@ defmodule Ecto.Repo.Model do
     {prefix, source} = struct.__meta__.source
     embeds = model.__schema__(:embeds)
 
-    changeset = %{changeset | repo: repo, action: :delete}
+    changeset = %{changeset | repo: repo, action: :delete, changes: %{}}
     autogen   = get_autogenerate_id(changeset, model)
-
-    if changeset.changes != %{} do
-      raise ArgumentError,
-        "#{inspect repo}.delete does not support changesets with changes, " <>
-        "got `#{inspect changeset.changes}`"
-    end
 
     wrap_in_transaction(repo, adapter, model, opts, embeds, [],
                         ~w(before_delete after_delete)a, fn ->

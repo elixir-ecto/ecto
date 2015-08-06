@@ -587,7 +587,7 @@ defmodule Ecto.AssociationTest do
 
     # This simulates update
     loaded = put_in %Author{}.__meta__.state, :loaded
-    assert_raise ArgumentError, ~r"attempting to cast or change association .* that was not loaded. Please preload your associations before casting or changing the model", fn ->
+    assert_raise ArgumentError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
       Changeset.cast(loaded, :empty, ~w(profile))
     end
   end

@@ -328,14 +328,6 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "delete fail on changeset with changes" do
-    invalid = %Ecto.Changeset{model: %MyModel{}, changes: %{x: "abc"}, valid?: true}
-
-    assert_raise ArgumentError, ~s(Ecto.TestRepo.delete does not support changesets with changes, got `%{x: "abc"}`), fn ->
-      TestRepo.delete(invalid)
-    end
-  end
-
   ## Changesets
 
   @uuid "30313233-3435-3637-3839-616263646566"

@@ -337,8 +337,8 @@ defmodule Ecto.Changeset.Relation do
 
   defp loaded_or_empty!(model, %NotLoaded{__field__: field}) do
     raise ArgumentError, "attempting to cast or change association `#{field}` " <>
-      "of `#{inspect model}` that was not loaded. Please preload your " <>
-      "associations before casting or changing the model."
+      "from `#{inspect model.__struct__}` that was not loaded. Please preload your " <>
+      "associations before casting or changing the model"
   end
 
   defp loaded_or_empty!(_model, loaded), do: loaded
