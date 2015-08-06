@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.15.0-dev
+## v0.15.0
 
 * Enhancements
   * Add query caching
