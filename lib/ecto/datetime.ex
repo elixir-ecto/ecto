@@ -83,6 +83,12 @@ end
 defmodule Ecto.Date do
   import Ecto.DateTime.Utils
 
+  @doc """
+  Compare two dates.
+
+  Receives two dates and compares the `t1`
+  against `t2` and returns `:lt`, `:eq` or `:gt`.
+  """
   defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
 
   @moduledoc """
@@ -184,6 +190,12 @@ end
 defmodule Ecto.Time do
   import Ecto.DateTime.Utils
 
+  @doc """
+  Compare two times.
+
+  Receives two times and compares the `t1`
+  against `t2` and returns `:lt`, `:eq` or `:gt`.
+  """
   defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
 
   @moduledoc """
@@ -302,6 +314,12 @@ end
 defmodule Ecto.DateTime do
   import Ecto.DateTime.Utils
 
+  @doc """
+  Compare two datetimes.
+
+  Receives two datetimes and compares the `t1`
+  against `t2` and returns `:lt`, `:eq` or `:gt`.
+  """
   defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
 
   @moduledoc """
