@@ -37,6 +37,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
     defp normalize_port(port) when is_integer(port), do: port
 
+    def to_constraints(%Postgrex.Error{postgres: %{code: :unique_violation, constraint: constraint}}),
+      do: [unique: constraint]
+    def to_constraints(%Postgrex.Error{}),
+      do: []
+
     ## Transaction
 
     def begin_transaction do

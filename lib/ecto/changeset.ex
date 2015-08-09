@@ -1,9 +1,74 @@
 defmodule Ecto.Changeset do
-  @moduledoc """
-  Changesets allow filtering, casting and validation of model changes.
+  @moduledoc ~S"""
+  Changesets allow filtering, casting, validation and
+  definition of constraints when manipulating models..
 
-  There is an example of working with changesets in the introductory
-  documentation in the `Ecto` module.
+  There is an example of working with changesets in the
+  introductory documentation in the `Ecto` module. The
+  functions `change/2` and `cast/4` are the usual entry
+  points for creating changesets, while the remaining
+  functions are useful for manipulating them.
+
+  ## Validations and constraints
+
+  Ecto changesets provide both validations and constraints
+  which are ultimately turned into errors in case something
+  goes wrong.
+
+  The difference between them is that validations can be executed
+  without a need to interact with the database and, therefore, are
+  always executed before attemping to insert or update the entry
+  in the database.
+
+  However, constraints can only be checked in a safe way when performing
+  the operation in the database. As consequence, validations are
+  always checked before constraints. Constraints won't even be
+  checked in case validations failed.
+
+  Let's see an example:
+
+      defmodule User do
+        use Ecto.Model
+
+        schema "users" do
+          field :name
+          field :email
+          field :age, :integer
+        end
+
+        def changeset(user, params \\ :empty) do
+          user
+          |> cast(params, ~w(name email), ~w(age))
+          |> validate_format(:email, ~r/@/)
+          |> validate_inclusion(:age, 18..100)
+          |> unique_constraint(:email)
+        end
+      end
+
+  In the `changeset/2` function above, we define two validations,
+  one for checking the e-mail format and another to check the age,
+  as well as a unique constraint in the email field.
+
+  Let's suppose the e-mail is given but the age is invalid, the
+  changeset would have the following errors:
+
+      changeset = User.changeset(%User{}, age: 0, email: "mary@example.com")
+      {:error, changeset} = Repo.insert(changeset)
+      changeset.errors #=> [age: "is invalid"]
+
+  In this case, we haven't checked the unique constraint in the
+  e-mail field because the data did not validate. Let's fix the
+  age and assume, however, that the e-mail already exists in the
+  database:
+
+      changeset = User.changeset(%User{}, age: 42, email: "mary@example.com")
+      {:error, changeset} = Repo.insert(changeset)
+      changeset.errors #=> [email: "has already been taken"]
+
+  Validations and constraints define a explicit boundary when
+  the check happens. By moving constraints to the database,
+  we also provide a safe, correct and data-race free of checking
+  the user input.
 
   ## The Ecto.Changeset struct
 
@@ -16,6 +81,7 @@ defmodule Ecto.Changeset do
   * `changes`     - The `changes` from parameters that were approved in casting
   * `errors`      - All errors from validations
   * `validations` - All validations performed in the changeset
+  * `constraints` - All constraints defined in the changeset
   * `required`    - All required fields as a list of atoms
   * `optional`    - All optional fields as a list of atoms
   * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
@@ -25,7 +91,8 @@ defmodule Ecto.Changeset do
   ## Related models
 
   Using changesets you can work with `has_one` and `has_many` associations
-  as well as with embedded models. Those relations have two additional options:
+  as well as with embedded models. When defining those relations, they have
+  two options that configure how changesets work:
 
     * `:on_cast` - specifies function that will be called when casting to
       a child changeset
@@ -47,7 +114,7 @@ defmodule Ecto.Changeset do
 
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: [],
-            filters: %{}, action: nil, types: nil
+            constraints: [], filters: %{}, action: nil, types: nil
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
@@ -57,7 +124,8 @@ defmodule Ecto.Changeset do
                         required: [atom],
                         optional: [atom],
                         errors: [error],
-                        validations: [{atom, String.t | {String.t, [term]}}],
+                        constraints: [constraint],
+                        validations: Keyword.t,
                         filters: %{atom => term},
                         action: action,
                         types: nil | %{atom => Ecto.Type.t}}
@@ -65,6 +133,8 @@ defmodule Ecto.Changeset do
   @type error :: {atom, error_message}
   @type error_message :: String.t | {String.t, integer}
   @type action :: nil | :insert | :update | :delete
+  @type constraint :: %{type: :unique, constraint: String.t,
+                        field: atom, message: error_message}
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{count}"},
@@ -764,8 +834,8 @@ defmodule Ecto.Changeset do
 
   It invokes the `validator` function to perform the validation
   only if a change for the given `field` exists and the change
-  value is not `nil`. The function must return a list of errors (with an
-  empty list meaning no errors).
+  value is not `nil`. The function must return a list of errors
+  (with an empty list meaning no errors).
 
   In case there's at least one error, the list of errors will be appended to the
   `:errors` field of the changeset and the `:valid?` flag will be set to
@@ -776,7 +846,7 @@ defmodule Ecto.Changeset do
       iex> changeset = change(%Post{}, %{title: "foo"})
       iex> changeset = validate_change changeset, :title, fn
       ...>   # Value must not be "foo"!
-      ...>   :title, "foo" -> [title: "is_foo"]
+      ...>   :title, "foo" -> [title: "is foo"]
       ...>   :title, _     -> []
       ...> end
       iex> changeset.errors
@@ -787,8 +857,8 @@ defmodule Ecto.Changeset do
   def validate_change(changeset, field, validator) when is_atom(field) do
     %{changes: changes, errors: errors} = changeset
 
-    new =
-      if value = Map.get(changes, field), do: validator.(field, value), else: []
+    value = Map.get(changes, field)
+    new   = if is_nil(value), do: [], else: validator.(field, value)
 
     case new do
       []    -> changeset
@@ -861,13 +931,13 @@ defmodule Ecto.Changeset do
     end
   end
 
-  @doc """
+  @doc ~S"""
   Validates a change, of type enum, is a subset of the given enumerable. Like
   validate_inclusion/4 for lists.
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "\#{x} is invalid"
+    * `:message` - the message on failure, defaults to "has an invalid entry"
 
   ## Examples
 
@@ -904,73 +974,11 @@ defmodule Ecto.Changeset do
     end
   end
 
-  @doc """
-  Validates the given `field`'s uniqueness on the given repository.
-
-  The validation runs if the field (or any of the values given in
-  scope) has changed and none of them contain an error. For this
-  reason, you may want to trigger the unique validations as last
-  in your validation pipeline.
-
-  This validation does not guarantee the absence of duplicate record insertions,
-  because uniqueness checks on the application level are inherently prone to race conditions.
-  The best way to work around this problem is to rely on the database to guarantee the uniqueness.
-  In SQL databases this can be achieved by creating a unique index on a given field.
-
-  ## Examples
-
-      validate_unique(changeset, :email, on: Repo)
-
-  ## Options
-
-    * `:message` - the message on failure, defaults to "has already been taken"
-    * `:on` - the repository to perform the query on
-    * `:downcase` - when `true`, downcase values when performing the uniqueness query
-    * `:scope` - a list of other fields to use for the uniqueness query
-
-  ## Case sensitivity
-
-  Unfortunately, different databases provide different guarantees
-  when it comes to case-sensitiveness. For example, in MySQL, comparisons
-  are case-insensitive by default. In Postgres, users can define case
-  insensitive column by using the `:citext` type/extension.
-
-  These behaviours make it hard for Ecto to guarantee if the unique
-  validation is case insensitive or not and that's why Ecto **does not**
-  provide a `:case_sensitive` option.
-
-  However `validate_unique/3` does provide a `:downcase` option that
-  guarantees values are downcased when doing the uniqueness check.
-  When this option is set, values are downcased regardless of the
-  database being used.
-
-  Since the `:downcase` option downcases the database values on the
-  fly, it should be used with care as it may affect performance. For example,
-  if this option is used, it could be appropriate to create an index with the
-  downcased value. Using `Ecto.Migration` syntax, one could write:
-
-      create index(:posts, ["lower(title)"])
-
-  Many times, however, it's simpler to just explicitly downcase values
-  before inserting them into the database and avoid the `:downcase` option
-  in `validate_unique/3`:
-
-      cast(model, params, ~w(email), ~w())
-      |> update_change(:email, &String.downcase/1)
-      |> validate_unique(:email, on: Repo)
-
-  ## Scope
-
-  The `:scope` option allows specifying of other fields that are used to limit
-  the uniqueness check. For example, if our use case limits a user to a single
-  comment per blog post, it would look something like:
-
-      cast(model, params, ~w(comment), ~w())
-      |> validate_unique(:user_id, scope: [:post_id], on: Repo)
-
-  """
-  @spec validate_unique(t, atom, [Keyword.t]) :: t
+  @doc false
   def validate_unique(changeset, field, opts) when is_list(opts) do
+    IO.write "[warning] validate_unique/3 is deprecated in favor of unique_constraint/3" <>
+             Exception.format_stacktrace()
+
     %{model: model, changes: changes, errors: errors, validations: validations} = changeset
     changeset = %{changeset | validations: [{field, {:unique, opts}}|validations]}
 
@@ -1183,4 +1191,93 @@ defmodule Ecto.Changeset do
   defp message(opts, default) do
     Keyword.get(opts, :message, default)
   end
+
+  ## Constraints
+
+  @doc """
+  Adds a unique constraint to the given field.
+
+  The unique constraint work by relying on the database to check
+  if the unique constraint has been violated or not and, if so,
+  Ecto converts it into a changeset error.
+
+  In order to use the uniqueness constraint the first step is
+  to define the unique index in a migration:
+
+      create unique_index(:users, [:email])
+
+  Now that a constraint exists, when modifying users, we could
+  annotate the changeset with unique constraint so Ecto knows
+  how to convert it into an error message:
+
+      cast(user, params, ~w(email), ~w())
+      |> unique_constraint(:email)
+
+  When inserting, if the email already exists, it will be
+  converted into an error.
+
+  ## Options
+
+    * `:message` - the message in case the constraint check fails,
+      defaults to "has already been taken"
+    * `:name` - the constraint name. By default, the constrant
+      name is inflected from the table + field. By may be required
+      to be given explicitly for complex cases
+
+  ## Complex constraints
+
+  Because the constraint logic is in the database, we can leverage
+  all the database functionality when defining them. For example,
+  let's suppose the e-mails are scoped by company id. We would write
+  in a migration:
+
+      create unique_index(:users, [:email, :company_id])
+
+  Because such indexes have usually more complex names, we need
+  to explicitly tell the changeset which constriant name to use:
+
+      cast(user, params, ~w(email), ~w())
+      |> unique_constraint(:email, name: :posts_email_company_id_index)
+
+  Alternatively, you can give both `unique_index` and `unique_constraint`
+  a name:
+
+      # In the migration
+      create unique_index(:users, [:email, :company_id], name: :posts_special_email_index)
+
+      # In the model
+      cast(user, params, ~w(email), ~w())
+      |> unique_constraint(:email, name: :posts_email_company_id_index)
+
+  ## Case sensitivity
+
+  Unfortunately, different databases provide different guarantees
+  when it comes to case-sensitiveness. For example, in MySQL, comparisons
+  are case-insensitive by default. In Postgres, users can define case
+  insensitive column by using the `:citext` type/extension.
+
+  If for some reason your database does not support case insensive columns,
+  you can explicitly downcase values before inserting/updating them:
+
+      cast(model, params, ~w(email), ~w())
+      |> update_change(:email, &String.downcase/1)
+      |> unique_constraint(:email)
+
+  """
+  def unique_constraint(changeset, field, opts \\ []) do
+    constraint = opts[:name] || "#{get_source(changeset)}_#{field}_index"
+    message    = opts[:message] || "has already been taken"
+    add_constraint(changeset, :unique, to_string(constraint), field, message)
+  end
+
+  defp add_constraint(changeset, type, constraint, field, message)
+       when is_binary(constraint) and is_atom(field) and is_binary(message) do
+    update_in changeset.constraints, &[%{type: type, constraint: constraint,
+                                         field: field, message: message}|&1]
+  end
+
+  defp get_source(%{model: %{__meta__: %{source: {_prefix, source}}}}) when is_binary(source),
+    do: source
+  defp get_source(%{model: model}), do:
+    raise("cannot add constraint to model because it does not have a source: #{inspect model}")
 end

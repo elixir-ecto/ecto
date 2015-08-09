@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.16.0-dev
+
+* Deprecations
+  * `Ecto.Changeset.validate_unique/3` is deprecate in favor of `Ecto.Changeset.unique_constraint/3`. Read the documentation for the latter for more information on updating
+
+* Backwards incompatible changes
+  * `Ecto.Adapters.SQL.query/4` now returns `{:ok, result}`. Use `Ecto.Adapters.SQL.query!/4` for the previous behaviour
+
 ## v0.15.0
 
 * Enhancements

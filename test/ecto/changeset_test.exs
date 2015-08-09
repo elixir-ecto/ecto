@@ -592,150 +592,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [title: "yada"]
   end
 
-  test "validate_unique/3" do
-    defmodule UniqueRepo do
-      def all(query) do
-        [where] = query.wheres
-        assert Macro.to_string(where.expr) == "&0.title() == ^0"
-        assert query.limit.expr == 1
-        Process.get(:unique_query)
-      end
-    end
-
-    Process.put(:unique_query, [])
-    changeset =
-      changeset(%{"title" => "hello"})
-      |> validate_unique(:title, on: UniqueRepo)
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert changeset.validations == [title: {:unique, [on: UniqueRepo]}]
-
-    Process.put(:unique_query, [1])
-    changeset =
-      changeset(%{"title" => "hello"})
-      |> validate_unique(:title, on: UniqueRepo)
-    refute changeset.valid?
-    assert changeset.errors == [title: "has already been taken"]
-    assert changeset.validations == [title: {:unique, [on: UniqueRepo]}]
-
-    changeset =
-      changeset(%{"title" => "hello"})
-      |> validate_unique(:title, on: UniqueRepo, message: "yada")
-    assert changeset.errors == [title: "yada"]
-
-    changeset =
-      changeset(%{"title" => "hello"}) # Does not validate when there are errors
-      |> validate_length(:title, max: 3)
-      |> validate_unique(:title, on: UniqueRepo)
-    assert changeset.errors == [title: {"should be at most %{count} characters", count: 3}]
-    assert changeset.validations == [
-      title: {:unique, [on: UniqueRepo]},
-      title: {:length, [max: 3]}
-    ]
-  end
-
-  test "validate_unique/3 with primary key" do
-    defmodule UniquePKRepo do
-      def all(query) do
-        [where, pk_where] = query.wheres
-        assert Macro.to_string(where.expr) == "&0.title() == ^0"
-        assert Macro.to_string(pk_where.expr) == "&0.id() != ^0"
-        []
-      end
-    end
-
-    changeset =
-      changeset(%Post{id: 1}, %{"title" => "hello"})
-      |> validate_unique(:title, on: UniquePKRepo)
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert changeset.validations == [title: {:unique, [on: UniquePKRepo]}]
-  end
-
-  test "validate_unique/3 with downcase" do
-    defmodule DowncaseRepo do
-      def all(query) do
-        assert inspect(query) =~
-               ~s|where: fragment("lower(?)", p.title) == fragment("lower(?)", ^"hello")|
-        []
-      end
-    end
-
-    changeset =
-      changeset(%{"title" => "hello"})
-      |> validate_unique(:title, on: DowncaseRepo, downcase: true)
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert changeset.validations == [title: {:unique, [on: DowncaseRepo, downcase: true]}]
-  end
-
-  test "validate_unique/3 with scope" do
-    defmodule ScopeRepo do
-      def all(query) do
-        assert query.wheres |> Enum.count == 2
-        query_strings = query.wheres |> Enum.map(&Macro.to_string(&1.expr))
-        case Process.get(:compare_type) do
-          :value  -> assert "&0.title() == ^0" in query_strings
-          :is_nil -> assert "is_nil(&0.title())" in query_strings
-        end
-        assert "&0.body() == ^0" in query_strings
-        assert query.limit.expr == 1
-        Process.get(:scope_query)
-      end
-    end
-
-    Process.put(:compare_type, :value)
-    Process.put(:scope_query, [])
-    changeset =
-      changeset(%{"title" => "hello", "body" => "world"})
-      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]
-
-    changeset =
-      changeset(%Post{title: "hello"}, %{"body" => "world"})
-      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
-    assert changeset.errors == []
-    assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]
-
-    Process.put(:scope_query, [1])
-    changeset =
-      changeset(%{"title" => "hello", "body" => "world"})
-      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
-    refute changeset.valid?
-    assert changeset.errors == [title: "has already been taken"]
-    assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]
-
-    changeset =
-      changeset(%{"title" => "hello", "body" => "world"})
-      |> validate_unique(:title, scope: [:body], on: ScopeRepo, message: "yada")
-    assert changeset.errors == [title: "yada"]
-
-    Process.put(:compare_type, :is_nil)
-    changeset =
-      changeset(%{"body" => "world"}) # Also validates when only scope changes
-      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
-    assert changeset.errors == [title: "has already been taken"]
-    assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]
-
-    changeset =
-      changeset(%Post{title: nil}, %{"body" => "world"})
-      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
-    assert changeset.errors == [title: "has already been taken"]
-    assert changeset.validations == [title: {:unique, [scope: [:body], on: ScopeRepo]}]
-
-    changeset =
-      changeset(%{"body" => "world"}) # Does not validate when there are errors
-      |> validate_length(:body, max: 3)
-      |> validate_unique(:title, scope: [:body], on: ScopeRepo)
-    assert changeset.errors == [body: {"should be at most %{count} characters", count: 3}]
-    assert changeset.validations == [
-      title: {:unique, [scope: [:body], on: ScopeRepo]},
-      body: {:length, [max: 3]}
-    ]
-  end
-
   test "validate_length/3" do
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 3, max: 7)
     assert changeset.valid?
@@ -856,5 +712,18 @@ defmodule Ecto.ChangesetTest do
                 |> validate_confirmation(:upvotes)
     assert changeset.valid?
     assert changeset.errors == []
+  end
+
+  ## Constraints
+
+  test "unique_constraint/3" do
+    changeset = change(%Post{}) |> unique_constraint(:title)
+    assert changeset.constraints ==
+           [%{type: :unique, field: :title, constraint: "posts_title_index",
+              message: "has already been taken"}]
+
+    changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, message: "is taken")
+    assert changeset.constraints ==
+           [%{type: :unique, field: :title, constraint: "whatever", message: "is taken"}]
   end
 end

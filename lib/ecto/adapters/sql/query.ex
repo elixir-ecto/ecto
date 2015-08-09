@@ -24,6 +24,20 @@ defmodule Ecto.Adapters.SQL.Query do
   """
   defcallback query(pid, query :: binary, params :: list(), opts :: Keyword.t) :: result
 
+  @doc """
+  Receives the exception returned by `query/4`.
+
+  The constraints are in the keyword list and must return the
+  constraint type, like `:unique`, and the constraint name as
+  a string, for example:
+
+      [unique: "posts_title_index"]
+
+  Must return an empty list if the error does not come
+  from any constraint.
+  """
+  defcallback to_constraints(Exception.t) :: Keyword.t
+
   ## Queries
 
   @doc """

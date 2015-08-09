@@ -329,7 +329,7 @@ defmodule Ecto.Migration do
     struct(%Table{name: name}, opts)
   end
 
-  @doc """
+  @doc ~S"""
   Returns an index struct that can be used on `create`, `drop`, etc.
 
   Expects the table name as first argument and the index fields as
@@ -337,6 +337,13 @@ defmodule Ecto.Migration do
   string representing an expression that is sent as is to the database.
 
   Indexes are non-unique by default.
+
+  ## Options
+
+    * `:name` - the name of the index. Defaults to "#{table}_#{column}_index"
+    * `:unique` - if the column(s) is unique or not
+    * `:concurrently` - if the index should be created/dropped concurrently
+    * `:using` - configures the index type
 
   ## Adding/dropping indexes concurrently
 
@@ -380,6 +387,15 @@ defmodule Ecto.Migration do
   def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
     index = struct(%Index{table: table, columns: columns}, opts)
     %{index | name: index.name || default_index_name(index)}
+  end
+
+  @doc """
+  Shortcut for creating a unique index.
+
+  See `index/3` for more information.
+  """
+  def unique_index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
+    index(table, columns, [unique: true] ++ opts)
   end
 
   defp default_index_name(index) do

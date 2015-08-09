@@ -10,6 +10,7 @@ defmodule Ecto.Adapter do
   @type source :: {prefix :: binary, table :: binary, model :: atom}
   @type fields :: Keyword.t
   @type filters :: Keyword.t
+  @type constraints :: Keyword.t
   @type returning :: [atom]
   @type prepared :: term
   @type preprocess :: (Macro.t, term -> term)
@@ -144,7 +145,7 @@ defmodule Ecto.Adapter do
   will be a non `nil` value.
   """
   defcallback insert(repo, source, fields, autogenerate_id, returning, options) ::
-                    {:ok, Keyword.t} | no_return
+                    {:ok, Keyword.t} | {:invalid, constraints} | no_return
 
   @doc """
   Updates a single model with the given filters.
@@ -168,7 +169,8 @@ defmodule Ecto.Adapter do
   will be a non `nil` value.
   """
   defcallback update(repo, source, fields, filters, autogenerate_id, returning, options) ::
-                    {:ok, Keyword.t} | {:error, :stale} | no_return
+                    {:ok, Keyword.t} | {:invalid, constraints} |
+                    {:error, :stale} | no_return
 
   @doc """
   Deletes a sigle model with the given filters.
@@ -188,5 +190,6 @@ defmodule Ecto.Adapter do
   If the value is `nil`, it means there is no autogenerate primary key.
   """
   defcallback delete(repo, source, filters, autogenerate_id, options) ::
-                     {:ok, Keyword.t} | {:error, :stale} | no_return
+                     {:ok, Keyword.t} | {:invalid, constraints} |
+                     {:error, :stale} | no_return
 end

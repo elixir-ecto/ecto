@@ -1,7 +1,7 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "0.15.0"
+  @version "0.16.0-dev"
   @adapters [:pg, :mysql]
   @pools [:poolboy, :sojourn_timeout, :sojourn_codel]
 

@@ -1,3 +1,5 @@
+Code.require_file "../support/types.exs", __DIR__
+
 defmodule Ecto.Integration.RepoTest do
   use Ecto.Integration.Case
 
@@ -189,58 +191,34 @@ defmodule Ecto.Integration.RepoTest do
     assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(base_post) end
   end
 
-  test "validate_unique/3" do
-    import Ecto.Changeset
-    post = TestRepo.insert!(%Post{title: "HELLO"})
+  test "unique constraint" do
+    changeset = Ecto.Changeset.change(%Post{}, uuid: Ecto.UUID.generate())
+    {:ok, _}  = TestRepo.insert(changeset)
 
-    on_insert = cast(%Post{}, %{"title" => "HELLO"}, ~w(title), ~w())
-    assert validate_unique(on_insert, :title, on: TestRepo).errors != []
+    exception =
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
+        changeset
+        |> TestRepo.insert()
+      end
 
-    on_update = cast(post, %{"title" => "HELLO"}, ~w(title), ~w())
-    assert validate_unique(on_update, :title, on: TestRepo).errors == []
+    assert exception.message =~ "unique: posts_uuid_index"
+    assert exception.message =~ "The changeset has not defined any constraint."
 
-    on_update = cast(post, %{"title" => nil}, ~w(), ~w(title))
-    assert validate_unique(on_update, :title, on: TestRepo).errors == []
+    message = ~r/constraint error when attempting to insert model/
+    exception =
+      assert_raise Ecto.ConstraintError, message, fn ->
+        changeset
+        |> Ecto.Changeset.unique_constraint(:uuid, name: :posts_email_changeset)
+        |> TestRepo.insert()
+      end
 
-    on_update = cast(%{post | id: nil, title: nil}, %{"title" => "HELLO"}, ~w(title), ~w())
-    assert validate_unique(on_update, :title, on: TestRepo).errors != []
-  end
+    assert exception.message =~ "unique: posts_email_changeset"
 
-  @tag :sql_fragments
-  test "validate_unique/3 with downcasing" do
-    import Ecto.Changeset
-    TestRepo.insert!(%Post{title: "HELLO"})
-
-    on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w())
-    assert validate_unique(on_insert, :title, on: TestRepo, downcase: true).errors != []
-  end
-
-  @tag :case_sensitive
-  test "validate_unique/3 case sensitive" do
-    import Ecto.Changeset
-    post = TestRepo.insert!(%Post{title: "HELLO"})
-
-    on_insert = cast(%Post{}, %{"title" => "hello"}, ~w(title), ~w())
-    assert validate_unique(on_insert, :title, on: TestRepo).errors == []
-
-    on_update = cast(%{post | id: nil}, %{"title" => "hello"}, ~w(title), ~w())
-    assert validate_unique(on_update, :title, on: TestRepo).errors == []
-  end
-
-  test "validate_unique/3 with scope" do
-    import Ecto.Changeset
-    TestRepo.insert!(%Post{title: "hello", text: "world"})
-
-    on_insert = cast(%Post{}, %{"title" => "hello", "text" => "elixir"}, ~w(title), ~w(text))
-    assert validate_unique(on_insert, :title, on: TestRepo).errors == [title: "has already been taken"]
-    assert validate_unique(on_insert, :title, scope: [:text], on: TestRepo).errors == []
-
-    on_insert = cast(%Post{}, %{"title" => "hello", "text" => nil}, ~w(title), ~w(text))
-    assert validate_unique(on_insert, :title, scope: [:text], on: TestRepo).errors == []
-
-    assert_raise(Ecto.QueryError, fn ->
-      validate_unique(on_insert, :title, scope: [:non_existent], on: TestRepo).errors == []
-    end)
+    {:error, changeset} =
+      changeset
+      |> Ecto.Changeset.unique_constraint(:uuid)
+      |> TestRepo.insert()
+    assert changeset.errors == [uuid: "has already been taken"]
   end
 
   test "get(!)" do

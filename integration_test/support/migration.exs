@@ -27,7 +27,7 @@ defmodule Ecto.Integration.Migration do
     # Add a unique index on uuid. We use this
     # to verify the behaviour that the index
     # only matters if the UUID column is not NULL.
-    create index(:posts, [:uuid], unique: true)
+    create unique_index(:posts, [:uuid])
 
     create table(:permalinks) do
       add :url

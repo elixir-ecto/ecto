@@ -68,17 +68,15 @@ defmodule Ecto.Repo.Model do
       changes = validate_changes(:insert, changes, model, fields, adapter)
       {embed_changes, changeset} = pop_from_changes(changeset, embeds)
 
-      {:ok, values} = adapter.insert(repo, {prefix, source, model}, changes, autogen, return, opts)
-
-      changeset
-      |> load_changes(values, adapter)
-      |> process_embeds(embed_changes, adapter, repo, opts)
-      |> process_assocs(assoc_changes, adapter, repo, opts)
-      |> case do
+      args = [repo, {prefix, source, model}, changes, autogen, return, opts]
+      case apply(changeset, adapter, :insert, args) do
         {:ok, changeset} ->
-          {:ok, Callbacks.__apply__(model, :after_insert, changeset).model}
-        {:error, changeset} ->
-          {:error, %{changeset | valid?: false}}
+          changeset
+          |> process_embeds(embed_changes, adapter, repo, opts)
+          |> process_assocs(assoc_changes, adapter, repo, opts)
+          |> maybe_process_after(model, :after_insert)
+        {:error, _} = error ->
+          error
       end
     end)
   end
@@ -122,27 +120,16 @@ defmodule Ecto.Repo.Model do
         filters = add_pk_filter!(changeset.filters, struct)
         filters = Planner.fields(model, :update, filters, adapter)
 
-        values =
-          if changes != [] do
-            case adapter.update(repo, {prefix, source, model}, changes, filters, autogen, return, opts) do
-              {:ok, values} ->
-                values
-              {:error, :stale} ->
-                raise Ecto.StaleModelError, model: struct, action: :update
-            end
-          else
-            []
-          end
-
-        changeset
-        |> load_changes(values, adapter)
-        |> process_embeds(embed_changes, adapter, repo, opts)
-        |> process_assocs(assoc_changes, adapter, repo, opts)
-        |> case do
+        args   = [repo, {prefix, source, model}, changes, filters, autogen, return, opts]
+        action = if changes == [], do: :noop, else: :update
+        case apply(changeset, adapter, action, args) do
           {:ok, changeset} ->
-            {:ok, Callbacks.__apply__(model, :after_update, changeset).model}
-          {:error, changeset} ->
-            {:error, %{changeset | valid?: false}}
+            changeset
+            |> process_embeds(embed_changes, adapter, repo, opts)
+            |> process_assocs(assoc_changes, adapter, repo, opts)
+            |> maybe_process_after(model, :after_update)
+          {:error, _} = error ->
+            error
         end
       end)
     else
@@ -180,24 +167,27 @@ defmodule Ecto.Repo.Model do
     wrap_in_transaction(repo, adapter, model, opts, embeds, [],
                         ~w(before_delete after_delete)a, fn ->
       changeset = Callbacks.__apply__(model, :before_delete, changeset)
-      changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :delete)
+
+      embeds  =
+        changeset
+        |> Ecto.Embedded.prepare(embeds, adapter, :delete)
+        |> Map.fetch!(:changes)
+        |> Map.take(embeds)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
 
-      case adapter.delete(repo, {prefix, source, model}, filters, autogen, opts) do
-        {:ok, _} -> nil
-        {:error, :stale} ->
-          raise Ecto.StaleModelError, model: struct, action: :delete
+      args = [repo, {prefix, source, model}, filters, autogen, opts]
+      case apply(changeset, adapter, :delete, args) do
+        {:ok, changeset} ->
+          # We ignore the results because we still want to keep
+          # the embed values in the model. Also note we don't
+          # process associations because they are handled externally.
+          _ = process_embeds(changeset, embeds, adapter, repo, opts)
+          {:ok, Callbacks.__apply__(model, :after_delete, changeset).model}
+        {:error, _} = error ->
+          error
       end
-
-      # We ignore the results because we still want to keep
-      # the embed values in the model. Also note we don't
-      # process associations because they are handled externally.
-      _ = process_embeds(changeset, Map.take(changeset.changes, embeds), adapter, repo, opts)
-
-      changeset = put_in(changeset.model.__meta__.state, :deleted)
-      {:ok, Callbacks.__apply__(model, :after_delete, changeset).model}
     end)
   end
 
@@ -218,16 +208,52 @@ defmodule Ecto.Repo.Model do
   defp struct_from_changeset!(_action, %{model: struct}),
     do: struct
 
-  defp load_changes(%{types: types} = changeset, values, adapter) do
+  defp apply(changeset, _adapter, :noop, _args) do
+    {:ok, changeset}
+  end
+
+  defp apply(changeset, adapter, action, args) do
+    case apply(adapter, action, args) do
+      {:ok, values} ->
+        {:ok, load_changes(changeset, action, values, adapter)}
+      {:invalid, constraints} ->
+        {:error, constraints_to_errors(changeset, action, constraints)}
+      {:error, :stale} ->
+        raise Ecto.StaleModelError, model: changeset.model, action: action
+    end
+  end
+
+  defp constraints_to_errors(%{constraints: user_constraints} = changeset, action, constraints) do
+    Enum.reduce constraints, changeset, fn {type, constraint}, acc ->
+      user_constraint =
+        Enum.find(user_constraints, fn c ->
+          c.type == type and c.constraint == constraint
+        end)
+
+      case user_constraint do
+        %{field: field, message: message} ->
+          Ecto.Changeset.add_error(acc, field, message)
+        nil ->
+          raise Ecto.ConstraintError, action: action, type: type,
+                                      constraint: constraint, changeset: changeset
+      end
+    end
+  end
+
+  defp load_changes(%{types: types} = changeset, action, values, adapter) do
     # It is ok to use types from changeset because we have
     # already filtered the results to be only about fields.
     model =
       changeset
       |> Ecto.Changeset.apply_changes
       |> do_load(values, types, adapter)
-    model = put_in(model.__meta__.state, :loaded)
+    model = put_in(model.__meta__.state, action_to_state(action))
     Map.put(changeset, :model, model)
   end
+
+  defp action_to_state(:insert), do: :loaded
+  defp action_to_state(:update), do: :loaded
+  defp action_to_state(:delete), do: :deleted
 
   defp do_load(struct, kv, types, adapter) do
     Enum.reduce(kv, struct, fn
@@ -262,6 +288,14 @@ defmodule Ecto.Repo.Model do
 
   defp process_assocs(changeset, assocs, adapter, repo, opts) do
     Ecto.Changeset.Relation.on_repo_action(changeset, assocs, adapter, repo, opts)
+  end
+
+  defp maybe_process_after({:ok, changeset}, model, callback) do
+    {:ok, Callbacks.__apply__(model, callback, changeset).model}
+  end
+
+  defp maybe_process_after({:error, changeset}, _model, _callback) do
+    {:error, %{changeset | valid?: false}}
   end
 
   defp pop_autogenerate_id(changes, model) do

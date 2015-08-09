@@ -169,6 +169,38 @@ defmodule Ecto.StaleModelError do
   end
 end
 
+defmodule Ecto.ConstraintError do
+  defexception [:message]
+
+  def exception(opts) do
+    type = Keyword.fetch!(opts, :type)
+    constraint = Keyword.fetch!(opts, :constraint)
+    changeset = Keyword.fetch!(opts, :changeset)
+    action = Keyword.fetch!(opts, :action)
+
+    constraints =
+      case changeset.constraints do
+        [] ->
+          "The changeset has not defined any constraint."
+        constraints ->
+          "The changeset defined the following constraints:\n\n" <>
+            Enum.map_join(constraints, "\n", &"    * #{&1.type}: #{&1.constraint}")
+      end
+
+    msg = """
+    constraint error when attempting to #{action} model:
+
+        * #{type}: #{constraint}
+
+    If you would like to convert this constraint into an error, please
+    call #{type}_constraint/3 in your changeset and define the proper
+    constraint name. #{constraints}
+    """
+
+    %__MODULE__{message: msg}
+  end
+end
+
 defmodule Ecto.UnmachedRelationError do
   defexception [:message]
 

@@ -74,7 +74,7 @@ defmodule Ecto.Adapters.SQL do
       def insert(repo, {prefix, source, _model}, params, _autogenerate, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(prefix, source, fields, returning)
-        Ecto.Adapters.SQL.model(repo, sql, values, returning, opts)
+        Ecto.Adapters.SQL.model(repo, @conn, sql, values, returning, opts)
       end
 
       @doc false
@@ -82,13 +82,14 @@ defmodule Ecto.Adapters.SQL do
         {fields, values1} = :lists.unzip(fields)
         {filter, values2} = :lists.unzip(filter)
         sql = @conn.update(prefix, source, fields, filter, returning)
-        Ecto.Adapters.SQL.model(repo, sql, values1 ++ values2, returning, opts)
+        Ecto.Adapters.SQL.model(repo, @conn, sql, values1 ++ values2, returning, opts)
       end
 
       @doc false
       def delete(repo, {prefix, source, _model}, filter, _autogenarate, opts) do
         {filter, values} = :lists.unzip(filter)
-        Ecto.Adapters.SQL.model(repo, @conn.delete(prefix, source, filter, []), values, [], opts)
+        sql = @conn.delete(prefix, source, filter, [])
+        Ecto.Adapters.SQL.model(repo, @conn, sql, values, [], opts)
       end
 
       ## Transaction
@@ -156,6 +157,22 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc """
+  Same as `query/4` but raises on invalid queries.
+  """
+  @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
+               %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
+  def query!(repo, sql, params, opts \\ []) do
+    query!(repo, sql, params, nil, opts)
+  end
+
+  defp query!(repo, sql, params, mapper, opts) do
+    case query(repo, sql, params, mapper, opts) do
+      {:ok, result} -> result
+      {:error, err} -> raise err
+    end
+  end
+
+  @doc """
   Runs custom SQL query on given repo.
 
   In case of success, it must return an `:ok` tuple containing
@@ -177,24 +194,21 @@ defmodule Ecto.Adapters.SQL do
 
   ## Examples
 
-      iex> Ecto.Adapters.SQL.query!(MyRepo, "SELECT $1::integer + $2", [40, 2])
-      %{rows: [{42}], num_rows: 1}
+      iex> Ecto.Adapters.SQL.query(MyRepo, "SELECT $1::integer + $2", [40, 2])
+      {:ok, %{rows: [{42}], num_rows: 1}}
 
   """
-  @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
-               %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
-  def query!(repo, sql, params, opts \\ []) do
-    query!(repo, sql, params, nil, opts)
+  @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
+              {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
+  def query(repo, sql, params, opts \\ []) do
+    query(repo, sql, params, nil, opts)
   end
 
-  defp query!(repo, sql, params, mapper, opts) do
+  defp query(repo, sql, params, mapper, opts) do
     case query(repo, sql, params, nil, mapper, opts) do
-      {{:ok, result}, entry} ->
+      {result, entry} ->
         log(repo, entry)
         result
-      {{:error, err}, entry} ->
-        log(repo, entry)
-        raise err
       :noconnect ->
         # :noconnect can never be the reason a call fails because
         # it is converted to {:nodedown, node}. This means the exit
@@ -452,14 +466,19 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def model(repo, sql, values, returning, opts) do
-    case query!(repo, sql, values, opts) do
-      %{rows: nil, num_rows: 1} ->
+  def model(repo, conn, sql, values, returning, opts) do
+    case query(repo, sql, values, nil, opts) do
+      {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
-      %{rows: [values], num_rows: 1} ->
+      {:ok, %{rows: [values], num_rows: 1}} ->
         {:ok, Enum.zip(returning, values)}
-      %{num_rows: 0} ->
+      {:ok, %{num_rows: 0}} ->
         {:error, :stale}
+      {:error, err} ->
+        case conn.to_constraints(err) do
+          []          -> raise err
+          constraints -> {:invalid, constraints}
+        end
     end
   end
 

@@ -151,12 +151,11 @@ defmodule Ecto do
           field :age, :integer
         end
 
-        def changeset(user, params \\ nil) do
+        def changeset(user, params \\ :empty) do
           user
           |> cast(params, ~w(name email), ~w(age))
           |> validate_format(:email, ~r/@/)
-          |> validate_inclusion(:age, 0..130)
-          |> validate_unique(:email, on: Repo)
+          |> validate_inclusion(:age, 18..100)
         end
       end
 

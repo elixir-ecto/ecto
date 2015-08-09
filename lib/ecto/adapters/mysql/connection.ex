@@ -35,6 +35,19 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       Application.get_env(:ecto, :json_library)
     end
 
+    def to_constraints(%Mariaex.Error{mariadb: %{code: 1062, message: message}}) do
+      case :binary.split(message, " for key ") do
+        [_, quoted_index] ->
+          size = byte_size(quoted_index) - 2
+          <<?', index::binary-size(size), ?'>> = quoted_index
+          [unique: index]
+        _ ->
+          []
+      end
+    end
+    def to_constraints(%Mariaex.Error{} = error),
+      do: error
+
     ## Transaction
 
     def begin_transaction do
