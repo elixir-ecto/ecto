@@ -110,7 +110,7 @@ defmodule Ecto.Adapters.SQL do
         sqls = @conn.execute_ddl(definition)
 
         for sql <- List.wrap(sqls) do
-          Ecto.Adapters.SQL.query(repo, sql, [], opts)
+          Ecto.Adapters.SQL.query!(repo, sql, [], opts)
         end
 
         :ok
@@ -177,17 +177,17 @@ defmodule Ecto.Adapters.SQL do
 
   ## Examples
 
-      iex> Ecto.Adapters.SQL.query(MyRepo, "SELECT $1::integer + $2", [40, 2])
+      iex> Ecto.Adapters.SQL.query!(MyRepo, "SELECT $1::integer + $2", [40, 2])
       %{rows: [{42}], num_rows: 1}
 
   """
-  @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
-             %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
-  def query(repo, sql, params, opts \\ []) do
-    query(repo, sql, params, nil, opts)
+  @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
+               %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
+  def query!(repo, sql, params, opts \\ []) do
+    query!(repo, sql, params, nil, opts)
   end
 
-  defp query(repo, sql, params, mapper, opts) do
+  defp query!(repo, sql, params, mapper, opts) do
     case query(repo, sql, params, nil, mapper, opts) do
       {{:ok, result}, entry} ->
         log(repo, entry)
@@ -440,20 +440,20 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def execute(repo, _meta, prepared, params, nil, opts) do
-    %{rows: rows, num_rows: num} = query(repo, prepared, params, nil, opts)
+    %{rows: rows, num_rows: num} = query!(repo, prepared, params, nil, opts)
     {num, rows}
   end
 
   def execute(repo, meta, prepared, params, preprocess, opts) do
     fields = count_fields(meta.select.fields, meta.sources)
     mapper = &process_row(&1, preprocess, fields)
-    %{rows: rows, num_rows: num} = query(repo, prepared, params, mapper, opts)
+    %{rows: rows, num_rows: num} = query!(repo, prepared, params, mapper, opts)
     {num, rows}
   end
 
   @doc false
   def model(repo, sql, values, returning, opts) do
-    case query(repo, sql, values, opts) do
+    case query!(repo, sql, values, opts) do
       %{rows: nil, num_rows: 1} ->
         {:ok, []}
       %{rows: [values], num_rows: 1} ->

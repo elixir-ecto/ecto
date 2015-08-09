@@ -165,7 +165,7 @@ defmodule Ecto.Adapters.MySQL do
   def insert(repo, {prefix, source, _model}, params, {pk, :id, nil}, [], opts) do
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(prefix, source, fields, [])
-    case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
+    case Ecto.Adapters.SQL.query!(repo, sql, values, opts) do
       %{num_rows: 1, last_insert_id: last_insert_id} ->
         {:ok, [{pk, last_insert_id}]}
     end
@@ -180,7 +180,7 @@ defmodule Ecto.Adapters.MySQL do
     {fields, values1} = :lists.unzip(fields)
     {filter, values2} = :lists.unzip(filter)
     sql = @conn.update(prefix, source, fields, filter, returning)
-    case Ecto.Adapters.SQL.query(repo, sql, values1 ++ values2, opts) do
+    case Ecto.Adapters.SQL.query!(repo, sql, values1 ++ values2, opts) do
       %{num_rows: 0} -> {:error, :stale}
       %{num_rows: _} -> {:ok, []}
     end
@@ -189,7 +189,7 @@ defmodule Ecto.Adapters.MySQL do
   @doc false
   def delete(repo, {prefix, source, _model}, filter, _autogenerate, opts) do
     {filter, values} = :lists.unzip(filter)
-    case Ecto.Adapters.SQL.query(repo, @conn.delete(prefix, source, filter, []), values, opts) do
+    case Ecto.Adapters.SQL.query!(repo, @conn.delete(prefix, source, filter, []), values, opts) do
       %{num_rows: 0} -> {:error, :stale}
       %{num_rows: _} -> {:ok, []}
     end

@@ -237,7 +237,7 @@ defmodule Ecto.Integration.MigrationTest do
     parent2 = TestRepo.insert! Ecto.Model.put_source(%Parent{}, "parent2")
 
     writer = "INSERT INTO ref_migration (parent1, parent2) VALUES (#{parent1.id}, #{parent2.id})"
-    Ecto.Adapters.SQL.query TestRepo, writer, []
+    Ecto.Adapters.SQL.query! TestRepo, writer, []
 
     reader = from r in "ref_migration", select: {r.parent1, r.parent2}
     assert TestRepo.all(reader) == [{parent1.id, parent2.id}]

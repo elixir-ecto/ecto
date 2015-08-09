@@ -173,7 +173,7 @@ defmodule Ecto.Integration.TransactionTest do
     end
 
     # If it doesn't fail, the transaction was not closed properly.
-    catch_error(Ecto.Adapters.SQL.query(PoolRepo, "savepoint foobar", []))
+    catch_error(Ecto.Adapters.SQL.query!(PoolRepo, "savepoint foobar", []))
   end
 
   test "log raises after begin, drops the whole transaction" do

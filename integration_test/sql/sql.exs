@@ -5,8 +5,8 @@ defmodule Ecto.Integration.SQLTest do
   alias Ecto.Integration.Barebone
   import Ecto.Query, only: [from: 2]
 
-  test "query/4" do
-    result = Ecto.Adapters.SQL.query(Repo, "SELECT 1", [])
+  test "query!/4" do
+    result = Ecto.Adapters.SQL.query!(Repo, "SELECT 1", [])
     assert result.rows == [[1]]
   end
 
