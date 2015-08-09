@@ -65,10 +65,9 @@ defmodule Ecto.Changeset do
       {:error, changeset} = Repo.insert(changeset)
       changeset.errors #=> [email: "has already been taken"]
 
-  Validations and constraints define a explicit boundary when
-  the check happens. By moving constraints to the database,
-  we also provide a safe, correct and data-race free of checking
-  the user input.
+  Validations and constraints define a explicit boundary when the check
+  happens. By moving constraints to the database, we also provide a safe,
+  correct and data-race free means of checking the user input.
 
   ## The Ecto.Changeset struct
 
