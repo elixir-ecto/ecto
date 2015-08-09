@@ -124,7 +124,8 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a reference struct used in migrations.
     """
-    defstruct table: nil,
+    defstruct name: nil,
+              table: nil,
               column: :id,
               type: :serial,
               on_delete: :nothing
@@ -561,7 +562,7 @@ defmodule Ecto.Migration do
     Runner.subcommand {:remove, column}
   end
 
-  @doc """
+  @doc ~S"""
   Defines a foreign key.
 
   ## Examples
@@ -572,6 +573,8 @@ defmodule Ecto.Migration do
 
   ## Options
 
+    * `:name` - The name of the underlying reference,
+      defaults to "#{table}_#{column}_fkey"
     * `:column` - The foreign key column, default is `:id`
     * `:type`   - The foreign key type, default is `:serial`
     * `:on_delete` - What to perform if the entry is deleted.

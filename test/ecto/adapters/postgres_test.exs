@@ -514,7 +514,15 @@ defmodule Ecto.Adapters.PostgresTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer REFERENCES "categories"("id"))|
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id"))|
+  end
+
+  test "create table with named reference" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, name: :foo_bar), []} ]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer CONSTRAINT "foo_bar" REFERENCES "categories"("id"))|
   end
 
   test "create table with reference and on_delete: :nothing clause" do
@@ -522,7 +530,7 @@ defmodule Ecto.Adapters.PostgresTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :nothing), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer REFERENCES "categories"("id"))|
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id"))|
   end
 
   test "create table with reference and on_delete: :nilify_all clause" do
@@ -530,7 +538,7 @@ defmodule Ecto.Adapters.PostgresTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer REFERENCES "categories"("id") ON DELETE SET NULL)|
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)|
   end
 
   test "create table with reference and on_delete: :delete_all clause" do
@@ -538,7 +546,7 @@ defmodule Ecto.Adapters.PostgresTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :delete_all), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer REFERENCES "categories"("id") ON DELETE CASCADE)|
+           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "category_id" integer CONSTRAINT "posts_category_id_fkey" REFERENCES "categories"("id") ON DELETE CASCADE)|
   end
 
   test "create table with column options" do
@@ -588,7 +596,7 @@ defmodule Ecto.Adapters.PostgresTest do
                [{:add, :comment_id, references(:comments), []}]}
 
     assert SQL.execute_ddl(alter) == """
-    ALTER TABLE "posts" ADD COLUMN "comment_id" integer REFERENCES "comments"("id")
+    ALTER TABLE "posts" ADD COLUMN "comment_id" integer CONSTRAINT "posts_comment_id_fkey" REFERENCES "comments"("id")
     """ |> remove_newlines
   end
 
@@ -600,7 +608,7 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "posts"
     ALTER COLUMN \"user_id\" TYPE integer ,
-    ADD CONSTRAINT "user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
+    ADD CONSTRAINT "posts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE
     """ |> remove_newlines
   end
 

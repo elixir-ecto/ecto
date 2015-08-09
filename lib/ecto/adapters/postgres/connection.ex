@@ -495,7 +495,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       options       = options_expr(table.options)
       if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
 
-      "CREATE TABLE" <> if_not_exists <> " #{quote_table(table.name)} (#{column_definitions(columns)})" <> options
+      "CREATE TABLE" <> if_not_exists <>
+        " #{quote_table(table.name)} (#{column_definitions(table, columns)})" <> options
     end
 
     def execute_ddl({command, %Table{name: name}}) when command in @drops do
@@ -505,7 +506,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
-      "ALTER TABLE #{quote_table(table.name)} #{column_changes(changes)}"
+      "ALTER TABLE #{quote_table(table.name)} #{column_changes(table, changes)}"
     end
 
     def execute_ddl({:create, %Index{}=index}) do
@@ -552,37 +553,48 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def execute_ddl(keyword) when is_list(keyword),
       do: error!(nil, "PostgreSQL adapter does not support keyword lists in execute")
 
-    defp column_definitions(columns) do
-      Enum.map_join(columns, ", ", &column_definition/1)
+    defp column_definitions(table, columns) do
+      Enum.map_join(columns, ", ", &column_definition(table, &1))
     end
 
-    defp column_definition({:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type, opts), column_options(opts)])
-    end
-
-    defp column_changes(columns) do
-      Enum.map_join(columns, ", ", &column_change/1)
-    end
-
-    defp column_change({:add, name, type, opts}) do
-      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(opts)])
-    end
-
-    defp column_change({:modify, name, %Reference{} = ref, opts}) do
+    defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
       assemble([
-        "ALTER COLUMN", quote_name(name), "TYPE", reference_column_type(ref.type, opts),
-        ", ADD CONSTRAINT", quote_name("#{name}_fkey"),
-        "FOREIGN KEY (#{quote_name(name)}) REFERENCES",
-        "#{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
-        reference_on_delete(ref.on_delete),
+        quote_name(name), reference_column_type(ref.type, opts),
+        reference_expr(ref, table, name)
       ])
     end
 
-    defp column_change({:modify, name, type, opts}) do
+    defp column_definition(_table, {:add, name, type, opts}) do
+      assemble([quote_name(name), column_type(type, opts), column_options(opts)])
+    end
+
+    defp column_changes(table, columns) do
+      Enum.map_join(columns, ", ", &column_change(table, &1))
+    end
+
+    defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
+      assemble([
+        "ADD COLUMN", quote_name(name), reference_column_type(ref.type, opts),
+        reference_expr(ref, table, name)
+      ])
+    end
+
+    defp column_change(_table, {:add, name, type, opts}) do
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(opts)])
+    end
+
+    defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
+      assemble([
+        "ALTER COLUMN", quote_name(name), "TYPE", reference_column_type(ref.type, opts),
+        constraint_expr(ref, table, name)
+      ])
+    end
+
+    defp column_change(_table, {:modify, name, type, opts}) do
       assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts)])
     end
 
-    defp column_change({:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
+    defp column_change(_table, {:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
 
     defp column_options(opts) do
       default = Keyword.get(opts, :default)
@@ -620,11 +632,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp options_expr(options),
       do: " #{options}"
 
-    defp column_type(%Reference{} = ref, opts),
-      do: "#{reference_column_type(ref.type, opts)} REFERENCES " <>
-          "#{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete)
-
     defp column_type({:array, type}, opts),
       do: column_type(type, opts) <> "[]"
     defp column_type(type, opts) do
@@ -641,7 +648,23 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
+    defp reference_expr(%Reference{} = ref, table, name),
+      do: "CONSTRAINT #{reference_name(ref, table, name)} REFERENCES " <>
+          "#{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
+          reference_on_delete(ref.on_delete)
+
+    defp constraint_expr(%Reference{} = ref, table, name),
+      do: ", ADD CONSTRAINT #{reference_name(ref, table, name)} " <>
+          "FOREIGN KEY (#{quote_name(name)}) " <>
+          "REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
+          reference_on_delete(ref.on_delete)
+
     # A reference pointing to a serial column becomes integer in postgres
+    defp reference_name(%Reference{name: nil}, table, column),
+      do: quote_name("#{table.name}_#{column}_fkey")
+    defp reference_name(%Reference{name: name}, _table, _column),
+      do: quote_name(name)
+
     defp reference_column_type(:serial, _opts), do: "integer"
     defp reference_column_type(type, opts), do: column_type(type, opts)
 

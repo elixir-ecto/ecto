@@ -457,7 +457,15 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `posts_category_id_fkey`(`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
+  end
+
+  test "create table with named reference" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_id, references(:categories, name: :foo_bar), []} ]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `foo_bar`(`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
   end
 
   test "create table with reference and on_delete: :nothing clause" do
@@ -465,7 +473,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :nothing), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`)) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `posts_category_id_fkey`(`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
   end
 
   test "create table with reference and on_delete: :nilify_all clause" do
@@ -473,7 +481,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE SET NULL) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `posts_category_id_fkey`(`category_id`) REFERENCES `categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB|
   end
 
   test "create table with reference and on_delete: :delete_all clause" do
@@ -481,7 +489,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :delete_all), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE CASCADE) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `posts_category_id_fkey`(`category_id`) REFERENCES `categories`(`id`) ON DELETE CASCADE) ENGINE = INNODB|
   end
 
   test "create table with column options" do
@@ -540,7 +548,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :comment_id, references(:comments), []}]}
 
     assert SQL.execute_ddl(alter) == """
-    ALTER TABLE `posts` ADD `comment_id` BIGINT UNSIGNED REFERENCES `comments`(`id`)
+    ALTER TABLE `posts` ADD `comment_id` BIGINT UNSIGNED , ADD CONSTRAINT `posts_comment_id_fkey` FOREIGN KEY (`comment_id`) REFERENCES `comments`(`id`)
     """ |> remove_newlines
   end
 
@@ -552,7 +560,7 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE `posts`
     MODIFY `user_id` BIGINT UNSIGNED ,
-    ADD CONSTRAINT `user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+    ADD CONSTRAINT `posts_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
     """ |> remove_newlines
   end
 

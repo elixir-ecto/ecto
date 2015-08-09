@@ -135,6 +135,9 @@ defmodule Ecto.Integration.MigrationTest do
 
       create table(:ref_migration) do
         add :parent1, references(:parent1, on_delete: :nilify_all)
+      end
+
+      alter table(:ref_migration) do
         add :parent2, references(:parent2, on_delete: :delete_all)
       end
     end
