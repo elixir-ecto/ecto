@@ -1219,7 +1219,7 @@ defmodule Ecto.Changeset do
 
     * `:message` - the message in case the constraint check fails,
       defaults to "has already been taken"
-    * `:name` - the constraint name. By default, the constrant
+    * `:name` - the constraint name. By default, the constraint
       name is inflected from the table + field. May be required
       explicitly for complex cases
 
@@ -1303,7 +1303,7 @@ defmodule Ecto.Changeset do
 
     * `:message` - the message in case the constraint check fails,
       defaults to "does not exist"
-    * `:name` - the constraint name. By default, the constrant
+    * `:name` - the constraint name. By default, the constraint
       name is inflected from the table + field. May be required
       explicitly for complex cases
 
@@ -1343,7 +1343,7 @@ defmodule Ecto.Changeset do
 
     * `:message` - the message in case the constraint check fails,
       defaults to "does not exist"
-    * `:name` - the constraint name. By default, the constrant
+    * `:name` - the constraint name. By default, the constraint
       name is inflected from the table + association field.
       May be required explicitly for complex cases
   """
@@ -1391,7 +1391,7 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "is still associated to this entry" (for has_one)
       and "are still associated to this entry" (for has_many)
-    * `:name` - the constraint name. By default, the constrant
+    * `:name` - the constraint name. By default, the constraint
       name is inflected from the association table + association
       field. May be required explicitly for complex cases
   """
