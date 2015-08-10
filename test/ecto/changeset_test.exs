@@ -4,6 +4,14 @@ defmodule Ecto.ChangesetTest do
   import Ecto.Changeset
   import Ecto.Query
 
+  defmodule Comment do
+    use Ecto.Model
+
+    schema "comments" do
+      belongs_to :post, Ecto.ChangesetTest.Post
+    end
+  end
+
   defmodule Post do
     use Ecto.Model
 
@@ -15,6 +23,8 @@ defmodule Ecto.ChangesetTest do
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
       field :published_at, Ecto.DateTime
+      has_many :comments, Ecto.ChangesetTest.Comment
+      has_one :comment, Ecto.ChangesetTest.Comment
     end
   end
 
@@ -725,5 +735,73 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, message: "is taken")
     assert changeset.constraints ==
            [%{type: :unique, field: :title, constraint: "whatever", message: "is taken"}]
+  end
+
+  test "foreign_key_constraint/3" do
+    changeset = change(%Comment{}) |> foreign_key_constraint(:post_id)
+    assert changeset.constraints ==
+           [%{type: :foreign_key, field: :post_id, constraint: "comments_post_id_fkey",
+              message: "does not exist"}]
+
+    changeset = change(%Comment{}) |> foreign_key_constraint(:post_id, name: :whatever, message: "is not available")
+    assert changeset.constraints ==
+           [%{type: :foreign_key, field: :post_id, constraint: "whatever", message: "is not available"}]
+  end
+
+  test "assoc_constraint/3" do
+    changeset = change(%Comment{}) |> assoc_constraint(:post)
+    assert changeset.constraints ==
+           [%{type: :foreign_key, field: :post, constraint: "comments_post_id_fkey",
+              message: "does not exist"}]
+
+    changeset = change(%Comment{}) |> assoc_constraint(:post, name: :whatever, message: "is not available")
+    assert changeset.constraints ==
+           [%{type: :foreign_key, field: :post, constraint: "whatever", message: "is not available"}]
+  end
+
+  test "assoc_constraint/3 with errors" do
+    message = ~r"cannot add constraint to model because association `unknown` does not exist"
+    assert_raise ArgumentError, message, fn ->
+      change(%Post{}) |> assoc_constraint(:unknown)
+    end
+
+    message = ~r"assoc_constraint can only be added to belongs to associations"
+    assert_raise ArgumentError, message, fn ->
+      change(%Post{}) |> assoc_constraint(:comments)
+    end
+  end
+
+  test "no_assoc_constraint/3 with has_many" do
+    changeset = change(%Post{}) |> no_assoc_constraint(:comments)
+    assert changeset.constraints ==
+           [%{type: :foreign_key, field: :comments, constraint: "comments_post_id_fkey",
+              message: "are still associated to this entry"}]
+
+    changeset = change(%Post{}) |> no_assoc_constraint(:comments, name: :whatever, message: "exists")
+    assert changeset.constraints ==
+           [%{type: :foreign_key, field: :comments, constraint: "whatever", message: "exists"}]
+  end
+
+  test "no_assoc_constraint/3 with has_one" do
+    changeset = change(%Post{}) |> no_assoc_constraint(:comment)
+    assert changeset.constraints ==
+           [%{type: :foreign_key, field: :comment, constraint: "comments_post_id_fkey",
+              message: "is still associated to this entry"}]
+
+    changeset = change(%Post{}) |> no_assoc_constraint(:comment, name: :whatever, message: "exists")
+    assert changeset.constraints ==
+           [%{type: :foreign_key, field: :comment, constraint: "whatever", message: "exists"}]
+  end
+
+  test "no_assoc_constraint/3 with errors" do
+    message = ~r"cannot add constraint to model because association `unknown` does not exist"
+    assert_raise ArgumentError, message, fn ->
+      change(%Post{}) |> no_assoc_constraint(:unknown)
+    end
+
+    message = ~r"no_assoc_constraint can only be added to has one/many associations"
+    assert_raise ArgumentError, message, fn ->
+      change(%Comment{}) |> no_assoc_constraint(:post)
+    end
   end
 end

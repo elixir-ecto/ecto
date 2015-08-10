@@ -41,7 +41,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
         _ -> []
       end
     end
-    def to_constraints(%Mariaex.Error{mariadb: %{code: 1452, message: message}}) do
+    def to_constraints(%Mariaex.Error{mariadb: %{code: code, message: message}})
+        when code in [1451, 1452] do
       case :binary.split(message, [" CONSTRAINT ", " FOREIGN KEY "], [:global]) do
         [_, quoted, _] -> [foreign_key: strip_quotes(quoted)]
         _ -> []

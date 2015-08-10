@@ -102,6 +102,7 @@ defmodule Ecto.Integration.Permalink do
   schema "permalinks" do
     field :url, :string
     belongs_to :post, Ecto.Integration.Post
+    belongs_to :user, Ecto.Integration.User
     has_many :post_comments_authors, through: [:post, :comments_authors]
   end
 
@@ -122,7 +123,8 @@ defmodule Ecto.Integration.User do
   schema "users" do
     field :name, :string
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all
-    has_many :posts, Ecto.Integration.Post, on_delete: :nothing, foreign_key: :author_id
+    has_many :posts, Ecto.Integration.Post, foreign_key: :author_id, on_delete: :nothing
+    has_many :permalinks, Ecto.Integration.Permalink
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     timestamps
   end

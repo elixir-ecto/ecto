@@ -1220,8 +1220,8 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "has already been taken"
     * `:name` - the constraint name. By default, the constrant
-      name is inflected from the table + field. By may be required
-      to be given explicitly for complex cases
+      name is inflected from the table + field. May be required
+      explicitly for complex cases
 
   ## Complex constraints
 
@@ -1304,8 +1304,8 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "does not exist"
     * `:name` - the constraint name. By default, the constrant
-      name is inflected from the table + field. By may be required
-      to be given explicitly for complex cases
+      name is inflected from the table + field. May be required
+      explicitly for complex cases
 
   """
   def foreign_key_constraint(changeset, field, opts \\ []) do
@@ -1313,6 +1313,105 @@ defmodule Ecto.Changeset do
     message    = opts[:message] || "does not exist"
     add_constraint(changeset, :foreign_key, to_string(constraint), field, message)
   end
+
+  @doc """
+  Checks the associated model exists.
+
+  This is similar to `foreign_key_constraint/3` except that the
+  field is inflected from the association definition. This is useful
+  to guarantee that a child will only be created if the parent exists
+  in the database too. Therefore, it only applies to `belongs_to`
+  associations.
+
+  As the name says, a contraint is required in the database for
+  this function to work. Such constraint is often added as a
+  reference to the child table:
+
+        create table(:comments) do
+          add :post_id, references(:posts)
+        end
+
+  Now, when inserting a comment, it is possible to forbid any
+  comment to be added if the associated post does not exist:
+
+        comment
+        |> Ecto.Changeset.cast(params, ~w(post_id))
+        |> Ecto.Changeset.assoc_constraint(:post)
+        |> Repo.insert
+
+  ## Options
+
+    * `:message` - the message in case the constraint check fails,
+      defaults to "does not exist"
+    * `:name` - the constraint name. By default, the constrant
+      name is inflected from the table + association field.
+      May be required explicitly for complex cases
+  """
+  def assoc_constraint(changeset, assoc, opts \\ []) do
+    constraint = opts[:name] ||
+      (case get_assoc(changeset, assoc) do
+        %Ecto.Association.BelongsTo{owner_key: owner_key} ->
+          "#{get_source(changeset)}_#{owner_key}_fkey"
+        other ->
+          raise ArgumentError,
+            "assoc_constraint can only be added to belongs to associations, got: #{inspect other}"
+      end)
+
+    message = opts[:message] || "does not exist"
+    add_constraint(changeset, :foreign_key, to_string(constraint), assoc, message)
+  end
+
+  @doc """
+  Checks the associated model does not exist.
+
+  This is similar to `foreign_key_constraint/3` except that the
+  field is inflected from the association definition. This is useful
+  to guarantee that parent can only be deleted (or have its primary
+  key changed) if no child exists in the database. Therefore, it only
+  applies to `has_*` associations.
+
+  As the name says, a contraint is required in the database for
+  this function to work. Such constraint is often added as a
+  reference to the child table:
+
+        create table(:comments) do
+          add :post_id, references(:posts)
+        end
+
+  Now, when deleting the post, it is possible to forbid any post to
+  be deleted if they still have comments attached to it:
+
+        post
+        |> Ecto.Changeset.change
+        |> Ecto.Changeset.no_assoc_constraint(:comments)
+        |> Repo.delete
+
+  ## Options
+
+    * `:message` - the message in case the constraint check fails,
+      defaults to "is still associated to this entry" (for has_one)
+      and "are still associated to this entry" (for has_many)
+    * `:name` - the constraint name. By default, the constrant
+      name is inflected from the association table + association
+      field. May be required explicitly for complex cases
+  """
+  def no_assoc_constraint(changeset, assoc, opts \\ []) do
+    {constraint, message} =
+      (case get_assoc(changeset, assoc) do
+        %Ecto.Association.Has{cardinality: cardinality,
+                              related_key: related_key, related: related} ->
+          {opts[:name] || "#{related.__schema__(:source)}_#{related_key}_fkey",
+           opts[:message] || no_assoc_message(cardinality)}
+        other ->
+          raise ArgumentError,
+            "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
+      end)
+
+    add_constraint(changeset, :foreign_key, to_string(constraint), assoc, message)
+  end
+
+  defp no_assoc_message(:one), do: "is still associated to this entry"
+  defp no_assoc_message(:many), do: "are still associated to this entry"
 
   defp add_constraint(changeset, type, constraint, field, message)
        when is_binary(constraint) and is_atom(field) and is_binary(message) do
@@ -1323,5 +1422,10 @@ defmodule Ecto.Changeset do
   defp get_source(%{model: %{__meta__: %{source: {_prefix, source}}}}) when is_binary(source),
     do: source
   defp get_source(%{model: model}), do:
-    raise("cannot add constraint to model because it does not have a source: #{inspect model}")
+    raise(ArgumentError, "cannot add constraint to model because it does not have a source, got: #{inspect model}")
+
+  defp get_assoc(%{model: %{__struct__: model}}, assoc) do
+    model.__schema__(:association, assoc) ||
+      raise(ArgumentError, "cannot add constraint to model because association `#{assoc}` does not exist")
+  end
 end

@@ -170,7 +170,7 @@ defmodule Ecto.StaleModelError do
 end
 
 defmodule Ecto.ConstraintError do
-  defexception [:message]
+  defexception [:type, :constraint, :message]
 
   def exception(opts) do
     type = Keyword.fetch!(opts, :type)
@@ -197,7 +197,7 @@ defmodule Ecto.ConstraintError do
     constraint name. #{constraints}
     """
 
-    %__MODULE__{message: msg}
+    %__MODULE__{message: msg, type: type, constraint: constraint}
   end
 end
 

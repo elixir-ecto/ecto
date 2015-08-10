@@ -2,6 +2,9 @@
 
 ## v0.16.0-dev
 
+* Enhancements
+  * Add functionality for constraint checking in the storage to `Ecto.Changeset`. Support was added for `unique_constraint/3` (powered by unique indexes) and `foreign_key_constraint/3`, `assoc_constraint/3` (belongs to) and `no_assoc_constraint/3` (has one/many)
+
 * Deprecations
   * `Ecto.Changeset.validate_unique/3` is deprecate in favor of `Ecto.Changeset.unique_constraint/3`. Read the documentation for the latter for more information on updating
 

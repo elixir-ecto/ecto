@@ -223,7 +223,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :foreign_key_constraint
-  test "foreign key constraint on insert" do
+  test "foreign key constraint" do
     changeset = Ecto.Changeset.change(%Comment{post_id: 0})
 
     exception =
@@ -250,6 +250,68 @@ defmodule Ecto.Integration.RepoTest do
       |> Ecto.Changeset.foreign_key_constraint(:post_id)
       |> TestRepo.insert()
     assert changeset.errors == [post_id: "does not exist"]
+  end
+
+ @tag :foreign_key_constraint
+  test "assoc constraint" do
+    changeset = Ecto.Changeset.change(%Comment{post_id: 0})
+
+    exception =
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
+        changeset
+        |> TestRepo.insert()
+      end
+
+    assert exception.message =~ "foreign_key: comments_post_id_fkey"
+    assert exception.message =~ "The changeset has not defined any constraint."
+
+    message = ~r/constraint error when attempting to insert model/
+    exception =
+      assert_raise Ecto.ConstraintError, message, fn ->
+        changeset
+        |> Ecto.Changeset.assoc_constraint(:post, name: :comments_post_id_other)
+        |> TestRepo.insert()
+      end
+
+    assert exception.message =~ "foreign_key: comments_post_id_other"
+
+    {:error, changeset} =
+      changeset
+      |> Ecto.Changeset.assoc_constraint(:post)
+      |> TestRepo.insert()
+    assert changeset.errors == [post: "does not exist"]
+  end
+
+  @tag :foreign_key_constraint
+  test "no assoc constraint" do
+    user = TestRepo.insert!(%User{})
+    TestRepo.insert!(%Permalink{user_id: user.id})
+
+    exception =
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to delete model/, fn ->
+        TestRepo.delete!(user)
+      end
+
+    assert exception.message =~ "foreign_key: permalinks_user_id_fkey"
+    assert exception.message =~ "The changeset has not defined any constraint."
+
+    message = ~r/constraint error when attempting to delete model/
+    exception =
+      assert_raise Ecto.ConstraintError, message, fn ->
+        user
+        |> Ecto.Changeset.change
+        |> Ecto.Changeset.no_assoc_constraint(:permalinks, name: :permalinks_user_id_pther)
+        |> TestRepo.delete()
+      end
+
+    assert exception.message =~ "foreign_key: permalinks_user_id_pther"
+
+    {:error, changeset} =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.no_assoc_constraint(:permalinks)
+      |> TestRepo.delete()
+    assert changeset.errors == [permalinks: "are still associated to this entry"]
   end
 
   test "get(!)" do
