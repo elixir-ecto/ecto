@@ -37,6 +37,9 @@ defmodule Ecto.Integration.Migration do
     create table(:comments) do
       add :text, :string, size: 100
       add :lock_version, :integer, default: 1
+    end
+
+    alter table(:comments) do
       add :post_id, references(:posts)
       add :author_id, references(:users)
     end

@@ -1194,9 +1194,9 @@ defmodule Ecto.Changeset do
   ## Constraints
 
   @doc """
-  Adds a unique constraint to the given field.
+  Checks for a unique constraint in the given field.
 
-  The unique constraint work by relying on the database to check
+  The unique constraint works by relying on the database to check
   if the unique constraint has been violated or not and, if so,
   Ecto converts it into a changeset error.
 
@@ -1212,8 +1212,8 @@ defmodule Ecto.Changeset do
       cast(user, params, ~w(email), ~w())
       |> unique_constraint(:email)
 
-  When inserting, if the email already exists, it will be
-  converted into an error.
+  When inserting/updating, if the email already exists, it will
+  be converted into an error.
 
   ## Options
 
@@ -1267,6 +1267,51 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_index"
     message    = opts[:message] || "has already been taken"
     add_constraint(changeset, :unique, to_string(constraint), field, message)
+  end
+
+  @doc """
+  Checks for foreign key constraint in the given field.
+
+  The foreign key constraint works by relying on the database to
+  check if the associated model exists or not. This is useful to
+  guarantee that a child will only be created if the parent exists
+  in the database too.
+
+  In order to use the foreign key constraint the first step is
+  to define the foreign key in a migration. This is often done
+  with references. For example, imagine you are creating a
+  comments table that belongs to posts. One would have:
+
+      create table(:comments) do
+        add :post_id, references(:posts)
+      end
+
+  By default, Ecto will generate a foreign key constraint with
+  name "comments_post_id_fkey" (the name is configurable).
+
+  Now that a constraint exists, when creating comments, we could
+  annotate the changeset with foreign key constraint so Ecto knows
+  how to convert it into an error message:
+
+      cast(comment, params, ~w(post_id), ~w())
+      |> foreign_key_constraint(:post_id)
+
+  When inserting/updating, if the associated post does not exist, it will be
+  converted into an error.
+
+  ## Options
+
+    * `:message` - the message in case the constraint check fails,
+      defaults to "does not exist"
+    * `:name` - the constraint name. By default, the constrant
+      name is inflected from the table + field. By may be required
+      to be given explicitly for complex cases
+
+  """
+  def foreign_key_constraint(changeset, field, opts \\ []) do
+    constraint = opts[:name] || "#{get_source(changeset)}_#{field}_fkey"
+    message    = opts[:message] || "does not exist"
+    add_constraint(changeset, :foreign_key, to_string(constraint), field, message)
   end
 
   defp add_constraint(changeset, type, constraint, field, message)

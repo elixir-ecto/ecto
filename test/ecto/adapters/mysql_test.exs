@@ -457,7 +457,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `posts_category_id_fkey`(`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
   end
 
   test "create table with named reference" do
@@ -465,7 +465,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, name: :foo_bar), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `foo_bar`(`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `foo_bar` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
   end
 
   test "create table with reference and on_delete: :nothing clause" do
@@ -473,7 +473,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :nothing), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `posts_category_id_fkey`(`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
   end
 
   test "create table with reference and on_delete: :nilify_all clause" do
@@ -481,7 +481,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `posts_category_id_fkey`(`category_id`) REFERENCES `categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB|
   end
 
   test "create table with reference and on_delete: :delete_all clause" do
@@ -489,7 +489,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :category_id, references(:categories, on_delete: :delete_all), []} ]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , FOREIGN KEY `posts_category_id_fkey`(`category_id`) REFERENCES `categories`(`id`) ON DELETE CASCADE) ENGINE = INNODB|
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON DELETE CASCADE) ENGINE = INNODB|
   end
 
   test "create table with column options" do

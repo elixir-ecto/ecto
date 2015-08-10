@@ -37,16 +37,24 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def to_constraints(%Mariaex.Error{mariadb: %{code: 1062, message: message}}) do
       case :binary.split(message, " for key ") do
-        [_, quoted_index] ->
-          size = byte_size(quoted_index) - 2
-          <<?', index::binary-size(size), ?'>> = quoted_index
-          [unique: index]
-        _ ->
-          []
+        [_, quoted] -> [unique: strip_quotes(quoted)]
+        _ -> []
       end
     end
-    def to_constraints(%Mariaex.Error{} = error),
-      do: error
+    def to_constraints(%Mariaex.Error{mariadb: %{code: 1452, message: message}}) do
+      case :binary.split(message, [" CONSTRAINT ", " FOREIGN KEY "], [:global]) do
+        [_, quoted, _] -> [foreign_key: strip_quotes(quoted)]
+        _ -> []
+      end
+    end
+    def to_constraints(%Mariaex.Error{}),
+      do: []
+
+    defp strip_quotes(quoted) do
+      size = byte_size(quoted) - 2
+      <<_, unquoted::binary-size(size), _>> = quoted
+      unquoted
+    end
 
     ## Transaction
 
@@ -605,7 +613,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
           reference_on_delete(ref.on_delete)
 
     defp reference_expr(%Reference{} = ref, table, name),
-      do: ", FOREIGN KEY #{reference_name(ref, table, name)}" <>
+      do: ", CONSTRAINT #{reference_name(ref, table, name)} FOREIGN KEY " <>
           "(#{quote_name(name)}) REFERENCES " <>
           "#{quote_table(ref.table)}(#{quote_name(ref.column)})" <>
           reference_on_delete(ref.on_delete)
