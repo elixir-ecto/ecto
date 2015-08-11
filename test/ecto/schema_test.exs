@@ -69,6 +69,11 @@ defmodule Ecto.SchemaTest do
     assert model.__meta__.source == {"prefix", "new_model"}
   end
 
+  test "inspects metadata" do
+    model = %Model{}
+    assert inspect(model.__meta__) == "#Ecto.Schema.Metadata<:built>"
+  end
+
   defmodule SchemaModel do
     use Ecto.Model
 

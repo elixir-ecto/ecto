@@ -252,13 +252,22 @@ defmodule Ecto.Schema do
 
     The fields are:
 
-      * `state`  - the state in a struct's lifetime, one of `:built`,
+      * `state` - the state in a struct's lifetime, one of `:built`,
         `:loaded`, `:deleted`
       * `source` - the source for the model alongside the query prefix,
         defaults to `{nil, "source"}`
+      * `context` - context stored by the database
 
     """
-    defstruct [:state, :source]
+    defstruct [:state, :source, :context]
+
+    defimpl Inspect do
+      import Inspect.Algebra
+
+      def inspect(metadata, opts) do
+        concat ["#Ecto.Schema.Metadata<", to_doc(metadata.state, opts), ">"]
+      end
+    end
   end
 
   @doc false
