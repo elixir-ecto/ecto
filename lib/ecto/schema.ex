@@ -538,7 +538,7 @@ defmodule Ecto.Schema do
       post.comments #=> [%Comment{...}, ...]
 
       # And the author for each comment too
-      hd(post.comments).authors #=> [%Author{...}, ...]
+      hd(post.comments).author #=> %Author{...}
 
   Finally, `:through` can be used with multiple associations (not only 2)
   and with associations of any kind, including `belongs_to` and others
