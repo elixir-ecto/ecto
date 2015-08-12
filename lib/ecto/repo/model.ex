@@ -44,13 +44,12 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.insert/2`.
   """
   def insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
-    struct   = struct_from_changeset!(:insert, changeset)
-    model    = struct.__struct__
-    fields   = model.__schema__(:fields)
-    embeds   = model.__schema__(:embeds)
-    assocs   = model.__schema__(:associations)
-    {prefix, source} = struct.__meta__.source
-    return   = model.__schema__(:read_after_writes)
+    struct = struct_from_changeset!(:insert, changeset)
+    model  = struct.__struct__
+    fields = model.__schema__(:fields)
+    embeds = model.__schema__(:embeds)
+    assocs = model.__schema__(:associations)
+    return = model.__schema__(:read_after_writes)
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
@@ -68,7 +67,7 @@ defmodule Ecto.Repo.Model do
       changes = validate_changes(:insert, changes, model, fields, adapter)
       {embed_changes, changeset} = pop_from_changes(changeset, embeds)
 
-      args = [repo, {prefix, source, model}, changes, autogen, return, opts]
+      args = [repo, metadata(struct), changes, autogen, return, opts]
       case apply(changeset, adapter, :insert, args) do
         {:ok, changeset} ->
           changeset
@@ -93,13 +92,12 @@ defmodule Ecto.Repo.Model do
   Implementation for `Ecto.Repo.update/2`.
   """
   def update(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
-    struct   = struct_from_changeset!(:update, changeset)
-    model    = struct.__struct__
-    fields   = model.__schema__(:fields)
-    embeds   = model.__schema__(:embeds)
-    assocs   = model.__schema__(:associations)
-    {prefix, source} = struct.__meta__.source
-    return   = model.__schema__(:read_after_writes)
+    struct = struct_from_changeset!(:update, changeset)
+    model  = struct.__struct__
+    fields = model.__schema__(:fields)
+    embeds = model.__schema__(:embeds)
+    assocs = model.__schema__(:associations)
+    return = model.__schema__(:read_after_writes)
 
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
@@ -120,7 +118,7 @@ defmodule Ecto.Repo.Model do
         filters = add_pk_filter!(changeset.filters, struct)
         filters = Planner.fields(model, :update, filters, adapter)
 
-        args   = [repo, {prefix, source, model}, changes, filters, autogen, return, opts]
+        args   = [repo, metadata(struct), changes, filters, autogen, return, opts]
         action = if changes == [], do: :noop, else: :update
         case apply(changeset, adapter, action, args) do
           {:ok, changeset} ->
@@ -158,7 +156,6 @@ defmodule Ecto.Repo.Model do
   def delete(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
     struct = struct_from_changeset!(:delete, changeset)
     model  = struct.__struct__
-    {prefix, source} = struct.__meta__.source
     embeds = model.__schema__(:embeds)
 
     changeset = %{changeset | repo: repo, action: :delete, changes: %{}}
@@ -177,7 +174,7 @@ defmodule Ecto.Repo.Model do
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
 
-      args = [repo, {prefix, source, model}, filters, autogen, opts]
+      args = [repo, metadata(struct), filters, autogen, opts]
       case apply(changeset, adapter, :delete, args) do
         {:ok, changeset} ->
           # We ignore the results because we still want to keep
@@ -207,6 +204,12 @@ defmodule Ecto.Repo.Model do
     do: raise(ArgumentError, "cannot #{action} a changeset without a model")
   defp struct_from_changeset!(_action, %{model: struct}),
     do: struct
+
+  defp metadata(%{__struct__: model, __meta__: meta}) do
+    meta
+    |> Map.delete(:__struct__)
+    |> Map.put(:model, model)
+  end
 
   defp apply(changeset, _adapter, :noop, _args) do
     {:ok, changeset}

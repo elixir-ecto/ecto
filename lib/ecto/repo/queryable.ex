@@ -103,26 +103,26 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp preprocess(prefix, sources, adapter) do
-    &preprocess(&1, &2, prefix, sources, adapter)
+    &preprocess(&1, &2, prefix, &3, sources, adapter)
   end
 
-  defp preprocess({:&, _, [ix]}, value, prefix, sources, adapter) do
+  defp preprocess({:&, _, [ix]}, value, prefix, context, sources, adapter) do
     {source, model} = elem(sources, ix)
-    Ecto.Schema.__load__(model, prefix, source, value, &adapter.load/2)
+    Ecto.Schema.__load__(model, prefix, source, context, value, &adapter.load/2)
   end
 
-  defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _sources, adapter) do
+  defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _context, _sources, adapter) do
     case Keyword.fetch(meta, :ecto_type) do
       {:ok, type} -> load!(type, value, adapter)
       :error      -> value
     end
   end
 
-  defp preprocess(%Ecto.Query.Tagged{tag: tag}, value, _prefix, _sources, adapter) do
+  defp preprocess(%Ecto.Query.Tagged{tag: tag}, value, _prefix, _context, _sources, adapter) do
     load!(tag, value, adapter)
   end
 
-  defp preprocess(_key, value, _prefix, _sources, _adapter) do
+  defp preprocess(_key, value, _prefix, _context, _sources, _adapter) do
     value
   end
 

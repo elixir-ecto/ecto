@@ -935,13 +935,14 @@ defmodule Ecto.Schema do
   ## Callbacks
 
   @doc false
-  def __load__(model, prefix, source, data, loader) do
+  def __load__(model, prefix, source, context, data, loader) do
     source = source || model.__schema__(:source)
     struct = model.__struct__()
     fields = model.__schema__(:types)
 
     loaded = do_load(struct, fields, data, loader)
-    loaded = Map.put(loaded, :__meta__, %Metadata{state: :loaded, source: {prefix, source}})
+    loaded = Map.put(loaded, :__meta__,
+                     %Metadata{state: :loaded, source: {prefix, source}, context: context})
     Ecto.Model.Callbacks.__apply__(model, :after_load, loaded)
   end
 

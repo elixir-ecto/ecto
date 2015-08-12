@@ -157,12 +157,12 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(_repo, {_prefix, source, _model}, _params, _autogen, [_|_] = returning, _opts) do
+  def insert(_repo, %{model: model}, _params, _autogen, [_|_] = returning, _opts) do
     raise ArgumentError, "MySQL does not support :read_after_writes in models. " <>
-                         "The following fields in #{inspect source} are tagged as such: #{inspect returning}"
+                         "The following fields in #{inspect model} are tagged as such: #{inspect returning}"
   end
 
-  def insert(repo, {prefix, source, _model}, params, {pk, :id, nil}, [], opts) do
+  def insert(repo, %{source: {prefix, source}}, params, {pk, :id, nil}, [], opts) do
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(prefix, source, fields, [])
     case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
@@ -176,7 +176,7 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
-  def insert(repo, source, params, autogen, [], opts) do
-    super(repo, source, params, autogen, [], opts)
+  def insert(repo, model_meta, params, autogen, [], opts) do
+    super(repo, model_meta, params, autogen, [], opts)
   end
 end

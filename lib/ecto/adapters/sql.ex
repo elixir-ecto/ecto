@@ -58,27 +58,27 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       # Nil ids are generated in the database.
-      def insert(repo, source, params, {key, :id, nil}, returning, opts) do
-        insert(repo, source, params, nil, [key|returning], opts)
+      def insert(repo, model_meta, params, {key, :id, nil}, returning, opts) do
+        insert(repo, model_meta, params, nil, [key|returning], opts)
       end
 
       # Nil binary_ids are generated in the adapter.
-      def insert(repo, source, params, {key, :binary_id, nil}, returning, opts) do
+      def insert(repo, model_meta, params, {key, :binary_id, nil}, returning, opts) do
         {req, resp} = Ecto.Adapters.SQL.bingenerate(key)
-        case insert(repo, source, req ++ params, nil, returning, opts) do
+        case insert(repo, model_meta, req ++ params, nil, returning, opts) do
           {:ok, values}     -> {:ok, resp ++ values}
           {:error, _} = err -> err
         end
       end
 
-      def insert(repo, {prefix, source, _model}, params, _autogenerate, returning, opts) do
+      def insert(repo, %{source: {prefix, source}}, params, _autogenerate, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(prefix, source, fields, returning)
         Ecto.Adapters.SQL.model(repo, @conn, sql, values, returning, opts)
       end
 
       @doc false
-      def update(repo, {prefix, source, _model}, fields, filter, _autogenerate, returning, opts) do
+      def update(repo, %{source: {prefix, source}}, fields, filter, _autogenerate, returning, opts) do
         {fields, values1} = :lists.unzip(fields)
         {filter, values2} = :lists.unzip(filter)
         sql = @conn.update(prefix, source, fields, filter, returning)
@@ -86,7 +86,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def delete(repo, {prefix, source, _model}, filter, _autogenarate, opts) do
+      def delete(repo, %{source: {prefix, source}}, filter, _autogenarate, opts) do
         {filter, values} = :lists.unzip(filter)
         sql = @conn.delete(prefix, source, filter, [])
         Ecto.Adapters.SQL.model(repo, @conn, sql, values, [], opts)
@@ -495,11 +495,11 @@ defmodule Ecto.Adapters.SQL do
   defp process_row(row, preprocess, fields) do
     Enum.map_reduce(fields, row, fn
       {field, 0}, [h|t] ->
-        {preprocess.(field, h), t}
+        {preprocess.(field, h, nil), t}
       {field, count}, acc ->
         case split_and_not_nil(acc, count, true, []) do
           {nil, rest} -> {nil, rest}
-          {val, rest} -> {preprocess.(field, val), rest}
+          {val, rest} -> {preprocess.(field, val, nil), rest}
         end
     end) |> elem(0)
   end

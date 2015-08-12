@@ -7,7 +7,8 @@ defmodule Ecto.Adapter do
   use Behaviour
 
   @type t :: module
-  @type source :: {prefix :: binary, table :: binary, model :: atom}
+  @type query_meta :: map
+  @type model_meta :: %{source: {prefix :: binary, table :: binary}, model: atom, context: term}
   @type fields :: Keyword.t
   @type filters :: Keyword.t
   @type constraints :: Keyword.t
@@ -125,7 +126,7 @@ defmodule Ecto.Adapter do
   expected Ecto type. The `preprocess` function will be nil if no
   result set is expected from the query.
   """
-  defcallback execute(repo, meta :: map, prepared, params :: list(), preprocess | nil, options) ::
+  defcallback execute(repo, query_meta :: map, prepared, params :: list(), preprocess | nil, options) ::
               {integer, [[term]] | nil} | no_return
 
   @doc """
@@ -144,7 +145,7 @@ defmodule Ecto.Adapter do
   to a primary key that does not support assignment. In this case, `value`
   will be a non `nil` value.
   """
-  defcallback insert(repo, source, fields, autogenerate_id, returning, options) ::
+  defcallback insert(repo, model_meta, fields, autogenerate_id, returning, options) ::
                     {:ok, Keyword.t} | {:invalid, constraints} | no_return
 
   @doc """
@@ -168,7 +169,7 @@ defmodule Ecto.Adapter do
   to a primary key that does not support assignment. In this case, `value`
   will be a non `nil` value.
   """
-  defcallback update(repo, source, fields, filters, autogenerate_id, returning, options) ::
+  defcallback update(repo, model_meta, fields, filters, autogenerate_id, returning, options) ::
                     {:ok, Keyword.t} | {:invalid, constraints} |
                     {:error, :stale} | no_return
 
@@ -189,7 +190,7 @@ defmodule Ecto.Adapter do
 
   If the value is `nil`, it means there is no autogenerate primary key.
   """
-  defcallback delete(repo, source, filters, autogenerate_id, options) ::
+  defcallback delete(repo, model_meta, filters, autogenerate_id, options) ::
                      {:ok, Keyword.t} | {:invalid, constraints} |
                      {:error, :stale} | no_return
 end

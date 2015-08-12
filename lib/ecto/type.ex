@@ -438,7 +438,7 @@ defmodule Ecto.Type do
   end
 
   defp load_embed(_field, model, value, loader) when is_map(value) do
-    Ecto.Schema.__load__(model, nil, nil, value, loader)
+    Ecto.Schema.__load__(model, nil, nil, nil, value, loader)
   end
 
   defp load_embed(field, _model, value, _fun) do

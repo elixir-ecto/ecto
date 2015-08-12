@@ -177,10 +177,11 @@ defmodule Ecto.Model.CallbacksTest do
   end
 
   test "after_load with model" do
-    model = Ecto.Schema.__load__(AllCallback, "prefix", "hello",
+    model = Ecto.Schema.__load__(AllCallback, "prefix", "hello", "abcd",
                                  [1, "x", "y", "z"], &Ecto.Type.load/2)
     assert model.id == 1
     assert model.xyz == "xyz"
-    assert model.__meta__ == %Ecto.Schema.Metadata{source: {"prefix", "hello"}, state: :loaded}
+    assert model.__meta__ ==
+           %Ecto.Schema.Metadata{source: {"prefix", "hello"}, state: :loaded, context: "abcd"}
   end
 end
