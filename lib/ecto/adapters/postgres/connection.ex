@@ -562,7 +562,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
       assemble([
         quote_name(name), reference_column_type(ref.type, opts),
-        reference_expr(ref, table, name)
+        column_options(opts), reference_expr(ref, table, name)
       ])
     end
 
@@ -577,7 +577,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
       assemble([
         "ADD COLUMN", quote_name(name), reference_column_type(ref.type, opts),
-        reference_expr(ref, table, name)
+        column_options(opts), reference_expr(ref, table, name)
       ])
     end
 
@@ -588,18 +588,34 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
       assemble([
         "ALTER COLUMN", quote_name(name), "TYPE", reference_column_type(ref.type, opts),
-        constraint_expr(ref, table, name)
+        constraint_expr(ref, table, name), modify_null(name, opts), modify_default(name, opts)
       ])
     end
 
     defp column_change(_table, {:modify, name, type, opts}) do
-      assemble(["ALTER COLUMN", quote_name(name), "TYPE", column_type(type, opts)])
+      assemble(["ALTER COLUMN", quote_name(name), "TYPE",
+                column_type(type, opts), modify_null(name, opts), modify_default(name, opts)])
     end
 
     defp column_change(_table, {:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
 
+    defp modify_null(name, opts) do
+      case Keyword.get(opts, :null) do
+        true  -> ", ALTER COLUMN #{quote_name(name)} DROP NOT NULL"
+        false -> ", ALTER COLUMN #{quote_name(name)} SET NOT NULL"
+        nil   -> []
+      end
+    end
+
+    defp modify_default(name, opts) do
+      case Keyword.fetch(opts, :default) do
+        {:ok, val} -> ", ALTER COLUMN #{quote_name(name)} SET #{default_expr({:ok, val})}"
+        :error -> []
+      end
+    end
+
     defp column_options(opts) do
-      default = Keyword.get(opts, :default)
+      default = Keyword.fetch(opts, :default)
       null    = Keyword.get(opts, :null)
       pk      = Keyword.get(opts, :primary_key)
 
@@ -613,14 +629,16 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp null_expr(true), do: "NULL"
     defp null_expr(_), do: []
 
-    defp default_expr(nil),
-      do: []
-    defp default_expr(literal) when is_binary(literal),
+    defp default_expr({:ok, nil}),
+      do: "DEFAULT NULL"
+    defp default_expr({:ok, literal}) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
-    defp default_expr(literal) when is_number(literal) or is_boolean(literal),
+    defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
       do: "DEFAULT #{literal}"
-    defp default_expr({:fragment, expr}),
+    defp default_expr({:ok, {:fragment, expr}}),
       do: "DEFAULT #{expr}"
+    defp default_expr(:error),
+      do: []
 
     defp index_expr(literal) when is_binary(literal),
       do: literal

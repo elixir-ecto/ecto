@@ -436,64 +436,6 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "create table" do
     create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :title, :string, []},
-                {:add, :created_at, :datetime, []}]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `title` varchar(255), `created_at` datetime) ENGINE = INNODB|
-  end
-
-  test "create table with engine" do
-    create = {:create, table(:posts, engine: :myisam),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :title, :string, []},
-                {:add, :created_at, :datetime, []}]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `title` varchar(255), `created_at` datetime) ENGINE = MYISAM|
-  end
-
-  test "create table with reference" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories), []} ]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
-  end
-
-  test "create table with named reference" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, name: :foo_bar), []} ]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `foo_bar` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
-  end
-
-  test "create table with reference and on_delete: :nothing clause" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :nothing), []} ]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`)) ENGINE = INNODB|
-  end
-
-  test "create table with reference and on_delete: :nilify_all clause" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :nilify_all), []} ]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB|
-  end
-
-  test "create table with reference and on_delete: :delete_all clause" do
-    create = {:create, table(:posts),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_id, references(:categories, on_delete: :delete_all), []} ]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `category_id` BIGINT UNSIGNED , CONSTRAINT `posts_category_id_fkey` FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON DELETE CASCADE) ENGINE = INNODB|
-  end
-
-  test "create table with column options" do
-    create = {:create, table(:posts),
                [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
                 {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
                 {:add, :on_hand, :integer, [default: 0, null: true]},
@@ -502,8 +444,39 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.execute_ddl(create) == """
     CREATE TABLE `posts` (`name` varchar(20) DEFAULT 'Untitled' NOT NULL,
     `price` numeric(8,2) DEFAULT expr,
-    `on_hand` integer DEFAULT 0,
+    `on_hand` integer DEFAULT 0 NULL,
     `is_active` boolean DEFAULT true) ENGINE = INNODB
+    """ |> remove_newlines
+  end
+
+  test "create table with engine" do
+    create = {:create, table(:posts, engine: :myisam),
+               [{:add, :id, :serial, [primary_key: true]}]}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`)) ENGINE = MYISAM|
+  end
+
+  test "create table with references" do
+    create = {:create, table(:posts),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_0, references(:categories), []},
+                {:add, :category_1, references(:categories, name: :foo_bar), []},
+                {:add, :category_2, references(:categories, on_delete: :nothing), []},
+                {:add, :category_3, references(:categories, on_delete: :delete_all), [null: false]},
+                {:add, :category_4, references(:categories, on_delete: :nilify_all), []}]}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`),
+    `category_0` BIGINT UNSIGNED ,
+    CONSTRAINT `posts_category_0_fkey` FOREIGN KEY (`category_0`) REFERENCES `categories`(`id`),
+    `category_1` BIGINT UNSIGNED ,
+    CONSTRAINT `foo_bar` FOREIGN KEY (`category_1`) REFERENCES `categories`(`id`),
+    `category_2` BIGINT UNSIGNED ,
+    CONSTRAINT `posts_category_2_fkey` FOREIGN KEY (`category_2`) REFERENCES `categories`(`id`),
+    `category_3` BIGINT UNSIGNED NOT NULL ,
+    CONSTRAINT `posts_category_3_fkey` FOREIGN KEY (`category_3`) REFERENCES `categories`(`id`) ON DELETE CASCADE,
+    `category_4` BIGINT UNSIGNED ,
+    CONSTRAINT `posts_category_4_fkey` FOREIGN KEY (`category_4`) REFERENCES `categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB
     """ |> remove_newlines
   end
 
@@ -515,14 +488,13 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `created_at` datetime) ENGINE = INNODB WITH FOO=BAR|
   end
 
-  test "create table with both: engine and options" do
+  test "create table with both engine and options" do
     create = {:create, table(:posts, engine: :myisam, options: "WITH FOO=BAR"),
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) ==
            ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `created_at` datetime) ENGINE = MYISAM WITH FOO=BAR|
   end
-
 
   test "drop table" do
     drop = {:drop, table(:posts)}
@@ -532,35 +504,20 @@ defmodule Ecto.Adapters.MySQLTest do
   test "alter table" do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:modify, :price, :numeric, [precision: 8, scale: 2]},
+                {:add, :author_id, references(:author), []},
+                {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
+                {:modify, :cost, :integer, [null: false, default: nil]},
+                {:modify, :permalink_id, references(:permalinks), null: false},
                 {:remove, :summary}]}
 
     assert SQL.execute_ddl(alter) == """
-    ALTER TABLE `posts`
-    ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
-    MODIFY `price` numeric(8,2),
+    ALTER TABLE `posts` ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
+    ADD `author_id` BIGINT UNSIGNED ,
+    ADD CONSTRAINT `posts_author_id_fkey` FOREIGN KEY (`author_id`) REFERENCES `author`(`id`),
+    MODIFY `price` numeric(8,2) NULL, MODIFY `cost` integer DEFAULT NULL NOT NULL,
+    MODIFY `permalink_id` BIGINT UNSIGNED NOT NULL ,
+    ADD CONSTRAINT `posts_permalink_id_fkey` FOREIGN KEY (`permalink_id`) REFERENCES `permalinks`(`id`),
     DROP `summary`
-    """ |> remove_newlines
-  end
-
-  test "alter table with reference" do
-    alter = {:alter, table(:posts),
-               [{:add, :comment_id, references(:comments), []}]}
-
-    assert SQL.execute_ddl(alter) == """
-    ALTER TABLE `posts` ADD `comment_id` BIGINT UNSIGNED , ADD CONSTRAINT `posts_comment_id_fkey` FOREIGN KEY (`comment_id`) REFERENCES `comments`(`id`)
-    """ |> remove_newlines
-  end
-
-  test "alter table with adding foreign key constraint" do
-    alter = {:alter, table(:posts),
-              [{:modify, :user_id, references(:users, on_delete: :delete_all), []}]
-            }
-
-    assert SQL.execute_ddl(alter) == """
-    ALTER TABLE `posts`
-    MODIFY `user_id` BIGINT UNSIGNED ,
-    ADD CONSTRAINT `posts_user_id_fkey` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
     """ |> remove_newlines
   end
 

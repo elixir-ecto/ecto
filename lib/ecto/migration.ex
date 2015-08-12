@@ -540,6 +540,8 @@ defmodule Ecto.Migration do
 
   ## Options
 
+    * `:null` - sets to null or not null
+    * `:default` - changes the default
     * `:size` - the size of the type (for example the numbers of characters). Default is no size.
     * `:precision` - the precision for a numberic type. Default is no precision.
     * `:scale` - the scale of a numberic type. Default is 0 scale.

@@ -546,18 +546,18 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
       assemble([
         "MODIFY", quote_name(name), reference_column_type(ref.type, opts),
-        constraint_expr(ref, table, name)
+        column_options(name, opts), constraint_expr(ref, table, name)
       ])
     end
 
     defp column_change(_table, {:modify, name, type, opts}) do
-      assemble(["MODIFY", quote_name(name), column_type(type, opts)])
+      assemble(["MODIFY", quote_name(name), column_type(type, opts), column_options(name, opts)])
     end
 
     defp column_change(_table, {:remove, name}), do: "DROP #{quote_name(name)}"
 
     defp column_options(name, opts) do
-      default = Keyword.get(opts, :default)
+      default = Keyword.fetch(opts, :default)
       null    = Keyword.get(opts, :null)
       pk      = Keyword.get(opts, :primary_key)
 
@@ -568,16 +568,19 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp pk_expr(_, _), do: []
 
     defp null_expr(false), do: "NOT NULL"
+    defp null_expr(true), do: "NULL"
     defp null_expr(_), do: []
 
-    defp default_expr(nil),
-      do: []
-    defp default_expr(literal) when is_binary(literal),
+    defp default_expr({:ok, nil}),
+      do: "DEFAULT NULL"
+    defp default_expr({:ok, literal}) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
-    defp default_expr(literal) when is_number(literal) or is_boolean(literal),
+    defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
       do: "DEFAULT #{literal}"
-    defp default_expr({:fragment, expr}),
+    defp default_expr({:ok, {:fragment, expr}}),
       do: "DEFAULT #{expr}"
+    defp default_expr(:error),
+      do: []
 
     defp index_expr(literal), do: quote_name(literal)
 
