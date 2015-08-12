@@ -35,8 +35,8 @@ defmodule Ecto.Integration.PreloadTest do
 
     # With assoc query
     assert [p3, p1, p2] = TestRepo.preload([p3, p1, p2], :comments)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments |> sort_by_id
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments |> sort_by_id
     assert [] = p3.comments
   end
 
@@ -104,12 +104,12 @@ defmodule Ecto.Integration.PreloadTest do
     p1 = TestRepo.preload(p1, :comments_authors)
 
     # Through was preloaded
-    [u1, u2] = p1.comments_authors
+    [u1, u2] = p1.comments_authors |> sort_by_id
     assert u1.id == uid1
     assert u2.id == uid2
 
     # But we also preloaded everything along the way
-    assert [c1, c2, c3] = p1.comments
+    assert [c1, c2, c3] = p1.comments |> sort_by_id
     assert c1.author.id == uid1
     assert c2.author.id == uid1
     assert c3.author.id == uid2
@@ -117,7 +117,7 @@ defmodule Ecto.Integration.PreloadTest do
     [p1, p2] = TestRepo.preload([p1, p2], :comments_authors)
 
     # Through was preloaded
-    [u1, u2] = p1.comments_authors
+    [u1, u2] = p1.comments_authors |> sort_by_id
     assert u1.id == uid1
     assert u2.id == uid2
 
@@ -125,7 +125,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert u2.id == uid2
 
     # But we also preloaded everything along the way
-    assert [c1, c2, c3] = p1.comments
+    assert [c1, c2, c3] = p1.comments |> sort_by_id
     assert c1.author.id == uid1
     assert c2.author.id == uid1
     assert c3.author.id == uid2
@@ -187,7 +187,7 @@ defmodule Ecto.Integration.PreloadTest do
     [l1, l2] = TestRepo.preload([l1, l2], :post_comments_authors)
 
     # Through was preloaded
-    [u1, u2] = l1.post_comments_authors
+    [u1, u2] = l1.post_comments_authors |> sort_by_id
     assert u1.id == uid1
     assert u2.id == uid2
 
@@ -217,14 +217,14 @@ defmodule Ecto.Integration.PreloadTest do
     [p1, p2] = TestRepo.preload([p1, p2], [:permalink, comments_authors: :comments])
 
     # Through was preloaded
-    [u1, u2] = p1.comments_authors
+    [u1, u2] = p1.comments_authors |> sort_by_id
     assert u1.id == uid1
     assert u2.id == uid2
-    assert u1.comments == [c1, c2]
+    assert [c1, c2] == u1.comments |> sort_by_id
 
     [u2] = p2.comments_authors
     assert u2.id == uid2
-    assert u2.comments == [c3, c4]
+    assert [c3, c4] == u2.comments |> sort_by_id
   end
 
   test "preload belongs_to with shared assocs" do
@@ -347,8 +347,8 @@ defmodule Ecto.Integration.PreloadTest do
     query = from(p in Post, preload: [:comments], select: p)
 
     assert [p1, p2, p3] = TestRepo.all(query)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments |> sort_by_id
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments |> sort_by_id
     assert [] = p3.comments
 
     # Query with interpolated preload query
@@ -366,8 +366,12 @@ defmodule Ecto.Integration.PreloadTest do
     posts = TestRepo.all(query)
     [p1, p2, p3] = Enum.map(posts, fn {0, [p], 1, 2} -> p end)
 
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments
-    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments |> sort_by_id
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments |> sort_by_id
     assert [] = p3.comments
+  end
+
+  defp sort_by_id(values) do
+    Enum.sort_by(values, &(&1.id))
   end
 end
