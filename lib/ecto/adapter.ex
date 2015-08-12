@@ -14,7 +14,7 @@ defmodule Ecto.Adapter do
   @type constraints :: Keyword.t
   @type returning :: [atom]
   @type prepared :: term
-  @type preprocess :: (Macro.t, term -> term)
+  @type preprocess :: (field :: Macro.t, value :: term, context :: term -> term)
   @type autogenerate_id :: {field :: atom, type :: :id | :binary_id, value :: term} | nil
 
   @typep repo :: Ecto.Repo.t
