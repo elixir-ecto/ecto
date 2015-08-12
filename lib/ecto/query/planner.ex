@@ -69,7 +69,7 @@ defmodule Ecto.Query.Planner do
       {build_meta(query, select), prepared, params}
     else
       table = repo.__query_cache__
-      case :ets.lookup(table, key) do
+      case cache_lookup(repo, table, key) do
         [{_, select, prepared}] ->
           {build_meta(query, select), prepared, params}
         [] ->
@@ -82,6 +82,14 @@ defmodule Ecto.Query.Planner do
           end
       end
     end
+  end
+
+  defp cache_lookup(repo, table, key) do
+    :ets.lookup(table, key)
+  rescue
+    ArgumentError ->
+      raise ArgumentError,
+        "repo #{inspect repo} is not started, please ensure it is part of your supervision tree"
   end
 
   defp query_without_cache(query, operation, adapter) do
