@@ -555,6 +555,10 @@ defmodule Ecto.Changeset do
   then falls back on the model, finally returning `:error` if
   no value is available.
 
+  For relations this functions will return the models with changes applied,
+  as if they were taken from model.
+  To retrieve raw changesets, please use `fetch_change/2`.
+
   ## Examples
 
       iex> post = %Post{title: "Foo", body: "Bar baz bong"}
@@ -568,9 +572,10 @@ defmodule Ecto.Changeset do
 
   """
   @spec fetch_field(t, atom) :: {:changes, term} | {:model, term} | :error
-  def fetch_field(%{changes: changes, model: model} = _changeset, key) do
+  def fetch_field(%Changeset{changes: changes, model: model, types: types}, key) do
     case Map.fetch(changes, key) do
-      {:ok, value} -> {:changes, value}
+      {:ok, value} ->
+        {:changes, change_as_field(types, key, value)}
       :error ->
         case Map.fetch(model, key) do
           {:ok, value} -> {:model, value}
@@ -587,6 +592,10 @@ defmodule Ecto.Changeset do
   then falls back on the model, finally returning `default` if
   no value is available.
 
+  For relations this functions will return the models with changes applied,
+  as if they were taken from model.
+  To retrieve raw changesets, please use `get_change/3`.
+
       iex> post = %Post{title: "A title", body: "My body is a cage"}
       iex> changeset = change(post, %{title: "A new title"})
       iex> get_field(changeset, :title)
@@ -596,14 +605,24 @@ defmodule Ecto.Changeset do
 
   """
   @spec get_field(t, atom, term) :: term
-  def get_field(%Changeset{changes: changes, model: model} = _changeset, key, default \\ nil) do
+  def get_field(%Changeset{changes: changes, model: model, types: types}, key, default \\ nil) do
     case Map.fetch(changes, key) do
-      {:ok, value} -> value
+      {:ok, value} ->
+        change_as_field(types, key, value)
       :error ->
         case Map.fetch(model, key) do
           {:ok, value} -> value
           :error       -> default
         end
+    end
+  end
+
+  defp change_as_field(types, key, value) do
+    case Map.get(types, key) do
+      {tag, relation} when tag in @relations ->
+         Relation.apply_changes(relation, value)
+      _other ->
+        value
     end
   end
 

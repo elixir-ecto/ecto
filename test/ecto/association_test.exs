@@ -838,6 +838,25 @@ defmodule Ecto.AssociationTest do
     assert %Ecto.Changeset{} = changeset.changes.profile
   end
 
+  test "get_field/3, fetch_field/2 with assocs" do
+    profile_changeset = Changeset.change(%Profile{}, name: "michal")
+    profile = Changeset.apply_changes(profile_changeset)
+
+    changeset = Changeset.change(%Author{}, profile: profile_changeset)
+    assert Changeset.get_field(changeset, :profile) == profile
+    assert Changeset.fetch_field(changeset, :profile) == {:changes, profile}
+
+    changeset = Changeset.change(%Author{profile: profile})
+    assert Changeset.get_field(changeset, :profile) == profile
+    assert Changeset.fetch_field(changeset, :profile) == {:model, profile}
+
+    post = %Post{id: 1}
+    post_changeset = %{Changeset.change(post) | action: :delete}
+    changeset = Changeset.change(%Author{posts: [post]}, posts: [post_changeset])
+    assert Changeset.get_field(changeset, :posts) == []
+    assert Changeset.fetch_field(changeset, :posts) == {:changes, []}
+  end
+
   test "on_replace: :nilify" do
     # one case is handled inside repo
     post = %Post{id: 1, summary_id: 5}
