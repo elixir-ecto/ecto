@@ -593,11 +593,11 @@ defmodule Ecto.Integration.RepoTest do
 
     changeset = Ecto.Changeset.change(p1, comments: [c1, c2])
     p1 = TestRepo.update!(changeset)
-    [_c1, c2] = p1.comments
+    [_c1, c2] = p1.comments |> Enum.sort_by(&(&1.id))
     assert c2.id
     assert c2.post_id == p1.id
     p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
-    [c1, c2] = p1.comments
+    [c1, c2] = p1.comments |> Enum.sort_by(&(&1.id))
     assert c1.text == "1"
     assert c2.text == "2"
 
