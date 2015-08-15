@@ -468,7 +468,7 @@ defmodule Ecto.Changeset do
   The other fields are merged with the following criteria:
 
   * `params` - params are merged (not deep-merged) giving precedence to the
-    params of `changeset2` in case of a conflict. If either changeset has its
+    params of `changeset2` in case of a conflict. If both changesets has its
     `:params` field set to `nil`, the resulting changeset will have its params
     set to `nil` too.
   * `changes` - changes are merged giving precedence to the `changeset2`
@@ -502,7 +502,7 @@ defmodule Ecto.Changeset do
 
   def merge(%Changeset{model: model} = cs1, %Changeset{model: model} = cs2) do
     new_repo        = merge_identical(cs1.repo, cs2.repo, "repos")
-    new_params      = cs1.params && cs2.params && Map.merge(cs1.params, cs2.params)
+    new_params      = (cs1.params || cs2.params) && Map.merge(cs1.params || %{}, cs2.params || %{})
     new_changes     = Map.merge(cs1.changes, cs2.changes)
     new_validations = cs1.validations ++ cs2.validations
     new_errors      = cs1.errors ++ cs2.errors

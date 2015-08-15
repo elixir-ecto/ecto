@@ -214,6 +214,12 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
+  test "cast/4: protects against atom injection" do
+    assert_raise ArgumentError, fn ->
+      cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before))
+    end
+  end
+
   ## Changeset functions
 
   test "merge/2: merges changes, errors and validations" do
@@ -241,6 +247,18 @@ defmodule Ecto.ChangesetTest do
     assert length(changeset.validations) == 2
     assert Enum.find(changeset.validations, &match?({:body, {:format, _}}, &1))
     assert Enum.find(changeset.validations, &match?({:title, {:length, _}}, &1))
+  end
+
+  test "merge/2: merges parameters" do
+    # Changes
+    empty = cast(%Post{}, :empty, ~w(title), ~w())
+    cs1   = cast(%Post{}, %{body: "foo"}, ~w(body), ~w())
+    cs2   = cast(%Post{}, %{body: "bar"}, ~w(body), ~w())
+    assert merge(cs1, cs2).params == %{"body" => "bar"}
+
+    assert merge(cs1, empty).params == %{"body" => "foo"}
+    assert merge(empty, cs2).params == %{"body" => "bar"}
+    assert merge(empty, empty).params == nil
   end
 
   test "merge/2: gives required fields precedence over optional ones" do
