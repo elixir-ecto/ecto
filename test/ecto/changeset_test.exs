@@ -679,8 +679,9 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0, message: "yada")
     assert changeset.errors == [upvotes: {"yada", count: 100}]
+  end
 
-    # Validations on Decimal
+  test "validate_number/3 with decimal" do
     changeset = changeset(%{"decimal" => Decimal.new(1)})
                 |> validate_number(:decimal, greater_than: Decimal.new(-3))
     assert changeset.valid?
@@ -706,6 +707,12 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"decimal" => Decimal.new(1.5)})
                 |> validate_number(:decimal, greater_than_or_equal_to: Decimal.new(1.5))
     assert changeset.valid?
+  end
+
+  test "validate_number/3 with bad options" do
+    assert_raise ArgumentError, "unknown option :min given to validate_number/3", fn  ->
+      validate_number(changeset(%{"upvotes" => 1}), :upvotes, min: Decimal.new(1.5))
+    end
   end
 
   test "validate_confirmation/3" do

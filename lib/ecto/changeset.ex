@@ -1100,32 +1100,31 @@ defmodule Ecto.Changeset do
   def validate_number(changeset, field, opts) do
     validate_change changeset, field, {:number, opts}, fn
       field, value ->
+        {message, opts} = Keyword.pop(opts, :message)
         Enum.find_value opts, [], fn {spec_key, target_value} ->
-          validate_number(field, value, opts, spec_key, target_value)
+          case Map.fetch(@number_validators, spec_key) do
+            {:ok, {spec_function, default_message}} ->
+              validate_number(field, value, message || default_message,
+                              spec_key, spec_function, target_value)
+            :error ->
+              raise ArgumentError, "unknown option #{inspect spec_key} given to validate_number/3"
+          end
         end
     end
   end
 
-  defp validate_number(field, %Decimal{} = value, opts, spec_key, target_value) do
-    case Map.fetch(@number_validators, spec_key) do
-      {:ok, {_spec_function, error_message}} ->
-        result = Decimal.compare(value, target_value)
-        case decimal_compare(result, spec_key) do
-          true  -> nil
-          false -> [{field, {message(opts, error_message), count: target_value}}]
-        end
-      _ -> nil
+  defp validate_number(field, %Decimal{} = value, message, spec_key, _spec_function, target_value) do
+    result = Decimal.compare(value, target_value)
+    case decimal_compare(result, spec_key) do
+      true  -> nil
+      false -> [{field, {message, count: target_value}}]
     end
   end
 
-  defp validate_number(field, value, opts, spec_key, target_value) do
-    case Map.fetch(@number_validators, spec_key) do
-      {:ok, {spec_function, error_message}} ->
-        case apply(spec_function, [value, target_value]) do
-          true  -> nil
-          false -> [{field, {message(opts, error_message), count: target_value}}]
-        end
-      _ -> nil # if the spec_key isn't in the validators_map just ignore it
+  defp validate_number(field, value, message, _spec_key, spec_function, target_value) do
+    case apply(spec_function, [value, target_value]) do
+      true  -> nil
+      false -> [{field, {message, count: target_value}}]
     end
   end
 
