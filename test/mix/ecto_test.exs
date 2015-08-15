@@ -2,7 +2,7 @@ defmodule Mix.EctoTest do
   use ExUnit.Case, async: true
   import Mix.Ecto
 
-  test :parse_repo do
+  test "parse repo" do
     assert parse_repo(["-r", "Repo"]) == Repo
     assert parse_repo(["--repo", Repo]) == Repo
     assert parse_repo([]) == Ecto.Repo
@@ -27,13 +27,13 @@ defmodule Mix.EctoTest do
     end
   end
 
-  test :ensure_repo do
+  test "ensure repo" do
     assert ensure_repo(Repo, []) == Repo
     assert_raise Mix.Error, fn -> ensure_repo(String, []) end
     assert_raise Mix.Error, fn -> ensure_repo(NotLoaded, []) end
   end
 
-  test :ensure_started do
+  test "ensure started" do
     Process.put(:start_link, {:ok, self})
     assert ensure_started(Repo) == {:ok, self}
 
@@ -44,7 +44,7 @@ defmodule Mix.EctoTest do
     assert_raise Mix.Error, fn -> ensure_started(Repo) end
   end
 
-  test :migrations_path do
+  test "migrations path" do
     Process.put(:priv, nil)
     assert migrations_path(Repo) == Application.app_dir(:ecto, "priv/repo/migrations")
     Process.put(:priv, "hello")

@@ -20,7 +20,7 @@
   * `Ecto.Adapters.SQL.query/4` now returns `{:ok, result}`. Use `Ecto.Adapters.SQL.query!/4` for the previous behaviour
 
 * Adapter backwards incompatible changes
-  * Receive context on `Ecto.Adapter.insert/update/delete`. Expected context on load.
+  * Receive context on `Ecto.Adapter.insert/update/delete`. Expect context on schema load.
 
 ## v0.15.0
 
