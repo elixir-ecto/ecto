@@ -1,9 +1,17 @@
 # Changelog
 
-## v0.16.0-dev
+## v0.16.0
 
 * Enhancements
   * Add functionality for constraint checking in the storage to `Ecto.Changeset`. Support was added for `unique_constraint/3` (powered by unique indexes) and `foreign_key_constraint/3`, `assoc_constraint/3` (belongs to) and `no_assoc_constraint/3` (has one/many)
+  * Support empty lists as default values
+  * Support changing/setting null and default on `modify/3` in migrations
+
+* Bug fixes
+  * Do not generate changes when parameters are `:empty` even for embeds/associations
+  * Raise on bad options in `validate_number/3`
+  * `get_field/3` and `fetch_field/2` for relations return models
+  * Ensure NULL and DEFAULT are respected when defining references
 
 * Deprecations
   * `Ecto.Changeset.validate_unique/3` is deprecate in favor of `Ecto.Changeset.unique_constraint/3`. Read the documentation for the latter for more information on updating
@@ -11,10 +19,13 @@
 * Backwards incompatible changes
   * `Ecto.Adapters.SQL.query/4` now returns `{:ok, result}`. Use `Ecto.Adapters.SQL.query!/4` for the previous behaviour
 
+* Adapter backwards incompatible changes
+  * Receive context on `Ecto.Adapter.insert/update/delete`. Expected context on load.
+
 ## v0.15.0
 
 * Enhancements
-  * Add query caching
+  * Add query generation caching
   * Add `compare/2` to `Ecto.DateTime` and friends
   * Add `Ecto.Query.API` with the purpose of documenting query functions
   * Add `Ecto.Migration.rename/3` to rename columns
