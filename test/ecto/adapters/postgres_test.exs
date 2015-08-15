@@ -505,13 +505,15 @@ defmodule Ecto.Adapters.PostgresTest do
                [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
                 {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
                 {:add, :on_hand, :integer, [default: 0, null: true]},
-                {:add, :is_active, :boolean, [default: true]}]}
+                {:add, :is_active, :boolean, [default: true]},
+                {:add, :tags, {:array, :string}, [default: []]}]}
 
     assert SQL.execute_ddl(create) == """
     CREATE TABLE "posts" ("name" varchar(20) DEFAULT 'Untitled' NOT NULL,
     "price" numeric(8,2) DEFAULT expr,
     "on_hand" integer DEFAULT 0 NULL,
-    "is_active" boolean DEFAULT true)
+    "is_active" boolean DEFAULT true,
+    "tags" varchar(255)[] DEFAULT ARRAY[]::varchar[])
     """ |> remove_newlines
   end
 

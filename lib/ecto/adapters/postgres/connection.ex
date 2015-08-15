@@ -562,12 +562,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
       assemble([
         quote_name(name), reference_column_type(ref.type, opts),
-        column_options(opts), reference_expr(ref, table, name)
+        column_options(ref.type, opts), reference_expr(ref, table, name)
       ])
     end
 
     defp column_definition(_table, {:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type, opts), column_options(opts)])
+      assemble([quote_name(name), column_type(type, opts), column_options(type, opts)])
     end
 
     defp column_changes(table, columns) do
@@ -577,24 +577,24 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
       assemble([
         "ADD COLUMN", quote_name(name), reference_column_type(ref.type, opts),
-        column_options(opts), reference_expr(ref, table, name)
+        column_options(ref.type, opts), reference_expr(ref, table, name)
       ])
     end
 
     defp column_change(_table, {:add, name, type, opts}) do
-      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(opts)])
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(type, opts)])
     end
 
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
       assemble([
         "ALTER COLUMN", quote_name(name), "TYPE", reference_column_type(ref.type, opts),
-        constraint_expr(ref, table, name), modify_null(name, opts), modify_default(name, opts)
+        constraint_expr(ref, table, name), modify_null(name, opts), modify_default(name, ref.type, opts)
       ])
     end
 
     defp column_change(_table, {:modify, name, type, opts}) do
       assemble(["ALTER COLUMN", quote_name(name), "TYPE",
-                column_type(type, opts), modify_null(name, opts), modify_default(name, opts)])
+                column_type(type, opts), modify_null(name, opts), modify_default(name, type, opts)])
     end
 
     defp column_change(_table, {:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
@@ -607,19 +607,19 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       end
     end
 
-    defp modify_default(name, opts) do
+    defp modify_default(name, type, opts) do
       case Keyword.fetch(opts, :default) do
-        {:ok, val} -> ", ALTER COLUMN #{quote_name(name)} SET #{default_expr({:ok, val})}"
+        {:ok, val} -> ", ALTER COLUMN #{quote_name(name)} SET #{default_expr({:ok, val}, type)}"
         :error -> []
       end
     end
 
-    defp column_options(opts) do
+    defp column_options(type, opts) do
       default = Keyword.fetch(opts, :default)
       null    = Keyword.get(opts, :null)
       pk      = Keyword.get(opts, :primary_key)
 
-      [default_expr(default), null_expr(null), pk_expr(pk)]
+      [default_expr(default, type), null_expr(null), pk_expr(pk)]
     end
 
     defp pk_expr(true), do: "PRIMARY KEY"
@@ -629,15 +629,20 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp null_expr(true), do: "NULL"
     defp null_expr(_), do: []
 
-    defp default_expr({:ok, nil}),
+    defp default_expr({:ok, nil}, _type),
       do: "DEFAULT NULL"
-    defp default_expr({:ok, literal}) when is_binary(literal),
+    defp default_expr({:ok, []}, type),
+      do: "DEFAULT ARRAY[]::#{ecto_to_db(type)}"
+    defp default_expr({:ok, literal}, _type) when is_binary(literal),
       do: "DEFAULT '#{escape_string(literal)}'"
-    defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
+    defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
       do: "DEFAULT #{literal}"
-    defp default_expr({:ok, {:fragment, expr}}),
+    defp default_expr({:ok, {:fragment, expr}}, _type),
       do: "DEFAULT #{expr}"
-    defp default_expr(:error),
+    defp default_expr({:ok, expr}, type),
+      do: raise(ArgumentError, "unknown default `#{inspect expr}` for type `#{inspect type}`. " <>
+                               ":default may be a string, number, boolean, empty list or a fragment(...)")
+    defp default_expr(:error, _),
       do: []
 
     defp index_expr(literal) when is_binary(literal),
