@@ -485,6 +485,15 @@ defmodule Ecto.AssociationTest do
     assert changeset.valid?
   end
 
+  test "cast has_one without loading" do
+    assert Changeset.cast(%Author{}, %{"profile" => nil}, ~w(profile)).changes == %{}
+
+    loaded = put_in %Author{}.__meta__.state, :loaded
+    assert_raise ArgumentError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
+      Changeset.cast(loaded, %{"profile" => nil}, ~w(profile))
+    end
+  end
+
   test "cast has_one with existing model replacing" do
     changeset =
       Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
@@ -566,7 +575,7 @@ defmodule Ecto.AssociationTest do
     assert changeset.changes.profile.action == :update
   end
 
-  test "cast has_one with empty parameters" do
+  test "cast has_one with :empty parameters" do
     changeset = Changeset.cast(%Author{profile: nil}, :empty, profile: :optional_changeset)
     assert changeset.changes == %{}
 
@@ -574,22 +583,7 @@ defmodule Ecto.AssociationTest do
     assert changeset.changes == %{}
 
     changeset = Changeset.cast(%Author{profile: %Profile{}}, :empty, profile: :optional_changeset)
-    profile_changeset = changeset.changes.profile
-    assert profile_changeset.model == %Profile{}
-    assert profile_changeset.params == nil
-    assert profile_changeset.changes == %{}
-    assert profile_changeset.errors == []
-    assert profile_changeset.validations == []
-    assert profile_changeset.required == []
-    assert profile_changeset.optional == [:name]
-    assert profile_changeset.action == :update
-    refute profile_changeset.valid?
-
-    # This simulates update
-    loaded = put_in %Author{}.__meta__.state, :loaded
-    assert_raise ArgumentError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
-      Changeset.cast(loaded, :empty, ~w(profile))
-    end
+    assert changeset.changes == %{}
   end
 
   ## cast has_many
@@ -623,6 +617,15 @@ defmodule Ecto.AssociationTest do
     assert post_change.action  == :insert
     assert post_change.valid?
     assert changeset.valid?
+  end
+
+  test "cast has_many without loading" do
+    assert Changeset.cast(%Author{}, %{"posts" => []}, ~w(posts)).changes == %{}
+
+    loaded = put_in %Author{}.__meta__.state, :loaded
+    assert_raise ArgumentError, ~r"attempting to cast or change association `posts` .* that was not loaded", fn ->
+      Changeset.cast(loaded, %{"posts" => []}, ~w(posts))
+    end
   end
 
   # Please note the order is important in this test.
@@ -696,26 +699,14 @@ defmodule Ecto.AssociationTest do
   end
 
   test "cast has_many with :empty parameters" do
-    changeset =
-      Changeset.cast(%Author{posts: []}, :empty, ~w(posts))
+    changeset = Changeset.cast(%Author{posts: []}, :empty, ~w(posts))
     assert changeset.changes == %{}
 
-    changeset =
-      Changeset.cast(%Author{}, :empty, ~w(posts))
+    changeset = Changeset.cast(%Author{}, :empty, ~w(posts))
     assert changeset.changes == %{}
 
-    changeset =
-      Changeset.cast(%Author{posts: [%Post{}]}, :empty, ~w(posts))
-    [post_changeset] = changeset.changes.posts
-    assert post_changeset.model == %Post{}
-    assert post_changeset.params == nil
-    assert post_changeset.changes == %{}
-    assert post_changeset.errors == []
-    assert post_changeset.validations == []
-    assert post_changeset.required == [:title]
-    assert post_changeset.optional == [:author_id]
-    assert post_changeset.action == :update
-    refute post_changeset.valid?
+    changeset = Changeset.cast(%Author{posts: [%Post{}]}, :empty, ~w(posts))
+    assert changeset.changes == %{}
   end
 
   ## Change

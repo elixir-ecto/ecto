@@ -295,13 +295,11 @@ defmodule Ecto.Changeset do
       when is_list(required) and is_list(optional) do
     types = module.__changeset__
 
-    {optional, changes} =
-      Enum.map_reduce(optional, %{}, &process_empty_relations(&1, types, model, &2))
-    {required, changes} =
-      Enum.map_reduce(required, changes, &process_empty_relations(&1, types, model, &2))
+    optional = Enum.map(optional, &process_empty_fields(&1, types))
+    required = Enum.map(required, &process_empty_fields(&1, types))
 
     %Changeset{params: nil, model: model, valid?: false, errors: [],
-               changes: changes, required: required, optional: optional, types: types}
+               changes: %{}, required: required, optional: optional, types: types}
   end
 
   def cast(%Changeset{} = changeset, %{} = params, required, optional)
@@ -328,31 +326,15 @@ defmodule Ecto.Changeset do
                optional: optional, types: types}
   end
 
-  defp process_empty_relations({key, fun}, types, model, changes) do
-    {key, _param_key} = cast_key(key)
-    {_tag, relation} = relation!(types, key, fun)
-    cast_empty_relation(relation, changes, model, key)
+  defp process_empty_fields({key, fun}, types) when is_atom(key) do
+    relation!(types, key, fun)
+    key
   end
-
-  defp process_empty_relations(key, types, model, changes) do
-    {key, _param_key} = cast_key(key)
-
-    case type!(types, key) do
-      {tag, relation} when tag in @relations ->
-        cast_empty_relation(relation, changes, model, key)
-      _ ->
-        {key, changes}
-    end
+  defp process_empty_fields(key, _types) when is_binary(key) do
+    String.to_existing_atom(key)
   end
-
-  defp cast_empty_relation(relation, changes, model, key) do
-    current = Map.get(model, key)
-    case Relation.cast(relation, model, :empty, current) do
-      {:ok, ^current, _, _} ->
-        {key, changes}
-      {:ok, result, _, _} ->
-        {key, Map.put(changes, key, result)}
-    end
+  defp process_empty_fields(key, _types) when is_atom(key) do
+    key
   end
 
   defp process_param({key, fun}, kind, params, types, model, acc) do
@@ -419,7 +401,7 @@ defmodule Ecto.Changeset do
   end
 
   defp cast_key(key) when is_binary(key),
-    do: {String.to_atom(key), key}
+    do: {String.to_existing_atom(key), key}
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 

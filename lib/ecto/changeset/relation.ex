@@ -25,11 +25,10 @@ defmodule Ecto.Changeset.Relation do
 
   Handles both the relation structs as well as Ecto.Association.NotLoaded.
   """
-  def empty(%{cardinality: cardinality}), do: empty(cardinality)
-  def empty(%{__cardinality__: cardinality}), do: empty(cardinality)
+  def empty(%{cardinality: cardinality}), do: do_empty(cardinality)
 
-  def empty(:one), do: nil
-  def empty(:many), do: []
+  defp do_empty(:one), do: nil
+  defp do_empty(:many), do: []
 
   @doc """
   Performs the repository action in the related changeset, returning
@@ -116,10 +115,6 @@ defmodule Ecto.Changeset.Relation do
 
   Sets correct `state` on the returned changeset
   """
-  def cast(_relation, %{__meta__: %{state: :built}}, :empty, %NotLoaded{} = current) do
-    {:ok, current, false, false}
-  end
-
   def cast(relation, model, params, current) do
     cast(relation, params, loaded_or_empty!(model, current))
   end
@@ -331,8 +326,9 @@ defmodule Ecto.Changeset.Relation do
   defp skip?(_changeset),
     do: false
 
-  defp loaded_or_empty!(%{__meta__: %{state: :built}}, %NotLoaded{} = not_loaded) do
-    empty(not_loaded)
+  defp loaded_or_empty!(%{__meta__: %{state: :built}},
+                        %NotLoaded{__cardinality__: cardinality}) do
+    do_empty(cardinality)
   end
 
   defp loaded_or_empty!(model, %NotLoaded{__field__: field}) do

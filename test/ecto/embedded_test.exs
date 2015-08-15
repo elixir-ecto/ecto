@@ -190,21 +190,12 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.changes.profile.action == :update
   end
 
-  test "cast embeds_one with empty parameters" do
+  test "cast embeds_one with :empty parameters" do
     changeset = Changeset.cast(%Author{profile: nil}, :empty, profile: :optional_changeset)
     assert changeset.changes == %{}
 
     changeset = Changeset.cast(%Author{profile: %Profile{}}, :empty, profile: :optional_changeset)
-    profile_changeset = changeset.changes.profile
-    assert profile_changeset.model == %Profile{}
-    assert profile_changeset.params == nil
-    assert profile_changeset.changes == %{}
-    assert profile_changeset.errors == []
-    assert profile_changeset.validations == []
-    assert profile_changeset.required == []
-    assert profile_changeset.optional == [:name]
-    assert profile_changeset.action == :update
-    refute profile_changeset.valid?
+    assert changeset.changes == %{}
   end
 
   ## cast embeds many
@@ -311,22 +302,11 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "cast embeds_many with :empty parameters" do
-    changeset =
-      Changeset.cast(%Author{posts: []}, :empty, ~w(posts))
+    changeset = Changeset.cast(%Author{posts: []}, :empty, ~w(posts))
     assert changeset.changes == %{}
 
-    changeset =
-      Changeset.cast(%Author{posts: [%Post{}]}, :empty, ~w(posts))
-    [post_changeset] = changeset.changes.posts
-    assert post_changeset.model == %Post{}
-    assert post_changeset.params == nil
-    assert post_changeset.changes == %{}
-    assert post_changeset.errors == []
-    assert post_changeset.validations == []
-    assert post_changeset.required == [:title]
-    assert post_changeset.optional == []
-    assert post_changeset.action == :update
-    refute post_changeset.valid?
+    changeset = Changeset.cast(%Author{posts: [%Post{}]}, :empty, ~w(posts))
+    assert changeset.changes == %{}
   end
 
   ## Others
