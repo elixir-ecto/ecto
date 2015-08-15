@@ -90,7 +90,7 @@ defmodule Ecto.MigrationTest do
 
   test "forward: creates a table" do
     create table = table(:posts) do
-      add :title
+      add :title, :string
       add :cost, :decimal, precision: 3
       add :author_id, references(:authors)
       timestamps
@@ -107,7 +107,7 @@ defmodule Ecto.MigrationTest do
                {:add, :updated_at, :datetime, [null: false]}]}
 
     create table = table(:posts, primary_key: false, timestamps: false) do
-      add :title
+      add :title, :string
     end
     flush
 
@@ -182,7 +182,7 @@ defmodule Ecto.MigrationTest do
 
   test "backward: creates a table" do
     create table = table(:posts) do
-      add :title
+      add :title, :string
       add :cost, :decimal, precision: 3
     end
     flush

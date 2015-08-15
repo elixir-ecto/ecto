@@ -30,7 +30,7 @@ defmodule Ecto.Integration.Migration do
     create unique_index(:posts, [:uuid])
 
     create table(:permalinks) do
-      add :url
+      add :url, :string
       add :post_id, references(:posts)
       add :user_id, references(:users)
     end

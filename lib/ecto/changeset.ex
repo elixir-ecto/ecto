@@ -976,7 +976,7 @@ defmodule Ecto.Changeset do
 
   @doc false
   def validate_unique(changeset, field, opts) when is_list(opts) do
-    IO.write "[warning] validate_unique/3 is deprecated in favor of unique_constraint/3" <>
+    IO.write "[warning] validate_unique/3 is deprecated in favor of unique_constraint/3\n" <>
              Exception.format_stacktrace()
 
     %{model: model, changes: changes, errors: errors, validations: validations} = changeset

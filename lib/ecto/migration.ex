@@ -474,9 +474,16 @@ defmodule Ecto.Migration do
     * `:scale` - the scale of a numeric type. Default is 0 scale
 
   """
-  def add(column, type \\ :string, opts \\ []) when is_atom(column) do
+  def add(column, type, opts \\ []) when is_atom(column) do
     validate_type!(type)
     Runner.subcommand {:add, column, type, opts}
+  end
+
+  @doc false
+  def add(column) when is_atom(column) do
+    IO.write "[warning] add/1 (without type information) is deprecated in migrations. " <>
+             "Please pass the type explicitly.\n" <> Exception.format_stacktrace()
+    add(column, :string)
   end
 
   @doc """
