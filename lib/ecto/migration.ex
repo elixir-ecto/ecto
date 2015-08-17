@@ -198,6 +198,7 @@ defmodule Ecto.Migration do
 
       unquote(block)
       Runner.end_command
+      table
     end
   end
 
@@ -241,6 +242,7 @@ defmodule Ecto.Migration do
 
   def create(%Table{} = table) do
     do_create table, :create
+    table
   end
 
   @doc """
@@ -283,6 +285,7 @@ defmodule Ecto.Migration do
   """
   def drop(%{} = object) do
     Runner.execute {:drop, object}
+    object
   end
 
   @doc """
@@ -495,6 +498,7 @@ defmodule Ecto.Migration do
   """
   def rename(%Table{} = table_current, to: %Table{} = table_new) do
     Runner.execute {:rename, table_current, table_new}
+    table_new
   end
 
   @doc """
@@ -506,6 +510,7 @@ defmodule Ecto.Migration do
   """
   def rename(%Table{} = table, current_column, to: new_column) when is_atom(current_column) and is_atom(new_column) do
     Runner.execute {:rename, table, current_column, new_column}
+    table
   end
 
   @doc """
