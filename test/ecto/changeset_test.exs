@@ -724,17 +724,17 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"title" => "title", "title_confirmation" => nil})
                 |> validate_confirmation(:title)
     refute changeset.valid?
-    assert changeset.errors == [title: "does not match confirmation"]
+    assert changeset.errors == [title_confirmation: "does not match confirmation"]
 
     changeset = changeset(%{"title" => "title", "title_confirmation" => "not title"})
                 |> validate_confirmation(:title)
     refute changeset.valid?
-    assert changeset.errors == [title: "does not match confirmation"]
+    assert changeset.errors == [title_confirmation: "does not match confirmation"]
 
     changeset = changeset(%{"title" => "title", "title_confirmation" => "not title"})
                 |> validate_confirmation(:title, message: "doesn't match field below")
     refute changeset.valid?
-    assert changeset.errors == [title: "doesn't match field below"]
+    assert changeset.errors == [title_confirmation: "doesn't match field below"]
 
     # Skip when no parameter
     changeset = changeset(%{"title" => "title"})
