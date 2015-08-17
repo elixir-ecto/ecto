@@ -89,7 +89,7 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: creates a table" do
-    create table = table(:posts) do
+    result = create(table = table(:posts)) do
       add :title, :string
       add :cost, :decimal, precision: 3
       add :author_id, references(:authors)
@@ -105,6 +105,8 @@ defmodule Ecto.MigrationTest do
                {:add, :author_id, %Reference{table: :authors}, []},
                {:add, :inserted_at, :datetime, [null: false]},
                {:add, :updated_at, :datetime, [null: false]}]}
+
+    assert result == table(:posts)
 
     create table = table(:posts, primary_key: false, timestamps: false) do
       add :title, :string
@@ -140,16 +142,18 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: rename column" do
-    rename table(:posts), :given_name, to: :first_name
+    result = rename(table(:posts), :given_name, to: :first_name)
     flush
 
     assert last_command() == {:rename, %Table{name: :posts}, :given_name, :first_name}
+    assert result == table(:posts)
   end
 
   test "forward: drops a table" do
-    drop table(:posts)
+    result = drop table(:posts)
     flush
     assert {:drop, %Table{}} = last_command()
+    assert result == table(:posts)
   end
 
   test "forward: creates an index" do
@@ -165,9 +169,10 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: renames a table" do
-    rename table(:posts), to: table(:new_posts)
+    result = rename(table(:posts), to: table(:new_posts))
     flush
     assert {:rename, %Table{name: :posts}, %Table{name: :new_posts}} = last_command()
+    assert result == table(:new_posts)
   end
 
   ## Reverse
