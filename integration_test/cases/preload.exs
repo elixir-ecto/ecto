@@ -55,14 +55,14 @@ defmodule Ecto.Integration.PreloadTest do
     # With custom query
     assert [pe3, pe1, pe2] = TestRepo.preload([p3, p1, p2],
                                               permalink: from(p in Permalink, where: false))
-    assert nil = pe1.permalink
-    assert nil = pe2.permalink
-    assert nil = pe3.permalink
+    refute pe1.permalink
+    refute pe2.permalink
+    refute pe3.permalink
 
     # With assoc query
     assert [p3, p1, p2] = TestRepo.preload([p3, p1, p2], :permalink)
     assert %Permalink{id: ^pid1} = p1.permalink
-    assert nil = p2.permalink
+    refute p2.permalink
     assert %Permalink{id: ^pid3} = p3.permalink
   end
 
@@ -79,13 +79,13 @@ defmodule Ecto.Integration.PreloadTest do
 
     assert [ple3, ple1, ple2] = TestRepo.preload([pl3, pl1, pl2],
                                                  post: from(p in Post, where: false))
-    assert nil = ple1.post
-    assert nil = ple2.post
-    assert nil = ple3.post
+    refute ple1.post
+    refute ple2.post
+    refute ple3.post
 
     assert [pl3, pl1, pl2] = TestRepo.preload([pl3, pl1, pl2], :post)
     assert %Post{id: ^pid1} = pl1.post
-    assert nil = pl2.post
+    refute pl2.post
     assert %Post{id: ^pid3} = pl3.post
   end
 

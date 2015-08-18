@@ -156,7 +156,8 @@ defmodule Ecto.Integration.TestTransactionTest do
     end)
 
     TestRepo.transaction(fn() ->
-      refute %{conn: ^conn} = Process.get(@ref)
+      %{conn: other} = Process.get(@ref)
+      assert conn != other
     end)
   end
 

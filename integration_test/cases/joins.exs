@@ -157,7 +157,7 @@ defmodule Ecto.Integration.JoinsTest do
     assert [p1, p2, p3] = TestRepo.all(query)
 
     assert %Post{id: ^pid1} = p1.post
-    assert nil = p2.post
+    refute p2.post
     assert %Post{id: ^pid2} = p3.post
   end
 
