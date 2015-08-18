@@ -66,8 +66,9 @@ defmodule Ecto.Adapters.SQL do
       def insert(repo, model_meta, params, {key, :binary_id, nil}, returning, opts) do
         {req, resp} = Ecto.Adapters.SQL.bingenerate(key)
         case insert(repo, model_meta, req ++ params, nil, returning, opts) do
-          {:ok, values}     -> {:ok, resp ++ values}
-          {:error, _} = err -> err
+          {:ok, values}         -> {:ok, resp ++ values}
+          {:error, _} = err     -> err
+          {:invalid, _} = err   -> err
         end
       end
 
