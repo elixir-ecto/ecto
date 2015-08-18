@@ -222,6 +222,19 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.errors == [uuid: "has already been taken"]
   end
 
+  @tag :id_type
+  @tag :unique_constraint
+  test "unique constraint with binary_id" do
+    changeset = Ecto.Changeset.change(%Custom{}, uuid: Ecto.UUID.generate())
+    {:ok, _}  = TestRepo.insert(changeset)
+
+    {:error, changeset} =
+      changeset
+      |> Ecto.Changeset.unique_constraint(:uuid)
+      |> TestRepo.insert()
+    assert changeset.errors == [uuid: "has already been taken"]
+  end
+
   @tag :foreign_key_constraint
   test "foreign key constraint" do
     changeset = Ecto.Changeset.change(%Comment{post_id: 0})

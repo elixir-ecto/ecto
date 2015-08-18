@@ -143,6 +143,7 @@ defmodule Ecto.Integration.Custom do
 
   @primary_key {:bid, :binary_id, autogenerate: true}
   schema "customs" do
+    field :uuid, Ecto.UUID
   end
 end
 

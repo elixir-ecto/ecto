@@ -44,7 +44,10 @@ defmodule Ecto.Integration.Migration do
 
     create table(:customs, primary_key: false) do
       add :bid, :binary_id, primary_key: true
+      add :uuid, :uuid
     end
+
+    create unique_index(:customs, [:uuid])
 
     create table(:barebones) do
       add :num, :integer
