@@ -974,59 +974,6 @@ defmodule Ecto.Changeset do
     end
   end
 
-  @doc false
-  def validate_unique(changeset, field, opts) when is_list(opts) do
-    IO.write "[warning] validate_unique/3 is deprecated in favor of unique_constraint/3\n" <>
-             Exception.format_stacktrace()
-
-    %{model: model, changes: changes, errors: errors, validations: validations} = changeset
-    changeset = %{changeset | validations: [{field, {:unique, opts}}|validations]}
-
-    repo   = Keyword.fetch!(opts, :on)
-    scope  = Keyword.get(opts, :scope)
-    fields = [field|List.wrap(scope)]
-
-    if Enum.any?(fields, &Map.has_key?(changes, &1)) &&
-       Enum.all?(fields, &not Keyword.has_key?(errors, &1)) do
-      struct = model.__struct__
-      value  = get_field(changeset, field)
-      query  = from m in struct, select: field(m, ^field), limit: 1
-
-      if scope do
-        query = Enum.reduce(scope, query, fn(field, acc) ->
-          case get_field(changeset, field) do
-            nil -> from m in acc, where: is_nil(field(m, ^field))
-            v   -> from m in acc, where: field(m, ^field) == ^v
-          end
-        end)
-      end
-
-      query =
-        cond do
-          value == nil ->
-            from m in query, where: is_nil(field(m, ^field))
-          opts[:downcase] ->
-            from m in query, where:
-              fragment("lower(?)", field(m, ^field)) == fragment("lower(?)", ^value)
-          true ->
-            from m in query, where: field(m, ^field) == ^value
-        end
-
-      query =
-        Enum.reduce(Ecto.Model.primary_key!(model), query, fn
-          {_, nil}, acc -> acc
-          {k, v}, acc   -> from m in acc, where: field(m, ^k) != ^v
-        end)
-
-      case repo.all(query) do
-        []  -> changeset
-        [_] -> add_error(changeset, field, message(opts, "has already been taken"))
-      end
-    else
-      changeset
-    end
-  end
-
   @doc """
   Validates a change is a string of the given length.
 

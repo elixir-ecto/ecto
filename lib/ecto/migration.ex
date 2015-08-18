@@ -482,13 +482,6 @@ defmodule Ecto.Migration do
     Runner.subcommand {:add, column, type, opts}
   end
 
-  @doc false
-  def add(column) when is_atom(column) do
-    IO.write "[warning] add/1 (without type information) is deprecated in migrations. " <>
-             "Please pass the type explicitly.\n" <> Exception.format_stacktrace()
-    add(column, :string)
-  end
-
   @doc """
   Renames a table.
 

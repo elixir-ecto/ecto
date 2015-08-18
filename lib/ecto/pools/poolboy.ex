@@ -64,17 +64,6 @@ defmodule Ecto.Pools.Poolboy do
   ## Helpers
 
   defp split_opts(opts) do
-    opts =
-      case Keyword.pop(opts, :size) do
-        {nil, opts} ->
-          opts
-        {size, opts} ->
-          repo = Keyword.get(opts, :repo, Ecto.Pool)
-          IO.puts "[warning] the :size option when configuring #{inspect repo} is deprecated, " <>
-                  "please use :pool_size instead"
-          Keyword.put(opts, :pool_size, size)
-      end
-
     {pool_opts, conn_opts} = Keyword.split(opts, [:pool_name, :pool_size, :max_overflow])
 
     conn_opts =
