@@ -519,6 +519,19 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.get(Post, id).temp == "temp"
   end
 
+  test "reload" do
+    post = TestRepo.insert!(%Post{text: "original"})
+
+    changeset = Ecto.Changeset.change(post, text: "changed")
+    TestRepo.update!(changeset)
+
+    assert post.text == "original"
+
+    post = TestRepo.reload(post)
+
+    assert post.text == "changed"
+  end
+
   ## Assocs
 
   test "has_many assoc" do
