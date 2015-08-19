@@ -109,8 +109,6 @@ defmodule Ecto.Changeset do
   alias __MODULE__
   alias Ecto.Changeset.Relation
 
-  import Ecto.Query, only: [from: 2]
-
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: [],
             constraints: [], filters: %{}, action: nil, types: nil
