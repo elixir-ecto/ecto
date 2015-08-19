@@ -152,6 +152,14 @@ defmodule Ecto.Repo do
         Ecto.Repo.Preloader.preload(model_or_models, __MODULE__, preloads)
       end
 
+      def reload(%{ __struct__: queryable, id: id }, opts \\ []) do
+        Ecto.Repo.Queryable.get(__MODULE__, @adapter, queryable, id, opts)
+      end
+
+      def reload!(%{ __struct__: queryable, id: id }, opts \\ []) do
+        Ecto.Repo.Queryable.get!(__MODULE__, @adapter, queryable, id, opts)
+      end
+
       def __adapter__ do
         @adapter
       end
@@ -324,6 +332,37 @@ defmodule Ecto.Repo do
   """
   defcallback preload([Ecto.Model.t] | Ecto.Model.t, preloads :: term) ::
                       [Ecto.Model.t] | Ecto.Model.t
+
+
+  @doc """
+  Reloads a single model from the data store.
+
+  Returns `nil` if no result was found. If the model in the queryable
+  has no primary key `Ecto.NoPrimaryKeyError` will be raised.
+
+  ## Options
+
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000)
+    * `:log` - When false, does not log the query
+
+  """
+
+  defcallback reload(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
+
+  @doc """
+
+  Similar to `reload/2` but raises `Ecto.NoResultsError` if no record was found.
+
+  ## Options
+
+    * `:timeout` - The time in milliseconds to wait for the call to finish,
+      `:infinity` will wait indefinitely (default: 5000)
+    * `:log` - When false, does not log the query
+
+  """
+
+  defcallback reload!(Ecto.Queryable.t, Keyword.t) :: Ecto.Model.t | nil | no_return
 
   @doc """
   Fetches all entries from the data store matching the given query.
