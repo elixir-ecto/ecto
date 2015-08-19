@@ -532,6 +532,16 @@ defmodule Ecto.Integration.RepoTest do
     assert post.text == "changed"
   end
 
+  test "reload!" do
+    post = TestRepo.insert!(%Post{text: "original"})
+
+    TestRepo.delete(post)
+
+    assert_raise Ecto.NoResultsError, fn ->
+      TestRepo.reload!(post)
+    end
+  end
+
   ## Assocs
 
   test "has_many assoc" do
