@@ -660,6 +660,26 @@ defmodule Ecto.AssociationTest do
     end
   end
 
+  # Please note the order is important in this test.
+  test "cast has_many should be composable with :empty" do
+    posts = [%Post{title: "hello", id: 1},
+             %Post{title: "unknown", id: 2},
+             %Post{title: "other", id: 3}]
+    params = [%{"id" => 1, "title" => "hello"},
+              %{"id" => 2, "title" => "unknown"},
+              %{"id" => 3, "title" => "other"}]
+
+    changeset = %Author{posts: posts}
+    |> Changeset.cast(:empty, ~w(posts))
+    |> Changeset.cast(%{"posts" => params}, ~w(posts))
+
+    for post <- (changeset.changes[:posts] || []) do
+       assert post.valid?
+    end
+    assert changeset.valid?
+
+  end
+
   test "cast has_many with invalid params" do
     changeset = Changeset.cast(%Author{}, %{"posts" => "value"}, ~w(posts))
     assert changeset.errors == [posts: "is invalid"]
