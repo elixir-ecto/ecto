@@ -119,7 +119,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: can't cast required field" do
+  test "cast/4: can't cast required field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
 
@@ -129,7 +129,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: can't cast optional field" do
+  test "cast/4: can't cast optional field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
 
@@ -158,6 +158,14 @@ defmodule Ecto.ChangesetTest do
 
   test "cast/4: does not mark as required if model contains field" do
     changeset = cast(%Post{title: "valid"}, %{}, ~w(title), ~w())
+    assert changeset.errors == []
+    assert changeset.valid?
+  end
+
+  test "cast/4: does not mark as required if changes contains field" do
+    changeset = cast(%Post{}, %{title: "valid"}, ~w(title), ~w())
+    changeset = cast(changeset, %{}, ~w(title), ~w())
+    assert changeset.changes == %{title: "valid"}
     assert changeset.errors == []
     assert changeset.valid?
   end

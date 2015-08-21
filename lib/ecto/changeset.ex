@@ -300,19 +300,21 @@ defmodule Ecto.Changeset do
                changes: %{}, required: required, optional: optional, types: types}
   end
 
-  def cast(%Changeset{} = changeset, %{} = params, required, optional)
-      when is_list(required) and is_list(optional) do
-    new_changeset = cast(changeset.model, params, required, optional)
+  def cast(%Changeset{changes: changes, model: model} = changeset, params, required, optional) do
+    new_changeset = cast(model, changes, params, required, optional)
     merge(changeset, new_changeset)
   end
 
-  def cast(%{__struct__: module} = model, %{} = params, required, optional)
-      when is_list(required) and is_list(optional) do
+  def cast(%{__struct__: _} = model, params, required, optional) do
+    cast(model, %{}, params, required, optional)
+  end
+
+  defp cast(%{__struct__: module} = model, %{} = changes, %{} = params, required, optional) do
     params = convert_params(params)
     types  = module.__changeset__
 
     {optional, {changes, errors, valid?}} =
-      Enum.map_reduce(optional, {%{}, [], true},
+      Enum.map_reduce(optional, {changes, [], true},
                       &process_param(&1, :optional, params, types, model, &2))
 
     {required, {changes, errors, valid?}} =
@@ -335,20 +337,27 @@ defmodule Ecto.Changeset do
     key
   end
 
-  defp process_param({key, fun}, kind, params, types, model, acc) do
+  defp process_param({key, fun}, kind, params, types, model, {changes, _, _} = acc) do
     {key, param_key} = cast_key(key)
     type = relation!(types, key, fun)
-    current = Map.get(model, key)
+    current = get_current(model, changes, key)
 
     do_process_param(key, param_key, kind, params, type, current, model, acc)
   end
 
-  defp process_param(key, kind, params, types, model, acc) do
+  defp process_param(key, kind, params, types, model, {changes, _, _} = acc) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
-    current = Map.get(model, key)
+    current = get_current(model, changes, key)
 
     do_process_param(key, param_key, kind, params, type, current, model, acc)
+  end
+
+  defp get_current(model, changes, key) do
+    case Map.fetch(changes, key) do
+      {:ok, value} -> value
+      :error -> Map.get(model, key)
+    end
   end
 
   defp do_process_param(key, param_key, kind, params, type, current,
