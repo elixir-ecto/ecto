@@ -32,6 +32,10 @@ defmodule Ecto.ChangesetTest do
     cast(model, params, ~w(), ~w(title body upvotes topics decimal))
   end
 
+  defp changeset_with_required(model \\ %Post{}, params) do
+    cast(model, params, ~w(title), ~w(body upvotes topics decimal))
+  end
+
   ## cast/4
 
   test "cast/4: with valid string keys" do
@@ -200,6 +204,14 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes  == %{body: "new body"}
     assert changeset.required == [:title]
     assert changeset.optional == [:body]
+  end
+
+  test "cast/4: works with a changeset when required params are already among changes" do
+    base_changeset = changeset_with_required(%{"title": "the title"})
+    changeset = changeset_with_required(base_changeset, %{body: "new body"})
+    assert changeset.changes[:title] == "the title"
+    assert changeset.errors == []
+    assert changeset.valid?
   end
 
   test "cast/4: works on casting a datetime field" do
