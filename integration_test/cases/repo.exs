@@ -623,6 +623,24 @@ defmodule Ecto.Integration.RepoTest do
     assert [0] == TestRepo.all(from(c in Comment, select: count(c.id)))
   end
 
+  test "has_many nested assoc and constraints" do
+    #TODO can we assert that `unique_constraint` for `uuid` exists?
+
+    author = TestRepo.insert!(%User{name: "Lovecraft"})
+    TestRepo.insert!(%Post{title: "The Call Of Chtulchu", author_id: author.id})
+    TestRepo.insert!(%Post{title: "The Shadow Out Of Time", author_id: author.id})
+
+    title1 = "shall not be named"
+    author = TestRepo.preload author, [:posts]
+    posts_params = Enum.map author.posts, fn %Post{uuid: u} ->
+      %{"uuid": u, "title": title1}
+    end
+
+    changeset = Ecto.Changeset.cast(author, %{"posts" => posts_params}, ~w(posts))
+    author = TestRepo.update! changeset
+    assert [title1, title1] == Enum.map(author.posts, &(&1.title))
+  end
+
   @tag :transaction
   test "rollbacks failed nested assocs" do
     permalink_changeset = %{Ecto.Changeset.change(%Permalink{url: "1"}) | valid?: false}

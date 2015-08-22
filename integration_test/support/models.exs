@@ -49,6 +49,12 @@ defmodule Ecto.Integration.Post do
     belongs_to :author, Ecto.Integration.User
     timestamps
   end
+
+  def changeset(model, params) do
+    model
+    |> cast(params, [], ~w(counter title text temp public cost visits
+                           intensity bid uuid meta posted))
+  end
 end
 
 defmodule Ecto.Integration.PostUsecTimestamps do
