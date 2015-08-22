@@ -233,13 +233,16 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp map_changes([], _pks, fun, current, acc, valid?, skip?) do
-    {previous, {valid?, skip?}} =
-      Enum.map_reduce(current, {valid?, skip?}, fn {_, model}, {valid?, skip?} ->
-        changeset = fun.(nil, model)
-        {changeset, {valid? && changeset.valid?, skip? && skip?(changeset)}}
+    {changesets, valid?, skip?} =
+      Enum.reduce(current, {Enum.reverse(acc), valid?, skip?}, fn
+        {_, model}, {changesets, valid?, skip?} ->
+          changeset = fun.(nil, model)
+          {[changeset | changesets],
+           valid? && changeset.valid?,
+           skip? && skip?(changeset)}
       end)
 
-    {:ok, Enum.reverse(acc, previous), valid?, skip?}
+    {:ok, changesets, valid?, skip?}
   end
 
   defp map_changes([map | rest], pks, fun, current, acc, valid?, skip?) when is_map(map) do
