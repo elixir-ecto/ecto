@@ -624,11 +624,14 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "has_many nested assoc and constraints" do
-    #TODO can we assert that `unique_constraint` for `uuid` exists?
-
     author = TestRepo.insert!(%User{name: "Lovecraft"})
-    TestRepo.insert!(%Post{title: "The Call Of Chtulchu", author_id: author.id})
+    p1 = TestRepo.insert!(%Post{title: "The Call Of Chtulchu", author_id: author.id})
     TestRepo.insert!(%Post{title: "The Shadow Out Of Time", author_id: author.id})
+
+    # Asserts that `unique_constraint` for `uuid` exists
+    assert_raise Ecto.ConstraintError, fn ->
+      TestRepo.insert!(%Post{title: "CoC Parody", author_id: author.id, uuid: p1.uuid})
+    end
 
     title1 = "shall not be named"
     author = TestRepo.preload author, [:posts]
