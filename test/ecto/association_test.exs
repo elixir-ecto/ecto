@@ -638,7 +638,11 @@ defmodule Ecto.AssociationTest do
               %{"id" => 3, "title" => "new name"}]
 
     changeset = Changeset.cast(%Author{posts: posts}, %{"posts" => params}, ~w(posts))
-    [new, unknown, other, hello] = changeset.changes.posts
+    [hello, new, unknown, other] = changeset.changes.posts
+    assert hello.model.id == 1
+    assert hello.required == [] # Check for not running chgangeset function
+    assert hello.action == :delete
+    assert hello.valid?
     assert new.changes == %{title: "new"}
     assert new.action == :insert
     assert new.valid?
@@ -649,10 +653,6 @@ defmodule Ecto.AssociationTest do
     assert other.model.id == 3
     assert other.action == :update
     assert other.valid?
-    assert hello.model.id == 1
-    assert hello.required == [] # Check for not running chgangeset function
-    assert hello.action == :delete
-    assert hello.valid?
     refute changeset.valid?
 
     assert_raise Ecto.UnmachedRelationError, fn ->
