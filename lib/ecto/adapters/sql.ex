@@ -528,8 +528,8 @@ defmodule Ecto.Adapters.SQL do
       :opened, ref, {mod, _conn}, queue_time ->
         mode = transaction_mode(pool_mod, pool, timeout)
         transaction(repo, ref, mod, mode, queue_time, timeout, opts, fun)
-      :already_open, _, _, _ ->
-        {{:return, {:ok, fun.()}}, nil}
+      :already_open, ref, _, _ ->
+        {{:return, Pool.with_rollback(:already_open, ref, fun)}, nil}
     end
 
     case Pool.transaction(pool_mod, pool, timeout, transaction) do
@@ -563,7 +563,7 @@ defmodule Ecto.Adapters.SQL do
     case begin(repo, mod, mode, queue_time, opts) do
       {{:ok, _}, entry} ->
         safe = fn -> log(repo, entry); fun.() end
-        case Pool.with_rollback(ref, safe) do
+        case Pool.with_rollback(:opened, ref, safe) do
           {:ok, _} = ok ->
             commit(repo, ref, mod, mode, timeout, opts, {:return, ok})
           {:error, _} = error ->

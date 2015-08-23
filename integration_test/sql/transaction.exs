@@ -118,12 +118,13 @@ defmodule Ecto.Integration.TransactionTest do
     x = PoolRepo.transaction(fn ->
       e = PoolRepo.insert!(%Trans{text: "6"})
       assert [^e] = PoolRepo.all(Trans)
-      PoolRepo.transaction(fn ->
+      assert {:error, :oops} = PoolRepo.transaction(fn ->
         PoolRepo.rollback(:oops)
       end)
+      assert {:noconnect, _} = catch_exit(PoolRepo.insert!(%Trans{text: "5"}))
     end)
 
-    assert x == {:error, :oops}
+    assert x == {:error, :rollback}
     assert [] = TestRepo.all(Trans)
   end
 

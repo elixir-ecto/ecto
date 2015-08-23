@@ -541,10 +541,9 @@ defmodule Ecto.Repo do
 
   If `transaction/2` is called inside another transaction, the function
   is simply executed, without wrapping the new transaction call in any
-  way. In fact, calling `rollback/1` inside the inner transaction will
-  propagate until the parent one. Finally, if there is an error in the
-  inner transaction and the error is rescued, the whole outer transaction
-  is marked as tainted, guaranteeing nothing will be comitted.
+  way. If there is an error in the inner transaction and the error is
+  rescued, or the inner transaction is rolled back, the whole outer
+  transaction is marked as tainted, guaranteeing nothing will be comitted.
 
   ## Options
 
@@ -557,16 +556,6 @@ defmodule Ecto.Repo do
       MyRepo.transaction(fn ->
         MyRepo.update!(%{alice | balance: alice.balance - 10})
         MyRepo.update!(%{bob | balance: bob.balance + 10})
-      end)
-
-      # In the following example only the comment will be rolled back
-      MyRepo.transaction(fn ->
-        MyRepo.insert!(%Post{})
-
-        MyRepo.transaction(fn ->
-          MyRepo.insert!(%Comment{})
-          raise "error"
-        end)
       end)
 
       # Roll back a transaction explicitly

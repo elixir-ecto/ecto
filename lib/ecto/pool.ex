@@ -284,10 +284,10 @@ defmodule Ecto.Pool do
   `{:error, value}` if the user rolled back or
   `{:raise, kind, error, stack}` in case there was a failure.
   """
-  @spec with_rollback(ref, (() -> return)) ::
+  @spec with_rollback(:opened | :already_open, ref, (() -> return)) ::
         {:ok, return} | {:error, term} | {:raise, atom, term, Exception.stacktrace}
         when return: var
-  def with_rollback(ref, fun) do
+  def with_rollback(:opened, ref, fun) do
     try do
       value = fun.()
       case Process.get(ref) do
@@ -302,6 +302,16 @@ defmodule Ecto.Pool do
         {:raise, kind, reason, stack}
     after
       tainted(ref, false)
+    end
+  end
+
+  def with_rollback(:already_open, ref, fun) do
+    try do
+      {:ok, fun.()}
+    catch
+      :throw, {:ecto_rollback, ^ref, value} ->
+        tainted(ref, true)
+        {:error, value}
     end
   end
 
