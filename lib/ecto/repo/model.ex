@@ -59,9 +59,9 @@ defmodule Ecto.Repo.Model do
 
     wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
                         ~w(before_insert after_insert)a, fn ->
-      changeset = Callbacks.__apply__(model, :before_insert, changeset)
-      changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
+      user_changeset = Callbacks.__apply__(model, :before_insert, changeset)
 
+      changeset = Ecto.Embedded.prepare(user_changeset, embeds, adapter, :insert)
       {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
       {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
       changes = validate_changes(:insert, changes, model, fields, adapter)
@@ -74,8 +74,8 @@ defmodule Ecto.Repo.Model do
           |> process_embeds(embed_changes, adapter, repo, opts)
           |> process_assocs(assoc_changes, adapter, repo, opts)
           |> maybe_process_after(model, :after_insert)
-        {:error, _} = error ->
-          error
+        {:invalid, constraints} ->
+          {:error, constraints_to_errors(user_changeset, :insert, constraints)}
       end
     end)
   end
@@ -107,9 +107,9 @@ defmodule Ecto.Repo.Model do
     if changeset.changes != %{} or opts[:force] do
       wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
                           ~w(before_update after_update)a, fn ->
-        changeset = Callbacks.__apply__(model, :before_update, changeset)
-        changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
+        user_changeset = Callbacks.__apply__(model, :before_update, changeset)
 
+        changeset = Ecto.Embedded.prepare(user_changeset, embeds, adapter, :update)
         {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
         autogen = get_autogenerate_id(changeset.changes, model)
         changes = validate_changes(:update, changeset.changes, model, fields, adapter)
@@ -126,8 +126,8 @@ defmodule Ecto.Repo.Model do
             |> process_embeds(embed_changes, adapter, repo, opts)
             |> process_assocs(assoc_changes, adapter, repo, opts)
             |> maybe_process_after(model, :after_update)
-          {:error, _} = error ->
-            error
+          {:invalid, constraints} ->
+            {:error, constraints_to_errors(user_changeset, :update, constraints)}
         end
       end)
     else
@@ -182,8 +182,8 @@ defmodule Ecto.Repo.Model do
           # process associations because they are handled externally.
           _ = process_embeds(changeset, embeds, adapter, repo, opts)
           {:ok, Callbacks.__apply__(model, :after_delete, changeset).model}
-        {:error, _} = error ->
-          error
+        {:invalid, constraints} ->
+          {:error, constraints_to_errors(changeset, :delete, constraints)}
       end
     end)
   end
@@ -219,8 +219,8 @@ defmodule Ecto.Repo.Model do
     case apply(adapter, action, args) do
       {:ok, values} ->
         {:ok, load_changes(changeset, action, values, adapter)}
-      {:invalid, constraints} ->
-        {:error, constraints_to_errors(changeset, action, constraints)}
+      {:invalid, _} = constraints ->
+        constraints
       {:error, :stale} ->
         raise Ecto.StaleModelError, model: changeset.model, action: action
     end

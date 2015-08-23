@@ -439,6 +439,10 @@ defmodule Ecto.RepoTest do
     [%{id: id}] = model.embeds
     assert id
     assert model.embeds == [%{embed | id: id}]
+  end
+
+  test "handles embeds on insert when error" do
+    embed = %MyEmbed{x: "xyz"}
 
     # Raises if action is update
     embed_changeset = %{Ecto.Changeset.change(embed) | action: :update}
@@ -453,9 +457,20 @@ defmodule Ecto.RepoTest do
     assert_raise ArgumentError, ~r"got action :delete in changeset for embedded .* while inserting", fn ->
       TestRepo.insert!(changeset)
     end
+
+    # Returns error and rollbacks on invalid constraint
+    embed_changeset = Ecto.Changeset.change(embed)
+    changeset =
+      put_in(%MyModel{}.__meta__.context, {:invalid, [unique: "my_model_foo_index"]})
+      |> Ecto.Changeset.change(embed: embed_changeset)
+      |> Ecto.Changeset.unique_constraint(:foo)
+    assert {:error, changeset} = TestRepo.insert(changeset)
+    assert_received {:rollback, ^changeset}
+    assert changeset.changes.embed
+    refute changeset.valid?
   end
 
-  test "handles assocs on insert" do
+  test "handles assocs on insert when ok" do
     assoc = %MyAssoc{x: "xyz"}
     inserted_assoc = put_in assoc.__meta__.state, :loaded
 
@@ -502,6 +517,10 @@ defmodule Ecto.RepoTest do
     assert id
     assert model.id == model_id
     assert model.assocs == [%{inserted_assoc | id: id, my_model_id: model_id}]
+  end
+
+  test "handles assocs on insert when error" do
+    assoc = %MyAssoc{x: "xyz"}
 
     # Raises if action is delete
     assoc_changeset = %{Ecto.Changeset.change(assoc) | action: :delete}
@@ -515,6 +534,17 @@ defmodule Ecto.RepoTest do
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
     assert {:error, changeset} = TestRepo.insert(changeset)
     assert_received {:rollback, ^changeset}
+    refute changeset.valid?
+
+    # Returns error and rollbacks on invalid constraint
+    assoc_changeset = Ecto.Changeset.change(assoc)
+    changeset =
+      put_in(%MyModel{}.__meta__.context, {:invalid, [unique: "my_model_foo_index"]})
+      |> Ecto.Changeset.change(assoc: assoc_changeset)
+      |> Ecto.Changeset.unique_constraint(:foo)
+    assert {:error, changeset} = TestRepo.insert(changeset)
+    assert_received {:rollback, ^changeset}
+    assert changeset.changes.assoc
     refute changeset.valid?
   end
 
@@ -811,6 +841,45 @@ defmodule Ecto.RepoTest do
             {:before_delete, MyAssoc}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
     assert model.assocs == []
+  end
+
+  test "handles embeds on update when error" do
+    embed = %MyEmbed{x: "xyz"}
+
+    # Returns error and rollbacks on invalid constraint
+    embed_changeset = Ecto.Changeset.change(embed)
+    my_model = %MyModel{id: 1, embed: nil}
+    changeset =
+      put_in(my_model.__meta__.context, {:invalid, [unique: "my_model_foo_index"]})
+      |> Ecto.Changeset.change(embed: embed_changeset, x: "foo")
+      |> Ecto.Changeset.unique_constraint(:foo)
+    assert {:error, changeset} = TestRepo.update(changeset)
+    assert_received {:rollback, ^changeset}
+    assert changeset.changes.embed
+    refute changeset.valid?
+  end
+
+  test "handles assocs on update when error" do
+    assoc = %MyAssoc{x: "xyz"}
+
+    # Returns error and rollbacks on invalid children
+    assoc_changeset = %{Ecto.Changeset.change(assoc) | valid?: false}
+    changeset = Ecto.Changeset.change(%MyModel{id: 1}, assoc: assoc_changeset)
+    assert {:error, changeset} = TestRepo.update(changeset)
+    assert_received {:rollback, ^changeset}
+    refute changeset.valid?
+
+    # Returns error and rollbacks on invalid constraint
+    assoc_changeset = Ecto.Changeset.change(assoc)
+    my_model = %MyModel{id: 1, assoc: nil}
+    changeset =
+      put_in(my_model.__meta__.context, {:invalid, [unique: "my_model_foo_index"]})
+      |> Ecto.Changeset.change(assoc: assoc_changeset, x: "foo")
+      |> Ecto.Changeset.unique_constraint(:foo)
+    assert {:error, changeset} = TestRepo.update(changeset)
+    assert_received {:rollback, ^changeset}
+    assert changeset.changes.assoc
+    refute changeset.valid?
   end
 
   test "handles nested embeds on update" do
