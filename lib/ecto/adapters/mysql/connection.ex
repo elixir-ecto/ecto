@@ -215,17 +215,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp join(%Query{joins: []}, _sources), do: []
     defp join(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
-        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix} ->
+        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name, _model} = elem(sources, ix)
           qual = join_qual(qual)
-          join =
-            case join do
-              table when is_binary(table) ->
-                table
-              {:fragment, _, _} ->
-                "(" <> expr(join, sources, query) <> ")"
-            end
-
+          join = join || "(" <> expr(source, sources, query) <> ")"
           "#{qual} JOIN " <> join <> " AS #{name} ON " <> expr(expr, sources, query)
       end)
     end
@@ -448,8 +441,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
           {table, model} ->
             name = String.first(table) <> Integer.to_string(pos)
             {quote_table(prefix, table), name, model}
-          {:fragment, _, _} = fragment ->
-            {fragment, "f" <> Integer.to_string(pos), nil}
+          {:fragment, _, _} ->
+            {nil, "f" <> Integer.to_string(pos), nil}
         end
       [current|create_names(prefix, sources, pos + 1, limit)]
     end

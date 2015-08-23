@@ -434,7 +434,7 @@ defmodule Ecto.Adapters.PostgresTest do
             |> normalize
     assert SQL.all(query) ==
            ~s{SELECT m0."id", $1 FROM "model" AS m0 INNER JOIN } <>
-           ~s{(SELECT * FROM model2 AS m2 WHERE m2.id = m0."x" AND m2.field = $1) AS f1 ON TRUE } <>
+           ~s{(SELECT * FROM model2 AS m2 WHERE m2.id = m0."x" AND m2.field = $2) AS f1 ON TRUE } <>
            ~s{WHERE ((m0."id" > 0) AND (m0."id" < $3))}
   end
 
