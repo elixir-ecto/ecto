@@ -625,13 +625,8 @@ defmodule Ecto.Integration.RepoTest do
 
   test "has_many assoc with constraints" do
     author = TestRepo.insert!(%User{name: "john doe"})
-    p1 = TestRepo.insert!(%Post{title: "hello", author_id: author.id})
+    TestRepo.insert!(%Post{title: "hello", author_id: author.id})
     TestRepo.insert!(%Post{title: "world", author_id: author.id})
-
-    # Asserts that `unique_constraint` for `uuid` exists
-    assert_raise Ecto.ConstraintError, fn ->
-      TestRepo.insert!(%Post{title: "another", author_id: author.id, uuid: p1.uuid})
-    end
 
     author = TestRepo.preload author, [:posts]
     posts_params = Enum.map author.posts, fn %Post{uuid: u} ->
