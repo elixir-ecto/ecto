@@ -55,7 +55,7 @@ defmodule Ecto.Repo.Model do
     # changeset as changes, except the primary key if it is nil.
     # We also remove all embeds that are not in the changes
     changeset = %{changeset | repo: repo, action: :insert}
-    changeset = insert_changes(struct, fields, embeds, changeset)
+    changeset = insert_changes(struct, fields, embeds, assocs, changeset)
 
     wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
                         ~w(before_insert after_insert)a, fn ->
@@ -269,14 +269,34 @@ defmodule Ecto.Repo.Model do
     end)
   end
 
-  defp insert_changes(struct, fields, embeds, changeset) do
+  defp insert_changes(struct, fields, embeds, assocs, changeset) do
     types = changeset.types
+    assert_empty_relation!(struct, embeds, types)
+    assert_empty_relation!(struct, assocs, types)
+
     base =
       Enum.reduce embeds, Map.take(struct, fields), fn field, acc ->
         {:embed, embed} = Map.get(types, field)
         Map.put(acc, field, Ecto.Changeset.Relation.empty(embed))
       end
+
     update_in changeset.changes, &Map.merge(base, &1)
+  end
+
+  defp assert_empty_relation!(struct, relation, types) do
+    Enum.each relation, fn field ->
+      case Map.get(types, field) do
+        {kind, relation} ->
+          value = Map.get(struct, field)
+          unless Ecto.Changeset.Relation.empty?(relation, value) do
+            raise ArgumentError, "model #{inspect struct.__struct__} has value `#{inspect value}` " <>
+              "set for #{kind} named `#{field}`. #{kind}s can only be manipulate via changesets, " <>
+              "be it on insert, update or delete."
+          end
+        _ ->
+          :ok
+      end
+    end
   end
 
   defp pop_from_changes(changeset, fields) do

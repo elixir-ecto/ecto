@@ -31,6 +31,14 @@ defmodule Ecto.Changeset.Relation do
   defp do_empty(:many), do: []
 
   @doc """
+  Checks if the container can be considered empty.
+  """
+  def empty?(%{cardinality: _}, %NotLoaded{}), do: true
+  def empty?(%{cardinality: :many}, []), do: true
+  def empty?(%{cardinality: :one}, nil), do: true
+  def empty?(%{}, _), do: false
+
+  @doc """
   Performs the repository action in the related changeset, returning
   `{:ok, model}` or `{:error, changeset}`.
   """

@@ -363,7 +363,7 @@ defmodule Ecto.RepoTest do
   defp get_after_changes([{_, changeset} | _]), do: changeset.changes
 
   test "adds embeds to changeset as empty on insert" do
-    TestRepo.insert!(%MyModel{embed: %MyEmbed{}, embeds: [%MyEmbed{}]})
+    TestRepo.insert!(%MyModel{})
     assert Agent.get(CallbackAgent, &get_before_changes/1) ==
       %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
     assert Agent.get(CallbackAgent, &get_after_changes/1) ==
@@ -371,7 +371,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "skips adding assocs to changeset on insert" do
-    TestRepo.insert!(%MyModel{assoc: %MyAssoc{}, assocs: [%MyAssoc{}]})
+    TestRepo.insert!(%MyModel{})
     assert Agent.get(CallbackAgent, &get_before_changes/1) ==
       %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
     assert Agent.get(CallbackAgent, &get_after_changes/1) ==
@@ -397,31 +397,6 @@ defmodule Ecto.RepoTest do
   test "handles embeds on insert" do
     embed = %MyEmbed{x: "xyz"}
 
-    # Rejects embeds when inserting model
-    model = TestRepo.insert!(%MyModel{embed: embed})
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == nil
-
-    model = TestRepo.insert!(%MyModel{embeds: [embed]})
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embeds == []
-
-    # Rejects if not in changes
-    changeset = Ecto.Changeset.change(%MyModel{embed: embed})
-    model = TestRepo.insert!(changeset)
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == nil
-
-    changeset = Ecto.Changeset.change(%MyModel{embeds: [embed]})
-    model = TestRepo.insert!(changeset)
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embeds == []
-
-    # Inserts when in changes
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed)
     model = TestRepo.insert!(changeset)
     assert [{:after_insert, MyModel}, {:after_insert, MyEmbed},
@@ -443,6 +418,15 @@ defmodule Ecto.RepoTest do
 
   test "handles embeds on insert when error" do
     embed = %MyEmbed{x: "xyz"}
+
+    # Raises with assocs when inserting model
+    assert_raise ArgumentError, ~r"set for embed named `embed`", fn ->
+      TestRepo.insert!(%MyModel{embed: embed})
+    end
+
+    assert_raise ArgumentError, ~r"set for embed named `embeds`", fn ->
+      TestRepo.insert!(%MyModel{embeds: [embed]})
+    end
 
     # Raises if action is update
     embed_changeset = %{Ecto.Changeset.change(embed) | action: :update}
@@ -474,31 +458,6 @@ defmodule Ecto.RepoTest do
     assoc = %MyAssoc{x: "xyz"}
     inserted_assoc = put_in assoc.__meta__.state, :loaded
 
-    # Rejects assocs when inserting model
-    model = TestRepo.insert!(%MyModel{assoc: assoc})
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.assoc == assoc
-
-    model = TestRepo.insert!(%MyModel{assocs: [assoc]})
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.assocs == [assoc]
-
-    # Rejects if not in changes
-    changeset = Ecto.Changeset.change(%MyModel{assoc: assoc})
-    model = TestRepo.insert!(changeset)
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.assoc == assoc
-
-    changeset = Ecto.Changeset.change(%MyModel{assocs: [assoc]})
-    model = TestRepo.insert!(changeset)
-    assert [{:after_insert, MyModel}, {:before_insert, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.assocs == [assoc]
-
-    # Inserts when in changes
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc)
     model = TestRepo.insert!(changeset)
     assert [{:after_insert, MyModel}, {:after_insert, MyAssoc},
@@ -521,6 +480,15 @@ defmodule Ecto.RepoTest do
 
   test "handles assocs on insert when error" do
     assoc = %MyAssoc{x: "xyz"}
+
+    # Raises with assocs when inserting model
+    assert_raise ArgumentError, ~r"set for assoc named `assoc`", fn ->
+      TestRepo.insert!(%MyModel{assoc: assoc})
+    end
+
+    assert_raise ArgumentError, ~r"set for assoc named `assocs`", fn ->
+      TestRepo.insert!(%MyModel{assocs: [assoc]})
+    end
 
     # Raises if action is delete
     assoc_changeset = %{Ecto.Changeset.change(assoc) | action: :delete}
