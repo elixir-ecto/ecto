@@ -52,7 +52,7 @@ defmodule Ecto.Changeset do
   Let's suppose the e-mail is given but the age is invalid, the
   changeset would have the following errors:
 
-      changeset = User.changeset(%User{}, age: 0, email: "mary@example.com")
+      changeset = User.changeset(%User{}, %{age: 0, email: "mary@example.com"})
       {:error, changeset} = Repo.insert(changeset)
       changeset.errors #=> [age: "is invalid"]
 
@@ -61,7 +61,7 @@ defmodule Ecto.Changeset do
   age and assume, however, that the e-mail already exists in the
   database:
 
-      changeset = User.changeset(%User{}, age: 42, email: "mary@example.com")
+      changeset = User.changeset(%User{}, %{age: 42, email: "mary@example.com"})
       {:error, changeset} = Repo.insert(changeset)
       changeset.errors #=> [email: "has already been taken"]
 
