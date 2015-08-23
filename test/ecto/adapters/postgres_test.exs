@@ -426,6 +426,18 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s{SELECT 0 FROM "prefix"."model" AS m0 INNER JOIN "prefix"."model2" AS m1 ON m0."x" = m1."z"}
   end
 
+  test "join with fragment" do
+    query = Model
+            |> join(:inner, [p], q in fragment("SELECT * FROM model2 AS m2 WHERE m2.id = ? AND m2.field = ?", p.x, ^10))
+            |> select([p], {p.id, ^0})
+            |> where([p], p.id > 0 and p.id < ^100)
+            |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT m0."id", $1 FROM "model" AS m0 INNER JOIN } <>
+           ~s{(SELECT * FROM model2 AS m2 WHERE m2.id = m0."x" AND m2.field = $1) AS f1 ON TRUE } <>
+           ~s{WHERE ((m0."id" > 0) AND (m0."id" < $3))}
+  end
+
   ## Associations
 
   test "association join belongs_to" do

@@ -132,17 +132,17 @@ defmodule Ecto.Query do
 
   defmodule QueryExpr do
     @moduledoc false
-    defstruct [expr: nil, params: [], file: nil, line: nil]
+    defstruct [:expr, :file, :line, params: %{}]
   end
 
   defmodule SelectExpr do
     @moduledoc false
-    defstruct [expr: nil, params: [], file: nil, line: nil, fields: []]
+    defstruct [:expr, :file, :line, fields: [], params: %{}]
   end
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, params: %{}]
   end
 
   defmodule Tagged do
@@ -323,9 +323,8 @@ defmodule Ecto.Query do
   `:full`. For a keyword query the `:join` keyword can be changed to:
   `:inner_join`, `:left_join`, `:right_join` or `:full_join`.
 
-  The join condition can be automatically set when doing an association
-  join. An association join can be done on any association field
-  (`has_many`, `has_one`, `belongs_to`).
+  Currently it is possible to join an existing model, an existing source
+  (table), an association or a fragment. See the examples below.
 
   ## Keywords examples
 
@@ -346,6 +345,16 @@ defmodule Ecto.Query do
       Post
       |> join(:left, [p], c in assoc(p, :comments))
       |> select([p, c], {p, c})
+
+  ## Joining with fragments
+
+  In cases you need to join on a complex expression that cannot be
+  expressed via Ecto associations, Ecto supports fragments in joins:
+
+      Comment
+      |> join(:inner, [c], p in fragment("SOME COMPLEX QUERY", c.id, ^some_param))
+
+  However, due to its complexity, such style is discouraged.
   """
   defmacro join(query, qual, binding, expr, on \\ nil) do
     Join.build(query, qual, binding, expr, on, nil, __CALLER__)

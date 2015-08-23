@@ -51,6 +51,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in Post, right_join: y in assoc(x, :post), join: z in assoc(y, :post))) ==
            ~s{from p0 in Inspect.Post, right_join: p1 in assoc(p0, :post), join: p2 in assoc(p1, :post)}
+
+    assert i(from(x in Post, inner_join: y in fragment("foo ? and ?", x.id, ^1), on: y.id == x.id)) ==
+           ~s{from p in Inspect.Post, join: f in fragment("foo ? and ?", p.id, ^1), on: f.id == p.id}
   end
 
   test "where" do

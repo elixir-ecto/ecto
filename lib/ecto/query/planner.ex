@@ -160,9 +160,10 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(:join, query, exprs, {cache, params}, adapter) do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn
-        %JoinExpr{on: on, qual: qual, source: source}, {params, cacheable?} ->
-          {params, current_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
-          {{qual, source, on.expr}, {params, cacheable? and current_cacheable?}}
+        %JoinExpr{on: on, qual: qual, source: source} = join, {params, cacheable?} ->
+          {params, join_cacheable?} = cast_and_merge_params(:join, query, join, params, adapter)
+          {params, on_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
+          {{qual, source, on.expr}, {params, cacheable? and join_cacheable? and on_cacheable?}}
       end
 
     case expr_cache do
@@ -341,17 +342,16 @@ defmodule Ecto.Query.Planner do
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources))
   end
 
-  defp prepare_joins([%JoinExpr{source: {source, nil}} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) when is_binary(source) do
-    source = {source, nil}
+  defp prepare_joins([%JoinExpr{source: {source, model}} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) when is_atom(model) and model != nil do
+    source = if is_binary(source), do: {source, model}, else: {model.__schema__(:source), model}
     join   = %{join | source: source, ix: counter}
     prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
   end
 
-  defp prepare_joins([%JoinExpr{source: {source, model}} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) when is_atom(model) do
-    source = if is_binary(source), do: {source, model}, else: {model.__schema__(:source), model}
-    join   = %{join | source: source, ix: counter}
+  defp prepare_joins([%JoinExpr{source: source} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) do
+    join = %{join | source: source, ix: counter}
     prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
   end
 
@@ -439,8 +439,9 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(:join, query, exprs, counter, adapter) do
     Enum.map_reduce exprs, counter, fn join, acc ->
+      {source, acc} = validate_and_increment_each(:join, query, join, join.source, acc, adapter)
       {on, acc} = validate_and_increment_each(:join, query, join.on, acc, adapter)
-      {%{join | on: on}, acc}
+      {%{join | on: on, source: source, params: nil}, acc}
     end
   end
 

@@ -55,13 +55,12 @@ defimpl Inspect, for: Ecto.Query do
 
   defp bound_from(from, name), do: ["from #{name} in #{unbound_from from}"]
 
-  defp unbound_from({source, nil}),    do: inspect source
-  defp unbound_from({nil, model}),    do: inspect model
+  defp unbound_from(nil),           do: "query"
+  defp unbound_from({source, nil}), do: inspect source
+  defp unbound_from({nil, model}),  do: inspect model
   defp unbound_from(from = {source, model}) do
-    inspecting = if source == model.__schema__(:source), do: model, else: from
-    inspect inspecting
+    inspect if(source == model.__schema__(:source), do: model, else: from)
   end
-  defp unbound_from(nil),              do: "query"
 
   defp joins(joins, names) do
     joins
@@ -76,6 +75,11 @@ defimpl Inspect, for: Ecto.Query do
 
   defp join(%JoinExpr{qual: qual, source: {source, model}, on: on}, name, names) do
     string = "#{name} in #{unbound_from {source, model}}"
+    [{join_qual(qual), string}, on: expr(on, names)]
+  end
+
+  defp join(%JoinExpr{qual: qual, source: source, params: params, on: on}, name, names) do
+    string = "#{name} in #{expr(source, names, params)}"
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
@@ -184,6 +188,8 @@ defimpl Inspect, for: Ecto.Query do
         assoc
       %JoinExpr{source: {source, model}} ->
         model || source
+      %JoinExpr{source: {:fragment, _, _}} ->
+        "fragment"
     end)
   end
 

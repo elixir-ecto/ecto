@@ -12,60 +12,68 @@ defmodule Ecto.Query.Builder.Join do
 
   ## Examples
 
-      iex> escape(quote(do: x in "foo"), [])
-      {:x, {"foo", nil}, nil}
+      iex> escape(quote(do: x in "foo"), [], __ENV__)
+      {:x, {"foo", nil}, nil, %{}}
 
-      iex> escape(quote(do: "foo"), [])
-      {:_, {"foo", nil}, nil}
+      iex> escape(quote(do: "foo"), [], __ENV__)
+      {:_, {"foo", nil}, nil, %{}}
 
-      iex> escape(quote(do: x in Sample), [])
-      {:x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil}
+      iex> escape(quote(do: x in Sample), [], __ENV__)
+      {:x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
 
-      iex> escape(quote(do: x in {"foo", Sample}), [])
-      {:x, {"foo", {:__aliases__, [alias: false], [:Sample]}}, nil}
+      iex> escape(quote(do: x in {"foo", Sample}), [], __ENV__)
+      {:x, {"foo", {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
 
-      iex> escape(quote(do: x in {"foo", :sample}), [])
-      {:x, {"foo", :sample}, nil}
+      iex> escape(quote(do: x in {"foo", :sample}), [], __ENV__)
+      {:x, {"foo", :sample}, nil, %{}}
 
-      iex> escape(quote(do: c in assoc(p, :comments)), [p: 0])
-      {:c, nil, {0, :comments}}
+      iex> escape(quote(do: c in assoc(p, :comments)), [p: 0], __ENV__)
+      {:c, nil, {0, :comments}, %{}}
+
+      iex> escape(quote(do: x in fragment("foo")), [], __ENV__)
+      {:x, {:{}, [], [:fragment, [], [raw: "foo"]]}, nil, %{}}
 
   """
-  @spec escape(Macro.t, Keyword.t) :: {[atom], Macro.t | nil, Macro.t | nil}
-  def escape({:in, _, [{var, _, context}, expr]}, vars)
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {[atom], Macro.t | nil, Macro.t | nil, %{}}
+  def escape({:in, _, [{var, _, context}, expr]}, vars, env)
       when is_atom(var) and is_atom(context) do
-    {_, expr, assoc} = escape(expr, vars)
-    {var, expr, assoc}
+    {_, expr, assoc, params} = escape(expr, vars, env)
+    {var, expr, assoc, params}
   end
 
-  def escape({:__aliases__, _, _} = module, _vars) do
-    {:_, {nil, module}, nil}
+  def escape({:fragment, _, [_|_]} = expr, vars, env) do
+    {expr, params} = Builder.escape(expr, :any, %{}, vars, env)
+    {:_, expr, nil, params}
   end
 
-  def escape(string, _vars) when is_binary(string) do
-    {:_, {string, nil}, nil}
+  def escape({:__aliases__, _, _} = module, _vars, _env) do
+    {:_, {nil, module}, nil, %{}}
   end
 
-  def escape({string, {:__aliases__, _, _} = module}, _vars) when is_binary(string) do
-    {:_, {string, module}, nil}
+  def escape(string, _vars, _env) when is_binary(string) do
+    {:_, {string, nil}, nil, %{}}
   end
 
-  def escape({string, atom}, _vars) when is_binary(string) and is_atom(atom) do
-    {:_, {string, atom}, nil}
+  def escape({string, {:__aliases__, _, _} = module}, _vars, _env) when is_binary(string) do
+    {:_, {string, module}, nil, %{}}
   end
 
-  def escape({:assoc, _, [{var, _, context}, field]}, vars)
+  def escape({string, atom}, _vars, _env) when is_binary(string) and is_atom(atom) do
+    {:_, {string, atom}, nil, %{}}
+  end
+
+  def escape({:assoc, _, [{var, _, context}, field]}, vars, _env)
       when is_atom(var) and is_atom(context) do
     var   = Builder.find_var!(var, vars)
     field = Builder.quoted_field!(field)
-    {:_, nil, {var, field}}
+    {:_, nil, {var, field}, %{}}
   end
 
-  def escape({:^, _, [expr]}, _vars) do
-    {:_, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil}
+  def escape({:^, _, [expr]}, _vars, _env) do
+    {:_, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil, %{}}
   end
 
-  def escape(join, _vars) do
+  def escape(join, _vars, _env) do
     Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
   end
 
@@ -88,10 +96,12 @@ defmodule Ecto.Query.Builder.Join do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
+  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.Env.t) ::
+              {Macro.t, Keyword.t, non_neg_integer | nil}
   def build(query, qual, binding, expr, on, count_bind, env) do
     binding = Builder.escape_binding(binding)
-    {join_bind, join_expr, join_assoc} = escape(expr, binding)
+    {join_bind, join_expr, join_assoc, join_params} = escape(expr, binding, env)
+    join_params = Builder.escape_params(join_params)
 
     qual = validate_qual(qual)
     validate_bind(join_bind, binding)
@@ -115,7 +125,8 @@ defmodule Ecto.Query.Builder.Join do
       quote do
         %JoinExpr{qual: unquote(qual), source: unquote(join_expr),
                   on: unquote(join_on), assoc: unquote(join_assoc),
-                  file: unquote(env.file), line: unquote(env.line)}
+                  file: unquote(env.file), line: unquote(env.line),
+                  params: unquote(join_params)}
       end
 
     if is_integer(count_bind) do
