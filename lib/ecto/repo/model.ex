@@ -70,6 +70,7 @@ defmodule Ecto.Repo.Model do
       args = [repo, metadata(struct), changes, autogen, return, opts]
       case apply(changeset, adapter, :insert, args) do
         {:ok, changeset} ->
+          opts = Keyword.put(opts, :skip_transaction, true)
           changeset
           |> process_embeds(embed_changes, adapter, repo, opts)
           |> process_assocs(assoc_changes, adapter, repo, opts)
@@ -122,6 +123,7 @@ defmodule Ecto.Repo.Model do
         action = if changes == [], do: :noop, else: :update
         case apply(changeset, adapter, action, args) do
           {:ok, changeset} ->
+            opts = Keyword.put(opts, :skip_transaction, true)
             changeset
             |> process_embeds(embed_changes, adapter, repo, opts)
             |> process_assocs(assoc_changes, adapter, repo, opts)
@@ -177,6 +179,7 @@ defmodule Ecto.Repo.Model do
       args = [repo, metadata(struct), filters, autogen, opts]
       case apply(changeset, adapter, :delete, args) do
         {:ok, changeset} ->
+          opts = Keyword.put(opts, :skip_transaction, true)
           # We ignore the results because we still want to keep
           # the embed values in the model. Also note we don't
           # process associations because they are handled externally.
@@ -355,6 +358,7 @@ defmodule Ecto.Repo.Model do
 
   defp wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, callbacks, fun) do
     if transaction_required?(model, embeds, assocs, callbacks) and
+       Keyword.get(opts, :skip_transaction) != true and
        function_exported?(adapter, :transaction, 3) do
       adapter.transaction(repo, opts, fn ->
         case fun.() do

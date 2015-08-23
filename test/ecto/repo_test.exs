@@ -516,6 +516,24 @@ defmodule Ecto.RepoTest do
     refute changeset.valid?
   end
 
+  test "handles assocs on insert with assoc constraint error" do
+    assoc_changeset =
+      put_in(%MyAssoc{}.__meta__.context, {:invalid, [unique: "my_assoc_foo_index"]})
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.unique_constraint(:foo)
+
+    changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
+    assert {:error, changeset} = TestRepo.insert(changeset)
+    assert changeset.changes.assoc
+    refute changeset.valid?
+
+    # Just one transaction was used
+    assert_received {:transaction, _}
+    assert_received {:rollback, ^changeset}
+    refute_received {:transaction, _}
+    refute_received {:rollback, _}
+  end
+
   test "handles nested embeds on insert" do
     sub_embed = %SubEmbed{y: "xyz"}
     embed = Ecto.Changeset.change(%MyEmbed{x: "xyz"}, sub_embed: sub_embed)
@@ -537,17 +555,26 @@ defmodule Ecto.RepoTest do
     assert id
     assert model.assoc.sub_assoc == %{inserted_assoc | id: id, my_assoc_id: model.assoc.id}
 
+    # Just one transaction was used
+    assert_received {:transaction, _}
+    refute_received {:rollback, _}
+
     sub_assoc_change = %{Ecto.Changeset.change(sub_assoc) | valid?: false}
     assoc = Ecto.Changeset.change(%MyAssoc{x: "xyz"}, sub_assoc: sub_assoc_change)
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc)
     assert {:error, changeset} = TestRepo.insert(changeset)
-    assert_received {:rollback, ^changeset}
     refute changeset.changes.id
     refute changeset.changes.assoc.changes.id
     refute changeset.changes.assoc.changes.my_model_id
     refute changeset.changes.assoc.changes.sub_assoc.changes.id
     refute changeset.changes.assoc.changes.sub_assoc.changes.my_assoc_id
     refute changeset.valid?
+
+    # Just one transaction was used
+    assert_received {:transaction, _}
+    assert_received {:rollback, ^changeset}
+    refute_received {:transaction, _}
+    refute_received {:rollback, _}
   end
 
   test "skips embeds on update when not changing" do
@@ -871,15 +898,24 @@ defmodule Ecto.RepoTest do
     id = model.assoc.sub_assoc.id
     assert model.assoc.sub_assoc == %{inserted_assoc | id: id, my_assoc_id: model.assoc.id}
 
+    # One transaction was used
+    assert_received {:transaction, _}
+    refute_received {:rollback, _}
+
     sub_assoc_change = %{Ecto.Changeset.change(sub_assoc) | valid?: false}
     assoc = %MyAssoc{id: 1, x: "xyz"}
     assoc_changeset = Ecto.Changeset.change(assoc, sub_assoc: sub_assoc_change)
     changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: assoc_changeset)
     assert {:error, changeset} = TestRepo.update(changeset)
-    assert_received {:rollback, ^changeset}
     refute changeset.changes.assoc.changes.sub_assoc.changes.id
     refute changeset.changes.assoc.changes.sub_assoc.changes.my_assoc_id
     refute changeset.valid?
+
+    # Just one transaction was used
+    assert_received {:transaction, _}
+    assert_received {:rollback, ^changeset}
+    refute_received {:transaction, _}
+    refute_received {:rollback, _}
   end
 
   test "handles embeds on delete" do
