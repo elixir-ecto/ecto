@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.0.0-dev
+
+* Enhancements
+  * Support fragment sources in join
+  * Also lookup in the changes map for required fields when casting changesets
+  * ALlow table and index commands in migration to be pipeable
+
+* Bug fixes
+  * Ensure constraints errors when saving nested association returns the parent changed and not the child one
+  * Ensure rollback only closes innermost transaction
+  * Ensure the user changeset containing embeds and assocs is returned when there is a constraint error
+  * Ensure binary_ids models can specify `unique_constraint` for SQL databases
+
 ## v0.16.0
 
 * Enhancements
