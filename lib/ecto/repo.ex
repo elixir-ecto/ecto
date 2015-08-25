@@ -512,17 +512,17 @@ defmodule Ecto.Repo do
               {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
 
   @doc """
-  Same as `insert/2` but raises if the changeset is invalid.
+  Same as `insert/2` but returns the inserted record and not a tuple on success. It raises if the changeset is invalid.
   """
   defcallback insert!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Same as `update/2` but raises if the changeset is invalid.
+  Same as `update/2` but returns the updated record and not a tuple on success. It raises if the changeset is invalid.
   """
   defcallback update!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Same as `delete/2` but raises if the changeset is invalid.
+  Same as `delete/2` but returns the deleted record and not a tuple on success. It raises if the changeset is invalid.
   """
   defcallback delete!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
