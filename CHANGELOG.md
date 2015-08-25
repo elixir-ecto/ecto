@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0.0-dev
+## v1.0.0
 
 * Enhancements
   * Support fragment sources in join
