@@ -516,6 +516,16 @@ defmodule Ecto.RepoTest do
     refute changeset.valid?
   end
 
+  test "fails cleanly for bad assocs on insert" do
+    assoc = Ecto.Changeset.change(%MyAssoc{})
+            |> Ecto.Changeset.put_change(:x, "xyz")
+            |> Ecto.Changeset.put_change(:my_model, %MyModel{})
+
+    assert_raise ArgumentError, ~r/cannot insert `my_model` in Ecto.RepoTest.MyAssoc/, fn ->
+      TestRepo.insert!(assoc)
+    end
+  end
+
   test "handles assocs on insert with assoc constraint error" do
     assoc_changeset =
       put_in(%MyAssoc{}.__meta__.context, {:invalid, [unique: "my_assoc_foo_index"]})

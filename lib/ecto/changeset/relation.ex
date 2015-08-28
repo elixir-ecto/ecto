@@ -51,8 +51,14 @@ defmodule Ecto.Changeset.Relation do
 
     {model, changes, valid?} =
       Enum.reduce(related, {model, changes, true}, fn {field, changeset}, acc ->
-        {_, related} = Map.get(types, field)
-        on_repo_action(related, field, changeset, adapter, repo, action, opts, acc)
+        case Map.get(types, field) do
+          {_, related} ->
+            on_repo_action(related, field, changeset, adapter, repo, action, opts, acc)
+          _ ->
+            raise ArgumentError,
+              "cannot #{action} `#{field}` in #{inspect model.__struct__}. Only embedded models, " <>
+              "has_one and has_many associations can be changed alongside the parent model"
+        end
       end)
 
     if valid? do
