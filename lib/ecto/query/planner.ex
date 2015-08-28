@@ -207,22 +207,23 @@ defmodule Ecto.Query.Planner do
 
   defp cast_param(kind, query, expr, v, type, adapter) do
     {model, field, type} = type_for_param!(kind, query, expr, type)
+    cast = cast_param(kind, type, v)
 
-    case cast_param(kind, type, v) do
-      {:dump, type, v} ->
-        case adapter.dump(type, v) do
-          {:ok, v} -> v
-          :error   -> raise ArgumentError, "cannot dump `#{inspect v}` to type #{inspect type}"
-        end
-      {:error, error} ->
-        try do
+    try do
+      case cast do
+        {:dump, type, v} ->
+          case adapter.dump(type, v) do
+            {:ok, v} -> v
+            :error   -> error! query, expr, "cannot dump cast value `#{inspect v}` to type #{inspect type}"
+          end
+        {:error, error} ->
           error! query, expr, error
-        catch
-          :error, %Ecto.QueryError{} = e when not is_nil(model) ->
-            raise Ecto.CastError, model: model, field: field, value: v, type: type,
-                                  message: Exception.message(e) <>
-                                           "\nError when casting value to `#{inspect model}.#{field}`"
-        end
+      end
+    catch
+      :error, %Ecto.QueryError{} = e when not is_nil(model) ->
+        raise Ecto.CastError, model: model, field: field, value: v, type: type,
+                              message: Exception.message(e) <>
+                                       "\nError when casting value to `#{inspect model}.#{field}`"
     end
   end
 
