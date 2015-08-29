@@ -41,8 +41,29 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       do: [unique: constraint]
     def to_constraints(%Postgrex.Error{postgres: %{code: :foreign_key_violation, constraint: constraint}}),
       do: [foreign_key: constraint]
+
+    # Postgres 9.2 and earlier does not provide the constraint field
+    def to_constraints(%Postgrex.Error{postgres: %{code: :unique_violation, message: message}}) do
+      case :binary.split(message, " unique constraint ") do
+        [_, quoted] -> [unique: strip_quotes(quoted)]
+        _ -> []
+      end
+    end
+    def to_constraints(%Postgrex.Error{postgres: %{code: :foreign_key_violation, message: message}}) do
+      case :binary.split(message, " foreign key constraint ") do
+        [_, quoted] -> [foreign_key: strip_quotes(quoted)]
+        _ -> []
+      end
+    end
+
     def to_constraints(%Postgrex.Error{}),
       do: []
+
+    defp strip_quotes(quoted) do
+      size = byte_size(quoted) - 2
+      <<_, unquoted::binary-size(size), _>> = quoted
+      unquoted
+    end
 
     ## Transaction
 
