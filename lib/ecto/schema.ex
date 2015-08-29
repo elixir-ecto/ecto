@@ -274,9 +274,18 @@ defmodule Ecto.Schema do
   defmacro __using__(_) do
     quote do
       import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
+
       @primary_key {:id, :id, autogenerate: true}
       @timestamps_opts []
       @foreign_key_type :id
+      @before_compile Ecto.Schema
+
+      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
+      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
   end
 
@@ -308,13 +317,6 @@ defmodule Ecto.Schema do
 
       Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
-
-      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
       Module.put_attribute(__MODULE__, :struct_fields,
                            {:__meta__, %Metadata{state: :built, source: {nil, source}}})
 
@@ -1151,6 +1153,15 @@ defmodule Ecto.Schema do
   def __autogenerate__(id) do
     quote do
       def __schema__(:autogenerate_id), do: unquote(id)
+    end
+  end
+
+  @doc false
+  def __before_compile__(env) do
+    unless Module.get_attribute(env.module, :struct_fields) do
+      raise "module #{inspect env.module} uses Ecto.Model (or Ecto.Schema) but it " <>
+            "does not define a schema. Please cherry pick the functionality you want " <>
+            "instead, for example, by importing Ecto.Query, Ecto.Model or others"
     end
   end
 
