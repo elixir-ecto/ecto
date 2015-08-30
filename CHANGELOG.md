@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.0.1
+
+* Bug fixes
+  * Raise a proper error message if trying to change a belongs_to association
+  * Raise a proper error message if Ecto.Model/Ecto.Schema are used but no schema is defined
+  * Ensure dump after cast is still handled as `Ecto.CastError` as it assumes poor casting
+  * Support constraints on Postgres versions earlier than 9.4
+
 ## v1.0.0
 
 * Enhancements
