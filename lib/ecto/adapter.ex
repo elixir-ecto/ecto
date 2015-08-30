@@ -87,8 +87,7 @@ defmodule Ecto.Adapter do
   defcallback embed_id(Ecto.Embedded.t) :: String.t
 
   @doc """
-  Starts any connection pooling or supervision and return `{:ok, pid}`
-  or just `:ok` if nothing needs to be done.
+  Starts any connection pooling or supervision and return `{:ok, pid}`.
 
   Returns `{:error, {:already_started, pid}}` if the repo already
   started or `{:error, term}` in case anything else goes wrong.
@@ -101,7 +100,7 @@ defmodule Ecto.Adapter do
   `Application.ensure_all_started/1`.
   """
   defcallback start_link(repo, options) ::
-              {:ok, pid} | :ok | {:error, {:already_started, pid}} | {:error, term}
+              {:ok, pid} | {:error, {:already_started, pid}} | {:error, term}
 
   @doc """
   Commands invoked to prepare a query for `all`, `update_all` and `delete_all`.
