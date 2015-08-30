@@ -988,7 +988,7 @@ defmodule Ecto.Changeset do
 
     * `:is` - the string length must be exactly this value
     * `:min` - the string length must be greater than or equal to this value
-    * `:max` - the string lenght must be less than or equal to this value
+    * `:max` - the string length must be less than or equal to this value
     * `:message` - the message on failure, depending on the validation, is one of:
       * "should be %{count} characters"
       * "should be at least %{count} characters"
