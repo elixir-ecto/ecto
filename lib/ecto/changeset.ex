@@ -1168,8 +1168,9 @@ defmodule Ecto.Changeset do
       cast(user, params, ~w(email), ~w())
       |> unique_constraint(:email)
 
-  When inserting/updating, if the email already exists, it will
-  be converted into an error.
+  Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
+  email already exists, it will be converted into an error and
+  `{:error, changeset}` returned by the repository.
 
   ## Options
 
@@ -1252,8 +1253,9 @@ defmodule Ecto.Changeset do
       cast(comment, params, ~w(post_id), ~w())
       |> foreign_key_constraint(:post_id)
 
-  When inserting/updating, if the associated post does not exist, it will be
-  converted into an error.
+  Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
+  associated post does not exist, it will be converted into an
+  error and `{:error, changeset}` returned by the repository.
 
   ## Options
 
