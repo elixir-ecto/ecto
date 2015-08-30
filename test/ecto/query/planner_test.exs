@@ -116,6 +116,12 @@ defmodule Ecto.Query.PlannerTest do
     {_query, params, _key} = prepare(Comment |> where([c], c.uuid == ^uuid))
     assert params == [%Ecto.Query.Tagged{type: :uuid,
                         value: <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>}]
+
+    assert_raise Ecto.CastError,
+                 ~r/cannot dump cast value `"00010203-0405-0607-0809"` to type :binary_id/, fn ->
+      uuid = "00010203-0405-0607-0809"
+      prepare(Comment |> where([c], c.uuid == ^uuid))
+    end
   end
 
   test "prepare: casts and dumps custom types in left side of in-expressions" do

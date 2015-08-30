@@ -406,6 +406,7 @@ defmodule Ecto.Repo do
 
   In case a model is given, the model is converted into a changeset
   with all model non-virtual fields as part of the changeset.
+  This conversion is done by calling `Ecto.Changeset.change/2` directly.
 
   In case a changeset is given, the changes in the changeset are
   merged with the model fields, and all of them are sent to the
@@ -439,11 +440,12 @@ defmodule Ecto.Repo do
   Updates a model or changeset using its primary key.
 
   In case a model is given, the model is converted into a changeset
-  with all model non-virtual fields as part of the changeset. For this
-  reason, it is preferred to use changesets as they perform dirty
-  tracking and avoid sending data that did not change to the database
-  over and over. In case there are no changes in the changeset, no
-  data is sent to the database at all.
+  with all model non-virtual fields as part of the changeset. This
+  conversion is done by calling `Ecto.Changeset.change/2` directly.
+  For this reason, it is preferred to use changesets when performing
+  updates as they perform dirty tracking and avoid sending data that
+  did not change to the database over and over. In case there are no
+  changes in the changeset, no data is sent to the database at all.
 
   In case a changeset is given, only the changes in the changeset
   will be updated, leaving all the other model fields intact.
@@ -512,17 +514,17 @@ defmodule Ecto.Repo do
               {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
 
   @doc """
-  Same as `insert/2` but raises if the changeset is invalid.
+  Same as `insert/2` but returns the model or raises if the changeset is invalid.
   """
   defcallback insert!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Same as `update/2` but raises if the changeset is invalid.
+  Same as `update/2` but returns the model or raises if the changeset is invalid.
   """
   defcallback update!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
   @doc """
-  Same as `delete/2` but raises if the changeset is invalid.
+  Same as `delete/2` but returns the model or raises if the changeset is invalid.
   """
   defcallback delete!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
 
