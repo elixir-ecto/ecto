@@ -289,17 +289,6 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
   end
 
-  def cast(%{__struct__: module} = model, :empty, required, optional)
-      when is_list(required) and is_list(optional) do
-    types = module.__changeset__
-
-    optional = Enum.map(optional, &process_empty_fields(&1, types))
-    required = Enum.map(required, &process_empty_fields(&1, types))
-
-    %Changeset{params: nil, model: model, valid?: false, errors: [],
-               changes: %{}, required: required, optional: optional, types: types}
-  end
-
   def cast(%Changeset{changes: changes, model: model} = changeset, params, required, optional) do
     new_changeset = cast(model, changes, params, required, optional)
     merge(changeset, new_changeset)
@@ -309,7 +298,19 @@ defmodule Ecto.Changeset do
     cast(model, %{}, params, required, optional)
   end
 
-  defp cast(%{__struct__: module} = model, %{} = changes, %{} = params, required, optional) do
+  defp cast(%{__struct__: module} = model, %{} = changes, :empty, required, optional)
+      when is_list(required) and is_list(optional) do
+    types = module.__changeset__
+
+    optional = Enum.map(optional, &process_empty_fields(&1, types))
+    required = Enum.map(required, &process_empty_fields(&1, types))
+
+    %Changeset{params: nil, model: model, valid?: false, errors: [],
+               changes: changes, required: required, optional: optional, types: types}
+  end
+
+  defp cast(%{__struct__: module} = model, %{} = changes, %{} = params, required, optional)
+      when is_list(required) and is_list(optional) do
     params = convert_params(params)
     types  = module.__changeset__
 
@@ -517,8 +518,9 @@ defmodule Ecto.Changeset do
     new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
     new_action      = merge_identical(cs1.action, cs2.action, "actions")
     new_types       = cs1.types || cs2.types
+    new_valid?      = cs1.valid? and cs2.valid?
 
-    %Changeset{params: new_params, model: model, valid?: new_errors == [],
+    %Changeset{params: new_params, model: model, valid?: new_valid?,
                errors: new_errors, changes: new_changes, repo: new_repo,
                required: new_required, optional: new_optional, action: new_action,
                validations: new_validations, types: new_types}

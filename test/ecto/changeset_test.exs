@@ -194,7 +194,7 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  test "cast/4: works with a changeset as the second argument" do
+  test "cast/4: works when cassting a changeset" do
     base_changeset = cast(%Post{title: "valid"}, %{}, ~w(title), ~w())
 
     # No changes
@@ -208,6 +208,19 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes  == %{body: "new body"}
     assert changeset.required == [:title]
     assert changeset.optional == [:body]
+  end
+
+  test "cast/4: works when casting a changeset with empty parameters" do
+    changeset = cast(%Post{}, %{"title" => "sample"}, ~w(title)a, ~w())
+    changeset = cast(changeset, :empty, ~w(), ~w(body)a)
+    assert changeset.model == %Post{}
+    assert changeset.params == %{"title" => "sample"}
+    assert changeset.changes == %{title: "sample"}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == [:title]
+    assert changeset.optional == [:body]
+    refute changeset.valid?
   end
 
   test "cast/4: works on casting a datetime field" do
