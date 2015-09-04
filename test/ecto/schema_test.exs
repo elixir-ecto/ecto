@@ -60,13 +60,19 @@ defmodule Ecto.SchemaTest do
     assert Ecto.Model.primary_key(%Model{id: "hello"}) == [id: "hello"]
   end
 
-  test "updates source with put_source" do
+  test "updates meta with put_meta" do
     model = %Model{}
     assert model.__meta__.source == {nil, "mymodel"}
-    model = Ecto.Model.put_source(model, "new_model")
+    model = Ecto.Model.put_meta(model, source: "new_model")
     assert model.__meta__.source == {nil, "new_model"}
-    model = Ecto.Model.put_source(model, "new_model", "prefix")
+    model = Ecto.Model.put_meta(model, prefix: "prefix")
     assert model.__meta__.source == {"prefix", "new_model"}
+    model = Ecto.Model.put_meta(model, source: "mymodel")
+    assert model.__meta__.source == {"prefix", "mymodel"}
+
+    model = Ecto.Model.put_meta(model, context: "foobar", state: :loaded)
+    assert model.__meta__.state == :loaded
+    assert model.__meta__.context == "foobar"
   end
 
   test "inspects metadata" do
@@ -104,6 +110,14 @@ defmodule Ecto.SchemaTest do
   end
 
   ## Errors
+
+  test "complains when a schema is not defined" do
+    assert_raise RuntimeError, ~r"does not define a schema", fn ->
+      defmodule Sample do
+        use Ecto.Model
+      end
+    end
+  end
 
   test "field name clash" do
     assert_raise ArgumentError, "field/association :name is already set on schema", fn ->
