@@ -157,17 +157,51 @@ defmodule Ecto.Model do
   end
 
   @doc """
-  Update the database source of the model.
+  Updates the model metadata.
 
-  A prefix (representing a schema or a database in storages)
-  may also be given as argument. If none is given, defaults
-  to nil.
+  It is possible to set:
 
-  ## Examples
-
-      post = Repo.get Post, 1
-      new_post = Ecto.Model.put_source(post, "user_posts")
+    * `:source` - changes the model query source
+    * `:prefix` - changes the model query prefix
+    * `:context` - changes the model meta context
+    * `:state` - changes the model state
   """
+  @spec put_meta(Ecto.Model.t, [source: String.t, prefix: String.t,
+                                context: term, state: :built | :loaded | :deleted]) :: Ecto.Model.t
+  def put_meta(model, opts) do
+    update_in model.__meta__, &update_meta(opts, &1)
+  end
+
+  defp update_meta([{:state, state}|t], meta) do
+    if state in [:built, :loaded, :deleted] do
+      update_meta t, %{meta | state: state}
+    else
+      raise ArgumentError, "invalid state #{inspect state}"
+    end
+  end
+
+  defp update_meta([{:source, source}|t], %{source: {prefix, _}} = meta) do
+    update_meta t, %{meta | source: {prefix, source}}
+  end
+
+  defp update_meta([{:prefix, prefix}|t], %{source: {_, source}} = meta) do
+    update_meta t, %{meta | source: {prefix, source}}
+  end
+
+  defp update_meta([{:context, context}|t], meta) do
+    update_meta t, %{meta | context: context}
+  end
+
+  defp update_meta([], meta) do
+    meta
+  end
+
+  defp update_meta([{k, _}], _meta) do
+    raise ArgumentError, "unknown meta key #{inspect k}"
+  end
+
+  @doc false
+  # TODO: Deprecate on Ecto 1.1
   def put_source(model, new_source, new_prefix \\ nil) do
     put_in model.__meta__.source, {new_prefix, new_source}
   end
