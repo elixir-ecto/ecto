@@ -27,13 +27,13 @@ defmodule Ecto.Model.Dependent do
   ## Alternatives
 
   Ecto also provides an `:on_delete` option when using `references/2` in migrations.
-  This allows you to set what to perform when an entry is deleted in your schema and
-  effectively, at the database level. When you want to push as much responsibilty
-  down to the schema, that approach would better serve you.
+  This allows you to set what to perform when an entry is deleted in your schema
+  effectively at the database level. Relying on the database is often the safest
+  way to perform this operation and should be preferred.
 
-  However, using the `:on_delete` option in `has_many/3` would afford you more
-  flexibility. It does not require you to run migrations every time you want to change
-  the behavior and it is not database specific.
+  However using the `:on_delete` option may be more flexible specially if you have
+  logic that needs to be expressed on the application side or if your database does
+  not support references.
   """
 
   @on_delete_callbacks [:fetch_and_delete, :nilify_all, :delete_all]
