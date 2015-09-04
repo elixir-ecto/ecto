@@ -444,20 +444,22 @@ defmodule Ecto.Schema do
     * `:through` - If this association must be defined in terms of existing
       associations. Read below for more information
 
-    * `:on_delete` - The action taken on associations when parent model is deleted.
-      May be `:nothing` (default), `:nilify_all`, `:delete_all` or
-      `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
+    * `:on_delete` - The action taken on associations when parent model
+      is deleted. May be `:nothing` (default), `:nilify_all`, `:delete_all`
+      or `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
+      Notice `:on_delete` may also be set in migrations when creating
+      a reference. If supported, relying on the database is often prefered
 
     * `:on_replace` - The action taken on associations when the model is
       replaced   when casting or manipulating parent changeset. May be
       `:delete` (default) or `:nilify`. See `Ecto.Changeset`'s section on
-      related models for more info.
+      related models for more info
 
     * `:on_cast` - The default changeset function to call during casting
       of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
       It's an atom representing the function name in the associated model's
       module which will receive the module and the parameters for casting
-      (default: `:changeset`).
+      (default: `:changeset`)
 
     * `:defaults` - Default values to use when building the association
 
@@ -580,20 +582,22 @@ defmodule Ecto.Schema do
     * `:through` - If this association must be defined in terms of existing
       associations. Read the section in `has_many/3` for more information
 
-    * `:on_delete` - The action taken on associations when parent model is deleted.
-      May be `:nothing` (default), `:nilify_all`, `:delete_all` or
-      `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
+    * `:on_delete` - The action taken on associations when parent model
+      is deleted. May be `:nothing` (default), `:nilify_all`, `:delete_all`
+      or `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
+      Notice `:on_delete` may also be set in migrations when creating
+      a reference. If supported, relying on the database is often prefered
 
     * `:on_replace` - The action taken on associations when the model is
       replaced   when casting or manipulating parent changeset. May be
       `:delete` (default) or `:nilify`. See `Ecto.Changeset`'s section on
-      related models for more info.
+      related models for more info
 
     * `:on_cast` - The default changeset function to call during casting
       of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
       It's an atom representing the function name in the associated model's
       module which will receive the module and the parameters for casting
-      (default: `:changeset`).
+      (default: `:changeset`)
 
     * `:defaults` - Default values to use when building the association
 
@@ -784,10 +788,6 @@ defmodule Ecto.Schema do
       Ecto supports only the `:replace` strategy out of the box which is the
       default. Read the strategy in `embeds_many/3` for more info.
 
-    * `:on_delete` - The action taken on embeds when parent model is deleted.
-      The only supported value is `:fetch_and_delete`, meaning callbacks are
-      always executed.
-
     * `:on_replace` - The action taken on embeds when it is replaced
       during casting or manipulating parent changeset. For now, it
       supports `:delete`, implying delete callbacks will be invoked.
@@ -858,10 +858,6 @@ defmodule Ecto.Schema do
     * `:strategy` - the strategy for storing models in the database.
       Ecto supports only the `:replace` strategy out of the box which is the
       default. Read strategy section below for more info.
-
-    * `:on_delete` - The action taken on embeds when parent model is deleted.
-      The only supported value is `:fetch_and_delete`, meaning callbacks are
-      always executed.
 
     * `:on_replace` - The action taken on embeds when it is replaced
       during casting or manipulating parent changeset. For now, it
