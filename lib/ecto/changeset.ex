@@ -134,11 +134,11 @@ defmodule Ecto.Changeset do
                         field: atom, message: error_message}
 
   @number_validators %{
-    less_than:                {&</2,  "must be less than %{count}"},
-    greater_than:             {&>/2,  "must be greater than %{count}"},
-    less_than_or_equal_to:    {&<=/2, "must be less than or equal to %{count}"},
-    greater_than_or_equal_to: {&>=/2, "must be greater than or equal to %{count}"},
-    equal_to:                 {&==/2, "must be equal to %{count}"},
+    less_than:                {&</2,  "must be less than <%= count %>"},
+    greater_than:             {&>/2,  "must be greater than <%= count %>"},
+    less_than_or_equal_to:    {&<=/2, "must be less than or equal to <%= count %>"},
+    greater_than_or_equal_to: {&>=/2, "must be greater than or equal to <%= count %>"},
+    equal_to:                 {&==/2, "must be equal to <%= count %>"},
   }
 
   @relations [:embed, :assoc]
@@ -1018,15 +1018,15 @@ defmodule Ecto.Changeset do
 
   defp wrong_length(value, value, _opts), do: nil
   defp wrong_length(_length, value, opts), do:
-    {message(opts, "should be %{count} characters"), count: value}
+    {message(opts, "should be <%= count %> characters"), count: value}
 
   defp too_short(length, value, _opts) when length >= value, do: nil
   defp too_short(_length, value, opts), do:
-    {message(opts, "should be at least %{count} characters"), count: value}
+    {message(opts, "should be at least <%= count %> characters"), count: value}
 
   defp too_long(length, value, _opts) when length <= value, do: nil
   defp too_long(_length, value, opts), do:
-    {message(opts, "should be at most %{count} characters"), count: value}
+    {message(opts, "should be at most <%= count %> characters"), count: value}
 
   @doc """
   Validates the properties of a number.
