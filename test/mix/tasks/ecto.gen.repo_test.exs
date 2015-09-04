@@ -24,19 +24,36 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
         password: "pass",
         hostname: "localhost"
       """
+    end
+  end
 
-      run ["-r", "AnotherRepo"]
+  test "generates a new repo with existing config file" do
+    in_tmp fn _ ->
+      File.mkdir_p! "config"
+      File.write! "config/config.exs", """
+      # Hello
+      use Mix.Config
+      # World
+      """
+
+      run ["-r", "Repo"]
 
       assert_file "config/config.exs", """
-      config :ecto, AnotherRepo,
+      # Hello
+      use Mix.Config
+
+      config :ecto, Repo,
         adapter: Ecto.Adapters.Postgres,
-        database: "ecto_another_repo",
+        database: "ecto_repo",
         username: "user",
         password: "pass",
         hostname: "localhost"
+
+      # World
       """
     end
   end
+
 
   test "generates a new namespaced repo" do
     in_tmp fn _ ->
