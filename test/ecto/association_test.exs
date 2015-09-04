@@ -33,6 +33,11 @@ defmodule Ecto.AssociationTest do
     def optional_changeset(model, params) do
       cast(model, params, ~w(), ~w(title author_id))
     end
+
+    def set_action(model, params) do
+      cast(model, params, ~w(title))
+      |> Map.put(:action, :update)
+    end
   end
 
   defmodule Comment do
@@ -466,10 +471,6 @@ defmodule Ecto.AssociationTest do
     changeset = Changeset.cast(%Author{}, %{"profile" => "value"}, ~w(profile))
     assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
-
-    assert_raise Ecto.UnmachedRelationError, fn ->
-      Changeset.cast(%Author{}, %{"profile" => %{"id" => "invalid"}}, ~w(profile))
-    end
   end
 
   test "cast has_one with existing model updating" do
@@ -506,9 +507,20 @@ defmodule Ecto.AssociationTest do
     assert profile.valid?
     assert changeset.valid?
 
-    assert_raise Ecto.UnmachedRelationError, fn ->
-      Changeset.cast(%Author{profile: %Profile{name: "michal", id: 1}},
-                     %{"profile" => %{"name" => "new", "id" => 2}}, ~w(profile))
+    changeset =
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: 2}},
+                     %{"profile" => %{"name" => "new", "id" => 5}}, ~w(profile))
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new", id: 5}
+    assert profile.errors  == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+
+    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"name" => "new", "id" => "new"}},
+                     profile: :set_action)
     end
   end
 
@@ -569,10 +581,17 @@ defmodule Ecto.AssociationTest do
     assert changeset.valid?
   end
 
-  test "cast has_one keeps action from changeset" do
-    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}},
+  test "cast has_one keeps appropriate action from changeset" do
+    changeset = Changeset.cast(%Author{profile: %Profile{id: "id"}},
+                               %{"profile" => %{"name" => "michal", "id" => "id"}},
                                [profile: :set_action])
     assert changeset.changes.profile.action == :update
+
+    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+      Changeset.cast(%Author{profile: %Profile{id: "old"}},
+                     %{"profile" => %{"name" => "michal", "id" => "new"}},
+                     [profile: :set_action])
+    end
   end
 
   test "cast has_one with :empty parameters" do
@@ -655,8 +674,14 @@ defmodule Ecto.AssociationTest do
     assert other.valid?
     refute changeset.valid?
 
-    assert_raise Ecto.UnmachedRelationError, fn ->
-      Changeset.cast(%Author{posts: posts}, %{"posts" => [%{"id" => 4}]}, ~w(posts))
+    params = %{"posts" => [%{"id" => "10", "title" => "post"}]}
+    changeset = Changeset.cast(%Author{posts: []}, params, ~w(posts))
+    [post] = changeset.changes.posts
+    assert post.changes == %{title: "post"}
+    assert post.action  == :insert
+
+    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+      Changeset.cast(%Author{posts: []}, params, [posts: :set_action])
     end
   end
 
@@ -746,22 +771,41 @@ defmodule Ecto.AssociationTest do
     assert {:ok, _, true, true} =
       Relation.change(assoc, model, empty_changeset, assoc_model)
 
-    assert_raise Ecto.UnmachedRelationError, fn ->
-      Relation.change(assoc, model, %Profile{id: 1}, %Profile{id: 2})
+    assoc_with_id = %Profile{id: 2}
+    assert {:ok, _, true, false} =
+      Relation.change(assoc, model, %Profile{id: 1}, assoc_with_id)
+
+    update_changeset = %{Changeset.change(assoc_model) | action: :delete}
+    assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
+      Relation.change(assoc, model, update_changeset, assoc_with_id)
     end
   end
 
-  test "change assocs_one keeps action from changeset" do
+  test "change assocs_one keeps appropriate action from changeset" do
     model = %Author{}
     assoc = Author.__schema__(:association, :profile)
+    assoc_model = %Profile{}
 
-    changeset =
-      %Profile{}
-      |> Changeset.change(name: "michal")
-      |> Map.put(:action, :update)
+    changeset = %{Changeset.change(assoc_model, name: "michal") | action: :insert}
 
     {:ok, changeset, _, _} = Relation.change(assoc, model, changeset, nil)
+    assert changeset.action == :insert
+
+    changeset = %{changeset | action: :delete}
+    assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
+      Relation.change(assoc, model, changeset, nil)
+    end
+
+    changeset = %{Changeset.change(assoc_model) | action: :update}
+    {:ok, changeset, _, _} = Relation.change(assoc, model, changeset, assoc_model)
     assert changeset.action == :update
+
+    assoc_model = %{assoc_model | id: 5}
+    model = %{model | profile: assoc_model}
+    changeset = %{Changeset.change(assoc_model) | action: :insert}
+    assert_raise RuntimeError, ~r"cannot insert .* it already exists in the parent model", fn ->
+      Relation.change(assoc, model, changeset, assoc_model)
+    end
   end
 
   test "change assocs_many" do
@@ -778,9 +822,11 @@ defmodule Ecto.AssociationTest do
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert_raise Ecto.UnmachedRelationError, fn ->
+    assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(assoc, model, [%Post{id: 1}], [%Post{id: 2}])
-    end
+    assert old_changeset.action  == :delete
+    assert new_changeset.action  == :insert
+    assert new_changeset.changes == %{id: 1, title: nil, summary_id: nil, author_id: nil}
 
     assoc_model_changeset = Changeset.change(%Post{}, title: "hello")
 
@@ -803,6 +849,11 @@ defmodule Ecto.AssociationTest do
     empty_changeset = Changeset.change(assoc_model)
     assert {:ok, _, true, true} =
       Relation.change(assoc, model, [empty_changeset], [assoc_model])
+
+    new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
+    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+      Relation.change(assoc, model, [new_model_update], [assoc_model])
+    end
   end
 
   ## Other

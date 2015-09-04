@@ -33,6 +33,11 @@ defmodule Ecto.EmbeddedTest do
     def optional_changeset(model, params) do
       cast(model, params, ~w(), ~w(title))
     end
+
+    def set_action(model, params) do
+      cast(model, params, ~w(title))
+      |> Map.put(:action, :update)
+    end
   end
 
   defmodule Profile do
@@ -96,10 +101,6 @@ defmodule Ecto.EmbeddedTest do
     changeset = Changeset.cast(%Author{}, %{"profile" => "value"}, ~w(profile))
     assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
-
-    assert_raise Ecto.UnmachedRelationError, fn ->
-      Changeset.cast(%Author{}, %{"profile" => %{"id" => 3}}, ~w(profile))
-    end
   end
 
   test "cast embeds_one with existing model updating" do
@@ -127,9 +128,20 @@ defmodule Ecto.EmbeddedTest do
     assert profile.valid?
     assert changeset.valid?
 
-    assert_raise Ecto.UnmachedRelationError, fn ->
+    changeset =
       Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
                      %{"profile" => %{"name" => "new", "id" => "new"}}, ~w(profile))
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new", id: "new"}
+    assert profile.errors  == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+
+    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+      Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"name" => "new", "id" => "new"}},
+                     profile: :set_action)
     end
   end
 
@@ -184,10 +196,17 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.valid?
   end
 
-  test "cast embeds_one keeps action from changeset" do
-    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}},
+  test "cast embeds_one keeps appropriate action from changeset" do
+    changeset = Changeset.cast(%Author{profile: %Profile{id: "id"}},
+                               %{"profile" => %{"name" => "michal", "id" => "id"}},
                                [profile: :set_action])
     assert changeset.changes.profile.action == :update
+
+    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+      Changeset.cast(%Author{profile: %Profile{id: "old"}},
+                     %{"profile" => %{"name" => "michal", "id" => "new"}},
+                     [profile: :set_action])
+    end
   end
 
   test "cast embeds_one with :empty parameters" do
@@ -258,8 +277,14 @@ defmodule Ecto.EmbeddedTest do
     assert other.valid?
     refute changeset.valid?
 
-    assert_raise Ecto.UnmachedRelationError, fn ->
-      Changeset.cast(%Author{posts: posts}, %{"posts" => [%{"id" => "10"}]}, ~w(posts))
+    params = %{"posts" => [%{"id" => "10", "title" => "post"}]}
+    changeset = Changeset.cast(%Author{posts: []}, params, ~w(posts))
+    [post] = changeset.changes.posts
+    assert post.changes == %{title: "post"}
+    assert post.action  == :insert
+
+    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+      Changeset.cast(%Author{posts: []}, params, [posts: :set_action])
     end
   end
 
@@ -346,22 +371,41 @@ defmodule Ecto.EmbeddedTest do
     assert {:ok, _, true, true} =
       Relation.change(embed, model, empty_changeset, embed_model)
 
-    assert_raise Ecto.UnmachedRelationError, fn ->
-      Relation.change(embed, model, %Profile{id: 1}, %Profile{id: 2})
+    embed_with_id = %Profile{id: 2}
+    assert {:ok, _, true, false} =
+      Relation.change(embed, model, %Profile{id: 1}, embed_with_id)
+
+    update_changeset = %{Changeset.change(embed_model) | action: :delete}
+    assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
+      Relation.change(embed, model, update_changeset, embed_with_id)
     end
   end
 
-  test "change embeds_one keeps action from changeset" do
+  test "change embeds_one keeps appropriate action from changeset" do
     model = %Author{}
     embed = Author.__schema__(:embed, :profile)
+    embed_model = %Profile{}
 
-    changeset =
-      %Profile{}
-      |> Changeset.change(name: "michal")
-      |> Map.put(:action, :update)
+    changeset = %{Changeset.change(embed_model, name: "michal") | action: :insert}
 
     {:ok, changeset, _, _} = Relation.change(embed, model, changeset, nil)
+    assert changeset.action == :insert
+
+    changeset = %{changeset | action: :delete}
+    assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
+      Relation.change(embed, model, changeset, nil)
+    end
+
+    changeset = %{Changeset.change(embed_model) | action: :update}
+    {:ok, changeset, _, _} = Relation.change(embed, model, changeset, embed_model)
     assert changeset.action == :update
+
+    embed_model = %{embed_model | id: 5}
+    model = %{model | profile: embed_model}
+    changeset = %{Changeset.change(embed_model) | action: :insert}
+    assert_raise RuntimeError, ~r"cannot insert .* it already exists in the parent model", fn ->
+      Relation.change(embed, model, changeset, embed_model)
+    end
   end
 
   test "change embeds_many" do
@@ -378,9 +422,11 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert_raise Ecto.UnmachedRelationError, fn ->
+    assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(embed, model, [%Post{id: 1}], [%Post{id: 2}])
-    end
+    assert old_changeset.action  == :delete
+    assert new_changeset.action  == :insert
+    assert new_changeset.changes == %{id: 1, title: nil}
 
     embed_model_changeset = Changeset.change(%Post{}, title: "hello")
 
@@ -403,6 +449,11 @@ defmodule Ecto.EmbeddedTest do
     empty_changeset = Changeset.change(embed_model)
     assert {:ok, _, true, true} =
       Relation.change(embed, model, [empty_changeset], [embed_model])
+
+    new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
+    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+      Relation.change(embed, model, [new_model_update], [embed_model])
+    end
   end
 
   test "change/2, put_change/3, force_change/3 wth embeds" do
