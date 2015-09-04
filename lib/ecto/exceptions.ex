@@ -200,29 +200,3 @@ defmodule Ecto.ConstraintError do
     %__MODULE__{message: msg, type: type, constraint: constraint}
   end
 end
-
-defmodule Ecto.UnmachedRelationError do
-  defexception [:message]
-
-  def exception(opts) do
-    old_value = Keyword.fetch!(opts, :old_value)
-    new_value = Keyword.fetch!(opts, :new_value)
-
-    msg =
-      case Keyword.fetch!(opts, :cardinality) do
-        :one  -> "attempted to update model with:"
-        :many -> "attempted to update one of the models with:"
-      end
-
-    msg = """
-    #{msg}
-
-    #{inspect new_value}
-
-    but could not find matching key in:
-
-    #{inspect old_value}
-    """
-    %__MODULE__{message: msg}
-  end
-end
