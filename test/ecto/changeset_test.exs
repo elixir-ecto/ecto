@@ -655,15 +655,15 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 6)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at least %{count} characters", count: 6}]
+    assert changeset.errors == [title: {"should be at least <%= count %> characters", count: 6}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, max: 4)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at most %{count} characters", count: 4}]
+    assert changeset.errors == [title: {"should be at most <%= count %> characters", count: 4}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be %{count} characters", count: 10}]
+    assert changeset.errors == [title: {"should be <%= count %> characters", count: 10}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10, message: "yada")
     assert changeset.errors == [title: {"yada", count: 10}]
@@ -680,7 +680,7 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => -1})
                 |> validate_number(:upvotes, greater_than: 0)
     refute changeset.valid?
-    assert changeset.errors == [upvotes: {"must be greater than %{count}", count: 0}]
+    assert changeset.errors == [upvotes: {"must be greater than <%= count %>", count: 0}]
     assert changeset.validations == [upvotes: {:number, [greater_than: 0]}]
 
     # Multiple validations
@@ -694,7 +694,7 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0)
     refute changeset.valid?
-    assert changeset.errors == [upvotes: {"must be greater than %{count}", count: 100}]
+    assert changeset.errors == [upvotes: {"must be greater than <%= count %>", count: 100}]
 
     # Multiple validations with custom message errors
     changeset = changeset(%{"upvotes" => 3})
