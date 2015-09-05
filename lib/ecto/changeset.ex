@@ -1283,7 +1283,7 @@ defmodule Ecto.Changeset do
   in the database too. Therefore, it only applies to `belongs_to`
   associations.
 
-  As the name says, a contraint is required in the database for
+  As the name says, a constraint is required in the database for
   this function to work. Such constraint is often added as a
   reference to the child table:
 
@@ -1330,7 +1330,7 @@ defmodule Ecto.Changeset do
   key changed) if no child exists in the database. Therefore, it only
   applies to `has_*` associations.
 
-  As the name says, a contraint is required in the database for
+  As the name says, a constraint is required in the database for
   this function to work. Such constraint is often added as a
   reference to the child table:
 
