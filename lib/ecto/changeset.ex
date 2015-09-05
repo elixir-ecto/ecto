@@ -965,7 +965,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates a change is not included in given the enumerable.
+  Validates a change is not included in the given enumerable.
 
   ## Options
 
