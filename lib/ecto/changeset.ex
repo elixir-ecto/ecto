@@ -476,8 +476,8 @@ defmodule Ecto.Changeset do
   The other fields are merged with the following criteria:
 
   * `params` - params are merged (not deep-merged) giving precedence to the
-    params of `changeset2` in case of a conflict. If both changesets has its
-    `:params` field set to `nil`, the resulting changeset will have its params
+    params of `changeset2` in case of a conflict. If both changesets have their
+    `:params` fields set to `nil`, the resulting changeset will have its params
     set to `nil` too.
   * `changes` - changes are merged giving precedence to the `changeset2`
     changes.
