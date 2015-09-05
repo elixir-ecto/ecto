@@ -10,7 +10,8 @@ defmodule Ecto.Embedded do
                        strategy: :replace | atom,
                        on_replace: :delete,
                        on_delete: :fetch_and_delete,
-                       field: atom, owner: atom, related: atom, on_cast: atom}
+                       field: atom, owner: atom, related: atom,
+                       on_cast: Changeset.Relation.on_cast}
 
   @behaviour Ecto.Changeset.Relation
 
