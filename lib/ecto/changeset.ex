@@ -476,8 +476,8 @@ defmodule Ecto.Changeset do
   The other fields are merged with the following criteria:
 
   * `params` - params are merged (not deep-merged) giving precedence to the
-    params of `changeset2` in case of a conflict. If both changesets has its
-    `:params` field set to `nil`, the resulting changeset will have its params
+    params of `changeset2` in case of a conflict. If both changesets have their
+    `:params` fields set to `nil`, the resulting changeset will have its params
     set to `nil` too.
   * `changes` - changes are merged giving precedence to the `changeset2`
     changes.
@@ -1283,7 +1283,7 @@ defmodule Ecto.Changeset do
   in the database too. Therefore, it only applies to `belongs_to`
   associations.
 
-  As the name says, a contraint is required in the database for
+  As the name says, a constraint is required in the database for
   this function to work. Such constraint is often added as a
   reference to the child table:
 
@@ -1330,7 +1330,7 @@ defmodule Ecto.Changeset do
   key changed) if no child exists in the database. Therefore, it only
   applies to `has_*` associations.
 
-  As the name says, a contraint is required in the database for
+  As the name says, a constraint is required in the database for
   this function to work. Such constraint is often added as a
   reference to the child table:
 
