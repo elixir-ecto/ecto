@@ -291,10 +291,11 @@ defmodule Ecto.Repo.Model do
       case Map.get(types, field) do
         {kind, relation} ->
           value = Map.get(struct, field)
+          kind  = kind |> Atom.to_string
           unless Ecto.Changeset.Relation.empty?(relation, value) do
             raise ArgumentError, "model #{inspect struct.__struct__} has value `#{inspect value}` " <>
-              "set for #{kind} named `#{field}`. #{kind}s can only be manipulate via changesets, " <>
-              "be it on insert, update or delete."
+              "set for #{kind} named `#{field}`. #{String.capitalize kind}s can only be " <>
+              "manipulated via changesets, be it on insert, update or delete."
           end
         _ ->
           :ok

@@ -418,8 +418,9 @@ defmodule Ecto.RepoTest do
 
   test "handles embeds on insert when error" do
     embed = %MyEmbed{x: "xyz"}
+    embed_changeset = Ecto.Changeset.change(embed)
 
-    # Raises with assocs when inserting model
+    # Raises with embeds when inserting model
     assert_raise ArgumentError, ~r"set for embed named `embed`", fn ->
       TestRepo.insert!(%MyModel{embed: embed})
     end
@@ -429,21 +430,20 @@ defmodule Ecto.RepoTest do
     end
 
     # Raises if action is update
-    embed_changeset = %{Ecto.Changeset.change(embed) | action: :update}
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
+    changeset = put_in(changeset.changes.embed.action, :update)
     assert_raise ArgumentError, ~r"got action :update in changeset for embedded .* while inserting", fn ->
       TestRepo.insert!(changeset)
     end
 
     # Raises if action is delete
-    embed_changeset = %{Ecto.Changeset.change(embed) | action: :delete}
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed_changeset)
+    changeset = put_in(changeset.changes.embed.action, :delete)
     assert_raise ArgumentError, ~r"got action :delete in changeset for embedded .* while inserting", fn ->
       TestRepo.insert!(changeset)
     end
 
     # Returns error and rollbacks on invalid constraint
-    embed_changeset = Ecto.Changeset.change(embed)
     changeset =
       put_in(%MyModel{}.__meta__.context, {:invalid, [unique: "my_model_foo_index"]})
       |> Ecto.Changeset.change(embed: embed_changeset)
@@ -480,6 +480,7 @@ defmodule Ecto.RepoTest do
 
   test "handles assocs on insert when error" do
     assoc = %MyAssoc{x: "xyz"}
+    assoc_changeset = Ecto.Changeset.change(assoc)
 
     # Raises with assocs when inserting model
     assert_raise ArgumentError, ~r"set for assoc named `assoc`", fn ->
@@ -491,8 +492,8 @@ defmodule Ecto.RepoTest do
     end
 
     # Raises if action is delete
-    assoc_changeset = %{Ecto.Changeset.change(assoc) | action: :delete}
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
+    changeset = put_in(changeset.changes.assoc.action, :delete)
     assert_raise ArgumentError, ~r"got action :delete in changeset for associated .* while inserting", fn ->
       TestRepo.insert!(changeset)
     end
@@ -505,7 +506,6 @@ defmodule Ecto.RepoTest do
     refute changeset.valid?
 
     # Returns error and rollbacks on invalid constraint
-    assoc_changeset = Ecto.Changeset.change(assoc)
     changeset =
       put_in(%MyModel{}.__meta__.context, {:invalid, [unique: "my_model_foo_index"]})
       |> Ecto.Changeset.change(assoc: assoc_changeset)

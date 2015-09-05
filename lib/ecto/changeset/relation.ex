@@ -263,19 +263,15 @@ defmodule Ecto.Changeset.Relation do
   defp map_changes([map | rest], pks, fun, current, acc, valid?, skip?) when is_map(map) do
     pk_values = get_pks(map, pks)
 
-    {model, current} =
+    {model, current, allowed_actions} =
       case Map.fetch(current, pk_values) do
         {:ok, model} ->
-          {model, Map.delete(current, pk_values)}
+          {model, Map.delete(current, pk_values), [:update, :delete]}
         :error ->
-          if Enum.all?(pk_values, &is_nil/1) do
-            {nil, current}
-          else
-            raise Ecto.UnmachedRelationError, new_value: map, old_value: Map.values(current), cardinality: :many
-          end
+          {nil, current, [:insert]}
       end
 
-    changeset = fun.(map, model)
+    changeset = create_changeset!(map, model, fun, allowed_actions)
     map_changes(rest, pks, fun, current, [changeset | acc],
                 valid? && changeset.valid?, skip? && skip?(changeset))
   end
@@ -285,23 +281,35 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp single_change(new, current_pks, new_pks, fun, current) do
-    current = current_or_nil(new, new_pks, current, current_pks)
-    changeset = fun.(new, current)
+    {current, allowed_actions} =
+      current_or_nil(new, new_pks, current, current_pks)
+
+    changeset = create_changeset!(new, current, fun, allowed_actions)
     {:ok, changeset, changeset.valid?, skip?(changeset)}
   end
 
-  defp current_or_nil(nil, _new_pks, current, _current_pks), do: current
+  defp current_or_nil(nil, _new_pks, current, _current_pks),
+    do: {current, [:update, :delete]}
+  defp current_or_nil(_new, _new_pks, nil, _current_pks),
+    do: {nil, [:insert]}
   defp current_or_nil(new, new_pks, current, current_pks) do
-    new_pk_values = get_pks(new, new_pks)
+    if get_pks(new, new_pks) == get_pks(current, current_pks) do
+      {current, [:update, :delete]}
+    else
+      {nil, [:insert]}
+    end
+  end
 
-    cond do
-      current && new_pk_values == get_pks(current, current_pks) ->
-        current
-      Enum.all?(new_pk_values, &is_nil/1) ->
-        nil
-      true ->
-        raise Ecto.UnmachedRelationError, new_value: new, old_value: current,
-                                          cardinality: :one
+  defp create_changeset!(new, current, fun, allowed_actions) do
+    changeset = fun.(new, current)
+    action = changeset.action
+
+    if action in allowed_actions do
+      changeset
+    else
+      reason = if action == :insert, do: "already exists", else: "does not exist"
+      raise "cannot #{action} related #{inspect changeset.model.__struct__}, " <>
+        "because it #{reason} in the parent model."
     end
   end
 
