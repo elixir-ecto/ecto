@@ -5,7 +5,8 @@ defmodule Ecto.Changeset.Relation do
   alias Ecto.Changeset
   alias Ecto.Association.NotLoaded
 
-  @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_cast: atom}
+  @type on_cast :: atom
+  @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_cast: on_cast}
 
   @doc """
   Updates the changeset accordingly to the relation's on_replace strategy.

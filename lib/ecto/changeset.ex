@@ -94,7 +94,8 @@ defmodule Ecto.Changeset do
   two options that configure how changesets work:
 
     * `:on_cast` - specifies function that will be called when casting to
-      a child changeset
+      a child changeset. This setting can be overridden in the parent's
+      `cast/4` call.
 
     * `:on_replace` - action that should be taken when the child model is
       no longer associated to the parent one. This may be invoked in different
@@ -132,6 +133,7 @@ defmodule Ecto.Changeset do
   @type action :: nil | :insert | :update | :delete
   @type constraint :: %{type: :unique, constraint: String.t,
                         field: atom, message: error_message}
+  @type cast_field :: String.t | atom | {atom, Relation.on_cast}
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{count}"},
@@ -278,11 +280,18 @@ defmodule Ecto.Changeset do
   and not optional. This represents the fact that required fields are
   "stronger" than optional fields.
 
+  ## Relations
+
+  You can override the relation's `on_cast` setting by providing a key-value pair
+  in the `required` or `optional` list instead of a simple field name. The key
+  will be the relation's name and value the new changeset function. The new
+  function will be used similarily to the one provided in the `on_cast` setting.
+
   """
   @spec cast(Ecto.Model.t | t,
              %{binary => term} | %{atom => term} | nil,
-             [String.t | atom],
-             [String.t | atom]) :: t
+             [cast_field],
+             [cast_field]) :: t
   def cast(model_or_changeset, params, required, optional \\ [])
 
   def cast(_model, %{__struct__: _} = params, _required, _optional) do
