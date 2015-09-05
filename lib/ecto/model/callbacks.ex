@@ -215,7 +215,7 @@ defmodule Ecto.Model.Callbacks do
     do: register_callback(:before_delete, module, function, args)
 
   @doc """
-  Adds a callback that is invoked before the model is deleted
+  Adds a callback that is invoked after the model is deleted
   from the repository.
 
   The callback receives an `Ecto.Changeset` with the model
