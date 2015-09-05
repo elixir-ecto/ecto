@@ -436,7 +436,7 @@ defmodule Ecto.Query do
 
   `where` expressions are used to filter the result set. If there is more
   than one where expression, they are combined with `and` operator. All
-  where expression have to evaluate to a boolean value.
+  where expressions have to evaluate to a boolean value.
 
   ## Keywords examples
 
@@ -492,7 +492,7 @@ defmodule Ecto.Query do
   A limit query expression.
 
   Limits the number of rows selected from the result. Can be any expression but
-  have to evaluate to an integer value and it can't include any field.
+  has to evaluate to an integer value and it can't include any field.
 
   If `limit` is given twice, it overrides the previous value.
 
@@ -659,7 +659,7 @@ defmodule Ecto.Query do
   @doc """
   Preloads the associations into the given model.
 
-  Preloading allow developers to specify associations that are preloaded
+  Preloading allows developers to specify associations that are preloaded
   into the model. Consider this example:
 
       Repo.all from p in Post, preload: [:comments]
