@@ -39,7 +39,7 @@ defmodule Ecto.Adapter do
       def load(:boolean, 1), do: {:ok, true}
       def load(type, value), do: Ecto.Type.load(type, value, &load/2)
 
-  Notice the `Ecte.Type.load/3` provides a default implementation
+  Notice that `Ecto.Type.load/3` provides a default implementation
   which also expects the current `load/2` for handling recursive
   types like arrays and embeds.
 
@@ -65,7 +65,7 @@ defmodule Ecto.Adapter do
       def dump(:boolean, true), do: {:ok, 1}
       def dump(type, value), do: Ecto.Type.dump(type, value, &dump/2)
 
-  Notice the `Ecte.Type.dump/3` provides a default implementation
+  Notice that `Ecto.Type.dump/3` provides a default implementation
   which also expects the current `dump/2` for handling recursive
   types like arrays and embeds.
 
@@ -152,7 +152,7 @@ defmodule Ecto.Adapter do
 
   While `filters` can be any record column, it is expected that
   at least the primary key (or any other key that uniquely
-  identifies an existing record) to be given as filter. Therefore,
+  identifies an existing record) be given as a filter. Therefore,
   in case there is no record matching the given filters,
   `{:error, :stale}` is returned.
 
@@ -173,11 +173,11 @@ defmodule Ecto.Adapter do
                     {:error, :stale} | no_return
 
   @doc """
-  Deletes a sigle model with the given filters.
+  Deletes a single model with the given filters.
 
   While `filters` can be any record column, it is expected that
   at least the primary key (or any other key that uniquely
-  identifies an existing record) to be given as filter. Therefore,
+  identifies an existing record) be given as a filter. Therefore,
   in case there is no record matching the given filters,
   `{:error, :stale}` is returned.
 
