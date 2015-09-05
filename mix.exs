@@ -80,7 +80,6 @@ defmodule Ecto.Mixfile do
     args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
 
     IO.puts "==> Running tests for MIX_ENV=#{env} mix test"
-
     {_, res} = System.cmd "mix", ["test"|args],
                           into: IO.binstream(:stdio, :line),
                           env: [{"MIX_ENV", to_string(env)}]
