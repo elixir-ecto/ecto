@@ -74,7 +74,7 @@ defmodule Ecto.Repo.Model do
           changeset
           |> process_embeds(embed_changes, adapter, repo, opts)
           |> process_assocs(assoc_changes, adapter, repo, opts)
-          |> maybe_process_after(model, :after_insert)
+          |> maybe_process_after(user_changeset, model, :after_insert)
         {:invalid, constraints} ->
           {:error, constraints_to_errors(user_changeset, :insert, constraints)}
       end
@@ -127,7 +127,7 @@ defmodule Ecto.Repo.Model do
             changeset
             |> process_embeds(embed_changes, adapter, repo, opts)
             |> process_assocs(assoc_changes, adapter, repo, opts)
-            |> maybe_process_after(model, :after_update)
+            |> maybe_process_after(user_changeset, model, :after_update)
           {:invalid, constraints} ->
             {:error, constraints_to_errors(user_changeset, :update, constraints)}
         end
@@ -165,9 +165,11 @@ defmodule Ecto.Repo.Model do
 
     wrap_in_transaction(repo, adapter, model, opts, embeds, [],
                         ~w(before_delete after_delete)a, fn ->
-      changeset = Callbacks.__apply__(model, :before_delete, changeset)
+      user_changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
-      embeds  =
+      # We don't prepare the changeset on delete, so we just copy the user one
+      changeset = user_changeset
+      embeds =
         changeset
         |> Ecto.Embedded.prepare(embeds, adapter, :delete)
         |> Map.fetch!(:changes)
@@ -184,9 +186,9 @@ defmodule Ecto.Repo.Model do
           # the embed values in the model. Also note we don't
           # process associations because they are handled externally.
           _ = process_embeds(changeset, embeds, adapter, repo, opts)
-          {:ok, Callbacks.__apply__(model, :after_delete, changeset).model}
+          maybe_process_after({:ok, changeset}, user_changeset, model, :after_delete)
         {:invalid, constraints} ->
-          {:error, constraints_to_errors(changeset, :delete, constraints)}
+          {:error, constraints_to_errors(user_changeset, :delete, constraints)}
       end
     end)
   end
@@ -317,12 +319,12 @@ defmodule Ecto.Repo.Model do
     Ecto.Changeset.Relation.on_repo_action(changeset, assocs, adapter, repo, opts)
   end
 
-  defp maybe_process_after({:ok, changeset}, model, callback) do
+  defp maybe_process_after({:ok, changeset}, _user_changeset, model, callback) do
     {:ok, Callbacks.__apply__(model, callback, changeset).model}
   end
 
-  defp maybe_process_after({:error, changeset}, _model, _callback) do
-    {:error, %{changeset | valid?: false}}
+  defp maybe_process_after({:error, %{changes: changes}}, user_changeset, _model, _callback) do
+    {:error, %{user_changeset | valid?: false, changes: changes}}
   end
 
   defp pop_autogenerate_id(changes, model) do

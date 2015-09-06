@@ -70,12 +70,12 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp on_repo_action(%{cardinality: :one}, field, nil,
-                   _adapter, _repo, _action, _opts, {parent, changes, valid?}) do
+                      _adapter, _repo, _action, _opts, {parent, changes, valid?}) do
     {Map.put(parent, field, nil), Map.put(changes, field, nil), valid?}
   end
 
   defp on_repo_action(%{cardinality: :one} = meta, field, changeset,
-                   adapter, repo, action, opts, {parent, changes, valid?}) do
+                      adapter, repo, action, opts, {parent, changes, valid?}) do
     case meta.__struct__.on_repo_action(meta, changeset, parent, adapter, repo, action, opts) do
       {:ok, model} ->
         {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
@@ -85,7 +85,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp on_repo_action(%{cardinality: :many} = meta, field, changesets,
-                   adapter, repo, action, opts, {parent, changes, valid?}) do
+                      adapter, repo, action, opts, {parent, changes, valid?}) do
     {changesets, {models, models_valid?}} =
       Enum.map_reduce(changesets, {[], true}, fn changeset, {models, models_valid?} ->
         case meta.__struct__.on_repo_action(meta, changeset, parent, adapter, repo, action, opts) do

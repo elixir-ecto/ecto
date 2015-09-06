@@ -450,6 +450,7 @@ defmodule Ecto.RepoTest do
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.insert(changeset)
     assert_received {:rollback, ^changeset}
+    assert changeset.model.__meta__.state == :built
     assert changeset.changes.embed
     refute changeset.valid?
   end
@@ -512,6 +513,7 @@ defmodule Ecto.RepoTest do
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.insert(changeset)
     assert_received {:rollback, ^changeset}
+    assert changeset.model.__meta__.state == :built
     assert changeset.changes.assoc
     refute changeset.valid?
   end
@@ -534,6 +536,7 @@ defmodule Ecto.RepoTest do
 
     changeset = Ecto.Changeset.change(%MyModel{}, assoc: assoc_changeset)
     assert {:error, changeset} = TestRepo.insert(changeset)
+    assert changeset.model.__meta__.state == :built
     assert changeset.changes.assoc
     refute changeset.valid?
 
