@@ -87,7 +87,7 @@ defmodule Ecto.Embedded do
 
   defp prepare_each(%Changeset{action: :update, changes: changes} = changeset,
                     _embed, _adapter) when changes == %{} do
-    {:ok, changeset}
+    changeset
   end
 
   defp prepare_each(%Changeset{model: %{__struct__: model}, action: action} = changeset,
