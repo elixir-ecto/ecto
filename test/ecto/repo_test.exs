@@ -749,19 +749,39 @@ defmodule Ecto.RepoTest do
 
     # Changing the embed
     embed_changeset = Ecto.Changeset.change(embed, x: "abc")
-    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: embed_changeset)
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed},
+                                      embed: embed_changeset)
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_update, MyEmbed},
             {:before_update, MyEmbed}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
     assert model.embed == %{embed | x: "abc"}
 
-    changeset = Ecto.Changeset.change(%MyModel{id: 1, embeds: [embed]}, embeds: [embed_changeset])
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embeds: [embed]},
+                                      embeds: [embed_changeset])
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_update, MyEmbed},
             {:before_update, MyEmbed}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
     assert model.embeds == [%{embed | x: "abc"}]
+
+    # With no changes
+    no_changes = Ecto.Changeset.change(embed)
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed},
+                                      embed: no_changes, x: "abc")
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embed == embed
+
+    changes = Ecto.Changeset.change(embed, x: "abc")
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, embeds: [embed]},
+                                      embeds: [no_changes, changes])
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_insert, MyEmbed},
+            {:before_insert, MyEmbed}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.embeds == [embed, %{embed | x: "abc"}]
   end
 
   test "changing assocs on update" do
@@ -775,23 +795,44 @@ defmodule Ecto.RepoTest do
     end
 
     assoc = %{assoc | id: 1}
-    inserted_assoc = put_in assoc.__meta__.state, :loaded
+    inserted_assoc = %{assoc | my_model_id: 1}
+    inserted_assoc = put_in inserted_assoc.__meta__.state, :loaded
 
     # Changing the assoc
-    assoc_changeset = Ecto.Changeset.change(assoc, x: "abc")
-    changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, assoc: assoc_changeset)
+    assoc_changeset = Ecto.Changeset.change(inserted_assoc, x: "abc")
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: inserted_assoc},
+                                      assoc: assoc_changeset)
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_update, MyAssoc},
             {:before_update, MyAssoc}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.assoc == %{inserted_assoc | x: "abc", my_model_id: model.id}
+    assert model.assoc == %{inserted_assoc | x: "abc"}
 
-    changeset = Ecto.Changeset.change(%MyModel{id: 1, assocs: [assoc]}, assocs: [assoc_changeset])
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, assocs: [inserted_assoc]},
+                                      assocs: [assoc_changeset])
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_update, MyAssoc},
             {:before_update, MyAssoc}, {:before_update, MyModel} | _] =
       Agent.get(CallbackAgent, &get_models/1)
-    assert model.assocs == [%{inserted_assoc | x: "abc", my_model_id: model.id}]
+    assert model.assocs == [%{inserted_assoc | x: "abc"}]
+
+    # With no changes
+    no_changes = Ecto.Changeset.change(inserted_assoc)
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: inserted_assoc},
+                                      assoc: no_changes, x: "abc")
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.assoc == inserted_assoc
+
+    new_changeset = Ecto.Changeset.change(assoc, x: "abc")
+    changeset = Ecto.Changeset.change(%MyModel{id: 1, assocs: [inserted_assoc]},
+                                      assocs: [no_changes, new_changeset])
+    model = TestRepo.update!(changeset)
+    assert [{:after_update, MyModel}, {:after_insert, MyAssoc},
+            {:before_insert, MyAssoc}, {:before_update, MyModel} | _] =
+      Agent.get(CallbackAgent, &get_models/1)
+    assert model.assocs == [inserted_assoc, %{inserted_assoc | x: "abc"}]
   end
 
   test "removing embeds on update" do
