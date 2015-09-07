@@ -104,7 +104,18 @@ defmodule Ecto.Date do
   def type, do: :date
 
   @doc """
-  Casts to date.
+  Casts the given value to date.
+
+  It supports:
+
+    * a binary in the "YYYY-MM-DD" format
+    * a map with `"year"`, `"month"` and `"day"` keys
+      with integer or binaries as values
+    * a map with `:year`, `:month` and `:day` keys
+      with integer or binaries as values
+    * a tuple with `{year, month, day}` as integers or binaries
+    * an `Ecto.Date` struct itself
+
   """
   def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes>>),
     do: from_parts(to_i(year), to_i(month), to_i(day))
@@ -211,7 +222,22 @@ defmodule Ecto.Time do
   def type, do: :time
 
   @doc """
-  Casts to time.
+  Casts the given value to time.
+
+  It supports:
+
+    * a binary in the "HH:MM:DD" format
+      (may be followed by "Z", as in `12:00:00Z`)
+    * a binary in the "HH:MM:DD.USEC" format
+      (may be followed by "Z", as in `12:00:00.005Z`)
+    * a map with `"hour"`, `"min"` keys with `"sec"` and `"usec"`
+      as optional keys and values are integers or binaries
+    * a map with `:hour`, `:min` keys with `:sec` and `:usec`
+      as optional keys and values are integers or binaries
+    * a tuple with `{hour, min, sec}` as integers or binaries
+    * a tuple with `{hour, min, sec, usec}` as integers or binaries
+    * an `Ecto.Time` struct itself
+
   """
   def cast(<<hour::2-bytes, ?:, min::2-bytes, ?:, sec::2-bytes, rest::binary>>) do
     if usec = usec(rest) do
@@ -335,7 +361,22 @@ defmodule Ecto.DateTime do
   def type, do: :datetime
 
   @doc """
-  Casts to date time.
+  Casts the given value to datetime.
+
+  It supports:
+
+    * a binary in the "YYYY-MM-DD HH:MM:DD" format
+      (may be seperated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
+    * a binary in the "YYYY-MM-DD HH:MM:DD.USEC" format
+      (may be seperated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
+    * a map with `"year"`, `"month"`,`"day"`, `"hour"`, `"min"` keys
+      with `"sec"` and `"usec"` as optional keys and values are integers or binaries
+    * a map with `:year`, `:month`,`:day`, `:hour`, `:min` keys
+      with `:sec` and `:usec` as optional keys and values are integers or binaries
+    * a tuple with `{{year, month, day}, {hour, min, sec}}` as integers or binaries
+    * a tuple with `{{year, month, day}, {hour, min, sec, usec}}` as integers or binaries
+    * an `Ecto.DateTime` struct itself
+
   """
   def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
              hour::2-bytes, ?:, min::2-bytes, ?:, sec::2-bytes, rest::binary>>) when sep in [?\s, ?T] do
