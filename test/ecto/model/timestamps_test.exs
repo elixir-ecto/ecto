@@ -30,9 +30,9 @@ defmodule Ecto.Model.TimestampsTest do
     assert %Ecto.DateTime{} = default.updated_at
   end
 
-  test "does not set inserted_at and updated_at values if they were previoously set" do
+  test "does not set inserted_at and updated_at values if they were previously set" do
     default = TestRepo.insert!(%Default{inserted_at: %Ecto.DateTime{year: 2000},
-                                       updated_at: %Ecto.DateTime{year: 2000}})
+                                        updated_at: %Ecto.DateTime{year: 2000}})
     assert %Ecto.DateTime{year: 2000} = default.inserted_at
     assert %Ecto.DateTime{year: 2000} = default.updated_at
 

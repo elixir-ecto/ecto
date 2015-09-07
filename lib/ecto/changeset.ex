@@ -74,7 +74,6 @@ defmodule Ecto.Changeset do
   The fields are:
 
   * `valid?`      - Stores if the changeset is valid
-  * `repo`        - The repository applying the changeset (only set after a Repo function is called)
   * `model`       - The changeset root model
   * `params`      - The parameters as given on changeset creation
   * `changes`     - The `changes` from parameters that were approved in casting
@@ -86,6 +85,8 @@ defmodule Ecto.Changeset do
   * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
   * `action`      - The action to be performed with the changeset
   * `types`       - Cache of the model's field types
+  * `repo`        - The repository applying the changeset (only set after a Repo function is called)
+  * `opts`        - The options given to the repository (only set after a Repo function is called)
 
   ## Related models
 
@@ -112,10 +113,11 @@ defmodule Ecto.Changeset do
 
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: [],
-            constraints: [], filters: %{}, action: nil, types: nil
+            constraints: [], filters: %{}, action: nil, types: nil, opts: nil
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
+                        opts: Keyword.t | nil,
                         model: Ecto.Model.t | nil,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
