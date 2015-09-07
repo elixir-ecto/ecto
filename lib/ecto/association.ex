@@ -578,7 +578,6 @@ defmodule Ecto.Association.BelongsTo do
         ref = opts[:references] ->
           ref
         primary_key = Module.get_attribute(module, :primary_key) ->
-          # TODO: Default to ID by the time Ecto 1.1 comes out
           case elem(primary_key, 0) do
             :id -> :id
             key ->
@@ -590,8 +589,7 @@ defmodule Ecto.Association.BelongsTo do
               key
           end
         true ->
-          raise ArgumentError, "need to set :references option for " <>
-            "association #{inspect name} when model has no primary key"
+          :id
       end
 
     queryable = Keyword.fetch!(opts, :queryable)
