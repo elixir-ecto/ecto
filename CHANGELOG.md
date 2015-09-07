@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.0.2
+
+* Enhancements
+  * Add `Ecto.Model.put_meta/2`
+  * Document supported formats in datetime
+  * Prepend model key ordering on preload
+
+* Bug fixes
+  * Ensure we can cast a changeset with `:empty`
+  * Ensure we prepend repo configuration instead of appending in `mix ecto.gen.repo`
+  * Allow non-matching ids to given on assocs or embeds as long as the underlying changeset has action `:insert`
+  * Make sure relations can be appended on `Ecto.Changeset.put_change/3`
+  * Ensure we return the original changeset when child constraint fails
+  * Always force timestamp update for models (without changesets)
+  * Warn on bad default for `belongs_to` associations
+
 ## v1.0.1
 
 * Bug fixes
