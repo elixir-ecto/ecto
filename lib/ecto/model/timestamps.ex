@@ -20,12 +20,19 @@ defmodule Ecto.Model.Timestamps do
   Puts a timestamp in the changeset with the given field and type.
   """
   def put_timestamp(changeset, field, type, use_usec) do
-    if get_change changeset, field do
+    if skip_timestamp?(changeset, field) do
       changeset
     else
       {:ok, value} = Ecto.Type.load(type, timestamp_tuple(use_usec))
       force_change changeset, field, value
     end
+  end
+
+  defp skip_timestamp?(changeset, field) do
+    get_change(changeset, field) &&
+      # If we are on update and the data came from the model,
+      # we can't effectively track changes so we force an update.
+      not (changeset.action == :update and changeset.opts[:source] == :model)
   end
 
   defp timestamp_tuple(_use_usec = true) do

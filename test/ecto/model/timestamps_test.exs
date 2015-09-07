@@ -33,12 +33,17 @@ defmodule Ecto.Model.TimestampsTest do
   test "does not set inserted_at and updated_at values if they were previously set" do
     default = TestRepo.insert!(%Default{inserted_at: %Ecto.DateTime{year: 2000},
                                         updated_at: %Ecto.DateTime{year: 2000}})
-    assert %Ecto.DateTime{year: 2000} = default.inserted_at
-    assert %Ecto.DateTime{year: 2000} = default.updated_at
+    assert default.inserted_at == %Ecto.DateTime{year: 2000}
+    assert default.updated_at == %Ecto.DateTime{year: 2000}
 
     default = TestRepo.update!(%Default{id: 1, updated_at: %Ecto.DateTime{year: 2000}})
     refute default.inserted_at
-    assert %Ecto.DateTime{year: 2000} = default.updated_at
+    assert default.updated_at != %Ecto.DateTime{year: 2000}
+
+    changeset = Ecto.Changeset.change(%Default{id: 1}, updated_at: %Ecto.DateTime{year: 2000})
+    default = TestRepo.update!(changeset)
+    refute default.inserted_at
+    assert default.updated_at == %Ecto.DateTime{year: 2000}
   end
 
   test "sets custom inserted_at and updated_at values" do
