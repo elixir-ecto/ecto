@@ -260,13 +260,13 @@ defmodule Ecto.RepoTest do
   test "insert, update and delete errors on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
 
-    insert = %{invalid | action: :insert}
+    insert = %{invalid | action: :insert, repo: TestRepo, opts: [source: :changeset]}
     assert {:error, ^insert} = TestRepo.insert(invalid)
 
-    update = %{invalid | action: :update}
+    update = %{invalid | action: :update, repo: TestRepo, opts: [source: :changeset]}
     assert {:error, ^update} = TestRepo.update(invalid)
 
-    delete = %{invalid | action: :delete}
+    delete = %{invalid | action: :delete, repo: TestRepo, opts: [source: :changeset]}
     assert {:error, ^delete} = TestRepo.delete(invalid)
   end
 
@@ -315,15 +315,15 @@ defmodule Ecto.RepoTest do
   test "insert!, update! and delete! fail on changeset with wrong action" do
     invalid = %Ecto.Changeset{valid?: true, model: %MyModel{}, action: :other}
 
-    assert_raise ArgumentError, "a changeset with action :other was given to Repo.insert", fn ->
+    assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.insert/2", fn ->
       TestRepo.insert!(invalid)
     end
 
-    assert_raise ArgumentError, "a changeset with action :other was given to Repo.update", fn ->
+    assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.update/2", fn ->
       TestRepo.update!(invalid)
     end
 
-    assert_raise ArgumentError, "a changeset with action :other was given to Repo.delete", fn ->
+    assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.delete/2", fn ->
       TestRepo.delete!(invalid)
     end
   end

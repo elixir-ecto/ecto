@@ -43,7 +43,20 @@ defmodule Ecto.Repo.Model do
   @doc """
   Implementation for `Ecto.Repo.insert/2`.
   """
-  def insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
+  def insert(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+    changeset = update_changeset(changeset, :changeset, :insert, repo, opts)
+    do_insert(repo, adapter, changeset, opts)
+  end
+
+  def insert(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
+    changeset =
+      struct
+      |> Ecto.Changeset.change()
+      |> update_changeset(:model, :insert, repo, opts)
+    do_insert(repo, adapter, changeset, opts)
+  end
+
+  defp do_insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
     struct = struct_from_changeset!(:insert, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -54,7 +67,6 @@ defmodule Ecto.Repo.Model do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     # We also remove all embeds that are not in the changes
-    changeset = %{changeset | repo: repo, action: :insert}
     changeset = insert_changes(struct, fields, embeds, assocs, changeset)
 
     wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
@@ -81,18 +93,35 @@ defmodule Ecto.Repo.Model do
     end)
   end
 
-  def insert(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
+  defp do_insert(_repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
     {:error, %{changeset | action: :insert}}
-  end
-
-  def insert(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
-    insert(repo, adapter, Ecto.Changeset.change(struct), opts)
   end
 
   @doc """
   Implementation for `Ecto.Repo.update/2`.
   """
-  def update(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
+  def update(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+    changeset = update_changeset(changeset, :changeset, :update, repo, opts)
+    do_update(repo, adapter, changeset, opts)
+  end
+
+  def update(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
+    changes =
+      struct
+      |> Map.take(model.__schema__(:fields))
+      |> Map.drop(model.__schema__(:primary_key))
+      |> Map.drop(model.__schema__(:embeds))
+
+    changeset =
+      struct
+      |> Ecto.Changeset.change()
+      |> Map.put(:changes, changes)
+      |> update_changeset(:model, :update, repo, opts)
+
+    do_update(repo, adapter, changeset, opts)
+  end
+
+  defp do_update(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
     struct = struct_from_changeset!(:update, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -103,7 +132,6 @@ defmodule Ecto.Repo.Model do
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
     # changeset before hand.
-    changeset = %{changeset | repo: repo, action: :update}
 
     if changeset.changes != %{} or opts[:force] do
       wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
@@ -137,30 +165,32 @@ defmodule Ecto.Repo.Model do
     end
   end
 
-  def update(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
+  defp do_update(_repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
     {:error, %{changeset | action: :update}}
-  end
-
-  def update(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
-    changes =
-      struct
-      |> Map.take(model.__schema__(:fields))
-      |> Map.drop(model.__schema__(:primary_key))
-      |> Map.drop(model.__schema__(:embeds))
-
-    changeset = %{Ecto.Changeset.change(struct) | changes: changes}
-    update(repo, adapter, changeset, opts)
   end
 
   @doc """
   Implementation for `Ecto.Repo.delete/2`.
   """
-  def delete(repo, adapter, %Changeset{valid?: true} = changeset, opts) when is_list(opts) do
+  def delete(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+    changeset = update_changeset(changeset, :changeset, :delete, repo, opts)
+    do_delete(repo, adapter, changeset, opts)
+  end
+
+  def delete(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
+    changeset =
+      struct
+      |> Ecto.Changeset.change()
+      |> update_changeset(:model, :delete, repo, opts)
+    do_delete(repo, adapter, changeset, opts)
+  end
+
+  defp do_delete(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
     struct = struct_from_changeset!(:delete, changeset)
     model  = struct.__struct__
     embeds = model.__schema__(:embeds)
 
-    changeset = %{changeset | repo: repo, action: :delete, changes: %{}}
+    changeset = %{changeset | changes: %{}}
     autogen   = get_autogenerate_id(changeset, model)
 
     wrap_in_transaction(repo, adapter, model, opts, embeds, [],
@@ -193,22 +223,21 @@ defmodule Ecto.Repo.Model do
     end)
   end
 
-  def delete(_repo, _adapter, %Changeset{valid?: false} = changeset, opts) when is_list(opts) do
+  defp do_delete(_repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
     {:error, %{changeset | action: :delete}}
-  end
-
-  def delete(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
-    delete(repo, adapter, Ecto.Changeset.change(struct), opts)
   end
 
   ## Helpers
 
-  defp struct_from_changeset!(action, %{action: given}) when given != nil and given != action,
-    do: raise(ArgumentError, "a changeset with action #{inspect given} was given to Repo.#{action}")
   defp struct_from_changeset!(action, %{model: nil}),
     do: raise(ArgumentError, "cannot #{action} a changeset without a model")
   defp struct_from_changeset!(_action, %{model: struct}),
     do: struct
+
+  defp update_changeset(%{action: given}, _source, action, repo, _opts) when given != nil and given != action,
+    do: raise(ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2")
+  defp update_changeset(changeset, source, action, repo, opts),
+    do: %{changeset | action: action, repo: repo, opts: [source: source] ++ opts}
 
   defp metadata(%{__struct__: model, __meta__: meta}) do
     meta
