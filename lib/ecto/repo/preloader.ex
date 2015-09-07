@@ -97,7 +97,11 @@ defmodule Ecto.Repo.Preloader do
 
   defp preload_assoc(repo, query, prefix, %{cardinality: card} = assoc, related_key, preloads) do
     if card == :many do
-      query = Ecto.Query.from q in query, order_by: field(q, ^related_key)
+      # Generate the expression by hand so we prepend it instead of appending it
+      query = update_in query.order_bys, fn order_bys ->
+        [%Ecto.Query.QueryExpr{expr: [asc: {{:., [], [{:&, [], [0]}, related_key]}, [], []}],
+                               file: __ENV__.file, line: __ENV__.line, params: []}|order_bys]
+      end
     end
     loaded = preload_each(repo.all(%{query | prefix: prefix}), repo, preloads)
     {:assoc, assoc, assoc_dict(card, related_key, loaded)}

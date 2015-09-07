@@ -19,10 +19,11 @@ defmodule Ecto.Integration.PreloadTest do
     p2 = TestRepo.insert!(%Post{title: "2"})
     p3 = TestRepo.insert!(%Post{title: "3"})
 
+    # We use the same text to expose bugs in preload sorting
     %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "2", post_id: p2.id})
     %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
-    %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
-    %Comment{id: cid4} = TestRepo.insert!(%Comment{text: "4", post_id: p2.id})
+    %Comment{id: cid4} = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
 
     assert %Ecto.Association.NotLoaded{} = p1.comments
 
@@ -31,6 +32,13 @@ defmodule Ecto.Integration.PreloadTest do
                                               comments: from(c in Comment, where: false))
     assert [] = pe1.comments
     assert [] = pe2.comments
+    assert [] = pe3.comments
+
+    # With custom ordered query
+    assert [pe3, pe1, pe2] = TestRepo.preload([p3, p1, p2],
+                                              comments: from(c in Comment, order_by: [desc: c.text]))
+    assert [%Comment{id: ^cid2}, %Comment{id: ^cid1}] = pe1.comments
+    assert [%Comment{id: ^cid4}, %Comment{id: ^cid3}] = pe2.comments
     assert [] = pe3.comments
 
     # With assoc query
