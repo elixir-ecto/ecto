@@ -578,7 +578,17 @@ defmodule Ecto.Association.BelongsTo do
         ref = opts[:references] ->
           ref
         primary_key = Module.get_attribute(module, :primary_key) ->
-          elem(primary_key, 0)
+          # TODO: Default to ID by the time Ecto 1.1 comes out
+          case elem(primary_key, 0) do
+            :id -> :id
+            key ->
+              IO.puts :stderr, "warning: #{inspect module} has a custom primary key and " <>
+                               "invoked belongs_to(#{inspect name}). To avoid ambiguity, " <>
+                               "please also specify the :references option in belongs_to " <>
+                               "with the primary key name of the associated model, currently " <>
+                               "it defaults to #{inspect key}\n#{Exception.format_stacktrace}"
+              key
+          end
         true ->
           raise ArgumentError, "need to set :references option for " <>
             "association #{inspect name} when model has no primary key"
