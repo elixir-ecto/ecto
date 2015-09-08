@@ -19,8 +19,6 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   """
 
-  @recursive true
-
   @doc false
   def run(args) do
     repo = parse_repo(args)
