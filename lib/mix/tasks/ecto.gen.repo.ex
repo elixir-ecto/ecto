@@ -26,6 +26,8 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   """
 
+  @recursive true
+
   @doc false
   def run(args) do
     no_umbrella!("ecto.gen.repo")

@@ -20,6 +20,8 @@ defmodule Mix.Tasks.Ecto.Create do
 
   """
 
+  @recursive true
+
   @doc false
   def run(args) do
     repo = parse_repo(args)

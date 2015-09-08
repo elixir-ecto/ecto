@@ -39,6 +39,8 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
   """
 
+  @recursive true
+
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     repo = parse_repo(args)

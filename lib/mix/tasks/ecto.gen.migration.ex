@@ -29,6 +29,8 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
 
   """
 
+  @recursive true
+
   @doc false
   def run(args) do
     no_umbrella!("ecto.gen.migration")
