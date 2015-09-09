@@ -381,10 +381,10 @@ defmodule Ecto.Changeset do
          {changes, errors, valid?}
        {:ok, value, valid?} ->
          {Map.put(changes, key, value), errors, valid?}
-       :skip ->
+       {:missing, current} ->
          {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
          {changes, errors, valid?}
-       :missing ->
+       :skip ->
          {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
          {changes, errors, valid?}
        :invalid ->
@@ -426,16 +426,17 @@ defmodule Ecto.Changeset do
 
   defp cast_field(param_key, {tag, relation}, params, current, model, valid?)
       when tag in @relations do
+    current = Relation.load!(model, current)
     case Map.fetch(params, param_key) do
       {:ok, value} ->
         case Relation.cast(relation, model, value, current) do
           :error -> :invalid
           {:ok, _, _, true} -> :skip
-          {:ok, ^current, _, _} -> :skip
+          {:ok, ^current, _, false} -> :skip
           {:ok, result, relation_valid?, false} -> {:ok, result, valid? and relation_valid?}
         end
       :error ->
-        :missing
+        {:missing, current}
     end
   end
 
@@ -448,7 +449,7 @@ defmodule Ecto.Changeset do
           :error -> :invalid
         end
       :error ->
-        :missing
+        {:missing, current}
     end
   end
 

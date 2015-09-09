@@ -125,13 +125,31 @@ defmodule Ecto.Changeset.Relation do
   defp apply_changes(%Changeset{action: :delete}), do: nil
   defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
+
+  @doc """
+  Loads the relation with the given model.
+
+  Loading will fail if the asociation is not loaded but the model is.
+  """
+  def load!(%{__meta__: %{state: :built}}, %NotLoaded{__cardinality__: cardinality}) do
+    do_empty(cardinality)
+  end
+
+  def load!(model, %NotLoaded{__field__: field}) do
+    raise ArgumentError, "attempting to cast or change association `#{field}` " <>
+      "from `#{inspect model.__struct__}` that was not loaded. Please preload your " <>
+      "associations before casting or changing the model"
+  end
+
+  def load!(_model, loaded), do: loaded
+
   @doc """
   Casts embedded models according to the `on_cast` function.
 
   Sets correct `state` on the returned changeset
   """
   def cast(relation, model, params, current) do
-    cast(relation, params, loaded_or_empty!(model, current))
+    cast(relation, params, current)
   end
 
   defp cast(%{cardinality: :one} = relation, :empty, current) do
@@ -181,7 +199,7 @@ defmodule Ecto.Changeset.Relation do
   def change(_relation, _model, nil, nil), do: {:ok, nil, false, true}
 
   def change(%{related: mod} = relation, model, value, current) do
-    current = loaded_or_empty!(model, current)
+    current = load!(model, current)
     pks     = primary_keys!(mod)
     cast_or_change(relation, value, current, pks, pks,
                    &do_change(relation, &1, &2))
@@ -199,7 +217,7 @@ defmodule Ecto.Changeset.Relation do
       Enum.reduce(embeds ++ assocs, Map.take(struct, fields), fn field, acc ->
         case Map.fetch(types, field) do
           {:ok, {_, embed_or_assoc}} ->
-            value = loaded_or_empty!(struct, Map.get(struct, field))
+            value = load!(struct, Map.get(struct, field))
             case change(embed_or_assoc, struct, value, nil) do
               {:ok, _, _, true}       -> acc
               {:ok, change, _, false} -> Map.put(acc, field, change)
@@ -351,17 +369,4 @@ defmodule Ecto.Changeset.Relation do
     do: true
   defp skip?(_changeset),
     do: false
-
-  defp loaded_or_empty!(%{__meta__: %{state: :built}},
-                        %NotLoaded{__cardinality__: cardinality}) do
-    do_empty(cardinality)
-  end
-
-  defp loaded_or_empty!(model, %NotLoaded{__field__: field}) do
-    raise ArgumentError, "attempting to cast or change association `#{field}` " <>
-      "from `#{inspect model.__struct__}` that was not loaded. Please preload your " <>
-      "associations before casting or changing the model"
-  end
-
-  defp loaded_or_empty!(_model, loaded), do: loaded
 end

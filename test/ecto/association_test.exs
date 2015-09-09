@@ -540,6 +540,11 @@ defmodule Ecto.AssociationTest do
 
   test "cast has_one when required" do
     changeset =
+      Changeset.cast(%Author{}, %{}, ~w(profile))
+    assert changeset.changes == %{}
+    assert changeset.errors == [profile: "can't be blank"]
+
+    changeset =
       Changeset.cast(%Author{profile: nil}, %{}, ~w(profile))
     assert changeset.changes == %{}
     assert changeset.errors == [profile: "can't be blank"]
@@ -712,6 +717,12 @@ defmodule Ecto.AssociationTest do
   end
 
   test "cast has_many when required" do
+    # Still no error because the loaded association is an empty list
+    changeset =
+      Changeset.cast(%Author{}, %{}, ~w(posts))
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+
     changeset =
       Changeset.cast(%Author{posts: []}, %{}, ~w(posts))
     assert changeset.changes == %{}
