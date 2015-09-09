@@ -995,17 +995,22 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates a change is a string of the given length.
+  Validates a change is a string or list of the given length.
 
   ## Options
 
-    * `:is` - the string length must be exactly this value
-    * `:min` - the string length must be greater than or equal to this value
-    * `:max` - the string lenght must be less than or equal to this value
+    * `:is` - the length must be exactly this value
+    * `:min` - the length must be greater than or equal to this value
+    * `:max` - the length must be less than or equal to this value
     * `:message` - the message on failure, depending on the validation, is one of:
-      * "should be %{count} characters"
-      * "should be at least %{count} characters"
-      * "should be at most %{count} characters"
+      * for strings:
+        * "should be %{count} characters"
+        * "should be at least %{count} characters"
+        * "should be at most %{count} characters"
+      * for lists:
+        * "should have %{count} items"
+        * "should have at least %{count} items"
+        * "should have at most %{count} items"
 
   ## Examples
 
@@ -1013,31 +1018,45 @@ defmodule Ecto.Changeset do
       validate_length(changeset, :title, max: 100)
       validate_length(changeset, :title, min: 3, max: 100)
       validate_length(changeset, :code, is: 9)
+      validate_length(changeset, :topics, is: 2)
 
   """
   @spec validate_length(t, atom, Keyword.t) :: t
   def validate_length(changeset, field, opts) when is_list(opts) do
     validate_change changeset, field, {:length, opts}, fn
-      _, value when is_binary(value) ->
-        length = String.length(value)
-        error  = ((is = opts[:is]) && wrong_length(length, is, opts)) ||
-                 ((min = opts[:min]) && too_short(length, min, opts)) ||
-                 ((max = opts[:max]) && too_long(length, max, opts))
+      _, value ->
+        {type, length} = case value do
+          value when is_binary(value) ->
+            {:string, String.length(value)}
+          value when is_list(value) ->
+            {:list, length(value)}
+        end
+
+        error = ((is = opts[:is]) && wrong_length(type, length, is, opts)) ||
+                ((min = opts[:min]) && too_short(type, length, min, opts)) ||
+                ((max = opts[:max]) && too_long(type, length, max, opts))
+
         if error, do: [{field, error}], else: []
     end
   end
 
-  defp wrong_length(value, value, _opts), do: nil
-  defp wrong_length(_length, value, opts), do:
+  defp wrong_length(_type, value, value, _opts), do: nil
+  defp wrong_length(:string, _length, value, opts), do:
     {message(opts, "should be %{count} characters"), count: value}
+  defp wrong_length(:list, _length, value, opts), do:
+    {message(opts, "should have %{count} items"), count: value}
 
-  defp too_short(length, value, _opts) when length >= value, do: nil
-  defp too_short(_length, value, opts), do:
+  defp too_short(_type, length, value, _opts) when length >= value, do: nil
+  defp too_short(:string, _length, value, opts), do:
     {message(opts, "should be at least %{count} characters"), count: value}
+  defp too_short(:list, _length, value, opts), do:
+    {message(opts, "should have at least %{count} items"), count: value}
 
-  defp too_long(length, value, _opts) when length <= value, do: nil
-  defp too_long(_length, value, opts), do:
+  defp too_long(_type, length, value, _opts) when length <= value, do: nil
+  defp too_long(:string, _length, value, opts), do:
     {message(opts, "should be at most %{count} characters"), count: value}
+  defp too_long(:list, _length, value, opts), do:
+    {message(opts, "should have at most %{count} items"), count: value}
 
   @doc """
   Validates the properties of a number.
