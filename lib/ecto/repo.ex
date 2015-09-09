@@ -317,9 +317,9 @@ defmodule Ecto.Repo do
 
   ## Examples
 
-      Repo.preload posts, :comments
-      Repo.preload posts, comments: :permalinks
-      Repo.preload posts, comments: from(c in Comment, order_by: c.published_at)
+      posts = Repo.preload posts, :comments
+      posts = Repo.preload posts, comments: :permalinks
+      posts = Repo.preload posts, comments: from(c in Comment, order_by: c.published_at)
 
   """
   defcallback preload([Ecto.Model.t] | Ecto.Model.t, preloads :: term) ::
