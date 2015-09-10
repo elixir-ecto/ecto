@@ -108,19 +108,14 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp unique_ids(structs, module, assoc) do
-    ids(structs, module, assoc)
-    |> Enum.uniq
-  end
-
-  defp ids(structs, module, assoc) do
     field = assoc.field
     owner_key = assoc.owner_key
 
-    for struct <- structs,
+    Enum.uniq for(struct <- structs,
       assert_struct!(module, struct),
       not loaded?(struct, field),
       key = Map.fetch!(struct, owner_key),
-      do: key
+      do: key)
   end
 
   defp loaded?(struct, field) do
