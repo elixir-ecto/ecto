@@ -83,7 +83,7 @@ defmodule Ecto.Repo.Preloader do
   ## Association preloading
 
   defp preload_assoc(structs, module, repo, prefix, assoc, related_key, preloads_or_query) do
-    case ids(structs, module, assoc) do
+    case unique_ids(structs, module, assoc) do
       [] ->
         {:assoc, assoc, HashDict.new}
       ids when is_list(preloads_or_query) ->
@@ -105,6 +105,11 @@ defmodule Ecto.Repo.Preloader do
     end
     loaded = preload_each(repo.all(%{query | prefix: prefix}), repo, preloads)
     {:assoc, assoc, assoc_dict(card, related_key, loaded)}
+  end
+
+  defp unique_ids(structs, module, assoc) do
+    ids(structs, module, assoc)
+    |> Enum.uniq
   end
 
   defp ids(structs, module, assoc) do
