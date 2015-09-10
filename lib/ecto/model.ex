@@ -148,10 +148,10 @@ defmodule Ecto.Model do
       Ecto.Association.association_from_model!(model, assoc)
 
     values =
-      for struct <- structs,
+      Enum.uniq for(struct <- structs,
         assert_struct!(model, struct),
         key = Map.fetch!(struct, owner_key),
-        do: key
+        do: key)
 
     assoc.__struct__.assoc_query(assoc, values)
   end
