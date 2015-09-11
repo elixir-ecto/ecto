@@ -376,6 +376,7 @@ defmodule Ecto.DateTime do
     * a tuple with `{{year, month, day}, {hour, min, sec}}` as integers or binaries
     * a tuple with `{{year, month, day}, {hour, min, sec, usec}}` as integers or binaries
     * an `Ecto.DateTime` struct itself
+    * a unix timestamp
 
   """
   def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
@@ -412,6 +413,13 @@ defmodule Ecto.DateTime do
   def cast({{year, month, day}, {hour, min, sec, usec}}) do
     from_parts(to_i(year), to_i(month), to_i(day),
                to_i(hour), to_i(min), to_i(sec), to_i(usec))
+  end
+
+  @seconds_0_to_1970 :calendar.datetime_to_gregorian_seconds({{1970, 1, 1}, {0, 0, 0}})
+  def cast(unix_timestamp) when is_integer(unix_timestamp) do
+    @seconds_0_to_1970 + unix_timestamp
+    |> :calendar.gregorian_seconds_to_datetime
+    |> cast
   end
 
   def cast(_) do

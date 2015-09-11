@@ -220,6 +220,10 @@ defmodule Ecto.DateTimeTest do
     assert Ecto.DateTime.cast({{2015, 1, 23}, {25, 50, 07, 8000}}) == :error
   end
 
+  test "cast unix timestmap" do
+    assert Ecto.DateTime.cast(1422057007) == {:ok, @datetime}
+  end
+
   test "dump itself to a tuple" do
     assert Ecto.DateTime.dump(@datetime) == {:ok, {{2015, 1, 23}, {23, 50, 07, 0}}}
     assert Ecto.DateTime.dump(@datetime_usec) == {:ok, {{2015, 1, 23}, {23, 50, 07, 8000}}}
