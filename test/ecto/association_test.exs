@@ -797,6 +797,22 @@ defmodule Ecto.AssociationTest do
     end
   end
 
+  test "change assocs_one twice" do
+    model = %Author{}
+    params = %{profile: %{name: "Bruce Wayne", id: 1}}
+    model = Changeset.cast(model, params, ~w(), ~w(profile)) |> Changeset.apply_changes
+    params = %{posts: %{name: "Batman", id: 1}}
+    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
+    assert changeset.valid?
+
+    model = %Author{}
+    params = %{profile: %{name: "Bruce Wayne"}}
+    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
+    assert changeset.valid?
+  end
+
   test "change assocs_one keeps appropriate action from changeset" do
     model = %Author{}
     assoc = Author.__schema__(:association, :profile)
@@ -870,6 +886,23 @@ defmodule Ecto.AssociationTest do
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
       Relation.change(assoc, model, [new_model_update], [assoc_model])
     end
+  end
+
+  test "change assocs_many twice" do
+    model = %Author{}
+
+    params = %{posts: [%{title: "hello", id: 1}]}
+    model = Changeset.cast(model, params, ~w(), ~w(posts)) |> Changeset.apply_changes
+    params = %{posts: []}
+    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
+    assert changeset.valid?
+
+    model = %Author{}
+    params = %{posts: [%{title: "hello"}]}
+    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
+    assert changeset.valid?
   end
 
   ## Other
