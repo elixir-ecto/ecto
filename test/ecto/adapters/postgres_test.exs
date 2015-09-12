@@ -321,6 +321,19 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == String.rstrip(result)
   end
 
+  test "fragments allow ? to be escaped with backslash" do
+    query =
+      normalize  from(e in "model",
+        where: fragment("? = \"query\\?\"", e.start_time),
+        select: 1)
+
+    result =
+      "SELECT 1 FROM \"model\" AS m0 " <>
+      "WHERE (m0.\"start_time\" = \"query?\")"
+
+    assert SQL.all(query) == String.rstrip(result)
+  end
+
   ## *_all
 
   test "update all" do
