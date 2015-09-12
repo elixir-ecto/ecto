@@ -429,7 +429,7 @@ defmodule Ecto.Changeset do
     current = Relation.load!(model, current)
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Relation.cast(relation, model, value, current) do
+        case Relation.cast(relation, value, current) do
           :error -> :invalid
           {:ok, _, _, true} -> :skip
           {:ok, ^current, _, false} -> :skip

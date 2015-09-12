@@ -312,13 +312,11 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def build(%{related: related, owner_key: owner_key, related_key: related_key,
-              queryable: queryable, defaults: defaults}, struct, attributes) do
-    related
-    |> struct(defaults)
+  def build(%{owner_key: owner_key, related_key: related_key} = refl, struct, attributes) do
+    refl
+    |> build()
     |> struct(attributes)
     |> Map.put(related_key, Map.get(struct, owner_key))
-    |> Ecto.Association.merge_source(queryable)
   end
 
   @doc false
@@ -347,6 +345,13 @@ defmodule Ecto.Association.Has do
   @behaviour Ecto.Changeset.Relation
 
   @doc false
+  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+    related
+    |> struct(defaults)
+    |> Ecto.Association.merge_source(queryable)
+  end
+
+  @doc false
   def on_replace(%{on_replace: :delete}, changeset) do
     {:delete, changeset}
   end
@@ -357,7 +362,6 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  # TODO: This should be spec'ed somewhere
   def on_repo_action(assoc, changeset, parent, _adapter, repo, repo_action, opts) do
     %{action: action, changes: changes} = changeset
     check_action!(action, repo_action, assoc)
