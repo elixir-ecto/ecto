@@ -349,27 +349,18 @@ defmodule Ecto.Changeset do
     key
   end
 
-  defp process_param({key, fun}, kind, params, types, model, {changes, _, _} = acc) do
+  defp process_param({key, fun}, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)
     type = relation!(types, key, fun)
-    current = get_current(model, changes, key)
-
+    current = Map.get(model, key)
     do_process_param(key, param_key, kind, params, type, current, model, acc)
   end
 
-  defp process_param(key, kind, params, types, model, {changes, _, _} = acc) do
+  defp process_param(key, kind, params, types, model, acc) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
-    current = get_current(model, changes, key)
-
+    current = Map.get(model, key)
     do_process_param(key, param_key, kind, params, type, current, model, acc)
-  end
-
-  defp get_current(model, changes, key) do
-    case Map.fetch(changes, key) do
-      {:ok, value} -> value
-      :error -> Map.get(model, key)
-    end
   end
 
   defp do_process_param(key, param_key, kind, params, type, current,
@@ -377,15 +368,15 @@ defmodule Ecto.Changeset do
     {key,
      case cast_field(param_key, type, params, current, model, valid?) do
        {:ok, nil, valid?} when kind == :required ->
-         {errors, valid?} = error_on_nil(kind, key, nil, errors, valid?)
+         {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key), errors, valid?)
          {changes, errors, valid?}
        {:ok, value, valid?} ->
          {Map.put(changes, key, value), errors, valid?}
        {:missing, current} ->
-         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
          {changes, errors, valid?}
        :skip ->
-         {errors, valid?} = error_on_nil(kind, key, current, errors, valid?)
+         {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
          {changes, errors, valid?}
        :invalid ->
          {changes, [{key, "is invalid"}|errors], false}
