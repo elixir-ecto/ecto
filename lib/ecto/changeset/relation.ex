@@ -327,8 +327,8 @@ defmodule Ecto.Changeset.Relation do
       changeset
     else
       reason = if action == :insert, do: "already exists", else: "does not exist"
-      raise "cannot #{action} related #{inspect changeset.model.__struct__}, " <>
-        "because it #{reason} in the parent model."
+      raise "cannot #{action} related #{inspect changeset.model} " <>
+            "because it #{reason} in the parent model"
     end
   end
 
