@@ -22,6 +22,11 @@ defmodule Ecto.Changeset.Relation do
               {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
 
   @doc """
+  Builds the related model.
+  """
+  defcallback build(t) :: Ecto.Model.t
+
+  @doc """
   Returns empty container for relation.
 
   Handles both the relation structs as well as Ecto.Association.NotLoaded.
@@ -148,23 +153,19 @@ defmodule Ecto.Changeset.Relation do
 
   Sets correct `state` on the returned changeset
   """
-  def cast(relation, model, params, current) do
-    cast(relation, params, current)
-  end
-
-  defp cast(%{cardinality: :one} = relation, :empty, current) do
+  def cast(%{cardinality: :one} = relation, :empty, current) do
     {:ok, current && do_cast(relation, :empty, current), false, false}
   end
 
-  defp cast(%{cardinality: :many} = relation, :empty, current) do
+  def cast(%{cardinality: :many} = relation, :empty, current) do
     {:ok, Enum.map(current, &do_cast(relation, :empty, &1)), false, false}
   end
 
-  defp cast(%{cardinality: :one}, nil, _current) do
+  def cast(%{cardinality: :one}, nil, _current) do
     {:ok, nil, false, false}
   end
 
-  defp cast(%{cardinality: :many} = relation, params, current) when is_map(params) do
+  def cast(%{cardinality: :many} = relation, params, current) when is_map(params) do
     params =
       params
       |> Enum.sort_by(&elem(&1, 0))
@@ -172,15 +173,15 @@ defmodule Ecto.Changeset.Relation do
     cast(relation, params, current)
   end
 
-  defp cast(%{related: model} = relation, params, current) do
+  def cast(%{related: model} = relation, params, current) do
     pks = primary_keys!(model)
     param_pks = Enum.map(pks, &{Atom.to_string(&1), model.__schema__(:type, &1)})
     cast_or_change(relation, params, current, param_pks, pks,
                    &do_cast(relation, &1, &2))
   end
 
-  defp do_cast(%{related: model, on_cast: fun}, params, nil) do
-    apply(model, fun, [model.__struct__(), params]) |> put_new_action(:insert)
+  defp do_cast(%{related: model, on_cast: fun} = meta, params, nil) do
+    apply(model, fun, [meta.__struct__.build(meta), params]) |> put_new_action(:insert)
   end
 
   defp do_cast(%{__struct__: module} = relation, nil, struct) do

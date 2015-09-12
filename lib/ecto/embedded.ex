@@ -131,6 +131,11 @@ defmodule Ecto.Embedded do
   end
 
   @doc false
+  def build(%Embedded{related: related}) do
+    related.__struct__
+  end
+
+  @doc false
   def on_replace(%Embedded{on_replace: :delete}, changeset) do
     {:delete, changeset}
   end

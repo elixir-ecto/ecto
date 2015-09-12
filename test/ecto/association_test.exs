@@ -69,7 +69,8 @@ defmodule Ecto.AssociationTest do
       has_many :posts_comments, through: [:posts, :comments]    # many -> many
       has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
       has_many :emails, {"users_emails", Email}
-      has_one :profile, {"users_profiles", Profile}, on_cast: :required_changeset
+      has_one :profile, {"users_profiles", Profile}, on_cast: :required_changeset,
+                                                     defaults: [name: "default"]
     end
   end
 
@@ -461,7 +462,7 @@ defmodule Ecto.AssociationTest do
   end
 
   test "cast has_one with invalid params" do
-    changeset = Changeset.cast(%Author{}, %{"profile" => %{}}, ~w(profile))
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{name: nil}}, ~w(profile))
     assert changeset.changes.profile.changes == %{}
     assert changeset.changes.profile.errors  == [name: "can't be blank"]
     assert changeset.changes.profile.action  == :insert
@@ -570,6 +571,8 @@ defmodule Ecto.AssociationTest do
                      [profile: :optional_changeset])
     profile = changeset.changes.profile
     assert changeset.required == [:profile]
+    assert profile.model.name == "default"
+    assert profile.model.__meta__.source == {nil, "users_profiles"}
     assert profile.changes == %{name: "michal"}
     assert profile.errors  == []
     assert profile.action  == :insert
@@ -579,6 +582,8 @@ defmodule Ecto.AssociationTest do
     changeset = Changeset.cast(%Author{}, %{"profile" => %{}}, [profile: :optional_changeset])
     profile = changeset.changes.profile
     assert changeset.required == [:profile]
+    assert profile.model.name == "default"
+    assert profile.model.__meta__.source == {nil, "users_profiles"}
     assert profile.changes == %{}
     assert profile.errors  == []
     assert profile.action  == :insert
