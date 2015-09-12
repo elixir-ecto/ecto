@@ -164,6 +164,9 @@ defmodule Ecto.Adapters.MySQLTest do
     query = Model |> select([r], fragment("lcase(?)", r.x)) |> normalize
     assert SQL.all(query) == ~s{SELECT lcase(m0.`x`) FROM `model` AS m0}
 
+    query = Model |> select([r], r.x) |> where([], fragment("? = \"query\\?\"", ^10)) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0.`x` FROM `model` AS m0 WHERE (? = \"query?\")}
+
     value = 13
     query = Model |> select([r], fragment("lcase(?, ?)", r.x, ^value)) |> normalize
     assert SQL.all(query) == ~s{SELECT lcase(m0.`x`, ?) FROM `model` AS m0}

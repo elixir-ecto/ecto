@@ -70,7 +70,7 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({:fragment, _, [query|frags]}, _type, params, vars, env) when is_binary(query) do
-    pieces = String.split(query, "?")
+    pieces = split_binary(query)
 
     if length(pieces) != length(frags) + 1 do
       error! "fragment(...) expects extra arguments in the same amount of question marks in string"
@@ -202,6 +202,12 @@ defmodule Ecto.Query.Builder do
   def escape(other, _type, _params, _vars, _env) do
     error! "`#{Macro.to_string(other)}` is not a valid query expression"
   end
+
+  defp split_binary(query), do: split_binary(query, "")
+  defp split_binary(<<>>, consumed), do: [consumed]
+  defp split_binary(<<??, rest :: binary >>, consumed), do: [consumed | split_binary(rest, "")]
+  defp split_binary(<<?\\, ??, rest :: binary >>, consumed), do: split_binary(rest, consumed <> <<??>>)
+  defp split_binary(<<first :: utf8, rest :: binary>>, consumed), do: split_binary(rest, consumed <> <<first>>)
 
   defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))

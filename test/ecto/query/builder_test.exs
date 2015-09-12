@@ -40,6 +40,10 @@ defmodule Ecto.Query.BuilderTest do
                                            {:raw, ", "}, {:expr, ^0}, {:raw, ")"}) end), %{0 => {0, :any}}} ==
       escape(quote do fragment("date_add(?, ?)", p.created_at, ^0) end, [p: 0], __ENV__)
 
+    assert {Macro.escape(quote do fragment({:raw, "query?("}, {:expr, &0.created_at},
+                                           {:raw, ")"}) end), %{}} ==
+      escape(quote do fragment("query\\?(?)", p.created_at) end, [p: 0], __ENV__)
+
     assert {Macro.escape(quote do fragment(title: [foo: ^0]) end), %{0 => {0, :any}}} ==
       escape(quote do fragment(title: [foo: ^0]) end, [], __ENV__)
 
