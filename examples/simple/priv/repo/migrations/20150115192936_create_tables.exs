@@ -4,6 +4,7 @@ defmodule Repo.CreateTables do
   def up do
     create table(:weather) do
       add :city_id, :integer
+      add :wdate,   :date
       add :temp_lo, :integer
       add :temp_hi, :integer
       add :prcp,    :float
