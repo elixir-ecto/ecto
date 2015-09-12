@@ -801,7 +801,7 @@ defmodule Ecto.AssociationTest do
     model = %Author{}
     params = %{profile: %{name: "Bruce Wayne", id: 1}}
     model = Changeset.cast(model, params, ~w(), ~w(profile)) |> Changeset.apply_changes
-    params = %{posts: %{name: "Batman", id: 1}}
+    params = %{profile: %{name: "Batman", id: 1}}
     changeset = Changeset.cast(model, params, ~w(), ~w(profile))
     changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
     assert changeset.valid?
