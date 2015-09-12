@@ -17,6 +17,7 @@ defmodule Weather do
   use Ecto.Model
   schema "weather" do
     belongs_to :city, City
+    field :wdate, Ecto.Date
     field :temp_lo, :integer
     field :temp_hi, :integer
     field :prcp, :float, default: 0.0
