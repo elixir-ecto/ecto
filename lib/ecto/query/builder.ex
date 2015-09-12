@@ -205,8 +205,8 @@ defmodule Ecto.Query.Builder do
 
   defp split_binary(query), do: split_binary(query, "")
   defp split_binary(<<>>, consumed), do: [consumed]
-  defp split_binary(<<63, rest :: binary >>, consumed), do: [consumed | split_binary(rest, "")]
-  defp split_binary(<<92, 63, rest :: binary >>, consumed), do: split_binary(rest, consumed <> <<63>>)
+  defp split_binary(<<??, rest :: binary >>, consumed), do: [consumed | split_binary(rest, "")]
+  defp split_binary(<<?\\, ??, rest :: binary >>, consumed), do: split_binary(rest, consumed <> <<??>>)
   defp split_binary(<<first :: utf8, rest :: binary>>, consumed), do: split_binary(rest, consumed <> <<first>>)
 
   defp escape_call({name, _, args}, type, params, vars, env) do
