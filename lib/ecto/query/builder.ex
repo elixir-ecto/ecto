@@ -121,6 +121,8 @@ defmodule Ecto.Query.Builder do
     do: {literal(number, type, vars), params}
   def escape(binary, type, params, vars, _env) when is_binary(binary),
     do: {literal(binary, type, vars), params}
+  def escape(atom, type, params, vars, _env) when is_atom(atom),
+    do: {literal(atom, type, vars), params}
   def escape(boolean, type, params, vars, _env) when is_boolean(boolean),
     do: {literal(boolean, type, vars), params}
   def escape(nil, _type, params, _vars, _env),
