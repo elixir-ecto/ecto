@@ -1039,13 +1039,13 @@ defmodule Ecto.Schema do
 
   @doc false
   def __embeds_one__(mod, name, model, opts) do
-    check_options!(opts, [:on_cast, :strategy], "embeds_one/3")
+    check_options!(opts, [:on_cast, :strategy, :on_replace], "embeds_one/3")
     embed(mod, :one, name, model, opts)
   end
 
   @doc false
   def __embeds_many__(mod, name, model, opts) do
-    check_options!(opts, [:on_cast, :strategy], "embeds_many/3")
+    check_options!(opts, [:on_cast, :strategy, :on_replace], "embeds_many/3")
     opts = Keyword.put(opts, :default, [])
     embed(mod, :many, name, model, opts)
   end

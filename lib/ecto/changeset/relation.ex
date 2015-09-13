@@ -6,7 +6,9 @@ defmodule Ecto.Changeset.Relation do
   alias Ecto.Association.NotLoaded
 
   @type on_cast :: atom
-  @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_cast: on_cast}
+  @type on_replace :: :raise | :mark_as_invalid | :delete | :nilify
+  @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom,
+               on_cast: on_cast, on_replace: on_replace}
 
   @doc """
   Updates the changeset accordingly to the relation's on_replace strategy.
@@ -181,13 +183,12 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp do_cast(%{related: model, on_cast: fun} = meta, params, nil) do
-    apply(model, fun, [meta.__struct__.build(meta), params]) |> put_new_action(:insert)
+    apply(model, fun, [meta.__struct__.build(meta), params])
+    |> put_new_action(:insert)
   end
 
-  defp do_cast(%{__struct__: module} = relation, nil, struct) do
-    changeset = Changeset.change(struct)
-    {action, changeset} = module.on_replace(relation, changeset)
-    changeset |> put_new_action(action)
+  defp do_cast(relation, nil, struct) do
+    on_replace(relation, struct)
   end
 
   defp do_cast(%{related: model, on_cast: fun}, params, struct) do
@@ -233,10 +234,8 @@ defmodule Ecto.Changeset.Relation do
     |> put_new_action(:insert)
   end
 
-  defp do_change(%{__struct__: module} = relation, nil, current) do
-    {action, changeset} =
-      module.on_replace(relation, Changeset.change(current))
-    changeset |> put_new_action(action)
+  defp do_change(relation, nil, current) do
+    on_replace(relation, current)
   end
 
   defp do_change(_relation, %Changeset{model: current} = changeset, current) do
@@ -250,6 +249,27 @@ defmodule Ecto.Changeset.Relation do
   defp do_change(_relation, struct, current) do
     changes = Map.take(struct, struct.__struct__.__schema__(:fields))
     Changeset.change(current, changes) |> put_new_action(:update)
+  end
+
+  @doc """
+  TODO
+  """
+  def on_replace(%{on_replace: :mark_as_invalid}, changeset_or_model) do
+    %{Changeset.change(changeset_or_model) | valid?: false}
+  end
+
+  def on_replace(%{on_replace: :raise}, _changeset_or_model) do
+    raise "Nested associations and embedded models, by default, cannot be deleted " <>
+      "by simply ommiting the data or overriding it with new one. " <>
+      "If you want to enable this bahaviour, you should set the relation's " <>
+      "`on_replace` option to `:delete`. You can also consider setting the child " <>
+      "changeset's action explicitly to `:delete`"
+  end
+
+  def on_replace(%{__struct__: module} = relation, changeset_or_model) do
+    {action, changeset} =
+      module.on_replace(relation, Changeset.change(changeset_or_model))
+    changeset |> put_new_action(action)
   end
 
   defp cast_or_change(%{cardinality: :one}, value, current, param_pks, pks, fun) when is_map(value) or is_nil(value) do

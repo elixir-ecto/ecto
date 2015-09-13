@@ -14,8 +14,8 @@ defmodule Ecto.EmbeddedTest do
     use Ecto.Model
 
     schema "authors" do
-      embeds_one :profile, Profile, on_cast: :required_changeset
-      embeds_many :posts, Post
+      embeds_one :profile, Profile, on_cast: :required_changeset, on_replace: :delete
+      embeds_many :posts, Post, on_replace: :delete
     end
   end
 
@@ -69,11 +69,11 @@ defmodule Ecto.EmbeddedTest do
     assert Author.__schema__(:embeds) == [:profile, :posts]
 
     assert Author.__schema__(:embed, :profile) ==
-      %Embedded{field: :profile, cardinality: :one, owner: Author,
+      %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete,
                 related: Profile, strategy: :replace, on_cast: :required_changeset}
 
     assert Author.__schema__(:embed, :posts) ==
-      %Embedded{field: :posts, cardinality: :many, owner: Author,
+      %Embedded{field: :posts, cardinality: :many, owner: Author, on_replace: :delete,
                 related: Post, strategy: :replace, on_cast: :changeset}
   end
 

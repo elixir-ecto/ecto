@@ -3,17 +3,18 @@ defmodule Ecto.Embedded do
   alias __MODULE__
   alias Ecto.Changeset
 
-  defstruct [:cardinality, :field, :owner, :related, :on_cast,
-             strategy: :replace, on_replace: :delete, on_delete: :fetch_and_delete]
-
   @type t :: %Embedded{cardinality: :one | :many,
                        strategy: :replace | atom,
-                       on_replace: :delete,
+                       on_replace: Changeset.Relation.on_replace,
                        on_delete: :fetch_and_delete,
                        field: atom, owner: atom, related: atom,
                        on_cast: Changeset.Relation.on_cast}
 
   @behaviour Ecto.Changeset.Relation
+  @on_replace_opts [:raise, :mark_as_invalid, :delete]
+  defstruct [:cardinality, :field, :owner, :related, :on_cast, :on_replace,
+             strategy: :replace, on_delete: :fetch_and_delete]
+
 
   @doc """
   Builds the embedded struct.
@@ -24,10 +25,22 @@ defmodule Ecto.Embedded do
     * `:strategy` - which strategy to use when storing items
     * `:related` - name of the embedded model
     * `:on_cast` - the changeset function to call during casting
+    * `:on_replace` - the action taken on embedded models when the model is
+      replaced
 
   """
   def struct(module, name, opts) do
-    opts = Keyword.put_new(opts, :on_cast, :changeset)
+    opts =
+      opts
+      |> Keyword.put_new(:on_cast, :changeset)
+      |> Keyword.put_new(:on_replace, :raise)
+
+    unless opts[:on_replace] in @on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+    end
+
     struct(%Embedded{field: name, owner: module}, opts)
   end
 

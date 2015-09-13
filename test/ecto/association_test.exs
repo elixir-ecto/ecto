@@ -65,12 +65,13 @@ defmodule Ecto.AssociationTest do
 
     schema "authors" do
       field :title, :string
-      has_many :posts, Post
+      has_many :posts, Post, on_replace: :delete
       has_many :posts_comments, through: [:posts, :comments]    # many -> many
       has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
       has_many :emails, {"users_emails", Email}
       has_one :profile, {"users_profiles", Profile}, on_cast: :required_changeset,
-                                                     defaults: [name: "default"]
+        defaults: [name: "default"], on_replace: :delete
+
     end
   end
 
