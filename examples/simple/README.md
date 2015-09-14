@@ -7,8 +7,8 @@ Then, from the command line:
 * `mix do deps.get, compile`
 * `mix ecto.create`
 * `mix ecto.migrate`
-* `iex -S mix`
 * `mix run priv/repo/seeds.exs`
+* `iex -S mix`
 
 Inside IEx, run:
 
