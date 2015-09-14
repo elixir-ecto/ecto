@@ -239,16 +239,16 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: generates a cache key if appropriate" do
     {_query, _params, key} = prepare(from(Post, []))
-    assert key == [:all, {"posts", Post}]
+    assert key == [:all, {"posts", Post, 112914533}]
 
     query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil),
                             join: c in Comment, preload: :comments)
     {_query, _params, key} = prepare(%{query | prefix: "foo"})
-    assert key == [:all, {"posts", Ecto.Query.PlannerTest.Post},
+    assert key == [:all, {"posts", Ecto.Query.PlannerTest.Post, 112914533},
                    lock: "foo",
                    prefix: "foo",
                    where: [{:is_nil, [], [nil]}],
-                   join: [{:inner, {"comments", Ecto.Query.PlannerTest.Comment}, true}],
+                   join: [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 53730846}, true}],
                    select: 1]
 
     query = from(p in Post, where: p.id in ^[1, 2, 3])
