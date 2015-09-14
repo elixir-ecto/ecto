@@ -630,6 +630,22 @@ defmodule Ecto.AssociationTest do
     end
   end
 
+  test "cast has_one twice" do
+    model = %Author{}
+    params = %{profile: %{name: "Bruce Wayne", id: 1}}
+    model = Changeset.cast(model, params, ~w(), ~w(profile)) |> Changeset.apply_changes
+    params = %{profile: %{name: "Batman", id: 1}}
+    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
+    assert changeset.valid?
+
+    model = %Author{}
+    params = %{profile: %{name: "Bruce Wayne"}}
+    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
+    assert changeset.valid?
+  end
+
   ## cast has_many
 
   test "cast has_many with only new models" do
@@ -776,9 +792,26 @@ defmodule Ecto.AssociationTest do
     end
   end
 
+  test "cast has_many twice" do
+    model = %Author{}
+
+    params = %{posts: [%{title: "hello", id: 1}]}
+    model = Changeset.cast(model, params, ~w(), ~w(posts)) |> Changeset.apply_changes
+    params = %{posts: []}
+    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
+    assert changeset.valid?
+
+    model = %Author{}
+    params = %{posts: [%{title: "hello"}]}
+    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
+    assert changeset.valid?
+  end
+
   ## Change
 
-  test "change assocs_one" do
+  test "change has_one" do
     model = %Author{}
     assoc = Author.__schema__(:association, :profile)
 
@@ -823,23 +856,7 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-  test "change assocs_one twice" do
-    model = %Author{}
-    params = %{profile: %{name: "Bruce Wayne", id: 1}}
-    model = Changeset.cast(model, params, ~w(), ~w(profile)) |> Changeset.apply_changes
-    params = %{profile: %{name: "Batman", id: 1}}
-    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
-    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
-    assert changeset.valid?
-
-    model = %Author{}
-    params = %{profile: %{name: "Bruce Wayne"}}
-    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
-    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
-    assert changeset.valid?
-  end
-
-  test "change assocs_one keeps appropriate action from changeset" do
+  test "change has_one keeps appropriate action from changeset" do
     model = %Author{}
     assoc = Author.__schema__(:association, :profile)
     assoc_model = %Profile{}
@@ -866,7 +883,21 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-  test "change assocs_many" do
+  test "change has_one with on_replace: :raise" do
+    model = %Summary{}
+    assoc = Summary.__schema__(:association, :raise_profile)
+    assoc_model = %Profile{id: 1}
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(assoc, model, nil, assoc_model)
+    end
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(assoc, model, %Profile{id: 2}, assoc_model)
+    end
+  end
+
+  test "change has_many" do
     model = %Author{}
     assoc = Author.__schema__(:association, :posts)
 
@@ -914,21 +945,18 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-  test "change assocs_many twice" do
-    model = %Author{}
+  test "change has_many with on_replace: :raise" do
+    model = %Summary{}
+    assoc = Summary.__schema__(:association, :raise_posts)
+    assoc_model = %Post{id: 1}
 
-    params = %{posts: [%{title: "hello", id: 1}]}
-    model = Changeset.cast(model, params, ~w(), ~w(posts)) |> Changeset.apply_changes
-    params = %{posts: []}
-    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
-    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
-    assert changeset.valid?
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(assoc, model, [], [assoc_model])
+    end
 
-    model = %Author{}
-    params = %{posts: [%{title: "hello"}]}
-    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
-    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
-    assert changeset.valid?
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(assoc, model, [%Post{id: 2}], [assoc_model])
+    end
   end
 
   ## Other

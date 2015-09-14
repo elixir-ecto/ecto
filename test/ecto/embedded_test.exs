@@ -435,6 +435,20 @@ defmodule Ecto.EmbeddedTest do
     end
   end
 
+  test "change embeds_one with on_replace: :raise" do
+    model = %Author{}
+    embed = Author.__schema__(:embed, :raise_profile)
+    embed_model = %Author{id: 1}
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(embed, model, nil, embed_model)
+    end
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(embed, model, %Author{id: 2}, embed_model)
+    end
+  end
+
   test "change embeds_many" do
     model = %Author{}
     embed = Author.__schema__(:embed, :posts)
@@ -480,6 +494,20 @@ defmodule Ecto.EmbeddedTest do
     new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
       Relation.change(embed, model, [new_model_update], [embed_model])
+    end
+  end
+
+  test "change has_many with on_replace: :raise" do
+    model = %Author{}
+    embed = Author.__schema__(:embed, :raise_posts)
+    embed_model = %Post{id: 1}
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(embed, model, [], [embed_model])
+    end
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(embed, model, [%Post{id: 2}], [embed_model])
     end
   end
 
