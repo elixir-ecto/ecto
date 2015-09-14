@@ -22,26 +22,33 @@ defmodule Mix.Tasks.Ecto.Create do
 
   @doc false
   def run(args) do
-    repo = parse_repo(args)
-    ensure_repo(repo, args)
-    ensure_implements(repo.__adapter__, Ecto.Adapter.Storage,
-                      "to create storage for #{inspect repo}")
+    repos = parse_repo(args)
+    ensure_repo(repos, args)
+
+    Enum.all?(repos,
+      fn repo -> ensure_implements(repo.__adapter__,
+                                   Ecto.Adapter.Storage,
+                                   "to create storage for #{inspect repo}")
+      end
+    )
 
     {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean]
 
-    case Ecto.Storage.up(repo) do
-      :ok ->
-        unless opts[:quiet] do
-          Mix.shell.info "The database for #{inspect repo} has been created."
-        end
-      {:error, :already_up} ->
-        unless opts[:quiet] do
-          Mix.shell.info "The database for #{inspect repo} has already been created."
-        end
-      {:error, term} when is_binary(term) ->
-        Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{term}."
-      {:error, term} ->
-        Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{inspect term}."
+    Enum.each repos, fn repo ->
+      case Ecto.Storage.up(repo) do
+        :ok ->
+          unless opts[:quiet] do
+            Mix.shell.info "The database for #{inspect repo} has been created."
+          end
+        {:error, :already_up} ->
+          unless opts[:quiet] do
+            Mix.shell.info "The database for #{inspect repo} has already been created."
+          end
+        {:error, term} when is_binary(term) ->
+          Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{term}."
+        {:error, term} ->
+          Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{inspect term}."
+      end
     end
   end
 end

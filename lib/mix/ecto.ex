@@ -8,12 +8,19 @@ defmodule Mix.Ecto do
   If no repo option is given, we get one from the environment.
   """
   @spec parse_repo([term]) :: Ecto.Repo.t
-  def parse_repo([key, value|_]) when key in ~w(--repo -r) do
-    Module.concat([value])
+  def parse_repo([key, value|remainder]) when key in ~w(--repo -r) do
+    [Module.concat([value])] ++
+    case remainder do
+      [] -> []
+      r -> parse_repo(r)
+    end
   end
 
   def parse_repo([_|t]) do
-    parse_repo(t)
+    case t do
+      [] -> []
+      _  -> parse_repo(t)
+    end
   end
 
   def parse_repo([]) do
@@ -22,12 +29,16 @@ defmodule Mix.Ecto do
     case Application.get_env(app, :app_namespace, app) do
       ^app -> app |> to_string |> Mix.Utils.camelize
       mod  -> mod |> inspect
-    end |> Module.concat(Repo)
+    end |> Module.concat(Repo) |> List.wrap
   end
 
   @doc """
   Ensures the given module is a repository.
   """
+  def ensure_repo(repos, args) when is_list(repos) do
+    repos |> Enum.map fn r -> ensure_repo(r, args) end
+  end
+
   @spec ensure_repo(module, list) :: Ecto.Repo.t | no_return
   def ensure_repo(repo, args) do
     Mix.Task.run "loadpaths", args

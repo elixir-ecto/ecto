@@ -3,12 +3,16 @@ defmodule Mix.EctoTest do
   import Mix.Ecto
 
   test "parse repo" do
-    assert parse_repo(["-r", "Repo"]) == Repo
-    assert parse_repo(["--repo", Repo]) == Repo
-    assert parse_repo([]) == Ecto.Repo
+    assert parse_repo(["-r", "Repo"]) == [Repo]
+    assert parse_repo(["--repo", Repo]) == [Repo]
+    assert parse_repo([]) == [Ecto.Repo]
+
+    assert parse_repo(["-r", "Repo", "-r", "Repo2"]) == [Repo, Repo2]
+    assert parse_repo(["-r", "Repo", "--quiet"]) == [Repo]
+    assert parse_repo(["-r", "Repo", "-r", "Repo2", "--quiet"]), [Repo, Repo2]
 
     Application.put_env(:ecto, :app_namespace, Foo)
-    assert parse_repo([]) == Foo.Repo
+    assert parse_repo([]) == [Foo.Repo]
   after
     Application.delete_env(:ecto, :app_namespace)
   end
@@ -16,6 +20,19 @@ defmodule Mix.EctoTest do
   defmodule Repo do
     def start_link do
       Process.get(:start_link)
+    end
+
+    def __repo__ do
+      true
+    end
+
+    def config do
+      [priv: Process.get(:priv), otp_app: :ecto]
+    end
+  end
+
+  defmodule Repo2 do
+    def start_link do
     end
 
     def __repo__ do
