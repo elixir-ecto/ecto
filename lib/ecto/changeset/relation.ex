@@ -163,8 +163,13 @@ defmodule Ecto.Changeset.Relation do
     {:ok, Enum.map(current, &do_cast(relation, :empty, &1)), false, false}
   end
 
-  def cast(%{cardinality: :one}, nil, _current) do
-    {:ok, nil, false, false}
+  def cast(%{cardinality: :one} = relation, nil, current) do
+    case current && on_replace(relation, current) do
+      :error ->
+        :error
+      _ ->
+        {:ok, nil, false, false}
+    end
   end
 
   def cast(%{cardinality: :many} = relation, params, current) when is_map(params) do
@@ -254,16 +259,23 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   TODO
   """
-  def on_replace(%{on_replace: :mark_as_invalid}, changeset_or_model) do
-    %{Changeset.change(changeset_or_model) | valid?: false}
+  def on_replace(%{on_replace: :mark_as_invalid}, _changeset_or_model) do
+    :error
   end
 
-  def on_replace(%{on_replace: :raise}, _changeset_or_model) do
-    raise "Nested associations and embedded models, by default, cannot be deleted " <>
-      "by simply ommiting the data or overriding it with new one. " <>
-      "If you want to enable this bahaviour, you should set the relation's " <>
-      "`on_replace` option to `:delete`. You can also consider setting the child " <>
-      "changeset's action explicitly to `:delete`"
+  def on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
+    raise """
+    you are attempting to change relation #{name}
+    of #{inspect owner}, but there is missing data.
+
+    By default, if the parent model contains N children, at least the same
+    N children must be given on update. In other words, it is not possible
+    to orphan embed nor associated records, attempting to do so results
+    in this error message.
+
+    It is possible to change this behaviour by setting :on_replace when
+    defining the relation. Check has_*/embed_* docs for more info.
+    """
   end
 
   def on_replace(%{__struct__: module} = relation, changeset_or_model) do
@@ -272,8 +284,9 @@ defmodule Ecto.Changeset.Relation do
     changeset |> put_new_action(action)
   end
 
-  defp cast_or_change(%{cardinality: :one}, value, current, param_pks, pks, fun) when is_map(value) or is_nil(value) do
-    single_change(value, pks, param_pks, fun, current)
+  defp cast_or_change(%{cardinality: :one} = relation, value, current, param_pks,
+                      pks, fun) when is_map(value) or is_nil(value) do
+    single_change(relation, value, pks, param_pks, fun, current)
   end
 
   defp cast_or_change(%{cardinality: :many}, value, current, param_pks, pks, fun) when is_list(value) do
@@ -319,23 +332,30 @@ defmodule Ecto.Changeset.Relation do
     :error
   end
 
-  defp single_change(new, current_pks, new_pks, fun, current) do
-    {current, allowed_actions} =
-      current_or_nil(new, new_pks, current, current_pks)
-
-    changeset = create_changeset!(new, current, fun, allowed_actions)
-    {:ok, changeset, changeset.valid?, skip?(changeset)}
+  defp single_change(relation, new, current_pks, new_pks, fun, current) do
+    case single_change_action(relation, new, new_pks, current, current_pks) do
+      {current, allowed_actions} ->
+        changeset = create_changeset!(new, current, fun, allowed_actions)
+        {:ok, changeset, changeset.valid?, skip?(changeset)}
+      :error ->
+        :error
+    end
   end
 
-  defp current_or_nil(nil, _new_pks, current, _current_pks),
+  defp single_change_action(_relation, nil, _new_pks, current, _current_pks),
     do: {current, [:update, :delete]}
-  defp current_or_nil(_new, _new_pks, nil, _current_pks),
+  defp single_change_action(_relation, _new, _new_pks, nil, _current_pks),
     do: {nil, [:insert]}
-  defp current_or_nil(new, new_pks, current, current_pks) do
-    if get_pks(new, new_pks) == get_pks(current, current_pks) do
-      {current, [:update, :delete]}
-    else
-      {nil, [:insert]}
+  defp single_change_action(relation, new, new_pks, current, current_pks) do
+    case on_replace(relation, current) do
+      :error ->
+        :error
+      _ ->
+        if get_pks(new, new_pks) == get_pks(current, current_pks) do
+          {current, [:update, :delete]}
+        else
+          {nil, [:insert]}
+        end
     end
   end
 

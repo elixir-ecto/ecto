@@ -16,6 +16,8 @@ defmodule Ecto.EmbeddedTest do
     schema "authors" do
       embeds_one :profile, Profile, on_cast: :required_changeset, on_replace: :delete
       embeds_many :posts, Post, on_replace: :delete
+      embeds_one :raise_profile, Profile
+      embeds_many :raise_posts, Post
     end
   end
 
@@ -66,7 +68,8 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "__schema__" do
-    assert Author.__schema__(:embeds) == [:profile, :posts]
+    assert Author.__schema__(:embeds) ==
+      [:profile, :posts, :raise_profile, :raise_posts]
 
     assert Author.__schema__(:embed, :profile) ==
       %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete,
@@ -217,6 +220,19 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.changes == %{}
   end
 
+  test "cast embeds_one with on_delete: :raise" do
+    model = %Author{raise_profile: %Profile{}}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_profile" => nil}, [], [:raise_profile])
+    end
+
+    model = %Author{raise_profile: %Profile{id: 1}}
+    params = %{"raise_profile" => %{"name" => "new", "id" => 2}}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, params, [:raise_profile])
+    end
+  end
+
   ## cast embeds many
 
   test "cast embeds_many with only new models" do
@@ -332,6 +348,17 @@ defmodule Ecto.EmbeddedTest do
 
     changeset = Changeset.cast(%Author{posts: [%Post{}]}, :empty, ~w(posts))
     assert changeset.changes == %{}
+  end
+
+  test "cast embeds_many with on_replace: :raise" do
+    model = %Author{raise_posts: [%Post{id: 1}]}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_posts" => []}, [:raise_posts])
+    end
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_posts" => [%{"id" => 2}]}, [:raise_posts])
+    end
   end
 
   ## Others

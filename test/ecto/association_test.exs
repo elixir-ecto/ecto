@@ -71,7 +71,6 @@ defmodule Ecto.AssociationTest do
       has_many :emails, {"users_emails", Email}
       has_one :profile, {"users_profiles", Profile}, on_cast: :required_changeset,
         defaults: [name: "default"], on_replace: :delete
-
     end
   end
 
@@ -81,6 +80,8 @@ defmodule Ecto.AssociationTest do
     schema "summaries" do
       has_one :post, Post, defaults: [title: "default"], on_replace: :nilify
       has_many :profiles, Profile, on_replace: :nilify
+      has_one :raise_profile, Profile
+      has_many :raise_posts, Post
       has_one :post_author, through: [:post, :author]        # one -> belongs
       has_many :post_comments, through: [:post, :comments]   # one -> many
     end
@@ -616,6 +617,19 @@ defmodule Ecto.AssociationTest do
     assert changeset.changes == %{}
   end
 
+  test "cast has_one with on_delete: :raise" do
+    model = %Summary{raise_profile: %Profile{}}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_profile" => nil}, [], [:raise_profile])
+    end
+
+    model = %Summary{raise_profile: %Profile{id: 1}}
+    params = %{"raise_profile" => %{"name" => "new", "id" => 2}}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, params, [:raise_profile])
+    end
+  end
+
   ## cast has_many
 
   test "cast has_many with only new models" do
@@ -749,6 +763,17 @@ defmodule Ecto.AssociationTest do
 
     changeset = Changeset.cast(%Author{posts: [%Post{}]}, :empty, ~w(posts))
     assert changeset.changes == %{}
+  end
+
+  test "cast has_many with on_replace: :raise" do
+    model = %Summary{raise_posts: [%Post{id: 1}]}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_posts" => []}, [:raise_posts])
+    end
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_posts" => [%{"id" => 2}]}, [:raise_posts])
+    end
   end
 
   ## Change
