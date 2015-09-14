@@ -247,7 +247,7 @@ defmodule Ecto.Pools.SojournBroker.Worker do
         connect(%{s | conn: nil})
       {:go, ref, {fun, pid}, _, _} ->
         mon = Process.monitor(pid)
-        %{s | mon: mon, ref: ref, fun: fun, conn: nil}
+        %{s | monitor: mon, ref: ref, fun: fun, conn: nil}
       {:drop, _} ->
         connect(%{s | conn: nil})
     end
