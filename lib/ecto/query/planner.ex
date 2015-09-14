@@ -163,7 +163,8 @@ defmodule Ecto.Query.Planner do
         %JoinExpr{on: on, qual: qual, source: source} = join, {params, cacheable?} ->
           {params, join_cacheable?} = cast_and_merge_params(:join, query, join, params, adapter)
           {params, on_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
-          {{qual, source, on.expr}, {params, cacheable? and join_cacheable? and on_cacheable?}}
+          {{qual, source_cache(source), on.expr},
+           {params, cacheable? and join_cacheable? and on_cacheable?}}
       end
 
     case expr_cache do
@@ -202,8 +203,12 @@ defmodule Ecto.Query.Planner do
       cache = [lock: lock] ++ cache
     end
 
-    [operation, query.from|cache]
+    [operation, source_cache(query.from)|cache]
   end
+
+  defp source_cache({_, nil} = source), do: source
+  defp source_cache({bin, model}), do: {bin, model, model.__schema__(:hash)}
+  defp source_cache({:fragment, _, _} = source), do: source
 
   defp cast_param(kind, query, expr, v, type, adapter) do
     {model, field, type} = type_for_param!(kind, query, expr, type)

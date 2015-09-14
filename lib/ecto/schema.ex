@@ -1071,10 +1071,17 @@ defmodule Ecto.Schema do
   def __schema__(source, fields, primary_key) do
     field_names = Enum.map(fields, &elem(&1, 0))
 
+    # Hash is used by the query cache to specify
+    # the underlying model structure did not change.
+    # We don't include the source because the source
+    # is already part of the query cache itself.
+    hash = :erlang.phash2({primary_key, fields})
+
     quote do
       def __schema__(:source),      do: unquote(Macro.escape(source))
       def __schema__(:fields),      do: unquote(field_names)
       def __schema__(:primary_key), do: unquote(primary_key)
+      def __schema__(:hash),        do: unquote(hash)
     end
   end
 
