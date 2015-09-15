@@ -452,8 +452,8 @@ defmodule Ecto.Schema do
 
     * `:on_replace` - The action taken on associations when the model is
       replaced   when casting or manipulating parent changeset. May be
-      `:delete` (default) or `:nilify`. See `Ecto.Changeset`'s section on
-      related models for more info
+      `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
+      See `Ecto.Changeset`'s section on related models for more info.
 
     * `:on_cast` - The default changeset function to call during casting
       of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
@@ -590,8 +590,8 @@ defmodule Ecto.Schema do
 
     * `:on_replace` - The action taken on associations when the model is
       replaced   when casting or manipulating parent changeset. May be
-      `:delete` (default) or `:nilify`. See `Ecto.Changeset`'s section on
-      related models for more info
+      `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
+      See `Ecto.Changeset`'s section on related models for more info.
 
     * `:on_cast` - The default changeset function to call during casting
       of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
@@ -788,9 +788,10 @@ defmodule Ecto.Schema do
       Ecto supports only the `:replace` strategy out of the box which is the
       default. Read the strategy in `embeds_many/3` for more info.
 
-    * `:on_replace` - The action taken on embeds when it is replaced
-      during casting or manipulating parent changeset. For now, it
-      supports `:delete`, implying delete callbacks will be invoked.
+    * `:on_replace` - The action taken on associations when the model is
+      replaced   when casting or manipulating parent changeset. May be
+      `:raise` (default), `:mark_as_invalid`, or `:delete`.
+      See `Ecto.Changeset`'s section on related models for more info.
 
   ## Examples
 
@@ -859,9 +860,10 @@ defmodule Ecto.Schema do
       Ecto supports only the `:replace` strategy out of the box which is the
       default. Read strategy section below for more info.
 
-    * `:on_replace` - The action taken on embeds when it is replaced
-      during casting or manipulating parent changeset. For now, it
-      supports `:delete`, implying delete callbacks will be invoked.
+    * `:on_replace` - The action taken on associations when the model is
+      replaced   when casting or manipulating parent changeset. May be
+      `:raise` (default), `:mark_as_invalid`, or `:delete`.
+      See `Ecto.Changeset`'s section on related models for more info.
 
   ## Examples
 

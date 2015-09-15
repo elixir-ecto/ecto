@@ -279,7 +279,8 @@ defmodule Ecto.Changeset.Relation do
     in this error message.
 
     It is possible to change this behaviour by setting :on_replace when
-    defining the relation. Check has_*/embed_* docs for more info.
+    defining the relation. See `Ecto.Changeset`'s section on related models
+    for more info.
     """
   end
 
