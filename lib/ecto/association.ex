@@ -400,7 +400,8 @@ defmodule Ecto.Association.Has do
       nil ->
         :ok
       previous ->
-        changeset = Ecto.Changeset.Relation.on_replace(assoc, previous)
+        # the case when this could return :error, was handled before
+        {:ok, changeset} = Ecto.Changeset.Relation.on_replace(assoc, previous)
 
         case apply(repo, changeset.action, [changeset, opts]) do
           {:ok, _} ->
