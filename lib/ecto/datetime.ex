@@ -167,6 +167,9 @@ defmodule Ecto.Date do
 
   @doc """
   Returns an `Ecto.Date` in local time.
+
+  WARNING: Using the local time of the server will often lead to
+  intermittent bugs. Please use the `utc/0` function instead.
   """
   def local do
     erl_load(:erlang.localtime)
@@ -298,7 +301,7 @@ defmodule Ecto.Time do
   end
 
   @doc """
-  Converts `Ecto.Time` to its ISO 8601 UTC representation.
+  Converts `Ecto.Time` to its ISO 8601 representation.
   """
   def to_iso8601(time) do
     to_string(time)
@@ -306,6 +309,9 @@ defmodule Ecto.Time do
 
   @doc """
   Returns an `Ecto.Time` in local time.
+
+  WARNING: Using the local time of the server will often lead to
+  intermittent bugs. Please use the `utc/0` function instead.
   """
   def local do
     erl_load(:erlang.localtime)
@@ -459,9 +465,8 @@ defmodule Ecto.DateTime do
   end
 
   @doc """
-  Converts the given `Ecto.Date` into `Ecto.DateTime`.
-
-  The time component is zero.
+  Converts the given `Ecto.Date` into `Ecto.DateTime` with the time being
+  00:00:00.
   """
   def from_date(%Ecto.Date{year: year, month: month, day: day}) do
     %Ecto.DateTime{year: year, month: month, day: day,
@@ -492,7 +497,13 @@ defmodule Ecto.DateTime do
   end
 
   @doc """
-  Converts `Ecto.DateTime` to its ISO 8601 UTC representation.
+  Converts `Ecto.DateTime` to its ISO 8601 UTC representation if the
+  `Ecto.DateTime` is UTC.
+
+  WARNING: This will produce an incorrect result unless the datetime is UTC!
+  Make sure that the datetime is UTC. `inserted_at` and `updated_at` fields
+  populated by the Ecto `timestamps` feature are UTC. But other `Ecto.DateTime`
+  fields are not always UTC.
   """
   def to_iso8601(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}) do
     str = zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2) <> "T" <>
@@ -507,6 +518,12 @@ defmodule Ecto.DateTime do
 
   @doc """
   Returns an `Ecto.DateTime` in local time.
+
+  WARNING: Using the local time of the server will often lead to
+  intermittent bugs.
+
+  This function only exists for legacy purposes. It is recommended to not
+  use this function. Please use the `utc/0` function instead.
   """
   def local do
     erl_load(:erlang.localtime)
