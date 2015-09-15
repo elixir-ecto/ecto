@@ -344,7 +344,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "get(!) with custom source" do
-    custom = Ecto.Model.put_source(%Custom{}, "posts")
+    custom = Ecto.Model.put_meta(%Custom{}, source: "posts")
     custom = TestRepo.insert!(custom)
     bid    = custom.bid
     assert %Custom{bid: ^bid, __meta__: %{source: {nil, "posts"}}} =

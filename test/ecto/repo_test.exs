@@ -143,11 +143,11 @@ defmodule Ecto.RepoTest do
   end
 
   test "works with custom source model" do
-    model = %MyModel{id: 1, x: "abc"} |> Ecto.Model.put_source("custom_model")
+    model = %MyModel{id: 1, x: "abc"} |> Ecto.Model.put_meta(source: "custom_model")
     TestRepo.update!(model |> Ecto.Changeset.change, force: true)
     TestRepo.delete!(model)
 
-    to_insert = %MyModel{x: "abc"} |> Ecto.Model.put_source("custom_model")
+    to_insert = %MyModel{x: "abc"} |> Ecto.Model.put_meta(source: "custom_model")
     TestRepo.insert!(to_insert)
   end
 

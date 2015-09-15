@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Ecto.CreateDropTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Mix.Tasks.Ecto.Create
   alias Mix.Tasks.Ecto.Drop
@@ -97,25 +97,5 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
     assert_raise Mix.Error, ~r/to implement Ecto.Adapter.Storage/, fn ->
       Drop.run ["-r", to_string(NoStorageRepo)]
     end
-  end
-
-  test "confirmation is asked if :disable_safety_warnings is false" do
-    defmodule Sample do
-      use Mix.Project
-      def project do
-        [app: :sample, version: "0.1.0", start_permanent: true, compilers: []]
-      end
-    end
-
-    Process.put(:storage_down, :ok)
-    send self, {:mix_shell_input, :yes?, true}
-    Drop.run ["-r", to_string(Repo)]
-    assert_received {
-      :mix_shell,
-      :yes?,
-      ["Are you sure you want to drop the database for repo Mix.Tasks.Ecto.CreateDropTest.Repo?"],
-    }
-  after
-    Mix.ProjectStack.pop
   end
 end
