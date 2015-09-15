@@ -65,12 +65,12 @@ defmodule Ecto.AssociationTest do
 
     schema "authors" do
       field :title, :string
-      has_many :posts, Post
+      has_many :posts, Post, on_replace: :delete
       has_many :posts_comments, through: [:posts, :comments]    # many -> many
       has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
       has_many :emails, {"users_emails", Email}
       has_one :profile, {"users_profiles", Profile}, on_cast: :required_changeset,
-                                                     defaults: [name: "default"]
+        defaults: [name: "default"], on_replace: :delete
     end
   end
 
@@ -80,6 +80,10 @@ defmodule Ecto.AssociationTest do
     schema "summaries" do
       has_one :post, Post, defaults: [title: "default"], on_replace: :nilify
       has_many :profiles, Profile, on_replace: :nilify
+      has_one :raise_profile, Profile
+      has_many :raise_posts, Post
+      has_one :invalid_profile, Profile, on_replace: :mark_as_invalid
+      has_many :invalid_posts, Post, on_replace: :mark_as_invalid
       has_one :post_author, through: [:post, :author]        # one -> belongs
       has_many :post_comments, through: [:post, :comments]   # one -> many
     end
@@ -615,6 +619,50 @@ defmodule Ecto.AssociationTest do
     assert changeset.changes == %{}
   end
 
+  test "cast has_one with on_replace: :raise" do
+    model = %Summary{raise_profile: %Profile{id: 1}}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_profile" => nil}, [], [:raise_profile])
+    end
+
+    params = %{"raise_profile" => %{"name" => "new", "id" => 2}}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, params, [:raise_profile])
+    end
+  end
+
+  test "cast has_one with on_replace: :mark_as_invalid" do
+    model = %Summary{invalid_profile: %Profile{id: 1}}
+
+    changeset = Changeset.cast(model, %{"invalid_profile" => nil},
+                               [], [:invalid_profile])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.cast(model, %{"invalid_profile" => %{"id" => 2}},
+                               [:invalid_profile])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+  end
+
+  test "cast has_one twice" do
+    model = %Author{}
+    params = %{profile: %{name: "Bruce Wayne", id: 1}}
+    model = Changeset.cast(model, params, ~w(), ~w(profile)) |> Changeset.apply_changes
+    params = %{profile: %{name: "Batman", id: 1}}
+    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
+    assert changeset.valid?
+
+    model = %Author{}
+    params = %{profile: %{name: "Bruce Wayne"}}
+    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
+    assert changeset.valid?
+  end
+
   ## cast has_many
 
   test "cast has_many with only new models" do
@@ -750,9 +798,52 @@ defmodule Ecto.AssociationTest do
     assert changeset.changes == %{}
   end
 
+  test "cast has_many with on_replace: :raise" do
+    model = %Summary{raise_posts: [%Post{id: 1}]}
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_posts" => []}, [:raise_posts])
+    end
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Changeset.cast(model, %{"raise_posts" => [%{"id" => 2}]}, [:raise_posts])
+    end
+  end
+
+  test "cast has_many with on_replace: :mark_as_invalid" do
+    model = %Summary{invalid_posts: [%Post{id: 1}]}
+
+    changeset = Changeset.cast(model, %{"invalid_posts" => []}, [:invalid_posts])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.cast(model, %{"invalid_posts" => [%{"id" => 2}]},
+                               [:invalid_posts])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
+  end
+
+  test "cast has_many twice" do
+    model = %Author{}
+
+    params = %{posts: [%{title: "hello", id: 1}]}
+    model = Changeset.cast(model, params, ~w(), ~w(posts)) |> Changeset.apply_changes
+    params = %{posts: []}
+    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
+    assert changeset.valid?
+
+    model = %Author{}
+    params = %{posts: [%{title: "hello"}]}
+    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
+    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
+    assert changeset.valid?
+  end
+
   ## Change
 
-  test "change assocs_one" do
+  test "change has_one" do
     model = %Author{}
     assoc = Author.__schema__(:association, :profile)
 
@@ -797,23 +888,7 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-  test "change assocs_one twice" do
-    model = %Author{}
-    params = %{profile: %{name: "Bruce Wayne", id: 1}}
-    model = Changeset.cast(model, params, ~w(), ~w(profile)) |> Changeset.apply_changes
-    params = %{profile: %{name: "Batman", id: 1}}
-    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
-    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
-    assert changeset.valid?
-
-    model = %Author{}
-    params = %{profile: %{name: "Bruce Wayne"}}
-    changeset = Changeset.cast(model, params, ~w(), ~w(profile))
-    changeset = Changeset.cast(changeset, params, ~w(), ~w(profile))
-    assert changeset.valid?
-  end
-
-  test "change assocs_one keeps appropriate action from changeset" do
+  test "change has_one keeps appropriate action from changeset" do
     model = %Author{}
     assoc = Author.__schema__(:association, :profile)
     assoc_model = %Profile{}
@@ -840,7 +915,52 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-  test "change assocs_many" do
+  test "change has_one with on_replace: :raise" do
+    model = %Summary{}
+    assoc = Summary.__schema__(:association, :raise_profile)
+    assoc_model = %Profile{id: 1}
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(assoc, model, nil, assoc_model)
+    end
+
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(assoc, model, %Profile{id: 2}, assoc_model)
+    end
+  end
+
+  test "change has_one with on_replace: :mark_as_invalid" do
+    model = %Summary{}
+    assoc = Summary.__schema__(:association, :invalid_profile)
+    assoc_model = %Profile{id: 1}
+
+    assert :error == Relation.change(assoc, model, nil, assoc_model)
+    assert :error == Relation.change(assoc, model, %Profile{id: 2}, assoc_model)
+
+    base_changeset = Changeset.change(%Summary{invalid_profile: assoc_model})
+
+    changeset = Changeset.change(base_changeset, invalid_profile: nil)
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.change(base_changeset, invalid_profile: %Profile{id: 2})
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.put_change(base_changeset, :invalid_profile, nil)
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.put_change(base_changeset, :invalid_profile, %Profile{id: 2})
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+  end
+
+  test "change has_many" do
     model = %Author{}
     assoc = Author.__schema__(:association, :posts)
 
@@ -888,21 +1008,49 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-  test "change assocs_many twice" do
-    model = %Author{}
+  test "change has_many with on_replace: :raise" do
+    model = %Summary{}
+    assoc = Summary.__schema__(:association, :raise_posts)
+    assoc_model = %Post{id: 1}
 
-    params = %{posts: [%{title: "hello", id: 1}]}
-    model = Changeset.cast(model, params, ~w(), ~w(posts)) |> Changeset.apply_changes
-    params = %{posts: []}
-    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
-    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
-    assert changeset.valid?
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(assoc, model, [], [assoc_model])
+    end
 
-    model = %Author{}
-    params = %{posts: [%{title: "hello"}]}
-    changeset = Changeset.cast(model, params, ~w(), ~w(posts))
-    changeset = Changeset.cast(changeset, params, ~w(), ~w(posts))
-    assert changeset.valid?
+    assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
+      Relation.change(assoc, model, [%Post{id: 2}], [assoc_model])
+    end
+  end
+
+  test "change has_many with on_replace: :mark_as_invalid" do
+    model = %Summary{}
+    assoc = Summary.__schema__(:association, :invalid_posts)
+    assoc_model = %Post{id: 1}
+
+    assert :error == Relation.change(assoc, model, [], [assoc_model])
+    assert :error == Relation.change(assoc, model, [%Post{id: 2}], [assoc_model])
+
+    base_changeset = Changeset.change(%Summary{invalid_posts: [assoc_model]})
+
+    changeset = Changeset.change(base_changeset, invalid_posts: [])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.change(base_changeset, invalid_posts: [%Post{id: 2}])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.put_change(base_changeset, :invalid_posts, [])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.put_change(base_changeset, :invalid_posts, [%Post{id: 2}])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
   end
 
   ## Other

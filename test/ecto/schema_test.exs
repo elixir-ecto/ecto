@@ -238,7 +238,7 @@ defmodule Ecto.SchemaTest do
       belongs_to :comment, Comment
       has_many :comment_authors, through: [:comment, :authors]
       has_one :comment_main_author, through: [:comment, :main_author]
-      has_many :emails, {"users_emails", Email}
+      has_many :emails, {"users_emails", Email}, on_replace: :delete
       has_one :profile, {"users_profiles", Profile}
       belongs_to :summary, {"post_summary", Summary}
     end
@@ -253,7 +253,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, on_delete: :nothing,
                             related: Post, owner_key: :id, related_key: :assoc_model_id, queryable: Post,
-                            on_cast: :changeset, on_replace: :delete}
+                            on_cast: :changeset, on_replace: :raise}
 
     assert AssocModel.__schema__(:association, :posts) == struct
     assert AssocModel.__changeset__.posts == {:assoc, struct}
@@ -293,7 +293,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one, on_delete: :nothing,
                             related: User, owner_key: :id, related_key: :assoc_model_id, queryable: User,
-                            on_cast: :assoc_author_changeset, on_replace: :delete}
+                            on_cast: :assoc_author_changeset, on_replace: :raise}
 
     assert AssocModel.__schema__(:association, :author) == struct
     assert AssocModel.__changeset__.author == {:assoc, struct}
@@ -307,7 +307,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one, on_delete: :nothing,
                             related: Profile, owner_key: :id, related_key: :assoc_model_id,
-                            queryable: {"users_profiles", Profile}, on_cast: :changeset, on_replace: :delete}
+                            queryable: {"users_profiles", Profile}, on_cast: :changeset, on_replace: :raise}
 
     assert AssocModel.__schema__(:association, :profile) == struct
     assert AssocModel.__changeset__.profile == {:assoc, struct}

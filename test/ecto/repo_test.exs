@@ -31,7 +31,7 @@ defmodule Ecto.RepoTest do
     @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
       field :x, :string
-      embeds_one :sub_embed, SubEmbed
+      embeds_one :sub_embed, SubEmbed, on_replace: :delete
     end
 
     before_insert :store_changeset, [:before_insert]
@@ -84,10 +84,10 @@ defmodule Ecto.RepoTest do
     schema "my_model" do
       field :x, :string
       field :y, :binary
-      embeds_one :embed, MyEmbed
-      embeds_many :embeds, MyEmbed
-      has_one :assoc, MyAssoc
-      has_many :assocs, MyAssoc
+      embeds_one :embed, MyEmbed, on_replace: :delete
+      embeds_many :embeds, MyEmbed, on_replace: :delete
+      has_one :assoc, MyAssoc, on_replace: :delete
+      has_many :assocs, MyAssoc, on_replace: :delete
     end
 
     before_insert :store_changeset, [:before_insert]
