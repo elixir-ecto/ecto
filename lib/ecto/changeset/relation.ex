@@ -251,16 +251,27 @@ defmodule Ecto.Changeset.Relation do
   end
 
   @doc """
-  TODO
+  Handles the changeset or model when being replaced.
   """
-  def on_replace(%{on_replace: :mark_as_invalid}, _changeset_or_model) do
+  def on_replace(%{__struct__: module} = relation, changeset_or_model) do
+    case local_on_replace(relation, changeset_or_model) do
+      :ok ->
+        {action, changeset} =
+          module.on_replace(relation, Changeset.change(changeset_or_model))
+        {:ok, put_new_action(changeset, action)}
+      :error ->
+        :error
+    end
+  end
+
+  defp local_on_replace(%{on_replace: :mark_as_invalid}, _changeset_or_model) do
     :error
   end
 
-  def on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
+  defp local_on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
     raise """
-    you are attempting to change relation #{name}
-    of #{inspect owner}, but there is missing data.
+    you are attempting to change relation #{inspect name} of
+    #{inspect owner}, but there is missing data.
 
     By default, if the parent model contains N children, at least the same
     N children must be given on update. In other words, it is not possible
@@ -272,10 +283,8 @@ defmodule Ecto.Changeset.Relation do
     """
   end
 
-  def on_replace(%{__struct__: module} = relation, changeset_or_model) do
-    {action, changeset} =
-      module.on_replace(relation, Changeset.change(changeset_or_model))
-    {:ok, put_new_action(changeset, action)}
+  defp local_on_replace(_relation, _changeset_or_model) do
+    :ok
   end
 
   defp cast_or_change(%{cardinality: :one} = relation, value, current, param_pks,
@@ -337,7 +346,6 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-
   defp single_change(relation, new, current_pks, new_pks, fun, current) do
     case single_change_action(relation, new, new_pks, current, current_pks) do
       {current, allowed_actions} ->
@@ -357,7 +365,7 @@ defmodule Ecto.Changeset.Relation do
   defp single_change_action(_relation, _new, _new_pks, nil, _current_pks),
     do: {nil, [:insert]}
   defp single_change_action(relation, new, new_pks, current, current_pks) do
-    case on_replace(relation, current) do
+    case local_on_replace(relation, current) do
       :error ->
         :error
       _ ->
