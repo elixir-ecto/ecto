@@ -155,14 +155,6 @@ defmodule Ecto.Changeset.Relation do
 
   Sets correct `state` on the returned changeset
   """
-  def cast(%{cardinality: :one} = relation, :empty, current) do
-    {:ok, current && do_cast(relation, :empty, current), false, false}
-  end
-
-  def cast(%{cardinality: :many} = relation, :empty, current) do
-    {:ok, Enum.map(current, &do_cast(relation, :empty, &1)), false, false}
-  end
-
   def cast(%{cardinality: :one} = relation, nil, current) do
     case current && on_replace(relation, current) do
       :error ->
