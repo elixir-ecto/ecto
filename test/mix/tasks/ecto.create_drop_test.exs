@@ -19,15 +19,18 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
 
   # Mocked repos
 
-  Application.put_env(:ecto, __MODULE__.Repo, [])
-  Application.put_env(:ecto, __MODULE__.NoStorageRepo, [])
-
   defmodule Repo do
     use Ecto.Repo, otp_app: :ecto, adapter: Adapter
   end
 
   defmodule NoStorageRepo do
     use Ecto.Repo, otp_app: :ecto, adapter: NoStorageAdapter
+  end
+
+  setup do
+    opts = [disable_safety_warnings: true]
+    Application.put_env(:ecto, __MODULE__.Repo, opts)
+    Application.put_env(:ecto, __MODULE__.NoStorageRepo, opts)
   end
 
   ## Create
@@ -94,5 +97,17 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
     assert_raise Mix.Error, ~r/to implement Ecto.Adapter.Storage/, fn ->
       Drop.run ["-r", to_string(NoStorageRepo)]
     end
+  end
+
+  test "confirmation is asked if :disable_safety_warnings is false" do
+    Application.put_env(:ecto, Repo, [disable_safety_warnings: false])
+    Process.put(:storage_down, :ok)
+    send self, {:mix_shell_input, :yes?, true}
+    Drop.run ["-r", to_string(Repo)]
+    assert_received {
+      :mix_shell,
+      :yes?,
+      ["Are you sure you want to drop the database for repo Mix.Tasks.Ecto.CreateDropTest.Repo?"],
+    }
   end
 end

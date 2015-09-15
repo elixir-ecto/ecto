@@ -34,6 +34,10 @@ defmodule Ecto.Repo do
     * `:url` - an URL that specifies storage information. Read below
       for more information
 
+    * `:disable_safety_warnings` - a boolean that specify whether to ask user
+      for confirmation when dropping a database through the `mix ecto.drop`
+      task. Defaults to `false`; if set to `true`, no confirmation will be asked
+
   ## URLs
 
   Repositories by default support URLs. For example, the configuration
