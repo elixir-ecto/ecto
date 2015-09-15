@@ -33,6 +33,12 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
     end
   end
 
+  test "underscores the filename when generating a migration" do
+    run ["-r", to_string(Repo), "MyMigration"]
+    assert [name] = File.ls!(@migrations_path)
+    assert String.match? name, ~r/^\d{14}_my_migration\.exs$/
+  end
+
   test "raises when missing file" do
     assert_raise Mix.Error, fn -> run ["-r", to_string(Repo)] end
   end
