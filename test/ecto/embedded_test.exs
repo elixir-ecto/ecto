@@ -235,7 +235,7 @@ defmodule Ecto.EmbeddedTest do
     end
   end
 
-  test "cast has_one with on_replace: :mark_as_invalid" do
+  test "cast embeds_one with on_replace: :mark_as_invalid" do
     model = %Author{invalid_profile: %Profile{id: 1}}
 
     changeset = Changeset.cast(model, %{"invalid_profile" => nil},
@@ -379,7 +379,7 @@ defmodule Ecto.EmbeddedTest do
     end
   end
 
-  test "cast has_many with on_replace: :mark_as_invalid" do
+  test "cast embeds_many with on_replace: :mark_as_invalid" do
     model = %Author{invalid_posts: [%Post{id: 1}]}
 
     changeset = Changeset.cast(model, %{"invalid_posts" => []}, [:invalid_posts])
@@ -482,6 +482,37 @@ defmodule Ecto.EmbeddedTest do
     end
   end
 
+  test "change embeds_one with on_replace: :mark_as_invalid" do
+    model = %Author{}
+    embed = Author.__schema__(:embed, :invalid_profile)
+    embed_model = %Profile{id: 1}
+
+    assert :error == Relation.change(embed, model, nil, embed_model)
+    assert :error == Relation.change(embed, model, %Profile{id: 2}, embed_model)
+
+    base_changeset = Changeset.change(%Author{invalid_profile: embed_model})
+
+    changeset = Changeset.change(base_changeset, invalid_profile: nil)
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.change(base_changeset, invalid_profile: %Profile{id: 2})
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.put_change(base_changeset, :invalid_profile, nil)
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.put_change(base_changeset, :invalid_profile, %Profile{id: 2})
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: "is invalid"]
+    refute changeset.valid?
+  end
+
   test "change embeds_many" do
     model = %Author{}
     embed = Author.__schema__(:embed, :posts)
@@ -530,7 +561,7 @@ defmodule Ecto.EmbeddedTest do
     end
   end
 
-  test "change has_many with on_replace: :raise" do
+  test "change embeds_many with on_replace: :raise" do
     model = %Author{}
     embed = Author.__schema__(:embed, :raise_posts)
     embed_model = %Post{id: 1}
@@ -542,6 +573,37 @@ defmodule Ecto.EmbeddedTest do
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
       Relation.change(embed, model, [%Post{id: 2}], [embed_model])
     end
+  end
+
+  test "change embeds_many with on_replace: :mark_as_invalid" do
+    model = %Author{}
+    embed = Author.__schema__(:embed, :invalid_posts)
+    embed_model = %Post{id: 1}
+
+    assert :error == Relation.change(embed, model, [], [embed_model])
+    assert :error == Relation.change(embed, model, [%Post{id: 2}], [embed_model])
+
+    base_changeset = Changeset.change(%Author{invalid_posts: [embed_model]})
+
+    changeset = Changeset.change(base_changeset, invalid_posts: [])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.change(base_changeset, invalid_posts: [%Post{id: 2}])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.put_change(base_changeset, :invalid_posts, [])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
+
+    changeset = Changeset.put_change(base_changeset, :invalid_posts, [%Post{id: 2}])
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: "is invalid"]
+    refute changeset.valid?
   end
 
   test "change/2, put_change/3, force_change/3 wth embeds" do
