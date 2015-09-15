@@ -13,6 +13,15 @@ defmodule Ecto.DateTest do
     assert Ecto.Date.cast("2015-13-23") == :error
     assert Ecto.Date.cast("2015-01-00") == :error
     assert Ecto.Date.cast("2015-01-32") == :error
+
+    assert Ecto.Date.cast("2015-12-31 23:50:07") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-31T23:50:07") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-31T23:50:07Z") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-31T23:50:07.000Z") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-31P23:50:07") == :error
+
+    assert Ecto.Date.cast("2015-12-31T23:50:07.008") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-31T23:50:07.008Z") == {:ok, @date}
   end
 
   test "cast maps" do
