@@ -1,5 +1,18 @@
 # Changelog
 
+## v1.0.3
+
+* Enhancements
+  * Allow escaping of `?` in fragment string
+
+* Bug fixes
+  * Ensure ids are unique in preloader queries
+  * Ensure relations cannot be replaced by default via changesets
+  * Ensure query cache changes when the schema fields change
+  * Ensure the model is always used on changes, even with multiple cast calls
+  * Ensure relations are properly marked as required in changeset cast
+  * Build models using the relation information on changeset cast for associations
+
 ## v1.0.2
 
 * Enhancements
