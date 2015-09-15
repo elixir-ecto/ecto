@@ -250,7 +250,7 @@ defmodule Ecto.Association.Has do
 
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
-  @on_replace_opts [:delete, :nilify]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key,
              :queryable, :on_delete, :on_replace, :on_cast, defaults: []]
 
@@ -281,7 +281,7 @@ defmodule Ecto.Association.Has do
     end
 
     on_delete  = Keyword.get(opts, :on_delete, :nothing)
-    on_replace = Keyword.get(opts, :on_replace, :delete)
+    on_replace = Keyword.get(opts, :on_replace, :raise)
     on_cast    = Keyword.get(opts, :on_cast, :changeset)
 
     unless on_delete in @on_delete_opts do
@@ -400,13 +400,15 @@ defmodule Ecto.Association.Has do
       nil ->
         :ok
       previous ->
-        {action, changeset} = on_replace(assoc, Ecto.Changeset.change(previous))
+        # the case when this could return :error, was handled before
+        {:ok, changeset} = Ecto.Changeset.Relation.on_replace(assoc, previous)
 
-        case apply(repo, action, [changeset, opts]) do
+        case apply(repo, changeset.action, [changeset, opts]) do
           {:ok, _} ->
             :ok
           {:error, changeset} ->
-            raise Ecto.InvalidChangesetError, action: action, changeset: changeset
+            raise Ecto.InvalidChangesetError,
+              action: changeset.action, changeset: changeset
         end
     end
   end

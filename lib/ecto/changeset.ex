@@ -206,18 +206,24 @@ defmodule Ecto.Changeset do
 
   def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
       when is_map(new_changes) do
-    %{changeset | changes: get_changed(changeset.model, types, changes, new_changes)}
+    {changes, errors, valid?} =
+      get_changed(changeset.model, types, changes, new_changes,
+                  changeset.errors, changeset.valid?)
+    %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
   def change(%{__struct__: struct} = model, changes) when is_map(changes) do
     types = struct.__changeset__
-    changed = get_changed(model, types, %{}, changes)
-    %Changeset{valid?: true, model: model, changes: changed, types: types}
+    {changes, errors, valid?} =
+      get_changed(model, types, %{}, changes, [], true)
+    %Changeset{valid?: valid?, model: model, changes: changes,
+               errors: errors, types: types}
   end
 
-  defp get_changed(model, types, old_changes, new_changes) do
-    Enum.reduce(new_changes, old_changes, fn({key, value}, acc) ->
-      put_change(model, acc, key, value, Map.get(types, key))
+  defp get_changed(model, types, old_changes, new_changes, errors, valid?) do
+    Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
+      {key, value}, {changes, errors, valid?} ->
+        put_change(model, changes, errors, valid?, key, value, Map.get(types, key))
     end)
   end
 
@@ -712,26 +718,32 @@ defmodule Ecto.Changeset do
 
   def put_change(%Changeset{types: types} = changeset, key, value) do
     type = Map.get(types, key)
-    update_in changeset.changes, &put_change(changeset.model, &1, key, value, type)
+    {changes, errors, valid?} =
+      put_change(changeset.model, changeset.changes, changeset.errors,
+                 changeset.valid?, key, value, type)
+    %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
-  defp put_change(model, acc, key, value, {tag, relation}) when tag in @relations do
+  defp put_change(model, changes, errors, valid?, key, value, {tag, relation})
+      when tag in @relations do
     case Relation.change(relation, model, value, Map.get(model, key)) do
       {:ok, _, _, true} ->
-        acc
+        {changes, errors, valid?}
       {:ok, change, _, false} ->
-        Map.put(acc, key, change)
+        {Map.put(changes, key, change), errors, valid?}
+      :error ->
+        {changes, [{key, "is invalid"} | errors], false}
     end
   end
 
-  defp put_change(model, acc, key, value, _type) do
+  defp put_change(model, changes, errors, valid?, key, value, _type) do
     cond do
       Map.get(model, key) != value ->
-        Map.put(acc, key, value)
-      Map.has_key?(acc, key) ->
-        Map.delete(acc, key)
+        {Map.put(changes, key, value), errors, valid?}
+      Map.has_key?(changes, key) ->
+        {Map.delete(changes, key), errors, valid?}
       true ->
-        acc
+        {changes, errors, valid?}
     end
   end
 
