@@ -102,10 +102,42 @@ defmodule Ecto.Changeset do
       no longer associated to the parent one. This may be invoked in different
       occasions, for example, when it has been ommited in the list of models
       for a many relation, or new model was specified for a one relation.
-      Valid values are: `:delete` (default for associations, and the only
-      one available for embedded models) that deletes the related model
-      from the database, and `:nilify` that sets the corresponding owner
-      reference column to `nil`.
+      Possible values are:
+
+        * `:raise` (default) - do not allow removing association or embedded
+          model via parent changesets,
+        * `:mark_as_invalid` - if attempting to remove the association or
+          embedded model via parent changeset - an error will be added to the parent
+          changeset, and it will be marked as invalid,
+        * `:nilify` - sets owner reference column to `nil` (available only for
+          associations),
+        * `:delete` - removes the association or related model from the database.
+          This option has to be used carefully. You should consider adding a
+          separate boolean virtual field to your model that will alow to manually
+          mark it deletion, as in the example below:
+
+                defmodule Comment do
+                  use Ecto.Model
+
+                  schema "comments" do
+                    field :body, :string
+                    field :delete, :boolean, virtual: true
+                  end
+
+                  def changeset(model, params) do
+                    cast(model, params, [:string], [:delete])
+                    |> maybe_mark_for_deletion
+                  end
+
+                  defp maybe_mark_for_deletion(changeset) do
+                    if get_change(changeset, :delete) do
+                      %{changeset | action: :delete}
+                    else
+                      changeset
+                    end
+                  end
+                end
+
   """
 
   alias __MODULE__
