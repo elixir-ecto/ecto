@@ -109,6 +109,10 @@ defmodule Ecto.Date do
   It supports:
 
     * a binary in the "YYYY-MM-DD" format
+    * a binary in the "YYYY-MM-DD HH:MM:DD" format
+      (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
+    * a binary in the "YYYY-MM-DD HH:MM:DD.USEC" format
+      (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
     * a map with `"year"`, `"month"` and `"day"` keys
       with integer or binaries as values
     * a map with `:year`, `:month` and `:day` keys
@@ -118,6 +122,9 @@ defmodule Ecto.Date do
 
   """
   def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes>>),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
+  def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
+             _hour::2-bytes, ?:, _min::2-bytes, ?:, _sec::2-bytes, _rest::binary>>) when sep in [?\s, ?T],
     do: from_parts(to_i(year), to_i(month), to_i(day))
   def cast(%Ecto.Date{} = d),
     do: {:ok, d}
@@ -366,9 +373,9 @@ defmodule Ecto.DateTime do
   It supports:
 
     * a binary in the "YYYY-MM-DD HH:MM:DD" format
-      (may be seperated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
+      (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
     * a binary in the "YYYY-MM-DD HH:MM:DD.USEC" format
-      (may be seperated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
+      (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
     * a map with `"year"`, `"month"`,`"day"`, `"hour"`, `"min"` keys
       with `"sec"` and `"usec"` as optional keys and values are integers or binaries
     * a map with `:year`, `:month`,`:day`, `:hour`, `:min` keys
