@@ -28,15 +28,14 @@ defmodule Mix.Tasks.Ecto.Drop do
 
     {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean]
 
-    if disable_safety_warnings?(repo) or Mix.shell.yes?("Are you sure you want to drop the database for repo #{inspect repo}?") do
+    if disable_safety_warnings?() or
+       Mix.shell.yes?("Are you sure you want to drop the database for repo #{inspect repo}?") do
       drop_database(repo, opts)
     end
   end
 
-  defp disable_safety_warnings?(repo) do
-    repo.config[:otp_app]
-    |> Application.get_env(repo)
-    |> Keyword.get(:disable_safety_warnings, false)
+  defp disable_safety_warnings? do
+    Mix.Project.config[:start_permanent] == false
   end
 
   defp drop_database(repo, opts) do

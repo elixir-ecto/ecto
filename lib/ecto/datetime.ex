@@ -168,8 +168,9 @@ defmodule Ecto.Date do
   @doc """
   Returns an `Ecto.Date` in local time.
 
-  WARNING: Using the local time of the server will often lead to
-  intermittent bugs. Please use the `utc/0` function instead.
+  WARNING: The local time is often not always increasing due
+  to DST changes, which can lead to bugs. Please prefer the
+  `utc/0` function instead.
   """
   def local do
     erl_load(:erlang.localtime)
@@ -310,8 +311,9 @@ defmodule Ecto.Time do
   @doc """
   Returns an `Ecto.Time` in local time.
 
-  WARNING: Using the local time of the server will often lead to
-  intermittent bugs. Please use the `utc/0` function instead.
+  WARNING: The local time is often not always increasing due
+  to DST changes, which can lead to bugs. Please prefer the
+  `utc/0` function instead.
   """
   def local do
     erl_load(:erlang.localtime)

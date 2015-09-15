@@ -100,7 +100,13 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   end
 
   test "confirmation is asked if :disable_safety_warnings is false" do
-    Application.put_env(:ecto, Repo, [disable_safety_warnings: false])
+    defmodule Sample do
+      use Mix.Project
+      def project do
+        [app: :sample, version: "0.1.0", start_permanent: true, compilers: []]
+      end
+    end
+
     Process.put(:storage_down, :ok)
     send self, {:mix_shell_input, :yes?, true}
     Drop.run ["-r", to_string(Repo)]
@@ -109,5 +115,7 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
       :yes?,
       ["Are you sure you want to drop the database for repo Mix.Tasks.Ecto.CreateDropTest.Repo?"],
     }
+  after
+    Mix.ProjectStack.pop
   end
 end
