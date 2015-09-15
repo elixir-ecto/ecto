@@ -473,13 +473,13 @@ defmodule Ecto.Repo do
   ## Example
 
       post = MyRepo.get!(Post, 42)
-      post = %{post | title: "New title"}
+      post = Ecto.Changeset.change post, title: "New title"
       case MyRepo.update post do
         {:ok, model}        -> # Updated with success
         {:error, changeset} -> # Something went wrong
       end
   """
-  defcallback update(Ecto.Model.t | Ecto.Changeset.t, Keyword.t) ::
+  defcallback update(Ecto.Changeset.t, Keyword.t) ::
               {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
 
   @doc """

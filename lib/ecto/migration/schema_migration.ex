@@ -2,6 +2,7 @@ defmodule Ecto.Migration.SchemaMigration do
   # Define a schema that works with the schema_migrations table
   @moduledoc false
   use Ecto.Model
+  import Ecto.Query, only: [from: 2]
 
   @primary_key false
   schema "schema_migrations" do

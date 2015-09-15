@@ -122,7 +122,7 @@ defmodule Ecto.RepoTest do
     model = %MyModelNoPK{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
-      TestRepo.update!(model)
+      TestRepo.update!(model |> Ecto.Changeset.change, force: true)
     end
 
     assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
@@ -138,13 +138,13 @@ defmodule Ecto.RepoTest do
     model = %MyModel{id: 1, x: "abc"}
     TestRepo.get(MyModel, 123)
     TestRepo.get_by(MyModel, x: "abc")
-    TestRepo.update!(model)
+    TestRepo.update!(model |> Ecto.Changeset.change, force: true)
     TestRepo.delete!(model)
   end
 
   test "works with custom source model" do
     model = %MyModel{id: 1, x: "abc"} |> Ecto.Model.put_source("custom_model")
-    TestRepo.update!(model)
+    TestRepo.update!(model |> Ecto.Changeset.change, force: true)
     TestRepo.delete!(model)
 
     to_insert = %MyModel{x: "abc"} |> Ecto.Model.put_source("custom_model")
@@ -155,7 +155,7 @@ defmodule Ecto.RepoTest do
     model = %MyModel{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKeyValueError, fn ->
-      TestRepo.update!(model)
+      TestRepo.update!(model |> Ecto.Changeset.change, force: true)
     end
 
     assert_raise Ecto.NoPrimaryKeyValueError, fn ->
@@ -168,12 +168,6 @@ defmodule Ecto.RepoTest do
 
     assert_raise Ecto.ChangeError, fn ->
       TestRepo.insert!(model)
-    end
-
-    model = %MyModel{id: 1, x: 123}
-
-    assert_raise Ecto.ChangeError, fn ->
-      TestRepo.update!(model)
     end
   end
 
@@ -344,11 +338,8 @@ defmodule Ecto.RepoTest do
     TestRepo.insert!(changeset)
     assert Agent.get(CallbackAgent, get_action) == {:after_insert, :insert}
 
-    TestRepo.update!(%MyModel{id: 1})
-    assert Agent.get(CallbackAgent, get_action) == {:after_update, :update}
-
     changeset = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
-    TestRepo.update!(changeset)
+    TestRepo.update!(changeset, force: true)
     assert Agent.get(CallbackAgent, get_action) == {:after_update, :update}
 
     TestRepo.delete!(%MyModel{id: 1})
@@ -376,16 +367,6 @@ defmodule Ecto.RepoTest do
       %{id: nil, embed: nil, embeds: [], x: nil, y: nil}
     assert Agent.get(CallbackAgent, &get_after_changes/1) ==
       %{id: nil, x: nil, y: nil}
-  end
-
-  test "skip adding embeds to changeset on update" do
-    TestRepo.update!(%MyModel{id: 5, embed: %MyEmbed{}, embeds: [%MyEmbed{}]})
-    assert Agent.get(CallbackAgent, &get_before_changes/1) == %{x: nil, y: nil}
-  end
-
-  test "skip adding assocs to changeset on update" do
-    TestRepo.update!(%MyModel{id: 5, assoc: %MyAssoc{}, assocs: [%MyAssoc{}]})
-    assert Agent.get(CallbackAgent, &get_before_changes/1) == %{x: nil, y: nil}
   end
 
   defp get_models(changesets) do
@@ -593,17 +574,6 @@ defmodule Ecto.RepoTest do
   test "skips embeds on update when not changing" do
     embed = %MyEmbed{x: "xyz"}
 
-    # Leaves embeds untouched when updatting model
-    model = TestRepo.update!(%MyModel{id: 1, embed: embed})
-    assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embed == embed
-
-    model = TestRepo.update!(%MyModel{id: 1, embeds: [embed]})
-    assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.embeds == [embed]
-
     # If embed is not in changeset, embeds are left out
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, x: "abc")
     model = TestRepo.update!(changeset)
@@ -620,17 +590,6 @@ defmodule Ecto.RepoTest do
 
   test "skips assocs on update when not changing" do
     assoc = %MyAssoc{x: "xyz"}
-
-    # Leaves assocs untouched when updatting model
-    model = TestRepo.update!(%MyModel{id: 1, assoc: assoc})
-    assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.assoc == assoc
-
-    model = TestRepo.update!(%MyModel{id: 1, assocs: [assoc]})
-    assert [{:after_update, MyModel}, {:before_update, MyModel} | _] =
-      Agent.get(CallbackAgent, &get_models/1)
-    assert model.assocs == [assoc]
 
     # If assoc is not in changeset, assocs are left out
     changeset = Ecto.Changeset.change(%MyModel{id: 1, assoc: assoc}, x: "abc")

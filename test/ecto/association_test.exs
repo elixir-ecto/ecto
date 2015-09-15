@@ -16,6 +16,7 @@ defmodule Ecto.AssociationTest do
 
   defmodule Post do
     use Ecto.Model
+    import Ecto.Changeset
 
     schema "posts" do
       field :title, :string
@@ -99,6 +100,7 @@ defmodule Ecto.AssociationTest do
 
   defmodule Profile do
     use Ecto.Model
+    import Ecto.Changeset
 
     schema "profiles" do
       field :name

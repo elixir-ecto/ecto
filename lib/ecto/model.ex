@@ -9,9 +9,7 @@ defmodule Ecto.Model do
   common functionality to your module:
 
     * `use Ecto.Schema` - provides the API necessary to define schemas
-    * `import Ecto.Changeset` - functions for building and manipulating changesets
     * `import Ecto.Model` - functions for working with models and their associations
-    * `import Ecto.Query, only: [from: 2]` - for generating and manipulating queries
 
   Plus all the modules existing in `Ecto.Model.*` are brought in
   too:
@@ -39,10 +37,8 @@ defmodule Ecto.Model do
   defmacro __using__(_opts) do
     quote do
       use Ecto.Schema
-      import Ecto.Changeset
-      import Ecto.Query, only: [from: 2]
-
       import Ecto.Model
+
       use Ecto.Model.OptimisticLock
       use Ecto.Model.Timestamps
       use Ecto.Model.Dependent
@@ -203,6 +199,8 @@ defmodule Ecto.Model do
   @doc false
   # TODO: Deprecate on Ecto 1.1
   def put_source(model, new_source, new_prefix \\ nil) do
+    IO.puts :stderr, "warning: Ecto.Model.put_source/3 is deprecated in favor of " <>
+                     "Ecto.Model.put_meta/2\n#{Exception.format_stacktrace}"
     put_in model.__meta__.source, {new_prefix, new_source}
   end
 

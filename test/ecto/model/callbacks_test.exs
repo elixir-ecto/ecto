@@ -52,6 +52,7 @@ defmodule Ecto.Model.CallbacksTest do
 
   defmodule AllCallback do
     use Ecto.Model
+    import Ecto.Changeset
 
     schema "all_callback" do
       field :x, :string, default: ""
@@ -104,13 +105,6 @@ defmodule Ecto.Model.CallbacksTest do
     model = TestRepo.insert! model
     assert model.before == %{id: 1, x: "x", y: "", z: ""}
     assert model.after == %{id: 1, x: "x", y: ""}
-  end
-
-  test "before_update and after_update with model" do
-    model = %AllCallback{id: 1, x: "x"}
-    model = TestRepo.update! model
-    assert model.before == %{x: "x", y: "", z: ""}
-    assert model.after == %{x: "x", y: ""}
   end
 
   test "before_delete and after_delete with model" do

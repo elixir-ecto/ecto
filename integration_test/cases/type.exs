@@ -113,7 +113,7 @@ defmodule Ecto.Integration.TypeTest do
     assert TestRepo.all(from t in Tag, where: 1 in t.ints, select: t.ints) == [ints]
 
     # Update
-    tag = TestRepo.update!(%{tag | ints: [3, 2, 1]})
+    tag = TestRepo.update!(Ecto.Changeset.change tag, ints: [3, 2, 1])
     assert TestRepo.get!(Tag, tag.id).ints == [3, 2, 1]
 
     # Update all
@@ -150,7 +150,7 @@ defmodule Ecto.Integration.TypeTest do
     post = TestRepo.insert!(%Post{meta: %{"world" => "hello"}})
     assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
 
-    post = TestRepo.update!(%{post | meta: %{hello: "world"}})
+    post = TestRepo.update!(Ecto.Changeset.change post, meta: %{hello: "world"})
     assert TestRepo.get!(Post, post.id).meta == %{"hello" => "world"}
 
     query = from(p in Post, where: p.id == ^post.id)

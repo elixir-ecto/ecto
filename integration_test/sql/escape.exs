@@ -21,7 +21,7 @@ defmodule Ecto.Integration.EscapeTest do
 
   test "Repo.update! escape" do
     p = TestRepo.insert!(%Post{title: "hello"})
-    TestRepo.update!(%{p | title: "'"})
+    TestRepo.update!(Ecto.Changeset.change p, title: "'")
 
     query = from(p in Post, select: p.title)
     assert ["'"] == TestRepo.all(query)

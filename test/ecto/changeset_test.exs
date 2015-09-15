@@ -1,8 +1,6 @@
 defmodule Ecto.ChangesetTest do
   use ExUnit.Case, async: true
-
   import Ecto.Changeset
-  import Ecto.Query
 
   defmodule Comment do
     use Ecto.Model

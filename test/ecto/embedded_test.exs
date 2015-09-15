@@ -25,6 +25,7 @@ defmodule Ecto.EmbeddedTest do
 
   defmodule Post do
     use Ecto.Model
+    import Ecto.Changeset
 
     schema "posts" do
       field :title, :string
@@ -46,6 +47,7 @@ defmodule Ecto.EmbeddedTest do
 
   defmodule Profile do
     use Ecto.Model
+    import Ecto.Changeset
 
     embedded_schema do
       field :name

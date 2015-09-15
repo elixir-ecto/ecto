@@ -7,6 +7,7 @@ defmodule Ecto.SchemaTest do
 
   defmodule Model do
     use Ecto.Model
+    import Ecto.Query
 
     schema "mymodel" do
       field :name,  :string, default: "eric"

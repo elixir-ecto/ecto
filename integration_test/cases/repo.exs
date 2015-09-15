@@ -61,10 +61,6 @@ defmodule Ecto.Integration.RepoTest do
     post = TestRepo.one(Post)
     assert post.__meta__.state == :loaded
     assert post.inserted_at
-
-    post = %{post | text: "coming very soon..."}
-    post = put_in post.__meta__.state, :built
-    assert %Post{__meta__: ^loaded_meta} = TestRepo.update!(post)
   end
 
   test "insert and update with changeset" do
@@ -119,7 +115,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %{id: cid, counter: nil} = raw = TestRepo.insert!(changeset)
 
     # Set the counter to 11, so we can read it soon
-    TestRepo.update!(%{raw | counter: 11})
+    TestRepo.update_all from(u in RAW, where: u.id == ^cid), set: [counter: 11]
 
     # Now, a combination of dirty tracking with read_after_writes,
     # allow us to see the actual counter value.

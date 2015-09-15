@@ -25,7 +25,7 @@ defmodule Ecto.Model.TimestampsTest do
     assert %Ecto.DateTime{} = default.inserted_at
     assert %Ecto.DateTime{} = default.updated_at
 
-    default = TestRepo.update!(%Default{id: 1})
+    default = TestRepo.update!(%Default{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.inserted_at
     assert %Ecto.DateTime{} = default.updated_at
   end
@@ -35,10 +35,6 @@ defmodule Ecto.Model.TimestampsTest do
                                         updated_at: %Ecto.DateTime{year: 2000}})
     assert default.inserted_at == %Ecto.DateTime{year: 2000}
     assert default.updated_at == %Ecto.DateTime{year: 2000}
-
-    default = TestRepo.update!(%Default{id: 1, updated_at: %Ecto.DateTime{year: 2000}})
-    refute default.inserted_at
-    assert default.updated_at != %Ecto.DateTime{year: 2000}
 
     changeset = Ecto.Changeset.change(%Default{id: 1}, updated_at: %Ecto.DateTime{year: 2000})
     default = TestRepo.update!(changeset)
@@ -51,7 +47,7 @@ defmodule Ecto.Model.TimestampsTest do
     assert %Ecto.DateTime{} = default.created_on
     assert %Ecto.DateTime{} = default.updated_on
 
-    default = TestRepo.update!(%Config{id: 1})
+    default = TestRepo.update!(%Config{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.created_on
     assert %Ecto.DateTime{} = default.updated_on
   end
