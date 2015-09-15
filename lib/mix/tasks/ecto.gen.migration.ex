@@ -2,7 +2,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   use Mix.Task
   import Mix.Ecto
   import Mix.Generator
-  import Mix.Utils, only: [camelize: 1]
+  import Mix.Utils, only: [camelize: 1, underscore: 1]
 
   @shortdoc "Generate a new migration for the repo"
 
@@ -38,7 +38,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
       {_, [name], _} ->
         ensure_repo(repo, args)
         path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
-        file = Path.join(path, "#{timestamp}_#{name}.exs")
+        file = Path.join(path, "#{timestamp}_#{underscore(name)}.exs")
         create_directory path
         create_file file, migration_template(mod: Module.concat([repo, Migrations, camelize(name)]))
 
