@@ -101,9 +101,11 @@ We are currently looking for contributions to add support for other SQL database
 
 ## Contributing
 
-Ecto is on the bleeding edge of Elixir so the latest master build is most likely needed, see [Elixir's README](https://github.com/elixir-lang/elixir) on how to build from source.
+For overall guidelines, please see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-To contribute you need to compile Ecto from source and test it:
+### Running tests
+
+Clone the repo and fetch its dependencies:
 
 ```
 $ git clone https://github.com/elixir-lang/ecto.git
@@ -122,7 +124,7 @@ MIX_ENV=pg mix test
 mix test.all
 ```
 
-In addition, build the docs locally to review any changes:
+### Building docs
 
 ```
 $ MIX_ENV=docs mix docs
