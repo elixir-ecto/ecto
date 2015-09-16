@@ -128,7 +128,7 @@ defmodule Ecto.Query.API do
   def min(value), do: doc! [value]
 
   @doc """
-  Calculates the minimum for the given entry.
+  Calculates the maximum for the given entry.
 
       from p in Payment, select: max(p.value)
   """
