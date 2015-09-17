@@ -5,10 +5,10 @@ defmodule Ecto.Query do
   Queries are used to retrieve and manipulate data in a repository
   (see `Ecto.Repo`). Although this module provides a complete API,
   supporting expressions like `where/3`, `select/3` and so forth,
-  most of the times developers need to import only the `from/2`
+  most of the time developers need to import only the `from/2`
   macro.
 
-      # Imports only from/2 from Ecto.Query
+      # Imports only from/2 of Ecto.Query
       import Ecto.Query, only: [from: 2]
 
       # Create a query
@@ -57,7 +57,7 @@ defmodule Ecto.Query do
     * Arrays: `[1, 2, 3]`, `~w(interpolate words)`
 
   All other types must be passed as a parameter using interpolation
-  explained below.
+  as explained below.
 
   ## Interpolation
 
@@ -91,7 +91,7 @@ defmodule Ecto.Query do
 
   The example above works because `u.age` is tagged as an :integer
   in the User model and therefore Ecto will attempt to cast the
-  interpolated `^age` to integer. In case a value cannot be cast,
+  interpolated `^age` to integer. When a value cannot be cast,
   `Ecto.CastError` is raised.
 
   In some situations, Ecto is unable to infer the type for interpolated
@@ -121,8 +121,8 @@ defmodule Ecto.Query do
 
       select(where(from(w in Weather), [w], w.prcp > 0), [w], w.city)
 
-  This module documents each of those macros, providing examples both
-  in the keywords query and in the query expression formats.
+  This module documents each of those macros, providing examples in both
+  the keywords query and query expression formats.
   """
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,
@@ -218,24 +218,24 @@ defmodule Ecto.Query do
           offset: ^((page-1) * size)
       end
 
-  The example above does not use `in` because none of `limit` and `offset`
-  requires such. However, extending a query with where expression would
-  require so:
+  The example above does not use `in` because `limit` and `offset`
+  do not require such. However, extending a query with a where expression would
+  require the use of `in`:
 
       def published(query) do
         from p in query, where: p.published_at != nil
       end
 
   Notice we have created a `p` variable to represent each item in the query.
-  In case the given query has more than one `from` expression, each of them
-  must be given in the order they were bound:
+  When the given query has more than one `from` expression, a variable
+  must be given for each in the order they were bound:
 
       def published_multi(query) do
         from [p,o] in query,
         where: p.published_at != nil and o.published_at != nil
       end
 
-  Note the variables `p` and `o` must be named as you find more convenient
+  Note the variables `p` and `o` can be named whatever you like
   as they have no importance in the query sent to the database.
   """
   defmacro from(expr, kw \\ []) do
@@ -316,8 +316,8 @@ defmodule Ecto.Query do
   @doc """
   A join query expression.
 
-  Receives a model that is to be joined to the query and a condition to
-  do the joining on. The join condition can be any expression that evaluates
+  Receives a model that is to be joined to the query and a condition for
+  the join. The join condition can be any expression that evaluates
   to a boolean value. The join is by default an inner join, the qualifier
   can be changed by giving the atoms: `:inner`, `:left`, `:right` or
   `:full`. For a keyword query the `:join` keyword can be changed to:
@@ -328,33 +328,33 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-         from c in Comment,
+      from c in Comment,
         join: p in Post, on: c.post_id == p.id,
-      select: {p.title, c.text}
+        select: {p.title, c.text}
 
-         from p in Post,
+      from p in Post,
         left_join: c in assoc(p, :comments),
-      select: {p, c}
+        select: {p, c}
 
   ## Expressions examples
 
       Comment
-      |> join(:inner, [c], p in Post, c.post_id == p.id)
-      |> select([c, p], {p.title, c.text})
+        |> join(:inner, [c], p in Post, c.post_id == p.id)
+        |> select([c, p], {p.title, c.text})
 
       Post
-      |> join(:left, [p], c in assoc(p, :comments))
-      |> select([p, c], {p, c})
+        |> join(:left, [p], c in assoc(p, :comments))
+        |> select([p, c], {p, c})
 
   ## Joining with fragments
 
-  In cases you need to join on a complex expression that cannot be
+  When you need to join on a complex expression that cannot be
   expressed via Ecto associations, Ecto supports fragments in joins:
 
       Comment
       |> join(:inner, [c], p in fragment("SOME COMPLEX QUERY", c.id, ^some_param))
 
-  However, due to its complexity, such style is discouraged.
+  This style discouraged due to its complexity.
   """
   defmacro join(query, qual, binding, expr, on \\ nil) do
     Join.build(query, qual, binding, expr, on, nil, __CALLER__)
