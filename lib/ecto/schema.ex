@@ -123,8 +123,8 @@ defmodule Ecto.Schema do
   `:string`               | UTF-8 encoded `string`  | "hello"
   `:binary`               | `binary`                | `<<int, int, int, ...>>`
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
-  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal)
-  `:map`                  | `map`
+  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal) | 
+  `:map`                  | `map` | 
 
   **Note:** For the `:array` type, replace `inner_type` with one of
   the valid types, such as `:string`.
