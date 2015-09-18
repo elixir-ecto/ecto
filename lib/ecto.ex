@@ -1,14 +1,18 @@
 defmodule Ecto do
   @moduledoc ~S"""
-  Ecto is split into 3 main components:
+  Ecto is split into 4 main components:
 
     * `Ecto.Repo` - repositories are wrappers around the database.
       Via the repository, we can create, update, destroy and query existing entries.
       A repository needs an adapter and a URL to communicate to the database
 
-    * `Ecto.Model` - models provide a set of functionalities for defining
-      data structures, how changes are performed in the storage, life-cycle
-      callbacks and more
+    * `Ecto.Model` - models build on top of `Ecto.Schema` to provide a set of
+      functionalities for defining data structures, manipulating them, as well
+      as life-cycle callbacks and more
+
+    * `Ecto.Changeset` - changesets provide a way for developers to filter
+      and cast external parameters, as well as a mechanism to track and
+      validate changes before their are sent to the database
 
     * `Ecto.Query` - written in Elixir syntax, queries are used to retrieve
       information from a given repository. Queries in Ecto are secure, avoiding
@@ -106,11 +110,6 @@ defmodule Ecto do
       iex> weather = Repo.get Weather, 1
       %Weather{id: 1, ...}
 
-      # Update it
-      iex> weather = %{weather | temp_lo: 10}
-      iex> Repo.update!(weather)
-      %Weather{...}
-
       # Delete it
       iex> Repo.delete!(weather)
       %Weather{...}
@@ -133,17 +132,19 @@ defmodule Ecto do
       repository with unnecessary overhead, providing straight-forward and
       performant access to storage;
 
-  ### Changesets
+  ## Changesets
 
-  Although in the example above we have directly inserted and updated the
-  model in the repository, most of the times, developers will use changesets
-  to perform those operations.
+  Although in the example above we have directly inserted and deleted the
+  model in the repository, update operations must be done through changesets
+  so Ecto efficiently track changes.
 
-  Changesets allow developers to filter, cast, and validate changes before
-  we apply them to a model. Imagine the given model:
+  Further than that, changesets allow developers to filter, cast, and validate
+  changes before we apply them to a model. Imagine the given model:
 
       defmodule User do
         use Ecto.Model
+
+        import Ecto.Changeset
 
         schema "users" do
           field :name
@@ -159,14 +160,10 @@ defmodule Ecto do
         end
       end
 
-  Since `Ecto.Model` by default imports `Ecto.Changeset` functions,
-  we use them to generate and manipulate a changeset in the `changeset/2`
-  function above.
-
-  First we invoke `Ecto.Changeset.cast/4` with the model, the parameters
-  and a list of required and optional fields; this returns a changeset.
-  The parameter is a map with binary keys and a value that will be cast
-  based on the type defined on the model schema.
+  The `changeset/2` function first invokes `Ecto.Changeset.cast/4` with
+  the model, the parameters and a list of required and optional fields;
+  this returns a changeset. The parameter is a map with binary keys and
+  a value that will be cast based on the type defined on the model schema.
 
   Any parameter that was not explicitly listed in the required or
   optional fields list will be ignored. Furthermore, if a field is given
@@ -185,11 +182,11 @@ defmodule Ecto do
       def update(id, params) do
         changeset = User.changeset Repo.get!(User, id), params["user"]
 
-        if changeset.valid? do
-          user = Repo.update!(changeset)
-          send_resp conn, 200, "Ok"
-        else
-          send_resp conn, 400, "Bad request"
+        case Repo.update(changeset) do
+          {:ok, user} ->
+            send_resp conn, 200, "Ok"
+          {:error, changeset} ->
+            send_resp conn, 400, "Bad request"
         end
       end
 
@@ -203,11 +200,11 @@ defmodule Ecto do
       def create(id, params) do
         changeset = User.changeset %User{}, params["user"]
 
-        if changeset.valid? do
-          user = Repo.insert!(changeset)
-          send_resp conn, 200, "Ok"
-        else
-          send_resp conn, 400, "Bad request"
+        case Repo.insert(changeset) do
+          {:ok, user} ->
+            send_resp conn, 200, "Ok"
+          {:error, changeset} ->
+            send_resp conn, 400, "Bad request"
         end
       end
 
@@ -215,13 +212,19 @@ defmodule Ecto do
   different changesets for different use cases. For example, one
   could easily provide specific changesets for create and update:
 
-      def changeset(user, :create, params) do
+      def create_changeset(user, params) do
         # Changeset on create
       end
 
-      def changeset(user, :update, params) do
+      def update_changeset(user, params) do
         # Changeset on update
       end
+
+  Changesets are also capable of transforming database constraints,
+  like unique indexes and foreign key checks, into errors. Allowing
+  developers to keep their database consistent while still providing
+  proper feedback to end users. Check `Ecto.Changeset.unique_constraint/3`
+  for some examples as well as the other `_constraint` functions.
 
   ## Query
 
@@ -358,9 +361,9 @@ defmodule Ecto do
   You can find more information about defining associations and each
   respective association module in `Ecto.Schema` docs.
 
-  > NOTE: Ecto does not lazy load associations. While lazily loading associations
-  > may sound convenient at first, in the long run it becomes a source of confusion
-  > and performance issues.
+  > NOTE: Ecto does not lazy load associations. While lazily loading
+  > associations may sound convenient at first, in the long run it
+  > becomes a source of confusion and performance issues.
 
   ### Embeds
 
