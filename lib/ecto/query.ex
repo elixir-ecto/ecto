@@ -202,11 +202,11 @@ defmodule Ecto.Query do
   If it is a query expression the first argument is the original query
   and the second argument the expression.
 
-  ## Keywords examples
+  ## Keywords example
 
       from(City, select: c)
 
-  ## Expressions examples
+  ## Expressions example
 
       City |> select([c], c)
 
@@ -420,7 +420,7 @@ defmodule Ecto.Query do
          distinct: p.category,
          order_by: [p.date])
 
-  ## Expressions examples
+  ## Expressions example
 
       Post
       |> distinct(true)
@@ -435,14 +435,14 @@ defmodule Ecto.Query do
   A where query expression.
 
   `where` expressions are used to filter the result set. If there is more
-  than one where expression, they are combined with `and` operator. All
+  than one where expression, they are combined with an `and` operator. All
   where expressions have to evaluate to a boolean value.
 
-  ## Keywords examples
+  ## Keywords example
 
       from(c in City, where: c.state == "Sweden")
 
-  ## Expressions examples
+  ## Expressions example
 
       City |> where([c], c.state == "Sweden")
 
@@ -455,7 +455,7 @@ defmodule Ecto.Query do
   An order by query expression.
 
   Orders the fields based on one or more fields. It accepts a single field
-  or a list field, the direction can be specified in a keyword list as shown
+  or a list of fields. The direction can be specified in a keyword list as shown
   in the examples. There can be several order by expressions in a query.
 
   ## Keywords examples
@@ -464,7 +464,7 @@ defmodule Ecto.Query do
       from(c in City, order_by: [c.name, c.population])
       from(c in City, order_by: [asc: c.name, desc: c.population])
 
-  ## Expressions examples
+  ## Expressions example
 
       City |> order_by([c], asc: c.name, desc: c.population)
 
@@ -491,16 +491,16 @@ defmodule Ecto.Query do
   @doc """
   A limit query expression.
 
-  Limits the number of rows selected from the result. Can be any expression but
+  Limits the number of rows returned from the result. Can be any expression but
   has to evaluate to an integer value and it can't include any field.
 
   If `limit` is given twice, it overrides the previous value.
 
-  ## Keywords examples
+  ## Keywords example
 
       from(u in User, where: u.id == ^current_user, limit: 1)
 
-  ## Expressions examples
+  ## Expressions example
 
       User |> where([u], u.id == ^current_user) |> limit([u], 1)
 
@@ -513,16 +513,16 @@ defmodule Ecto.Query do
   An offset query expression.
 
   Offsets the number of rows selected from the result. Can be any expression
-  but have to evaluate to an integer value and it can't include any field.
+  but it must evaluate to an integer value and it can't include any field.
 
   If `offset` is given twice, it overrides the previous value.
 
-  ## Keywords examples
+  ## Keywords example
 
       # Get all posts on page 4
       from(p in Post, limit: 10, offset: 30)
 
-  ## Expressions examples
+  ## Expressions example
 
       Post |> limit([p], 10) |> offset([p], 30)
 
@@ -546,11 +546,11 @@ defmodule Ecto.Query do
   through queries. For more information on optimistic locking, have a look at
   the `Ecto.Model.OptimisticLock` module.
 
-  ## Keywords examples
+  ## Keywords example
 
       from(u in User, where: u.id == ^current_user, lock: "FOR SHARE NOWAIT")
 
-  ## Expressions examples
+  ## Expressions example
 
       User |> where(u.id == ^current_user) |> lock("FOR SHARE NOWAIT")
 
@@ -565,11 +565,11 @@ defmodule Ecto.Query do
   Updates are used to update the filtered entries. In order for
   updates to be applied, `Ecto.Repo.update_all/3` must be invoked.
 
-  ## Keywords examples
+  ## Keywords example
 
       from(u in User, update: [set: [name: "new name"]]
 
-  ## Expressions examples
+  ## Expressions example
 
       User |> update([u], set: [name: "new name"])
 
@@ -577,11 +577,11 @@ defmodule Ecto.Query do
 
   The update expression in Ecto supports the following operators:
 
-    * `set` - sets the given field in table to the given value
+    * `set` - sets the given field in the table to the given value
 
           from(u in User, update: [set: [name: "new name"]]
 
-    * `inc` - increments the given field in table by the given value
+    * `inc` - increments the given field in the table by the given value
 
           from(u in User, update: [inc: [accesses: 1]]
 
@@ -603,7 +603,7 @@ defmodule Ecto.Query do
 
   Groups together rows from the model that have the same values in the given
   fields. Using `group_by` "groups" the query giving it different semantics
-  in the `select` expression. If a query is grouped only fields that were
+  in the `select` expression. If a query is grouped, only fields that were
   referenced in the `group_by` can be used in the `select` or if the field
   is given as an argument to an aggregate function.
 
@@ -619,7 +619,7 @@ defmodule Ecto.Query do
         group_by: p,
         select: p)
 
-  ## Expressions examples
+  ## Expressions example
 
       Post |> group_by([p], p.category) |> select([p], count(p.id))
 
@@ -636,7 +636,7 @@ defmodule Ecto.Query do
   (see `group_by/3`). `having` groups the query even if the query has no
   `group_by` expression.
 
-  ## Keywords examples
+  ## Keywords example
 
       # Returns the number of posts in each category where the
       # average number of comments is above ten
@@ -645,7 +645,7 @@ defmodule Ecto.Query do
         having: avg(p.num_comments) > 10,
         select: {p.category, count(p.id)})
 
-  ## Expressions examples
+  ## Expressions example
 
       Post
       |> group_by([p], p.category)
@@ -690,7 +690,7 @@ defmodule Ecto.Query do
                  where: l.inserted_at > c.updated_at,
                  preload: [comments: {c, likes: l}]
 
-  Keep in mind though both formats cannot be nested arbitrary. For
+  Keep in mind neither format can be nested arbitrarily. For
   example, the query below is invalid because we cannot preload
   likes with the join association `c`.
 
@@ -700,15 +700,15 @@ defmodule Ecto.Query do
 
   ## Preload queries
 
-  Preload also allows queries to be given, allow you to filter or
+  Preload also allows queries to be given, allowing you to filter or
   customize how the preloads are fetched:
 
       comments_query = from c in Comment, order_by: c.published_at
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
   The example above will issue two queries, one for loading posts and
-  then another for loading the comments associated to the posts,
-  where they will be ordered by `published_at`.
+  then another for loading the comments associated with the posts.
+  Comments will be ordered by `published_at`.
 
   Note: keep in mind operations like limit and offset in the preload
   query will affect the whole result set and not each association. For
@@ -720,7 +720,7 @@ defmodule Ecto.Query do
   won't bring the top of comments per post. Rather, it will only bring
   the 5 top comments across all posts.
 
-  ## Keywords examples
+  ## Keywords example
 
       # Returns all posts and their associated comments
       from(p in Post,
