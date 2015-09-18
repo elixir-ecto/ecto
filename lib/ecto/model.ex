@@ -3,16 +3,14 @@ defmodule Ecto.Model do
   Provides convenience functions for defining and working
   with models.
 
+  `Ecto.Model` is built on top of `Ecto.Schema`. See
+  `Ecto.Schema` for documentation on the `schema/2` macro,
+  as well which fields, associations, types are available.
+
   ## Using
 
-  When used, `Ecto.Model` works as an "umbrella" module that adds
-  common functionality to your module:
-
-    * `use Ecto.Schema` - provides the API necessary to define schemas
-    * `import Ecto.Model` - functions for working with models and their associations
-
-  Plus all the modules existing in `Ecto.Model.*` are brought in
-  too:
+  When used, `Ecto.Model` imports itself. All the modules
+  existing in `Ecto.Model.*` are brought in too:
 
     * `use Ecto.Model.Autogenerate` - automatically handle autogenerate columns before insertion
     * `use Ecto.Model.Dependent` - performs dependency (associations) management
