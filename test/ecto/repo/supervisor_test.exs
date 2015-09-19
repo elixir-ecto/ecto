@@ -73,5 +73,9 @@ defmodule Ecto.Repo.SupervisorTest do
     assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
       parse_url("ecto://eric:hunter2@host:123/")
     end
+
+    assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
+      parse_url("ecto://eric:hunter2@host:123")
+    end
   end
 end

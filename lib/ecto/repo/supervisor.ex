@@ -78,11 +78,11 @@ defmodule Ecto.Repo.Supervisor do
   def parse_url(url) when is_binary(url) do
     info = url |> URI.decode() |> URI.parse()
 
-    unless info.host do
+    if is_nil(info.host) do
       raise Ecto.InvalidURLError, url: url, message: "host is not present"
     end
 
-    unless String.match? info.path, ~r"^/([^/])+$" do
+    if is_nil(info.path) or not (info.path =~ ~r"^/([^/])+$") do
       raise Ecto.InvalidURLError, url: url, message: "path should be a database name"
     end
 
@@ -90,7 +90,7 @@ defmodule Ecto.Repo.Supervisor do
       destructure [username, password], String.split(info.userinfo, ":")
     end
 
-    database = String.slice(info.path, 1, String.length(info.path))
+    "/" <> database = info.path
 
     opts = [username: username,
             password: password,
