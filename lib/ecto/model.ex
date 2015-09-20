@@ -95,7 +95,7 @@ defmodule Ecto.Model do
   key is often the primary key and such is usually generated
   dynamically:
 
-      iex> comment = Repo.get(Post, 13)
+      iex> comment = Repo.get(Comment, 13)
       %Comment{id: 13, post_id: 25}
       iex> build(comment, :post)
       %Post{id: nil}
