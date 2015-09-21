@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.4-dev
+
+* Enhancements
+  * Add support for ISO datetime strings in Ecto.Date.cast/1
+
+* Bug fixes
+  * Ensure changeset constraints are merged on cast/merge
+  * Underscore the migration file name with ecto.gen.migration
+
 ## v1.0.3
 
 * Enhancements
