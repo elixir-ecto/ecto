@@ -164,7 +164,7 @@ defmodule Ecto.Changeset do
                         types: nil | %{atom => Ecto.Type.t}}
 
   @type error :: {atom, error_message}
-  @type error_message :: String.t | {String.t, integer}
+  @type error_message :: String.t | {String.t, Keyword.t}
   @type action :: nil | :insert | :update | :delete
   @type constraint :: %{type: :unique, constraint: String.t,
                         field: atom, message: error_message}
@@ -890,7 +890,12 @@ defmodule Ecto.Changeset do
 
   """
   @spec add_error(t, atom, error_message) :: t
-  def add_error(%{errors: errors} = changeset, key, error) do
+  def add_error(%{errors: errors} = changeset, key, message) when is_binary(message) do
+    %{changeset | errors: [{key, message}|errors], valid?: false}
+  end
+
+  def add_error(%{errors: errors} = changeset, key, {message, opts} = error)
+      when is_binary(message) and is_list(opts) do
     %{changeset | errors: [{key, error}|errors], valid?: false}
   end
 
