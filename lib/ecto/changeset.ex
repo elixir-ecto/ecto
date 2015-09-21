@@ -86,7 +86,7 @@ defmodule Ecto.Changeset do
   * `action`      - The action to be performed with the changeset
   * `types`       - Cache of the model's field types
   * `repo`        - The repository applying the changeset (only set after a Repo function is called)
-  * `opts`        - The options given to the repository (only set after a Repo function is called)
+  * `opts`        - The options given to the repository
 
   ## Related models
 
@@ -143,13 +143,14 @@ defmodule Ecto.Changeset do
   alias __MODULE__
   alias Ecto.Changeset.Relation
 
+  # If a new field is added here, def merge must be adapted
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], optional: [],
-            constraints: [], filters: %{}, action: nil, types: nil, opts: nil
+            constraints: [], filters: %{}, action: nil, types: nil, opts: []
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
-                        opts: Keyword.t | nil,
+                        opts: Keyword.t,
                         model: Ecto.Model.t | nil,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
@@ -340,7 +341,7 @@ defmodule Ecto.Changeset do
 
   def cast(%Changeset{changes: changes, model: model} = changeset, params, required, optional) do
     new_changeset = cast(model, changes, params, required, optional)
-    merge(changeset, new_changeset)
+    cast_merge(changeset, new_changeset)
   end
 
   def cast(%{__struct__: _} = model, params, required, optional) do
@@ -550,25 +551,33 @@ defmodule Ecto.Changeset do
   def merge(changeset1, changeset2)
 
   def merge(%Changeset{model: model} = cs1, %Changeset{model: model} = cs2) do
+    new_opts        = cs1.opts ++ cs2.opts
     new_repo        = merge_identical(cs1.repo, cs2.repo, "repos")
-    new_params      = (cs1.params || cs2.params) && Map.merge(cs1.params || %{}, cs2.params || %{})
-    new_changes     = Map.merge(cs1.changes, cs2.changes)
-    new_validations = cs1.validations ++ cs2.validations
-    new_errors      = cs1.errors ++ cs2.errors
-    new_required    = Enum.uniq(cs1.required ++ cs2.required)
-    new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
     new_action      = merge_identical(cs1.action, cs2.action, "actions")
-    new_types       = cs1.types || cs2.types
-    new_valid?      = cs1.valid? and cs2.valid?
+    new_filters     = Map.merge(cs1.filters, cs2.filters)
+    new_validations = cs1.validations ++ cs2.validations
+    new_constraints = cs1.constraints ++ cs2.constraints
 
-    %Changeset{params: new_params, model: model, valid?: new_valid?,
-               errors: new_errors, changes: new_changes, repo: new_repo,
-               required: new_required, optional: new_optional, action: new_action,
-               validations: new_validations, types: new_types}
+    cast_merge %{cs1 | repo: new_repo, filters: new_filters,
+                       action: new_action, validations: new_validations,
+                       opts: new_opts, constraints: new_constraints}, cs2
   end
 
   def merge(%Changeset{}, %Changeset{}) do
     raise ArgumentError, message: "different models when merging changesets"
+  end
+
+  defp cast_merge(cs1, cs2) do
+    new_params      = (cs1.params || cs2.params) && Map.merge(cs1.params || %{}, cs2.params || %{})
+    new_changes     = Map.merge(cs1.changes, cs2.changes)
+    new_errors      = Enum.uniq(cs1.errors ++ cs2.errors)
+    new_required    = Enum.uniq(cs1.required ++ cs2.required)
+    new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
+    new_types       = cs1.types || cs2.types
+    new_valid?      = cs1.valid? and cs2.valid?
+
+    %{cs1 | params: new_params, valid?: new_valid?, errors: new_errors, types: new_types,
+            changes: new_changes, required: new_required, optional: new_optional}
   end
 
   defp merge_identical(object, nil, _thing), do: object

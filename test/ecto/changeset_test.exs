@@ -194,20 +194,26 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  test "cast/4: works when cassting a changeset" do
+  test "cast/4: works when casting a changeset" do
     base_changeset = cast(%Post{title: "valid"}, %{}, ~w(title), ~w())
+                     |> validate_length(:title, min: 3)
+                     |> unique_constraint(:title)
 
     # No changes
     changeset = cast(base_changeset, %{}, ~w(), ~w())
     assert changeset.valid?
     assert changeset.changes  == %{}
     assert changeset.required == [:title]
+    assert length(changeset.validations) == 1
+    assert length(changeset.constraints) == 1
 
     changeset = cast(base_changeset, %{body: "new body"}, ~w(), ~w(body))
     assert changeset.valid?
     assert changeset.changes  == %{body: "new body"}
     assert changeset.required == [:title]
     assert changeset.optional == [:body]
+    assert length(changeset.validations) == 1
+    assert length(changeset.constraints) == 1
   end
 
   test "cast/4: works when casting a changeset with empty parameters" do
@@ -243,21 +249,29 @@ defmodule Ecto.ChangesetTest do
 
   ## Changeset functions
 
-  test "merge/2: merges changes, errors and validations" do
-    # Changes
+  test "merge/2: merges changes" do
     cs1 = cast(%Post{}, %{title: "foo"}, ~w(title), ~w())
     cs2 = cast(%Post{}, %{body: "bar"}, ~w(body), ~w())
     assert merge(cs1, cs2).changes == %{body: "bar", title: "foo"}
 
-    # Errors
+    cs1 = cast(%Post{}, %{title: "foo"}, ~w(title), ~w())
+    cs2 = cast(%Post{}, %{title: "bar"}, ~w(title), ~w())
+    changeset = merge(cs1, cs2)
+    assert changeset.valid?
+    assert changeset.params == %{"title" => "bar"}
+    assert changeset.changes == %{title: "bar"}
+  end
+
+  test "merge/2: merges errors" do
     cs1 = cast(%Post{}, %{}, ~w(title), ~w())
     cs2 = cast(%Post{}, %{}, ~w(title body), ~w())
     changeset = merge(cs1, cs2)
     refute changeset.valid?
-    assert Enum.sort(changeset.errors) ==
-           [body: "can't be blank", title: "can't be blank", title: "can't be blank"]
+    assert changeset.errors ==
+           [title: "can't be blank", body: "can't be blank"]
+  end
 
-    # Validations
+  test "merge/2: merges validations" do
     cs1 = cast(%Post{}, %{title: "Title"}, ~w(title), ~w())
                 |> validate_length(:title, min: 1, max: 10)
     cs2 = cast(%Post{}, %{body: "Body"}, ~w(body), ~w())
@@ -270,8 +284,18 @@ defmodule Ecto.ChangesetTest do
     assert Enum.find(changeset.validations, &match?({:title, {:length, _}}, &1))
   end
 
+  test "merge/2: merges constraints" do
+    cs1 = cast(%Post{}, %{title: "Title"}, ~w(title), ~w())
+                |> unique_constraint(:title)
+    cs2 = cast(%Post{}, %{body: "Body"}, ~w(body), ~w())
+                |> unique_constraint(:body)
+
+    changeset = merge(cs1, cs2)
+    assert changeset.valid?
+    assert length(changeset.constraints) == 2
+  end
+
   test "merge/2: merges parameters" do
-    # Changes
     empty = cast(%Post{}, :empty, ~w(title), ~w())
     cs1   = cast(%Post{}, %{body: "foo"}, ~w(body), ~w())
     cs2   = cast(%Post{}, %{body: "bar"}, ~w(body), ~w())
@@ -298,15 +322,6 @@ defmodule Ecto.ChangesetTest do
     assert Enum.sort(changeset.optional) == []
   end
 
-  test "merge/2: gives precedence to the second changeset" do
-    cs1 = cast(%Post{}, %{title: "foo"}, ~w(title), ~w())
-    cs2 = cast(%Post{}, %{title: "bar"}, ~w(title), ~w())
-    changeset = merge(cs1, cs2)
-    assert changeset.valid?
-    assert changeset.params == %{"title" => "bar"}
-    assert changeset.changes == %{title: "bar"}
-  end
-
   test "merge/2: merges the :repo field when either one is nil" do
     changeset = merge(%Ecto.Changeset{repo: :foo}, %Ecto.Changeset{repo: nil})
     assert changeset.repo == :foo
@@ -326,12 +341,15 @@ defmodule Ecto.ChangesetTest do
   test "merge/2: fails when the :model, :repo or :action field are not equal" do
     cs1 = cast(%Post{title: "foo"}, %{}, ~w(title), ~w())
     cs2 = cast(%Post{title: "bar"}, %{}, ~w(title), ~w())
+
     assert_raise ArgumentError, "different models when merging changesets", fn ->
       merge(cs1, cs2)
     end
+
     assert_raise ArgumentError, "different repos (`:foo` and `:bar`) when merging changesets", fn ->
       merge(%Ecto.Changeset{repo: :foo}, %Ecto.Changeset{repo: :bar})
     end
+
     assert_raise ArgumentError, "different actions (`:insert` and `:update`) when merging changesets", fn ->
       merge(%Ecto.Changeset{action: :insert}, %Ecto.Changeset{action: :update})
     end
