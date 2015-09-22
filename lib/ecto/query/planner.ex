@@ -121,7 +121,7 @@ defmodule Ecto.Query.Planner do
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      raise e
+      reraise e
   end
 
   @doc """
@@ -418,7 +418,7 @@ defmodule Ecto.Query.Planner do
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      raise e
+      reraise e
   end
 
   defp validate_and_increment(kind, query, expr, counter, adapter)
@@ -697,6 +697,10 @@ defmodule Ecto.Query.Planner do
       _ ->
         error! query, "`#{operation}` allows only `where` and `join` expressions"
     end
+  end
+
+  defp reraise(exception) do
+    reraise exception, Enum.reject(System.stacktrace, &match?({__MODULE__, _, _, _}, &1))
   end
 
   defp error!(query, message) do
