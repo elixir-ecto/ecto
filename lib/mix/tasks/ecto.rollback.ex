@@ -45,7 +45,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
     repo = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean],
+      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, quiet: :boolean],
       aliases: [n: :step, v: :to]
 
     ensure_repo(repo, args)
@@ -53,6 +53,10 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
     unless opts[:to] || opts[:step] || opts[:all] do
       opts = Keyword.put(opts, :step, 1)
+    end
+
+    if opts[:quiet] do
+      opts = Keyword.put(opts, :log, false)
     end
 
     migrator.(repo, migrations_path(repo), :down, opts)
