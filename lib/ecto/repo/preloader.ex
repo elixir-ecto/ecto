@@ -46,7 +46,7 @@ defmodule Ecto.Repo.Preloader do
   rescue
     e ->
       # Reraise errors so we ignore the preload inner stacktrace
-      raise e
+      reraise e
   end
 
   ## Preloading
@@ -264,5 +264,9 @@ defmodule Ecto.Repo.Preloader do
   defp merge_preloads(preload, left, right) do
     raise ArgumentError, "cannot preload `#{preload}` as it has been supplied more than once " <>
                          "with different argument types: #{inspect left} and #{inspect right}"
+  end
+
+  defp reraise(exception) do
+    reraise exception, Enum.reject(System.stacktrace, &match?({__MODULE__, _, _, _}, &1))
   end
 end
