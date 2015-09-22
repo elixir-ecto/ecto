@@ -36,6 +36,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
     * `--all` - run all pending migrations
     * `--step` / `-n` - run n number of pending migrations
     * `--to` / `-v` - run all migrations up to and including version
+    * `--quiet` - do not log migration commands
 
   """
 
