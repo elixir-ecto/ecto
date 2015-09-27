@@ -381,7 +381,7 @@ defmodule Ecto.Query do
       from(c in City, select: c) # selects the entire model
       from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
-      from(c in City, select: {c.name, ^to_binary(40 + 2), 43})
+      from(c in City, select: {c.name, ^to_string(40 + 2), 43})
       from(c in City, select: %{n: c.name, answer: 42})
 
   ## Expressions examples
