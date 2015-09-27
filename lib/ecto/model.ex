@@ -36,6 +36,7 @@ defmodule Ecto.Model do
     quote do
       use Ecto.Schema
       import Ecto.Model
+      import Ecto.Changeset
 
       use Ecto.Model.OptimisticLock
       use Ecto.Model.Timestamps
