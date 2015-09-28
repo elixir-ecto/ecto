@@ -1,13 +1,14 @@
 # Changelog
 
-## v1.0.4-dev
+## v1.0.4
 
 * Enhancements
-  * Add support for ISO datetime strings in Ecto.Date.cast/1
+  * Support `--quiet` in `ecto.rollback`
+  * Add support for ISO datetime strings in `Ecto.Date.cast/1`
 
 * Bug fixes
   * Ensure changeset constraints are merged on cast/merge
-  * Underscore the migration file name with ecto.gen.migration
+  * Underscore the migration file name given to `mix ecto.gen.migration`
 
 ## v1.0.3
 
