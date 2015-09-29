@@ -50,6 +50,8 @@ defmodule Ecto.DateTime.Utils do
   """
   def usec("." <> rest) do
     case parse(rest, "") do
+      {int, rest} when byte_size(int) > 6 and is_iso_8601(rest) ->
+        usec("." <> String.slice(int, 0, 6))
       {int, rest} when byte_size(int) in 1..6 and is_iso_8601(rest) ->
         pad = String.duplicate("0", 6 - byte_size(int))
         String.to_integer(int <> pad)
