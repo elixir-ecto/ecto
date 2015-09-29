@@ -189,6 +189,7 @@ defmodule Ecto.DateTimeTest do
 
     assert Ecto.DateTime.cast("2015-01-23T23:50:07.008") == {:ok, @datetime_usec}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07.008Z") == {:ok, @datetime_usec}
+    assert Ecto.DateTime.cast("2015-01-23T23:50:07.008000789") == {:ok, @datetime_usec}
   end
 
   test "cast maps" do
