@@ -125,7 +125,7 @@ defmodule Ecto.Changeset do
                   end
 
                   def changeset(model, params) do
-                    cast(model, params, [:string], [:delete])
+                    cast(model, params, [:body], [:delete])
                     |> maybe_mark_for_deletion
                   end
 
