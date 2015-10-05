@@ -63,6 +63,8 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
     migrator.(repo, migrations_path(repo), :up, opts)
     ensure_stopped(pid)
+    # We shut the adapter down to flush any cache,
+    # like Postgrex types.
     silence_logger fn -> Application.stop(adapter) end
   end
 
