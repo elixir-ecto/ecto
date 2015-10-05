@@ -14,6 +14,10 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
       end
     end
 
+    def __adapter__ do
+      :ecto
+    end
+
     def __repo__ do
       true
     end
