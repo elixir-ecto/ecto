@@ -106,11 +106,11 @@ defmodule Ecto.Query do
 
   ## Query Prefix
 
-  It is possible to set a prefix for the table name in queries.  For Postgres users, 
-  this will specify the schema where the table is located, while for MySQL users this will 
-  specify the database where the table is located.  When no prefix is set, Postgres queries 
-  are assumed to be in the public schema, while MySQL queries are assumed to be in the 
-  database set in the config for the repo.  
+  It is possible to set a prefix for the table name in queries.  For Postgres users,
+  this will specify the schema where the table is located, while for MySQL users this will
+  specify the database where the table is located.  When no prefix is set, Postgres queries
+  are assumed to be in the public schema, while MySQL queries are assumed to be in the
+  database set in the config for the repo.
 
   Set the prefix on a query:
 
@@ -120,22 +120,22 @@ defmodule Ecto.Query do
 
   Set the prefix without the query syntax:
 
-      results = Model 
+      results = Model
       |> Ecto.Queryable.to_query
       |> Map.put(:prefix, "foo")
       |> Repo.all
 
-  To set the prefix on an insert/update, simply intercept the changeset and 
+  To set the prefix on an insert/update, simply intercept the changeset and
   set the changeset.model as the updated model with prefix using put_meta/2:
 
       new_changeset = changeset
       |> Map.put(:model, Ecto.Model.put_meta(changeset.model, prefix: "foo"))
       results = Repo.all(new_changeset)
 
-  For deleting, if the model was retrieved by a prefix qualified query, the prefix 
+  For deleting, if the model was retrieved by a prefix qualified query, the prefix
   will be preserved in it when deleting, and the prefix qualified record will be deleted.
 
-      result = Model 
+      result = Model
       |> Ecto.Queryable.to_query
       |> Map.put(:prefix, "foo")
       |> Repo.get!(id)
