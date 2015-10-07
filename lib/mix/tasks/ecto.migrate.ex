@@ -43,14 +43,12 @@ defmodule Mix.Tasks.Ecto.Migrate do
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     repo = parse_repo(args)
-    adapter = repo.__adapter__
 
     {opts, _, _} = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer, quiet: :boolean],
       aliases: [n: :step, v: :to]
 
     ensure_repo(repo, args)
-    {:ok, _} = Application.ensure_all_started(adapter)
     {:ok, pid} = ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
@@ -62,14 +60,6 @@ defmodule Mix.Tasks.Ecto.Migrate do
     end
 
     migrator.(repo, migrations_path(repo), :up, opts)
-    ensure_stopped(pid)
-    silence_logger fn -> Application.stop(adapter) end
-  end
-
-  defp silence_logger(fun) do
-    Logger.remove_backend(:console)
-    fun.()
-  after
-    Logger.add_backend(:console, flush: true)
+    ensure_stopped(repo, pid)
   end
 end

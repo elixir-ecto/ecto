@@ -80,6 +80,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Supervisor.start_link(__MODULE__, @otp_app, @adapter, opts)
       end
 
+      def stop(pid, timeout \\ 5000) do
+        @adapter.stop(pid, timeout)
+      end
+
       def transaction(opts \\ [], fun) when is_list(opts) do
         @adapter.transaction(__MODULE__, opts, fun)
       end
@@ -213,9 +217,17 @@ defmodule Ecto.Repo do
   Returns `{:error, {:already_started, pid}}` if the repo already
   started or `{:error, term}` in case anything else goes wrong.
   """
-  defcallback start_link() :: {:ok, pid} | :ok |
+  defcallback start_link() :: {:ok, pid} |
                               {:error, {:already_started, pid}} |
                               {:error, term}
+
+  @doc """
+  Shuts down the repository represented by the given pid.
+
+  This callback must be called by the process that called
+  `start_link/2`. Therefore, it is useful for scripts.
+  """
+  defcallback stop(pid, timeout) :: :ok
 
   @doc """
   Fetches a single model from the data store where the primary key matches the

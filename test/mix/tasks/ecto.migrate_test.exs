@@ -14,8 +14,8 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
       end
     end
 
-    def __adapter__ do
-      :ecto
+    def stop(_pid) do
+      :ok
     end
 
     def __repo__ do

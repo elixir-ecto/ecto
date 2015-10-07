@@ -61,6 +61,6 @@ defmodule Mix.Tasks.Ecto.Rollback do
     end
 
     migrator.(repo, migrations_path(repo), :down, opts)
-    ensure_stopped(pid)
+    ensure_stopped(repo, pid)
   end
 end
