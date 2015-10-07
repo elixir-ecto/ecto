@@ -14,6 +14,10 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
       end
     end
 
+    def stop(_pid) do
+      :ok
+    end
+
     def __repo__ do
       true
     end

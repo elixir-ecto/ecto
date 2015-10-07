@@ -103,6 +103,14 @@ defmodule Ecto.Adapter do
               {:ok, pid} | {:error, {:already_started, pid}} | {:error, term}
 
   @doc """
+  Shuts down the repository represented by the given pid.
+
+  This callback must be called by the process that called
+  `start_link/2`. Therefore, it is useful for scripts.
+  """
+  defcallback stop(pid, timeout) :: :ok
+
+  @doc """
   Commands invoked to prepare a query for `all`, `update_all` and `delete_all`.
 
   The returned result is given to `execute/6`.
