@@ -123,8 +123,8 @@ defmodule Ecto.Schema do
   `:string`               | UTF-8 encoded `string`  | "hello"
   `:binary`               | `binary`                | `<<int, int, int, ...>>`
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
-  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal) | 
-  `:map`                  | `map` | 
+  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal) |
+  `:map`                  | `map` |
 
   **Note:** For the `:array` type, replace `inner_type` with one of
   the valid types, such as `:string`.
@@ -1221,11 +1221,32 @@ defmodule Ecto.Schema do
         if Code.ensure_compiled?(type) and function_exported?(type, :type, 0) do
           type
         else
-          raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
+          raise_type_error(name, type)
         end
       true ->
         raise ArgumentError, "invalid type #{inspect type} for field #{inspect name}"
     end
+  end
+
+  defp raise_type_error(name, :datetime) do
+    raise_wrong_ecto_type(name, :datetime, Ecto.DateTime)
+  end
+  defp raise_type_error(name, :date) do
+    raise_wrong_ecto_type(name, :date, Ecto.Date)
+  end
+  defp raise_type_error(name, :time) do
+    raise_wrong_ecto_type(name, :time, Ecto.Time)
+  end
+  defp raise_type_error(name, :uuid) do
+    raise_wrong_ecto_type(name, :uuid, Ecto.UUID)
+  end
+  defp raise_type_error(name, type) do
+    raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
+  end
+
+  defp raise_wrong_ecto_type(name, given_type, real_type) do
+    raise ArgumentError, "invalid or unknown type #{inspect given_type} for field #{inspect name}. " <>
+      "Maybe you meant to use #{inspect real_type} as the type?"
   end
 
   defp check_default!(_name, :binary_id, _default), do: :ok
