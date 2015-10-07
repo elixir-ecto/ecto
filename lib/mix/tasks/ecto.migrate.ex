@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     repo = parse_repo(args)
-    adapter = repo.__adapter__
+    adapter = repo.__adapter__.__adapter__
 
     {opts, _, _} = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer, quiet: :boolean],

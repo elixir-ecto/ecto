@@ -118,6 +118,9 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
+      @doc false
+      def __adapter__, do: @adapter
+
       defoverridable [prepare: 2, execute: 6,
                       insert: 6, update: 7, delete: 5,
                       execute_ddl: 3, embed_id: 1,

@@ -15,7 +15,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
 
     def __adapter__ do
-      :ecto
+      Ecto.Adapters.Postgres
     end
 
     def __repo__ do
