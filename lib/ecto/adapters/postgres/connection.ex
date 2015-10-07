@@ -522,17 +522,17 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
 
       "CREATE TABLE" <> if_not_exists <>
-        " #{quote_table(table.name)} (#{column_definitions(table, columns)})" <> options
+        " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)})" <> options
     end
 
-    def execute_ddl({command, %Table{name: name}}) when command in @drops do
+    def execute_ddl({command, %Table{}=table}) when command in @drops do
       if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
 
-      "DROP TABLE" <> if_exists <> " #{quote_table(name)}"
+      "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
-      "ALTER TABLE #{quote_table(table.name)} #{column_changes(table, changes)}"
+      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}"
     end
 
     def execute_ddl({:create, %Index{}=index}) do
@@ -567,11 +567,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
-      "ALTER TABLE #{quote_table(current_table.name)} RENAME TO #{quote_table(new_table.name)}"
+      "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(new_table.prefix, new_table.name)}"
     end
 
     def execute_ddl({:rename, %Table{}=table, current_column, new_column}) do
-      "ALTER TABLE #{quote_table(table.name)} RENAME #{quote_name(current_column)} TO #{quote_name(new_column)}"
+      "ALTER TABLE #{quote_table(table.prefix, table.name)} RENAME #{quote_name(current_column)} TO #{quote_name(new_column)}"
     end
 
     def execute_ddl(string) when is_binary(string), do: string

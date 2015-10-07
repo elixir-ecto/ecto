@@ -29,6 +29,16 @@ defmodule Ecto.MigratorTest do
     end
   end
 
+  defmodule ChangeMigrationPrefix do
+    use Ecto.Migration
+
+    def change do
+      create table(:comments, prefix: :foo) do
+        add :name, :string
+      end
+    end
+  end
+
   defmodule UpDownMigration do
     use Ecto.Migration
 
@@ -78,6 +88,22 @@ defmodule Ecto.MigratorTest do
     assert output =~ "== Running Ecto.MigratorTest.ChangeMigration.change/0 backward"
     assert output =~ "drop table posts"
     assert output =~ "drop index if exists posts_title_index"
+    assert output =~ ~r"== Migrated in \d.\ds"
+
+    output = capture_log fn ->
+      :ok = up(TestRepo, 0, ChangeMigrationPrefix)
+    end
+
+    assert output =~ "== Running Ecto.MigratorTest.ChangeMigrationPrefix.change/0 forward"
+    assert output =~ "create table foo.comments"
+    assert output =~ ~r"== Migrated in \d.\ds"
+
+    output = capture_log fn ->
+      :ok = down(TestRepo, 0, ChangeMigrationPrefix)
+    end
+
+    assert output =~ "== Running Ecto.MigratorTest.ChangeMigrationPrefix.change/0 backward"
+    assert output =~ "drop table foo.comments"
     assert output =~ ~r"== Migrated in \d.\ds"
 
     output = capture_log fn ->

@@ -64,6 +64,24 @@ defmodule Ecto.Migration do
   Notice not all commands are reversible though. Trying to rollback
   a non-reversible command will raise an `Ecto.MigrationError`.
 
+  ## Prefixes
+
+  Migrations support specifying a prefix which will target either a schema 
+  if using Postgres, or a different database if using MySQL.  If no prefix is 
+  provided, the default schema or database is used.  The prefix is 
+  specified in the table options:
+
+      def up do
+        create table(:weather, prefix: :north_america) do
+          add :city,    :string, size: 40
+          add :temp_lo, :integer
+          add :temp_hi, :integer
+          add :prcp,    :float
+
+          timestamps
+        end
+      end
+
   ## Transactions
 
   By default, Ecto runs all migrations inside a transaction. That's not always
@@ -116,8 +134,8 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a table struct used in migrations.
     """
-    defstruct name: nil, primary_key: true, engine: nil, options: nil
-    @type t :: %__MODULE__{name: atom, primary_key: boolean, engine: atom}
+    defstruct name: nil, prefix: nil, primary_key: true, engine: nil, options: nil
+    @type t :: %__MODULE__{name: atom, prefix: atom, primary_key: boolean, engine: atom}
   end
 
   defmodule Reference do
