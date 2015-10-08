@@ -41,7 +41,7 @@ defmodule Ecto.Adapters.SQL do
       @doc false
       def stop(pid, timeout) do
         ref = Process.monitor(pid)
-        Process.exit(pid, :shutdown)
+        Process.exit(pid, :normal)
         receive do
           {:DOWN, ^ref, _, _, _} -> :ok
         after
