@@ -204,13 +204,13 @@ defmodule Ecto.Migration.Runner do
     do: "drop table if exists #{quote_table(table.prefix, table.name)}"
 
   defp command({:create, %Index{} = index}),
-    do: "create index #{index.name}"
+    do: "create index #{quote_table(index.prefix, index.name)}"
   defp command({:create_if_not_exists, %Index{} = index}),
-    do: "create index if not exists #{index.name}"
+    do: "create index if not exists #{quote_table(index.prefix, index.name)}"
   defp command({:drop, %Index{} = index}),
-    do: "drop index #{index.name}"
+    do: "drop index #{quote_table(index.prefix, index.name)}"
   defp command({:drop_if_exists, %Index{} = index}),
-    do: "drop index if exists #{index.name}"
+    do: "drop index if exists #{quote_table(index.prefix, index.name)}"
   defp command({:rename, %Table{} = current_table, %Table{} = new_table}),
     do: "rename table #{quote_table(current_table.prefix, current_table.name)} to #{quote_table(new_table.prefix, new_table.name)}"
   defp command({:rename, %Table{} = table, current_column, new_column}),

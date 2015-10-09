@@ -66,7 +66,7 @@ defmodule Ecto.Migration do
 
   ## Prefixes
 
-  Migrations support specifying a prefix which will target either a schema 
+  Migrations support specifying a table or index prefix which will target either a schema 
   if using Postgres, or a different database if using MySQL.  If no prefix is 
   provided, the default schema or database is used.  The prefix is 
   specified in the table options:
@@ -80,6 +80,8 @@ defmodule Ecto.Migration do
 
           timestamps
         end
+
+        create index(:weather, [:city], prefix: :north_america)
       end
 
   ## Transactions
@@ -114,6 +116,7 @@ defmodule Ecto.Migration do
     Defines an index struct used in migrations.
     """
     defstruct table: nil,
+              prefix: nil,
               name: nil,
               columns: [],
               unique: false,
@@ -122,6 +125,7 @@ defmodule Ecto.Migration do
 
     @type t :: %__MODULE__{
       table: atom,
+      prefix: atom,
       name: atom,
       columns: [atom | String.t],
       unique: boolean,
@@ -366,6 +370,7 @@ defmodule Ecto.Migration do
     * `:unique` - if the column(s) is unique or not
     * `:concurrently` - if the index should be created/dropped concurrently
     * `:using` - configures the index type
+    * `:prefix` - prefix for the index
 
   ## Adding/dropping indexes concurrently
 

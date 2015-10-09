@@ -483,7 +483,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([create,
                 quote_name(index.name),
                 "ON",
-                quote_table(index.table),
+                quote_table(index.prefix, index.table),
                 "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})",
                 using,
                 if_do(index.concurrently, "LOCK=NONE")])
@@ -495,7 +495,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def execute_ddl({:drop, %Index{}=index}) do
       assemble(["DROP INDEX",
                 quote_name(index.name),
-                "ON #{quote_table(index.table)}",
+                "ON #{quote_table(index.prefix, index.table)}",
                 if_do(index.concurrently, "LOCK=NONE")])
     end
 

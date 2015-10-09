@@ -544,7 +544,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
                 if_do(index.concurrently, "CONCURRENTLY"),
                 quote_name(index.name),
                 "ON",
-                quote_table(index.table),
+                quote_table(index.prefix, index.table),
                 if_do(index.using, "USING #{index.using}"),
                 "(#{fields})"])
     end
@@ -563,7 +563,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
                 "INDEX",
                 if_do(index.concurrently, "CONCURRENTLY"),
                 if_exists,
-                quote_name(index.name)])
+                quote_table(index.prefix, index.name)])
     end
 
     def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do

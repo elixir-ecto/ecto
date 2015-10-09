@@ -201,6 +201,20 @@ defmodule Ecto.MigrationTest do
     assert new_name == :first_name
   end
 
+  test "forward: creates an index with prefix" do
+    create index(:posts, [:title], prefix: :foo)
+    flush
+    {_, index} = last_command()
+    assert index.prefix == :foo
+  end
+
+  test "forward: drops an index with a prefix" do
+    drop index(:posts, [:title], prefix: :foo)
+    flush
+    {_, index} = last_command()
+    assert index.prefix == :foo
+  end
+
   ## Reverse
   @moduletag direction: :backward
 
