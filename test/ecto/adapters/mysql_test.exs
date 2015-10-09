@@ -464,6 +464,21 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> remove_newlines
   end
 
+  test "create table with prefix" do
+    create = {:create, table(:posts, prefix: :foo),
+               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
+                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
+                {:add, :on_hand, :integer, [default: 0, null: true]},
+                {:add, :is_active, :boolean, [default: true]}]}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE `foo`.`posts` (`name` varchar(20) DEFAULT 'Untitled' NOT NULL,
+    `price` numeric(8,2) DEFAULT expr,
+    `on_hand` integer DEFAULT 0 NULL,
+    `is_active` boolean DEFAULT true) ENGINE = INNODB
+    """ |> remove_newlines
+  end
+
   test "create table with engine" do
     create = {:create, table(:posts, engine: :myisam),
                [{:add, :id, :serial, [primary_key: true]}]}
@@ -495,6 +510,30 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> remove_newlines
   end
 
+  test "create table with references including prefixes" do
+    create = {:create, table(:posts, prefix: :foo),
+               [{:add, :id, :serial, [primary_key: true]},
+                {:add, :category_0, references(:categories, prefix: :foo), []},
+                {:add, :category_1, references(:categories, name: :foo_bar, prefix: :foo), []},
+                {:add, :category_2, references(:categories, on_delete: :nothing, prefix: :foo), []},
+                {:add, :category_3, references(:categories, on_delete: :delete_all, prefix: :foo), [null: false]},
+                {:add, :category_4, references(:categories, on_delete: :nilify_all, prefix: :foo), []}]}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE `foo`.`posts` (`id` serial , PRIMARY KEY(`id`),
+    `category_0` BIGINT UNSIGNED ,
+    CONSTRAINT `posts_category_0_fkey` FOREIGN KEY (`category_0`) REFERENCES `foo`.`categories`(`id`),
+    `category_1` BIGINT UNSIGNED ,
+    CONSTRAINT `foo_bar` FOREIGN KEY (`category_1`) REFERENCES `foo`.`categories`(`id`),
+    `category_2` BIGINT UNSIGNED ,
+    CONSTRAINT `posts_category_2_fkey` FOREIGN KEY (`category_2`) REFERENCES `foo`.`categories`(`id`),
+    `category_3` BIGINT UNSIGNED NOT NULL ,
+    CONSTRAINT `posts_category_3_fkey` FOREIGN KEY (`category_3`) REFERENCES `foo`.`categories`(`id`) ON DELETE CASCADE,
+    `category_4` BIGINT UNSIGNED ,
+    CONSTRAINT `posts_category_4_fkey` FOREIGN KEY (`category_4`) REFERENCES `foo`.`categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB
+    """ |> remove_newlines
+  end
+
   test "create table with options" do
     create = {:create, table(:posts, options: "WITH FOO=BAR"),
                [{:add, :id, :serial, [primary_key: true]},
@@ -514,6 +553,11 @@ defmodule Ecto.Adapters.MySQLTest do
   test "drop table" do
     drop = {:drop, table(:posts)}
     assert SQL.execute_ddl(drop) == ~s|DROP TABLE `posts`|
+  end
+
+  test "drop table with prefixes" do
+    drop = {:drop, table(:posts, prefix: :foo)}
+    assert SQL.execute_ddl(drop) == ~s|DROP TABLE `foo`.`posts`|
   end
 
   test "alter table" do
@@ -536,6 +580,26 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> remove_newlines
   end
 
+  test "alter table with prefix" do
+    alter = {:alter, table(:posts, prefix: :foo),
+               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
+                {:add, :author_id, references(:author), []},
+                {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
+                {:modify, :cost, :integer, [null: false, default: nil]},
+                {:modify, :permalink_id, references(:permalinks, prefix: :foo), null: false},
+                {:remove, :summary}]}
+
+    assert SQL.execute_ddl(alter) == """
+    ALTER TABLE `foo`.`posts` ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
+    ADD `author_id` BIGINT UNSIGNED ,
+    ADD CONSTRAINT `posts_author_id_fkey` FOREIGN KEY (`author_id`) REFERENCES `author`(`id`),
+    MODIFY `price` numeric(8,2) NULL, MODIFY `cost` integer DEFAULT NULL NOT NULL,
+    MODIFY `permalink_id` BIGINT UNSIGNED NOT NULL ,
+    ADD CONSTRAINT `posts_permalink_id_fkey` FOREIGN KEY (`permalink_id`) REFERENCES `foo`.`permalinks`(`id`),
+    DROP `summary`
+    """ |> remove_newlines
+  end
+
   test "create index" do
     create = {:create, index(:posts, [:category_id, :permalink])}
     assert SQL.execute_ddl(create) ==
@@ -544,6 +608,12 @@ defmodule Ecto.Adapters.MySQLTest do
     create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
     assert SQL.execute_ddl(create) ==
            ~s|CREATE INDEX `posts$main` ON `posts` (`lower(permalink)`)|
+  end
+
+  test "create index with prefix" do
+    create = {:create, index(:posts, [:category_id, :permalink], prefix: :foo)}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE INDEX `posts_category_id_permalink_index` ON `foo`.`posts` (`category_id`, `permalink`)|
   end
 
   test "create index asserting concurrency" do
@@ -569,6 +639,11 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts`|
   end
 
+  test "drop index with prefix" do
+    drop = {:drop, index(:posts, [:id], name: "posts$main", prefix: :foo)}
+    assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `foo`.`posts`|
+  end
+
   test "drop index asserting concurrency" do
     drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts` LOCK=NONE|
@@ -579,12 +654,28 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.execute_ddl(rename) == ~s|RENAME TABLE `posts` TO `new_posts`|
   end
 
+  test "rename table with prefix" do
+    rename = {:rename, table(:posts, prefix: :foo), table(:new_posts, prefix: :foo)}
+    assert SQL.execute_ddl(rename) == ~s|RENAME TABLE `foo`.`posts` TO `foo`.`new_posts`|
+  end
+
   test "rename column" do
     rename = {:rename, table(:posts), :given_name, :first_name}
     assert SQL.execute_ddl(rename) ==
       [
         "SELECT @column_type := COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'posts' AND COLUMN_NAME = 'given_name' LIMIT 1",
         "SET @rename_stmt = concat('ALTER TABLE `posts` CHANGE COLUMN `given_name` `first_name` ', @column_type)",
+        "PREPARE rename_stmt FROM @rename_stmt",
+        "EXECUTE rename_stmt"
+      ]
+  end
+
+  test "rename column in table with prefixes" do
+    rename = {:rename, table(:posts, prefix: :foo), :given_name, :first_name}
+    assert SQL.execute_ddl(rename) ==
+      [
+        "SELECT @column_type := COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'posts' AND COLUMN_NAME = 'given_name' LIMIT 1",
+        "SET @rename_stmt = concat('ALTER TABLE `foo`.`posts` CHANGE COLUMN `given_name` `first_name` ', @column_type)",
         "PREPARE rename_stmt FROM @rename_stmt",
         "EXECUTE rename_stmt"
       ]

@@ -193,26 +193,32 @@ defmodule Ecto.Migration.Runner do
     do: "execute #{inspect ddl}"
 
   defp command({:create, %Table{} = table, _}),
-    do: "create table #{table.name}"
+    do: "create table #{quote_table(table.prefix, table.name)}"
   defp command({:create_if_not_exists, %Table{} = table, _}),
-    do: "create table if not exists #{table.name}"
+    do: "create table if not exists #{quote_table(table.prefix, table.name)}"
   defp command({:alter, %Table{} = table, _}),
-    do: "alter table #{table.name}"
+    do: "alter table #{quote_table(table.prefix, table.name)}"
   defp command({:drop, %Table{} = table}),
-    do: "drop table #{table.name}"
+    do: "drop table #{quote_table(table.prefix, table.name)}"
   defp command({:drop_if_exists, %Table{} = table}),
-    do: "drop table if exists #{table.name}"
+    do: "drop table if exists #{quote_table(table.prefix, table.name)}"
 
   defp command({:create, %Index{} = index}),
-    do: "create index #{index.name}"
+    do: "create index #{quote_table(index.prefix, index.name)}"
   defp command({:create_if_not_exists, %Index{} = index}),
-    do: "create index if not exists #{index.name}"
+    do: "create index if not exists #{quote_table(index.prefix, index.name)}"
   defp command({:drop, %Index{} = index}),
-    do: "drop index #{index.name}"
+    do: "drop index #{quote_table(index.prefix, index.name)}"
   defp command({:drop_if_exists, %Index{} = index}),
-    do: "drop index if exists #{index.name}"
+    do: "drop index if exists #{quote_table(index.prefix, index.name)}"
   defp command({:rename, %Table{} = current_table, %Table{} = new_table}),
-    do: "rename table #{current_table.name} to #{new_table.name}"
+    do: "rename table #{quote_table(current_table.prefix, current_table.name)} to #{quote_table(new_table.prefix, new_table.name)}"
   defp command({:rename, %Table{} = table, current_column, new_column}),
-    do: "rename column #{current_column} to #{new_column} on table #{table.name}"
+    do: "rename column #{current_column} to #{new_column} on table #{quote_table(table.prefix, table.name)}"
+
+  defp quote_table(nil, name),    do: quote_table(name)
+  defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
+  defp quote_table(name) when is_atom(name),
+      do: quote_table(Atom.to_string(name))
+  defp quote_table(name), do: name
 end

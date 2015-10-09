@@ -64,6 +64,33 @@ defmodule Ecto.Migration do
   Notice not all commands are reversible though. Trying to rollback
   a non-reversible command will raise an `Ecto.MigrationError`.
 
+  ## Prefixes
+
+  Migrations support specifying a table, reference or index prefix which will target either a schema 
+  if using Postgres, or a different database if using MySQL.  If no prefix is 
+  provided, the default schema or database is used.  The prefix is 
+  specified in the table options:
+
+      def up do
+        create table(:weather, prefix: :north_america) do
+          add :city,    :string, size: 40
+          add :temp_lo, :integer
+          add :temp_hi, :integer
+          add :prcp,    :float
+          add :group_id, references(:groups, prefix: :north_america)
+
+          timestamps
+        end
+
+        create index(:weather, [:city], prefix: :north_america)
+      end
+
+  Note: if using MySQL with a prefixed table, you must use the same prefix for the references since 
+  cross database references are not supported.
+
+  For both MySQL and Postgres with a prefixed table, you must use the same prefix for the index field to ensure 
+  you index the prefix qualified table. 
+
   ## Transactions
 
   By default, Ecto runs all migrations inside a transaction. That's not always
@@ -96,6 +123,7 @@ defmodule Ecto.Migration do
     Defines an index struct used in migrations.
     """
     defstruct table: nil,
+              prefix: nil,
               name: nil,
               columns: [],
               unique: false,
@@ -104,6 +132,7 @@ defmodule Ecto.Migration do
 
     @type t :: %__MODULE__{
       table: atom,
+      prefix: atom,
       name: atom,
       columns: [atom | String.t],
       unique: boolean,
@@ -116,8 +145,8 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a table struct used in migrations.
     """
-    defstruct name: nil, primary_key: true, engine: nil, options: nil
-    @type t :: %__MODULE__{name: atom, primary_key: boolean, engine: atom}
+    defstruct name: nil, prefix: nil, primary_key: true, engine: nil, options: nil
+    @type t :: %__MODULE__{name: atom, prefix: atom, primary_key: boolean, engine: atom}
   end
 
   defmodule Reference do
@@ -126,12 +155,14 @@ defmodule Ecto.Migration do
     """
     defstruct name: nil,
               table: nil,
+              prefix: nil,
               column: :id,
               type: :serial,
               on_delete: :nothing
 
     @type t :: %__MODULE__{
       table: atom,
+      prefix: atom,
       column: atom,
       type: atom,
       on_delete: atom
@@ -348,6 +379,7 @@ defmodule Ecto.Migration do
     * `:unique` - if the column(s) is unique or not
     * `:concurrently` - if the index should be created/dropped concurrently
     * `:using` - configures the index type
+    * `:prefix` - prefix for the index
 
   ## Adding/dropping indexes concurrently
 
@@ -587,6 +619,7 @@ defmodule Ecto.Migration do
     * `:on_delete` - What to perform if the entry is deleted.
       May be `:nothing`, `:delete_all` or `:nilify_all`.
       Defaults to `:nothing`.
+    * `:prefix` - prefix for the table in the reference
 
   """
   def references(table, opts \\ []) when is_atom(table) do
