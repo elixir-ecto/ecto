@@ -44,7 +44,7 @@ defmodule Sample.App do
 end
 ```
 
-See the [online documentation](http://hexdocs.pm/ecto) or [run the sample application](https://github.com/elixir-lang/ecto/tree/master/examples/simple) for more information.
+See the [online documentation](http://hexdocs.pm/ecto/Ecto.html) or [run the sample application](https://github.com/elixir-lang/ecto/tree/master/examples/simple) for more information.
 
 ## Usage
 
@@ -95,7 +95,7 @@ We are currently looking for contributions to add support for other SQL database
 
 ## Important links
 
-  * [Documentation](http://hexdocs.pm/ecto)
+  * [Documentation](http://hexdocs.pm/ecto/Ecto.html)
   * [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
   * [Examples](https://github.com/elixir-lang/ecto/tree/master/examples)
 
