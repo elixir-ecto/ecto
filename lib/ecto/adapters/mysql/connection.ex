@@ -616,13 +616,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp constraint_expr(%Reference{} = ref, table, name),
       do: ", ADD CONSTRAINT #{reference_name(ref, table, name)} " <>
           "FOREIGN KEY (#{quote_name(name)}) " <>
-          "REFERENCES #{quote_name(ref.table)}(#{quote_name(ref.column)})" <>
+          "REFERENCES #{quote_table(ref.prefix, ref.table)}(#{quote_name(ref.column)})" <>
           reference_on_delete(ref.on_delete)
 
     defp reference_expr(%Reference{} = ref, table, name),
       do: ", CONSTRAINT #{reference_name(ref, table, name)} FOREIGN KEY " <>
           "(#{quote_name(name)}) REFERENCES " <>
-          "#{quote_table(ref.table)}(#{quote_name(ref.column)})" <>
+          "#{quote_table(ref.prefix, ref.table)}(#{quote_name(ref.column)})" <>
           reference_on_delete(ref.on_delete)
 
     defp reference_name(%Reference{name: nil}, table, column),

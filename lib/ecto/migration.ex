@@ -66,7 +66,7 @@ defmodule Ecto.Migration do
 
   ## Prefixes
 
-  Migrations support specifying a table or index prefix which will target either a schema 
+  Migrations support specifying a table, reference or index prefix which will target either a schema 
   if using Postgres, or a different database if using MySQL.  If no prefix is 
   provided, the default schema or database is used.  The prefix is 
   specified in the table options:
@@ -77,12 +77,19 @@ defmodule Ecto.Migration do
           add :temp_lo, :integer
           add :temp_hi, :integer
           add :prcp,    :float
+          add :group_id, references(:groups, prefix: :north_america)
 
           timestamps
         end
 
         create index(:weather, [:city], prefix: :north_america)
       end
+
+  Note: if using MySQL with a prefixed table, you must use the same prefix for the references since 
+  cross database references are not supported.
+
+  For both MySQL and Postgres with a prefixed table, you must use the same prefix for the index field to ensure 
+  you index the prefix qualified table. 
 
   ## Transactions
 
@@ -148,12 +155,14 @@ defmodule Ecto.Migration do
     """
     defstruct name: nil,
               table: nil,
+              prefix: nil,
               column: :id,
               type: :serial,
               on_delete: :nothing
 
     @type t :: %__MODULE__{
       table: atom,
+      prefix: atom,
       column: atom,
       type: atom,
       on_delete: atom
@@ -610,6 +619,7 @@ defmodule Ecto.Migration do
     * `:on_delete` - What to perform if the entry is deleted.
       May be `:nothing`, `:delete_all` or `:nilify_all`.
       Defaults to `:nothing`.
+    * `:prefix` - prefix for the table in the reference
 
   """
   def references(table, opts \\ []) when is_atom(table) do
