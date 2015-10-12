@@ -38,6 +38,19 @@ defmodule Ecto.Adapters.SQL do
         Ecto.Adapters.SQL.start_link(@conn, @adapter, repo, opts)
       end
 
+      @doc false
+      def stop(pid, timeout) do
+        ref = Process.monitor(pid)
+        Process.exit(pid, :normal)
+        receive do
+          {:DOWN, ^ref, _, _, _} -> :ok
+        after
+          timeout -> exit(:timeout)
+        end
+        Application.stop(@adapter)
+        :ok
+      end
+
       ## Types
 
       def embed_id(_), do: Ecto.UUID.generate

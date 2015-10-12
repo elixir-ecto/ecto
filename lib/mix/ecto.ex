@@ -67,20 +67,14 @@ defmodule Mix.Ecto do
   end
 
   @doc """
-  Ensure the repository is stopped.
+  Ensures the given pid for repo is stopped.
   """
-  @spec ensure_stopped(pid | nil) :: :ok
-  def ensure_stopped(nil), do: :ok
-  def ensure_stopped(pid) do
-    ref = Process.monitor(pid)
-    Process.exit(pid, :normal)
-    receive do
-      {:DOWN, ^ref, _, _, _} ->
-        :ok
-    after
-      30_000 ->
-        Mix.raise "repository did not shutdown after running command"
-    end
+  def ensure_stopped(repo, pid) do
+    # Silence the logger to avoid application down messages.
+    Logger.remove_backend(:console)
+    repo.stop(pid)
+  after
+    Logger.add_backend(:console, flush: true)
   end
 
   @doc """
