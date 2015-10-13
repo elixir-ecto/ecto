@@ -25,12 +25,8 @@ defmodule Mix.Tasks.Ecto.Create do
     repos = parse_repo(args)
     ensure_repo(repos, args)
 
-    Enum.all?(repos,
-      fn repo -> ensure_implements(repo.__adapter__,
-                                   Ecto.Adapter.Storage,
-                                   "to create storage for #{inspect repo}")
-      end
-    )
+    Enum.all?(repos, &ensure_implements(&1.__adapter__, Ecto.Adapter.Storage,
+                                        "to create storage for #{inspect &1}"))
 
     {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean]
 

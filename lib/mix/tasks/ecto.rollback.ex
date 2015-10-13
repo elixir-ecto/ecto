@@ -57,7 +57,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
       opts = Keyword.put(opts, :log, false)
     end
 
-    repos |> Enum.each fn repo ->
+    Enum.each repos, fn repo ->
       ensure_repo(repo, args)
       {:ok, pid} = ensure_started(repo)
 

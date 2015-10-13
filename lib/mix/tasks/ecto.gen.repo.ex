@@ -32,39 +32,37 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     [repo|other_repos] = parse_repo(args)
 
     if other_repos != [] do
-      Mix.shell.info """
-      Only specify one repo at a time when generating with ecto.gen.repo
-      """
-    else
-      config      = Mix.Project.config
-      underscored = Mix.Utils.underscore(inspect(repo))
-
-      base = Path.basename(underscored)
-      file = Path.join("lib", underscored) <> ".ex"
-      app  = config[:app] || :YOUR_APP_NAME
-      opts = [mod: repo, app: app, base: base]
-
-      create_directory Path.dirname(file)
-      create_file file, repo_template(opts)
-
-      case File.read "config/config.exs" do
-        {:ok, contents} ->
-          Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
-          File.write! "config/config.exs",
-                      String.replace(contents, "use Mix.Config", config_template(opts))
-        {:error, _} ->
-          create_file "config/config.exs", config_template(opts)
-      end
-
-      open?("config/config.exs")
-
-      Mix.shell.info """
-      Don't forget to add your new repo to your supervision tree
-      (typically in lib/#{app}.ex):
-
-          worker(#{inspect repo}, [])
-      """
+      Mix.raise "Only specify one repo at a time when generating with ecto.gen.repo"
     end
+
+    config      = Mix.Project.config
+    underscored = Mix.Utils.underscore(inspect(repo))
+
+    base = Path.basename(underscored)
+    file = Path.join("lib", underscored) <> ".ex"
+    app  = config[:app] || :YOUR_APP_NAME
+    opts = [mod: repo, app: app, base: base]
+
+    create_directory Path.dirname(file)
+    create_file file, repo_template(opts)
+
+    case File.read "config/config.exs" do
+      {:ok, contents} ->
+        Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
+        File.write! "config/config.exs",
+                    String.replace(contents, "use Mix.Config", config_template(opts))
+      {:error, _} ->
+        create_file "config/config.exs", config_template(opts)
+    end
+
+    open?("config/config.exs")
+
+    Mix.shell.info """
+    Don't forget to add your new repo to your supervision tree
+    (typically in lib/#{app}.ex):
+
+        worker(#{inspect repo}, [])
+    """
   end
 
   embed_template :repo, """
