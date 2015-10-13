@@ -27,8 +27,36 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
   end
 
+  defmodule Repo2 do
+    def start_link do
+      Process.put(:started, true)
+      Task.start_link fn ->
+        Process.flag(:trap_exit, true)
+        receive do
+          {:EXIT, _, :normal} -> :ok
+        end
+      end
+    end
+
+    def __repo__ do
+      true
+    end
+
+    def config do
+      [priv: "howdy", otp_app: :ecto]
+    end
+  end
+
   test "runs the migrator with the repo started" do
     run ["-r", to_string(Repo), "--no-start"], fn _, _, _, _ ->
+      Process.put(:migrated, true)
+    end
+    assert Process.get(:migrated)
+    assert Process.get(:started)
+  end
+
+  test "runs the migrator with both the repos started" do
+    run ["-r", to_string(Repo), to_string(Repo2), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
     end
     assert Process.get(:migrated)
