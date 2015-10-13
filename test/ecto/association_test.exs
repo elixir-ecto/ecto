@@ -338,6 +338,9 @@ defmodule Ecto.AssociationTest do
   test "build/2 with custom source" do
     email = build(%Author{id: 1}, :emails)
     assert email.__meta__.source == {nil, "users_emails"}
+
+    profile = build(%Author{id: 1}, :profile)
+    assert profile.__meta__.source == {nil, "users_profiles"}
   end
 
   test "build/3 with custom attributes" do
