@@ -36,7 +36,7 @@ defmodule Ecto.Pools.SojournBroker.WorkerTest do
     {:ok, _} = TestPool.start_link([pool_name: pool])
 
     conn1 = TestPool.transaction(pool, @timeout,
-      fn(:opened, _ref, {Connection, conn}, _) ->
+      fn(:opened, _ref, {Connection, conn}, _, _) ->
         conn
       end)
 
@@ -49,7 +49,7 @@ defmodule Ecto.Pools.SojournBroker.WorkerTest do
     await_len_r(pool, 0)
 
     conn2 = TestPool.transaction(pool, @timeout,
-      fn(:opened, _ref, {Connection, conn}, _) ->
+      fn(:opened, _ref, {Connection, conn}, _, _) ->
         conn
       end)
 
@@ -61,7 +61,7 @@ defmodule Ecto.Pools.SojournBroker.WorkerTest do
     {:ok, _} = TestPool.start_link([pool_name: pool, size: 1, lazy: false])
 
     conn1 = TestPool.transaction(pool, @timeout,
-      fn(:opened, _ref, {Connection, conn}, _) ->
+      fn(:opened, _ref, {Connection, conn}, _, _) ->
         conn
       end)
 
@@ -74,7 +74,7 @@ defmodule Ecto.Pools.SojournBroker.WorkerTest do
     receive do: ({:DOWN, ^ref, _, _, _} -> :ok)
 
     conn2 = TestPool.transaction(pool, @timeout,
-      fn(:opened, _ref, {Connection, conn}, _) ->
+      fn(:opened, _ref, {Connection, conn}, _, _) ->
         :sys.resume(worker)
         conn
       end)
@@ -82,7 +82,7 @@ defmodule Ecto.Pools.SojournBroker.WorkerTest do
     assert conn1 == conn2
 
     conn3 = TestPool.transaction(pool, @timeout,
-      fn(:opened, _ref, {Connection, conn}, _) ->
+      fn(:opened, _ref, {Connection, conn}, _, _) ->
         conn
       end)
 

@@ -36,7 +36,7 @@ defmodule Ecto.Pool.RunTest do
     pool = context[:pool]
     {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
-    TestPool.transaction(pool, @timeout, fn(_, _, _, _) ->
+    TestPool.transaction(pool, @timeout, fn(_, _, _, _, _) ->
       TestPool.run(pool, @timeout, fn({_mod, _conn}, queue_time) ->
         assert is_nil(queue_time)
       end)

@@ -12,23 +12,23 @@ defmodule Ecto.Integration.TestTransactionTest do
   end
 
   test "begin, restart and rollback" do
-    assert_transaction(:raw)
+    assert_transaction(:default)
     assert :ok = Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
     assert_transaction(:sandbox)
     assert :ok = Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
     assert_transaction(:sandbox)
     assert :ok = Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-    assert_transaction(:raw)
+    assert_transaction(:default)
   after
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end
 
   test "restart_test_transaction begins a transaction if one is not running" do
-    assert_transaction(:raw)
+    assert_transaction(:default)
     assert :ok = Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
     assert_transaction(:sandbox)
     assert :ok = Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-    assert_transaction(:raw)
+    assert_transaction(:default)
   after
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
   end

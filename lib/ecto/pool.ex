@@ -154,7 +154,7 @@ defmodule Ecto.Pool do
 
   defp do_run(pool_mod, pool, timeout, fun) do
     case checkout(pool_mod, pool, timeout) do
-      {:ok, worker, conn, time} ->
+      {:ok, worker, conn, _mode, time} ->
         try do
           {:ok, fun.(conn, time)}
         after
@@ -167,7 +167,7 @@ defmodule Ecto.Pool do
 
   defp checkout(pool_mod, pool, timeout) do
     case pool_mod.checkout(pool, timeout) do
-      {:ok, _worker, _conn, _time} = ok ->
+      {:ok, _worker, _conn, _mode, _time} = ok ->
         ok
       {:error, reason} = error when reason in [:noproc, :noconnect] ->
         error
@@ -224,24 +224,24 @@ defmodule Ecto.Pool do
     ref = {__MODULE__, pool_mod, pool}
     case Process.get(ref) do
       nil ->
-        case pool_mod.open_transaction(pool, timeout) do
-          {:ok, worker, conn, time} ->
-            outer_transaction(ref, worker, conn, time, timeout, fun)
+        case pool_mod.checkout_transaction(pool, timeout) do
+          {:ok, worker, conn, mode, time} ->
+            outer_transaction(ref, worker, conn, mode, time, timeout, fun)
           {:error, reason} = error when reason in [:noproc, :noconnect] ->
             error
           {:error, err} ->
             raise err
         end
-      %{conn: conn} ->
-        inner_transaction(ref, conn, fun)
+      %{conn: conn, mode: mode} ->
+        inner_transaction(ref, conn, mode, fun)
     end
   end
 
-  defp outer_transaction(ref, worker, conn, time, timeout, fun) do
-    Process.put(ref, %{worker: worker, conn: conn, tainted: false})
+  defp outer_transaction(ref, worker, conn, mode, time, timeout, fun) do
+    Process.put(ref, %{worker: worker, conn: conn, tainted: false, mode: mode})
 
     try do
-      fun.(:opened, ref, conn, time)
+      fun.(:opened, ref, conn, mode, time)
     catch
       # If any error leaked, it should be a bug in Ecto.
       kind, reason ->
@@ -257,9 +257,9 @@ defmodule Ecto.Pool do
     end
   end
 
-  defp inner_transaction(ref, conn, fun) do
+  defp inner_transaction(ref, conn, mode, fun) do
     try do
-      fun.(:already_open, ref, conn, nil)
+      fun.(:already_open, ref, conn, mode, nil)
     catch
       kind, reason ->
         stack = System.stacktrace()
@@ -269,8 +269,11 @@ defmodule Ecto.Pool do
   end
 
   defp close_transaction({__MODULE__, pool_mod, pool}, %{conn: _, worker: worker}, timeout) do
-    pool_mod.close_transaction(pool, worker, timeout)
-    :ok
+    try do
+      pool_mod.close_transaction(pool, worker, timeout)
+    after
+      pool_mod.checkin(pool, worker, timeout)
+    end
   end
 
   defp close_transaction(_, %{}, _) do

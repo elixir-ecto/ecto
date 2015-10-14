@@ -39,17 +39,13 @@ defmodule Ecto.Pools.Poolboy do
   end
 
   @doc false
-  def open_transaction(pool, timeout) do
+  def checkout_transaction(pool, timeout) do
     checkout(pool, :transaction, timeout)
   end
 
   @doc false
-  def close_transaction(pool, worker, _) do
-    try do
-      Worker.checkin(worker)
-    after
-      :poolboy.checkin(pool, worker)
-    end
+  def close_transaction(_pool, worker, _) do
+    Worker.checkin(worker)
   end
 
   @doc false
@@ -81,7 +77,7 @@ defmodule Ecto.Pools.Poolboy do
   defp checkout(pool, fun, timeout) do
     case :timer.tc(fn() -> do_checkout(pool, fun, timeout) end) do
       {queue_time, {:ok, worker, mod_conn}} ->
-        {:ok, worker, mod_conn, queue_time}
+        {:ok, worker, mod_conn, :default, queue_time}
       {_queue_time, {:error, _} = error} ->
         error
     end
