@@ -7,29 +7,32 @@ defmodule Mix.Ecto do
 
   If no repo option is given, we get one from the environment.
   """
-  @spec parse_repo([term]) :: Ecto.Repo.t
-  def parse_repo([key, value|remainder]) when key in ~w(--repo -r) do
-    [Module.concat([value])] ++
-    case remainder do
-      [] -> []
-      r -> parse_repo(r)
+  @spec parse_repo([term]) :: [Ecto.Repo.t]
+  def parse_repo(args) do
+    parse_repo(args, [])
+  end
+
+  defp parse_repo([key, value|t], acc) when key in ~w(--repo -r) do
+    parse_repo t, [Module.concat([value])|acc]
+  end
+
+  defp parse_repo([_|t], acc) do
+    parse_repo t, acc
+  end
+
+  defp parse_repo([], []) do
+    if app = Keyword.get(Mix.Project.config, :app) do
+      case Application.get_env(app, :app_namespace, app) do
+        ^app -> app |> to_string |> Mix.Utils.camelize
+        mod  -> mod |> inspect
+      end |> Module.concat(Repo) |> List.wrap
+    else
+      Mix.raise "No repository available. Please pass a repo with the -r option."
     end
   end
 
-  def parse_repo([_|t]) do
-    case t do
-      [] -> []
-      _  -> parse_repo(t)
-    end
-  end
-
-  def parse_repo([]) do
-    app = Mix.Project.config |> Keyword.fetch!(:app)
-
-    case Application.get_env(app, :app_namespace, app) do
-      ^app -> app |> to_string |> Mix.Utils.camelize
-      mod  -> mod |> inspect
-    end |> Module.concat(Repo) |> List.wrap
+  defp parse_repo([], acc) do
+    Enum.reverse(acc)
   end
 
   @doc """
@@ -54,11 +57,11 @@ defmodule Mix.Ecto do
           repo
         else
           Mix.raise "module #{inspect repo} is not a Ecto.Repo. " <>
-                    "Please pass a proper repo with the -r option."
+                    "Please pass a repo with the -r option."
         end
       {:error, error} ->
         Mix.raise "could not load #{inspect repo}, error: #{inspect error}. " <>
-                  "Please pass a proper repo with the -r option."
+                  "Please pass a repo with the -r option."
     end
   end
 
