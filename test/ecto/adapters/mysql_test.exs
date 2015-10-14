@@ -466,16 +466,11 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "create table with prefix" do
     create = {:create, table(:posts, prefix: :foo),
-               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
-                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
-                {:add, :on_hand, :integer, [default: 0, null: true]},
-                {:add, :is_active, :boolean, [default: true]}]}
+               [{:add, :category_0, references(:categories, prefix: :foo), []}]}
 
     assert SQL.execute_ddl(create) == """
-    CREATE TABLE `foo`.`posts` (`name` varchar(20) DEFAULT 'Untitled' NOT NULL,
-    `price` numeric(8,2) DEFAULT expr,
-    `on_hand` integer DEFAULT 0 NULL,
-    `is_active` boolean DEFAULT true) ENGINE = INNODB
+    CREATE TABLE `foo`.`posts` (`category_0` BIGINT UNSIGNED ,
+    CONSTRAINT `posts_category_0_fkey` FOREIGN KEY (`category_0`) REFERENCES `foo`.`categories`(`id`)) ENGINE = INNODB
     """ |> remove_newlines
   end
 
@@ -507,30 +502,6 @@ defmodule Ecto.Adapters.MySQLTest do
     CONSTRAINT `posts_category_3_fkey` FOREIGN KEY (`category_3`) REFERENCES `categories`(`id`) ON DELETE CASCADE,
     `category_4` BIGINT UNSIGNED ,
     CONSTRAINT `posts_category_4_fkey` FOREIGN KEY (`category_4`) REFERENCES `categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB
-    """ |> remove_newlines
-  end
-
-  test "create table with references including prefixes" do
-    create = {:create, table(:posts, prefix: :foo),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_0, references(:categories, prefix: :foo), []},
-                {:add, :category_1, references(:categories, name: :foo_bar, prefix: :foo), []},
-                {:add, :category_2, references(:categories, on_delete: :nothing, prefix: :foo), []},
-                {:add, :category_3, references(:categories, on_delete: :delete_all, prefix: :foo), [null: false]},
-                {:add, :category_4, references(:categories, on_delete: :nilify_all, prefix: :foo), []}]}
-
-    assert SQL.execute_ddl(create) == """
-    CREATE TABLE `foo`.`posts` (`id` serial , PRIMARY KEY(`id`),
-    `category_0` BIGINT UNSIGNED ,
-    CONSTRAINT `posts_category_0_fkey` FOREIGN KEY (`category_0`) REFERENCES `foo`.`categories`(`id`),
-    `category_1` BIGINT UNSIGNED ,
-    CONSTRAINT `foo_bar` FOREIGN KEY (`category_1`) REFERENCES `foo`.`categories`(`id`),
-    `category_2` BIGINT UNSIGNED ,
-    CONSTRAINT `posts_category_2_fkey` FOREIGN KEY (`category_2`) REFERENCES `foo`.`categories`(`id`),
-    `category_3` BIGINT UNSIGNED NOT NULL ,
-    CONSTRAINT `posts_category_3_fkey` FOREIGN KEY (`category_3`) REFERENCES `foo`.`categories`(`id`) ON DELETE CASCADE,
-    `category_4` BIGINT UNSIGNED ,
-    CONSTRAINT `posts_category_4_fkey` FOREIGN KEY (`category_4`) REFERENCES `foo`.`categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB
     """ |> remove_newlines
   end
 
@@ -582,21 +553,14 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "alter table with prefix" do
     alter = {:alter, table(:posts, prefix: :foo),
-               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :author_id, references(:author), []},
-                {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
-                {:modify, :cost, :integer, [null: false, default: nil]},
-                {:modify, :permalink_id, references(:permalinks, prefix: :foo), null: false},
-                {:remove, :summary}]}
+               [{:add, :author_id, references(:author), []},
+                {:modify, :permalink_id, references(:permalinks), null: false}]}
 
     assert SQL.execute_ddl(alter) == """
-    ALTER TABLE `foo`.`posts` ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
-    ADD `author_id` BIGINT UNSIGNED ,
-    ADD CONSTRAINT `posts_author_id_fkey` FOREIGN KEY (`author_id`) REFERENCES `author`(`id`),
-    MODIFY `price` numeric(8,2) NULL, MODIFY `cost` integer DEFAULT NULL NOT NULL,
+    ALTER TABLE `foo`.`posts` ADD `author_id` BIGINT UNSIGNED ,
+    ADD CONSTRAINT `posts_author_id_fkey` FOREIGN KEY (`author_id`) REFERENCES `foo`.`author`(`id`),
     MODIFY `permalink_id` BIGINT UNSIGNED NOT NULL ,
-    ADD CONSTRAINT `posts_permalink_id_fkey` FOREIGN KEY (`permalink_id`) REFERENCES `foo`.`permalinks`(`id`),
-    DROP `summary`
+    ADD CONSTRAINT `posts_permalink_id_fkey` FOREIGN KEY (`permalink_id`) REFERENCES `foo`.`permalinks`(`id`)
     """ |> remove_newlines
   end
 

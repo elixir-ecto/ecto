@@ -544,18 +544,11 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "create table with prefix" do
     create = {:create, table(:posts, prefix: :foo),
-               [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
-                {:add, :price, :numeric, [precision: 8, scale: 2, default: {:fragment, "expr"}]},
-                {:add, :on_hand, :integer, [default: 0, null: true]},
-                {:add, :is_active, :boolean, [default: true]},
-                {:add, :tags, {:array, :string}, [default: []]}]}
+               [{:add, :category_0, references(:categories), []}]}
 
     assert SQL.execute_ddl(create) == """
-    CREATE TABLE "foo"."posts" ("name" varchar(20) DEFAULT 'Untitled' NOT NULL,
-    "price" numeric(8,2) DEFAULT expr,
-    "on_hand" integer DEFAULT 0 NULL,
-    "is_active" boolean DEFAULT true,
-    "tags" varchar(255)[] DEFAULT ARRAY[]::varchar[])
+    CREATE TABLE "foo"."posts"
+    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
     """ |> remove_newlines
   end
 
@@ -575,25 +568,6 @@ defmodule Ecto.Adapters.PostgresTest do
     "category_2" integer CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
     "category_3" integer NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
     "category_4" integer CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)
-    """ |> remove_newlines
-  end
-
-  test "create table with references including prefixes" do
-    create = {:create, table(:posts, prefix: :foo),
-               [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_0, references(:categories, prefix: :foo), []},
-                {:add, :category_1, references(:categories, name: :foo_bar, prefix: :foo), []},
-                {:add, :category_2, references(:categories, on_delete: :nothing, prefix: :foo), []},
-                {:add, :category_3, references(:categories, on_delete: :delete_all, prefix: :foo), [null: false]},
-                {:add, :category_4, references(:categories, on_delete: :nilify_all, prefix: :foo), []}]}
-
-    assert SQL.execute_ddl(create) == """
-    CREATE TABLE "foo"."posts" ("id" serial PRIMARY KEY,
-    "category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"),
-    "category_1" integer CONSTRAINT "foo_bar" REFERENCES "foo"."categories"("id"),
-    "category_2" integer CONSTRAINT "posts_category_2_fkey" REFERENCES "foo"."categories"("id"),
-    "category_3" integer NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "foo"."categories"("id") ON DELETE CASCADE,
-    "category_4" integer CONSTRAINT "posts_category_4_fkey" REFERENCES "foo"."categories"("id") ON DELETE SET NULL)
     """ |> remove_newlines
   end
 
@@ -642,26 +616,15 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "alter table with prefix" do
     alter = {:alter, table(:posts, prefix: :foo),
-               [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :author_id, references(:author, prefix: :foo), []},
-                {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
-                {:modify, :cost, :integer, [null: false, default: nil]},
-                {:modify, :permalink_id, references(:permalinks, prefix: :foo), null: false},
-                {:remove, :summary}]}
+               [{:add, :author_id, references(:author, prefix: :foo), []},
+                {:modify, :permalink_id, references(:permalinks, prefix: :foo), null: false}]}
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "foo"."posts"
-    ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL,
     ADD COLUMN "author_id" integer CONSTRAINT "posts_author_id_fkey" REFERENCES "foo"."author"("id"),
-    ALTER COLUMN "price" TYPE numeric(8,2) ,
-    ALTER COLUMN "price" DROP NOT NULL,
-    ALTER COLUMN "cost" TYPE integer ,
-    ALTER COLUMN "cost" SET NOT NULL ,
-    ALTER COLUMN "cost" SET DEFAULT NULL,
-    ALTER COLUMN "permalink_id" TYPE integer ,
+    ALTER COLUMN \"permalink_id\" TYPE integer ,
     ADD CONSTRAINT "posts_permalink_id_fkey" FOREIGN KEY ("permalink_id") REFERENCES "foo"."permalinks"("id") ,
-    ALTER COLUMN "permalink_id" SET NOT NULL,
-    DROP COLUMN "summary"
+    ALTER COLUMN "permalink_id" SET NOT NULL
     """ |> remove_newlines
   end
 

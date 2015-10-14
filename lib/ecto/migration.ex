@@ -155,14 +155,12 @@ defmodule Ecto.Migration do
     """
     defstruct name: nil,
               table: nil,
-              prefix: nil,
               column: :id,
               type: :serial,
               on_delete: :nothing
 
     @type t :: %__MODULE__{
       table: atom,
-      prefix: atom,
       column: atom,
       type: atom,
       on_delete: atom
@@ -619,7 +617,6 @@ defmodule Ecto.Migration do
     * `:on_delete` - What to perform if the entry is deleted.
       May be `:nothing`, `:delete_all` or `:nilify_all`.
       Defaults to `:nothing`.
-    * `:prefix` - prefix for the table in the reference
 
   """
   def references(table, opts \\ []) when is_atom(table) do
