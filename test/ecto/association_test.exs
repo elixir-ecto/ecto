@@ -944,9 +944,11 @@ defmodule Ecto.AssociationTest do
     assoc = Summary.__schema__(:association, :invalid_profile)
     assoc_model = %Profile{id: 1}
 
+    # Validate the private API
     assert :error == Relation.change(assoc, model, nil, assoc_model)
     assert :error == Relation.change(assoc, model, %Profile{id: 2}, assoc_model)
 
+    # Validate the public API
     base_changeset = Changeset.change(%Summary{invalid_profile: assoc_model})
 
     changeset = Changeset.change(base_changeset, invalid_profile: nil)
@@ -960,11 +962,6 @@ defmodule Ecto.AssociationTest do
     refute changeset.valid?
 
     changeset = Changeset.put_change(base_changeset, :invalid_profile, nil)
-    assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
-    refute changeset.valid?
-
-    changeset = Changeset.put_change(base_changeset, :invalid_profile, %Profile{id: 2})
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
@@ -1037,9 +1034,11 @@ defmodule Ecto.AssociationTest do
     assoc = Summary.__schema__(:association, :invalid_posts)
     assoc_model = %Post{id: 1}
 
+    # Validate the private API
     assert :error == Relation.change(assoc, model, [], [assoc_model])
     assert :error == Relation.change(assoc, model, [%Post{id: 2}], [assoc_model])
 
+    # Validate the public API
     base_changeset = Changeset.change(%Summary{invalid_posts: [assoc_model]})
 
     changeset = Changeset.change(base_changeset, invalid_posts: [])
