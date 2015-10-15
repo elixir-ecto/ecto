@@ -115,7 +115,7 @@ defmodule Ecto.Model do
   """
   def build(%{__struct__: model} = struct, assoc, attributes \\ %{}) do
     assoc = Ecto.Association.association_from_model!(model, assoc)
-    assoc.__struct__.build(assoc, struct, attributes)
+    assoc.__struct__.build(assoc, struct, Dict.delete(attributes, :__meta__))
   end
 
   @doc """
