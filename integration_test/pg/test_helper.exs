@@ -59,7 +59,7 @@ _   = Ecto.Storage.down(TestRepo)
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
 
-Ecto.Pools.Ownership.Server.ownership_checkout(TestRepo.Pool, nil)
+Ecto.Pools.Ownership.Server.ownership_checkout(TestRepo.Pool)
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
 Process.flag(:trap_exit, true)

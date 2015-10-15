@@ -43,7 +43,7 @@ defmodule Ecto.Pools.Ownership do
       GenServer.start_link(__MODULE__, {pool, pool_name}, [name: name])
     end
 
-    def ownership_checkout(pool, strategy, timeout \\ @timeout) do
+    def ownership_checkout(pool, strategy \\ nil, timeout \\ @timeout) do
       case GenServer.call(pool, {:ownership_checkout, strategy, timeout}, timeout) do
         :ok ->
           :ok
@@ -65,7 +65,6 @@ defmodule Ecto.Pools.Ownership do
       {worker, mod_conn, mode} =
         GenServer.call(pool, :get_checkout, timeout)
         |> maybe_raise
-      # TODO: queue_time
       {:ok, worker, mod_conn, mode, 0}
     end
 
@@ -84,7 +83,6 @@ defmodule Ecto.Pools.Ownership do
         |> maybe_raise
 
       fun.()
-      # TODO: queue_time
       {:ok, worker, mod_conn, mode, 0}
     end
 
@@ -153,7 +151,6 @@ defmodule Ecto.Pools.Ownership do
       maybe_get_worker(pid, s, fn {_ref, {my_worker, _mod_conn, _mode}, _strategy} ->
         ^my_worker = worker
         s.module.break(s.pool, worker, timeout)
-        # Should we do same as :DOWN here? I am thinking no
         {:reply, :ok, s}
       end)
     end
