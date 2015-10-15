@@ -355,6 +355,11 @@ defmodule Ecto.AssociationTest do
 
     # Overriding defaults
     assert build(%Summary{id: 1}, :post, title: "Hello").title == "Hello"
+
+    # Should not allow overriding of __meta__
+    meta = %{__meta__: %{source: {nil, "posts"}}}
+    comment = build(%Post{id: 1}, :comments, meta)
+    assert comment.__meta__.source == {nil, "comments"}
   end
 
   test "assoc/2" do
