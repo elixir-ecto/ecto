@@ -44,7 +44,8 @@ defmodule Ecto.Pools.SojournBroker do
     Supervisor.start_link(children, sup_opts)
   end
 
-  def open_transaction(_pool, _worker, _timeout) do
+  def open_transaction(_pool, {worker, ref}, _timeout) do
+    Worker.open_transaction(worker, ref)
     :ok
   end
 
