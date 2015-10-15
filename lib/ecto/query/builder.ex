@@ -528,8 +528,9 @@ defmodule Ecto.Query.Builder do
   @doc """
   Applies a query at compilation time or at runtime.
 
-  This function is responsible to check if a given query is an
-  `Ecto.Query` struct at compile time or not and act accordingly.
+  This function is responsible for checking if a given query is an
+  `Ecto.Query` struct at compile time. If it is not it will act
+  accordingly.
 
   If a query is available, it invokes the `apply` function in the
   given `module`, otherwise, it delegates the call to runtime.
