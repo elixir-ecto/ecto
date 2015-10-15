@@ -12,7 +12,7 @@ defmodule Ecto.Integration.PoolTest do
   repo = Application.get_env(:ecto, Ecto.Integration.TestRepo) ||
          raise "could not find configuration for Ecto.Integration.TestRepo"
 
-  new_opts = [pool: pool, pool_size: 1, use_ownership: false]
+  new_opts = [pool: pool, pool_size: 1]
   Application.put_env(:ecto, __MODULE__.MockRepo, new_opts ++ repo)
 
   defmodule MockRepo do

@@ -64,16 +64,10 @@ defmodule Ecto.Repo do
       {otp_app, adapter, pool, config} = Ecto.Repo.Supervisor.parse_config(__MODULE__, opts)
       @otp_app otp_app
       @adapter adapter
+      @pool pool
       @config  config
       @query_cache config[:query_cache] || __MODULE__
       @before_compile adapter
-
-      if config[:use_ownership] do
-        {pool, name, timeout} = pool
-        @pool {Ecto.Pools.Ownership.Server, name, timeout}
-      else
-        @pool pool
-      end
 
       require Logger
       @log_level config[:log_level] || :debug

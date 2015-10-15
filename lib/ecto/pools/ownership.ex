@@ -8,6 +8,27 @@ defmodule Ecto.Pools.Ownership do
     defcallback ownership_checkin(module, pid) :: Pool.mode
   end
 
+  defmodule Supervisor do
+    use Elixir.Supervisor
+
+    def start_link(adapter, repo, opts) do
+      Elixir.Supervisor.start_link(__MODULE__, {adapter, repo, opts})
+    end
+
+    def init({adapter, repo, opts}) do
+      opts      = Keyword.put(opts, :pool, Keyword.fetch!(opts, :ownership_pool))
+      pool_name = Module.concat(opts[:pool_name], Inner)
+      serv_opts = Keyword.put(opts, :inner_pool_name, pool_name)
+      pool_opts = Keyword.put(opts, :pool_name, pool_name)
+
+      children = [
+        worker(Ecto.Pools.Ownership.Server, [serv_opts]),
+        supervisor(adapter, [repo, pool_opts])
+      ]
+      supervise(children, strategy: :rest_for_one)
+    end
+  end
+
   defmodule Server do
     use GenServer
 
@@ -18,13 +39,12 @@ defmodule Ecto.Pools.Ownership do
       raise "#{inspect __MODULE__}.start_link/2 should never be called"
     end
 
-    def start_link(adapter, repo, opts) do
-      pool     = Keyword.fetch!(opts, :pool)
-      name     = Keyword.fetch!(opts, :pool_name)
-      opts     = Keyword.put(opts, :pool_name, Module.concat(name, Inner))
+    def start_link(opts) do
+      pool = Keyword.fetch!(opts, :pool)
+      name = Keyword.fetch!(opts, :pool_name)
+      pool_name = Keyword.fetch!(opts, :inner_pool_name)
 
-      adapter_opts = {adapter, repo, opts}
-      GenServer.start_link(__MODULE__, {pool, adapter_opts}, [name: name])
+      GenServer.start_link(__MODULE__, {pool, pool_name}, [name: name])
     end
 
     def ownership_checkout(pool, strategy, timeout \\ @timeout) do
@@ -92,10 +112,9 @@ defmodule Ecto.Pools.Ownership do
       do: value
 
 
-    def init({module, {adapter, repo, opts}}) do
-      {:ok, pid} = adapter.start_link(repo, opts)
+    def init({module, pool}) do
       {:ok, %{module: module,
-              pool: pid,
+              pool: pool,
               owners: %{}}}
     end
 

@@ -113,9 +113,9 @@ defmodule Ecto.Repo.Supervisor do
       |> Keyword.put_new(:pool, default_pool)
       |> Keyword.put_new(:pool_name, Module.concat(name, Pool))
 
-     children =
-      if opts[:use_ownership] do
-        [supervisor(Ecto.Pools.Ownership.Server, [adapter, repo, opts])]
+    children =
+      if opts[:pool] == Ecto.Pools.Ownership.Server do
+        [supervisor(Ecto.Pools.Ownership.Supervisor, [adapter, repo, opts])]
       else
         [supervisor(adapter, [repo, opts])]
       end
@@ -124,6 +124,6 @@ defmodule Ecto.Repo.Supervisor do
       :ets.new(repo.__query_cache__, [:set, :public, :named_table, read_concurrency: true])
     end
 
-    supervise(children, strategy: :rest_for_one)
+    supervise(children, strategy: :one_for_one)
   end
 end

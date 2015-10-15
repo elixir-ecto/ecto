@@ -22,8 +22,8 @@ alias Ecto.Integration.TestRepo
 Application.put_env(:ecto, TestRepo,
   adapter: Ecto.Adapters.Postgres,
   url: "ecto://postgres:postgres@localhost/ecto_test",
-  pool: pool,
-  use_ownership: true)
+  pool: Ecto.Pools.Ownership.Server,
+  ownership_pool: pool)
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
