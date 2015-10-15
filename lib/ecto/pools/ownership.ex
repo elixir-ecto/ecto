@@ -1,5 +1,4 @@
 defmodule Ecto.Pools.Ownership do
-
   defmodule Strategy do
     use Behaviour
     alias Ecto.Pool
@@ -32,79 +31,11 @@ defmodule Ecto.Pools.Ownership do
   defmodule Server do
     use GenServer
 
-    @behaviour Ecto.Pool
     @timeout 5_000
-
-    def start_link(connection, opts) do
-      Supervisor.start_link(connection, opts)
-    end
 
     def start_link(name, pool, pool_name) do
       GenServer.start_link(__MODULE__, {pool, pool_name}, [name: name])
     end
-
-    def ownership_checkout(pool, strategy \\ nil, timeout \\ @timeout) do
-      case GenServer.call(pool, {:ownership_checkout, strategy, timeout}, timeout) do
-        :ok ->
-          :ok
-        {:error, :already_checked_out} ->
-          raise ArgumentError, "process already owns a worker"
-      end
-    end
-
-    def ownership_checkin(pool, timeout \\ @timeout) do
-      case GenServer.call(pool, {:ownership_checkin, timeout}, timeout) do
-        :ok ->
-          :ok
-        {:error, :not_checked_out} ->
-          raise ArgumentError, "process doesn't own a worker"
-      end
-    end
-
-    def checkout(pool, timeout) do
-      {worker, mod_conn, mode} =
-        GenServer.call(pool, :get_checkout, timeout)
-        |> maybe_raise
-      {:ok, worker, mod_conn, mode, 0}
-    end
-
-    def checkin(_pool, _worker, _timeout) do
-      :ok
-    end
-
-    def break(pool, worker, timeout) do
-      GenServer.call(pool, {:break, worker, timeout}, timeout)
-      |> maybe_raise
-    end
-
-    def checkout_transaction(pool, timeout) do
-      {fun, {worker, mod_conn, mode}} =
-        GenServer.call(pool, {:open_transaction, timeout}, timeout)
-        |> maybe_raise
-
-      fun.()
-      {:ok, worker, mod_conn, mode, 0}
-    end
-
-    def open_transaction(_pool, _worker, _timeout) do
-      raise "#{inspect __MODULE__}.open_transaction/3 should never be called"
-    end
-
-    def close_transaction(pool, worker, timeout) do
-      fun =
-        GenServer.call(pool, {:close_transaction, worker, timeout}, timeout)
-        |> maybe_raise
-
-      fun.()
-    end
-
-    defp maybe_raise({:error, :not_checked_out}),
-      do: raise(ArgumentError, "process doesn't own a worker")
-    defp maybe_raise(:ok),
-      do: :ok
-    defp maybe_raise({:ok, value}),
-      do: value
-
 
     def init({module, pool}) do
       {:ok, %{module: module,
@@ -200,4 +131,73 @@ defmodule Ecto.Pools.Ownership do
       %{s | owners: Map.put(s.owners, owner, {ref, checkout, strategy})}
     end
   end
+
+  @behaviour Ecto.Pool
+  @timeout 5_000
+
+  def start_link(connection, opts) do
+    Supervisor.start_link(connection, opts)
+  end
+
+  def ownership_checkout(pool, strategy \\ nil, timeout \\ @timeout) do
+    case GenServer.call(pool, {:ownership_checkout, strategy, timeout}, timeout) do
+      :ok ->
+        :ok
+      {:error, :already_checked_out} ->
+        raise ArgumentError, "process already owns a worker"
+    end
+  end
+
+  def ownership_checkin(pool, timeout \\ @timeout) do
+    case GenServer.call(pool, {:ownership_checkin, timeout}, timeout) do
+      :ok ->
+        :ok
+      {:error, :not_checked_out} ->
+        raise ArgumentError, "process doesn't own a worker"
+    end
+  end
+
+  def checkout(pool, timeout) do
+    {worker, mod_conn, mode} =
+      GenServer.call(pool, :get_checkout, timeout)
+      |> maybe_raise
+    {:ok, worker, mod_conn, mode, 0}
+  end
+
+  def checkin(_pool, _worker, _timeout) do
+    :ok
+  end
+
+  def break(pool, worker, timeout) do
+    GenServer.call(pool, {:break, worker, timeout}, timeout)
+    |> maybe_raise
+  end
+
+  def checkout_transaction(pool, timeout) do
+    {fun, {worker, mod_conn, mode}} =
+      GenServer.call(pool, {:open_transaction, timeout}, timeout)
+      |> maybe_raise
+
+    fun.()
+    {:ok, worker, mod_conn, mode, 0}
+  end
+
+  def open_transaction(_pool, _worker, _timeout) do
+    raise "#{inspect __MODULE__}.open_transaction/3 should never be called"
+  end
+
+  def close_transaction(pool, worker, timeout) do
+    fun =
+      GenServer.call(pool, {:close_transaction, worker, timeout}, timeout)
+      |> maybe_raise
+
+    fun.()
+  end
+
+  defp maybe_raise({:error, :not_checked_out}),
+    do: raise(ArgumentError, "process doesn't own a worker")
+  defp maybe_raise(:ok),
+    do: :ok
+  defp maybe_raise({:ok, value}),
+    do: value
 end

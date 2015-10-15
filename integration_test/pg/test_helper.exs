@@ -22,7 +22,7 @@ alias Ecto.Integration.TestRepo
 Application.put_env(:ecto, TestRepo,
   adapter: Ecto.Adapters.Postgres,
   url: "ecto://postgres:postgres@localhost/ecto_test",
-  pool: Ecto.Pools.Ownership.Server,
+  pool: Ecto.Pools.Ownership,
   ownership_pool: pool)
 
 defmodule Ecto.Integration.TestRepo do
@@ -46,8 +46,7 @@ defmodule Ecto.Integration.Case do
   use ExUnit.CaseTemplate
 
   setup do
-    Ecto.Pools.Ownership.Server.ownership_checkout(TestRepo.Pool,
-                                                   Ecto.Adapters.SQL.Sandbox)
+    Ecto.Pools.Ownership.ownership_checkout(TestRepo.Pool, Ecto.Adapters.SQL.Sandbox)
     :ok
   end
 end
@@ -59,9 +58,9 @@ _   = Ecto.Storage.down(TestRepo)
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
 
-Ecto.Pools.Ownership.Server.ownership_checkout(TestRepo.Pool)
+Ecto.Pools.Ownership.ownership_checkout(TestRepo.Pool)
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
 Process.flag(:trap_exit, true)
 
-Ecto.Pools.Ownership.Server.ownership_checkin(TestRepo.Pool)
+Ecto.Pools.Ownership.ownership_checkin(TestRepo.Pool)

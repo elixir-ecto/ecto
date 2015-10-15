@@ -10,8 +10,7 @@ defmodule Ecto.Integration.MigratorTest do
   alias Ecto.Migration.SchemaMigration
 
   setup do
-    Ecto.Pools.Ownership.Server.ownership_checkout(TestRepo.Pool,
-                                                   Ecto.Adapters.SQL.Sandbox)
+    Ecto.Pools.Ownership.ownership_checkout(TestRepo.Pool, Ecto.Adapters.SQL.Sandbox)
     TestRepo.delete_all(SchemaMigration)
     :ok
   end
