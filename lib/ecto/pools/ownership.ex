@@ -11,19 +11,19 @@ defmodule Ecto.Pools.Ownership do
   defmodule Supervisor do
     use Elixir.Supervisor
 
-    def start_link(adapter, repo, opts) do
-      Elixir.Supervisor.start_link(__MODULE__, {adapter, repo, opts})
+    def start_link(connection, opts) do
+      Elixir.Supervisor.start_link(__MODULE__, {connection, opts})
     end
 
-    def init({adapter, repo, opts}) do
-      opts      = Keyword.put(opts, :pool, Keyword.fetch!(opts, :ownership_pool))
-      pool_name = Module.concat(opts[:pool_name], Inner)
-      serv_opts = Keyword.put(opts, :inner_pool_name, pool_name)
-      pool_opts = Keyword.put(opts, :pool_name, pool_name)
+    def init({connection, opts}) do
+      {pool, opts} = Keyword.pop(opts, :ownership_pool)
+      name         = Keyword.fetch!(opts, :pool_name)
+      pool_name    = Module.concat(name, Inner)
+      pool_opts    = Keyword.put(opts, :pool_name, pool_name)
 
       children = [
-        worker(Ecto.Pools.Ownership.Server, [serv_opts]),
-        supervisor(adapter, [repo, pool_opts])
+        worker(Ecto.Pools.Ownership.Server, [name, pool, pool_name]),
+        supervisor(pool, [connection, pool_opts])
       ]
       supervise(children, strategy: :rest_for_one)
     end
@@ -35,15 +35,11 @@ defmodule Ecto.Pools.Ownership do
     @behaviour Ecto.Pool
     @timeout 5_000
 
-    def start_link(_, _) do
-      raise "#{inspect __MODULE__}.start_link/2 should never be called"
+    def start_link(connection, opts) do
+      Supervisor.start_link(connection, opts)
     end
 
-    def start_link(opts) do
-      pool = Keyword.fetch!(opts, :pool)
-      name = Keyword.fetch!(opts, :pool_name)
-      pool_name = Keyword.fetch!(opts, :inner_pool_name)
-
+    def start_link(name, pool, pool_name) do
       GenServer.start_link(__MODULE__, {pool, pool_name}, [name: name])
     end
 
