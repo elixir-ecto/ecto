@@ -46,7 +46,7 @@ defmodule Ecto.Integration.Case do
   use ExUnit.CaseTemplate
 
   setup do
-    Ecto.Pools.Ownership.ownership_checkout(TestRepo.Pool, Ecto.Adapters.SQL.Sandbox)
+    Ecto.Pools.Ownership.ownership_checkout(TestRepo, Ecto.Adapters.SQL.Sandbox)
     :ok
   end
 end
@@ -58,9 +58,9 @@ _   = Ecto.Storage.down(TestRepo)
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
 
-Ecto.Pools.Ownership.ownership_checkout(TestRepo.Pool)
+Ecto.Pools.Ownership.ownership_checkout(TestRepo)
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
 Process.flag(:trap_exit, true)
 
-Ecto.Pools.Ownership.ownership_checkin(TestRepo.Pool)
+Ecto.Pools.Ownership.ownership_checkin(TestRepo)

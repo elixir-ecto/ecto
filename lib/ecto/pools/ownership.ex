@@ -139,7 +139,8 @@ defmodule Ecto.Pools.Ownership do
     Supervisor.start_link(connection, opts)
   end
 
-  def ownership_checkout(pool, strategy \\ nil, timeout \\ @timeout) do
+  def ownership_checkout(repo, strategy \\ nil, timeout \\ @timeout) do
+    {_, pool, _, } = repo.__pool__
     case GenServer.call(pool, {:ownership_checkout, strategy, timeout}, timeout) do
       :ok ->
         :ok
@@ -148,13 +149,10 @@ defmodule Ecto.Pools.Ownership do
     end
   end
 
-  def ownership_checkin(pool, timeout \\ @timeout) do
-    case GenServer.call(pool, {:ownership_checkin, timeout}, timeout) do
-      :ok ->
-        :ok
-      {:error, :not_checked_out} ->
-        raise ArgumentError, "process doesn't own a worker"
-    end
+  def ownership_checkin(repo, timeout \\ @timeout) do
+    {_, pool, _, } = repo.__pool__
+    GenServer.call(pool, {:ownership_checkin, timeout}, timeout)
+    |> maybe_raise
   end
 
   def checkout(pool, timeout) do

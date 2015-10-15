@@ -237,7 +237,7 @@ defmodule Ecto.Integration.MigrationTest do
   import Ecto.Migrator, only: [up: 4, down: 4]
 
   setup do
-    Ecto.Pools.Ownership.ownership_checkout(TestRepo.Pool)
+    Ecto.Pools.Ownership.ownership_checkout(TestRepo)
     :ok
   end
 
