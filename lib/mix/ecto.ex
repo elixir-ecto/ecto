@@ -26,18 +26,6 @@ defmodule Mix.Ecto do
              end |> Module.concat(Repo)
       repo -> repo
     end
-
-
-    # # Use default repo when configured
-    # case Application.get_env(app, :app_repo) do      
-    #   nil  -> 
-    #     case Application.get_env(app, :app_namespace, app) do
-    #       ^app -> app |> to_string |> Mix.Utils.camelize
-    #       mod  -> mod |> inspect
-    #     end |> Module.concat(Repo)
-
-    #   repo -> repo
-    # end
   end
 
   @doc """
