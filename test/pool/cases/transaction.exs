@@ -4,7 +4,7 @@ defmodule Ecto.Pool.TransactionTest do
   alias Ecto.Pool
   alias Ecto.TestPool
 
-  @timeout 1000
+  @timeout 5_000
 
   setup context do
     case = context[:case]
