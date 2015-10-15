@@ -65,9 +65,15 @@ defmodule Ecto.Repo do
       @otp_app otp_app
       @adapter adapter
       @config  config
-      @pool pool
       @query_cache config[:query_cache] || __MODULE__
       @before_compile adapter
+
+      if config[:use_ownership] do
+        {pool, name, timeout} = pool
+        @pool {Ecto.Pools.Ownership.Server, name, timeout}
+      else
+        @pool pool
+      end
 
       require Logger
       @log_level config[:log_level] || :debug

@@ -28,6 +28,10 @@ defmodule Ecto.Pools.Poolboy do
     :poolboy.start_link(pool_opts, {conn_mod, conn_opts})
   end
 
+  def open_transaction(_pool, worker, timeout) do
+    Worker.checkout(worker, :transaction, timeout)
+  end
+
   @doc false
   def checkout(pool, timeout) do
     checkout(pool, :run, timeout)

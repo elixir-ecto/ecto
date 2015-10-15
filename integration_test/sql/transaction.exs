@@ -12,6 +12,7 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   setup do
+    Ecto.Pools.Ownership.Server.ownership_checkout(TestRepo.Pool, nil)
     PoolRepo.delete_all "transactions"
     :ok
   end

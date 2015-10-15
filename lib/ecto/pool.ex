@@ -28,6 +28,12 @@ defmodule Ecto.Pool do
   """
   @type queue_time :: non_neg_integer
 
+  @type worker :: any
+
+  @type conn :: {module, pid}
+
+  defcallback open_transaction(t, worker, timeout) :: :ok
+
   @doc """
   Start a pool of connections.
 
@@ -65,7 +71,7 @@ defmodule Ecto.Pool do
   """
   defcallback checkout(t, timeout) ::
     {:ok, worker, conn, queue_time} |
-    {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
+    {:error, :noproc | :noconnect}
 
   @doc """
   Checkin a worker/connection to the pool.
@@ -73,7 +79,7 @@ defmodule Ecto.Pool do
   Called when the top level `run/4` finishes, if `break/2` was not called
   inside the fun.
   """
-  defcallback checkin(t, worker, timeout) :: :ok when worker: any
+  defcallback checkin(t, worker, timeout) :: :ok
 
   @doc """
   Break the current transaction or run.
@@ -81,7 +87,7 @@ defmodule Ecto.Pool do
   Called when the function has failed and the connection should no longer be
   available to to the calling process.
   """
-  defcallback break(t, worker, timeout) :: :ok when worker: any
+  defcallback break(t, worker, timeout) :: :ok
 
   @doc """
   Open a transaction with a connection from the pool.
@@ -97,9 +103,9 @@ defmodule Ecto.Pool do
   Returns `{:error, :noproc}` if the pool is not alive and
   `{:error, :noconnect}` if a connection is not available.
   """
-  defcallback open_transaction(t, timeout) ::
+  defcallback checkout_transaction(t, timeout) ::
     {:ok, worker, conn, queue_time} |
-    {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
+    {:error, :noproc | :noconnect}
 
   @doc """
   Close the transaction and signal to the worker the work with the connection
@@ -108,7 +114,7 @@ defmodule Ecto.Pool do
   Called once the transaction at `depth` `1` is finished, if the transaction
   is not broken with `break/2`.
   """
-  defcallback close_transaction(t, worker, timeout) :: :ok when worker: any
+  defcallback close_transaction(t, worker, timeout) :: :ok
 
   @doc """
   Runs a fun using a connection from a pool.

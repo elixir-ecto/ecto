@@ -44,6 +44,10 @@ defmodule Ecto.Pools.SojournBroker do
     Supervisor.start_link(children, sup_opts)
   end
 
+  def open_transaction(_pool, _worker, _timeout) do
+    :ok
+  end
+
   @doc false
   def checkout(pool, timeout) do
     ask(pool, :run, timeout)
