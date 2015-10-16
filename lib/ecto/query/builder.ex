@@ -1,7 +1,7 @@
 defmodule Ecto.Query.Builder do
   @moduledoc false
 
-  @aggregators ~w(count)a
+  @distinct ~w(count)a
 
   alias Ecto.Query
 
@@ -211,7 +211,7 @@ defmodule Ecto.Query.Builder do
   defp split_binary(<<?\\, ??, rest :: binary >>, consumed), do: split_binary(rest, consumed <> <<??>>)
   defp split_binary(<<first :: utf8, rest :: binary>>, consumed), do: split_binary(rest, consumed <> <<first>>)
 
-  defp escape_call({name, _, [arg, :distinct]}, type, params, vars, env) when name in @aggregators do
+  defp escape_call({name, _, [arg, :distinct]}, type, params, vars, env) when name in @distinct do
     {arg, params} = escape(arg, type, params, vars, env)
     distinct = {:{}, [], [:distinct, [], []]}
     expr = {:{}, [], [name, [], [arg, :distinct]]}
@@ -263,7 +263,7 @@ defmodule Ecto.Query.Builder do
     do: [{:raw, h1}]
 
   defp call_type(agg, 1)  when agg in ~w(max count sum min avg)a, do: {:any, :any}
-  defp call_type(agg, 2)  when agg in @aggregators,               do: {:any, :any}
+  defp call_type(agg, 2)  when agg in @distinct,                  do: {:any, :any}
   defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}
   defp call_type(like, 2) when like in ~w(like ilike)a,           do: {:string, :boolean}
   defp call_type(bool, 2) when bool in ~w(and or)a,               do: {:boolean, :boolean}
