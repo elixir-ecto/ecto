@@ -1,6 +1,8 @@
 defmodule Ecto.Query.Builder do
   @moduledoc false
 
+  @distinct ~w(count)a
+
   alias Ecto.Query
 
   @typedoc """
@@ -209,6 +211,12 @@ defmodule Ecto.Query.Builder do
   defp split_binary(<<?\\, ??, rest :: binary >>, consumed), do: split_binary(rest, consumed <> <<??>>)
   defp split_binary(<<first :: utf8, rest :: binary>>, consumed), do: split_binary(rest, consumed <> <<first>>)
 
+  defp escape_call({name, _, [arg, :distinct]}, type, params, vars, env) when name in @distinct do
+    {arg, params} = escape(arg, type, params, vars, env)
+    expr = {:{}, [], [name, [], [arg, :distinct]]}
+    {expr, params}
+  end
+
   defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
     expr = {:{}, [], [name, [], args]}
@@ -254,6 +262,7 @@ defmodule Ecto.Query.Builder do
     do: [{:raw, h1}]
 
   defp call_type(agg, 1)  when agg in ~w(max count sum min avg)a, do: {:any, :any}
+  defp call_type(agg, 2)  when agg in @distinct,                  do: {:any, :any}
   defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}
   defp call_type(like, 2) when like in ~w(like ilike)a,           do: {:string, :boolean}
   defp call_type(bool, 2) when bool in ~w(and or)a,               do: {:boolean, :boolean}

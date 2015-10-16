@@ -73,6 +73,14 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
   end
 
+  test "aggregates" do
+    query = Model |> select([r], count(r.x)) |> normalize
+    assert SQL.all(query) == ~s{SELECT count(m0."x") FROM "model" AS m0}
+
+    query = Model |> select([r], count(r.x, :distinct)) |> normalize
+    assert SQL.all(query) == ~s{SELECT count(DISTINCT m0."x") FROM "model" AS m0}
+  end
+
   test "distinct" do
     query = Model |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT DISTINCT ON (m0."x") m0."x", m0."y" FROM "model" AS m0}
