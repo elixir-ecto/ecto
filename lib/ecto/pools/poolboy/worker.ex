@@ -67,9 +67,24 @@ defmodule Ecto.Pools.Poolboy.Worker do
     end
   end
 
+  ## Checkout/Open transaction when in transaction
+
+  def handle_call({:checkout, _} = checkout, from, %{transaction: {client, _}} = s) do
+    if Process.alive?(client) do
+      {:stop, :bad_checkout, s}
+    else
+      # poolboy got the :DOWN message and checked out this process to a new
+      # client before this process got the :DOWN from the old client
+      s = s
+        |> demonitor()
+        |> disconnect()
+      handle_call(checkout, from, s)
+    end
+  end
+
   ## Checkout
 
-  def handle_call({:checkout, :run}, _, s) do
+  def handle_call({:checkout, :run}, _, %{transaction: nil} = s) do
     {:reply, {:ok, modconn(s)}, s}
   end
 
@@ -78,18 +93,6 @@ defmodule Ecto.Pools.Poolboy.Worker do
   def handle_call({:checkout, :transaction}, from, %{transaction: nil} = s) do
     {pid, _} = from
     {:reply, {:ok, modconn(s)}, monitor(pid, s)}
-  end
-
-  def handle_call({:checkout, :transaction} = checkout, from, s) do
-    {client, _} = s.transaction
-    if Process.is_alive?(client) do
-      handle_call(checkout, from, demonitor(s))
-    else
-      s = s
-        |> demonitor()
-        |> disconnect()
-      handle_call(checkout, from, s)
-    end
   end
 
   ## Close transaction
