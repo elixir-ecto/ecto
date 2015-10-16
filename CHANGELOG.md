@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.5
+
+* Bug fixes
+  * Ensure `__meta__` is not overridable in `Ecto.Model.build/3`
+  * Ensure adapters are shut down after running migrations so caches are reloaded
+  * Do not trigger `:on_replace` behaviour if `has_one` model is being updated
+  * Raise helpful error when using wrong Ecto native types
+  * Make `Ecto.DateTime.cast/1` support over 6 decimal places
+
 ## v1.0.4
 
 * Enhancements
