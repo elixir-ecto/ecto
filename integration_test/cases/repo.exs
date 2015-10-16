@@ -694,4 +694,13 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.delete!(user)
     assert Enum.count(TestRepo.all(Post)) == 1
   end
+
+  test "count distinct" do
+    TestRepo.insert!(%Post{title: "1"})
+    TestRepo.insert!(%Post{title: "1"})
+    TestRepo.insert!(%Post{title: "2"})
+
+    assert [3] == Post |> select([p], count(p.title)) |> TestRepo.all
+    assert [2] == Post |> select([p], count(p.title, :distinct)) |> TestRepo.all
+  end
 end
