@@ -213,7 +213,6 @@ defmodule Ecto.Query.Builder do
 
   defp escape_call({name, _, [arg, :distinct]}, type, params, vars, env) when name in @distinct do
     {arg, params} = escape(arg, type, params, vars, env)
-    distinct = {:{}, [], [:distinct, [], []]}
     expr = {:{}, [], [name, [], [arg, :distinct]]}
     {expr, params}
   end
