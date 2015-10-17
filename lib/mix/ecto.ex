@@ -22,10 +22,14 @@ defmodule Mix.Ecto do
 
   defp parse_repo([], []) do
     if app = Keyword.get(Mix.Project.config, :app) do
-      case Application.get_env(app, :app_namespace, app) do
-        ^app -> app |> to_string |> Mix.Utils.camelize
-        mod  -> mod |> inspect
-      end |> Module.concat(Repo) |> List.wrap
+      case Application.get_env(app, :app_repo) do
+        nil -> 
+          case Application.get_env(app, :app_namespace, app) do
+            ^app -> app |> to_string |> Mix.Utils.camelize
+            mod  -> mod |> inspect
+          end |> Module.concat(Repo) |> List.wrap
+        repo -> repo
+      end
     else
       Mix.raise "No repository available. Please pass a repo with the -r option."
     end
