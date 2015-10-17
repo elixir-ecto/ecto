@@ -27,15 +27,14 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
   end
 
-  defmodule Repo2 do
+  defmodule StartedRepo do
     def start_link do
-      Process.put(:started, true)
-      Task.start_link fn ->
-        Process.flag(:trap_exit, true)
-        receive do
-          {:EXIT, _, :normal} -> :ok
-        end
-      end
+      Process.put(:already_started, true)
+      {:error, {:already_started, :whatever}}
+    end
+
+    def stop(_) do
+      raise "I should never be called"
     end
 
     def __repo__ do
@@ -47,7 +46,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
   end
 
-  test "runs the migrator with the repo started" do
+  test "runs the migrator after starting repo" do
     run ["-r", to_string(Repo), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
     end
@@ -55,12 +54,21 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     assert Process.get(:started)
   end
 
-  test "runs the migrator with both the repos started" do
-    run ["-r", to_string(Repo), to_string(Repo2), "--no-start"], fn _, _, _, _ ->
+  test "runs the migrator with the already started repo" do
+    run ["-r", to_string(StartedRepo), "--no-start"], fn _, _, _, _ ->
+      Process.put(:migrated, true)
+    end
+    assert Process.get(:migrated)
+    assert Process.get(:already_started)
+  end
+
+  test "runs the migrator with two repos" do
+    run ["-r", to_string(Repo), "-r", to_string(StartedRepo), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
     end
     assert Process.get(:migrated)
     assert Process.get(:started)
+    assert Process.get(:already_started)
   end
 
   test "runs the migrator yielding the repository and migrations path" do
