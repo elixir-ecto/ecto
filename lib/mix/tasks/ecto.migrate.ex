@@ -60,6 +60,6 @@ defmodule Mix.Tasks.Ecto.Migrate do
     end
 
     migrator.(repo, migrations_path(repo), :up, opts)
-    ensure_stopped(repo, pid)
+    pid && ensure_stopped(repo, pid)
   end
 end
