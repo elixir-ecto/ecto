@@ -39,7 +39,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def stop(pid, timeout) do
+      def stop(_repo, pid, timeout) do
         ref = Process.monitor(pid)
         Process.exit(pid, :normal)
         receive do
