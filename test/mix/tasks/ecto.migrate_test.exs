@@ -46,6 +46,17 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
   end
 
+  test "runs the migrator with app_repo config" do
+    Application.put_env(:ecto, :app_repo, Repo)
+    run ["--no-start"], fn _, _, _, _ ->
+      Process.put(:migrated, true)
+    end
+    assert Process.get(:migrated)
+    assert Process.get(:started)
+  after
+    Application.delete_env(:ecto, :app_repo)
+  end
+
   test "runs the migrator after starting repo" do
     run ["-r", to_string(Repo), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
