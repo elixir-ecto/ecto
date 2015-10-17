@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.0.6
+
+* Bug fixes
+  * Only shut down repo in "ecto.migrate" and "ecto.rollback" if it was created by the task
+
 ## v1.0.5
 
 * Bug fixes
