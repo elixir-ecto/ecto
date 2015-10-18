@@ -32,6 +32,8 @@ defmodule Ecto.Pool do
 
   @type conn :: {module, pid}
 
+  @type mode :: :normal | :sandbox
+
   defcallback open_transaction(t, worker, timeout) :: :ok
 
   @doc """
@@ -70,7 +72,7 @@ defmodule Ecto.Pool do
   `{:error, :noconnect}` if a connection is not available.
   """
   defcallback checkout(t, timeout) ::
-    {:ok, worker, conn, queue_time} |
+    {:ok, worker, conn, mode, queue_time} |
     {:error, :noproc | :noconnect}
 
   @doc """
