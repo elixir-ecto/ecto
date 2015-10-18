@@ -28,7 +28,17 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   end
 
   def open_transaction(_pool, _worker, _timeout) do
-    raise "#{inspect __MODULE__}.open_transaction/3 should never be called"
+    raise """
+    If you want to use ownership with SQL sandbox, configure your repo like this:
+
+        config :ecto, MyRepo,
+          pool: Ecto.Pools.Ownership,
+          ownership_pool: AnyPool)
+
+    In your test setup call ownership_checkout passing the sandbox as second option:
+
+        Ecto.Pools.Ownership.ownership_checkout(MyRepo, Ecto.Adapters.SQL.Sandbox)
+    """
   end
 
   def ownership_checkout(module, conn) do
