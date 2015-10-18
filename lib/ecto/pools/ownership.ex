@@ -125,7 +125,7 @@ defmodule Ecto.Pools.Ownership do
       sup_name     = Module.concat(name, Elixir.ServerSup)
 
       :ets.new(name, [:named_table, :public, read_concurrency: true])
-      :ets.insert(name, {:metadata, sup_name, pool_name, pool})
+      :ets.insert(name, {:metadata, sup_name})
 
       children = [
         supervisor(ServerSup, [sup_name, pool, pool_name, name]),
