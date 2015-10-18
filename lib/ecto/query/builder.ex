@@ -113,8 +113,21 @@ defmodule Ecto.Query.Builder do
     do: Enum.map_reduce(list, params, &escape(&1, :any, &2, vars, env))
 
   # literals
-  def escape({:<<>>, _, _} = expr, type, params, vars, _env),
-    do: {literal(expr, type, vars), params}
+  def escape({:<<>>, _, args} = expr, type, params, vars, _env) do
+    valid? = Enum.all?(args, fn
+      {:::, _, [left, _]} -> is_integer(left) or is_binary(left)
+      left -> is_integer(left) or is_binary(left)
+    end)
+
+    unless valid? do
+      error! "`#{Macro.to_string(expr)}` is not a valid query expression. " <>
+             "Only literal binaries and strings are allowed, " <>
+             "dynamic values need to be explicitly interpolated in queries with ^"
+    end
+
+    {literal(expr, type, vars), params}
+  end
+
   def escape({:-, _, [number]}, type, params, vars, _env) when is_number(number),
     do: {literal(-number, type, vars), params}
   def escape(number, type, params, vars, _env) when is_number(number),
