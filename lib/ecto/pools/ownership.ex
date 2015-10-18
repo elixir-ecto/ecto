@@ -10,8 +10,6 @@ defmodule Ecto.Pools.Ownership do
   defmodule Server do
     use GenServer
 
-    @timeout 5_000
-
     def start_link(pool, pool_name, ets) do
       GenServer.start_link(__MODULE__, {pool, pool_name, ets})
     end
@@ -24,10 +22,13 @@ defmodule Ecto.Pools.Ownership do
               owner: nil,
               ref: nil,
               checkout: nil,
-              strategy: nil}}
+              strategy: nil,
+              worker: nil,
+              timeout: nil}}
     end
 
-    def handle_call({:ownership_checkout, strategy, timeout}, {pid, _ref}, s) do
+    def handle_call({:ownership_checkout, strategy, timeout}, {pid, _ref},
+                    %{checkout: nil, strategy: nil} = s) do
       case s.module.checkout(s.pool, timeout) do
         {:ok, worker, {module, conn}, :default, _queue_time} ->
           mode = if strategy,
@@ -37,7 +38,10 @@ defmodule Ecto.Pools.Ownership do
           checkout = {worker, {module, conn}, mode}
 
           s = monitor_owner(pid, s)
-          s = %{s | strategy: strategy, checkout: checkout}
+          s = %{s | strategy: strategy,
+                    checkout: checkout,
+                    worker: worker,
+                    timeout: timeout}
           {:reply, {:ok, checkout}, s}
         {:error, _} = error ->
           {:stop, :normal, error, s}
@@ -49,8 +53,23 @@ defmodule Ecto.Pools.Ownership do
       {:stop, :normal, :ok, s}
     end
 
+    def handle_call({:break, worker, timeout}, _from, %{worker: worker} = s) do
+      s.module.break(s.pool, worker, timeout)
+      {:reply, :ok, s}
+    end
+
+    def handle_call({:open_transaction, timeout}, _from, s) do
+      s.module.open_transaction(s.pool, s.worker, timeout)
+      {:reply, :ok, s}
+    end
+
+    def handle_call({:close_transaction, worker, timeout}, _from, %{worker: worker} = s) do
+      s.module.close_transaction(s.pool, worker, timeout)
+      {:reply, :ok, s}
+    end
+
     def handle_info({:DOWN, ref, :process, pid, _reason}, %{ref: ref, owner: pid} = s) do
-      checkin(@timeout, s)
+      checkin(s.timeout, s)
       {:stop, :normal, s}
     end
 
@@ -117,14 +136,13 @@ defmodule Ecto.Pools.Ownership do
   end
 
   @behaviour Ecto.Pool
-  @timeout 5_000
 
   def start_link(connection, opts) do
     Sup.start_link(connection, opts)
   end
 
-  def ownership_checkout(repo, strategy \\ nil, timeout \\ @timeout) do
-    {_, pool, _} = repo.__pool__
+  def ownership_checkout(repo, strategy \\ nil) do
+    {_, pool, timeout} = repo.__pool__
 
     if :ets.member(pool, self) do
       raise "process already owns a worker"
@@ -132,7 +150,7 @@ defmodule Ecto.Pools.Ownership do
       supervisor = :ets.lookup_element(pool, :metadata, 2)
       {:ok, pid} = ServerSup.new_owner(supervisor)
 
-      case GenServer.call(pid, {:ownership_checkout, strategy, timeout}) do
+      case GenServer.call(pid, {:ownership_checkout, strategy, timeout}, timeout) do
         {:ok, checkout} ->
           unless :ets.insert_new(pool, {self, pid, checkout}) do
             GenServer.call(pid, {:ownership_checkin, timeout}, timeout)
@@ -144,13 +162,13 @@ defmodule Ecto.Pools.Ownership do
     end
   end
 
-  def ownership_checkin(repo, timeout \\ @timeout) do
-    {_, pool, _, } = repo.__pool__
-    if :ets.member(pool, self) do
-      [{_, pid, _}] = :ets.lookup(pool, self)
-      GenServer.call(pid, {:ownership_checkin, timeout}, timeout)
-    else
-      raise "process doesn't own a worker"
+  def ownership_checkin(repo) do
+    {_, pool, timeout} = repo.__pool__
+    case :ets.lookup(pool, self) do
+      [{_, pid, _}] ->
+        GenServer.call(pid, {:ownership_checkin, timeout}, timeout)
+      [] ->
+        raise "process doesn't own a worker"
     end
   end
 
@@ -159,7 +177,7 @@ defmodule Ecto.Pools.Ownership do
       [{_, _, {worker, mod_conn, mode}}] ->
         {:ok, worker, mod_conn, mode, 0}
       [] ->
-        raise "..."
+        raise "process doesn't own a worker"
     end
   end
 
@@ -168,22 +186,21 @@ defmodule Ecto.Pools.Ownership do
   end
 
   def break(pool, worker, timeout) do
-    if :ets.member(pool, self) do
-      [{:metadata, _supervisor, inner_pool, module}] = :ets.lookup(pool, :metadata)
-      module.break(inner_pool, worker, timeout)
-    else
-      raise "..."
+    case :ets.lookup(pool, self) do
+      [{_, pid, _}] ->
+        GenServer.call(pid, {:break, worker, timeout}, timeout)
+      [] ->
+        raise "process doesn't own a worker"
     end
   end
 
   def checkout_transaction(pool, timeout) do
-    if :ets.member(pool, self) do
-      [{:metadata, _supervisor, inner_pool, module}] = :ets.lookup(pool, :metadata)
-      [{_, _, {worker, mod_conn, mode}}] = :ets.lookup(pool, self)
-      module.open_transaction(inner_pool, worker, timeout)
-      {:ok, worker, mod_conn, mode, 0}
-    else
-      raise "..."
+    case :ets.lookup(pool, self) do
+      [{_, pid, {worker, mod_conn, mode}}] ->
+        GenServer.call(pid, {:open_transaction, timeout}, timeout)
+        {:ok, worker, mod_conn, mode, 0}
+      [] ->
+        raise "process doesn't own a worker"
     end
   end
 
@@ -192,11 +209,11 @@ defmodule Ecto.Pools.Ownership do
   end
 
   def close_transaction(pool, worker, timeout) do
-    if :ets.member(pool, self) do
-      [{:metadata, _supervisor, inner_pool, module}] = :ets.lookup(pool, :metadata)
-      module.close_transaction(inner_pool, worker, timeout)
-    else
-      raise "..."
+    case :ets.lookup(pool, self) do
+      [{_, pid, _}] ->
+        GenServer.call(pid, {:close_transaction, worker, timeout}, timeout)
+      [] ->
+        raise "process doesn't own a worker"
     end
   end
 end
