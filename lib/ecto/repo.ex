@@ -364,6 +364,9 @@ defmodule Ecto.Repo do
   and any returned result as second element. If the database
   does not support RETURNING in UPDATE statements or no
   return result was selected, the second element will be nil.
+  
+  See `Ecto.Query.update/3` for update operations that can be
+  performed on fields.
 
   This operation does not run the model `before_update` and
   `after_update` callbacks.
