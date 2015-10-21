@@ -17,18 +17,18 @@ defmodule Ecto.Model.AutogenerateTest do
 
   test "autogenerates values" do
     model = TestRepo.insert!(%MyModel{})
-    assert byte_size(model.z) == 36
+    assert byte_size(model.z.string) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{}, [], [])
     model = TestRepo.insert!(changeset)
-    assert byte_size(model.z) == 36
+    assert byte_size(model.z.string) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{z: nil}, [], [])
     model = TestRepo.insert!(changeset)
-    assert byte_size(model.z) == 36
+    assert byte_size(model.z.string) == 36
 
     changeset = Ecto.Changeset.cast(%MyModel{}, %{z: @uuid}, [:z], [])
     model = TestRepo.insert!(changeset)
-    assert model.z == @uuid
+    assert model.z.string == @uuid
   end
 end

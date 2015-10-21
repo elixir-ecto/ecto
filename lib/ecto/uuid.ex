@@ -7,6 +7,7 @@ defmodule Ecto.UUID do
   """
 
   @behaviour Ecto.Type
+  defstruct [:binary, :string]
 
   @doc """
   The Ecto primitive type.
@@ -16,12 +17,22 @@ defmodule Ecto.UUID do
   @doc """
   Casts to UUID.
   """
-  def cast(<< _::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96 >> = u), do: {:ok, u}
+  def cast(%Ecto.UUID{} = u), do: {:ok, u}
+  def cast(<< _::128 >> = u), do: {:ok, %Ecto.UUID{binary: u, string: encode(u)}}
+  def cast(<< u0::64, ?-, u1::32, ?-, u2::32, ?-, u3::32, ?-, u4::96 >> = u) do
+    case Base.decode16(<< u0::64, u1::32, u2::32, u3::32, u4::96 >>, case: :mixed) do
+      :error -> :error
+      {:ok, binary} -> {:ok, %Ecto.UUID{binary: binary, string: u}}
+    end
+  end
   def cast(_), do: :error
 
   @doc """
   Converts a string representing a UUID into a binary.
   """
+  def dump(%Ecto.UUID{binary: binary}) do
+    {:ok, %Ecto.Query.Tagged{type: :uuid, value: binary}}
+  end
   def dump(<< u0::64, ?-, u1::32, ?-, u2::32, ?-, u3::32, ?-, u4::96 >>) do
     case Base.decode16(<< u0::64, u1::32, u2::32, u3::32, u4::96 >>, case: :mixed) do
       {:ok, value} -> {:ok, %Ecto.Query.Tagged{type: :uuid, value: value}}
@@ -31,10 +42,10 @@ defmodule Ecto.UUID do
   def dump(_), do: :error
 
   @doc """
-  Converts a binary UUID into a string.
+  Converts a binary UUID into an Ecto.UUID.
   """
   def load(<< _::128 >> = uuid) do
-   {:ok, encode(uuid)}
+   {:ok, %Ecto.UUID{binary: uuid, string: encode(uuid)}}
   end
   def load(<<_::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96>> = string) do
     raise "trying to load string UUID as Ecto.UUID: #{inspect string}. " <>
@@ -43,16 +54,14 @@ defmodule Ecto.UUID do
   def load(_), do: :error
 
   @doc """
-  Generates a version 4 (random) UUID.
+  Generates an Ecto.UUID.
   """
   def generate do
-    bingenerate() |> encode
+    binary = bingenerate();
+    %Ecto.UUID{binary: binary, string: encode(binary)}
   end
 
-  @doc """
-  Generates a version 4 (random) UUID in the binary format.
-  """
-  def bingenerate do
+  defp bingenerate do
     <<u0::48, _::4, u1::12, _::2, u2::62>> = :crypto.strong_rand_bytes(16)
     <<u0::48, 4::4, u1::12, 2::2, u2::62>>
   end
