@@ -66,10 +66,11 @@ defmodule Ecto.Migration do
 
   ## Prefixes
 
-  Migrations support specifying a table, reference or index prefix which will target either a schema 
-  if using Postgres, or a different database if using MySQL.  If no prefix is 
-  provided, the default schema or database is used.  The prefix is 
-  specified in the table options:
+  Migrations support specifying a table prefix or index prefix which will target either a schema
+  if using Postgres, or a different database if using MySQL. If no prefix is
+  provided, the default schema or database is used.
+  Any reference declated in table migration refer by default table with same prefix declared for table.
+  The prefix is specified in the table options:
 
       def up do
         create table(:weather, prefix: :north_america) do
@@ -77,7 +78,7 @@ defmodule Ecto.Migration do
           add :temp_lo, :integer
           add :temp_hi, :integer
           add :prcp,    :float
-          add :group_id, references(:groups, prefix: :north_america)
+          add :group_id, references(:groups)
 
           timestamps
         end
