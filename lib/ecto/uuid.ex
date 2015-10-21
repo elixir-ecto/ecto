@@ -86,3 +86,14 @@ defmodule Ecto.UUID do
   defp lower(<<>>, acc),
     do: acc
 end
+
+defimpl String.Chars, for: Ecto.UUID do
+  def to_string(%Ecto.UUID{string: s}), do: s
+end
+
+defimpl Inspect, for: Ecto.UUID do
+
+  def inspect(%Ecto.UUID{string: s}, _opts) do
+    "#Ecto.UUID<" <> s <> ">"
+  end
+end

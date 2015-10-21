@@ -29,4 +29,14 @@ defmodule Ecto.UUIDTest do
     %Ecto.UUID{string: s} = Ecto.UUID.generate
     assert << _::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96 >> = s
   end
+
+  test "to_string" do
+    uuid = Ecto.UUID.generate
+    assert to_string(uuid) == uuid.string
+  end
+
+  test "inspect protocol" do
+    uuid = Ecto.UUID.generate
+    assert inspect(uuid) == "#Ecto.UUID<" <> uuid.string <> ">"
+  end
 end
