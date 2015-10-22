@@ -3,6 +3,7 @@ defmodule Ecto.Pools.Poolboy.Worker do
 
   use GenServer
   use Behaviour
+  require Logger
   alias Ecto.Adapters.Connection
 
   @type modconn :: {module :: atom, conn :: pid}
@@ -36,16 +37,9 @@ defmodule Ecto.Pools.Poolboy.Worker do
     lazy?    = Keyword.get(opts, :lazy, true)
     shutdown = Keyword.get(opts, :shutdown, 5_000)
 
-    unless lazy? do
-      case Connection.connect(module, params) do
-        {:ok, conn} ->
-          conn = conn
-        _ ->
-          :ok
-      end
-    end
+    unless lazy?, do: GenServer.cast(self(), :connect)
 
-    {:ok, %{conn: conn, params: params, shutdown: shutdown, transaction: nil,
+    {:ok, %{conn: nil, params: params, shutdown: shutdown, transaction: nil,
             module: module}}
   end
 
@@ -106,6 +100,17 @@ defmodule Ecto.Pools.Poolboy.Worker do
     {:noreply, demonitor(s)}
   end
 
+  def handle_cast(:connect, %{conn: nil, transaction: nil} = s) do
+    %{module: module, params: params} = s
+    case Connection.connect(module, params) do
+      {:ok, conn} ->
+        {:noreply, %{s | conn: conn}}
+      {:error, error} ->
+        log_connect_error(error, s)
+        {:noreply, s}
+    end
+  end
+
   ## Info
 
   # The connection crashed. We don't need to notify
@@ -149,5 +154,23 @@ defmodule Ecto.Pools.Poolboy.Worker do
   defp disconnect(%{conn: conn, shutdown: shutdown} = s) do
     _ = conn && Connection.shutdown(conn, shutdown)
     %{s | conn: nil}
+  end
+
+  defp log_connect_error(error, %{module: module, params: params}) do
+    Logger.error(fn() ->
+      [inspect(module), " failed to connect with parameters ", inspect(params),
+       ?\n | inspect_error(error)]
+    end)
+  end
+
+  defp inspect_error({'EXIT', reason}) do
+    Exception.format_exit(reason)
+  end
+  defp inspect_error(reason) do
+    if Exception.exception?(reason) do
+      Exception.format_banner(:error, reason)
+    else
+      Exception.format_banner(:exit, reason)
+    end
   end
 end
