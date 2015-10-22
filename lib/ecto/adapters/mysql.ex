@@ -113,7 +113,7 @@ defmodule Ecto.Adapters.MySQL do
 
     {output, status} =
       run_with_mysql opts, "CREATE DATABASE `" <> database <>
-                           "` DEFAULT CHARACTER SET = #{charset} " <> extra
+                           "` DEFAULT CHARACTER SET = " <> charset <> extra
 
     cond do
       status == 0 -> :ok
