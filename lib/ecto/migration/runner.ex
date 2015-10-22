@@ -133,7 +133,7 @@ defmodule Ecto.Migration.Runner do
   end
 
   defp execute_in_direction(repo, :backward, level, {command, %Index{}=index}) when command in @creates do
-    log_and_execute_ddl(repo, level, {:drop_if_exists, index})
+    log_and_execute_ddl(repo, level, {:drop, index})
   end
 
   defp execute_in_direction(repo, :backward, level, {:drop, %Index{}=index}) do
