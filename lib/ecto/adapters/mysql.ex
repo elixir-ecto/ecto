@@ -108,7 +108,7 @@ defmodule Ecto.Adapters.MySQL do
     extra = ""
 
     if collation = Keyword.get(opts, :collation) do
-      extra =  extra <> " DEFAULT COLLATE = #{collation}"
+      extra =  extra <> " DEFAULT COLLATE = " <> collation
     end
 
     {output, status} =
