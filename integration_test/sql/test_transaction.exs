@@ -211,7 +211,7 @@ defmodule Ecto.Integration.TestTransactionTest do
 
   defp assert_transaction(mode) do
     TestRepo.transaction(fn ->
-      {_, pool, _} = TestRepo.__pool__
+      {_, pool, _, _} = TestRepo.__pool__
       assert Ecto.Adapters.SQL.Sandbox.mode(pool) === mode
     end)
   end

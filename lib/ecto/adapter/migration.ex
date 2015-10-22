@@ -46,9 +46,11 @@ defmodule Ecto.Adapter.Migration  do
 
   ## Options
 
-  * `:timeout` - The time in milliseconds to wait for the call to finish,
-    `:infinity` will wait indefinitely (default: 5000);
-  * `:log` - When false, does not log begin/commit/rollback queries
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log begin/commit/rollback queries
   """
   defcallback execute_ddl(Ecto.Repo.t, command, Keyword.t) :: :ok | no_return
 end
