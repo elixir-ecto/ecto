@@ -136,6 +136,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Model.update(__MODULE__, @adapter, model, opts)
       end
 
+      def insert_or_update(changeset, opts \\ []) do
+        Ecto.Repo.Model.insert_or_update(__MODULE__, @adapter, changeset, opts)
+      end
+
       def delete(model, opts \\ []) do
         Ecto.Repo.Model.delete(__MODULE__, @adapter, model, opts)
       end
@@ -146,6 +150,10 @@ defmodule Ecto.Repo do
 
       def update!(model, opts \\ []) do
         Ecto.Repo.Model.update!(__MODULE__, @adapter, model, opts)
+      end
+
+      def insert_or_update!(changeset, opts \\ []) do
+        Ecto.Repo.Model.insert_or_update!(__MODULE__, @adapter, changeset, opts)
       end
 
       def delete!(model, opts \\ []) do
@@ -364,7 +372,7 @@ defmodule Ecto.Repo do
   and any returned result as second element. If the database
   does not support RETURNING in UPDATE statements or no
   return result was selected, the second element will be nil.
-  
+
   See `Ecto.Query.update/3` for update operations that can be
   performed on fields.
 
@@ -498,6 +506,39 @@ defmodule Ecto.Repo do
               {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
 
   @doc """
+  Inserts or updates a changeset depending on whether the model is persisted
+  or not.
+
+  The distinction whether to insert or update will be made on the
+  `Ecto.Schema.Metadata` field `:state`. The `:state` is automatically set by
+  Ecto when loading or building a schema.
+
+  Please note that for this to work, you will have to load existing models from
+  the database. So even if the model exists, this won't work:
+
+      model = %Post{id: 'existing_id', ...}
+      MyRepo.insert_or_update changeset
+      # => {:error, "id already exists"}
+
+  ## Example
+
+      result =
+        case MyRepo.get(Post, id) do
+          nil  -> %Post{id: id} # Post not found, we build one
+          post -> post          # Post exists, let's use it
+        end
+        |> Post.changeset(changes)
+        |> MyRepo.insert_or_update
+
+      case result do
+        {:ok, model}        -> # Inserted or updated with success
+        {:error, changeset} -> # Something went wrong
+      end
+  """
+  defcallback insert_or_update(Ecto.Changeset.t, Keyword.t) ::
+              {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
+
+  @doc """
   Deletes a model using its primary key.
 
   If any `before_delete` or `after_delete` callback are registered
@@ -537,6 +578,13 @@ defmodule Ecto.Repo do
   Same as `update/2` but returns the model or raises if the changeset is invalid.
   """
   defcallback update!(Ecto.Model.t, Keyword.t) :: Ecto.Model.t | no_return
+
+  @doc """
+  Same as `insert_or_update/2` but returns the model or raises if the changeset
+  is invalid.
+  """
+  defcallback insert_or_update!(Ecto.Changeset.t, Keyword.t) ::
+              Ecto.Model.t | no_return
 
   @doc """
   Same as `delete/2` but returns the model or raises if the changeset is invalid.
