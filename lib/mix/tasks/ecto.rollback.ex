@@ -43,14 +43,11 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
-    repo = parse_repo(args)
+    repos = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, quiet: :boolean],
       aliases: [n: :step, v: :to]
-
-    ensure_repo(repo, args)
-    {:ok, pid} = ensure_started(repo)
 
     unless opts[:to] || opts[:step] || opts[:all] do
       opts = Keyword.put(opts, :step, 1)
@@ -60,7 +57,12 @@ defmodule Mix.Tasks.Ecto.Rollback do
       opts = Keyword.put(opts, :log, false)
     end
 
-    migrator.(repo, migrations_path(repo), :down, opts)
-    ensure_stopped(repo, pid)
+    Enum.each repos, fn repo ->
+      ensure_repo(repo, args)
+      {:ok, pid} = ensure_started(repo)
+
+      migrator.(repo, migrations_path(repo), :down, opts)
+      pid && ensure_stopped(repo, pid)
+    end
   end
 end

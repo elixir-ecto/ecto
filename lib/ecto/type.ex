@@ -40,7 +40,7 @@ defmodule Ecto.Type do
         def cast(_), do: :error
 
         # When loading data from the database, we are guaranteed to
-        # receive an integer (as database are stricts) and we will
+        # receive an integer (as databases are strict) and we will
         # just return it to be stored in the model struct.
         def load(integer) when is_integer(integer), do: {:ok, integer}
 

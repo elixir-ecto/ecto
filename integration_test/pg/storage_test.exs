@@ -4,17 +4,15 @@ defmodule Ecto.Integration.StorageTest do
   alias Ecto.Adapters.Postgres
 
   def correct_params do
-    [database: "storage_mgt",
-     username: "postgres",
-     password: "postgres",
-     hostname: "localhost"]
+    Ecto.Repo.Supervisor.parse_url(
+      Application.get_env(:ecto, :pg_test_url) <> "/storage_mgt"
+    )
   end
 
   def wrong_user do
-    [database: "storage_mgt",
-     username: "randomuser",
-     password: "password1234",
-     hostname: "localhost"]
+    Keyword.merge correct_params,
+      [ username: "randomuser",
+        password: "password1234" ]
   end
 
   def drop_database do

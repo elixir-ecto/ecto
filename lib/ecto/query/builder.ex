@@ -1,6 +1,8 @@
 defmodule Ecto.Query.Builder do
   @moduledoc false
 
+  @distinct ~w(count)a
+
   alias Ecto.Query
 
   @typedoc """
@@ -113,8 +115,21 @@ defmodule Ecto.Query.Builder do
     do: Enum.map_reduce(list, params, &escape(&1, :any, &2, vars, env))
 
   # literals
-  def escape({:<<>>, _, _} = expr, type, params, vars, _env),
-    do: {literal(expr, type, vars), params}
+  def escape({:<<>>, _, args} = expr, type, params, vars, _env) do
+    valid? = Enum.all?(args, fn
+      {:::, _, [left, _]} -> is_integer(left) or is_binary(left)
+      left -> is_integer(left) or is_binary(left)
+    end)
+
+    unless valid? do
+      error! "`#{Macro.to_string(expr)}` is not a valid query expression. " <>
+             "Only literal binaries and strings are allowed, " <>
+             "dynamic values need to be explicitly interpolated in queries with ^"
+    end
+
+    {literal(expr, type, vars), params}
+  end
+
   def escape({:-, _, [number]}, type, params, vars, _env) when is_number(number),
     do: {literal(-number, type, vars), params}
   def escape(number, type, params, vars, _env) when is_number(number),
@@ -209,6 +224,12 @@ defmodule Ecto.Query.Builder do
   defp split_binary(<<?\\, ??, rest :: binary >>, consumed), do: split_binary(rest, consumed <> <<??>>)
   defp split_binary(<<first :: utf8, rest :: binary>>, consumed), do: split_binary(rest, consumed <> <<first>>)
 
+  defp escape_call({name, _, [arg, :distinct]}, type, params, vars, env) when name in @distinct do
+    {arg, params} = escape(arg, type, params, vars, env)
+    expr = {:{}, [], [name, [], [arg, :distinct]]}
+    {expr, params}
+  end
+
   defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
     expr = {:{}, [], [name, [], args]}
@@ -254,6 +275,7 @@ defmodule Ecto.Query.Builder do
     do: [{:raw, h1}]
 
   defp call_type(agg, 1)  when agg in ~w(max count sum min avg)a, do: {:any, :any}
+  defp call_type(agg, 2)  when agg in @distinct,                  do: {:any, :any}
   defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}
   defp call_type(like, 2) when like in ~w(like ilike)a,           do: {:string, :boolean}
   defp call_type(bool, 2) when bool in ~w(and or)a,               do: {:boolean, :boolean}
@@ -528,8 +550,9 @@ defmodule Ecto.Query.Builder do
   @doc """
   Applies a query at compilation time or at runtime.
 
-  This function is responsible to check if a given query is an
-  `Ecto.Query` struct at compile time or not and act accordingly.
+  This function is responsible for checking if a given query is an
+  `Ecto.Query` struct at compile time. If it is not it will act
+  accordingly.
 
   If a query is available, it invokes the `apply` function in the
   given `module`, otherwise, it delegates the call to runtime.

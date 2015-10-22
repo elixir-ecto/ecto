@@ -108,7 +108,7 @@ defmodule Ecto.Adapter do
   This callback must be called by the process that called
   `start_link/2`. Therefore, it is useful for scripts.
   """
-  defcallback stop(pid, timeout) :: :ok
+  defcallback stop(repo, pid, timeout) :: :ok
 
   @doc """
   Commands invoked to prepare a query for `all`, `update_all` and `delete_all`.

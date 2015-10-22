@@ -5,6 +5,11 @@ ExUnit.start
 Application.put_env(:ecto, :lock_for_update, "FOR UPDATE")
 Application.put_env(:ecto, :primary_key_type, :id)
 
+# Configure PG connection
+Application.put_env(:ecto, :pg_test_url,
+  "ecto://" <> (System.get_env("PG_URL") || "postgres:postgres@localhost")
+)
+
 # Load support files
 Code.require_file "../support/repo.exs", __DIR__
 Code.require_file "../support/models.exs", __DIR__
@@ -21,11 +26,19 @@ alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
   adapter: Ecto.Adapters.Postgres,
-  url: "ecto://postgres:postgres@localhost/ecto_test",
+  url: Application.get_env(:ecto, :pg_test_url) <> "/ecto_test",
   pool: Ecto.Adapters.SQL.Sandbox)
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
+
+  def create_prefix(prefix) do
+    "create schema #{prefix}"
+  end
+
+  def drop_prefix(prefix) do
+    "drop schema #{prefix}"
+  end
 end
 
 # Pool repo for transaction and lock tests
@@ -34,7 +47,7 @@ alias Ecto.Integration.PoolRepo
 Application.put_env(:ecto, PoolRepo,
   adapter: Ecto.Adapters.Postgres,
   pool: pool,
-  url: "ecto://postgres:postgres@localhost/ecto_test",
+  url: Application.get_env(:ecto, :pg_test_url) <> "/ecto_test",
   pool_size: 10)
 
 defmodule Ecto.Integration.PoolRepo do

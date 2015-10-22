@@ -81,7 +81,7 @@ defmodule Ecto.Repo do
       end
 
       def stop(pid, timeout \\ 5000) do
-        @adapter.stop(pid, timeout)
+        @adapter.stop(__MODULE__, pid, timeout)
       end
 
       def transaction(opts \\ [], fun) when is_list(opts) do
@@ -238,8 +238,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000)
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   """
@@ -250,8 +252,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   """
@@ -264,8 +268,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   ## Example
@@ -280,8 +286,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   ## Example
@@ -299,7 +307,7 @@ defmodule Ecto.Repo do
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+      `:infinity` will wait indefinitely (default: 5000);;
     * `:log` - When false, does not log the query
 
   """
@@ -311,7 +319,7 @@ defmodule Ecto.Repo do
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+      `:infinity` will wait indefinitely (default: 5000);;
     * `:log` - When false, does not log the query
 
   """
@@ -344,8 +352,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   ## Example
@@ -364,14 +374,19 @@ defmodule Ecto.Repo do
   and any returned result as second element. If the database
   does not support RETURNING in UPDATE statements or no
   return result was selected, the second element will be nil.
+  
+  See `Ecto.Query.update/3` for update operations that can be
+  performed on fields.
 
   This operation does not run the model `before_update` and
   `after_update` callbacks.
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   ## Examples
@@ -401,8 +416,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   ## Examples
@@ -433,8 +450,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   ## Example
@@ -478,8 +497,10 @@ defmodule Ecto.Repo do
       `update!/2` is a no-op. By setting this option to true, update
       callbacks will always be executed, even if there are no changes
       (including timestamps).
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   ## Example
@@ -509,8 +530,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log the query
 
   ## Example
@@ -561,8 +584,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log begin/commit/rollback queries
 
   ## Examples

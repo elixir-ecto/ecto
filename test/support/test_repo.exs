@@ -19,7 +19,7 @@ defmodule Ecto.TestAdapter do
     Task.start_link(fn -> :timer.sleep(:infinity) end)
   end
 
-  def stop(_, _) do
+  def stop(_, _, _) do
     :ok
   end
 

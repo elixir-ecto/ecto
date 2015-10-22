@@ -29,7 +29,11 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
   @doc false
   def run(args) do
     no_umbrella!("ecto.gen.repo")
-    repo = parse_repo(args)
+    [repo|other_repos] = parse_repo(args)
+
+    if other_repos != [] do
+      Mix.raise "Only specify one repo at a time when generating with ecto.gen.repo"
+    end
 
     config      = Mix.Project.config
     underscored = Mix.Utils.underscore(inspect(repo))

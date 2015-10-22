@@ -416,6 +416,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
+      {modifier, args} =
+        case args do
+         [rest, :distinct] -> {"DISTINCT ", [rest]}
+         _ -> {"", args}
+       end
+
       case handle_call(fun, length(args)) do
         {:binary_op, op} ->
           [left, right] = args
@@ -424,7 +430,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           <> op_to_binary(right, sources, query)
 
         {:fun, fun} ->
-          "#{fun}(" <> Enum.map_join(args, ", ", &expr(&1, sources, query)) <> ")"
+          "#{fun}(" <> modifier <> Enum.map_join(args, ", ", &expr(&1, sources, query)) <> ")"
       end
     end
 
@@ -699,13 +705,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     defp reference_expr(%Reference{} = ref, table, name),
       do: "CONSTRAINT #{reference_name(ref, table, name)} REFERENCES " <>
-          "#{quote_table(ref.prefix, ref.table)}(#{quote_name(ref.column)})" <>
+          "#{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
           reference_on_delete(ref.on_delete)
 
     defp constraint_expr(%Reference{} = ref, table, name),
       do: ", ADD CONSTRAINT #{reference_name(ref, table, name)} " <>
           "FOREIGN KEY (#{quote_name(name)}) " <>
-          "REFERENCES #{quote_table(ref.prefix, ref.table)}(#{quote_name(ref.column)})" <>
+          "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
           reference_on_delete(ref.on_delete)
 
     # A reference pointing to a serial column becomes integer in postgres

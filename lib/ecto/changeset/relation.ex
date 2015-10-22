@@ -184,8 +184,8 @@ defmodule Ecto.Changeset.Relation do
           |> put_new_action(:insert)}
   end
 
-  defp do_cast(relation, nil, struct) do
-    on_replace(relation, struct)
+  defp do_cast(relation, nil, current) do
+    on_replace(relation, current)
   end
 
   defp do_cast(%{related: model, on_cast: fun}, params, struct) do
@@ -299,6 +299,8 @@ defmodule Ecto.Changeset.Relation do
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
 
+  # map changes
+
   defp map_changes(list, pks, param_pks, fun, current) do
     map_changes(list, param_pks, fun, process_current(current, pks), [], true, true)
   end
@@ -319,7 +321,7 @@ defmodule Ecto.Changeset.Relation do
           {nil, current, [:insert]}
       end
 
-    case create_changeset!(map, model, fun, allowed_actions) do
+    case build_changeset!(map, model, fun, allowed_actions) do
       {:ok, changeset} ->
         map_changes(rest, pks, fun, current, [changeset | acc],
                     valid? && changeset.valid?, skip? && skip?(changeset))
@@ -337,7 +339,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp reduce_delete_changesets([model | rest], fun, acc, valid?, skip?) do
-    case create_changeset!(nil, model, fun, [:update, :delete]) do
+    case build_changeset!(nil, model, fun, [:update, :delete]) do
       {:ok, changeset} ->
         reduce_delete_changesets(rest, fun, [changeset | acc],
                                  valid? && changeset.valid?,
@@ -347,38 +349,39 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
+  # single changes
+
+  defp single_change(_relation, nil, _current_pks, _new_pks, fun, current) do
+    single_changeset!(nil, current, fun, [:update, :delete])
+  end
+
+  defp single_change(_relation, new, _current_pks, _new_pks, fun, nil) do
+    single_changeset!(new, nil, fun, [:insert])
+  end
+
   defp single_change(relation, new, current_pks, new_pks, fun, current) do
-    case single_change_action(relation, new, new_pks, current, current_pks) do
-      {current, allowed_actions} ->
-        case create_changeset!(new, current, fun, allowed_actions) do
-          {:ok, changeset} ->
-            {:ok, changeset, changeset.valid?, skip?(changeset)}
-          :error ->
-            :error
-        end
+    if get_pks(new, new_pks) == get_pks(current, current_pks) do
+      single_changeset!(new, current, fun, [:update, :delete])
+    else
+      case local_on_replace(relation, current) do
+        :ok -> single_changeset!(new, nil, fun, [:insert])
+        :error -> :error
+      end
+    end
+  end
+
+  # helpers
+
+  defp single_changeset!(new, current, fun, allowed_actions) do
+    case build_changeset!(new, current, fun, allowed_actions) do
+      {:ok, changeset} ->
+        {:ok, changeset, changeset.valid?, skip?(changeset)}
       :error ->
         :error
     end
   end
 
-  defp single_change_action(_relation, nil, _new_pks, current, _current_pks),
-    do: {current, [:update, :delete]}
-  defp single_change_action(_relation, _new, _new_pks, nil, _current_pks),
-    do: {nil, [:insert]}
-  defp single_change_action(relation, new, new_pks, current, current_pks) do
-    case local_on_replace(relation, current) do
-      :error ->
-        :error
-      _ ->
-        if get_pks(new, new_pks) == get_pks(current, current_pks) do
-          {current, [:update, :delete]}
-        else
-          {nil, [:insert]}
-        end
-    end
-  end
-
-  defp create_changeset!(new, current, fun, allowed_actions) do
+  defp build_changeset!(new, current, fun, allowed_actions) do
     case fun.(new, current) do
       {:ok, changeset} ->
         action = changeset.action

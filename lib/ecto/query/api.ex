@@ -107,6 +107,13 @@ defmodule Ecto.Query.API do
   def count(value), do: doc! [value]
 
   @doc """
+  Counts the distinct values in given entry.
+
+      from p in Post, select: count(p.id, :distinct)
+  """
+  def count(value, :distinct), do: doc! [value, :distinct]
+
+  @doc """
   Calculates the average for the given entry.
 
       from p in Payment, select: avg(p.value)

@@ -187,6 +187,26 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule PrefixMigration do
+    use Ecto.Migration
+
+    @prefix "ecto_prefix_test"
+
+    def up do
+      execute TestRepo.create_prefix(@prefix)
+      create table(:first, prefix: @prefix)
+      create table(:second, prefix: @prefix) do
+        add :first_id, references(:first)
+      end
+    end
+
+    def down do
+      drop table(:second, prefix: @prefix)
+      drop table(:first, prefix: @prefix)
+      execute TestRepo.drop_prefix(@prefix)
+    end
+  end
+
   defmodule NoSQLMigration do
     use Ecto.Migration
 
@@ -333,5 +353,11 @@ defmodule Ecto.Integration.MigrationTest do
   test "rename table" do
     assert :ok == up(TestRepo, 20150712120000, RenameMigration, log: false)
     assert :ok == down(TestRepo, 20150712120000, RenameMigration, log: false)
+  end
+
+  @tag :prefix
+  test "prefix" do
+    assert :ok == up(TestRepo, 20151012120000, PrefixMigration, log: false)
+    assert :ok == down(TestRepo, 20151012120000, PrefixMigration, log: false)
   end
 end

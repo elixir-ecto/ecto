@@ -3,6 +3,7 @@ defmodule Ecto.Pools.Poolboy.Worker do
 
   use GenServer
   use Behaviour
+  require Logger
   alias Ecto.Adapters.Connection
 
   @type modconn :: {module :: atom, conn :: pid}
@@ -36,16 +37,9 @@ defmodule Ecto.Pools.Poolboy.Worker do
     lazy?    = Keyword.get(opts, :lazy, true)
     shutdown = Keyword.get(opts, :shutdown, 5_000)
 
-    unless lazy? do
-      case Connection.connect(module, params) do
-        {:ok, conn} ->
-          conn = conn
-        _ ->
-          :ok
-      end
-    end
+    unless lazy?, do: GenServer.cast(self(), :connect)
 
-    {:ok, %{conn: conn, params: params, shutdown: shutdown, transaction: nil,
+    {:ok, %{conn: nil, params: params, shutdown: shutdown, transaction: nil,
             module: module}}
   end
 
@@ -67,9 +61,24 @@ defmodule Ecto.Pools.Poolboy.Worker do
     end
   end
 
+  ## Checkout/Open transaction when in transaction
+
+  def handle_call({:checkout, _} = checkout, from, %{transaction: {client, _}} = s) do
+    if Process.alive?(client) do
+      {:stop, :bad_checkout, s}
+    else
+      # poolboy got the :DOWN message and checked out this process to a new
+      # client before this process got the :DOWN from the old client
+      s = s
+        |> demonitor()
+        |> disconnect()
+      handle_call(checkout, from, s)
+    end
+  end
+
   ## Checkout
 
-  def handle_call({:checkout, :run}, _, s) do
+  def handle_call({:checkout, :run}, _, %{transaction: nil} = s) do
     {:reply, {:ok, modconn(s)}, s}
   end
 
@@ -78,18 +87,6 @@ defmodule Ecto.Pools.Poolboy.Worker do
   def handle_call({:checkout, :transaction}, from, %{transaction: nil} = s) do
     {pid, _} = from
     {:reply, {:ok, modconn(s)}, monitor(pid, s)}
-  end
-
-  def handle_call({:checkout, :transaction} = checkout, from, s) do
-    {client, _} = s.transaction
-    if Process.is_alive?(client) do
-      handle_call(checkout, from, demonitor(s))
-    else
-      s = s
-        |> demonitor()
-        |> disconnect()
-      handle_call(checkout, from, s)
-    end
   end
 
   ## Close transaction
@@ -101,6 +98,17 @@ defmodule Ecto.Pools.Poolboy.Worker do
 
   def handle_cast(:checkin, s) do
     {:noreply, demonitor(s)}
+  end
+
+  def handle_cast(:connect, %{conn: nil, transaction: nil} = s) do
+    %{module: module, params: params} = s
+    case Connection.connect(module, params) do
+      {:ok, conn} ->
+        {:noreply, %{s | conn: conn}}
+      {:error, error} ->
+        log_connect_error(error, s)
+        {:noreply, s}
+    end
   end
 
   ## Info
@@ -146,5 +154,23 @@ defmodule Ecto.Pools.Poolboy.Worker do
   defp disconnect(%{conn: conn, shutdown: shutdown} = s) do
     _ = conn && Connection.shutdown(conn, shutdown)
     %{s | conn: nil}
+  end
+
+  defp log_connect_error(error, %{module: module, params: params}) do
+    Logger.error(fn() ->
+      [inspect(module), " failed to connect with parameters ", inspect(params),
+       ?\n | inspect_error(error)]
+    end)
+  end
+
+  defp inspect_error({'EXIT', reason}) do
+    Exception.format_exit(reason)
+  end
+  defp inspect_error(reason) do
+    if Exception.exception?(reason) do
+      Exception.format_banner(:error, reason)
+    else
+      Exception.format_banner(:exit, reason)
+    end
   end
 end

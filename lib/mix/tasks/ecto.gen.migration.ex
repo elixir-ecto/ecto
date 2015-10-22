@@ -32,22 +32,24 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   @doc false
   def run(args) do
     no_umbrella!("ecto.gen.migration")
-    repo = parse_repo(args)
+    repos = parse_repo(args)
 
-    case OptionParser.parse(args) do
-      {_, [name], _} ->
-        ensure_repo(repo, args)
-        path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
-        file = Path.join(path, "#{timestamp}_#{underscore(name)}.exs")
-        create_directory path
-        create_file file, migration_template(mod: Module.concat([repo, Migrations, camelize(name)]))
+    Enum.each repos, fn repo ->
+      case OptionParser.parse(args) do
+        {_, [name], _} ->
+          ensure_repo(repo, args)
+          path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
+          file = Path.join(path, "#{timestamp}_#{underscore(name)}.exs")
+          create_directory path
+          create_file file, migration_template(mod: Module.concat([repo, Migrations, camelize(name)]))
 
-        if open?(file) && Mix.shell.yes?("Do you want to run this migration?") do
-          Mix.Task.run "ecto.migrate", [repo]
-        end
-      {_, _, _} ->
-        Mix.raise "expected ecto.gen.migration to receive the migration file name, " <>
-                  "got: #{inspect Enum.join(args, " ")}"
+          if open?(file) && Mix.shell.yes?("Do you want to run this migration?") do
+            Mix.Task.run "ecto.migrate", [repo]
+          end
+        {_, _, _} ->
+          Mix.raise "expected ecto.gen.migration to receive the migration file name, " <>
+                    "got: #{inspect Enum.join(args, " ")}"
+      end
     end
   end
 

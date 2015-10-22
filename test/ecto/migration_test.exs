@@ -215,13 +215,6 @@ defmodule Ecto.MigrationTest do
     assert index.prefix == :foo
   end
 
-  test "creates a reference with a prefix" do
-    assert references(:posts) ==
-           %Reference{table: :posts, column: :id, type: :serial, prefix: nil}
-    assert references(:posts, type: :uuid, column: :other, prefix: :foo) ==
-           %Reference{table: :posts, column: :other, type: :uuid, prefix: :foo}
-  end
-
   ## Reverse
   @moduletag direction: :backward
 

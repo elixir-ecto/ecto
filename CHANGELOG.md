@@ -15,6 +15,9 @@ Keep on reading for more general information about this release.
 ### Enhancements
 
 * Support lists in `Ecto.Changeset.validate_length/3`
+* Support `count(expr, :distinct)` in query expressions
+* Support prefixes in `table` and `index` in migrations
+* Allow multiple repos to be given to Mix tasks
 
 ### Bug fixes
 
