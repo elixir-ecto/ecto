@@ -256,6 +256,11 @@ defmodule Ecto.Integration.MigrationTest do
   import Ecto.Query, only: [from: 2]
   import Ecto.Migrator, only: [up: 4, down: 4]
 
+  setup do
+    Ecto.Pools.Ownership.ownership_checkout(TestRepo)
+    :ok
+  end
+
   test "create and drop table and indexes" do
     assert :ok == up(TestRepo, 20050906120000, CreateMigration, log: false)
     assert :ok == down(TestRepo, 20050906120000, CreateMigration, log: false)

@@ -538,10 +538,9 @@ defmodule Ecto.Adapters.SQL do
     timeout = Keyword.fetch!(opts, :timeout)
 
     transaction = fn
-      :opened, ref, {mod, _conn}, queue_time ->
-        mode = transaction_mode(pool_mod, pool, timeout)
+      :opened, ref, {mod, _conn}, mode, queue_time ->
         transaction(repo, ref, mod, mode, queue_time, timeout, opts, fun)
-      :already_open, ref, _, _ ->
+      :already_open, ref, _, _, _ ->
         {{:return, Pool.with_rollback(:already_open, ref, fun)}, nil}
     end
 
@@ -569,9 +568,6 @@ defmodule Ecto.Adapters.SQL do
     Pool.rollback(pool_mod, pool, value)
   end
 
-  defp transaction_mode(Sandbox, pool, timeout), do: Sandbox.mode(pool, timeout)
-  defp transaction_mode(_, _, _), do: :raw
-
   defp transaction(repo, ref, mod, mode, queue_time, timeout, opts, fun) do
     case begin(repo, mod, mode, queue_time, opts) do
       {{:ok, _}, entry} ->
@@ -597,10 +593,10 @@ defmodule Ecto.Adapters.SQL do
     query(repo, sql, [], queue_time, nil, opts)
   end
 
-  defp begin_sql(mod, :raw),     do: mod.begin_transaction
+  defp begin_sql(mod, :default), do: mod.begin_transaction
   defp begin_sql(mod, :sandbox), do: mod.savepoint "ecto_trans"
 
-  defp commit(repo, ref, mod, :raw, timeout, opts, result) do
+  defp commit(repo, ref, mod, :default, timeout, opts, result) do
     case query(repo, mod.commit, [], nil, nil, opts) do
       {{:ok, _}, entry} ->
         {result, entry}
@@ -630,7 +626,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp rollback_sql(mod, :raw), do: mod.rollback
+  defp rollback_sql(mod, :default), do: mod.rollback
   defp rollback_sql(mod, :sandbox) do
     mod.rollback_to_savepoint "ecto_trans"
   end

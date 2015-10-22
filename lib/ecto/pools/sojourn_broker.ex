@@ -44,6 +44,11 @@ defmodule Ecto.Pools.SojournBroker do
     Supervisor.start_link(children, sup_opts)
   end
 
+  def open_transaction(_pool, {worker, ref}, _timeout) do
+    Worker.open_transaction(worker, ref)
+    :ok
+  end
+
   @doc false
   def checkout(pool, timeout) do
     ask(pool, :run, timeout)
@@ -55,13 +60,13 @@ defmodule Ecto.Pools.SojournBroker do
   end
 
   @doc false
-  def open_transaction(pool, timeout) do
+  def checkout_transaction(pool, timeout) do
     ask(pool, :transaction, timeout)
   end
 
   @doc false
-  def close_transaction(_, {worker, ref}, _) do
-    Worker.done(worker, ref)
+  def close_transaction(_, _, _) do
+    :ok
   end
 
   @doc false
@@ -74,9 +79,9 @@ defmodule Ecto.Pools.SojournBroker do
   defp ask(pool, fun, timeout) do
     case :sbroker.ask(pool, {fun, self()}) do
       {:go, ref, {worker, :lazy}, _, queue_time} ->
-          lazy_connect(worker, ref, queue_time, timeout)
+        lazy_connect(worker, ref, queue_time, timeout)
       {:go, ref, {worker, mod_conn}, _, queue_time} ->
-          {:ok, {worker, ref}, mod_conn, queue_time}
+        {:ok, {worker, ref}, mod_conn, :default, queue_time}
       {:drop, _} ->
         {:error, :noconnect}
     end
@@ -109,7 +114,7 @@ defmodule Ecto.Pools.SojournBroker do
         :erlang.raise(class, reason, stack)
     else
       {connect_time, {:ok, mod_conn}} ->
-        {:ok, {worker, ref}, mod_conn, queue_time + connect_time}
+        {:ok, {worker, ref}, mod_conn, :default, queue_time + connect_time}
       {_, {:error, :noconnect} = error} ->
         Worker.done(worker, ref)
         error

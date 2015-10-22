@@ -113,9 +113,7 @@ defmodule Ecto.Repo.Supervisor do
       |> Keyword.put_new(:pool, default_pool)
       |> Keyword.put_new(:pool_name, Module.concat(name, Pool))
 
-    children = [
-      supervisor(adapter, [repo, opts])
-    ]
+    children = [supervisor(adapter, [repo, opts])]
 
     if Keyword.get(opts, :query_cache_owner, repo == repo.__query_cache__) do
       :ets.new(repo.__query_cache__, [:set, :public, :named_table, read_concurrency: true])

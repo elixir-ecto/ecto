@@ -4,7 +4,7 @@ defmodule Ecto.Pool.TransactionTest do
   alias Ecto.Pool
   alias Ecto.TestPool
 
-  @timeout :infinity
+  @timeout 5_000
 
   setup context do
     case = context[:case]
@@ -17,7 +17,7 @@ defmodule Ecto.Pool.TransactionTest do
     {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
     conn1 =
-      TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, queue_time) ->
+      TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, _mode, queue_time) ->
         assert is_integer(queue_time)
         ref = Process.monitor(conn1)
         Process.exit(conn1, :kill)
@@ -25,7 +25,7 @@ defmodule Ecto.Pool.TransactionTest do
         conn1
       end)
 
-    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn2}, queue_time) ->
+    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn2}, _mode, queue_time) ->
       assert is_integer(queue_time)
       assert conn1 != conn2
       refute Process.alive?(conn1)
@@ -38,7 +38,7 @@ defmodule Ecto.Pool.TransactionTest do
     {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
     TestPool.transaction(pool, @timeout,
-      fn(:opened, ref, {_mod, conn1}, queue_time) ->
+      fn(:opened, ref, {_mod, conn1}, _mode, queue_time) ->
         assert is_integer(queue_time)
         monitor = Process.monitor(conn1)
         assert Pool.break(ref, @timeout) === :ok
@@ -54,7 +54,7 @@ defmodule Ecto.Pool.TransactionTest do
     _ = Process.flag(:trap_exit, true)
     parent = self()
     {:ok, task} = Task.start_link(fn ->
-      TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, _) ->
+      TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, _, _) ->
         send(parent, {:go, self(), conn1})
         :timer.sleep(:infinity)
       end)
@@ -64,7 +64,7 @@ defmodule Ecto.Pool.TransactionTest do
     Process.exit(task, :kill)
     assert_receive {:EXIT, ^task, :killed}, @timeout
 
-    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn2}, _) ->
+    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn2}, _, _) ->
       assert conn1 != conn2
       refute Process.alive?(conn1)
       assert Process.alive?(conn2)
@@ -76,14 +76,14 @@ defmodule Ecto.Pool.TransactionTest do
     {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
     task = Task.async(fn ->
-      TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, _) ->
+      TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, _, _) ->
         conn1
       end)
     end)
 
     conn1 = Task.await(task, @timeout)
 
-    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn2}, _) ->
+    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn2}, _, _) ->
       assert conn1 == conn2
       assert Process.alive?(conn1)
     end)
@@ -93,9 +93,9 @@ defmodule Ecto.Pool.TransactionTest do
     pool = context[:pool]
     {:ok, _} = TestPool.start_link([lazy: false, pool_name: pool])
 
-    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, queue_time) ->
+    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {_mod, conn1}, _mode, queue_time) ->
       assert is_integer(queue_time)
-      TestPool.transaction(pool, @timeout, fn(:already_open, _ref, {_mod, conn2}, nil) ->
+      TestPool.transaction(pool, @timeout, fn(:already_open, _ref, {_mod, conn2}, _mode, nil) ->
         assert conn1 == conn2
       end)
     end)
@@ -105,7 +105,7 @@ defmodule Ecto.Pool.TransactionTest do
     pool = context[:pool]
     {:ok, _} = TestPool.start_link([pool_name: pool])
 
-    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
+    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _, _) ->
       mon = Process.monitor(conn)
       TestPool.break(ref, @timeout)
       assert_receive {:DOWN, ^mon, _, _, :shutdown}
@@ -116,7 +116,7 @@ defmodule Ecto.Pool.TransactionTest do
     pool = context[:pool]
     {:ok, _} = TestPool.start_link([pool_name: pool, shutdown: :brutal_kill])
 
-    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
+    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _, _) ->
       mon = Process.monitor(conn)
       TestPool.break(ref, @timeout)
       assert_receive {:DOWN, ^mon, _, _, :killed}
@@ -127,7 +127,7 @@ defmodule Ecto.Pool.TransactionTest do
     pool = context[:pool]
     {:ok, _} = TestPool.start_link([pool_name: pool, shutdown: 1, trap_exit: true])
 
-    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _) ->
+    TestPool.transaction(pool, @timeout, fn(_, ref, {_mod, conn}, _, _) ->
       mon = Process.monitor(conn)
       :erlang.suspend_process(conn)
       TestPool.break(ref, @timeout)

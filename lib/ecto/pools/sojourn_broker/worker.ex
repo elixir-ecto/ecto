@@ -30,6 +30,10 @@ defmodule Ecto.Pools.SojournBroker.Worker do
     GenServer.cast(worker, {:done, ref})
   end
 
+  def open_transaction(worker, ref) do
+    GenServer.cast(worker, {:open_transaction, ref})
+  end
+
   ## Callbacks
 
   def init({module, broker, opts}) do
@@ -99,6 +103,13 @@ defmodule Ecto.Pools.SojournBroker.Worker do
     s = s
       |> demonitor()
       |> ask()
+    {:noreply, s}
+  end
+
+  ## Open transaction
+
+  def handle_cast({:open_transaction, ref}, %{ref: ref} = s) do
+    s = %{s | fun: :transaction}
     {:noreply, s}
   end
 

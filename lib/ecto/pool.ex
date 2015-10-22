@@ -28,6 +28,14 @@ defmodule Ecto.Pool do
   """
   @type queue_time :: non_neg_integer
 
+  @type worker :: any
+
+  @type conn :: {module, pid}
+
+  @type mode :: :normal | :sandbox
+
+  defcallback open_transaction(t, worker, timeout) :: :ok
+
   @doc """
   Start a pool of connections.
 
@@ -64,8 +72,8 @@ defmodule Ecto.Pool do
   `{:error, :noconnect}` if a connection is not available.
   """
   defcallback checkout(t, timeout) ::
-    {:ok, worker, conn, queue_time} |
-    {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
+    {:ok, worker, conn, mode, queue_time} |
+    {:error, :noproc | :noconnect}
 
   @doc """
   Checkin a worker/connection to the pool.
@@ -73,7 +81,7 @@ defmodule Ecto.Pool do
   Called when the top level `run/4` finishes, if `break/2` was not called
   inside the fun.
   """
-  defcallback checkin(t, worker, timeout) :: :ok when worker: any
+  defcallback checkin(t, worker, timeout) :: :ok
 
   @doc """
   Break the current transaction or run.
@@ -81,7 +89,7 @@ defmodule Ecto.Pool do
   Called when the function has failed and the connection should no longer be
   available to to the calling process.
   """
-  defcallback break(t, worker, timeout) :: :ok when worker: any
+  defcallback break(t, worker, timeout) :: :ok
 
   @doc """
   Open a transaction with a connection from the pool.
@@ -97,9 +105,9 @@ defmodule Ecto.Pool do
   Returns `{:error, :noproc}` if the pool is not alive and
   `{:error, :noconnect}` if a connection is not available.
   """
-  defcallback open_transaction(t, timeout) ::
+  defcallback checkout_transaction(t, timeout) ::
     {:ok, worker, conn, queue_time} |
-    {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
+    {:error, :noproc | :noconnect}
 
   @doc """
   Close the transaction and signal to the worker the work with the connection
@@ -108,7 +116,7 @@ defmodule Ecto.Pool do
   Called once the transaction at `depth` `1` is finished, if the transaction
   is not broken with `break/2`.
   """
-  defcallback close_transaction(t, worker, timeout) :: :ok when worker: any
+  defcallback close_transaction(t, worker, timeout) :: :ok
 
   @doc """
   Runs a fun using a connection from a pool.
@@ -154,7 +162,7 @@ defmodule Ecto.Pool do
 
   defp do_run(pool_mod, pool, timeout, fun) do
     case checkout(pool_mod, pool, timeout) do
-      {:ok, worker, conn, time} ->
+      {:ok, worker, conn, _mode, time} ->
         try do
           {:ok, fun.(conn, time)}
         after
@@ -167,7 +175,7 @@ defmodule Ecto.Pool do
 
   defp checkout(pool_mod, pool, timeout) do
     case pool_mod.checkout(pool, timeout) do
-      {:ok, _worker, _conn, _time} = ok ->
+      {:ok, _worker, _conn, _mode, _time} = ok ->
         ok
       {:error, reason} = error when reason in [:noproc, :noconnect] ->
         error
@@ -224,24 +232,24 @@ defmodule Ecto.Pool do
     ref = {__MODULE__, pool_mod, pool}
     case Process.get(ref) do
       nil ->
-        case pool_mod.open_transaction(pool, timeout) do
-          {:ok, worker, conn, time} ->
-            outer_transaction(ref, worker, conn, time, timeout, fun)
+        case pool_mod.checkout_transaction(pool, timeout) do
+          {:ok, worker, conn, mode, time} ->
+            outer_transaction(ref, worker, conn, mode, time, timeout, fun)
           {:error, reason} = error when reason in [:noproc, :noconnect] ->
             error
           {:error, err} ->
             raise err
         end
-      %{conn: conn} ->
-        inner_transaction(ref, conn, fun)
+      %{conn: conn, mode: mode} ->
+        inner_transaction(ref, conn, mode, fun)
     end
   end
 
-  defp outer_transaction(ref, worker, conn, time, timeout, fun) do
-    Process.put(ref, %{worker: worker, conn: conn, tainted: false})
+  defp outer_transaction(ref, worker, conn, mode, time, timeout, fun) do
+    Process.put(ref, %{worker: worker, conn: conn, tainted: false, mode: mode})
 
     try do
-      fun.(:opened, ref, conn, time)
+      fun.(:opened, ref, conn, mode, time)
     catch
       # If any error leaked, it should be a bug in Ecto.
       kind, reason ->
@@ -257,9 +265,9 @@ defmodule Ecto.Pool do
     end
   end
 
-  defp inner_transaction(ref, conn, fun) do
+  defp inner_transaction(ref, conn, mode, fun) do
     try do
-      fun.(:already_open, ref, conn, nil)
+      fun.(:already_open, ref, conn, mode, nil)
     catch
       kind, reason ->
         stack = System.stacktrace()
@@ -269,8 +277,11 @@ defmodule Ecto.Pool do
   end
 
   defp close_transaction({__MODULE__, pool_mod, pool}, %{conn: _, worker: worker}, timeout) do
-    pool_mod.close_transaction(pool, worker, timeout)
-    :ok
+    try do
+      pool_mod.close_transaction(pool, worker, timeout)
+    after
+      pool_mod.checkin(pool, worker, timeout)
+    end
   end
 
   defp close_transaction(_, %{}, _) do

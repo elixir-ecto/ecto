@@ -20,7 +20,7 @@ defmodule Ecto.Pools.Poolboy.WorkerTest do
     refute :sys.get_state(worker).conn
     :poolboy.checkin(pool, worker)
 
-    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {Connection, conn}, _) ->
+    TestPool.transaction(pool, @timeout, fn(:opened, _ref, {Connection, conn}, _, _) ->
       assert Process.alive?(conn)
     end)
   end
