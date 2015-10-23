@@ -180,7 +180,9 @@ defmodule Ecto.MigrationTest do
     assert result == table(:new_posts)
   end
 
-  test "forward: creates a table with prefix" do
+  #prefix
+
+  test "forward: creates a table with prefix from migration" do
     create(table(:posts, prefix: :foo))
     flush
 
@@ -189,14 +191,54 @@ defmodule Ecto.MigrationTest do
     assert table.prefix == :foo
   end
 
-  test "forward: drops a table with prefix" do
+  test "forward: creates a table with prefix from manager" do
+    Manager.put_prefix(self(), :foo)
+
+    create(table(:posts))
+    flush
+
+    {_, table, _} = last_command()
+
+    assert table.prefix == :foo
+  end
+
+  test "forward: creates a table with prefix from manager matching prefix from migration" do
+    Manager.put_prefix(self(), :foo)
+
+    create(table(:posts, prefix: :foo))
+    flush
+
+    {_, table, _} = last_command()
+
+    assert table.prefix == :foo
+  end
+
+  test "forward: raise error when prefixes don't match" do
+    Manager.put_prefix(self(), :bar)
+
+    assert_raise Ecto.MigrationError, ~r/prefixes given as migration options must match global migrator prefix/, fn ->
+      create(table(:posts, prefix: :foo))
+      flush
+    end
+  end
+
+  test "forward: drops a table with prefix from migration" do
     drop(table(:posts, prefix: :foo))
     flush
     {:drop, table} = last_command()
     assert table.prefix == :foo
   end
 
-  test "forward: rename column on table with index" do
+  test "forward: drops a table with prefix from manager" do
+    Manager.put_prefix(self(), :foo)
+
+    drop(table(:posts))
+    flush
+    {:drop, table} = last_command()
+    assert table.prefix == :foo
+  end
+
+  test "forward: rename column on table with index prefixed from migration" do
     rename(table(:posts, prefix: :foo), :given_name, to: :first_name)
     flush
 
@@ -205,15 +247,44 @@ defmodule Ecto.MigrationTest do
     assert new_name == :first_name
   end
 
-  test "forward: creates an index with prefix" do
+  test "forward: rename column on table with index prefixed from manager" do
+    Manager.put_prefix(self(), :foo)
+
+    rename(table(:posts), :given_name, to: :first_name)
+    flush
+
+    {_, table, _, new_name} = last_command()
+    assert table.prefix == :foo
+    assert new_name == :first_name
+  end
+
+  test "forward: creates an index with prefix from migration" do
     create index(:posts, [:title], prefix: :foo)
     flush
     {_, index} = last_command()
     assert index.prefix == :foo
   end
 
-  test "forward: drops an index with a prefix" do
+  test "forward: creates an index with prefix from manager" do
+    Manager.put_prefix(self(), :foo)
+
+    create index(:posts, [:title])
+    flush
+    {_, index} = last_command()
+    assert index.prefix == :foo
+  end
+
+  test "forward: drops an index with a prefix from migration" do
     drop index(:posts, [:title], prefix: :foo)
+    flush
+    {_, index} = last_command()
+    assert index.prefix == :foo
+  end
+
+  test "forward: drops an index with a prefix from manager" do
+    Manager.put_prefix(self(), :foo)
+
+    drop index(:posts, [:title])
     flush
     {_, index} = last_command()
     assert index.prefix == :foo
@@ -294,6 +365,21 @@ defmodule Ecto.MigrationTest do
     rename table(:posts), to: table(:new_posts)
     flush
     assert {:rename, %Table{name: :new_posts}, %Table{name: :posts}} = last_command()
+  end
+
+  #manager self management
+  test "manager agent stops when no more migrations" do
+    pid = Process.whereis(Manager)
+    Manager.drop_migration(self())
+    assert Process.alive?(pid) == false
+  end
+
+  test "manager agent stays alive when there are more migrations" do
+    pid = Process.whereis(Manager)
+    Manager.put_migration(12345, nil)
+    Manager.drop_migration(self())
+    
+    assert Process.alive?(pid) == true
   end
 
   defp last_command(), do: Process.get(:last_command)
