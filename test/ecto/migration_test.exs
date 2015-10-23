@@ -11,9 +11,13 @@ defmodule Ecto.MigrationTest do
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference
   alias Ecto.Migration.Runner
+  alias Ecto.Migration.Manager
 
   setup meta do
-    {:ok, _} = Runner.start_link(TestRepo, meta[:direction] || :forward, :up, false)
+    ensure_manager_started()
+    Manager.put_migration(self(), nil)
+    {:ok, runner} = Runner.start_link(TestRepo, meta[:direction] || :forward, :up, false)
+    Manager.put_runner(self(), runner)
 
     on_exit fn ->
       try do
@@ -67,10 +71,10 @@ defmodule Ecto.MigrationTest do
 
   test "flush clears out commands" do
     execute "TEST"
-    commands = Agent.get(Runner, & &1.commands)
+    commands = Agent.get(runner, & &1.commands)
     assert commands == ["TEST"]
     flush
-    commands = Agent.get(Runner, & &1.commands)
+    commands = Agent.get(runner, & &1.commands)
     assert commands == []
   end
 
@@ -293,4 +297,16 @@ defmodule Ecto.MigrationTest do
   end
 
   defp last_command(), do: Process.get(:last_command)
+
+  defp runner do
+    Manager.get_runner(self())
+  end
+
+  defp ensure_manager_started do
+    case Manager.start_link do
+      {:ok, _} -> nil
+      {:error, {:already_started, _}} -> nil
+      _ -> raise Ecto.MigrationError, message: "unable to start migration manager"
+    end
+  end
 end
