@@ -109,12 +109,12 @@ defmodule Ecto.Adapters.MySQL do
     extra = ""
 
     if collation = Keyword.get(opts, :collation) do
-      extra =  extra <> " DEFAULT COLLATE = #{collation}"
+      extra =  extra <> " DEFAULT COLLATE = " <> collation
     end
 
     {output, status} =
       run_with_mysql opts, "CREATE DATABASE `" <> database <>
-                           "` DEFAULT CHARACTER SET = #{charset} " <> extra
+                           "` DEFAULT CHARACTER SET = " <> charset <> extra
 
     cond do
       status == 0 -> :ok
