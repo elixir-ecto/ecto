@@ -89,7 +89,7 @@ defmodule Ecto.MigratorTest do
 
     assert output =~ "== Running Ecto.MigratorTest.ChangeMigration.change/0 backward"
     assert output =~ "drop table posts"
-    assert output =~ "drop index if exists posts_title_index"
+    assert output =~ "drop index posts_title_index"
     assert output =~ ~r"== Migrated in \d.\ds"
 
     output = capture_log fn ->
@@ -107,7 +107,7 @@ defmodule Ecto.MigratorTest do
 
     assert output =~ "== Running Ecto.MigratorTest.ChangeMigrationPrefix.change/0 backward"
     assert output =~ "drop table foo.comments"
-    assert output =~ "drop index if exists foo.posts_title_index"
+    assert output =~ "drop index foo.posts_title_index"
     assert output =~ ~r"== Migrated in \d.\ds"
 
     output = capture_log fn ->

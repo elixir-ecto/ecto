@@ -277,7 +277,7 @@ defmodule Ecto.MigrationTest do
   test "backward: creates an index" do
     create index(:posts, [:title])
     flush
-    assert {:drop_if_exists, %Index{}} = last_command()
+    assert {:drop, %Index{}} = last_command()
   end
 
   test "backward: drops an index" do
