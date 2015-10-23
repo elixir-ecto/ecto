@@ -703,4 +703,13 @@ defmodule Ecto.Integration.RepoTest do
     assert [3] == Post |> select([p], count(p.title)) |> TestRepo.all
     assert [2] == Post |> select([p], count(p.title, :distinct)) |> TestRepo.all
   end
+
+  test "keyword where" do
+    post1 = TestRepo.insert!(%Post{text: "x", title: "hello"  })
+    post2 = TestRepo.insert!(%Post{text: "y", title: "goodbye"})
+
+    assert [post1, post2] == Post |> where([], []) |> TestRepo.all
+    assert [post1]        == Post |> where([], [title: "hello"]) |> TestRepo.all
+    assert [post1]        == Post |> where([], [title: "hello", id: ^post1.id]) |> TestRepo.all
+  end
 end
