@@ -13,7 +13,7 @@ defmodule Ecto.Query.Builder.Filter do
   @spec build(:where | :having, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(kind, query, binding, expr, env) do
     binding        = Builder.escape_binding(binding)
-    {expr, params} = escape(expr, binding, env)
+    {expr, params} = escape(kind, expr, binding, env)
     params         = Builder.escape_params(params)
 
     expr = quote do: %Ecto.Query.QueryExpr{
@@ -28,6 +28,10 @@ defmodule Ecto.Query.Builder.Filter do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, :where | :having, term) :: Ecto.Query.t
+  def apply(query, _, %{expr: true}) do
+    query
+  end
+
   def apply(query, :where, expr) do
     query = Ecto.Queryable.to_query(query)
     %{query | wheres: query.wheres ++ [expr]}
@@ -45,23 +49,28 @@ defmodule Ecto.Query.Builder.Filter do
   or a keyword list of field names and values. In a keyword
   list multiple key value pairs will be joined with "and".
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
-  def escape([], vars, env) do
-    {[], %{}}
+  @spec escape(:where | :having, Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  def escape(_kind, [], _vars, _env) do
+    {true, %{}}
   end
 
-  def escape(expr, vars, env) when is_list(expr) do
+  def escape(kind, expr, vars, env) when is_list(expr) do
     {parts, params} =
-      Enum.map_reduce(expr, %{}, fn {field, value}, acc ->
-        {value, params} = Builder.escape(value, {0, field}, acc, vars, env)
-        {[:==, [], [to_field(field), value]], params}
+      Enum.map_reduce(expr, %{}, fn
+        {field, value}, acc when is_atom(field) ->
+          {value, params} = Builder.escape(value, {0, field}, acc, vars, env)
+          {{:{}, [], [:==, [], [to_field(field), value]]}, params}
+        _, _acc ->
+          Builder.error! "expected a keyword list at compile time in #{kind}, " <>
+                         "got: `#{Macro.to_string expr}`. If you would like to " <>
+                         "pass a list dynamically, please interpolate the whole list with ^"
       end)
 
-    expr = Enum.reduce parts, &[:and, [], [{:{}, [], &1}, {:{}, [], &2}]]
-    {{:{}, [], expr}, params}
+    expr = Enum.reduce parts, &{:{}, [], [:and, [], [&2, &1]]}
+    {expr, params}
   end
 
-  def escape(expr, vars, env) do
+  def escape(_kind, expr, vars, env) do
     Builder.escape(expr, :boolean, %{}, vars, env)
   end
 
