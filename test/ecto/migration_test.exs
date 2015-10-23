@@ -14,10 +14,8 @@ defmodule Ecto.MigrationTest do
   alias Ecto.Migration.Manager
 
   setup meta do
-    ensure_manager_started()
-    Manager.put_migration(self(), nil)
-    {:ok, runner} = Runner.start_link(TestRepo, meta[:direction] || :forward, :up, false)
-    Manager.put_runner(self(), runner)
+    {:ok, runner} = Runner.start_link(TestRepo, meta[:direction] || :forward, :up, false, nil)
+    Manager.put_migration(self(), runner)
 
     on_exit fn ->
       try do
@@ -192,7 +190,9 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: creates a table with prefix from manager" do
-    Manager.put_prefix(self(), :foo)
+    Runner.stop()
+    {:ok, runner} = Runner.start_link(TestRepo, :forward, :up, false, :foo)
+    Manager.put_migration(self(), runner)
 
     create(table(:posts))
     flush
@@ -203,7 +203,9 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: creates a table with prefix from manager matching prefix from migration" do
-    Manager.put_prefix(self(), :foo)
+    Runner.stop()
+    {:ok, runner} = Runner.start_link(TestRepo, :forward, :up, false, :foo)
+    Manager.put_migration(self(), runner)
 
     create(table(:posts, prefix: :foo))
     flush
@@ -214,7 +216,9 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: raise error when prefixes don't match" do
-    Manager.put_prefix(self(), :bar)
+    Runner.stop()
+    {:ok, runner} = Runner.start_link(TestRepo, :forward, :up, false, :bar)
+    Manager.put_migration(self(), runner)
 
     assert_raise Ecto.MigrationError, ~r/prefixes given as migration options must match global migrator prefix/, fn ->
       create(table(:posts, prefix: :foo))
@@ -230,7 +234,9 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: drops a table with prefix from manager" do
-    Manager.put_prefix(self(), :foo)
+    Runner.stop()
+    {:ok, runner} = Runner.start_link(TestRepo, :forward, :up, false, :foo)
+    Manager.put_migration(self(), runner)
 
     drop(table(:posts))
     flush
@@ -248,7 +254,9 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: rename column on table with index prefixed from manager" do
-    Manager.put_prefix(self(), :foo)
+    Runner.stop()
+    {:ok, runner} = Runner.start_link(TestRepo, :forward, :up, false, :foo)
+    Manager.put_migration(self(), runner)
 
     rename(table(:posts), :given_name, to: :first_name)
     flush
@@ -266,7 +274,9 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: creates an index with prefix from manager" do
-    Manager.put_prefix(self(), :foo)
+    Runner.stop()
+    {:ok, runner} = Runner.start_link(TestRepo, :forward, :up, false, :foo)
+    Manager.put_migration(self(), runner)
 
     create index(:posts, [:title])
     flush
@@ -282,7 +292,9 @@ defmodule Ecto.MigrationTest do
   end
 
   test "forward: drops an index with a prefix from manager" do
-    Manager.put_prefix(self(), :foo)
+    Runner.stop()
+    {:ok, runner} = Runner.start_link(TestRepo, :forward, :up, false, :foo)
+    Manager.put_migration(self(), runner)
 
     drop index(:posts, [:title])
     flush
@@ -367,32 +379,9 @@ defmodule Ecto.MigrationTest do
     assert {:rename, %Table{name: :new_posts}, %Table{name: :posts}} = last_command()
   end
 
-  #manager self management
-  test "manager agent stops when no more migrations" do
-    pid = Process.whereis(Manager)
-    Manager.drop_migration(self())
-    assert Process.alive?(pid) == false
-  end
-
-  test "manager agent stays alive when there are more migrations" do
-    pid = Process.whereis(Manager)
-    Manager.put_migration(12345, nil)
-    Manager.drop_migration(self())
-    
-    assert Process.alive?(pid) == true
-  end
-
   defp last_command(), do: Process.get(:last_command)
 
   defp runner do
     Manager.get_runner(self())
-  end
-
-  defp ensure_manager_started do
-    case Manager.start_link do
-      {:ok, _} -> nil
-      {:error, {:already_started, _}} -> nil
-      _ -> raise Ecto.MigrationError, message: "unable to start migration manager"
-    end
   end
 end

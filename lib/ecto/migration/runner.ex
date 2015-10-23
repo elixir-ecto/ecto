@@ -17,12 +17,10 @@ defmodule Ecto.Migration.Runner do
   """
   def run(repo, module, direction, operation, migrator_direction, opts) do
     level = Keyword.get(opts, :log, :info)
-    ensure_manager_started()
-    Manager.put_migration(self(), Keyword.get(opts, :prefix, nil))
+
+    {:ok, runner} = start_link(repo, direction, migrator_direction, level, opts[:prefix])
     
-    {:ok, runner} = start_link(repo, direction, migrator_direction, level)
-    
-    Manager.put_runner(self(), runner)
+    Manager.put_migration(self(), runner)
 
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
     {time1, _} = :timer.tc(module, operation, [])
@@ -35,10 +33,10 @@ defmodule Ecto.Migration.Runner do
   @doc """
   Starts the runner for the specified repo.
   """
-  def start_link(repo, direction, migrator_direction, level) do
+  def start_link(repo, direction, migrator_direction, level, prefix) do
     Agent.start_link(fn ->
       %{direction: direction, repo: repo, migrator_direction: migrator_direction,
-        command: nil, subcommands: [], level: level, commands: []}
+        command: nil, subcommands: [], level: level, prefix: prefix, commands: []}
     end)
   end
 
@@ -61,6 +59,13 @@ defmodule Ecto.Migration.Runner do
   """
   def migrator_direction do
     Agent.get(runner, & &1.migrator_direction)
+  end
+
+  @doc """
+  Gets the prefix for this migration
+  """
+  def prefix do
+    Agent.get(runner, & &1.prefix)
   end
 
   @doc """
@@ -180,14 +185,6 @@ defmodule Ecto.Migration.Runner do
   defp table_reverse(_), do: false
 
   ## Helpers
-
-  defp ensure_manager_started do
-    case Manager.start_link do
-      {:ok, _} -> nil
-      {:error, {:already_started, _}} -> nil
-      _ -> raise Ecto.MigrationError, message: "unable to start migration manager"
-    end
-  end
 
   defp runner do
     Manager.get_runner(self())

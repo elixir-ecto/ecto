@@ -169,7 +169,6 @@ defmodule Ecto.Migration do
   end
 
   alias Ecto.Migration.Runner
-  alias Ecto.Migration.Manager
 
   @doc false
   defmacro __using__(_) do
@@ -661,11 +660,11 @@ defmodule Ecto.Migration do
   end
 
   def prefix(opts_prefix) when is_nil(opts_prefix) do
-    Manager.get_prefix(self)
+    Runner.prefix()
   end
 
   def prefix(opts_prefix) do
-    case {Manager.get_prefix(self), Manager.get_prefix(self) == opts_prefix} do
+    case {Runner.prefix(), Runner.prefix() == opts_prefix} do
       {nil, _} -> opts_prefix
       {prefix, true} -> prefix
       {_, false} -> raise Ecto.MigrationError, 
