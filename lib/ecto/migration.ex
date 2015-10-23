@@ -247,7 +247,7 @@ defmodule Ecto.Migration do
   defmacro alter(object, do: block) do
     quote do
       table = %Table{} = unquote(object)
-      Runner.start_command({:alter, table})
+      Runner.start_command({:alter, %{table | prefix: prefix(table.prefix)}})
       unquote(block)
       Runner.end_command
     end
