@@ -1252,7 +1252,9 @@ defmodule Ecto.Changeset do
 
   Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
   email already exists, it will be converted into an error and
-  `{:error, changeset}` returned by the repository.
+  `{:error, changeset}` returned by the repository. Note that the error
+  will occur only after hitting the database so it will not be visible
+  until all other validations pass.
 
   ## Options
 
