@@ -387,4 +387,9 @@ defmodule Ecto do
   This will create a new file inside `priv/repo/migrations` with the `up` and
   `down` functions. Check `Ecto.Migration` for more information.
   """
+  use Application
+
+  def start(_type, _args) do
+    Ecto.Migration.Manager.Supervisor.start_link()
+  end
 end

@@ -31,10 +31,10 @@ defmodule Ecto.Migrator do
   This function ensures the migration table exists
   if no table has been defined yet.
   """
-  @spec migrated_versions(Ecto.Repo.t) :: [integer]
-  def migrated_versions(repo) do
-    SchemaMigration.ensure_schema_migrations_table!(repo)
-    SchemaMigration.migrated_versions(repo)
+  @spec migrated_versions(Ecto.Repo.t, Keyword.t) :: [integer]
+  def migrated_versions(repo, opts) do
+    SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
+    SchemaMigration.migrated_versions(repo, opts[:prefix])
   end
 
   @doc """
@@ -47,7 +47,7 @@ defmodule Ecto.Migrator do
   """
   @spec up(Ecto.Repo.t, integer, Module.t, Keyword.t) :: :ok | :already_up | no_return
   def up(repo, version, module, opts \\ []) do
-    versions = migrated_versions(repo)
+    versions = migrated_versions(repo, opts)
 
     if version in versions do
       :already_up
@@ -62,7 +62,7 @@ defmodule Ecto.Migrator do
       attempt(repo, module, :forward, :up, :up, opts)
         || attempt(repo, module, :forward, :change, :up, opts)
         || raise Ecto.MigrationError, message: "#{inspect module} does not implement a `up/0` or `change/0` function"
-      SchemaMigration.up(repo, version)
+      SchemaMigration.up(repo, version, opts[:prefix])
     end
   end
 
@@ -77,7 +77,7 @@ defmodule Ecto.Migrator do
   """
   @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :already_down | no_return
   def down(repo, version, module, opts \\ []) do
-    versions = migrated_versions(repo)
+    versions = migrated_versions(repo, opts)
 
     if version in versions do
       do_down(repo, version, module, opts)
@@ -92,7 +92,7 @@ defmodule Ecto.Migrator do
       attempt(repo, module, :forward, :down, :down, opts)
         || attempt(repo, module, :backward, :change, :down, opts)
         || raise Ecto.MigrationError, message: "#{inspect module} does not implement a `down/0` or `change/0` function"
-      SchemaMigration.down(repo, version)
+      SchemaMigration.down(repo, version, opts[:prefix])
     end
   end
 
@@ -131,7 +131,7 @@ defmodule Ecto.Migrator do
   """
   @spec run(Ecto.Repo.t, binary, atom, Keyword.t) :: [integer]
   def run(repo, directory, direction, opts) do
-    versions = migrated_versions(repo)
+    versions = migrated_versions(repo, opts)
 
     cond do
       opts[:all] ->
