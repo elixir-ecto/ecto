@@ -485,7 +485,7 @@ defmodule Ecto.Query do
       City |> where([c], c.state == "Sweden")
 
   """
-  defmacro where(query, binding, expr) do
+  defmacro where(query, binding \\ [], expr) do
     Filter.build(:where, query, binding, expr, __CALLER__)
   end
 
@@ -522,7 +522,7 @@ defmodule Ecto.Query do
       from(c in City, order_by: ^values)
 
   """
-  defmacro order_by(query, binding, expr)  do
+  defmacro order_by(query, binding \\ [], expr)  do
     OrderBy.build(query, binding, expr, __CALLER__)
   end
 
@@ -543,7 +543,7 @@ defmodule Ecto.Query do
       User |> where([u], u.id == ^current_user) |> limit([u], 1)
 
   """
-  defmacro limit(query, binding, expr) do
+  defmacro limit(query, binding \\ [], expr) do
     LimitOffset.build(:limit, query, binding, expr, __CALLER__)
   end
 
@@ -565,7 +565,7 @@ defmodule Ecto.Query do
       Post |> limit([p], 10) |> offset([p], 30)
 
   """
-  defmacro offset(query, binding, expr) do
+  defmacro offset(query, binding \\ [], expr) do
     LimitOffset.build(:offset, query, binding, expr, __CALLER__)
   end
 
@@ -632,7 +632,7 @@ defmodule Ecto.Query do
           from(u in User, update: [pull: [tags: "not cool"]]
 
   """
-  defmacro update(query, binding, expr) do
+  defmacro update(query, binding \\ [], expr) do
     Update.build(query, binding, expr, __CALLER__)
   end
 
