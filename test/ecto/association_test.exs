@@ -425,6 +425,10 @@ defmodule Ecto.AssociationTest do
     assert_raise ArgumentError, ~r"invalid preload `123` in `123`", fn ->
       Preloader.normalize(123, [], 123)
     end
+
+    assert_raise ArgumentError, ~r"invalid preload `{:bar, :baz}` in", fn ->
+      Preloader.normalize([foo: {:bar, :baz}], [], []) == [foo: [bar: []]]
+    end
   end
 
   defp expand(model, preloads) do

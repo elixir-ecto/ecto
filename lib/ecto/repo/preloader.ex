@@ -200,7 +200,7 @@ defmodule Ecto.Repo.Preloader do
   ## Normalizer
 
   def normalize(preload, assocs, original) do
-    normalize_each(List.wrap(preload), [], assocs, original)
+    normalize_each(wrap(preload, original), [], assocs, original)
   end
 
   defp normalize_each({atom, %Ecto.Query{} = query}, acc, assocs, _original) when is_atom(atom) do
@@ -210,7 +210,7 @@ defmodule Ecto.Repo.Preloader do
 
   defp normalize_each({atom, list}, acc, assocs, original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    [{atom, normalize_each(List.wrap(list), [], nil, original)}|acc]
+    [{atom, normalize_each(wrap(list, original), [], nil, original)}|acc]
   end
 
   defp normalize_each(atom, acc, assocs, _original) when is_atom(atom) do
@@ -218,11 +218,15 @@ defmodule Ecto.Repo.Preloader do
     [{atom, []}|acc]
   end
 
-  defp normalize_each(list, acc, assocs, original) when is_list(list) do
-    Enum.reduce(list, acc, &normalize_each(&1, &2, assocs, original))
+  defp normalize_each(other, acc, assocs, original) do
+    Enum.reduce(wrap(other, original), acc, &normalize_each(&1, &2, assocs, original))
   end
 
-  defp normalize_each(other, _, _assocs, original) do
+  defp wrap(list, _original) when is_list(list),
+    do: list
+  defp wrap(atom, _original) when is_atom(atom),
+    do: atom
+  defp wrap(other, original) do
     raise ArgumentError, "invalid preload `#{inspect other}` in `#{inspect original}`. " <>
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
   end
