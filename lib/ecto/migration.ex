@@ -300,7 +300,7 @@ defmodule Ecto.Migration do
       else
         []
       end
-
+      
     Runner.execute {command, %{table | prefix: prefix(table.prefix)}, columns}
   end
 

@@ -18,10 +18,8 @@ defmodule Ecto.Migration.Runner do
   def run(repo, module, direction, operation, migrator_direction, opts) do
     level = Keyword.get(opts, :log, :info)
 
-    {:ok, runner} = start_link(repo, direction, migrator_direction, level, opts[:prefix])
+    start_link(repo, direction, migrator_direction, level, opts[:prefix])
     
-    Manager.put_migration(self(), runner)
-
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
     {time1, _} = :timer.tc(module, operation, [])
     {time2, _} = :timer.tc(&flush/0, [])
@@ -34,10 +32,11 @@ defmodule Ecto.Migration.Runner do
   Starts the runner for the specified repo.
   """
   def start_link(repo, direction, migrator_direction, level, prefix) do
-    Agent.start_link(fn ->
+    {:ok, runner} = Agent.start_link(fn ->
       %{direction: direction, repo: repo, migrator_direction: migrator_direction,
         command: nil, subcommands: [], level: level, prefix: prefix, commands: []}
     end)
+    Manager.put_migration(self(), runner)
   end
 
   @doc """
@@ -64,7 +63,7 @@ defmodule Ecto.Migration.Runner do
   @doc """
   Gets the prefix for this migration
   """
-  def prefix do
+  def prefix do  
     Agent.get(runner, & &1.prefix)
   end
 
