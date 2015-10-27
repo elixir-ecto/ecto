@@ -65,6 +65,28 @@ defmodule Ecto do
         Supervisor.start_link(children, opts)
       end
 
+  ### Repo resolution
+
+  Our of the box, Ecto assumes that the location of your Repo lives within your
+  application's root namespace; for example, in the previous examples, Ecto will
+  assume your Repo is located at MyApp.Repo.
+
+  For more complex use-cases, this might not be sufficient and Ecto allows you
+  to provide an alternative namespace or Repo location using the `app_namespace`
+  or the `app_repo` configuration variables as follows:
+
+      config :my_app,
+        [{:app_repo, My.App.Repo},
+         {My.App.Repo, [adapter: Ecto.Adapters.Postgres,
+                        database: "ecto_simple",
+                        username: "postgres",
+                        password: "postgres",
+                        hostname: "localhost"]}]
+
+  In this example the configuration variable `app_repo` is used to explicitly
+  provide the default Repo to use. Alternatively, the `app_namespace` variable
+  could have been set to `My.App` to achieve the same result.
+
   ## Models
 
   Models provide a set of functionalities around structuring your data,
