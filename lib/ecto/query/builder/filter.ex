@@ -50,6 +50,10 @@ defmodule Ecto.Query.Builder.Filter do
   list multiple key value pairs will be joined with "and".
   """
   @spec escape(:where | :having, Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  def escape(kind, {:^, _, [var]}, _, _)  when is_tuple(var) do
+    {quote(do: Ecto.Query.Builder.Filter.runtime!(unquote(kind), unquote(var))), %{}}
+  end
+
   def escape(_kind, [], _vars, _env) do
     {true, %{}}
   end
@@ -59,7 +63,7 @@ defmodule Ecto.Query.Builder.Filter do
       Enum.map_reduce(expr, %{}, fn
         {field, value}, acc when is_atom(field) ->
           {value, params} = Builder.escape(value, {0, field}, acc, vars, env)
-          {{:{}, [], [:==, [], [to_field(field), value]]}, params}
+          {{:{}, [], [:==, [], [to_escaped_field(field), value]]}, params}
         _, _acc ->
           Builder.error! "expected a keyword list at compile time in #{kind}, " <>
                          "got: `#{Macro.to_string expr}`. If you would like to " <>
@@ -74,5 +78,22 @@ defmodule Ecto.Query.Builder.Filter do
     Builder.escape(expr, :boolean, %{}, vars, env)
   end
 
-  defp to_field(field), do: Macro.escape {{:., [], [{:&, [], [0]}, field]}, [], []}
+  def runtime!(_kind, []) do
+    true
+  end
+
+  def runtime!(kind, params) when is_list(params) do
+    params
+      |> Enum.map(fn
+        {field, value} when is_atom(field) ->
+          value = %Ecto.Query.Tagged{tag: nil, type: {0, field}, value: value}
+          {:==, [], [to_field(field), value]}
+        {_, _} ->
+          raise ArgumentError, "expected a keyword list in #{kind}, got: `#{inspect params}`"
+      end)
+     |> Enum.reduce &{:and, [], [&2, &1]}
+  end
+
+  defp to_escaped_field(field), do: Macro.escape to_field(field) 
+  defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
 end

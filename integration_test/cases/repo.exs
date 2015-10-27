@@ -711,5 +711,16 @@ defmodule Ecto.Integration.RepoTest do
     assert [post1, post2] == Post |> where([], []) |> TestRepo.all
     assert [post1]        == Post |> where([], [title: "hello"]) |> TestRepo.all
     assert [post1]        == Post |> where([], [title: "hello", id: ^post1.id]) |> TestRepo.all
+
+    params0 = []
+    params1 = [title: "hello"]
+    params2 = [title: "hello", id: post1.id]
+    assert [post1, post2]  == (from Post, where: ^params0) |> TestRepo.all
+    assert [post1]         == (from Post, where: ^params1) |> TestRepo.all
+    assert [post1]         == (from Post, where: ^params2) |> TestRepo.all
+
+    post3 = TestRepo.insert!(%Post{text: "y", title: "goodbye", uuid: nil})
+    params3 = [title: "goodbye", uuid: post3.uuid]
+    assert [post3]         == (from Post, where: ^params3) |> TestRepo.all
   end
 end
