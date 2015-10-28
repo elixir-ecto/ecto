@@ -406,13 +406,20 @@ defmodule Ecto.AssociationTest do
   alias Ecto.Repo.Preloader
 
   test "preload: normalizer" do
-    assert Preloader.normalize(:foo, [], []) == [foo: []]
-    assert Preloader.normalize([foo: :bar], [], []) == [foo: [bar: []]]
+    assert Preloader.normalize(:foo, [], []) == [foo: {nil, []}]
+    assert Preloader.normalize([foo: :bar], [], []) == [foo: {nil, [bar: {nil, []}]}]
     assert Preloader.normalize([foo: [:bar, baz: :bat], this: :that], [], []) ==
-           [this: [that: []], foo: [baz: [bat: []], bar: []]]
+           [this: {nil, [that: {nil, []}]},
+            foo: {nil, [baz: {nil, [bat: {nil, []}]},
+                        bar: {nil, []}]}]
 
     query = from(p in Post, limit: 1)
-    assert Preloader.normalize([foo: query], [], []) == [foo: query]
+    assert Preloader.normalize([foo: query], [], []) ==
+           [foo: {query, []}]
+    assert Preloader.normalize([foo: {query, :bar}], [], []) ==
+           [foo: {query, [bar: {nil, []}]}]
+    assert Preloader.normalize([foo: {query, bar: :baz}], [], []) ==
+           [foo: {query, [bar: {nil, [baz: {nil, []}]}]}]
   end
 
   test "preload: raises on assoc conflict" do
@@ -436,36 +443,41 @@ defmodule Ecto.AssociationTest do
   end
 
   test "preload: expand" do
-    assert [{:comments, {:assoc, %Ecto.Association.Has{}, :post_id}, []},
-            {:permalink, {:assoc, %Ecto.Association.Has{}, :post_id}, []}] =
+    assert [{:comments, {:assoc, %Ecto.Association.Has{}, :post_id}, {nil, []}},
+            {:permalink, {:assoc, %Ecto.Association.Has{}, :post_id}, {nil, []}}] =
            expand(Post, [:comments, :permalink])
 
     assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, :id},
-              [author: [], permalink: []]}] =
+              {nil, [author: {nil, []}, permalink: {nil, []}]}}] =
            expand(Comment, [:post, post: :author, post: :permalink])
 
     assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, :id},
-             [author: [], permalink: []]}] =
+             {nil, [author: {nil, []}, permalink: {nil, []}]}}] =
            expand(Comment, [:post, post: :author, post: :permalink])
 
-    assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, [comments: [post: []]]},
-            {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, []}] =
+    assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, {nil, [comments: {nil, [post: {nil, []}]}]}},
+            {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
            expand(Author, [posts_comments: :post])
 
-    assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, [comments: _, comments: _]},
-           {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, []}] =
+    assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, {nil, [comments: _, comments: _]}},
+           {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
            expand(Author, [:posts, posts_comments: :post, posts: [comments: :post]])
 
     query = from(c in Comment, limit: 1)
-    assert [{:permalink, {:assoc, %Ecto.Association.Has{}, :post_id}, []},
-            {:comments, {:assoc, %Ecto.Association.Has{}, :post_id}, ^query}] =
+    assert [{:permalink, {:assoc, %Ecto.Association.Has{}, :post_id}, {nil, []}},
+            {:comments, {:assoc, %Ecto.Association.Has{}, :post_id}, {^query, []}}] =
            expand(Post, [:permalink, comments: query])
+
+    assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, {nil, [comments: {^query, [post: {nil, []}]}]}},
+            {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
+           expand(Author, [posts_comments: {query, :post}])
   end
 
   test "preload: expand raises on duplicated entries" do
-    message = ~r"cannot preload `comments` as it has been supplied more than once with different argument types"
+    message = ~r"cannot preload `comments` as it has been supplied more than once with different queries"
     assert_raise ArgumentError, message, fn ->
-      expand(Post, [comments: [], comments: from(c in Comment, limit: 1)])
+      expand(Post, [comments: from(c in Comment, limit: 2),
+                    comments: from(c in Comment, limit: 1)])
     end
   end
 
