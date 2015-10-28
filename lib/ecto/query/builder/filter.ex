@@ -11,6 +11,16 @@ defmodule Ecto.Query.Builder.Filter do
   runtime work.
   """
   @spec build(:where | :having, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  def build(kind, query, _binding, {:^, _, [var]}, env) do
+    expr =
+      quote do
+        {expr, params} = Ecto.Query.Builder.Filter.runtime!(unquote(kind), unquote(var))
+        %Ecto.Query.QueryExpr{expr: expr, params: params,
+                              file: unquote(env.file), line: unquote(env.line)}
+      end
+    Builder.apply_query(query, __MODULE__, [kind, expr], env)
+  end
+
   def build(kind, query, binding, expr, env) do
     binding        = Builder.escape_binding(binding)
     {expr, params} = escape(kind, expr, binding, env)
@@ -59,7 +69,7 @@ defmodule Ecto.Query.Builder.Filter do
       Enum.map_reduce(expr, %{}, fn
         {field, value}, acc when is_atom(field) ->
           {value, params} = Builder.escape(value, {0, field}, acc, vars, env)
-          {{:{}, [], [:==, [], [to_field(field), value]]}, params}
+          {{:{}, [], [:==, [], [to_escaped_field(field), value]]}, params}
         _, _acc ->
           Builder.error! "expected a keyword list at compile time in #{kind}, " <>
                          "got: `#{Macro.to_string expr}`. If you would like to " <>
@@ -74,5 +84,37 @@ defmodule Ecto.Query.Builder.Filter do
     Builder.escape(expr, :boolean, %{}, vars, env)
   end
 
-  defp to_field(field), do: Macro.escape {{:., [], [{:&, [], [0]}, field]}, [], []}
+  @doc """
+  Invoked at runtime for interpolated lists.
+  """
+  def runtime!(_kind, []) do
+    {true, []}
+  end
+
+  def runtime!(kind, kw) when is_list(kw) do
+    {parts, params} = runtime!(kw, 0, [], [], kind, kw)
+    {Enum.reduce(parts, &{:and, [], [&2, &1]}), params}
+  end
+
+  def runtime!(_kind, other) do
+    {{:^, [], [0]}, [{other, :boolean}]}
+  end
+
+  defp runtime!([{field, value}|t], counter, exprs, params, kind, original) when is_atom(field) do
+    runtime!(t, counter + 1,
+             [{:==, [], [to_field(field), {:^, [], [counter]}]}|exprs],
+             [{value, {0, field}}|params],
+             kind, original)
+  end
+
+  defp runtime!([], _counter, exprs, params, _kind, _original) do
+    {Enum.reverse(exprs), Enum.reverse(params)}
+  end
+
+  defp runtime!(_, _counter, _exprs, _params, kind, original) do
+    raise ArgumentError, "expected a keyword list in #{kind}, got: `#{inspect original}`"
+  end
+
+  defp to_escaped_field(field), do: Macro.escape to_field(field)
+  defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
 end
