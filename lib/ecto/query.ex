@@ -476,16 +476,28 @@ defmodule Ecto.Query do
   than one where expression, they are combined with an `and` operator. All
   where expressions have to evaluate to a boolean value.
 
+  `where` also accepts a keyword list where the field given as key is going to
+  be compared with the given value. The fields will always refer to the source
+  given in `from`.
+
   ## Keywords example
 
       from(c in City, where: c.state == "Sweden")
+      from(c in City, where: [state: "Sweden"])
+
+  It is also possible to interpolate the whole keyword list, allowing you to
+  dynamically filter the source:
+
+      filters = [state: "Sweden"]
+      from(c in City, where: ^filters)
 
   ## Expressions example
 
       City |> where([c], c.state == "Sweden")
+      City |> where(state: "Sweden")
 
   """
-  defmacro where(query, binding, expr) do
+  defmacro where(query, binding \\ [], expr) do
     Filter.build(:where, query, binding, expr, __CALLER__)
   end
 
@@ -505,6 +517,7 @@ defmodule Ecto.Query do
   ## Expressions example
 
       City |> order_by([c], asc: c.name, desc: c.population)
+      City |> order_by(asc: :name) # Sorts by the cities name
 
   ## Atom values
 
@@ -522,7 +535,7 @@ defmodule Ecto.Query do
       from(c in City, order_by: ^values)
 
   """
-  defmacro order_by(query, binding, expr)  do
+  defmacro order_by(query, binding \\ [], expr)  do
     OrderBy.build(query, binding, expr, __CALLER__)
   end
 
@@ -540,10 +553,10 @@ defmodule Ecto.Query do
 
   ## Expressions example
 
-      User |> where([u], u.id == ^current_user) |> limit([u], 1)
+      User |> where([u], u.id == ^current_user) |> limit(1)
 
   """
-  defmacro limit(query, binding, expr) do
+  defmacro limit(query, binding \\ [], expr) do
     LimitOffset.build(:limit, query, binding, expr, __CALLER__)
   end
 
@@ -562,10 +575,10 @@ defmodule Ecto.Query do
 
   ## Expressions example
 
-      Post |> limit([p], 10) |> offset([p], 30)
+      Post |> limit(10) |> offset(30)
 
   """
-  defmacro offset(query, binding, expr) do
+  defmacro offset(query, binding \\ [], expr) do
     LimitOffset.build(:offset, query, binding, expr, __CALLER__)
   end
 
@@ -610,6 +623,7 @@ defmodule Ecto.Query do
   ## Expressions example
 
       User |> update([u], set: [name: "new name"])
+      User |> update(set: [name: "new name"])
 
   ## Operators
 
@@ -632,7 +646,7 @@ defmodule Ecto.Query do
           from(u in User, update: [pull: [tags: "not cool"]]
 
   """
-  defmacro update(query, binding, expr) do
+  defmacro update(query, binding \\ [], expr) do
     Update.build(query, binding, expr, __CALLER__)
   end
 
