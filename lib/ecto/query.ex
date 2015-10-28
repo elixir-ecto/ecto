@@ -683,7 +683,7 @@ defmodule Ecto.Query do
   @doc """
   A having query expression.
 
-  Like `where` `having` filters rows from the model, but after the grouping is
+  Like `where`, `having` filters rows from the model, but after the grouping is
   performed giving it the same semantics as `select` for a grouped query
   (see `group_by/3`). `having` groups the query even if the query has no
   `group_by` expression.
@@ -704,7 +704,7 @@ defmodule Ecto.Query do
       |> having([p], avg(p.num_comments) > 10)
       |> select([p], count(p.id))
   """
-  defmacro having(query, binding, expr) do
+  defmacro having(query, binding \\ [], expr) do
     Filter.build(:having, query, binding, expr, __CALLER__)
   end
 

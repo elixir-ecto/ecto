@@ -17,6 +17,7 @@ defmodule Ecto.QueryTest do
     from(p in "posts") |> limit(1)
     from(p in "posts") |> order_by([asc: :title])
     from(p in "posts") |> where(title: "foo")
+    from(p in "posts") |> having(title: "foo")
     from(p in "posts") |> offset(1)
     from(p in "posts") |> update(set: [title: "foo"])
   end
