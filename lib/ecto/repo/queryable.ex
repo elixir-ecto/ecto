@@ -189,12 +189,8 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp query_for_get_by(repo, queryable, clauses) do
-    Enum.reduce(clauses, queryable, fn
-      {field, nil}, _query ->
-        raise ArgumentError, "cannot perform #{inspect repo}.get_by/2 because #{inspect field} is nil"
-      {field, value}, query ->
-        query |> Ecto.Query.where([x], field(x, ^field) == ^value)
-    end)
+    assert_no_nils!(clauses, repo)
+    Ecto.Query.where(queryable, [], ^clauses)
   end
 
   defp assert_model!(query) do
@@ -213,5 +209,13 @@ defmodule Ecto.Repo.Queryable do
       [field] -> field
       _ -> raise Ecto.NoPrimaryKeyFieldError, model: model
     end
+  end
+
+  defp assert_no_nils!(clauses, repo) do
+    Enum.each(clauses, fn
+      {field, nil} ->
+        raise ArgumentError, "cannot perform #{inspect repo}.get_by/2 because #{inspect field} is nil"
+      _ ->
+      end)
   end
 end

@@ -19,7 +19,8 @@ defmodule Ecto.Adapters.MySQL do
 
     * `:adapter` - The adapter name, in this case, `Ecto.Adapters.MySQL`
     * `:pool` - The connection pool module, defaults to `Ecto.Pools.Poolboy`
-    * `:timeout` - The default timeout to use on queries, defaults to `5000`
+    * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
+    * `:timeout` - The default timeout to use on queries, defaults to `15000`
     * `:log_level` - The level to use when logging queries (default: `:debug`)
 
   ### Connection options

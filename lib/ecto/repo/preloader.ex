@@ -62,7 +62,7 @@ defmodule Ecto.Repo.Preloader do
       Enum.map preloads, fn
         {_, {:assoc, assoc, related_key}, sub_preloads} ->
           preload_assoc(structs, module, repo, prefix, assoc, related_key, sub_preloads)
-        {_, {:through, _, _} = info, []} ->
+        {_, {:through, _, _} = info, {nil, []}} ->
           info
       end
 
@@ -82,16 +82,18 @@ defmodule Ecto.Repo.Preloader do
 
   ## Association preloading
 
-  defp preload_assoc(structs, module, repo, prefix, assoc, related_key, preloads_or_query) do
+  defp preload_assoc(structs, module, repo, prefix, assoc, related_key, {query, preloads}) do
     case unique_ids(structs, module, assoc) do
       [] ->
         {:assoc, assoc, HashDict.new}
-      ids when is_list(preloads_or_query) ->
-        query = assoc.__struct__.assoc_query(assoc, ids)
-        preload_assoc(repo, query, prefix, assoc, related_key, preloads_or_query)
       ids ->
-        query = assoc.__struct__.assoc_query(assoc, preloads_or_query, ids)
-        preload_assoc(repo, query, prefix, assoc, related_key, [])
+        query =
+          if query do
+            assoc.__struct__.assoc_query(assoc, query, ids)
+          else
+            assoc.__struct__.assoc_query(assoc, ids)
+          end
+        preload_assoc(repo, query, prefix, assoc, related_key, preloads)
     end
   end
 
@@ -200,29 +202,38 @@ defmodule Ecto.Repo.Preloader do
   ## Normalizer
 
   def normalize(preload, assocs, original) do
-    normalize_each(List.wrap(preload), [], assocs, original)
+    normalize_each(wrap(preload, original), [], assocs, original)
+  end
+
+  defp normalize_each({atom, {%Ecto.Query{} = query, list}}, acc, assocs, original) when is_atom(atom) do
+    no_assoc!(assocs, atom)
+    [{atom, {query, normalize_each(wrap(list, original), [], nil, original)}}|acc]
   end
 
   defp normalize_each({atom, %Ecto.Query{} = query}, acc, assocs, _original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    [{atom, query}|acc]
+    [{atom, {query, []}}|acc]
   end
 
   defp normalize_each({atom, list}, acc, assocs, original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    [{atom, normalize_each(List.wrap(list), [], nil, original)}|acc]
+    [{atom, {nil, normalize_each(wrap(list, original), [], nil, original)}}|acc]
   end
 
   defp normalize_each(atom, acc, assocs, _original) when is_atom(atom) do
     no_assoc!(assocs, atom)
-    [{atom, []}|acc]
+    [{atom, {nil, []}}|acc]
   end
 
-  defp normalize_each(list, acc, assocs, original) when is_list(list) do
-    Enum.reduce(list, acc, &normalize_each(&1, &2, assocs, original))
+  defp normalize_each(other, acc, assocs, original) do
+    Enum.reduce(wrap(other, original), acc, &normalize_each(&1, &2, assocs, original))
   end
 
-  defp normalize_each(other, _, _assocs, original) do
+  defp wrap(list, _original) when is_list(list),
+    do: list
+  defp wrap(atom, _original) when is_atom(atom),
+    do: atom
+  defp wrap(other, original) do
     raise ArgumentError, "invalid preload `#{inspect other}` in `#{inspect original}`. " <>
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
   end
@@ -251,19 +262,24 @@ defmodule Ecto.Repo.Preloader do
             {:assoc, _, _} ->
               [{preload, info, sub_preloads}|acc]
             {:through, _, through} ->
-              through = through |> Enum.reverse |> Enum.reduce(sub_preloads, &[{&1, &2}])
-              List.keystore(expand(model, through, acc), preload, 0, {preload, info, []})
+              through =
+                through
+                |> Enum.reverse
+                |> Enum.reduce(sub_preloads, &{nil, [{&1, &2}]})
+                |> elem(1)
+              List.keystore(expand(model, through, acc), preload, 0, {preload, info, {nil, []}})
           end
       end
     end)
   end
 
-  defp merge_preloads(_preload, left, right) when is_list(left) and is_list(right) do
-    left ++ right
-  end
-  defp merge_preloads(preload, left, right) do
+  defp merge_preloads(_preload, {nil, left}, {query, right}),
+    do: {query, left ++ right}
+  defp merge_preloads(_preload, {query, left}, {nil, right}),
+    do: {query, left ++ right}
+  defp merge_preloads(preload, {left, _}, {right, _}) do
     raise ArgumentError, "cannot preload `#{preload}` as it has been supplied more than once " <>
-                         "with different argument types: #{inspect left} and #{inspect right}"
+                         "with different queries: #{inspect left} and #{inspect right}"
   end
 
   defp reraise(exception) do

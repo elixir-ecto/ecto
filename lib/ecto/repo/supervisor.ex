@@ -47,10 +47,11 @@ defmodule Ecto.Repo.Supervisor do
   end
 
   defp pool(repo, config) do
-    pool    = Keyword.get(config, :pool, Ecto.Pools.Poolboy)
-    name    = Keyword.get(config, :pool_name, default_pool_name(repo, config))
-    timeout = Keyword.get(config, :timeout, 5000)
-    {pool, name, timeout}
+    pool         = Keyword.get(config, :pool, Ecto.Pools.Poolboy)
+    name         = Keyword.get(config, :pool_name, default_pool_name(repo, config))
+    pool_timeout = Keyword.get(config, :pool_timeout, 5_000)
+    timeout      = Keyword.get(config, :timeout, 15_000)
+    {pool, name, pool_timeout, timeout}
   end
 
   defp default_pool_name(repo, config) do
@@ -105,7 +106,7 @@ defmodule Ecto.Repo.Supervisor do
 
   def init({name, repo, otp_app, adapter, opts}) do
     opts = config(repo, otp_app, opts)
-    {default_pool, _, _} = repo.__pool__
+    {default_pool, _, _, _} = repo.__pool__
 
     opts =
       opts

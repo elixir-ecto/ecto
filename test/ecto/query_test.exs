@@ -13,6 +13,15 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  test "query functions do not require binding" do
+    from(p in "posts") |> limit(1)
+    from(p in "posts") |> order_by([asc: :title])
+    from(p in "posts") |> where(title: "foo")
+    from(p in "posts") |> having(title: "foo")
+    from(p in "posts") |> offset(1)
+    from(p in "posts") |> update(set: [title: "foo"])
+  end
+
   test "where allows macros" do
     test_data = "test"
     query = from(p in "posts") |> where([q], macro_equal(q.title, ^test_data))

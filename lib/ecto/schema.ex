@@ -343,7 +343,7 @@ defmodule Ecto.Schema do
       embeds = @ecto_embeds |> Enum.reverse
 
       Module.eval_quoted __ENV__, [
-        Ecto.Schema.__struct__(@struct_fields),
+        Ecto.Schema.__defstruct__(@struct_fields),
         Ecto.Schema.__changeset__(@changeset_fields),
         Ecto.Schema.__schema__(source, fields, primary_key_fields),
         Ecto.Schema.__types__(fields),
@@ -1063,7 +1063,7 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __struct__(struct_fields) do
+  def __defstruct__(struct_fields) do
     quote do
       defstruct unquote(Macro.escape(struct_fields))
     end

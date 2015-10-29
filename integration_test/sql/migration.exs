@@ -253,12 +253,25 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule InferredDropIndexMigration do
+    use Ecto.Migration
+
+    def change do
+      create index(:posts, [:title])
+    end
+  end
+
   import Ecto.Query, only: [from: 2]
   import Ecto.Migrator, only: [up: 4, down: 4]
 
   test "create and drop table and indexes" do
     assert :ok == up(TestRepo, 20050906120000, CreateMigration, log: false)
     assert :ok == down(TestRepo, 20050906120000, CreateMigration, log: false)
+  end
+
+  test "correctly infers how to drop index" do
+    assert :ok == up(TestRepo, 20050906120000, InferredDropIndexMigration, log: false)
+    assert :ok == down(TestRepo, 20050906120000, InferredDropIndexMigration, log: false)
   end
 
   test "supports references" do

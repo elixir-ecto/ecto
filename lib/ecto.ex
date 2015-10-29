@@ -274,15 +274,6 @@ defmodule Ecto do
 
   ## Other topics
 
-  ### Mix tasks and generators
-
-  Ecto provides many tasks to help your workflow as well as code generators.
-  You can find all available tasks by typing `mix help` inside a project
-  with Ecto listed as a dependency.
-
-  Ecto generators will automatically open the generated files if you have
-  `ECTO_EDITOR` set in your environment variable.
-
   ### Associations
 
   Ecto supports defining associations on schemas:
@@ -378,7 +369,16 @@ defmodule Ecto do
   Check `Ecto.Schema.embeds_one/3` and `Ecto.Schema.embeds_many/3`
   for more information.
 
-  ### Migrations
+  ### Mix tasks and generators
+
+  Ecto provides many tasks to help your workflow as well as code generators.
+  You can find all available tasks by typing `mix help` inside a project
+  with Ecto listed as a dependency.
+
+  Ecto generators will automatically open the generated files if you have
+  `ECTO_EDITOR` set in your environment variable.
+
+  #### Migrations
 
   Ecto supports database migrations. You can generate a migration with:
 
@@ -386,5 +386,27 @@ defmodule Ecto do
 
   This will create a new file inside `priv/repo/migrations` with the `up` and
   `down` functions. Check `Ecto.Migration` for more information.
+
+  #### Repo resolution
+
+  Our of the box, Ecto tasks assumes that the location of your Repo lives within
+  your application's root namespace; for example, in the previous examples, Ecto
+  will assume your Repo is located at MyApp.Repo.
+
+  For more complex use-cases, this might not be sufficient and Ecto allows you
+  to provide an alternative namespace or Repo location using the `app_namespace`
+  or the `app_repo` configuration variables as follows:
+
+      config :my_app, :app_repo, My.App.Repo
+      config :my_app, My.App.Repo,
+        adapter: Ecto.Adapters.Postgres,
+        database: "ecto_simple",
+        username: "postgres",
+        password: "postgres",
+        hostname: "localhost"
+
+  In this example the configuration `:app_repo` is used to explicitly provide
+  the default Repo to use. Alternatively, the `:app_namespace` config could
+  have been set to `My.App` to achieve the same result.
   """
 end
