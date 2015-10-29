@@ -193,11 +193,6 @@ defmodule Ecto.RepoTest do
   test "validates get_by" do
     TestRepo.get_by(MyModel, id: 123)
 
-    message = "cannot perform Ecto.TestRepo.get_by/2 because :id is nil"
-    assert_raise ArgumentError, message, fn ->
-      TestRepo.get_by(MyModel, id: nil)
-    end
-
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
     assert_raise Ecto.CastError, message, fn ->
       TestRepo.get_by(MyModel, id: :atom)
