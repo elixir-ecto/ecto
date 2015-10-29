@@ -67,6 +67,9 @@ defmodule Ecto.Query.Builder.Filter do
   def escape(kind, expr, vars, env) when is_list(expr) do
     {parts, params} =
       Enum.map_reduce(expr, %{}, fn
+        {field, nil}, _acc ->
+          Builder.error! "nil given for #{inspect field}, comparison with nil is forbidden as it always evaluates to false. " <>
+                         "Pass a full query expression and use is_nil/1 instead."
         {field, value}, acc when is_atom(field) ->
           {value, params} = Builder.escape(value, {0, field}, acc, vars, env)
           {{:{}, [], [:==, [], [to_escaped_field(field), value]]}, params}
@@ -98,6 +101,11 @@ defmodule Ecto.Query.Builder.Filter do
 
   def runtime!(_kind, other) do
     {{:^, [], [0]}, [{other, :boolean}]}
+  end
+
+  defp runtime!([{field, nil}|_], _counter, _exprs, _params, _kind, _original) when is_atom(field) do
+    raise ArgumentError, "nil given for #{inspect field}, comparison with nil is forbidden as it always evaluates to false. " <>
+                         "Pass a full query expression and use is_nil/1 instead."
   end
 
   defp runtime!([{field, value}|t], counter, exprs, params, kind, original) when is_atom(field) do
