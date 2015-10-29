@@ -176,6 +176,38 @@ defmodule Ecto.Repo.Model do
   end
 
   @doc """
+  Implementation for `Ecto.Repo.insert_or_update/2`.
+  """
+  def insert_or_update(repo, adapter, changeset, opts) do
+    case get_state(changeset) do
+      :built  -> insert repo, adapter, changeset, opts
+      :loaded -> update repo, adapter, changeset, opts
+      state   -> raise ArgumentError, "the changeset has an invalid state " <>
+                                      "for Repo.insert_or_update/2: #{state}"
+    end
+  end
+
+  @doc """
+  Implementation for `Ecto.Repo.insert_or_update!/2`.
+  """
+  def insert_or_update!(repo, adapter, changeset, opts) do
+    case get_state(changeset) do
+      :built  -> insert! repo, adapter, changeset, opts
+      :loaded -> update! repo, adapter, changeset, opts
+      state   -> raise ArgumentError, "the changeset has an invalid state " <>
+                                      "for Repo.insert_or_update/2: #{state}"
+    end
+  end
+
+  defp get_state(%Changeset{model: model}), do: model.__meta__.state
+  defp get_State(%{__struct__: model}) do
+    raise ArgumentError, "giving a model to "
+                         "#{inspect repo}.insert_or_update/2 or "
+                         "#{inspect repo}.insert_or_update!/2 is not "
+                         "supported. Please use an `%Ecto.Changeset{}`."
+  end
+
+  @doc """
   Implementation for `Ecto.Repo.delete/2`.
   """
   def delete(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
