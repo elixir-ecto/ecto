@@ -234,7 +234,7 @@ defmodule Ecto.Query do
 
   It can either be a keyword query or a query expression. If it is a
   keyword query the first argument should be an `in` expression and
-  the second argument a keyword query where they keys are expression
+  the second argument a keyword query where the keys are expression
   types and the values are expressions.
 
   If it is a query expression the first argument is the original query
