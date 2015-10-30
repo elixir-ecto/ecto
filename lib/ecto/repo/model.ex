@@ -200,11 +200,11 @@ defmodule Ecto.Repo.Model do
   end
 
   defp get_state(%Changeset{model: model}), do: model.__meta__.state
-  defp get_State(%{__struct__: model}) do
-    raise ArgumentError, "giving a model to "
-                         "#{inspect repo}.insert_or_update/2 or "
-                         "#{inspect repo}.insert_or_update!/2 is not "
-                         "supported. Please use an `%Ecto.Changeset{}`."
+  defp get_state(%{__struct__: _model}) do
+    raise ArgumentError, "giving a model to " <>
+                         "Repo.insert_or_update/2 or " <>
+                         "Repo.insert_or_update!/2 is not supported. Please " <>
+                         "use an `%Ecto.Changeset{}`."
   end
 
   @doc """

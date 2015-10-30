@@ -358,6 +358,12 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  test "insert_or_update fails when being passed a model" do
+    assert_raise ArgumentError, ~r/giving a model to .* is not supported/, fn ->
+      TestRepo.insert_or_update %MyModel{}
+    end
+  end
+
   ## Changesets
 
   @uuid "30313233-3435-3637-3839-616263646566"
