@@ -244,14 +244,15 @@ defmodule Ecto.RepoTest do
 
   ## Changesets
 
-  test "insert, update and delete accepts changesets" do
+  test "insert, update, insert_or_update and delete accepts changesets" do
     valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     assert {:ok, %MyModel{}} = TestRepo.insert(valid)
     assert {:ok, %MyModel{}} = TestRepo.update(valid)
+    assert {:ok, %MyModel{}} = TestRepo.insert_or_update(valid)
     assert {:ok, %MyModel{}} = TestRepo.delete(valid)
   end
 
-  test "insert, update and delete errors on invalid changeset" do
+  test "insert, update, insert_or_update and delete errors on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
 
     insert = %{invalid | action: :insert, repo: TestRepo, opts: [source: :changeset]}
@@ -259,6 +260,9 @@ defmodule Ecto.RepoTest do
 
     update = %{invalid | action: :update, repo: TestRepo, opts: [source: :changeset]}
     assert {:error, ^update} = TestRepo.update(invalid)
+
+    update = %{invalid | action: :insert, repo: TestRepo, opts: [source: :changeset]}
+    assert {:error, ^update} = TestRepo.insert_or_update(invalid)
 
     delete = %{invalid | action: :delete, repo: TestRepo, opts: [source: :changeset]}
     assert {:error, ^delete} = TestRepo.delete(invalid)
@@ -268,10 +272,11 @@ defmodule Ecto.RepoTest do
     valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [], [])
     assert %MyModel{} = TestRepo.insert!(valid)
     assert %MyModel{} = TestRepo.update!(valid)
+    assert %MyModel{} = TestRepo.insert_or_update!(valid)
     assert %MyModel{} = TestRepo.delete!(valid)
   end
 
-  test "insert!, update! and delete! fail on invalid changeset" do
+  test "insert!, update!, insert_or_update! and delete! fail on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
 
     assert_raise Ecto.InvalidChangesetError,
@@ -282,6 +287,11 @@ defmodule Ecto.RepoTest do
     assert_raise Ecto.InvalidChangesetError,
                  ~r"could not perform update because changeset is invalid", fn ->
       TestRepo.update!(invalid)
+    end
+
+    assert_raise Ecto.InvalidChangesetError,
+                 ~r"could not perform insert because changeset is invalid", fn ->
+      TestRepo.insert_or_update!(invalid)
     end
 
     assert_raise Ecto.InvalidChangesetError,
@@ -306,7 +316,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "insert!, update! and delete! fail on changeset with wrong action" do
+  test "insert!, update!, insert_or_update! and delete! fail on changeset with wrong action" do
     invalid = %Ecto.Changeset{valid?: true, model: %MyModel{}, action: :other}
 
     assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.insert/2", fn ->
@@ -317,8 +327,39 @@ defmodule Ecto.RepoTest do
       TestRepo.update!(invalid)
     end
 
+    assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.insert/2", fn ->
+      TestRepo.insert_or_update!(invalid)
+    end
+
     assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.delete/2", fn ->
       TestRepo.delete!(invalid)
+    end
+  end
+
+  test "uses the correct method for insert_or_update" do
+    built  = Ecto.Changeset.cast(%MyModel{y: "built"}, %{}, [], [])
+    loaded =
+      %MyModel{y: "loaded"}
+      |> TestRepo.insert!
+      |> Ecto.Changeset.cast(%{y: "updated"}, [:y], [])
+    assert_received :insert
+
+    TestRepo.insert_or_update built
+    assert_received :insert
+
+    TestRepo.insert_or_update loaded
+    assert_received :update
+  end
+
+  test "fails on invalid states" do
+    deleted =
+      %MyModel{y: "deleted"}
+      |> TestRepo.insert!
+      |> TestRepo.delete!
+      |> Ecto.Changeset.cast(%{y: "updated"}, [:y], [])
+
+    assert_raise ArgumentError, ~r/the changeset has an invalid state/, fn ->
+      TestRepo.insert_or_update deleted
     end
   end
 
