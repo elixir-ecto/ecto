@@ -159,11 +159,7 @@ defmodule Ecto.Embedded do
     changeset = on_repo_action(changeset, model, adapter, repo, opts)
     maybe_replace_one!(embed, changeset.action, Map.get(parent, field))
 
-    if changeset.action == :delete do
-      {:ok, nil}
-    else
-      {:ok, Changeset.apply_changes(changeset)}
-    end
+    {:ok, apply_changes(changeset)}
   end
 
   defp on_repo_action(%Changeset{action: :update, changes: changes} = changeset,
@@ -187,6 +183,12 @@ defmodule Ecto.Embedded do
     :ok
   end
   defp maybe_replace_one!(_embed, _action, _current), do: :ok
+
+  defp apply_changes(%{action: :delete}), do: nil
+  defp apply_changes(changeset) do
+    model = Changeset.apply_changes(changeset)
+    put_in(model.__meta__.state, :loaded)
+  end
 
   types   = [:before, :after]
   actions = [:insert, :update, :delete]

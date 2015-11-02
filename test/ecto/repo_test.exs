@@ -418,7 +418,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "handles embeds on insert" do
-    embed = %MyEmbed{x: "xyz"}
+    embed = %MyEmbed{x: "xyz"} |> Ecto.Model.put_meta(state: :loaded)
 
     changeset = Ecto.Changeset.change(%MyModel{}, embed: embed)
     model = TestRepo.insert!(changeset)
@@ -648,7 +648,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "inserting embeds on update" do
-    embed = %MyEmbed{x: "xyz"}
+    embed = %MyEmbed{x: "xyz"} |> Ecto.Model.put_meta(state: :loaded)
 
     # Inserting the embed
     changeset = Ecto.Changeset.change(%MyModel{id: 1}, embed: embed)
@@ -672,7 +672,7 @@ defmodule Ecto.RepoTest do
     embed = %{embed | id: @uuid}
 
     # Replacing embed with a new one
-    new_embed = %MyEmbed{x: "abc"}
+    new_embed = %MyEmbed{x: "abc"} |> Ecto.Model.put_meta(state: :loaded)
     changeset = Ecto.Changeset.change(%MyModel{id: 1, embed: embed}, embed: new_embed)
     model = TestRepo.update!(changeset)
     assert [{:after_update, MyModel}, {:after_delete, MyEmbed},
@@ -740,7 +740,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "changing embeds on update" do
-    embed = %MyEmbed{x: "xyz"}
+    embed = %MyEmbed{x: "xyz"} |> Ecto.Model.put_meta(state: :loaded)
 
     # Raises if there's no id
     embed_changeset = Ecto.Changeset.change(embed, x: "abc")
