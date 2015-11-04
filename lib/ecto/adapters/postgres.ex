@@ -113,6 +113,7 @@ defmodule Ecto.Adapters.Postgres do
       else
         []
       end
+    env = [{"PGCONNECT_TIMEOUT", "10"} | env]
 
     args = []
 
