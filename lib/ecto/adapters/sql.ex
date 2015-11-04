@@ -268,9 +268,9 @@ defmodule Ecto.Adapters.SQL do
   defp decode(mod, result, nil, mapper) do
     {mod.decode(result, mapper), nil}
   end
-  defp decode(mod, result, %{query_time: query_time} = entry, mapper) do
+  defp decode(mod, result, entry, mapper) do
     {decode_time, decoded} = :timer.tc(mod, :decode, [result, mapper])
-    {decoded, %{entry | result: decoded, query_time: query_time + decode_time}}
+    {decoded, %Ecto.LogEntry{entry | result: decoded, decode_time: decode_time}}
   end
 
   defp log(_repo, nil), do: :ok
