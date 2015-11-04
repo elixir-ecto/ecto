@@ -238,8 +238,6 @@ defmodule Ecto.Schema do
   * `__schema__(:read_after_writes)` - Non-virtual fields that must be read back
     from the database after every write (insert or update);
 
-  * `__schema__(:autogenerate)` - Non-virtual fields that are auto generated on insert;
-
   * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
 
   Furthermore, both `__struct__` and `__changeset__` functions are
