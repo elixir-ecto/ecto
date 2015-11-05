@@ -633,7 +633,7 @@ defmodule Ecto.Query do
 
           from(u in User, update: [set: [name: "new name"]]
 
-    * `inc` - increments the given field in the table by the given value
+    * `inc` - increments (or decrements if the value is negative) the given field in the table by the given value
 
           from(u in User, update: [inc: [accesses: 1]]
 
