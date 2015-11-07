@@ -1296,7 +1296,7 @@ defmodule Ecto.Changeset do
   are case-insensitive by default. In Postgres, users can define case
   insensitive column by using the `:citext` type/extension.
 
-  If for some reason your database does not support case insensive columns,
+  If for some reason your database does not support case insensitive columns,
   you can explicitly downcase values before inserting/updating them:
 
       cast(model, params, ~w(email), ~w())
