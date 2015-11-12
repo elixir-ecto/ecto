@@ -84,9 +84,9 @@ defmodule Ecto.Adapters.Postgres do
                           "\" ENCODING='#{encoding}'" <> extra
 
     cond do
-      status == 0                                -> :ok
-      String.contains?(output, "already exists") -> {:error, :already_up}
-      true                                       -> {:error, output}
+      status == 0                       -> :ok
+      String.contains?(output, "42P04") -> {:error, :already_up}
+      true                              -> {:error, output}
     end
   end
 
@@ -95,9 +95,9 @@ defmodule Ecto.Adapters.Postgres do
     {output, status} = run_with_psql(opts, "DROP DATABASE \"#{opts[:database]}\"")
 
     cond do
-      status == 0                                -> :ok
-      String.contains?(output, "does not exist") -> {:error, :already_down}
-      true                                       -> {:error, output}
+      status == 0                       -> :ok
+      String.contains?(output, "3D000") -> {:error, :already_down}
+      true                              -> {:error, output}
     end
   end
 
@@ -126,7 +126,13 @@ defmodule Ecto.Adapters.Postgres do
     end
 
     host = database[:hostname] || System.get_env("PGHOST") || "localhost"
-    args = args ++ ["--quiet", "--host", host, "--set", "ON_ERROR_STOP=1", "--no-psqlrc", "-d", "template1", "-c", sql_command]
+    args = args ++ ["--quiet",
+                    "--host", host,
+                    "--set", "ON_ERROR_STOP=1",
+                    "--set", "VERBOSITY=verbose",
+                    "--no-psqlrc",
+                    "-d", "template1",
+                    "-c", sql_command]
     System.cmd("psql", args, env: env, stderr_to_stdout: true)
   end
 
