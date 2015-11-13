@@ -599,6 +599,12 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s|CREATE UNIQUE INDEX `posts_permalink_index` ON `posts` (`permalink`)|
   end
 
+  test "create unique index with condition" do
+    create = {:create, index(:posts, [:permalink], unique: true, where: "public IS TRUE")}
+    assert SQL.execute_ddl(create) ==
+           ~s|CREATE UNIQUE INDEX `posts_permalink_index` ON `posts` (`permalink`)|
+  end
+
   test "create an index using a different type" do
     create = {:create, index(:posts, [:permalink], using: :hash)}
     assert SQL.execute_ddl(create) ==

@@ -129,7 +129,8 @@ defmodule Ecto.Migration do
               columns: [],
               unique: false,
               concurrently: false,
-              using: nil
+              using: nil,
+              where: nil
 
     @type t :: %__MODULE__{
       table: atom,
@@ -138,7 +139,8 @@ defmodule Ecto.Migration do
       columns: [atom | String.t],
       unique: boolean,
       concurrently: boolean,
-      using: atom | String.t
+      using: atom | String.t,
+      where: atom | String.t
     }
   end
 
