@@ -631,6 +631,22 @@ defmodule Ecto.AssociationTest do
     assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
+
+    changeset = Changeset.cast(%Author{}, %{"profile" => %{}},
+                     [profile: &custom_profile_changeset/2])
+    profile = changeset.changes.profile
+    assert changeset.required == [:profile]
+    assert profile.model.name == "default"
+    assert profile.model.__meta__.source == {nil, "users_profiles"}
+    assert profile.changes == %{}
+    assert profile.errors  == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
+  defp custom_profile_changeset(model, params) do
+    Ecto.Changeset.cast(model, params, ~w(), ~w(author_id))
   end
 
   test "cast has_one keeps appropriate action from changeset" do
@@ -737,6 +753,19 @@ defmodule Ecto.AssociationTest do
     assert post_change.action  == :insert
     assert post_change.valid?
     assert changeset.valid?
+
+    changeset = Changeset.cast(%Author{}, %{"posts" => [%{"title" => "hello"}]},
+                               [posts: &custom_posts_changeset/2])
+    [post_change] = changeset.changes.posts
+    assert post_change.changes == %{title: "hello"}
+    assert post_change.errors  == []
+    assert post_change.action  == :insert
+    assert post_change.valid?
+    assert changeset.valid?
+  end
+
+  defp custom_posts_changeset(model, params) do
+    Ecto.Changeset.cast(model, params, ~w(), ~w(title))
   end
 
   test "cast has_many without loading" do

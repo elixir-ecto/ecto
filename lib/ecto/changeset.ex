@@ -323,10 +323,23 @@ defmodule Ecto.Changeset do
 
   ## Relations
 
-  You can override the relation's `on_cast` setting by providing a key-value pair
-  in the `required` or `optional` list instead of a simple field name. The key
-  will be the relation's name and value the new changeset function. The new
-  function will be used similarily to the one provided in the `on_cast` setting.
+  You can override the relation's `on_cast` setting by providing a 2 item tuple
+  in the `required` or `optional` list instead of a simple field name.
+
+  The key will be the relation's name and value is either the changeset
+  function's name or an anonymous function that accepts a model and params. The
+  new function will be used similarily to the one provided in the `on_cast`
+  setting.
+
+      # Will use Author.custom_changeset/2 as the changeset function
+      cast(post, %{author: %{name: "Paul"}}, ~w(), [{:author, :custom_changeset})
+
+      # Will use my_custom_changeset/2 as the changeset function.
+      cast(post, %{author: %{name: "Paul"}}, ~w(), [{:author, &my_custom_changeset/2}])
+
+      defp my_custom_changeset(model, params) do
+        cast(model, params, ~w(name))
+      end
 
   """
   @spec cast(Ecto.Model.t | t,
