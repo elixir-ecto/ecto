@@ -42,6 +42,14 @@ defmodule Ecto.DateTest do
     assert Ecto.Date.cast({2015, 13, 31}) == :error
   end
 
+  test "cast!" do
+    assert Ecto.Date.cast!("2015-12-31") == @date
+
+    assert_raise ArgumentError, "cannot cast \"2015-00-23\" to date", fn ->
+      Ecto.Date.cast!("2015-00-23")
+    end
+  end
+
   test "dump itself into a date triplet" do
     assert Ecto.Date.dump(@date) == {:ok, {2015, 12, 31}}
     assert Ecto.Date.dump({2015, 12, 31}) == :error
@@ -125,6 +133,14 @@ defmodule Ecto.TimeTest do
     assert Ecto.Time.cast({23, 50, 07}) == {:ok, @time}
     assert Ecto.Time.cast({12, 40, 33, 30000}) == {:ok, @time_usec}
     assert Ecto.Time.cast({00, 61, 33}) == :error
+  end
+
+  test "cast!" do
+    assert Ecto.Time.cast!("23:50:07") == @time
+
+    assert_raise ArgumentError, "cannot cast \"24:01:01\" to time", fn ->
+      Ecto.Time.cast!("24:01:01")
+    end
   end
 
   test "dump itself into a time tuple" do
@@ -228,6 +244,14 @@ defmodule Ecto.DateTimeTest do
     assert Ecto.DateTime.cast({{2015, 1, 23}, {23, 50, 07}}) == {:ok, @datetime}
     assert Ecto.DateTime.cast({{2015, 1, 23}, {23, 50, 07, 8000}}) == {:ok, @datetime_usec}
     assert Ecto.DateTime.cast({{2015, 1, 23}, {25, 50, 07, 8000}}) == :error
+  end
+
+  test "cast!" do
+    assert Ecto.DateTime.cast!("2015-01-23 23:50:07") == @datetime
+
+    assert_raise ArgumentError, "cannot cast \"2015-01-23P23:50:07\" to datetime", fn ->
+      Ecto.DateTime.cast!("2015-01-23P23:50:07")
+    end
   end
 
   test "dump itself to a tuple" do
