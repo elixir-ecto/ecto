@@ -801,7 +801,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Item do
-        use Ecto.model
+        use Ecto.Model
 
         # A required field for all embedded documents
         @primary_key {:id, :binary_id, autogenerate: true}
@@ -873,7 +873,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Item do
-        use Ecto.model
+        use Ecto.Model
 
         # embedded_schema is a shorcut for:
         #
