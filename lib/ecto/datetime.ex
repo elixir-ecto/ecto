@@ -139,6 +139,16 @@ defmodule Ecto.Date do
   def cast(_),
     do: :error
 
+  @doc """
+  Same as `cast/1` but raises on invalid dates.
+  """
+  def cast!(value) do
+    case cast(value) do
+      {:ok, date} -> date
+      :error -> raise ArgumentError, "cannot cast #{inspect value} to date"
+    end
+  end
+
   defp from_parts(year, month, day) when is_date(year, month, day) do
     {:ok, %Ecto.Date{year: year, month: month, day: day}}
   end
@@ -271,6 +281,16 @@ defmodule Ecto.Time do
     do: from_parts(to_i(hour), to_i(min), to_i(sec), to_i(usec))
   def cast(_),
     do: :error
+
+  @doc """
+  Same as `cast/1` but raises on invalid times.
+  """
+  def cast!(value) do
+    case cast(value) do
+      {:ok, time} -> time
+      :error -> raise ArgumentError, "cannot cast #{inspect value} to time"
+    end
+  end
 
   defp from_parts(hour, min, sec, usec) when is_time(hour, min, sec, usec),
     do: {:ok, %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}}
@@ -433,6 +453,16 @@ defmodule Ecto.DateTime do
 
   def cast(_) do
     :error
+  end
+
+  @doc """
+  Same as `cast/1` but raises on invalid datetimes.
+  """
+  def cast!(value) do
+    case cast(value) do
+      {:ok, datetime} -> datetime
+      :error -> raise ArgumentError, "cannot cast #{inspect value} to datetime"
+    end
   end
 
   defp from_parts(year, month, day, hour, min, sec, usec)
