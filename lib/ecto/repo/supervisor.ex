@@ -87,10 +87,7 @@ defmodule Ecto.Repo.Supervisor do
       raise Ecto.InvalidURLError, url: url, message: "path should be a database name"
     end
 
-    if info.userinfo do
-      destructure [username, password], String.split(info.userinfo, ":")
-    end
-
+    destructure [username, password], info.userinfo && String.split(info.userinfo, ":")
     "/" <> database = info.path
 
     opts = [username: username,

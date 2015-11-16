@@ -37,7 +37,6 @@ defmodule Ecto.Adapter.Migration  do
 
   @doc """
   Checks if the adapter supports ddl transaction.
-
   """
   defcallback supports_ddl_transaction? :: boolean
 

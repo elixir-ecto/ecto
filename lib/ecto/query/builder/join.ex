@@ -104,6 +104,7 @@ defmodule Ecto.Query.Builder.Join do
     join_params = Builder.escape_params(join_params)
 
     qual = validate_qual(qual)
+    count_setter = nil
     validate_bind(join_bind, binding)
 
     if join_bind != :_ and !count_bind do
@@ -129,17 +130,17 @@ defmodule Ecto.Query.Builder.Join do
                   params: unquote(join_params)}
       end
 
-    if is_integer(count_bind) do
-      count_bind = count_bind + 1
-      quoted = Builder.apply_query(query, __MODULE__, [join], env)
-    else
-      count_bind = quote(do: unquote(count_bind) + 1)
-      quoted =
-        quote do
-          query = Ecto.Queryable.to_query(unquote(query))
-          unquote(count_setter)
-          %{query | joins: query.joins ++ [unquote(join)]}
-        end
+    {count_bind, quoted} =
+      if is_integer(count_bind) do
+        {count_bind + 1,
+         Builder.apply_query(query, __MODULE__, [join], env)}
+      else
+        {quote(do: unquote(count_bind) + 1),
+         quote do
+           query = Ecto.Queryable.to_query(unquote(query))
+           unquote(count_setter)
+           %{query | joins: query.joins ++ [unquote(join)]}
+         end}
       end
 
     {quoted, binding, count_bind}

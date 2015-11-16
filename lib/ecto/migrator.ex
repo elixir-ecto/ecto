@@ -97,6 +97,7 @@ defmodule Ecto.Migrator do
   end
 
   defp run_maybe_in_transaction(repo, module, fun) do
+    # TODO: Make supports_ddl_transaction something that actually runs transactions
     cond do
       module.__migration__[:disable_ddl_transaction] ->
         fun.()

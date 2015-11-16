@@ -35,10 +35,11 @@ defmodule Ecto.Repo.Assoc do
   end
 
   defp merge([struct|sub_structs], {keys, dict, sub_dicts}, parent_key) do
-    if struct do
-      [{_, child_key}] = Ecto.Model.primary_key!(struct)
-      child_key || raise Ecto.NoPrimaryKeyValueError, struct: struct
-    end
+    child_key =
+      if struct do
+        [{_, key}] = Ecto.Model.primary_key!(struct)
+        key || raise Ecto.NoPrimaryKeyValueError, struct: struct
+      end
 
     # Traverse sub_structs adding one by one to the tree.
     # Note we need to traverse even if we don't have a child_key
