@@ -1145,7 +1145,7 @@ defmodule Ecto.Changeset do
       validate_number(changeset, :the_answer_to_life_the_universe_and_everything, equal_to: 42)
 
   """
-  @spec validate_number(t, atom, Range.t | [Keyword.t]) :: t
+  @spec validate_number(t, atom, [Keyword.t]) :: t
   def validate_number(changeset, field, opts) do
     validate_change changeset, field, {:number, opts}, fn
       field, value ->
