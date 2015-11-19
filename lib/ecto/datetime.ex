@@ -339,20 +339,30 @@ defmodule Ecto.Time do
 
   @doc """
   Returns an `Ecto.Time` in local time.
+  `precision` can be `:sec` or `:usec.`
 
   WARNING: The local time is often not always increasing due
   to DST changes, which can lead to bugs. Please prefer the
-  `utc/0` function instead.
+  `utc/1` function instead.
   """
-  def local do
-    erl_load(:erlang.localtime)
+  def local(precision \\ :sec)
+  def local(:sec), do: erl_load(:erlang.localtime)
+  def local(:usec) do
+    now = {_, _, usec} = :os.timestamp
+    {_date, {hour, min, sec}} = :calendar.now_to_local_time(now)
+    %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}
   end
 
   @doc """
   Returns an `Ecto.Time` in UTC.
+  `precision` can be `:sec` or `:usec.`
   """
-  def utc do
-    erl_load(:erlang.universaltime)
+  def utc(precision \\ :sec)
+  def utc(:sec), do: erl_load(:erlang.universaltime)
+  def utc(:usec) do
+    now = {_, _, usec} = :os.timestamp
+    {_date, {hour, min, sec}} = :calendar.now_to_universal_time(now)
+    %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}
   end
 
   @doc """
@@ -482,9 +492,8 @@ defmodule Ecto.DateTime do
   @doc """
   Converts a `{date, time}` tuple into an `Ecto.DateTime`.
   """
-  def load({{year, month, day}, {hour, min, sec, usec}}) do
-    {:ok, %Ecto.DateTime{year: year, month: month, day: day,
-                         hour: hour, min: min, sec: sec, usec: usec}}
+  def load({{_, _, _}, {_, _, _, _}} = datetime) do
+    {:ok, erl_load(datetime)}
   end
   def load({{_, _, _}, {_, _, _}} = datetime) do
     {:ok, erl_load(datetime)}
@@ -559,22 +568,32 @@ defmodule Ecto.DateTime do
 
   @doc """
   Returns an `Ecto.DateTime` in local time.
+  `precision` can be `:sec` or `:usec.`
 
   WARNING: Using the local time of the server will often lead to
   intermittent bugs.
 
   This function only exists for legacy purposes. It is recommended to not
-  use this function. Please use the `utc/0` function instead.
+  use this function. Please use the `utc/1` function instead.
   """
-  def local do
-    erl_load(:erlang.localtime)
+  def local(precision \\ :sec)
+  def local(:sec), do: erl_load(:erlang.localtime)
+  def local(:usec) do
+    now = {_, _, usec} = :os.timestamp
+    {date, {hour, min, sec}} = :calendar.now_to_local_time(now)
+    erl_load({date, {hour, min, sec, usec}})
   end
 
   @doc """
   Returns an `Ecto.DateTime` in UTC.
+  `precision` can be `:sec` or `:usec.`
   """
-  def utc do
-    erl_load(:erlang.universaltime)
+  def utc(precision \\ :sec)
+  def utc(:sec), do: erl_load(:erlang.universaltime)
+  def utc(:usec) do
+    now = {_, _, usec} = :os.timestamp
+    {date, {hour, min, sec}} = :calendar.now_to_universal_time(now)
+    erl_load({date, {hour, min, sec, usec}})
   end
 
   @doc """
@@ -594,6 +613,11 @@ defmodule Ecto.DateTime do
   defp erl_load({{year, month, day}, {hour, min, sec}}) do
     %Ecto.DateTime{year: year, month: month, day: day,
                    hour: hour, min: min, sec: sec}
+  end
+
+  defp erl_load({{year, month, day}, {hour, min, sec, usec}}) do
+    %Ecto.DateTime{year: year, month: month, day: day,
+                   hour: hour, min: min, sec: sec, usec: usec}
   end
 end
 
