@@ -1216,10 +1216,10 @@ defmodule Ecto.Changeset do
   ## Examples
 
       validate_confirmation(changeset, :email)
-      validate_confirmation(changeset, :password, message: "passwords do not match")
+      validate_confirmation(changeset, :password, message: "does not match password")
 
       cast(model, params, ~w(password), ~w())
-      |> validate_confirmation(:password, message: "passwords do not match")
+      |> validate_confirmation(:password, message: "does not match password")
 
   """
   @spec validate_confirmation(t, atom, Enum.t) :: t
