@@ -71,6 +71,15 @@ defmodule Ecto.Type do
   Ecto types also allow developers to create completely new types as
   long as they can be encoded by the database. `Ecto.DateTime` and
   `Ecto.UUID` are such examples.
+
+  In order for this to work, callbacks should take care of encoding your custom
+  Ecto type into its db representation, as well as decoding it from the db back
+  into the Ecto type. Each callback should behave as follows.
+
+    * `type` should output the name of the db type
+    * `cast` should receive any type and output your custom Ecto type
+    * `load` should receive the db type and output your custom Ecto type
+    * `dump` should receive your custom Ecto type and output the db type
   """
 
   import Kernel, except: [match?: 2]
