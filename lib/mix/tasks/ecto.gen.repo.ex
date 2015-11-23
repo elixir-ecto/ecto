@@ -61,7 +61,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     Don't forget to add your new repo to your supervision tree
     (typically in lib/#{app}.ex):
 
-        worker(#{inspect repo}, [])
+        supervisor(#{inspect repo}, [])
     """
   end
 
