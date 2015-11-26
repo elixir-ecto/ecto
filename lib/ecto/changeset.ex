@@ -1482,7 +1482,7 @@ defmodule Ecto.Changeset do
 
   """
   def exclude_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclude"
+    constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclusion"
     message    = opts[:message] || "violates an exclusion constraint"
     add_constraint(changeset, :exclude, to_string(constraint), field, message)
   end
