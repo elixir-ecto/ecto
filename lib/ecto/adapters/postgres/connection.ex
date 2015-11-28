@@ -114,13 +114,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     def update_all(query) do
       sources = create_names(query)
+      {table, name, _model} = elem(sources, 0)
 
       fields = update_fields(query, sources)
-      update = update_expr(query, elem(sources, 0))
-      join   = update_filter(query, sources)
-      where  = where(query, sources)
+      {join, wheres} = update_join(query, sources)
+      where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble([update, "SET", fields, join, where])
+      assemble(["UPDATE #{table} AS #{name} SET", fields, join, where])
     end
 
     def delete_all(query) do
@@ -209,10 +209,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp using(%Query{joins: []}, _sources), do: []
     defp using(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
-        %JoinExpr{on: %QueryExpr{expr: expr}, ix: ix} ->
+        %JoinExpr{qual: :inner, on: %QueryExpr{expr: expr}, ix: ix} ->
           {table, name, _model} = elem(sources, ix)
           where = expr(expr, sources, query)
           "USING #{table} AS #{name} WHERE " <> where
+        %JoinExpr{qual: qual} ->
+            error!(query, "PostgreSQL supports only inner joins on delete_all, got: `#{qual}`")
       end)
     end
 
@@ -246,16 +248,24 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       error!(query, "Unknown update operation #{inspect command} for PostgreSQL")
     end
 
-    defp update_expr(%Query{joins: []}, {table, name, _model}) do
-      "UPDATE #{table} AS #{name}"
-    end
-    defp update_expr(_query, {table, _name, _model}) do
-      "UPDATE #{table}"
-    end
+    defp update_join(%Query{joins: []}, _sources), do: {[], []}
+    defp update_join(%Query{joins: joins} = query, sources) do
+      froms =
+        "FROM " <> Enum.map_join(joins, ", ", fn
+          %JoinExpr{qual: :inner, ix: ix, source: source} ->
+            {join, name, _model} = elem(sources, ix)
+            join = join || "(" <> expr(source, sources, query) <> ")"
+            join <> " AS " <> name
+          %JoinExpr{qual: qual} ->
+            error!(query, "PostgreSQL supports only inner joins on update_all, got: `#{qual}`")
+        end)
 
-    defp update_filter(%Query{joins: []}, _sources), do: []
-    defp update_filter(query, sources) do
-      from(sources) <> " "  <> join(query, sources)
+      wheres =
+        for %JoinExpr{on: %QueryExpr{expr: value} = expr} <- joins,
+            value != true,
+            do: expr
+
+      {froms, wheres}
     end
 
     defp join(%Query{joins: []}, _sources), do: []
@@ -265,7 +275,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
           {join, name, _model} = elem(sources, ix)
           qual = join_qual(qual)
           join = join || "(" <> expr(source, sources, query) <> ")"
-          "#{qual} JOIN " <> join <> " AS #{name} ON " <> expr(expr, sources, query)
+          "#{qual} JOIN " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
       end)
     end
 
