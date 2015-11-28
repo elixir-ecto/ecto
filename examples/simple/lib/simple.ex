@@ -3,7 +3,7 @@ defmodule Simple.App do
 
   def start(_type, _args) do
     import Supervisor.Spec
-    tree = [worker(Simple.Repo, [])]
+    tree = [supervisor(Simple.Repo, [])]
     opts = [name: Simple.Sup, strategy: :one_for_one]
     Supervisor.start_link(tree, opts)
   end

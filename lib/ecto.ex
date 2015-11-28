@@ -52,13 +52,13 @@ defmodule Ecto do
   If your application was generated with a supervisor (by passing `--sup` to `mix new`)
   you will have a `lib/my_app.ex` file containing the application start callback that
   defines and starts your supervisor. You just need to edit the `start/2` function to
-  start the repo as a worker on the supervisor:
+  start the repo as a supervisor on your application's supervisor:
 
       def start(_type, _args) do
         import Supervisor.Spec
 
         children = [
-          worker(Repo, [])
+          supervisor(Repo, [])
         ]
 
         opts = [strategy: :one_for_one, name: MyApp.Supervisor]
