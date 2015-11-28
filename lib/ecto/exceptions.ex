@@ -99,7 +99,7 @@ end
 defmodule Ecto.NoPrimaryKeyValueError do
   @moduledoc """
   Raised at runtime when an operation that requires a primary key is invoked
-  with a model missing value for it's primary key
+  with a model missing value for its primary key
   """
   defexception [:message, :struct]
 
