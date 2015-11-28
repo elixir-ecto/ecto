@@ -360,13 +360,13 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z)
                   |> update([_], set: [x: 0]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "model" SET "x" = 0 FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m0."x" = m1."z"}
+           ~s{UPDATE "model" AS m0 SET "x" = 0 FROM "model2" AS m1 WHERE (m0."x" = m1."z")}
 
     query = from(e in Model, where: e.x == 123, update: [set: [x: 0]],
                              join: q in Model2, on: e.x == q.z) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "model" SET "x" = 0 FROM "model" AS m0 } <>
-           ~s{INNER JOIN "model2" AS m1 ON m0."x" = m1."z" WHERE (m0."x" = 123)}
+           ~s{UPDATE "model" AS m0 SET "x" = 0 FROM "model2" AS m1 } <>
+           ~s{WHERE (m0."x" = m1."z") AND (m0."x" = 123)}
   end
 
   test "update all array ops" do
