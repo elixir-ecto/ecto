@@ -38,11 +38,6 @@ defmodule Ecto.Adapters.SQL.Query do
   """
   defcallback to_constraints(Exception.t) :: Keyword.t
 
-  @doc """
-  Decodes the given result set given the mapper function.
-  """
-  defcallback decode(result, mapper :: (term -> term)) :: result
-
   ## Queries
 
   @doc """

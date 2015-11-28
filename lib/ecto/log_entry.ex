@@ -9,7 +9,6 @@ defmodule Ecto.LogEntry do
     * params - the query parameters;
     * result - the query result as an `:ok` or `:error` tuple;
     * query_time - the time spent executing the query in microseconds;
-    * decode_time - the time spent decoding the result in microseconds (it may be nil);
     * queue_time - the time spent to check the connection out in microseconds (it may be nil);
     * connection_pid - the connection process that executed the query
   """
@@ -17,11 +16,10 @@ defmodule Ecto.LogEntry do
   alias Ecto.LogEntry
 
   @type t :: %LogEntry{query: iodata | (t -> iodata), params: [term],
-                       query_time: integer, decode_time: integer | nil,
-                       queue_time: integer | nil, connection_pid: pid | nil,
+                       query_time: integer, queue_time: integer, connection_pid: pid | nil,
                        result: {:ok, term} | {:error, Exception.t}}
-  defstruct query: nil, params: [], query_time: nil, decode_time: nil,
-            queue_time: nil, result: nil, connection_pid: nil
+  defstruct query: nil, params: [], query_time: nil, queue_time: nil, result: nil,
+            connection_pid: nil
 
   @doc """
   Resolves a log entry.
@@ -43,7 +41,7 @@ defmodule Ecto.LogEntry do
   The entry is automatically resolved if it hasn't been yet.
   """
   def to_iodata(entry) do
-    %{query_time: query_time, decode_time: decode_time, queue_time: queue_time,
+    %{query_time: query_time, queue_time: queue_time,
       params: params, query: query, result: result} = entry = resolve(entry)
 
     params = Enum.map params, fn
@@ -52,8 +50,7 @@ defmodule Ecto.LogEntry do
     end
 
     {entry, [query, ?\s, inspect(params, char_lists: false), ?\s, ok_error(result),
-             time("query", query_time, true), time("decode", decode_time, false),
-             time("queue", queue_time, false)]}
+             time("query", query_time, true), time("queue", queue_time, false)]}
   end
 
   defp ok_error({:ok, _}),    do: "OK"

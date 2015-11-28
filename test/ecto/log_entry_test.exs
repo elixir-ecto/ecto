@@ -40,9 +40,6 @@ defmodule Ecto.LogEntryTest do
 
     entry = %{entry | params: [1, 2, 3], query_time: 2100, queue_time: 100, result: {:error, :error}}
     assert to_binary(entry) == "done [1, 2, 3] ERROR query=2.1ms queue=0.1ms"
-
-    entry = %{entry | params: [1, 2, 3], query_time: 2100, decode_time: 500, queue_time: 100, result: {:error, :error}}
-    assert to_binary(entry) == "done [1, 2, 3] ERROR query=2.1ms decode=0.5ms queue=0.1ms"
   end
 
   test "resolves when converting entry to iodata" do
