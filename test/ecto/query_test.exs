@@ -20,6 +20,9 @@ defmodule Ecto.QueryTest do
     from(p in "posts") |> having(title: "foo")
     from(p in "posts") |> offset(1)
     from(p in "posts") |> update(set: [title: "foo"])
+    from(p in "posts") |> select(1)
+    from(p in "posts") |> group_by(1)
+    from(p in "posts") |> join(:inner, "comments")
   end
 
   test "where allows macros" do
