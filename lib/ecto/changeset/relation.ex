@@ -179,7 +179,7 @@ defmodule Ecto.Changeset.Relation do
                    &do_cast(relation, &1, &2))
   end
 
-  defp do_cast(%{related: model, on_cast: fun} = meta, params, nil) when is_function(fun) do
+  defp do_cast(%{on_cast: fun} = meta, params, nil) when is_function(fun) do
     {:ok, fun.(meta.__struct__.build(meta), params) |> put_new_action(:insert)}
   end
 
