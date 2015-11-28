@@ -390,7 +390,7 @@ defmodule Ecto.Adapters.SQL do
     case repo.__pool__ do
       {Sandbox, pool, pool_timeout, timeout} ->
         opts = Keyword.put_new(opts, :timeout, timeout)
-        pool_timeout = Keyword.get(opts, :pool_tmeout, pool_timeout)
+        pool_timeout = Keyword.get(opts, :pool_timeout, pool_timeout)
         test_transaction(pool, fun, &repo.log/1, opts, pool_timeout)
       {pool_mod, _, _, _} ->
         raise """
