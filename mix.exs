@@ -39,7 +39,7 @@ defmodule Ecto.Mixfile do
      {:sbroker, "~> 0.7", optional: true},
      {:decimal, "~> 1.0"},
      {:postgrex, "~> 0.10", optional: true},
-     {:mariaex, "~> 0.4.1", optional: true},
+     {:mariaex, "~> 0.5", optional: true},
      {:poison, "~> 1.0", optional: true},
      {:ex_doc, "~> 0.10", only: :docs},
      {:earmark, "~> 0.1", only: :docs},
