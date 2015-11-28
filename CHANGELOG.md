@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.7
+
+* Enhancements
+  * Improve performance of Ecto.UUID encoding/decoding
+  * No longer block poolboy when starting a non-lazy connection
+
+* Bug fixes
+  * Do not allow interpolated strings in queries
+  * Emit proper SQL for update all with postgres
+
 ## v1.0.6
 
 * Bug fixes
