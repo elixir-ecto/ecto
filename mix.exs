@@ -61,7 +61,7 @@ defmodule Ecto.Mixfile do
   end
 
   defp package do
-    [maintainers: ["Eric Meadows-Jönsson", "José Valim"],
+    [maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
      licenses: ["Apache 2.0"],
      links: %{"GitHub" => "https://github.com/elixir-lang/ecto"},
      files: ~w(mix.exs README.md CHANGELOG.md lib) ++
