@@ -136,7 +136,7 @@ defmodule Ecto do
 
   Although in the example above we have directly inserted and deleted the
   model in the repository, update operations must be done through changesets
-  so Ecto efficiently track changes.
+  so Ecto can efficiently track changes.
 
   Further than that, changesets allow developers to filter, cast, and validate
   changes before we apply them to a model. Imagine the given model:
