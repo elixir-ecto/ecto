@@ -681,4 +681,6 @@ defmodule Ecto.Repo do
 
   """
   defcallback log(Ecto.LogEntry.t) :: any
+
+  # TODO: Consider moving after_connect and log to the upcoming events system
 end

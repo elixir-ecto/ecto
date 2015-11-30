@@ -91,7 +91,6 @@ defmodule Ecto.Integration.Comment do
     has_one :post_permalink, through: [:post, :permalink]
   end
 
-  optimistic_lock :lock_version
   before_delete Ecto.Integration.Model, :pdict_store, [__MODULE__, :on_delete]
 end
 

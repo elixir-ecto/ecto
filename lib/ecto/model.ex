@@ -195,7 +195,6 @@ defmodule Ecto.Model do
   end
 
   @doc false
-  # TODO: Deprecate on Ecto 1.1
   def put_source(model, new_source, new_prefix \\ nil) do
     IO.puts :stderr, "warning: Ecto.Model.put_source/3 is deprecated in favor of " <>
                      "Ecto.Model.put_meta/2\n#{Exception.format_stacktrace}"

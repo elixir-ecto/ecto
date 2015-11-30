@@ -152,6 +152,7 @@ defmodule Ecto.MigrationError do
   defexception [:message]
 end
 
+# TODO: Rename to Ecto.StaleEntryError on 2.0
 defmodule Ecto.StaleModelError do
   defexception [:message]
 

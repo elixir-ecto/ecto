@@ -814,6 +814,26 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
   end
 
+  ## Locks
+
+  test "optimistic_lock/3 with changeset" do
+    changeset = changeset(%{}) |> optimistic_lock(:upvotes)
+    assert changeset.filters == %{upvotes: 0}
+    assert changeset.changes == %{upvotes: 1}
+  end
+
+  test "optimistic_lock/3 with model" do
+    changeset = %Post{} |> optimistic_lock(:upvotes)
+    assert changeset.filters == %{upvotes: 0}
+    assert changeset.changes == %{upvotes: 1}
+  end
+
+  test "optimistic_lock/3 with custom incrementer" do
+    changeset = %Post{} |> optimistic_lock(:upvotes, &(&1 - 1))
+    assert changeset.filters == %{upvotes: 0}
+    assert changeset.changes == %{upvotes: -1}
+  end
+
   ## Constraints
 
   test "unique_constraint/3" do

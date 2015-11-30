@@ -175,16 +175,18 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "optimistic locking in update/delete operations" do
-    import Ecto.Changeset, only: [cast: 4]
+    import Ecto.Changeset, only: [cast: 4, optimistic_lock: 2]
     base_post = TestRepo.insert!(%Comment{})
 
-    cs_ok = cast(base_post, %{"text" => "foo.bar"}, ~w(text), ~w())
+    cs_ok =
+      base_post
+      |> cast(%{"text" => "foo.bar"}, ~w(text), ~w())
+      |> optimistic_lock(:lock_version)
     TestRepo.update!(cs_ok)
 
-    cs_stale = cast(base_post, %{"text" => "foo.baz"}, ~w(text), ~w())
+    cs_stale = optimistic_lock(base_post, :lock_version)
     assert_raise Ecto.StaleModelError, fn -> TestRepo.update!(cs_stale) end
-
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(base_post) end
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(cs_stale) end
   end
 
   @tag :unique_constraint

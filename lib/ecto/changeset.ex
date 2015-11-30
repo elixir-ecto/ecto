@@ -1,7 +1,7 @@
 defmodule Ecto.Changeset do
   @moduledoc ~S"""
   Changesets allow filtering, casting, validation and
-  definition of constraints when manipulating models..
+  definition of constraints when manipulating models.
 
   There is an example of working with changesets in the
   introductory documentation in the `Ecto` module. The
@@ -229,23 +229,19 @@ defmodule Ecto.Changeset do
   @spec change(Ecto.Model.t | t, %{atom => term} | [Keyword.t]) :: t
   def change(model_or_changeset, changes \\ %{})
 
-  def change(model_or_changeset, changes) when is_list(changes) do
-    change(model_or_changeset, Enum.into(changes, %{}))
-  end
-
   def change(%Changeset{types: nil}, _changes) do
     raise ArgumentError, "changeset does not have types information"
   end
 
   def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
-      when is_map(new_changes) do
+      when is_map(new_changes) or is_list(new_changes) do
     {changes, errors, valid?} =
       get_changed(changeset.model, types, changes, new_changes,
                   changeset.errors, changeset.valid?)
     %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
-  def change(%{__struct__: struct} = model, changes) when is_map(changes) do
+  def change(%{__struct__: struct} = model, changes) when is_map(changes) or is_list(changes) do
     types = struct.__changeset__
     {changes, errors, valid?} =
       get_changed(model, types, %{}, changes, [], true)
@@ -1240,6 +1236,97 @@ defmodule Ecto.Changeset do
 
   defp message(opts, default) do
     Keyword.get(opts, :message, default)
+  end
+
+  ## Optimistic lock
+
+  @doc ~S"""
+  Applies optimistic locking to the changeset.
+
+  [Optimistic
+  locking](http://en.wikipedia.org/wiki/Optimistic_concurrency_control) (or
+  *optimistic concurrency control*) is a technique that allows concurrent edits
+  on a single record. While pessimistic locking works by locking a resource for
+  an entire transaction, optimistic locking only checks if the resource changed
+  before updating it.
+
+  This is done by regularly fetching the record from the database, then checking
+  whether another user has made changes to the record *only when updating the
+  record*. This behaviour is ideal in situations where the chances of concurrent
+  updates to the same record are low; if they're not, pessimistic locking or
+  other concurrency patterns may be more suited.
+
+  ## Usage
+
+  Optimistic locking works by keeping a "version" counter for each record; this
+  counter gets incremented each time a modification is made to a record. Hence,
+  in order to use optimistic locking, a field must exist in your schema for
+  versioning purpose. Such field is usually an integer but other types are
+  supported.
+
+  ## Examples
+
+  Assuming we have a `Post` schema (stored in the `posts` table), the first step
+  is to add a version column to the `posts` table:
+
+      alter table(:posts) do
+        add :lock_version, :integer, default: 1
+      end
+
+  The column name is arbitrary and doesn't need to be `:lock_version`. Now add
+  a field to the schema too:
+
+      defmodule Post do
+        use Ecto.Schema
+
+        schema "posts" do
+          field :title, :string
+          field :lock_version, :integer, default: 1
+        end
+
+        def changeset(:update, struct, params \\ :empty) do
+          struct
+          |> Ecto.Changeset.cast(struct, params, ~w(:title))
+          |> Ecto.Changeset.optimistic_lock(:lock_version)
+        end
+      end
+
+  Now let's take optimistic locking for a spin:
+
+      iex> post = Repo.insert!(%Post{title: "foo"})
+      %Post{id: 1, title: "foo", lock_version: 1}
+      iex> valid_change = Post.changeset(:update, post, %{title: "bar"})
+      iex> stable_change = Post.changeset(:update, post, %{title: "baz"})
+      iex> Repo.update!(valid_change)
+      %Post{id: 1, title: "bar", lock_version: 2}
+      iex> Repo.update!(stale_change)
+      ** (Ecto.StaleModelError) attempted to update a stale model:
+
+      %Post{id: 1, title: "baz", lock_version: 1}
+
+  When a conflict happens (a record which has been previously fetched is
+  being updated, but that same record has been modified since it was
+  fetched), an `Ecto.StaleModelError` exception is raised.
+
+  Optimistic locking also works with delete operations. Just call the
+  `optimistic_lock` function with the model before delete:
+
+      iex> changeset = Ecto.Changeset.optimistic_lock(post, :lock_version)
+      iex> Repo.delete(changeset)
+
+  Finally, keep in `optimistic_lock/3` by default assumes the field
+  being used as a lock is an integer. If you want to use another type,
+  you need to pass the third argument customizing how the next value
+  is generated:
+
+      iex> Ecto.Changeset.optimistic_lock(post, :lock_uuid, fn _ -> Ecto.UUID.generate end)
+
+  """
+  def optimistic_lock(model_or_changeset, field, incrementer \\ &(&1 + 1)) do
+    changeset = change(model_or_changeset, %{})
+    current = Map.fetch!(changeset.model, field)
+    update_in(changeset.filters, &Map.put(&1, field, current))
+    |> force_change(field, incrementer.(current))
   end
 
   ## Constraints
