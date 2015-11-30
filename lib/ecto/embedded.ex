@@ -6,15 +6,13 @@ defmodule Ecto.Embedded do
   @type t :: %Embedded{cardinality: :one | :many,
                        strategy: :replace | atom,
                        on_replace: Changeset.Relation.on_replace,
-                       on_delete: :fetch_and_delete,
                        field: atom, owner: atom, related: atom,
                        on_cast: Changeset.Relation.on_cast}
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:cardinality, :field, :owner, :related, :on_cast, :on_replace,
-             strategy: :replace, on_delete: :fetch_and_delete]
-
+             strategy: :replace]
 
   @doc """
   Builds the embedded struct.

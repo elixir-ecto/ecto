@@ -108,9 +108,9 @@ defmodule Ecto.Repo.Model do
   def update(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
     # TODO: Once we remove this deprecation, we can remove the :source
     # hack from repo.opts and clean up the timestamps implementation.
-    IO.puts :stderr, "warning: giving a model to #{inspect repo}.update/2 is deprecated. " <>
-                     "Ecto is unable to properly track changes when a model is given and " <>
-                     "using a changeset must be given instead\n#{Exception.format_stacktrace}"
+    IO.puts :stderr, "warning: giving a struct to #{inspect repo}.update/2 is deprecated. " <>
+                     "Ecto is unable to properly track changes when a struct is given and " <>
+                     "an Ecto.Changeset must be given instead\n#{Exception.format_stacktrace}"
 
     changes =
       struct
@@ -195,16 +195,15 @@ defmodule Ecto.Repo.Model do
       :built  -> insert! repo, adapter, changeset, opts
       :loaded -> update! repo, adapter, changeset, opts
       state   -> raise ArgumentError, "the changeset has an invalid state " <>
-                                      "for Repo.insert_or_update/2: #{state}"
+                                      "for Repo.insert_or_update!/2: #{state}"
     end
   end
 
   defp get_state(%Changeset{model: model}), do: model.__meta__.state
   defp get_state(%{__struct__: _model}) do
-    raise ArgumentError, "giving a model to " <>
-                         "Repo.insert_or_update/2 or " <>
-                         "Repo.insert_or_update!/2 is not supported. Please " <>
-                         "use an `%Ecto.Changeset{}`."
+    raise ArgumentError, "giving a struct to Repo.insert_or_update/2 or " <>
+                         "Repo.insert_or_update!/2 is not supported. " <>
+                         "Please use an Ecto.Changeset"
   end
 
   @doc """
@@ -227,12 +226,14 @@ defmodule Ecto.Repo.Model do
     struct = struct_from_changeset!(:delete, changeset)
     model  = struct.__struct__
     embeds = model.__schema__(:embeds)
+    assocs = model.__schema__(:associations)
 
     changeset = %{changeset | changes: %{}}
     autogen   = get_autogenerate_id(changeset, model)
 
     wrap_in_transaction(repo, adapter, model, opts, embeds, [],
                         ~w(before_delete after_delete)a, fn ->
+      delete_assocs(changeset, repo, model, assocs)
       user_changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
       # We don't prepare the changeset on delete, so we just copy the user one
@@ -348,7 +349,7 @@ defmodule Ecto.Repo.Model do
 
     base =
       Enum.reduce embeds, Map.take(struct, fields), fn field, acc ->
-        {:embed, embed} = Map.get(types, field)
+        {:embed, embed} = Map.fetch!(types, field)
         Map.put(acc, field, Ecto.Changeset.Relation.empty(embed))
       end
 
@@ -384,6 +385,30 @@ defmodule Ecto.Repo.Model do
 
   defp process_assocs(changeset, assocs, adapter, repo, opts) do
     Ecto.Changeset.Relation.on_repo_action(changeset, assocs, adapter, repo, opts)
+  end
+
+  # TODO: In the future, once we support belongs_to associations,
+  # we will want to optimize this as some associations must be
+  # acted on before delete and some after and we likely won't
+  # want to traverse it twice.
+  defp delete_assocs(%{model: model}, repo, struct, assocs) do
+    for assoc_name <- assocs do
+      case struct.__schema__(:association, assoc_name) do
+        # TODO: fetch_and_delete is deprecated. Removed by 2.0
+        %{on_delete: :fetch_and_delete, field: field} ->
+          assocs = repo.all Ecto.Model.assoc(model, field)
+          Enum.each assocs, &repo.delete!(&1)
+        %{on_delete: :delete_all, field: field} ->
+          repo.delete_all Ecto.Model.assoc(model, field)
+        %{on_delete: :nilify_all, related_key: related_key, field: field} ->
+          query = Ecto.Model.assoc(model, field)
+          repo.update_all query, set: [{related_key, nil}]
+        _ ->
+          :ok
+      end
+    end
+
+    :ok
   end
 
   defp maybe_process_after({:ok, changeset}, _user_changeset, model, callback) do

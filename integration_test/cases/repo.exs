@@ -296,7 +296,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :foreign_key_constraint
-  test "no assoc constraint" do
+  test "no assoc constraint error" do
     user = TestRepo.insert!(%User{})
     TestRepo.insert!(%Permalink{user_id: user.id})
 
@@ -307,6 +307,12 @@ defmodule Ecto.Integration.RepoTest do
 
     assert exception.message =~ "foreign_key: permalinks_user_id_fkey"
     assert exception.message =~ "The changeset has not defined any constraint."
+  end
+
+  @tag :foreign_key_constraint
+  test "no assoc constraint with changeset mismatch" do
+    user = TestRepo.insert!(%User{})
+    TestRepo.insert!(%Permalink{user_id: user.id})
 
     message = ~r/constraint error when attempting to delete model/
     exception =
@@ -318,6 +324,12 @@ defmodule Ecto.Integration.RepoTest do
       end
 
     assert exception.message =~ "foreign_key: permalinks_user_id_pther"
+  end
+
+  @tag :foreign_key_constraint
+  test "no assoc constraint with changeset match" do
+    user = TestRepo.insert!(%User{})
+    TestRepo.insert!(%Permalink{user_id: user.id})
 
     {:error, changeset} =
       user

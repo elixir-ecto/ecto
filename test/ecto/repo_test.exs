@@ -358,8 +358,8 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "insert_or_update fails when being passed a model" do
-    assert_raise ArgumentError, ~r/giving a model to .* is not supported/, fn ->
+  test "insert_or_update fails when being passed a struct" do
+    assert_raise ArgumentError, ~r/giving a struct to .* is not supported/, fn ->
       TestRepo.insert_or_update %MyModel{}
     end
   end

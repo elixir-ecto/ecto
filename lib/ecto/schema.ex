@@ -443,10 +443,10 @@ defmodule Ecto.Schema do
       associations. Read below for more information
 
     * `:on_delete` - The action taken on associations when parent model
-      is deleted. May be `:nothing` (default), `:nilify_all`, `:delete_all`
-      or `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
-      Notice `:on_delete` may also be set in migrations when creating
-      a reference. If supported, relying on the database is often prefered
+      is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
+      Notice `:on_delete` may also be set in migrations when creating a
+      reference. If supported, relying on the database via migrations
+      is prefered
 
     * `:on_replace` - The action taken on associations when the model is
       replaced   when casting or manipulating parent changeset. May be
@@ -581,10 +581,10 @@ defmodule Ecto.Schema do
       associations. Read the section in `has_many/3` for more information
 
     * `:on_delete` - The action taken on associations when parent model
-      is deleted. May be `:nothing` (default), `:nilify_all`, `:delete_all`
-      or `:fetch_and_delete`. See `Ecto.Model.Dependent` for more info.
-      Notice `:on_delete` may also be set in migrations when creating
-      a reference. If supported, relying on the database is often prefered
+      is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
+      Notice `:on_delete` may also be set in migrations when creating a
+      reference. If supported, relying on the database via migrations
+      is prefered
 
     * `:on_replace` - The action taken on associations when the model is
       replaced   when casting or manipulating parent changeset. May be
@@ -1000,6 +1000,11 @@ defmodule Ecto.Schema do
   @doc false
   def __has_many__(mod, name, queryable, opts) do
     check_options!(opts, @valid_has_options, "has_many/3")
+
+    if opts[:on_delete] == :fetch_and_delete do
+      IO.puts :stderr, "warning: setting on_delete: :fetch_and_delete for associations " <>
+                       "is deprecated as they rely on callbacks. Use :delete_all or :nilify_all"
+    end
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)

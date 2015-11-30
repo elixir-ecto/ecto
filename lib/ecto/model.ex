@@ -13,7 +13,6 @@ defmodule Ecto.Model do
   existing in `Ecto.Model.*` are brought in too:
 
     * `use Ecto.Model.Autogenerate` - automatically handle autogenerate columns before insertion
-    * `use Ecto.Model.Dependent` - performs dependency (associations) management
     * `use Ecto.Model.Callbacks` - provides lifecycle callbacks
     * `use Ecto.Model.Timestamps` - automatically sets `inserted_at` and
       `updated_at` fields declared via `Ecto.Schema.timestamps/1`
@@ -39,7 +38,6 @@ defmodule Ecto.Model do
 
       use Ecto.Model.OptimisticLock
       use Ecto.Model.Timestamps
-      use Ecto.Model.Dependent
       use Ecto.Model.Autogenerate
       use Ecto.Model.Callbacks
     end
