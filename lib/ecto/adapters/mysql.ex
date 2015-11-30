@@ -139,23 +139,28 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
-  defp run_with_mysql(sql_command, database) do
-    unless System.find_executable("mysql") do
-      raise "could not find executable `mysql` in path, " <>
+  defp run_with_mysql(sql_command, opts) do
+    args = ["--silent", "--execute", sql_command]
+    run_with_cmd("mysql", opts, args)
+  end
+
+  defp run_with_cmd(cmd, opts, opt_args) do
+    unless System.find_executable(cmd) do
+      raise "could not find executable `#{cmd}` in path, " <>
             "please guarantee it is available before running ecto commands"
     end
 
     env =
-      if password = database[:password] do
+      if password = opts[:password] do
         [{"MYSQL_PWD", password}]
       else
         []
       end
 
-    host = database[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
-    port = database[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
-    args = ["--silent", "-u", database[:username], "-h", host, "-P", to_string(port), "-e", sql_command]
-    System.cmd("mysql", args, env: env, stderr_to_stdout: true)
+    host = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
+    port = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
+    args = ["--user", opts[:username], "--host", host, "--port", to_string(port)] ++ opt_args
+    System.cmd(cmd, args, env: env, stderr_to_stdout: true)
   end
 
   @doc false
@@ -185,5 +190,19 @@ defmodule Ecto.Adapters.MySQL do
   def insert(_repo, %{schema: schema}, _params, returning, _opts) do
     raise ArgumentError, "MySQL does not support :read_after_writes in schemas for non-primary keys. " <>
                          "The following fields in #{inspect schema} are tagged as such: #{inspect returning}"
+  end
+
+  @doc false
+  def structure_dump(config) do
+    run_with_cmd("mysqldump", config, ["--no-data", "--routines", config[:database]])
+  end
+
+  @doc false
+  def structure_load(config, path) do
+    args = [
+      "--execute", "SET FOREIGN_KEY_CHECKS = 0; SOURCE #{path}; SET FOREIGN_KEY_CHECKS = 1",
+      "--database", config[:database]
+    ]
+    run_with_cmd("mysql", config, args)
   end
 end
