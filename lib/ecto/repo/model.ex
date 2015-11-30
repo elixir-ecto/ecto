@@ -106,8 +106,6 @@ defmodule Ecto.Repo.Model do
   end
 
   def update(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
-    # TODO: Once we remove this deprecation, we can remove the :source
-    # hack from repo.opts and clean up the timestamps implementation.
     IO.puts :stderr, "warning: giving a struct to #{inspect repo}.update/2 is deprecated. " <>
                      "Ecto is unable to properly track changes when a struct is given and " <>
                      "an Ecto.Changeset must be given instead\n#{Exception.format_stacktrace}"
