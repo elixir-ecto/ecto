@@ -598,6 +598,21 @@ defmodule Ecto.DateTime do
     %Ecto.DateTime{year: year, month: month, day: day,
                    hour: hour, min: min, sec: sec}
   end
+
+  # Callback invoked by autogenerate in schema.
+  @doc false
+  def autogenerate do
+    {date, {h, m, s}} = :erlang.universaltime
+    {date, {h, m, s, 0}}
+  end
+
+  # Callback invoked by autogenerate in schema.
+  @doc false
+  def autogenerate_with_usec do
+    timestamp = {_, _, usec} = :os.timestamp
+    {date, {h, m, s}} =:calendar.now_to_datetime(timestamp)
+    {date, {h, m, s, usec}}
+  end
 end
 
 defimpl String.Chars, for: [Ecto.DateTime, Ecto.Date, Ecto.Time] do

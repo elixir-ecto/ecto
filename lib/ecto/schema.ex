@@ -282,7 +282,8 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_autogenerate_insert, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_autogenerate_update, accumulate: true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
   end
@@ -348,7 +349,9 @@ defmodule Ecto.Schema do
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
-        Ecto.Schema.__autogenerate__(@ecto_autogenerate_id)]
+        Ecto.Schema.__autogenerate__(@ecto_autogenerate_id,
+                                     @ecto_autogenerate_insert,
+                                     @ecto_autogenerate_update)]
     end
   end
 
@@ -412,15 +415,21 @@ defmodule Ecto.Schema do
         |> Keyword.merge(@timestamps_opts)
         |> Keyword.merge(opts)
 
+      type = Keyword.fetch!(timestamps, :type)
+      autogen = if Keyword.fetch!(timestamps, :usec),
+                   do: :autogenerate_with_usec,
+                   else: :autogenerate
+
       if inserted_at = Keyword.fetch!(timestamps, :inserted_at) do
-        Ecto.Schema.field(inserted_at, Keyword.fetch!(timestamps, :type), [])
+        Ecto.Schema.field(inserted_at, type, [])
+        Module.put_attribute(__MODULE__, :ecto_autogenerate_insert, {inserted_at, Ecto.DateTime, autogen})
       end
 
       if updated_at = Keyword.fetch!(timestamps, :updated_at) do
-        Ecto.Schema.field(updated_at, Keyword.fetch!(timestamps, :type), [])
+        Ecto.Schema.field(updated_at, type, [])
+        Module.put_attribute(__MODULE__, :ecto_autogenerate_insert, {updated_at, Ecto.DateTime, autogen})
+        Module.put_attribute(__MODULE__, :ecto_autogenerate_update, {updated_at, Ecto.DateTime, autogen})
       end
-
-      @ecto_timestamps timestamps
     end
   end
 
@@ -1158,9 +1167,11 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __autogenerate__(id) do
+  def __autogenerate__(id, insert, update) do
     quote do
       def __schema__(:autogenerate_id), do: unquote(id)
+      def __schema__(:autogenerate, :insert), do: unquote(Macro.escape(insert))
+      def __schema__(:autogenerate, :update), do: unquote(Macro.escape(update))
     end
   end
 
@@ -1292,7 +1303,7 @@ defmodule Ecto.Schema do
                              "custom type #{inspect type} that does not define generate/0"
 
       true ->
-        Module.put_attribute(mod, :ecto_autogenerate, {name, type})
+        Module.put_attribute(mod, :ecto_autogenerate_insert, {name, type, :autogenerate})
     end
   end
 

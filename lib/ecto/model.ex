@@ -12,10 +12,7 @@ defmodule Ecto.Model do
   When used, `Ecto.Model` imports itself. All the modules
   existing in `Ecto.Model.*` are brought in too:
 
-    * `use Ecto.Model.Autogenerate` - automatically handle autogenerate columns before insertion
     * `use Ecto.Model.Callbacks` - provides lifecycle callbacks
-    * `use Ecto.Model.Timestamps` - automatically sets `inserted_at` and
-      `updated_at` fields declared via `Ecto.Schema.timestamps/1`
     * `use Ecto.Model.OptimisticLock` - makes the `optimistic_lock/1` macro
       available
 
@@ -37,8 +34,6 @@ defmodule Ecto.Model do
       import Ecto.Model
 
       use Ecto.Model.OptimisticLock
-      use Ecto.Model.Timestamps
-      use Ecto.Model.Autogenerate
       use Ecto.Model.Callbacks
     end
   end
