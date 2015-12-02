@@ -1,24 +1,48 @@
-defmodule Ecto.Model.TimestampsTest do
+alias Ecto.TestRepo
+
+defmodule Ecto.Repo.AutogenerateTest do
   use ExUnit.Case, async: true
 
-  alias Ecto.TestRepo
-
   defmodule Default do
-    use Ecto.Model
+    use Ecto.Schema
 
-    schema "default" do
+    schema "my_model" do
+      field :z, Ecto.UUID, autogenerate: true
       timestamps
     end
   end
 
   defmodule Config do
-    use Ecto.Model
+    use Ecto.Schema
 
     @timestamps_opts [inserted_at: :created_on]
     schema "default" do
       timestamps updated_at: :updated_on
     end
   end
+
+  ## Autogenerate
+
+  @uuid "30313233-3435-3637-3839-616263646566"
+
+  test "autogenerates values" do
+    model = TestRepo.insert!(%Default{})
+    assert byte_size(model.z) == 36
+
+    changeset = Ecto.Changeset.cast(%Default{}, %{}, [], [])
+    model = TestRepo.insert!(changeset)
+    assert byte_size(model.z) == 36
+
+    changeset = Ecto.Changeset.cast(%Default{}, %{z: nil}, [], [])
+    model = TestRepo.insert!(changeset)
+    assert byte_size(model.z) == 36
+
+    changeset = Ecto.Changeset.cast(%Default{}, %{z: @uuid}, [:z], [])
+    model = TestRepo.insert!(changeset)
+    assert model.z == @uuid
+  end
+
+  ## Timestamps
 
   test "sets inserted_at and updated_at values" do
     default = TestRepo.insert!(%Default{})
