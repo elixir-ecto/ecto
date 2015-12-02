@@ -151,7 +151,7 @@ defmodule Ecto.Changeset do
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
                         opts: Keyword.t,
-                        model: Ecto.Model.t | nil,
+                        model: Ecto.Schema.t | nil,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
                         required: [atom],
@@ -226,7 +226,7 @@ defmodule Ecto.Changeset do
       "body"
 
   """
-  @spec change(Ecto.Model.t | t, %{atom => term} | [Keyword.t]) :: t
+  @spec change(Ecto.Schema.t | t, %{atom => term} | [Keyword.t]) :: t
   def change(model_or_changeset, changes \\ %{})
 
   def change(%Changeset{types: nil}, _changes) do
@@ -338,7 +338,7 @@ defmodule Ecto.Changeset do
       end
 
   """
-  @spec cast(Ecto.Model.t | t,
+  @spec cast(Ecto.Schema.t | t,
              %{binary => term} | %{atom => term} | nil,
              [cast_field],
              [cast_field]) :: t
@@ -864,7 +864,7 @@ defmodule Ecto.Changeset do
       apply_changes(changeset)
 
   """
-  @spec apply_changes(t) :: Ecto.Model.t
+  @spec apply_changes(t) :: Ecto.Schema.t
   def apply_changes(%Changeset{changes: changes, model: model}) when changes == %{} do
     model
   end

@@ -55,7 +55,7 @@ defmodule Ecto.Association do
 
   Invoked by `Ecto.Model.build/3`.
   """
-  defcallback build(t, Ecto.Model.t, %{atom => term} | [Keyword.t]) :: Ecto.Model.t
+  defcallback build(t, Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
 
   @doc """
   Returns an association join query.

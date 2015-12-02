@@ -244,6 +244,8 @@ defmodule Ecto.Schema do
   defined so structs and changeset functionalities are available.
   """
 
+  @type t :: %{__struct__: atom}
+
   defmodule Metadata do
     @moduledoc """
     Stores metadata of a struct.

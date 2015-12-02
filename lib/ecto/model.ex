@@ -153,8 +153,8 @@ defmodule Ecto.Model do
     * `:context` - changes the model meta context
     * `:state` - changes the model state
   """
-  @spec put_meta(Ecto.Model.t, [source: String.t, prefix: String.t,
-                                context: term, state: :built | :loaded | :deleted]) :: Ecto.Model.t
+  @spec put_meta(Ecto.Schema.t, [source: String.t, prefix: String.t,
+                                context: term, state: :built | :loaded | :deleted]) :: Ecto.Schema.t
   def put_meta(model, opts) do
     update_in model.__meta__, &update_meta(opts, &1)
   end
