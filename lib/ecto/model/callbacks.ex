@@ -1,69 +1,6 @@
 defmodule Ecto.Model.Callbacks do
   @moduledoc """
-  Define module-level callbacks in models.
-
-  ## Lifecycle callbacks
-
-  Ecto provides lifecycle callbacks around insert, update
-  and delete commands.
-
-  A callback is invoked by your `Ecto.Repo` before (or after)
-  particular events. Lifecycle callbacks always receive a
-  changeset as an argument and must always return a modified changeset.
-
-  Such callbacks are useful for data consistency: keeping
-  counters, setting field values and so on. For this reason,
-  callbacks:
-
-    * cannot abort
-    * run inside the transaction (if supported by the database/adapter)
-    * are invoked only after the data is validated
-
-  Therefore, don't use callbacks for validation, enforcing business
-  rules or performing actions unrelated to the data itself, like
-  sending e-mails.
-
-  Finally keep in mind callbacks are not invoked on bulk actions
-  such as `Ecto.Repo.update_all/3` or `Ecto.Repo.delete_all/2`.
-
-  ## Other callbacks
-
-  Besides lifecycle callbacks, Ecto also supports an `after_load`
-  callback that is invoked everytime a model is loaded with the
-  model itself. See `after_load/2` for more informations.
-
-  ## Examples
-
-      defmodule User do
-        use Ecto.Model.Callbacks
-
-        after_insert :increase_user_count
-
-        def increase_user_count(changeset) do
-          # ...
-        end
-      end
-
-  When creating the user, the `after_insert` callbacks will be
-  invoked with a changeset as argument. Multiple callbacks
-  can be defined, they will be invoked in order of declaration.
-
-  A callback can be defined in the following formats:
-
-      # Invoke the local function increase_user_count/1
-      after_insert :increase_user_count
-
-      # Invoke the local function increase_user_count/3
-      # with the given arguments (changeset is prepended)
-      after_insert :increase_user_count, ["foo", "bar"]
-
-      # Invoke the remote function Stats.increase_user_count/1
-      after_insert Stats, :increase_user_count
-
-      # Invoke the remote function Stats.increase_user_count/3
-      # with the given arguments (changeset is prepended)
-      after_insert Stats, :increase_user_count, ["foo", "bar"]
-
+  Warning: Ecto callbacks are deprecated.
   """
 
   @doc false
@@ -110,13 +47,13 @@ defmodule Ecto.Model.Callbacks do
 
   """
   defmacro before_insert(function, args \\ []),
-    do: register_callback(:before_insert, function, args, [])
+    do: register_callback(:before_insert, function, args, [], __CALLER__)
 
   @doc """
   Same as `before_insert/2` but with arguments.
   """
   defmacro before_insert(module, function, args),
-    do: register_callback(:before_insert, module, function, args)
+    do: register_callback(:before_insert, module, function, args, __CALLER__)
 
   @doc """
   Adds a callback that is invoked after the model is inserted
@@ -134,13 +71,13 @@ defmodule Ecto.Model.Callbacks do
 
   """
   defmacro after_insert(function, args \\ []),
-    do: register_callback(:after_insert, function, args, [])
+    do: register_callback(:after_insert, function, args, [], __CALLER__)
 
   @doc """
   Same as `after_insert/2` but with arguments.
   """
   defmacro after_insert(module, function, args),
-    do: register_callback(:after_insert, module, function, args)
+    do: register_callback(:after_insert, module, function, args, __CALLER__)
 
   @doc """
   Adds a callback that is invoked before the model is updated.
@@ -159,13 +96,13 @@ defmodule Ecto.Model.Callbacks do
 
   """
   defmacro before_update(function, args \\ []),
-    do: register_callback(:before_update, function, args, [])
+    do: register_callback(:before_update, function, args, [], __CALLER__)
 
   @doc """
   Same as `before_update/2` but with arguments.
   """
   defmacro before_update(module, function, args),
-    do: register_callback(:before_update, module, function, args)
+    do: register_callback(:before_update, module, function, args, __CALLER__)
 
   @doc """
   Adds a callback that is invoked after the model is updated.
@@ -182,13 +119,13 @@ defmodule Ecto.Model.Callbacks do
 
   """
   defmacro after_update(function, args \\ []),
-    do: register_callback(:after_update, function, args, [])
+    do: register_callback(:after_update, function, args, [], __CALLER__)
 
   @doc """
   Same as `after_update/2` but with arguments.
   """
   defmacro after_update(module, function, args),
-    do: register_callback(:after_update, module, function, args)
+    do: register_callback(:after_update, module, function, args, __CALLER__)
 
   @doc """
   Adds a callback that is invoked before the model is deleted
@@ -206,13 +143,13 @@ defmodule Ecto.Model.Callbacks do
 
   """
   defmacro before_delete(function, args \\ []),
-    do: register_callback(:before_delete, function, args, [])
+    do: register_callback(:before_delete, function, args, [], __CALLER__)
 
   @doc """
   Same as `before_delete/2` but with arguments.
   """
   defmacro before_delete(module, function, args),
-    do: register_callback(:before_delete, module, function, args)
+    do: register_callback(:before_delete, module, function, args, __CALLER__)
 
   @doc """
   Adds a callback that is invoked after the model is deleted
@@ -230,13 +167,13 @@ defmodule Ecto.Model.Callbacks do
 
   """
   defmacro after_delete(function, args \\ []),
-    do: register_callback(:after_delete, function, args, [])
+    do: register_callback(:after_delete, function, args, [], __CALLER__)
 
   @doc """
   Same as `after_delete/2` but with arguments.
   """
   defmacro after_delete(module, function, args),
-    do: register_callback(:after_delete, module, function, args)
+    do: register_callback(:after_delete, module, function, args, __CALLER__)
 
   @doc """
   Adds a callback that is invoked after the model is loaded
@@ -266,16 +203,18 @@ defmodule Ecto.Model.Callbacks do
 
   """
   defmacro after_load(function, args \\ []),
-    do: register_callback(:after_load, function, args, [])
+    do: register_callback(:after_load, function, args, [], __CALLER__)
 
   @doc """
   Same as `after_load/2` but with arguments.
   """
   defmacro after_load(module, function, args),
-    do: register_callback(:after_load, module, function, args)
+    do: register_callback(:after_load, module, function, args, __CALLER__)
 
-  defp register_callback(event, module, function, args) do
-    quote bind_quoted: binding() do
+  defp register_callback(event, module, function, args, caller) do
+    IO.write :stderr, "warning: #{event} is deprecated\n" <>
+                      Exception.format_stacktrace(Macro.Env.stacktrace(caller))
+    quote bind_quoted: [event: event, module: module, function: function, args: args] do
       callback = {module, function, args}
       @ecto_callbacks Map.update(@ecto_callbacks, event, [callback], &[callback|&1])
     end

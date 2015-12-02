@@ -6,11 +6,12 @@ Ecto v1.1.0 brings many improvements and bug fixes.
 
 In particular v1.1.0 deprecates functionality that has been shown by developers to be confusing, unclear or error prone. They include:
 
-* `Ecto.Model`'s callbacks have been deprecated in favor of composing with changesets
+* `Ecto.Model`'s callbacks have been deprecated in favor of composing with changesets and of schema serializers
 * `Ecto.Model`'s `optimistic_lock/1` has been deprecated in favor of `Ecto.Changeset.optimistic_lock/3`, which gives more fine grained control over the lock by relying on changesets
 * Giving a model to `Ecto.Repo.update/2` has been deprecated as it is ineffective and error prone since changes cannot be tracked
+* `Ecto.DateTime.local/0` has been deprecated
 
-Furthermore, the following functionality has been soft-deprecated (they won't emit warnings for now only on Ecto v2.0):
+Furthermore, the following functionality has been soft-deprecated (they won't emit warnings for now, only on Ecto v2.0):
 
 * `Ecto.Model` has been soft deprecated. `use Ecto.Schema` instead of `use Ecto.Model` and invoke the functions in `Ecto` instead of the ones in `Ecto.Model`
 

@@ -680,15 +680,6 @@ defmodule Ecto.Integration.RepoTest do
     refute Process.get(Comment)
   end
 
-  test "has_many assoc on delete fetches and deletes" do
-    post = TestRepo.insert!(%Post{})
-    TestRepo.insert!(%Permalink{post_id: post.id})
-    TestRepo.delete!(post)
-
-    assert TestRepo.all(Permalink) == []
-    assert Process.get(Permalink) == :on_delete
-  end
-
   test "has_many assoc on delete nilifies all" do
     user = TestRepo.insert!(%User{})
     TestRepo.insert!(%Comment{author_id: user.id})
