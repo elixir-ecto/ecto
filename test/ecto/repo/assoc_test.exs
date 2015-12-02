@@ -5,7 +5,7 @@ defmodule Ecto.Repo.AssocTest do
   require Ecto.TestRepo, as: TestRepo
 
   defmodule SubAssoc do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "sub_assoc" do
       field :y, :string
@@ -14,7 +14,7 @@ defmodule Ecto.Repo.AssocTest do
   end
 
   defmodule MyAssoc do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "my_assoc" do
       field :x, :string
@@ -25,7 +25,7 @@ defmodule Ecto.Repo.AssocTest do
   end
 
   defmodule MyModel do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "my_model" do
       field :x, :string

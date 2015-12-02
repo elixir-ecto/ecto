@@ -54,7 +54,7 @@ defmodule Ecto.Type do
   Now, we can use our new field above as our primary key type in models:
 
       defmodule Post do
-        use Ecto.Model
+        use Ecto.Schema
 
         @primary_key {:id, Permalink, autogenerate: true}
         schema "posts" do

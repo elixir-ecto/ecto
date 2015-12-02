@@ -15,7 +15,8 @@ defmodule Ecto.AssociationTest do
   alias __MODULE__.Profile
 
   defmodule Post do
-    use Ecto.Model
+    use Ecto.Schema
+
     import Ecto.Changeset
 
     schema "posts" do
@@ -42,7 +43,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Comment do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "comments" do
       field :text, :string
@@ -55,14 +56,14 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Permalink do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "permalinks" do
     end
   end
 
   defmodule Author do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "authors" do
       field :title, :string
@@ -76,7 +77,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Summary do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "summaries" do
       has_one :post, Post, defaults: [title: "default"], on_replace: :nilify
@@ -91,7 +92,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Email do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "emails" do
       belongs_to :author, {"post_authors", Author}
@@ -99,7 +100,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Profile do
-    use Ecto.Model
+    use Ecto.Schema
     import Ecto.Changeset
 
     schema "profiles" do

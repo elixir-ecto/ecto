@@ -17,7 +17,7 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   defmodule Trans do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "transactions" do
       field :text, :string

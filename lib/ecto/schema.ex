@@ -53,19 +53,19 @@ defmodule Ecto.Schema do
   configure and use`:binary_id` as your primary key type as follows:
 
       # Define a module to be used as base
-      defmodule MyApp.Model do
+      defmodule MyApp.Schema do
         defmacro __using__(_) do
           quote do
-            use Ecto.Model
+            use Ecto.Schema
             @primary_key {:id, :binary_id, autogenerate: true}
             @foreign_key_type :binary_id
           end
         end
       end
 
-      # Now use MyApp.Model to define new models
+      # Now use MyApp.Schema to define new models
       defmodule MyApp.Comment do
-        use MyApp.Model
+        use MyApp.Schema
 
         schema "comments" do
           belongs_to :post, MyApp.Post
@@ -474,7 +474,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Post do
-        use Ecto.Model
+        use Ecto.Schema
         schema "posts" do
           has_many :comments, Comment
         end
@@ -494,7 +494,8 @@ defmodule Ecto.Schema do
   via the `:through` option. Let's see an example:
 
       defmodule Post do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "posts" do
           has_many :comments, Comment
           has_one :permalink, Permalink
@@ -513,7 +514,8 @@ defmodule Ecto.Schema do
       end
 
       defmodule Comment do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "comments" do
           belongs_to :author, Author
           belongs_to :post, Post
@@ -612,7 +614,8 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Post do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "posts" do
           has_one :permalink, Permalink
 
@@ -666,7 +669,8 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Comment do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "comments" do
           belongs_to :post, Post
         end
@@ -708,7 +712,8 @@ defmodule Ecto.Schema do
   and define a new Comment model:
 
       defmodule Comment do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "abstract table: comments" do
           # This will be used by associations on each "concrete" table
           field :assoc_id, :integer
@@ -722,14 +727,16 @@ defmodule Ecto.Schema do
   Now in your Post and Task models:
 
       defmodule Post do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "posts" do
           has_many :comments, {"posts_comments", Comment}, foreign_key: :assoc_id
         end
       end
 
       defmodule Task do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "tasks" do
           has_many :comments, {"tasks_comments", Comment}, foreign_key: :assoc_id
         end
@@ -747,7 +754,7 @@ defmodule Ecto.Schema do
 
   will attempt to use the abstract table. Instead, one should
 
-      Repo.insert!(build(post, :comments))
+      Repo.insert!(build_assoc(post, :comments))
 
   where `build/2` is defined in `Ecto.Model`. You can also
   use `assoc/2` in both `Ecto.Model` and in the query syntax
@@ -804,14 +811,15 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Order do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "orders" do
           embeds_one :item, Item
         end
       end
 
       defmodule Item do
-        use Ecto.Model
+        use Ecto.Schema
 
         # A required field for all embedded documents
         @primary_key {:id, :binary_id, autogenerate: true}
@@ -876,14 +884,15 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Order do
-        use Ecto.Model
+        use Ecto.Schema
+
         schema "orders" do
           embeds_many :items, Item
         end
       end
 
       defmodule Item do
-        use Ecto.Model
+        use Ecto.Schema
 
         # embedded_schema is a shorcut for:
         #

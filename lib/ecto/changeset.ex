@@ -28,7 +28,7 @@ defmodule Ecto.Changeset do
   Let's see an example:
 
       defmodule User do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "users" do
           field :name
@@ -117,7 +117,7 @@ defmodule Ecto.Changeset do
           mark it deletion, as in the example below:
 
                 defmodule Comment do
-                  use Ecto.Model
+                  use Ecto.Schema
 
                   schema "comments" do
                     field :body, :string

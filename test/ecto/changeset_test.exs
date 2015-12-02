@@ -3,7 +3,7 @@ defmodule Ecto.ChangesetTest do
   import Ecto.Changeset
 
   defmodule Comment do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "comments" do
       belongs_to :post, Ecto.ChangesetTest.Post
@@ -11,7 +11,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defmodule Post do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "posts" do
       field :title

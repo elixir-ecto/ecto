@@ -75,7 +75,7 @@ defmodule Ecto.SchemaTest do
   end
 
   defmodule SchemaModel do
-    use Ecto.Model
+    use Ecto.Schema
 
     @primary_key {:perm, Custom.Permalink, autogenerate: true}
     @foreign_key_type :string
@@ -398,7 +398,7 @@ defmodule Ecto.SchemaTest do
   end
 
   defmodule ModelAssocOpts do
-    use Ecto.Model
+    use Ecto.Schema
 
     @primary_key {:pk, :integer, []}
     @foreign_key_type :string
@@ -440,7 +440,7 @@ defmodule Ecto.SchemaTest do
   test "has_* validates option" do
     assert_raise ArgumentError, "invalid option :unknown for has_many/3", fn ->
       defmodule InvalidHasOption do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "assoc" do
           has_many :posts, Post, unknown: :option
@@ -453,7 +453,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"model does not have the field :pk used by association :posts"
     assert_raise ArgumentError, message, fn ->
       defmodule ModelPkAssocMisMatch do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "assoc" do
           has_many :posts, Post, references: :pk
@@ -466,7 +466,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"association queryable must be a model or {source, model}, got: 123"
     assert_raise ArgumentError, message, fn ->
       defmodule QueryableMisMatch do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "assoc" do
           has_many :posts, 123
@@ -479,7 +479,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"model does not have the association :whatever used by association :posts"
     assert_raise ArgumentError, message, fn ->
       defmodule ModelPkAssocMisMatch do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "assoc" do
           has_many :posts, through: [:whatever, :works]
@@ -492,7 +492,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"When using the :through option, the model should not be passed as second argument"
     assert_raise ArgumentError, message, fn ->
       defmodule ModelThroughMatch do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "assoc" do
           has_many :posts, Post, through: [:whatever, :works]

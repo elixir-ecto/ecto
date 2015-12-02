@@ -4,7 +4,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   alias Ecto.TestRepo, as: TestRepo
 
   defmodule SubEmbed do
-    use Ecto.Model
+    use Ecto.Schema
 
     @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
@@ -13,7 +13,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   defmodule MyEmbed do
-    use Ecto.Model
+    use Ecto.Schema
 
     @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
@@ -24,7 +24,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   defmodule MyModel do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "my_model" do
       embeds_one :embed, MyEmbed, on_replace: :delete

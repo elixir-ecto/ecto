@@ -11,7 +11,7 @@ defmodule Ecto.EmbeddedTest do
   alias __MODULE__.Post
 
   defmodule Author do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "authors" do
       embeds_one :profile, Profile, on_cast: :required_changeset, on_replace: :delete
@@ -24,7 +24,7 @@ defmodule Ecto.EmbeddedTest do
   end
 
   defmodule Post do
-    use Ecto.Model
+    use Ecto.Schema
     import Ecto.Changeset
 
     schema "posts" do
@@ -46,7 +46,7 @@ defmodule Ecto.EmbeddedTest do
   end
 
   defmodule Profile do
-    use Ecto.Model
+    use Ecto.Schema
     import Ecto.Changeset
 
     embedded_schema do

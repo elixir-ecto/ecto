@@ -9,7 +9,7 @@ defmodule Ecto.Adapters.PostgresTest do
   alias Ecto.Adapters.Postgres.Connection, as: SQL
 
   defmodule Model do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model" do
       field :x, :integer
@@ -27,7 +27,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   defmodule Model2 do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model2" do
       belongs_to :post, Ecto.Adapters.PostgresTest.Model,
@@ -37,7 +37,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   defmodule Model3 do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model3" do
       field :list1, {:array, :string}

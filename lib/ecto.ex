@@ -273,7 +273,7 @@ defmodule Ecto do
   Ecto supports defining associations on schemas:
 
       defmodule Post do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "posts" do
           has_many :comments, Comment
@@ -281,7 +281,7 @@ defmodule Ecto do
       end
 
       defmodule Comment do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "comments" do
           field :title, :string

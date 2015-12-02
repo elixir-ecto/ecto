@@ -217,7 +217,7 @@ defmodule Ecto.Integration.MigrationTest do
   end
 
   defmodule Parent do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "parent" do
     end
