@@ -14,7 +14,7 @@ defmodule Simple.Repo do
 end
 
 defmodule Weather do
-  use Ecto.Model
+  use Ecto.Schema
   schema "weather" do
     belongs_to :city, City
     field :wdate, Ecto.Date
@@ -26,7 +26,7 @@ defmodule Weather do
 end
 
 defmodule City do
-  use Ecto.Model
+  use Ecto.Schema
   schema "cities" do
     has_many :local_weather, Weather
     belongs_to :country, Country
@@ -35,7 +35,7 @@ defmodule City do
 end
 
 defmodule Country do
-  use Ecto.Model
+  use Ecto.Schema
   schema "countries" do
     has_many :cities, City
     # here we associate the `:local_weather` from every City that belongs_to

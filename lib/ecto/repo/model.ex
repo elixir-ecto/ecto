@@ -387,12 +387,12 @@ defmodule Ecto.Repo.Model do
       case struct.__schema__(:association, assoc_name) do
         # TODO: fetch_and_delete is deprecated. Removed by 2.0
         %{on_delete: :fetch_and_delete, field: field} ->
-          assocs = repo.all Ecto.Model.assoc(model, field)
+          assocs = repo.all Ecto.assoc(model, field)
           Enum.each assocs, &repo.delete!(&1)
         %{on_delete: :delete_all, field: field} ->
-          repo.delete_all Ecto.Model.assoc(model, field)
+          repo.delete_all Ecto.assoc(model, field)
         %{on_delete: :nilify_all, related_key: related_key, field: field} ->
-          query = Ecto.Model.assoc(model, field)
+          query = Ecto.assoc(model, field)
           repo.update_all query, set: [{related_key, nil}]
         _ ->
           :ok
@@ -447,7 +447,7 @@ defmodule Ecto.Repo.Model do
   end
 
   defp add_pk_filter!(filters, struct) do
-    Enum.reduce Ecto.Model.primary_key!(struct), filters, fn
+    Enum.reduce Ecto.primary_key!(struct), filters, fn
       {_k, nil}, _acc ->
         raise Ecto.NoPrimaryKeyValueError, struct: struct
       {k, v}, acc ->

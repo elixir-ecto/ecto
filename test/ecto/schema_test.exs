@@ -6,8 +6,7 @@ defmodule Ecto.SchemaTest do
   import ExUnit.CaptureIO
 
   defmodule Model do
-    use Ecto.Model
-    import Ecto.Query
+    use Ecto.Schema
 
     schema "mymodel" do
       field :name,  :string, default: "eric"
@@ -19,14 +18,6 @@ defmodule Ecto.SchemaTest do
       belongs_to :comment, Comment
       belongs_to :permalink, Permalink, define_field: false
     end
-
-    def model_from do
-      from(c in __MODULE__, where: is_nil(c.name))
-    end
-  end
-
-  test "imports Ecto.Query functions" do
-    assert %Ecto.Query{} = Model.model_from
   end
 
   test "schema metadata" do
@@ -59,21 +50,21 @@ defmodule Ecto.SchemaTest do
   end
 
   test "primary key" do
-    assert Ecto.Model.primary_key(%Model{}) == [id: nil]
-    assert Ecto.Model.primary_key(%Model{id: "hello"}) == [id: "hello"]
+    assert Ecto.primary_key(%Model{}) == [id: nil]
+    assert Ecto.primary_key(%Model{id: "hello"}) == [id: "hello"]
   end
 
   test "updates meta with put_meta" do
     model = %Model{}
     assert model.__meta__.source == {nil, "mymodel"}
-    model = Ecto.Model.put_meta(model, source: "new_model")
+    model = Ecto.put_meta(model, source: "new_model")
     assert model.__meta__.source == {nil, "new_model"}
-    model = Ecto.Model.put_meta(model, prefix: "prefix")
+    model = Ecto.put_meta(model, prefix: "prefix")
     assert model.__meta__.source == {"prefix", "new_model"}
-    model = Ecto.Model.put_meta(model, source: "mymodel")
+    model = Ecto.put_meta(model, source: "mymodel")
     assert model.__meta__.source == {"prefix", "mymodel"}
 
-    model = Ecto.Model.put_meta(model, context: "foobar", state: :loaded)
+    model = Ecto.put_meta(model, context: "foobar", state: :loaded)
     assert model.__meta__.state == :loaded
     assert model.__meta__.context == "foobar"
   end
@@ -104,8 +95,8 @@ defmodule Ecto.SchemaTest do
   end
 
   test "custom primary key" do
-    assert Ecto.Model.primary_key(%SchemaModel{}) == [perm: nil]
-    assert Ecto.Model.primary_key(%SchemaModel{perm: "hello"}) == [perm: "hello"]
+    assert Ecto.primary_key(%SchemaModel{}) == [perm: nil]
+    assert Ecto.primary_key(%SchemaModel{perm: "hello"}) == [perm: "hello"]
   end
 
   test "has __meta__ field" do
@@ -119,15 +110,15 @@ defmodule Ecto.SchemaTest do
   test "complains when a schema is not defined" do
     assert_raise RuntimeError, ~r"does not define a schema", fn ->
       defmodule Sample do
-        use Ecto.Model
+        use Ecto.Schema
       end
     end
   end
 
   test "field name clash" do
     assert_raise ArgumentError, "field/association :name is already set on schema", fn ->
-      defmodule ModelFieldNameClash do
-        use Ecto.Model
+      defmodule SchemaFieldNameClash do
+        use Ecto.Schema
 
         schema "clash" do
           field :name, :string
@@ -139,8 +130,8 @@ defmodule Ecto.SchemaTest do
 
   test "invalid field type" do
     assert_raise ArgumentError, "invalid type {:apa} for field :name", fn ->
-      defmodule ModelInvalidFieldType do
-        use Ecto.Model
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
 
         schema "invalidtype" do
           field :name, {:apa}
@@ -149,8 +140,8 @@ defmodule Ecto.SchemaTest do
     end
 
     assert_raise ArgumentError, "invalid or unknown type OMG for field :name", fn ->
-      defmodule ModelInvalidFieldType do
-        use Ecto.Model
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
 
         schema "invalidtype" do
           field :name, OMG
@@ -161,8 +152,8 @@ defmodule Ecto.SchemaTest do
 
   test "raises helpful error for :datetime" do
     assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.DateTime as the type/, fn ->
-      defmodule ModelInvalidFieldType do
-        use Ecto.Model
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
 
         schema "invalidtype" do
           field :published_at, :datetime
@@ -173,8 +164,8 @@ defmodule Ecto.SchemaTest do
 
   test "raises helpful error for :date" do
     assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.Date as the type/, fn ->
-      defmodule ModelInvalidFieldType do
-        use Ecto.Model
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
 
         schema "invalidtype" do
           field :published_on, :date
@@ -185,8 +176,8 @@ defmodule Ecto.SchemaTest do
 
   test "raises helpful error for :time" do
     assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.Time as the type/, fn ->
-      defmodule ModelInvalidFieldType do
-        use Ecto.Model
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
 
         schema "invalidtype" do
           field :published_time, :time
@@ -197,8 +188,8 @@ defmodule Ecto.SchemaTest do
 
   test "raises helpful error for :uuid" do
     assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.UUID as the type/, fn ->
-      defmodule ModelInvalidFieldType do
-        use Ecto.Model
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
 
         schema "invalidtype" do
           field :author_id, :uuid
@@ -210,7 +201,7 @@ defmodule Ecto.SchemaTest do
   test "fail invalid schema" do
     assert_raise ArgumentError, "schema source must be a string, got: :hello", fn ->
       defmodule SchemaFail do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema :hello do
           field :x, :string
@@ -223,7 +214,7 @@ defmodule Ecto.SchemaTest do
   test "fail invalid default" do
     assert_raise ArgumentError, "invalid default argument `13` for field :x of type :string", fn ->
       defmodule DefaultFail do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "hello" do
           field :x, :string, default: 13
@@ -236,7 +227,7 @@ defmodule Ecto.SchemaTest do
     assert_raise ArgumentError,
                  "field :x does not support :autogenerate because it uses a primitive type :string", fn ->
       defmodule AutogenerateFail do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "hello" do
           field :x, :string, autogenerate: true
@@ -248,7 +239,7 @@ defmodule Ecto.SchemaTest do
                  "field :x does not support :autogenerate because " <>
                  "it uses a custom type Ecto.DateTime that does not define generate/0", fn ->
       defmodule AutogenerateFail do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "hello" do
           field :x, Ecto.DateTime, autogenerate: true
@@ -260,7 +251,7 @@ defmodule Ecto.SchemaTest do
                  "only primary keys allow :autogenerate for type :id, " <>
                  "field :x is not a primary key", fn ->
       defmodule AutogenerateFail do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "hello" do
           field :x, :id, autogenerate: true
@@ -271,7 +262,7 @@ defmodule Ecto.SchemaTest do
     assert_raise ArgumentError,
                  "cannot mark the same field as autogenerate and read_after_writes", fn ->
       defmodule AutogenerateFail do
-        use Ecto.Model
+        use Ecto.Schema
 
         schema "hello" do
           field :x, Ecto.UUID, autogenerate: true, read_after_writes: true
@@ -283,7 +274,7 @@ defmodule Ecto.SchemaTest do
   ## Associations
 
   defmodule AssocModel do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "assocs" do
       has_many :posts, Post

@@ -2,7 +2,7 @@ defmodule Ecto.RepoTest do
   use ExUnit.Case, async: true
 
   import Ecto.Query
-  import Ecto.Model, only: [put_meta: 2]
+  import Ecto, only: [put_meta: 2]
   require Ecto.TestRepo, as: TestRepo
 
   defmodule MyModel do

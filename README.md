@@ -20,7 +20,7 @@ defmodule Sample.Repo do
 end
 
 defmodule Sample.Weather do
-  use Ecto.Model
+  use Ecto.Schema
 
   schema "weather" do
     field :city     # Defaults to type :string

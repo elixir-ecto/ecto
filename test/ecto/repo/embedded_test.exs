@@ -1,7 +1,6 @@
 defmodule Ecto.Repo.EmbeddedTest do
   use ExUnit.Case, async: true
 
-  import Ecto.Model, only: [put_meta: 2]
   alias Ecto.TestRepo, as: TestRepo
 
   defmodule SubEmbed do

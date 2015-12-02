@@ -136,7 +136,7 @@ defmodule Ecto.Embedded do
   end
 
   defp autogenerate_id(changeset, action, _model, _embed, _adapter) when action in [:update, :delete] do
-    for {_, nil} <- Ecto.Model.primary_key(changeset.model) do
+    for {_, nil} <- Ecto.primary_key(changeset.model) do
       raise Ecto.NoPrimaryKeyValueError, struct: changeset.model
     end
     changeset

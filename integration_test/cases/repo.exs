@@ -100,7 +100,7 @@ defmodule Ecto.Integration.RepoTest do
   @tag :read_after_writes
   test "insert and update with changeset read after writes" do
     defmodule RAW do
-      use Ecto.Model
+      use Ecto.Schema
 
       schema "posts" do
         field :counter, :integer, read_after_writes: true
@@ -132,7 +132,7 @@ defmodule Ecto.Integration.RepoTest do
   @tag :id_type
   test "insert autogenerates for custom id type" do
     defmodule ID do
-      use Ecto.Model
+      use Ecto.Schema
 
       @primary_key {:id, Elixir.Custom.Permalink, autogenerate: true}
       schema "posts" do
@@ -358,7 +358,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "get(!) with custom source" do
-    custom = Ecto.Model.put_meta(%Custom{}, source: "posts")
+    custom = Ecto.put_meta(%Custom{}, source: "posts")
     custom = TestRepo.insert!(custom)
     bid    = custom.bid
     assert %Custom{bid: ^bid, __meta__: %{source: {nil, "posts"}}} =
@@ -541,11 +541,11 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
     %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
 
-    [c1, c2] = TestRepo.all Ecto.Model.assoc(p1, :comments)
+    [c1, c2] = TestRepo.all Ecto.assoc(p1, :comments)
     assert c1.id == cid1
     assert c2.id == cid2
 
-    [c1, c2, c3] = TestRepo.all Ecto.Model.assoc([p1, p2], :comments)
+    [c1, c2, c3] = TestRepo.all Ecto.assoc([p1, p2], :comments)
     assert c1.id == cid1
     assert c2.id == cid2
     assert c3.id == cid3
@@ -559,7 +559,7 @@ defmodule Ecto.Integration.RepoTest do
     %Permalink{}         = TestRepo.insert!(%Permalink{url: "2"})
     %Permalink{id: lid3} = TestRepo.insert!(%Permalink{url: "3", post_id: p2.id})
 
-    [l1, l3] = TestRepo.all Ecto.Model.assoc([p1, p2], :permalink)
+    [l1, l3] = TestRepo.all Ecto.assoc([p1, p2], :permalink)
     assert l1.id == lid1
     assert l3.id == lid3
   end
@@ -572,7 +572,7 @@ defmodule Ecto.Integration.RepoTest do
     l2 = TestRepo.insert!(%Permalink{url: "2"})
     l3 = TestRepo.insert!(%Permalink{url: "3", post_id: pid2})
 
-    assert [p1, p2] = TestRepo.all Ecto.Model.assoc([l1, l2, l3], :post)
+    assert [p1, p2] = TestRepo.all Ecto.assoc([l1, l2, l3], :post)
     assert p1.id == pid1
     assert p2.id == pid2
   end

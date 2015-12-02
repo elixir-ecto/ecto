@@ -129,7 +129,7 @@ defmodule Ecto.Query do
   set the changeset.model as the updated model with prefix using put_meta/2:
 
       new_changeset = changeset
-      |> Map.put(:model, Ecto.Model.put_meta(changeset.model, prefix: "foo"))
+      |> Map.put(:model, Ecto.put_meta(changeset.model, prefix: "foo"))
       results = Repo.all(new_changeset)
 
   For deleting, if the model was retrieved by a prefix qualified query, the prefix

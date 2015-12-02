@@ -2,7 +2,7 @@ defmodule Ecto.AssociationTest do
   use ExUnit.Case, async: true
   doctest Ecto.Association
 
-  import Ecto.Model
+  import Ecto
   import Ecto.Query, only: [from: 2]
   alias Ecto.Changeset.Relation
 
@@ -317,49 +317,54 @@ defmodule Ecto.AssociationTest do
                         distinct: true, limit: 5)
   end
 
-  ## Integration tests through Ecto.Model
+  ## Integration tests through Ecto
 
   test "build/2" do
-    assert build(%Post{id: 1}, :comments) ==
+    assert build_assoc(%Post{id: 1}, :comments) ==
            %Comment{post_id: 1}
 
-    assert build(%Summary{id: 1}, :post) ==
+    assert build_assoc(%Summary{id: 1}, :post) ==
            %Post{summary_id: 1, title: "default"}
 
     assert_raise ArgumentError, ~r"cannot build belongs_to association :author", fn ->
-      assert build(%Email{id: 1}, :author)
+      assert build_assoc(%Email{id: 1}, :author)
     end
 
     assert_raise ArgumentError, ~r"cannot build through association :post_author", fn ->
-      build(%Comment{}, :post_author)
+      build_assoc(%Comment{}, :post_author)
     end
   end
 
   test "build/2 with custom source" do
-    email = build(%Author{id: 1}, :emails)
+    email = build_assoc(%Author{id: 1}, :emails)
     assert email.__meta__.source == {nil, "users_emails"}
 
-    profile = build(%Author{id: 1}, :profile)
+    profile = build_assoc(%Author{id: 1}, :profile)
     assert profile.__meta__.source == {nil, "users_profiles"}
   end
 
   test "build/3 with custom attributes" do
-    assert build(%Post{id: 1}, :comments, text: "Awesome!") ==
+    assert build_assoc(%Post{id: 1}, :comments, text: "Awesome!") ==
            %Comment{post_id: 1, text: "Awesome!"}
 
-    assert build(%Post{id: 1}, :comments, %{text: "Awesome!"}) ==
+    assert build_assoc(%Post{id: 1}, :comments, %{text: "Awesome!"}) ==
            %Comment{post_id: 1, text: "Awesome!"}
 
-    assert build(%Post{id: 1}, :comments, post_id: 2) ==
+    assert build_assoc(%Post{id: 1}, :comments, post_id: 2) ==
            %Comment{post_id: 1}
 
     # Overriding defaults
-    assert build(%Summary{id: 1}, :post, title: "Hello").title == "Hello"
+    assert build_assoc(%Summary{id: 1}, :post, title: "Hello").title == "Hello"
 
     # Should not allow overriding of __meta__
     meta = %{__meta__: %{source: {nil, "posts"}}}
-    comment = build(%Post{id: 1}, :comments, meta)
+    comment = build_assoc(%Post{id: 1}, :comments, meta)
     assert comment.__meta__.source == {nil, "comments"}
+  end
+
+  test "sets association to loaded/not loaded" do
+    refute Ecto.assoc_loaded?(%Post{}.comments)
+    assert Ecto.assoc_loaded?(%Post{comments: []}.comments)
   end
 
   test "assoc/2" do
@@ -391,14 +396,6 @@ defmodule Ecto.AssociationTest do
     assert_raise ArgumentError, ~r"expected a homogeneous list containing the same struct", fn ->
       assoc([%Post{}, %Comment{}], :comments)
     end
-  end
-
-  test "Ecto.Association.loaded?/1 returns false if association is not loaded" do
-    refute Ecto.Association.loaded?(%Post{}.comments)
-  end
-
-  test "Ecto.Association.loaded?/1 returns true if association is loaded" do
-    assert Ecto.Association.loaded?(%Post{comments: []}.comments)
   end
 
   ## Preloader
