@@ -100,7 +100,7 @@ defmodule Ecto.Integration.RepoTest do
   @tag :read_after_writes
   test "insert and update with changeset read after writes" do
     defmodule RAW do
-      use Ecto.Model
+      use Ecto.Schema
 
       schema "posts" do
         field :counter, :integer, read_after_writes: true
@@ -132,7 +132,7 @@ defmodule Ecto.Integration.RepoTest do
   @tag :id_type
   test "insert autogenerates for custom id type" do
     defmodule ID do
-      use Ecto.Model
+      use Ecto.Schema
 
       @primary_key {:id, Elixir.Custom.Permalink, autogenerate: true}
       schema "posts" do
@@ -175,16 +175,18 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "optimistic locking in update/delete operations" do
-    import Ecto.Changeset, only: [cast: 4]
+    import Ecto.Changeset, only: [cast: 4, optimistic_lock: 2]
     base_post = TestRepo.insert!(%Comment{})
 
-    cs_ok = cast(base_post, %{"text" => "foo.bar"}, ~w(text), ~w())
+    cs_ok =
+      base_post
+      |> cast(%{"text" => "foo.bar"}, ~w(text), ~w())
+      |> optimistic_lock(:lock_version)
     TestRepo.update!(cs_ok)
 
-    cs_stale = cast(base_post, %{"text" => "foo.baz"}, ~w(text), ~w())
+    cs_stale = optimistic_lock(base_post, :lock_version)
     assert_raise Ecto.StaleModelError, fn -> TestRepo.update!(cs_stale) end
-
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(base_post) end
+    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(cs_stale) end
   end
 
   @tag :unique_constraint
@@ -294,7 +296,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :foreign_key_constraint
-  test "no assoc constraint" do
+  test "no assoc constraint error" do
     user = TestRepo.insert!(%User{})
     TestRepo.insert!(%Permalink{user_id: user.id})
 
@@ -305,6 +307,12 @@ defmodule Ecto.Integration.RepoTest do
 
     assert exception.message =~ "foreign_key: permalinks_user_id_fkey"
     assert exception.message =~ "The changeset has not defined any constraint."
+  end
+
+  @tag :foreign_key_constraint
+  test "no assoc constraint with changeset mismatch" do
+    user = TestRepo.insert!(%User{})
+    TestRepo.insert!(%Permalink{user_id: user.id})
 
     message = ~r/constraint error when attempting to delete model/
     exception =
@@ -316,6 +324,12 @@ defmodule Ecto.Integration.RepoTest do
       end
 
     assert exception.message =~ "foreign_key: permalinks_user_id_pther"
+  end
+
+  @tag :foreign_key_constraint
+  test "no assoc constraint with changeset match" do
+    user = TestRepo.insert!(%User{})
+    TestRepo.insert!(%Permalink{user_id: user.id})
 
     {:error, changeset} =
       user
@@ -344,7 +358,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "get(!) with custom source" do
-    custom = Ecto.Model.put_meta(%Custom{}, source: "posts")
+    custom = Ecto.put_meta(%Custom{}, source: "posts")
     custom = TestRepo.insert!(custom)
     bid    = custom.bid
     assert %Custom{bid: ^bid, __meta__: %{source: {nil, "posts"}}} =
@@ -527,11 +541,11 @@ defmodule Ecto.Integration.RepoTest do
     %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
     %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
 
-    [c1, c2] = TestRepo.all Ecto.Model.assoc(p1, :comments)
+    [c1, c2] = TestRepo.all Ecto.assoc(p1, :comments)
     assert c1.id == cid1
     assert c2.id == cid2
 
-    [c1, c2, c3] = TestRepo.all Ecto.Model.assoc([p1, p2], :comments)
+    [c1, c2, c3] = TestRepo.all Ecto.assoc([p1, p2], :comments)
     assert c1.id == cid1
     assert c2.id == cid2
     assert c3.id == cid3
@@ -545,7 +559,7 @@ defmodule Ecto.Integration.RepoTest do
     %Permalink{}         = TestRepo.insert!(%Permalink{url: "2"})
     %Permalink{id: lid3} = TestRepo.insert!(%Permalink{url: "3", post_id: p2.id})
 
-    [l1, l3] = TestRepo.all Ecto.Model.assoc([p1, p2], :permalink)
+    [l1, l3] = TestRepo.all Ecto.assoc([p1, p2], :permalink)
     assert l1.id == lid1
     assert l3.id == lid3
   end
@@ -558,7 +572,7 @@ defmodule Ecto.Integration.RepoTest do
     l2 = TestRepo.insert!(%Permalink{url: "2"})
     l3 = TestRepo.insert!(%Permalink{url: "3", post_id: pid2})
 
-    assert [p1, p2] = TestRepo.all Ecto.Model.assoc([l1, l2, l3], :post)
+    assert [p1, p2] = TestRepo.all Ecto.assoc([l1, l2, l3], :post)
     assert p1.id == pid1
     assert p2.id == pid2
   end
@@ -664,15 +678,6 @@ defmodule Ecto.Integration.RepoTest do
 
     assert TestRepo.all(Comment) == []
     refute Process.get(Comment)
-  end
-
-  test "has_many assoc on delete fetches and deletes" do
-    post = TestRepo.insert!(%Post{})
-    TestRepo.insert!(%Permalink{post_id: post.id})
-    TestRepo.delete!(post)
-
-    assert TestRepo.all(Permalink) == []
-    assert Process.get(Permalink) == :on_delete
   end
 
   test "has_many assoc on delete nilifies all" do

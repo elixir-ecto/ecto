@@ -7,7 +7,7 @@ defmodule Ecto.Repo.Assoc do
   Transforms a result set based on query assocs, loading
   the associations onto their parent model.
   """
-  @spec query([Ecto.Model.t], list, tuple) :: [Ecto.Model.t]
+  @spec query([Ecto.Schema.t], list, tuple) :: [Ecto.Schema.t]
   def query(rows, assocs, sources)
 
   def query([], _assocs, _sources), do: []
@@ -37,7 +37,7 @@ defmodule Ecto.Repo.Assoc do
   defp merge([struct|sub_structs], {keys, dict, sub_dicts}, parent_key) do
     child_key =
       if struct do
-        [{_, key}] = Ecto.Model.primary_key!(struct)
+        [{_, key}] = Ecto.primary_key!(struct)
         key || raise Ecto.NoPrimaryKeyValueError, struct: struct
       end
 

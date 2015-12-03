@@ -14,12 +14,15 @@ defmodule Ecto.QueryTest do
   end
 
   test "query functions do not require binding" do
-    from(p in "posts") |> limit(1)
-    from(p in "posts") |> order_by([asc: :title])
-    from(p in "posts") |> where(title: "foo")
-    from(p in "posts") |> having(title: "foo")
-    from(p in "posts") |> offset(1)
-    from(p in "posts") |> update(set: [title: "foo"])
+    _ = from(p in "posts") |> limit(1)
+    _ = from(p in "posts") |> order_by([asc: :title])
+    _ = from(p in "posts") |> where(title: "foo")
+    _ = from(p in "posts") |> having(title: "foo")
+    _ = from(p in "posts") |> offset(1)
+    _ = from(p in "posts") |> update(set: [title: "foo"])
+    _ = from(p in "posts") |> select(1)
+    _ = from(p in "posts") |> group_by(1)
+    _ = from(p in "posts") |> join(:inner, "comments")
   end
 
   test "where allows macros" do

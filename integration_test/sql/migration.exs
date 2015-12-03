@@ -217,7 +217,7 @@ defmodule Ecto.Integration.MigrationTest do
   end
 
   defmodule Parent do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "parent" do
     end
@@ -277,8 +277,8 @@ defmodule Ecto.Integration.MigrationTest do
   test "supports references" do
     assert :ok == up(TestRepo, 20050906120000, OnDeleteMigration, log: false)
 
-    parent1 = TestRepo.insert! Ecto.Model.put_meta(%Parent{}, source: "parent1")
-    parent2 = TestRepo.insert! Ecto.Model.put_meta(%Parent{}, source: "parent2")
+    parent1 = TestRepo.insert! Ecto.put_meta(%Parent{}, source: "parent1")
+    parent2 = TestRepo.insert! Ecto.put_meta(%Parent{}, source: "parent2")
 
     writer = "INSERT INTO ref_migration (parent1, parent2) VALUES (#{parent1.id}, #{parent2.id})"
     Ecto.Adapters.SQL.query! TestRepo, writer, []

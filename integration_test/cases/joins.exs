@@ -11,15 +11,19 @@ defmodule Ecto.Integration.JoinsTest do
 
   @tag :update_with_join
   test "update all with joins" do
-    user    = TestRepo.insert!(%User{name: "Tester"})
-    post    = TestRepo.insert!(%Post{title: "foo"})
+    user = TestRepo.insert!(%User{name: "Tester"})
+    post = TestRepo.insert!(%Post{title: "foo"})
     comment = TestRepo.insert!(%Comment{text: "hey", author_id: user.id, post_id: post.id})
+
+    another_post = TestRepo.insert!(%Post{title: "bar"})
+    another_comment = TestRepo.insert!(%Comment{text: "another", author_id: user.id, post_id: another_post.id})
 
     query = from(c in Comment, join: u in User, on: u.id == c.author_id,
                                where: c.post_id in ^[post.id])
 
     assert {1, nil} = TestRepo.update_all(query, set: [text: "hoo"])
     assert %Comment{text: "hoo"} = TestRepo.get(Comment, comment.id)
+    assert %Comment{text: "another"} = TestRepo.get(Comment, another_comment.id)
   end
 
   @tag :delete_with_join
@@ -108,7 +112,7 @@ defmodule Ecto.Integration.JoinsTest do
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid2, author_id: uid2})
 
-    [u2, u1] = TestRepo.all Ecto.Model.assoc([p1, p2], :comments_authors)
+    [u2, u1] = TestRepo.all Ecto.assoc([p1, p2], :comments_authors)
                             |> order_by([a], a.name)
     assert u1.id == uid1
     assert u2.id == uid2

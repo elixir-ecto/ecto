@@ -3,7 +3,7 @@ defmodule Ecto.ChangesetTest do
   import Ecto.Changeset
 
   defmodule Comment do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "comments" do
       belongs_to :post, Ecto.ChangesetTest.Post
@@ -11,7 +11,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defmodule Post do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "posts" do
       field :title
@@ -814,6 +814,26 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
   end
 
+  ## Locks
+
+  test "optimistic_lock/3 with changeset" do
+    changeset = changeset(%{}) |> optimistic_lock(:upvotes)
+    assert changeset.filters == %{upvotes: 0}
+    assert changeset.changes == %{upvotes: 1}
+  end
+
+  test "optimistic_lock/3 with model" do
+    changeset = %Post{} |> optimistic_lock(:upvotes)
+    assert changeset.filters == %{upvotes: 0}
+    assert changeset.changes == %{upvotes: 1}
+  end
+
+  test "optimistic_lock/3 with custom incrementer" do
+    changeset = %Post{} |> optimistic_lock(:upvotes, &(&1 - 1))
+    assert changeset.filters == %{upvotes: 0}
+    assert changeset.changes == %{upvotes: -1}
+  end
+
   ## Constraints
 
   test "unique_constraint/3" do
@@ -904,5 +924,28 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> exclude_constraint(:title, name: :whatever, message: "is invalid")
     assert changeset.constraints ==
            [%{type: :exclude, field: :title, constraint: "whatever", message: "is invalid"}]
+  end
+
+  ## traverse_errors
+
+  test "traverses changeset errors" do
+    changeset =
+      changeset(%{"title" => "title", "body" => "hi"})
+      |> validate_length(:body, min: 3)
+      |> validate_format(:body, ~r/888/)
+      |> add_error(:title, "is taken")
+
+    errors = traverse_errors(changeset, fn
+      {err, opts} ->
+        err
+        |> String.replace("%{count}", to_string(opts[:count]))
+        |> String.upcase()
+      err -> String.upcase(err)
+    end)
+
+    assert errors == %{
+      body: ["HAS INVALID FORMAT", "SHOULD BE AT LEAST 3 CHARACTERS"],
+      title: ["IS TAKEN"]
+    }
   end
 end

@@ -129,7 +129,7 @@ defmodule Ecto.Query do
   set the changeset.model as the updated model with prefix using put_meta/2:
 
       new_changeset = changeset
-      |> Map.put(:model, Ecto.Model.put_meta(changeset.model, prefix: "foo"))
+      |> Map.put(:model, Ecto.put_meta(changeset.model, prefix: "foo"))
       results = Repo.all(new_changeset)
 
   For deleting, if the model was retrieved by a prefix qualified query, the prefix
@@ -394,7 +394,7 @@ defmodule Ecto.Query do
 
   This style discouraged due to its complexity.
   """
-  defmacro join(query, qual, binding, expr, on \\ nil) do
+  defmacro join(query, qual, binding \\ [], expr, on \\ nil) do
     Join.build(query, qual, binding, expr, on, nil, __CALLER__)
     |> elem(0)
   end
@@ -429,7 +429,7 @@ defmodule Ecto.Query do
       City |> select([c], %{"name" => c.name})
 
   """
-  defmacro select(query, binding, expr) do
+  defmacro select(query, binding \\ [], expr) do
     Select.build(query, binding, expr, __CALLER__)
   end
 
@@ -676,7 +676,7 @@ defmodule Ecto.Query do
       Post |> group_by([p], p.category) |> select([p], count(p.id))
 
   """
-  defmacro group_by(query, binding, expr) do
+  defmacro group_by(query, binding \\ [], expr) do
     GroupBy.build(query, binding, expr, __CALLER__)
   end
 

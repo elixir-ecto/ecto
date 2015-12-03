@@ -14,17 +14,17 @@ defmodule Ecto.Repo.SupervisorTest do
 
   test "merges url into configuration" do
     put_env(database: "hello", url: "ecto://eric:hunter2@host:12345/mydb")
-    assert config(__MODULE__, :ecto, [extra: "extra"]) ==
-           [otp_app: :ecto, repo: __MODULE__, username: "eric", password: "hunter2",
-            database: "mydb", hostname: "host", port: 12345, extra: "extra"]
+    assert Enum.sort(config(__MODULE__, :ecto, [extra: "extra"])) ==
+           [database: "mydb", extra: "extra", hostname: "host", otp_app: :ecto,
+            password: "hunter2", port: 12345, repo: __MODULE__, username: "eric"]
   end
 
   test "merges system url into configuration" do
     System.put_env("ECTO_REPO_CONFIG_URL", "ecto://eric:hunter2@host:12345/mydb")
     put_env(database: "hello", url: {:system, "ECTO_REPO_CONFIG_URL"})
-    assert config(__MODULE__, :ecto, []) ==
-           [otp_app: :ecto, repo: __MODULE__, username: "eric", password: "hunter2",
-            database: "mydb", hostname: "host", port: 12345]
+    assert Enum.sort(config(__MODULE__, :ecto, [])) ==
+           [database: "mydb", hostname: "host", otp_app: :ecto,
+            password: "hunter2", port: 12345, repo: __MODULE__, username: "eric"]
   end
 
   test "parse_url options" do

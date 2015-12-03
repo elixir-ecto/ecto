@@ -1,7 +1,7 @@
-defmodule Ecto.Integration.Model do
+defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
-      use Ecto.Model
+      use Ecto.Schema
 
       type =
         Application.get_env(:ecto, :primary_key_type) ||
@@ -9,11 +9,6 @@ defmodule Ecto.Integration.Model do
       @primary_key {:id, type, autogenerate: true}
       @foreign_key_type type
     end
-  end
-
-  def pdict_store(changeset, key, val) do
-    Process.put(key, val)
-    changeset
   end
 end
 
@@ -28,7 +23,7 @@ defmodule Ecto.Integration.Post do
     * Dependent callbacks
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
   import Ecto.Changeset
 
   schema "posts" do
@@ -64,7 +59,7 @@ defmodule Ecto.Integration.PostUsecTimestamps do
     * Usec timestamps
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   schema "posts" do
     field :title, :string
@@ -81,7 +76,7 @@ defmodule Ecto.Integration.Comment do
     * Dependent callbacks
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   schema "comments" do
     field :text, :string
@@ -90,9 +85,6 @@ defmodule Ecto.Integration.Comment do
     belongs_to :author, Ecto.Integration.User
     has_one :post_permalink, through: [:post, :permalink]
   end
-
-  optimistic_lock :lock_version
-  before_delete Ecto.Integration.Model, :pdict_store, [__MODULE__, :on_delete]
 end
 
 defmodule Ecto.Integration.Permalink do
@@ -103,7 +95,7 @@ defmodule Ecto.Integration.Permalink do
     * Dependent callbacks
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   schema "permalinks" do
     field :url, :string
@@ -111,8 +103,6 @@ defmodule Ecto.Integration.Permalink do
     belongs_to :user, Ecto.Integration.User
     has_many :post_comments_authors, through: [:post, :comments_authors]
   end
-
-  before_delete Ecto.Integration.Model, :pdict_store, [__MODULE__, :on_delete]
 end
 
 defmodule Ecto.Integration.User do
@@ -124,7 +114,7 @@ defmodule Ecto.Integration.User do
     * Dependent callbacks
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   schema "users" do
     field :name, :string
@@ -145,7 +135,7 @@ defmodule Ecto.Integration.Custom do
 
   Due to the second item, it must be a subset of posts.
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   @primary_key {:bid, :binary_id, autogenerate: true}
   schema "customs" do
@@ -160,7 +150,7 @@ defmodule Ecto.Integration.Barebone do
     * A model wthout primary keys
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   @primary_key false
   schema "barebones" do
@@ -176,7 +166,7 @@ defmodule Ecto.Integration.Tag do
     * Embedding many models (uses array)
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   schema "tags" do
     field :ints, {:array, :integer}
@@ -192,7 +182,7 @@ defmodule Ecto.Integration.Item do
     * Embedding
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   embedded_schema do
     field :price, :integer
@@ -207,7 +197,7 @@ defmodule Ecto.Integration.Order do
     * Embedding one model
 
   """
-  use Ecto.Integration.Model
+  use Ecto.Integration.Schema
 
   schema "orders" do
     embeds_one :item, Ecto.Integration.Item

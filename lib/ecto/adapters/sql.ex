@@ -176,7 +176,7 @@ defmodule Ecto.Adapters.SQL do
   @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
                %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query!(repo, sql, params, opts \\ []) do
-    query!(repo, sql, params, fn x -> x end, opts)
+    query!(repo, sql, params, nil, opts)
   end
 
   defp query!(repo, sql, params, mapper, opts) do
@@ -218,7 +218,7 @@ defmodule Ecto.Adapters.SQL do
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
               {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
   def query(repo, sql, params, opts \\ []) do
-    query(repo, sql, params, fn x -> x end, opts)
+    query(repo, sql, params, nil, opts)
   end
 
   defp query(repo, sql, params, mapper, opts) do
@@ -245,8 +245,8 @@ defmodule Ecto.Adapters.SQL do
     end
 
     case Pool.run(pool_mod, pool, pool_timeout, query_fun) do
-      {:ok, {mod, result, entry}} ->
-        decode(mod, result, entry, mapper)
+      {:ok, {result, entry}} ->
+        decode(result, entry, mapper)
       {:error, :noconnect} ->
         :noconnect
       {:error, :noproc} ->
@@ -256,21 +256,34 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp query(mod, conn, _queue_time, sql, params, false, opts) do
-    {mod, mod.query(conn, sql, params, opts), nil}
+    {mod.query(conn, sql, params, opts), nil}
   end
   defp query(mod, conn, queue_time, sql, params, true, opts) do
     {query_time, result} = :timer.tc(mod, :query, [conn, sql, params, opts])
     entry = %Ecto.LogEntry{query: sql, params: params, connection_pid: conn,
                            query_time: query_time, queue_time: queue_time}
-    {mod, result, entry}
+    {result, entry}
   end
 
-  defp decode(mod, result, nil, mapper) do
-    {mod.decode(result, mapper), nil}
+  defp decode(result, nil, nil) do
+    {result, nil}
   end
-  defp decode(mod, result, entry, mapper) do
-    {decode_time, decoded} = :timer.tc(mod, :decode, [result, mapper])
-    {decoded, %Ecto.LogEntry{entry | result: decoded, decode_time: decode_time}}
+  defp decode(result, nil, mapper) do
+    {decode(result, mapper), nil}
+  end
+  defp decode(result, entry, nil) do
+    {result, %{entry | result: result}}
+  end
+  defp decode(result, %{query_time: query_time} = entry, mapper) do
+    {decode_time, decoded} = :timer.tc(fn -> decode(result, mapper) end)
+    {decoded, %{entry | result: decoded, query_time: query_time + decode_time}}
+  end
+
+  defp decode({:ok, %{rows: rows} = res}, mapper) when is_list(rows) do
+    {:ok, %{res | rows: Enum.map(rows, mapper)}}
+  end
+  defp decode(other, _mapper) do
+    other
   end
 
   defp log(_repo, nil), do: :ok
@@ -377,7 +390,7 @@ defmodule Ecto.Adapters.SQL do
     case repo.__pool__ do
       {Sandbox, pool, pool_timeout, timeout} ->
         opts = Keyword.put_new(opts, :timeout, timeout)
-        pool_timeout = Keyword.get(opts, :pool_tmeout, pool_timeout)
+        pool_timeout = Keyword.get(opts, :pool_timeout, pool_timeout)
         test_transaction(pool, fun, &repo.log/1, opts, pool_timeout)
       {pool_mod, _, _, _} ->
         raise """
@@ -471,7 +484,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def model(repo, conn, sql, values, returning, opts) do
-    case query(repo, sql, values, fn x -> x end, opts) do
+    case query(repo, sql, values, nil, opts) do
       {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
       {:ok, %{rows: [values], num_rows: 1}} ->

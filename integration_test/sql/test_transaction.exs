@@ -37,7 +37,7 @@ defmodule Ecto.Integration.TestTransactionTest do
     TestRepo.transaction(fn ->
       assert {:timeout, _} =
         catch_exit(Ecto.Adapters.SQL.restart_test_transaction(TestRepo,
-          [timeout: 200]))
+          [timeout: 200, pool_timeout: 200]))
     end)
   after
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
@@ -47,7 +47,7 @@ defmodule Ecto.Integration.TestTransactionTest do
     TestRepo.transaction(fn ->
       assert {:timeout, _} =
         catch_exit(Ecto.Adapters.SQL.restart_test_transaction(TestRepo,
-                   [timeout: 200]))
+                   [timeout: 200, pool_timeout: 200]))
     end)
   after
     Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)

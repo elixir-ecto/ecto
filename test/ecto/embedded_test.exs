@@ -11,10 +11,12 @@ defmodule Ecto.EmbeddedTest do
   alias __MODULE__.Post
 
   defmodule Author do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "authors" do
+      field :name, :string
       embeds_one :profile, Profile, on_cast: :required_changeset, on_replace: :delete
+      embeds_one :post, Post
       embeds_many :posts, Post, on_replace: :delete
       embeds_one :raise_profile, Profile
       embeds_many :raise_posts, Post
@@ -24,7 +26,7 @@ defmodule Ecto.EmbeddedTest do
   end
 
   defmodule Post do
-    use Ecto.Model
+    use Ecto.Schema
     import Ecto.Changeset
 
     schema "posts" do
@@ -33,6 +35,7 @@ defmodule Ecto.EmbeddedTest do
 
     def changeset(model, params) do
       cast(model, params, ~w(title))
+      |> validate_length(:title, min: 3)
     end
 
     def optional_changeset(model, params) do
@@ -46,7 +49,7 @@ defmodule Ecto.EmbeddedTest do
   end
 
   defmodule Profile do
-    use Ecto.Model
+    use Ecto.Schema
     import Ecto.Changeset
 
     embedded_schema do
@@ -73,7 +76,7 @@ defmodule Ecto.EmbeddedTest do
 
   test "__schema__" do
     assert Author.__schema__(:embeds) ==
-      [:profile, :posts, :raise_profile, :raise_posts, :invalid_profile, :invalid_posts]
+      [:profile, :post, :posts, :raise_profile, :raise_posts, :invalid_profile, :invalid_posts]
 
     assert Author.__schema__(:embed, :profile) ==
       %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete,
@@ -680,5 +683,52 @@ defmodule Ecto.EmbeddedTest do
     embed = Author.__schema__(:embed, :posts)
     [model] = Relation.apply_changes(embed, [changeset, changeset2])
     assert model == %Post{title: "hello"}
+  end
+
+  ## traverse_errors
+
+  test "traverses changeset errors with embeds_one error" do
+    import Ecto.Changeset
+    params = %{"name" => "hi", "post" => %{"title" => "hi"}}
+    changeset =
+      %Author{}
+      |> cast(params, ~w(), ~w(name post))
+      |> add_error(:name, "is invalid")
+
+    errors = traverse_errors(changeset, fn
+      {err, opts} ->
+        err
+        |> String.replace("%{count}", to_string(opts[:count]))
+        |> String.upcase()
+      err -> String.upcase(err)
+    end)
+
+    assert errors == %{
+      post: %{title: ["SHOULD BE AT LEAST 3 CHARACTERS"]},
+      name: ["IS INVALID"]
+    }
+  end
+
+  test "traverses changeset errors with embeds_many errors" do
+    import Ecto.Changeset
+    params = %{"name" => "hi", "posts" => [%{"title" => "hi"},
+                                           %{"title" => "valid"}]}
+    changeset =
+      %Author{}
+      |> cast(params, ~w(), ~w(name posts))
+      |> add_error(:name, "is invalid")
+
+    errors = traverse_errors(changeset, fn
+      {err, opts} ->
+        err
+        |> String.replace("%{count}", to_string(opts[:count]))
+        |> String.upcase()
+      err -> String.upcase(err)
+    end)
+
+    assert errors == %{
+      posts: [%{title: ["SHOULD BE AT LEAST 3 CHARACTERS"]}, %{}],
+      name: ["IS INVALID"]
+    }
   end
 end

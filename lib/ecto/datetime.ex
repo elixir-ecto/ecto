@@ -192,6 +192,8 @@ defmodule Ecto.Date do
   `utc/0` function instead.
   """
   def local do
+    IO.write :stderr, "warning: Ecto.Date.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
+                      Exception.format_stacktrace
     erl_load(:erlang.localtime)
   end
 
@@ -345,6 +347,8 @@ defmodule Ecto.Time do
   `utc/0` function instead.
   """
   def local do
+    IO.write :stderr, "warning: Ecto.Time.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
+                      Exception.format_stacktrace
     erl_load(:erlang.localtime)
   end
 
@@ -487,7 +491,7 @@ defmodule Ecto.DateTime do
                          hour: hour, min: min, sec: sec, usec: usec}}
   end
   def load({{_, _, _}, {_, _, _}} = datetime) do
-    {:ok, erl_load(datetime)}
+    {:ok, from_erl(datetime)}
   end
   def load(_), do: :error
 
@@ -546,7 +550,8 @@ defmodule Ecto.DateTime do
   populated by the Ecto `timestamps` feature are UTC. But other `Ecto.DateTime`
   fields are not always UTC.
   """
-  def to_iso8601(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}) do
+  def to_iso8601(%Ecto.DateTime{year: year, month: month, day: day,
+                                hour: hour, min: min, sec: sec, usec: usec}) do
     str = zero_pad(year, 4) <> "-" <> zero_pad(month, 2) <> "-" <> zero_pad(day, 2) <> "T" <>
           zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
 
@@ -567,14 +572,16 @@ defmodule Ecto.DateTime do
   use this function. Please use the `utc/0` function instead.
   """
   def local do
-    erl_load(:erlang.localtime)
+    IO.write :stderr, "warning: Ecto.DateTime.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
+                      Exception.format_stacktrace
+    from_erl(:erlang.localtime)
   end
 
   @doc """
   Returns an `Ecto.DateTime` in UTC.
   """
   def utc do
-    erl_load(:erlang.universaltime)
+    from_erl(:erlang.universaltime)
   end
 
   @doc """
@@ -588,12 +595,23 @@ defmodule Ecto.DateTime do
   Returns an `Ecto.DateTime` from an Erlang datetime tuple.
   """
   def from_erl({{year, month, day}, {hour, min, sec}}) do
-    %Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec}
-  end
-
-  defp erl_load({{year, month, day}, {hour, min, sec}}) do
     %Ecto.DateTime{year: year, month: month, day: day,
                    hour: hour, min: min, sec: sec}
+  end
+
+  # Callback invoked by autogenerate in schema.
+  @doc false
+  def autogenerate do
+    {date, {h, m, s}} = :erlang.universaltime
+    {date, {h, m, s, 0}}
+  end
+
+  # Callback invoked by autogenerate in schema.
+  @doc false
+  def autogenerate_with_usec do
+    timestamp = {_, _, usec} = :os.timestamp
+    {date, {h, m, s}} =:calendar.now_to_datetime(timestamp)
+    {date, {h, m, s, usec}}
   end
 end
 

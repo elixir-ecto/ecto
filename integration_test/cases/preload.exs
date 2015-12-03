@@ -285,7 +285,7 @@ defmodule Ecto.Integration.PreloadTest do
   @tag :invalid_prefix
   test "preload custom prefix" do
     p = TestRepo.insert!(%Post{title: "1"})
-    p = Ecto.Model.put_meta(p, prefix: "this_surely_does_not_exist")
+    p = Ecto.put_meta(p, prefix: "this_surely_does_not_exist")
     # This preload should fail because it points to a prefix that does not exist
     assert catch_error(TestRepo.preload(p, [:comments]))
   end

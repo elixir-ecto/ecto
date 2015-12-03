@@ -9,7 +9,7 @@ defmodule Ecto.Query.PlannerTest do
   alias Ecto.Query.JoinExpr
 
   defmodule Comment do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "comments" do
       field :text, :string
@@ -22,7 +22,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   defmodule Post do
-    use Ecto.Model
+    use Ecto.Schema
 
     @primary_key {:id, Custom.Permalink, []}
     schema "posts" do

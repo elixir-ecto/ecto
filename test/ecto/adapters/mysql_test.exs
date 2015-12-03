@@ -9,7 +9,7 @@ defmodule Ecto.Adapters.MySQLTest do
   alias Ecto.Adapters.MySQL.Connection, as: SQL
 
   defmodule Model do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model" do
       field :x, :integer
@@ -26,7 +26,7 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   defmodule Model2 do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model2" do
       belongs_to :post, Ecto.Adapters.MySQLTest.Model,
@@ -36,7 +36,7 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   defmodule Model3 do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "model3" do
       field :binary, :binary

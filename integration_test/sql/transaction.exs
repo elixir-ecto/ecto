@@ -17,7 +17,7 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   defmodule Trans do
-    use Ecto.Model
+    use Ecto.Schema
 
     schema "transactions" do
       field :text, :string
@@ -168,7 +168,7 @@ defmodule Ecto.Integration.TransactionTest do
   test "log raises after begin, drops transaction" do
     try do
       Process.put(:on_log, fn -> raise UniqueError end)
-      PoolRepo.transaction(fn -> end)
+      PoolRepo.transaction(fn -> :ok end)
     rescue
       UniqueError -> :ok
     end

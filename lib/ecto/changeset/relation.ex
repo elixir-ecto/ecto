@@ -19,14 +19,14 @@ defmodule Ecto.Changeset.Relation do
   The action to be performed when the relation is modified given the changeset
   on the repo insert/update/delete.
   """
-  defcallback on_repo_action(t, Changeset.t, Ecto.Model.t, Ecto.Adapter.t, Ecto.Repo.t,
+  defcallback on_repo_action(t, Changeset.t, Ecto.Schema.t, Ecto.Adapter.t, Ecto.Repo.t,
                              repo_action :: :insert | :update | :delete, Keyword.t) ::
-              {:ok, Ecto.Model.t} | {:error, Ecto.Changeset.t}
+              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Builds the related model.
   """
-  defcallback build(t) :: Ecto.Model.t
+  defcallback build(t) :: Ecto.Schema.t
 
   @doc """
   Returns empty container for relation.
@@ -179,7 +179,7 @@ defmodule Ecto.Changeset.Relation do
                    &do_cast(relation, &1, &2))
   end
 
-  defp do_cast(%{related: model, on_cast: fun} = meta, params, nil) when is_function(fun) do
+  defp do_cast(%{on_cast: fun} = meta, params, nil) when is_function(fun) do
     {:ok, fun.(meta.__struct__.build(meta), params) |> put_new_action(:insert)}
   end
 

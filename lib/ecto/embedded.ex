@@ -6,15 +6,13 @@ defmodule Ecto.Embedded do
   @type t :: %Embedded{cardinality: :one | :many,
                        strategy: :replace | atom,
                        on_replace: Changeset.Relation.on_replace,
-                       on_delete: :fetch_and_delete,
                        field: atom, owner: atom, related: atom,
                        on_cast: Changeset.Relation.on_cast}
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:cardinality, :field, :owner, :related, :on_cast, :on_replace,
-             strategy: :replace, on_delete: :fetch_and_delete]
-
+             strategy: :replace]
 
   @doc """
   Builds the embedded struct.
@@ -107,7 +105,8 @@ defmodule Ecto.Embedded do
                     %{related: model} = embed, adapter) do
     callback = callback_for(:before, action)
     Ecto.Model.Callbacks.__apply__(model, callback, changeset)
-    |> generate_id(action, model, embed, adapter)
+    |> autogenerate_id(action, model, embed, adapter)
+    |> autogenerate(action, model, adapter)
     |> prepare(model.__schema__(:embeds), adapter, action)
   end
 
@@ -122,7 +121,7 @@ defmodule Ecto.Embedded do
     do: raise(ArgumentError, "got action :delete in changeset for embedded #{model} while inserting")
   defp check_action!(_, _, _), do: :ok
 
-  defp generate_id(changeset, :insert, model, embed, adapter) do
+  defp autogenerate_id(changeset, :insert, model, embed, adapter) do
     case model.__schema__(:autogenerate_id) do
       {key, :binary_id} ->
         if Map.get(changeset.changes, key) || Map.get(changeset.model, key) do
@@ -136,11 +135,37 @@ defmodule Ecto.Embedded do
     end
   end
 
-  defp generate_id(changeset, action, _model, _embed, _adapter) when action in [:update, :delete] do
-    for {_, nil} <- Ecto.Model.primary_key(changeset.model) do
+  defp autogenerate_id(changeset, action, _model, _embed, _adapter) when action in [:update, :delete] do
+    for {_, nil} <- Ecto.primary_key(changeset.model) do
       raise Ecto.NoPrimaryKeyValueError, struct: changeset.model
     end
     changeset
+  end
+
+  defp autogenerate(changeset, :delete, _model, _adapter) do
+    changeset
+  end
+
+  defp autogenerate(%{types: types} = changeset, action, model, adapter) do
+    update_in changeset.changes, fn changes ->
+      Enum.reduce model.__schema__(:autogenerate, action), changes,
+        fn {k, mod, fun}, acc ->
+          if Map.get(acc, k) do
+            acc
+          else
+            Map.put(acc, k, load!(types, k, apply(mod, fun, []), adapter))
+          end
+        end
+    end
+  end
+
+  defp load!(types, k, v, adapter) do
+    type = Map.fetch!(types, k)
+
+    case adapter.load(type, v) do
+      {:ok, v} -> v
+      :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"
+    end
   end
 
   @doc false

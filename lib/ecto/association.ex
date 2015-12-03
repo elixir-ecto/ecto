@@ -53,9 +53,9 @@ defmodule Ecto.Association do
   The struct to build from is given as argument in case default values
   should be set in the struct.
 
-  Invoked by `Ecto.Model.build/3`.
+  Invoked by `Ecto.build_assoc/3`.
   """
-  defcallback build(t, Ecto.Model.t, %{atom => term} | [Keyword.t]) :: Ecto.Model.t
+  defcallback build(t, Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
 
   @doc """
   Returns an association join query.
@@ -84,7 +84,7 @@ defmodule Ecto.Association do
   a query that retrieves all associated entries with the given
   values for the owner key.
 
-  This callback is used by `Ecto.Model.assoc/2`.
+  This callback is used by `Ecto.assoc/2`.
   """
   defcallback assoc_query(t, values :: [term]) :: Ecto.Query.t
 
@@ -114,24 +114,6 @@ defmodule Ecto.Association do
   end
 
   @doc """
-  Checks if an association is loaded.
-
-  ## Examples
-
-      post = Repo.get(Post, 1)
-      Ecto.Association.loaded?(post.comments) # false
-      post = post |> Repo.preload(:comments)
-      Ecto.Association.loaded?(post.comments) # true
-
-  """
-  def loaded?(association) do
-    case association do
-      %Ecto.Association.NotLoaded{} -> false
-      _ -> true
-    end
-  end
-
-  @doc """
   Returns the association key for the given module with the given suffix.
 
   ## Examples
@@ -150,6 +132,8 @@ defmodule Ecto.Association do
     prefix = module |> Module.split |> List.last |> underscore
     :"#{prefix}_#{suffix}"
   end
+
+  # TODO: Use Elixir's underscore function on from Elixir v1.2 onwards
 
   defp underscore(""), do: ""
 
@@ -221,7 +205,7 @@ defmodule Ecto.Association do
   def merge_source(model, query)
 
   def merge_source(struct, {source, _}) do
-    Ecto.Model.put_meta(struct, source: source)
+    Ecto.put_meta(struct, source: source)
   end
 
   def merge_source(struct, _query) do

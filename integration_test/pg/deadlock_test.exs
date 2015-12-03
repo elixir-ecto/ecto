@@ -44,8 +44,7 @@ defmodule Ecto.Integration.DeadlockTest do
         # Trapping a transaction should still be fine.
         try do
           Process.flag(:trap_exit, true)
-          PoolRepo.transaction fn ->
-          end
+          PoolRepo.transaction fn -> :ok end
         catch
           class, msg ->
             Logger.debug inspect([class, msg])

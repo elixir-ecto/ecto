@@ -31,7 +31,7 @@ defmodule Ecto.Repo.Preloader do
   @doc """
   Implementation for `Ecto.Repo.preload/2`.
   """
-  @spec preload(models, atom, atom | list) :: models when models: [Ecto.Model.t] | Ecto.Model.t
+  @spec preload(models, atom, atom | list) :: models when models: [Ecto.Schema.t] | Ecto.Schema.t
   def preload(structs, repo, preloads) when is_list(structs) do
     do_preload(structs, repo, preloads, nil)
   end
@@ -187,7 +187,7 @@ defmodule Ecto.Repo.Preloader do
       children = struct |> Map.fetch!(assoc) |> List.wrap
 
       Enum.reduce children, acc, fn child, {fresh, set} ->
-        [{_, pk}] = Ecto.Model.primary_key!(child)
+        [{_, pk}] = Ecto.primary_key!(child)
         pk || raise Ecto.NoPrimaryKeyValueError, struct: child
 
         if HashSet.member?(set, pk) do
