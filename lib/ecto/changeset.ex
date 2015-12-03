@@ -1570,4 +1570,60 @@ defmodule Ecto.Changeset do
     model.__schema__(:association, assoc) ||
       raise(ArgumentError, "cannot add constraint to model because association `#{assoc}` does not exist")
   end
+
+  @doc """
+  Traverses changeset errors and applies function to error messages.
+
+  This function is particularly useful when associations and embeds
+  are cast in the changeset as it will traverse all associations and
+  embeds and place all errors in a series of nested maps.
+
+  A changeset is supplied along with a function to apply to each
+  error message as the changeset is traversed. The error message
+  function receives a single argument matching either:
+
+    * `{message, opts}` - The string error message and options,
+      for example `{"should be at least %{count} characters", [count: 3]}`
+    * `message` - The string error message
+
+  ## Examples
+
+      iex> traverse_errors(changeset, fn
+        {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
+        msg -> msg
+      end)
+      %{title: "should be at least 3 characters"}
+  """
+  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func) do
+    errors
+    |> Enum.reverse()
+    |> merge_error_keys(msg_func)
+    |> merge_related_keys(changes, types, msg_func)
+  end
+
+  defp merge_error_keys(errors, msg_func) do
+    Enum.reduce(errors, %{}, fn({key, val}, acc) ->
+      val = msg_func.(val)
+      Map.update(acc, key, [val], &[val|&1])
+    end)
+  end
+
+  defp merge_related_keys(map, changes, types, msg_func) do
+    Enum.reduce types, map, fn
+      {field, {tag, %{cardinality: :many}}}, acc when tag in @relations ->
+        if changesets = Map.get(changes, field) do
+          Map.put(acc, field, Enum.map(changesets, &traverse_errors(&1, msg_func)))
+        else
+          acc
+        end
+      {field, {tag, %{cardinality: :one}}}, acc when tag in @relations ->
+        if changeset = Map.get(changes, field) do
+          Map.put(acc, field, traverse_errors(changeset, msg_func))
+        else
+          acc
+        end
+      {_, _}, acc ->
+        acc
+    end
+  end
 end
