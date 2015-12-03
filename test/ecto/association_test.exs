@@ -24,6 +24,7 @@ defmodule Ecto.AssociationTest do
 
       has_many :comments, Comment
       has_one :permalink, Permalink
+      has_many :permalinks, Permalink
       belongs_to :author, Author
       belongs_to :summary, Summary
     end
@@ -59,6 +60,14 @@ defmodule Ecto.AssociationTest do
     use Ecto.Schema
 
     schema "permalinks" do
+      field :url, :string
+    end
+
+    def changeset(model, params) do
+      import Ecto.Changeset
+      model
+      |> cast(params, ~w(url), ~w())
+      |> validate_length(:url, min: 3)
     end
   end
 
@@ -1194,5 +1203,52 @@ defmodule Ecto.AssociationTest do
     embed = Author.__schema__(:association, :posts)
     [model] = Relation.apply_changes(embed, [changeset, changeset2])
     assert model == %Post{title: "hello"}
+  end
+
+  ## traverse_errors
+
+  test "traverses changeset errors with has_one error" do
+    import Ecto.Changeset
+    params = %{"title" => "hi", "permalink" => %{"url" => "hi"}}
+    changeset =
+      %Post{}
+      |> cast(params, ~w(), ~w(title permalink))
+      |> add_error(:title, "is invalid")
+
+    errors = traverse_errors(changeset, fn
+      {err, opts} ->
+        err
+        |> String.replace("%{count}", to_string(opts[:count]))
+        |> String.upcase()
+      err -> String.upcase(err)
+    end)
+
+    assert errors == %{
+      permalink: %{url: ["SHOULD BE AT LEAST 3 CHARACTERS"]},
+      title: ["IS INVALID"]
+    }
+  end
+
+  test "traverses changeset errors with has_many errors" do
+    import Ecto.Changeset
+    params = %{"title" => "hi", "permalinks" => [%{"url" => "hi"},
+                                                 %{"url" => "valid"}]}
+    changeset =
+      %Post{}
+      |> cast(params, ~w(), ~w(title permalinks))
+      |> add_error(:title, "is invalid")
+
+    errors = traverse_errors(changeset, fn
+      {err, opts} ->
+        err
+        |> String.replace("%{count}", to_string(opts[:count]))
+        |> String.upcase()
+      err -> String.upcase(err)
+    end)
+
+    assert errors == %{
+      permalinks: [%{url: ["SHOULD BE AT LEAST 3 CHARACTERS"]}, %{}],
+      title: ["IS INVALID"]
+    }
   end
 end

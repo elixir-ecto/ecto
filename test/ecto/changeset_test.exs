@@ -914,4 +914,27 @@ defmodule Ecto.ChangesetTest do
       change(%Comment{}) |> no_assoc_constraint(:post)
     end
   end
+
+  ## traverse_errors
+
+  test "traverses changeset errors" do
+    changeset =
+      changeset(%{"title" => "title", "body" => "hi"})
+      |> validate_length(:body, min: 3)
+      |> validate_format(:body, ~r/888/)
+      |> add_error(:title, "is taken")
+
+    errors = traverse_errors(changeset, fn
+      {err, opts} ->
+        err
+        |> String.replace("%{count}", to_string(opts[:count]))
+        |> String.upcase()
+      err -> String.upcase(err)
+    end)
+
+    assert errors == %{
+      body: ["HAS INVALID FORMAT", "SHOULD BE AT LEAST 3 CHARACTERS"],
+      title: ["IS TAKEN"]
+    }
+  end
 end
