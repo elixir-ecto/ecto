@@ -65,10 +65,11 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:fragment, [], [escaped]]}, params}
   end
 
-  def escape({:fragment, _, [{:^, _, _} = expr]}, _type, params, vars, env) do
-    {escaped, params} = escape(expr, :any, params, vars, env)
-
-    {{:{}, [], [:fragment, [], [escaped]]}, params}
+  def escape({:fragment, _, [{:^, _, [var]} = _expr]}, _type, params, _vars, _env) do
+    expr = quote do
+      Ecto.Query.Builder.runtime_validate!(unquote(var))
+    end
+    {{:{}, [], [:fragment, [], [expr]]}, params}
   end
 
   def escape({:fragment, _, [query|frags]}, _type, params, vars, env) when is_binary(query) do
@@ -216,6 +217,15 @@ defmodule Ecto.Query.Builder do
   # Everything else is not allowed
   def escape(other, _type, _params, _vars, _env) do
     error! "`#{Macro.to_string(other)}` is not a valid query expression"
+  end
+
+  def runtime_validate!(kw) do
+    unless Keyword.keyword?(kw) do
+      raise ArgumentError, "to prevent sql injection, only a keyword list may be interpolated " <>
+                           "as the first argument to `fragment/1` with the `^` operator, got `#{inspect kw}`"
+    end
+
+    kw
   end
 
   defp split_binary(query), do: split_binary(query, "")
