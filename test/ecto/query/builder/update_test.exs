@@ -51,6 +51,16 @@ defmodule Ecto.Query.Builder.UpdateTest do
     assert compile.params == [{"bar", {0, :bar}}]
   end
 
+  test "runtime values are validated" do
+    assert_raise ArgumentError, ~r/malformed update/, fn ->
+      update("foo", [_], set: ^"bar")
+    end
+
+    assert_raise ArgumentError, ~r/malformed :set in update/, fn ->
+      update("foo", [_], set: ^["bar"])
+    end
+  end
+
   test "keyword lists are expected" do
     assert_raise Ecto.Query.CompileError,
                  ~r"malformed update `\[1\]` in query expression", fn ->
