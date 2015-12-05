@@ -268,7 +268,7 @@ defmodule Ecto.QueryTest do
   end
 
   test "fragment/1 raises at runtime when interpolation is not a keyword list" do
-    assert_raise ArgumentError, ~r|only a keyword list.*1 = ?|, fn ->
+    assert_raise ArgumentError, ~r/only a keyword list.*1 = \?/, fn ->
       clause = "1 = ?"
       from p in "posts", where: fragment(^clause)
     end
