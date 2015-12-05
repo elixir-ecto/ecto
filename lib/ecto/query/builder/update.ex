@@ -151,14 +151,16 @@ defmodule Ecto.Query.Builder.Update do
         params = [{v, type_for_key(key, {0, k})}|params]
         {{k, {:^, [], [count]}}, {params, count+1}}
       _, _acc ->
-        Builder.error! "malformed #{inspect key} in update `#{inspect(kw)}`, " <>
-                       "expected a keyword list"
+        raise ArgumentError,
+          "malformed #{inspect key} in update `#{inspect(kw)}`, " <>
+          "expected a keyword list"
     end
   end
 
   defp runtime_error!(value) do
-    Builder.error! "malformed update `#{inspect(value)}` in query expression, " <>
-                   "expected a keyword list with lists or interpolated expressions as values"
+    raise ArgumentError,
+      "malformed update `#{inspect(value)}` in query expression, " <>
+      "expected a keyword list with lists or interpolated expressions as values"
   end
 
   defp validate_key!(key) when key in @keys, do: :ok
