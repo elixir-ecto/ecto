@@ -915,6 +915,17 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "exclude_constraint/3" do
+    changeset = change(%Post{}) |> exclude_constraint(:title)
+    assert changeset.constraints ==
+           [%{type: :exclude, field: :title, constraint: "posts_title_exclusion",
+              message: "violates an exclusion constraint"}]
+
+    changeset = change(%Post{}) |> exclude_constraint(:title, name: :whatever, message: "is invalid")
+    assert changeset.constraints ==
+           [%{type: :exclude, field: :title, constraint: "whatever", message: "is invalid"}]
+  end
+
   ## traverse_errors
 
   test "traverses changeset errors" do

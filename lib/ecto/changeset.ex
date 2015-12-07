@@ -1552,6 +1552,28 @@ defmodule Ecto.Changeset do
     add_constraint(changeset, :foreign_key, to_string(constraint), assoc, message)
   end
 
+  @doc """
+  Checks for a exclude constraint in the given field.
+
+  The exclude constraint works by relying on the database to check
+  if the exclude constraint has been violated or not and, if so,
+  Ecto converts it into a changeset error.
+
+  ## Options
+
+    * `:message` - the message in case the constraint check fails,
+      defaults to "violates an exclusion constraint"
+    * `:name` - the constraint name. By default, the constraint
+      name is inflected from the table + field. May be required
+      explicitly for complex cases
+
+  """
+  def exclude_constraint(changeset, field, opts \\ []) do
+    constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclusion"
+    message    = opts[:message] || "violates an exclusion constraint"
+    add_constraint(changeset, :exclude, to_string(constraint), field, message)
+  end
+
   defp no_assoc_message(:one), do: "is still associated to this entry"
   defp no_assoc_message(:many), do: "are still associated to this entry"
 
