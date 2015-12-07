@@ -636,8 +636,10 @@ defmodule Ecto.Query.Planner do
   defp type!(_kind, _query, _expr, nil, _field), do: :any
 
   defp type!(kind, query, expr, source, field) when is_integer(source) do
-    {_, model} = elem(query.sources, source)
-    type!(kind, query, expr, model, field)
+    case elem(query.sources, source) do
+      {_, model} -> type!(kind, query, expr, model, field)
+      {:fragment, _, _} -> :any
+    end
   end
 
   defp type!(kind, query, expr, model, field) when is_atom(model) do

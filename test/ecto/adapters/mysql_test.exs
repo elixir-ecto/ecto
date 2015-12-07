@@ -384,6 +384,16 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s{WHERE ((m0.`id` > 0) AND (m0.`id` < ?))}
   end
 
+  test "join with fragment and on defined" do
+    query = Model
+            |> join(:inner, [p], q in fragment("SELECT * FROM model2"), q.id == p.id)
+            |> select([p], {p.id, ^0})
+            |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT m0.`id`, ? FROM `model` AS m0 INNER JOIN } <>
+           ~s{(SELECT * FROM model2) AS f1 ON f1.`id` = m0.`id`}
+  end
+
   ## Associations
 
   test "association join belongs_to" do
