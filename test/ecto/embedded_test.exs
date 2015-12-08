@@ -704,7 +704,7 @@ defmodule Ecto.EmbeddedTest do
     end)
 
     assert errors == %{
-      post: %{title: ["SHOULD BE AT LEAST 3 CHARACTERS"]},
+      post: %{title: ["SHOULD BE AT LEAST 3 CHARACTER(S)"]},
       name: ["IS INVALID"]
     }
   end
@@ -727,7 +727,7 @@ defmodule Ecto.EmbeddedTest do
     end)
 
     assert errors == %{
-      posts: [%{title: ["SHOULD BE AT LEAST 3 CHARACTERS"]}, %{}],
+      posts: [%{title: ["SHOULD BE AT LEAST 3 CHARACTER(S)"]}, %{}],
       name: ["IS INVALID"]
     }
   end

@@ -671,15 +671,15 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 6)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at least %{count} characters", count: 6}]
+    assert changeset.errors == [title: {"should be at least %{count} character(s)", count: 6}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, max: 4)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at most %{count} characters", count: 4}]
+    assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 4}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be %{count} characters", count: 10}]
+    assert changeset.errors == [title: {"should be %{count} character(s)", count: 10}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10, message: "yada")
     assert changeset.errors == [title: {"yada", count: 10}]
@@ -699,15 +699,15 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, min: 6, foo: true)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have at least %{count} items", count: 6}]
+    assert changeset.errors == [topics: {"should have at least %{count} item(s)", count: 6}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security", "Economy"]}) |> validate_length(:topics, max: 2)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have at most %{count} items", count: 2}]
+    assert changeset.errors == [topics: {"should have at most %{count} item(s)", count: 2}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have %{count} items", count: 10}]
+    assert changeset.errors == [topics: {"should have %{count} item(s)", count: 10}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10, message: "yada")
     assert changeset.errors == [topics: {"yada", count: 10}]
@@ -933,7 +933,7 @@ defmodule Ecto.ChangesetTest do
     end)
 
     assert errors == %{
-      body: ["HAS INVALID FORMAT", "SHOULD BE AT LEAST 3 CHARACTERS"],
+      body: ["HAS INVALID FORMAT", "SHOULD BE AT LEAST 3 CHARACTER(S)"],
       title: ["IS TAKEN"]
     }
   end

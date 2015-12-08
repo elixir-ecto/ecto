@@ -1224,7 +1224,7 @@ defmodule Ecto.AssociationTest do
     end)
 
     assert errors == %{
-      permalink: %{url: ["SHOULD BE AT LEAST 3 CHARACTERS"]},
+      permalink: %{url: ["SHOULD BE AT LEAST 3 CHARACTER(S)"]},
       title: ["IS INVALID"]
     }
   end
@@ -1247,7 +1247,7 @@ defmodule Ecto.AssociationTest do
     end)
 
     assert errors == %{
-      permalinks: [%{url: ["SHOULD BE AT LEAST 3 CHARACTERS"]}, %{}],
+      permalinks: [%{url: ["SHOULD BE AT LEAST 3 CHARACTER(S)"]}, %{}],
       title: ["IS INVALID"]
     }
   end
