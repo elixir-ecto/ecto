@@ -221,10 +221,9 @@ defmodule Ecto.Schema do
   used for runtime introspection of the schema:
 
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
-  * `__schema__(:primary_key)` - Returns a list of the field that is the primary
-    key or [] if there is none;
-  * `__schema__(:fields)` - Returns a list of all non-virtual field names;
+  * `__schema__(:primary_key)` - Returns a list of primary key fields (empty if there is none);
 
+  * `__schema__(:fields)` - Returns a list of all non-virtual field names;
   * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
   * `__schema__(:types)` - Returns a keyword list of all non-virtual
     field names and their type;

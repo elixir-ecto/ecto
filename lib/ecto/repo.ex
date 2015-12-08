@@ -129,35 +129,35 @@ defmodule Ecto.Repo do
       end
 
       def insert(model, opts \\ []) do
-        Ecto.Repo.Model.insert(__MODULE__, @adapter, model, opts)
+        Ecto.Repo.Schema.insert(__MODULE__, @adapter, model, opts)
       end
 
       def update(model, opts \\ []) do
-        Ecto.Repo.Model.update(__MODULE__, @adapter, model, opts)
+        Ecto.Repo.Schema.update(__MODULE__, @adapter, model, opts)
       end
 
       def insert_or_update(changeset, opts \\ []) do
-        Ecto.Repo.Model.insert_or_update(__MODULE__, @adapter, changeset, opts)
+        Ecto.Repo.Schema.insert_or_update(__MODULE__, @adapter, changeset, opts)
       end
 
       def delete(model, opts \\ []) do
-        Ecto.Repo.Model.delete(__MODULE__, @adapter, model, opts)
+        Ecto.Repo.Schema.delete(__MODULE__, @adapter, model, opts)
       end
 
       def insert!(model, opts \\ []) do
-        Ecto.Repo.Model.insert!(__MODULE__, @adapter, model, opts)
+        Ecto.Repo.Schema.insert!(__MODULE__, @adapter, model, opts)
       end
 
       def update!(model, opts \\ []) do
-        Ecto.Repo.Model.update!(__MODULE__, @adapter, model, opts)
+        Ecto.Repo.Schema.update!(__MODULE__, @adapter, model, opts)
       end
 
       def insert_or_update!(changeset, opts \\ []) do
-        Ecto.Repo.Model.insert_or_update!(__MODULE__, @adapter, changeset, opts)
+        Ecto.Repo.Schema.insert_or_update!(__MODULE__, @adapter, changeset, opts)
       end
 
       def delete!(model, opts \\ []) do
-        Ecto.Repo.Model.delete!(__MODULE__, @adapter, model, opts)
+        Ecto.Repo.Schema.delete!(__MODULE__, @adapter, model, opts)
       end
 
       def preload(model_or_models, preloads) do

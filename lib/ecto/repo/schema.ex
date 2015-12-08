@@ -1,4 +1,4 @@
-defmodule Ecto.Repo.Model do
+defmodule Ecto.Repo.Schema do
   # The module invoked by user defined repos
   # for model related functionality.
   @moduledoc false
