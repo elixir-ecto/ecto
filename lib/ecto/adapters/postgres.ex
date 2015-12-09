@@ -128,6 +128,7 @@ defmodule Ecto.Adapters.Postgres do
     host = database[:hostname] || System.get_env("PGHOST") || "localhost"
     args = args ++ ["--quiet",
                     "--host", host,
+                    "--no-password",
                     "--set", "ON_ERROR_STOP=1",
                     "--set", "VERBOSITY=verbose",
                     "--no-psqlrc",
