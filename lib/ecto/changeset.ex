@@ -145,7 +145,7 @@ defmodule Ecto.Changeset do
 
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
-            errors: [], validations: [], required: [], optional: [],
+            errors: [], validations: [], required: [], optional: [], prepare: [],
             constraints: [], filters: %{}, action: nil, types: nil, opts: []
 
   @type t :: %Changeset{valid?: boolean(),
@@ -156,6 +156,7 @@ defmodule Ecto.Changeset do
                         changes: %{atom => term},
                         required: [atom],
                         optional: [atom],
+                        prepare: [(t -> t)],
                         errors: [error],
                         constraints: [constraint],
                         validations: Keyword.t,
@@ -1327,6 +1328,20 @@ defmodule Ecto.Changeset do
     current = Map.fetch!(changeset.model, field)
     update_in(changeset.filters, &Map.put(&1, field, current))
     |> force_change(field, incrementer.(current))
+  end
+
+  @doc """
+  Provides a function to run before emitting changes to the repository.
+
+  Such function receives the changeset and must return a changeset,
+  allowing developers to do final adjustments to the changeset or to
+  issue data consistency commands.
+
+  The given function is guaranteed to run inside the same transaction
+  as the changeset operation for databases that do support transactions.
+  """
+  def prepare_changes(changeset, function) when is_function(function, 1) do
+    update_in changeset.prepare, &[function|&1]
   end
 
   ## Constraints

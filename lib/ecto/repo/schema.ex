@@ -52,7 +52,7 @@ defmodule Ecto.Repo.Schema do
     do_insert(repo, adapter, changeset, opts)
   end
 
-  defp do_insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
+  defp do_insert(repo, adapter, %Changeset{valid?: true, prepare: prepare} = changeset, opts) do
     struct = struct_from_changeset!(:insert, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -66,8 +66,9 @@ defmodule Ecto.Repo.Schema do
     changeset = update_changeset(changeset, :insert, repo)
     changeset = insert_changes(struct, fields, embeds, assocs, changeset)
 
-    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
+    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, prepare,
                         ~w(before_insert after_insert)a, fn ->
+      changeset = run_prepare(changeset, prepare)
       user_changeset = Callbacks.__apply__(model, :before_insert, changeset)
 
       changeset = Ecto.Embedded.prepare(user_changeset, embeds, adapter, :insert)
@@ -120,7 +121,7 @@ defmodule Ecto.Repo.Schema do
     do_update(repo, adapter, changeset, opts)
   end
 
-  defp do_update(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
+  defp do_update(repo, adapter, %Changeset{valid?: true, prepare: prepare} = changeset, opts) do
     struct = struct_from_changeset!(:update, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -134,8 +135,9 @@ defmodule Ecto.Repo.Schema do
     changeset = update_changeset(changeset, :update, repo)
 
     if changeset.changes != %{} or opts[:force] do
-      wrap_in_transaction(repo, adapter, model, opts, embeds, assocs,
+      wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, prepare,
                           ~w(before_update after_update)a, fn ->
+        changeset = run_prepare(changeset, prepare)
         user_changeset = Callbacks.__apply__(model, :before_update, changeset)
 
         changeset = Ecto.Embedded.prepare(user_changeset, embeds, adapter, :update)
@@ -212,7 +214,7 @@ defmodule Ecto.Repo.Schema do
     do_delete(repo, adapter, changeset, opts)
   end
 
-  defp do_delete(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
+  defp do_delete(repo, adapter, %Changeset{valid?: true, prepare: prepare} = changeset, opts) do
     struct = struct_from_changeset!(:delete, changeset)
     model  = struct.__struct__
     embeds = model.__schema__(:embeds)
@@ -222,8 +224,9 @@ defmodule Ecto.Repo.Schema do
     changeset = %{changeset | changes: %{}}
     autogen   = get_autogenerate_id(changeset, model)
 
-    wrap_in_transaction(repo, adapter, model, opts, embeds, [],
+    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, prepare,
                         ~w(before_delete after_delete)a, fn ->
+      changeset = run_prepare(changeset, prepare)
       delete_assocs(changeset, repo, model, assocs)
       user_changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
@@ -268,6 +271,17 @@ defmodule Ecto.Repo.Schema do
     do: raise(ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2")
   defp update_changeset(changeset, action, repo),
     do: %{changeset | action: action, repo: repo}
+
+  defp run_prepare(changeset, prepare) do
+    Enum.reduce(Enum.reverse(prepare), changeset, fn fun, acc ->
+      case fun.(acc) do
+        %Ecto.Changeset{} = acc -> acc
+        other ->
+          raise "expected function #{inspect fun} given to Ecto.Changeset.prepare_changes/2 " <>
+                "to return an Ecto.Changeset, got: `#{inspect other}`"
+      end
+    end)
+  end
 
   defp metadata(%{__struct__: model, __meta__: meta}) do
     meta
@@ -455,8 +469,8 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, callbacks, fun) do
-    if transaction_required?(model, embeds, assocs, callbacks) and
+  defp wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, prepare, callbacks, fun) do
+    if transaction_required?(model, embeds, assocs, prepare, callbacks) and
        Keyword.get(opts, :skip_transaction) != true and
        function_exported?(adapter, :transaction, 3) do
       adapter.transaction(repo, opts, fn ->
@@ -470,8 +484,8 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp transaction_required?(model, embeds, assocs, callbacks) do
-    embeds != [] or assocs != [] or
+  defp transaction_required?(model, embeds, assocs, prepare, callbacks) do
+    embeds != [] or assocs != [] or prepare != [] or
       Enum.any?(callbacks, &function_exported?(model, &1, 1))
   end
 end

@@ -232,7 +232,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "insert_or_update uses the correct method" do
+  test "insert_or_update uses the correct action" do
     built  = Ecto.Changeset.cast(%MyModel{y: "built"}, %{}, [], [])
     loaded =
       %MyModel{y: "loaded"}
@@ -263,5 +263,43 @@ defmodule Ecto.RepoTest do
     assert_raise ArgumentError, ~r/giving a struct to .* is not supported/, fn ->
       TestRepo.insert_or_update %MyModel{}
     end
+  end
+
+  defp prepare_changeset() do
+    %MyModel{id: 1}
+    |> Ecto.Changeset.cast(%{x: "one"}, [:x], [])
+    |> Ecto.Changeset.prepare_changes(fn %{repo: repo} = changeset ->
+          Process.put(:ecto_repo, repo)
+          Process.put(:ecto_counter, 1)
+          changeset
+        end)
+    |> Ecto.Changeset.prepare_changes(fn changeset ->
+          Process.put(:ecto_counter, 2)
+          changeset
+        end)
+  end
+
+  test "insert runs prepare callbacks in transaction" do
+    changeset = prepare_changeset()
+    TestRepo.insert!(changeset)
+    assert_received {:transaction, _}
+    assert Process.get(:ecto_repo) == TestRepo
+    assert Process.get(:ecto_counter) == 2
+  end
+
+  test "update runs prepare callbacks in transaction" do
+    changeset = prepare_changeset()
+    TestRepo.update!(changeset)
+    assert_received {:transaction, _}
+    assert Process.get(:ecto_repo) == TestRepo
+    assert Process.get(:ecto_counter) == 2
+  end
+
+  test "delete runs prepare callbacks in transaction" do
+    changeset = prepare_changeset()
+    TestRepo.delete!(changeset)
+    assert_received {:transaction, _}
+    assert Process.get(:ecto_repo) == TestRepo
+    assert Process.get(:ecto_counter) == 2
   end
 end
