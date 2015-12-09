@@ -1238,7 +1238,7 @@ defmodule Ecto.Schema do
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
-      Ecto.Type.primitive?(type) ->
+      Ecto.Type.primitive?(type) and not type in [:date, :time, :datetime] ->
         true
       is_atom(type) ->
         if Code.ensure_compiled?(type) and function_exported?(type, :type, 0) do
@@ -1251,26 +1251,21 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp raise_type_error(name, :datetime) do
-    raise_wrong_ecto_type(name, :datetime, Ecto.DateTime)
-  end
-  defp raise_type_error(name, :date) do
-    raise_wrong_ecto_type(name, :date, Ecto.Date)
-  end
-  defp raise_type_error(name, :time) do
-    raise_wrong_ecto_type(name, :time, Ecto.Time)
-  end
-  defp raise_type_error(name, :uuid) do
-    raise_wrong_ecto_type(name, :uuid, Ecto.UUID)
-  end
   defp raise_type_error(name, type) do
-    raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
+    raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}" <>
+                         raise_type_error_hint(type)
   end
 
-  defp raise_wrong_ecto_type(name, given_type, real_type) do
-    raise ArgumentError, "invalid or unknown type #{inspect given_type} for field #{inspect name}. " <>
-      "Maybe you meant to use #{inspect real_type} as the type?"
-  end
+  defp raise_type_error_hint(:datetime),
+    do: ". Maybe you meant to use Ecto.DateTime?"
+  defp raise_type_error_hint(:date),
+    do: ". Maybe you meant to use Ecto.Date?"
+  defp raise_type_error_hint(:time),
+    do: ". Maybe you meant to use Ecto.Time?"
+  defp raise_type_error_hint(:uuid),
+    do: ". Maybe you meant to use Ecto.UUID?"
+  defp raise_type_error_hint(_),
+    do: ""
 
   defp check_default!(_name, :binary_id, _default), do: :ok
   defp check_default!(_name, {:embed, _}, _default), do: :ok

@@ -1,15 +1,12 @@
 defmodule Ecto.UUID do
   @moduledoc """
   An Ecto type for UUIDs strings.
-
-  In contrast to the `:uuid` type, `Ecto.UUID` works
-  with UUID as strings instead of binary data.
   """
 
   @behaviour Ecto.Type
 
   @doc """
-  The Ecto primitive type.
+  The Ecto type.
   """
   def type, do: :uuid
 

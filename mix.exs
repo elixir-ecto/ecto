@@ -11,6 +11,7 @@ defmodule Ecto.Mixfile do
      elixir: "~> 1.0",
      deps: deps,
      build_per_environment: false,
+     consolidate_protocols: false,
      test_paths: test_paths(Mix.env),
 
      # Custom testing

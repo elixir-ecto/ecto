@@ -86,15 +86,21 @@ defmodule Ecto.Type do
 
   use Behaviour
 
+  @typedoc "An Ecto type, primitive or custom."
   @type t         :: primitive | custom
+
+  @typedoc "Primitive Ecto types (handled by Ecto)."
   @type primitive :: base | composite
+
+  @typedoc "Custom types are represented by user-defined modules."
   @type custom    :: atom
 
   @typep base      :: :integer | :float | :boolean | :string | :map |
-                      :binary | :decimal | :id | :binary_id | :any
+                      :binary | :decimal | :id | :binary_id |
+                      :datetime | :date | :time | :any
   @typep composite :: {:array, base} | {:embed, Ecto.Embedded.t}
 
-  @base      ~w(integer float boolean string binary decimal id binary_id map any)a
+  @base      ~w(integer float boolean string binary decimal datetime date time id binary_id map any)a
   @composite ~w(array embed)a
 
   @doc """
@@ -102,6 +108,9 @@ defmodule Ecto.Type do
 
   For example, if you want to provide your own datetime
   structures, the type function should return `:datetime`.
+
+  Note this function is not required to return Ecto primitive
+  types, the type is only required to be known by the adapter.
   """
   defcallback type :: t
 
@@ -292,6 +301,10 @@ defmodule Ecto.Type do
     {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
   end
 
+  def dump(:binary_id, value, _dumper) do
+    raise ":binary_id type must be dumped by the adapter, attempted value: #{inspect value}"
+  end
+
   def dump({:array, type}, value, dumper) do
     if is_list(value) do
       dump_array(type, value, dumper, [], false)
@@ -406,6 +419,10 @@ defmodule Ecto.Type do
   end
 
   def load(_type, nil, _loader), do: {:ok, nil}
+
+  def load(:binary_id, value, _loader) do
+    raise ":binary_id type must be loaded by the adapter, attempted value: #{inspect value}"
+  end
 
   def load({:array, type}, value, loader) do
     if is_list(value) do
@@ -535,20 +552,8 @@ defmodule Ecto.Type do
 
   def cast(_type, nil), do: {:ok, nil}
 
-  def cast({:array, type}, term) do
-    if is_list(term) do
-      array(term, &cast(type, &1), [])
-    else
-      :error
-    end
-  end
-
-  def cast(:binary_id, term) do
-    if is_binary(term) do
-      {:ok, term}
-    else
-      :error
-    end
+  def cast({:array, type}, term) when is_list(term) do
+    array(term, &cast(type, &1), [])
   end
 
   def cast(:float, term) when is_binary(term) do
@@ -575,7 +580,20 @@ defmodule Ecto.Type do
     end
   end
 
-  def cast(type, value) do
+  # This would be equivalent to implementing Ecto.DataType
+  # for those types. We skip the protocol for performance.
+  def cast(:datetime, %{__struct__: Ecto.DateTime} = datetime), do: Ecto.DateTime.dump(datetime)
+  def cast(:date, %{__struct__: Ecto.Date} = date), do: Ecto.Date.dump(date)
+  def cast(:time, %{__struct__: Ecto.Time} = time), do: Ecto.Time.dump(time)
+
+  def cast(type, term) do
+    case try_cast(type, term) do
+      {:ok, _} = ok -> ok
+      :error -> Ecto.DataType.cast(term, type)
+    end
+  end
+
+  defp try_cast(type, value) do
     cond do
       not primitive?(type) ->
         type.cast(value)
@@ -589,22 +607,40 @@ defmodule Ecto.Type do
   ## Helpers
 
   # Checks if a value is of the given primitive type.
-  defp of_base_type?(:any, _),        do: true
-  defp of_base_type?(:id, term),      do: is_integer(term)
-  defp of_base_type?(:float, term),   do: is_float(term)
-  defp of_base_type?(:integer, term), do: is_integer(term)
-  defp of_base_type?(:boolean, term), do: is_boolean(term)
+  defp of_base_type?(:any, _),           do: true
+  defp of_base_type?({:array, _}, _),    do: false # Always handled explicitly.
+  defp of_base_type?(:id, term),         do: is_integer(term)
+  defp of_base_type?(:float, term),      do: is_float(term)
+  defp of_base_type?(:integer, term),    do: is_integer(term)
+  defp of_base_type?(:boolean, term),    do: is_boolean(term)
+  defp of_base_type?(:binary_id, value), do: is_binary(value)
+  defp of_base_type?(:binary, term),     do: is_binary(term)
+  defp of_base_type?(:string, term),     do: is_binary(term)
+  defp of_base_type?(:map, term),        do: is_map(term) and not Map.has_key?(term, :__struct__)
+  defp of_base_type?(:decimal, value),   do: Kernel.match?(%{__struct__: Decimal}, value)
 
-  defp of_base_type?(:binary, term), do: is_binary(term)
-  defp of_base_type?(:string, term), do: is_binary(term)
-  defp of_base_type?(:map, term),    do: is_map(term) and not Map.has_key?(term, :__struct__)
-
-  defp of_base_type?(:decimal, %Decimal{}), do: true
-  defp of_base_type?(:binary_id, value) do
-    raise "cannot dump/load :binary_id type directly, attempted value: #{inspect value}"
+  defp of_base_type?(:date, value) do
+    case value do
+      {_, _, _} -> true
+      _ -> false
+    end
   end
 
-  defp of_base_type?(struct, _) when struct in ~w(decimal date time datetime)a, do: false
+  defp of_base_type?(:time, value) do
+    case value do
+      {_, _, _, _} -> true
+      {_, _, _} -> true
+      _ -> false
+    end
+  end
+
+  defp of_base_type?(:datetime, value) do
+    case value do
+      {{_, _, _}, {_, _, _, _}} -> true
+      {{_, _, _}, {_, _, _}} -> true
+      _ -> false
+    end
+  end
 
   defp array([h|t], fun, acc) do
     case fun.(h) do

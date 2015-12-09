@@ -251,26 +251,13 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cast_param(kind, type, v) do
-    # If we are giving a struct, we first check if the struct
-    # type and the given type are match and, if so, use the
-    # struct type when dumping.
-    if (struct = param_struct(v)) &&
-       Ecto.Type.match?(struct, type) do
-      {:dump, struct, v}
-    else
-      case Ecto.Type.cast(type, v) do
-        {:ok, v} ->
-          {:dump, type, v}
-        :error ->
-          {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"}
-      end
+    case Ecto.Type.cast(type, v) do
+      {:ok, v} ->
+        {:dump, type, v}
+      :error ->
+        {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"}
     end
   end
-
-  defp param_struct(%{__struct__: struct}) when not struct in [Decimal] do
-    struct
-  end
-  defp param_struct(_), do: nil
 
   defp unfold_in(%Ecto.Query.Tagged{value: value, type: {:array, type}}, acc),
     do: unfold_in(value, type, acc)

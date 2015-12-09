@@ -35,6 +35,28 @@ defmodule Ecto.TypeTest do
   import Ecto.Type
   doctest Ecto.Type
 
+  test "data type protocol" do
+    defmodule Name do
+      defstruct first: "", last: ""
+    end
+
+    name = struct(Name, first: "john", last: "doe")
+    assert cast(:string, name) == :error
+    assert cast(:integer, name) == :error
+
+    defimpl Ecto.DataType, for: Name do
+      def cast(%Name{first: first, last: last}, :string) do
+        {:ok, first <> " " <> last}
+      end
+      def cast(_, _) do
+        :error
+      end
+    end
+
+    assert cast(:string, name) == {:ok, "john doe"}
+    assert cast(:integer, name) == :error
+  end
+
   test "custom types" do
     assert load(Custom, "foo") == {:ok, :load}
     assert dump(Custom, "foo") == {:ok, :dump}

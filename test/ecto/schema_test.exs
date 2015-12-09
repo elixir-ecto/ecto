@@ -151,7 +151,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "raises helpful error for :datetime" do
-    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.DateTime as the type/, fn ->
+    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.DateTime\?/, fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
@@ -163,7 +163,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "raises helpful error for :date" do
-    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.Date as the type/, fn ->
+    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.Date\?/, fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
@@ -175,7 +175,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "raises helpful error for :time" do
-    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.Time as the type/, fn ->
+    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.Time\?/, fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
@@ -187,7 +187,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "raises helpful error for :uuid" do
-    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.UUID as the type/, fn ->
+    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.UUID\?/, fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
