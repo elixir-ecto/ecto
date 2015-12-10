@@ -32,7 +32,7 @@ defmodule Ecto.Mixfile do
 
   def application do
     [applications: [:logger, :decimal, :poolboy],
-     env: [json_library: Poison]]
+     env: [json_library: Poison], mod: {Ecto.Application, []}]
   end
 
   defp deps do

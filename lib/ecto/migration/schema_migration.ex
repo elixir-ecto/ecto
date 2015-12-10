@@ -11,31 +11,30 @@ defmodule Ecto.Migration.SchemaMigration do
     timestamps updated_at: false
   end
 
-  @table %Ecto.Migration.Table{name: :schema_migrations}
   @opts [timeout: :infinity, log: false]
 
-  def ensure_schema_migrations_table!(repo) do
+  def ensure_schema_migrations_table!(repo, prefix) do
     adapter = repo.__adapter__
-    create_migrations_table(adapter, repo)
+    create_migrations_table(adapter, repo, prefix)
   end
 
-  def migrated_versions(repo) do
-    repo.all from(p in __MODULE__, select: p.version), @opts
+  def migrated_versions(repo, prefix) do
+    repo.all from(p in __MODULE__, select: p.version) |> Map.put(:prefix, prefix), @opts
   end
 
-  def up(repo, version) do
-    repo.insert! %__MODULE__{version: version}, @opts
+  def up(repo, version, prefix) do
+    repo.insert! %__MODULE__{version: version} |> put_meta(prefix: prefix), @opts
   end
 
-  def down(repo, version) do
-    repo.delete_all from(p in __MODULE__, where: p.version == ^version), @opts
+  def down(repo, version, prefix) do
+    repo.delete_all from(p in __MODULE__, where: p.version == ^version) |> Map.put(:prefix, prefix), @opts
   end
 
-  defp create_migrations_table(adapter, repo) do
+  defp create_migrations_table(adapter, repo, prefix) do
     # DDL queries do not log, so we do not need
     # to pass log: false here.
     adapter.execute_ddl(repo,
-      {:create_if_not_exists, @table, [
+      {:create_if_not_exists, %Ecto.Migration.Table{name: :schema_migrations, prefix: prefix}, [
         {:add, :version, :bigint, primary_key: true},
         {:add, :inserted_at, :datetime, []}]}, @opts)
   end

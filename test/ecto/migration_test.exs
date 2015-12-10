@@ -11,19 +11,13 @@ defmodule Ecto.MigrationTest do
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference
   alias Ecto.Migration.Runner
+  alias Ecto.Migration.Manager
 
   setup meta do
-    {:ok, _} = Runner.start_link(TestRepo, meta[:direction] || :forward, :up, false)
-
-    on_exit fn ->
-      try do
-        Runner.stop()
-      catch
-        :exit, _ -> :ok
-      end
-    end
-
-    :ok
+    {:ok, runner} =
+      Runner.start_link(TestRepo, meta[:direction] || :forward, :up, false, meta[:prefix])
+    Process.put(:ecto_migration_runner, runner)
+    {:ok, runner: runner}
   end
 
   test "defines __migration__ function" do
@@ -65,12 +59,12 @@ defmodule Ecto.MigrationTest do
     end
   end
 
-  test "flush clears out commands" do
+  test "flush clears out commands", %{runner: runner} do
     execute "TEST"
-    commands = Agent.get(Runner, & &1.commands)
+    commands = Agent.get(runner, & &1.commands)
     assert commands == ["TEST"]
     flush
-    commands = Agent.get(Runner, & &1.commands)
+    commands = Agent.get(runner, & &1.commands)
     assert commands == []
   end
 
@@ -176,7 +170,9 @@ defmodule Ecto.MigrationTest do
     assert result == table(:new_posts)
   end
 
-  test "forward: creates a table with prefix" do
+  # prefix
+
+  test "forward: creates a table with prefix from migration" do
     create(table(:posts, prefix: :foo))
     flush
 
@@ -185,14 +181,48 @@ defmodule Ecto.MigrationTest do
     assert table.prefix == :foo
   end
 
-  test "forward: drops a table with prefix" do
+  @tag prefix: :foo
+  test "forward: creates a table with prefix from manager" do
+    create(table(:posts))
+    flush
+
+    {_, table, _} = last_command()
+    assert table.prefix == :foo
+  end
+
+  @tag prefix: :foo
+  test "forward: creates a table with prefix from manager matching prefix from migration" do
+    create(table(:posts, prefix: :foo))
+    flush
+
+    {_, table, _} = last_command()
+    assert table.prefix == :foo
+  end
+
+  @tag prefix: :bar
+  test "forward: raise error when prefixes don't match" do
+    assert_raise Ecto.MigrationError, ~r/prefixes given as migration options must match global migrator prefix/, fn ->
+      create(table(:posts, prefix: :foo))
+      flush
+    end
+  end
+
+  test "forward: drops a table with prefix from migration" do
     drop(table(:posts, prefix: :foo))
     flush
     {:drop, table} = last_command()
     assert table.prefix == :foo
   end
 
-  test "forward: rename column on table with index" do
+  @tag prefix: :foo
+  test "forward: drops a table with prefix from manager" do
+    drop(table(:posts))
+    flush
+    {:drop, table} = last_command()
+    assert table.prefix == :foo
+  end
+
+  test "forward: rename column on table with index prefixed from migration" do
     rename(table(:posts, prefix: :foo), :given_name, to: :first_name)
     flush
 
@@ -201,15 +231,41 @@ defmodule Ecto.MigrationTest do
     assert new_name == :first_name
   end
 
-  test "forward: creates an index with prefix" do
+  @tag prefix: :foo
+  test "forward: rename column on table with index prefixed from manager" do
+    rename(table(:posts), :given_name, to: :first_name)
+    flush
+
+    {_, table, _, new_name} = last_command()
+    assert table.prefix == :foo
+    assert new_name == :first_name
+  end
+
+  test "forward: creates an index with prefix from migration" do
     create index(:posts, [:title], prefix: :foo)
     flush
     {_, index} = last_command()
     assert index.prefix == :foo
   end
 
-  test "forward: drops an index with a prefix" do
+  @tag prefix: :foo
+  test "forward: creates an index with prefix from manager" do
+    create index(:posts, [:title])
+    flush
+    {_, index} = last_command()
+    assert index.prefix == :foo
+  end
+
+  test "forward: drops an index with a prefix from migration" do
     drop index(:posts, [:title], prefix: :foo)
+    flush
+    {_, index} = last_command()
+    assert index.prefix == :foo
+  end
+
+  @tag prefix: :foo
+  test "forward: drops an index with a prefix from manager" do
+    drop index(:posts, [:title])
     flush
     {_, index} = last_command()
     assert index.prefix == :foo
