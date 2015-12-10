@@ -204,7 +204,8 @@ defmodule Ecto.Repo do
   @doc """
   Returns the pool information this repository should run under.
   """
-  defcallback __pool__ :: {module, atom, timeout}
+  defcallback __pool__ :: {pool :: module, name :: atom,
+                           pool_timeout :: timeout, op_timeout :: timeout}
 
   @doc """
   Returns the name of the ETS table used for query caching.
@@ -681,6 +682,4 @@ defmodule Ecto.Repo do
 
   """
   defcallback log(Ecto.LogEntry.t) :: any
-
-  # TODO: Consider moving after_connect and log to the upcoming events system
 end

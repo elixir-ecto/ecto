@@ -227,7 +227,7 @@ defmodule Ecto.Changeset do
       "body"
 
   """
-  @spec change(Ecto.Schema.t | t, %{atom => term} | [Keyword.t]) :: t
+  @spec change(Ecto.Schema.t | t, %{atom => term} | Keyword.t) :: t
   def change(model_or_changeset, changes \\ %{})
 
   def change(%Changeset{types: nil}, _changes) do

@@ -9,8 +9,10 @@ defmodule Ecto.Model do
 
   ## Using
 
-  When used, `Ecto.Model` imports itself. All the modules
-  existing in `Ecto.Model.*` are brought in too:
+  When used, `Ecto.Model` imports itself, as well as the functions
+  in `Ecto.Changeset` and `Ecto.Query`.
+
+  All the modules existing in `Ecto.Model.*` are brought in too:
 
     * `use Ecto.Model.Callbacks` - provides lifecycle callbacks
     * `use Ecto.Model.OptimisticLock` - makes the `optimistic_lock/1` macro
@@ -25,6 +27,7 @@ defmodule Ecto.Model do
     quote do
       use Ecto.Schema
       import Ecto.Model
+      import Ecto.Changeset
       import Ecto.Query, only: [from: 2]
 
       use Ecto.Model.OptimisticLock
