@@ -8,7 +8,6 @@ defmodule Ecto.Migration.Runner do
 
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
-  alias Ecto.Migration.Manager
 
   @opts [timeout: :infinity, log: false]
 
@@ -17,10 +16,10 @@ defmodule Ecto.Migration.Runner do
   """
   def run(repo, module, direction, operation, migrator_direction, opts) do
     level = Keyword.get(opts, :log, :info)
-    args  = [self, repo, direction, migrator_direction, level, opts[:prefix]]
+    args  = [self, repo, direction, migrator_direction, level]
 
     {:ok, runner} = Supervisor.start_child(Ecto.Migration.Supervisor, args)
-    Process.put(:ecto_migration_runner, runner)
+    Process.put(:ecto_migration, %{runner: runner, prefix: opts[:prefix]})
 
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
     {time1, _} = :timer.tc(module, operation, [])
@@ -34,11 +33,11 @@ defmodule Ecto.Migration.Runner do
   @doc """
   Starts the runner for the specified repo.
   """
-  def start_link(parent, repo, direction, migrator_direction, level, prefix) do
+  def start_link(parent, repo, direction, migrator_direction, level) do
     Agent.start_link(fn ->
       Process.link(parent)
       %{direction: direction, repo: repo, migrator_direction: migrator_direction,
-        command: nil, subcommands: [], level: level, prefix: prefix, commands: []}
+        command: nil, subcommands: [], level: level, commands: []}
     end)
   end
 
@@ -66,8 +65,10 @@ defmodule Ecto.Migration.Runner do
   Gets the prefix for this migration
   """
   def prefix do
-    # TODO: GET RID OF ME
-    Agent.get(runner(), & &1.prefix)
+    case Process.get(:ecto_migration) do
+      %{prefix: prefix} -> prefix
+      _ -> raise "could not find migration runner process for #{inspect self}"
+    end
   end
 
   @doc """
@@ -190,7 +191,10 @@ defmodule Ecto.Migration.Runner do
   ## Helpers
 
   defp runner do
-    Process.get(:ecto_migration_runner) || raise "could not find migration runner process for #{inspect self}"
+    case Process.get(:ecto_migration) do
+      %{runner: runner} -> runner
+      _ -> raise "could not find migration runner process for #{inspect self}"
+    end
   end
 
   defp repo_and_direction_and_level do

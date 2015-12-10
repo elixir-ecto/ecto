@@ -23,7 +23,7 @@ defmodule Ecto.Migration.SchemaMigration do
   end
 
   def up(repo, version, prefix) do
-    repo.insert! %__MODULE__{version: version} |> put_meta(prefix: prefix), @opts
+    repo.insert! %__MODULE__{version: version} |> Ecto.put_meta(prefix: prefix), @opts
   end
 
   def down(repo, version, prefix) do
@@ -31,10 +31,11 @@ defmodule Ecto.Migration.SchemaMigration do
   end
 
   defp create_migrations_table(adapter, repo, prefix) do
-    # DDL queries do not log, so we do not need
-    # to pass log: false here.
+    table = %Ecto.Migration.Table{name: :schema_migrations, prefix: prefix}
+
+    # DDL queries do not log, so we do not need to pass log: false here.
     adapter.execute_ddl(repo,
-      {:create_if_not_exists, %Ecto.Migration.Table{name: :schema_migrations, prefix: prefix}, [
+      {:create_if_not_exists, table, [
         {:add, :version, :bigint, primary_key: true},
         {:add, :inserted_at, :datetime, []}]}, @opts)
   end

@@ -11,12 +11,11 @@ defmodule Ecto.MigrationTest do
   alias Ecto.Migration.Index
   alias Ecto.Migration.Reference
   alias Ecto.Migration.Runner
-  alias Ecto.Migration.Manager
 
   setup meta do
     {:ok, runner} =
-      Runner.start_link(TestRepo, meta[:direction] || :forward, :up, false, meta[:prefix])
-    Process.put(:ecto_migration_runner, runner)
+      Runner.start_link(self(), TestRepo, meta[:direction] || :forward, :up, false)
+    Process.put(:ecto_migration, %{runner: runner, prefix: meta[:prefix]})
     {:ok, runner: runner}
   end
 
@@ -201,7 +200,8 @@ defmodule Ecto.MigrationTest do
 
   @tag prefix: :bar
   test "forward: raise error when prefixes don't match" do
-    assert_raise Ecto.MigrationError, ~r/prefixes given as migration options must match global migrator prefix/, fn ->
+    assert_raise Ecto.MigrationError,
+                 "the :prefix option `:foo` does match the migrator prefix `:bar`", fn ->
       create(table(:posts, prefix: :foo))
       flush
     end

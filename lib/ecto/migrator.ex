@@ -30,9 +30,16 @@ defmodule Ecto.Migrator do
 
   This function ensures the migration table exists
   if no table has been defined yet.
+
+  ## Options
+
+    * `:log` - the level to use for logging. Defaults to `:info`.
+      Can be any of `Logger.level/0` values or `false`.
+    * `:prefix` - the prefix to run the migrations on
+
   """
   @spec migrated_versions(Ecto.Repo.t, Keyword.t) :: [integer]
-  def migrated_versions(repo, opts) do
+  def migrated_versions(repo, opts \\ []) do
     SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
     SchemaMigration.migrated_versions(repo, opts[:prefix])
   end
@@ -44,6 +51,7 @@ defmodule Ecto.Migrator do
 
     * `:log` - the level to use for logging. Defaults to `:info`.
       Can be any of `Logger.level/0` values or `false`.
+    * `:prefix` - the prefix to run the migrations on
   """
   @spec up(Ecto.Repo.t, integer, Module.t, Keyword.t) :: :ok | :already_up | no_return
   def up(repo, version, module, opts \\ []) do
@@ -97,7 +105,6 @@ defmodule Ecto.Migrator do
   end
 
   defp run_maybe_in_transaction(repo, module, fun) do
-    # TODO: Make supports_ddl_transaction something that actually runs transactions
     cond do
       module.__migration__[:disable_ddl_transaction] ->
         fun.()

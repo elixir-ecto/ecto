@@ -507,7 +507,6 @@ defmodule Ecto do
     assoc.__struct__.assoc_query(assoc, values)
   end
 
-
   @doc """
   Checks if an association is loaded.
 

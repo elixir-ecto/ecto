@@ -9,7 +9,7 @@ defmodule Ecto.Migration.Supervisor do
 
   def init(:ok) do
     children = [
-      worker(Ecto.Migration.Runner, [])
+      worker(Ecto.Migration.Runner, [], restart: :temporary)
     ]
 
     supervise(children, strategy: :simple_one_for_one)
