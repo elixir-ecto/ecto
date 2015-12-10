@@ -566,11 +566,11 @@ defmodule Ecto.Changeset do
   defp extract_relation!(type, {type, relation}),
     do: relation
   defp extract_relation!(type, {other, _}) when other in @relations,
-    do: raise ArgumentError, "expected an #{type} in call to cast_#{type}/3, " <>
-                             "got: #{other}"
+    do: raise(ArgumentError, "expected an #{type} in call to cast_#{type}/3, " <>
+                             "got: #{other}")
   defp extract_relation!(type, schema_type),
-    do: raise ArgumentError, "expected an #{type} in call to cast_#{type}/3, " <>
-                             "got: #{inspect schema_type}"
+    do: raise(ArgumentError, "expected an #{type} in call to cast_#{type}/3, " <>
+                             "got: #{inspect schema_type}")
 
   ## Working with changesets
 
