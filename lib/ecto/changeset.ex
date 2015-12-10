@@ -1323,6 +1323,7 @@ defmodule Ecto.Changeset do
       iex> Ecto.Changeset.optimistic_lock(post, :lock_uuid, fn _ -> Ecto.UUID.generate end)
 
   """
+  @spec optimistic_lock(Ecto.Schema.t | t, atom, (integer -> integer)) :: t | no_return
   def optimistic_lock(model_or_changeset, field, incrementer \\ &(&1 + 1)) do
     changeset = change(model_or_changeset, %{})
     current = Map.fetch!(changeset.model, field)
@@ -1340,6 +1341,7 @@ defmodule Ecto.Changeset do
   The given function is guaranteed to run inside the same transaction
   as the changeset operation for databases that do support transactions.
   """
+  @spec prepare_changes(t, (t -> t)) :: t
   def prepare_changes(changeset, function) when is_function(function, 1) do
     update_in changeset.prepare, &[function|&1]
   end
@@ -1419,6 +1421,7 @@ defmodule Ecto.Changeset do
       |> unique_constraint(:email)
 
   """
+  @spec unique_constraint(t, atom, Keyword.t) :: t
   def unique_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_index"
     message    = opts[:message] || "has already been taken"
@@ -1465,6 +1468,7 @@ defmodule Ecto.Changeset do
       explicitly for complex cases
 
   """
+  @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_fkey"
     message    = opts[:message] || "does not exist"
@@ -1504,6 +1508,7 @@ defmodule Ecto.Changeset do
       name is inflected from the table + association field.
       May be required explicitly for complex cases
   """
+  @spec assoc_constraint(t, atom, Keyword.t) :: t | no_return
   def assoc_constraint(changeset, assoc, opts \\ []) do
     constraint = opts[:name] ||
       (case get_assoc(changeset, assoc) do
@@ -1552,6 +1557,7 @@ defmodule Ecto.Changeset do
       name is inflected from the association table + association
       field. May be required explicitly for complex cases
   """
+  @spec no_assoc_constraint(t, atom, Keyword.t) :: t | no_return
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
     {constraint, message} =
       (case get_assoc(changeset, assoc) do
@@ -1631,6 +1637,7 @@ defmodule Ecto.Changeset do
       end)
       %{title: "should be at least 3 characters"}
   """
+  @spec traverse_errors(t, (error_message -> String.t)) :: %{atom => String.t}
   def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func) do
     errors
     |> Enum.reverse()
