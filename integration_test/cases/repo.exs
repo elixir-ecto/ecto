@@ -381,6 +381,8 @@ defmodule Ecto.Integration.RepoTest do
     assert post1 == TestRepo.get_by!(Post, id: post1.id, text: post1.text)
     assert post2 == TestRepo.get_by!(Post, id: to_string(post2.id)) # With casting
 
+    assert post1 == TestRepo.get_by!(Post, %{id: post1.id})
+
     assert_raise Ecto.NoResultsError, fn ->
       TestRepo.get_by!(Post, id: post2.id, text: "hey")
     end
