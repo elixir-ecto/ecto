@@ -22,6 +22,9 @@ Keep on reading for more general information about this release.
 * Optimize Ecto.UUID encoding/decoding
 * Introduce pool timeout and set default value to 15000ms
 * Support lists in `Ecto.Changeset.validate_length/3`
+* Add `Ecto.DataType` protocol that allows an Elixir data type to be cast to any Ecto type
+* Add `Ecto.Changeset.prepare_changes/2` allowing the changeset to be prepared before sent to the storage
+* Add `Ecto.Changeset.traverse_errors/2` for traversing all errors in a changeset, including the ones from embeds and associations
 * Support `count(expr, :distinct)` in query expressions
 * Support prefixes in `table` and `index` in migrations
 * Allow multiple repos to be given to Mix tasks
@@ -31,6 +34,8 @@ Keep on reading for more general information about this release.
 ### Bug fixes
 
 * Ensure we update embedded models state after insert/update/delete
+* Ensure psql does not hang if not password is given
+* Allow fragment joins with custom `on` statement
 
 ## v1.0.0
 
