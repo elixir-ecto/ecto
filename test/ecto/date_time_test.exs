@@ -181,6 +181,11 @@ defmodule Ecto.TimeTest do
     assert inspect(@time) == "#Ecto.Time<23:50:07>"
     assert inspect(@time_usec) == "#Ecto.Time<12:40:33.030000>"
   end
+
+  test "precision" do
+    assert %Ecto.Time{usec: 0} = Ecto.Time.utc
+    assert %Ecto.Time{usec: 0} = Ecto.Time.utc :sec
+  end
 end
 
 defmodule Ecto.DateTimeTest do
@@ -290,5 +295,10 @@ defmodule Ecto.DateTimeTest do
   test "inspect protocol" do
     assert inspect(@datetime) == "#Ecto.DateTime<2015-01-23T23:50:07Z>"
     assert inspect(@datetime_usec) == "#Ecto.DateTime<2015-01-23T23:50:07.008000Z>"
+  end
+
+  test "precision" do
+    assert %Ecto.DateTime{usec: 0} = Ecto.DateTime.utc
+    assert %Ecto.DateTime{usec: 0} = Ecto.DateTime.utc :sec
   end
 end

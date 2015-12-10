@@ -149,11 +149,11 @@ defmodule Ecto.Embedded do
   defp autogenerate(%{types: types} = changeset, action, model, adapter) do
     update_in changeset.changes, fn changes ->
       Enum.reduce model.__schema__(:autogenerate, action), changes,
-        fn {k, mod, fun}, acc ->
+        fn {k, mod, args}, acc ->
           if Map.get(acc, k) do
             acc
           else
-            Map.put(acc, k, load!(types, k, apply(mod, fun, []), adapter))
+            Map.put(acc, k, load!(types, k, apply(mod, :autogenerate, args), adapter))
           end
         end
     end

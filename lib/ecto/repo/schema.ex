@@ -452,9 +452,9 @@ defmodule Ecto.Repo.Schema do
 
   defp autogenerate_changes(model, action, changes) do
     Enum.reduce model.__schema__(:autogenerate, action), {changes, []},
-      fn {k, mod, fun}, {acc_changes, acc_autogen} ->
+      fn {k, mod, args}, {acc_changes, acc_autogen} ->
         case Map.get(acc_changes, k) do
-          nil -> {Map.delete(acc_changes, k), [{k, apply(mod, fun, [])}|acc_autogen]}
+          nil -> {Map.delete(acc_changes, k), [{k, apply(mod, :autogenerate, args)}|acc_autogen]}
           _   -> {acc_changes, acc_autogen}
         end
       end

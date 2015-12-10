@@ -194,14 +194,16 @@ defmodule Ecto.Date do
   def local do
     IO.write :stderr, "warning: Ecto.Date.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
                       Exception.format_stacktrace
-    erl_load(:erlang.localtime)
+    {{year, month, day}, _time} = :erlang.localtime
+    %Ecto.Date{year: year, month: month, day: day}
   end
 
   @doc """
   Returns an `Ecto.Date` in UTC.
   """
   def utc do
-    erl_load(:erlang.universaltime)
+    {{year, month, day}, _time} = :erlang.universaltime
+    %Ecto.Date{year: year, month: month, day: day}
   end
 
   @doc """
@@ -215,10 +217,6 @@ defmodule Ecto.Date do
   Returns an `Ecto.Date` from an Erlang date tuple.
   """
   def from_erl({year, month, day}) do
-    %Ecto.Date{year: year, month: month, day: day}
-  end
-
-  defp erl_load({{year, month, day}, _time}) do
     %Ecto.Date{year: year, month: month, day: day}
   end
 end
@@ -344,19 +342,32 @@ defmodule Ecto.Time do
 
   WARNING: The local time is often not always increasing due
   to DST changes, which can lead to bugs. Please prefer the
-  `utc/0` function instead.
+  `utc/1` function instead.
   """
   def local do
     IO.write :stderr, "warning: Ecto.Time.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
                       Exception.format_stacktrace
-    erl_load(:erlang.localtime)
+
+    {_, {hour, min, sec}} = :erlang.localtime
+    %Ecto.Time{hour: hour, min: min, sec: sec}
   end
 
   @doc """
   Returns an `Ecto.Time` in UTC.
+
+  `precision` can be `:sec` or `:usec.`
   """
-  def utc do
-    erl_load(:erlang.universaltime)
+  def utc(precision \\ :sec)
+
+  def utc(:sec) do
+    {_, {hour, min, sec}} = :erlang.universaltime
+    %Ecto.Time{hour: hour, min: min, sec: sec}
+  end
+
+  def utc(:usec) do
+    now = {_, _, usec} = :os.timestamp
+    {_date, {hour, min, sec}} = :calendar.now_to_universal_time(now)
+    %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}
   end
 
   @doc """
@@ -370,10 +381,6 @@ defmodule Ecto.Time do
   Returns an `Ecto.Time` from an Erlang time tuple.
   """
   def from_erl({hour, min, sec}) do
-    %Ecto.Time{hour: hour, min: min, sec: sec}
-  end
-
-  defp erl_load({_, {hour, min, sec}}) do
     %Ecto.Time{hour: hour, min: min, sec: sec}
   end
 end
@@ -486,9 +493,8 @@ defmodule Ecto.DateTime do
   @doc """
   Converts a `{date, time}` tuple into an `Ecto.DateTime`.
   """
-  def load({{year, month, day}, {hour, min, sec, usec}}) do
-    {:ok, %Ecto.DateTime{year: year, month: month, day: day,
-                         hour: hour, min: min, sec: sec, usec: usec}}
+  def load({{_, _, _}, {_, _, _, _}} = datetime) do
+    {:ok, erl_load(datetime)}
   end
   def load({{_, _, _}, {_, _, _}} = datetime) do
     {:ok, from_erl(datetime)}
@@ -569,7 +575,7 @@ defmodule Ecto.DateTime do
   intermittent bugs.
 
   This function only exists for legacy purposes. It is recommended to not
-  use this function. Please use the `utc/0` function instead.
+  use this function. Please use the `utc/1` function instead.
   """
   def local do
     IO.write :stderr, "warning: Ecto.DateTime.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
@@ -579,9 +585,11 @@ defmodule Ecto.DateTime do
 
   @doc """
   Returns an `Ecto.DateTime` in UTC.
+
+  `precision` can be `:sec` or `:usec`.
   """
-  def utc do
-    from_erl(:erlang.universaltime)
+  def utc(precision \\ :sec) do
+    erl_load(autogenerate(precision))
   end
 
   @doc """
@@ -601,17 +609,22 @@ defmodule Ecto.DateTime do
 
   # Callback invoked by autogenerate in schema.
   @doc false
-  def autogenerate do
+  def autogenerate(precision \\ :sec)
+
+  def autogenerate(:sec) do
     {date, {h, m, s}} = :erlang.universaltime
     {date, {h, m, s, 0}}
   end
 
-  # Callback invoked by autogenerate in schema.
-  @doc false
-  def autogenerate_with_usec do
+  def autogenerate(:usec) do
     timestamp = {_, _, usec} = :os.timestamp
     {date, {h, m, s}} =:calendar.now_to_datetime(timestamp)
     {date, {h, m, s, usec}}
+  end
+
+  defp erl_load({{year, month, day}, {hour, min, sec, usec}}) do
+    %Ecto.DateTime{year: year, month: month, day: day,
+                   hour: hour, min: min, sec: sec, usec: usec}
   end
 end
 

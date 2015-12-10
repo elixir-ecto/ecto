@@ -416,9 +416,7 @@ defmodule Ecto.Schema do
         |> Keyword.merge(opts)
 
       type = Keyword.fetch!(timestamps, :type)
-      autogen = if Keyword.fetch!(timestamps, :usec),
-                   do: :autogenerate_with_usec,
-                   else: :autogenerate
+      autogen = if Keyword.fetch!(timestamps, :usec), do: [:usec], else: []
 
       if inserted_at = Keyword.fetch!(timestamps, :inserted_at) do
         Ecto.Schema.field(inserted_at, type, [])
@@ -1307,7 +1305,7 @@ defmodule Ecto.Schema do
                              "custom type #{inspect type} that does not define generate/0"
 
       true ->
-        Module.put_attribute(mod, :ecto_autogenerate_insert, {name, type, :autogenerate})
+        Module.put_attribute(mod, :ecto_autogenerate_insert, {name, type, []})
     end
   end
 
