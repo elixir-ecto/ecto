@@ -10,6 +10,8 @@ In particular v1.1.0 deprecates functionality that has been shown by developers 
 * `Ecto.Model`'s `optimistic_lock/1` has been deprecated in favor of `Ecto.Changeset.optimistic_lock/3`, which gives more fine grained control over the lock by relying on changesets
 * Giving a model to `Ecto.Repo.update/2` has been deprecated as it is ineffective and error prone since changes cannot be tracked
 * `Ecto.DateTime.local/0` has been deprecated
+* The association and embedded functionality from `Ecto.Changeset.cast/4` has been moved to `Ecto.Changeset.cast_assoc/3` and `Ecto.Changeset.cast_embed/3`
+* The association and embedded functionality from `Ecto.Changeset.put_change/3` has been moved to `Ecto.Changeset.put_assoc/3` and `Ecto.Changeset.put_embed/3`
 
 Furthermore, the following functionality has been soft-deprecated (they won't emit warnings for now, only on Ecto v2.0):
 
@@ -25,6 +27,9 @@ Keep on reading for more general information about this release.
 * Add `Ecto.DataType` protocol that allows an Elixir data type to be cast to any Ecto type
 * Add `Ecto.Changeset.prepare_changes/2` allowing the changeset to be prepared before sent to the storage
 * Add `Ecto.Changeset.traverse_errors/2` for traversing all errors in a changeset, including the ones from embeds and associations
+* Add `Ecto.Repo.insert_or_update/2`
+* Add support for exclusion constraints
+* Add support for precision on `Ecto.Time.utc/1` and `Ecto.DateTime.utc/1`
 * Support `count(expr, :distinct)` in query expressions
 * Support prefixes in `table` and `index` in migrations
 * Allow multiple repos to be given to Mix tasks
