@@ -245,6 +245,54 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "cast_embed/3 with :empty" do
+    changeset =
+      %Post{}
+      |> cast(:empty, [], [])
+      |> cast_embed(:comments, required: true)
+
+    assert changeset.required == [:comments]
+    assert changeset.optional == []
+
+    changeset =
+      %Post{}
+      |> cast(:empty, [], [])
+      |> cast_embed(:comments, required: false)
+
+    assert changeset.required == []
+    assert changeset.optional == [:comments]
+
+    assert_raise ArgumentError, "`:required` option is mandatory in cast_embed/3", fn ->
+      %Post{}
+      |> cast(:empty, [], [])
+      |> cast_embed(:comments)
+    end
+  end
+
+  test "cast_assoc/3 with :empty" do
+    changeset =
+      %Post{}
+      |> cast(:empty, [], [])
+      |> cast_assoc(:comments, required: true)
+
+    assert changeset.required == [:comments]
+    assert changeset.optional == []
+
+    changeset =
+      %Post{}
+      |> cast(:empty, [], [])
+      |> cast_assoc(:comments, required: false)
+
+    assert changeset.required == []
+    assert changeset.optional == [:comments]
+
+    assert_raise ArgumentError, "`:required` option is mandatory in cast_assoc/3", fn ->
+      %Post{}
+      |> cast(:empty, [], [])
+      |> cast_assoc(:comments)
+    end
+  end
+
   ## Changeset functions
 
   test "merge/2: merges changes" do
