@@ -227,7 +227,7 @@ defmodule Ecto.Changeset do
       "body"
 
   """
-  @spec change(Ecto.Schema.t | t, %{atom => term} | Keyword.t) :: t
+  @spec change(Ecto.Schema.t | t, %{atom => term} | Keyword.t) :: t | no_return
   def change(model_or_changeset, changes \\ %{})
 
   def change(%Changeset{types: nil}, _changes) do
@@ -342,7 +342,7 @@ defmodule Ecto.Changeset do
   @spec cast(Ecto.Schema.t | t,
              %{binary => term} | %{atom => term} | nil,
              [cast_field],
-             [cast_field]) :: t
+             [cast_field]) :: t | no_return
   def cast(model_or_changeset, params, required, optional \\ [])
 
   def cast(_model, %{__struct__: _} = params, _required, _optional) do
@@ -557,7 +557,7 @@ defmodule Ecto.Changeset do
       ** (ArgumentError) different models when merging changesets
 
   """
-  @spec merge(t, t) :: t
+  @spec merge(t, t) :: t | no_return
   def merge(changeset1, changeset2)
 
   def merge(%Changeset{model: model} = cs1, %Changeset{model: model} = cs2) do
@@ -762,7 +762,7 @@ defmodule Ecto.Changeset do
       %{title: "bar"}
 
   """
-  @spec put_change(t, atom, term) :: t
+  @spec put_change(t, atom, term) :: t | no_return
   def put_change(%Changeset{types: nil}, _key, _value) do
     raise ArgumentError, "changeset does not have types information"
   end
@@ -816,7 +816,7 @@ defmodule Ecto.Changeset do
       %{title: "bar", author: "bar"}
 
   """
-  @spec force_change(t, atom, term) :: t
+  @spec force_change(t, atom, term) :: t | no_return
   def force_change(%Changeset{types: nil}, _key, _value) do
     raise ArgumentError, "changeset does not have types information"
   end
@@ -849,7 +849,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec delete_change(t, atom) :: t
-  def delete_change(%Changeset{} = changeset, key) do
+  def delete_change(%Changeset{} = changeset, key) when is_atom(key) do
     update_in changeset.changes, &Map.delete(&1, key)
   end
 
@@ -964,7 +964,7 @@ defmodule Ecto.Changeset do
       [title: :useless_validator]
 
   """
-  @spec validate_change(t, atom, any, (atom, term -> [error])) :: t
+  @spec validate_change(t, atom, term, (atom, term -> [error])) :: t
   def validate_change(%{validations: validations} = changeset, field, metadata, validator) do
     changeset = %{changeset | validations: [{field, metadata}|validations]}
     validate_change(changeset, field, validator)
@@ -984,7 +984,7 @@ defmodule Ecto.Changeset do
       validate_format(changeset, :email, ~r/@/)
 
   """
-  @spec validate_format(t, atom, Regex.t) :: t
+  @spec validate_format(t, atom, Regex.t, Keyword.t) :: t
   def validate_format(changeset, field, format, opts \\ []) do
     validate_change changeset, field, {:format, format}, fn _, value ->
       if value =~ format, do: [], else: [{field, message(opts, "has invalid format")}]
@@ -1004,7 +1004,7 @@ defmodule Ecto.Changeset do
       validate_inclusion(changeset, :age, 0..99)
 
   """
-  @spec validate_inclusion(t, atom, Enum.t) :: t
+  @spec validate_inclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_inclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
       if value in data, do: [], else: [{field, message(opts, "is invalid")}]
@@ -1025,7 +1025,7 @@ defmodule Ecto.Changeset do
       validate_subset(changeset, :lottery_numbers, 0..99)
 
   """
-  @spec validate_subset(t, atom, Enum.t) :: t
+  @spec validate_subset(t, atom, Enum.t, Keyword.t) :: t
   def validate_subset(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:subset, data}, fn _, value ->
       case Enum.any?(value, fn(x) -> not x in data end) do
@@ -1047,7 +1047,7 @@ defmodule Ecto.Changeset do
       validate_exclusion(changeset, :name, ~w(admin superadmin))
 
   """
-  @spec validate_exclusion(t, atom, Enum.t) :: t
+  @spec validate_exclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_exclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
       if value in data, do: [{field, message(opts, "is reserved")}], else: []
@@ -1142,7 +1142,7 @@ defmodule Ecto.Changeset do
       validate_number(changeset, :the_answer_to_life_the_universe_and_everything, equal_to: 42)
 
   """
-  @spec validate_number(t, atom, [Keyword.t]) :: t
+  @spec validate_number(t, atom, Keyword.t) :: t | no_return
   def validate_number(changeset, field, opts) do
     validate_change changeset, field, {:number, opts}, fn
       field, value ->
@@ -1219,7 +1219,7 @@ defmodule Ecto.Changeset do
       |> validate_confirmation(:password, message: "does not match password")
 
   """
-  @spec validate_confirmation(t, atom, Enum.t) :: t
+  @spec validate_confirmation(t, atom, Keyword.t) :: t
   def validate_confirmation(changeset, field, opts \\ []) do
     validate_change changeset, field, {:confirmation, opts}, fn _, _ ->
       param = Atom.to_string(field)
@@ -1323,6 +1323,7 @@ defmodule Ecto.Changeset do
       iex> Ecto.Changeset.optimistic_lock(post, :lock_uuid, fn _ -> Ecto.UUID.generate end)
 
   """
+  @spec optimistic_lock(Ecto.Schema.t | t, atom, (integer -> integer)) :: t | no_return
   def optimistic_lock(model_or_changeset, field, incrementer \\ &(&1 + 1)) do
     changeset = change(model_or_changeset, %{})
     current = Map.fetch!(changeset.model, field)
@@ -1340,6 +1341,7 @@ defmodule Ecto.Changeset do
   The given function is guaranteed to run inside the same transaction
   as the changeset operation for databases that do support transactions.
   """
+  @spec prepare_changes(t, (t -> t)) :: t
   def prepare_changes(changeset, function) when is_function(function, 1) do
     update_in changeset.prepare, &[function|&1]
   end
@@ -1419,6 +1421,7 @@ defmodule Ecto.Changeset do
       |> unique_constraint(:email)
 
   """
+  @spec unique_constraint(t, atom, Keyword.t) :: t
   def unique_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_index"
     message    = opts[:message] || "has already been taken"
@@ -1465,6 +1468,7 @@ defmodule Ecto.Changeset do
       explicitly for complex cases
 
   """
+  @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_fkey"
     message    = opts[:message] || "does not exist"
@@ -1504,6 +1508,7 @@ defmodule Ecto.Changeset do
       name is inflected from the table + association field.
       May be required explicitly for complex cases
   """
+  @spec assoc_constraint(t, atom, Keyword.t) :: t | no_return
   def assoc_constraint(changeset, assoc, opts \\ []) do
     constraint = opts[:name] ||
       (case get_assoc(changeset, assoc) do
@@ -1552,6 +1557,7 @@ defmodule Ecto.Changeset do
       name is inflected from the association table + association
       field. May be required explicitly for complex cases
   """
+  @spec no_assoc_constraint(t, atom, Keyword.t) :: t | no_return
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
     {constraint, message} =
       (case get_assoc(changeset, assoc) do
@@ -1631,6 +1637,7 @@ defmodule Ecto.Changeset do
       end)
       %{title: "should be at least 3 characters"}
   """
+  @spec traverse_errors(t, (error_message -> String.t)) :: %{atom => String.t}
   def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func) do
     errors
     |> Enum.reverse()
