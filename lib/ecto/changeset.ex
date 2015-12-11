@@ -88,55 +88,53 @@ defmodule Ecto.Changeset do
   * `repo`        - The repository applying the changeset (only set after a Repo function is called)
   * `opts`        - The options given to the repository
 
-  ## Related models
+  ## On replace
 
   Using changesets you can work with `has_one` and `has_many` associations
-  as well as with embedded models. When defining those relations, they have
-  two options that configure how changesets work:
+  as well as with embedded structs. When working with those relations,
+  the `:on_replace` option can be given to configure the action that
+  should be taken when the child model is no longer associated to the
+  parent one.
 
-    * `:on_cast` - specifies function that will be called when casting to
-      a child changeset. This setting can be overridden in the parent's
-      `cast/4` call.
+  This may be invoked in different occasions, for example, when it has been
+  ommited in the list of associations/embeds for a many relation, or new struct
+  was specified for a one relation.
 
-    * `:on_replace` - action that should be taken when the child model is
-      no longer associated to the parent one. This may be invoked in different
-      occasions, for example, when it has been ommited in the list of models
-      for a many relation, or new model was specified for a one relation.
-      Possible values are:
+  Possible values are:
 
-        * `:raise` (default) - do not allow removing association or embedded
-          model via parent changesets,
-        * `:mark_as_invalid` - if attempting to remove the association or
-          embedded model via parent changeset - an error will be added to the parent
-          changeset, and it will be marked as invalid,
-        * `:nilify` - sets owner reference column to `nil` (available only for
-          associations),
-        * `:delete` - removes the association or related model from the database.
-          This option has to be used carefully. You should consider adding a
-          separate boolean virtual field to your model that will alow to manually
-          mark it deletion, as in the example below:
+    * `:raise` (default) - do not allow removing association or embedded
+    model via parent changesets,
+    * `:mark_as_invalid` - if attempting to remove the association or
+    embedded model via parent changeset - an error will be added to the parent
+    changeset, and it will be marked as invalid,
+    * `:nilify` - sets owner reference column to `nil` (available only for
+    associations),
+    * `:delete` - removes the association or related model from the database.
+    This option has to be used carefully. You should consider adding a
+    separate boolean virtual field to your model that will alow to manually
+    mark it deletion, as in the example below:
 
-                defmodule Comment do
-                  use Ecto.Schema
+          defmodule Comment do
+            use Ecto.Schema
 
-                  schema "comments" do
-                    field :body, :string
-                    field :delete, :boolean, virtual: true
-                  end
+            schema "comments" do
+              field :body, :string
+              field :delete, :boolean, virtual: true
+            end
 
-                  def changeset(model, params) do
-                    cast(model, params, [:body], [:delete])
-                    |> maybe_mark_for_deletion
-                  end
+            def changeset(model, params) do
+              cast(model, params, [:body], [:delete])
+              |> maybe_mark_for_deletion
+            end
 
-                  defp maybe_mark_for_deletion(changeset) do
-                    if get_change(changeset, :delete) do
-                      %{changeset | action: :delete}
-                    else
-                      changeset
-                    end
-                  end
-                end
+            defp maybe_mark_for_deletion(changeset) do
+              if get_change(changeset, :delete) do
+                %{changeset | action: :delete}
+              else
+                changeset
+              end
+            end
+          end
 
   """
 
@@ -523,66 +521,48 @@ defmodule Ecto.Changeset do
     cast_relation(:embed, changeset, name, opts)
   end
 
-  defp cast_relation(type, %Changeset{model: model, types: types}, _name_, _opts)
+  defp cast_relation(type, %Changeset{model: model, types: types}, _name, _opts)
       when model == nil or types == nil do
-    raise ArgumentError, "cast_#{type}/3 expects the changeset to be casted. " <>
-      "Please call cast/4 before calling cast_#{type}/3"
+    raise ArgumentError, "cast_#{type}/3 expects the changeset to be cast. " <>
+                         "Please call cast/4 before calling cast_#{type}/3"
   end
 
-  defp cast_relation(type, %Changeset{params: nil} = changeset, name, opts) do
-    case Keyword.fetch(opts, :required) do
-      {:ok, true} ->
-        update_in changeset.required, &[name | &1]
-      {:ok, false} ->
-        update_in changeset.optional, &[name | &1]
-      :error ->
-        raise ArgumentError, "`:required` option is mandatory in cast_#{type}/3"
-    end
+  defp cast_relation(type, %Changeset{} = changeset, name, opts) do
+    %{model: model, types: types, params: params} = changeset
+    relation = relation!(:cast, type, name, Map.get(types, name))
+    params = params || %{}
+
+    on_replace = opts[:on_replace] || relation.on_replace
+    required?  = Keyword.get(opts, :required, false)
+    on_cast    = opts[:with] || &apply(model.__struct__, relation.on_cast, [&1, &2])
+    relation   = %{relation | on_replace: on_replace, on_cast: on_cast}
+
+    # cast_relation(Atom.to_string(name), relation, params, Map.get(model, name), model, fun)
   end
 
-  defp cast_relation(type, %Changeset{model: model, types: types, params: params} = changeset,
-                     name, opts) do
-    relation = extract_relation!(type, Map.get(types, name))
-    {required?, fun} = extract_cast_relation_opts(type, opts, model, relation)
+  # defp cast_relation(param_key, relation, params, current, model, _fun) do
+  #   current = Relation.load!(model, current)
+  #   case Map.fetch(params, param_key) do
+  #     {:ok, value} ->
+  #       case Relation.cast(relation, value, current) do
+  #         :error -> :invalid
+  #         {:ok, _, _, true} -> :skip
+  #         {:ok, ^current, _, false} -> :skip
+  #         {:ok, result, relation_valid?, false} -> {:ok, result, relation_valid?}
+  #       end
+  #     :error ->
+  #       {:missing, current}
+  #   end
+  # end
 
-    cast_relation(Atom.to_string(name), relation, params, Map.get(model, name), model, fun)
-    # TODO return updated changeset
-  end
-
-  defp cast_relation(param_key, relation, params, current, model, _fun) do
-    current = Relation.load!(model, current)
-    case Map.fetch(params, param_key) do
-      {:ok, value} ->
-        case Relation.cast(relation, value, current) do
-          :error -> :invalid
-          {:ok, _, _, true} -> :skip
-          {:ok, ^current, _, false} -> :skip
-          {:ok, result, relation_valid?, false} -> {:ok, result, relation_valid?}
-        end
-      :error ->
-        {:missing, current}
-    end
-  end
-
-  defp extract_cast_relation_opts(type, opts, model, relation) do
-    default_function = &apply(model.__struct__, relation.on_cast, [&1, &2])
-
-    case Keyword.fetch(opts, :required) do
-      {:ok, required?} ->
-        {required?, Keyword.get(opts, :function, default_function)}
-      :error ->
-        raise ArgumentError, "`:required` option is mandatory in cast_#{type}/3"
-    end
-  end
-
-  defp extract_relation!(type, {type, relation}),
+  defp relation!(_op, type, _name, {type, relation}),
     do: relation
-  defp extract_relation!(type, {other, _}) when other in @relations,
-    do: raise(ArgumentError, "expected an #{type} in call to cast_#{type}/3, " <>
-                             "got: #{other}")
-  defp extract_relation!(type, schema_type),
-    do: raise(ArgumentError, "expected an #{type} in call to cast_#{type}/3, " <>
-                             "got: #{inspect schema_type}")
+  defp relation!(op, type, name, nil),
+    do: raise(ArgumentError, "unknown #{type} `#{name}` in `#{op}_#{type}`")
+  defp relation!(op, type, name, {other, _}) when other in @relations,
+    do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{other}`")
+  defp relation!(op, type, name, schema_type),
+    do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{inspect schema_type}`")
 
   ## Working with changesets
 
@@ -818,9 +798,6 @@ defmodule Ecto.Changeset do
   the new value, also, if the change has the same value as
   the model, it is not added to the list of changes.
 
-  For embedded models if the produced changeset would result in
-  update without changes, the change is skipped.
-
   ## Examples
 
       iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
@@ -848,6 +825,9 @@ defmodule Ecto.Changeset do
 
   defp put_change(model, changes, errors, valid?, key, value, {tag, relation})
       when tag in @relations do
+    # TODO: Always raise
+    IO.write :stderr, "warning: changing #{tag}s with change/2 or put_change/3 is deprecated, " <>
+                      "please use put_#{tag}/4 instead\n" <> Exception.format_stacktrace()
     case Relation.change(relation, model, value, Map.get(model, key)) do
       {:ok, _, _, true} ->
         {changes, errors, valid?}
@@ -870,7 +850,53 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Puts a change on the given `key` with `value`.
+  Puts the given association as change in the changeset.
+
+  The association may either be the association struct or a
+  changeset for the given association.
+
+  ## Options
+
+    * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
+  """
+  def put_assoc(changeset, name, value, opts \\ []) do
+    put_relation(:assoc, changeset, name, value, opts)
+  end
+
+  @doc """
+  Puts the given embed as change in the changeset.
+
+  The embed may either be the embed struct or a changeset
+  for the given embed.
+
+  ## Options
+
+    * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
+  """
+  def put_embed(changeset, name, value, opts \\ []) do
+    put_relation(:embed, changeset, name, value, opts)
+  end
+
+  defp put_relation(type, %Changeset{types: nil}, _name, _value, _opts) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  defp put_relation(type, changeset, name, value, opts) do
+    %{model: model, types: types, changes: changes} = changeset
+
+    relation = relation!(:put, type, name, Map.get(types, name))
+    relation = %{relation | on_replace: opts[:on_replace] || relation.on_replace}
+
+    case Relation.change(relation, model, value, Map.get(model, name)) do
+      {:ok, change, _, _} ->
+        put_in changeset.changes[name], change
+      :error ->
+        %{changeset | errors: [{name, "is invalid"} | changeset.errors], valid?: false}
+    end
+  end
+
+  @doc """
+  Forces a change on the given `key` with `value`.
 
   If the change is already present, it is overridden with
   the new value.
@@ -898,6 +924,9 @@ defmodule Ecto.Changeset do
     value =
       case Map.get(types, key) do
         {tag, relation} when tag in @relations ->
+          # TODO: Always raise
+          IO.write :stderr, "warning: changing #{tag}s with force_change/3 is deprecated, " <>
+                            "please use put_#{tag}/4 instead\n" <> Exception.format_stacktrace()
           {:ok, changes, _, _} =
             Relation.change(relation, model, value, Map.get(model, key))
           changes

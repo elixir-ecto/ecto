@@ -65,12 +65,10 @@ defmodule Ecto.Embedded do
   end
 
   defp merge_delete_changes(changeset, embeds, types, :delete) do
-    changes =
-      Enum.map(embeds, fn field ->
-        {:embed, embed} = Map.get(types, field)
-        {field, Ecto.Changeset.Relation.empty(embed)}
-      end)
-    Changeset.change(changeset, changes)
+    Enum.reduce(embeds, changeset, fn field, acc ->
+      {:embed, embed} = Map.get(types, field)
+      Changeset.put_embed(acc, field, Ecto.Changeset.Relation.empty(embed))
+    end)
   end
 
   defp merge_delete_changes(changeset, _, _, _), do: changeset

@@ -179,6 +179,7 @@ defmodule Ecto.Changeset.Relation do
                    &do_cast(relation, &1, &2))
   end
 
+  # TODO: pass the casting function as parameter
   defp do_cast(%{on_cast: fun} = meta, params, nil) when is_function(fun) do
     {:ok, fun.(meta.__struct__.build(meta), params) |> put_new_action(:insert)}
   end
@@ -282,7 +283,7 @@ defmodule Ecto.Changeset.Relation do
     to orphan embed nor associated records, attempting to do so results
     in this error message.
 
-    It is possible to change this behaviour by setting :on_replace when
+    It is possible to change this behaviour by setting `:on_replace` when
     defining the relation. See `Ecto.Changeset`'s section on related models
     for more info.
     """

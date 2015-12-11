@@ -580,7 +580,10 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "has_one nested assoc" do
-    changeset = Ecto.Changeset.change(%Post{title: "1"}, permalink: %Permalink{url: "1"})
+    changeset =
+      %Post{title: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, %Permalink{url: "1"})
     p1 = TestRepo.insert!(changeset)
     assert p1.permalink.id
     assert p1.permalink.post_id == p1.id
@@ -588,7 +591,10 @@ defmodule Ecto.Integration.RepoTest do
     p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
     assert p1.permalink.url == "1"
 
-    changeset = Ecto.Changeset.change(p1, permalink: %Permalink{url: "2"})
+    changeset =
+      p1
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, %Permalink{url: "2"})
     p1 = TestRepo.update!(changeset)
     assert p1.permalink.id
     assert p1.permalink.post_id == p1.id
@@ -596,7 +602,10 @@ defmodule Ecto.Integration.RepoTest do
     p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
     assert p1.permalink.url == "2"
 
-    changeset = Ecto.Changeset.change(p1, permalink: nil)
+    changeset =
+      p1
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, nil)
     p1 = TestRepo.update!(changeset)
     refute p1.permalink
     p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
@@ -609,7 +618,10 @@ defmodule Ecto.Integration.RepoTest do
     c1 = %Comment{text: "1"}
     c2 = %Comment{text: "2"}
 
-    changeset = Ecto.Changeset.change(%Post{title: "1"}, comments: [c1])
+    changeset =
+      %Post{title: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:comments, [c1])
     p1 = TestRepo.insert!(changeset)
     [c1] = p1.comments
     assert c1.id
@@ -618,7 +630,10 @@ defmodule Ecto.Integration.RepoTest do
     [c1] = p1.comments
     assert c1.text == "1"
 
-    changeset = Ecto.Changeset.change(p1, comments: [c1, c2])
+    changeset =
+      p1
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:comments, [c1, c2])
     p1 = TestRepo.update!(changeset)
     [_c1, c2] = p1.comments |> Enum.sort_by(&(&1.id))
     assert c2.id
@@ -628,7 +643,10 @@ defmodule Ecto.Integration.RepoTest do
     assert c1.text == "1"
     assert c2.text == "2"
 
-    changeset = Ecto.Changeset.change(p1, comments: [])
+    changeset =
+      p1
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:comments, [])
     p1 = TestRepo.update!(changeset)
     assert p1.comments == []
     p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
@@ -662,7 +680,10 @@ defmodule Ecto.Integration.RepoTest do
   @tag :transaction
   test "rollbacks failed nested assocs" do
     permalink_changeset = %{Ecto.Changeset.change(%Permalink{url: "1"}) | valid?: false}
-    changeset = Ecto.Changeset.change(%Post{title: "1"}, permalink: permalink_changeset)
+    changeset =
+      %Post{title: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, permalink_changeset)
     assert {:error, changeset} = TestRepo.insert(changeset)
     assert changeset.model.__struct__ == Post
     refute changeset.valid?

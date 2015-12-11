@@ -1223,6 +1223,12 @@ defmodule Ecto.Schema do
   end
 
   defp check_options!(opts, valid, fun_arity) do
+    if opts[:on_cast] do
+      IO.write :stderr, "warning: :on_cast option for #{fun_arity} is deprecated, " <>
+                        "pass :with option to Ecto.Changeset.cast_embed/cast_assoc\n" <>
+                        Exception.format_stacktrace
+    end
+
     case Enum.find(opts, fn {k, _} -> not k in valid end) do
       {k, _} ->
         raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"

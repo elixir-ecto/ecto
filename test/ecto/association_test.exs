@@ -1022,17 +1022,12 @@ defmodule Ecto.AssociationTest do
     # Validate the public API
     base_changeset = Changeset.change(%Summary{invalid_profile: assoc_model})
 
-    changeset = Changeset.change(base_changeset, invalid_profile: nil)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_profile, nil)
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.change(base_changeset, invalid_profile: %Profile{id: 2})
-    assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
-    refute changeset.valid?
-
-    changeset = Changeset.put_change(base_changeset, :invalid_profile, nil)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_profile, %Profile{id: 2})
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
@@ -1112,22 +1107,22 @@ defmodule Ecto.AssociationTest do
     # Validate the public API
     base_changeset = Changeset.change(%Summary{invalid_posts: [assoc_model]})
 
-    changeset = Changeset.change(base_changeset, invalid_posts: [])
+    changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [])
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.change(base_changeset, invalid_posts: [%Post{id: 2}])
+    changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [%Post{id: 2}])
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.put_change(base_changeset, :invalid_posts, [])
+    changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [])
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.put_change(base_changeset, :invalid_posts, [%Post{id: 2}])
+    changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [%Post{id: 2}])
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
@@ -1135,25 +1130,16 @@ defmodule Ecto.AssociationTest do
 
   ## Other
 
-  test "change/2, put_change/3, force_change/3 wth assocs" do
+  test "put_assoc/4" do
     base_changeset = Changeset.change(%Author{})
 
-    changeset = Changeset.change(base_changeset, profile: %Profile{name: "michal"})
-    assert %Ecto.Changeset{} = changeset.changes.profile
-
-    changeset = Changeset.put_change(base_changeset, :profile, %Profile{name: "michal"})
-    assert %Ecto.Changeset{} = changeset.changes.profile
-
-    changeset = Changeset.force_change(base_changeset, :profile, %Profile{name: "michal"})
+    changeset = Changeset.put_assoc(base_changeset, :profile, %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
 
     base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
     empty_update_changeset = Changeset.change(%Profile{name: "michal"})
 
-    changeset = Changeset.put_change(base_changeset, :profile, empty_update_changeset)
-    assert changeset.changes == %{}
-
-    changeset = Changeset.force_change(base_changeset, :profile, empty_update_changeset)
+    changeset = Changeset.put_assoc(base_changeset, :profile, empty_update_changeset)
     assert %Ecto.Changeset{} = changeset.changes.profile
   end
 
@@ -1161,7 +1147,10 @@ defmodule Ecto.AssociationTest do
     profile_changeset = Changeset.change(%Profile{}, name: "michal")
     profile = Changeset.apply_changes(profile_changeset)
 
-    changeset = Changeset.change(%Author{}, profile: profile_changeset)
+    changeset =
+      %Author{}
+      |> Changeset.change
+      |> Changeset.put_assoc(:profile, profile_changeset)
     assert Changeset.get_field(changeset, :profile) == profile
     assert Changeset.fetch_field(changeset, :profile) == {:changes, profile}
 
@@ -1171,7 +1160,10 @@ defmodule Ecto.AssociationTest do
 
     post = %Post{id: 1}
     post_changeset = %{Changeset.change(post) | action: :delete}
-    changeset = Changeset.change(%Author{posts: [post]}, posts: [post_changeset])
+    changeset =
+      %Author{posts: [post]}
+      |> Changeset.change
+      |> Changeset.put_assoc(:posts, [post_changeset])
     assert Changeset.get_field(changeset, :posts) == []
     assert Changeset.fetch_field(changeset, :posts) == {:changes, []}
   end
