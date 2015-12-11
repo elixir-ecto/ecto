@@ -288,7 +288,7 @@ defmodule Ecto.Repo do
       MyRepo.get_by(Post, title: "My post")
 
   """
-  defcallback get_by(Ecto.Queryable.t, Keyword.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  defcallback get_by(Ecto.Queryable.t, Keyword.t | Map.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Similar to `get_by/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -306,7 +306,7 @@ defmodule Ecto.Repo do
       MyRepo.get_by!(Post, title: "My post")
 
   """
-  defcallback get_by!(Ecto.Queryable.t, Keyword.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  defcallback get_by!(Ecto.Queryable.t, Keyword.t | Map.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Fetches a single result from the query.

@@ -189,7 +189,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp query_for_get_by(_repo, queryable, clauses) do
-    Ecto.Query.where(queryable, [], ^clauses)
+    Ecto.Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
   defp assert_model!(query) do
