@@ -466,18 +466,8 @@ defmodule Ecto.Changeset do
 
   defp cast_field(param_key, {tag, relation}, params, current, model, valid?)
       when tag in @relations do
-    current = Relation.load!(model, current)
-    case Map.fetch(params, param_key) do
-      {:ok, value} ->
-        case Relation.cast(relation, value, current) do
-          :error -> :invalid
-          {:ok, _, _, true} -> :skip
-          {:ok, ^current, _, false} -> :skip
-          {:ok, result, relation_valid?, false} -> {:ok, result, valid? and relation_valid?}
-        end
-      :error ->
-        {:missing, current}
-    end
+    fun = &apply(model.__struct__, relation.on_cast, [&1, &2])
+    cast_relation(param_key, relation, params, current, model, fun)
   end
 
   defp cast_field(param_key, type, params, current, _model, valid?) do
@@ -512,6 +502,75 @@ defmodule Ecto.Changeset do
     do: {[{key, "can't be blank"}|errors], false}
   defp error_on_nil(_kind, _key, _value, errors, valid?),
     do: {errors, valid?}
+
+  def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
+    cast_relation(:assoc, changeset, name, opts)
+  end
+
+  def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
+    cast_relation(:embed, changeset, name, opts)
+  end
+
+  defp cast_relation(type, %Changeset{model: model, types: types}, _name_, _opts)
+      when model == nil or types == nil do
+    raise ArgumentError, "cast_#{type}/3 expects the changeset to be casted. " <>
+      "Please call cast/4 before calling cast_#{type}/3"
+  end
+
+  defp cast_relation(type, %Changeset{params: nil} = changeset, name, opts) do
+    case Keyword.fetch(opts, :required) do
+      {:ok, true} ->
+        update_in changeset.required, &[name | &1]
+      {:ok, false} ->
+        update_in changeset.optional, &[name | &1]
+      :error ->
+        raise ArgumentError, "`:required` option is mandatory in cast_#{type}/3"
+    end
+  end
+
+  defp cast_relation(type, %Changeset{model: model, types: types, params: params} = changeset,
+                     name, opts) do
+    relation = extract_relation!(type, Map.get(types, name))
+    {required?, fun} = extract_cast_relation_opts(type, opts, model, relation)
+
+    cast_relation(Atom.to_string(name), relation, params, Map.get(model, name), model, fun)
+    # TODO return updated changeset
+  end
+
+  defp cast_relation(param_key, relation, params, current, model, _fun) do
+    current = Relation.load!(model, current)
+    case Map.fetch(params, param_key) do
+      {:ok, value} ->
+        case Relation.cast(relation, value, current) do
+          :error -> :invalid
+          {:ok, _, _, true} -> :skip
+          {:ok, ^current, _, false} -> :skip
+          {:ok, result, relation_valid?, false} -> {:ok, result, relation_valid?}
+        end
+      :error ->
+        {:missing, current}
+    end
+  end
+
+  defp extract_cast_relation_opts(type, opts, model, relation) do
+    default_function = &apply(model.__struct__, relation.on_cast, [&1, &2])
+
+    case Keyword.fetch(opts, :required) do
+      {:ok, required?} ->
+        {required?, Keyword.get(opts, :function, default_function)}
+      :error ->
+        raise ArgumentError, "`:required` option is mandatory in cast_#{type}/3"
+    end
+  end
+
+  defp extract_relation!(type, {type, relation}),
+    do: relation
+  defp extract_relation!(type, {other, _}) when other in @relations,
+    do: raise(ArgumentError, "expected an #{type} in call to cast_#{type}/3, " <>
+                             "got: #{other}")
+  defp extract_relation!(type, schema_type),
+    do: raise(ArgumentError, "expected an #{type} in call to cast_#{type}/3, " <>
+                             "got: #{inspect schema_type}")
 
   ## Working with changesets
 
