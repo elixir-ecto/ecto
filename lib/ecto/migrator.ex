@@ -208,12 +208,13 @@ defmodule Ecto.Migrator do
     end
   end
 
-  defp migrate(migrations, direction, repo, opts) do
-    if Enum.empty? migrations do
-      level = Keyword.get(opts, :log, :info)
-      log(level, "Already #{direction}")
-    end
+  defp migrate([], direction, _repo, opts) do
+    level = Keyword.get(opts, :log, :info)
+    log(level, "Already #{direction}")
+    []
+  end
 
+  defp migrate(migrations, direction, repo, opts) do
     ensure_no_duplication(migrations)
 
     Enum.map migrations, fn {version, _name, file} ->

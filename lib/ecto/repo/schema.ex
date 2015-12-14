@@ -68,8 +68,8 @@ defmodule Ecto.Repo.Schema do
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
       user_changeset = run_prepare(changeset, prepare)
 
-      changeset = Ecto.Embedded.prepare(user_changeset, embeds, adapter, :insert)
-      {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
+      {assoc_changes, changeset} = pop_from_changes(user_changeset, assocs)
+      changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
       {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
       {changes, extra} = dump_changes(:insert, changes, model, fields, adapter)
       {embed_changes, changeset} = pop_from_changes(changeset, embeds)
@@ -122,8 +122,8 @@ defmodule Ecto.Repo.Schema do
       wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
         user_changeset = run_prepare(changeset, prepare)
 
-        changeset = Ecto.Embedded.prepare(user_changeset, embeds, adapter, :update)
-        {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
+        {assoc_changes, changeset} = pop_from_changes(user_changeset, assocs)
+        changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
         autogen = get_autogenerate_id(changeset.changes, model)
         {changes, extra} = dump_changes(:update, changeset.changes, model, fields, adapter)
         {embed_changes, changeset} = pop_from_changes(changeset, embeds)
@@ -199,7 +199,6 @@ defmodule Ecto.Repo.Schema do
   defp do_delete(repo, adapter, %Changeset{valid?: true, prepare: prepare} = changeset, opts) do
     struct = struct_from_changeset!(:delete, changeset)
     model  = struct.__struct__
-    embeds = model.__schema__(:embeds)
     assocs = model.__schema__(:associations)
 
     changeset = update_changeset(changeset, :delete, repo)
@@ -212,11 +211,6 @@ defmodule Ecto.Repo.Schema do
 
       # We don't prepare the changeset on delete, so we just copy the user one
       changeset = user_changeset
-      embeds =
-        changeset
-        |> Ecto.Embedded.prepare(embeds, adapter, :delete)
-        |> Map.fetch!(:changes)
-        |> Map.take(embeds)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
@@ -224,11 +218,6 @@ defmodule Ecto.Repo.Schema do
       args = [repo, metadata(struct), filters, autogen, opts]
       case apply(changeset, adapter, :delete, [], args) do
         {:ok, changeset} ->
-          opts = Keyword.put(opts, :skip_transaction, true)
-          # We ignore the results because we still want to keep
-          # the embed values in the model. Also note we don't
-          # process associations because they are handled externally.
-          _ = process_embeds(changeset, embeds, adapter, repo, opts)
           {:ok, changeset.model}
         {:invalid, constraints} ->
           {:error, constraints_to_errors(user_changeset, :delete, constraints)}
@@ -331,14 +320,7 @@ defmodule Ecto.Repo.Schema do
     types = changeset.types
     assert_empty_relation!(struct, embeds, types)
     assert_empty_relation!(struct, assocs, types)
-
-    base =
-      Enum.reduce embeds, Map.take(struct, fields), fn field, acc ->
-        {:embed, embed} = Map.fetch!(types, field)
-        Map.put(acc, field, Ecto.Changeset.Relation.empty(embed))
-      end
-
-    update_in changeset.changes, &Map.merge(base, &1)
+    update_in changeset.changes, &Map.merge(Map.take(struct, fields), &1)
   end
 
   defp assert_empty_relation!(struct, relation, types) do
@@ -348,7 +330,7 @@ defmodule Ecto.Repo.Schema do
           value = Map.get(struct, field)
           kind  = kind |> Atom.to_string
           unless Ecto.Changeset.Relation.empty?(relation, value) do
-            raise ArgumentError, "model #{inspect struct.__struct__} has value `#{inspect value}` " <>
+            raise ArgumentError, "struct #{inspect struct.__struct__} has value `#{inspect value}` " <>
               "set for #{kind} named `#{field}`. #{String.capitalize kind}s can only be " <>
               "manipulated via changesets, be it on insert, update or delete."
           end

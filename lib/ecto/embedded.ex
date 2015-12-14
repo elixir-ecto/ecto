@@ -43,7 +43,7 @@ defmodule Ecto.Embedded do
 
   def prepare(changeset, embeds, adapter, repo_action) do
     types     = changeset.types
-    changeset = merge_delete_changes(changeset, embeds, types, repo_action)
+
 
     update_in changeset.changes, fn changes ->
       Enum.reduce(embeds, changes, fn name, changes ->
@@ -57,15 +57,6 @@ defmodule Ecto.Embedded do
       end)
     end
   end
-
-  defp merge_delete_changes(changeset, embeds, types, :delete) do
-    Enum.reduce(embeds, changeset, fn field, acc ->
-      {:embed, embed} = Map.get(types, field)
-      Changeset.put_embed(acc, field, Ecto.Changeset.Relation.empty(embed))
-    end)
-  end
-
-  defp merge_delete_changes(changeset, _, _, _), do: changeset
 
   defp prepare_each(%{cardinality: :one}, nil, _adapter, _action) do
     nil

@@ -237,8 +237,7 @@ defmodule Ecto.Changeset.Relation do
 
   defp do_change(_relation, struct, current) do
     changes = Map.take(struct, struct.__struct__.__schema__(:fields))
-    {:ok, Changeset.change(current, changes)
-          |> put_new_action(:update)}
+    {:ok, Changeset.change(current, changes) |> put_new_action(:update)}
   end
 
   @doc """
