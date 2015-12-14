@@ -1,6 +1,6 @@
 language: elixir
 elixir:
-  - 1.2.0-rc0
+  - 1.2.0-rc.0
 otp_release:
   - 18.1
 addons:
