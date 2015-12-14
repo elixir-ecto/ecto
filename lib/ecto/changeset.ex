@@ -525,32 +525,33 @@ defmodule Ecto.Changeset do
   end
 
   defp cast_relation(type, %Changeset{} = changeset, name, opts) do
-    %{model: model, types: types, params: params} = changeset
+    %{model: model, types: types, params: params, changes: changes} = changeset
     relation = relation!(:cast, type, name, Map.get(types, name))
     params = params || %{}
 
     on_replace = opts[:on_replace] || relation.on_replace
-    required?  = Keyword.get(opts, :required, false)
     on_cast    = opts[:with] || &apply(model.__struct__, relation.on_cast, [&1, &2])
     relation   = %{relation | on_replace: on_replace, on_cast: on_cast}
+    current    = Relation.load!(model, Map.get(model, name))
 
-    # cast_relation(Atom.to_string(name), relation, params, Map.get(model, name), model, fun)
+    case Relation.cast(relation, params[name], current) do
+      {:ok, _, _, true} ->
+        missing_relation(changeset, name, current, opts)
+      {:ok, change, relation_valid?, false} ->
+        missing_relation(%{changeset | changes: Map.put(changes, name, change),
+                           valid?: changeset.valid? && relation_valid?}, name, current, opts)
+      :error ->
+        %{changeset | errors: [{name, "is invalid"} | changeset.errors], valid?: false}
+    end
   end
 
-  # defp cast_relation(param_key, relation, params, current, model, _fun) do
-  #   current = Relation.load!(model, current)
-  #   case Map.fetch(params, param_key) do
-  #     {:ok, value} ->
-  #       case Relation.cast(relation, value, current) do
-  #         :error -> :invalid
-  #         {:ok, _, _, true} -> :skip
-  #         {:ok, ^current, _, false} -> :skip
-  #         {:ok, result, relation_valid?, false} -> {:ok, result, relation_valid?}
-  #       end
-  #     :error ->
-  #       {:missing, current}
-  #   end
-  # end
+  defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, opts) do
+    if opts[:required] && is_nil(Map.get(changes, name)) && is_nil(current) do
+      %{changeset | errors: [{name, "can't be blank"} | errors], valid?: false}
+    else
+      changeset
+    end
+  end
 
   defp relation!(_op, type, _name, {type, relation}),
     do: relation
@@ -825,7 +826,8 @@ defmodule Ecto.Changeset do
     # TODO: Always raise
     IO.write :stderr, "warning: changing #{tag}s with change/2 or put_change/3 is deprecated, " <>
                       "please use put_#{tag}/4 instead\n" <> Exception.format_stacktrace()
-    case Relation.change(relation, model, value, Map.get(model, key)) do
+    current = Relation.load!(model, Map.get(model, key))
+    case Relation.change(relation, value, current) do
       {:ok, _, _, true} ->
         {changes, errors, valid?}
       {:ok, change, _, false} ->
@@ -884,7 +886,7 @@ defmodule Ecto.Changeset do
     put_relation(:embed, changeset, name, value, opts)
   end
 
-  defp put_relation(type, %Changeset{types: nil}, _name, _value, _opts) do
+  defp put_relation(_type, %Changeset{types: nil}, _name, _value, _opts) do
     raise ArgumentError, "changeset does not have types information"
   end
 
@@ -893,9 +895,10 @@ defmodule Ecto.Changeset do
 
     relation = relation!(:put, type, name, Map.get(types, name))
     relation = %{relation | on_replace: opts[:on_replace] || relation.on_replace}
+    current  = Relation.load!(model, Map.get(model, name))
 
-    case Relation.change(relation, model, value, Map.get(model, name)) do
-      {:ok, change, _, true} ->
+    case Relation.change(relation, value, current) do
+      {:ok, _, _, true} ->
         changeset
       {:ok, change, relation_valid?, false} ->
         %{changeset | changes: Map.put(changes, name, change),

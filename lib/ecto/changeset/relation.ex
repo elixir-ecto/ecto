@@ -198,13 +198,12 @@ defmodule Ecto.Changeset.Relation do
   end
 
   @doc """
-  Wraps embedded models in changesets.
+  Wraps related models in changesets.
   """
-  def change(_relation, _model, nil, nil), do: {:ok, nil, false, true}
+  def change(_relation, nil, nil), do: {:ok, nil, false, true}
 
-  def change(%{related: mod} = relation, model, value, current) do
-    current = load!(model, current)
-    pks     = primary_keys!(mod)
+  def change(%{related: mod} = relation, value, current) do
+    pks = primary_keys!(mod)
     cast_or_change(relation, value, current, pks, pks,
                    &do_change(relation, &1, &2))
   end
@@ -222,7 +221,7 @@ defmodule Ecto.Changeset.Relation do
         case Map.fetch(types, field) do
           {:ok, {_, embed_or_assoc}} ->
             value = load!(struct, Map.get(struct, field))
-            case change(embed_or_assoc, struct, value, nil) do
+            case change(embed_or_assoc, value, nil) do
               {:ok, _, _, true}       -> acc
               {:ok, change, _, false} -> Map.put(acc, field, change)
             end

@@ -414,98 +414,93 @@ defmodule Ecto.EmbeddedTest do
   ## Others
 
   test "change embeds_one" do
-    model = %Author{}
     embed = Author.__schema__(:embed, :profile)
 
     assert {:ok, changeset, true, false} =
-      Relation.change(embed, model, %Profile{name: "michal"}, nil)
+      Relation.change(embed, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(embed, model, %Profile{name: "michal"}, %Profile{})
+      Relation.change(embed, %Profile{name: "michal"}, %Profile{})
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(embed, model, nil, %Profile{})
+      Relation.change(embed, nil, %Profile{})
     assert changeset.action == :delete
 
     embed_model = %Profile{}
     embed_model_changeset = Changeset.change(embed_model, name: "michal")
 
     assert {:ok, changeset, true, false} =
-      Relation.change(embed, model, embed_model_changeset, nil)
+      Relation.change(embed, embed_model_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal"}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(embed, model, embed_model_changeset, embed_model)
+      Relation.change(embed, embed_model_changeset, embed_model)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     empty_changeset = Changeset.change(embed_model)
     assert {:ok, _, true, true} =
-      Relation.change(embed, model, empty_changeset, embed_model)
+      Relation.change(embed, empty_changeset, embed_model)
 
     embed_with_id = %Profile{id: 2}
     assert {:ok, _, true, false} =
-      Relation.change(embed, model, %Profile{id: 1}, embed_with_id)
+      Relation.change(embed, %Profile{id: 1}, embed_with_id)
 
     update_changeset = %{Changeset.change(embed_model) | action: :delete}
     assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
-      Relation.change(embed, model, update_changeset, embed_with_id)
+      Relation.change(embed, update_changeset, embed_with_id)
     end
   end
 
   test "change embeds_one keeps appropriate action from changeset" do
-    model = %Author{}
     embed = Author.__schema__(:embed, :profile)
     embed_model = %Profile{}
 
     changeset = %{Changeset.change(embed_model, name: "michal") | action: :insert}
 
-    {:ok, changeset, _, _} = Relation.change(embed, model, changeset, nil)
+    {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
     assert changeset.action == :insert
 
     changeset = %{changeset | action: :delete}
     assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
-      Relation.change(embed, model, changeset, nil)
+      Relation.change(embed, changeset, nil)
     end
 
     changeset = %{Changeset.change(embed_model) | action: :update}
-    {:ok, changeset, _, _} = Relation.change(embed, model, changeset, embed_model)
+    {:ok, changeset, _, _} = Relation.change(embed, changeset, embed_model)
     assert changeset.action == :update
 
     embed_model = %{embed_model | id: 5}
-    model = %{model | profile: embed_model}
     changeset = %{Changeset.change(embed_model) | action: :insert}
     assert_raise RuntimeError, ~r"cannot insert .* it already exists in the parent model", fn ->
-      Relation.change(embed, model, changeset, embed_model)
+      Relation.change(embed, changeset, embed_model)
     end
   end
 
   test "change embeds_one with on_replace: :raise" do
-    model = %Author{}
     embed = Author.__schema__(:embed, :raise_profile)
     embed_model = %Author{id: 1}
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(embed, model, nil, embed_model)
+      Relation.change(embed, nil, embed_model)
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(embed, model, %Author{id: 2}, embed_model)
+      Relation.change(embed, %Author{id: 2}, embed_model)
     end
   end
 
   test "change embeds_one with on_replace: :mark_as_invalid" do
-    model = %Author{}
     embed = Author.__schema__(:embed, :invalid_profile)
     embed_model = %Profile{id: 1}
 
-    assert :error == Relation.change(embed, model, nil, embed_model)
-    assert :error == Relation.change(embed, model, %Profile{id: 2}, embed_model)
+    assert :error == Relation.change(embed, nil, embed_model)
+    assert :error == Relation.change(embed, %Profile{id: 2}, embed_model)
 
     base_changeset = Changeset.change(%Author{invalid_profile: embed_model})
 
@@ -521,21 +516,20 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "change embeds_many" do
-    model = %Author{}
     embed = Author.__schema__(:embed, :posts)
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(embed, model, [%Post{title: "hello"}], [])
+      Relation.change(embed, [%Post{title: "hello"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, title: "hello"}
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(embed, model, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
+      Relation.change(embed, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
     assert {:ok, [old_changeset, new_changeset], true, false} =
-      Relation.change(embed, model, [%Post{id: 1}], [%Post{id: 2}])
+      Relation.change(embed, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action  == :delete
     assert new_changeset.action  == :insert
     assert new_changeset.changes == %{id: 1, title: nil}
@@ -543,52 +537,50 @@ defmodule Ecto.EmbeddedTest do
     embed_model_changeset = Changeset.change(%Post{}, title: "hello")
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(embed, model, [embed_model_changeset], [])
+      Relation.change(embed, [embed_model_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, title: "hello"}
 
     embed_model = %Post{id: 1}
     embed_model_changeset = Changeset.change(embed_model, title: "hello")
     assert {:ok, [changeset], true, false} =
-      Relation.change(embed, model, [embed_model_changeset], [embed_model])
+      Relation.change(embed, [embed_model_changeset], [embed_model])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(embed, model, [], [embed_model_changeset])
+      Relation.change(embed, [], [embed_model_changeset])
     assert changeset.action == :delete
 
     empty_changeset = Changeset.change(embed_model)
     assert {:ok, _, true, true} =
-      Relation.change(embed, model, [empty_changeset], [embed_model])
+      Relation.change(embed, [empty_changeset], [embed_model])
 
     new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
-      Relation.change(embed, model, [new_model_update], [embed_model])
+      Relation.change(embed, [new_model_update], [embed_model])
     end
   end
 
   test "change embeds_many with on_replace: :raise" do
-    model = %Author{}
     embed = Author.__schema__(:embed, :raise_posts)
     embed_model = %Post{id: 1}
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(embed, model, [], [embed_model])
+      Relation.change(embed, [], [embed_model])
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(embed, model, [%Post{id: 2}], [embed_model])
+      Relation.change(embed, [%Post{id: 2}], [embed_model])
     end
   end
 
   test "change embeds_many with on_replace: :mark_as_invalid" do
-    model = %Author{}
     embed = Author.__schema__(:embed, :invalid_posts)
     embed_model = %Post{id: 1}
 
-    assert :error == Relation.change(embed, model, [], [embed_model])
-    assert :error == Relation.change(embed, model, [%Post{id: 2}], [embed_model])
+    assert :error == Relation.change(embed, [], [embed_model])
+    assert :error == Relation.change(embed, [%Post{id: 2}], [embed_model])
 
     base_changeset = Changeset.change(%Author{invalid_posts: [embed_model]})
 

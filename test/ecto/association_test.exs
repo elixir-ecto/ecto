@@ -925,99 +925,94 @@ defmodule Ecto.AssociationTest do
   ## Change
 
   test "change has_one" do
-    model = %Author{}
     assoc = Author.__schema__(:association, :profile)
 
     assert {:ok, changeset, true, false} =
-      Relation.change(assoc, model, %Profile{name: "michal"}, nil)
+      Relation.change(assoc, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal", summary_id: nil, author_id: nil}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(assoc, model, %Profile{name: "michal"}, %Profile{})
+      Relation.change(assoc, %Profile{name: "michal"}, %Profile{})
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(assoc, model, nil, %Profile{})
+      Relation.change(assoc, nil, %Profile{})
     assert changeset.action == :delete
 
     assoc_model = %Profile{}
     assoc_model_changeset = Changeset.change(assoc_model, name: "michal")
 
     assert {:ok, changeset, true, false} =
-      Relation.change(assoc, model, assoc_model_changeset, nil)
+      Relation.change(assoc, assoc_model_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, name: "michal", summary_id: nil, author_id: nil}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(assoc, model, assoc_model_changeset, assoc_model)
+      Relation.change(assoc, assoc_model_changeset, assoc_model)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     empty_changeset = Changeset.change(assoc_model)
     assert {:ok, _, true, true} =
-      Relation.change(assoc, model, empty_changeset, assoc_model)
+      Relation.change(assoc, empty_changeset, assoc_model)
 
     assoc_with_id = %Profile{id: 2}
     assert {:ok, _, true, false} =
-      Relation.change(assoc, model, %Profile{id: 1}, assoc_with_id)
+      Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
 
     update_changeset = %{Changeset.change(assoc_model) | action: :delete}
     assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
-      Relation.change(assoc, model, update_changeset, assoc_with_id)
+      Relation.change(assoc, update_changeset, assoc_with_id)
     end
   end
 
   test "change has_one keeps appropriate action from changeset" do
-    model = %Author{}
     assoc = Author.__schema__(:association, :profile)
     assoc_model = %Profile{}
 
     changeset = %{Changeset.change(assoc_model, name: "michal") | action: :insert}
 
-    {:ok, changeset, _, _} = Relation.change(assoc, model, changeset, nil)
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :insert
 
     changeset = %{changeset | action: :delete}
     assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
-      Relation.change(assoc, model, changeset, nil)
+      Relation.change(assoc, changeset, nil)
     end
 
     changeset = %{Changeset.change(assoc_model) | action: :update}
-    {:ok, changeset, _, _} = Relation.change(assoc, model, changeset, assoc_model)
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, assoc_model)
     assert changeset.action == :update
 
     assoc_model = %{assoc_model | id: 5}
-    model = %{model | profile: assoc_model}
     changeset = %{Changeset.change(assoc_model) | action: :insert}
     assert_raise RuntimeError, ~r"cannot insert .* it already exists in the parent model", fn ->
-      Relation.change(assoc, model, changeset, assoc_model)
+      Relation.change(assoc, changeset, assoc_model)
     end
   end
 
   test "change has_one with on_replace: :raise" do
-    model = %Summary{}
     assoc = Summary.__schema__(:association, :raise_profile)
     assoc_model = %Profile{id: 1}
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(assoc, model, nil, assoc_model)
+      Relation.change(assoc, nil, assoc_model)
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(assoc, model, %Profile{id: 2}, assoc_model)
+      Relation.change(assoc, %Profile{id: 2}, assoc_model)
     end
   end
 
   test "change has_one with on_replace: :mark_as_invalid" do
-    model = %Summary{}
     assoc = Summary.__schema__(:association, :invalid_profile)
     assoc_model = %Profile{id: 1}
 
     # Validate the private API
-    assert :error == Relation.change(assoc, model, nil, assoc_model)
-    assert :error == Relation.change(assoc, model, %Profile{id: 2}, assoc_model)
+    assert :error == Relation.change(assoc, nil, assoc_model)
+    assert :error == Relation.change(assoc, %Profile{id: 2}, assoc_model)
 
     # Validate the public API
     base_changeset = Changeset.change(%Summary{invalid_profile: assoc_model})
@@ -1034,21 +1029,20 @@ defmodule Ecto.AssociationTest do
   end
 
   test "change has_many" do
-    model = %Author{}
     assoc = Author.__schema__(:association, :posts)
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(assoc, model, [%Post{title: "hello"}], [])
+      Relation.change(assoc, [%Post{title: "hello"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, title: "hello", summary_id: nil, author_id: nil}
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(assoc, model, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
+      Relation.change(assoc, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
     assert {:ok, [old_changeset, new_changeset], true, false} =
-      Relation.change(assoc, model, [%Post{id: 1}], [%Post{id: 2}])
+      Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action  == :delete
     assert new_changeset.action  == :insert
     assert new_changeset.changes == %{id: 1, title: nil, summary_id: nil, author_id: nil}
@@ -1056,53 +1050,51 @@ defmodule Ecto.AssociationTest do
     assoc_model_changeset = Changeset.change(%Post{}, title: "hello")
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(assoc, model, [assoc_model_changeset], [])
+      Relation.change(assoc, [assoc_model_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, title: "hello", summary_id: nil, author_id: nil}
 
     assoc_model = %Post{id: 1}
     assoc_model_changeset = Changeset.change(assoc_model, title: "hello")
     assert {:ok, [changeset], true, false} =
-      Relation.change(assoc, model, [assoc_model_changeset], [assoc_model])
+      Relation.change(assoc, [assoc_model_changeset], [assoc_model])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
     assert {:ok, [changeset], true, false} =
-      Relation.change(assoc, model, [], [assoc_model_changeset])
+      Relation.change(assoc, [], [assoc_model_changeset])
     assert changeset.action == :delete
 
     empty_changeset = Changeset.change(assoc_model)
     assert {:ok, _, true, true} =
-      Relation.change(assoc, model, [empty_changeset], [assoc_model])
+      Relation.change(assoc, [empty_changeset], [assoc_model])
 
     new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
-      Relation.change(assoc, model, [new_model_update], [assoc_model])
+      Relation.change(assoc, [new_model_update], [assoc_model])
     end
   end
 
   test "change has_many with on_replace: :raise" do
-    model = %Summary{}
     assoc = Summary.__schema__(:association, :raise_posts)
     assoc_model = %Post{id: 1}
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(assoc, model, [], [assoc_model])
+      Relation.change(assoc, [], [assoc_model])
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(assoc, model, [%Post{id: 2}], [assoc_model])
+      Relation.change(assoc, [%Post{id: 2}], [assoc_model])
     end
   end
 
   test "change has_many with on_replace: :mark_as_invalid" do
-    model = %Summary{}
     assoc = Summary.__schema__(:association, :invalid_posts)
     assoc_model = %Post{id: 1}
 
     # Validate the private API
-    assert :error == Relation.change(assoc, model, [], [assoc_model])
-    assert :error == Relation.change(assoc, model, [%Post{id: 2}], [assoc_model])
+    assert :error == Relation.change(assoc, [], [assoc_model])
+    assert :error == Relation.change(assoc, [%Post{id: 2}], [assoc_model])
 
     # Validate the public API
     base_changeset = Changeset.change(%Summary{invalid_posts: [assoc_model]})
