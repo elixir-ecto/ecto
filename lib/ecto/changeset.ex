@@ -461,6 +461,9 @@ defmodule Ecto.Changeset do
 
   defp cast_field(param_key, {tag, relation}, params, current, model, valid?)
       when tag in @relations do
+    # TODO: Always raise
+    IO.write :stderr, "warning: casting #{tag}s with cast/4 is deprecated, " <>
+                      "please use cast_#{tag}/4 instead\n" <> Exception.format_stacktrace()
     current = Relation.load!(model, current)
     case Map.fetch(params, param_key) do
       {:ok, value} ->
@@ -524,29 +527,42 @@ defmodule Ecto.Changeset do
                          "Please call cast/4 before calling cast_#{type}/3"
   end
 
-  defp cast_relation(type, %Changeset{} = changeset, name, opts) do
+  defp cast_relation(type, %Changeset{} = changeset, key, opts) do
+    {key, param_key} = cast_key(key)
     %{model: model, types: types, params: params, changes: changes} = changeset
-    relation = relation!(:cast, type, name, Map.get(types, name))
+    relation = relation!(:cast, type, key, Map.get(types, key))
     params = params || %{}
 
-    on_replace = opts[:on_replace] || relation.on_replace
-    on_cast    = opts[:with] || &apply(model.__struct__, relation.on_cast, [&1, &2])
-    relation   = %{relation | on_replace: on_replace, on_cast: on_cast}
-    current    = Relation.load!(model, Map.get(model, name))
+    {changeset, required?} =
+      if opts[:required] do
+        {update_in(changeset.required, &[key|&1]), true}
+      else
+        {update_in(changeset.optional, &[key|&1]), false}
+      end
 
-    case Relation.cast(relation, params[name], current) do
-      {:ok, _, _, true} ->
-        missing_relation(changeset, name, current, opts)
-      {:ok, change, relation_valid?, false} ->
-        missing_relation(%{changeset | changes: Map.put(changes, name, change),
-                           valid?: changeset.valid? && relation_valid?}, name, current, opts)
-      :error ->
-        %{changeset | errors: [{name, "is invalid"} | changeset.errors], valid?: false}
+    on_replace = opts[:on_replace] || relation.on_replace
+    on_cast    = opts[:with] || &apply(relation.related, relation.on_cast, [&1, &2])
+    relation   = %{relation | on_replace: on_replace, on_cast: on_cast}
+    current    = Relation.load!(model, Map.get(model, key))
+
+    case params && Map.fetch(params, param_key) do
+      {:ok, value} ->
+        case Relation.cast(relation, value, current) do
+          {:ok, change, relation_valid?, false} when change != current ->
+            missing_relation(%{changeset | changes: Map.put(changes, key, change),
+                               valid?: changeset.valid? && relation_valid?}, key, current, required?)
+          {:ok, _, _, _} ->
+            missing_relation(changeset, key, current, required?)
+          :error ->
+            %{changeset | errors: [{key, "is invalid"} | changeset.errors], valid?: false}
+        end
+      _ ->
+        missing_relation(changeset, key, current, required?)
     end
   end
 
-  defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, opts) do
-    if opts[:required] && is_nil(Map.get(changes, name)) && is_nil(current) do
+  defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?) do
+    if required? and is_nil(Map.get(changes, name, current)) do
       %{changeset | errors: [{name, "can't be blank"} | errors], valid?: false}
     else
       changeset

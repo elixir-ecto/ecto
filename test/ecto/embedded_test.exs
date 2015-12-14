@@ -18,10 +18,6 @@ defmodule Ecto.EmbeddedTest do
       embeds_one :profile, Profile, on_cast: :required_changeset, on_replace: :delete
       embeds_one :post, Post
       embeds_many :posts, Post, on_replace: :delete
-      embeds_one :raise_profile, Profile
-      embeds_many :raise_posts, Post
-      embeds_one :invalid_profile, Profile, on_replace: :mark_as_invalid
-      embeds_many :invalid_posts, Post, on_replace: :mark_as_invalid
     end
   end
 
@@ -34,49 +30,48 @@ defmodule Ecto.EmbeddedTest do
     end
 
     def changeset(model, params) do
-      cast(model, params, ~w(title))
+      Changeset.cast(model, params, ~w(title))
       |> validate_length(:title, min: 3)
     end
 
     def optional_changeset(model, params) do
-      cast(model, params, ~w(), ~w(title))
+      Changeset.cast(model, params, ~w(), ~w(title))
     end
 
     def set_action(model, params) do
-      cast(model, params, ~w(title))
+      Changeset.cast(model, params, ~w(title))
       |> Map.put(:action, :update)
     end
   end
 
   defmodule Profile do
     use Ecto.Schema
-    import Ecto.Changeset
 
     embedded_schema do
       field :name
     end
 
     def changeset(model, params) do
-      cast(model, params, ~w(name))
+      Changeset.cast(model, params, ~w(name))
     end
 
     def required_changeset(model, params) do
-      cast(model, params, ~w(name), ~w(id))
+      Changeset.cast(model, params, ~w(name), ~w(id))
     end
 
     def optional_changeset(model, params) do
-      cast(model, params, ~w(), ~w(name))
+      Changeset.cast(model, params, ~w(), ~w(name))
     end
 
     def set_action(model, params) do
-      cast(model, params, ~w(name), ~w(id))
+      Changeset.cast(model, params, ~w(name), ~w(id))
       |> Map.put(:action, :update)
     end
   end
 
   test "__schema__" do
     assert Author.__schema__(:embeds) ==
-      [:profile, :post, :posts, :raise_profile, :raise_posts, :invalid_profile, :invalid_posts]
+      [:profile, :post, :posts]
 
     assert Author.__schema__(:embed, :profile) ==
       %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete,
@@ -87,12 +82,17 @@ defmodule Ecto.EmbeddedTest do
                 related: Post, strategy: :replace, on_cast: :changeset}
   end
 
+  defp cast(model, params, embed, opts \\ []) do
+    model
+    |> Changeset.cast(params, ~w(), ~w())
+    |> Changeset.cast_embed(embed, opts)
+  end
+
   ## Cast embeds one
 
   test "cast embeds_one with valid params" do
-    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}}, ~w(profile))
+    changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, :profile)
     profile = changeset.changes.profile
-    assert changeset.required == [:profile]
     assert profile.changes == %{name: "michal"}
     assert profile.errors == []
     assert profile.action  == :insert
@@ -101,22 +101,21 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "cast embeds_one with invalid params" do
-    changeset = Changeset.cast(%Author{}, %{"profile" => %{}}, ~w(profile))
+    changeset = cast(%Author{}, %{"profile" => %{}}, :profile)
     assert changeset.changes.profile.changes == %{}
     assert changeset.changes.profile.errors  == [name: "can't be blank"]
     assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
 
-    changeset = Changeset.cast(%Author{}, %{"profile" => "value"}, ~w(profile))
+    changeset = cast(%Author{}, %{"profile" => "value"}, :profile, required: true)
     assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
   end
 
   test "cast embeds_one with existing model updating" do
-    changeset =
-      Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
-                     %{"profile" => %{"name" => "new", "id" => "michal"}}, ~w(profile))
+    changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"name" => "new", "id" => "michal"}}, :profile)
 
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new"}
@@ -127,9 +126,8 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "cast embeds_one with existing model replacing" do
-    changeset =
-      Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
-                     %{"profile" => %{"name" => "new"}}, ~w(profile))
+    changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"name" => "new"}}, :profile)
 
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new"}
@@ -138,9 +136,8 @@ defmodule Ecto.EmbeddedTest do
     assert profile.valid?
     assert changeset.valid?
 
-    changeset =
-      Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
-                     %{"profile" => %{"name" => "new", "id" => "new"}}, ~w(profile))
+    changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"name" => "new", "id" => "new"}}, :profile)
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new", id: "new"}
     assert profile.errors  == []
@@ -149,64 +146,52 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.valid?
 
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
-      Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
-                     %{"profile" => %{"name" => "new", "id" => "new"}},
-                     profile: :set_action)
+      cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+           %{"profile" => %{"name" => "new", "id" => "new"}},
+           :profile, with: &Profile.set_action/2)
     end
   end
 
   test "cast embeds_one without changes skips" do
-    changeset =
-      Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
-                     %{"profile" => %{"id" => "michal"}}, ~w(profile))
+    changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
+                     %{"profile" => %{"id" => "michal"}}, :profile)
     assert changeset.changes == %{}
     assert changeset.errors == []
   end
 
   test "cast embeds_one when required" do
-    changeset =
-      Changeset.cast(%Author{profile: nil}, %{}, ~w(profile))
+    changeset = cast(%Author{profile: nil}, %{}, :profile, required: true)
+    assert changeset.required == [:profile]
     assert changeset.changes == %{}
     assert changeset.errors == [profile: "can't be blank"]
 
-    changeset =
-      Changeset.cast(%Author{profile: %Profile{}}, %{}, ~w(profile))
+    changeset = cast(%Author{profile: %Profile{}}, %{}, :profile, required: true)
+    assert changeset.required == [:profile]
     assert changeset.changes == %{}
     assert changeset.errors == []
 
-    changeset =
-      Changeset.cast(%Author{profile: nil}, %{"profile" => nil}, ~w(profile))
+    changeset = cast(%Author{profile: nil}, %{"profile" => nil}, :profile, required: true)
+    assert changeset.required == [:profile]
     assert changeset.changes == %{}
     assert changeset.errors == [profile: "can't be blank"]
 
-    changeset =
-      Changeset.cast(%Author{profile: %Profile{}}, %{"profile" => nil}, ~w(profile))
-    assert changeset.changes == %{}
+    changeset = cast(%Author{profile: %Profile{}}, %{"profile" => nil}, :profile, required: true)
+    assert changeset.required == [:profile]
+    assert changeset.changes == %{profile: nil}
     assert changeset.errors == [profile: "can't be blank"]
   end
 
   test "cast embeds_one with optional" do
-    changeset = Changeset.cast(%Author{profile: %Profile{id: "id"}},
-                               %{"profile" => nil},
-                               [], ~w(profile))
+    changeset = cast(%Author{profile: %Profile{id: "id"}}, %{"profile" => nil}, :profile)
     assert changeset.changes.profile == nil
   end
 
   test "cast embeds_one with custom changeset" do
-    changeset = Changeset.cast(%Author{}, %{"profile" => %{"name" => "michal"}},
-                     [profile: :optional_changeset])
+    changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, :profile,
+                     with: &Profile.optional_changeset/2)
     profile = changeset.changes.profile
-    assert changeset.required == [:profile]
+    assert changeset.optional == [:profile]
     assert profile.changes == %{name: "michal"}
-    assert profile.errors  == []
-    assert profile.action  == :insert
-    assert profile.valid?
-    assert changeset.valid?
-
-    changeset = Changeset.cast(%Author{}, %{"profile" => %{}}, [profile: :optional_changeset])
-    profile = changeset.changes.profile
-    assert changeset.required == [:profile]
-    assert profile.changes == %{}
     assert profile.errors  == []
     assert profile.action  == :insert
     assert profile.valid?
@@ -214,63 +199,62 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "cast embeds_one keeps appropriate action from changeset" do
-    changeset = Changeset.cast(%Author{profile: %Profile{id: "id"}},
-                               %{"profile" => %{"name" => "michal", "id" => "id"}},
-                               [profile: :set_action])
+    changeset = cast(%Author{profile: %Profile{id: "id"}},
+                     %{"profile" => %{"name" => "michal", "id" => "id"}},
+                     :profile, with: &Profile.set_action/2)
     assert changeset.changes.profile.action == :update
 
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
-      Changeset.cast(%Author{profile: %Profile{id: "old"}},
-                     %{"profile" => %{"name" => "michal", "id" => "new"}},
-                     [profile: :set_action])
+      cast(%Author{profile: %Profile{id: "old"}},
+           %{"profile" => %{"name" => "michal", "id" => "new"}},
+           :profile, with: &Profile.set_action/2)
     end
   end
 
   test "cast embeds_one with :empty parameters" do
-    changeset = Changeset.cast(%Author{profile: nil}, :empty, profile: :optional_changeset)
+    changeset = cast(%Author{profile: nil}, :empty, :profile)
     assert changeset.changes == %{}
 
-    changeset = Changeset.cast(%Author{profile: %Profile{}}, :empty, profile: :optional_changeset)
+    changeset = cast(%Author{profile: %Profile{}}, :empty, :profile)
     assert changeset.changes == %{}
   end
 
   test "cast embeds_one with on_replace: :raise" do
-    model = %Author{raise_profile: %Profile{id: 1}}
+    model  = %Author{profile: %Profile{id: 1}}
+    params = %{"profile" => %{"name" => "jose", "id" => 1}}
 
-    params = %{"raise_profile" => %{"name" => "jose", "id" => 1}}
-    changeset = Changeset.cast(model, params, [:raise_profile])
-    assert changeset.changes.raise_profile.action == :update
+    changeset = cast(model, params, :profile, on_replace: :raise)
+    assert changeset.changes.profile.action == :update
 
+    params = %{"profile" => nil}
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.cast(model, %{"raise_profile" => nil}, [], [:raise_profile])
+      cast(model, params, :profile, on_replace: :raise)
     end
 
-    params = %{"raise_profile" => %{"name" => "new", "id" => 2}}
+    params = %{"profile" => %{"name" => "new", "id" => 2}}
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.cast(model, params, [:raise_profile])
+      cast(model, params, :profile, on_replace: :raise)
     end
   end
 
   test "cast embeds_one with on_replace: :mark_as_invalid" do
-    model = %Author{invalid_profile: %Profile{id: 1}}
+    model = %Author{profile: %Profile{id: 1}}
 
-    changeset = Changeset.cast(model, %{"invalid_profile" => nil},
-                               [], [:invalid_profile])
+    changeset = cast(model, %{"profile" => nil}, :profile, on_replace: :mark_as_invalid)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
+    assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.cast(model, %{"invalid_profile" => %{"id" => 2}},
-                               [:invalid_profile])
+    changeset = cast(model, %{"profile" => %{"id" => 2}}, :profile, on_replace: :mark_as_invalid)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
+    assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
   end
 
   ## cast embeds many
 
   test "cast embeds_many with only new models" do
-    changeset = Changeset.cast(%Author{}, %{"posts" => [%{"title" => "hello"}]}, ~w(posts))
+    changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]}, :posts)
     [post_change] = changeset.changes.posts
     assert post_change.changes == %{title: "hello"}
     assert post_change.errors  == []
@@ -280,7 +264,7 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "cast embeds_many with map" do
-    changeset = Changeset.cast(%Author{}, %{"posts" => %{0 => %{"title" => "hello"}}}, ~w(posts))
+    changeset = cast(%Author{}, %{"posts" => %{0 => %{"title" => "hello"}}}, :posts)
     [post_change] = changeset.changes.posts
     assert post_change.changes == %{title: "hello"}
     assert post_change.errors  == []
@@ -290,8 +274,8 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "cast embeds_many with custom changeset" do
-    changeset = Changeset.cast(%Author{}, %{"posts" => [%{"title" => "hello"}]},
-                               [posts: :optional_changeset])
+    changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]},
+                     :posts, with: &Post.optional_changeset/2)
     [post_change] = changeset.changes.posts
     assert post_change.changes == %{title: "hello"}
     assert post_change.errors  == []
@@ -309,7 +293,7 @@ defmodule Ecto.EmbeddedTest do
               %{"id" => "2", "title" => nil},
               %{"id" => "3", "title" => "new name"}]
 
-    changeset = Changeset.cast(%Author{posts: posts}, %{"posts" => params}, ~w(posts))
+    changeset = cast(%Author{posts: posts}, %{"posts" => params}, :posts)
     [first, new, second, third] = changeset.changes.posts
 
     assert first.model.id == 1
@@ -335,79 +319,76 @@ defmodule Ecto.EmbeddedTest do
   test "cast embeds_many with invalid operation" do
     params = %{"posts" => [%{"id" => 1, "title" => "new"}]}
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
-      Changeset.cast(%Author{posts: []}, params, [posts: :set_action])
+      cast(%Author{posts: []}, params, :posts, with: &Post.set_action/2)
     end
   end
 
   test "cast embeds_many with invalid params" do
-    changeset = Changeset.cast(%Author{}, %{"posts" => "value"}, ~w(posts))
+    changeset = cast(%Author{}, %{"posts" => "value"}, :posts)
     assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.cast(%Author{}, %{"posts" => ["value"]}, ~w(posts))
+    changeset = cast(%Author{}, %{"posts" => ["value"]}, :posts)
     assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.cast(%Author{}, %{"posts" => nil}, ~w(posts))
+    changeset = cast(%Author{}, %{"posts" => nil}, :posts)
     assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, ~w(posts))
+    changeset = cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, :posts)
     assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
   end
 
   test "cast embeds_many without changes skips" do
-    changeset =
-      Changeset.cast(%Author{posts: [%Post{title: "hello", id: 1}]},
-                     %{"posts" => [%{"id" => 1}]}, ~w(posts))
+    changeset = cast(%Author{posts: [%Post{title: "hello", id: 1}]},
+                     %{"posts" => [%{"id" => 1}]}, :posts)
 
     refute Map.has_key?(changeset.changes, :posts)
   end
 
   test "cast embeds_many when required" do
-    changeset =
-      Changeset.cast(%Author{posts: []}, %{}, ~w(posts))
+    changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
+    assert changeset.required == [:posts]
     assert changeset.changes == %{}
     assert changeset.errors == []
 
-    changeset =
-      Changeset.cast(%Author{posts: []}, %{"posts" => nil}, ~w(posts))
+    changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.changes == %{}
     assert changeset.errors == [posts: "is invalid"]
   end
 
   test "cast embeds_many with :empty parameters" do
-    changeset = Changeset.cast(%Author{posts: []}, :empty, ~w(posts))
+    changeset = cast(%Author{posts: []}, :empty, :posts)
     assert changeset.changes == %{}
 
-    changeset = Changeset.cast(%Author{posts: [%Post{}]}, :empty, ~w(posts))
+    changeset = cast(%Author{posts: [%Post{}]}, :empty, :posts)
     assert changeset.changes == %{}
   end
 
   test "cast embeds_many with on_replace: :raise" do
-    model = %Author{raise_posts: [%Post{id: 1}]}
+    model = %Author{posts: [%Post{id: 1}]}
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.cast(model, %{"raise_posts" => []}, [:raise_posts])
+      cast(model, %{"posts" => []}, :posts, on_replace: :raise)
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.cast(model, %{"raise_posts" => [%{"id" => 2}]}, [:raise_posts])
+      cast(model, %{"posts" => [%{"id" => 2}]}, :posts, on_replace: :raise)
     end
   end
 
   test "cast embeds_many with on_replace: :mark_as_invalid" do
-    model = %Author{invalid_posts: [%Post{id: 1}]}
+    model = %Author{posts: [%Post{id: 1}]}
 
-    changeset = Changeset.cast(model, %{"invalid_posts" => []}, [:invalid_posts])
+    changeset = cast(model, %{"posts" => []}, :posts, on_replace: :mark_as_invalid)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.cast(model, %{"invalid_posts" => [%{"id" => 2}]},
-                               [:invalid_posts])
+    changeset = cast(model, %{"posts" => [%{"id" => 2}]}, :posts, on_replace: :mark_as_invalid)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
   end
 
@@ -483,35 +464,30 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "change embeds_one with on_replace: :raise" do
-    embed = Author.__schema__(:embed, :raise_profile)
-    embed_model = %Author{id: 1}
+    embed_model = %Profile{id: 1}
+    base_changeset = Changeset.change(%Author{profile: embed_model})
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(embed, nil, embed_model)
+      Changeset.put_embed(base_changeset, :profile, nil, on_replace: :raise)
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(embed, %Author{id: 2}, embed_model)
+      Changeset.put_embed(base_changeset, :profile, %Profile{id: 2}, on_replace: :raise)
     end
   end
 
   test "change embeds_one with on_replace: :mark_as_invalid" do
-    embed = Author.__schema__(:embed, :invalid_profile)
     embed_model = %Profile{id: 1}
+    base_changeset = Changeset.change(%Author{profile: embed_model})
 
-    assert :error == Relation.change(embed, nil, embed_model)
-    assert :error == Relation.change(embed, %Profile{id: 2}, embed_model)
-
-    base_changeset = Changeset.change(%Author{invalid_profile: embed_model})
-
-    changeset = Changeset.put_embed(base_changeset, :invalid_profile, nil)
+    changeset = Changeset.put_embed(base_changeset, :profile, nil, on_replace: :mark_as_invalid)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
+    assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.put_embed(base_changeset, :invalid_profile, %Profile{id: 2})
+    changeset = Changeset.put_embed(base_changeset, :profile, %Profile{id: 2}, on_replace: :mark_as_invalid)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
+    assert changeset.errors == [profile: "is invalid"]
     refute changeset.valid?
   end
 
@@ -563,35 +539,30 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "change embeds_many with on_replace: :raise" do
-    embed = Author.__schema__(:embed, :raise_posts)
     embed_model = %Post{id: 1}
+    base_changeset = Changeset.change(%Author{posts: [embed_model]})
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(embed, [], [embed_model])
+      Changeset.put_embed(base_changeset, :posts, [], on_replace: :raise)
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Relation.change(embed, [%Post{id: 2}], [embed_model])
+      Changeset.put_embed(base_changeset, :posts, [%Post{id: 2}], on_replace: :raise)
     end
   end
 
   test "change embeds_many with on_replace: :mark_as_invalid" do
-    embed = Author.__schema__(:embed, :invalid_posts)
     embed_model = %Post{id: 1}
+    base_changeset = Changeset.change(%Author{posts: [embed_model]})
 
-    assert :error == Relation.change(embed, [], [embed_model])
-    assert :error == Relation.change(embed, [%Post{id: 2}], [embed_model])
-
-    base_changeset = Changeset.change(%Author{invalid_posts: [embed_model]})
-
-    changeset = Changeset.put_embed(base_changeset, :invalid_posts, [])
+    changeset = Changeset.put_embed(base_changeset, :posts, [], on_replace: :mark_as_invalid)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.put_embed(base_changeset, :invalid_posts, [%Post{id: 2}])
+    changeset = Changeset.put_embed(base_changeset, :posts, [%Post{id: 2}], on_replace: :mark_as_invalid)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [posts: "is invalid"]
     refute changeset.valid?
   end
 
@@ -657,19 +628,20 @@ defmodule Ecto.EmbeddedTest do
   ## traverse_errors
 
   test "traverses changeset errors with embeds_one error" do
-    import Ecto.Changeset
     params = %{"name" => "hi", "post" => %{"title" => "hi"}}
     changeset =
       %Author{}
-      |> cast(params, ~w(), ~w(name post))
-      |> add_error(:name, "is invalid")
+      |> Changeset.cast(params, ~w(), ~w(name))
+      |> Changeset.cast_embed(:post)
+      |> Changeset.add_error(:name, "is invalid")
 
-    errors = traverse_errors(changeset, fn
+    errors = Changeset.traverse_errors(changeset, fn
       {err, opts} ->
         err
         |> String.replace("%{count}", to_string(opts[:count]))
         |> String.upcase()
-      err -> String.upcase(err)
+      err ->
+        String.upcase(err)
     end)
 
     assert errors == %{
@@ -679,20 +651,21 @@ defmodule Ecto.EmbeddedTest do
   end
 
   test "traverses changeset errors with embeds_many errors" do
-    import Ecto.Changeset
     params = %{"name" => "hi", "posts" => [%{"title" => "hi"},
                                            %{"title" => "valid"}]}
     changeset =
       %Author{}
-      |> cast(params, ~w(), ~w(name posts))
-      |> add_error(:name, "is invalid")
+      |> Changeset.cast(params, ~w(), ~w(name))
+      |> Changeset.cast_embed(:posts)
+      |> Changeset.add_error(:name, "is invalid")
 
-    errors = traverse_errors(changeset, fn
+    errors = Changeset.traverse_errors(changeset, fn
       {err, opts} ->
         err
         |> String.replace("%{count}", to_string(opts[:count]))
         |> String.upcase()
-      err -> String.upcase(err)
+      err ->
+        String.upcase(err)
     end)
 
     assert errors == %{

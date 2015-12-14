@@ -192,6 +192,10 @@ defmodule Ecto.Changeset.Relation do
     on_replace(relation, current)
   end
 
+  defp do_cast(%{on_cast: fun}, params, struct) when is_function(fun) do
+    {:ok, fun.(struct, params) |> put_new_action(:update)}
+  end
+
   defp do_cast(%{related: model, on_cast: fun}, params, struct) do
     {:ok, apply(model, fun, [struct, params])
           |> put_new_action(:update)}
