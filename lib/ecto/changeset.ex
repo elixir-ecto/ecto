@@ -514,10 +514,44 @@ defmodule Ecto.Changeset do
 
   ## Casting related
 
+  @doc """
+  Casts the given association.
+
+  The parameters for the given association will be retrieved
+  from `changeset.params` and the changeset function in the
+  association module will be invoked. The function to be
+  invoked may also be configured by using the `:with` option.
+
+  The changeset must have been previously `cast` using
+  `cast/4` before this function is invoked.
+
+  ## Options
+
+    * `:with` - the function to build the changeset from params.
+      Defaults to the changeset/2 function in the association module
+    * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
+  """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
   end
 
+  @doc """
+  Casts the given embed.
+
+  The parameters for the given embed will be retrieved
+  from `changeset.params` and the changeset function in the
+  embed module will be invoked. The function to be
+  invoked may also be configured by using the `:with` option.
+
+  The changeset must have been previously `cast` using
+  `cast/4` before this function is invoked.
+
+  ## Options
+
+    * `:with` - the function to build the changeset from params.
+      Defaults to the changeset/2 function in the embed module
+    * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
+  """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
   end
