@@ -89,7 +89,7 @@ defmodule Ecto.Repo.AssociationTest do
       %MyModel{}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
-    assert {:error, changeset} = TestRepo.insert(changeset)
+    assert {:error, changeset} = TestRepo.insert(%{changeset | valid?: true})
     assert_received {:rollback, ^changeset}
     refute changeset.valid?
   end
@@ -162,7 +162,7 @@ defmodule Ecto.Repo.AssociationTest do
       %MyModel{}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assoc, assoc)
-    assert {:error, changeset} = TestRepo.insert(changeset)
+    assert {:error, changeset} = TestRepo.insert(%{changeset | valid?: true})
     refute changeset.changes.id
     refute changeset.changes.assoc.changes.id
     refute changeset.changes.assoc.changes.my_model_id
@@ -320,7 +320,7 @@ defmodule Ecto.Repo.AssociationTest do
       %MyModel{id: 1}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
-    assert {:error, changeset} = TestRepo.update(changeset)
+    assert {:error, changeset} = TestRepo.update(%{changeset | valid?: true})
     assert_received {:rollback, ^changeset}
     refute changeset.valid?
   end
@@ -373,7 +373,7 @@ defmodule Ecto.Repo.AssociationTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
 
-    assert {:error, changeset} = TestRepo.update(changeset)
+    assert {:error, changeset} = TestRepo.update(%{changeset | valid?: true})
     refute changeset.changes.assoc.changes.sub_assoc.changes.id
     refute changeset.changes.assoc.changes.sub_assoc.changes.my_assoc_id
     refute changeset.valid?

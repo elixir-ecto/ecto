@@ -132,7 +132,6 @@ defmodule Ecto.Changeset.Relation do
   defp apply_changes(%Changeset{action: :delete}), do: nil
   defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
-
   @doc """
   Loads the relation with the given model.
 

@@ -422,9 +422,6 @@ defmodule Ecto.Changeset do
        {:missing, current} ->
          {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
          {changes, errors, valid?}
-       :skip ->
-         {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
-         {changes, errors, valid?}
        :invalid ->
          {changes, [{key, "is invalid"}|errors], false}
      end}
@@ -469,8 +466,8 @@ defmodule Ecto.Changeset do
       {:ok, value} ->
         case Relation.cast(relation, value, current) do
           :error -> :invalid
-          {:ok, _, _, true} -> :skip
-          {:ok, ^current, _, false} -> :skip
+          {:ok, _, _, true} -> {:missing, current}
+          {:ok, ^current, _, false} -> {:missing, current}
           {:ok, result, relation_valid?, false} -> {:ok, result, valid? and relation_valid?}
         end
       :error ->
@@ -482,7 +479,7 @@ defmodule Ecto.Changeset do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
         case Ecto.Type.cast(type, value) do
-          {:ok, ^current} -> :skip
+          {:ok, ^current} -> {:missing, current}
           {:ok, value} -> {:ok, value, valid?}
           :error -> :invalid
         end
@@ -855,6 +852,11 @@ defmodule Ecto.Changeset do
   The association may either be the association struct or a
   changeset for the given association.
 
+  If the association has no changes, it will be skipped.
+  If the association is invalid, the changeset will be marked
+  as invalid. If the given value is not an association, it
+  will raise.
+
   ## Options
 
     * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
@@ -868,6 +870,11 @@ defmodule Ecto.Changeset do
 
   The embed may either be the embed struct or a changeset
   for the given embed.
+
+  If the embed has no changes, it will be skipped.
+  If the embed is invalid, the changeset will be marked
+  as invalid. If the given value is not an embed, it
+  will raise.
 
   ## Options
 
@@ -888,8 +895,11 @@ defmodule Ecto.Changeset do
     relation = %{relation | on_replace: opts[:on_replace] || relation.on_replace}
 
     case Relation.change(relation, model, value, Map.get(model, name)) do
-      {:ok, change, _, _} ->
-        put_in changeset.changes[name], change
+      {:ok, change, _, true} ->
+        changeset
+      {:ok, change, relation_valid?, false} ->
+        %{changeset | changes: Map.put(changes, name, change),
+                      valid?: changeset.valid? && relation_valid?}
       :error ->
         %{changeset | errors: [{name, "is invalid"} | changeset.errors], valid?: false}
     end

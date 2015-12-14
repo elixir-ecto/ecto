@@ -7,8 +7,13 @@ defmodule Ecto.Adapter do
   use Behaviour
 
   @type t :: module
-  @type query_meta :: map
-  @type model_meta :: %{source: {prefix :: binary, table :: binary}, model: atom, context: term}
+
+  @typedoc "Ecto.Query fields that are orthogonal to the generated query"
+  @type query_meta :: %{prefix: binary | nil, sources: tuple, assocs: term, preloads: term, select: term}
+
+  @typedoc "Schema metadata fields"
+  @type schema_meta :: %{source: {prefix :: binary | nil, table :: binary}, model: atom, context: term}
+
   @type fields :: Keyword.t
   @type filters :: Keyword.t
   @type constraints :: Keyword.t
@@ -152,7 +157,7 @@ defmodule Ecto.Adapter do
   to a primary key that does not support assignment. In this case, `value`
   will be a non `nil` value.
   """
-  defcallback insert(repo, model_meta, fields, autogenerate_id, returning, options) ::
+  defcallback insert(repo, schema_meta, fields, autogenerate_id, returning, options) ::
                     {:ok, Keyword.t} | {:invalid, constraints} | no_return
 
   @doc """
@@ -176,7 +181,7 @@ defmodule Ecto.Adapter do
   to a primary key that does not support assignment. In this case, `value`
   will be a non `nil` value.
   """
-  defcallback update(repo, model_meta, fields, filters, autogenerate_id, returning, options) ::
+  defcallback update(repo, schema_meta, fields, filters, autogenerate_id, returning, options) ::
                     {:ok, Keyword.t} | {:invalid, constraints} |
                     {:error, :stale} | no_return
 
@@ -197,7 +202,7 @@ defmodule Ecto.Adapter do
 
   If the value is `nil`, it means there is no autogenerate primary key.
   """
-  defcallback delete(repo, model_meta, filters, autogenerate_id, options) ::
+  defcallback delete(repo, schema_meta, filters, autogenerate_id, options) ::
                      {:ok, Keyword.t} | {:invalid, constraints} |
                      {:error, :stale} | no_return
 end

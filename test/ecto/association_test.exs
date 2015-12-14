@@ -1140,7 +1140,7 @@ defmodule Ecto.AssociationTest do
     empty_update_changeset = Changeset.change(%Profile{name: "michal"})
 
     changeset = Changeset.put_assoc(base_changeset, :profile, empty_update_changeset)
-    assert %Ecto.Changeset{} = changeset.changes.profile
+    refute Map.has_key?(changeset.changes, :profile)
   end
 
   test "get_field/3, fetch_field/2 with assocs" do
