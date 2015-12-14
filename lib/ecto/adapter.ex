@@ -4,8 +4,6 @@ defmodule Ecto.Adapter do
   implement.
   """
 
-  use Behaviour
-
   @type t :: module
 
   @typedoc "Ecto.Query fields that are orthogonal to the generated query"
@@ -28,7 +26,7 @@ defmodule Ecto.Adapter do
   @doc """
   The callback invoked in case the adapter needs to inject code.
   """
-  defmacrocallback __before_compile__(Macro.Env.t) :: Macro.t
+  @macrocallback __before_compile__(Macro.Env.t) :: Macro.t
 
   ## Types
 
@@ -56,7 +54,7 @@ defmodule Ecto.Adapter do
       def load(type, value), do: Ecto.Type.load(type, value, &load/2)
 
   """
-  defcallback load(Ecto.Type.t, term) :: {:ok, term} | :error
+  @callback load(Ecto.Type.t, term) :: {:ok, term} | :error
 
   @doc """
   Called for every known Ecto type when dumping data to the adapter.
@@ -82,14 +80,14 @@ defmodule Ecto.Adapter do
       def dump(type, value), do: Ecto.Type.dump(type, value, &dump/2)
 
   """
-  defcallback dump(Ecto.Type.t, term) :: {:ok, term} | :error
+  @callback dump(Ecto.Type.t, term) :: {:ok, term} | :error
 
   @doc """
   Called every time an id is needed for an embedded model.
 
   It receives the `Ecto.Embedded` struct.
   """
-  defcallback embed_id(Ecto.Embedded.t) :: String.t
+  @callback embed_id(Ecto.Embedded.t) :: String.t
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`.
@@ -104,7 +102,7 @@ defmodule Ecto.Adapter do
   adapters make sure the adapter application is started by calling
   `Application.ensure_all_started/1`.
   """
-  defcallback start_link(repo, options) ::
+  @callback start_link(repo, options) ::
               {:ok, pid} | {:error, {:already_started, pid}} | {:error, term}
 
   @doc """
@@ -113,14 +111,14 @@ defmodule Ecto.Adapter do
   This callback must be called by the process that called
   `start_link/2`. Therefore, it is useful for scripts.
   """
-  defcallback stop(repo, pid, timeout) :: :ok
+  @callback stop(repo, pid, timeout) :: :ok
 
   @doc """
   Commands invoked to prepare a query for `all`, `update_all` and `delete_all`.
 
   The returned result is given to `execute/6`.
   """
-  defcallback prepare(:all | :update_all | :delete_all, query :: Ecto.Query.t) ::
+  @callback prepare(:all | :update_all | :delete_all, query :: Ecto.Query.t) ::
               {:cache, prepared} | {:nocache, prepared}
 
   @doc """
@@ -138,7 +136,7 @@ defmodule Ecto.Adapter do
   expected Ecto type. The `preprocess` function will be nil if no
   result set is expected from the query.
   """
-  defcallback execute(repo, query_meta :: map, prepared, params :: list(), preprocess | nil, options) ::
+  @callback execute(repo, query_meta :: map, prepared, params :: list(), preprocess | nil, options) ::
               {integer, [[term]] | nil} | no_return
 
   @doc """
@@ -157,7 +155,7 @@ defmodule Ecto.Adapter do
   to a primary key that does not support assignment. In this case, `value`
   will be a non `nil` value.
   """
-  defcallback insert(repo, schema_meta, fields, autogenerate_id, returning, options) ::
+  @callback insert(repo, schema_meta, fields, autogenerate_id, returning, options) ::
                     {:ok, Keyword.t} | {:invalid, constraints} | no_return
 
   @doc """
@@ -181,7 +179,7 @@ defmodule Ecto.Adapter do
   to a primary key that does not support assignment. In this case, `value`
   will be a non `nil` value.
   """
-  defcallback update(repo, schema_meta, fields, filters, autogenerate_id, returning, options) ::
+  @callback update(repo, schema_meta, fields, filters, autogenerate_id, returning, options) ::
                     {:ok, Keyword.t} | {:invalid, constraints} |
                     {:error, :stale} | no_return
 
@@ -202,7 +200,7 @@ defmodule Ecto.Adapter do
 
   If the value is `nil`, it means there is no autogenerate primary key.
   """
-  defcallback delete(repo, schema_meta, filters, autogenerate_id, options) ::
+  @callback delete(repo, schema_meta, filters, autogenerate_id, options) ::
                      {:ok, Keyword.t} | {:invalid, constraints} |
                      {:error, :stale} | no_return
 end

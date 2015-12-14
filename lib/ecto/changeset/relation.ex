@@ -1,7 +1,6 @@
 defmodule Ecto.Changeset.Relation do
   @moduledoc false
 
-  use Behaviour
   alias Ecto.Changeset
   alias Ecto.Association.NotLoaded
 
@@ -11,20 +10,20 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Updates the changeset accordingly to the relation's on_replace strategy.
   """
-  defcallback on_replace(t, Changeset.t) :: {:update | :delete, Changeset.t}
+  @callback on_replace(t, Changeset.t) :: {:update | :delete, Changeset.t}
 
   @doc """
   The action to be performed when the relation is modified given the changeset
   on the repo insert/update/delete.
   """
-  defcallback on_repo_action(t, Changeset.t, Ecto.Schema.t, Ecto.Adapter.t, Ecto.Repo.t,
+  @callback on_repo_action(t, Changeset.t, Ecto.Schema.t, Ecto.Adapter.t, Ecto.Repo.t,
                              repo_action :: :insert | :update | :delete, Keyword.t) ::
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Builds the related model.
   """
-  defcallback build(t) :: Ecto.Schema.t
+  @callback build(t) :: Ecto.Schema.t
 
   @doc """
   Returns empty container for relation.

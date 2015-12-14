@@ -3,8 +3,6 @@ defmodule Ecto.Pool do
   Behaviour for using a pool of connections.
   """
 
-  use Behaviour
-
   @typedoc """
   A pool process
   """
@@ -46,7 +44,7 @@ defmodule Ecto.Pool do
   is  {:already_started, pid}}` a pool with the same name has already been
   started.
   """
-  defcallback start_link(module, opts) ::
+  @callback start_link(module, opts) ::
     {:ok, pid} | {:error, any} when opts: Keyword.t
 
   @doc """
@@ -63,7 +61,7 @@ defmodule Ecto.Pool do
   Returns `{:error, :noproc}` if the pool is not alive and
   `{:error, :noconnect}` if a connection is not available.
   """
-  defcallback checkout(t, timeout) ::
+  @callback checkout(t, timeout) ::
     {:ok, worker, conn, queue_time} |
     {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
 
@@ -73,7 +71,7 @@ defmodule Ecto.Pool do
   Called when the top level `run/4` finishes, if `break/2` was not called
   inside the fun.
   """
-  defcallback checkin(t, worker, timeout) :: :ok when worker: any
+  @callback checkin(t, worker, timeout) :: :ok when worker: any
 
   @doc """
   Break the current transaction or run.
@@ -81,7 +79,7 @@ defmodule Ecto.Pool do
   Called when the function has failed and the connection should no longer be
   available to to the calling process.
   """
-  defcallback break(t, worker, timeout) :: :ok when worker: any
+  @callback break(t, worker, timeout) :: :ok when worker: any
 
   @doc """
   Open a transaction with a connection from the pool.
@@ -97,7 +95,7 @@ defmodule Ecto.Pool do
   Returns `{:error, :noproc}` if the pool is not alive and
   `{:error, :noconnect}` if a connection is not available.
   """
-  defcallback open_transaction(t, timeout) ::
+  @callback open_transaction(t, timeout) ::
     {:ok, worker, conn, queue_time} |
     {:error, :noproc | :noconnect} when worker: any, conn: {module, pid}
 
@@ -108,7 +106,7 @@ defmodule Ecto.Pool do
   Called once the transaction at `depth` `1` is finished, if the transaction
   is not broken with `break/2`.
   """
-  defcallback close_transaction(t, worker, timeout) :: :ok when worker: any
+  @callback close_transaction(t, worker, timeout) :: :ok when worker: any
 
   @doc """
   Runs a fun using a connection from a pool.

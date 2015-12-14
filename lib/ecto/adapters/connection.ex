@@ -9,15 +9,13 @@ defmodule Ecto.Adapters.Connection do
   then be used with all the different pools provided by Ecto.
   """
 
-  use Behaviour
-
   @doc """
   Connects to the underlying database.
 
   Should return a process which is linked to
   the caller process or an error.
   """
-  defcallback connect(Keyword.t) :: {:ok, pid} | {:error, term}
+  @callback connect(Keyword.t) :: {:ok, pid} | {:error, term}
 
   @doc """
   Executes the connect in the given module, ensuring the repository's

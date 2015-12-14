@@ -84,8 +84,6 @@ defmodule Ecto.Type do
 
   import Kernel, except: [match?: 2]
 
-  use Behaviour
-
   @typedoc "An Ecto type, primitive or custom."
   @type t         :: primitive | custom
 
@@ -112,7 +110,7 @@ defmodule Ecto.Type do
   Note this function is not required to return Ecto primitive
   types, the type is only required to be known by the adapter.
   """
-  defcallback type :: t
+  @callback type :: t
 
   @doc """
   Casts the given input to the custom type.
@@ -126,7 +124,7 @@ defmodule Ecto.Type do
     2. When passing arguments to `Ecto.Query`
 
   """
-  defcallback cast(term) :: {:ok, term} | :error
+  @callback cast(term) :: {:ok, term} | :error
 
   @doc """
   Loads the given term into a custom type.
@@ -136,7 +134,7 @@ defmodule Ecto.Type do
   the `dump/1` function is able to convert the returned value back
   into an Ecto native type.
   """
-  defcallback load(term) :: {:ok, term} | :error
+  @callback load(term) :: {:ok, term} | :error
 
   @doc """
   Dumps the given term into an Ecto native type.
@@ -144,7 +142,7 @@ defmodule Ecto.Type do
   This callback is called with any term that was stored in the struct
   and it needs to validate them and convert it to an Ecto native type.
   """
-  defcallback dump(term) :: {:ok, term} | :error
+  @callback dump(term) :: {:ok, term} | :error
 
   ## Functions
 

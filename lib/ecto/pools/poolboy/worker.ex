@@ -2,7 +2,6 @@ defmodule Ecto.Pools.Poolboy.Worker do
   @moduledoc false
 
   use GenServer
-  use Behaviour
   require Logger
   alias Ecto.Adapters.Connection
 

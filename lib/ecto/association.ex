@@ -26,7 +26,6 @@ defmodule Ecto.Association do
 
   @type t :: %{__struct__: atom, cardinality: :one | :many,
                field: atom, owner_key: atom, owner: atom}
-  use Behaviour
 
   @doc """
   Builds the association struct.
@@ -45,7 +44,7 @@ defmodule Ecto.Association do
     * `:owner_key` - the key in the owner with the association value
 
   """
-  defcallback struct(module, field :: atom, opts :: Keyword.t) :: t
+  @callback struct(module, field :: atom, opts :: Keyword.t) :: t
 
   @doc """
   Builds a model for the given association.
@@ -55,7 +54,7 @@ defmodule Ecto.Association do
 
   Invoked by `Ecto.build_assoc/3`.
   """
-  defcallback build(t, Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
+  @callback build(t, Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
 
   @doc """
   Returns an association join query.
@@ -75,7 +74,7 @@ defmodule Ecto.Association do
   This callback is invoked when `join: assoc(p, :comments)` is used
   inside queries.
   """
-  defcallback joins_query(t) :: Ecto.Query.t
+  @callback joins_query(t) :: Ecto.Query.t
 
   @doc """
   Returns the association query.
@@ -86,7 +85,7 @@ defmodule Ecto.Association do
 
   This callback is used by `Ecto.assoc/2`.
   """
-  defcallback assoc_query(t, values :: [term]) :: Ecto.Query.t
+  @callback assoc_query(t, values :: [term]) :: Ecto.Query.t
 
   @doc """
   Returns the association query on top of the given query.
@@ -97,12 +96,12 @@ defmodule Ecto.Association do
 
   This callback is used by preloading.
   """
-  defcallback assoc_query(t, Ecto.Query.t, values :: [term]) :: Ecto.Query.t
+  @callback assoc_query(t, Ecto.Query.t, values :: [term]) :: Ecto.Query.t
 
   @doc """
   Returns information used by the preloader.
   """
-  defcallback preload_info(t) ::
+  @callback preload_info(t) ::
               {:assoc, t, atom} | {:through, t, [atom]}
 
   @doc """

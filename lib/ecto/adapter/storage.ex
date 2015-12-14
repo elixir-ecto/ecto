@@ -3,8 +3,6 @@ defmodule Ecto.Adapter.Storage  do
   Specifies the adapter storage API.
   """
 
-  use Behaviour
-
   @doc """
   Create the storage in the data store and return `:ok` if it was created
   successfully.
@@ -19,7 +17,7 @@ defmodule Ecto.Adapter.Storage  do
                hostname: 'localhost')
 
   """
-  defcallback storage_up(Keyword.t) :: :ok | {:error, :already_up} | {:error, term}
+  @callback storage_up(Keyword.t) :: :ok | {:error, :already_up} | {:error, term}
 
   @doc """
   Drop the storage in the data store and return `:ok` if it was dropped
@@ -35,5 +33,5 @@ defmodule Ecto.Adapter.Storage  do
                  hostname: 'localhost')
 
   """
-  defcallback storage_down(Keyword.t) :: :ok | {:error, :already_down} | {:error, term}
+  @callback storage_down(Keyword.t) :: :ok | {:error, :already_down} | {:error, term}
 end

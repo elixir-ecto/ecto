@@ -53,7 +53,6 @@ defmodule Ecto.Repo do
 
   """
 
-  use Behaviour
   @type t :: module
 
   @doc false
@@ -194,17 +193,17 @@ defmodule Ecto.Repo do
   @doc """
   Returns the adapter tied to the repository.
   """
-  defcallback __adapter__ :: Ecto.Adapter.t
+  @callback __adapter__ :: Ecto.Adapter.t
 
   @doc """
   Simply returns true to mark this module as a repository.
   """
-  defcallback __repo__ :: true
+  @callback __repo__ :: true
 
   @doc """
   Returns the pool information this repository should run under.
   """
-  defcallback __pool__ :: {pool :: module, name :: atom,
+  @callback __pool__ :: {pool :: module, name :: atom,
                            pool_timeout :: timeout, op_timeout :: timeout}
 
   @doc """
@@ -212,12 +211,12 @@ defmodule Ecto.Repo do
 
   The name can be configured with the `:query_cache` option.
   """
-  defcallback __query_cache__ :: atom
+  @callback __query_cache__ :: atom
 
   @doc """
   Returns the adapter configuration stored in the `:otp_app` environment.
   """
-  defcallback config() :: Keyword.t
+  @callback config() :: Keyword.t
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`
@@ -226,7 +225,7 @@ defmodule Ecto.Repo do
   Returns `{:error, {:already_started, pid}}` if the repo already
   started or `{:error, term}` in case anything else goes wrong.
   """
-  defcallback start_link() :: {:ok, pid} |
+  @callback start_link() :: {:ok, pid} |
                               {:error, {:already_started, pid}} |
                               {:error, term}
 
@@ -236,7 +235,7 @@ defmodule Ecto.Repo do
   This callback must be called by the process that called
   `start_link/2`. Therefore, it is useful for scripts.
   """
-  defcallback stop(pid, timeout) :: :ok
+  @callback stop(pid, timeout) :: :ok
 
   @doc """
   Fetches a single model from the data store where the primary key matches the
@@ -254,7 +253,7 @@ defmodule Ecto.Repo do
     * `:log` - When false, does not log the query
 
   """
-  defcallback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Similar to `get/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -268,7 +267,7 @@ defmodule Ecto.Repo do
     * `:log` - When false, does not log the query
 
   """
-  defcallback get!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Fetches a single result from the query.
@@ -288,7 +287,7 @@ defmodule Ecto.Repo do
       MyRepo.get_by(Post, title: "My post")
 
   """
-  defcallback get_by(Ecto.Queryable.t, Keyword.t | Map.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get_by(Ecto.Queryable.t, Keyword.t | Map.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Similar to `get_by/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -306,7 +305,7 @@ defmodule Ecto.Repo do
       MyRepo.get_by!(Post, title: "My post")
 
   """
-  defcallback get_by!(Ecto.Queryable.t, Keyword.t | Map.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get_by!(Ecto.Queryable.t, Keyword.t | Map.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Fetches a single result from the query.
@@ -320,7 +319,7 @@ defmodule Ecto.Repo do
     * `:log` - When false, does not log the query
 
   """
-  defcallback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Similar to `one/2` but raises `Ecto.NoResultsError` if no record was found.
@@ -332,7 +331,7 @@ defmodule Ecto.Repo do
     * `:log` - When false, does not log the query
 
   """
-  defcallback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Preloads all associations on the given model or models.
@@ -351,7 +350,7 @@ defmodule Ecto.Repo do
       posts = Repo.preload posts, comments: from(c in Comment, order_by: c.published_at)
 
   """
-  defcallback preload([Ecto.Schema.t] | Ecto.Schema.t, preloads :: term) ::
+  @callback preload([Ecto.Schema.t] | Ecto.Schema.t, preloads :: term) ::
                       [Ecto.Schema.t] | Ecto.Schema.t
 
   @doc """
@@ -374,7 +373,7 @@ defmodule Ecto.Repo do
            select: p.title
       MyRepo.all(query)
   """
-  defcallback all(Ecto.Query.t, Keyword.t) :: [Ecto.Schema.t] | no_return
+  @callback all(Ecto.Query.t, Keyword.t) :: [Ecto.Schema.t] | no_return
 
   @doc """
   Updates all entries matching the given query with the given values.
@@ -410,7 +409,7 @@ defmodule Ecto.Repo do
       from(p in Post, where: p.id < 10, update: [set: [title: "New title"]])
       |> MyRepo.update_all([])
   """
-  defcallback update_all(Macro.t, Keyword.t, Keyword.t) :: {integer, nil} | no_return
+  @callback update_all(Macro.t, Keyword.t, Keyword.t) :: {integer, nil} | no_return
 
   @doc """
   Deletes all entries matching the given query.
@@ -437,7 +436,7 @@ defmodule Ecto.Repo do
 
       from(p in Post, where: p.id < 10) |> MyRepo.delete_all
   """
-  defcallback delete_all(Ecto.Queryable.t, Keyword.t) :: {integer, nil} | no_return
+  @callback delete_all(Ecto.Queryable.t, Keyword.t) :: {integer, nil} | no_return
 
   @doc """
   Inserts a model or a changeset.
@@ -473,7 +472,7 @@ defmodule Ecto.Repo do
       end
 
   """
-  defcallback insert(Ecto.Schema.t | Ecto.Changeset.t, Keyword.t) ::
+  @callback insert(Ecto.Schema.t | Ecto.Changeset.t, Keyword.t) ::
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
@@ -521,7 +520,7 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
-  defcallback update(Ecto.Changeset.t, Keyword.t) ::
+  @callback update(Ecto.Changeset.t, Keyword.t) ::
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
@@ -554,7 +553,7 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
-  defcallback insert_or_update(Ecto.Changeset.t, Keyword.t) ::
+  @callback insert_or_update(Ecto.Changeset.t, Keyword.t) ::
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
@@ -587,30 +586,30 @@ defmodule Ecto.Repo do
       end
 
   """
-  defcallback delete(Ecto.Schema.t, Keyword.t) ::
+  @callback delete(Ecto.Schema.t, Keyword.t) ::
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Same as `insert/2` but returns the model or raises if the changeset is invalid.
   """
-  defcallback insert!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
+  @callback insert!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
 
   @doc """
   Same as `update/2` but returns the model or raises if the changeset is invalid.
   """
-  defcallback update!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
+  @callback update!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
 
   @doc """
   Same as `insert_or_update/2` but returns the model or raises if the changeset
   is invalid.
   """
-  defcallback insert_or_update!(Ecto.Changeset.t, Keyword.t) ::
+  @callback insert_or_update!(Ecto.Changeset.t, Keyword.t) ::
               Ecto.Schema.t | no_return
 
   @doc """
   Same as `delete/2` but returns the model or raises if the changeset is invalid.
   """
-  defcallback delete!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
+  @callback delete!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
 
   @doc """
   Runs the given function inside a transaction.
@@ -655,14 +654,14 @@ defmodule Ecto.Repo do
       end)
 
   """
-  defcallback transaction(Keyword.t, fun) :: {:ok, any} | {:error, any}
+  @callback transaction(Keyword.t, fun) :: {:ok, any} | {:error, any}
 
   @doc """
   Rolls back the current transaction.
 
   The transaction will return the value given as `{:error, value}`.
   """
-  defcallback rollback(any) :: no_return
+  @callback rollback(any) :: no_return
 
   @doc ~S"""
   Enables logging of adapter actions such as sending queries to the database.
@@ -681,5 +680,5 @@ defmodule Ecto.Repo do
       end
 
   """
-  defcallback log(Ecto.LogEntry.t) :: any
+  @callback log(Ecto.LogEntry.t) :: any
 end

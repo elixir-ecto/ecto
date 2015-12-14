@@ -3,8 +3,6 @@ defmodule Ecto.Adapter.Transaction  do
   Specifies the adapter transactions API.
   """
 
-  use Behaviour
-
   @doc """
   Runs the given function inside a transaction. Returns `{:ok, value}` if the
   transaction was successful where `value` is the value return by the function
@@ -13,7 +11,7 @@ defmodule Ecto.Adapter.Transaction  do
 
   See `Ecto.Repo.transaction/1`.
   """
-  defcallback transaction(Ecto.Repo.t, Keyword.t, fun) :: {:ok, any} | {:error, any}
+  @callback transaction(Ecto.Repo.t, Keyword.t, fun) :: {:ok, any} | {:error, any}
 
   @doc """
   Rolls back the current transaction. The transaction will return the value
@@ -21,5 +19,5 @@ defmodule Ecto.Adapter.Transaction  do
 
   See `Ecto.Repo.rollback/1`.
   """
-  defcallback rollback(Ecto.Repo.t, any) :: no_return
+  @callback rollback(Ecto.Repo.t, any) :: no_return
 end
