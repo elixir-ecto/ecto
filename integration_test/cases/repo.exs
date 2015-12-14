@@ -185,8 +185,8 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.update!(cs_ok)
 
     cs_stale = optimistic_lock(base_post, :lock_version)
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.update!(cs_stale) end
-    assert_raise Ecto.StaleModelError, fn -> TestRepo.delete!(cs_stale) end
+    assert_raise Ecto.StaleEntryError, fn -> TestRepo.update!(cs_stale) end
+    assert_raise Ecto.StaleEntryError, fn -> TestRepo.delete!(cs_stale) end
   end
 
   @tag :unique_constraint

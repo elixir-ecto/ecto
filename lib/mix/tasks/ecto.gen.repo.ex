@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     end
 
     config      = Mix.Project.config
-    underscored = Mix.Utils.underscore(inspect(repo))
+    underscored = Macro.underscore(inspect(repo))
 
     base = Path.basename(underscored)
     file = Path.join("lib", underscored) <> ".ex"

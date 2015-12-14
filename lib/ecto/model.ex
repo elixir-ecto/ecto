@@ -29,9 +29,6 @@ defmodule Ecto.Model do
       import Ecto.Model
       import Ecto.Changeset
       import Ecto.Query, only: [from: 2]
-
-      use Ecto.Model.OptimisticLock
-      use Ecto.Model.Callbacks
     end
   end
 

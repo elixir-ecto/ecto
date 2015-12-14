@@ -4,7 +4,6 @@ defmodule Ecto.Repo.Schema do
   @moduledoc false
 
   alias Ecto.Query.Planner
-  alias Ecto.Model.Callbacks
   alias Ecto.Changeset
 
   @doc """
@@ -66,10 +65,8 @@ defmodule Ecto.Repo.Schema do
     changeset = update_changeset(changeset, :insert, repo)
     changeset = insert_changes(struct, fields, embeds, assocs, changeset)
 
-    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, prepare,
-                        ~w(before_insert after_insert)a, fn ->
-      changeset = run_prepare(changeset, prepare)
-      user_changeset = Callbacks.__apply__(model, :before_insert, changeset)
+    wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
+      user_changeset = run_prepare(changeset, prepare)
 
       changeset = Ecto.Embedded.prepare(user_changeset, embeds, adapter, :insert)
       {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
@@ -84,7 +81,7 @@ defmodule Ecto.Repo.Schema do
           changeset
           |> process_embeds(embed_changes, adapter, repo, opts)
           |> process_assocs(assoc_changes, adapter, repo, opts)
-          |> maybe_process_after(user_changeset, model, :after_insert)
+          |> get_model_if_ok(user_changeset)
         {:invalid, constraints} ->
           {:error, constraints_to_errors(user_changeset, :insert, constraints)}
       end
@@ -102,23 +99,10 @@ defmodule Ecto.Repo.Schema do
     do_update(repo, adapter, changeset, opts)
   end
 
-  def update(repo, adapter, %{__struct__: model} = struct, opts) when is_list(opts) do
-    IO.puts :stderr, "warning: giving a struct to #{inspect repo}.update/2 is deprecated. " <>
-                     "Ecto is unable to properly track changes when a struct is given and " <>
-                     "an Ecto.Changeset must be given instead\n#{Exception.format_stacktrace}"
-
-    changes =
-      struct
-      |> Map.take(model.__schema__(:fields))
-      |> Map.drop(model.__schema__(:primary_key))
-      |> Map.drop(model.__schema__(:embeds))
-
-    changeset =
-      struct
-      |> Ecto.Changeset.change()
-      |> Map.put(:changes, changes)
-
-    do_update(repo, adapter, changeset, opts)
+  def update(repo, _adapter, _struct, opts) when is_list(opts) do
+    raise ArgumentError, "giving a struct to #{inspect repo}.update/2 is not supported. " <>
+                         "Ecto is unable to properly track changes when a struct is given, " <>
+                         "an Ecto.Changeset must be given instead"
   end
 
   defp do_update(repo, adapter, %Changeset{valid?: true, prepare: prepare} = changeset, opts) do
@@ -135,10 +119,8 @@ defmodule Ecto.Repo.Schema do
     changeset = update_changeset(changeset, :update, repo)
 
     if changeset.changes != %{} or opts[:force] do
-      wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, prepare,
-                          ~w(before_update after_update)a, fn ->
-        changeset = run_prepare(changeset, prepare)
-        user_changeset = Callbacks.__apply__(model, :before_update, changeset)
+      wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
+        user_changeset = run_prepare(changeset, prepare)
 
         changeset = Ecto.Embedded.prepare(user_changeset, embeds, adapter, :update)
         {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
@@ -157,7 +139,7 @@ defmodule Ecto.Repo.Schema do
             changeset
             |> process_embeds(embed_changes, adapter, repo, opts)
             |> process_assocs(assoc_changes, adapter, repo, opts)
-            |> maybe_process_after(user_changeset, model, :after_update)
+            |> get_model_if_ok(user_changeset)
           {:invalid, constraints} ->
             {:error, constraints_to_errors(user_changeset, :update, constraints)}
         end
@@ -224,11 +206,9 @@ defmodule Ecto.Repo.Schema do
     changeset = %{changeset | changes: %{}}
     autogen   = get_autogenerate_id(changeset, model)
 
-    wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, prepare,
-                        ~w(before_delete after_delete)a, fn ->
-      changeset = run_prepare(changeset, prepare)
+    wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
+      user_changeset = run_prepare(changeset, prepare)
       delete_assocs(changeset, repo, model, assocs)
-      user_changeset = Callbacks.__apply__(model, :before_delete, changeset)
 
       # We don't prepare the changeset on delete, so we just copy the user one
       changeset = user_changeset
@@ -249,7 +229,7 @@ defmodule Ecto.Repo.Schema do
           # the embed values in the model. Also note we don't
           # process associations because they are handled externally.
           _ = process_embeds(changeset, embeds, adapter, repo, opts)
-          maybe_process_after({:ok, changeset}, user_changeset, model, :after_delete)
+          {:ok, changeset.model}
         {:invalid, constraints} ->
           {:error, constraints_to_errors(user_changeset, :delete, constraints)}
       end
@@ -300,7 +280,7 @@ defmodule Ecto.Repo.Schema do
       {:invalid, _} = constraints ->
         constraints
       {:error, :stale} ->
-        raise Ecto.StaleModelError, model: changeset.model, action: action
+        raise Ecto.StaleEntryError, model: changeset.model, action: action
     end
   end
 
@@ -399,10 +379,6 @@ defmodule Ecto.Repo.Schema do
   defp delete_assocs(%{model: model}, repo, struct, assocs) do
     for assoc_name <- assocs do
       case struct.__schema__(:association, assoc_name) do
-        # TODO: fetch_and_delete is deprecated. Removed by 2.0
-        %{on_delete: :fetch_and_delete, field: field} ->
-          assocs = repo.all Ecto.assoc(model, field)
-          Enum.each assocs, &repo.delete!(&1)
         %{on_delete: :delete_all, field: field} ->
           repo.delete_all Ecto.assoc(model, field)
         %{on_delete: :nilify_all, related_key: related_key, field: field} ->
@@ -416,11 +392,11 @@ defmodule Ecto.Repo.Schema do
     :ok
   end
 
-  defp maybe_process_after({:ok, changeset}, _user_changeset, model, callback) do
-    {:ok, Callbacks.__apply__(model, callback, changeset).model}
+  defp get_model_if_ok({:ok, %{model: model}}, _user_changeset) do
+    {:ok, model}
   end
 
-  defp maybe_process_after({:error, %{changes: changes}}, user_changeset, _model, _callback) do
+  defp get_model_if_ok({:error, %{changes: changes}}, user_changeset) do
     {:error, %{user_changeset | valid?: false, changes: changes}}
   end
 
@@ -469,8 +445,8 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp wrap_in_transaction(repo, adapter, model, opts, embeds, assocs, prepare, callbacks, fun) do
-    if transaction_required?(model, embeds, assocs, prepare, callbacks) and
+  defp wrap_in_transaction(repo, adapter, opts, assocs, prepare, fun) do
+    if (assocs != [] or prepare != []) and
        Keyword.get(opts, :skip_transaction) != true and
        function_exported?(adapter, :transaction, 3) do
       adapter.transaction(repo, opts, fn ->
@@ -482,10 +458,5 @@ defmodule Ecto.Repo.Schema do
     else
       fun.()
     end
-  end
-
-  defp transaction_required?(model, embeds, assocs, prepare, callbacks) do
-    embeds != [] or assocs != [] or prepare != [] or
-      Enum.any?(callbacks, &function_exported?(model, &1, 1))
   end
 end

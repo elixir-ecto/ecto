@@ -185,20 +185,6 @@ defmodule Ecto.Date do
   end
 
   @doc """
-  Returns an `Ecto.Date` in local time.
-
-  WARNING: The local time is often not always increasing due
-  to DST changes, which can lead to bugs. Please prefer the
-  `utc/0` function instead.
-  """
-  def local do
-    IO.write :stderr, "warning: Ecto.Date.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
-                      Exception.format_stacktrace
-    {{year, month, day}, _time} = :erlang.localtime
-    %Ecto.Date{year: year, month: month, day: day}
-  end
-
-  @doc """
   Returns an `Ecto.Date` in UTC.
   """
   def utc do
@@ -335,21 +321,6 @@ defmodule Ecto.Time do
   """
   def to_iso8601(time) do
     to_string(time)
-  end
-
-  @doc """
-  Returns an `Ecto.Time` in local time.
-
-  WARNING: The local time is often not always increasing due
-  to DST changes, which can lead to bugs. Please prefer the
-  `utc/1` function instead.
-  """
-  def local do
-    IO.write :stderr, "warning: Ecto.Time.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
-                      Exception.format_stacktrace
-
-    {_, {hour, min, sec}} = :erlang.localtime
-    %Ecto.Time{hour: hour, min: min, sec: sec}
   end
 
   @doc """
@@ -566,21 +537,6 @@ defmodule Ecto.DateTime do
     else
       str <> "." <> zero_pad(usec, 6) <> "Z"
     end
-  end
-
-  @doc """
-  Returns an `Ecto.DateTime` in local time.
-
-  WARNING: Using the local time of the server will often lead to
-  intermittent bugs.
-
-  This function only exists for legacy purposes. It is recommended to not
-  use this function. Please use the `utc/1` function instead.
-  """
-  def local do
-    IO.write :stderr, "warning: Ecto.DateTime.local/0 is deprecated as it is unsafe. Use utc/0 instead." <>
-                      Exception.format_stacktrace
-    from_erl(:erlang.localtime)
   end
 
   @doc """

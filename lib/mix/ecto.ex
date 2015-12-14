@@ -52,8 +52,7 @@ defmodule Mix.Ecto do
     Mix.Task.run "loadpaths", args
 
     unless "--no-compile" in args do
-      # TODO: Use Mix.Project.compile(args) with v1.1
-      Mix.Task.run "compile", args
+      Mix.Project.compile(args)
     end
 
     case Code.ensure_compiled(repo) do
@@ -111,7 +110,7 @@ defmodule Mix.Ecto do
     config = repo.config()
 
     Application.app_dir(Keyword.fetch!(config, :otp_app),
-      config[:priv] || "priv/#{repo |> Module.split |> List.last |> Mix.Utils.underscore}")
+      config[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}")
   end
 
   @doc """

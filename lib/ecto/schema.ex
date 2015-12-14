@@ -460,12 +460,6 @@ defmodule Ecto.Schema do
       `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
       See `Ecto.Changeset`'s section on related models for more info.
 
-    * `:on_cast` - The default changeset function to call during casting
-      of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
-      It's an atom representing the function name in the associated model's
-      module which will receive the module and the parameters for casting
-      (default: `:changeset`)
-
     * `:defaults` - Default values to use when building the association
 
   ## Examples
@@ -599,12 +593,6 @@ defmodule Ecto.Schema do
       replaced   when casting or manipulating parent changeset. May be
       `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
       See `Ecto.Changeset`'s section on related models for more info.
-
-    * `:on_cast` - The default changeset function to call during casting
-      of a nested association which can be overridden in `Ecto.Changeset.cast/4`.
-      It's an atom representing the function name in the associated model's
-      module which will receive the module and the parameters for casting
-      (default: `:changeset`)
 
     * `:defaults` - Default values to use when building the association
 
@@ -791,11 +779,6 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:on_cast` - the default changeset function to call during casting,
-      which can be overridden in `Ecto.Changeset.cast/4`. It's an atom representing
-      the function name in the embedded model's module which will receive
-      the module and the parameters for casting (default: `:changeset`).
-
     * `:strategy` - the strategy for storing models in the database.
       Ecto supports only the `:replace` strategy out of the box which is the
       default. Read the strategy in `embeds_many/3` for more info.
@@ -863,11 +846,6 @@ defmodule Ecto.Schema do
   to `embeds_many/3` fields in order to mimic `has_many/3`).
 
   ## Options
-
-    * `:on_cast` - the default changeset function to call during casting,
-      which can be overridden in `Ecto.Changeset.cast/4`. It's an atom representing
-      the function name in the embedded model's module which will receive
-      the module and the parameters for casting (default: `:changeset`).
 
     * `:strategy` - the strategy for storing models in the database.
       Ecto supports only the `:replace` strategy out of the box which is the
@@ -954,10 +932,9 @@ defmodule Ecto.Schema do
     struct = model.__struct__()
     fields = model.__schema__(:types)
 
-    loaded = do_load(struct, fields, data, loader)
-    loaded = Map.put(loaded, :__meta__,
-                     %Metadata{state: :loaded, source: {prefix, source}, context: context})
-    Ecto.Model.Callbacks.__apply__(model, :after_load, loaded)
+    struct
+    |> do_load(fields, data, loader)
+    |> Map.put(:__meta__, %Metadata{state: :loaded, source: {prefix, source}, context: context})
   end
 
   defp do_load(struct, fields, map, loader) when is_map(map) do
@@ -1010,17 +987,11 @@ defmodule Ecto.Schema do
     end
   end
 
-  @valid_has_options [:foreign_key, :references, :through, :on_delete,
-                      :defaults, :on_cast, :on_replace]
+  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace]
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
     check_options!(opts, @valid_has_options, "has_many/3")
-
-    if opts[:on_delete] == :fetch_and_delete do
-      IO.puts :stderr, "warning: setting on_delete: :fetch_and_delete for associations " <>
-                       "is deprecated as they rely on callbacks. Use :delete_all or :nilify_all"
-    end
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
@@ -1060,13 +1031,13 @@ defmodule Ecto.Schema do
 
   @doc false
   def __embeds_one__(mod, name, model, opts) do
-    check_options!(opts, [:on_cast, :strategy, :on_replace], "embeds_one/3")
+    check_options!(opts, [:strategy, :on_replace], "embeds_one/3")
     embed(mod, :one, name, model, opts)
   end
 
   @doc false
   def __embeds_many__(mod, name, model, opts) do
-    check_options!(opts, [:on_cast, :strategy, :on_replace], "embeds_many/3")
+    check_options!(opts, [:strategy, :on_replace], "embeds_many/3")
     opts = Keyword.put(opts, :default, [])
     embed(mod, :many, name, model, opts)
   end
@@ -1223,12 +1194,6 @@ defmodule Ecto.Schema do
   end
 
   defp check_options!(opts, valid, fun_arity) do
-    if opts[:on_cast] do
-      IO.write :stderr, "warning: :on_cast option for #{fun_arity} is deprecated, " <>
-                        "pass :with option to Ecto.Changeset.cast_embed/cast_assoc\n" <>
-                        Exception.format_stacktrace
-    end
-
     case Enum.find(opts, fn {k, _} -> not k in valid end) do
       {k, _} ->
         raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"

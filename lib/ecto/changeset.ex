@@ -168,7 +168,6 @@ defmodule Ecto.Changeset do
   @type action :: nil | :insert | :update | :delete
   @type constraint :: %{type: :unique, constraint: String.t,
                         field: atom, message: error_message}
-  @type cast_field :: String.t | atom | {atom, Relation.on_cast}
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{count}"},
@@ -316,32 +315,11 @@ defmodule Ecto.Changeset do
   in the `optional` list passed to `cast/4`), then it will be marked as required
   and not optional. This represents the fact that required fields are
   "stronger" than optional fields.
-
-  ## Relations
-
-  You can override the relation's `on_cast` setting by providing a 2 item tuple
-  in the `required` or `optional` list instead of a simple field name.
-
-  The key will be the relation's name and value is either the changeset
-  function's name or an anonymous function that accepts a model and params. The
-  new function will be used similarily to the one provided in the `on_cast`
-  setting.
-
-      # Will use Author.custom_changeset/2 as the changeset function
-      cast(post, %{author: %{name: "Paul"}}, ~w(), [{:author, :custom_changeset})
-
-      # Will use my_custom_changeset/2 as the changeset function.
-      cast(post, %{author: %{name: "Paul"}}, ~w(), [{:author, &my_custom_changeset/2}])
-
-      defp my_custom_changeset(model, params) do
-        cast(model, params, ~w(name))
-      end
-
   """
   @spec cast(Ecto.Schema.t | t,
              %{binary => term} | %{atom => term} | nil,
-             [cast_field],
-             [cast_field]) :: t | no_return
+             [String.t | atom],
+             [String.t | atom]) :: t | no_return
   def cast(model_or_changeset, params, required, optional \\ [])
 
   def cast(_model, %{__struct__: _} = params, _required, _optional) do
@@ -386,22 +364,11 @@ defmodule Ecto.Changeset do
                optional: optional, types: types}
   end
 
-  defp process_empty_fields({key, fun}, types) when is_atom(key) do
-    relation!(types, key, fun)
-    key
-  end
   defp process_empty_fields(key, _types) when is_binary(key) do
     String.to_existing_atom(key)
   end
   defp process_empty_fields(key, _types) when is_atom(key) do
     key
-  end
-
-  defp process_param({key, fun}, kind, params, types, model, acc) do
-    {key, param_key} = cast_key(key)
-    type = relation!(types, key, fun)
-    current = Map.get(model, key)
-    do_process_param(key, param_key, kind, params, type, current, model, acc)
   end
 
   defp process_param(key, kind, params, types, model, acc) do
@@ -428,25 +395,10 @@ defmodule Ecto.Changeset do
      end}
   end
 
-  defp relation!(types, key, fun) do
-    case Map.fetch(types, key) do
-      {:ok, {:embed, embed}} ->
-        {:embed, %Ecto.Embedded{embed | on_cast: fun}}
-      {:ok, {:assoc, assoc}} ->
-        {:assoc, %Ecto.Association.Has{assoc | on_cast: fun}}
-      {:ok, _} ->
-        raise ArgumentError, "only embedded fields and associations can be " <>
-          "given a cast function"
-      :error ->
-        raise ArgumentError, "unknown field `#{key}` (note only fields, " <>
-          "embedded models, has_one and has_many associations are supported in cast)"
-    end
-  end
-
   defp type!(types, key) do
     case Map.fetch(types, key) do
-      {:ok, {tag, _} = relation} when tag in @relations ->
-        relation
+      {:ok, {tag, _}} when tag in @relations ->
+        raise "casting #{tag}s with cast/4 is not supported, use cast_#{tag}/3 instead"
       {:ok, type} ->
         type
       :error ->
@@ -459,25 +411,6 @@ defmodule Ecto.Changeset do
     do: {String.to_existing_atom(key), key}
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
-
-  defp cast_field(param_key, {tag, relation}, params, current, model, valid?)
-      when tag in @relations do
-    # TODO: Always raise
-    IO.write :stderr, "warning: casting #{tag}s with cast/4 is deprecated, " <>
-                      "please use cast_#{tag}/4 instead\n" <> Exception.format_stacktrace()
-    current = Relation.load!(model, current)
-    case Map.fetch(params, param_key) do
-      {:ok, value} ->
-        case Relation.cast(relation, value, current) do
-          :error -> :invalid
-          {:ok, _, _, true} -> {:missing, current}
-          {:ok, ^current, _, false} -> {:missing, current}
-          {:ok, result, relation_valid?, false} -> {:ok, result, valid? and relation_valid?}
-        end
-      :error ->
-        {:missing, current}
-    end
-  end
 
   defp cast_field(param_key, type, params, current, _model, valid?) do
     case Map.fetch(params, param_key) do
@@ -565,7 +498,7 @@ defmodule Ecto.Changeset do
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
     {key, param_key} = cast_key(key)
     %{model: model, types: types, params: params, changes: changes} = changeset
-    relation = relation!(:cast, type, key, Map.get(types, key))
+    %{related: related} = relation = relation!(:cast, type, key, Map.get(types, key))
     params = params || %{}
 
     {changeset, required?} =
@@ -576,13 +509,13 @@ defmodule Ecto.Changeset do
       end
 
     on_replace = opts[:on_replace] || relation.on_replace
-    on_cast    = opts[:with] || &apply(relation.related, relation.on_cast, [&1, &2])
-    relation   = %{relation | on_replace: on_replace, on_cast: on_cast}
+    relation   = %{relation | on_replace: on_replace}
+    on_cast    = opts[:with] || &related.changeset(&1, &2)
     current    = Relation.load!(model, Map.get(model, key))
 
     case params && Map.fetch(params, param_key) do
       {:ok, value} ->
-        case Relation.cast(relation, value, current) do
+        case Relation.cast(relation, value, current, on_cast) do
           {:ok, change, relation_valid?, false} when change != current ->
             missing_relation(%{changeset | changes: Map.put(changes, key, change),
                                valid?: changeset.valid? && relation_valid?}, key, current, required?)
@@ -872,20 +805,10 @@ defmodule Ecto.Changeset do
     %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
-  defp put_change(model, changes, errors, valid?, key, value, {tag, relation})
+  defp put_change(_model, _changes, _errors, _valid?, _key, _value, {tag, _})
       when tag in @relations do
-    # TODO: Always raise
-    IO.write :stderr, "warning: changing #{tag}s with change/2 or put_change/3 is deprecated, " <>
-                      "please use put_#{tag}/4 instead\n" <> Exception.format_stacktrace()
-    current = Relation.load!(model, Map.get(model, key))
-    case Relation.change(relation, value, current) do
-      {:ok, _, _, true} ->
-        {changes, errors, valid?}
-      {:ok, change, _, false} ->
-        {Map.put(changes, key, change), errors, valid?}
-      :error ->
-        {changes, [{key, "is invalid"} | errors], false}
-    end
+    raise "changing #{tag}s with change/2 or put_change/3 is not supported, " <>
+          "please use put_#{tag}/4 instead"
   end
 
   defp put_change(model, changes, errors, valid?, key, value, _type) do
@@ -983,22 +906,13 @@ defmodule Ecto.Changeset do
   end
 
   def force_change(%Changeset{types: types} = changeset, key, value) do
-    model = changeset.model
-
-    value =
-      case Map.get(types, key) do
-        {tag, relation} when tag in @relations ->
-          # TODO: Always raise
-          IO.write :stderr, "warning: changing #{tag}s with force_change/3 is deprecated, " <>
-                            "please use put_#{tag}/4 instead\n" <> Exception.format_stacktrace()
-          {:ok, changes, _, _} =
-            Relation.change(relation, model, value, Map.get(model, key))
-          changes
-        _ ->
-          value
-      end
-
-    update_in changeset.changes, &Map.put(&1, key, value)
+    case Map.get(types, key) do
+      {tag, _} when tag in @relations ->
+        raise "changing #{tag}s with force_change/3 is not supported, " <>
+              "please use put_#{tag}/4 instead"
+      _ ->
+        update_in changeset.changes, &Map.put(&1, key, value)
+    end
   end
 
   @doc """
@@ -1465,13 +1379,13 @@ defmodule Ecto.Changeset do
       iex> Repo.update!(valid_change)
       %Post{id: 1, title: "bar", lock_version: 2}
       iex> Repo.update!(stale_change)
-      ** (Ecto.StaleModelError) attempted to update a stale model:
+      ** (Ecto.StaleEntryError) attempted to update a stale model:
 
       %Post{id: 1, title: "baz", lock_version: 1}
 
   When a conflict happens (a record which has been previously fetched is
   being updated, but that same record has been modified since it was
-  fetched), an `Ecto.StaleModelError` exception is raised.
+  fetched), an `Ecto.StaleEntryError` exception is raised.
 
   Optimistic locking also works with delete operations. Just call the
   `optimistic_lock` function with the model before delete:

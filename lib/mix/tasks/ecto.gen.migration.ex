@@ -1,8 +1,9 @@
 defmodule Mix.Tasks.Ecto.Gen.Migration do
   use Mix.Task
-  import Mix.Ecto
+
+  import Macro, only: [camelize: 1, underscore: 1]
   import Mix.Generator
-  import Mix.Utils, only: [camelize: 1, underscore: 1]
+  import Mix.Ecto
 
   @shortdoc "Generate a new migration for the repo"
 

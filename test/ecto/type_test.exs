@@ -110,7 +110,7 @@ defmodule Ecto.TypeTest do
 
   test "embeds_one" do
     embed = %Ecto.Embedded{field: :embed, cardinality: :one,
-                           owner: __MODULE__, related: Model, on_cast: :changeset}
+                           owner: __MODULE__, related: Model}
     type  = {:embed, embed}
 
     assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, &Ecto.TestAdapter.load/2)
@@ -128,7 +128,7 @@ defmodule Ecto.TypeTest do
 
   test "embeds_many" do
     embed = %Ecto.Embedded{field: :embed, cardinality: :many,
-                           owner: __MODULE__, related: Model, on_cast: :changeset}
+                           owner: __MODULE__, related: Model}
     type  = {:embed, embed}
 
     assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], &Ecto.TestAdapter.load/2)

@@ -129,50 +129,9 @@ defmodule Ecto.Association do
 
   """
   def association_key(module, suffix) do
-    prefix = module |> Module.split |> List.last |> underscore
+    prefix = module |> Module.split |> List.last |> Macro.underscore
     :"#{prefix}_#{suffix}"
   end
-
-  # TODO: Use Elixir's underscore function on from Elixir v1.2 onwards
-
-  defp underscore(""), do: ""
-
-  defp underscore(<<h, t :: binary>>) do
-    <<to_lower_char(h)>> <> do_underscore(t, h)
-  end
-
-  defp do_underscore(<<h, t, rest :: binary>>, _) when h in ?A..?Z and not t in ?A..?Z do
-    <<?_, to_lower_char(h), t>> <> do_underscore(rest, t)
-  end
-
-  defp do_underscore(<<h, t :: binary>>, prev) when h in ?A..?Z and not prev in ?A..?Z do
-    <<?_, to_lower_char(h)>> <> do_underscore(t, h)
-  end
-
-  defp do_underscore(<<?-, t :: binary>>, _) do
-    <<?_>> <> do_underscore(t, ?-)
-  end
-
-  defp do_underscore(<< "..", t :: binary>>, _) do
-    <<"..">> <> underscore(t)
-  end
-
-  defp do_underscore(<<?.>>, _), do: <<?.>>
-
-  defp do_underscore(<<?., t :: binary>>, _) do
-    <<?/>> <> underscore(t)
-  end
-
-  defp do_underscore(<<h, t :: binary>>, _) do
-    <<to_lower_char(h)>> <> do_underscore(t, h)
-  end
-
-  defp do_underscore(<<>>, _) do
-    <<>>
-  end
-
-  defp to_lower_char(char) when char in ?A..?Z, do: char + 32
-  defp to_lower_char(char), do: char
 
   @doc """
   Retrieves related module from queryable.
@@ -228,7 +187,6 @@ defmodule Ecto.Association.Has do
     * `queryable` - The real query to use for querying association
     * `on_delete` - The action taken on associations when model is deleted
     * `on_replace` - The action taken on associations when model is replaced
-    * `on_cast` - The changeset function to call during casting
     * `defaults` - Default fields used when building the association
   """
 
@@ -236,7 +194,7 @@ defmodule Ecto.Association.Has do
   @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key,
-             :queryable, :on_delete, :on_replace, on_cast: :changeset, defaults: []]
+             :queryable, :on_delete, :on_replace, defaults: []]
 
   @doc false
   def struct(module, name, opts) do
@@ -266,7 +224,6 @@ defmodule Ecto.Association.Has do
 
     on_delete  = Keyword.get(opts, :on_delete, :nothing)
     on_replace = Keyword.get(opts, :on_replace, :raise)
-    on_cast    = Keyword.get(opts, :on_cast, :changeset)
 
     unless on_delete in @on_delete_opts do
       raise ArgumentError, "invalid :on_delete option for #{inspect name}. " <>
@@ -290,7 +247,6 @@ defmodule Ecto.Association.Has do
       queryable: queryable,
       on_delete: on_delete,
       on_replace: on_replace,
-      on_cast: on_cast,
       defaults: opts[:defaults] || []
     }
   end

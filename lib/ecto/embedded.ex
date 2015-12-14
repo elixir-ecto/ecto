@@ -6,13 +6,11 @@ defmodule Ecto.Embedded do
   @type t :: %Embedded{cardinality: :one | :many,
                        strategy: :replace | atom,
                        on_replace: Changeset.Relation.on_replace,
-                       field: atom, owner: atom, related: atom,
-                       on_cast: Changeset.Relation.on_cast}
+                       field: atom, owner: atom, related: atom}
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-  defstruct [:cardinality, :field, :owner, :related, :on_replace,
-             strategy: :replace, on_cast: :changeset]
+  defstruct [:cardinality, :field, :owner, :related, :on_replace, strategy: :replace]
 
   @doc """
   Builds the embedded struct.
@@ -22,16 +20,12 @@ defmodule Ecto.Embedded do
     * `:cardinality` - tells if there is one embedded model or many
     * `:strategy` - which strategy to use when storing items
     * `:related` - name of the embedded model
-    * `:on_cast` - the changeset function to call during casting
     * `:on_replace` - the action taken on embedded models when the model is
       replaced
 
   """
   def struct(module, name, opts) do
-    opts =
-      opts
-      |> Keyword.put_new(:on_cast, :changeset)
-      |> Keyword.put_new(:on_replace, :raise)
+    opts = Keyword.put_new(opts, :on_replace, :raise)
 
     unless opts[:on_replace] in @on_replace_opts do
       raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
@@ -101,8 +95,7 @@ defmodule Ecto.Embedded do
 
   defp prepare_each(%Changeset{model: %{__struct__: model}, action: action} = changeset,
                     %{related: model} = embed, adapter) do
-    callback = callback_for(:before, action)
-    Ecto.Model.Callbacks.__apply__(model, callback, changeset)
+    changeset
     |> autogenerate_id(action, model, embed, adapter)
     |> autogenerate(action, model, adapter)
     |> prepare(model.__schema__(:embeds), adapter, action)
@@ -177,11 +170,8 @@ defmodule Ecto.Embedded do
   end
 
   @doc false
-  def on_repo_action(%{field: field, related: model} = embed,
-                     changeset, parent, adapter, repo, _repo_action, opts) do
+  def on_repo_action(%{related: model}, changeset, _parent, adapter, repo, _repo_action, opts) do
     changeset = on_repo_action(changeset, model, adapter, repo, opts)
-    maybe_replace_one!(embed, changeset.action, Map.get(parent, field))
-
     {:ok, apply_changes(changeset)}
   end
 
@@ -190,37 +180,16 @@ defmodule Ecto.Embedded do
     changeset
   end
 
-  defp on_repo_action(%Changeset{action: action, changes: changes} = changeset,
-                      model, adapter, repo, opts) do
-    callback = callback_for(:after, action)
+  defp on_repo_action(%Changeset{changes: changes} = changeset, model, adapter, repo, opts) do
     related  = Map.take(changes, model.__schema__(:embeds))
     {:ok, changeset} =
       Ecto.Changeset.Relation.on_repo_action(changeset, related, adapter, repo, opts)
-    Ecto.Model.Callbacks.__apply__(model, callback, changeset)
+    changeset
   end
-
-  defp maybe_replace_one!(%{cardinality: :one, related: model}, :insert, current) when current != nil do
-    changeset = Changeset.change(current)
-    changeset = Ecto.Model.Callbacks.__apply__(model, :before_delete, changeset)
-    Ecto.Model.Callbacks.__apply__(model, :after_delete, changeset)
-    :ok
-  end
-  defp maybe_replace_one!(_embed, _action, _current), do: :ok
 
   defp apply_changes(%{action: :delete}), do: nil
   defp apply_changes(changeset) do
     model = Changeset.apply_changes(changeset)
     put_in(model.__meta__.state, :loaded)
-  end
-
-  types   = [:before, :after]
-  actions = [:insert, :update, :delete]
-
-  for type <- types, action <- actions do
-    defp callback_for(unquote(type), unquote(action)), do: unquote(:"#{type}_#{action}")
-  end
-
-  defp callback_for(_type, nil) do
-    raise ArgumentError, "embedded changeset action not set"
   end
 end

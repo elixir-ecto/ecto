@@ -5,10 +5,8 @@ defmodule Ecto.Changeset.Relation do
   alias Ecto.Changeset
   alias Ecto.Association.NotLoaded
 
-  @type on_cast :: atom
   @type on_replace :: :raise | :mark_as_invalid | :delete | :nilify
-  @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom,
-               on_cast: on_cast, on_replace: on_replace}
+  @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_replace: on_replace}
 
   @doc """
   Updates the changeset accordingly to the relation's on_replace strategy.
@@ -150,11 +148,9 @@ defmodule Ecto.Changeset.Relation do
   def load!(_model, loaded), do: loaded
 
   @doc """
-  Casts embedded models according to the `on_cast` function.
-
-  Sets correct `state` on the returned changeset
+  Casts related according to the `on_cast` function.
   """
-  def cast(%{cardinality: :one} = relation, nil, current) do
+  def cast(%{cardinality: :one} = relation, nil, current, _on_cast) do
     case current && on_replace(relation, current) do
       :error ->
         :error
@@ -163,42 +159,31 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  def cast(%{cardinality: :many} = relation, params, current) when is_map(params) do
+  def cast(%{cardinality: :many} = relation, params, current, on_cast) when is_map(params) do
     params =
       params
       |> Enum.sort_by(&elem(&1, 0))
       |> Enum.map(&elem(&1, 1))
-    cast(relation, params, current)
+    cast(relation, params, current, on_cast)
   end
 
-  def cast(%{related: model} = relation, params, current) do
+  def cast(%{related: model} = relation, params, current, on_cast) do
     pks = primary_keys!(model)
     param_pks = Enum.map(pks, &{Atom.to_string(&1), model.__schema__(:type, &1)})
     cast_or_change(relation, params, current, param_pks, pks,
-                   &do_cast(relation, &1, &2))
+                   &do_cast(relation, &1, &2, on_cast))
   end
 
-  # TODO: pass the casting function as parameter
-  defp do_cast(%{on_cast: fun} = meta, params, nil) when is_function(fun) do
-    {:ok, fun.(meta.__struct__.build(meta), params) |> put_new_action(:insert)}
+  defp do_cast(meta, params, nil, on_cast) do
+    {:ok, on_cast.(meta.__struct__.build(meta), params) |> put_new_action(:insert)}
   end
 
-  defp do_cast(%{related: model, on_cast: fun_name} = meta, params, nil) do
-    {:ok, apply(model, fun_name, [meta.__struct__.build(meta), params])
-          |> put_new_action(:insert)}
-  end
-
-  defp do_cast(relation, nil, current) do
+  defp do_cast(relation, nil, current, _cast_casat) do
     on_replace(relation, current)
   end
 
-  defp do_cast(%{on_cast: fun}, params, struct) when is_function(fun) do
-    {:ok, fun.(struct, params) |> put_new_action(:update)}
-  end
-
-  defp do_cast(%{related: model, on_cast: fun}, params, struct) do
-    {:ok, apply(model, fun, [struct, params])
-          |> put_new_action(:update)}
+  defp do_cast(_meta, params, struct, on_cast) do
+    {:ok, on_cast.(struct, params) |> put_new_action(:update)}
   end
 
   @doc """

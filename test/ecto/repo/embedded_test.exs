@@ -100,7 +100,6 @@ defmodule Ecto.Repo.EmbeddedTest do
       |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz"})
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.insert(changeset)
-    assert_received {:rollback, ^changeset}
     assert changeset.model.__meta__.state == :built
     refute changeset.model.embed
     assert changeset.changes.embed
@@ -286,7 +285,6 @@ defmodule Ecto.Repo.EmbeddedTest do
       |> Ecto.Changeset.put_embed(:embed, embed)
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.update(changeset)
-    assert_received {:rollback, ^changeset}
     refute changeset.model.embed
     assert changeset.changes.embed
     refute changeset.changes.embed.model.id
