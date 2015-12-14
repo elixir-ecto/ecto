@@ -2,28 +2,12 @@ defmodule Ecto.Model do
   @moduledoc """
   Warning: this module is currently deprecated. Instead
   `use Ecto.Schema` and the functions in the `Ecto` module.
-
-  `Ecto.Model` is built on top of `Ecto.Schema`. See
-  `Ecto.Schema` for documentation on the `schema/2` macro,
-  as well which fields, associations, types are available.
-
-  ## Using
-
-  When used, `Ecto.Model` imports itself, as well as the functions
-  in `Ecto.Changeset` and `Ecto.Query`.
-
-  All the modules existing in `Ecto.Model.*` are brought in too:
-
-    * `use Ecto.Model.Callbacks` - provides lifecycle callbacks
-    * `use Ecto.Model.OptimisticLock` - makes the `optimistic_lock/1` macro
-      available
-
-  However, you can avoid using `Ecto.Model` altogether in favor
-  of cherry-picking any of the functionality above.
   """
 
   @doc false
   defmacro __using__(_opts) do
+    IO.write :stderr, "warning: using Ecto.Model is deprecated, please use Ecto.Schema instead\n" <>
+                      Exception.format_stacktrace(Macro.Env.stacktrace(__CALLER__))
     quote do
       use Ecto.Schema
       import Ecto.Model
@@ -36,26 +20,36 @@ defmodule Ecto.Model do
 
   @doc false
   def primary_key(struct) do
+    IO.write :stderr, "warning: Ecto.Model.primary_key/1 is deprecated, please use Ecto.primary_key/1 instead\n" <>
+                      Exception.format_stacktrace()
     Ecto.primary_key(struct)
   end
 
   @doc false
   def primary_key!(struct) do
+    IO.write :stderr, "warning: Ecto.Model.primary_key!/1 is deprecated, please use Ecto.primary_key!/1 instead\n" <>
+                      Exception.format_stacktrace()
     Ecto.primary_key!(struct)
   end
 
   @doc false
   def build(struct, assoc, attributes \\ %{}) do
+    IO.write :stderr, "warning: Ecto.Model.build/3 is deprecated, please use Ecto.build_assoc/3 instead\n" <>
+                      Exception.format_stacktrace()
     Ecto.build_assoc(struct, assoc, attributes)
   end
 
   @doc false
   def assoc(model_or_models, assoc) do
+    IO.write :stderr, "warning: Ecto.Model.assoc/2 is deprecated, please use Ecto.assoc/2 instead\n" <>
+                      Exception.format_stacktrace()
     Ecto.assoc(model_or_models, assoc)
   end
 
   @doc false
   def put_source(model, new_source, new_prefix \\ nil) do
+    IO.write :stderr, "warning: Ecto.Model.put_source/3 is deprecated, please use Ecto.put_meta/3 instead\n" <>
+                      Exception.format_stacktrace()
     put_in model.__meta__.source, {new_prefix, new_source}
   end
 end
