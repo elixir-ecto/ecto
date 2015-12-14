@@ -464,7 +464,7 @@ defmodule Ecto.Changeset do
       when tag in @relations do
     # TODO: Always raise
     IO.write :stderr, "warning: casting #{tag}s with cast/4 is deprecated, " <>
-                      "please use cast_#{tag}/4 instead\n" <> Exception.format_stacktrace()
+                      "please use cast_#{tag}/3 instead\n" <> Exception.format_stacktrace()
     current = Relation.load!(model, current)
     case Map.fetch(params, param_key) do
       {:ok, value} ->
@@ -876,7 +876,7 @@ defmodule Ecto.Changeset do
       when tag in @relations do
     # TODO: Always raise
     IO.write :stderr, "warning: changing #{tag}s with change/2 or put_change/3 is deprecated, " <>
-                      "please use put_#{tag}/4 instead\n" <> Exception.format_stacktrace()
+                      "please use put_#{tag}/3 instead\n" <> Exception.format_stacktrace()
     current = Relation.load!(model, Map.get(model, key))
     case Relation.change(relation, value, current) do
       {:ok, _, _, true} ->
