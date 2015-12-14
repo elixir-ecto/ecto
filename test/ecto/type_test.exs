@@ -117,12 +117,10 @@ defmodule Ecto.TypeTest do
     assert {:ok, nil} == load(type, nil, &Ecto.TestAdapter.load/2)
     assert :error == load(type, 1)
 
-    changeset = Ecto.Changeset.change(%Model{id: @uuid_string}, a: 1)
     assert {:ok, %{a: 1, id: @uuid_tagged}} ==
-           dump(type, changeset, &Ecto.TestAdapter.dump/2)
+           dump(type, %Model{id: @uuid_string, a: 1}, &Ecto.TestAdapter.dump/2)
 
     assert :error == cast(type, %{"a" => 1})
-
     assert match?(:any, type)
   end
 
@@ -135,16 +133,10 @@ defmodule Ecto.TypeTest do
     assert {:ok, []} == load(type, nil, &Ecto.TestAdapter.load/2)
     assert :error == load(type, 1, &Ecto.TestAdapter.load/2)
 
-    changeset = Ecto.Changeset.change(%Model{id: @uuid_string}, a: 1)
     assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
-           dump(type, [changeset], &Ecto.TestAdapter.dump/2)
-
-    deleted = %{changeset | action: :delete}
-    assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
-           dump(type, [changeset, deleted], &Ecto.TestAdapter.dump/2)
+           dump(type, [%Model{id: @uuid_string, a: 1}], &Ecto.TestAdapter.dump/2)
 
     assert :error == cast(type, [%{"a" => 1}])
-
     assert match?({:array, :any}, type)
   end
 end

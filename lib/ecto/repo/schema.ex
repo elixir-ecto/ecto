@@ -69,17 +69,19 @@ defmodule Ecto.Repo.Schema do
       user_changeset = run_prepare(changeset, prepare)
 
       {assoc_changes, changeset} = pop_from_changes(user_changeset, assocs)
-      changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
-      {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
-      {changes, extra} = dump_changes(:insert, changes, model, fields, adapter)
       {embed_changes, changeset} = pop_from_changes(changeset, embeds)
+      embed_changes = Ecto.Embedded.prepare(changeset, embed_changes, adapter, :insert)
+
+      changes = Map.merge(changeset.changes, embed_changes)
+      {autogen, changes} = pop_autogenerate_id(changes, model)
+      {changes, extra} = dump_changes(:insert, changes, model, fields, adapter)
 
       args = [repo, metadata(struct), changes, autogen, return, opts]
       case apply(changeset, adapter, :insert, extra, args) do
         {:ok, changeset} ->
           opts = Keyword.put(opts, :skip_transaction, true)
           changeset
-          |> process_embeds(embed_changes, adapter, repo, opts)
+          |> merge_embeds(embed_changes)
           |> process_assocs(assoc_changes, adapter, repo, opts)
           |> get_model_if_ok(user_changeset)
         {:invalid, constraints} ->
@@ -123,10 +125,12 @@ defmodule Ecto.Repo.Schema do
         user_changeset = run_prepare(changeset, prepare)
 
         {assoc_changes, changeset} = pop_from_changes(user_changeset, assocs)
-        changeset = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
-        autogen = get_autogenerate_id(changeset.changes, model)
-        {changes, extra} = dump_changes(:update, changeset.changes, model, fields, adapter)
         {embed_changes, changeset} = pop_from_changes(changeset, embeds)
+        embed_changes = Ecto.Embedded.prepare(changeset, embed_changes, adapter, :update)
+
+        changes = Map.merge(changeset.changes, embed_changes)
+        autogen = get_autogenerate_id(changeset.changes, model)
+        {changes, extra} = dump_changes(:update, changes, model, fields, adapter)
 
         filters = add_pk_filter!(changeset.filters, struct)
         filters = Planner.fields(model, :update, filters, adapter)
@@ -137,7 +141,7 @@ defmodule Ecto.Repo.Schema do
           {:ok, changeset} ->
             opts = Keyword.put(opts, :skip_transaction, true)
             changeset
-            |> process_embeds(embed_changes, adapter, repo, opts)
+            |> merge_embeds(embed_changes)
             |> process_assocs(assoc_changes, adapter, repo, opts)
             |> get_model_if_ok(user_changeset)
           {:invalid, constraints} ->
@@ -344,10 +348,8 @@ defmodule Ecto.Repo.Schema do
     get_and_update_in(changeset.changes, &Map.split(&1, fields))
   end
 
-  defp process_embeds(changeset, embeds, adapter, repo, opts) do
-    {:ok, changeset} =
-      Ecto.Changeset.Relation.on_repo_action(changeset, embeds, adapter, repo, opts)
-    changeset
+  defp merge_embeds(changeset, embeds_changes) do
+    update_in changeset.model, &Map.merge(&1, embeds_changes)
   end
 
   defp process_assocs(changeset, assocs, adapter, repo, opts) do

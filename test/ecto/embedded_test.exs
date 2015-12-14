@@ -70,12 +70,10 @@ defmodule Ecto.EmbeddedTest do
       [:profile, :post, :posts]
 
     assert Author.__schema__(:embed, :profile) ==
-      %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete,
-                related: Profile, strategy: :replace}
+      %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete, related: Profile}
 
     assert Author.__schema__(:embed, :posts) ==
-      %Embedded{field: :posts, cardinality: :many, owner: Author, on_replace: :delete,
-                related: Post, strategy: :replace}
+      %Embedded{field: :posts, cardinality: :many, owner: Author, on_replace: :delete, related: Post}
   end
 
   defp cast(model, params, embed, opts \\ []) do

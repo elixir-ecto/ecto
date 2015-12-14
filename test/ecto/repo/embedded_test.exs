@@ -245,18 +245,6 @@ defmodule Ecto.Repo.EmbeddedTest do
     refute hd(model.embeds).updated_at
   end
 
-  test "removing embeds on update raises if there is no id" do
-    embed = %MyEmbed{x: "xyz"}
-
-    changeset =
-      %MyModel{id: 1, embed: embed}
-      |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_embed(:embed, nil)
-    assert_raise Ecto.NoPrimaryKeyValueError, fn ->
-      TestRepo.update!(changeset)
-    end
-  end
-
   test "removing embeds on update" do
     embed = %MyEmbed{x: "xyz", id: @uuid}
 

@@ -779,10 +779,6 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:strategy` - the strategy for storing models in the database.
-      Ecto supports only the `:replace` strategy out of the box which is the
-      default. Read the strategy in `embeds_many/3` for more info.
-
     * `:on_replace` - The action taken on associations when the model is
       replaced   when casting or manipulating parent changeset. May be
       `:raise` (default), `:mark_as_invalid`, or `:delete`.
@@ -847,10 +843,6 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:strategy` - the strategy for storing models in the database.
-      Ecto supports only the `:replace` strategy out of the box which is the
-      default. Read strategy section below for more info.
-
     * `:on_replace` - The action taken on associations when the model is
       replaced   when casting or manipulating parent changeset. May be
       `:raise` (default), `:mark_as_invalid`, or `:delete`.
@@ -897,26 +889,6 @@ defmodule Ecto.Schema do
       # Update the order
       changeset = Repo.update!(changeset)
 
-  ## Strategy
-
-  A strategy configures how modules should be inserted, updated and deleted
-  from the database. Changing the strategy may affect how items are stored in
-  the database, although embeds_many will always have them as a list in the
-  model.
-
-  Ecto supports only the `:replace` strategy out of the box which is the
-  default. This means all embeds in the model always fully replace the entries
-  in the database.
-
-  For example, if you have a collection with a 100 items, the 100 items will
-  be sent whenever any of them change. The approach is useful when you need the
-  parent and embeds to always be consistent.
-
-  Other databases may support different strategies, like one that only changes
-  the embeds that have effectively changed, also reducing the amount of data
-  send to the database. This is specially common in NoSQL databases.
-
-  Please check your adapter documentation in case it supports other strategies.
   """
   defmacro embeds_many(name, model, opts \\ []) do
     quote do

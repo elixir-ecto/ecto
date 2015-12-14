@@ -4,13 +4,12 @@ defmodule Ecto.Embedded do
   alias Ecto.Changeset
 
   @type t :: %Embedded{cardinality: :one | :many,
-                       strategy: :replace | atom,
                        on_replace: Changeset.Relation.on_replace,
                        field: atom, owner: atom, related: atom}
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-  defstruct [:cardinality, :field, :owner, :related, :on_replace, strategy: :replace]
+  defstruct [:cardinality, :field, :owner, :related, :on_replace]
 
   @doc """
   Builds the embedded struct.
@@ -18,7 +17,6 @@ defmodule Ecto.Embedded do
   ## Options
 
     * `:cardinality` - tells if there is one embedded model or many
-    * `:strategy` - which strategy to use when storing items
     * `:related` - name of the embedded model
     * `:on_replace` - the action taken on embedded models when the model is
       replaced
@@ -39,22 +37,10 @@ defmodule Ecto.Embedded do
   @doc """
   Callback invoked by repository to prepare embeds.
   """
-  def prepare(changeset, [], _adapter, _repo_action), do: changeset
-
-  def prepare(changeset, embeds, adapter, repo_action) do
-    types     = changeset.types
-
-
-    update_in changeset.changes, fn changes ->
-      Enum.reduce(embeds, changes, fn name, changes ->
-        case Map.fetch(changes, name) do
-          {:ok, changeset} ->
-            {:embed, embed} = Map.get(types, name)
-            Map.put(changes, name, prepare_each(embed, changeset, adapter, repo_action))
-          :error ->
-            changes
-        end
-      end)
+  def prepare(%{types: types}, embeds, adapter, repo_action) do
+    for {name, changeset} <- embeds, into: %{} do
+      {:embed, embed} = Map.get(types, name)
+      {name, prepare_each(embed, changeset, adapter, repo_action)}
     end
   end
 
@@ -68,10 +54,10 @@ defmodule Ecto.Embedded do
   end
 
   defp prepare_each(%{cardinality: :many} = embed, changesets, adapter, action) do
-    for changeset <- changesets do
-      check_action!(changeset.action, action, embed)
-      prepare_each(changeset, embed, adapter)
-    end
+    for changeset <- changesets,
+        check_action!(changeset.action, action, embed),
+        prepared = prepare_each(changeset, embed, adapter),
+        do: prepared
   end
 
   defp prepare_each(%Changeset{valid?: false}, %{related: model}, _adapter) do
@@ -79,22 +65,36 @@ defmodule Ecto.Embedded do
                          "but the parent changeset was not marked as invalid"
   end
 
-  defp prepare_each(%Changeset{action: :update, changes: changes} = changeset,
-                    _embed, _adapter) when changes == %{} do
-    changeset
-  end
-
-  defp prepare_each(%Changeset{model: %{__struct__: model}, action: action} = changeset,
-                    %{related: model} = embed, adapter) do
-    changeset
-    |> autogenerate_id(action, model, embed, adapter)
-    |> autogenerate(action, model, adapter)
-    |> prepare(model.__schema__(:embeds), adapter, action)
-  end
-
-  defp prepare_each(%Changeset{model: model}, %{related: expected}, _adapter) do
+  defp prepare_each(%Changeset{model: %{__struct__: model}},
+                    %{related: expected}, _adapter) when model != expected do
     raise ArgumentError, "expected changeset for embedded model `#{inspect expected}`, " <>
                          "got: #{inspect model}"
+  end
+
+  defp prepare_each(%Changeset{action: :update, changes: changes, model: model},
+                    _embed, _adapter) when changes == %{} do
+    model
+  end
+
+  defp prepare_each(%Changeset{action: :delete}, _embed, _adapter) do
+    nil
+  end
+
+  defp prepare_each(%Changeset{action: action, changes: changes} = changeset,
+                    %{related: model} = embed, adapter) do
+    embed_changes = Map.take(changes, model.__schema__(:embeds))
+
+    changeset
+    |> prepare(embed_changes, adapter, action)
+    |> apply_embeds(changeset)
+    |> autogenerate_id(action, model, embed, adapter)
+    |> autogenerate(changeset, action, model, adapter)
+  end
+
+  defp apply_embeds(embeds, changeset) do
+    model = Changeset.apply_changes(changeset)
+    model = Map.merge(model, embeds)
+    put_in(model.__meta__.state, :loaded)
   end
 
   defp check_action!(:update, :insert, %{related: model}),
@@ -103,13 +103,13 @@ defmodule Ecto.Embedded do
     do: raise(ArgumentError, "got action :delete in changeset for embedded #{model} while inserting")
   defp check_action!(_, _, _), do: :ok
 
-  defp autogenerate_id(changeset, :insert, model, embed, adapter) do
+  defp autogenerate_id(struct, :insert, model, embed, adapter) do
     case model.__schema__(:autogenerate_id) do
       {key, :binary_id} ->
-        if Map.get(changeset.changes, key) || Map.get(changeset.model, key) do
-          changeset
+        if Map.get(struct, key) do
+          struct
         else
-          update_in changeset.changes, &Map.put(&1, key, adapter.embed_id(embed))
+          Map.put(struct, key, adapter.embed_id(embed))
         end
       other ->
         raise ArgumentError, "embedded model `#{inspect model}` must have " <>
@@ -117,28 +117,22 @@ defmodule Ecto.Embedded do
     end
   end
 
-  defp autogenerate_id(changeset, action, _model, _embed, _adapter) when action in [:update, :delete] do
-    for {_, nil} <- Ecto.primary_key(changeset.model) do
-      raise Ecto.NoPrimaryKeyValueError, struct: changeset.model
+  defp autogenerate_id(struct, :update, _model, _embed, _adapter) do
+    for {_, nil} <- Ecto.primary_key(struct) do
+      raise Ecto.NoPrimaryKeyValueError, struct: struct
     end
-    changeset
+    struct
   end
 
-  defp autogenerate(changeset, :delete, _model, _adapter) do
-    changeset
-  end
-
-  defp autogenerate(%{types: types} = changeset, action, model, adapter) do
-    update_in changeset.changes, fn changes ->
-      Enum.reduce model.__schema__(:autogenerate, action), changes,
-        fn {k, mod, args}, acc ->
-          if Map.get(acc, k) do
-            acc
-          else
-            Map.put(acc, k, load!(types, k, apply(mod, :autogenerate, args), adapter))
-          end
+  defp autogenerate(struct, %{types: types}, action, model, adapter) do
+    Enum.reduce model.__schema__(:autogenerate, action), struct,
+      fn {k, mod, args}, acc ->
+        if Map.get(acc, k) do
+          acc
+        else
+          Map.put(acc, k, load!(types, k, apply(mod, :autogenerate, args), adapter))
         end
-    end
+      end
   end
 
   defp load!(types, k, v, adapter) do
@@ -150,37 +144,17 @@ defmodule Ecto.Embedded do
     end
   end
 
-  @doc false
+  @doc """
+  Callback invoked to build relations.
+  """
   def build(%Embedded{related: related}) do
     related.__struct__
   end
 
-  @doc false
+  @doc """
+  Callback invoked when replacing relations.
+  """
   def on_replace(%Embedded{on_replace: :delete}, changeset) do
     {:delete, changeset}
-  end
-
-  @doc false
-  def on_repo_action(%{related: model}, changeset, _parent, adapter, repo, _repo_action, opts) do
-    changeset = on_repo_action(changeset, model, adapter, repo, opts)
-    {:ok, apply_changes(changeset)}
-  end
-
-  defp on_repo_action(%Changeset{action: :update, changes: changes} = changeset,
-                      _model, _adapter, _repo, _opts) when changes == %{} do
-    changeset
-  end
-
-  defp on_repo_action(%Changeset{changes: changes} = changeset, model, adapter, repo, opts) do
-    related  = Map.take(changes, model.__schema__(:embeds))
-    {:ok, changeset} =
-      Ecto.Changeset.Relation.on_repo_action(changeset, related, adapter, repo, opts)
-    changeset
-  end
-
-  defp apply_changes(%{action: :delete}), do: nil
-  defp apply_changes(changeset) do
-    model = Changeset.apply_changes(changeset)
-    put_in(model.__meta__.state, :loaded)
   end
 end
