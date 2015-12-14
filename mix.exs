@@ -1,7 +1,7 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "1.1.0-dev"
+  @version "1.1.0"
   @adapters [:pg, :mysql]
   @pools [:poolboy, :sojourn_timeout, :sojourn_codel]
 
@@ -42,7 +42,7 @@ defmodule Ecto.Mixfile do
      {:postgrex, "~> 0.10", optional: true},
      {:mariaex, "~> 0.5", optional: true},
      {:poison, "~> 1.0", optional: true},
-     {:ex_doc, "~> 0.10", only: :docs},
+     {:ex_doc, "~> 0.11", only: :docs},
      {:earmark, "~> 0.1", only: :docs},
      {:inch_ex, only: :docs}]
   end
