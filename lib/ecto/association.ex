@@ -236,7 +236,7 @@ defmodule Ecto.Association.Has do
   @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key,
-             :queryable, :on_delete, :on_replace, :on_cast, defaults: []]
+             :queryable, :on_delete, :on_replace, on_cast: :changeset, defaults: []]
 
   @doc false
   def struct(module, name, opts) do

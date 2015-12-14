@@ -278,7 +278,7 @@ defmodule Ecto.SchemaTest do
 
     schema "assocs" do
       has_many :posts, Post
-      has_one :author, User, on_cast: :assoc_author_changeset
+      has_one :author, User
       belongs_to :comment, Comment
       has_many :comment_authors, through: [:comment, :authors]
       has_one :comment_main_author, through: [:comment, :main_author]
@@ -297,7 +297,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, on_delete: :nothing,
                             related: Post, owner_key: :id, related_key: :assoc_model_id, queryable: Post,
-                            on_cast: :changeset, on_replace: :raise}
+                            on_replace: :raise}
 
     assert AssocModel.__schema__(:association, :posts) == struct
     assert AssocModel.__changeset__.posts == {:assoc, struct}
@@ -311,7 +311,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :emails, owner: AssocModel, cardinality: :many, on_delete: :nothing,
                             related: Email, owner_key: :id, related_key: :assoc_model_id,
-                            queryable: {"users_emails", Email}, on_cast: :changeset, on_replace: :delete}
+                            queryable: {"users_emails", Email}, on_replace: :delete}
 
     assert AssocModel.__schema__(:association, :emails) == struct
     assert AssocModel.__changeset__.emails == {:assoc, struct}
@@ -337,7 +337,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one, on_delete: :nothing,
                             related: User, owner_key: :id, related_key: :assoc_model_id, queryable: User,
-                            on_cast: :assoc_author_changeset, on_replace: :raise}
+                            on_replace: :raise}
 
     assert AssocModel.__schema__(:association, :author) == struct
     assert AssocModel.__changeset__.author == {:assoc, struct}
@@ -351,7 +351,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one, on_delete: :nothing,
                             related: Profile, owner_key: :id, related_key: :assoc_model_id,
-                            queryable: {"users_profiles", Profile}, on_cast: :changeset, on_replace: :raise}
+                            queryable: {"users_profiles", Profile}, on_replace: :raise}
 
     assert AssocModel.__schema__(:association, :profile) == struct
     assert AssocModel.__changeset__.profile == {:assoc, struct}
@@ -403,8 +403,8 @@ defmodule Ecto.SchemaTest do
     @primary_key {:pk, :integer, []}
     @foreign_key_type :string
     schema "assoc" do
-      has_many :posts, Post, references: :pk, foreign_key: :fk, on_cast: :my_changeset
-      has_one :author, User, references: :pk, foreign_key: :fk, on_cast: :my_changeset
+      has_many :posts, Post, references: :pk, foreign_key: :fk
+      has_one :author, User, references: :pk, foreign_key: :fk
       belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk
       belongs_to :permalink2, Permalink, references: :pk, type: :string
     end
@@ -414,14 +414,12 @@ defmodule Ecto.SchemaTest do
     refl = ModelAssocOpts.__schema__(:association, :posts)
     assert :pk == refl.owner_key
     assert :fk == refl.related_key
-    assert :my_changeset == refl.on_cast
   end
 
   test "has_one options" do
     refl = ModelAssocOpts.__schema__(:association, :author)
     assert :pk == refl.owner_key
     assert :fk == refl.related_key
-    assert :my_changeset == refl.on_cast
   end
 
   test "belongs_to options" do

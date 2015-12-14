@@ -11,8 +11,8 @@ defmodule Ecto.Embedded do
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-  defstruct [:cardinality, :field, :owner, :related, :on_cast, :on_replace,
-             strategy: :replace]
+  defstruct [:cardinality, :field, :owner, :related, :on_replace,
+             strategy: :replace, on_cast: :changeset]
 
   @doc """
   Builds the embedded struct.

@@ -92,9 +92,9 @@ defmodule Ecto.Changeset do
 
   Using changesets you can work with `has_one` and `has_many` associations
   as well as with embedded structs. When working with those relations,
-  the `:on_replace` option can be given to configure the action that
-  should be taken when the child model is no longer associated to the
-  parent one.
+  the `:on_replace` option can be given to `cast_assoc`/`cast_embed` as well
+  as `put_assoc`/`put_embed` to configure the action that should be taken
+  when the child model is no longer associated to the parent one.
 
   This may be invoked in different occasions, for example, when it has been
   ommited in the list of associations/embeds for a many relation, or new struct
@@ -136,6 +136,7 @@ defmodule Ecto.Changeset do
             end
           end
 
+  `on_replace` may also be set when defining the association/embed.
   """
 
   alias __MODULE__
