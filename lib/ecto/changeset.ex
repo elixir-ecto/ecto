@@ -371,15 +371,11 @@ defmodule Ecto.Changeset do
     key
   end
 
-  defp process_param(key, kind, params, types, model, acc) do
+  defp process_param(key, kind, params, types, model, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
     current = Map.get(model, key)
-    do_process_param(key, param_key, kind, params, type, current, model, acc)
-  end
 
-  defp do_process_param(key, param_key, kind, params, type, current,
-                        model, {changes, errors, valid?}) do
     {key,
      case cast_field(param_key, type, params, current, model, valid?) do
        {:ok, nil, valid?} when kind == :required ->
@@ -403,7 +399,7 @@ defmodule Ecto.Changeset do
         type
       :error ->
         raise ArgumentError, "unknown field `#{key}` (note only fields, " <>
-          "embedded models, has_one and has_many associations are supported in cast)"
+          "embedded models, has_one and has_many associations are supported in changesets)"
     end
   end
 
@@ -513,7 +509,7 @@ defmodule Ecto.Changeset do
     on_cast    = opts[:with] || &related.changeset(&1, &2)
     current    = Relation.load!(model, Map.get(model, key))
 
-    case params && Map.fetch(params, param_key) do
+    case Map.fetch(params, param_key) do
       {:ok, value} ->
         case Relation.cast(relation, value, current, on_cast) do
           {:ok, change, relation_valid?, false} when change != current ->
@@ -524,7 +520,7 @@ defmodule Ecto.Changeset do
           :error ->
             %{changeset | errors: [{key, "is invalid"} | changeset.errors], valid?: false}
         end
-      _ ->
+      :error ->
         missing_relation(changeset, key, current, required?)
     end
   end

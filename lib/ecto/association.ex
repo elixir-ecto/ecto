@@ -169,6 +169,72 @@ defmodule Ecto.Association do
   def merge_source(struct, _query) do
     struct
   end
+
+  @doc """
+  Performs the repository action in the related changeset,
+  returning `{:ok, model}` or `{:error, changeset}`.
+  """
+  def on_repo_action(changeset, assocs, _adapter, _repo, _opts) when assocs == %{} do
+    {:ok, changeset}
+  end
+
+  def on_repo_action(changeset, assocs, adapter, repo, opts) do
+    %Ecto.Changeset{types: types, model: model, changes: changes, action: action} = changeset
+
+    {model, changes, valid?} =
+      Enum.reduce(assocs, {model, changes, true}, fn {field, changeset}, acc ->
+        case Map.get(types, field) do
+          {_, assocs} ->
+            on_repo_action(assocs, field, changeset, adapter, repo, action, opts, acc)
+          _ ->
+            raise ArgumentError,
+              "cannot #{action} `#{field}` in #{inspect model.__struct__}. Only embedded models, " <>
+              "has_one and has_many associations can be changed alongside the parent model"
+        end
+      end)
+
+    if valid? do
+      {:ok, %{changeset | model: model}}
+    else
+      {:error, %{changeset | changes: changes}}
+    end
+  end
+
+  defp on_repo_action(%{cardinality: :one}, field, nil,
+                      _adapter, _repo, _action, _opts, {parent, changes, valid?}) do
+    {Map.put(parent, field, nil), Map.put(changes, field, nil), valid?}
+  end
+
+  defp on_repo_action(%{cardinality: :one} = meta, field, changeset,
+                      adapter, repo, action, opts, {parent, changes, valid?}) do
+    case meta.__struct__.on_repo_action(meta, changeset, parent, adapter, repo, action, opts) do
+      {:ok, model} ->
+        {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
+      {:error, changeset} ->
+        {parent, Map.put(changes, field, changeset), false}
+    end
+  end
+
+  defp on_repo_action(%{cardinality: :many} = meta, field, changesets,
+                      adapter, repo, action, opts, {parent, changes, valid?}) do
+    {changesets, {models, models_valid?}} =
+      Enum.map_reduce(changesets, {[], true}, fn changeset, {models, models_valid?} ->
+        case meta.__struct__.on_repo_action(meta, changeset, parent, adapter, repo, action, opts) do
+          {:ok, nil} ->
+            {changeset, {models, models_valid?}}
+          {:ok, model} ->
+            {changeset, {[model | models], models_valid?}}
+          {:error, changeset} ->
+            {changeset, {models, false}}
+        end
+      end)
+
+    if models_valid? do
+      {Map.put(parent, field, Enum.reverse(models)), Map.put(changes, field, changesets), valid?}
+    else
+      {parent, Map.put(changes, field, changesets), false}
+    end
+  end
 end
 
 defmodule Ecto.Association.Has do

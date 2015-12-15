@@ -353,7 +353,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp process_assocs(changeset, assocs, adapter, repo, opts) do
-    Ecto.Changeset.Relation.on_repo_action(changeset, assocs, adapter, repo, opts)
+    Ecto.Association.on_repo_action(changeset, assocs, adapter, repo, opts)
   end
 
   # TODO: In the future, once we support belongs_to associations,
