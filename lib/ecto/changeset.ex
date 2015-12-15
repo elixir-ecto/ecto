@@ -82,7 +82,6 @@ defmodule Ecto.Changeset do
   * `validations` - All validations performed in the changeset
   * `constraints` - All constraints defined in the changeset
   * `required`    - All required fields as a list of atoms
-  * `optional`    - All optional fields as a list of atoms
   * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
   * `action`      - The action to be performed with the changeset
   * `types`       - Cache of the model's field types
@@ -146,7 +145,7 @@ defmodule Ecto.Changeset do
 
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
-            errors: [], validations: [], required: [], optional: [], prepare: [],
+            errors: [], validations: [], required: [], prepare: [],
             constraints: [], filters: %{}, action: nil, types: nil, opts: []
 
   @type t :: %Changeset{valid?: boolean(),
@@ -156,7 +155,6 @@ defmodule Ecto.Changeset do
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
                         required: [atom],
-                        optional: [atom],
                         prepare: [(t -> t)],
                         errors: [error],
                         constraints: [constraint],
@@ -288,8 +286,6 @@ defmodule Ecto.Changeset do
       %{title: "Foo", body: "Bar"}
       iex> new_changeset.required
       [:title]
-      iex> new_changeset.optional
-      [:body]
 
   ## Empty parameters
 
@@ -322,7 +318,7 @@ defmodule Ecto.Changeset do
              %{binary => term} | %{atom => term} | nil,
              [String.t | atom],
              [String.t | atom]) :: t | no_return
-  def cast(model_or_changeset, params, required, optional \\ [])
+  def cast(model_or_changeset, params, required, optional)
 
   def cast(_model, %{__struct__: _} = params, _required, _optional) do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
@@ -341,11 +337,11 @@ defmodule Ecto.Changeset do
       when is_list(required) and is_list(optional) do
     types = module.__changeset__
 
-    optional = Enum.map(optional, &process_empty_fields(&1, types))
+    _ = Enum.map(optional, &process_empty_fields(&1, types))
     required = Enum.map(required, &process_empty_fields(&1, types))
 
     %Changeset{params: nil, model: model, valid?: false, errors: [],
-               changes: changes, required: required, optional: optional, types: types}
+               changes: changes, required: required, types: types}
   end
 
   defp cast(%{__struct__: module} = model, %{} = changes, %{} = params, required, optional)
@@ -353,7 +349,7 @@ defmodule Ecto.Changeset do
     params = convert_params(params)
     types  = module.__changeset__
 
-    {optional, {changes, errors, valid?}} =
+    {_, {changes, errors, valid?}} =
       Enum.map_reduce(optional, {changes, [], true},
                       &process_param(&1, :optional, params, types, model, &2))
 
@@ -363,7 +359,7 @@ defmodule Ecto.Changeset do
 
     %Changeset{params: params, model: model, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, required: required,
-               optional: optional, types: types}
+               types: types}
   end
 
   defp process_empty_fields(key, _types) when is_binary(key) do
@@ -461,6 +457,7 @@ defmodule Ecto.Changeset do
     * `:with` - the function to build the changeset from params.
       Defaults to the changeset/2 function in the association module
     * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
+    * `:required` - if the association is a required field
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
@@ -482,6 +479,7 @@ defmodule Ecto.Changeset do
     * `:with` - the function to build the changeset from params.
       Defaults to the changeset/2 function in the embed module
     * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
+    * `:required` - if the embed is a required field
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
@@ -503,7 +501,7 @@ defmodule Ecto.Changeset do
       if opts[:required] do
         {update_in(changeset.required, &[key|&1]), true}
       else
-        {update_in(changeset.optional, &[key|&1]), false}
+        {changeset, false}
       end
 
     on_replace = opts[:on_replace] || relation.on_replace
@@ -579,8 +577,6 @@ defmodule Ecto.Changeset do
       %{body: "Body", title: "New title"}
       iex> changeset.required
       [:title, :body]
-      iex> changeset.optional
-      []
 
       iex> changeset1 = cast(%{title: "Title"}, %Post{body: "Body"}, ~w(title), ~w(body))
       iex> changeset2 = cast(%{title: "New title"}, %Post{}, ~w(title), ~w())
@@ -609,16 +605,15 @@ defmodule Ecto.Changeset do
   end
 
   defp cast_merge(cs1, cs2) do
-    new_params      = (cs1.params || cs2.params) && Map.merge(cs1.params || %{}, cs2.params || %{})
-    new_changes     = Map.merge(cs1.changes, cs2.changes)
-    new_errors      = Enum.uniq(cs1.errors ++ cs2.errors)
-    new_required    = Enum.uniq(cs1.required ++ cs2.required)
-    new_optional    = Enum.uniq(cs1.optional ++ cs2.optional) -- new_required
-    new_types       = cs1.types || cs2.types
-    new_valid?      = cs1.valid? and cs2.valid?
+    new_params   = (cs1.params || cs2.params) && Map.merge(cs1.params || %{}, cs2.params || %{})
+    new_changes  = Map.merge(cs1.changes, cs2.changes)
+    new_errors   = Enum.uniq(cs1.errors ++ cs2.errors)
+    new_required = Enum.uniq(cs1.required ++ cs2.required)
+    new_types    = cs1.types || cs2.types
+    new_valid?   = cs1.valid? and cs2.valid?
 
     %{cs1 | params: new_params, valid?: new_valid?, errors: new_errors, types: new_types,
-            changes: new_changes, required: new_required, optional: new_optional}
+            changes: new_changes, required: new_required}
   end
 
   defp merge_identical(object, nil, _thing), do: object

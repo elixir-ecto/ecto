@@ -43,7 +43,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
     assert changeset.validations == []
     assert changeset.required == [:title]
-    assert changeset.optional == [:body]
     assert changeset.valid?
   end
 
@@ -58,12 +57,11 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
     assert changeset.validations == []
     assert changeset.required == [:title]
-    assert changeset.optional == [:body]
     assert changeset.valid?
   end
 
   test "cast/4: with binary id" do
-    changeset = cast(%Post{}, %{"uuid" => "hello"}, [:uuid])
+    changeset = cast(%Post{}, %{"uuid" => "hello"}, [:uuid], [])
     assert changeset.changes == %{uuid: "hello"}
     assert changeset.errors == []
     assert changeset.valid?
@@ -85,7 +83,7 @@ defmodule Ecto.ChangesetTest do
     params = %{"title" => "hello"}
     struct = %Post{}
 
-    changeset = cast(struct, params, ~w(title))
+    changeset = cast(struct, params, ~w(title), [])
     assert changeset.params == params
     assert changeset.model  == struct
     assert changeset.changes == %{title: "hello"}
@@ -113,7 +111,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
     assert changeset.validations == []
     assert changeset.required == [:title]
-    assert changeset.optional == [:body]
     refute changeset.valid?
   end
 
@@ -209,7 +206,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.changes  == %{body: "new body"}
     assert changeset.required == [:title]
-    assert changeset.optional == [:body]
     assert length(changeset.validations) == 1
     assert length(changeset.constraints) == 1
   end
@@ -223,7 +219,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
     assert changeset.validations == []
     assert changeset.required == [:title]
-    assert changeset.optional == [:body]
     refute changeset.valid?
   end
 
@@ -241,7 +236,7 @@ defmodule Ecto.ChangesetTest do
 
   test "cast/4: protects against atom injection" do
     assert_raise ArgumentError, fn ->
-      cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before))
+      cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before), [])
     end
   end
 
@@ -309,7 +304,6 @@ defmodule Ecto.ChangesetTest do
     cs2 = cast(%Post{}, %{}, ~w(), ~w(title))
     changeset = merge(cs1, cs2)
     assert changeset.required == [:title]
-    assert changeset.optional == []
   end
 
   test "merge/2: doesn't duplicate required or optional fields" do
@@ -317,7 +311,6 @@ defmodule Ecto.ChangesetTest do
     cs2 = cast(%Post{}, %{}, ~w(body title), ~w(title))
     changeset = merge(cs1, cs2)
     assert Enum.sort(changeset.required) == [:body, :title]
-    assert Enum.sort(changeset.optional) == []
   end
 
   test "merge/2: merges the :repo field when either one is nil" do

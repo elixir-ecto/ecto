@@ -674,7 +674,7 @@ defmodule Ecto.Integration.RepoTest do
     # This will only work if we delete before performing inserts
     changeset =
       author
-      |> Ecto.Changeset.cast(%{"posts" => posts_params}, ~w())
+      |> Ecto.Changeset.cast(%{"posts" => posts_params}, ~w(), ~w())
       |> Ecto.Changeset.cast_assoc(:posts)
     author = TestRepo.update! changeset
     assert Enum.map(author.posts, &(&1.title)) == ["fresh", "fresh"]

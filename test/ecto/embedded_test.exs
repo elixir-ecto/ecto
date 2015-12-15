@@ -30,7 +30,7 @@ defmodule Ecto.EmbeddedTest do
     end
 
     def changeset(model, params) do
-      Changeset.cast(model, params, ~w(title))
+      Changeset.cast(model, params, ~w(title), [])
       |> validate_length(:title, min: 3)
     end
 
@@ -39,7 +39,7 @@ defmodule Ecto.EmbeddedTest do
     end
 
     def set_action(model, params) do
-      Changeset.cast(model, params, ~w(title))
+      Changeset.cast(model, params, ~w(title), [])
       |> Map.put(:action, :update)
     end
   end
@@ -184,7 +184,6 @@ defmodule Ecto.EmbeddedTest do
     changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, :profile,
                      with: &Profile.optional_changeset/2)
     profile = changeset.changes.profile
-    assert changeset.optional == [:profile]
     assert profile.changes == %{name: "michal"}
     assert profile.errors  == []
     assert profile.action  == :insert

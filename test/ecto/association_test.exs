@@ -34,7 +34,7 @@ defmodule Ecto.AssociationTest do
     end
 
     def set_action(model, params) do
-      Changeset.cast(model, params, ~w(title))
+      Changeset.cast(model, params, ~w(title), [])
       |> Map.put(:action, :update)
     end
   end
@@ -595,7 +595,6 @@ defmodule Ecto.AssociationTest do
 
   test "cast has_one with optional" do
     changeset = cast(%Author{profile: %Profile{id: "id"}}, %{"profile" => nil}, :profile)
-    assert changeset.optional == [:profile]
     assert changeset.changes.profile == nil
   end
 
