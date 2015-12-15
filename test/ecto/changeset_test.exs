@@ -114,7 +114,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: can't cast required field is marked as invalid" do
+  test "cast/4: required field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
 
