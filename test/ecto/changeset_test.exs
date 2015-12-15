@@ -566,6 +566,22 @@ defmodule Ecto.ChangesetTest do
     assert changeset.validations == [title: :oops]
   end
 
+  test "validate_required/2" do
+    changeset = changeset(%{}) |> validate_required(:title)
+    refute changeset.valid?
+    assert changeset.errors == [title: "can't be blank"]
+
+    changeset = changeset(%{}) |> validate_required([:title, :body])
+    refute changeset.valid?
+    assert changeset.errors == [body: "can't be blank", title: "can't be blank"]
+
+    changeset =
+      changeset(%{"title" => "hello", "body" => "something"})
+      |> validate_required(:title)
+    assert changeset.valid?
+    assert changeset.errors == []
+  end
+
   test "validate_format/3" do
     changeset =
       changeset(%{"title" => "foo@bar"})

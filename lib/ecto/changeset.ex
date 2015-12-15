@@ -1042,6 +1042,41 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Validates that one or more fields are present in the changeset.
+
+  If the value of a field is `nil`, an empty string `""`, or a string with only
+  white space `"   "` it will mark the changeset as invalid.
+
+  You can pass a single field name or a list of field names that are required.
+
+  ## Examples
+
+      validate_required(changeset, :title)
+      validate_required(changeset, [:title, :body])
+
+  """
+  @spec validate_required(t, list()) :: t
+  def validate_required(changeset, fields) when is_list(fields) do
+    Enum.reduce fields, changeset, fn(field, changeset) ->
+      changeset |> validate_required(field)
+    end
+  end
+
+  @spec validate_required(t, atom) :: t
+  def validate_required(changeset, field) do
+    value = case get_field(changeset, field) do
+      value when is_binary(value) -> String.strip(value)
+      value -> value
+    end
+
+    case value do
+      nil -> add_error(changeset, field, "can't be blank")
+      "" -> add_error(changeset, field, "can't be blank")
+      _ -> changeset
+    end
+  end
+
+  @doc """
   Validates a change has the given format.
 
   The format has to be expressed as a regular expression.
