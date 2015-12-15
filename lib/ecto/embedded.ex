@@ -18,8 +18,7 @@ defmodule Ecto.Embedded do
 
     * `:cardinality` - tells if there is one embedded model or many
     * `:related` - name of the embedded model
-    * `:on_replace` - the action taken on embedded models when the model is
-      replaced
+    * `:on_replace` - the action taken on embeds when the embed is replaced
 
   """
   def struct(module, name, opts) do

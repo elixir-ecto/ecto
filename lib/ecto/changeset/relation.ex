@@ -5,7 +5,8 @@ defmodule Ecto.Changeset.Relation do
   alias Ecto.Association.NotLoaded
 
   @type on_replace :: :raise | :mark_as_invalid | :delete | :nilify
-  @type t :: %{__struct__: atom, cardinality: :one | :many, related: atom, on_replace: on_replace}
+  @type t :: %{__struct__: atom, cardinality: :one | :many,
+               related: atom, on_replace: on_replace, field: atom}
 
   @doc """
   Updates the changeset accordingly to the relation's on_replace strategy.
@@ -120,31 +121,14 @@ defmodule Ecto.Changeset.Relation do
                    &do_change(relation, &1, &2))
   end
 
-  defp do_change(%{related: model}, struct, nil) do
-    fields    = model.__schema__(:fields)
-    embeds    = model.__schema__(:embeds)
-    assocs    = model.__schema__(:associations)
-    changeset = Changeset.change(struct)
-    struct    = changeset.model
-    types     = changeset.types
-
-    changes =
-      Enum.reduce(embeds ++ assocs, Map.take(struct, fields), fn field, acc ->
-        case Map.fetch(types, field) do
-          {:ok, {_, embed_or_assoc}} ->
-            value = load!(struct, Map.get(struct, field))
-            case change(embed_or_assoc, value, nil) do
-              {:ok, _, _, true}       -> acc
-              {:ok, change, _, false} -> Map.put(acc, field, change)
-            end
-          :error ->
-            acc
-        end
-      end)
-
-    {:ok, changeset.changes
-          |> update_in(&Map.merge(changes, &1))
-          |> put_new_action(:insert)}
+  # This may be an insert or an update, get all fields.
+  defp do_change(%{related: module}, changeset_or_struct, nil) do
+    fields    = module.__schema__(:fields)
+    embeds    = module.__schema__(:embeds)
+    assocs    = module.__schema__(:associations)
+    {:ok, Changeset.change(changeset_or_struct)
+          |> put_new_action(:insert)
+          |> surface(fields, embeds, assocs)}
   end
 
   defp do_change(relation, nil, current) do
@@ -155,13 +139,65 @@ defmodule Ecto.Changeset.Relation do
     {:ok, put_new_action(changeset, :update)}
   end
 
-  defp do_change(_relation, %Changeset{}, _current) do
-    raise ArgumentError, "related changeset has a different model than the one specified in the schema"
+  defp do_change(%{field: field}, %Changeset{}, _current) do
+    raise ArgumentError, "cannot change `#{field}` because given changeset has a different " <>
+                         "embed/association than the one specified in the parent struct"
   end
 
-  defp do_change(_relation, struct, current) do
-    changes = Map.take(struct, struct.__struct__.__schema__(:fields))
-    {:ok, Changeset.change(current, changes) |> put_new_action(:update)}
+  defp do_change(%{field: field}, _struct, _current) do
+    raise ArgumentError, "cannot change `#{field}` with a struct because another " <>
+                         "embed/association is set in parent struct, use a changeset instead"
+  end
+
+  @doc """
+  Surface all embeds and associations in the underlying struct
+  into the changeset as a change.
+  """
+  def surface(%{action: :insert} = changeset, fields, embeds, assocs) do
+    %{model: struct, types: types} = changeset
+    changeset
+    |> surface_relations(embeds, types, struct)
+    |> surface_relations(assocs, types, struct)
+    |> surface_fields(struct, fields -- embeds -- assocs)
+  end
+
+  def surface(changeset, _fields, _embeds, _assocs) do
+    changeset
+  end
+
+  defp surface_fields(changeset, struct, fields) do
+    update_in(changeset.changes, &Map.merge(Map.take(struct, fields), &1))
+  end
+
+  defp surface_relations(changeset, [], _types, _struct) do
+    changeset
+  end
+
+  defp surface_relations(%{changes: changes} = changeset, relation, types, struct) do
+    {changes, errors} =
+      Enum.reduce relation, {changes, []}, fn field, {changes, errors} ->
+        case {changes, types} do
+          {%{^field => _}, _} ->
+            {changes, errors}
+          {_, %{^field => {_, embed_or_assoc}}} ->
+            # This is partly reimplemeting the logic behind put_relation
+            # in Ecto.Changeset but we need to do it in a way where we have
+            # control over the current value.
+            value = load!(struct, Map.get(struct, field))
+            case change(embed_or_assoc, value, nil) do
+              {:ok, _, _, true}       -> {changes, errors}
+              {:ok, change, _, false} -> {Map.put(changes, field, change), errors}
+              :error                  -> {changes, [{field, "is invalid"}]}
+            end
+          {_, _} ->
+            {changes, errors}
+        end
+      end
+
+    case errors do
+      [] -> put_in changeset.changes, changes
+      _  -> %{changeset | errors: errors ++ changeset.errors, valid?: false}
+    end
   end
 
   @doc """

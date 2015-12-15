@@ -505,7 +505,6 @@ defmodule Ecto.EmbeddedTest do
     assert new_changeset.changes == %{id: 1, title: nil}
 
     embed_model_changeset = Changeset.change(%Post{}, title: "hello")
-
     assert {:ok, [changeset], true, false} =
       Relation.change(embed, [embed_model_changeset], [])
     assert changeset.action == :insert

@@ -188,7 +188,7 @@ defmodule Ecto.Association do
             on_repo_action(assocs, field, changeset, adapter, repo, action, opts, acc)
           _ ->
             raise ArgumentError,
-              "cannot #{action} `#{field}` in #{inspect model.__struct__}. Only embedded models, " <>
+              "cannot #{action} `#{field}` in #{inspect model.__struct__}. Only embeds, " <>
               "has_one and has_many associations can be changed alongside the parent model"
         end
       end)
@@ -376,7 +376,7 @@ defmodule Ecto.Association.Has do
 
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
-        maybe_replace_one!(assoc, changeset, parent, repo, opts)
+        maybe_replace_one!(assoc, changeset, parent, repo, repo_action, opts)
         if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
         original = Map.get(changes, key)
@@ -397,8 +397,8 @@ defmodule Ecto.Association.Has do
     do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect model} while inserting")
   defp check_action!(_, _, _), do: :ok
 
-  defp maybe_replace_one!(%{cardinality: :one, field: field} = assoc,
-                          %{action: :insert}, parent, repo, opts) do
+  defp maybe_replace_one!(%{cardinality: :one, field: field} = assoc, %{action: :insert},
+                          parent, repo, :update, opts) do
     case Map.get(parent, field) do
       %Ecto.Association.NotLoaded{} ->
         :ok
@@ -418,7 +418,7 @@ defmodule Ecto.Association.Has do
     end
   end
 
-  defp maybe_replace_one!(_, _, _, _, _), do: :ok
+  defp maybe_replace_one!(_, _, _, _, _, _), do: :ok
 end
 
 defmodule Ecto.Association.HasThrough do
@@ -592,11 +592,12 @@ defmodule Ecto.Association.BelongsTo do
           case elem(primary_key, 0) do
             :id -> :id
             key ->
-              IO.puts :stderr, "warning: #{inspect module} has a custom primary key and " <>
-                               "invoked belongs_to(#{inspect name}). To avoid ambiguity, " <>
-                               "please also specify the :references option in belongs_to " <>
-                               "with the primary key name of the associated model, currently " <>
-                               "it defaults to #{inspect key}\n#{Exception.format_stacktrace}"
+              IO.puts :stderr,
+                "warning: #{inspect module} has a custom primary key and " <>
+                "invoked belongs_to(#{inspect name}). To avoid ambiguity, " <>
+                "please also specify the :references option in belongs_to " <>
+                "with the primary key name of the associated model, currently " <>
+                "it defaults to #{inspect key}\n#{Exception.format_stacktrace}"
               key
           end
         true ->

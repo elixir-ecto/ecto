@@ -61,14 +61,25 @@ defmodule Ecto.Repo.AssociationTest do
     assert assoc.inserted_at
   end
 
-  test "raises when assoc is given on insert" do
-    assert_raise ArgumentError, ~r"set for assoc named `assoc`", fn ->
-      TestRepo.insert!(%MyModel{assoc: %MyAssoc{x: "xyz"}})
-    end
+  test "handles assocs from struct on insert" do
+    model = TestRepo.insert!(%MyModel{assoc: %MyAssoc{x: "xyz"}})
+    assoc = model.assoc
+    assert assoc.id
+    assert assoc.x == "xyz"
+    assert assoc.my_model_id == model.id
+    assert assoc.inserted_at
 
-    assert_raise ArgumentError, ~r"set for assoc named `assocs`", fn ->
-      TestRepo.insert!(%MyModel{assocs: [%MyAssoc{x: "xyz"}]})
-    end
+    model = TestRepo.insert!(%MyModel{assocs: [%MyAssoc{x: "xyz"}]})
+    [assoc] = model.assocs
+    assert assoc.id
+    assert assoc.x == "xyz"
+    assert assoc.my_model_id == model.id
+    assert assoc.inserted_at
+  end
+
+  test "handles invalid assocs from struct on insert" do
+    {:error, changeset} = TestRepo.insert(%MyModel{assoc: 1})
+    assert changeset.errors == [assoc: "is invalid"]
   end
 
   test "raises on action mismatch on insert" do

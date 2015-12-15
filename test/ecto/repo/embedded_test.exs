@@ -51,7 +51,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   test "handles embeds on insert" do
     embed = %MyEmbed{x: "xyz"}
 
-    changeset = 
+    changeset =
       %MyModel{}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_embed(:embed, embed)
@@ -72,14 +72,23 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert embed.inserted_at
   end
 
-  test "raises when embed is given on insert" do
-    assert_raise ArgumentError, ~r"set for embed named `embed`", fn ->
-      TestRepo.insert!(%MyModel{embed: %MyEmbed{x: "xyz"}})
-    end
+  test "handles embeds from struct on insert" do
+    model = TestRepo.insert!(%MyModel{embed: %MyEmbed{x: "xyz"}})
+    embed = model.embed
+    assert embed.id
+    assert embed.x == "xyz"
+    assert embed.inserted_at
 
-    assert_raise ArgumentError, ~r"set for embed named `embeds`", fn ->
-      TestRepo.insert!(%MyModel{embeds: [%MyEmbed{x: "xyz"}]})
-    end
+    model = TestRepo.insert!(%MyModel{embeds: [%MyEmbed{x: "xyz"}]})
+    [embed] = model.embeds
+    assert embed.id
+    assert embed.x == "xyz"
+    assert embed.inserted_at
+  end
+
+  test "handles invalid embeds from struct on insert" do
+    {:error, changeset} = TestRepo.insert(%MyModel{embed: 1})
+    assert changeset.errors == [embed: "is invalid"]
   end
 
   test "raises on action mismatch on insert" do

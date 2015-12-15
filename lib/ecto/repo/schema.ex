@@ -5,6 +5,7 @@ defmodule Ecto.Repo.Schema do
 
   alias Ecto.Query.Planner
   alias Ecto.Changeset
+  alias Ecto.Changeset.Relation
 
   @doc """
   Implementation for `Ecto.Repo.insert!/2`.
@@ -61,9 +62,8 @@ defmodule Ecto.Repo.Schema do
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
-    # We also remove all embeds that are not in the changes
     changeset = update_changeset(changeset, :insert, repo)
-    changeset = insert_changes(struct, fields, embeds, assocs, changeset)
+    changeset = Relation.surface(changeset, fields, embeds, assocs)
 
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
       user_changeset = run_prepare(changeset, prepare)
@@ -84,6 +84,8 @@ defmodule Ecto.Repo.Schema do
           |> merge_embeds(embed_changes)
           |> process_assocs(assoc_changes, adapter, repo, opts)
           |> get_model_if_ok(user_changeset)
+        {:error, _} = error ->
+          error
         {:invalid, constraints} ->
           {:error, constraints_to_errors(user_changeset, :insert, constraints)}
       end
@@ -144,6 +146,8 @@ defmodule Ecto.Repo.Schema do
             |> merge_embeds(embed_changes)
             |> process_assocs(assoc_changes, adapter, repo, opts)
             |> get_model_if_ok(user_changeset)
+          {:error, _} = error ->
+            error
           {:invalid, constraints} ->
             {:error, constraints_to_errors(user_changeset, :update, constraints)}
         end
@@ -223,6 +227,8 @@ defmodule Ecto.Repo.Schema do
       case apply(changeset, adapter, :delete, [], args) do
         {:ok, changeset} ->
           {:ok, changeset.model}
+        {:error, _} = error ->
+          error
         {:invalid, constraints} ->
           {:error, constraints_to_errors(user_changeset, :delete, constraints)}
       end
@@ -262,10 +268,12 @@ defmodule Ecto.Repo.Schema do
     |> Map.put(:model, model)
   end
 
+  defp apply(%{valid?: false} = changeset, _adapter, _action, _extra, _args) do
+    {:error, changeset}
+  end
   defp apply(changeset, _adapter, :noop, _extra, _args) do
     {:ok, changeset}
   end
-
   defp apply(changeset, adapter, action, extra, args) do
     case apply(adapter, action, args) do
       {:ok, values} ->
@@ -319,30 +327,6 @@ defmodule Ecto.Repo.Schema do
   defp action_to_state(:insert), do: :loaded
   defp action_to_state(:update), do: :loaded
   defp action_to_state(:delete), do: :deleted
-
-  defp insert_changes(struct, fields, embeds, assocs, changeset) do
-    types = changeset.types
-    assert_empty_relation!(struct, embeds, types)
-    assert_empty_relation!(struct, assocs, types)
-    update_in changeset.changes, &Map.merge(Map.take(struct, fields), &1)
-  end
-
-  defp assert_empty_relation!(struct, relation, types) do
-    Enum.each relation, fn field ->
-      case Map.get(types, field) do
-        {kind, relation} ->
-          value = Map.get(struct, field)
-          kind  = kind |> Atom.to_string
-          unless Ecto.Changeset.Relation.empty?(relation, value) do
-            raise ArgumentError, "struct #{inspect struct.__struct__} has value `#{inspect value}` " <>
-              "set for #{kind} named `#{field}`. #{String.capitalize kind}s can only be " <>
-              "manipulated via changesets, be it on insert, update or delete."
-          end
-        _ ->
-          :ok
-      end
-    end
-  end
 
   defp pop_from_changes(changeset, fields) do
     get_and_update_in(changeset.changes, &Map.split(&1, fields))
