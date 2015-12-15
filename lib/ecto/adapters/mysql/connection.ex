@@ -181,7 +181,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
                 sources) do
       "SELECT " <>
         distinct(distinct, sources, query) <>
-        Enum.map_join(fields, ", ", &expr(&1, sources, query))
+        select(fields, sources, query)
     end
 
     defp distinct(nil, _sources, _query), do: ""
@@ -190,6 +190,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp distinct(%QueryExpr{expr: exprs}, _sources, query) when is_list(exprs) do
       error!(query, "DISTINCT with multiple columns is not supported by MySQL")
     end
+
+    defp select([], _sources, _query),
+      do: "TRUE"
+    defp select(fields, sources, query),
+      do: Enum.map_join(fields, ", ", &expr(&1, sources, query))
 
     defp from(sources) do
       {table, name, _model} = elem(sources, 0)

@@ -5,13 +5,6 @@ defmodule Ecto.Integration.EscapeTest do
   import Ecto.Query
   alias Ecto.Integration.Post
 
-  test "Repo.all escape" do
-    TestRepo.insert!(%Post{title: "hello"})
-
-    query = from(p in Post, select: "'\\")
-    assert ["'\\"] == TestRepo.all(query)
-  end
-
   test "Repo.insert! escape" do
     TestRepo.insert!(%Post{title: "'"})
 
@@ -29,14 +22,13 @@ defmodule Ecto.Integration.EscapeTest do
 
   test "Repo.update_all escape" do
     TestRepo.insert!(%Post{title: "hello"})
-    TestRepo.update_all(Post, set: [title: "'"])
 
+    TestRepo.update_all(Post, set: [title: "'"])
     reader = from(p in Post, select: p.title)
     assert ["'"] == TestRepo.all(reader)
 
     query = from(Post, where: "'" != "")
     TestRepo.update_all(query, set: [title: "''"])
-
     assert ["''"] == TestRepo.all(reader)
   end
 

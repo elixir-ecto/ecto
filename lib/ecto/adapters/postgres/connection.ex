@@ -199,8 +199,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
                 distinct_exprs, sources) do
       "SELECT " <>
         distinct(distinct, distinct_exprs) <>
-        Enum.map_join(fields, ", ", &expr(&1, sources, query))
+        select_fields(fields, sources, query)
     end
+
+    defp select_fields([], _sources, _query),
+      do: "TRUE"
+    defp select_fields(fields, sources, query),
+      do: Enum.map_join(fields, ", ", &expr(&1, sources, query))
 
     defp distinct_exprs(%Query{distinct: %QueryExpr{expr: exprs}} = query, sources)
         when is_list(exprs) do

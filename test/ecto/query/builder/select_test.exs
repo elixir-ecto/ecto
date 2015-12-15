@@ -18,6 +18,9 @@ defmodule Ecto.Query.Builder.SelectTest do
     assert {{:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}, %{}} ==
            escape(quote do %{a: a} end, [a: 0], __ENV__)
 
+    assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]}, %{}} ==
+           escape(quote do %{a => b} end, [a: 0, b: 1], __ENV__)
+
     assert {[Macro.escape(quote do &0.y end), Macro.escape(quote do &0.z end)], %{}} ==
            escape(quote do [x.y, x.z] end, [x: 0], __ENV__)
 

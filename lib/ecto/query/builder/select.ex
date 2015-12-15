@@ -44,11 +44,9 @@ defmodule Ecto.Query.Builder.Select do
   # Map
   defp escape({:%{}, _, pairs}, params, vars, env) do
     {pairs, params} = Enum.map_reduce pairs, params, fn({k, v}, acc) ->
-      unless is_atom(k) or is_binary(k) or is_number(k) do
-        Builder.error! "keys can only be atoms/binaries/integers/floats"
-      end
-      {expr, params} = escape(v, acc, vars, env)
-      {{k, expr}, params}
+      {k, acc} = escape_key(k, acc, vars, env)
+      {v, acc} = escape_value(v, acc, vars, env)
+      {{k, v}, acc}
     end
 
     expr = {:{}, [], [:%{}, [], pairs]}
@@ -69,6 +67,17 @@ defmodule Ecto.Query.Builder.Select do
 
   defp escape(other, params, vars, env) do
     Builder.escape(other, :any, params, vars, env)
+  end
+
+  defp escape_key(k, params, _vars, _env) when is_atom(k) do
+    {k, params}
+  end
+  defp escape_key(k, params, vars, env) do
+    escape(k, params, vars, env)
+  end
+
+  defp escape_value(k, params, vars, env) do
+    escape(k, params, vars, env)
   end
 
   @doc """

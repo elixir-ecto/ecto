@@ -147,6 +147,10 @@ defmodule Ecto.Repo.Queryable do
   defp postprocess(row, expr, false),
     do: transform_row(expr, nil, row) |> elem(0)
 
+  defp transform_row({:&, _, [0]}, from, values) do
+    {from, values}
+  end
+
   defp transform_row({:{}, _, list}, from, values) do
     {result, values} = transform_row(list, from, values)
     {List.to_tuple(result), values}
@@ -158,9 +162,10 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp transform_row({:%{}, _, pairs}, from, values) do
-    Enum.reduce pairs, {%{}, values}, fn({key, value}, {map, values_acc}) ->
-      {value, new_values} = transform_row(value, from, values_acc)
-      {Map.put(map, key, value), new_values}
+    Enum.reduce pairs, {%{}, values}, fn {k, v}, {map, acc} ->
+      {k, acc} = transform_row(k, from, acc)
+      {v, acc} = transform_row(v, from, acc)
+      {Map.put(map, k, v), acc}
     end
   end
 
@@ -168,8 +173,8 @@ defmodule Ecto.Repo.Queryable do
     Enum.map_reduce(list, values, &transform_row(&1, from, &2))
   end
 
-  defp transform_row({:&, _, [0]}, from, values) do
-    {from, values}
+  defp transform_row(expr, _from, values) when is_atom(expr) or is_binary(expr) or is_number(expr) do
+    {expr, values}
   end
 
   defp transform_row(_, _from, values) do

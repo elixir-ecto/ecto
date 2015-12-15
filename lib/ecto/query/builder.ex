@@ -328,7 +328,7 @@ defmodule Ecto.Query.Builder do
   defp literal(value, expected, vars),
     do: do_literal(value, expected, quoted_type(value, vars))
 
-  defp do_literal(value, :any, current) when current in @always_tagged,
+  defp do_literal(value, _, current) when current in @always_tagged,
     do: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: value, type: current]}]}
   defp do_literal(value, :any, _current),
     do: value
