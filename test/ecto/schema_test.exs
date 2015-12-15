@@ -74,6 +74,10 @@ defmodule Ecto.SchemaTest do
     assert inspect(model.__meta__) == "#Ecto.Schema.Metadata<:built>"
   end
 
+  test "default of array field is not []" do
+     assert %Model{}.array == nil
+  end
+
   defmodule SchemaModel do
     use Ecto.Schema
 

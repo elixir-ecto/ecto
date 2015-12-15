@@ -1257,10 +1257,6 @@ defmodule Ecto.Schema do
     if id in [:id, :binary_id], do: id, else: nil
   end
 
-  defp default_for_type({:array, _}, opts) do
-    Keyword.get(opts, :default, [])
-  end
-
   defp default_for_type(_, opts) do
     Keyword.get(opts, :default)
   end
