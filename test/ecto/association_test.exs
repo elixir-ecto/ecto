@@ -522,7 +522,7 @@ defmodule Ecto.AssociationTest do
     assert cast(%Author{}, %{"profile" => nil}, :profile).changes == %{}
 
     loaded = put_in %Author{}.__meta__.state, :loaded
-    assert_raise ArgumentError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
+    assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
       cast(loaded, %{"profile" => nil}, :profile)
     end
   end
@@ -709,7 +709,7 @@ defmodule Ecto.AssociationTest do
     assert cast(%Author{}, %{"posts" => []}, :posts).changes == %{}
 
     loaded = put_in %Author{}.__meta__.state, :loaded
-    assert_raise ArgumentError, ~r"attempting to cast or change association `posts` .* that was not loaded", fn ->
+    assert_raise RuntimeError, ~r"attempting to cast or change association `posts` .* that was not loaded", fn ->
       cast(loaded, %{"posts" => []}, :posts)
     end
   end
@@ -861,11 +861,6 @@ defmodule Ecto.AssociationTest do
     assert changeset.changes == %{id: nil, name: "michal", summary_id: nil, author_id: nil}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(assoc, %Profile{name: "michal"}, %Profile{})
-    assert changeset.action == :update
-    assert changeset.changes == %{name: "michal"}
-
-    assert {:ok, changeset, true, false} =
       Relation.change(assoc, nil, %Profile{})
     assert changeset.action == :delete
 
@@ -957,11 +952,6 @@ defmodule Ecto.AssociationTest do
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, title: "hello", summary_id: nil, author_id: nil}
 
-    assert {:ok, [changeset], true, false} =
-      Relation.change(assoc, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
-    assert changeset.action == :update
-    assert changeset.changes == %{title: "hello"}
-
     assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action  == :delete
@@ -993,6 +983,10 @@ defmodule Ecto.AssociationTest do
     new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
       Relation.change(assoc, [new_model_update], [assoc_model])
+    end
+
+    assert_raise RuntimeError, ~r"use a changeset instead", fn ->
+      Relation.change(assoc, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
     end
   end
 

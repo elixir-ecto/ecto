@@ -397,11 +397,6 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.changes == %{id: nil, name: "michal"}
 
     assert {:ok, changeset, true, false} =
-      Relation.change(embed, %Profile{name: "michal"}, %Profile{})
-    assert changeset.action == :update
-    assert changeset.changes == %{name: "michal"}
-
-    assert {:ok, changeset, true, false} =
       Relation.change(embed, nil, %Profile{})
     assert changeset.action == :delete
 
@@ -493,11 +488,6 @@ defmodule Ecto.EmbeddedTest do
     assert changeset.action == :insert
     assert changeset.changes == %{id: nil, title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
-      Relation.change(embed, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
-    assert changeset.action == :update
-    assert changeset.changes == %{title: "hello"}
-
     assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(embed, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action  == :delete
@@ -528,6 +518,10 @@ defmodule Ecto.EmbeddedTest do
     new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
     assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
       Relation.change(embed, [new_model_update], [embed_model])
+    end
+
+    assert_raise RuntimeError, ~r"use a changeset instead", fn ->
+      Relation.change(embed, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
     end
   end
 

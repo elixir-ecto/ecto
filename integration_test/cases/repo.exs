@@ -633,7 +633,7 @@ defmodule Ecto.Integration.RepoTest do
     changeset =
       p1
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_assoc(:comments, [c1, c2])
+      |> Ecto.Changeset.put_assoc(:comments, [Ecto.Changeset.change(c1), Ecto.Changeset.change(c2)])
     p1 = TestRepo.update!(changeset)
     [_c1, c2] = p1.comments |> Enum.sort_by(&(&1.id))
     assert c2.id

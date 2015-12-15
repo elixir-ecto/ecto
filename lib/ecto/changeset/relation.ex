@@ -64,9 +64,9 @@ defmodule Ecto.Changeset.Relation do
   end
 
   def load!(model, %NotLoaded{__field__: field}) do
-    raise ArgumentError, "attempting to cast or change association `#{field}` " <>
-      "from `#{inspect model.__struct__}` that was not loaded. Please preload your " <>
-      "associations before casting or changing the model"
+    raise "attempting to cast or change association `#{field}` " <>
+          "from `#{inspect model.__struct__}` that was not loaded. Please preload your " <>
+          "associations before casting or changing the model"
   end
 
   def load!(_model, loaded), do: loaded
@@ -140,13 +140,13 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp do_change(%{field: field}, %Changeset{}, _current) do
-    raise ArgumentError, "cannot change `#{field}` because given changeset has a different " <>
-                         "embed/association than the one specified in the parent struct"
+    raise "cannot change `#{field}` because given changeset has a different " <>
+          "embed/association than the one specified in the parent struct"
   end
 
   defp do_change(%{field: field}, _struct, _current) do
-    raise ArgumentError, "cannot change `#{field}` with a struct because another " <>
-                         "embed/association is set in parent struct, use a changeset instead"
+    raise "cannot change `#{field}` with a struct because another " <>
+          "embed/association is set in parent struct, use a changeset instead"
   end
 
   @doc """
@@ -223,13 +223,13 @@ defmodule Ecto.Changeset.Relation do
     you are attempting to change relation #{inspect name} of
     #{inspect owner}, but there is missing data.
 
-    By default, if the parent model contains N children, at least the same
+    By default, if the parent struct contains N children, at least the same
     N children must be given on update. In other words, it is not possible
     to orphan embed nor associated records, attempting to do so results
     in this error message.
 
     It is possible to change this behaviour by setting `:on_replace` when
-    defining the relation. See `Ecto.Changeset`'s section on related models
+    defining the relation. See `Ecto.Changeset`'s section on related data
     for more info.
     """
   end
@@ -341,7 +341,7 @@ defmodule Ecto.Changeset.Relation do
         else
           reason = if action == :insert, do: "already exists", else: "does not exist"
           raise "cannot #{action} related #{inspect changeset.model} " <>
-            "because it #{reason} in the parent model"
+                "because it #{reason} in the parent model"
         end
       :error ->
         :error

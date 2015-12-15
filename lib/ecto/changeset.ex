@@ -29,6 +29,7 @@ defmodule Ecto.Changeset do
 
       defmodule User do
         use Ecto.Schema
+        import Ecto.Changeset
 
         schema "users" do
           field :name
@@ -116,6 +117,7 @@ defmodule Ecto.Changeset do
 
           defmodule Comment do
             use Ecto.Schema
+            import Ecto.Changeset
 
             schema "comments" do
               field :body, :string
