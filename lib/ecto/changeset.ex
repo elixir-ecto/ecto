@@ -258,6 +258,12 @@ defmodule Ecto.Changeset do
     end)
   end
 
+  @doc false
+  def cast(model, params, required) do
+    IO.write :stderr, "warning: cast/3 is deprecated, please use cast/4\n" <> Exception.format_stacktrace()
+    cast(model, params, required, [])
+  end
+
   @doc """
   Converts the given `params` into a changeset for `model`
   keeping only the set of `required` and `optional` keys.
@@ -344,7 +350,7 @@ defmodule Ecto.Changeset do
              %{binary => term} | %{atom => term} | nil,
              [cast_field],
              [cast_field]) :: t | no_return
-  def cast(model_or_changeset, params, required, optional \\ [])
+  def cast(model_or_changeset, params, required, optional)
 
   def cast(_model, %{__struct__: _} = params, _required, _optional) do
     raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"

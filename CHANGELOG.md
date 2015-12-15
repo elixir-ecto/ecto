@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.1-dev
+
+### Deprecations
+
+* Add missing deprecation on `Ecto.Changeset.cast/3`
+
 ## v1.1.0
 
 Ecto v1.1.0 brings many improvements and bug fixes.
