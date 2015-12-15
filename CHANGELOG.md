@@ -12,7 +12,7 @@ This is a new major release of Ecto that removes previously deprecated features 
 ### Enhancements
 
 * Allow associations and embeds to given on `Repo.insert/2` without wrapping them in a changeset. This will make inserting data to the database in scenarios like testing or seeding simpler and more convenient
-* Support expressions in map keys in `select` in queries. Example: `from p in Post, group_by: p.category, select: %{p.category => count(p.id)}`
+* Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
 
 ## v1.1
 
