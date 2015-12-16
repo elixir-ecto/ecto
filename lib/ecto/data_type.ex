@@ -14,7 +14,7 @@ defprotocol Ecto.DataType do
   tell Ecto how to convert `%Ecto.Date{}` into `:date` and
   such is done with the `Ecto.DataType` protocol:
 
-      defimpl Ecto.DataType, for: Ecto.DateTime do
+      defimpl Ecto.DataType, for: Ecto.Date do
         def cast(%Ecto.Date{day: day, month: month, year: year}, :date) do
           {:ok, {year, month, day}}
         end
