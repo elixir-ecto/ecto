@@ -465,7 +465,7 @@ defmodule Ecto do
       %Comment{id: nil, post_id: 13}
   """
   def build_assoc(%{__struct__: model} = struct, assoc, attributes \\ %{}) do
-    assoc = Ecto.Association.association_from_model!(model, assoc)
+    assoc = Ecto.Association.association_from_schema!(model, assoc)
     assoc.__struct__.build(assoc, struct, Dict.delete(attributes, :__meta__))
   end
 
@@ -496,7 +496,7 @@ defmodule Ecto do
 
     model = hd(structs).__struct__
     assoc = %{owner_key: owner_key} =
-      Ecto.Association.association_from_model!(model, assoc)
+      Ecto.Association.association_from_schema!(model, assoc)
 
     values =
       Enum.uniq for(struct <- structs,

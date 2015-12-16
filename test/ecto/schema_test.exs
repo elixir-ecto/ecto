@@ -451,8 +451,8 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "has_* references option has to match a field on model" do
-    message = ~r"model does not have the field :pk used by association :posts"
+  test "has_* references option has to match a field on schema" do
+    message = ~r"schema does not have the field :pk used by association :posts"
     assert_raise ArgumentError, message, fn ->
       defmodule ModelPkAssocMisMatch do
         use Ecto.Schema
@@ -465,7 +465,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_* expects a queryable" do
-    message = ~r"association queryable must be a model or {source, model}, got: 123"
+    message = ~r"association queryable must be a schema or {source, schema}, got: 123"
     assert_raise ArgumentError, message, fn ->
       defmodule QueryableMisMatch do
         use Ecto.Schema
@@ -477,8 +477,8 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "has_* through has to match an association on model" do
-    message = ~r"model does not have the association :whatever used by association :posts"
+  test "has_* through has to match an association on schema" do
+    message = ~r"schema does not have the association :whatever used by association :posts"
     assert_raise ArgumentError, message, fn ->
       defmodule ModelPkAssocMisMatch do
         use Ecto.Schema
@@ -490,8 +490,8 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "has_* through with model" do
-    message = ~r"When using the :through option, the model should not be passed as second argument"
+  test "has_* through with schema" do
+    message = ~r"When using the :through option, the schema should not be passed as second argument"
     assert_raise ArgumentError, message, fn ->
       defmodule ModelThroughMatch do
         use Ecto.Schema

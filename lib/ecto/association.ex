@@ -7,7 +7,7 @@ defmodule Ecto.Association.NotLoaded do
   The fields are:
 
     * `__field__` - the association field in `owner`
-    * `__owner__` - the model that owns the association
+    * `__owner__` - the schema that owns the association
     * `__cardinality__` - the cardinality of the association
 
   """
@@ -24,8 +24,12 @@ end
 defmodule Ecto.Association do
   @moduledoc false
 
-  @type t :: %{__struct__: atom, cardinality: :one | :many,
-               field: atom, owner_key: atom, owner: atom}
+  @type t :: %{__struct__: atom,
+               cardinality: :one | :many,
+               relationship: :parent | :child,
+               owner: atom,
+               owner_key: atom,
+               field: atom}
 
   @doc """
   Builds the association struct.
@@ -43,11 +47,14 @@ defmodule Ecto.Association do
 
     * `:owner_key` - the key in the owner with the association value
 
+    * `:relationship` - if the relationship to the specified entity is
+      of a child or a parent
+
   """
   @callback struct(module, field :: atom, opts :: Keyword.t) :: t
 
   @doc """
-  Builds a model for the given association.
+  Builds a struct for the given association.
 
   The struct to build from is given as argument in case default values
   should be set in the struct.
@@ -105,11 +112,11 @@ defmodule Ecto.Association do
               {:assoc, t, atom} | {:through, t, [atom]}
 
   @doc """
-  Retrieves the association from the given model.
+  Retrieves the association from the given schema.
   """
-  def association_from_model!(model, assoc) do
-    model.__schema__(:association, assoc) ||
-      raise ArgumentError, "model #{inspect model} does not have association #{inspect assoc}"
+  def association_from_schema!(schema, assoc) do
+    schema.__schema__(:association, assoc) ||
+      raise ArgumentError, "schema #{inspect schema} does not have association #{inspect assoc}"
   end
 
   @doc """
@@ -144,23 +151,23 @@ defmodule Ecto.Association do
       Model
 
       iex> Ecto.Association.related_from_query("wrong")
-      ** (ArgumentError) association queryable must be a model or {source, model}, got: "wrong"
+      ** (ArgumentError) association queryable must be a schema or {source, schema}, got: "wrong"
 
   """
   def related_from_query(atom) when is_atom(atom), do: atom
-  def related_from_query({source, model}) when is_binary(source) and is_atom(model), do: model
+  def related_from_query({source, schema}) when is_binary(source) and is_atom(schema), do: schema
   def related_from_query(queryable) do
-    raise ArgumentError, "association queryable must be a model " <>
-      "or {source, model}, got: #{inspect queryable}"
+    raise ArgumentError, "association queryable must be a schema " <>
+      "or {source, schema}, got: #{inspect queryable}"
   end
 
   @doc """
-  Merges source from query into to the given model.
+  Merges source from query into to the given schema.
 
   In case the query does not have a source, returns
-  the model unchanged.
+  the schema unchanged.
   """
-  def merge_source(model, query)
+  def merge_source(schema, query)
 
   def merge_source(struct, {source, _}) do
     Ecto.put_meta(struct, source: source)
@@ -172,7 +179,7 @@ defmodule Ecto.Association do
 
   @doc """
   Performs the repository action in the related changeset,
-  returning `{:ok, model}` or `{:error, changeset}`.
+  returning `{:ok, struct}` or `{:error, changeset}`.
   """
   def on_repo_action(changeset, assocs, _adapter, _repo, _opts) when assocs == %{} do
     {:ok, changeset}
@@ -189,7 +196,7 @@ defmodule Ecto.Association do
           _ ->
             raise ArgumentError,
               "cannot #{action} `#{field}` in #{inspect model.__struct__}. Only embeds, " <>
-              "has_one and has_many associations can be changed alongside the parent model"
+              "has_one and has_many associations can be changed alongside the parent struct"
         end
       end)
 
@@ -244,14 +251,14 @@ defmodule Ecto.Association.Has do
   Its fields are:
 
     * `cardinality` - The association cardinality
-    * `field` - The name of the association field on the model
-    * `owner` - The model where the association was defined
-    * `related` - The model that is associated
-    * `owner_key` - The key on the `owner` model used for the association
-    * `related_key` - The key on the `related` model used for the association
+    * `field` - The name of the association field on the schema
+    * `owner` - The schema where the association was defined
+    * `related` - The schema that is associated
+    * `owner_key` - The key on the `owner` schema used for the association
+    * `related_key` - The key on the `related` schema used for the association
     * `queryable` - The real query to use for querying association
-    * `on_delete` - The action taken on associations when model is deleted
-    * `on_replace` - The action taken on associations when model is replaced
+    * `on_delete` - The action taken on associations when schema is deleted
+    * `on_replace` - The action taken on associations when schema is replaced
     * `defaults` - Default fields used when building the association
   """
 
@@ -259,7 +266,7 @@ defmodule Ecto.Association.Has do
   @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key,
-             :queryable, :on_delete, :on_replace, defaults: []]
+             :queryable, :on_delete, :on_replace, defaults: [], relationship: :child]
 
   @doc false
   def struct(module, name, opts) do
@@ -271,11 +278,11 @@ defmodule Ecto.Association.Has do
           elem(primary_key, 0)
         true ->
           raise ArgumentError, "need to set :references option for " <>
-            "association #{inspect name} when model has no primary key"
+            "association #{inspect name} when schema has no primary key"
       end
 
     unless Module.get_attribute(module, :ecto_fields)[ref] do
-      raise ArgumentError, "model does not have the field #{inspect ref} used by " <>
+      raise ArgumentError, "schema does not have the field #{inspect ref} used by " <>
         "association #{inspect name}, please set the :references option accordingly"
     end
 
@@ -284,7 +291,7 @@ defmodule Ecto.Association.Has do
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
-                           "option, the model should not be passed as second argument"
+                           "option, the schema should not be passed as second argument"
     end
 
     on_delete  = Keyword.get(opts, :on_delete, :nothing)
@@ -393,8 +400,8 @@ defmodule Ecto.Association.Has do
     {related_key, Map.get(owner, owner_key)}
   end
 
-  defp check_action!(:delete, :insert, %{related: model}),
-    do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect model} while inserting")
+  defp check_action!(:delete, :insert, %{related: schema}),
+    do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect schema} while inserting")
   defp check_action!(_, _, _), do: :ok
 
   defp maybe_replace_one!(%{cardinality: :one, field: field} = assoc, %{action: :insert},
@@ -428,16 +435,16 @@ defmodule Ecto.Association.HasThrough do
   Its fields are:
 
     * `cardinality` - The association cardinality
-    * `field` - The name of the association field on the model
-    * `owner` - The model where the association was defined
-    * `owner_key` - The key on the `owner` model used for the association
+    * `field` - The name of the association field on the schema
+    * `owner` - The schema where the association was defined
+    * `owner_key` - The key on the `owner` schema used for the association
     * `through` - The through associations
   """
 
   alias Ecto.Query.JoinExpr
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :owner_key, :through]
+  defstruct [:cardinality, :field, :owner, :owner_key, :through, relationship: :child]
 
   @doc false
   def struct(module, name, opts) do
@@ -453,7 +460,7 @@ defmodule Ecto.Association.HasThrough do
       end
 
     unless refl do
-      raise ArgumentError, "model does not have the association #{inspect hd(through)} " <>
+      raise ArgumentError, "schema does not have the association #{inspect hd(through)} " <>
         "used by association #{inspect name}, please ensure the association exists and " <>
         "is defined before the :through one"
     end
@@ -570,17 +577,18 @@ defmodule Ecto.Association.BelongsTo do
   Its fields are:
 
     * `cardinality` - The association cardinality
-    * `field` - The name of the association field on the model
-    * `owner` - The model where the association was defined
-    * `related` - The model that is associated
-    * `owner_key` - The key on the `owner` model used for the association
-    * `related_key` - The key on the `related` model used for the association
+    * `field` - The name of the association field on the schema
+    * `owner` - The schema where the association was defined
+    * `owner_key` - The key on the `owner` schema used for the association
+    * `related` - The schema that is associated
+    * `related_key` - The key on the `related` schema used for the association
     * `queryable` - The real query to use for querying association
     * `defaults` - Default fields used when building the association
   """
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :queryable, defaults: []]
+  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable,
+             defaults: [], cardinality: :one, relationship: :parent]
 
   @doc false
   def struct(module, name, opts) do
@@ -596,7 +604,7 @@ defmodule Ecto.Association.BelongsTo do
                 "warning: #{inspect module} has a custom primary key and " <>
                 "invoked belongs_to(#{inspect name}). To avoid ambiguity, " <>
                 "please also specify the :references option in belongs_to " <>
-                "with the primary key name of the associated model, currently " <>
+                "with the primary key name of the associated schema, currently " <>
                 "it defaults to #{inspect key}\n#{Exception.format_stacktrace}"
               key
           end
@@ -609,12 +617,11 @@ defmodule Ecto.Association.BelongsTo do
     related = Ecto.Association.related_from_query(queryable)
 
     unless is_atom(related) do
-      raise ArgumentError, "association queryable must be a model, got: #{inspect related}"
+      raise ArgumentError, "association queryable must be a schema, got: #{inspect related}"
     end
 
     %__MODULE__{
       field: name,
-      cardinality: :one,
       owner: module,
       related: related,
       owner_key: Keyword.fetch!(opts, :foreign_key),

@@ -255,7 +255,7 @@ defmodule Ecto.Repo.Preloader do
           List.keyreplace(acc, preload, 0,
                           {preload, info, merge_preloads(preload, sub_preloads, extra_preloads)})
         nil ->
-          assoc = Ecto.Association.association_from_model!(model, preload)
+          assoc = Ecto.Association.association_from_schema!(model, preload)
           info  = assoc.__struct__.preload_info(assoc)
 
           case info do

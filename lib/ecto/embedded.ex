@@ -4,12 +4,16 @@ defmodule Ecto.Embedded do
   alias Ecto.Changeset
 
   @type t :: %Embedded{cardinality: :one | :many,
-                       on_replace: Changeset.Relation.on_replace,
-                       field: atom, owner: atom, related: atom}
+                       on_replace: :raise | :mark_as_invalid | :delete,
+                       relationship: :child,
+                       field: atom,
+                       owner: atom,
+                       related: atom}
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-  defstruct [:cardinality, :field, :owner, :related, :on_replace]
+  defstruct [:cardinality, :field, :owner, :related,
+             on_replace: :raise, relationship: :child]
 
   @doc """
   Builds the embedded struct.
