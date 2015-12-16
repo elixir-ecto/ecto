@@ -82,7 +82,7 @@ defmodule Ecto.Repo.Schema do
           opts = Keyword.put(opts, :skip_transaction, true)
           changeset
           |> merge_embeds(embed_changes)
-          |> process_assocs(assoc_changes, adapter, repo, opts)
+          |> process_assocs(assoc_changes, opts)
           |> get_model_if_ok(user_changeset)
         {:error, _} = error ->
           error
@@ -144,7 +144,7 @@ defmodule Ecto.Repo.Schema do
             opts = Keyword.put(opts, :skip_transaction, true)
             changeset
             |> merge_embeds(embed_changes)
-            |> process_assocs(assoc_changes, adapter, repo, opts)
+            |> process_assocs(assoc_changes, opts)
             |> get_model_if_ok(user_changeset)
           {:error, _} = error ->
             error
@@ -214,15 +214,12 @@ defmodule Ecto.Repo.Schema do
     autogen   = get_autogenerate_id(changeset, model)
 
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
-      user_changeset = run_prepare(changeset, prepare)
-      delete_assocs(changeset, repo, model, assocs)
-
-      # We don't prepare the changeset on delete, so we just copy the user one
-      changeset = user_changeset
+      changeset = run_prepare(changeset, prepare)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = Planner.fields(model, :delete, filters, adapter)
 
+      delete_assocs(changeset, repo, model, assocs, opts)
       args = [repo, metadata(struct), filters, autogen, opts]
       case apply(changeset, adapter, :delete, [], args) do
         {:ok, changeset} ->
@@ -230,7 +227,7 @@ defmodule Ecto.Repo.Schema do
         {:error, _} = error ->
           error
         {:invalid, constraints} ->
-          {:error, constraints_to_errors(user_changeset, :delete, constraints)}
+          {:error, constraints_to_errors(changeset, :delete, constraints)}
       end
     end)
   end
@@ -336,22 +333,15 @@ defmodule Ecto.Repo.Schema do
     update_in changeset.model, &Map.merge(&1, embeds_changes)
   end
 
-  defp process_assocs(changeset, assocs, adapter, repo, opts) do
-    Ecto.Association.on_repo_action(changeset, assocs, adapter, repo, opts)
+  defp process_assocs(changeset, assocs, opts) do
+    Ecto.Association.on_repo_change(:child, changeset, assocs, opts)
   end
 
-  # TODO: In the future, once we support belongs_to associations,
-  # we will want to optimize this as some associations must be
-  # acted on before delete and some after and we likely won't
-  # want to traverse it twice.
-  defp delete_assocs(%{model: model}, repo, struct, assocs) do
+  defp delete_assocs(%{model: model}, repo, struct, assocs, opts) do
     for assoc_name <- assocs do
       case struct.__schema__(:association, assoc_name) do
-        %{on_delete: :delete_all, field: field} ->
-          repo.delete_all Ecto.assoc(model, field)
-        %{on_delete: :nilify_all, related_key: related_key, field: field} ->
-          query = Ecto.assoc(model, field)
-          repo.update_all query, set: [{related_key, nil}]
+        %{__struct__: mod, on_delete: on_delete} = reflection when on_delete != :nothing ->
+          apply(mod, on_delete, [reflection, model, repo, opts])
         _ ->
           :ok
       end

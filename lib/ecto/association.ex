@@ -181,22 +181,21 @@ defmodule Ecto.Association do
   Performs the repository action in the related changeset,
   returning `{:ok, struct}` or `{:error, changeset}`.
   """
-  def on_repo_action(changeset, assocs, _adapter, _repo, _opts) when assocs == %{} do
+  # TODO: Make on_repo_change an association callback
+  def on_repo_change(_kind, changeset, assocs, _opts) when assocs == %{} do
     {:ok, changeset}
   end
 
-  def on_repo_action(changeset, assocs, adapter, repo, opts) do
-    %Ecto.Changeset{types: types, model: model, changes: changes, action: action} = changeset
+  def on_repo_change(kind, changeset, assocs, opts) do
+    %{model: %{__struct__: schema} = model, changes: changes} = changeset
 
     {model, changes, valid?} =
-      Enum.reduce(assocs, {model, changes, true}, fn {field, changeset}, acc ->
-        case Map.get(types, field) do
-          {_, assocs} ->
-            on_repo_action(assocs, field, changeset, adapter, repo, action, opts, acc)
-          _ ->
-            raise ArgumentError,
-              "cannot #{action} `#{field}` in #{inspect model.__struct__}. Only embeds, " <>
-              "has_one and has_many associations can be changed alongside the parent struct"
+      Enum.reduce(assocs, {model, changes, true}, fn {field, value}, acc ->
+        case schema.__schema__(:association, field) do
+          %{relationship: ^kind} = reflection ->
+            on_repo_change(reflection, field, value, changeset, opts, acc)
+          %{relationship: _} ->
+            acc
         end
       end)
 
@@ -207,14 +206,9 @@ defmodule Ecto.Association do
     end
   end
 
-  defp on_repo_action(%{cardinality: :one}, field, nil,
-                      _adapter, _repo, _action, _opts, {parent, changes, valid?}) do
-    {Map.put(parent, field, nil), Map.put(changes, field, nil), valid?}
-  end
-
-  defp on_repo_action(%{cardinality: :one} = meta, field, changeset,
-                      adapter, repo, action, opts, {parent, changes, valid?}) do
-    case meta.__struct__.on_repo_action(meta, changeset, parent, adapter, repo, action, opts) do
+  defp on_repo_change(%{cardinality: :one} = meta, field, changeset,
+                      parent_changeset, opts, {parent, changes, valid?}) do
+    case meta.__struct__.on_repo_change(meta, parent_changeset, changeset, opts) do
       {:ok, model} ->
         {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
       {:error, changeset} ->
@@ -222,24 +216,28 @@ defmodule Ecto.Association do
     end
   end
 
-  defp on_repo_action(%{cardinality: :many} = meta, field, changesets,
-                      adapter, repo, action, opts, {parent, changes, valid?}) do
-    {changesets, {models, models_valid?}} =
-      Enum.map_reduce(changesets, {[], true}, fn changeset, {models, models_valid?} ->
-        case meta.__struct__.on_repo_action(meta, changeset, parent, adapter, repo, action, opts) do
+  defp on_repo_change(%{cardinality: :many} = meta, field, changesets,
+                      parent_changeset, opts, {parent, changes, valid?}) do
+    {changesets, models, models_valid?} =
+      Enum.reduce(changesets, {[], [], true}, fn changeset, {changesets, models, models_valid?} ->
+        case meta.__struct__.on_repo_change(meta, parent_changeset, changeset, opts) do
           {:ok, nil} ->
-            {changeset, {models, models_valid?}}
+            {[changeset|changesets], models, models_valid?}
           {:ok, model} ->
-            {changeset, {[model | models], models_valid?}}
+            {[changeset|changesets], [model | models], models_valid?}
           {:error, changeset} ->
-            {changeset, {models, false}}
+            {[changeset|changesets], models, false}
         end
       end)
 
     if models_valid? do
-      {Map.put(parent, field, Enum.reverse(models)), Map.put(changes, field, changesets), valid?}
+      {Map.put(parent, field, Enum.reverse(models)),
+       Map.put(changes, field, Enum.reverse(changesets)),
+       valid?}
     else
-      {parent, Map.put(changes, field, changesets), false}
+      {parent,
+       Map.put(changes, field, Enum.reverse(changesets)),
+       false}
     end
   end
 end
@@ -263,7 +261,7 @@ defmodule Ecto.Association.Has do
   """
 
   @behaviour Ecto.Association
-  @on_delete_opts [:nothing, :fetch_and_delete, :nilify_all, :delete_all]
+  @on_delete_opts [:nothing, :nilify_all, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key,
              :queryable, :on_delete, :on_replace, defaults: [], relationship: :child]
@@ -354,27 +352,13 @@ defmodule Ecto.Association.Has do
     {:assoc, refl, refl.related_key}
   end
 
-  @behaviour Ecto.Changeset.Relation
-
   @doc false
-  def build(%{related: related, queryable: queryable, defaults: defaults}) do
-    related
-    |> struct(defaults)
-    |> Ecto.Association.merge_source(queryable)
+  def on_repo_change(%{cardinality: :one}, _parent, nil, _opts) do
+    {:ok, nil}
   end
 
-  @doc false
-  def on_replace(%{on_replace: :delete}, changeset) do
-    {:delete, changeset}
-  end
-
-  def on_replace(%{on_replace: :nilify, related_key: related_key}, changeset) do
-    changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
-    {:update, changeset}
-  end
-
-  @doc false
-  def on_repo_action(assoc, changeset, parent, _adapter, repo, repo_action, opts) do
+  def on_repo_change(assoc, parent_changeset, changeset, opts) do
+    %{model: parent, repo: repo, action: repo_action} = parent_changeset
     %{action: action, changes: changes} = changeset
     check_action!(action, repo_action, assoc)
 
@@ -426,6 +410,36 @@ defmodule Ecto.Association.Has do
   end
 
   defp maybe_replace_one!(_, _, _, _, _, _), do: :ok
+
+  ## Relation callbacks
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+    related
+    |> struct(defaults)
+    |> Ecto.Association.merge_source(queryable)
+  end
+
+  @doc false
+  def on_replace(%{on_replace: :delete}, changeset) do
+    {:delete, changeset}
+  end
+
+  def on_replace(%{on_replace: :nilify, related_key: related_key}, changeset) do
+    changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
+    {:update, changeset}
+  end
+
+  ## On delete callbacks
+
+  def delete_all(%{field: field}, parent, repo, opts) do
+    repo.delete_all Ecto.assoc(parent, field), opts
+  end
+
+  def nilify_all(%{related_key: related_key, field: field}, parent, repo, opts) do
+    repo.update_all Ecto.assoc(parent, field), [set: [{related_key, nil}]], opts
+  end
 end
 
 defmodule Ecto.Association.HasThrough do
@@ -613,8 +627,7 @@ defmodule Ecto.Association.BelongsTo do
       end
 
     queryable = Keyword.fetch!(opts, :queryable)
-
-    related = Ecto.Association.related_from_query(queryable)
+    related   = Ecto.Association.related_from_query(queryable)
 
     unless is_atom(related) do
       raise ArgumentError, "association queryable must be a schema, got: #{inspect related}"

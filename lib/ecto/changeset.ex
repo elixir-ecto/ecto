@@ -146,11 +146,10 @@ defmodule Ecto.Changeset do
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false, model: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], prepare: [],
-            constraints: [], filters: %{}, action: nil, types: nil, opts: []
+            constraints: [], filters: %{}, action: nil, types: nil
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
-                        opts: Keyword.t,
                         model: Ecto.Schema.t | nil,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
@@ -588,7 +587,6 @@ defmodule Ecto.Changeset do
   def merge(changeset1, changeset2)
 
   def merge(%Changeset{model: model} = cs1, %Changeset{model: model} = cs2) do
-    new_opts        = cs1.opts ++ cs2.opts
     new_repo        = merge_identical(cs1.repo, cs2.repo, "repos")
     new_action      = merge_identical(cs1.action, cs2.action, "actions")
     new_filters     = Map.merge(cs1.filters, cs2.filters)
@@ -597,7 +595,7 @@ defmodule Ecto.Changeset do
 
     cast_merge %{cs1 | repo: new_repo, filters: new_filters,
                        action: new_action, validations: new_validations,
-                       opts: new_opts, constraints: new_constraints}, cs2
+                       constraints: new_constraints}, cs2
   end
 
   def merge(%Changeset{}, %Changeset{}) do
