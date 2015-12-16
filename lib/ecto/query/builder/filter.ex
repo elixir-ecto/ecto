@@ -4,6 +4,41 @@ defmodule Ecto.Query.Builder.Filter do
   alias Ecto.Query.Builder
 
   @doc """
+  Escapes a where or having clause.
+
+  It allows query expressions that evaluate to a boolean
+  or a keyword list of field names and values. In a keyword
+  list multiple key value pairs will be joined with "and".
+  """
+  @spec escape(:where | :having, Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  def escape(_kind, [], _vars, _env) do
+    {true, %{}}
+  end
+
+  def escape(kind, expr, vars, env) when is_list(expr) do
+    {parts, params} =
+      Enum.map_reduce(expr, %{}, fn
+        {field, nil}, _acc ->
+          Builder.error! "nil given for #{inspect field}, comparison with nil is forbidden as it always evaluates to false. " <>
+                         "Pass a full query expression and use is_nil/1 instead."
+        {field, value}, acc when is_atom(field) ->
+          {value, params} = Builder.escape(value, {0, field}, acc, vars, env)
+          {{:{}, [], [:==, [], [to_escaped_field(field), value]]}, params}
+        _, _acc ->
+          Builder.error! "expected a keyword list at compile time in #{kind}, " <>
+                         "got: `#{Macro.to_string expr}`. If you would like to " <>
+                         "pass a list dynamically, please interpolate the whole list with ^"
+      end)
+
+    expr = Enum.reduce parts, &{:{}, [], [:and, [], [&2, &1]]}
+    {expr, params}
+  end
+
+  def escape(_kind, expr, vars, env) do
+    Builder.escape(expr, :boolean, %{}, vars, env)
+  end
+
+  @doc """
   Builds a quoted expression.
 
   The quoted expression should evaluate to a query at runtime.
@@ -53,41 +88,6 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   @doc """
-  Escapes a where or having clause.
-
-  It allows query expressions that evaluate to a boolean
-  or a keyword list of field names and values. In a keyword
-  list multiple key value pairs will be joined with "and".
-  """
-  @spec escape(:where | :having, Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
-  def escape(_kind, [], _vars, _env) do
-    {true, %{}}
-  end
-
-  def escape(kind, expr, vars, env) when is_list(expr) do
-    {parts, params} =
-      Enum.map_reduce(expr, %{}, fn
-        {field, nil}, _acc ->
-          Builder.error! "nil given for #{inspect field}, comparison with nil is forbidden as it always evaluates to false. " <>
-                         "Pass a full query expression and use is_nil/1 instead."
-        {field, value}, acc when is_atom(field) ->
-          {value, params} = Builder.escape(value, {0, field}, acc, vars, env)
-          {{:{}, [], [:==, [], [to_escaped_field(field), value]]}, params}
-        _, _acc ->
-          Builder.error! "expected a keyword list at compile time in #{kind}, " <>
-                         "got: `#{Macro.to_string expr}`. If you would like to " <>
-                         "pass a list dynamically, please interpolate the whole list with ^"
-      end)
-
-    expr = Enum.reduce parts, &{:{}, [], [:and, [], [&2, &1]]}
-    {expr, params}
-  end
-
-  def escape(_kind, expr, vars, env) do
-    Builder.escape(expr, :boolean, %{}, vars, env)
-  end
-
-  @doc """
   Invoked at runtime for interpolated lists.
   """
   def runtime!(_kind, []) do
@@ -99,8 +99,8 @@ defmodule Ecto.Query.Builder.Filter do
     {Enum.reduce(parts, &{:and, [], [&2, &1]}), params}
   end
 
-  def runtime!(_kind, other) do
-    {{:^, [], [0]}, [{other, :boolean}]}
+  def runtime!(kind, other) do
+    raise ArgumentError, "expected a keyword list in `#{kind}`, got: `#{inspect other}`"
   end
 
   defp runtime!([{field, nil}|_], _counter, _exprs, _params, _kind, _original) when is_atom(field) do
@@ -120,7 +120,7 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   defp runtime!(_, _counter, _exprs, _params, kind, original) do
-    raise ArgumentError, "expected a keyword list in #{kind}, got: `#{inspect original}`"
+    raise ArgumentError, "expected a keyword list in `#{kind}`, got: `#{inspect original}`"
   end
 
   defp to_escaped_field(field), do: Macro.escape to_field(field)

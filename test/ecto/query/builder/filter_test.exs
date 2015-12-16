@@ -19,8 +19,6 @@ defmodule Ecto.Query.Builder.FilterTest do
   end
 
   test "runtime!" do
-    assert runtime!(:where, false) == {{:^, [], [0]}, [{false, :boolean}]}
-
     assert runtime!(:where, []) |> Macro.to_string ==
            "{true, []}"
     assert runtime!(:where, [x: 11]) |> Macro.to_string ==
@@ -45,7 +43,7 @@ defmodule Ecto.Query.Builder.FilterTest do
 
   test "invalid runtime filter" do
     assert_raise ArgumentError,
-                 ~r"expected a keyword list in where, got: `\[\{\"foo\", \"bar\"\}\]`", fn ->
+                 ~r"expected a keyword list in `where`, got: `\[\{\"foo\", \"bar\"\}\]`", fn ->
       runtime!(:where, [{"foo", "bar"}])
     end
   end
