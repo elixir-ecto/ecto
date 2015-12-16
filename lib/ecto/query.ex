@@ -90,7 +90,7 @@ defmodule Ecto.Query do
       Repo.all(from u in User, where: u.age > ^age)
 
   The example above works because `u.age` is tagged as an :integer
-  in the User model and therefore Ecto will attempt to cast the
+  in the User schema and therefore Ecto will attempt to cast the
   interpolated `^age` to integer. When a value cannot be cast,
   `Ecto.CastError` is raised.
 
@@ -114,33 +114,22 @@ defmodule Ecto.Query do
 
   Set the prefix on a query:
 
-      query = from m in Model, select: m
+      query = from u in User, select: u
       queryable = %{query | prefix: "foo"}
       results = Repo.all(queryable)
 
   Set the prefix without the query syntax:
 
-      results = Model
-      |> Ecto.Queryable.to_query
-      |> Map.put(:prefix, "foo")
-      |> Repo.all
+      results =
+        User
+        |> Ecto.Queryable.to_query
+        |> Map.put(:prefix, "foo")
+        |> Repo.all
 
-  To set the prefix on an insert/update, simply intercept the changeset and
-  set the changeset.model as the updated model with prefix using put_meta/2:
-
-      new_changeset = changeset
-      |> Map.put(:model, Ecto.put_meta(changeset.model, prefix: "foo"))
-      results = Repo.all(new_changeset)
-
-  For deleting, if the model was retrieved by a prefix qualified query, the prefix
-  will be preserved in it when deleting, and the prefix qualified record will be deleted.
-
-      result = Model
-      |> Ecto.Queryable.to_query
-      |> Map.put(:prefix, "foo")
-      |> Repo.get!(id)
-
-      Repo.delete(result)
+  When a prefix is set in a query, all loaded structs will belong to that
+  prefix, so operations like update and delete will be applied to the
+  proper prefix. In case you want to manually set the prefix for new data,
+  specially on insert, use `Ecto.put_meta/2`.
 
   ## Macro API
 
@@ -354,15 +343,16 @@ defmodule Ecto.Query do
   @doc """
   A join query expression.
 
-  Receives a model that is to be joined to the query and a condition for
+  Receives a source that is to be joined to the query and a condition for
   the join. The join condition can be any expression that evaluates
   to a boolean value. The join is by default an inner join, the qualifier
   can be changed by giving the atoms: `:inner`, `:left`, `:right` or
   `:full`. For a keyword query the `:join` keyword can be changed to:
   `:inner_join`, `:left_join`, `:right_join` or `:full_join`.
 
-  Currently it is possible to join an existing model, an existing source
-  (table), an association or a fragment. See the examples below.
+  Currently it is possible to join on an Ecto.Schema (a module), an
+  existing source (a binary representing a table), an association or a
+  fragment. See the examples below.
 
   ## Keywords examples
 
@@ -402,21 +392,19 @@ defmodule Ecto.Query do
   @doc """
   A select query expression.
 
-  Selects which fields will be selected from the model and any transformations
+  Selects which fields will be selected from the schema and any transformations
   that should be performed on the fields. Any expression that is accepted in a
   query can be a select field.
 
-  There can only be one select expression in a query, if the select expression
-  is omitted, the query will by default select the full model.
-
   The sub-expressions in the query can be wrapped in lists, tuples or maps as
-  shown in the examples. A full model can also be selected. Note that map keys
-  can only be atoms, binaries, integers or floats otherwise an
-  `Ecto.Query.CompileError` exception is raised at compile-time.
+  shown in the examples. A full schema can also be selected.
+
+  There can only be one select expression in a query, if the select expression
+  is omitted, the query will by default select the full schema.
 
   ## Keywords examples
 
-      from(c in City, select: c) # selects the entire model
+      from(c in City, select: c) # selects the entire schema
       from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
       from(c in City, select: {c.name, ^to_string(40 + 2), 43})
@@ -447,9 +435,12 @@ defmodule Ecto.Query do
   `distinct` expression are automatically referenced `order_by`
   too.
 
+  `distinct` also accepts a list of atoms where each atom refers to
+  a field in source.
+
   ## Keywords examples
 
-      # Returns the list of different categories in the Post model
+      # Returns the list of different categories in the Post schema
       from(p in Post, distinct: true, select: p.category)
 
       # If your database supports DISTINCT ON(),
@@ -457,6 +448,9 @@ defmodule Ecto.Query do
       from(p in Post,
          distinct: p.category,
          order_by: [p.date])
+
+      # Using atoms
+      from(p in Post, distinct: :category, order_by: :date)
 
   ## Expressions example
 
@@ -508,31 +502,28 @@ defmodule Ecto.Query do
   or a list of fields. The direction can be specified in a keyword list as shown
   in the examples. There can be several order by expressions in a query.
 
+  `order_by` also accepts a list of atoms where each atom refers to a field in
+  source or a keyword list where the direction is given as key and the field
+  to order as value.
+
   ## Keywords examples
 
       from(c in City, order_by: c.name, order_by: c.population)
       from(c in City, order_by: [c.name, c.population])
       from(c in City, order_by: [asc: c.name, desc: c.population])
 
-  ## Expressions example
-
-      City |> order_by([c], asc: c.name, desc: c.population)
-      City |> order_by(asc: :name) # Sorts by the cities name
-
-  ## Atom values
-
-  For simplicity, `order_by` also allows the fields to be given
-  as atoms. In such cases, the field always applies to the source
-  given in `from` (i.e. the first binding). For example, the two
-  expressions below are equivalent:
-
+      from(c in City, order_by: [:name, :population])
       from(c in City, order_by: [asc: :name, desc: :population])
-      from(c in City, order_by: [asc: c.name, desc: c.population])
 
   A keyword list can also be interpolated:
 
       values = [asc: :name, desc: :population]
       from(c in City, order_by: ^values)
+
+  ## Expressions example
+
+      City |> order_by([c], asc: c.name, desc: c.population)
+      City |> order_by(asc: :name) # Sorts by the cities name
 
   """
   defmacro order_by(query, binding \\ [], expr)  do
@@ -653,11 +644,14 @@ defmodule Ecto.Query do
   @doc """
   A group by query expression.
 
-  Groups together rows from the model that have the same values in the given
+  Groups together rows from the schema that have the same values in the given
   fields. Using `group_by` "groups" the query giving it different semantics
   in the `select` expression. If a query is grouped, only fields that were
   referenced in the `group_by` can be used in the `select` or if the field
   is given as an argument to an aggregate function.
+
+  `group_by` also accepts a list of atoms where each atom refers to
+  a field in source.
 
   ## Keywords examples
 
@@ -666,10 +660,11 @@ defmodule Ecto.Query do
         group_by: p.category,
         select: {p.category, count(p.id)})
 
-      # Group on all fields on the Post model
-      from(p in Post,
-        group_by: p,
-        select: p)
+      # Group on all fields on the Post schema
+      from(p in Post, group_by: p, select: p)
+
+      # Using atoms
+      from(p in Post, group_by: :category, select: {p.category, count(p.id)})
 
   ## Expressions example
 
@@ -683,7 +678,7 @@ defmodule Ecto.Query do
   @doc """
   A having query expression.
 
-  Like `where`, `having` filters rows from the model, but after the grouping is
+  Like `where`, `having` filters rows from the schema, but after the grouping is
   performed giving it the same semantics as `select` for a grouped query
   (see `group_by/3`). `having` groups the query even if the query has no
   `group_by` expression.
@@ -709,10 +704,10 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Preloads the associations into the given model.
+  Preloads the associations into the given struct.
 
   Preloading allows developers to specify associations that are preloaded
-  into the model. Consider this example:
+  into the struct. Consider this example:
 
       Repo.all from p in Post, preload: [:comments]
 
@@ -721,7 +716,7 @@ defmodule Ecto.Query do
 
   However, often times, you want posts and comments to be selected and
   filtered in the same query. For such cases, you can explicitly tell
-  the association to be preloaded into the model:
+  the association to be preloaded into the struct:
 
       Repo.all from p in Post,
                  join: c in assoc(p, :comments),

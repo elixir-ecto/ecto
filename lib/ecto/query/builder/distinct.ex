@@ -20,15 +20,53 @@ defmodule Ecto.Query.Builder.Distinct do
     {expr, %{}}
   end
 
+  def escape({:^, _, [expr]}, _vars, _env) do
+    {quote(do: Ecto.Query.Builder.Distinct.distinct!(unquote(expr))), %{}}
+  end
+
   def escape(expr, vars, env) do
     expr
     |> List.wrap
-    |> Enum.map_reduce(%{}, &escape(&1, &2, vars, env))
+    |> Enum.map_reduce(%{}, &do_escape(&1, &2, vars, env))
   end
 
-  defp escape(expr, params, vars, env) do
+  defp do_escape({:^, _, [expr]}, params, _vars, _env) do
+    {quote(do: Ecto.Query.Builder.Distinct.field!(unquote(expr))), params}
+  end
+
+  defp do_escape(field, params, _vars, _env) when is_atom(field) do
+    {Macro.escape(to_field(field)), params}
+  end
+
+  defp do_escape(expr, params, vars, env) do
     Builder.escape(expr, :any, params, vars, env)
   end
+
+  @doc """
+  Called at runtime to verify a field.
+  """
+  def field!(field) when is_atom(field),
+    do: to_field(field)
+  def field!(other),
+    do: Builder.error!("expected a field as an atom in `distinct`, got: `#{inspect other}`")
+
+  @doc """
+  Called at runtime to verify group_by.
+  """
+  def distinct!(distinct) when is_boolean(distinct) do
+    distinct
+  end
+
+  def distinct!(distinct) do
+    Enum.map List.wrap(distinct), fn
+      field when is_atom(field) ->
+        to_field(field)
+      _ ->
+        Builder.error!("expected a boolean or a list of fields in `distinct`, got: `#{inspect distinct}`")
+    end
+  end
+
+  defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
 
   @doc """
   Builds a quoted expression.

@@ -24,7 +24,8 @@ defmodule Ecto.Query.Builder.OrderBy do
   end
 
   def escape(expr, vars, env) do
-    List.wrap(expr)
+    expr
+    |> List.wrap
     |> Enum.map_reduce(%{}, &do_escape(&1, &2, vars, env))
   end
 
