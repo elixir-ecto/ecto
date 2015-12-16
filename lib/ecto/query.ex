@@ -261,7 +261,7 @@ defmodule Ecto.Query do
   require the use of `in`:
 
       def published(query) do
-        from p in query, where: p.published_at != nil
+        from p in query, where: not(is_nil(p.published_a))
       end
 
   Notice we have created a `p` variable to represent each item in the query.
@@ -270,7 +270,7 @@ defmodule Ecto.Query do
 
       def published_multi(query) do
         from [p,o] in query,
-        where: p.published_at != nil and o.published_at != nil
+        where: not(is_nil(p.published_at)) and not(is_nil(o.published_at))
       end
 
   Note the variables `p` and `o` can be named whatever you like
