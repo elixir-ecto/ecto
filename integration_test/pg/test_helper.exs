@@ -12,7 +12,7 @@ Application.put_env(:ecto, :pg_test_url,
 
 # Load support files
 Code.require_file "../support/repo.exs", __DIR__
-Code.require_file "../support/models.exs", __DIR__
+Code.require_file "../support/schemas.exs", __DIR__
 Code.require_file "../support/migration.exs", __DIR__
 
 pool =
