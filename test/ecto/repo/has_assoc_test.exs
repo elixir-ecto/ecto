@@ -1,4 +1,4 @@
-defmodule Ecto.Repo.AssociationTest do
+defmodule Ecto.Repo.HasAssocTest do
   use ExUnit.Case, async: true
 
   import Ecto, only: [put_meta: 2]
