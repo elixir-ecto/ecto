@@ -609,7 +609,7 @@ defmodule Ecto.Query do
 
   ## Keywords example
 
-      from(u in User, update: [set: [name: "new name"]]
+      from(u in User, update: [set: [name: "new name"]])
 
   ## Expressions example
 
@@ -622,19 +622,19 @@ defmodule Ecto.Query do
 
     * `set` - sets the given field in the table to the given value
 
-          from(u in User, update: [set: [name: "new name"]]
+          from(u in User, update: [set: [name: "new name"]])
 
     * `inc` - increments (or decrements if the value is negative) the given field in the table by the given value
 
-          from(u in User, update: [inc: [accesses: 1]]
+          from(u in User, update: [inc: [accesses: 1]])
 
     * `push` - pushes (appends) the given value to the end of the array field
 
-          from(u in User, update: [push: [tags: "cool"]]
+          from(u in User, update: [push: [tags: "cool"]])
 
     * `pull` - pulls (removes) the given value from the array field
 
-          from(u in User, update: [pull: [tags: "not cool"]]
+          from(u in User, update: [pull: [tags: "not cool"]])
 
   """
   defmacro update(query, binding \\ [], expr) do
