@@ -90,7 +90,7 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:fun, {__MODULE__, :ok, []}}]
   end
 
-  test "Repo.transaction" do
+  test "Repo.transaction success" do
     changeset = Changeset.change(%Comment{id: 1}, x: 1)
     multi =
       Multi.new
@@ -109,5 +109,52 @@ defmodule Ecto.MultiTest do
     refute Map.has_key?(changes.run, :update)
   end
 
-  #TODO failing cases
+  test "Repo.transaction rolling back from run" do
+    changeset = Changeset.change(%Comment{id: 1}, x: 1)
+    multi =
+      Multi.new
+      |> Multi.insert(:insert, changeset)
+      |> Multi.run(:run, fn _changes, _opts -> {:error, "error from run"} end)
+      |> Multi.update(:update, changeset)
+      |> Multi.delete(:delete, changeset)
+
+    assert {:error, :run, "error from run", changes} = TestRepo.transaction(multi)
+    assert_received {:transaction, _}
+    assert_received {:rollback, _}
+    assert {:messages, [:insert]} == Process.info(self, :messages)
+    assert %Comment{} = changes.insert
+    refute Map.has_key?(changes, :run)
+    refute Map.has_key?(changes, :update)
+  end
+
+  test "Repo.transaction rolling back from repo" do
+    changeset = Changeset.change(%Comment{id: 1}, x: 1)
+    invalid   = put_in(changeset.model.__meta__.context, {:invalid, [unique: "comments_x_index"]})
+                |> Changeset.unique_constraint(:x)
+
+    multi =
+      Multi.new
+      |> Multi.insert(:insert, changeset)
+      |> Multi.run(:run, fn _changes, _opts -> {:ok, "ok"} end)
+      |> Multi.update(:update, invalid)
+      |> Multi.delete(:delete, changeset)
+
+    assert {:error, :update, error, changes} = TestRepo.transaction(multi)
+    assert_received {:transaction, _}
+    assert_received {:rollback, _}
+    assert {:messages, [:insert]} == Process.info(self, :messages)
+    assert %Comment{} = changes.insert
+    assert "ok" == changes.run
+    assert error.errors == [x: "has already been taken"]
+    refute Map.has_key?(changes, :update)
+  end
+
+  test "checks invalid changesets before starting transaction" do
+    changeset = %{Changeset.change(%Comment{}) | valid?: false}
+    multi = Multi.new |> Multi.insert(:invalid, changeset)
+
+    assert {:error, :invalid, invalid, %{}} = TestRepo.transaction(multi)
+    assert invalid.model == changeset.model
+    refute_received {:transaction, _}
+  end
 end

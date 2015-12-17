@@ -76,22 +76,40 @@ defmodule Ecto.Multi do
   end
 
   @spec apply(t, Ecto.Repo.t, wrap, return, Keyword.t) ::
-      {:ok, results} | {:error, {name, errors}}
+      {:ok, results} | {:error, {name, error, results}}
     when results: %{name => Ecto.Schema.t | any},
-         errors: %{name => Changeset.t | :skipped | any},
-         wrap: ((() -> any), Keyword.t -> {:ok | :error, any}),
+         error: Changeset.t | any,
+         wrap: ((() -> any) -> {:ok | :error, any}),
          return: (any -> no_return)
   def apply(%Multi{} = multi, repo, wrap, return, opts \\ []) do
-    # TODO skip transaction if changesets are invalid
     multi.operations
     |> Enum.reverse
+    |> check_operations_valid
     |> apply_operations(repo, wrap, return, opts)
   end
 
-  defp apply_operations(operations, repo, wrap, return, opts) do
-    wrap.(opts, fn ->
+  defp check_operations_valid(operations) do
+    operations
+    |> Enum.find(fn
+      {_, %{valid?: valid?}} -> not valid?
+      _                      -> false
+    end)
+    |> do_check_operations_valid(operations)
+  end
+
+  defp do_check_operations_valid(nil, operations),
+    do: {:ok, operations}
+  defp do_check_operations_valid({name, changeset}, _operations),
+    do: {:error, {name, changeset, %{}}}
+
+  defp apply_operations({:ok, operations}, repo, wrap, return, opts) do
+    wrap.(fn ->
       do_apply_operations(operations, repo, return, opts, %{})
     end)
+  end
+
+  defp apply_operations({:error, error}, _repo, _wrap, _return, _opts) do
+    {:error, error}
   end
 
   defp do_apply_operations([], _repo, _return, _opts, acc) do
@@ -103,7 +121,7 @@ defmodule Ecto.Multi do
       {:ok, value} ->
         do_apply_operations(rest, repo, return, opts, Map.put(acc, name, value))
       {:error, value} ->
-        return.(%{name => value})
+        return.({name, value, acc})
     end
   end
 

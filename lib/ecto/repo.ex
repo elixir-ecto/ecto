@@ -756,9 +756,14 @@ defmodule Ecto.Repo do
   end
 
   def transaction(adapter, repo, opts, %Ecto.Multi{} = multi) do
-    wrap   = &adapter.transaction(repo, &1, &2)
+    wrap   = &adapter.transaction(repo, opts, &1)
     return = &adapter.rollback(repo, &1)
 
-    Ecto.Multi.apply(multi, repo, wrap, return, opts)
+    case Ecto.Multi.apply(multi, repo, wrap, return, opts) do
+      {:ok, values} ->
+        {:ok, values}
+      {:error, {key, error_value, values}} ->
+        {:error, key, error_value, values}
+    end
   end
 end
