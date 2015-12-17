@@ -24,13 +24,13 @@ defmodule Ecto.Query.Builder.DistinctTest do
     end
 
     message = "expected a field as an atom in `distinct`, got: `\"temp\"`"
-    assert_raise Ecto.Query.CompileError, message, fn ->
+    assert_raise ArgumentError, message, fn ->
       temp = "temp"
       distinct("posts", [p], [^temp])
     end
 
     message = "expected a boolean or a list of fields in `distinct`, got: `\"temp\"`"
-    assert_raise Ecto.Query.CompileError, message, fn ->
+    assert_raise ArgumentError, message, fn ->
       temp = "temp"
       distinct("posts", [p], ^temp)
     end

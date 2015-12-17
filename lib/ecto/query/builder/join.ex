@@ -86,8 +86,10 @@ defmodule Ecto.Query.Builder.Join do
     do: {expr, nil}
   def join!({source, module}) when is_binary(source) and is_atom(module),
     do: {source, module}
-  def join!(expr),
-    do: Builder.error!("expected join to be a string, atom or {string, atom}, got: `#{inspect expr}`")
+  def join!(expr) do
+    raise ArgumentError,
+      "expected join to be a string, atom or {string, atom}, got: `#{inspect expr}`"
+  end
 
   @doc """
   Builds a quoted expression.
@@ -183,7 +185,8 @@ defmodule Ecto.Query.Builder.Join do
   """
   def qual!(qual) when qual in @qualifiers, do: qual
   def qual!(qual) do
-    Builder.error! "invalid join qualifier `#{inspect qual}`, accepted qualifiers are: " <>
-                   Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
+    raise ArgumentError,
+      "invalid join qualifier `#{inspect qual}`, accepted qualifiers are: " <>
+      Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
   end
 end
