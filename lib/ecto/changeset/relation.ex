@@ -224,10 +224,13 @@ defmodule Ecto.Changeset.Relation do
     you are attempting to change relation #{inspect name} of
     #{inspect owner}, but there is missing data.
 
-    By default, if the parent struct contains N children, at least the same
-    N children must be given on update. In other words, it is not possible
-    to orphan embed nor associated records, attempting to do so results
-    in this error message.
+    If you are attempting to update an existing entry, please make sure
+    you include the entry primary key (ID) alongside the data.
+
+    If you have a relationship with many children, at least the same N
+    children must be given on update. By default it is not possible to
+    orphan embed nor associated records, attempting to do so results in
+    this error message.
 
     It is possible to change this behaviour by setting `:on_replace` when
     defining the relation. See `Ecto.Changeset`'s section on related data
