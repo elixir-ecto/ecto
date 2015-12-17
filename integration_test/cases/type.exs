@@ -141,6 +141,12 @@ defmodule Ecto.Integration.TypeTest do
                                        select: t.uuids) == [uuids]
   end
 
+  @tag :array_type
+  test "array type with nil in array" do
+    tag = TestRepo.insert!(%Tag{ints: [1, nil, 3]})
+    assert tag.ints == [1, nil, 3]
+  end
+
   @tag :map_type
   test "map type" do
     post1 = TestRepo.insert!(%Post{meta: %{"foo" => "bar", "baz" => "bat"}})
