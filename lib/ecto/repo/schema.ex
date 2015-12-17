@@ -68,20 +68,19 @@ defmodule Ecto.Repo.Schema do
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
       user_changeset = run_prepare(changeset, prepare)
 
-      {assoc_changes, changeset} = pop_from_changes(user_changeset, assocs)
-      {embed_changes, changeset} = pop_from_changes(changeset, embeds)
-      embed_changes = Ecto.Embedded.prepare(changeset, embed_changes, adapter, :insert)
+      changeset = Ecto.Embedded.prepare(user_changeset, adapter, :insert)
+      {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
 
-      changes = Map.merge(changeset.changes, embed_changes)
+      changes = changeset.changes
       {autogen, changes} = pop_autogenerate_id(changes, model)
       {changes, extra} = dump_changes(:insert, changes, model, fields, adapter)
 
       args = [repo, metadata(struct), changes, autogen, return, opts]
-      case apply(changeset, adapter, :insert, extra, args) do
-        {:ok, changeset} ->
+      case apply(changeset, adapter, :insert, args) do
+        {:ok, values} ->
           opts = Keyword.put(opts, :skip_transaction, true)
           changeset
-          |> merge_embeds(embed_changes)
+          |> load_changes(:loaded, extra ++ values, adapter)
           |> process_assocs(assoc_changes, opts)
           |> get_model_if_ok(user_changeset)
         {:error, _} = error ->
@@ -113,7 +112,6 @@ defmodule Ecto.Repo.Schema do
     struct = struct_from_changeset!(:update, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
-    embeds = model.__schema__(:embeds)
     assocs = model.__schema__(:associations)
     return = model.__schema__(:read_after_writes)
 
@@ -126,12 +124,11 @@ defmodule Ecto.Repo.Schema do
       wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
         user_changeset = run_prepare(changeset, prepare)
 
-        {assoc_changes, changeset} = pop_from_changes(user_changeset, assocs)
-        {embed_changes, changeset} = pop_from_changes(changeset, embeds)
-        embed_changes = Ecto.Embedded.prepare(changeset, embed_changes, adapter, :update)
+        changeset = Ecto.Embedded.prepare(user_changeset, adapter, :update)
+        {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
 
-        changes = Map.merge(changeset.changes, embed_changes)
-        autogen = get_autogenerate_id(changeset.changes, model)
+        changes = changeset.changes
+        autogen = get_autogenerate_id(changes, model)
         {changes, extra} = dump_changes(:update, changes, model, fields, adapter)
 
         filters = add_pk_filter!(changeset.filters, struct)
@@ -139,11 +136,11 @@ defmodule Ecto.Repo.Schema do
 
         args   = [repo, metadata(struct), changes, filters, autogen, return, opts]
         action = if changes == [], do: :noop, else: :update
-        case apply(changeset, adapter, action, extra, args) do
-          {:ok, changeset} ->
+        case apply(changeset, adapter, action, args) do
+          {:ok, values} ->
             opts = Keyword.put(opts, :skip_transaction, true)
             changeset
-            |> merge_embeds(embed_changes)
+            |> load_changes(:loaded, extra ++ values, adapter)
             |> process_assocs(assoc_changes, opts)
             |> get_model_if_ok(user_changeset)
           {:error, _} = error ->
@@ -221,9 +218,9 @@ defmodule Ecto.Repo.Schema do
 
       delete_assocs(changeset, repo, model, assocs, opts)
       args = [repo, metadata(struct), filters, autogen, opts]
-      case apply(changeset, adapter, :delete, [], args) do
-        {:ok, changeset} ->
-          {:ok, changeset.model}
+      case apply(changeset, adapter, :delete, args) do
+        {:ok, values} ->
+          {:ok, load_changes(changeset, :deleted, values, adapter).model}
         {:error, _} = error ->
           error
         {:invalid, constraints} ->
@@ -265,16 +262,16 @@ defmodule Ecto.Repo.Schema do
     |> Map.put(:model, model)
   end
 
-  defp apply(%{valid?: false} = changeset, _adapter, _action, _extra, _args) do
+  defp apply(%{valid?: false} = changeset, _adapter, _action, _args) do
     {:error, changeset}
   end
-  defp apply(changeset, _adapter, :noop, _extra, _args) do
-    {:ok, changeset}
+  defp apply(_changeset, _adapter, :noop, _args) do
+    {:ok, []}
   end
-  defp apply(changeset, adapter, action, extra, args) do
+  defp apply(changeset, adapter, action, args) do
     case apply(adapter, action, args) do
       {:ok, values} ->
-        {:ok, load_changes(changeset, action, extra ++ values, adapter)}
+        {:ok, values}
       {:invalid, _} = constraints ->
         constraints
       {:error, :stale} ->
@@ -299,38 +296,29 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp load_changes(%{types: types} = changeset, action, values, adapter) do
+  defp load_changes(%{types: types, changes: changes} = changeset, state, values, adapter) do
     # It is ok to use types from changeset because we have
     # already filtered the results to be only about fields.
     model =
-      changeset
-      |> Ecto.Changeset.apply_changes
+      changeset.model
+      |> Map.merge(changes)
       |> load_each(values, types, adapter)
-    model = put_in(model.__meta__.state, action_to_state(action))
+    model = put_in(model.__meta__.state, state)
     Map.put(changeset, :model, model)
   end
 
   defp load_each(struct, kv, types, adapter) do
-    Enum.reduce(kv, struct, fn
-      {k, v}, acc ->
-        type = Map.fetch!(types, k)
-        case adapter.load(type, v) do
-          {:ok, v} -> Map.put(acc, k, v)
-          :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"
-        end
+    Enum.reduce(kv, struct, fn {k, v}, acc ->
+      type = Map.fetch!(types, k)
+      case adapter.load(type, v) do
+        {:ok, v} -> Map.put(acc, k, v)
+        :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"
+      end
     end)
   end
 
-  defp action_to_state(:insert), do: :loaded
-  defp action_to_state(:update), do: :loaded
-  defp action_to_state(:delete), do: :deleted
-
   defp pop_from_changes(changeset, fields) do
     get_and_update_in(changeset.changes, &Map.split(&1, fields))
-  end
-
-  defp merge_embeds(changeset, embeds_changes) do
-    update_in changeset.model, &Map.merge(&1, embeds_changes)
   end
 
   defp process_assocs(changeset, assocs, opts) do

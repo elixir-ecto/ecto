@@ -5,15 +5,13 @@ defmodule Ecto.Embedded do
 
   @type t :: %Embedded{cardinality: :one | :many,
                        on_replace: :raise | :mark_as_invalid | :delete,
-                       relationship: :child,
                        field: atom,
                        owner: atom,
                        related: atom}
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-  defstruct [:cardinality, :field, :owner, :related,
-             on_replace: :raise, relationship: :child]
+  defstruct [:cardinality, :field, :owner, :related, on_replace: :raise]
 
   @doc """
   Builds the embedded struct.
@@ -39,11 +37,26 @@ defmodule Ecto.Embedded do
 
   @doc """
   Callback invoked by repository to prepare embeds.
+
+  It replaces the changesets for embeds inside changes
+  by actual structs so it can be dumped by adapters and
+  loaded into the schema struct afterwards.
   """
-  def prepare(%{types: types}, embeds, adapter, repo_action) do
-    for {name, changeset} <- embeds, into: %{} do
-      {:embed, embed} = Map.get(types, name)
-      {name, prepare_each(embed, changeset, adapter, repo_action)}
+  def prepare(changeset, adapter, repo_action) do
+    %{changes: changes, model: %{__struct__: schema}} = changeset
+    prepare(changeset, Map.take(changes, schema.__schema__(:embeds)), adapter, repo_action)
+  end
+
+  defp prepare(changeset, embeds, _adapter, _repo_action) when embeds == %{} do
+    changeset
+  end
+
+  defp prepare(%{types: types} = changeset, embeds, adapter, repo_action) do
+    update_in changeset.changes, fn changes ->
+      Enum.reduce embeds, changes, fn {name, changeset}, acc ->
+        {:embed, embed} = Map.get(types, name)
+        Map.put(acc, name, prepare_each(embed, changeset, adapter, repo_action))
+      end
     end
   end
 
@@ -83,20 +96,17 @@ defmodule Ecto.Embedded do
     nil
   end
 
-  defp prepare_each(%Changeset{action: action, changes: changes} = changeset,
+  defp prepare_each(%Changeset{action: action, types: types} = changeset,
                     %{related: model} = embed, adapter) do
-    embed_changes = Map.take(changes, model.__schema__(:embeds))
-
     changeset
-    |> prepare(embed_changes, adapter, action)
-    |> apply_embeds(changeset)
+    |> prepare(adapter, action)
+    |> apply_embeds()
     |> autogenerate_id(action, model, embed, adapter)
-    |> autogenerate(changeset, action, model, adapter)
+    |> autogenerate(types, action, model, adapter)
   end
 
-  defp apply_embeds(embeds, changeset) do
-    model = Changeset.apply_changes(changeset)
-    model = Map.merge(model, embeds)
+  defp apply_embeds(%{changes: changes, model: model}) do
+    model = Map.merge(model, changes)
     put_in(model.__meta__.state, :loaded)
   end
 
@@ -127,7 +137,7 @@ defmodule Ecto.Embedded do
     struct
   end
 
-  defp autogenerate(struct, %{types: types}, action, model, adapter) do
+  defp autogenerate(struct, types, action, model, adapter) do
     Enum.reduce model.__schema__(:autogenerate, action), struct,
       fn {k, mod, args}, acc ->
         if Map.get(acc, k) do

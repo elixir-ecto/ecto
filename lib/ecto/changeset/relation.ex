@@ -5,7 +5,6 @@ defmodule Ecto.Changeset.Relation do
   alias Ecto.Association.NotLoaded
 
   @type t :: %{cardinality: :one | :many,
-               relationship: :parent | :child,
                on_replace: :raise | :mark_as_invalid | atom,
                owner: atom,
                related: atom,
@@ -104,7 +103,7 @@ defmodule Ecto.Changeset.Relation do
     {:ok, on_cast.(meta.__struct__.build(meta), params) |> put_new_action(:insert)}
   end
 
-  defp do_cast(relation, nil, current, _cast_casat) do
+  defp do_cast(relation, nil, current, _on_cast) do
     on_replace(relation, current)
   end
 
