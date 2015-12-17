@@ -20,7 +20,7 @@ defmodule Ecto.Multi do
   end
 
   def insert(multi, name, struct) do
-    add_changeset(multi, :insert, name, Changeset.change(struct))
+    insert(multi, name, Changeset.change(struct))
   end
 
   @spec update(t, name, Changeset.t) :: t
@@ -34,11 +34,11 @@ defmodule Ecto.Multi do
   end
 
   def delete(multi, name, struct) do
-    add_changeset(multi, :delete, name, Changeset.change(struct))
+    delete(multi, name, Changeset.change(struct))
   end
 
   defp add_changeset(multi, action, name, changeset) do
-    add_operation(multi, name, put_action(changeset, action))
+    add_operation(multi, name, {:changeset, put_action(changeset, action)})
   end
 
   defp put_action(%{action: nil} = changeset, action) do
@@ -51,18 +51,30 @@ defmodule Ecto.Multi do
 
   defp put_action(%{action: original}, action) do
     raise ArgumentError, "you provided a changeset with an action already set " <>
-      "to #{original} when trying to #{action} it"
+      "to #{inspect original} when trying to #{action} it"
   end
 
   @spec run(t, name, run) :: t
   def run(multi, name, run) when is_function(run, 2) do
-    add_operation(multi, name, run)
+    add_operation(multi, name, {:run, run})
   end
 
   @spec run(t, name, module, function, args) :: t
     when function: atom, args: [any]
   def run(multi, name, mod, fun, args) do
-    add_operation(multi, name, {mod, fun, args})
+    add_operation(multi, name, {:run, {mod, fun, args}})
+  end
+
+  @spec update_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
+  def update_all(multi, name, queryable, updates) do
+    query = Ecto.Queryable.to_query(queryable)
+    add_operation(multi, name, {:update_all, query, updates})
+  end
+
+  @spec delete_all(t, name, Ecto.Queryable.t) :: t
+  def delete_all(multi, name, queryable) do
+    query = Ecto.Queryable.to_query(queryable)
+    add_operation(multi, name, {:delete_all, query})
   end
 
   defp add_operation(%Multi{operations: operations, names: names} = multi, name, operation)
@@ -91,15 +103,15 @@ defmodule Ecto.Multi do
   defp check_operations_valid(operations) do
     operations
     |> Enum.find(fn
-      {_, %{valid?: valid?}} -> not valid?
-      _                      -> false
+      {_, {:changeset, %{valid?: valid?}}} -> not valid?
+      _                                    -> false
     end)
     |> do_check_operations_valid(operations)
   end
 
   defp do_check_operations_valid(nil, operations),
     do: {:ok, operations}
-  defp do_check_operations_valid({name, changeset}, _operations),
+  defp do_check_operations_valid({name, {:changeset, changeset}}, _operations),
     do: {:error, {name, changeset, %{}}}
 
   defp apply_operations({:ok, operations}, repo, wrap, return, opts) do
@@ -125,15 +137,14 @@ defmodule Ecto.Multi do
     end
   end
 
-  defp apply_operation(%Changeset{action: action} = changeset, _acc, repo, opts) do
-    apply(repo, action, [changeset, opts])
-  end
-
-  defp apply_operation(run, acc, _repo, opts) when is_function(run, 2) do
-    apply(run, [acc, opts])
-  end
-
-  defp apply_operation({mod, fun, args}, acc, _repo, opts) do
-    apply(mod, fun, [acc, opts | args])
-  end
+  defp apply_operation({:changeset, changeset}, _acc, repo, opts),
+    do: apply(repo, changeset.action, [changeset, opts])
+  defp apply_operation({:run, {mod, fun, args}}, acc, _repo, opts),
+    do: apply(mod, fun, [acc, opts | args])
+  defp apply_operation({:run, run}, acc, _repo, opts),
+    do: apply(run, [acc, opts])
+  defp apply_operation({:update_all, query, updates}, _acc, repo, opts),
+    do: {:ok, repo.update_all(query, updates, opts)}
+  defp apply_operation({:delete_all, query}, _acc, repo, opts),
+    do: {:ok, repo.delete_all(query, opts)}
 end

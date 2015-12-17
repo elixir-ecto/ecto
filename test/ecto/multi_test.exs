@@ -26,7 +26,7 @@ defmodule Ecto.MultiTest do
       |> Multi.insert(:comment, changeset)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, %{changeset | action: :insert}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}}}]
   end
 
   test "insert struct" do
@@ -37,7 +37,7 @@ defmodule Ecto.MultiTest do
       |> Multi.insert(:comment, struct)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, %{changeset | action: :insert}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}}}]
   end
 
   test "update changeset" do
@@ -47,7 +47,7 @@ defmodule Ecto.MultiTest do
       |> Multi.update(:comment, changeset)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, %{changeset | action: :update}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}}}]
   end
 
   test "delete changeset" do
@@ -57,7 +57,7 @@ defmodule Ecto.MultiTest do
       |> Multi.delete(:comment, changeset)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, %{changeset | action: :delete}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}}}]
   end
 
   test "delete struct" do
@@ -68,7 +68,7 @@ defmodule Ecto.MultiTest do
       |> Multi.delete(:comment, struct)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, %{changeset | action: :delete}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}}}]
   end
 
   test "run with fun" do
@@ -78,7 +78,7 @@ defmodule Ecto.MultiTest do
       |> Multi.run(:fun, fun)
 
     assert multi.names      == MapSet.new([:fun])
-    assert multi.operations == [{:fun, fun}]
+    assert multi.operations == [{:fun, {:run, fun}}]
   end
 
   test "run with mfa" do
@@ -87,7 +87,28 @@ defmodule Ecto.MultiTest do
       |> Multi.run(:fun, __MODULE__, :ok, [])
 
     assert multi.names      == MapSet.new([:fun])
-    assert multi.operations == [{:fun, {__MODULE__, :ok, []}}]
+    assert multi.operations == [{:fun, {:run, {__MODULE__, :ok, []}}}]
+  end
+
+  test "update_all" do
+    multi =
+      Multi.new
+      |> Multi.update_all(:comments, Comment, set: [x: 2])
+
+    assert multi.names == MapSet.new([:comments])
+    assert [{:comments, {:update_all, query, updates}}] = multi.operations
+    assert updates == [set: [x: 2]]
+    assert query   == Ecto.Queryable.to_query(Comment)
+  end
+
+  test "delete_all" do
+    multi =
+      Multi.new
+      |> Multi.delete_all(:comments, Comment)
+
+    assert multi.names == MapSet.new([:comments])
+    assert [{:comments, {:delete_all, query}}] = multi.operations
+    assert query == Ecto.Queryable.to_query(Comment)
   end
 
   test "Repo.transaction success" do
@@ -98,13 +119,18 @@ defmodule Ecto.MultiTest do
       |> Multi.run(:run, fn changes, _opts -> {:ok, changes} end)
       |> Multi.update(:update, changeset)
       |> Multi.delete(:delete, changeset)
+      |> Multi.update_all(:update_all, Comment, set: [x: 1])
+      |> Multi.delete_all(:delete_all, Comment)
 
     assert {:ok, changes} = TestRepo.transaction(multi)
     assert_received {:transaction, _}
-    assert {:messages, [:insert, :update, :delete]} == Process.info(self, :messages)
+    assert {:messages, actions} = Process.info(self, :messages)
+    assert actions == [:insert, :update, :delete, :update_all, :delete_all]
     assert %Comment{} = changes.insert
     assert %Comment{} = changes.update
     assert %Comment{} = changes.delete
+    assert {1, nil}   = changes.update_all
+    assert {1, nil}   = changes.delete_all
     assert Map.has_key?(changes.run, :insert)
     refute Map.has_key?(changes.run, :update)
   end
@@ -156,5 +182,19 @@ defmodule Ecto.MultiTest do
     assert {:error, :invalid, invalid, %{}} = TestRepo.transaction(multi)
     assert invalid.model == changeset.model
     refute_received {:transaction, _}
+  end
+
+  test "add changeset with invalid action" do
+    changeset = %{Changeset.change(%Comment{}) | action: :invalid}
+
+    assert_raise ArgumentError, ~r"an action already set to :invalid", fn ->
+      Multi.new |> Multi.insert(:changeset, changeset)
+    end
+  end
+
+  test "add run with invalid arity" do
+    assert_raise FunctionClauseError, fn ->
+      Multi.new |> Multi.run(:run, fn -> nil end)
+    end
   end
 end
