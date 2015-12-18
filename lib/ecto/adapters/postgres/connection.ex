@@ -386,7 +386,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp expr({:&, _, [idx]}, sources, query) do
       {table, name, model} = elem(sources, idx)
       unless model do
-        error!(query, "PostgreSQL requires a model when using selector " <>
+        error!(query, "PostgreSQL requires a schema module when using selector " <>
           "#{inspect name} but only the table #{inspect table} was given. " <>
           "Please specify a model or specify exactly which fields from " <>
           "#{inspect name} you desire")

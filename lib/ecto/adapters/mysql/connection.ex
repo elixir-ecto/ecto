@@ -314,7 +314,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp expr({:&, _, [idx]}, sources, query) do
       {table, name, model} = elem(sources, idx)
       unless model do
-        error!(query, "MySQL requires a model when using selector " <>
+        error!(query, "MySQL requires a schema module when using selector " <>
           "#{inspect name} but only the table #{inspect table} was given. " <>
           "Please specify a model or specify exactly which fields from " <>
           "#{inspect name} you desire")
@@ -494,6 +494,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def execute_ddl({:create, %Index{}=index}) do
       create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
       using  = if index.using, do: "USING #{index.using}", else: []
+
+      if index.where do
+        error!(nil, "MySQL adapter does not where in indexes")
+      end
 
       assemble([create,
                 quote_name(index.name),

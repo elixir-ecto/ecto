@@ -57,7 +57,7 @@ defmodule Ecto.Adapters.MySQLTest do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0.`x` FROM `posts` AS p0}
 
-    assert_raise Ecto.QueryError, ~r"MySQL requires a model", fn ->
+    assert_raise Ecto.QueryError, ~r"MySQL requires a schema module", fn ->
       SQL.all from(p in "posts", select: p) |> normalize()
     end
   end
@@ -600,9 +600,10 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "create unique index with condition" do
-    create = {:create, index(:posts, [:permalink], unique: true, where: "public IS TRUE")}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE UNIQUE INDEX `posts_permalink_index` ON `posts` (`permalink`)|
+    assert_raise ArgumentError, "MySQL adapter does not where in indexes", fn ->
+      create = {:create, index(:posts, [:permalink], unique: true, where: "public IS TRUE")}
+      SQL.execute_ddl(create)
+    end
   end
 
   test "create an index using a different type" do

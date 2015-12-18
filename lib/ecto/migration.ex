@@ -86,11 +86,11 @@ defmodule Ecto.Migration do
         create index(:weather, [:city], prefix: :north_america)
       end
 
-  Note: if using MySQL with a prefixed table, you must use the same prefix for the references since 
+  Note: if using MySQL with a prefixed table, you must use the same prefix for the references since
   cross database references are not supported.
 
-  For both MySQL and Postgres with a prefixed table, you must use the same prefix for the index field to ensure 
-  you index the prefix qualified table. 
+  For both MySQL and Postgres with a prefixed table, you must use the same prefix for the index field to ensure
+  you index the prefix qualified table.
 
   ## Transactions
 
@@ -302,7 +302,7 @@ defmodule Ecto.Migration do
       else
         []
       end
-      
+
     Runner.execute {command, __prefix__(table), columns}
   end
 
@@ -407,11 +407,12 @@ defmodule Ecto.Migration do
 
   ## Partial indexes
 
-  PostgreSQL supports partial indexes.
-  A partial index is an index built over a subset of a table.
-  The subset is defined by a conditional expression using the `:where` option.
-  The `:where` option can be an atom or a string; its
-  value is passed to the `WHERE` clause as is.
+  Databases like PostgreSQL and MSSQL supports partial indexes.
+
+  A partial index is an index built over a subset of a table. The subset
+  is defined by a conditional expression using the `:where` option.
+  The `:where` option can be an atom or a string; its value is passed
+  to the `WHERE` clause as is.
 
   More information on partial indexes can be found in the [PostgreSQL
   docs](http://www.postgresql.org/docs/9.4/static/indexes-partial.html).
