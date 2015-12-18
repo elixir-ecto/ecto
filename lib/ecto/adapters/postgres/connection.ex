@@ -579,7 +579,8 @@ if Code.ensure_loaded?(Postgrex.Connection) do
                 "ON",
                 quote_table(index.prefix, index.table),
                 if_do(index.using, "USING #{index.using}"),
-                "(#{fields})"])
+                "(#{fields})",
+                if_do(index.where, "WHERE #{index.where}")])
     end
 
     def execute_ddl({:create_if_not_exists, %Index{}=index}) do

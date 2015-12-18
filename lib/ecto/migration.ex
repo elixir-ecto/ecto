@@ -129,7 +129,8 @@ defmodule Ecto.Migration do
               columns: [],
               unique: false,
               concurrently: false,
-              using: nil
+              using: nil,
+              where: nil
 
     @type t :: %__MODULE__{
       table: atom,
@@ -138,7 +139,8 @@ defmodule Ecto.Migration do
       columns: [atom | String.t],
       unique: boolean,
       concurrently: boolean,
-      using: atom | String.t
+      using: atom | String.t,
+      where: atom | String.t
     }
   end
 
@@ -380,6 +382,7 @@ defmodule Ecto.Migration do
     * `:concurrently` - if the index should be created/dropped concurrently
     * `:using` - configures the index type
     * `:prefix` - prefix for the index
+    * `:where` - the conditions for a partial index
 
   ## Adding/dropping indexes concurrently
 
@@ -402,6 +405,17 @@ defmodule Ecto.Migration do
   More information on index types can be found in the [PostgreSQL
   docs](http://www.postgresql.org/docs/9.4/static/indexes-types.html).
 
+  ## Partial indexes
+
+  PostgreSQL supports partial indexes.
+  A partial index is an index built over a subset of a table.
+  The subset is defined by a conditional expression using the `:where` option.
+  The `:where` option can be an atom or a string; its
+  value is passed to the `WHERE` clause as is.
+
+  More information on partial indexes can be found in the [PostgreSQL
+  docs](http://www.postgresql.org/docs/9.4/static/indexes-partial.html).
+
   ## Examples
 
       # Without a name, index defaults to products_category_id_sku_index
@@ -418,6 +432,9 @@ defmodule Ecto.Migration do
 
       # Create an index on custom expressions
       create index(:products, ["lower(name)"], name: :products_lower_name_index)
+
+      # Create a partial index
+      create index(:products, [:user_id], where: "price = 0", name: :free_products_index)
 
   """
   def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
