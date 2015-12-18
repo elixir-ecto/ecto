@@ -1557,17 +1557,17 @@ defmodule Ecto.Changeset do
   this function to work. Such constraint is often added as a
   reference to the child table:
 
-        create table(:comments) do
-          add :post_id, references(:posts)
-        end
+      create table(:comments) do
+        add :post_id, references(:posts)
+      end
 
   Now, when inserting a comment, it is possible to forbid any
   comment to be added if the associated post does not exist:
 
-        comment
-        |> Ecto.Changeset.cast(params, ~w(post_id))
-        |> Ecto.Changeset.assoc_constraint(:post)
-        |> Repo.insert
+      comment
+      |> Ecto.Changeset.cast(params, ~w(post_id))
+      |> Ecto.Changeset.assoc_constraint(:post)
+      |> Repo.insert
 
   ## Options
 
@@ -1605,17 +1605,17 @@ defmodule Ecto.Changeset do
   this function to work. Such constraint is often added as a
   reference to the child table:
 
-        create table(:comments) do
-          add :post_id, references(:posts)
-        end
+      create table(:comments) do
+        add :post_id, references(:posts)
+      end
 
   Now, when deleting the post, it is possible to forbid any post to
   be deleted if they still have comments attached to it:
 
-        post
-        |> Ecto.Changeset.change
-        |> Ecto.Changeset.no_assoc_constraint(:comments)
-        |> Repo.delete
+      post
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.no_assoc_constraint(:comments)
+      |> Repo.delete
 
   ## Options
 
