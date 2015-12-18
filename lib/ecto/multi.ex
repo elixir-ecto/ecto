@@ -7,11 +7,41 @@ defmodule Ecto.Multi do
   @type run :: (t, Keyword.t -> {:ok | :error, any})
   @type operation :: Changeset.t | run
   @type name :: atom
-  @type t :: %__MODULE__{operations: [{name, operation}]}
+  @type t :: %__MODULE__{operations: [{name, operation}], names: MapSet.t}
 
   @spec new :: t
   def new do
     %Multi{}
+  end
+
+  @spec append(t, t) :: t
+  def append(lhs, rhs) do
+    merge(lhs, rhs, &(&2 ++ &1))
+  end
+
+  @spec prepend(t, t) :: t
+  def prepend(lhs, rhs) do
+    merge(lhs, rhs, &(&1 ++ &2))
+  end
+
+  def merge(%Multi{names: names1, operations: ops1} = lhs,
+            %Multi{names: names2, operations: ops2} = rhs,
+            joiner) do
+    if MapSet.disjoint?(names1, names2) do
+      %Multi{names: MapSet.union(names1, names2),
+             operations: joiner.(ops1, ops2)}
+    else
+      common = MapSet.intersection(names1, names2) |> MapSet.to_list
+      raise """
+      When merging following Ecto.Multi:
+
+      #{inspect lhs}
+
+      #{inspect rhs}
+
+      both declared operations: #{inspect common}
+      """
+    end
   end
 
   @spec insert(t, name, Changeset.t | Model.t) :: t
@@ -77,10 +107,10 @@ defmodule Ecto.Multi do
     add_operation(multi, name, {:delete_all, query})
   end
 
-  defp add_operation(%Multi{operations: operations, names: names} = multi, name, operation)
-      when is_atom(name) do
+  defp add_operation(%Multi{operations: operations, names: names} = multi, name,
+                     operation) when is_atom(name) do
     if MapSet.member?(names, name) do
-      raise "#{name} is already a member of the Ecto.Multi: \n#{inspect multi}"
+      raise "#{inspect name} is already a member of the Ecto.Multi: \n#{inspect multi}"
     else
       %{multi | operations: [{name, operation} | operations],
                 names: MapSet.put(names, name)}
@@ -101,22 +131,18 @@ defmodule Ecto.Multi do
   end
 
   defp check_operations_valid(operations) do
-    operations
-    |> Enum.find(fn
-      {_, {:changeset, %{valid?: valid?}}} -> not valid?
-      _                                    -> false
-    end)
-    |> do_check_operations_valid(operations)
+    case Enum.find(operations, &invalid_operation?/1) do
+      nil                             -> {:ok, operations}
+      {name, {:changeset, changeset}} -> {:error, {name, changeset, %{}}}
+    end
   end
 
-  defp do_check_operations_valid(nil, operations),
-    do: {:ok, operations}
-  defp do_check_operations_valid({name, {:changeset, changeset}}, _operations),
-    do: {:error, {name, changeset, %{}}}
+  defp invalid_operation?({_, {:changeset, %{valid?: valid?}}}), do: not valid?
+  defp invalid_operation?(_operation),                           do: false
 
   defp apply_operations({:ok, operations}, repo, wrap, return, opts) do
     wrap.(fn ->
-      do_apply_operations(operations, repo, return, opts, %{})
+      Enum.reduce(operations, %{}, &apply_operation(&1, repo, return, opts, &2))
     end)
   end
 
@@ -124,14 +150,10 @@ defmodule Ecto.Multi do
     {:error, error}
   end
 
-  defp do_apply_operations([], _repo, _return, _opts, acc) do
-    acc
-  end
-
-  defp do_apply_operations([{name, operation} | rest], repo, return, opts, acc) do
+  defp apply_operation({name, operation}, repo, return, opts, acc) do
     case apply_operation(operation, acc, repo, opts) do
       {:ok, value} ->
-        do_apply_operations(rest, repo, return, opts, Map.put(acc, name, value))
+        Map.put(acc, name, value)
       {:error, value} ->
         return.({name, value, acc})
     end

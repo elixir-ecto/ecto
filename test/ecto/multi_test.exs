@@ -111,6 +111,35 @@ defmodule Ecto.MultiTest do
     assert query == Ecto.Queryable.to_query(Comment)
   end
 
+  test "append/prepend without repetition" do
+    fun = fn _, _ -> {:ok, :ok} end
+    lhs = Multi.new |> Multi.run(:one, fun) |> Multi.run(:two, fun)
+    rhs = Multi.new |> Multi.run(:three, fun) |> Multi.run(:four, fun)
+
+    merged     = Multi.append(lhs, rhs)
+    operations = Keyword.keys(merged.operations)
+    assert merged.names == MapSet.new([:one, :two, :three, :four])
+    assert operations   == [:four, :three, :two, :one]
+
+    merged     = Multi.prepend(lhs, rhs)
+    operations = Keyword.keys(merged.operations)
+    assert merged.names == MapSet.new([:one, :two, :three, :four])
+    assert operations   == [:two, :one, :four, :three]
+  end
+
+  test "append/prepend with repetition" do
+    fun   = fn _, _ -> {:ok, :ok} end
+    multi = Multi.new |> Multi.run(:run, fun)
+
+    assert_raise RuntimeError, ~r"both declared operations: \[:run\]", fn ->
+      Multi.append(multi, multi)
+    end
+
+    assert_raise RuntimeError, ~r"both declared operations: \[:run\]", fn ->
+      Multi.prepend(multi, multi)
+    end
+  end
+
   test "Repo.transaction success" do
     changeset = Changeset.change(%Comment{id: 1}, x: 1)
     multi =
@@ -195,6 +224,13 @@ defmodule Ecto.MultiTest do
   test "add run with invalid arity" do
     assert_raise FunctionClauseError, fn ->
       Multi.new |> Multi.run(:run, fn -> nil end)
+    end
+  end
+
+  test "repeating an operation" do
+    fun = fn _, _ -> {:ok, :ok} end
+    assert_raise RuntimeError, ~r":run is already a member", fn ->
+      Multi.new |> Multi.run(:run, fun) |> Multi.run(:run, fun)
     end
   end
 end
