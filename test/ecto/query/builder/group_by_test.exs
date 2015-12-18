@@ -25,13 +25,13 @@ defmodule Ecto.Query.Builder.GroupByTest do
     end
 
     message = "expected a field as an atom in `group_by`, got: `\"temp\"`"
-    assert_raise Ecto.Query.CompileError, message, fn ->
+    assert_raise ArgumentError, message, fn ->
       temp = "temp"
       group_by("posts", [p], [^temp])
     end
 
     message = "expected a list of fields in `group_by`, got: `\"temp\"`"
-    assert_raise Ecto.Query.CompileError, message, fn ->
+    assert_raise ArgumentError, message, fn ->
       temp = "temp"
       group_by("posts", [p], ^temp)
     end

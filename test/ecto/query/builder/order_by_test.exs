@@ -47,13 +47,13 @@ defmodule Ecto.Query.Builder.OrderByTest do
     end
 
     message = "expected a field as an atom in `order_by`, got: `\"temp\"`"
-    assert_raise Ecto.Query.CompileError, message, fn ->
+    assert_raise ArgumentError, message, fn ->
       temp = "temp"
       order_by("posts", [p], [asc: ^temp])
     end
 
     message = "expected a list or keyword list of fields in `order_by`, got: `\"temp\"`"
-    assert_raise Ecto.Query.CompileError, message, fn ->
+    assert_raise ArgumentError, message, fn ->
       temp = "temp"
       order_by("posts", [p], ^temp)
     end

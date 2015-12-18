@@ -129,8 +129,10 @@ defmodule Ecto.Query.Builder.Preload do
   """
   def key!(key) when is_atom(key),
     do: key
-  def key!(key),
-    do: Builder.error!("expected key in preload to be an atom, got: `#{inspect key}`")
+  def key!(key) do
+    raise ArgumentError,
+      "expected key in preload to be an atom, got: `#{inspect key}`"
+  end
 
   @doc """
   Applies the preloaded value into the query.

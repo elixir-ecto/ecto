@@ -47,11 +47,13 @@ defmodule Ecto.Query.Builder.Distinct do
   """
   def field!(field) when is_atom(field),
     do: to_field(field)
-  def field!(other),
-    do: Builder.error!("expected a field as an atom in `distinct`, got: `#{inspect other}`")
+  def field!(other) do
+    raise ArgumentError,
+      "expected a field as an atom in `distinct`, got: `#{inspect other}`"
+  end
 
   @doc """
-  Called at runtime to verify group_by.
+  Called at runtime to verify distinct.
   """
   def distinct!(distinct) when is_boolean(distinct) do
     distinct
@@ -62,7 +64,8 @@ defmodule Ecto.Query.Builder.Distinct do
       field when is_atom(field) ->
         to_field(field)
       _ ->
-        Builder.error!("expected a boolean or a list of fields in `distinct`, got: `#{inspect distinct}`")
+        raise ArgumentError,
+          "expected a boolean or a list of fields in `distinct`, got: `#{inspect distinct}`"
     end
   end
 

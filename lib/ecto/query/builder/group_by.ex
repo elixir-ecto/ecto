@@ -41,8 +41,10 @@ defmodule Ecto.Query.Builder.GroupBy do
   """
   def field!(field) when is_atom(field),
     do: to_field(field)
-  def field!(other),
-    do: Builder.error!("expected a field as an atom in `group_by`, got: `#{inspect other}`")
+  def field!(other) do
+    raise ArgumentError,
+      "expected a field as an atom in `group_by`, got: `#{inspect other}`"
+  end
 
   @doc """
   Called at runtime to verify group_by.
@@ -52,7 +54,8 @@ defmodule Ecto.Query.Builder.GroupBy do
       field when is_atom(field) ->
         to_field(field)
       _ ->
-        Builder.error!("expected a list of fields in `group_by`, got: `#{inspect group_by}`")
+        raise ArgumentError,
+          "expected a list of fields in `group_by`, got: `#{inspect group_by}`"
     end
   end
 
