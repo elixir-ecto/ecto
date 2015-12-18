@@ -4,8 +4,11 @@ defmodule Ecto.Multi do
 
   defstruct operations: [], names: MapSet.new
 
-  @type run :: (t, Keyword.t -> {:ok | :error, any})
-  @type operation :: Changeset.t | run
+  @type run :: (t, Keyword.t -> {:ok | :error, any}) | {module, atom, [any]}
+  @type operation :: {:changeset, Changeset.t} |
+                     {:run, run} |
+                     {:update_all, Ecto.Query.t, Keyword.t} |
+                     {:delete_all, Ecto.Query.t}
   @type name :: atom
   @type t :: %__MODULE__{operations: [{name, operation}], names: MapSet.t}
 
@@ -116,6 +119,17 @@ defmodule Ecto.Multi do
                 names: MapSet.put(names, name)}
     end
   end
+
+  def to_list(%Multi{operations: operations}) do
+    operations
+    |> Enum.reverse
+    |> Enum.map(&format_operation/1)
+  end
+
+  defp format_operation({name, {:changeset, changeset}}),
+    do: {name, {changeset.action, changeset}}
+  defp format_operation(other),
+    do: other
 
   @spec apply(t, Ecto.Repo.t, wrap, return, Keyword.t) ::
       {:ok, results} | {:error, {name, error, results}}

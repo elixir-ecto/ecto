@@ -140,6 +140,27 @@ defmodule Ecto.MultiTest do
     end
   end
 
+  test "to_list" do
+    changeset = Changeset.change(%Comment{id: 1}, x: 1)
+    multi =
+      Multi.new
+      |> Multi.insert(:insert, changeset)
+      |> Multi.run(:run, fn changes, _opts -> {:ok, changes} end)
+      |> Multi.update(:update, changeset)
+      |> Multi.delete(:delete, changeset)
+      |> Multi.update_all(:update_all, Comment, set: [x: 1])
+      |> Multi.delete_all(:delete_all, Comment)
+
+    assert [
+      {:insert,     {:insert, _}},
+      {:run,        {:run, _}},
+      {:update,     {:update, _}},
+      {:delete,     {:delete, _}},
+      {:update_all, {:update_all, _, _}},
+      {:delete_all, {:delete_all, _}},
+    ] = Ecto.Multi.to_list(multi)
+  end
+
   test "Repo.transaction success" do
     changeset = Changeset.change(%Comment{id: 1}, x: 1)
     multi =
