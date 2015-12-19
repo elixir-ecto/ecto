@@ -24,6 +24,7 @@ defmodule Ecto.TypeTest do
     schema "" do
       field :a, :integer
       field :b, :integer, virtual: true
+      field :c, :integer, default: 0
     end
 
     def changeset(params, model) do
@@ -113,11 +114,11 @@ defmodule Ecto.TypeTest do
                            owner: __MODULE__, related: Model}
     type  = {:embed, embed}
 
-    assert {:ok, %Model{a: 1}} = load(type, %{"a" => 1}, &Ecto.TestAdapter.load/2)
+    assert {:ok, %Model{a: 1, c: 0}} = load(type, %{"a" => 1}, &Ecto.TestAdapter.load/2)
     assert {:ok, nil} == load(type, nil, &Ecto.TestAdapter.load/2)
     assert :error == load(type, 1)
 
-    assert {:ok, %{a: 1, id: @uuid_tagged}} ==
+    assert {:ok, %{a: 1, c: 0, id: @uuid_tagged}} ==
            dump(type, %Model{id: @uuid_string, a: 1}, &Ecto.TestAdapter.dump/2)
 
     assert :error == cast(type, %{"a" => 1})
@@ -129,11 +130,11 @@ defmodule Ecto.TypeTest do
                            owner: __MODULE__, related: Model}
     type  = {:embed, embed}
 
-    assert {:ok, [%Model{a: 1}]} = load(type, [%{"a" => 1}], &Ecto.TestAdapter.load/2)
+    assert {:ok, [%Model{a: 1, c: 0}]} = load(type, [%{"a" => 1}], &Ecto.TestAdapter.load/2)
     assert {:ok, []} == load(type, nil, &Ecto.TestAdapter.load/2)
     assert :error == load(type, 1, &Ecto.TestAdapter.load/2)
 
-    assert {:ok, [%{a: 1, id: @uuid_tagged}]} ==
+    assert {:ok, [%{a: 1, id: @uuid_tagged, c: 0}]} ==
            dump(type, [%Model{id: @uuid_string, a: 1}], &Ecto.TestAdapter.dump/2)
 
     assert :error == cast(type, [%{"a" => 1}])

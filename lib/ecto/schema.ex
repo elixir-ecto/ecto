@@ -908,8 +908,10 @@ defmodule Ecto.Schema do
   defp do_load(struct, fields, map, loader) when is_map(map) do
     Enum.reduce(fields, struct, fn
       {field, type}, acc ->
-        value = load!(type, Map.get(map, Atom.to_string(field)), loader)
-        Map.put(acc, field, value)
+        case Map.fetch(map, Atom.to_string(field)) do
+          {:ok, value} -> Map.put(acc, field, load!(type, value, loader))
+          :error -> acc
+        end
     end)
   end
 
