@@ -6,8 +6,8 @@ defmodule Ecto.Pools.Poolboy do
 
     * `:pool_name` - The name of the pool supervisor
     * `:pool_size` - The number of connections to keep in the pool (default: 10)
+    * `:pool_overflow` - The maximum overflow of connections (default: 0) (see poolboy docs)
     * `:lazy` - When true, connections to the repo are lazily started (default: true)
-    * `:max_overflow` - The maximum overflow of connections (default: 0) (see poolboy docs)
     * `:shutdown` - The shutdown method for the connections (default: 5000) (see Supervisor.Spec)
 
   """
@@ -64,16 +64,21 @@ defmodule Ecto.Pools.Poolboy do
   ## Helpers
 
   defp split_opts(opts) do
-    {pool_opts, conn_opts} = Keyword.split(opts, [:pool_name, :pool_size, :max_overflow])
+    {pool_opts, conn_opts} = Keyword.split(opts, [:pool_name, :pool_size, :pool_overflow, :max_overflow])
+    conn_opts = Keyword.put(conn_opts, :timeout, Keyword.get(opts, :connect_timeout, 5_000))
 
-    conn_opts =
-      conn_opts
-      |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5_000))
+    pool_overflow =
+      if max_overflow = Keyword.get(pool_opts, :max_overflow) do
+        IO.write :stderr, "warning: :max_overflow option for poolboy is deprecated, please use :pool_overflow instead"
+        max_overflow
+      else
+        0
+      end
 
     pool_opts = [worker_module: Worker,
                  name: {:local, Keyword.fetch!(pool_opts, :pool_name)},
                  size: Keyword.get(pool_opts, :pool_size, 10),
-                 max_overflow: Keyword.get(pool_opts, :max_overflow, 0)]
+                 max_overflow: Keyword.get(pool_opts, :pool_overflow, pool_overflow)]
 
     {pool_opts, conn_opts}
   end
