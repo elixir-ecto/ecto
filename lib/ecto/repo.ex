@@ -386,9 +386,6 @@ defmodule Ecto.Repo do
   See `Ecto.Query.update/3` for update operations that can be
   performed on fields.
 
-  This operation does not run the model `before_update` and
-  `after_update` callbacks.
-
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for the query call to
@@ -419,9 +416,6 @@ defmodule Ecto.Repo do
   does not support RETURNING in DELETE statements or no
   return result was selected, the second element will be nil.
 
-  This operation does not run the model `before_delete` and
-  `after_delete` callbacks.
-
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for the query call to
@@ -448,9 +442,6 @@ defmodule Ecto.Repo do
   In case a changeset is given, the changes in the changeset are
   merged with the model fields, and all of them are sent to the
   database.
-
-  If any `before_insert` or `after_insert` callback is registered
-  in the given model, they will be invoked with the changeset.
 
   It returns `{:ok, model}` if the model has been successfully
   inserted or `{:error, changeset}` if there was a validation
@@ -488,9 +479,6 @@ defmodule Ecto.Repo do
 
   In case a changeset is given, only the changes in the changeset
   will be updated, leaving all the other model fields intact.
-
-  If any `before_update` or `after_update` callback are registered
-  in the given model, they will be invoked with the changeset.
 
   If the model has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised.
@@ -558,9 +546,6 @@ defmodule Ecto.Repo do
 
   @doc """
   Deletes a model using its primary key.
-
-  If any `before_delete` or `after_delete` callback are registered
-  in the given model, they will be invoked with the changeset.
 
   If the model has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised.
