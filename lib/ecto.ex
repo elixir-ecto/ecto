@@ -383,7 +383,7 @@ defmodule Ecto do
 
   #### Repo resolution
 
-  Our of the box, Ecto tasks assumes that the location of your Repo lives within
+  Out of the box, Ecto tasks assumes that the location of your Repo lives within
   your application's root namespace; for example, in the previous examples, Ecto
   will assume your Repo is located at MyApp.Repo.
 
