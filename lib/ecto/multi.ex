@@ -4,13 +4,13 @@ defmodule Ecto.Multi do
 
   defstruct operations: [], names: MapSet.new
 
-  @type run :: (t, Keyword.t -> {:ok | :error, any}) | {module, atom, [any]}
-  @type operation :: {:changeset, Changeset.t} |
-                     {:run, run} |
-                     {:update_all, Ecto.Query.t, Keyword.t} |
-                     {:delete_all, Ecto.Query.t}
+  @type run :: (t -> {:ok | :error, any}) | {module, atom, [any]}
+  @typep operation :: {:changeset, Changeset.t, Keyword.t} |
+                      {:run, run} |
+                      {:update_all, Ecto.Query.t, Keyword.t} |
+                      {:delete_all, Ecto.Query.t, Keyword.t}
   @type name :: atom
-  @type t :: %__MODULE__{operations: [{name, operation}], names: MapSet.t}
+  @opaque t :: %__MODULE__{operations: [{name, operation}], names: MapSet.t}
 
   @spec new :: t
   def new do
@@ -47,31 +47,35 @@ defmodule Ecto.Multi do
     end
   end
 
-  @spec insert(t, name, Changeset.t | Model.t) :: t
-  def insert(multi, name, %Changeset{} = changeset) do
-    add_changeset(multi, :insert, name, changeset)
+  @spec insert(t, name, Changeset.t | Ecto.Schema.t) :: t
+  def insert(multi, name, changeset_or_struct, opts \\ [])
+
+  def insert(multi, name, %Changeset{} = changeset, opts) do
+    add_changeset(multi, :insert, name, changeset, opts)
   end
 
-  def insert(multi, name, struct) do
-    insert(multi, name, Changeset.change(struct))
+  def insert(multi, name, struct, opts) do
+    insert(multi, name, Changeset.change(struct), opts)
   end
 
   @spec update(t, name, Changeset.t) :: t
-  def update(multi, name, %Changeset{} = changeset) do
-    add_changeset(multi, :update, name, changeset)
+  def update(multi, name, %Changeset{} = changeset, opts \\ []) do
+    add_changeset(multi, :update, name, changeset, opts)
   end
 
-  @spec delete(t, name, Changeset.t | Model.t) :: t
-  def delete(multi, name, %Changeset{} = changeset) do
-    add_changeset(multi, :delete, name, changeset)
+  @spec delete(t, name, Changeset.t | Ecto.Schema.t) :: t
+  def delete(multi, name, changeset_or_struct, opts \\ [])
+
+  def delete(multi, name, %Changeset{} = changeset, opts) do
+    add_changeset(multi, :delete, name, changeset, opts)
   end
 
-  def delete(multi, name, struct) do
-    delete(multi, name, Changeset.change(struct))
+  def delete(multi, name, struct, opts) do
+    delete(multi, name, Changeset.change(struct), opts)
   end
 
-  defp add_changeset(multi, action, name, changeset) do
-    add_operation(multi, name, {:changeset, put_action(changeset, action)})
+  defp add_changeset(multi, action, name, changeset, opts) when is_list(opts) do
+    add_operation(multi, name, {:changeset, put_action(changeset, action), opts})
   end
 
   defp put_action(%{action: nil} = changeset, action) do
@@ -88,7 +92,7 @@ defmodule Ecto.Multi do
   end
 
   @spec run(t, name, run) :: t
-  def run(multi, name, run) when is_function(run, 2) do
+  def run(multi, name, run) when is_function(run, 1) do
     add_operation(multi, name, {:run, run})
   end
 
@@ -98,16 +102,16 @@ defmodule Ecto.Multi do
     add_operation(multi, name, {:run, {mod, fun, args}})
   end
 
-  @spec update_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
-  def update_all(multi, name, queryable, updates) do
+  @spec update_all(t, name, Ecto.Queryable.t, Keyword.t, Keyword.t) :: t
+  def update_all(multi, name, queryable, updates, opts \\ []) when is_list(opts) do
     query = Ecto.Queryable.to_query(queryable)
-    add_operation(multi, name, {:update_all, query, updates})
+    add_operation(multi, name, {:update_all, query, updates, opts})
   end
 
-  @spec delete_all(t, name, Ecto.Queryable.t) :: t
-  def delete_all(multi, name, queryable) do
+  @spec delete_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
+  def delete_all(multi, name, queryable, opts \\ []) when is_list(opts) do
     query = Ecto.Queryable.to_query(queryable)
-    add_operation(multi, name, {:delete_all, query})
+    add_operation(multi, name, {:delete_all, query, opts})
   end
 
   defp add_operation(%Multi{operations: operations, names: names} = multi, name,
@@ -126,46 +130,45 @@ defmodule Ecto.Multi do
     |> Enum.map(&format_operation/1)
   end
 
-  defp format_operation({name, {:changeset, changeset}}),
-    do: {name, {changeset.action, changeset}}
+  defp format_operation({name, {:changeset, changeset, opts}}),
+    do: {name, {changeset.action, changeset, opts}}
   defp format_operation(other),
     do: other
 
-  @spec apply(t, Ecto.Repo.t, wrap, return, Keyword.t) ::
-      {:ok, results} | {:error, {name, error, results}}
+  @spec apply(t, Ecto.Repo.t, wrap, return) :: {:ok, results} | {:error, {name, error, results}}
     when results: %{name => Ecto.Schema.t | any},
          error: Changeset.t | any,
          wrap: ((() -> any) -> {:ok | :error, any}),
          return: (any -> no_return)
-  def apply(%Multi{} = multi, repo, wrap, return, opts \\ []) do
+  def apply(%Multi{} = multi, repo, wrap, return) do
     multi.operations
     |> Enum.reverse
     |> check_operations_valid
-    |> apply_operations(repo, wrap, return, opts)
+    |> apply_operations(repo, wrap, return)
   end
 
   defp check_operations_valid(operations) do
     case Enum.find(operations, &invalid_operation?/1) do
-      nil                             -> {:ok, operations}
-      {name, {:changeset, changeset}} -> {:error, {name, changeset, %{}}}
+      nil                                -> {:ok, operations}
+      {name, {:changeset, changeset, _}} -> {:error, {name, changeset, %{}}}
     end
   end
 
-  defp invalid_operation?({_, {:changeset, %{valid?: valid?}}}), do: not valid?
-  defp invalid_operation?(_operation),                           do: false
+  defp invalid_operation?({_, {:changeset, %{valid?: valid?}, _}}), do: not valid?
+  defp invalid_operation?(_operation),                              do: false
 
-  defp apply_operations({:ok, operations}, repo, wrap, return, opts) do
+  defp apply_operations({:ok, operations}, repo, wrap, return) do
     wrap.(fn ->
-      Enum.reduce(operations, %{}, &apply_operation(&1, repo, return, opts, &2))
+      Enum.reduce(operations, %{}, &apply_operation(&1, repo, return, &2))
     end)
   end
 
-  defp apply_operations({:error, error}, _repo, _wrap, _return, _opts) do
+  defp apply_operations({:error, error}, _repo, _wrap, _return) do
     {:error, error}
   end
 
-  defp apply_operation({name, operation}, repo, return, opts, acc) do
-    case apply_operation(operation, acc, repo, opts) do
+  defp apply_operation({name, operation}, repo, return, acc) do
+    case apply_operation(operation, acc, repo) do
       {:ok, value} ->
         Map.put(acc, name, value)
       {:error, value} ->
@@ -173,14 +176,14 @@ defmodule Ecto.Multi do
     end
   end
 
-  defp apply_operation({:changeset, changeset}, _acc, repo, opts),
+  defp apply_operation({:changeset, changeset, opts}, _acc, repo),
     do: apply(repo, changeset.action, [changeset, opts])
-  defp apply_operation({:run, {mod, fun, args}}, acc, _repo, opts),
-    do: apply(mod, fun, [acc, opts | args])
-  defp apply_operation({:run, run}, acc, _repo, opts),
-    do: apply(run, [acc, opts])
-  defp apply_operation({:update_all, query, updates}, _acc, repo, opts),
+  defp apply_operation({:run, {mod, fun, args}}, acc, _repo),
+    do: apply(mod, fun, [acc | args])
+  defp apply_operation({:run, run}, acc, _repo),
+    do: apply(run, [acc])
+  defp apply_operation({:update_all, query, updates, opts}, _acc, repo),
     do: {:ok, repo.update_all(query, updates, opts)}
-  defp apply_operation({:delete_all, query}, _acc, repo, opts),
+  defp apply_operation({:delete_all, query, opts}, _acc, repo),
     do: {:ok, repo.delete_all(query, opts)}
 end

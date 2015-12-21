@@ -26,7 +26,7 @@ defmodule Ecto.MultiTest do
       |> Multi.insert(:comment, changeset)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
   test "insert struct" do
@@ -37,7 +37,7 @@ defmodule Ecto.MultiTest do
       |> Multi.insert(:comment, struct)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
   test "update changeset" do
@@ -47,7 +47,7 @@ defmodule Ecto.MultiTest do
       |> Multi.update(:comment, changeset)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}, []}}]
   end
 
   test "delete changeset" do
@@ -57,7 +57,7 @@ defmodule Ecto.MultiTest do
       |> Multi.delete(:comment, changeset)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}, []}}]
   end
 
   test "delete struct" do
@@ -68,11 +68,11 @@ defmodule Ecto.MultiTest do
       |> Multi.delete(:comment, struct)
 
     assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}}}]
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}, []}}]
   end
 
   test "run with fun" do
-    fun = fn changes, _opts -> {:ok, changes} end
+    fun = fn changes -> {:ok, changes} end
     multi =
       Multi.new
       |> Multi.run(:fun, fun)
@@ -96,7 +96,7 @@ defmodule Ecto.MultiTest do
       |> Multi.update_all(:comments, Comment, set: [x: 2])
 
     assert multi.names == MapSet.new([:comments])
-    assert [{:comments, {:update_all, query, updates}}] = multi.operations
+    assert [{:comments, {:update_all, query, updates, []}}] = multi.operations
     assert updates == [set: [x: 2]]
     assert query   == Ecto.Queryable.to_query(Comment)
   end
@@ -107,12 +107,12 @@ defmodule Ecto.MultiTest do
       |> Multi.delete_all(:comments, Comment)
 
     assert multi.names == MapSet.new([:comments])
-    assert [{:comments, {:delete_all, query}}] = multi.operations
+    assert [{:comments, {:delete_all, query, []}}] = multi.operations
     assert query == Ecto.Queryable.to_query(Comment)
   end
 
   test "append/prepend without repetition" do
-    fun = fn _, _ -> {:ok, :ok} end
+    fun = fn _ -> {:ok, :ok} end
     lhs = Multi.new |> Multi.run(:one, fun) |> Multi.run(:two, fun)
     rhs = Multi.new |> Multi.run(:three, fun) |> Multi.run(:four, fun)
 
@@ -128,7 +128,7 @@ defmodule Ecto.MultiTest do
   end
 
   test "append/prepend with repetition" do
-    fun   = fn _, _ -> {:ok, :ok} end
+    fun   = fn _ -> {:ok, :ok} end
     multi = Multi.new |> Multi.run(:run, fun)
 
     assert_raise RuntimeError, ~r"both declared operations: \[:run\]", fn ->
@@ -145,19 +145,19 @@ defmodule Ecto.MultiTest do
     multi =
       Multi.new
       |> Multi.insert(:insert, changeset)
-      |> Multi.run(:run, fn changes, _opts -> {:ok, changes} end)
+      |> Multi.run(:run, fn changes -> {:ok, changes} end)
       |> Multi.update(:update, changeset)
       |> Multi.delete(:delete, changeset)
       |> Multi.update_all(:update_all, Comment, set: [x: 1])
       |> Multi.delete_all(:delete_all, Comment)
 
     assert [
-      {:insert,     {:insert, _}},
+      {:insert,     {:insert, _, []}},
       {:run,        {:run, _}},
-      {:update,     {:update, _}},
-      {:delete,     {:delete, _}},
-      {:update_all, {:update_all, _, _}},
-      {:delete_all, {:delete_all, _}},
+      {:update,     {:update, _, []}},
+      {:delete,     {:delete, _, []}},
+      {:update_all, {:update_all, _, _, []}},
+      {:delete_all, {:delete_all, _, []}},
     ] = Ecto.Multi.to_list(multi)
   end
 
@@ -166,7 +166,7 @@ defmodule Ecto.MultiTest do
     multi =
       Multi.new
       |> Multi.insert(:insert, changeset)
-      |> Multi.run(:run, fn changes, _opts -> {:ok, changes} end)
+      |> Multi.run(:run, fn changes -> {:ok, changes} end)
       |> Multi.update(:update, changeset)
       |> Multi.delete(:delete, changeset)
       |> Multi.update_all(:update_all, Comment, set: [x: 1])
@@ -190,7 +190,7 @@ defmodule Ecto.MultiTest do
     multi =
       Multi.new
       |> Multi.insert(:insert, changeset)
-      |> Multi.run(:run, fn _changes, _opts -> {:error, "error from run"} end)
+      |> Multi.run(:run, fn _changes -> {:error, "error from run"} end)
       |> Multi.update(:update, changeset)
       |> Multi.delete(:delete, changeset)
 
@@ -211,7 +211,7 @@ defmodule Ecto.MultiTest do
     multi =
       Multi.new
       |> Multi.insert(:insert, changeset)
-      |> Multi.run(:run, fn _changes, _opts -> {:ok, "ok"} end)
+      |> Multi.run(:run, fn _changes -> {:ok, "ok"} end)
       |> Multi.update(:update, invalid)
       |> Multi.delete(:delete, changeset)
 
@@ -249,7 +249,7 @@ defmodule Ecto.MultiTest do
   end
 
   test "repeating an operation" do
-    fun = fn _, _ -> {:ok, :ok} end
+    fun = fn _ -> {:ok, :ok} end
     assert_raise RuntimeError, ~r":run is already a member", fn ->
       Multi.new |> Multi.run(:run, fun) |> Multi.run(:run, fun)
     end
