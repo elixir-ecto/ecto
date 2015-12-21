@@ -1366,7 +1366,7 @@ defmodule Ecto.Changeset do
       iex> post = Repo.insert!(%Post{title: "foo"})
       %Post{id: 1, title: "foo", lock_version: 1}
       iex> valid_change = Post.changeset(:update, post, %{title: "bar"})
-      iex> stable_change = Post.changeset(:update, post, %{title: "baz"})
+      iex> stale_change = Post.changeset(:update, post, %{title: "baz"})
       iex> Repo.update!(valid_change)
       %Post{id: 1, title: "bar", lock_version: 2}
       iex> Repo.update!(stale_change)
