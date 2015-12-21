@@ -115,8 +115,8 @@ defmodule Ecto.Repo do
         Supervisor.stop(pid, :normal, timeout)
       end
 
-     def transaction(opts \\ [], fun_or_multi) when is_list(opts) do
-        Ecto.Repo.transaction(@adapter, __MODULE__, opts, fun_or_multi)
+      def transaction(fun_or_multi, opts \\ []) do
+        Ecto.Repo.Transaction.transaction(@adapter, __MODULE__, fun_or_multi, opts)
       end
 
       def in_transaction? do
@@ -726,7 +726,8 @@ defmodule Ecto.Repo do
       end)
 
   """
-  @callback transaction(Keyword.t, fun  | Ecto.Multi.t) :: {:ok, any} | {:error, any}
+  @callback transaction(fun | Ecto.Multi.t, Keyword.t) ::
+    {:ok, any} | {:error, any} | {:error, atom, any, %{atom => any}}
 
   @doc """
   Returns true if the current process is inside a transaction.
@@ -749,21 +750,4 @@ defmodule Ecto.Repo do
   The transaction will return the value given as `{:error, value}`.
   """
   @callback rollback(any) :: no_return
-
-  @doc false
-  def transaction(adapter, repo, opts, fun) when is_function(fun, 0) do
-    adapter.transaction(repo, opts, fun)
-  end
-
-  def transaction(adapter, repo, opts, %Ecto.Multi{} = multi) do
-    wrap   = &adapter.transaction(repo, opts, &1)
-    return = &adapter.rollback(repo, &1)
-
-    case Ecto.Multi.apply(multi, repo, wrap, return) do
-      {:ok, values} ->
-        {:ok, values}
-      {:error, {key, error_value, values}} ->
-        {:error, key, error_value, values}
-    end
-  end
 end

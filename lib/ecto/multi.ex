@@ -36,7 +36,7 @@ defmodule Ecto.Multi do
     else
       common = MapSet.intersection(names1, names2) |> MapSet.to_list
       raise """
-      When merging following Ecto.Multi:
+      when merging following Ecto.Multi:
 
       #{inspect lhs}
 
