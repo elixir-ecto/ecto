@@ -310,7 +310,7 @@ defmodule Ecto.Repo.Schema do
   defp load_each(struct, kv, types, adapter) do
     Enum.reduce(kv, struct, fn {k, v}, acc ->
       type = Map.fetch!(types, k)
-      case adapter.load(type, v) do
+      case Ecto.Type.adapter_load(adapter, type, v) do
         {:ok, v} -> Map.put(acc, k, v)
         :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"
       end

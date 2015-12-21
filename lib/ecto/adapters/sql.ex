@@ -54,8 +54,16 @@ defmodule Ecto.Adapters.SQL do
       ## Types
 
       def embed_id(_), do: Ecto.UUID.generate
-      def load(type, value), do: Ecto.Adapters.SQL.load(type, value, &load/2)
-      def dump(type, value), do: Ecto.Adapters.SQL.dump(type, value, &dump/2)
+
+      @doc false
+      def loaders({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
+      def loaders(:binary_id, type), do: [Ecto.UUID, type]
+      def loaders(_, type), do: [type]
+
+      @doc false
+      def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
+      def dumpers(:binary_id, type), do: [type, Ecto.UUID]
+      def dumpers(_, type), do: [type]
 
       ## Query
 
@@ -131,10 +139,8 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
-      defoverridable [prepare: 2, execute: 6,
-                      insert: 6, update: 7, delete: 5,
-                      execute_ddl: 3, embed_id: 1,
-                      load: 2, dump: 2]
+      defoverridable [prepare: 2, execute: 6, insert: 6, update: 7, delete: 5,
+                      execute_ddl: 3, embed_id: 1, loaders: 2, dumpers: 2]
     end
   end
 
@@ -424,26 +430,20 @@ defmodule Ecto.Adapters.SQL do
   ## Types
 
   @doc false
-  def load({:embed, _} = type, data, loader),
-    do: Ecto.Type.load(type, data, fn
-          {:embed, _} = type, value -> loader.(type, value)
-          type, value -> Ecto.Type.cast(type, value)
-        end)
-  def load(:binary_id, data, loader),
-    do: Ecto.Type.load(Ecto.UUID, data, loader)
-  def load(type, data, loader),
-    do: Ecto.Type.load(type, data, loader)
+  def load_embed(type, value) do
+    Ecto.Type.load(type, value, fn
+      {:embed, _} = type, value -> load_embed(type, value)
+      type, value -> Ecto.Type.cast(type, value)
+    end)
+  end
 
   @doc false
-  def dump({:embed, _} = type, data, dumper),
-    do: Ecto.Type.dump(type, data, fn
-          {:embed, _} = type, value -> dumper.(type, value)
-          _type, value -> {:ok, value}
-        end)
-  def dump(:binary_id, data, dumper),
-    do: Ecto.Type.dump(Ecto.UUID, data, dumper)
-  def dump(type, data, dumper),
-    do: Ecto.Type.dump(type, data, dumper)
+  def dump_embed(type, value) do
+    Ecto.Type.dump(type, value, fn
+      {:embed, _} = type, value -> dump_embed(type, value)
+      _type, value -> {:ok, value}
+    end)
+  end
 
   @doc false
   def bingenerate(key) do

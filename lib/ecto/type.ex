@@ -291,16 +291,12 @@ defmodule Ecto.Type do
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(type, value, dumper \\ &dump/2)
 
-  def dump({:embed, embed}, value, dumper) do
-    dump_embed(embed, value, dumper)
-  end
-
   def dump(type, nil, _dumper) do
     {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
   end
 
-  def dump(:binary_id, value, _dumper) do
-    raise ":binary_id type must be dumped by the adapter, attempted value: #{inspect value}"
+  def dump({:embed, embed}, value, dumper) do
+    dump_embed(embed, value, dumper)
   end
 
   def dump({:array, type}, value, dumper) do
@@ -344,10 +340,6 @@ defmodule Ecto.Type do
 
   defp dump_array(_type, [], _dumper, acc, false) do
     {:ok, Enum.reverse(acc)}
-  end
-
-  defp dump_embed(%{cardinality: :one} = embed, nil, _fun) do
-    {:ok, %Ecto.Query.Tagged{value: nil, type: type({:embed, embed})}}
   end
 
   defp dump_embed(%{cardinality: :one, related: model, field: field},
@@ -403,10 +395,6 @@ defmodule Ecto.Type do
   end
 
   def load(_type, nil, _loader), do: {:ok, nil}
-
-  def load(:binary_id, value, _loader) do
-    raise ":binary_id type must be loaded by the adapter, attempted value: #{inspect value}"
-  end
 
   def load({:array, type}, value, loader) do
     if is_list(value) do
@@ -585,6 +573,40 @@ defmodule Ecto.Type do
         :error
     end
   end
+
+  ## Adapter related
+
+  @doc false
+  def adapter_load(_adapter, type, nil),
+    do: load(type, nil)
+  def adapter_load(adapter, type, value),
+    do: do_adapter_load(adapter.loaders(type(type), type), {:ok, value}, adapter)
+
+  defp do_adapter_load(_, :error, _adapter),
+    do: :error
+  defp do_adapter_load([fun|t], {:ok, value}, adapter) when is_function(fun),
+    do: do_adapter_load(t, fun.(value), adapter)
+  defp do_adapter_load([type|t], {:ok, _} = acc, adapter) when type in @base,
+    do: do_adapter_load(t, acc, adapter)
+  defp do_adapter_load([type|t], {:ok, value}, adapter),
+    do: do_adapter_load(t, load(type, value, &adapter_load(adapter, &1, &2)), adapter)
+  defp do_adapter_load([], {:ok, _} = acc, _adapter),
+    do: acc
+
+  @doc false
+  def adapter_dump(_adapter, type, nil),
+    do: dump(type, nil)
+  def adapter_dump(adapter, type, value),
+    do: do_adapter_dump(adapter.dumpers(type(type), type), {:ok, value}, adapter)
+
+  defp do_adapter_dump(_, :error, _adapter),
+    do: :error
+  defp do_adapter_dump([fun|t], {:ok, value}, adapter) when is_function(fun),
+    do: do_adapter_dump(t, fun.(value), adapter)
+  defp do_adapter_dump([type|t], {:ok, value}, adapter),
+    do: do_adapter_dump(t, dump(type, value, &adapter_dump(adapter, &1, &2)), adapter)
+  defp do_adapter_dump([], {:ok, _} = acc, _adapter),
+    do: acc
 
   ## Helpers
 

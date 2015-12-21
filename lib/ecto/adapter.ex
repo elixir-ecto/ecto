@@ -31,56 +31,62 @@ defmodule Ecto.Adapter do
   ## Types
 
   @doc """
-  Called for every known Ecto type when loading data from the adapter.
+  Returns the loaders for a given type.
+
+  It receives the primitive type and the Ecto type (which may be
+  primitive as well). It returns a list of loaders with the given
+  type usually at the end.
 
   This allows developers to properly translate values coming from
   the adapters into Ecto ones. For example, if the database does not
   support booleans but instead returns 0 and 1 for them, you could
   add:
 
-      def load(:boolean, 0), do: {:ok, false}
-      def load(:boolean, 1), do: {:ok, true}
-      def load(type, value), do: Ecto.Type.load(type, value, &load/2)
+      def loaders(:boolean, type), do: [&bool_decode/1, type]
+      def loaders(_primitive, type), do: [type]
 
-  Notice that `Ecto.Type.load/3` provides a default implementation
-  which also expects the current `load/2` for handling recursive
-  types like arrays and embeds.
+      defp bool_decode(0), do: {:ok, false}
+      defp bool_decode(1), do: {:ok, true}
 
-  Finally, notice all adapters are required to implement a clause
-  for :binary_id types, since they are adapter specific. If your
-  adapter does not provide binary ids, you may simply use Ecto.UUID:
+  All adapters are required to implement a clause for `:binary_id` types,
+  since they are adapter specific. If your adapter does not provide binary
+  ids, you may simply use Ecto.UUID:
 
-      def load(:binary_id, value), do: load(Ecto.UUID, value)
-      def load(type, value), do: Ecto.Type.load(type, value, &load/2)
+      def loaders(:binary_id, type), do: [Ecto.UUID, type]
+      def loaders(_primitive, type), do: [type]
 
   """
-  @callback load(Ecto.Type.t, term) :: {:ok, term} | :error
+  @callback loaders(Ecto.Type.primitive, Ecto.Type.t) ::
+            [(term -> {:ok, term} | :error) | Ecto.Type.t]
 
   @doc """
-  Called for every known Ecto type when dumping data to the adapter.
+  Returns the dumprs for a given type.
+
+  It receives the primitive type and the Ecto type (which may be
+  primitive as well). It returns a list of dumpers with the given
+  type usually at the beginning.
 
   This allows developers to properly translate values coming from
   the Ecto into adapter ones. For example, if the database does not
   support booleans but instead returns 0 and 1 for them, you could
   add:
 
-      def dump(:boolean, false), do: {:ok, 0}
-      def dump(:boolean, true), do: {:ok, 1}
-      def dump(type, value), do: Ecto.Type.dump(type, value, &dump/2)
+      def dumpers(:boolean, type), do: [type, &bool_encode/1]
+      def dumpers(_primitive, type), do: [type]
 
-  Notice that `Ecto.Type.dump/3` provides a default implementation
-  which also expects the current `dump/2` for handling recursive
-  types like arrays and embeds.
+      defp bool_encode(false), do: {:ok, 0}
+      defp bool_encode(true), do: {:ok, 1}
 
-  Finally, notice all adapters are required to implement a clause
-  for :binary_id types, since they are adapter specific. If your
-  adapter does not provide binary ids, you may simply use Ecto.UUID:
+  All adapters are required to implement a clause or :binary_id types,
+  since they are adapter specific. If your adapter does not provide
+  binary ids, you may simply use Ecto.UUID:
 
-      def dump(:binary_id, value), do: dump(Ecto.UUID, value)
-      def dump(type, value), do: Ecto.Type.dump(type, value, &dump/2)
+      def dumpers(:binary_id, type), do: [type, Ecto.UUID]
+      def dumpers(_primitive, type), do: [type]
 
   """
-  @callback dump(Ecto.Type.t, term) :: {:ok, term} | :error
+  @callback dumpers(Ecto.Type.primitive, Ecto.Type.t) ::
+            [(term -> {:ok, term} | :error) | Ecto.Type.t]
 
   @doc """
   Called every time an id is needed for an embedded model.

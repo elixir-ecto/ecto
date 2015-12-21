@@ -25,11 +25,11 @@ defmodule Ecto.TestAdapter do
 
   ## Types
 
-  def load(:binary_id, data), do: Ecto.Type.load(Ecto.UUID, data, &load/2)
-  def load(type, data), do: Ecto.Type.load(type, data, &load/2)
+  def loaders(:binary_id, type), do: [Ecto.UUID, type]
+  def loaders(_primitive, type), do: [type]
 
-  def dump(:binary_id, data), do: Ecto.Type.dump(Ecto.UUID, data, &dump/2)
-  def dump(type, data), do: Ecto.Type.dump(type, data, &dump/2)
+  def dumpers(:binary_id, type), do: [type, Ecto.UUID]
+  def dumpers(_primitive, type), do: [type]
 
   def embed_id(%Ecto.Embedded{}), do: Ecto.UUID.generate
 

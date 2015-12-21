@@ -114,12 +114,12 @@ defmodule Ecto.TypeTest do
                            owner: __MODULE__, related: Model}
     type  = {:embed, embed}
 
-    assert {:ok, %Model{a: 1, c: 0}} = load(type, %{"a" => 1}, &Ecto.TestAdapter.load/2)
-    assert {:ok, nil} == load(type, nil, &Ecto.TestAdapter.load/2)
-    assert :error == load(type, 1)
+    assert {:ok, %Model{a: 1, c: 0}} = adapter_load(Ecto.TestAdapter, type, %{"a" => 1})
+    assert {:ok, nil} == adapter_load(Ecto.TestAdapter,type, nil)
+    assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
     assert {:ok, %{a: 1, c: 0, id: @uuid_tagged}} ==
-           dump(type, %Model{id: @uuid_string, a: 1}, &Ecto.TestAdapter.dump/2)
+           adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1})
 
     assert :error == cast(type, %{"a" => 1})
     assert match?(:any, type)
@@ -130,12 +130,12 @@ defmodule Ecto.TypeTest do
                            owner: __MODULE__, related: Model}
     type  = {:embed, embed}
 
-    assert {:ok, [%Model{a: 1, c: 0}]} = load(type, [%{"a" => 1}], &Ecto.TestAdapter.load/2)
-    assert {:ok, []} == load(type, nil, &Ecto.TestAdapter.load/2)
-    assert :error == load(type, 1, &Ecto.TestAdapter.load/2)
+    assert {:ok, [%Model{a: 1, c: 0}]} = adapter_load(Ecto.TestAdapter, type, [%{"a" => 1}])
+    assert {:ok, []} == adapter_load(Ecto.TestAdapter, type, nil)
+    assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
     assert {:ok, [%{a: 1, id: @uuid_tagged, c: 0}]} ==
-           dump(type, [%Model{id: @uuid_string, a: 1}], &Ecto.TestAdapter.dump/2)
+           adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}])
 
     assert :error == cast(type, [%{"a" => 1}])
     assert match?({:array, :any}, type)

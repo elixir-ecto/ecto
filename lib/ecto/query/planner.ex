@@ -26,7 +26,7 @@ defmodule Ecto.Query.Planner do
           message: "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
       end
 
-      case adapter.dump(type, value) do
+      case Ecto.Type.adapter_dump(adapter, type, value) do
         {:ok, value} ->
           {field, value}
         :error ->
@@ -217,7 +217,7 @@ defmodule Ecto.Query.Planner do
     try do
       case cast do
         {:dump, type, v} ->
-          case adapter.dump(type, v) do
+          case Ecto.Type.adapter_dump(adapter, type, v) do
             {:ok, v} -> v
             :error   -> error! query, expr, "cannot dump cast value `#{inspect v}` to type #{inspect type}"
           end

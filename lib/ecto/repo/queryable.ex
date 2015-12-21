@@ -108,7 +108,8 @@ defmodule Ecto.Repo.Queryable do
 
   defp preprocess({:&, _, [ix]}, value, prefix, context, sources, adapter) do
     {source, model} = elem(sources, ix)
-    Ecto.Schema.__load__(model, prefix, source, context, value, &adapter.load/2)
+    Ecto.Schema.__load__(model, prefix, source, context, value,
+                         &Ecto.Type.adapter_load(adapter, &1, &2))
   end
 
   defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _context, _sources, adapter) do
@@ -127,7 +128,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp load!(type, value, adapter) do
-    case adapter.load(type, value) do
+    case Ecto.Type.adapter_load(adapter, type, value) do
       {:ok, value} -> value
       :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type}"
     end

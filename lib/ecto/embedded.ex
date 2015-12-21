@@ -151,7 +151,7 @@ defmodule Ecto.Embedded do
   defp load!(types, k, v, adapter) do
     type = Map.fetch!(types, k)
 
-    case adapter.load(type, v) do
+    case Ecto.Type.adapter_load(adapter, type, v) do
       {:ok, v} -> v
       :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"
     end
