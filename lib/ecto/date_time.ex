@@ -62,6 +62,14 @@ defmodule Ecto.DateTime.Utils do
   def usec(rest) when is_iso_8601(rest), do: 0
   def usec(_), do: nil
 
+  def add_with_wrap(current, n, first..last = range) do
+    Enum.at(range, rem(current - first + n, last + (1 - first)))
+  end
+
+  def get_wrap_count(current, n, first..last) do
+    trunc Float.floor((current - first + n) / (last + (1 - first)))
+  end
+
   @doc """
   Compare two datetimes.
 
@@ -110,11 +118,7 @@ defmodule Ecto.Date do
 
   It supports:
 
-    * a binary in the "YYYY-MM-DD" format
-    * a binary in the "YYYY-MM-DD HH:MM:DD" format
-      (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
-    * a binary in the "YYYY-MM-DD HH:MM:DD.USEC" format
-      (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
+    * a binary in the ISO 8601 calendar date format
     * a map with `"year"`, `"month"` and `"day"` keys
       with integer or binaries as values
     * a map with `:year`, `:month` and `:day` keys
@@ -125,9 +129,20 @@ defmodule Ecto.Date do
   """
   def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes>>),
     do: from_parts(to_i(year), to_i(month), to_i(day))
-  def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
-             _hour::2-bytes, ?:, _min::2-bytes, ?:, _sec::2-bytes, _rest::binary>>) when sep in [?\s, ?T],
+  def cast(<<year::4-bytes, ?-, month::2-bytes>>),
+    do: from_parts(to_i(year), to_i(month), 1)
+  def cast(<<year::4-bytes, month::2-bytes, day::2-bytes>>),
     do: from_parts(to_i(year), to_i(month), to_i(day))
+
+  def cast(iso8601_string) when is_binary(iso8601_string) do
+    case String.split(iso8601_string, ~r/[T\s]/) do
+      [date_string, _] ->
+        Ecto.Date.cast(date_string)
+      _ ->
+        :error
+    end
+  end
+
   def cast(%Ecto.Date{} = d),
     do: {:ok, d}
   def cast(%{"year" => year, "month" => month, "day" => day}),
@@ -235,10 +250,7 @@ defmodule Ecto.Time do
 
   It supports:
 
-    * a binary in the "HH:MM:DD" format
-      (may be followed by "Z", as in `12:00:00Z`)
-    * a binary in the "HH:MM:DD.USEC" format
-      (may be followed by "Z", as in `12:00:00.005Z`)
+    * a binary in the ISO 8601 time format
     * a map with `"hour"`, `"min"` keys with `"sec"` and `"usec"`
       as optional keys and values are integers or binaries
     * a map with `:hour`, `:min` keys with `:sec` and `:usec`
@@ -248,13 +260,19 @@ defmodule Ecto.Time do
     * an `Ecto.Time` struct itself
 
   """
-  def cast(<<hour::2-bytes, ?:, min::2-bytes, ?:, sec::2-bytes, rest::binary>>) do
-    if usec = usec(rest) do
-      from_parts(to_i(hour), to_i(min), to_i(sec), usec)
+  def cast(iso_time) when is_binary(iso_time) do
+    parts_regex = ~r/^(?<hour>\d{2})(:?(?<min>\d{2})(:?(?<sec>\d{2})(?<usec>\.\d{1,})?)?)?(?<rest>.*)/
+    parts = Regex.named_captures(parts_regex, iso_time)
+    if usec = usec(parts["usec"]) do
+      case from_parts(to_i(parts["hour"]), to_i(parts["min"]) || 0, to_i(parts["sec"]) || 0, usec) do
+        {:ok, t} -> offset_timezone(t, parts["rest"])
+        _ -> :error
+      end
     else
       :error
     end
   end
+
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
   def cast(%{"hour" => hour, "min" => min} = map),
@@ -282,6 +300,58 @@ defmodule Ecto.Time do
     do: {:ok, %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}}
   defp from_parts(_, _, _, _),
     do: :error
+
+  defp offset_timezone(%Ecto.Time{} = dt, timezone) do
+    if timezone == "" do
+      {:ok, dt}
+    else
+      timezone_regex = ~r/^(?<sign>[\+-Z])((?<hour>([01][0-9]|2[0-3]))(:?(?<minute>[0-5][0-9]))?)?$/
+      offset = Regex.named_captures(timezone_regex, timezone)
+      case offset["sign"] do
+        "Z" -> {:ok, dt}
+        "-" ->
+          dt = Ecto.Time.add_hours(dt, to_i(offset["hour"]) || 0)
+            |> Ecto.Time.add_minutes(to_i(offset["minute"]) || 0)
+          {:ok, dt}
+        "+" ->
+          dt = Ecto.Time.add_hours(dt, to_i("-"<>offset["hour"]) || 0)
+            |> Ecto.Time.add_minutes(to_i("-"<>offset["minute"]) || 0)
+          {:ok, dt}
+        _ -> :error
+      end
+    end
+  end
+
+  @doc """
+  Adds hours to the given `Ecto.DateTime`.
+  """
+  def add_hours(%Ecto.Time{hour: hour} = t, hours) do
+    %Ecto.Time{ t | hour: add_with_wrap(hour, hours, 0..23) }
+  end
+
+  @doc """
+  Adds minutes to the given `Ecto.DateTime`.
+  """
+  def add_minutes(%Ecto.Time{min: min} = t, minutes) do
+    %Ecto.Time{ t | min: add_with_wrap(min, minutes, 0..59) }
+      |> add_hours(get_wrap_count(min, minutes, 0..59))
+  end
+
+  @doc """
+  Adds seconds to the given `Ecto.DateTime`.
+  """
+  def add_seconds(%Ecto.Time{sec: sec} = t, seconds) do
+    %Ecto.Time{ t | sec: add_with_wrap(sec, seconds, 0..59) }
+      |> add_minutes(get_wrap_count(sec, seconds, 0..59))
+  end
+
+  @doc """
+  Adds microseconds to the given `Ecto.DateTime`.
+  """
+  def add_useconds(%Ecto.Time{usec: usec} = t, useconds) do
+    %Ecto.Time{ t | usec: add_with_wrap(usec, useconds, 0..999_999) }
+      |> add_seconds(get_wrap_count(usec, useconds, 0..999_999))
+  end
 
   @doc """
   Converts an `Ecto.Time` into a time tuple (in the form `{hour, min, sec,
@@ -384,19 +454,52 @@ defmodule Ecto.DateTime do
 
   It supports:
 
-    * a binary in the "YYYY-MM-DD HH:MM:DD" format
-      (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
-    * a binary in the "YYYY-MM-DD HH:MM:DD.USEC" format
-      (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
+    * a binary in the ISO 8601 calendar datetime format
     * a map with `"year"`, `"month"`,`"day"`, `"hour"`, `"min"` keys
       with `"sec"` and `"usec"` as optional keys and values are integers or binaries
     * a map with `:year`, `:month`,`:day`, `:hour`, `:min` keys
       with `:sec` and `:usec` as optional keys and values are integers or binaries
     * a tuple with `{{year, month, day}, {hour, min, sec}}` as integers or binaries
     * a tuple with `{{year, month, day}, {hour, min, sec, usec}}` as integers or binaries
+    * a tuple with `{%Ecto.Date{}, %Ecto.Time{}}`
     * an `Ecto.DateTime` struct itself
 
   """
+  def cast(iso8601_string) when is_binary(iso8601_string) do
+    parts_regex = ~r/^(?<date_string>[\d-]+)[T\s](?<time_string>[\d:\.]+)(?<timezone>[\+-Z].*)?$/
+    if parts = Regex.named_captures(parts_regex, iso8601_string) do
+      case {Ecto.Date.cast!(parts["date_string"]), Ecto.Time.cast!(parts["time_string"])} do
+        {%Ecto.Date{}, %Ecto.Time{}} = tuple ->
+          Ecto.DateTime.cast!(tuple)
+            |> offset_timezone(parts["timezone"])
+        _ -> :error
+      end
+    else
+      :error
+    end
+  end
+
+  defp offset_timezone(%Ecto.DateTime{} = dt, timezone) do
+    if timezone == "" do
+      {:ok, dt}
+    else
+      timezone_regex = ~r/^(?<sign>[\+-Z])((?<hour>([01][0-9]|2[0-3]))(:?(?<minute>[0-5][0-9]))?)?$/
+      offset = Regex.named_captures(timezone_regex, timezone)
+      case offset["sign"] do
+        nil -> :error
+        "Z" -> {:ok, dt}
+        "-" ->
+          dt = Ecto.DateTime.add_hours(dt, to_i(offset["hour"]) || 0)
+            |> Ecto.DateTime.add_minutes(to_i(offset["minute"]) || 0)
+          {:ok, dt}
+        "+" ->
+          dt = Ecto.DateTime.add_hours(dt, to_i("-"<>offset["hour"]) || 0)
+            |> Ecto.DateTime.add_minutes(to_i("-"<>offset["minute"]) || 0)
+          {:ok, dt}
+      end
+    end
+  end
+
   def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
              hour::2-bytes, ?:, min::2-bytes, ?:, sec::2-bytes, rest::binary>>) when sep in [?\s, ?T] do
     if usec = usec(rest) do
@@ -405,6 +508,11 @@ defmodule Ecto.DateTime do
     else
       :error
     end
+  end
+
+  def cast({%Ecto.Date{year: year, month: month, day: day},
+            %Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}}) do
+    from_parts(year, month, day, hour, min, sec, usec)
   end
 
   def cast(%Ecto.DateTime{} = dt) do
@@ -452,6 +560,85 @@ defmodule Ecto.DateTime do
     {:ok, %Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}}
   end
   defp from_parts(_, _, _, _, _, _, _), do: :error
+
+  @doc """
+  Adds years to the given `Ecto.DateTime`.
+  """
+  def add_years(%Ecto.DateTime{year: year} = dt, years) do
+    %Ecto.DateTime{ dt | year: year + years }
+  end
+
+  @doc """
+  Adds months to the given `Ecto.DateTime`.
+  """
+  def add_months(%Ecto.DateTime{month: month} = dt, months) do
+    %Ecto.DateTime{ dt | month: add_with_wrap(month, months, 1..12) }
+      |> add_years(get_wrap_count(month, months, 1..12))
+  end
+
+  @doc """
+  Adds days to the given `Ecto.DateTime`.
+  """
+  def add_days(%Ecto.DateTime{year: year, month: month, day: day} = dt, days) do
+    max_days = days_in_month(year, month)
+    cond do
+      days == 0 ->
+        %Ecto.DateTime{ dt | day: add_with_wrap(day, 0, 1..max_days) }
+          |> add_months(get_wrap_count(day, 0, 1..max_days))
+      abs(days) > max_days ->
+        months_to_add = div(days, abs days)
+        days_to_add = max_days * months_to_add
+        %Ecto.DateTime{ dt | day: add_with_wrap(day, days_to_add, 1..max_days) }
+          |> add_months(months_to_add)
+          |> add_days(days - days_to_add)
+      true ->
+        %Ecto.DateTime{ dt | day: add_with_wrap(day, days, 1..max_days) }
+          |> add_months(get_wrap_count(day, days, 1..max_days))
+          |> Ecto.DateTime.add_days(0) # prevents cases like this from failing. 2000-01-31 + 30 days
+    end
+  end
+
+  @doc """
+  Adds hours to the given `Ecto.DateTime`.
+  """
+  def add_hours(%Ecto.DateTime{hour: hour} = dt, hours) do
+    %Ecto.DateTime{ dt | hour: add_with_wrap(hour, hours, 0..23) }
+      |> add_days(get_wrap_count(hour, hours, 0..23))
+  end
+
+  @doc """
+  Adds minutes to the given `Ecto.DateTime`.
+  """
+  def add_minutes(%Ecto.DateTime{min: min} = dt, minutes) do
+    %Ecto.DateTime{ dt | min: add_with_wrap(min, minutes, 0..59) }
+      |> add_hours(get_wrap_count(min, minutes, 0..59))
+  end
+
+  @doc """
+  Adds seconds to the given `Ecto.DateTime`.
+  """
+  def add_seconds(%Ecto.DateTime{sec: sec} = dt, seconds) do
+    %Ecto.DateTime{ dt | sec: add_with_wrap(sec, seconds, 0..59) }
+      |> add_minutes(get_wrap_count(sec, seconds, 0..59))
+  end
+
+  @doc """
+  Adds microseconds to the given `Ecto.DateTime`.
+  """
+  def add_useconds(%Ecto.DateTime{usec: usec} = dt, useconds) do
+    %Ecto.DateTime{ dt | usec: add_with_wrap(usec, useconds, 0..999_999) }
+      |> add_seconds(get_wrap_count(usec, useconds, 0..999_999))
+  end
+
+  defp days_in_month(year, month) do
+    feb = if rem(year, 4) == 0 do
+      29
+    else
+      28
+    end
+    [31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+      |> Enum.at(month - 1)
+  end
 
   @doc """
   Converts an `Ecto.DateTime` into a `{date, time}` tuple.

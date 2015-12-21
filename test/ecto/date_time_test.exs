@@ -1,49 +1,58 @@
 defmodule Ecto.DateTest do
   use ExUnit.Case, async: true
 
-  @date %Ecto.Date{year: 2015, month: 12, day: 31}
+  @date %Ecto.Date{year: 2015, month: 12, day: 1}
 
   test "cast itself" do
     assert Ecto.Date.cast(@date) == {:ok, @date}
   end
 
   test "cast strings" do
-    assert Ecto.Date.cast("2015-12-31") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01") == {:ok, @date}
+    assert Ecto.Date.cast("20151201") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12") == {:ok, @date}
     assert Ecto.Date.cast("2015-00-23") == :error
     assert Ecto.Date.cast("2015-13-23") == :error
     assert Ecto.Date.cast("2015-01-00") == :error
     assert Ecto.Date.cast("2015-01-32") == :error
 
-    assert Ecto.Date.cast("2015-12-31 23:50:07") == {:ok, @date}
-    assert Ecto.Date.cast("2015-12-31T23:50:07") == {:ok, @date}
-    assert Ecto.Date.cast("2015-12-31T23:50:07Z") == {:ok, @date}
-    assert Ecto.Date.cast("2015-12-31T23:50:07.000Z") == {:ok, @date}
-    assert Ecto.Date.cast("2015-12-31P23:50:07") == :error
+    assert Ecto.Date.cast("2015-12-01 23:50:07") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01T23:50:07") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01T23:50:07+01:30") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01T23:50:07+01") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01T23:50:07+0130") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01T23:50:07Z") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01T23:50:07.000Z") == {:ok, @date}
+    assert Ecto.Date.cast("20151201T23:50:07.000Z") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12T23:50:07.000Z") == {:ok, @date}
+    assert Ecto.Date.cast("20151201 23:50:07.000Z") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12 23:50:07.000Z") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01P23:50:07") == :error
 
-    assert Ecto.Date.cast("2015-12-31T23:50:07.008") == {:ok, @date}
-    assert Ecto.Date.cast("2015-12-31T23:50:07.008Z") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01T23:50:07.008") == {:ok, @date}
+    assert Ecto.Date.cast("2015-12-01T23:50:07.008Z") == {:ok, @date}
   end
 
   test "cast maps" do
-    assert Ecto.Date.cast(%{"year" => "2015", "month" => "12", "day" => "31"}) ==
+    assert Ecto.Date.cast(%{"year" => "2015", "month" => "12", "day" => "01"}) ==
            {:ok, @date}
-    assert Ecto.Date.cast(%{year: 2015, month: 12, day: 31}) ==
+    assert Ecto.Date.cast(%{year: 2015, month: 12, day: 1}) ==
            {:ok, @date}
-    assert Ecto.Date.cast(%{"year" => "2015", "month" => "", "day" => "31"}) ==
+    assert Ecto.Date.cast(%{"year" => "2015", "month" => "", "day" => "01"}) ==
            :error
-    assert Ecto.Date.cast(%{"year" => "2015", "month" => nil, "day" => "31"}) ==
+    assert Ecto.Date.cast(%{"year" => "2015", "month" => nil, "day" => "01"}) ==
            :error
     assert Ecto.Date.cast(%{"year" => "2015", "month" => nil}) ==
            :error
   end
 
   test "cast erl date" do
-    assert Ecto.Date.cast({2015, 12, 31}) == {:ok, @date}
-    assert Ecto.Date.cast({2015, 13, 31}) == :error
+    assert Ecto.Date.cast({2015, 12, 1}) == {:ok, @date}
+    assert Ecto.Date.cast({2015, 13, 1}) == :error
   end
 
   test "cast!" do
-    assert Ecto.Date.cast!("2015-12-31") == @date
+    assert Ecto.Date.cast!("2015-12-01") == @date
 
     assert_raise ArgumentError, "cannot cast \"2015-00-23\" to date", fn ->
       Ecto.Date.cast!("2015-00-23")
@@ -51,22 +60,22 @@ defmodule Ecto.DateTest do
   end
 
   test "dump itself into a date triplet" do
-    assert Ecto.Date.dump(@date) == {:ok, {2015, 12, 31}}
-    assert Ecto.Date.dump({2015, 12, 31}) == :error
+    assert Ecto.Date.dump(@date) == {:ok, {2015, 12, 1}}
+    assert Ecto.Date.dump({2015, 12, 1}) == :error
   end
 
   test "load a date triplet" do
-    assert Ecto.Date.load({2015, 12, 31}) == {:ok, @date}
+    assert Ecto.Date.load({2015, 12, 1}) == {:ok, @date}
     assert Ecto.Date.load(@date) == :error
   end
 
   test "to_string" do
-    assert to_string(@date) == "2015-12-31"
-    assert Ecto.Date.to_string(@date) == "2015-12-31"
+    assert to_string(@date) == "2015-12-01"
+    assert Ecto.Date.to_string(@date) == "2015-12-01"
   end
 
   test "to_iso8601" do
-    assert Ecto.Date.to_iso8601(@date) == "2015-12-31"
+    assert Ecto.Date.to_iso8601(@date) == "2015-12-01"
   end
 
   test "to_erl and from_erl" do
@@ -74,7 +83,7 @@ defmodule Ecto.DateTest do
   end
 
   test "inspect protocol" do
-    assert inspect(@date) == "#Ecto.Date<2015-12-31>"
+    assert inspect(@date) == "#Ecto.Date<2015-12-01>"
   end
 end
 
@@ -102,7 +111,25 @@ defmodule Ecto.TimeTest do
       == {:ok, %{@time | usec: 123456}}
     assert Ecto.Time.cast("23:50:07.000123Z")
       == {:ok, %{@time | usec: 123}}
+    assert Ecto.Time.cast("235007.000123Z")
+      == {:ok, %{@time | usec: 123}}
 
+    assert Ecto.Time.cast("23:50:07Z") == {:ok, @time}
+    assert Ecto.Time.cast("235007Z") == {:ok, @time}
+    assert Ecto.Time.cast("23:50Z") == {:ok, @time_zero}
+    assert Ecto.Time.cast("2350Z") == {:ok, @time_zero}
+    assert Ecto.Time.cast("23Z") == {:ok, %{@time_zero | min: 0}}
+
+    assert Ecto.Time.cast("00:50+01:00") == {:ok, @time_zero}
+    assert Ecto.Time.cast("22:20-01:30") == {:ok, @time_zero}
+    assert Ecto.Time.cast("13:50-1000") == {:ok, @time_zero}
+    assert Ecto.Time.cast("23:50+00:00") == {:ok, @time_zero}
+    assert Ecto.Time.cast("23:50-00:00") == {:ok, @time_zero}
+    assert Ecto.Time.cast("00:50+01") == {:ok, @time_zero}
+    assert Ecto.Time.cast("10:50-13") == {:ok, @time_zero}
+
+    # assert Ecto.Time.cast("23:50-24:00") == :error
+    # assert Ecto.Time.cast("23:50-12:60") == :error
     assert Ecto.Time.cast("24:01:01") == :error
     assert Ecto.Time.cast("00:61:00") == :error
     assert Ecto.Time.cast("00:00:61") == :error
@@ -211,6 +238,22 @@ defmodule Ecto.DateTimeTest do
     assert Ecto.DateTime.cast("2015-01-23T23:50:07.008") == {:ok, @datetime_usec}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07.008Z") == {:ok, @datetime_usec}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07.008000789") == {:ok, @datetime_usec}
+
+    assert Ecto.DateTime.cast("20150123T23:50:07.008") == {:ok, @datetime_usec}
+    assert Ecto.DateTime.cast("2015-01T23:50:07.008Z") == {:ok, %{@datetime_usec | day: 1}}
+    assert Ecto.DateTime.cast("2015-01-23T235007") == {:ok, @datetime}
+    assert Ecto.DateTime.cast("2015-01-23T23:50") == {:ok, @datetime_zero}
+    assert Ecto.DateTime.cast("2015-01-23T2350") == {:ok, @datetime_zero}
+    assert Ecto.DateTime.cast("2015-01-23T23") == {:ok, %{@datetime_zero | min: 0}}
+    assert Ecto.DateTime.cast("2015-01-24T00+01:00") == {:ok, %{@datetime_zero | min: 0}}
+    assert Ecto.DateTime.cast("2015-01-23T22-01:00") == {:ok, %{@datetime_zero | min: 0}}
+    assert Ecto.DateTime.cast("2015-01-24T00+0100") == {:ok, %{@datetime_zero | min: 0}}
+    assert Ecto.DateTime.cast("2015-01-24T00+01") == {:ok, %{@datetime_zero | min: 0}}
+    assert Ecto.DateTime.cast("2015-01-23T22-01") == {:ok, %{@datetime_zero | min: 0}}
+
+    assert Ecto.DateTime.cast("REWMRTMVKFDSZ") == :error
+    assert Ecto.DateTime.cast("2015-01-23Tfoo+10") == :error
+    assert Ecto.DateTime.cast("fooT23:50:07.008Z") == :error
   end
 
   test "cast maps" do
