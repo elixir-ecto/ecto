@@ -71,12 +71,15 @@ defmodule Ecto.Integration.Case do
   end
 end
 
+{:ok, _} = Application.ensure_all_started(:postgrex)
+
 # Load up the repository, start it, and run migrations
-_   = Ecto.Storage.down(TestRepo)
+:ok = Ecto.Storage.down(TestRepo)
 :ok = Ecto.Storage.up(TestRepo)
 
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
+
 Process.flag(:trap_exit, true)

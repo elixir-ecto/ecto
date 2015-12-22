@@ -80,66 +80,48 @@ defmodule Ecto.Adapters.Postgres do
       extra = extra <> " LC_CTYPE='#{lc_ctype}'"
     end
 
-    {output, status} =
-      run_with_psql opts, "CREATE DATABASE \"" <> database <>
-                          "\" ENCODING='#{encoding}'" <> extra
+    command = "CREATE DATABASE #{database} " <>
+              "ENCODING '#{encoding}'" <> extra
 
-    cond do
-      status == 0                       -> :ok
-      String.contains?(output, "42P04") -> {:error, :already_up}
-      true                              -> {:error, output}
-    end
+    run_query(opts, command)
   end
 
   @doc false
   def storage_down(opts) do
-    {output, status} = run_with_psql(opts, "DROP DATABASE \"#{opts[:database]}\"")
+    command = "DROP DATABASE #{opts[:database]}"
 
-    cond do
-      status == 0                       -> :ok
-      String.contains?(output, "3D000") -> {:error, :already_down}
-      true                              -> {:error, output}
+    run_query(opts, command)
+  end
+
+  defp run_query(opts, sql) do
+    opts = Keyword.put(opts, :database, "template1")
+
+    {:ok, pid} = Task.Supervisor.start_link
+
+    task = Task.Supervisor.async_nolink(pid, fn ->
+      {:ok, conn} = Postgrex.Connection.start_link(opts)
+
+      value = Ecto.Adapters.Postgres.Connection.query(conn, sql, [], [])
+      GenServer.stop(conn)
+      value
+    end)
+
+    case Task.yield(task) do
+      {:ok, _} ->
+        :ok
+      {:error, {error, _}} ->
+        {:error, get_message(error)}
+      {:exit, {error, _}}  ->
+        {:error, get_message(error)}
+      nil ->
+        Task.shutdown(task)
+        {:error, {nil, :timeout}}
     end
   end
 
-  defp run_with_psql(database, sql_command) do
-    unless System.find_executable("psql") do
-      raise "could not find executable `psql` in path, " <>
-            "please guarantee it is available before running ecto commands"
-    end
-
-    env =
-      if password = database[:password] do
-        [{"PGPASSWORD", password}]
-      else
-        []
-      end
-    env = [{"PGCONNECT_TIMEOUT", "10"} | env]
-
-    args = []
-
-    if username = database[:username] do
-      args = ["-U", username|args]
-    end
-
-    if port = database[:port] do
-      args = ["-p", to_string(port)|args]
-    end
-
-    host = database[:hostname] || System.get_env("PGHOST") || "localhost"
-    args = args ++ ["--quiet",
-                    "--host", host,
-                    "--no-password",
-                    "--set", "ON_ERROR_STOP=1",
-                    "--set", "VERBOSITY=verbose",
-                    "--no-psqlrc",
-                    "-d", "template1",
-                    "-c", sql_command]
-    System.cmd("psql", args, env: env, stderr_to_stdout: true)
-  end
+  defp get_message(%DBConnection.Error{message: message}), do: message
 
   @doc false
-
   def supports_ddl_transaction? do
     true
   end
