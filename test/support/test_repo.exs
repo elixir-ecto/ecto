@@ -77,7 +77,7 @@ defmodule Ecto.TestAdapter do
     do: res
 
   def delete(_repo, _model_meta, _filter, _autogen, _opts),
-    do: {:ok, []}
+    do: send(self, :delete) && {:ok, []}
 
   ## Transactions
 

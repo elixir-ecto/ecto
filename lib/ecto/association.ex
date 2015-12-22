@@ -179,11 +179,11 @@ defmodule Ecto.Association do
 
   @doc """
   Performs the repository action in the related changeset,
-  returning `{:ok, struct}` or `{:error, changeset}`.
+  returning the changeset.
   """
   # TODO: Make on_repo_change an association callback
   def on_repo_change(_kind, changeset, assocs, _opts) when assocs == %{} do
-    {:ok, changeset}
+    changeset
   end
 
   def on_repo_change(kind, changeset, assocs, opts) do
@@ -199,11 +199,7 @@ defmodule Ecto.Association do
         end
       end)
 
-    if valid? do
-      {:ok, %{changeset | model: model}}
-    else
-      {:error, %{changeset | changes: changes}}
-    end
+    %{changeset | model: model, changes: changes, valid?: valid?}
   end
 
   defp on_repo_change(%{cardinality: :one} = meta, field, changeset,
@@ -699,8 +695,7 @@ defmodule Ecto.Association.BelongsTo do
     {:delete, changeset}
   end
 
-  def on_replace(%{on_replace: :nilify, related_key: related_key}, changeset) do
-    changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
+  def on_replace(%{on_replace: :nilify}, changeset) do
     {:update, changeset}
   end
 end

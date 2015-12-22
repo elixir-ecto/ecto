@@ -14,6 +14,8 @@ defmodule Ecto.Changeset.BelongsToTest do
       field :title, :string
       belongs_to :profile, {"authors_profiles", Profile},
         on_replace: :delete, defaults: [name: "default"]
+      belongs_to :raise_profile, Profile, on_replace: :raise
+      belongs_to :invalid_profile, Profile, on_replace: :mark_as_invalid
     end
   end
 
@@ -199,34 +201,34 @@ defmodule Ecto.Changeset.BelongsToTest do
   end
 
   test "cast belongs_to with on_replace: :raise" do
-    model = %Author{profile: %Profile{id: 1}}
+    model = %Author{raise_profile: %Profile{id: 1}}
 
-    params = %{"profile" => %{"name" => "jose", "id" => "1"}}
-    changeset = cast(model, params, :profile, on_replace: :raise)
-    assert changeset.changes.profile.action == :update
+    params = %{"raise_profile" => %{"name" => "jose", "id" => "1"}}
+    changeset = cast(model, params, :raise_profile)
+    assert changeset.changes.raise_profile.action == :update
 
-    params = %{"profile" => nil}
+    params = %{"raise_profile" => nil}
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      cast(model, params, :profile, on_replace: :raise)
+      cast(model, params, :raise_profile)
     end
 
-    params = %{"profile" => %{"name" => "new", "id" => 2}}
+    params = %{"raise_profile" => %{"name" => "new", "id" => 2}}
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      cast(model, params, :profile, on_replace: :raise)
+      cast(model, params, :raise_profile)
     end
   end
 
   test "cast belongs_to with on_replace: :mark_as_invalid" do
-    model = %Author{profile: %Profile{id: 1}}
+    model = %Author{invalid_profile: %Profile{id: 1}}
 
-    changeset = cast(model, %{"profile" => nil}, :profile, on_replace: :mark_as_invalid)
+    changeset = cast(model, %{"invalid_profile" => nil}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
 
-    changeset = cast(model, %{"profile" => %{"id" => 2}}, :profile, on_replace: :mark_as_invalid)
+    changeset = cast(model, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
   end
 
@@ -314,24 +316,24 @@ defmodule Ecto.Changeset.BelongsToTest do
 
   test "change belongs_to with on_replace: :raise" do
     assoc_model = %Profile{id: 1}
-    base_changeset = Changeset.change(%Author{profile: assoc_model})
+    base_changeset = Changeset.change(%Author{raise_profile: assoc_model})
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.put_assoc(base_changeset, :profile, nil, on_replace: :raise)
+      Changeset.put_assoc(base_changeset, :raise_profile, nil)
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.put_assoc(base_changeset, :profile, %Profile{id: 2}, on_replace: :raise)
+      Changeset.put_assoc(base_changeset, :raise_profile, %Profile{id: 2})
     end
   end
 
   test "change belongs_to with on_replace: :mark_as_invalid" do
     assoc_model = %Profile{id: 1}
-    base_changeset = Changeset.change(%Author{profile: assoc_model})
+    base_changeset = Changeset.change(%Author{invalid_profile: assoc_model})
 
-    changeset = Changeset.put_assoc(base_changeset, :profile, nil, on_replace: :mark_as_invalid)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_profile, nil)
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
   end
 

@@ -227,13 +227,13 @@ defmodule Ecto.Repo.HasAssocTest do
     assert assoc.updated_at
   end
 
-  test "replacing assocs on update" do
+  test "replacing assocs on update on_replace" do
     sample = %MyAssoc{id: 10, x: "xyz"}
 
     # Replacing assoc with a new one
     changeset =
       %MyModel{id: 1, assoc: sample}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change(x: "1")
       |> Ecto.Changeset.put_assoc(:assoc, %MyAssoc{x: "abc"})
     model = TestRepo.update!(changeset)
     assoc = model.assoc
@@ -241,14 +241,20 @@ defmodule Ecto.Repo.HasAssocTest do
     assert assoc.x == "abc"
     assert assoc.my_model_id == model.id
     assert assoc.updated_at
+    assert_received :update # Parent
+    assert_received :insert # New assoc
+    assert_received :delete # Old assoc
 
     # Replacing assoc with nil
     changeset =
       %MyModel{id: 1, assoc: sample}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change(x: "2")
       |> Ecto.Changeset.put_assoc(:assoc, nil)
     model = TestRepo.update!(changeset)
     refute model.assoc
+    assert_received :update # Parent
+    refute_received :insert # New assoc
+    assert_received :delete # Old assoc
   end
 
   test "changing assocs on update raises if there is no id" do

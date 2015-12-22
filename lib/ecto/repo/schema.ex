@@ -66,6 +66,7 @@ defmodule Ecto.Repo.Schema do
     changeset = Relation.surface(changeset, fields, embeds, assocs)
 
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
+      opts = Keyword.put(opts, :skip_transaction, true)
       user_changeset = run_prepare(changeset, prepare)
 
       changeset = Ecto.Embedded.prepare(user_changeset, adapter, :insert)
@@ -78,11 +79,10 @@ defmodule Ecto.Repo.Schema do
       args = [repo, metadata(struct), changes, autogen, return, opts]
       case apply(changeset, adapter, :insert, args) do
         {:ok, values} ->
-          opts = Keyword.put(opts, :skip_transaction, true)
           changeset
           |> load_changes(:loaded, extra ++ values, adapter)
           |> process_assocs(assoc_changes, opts)
-          |> get_model_if_ok(user_changeset)
+          |> get_model_if_valid(user_changeset)
         {:error, _} = error ->
           error
         {:invalid, constraints} ->
@@ -122,6 +122,7 @@ defmodule Ecto.Repo.Schema do
 
     if changeset.changes != %{} or opts[:force] do
       wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
+        opts = Keyword.put(opts, :skip_transaction, true)
         user_changeset = run_prepare(changeset, prepare)
 
         changeset = Ecto.Embedded.prepare(user_changeset, adapter, :update)
@@ -138,11 +139,10 @@ defmodule Ecto.Repo.Schema do
         action = if changes == [], do: :noop, else: :update
         case apply(changeset, adapter, action, args) do
           {:ok, values} ->
-            opts = Keyword.put(opts, :skip_transaction, true)
             changeset
             |> load_changes(:loaded, extra ++ values, adapter)
             |> process_assocs(assoc_changes, opts)
-            |> get_model_if_ok(user_changeset)
+            |> get_model_if_valid(user_changeset)
           {:error, _} = error ->
             error
           {:invalid, constraints} ->
@@ -338,11 +338,11 @@ defmodule Ecto.Repo.Schema do
     :ok
   end
 
-  defp get_model_if_ok({:ok, %{model: model}}, _user_changeset) do
+  defp get_model_if_valid(%{valid?: true, model: model}, _user_changeset) do
     {:ok, model}
   end
 
-  defp get_model_if_ok({:error, %{changes: changes}}, user_changeset) do
+  defp get_model_if_valid(%{valid?: false, changes: changes}, user_changeset) do
     {:error, %{user_changeset | valid?: false, changes: changes}}
   end
 

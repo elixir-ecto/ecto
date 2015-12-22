@@ -32,8 +32,14 @@ defmodule Ecto.Changeset.HasAssocTest do
     schema "authors" do
       field :title, :string
       has_many :posts, Post, on_replace: :delete
+      has_many :raise_posts, Post, on_replace: :raise
+      has_many :nilify_posts, Post, on_replace: :nilify
+      has_many :invalid_posts, Post, on_replace: :mark_as_invalid
       has_one :profile, {"users_profiles", Profile},
         defaults: [name: "default"], on_replace: :delete
+      has_one :raise_profile, Profile, on_replace: :raise
+      has_one :nilify_profile, Profile, on_replace: :nilify
+      has_one :invalid_profile, Profile, on_replace: :mark_as_invalid
     end
   end
 
@@ -219,34 +225,34 @@ defmodule Ecto.Changeset.HasAssocTest do
   end
 
   test "cast has_one with on_replace: :raise" do
-    model = %Author{profile: %Profile{id: 1}}
+    model = %Author{raise_profile: %Profile{id: 1}}
 
-    params = %{"profile" => %{"name" => "jose", "id" => "1"}}
-    changeset = cast(model, params, :profile, on_replace: :raise)
-    assert changeset.changes.profile.action == :update
+    params = %{"raise_profile" => %{"name" => "jose", "id" => "1"}}
+    changeset = cast(model, params, :raise_profile)
+    assert changeset.changes.raise_profile.action == :update
 
-    params = %{"profile" => nil}
+    params = %{"raise_profile" => nil}
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      cast(model, params, :profile, on_replace: :raise)
+      cast(model, params, :raise_profile)
     end
 
-    params = %{"profile" => %{"name" => "new", "id" => 2}}
+    params = %{"raise_profile" => %{"name" => "new", "id" => 2}}
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      cast(model, params, :profile, on_replace: :raise)
+      cast(model, params, :raise_profile)
     end
   end
 
   test "cast has_one with on_replace: :mark_as_invalid" do
-    model = %Author{profile: %Profile{id: 1}}
+    model = %Author{invalid_profile: %Profile{id: 1}}
 
-    changeset = cast(model, %{"profile" => nil}, :profile, on_replace: :mark_as_invalid)
+    changeset = cast(model, %{"invalid_profile" => nil}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
 
-    changeset = cast(model, %{"profile" => %{"id" => 2}}, :profile, on_replace: :mark_as_invalid)
+    changeset = cast(model, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
   end
 
@@ -392,27 +398,27 @@ defmodule Ecto.Changeset.HasAssocTest do
   end
 
   test "cast has_many with on_replace: :raise" do
-    model = %Author{posts: [%Post{id: 1}]}
+    model = %Author{raise_posts: [%Post{id: 1}]}
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      cast(model, %{"posts" => []}, :posts, on_replace: :raise)
+      cast(model, %{"raise_posts" => []}, :raise_posts)
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      cast(model, %{"posts" => [%{"id" => 2}]}, :posts, on_replace: :raise)
+      cast(model, %{"raise_posts" => [%{"id" => 2}]}, :raise_posts)
     end
   end
 
   test "cast has_many with on_replace: :mark_as_invalid" do
-    model = %Author{posts: [%Post{id: 1}]}
+    model = %Author{invalid_posts: [%Post{id: 1}]}
 
-    changeset = cast(model, %{"posts" => []}, :posts, on_replace: :mark_as_invalid)
+    changeset = cast(model, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = cast(model, %{"posts" => [%{"id" => 2}]}, :posts, on_replace: :mark_as_invalid)
+    changeset = cast(model, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
   end
 
@@ -474,6 +480,13 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
   end
 
+  test "change has_one with on_replace: :nilify" do
+    # one case is handled inside repo
+    profile = %Profile{id: 1, author_id: 5}
+    changeset = cast(%Author{nilify_profile: profile}, %{"nilify_profile" => nil}, :nilify_profile)
+    assert changeset.changes.nilify_profile == nil
+  end
+
   test "change has_one keeps appropriate action from changeset" do
     assoc = Author.__schema__(:association, :profile)
     assoc_model = %Profile{}
@@ -501,29 +514,29 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "change has_one with on_replace: :raise" do
     assoc_model = %Profile{id: 1}
-    base_changeset = Changeset.change(%Author{profile: assoc_model})
+    base_changeset = Changeset.change(%Author{raise_profile: assoc_model})
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.put_assoc(base_changeset, :profile, nil, on_replace: :raise)
+      Changeset.put_assoc(base_changeset, :raise_profile, nil)
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.put_assoc(base_changeset, :profile, %Profile{id: 2}, on_replace: :raise)
+      Changeset.put_assoc(base_changeset, :raise_profile, %Profile{id: 2})
     end
   end
 
   test "change has_one with on_replace: :mark_as_invalid" do
     assoc_model = %Profile{id: 1}
-    base_changeset = Changeset.change(%Author{profile: assoc_model})
+    base_changeset = Changeset.change(%Author{invalid_profile: assoc_model})
 
-    changeset = Changeset.put_assoc(base_changeset, :profile, nil, on_replace: :mark_as_invalid)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_profile, nil)
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.put_assoc(base_changeset, :profile, %Profile{id: 2}, on_replace: :mark_as_invalid)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_profile, %Profile{id: 2})
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: "is invalid"]
     refute changeset.valid?
   end
 
@@ -573,41 +586,49 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
   end
 
+  test "change has_many with on_replace: :nilify" do
+    post = %Post{id: 1, author_id: 5}
+    changeset = cast(%Author{nilify_posts: [post]}, %{"nilify_posts" => []}, :nilify_posts)
+    [post_change] = changeset.changes.nilify_posts
+    assert post_change.action == :update
+    assert post_change.changes == %{author_id: nil}
+  end
+
   test "change has_many with on_replace: :raise" do
     assoc_model = %Post{id: 1}
-    base_changeset = Changeset.change(%Author{posts: [assoc_model]})
+    base_changeset = Changeset.change(%Author{raise_posts: [assoc_model]})
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.put_assoc(base_changeset, :posts, [], on_replace: :raise)
+      Changeset.put_assoc(base_changeset, :raise_posts, [])
     end
 
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
-      Changeset.put_assoc(base_changeset, :posts, [%Post{id: 2}], on_replace: :raise)
+      Changeset.put_assoc(base_changeset, :raise_posts, [%Post{id: 2}])
     end
   end
 
   test "change has_many with on_replace: :mark_as_invalid" do
     assoc_model = %Post{id: 1}
-    base_changeset = Changeset.change(%Author{posts: [assoc_model]})
+    base_changeset = Changeset.change(%Author{invalid_posts: [assoc_model]})
 
-    changeset = Changeset.put_assoc(base_changeset, :posts, [], on_replace: :mark_as_invalid)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [])
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.put_assoc(base_changeset, :posts, [%Post{id: 2}], on_replace: :mark_as_invalid)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [%Post{id: 2}])
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.put_assoc(base_changeset, :posts, [], on_replace: :mark_as_invalid)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [])
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
 
-    changeset = Changeset.put_assoc(base_changeset, :posts, [%Post{id: 2}], on_replace: :mark_as_invalid)
+    changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [%Post{id: 2}])
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: "is invalid"]
     refute changeset.valid?
   end
 
@@ -649,19 +670,6 @@ defmodule Ecto.Changeset.HasAssocTest do
       |> Changeset.put_assoc(:posts, [post_changeset])
     assert Changeset.get_field(changeset, :posts) == []
     assert Changeset.fetch_field(changeset, :posts) == {:changes, []}
-  end
-
-  test "on_replace: :nilify" do
-    # one case is handled inside repo
-    profile = %Profile{id: 1, author_id: 5}
-    changeset = cast(%Author{profile: profile}, %{"profile" => nil}, :profile, on_replace: :nilify)
-    assert changeset.changes.profile == nil
-
-    post = %Post{id: 1, author_id: 5}
-    changeset = cast(%Author{posts: [post]}, %{"posts" => []}, :posts, on_replace: :nilify)
-    [post_change] = changeset.changes.posts
-    assert post_change.action == :update
-    assert post_change.changes == %{author_id: nil}
   end
 
   test "apply_changes" do
