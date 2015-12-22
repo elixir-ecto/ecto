@@ -292,7 +292,7 @@ defmodule Ecto.AssociationTest do
     assert build_assoc(%Post{id: 1}, :author) ==
            %Author{title: "World!"}
 
-    assert_raise ArgumentError, ~r"cannot build through association :post_author", fn ->
+    assert_raise ArgumentError, ~r"cannot build through association `:post_author`", fn ->
       build_assoc(%Comment{}, :post_author)
     end
   end

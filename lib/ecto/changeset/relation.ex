@@ -6,6 +6,7 @@ defmodule Ecto.Changeset.Relation do
 
   @type t :: %{cardinality: :one | :many,
                on_replace: :raise | :mark_as_invalid | atom,
+               relationship: :parent | :child,
                owner: atom,
                related: atom,
                field: atom}
@@ -143,54 +144,6 @@ defmodule Ecto.Changeset.Relation do
   defp do_change(%{field: field}, _struct, _current) do
     raise "cannot change `#{field}` with a struct because another " <>
           "embed/association is set in parent struct, use a changeset instead"
-  end
-
-  @doc """
-  Surface all embeds and associations in the underlying struct
-  into the changeset as a change.
-  """
-  # TODO: Move this to repo.schema
-  def surface(changeset, fields, embeds, assocs) do
-    %{model: struct, types: types} = changeset
-    changeset
-    |> surface_relations(embeds, types, struct)
-    |> surface_relations(assocs, types, struct)
-    |> surface_fields(struct, fields -- embeds -- assocs)
-  end
-
-  defp surface_fields(changeset, struct, fields) do
-    update_in(changeset.changes, &Map.merge(Map.take(struct, fields), &1))
-  end
-
-  defp surface_relations(changeset, [], _types, _struct) do
-    changeset
-  end
-
-  defp surface_relations(%{changes: changes} = changeset, relation, types, struct) do
-    {changes, errors} =
-      Enum.reduce relation, {changes, []}, fn field, {changes, errors} ->
-        case {changes, types} do
-          {%{^field => _}, _} ->
-            {changes, errors}
-          {_, %{^field => {_, embed_or_assoc}}} ->
-            # This is partly reimplemeting the logic behind put_relation
-            # in Ecto.Changeset but we need to do it in a way where we have
-            # control over the current value.
-            value = load!(struct, Map.get(struct, field))
-            case change(embed_or_assoc, value, nil) do
-              {:ok, _, _, true}       -> {changes, errors}
-              {:ok, change, _, false} -> {Map.put(changes, field, change), errors}
-              :error                  -> {changes, [{field, "is invalid"}]}
-            end
-          {_, _} ->
-            {changes, errors}
-        end
-      end
-
-    case errors do
-      [] -> put_in changeset.changes, changes
-      _  -> %{changeset | errors: errors ++ changeset.errors, valid?: false}
-    end
   end
 
   @doc """
