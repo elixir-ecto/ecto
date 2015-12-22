@@ -256,7 +256,6 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
-    assert changeset.changes == %{id: nil, name: "michal"}
 
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, nil, %Profile{})
@@ -268,7 +267,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, assoc_model_changeset, nil)
     assert changeset.action == :insert
-    assert changeset.changes == %{id: nil, name: "michal"}
+    assert changeset.changes == %{name: "michal"}
 
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, assoc_model_changeset, assoc_model)

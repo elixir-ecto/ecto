@@ -179,32 +179,30 @@ defmodule Ecto.Association do
 
   @doc """
   Performs the repository action in the related changeset,
-  returning the changeset.
+  returning `{:ok, model}` or `{:error, changes}`.
   """
   # TODO: Make on_repo_change an association callback
-  def on_repo_change(_kind, changeset, assocs, _opts) when assocs == %{} do
-    changeset
+  def on_repo_change(%{model: model}, [], _opts) do
+    {:ok, model}
   end
 
-  def on_repo_change(kind, changeset, assocs, opts) do
-    %{model: %{__struct__: schema} = model, changes: changes} = changeset
+  def on_repo_change(changeset, assocs, opts) do
+    %{model: model, changes: changes} = changeset
 
     {model, changes, valid?} =
-      Enum.reduce(assocs, {model, changes, true}, fn {field, value}, acc ->
-        case schema.__schema__(:association, field) do
-          %{relationship: ^kind} = reflection ->
-            on_repo_change(reflection, field, value, changeset, opts, acc)
-          %{relationship: _} ->
-            acc
-        end
+      Enum.reduce(assocs, {model, changes, true}, fn {refl, value}, acc ->
+        on_repo_change(refl, value, changeset, opts, acc)
       end)
 
-    %{changeset | model: model, changes: changes, valid?: valid?}
+    case valid? do
+      true  -> {:ok, model}
+      false -> {:error, changes}
+    end
   end
 
-  defp on_repo_change(%{cardinality: :one} = meta, field, changeset,
-                      parent_changeset, opts, {parent, changes, valid?}) do
-    case meta.__struct__.on_repo_change(meta, parent_changeset, changeset, opts) do
+  defp on_repo_change(%{cardinality: :one, field: field, __struct__: mod} = meta,
+                      changeset, parent_changeset, opts, {parent, changes, valid?}) do
+    case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
       {:ok, model} ->
         {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
       {:error, changeset} ->
@@ -212,11 +210,11 @@ defmodule Ecto.Association do
     end
   end
 
-  defp on_repo_change(%{cardinality: :many} = meta, field, changesets,
-                      parent_changeset, opts, {parent, changes, valid?}) do
+  defp on_repo_change(%{cardinality: :many, field: field, __struct__: mod} = meta,
+                      changesets, parent_changeset, opts, {parent, changes, valid?}) do
     {changesets, models, models_valid?} =
       Enum.reduce(changesets, {[], [], true}, fn changeset, {changesets, models, models_valid?} ->
-        case meta.__struct__.on_repo_change(meta, parent_changeset, changeset, opts) do
+        case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
           {:ok, nil} ->
             {[changeset|changesets], models, models_valid?}
           {:ok, model} ->
@@ -679,6 +677,51 @@ defmodule Ecto.Association.BelongsTo do
   def preload_info(refl) do
     {:assoc, refl, refl.related_key}
   end
+
+  @doc false
+  def on_repo_change(_refl, _parent, nil, _opts) do
+    {:ok, nil}
+  end
+
+  def on_repo_change(assoc, parent_changeset, changeset, opts) do
+    %{model: parent, repo: repo, action: repo_action} = parent_changeset
+    %{action: action} = changeset
+    check_action!(action, repo_action, assoc)
+
+    case apply(repo, action, [changeset, opts]) do
+      {:ok, _} = ok ->
+        maybe_replace_one!(assoc, changeset, parent, repo, repo_action, opts)
+        if action == :delete, do: {:ok, nil}, else: ok
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  defp check_action!(:delete, :insert, %{related: schema}),
+    do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect schema} while inserting")
+  defp check_action!(_, _, _), do: :ok
+
+  defp maybe_replace_one!(%{field: field} = assoc, %{action: :insert}, parent, repo, :update, opts) do
+    case Map.get(parent, field) do
+      %Ecto.Association.NotLoaded{} ->
+        :ok
+      nil ->
+        :ok
+      previous ->
+        # the case when this could return :error, was handled before
+        {:ok, changeset} = Ecto.Changeset.Relation.on_replace(assoc, previous)
+
+        case apply(repo, changeset.action, [changeset, opts]) do
+          {:ok, _} ->
+            :ok
+          {:error, changeset} ->
+            raise Ecto.InvalidChangesetError,
+              action: changeset.action, changeset: changeset
+        end
+    end
+  end
+
+  defp maybe_replace_one!(_, _, _, _, _, _), do: :ok
 
   ## Relation callbacks
   @behaviour Ecto.Changeset.Relation

@@ -123,13 +123,8 @@ defmodule Ecto.Changeset.Relation do
   end
 
   # This may be an insert or an update, get all fields.
-  defp do_change(%{related: mod}, changeset_or_struct, nil) do
-    fields = mod.__schema__(:fields)
-    embeds = mod.__schema__(:embeds)
-    assocs = mod.__schema__(:associations)
-    {:ok, Changeset.change(changeset_or_struct)
-          |> put_new_action(:insert)
-          |> surface(fields, embeds, assocs)}
+  defp do_change(_relation, changeset_or_struct, nil) do
+    {:ok, Changeset.change(changeset_or_struct) |> put_new_action(:insert)}
   end
 
   defp do_change(relation, nil, current) do
@@ -154,16 +149,13 @@ defmodule Ecto.Changeset.Relation do
   Surface all embeds and associations in the underlying struct
   into the changeset as a change.
   """
-  def surface(%{action: :insert} = changeset, fields, embeds, assocs) do
+  # TODO: Move this to repo.schema
+  def surface(changeset, fields, embeds, assocs) do
     %{model: struct, types: types} = changeset
     changeset
     |> surface_relations(embeds, types, struct)
     |> surface_relations(assocs, types, struct)
     |> surface_fields(struct, fields -- embeds -- assocs)
-  end
-
-  def surface(changeset, _fields, _embeds, _assocs) do
-    changeset
   end
 
   defp surface_fields(changeset, struct, fields) do

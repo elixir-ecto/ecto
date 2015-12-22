@@ -447,7 +447,6 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
-    assert changeset.changes == %{id: nil, name: "michal", author_id: nil}
 
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, nil, %Profile{})
@@ -459,7 +458,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, assoc_model_changeset, nil)
     assert changeset.action == :insert
-    assert changeset.changes == %{id: nil, name: "michal", author_id: nil}
+    assert changeset.changes == %{name: "michal"}
 
     assert {:ok, changeset, true, false} =
       Relation.change(assoc, assoc_model_changeset, assoc_model)
@@ -546,20 +545,18 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert {:ok, [changeset], true, false} =
       Relation.change(assoc, [%Post{title: "hello"}], [])
     assert changeset.action == :insert
-    assert changeset.changes == %{id: nil, title: "hello", author_id: nil}
 
     assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action  == :delete
     assert new_changeset.action  == :insert
-    assert new_changeset.changes == %{id: 1, title: nil, author_id: nil}
 
     assoc_model_changeset = Changeset.change(%Post{}, title: "hello")
 
     assert {:ok, [changeset], true, false} =
       Relation.change(assoc, [assoc_model_changeset], [])
     assert changeset.action == :insert
-    assert changeset.changes == %{id: nil, title: "hello", author_id: nil}
+    assert changeset.changes == %{title: "hello"}
 
     assoc_model = %Post{id: 1}
     assoc_model_changeset = Changeset.change(assoc_model, title: "hello")

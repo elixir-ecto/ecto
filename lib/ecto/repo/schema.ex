@@ -52,7 +52,8 @@ defmodule Ecto.Repo.Schema do
     do_insert(repo, adapter, changeset, opts)
   end
 
-  defp do_insert(repo, adapter, %Changeset{valid?: true, prepare: prepare} = changeset, opts) do
+  defp do_insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
+    %{prepare: prepare, changes: original_changes} = changeset
     struct = struct_from_changeset!(:insert, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -62,7 +63,7 @@ defmodule Ecto.Repo.Schema do
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
-    changeset = update_changeset(changeset, :insert, repo)
+    changeset = put_repo_and_action(changeset, :insert, repo)
     changeset = Relation.surface(changeset, fields, embeds, assocs)
 
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
@@ -70,10 +71,10 @@ defmodule Ecto.Repo.Schema do
       user_changeset = run_prepare(changeset, prepare)
 
       changeset = Ecto.Embedded.prepare(user_changeset, adapter, :insert)
-      {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
+      {changeset, parents, children} = pop_assocs(changeset, assocs)
+      changeset = process_parents(changeset, parents, original_changes, opts)
 
-      changes = changeset.changes
-      {autogen, changes} = pop_autogenerate_id(changes, model)
+      {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
       {changes, extra} = dump_changes(:insert, changes, model, fields, adapter)
 
       args = [repo, metadata(struct), changes, autogen, return, opts]
@@ -81,8 +82,7 @@ defmodule Ecto.Repo.Schema do
         {:ok, values} ->
           changeset
           |> load_changes(:loaded, extra ++ values, adapter)
-          |> process_assocs(assoc_changes, opts)
-          |> get_model_if_valid(user_changeset)
+          |> process_children(children, user_changeset, opts)
         {:error, _} = error ->
           error
         {:invalid, constraints} ->
@@ -92,7 +92,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_insert(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, update_changeset(changeset, :insert, repo)}
+    {:error, put_repo_and_action(changeset, :insert, repo)}
   end
 
   @doc """
@@ -108,7 +108,8 @@ defmodule Ecto.Repo.Schema do
                          "an Ecto.Changeset must be given instead"
   end
 
-  defp do_update(repo, adapter, %Changeset{valid?: true, prepare: prepare} = changeset, opts) do
+  defp do_update(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
+    %{prepare: prepare, changes: original_changes} = changeset
     struct = struct_from_changeset!(:update, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -118,7 +119,7 @@ defmodule Ecto.Repo.Schema do
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
     # changeset before hand.
-    changeset = update_changeset(changeset, :update, repo)
+    changeset = put_repo_and_action(changeset, :update, repo)
 
     if changeset.changes != %{} or opts[:force] do
       wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
@@ -126,7 +127,8 @@ defmodule Ecto.Repo.Schema do
         user_changeset = run_prepare(changeset, prepare)
 
         changeset = Ecto.Embedded.prepare(user_changeset, adapter, :update)
-        {assoc_changes, changeset} = pop_from_changes(changeset, assocs)
+        {changeset, parents, children} = pop_assocs(changeset, assocs)
+        changeset = process_parents(changeset, parents, original_changes, opts)
 
         changes = changeset.changes
         autogen = get_autogenerate_id(changes, model)
@@ -141,8 +143,7 @@ defmodule Ecto.Repo.Schema do
           {:ok, values} ->
             changeset
             |> load_changes(:loaded, extra ++ values, adapter)
-            |> process_assocs(assoc_changes, opts)
-            |> get_model_if_valid(user_changeset)
+            |> process_children(children, user_changeset, opts)
           {:error, _} = error ->
             error
           {:invalid, constraints} ->
@@ -155,7 +156,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_update(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, update_changeset(changeset, :update, repo)}
+    {:error, put_repo_and_action(changeset, :update, repo)}
   end
 
   @doc """
@@ -206,7 +207,7 @@ defmodule Ecto.Repo.Schema do
     model  = struct.__struct__
     assocs = model.__schema__(:associations)
 
-    changeset = update_changeset(changeset, :delete, repo)
+    changeset = put_repo_and_action(changeset, :delete, repo)
     changeset = %{changeset | changes: %{}}
     autogen   = get_autogenerate_id(changeset, model)
 
@@ -230,7 +231,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_delete(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, update_changeset(changeset, :delete, repo)}
+    {:error, put_repo_and_action(changeset, :delete, repo)}
   end
 
   ## Helpers
@@ -240,9 +241,9 @@ defmodule Ecto.Repo.Schema do
   defp struct_from_changeset!(_action, %{model: struct}),
     do: struct
 
-  defp update_changeset(%{action: given}, action, repo) when given != nil and given != action,
+  defp put_repo_and_action(%{action: given}, action, repo) when given != nil and given != action,
     do: raise(ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2")
-  defp update_changeset(changeset, action, repo),
+  defp put_repo_and_action(changeset, action, repo),
     do: %{changeset | action: action, repo: repo}
 
   defp run_prepare(changeset, prepare) do
@@ -317,12 +318,59 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp pop_from_changes(changeset, fields) do
-    get_and_update_in(changeset.changes, &Map.split(&1, fields))
+  defp pop_assocs(changeset, []) do
+    {changeset, [], []}
+  end
+  defp pop_assocs(%{changes: changes, types: types} = changeset, assocs) do
+    {changes, parent, child} =
+      Enum.reduce assocs, {changes, [], []}, fn assoc, {changes, parent, child} ->
+        case Map.fetch(changes, assoc) do
+          {:ok, value} ->
+            changes = Map.delete(changes, assoc)
+
+            case Map.fetch!(types, assoc) do
+              {:assoc, %{relationship: :parent} = refl} ->
+                {changes, [{refl, value}|parent], child}
+              {:assoc, %{relationship: :child} = refl} ->
+                {changes, parent, [{refl, value}|child]}
+            end
+          :error ->
+            {changes, parent, child}
+        end
+      end
+    {%{changeset | changes: changes}, parent, child}
   end
 
-  defp process_assocs(changeset, assocs, opts) do
-    Ecto.Association.on_repo_change(:child, changeset, assocs, opts)
+  defp process_parents(%{changes: changes} = changeset, assocs, original_changes, opts) do
+    case Ecto.Association.on_repo_change(changeset, assocs, opts) do
+      {:ok, model} ->
+        changes = change_parents(changes, model, assocs, original_changes)
+        %{changeset | changes: changes, model: model}
+      {:error, changes} ->
+        %{changeset | changes: changes, valid?: false}
+    end
+  end
+
+  defp change_parents(changes, model, assocs, original) do
+    Enum.reduce assocs, changes, fn {refl, _}, acc ->
+      %{field: field, owner_key: owner_key, related_key: related_key} = refl
+      case Map.fetch(original, owner_key) do
+        {:ok, current} ->
+          raise ArgumentError,
+            "cannot change belongs_to association `#{field}` because there is " <>
+            "already a change setting its foreign key `#{owner_key}` to `#{inspect current}`"
+        :error ->
+          related = Map.get(model, field)
+          Map.put(acc, owner_key, related && Map.get(related, related_key))
+      end
+    end
+  end
+
+  defp process_children(changeset, assocs, user_changeset, opts) do
+    case Ecto.Association.on_repo_change(changeset, assocs, opts) do
+      {:ok, model} -> {:ok, model}
+      {:error, changes} -> {:error, %{user_changeset | valid?: false, changes: changes}}
+    end
   end
 
   defp delete_assocs(%{model: model}, repo, struct, assocs, opts) do
@@ -334,16 +382,7 @@ defmodule Ecto.Repo.Schema do
           :ok
       end
     end
-
     :ok
-  end
-
-  defp get_model_if_valid(%{valid?: true, model: model}, _user_changeset) do
-    {:ok, model}
-  end
-
-  defp get_model_if_valid(%{valid?: false, changes: changes}, user_changeset) do
-    {:error, %{user_changeset | valid?: false, changes: changes}}
   end
 
   defp pop_autogenerate_id(changes, model) do
