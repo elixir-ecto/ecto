@@ -117,6 +117,13 @@ defmodule Ecto.Migration do
   See the `index/3` function for more information on creating/dropping indexes
   concurrently.
 
+  ## Schema Migrations table
+
+  Version numbers of migrations will be saved in `schema_migrations` table.
+  But you can configure the table via:
+
+      config :app, App.Repo, migration_table: "my_migrations"
+
   """
 
   defmodule Index do
