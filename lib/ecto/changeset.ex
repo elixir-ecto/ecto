@@ -92,16 +92,10 @@ defmodule Ecto.Changeset do
   ## On replace
 
   Using changesets you can work with `has_one` and `has_many` associations
-  as well as with embedded structs. When working with those relations,
-  the `:on_replace` option can be given to `cast_assoc`/`cast_embed` as well
-  as `put_assoc`/`put_embed` to configure the action that should be taken
-  when the child model is no longer associated to the parent one.
-
-  This may be invoked in different occasions, for example, when it has been
-  ommited in the list of associations/embeds for a many relation, or new struct
-  was specified for a one relation.
-
-  Possible values are:
+  as well as with embedded structs. Sometimes the related data may be
+  replaced by incoming data. The default behaviour in such cases is to
+  raise but can be configured when defining the relation according to the
+  possible values are:
 
     * `:raise` (default) - do not allow removing association or embedded
     model via parent changesets,
@@ -138,7 +132,6 @@ defmodule Ecto.Changeset do
             end
           end
 
-  `on_replace` may also be set when defining the association/embed.
   """
 
   alias __MODULE__
@@ -537,7 +530,7 @@ defmodule Ecto.Changeset do
 
     * `:with` - the function to build the changeset from params.
       Defaults to the changeset/2 function in the association module
-    * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
+
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
@@ -558,7 +551,7 @@ defmodule Ecto.Changeset do
 
     * `:with` - the function to build the changeset from params.
       Defaults to the changeset/2 function in the embed module
-    * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
+
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
@@ -583,10 +576,9 @@ defmodule Ecto.Changeset do
         {update_in(changeset.optional, &[key|&1]), false}
       end
 
-    on_replace = opts[:on_replace] || relation.on_replace
-    on_cast    = opts[:with] || &apply(relation.related, relation.on_cast, [&1, &2])
-    relation   = %{relation | on_replace: on_replace, on_cast: on_cast}
-    current    = Relation.load!(model, Map.get(model, key))
+    on_cast  = opts[:with] || &apply(relation.related, relation.on_cast, [&1, &2])
+    relation = %{relation | on_cast: on_cast}
+    current  = Relation.load!(model, Map.get(model, key))
 
     case params && Map.fetch(params, param_key) do
       {:ok, value} ->
@@ -917,10 +909,6 @@ defmodule Ecto.Changeset do
   If the association is invalid, the changeset will be marked
   as invalid. If the given value is not an association, it
   will raise.
-
-  ## Options
-
-    * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
   """
   def put_assoc(changeset, name, value, opts \\ []) do
     put_relation(:assoc, changeset, name, value, opts)
@@ -936,10 +924,6 @@ defmodule Ecto.Changeset do
   If the embed is invalid, the changeset will be marked
   as invalid. If the given value is not an embed, it
   will raise.
-
-  ## Options
-
-    * `:on_replace` - see "On Replace" section on `Ecto.Changeset`
   """
   def put_embed(changeset, name, value, opts \\ []) do
     put_relation(:embed, changeset, name, value, opts)
@@ -949,11 +933,10 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  defp put_relation(type, changeset, name, value, opts) do
+  defp put_relation(type, changeset, name, value, _opts) do
     %{model: model, types: types, changes: changes} = changeset
 
     relation = relation!(:put, type, name, Map.get(types, name))
-    relation = %{relation | on_replace: opts[:on_replace] || relation.on_replace}
     current  = Relation.load!(model, Map.get(model, name))
 
     case Relation.change(relation, value, current) do
