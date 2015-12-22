@@ -40,7 +40,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "changeset metadata" do
-    assert Model.__changeset__ ==
+    assert Model.__changeset__ |> Map.drop([:comment, :permalink]) ==
            %{name: :string, email: :string, count: :decimal, array: {:array, :string},
              comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID}
   end
@@ -378,11 +378,13 @@ defmodule Ecto.SchemaTest do
   end
 
   test "belongs_to association" do
-    assert AssocModel.__schema__(:association, :comment) ==
-           %Ecto.Association.BelongsTo{field: :comment, owner: AssocModel, cardinality: :one,
-                                        related: Comment, owner_key: :comment_id, related_key: :id, queryable: Comment}
+    struct =
+      %Ecto.Association.BelongsTo{field: :comment, owner: AssocModel, cardinality: :one,
+       related: Comment, owner_key: :comment_id, related_key: :id, queryable: Comment,
+       on_replace: :raise, defaults: []}
 
-    refute Map.has_key?(AssocModel.__changeset__, :comment)
+    assert AssocModel.__schema__(:association, :comment) == struct
+    assert AssocModel.__changeset__.comment == {:assoc, struct}
 
     comment = (%AssocModel{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
@@ -390,11 +392,13 @@ defmodule Ecto.SchemaTest do
   end
 
   test "belongs_to association via {source, model}" do
-    assert AssocModel.__schema__(:association, :summary) ==
-           %Ecto.Association.BelongsTo{field: :summary, owner: AssocModel, cardinality: :one,
-                                        related: Summary, owner_key: :summary_id, related_key: :id, queryable: {"post_summary", Summary}}
+    struct =
+      %Ecto.Association.BelongsTo{field: :summary, owner: AssocModel, cardinality: :one,
+       related: Summary, owner_key: :summary_id, related_key: :id,
+       queryable: {"post_summary", Summary}, on_replace: :raise, defaults: []}
 
-    refute Map.has_key?(AssocModel.__changeset__, :summary)
+    assert AssocModel.__schema__(:association, :summary) == struct
+    assert AssocModel.__changeset__.summary == {:assoc, struct}
 
     comment = (%AssocModel{}).comment
     assert %Ecto.Association.NotLoaded{} = comment

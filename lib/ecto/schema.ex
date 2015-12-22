@@ -648,6 +648,13 @@ defmodule Ecto.Schema do
     * `:type` - Sets the type of automatically defined `:foreign_key`.
       Defaults to: `:integer` and be set per schema via `@foreign_key_type`
 
+    * `:on_replace` - The action taken on associations when the record is
+      replaced   when casting or manipulating parent changeset. May be
+      `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
+      See `Ecto.Changeset`'s section on related data for more info.
+
+    * `:defaults` - Default values to use when building the association
+
   All other options are forwarded to the underlying foreign key definition
   and therefore accept the same options as `field/3`.
 
@@ -985,9 +992,11 @@ defmodule Ecto.Schema do
     end
   end
 
+  @valid_belongs_to_options [:foreign_key, :references, :define_field, :type, :on_replace, :defaults]
+
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
-    check_options!(opts, [:foreign_key, :references, :define_field, :type], "belongs_to/3")
+    check_options!(opts, @valid_belongs_to_options, "belongs_to/3")
 
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
@@ -996,7 +1005,9 @@ defmodule Ecto.Schema do
       __field__(mod, opts[:foreign_key], foreign_key_type, false, opts)
     end
 
-    association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+    struct =
+      association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+    Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
   @doc false

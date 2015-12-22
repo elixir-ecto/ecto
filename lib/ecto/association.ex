@@ -601,7 +601,8 @@ defmodule Ecto.Association.BelongsTo do
   """
 
   @behaviour Ecto.Association
-  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable,
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
+  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_replace,
              defaults: [], cardinality: :one, relationship: :parent]
 
   @doc false
@@ -633,21 +634,31 @@ defmodule Ecto.Association.BelongsTo do
       raise ArgumentError, "association queryable must be a schema, got: #{inspect related}"
     end
 
+    on_replace = Keyword.get(opts, :on_replace, :raise)
+
+    unless on_replace in @on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+    end
+
     %__MODULE__{
       field: name,
       owner: module,
       related: related,
       owner_key: Keyword.fetch!(opts, :foreign_key),
       related_key: ref,
-      queryable: queryable
+      queryable: queryable,
+      on_replace: on_replace,
+      defaults: opts[:defaults] || []
     }
   end
 
   @doc false
-  def build(%{field: name}, %{__struct__: struct}, _attributes) do
-    raise ArgumentError,
-      "cannot build belongs_to association #{inspect name} for #{inspect struct}. " <>
-      "Belongs to associations cannot be built with build/3, only the opposide side (has_one/has_many)"
+  def build(refl, _, attributes) do
+    refl
+    |> build()
+    |> struct(attributes)
   end
 
   @doc false
@@ -671,5 +682,25 @@ defmodule Ecto.Association.BelongsTo do
   @doc false
   def preload_info(refl) do
     {:assoc, refl, refl.related_key}
+  end
+
+  ## Relation callbacks
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+    related
+    |> struct(defaults)
+    |> Ecto.Association.merge_source(queryable)
+  end
+
+  @doc false
+  def on_replace(%{on_replace: :delete}, changeset) do
+    {:delete, changeset}
+  end
+
+  def on_replace(%{on_replace: :nilify, related_key: related_key}, changeset) do
+    changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
+    {:update, changeset}
   end
 end

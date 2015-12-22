@@ -15,7 +15,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
     schema "authors" do
       field :name, :string
       embeds_one :profile, Profile, on_replace: :delete
-      embeds_one :post, Post
       embeds_many :posts, Post, on_replace: :delete
     end
   end
@@ -45,6 +44,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   defmodule Profile do
     use Ecto.Schema
+    import Ecto.Changeset
 
     embedded_schema do
       field :name
@@ -52,6 +52,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     def changeset(model, params) do
       Changeset.cast(model, params, ~w(name), ~w(id))
+      |> validate_length(:name, min: 3)
     end
 
     def optional_changeset(model, params) do
@@ -602,11 +603,11 @@ defmodule Ecto.Changeset.EmbeddedTest do
   ## traverse_errors
 
   test "traverses changeset errors with embeds_one error" do
-    params = %{"name" => "hi", "post" => %{"title" => "hi"}}
+    params = %{"name" => "hi", "profile" => %{"name" => "hi"}}
     changeset =
       %Author{}
       |> Changeset.cast(params, ~w(), ~w(name))
-      |> Changeset.cast_embed(:post)
+      |> Changeset.cast_embed(:profile)
       |> Changeset.add_error(:name, "is invalid")
 
     errors = Changeset.traverse_errors(changeset, fn
@@ -619,7 +620,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end)
 
     assert errors == %{
-      post: %{title: ["SHOULD BE AT LEAST 3 CHARACTER(S)"]},
+      profile: %{name: ["SHOULD BE AT LEAST 3 CHARACTER(S)"]},
       name: ["IS INVALID"]
     }
   end

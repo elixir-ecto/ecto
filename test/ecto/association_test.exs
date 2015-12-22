@@ -22,7 +22,7 @@ defmodule Ecto.AssociationTest do
       has_many :comments, Comment
       has_one :permalink, Permalink
       has_many :permalinks, Permalink
-      belongs_to :author, Author
+      belongs_to :author, Author, defaults: [title: "World!"]
       belongs_to :summary, Summary
     end
   end
@@ -289,9 +289,8 @@ defmodule Ecto.AssociationTest do
     assert build_assoc(%Summary{id: 1}, :post) ==
            %Post{summary_id: 1, title: "default"}
 
-    assert_raise ArgumentError, ~r"cannot build belongs_to association :author", fn ->
-      assert build_assoc(%Email{id: 1}, :author)
-    end
+    assert build_assoc(%Post{id: 1}, :author) ==
+           %Author{title: "World!"}
 
     assert_raise ArgumentError, ~r"cannot build through association :post_author", fn ->
       build_assoc(%Comment{}, :post_author)
@@ -304,6 +303,9 @@ defmodule Ecto.AssociationTest do
 
     profile = build_assoc(%Author{id: 1}, :profile)
     assert profile.__meta__.source == {nil, "users_profiles"}
+
+    profile = build_assoc(%Email{id: 1}, :author)
+    assert profile.__meta__.source == {nil, "post_authors"}
   end
 
   test "build/3 with custom attributes" do
@@ -315,6 +317,9 @@ defmodule Ecto.AssociationTest do
 
     assert build_assoc(%Post{id: 1}, :comments, post_id: 2) ==
            %Comment{post_id: 1}
+
+    assert build_assoc(%Post{id: 1}, :author, title: "Hello!") ==
+           %Author{title: "Hello!"}
 
     # Overriding defaults
     assert build_assoc(%Summary{id: 1}, :post, title: "Hello").title == "Hello"
