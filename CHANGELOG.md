@@ -1,6 +1,10 @@
 # Changelog
 
-## v1.1.1-dev
+## v1.1.1
+
+### Bug fixes
+
+* Remove documentation for unfinished `on_replace` option in `cast_assoc`, `cast_embed`, `put_assoc` and `put_embed`. The option could be given and applied to the changeset but it would never reach the repository, giving the impression it works as expected but ultimately failing in the repository operation
 
 ### Deprecations
 
