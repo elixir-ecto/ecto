@@ -528,19 +528,31 @@ defmodule Ecto do
   end
 
   @doc """
-  Updates the model metadata.
+  Gets the metadata from the given struct.
+  """
+  def get_meta(struct, :context),
+    do: struct.__meta__.context
+  def get_meta(struct, :state),
+    do: struct.__meta__.state
+  def get_meta(struct, :source),
+    do: struct.__meta__.source |> elem(1)
+  def get_meta(struct, :prefix),
+    do: struct.__meta__.source |> elem(0)
+
+  @doc """
+  Returns a new struct with updated metadata.
 
   It is possible to set:
 
-    * `:source` - changes the model query source
-    * `:prefix` - changes the model query prefix
-    * `:context` - changes the model meta context
-    * `:state` - changes the model state
+    * `:source` - changes the struct query source
+    * `:prefix` - changes the struct query prefix
+    * `:context` - changes the struct meta context
+    * `:state` - changes the struct state
   """
   @spec put_meta(Ecto.Schema.t, [source: String.t, prefix: String.t,
                                 context: term, state: :built | :loaded | :deleted]) :: Ecto.Schema.t
-  def put_meta(model, opts) do
-    update_in model.__meta__, &update_meta(opts, &1)
+  def put_meta(struct, opts) do
+    update_in struct.__meta__, &update_meta(opts, &1)
   end
 
   defp update_meta([{:state, state}|t], meta) do
@@ -571,10 +583,10 @@ defmodule Ecto do
     raise ArgumentError, "unknown meta key #{inspect k}"
   end
 
-  defp assert_struct!(model, %{__struct__: struct}) do
-    if struct != model do
+  defp assert_struct!(module, %{__struct__: struct}) do
+    if struct != module do
       raise ArgumentError, "expected a homogeneous list containing the same struct, " <>
-                           "got: #{inspect model} and #{inspect struct}"
+                           "got: #{inspect module} and #{inspect struct}"
     else
       true
     end

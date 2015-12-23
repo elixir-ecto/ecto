@@ -580,36 +580,39 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "has_one changeset assoc" do
+    # Insert new
     changeset =
       %Post{title: "1"}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:permalink, %Permalink{url: "1"})
-    p1 = TestRepo.insert!(changeset)
-    assert p1.permalink.id
-    assert p1.permalink.post_id == p1.id
-    assert p1.permalink.url == "1"
-    p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
-    assert p1.permalink.url == "1"
+    post = TestRepo.insert!(changeset)
+    assert post.permalink.id
+    assert post.permalink.post_id == post.id
+    assert post.permalink.url == "1"
+    post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
+    assert post.permalink.url == "1"
 
+    # Replace with new
     changeset =
-      p1
+      post
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:permalink, %Permalink{url: "2"})
-    p1 = TestRepo.update!(changeset)
-    assert p1.permalink.id
-    assert p1.permalink.post_id == p1.id
-    assert p1.permalink.url == "2"
-    p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
-    assert p1.permalink.url == "2"
+    post = TestRepo.update!(changeset)
+    assert post.permalink.id
+    assert post.permalink.post_id == post.id
+    assert post.permalink.url == "2"
+    post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
+    assert post.permalink.url == "2"
 
+    # Replacing with nil
     changeset =
-      p1
+      post
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:permalink, nil)
-    p1 = TestRepo.update!(changeset)
-    refute p1.permalink
-    p1 = TestRepo.get!(from(p in Post, preload: [:permalink]), p1.id)
-    refute p1.permalink
+    post = TestRepo.update!(changeset)
+    refute post.permalink
+    post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
+    refute post.permalink
 
     assert [0] == TestRepo.all(from(p in Permalink, select: count(p.id)))
   end
@@ -622,68 +625,96 @@ defmodule Ecto.Integration.RepoTest do
       %Post{title: "1"}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:comments, [c1])
-    p1 = TestRepo.insert!(changeset)
-    [c1] = p1.comments
+    post = TestRepo.insert!(changeset)
+    [c1] = post.comments
     assert c1.id
-    assert c1.post_id == p1.id
-    p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
-    [c1] = p1.comments
+    assert c1.post_id == post.id
+    post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
+    [c1] = post.comments
     assert c1.text == "1"
 
     changeset =
-      p1
+      post
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:comments, [Ecto.Changeset.change(c1), Ecto.Changeset.change(c2)])
-    p1 = TestRepo.update!(changeset)
-    [_c1, c2] = p1.comments |> Enum.sort_by(&(&1.id))
+    post = TestRepo.update!(changeset)
+    [_c1, c2] = post.comments |> Enum.sort_by(&(&1.id))
     assert c2.id
-    assert c2.post_id == p1.id
-    p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
-    [c1, c2] = p1.comments |> Enum.sort_by(&(&1.id))
+    assert c2.post_id == post.id
+    post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
+    [c1, c2] = post.comments |> Enum.sort_by(&(&1.id))
     assert c1.text == "1"
     assert c2.text == "2"
 
     changeset =
-      p1
+      post
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:comments, [])
-    p1 = TestRepo.update!(changeset)
-    assert p1.comments == []
-    p1 = TestRepo.get!(from(p in Post, preload: [:comments]), p1.id)
-    assert p1.comments == []
+    post = TestRepo.update!(changeset)
+    assert post.comments == []
+    post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
+    assert post.comments == []
 
     assert [0] == TestRepo.all(from(c in Comment, select: count(c.id)))
   end
 
   test "belongs_to changeset assoc" do
-    perma =
+    # Insert new
+    changeset =
       %Permalink{url: "1"}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:post, %Post{title: "1"})
-    perma = TestRepo.insert!(perma)
+    perma = TestRepo.insert!(changeset)
     post = perma.post
     assert perma.post_id
     assert perma.post_id == post.id
     assert perma.post.title == "1"
 
-    perma =
+    # Replace with new
+    changeset =
       perma
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:post, %Post{title: "2"})
-    perma = TestRepo.update!(perma)
+    perma = TestRepo.update!(changeset)
     assert perma.post.id != post.id
     post = perma.post
     assert perma.post_id
     assert perma.post_id == post.id
     assert perma.post.title == "2"
 
-    perma =
+    # Replace with nil
+    changeset =
       perma
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:post, nil)
-    perma = TestRepo.update!(perma)
+    perma = TestRepo.update!(changeset)
     assert perma.post == nil
     assert perma.post_id == nil
+  end
+
+  test "inserting with associations in structs" do
+    tree = %Permalink{
+      url: "root",
+      post: %Post{
+        title: "belongs_to",
+        comments: [
+          %Comment{text: "child 1"},
+          %Comment{text: "child 2"},
+        ]
+      }
+    }
+
+    tree = TestRepo.insert!(tree)
+    assert tree.id
+    assert tree.post.id
+    assert length(tree.post.comments) == 2
+    assert Enum.all?(tree.post.comments, & &1.id)
+
+    tree = TestRepo.get!(from(Permalink, preload: [post: :comments]), tree.id)
+    assert tree.id
+    assert tree.post.id
+    assert length(tree.post.comments) == 2
+    assert Enum.all?(tree.post.comments, & &1.id)
   end
 
   @tag :unique_constraint
@@ -757,7 +788,9 @@ defmodule Ecto.Integration.RepoTest do
     assert Enum.count(TestRepo.all(Post)) == 1
   end
 
-  test "count distinct" do
+  ## Query syntax
+
+  test "query count distinct" do
     TestRepo.insert!(%Post{title: "1"})
     TestRepo.insert!(%Post{title: "1"})
     TestRepo.insert!(%Post{title: "2"})
@@ -766,7 +799,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [2] == Post |> select([p], count(p.title, :distinct)) |> TestRepo.all
   end
 
-  test "keyword where" do
+  test "query where interpolation" do
     post1 = TestRepo.insert!(%Post{text: "x", title: "hello"  })
     post2 = TestRepo.insert!(%Post{text: "y", title: "goodbye"})
 

@@ -137,7 +137,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert profile.valid?
     assert changeset.valid?
 
-    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+    assert_raise RuntimeError, ~r"cannot update related", fn ->
       cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
            %{"profile" => %{"name" => "new", "id" => "new"}},
            :profile, with: &Profile.set_action/2)
@@ -207,7 +207,7 @@ defmodule Ecto.Changeset.HasAssocTest do
                      :profile, with: &Profile.set_action/2)
     assert changeset.changes.profile.action == :update
 
-    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+    assert_raise RuntimeError, ~r"cannot update related", fn ->
       cast(%Author{profile: %Profile{id: "old"}},
            %{"profile" => %{"name" => "michal", "id" => "new"}},
            :profile, with: &Profile.set_action/2)
@@ -339,7 +339,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "cast has_many with invalid operation" do
     params = %{"posts" => [%{"id" => 1, "title" => "new"}]}
-    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+    assert_raise RuntimeError, ~r"cannot update related", fn ->
       cast(%Author{posts: []}, params, :posts, with: &Post.set_action/2)
     end
   end
@@ -474,11 +474,6 @@ defmodule Ecto.Changeset.HasAssocTest do
     assoc_with_id = %Profile{id: 2}
     assert {:ok, _, true, false} =
       Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
-
-    update_changeset = %{Changeset.change(assoc_model) | action: :delete}
-    assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
-      Relation.change(assoc, update_changeset, assoc_with_id)
-    end
   end
 
   test "change has_one with on_replace: :nilify" do
@@ -498,7 +493,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.action == :insert
 
     changeset = %{changeset | action: :delete}
-    assert_raise RuntimeError, ~r"cannot delete .* it does not exist in the parent model", fn ->
+    assert_raise RuntimeError, ~r"cannot delete related", fn ->
       Relation.change(assoc, changeset, nil)
     end
 
@@ -508,7 +503,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     assoc_model = %{assoc_model | id: 5}
     changeset = %{Changeset.change(assoc_model) | action: :insert}
-    assert_raise RuntimeError, ~r"cannot insert .* it already exists in the parent model", fn ->
+    assert_raise RuntimeError, ~r"cannot insert related", fn ->
       Relation.change(assoc, changeset, assoc_model)
     end
   end
@@ -576,7 +571,7 @@ defmodule Ecto.Changeset.HasAssocTest do
       Relation.change(assoc, [empty_changeset], [assoc_model])
 
     new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
-    assert_raise RuntimeError, ~r"cannot update .* it does not exist in the parent model", fn ->
+    assert_raise RuntimeError, ~r"cannot update related", fn ->
       Relation.change(assoc, [new_model_update], [assoc_model])
     end
 

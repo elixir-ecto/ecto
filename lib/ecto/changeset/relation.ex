@@ -132,7 +132,15 @@ defmodule Ecto.Changeset.Relation do
 
   # This may be an insert or an update, get all fields.
   defp do_change(_relation, changeset_or_struct, nil) do
-    {:ok, Changeset.change(changeset_or_struct) |> put_new_action(:insert)}
+    changeset = Changeset.change(changeset_or_struct)
+    %{model: %{__meta__: %{state: state}}} = changeset
+    action =
+      case state do
+        :built   -> :insert
+        :loaded  -> :update
+        :deleted -> :delete
+      end
+    {:ok, put_new_action(changeset, action)}
   end
 
   defp do_change(relation, nil, current) do
@@ -293,12 +301,18 @@ defmodule Ecto.Changeset.Relation do
       {:ok, changeset} ->
         action = changeset.action
 
-        if action in allowed_actions do
-          {:ok, changeset}
-        else
-          reason = if action == :insert, do: "already exists", else: "does not exist"
-          raise "cannot #{action} related #{inspect changeset.model} " <>
-                "because it #{reason} in the parent model"
+        cond do
+          action in allowed_actions ->
+            {:ok, changeset}
+          action == :insert ->
+            raise "cannot #{action} related #{inspect changeset.model} " <>
+                  "because it is already associated to the given struct"
+          true ->
+            raise "cannot #{action} related #{inspect changeset.model} " <>
+                  "because it already exists and it is not currently associated " <>
+                  "to the given struct. Ecto forbids associating existing records " <>
+                  "through the association field for security reasons. Instead, set " <>
+                  "the foreign key value accordingly"
         end
       :error ->
         :error

@@ -49,12 +49,10 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   test "handles embeds on insert" do
-    embed = %MyEmbed{x: "xyz"}
-
     changeset =
       %MyModel{}
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_embed(:embed, embed)
+      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz"})
     model = TestRepo.insert!(changeset)
     embed = model.embed
     assert embed.id
@@ -64,7 +62,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     changeset =
       %MyModel{}
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_embed(:embeds, [embed])
+      |> Ecto.Changeset.put_embed(:embeds, [%MyEmbed{x: "xyz"}])
     model = TestRepo.insert!(changeset)
     [embed] = model.embeds
     assert embed.id
@@ -145,12 +143,10 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   test "inserting embeds on update" do
-    embed = %MyEmbed{x: "xyz"}
-
     changeset =
       %MyModel{id: 1}
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_embed(:embed, embed)
+      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz"})
     model = TestRepo.update!(changeset)
     embed = model.embed
     assert embed.id
@@ -160,7 +156,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     changeset =
       %MyModel{id: 1}
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_embed(:embeds, [embed])
+      |> Ecto.Changeset.put_embed(:embeds, [%MyEmbed{x: "xyz"}])
     model = TestRepo.update!(changeset)
     [embed] = model.embeds
     assert embed.id

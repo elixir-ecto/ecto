@@ -54,7 +54,7 @@ defmodule Ecto.SchemaTest do
     assert Ecto.primary_key(%Model{id: "hello"}) == [id: "hello"]
   end
 
-  test "updates meta with put_meta" do
+  test "reads and writes meta" do
     model = %Model{}
     assert model.__meta__.source == {nil, "mymodel"}
     model = Ecto.put_meta(model, source: "new_model")
@@ -63,10 +63,14 @@ defmodule Ecto.SchemaTest do
     assert model.__meta__.source == {"prefix", "new_model"}
     model = Ecto.put_meta(model, source: "mymodel")
     assert model.__meta__.source == {"prefix", "mymodel"}
+    assert Ecto.get_meta(model, :prefix) == "prefix"
+    assert Ecto.get_meta(model, :source) == "mymodel"
 
     model = Ecto.put_meta(model, context: "foobar", state: :loaded)
     assert model.__meta__.state == :loaded
     assert model.__meta__.context == "foobar"
+    assert Ecto.get_meta(model, :state) == :loaded
+    assert Ecto.get_meta(model, :context) == "foobar"
   end
 
   test "inspects metadata" do
