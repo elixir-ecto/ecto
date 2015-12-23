@@ -384,10 +384,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "change embeds_one" do
     embed = Author.__schema__(:embed, :profile)
 
-    assert {:ok, changeset, true, false} =
-      Relation.change(embed, %Profile{name: "michal"}, nil)
-    assert changeset.action == :insert
-
     assert {:ok, nil, true, false} =
       Relation.change(embed, nil, %Profile{})
     assert {:ok, nil, true, true} =
@@ -415,29 +411,38 @@ defmodule Ecto.Changeset.EmbeddedTest do
       Relation.change(embed, %Profile{id: 1}, embed_with_id)
   end
 
+  test "change embeds_one with structs" do
+    embed = Author.__schema__(:embed, :profile)
+    profile = %Profile{name: "michal"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(embed, profile, nil)
+    assert changeset.action == :insert
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(embed, Ecto.put_meta(profile, state: :loaded), nil)
+    assert changeset.action == :update
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(embed, Ecto.put_meta(profile, state: :deleted), nil)
+    assert changeset.action == :delete
+  end
+
   test "change embeds_one keeps appropriate action from changeset" do
     embed = Author.__schema__(:embed, :profile)
-    embed_model = %Profile{}
+    assoc_model = %Profile{}
 
-    changeset = %{Changeset.change(embed_model, name: "michal") | action: :insert}
-
+    changeset = %{Changeset.change(assoc_model, name: "michal") | action: :insert}
     {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
     assert changeset.action == :insert
 
-    changeset = %{changeset | action: :delete}
-    assert_raise RuntimeError, ~r"cannot delete related", fn ->
-      Relation.change(embed, changeset, nil)
-    end
-
-    changeset = %{Changeset.change(embed_model) | action: :update}
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, embed_model)
+    changeset = %{Changeset.change(assoc_model) | action: :update}
+    {:ok, changeset, _, _} = Relation.change(embed, changeset, assoc_model)
     assert changeset.action == :update
 
-    embed_model = %{embed_model | id: 5}
-    changeset = %{Changeset.change(embed_model) | action: :insert}
-    assert_raise RuntimeError, ~r"cannot insert related", fn ->
-      Relation.change(embed, changeset, embed_model)
-    end
+    changeset = %{Changeset.change(assoc_model) | action: :delete}
+    {:ok, changeset, _, _} = Relation.change(embed, changeset, assoc_model)
+    assert changeset.action == :delete
   end
 
   test "change embeds_one with on_replace: :raise" do
@@ -471,10 +476,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "change embeds_many" do
     embed = Author.__schema__(:embed, :posts)
 
-    assert {:ok, [changeset], true, false} =
-      Relation.change(embed, [%Post{title: "hello"}], [])
-    assert changeset.action == :insert
-
     assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(embed, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action  == :delete
@@ -500,15 +501,23 @@ defmodule Ecto.Changeset.EmbeddedTest do
     empty_changeset = Changeset.change(embed_model)
     assert {:ok, _, true, true} =
       Relation.change(embed, [empty_changeset], [embed_model])
+  end
 
-    new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
-    assert_raise RuntimeError, ~r"cannot update related", fn ->
-      Relation.change(embed, [new_model_update], [embed_model])
-    end
+  test "change embeds_many with structs" do
+    embed = Author.__schema__(:embed, :posts)
+    post = %Post{title: "hello"}
 
-    assert_raise RuntimeError, ~r"use a changeset instead", fn ->
-      Relation.change(embed, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
-    end
+    assert {:ok, [changeset], true, false} =
+      Relation.change(embed, [post], [])
+    assert changeset.action == :insert
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(embed, [Ecto.put_meta(post, state: :loaded)], [])
+    assert changeset.action == :update
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(embed, [Ecto.put_meta(post, state: :deleted)], [])
+    assert changeset.action == :delete
   end
 
   test "change embeds_many with on_replace: :raise" do

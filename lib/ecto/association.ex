@@ -210,8 +210,8 @@ defmodule Ecto.Association do
   end
 
   defp on_repo_change(%{cardinality: :one, field: field} = meta, nil, _parent_changeset,
-                      repo, repo_action, opts, {parent, changes, valid?}) do
-    maybe_replace_one!(true, meta, parent, repo, repo_action, opts)
+                      repo, _repo_action, opts, {parent, changes, valid?}) do
+    maybe_replace_one!(meta, nil, parent, repo, opts)
     {Map.put(parent, field, nil), Map.put(changes, field, nil), valid?}
   end
 
@@ -221,7 +221,7 @@ defmodule Ecto.Association do
     check_action!(meta, action, repo_action)
     case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
       {:ok, model} ->
-        maybe_replace_one!(action == :insert, meta, parent, repo, repo_action, opts)
+        maybe_replace_one!(meta, model, parent, repo, opts)
         {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
       {:error, changeset} ->
         {parent, Map.put(changes, field, changeset), false}
@@ -260,27 +260,30 @@ defmodule Ecto.Association do
     do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect schema} while inserting")
   defp check_action!(_, _, _), do: :ok
 
-  defp maybe_replace_one!(true, %{field: field} = assoc, parent, repo, :update, opts) do
-    case Map.get(parent, field) do
-      %Ecto.Association.NotLoaded{} ->
-        :ok
-      nil ->
-        :ok
-      previous ->
-        # the case when this could return :error, was handled before
-        {:ok, changeset} = Ecto.Changeset.Relation.on_replace(assoc, previous)
+  defp maybe_replace_one!(%{field: field} = assoc, current, parent, repo, opts) do
+    previous = Map.get(parent, field)
+    if replaceable?(previous) and primary_key!(previous) != primary_key!(current) do
+      # The case when this could return :error was handled before
+      {:ok, changeset} = Ecto.Changeset.Relation.on_replace(assoc, previous)
 
-        case apply(repo, changeset.action, [changeset, opts]) do
-          {:ok, _} ->
-            :ok
-          {:error, changeset} ->
-            raise Ecto.InvalidChangesetError,
-              action: changeset.action, changeset: changeset
-        end
+      case apply(repo, changeset.action, [changeset, opts]) do
+        {:ok, _} -> :ok
+        {:error, changeset} ->
+          raise Ecto.InvalidChangesetError,
+            action: changeset.action, changeset: changeset
+      end
     end
   end
 
-  defp maybe_replace_one!(_, _, _, _, _, _), do: :ok
+  defp maybe_replace_one!(_, _, _, _, _), do: :ok
+
+  defp replaceable?(nil), do: false
+  defp replaceable?(%Ecto.Association.NotLoaded{}), do: false
+  defp replaceable?(%{__meta__: %{state: :built}}), do: false
+  defp replaceable?(_), do: true
+
+  defp primary_key!(nil), do: []
+  defp primary_key!(struct), do: Ecto.primary_key!(struct)
 end
 
 defmodule Ecto.Association.Has do

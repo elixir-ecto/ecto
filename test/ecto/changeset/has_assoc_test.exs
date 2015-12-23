@@ -445,10 +445,6 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "change has_one" do
     assoc = Author.__schema__(:association, :profile)
 
-    assert {:ok, changeset, true, false} =
-      Relation.change(assoc, %Profile{name: "michal"}, nil)
-    assert changeset.action == :insert
-
     assert {:ok, nil, true, false} =
       Relation.change(assoc, nil, %Profile{})
     assert {:ok, nil, true, true} =
@@ -476,6 +472,23 @@ defmodule Ecto.Changeset.HasAssocTest do
       Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
   end
 
+  test "change has_one with structs" do
+    assoc = Author.__schema__(:association, :profile)
+    profile = %Profile{name: "michal"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, profile, nil)
+    assert changeset.action == :insert
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, Ecto.put_meta(profile, state: :loaded), nil)
+    assert changeset.action == :update
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, Ecto.put_meta(profile, state: :deleted), nil)
+    assert changeset.action == :delete
+  end
+
   test "change has_one with on_replace: :nilify" do
     # one case is handled inside repo
     profile = %Profile{id: 1, author_id: 5}
@@ -488,24 +501,16 @@ defmodule Ecto.Changeset.HasAssocTest do
     assoc_model = %Profile{}
 
     changeset = %{Changeset.change(assoc_model, name: "michal") | action: :insert}
-
     {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :insert
-
-    changeset = %{changeset | action: :delete}
-    assert_raise RuntimeError, ~r"cannot delete related", fn ->
-      Relation.change(assoc, changeset, nil)
-    end
 
     changeset = %{Changeset.change(assoc_model) | action: :update}
     {:ok, changeset, _, _} = Relation.change(assoc, changeset, assoc_model)
     assert changeset.action == :update
 
-    assoc_model = %{assoc_model | id: 5}
-    changeset = %{Changeset.change(assoc_model) | action: :insert}
-    assert_raise RuntimeError, ~r"cannot insert related", fn ->
-      Relation.change(assoc, changeset, assoc_model)
-    end
+    changeset = %{Changeset.change(assoc_model) | action: :delete}
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, assoc_model)
+    assert changeset.action == :delete
   end
 
   test "change has_one with on_replace: :raise" do
@@ -539,10 +544,6 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "change has_many" do
     assoc = Author.__schema__(:association, :posts)
 
-    assert {:ok, [changeset], true, false} =
-      Relation.change(assoc, [%Post{title: "hello"}], [])
-    assert changeset.action == :insert
-
     assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action  == :delete
@@ -569,15 +570,23 @@ defmodule Ecto.Changeset.HasAssocTest do
     empty_changeset = Changeset.change(assoc_model)
     assert {:ok, _, true, true} =
       Relation.change(assoc, [empty_changeset], [assoc_model])
+  end
 
-    new_model_update = %{Changeset.change(%Post{id: 2}) | action: :update}
-    assert_raise RuntimeError, ~r"cannot update related", fn ->
-      Relation.change(assoc, [new_model_update], [assoc_model])
-    end
+  test "change has_many with structs" do
+    assoc = Author.__schema__(:association, :posts)
+    post = %Post{title: "hello"}
 
-    assert_raise RuntimeError, ~r"use a changeset instead", fn ->
-      Relation.change(assoc, [%Post{id: 1, title: "hello"}], [%Post{id: 1}])
-    end
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, [post], [])
+    assert changeset.action == :insert
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, [Ecto.put_meta(post, state: :loaded)], [])
+    assert changeset.action == :update
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, [Ecto.put_meta(post, state: :deleted)], [])
+    assert changeset.action == :delete
   end
 
   test "change has_many with on_replace: :nilify" do

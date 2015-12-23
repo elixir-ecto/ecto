@@ -97,19 +97,28 @@ defmodule Ecto.Changeset.Relation do
   def cast(%{related: mod} = relation, params, current, on_cast) do
     pks = primary_keys!(mod)
     cast_or_change(relation, params, current, struct_pk(mod, pks),
-                   param_pk(mod, pks), &do_cast(relation, &1, &2, on_cast))
+                   param_pk(mod, pks), &do_cast(relation, &1, &2, &3, on_cast))
   end
 
-  defp do_cast(meta, params, nil, on_cast) do
-    {:ok, on_cast.(meta.__struct__.build(meta), params) |> put_new_action(:insert)}
+  defp do_cast(meta, params, nil, allowed_actions, on_cast) do
+    {:ok,
+      on_cast.(meta.__struct__.build(meta), params)
+      |> put_new_action(:insert)
+      |> check_action!(allowed_actions)}
   end
 
-  defp do_cast(relation, nil, current, _on_cast) do
-    on_replace(relation, current)
+  defp do_cast(relation, nil, current, allowed_actions, _on_cast) do
+    case on_replace(relation, current) do
+      {:ok, changeset} -> {:ok, check_action!(changeset, allowed_actions)}
+      :error -> :error
+    end
   end
 
-  defp do_cast(_meta, params, struct, on_cast) do
-    {:ok, on_cast.(struct, params) |> put_new_action(:update)}
+  defp do_cast(_meta, params, struct, allowed_actions, on_cast) do
+    {:ok,
+      on_cast.(struct, params)
+      |> put_new_action(:update)
+      |> check_action!(allowed_actions)}
   end
 
   @doc """
@@ -127,11 +136,11 @@ defmodule Ecto.Changeset.Relation do
   def change(%{related: mod} = relation, value, current) do
     get_pks = struct_pk(mod, primary_keys!(mod))
     cast_or_change(relation, value, current, get_pks, get_pks,
-                   &do_change(relation, &1, &2))
+                   &do_change(relation, &1, &2, &3))
   end
 
   # This may be an insert or an update, get all fields.
-  defp do_change(_relation, changeset_or_struct, nil) do
+  defp do_change(_relation, changeset_or_struct, nil, _allowed_actions) do
     changeset = Changeset.change(changeset_or_struct)
     %{model: %{__meta__: %{state: state}}} = changeset
     action =
@@ -143,20 +152,20 @@ defmodule Ecto.Changeset.Relation do
     {:ok, put_new_action(changeset, action)}
   end
 
-  defp do_change(relation, nil, current) do
+  defp do_change(relation, nil, current, _allowed_actions) do
     on_replace(relation, current)
   end
 
-  defp do_change(_relation, %Changeset{model: current} = changeset, current) do
+  defp do_change(_relation, %Changeset{model: current} = changeset, current, _allowed_actions) do
     {:ok, put_new_action(changeset, :update)}
   end
 
-  defp do_change(%{field: field}, %Changeset{}, _current) do
+  defp do_change(%{field: field}, %Changeset{}, _current, _allowed_actions) do
     raise "cannot change `#{field}` because given changeset has a different " <>
           "embed/association than the one specified in the parent struct"
   end
 
-  defp do_change(%{field: field}, _struct, _current) do
+  defp do_change(%{field: field}, _struct, _current, _allowed_actions) do
     raise "cannot change `#{field}` with a struct because another " <>
           "embed/association is set in parent struct, use a changeset instead"
   end
@@ -217,28 +226,28 @@ defmodule Ecto.Changeset.Relation do
   # single change
 
   defp single_change(_relation, nil, _current_pks, _new_pks, fun, current) do
-    single_changeset!(nil, current, fun, [:update, :delete])
+    single_change(nil, current, fun, [:update, :delete], false)
   end
 
   defp single_change(_relation, new, _current_pks, _new_pks, fun, nil) do
-    single_changeset!(new, nil, fun, [:insert])
+    single_change(new, nil, fun, [:insert], false)
   end
 
   defp single_change(relation, new, current_pks, new_pks, fun, current) do
     if new_pks.(new) == current_pks.(current) do
-      single_changeset!(new, current, fun, [:update, :delete])
+      single_change(new, current, fun, [:update, :delete], true)
     else
       case local_on_replace(relation, current) do
-        :ok -> single_changeset!(new, nil, fun, [:insert])
+        :ok    -> single_change(new, nil, fun, [:insert], false)
         :error -> :error
       end
     end
   end
 
-  defp single_changeset!(new, current, fun, allowed_actions) do
-    case build_changeset!(new, current, fun, allowed_actions) do
+  defp single_change(new, current, fun, allowed_actions, skippable?) do
+    case fun.(new, current, allowed_actions) do
       {:ok, changeset} ->
-        {:ok, changeset, changeset.valid?, skip?(changeset)}
+        {:ok, changeset, changeset.valid?, skippable? and skip?(changeset)}
       :error ->
         :error
     end
@@ -266,10 +275,10 @@ defmodule Ecto.Changeset.Relation do
           {nil, current, [:insert]}
       end
 
-    case build_changeset!(map, model, fun, allowed_actions) do
+    case fun.(map, model, allowed_actions) do
       {:ok, changeset} ->
         map_changes(rest, new_pks, fun, current, [changeset | acc],
-                    valid? && changeset.valid?, skip? && skip?(changeset))
+                    valid? && changeset.valid?, (model != nil) and skip? and skip?(changeset))
       :error ->
         :error
     end
@@ -283,12 +292,11 @@ defmodule Ecto.Changeset.Relation do
     {:ok, acc, valid?, skip?}
   end
 
-  defp reduce_delete_changesets([model | rest], fun, acc, valid?, skip?) do
-    case build_changeset!(nil, model, fun, [:update, :delete]) do
+  defp reduce_delete_changesets([model | rest], fun, acc, valid?, _skip?) do
+    case fun.(nil, model, [:update, :delete]) do
       {:ok, changeset} ->
         reduce_delete_changesets(rest, fun, [changeset | acc],
-                                 valid? && changeset.valid?,
-                                 skip? && skip?(changeset))
+                                 valid? && changeset.valid?, false)
       :error ->
         :error
     end
@@ -296,26 +304,21 @@ defmodule Ecto.Changeset.Relation do
 
   # helpers
 
-  defp build_changeset!(new, current, fun, allowed_actions) do
-    case fun.(new, current) do
-      {:ok, changeset} ->
-        action = changeset.action
+  defp check_action!(changeset, allowed_actions) do
+    action = changeset.action
 
-        cond do
-          action in allowed_actions ->
-            {:ok, changeset}
-          action == :insert ->
-            raise "cannot #{action} related #{inspect changeset.model} " <>
-                  "because it is already associated to the given struct"
-          true ->
-            raise "cannot #{action} related #{inspect changeset.model} " <>
-                  "because it already exists and it is not currently associated " <>
-                  "to the given struct. Ecto forbids associating existing records " <>
-                  "through the association field for security reasons. Instead, set " <>
-                  "the foreign key value accordingly"
-        end
-      :error ->
-        :error
+    cond do
+      action in allowed_actions ->
+        changeset
+      action == :insert ->
+        raise "cannot #{action} related #{inspect changeset.model} " <>
+              "because it is already associated to the given struct"
+      true ->
+        raise "cannot #{action} related #{inspect changeset.model} because " <>
+              "it already exists and it is not currently associated to the " <>
+              "given struct. Ecto forbids casting existing records through " <>
+              "the association field for security reasons. Instead, set " <>
+              "the foreign key value accordingly"
     end
   end
 

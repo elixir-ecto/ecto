@@ -604,6 +604,19 @@ defmodule Ecto.Integration.RepoTest do
     post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
     assert post.permalink.url == "2"
 
+    # Replacing with existing
+    existing = TestRepo.insert!(%Permalink{url: "3"})
+    changeset =
+      post
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, existing)
+    post = TestRepo.update!(changeset)
+    assert post.permalink.id
+    assert post.permalink.post_id == post.id
+    assert post.permalink.url == "3"
+    post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
+    assert post.permalink.url == "3"
+
     # Replacing with nil
     changeset =
       post
@@ -681,6 +694,18 @@ defmodule Ecto.Integration.RepoTest do
     assert perma.post_id
     assert perma.post_id == post.id
     assert perma.post.title == "2"
+
+    # Replace with existing
+    existing = TestRepo.insert!(%Post{title: "3"})
+    changeset =
+      perma
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:post, existing)
+    perma = TestRepo.update!(changeset)
+    post = perma.post
+    assert perma.post_id == post.id
+    assert perma.post_id == existing.id
+    assert perma.post.title == "3"
 
     # Replace with nil
     changeset =

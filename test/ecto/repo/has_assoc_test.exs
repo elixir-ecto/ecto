@@ -228,7 +228,7 @@ defmodule Ecto.Repo.HasAssocTest do
   end
 
   test "replacing assocs on update on_replace" do
-    sample = %MyAssoc{id: 10, x: "xyz"}
+    sample = %MyAssoc{id: 10, x: "xyz"} |> Ecto.put_meta(state: :loaded)
 
     # Replacing assoc with a new one
     changeset =
@@ -258,7 +258,7 @@ defmodule Ecto.Repo.HasAssocTest do
   end
 
   test "changing assocs on update raises if there is no id" do
-    sample = %MyAssoc{x: "xyz"}
+    sample = %MyAssoc{x: "xyz"} |> Ecto.put_meta(state: :loaded)
     sample_changeset = Ecto.Changeset.change(sample, x: "abc")
 
     changeset =
@@ -286,6 +286,7 @@ defmodule Ecto.Repo.HasAssocTest do
     assert assoc.x == "abc"
     refute assoc.inserted_at
     assert assoc.updated_at
+    refute_received :delete # Same assoc should not emit delete
 
     changeset =
       %MyModel{id: 1, assocs: [sample]}
@@ -297,10 +298,11 @@ defmodule Ecto.Repo.HasAssocTest do
     assert assoc.x == "abc"
     refute assoc.inserted_at
     assert assoc.updated_at
+    refute_received :delete # Same assoc should not emit delete
   end
 
   test "removing assocs on update raises if there is no id" do
-    assoc = %MyAssoc{x: "xyz"}
+    assoc = %MyAssoc{x: "xyz"} |> Ecto.put_meta(state: :loaded)
 
     # Raises if there's no id
     changeset =

@@ -253,11 +253,6 @@ defmodule Ecto.Changeset.BelongsToTest do
 
   test "change belongs_to" do
     assoc = Author.__schema__(:association, :profile)
-
-    assert {:ok, changeset, true, false} =
-      Relation.change(assoc, %Profile{name: "michal"}, nil)
-    assert changeset.action == :insert
-
     assert {:ok, nil, true, false} =
       Relation.change(assoc, nil, %Profile{})
     assert {:ok, nil, true, true} =
@@ -285,18 +280,21 @@ defmodule Ecto.Changeset.BelongsToTest do
       Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
   end
 
-  test "change belongs_to with loaded/deleted struct" do
+  test "change belongs_to with struct" do
     assoc = Author.__schema__(:association, :profile)
+    profile = %Profile{name: "michal"}
 
-    assert_raise RuntimeError, ~r"cannot update related", fn ->
-      profile = %Profile{name: "michal"} |> Ecto.put_meta(state: :loaded)
+    assert {:ok, changeset, true, false} =
       Relation.change(assoc, profile, nil)
-    end
+    assert changeset.action == :insert
 
-    assert_raise RuntimeError, ~r"cannot delete related", fn ->
-      profile = %Profile{name: "michal"} |> Ecto.put_meta(state: :deleted)
-      Relation.change(assoc, profile, nil)
-    end
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, Ecto.put_meta(profile, state: :loaded), nil)
+    assert changeset.action == :update
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, Ecto.put_meta(profile, state: :deleted), nil)
+    assert changeset.action == :delete
   end
 
   test "change belongs_to keeps appropriate action from changeset" do
@@ -304,24 +302,16 @@ defmodule Ecto.Changeset.BelongsToTest do
     assoc_model = %Profile{}
 
     changeset = %{Changeset.change(assoc_model, name: "michal") | action: :insert}
-
     {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :insert
 
-    changeset = %{changeset | action: :delete}
-    assert_raise RuntimeError, ~r"cannot delete related", fn ->
-      Relation.change(assoc, changeset, nil)
-    end
-
-    changeset = %{Changeset.change(assoc_model) | action: :update}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, assoc_model)
+    changeset = %{changeset | action: :update}
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :update
 
-    assoc_model = %{assoc_model | id: 5}
-    changeset = %{Changeset.change(assoc_model) | action: :insert}
-    assert_raise RuntimeError, ~r"cannot insert related", fn ->
-      Relation.change(assoc, changeset, assoc_model)
-    end
+    changeset = %{changeset | action: :delete}
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    assert changeset.action == :delete
   end
 
   test "change belongs_to with on_replace: :raise" do
