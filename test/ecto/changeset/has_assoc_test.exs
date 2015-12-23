@@ -500,16 +500,31 @@ defmodule Ecto.Changeset.HasAssocTest do
     assoc = Author.__schema__(:association, :profile)
     assoc_model = %Profile{}
 
+    # Adding
     changeset = %{Changeset.change(assoc_model, name: "michal") | action: :insert}
     {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :insert
 
     changeset = %{Changeset.change(assoc_model) | action: :update}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, assoc_model)
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :update
 
     changeset = %{Changeset.change(assoc_model) | action: :delete}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, assoc_model)
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    assert changeset.action == :delete
+
+    # Replacing
+    changeset = %{Changeset.change(assoc_model, name: "michal") | action: :insert}
+    assert_raise RuntimeError, ~r/cannot insert related/, fn ->
+      Relation.change(assoc, changeset, assoc_model)
+    end
+
+    changeset = %{Changeset.change(assoc_model) | action: :update}
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    assert changeset.action == :update
+
+    changeset = %{Changeset.change(assoc_model) | action: :delete}
+    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :delete
   end
 

@@ -108,10 +108,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp do_cast(relation, nil, current, allowed_actions, _on_cast) do
-    case on_replace(relation, current) do
-      {:ok, changeset} -> {:ok, check_action!(changeset, allowed_actions)}
-      :error -> :error
-    end
+    on_replace(relation, current)
   end
 
   defp do_cast(_meta, params, struct, allowed_actions, on_cast) do
@@ -156,8 +153,8 @@ defmodule Ecto.Changeset.Relation do
     on_replace(relation, current)
   end
 
-  defp do_change(_relation, %Changeset{model: current} = changeset, current, _allowed_actions) do
-    {:ok, put_new_action(changeset, :update)}
+  defp do_change(_relation, %Changeset{model: current} = changeset, current, allowed_actions) do
+    {:ok, put_new_action(changeset, :update) |> check_action!(allowed_actions)}
   end
 
   defp do_change(%{field: field}, %Changeset{}, _current, _allowed_actions) do

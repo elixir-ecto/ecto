@@ -430,18 +430,33 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "change embeds_one keeps appropriate action from changeset" do
     embed = Author.__schema__(:embed, :profile)
-    assoc_model = %Profile{}
+    embed_model = %Profile{}
 
-    changeset = %{Changeset.change(assoc_model, name: "michal") | action: :insert}
+    # Adding
+    changeset = %{Changeset.change(embed_model, name: "michal") | action: :insert}
     {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
     assert changeset.action == :insert
 
-    changeset = %{Changeset.change(assoc_model) | action: :update}
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, assoc_model)
+    changeset = %{changeset | action: :update}
+    {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
     assert changeset.action == :update
 
-    changeset = %{Changeset.change(assoc_model) | action: :delete}
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, assoc_model)
+    changeset = %{changeset | action: :delete}
+    {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
+    assert changeset.action == :delete
+
+    # Replacing
+    changeset = %{changeset | action: :insert}
+    assert_raise RuntimeError, ~r/cannot insert related/, fn ->
+      Relation.change(embed, changeset, embed_model)
+    end
+
+    changeset = %{changeset | action: :update}
+    {:ok, changeset, _, _} = Relation.change(embed, changeset, embed_model)
+    assert changeset.action == :update
+
+    changeset = %{changeset | action: :delete}
+    {:ok, changeset, _, _} = Relation.change(embed, changeset, embed_model)
     assert changeset.action == :delete
   end
 
