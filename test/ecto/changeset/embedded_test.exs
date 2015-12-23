@@ -171,6 +171,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "cast embeds_one with optional" do
     changeset = cast(%Author{profile: %Profile{id: "id"}}, %{"profile" => nil}, :profile)
     assert changeset.changes.profile == nil
+    assert changeset.valid?
   end
 
   test "cast embeds_one with custom changeset" do
@@ -387,9 +388,10 @@ defmodule Ecto.Changeset.EmbeddedTest do
       Relation.change(embed, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, nil, true, false} =
       Relation.change(embed, nil, %Profile{})
-    assert changeset.action == :delete
+    assert {:ok, nil, true, true} =
+      Relation.change(embed, nil, nil)
 
     embed_model = %Profile{}
     embed_model_changeset = Changeset.change(embed_model, name: "michal")

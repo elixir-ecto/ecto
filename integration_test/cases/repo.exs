@@ -579,7 +579,7 @@ defmodule Ecto.Integration.RepoTest do
     assert p2.id == pid2
   end
 
-  test "has_one nested assoc" do
+  test "has_one changeset assoc" do
     changeset =
       %Post{title: "1"}
       |> Ecto.Changeset.change
@@ -614,7 +614,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [0] == TestRepo.all(from(p in Permalink, select: count(p.id)))
   end
 
-  test "has_many nested assoc" do
+  test "has_many changeset assoc" do
     c1 = %Comment{text: "1"}
     c2 = %Comment{text: "2"}
 
@@ -653,6 +653,37 @@ defmodule Ecto.Integration.RepoTest do
     assert p1.comments == []
 
     assert [0] == TestRepo.all(from(c in Comment, select: count(c.id)))
+  end
+
+  test "belongs_to changeset assoc" do
+    perma =
+      %Permalink{url: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:post, %Post{title: "1"})
+    perma = TestRepo.insert!(perma)
+    post = perma.post
+    assert perma.post_id
+    assert perma.post_id == post.id
+    assert perma.post.title == "1"
+
+    perma =
+      perma
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:post, %Post{title: "2"})
+    perma = TestRepo.update!(perma)
+    assert perma.post.id != post.id
+    post = perma.post
+    assert perma.post_id
+    assert perma.post_id == post.id
+    assert perma.post.title == "2"
+
+    perma =
+      perma
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:post, nil)
+    perma = TestRepo.update!(perma)
+    assert perma.post == nil
+    assert perma.post_id == nil
   end
 
   @tag :unique_constraint

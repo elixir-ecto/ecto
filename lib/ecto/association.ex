@@ -209,8 +209,9 @@ defmodule Ecto.Association do
     end
   end
 
-  defp on_repo_change(%{cardinality: :one, field: field}, nil, _parent,
-                      _repo, _repo_action, _opts, {parent, changes, valid?}) do
+  defp on_repo_change(%{cardinality: :one, field: field} = meta, nil, _parent_changeset,
+                      repo, repo_action, opts, {parent, changes, valid?}) do
+    maybe_replace_one!(true, meta, parent, repo, repo_action, opts)
     {Map.put(parent, field, nil), Map.put(changes, field, nil), valid?}
   end
 
@@ -220,7 +221,7 @@ defmodule Ecto.Association do
     check_action!(meta, action, repo_action)
     case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
       {:ok, model} ->
-        maybe_replace_one!(meta, action, parent, repo, repo_action, opts)
+        maybe_replace_one!(action == :insert, meta, parent, repo, repo_action, opts)
         {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
       {:error, changeset} ->
         {parent, Map.put(changes, field, changeset), false}
@@ -259,7 +260,7 @@ defmodule Ecto.Association do
     do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect schema} while inserting")
   defp check_action!(_, _, _), do: :ok
 
-  defp maybe_replace_one!(%{field: field} = assoc, :insert, parent, repo, :update, opts) do
+  defp maybe_replace_one!(true, %{field: field} = assoc, parent, repo, :update, opts) do
     case Map.get(parent, field) do
       %Ecto.Association.NotLoaded{} ->
         :ok

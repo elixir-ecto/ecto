@@ -186,6 +186,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "cast has_one with optional" do
     changeset = cast(%Author{profile: %Profile{id: "id"}}, %{"profile" => nil}, :profile)
     assert changeset.changes.profile == nil
+    assert changeset.valid?
   end
 
   test "cast has_one with custom changeset" do
@@ -448,9 +449,10 @@ defmodule Ecto.Changeset.HasAssocTest do
       Relation.change(assoc, %Profile{name: "michal"}, nil)
     assert changeset.action == :insert
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, nil, true, false} =
       Relation.change(assoc, nil, %Profile{})
-    assert changeset.action == :delete
+    assert {:ok, nil, true, true} =
+      Relation.change(assoc, nil, nil)
 
     assoc_model = %Profile{}
     assoc_model_changeset = Changeset.change(assoc_model, name: "michal")

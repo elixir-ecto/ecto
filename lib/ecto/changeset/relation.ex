@@ -78,11 +78,11 @@ defmodule Ecto.Changeset.Relation do
   Casts related according to the `on_cast` function.
   """
   def cast(%{cardinality: :one} = relation, nil, current, _on_cast) do
-    case current && on_replace(relation, current) do
+    case current && local_on_replace(relation, current) do
       :error ->
         :error
       _ ->
-        {:ok, nil, false, false}
+        {:ok, nil, true, is_nil(current)}
     end
   end
 
@@ -115,7 +115,14 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Wraps related models in changesets.
   """
-  def change(_relation, nil, nil), do: {:ok, nil, false, true}
+  def change(%{cardinality: :one} = relation, nil, current) do
+    case current && local_on_replace(relation, current) do
+      :error ->
+        :error
+      _ ->
+        {:ok, nil, true, is_nil(current)}
+    end
+  end
 
   def change(%{related: mod} = relation, value, current) do
     get_pks = struct_pk(mod, primary_keys!(mod))
