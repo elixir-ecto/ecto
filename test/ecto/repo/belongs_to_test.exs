@@ -74,6 +74,24 @@ defmodule Ecto.Repo.BelongsToTest do
     end
   end
 
+  test "checks dual changes on insert" do
+    # values are the same
+    changeset =
+      %MyModel{}
+      |> Ecto.Changeset.change(assoc_id: 13)
+      |> Ecto.Changeset.put_assoc(:assoc, %MyAssoc{x: "xyz", id: 13})
+    TestRepo.insert!(changeset)
+
+    # values are different
+    changeset =
+      %MyModel{}
+      |> Ecto.Changeset.change(assoc_id: 13)
+      |> Ecto.Changeset.put_assoc(:assoc, %MyAssoc{x: "xyz"})
+    assert_raise ArgumentError, ~r"there is already a change setting its foreign key", fn ->
+      TestRepo.insert!(changeset)
+    end
+  end
+
   test "returns untouched changeset on invalid children on insert" do
     assoc = %MyAssoc{x: "xyz"}
     assoc_changeset = %{Ecto.Changeset.change(assoc) | valid?: false}
@@ -266,6 +284,24 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assoc, nil)
     assert_raise Ecto.NoPrimaryKeyValueError, fn ->
+      TestRepo.update!(changeset)
+    end
+  end
+
+  test "checks dual changes on update" do
+    # values are the same
+    changeset =
+      %MyModel{id: 1}
+      |> Ecto.Changeset.change(assoc_id: 13)
+      |> Ecto.Changeset.put_assoc(:assoc, %MyAssoc{x: "xyz", id: 13})
+    TestRepo.update!(changeset)
+
+    # values are different
+    changeset =
+      %MyModel{id: 1}
+      |> Ecto.Changeset.change(assoc_id: 13)
+      |> Ecto.Changeset.put_assoc(:assoc, %MyAssoc{x: "xyz"})
+    assert_raise ArgumentError, ~r"there is already a change setting its foreign key", fn ->
       TestRepo.update!(changeset)
     end
   end
