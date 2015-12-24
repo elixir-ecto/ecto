@@ -314,7 +314,7 @@ defmodule Ecto do
 
       posts = Repo.all(Post) |> Repo.preload(:comments)
 
-  The `Ecto.Model` module also provides conveniences for working
+  The `Ecto` module also provides conveniences for working
   with associations. For example, `Ecto.assoc/2` returns a query
   with all associated data to a given struct:
 
