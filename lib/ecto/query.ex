@@ -586,7 +586,7 @@ defmodule Ecto.Query do
   Ecto also supports [optimistic
   locking](http://en.wikipedia.org/wiki/Optimistic_concurrency_control) but not
   through queries. For more information on optimistic locking, have a look at
-  the `Ecto.Model.OptimisticLock` module.
+  the `Ecto.Changeset.optimistic_lock/3` function
 
   ## Keywords example
 
