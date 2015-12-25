@@ -53,7 +53,10 @@ defmodule Ecto.Adapters.SQL do
 
       ## Types
 
-      def embed_id(_), do: Ecto.UUID.generate
+      @doc false
+      def autogenerate(:id), do: nil
+      def autogenerate(:embed_id), do: Ecto.UUID.autogenerate()
+      def autogenerate(:binary_id), do: Ecto.UUID.autogenerate()
 
       @doc false
       def loaders({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
@@ -81,16 +84,6 @@ defmodule Ecto.Adapters.SQL do
       # Nil ids are generated in the database.
       def insert(repo, model_meta, params, {key, :id, nil}, returning, opts) do
         insert(repo, model_meta, params, nil, [key|returning], opts)
-      end
-
-      # Nil binary_ids are generated in the adapter.
-      def insert(repo, model_meta, params, {key, :binary_id, nil}, returning, opts) do
-        {req, resp} = Ecto.Adapters.SQL.bingenerate(key)
-        case insert(repo, model_meta, req ++ params, nil, returning, opts) do
-          {:ok, values}         -> {:ok, resp ++ values}
-          {:error, _} = err     -> err
-          {:invalid, _} = err   -> err
-        end
       end
 
       def insert(repo, %{source: {prefix, source}}, params, _autogenerate, returning, opts) do
@@ -140,7 +133,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       defoverridable [prepare: 2, execute: 6, insert: 6, update: 7, delete: 5,
-                      execute_ddl: 3, embed_id: 1, loaders: 2, dumpers: 2]
+                      execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1]
     end
   end
 
@@ -444,15 +437,6 @@ defmodule Ecto.Adapters.SQL do
       _type, value -> {:ok, value}
     end)
   end
-
-  @doc false
-  def bingenerate(key) do
-    {:ok, value} = Ecto.UUID.dump(Ecto.UUID.generate)
-    {[{key, value}], [{key, unwrap(value)}]}
-  end
-
-  defp unwrap(%Ecto.Query.Tagged{value: value}), do: value
-  defp unwrap(value), do: value
 
   ## Query
 

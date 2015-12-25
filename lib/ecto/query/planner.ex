@@ -10,34 +10,6 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
-  Validates and cast the given fields belonging to the given model.
-  """
-  def fields(model, kind, kw, adapter) do
-    # It is ok to use __changeset__ because
-    # we have already filtered the results
-    # to be only about fields.
-    types = model.__changeset__
-
-    for {field, value} <- kw do
-      type = Map.get(types, field)
-
-      unless type do
-        raise Ecto.ChangeError,
-          message: "field `#{inspect model}.#{field}` in `#{kind}` does not exist in the model source"
-      end
-
-      case Ecto.Type.adapter_dump(adapter, type, value) do
-        {:ok, value} ->
-          {field, value}
-        :error ->
-          raise Ecto.ChangeError,
-            message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>
-                     "in `#{kind}` does not match type #{inspect type}"
-      end
-    end
-  end
-
-  @doc """
   Plans the query for execution.
 
   Planning happens in multiple steps:
@@ -639,7 +611,7 @@ defmodule Ecto.Query.Planner do
       type
     else
       error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` " <>
-                          "does not exist in the model source"
+                          "does not exist in the schema"
     end
   end
 

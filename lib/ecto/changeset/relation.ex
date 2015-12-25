@@ -107,7 +107,7 @@ defmodule Ecto.Changeset.Relation do
       |> check_action!(allowed_actions)}
   end
 
-  defp do_cast(relation, nil, current, allowed_actions, _on_cast) do
+  defp do_cast(relation, nil, current, _allowed_actions, _on_cast) do
     on_replace(relation, current)
   end
 

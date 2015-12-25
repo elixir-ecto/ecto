@@ -3,7 +3,6 @@ defmodule Ecto.Repo.Schema do
   # for model related functionality.
   @moduledoc false
 
-  alias Ecto.Query.Planner
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
 
@@ -53,7 +52,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
-    %{prepare: prepare, changes: original_changes} = changeset
+    %{prepare: prepare, changes: original_changes, types: types} = changeset
     struct = struct_from_changeset!(:insert, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -74,8 +73,8 @@ defmodule Ecto.Repo.Schema do
       {changeset, parents, children} = pop_assocs(changeset, assocs)
       changeset = process_parents(changeset, parents, original_changes, opts)
 
-      {autogen, changes} = pop_autogenerate_id(changeset.changes, model)
-      {changes, extra} = dump_changes(:insert, changes, model, fields, adapter)
+      {autogen, changes, extra} = pop_autogenerate_id(:insert, changeset.changes, model, adapter)
+      {changes, extra} = dump_changes!(:insert, changes, model, fields, extra, types, adapter)
 
       args = [repo, metadata(struct), changes, autogen, return, opts]
       case apply(changeset, adapter, :insert, args) do
@@ -109,7 +108,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_update(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
-    %{prepare: prepare, changes: original_changes} = changeset
+    %{prepare: prepare, changes: original_changes, types: types} = changeset
     struct = struct_from_changeset!(:update, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -131,11 +130,11 @@ defmodule Ecto.Repo.Schema do
         changeset = process_parents(changeset, parents, original_changes, opts)
 
         changes = changeset.changes
+        {changes, extra} = dump_changes!(:update, changes, model, fields, [], types, adapter)
         autogen = get_autogenerate_id(changes, model)
-        {changes, extra} = dump_changes(:update, changes, model, fields, adapter)
 
         filters = add_pk_filter!(changeset.filters, struct)
-        filters = Planner.fields(model, :update, filters, adapter)
+        filters = dump_fields!(model, :update, filters, types, adapter)
 
         args   = [repo, metadata(struct), changes, filters, autogen, return, opts]
         action = if changes == [], do: :noop, else: :update
@@ -202,20 +201,21 @@ defmodule Ecto.Repo.Schema do
     do_delete(repo, adapter, changeset, opts)
   end
 
-  defp do_delete(repo, adapter, %Changeset{valid?: true, prepare: prepare} = changeset, opts) do
+  defp do_delete(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
+    %{prepare: prepare, types: types} = changeset
     struct = struct_from_changeset!(:delete, changeset)
     model  = struct.__struct__
     assocs = model.__schema__(:associations)
 
     changeset = put_repo_and_action(changeset, :delete, repo)
     changeset = %{changeset | changes: %{}}
-    autogen   = get_autogenerate_id(changeset, model)
+    autogen   = get_autogenerate_id([], model)
 
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
       changeset = run_prepare(changeset, prepare)
 
       filters = add_pk_filter!(changeset.filters, struct)
-      filters = Planner.fields(model, :delete, filters, adapter)
+      filters = dump_fields!(model, :delete, filters, types, adapter)
 
       delete_assocs(changeset, repo, model, assocs, opts)
       args = [repo, metadata(struct), filters, autogen, opts]
@@ -428,34 +428,41 @@ defmodule Ecto.Repo.Schema do
     :ok
   end
 
-  defp pop_autogenerate_id(changes, model) do
+  defp pop_autogenerate_id(action, changes, model, adapter) do
     case model.__schema__(:autogenerate_id) do
-      {key, id} ->
+      {key, type} ->
         case Map.pop(changes, key) do
-          {nil, changes} -> {{key, id, nil}, changes}
-          {value, _}     -> {{key, id, value}, changes}
+          {nil, changes} ->
+            if value = adapter.autogenerate(type) do
+              {{key, type, value}, changes, [{key, value}]}
+            else
+              {{key, type, nil}, changes, []}
+            end
+          {value, _} ->
+            {_, value} = dump_field!(action, model, key, type, value, adapter)
+            {{key, type, value}, changes, []}
         end
       nil ->
-        {nil, changes}
+        {nil, changes, []}
     end
   end
 
   defp get_autogenerate_id(changes, model) do
     case model.__schema__(:autogenerate_id) do
-      {key, id} -> {key, id, Map.get(changes, key)}
+      {key, type} -> {key, type, Keyword.get(changes, key)}
       nil -> nil
     end
   end
 
-  defp dump_changes(action, changes, model, fields, adapter) do
+  defp dump_changes!(action, changes, model, fields, extra, types, adapter) do
     changes = Map.take(changes, fields)
-    {leftover, autogen} = autogenerate_changes(model, action, changes)
-    dumped = Planner.fields(model, action, leftover, adapter)
+    {leftover, autogen} = autogenerate_changes(model, action, changes, extra)
+    dumped = dump_fields!(action, model, leftover, types, adapter)
     {autogen ++ dumped, autogen}
   end
 
-  defp autogenerate_changes(model, action, changes) do
-    Enum.reduce model.__schema__(:autogenerate, action), {changes, []},
+  defp autogenerate_changes(model, action, changes, extra) do
+    Enum.reduce model.__schema__(:autogenerate, action), {changes, extra},
       fn {k, mod, args}, {acc_changes, acc_autogen} ->
         case Map.get(acc_changes, k) do
           nil -> {Map.delete(acc_changes, k), [{k, apply(mod, :autogenerate, args)}|acc_autogen]}
@@ -485,6 +492,24 @@ defmodule Ecto.Repo.Schema do
       end)
     else
       fun.()
+    end
+  end
+
+  defp dump_field!(action, model, field, type, value, adapter) do
+    case Ecto.Type.adapter_dump(adapter, type, value) do
+      {:ok, value} ->
+        {field, value}
+      :error ->
+        raise Ecto.ChangeError,
+          message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>
+                   "in `#{action}` does not match type #{inspect type}"
+    end
+  end
+
+  defp dump_fields!(action, model, kw, types, adapter) do
+    for {field, value} <- kw do
+      type = Map.fetch!(types, field)
+      dump_field!(action, model, field, type, value, adapter)
     end
   end
 end

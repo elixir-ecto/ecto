@@ -97,11 +97,11 @@ defmodule Ecto.Embedded do
   end
 
   defp prepare_each(%Changeset{action: action, types: types} = changeset,
-                    %{related: model} = embed, adapter) do
+                    %{related: model}, adapter) do
     changeset
     |> prepare(adapter, action)
     |> apply_embeds()
-    |> autogenerate_id(action, model, embed, adapter)
+    |> autogenerate_id(action, model, adapter)
     |> autogenerate(types, action, model, adapter)
   end
 
@@ -116,13 +116,14 @@ defmodule Ecto.Embedded do
     do: raise(ArgumentError, "got action :delete in changeset for embedded #{model} while inserting")
   defp check_action!(_, _, _), do: :ok
 
-  defp autogenerate_id(struct, :insert, model, embed, adapter) do
+  defp autogenerate_id(struct, :insert, model, adapter) do
     case model.__schema__(:autogenerate_id) do
       {key, :binary_id} ->
         if Map.get(struct, key) do
           struct
         else
-          Map.put(struct, key, adapter.embed_id(embed))
+          {:ok, value} = Ecto.Type.adapter_load(adapter, :binary_id, adapter.autogenerate(:embed_id))
+          Map.put(struct, key, value)
         end
       other ->
         raise ArgumentError, "embedded model `#{inspect model}` must have " <>
@@ -130,7 +131,7 @@ defmodule Ecto.Embedded do
     end
   end
 
-  defp autogenerate_id(struct, :update, _model, _embed, _adapter) do
+  defp autogenerate_id(struct, :update, _model, _adapter) do
     for {_, nil} <- Ecto.primary_key(struct) do
       raise Ecto.NoPrimaryKeyValueError, struct: struct
     end
