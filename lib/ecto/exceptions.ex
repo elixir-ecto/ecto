@@ -59,15 +59,15 @@ defmodule Ecto.CastError do
   @moduledoc """
   Raised at runtime when a value cannot be cast.
   """
-  defexception [:model, :field, :type, :value, :message]
+  defexception [:schema, :field, :type, :value, :message]
 
   def exception(opts) do
-    model = Keyword.fetch!(opts, :model)
-    field = Keyword.fetch!(opts, :field)
-    value = Keyword.fetch!(opts, :value)
-    type  = Keyword.fetch!(opts, :type)
-    msg   = Keyword.fetch!(opts, :message)
-    %__MODULE__{model: model, field: field, value: value, type: type, message: msg}
+    schema = Keyword.fetch!(opts, :schema)
+    field  = Keyword.fetch!(opts, :field)
+    value  = Keyword.fetch!(opts, :value)
+    type   = Keyword.fetch!(opts, :type)
+    msg    = Keyword.fetch!(opts, :message)
+    %__MODULE__{schema: schema, field: field, value: value, type: type, message: msg}
   end
 end
 
@@ -157,12 +157,12 @@ defmodule Ecto.StaleEntryError do
 
   def exception(opts) do
     action = Keyword.fetch!(opts, :action)
-    model = Keyword.fetch!(opts, :model)
+    struct = Keyword.fetch!(opts, :struct)
 
     msg = """
-    attempted to #{action} a stale model:
+    attempted to #{action} a stale struct:
 
-    #{inspect model}
+    #{inspect struct}
     """
 
     %__MODULE__{message: msg}

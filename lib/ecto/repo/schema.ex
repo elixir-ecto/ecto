@@ -257,10 +257,10 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp metadata(%{__struct__: model, __meta__: meta}) do
+  defp metadata(%{__struct__: schema, __meta__: meta}) do
     meta
     |> Map.delete(:__struct__)
-    |> Map.put(:model, model)
+    |> Map.put(:schema, schema)
   end
 
   defp apply(%{valid?: false} = changeset, _adapter, _action, _args) do
@@ -276,7 +276,7 @@ defmodule Ecto.Repo.Schema do
       {:invalid, _} = constraints ->
         constraints
       {:error, :stale} ->
-        raise Ecto.StaleEntryError, model: changeset.model, action: action
+        raise Ecto.StaleEntryError, struct: changeset.model, action: action
     end
   end
 

@@ -198,7 +198,7 @@ defmodule Ecto.Query.Planner do
       end
     catch
       :error, %Ecto.QueryError{} = e when not is_nil(model) ->
-        raise Ecto.CastError, model: model, field: field, value: v, type: type,
+        raise Ecto.CastError, schema: model, field: field, value: v, type: type,
                               message: Exception.message(e) <>
                                        "\nError when casting value to `#{inspect model}.#{field}`"
     end

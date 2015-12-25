@@ -10,7 +10,7 @@ defmodule Ecto.Adapter do
   @type query_meta :: %{prefix: binary | nil, sources: tuple, assocs: term, preloads: term, select: term}
 
   @typedoc "Schema metadata fields"
-  @type schema_meta :: %{source: {prefix :: binary | nil, table :: binary}, model: atom, context: term}
+  @type schema_meta :: %{source: {prefix :: binary | nil, table :: binary}, schema: atom, context: term}
 
   @type fields :: Keyword.t
   @type filters :: Keyword.t
@@ -147,7 +147,7 @@ defmodule Ecto.Adapter do
               {integer, [[term]] | nil} | no_return
 
   @doc """
-  Inserts a single new model in the data store.
+  Inserts a single new struct in the data store.
 
   ## Autogenerate
 
@@ -166,7 +166,7 @@ defmodule Ecto.Adapter do
                     {:ok, Keyword.t} | {:invalid, constraints} | no_return
 
   @doc """
-  Updates a single model with the given filters.
+  Updates a single struct with the given filters.
 
   While `filters` can be any record column, it is expected that
   at least the primary key (or any other key that uniquely
@@ -189,7 +189,7 @@ defmodule Ecto.Adapter do
                     {:error, :stale} | no_return
 
   @doc """
-  Deletes a single model with the given filters.
+  Deletes a single struct with the given filters.
 
   While `filters` can be any record column, it is expected that
   at least the primary key (or any other key that uniquely
