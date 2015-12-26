@@ -35,6 +35,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 * `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
 * Array fields no longer default to an empty list `[]`
 * Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
+* `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
 
 ### Enhancements
 
@@ -42,6 +43,11 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 * Add support for partial indexes by specifying the `:where` option when defining an index
 * Allow dynamic and atom fields to be specified on `group_by` and `distinct`
 * Ensure adapters work on native types, guaranteeing adapters compose better with custom types
+* Allow the migration table name to be configured
+
+### Bug fixes
+
+* The `:required` option on `cast_assoc`and `cast_embed` will now tag `has_many` and `embeds_many` relationships as missing if they contain an empty list
 
 ## v1.1
 
