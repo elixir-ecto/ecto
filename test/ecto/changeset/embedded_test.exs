@@ -75,6 +75,18 @@ defmodule Ecto.Changeset.EmbeddedTest do
     |> Changeset.cast_embed(embed, opts)
   end
 
+  test "raises when an association is defined in embedded_schema" do
+    assert_raise RuntimeError, ~r/association can't be defined in embedded_schema/, fn ->
+      defmodule EmbeddedProfile do
+        use Ecto.Schema
+
+        embedded_schema do
+          belongs_to :author, Author
+        end
+      end
+    end
+  end
+
   ## Cast embeds one
 
   test "cast embeds_one with valid params" do
