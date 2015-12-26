@@ -164,17 +164,12 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(_repo, %{model: model}, _params, _autogen, [_|_] = returning, _opts) do
-    raise ArgumentError, "MySQL does not support :read_after_writes in models. " <>
-                         "The following fields in #{inspect model} are tagged as such: #{inspect returning}"
-  end
-
-  def insert(repo, %{source: {prefix, source}}, params, {pk, :id, nil}, [], opts) do
+  def insert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params, [key], opts) do
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(prefix, source, fields, [])
     case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
       {:ok, %{num_rows: 1, last_insert_id: last_insert_id}} ->
-        {:ok, [{pk, last_insert_id}]}
+        {:ok, [{key, last_insert_id}]}
       {:error, err} ->
         case @conn.to_constraints(err) do
           []          -> raise err
@@ -183,7 +178,12 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
-  def insert(repo, model_meta, params, autogen, [], opts) do
-    super(repo, model_meta, params, autogen, [], opts)
+  def insert(repo, schema_meta, params, [], opts) do
+    super(repo, schema_meta, params, [], opts)
+  end
+
+  def insert(_repo, %{schema: schema}, _params, returning, _opts) do
+    raise ArgumentError, "MySQL does not support :read_after_writes in schemas for non-primary keys. " <>
+                         "The following fields in #{inspect schema} are tagged as such: #{inspect returning}"
   end
 end

@@ -55,26 +55,24 @@ defmodule Ecto.TestAdapter do
 
   ## Model
 
-  def insert(_repo, %{source: {nil, "schema_migrations"}}, val, _, _, _) do
+  def insert(_repo, %{source: {nil, "schema_migrations"}}, val, _, _) do
     version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, [version: 1]}
   end
 
-  def insert(repo, model_meta, fields, {key, :id, nil}, return, opts),
-    do: insert(repo, model_meta, fields, nil, [key|return], opts)
-  def insert(_repo, %{context: nil}, _fields, _autogen, return, _opts),
+  def insert(_repo, %{context: nil}, _fields, return, _opts),
     do: send(self, :insert) && {:ok, Enum.zip(return, 1..length(return))}
-  def insert(_repo, %{context: {:invalid, _}=res}, _fields, _autogen, _return, _opts),
+  def insert(_repo, %{context: {:invalid, _}=res}, _fields, _return, _opts),
     do: res
 
   # Notice the list of changes is never empty.
-  def update(_repo, %{context: nil}, [_|_], _filters, _autogen, return, _opts),
+  def update(_repo, %{context: nil}, [_|_], _filters, return, _opts),
     do: send(self, :update) && {:ok, Enum.zip(return, 1..length(return))}
-  def update(_repo, %{context: {:invalid, _}=res}, [_|_], _filters, _autogen, _return, _opts),
+  def update(_repo, %{context: {:invalid, _}=res}, [_|_], _filters, _return, _opts),
     do: res
 
-  def delete(_repo, _model_meta, _filter, _autogen, _opts),
+  def delete(_repo, _model_meta, _filter, _opts),
     do: send(self, :delete) && {:ok, []}
 
   ## Transactions

@@ -68,30 +68,25 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      # Nil ids are generated in the database.
-      def insert(repo, model_meta, params, {key, :id, nil}, returning, opts) do
-        insert(repo, model_meta, params, nil, [key|returning], opts)
-      end
-
-      def insert(repo, %{source: {prefix, source}}, params, _autogenerate, returning, opts) do
+      def insert(repo, %{source: {prefix, source}} = schema_meta, params, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(prefix, source, fields, returning)
-        Ecto.Adapters.SQL.model(repo, @conn, sql, values, returning, opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, values, returning, opts)
       end
 
       @doc false
-      def update(repo, %{source: {prefix, source}}, fields, filter, _autogenerate, returning, opts) do
+      def update(repo, %{source: {prefix, source}}, fields, filter, returning, opts) do
         {fields, values1} = :lists.unzip(fields)
         {filter, values2} = :lists.unzip(filter)
         sql = @conn.update(prefix, source, fields, filter, returning)
-        Ecto.Adapters.SQL.model(repo, @conn, sql, values1 ++ values2, returning, opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, values1 ++ values2, returning, opts)
       end
 
       @doc false
-      def delete(repo, %{source: {prefix, source}}, filter, _autogenarate, opts) do
+      def delete(repo, %{source: {prefix, source}}, filter, opts) do
         {filter, values} = :lists.unzip(filter)
         sql = @conn.delete(prefix, source, filter, [])
-        Ecto.Adapters.SQL.model(repo, @conn, sql, values, [], opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, values, [], opts)
       end
 
       ## Transaction
@@ -119,7 +114,7 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
-      defoverridable [prepare: 2, execute: 6, insert: 6, update: 7, delete: 5,
+      defoverridable [prepare: 2, execute: 6, insert: 5, update: 6, delete: 4,
                       execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1]
     end
   end
@@ -441,7 +436,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def model(repo, conn, sql, values, returning, opts) do
+  def struct(repo, conn, sql, values, returning, opts) do
     case query(repo, sql, values, fn x -> x end, opts) do
       {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
