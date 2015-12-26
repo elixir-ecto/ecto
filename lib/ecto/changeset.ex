@@ -501,19 +501,20 @@ defmodule Ecto.Changeset do
         case Relation.cast(relation, value, current, on_cast) do
           {:ok, change, relation_valid?, false} when change != current ->
             missing_relation(%{changeset | changes: Map.put(changes, key, change),
-                               valid?: changeset.valid? && relation_valid?}, key, current, required?)
+                               valid?: changeset.valid? && relation_valid?}, key, current, required?, relation)
           {:ok, _, _, _} ->
-            missing_relation(changeset, key, current, required?)
+            missing_relation(changeset, key, current, required?, relation)
           :error ->
             %{changeset | errors: [{key, "is invalid"} | changeset.errors], valid?: false}
         end
       :error ->
-        missing_relation(changeset, key, current, required?)
+        missing_relation(changeset, key, current, required?, relation)
     end
   end
 
-  defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?) do
-    if required? and is_nil(Map.get(changes, name, current)) do
+  defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?, relation) do
+    current_changes = Map.get(changes, name, current)
+    if required? and Relation.empty?(relation, current_changes) do
       %{changeset | errors: [{name, "can't be blank"} | errors], valid?: false}
     else
       changeset

@@ -371,15 +371,14 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "cast has_many when required" do
     # Still no error because the loaded association is an empty list
-    changeset = cast(%Author{}, %{}, :posts, required: true)
+    changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, required: true)
     assert changeset.required == [:posts]
-    assert changeset.changes == %{}
     assert changeset.errors == []
 
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == []
+    assert changeset.errors == [posts: "can't be blank"]
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.required == [:posts]
