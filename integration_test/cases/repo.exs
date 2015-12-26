@@ -102,25 +102,24 @@ defmodule Ecto.Integration.RepoTest do
     defmodule RAW do
       use Ecto.Schema
 
-      schema "posts" do
-        field :counter, :integer, read_after_writes: true
-        field :visits, :integer
+      schema "comments" do
+        field :text, :string
+        field :lock_version, :integer, read_after_writes: true
       end
     end
 
     changeset = Ecto.Changeset.cast(struct(RAW, %{}), %{}, ~w(), ~w())
 
-    # There is no dirty tracking on insert, even with changesets,
-    # so database defaults never actually kick in.
-    assert %{id: cid, counter: nil} = raw = TestRepo.insert!(changeset)
+    # If the field is nil, we will not send it
+    # and read the value back from the database.
+    assert %{id: cid, lock_version: 1} = raw = TestRepo.insert!(changeset)
 
     # Set the counter to 11, so we can read it soon
-    TestRepo.update_all from(u in RAW, where: u.id == ^cid), set: [counter: 11]
+    TestRepo.update_all from(u in RAW, where: u.id == ^cid), set: [lock_version: 11]
 
-    # Now, a combination of dirty tracking with read_after_writes,
-    # allow us to see the actual counter value.
-    changeset = Ecto.Changeset.cast(raw, %{"visits" => "0"}, ~w(visits), ~w())
-    assert %{id: ^cid, counter: 11, visits: 0} = TestRepo.update!(changeset)
+    # We will read back on update too
+    changeset = Ecto.Changeset.cast(raw, %{"text" => "0"}, ~w(text), ~w())
+    assert %{id: ^cid, lock_version: 11, text: "0"} = TestRepo.update!(changeset)
   end
 
   test "insert autogenerates for custom type" do
@@ -418,14 +417,14 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "insert all" do
-    assert {2, nil} = TestRepo.insert_all("posts", [[title: "1"], [title: "2", counter: 20]])
-    assert [%Post{title: "1", counter: 10},
-            %Post{title: "2", counter: 20}] = TestRepo.all(Post)
+    assert {2, nil} = TestRepo.insert_all("comments", [[text: "1"], [text: "2", lock_version: 2]])
+    assert [%Comment{text: "1", lock_version: 1},
+            %Comment{text: "2", lock_version: 2}] = TestRepo.all(Comment)
 
-    assert {2, nil} = TestRepo.insert_all("comments", [[], []])
-    assert [%Comment{}, %Comment{}] = TestRepo.all(Comment)
+    assert {2, nil} = TestRepo.insert_all("posts", [[], []])
+    assert [%Post{}, %Post{}] = TestRepo.all(Post)
 
-    assert {0, nil} = TestRepo.insert_all("comments", [])
+    assert {0, nil} = TestRepo.insert_all("posts", [])
   end
 
   test "update all" do

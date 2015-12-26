@@ -131,40 +131,40 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.delete_all(__MODULE__, @adapter, queryable, opts)
       end
 
-      def insert(model, opts \\ []) do
-        Ecto.Repo.Schema.insert(__MODULE__, @adapter, model, opts)
+      def insert(struct, opts \\ []) do
+        Ecto.Repo.Schema.insert(__MODULE__, @adapter, struct, opts)
       end
 
-      def update(model, opts \\ []) do
-        Ecto.Repo.Schema.update(__MODULE__, @adapter, model, opts)
+      def update(struct, opts \\ []) do
+        Ecto.Repo.Schema.update(__MODULE__, @adapter, struct, opts)
       end
 
       def insert_or_update(changeset, opts \\ []) do
         Ecto.Repo.Schema.insert_or_update(__MODULE__, @adapter, changeset, opts)
       end
 
-      def delete(model, opts \\ []) do
-        Ecto.Repo.Schema.delete(__MODULE__, @adapter, model, opts)
+      def delete(struct, opts \\ []) do
+        Ecto.Repo.Schema.delete(__MODULE__, @adapter, struct, opts)
       end
 
-      def insert!(model, opts \\ []) do
-        Ecto.Repo.Schema.insert!(__MODULE__, @adapter, model, opts)
+      def insert!(struct, opts \\ []) do
+        Ecto.Repo.Schema.insert!(__MODULE__, @adapter, struct, opts)
       end
 
-      def update!(model, opts \\ []) do
-        Ecto.Repo.Schema.update!(__MODULE__, @adapter, model, opts)
+      def update!(struct, opts \\ []) do
+        Ecto.Repo.Schema.update!(__MODULE__, @adapter, struct, opts)
       end
 
       def insert_or_update!(changeset, opts \\ []) do
         Ecto.Repo.Schema.insert_or_update!(__MODULE__, @adapter, changeset, opts)
       end
 
-      def delete!(model, opts \\ []) do
-        Ecto.Repo.Schema.delete!(__MODULE__, @adapter, model, opts)
+      def delete!(struct, opts \\ []) do
+        Ecto.Repo.Schema.delete!(__MODULE__, @adapter, struct, opts)
       end
 
-      def preload(model_or_models, preloads) do
-        Ecto.Repo.Preloader.preload(model_or_models, __MODULE__, preloads)
+      def preload(struct_or_structs, preloads) do
+        Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads)
       end
 
       def __adapter__ do
@@ -239,10 +239,10 @@ defmodule Ecto.Repo do
   @callback stop(pid, timeout) :: :ok
 
   @doc """
-  Fetches a single model from the data store where the primary key matches the
+  Fetches a single struct from the data store where the primary key matches the
   given id.
 
-  Returns `nil` if no result was found. If the model in the queryable
+  Returns `nil` if no result was found. If the struct in the queryable
   has no primary key `Ecto.NoPrimaryKeyFieldError` will be raised.
 
   ## Options
@@ -337,10 +337,10 @@ defmodule Ecto.Repo do
   @callback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
-  Preloads all associations on the given model or models.
+  Preloads all associations on the given struct or structs.
 
   This is similar to `Ecto.Query.preload/3` except it allows
-  you to preload models after they have been fetched from the
+  you to preload structs after they have been fetched from the
   database.
 
   In case the association was already loaded, preload won't attempt
@@ -384,6 +384,13 @@ defmodule Ecto.Repo do
   It expects a source (`"users"` or `{"prefix", "users"}`) as
   first argument. The second argument is a list of entries to
   be inserted, either as keyword lists or as maps.
+
+  Because this function does not rely on the underlying `Ecto.Schema`,
+  the given fields are passed as is to the adapter, without prior
+  dumping. For example, it is not impossible to insert a field with
+  value of `%Ecto.DateTime{}` as adapters are not able to handle
+  Ecto types. In this example, the native datetime tuple must be
+  given instead.
   """
   @callback insert_all(binary | {binary | nil, binary}, [map | Keyword.t], opts :: Keyword.t) ::
               {integer, nil} | no_return
@@ -446,17 +453,16 @@ defmodule Ecto.Repo do
   @callback delete_all(Ecto.Queryable.t, Keyword.t) :: {integer, nil} | no_return
 
   @doc """
-  Inserts a model or a changeset.
+  Inserts a struct or a changeset.
 
-  In case a model is given, the model is converted into a changeset
-  with all model non-virtual fields as part of the changeset.
-  This conversion is done by calling `Ecto.Changeset.change/2` directly.
+  In case a struct is given, the struct is converted into a changeset
+  with all non-nil fields as part of the changeset.
 
   In case a changeset is given, the changes in the changeset are
-  merged with the model fields, and all of them are sent to the
+  merged with the struct fields, and all of them are sent to the
   database.
 
-  It returns `{:ok, model}` if the model has been successfully
+  It returns `{:ok, struct}` if the struct has been successfully
   inserted or `{:error, changeset}` if there was a validation
   or a known constraint error.
 
@@ -471,7 +477,7 @@ defmodule Ecto.Repo do
   ## Example
 
       case MyRepo.insert %Post{title: "Ecto is great"} do
-        {:ok, model}        -> # Inserted with success
+        {:ok, struct}       -> # Inserted with success
         {:error, changeset} -> # Something went wrong
       end
 
@@ -480,23 +486,15 @@ defmodule Ecto.Repo do
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
-  Updates a model or changeset using its primary key.
+  Updates a changeset using its primary key.
 
-  In case a model is given, the model is converted into a changeset
-  with all model non-virtual fields as part of the changeset. This
-  conversion is done by calling `Ecto.Changeset.change/2` directly.
-  For this reason, it is preferred to use changesets when performing
-  updates as they perform dirty tracking and avoid sending data that
-  did not change to the database over and over. In case there are no
-  changes in the changeset, no data is sent to the database at all.
+  A changeset is required as it is the only for mechanism for
+  tracking dirty changes.
 
-  In case a changeset is given, only the changes in the changeset
-  will be updated, leaving all the other model fields intact.
-
-  If the model has no primary key, `Ecto.NoPrimaryKeyFieldError`
+  If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised.
 
-  It returns `{:ok, model}` if the model has been successfully
+  It returns `{:ok, struct}` if the struct has been successfully
   updated or `{:error, changeset}` if there was a validation
   or a known constraint error.
 
@@ -517,7 +515,7 @@ defmodule Ecto.Repo do
       post = MyRepo.get!(Post, 42)
       post = Ecto.Changeset.change post, title: "New title"
       case MyRepo.update post do
-        {:ok, model}        -> # Updated with success
+        {:ok, struct}       -> # Updated with success
         {:error, changeset} -> # Something went wrong
       end
   """
@@ -525,17 +523,17 @@ defmodule Ecto.Repo do
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
-  Inserts or updates a changeset depending on whether the model is persisted
+  Inserts or updates a changeset depending on whether the struct is persisted
   or not.
 
   The distinction whether to insert or update will be made on the
   `Ecto.Schema.Metadata` field `:state`. The `:state` is automatically set by
   Ecto when loading or building a schema.
 
-  Please note that for this to work, you will have to load existing models from
-  the database. So even if the model exists, this won't work:
+  Please note that for this to work, you will have to load existing structs from
+  the database. So even if the struct exists, this won't work:
 
-      model = %Post{id: 'existing_id', ...}
+      struct = %Post{id: 'existing_id', ...}
       MyRepo.insert_or_update changeset
       # => {:error, "id already exists"}
 
@@ -550,7 +548,7 @@ defmodule Ecto.Repo do
         |> MyRepo.insert_or_update
 
       case result do
-        {:ok, model}        -> # Inserted or updated with success
+        {:ok, struct}       -> # Inserted or updated with success
         {:error, changeset} -> # Something went wrong
       end
   """
@@ -558,12 +556,12 @@ defmodule Ecto.Repo do
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
-  Deletes a model using its primary key.
+  Deletes a struct using its primary key.
 
-  If the model has no primary key, `Ecto.NoPrimaryKeyFieldError`
+  If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised.
 
-  It returns `{:ok, model}` if the model has been successfully
+  It returns `{:ok, struct}` if the struct has been successfully
   deleted or `{:error, changeset}` if there was a validation
   or a known constraint error.
 
@@ -579,7 +577,7 @@ defmodule Ecto.Repo do
 
       [post] = MyRepo.all(from(p in Post, where: p.id == 42))
       case MyRepo.delete post do
-        {:ok, model}        -> # Deleted with success
+        {:ok, struct}       -> # Deleted with success
         {:error, changeset} -> # Something went wrong
       end
 
@@ -588,24 +586,24 @@ defmodule Ecto.Repo do
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
-  Same as `insert/2` but returns the model or raises if the changeset is invalid.
+  Same as `insert/2` but returns the struct or raises if the changeset is invalid.
   """
   @callback insert!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
 
   @doc """
-  Same as `update/2` but returns the model or raises if the changeset is invalid.
+  Same as `update/2` but returns the struct or raises if the changeset is invalid.
   """
   @callback update!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
 
   @doc """
-  Same as `insert_or_update/2` but returns the model or raises if the changeset
+  Same as `insert_or_update/2` but returns the struct or raises if the changeset
   is invalid.
   """
   @callback insert_or_update!(Ecto.Changeset.t, Keyword.t) ::
               Ecto.Schema.t | no_return
 
   @doc """
-  Same as `delete/2` but returns the model or raises if the changeset is invalid.
+  Same as `delete/2` but returns the struct or raises if the changeset is invalid.
   """
   @callback delete!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
 

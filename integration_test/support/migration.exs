@@ -10,7 +10,7 @@ defmodule Ecto.Integration.Migration do
 
     create table(:posts) do
       add :title, :string, size: 100
-      add :counter, :integer, default: 10 # Do not propagate unless read_after_write
+      add :counter, :integer
       add :text, :binary
       add :bid, :binary_id
       add :uuid, :uuid

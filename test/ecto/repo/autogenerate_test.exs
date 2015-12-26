@@ -37,6 +37,10 @@ defmodule Ecto.Repo.AutogenerateTest do
     model = TestRepo.insert!(changeset)
     assert byte_size(model.z) == 36
 
+    changeset = Ecto.Changeset.force_change(changeset, :z, nil)
+    model = TestRepo.insert!(changeset)
+    assert model.z == nil
+
     changeset = Ecto.Changeset.cast(%Default{}, %{z: @uuid}, [:z], [])
     model = TestRepo.insert!(changeset)
     assert model.z == @uuid

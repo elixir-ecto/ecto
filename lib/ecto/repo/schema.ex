@@ -81,18 +81,17 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
-    %{prepare: prepare, changes: original_changes, types: types} = changeset
+    %{prepare: prepare, types: types} = changeset
     struct = struct_from_changeset!(:insert, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
-    embeds = model.__schema__(:embeds)
     assocs = model.__schema__(:associations)
     return = model.__schema__(:read_after_writes)
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo)
-    changeset = surface_changes(changeset, fields, embeds, assocs)
+    changeset = surface_changes(changeset, struct, types, fields ++ assocs)
 
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
       opts = Keyword.put(opts, :skip_transaction, true)
@@ -100,7 +99,7 @@ defmodule Ecto.Repo.Schema do
 
       changeset = Ecto.Embedded.prepare(user_changeset, adapter, :insert)
       {changeset, parents, children} = pop_assocs(changeset, assocs)
-      changeset = process_parents(changeset, parents, original_changes, opts)
+      changeset = process_parents(changeset, parents, opts)
 
       metadata = metadata(struct)
       {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
@@ -138,7 +137,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_update(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
-    %{prepare: prepare, changes: original_changes, types: types} = changeset
+    %{prepare: prepare, types: types} = changeset
     struct = struct_from_changeset!(:update, changeset)
     model  = struct.__struct__
     fields = model.__schema__(:fields)
@@ -157,7 +156,7 @@ defmodule Ecto.Repo.Schema do
 
         changeset = Ecto.Embedded.prepare(user_changeset, adapter, :update)
         {changeset, parents, children} = pop_assocs(changeset, assocs)
-        changeset = process_parents(changeset, parents, original_changes, opts)
+        changeset = process_parents(changeset, parents, opts)
 
         changes = changeset.changes
         {changes, extra} = dump_changes!(:update, changes, model, fields, [], types, adapter)
@@ -324,28 +323,16 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp surface_changes(changeset, fields, embeds, assocs) do
-    %{model: struct, types: types} = changeset
-    changeset
-    |> surface_relations(embeds, types, struct)
-    |> surface_relations(assocs, types, struct)
-    |> surface_fields(struct, fields -- embeds -- assocs)
-  end
-
-  defp surface_fields(changeset, struct, fields) do
-    update_in(changeset.changes, &Map.merge(Map.take(struct, fields), &1))
-  end
-
-  defp surface_relations(changeset, [], _types, _struct) do
-    changeset
-  end
-  defp surface_relations(%{changes: changes} = changeset, relation, types, struct) do
+  defp surface_changes(%{changes: changes} = changeset, struct, types, fields) do
     {changes, errors} =
-      Enum.reduce relation, {changes, []}, fn field, {changes, errors} ->
-        case {changes, types} do
-          {%{^field => _}, _} ->
+      Enum.reduce fields, {changes, []}, fn field, {changes, errors} ->
+        case {struct, changes, types} do
+          # User has explicitly changed it
+          {_, %{^field => _}, _} ->
             {changes, errors}
-          {_, %{^field => {_, embed_or_assoc}}} ->
+
+          # Handle associations specially
+          {_, _, %{^field => {tag, embed_or_assoc}}} when tag in [:assoc, :embed] ->
             # This is partly reimplemeting the logic behind put_relation
             # in Ecto.Changeset but we need to do it in a way where we have
             # control over the current value.
@@ -355,14 +342,19 @@ defmodule Ecto.Repo.Schema do
               {:ok, change, _, false} -> {Map.put(changes, field, change), errors}
               :error                  -> {changes, [{field, "is invalid"}]}
             end
-          {_, _} ->
+
+          # Struct has a non nil value
+          {%{^field => value}, _, %{^field => _}} when value != nil ->
+            {Map.put(changes, field, value), errors}
+
+          {_, _, _} ->
             {changes, errors}
         end
       end
 
     case errors do
-      [] -> put_in changeset.changes, changes
-      _  -> %{changeset | errors: errors ++ changeset.errors, valid?: false}
+      [] -> %{changeset | changes: changes}
+      _  -> %{changeset | errors: errors ++ changeset.errors, valid?: false, changes: changes}
     end
   end
 
@@ -410,22 +402,22 @@ defmodule Ecto.Repo.Schema do
     {%{changeset | changes: changes}, parent, child}
   end
 
-  defp process_parents(%{changes: changes} = changeset, assocs, original_changes, opts) do
+  defp process_parents(%{changes: changes} = changeset, assocs, opts) do
     case Ecto.Association.on_repo_change(changeset, assocs, opts) do
       {:ok, model} ->
-        changes = change_parents(changes, model, assocs, original_changes)
+        changes = change_parents(changes, model, assocs)
         %{changeset | changes: changes, model: model}
       {:error, changes} ->
         %{changeset | changes: changes, valid?: false}
     end
   end
 
-  defp change_parents(changes, model, assocs, original) do
+  defp change_parents(changes, model, assocs) do
     Enum.reduce assocs, changes, fn {refl, _}, acc ->
       %{field: field, owner_key: owner_key, related_key: related_key} = refl
       related = Map.get(model, field)
       value   = related && Map.get(related, related_key)
-      case Map.fetch(original, owner_key) do
+      case Map.fetch(changes, owner_key) do
         {:ok, current} when current != value ->
           raise ArgumentError,
             "cannot change belongs_to association `#{field}` because there is " <>
@@ -460,16 +452,15 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp autogenerate_id(%{autogenerate_id: {key, type}}, changes, return, adapter) do
-    case changes do
-      %{^key => nil} ->
-        changes = Map.delete(changes, key)
-        if value = adapter.autogenerate(type) do
-          {changes, [{key, value}], return} # Autogenerated now
-        else
-          {changes, [], [key|List.delete(return, key)]} # Autogenerated in storage
-        end
-      _ ->
-        {changes, [], return} # Set by user
+    if Map.has_key?(changes, key) do
+      {changes, [], return} # Set by user
+    else
+      changes = Map.delete(changes, key)
+      if value = adapter.autogenerate(type) do
+        {changes, [{key, value}], return} # Autogenerated now
+      else
+        {changes, [], [key|List.delete(return, key)]} # Autogenerated in storage
+      end
     end
   end
 
@@ -483,9 +474,10 @@ defmodule Ecto.Repo.Schema do
   defp autogenerate_changes(model, action, changes, extra) do
     Enum.reduce model.__schema__(:autogenerate, action), {changes, extra},
       fn {k, mod, args}, {acc_changes, acc_autogen} ->
-        case Map.get(acc_changes, k) do
-          nil -> {Map.delete(acc_changes, k), [{k, apply(mod, :autogenerate, args)}|acc_autogen]}
-          _   -> {acc_changes, acc_autogen}
+        if Map.has_key?(acc_changes, k) do
+          {acc_changes, acc_autogen}
+        else
+          {acc_changes, [{k, apply(mod, :autogenerate, args)}|acc_autogen]}
         end
       end
   end

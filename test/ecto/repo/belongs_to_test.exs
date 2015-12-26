@@ -175,8 +175,8 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assoc, assoc)
     assert {:error, changeset} = TestRepo.insert(%{changeset | valid?: true})
-    refute changeset.changes.id
-    refute changeset.changes.assoc_id
+    refute Map.has_key?(changeset.changes, :id)
+    refute Map.has_key?(changeset.changes, :assoc_id)
     refute Map.has_key?(changeset.changes.assoc.changes, :id)
     refute Map.has_key?(changeset.changes.assoc.changes, :sub_assoc_id)
     refute Map.has_key?(changeset.changes.assoc.changes.sub_assoc.changes, :id)
