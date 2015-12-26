@@ -53,6 +53,10 @@ defmodule Ecto.TestAdapter do
     {1, nil}
   end
 
+  def insert_all(_repo, _meta, _header, _rows, _autogenerate, _opts) do
+    {1, nil}
+  end
+
   ## Model
 
   def insert(_repo, %{source: {nil, "schema_migrations"}}, val, _, _) do

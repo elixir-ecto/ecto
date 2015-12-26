@@ -139,6 +139,11 @@ defmodule Ecto.Adapter do
   @callback execute(repo, query_meta, prepared, params :: list(), preprocess | nil, options) ::
               {integer, [[term]] | nil} | no_return
 
+  @doc """
+  Inserts multiple entries into the data store.
+  """
+  @callback insert_all(repo, schema_meta, header :: [atom], [fields], returning, options) ::
+              {integer, [[term]] | nil} | no_return
 
   @doc """
   Inserts a single new struct in the data store.

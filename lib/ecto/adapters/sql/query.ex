@@ -59,24 +59,24 @@ defmodule Ecto.Adapters.SQL.Query do
   @callback delete_all(Ecto.Query.t) :: String.t
 
   @doc """
-  Returns an INSERT for the given `fields` in `table` returning
+  Returns an INSERT for the given `rows` in `table` returning
   the given `returning`.
   """
   @callback insert(prefix ::String.t, table :: String.t,
-                     fields :: [atom], returning :: [atom]) :: String.t
+                   header :: [atom], rows :: [[atom | nil]], returning :: [atom]) :: String.t
 
   @doc """
   Returns an UPDATE for the given `fields` in `table` filtered by
   `filters` returning the given `returning`.
   """
   @callback update(prefix :: String.t, table :: String.t, fields :: [atom],
-                     filters :: [atom], returning :: [atom]) :: String.t
+                   filters :: [atom], returning :: [atom]) :: String.t
 
   @doc """
   Returns a DELETE for the `filters` returning the given `returning`.
   """
   @callback delete(prefix :: String.t, table :: String.t,
-                     filters :: [atom], returning :: [atom]) :: String.t
+                   filters :: [atom], returning :: [atom]) :: String.t
 
   ## DDL
 

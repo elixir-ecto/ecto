@@ -9,6 +9,35 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.insert!/2`.
   """
+  def insert_all(repo, adapter, table, rows, opts) when is_binary(table) do
+    do_insert_all(repo, adapter, {nil, table}, rows, opts)
+  end
+
+  def insert_all(repo, adapter, {_, table} = source, rows, opts) when is_binary(table) do
+    do_insert_all(repo, adapter, source, rows, opts)
+  end
+
+  defp do_insert_all(_repo, _adapter, _source, [], _opts) do
+    {0, nil}
+  end
+
+  defp do_insert_all(repo, adapter, source, rows, opts) do
+    metadata = %{source: source, context: nil, schema: nil}
+    {rows, header} = extract_header_and_fields(rows)
+    adapter.insert_all(repo, metadata, Map.keys(header), rows, [], opts)
+  end
+
+  defp extract_header_and_fields(rows) do
+    Enum.map_reduce(rows, %{}, fn fields, header ->
+      Enum.map_reduce(fields, header, fn {k, _} = pair, acc ->
+        {pair, Map.put(acc, k, true)}
+      end)
+    end)
+  end
+
+  @doc """
+  Implementation for `Ecto.Repo.insert!/2`.
+  """
   def insert!(repo, adapter, model_or_changeset, opts) do
     case insert(repo, adapter, model_or_changeset, opts) do
       {:ok, model} -> model

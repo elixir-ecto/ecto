@@ -119,6 +119,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
       end
 
+      def insert_all(schema_or_source, entries, opts \\ []) do
+        Ecto.Repo.Schema.insert_all(__MODULE__, @adapter, schema_or_source, entries, opts)
+      end
+
       def update_all(queryable, updates, opts \\ []) do
         Ecto.Repo.Queryable.update_all(__MODULE__, @adapter, queryable, updates, opts)
       end
@@ -204,7 +208,7 @@ defmodule Ecto.Repo do
   Returns the pool information this repository should run under.
   """
   @callback __pool__ :: {pool :: module, name :: atom,
-                           pool_timeout :: timeout, op_timeout :: timeout}
+                         pool_timeout :: timeout, op_timeout :: timeout}
 
   @doc """
   Returns the name of the ETS table used for query caching.
@@ -231,9 +235,6 @@ defmodule Ecto.Repo do
 
   @doc """
   Shuts down the repository represented by the given pid.
-
-  This callback must be called by the process that called
-  `start_link/2`. Therefore, it is useful for scripts.
   """
   @callback stop(pid, timeout) :: :ok
 
@@ -310,7 +311,7 @@ defmodule Ecto.Repo do
   @doc """
   Fetches a single result from the query.
 
-  Returns `nil` if no result was found.
+  Returns `nil` if no result was found. Raises if more than one entry.
 
   ## Options
 
@@ -323,6 +324,8 @@ defmodule Ecto.Repo do
 
   @doc """
   Similar to `one/2` but raises `Ecto.NoResultsError` if no record was found.
+
+  Raises if more than one entry.
 
   ## Options
 
@@ -374,6 +377,16 @@ defmodule Ecto.Repo do
       MyRepo.all(query)
   """
   @callback all(Ecto.Query.t, Keyword.t) :: [Ecto.Schema.t] | no_return
+
+  @doc """
+  Inserts all entries into the repository.
+
+  It expects a source (`"users"` or `{"prefix", "users"}`) as
+  first argument. The second argument is a list of entries to
+  be inserted, either as keyword lists or as maps.
+  """
+  @callback insert_all(binary | {binary | nil, binary}, [map | Keyword.t], opts :: Keyword.t) ::
+              {integer, nil} | no_return
 
   @doc """
   Updates all entries matching the given query with the given values.

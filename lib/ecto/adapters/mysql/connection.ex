@@ -131,13 +131,19 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([delete, from, join, where])
     end
 
-    def insert(prefix, table, [], _returning),
-      do: "INSERT INTO #{quote_table(prefix, table)} () VALUES ()"
-    def insert(prefix, table, fields, _returning) do
-      values = ~s{(#{Enum.map_join(fields, ", ", &quote_name/1)}) } <>
-               ~s{VALUES (#{Enum.map_join(1..length(fields), ", ", fn (_) -> "?" end)})}
+    def insert(prefix, table, header, rows, _returning) do
+      fields = Enum.map_join(header, ",", &quote_name/1)
+      "INSERT INTO #{quote_table(prefix, table)} (" <> fields <> ") VALUES " <> insert_all(rows)
+    end
 
-      "INSERT INTO #{quote_table(prefix, table)} " <> values
+    defp insert_all(rows) do
+      Enum.map_join(rows, ",", fn row ->
+        row = Enum.map_join(row, ",", fn
+          nil -> "DEFAULT"
+          _   -> "?"
+        end)
+        "(" <> row <> ")"
+      end)
     end
 
     def update(prefix, table, fields, filters, _returning) do

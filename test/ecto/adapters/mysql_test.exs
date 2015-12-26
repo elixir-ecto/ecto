@@ -422,13 +422,16 @@ defmodule Ecto.Adapters.MySQLTest do
   # Model based
 
   test "insert" do
-    query = SQL.insert(nil, "model", [:x, :y], [])
-    assert query == ~s{INSERT INTO `model` (`x`, `y`) VALUES (?, ?)}
+    query = SQL.insert(nil, "model", [:x, :y], [[:x, :y]], [])
+    assert query == ~s{INSERT INTO `model` (`x`,`y`) VALUES (?,?)}
 
-    query = SQL.insert(nil, "model", [], [])
+    query = SQL.insert(nil, "model", [:x, :y], [[:x, :y], [nil, :y]], [])
+    assert query == ~s{INSERT INTO `model` (`x`,`y`) VALUES (?,?),(DEFAULT,?)}
+
+    query = SQL.insert(nil, "model", [], [[]], [])
     assert query == ~s{INSERT INTO `model` () VALUES ()}
 
-    query = SQL.insert("prefix", "model", [], [])
+    query = SQL.insert("prefix", "model", [], [[]], [])
     assert query == ~s{INSERT INTO `prefix`.`model` () VALUES ()}
   end
 

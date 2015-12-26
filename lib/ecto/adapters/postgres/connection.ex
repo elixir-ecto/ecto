@@ -145,17 +145,32 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       assemble(["DELETE FROM #{table} AS #{name}", join, where])
     end
 
-    def insert(prefix, table, fields, returning) do
+    def insert(prefix, table, header, rows, returning) do
       values =
-        if fields == [] do
-          "DEFAULT VALUES"
+        if header == [] do
+          "VALUES " <> Enum.map_join(rows, ",", fn _ -> "(DEFAULT)" end)
         else
-          "(" <> Enum.map_join(fields, ", ", &quote_name/1) <> ") " <>
-          "VALUES (" <> Enum.map_join(1..length(fields), ", ", &"$#{&1}") <> ")"
+          "(" <> Enum.map_join(header, ",", &quote_name/1) <> ") " <>
+          "VALUES " <> insert_all(rows, 1, "")
         end
 
       "INSERT INTO #{quote_table(prefix, table)} " <> values <> returning(returning)
     end
+
+    defp insert_all([row|rows], counter, acc) do
+      {counter, row} = insert_each(row, counter, "")
+      insert_all(rows, counter, acc <> ",(" <> row <> ")")
+    end
+    defp insert_all([], _counter, "," <> acc) do
+      acc
+    end
+
+    defp insert_each([nil|t], counter, acc),
+      do: insert_each(t, counter, acc <> ",DEFAULT")
+    defp insert_each([_|t], counter, acc),
+      do: insert_each(t, counter + 1, acc <> ",$" <> Integer.to_string(counter))
+    defp insert_each([], counter, "," <> acc),
+      do: {counter, acc}
 
     def update(prefix, table, fields, filters, returning) do
       {fields, count} = Enum.map_reduce fields, 1, fn field, acc ->

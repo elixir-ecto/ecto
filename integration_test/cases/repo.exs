@@ -417,6 +417,17 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
+  test "insert all" do
+    assert {2, nil} = TestRepo.insert_all("posts", [[title: "1"], [title: "2", counter: 20]])
+    assert [%Post{title: "1", counter: 10},
+            %Post{title: "2", counter: 20}] = TestRepo.all(Post)
+
+    assert {2, nil} = TestRepo.insert_all("comments", [[], []])
+    assert [%Comment{}, %Comment{}] = TestRepo.all(Comment)
+
+    assert {0, nil} = TestRepo.insert_all("comments", [])
+  end
+
   test "update all" do
     assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1"})
     assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2"})

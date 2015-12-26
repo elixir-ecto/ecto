@@ -494,20 +494,23 @@ defmodule Ecto.Adapters.PostgresTest do
            "SELECT m0.\"id\", m2.\"id\" FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON TRUE INNER JOIN \"model2\" AS m2 ON TRUE"
   end
 
-  # Model based
+  # Schema based
 
   test "insert" do
-    query = SQL.insert(nil, "model", [:x, :y], [:id])
-    assert query == ~s{INSERT INTO "model" ("x", "y") VALUES ($1, $2) RETURNING "id"}
+    query = SQL.insert(nil, "model", [:x, :y], [[:x, :y]], [:id])
+    assert query == ~s{INSERT INTO "model" ("x","y") VALUES ($1,$2) RETURNING "id"}
 
-    query = SQL.insert(nil, "model", [], [:id])
-    assert query == ~s{INSERT INTO "model" DEFAULT VALUES RETURNING "id"}
+    query = SQL.insert(nil, "model", [:x, :y], [[:x, :y], [nil, :z]], [:id])
+    assert query == ~s{INSERT INTO "model" ("x","y") VALUES ($1,$2),(DEFAULT,$3) RETURNING "id"}
 
-    query = SQL.insert(nil, "model", [], [])
-    assert query == ~s{INSERT INTO "model" DEFAULT VALUES}
+    query = SQL.insert(nil, "model", [], [[]], [:id])
+    assert query == ~s{INSERT INTO "model" VALUES (DEFAULT) RETURNING "id"}
 
-    query = SQL.insert("prefix", "model", [], [])
-    assert query == ~s{INSERT INTO "prefix"."model" DEFAULT VALUES}
+    query = SQL.insert(nil, "model", [], [[]], [])
+    assert query == ~s{INSERT INTO "model" VALUES (DEFAULT)}
+
+    query = SQL.insert("prefix", "model", [], [[]], [])
+    assert query == ~s{INSERT INTO "prefix"."model" VALUES (DEFAULT)}
   end
 
   test "update" do

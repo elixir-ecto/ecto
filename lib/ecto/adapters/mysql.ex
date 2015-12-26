@@ -166,7 +166,7 @@ defmodule Ecto.Adapters.MySQL do
   @doc false
   def insert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params, [key], opts) do
     {fields, values} = :lists.unzip(params)
-    sql = @conn.insert(prefix, source, fields, [])
+    sql = @conn.insert(prefix, source, fields, [fields], [])
     case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
       {:ok, %{num_rows: 1, last_insert_id: last_insert_id}} ->
         {:ok, [{key, last_insert_id}]}
