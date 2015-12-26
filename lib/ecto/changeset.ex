@@ -513,10 +513,12 @@ defmodule Ecto.Changeset do
   end
 
   defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?) do
-    if required? and is_nil(Map.get(changes, name, current)) do
-      %{changeset | errors: [{name, "can't be blank"} | errors], valid?: false}
-    else
-      changeset
+    if required? do
+      if is_nil(Map.get(changes, name, current))
+        %{changeset | errors: [{name, "can't be blank"} | errors], valid?: false}
+      else
+        %{changeset | errors: [{name, "key must be present"} | errors], valid?: false}
+      end
     end
   end
 
