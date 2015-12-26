@@ -278,6 +278,7 @@ defmodule Ecto.Schema do
       @timestamps_opts []
       @foreign_key_type :id
       @before_compile Ecto.Schema
+      @ecto_embedded false
 
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
@@ -300,6 +301,7 @@ defmodule Ecto.Schema do
   defmacro embedded_schema(opts) do
     quote do
       @primary_key {:id, :binary_id, autogenerate: true}
+      @ecto_embedded true
       schema "embedded #{inspect __MODULE__}", unquote(opts)
     end
   end
@@ -1145,6 +1147,10 @@ defmodule Ecto.Schema do
   ## Private
 
   defp association(mod, cardinality, name, association, opts) do
+    if Module.get_attribute(mod, :ecto_embedded) do
+      raise "association can't be defined in embedded_schema for #{inspect mod}"
+    end
+
     not_loaded  = %Ecto.Association.NotLoaded{__owner__: mod,
                     __field__: name, __cardinality__: cardinality}
     put_struct_field(mod, name, not_loaded)
