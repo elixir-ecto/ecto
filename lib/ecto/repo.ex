@@ -80,7 +80,7 @@ defmodule Ecto.Repo do
       end
 
       def stop(pid, timeout \\ 5000) do
-        @adapter.stop(__MODULE__, pid, timeout)
+        Supervisor.stop(pid, timeout)
       end
 
       def transaction(opts \\ [], fun) when is_list(opts) do
