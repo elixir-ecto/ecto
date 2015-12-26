@@ -351,7 +351,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == []
+    assert changeset.errors == [posts: "can't be blank"]
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.changes == %{}
