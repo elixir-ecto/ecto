@@ -106,7 +106,7 @@ defmodule Ecto.Embedded do
   end
 
   defp apply_embeds(%{changes: changes, model: model}) do
-    model = Map.merge(model, changes)
+    model = struct(model, changes)
     put_in(model.__meta__.state, :loaded)
   end
 

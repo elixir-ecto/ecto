@@ -920,17 +920,16 @@ defmodule Ecto.Changeset do
   end
 
   def apply_changes(%Changeset{changes: changes, model: model, types: types}) do
-    changes =
-      Enum.map(changes, fn {key, value} = kv ->
-        case Map.get(types, key) do
-          {tag, relation} when tag in @relations ->
-            {key, Relation.apply_changes(relation, value)}
-          _ ->
-            kv
-        end
-      end)
-
-    struct(model, changes)
+    Enum.reduce(changes, model, fn {key, value}, acc ->
+      case Map.fetch(types, key) do
+        {:ok, {tag, relation}} when tag in @relations ->
+          Map.put(acc, key, Relation.apply_changes(relation, value))
+        {:ok, _} ->
+          Map.put(acc, key, value)
+        :error ->
+          acc
+      end
+    end)
   end
 
   ## Validations
