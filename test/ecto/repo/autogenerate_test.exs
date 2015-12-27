@@ -3,21 +3,22 @@ alias Ecto.TestRepo
 defmodule Ecto.Repo.AutogenerateTest do
   use ExUnit.Case, async: true
 
-  defmodule Default do
-    use Ecto.Schema
-
-    schema "my_model" do
-      field :z, Ecto.UUID, autogenerate: true
-      timestamps
-    end
-  end
-
   defmodule Config do
     use Ecto.Schema
 
     @timestamps_opts [inserted_at: :created_on]
-    schema "default" do
+    schema "config" do
       timestamps updated_at: :updated_on
+    end
+  end
+
+  defmodule Default do
+    use Ecto.Schema
+
+    schema "default" do
+      field :z, Ecto.UUID, autogenerate: true
+      has_one :config, Config
+      timestamps
     end
   end
 
@@ -52,10 +53,29 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.insert!(%Default{})
     assert %Ecto.DateTime{} = default.inserted_at
     assert %Ecto.DateTime{} = default.updated_at
+    assert_received :insert
 
-    default = TestRepo.update!(%Default{id: 1} |> Ecto.Changeset.change, force: true)
+    # No change
+    changeset = Ecto.Changeset.change(%Default{id: 1})
+    default = TestRepo.update!(changeset)
+    refute default.inserted_at
+    refute default.updated_at
+    refute_received :update
+
+    # Change in children
+    changeset = Ecto.Changeset.change(%Default{id: 1})
+    default = TestRepo.update!(Ecto.Changeset.put_assoc(changeset, :config, %Config{}))
+    refute default.inserted_at
+    refute default.updated_at
+    assert_received :insert
+    refute_received :update
+
+    # Force change
+    changeset = Ecto.Changeset.change(%Default{id: 1})
+    default = TestRepo.update!(changeset, force: true)
     refute default.inserted_at
     assert %Ecto.DateTime{} = default.updated_at
+    assert_received :update
   end
 
   test "does not set inserted_at and updated_at values if they were previously set" do
