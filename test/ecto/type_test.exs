@@ -119,9 +119,15 @@ defmodule Ecto.TypeTest do
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
     assert {:ok, %{a: 1, c: 0, id: @uuid_tagged}} ==
-           adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1})
+           adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1}
+                                                |> Ecto.put_meta(state: :loaded))
+    assert_raise ArgumentError, "Ecto can only dump loaded structs", fn ->
+      adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1})
+    end
 
     assert :error == cast(type, %{"a" => 1})
+    assert cast(type, %Model{}) == {:ok, %Model{}}
+    assert cast(type, nil) == {:ok, nil}
     assert match?(:any, type)
   end
 
@@ -135,9 +141,15 @@ defmodule Ecto.TypeTest do
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
     assert {:ok, [%{a: 1, id: @uuid_tagged, c: 0}]} ==
-           adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}])
+           adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}
+                                                 |> Ecto.put_meta(state: :loaded)])
+    assert_raise ArgumentError, "Ecto can only dump loaded structs", fn ->
+      adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}])
+    end
 
-    assert :error == cast(type, [%{"a" => 1}])
+    assert cast(type, [%{"a" => 1}]) == :error
+    assert cast(type, [%Model{}]) == {:ok, [%Model{}]}
+    assert cast(type, []) == {:ok, []}
     assert match?({:array, :any}, type)
   end
 end

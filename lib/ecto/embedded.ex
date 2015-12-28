@@ -18,8 +18,8 @@ defmodule Ecto.Embedded do
 
   ## Options
 
-    * `:cardinality` - tells if there is one embedded model or many
-    * `:related` - name of the embedded model
+    * `:cardinality` - tells if there is one embedded schema or many
+    * `:related` - name of the embedded schema
     * `:on_replace` - the action taken on embeds when the embed is replaced
 
   """
@@ -76,15 +76,15 @@ defmodule Ecto.Embedded do
         do: prepared
   end
 
-  defp prepare_each(%Changeset{valid?: false}, %{related: model}, _adapter) do
-    raise ArgumentError, "changeset for embedded #{model} is invalid, " <>
+  defp prepare_each(%Changeset{valid?: false}, %{related: schema}, _adapter) do
+    raise ArgumentError, "changeset for embedded #{inspect schema} is invalid, " <>
                          "but the parent changeset was not marked as invalid"
   end
 
-  defp prepare_each(%Changeset{model: %{__struct__: model}},
-                    %{related: expected}, _adapter) when model != expected do
-    raise ArgumentError, "expected changeset for embedded model `#{inspect expected}`, " <>
-                         "got: #{inspect model}"
+  defp prepare_each(%Changeset{model: %{__struct__: actual}},
+                    %{related: expected}, _adapter) when actual != expected do
+    raise ArgumentError, "expected changeset for embedded schema `#{inspect expected}`, " <>
+                         "got: #{inspect actual}"
   end
 
   defp prepare_each(%Changeset{action: :update, changes: changes, model: model},
@@ -97,61 +97,60 @@ defmodule Ecto.Embedded do
   end
 
   defp prepare_each(%Changeset{action: action, types: types} = changeset,
-                    %{related: model}, adapter) do
-    changeset
-    |> prepare(adapter, action)
-    |> apply_embeds()
-    |> autogenerate_id(action, model, adapter)
-    |> autogenerate(types, action, model, adapter)
+                    %{related: schema}, adapter) do
+    %{model: struct, changes: changes} = prepare(changeset, adapter, action)
+
+    changes
+    |> autogenerate_id(struct, action, schema, adapter)
+    |> autogenerate(action, schema, types, adapter)
+    |> apply_embeds(struct)
   end
 
-  defp apply_embeds(%{changes: changes, model: model}) do
-    model = struct(model, changes)
-    put_in(model.__meta__.state, :loaded)
+  defp apply_embeds(changes, struct) do
+    struct = struct(struct, changes)
+    put_in(struct.__meta__.state, :loaded)
   end
 
-  defp check_action!(:update, :insert, %{related: model}),
-    do: raise(ArgumentError, "got action :update in changeset for embedded #{model} while inserting")
-  defp check_action!(:delete, :insert, %{related: model}),
-    do: raise(ArgumentError, "got action :delete in changeset for embedded #{model} while inserting")
+  defp check_action!(:update, :insert, %{related: schema}),
+    do: raise(ArgumentError, "got action :update in changeset for embedded #{inspect schema} while inserting")
+  defp check_action!(:delete, :insert, %{related: schema}),
+    do: raise(ArgumentError, "got action :delete in changeset for embedded #{inspect schema} while inserting")
   defp check_action!(_, _, _), do: :ok
 
-  defp autogenerate_id(struct, :insert, model, adapter) do
-    case model.__schema__(:autogenerate_id) do
+  defp autogenerate_id(changes, _struct, :insert, schema, adapter) do
+    case schema.__schema__(:autogenerate_id) do
       {key, :binary_id} ->
-        if Map.get(struct, key) do
-          struct
-        else
-          {:ok, value} = Ecto.Type.adapter_load(adapter, :binary_id, adapter.autogenerate(:embed_id))
-          Map.put(struct, key, value)
+        case Map.fetch(changes, key) do
+          {:ok, _} ->
+            changes
+          :error ->
+            {:ok, value} = Ecto.Type.adapter_load(adapter, :binary_id, adapter.autogenerate(:embed_id))
+            Map.put(changes, key, value)
         end
       other ->
-        raise ArgumentError, "embedded model `#{inspect model}` must have " <>
+        raise ArgumentError, "embedded schema `#{inspect schema}` must have " <>
           "`:binary_id` primary key with `autogenerate: true`, got: #{inspect other}"
     end
   end
 
-  defp autogenerate_id(struct, :update, _model, _adapter) do
+  defp autogenerate_id(changes, struct, :update, _schema, _adapter) do
     for {_, nil} <- Ecto.primary_key(struct) do
       raise Ecto.NoPrimaryKeyValueError, struct: struct
     end
-    struct
+    changes
   end
 
-  defp autogenerate(struct, types, action, model, adapter) do
-    Enum.reduce model.__schema__(:autogenerate, action), struct,
-      fn {k, mod, args}, acc ->
-        if Map.get(acc, k) do
-          acc
-        else
-          Map.put(acc, k, load!(types, k, apply(mod, :autogenerate, args), adapter))
-        end
+  defp autogenerate(changes, action, schema, types, adapter) do
+    Enum.reduce schema.__schema__(:autogenerate, action), changes, fn {k, mod, args}, acc ->
+      case Map.fetch(acc, k) do
+        {:ok, _} -> acc
+        :error   -> Map.put(acc, k, load!(types, k, apply(mod, :autogenerate, args), adapter))
       end
+    end
   end
 
   defp load!(types, k, v, adapter) do
     type = Map.fetch!(types, k)
-
     case Ecto.Type.adapter_load(adapter, type, v) do
       {:ok, v} -> v
       :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"

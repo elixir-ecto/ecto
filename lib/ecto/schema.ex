@@ -1222,7 +1222,7 @@ defmodule Ecto.Schema do
   defp raise_type_error_hint(_),
     do: ""
 
-  defp check_default!(_name, :binary_id, _default), do: :ok
+  # Skip embed check because embedded schema may not yet be compiled
   defp check_default!(_name, {:embed, _}, _default), do: :ok
   defp check_default!(name, type, default) do
     case Ecto.Type.dump(type, default) do

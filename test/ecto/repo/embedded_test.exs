@@ -231,7 +231,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   test "empty changeset on update" do
-    embed = %MyEmbed{x: "xyz", id: @uuid}
+    embed = %MyEmbed{x: "xyz", id: @uuid} |> Ecto.put_meta(state: :loaded)
     no_changes = Ecto.Changeset.change(embed)
 
     changeset =

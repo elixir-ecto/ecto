@@ -188,6 +188,9 @@ defmodule Ecto.Integration.TypeTest do
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
     assert dbitem.id
+
+    {1, _} = TestRepo.update_all(Order, set: [item: %{dbitem | price: 456}])
+    assert TestRepo.get!(Order, order.id).item.price == 456
   end
 
   @tag :map_type
@@ -209,6 +212,9 @@ defmodule Ecto.Integration.TypeTest do
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
     assert dbitem.id
+
+    {1, _} = TestRepo.update_all(Tag, set: [items: [%{dbitem | price: 456}]])
+    assert (TestRepo.get!(Tag, tag.id).items |> hd).price == 456
   end
 
   @tag :decimal_type

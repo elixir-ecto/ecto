@@ -342,22 +342,23 @@ defmodule Ecto.Type do
     {:ok, Enum.reverse(acc)}
   end
 
-  defp dump_embed(%{cardinality: :one, related: model, field: field},
+  defp dump_embed(%{cardinality: :one, related: schema, field: field},
                   value, fun) when is_map(value) do
-    {:ok, dump_embed(field, model, value, model.__schema__(:types), fun)}
+    {:ok, dump_embed(field, schema, value, schema.__schema__(:types), fun)}
   end
 
-  defp dump_embed(%{cardinality: :many, related: model, field: field},
+  defp dump_embed(%{cardinality: :many, related: schema, field: field},
                   value, fun) when is_list(value) do
-    types = model.__schema__(:types)
-    {:ok, Enum.map(value, &dump_embed(field, model, &1, types, fun))}
+    types = schema.__schema__(:types)
+    {:ok, Enum.map(value, &dump_embed(field, schema, &1, types, fun))}
   end
 
   defp dump_embed(_embed, _value, _fun) do
     :error
   end
 
-  defp dump_embed(_field, model, %{__struct__: model} = struct, types, dumper) do
+  defp dump_embed(_field, schema, %{__meta__: %{state: :loaded}, __struct__: schema} = struct,
+                  types, dumper) do
     Enum.reduce(types, %{}, fn {field, type}, acc ->
       value = Map.get(struct, field)
 
@@ -366,6 +367,12 @@ defmodule Ecto.Type do
         :error       -> raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type}"
       end
     end)
+  end
+
+  defp dump_embed(field, schema, %{__meta__: %{state: state}, __struct__: schema},
+                  _types, _dumper) do
+    raise ArgumentError, "cannot dump embed `#{field}` because its state is `#{state}`. " <>
+                         "Ecto can only dump loaded structs, otherwise using Repo.insert/update/delete is required"
   end
 
   defp dump_embed(field, _model, value, _types, _fun) do
@@ -516,8 +523,8 @@ defmodule Ecto.Type do
 
   """
   @spec cast(t, term) :: {:ok, term} | :error
-  def cast({:embed, _}, _) do
-    :error
+  def cast({:embed, type}, value) do
+    cast_embed(type, value)
   end
 
   def cast(_type, nil), do: {:ok, nil}
@@ -572,6 +579,24 @@ defmodule Ecto.Type do
       true ->
         :error
     end
+  end
+
+  defp cast_embed(%{cardinality: :one}, nil), do: {:ok, nil}
+  defp cast_embed(%{cardinality: :one, related: schema}, %{__struct__: schema} = struct) do
+    {:ok, struct}
+  end
+
+  defp cast_embed(%{cardinality: :many}, nil), do: {:ok, []}
+  defp cast_embed(%{cardinality: :many, related: schema}, value) when is_list(value) do
+    if Enum.all?(value, &Kernel.match?(%{__struct__: ^schema}, &1)) do
+      {:ok, value}
+    else
+      :error
+    end
+  end
+
+  defp cast_embed(_embed, _value) do
+    :error
   end
 
   ## Adapter related
