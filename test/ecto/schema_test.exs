@@ -22,6 +22,7 @@ defmodule Ecto.SchemaTest do
 
   test "schema metadata" do
     assert Model.__schema__(:source)             == "mymodel"
+    assert Model.__schema__(:prefix)             == nil
     assert Model.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
     assert Model.__schema__(:read_after_writes)  == [:email, :count]
     assert Model.__schema__(:primary_key)        == [:id]
@@ -111,6 +112,34 @@ defmodule Ecto.SchemaTest do
     assert %SchemaModel{}.__meta__.state == :built
     assert %SchemaModel{}.__meta__.source == {nil, "users"}
     assert SchemaModel.__schema__(:type, :__meta__) == nil
+  end
+
+  ## Schema prefix
+
+  defmodule SchemaWithPrefix do
+    use Ecto.Schema
+
+    @schema_prefix "tenant_001"
+    schema "company" do
+      field :name
+    end
+  end
+
+  test "schema prefix metadata" do
+    assert SchemaWithPrefix.__schema__(:source) == "company"
+    assert SchemaWithPrefix.__schema__(:prefix) == "tenant_001"
+    assert %SchemaWithPrefix{}.__meta__.source == {"tenant_001", "company"}
+  end
+
+  test "updates meta prefix with put_meta" do
+    model = %SchemaWithPrefix{}
+    assert model.__meta__.source == {"tenant_001", "company"}
+    model = Ecto.put_meta(model, source: "new_company")
+    assert model.__meta__.source == {"tenant_001", "new_company"}
+    model = Ecto.put_meta(model, prefix: "prefix")
+    assert model.__meta__.source == {"prefix", "new_company"}
+    model = Ecto.put_meta(model, prefix: nil)
+    assert model.__meta__.source == {nil, "new_company"}
   end
 
   ## Errors
