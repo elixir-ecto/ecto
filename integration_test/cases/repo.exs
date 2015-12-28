@@ -417,7 +417,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "insert all" do
-    assert {2, nil} = TestRepo.insert_all("comments", [[text: "1"], [text: "2", lock_version: 2]])
+    assert {2, nil} = TestRepo.insert_all("comments", [[text: "1"], %{text: "2", lock_version: 2}])
     assert [%Comment{text: "1", lock_version: 1},
             %Comment{text: "2", lock_version: 2}] = TestRepo.all(Comment)
 

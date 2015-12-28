@@ -121,7 +121,7 @@ defmodule Ecto.TypeTest do
     assert {:ok, %{a: 1, c: 0, id: @uuid_tagged}} ==
            adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1}
                                                 |> Ecto.put_meta(state: :loaded))
-    assert_raise ArgumentError, "Ecto can only dump loaded structs", fn ->
+    assert_raise ArgumentError, ~r"Ecto can only dump loaded structs", fn ->
       adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1})
     end
 
@@ -143,7 +143,7 @@ defmodule Ecto.TypeTest do
     assert {:ok, [%{a: 1, id: @uuid_tagged, c: 0}]} ==
            adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}
                                                  |> Ecto.put_meta(state: :loaded)])
-    assert_raise ArgumentError, "Ecto can only dump loaded structs", fn ->
+    assert_raise ArgumentError, ~r"Ecto can only dump loaded structs", fn ->
       adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}])
     end
 
