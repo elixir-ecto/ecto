@@ -9,30 +9,67 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.insert!/2`.
   """
+  def insert_all(repo, adapter, schema, rows, opts) when is_atom(schema) do
+    do_insert_all(repo, adapter, schema, {nil, schema.__schema__(:source)}, rows, opts)
+  end
+
   def insert_all(repo, adapter, table, rows, opts) when is_binary(table) do
-    do_insert_all(repo, adapter, {nil, table}, rows, opts)
+    do_insert_all(repo, adapter, nil, {nil, table}, rows, opts)
   end
 
   def insert_all(repo, adapter, {_, table} = source, rows, opts) when is_binary(table) do
-    do_insert_all(repo, adapter, source, rows, opts)
+    do_insert_all(repo, adapter, nil, source, rows, opts)
   end
 
-  defp do_insert_all(_repo, _adapter, _source, [], _opts) do
+  defp do_insert_all(_repo, _adapter, _schema, _source, [], _opts) do
     {0, nil}
   end
 
-  defp do_insert_all(repo, adapter, source, rows, opts) do
-    metadata = %{source: source, context: nil, schema: nil}
-    {rows, header} = extract_header_and_fields(rows)
+  defp do_insert_all(repo, adapter, schema, source, rows, opts) when is_list(rows) do
+    autogen  = schema && schema.__schema__(:autogenerate_id)
+    metadata = %{source: source, context: nil, schema: schema, autogenerate_id: autogen}
+    {rows, header} = extract_header_and_fields(rows, schema, autogen, adapter)
     adapter.insert_all(repo, metadata, Map.keys(header), rows, [], opts)
   end
 
-  defp extract_header_and_fields(rows) do
-    Enum.map_reduce(rows, %{}, fn fields, header ->
-      Enum.map_reduce(fields, header, fn {k, _} = pair, acc ->
-        {pair, Map.put(acc, k, true)}
-      end)
+  defp extract_header_and_fields(rows, schema, autogenerate_id, adapter) do
+    header = init_header(autogenerate_id)
+    mapper = init_mapper(schema, adapter)
+
+    Enum.map_reduce(rows, header, fn fields, header ->
+      {fields, header} = Enum.map_reduce(fields, header, mapper)
+      {autogenerate_id(autogenerate_id, fields, adapter), header}
     end)
+  end
+
+  defp init_header(nil), do: %{}
+  defp init_header({key, _}), do: %{key => true}
+
+  defp init_mapper(nil, _adapter) do
+    fn {field, _} = pair, acc ->
+      {pair, Map.put(acc, field, true)}
+    end
+  end
+  defp init_mapper(schema, adapter) do
+    types = schema.__changeset__
+    fn {field, value}, acc ->
+      type = Map.fetch!(types, field)
+      {dump_field!(:insert_all, schema, field, type, value, adapter),
+       Map.put(acc, field, true)}
+    end
+  end
+
+  defp autogenerate_id(nil, fields, _adapter), do: fields
+  defp autogenerate_id({key, type}, fields, adapter) do
+    case :lists.keyfind(key, 1, fields) do
+      {^key, _} -> fields
+      false ->
+        if value = adapter.autogenerate(type) do
+          [{key, value}|fields]
+        else
+          fields
+        end
+    end
   end
 
   @doc """
@@ -501,7 +538,7 @@ defmodule Ecto.Repo.Schema do
        function_exported?(adapter, :transaction, 3) do
       adapter.transaction(repo, opts, fn ->
         case fun.() do
-          {:ok, model} -> model
+          {:ok, struct} -> struct
           {:error, changeset} -> adapter.rollback(repo, changeset)
         end
       end)
@@ -510,21 +547,21 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp dump_field!(action, model, field, type, value, adapter) do
+  defp dump_field!(action, schema, field, type, value, adapter) do
     case Ecto.Type.adapter_dump(adapter, type, value) do
       {:ok, value} ->
         {field, value}
       :error ->
         raise Ecto.ChangeError,
-          message: "value `#{inspect value}` for `#{inspect model}.#{field}` " <>
+          message: "value `#{inspect value}` for `#{inspect schema}.#{field}` " <>
                    "in `#{action}` does not match type #{inspect type}"
     end
   end
 
-  defp dump_fields!(action, model, kw, types, adapter) do
+  defp dump_fields!(action, schema, kw, types, adapter) do
     for {field, value} <- kw do
       type = Map.fetch!(types, field)
-      dump_field!(action, model, field, type, value, adapter)
+      dump_field!(action, schema, field, type, value, adapter)
     end
   end
 end
