@@ -375,26 +375,27 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def joins_query(refl) do
-    from o in refl.owner,
-      join: q in ^refl.queryable,
-      on: field(q, ^refl.related_key) == field(o, ^refl.owner_key)
+  def joins_query(%{queryable: queryable, related_key: related_key,
+                    owner: owner, owner_key: owner_key}) do
+    from o in owner,
+      join: q in ^queryable,
+      on: field(q, ^related_key) == field(o, ^owner_key)
   end
 
   @doc false
-  def assoc_query(refl, values) do
-    assoc_query(refl, refl.queryable, values)
+  def assoc_query(%{queryable: queryable} = refl, values) do
+    assoc_query(refl, queryable, values)
   end
 
   @doc false
-  def assoc_query(refl, query, values) do
+  def assoc_query(%{related_key: related_key}, query, values) do
     from x in query,
-      where: field(x, ^refl.related_key) in ^values
+      where: field(x, ^related_key) in ^values
   end
 
   @doc false
-  def preload_info(refl) do
-    {:assoc, refl, refl.related_key}
+  def preload_info(%{related_key: related_key} = refl) do
+    {:assoc, refl, related_key}
   end
 
   @doc false
@@ -511,8 +512,8 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def preload_info(refl) do
-    {:through, refl, refl.through}
+  def preload_info(%{through: through} = refl) do
+    {:through, refl, through}
   end
 
   def on_repo_change(%{field: name}, _, _, _) do
@@ -683,26 +684,27 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def joins_query(refl) do
-    from o in refl.owner,
-      join: q in ^refl.queryable,
-      on: field(q, ^refl.related_key) == field(o, ^refl.owner_key)
+  def joins_query(%{queryable: queryable, related_key: related_key,
+                    owner: owner, owner_key: owner_key}) do
+    from o in owner,
+      join: q in ^queryable,
+      on: field(q, ^related_key) == field(o, ^owner_key)
   end
 
   @doc false
-  def assoc_query(refl, values) do
-    assoc_query(refl, refl.queryable, values)
+  def assoc_query(%{queryable: queryable} = refl, values) do
+    assoc_query(refl, queryable, values)
   end
 
   @doc false
-  def assoc_query(refl, query, values) do
+  def assoc_query(%{related_key: related_key}, query, values) do
     from x in query,
-      where: field(x, ^refl.related_key) in ^values
+      where: field(x, ^related_key) in ^values
   end
 
   @doc false
-  def preload_info(refl) do
-    {:assoc, refl, refl.related_key}
+  def preload_info(%{related_key: related_key} = refl) do
+    {:assoc, refl, related_key}
   end
 
   @doc false
@@ -732,5 +734,99 @@ defmodule Ecto.Association.BelongsTo do
 
   def on_replace(%{on_replace: :nilify}, changeset) do
     {:update, changeset}
+  end
+end
+
+defmodule Ecto.Association.ManyToMany do
+  @moduledoc """
+  The association struct for `many_to_many` associations.
+
+  Its fields are:
+
+    * `cardinality` - The association cardinality
+    * `field` - The name of the association field on the schema
+    * `owner` - The schema where the association was defined
+    * `related` - The schema that is associated
+    * `owner_key` - The key on the `owner` schema used for the association
+    * `queryable` - The real query to use for querying association
+    * `on_delete` - The action taken on associations when schema is deleted
+    * `on_replace` - The action taken on associations when schema is replaced
+    * `defaults` - Default fields used when building the association
+  """
+
+  @behaviour Ecto.Association
+  @on_delete_opts [:nothing, :nilify_all, :delete_all]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
+  defstruct [:field, :owner, :related, :owner_key, :queryable,
+             :on_delete, :on_replace, :join_keys, :join_through,
+             defaults: [], relationship: :child, cardinality: :many]
+
+  @doc false
+  def struct(module, name, opts) do
+    join_keys    = opts[:join_keys]
+    join_through = opts[:join_through]
+
+    queryable = Keyword.fetch!(opts, :queryable)
+    related   = Ecto.Association.related_from_query(queryable)
+
+    unless join_through do
+      raise ArgumentError,
+        "many_to_many #{inspect name} associations require the :join_through option to be given"
+    end
+
+    {owner_key, join_keys} =
+      case join_keys do
+        [{join_owner_key, owner_key}, {join_related_key, related_key}]
+            when is_atom(join_owner_key) and is_atom(owner_key) and
+                 is_atom(join_related_key) and is_atom(related_key) ->
+          {owner_key, join_keys}
+        nil ->
+          {:id, default_join_keys(module, related)}
+        _ ->
+          raise ArgumentError,
+            "many_to_many #{inspect name} expect :join_keys to be a keyword list " <>
+            "with two entries, the first being how the join table should reach " <>
+            "the current schema and the second how the join table should reach " <>
+            "the associated schema. For example: #{inspect default_join_keys(module, related)}"
+      end
+
+    unless Module.get_attribute(module, :ecto_fields)[owner_key] do
+      raise ArgumentError, "schema does not have the field #{inspect owner_key} used by " <>
+        "association #{inspect name}, please set the :join_keys option accordingly"
+    end
+
+    on_delete  = Keyword.get(opts, :on_delete, :nothing)
+    on_replace = Keyword.get(opts, :on_replace, :raise)
+
+    unless on_delete in @on_delete_opts do
+      raise ArgumentError, "invalid :on_delete option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_delete_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    unless on_replace in @on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    %__MODULE__{
+      field: name,
+      cardinality: Keyword.fetch!(opts, :cardinality),
+      owner: module,
+      related: related,
+      owner_key: owner_key,
+      join_keys: join_keys,
+      join_through: join_through,
+      queryable: queryable,
+      on_delete: on_delete,
+      on_replace: on_replace,
+      defaults: opts[:defaults] || []
+    }
+  end
+
+  defp default_join_keys(module, related) do
+    [{Ecto.Association.association_key(module, :id), :id},
+     {Ecto.Association.association_key(related, :id), :id}]
   end
 end
