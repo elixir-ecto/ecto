@@ -803,7 +803,7 @@ defmodule Ecto.Schema do
       The keys are inflected from the schema names.
 
     * `:on_delete` - The action taken on associations when the parent record
-      is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
+      is deleted. May be `:nothing` (default) or `:delete_all`.
       `:delete_all` will only remove data from the join source, never
       the associated records. Notice `:on_delete` may also be set in migrations
       when creating a reference. If supported, relying on the database via

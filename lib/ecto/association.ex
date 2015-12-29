@@ -109,7 +109,7 @@ defmodule Ecto.Association do
   Returns information used by the preloader.
   """
   @callback preload_info(t) ::
-              {:assoc, t, atom} | {:through, t, [atom]}
+              {:assoc, t, {integer, atom}} | {:through, t, [atom]}
 
   @doc """
   Performs the repository change on the association.
@@ -395,7 +395,7 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def preload_info(%{related_key: related_key} = refl) do
-    {:assoc, refl, related_key}
+    {:assoc, refl, {0, related_key}}
   end
 
   @doc false
@@ -570,7 +570,7 @@ defmodule Ecto.Association.HasThrough do
     assoc_on = rewrite_expr(assoc.on, mapping)
 
     %{query | wheres: [assoc_on|query.wheres], joins: joins,
-              from: merge_from(query.from, assoc.source), sources: nil}
+              from: assoc.source, sources: nil}
     |> distinct([x], true)
   end
 
@@ -579,9 +579,6 @@ defmodule Ecto.Association.HasThrough do
               on: rewrite_expr(on, %{0 => position}),
               file: on.file, line: on.line}
   end
-
-  defp merge_from({"join expression", _}, assoc_source), do: assoc_source
-  defp merge_from(from, _assoc_source), do: from
 
   defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
     expr =
@@ -704,7 +701,7 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def preload_info(%{related_key: related_key} = refl) do
-    {:assoc, refl, related_key}
+    {:assoc, refl, {0, related_key}}
   end
 
   @doc false
@@ -755,7 +752,7 @@ defmodule Ecto.Association.ManyToMany do
   """
 
   @behaviour Ecto.Association
-  @on_delete_opts [:nothing, :nilify_all, :delete_all]
+  @on_delete_opts [:nothing, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   defstruct [:field, :owner, :related, :owner_key, :queryable,
              :on_delete, :on_replace, :join_keys, :join_through,

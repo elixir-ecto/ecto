@@ -545,16 +545,12 @@ defmodule Ecto.Query.Builder do
   ## Examples
 
       iex> count_binds(%Ecto.Query{joins: [1,2,3]})
-      3
-
-      iex> count_binds(%Ecto.Query{from: 0, joins: [1,2]})
-      3
+      4
 
   """
   @spec count_binds(Ecto.Query.t) :: non_neg_integer
-  def count_binds(%Query{from: from, joins: joins}) do
-    count = if from, do: 1, else: 0
-    count + length(joins)
+  def count_binds(%Query{joins: joins}) do
+    1 + length(joins)
   end
 
   @doc """

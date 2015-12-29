@@ -459,7 +459,7 @@ defmodule Ecto.Query.Planner do
       select = query.select ->
         %{query | select: normalize_fields(query, select)}
       true ->
-        select = %SelectExpr{expr: {:&, [], [0]}}
+        select = %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}
         %{query | select: normalize_fields(query, select)}
     end
   end
