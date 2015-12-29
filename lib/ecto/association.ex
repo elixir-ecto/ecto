@@ -829,4 +829,43 @@ defmodule Ecto.Association.ManyToMany do
     [{Ecto.Association.association_key(module, :id), :id},
      {Ecto.Association.association_key(related, :id), :id}]
   end
+
+  @doc false
+  def joins_query(%{queryable: queryable, owner: owner,
+                    join_through: join_through, join_keys: join_keys}) do
+    [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+    from o in owner,
+      join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
+      join: q in ^queryable, on: field(j, ^join_related_key) == field(q, ^related_key)
+  end
+
+  @doc false
+  def assoc_query(%{queryable: queryable} = refl, values) do
+    assoc_query(refl, queryable, values)
+  end
+
+  @doc false
+  def assoc_query(%{join_through: join_through, join_keys: join_keys}, query, values) do
+    [{join_owner_key, _}, {join_related_key, related_key}] = join_keys
+    from q in query,
+      join: j in ^join_through, on: field(j, ^join_related_key) == field(q, ^related_key),
+      where: field(j, ^join_owner_key) in ^values
+  end
+
+  @doc false
+  def build(refl, _, attributes) do
+    refl
+    |> build()
+    |> struct(attributes)
+  end
+
+  ## Relation callbacks
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+    related
+    |> struct(defaults)
+    |> Ecto.Association.merge_source(queryable)
+  end
 end
