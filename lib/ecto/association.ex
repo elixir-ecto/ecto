@@ -84,26 +84,17 @@ defmodule Ecto.Association do
   @callback joins_query(t) :: Ecto.Query.t
 
   @doc """
-  Returns the association query.
-
-  This callback receives the association struct and it must return
-  a query that retrieves all associated entries with the given
-  values for the owner key.
-
-  This callback is used by `Ecto.assoc/2`.
-  """
-  @callback assoc_query(t, values :: [term]) :: Ecto.Query.t
-
-  @doc """
   Returns the association query on top of the given query.
 
+  If the query is `nil`, the association target must be used.
+
   This callback receives the association struct and it must return
   a query that retrieves all associated entries with the given
   values for the owner key.
 
-  This callback is used by preloading.
+  This callback is used by `Ecto.assoc/2` and when preloading.
   """
-  @callback assoc_query(t, Ecto.Query.t, values :: [term]) :: Ecto.Query.t
+  @callback assoc_query(t, Ecto.Query.t | nil, values :: [term]) :: Ecto.Query.t
 
   @doc """
   Returns information used by the preloader.
@@ -383,13 +374,8 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable} = refl, values) do
-    assoc_query(refl, queryable, values)
-  end
-
-  @doc false
-  def assoc_query(%{related_key: related_key}, query, values) do
-    from x in query,
+  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
+    from x in (query || queryable),
       where: field(x, ^related_key) in ^values
   end
 
@@ -534,13 +520,9 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def assoc_query(refl, values) do
-    assoc_query(refl, %Ecto.Query{from: {"join expression", nil}}, values)
-  end
-
-  @doc false
-  def assoc_query(%{owner: owner, through: [h|t]}, %Ecto.Query{} = query, values) do
-    refl = owner.__schema__(:association, h)
+  def assoc_query(%{owner: owner, through: [h|t]}, query, values) do
+    query = query || %Ecto.Query{from: {"join expression", nil}}
+    refl  = owner.__schema__(:association, h)
 
     # Find the position for upcoming joins
     position = length(query.joins) + 1
@@ -551,7 +533,7 @@ defmodule Ecto.Association.HasThrough do
     #
     # Note we are being restrictive on the format
     # expected from assoc_query.
-    join = assoc_to_join(refl.__struct__.assoc_query(refl, values), position)
+    join = assoc_to_join(refl.__struct__.assoc_query(refl, nil, values), position)
 
     # Add the new join to the query and traverse the remaining
     # joins that will start counting from the added join position.
@@ -570,7 +552,7 @@ defmodule Ecto.Association.HasThrough do
     assoc_on = rewrite_expr(assoc.on, mapping)
 
     %{query | wheres: [assoc_on|query.wheres], joins: joins,
-              from: assoc.source, sources: nil}
+              from: merge_from(query.from, assoc.source), sources: nil}
     |> distinct([x], true)
   end
 
@@ -579,6 +561,9 @@ defmodule Ecto.Association.HasThrough do
               on: rewrite_expr(on, %{0 => position}),
               file: on.file, line: on.line}
   end
+
+  defp merge_from({"join expression", _}, assoc_source), do: assoc_source
+  defp merge_from(from, _assoc_source), do: from
 
   defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
     expr =
@@ -689,13 +674,8 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable} = refl, values) do
-    assoc_query(refl, queryable, values)
-  end
-
-  @doc false
-  def assoc_query(%{related_key: related_key}, query, values) do
-    from x in query,
+  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
+    from x in (query || queryable),
       where: field(x, ^related_key) in ^values
   end
 
@@ -842,9 +822,10 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @doc false
-  def assoc_query(%{join_through: join_through, join_keys: join_keys}, query, values) do
+  def assoc_query(%{join_through: join_through, join_keys: join_keys,
+                    queryable: queryable}, query, values) do
     [{join_owner_key, _}, {join_related_key, related_key}] = join_keys
-    from q in query,
+    from q in (query || queryable),
       join: j in ^join_through, on: field(j, ^join_related_key) == field(q, ^related_key),
       where: field(j, ^join_owner_key) in ^values
   end

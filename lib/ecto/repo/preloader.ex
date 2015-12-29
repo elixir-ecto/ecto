@@ -87,12 +87,7 @@ defmodule Ecto.Repo.Preloader do
       [] ->
         {:assoc, assoc, %{}}
       ids ->
-        query =
-          if query do
-            assoc.__struct__.assoc_query(assoc, query, ids)
-          else
-            assoc.__struct__.assoc_query(assoc, ids)
-          end
+        query = assoc.__struct__.assoc_query(assoc, query, ids)
         preload_assoc(repo, query, prefix, assoc, related_key, preloads)
     end
   end
