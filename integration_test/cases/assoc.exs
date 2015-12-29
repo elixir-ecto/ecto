@@ -55,6 +55,33 @@ defmodule Ecto.Integration.AssocTest do
     assert p2.id == pid2
   end
 
+  test "many_to_many assoc" do
+    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})
+    p3 = TestRepo.insert!(%Post{title: "3", text: "hello"})
+
+    %User{id: uid1} = TestRepo.insert!(%User{name: "john"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "mary"})
+
+    TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: uid1],
+                                        [post_id: p1.id, user_id: uid2],
+                                        [post_id: p2.id, user_id: uid2]]
+
+    [u1, u2] = TestRepo.all Ecto.assoc([p1], :users)
+    assert u1.id == uid1
+    assert u2.id == uid2
+
+    [u2] = TestRepo.all Ecto.assoc([p2], :users)
+    assert u2.id == uid2
+    [] = TestRepo.all Ecto.assoc([p3], :users)
+
+    [u1, u2, u2] = TestRepo.all Ecto.assoc([p1, p2, p3], :users)
+    assert u1.id == uid1
+    assert u2.id == uid2
+  end
+
+  ## Changesets
+
   test "has_one changeset assoc" do
     # Insert new
     changeset =

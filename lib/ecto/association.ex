@@ -837,6 +837,11 @@ defmodule Ecto.Association.ManyToMany do
     |> struct(attributes)
   end
 
+  @doc false
+  def preload_info(%{join_keys: [{join_owner_key, _}, {_, _}]} = refl) do
+    {:assoc, refl, {-1, join_owner_key}}
+  end
+
   ## Relation callbacks
   @behaviour Ecto.Changeset.Relation
 

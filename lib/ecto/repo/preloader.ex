@@ -122,7 +122,7 @@ defmodule Ecto.Repo.Preloader do
     query
   end
 
-  defp related_key_to_field(query, {pos, key}) when pos >= 0 do
+  defp related_key_to_field(query, {pos, key}) do
     {{:., [], [{:&, [], [related_key_pos(query, pos)]}, key]}, [], []}
   end
 
