@@ -792,8 +792,9 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:join_through` - specifies the source of the associated data.
-      Currently it supports only strings representing sources, like
-      "posts_tags" in the example above. This option is required.
+      It may be a string, like "posts_tags", representing the
+      underlying storage table or an atom, like `MyApp.PostTag`,
+      representing a schema. This option is required.
 
     * `:join_keys` - specifies how the schemas are associated. It
       expects a keyword list with two entries, the first being how

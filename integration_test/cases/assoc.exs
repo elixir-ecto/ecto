@@ -8,6 +8,7 @@ defmodule Ecto.Integration.AssocTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.User
+  alias Ecto.Integration.UserPost
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
 
@@ -265,6 +266,8 @@ defmodule Ecto.Integration.AssocTest do
     [u2] = post.users
     assert u2.name == "2"
 
+    assert [1] == TestRepo.all(from(j in "posts_users", select: count(j.post_id)))
+
     # Updating
     changeset =
       post
@@ -279,6 +282,8 @@ defmodule Ecto.Integration.AssocTest do
     assert u1.name == "11"
     assert u2.name == "22"
 
+    assert [2] == TestRepo.all(from(j in "posts_users", select: count(j.post_id)))
+
     # Replacing (on_replace: :delete)
     changeset =
       post
@@ -291,6 +296,49 @@ defmodule Ecto.Integration.AssocTest do
 
     assert [0] == TestRepo.all(from(j in "posts_users", select: count(j.post_id)))
     assert [2] == TestRepo.all(from(c in User, select: count(c.id)))
+  end
+
+  test "many_to_many changeset assoc with schema" do
+    p1 = TestRepo.insert! %Post{title: "1"}
+    p2 = %Post{title: "2"}
+
+    # Inserting
+    changeset =
+      %User{name: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_posts, [p2])
+    user = TestRepo.insert!(changeset)
+    [p2] = user.schema_posts
+    assert p2.id
+    user = TestRepo.get!(from(User, preload: [:schema_posts]), user.id)
+    [p2] = user.schema_posts
+    assert p2.title == "2"
+
+    [up2] = TestRepo.all(UserPost) |> Enum.sort_by(&(&1.id))
+    assert up2.post_id == p2.id
+    assert up2.user_id == user.id
+    assert up2.inserted_at
+    assert up2.updated_at
+
+    # Updating
+    changeset =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_posts, [Ecto.Changeset.change(p1, title: "11"),
+                                                  Ecto.Changeset.change(p2, title: "22")])
+    user = TestRepo.update!(changeset)
+    [p1, _p2] = user.schema_posts |> Enum.sort_by(&(&1.id))
+    assert p1.id
+    user = TestRepo.get!(from(User, preload: [:schema_posts]), user.id)
+    [p1, p2] = user.schema_posts |> Enum.sort_by(&(&1.id))
+    assert p1.title == "11"
+    assert p2.title == "22"
+
+    [_up2, up1] = TestRepo.all(UserPost) |> Enum.sort_by(&(&1.id))
+    assert up1.post_id == p1.id
+    assert up1.user_id == user.id
+    assert up1.inserted_at
+    assert up1.updated_at
   end
 
   @tag :unique_constraint

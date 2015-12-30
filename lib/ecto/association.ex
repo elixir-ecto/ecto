@@ -385,7 +385,6 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-
   def on_repo_change(%{on_replace: on_replace} = refl, parent_changeset,
                      %{action: :replace} = changeset, opts) do
     changeset = case on_replace do
@@ -439,12 +438,14 @@ defmodule Ecto.Association.Has do
 
   ## On delete callbacks
 
+  @doc false
   def delete_all(refl, parent, repo, opts) do
     if query = on_delete_query(refl, parent) do
       repo.delete_all query, opts
     end
   end
 
+  @doc false
   def nilify_all(%{related_key: related_key} = refl, parent, repo, opts) do
     if query = on_delete_query(refl, parent) do
       repo.update_all query, [set: [{related_key, nil}]], opts
@@ -755,16 +756,19 @@ defmodule Ecto.Association.ManyToMany do
 
   @doc false
   def struct(module, name, opts) do
-    join_keys    = opts[:join_keys]
     join_through = opts[:join_through]
 
+    if join_through && (is_atom(join_through) or is_binary(join_through)) do
+      :ok
+    else
+      raise ArgumentError,
+        "many_to_many #{inspect name} associations require the :join_through option to be " <>
+        "given and it must be an atom (representing a schema) or a string (representing a table)"
+    end
+
+    join_keys = opts[:join_keys]
     queryable = Keyword.fetch!(opts, :queryable)
     related   = Ecto.Association.related_from_query(queryable)
-
-    unless join_through do
-      raise ArgumentError,
-        "many_to_many #{inspect name} associations require the :join_through option to be given"
-    end
 
     {owner_key, join_keys} =
       case join_keys do
@@ -883,9 +887,9 @@ defmodule Ecto.Association.ManyToMany do
       {:ok, child} ->
         [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
         if insert_join?(parent_changeset, changeset, field, related_key) do
-          row = [{join_owner_key, field!(:insert, owner, owner_key)},
-                 {join_related_key, field!(:insert, child, related_key)}]
-          repo.insert_all join_through, [row], opts
+          data = [{join_owner_key, field!(:insert, owner, owner_key)},
+                  {join_related_key, field!(:insert, child, related_key)}]
+          insert_join(repo, join_through, data, opts)
         end
         {:ok, child}
       {:error, changeset} ->
@@ -900,6 +904,14 @@ defmodule Ecto.Association.ManyToMany do
     not Enum.any? Map.fetch!(owner, field), fn child ->
       Map.get(child, related_key) == current_key
     end
+  end
+
+  defp insert_join(repo, join_through, data, opts) when is_binary(join_through) do
+    repo.insert_all join_through, [data], opts
+  end
+
+  defp insert_join(repo, join_through, data, opts) when is_atom(join_through) do
+    repo.insert! struct(join_through, data), opts
   end
 
   defp field!(op, struct, field) do
@@ -918,6 +930,7 @@ defmodule Ecto.Association.ManyToMany do
 
   ## On delete callbacks
 
+  @doc false
   def delete_all(%{join_through: join_through, join_keys: join_keys}, parent, repo, opts) do
     [{join_owner_key, owner_key}, {_, _}] = join_keys
     if value = Map.get(parent, owner_key) do

@@ -108,6 +108,22 @@ defmodule Ecto.Integration.Permalink do
   end
 end
 
+defmodule Ecto.Integration.UserPost do
+  @moduledoc """
+  This module is used to test:
+
+    * Many to many associations join_through with schema
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "users_posts" do
+    belongs_to :user, Ecto.Integration.User
+    belongs_to :post, Ecto.Integration.Post
+    timestamps
+  end
+end
+
 defmodule Ecto.Integration.User do
   @moduledoc """
   This module is used to test:
@@ -125,6 +141,7 @@ defmodule Ecto.Integration.User do
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all, on_replace: :nilify
     has_one :permalink, Ecto.Integration.Permalink, on_replace: :nilify
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
+    many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.UserPost
     timestamps
   end
 end

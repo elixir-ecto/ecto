@@ -23,6 +23,16 @@ defmodule Ecto.Repo.ManyToManyTest do
     end
   end
 
+  defmodule MyModelAssoc do
+    use Ecto.Schema
+
+    schema "models_assocs" do
+      belongs_to :my_model, MyModel
+      belongs_to :my_assoc, MyAssoc
+      timestamps
+    end
+  end
+
   defmodule MyModel do
     use Ecto.Schema
 
@@ -30,6 +40,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       field :x, :string
       field :y, :binary
       many_to_many :assocs, MyAssoc, join_through: "models_assocs", on_replace: :delete
+      many_to_many :schema_assocs, MyAssoc, join_through: MyModelAssoc
     end
   end
 
@@ -45,7 +56,24 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.id
     assert assoc.x == "xyz"
     assert assoc.inserted_at
+    assert_received :insert
     assert_received {:insert_all, "models_assocs", [[my_model_id: 1, my_assoc_id: 1]]}
+  end
+
+  test "handles assocs on insert with schema" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MyModel{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_assocs, [sample])
+    model = TestRepo.insert!(changeset)
+    [assoc] = model.schema_assocs
+    assert assoc.id
+    assert assoc.x == "xyz"
+    assert assoc.inserted_at
+    assert_received :insert
+    assert_received :insert
   end
 
   test "handles assocs from struct on insert" do
@@ -54,6 +82,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.id
     assert assoc.x == "xyz"
     assert assoc.inserted_at
+    assert_received :insert
     assert_received {:insert_all, "models_assocs", [[my_model_id: 1, my_assoc_id: 1]]}
   end
 
@@ -188,14 +217,31 @@ defmodule Ecto.Repo.ManyToManyTest do
 
     changeset =
       %MyModel{id: 3}
-      |> Ecto.Changeset.change
+      |> Ecto.Changeset.change(x: "1")
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
     model = TestRepo.update!(changeset)
     [assoc] = model.assocs
     assert assoc.id
     assert assoc.x == "xyz"
     assert assoc.updated_at
+    assert_received :update
     assert_received {:insert_all, "models_assocs", [[my_model_id: 3, my_assoc_id: 1]]}
+  end
+
+  test "inserting assocs on update with schema" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MyModel{id: 3}
+      |> Ecto.Changeset.change(x: "1")
+      |> Ecto.Changeset.put_assoc(:schema_assocs, [sample])
+    model = TestRepo.update!(changeset)
+    [assoc] = model.schema_assocs
+    assert assoc.id
+    assert assoc.x == "xyz"
+    assert assoc.updated_at
+    assert_received :update
+    assert_received :insert
   end
 
   test "replacing assocs on update on_replace" do
