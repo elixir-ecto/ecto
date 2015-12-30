@@ -26,9 +26,10 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   ## Command line options
 
     * `-r`, `--repo` - the repo to generate migration for (defaults to `YourApp.Repo`)
-    * `--no-start` - do not start applications
 
   """
+
+  @switches [change: :string]
 
   @doc false
   def run(args) do
@@ -36,13 +37,16 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
     repos = parse_repo(args)
 
     Enum.each repos, fn repo ->
-      case OptionParser.parse(args) do
-        {_, [name], _} ->
+      case OptionParser.parse(args, switches: @switches) do
+        {opts, [name], _} ->
           ensure_repo(repo, args)
           path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
           file = Path.join(path, "#{timestamp}_#{underscore(name)}.exs")
           create_directory path
-          create_file file, migration_template(mod: Module.concat([repo, Migrations, camelize(name)]))
+
+          assigns = [mod: Module.concat([repo, Migrations, camelize(name)]),
+                     change: opts[:change]]
+          create_file file, migration_template(assigns)
 
           if open?(file) && Mix.shell.yes?("Do you want to run this migration?") do
             Mix.Task.run "ecto.migrate", [repo]
@@ -67,6 +71,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
     use Ecto.Migration
 
     def change do
+  <%= @change %>
     end
   end
   """
