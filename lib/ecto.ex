@@ -504,7 +504,7 @@ defmodule Ecto do
         key = Map.fetch!(struct, owner_key),
         do: key)
 
-    assoc.__struct__.assoc_query(assoc, values)
+    assoc.__struct__.assoc_query(assoc, nil, values)
   end
 
   @doc """

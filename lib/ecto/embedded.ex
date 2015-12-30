@@ -60,43 +60,44 @@ defmodule Ecto.Embedded do
     end
   end
 
-  defp prepare_each(%{cardinality: :one}, nil, _adapter, _action) do
+  defp prepare_each(%{cardinality: :one}, nil, _adapter, _repo_action) do
     nil
   end
 
-  defp prepare_each(%{cardinality: :one} = embed, changeset, adapter, action) do
-    check_action!(changeset.action, action, embed)
-    prepare_each(changeset, embed, adapter)
+  defp prepare_each(%{cardinality: :one} = embed, changeset, adapter, repo_action) do
+    action = check_action!(changeset.action, repo_action, embed)
+    to_struct(changeset, action, embed, adapter)
   end
 
-  defp prepare_each(%{cardinality: :many} = embed, changesets, adapter, action) do
+  defp prepare_each(%{cardinality: :many} = embed, changesets, adapter, repo_action) do
     for changeset <- changesets,
-        check_action!(changeset.action, action, embed),
-        prepared = prepare_each(changeset, embed, adapter),
+        action = check_action!(changeset.action, repo_action, embed),
+        prepared = to_struct(changeset, action, embed, adapter),
         do: prepared
   end
 
-  defp prepare_each(%Changeset{valid?: false}, %{related: schema}, _adapter) do
+  defp to_struct(%Changeset{valid?: false}, _action,
+                 %{related: schema}, _adapter) do
     raise ArgumentError, "changeset for embedded #{inspect schema} is invalid, " <>
                          "but the parent changeset was not marked as invalid"
   end
 
-  defp prepare_each(%Changeset{model: %{__struct__: actual}},
-                    %{related: expected}, _adapter) when actual != expected do
+  defp to_struct(%Changeset{model: %{__struct__: actual}}, _action,
+                 %{related: expected}, _adapter) when actual != expected do
     raise ArgumentError, "expected changeset for embedded schema `#{inspect expected}`, " <>
                          "got: #{inspect actual}"
   end
 
-  defp prepare_each(%Changeset{action: :update, changes: changes, model: model},
-                    _embed, _adapter) when changes == %{} do
+  defp to_struct(%Changeset{changes: changes, model: model}, :update,
+                 _embed, _adapter) when changes == %{} do
     model
   end
 
-  defp prepare_each(%Changeset{action: :delete}, _embed, _adapter) do
+  defp to_struct(%Changeset{}, :delete, _embed, _adapter) do
     nil
   end
 
-  defp prepare_each(%Changeset{action: action, types: types} = changeset,
+  defp to_struct(%Changeset{types: types} = changeset, action,
                     %{related: schema}, adapter) do
     %{model: struct, changes: changes} = prepare(changeset, adapter, action)
 
@@ -111,11 +112,13 @@ defmodule Ecto.Embedded do
     put_in(struct.__meta__.state, :loaded)
   end
 
+  defp check_action!(:replace, action, %{on_replace: :delete} = embed),
+    do: check_action!(:delete, action, embed)
   defp check_action!(:update, :insert, %{related: schema}),
     do: raise(ArgumentError, "got action :update in changeset for embedded #{inspect schema} while inserting")
   defp check_action!(:delete, :insert, %{related: schema}),
     do: raise(ArgumentError, "got action :delete in changeset for embedded #{inspect schema} while inserting")
-  defp check_action!(_, _, _), do: :ok
+  defp check_action!(action, _, _), do: action
 
   defp autogenerate_id(changes, _struct, :insert, schema, adapter) do
     case schema.__schema__(:autogenerate_id) do
@@ -162,12 +165,5 @@ defmodule Ecto.Embedded do
   """
   def build(%Embedded{related: related}) do
     related.__struct__
-  end
-
-  @doc """
-  Callback invoked when replacing relations.
-  """
-  def on_replace(%Embedded{on_replace: :delete}, changeset) do
-    {:delete, changeset}
   end
 end

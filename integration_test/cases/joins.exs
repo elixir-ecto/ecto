@@ -73,6 +73,8 @@ defmodule Ecto.Integration.JoinsTest do
     assert p2.permalink.id == plid1
   end
 
+  ## Associations joins
+
   test "has_many association join" do
     post = TestRepo.insert!(%Post{title: "1", text: "hi"})
     c1 = TestRepo.insert!(%Comment{text: "hey", post_id: post.id})
@@ -100,7 +102,7 @@ defmodule Ecto.Integration.JoinsTest do
     [{^p1, ^post}, {^p2, ^post}] = TestRepo.all(query)
   end
 
-  test "has_many through assoc" do
+  test "has_many through association join" do
     %Post{id: pid1} = p1 = TestRepo.insert!(%Post{})
     %Post{id: pid2} = p2 = TestRepo.insert!(%Post{})
 
@@ -118,7 +120,22 @@ defmodule Ecto.Integration.JoinsTest do
     assert u2.id == uid2
   end
 
-  ## Preload assocs
+  test "many_to_many association join" do
+    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})
+    _p = TestRepo.insert!(%Post{title: "3", text: "hello"})
+    u1 = TestRepo.insert!(%User{name: "john"})
+    u2 = TestRepo.insert!(%User{name: "mary"})
+
+    TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: u1.id],
+                                        [post_id: p1.id, user_id: u2.id],
+                                        [post_id: p2.id, user_id: u2.id]]
+
+    query = from(p in Post, join: u in assoc(p, :users), select: {p, u}, order_by: p.id)
+    [{^p1, ^u1}, {^p1, ^u2}, {^p2, ^u2}] = TestRepo.all(query)
+  end
+
+  ## Association preload
 
   test "has_many assoc selector" do
     p1 = TestRepo.insert!(%Post{title: "1"})
@@ -163,6 +180,24 @@ defmodule Ecto.Integration.JoinsTest do
     assert %Post{id: ^pid1} = p1.post
     refute p2.post
     assert %Post{id: ^pid2} = p3.post
+  end
+
+  test "many_to_many assoc selector" do
+    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})
+    _p = TestRepo.insert!(%Post{title: "3", text: "hello"})
+    u1 = TestRepo.insert!(%User{name: "john"})
+    u2 = TestRepo.insert!(%User{name: "mary"})
+
+    TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: u1.id],
+                                        [post_id: p1.id, user_id: u2.id],
+                                        [post_id: p2.id, user_id: u2.id]]
+
+    query = from(p in Post, left_join: u in assoc(p, :users), preload: [users: u], order_by: p.id)
+    [p1, p2, p3] = TestRepo.all(query)
+    assert p1.users == [u1, u2]
+    assert p2.users == [u2]
+    assert p3.users == []
   end
 
   test "has_many through assoc selector" do
@@ -231,6 +266,8 @@ defmodule Ecto.Integration.JoinsTest do
     [u2] = l2.post_comments_authors
     assert u2.id == uid2
   end
+
+  ## Nested
 
   test "nested assoc" do
     %Post{id: pid1} = TestRepo.insert!(%Post{title: "1"})
@@ -301,7 +338,7 @@ defmodule Ecto.Integration.JoinsTest do
     assert c3.author.id == uid2
   end
 
-  test "assoc with preload" do
+  test "nested assoc with preload" do
     %Post{id: pid1} = TestRepo.insert!(%Post{title: "1"})
     %Post{id: pid2} = TestRepo.insert!(%Post{title: "2"})
 

@@ -45,6 +45,7 @@ defmodule Ecto.AssociationTest do
 
     schema "permalinks" do
       field :url, :string
+      many_to_many :authors, Author, join_through: "authors_permalinks", defaults: [title: "m2m!"]
     end
   end
 
@@ -59,6 +60,8 @@ defmodule Ecto.AssociationTest do
       has_many :emails, {"users_emails", Email}
       has_one :profile, {"users_profiles", Profile},
         defaults: [name: "default"], on_replace: :delete
+      many_to_many :permalinks, {"custom_permalinks", Permalink},
+        join_through: "authors_permalinks"
     end
   end
 
@@ -97,23 +100,23 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
            inspect(from p in Post, join: c in Comment, on: c.post_id == p.id)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from c in Comment, where: c.post_id in ^[])
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from c in Comment, where: c.post_id in ^[1, 2, 3])
   end
 
-  test "has many model with specified source" do
+  test "has many with specified source" do
     assoc = Author.__schema__(:association, :emails)
 
     assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
            inspect(from a in Author, join: e in {"users_emails", Email}, on: e.author_id == a.id)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from e in {"users_emails", Email}, where: e.author_id in ^[])
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from e in {"users_emails", Email}, where: e.author_id in ^[1, 2, 3])
   end
 
@@ -130,23 +133,23 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
            inspect(from p in Post, join: c in Permalink, on: c.post_id == p.id)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from c in Permalink, where: c.post_id in ^[])
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from c in Permalink, where: c.post_id in ^[1, 2, 3])
   end
 
-  test "has one model with specified source" do
+  test "has one with specified source" do
     assoc = Author.__schema__(:association, :profile)
 
     assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
            inspect(from a in Author, join: p in {"users_profiles", Profile}, on: p.author_id == a.id)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from p in {"users_profiles", Profile}, where: p.author_id in ^[])
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from p in {"users_profiles", Profile}, where: p.author_id in ^[1, 2, 3])
   end
 
@@ -163,23 +166,23 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
            inspect(from p in Post, join: a in Author, on: a.id == p.author_id)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from a in Author, where: a.id in ^[])
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in Author, where: a.id in ^[1, 2, 3])
   end
 
-  test "belongs to model with specified source" do
+  test "belongs to with specified source" do
     assoc = Email.__schema__(:association, :author)
 
     assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
            inspect(from e in Email, join: a in {"post_authors", Author}, on: a.id == e.author_id)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from a in {"post_authors", Author}, where: a.id in ^[])
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in {"post_authors", Author}, where: a.id in ^[1, 2, 3])
   end
 
@@ -190,13 +193,60 @@ defmodule Ecto.AssociationTest do
            inspect(from a in Author, where: a.id in ^[1, 2, 3], limit: 5)
   end
 
+  test "many to many" do
+    assoc = Permalink.__schema__(:association, :authors)
+
+    assert inspect(Ecto.Association.ManyToMany.joins_query(assoc)) ==
+           inspect(from p in Permalink,
+                    join: m in "authors_permalinks", on: m.permalink_id == p.id,
+                    join: a in Author, on: m.author_id == a.id)
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
+           inspect(from a in Author,
+                    join: m in "authors_permalinks", on: m.author_id == a.id,
+                    where: m.permalink_id in ^[])
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from a in Author,
+                    join: m in "authors_permalinks", on: m.author_id == a.id,
+                    where: m.permalink_id in ^[1, 2, 3])
+  end
+
+  test "many to many with specified source" do
+    assoc = Author.__schema__(:association, :permalinks)
+
+    assert inspect(Ecto.Association.ManyToMany.joins_query(assoc)) ==
+           inspect(from a in Author,
+                    join: m in "authors_permalinks", on: m.author_id == a.id,
+                    join: p in {"custom_permalinks", Permalink}, on: m.permalink_id == p.id)
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
+           inspect(from p in {"custom_permalinks", Permalink},
+                    join: m in "authors_permalinks", on: m.permalink_id == p.id,
+                    where: m.author_id in ^[])
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from p in {"custom_permalinks", Permalink},
+                    join: m in "authors_permalinks", on: m.permalink_id == p.id,
+                    where: m.author_id in ^[1, 2, 3])
+  end
+
+  test "many to many custom assoc query" do
+    assoc = Permalink.__schema__(:association, :authors)
+    query = from a in Author, limit: 5
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from a in Author,
+                    join: m in "authors_permalinks", on: m.author_id == a.id,
+                    where: m.permalink_id in ^[1, 2, 3], limit: 5)
+  end
+
   test "has many through many to many" do
     assoc = Author.__schema__(:association, :posts_comments)
 
     assert inspect(Ecto.Association.HasThrough.joins_query(assoc)) ==
            inspect(from a in Author, join: p in assoc(a, :posts), join: c in assoc(p, :comments))
 
-    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, [1,2,3])) ==
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, nil, [1,2,3])) ==
            inspect(from c in Comment, join: p in Post, on: p.author_id in ^[1, 2, 3],
                         where: c.post_id == p.id, distinct: true)
   end
@@ -207,7 +257,7 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.HasThrough.joins_query(assoc)) ==
            inspect(from a in Author, join: p in assoc(a, :posts), join: c in assoc(p, :permalink))
 
-    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, [1,2,3])) ==
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, nil, [1,2,3])) ==
            inspect(from l in Permalink, join: p in Post, on: p.author_id in ^[1, 2, 3],
                         where: l.post_id == p.id, distinct: true)
   end
@@ -218,7 +268,7 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.HasThrough.joins_query(assoc)) ==
            inspect(from c in Comment, join: p in assoc(c, :post), join: a in assoc(p, :author))
 
-    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, [1,2,3])) ==
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, nil, [1,2,3])) ==
            inspect(from a in Author, join: p in Post, on: p.id in ^[1, 2, 3],
                         where: a.id == p.author_id, distinct: true)
   end
@@ -229,7 +279,7 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.HasThrough.joins_query(assoc)) ==
            inspect(from c in Comment, join: p in assoc(c, :post), join: l in assoc(p, :permalink))
 
-    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, [1,2,3])) ==
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, nil, [1,2,3])) ==
            inspect(from l in Permalink, join: p in Post, on: p.id in ^[1, 2, 3],
                         where: l.post_id == p.id, distinct: true)
   end
@@ -240,7 +290,7 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.HasThrough.joins_query(assoc)) ==
            inspect(from s in Summary, join: p in assoc(s, :post), join: c in assoc(p, :comments))
 
-    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, [1,2,3])) ==
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, nil, [1,2,3])) ==
            inspect(from c in Comment, join: p in Post, on: p.summary_id in ^[1, 2, 3],
                         where: c.post_id == p.id, distinct: true)
   end
@@ -251,7 +301,7 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.HasThrough.joins_query(assoc)) ==
            inspect(from s in Summary, join: p in assoc(s, :post), join: a in assoc(p, :author))
 
-    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, [1,2,3])) ==
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, nil, [1,2,3])) ==
            inspect(from a in Author, join: p in Post, on: p.summary_id in ^[1, 2, 3],
                         where: a.id == p.author_id, distinct: true)
   end
@@ -283,14 +333,21 @@ defmodule Ecto.AssociationTest do
   ## Integration tests through Ecto
 
   test "build/2" do
+    # has many
     assert build_assoc(%Post{id: 1}, :comments) ==
            %Comment{post_id: 1}
 
+    # has one
     assert build_assoc(%Summary{id: 1}, :post) ==
            %Post{summary_id: 1, title: "default"}
 
+    # belongs to
     assert build_assoc(%Post{id: 1}, :author) ==
            %Author{title: "World!"}
+
+    # many to many
+    assert build_assoc(%Permalink{id: 1}, :authors) ==
+           %Author{title: "m2m!"}
 
     assert_raise ArgumentError, ~r"cannot build through association `:post_author`", fn ->
       build_assoc(%Comment{}, :post_author)
@@ -306,19 +363,29 @@ defmodule Ecto.AssociationTest do
 
     profile = build_assoc(%Email{id: 1}, :author)
     assert profile.__meta__.source == {nil, "post_authors"}
+
+    permalink = build_assoc(%Author{id: 1}, :permalinks)
+    assert permalink.__meta__.source == {nil, "custom_permalinks"}
   end
 
   test "build/3 with custom attributes" do
+    # has many
     assert build_assoc(%Post{id: 1}, :comments, text: "Awesome!") ==
            %Comment{post_id: 1, text: "Awesome!"}
 
     assert build_assoc(%Post{id: 1}, :comments, %{text: "Awesome!"}) ==
            %Comment{post_id: 1, text: "Awesome!"}
 
+    # has one
     assert build_assoc(%Post{id: 1}, :comments, post_id: 2) ==
            %Comment{post_id: 1}
 
+    # belongs to
     assert build_assoc(%Post{id: 1}, :author, title: "Hello!") ==
+           %Author{title: "Hello!"}
+
+    # many to many
+    assert build_assoc(%Permalink{id: 1}, :authors, title: "Hello!") ==
            %Author{title: "Hello!"}
 
     # Overriding defaults
@@ -408,32 +475,32 @@ defmodule Ecto.AssociationTest do
   end
 
   test "preload: expand" do
-    assert [{:comments, {:assoc, %Ecto.Association.Has{}, :post_id}, {nil, []}},
-            {:permalink, {:assoc, %Ecto.Association.Has{}, :post_id}, {nil, []}}] =
+    assert [{:comments, {:assoc, %Ecto.Association.Has{}, {0, :post_id}}, {nil, []}},
+            {:permalink, {:assoc, %Ecto.Association.Has{}, {0, :post_id}}, {nil, []}}] =
            expand(Post, [:comments, :permalink])
 
-    assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, :id},
+    assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, {0, :id}},
               {nil, [author: {nil, []}, permalink: {nil, []}]}}] =
            expand(Comment, [:post, post: :author, post: :permalink])
 
-    assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, :id},
+    assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, {0, :id}},
              {nil, [author: {nil, []}, permalink: {nil, []}]}}] =
            expand(Comment, [:post, post: :author, post: :permalink])
 
-    assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, {nil, [comments: {nil, [post: {nil, []}]}]}},
+    assert [{:posts, {:assoc, %Ecto.Association.Has{}, {0, :author_id}}, {nil, [comments: {nil, [post: {nil, []}]}]}},
             {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
            expand(Author, [posts_comments: :post])
 
-    assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, {nil, [comments: _, comments: _]}},
+    assert [{:posts, {:assoc, %Ecto.Association.Has{}, {0, :author_id}}, {nil, [comments: _, comments: _]}},
            {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
            expand(Author, [:posts, posts_comments: :post, posts: [comments: :post]])
 
     query = from(c in Comment, limit: 1)
-    assert [{:permalink, {:assoc, %Ecto.Association.Has{}, :post_id}, {nil, []}},
-            {:comments, {:assoc, %Ecto.Association.Has{}, :post_id}, {^query, []}}] =
+    assert [{:permalink, {:assoc, %Ecto.Association.Has{}, {0, :post_id}}, {nil, []}},
+            {:comments, {:assoc, %Ecto.Association.Has{}, {0, :post_id}}, {^query, []}}] =
            expand(Post, [:permalink, comments: query])
 
-    assert [{:posts, {:assoc, %Ecto.Association.Has{}, :author_id}, {nil, [comments: {^query, [post: {nil, []}]}]}},
+    assert [{:posts, {:assoc, %Ecto.Association.Has{}, {0, :author_id}}, {nil, [comments: {^query, [post: {nil, []}]}]}},
             {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
            expand(Author, [posts_comments: {query, :post}])
   end

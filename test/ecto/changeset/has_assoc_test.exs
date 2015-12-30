@@ -318,7 +318,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     assert first.model.id == 1
     assert first.required == [] # Check for not running changeset function
-    assert first.action == :delete
+    assert first.action == :replace
     assert first.valid?
 
     assert new.changes == %{title: "new"}
@@ -560,8 +560,8 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
-    assert old_changeset.action  == :delete
-    assert new_changeset.action  == :insert
+    assert old_changeset.action == :replace
+    assert new_changeset.action == :insert
 
     assoc_model_changeset = Changeset.change(%Post{}, title: "hello")
 
@@ -579,7 +579,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     assert {:ok, [changeset], true, false} =
       Relation.change(assoc, [], [assoc_model_changeset])
-    assert changeset.action == :delete
+    assert changeset.action == :replace
 
     empty_changeset = Changeset.change(assoc_model)
     assert {:ok, _, true, true} =
@@ -607,8 +607,8 @@ defmodule Ecto.Changeset.HasAssocTest do
     post = %Post{id: 1, author_id: 5}
     changeset = cast(%Author{nilify_posts: [post]}, %{"nilify_posts" => []}, :nilify_posts)
     [post_change] = changeset.changes.nilify_posts
-    assert post_change.action == :update
-    assert post_change.changes == %{author_id: nil}
+    assert post_change.action == :replace
+    assert post_change.changes == %{}
   end
 
   test "change has_many with on_replace: :raise" do
@@ -690,18 +690,18 @@ defmodule Ecto.Changeset.HasAssocTest do
   end
 
   test "apply_changes" do
-    embed = Author.__schema__(:association, :profile)
+    assoc = Author.__schema__(:association, :profile)
 
     changeset = Changeset.change(%Profile{}, name: "michal")
-    model = Relation.apply_changes(embed, changeset)
+    model = Relation.apply_changes(assoc, changeset)
     assert model == %Profile{name: "michal"}
 
-    changeset = Changeset.change(%Post{}, title: "hello")
-    changeset2 = %{changeset | action: :delete}
-    assert Relation.apply_changes(embed, changeset2) == nil
+    changeset1 = Changeset.change(%Post{}, title: "hello")
+    changeset2 = %{changeset1 | action: :delete}
+    assert Relation.apply_changes(assoc, changeset2) == nil
 
-    embed = Author.__schema__(:association, :posts)
-    [model] = Relation.apply_changes(embed, [changeset, changeset2])
+    assoc = Author.__schema__(:association, :posts)
+    [model] = Relation.apply_changes(assoc, [changeset1, changeset2])
     assert model == %Post{title: "hello"}
   end
 end

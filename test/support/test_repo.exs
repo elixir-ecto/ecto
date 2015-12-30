@@ -49,15 +49,17 @@ defmodule Ecto.TestAdapter do
     {1, nil}
   end
 
-  def execute(_repo, _meta, {_, _}, _params, _preprocess, _opts) do
+  def execute(_repo, _meta, {op, %{from: {source, _}}}, _params, _preprocess, _opts) do
+    send self, {op, source}
     {1, nil}
   end
 
-  def insert_all(_repo, _meta, _header, _rows, _autogenerate, _opts) do
+  ## Schema
+
+  def insert_all(_repo, %{source: {_, source}}, _header, rows, _returning, _opts) do
+    send self(), {:insert_all, source, rows}
     {1, nil}
   end
-
-  ## Model
 
   def insert(_repo, %{source: {nil, "schema_migrations"}}, val, _, _) do
     version = Keyword.fetch!(val, :version)

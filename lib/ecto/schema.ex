@@ -770,6 +770,90 @@ defmodule Ecto.Schema do
     end
   end
 
+  @doc ~S"""
+  Indicates a many-to-many association with another schema.
+
+  The association happens through a join schema or source, containing
+  foreign keys to the associated schemas. For example, the association
+  below:
+
+      # from MyApp.Post
+      many_to_many :tags, MyApp.Tag, join_through: "posts_tags"
+
+  is backed by relational databases through a join table as follows:
+
+      [Post] <-> [posts_tags] <-> [Tag]
+        id   <--   post_id
+                    tag_id    -->  id
+
+  More information on the migration for creating such schema is shown
+  below.
+
+  ## Options
+
+    * `:join_through` - specifies the source of the associated data.
+      It may be a string, like "posts_tags", representing the
+      underlying storage table or an atom, like `MyApp.PostTag`,
+      representing a schema. This option is required.
+
+    * `:join_keys` - specifies how the schemas are associated. It
+      expects a keyword list with two entries, the first being how
+      the join table should reach the current schema and the second
+      how the join table should reach the associated schema. In the
+      example above, it defaults to: `[post_id: :id, tag_id: :id]`.
+      The keys are inflected from the schema names.
+
+    * `:on_delete` - The action taken on associations when the parent record
+      is deleted. May be `:nothing` (default) or `:delete_all`.
+      `:delete_all` will only remove data from the join source, never the
+      associated records. Notice `:on_delete` may also be set in migrations
+      when creating a reference. If supported, relying on the database via
+      migrations is prefered
+
+    * `:on_replace` - The action taken on associations when the record is
+      replaced   when casting or manipulating parent changeset. May be
+      `:raise` (default), `:mark_as_invalid`, or `:delete`.
+      `:delete` will only remove data from the join source, never the
+      associated records. See `Ecto.Changeset`'s section on related data
+      for more info.
+
+    * `:defaults` - Default values to use when building the association
+
+  ## Removing data
+
+  If you attempt to remove associated `many_to_many` data, be it by
+  setting `:on_replace` to `:delete`, `:on_delete` to `:delete_all`
+  or by using `Ecto.Changeset.put_assoc/3` and `Ecto.Changeset.cast_assoc/3`,
+  **Ecto will always remove data from the join schema and never from
+  the target associations**. For example, if a `Post` has a many to many
+  relationship with `Tag`, setting a `:on_delete` to `:delete_all` will
+  only delete entries from the "posts_tags" table in case `Post` is
+  deleted.
+
+  ## Examples
+
+      defmodule Post do
+        use Ecto.Schema
+        schema "posts" do
+          many_to_many :tags, Tag, join_through: "posts_tags"
+        end
+      end
+
+      # Get all comments for a given post
+      post = Repo.get(Post, 42)
+      tags = Repo.all assoc(post, :tags)
+
+      # The comments can come preloaded on the post struct
+      [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :tags))
+      post.tags #=> [%Tag{...}, ...]
+
+  """
+  defmacro many_to_many(name, queryable, opts \\ []) do
+    quote do
+      Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
+    end
+  end
+
   ## Embeds
 
   @doc ~S"""
@@ -1008,6 +1092,17 @@ defmodule Ecto.Schema do
 
     struct =
       association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+    Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
+  end
+
+  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace]
+
+  @doc false
+  def __many_to_many__(mod, name, queryable, opts) do
+    check_options!(opts, @valid_many_to_many_options, "many_to_many/3")
+
+    struct =
+      association(mod, :many, name, Ecto.Association.ManyToMany, [queryable: queryable] ++ opts)
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 

@@ -84,32 +84,23 @@ defmodule Ecto.Association do
   @callback joins_query(t) :: Ecto.Query.t
 
   @doc """
-  Returns the association query.
-
-  This callback receives the association struct and it must return
-  a query that retrieves all associated entries with the given
-  values for the owner key.
-
-  This callback is used by `Ecto.assoc/2`.
-  """
-  @callback assoc_query(t, values :: [term]) :: Ecto.Query.t
-
-  @doc """
   Returns the association query on top of the given query.
 
+  If the query is `nil`, the association target must be used.
+
   This callback receives the association struct and it must return
   a query that retrieves all associated entries with the given
   values for the owner key.
 
-  This callback is used by preloading.
+  This callback is used by `Ecto.assoc/2` and when preloading.
   """
-  @callback assoc_query(t, Ecto.Query.t, values :: [term]) :: Ecto.Query.t
+  @callback assoc_query(t, Ecto.Query.t | nil, values :: [term]) :: Ecto.Query.t
 
   @doc """
   Returns information used by the preloader.
   """
   @callback preload_info(t) ::
-              {:assoc, t, atom} | {:through, t, [atom]}
+              {:assoc, t, {integer, atom}} | {:through, t, [atom]}
 
   @doc """
   Performs the repository change on the association.
@@ -264,11 +255,11 @@ defmodule Ecto.Association do
                           parent_changeset, opts) do
     previous = Map.get(parent, field)
     if replaceable?(previous) and primary_key!(previous) != primary_key!(current) do
-      # The case when this could return :error was handled before
-      {:ok, changeset} = Ecto.Changeset.Relation.on_replace(meta, previous)
+      changeset = %{Ecto.Changeset.change(previous) | action: :replace}
 
-      case mod.on_repo_change(meta, %{parent_changeset | model: nil}, changeset, opts) do
-        {:ok, _} -> :ok
+      case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
+        {:ok, nil} ->
+          :ok
         {:error, changeset} ->
           raise Ecto.InvalidChangesetError,
             action: changeset.action, changeset: changeset
@@ -375,29 +366,38 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def joins_query(refl) do
-    from o in refl.owner,
-      join: q in ^refl.queryable,
-      on: field(q, ^refl.related_key) == field(o, ^refl.owner_key)
+  def joins_query(%{queryable: queryable, related_key: related_key,
+                    owner: owner, owner_key: owner_key}) do
+    from o in owner,
+      join: q in ^queryable,
+      on: field(q, ^related_key) == field(o, ^owner_key)
   end
 
   @doc false
-  def assoc_query(refl, values) do
-    assoc_query(refl, refl.queryable, values)
+  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
+    from x in (query || queryable),
+      where: field(x, ^related_key) in ^values
   end
 
   @doc false
-  def assoc_query(refl, query, values) do
-    from x in query,
-      where: field(x, ^refl.related_key) in ^values
+  def preload_info(%{related_key: related_key} = refl) do
+    {:assoc, refl, {0, related_key}}
   end
 
   @doc false
-  def preload_info(refl) do
-    {:assoc, refl, refl.related_key}
+  def on_repo_change(%{on_replace: on_replace} = refl, parent_changeset,
+                     %{action: :replace} = changeset, opts) do
+    changeset = case on_replace do
+      :nilify -> %{changeset | action: :update}
+      :delete -> %{changeset | action: :delete}
+    end
+
+    case on_repo_change(refl, %{parent_changeset | model: nil}, changeset, opts) do
+      {:ok, _} -> {:ok, nil}
+      {:error, changeset} -> {:error, changeset}
+    end
   end
 
-  @doc false
   def on_repo_change(assoc, parent_changeset, changeset, opts) do
     %{model: parent, repo: repo} = parent_changeset
     %{action: action, changes: changes} = changeset
@@ -436,24 +436,27 @@ defmodule Ecto.Association.Has do
     |> Ecto.Association.merge_source(queryable)
   end
 
-  @doc false
-  def on_replace(%{on_replace: :delete}, changeset) do
-    {:delete, changeset}
-  end
-
-  def on_replace(%{on_replace: :nilify, related_key: related_key}, changeset) do
-    changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
-    {:update, changeset}
-  end
-
   ## On delete callbacks
 
-  def delete_all(%{field: field}, parent, repo, opts) do
-    repo.delete_all Ecto.assoc(parent, field), opts
+  @doc false
+  def delete_all(refl, parent, repo, opts) do
+    if query = on_delete_query(refl, parent) do
+      repo.delete_all query, opts
+    end
   end
 
-  def nilify_all(%{related_key: related_key, field: field}, parent, repo, opts) do
-    repo.update_all Ecto.assoc(parent, field), [set: [{related_key, nil}]], opts
+  @doc false
+  def nilify_all(%{related_key: related_key} = refl, parent, repo, opts) do
+    if query = on_delete_query(refl, parent) do
+      repo.update_all query, [set: [{related_key, nil}]], opts
+    end
+  end
+
+  defp on_delete_query(%{owner_key: owner_key, related_key: related_key,
+                         queryable: queryable}, parent) do
+    if value = Map.get(parent, owner_key) do
+      from x in queryable, where: field(x, ^related_key) == ^value
+    end
   end
 end
 
@@ -511,8 +514,8 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def preload_info(refl) do
-    {:through, refl, refl.through}
+  def preload_info(%{through: through} = refl) do
+    {:through, refl, through}
   end
 
   def on_repo_change(%{field: name}, _, _, _) do
@@ -533,13 +536,9 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def assoc_query(refl, values) do
-    assoc_query(refl, %Ecto.Query{from: {"join expression", nil}}, values)
-  end
-
-  @doc false
-  def assoc_query(%{owner: owner, through: [h|t]}, %Ecto.Query{} = query, values) do
-    refl = owner.__schema__(:association, h)
+  def assoc_query(%{owner: owner, through: [h|t]}, query, values) do
+    query = query || %Ecto.Query{from: {"join expression", nil}}
+    refl  = owner.__schema__(:association, h)
 
     # Find the position for upcoming joins
     position = length(query.joins) + 1
@@ -550,7 +549,7 @@ defmodule Ecto.Association.HasThrough do
     #
     # Note we are being restrictive on the format
     # expected from assoc_query.
-    join = assoc_to_join(refl.__struct__.assoc_query(refl, values), position)
+    join = assoc_to_join(refl.__struct__.assoc_query(refl, nil, values), position)
 
     # Add the new join to the query and traverse the remaining
     # joins that will start counting from the added join position.
@@ -683,29 +682,34 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def joins_query(refl) do
-    from o in refl.owner,
-      join: q in ^refl.queryable,
-      on: field(q, ^refl.related_key) == field(o, ^refl.owner_key)
+  def joins_query(%{queryable: queryable, related_key: related_key,
+                    owner: owner, owner_key: owner_key}) do
+    from o in owner,
+      join: q in ^queryable,
+      on: field(q, ^related_key) == field(o, ^owner_key)
   end
 
   @doc false
-  def assoc_query(refl, values) do
-    assoc_query(refl, refl.queryable, values)
+  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
+    from x in (query || queryable),
+      where: field(x, ^related_key) in ^values
   end
 
   @doc false
-  def assoc_query(refl, query, values) do
-    from x in query,
-      where: field(x, ^refl.related_key) in ^values
+  def preload_info(%{related_key: related_key} = refl) do
+    {:assoc, refl, {0, related_key}}
   end
 
   @doc false
-  def preload_info(refl) do
-    {:assoc, refl, refl.related_key}
+  def on_repo_change(%{on_replace: :nilify}, _parent_changeset, %{action: :replace}, _opts) do
+    {:ok, nil}
   end
 
-  @doc false
+  def on_repo_change(%{on_replace: :delete} = refl, parent_changeset,
+                     %{action: :replace} = changeset, opts) do
+    on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, opts)
+  end
+
   def on_repo_change(_refl, %{repo: repo}, %{action: action} = changeset, opts) do
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
@@ -724,13 +728,214 @@ defmodule Ecto.Association.BelongsTo do
     |> struct(defaults)
     |> Ecto.Association.merge_source(queryable)
   end
+end
+
+defmodule Ecto.Association.ManyToMany do
+  @moduledoc """
+  The association struct for `many_to_many` associations.
+
+  Its fields are:
+
+    * `cardinality` - The association cardinality
+    * `field` - The name of the association field on the schema
+    * `owner` - The schema where the association was defined
+    * `related` - The schema that is associated
+    * `owner_key` - The key on the `owner` schema used for the association
+    * `queryable` - The real query to use for querying association
+    * `on_delete` - The action taken on associations when schema is deleted
+    * `on_replace` - The action taken on associations when schema is replaced
+    * `defaults` - Default fields used when building the association
+  """
+
+  @behaviour Ecto.Association
+  @on_delete_opts [:nothing, :delete_all]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete]
+  defstruct [:field, :owner, :related, :owner_key, :queryable,
+             :on_delete, :on_replace, :join_keys, :join_through,
+             defaults: [], relationship: :child, cardinality: :many]
 
   @doc false
-  def on_replace(%{on_replace: :delete}, changeset) do
-    {:delete, changeset}
+  def struct(module, name, opts) do
+    join_through = opts[:join_through]
+
+    if join_through && (is_atom(join_through) or is_binary(join_through)) do
+      :ok
+    else
+      raise ArgumentError,
+        "many_to_many #{inspect name} associations require the :join_through option to be " <>
+        "given and it must be an atom (representing a schema) or a string (representing a table)"
+    end
+
+    join_keys = opts[:join_keys]
+    queryable = Keyword.fetch!(opts, :queryable)
+    related   = Ecto.Association.related_from_query(queryable)
+
+    {owner_key, join_keys} =
+      case join_keys do
+        [{join_owner_key, owner_key}, {join_related_key, related_key}]
+            when is_atom(join_owner_key) and is_atom(owner_key) and
+                 is_atom(join_related_key) and is_atom(related_key) ->
+          {owner_key, join_keys}
+        nil ->
+          {:id, default_join_keys(module, related)}
+        _ ->
+          raise ArgumentError,
+            "many_to_many #{inspect name} expect :join_keys to be a keyword list " <>
+            "with two entries, the first being how the join table should reach " <>
+            "the current schema and the second how the join table should reach " <>
+            "the associated schema. For example: #{inspect default_join_keys(module, related)}"
+      end
+
+    unless Module.get_attribute(module, :ecto_fields)[owner_key] do
+      raise ArgumentError, "schema does not have the field #{inspect owner_key} used by " <>
+        "association #{inspect name}, please set the :join_keys option accordingly"
+    end
+
+    on_delete  = Keyword.get(opts, :on_delete, :nothing)
+    on_replace = Keyword.get(opts, :on_replace, :raise)
+
+    unless on_delete in @on_delete_opts do
+      raise ArgumentError, "invalid :on_delete option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_delete_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    unless on_replace in @on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    %__MODULE__{
+      field: name,
+      cardinality: Keyword.fetch!(opts, :cardinality),
+      owner: module,
+      related: related,
+      owner_key: owner_key,
+      join_keys: join_keys,
+      join_through: join_through,
+      queryable: queryable,
+      on_delete: on_delete,
+      on_replace: on_replace,
+      defaults: opts[:defaults] || []
+    }
   end
 
-  def on_replace(%{on_replace: :nilify}, changeset) do
-    {:update, changeset}
+  defp default_join_keys(module, related) do
+    [{Ecto.Association.association_key(module, :id), :id},
+     {Ecto.Association.association_key(related, :id), :id}]
+  end
+
+  @doc false
+  def joins_query(%{queryable: queryable, owner: owner,
+                    join_through: join_through, join_keys: join_keys}) do
+    [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+    from o in owner,
+      join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
+      join: q in ^queryable, on: field(j, ^join_related_key) == field(q, ^related_key)
+  end
+
+  @doc false
+  def assoc_query(%{queryable: queryable} = refl, values) do
+    assoc_query(refl, queryable, values)
+  end
+
+  @doc false
+  def assoc_query(%{join_through: join_through, join_keys: join_keys,
+                    queryable: queryable}, query, values) do
+    [{join_owner_key, _}, {join_related_key, related_key}] = join_keys
+    from q in (query || queryable),
+      join: j in ^join_through, on: field(j, ^join_related_key) == field(q, ^related_key),
+      where: field(j, ^join_owner_key) in ^values
+  end
+
+  @doc false
+  def build(refl, _, attributes) do
+    refl
+    |> build()
+    |> struct(attributes)
+  end
+
+  @doc false
+  def preload_info(%{join_keys: [{join_owner_key, _}, {_, _}]} = refl) do
+    {:assoc, refl, {-1, join_owner_key}}
+  end
+
+  @doc false
+  def on_repo_change(%{on_replace: :delete} = refl, parent_changeset,
+                     %{action: :replace}  = changeset, opts) do
+    on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, opts)
+  end
+
+  def on_repo_change(%{join_keys: join_keys, join_through: join_through},
+                     %{repo: repo, model: owner}, %{action: :delete, model: related}, opts) do
+    [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+
+    query =
+      from j in join_through,
+        where: field(j, ^join_owner_key) == ^field!(:delete, owner, owner_key) and
+               field(j, ^join_related_key) == ^field!(:delete, related, related_key)
+
+    repo.delete_all query, opts
+    {:ok, nil}
+  end
+
+  def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys},
+                     %{repo: repo, model: owner} = parent_changeset,
+                     %{action: action} = changeset, opts) do
+    case apply(repo, action, [changeset, opts]) do
+      {:ok, child} ->
+        [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+        if insert_join?(parent_changeset, changeset, field, related_key) do
+          data = [{join_owner_key, field!(:insert, owner, owner_key)},
+                  {join_related_key, field!(:insert, child, related_key)}]
+          insert_join(repo, join_through, data, opts)
+        end
+        {:ok, child}
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true
+  defp insert_join?(_, %{action: :insert}, _field, _related_key), do: true
+  defp insert_join?(%{model: owner}, %{model: related}, field, related_key) do
+    current_key = Map.fetch!(related, related_key)
+    not Enum.any? Map.fetch!(owner, field), fn child ->
+      Map.get(child, related_key) == current_key
+    end
+  end
+
+  defp insert_join(repo, join_through, data, opts) when is_binary(join_through) do
+    repo.insert_all join_through, [data], opts
+  end
+
+  defp insert_join(repo, join_through, data, opts) when is_atom(join_through) do
+    repo.insert! struct(join_through, data), opts
+  end
+
+  defp field!(op, struct, field) do
+    Map.get(struct, field) || raise "could not #{op} join entry because `#{field}` is nil in #{inspect struct}"
+  end
+
+  ## Relation callbacks
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+    related
+    |> struct(defaults)
+    |> Ecto.Association.merge_source(queryable)
+  end
+
+  ## On delete callbacks
+
+  @doc false
+  def delete_all(%{join_through: join_through, join_keys: join_keys}, parent, repo, opts) do
+    [{join_owner_key, owner_key}, {_, _}] = join_keys
+    if value = Map.get(parent, owner_key) do
+      query = from j in join_through, where: field(j, ^join_owner_key) == ^value
+      repo.delete_all query, opts
+    end
   end
 end

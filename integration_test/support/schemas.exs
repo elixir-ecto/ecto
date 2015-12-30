@@ -40,9 +40,12 @@ defmodule Ecto.Integration.Post do
     field :meta, :map
     field :posted, Ecto.Date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
-    has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :nilify
+    has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
     has_many :comments_authors, through: [:comments, :author]
     belongs_to :author, Ecto.Integration.User
+    many_to_many :users, Ecto.Integration.User,
+      join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
+    has_many :users_comments, through: [:users, :comments]
     timestamps
   end
 
@@ -105,6 +108,22 @@ defmodule Ecto.Integration.Permalink do
   end
 end
 
+defmodule Ecto.Integration.UserPost do
+  @moduledoc """
+  This module is used to test:
+
+    * Many to many associations join_through with schema
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "users_posts" do
+    belongs_to :user, Ecto.Integration.User
+    belongs_to :post, Ecto.Integration.Post
+    timestamps
+  end
+end
+
 defmodule Ecto.Integration.User do
   @moduledoc """
   This module is used to test:
@@ -118,10 +137,11 @@ defmodule Ecto.Integration.User do
 
   schema "users" do
     field :name, :string
-    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all
     has_many :posts, Ecto.Integration.Post, foreign_key: :author_id, on_delete: :nothing, on_replace: :delete
-    has_many :permalinks, Ecto.Integration.Permalink
+    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all, on_replace: :nilify
+    has_one :permalink, Ecto.Integration.Permalink, on_replace: :nilify
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
+    many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.UserPost
     timestamps
   end
 end

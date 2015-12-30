@@ -310,7 +310,7 @@ defmodule Ecto.Integration.RepoTest do
       assert_raise Ecto.ConstraintError, message, fn ->
         user
         |> Ecto.Changeset.change
-        |> Ecto.Changeset.no_assoc_constraint(:permalinks, name: :permalinks_user_id_pther)
+        |> Ecto.Changeset.no_assoc_constraint(:permalink, name: :permalinks_user_id_pther)
         |> TestRepo.delete()
       end
 
@@ -325,9 +325,9 @@ defmodule Ecto.Integration.RepoTest do
     {:error, changeset} =
       user
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.no_assoc_constraint(:permalinks)
+      |> Ecto.Changeset.no_assoc_constraint(:permalink)
       |> TestRepo.delete()
-    assert changeset.errors == [permalinks: "are still associated to this entry"]
+    assert changeset.errors == [permalink: "is still associated to this entry"]
   end
 
   test "get(!)" do

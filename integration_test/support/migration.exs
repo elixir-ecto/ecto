@@ -24,6 +24,17 @@ defmodule Ecto.Integration.Migration do
       timestamps null: true
     end
 
+    create table(:posts_users, primary_key: false) do
+      add :post_id, references(:posts)
+      add :user_id, references(:users)
+    end
+
+    create table(:users_posts) do
+      add :post_id, references(:posts)
+      add :user_id, references(:users)
+      timestamps
+    end
+
     # Add a unique index on uuid. We use this
     # to verify the behaviour that the index
     # only matters if the UUID column is not NULL.

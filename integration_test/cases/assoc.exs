@@ -8,6 +8,7 @@ defmodule Ecto.Integration.AssocTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.User
+  alias Ecto.Integration.UserPost
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
 
@@ -55,7 +56,34 @@ defmodule Ecto.Integration.AssocTest do
     assert p2.id == pid2
   end
 
-  test "has_one changeset assoc" do
+  test "many_to_many assoc" do
+    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})
+    p3 = TestRepo.insert!(%Post{title: "3", text: "hello"})
+
+    %User{id: uid1} = TestRepo.insert!(%User{name: "john"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "mary"})
+
+    TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: uid1],
+                                        [post_id: p1.id, user_id: uid2],
+                                        [post_id: p2.id, user_id: uid2]]
+
+    [u1, u2] = TestRepo.all Ecto.assoc([p1], :users)
+    assert u1.id == uid1
+    assert u2.id == uid2
+
+    [u2] = TestRepo.all Ecto.assoc([p2], :users)
+    assert u2.id == uid2
+    [] = TestRepo.all Ecto.assoc([p3], :users)
+
+    [u1, u2, u2] = TestRepo.all Ecto.assoc([p1, p2, p3], :users)
+    assert u1.id == uid1
+    assert u2.id == uid2
+  end
+
+  ## Changesets
+
+  test "has_one changeset assoc (on_replace: :delete)" do
     # Insert new
     changeset =
       %Post{title: "1"}
@@ -93,7 +121,7 @@ defmodule Ecto.Integration.AssocTest do
     post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
     assert post.permalink.url == "3"
 
-    # Replacing with nil (on_replace: :nilify)
+    # Replacing with nil (on_replace: :delete)
     changeset =
       post
       |> Ecto.Changeset.change
@@ -103,39 +131,78 @@ defmodule Ecto.Integration.AssocTest do
     post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
     refute post.permalink
 
-    assert [3] == TestRepo.all(from(p in Permalink, select: count(p.id)))
+    assert [0] == TestRepo.all(from(p in Permalink, select: count(p.id)))
   end
 
-  test "has_many changeset assoc" do
-    c1 = %Comment{text: "1"}
+  test "has_one changeset assoc (on_replace: :nilify)" do
+    # Insert new
+    changeset =
+      %User{name: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, %Permalink{url: "1"})
+    user = TestRepo.insert!(changeset)
+    assert user.permalink.id
+    assert user.permalink.user_id == user.id
+    assert user.permalink.url == "1"
+    user = TestRepo.get!(from(User, preload: [:permalink]), user.id)
+    assert user.permalink.url == "1"
+
+    # Replace with new
+    changeset =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, %Permalink{url: "2"})
+    user = TestRepo.update!(changeset)
+    assert user.permalink.id
+    assert user.permalink.user_id == user.id
+    assert user.permalink.url == "2"
+    user = TestRepo.get!(from(User, preload: [:permalink]), user.id)
+    assert user.permalink.url == "2"
+
+    # Replacing with nil (on_replace: :nilify)
+    changeset =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, nil)
+    user = TestRepo.update!(changeset)
+    refute user.permalink
+    user = TestRepo.get!(from(User, preload: [:permalink]), user.id)
+    refute user.permalink
+
+    assert [2] == TestRepo.all(from(p in Permalink, select: count(p.id)))
+  end
+
+  test "has_many changeset assoc (on_replace: :delete)" do
+    c1 = TestRepo.insert! %Comment{text: "1"}
     c2 = %Comment{text: "2"}
 
     # Inserting
     changeset =
       %Post{title: "1"}
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_assoc(:comments, [c1])
+      |> Ecto.Changeset.put_assoc(:comments, [c2])
     post = TestRepo.insert!(changeset)
-    [c1] = post.comments
-    assert c1.id
-    assert c1.post_id == post.id
+    [c2] = post.comments
+    assert c2.id
+    assert c2.post_id == post.id
     post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
-    [c1] = post.comments
-    assert c1.text == "1"
+    [c2] = post.comments
+    assert c2.text == "2"
 
     # Updating
     changeset =
       post
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_assoc(:comments, [Ecto.Changeset.change(c1), Ecto.Changeset.change(c2)])
+      |> Ecto.Changeset.put_assoc(:comments, [Ecto.Changeset.change(c1, text: "11"),
+                                              Ecto.Changeset.change(c2, text: "22")])
     post = TestRepo.update!(changeset)
-    [_c1, c2] = post.comments |> Enum.sort_by(&(&1.id))
-    assert c2.id
-    assert c2.post_id == post.id
+    [c1, _c2] = post.comments |> Enum.sort_by(&(&1.id))
+    assert c1.id
+    assert c1.post_id == post.id
     post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
     [c1, c2] = post.comments |> Enum.sort_by(&(&1.id))
-    assert c1.text == "1"
-    assert c2.text == "2"
+    assert c1.text == "11"
+    assert c2.text == "22"
 
     # Replacing (on_replace: :delete)
     changeset =
@@ -148,6 +215,130 @@ defmodule Ecto.Integration.AssocTest do
     assert post.comments == []
 
     assert [0] == TestRepo.all(from(c in Comment, select: count(c.id)))
+  end
+
+  test "has_many changeset assoc (on_replace: :nilify)" do
+    c1 = TestRepo.insert! %Comment{text: "1"}
+    c2 = %Comment{text: "2"}
+
+    # Inserting
+    changeset =
+      %User{name: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:comments, [c1, c2])
+    user = TestRepo.insert!(changeset)
+    [c1, c2] = user.comments
+    assert c1.id
+    assert c1.author_id == user.id
+    assert c2.id
+    assert c2.author_id == user.id
+    user = TestRepo.get!(from(User, preload: [:comments]), user.id)
+    [c1, c2] = user.comments
+    assert c1.text == "1"
+    assert c2.text == "2"
+
+    # Replacing (on_replace: :nilify)
+    changeset =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:comments, [])
+    user = TestRepo.update!(changeset)
+    assert user.comments == []
+    user = TestRepo.get!(from(User, preload: [:comments]), user.id)
+    assert user.comments == []
+
+    assert [2] == TestRepo.all(from(c in Comment, select: count(c.id)))
+  end
+
+  test "many_to_many changeset assoc" do
+    u1 = TestRepo.insert! %User{name: "1"}
+    u2 = %User{name: "2"}
+
+    # Inserting
+    changeset =
+      %Post{title: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:users, [u2])
+    post = TestRepo.insert!(changeset)
+    [u2] = post.users
+    assert u2.id
+    post = TestRepo.get!(from(Post, preload: [:users]), post.id)
+    [u2] = post.users
+    assert u2.name == "2"
+
+    assert [1] == TestRepo.all(from(j in "posts_users", select: count(j.post_id)))
+
+    # Updating
+    changeset =
+      post
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:users, [Ecto.Changeset.change(u1, name: "11"),
+                                           Ecto.Changeset.change(u2, name: "22")])
+    post = TestRepo.update!(changeset)
+    [u1, _u2] = post.users |> Enum.sort_by(&(&1.id))
+    assert u1.id
+    post = TestRepo.get!(from(Post, preload: [:users]), post.id)
+    [u1, u2] = post.users |> Enum.sort_by(&(&1.id))
+    assert u1.name == "11"
+    assert u2.name == "22"
+
+    assert [2] == TestRepo.all(from(j in "posts_users", select: count(j.post_id)))
+
+    # Replacing (on_replace: :delete)
+    changeset =
+      post
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:users, [])
+    post = TestRepo.update!(changeset)
+    assert post.users == []
+    post = TestRepo.get!(from(Post, preload: [:users]), post.id)
+    assert post.users == []
+
+    assert [0] == TestRepo.all(from(j in "posts_users", select: count(j.post_id)))
+    assert [2] == TestRepo.all(from(c in User, select: count(c.id)))
+  end
+
+  test "many_to_many changeset assoc with schema" do
+    p1 = TestRepo.insert! %Post{title: "1"}
+    p2 = %Post{title: "2"}
+
+    # Inserting
+    changeset =
+      %User{name: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_posts, [p2])
+    user = TestRepo.insert!(changeset)
+    [p2] = user.schema_posts
+    assert p2.id
+    user = TestRepo.get!(from(User, preload: [:schema_posts]), user.id)
+    [p2] = user.schema_posts
+    assert p2.title == "2"
+
+    [up2] = TestRepo.all(UserPost) |> Enum.sort_by(&(&1.id))
+    assert up2.post_id == p2.id
+    assert up2.user_id == user.id
+    assert up2.inserted_at
+    assert up2.updated_at
+
+    # Updating
+    changeset =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_posts, [Ecto.Changeset.change(p1, title: "11"),
+                                                  Ecto.Changeset.change(p2, title: "22")])
+    user = TestRepo.update!(changeset)
+    [p1, _p2] = user.schema_posts |> Enum.sort_by(&(&1.id))
+    assert p1.id
+    user = TestRepo.get!(from(User, preload: [:schema_posts]), user.id)
+    [p1, p2] = user.schema_posts |> Enum.sort_by(&(&1.id))
+    assert p1.title == "11"
+    assert p2.title == "22"
+
+    [_up2, up1] = TestRepo.all(UserPost) |> Enum.sort_by(&(&1.id))
+    assert up1.post_id == p1.id
+    assert up1.user_id == user.id
+    assert up1.inserted_at
+    assert up1.updated_at
   end
 
   @tag :unique_constraint
@@ -276,5 +467,29 @@ defmodule Ecto.Integration.AssocTest do
 
     TestRepo.delete!(user)
     assert Enum.count(TestRepo.all(Post)) == 1
+  end
+
+  test "many_to_many assoc on delete deletes all" do
+    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    p2 = TestRepo.insert!(%Post{title: "2", text: "hello"})
+
+    u1 = TestRepo.insert!(%User{name: "john"})
+    u2 = TestRepo.insert!(%User{name: "mary"})
+
+    TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: u1.id],
+                                        [post_id: p1.id, user_id: u1.id],
+                                        [post_id: p2.id, user_id: u2.id]]
+    TestRepo.delete!(p1)
+
+    [pid2] = TestRepo.all from(p in Post, select: p.id)
+    assert pid2 == p2.id
+
+    [[pid2, uid2]] = TestRepo.all from(j in "posts_users", select: [j.post_id, j.user_id])
+    assert pid2 == p2.id
+    assert uid2 == u2.id
+
+    [uid1, uid2] = TestRepo.all from(u in User, select: u.id)
+    assert uid1 == u1.id
+    assert uid2 == u2.id
   end
 end
