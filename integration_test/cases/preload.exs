@@ -123,21 +123,6 @@ defmodule Ecto.Integration.PreloadTest do
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid2, author_id: uid2})
 
-    ## Single preload
-    p1 = TestRepo.preload(p1, :comments_authors)
-
-    # Through was preloaded
-    [u1, u2] = p1.comments_authors |> sort_by_id
-    assert u1.id == uid1
-    assert u2.id == uid2
-
-    # But we also preloaded everything along the way
-    assert [c1, c2, c3] = p1.comments |> sort_by_id
-    assert c1.author.id == uid1
-    assert c2.author.id == uid1
-    assert c3.author.id == uid2
-
-    ## Multiple preloads
     [p1, p2] = TestRepo.preload([p1, p2], :comments_authors)
 
     # Through was preloaded
@@ -249,6 +234,44 @@ defmodule Ecto.Integration.PreloadTest do
     [u2] = p2.comments_authors
     assert u2.id == uid2
     assert [c3, c4] == u2.comments |> sort_by_id
+  end
+
+  test "preload has_many through many to many" do
+    %Post{} = p1 = TestRepo.insert!(%Post{})
+    %Post{} = p2 = TestRepo.insert!(%Post{})
+
+    %User{id: uid1} = TestRepo.insert!(%User{name: "foo"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "bar"})
+
+    TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: uid1],
+                                        [post_id: p1.id, user_id: uid2],
+                                        [post_id: p2.id, user_id: uid2]]
+
+    %Comment{id: cid1} = TestRepo.insert!(%Comment{author_id: uid1})
+    %Comment{id: cid2} = TestRepo.insert!(%Comment{author_id: uid1})
+    %Comment{id: cid3} = TestRepo.insert!(%Comment{author_id: uid2})
+    %Comment{id: cid4} = TestRepo.insert!(%Comment{author_id: uid2})
+
+    [p1, p2] = TestRepo.preload([p1, p2], :users_comments)
+
+    # Through was preloaded
+    [c1, c2, c3, c4] = p1.users_comments |> sort_by_id
+    assert c1.id == cid1
+    assert c2.id == cid2
+    assert c3.id == cid3
+    assert c4.id == cid4
+
+    [c3, c4] = p2.users_comments |> sort_by_id
+    assert c3.id == cid3
+    assert c4.id == cid4
+
+    # But we also preloaded everything along the way
+    assert [u1, u2] = p1.users |> sort_by_id
+    assert u1.id == uid1
+    assert u2.id == uid2
+
+    assert [u2] = p2.users
+    assert u2.id == uid2
   end
 
   ## Empties
