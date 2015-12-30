@@ -690,18 +690,18 @@ defmodule Ecto.Changeset.HasAssocTest do
   end
 
   test "apply_changes" do
-    embed = Author.__schema__(:association, :profile)
+    assoc = Author.__schema__(:association, :profile)
 
     changeset = Changeset.change(%Profile{}, name: "michal")
-    model = Relation.apply_changes(embed, changeset)
+    model = Relation.apply_changes(assoc, changeset)
     assert model == %Profile{name: "michal"}
 
-    changeset = Changeset.change(%Post{}, title: "hello")
-    changeset2 = %{changeset | action: :delete}
-    assert Relation.apply_changes(embed, changeset2) == nil
+    changeset1 = Changeset.change(%Post{}, title: "hello")
+    changeset2 = %{changeset1 | action: :delete}
+    assert Relation.apply_changes(assoc, changeset2) == nil
 
-    embed = Author.__schema__(:association, :posts)
-    [model] = Relation.apply_changes(embed, [changeset, changeset2])
+    assoc = Author.__schema__(:association, :posts)
+    [model] = Relation.apply_changes(assoc, [changeset1, changeset2])
     assert model == %Post{title: "hello"}
   end
 end

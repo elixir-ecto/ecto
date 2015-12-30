@@ -134,35 +134,36 @@ defmodule Ecto.Integration.AssocTest do
   end
 
   test "has_many changeset assoc" do
-    c1 = %Comment{text: "1"}
+    c1 = TestRepo.insert! %Comment{text: "1"}
     c2 = %Comment{text: "2"}
 
     # Inserting
     changeset =
       %Post{title: "1"}
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_assoc(:comments, [c1])
+      |> Ecto.Changeset.put_assoc(:comments, [c2])
     post = TestRepo.insert!(changeset)
-    [c1] = post.comments
-    assert c1.id
-    assert c1.post_id == post.id
+    [c2] = post.comments
+    assert c2.id
+    assert c2.post_id == post.id
     post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
-    [c1] = post.comments
-    assert c1.text == "1"
+    [c2] = post.comments
+    assert c2.text == "2"
 
     # Updating
     changeset =
       post
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_assoc(:comments, [Ecto.Changeset.change(c1), Ecto.Changeset.change(c2)])
+      |> Ecto.Changeset.put_assoc(:comments, [Ecto.Changeset.change(c1, text: "11"),
+                                              Ecto.Changeset.change(c2, text: "22")])
     post = TestRepo.update!(changeset)
-    [_c1, c2] = post.comments |> Enum.sort_by(&(&1.id))
-    assert c2.id
-    assert c2.post_id == post.id
+    [c1, _c2] = post.comments |> Enum.sort_by(&(&1.id))
+    assert c1.id
+    assert c1.post_id == post.id
     post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
     [c1, c2] = post.comments |> Enum.sort_by(&(&1.id))
-    assert c1.text == "1"
-    assert c2.text == "2"
+    assert c1.text == "11"
+    assert c2.text == "22"
 
     # Replacing (on_replace: :delete)
     changeset =
@@ -175,6 +176,50 @@ defmodule Ecto.Integration.AssocTest do
     assert post.comments == []
 
     assert [0] == TestRepo.all(from(c in Comment, select: count(c.id)))
+  end
+
+  test "many_to_many changeset assoc" do
+    u1 = TestRepo.insert! %User{name: "1"}
+    u2 = %User{name: "2"}
+
+    # Inserting
+    changeset =
+      %Post{title: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:users, [u2])
+    post = TestRepo.insert!(changeset)
+    [u2] = post.users
+    assert u2.id
+    post = TestRepo.get!(from(Post, preload: [:users]), post.id)
+    [u2] = post.users
+    assert u2.name == "2"
+
+    # Updating
+    changeset =
+      post
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:users, [Ecto.Changeset.change(u1, name: "11"),
+                                           Ecto.Changeset.change(u2, name: "22")])
+    post = TestRepo.update!(changeset)
+    [u1, _u2] = post.users |> Enum.sort_by(&(&1.id))
+    assert u1.id
+    post = TestRepo.get!(from(Post, preload: [:users]), post.id)
+    [u1, u2] = post.users |> Enum.sort_by(&(&1.id))
+    assert u1.name == "11"
+    assert u2.name == "22"
+
+    # Replacing (on_replace: :delete)
+    changeset =
+      post
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:users, [])
+    post = TestRepo.update!(changeset)
+    assert post.users == []
+    post = TestRepo.get!(from(Post, preload: [:users]), post.id)
+    assert post.users == []
+
+    assert [0] == TestRepo.all(from(j in "posts_users", select: count(j.post_id)))
+    assert [2] == TestRepo.all(from(c in User, select: count(c.id)))
   end
 
   @tag :unique_constraint

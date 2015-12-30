@@ -258,7 +258,7 @@ defmodule Ecto.Association do
       # The case when this could return :error was handled before
       {:ok, changeset} = Ecto.Changeset.Relation.on_replace(meta, previous)
 
-      case mod.on_repo_change(meta, %{parent_changeset | model: nil}, changeset, opts) do
+      case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
         {:ok, _} -> :ok
         {:error, changeset} ->
           raise Ecto.InvalidChangesetError,
@@ -853,6 +853,50 @@ defmodule Ecto.Association.ManyToMany do
     {:assoc, refl, {-1, join_owner_key}}
   end
 
+  @doc false
+  def on_repo_change(%{join_keys: join_keys, join_through: join_through},
+                     %{repo: repo, model: owner}, %{action: :delete, model: related}, opts) do
+    [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+
+    query =
+      from j in join_through,
+        where: field(j, ^join_owner_key) == ^field!(:delete, owner, owner_key) and
+               field(j, ^join_related_key) == ^field!(:delete, related, related_key)
+
+    repo.delete_all query, opts
+    {:ok, nil}
+  end
+
+  def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys},
+                     %{repo: repo, model: owner} = parent_changeset,
+                     %{action: action} = changeset, opts) do
+    case apply(repo, action, [changeset, opts]) do
+      {:ok, child} ->
+        [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+        if insert_join?(parent_changeset, changeset, field, related_key) do
+          row = [{join_owner_key, field!(:insert, owner, owner_key)},
+                 {join_related_key, field!(:insert, child, related_key)}]
+          repo.insert_all join_through, [row], opts
+        end
+        {:ok, child}
+      {:error, changeset} ->
+        {:error, changeset}
+    end
+  end
+
+  defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true
+  defp insert_join?(_, %{action: :insert}, _field, _related_key), do: true
+  defp insert_join?(%{model: owner}, %{model: related}, field, related_key) do
+    current_key = Map.fetch!(related, related_key)
+    not Enum.any? Map.fetch!(owner, field), fn child ->
+      Map.get(child, related_key) == current_key
+    end
+  end
+
+  defp field!(op, struct, field) do
+    Map.get(struct, field) || raise "could not #{op} join entry because `#{field}` is nil in #{inspect struct}"
+  end
+
   ## Relation callbacks
   @behaviour Ecto.Changeset.Relation
 
@@ -873,7 +917,7 @@ defmodule Ecto.Association.ManyToMany do
   def delete_all(%{join_through: join_through, join_keys: join_keys}, parent, repo, opts) do
     [{join_owner_key, owner_key}, {_, _}] = join_keys
     if value = Map.get(parent, owner_key) do
-      query = from(j in join_through, where: field(j, ^join_owner_key) == ^value)
+      query = from j in join_through, where: field(j, ^join_owner_key) == ^value
       repo.delete_all query, opts
     end
   end
