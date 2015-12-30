@@ -863,7 +863,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "assoc_constraint/3 with errors" do
-    message = ~r"cannot add constraint to model because association `unknown` does not exist"
+    message = ~r"cannot add constraint to changeset because association `unknown` does not exist"
     assert_raise ArgumentError, message, fn ->
       change(%Post{}) |> assoc_constraint(:unknown)
     end
@@ -897,7 +897,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "no_assoc_constraint/3 with errors" do
-    message = ~r"cannot add constraint to model because association `unknown` does not exist"
+    message = ~r"cannot add constraint to changeset because association `unknown` does not exist"
     assert_raise ArgumentError, message, fn ->
       change(%Post{}) |> no_assoc_constraint(:unknown)
     end

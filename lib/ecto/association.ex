@@ -255,11 +255,11 @@ defmodule Ecto.Association do
                           parent_changeset, opts) do
     previous = Map.get(parent, field)
     if replaceable?(previous) and primary_key!(previous) != primary_key!(current) do
-      # The case when this could return :error was handled before
-      {:ok, changeset} = Ecto.Changeset.Relation.on_replace(meta, previous)
+      changeset = %{Ecto.Changeset.change(previous) | action: :replace}
 
       case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
-        {:ok, _} -> :ok
+        {:ok, nil} ->
+          :ok
         {:error, changeset} ->
           raise Ecto.InvalidChangesetError,
             action: changeset.action, changeset: changeset
@@ -385,6 +385,20 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
+
+  def on_repo_change(%{on_replace: on_replace} = refl, parent_changeset,
+                     %{action: :replace} = changeset, opts) do
+    changeset = case on_replace do
+      :nilify -> %{changeset | action: :update}
+      :delete -> %{changeset | action: :delete}
+    end
+
+    case on_repo_change(refl, %{parent_changeset | model: nil}, changeset, opts) do
+      {:ok, _} -> {:ok, nil}
+      {:error, changeset} -> {:error, changeset}
+    end
+  end
+
   def on_repo_change(assoc, parent_changeset, changeset, opts) do
     %{model: parent, repo: repo} = parent_changeset
     %{action: action, changes: changes} = changeset
@@ -421,16 +435,6 @@ defmodule Ecto.Association.Has do
     related
     |> struct(defaults)
     |> Ecto.Association.merge_source(queryable)
-  end
-
-  @doc false
-  def on_replace(%{on_replace: :delete}, changeset) do
-    {:delete, changeset}
-  end
-
-  def on_replace(%{on_replace: :nilify, related_key: related_key}, changeset) do
-    changeset = update_in changeset.changes, &Map.put(&1, related_key, nil)
-    {:update, changeset}
   end
 
   ## On delete callbacks
@@ -696,6 +700,15 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
+  def on_repo_change(%{on_replace: :nilify}, _parent_changeset, %{action: :replace}, _opts) do
+    {:ok, nil}
+  end
+
+  def on_repo_change(%{on_replace: :delete} = refl, parent_changeset,
+                     %{action: :replace} = changeset, opts) do
+    on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, opts)
+  end
+
   def on_repo_change(_refl, %{repo: repo}, %{action: action} = changeset, opts) do
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
@@ -713,15 +726,6 @@ defmodule Ecto.Association.BelongsTo do
     related
     |> struct(defaults)
     |> Ecto.Association.merge_source(queryable)
-  end
-
-  @doc false
-  def on_replace(%{on_replace: :delete}, changeset) do
-    {:delete, changeset}
-  end
-
-  def on_replace(%{on_replace: :nilify}, changeset) do
-    {:update, changeset}
   end
 end
 
@@ -854,6 +858,11 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @doc false
+  def on_repo_change(%{on_replace: :delete} = refl, parent_changeset,
+                     %{action: :replace}  = changeset, opts) do
+    on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, opts)
+  end
+
   def on_repo_change(%{join_keys: join_keys, join_through: join_through},
                      %{repo: repo, model: owner}, %{action: :delete, model: related}, opts) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
@@ -905,11 +914,6 @@ defmodule Ecto.Association.ManyToMany do
     related
     |> struct(defaults)
     |> Ecto.Association.merge_source(queryable)
-  end
-
-  @doc false
-  def on_replace(%{on_replace: :delete}, changeset) do
-    {:delete, changeset}
   end
 
   ## On delete callbacks

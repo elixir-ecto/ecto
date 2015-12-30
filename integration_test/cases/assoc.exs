@@ -82,7 +82,7 @@ defmodule Ecto.Integration.AssocTest do
 
   ## Changesets
 
-  test "has_one changeset assoc" do
+  test "has_one changeset assoc (on_replace: :delete)" do
     # Insert new
     changeset =
       %Post{title: "1"}
@@ -120,7 +120,7 @@ defmodule Ecto.Integration.AssocTest do
     post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
     assert post.permalink.url == "3"
 
-    # Replacing with nil (on_replace: :nilify)
+    # Replacing with nil (on_replace: :delete)
     changeset =
       post
       |> Ecto.Changeset.change
@@ -130,10 +130,48 @@ defmodule Ecto.Integration.AssocTest do
     post = TestRepo.get!(from(Post, preload: [:permalink]), post.id)
     refute post.permalink
 
-    assert [3] == TestRepo.all(from(p in Permalink, select: count(p.id)))
+    assert [0] == TestRepo.all(from(p in Permalink, select: count(p.id)))
   end
 
-  test "has_many changeset assoc" do
+  test "has_one changeset assoc (on_replace: :nilify)" do
+    # Insert new
+    changeset =
+      %User{name: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, %Permalink{url: "1"})
+    user = TestRepo.insert!(changeset)
+    assert user.permalink.id
+    assert user.permalink.user_id == user.id
+    assert user.permalink.url == "1"
+    user = TestRepo.get!(from(User, preload: [:permalink]), user.id)
+    assert user.permalink.url == "1"
+
+    # Replace with new
+    changeset =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, %Permalink{url: "2"})
+    user = TestRepo.update!(changeset)
+    assert user.permalink.id
+    assert user.permalink.user_id == user.id
+    assert user.permalink.url == "2"
+    user = TestRepo.get!(from(User, preload: [:permalink]), user.id)
+    assert user.permalink.url == "2"
+
+    # Replacing with nil (on_replace: :nilify)
+    changeset =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:permalink, nil)
+    user = TestRepo.update!(changeset)
+    refute user.permalink
+    user = TestRepo.get!(from(User, preload: [:permalink]), user.id)
+    refute user.permalink
+
+    assert [2] == TestRepo.all(from(p in Permalink, select: count(p.id)))
+  end
+
+  test "has_many changeset assoc (on_replace: :delete)" do
     c1 = TestRepo.insert! %Comment{text: "1"}
     c2 = %Comment{text: "2"}
 
@@ -176,6 +214,39 @@ defmodule Ecto.Integration.AssocTest do
     assert post.comments == []
 
     assert [0] == TestRepo.all(from(c in Comment, select: count(c.id)))
+  end
+
+  test "has_many changeset assoc (on_replace: :nilify)" do
+    c1 = TestRepo.insert! %Comment{text: "1"}
+    c2 = %Comment{text: "2"}
+
+    # Inserting
+    changeset =
+      %User{name: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:comments, [c1, c2])
+    user = TestRepo.insert!(changeset)
+    [c1, c2] = user.comments
+    assert c1.id
+    assert c1.author_id == user.id
+    assert c2.id
+    assert c2.author_id == user.id
+    user = TestRepo.get!(from(User, preload: [:comments]), user.id)
+    [c1, c2] = user.comments
+    assert c1.text == "1"
+    assert c2.text == "2"
+
+    # Replacing (on_replace: :nilify)
+    changeset =
+      user
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:comments, [])
+    user = TestRepo.update!(changeset)
+    assert user.comments == []
+    user = TestRepo.get!(from(User, preload: [:comments]), user.id)
+    assert user.comments == []
+
+    assert [2] == TestRepo.all(from(c in Comment, select: count(c.id)))
   end
 
   test "many_to_many changeset assoc" do

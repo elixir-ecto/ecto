@@ -31,6 +31,7 @@ defmodule Ecto.Repo.HasAssocTest do
       field :x, :string
       field :y, :binary
       has_one :assoc, MyAssoc, on_replace: :delete
+      has_one :nilify_assoc, MyAssoc, on_replace: :nilify
       has_many :assocs, MyAssoc, on_replace: :delete
     end
   end
@@ -227,7 +228,7 @@ defmodule Ecto.Repo.HasAssocTest do
     assert assoc.updated_at
   end
 
-  test "replacing assocs on update on_replace" do
+  test "replacing assocs on update on_replace: :delete" do
     sample = %MyAssoc{id: 10, x: "xyz"} |> Ecto.put_meta(state: :loaded)
 
     # Replacing assoc with a new one
@@ -255,6 +256,36 @@ defmodule Ecto.Repo.HasAssocTest do
     assert_received :update # Parent
     refute_received :insert # New assoc
     assert_received :delete # Old assoc
+  end
+
+  test "replacing assocs on update on_replace: :nilify" do
+    sample = %MyAssoc{id: 10, my_model_id: 1, x: "xyz"} |> Ecto.put_meta(state: :loaded)
+
+    # Replacing assoc with a new one
+    changeset =
+      %MyModel{id: 1, nilify_assoc: sample}
+      |> Ecto.Changeset.change(x: "1")
+      |> Ecto.Changeset.put_assoc(:nilify_assoc, %MyAssoc{x: "abc"})
+    model = TestRepo.update!(changeset)
+    assoc = model.nilify_assoc
+    assert assoc.id != 10
+    assert assoc.x == "abc"
+    assert assoc.my_model_id == model.id
+    assert assoc.updated_at
+    assert_received :update # Parent
+    assert_received :insert # New assoc
+    assert_received :update # Old assoc
+
+    # Replacing assoc with nil
+    changeset =
+      %MyModel{id: 1, nilify_assoc: sample}
+      |> Ecto.Changeset.change(x: "2")
+      |> Ecto.Changeset.put_assoc(:nilify_assoc, nil)
+    model = TestRepo.update!(changeset)
+    refute model.nilify_assoc
+    assert_received :update # Parent
+    refute_received :insert # New assoc
+    assert_received :update # Old assoc
   end
 
   test "changing assocs on update raises if there is no id" do

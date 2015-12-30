@@ -84,7 +84,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     assert first.model.id == 1
     assert first.required == [] # Check for not running changeset function
-    assert first.action == :delete
+    assert first.action == :replace
     assert first.valid?
 
     assert new.changes == %{title: "new"}
@@ -210,8 +210,8 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     assert {:ok, [old_changeset, new_changeset], true, false} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
-    assert old_changeset.action  == :delete
-    assert new_changeset.action  == :insert
+    assert old_changeset.action == :replace
+    assert new_changeset.action == :insert
 
     assoc_model_changeset = Changeset.change(%Post{}, title: "hello")
 
@@ -229,7 +229,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     assert {:ok, [changeset], true, false} =
       Relation.change(assoc, [], [assoc_model_changeset])
-    assert changeset.action == :delete
+    assert changeset.action == :replace
 
     empty_changeset = Changeset.change(assoc_model)
     assert {:ok, _, true, true} =

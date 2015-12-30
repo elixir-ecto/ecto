@@ -12,11 +12,6 @@ defmodule Ecto.Changeset.Relation do
                field: atom}
 
   @doc """
-  Updates the changeset accordingly to the relation's on_replace strategy.
-  """
-  @callback on_replace(t, Changeset.t) :: {:update | :delete, Changeset.t}
-
-  @doc """
   Builds the related model.
   """
   @callback build(t) :: Ecto.Schema.t
@@ -78,11 +73,9 @@ defmodule Ecto.Changeset.Relation do
   Casts related according to the `on_cast` function.
   """
   def cast(%{cardinality: :one} = relation, nil, current, _on_cast) do
-    case current && local_on_replace(relation, current) do
-      :error ->
-        :error
-      _ ->
-        {:ok, nil, true, is_nil(current)}
+    case current && on_replace(relation, current) do
+      :error -> :error
+      _ -> {:ok, nil, true, is_nil(current)}
     end
   end
 
@@ -122,11 +115,9 @@ defmodule Ecto.Changeset.Relation do
   Wraps related models in changesets.
   """
   def change(%{cardinality: :one} = relation, nil, current) do
-    case current && local_on_replace(relation, current) do
-      :error ->
-        :error
-      _ ->
-        {:ok, nil, true, is_nil(current)}
+    case current && on_replace(relation, current) do
+      :error -> :error
+      _ -> {:ok, nil, true, is_nil(current)}
     end
   end
 
@@ -170,22 +161,11 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Handles the changeset or model when being replaced.
   """
-  def on_replace(%{__struct__: mod} = relation, changeset_or_model) do
-    case local_on_replace(relation, changeset_or_model) do
-      :ok ->
-        {action, changeset} =
-          mod.on_replace(relation, Changeset.change(changeset_or_model))
-        {:ok, put_new_action(changeset, action)}
-      :error ->
-        :error
-    end
-  end
-
-  defp local_on_replace(%{on_replace: :mark_as_invalid}, _changeset_or_model) do
+  def on_replace(%{on_replace: :mark_as_invalid}, _changeset_or_model) do
     :error
   end
 
-  defp local_on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
+  def on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
     raise """
     you are attempting to change relation #{inspect name} of
     #{inspect owner}, but there is missing data.
@@ -204,8 +184,8 @@ defmodule Ecto.Changeset.Relation do
     """
   end
 
-  defp local_on_replace(_relation, _changeset_or_model) do
-    :ok
+  def on_replace(_relation, changeset_or_model) do
+    {:ok, Changeset.change(changeset_or_model) |> put_new_action(:replace)}
   end
 
   defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks,
@@ -234,9 +214,9 @@ defmodule Ecto.Changeset.Relation do
     if new_pks.(new) == current_pks.(current) do
       single_change(new, current, fun, [:update, :delete], true)
     else
-      case local_on_replace(relation, current) do
-        :ok    -> single_change(new, nil, fun, [:insert], false)
-        :error -> :error
+      case on_replace(relation, current) do
+        {:ok, _} -> single_change(new, nil, fun, [:insert], false)
+        :error   -> :error
       end
     end
   end

@@ -40,7 +40,7 @@ defmodule Ecto.Integration.Post do
     field :meta, :map
     field :posted, Ecto.Date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
-    has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :nilify
+    has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
     has_many :comments_authors, through: [:comments, :author]
     belongs_to :author, Ecto.Integration.User
     many_to_many :users, Ecto.Integration.User,
@@ -121,9 +121,9 @@ defmodule Ecto.Integration.User do
 
   schema "users" do
     field :name, :string
-    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all
     has_many :posts, Ecto.Integration.Post, foreign_key: :author_id, on_delete: :nothing, on_replace: :delete
-    has_many :permalinks, Ecto.Integration.Permalink
+    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all, on_replace: :nilify
+    has_one :permalink, Ecto.Integration.Permalink, on_replace: :nilify
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     timestamps
   end

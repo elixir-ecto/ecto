@@ -156,7 +156,7 @@ defmodule Ecto.Changeset do
 
   @type error :: {atom, error_message}
   @type error_message :: String.t | {String.t, Keyword.t}
-  @type action :: nil | :insert | :update | :delete
+  @type action :: nil | :insert | :update | :delete | :replace
   @type constraint :: %{type: :unique, constraint: String.t,
                         field: atom, message: error_message}
 
@@ -1655,11 +1655,11 @@ defmodule Ecto.Changeset do
   defp get_source(%{model: %{__meta__: %{source: {_prefix, source}}}}) when is_binary(source),
     do: source
   defp get_source(%{model: model}), do:
-    raise(ArgumentError, "cannot add constraint to model because it does not have a source, got: #{inspect model}")
+    raise(ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect model}")
 
   defp get_assoc(%{model: %{__struct__: model}}, assoc) do
     model.__schema__(:association, assoc) ||
-      raise(ArgumentError, "cannot add constraint to model because association `#{assoc}` does not exist")
+      raise(ArgumentError, "cannot add constraint to changeset because association `#{assoc}` does not exist")
   end
 
   @doc """
