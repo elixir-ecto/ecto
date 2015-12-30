@@ -804,16 +804,16 @@ defmodule Ecto.Schema do
 
     * `:on_delete` - The action taken on associations when the parent record
       is deleted. May be `:nothing` (default) or `:delete_all`.
-      `:delete_all` will only remove data from the join source, never
-      the associated records. Notice `:on_delete` may also be set in migrations
+      `:delete_all` will only remove data from the join source, never the
+      associated records. Notice `:on_delete` may also be set in migrations
       when creating a reference. If supported, relying on the database via
       migrations is prefered
 
     * `:on_replace` - The action taken on associations when the record is
       replaced   when casting or manipulating parent changeset. May be
-      `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
-      `:delete_all` will only remove data from the join source, never
-      the associated records. See `Ecto.Changeset`'s section on related data
+      `:raise` (default), `:mark_as_invalid`, or `:delete`.
+      `:delete` will only remove data from the join source, never the
+      associated records. See `Ecto.Changeset`'s section on related data
       for more info.
 
     * `:defaults` - Default values to use when building the association
@@ -823,7 +823,7 @@ defmodule Ecto.Schema do
   If you attempt to remove associated `many_to_many` data, be it by
   setting `:on_replace` to `:delete`, `:on_delete` to `:delete_all`
   or by using `Ecto.Changeset.put_assoc/3` and `Ecto.Changeset.cast_assoc/3`,
-  **Ecto will always remove data from the joint schema and never from
+  **Ecto will always remove data from the join schema and never from
   the target associations**. For example, if a `Post` has a many to many
   relationship with `Tag`, setting a `:on_delete` to `:delete_all` will
   only delete entries from the "posts_tags" table in case `Post` is

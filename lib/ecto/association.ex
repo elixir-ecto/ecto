@@ -435,19 +435,22 @@ defmodule Ecto.Association.Has do
 
   ## On delete callbacks
 
-  def delete_all(%{owner_key: owner_key, related_key: related_key, queryable: queryable},
-                 parent, repo, opts) do
-    if value = Map.get(parent, owner_key) do
-      query = from x in queryable, where: field(x, ^related_key) == ^value
+  def delete_all(refl, parent, repo, opts) do
+    if query = on_delete_query(refl, parent) do
       repo.delete_all query, opts
     end
   end
 
-  def nilify_all(%{owner_key: owner_key, related_key: related_key, queryable: queryable},
-                 parent, repo, opts) do
-    if value = Map.get(parent, owner_key) do
-      query = from x in queryable, where: field(x, ^related_key) == ^value
+  def nilify_all(%{related_key: related_key} = refl, parent, repo, opts) do
+    if query = on_delete_query(refl, parent) do
       repo.update_all query, [set: [{related_key, nil}]], opts
+    end
+  end
+
+  defp on_delete_query(%{owner_key: owner_key, related_key: related_key,
+                         queryable: queryable}, parent) do
+    if value = Map.get(parent, owner_key) do
+      from x in queryable, where: field(x, ^related_key) == ^value
     end
   end
 end
@@ -741,7 +744,7 @@ defmodule Ecto.Association.ManyToMany do
 
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :delete_all]
-  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable,
              :on_delete, :on_replace, :join_keys, :join_through,
              defaults: [], relationship: :child, cardinality: :many]
@@ -860,12 +863,17 @@ defmodule Ecto.Association.ManyToMany do
     |> Ecto.Association.merge_source(queryable)
   end
 
+  @doc false
+  def on_replace(%{on_replace: :delete}, changeset) do
+    {:delete, changeset}
+  end
+
   ## On delete callbacks
 
   def delete_all(%{join_through: join_through, join_keys: join_keys}, parent, repo, opts) do
     [{join_owner_key, owner_key}, {_, _}] = join_keys
     if value = Map.get(parent, owner_key) do
-      query = from j in join_through, where: field(j, ^join_owner_key) == ^value
+      query = from(j in join_through, where: field(j, ^join_owner_key) == ^value)
       repo.delete_all query, opts
     end
   end
