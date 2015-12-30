@@ -435,12 +435,20 @@ defmodule Ecto.Association.Has do
 
   ## On delete callbacks
 
-  def delete_all(%{field: field}, parent, repo, opts) do
-    repo.delete_all Ecto.assoc(parent, field), opts
+  def delete_all(%{owner_key: owner_key, related_key: related_key, queryable: queryable},
+                 parent, repo, opts) do
+    if value = Map.get(parent, owner_key) do
+      query = from x in queryable, where: field(x, ^related_key) == ^value
+      repo.delete_all query, opts
+    end
   end
 
-  def nilify_all(%{related_key: related_key, field: field}, parent, repo, opts) do
-    repo.update_all Ecto.assoc(parent, field), [set: [{related_key, nil}]], opts
+  def nilify_all(%{owner_key: owner_key, related_key: related_key, queryable: queryable},
+                 parent, repo, opts) do
+    if value = Map.get(parent, owner_key) do
+      query = from x in queryable, where: field(x, ^related_key) == ^value
+      repo.update_all query, [set: [{related_key, nil}]], opts
+    end
   end
 end
 
@@ -850,5 +858,15 @@ defmodule Ecto.Association.ManyToMany do
     related
     |> struct(defaults)
     |> Ecto.Association.merge_source(queryable)
+  end
+
+  ## On delete callbacks
+
+  def delete_all(%{join_through: join_through, join_keys: join_keys}, parent, repo, opts) do
+    [{join_owner_key, owner_key}, {_, _}] = join_keys
+    if value = Map.get(parent, owner_key) do
+      query = from j in join_through, where: field(j, ^join_owner_key) == ^value
+      repo.delete_all query, opts
+    end
   end
 end

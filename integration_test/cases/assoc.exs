@@ -304,4 +304,28 @@ defmodule Ecto.Integration.AssocTest do
     TestRepo.delete!(user)
     assert Enum.count(TestRepo.all(Post)) == 1
   end
+
+  test "many_to_many assoc on delete deletes all" do
+    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    p2 = TestRepo.insert!(%Post{title: "2", text: "hello"})
+
+    u1 = TestRepo.insert!(%User{name: "john"})
+    u2 = TestRepo.insert!(%User{name: "mary"})
+
+    TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: u1.id],
+                                        [post_id: p1.id, user_id: u1.id],
+                                        [post_id: p2.id, user_id: u2.id]]
+    TestRepo.delete!(p1)
+
+    [pid2] = TestRepo.all from(p in Post, select: p.id)
+    assert pid2 == p2.id
+
+    [[pid2, uid2]] = TestRepo.all from(j in "posts_users", select: [j.post_id, j.user_id])
+    assert pid2 == p2.id
+    assert uid2 == u2.id
+
+    [uid1, uid2] = TestRepo.all from(u in User, select: u.id)
+    assert uid1 == u1.id
+    assert uid2 == u2.id
+  end
 end

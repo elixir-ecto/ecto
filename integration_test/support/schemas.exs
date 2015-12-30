@@ -43,7 +43,7 @@ defmodule Ecto.Integration.Post do
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :nilify
     has_many :comments_authors, through: [:comments, :author]
     belongs_to :author, Ecto.Integration.User
-    many_to_many :users, Ecto.Integration.User, join_through: "posts_users"
+    many_to_many :users, Ecto.Integration.User, join_through: "posts_users", on_delete: :delete_all
     timestamps
   end
 
