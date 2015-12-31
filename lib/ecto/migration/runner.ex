@@ -8,6 +8,7 @@ defmodule Ecto.Migration.Runner do
 
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
+  alias Ecto.Migration.Constraint
 
   @opts [timeout: :infinity, log: false]
 
@@ -176,6 +177,8 @@ defmodule Ecto.Migration.Runner do
     do: {:rename, table_new, table_current}
   defp reverse({:rename, %Table{}=table, current_column, new_column}),
     do: {:rename, table, new_column, current_column}
+  defp reverse({command, %Constraint{}=constraint}) when command in @creates,
+    do: {:drop, constraint}
   defp reverse(_command), do: false
 
   defp table_reverse([]),   do: []
@@ -237,6 +240,18 @@ defmodule Ecto.Migration.Runner do
     do: "rename table #{quote_table(current_table.prefix, current_table.name)} to #{quote_table(new_table.prefix, new_table.name)}"
   defp command({:rename, %Table{} = table, current_column, new_column}),
     do: "rename column #{current_column} to #{new_column} on table #{quote_table(table.prefix, table.name)}"
+
+  defp command({:create, %Constraint{check: nil, exclude: nil}}),
+    do: raise ArgumentError, "a constraint must have either a check or exclude option"
+  defp command({:create, %Constraint{check: check, exclude: exclude}}) when is_binary(check) and is_binary(exclude),
+    do: raise ArgumentError, "a constraint must not have both check and exclude options"
+  defp command({:create, %Constraint{check: check} = constraint}) when is_binary(check),
+    do: "ALTER TABLE #{quote_table(constraint.table)} ADD CONSTRAINT #{constraint.name} CHECK (#{constraint.check})"
+  defp command({:create, %Constraint{exclude: exclude} = constraint}) when is_binary(exclude),
+    do: "ALTER TABLE #{quote_table(constraint.table)} ADD CONSTRAINT #{constraint.name} EXCLUDE USING #{constraint.exclude})"
+
+  defp command({:drop, %Constraint{} = constraint}),
+    do: "ALTER TABLE #{quote_table(constraint.table)} DROP CONSTRAINT #{constraint.name}"
 
   defp quote_table(nil, name),    do: quote_table(name)
   defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
