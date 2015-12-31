@@ -941,4 +941,15 @@ defmodule Ecto.ChangesetTest do
       title: ["IS TAKEN"]
     }
   end
+
+  ## inspect
+
+  test "inspects relevant data" do
+    assert inspect(%Ecto.Changeset{}) ==
+           "#Ecto.Changeset<action: nil, changes: %{}, errors: [], model: nil, valid?: false>"
+
+    assert inspect(changeset(%{"title" => "title", "body" => "hi"})) ==
+           "#Ecto.Changeset<action: nil, changes: %{body: \"hi\", title: \"title\"}, " <>
+           "errors: [], model: #Ecto.ChangesetTest.Post<>, valid?: true>"
+  end
 end

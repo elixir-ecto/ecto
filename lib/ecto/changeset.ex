@@ -1719,3 +1719,24 @@ defmodule Ecto.Changeset do
     end
   end
 end
+
+defimpl Inspect, for: Ecto.Changeset do
+  import Inspect.Algebra
+
+  def inspect(changeset, opts) do
+    list = for attr <- [:action, :changes, :errors, :model, :valid?] do
+      {attr, Map.get(changeset, attr)}
+    end
+
+    surround_many("#Ecto.Changeset<", list, ">", opts, fn
+      {:action, action}, opts   -> concat("action: ", to_doc(action, opts))
+      {:changes, changes}, opts -> concat("changes: ", to_doc(changes, opts))
+      {:errors, errors}, opts   -> concat("errors: ", to_doc(errors, opts))
+      {:model, model}, _opts    -> concat("model: ", to_struct(model))
+      {:valid?, valid?}, opts   -> concat("valid?: ", to_doc(valid?, opts))
+    end)
+  end
+
+  defp to_struct(nil), do: "nil"
+  defp to_struct(%{__struct__: struct}), do: "#" <> Kernel.inspect(struct) <> "<>"
+end
