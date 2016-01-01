@@ -480,11 +480,11 @@ defmodule Ecto.AssociationTest do
            expand(Post, [:comments, :permalink])
 
     assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, {0, :id}},
-              {nil, [author: {nil, []}, permalink: {nil, []}]}}] =
-           expand(Comment, [:post, post: :author, post: :permalink])
+            {nil, [author: {nil, []}]}}] =
+           expand(Comment, [post: :author])
 
     assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, {0, :id}},
-             {nil, [author: {nil, []}, permalink: {nil, []}]}}] =
+            {nil, [author: {nil, []}, permalink: {nil, []}]}}] =
            expand(Comment, [:post, post: :author, post: :permalink])
 
     assert [{:posts, {:assoc, %Ecto.Association.Has{}, {0, :author_id}}, {nil, [comments: {nil, [post: {nil, []}]}]}},
