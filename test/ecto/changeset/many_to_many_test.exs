@@ -6,7 +6,6 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
   alias __MODULE__.Author
   alias __MODULE__.Post
-  alias __MODULE__.AuthorPost
 
   defmodule Post do
     use Ecto.Schema

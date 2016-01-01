@@ -51,8 +51,8 @@ defmodule Ecto.Repo.Assoc do
     # data unless we have already processed it.
     cache = {parent_key, child_key}
 
-    if struct && parent_key && not HashSet.member?(keys, cache) do
-      keys = HashSet.put(keys, cache)
+    if struct && parent_key && not Map.get(keys, cache, false) do
+      keys = Map.put(keys, cache, true)
       item = {child_key, struct}
 
       # If we have a list, we are at the root,
@@ -61,7 +61,7 @@ defmodule Ecto.Repo.Assoc do
         if is_list(dict) do
           [{item, sub_structs}|dict]
         else
-          HashDict.update(dict, parent_key, [item], &[item|&1])
+          Map.update(dict, parent_key, [item], &[item|&1])
         end
     end
 
@@ -73,7 +73,7 @@ defmodule Ecto.Repo.Assoc do
       {{_keys, dict, sub_dicts}, {refl, refls}}, acc ->
         loaded =
           dict
-          |> HashDict.get(child_key, [])
+          |> Map.get(child_key, [])
           |> Enum.reverse()
           |> Enum.map(&load_assocs(&1, sub_dicts, refls))
 
@@ -98,6 +98,6 @@ defmodule Ecto.Repo.Assoc do
       create_accs(child_fields)
     end)
 
-    {HashSet.new, HashDict.new, acc}
+    {%{}, %{}, acc}
   end
 end
