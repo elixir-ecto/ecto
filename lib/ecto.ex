@@ -11,7 +11,7 @@ defmodule Ecto do
 
     * `Ecto.Changeset` - changesets provide a way for developers to filter
       and cast external parameters, as well as a mechanism to track and
-      validate changes before their are sent to the database
+      validate changes before they are sent to the database
 
     * `Ecto.Query` - written in Elixir syntax, queries are used to retrieve
       information from a given repository. Queries in Ecto are secure, avoiding
