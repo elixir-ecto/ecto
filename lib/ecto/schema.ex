@@ -31,8 +31,8 @@ defmodule Ecto.Schema do
   Those attributes are:
 
     * `@primary_key` - configures the schema primary key. It expects
-      a tuple with the primary key name, type (:id or :binary_id) and options. Defaults
-      to `{:id, :id, autogenerate: true}`. When set to
+      a tuple with the primary key name, type (:id or :binary_id) and
+      options. Defaults to `{:id, :id, autogenerate: true}`. When set to
       false, does not define a primary key in the schema;
 
     * `@foreign_key_type` - configures the default foreign key type
@@ -82,18 +82,19 @@ defmodule Ecto.Schema do
 
   ## Primary keys
 
-  Ecto supports two ID types, called `:id` and `:binary_id` which are
+  Ecto supports two ID types, called `:id` and `:binary_id`, which are
   often used as the type for primary keys and associations.
 
   The `:id` type is used when the primary key is an integer while the
-  `:binary_id` is used when the primary key is in binary format, which
-  may be `Ecto.UUID` for databases like PostgreSQL and MySQL, or some
-  specific ObjectID or RecordID often imposed by NoSQL databases.
+  `:binary_id` is used for primary keys in particular binary formats,
+  which may be `Ecto.UUID` for databases like PostgreSQL and MySQL,
+  or some specific ObjectID or RecordID often imposed by NoSQL databases.
 
   In both cases, both types have their semantics specified by the
-  underlying adapter/database. For example, if you use the `:id`
-  type with `:autogenerate`, it means the database will be responsible
-  for auto-generation the id if it supports it.
+  underlying adapter/database. If you use the `:id` type with
+  `:autogenerate`, it means the database will be responsible for
+  auto-generation of the id. This is often the case for primary keys
+  in relation databases which are auto-incremented.
 
   Similarly, the `:binary_id` type may be generated in the adapter
   for cases like UUID but it may also be handled by the database if
@@ -102,7 +103,7 @@ defmodule Ecto.Schema do
 
   Besides `:id` and `:binary_id`, which are often used by primary
   and foreign keys, Ecto provides a huge variety of types to be used
-  by the remaining columns.
+  by any column.
 
   ## Types and casting
 
