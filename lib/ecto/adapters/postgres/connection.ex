@@ -3,39 +3,23 @@ if Code.ensure_loaded?(Postgrex.Connection) do
   defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false
 
-    @default_port 5432
-    @behaviour Ecto.Adapters.Connection
     @behaviour Ecto.Adapters.SQL.Query
+    @default_port 5432
 
-    ## Connection
+    ## Module and Options
 
-    def connect(opts) do
+    def mod_and_opts(opts) do
       json = Application.get_env(:ecto, :json_library)
       extensions = [{Ecto.Adapters.Postgres.DateTime, []},
-                    {Postgrex.Extensions.JSON, library: json}]
+        {Postgrex.Extensions.JSON, library: json}]
 
       opts =
-        opts
-        |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
-        |> Keyword.update(:port, @default_port, &normalize_port/1)
+       opts
+       |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
+       |> Keyword.update(:port, @default_port, &normalize_port/1)
+       |> Keyword.put(:types, true)
 
-      Postgrex.Connection.start_link(opts)
-    end
-
-    def query(conn, sql, params, opts) do
-      params = Enum.map params, fn
-        %Ecto.Query.Tagged{value: value} -> value
-        value -> value
-      end
-
-      Postgrex.Connection.query(conn, sql, params, [decode: :manual] ++ opts)
-    end
-
-    def decode({:ok, res}, mapper) do
-      {:ok, Postgrex.Result.decode(res, mapper) |> Map.from_struct}
-    end
-    def decode({:error, _} = err, _mapper) do
-      err
+      {Postgrex.Protocol, opts}
     end
 
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
@@ -77,19 +61,14 @@ if Code.ensure_loaded?(Postgrex.Connection) do
       unquoted
     end
 
-    ## Transaction
+    ## Query
 
-    def begin_transaction do
-      "BEGIN"
+    def query(statement) do
+      %Postgrex.Query{name: "", statement: statement}
     end
 
-    def rollback do
-      "ROLLBACK"
-    end
-
-    def commit do
-      "COMMIT"
-    end
+    def encode_mapper(%Ecto.Query.Tagged{value: value}), do: value
+    def encode_mapper(value), do: value
 
     def savepoint(savepoint) do
       "SAVEPOINT " <> savepoint
@@ -98,8 +77,6 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def rollback_to_savepoint(savepoint) do
       "ROLLBACK TO SAVEPOINT " <> savepoint
     end
-
-    ## Query
 
     alias Ecto.Query
     alias Ecto.Query.SelectExpr

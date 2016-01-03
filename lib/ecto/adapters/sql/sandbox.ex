@@ -1,329 +1,299 @@
 defmodule Ecto.Adapters.SQL.Sandbox do
   @moduledoc """
   Start a pool with a single sandboxed SQL connection.
-
-  ### Options
-
-  * `:shutdown` - The shutdown method for the connections (default: 5000) (see Supervisor.Spec)
-
   """
 
-  alias Ecto.Adapters.Connection
-  @behaviour Ecto.Pool
+  defmodule Query do
+    defstruct [:request]
+  end
 
-  @typep log :: (%Ecto.LogEntry{} -> any())
+  defmodule Result do
+    defstruct [:value]
+  end
 
-  @doc """
-  Starts a pool with a single sandboxed connections for the given SQL connection
-  module and options.
+  @behaviour DBConnection
+  @behaviour DBConnection.Pool
 
-    * `conn_mod` - The connection module, see `Ecto.Adapters.Connection`
-    * `opts` - The options for the pool and the connections
+  defstruct [:mod, :state, :status, :adapter]
 
-  """
-  @spec start_link(module, Keyword.t) :: {:ok, pid} | {:error, any}
-  def start_link(conn_mod, opts) do
-    {name, opts} = Keyword.pop(opts, :pool_name)
-    GenServer.start_link(__MODULE__, {conn_mod, opts}, [name: name])
+  @doc false
+  def mode(pool) do
+    DBConnection.execute!(pool, %Query{request: :mode}, [], [pool: __MODULE__])
   end
 
   @doc false
-  @spec begin(pool, log, Keyword.t, timeout) ::
-    :ok | {:error, :sandbox} when pool: pid | atom
-  def begin(pool, log, opts, timeout) do
-    query(pool, :begin, log, opts, timeout)
+  def start_link(mod, opts) do
+    DBConnection.Connection.start_link(__MODULE__, opts(mod, opts))
   end
 
   @doc false
-  @spec restart(pool, log, Keyword.t, timeout) :: :ok when pool: pid | atom
-  def restart(pool, log, opts, timeout) do
-    query(pool, :restart, log, opts, timeout)
+  def child_spec(mod, opts, child_opts \\ []) do
+    DBConnection.Connection.child_spec(__MODULE__, opts(mod, opts), child_opts)
   end
 
   @doc false
-  @spec rollback(pool, log, Keyword.t, timeout) :: :ok when pool: pid | atom
-  def rollback(pool, log, opts, timeout) do
-    query(pool, :rollback, log, opts, timeout)
+  def checkout(pool, opts) do
+    DBConnection.Connection.checkout(pool, opts(opts))
   end
 
   @doc false
-  @spec mode(pool, timeout) :: :raw | :sandbox when pool: pid | atom
-  def mode(pool, timeout \\ 5_000) do
-    GenServer.call(pool, :mode, timeout)
+  def checkin(pool, state, opts) do
+    DBConnection.Connection.checkin(pool, state, opts(opts))
   end
 
   @doc false
-  def checkout(pool, timeout) do
-    checkout(pool, :run, timeout)
+  def disconnect(pool, err, state, opts) do
+    DBConnection.Connection.disconnect(pool, err, state, opts(opts))
   end
 
   @doc false
-  def checkin(pool, ref, _) do
-    GenServer.cast(pool, {:checkin, ref})
+  def stop(pool, reason, state, opts) do
+    DBConnection.Connection.stop(pool, reason, state, opts(opts))
   end
 
   @doc false
-  def open_transaction(pool, timeout) do
-    checkout(pool, :transaction, timeout)
-  end
-
-  @doc false
-  def close_transaction(pool, ref, _) do
-    GenServer.cast(pool, {:checkin, ref})
-  end
-
-  @doc false
-  def break(pool, ref, timeout) do
-    GenServer.call(pool, {:break, ref}, timeout)
-  end
-
-  ## GenServer
-
-  @doc false
-  def init({module, opts}) do
-    _ = Process.flag(:trap_exit, true)
-    {shutdown, params} = Keyword.pop(opts, :shutdown, 5_000)
-    {:ok, %{module: module, conn: nil, queue: :queue.new(), fun: nil,
-            ref: nil, monitor: nil, mode: :raw, params: params,
-            shutdown: shutdown}}
-  end
-
-  ## Lazy connect
-
-  def handle_call(req, from, %{conn: nil} = s) do
-    %{module: module, params: params} = s
-    case Connection.connect(module, params) do
-      {:ok, conn} ->
-        handle_call(req, from, %{s | conn: conn})
-      {:error, reason} ->
-        {:stop, reason, s}
-    end
-  end
-
-  ## Checkout
-
-  @doc false
-  def handle_call({:checkout, ref, fun}, {pid, _}, %{ref: nil} = s) do
-    %{module: module, conn: conn} = s
-    mon = Process.monitor(pid)
-    {:reply, {:ok, {module, conn}}, %{s | fun: fun, ref: ref, monitor: mon}}
-  end
-  def handle_call({:checkout, ref, fun}, {pid, _} = from, %{queue: q} = s) do
-    mon = Process.monitor(pid)
-    {:noreply, %{s | queue: :queue.in({:checkout, from, ref, fun, mon}, q)}}
-  end
-
-  ## Break
-
-  def handle_call({:break, ref}, from, %{mode: :raw, ref: ref} = s) do
-    s = demonitor(s)
-    GenServer.reply(from, :ok)
-    s = s
-      |> reset()
-      |> dequeue()
-    {:noreply, s}
-  end
-  def handle_call({:break, ref}, from, %{mode: :sandbox, ref: ref} = s) do
-    s = demonitor(s)
-    GenServer.reply(from, :ok)
-    {:noreply, dequeue(s)}
-  end
-
-  ## Query
-
-  def handle_call({:query, query, log, opts}, _, %{ref: nil} = s) do
-    {reply, s} = handle_query(query, log, opts, s)
-    {:reply, reply, s}
-  end
-
-  def handle_call({:query, query, log, opts}, from, %{queue: q} = s) do
-    {:noreply, %{s | queue: :queue.in({query, log, opts, from}, q)}}
-  end
-
-  ## Mode
-
-  def handle_call(:mode, _, %{mode: mode} = s) do
-    {:reply, mode, s}
-  end
-
-  ## Cancel
-
-  @doc false
-  def handle_cast({:cancel, ref}, %{ref: ref} = s) do
-    handle_cast({:checkin, ref}, s)
-  end
-  def handle_cast({:cancel, ref}, %{queue: q} = s) do
-    {:noreply, %{s | queue: :queue.filter(&cancel(&1, ref), q)}}
-  end
-
-  ## Checkin
-
-  def handle_cast({:checkin, ref}, %{ref: ref} = s) do
-    s = s
-      |> demonitor()
-      |> dequeue()
-    {:noreply, s}
-  end
-
-  ## DOWN
-
-  @doc false
-  def handle_info({:DOWN, mon, _, _, _}, %{monitor: mon, fun: :run} = s) do
-    {:noreply, dequeue(%{s | fun: nil, monitor: nil, ref: nil})}
-  end
-  def handle_info({:DOWN, mon, _, _, _}, %{monitor: mon, mode: :raw} = s) do
-    s = %{s | fun: nil, monitor: nil, ref: nil}
-      |> reset()
-      |> dequeue()
-    {:noreply, s}
-  end
-  def handle_info({:DOWN, mon, _, _, _}, %{monitor: mon, mode: :sandbox} = s) do
-    s = %{s | fun: nil, monitor: nil, ref: nil}
-      |> dequeue()
-    {:noreply, s}
-  end
-  def handle_info({:DOWN, mon, _, _, _}, %{queue: q} = s) do
-    {:noreply, %{s | queue: :queue.filter(&down(&1, mon), q)}}
-  end
-
-  ## EXIT
-
-  def handle_info({:EXIT, conn, reason}, %{conn: conn} = s) do
-    {:stop, reason, %{s | conn: nil}}
-  end
-
-  ## Info
-
-  def handle_info(_, s) do
-    {:noreply, s}
-  end
-
-  ## Terminate
-
-  @doc false
-  def terminate(_, %{conn: conn, shutdown: shutdown}) do
-    conn && Connection.shutdown(conn, shutdown)
-  end
-
-  ## Helpers
-
-  defp checkout(pool, fun, timeout) do
-    ref = make_ref()
-    case :timer.tc(fn() -> do_checkout(pool, ref, fun, timeout) end) do
-      {queue_time, {:ok, mod_conn}} ->
-        {:ok, ref, mod_conn, queue_time}
-      {_, {:error, _} = error} ->
+  def connect(opts) do
+    mod     = Keyword.fetch!(opts, :sandbox)
+    adapter = Module.concat(Keyword.fetch!(opts, :adapter), Connection)
+    case apply(mod, :connect, [opts]) do
+      {:ok, state} ->
+        s = %__MODULE__{mod: mod, state: state, status: :run, adapter: adapter}
+        {:ok, s}
+      {:error, _} = error ->
         error
     end
   end
 
-  defp do_checkout(pool, ref, fun, timeout) do
-    try do
-      GenServer.call(pool, {:checkout, ref, fun}, timeout)
-    catch
-      :exit, {:timeout, _} = reason ->
-        GenServer.cast(pool, {:cancel, ref})
-        exit(reason)
-      :exit, {:noproc, _} ->
-        {:error, :noproc}
+  @doc false
+  def checkout(s), do: handle(s, :checkout, [], :no_result)
+
+  @doc false
+  def checkin(s), do: handle(s, :checkin, [], :no_result)
+
+  @doc false
+  def ping(s), do: handle(s, :ping, [], :no_result)
+
+  @doc false
+  def handle_begin(opts, %{status: :run} = s) do
+    transaction_handle(s, :handle_begin, opts, :transaction)
+  end
+  def handle_begin(opts, %{status: :sandbox} = s) do
+    sandbox_transaction(s, :savepoint, opts, :sandbox_transaction)
+  end
+
+  @doc false
+  def handle_commit(opts, %{status: :transaction} = s) do
+    transaction_handle(s, :handle_commit, opts, :run)
+  end
+  def handle_commit(_, %{status: :sandbox_transaction} = s) do
+    {:ok, %{s | status: :sandbox}}
+  end
+
+  @doc false
+  def handle_rollback(opts, %{status: :transaction} = s) do
+    transaction_handle(s, :handle_rollback, opts, :run)
+  end
+  def handle_rollback(opts, %{status: :sandbox_transaction} = s) do
+    sandbox_transaction(s, :rollback_to_savepoint, opts, :sandbox)
+  end
+
+  @doc false
+  def handle_prepare(query, opts, s) do
+    handle(s, :handle_prepare, [query, opts], :result)
+  end
+
+  @doc false
+  def handle_execute(%Query{request: request}, [], opts, s) do
+    handle_request(request, opts, s)
+  end
+  def handle_execute(query, params, opts, s) do
+    handle(s, :handle_execute, [query, params, opts], :execute)
+  end
+
+  @doc false
+  def handle_execute_close(query, params, opts, s) do
+    handle(s, :handle_execute_close, [query, params, opts], :execute)
+  end
+
+  @doc false
+  def handle_close(query, opts, s) do
+    handle(s, :handle_close, [query, opts], :no_result)
+  end
+
+  @doc false
+  def handle_info(msg, s) do
+    handle(s, :handle_info, [msg], :no_result)
+  end
+
+  @doc false
+  def disconnect(err, %{mod: mod, status: status, state: state}) do
+    :ok = apply(mod, :disconnect, [err, state])
+    if status in [:sandbox, :sandbox_transaction] do
+      raise err
+    else
+      :ok
     end
   end
 
-  defp query(pool, query, log, opts, timeout) do
-    GenServer.call(pool, {:query, query, log, opts}, timeout)
-  end
+  ## Helpers
 
-  defp cancel({:checkout, _, ref, _, mon}, ref) do
-    Process.demonitor(mon, [:flush])
-    false
-  end
-  defp cancel(_, _) do
-    true
-  end
+  defp opts(mod, opts), do: [sandbox: mod] ++ opts(opts)
 
-  defp down({:checkout, _, _, _, mon}, mon) do
-    false
-  end
-  defp down(_, _) do
-    true
-  end
+  defp opts(opts), do: [pool: DBConnection.Connection] ++ opts
 
-  defp demonitor(%{monitor: mon} = s) do
-    Process.demonitor(mon, [:flush])
-    %{s | fun: nil, ref: nil, monitor: nil}
-  end
-
-  defp dequeue(%{queue: q} = s) do
-    case :queue.out(q) do
-      {{:value, {:checkout, from, ref, fun, mon}}, q} ->
-        %{module: module, conn: conn} = s
-        GenServer.reply(from, {:ok, {module, conn}})
-        %{s | ref: ref, fun: fun, monitor: mon, queue: q}
-      {{:value, {query, log, opts, from}}, q} ->
-        {reply, s} = handle_query(query, log, opts, %{s | queue: q})
-        GenServer.reply(from, reply)
-        dequeue(s)
-      {:empty, _} ->
-        s
+  defp handle(%{mod: mod, state: state} = s, callback, args, return) do
+    case apply(mod, callback, args ++ [state]) do
+      {:ok, state} when return == :no_result ->
+        {:ok, %{s | state: state}}
+      {:ok, result, state} when return in [:result, :execute] ->
+        {:ok, result, %{s | state: state}}
+      {:prepare, state} when return == :execute ->
+        {:prepare, %{s | state: state}}
+      {error, err, state} when error in [:disconnect, :error] ->
+        {error, err, %{s | state: state}}
+      other ->
+        other
     end
   end
 
-  def handle_query(query, log, opts, s) do
-    query! = &query!(&1, &2, log, opts)
-    case query do
-      :begin    -> begin(s, query!)
-      :restart  -> restart(s, query!)
-      :rollback -> rollback(s, query!)
+  defp transaction_handle(s, callback, opts, new_status) do
+    %{mod: mod, state: state} = s
+    case apply(mod, callback, [opts, state]) do
+      {:ok, state} ->
+        {:ok, %{s | status: new_status, state: state}}
+      {:error, err, state} ->
+        {:error, err, %{s | status: :run, state: state}}
+      {:disconnect, err, state} ->
+        {:disconnect, err, %{s | state: state}}
+      other ->
+        other
     end
   end
 
-  defp begin(%{ref: nil, mode: :sandbox} = s, _) do
-    {{:error, :sandbox}, s}
+  defp handle_request(:mode, _, %{status: status} = s)
+  when status in [:run, :transaction] do
+    {:ok, %Result{value: :raw}, s}
   end
-  defp begin(%{ref: nil, mode: :raw, module: module} = s, query!) do
-    begin_sql = module.begin_transaction()
-    query!.(s, begin_sql)
-    savepoint_sql = module.savepoint("ecto_sandbox")
-    query!.(s, savepoint_sql)
-    {:ok, %{s | mode: :sandbox}}
+  defp handle_request(:mode, _, %{status: status} = s)
+  when status in [:sandbox, :sandbox_transaction] do
+    {:ok, %Result{value: :sandbox}, s}
   end
-
-  defp restart(%{ref: nil, mode: :raw} = s, query!), do: begin(s, query!)
-  defp restart(%{ref: nil, mode: :sandbox, module: module} = s, query!) do
-    sql = module.rollback_to_savepoint("ecto_sandbox")
-    query!.(s, sql)
-    {:ok, s}
+  defp handle_request(req, _, %{status: status} = s)
+  when status in [:transaction, :sandbox_transaction] do
+    err = RuntimeError.exception("cannot #{req} test transaction inside transaction")
+    {:error, err, s}
   end
-
-  defp rollback(%{ref: nil, mode: :raw} = s, _), do: {:ok, s}
-  defp rollback(%{ref: nil, mode: :sandbox, module: module} = s, query!) do
-    sql = module.rollback()
-    query!.(s, sql)
-    {:ok, %{s | mode: :raw}}
+  defp handle_request(:begin, opts, %{status: :run} = s) do
+    sandbox_begin(s, opts)
   end
-
-  defp query!(%{module: module, conn: conn}, sql, log, opts) do
-    log? = Keyword.get(opts, :log, true)
-    {query_time, res} = :timer.tc(module, :query, [conn, sql, [], opts])
-    if log? do
-      entry = %Ecto.LogEntry{query: sql, params: [], result: res,
-                            query_time: query_time, queue_time: nil}
-      log.(entry)
-    end
-    case res do
-      {:ok, _} ->
-        :ok
-      {:error, err} ->
-        raise err
-    end
+  defp handle_request(:begin, _, s) do
+    err = RuntimeError.exception("cannot begin test transaction inside test transaction")
+    {:error, err, s}
+  end
+  defp handle_request(:restart, opts, %{status: :sandbox} = s) do
+    sandbox_restart(s, opts)
+  end
+  defp handle_request(:restart, opts, %{status: :run} = s) do
+    sandbox_begin(s, opts)
+  end
+  defp handle_request(:rollback, opts, %{status: :sandbox} = s) do
+    sandbox_rollback(s, opts)
+  end
+  defp handle_request(:rollback, _, s) do
+    {:ok, %Result{value: :ok}, s}
   end
 
-  defp reset(s) do
-    %{module: module, conn: conn, params: params, shutdown: shutdown} = s
-    Connection.shutdown(conn, shutdown)
-    case Connection.connect(module, params) do
-      {:ok, conn}     -> %{s | conn: conn}
-      {:error, error} -> raise error
+  defp sandbox_begin(s, opts) do
+    case transaction_handle(s, :handle_begin, opts, :sandbox) do
+      {:ok, %{adapter: adapter} = s} ->
+        savepoint_query =
+          "ecto_sandbox"
+          |> adapter.savepoint()
+          |> adapter.query()
+        sandbox_query(savepoint_query, opts, s, :disconnect)
+      other ->
+        other
     end
   end
+
+  defp sandbox_restart(%{adapter: adapter} = s, opts) do
+    restart_query =
+      "ecto_sandbox"
+      |> adapter.rollback_to_savepoint()
+      |> adapter.query()
+    sandbox_query(restart_query, opts, s)
+  end
+
+  defp sandbox_rollback(s, opts) do
+    case transaction_handle(s, :handle_rollback, opts, :run) do
+      {:ok, s} ->
+        {:ok, %Result{value: :ok}, s}
+      other ->
+        other
+    end
+  end
+
+  def sandbox_transaction(s, callback, opts, new_status) do
+    %{adapter: adapter} = s
+    query =
+      apply(adapter, callback, ["ecto_sandbox_transaction"])
+      |> adapter.query()
+    case sandbox_query(query, opts, s) do
+      {:ok, _, s} ->
+        {:ok, %{s | status: new_status}}
+      {:error, err, s} ->
+        {:error, err, %{s | status: :sandbox}}
+      other ->
+        other
+    end
+  end
+
+  defp sandbox_query(query, opts, s, error \\ :error) do
+    query = DBConnection.Query.parse(query, opts)
+    case handle_prepare(query, opts, s) do
+      {:ok, query, s} ->
+        query = DBConnection.Query.describe(query, opts)
+        sandbox_execute(query, opts, s, error)
+      other ->
+        other
+    end
+  end
+
+  def sandbox_execute(query, opts, s, error) do
+    params = DBConnection.Query.encode(query, [], opts)
+    case handle_execute_close(query, params, opts, s) do
+      {:prepare, s} ->
+        err = RuntimeError.exception("query #{inspect query} was not prepared")
+        {:error, err, s}
+      {:ok, _, s} ->
+        {:ok, %Result{value: :ok}, s}
+      {:error, err, s} when error == :disconnect ->
+        {:disconnect, err, s}
+      other ->
+        other
+    end
+  end
+
+end
+
+defimpl String.Chars, for: DBConnection.Query do
+  def to_string(%{request: :start}) do
+    "BEGIN; SAVEPOINT ecto_sandbox"
+  end
+  def to_string(%{request: :restart}) do
+    "ROLLBACK TO SAVEPOINT ecto_sandbox"
+  end
+  def to_string(%{request: :stop}) do
+    "ROLLBACK"
+  end
+  def to_string(%{request: :mode}) do
+    "SANDBOX MODE"
+  end
+end
+
+defimpl DBConnection.Query, for: Ecto.Adapters.SQL.Sandbox.Query do
+  def parse(query, _), do: query
+  def describe(query, _), do: query
+  def encode(_ , [], _), do: []
+  def decode(_, %Ecto.Adapters.SQL.Sandbox.Result{value: value}, _), do: value
 end

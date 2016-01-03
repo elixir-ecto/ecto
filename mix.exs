@@ -3,7 +3,6 @@ defmodule Ecto.Mixfile do
 
   @version "2.0.0-dev"
   @adapters [:pg, :mysql]
-  @pools [:poolboy, :sojourn_timeout, :sojourn_codel]
 
   def project do
     [app: :ecto,
@@ -15,8 +14,7 @@ defmodule Ecto.Mixfile do
      test_paths: test_paths(Mix.env),
 
      # Custom testing
-     aliases: ["test.all": ["test", "test.pools", "test.adapters"],
-               "test.pools": &test_pools/1,
+     aliases: ["test.all": ["test", "test.adapters"],
                "test.adapters": &test_adapters/1],
      preferred_cli_env: ["test.all": :test],
 
@@ -37,9 +35,12 @@ defmodule Ecto.Mixfile do
 
   defp deps do
     [{:poolboy, "~> 1.5"},
-     {:sbroker, "~> 0.7", optional: true},
+     {:sbroker, "~> 0.7"},
      {:decimal, "~> 1.0"},
-     {:postgrex, "~> 0.10", optional: true},
+     {:connection, "~> 1.0.2", override: true},
+     {:backoff, "1.1.1", override: true},
+     {:db_connection, "~> 0.1.7", override: true},
+     {:postgrex, "~> 0.10", github: "ericmj/postgrex", optional: true},
      {:mariaex, "~> 0.6", optional: true},
      {:poison, "~> 1.0", optional: true},
      {:ex_doc, "~> 0.10", only: :docs},
@@ -48,12 +49,7 @@ defmodule Ecto.Mixfile do
   end
 
   defp test_paths(adapter) when adapter in @adapters, do: ["integration_test/#{adapter}"]
-  defp test_paths(pool) when pool in @pools, do: ["test/pool/#{pool(pool)}"]
   defp test_paths(_), do: ["test/ecto", "test/mix"]
-
-  defp pool(:sojourn_timeout), do: "sojourn_broker"
-  defp pool(:sojourn_codel),   do: "sojourn_broker"
-  defp pool(:poolboy),         do: "poolboy"
 
   defp description do
     """
@@ -67,10 +63,6 @@ defmodule Ecto.Mixfile do
      links: %{"GitHub" => "https://github.com/elixir-lang/ecto"},
      files: ~w(mix.exs README.md CHANGELOG.md lib) ++
             ~w(integration_test/cases integration_test/sql integration_test/support)]
-  end
-
-  defp test_pools(args) do
-    for env <- @pools, do: env_run(env, args)
   end
 
   defp test_adapters(args) do

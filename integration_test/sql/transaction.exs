@@ -97,7 +97,8 @@ defmodule Ecto.Integration.TransactionTest do
         UniqueError -> :ok
       end
 
-      assert {:noconnect, _} = catch_exit(PoolRepo.insert!(%Trans{text: "5"}))
+      assert_raise DBConnection.Error, "transaction rolling back",
+        fn() -> PoolRepo.insert!(%Trans{text: "5"}) end
     end) == {:error, :rollback}
 
     assert TestRepo.all(Trans) == []
@@ -115,16 +116,16 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   test "manual rollback bubbles up on nested transaction" do
-    x = PoolRepo.transaction(fn ->
+    assert PoolRepo.transaction(fn ->
       e = PoolRepo.insert!(%Trans{text: "6"})
       assert [^e] = PoolRepo.all(Trans)
       assert {:error, :oops} = PoolRepo.transaction(fn ->
         PoolRepo.rollback(:oops)
       end)
-      assert {:noconnect, _} = catch_exit(PoolRepo.insert!(%Trans{text: "5"}))
-    end)
+      assert_raise DBConnection.Error, "transaction rolling back",
+        fn() -> PoolRepo.insert!(%Trans{text: "5"}) end
+    end) == {:error, :rollback}
 
-    assert x == {:error, :rollback}
     assert [] = TestRepo.all(Trans)
   end
 
