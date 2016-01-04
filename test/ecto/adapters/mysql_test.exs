@@ -68,6 +68,9 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = Model |> select([r], [r.x, r.y]) |> normalize
     assert SQL.all(query) == ~s{SELECT m0.`x`, m0.`y` FROM `model` AS m0}
+
+    query = Model |> select([r], take(r, [:x, :y])) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0.`x`, m0.`y` FROM `model` AS m0}
   end
 
   test "distinct" do

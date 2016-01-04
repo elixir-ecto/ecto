@@ -107,9 +107,9 @@ defmodule Ecto.Repo.Queryable do
     &preprocess(&1, &2, prefix, &3, sources, adapter)
   end
 
-  defp preprocess({:&, _, [ix, _]}, value, prefix, context, sources, adapter) do
+  defp preprocess({:&, _, [ix, fields]}, value, prefix, context, sources, adapter) do
     {source, schema} = elem(sources, ix)
-    Ecto.Schema.__load__(schema, prefix, source, context, value,
+    Ecto.Schema.__load__(schema, prefix, source, context, {fields, value},
                          &Ecto.Type.adapter_load(adapter, &1, &2))
   end
 

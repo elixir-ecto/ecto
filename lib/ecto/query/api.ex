@@ -9,7 +9,7 @@ defmodule Ecto.Query.API do
     * Null check functions: `is_nil/1`
     * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`
-    * General: `fragment/1`, `field/2` and `type/2`
+    * General: `fragment/1`, `field/2`, `type/2` and `take/2`
 
   Note the functions in this module exist for documentation
   purposes and one should never need to invoke them directly.
@@ -196,7 +196,7 @@ defmodule Ecto.Query.API do
 
   It is possible to make use of PostgreSQL's JSON/JSONB data type
   with fragments, as well:
-  
+
       fragment("?->>? ILIKE ?", p.map, "key_name", ^some_value)
 
   ## Keyword fragments
@@ -206,7 +206,7 @@ defmodule Ecto.Query.API do
 
       from p in Post,
           where: fragment(title: ["$eq": ^some_value])
-    
+
   """
   def fragment(fragments), do: doc! [fragments]
 
@@ -222,6 +222,24 @@ defmodule Ecto.Query.API do
   would be valid calls as the field is dynamically generated.
   """
   def field(source, field), do: doc! [source, field]
+
+  @doc """
+  Used in `select` to specify which fields should be returned.
+
+  For example, if you don't need all fields to be returned
+  as part of a struct, you can filter it to include only certain
+  fields by using `take/2`:
+
+      from p in Post,
+        select: take(p, [:title, :body])
+
+  `take/2` can also be used to dynamically select fields:
+
+      fields = [:title, :body]
+      from p in Post, select: take(p, ^fields)
+
+  """
+  def take(source, fields), do: doc! [source, fields]
 
   @doc """
   Casts the given value to the given type.

@@ -1033,13 +1033,21 @@ defmodule Ecto.Schema do
     end)
   end
 
-  defp do_load(struct, fields, list, loader) when is_list(list) do
-    Enum.reduce(fields, {struct, list}, fn
-      {field, type}, {acc, [h|t]} ->
-        value = load!(type, h, loader)
-        {Map.put(acc, field, value), t}
-    end) |> elem(0)
+  defp do_load(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
+    do_load(fields, values, struct, types, loader)
   end
+
+  defp do_load([field|fields], [value|values], struct, types, loader) do
+    case :lists.keyfind(field, 1, types) do
+      {^field, type} ->
+        value = load!(type, value, loader)
+        do_load(fields, values, Map.put(struct, field, value), types, loader)
+      false ->
+        raise ArgumentError, "unknown field `#{field}` for struct #{inspect struct.__struct__}"
+    end
+  end
+
+  defp do_load([], [], struct, _types, _loader), do: struct
 
   defp load!(type, value, loader) do
     case loader.(type, value) do

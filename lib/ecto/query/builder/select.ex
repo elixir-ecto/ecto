@@ -12,72 +12,98 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, %{}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {%{}, %{}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], %{}}
+      {[1, 2], {%{}, %{}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, %{}}
+      {{:{}, [], [:&, [], [0]]}, {%{}, %{}}}
 
       iex> escape(quote(do: ^123), [], __ENV__)
-      {{:{}, [], [:^, [], [0]]}, %{0 => {123, :any}}}
+      {{:{}, [], [:^, [], [0]]}, {%{0 => {123, :any}}, %{}}}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
   def escape(other, vars, env) do
-    escape(other, %{}, vars, env)
+    escape(other, {%{}, %{}}, vars, env)
   end
 
   # Tuple
-  defp escape({left, right}, params, vars, env) do
-    escape({:{}, [], [left, right]}, params, vars, env)
+  defp escape({left, right}, params_take, vars, env) do
+    escape({:{}, [], [left, right]}, params_take, vars, env)
   end
 
   # Tuple
-  defp escape({:{}, _, list}, params, vars, env) do
-    {list, params} = Enum.map_reduce(list, params, &escape(&1, &2, vars, env))
+  defp escape({:{}, _, list}, params_take, vars, env) do
+    {list, params_take} = Enum.map_reduce(list, params_take, &escape(&1, &2, vars, env))
     expr = {:{}, [], [:{}, [], list]}
-    {expr, params}
+    {expr, params_take}
   end
 
   # Map
-  defp escape({:%{}, _, pairs}, params, vars, env) do
-    {pairs, params} = Enum.map_reduce pairs, params, fn({k, v}, acc) ->
+  defp escape({:%{}, _, pairs}, params_take, vars, env) do
+    {pairs, params_take} = Enum.map_reduce pairs, params_take, fn({k, v}, acc) ->
       {k, acc} = escape_key(k, acc, vars, env)
-      {v, acc} = escape_value(v, acc, vars, env)
+      {v, acc} = escape(v, acc, vars, env)
       {{k, v}, acc}
     end
 
     expr = {:{}, [], [:%{}, [], pairs]}
-    {expr, params}
+    {expr, params_take}
   end
 
   # List
-  defp escape(list, params, vars, env) when is_list(list) do
-    Enum.map_reduce(list, params, &escape(&1, &2, vars, env))
+  defp escape(list, params_take, vars, env) when is_list(list) do
+    Enum.map_reduce(list, params_take, &escape(&1, &2, vars, env))
   end
 
-  # var - where var is bound
-  defp escape({var, _, context}, params, vars, _env)
+  # take(var, [:foo, :bar])
+  defp escape({:take, _, [{var, _, context}, fields]}, {params, take}, vars, _env)
+      when is_atom(var) and is_atom(context) do
+    taken =
+      case fields do
+        {:^, _, [interpolated]} ->
+          quote(do: Ecto.Query.Builder.Select.fields!(unquote(interpolated)))
+        _ when is_list(fields) ->
+          fields
+        true ->
+          Builder.error! "`take/2` in `select` expects either a literal or "
+                         "an interpolated list of atom fields"
+      end
+
+    expr = Builder.escape_var(var, vars)
+    take = Map.put(take, Builder.find_var!(var, vars), taken)
+    {expr, {params, take}}
+  end
+
+  # var
+  defp escape({var, _, context}, params_take, vars, _env)
       when is_atom(var) and is_atom(context) do
     expr = Builder.escape_var(var, vars)
-    {expr, params}
+    {expr, params_take}
   end
 
-  defp escape(other, params, vars, env) do
-    Builder.escape(other, :any, params, vars, env)
+  defp escape(other, {params, take}, vars, env) do
+    {other, params} = Builder.escape(other, :any, params, vars, env)
+    {other, {params, take}}
   end
 
-  defp escape_key(k, params, _vars, _env) when is_atom(k) do
-    {k, params}
+  defp escape_key(k, params_take, _vars, _env) when is_atom(k) do
+    {k, params_take}
   end
-  defp escape_key(k, params, vars, env) do
-    escape(k, params, vars, env)
+  defp escape_key(k, params_take, vars, env) do
+    escape(k, params_take, vars, env)
   end
 
-  defp escape_value(k, params, vars, env) do
-    escape(k, params, vars, env)
+  @doc """
+  Called at runtime to verify a field.
+  """
+  def fields!(fields) when is_list(fields),
+    do: fields
+  def fields!(other) do
+    raise ArgumentError,
+      "expected a list of fields in `take/2` inside `select`, got: `#{inspect other}`"
   end
 
   @doc """
@@ -89,15 +115,17 @@ defmodule Ecto.Query.Builder.Select do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    binding        = Builder.escape_binding(binding)
-    {expr, params} = escape(expr, binding, env)
-    params         = Builder.escape_params(params)
+    binding = Builder.escape_binding(binding)
+    {expr, {params, take}} = escape(expr, binding, env)
+    params = Builder.escape_params(params)
+    take   = {:%{}, [], Map.to_list(take)}
 
     select = quote do: %Ecto.Query.SelectExpr{
                          expr: unquote(expr),
                          params: unquote(params),
                          file: unquote(env.file),
-                         line: unquote(env.line)}
+                         line: unquote(env.line),
+                         take: unquote(take)}
     Builder.apply_query(query, __MODULE__, [select], env)
   end
 

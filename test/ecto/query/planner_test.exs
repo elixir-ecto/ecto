@@ -370,6 +370,26 @@ defmodule Ecto.Query.PlannerTest do
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
   end
 
+  test "normalize: select with take" do
+    query = from(Post, []) |> select([p], take(p, [:id, :title])) |> normalize()
+    assert query.select.expr == {:&, [], [0]}
+    assert query.select.fields == [{:&, [], [0, [:id, :title]]}]
+
+    query = from(Post, []) |> select([p], {take(p, [:id, :title]), p.title}) |> normalize()
+    assert query.select.fields ==
+           [{:&, [], [0, [:id, :title]]},
+            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+
+    query =
+      from(Post, [])
+      |> join(:inner, [_], c in Comment)
+      |> select([p, c], {p, take(c, [:id, :text])})
+      |> normalize()
+    assert query.select.fields ==
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]},
+            {:&, [], [1, [:id, :text]]}]
+  end
+
   test "normalize: preload" do
     message = ~r"the binding used in `from` must be selected in `select` when using `preload`"
     assert_raise Ecto.QueryError, message, fn ->
