@@ -4,11 +4,8 @@ defmodule Ecto.Integration.Repo do
       use Ecto.Repo, unquote(opts)
       def log(cmd) do
         super(cmd)
-        on_log = Process.delete(:on_log) || fn -> :ok end
-        cond do
-          is_function(on_log, 0) -> on_log.()
-          is_function(on_log, 1) -> on_log.(cmd)
-        end
+        on_log = Process.delete(:on_log) || fn _ -> :ok end
+        on_log.(cmd)
       end
     end
   end

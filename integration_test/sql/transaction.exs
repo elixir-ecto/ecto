@@ -204,7 +204,7 @@ defmodule Ecto.Integration.TransactionTest do
   @tag :strict_savepoint
   test "log raises after begin, drops transaction" do
     try do
-      Process.put(:on_log, fn -> raise UniqueError end)
+      Process.put(:on_log, fn _ -> raise UniqueError end)
       PoolRepo.transaction(fn -> :ok end)
     rescue
       UniqueError -> :ok
@@ -218,7 +218,7 @@ defmodule Ecto.Integration.TransactionTest do
     try do
       PoolRepo.transaction(fn ->
         PoolRepo.insert!(%Trans{text: "8"})
-        Process.put(:on_log, fn -> raise UniqueError end)
+        Process.put(:on_log, fn _ -> raise UniqueError end)
         PoolRepo.transaction(fn -> flunk "log did not raise" end)
       end)
     rescue
@@ -232,7 +232,7 @@ defmodule Ecto.Integration.TransactionTest do
     try do
       PoolRepo.transaction(fn ->
         PoolRepo.insert!(%Trans{text: "10"})
-        Process.put(:on_log, fn -> raise UniqueError end)
+        Process.put(:on_log, fn _ -> raise UniqueError end)
       end)
     rescue
       UniqueError -> :ok
@@ -245,7 +245,7 @@ defmodule Ecto.Integration.TransactionTest do
     try do
       PoolRepo.transaction(fn ->
         PoolRepo.insert!(%Trans{text: "11"})
-        Process.put(:on_log, fn -> raise UniqueError end)
+        Process.put(:on_log, fn _ -> raise UniqueError end)
         PoolRepo.rollback(:rollback)
       end)
     rescue

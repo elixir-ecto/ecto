@@ -14,7 +14,8 @@ defmodule Ecto.Integration.ConstraintTest do
         add :from, :integer
         add :to, :integer
       end
-      execute "ALTER TABLE exclude_constraint_migration ADD CONSTRAINT overlapping_ranges EXCLUDE USING gist (int4range(\"from\", \"to\") WITH &&)"
+      execute "ALTER TABLE exclude_constraint_migration " <>
+              "ADD CONSTRAINT overlapping_ranges EXCLUDE USING gist (int4range(\"from\", \"to\") WITH &&)"
     end
 
     def down do
