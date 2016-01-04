@@ -35,6 +35,9 @@ defmodule Ecto.Schema do
       options. Defaults to `{:id, :id, autogenerate: true}`. When set to
       false, does not define a primary key in the schema;
 
+    * `@schema_prefix` - configures the schema prefix. Defaults `nil`
+      generate queries without prefix;
+
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. Defaults to `:integer`;
 
@@ -222,6 +225,8 @@ defmodule Ecto.Schema do
   used for runtime introspection of the schema:
 
   * `__schema__(:source)` - Returns the source as given to `schema/2`;
+  * `__schema__(:prefix)` - Returns optional prefix for source provided by
+    `@schema_prefix` schema attribute;
   * `__schema__(:primary_key)` - Returns a list of primary key fields (empty if there is none);
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
@@ -280,6 +285,7 @@ defmodule Ecto.Schema do
       @foreign_key_type :id
       @before_compile Ecto.Schema
       @ecto_embedded false
+      @schema_prefix nil
 
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
@@ -312,6 +318,7 @@ defmodule Ecto.Schema do
   """
   defmacro schema(source, [do: block]) do
     quote do
+      prefix = Module.get_attribute(__MODULE__, :schema_prefix)
       source = unquote(source)
 
       unless is_binary(source) do
@@ -321,7 +328,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
       Module.put_attribute(__MODULE__, :struct_fields,
-                           {:__meta__, %Metadata{state: :built, source: {nil, source}}})
+                           {:__meta__, %Metadata{state: :built, source: {prefix, source}}})
 
       primary_key_fields =
         case @primary_key do
@@ -348,7 +355,7 @@ defmodule Ecto.Schema do
       Module.eval_quoted __ENV__, [
         Ecto.Schema.__defstruct__(@struct_fields),
         Ecto.Schema.__changeset__(@changeset_fields),
-        Ecto.Schema.__schema__(source, fields, primary_key_fields),
+        Ecto.Schema.__schema__(prefix, source, fields, primary_key_fields),
         Ecto.Schema.__types__(fields),
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
@@ -1171,7 +1178,7 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __schema__(source, fields, primary_key) do
+  def __schema__(prefix, source, fields, primary_key) do
     field_names = Enum.map(fields, &elem(&1, 0))
 
     # Hash is used by the query cache to specify
@@ -1181,6 +1188,7 @@ defmodule Ecto.Schema do
     hash = :erlang.phash2({primary_key, fields})
 
     quote do
+      def __schema__(:prefix),      do: unquote(Macro.escape(prefix))
       def __schema__(:source),      do: unquote(Macro.escape(source))
       def __schema__(:fields),      do: unquote(field_names)
       def __schema__(:primary_key), do: unquote(primary_key)
