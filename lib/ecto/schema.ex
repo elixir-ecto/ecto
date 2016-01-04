@@ -36,7 +36,9 @@ defmodule Ecto.Schema do
       false, does not define a primary key in the schema;
 
     * `@schema_prefix` - configures the schema prefix. Defaults `nil`
-      generate queries without prefix;
+      generate structs and queries without prefix. When set, the
+      prefix will be used by every built struct as well as queries
+      where the `from` is the current schema;
 
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. Defaults to `:integer`;
