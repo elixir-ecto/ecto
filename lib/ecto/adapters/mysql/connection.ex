@@ -317,7 +317,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "#{name}.#{quote_name(field)}"
     end
 
-    defp expr({:&, _, [idx]}, sources, query) do
+    defp expr({:&, _, [idx, fields]}, sources, query) do
       {table, name, model} = elem(sources, idx)
       unless model do
         error!(query, "MySQL requires a schema module when using selector " <>
@@ -325,7 +325,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
           "Please specify a model or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
-      fields = model.__schema__(:fields)
       Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
     end
 

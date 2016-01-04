@@ -90,15 +90,16 @@ defmodule Ecto.Repo.Queryable do
       |> Queryable.to_query()
       |> Planner.query(operation, repo, adapter)
 
-    if meta.select do
-      preprocess = preprocess(meta.prefix, meta.sources, adapter)
-      {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
-      {count,
-        rows
-        |> Ecto.Repo.Assoc.query(meta.assocs, meta.sources)
-        |> Ecto.Repo.Preloader.query(repo, meta.preloads, meta.assocs, postprocess(meta.select))}
-    else
-      adapter.execute(repo, meta, prepared, params, nil, opts)
+    case meta do
+      %{select: nil} ->
+        adapter.execute(repo, meta, prepared, params, nil, opts)
+      %{select: select, prefix: prefix, sources: sources, assocs: assocs, preloads: preloads} ->
+        preprocess = preprocess(prefix, sources, adapter)
+        {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
+        {count,
+          rows
+          |> Ecto.Repo.Assoc.query(assocs, sources)
+          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select))}
     end
   end
 
@@ -106,9 +107,9 @@ defmodule Ecto.Repo.Queryable do
     &preprocess(&1, &2, prefix, &3, sources, adapter)
   end
 
-  defp preprocess({:&, _, [ix]}, value, prefix, context, sources, adapter) do
-    {source, model} = elem(sources, ix)
-    Ecto.Schema.__load__(model, prefix, source, context, value,
+  defp preprocess({:&, _, [ix, _]}, value, prefix, context, sources, adapter) do
+    {source, schema} = elem(sources, ix)
+    Ecto.Schema.__load__(schema, prefix, source, context, value,
                          &Ecto.Type.adapter_load(adapter, &1, &2))
   end
 
@@ -139,7 +140,7 @@ defmodule Ecto.Repo.Queryable do
     # entry in the query, avoiding fetching it multiple
     # times even if it appears multiple times in the query.
     # So we always need to handle it specially.
-    from? = match?([{:&, _, [0]}|_], fields)
+    from? = match?([{:&, _, [0, _]}|_], fields)
     &postprocess(&1, expr, from?)
   end
 

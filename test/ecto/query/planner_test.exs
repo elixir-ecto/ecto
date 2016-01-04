@@ -346,15 +346,17 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select" do
     query = from(Post, []) |> normalize()
     assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == [{:&, [], [0]}]
+    assert query.select.fields == [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]}]
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]},
+            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0]}, {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]},
+            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query =
       from(Post, [])
@@ -363,7 +365,8 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0]}, {:&, [], [1]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]},
+            {:&, [], [1, [:id, :text, :posted, :uuid, :post_id]]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
   end
 

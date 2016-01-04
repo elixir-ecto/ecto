@@ -451,8 +451,7 @@ defmodule Ecto.Adapters.SQL do
     {num, rows}
   end
 
-  def execute(repo, meta, prepared, params, preprocess, opts) do
-    fields = count_fields(meta.select.fields, meta.sources)
+  def execute(repo, %{select: %{fields: fields}}, prepared, params, preprocess, opts) do
     mapper = &process_row(&1, preprocess, fields)
     %{rows: rows, num_rows: num} = query!(repo, prepared, params, mapper, opts)
     {num, rows}
@@ -475,25 +474,15 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp count_fields(fields, sources) do
-    Enum.map fields, fn
-      {:&, _, [idx]} = field ->
-        {_source, model} = elem(sources, idx)
-        {field, length(model.__schema__(:fields))}
-      field ->
-        {field, 0}
-    end
-  end
-
   defp process_row(row, preprocess, fields) do
     Enum.map_reduce(fields, row, fn
-      {field, 0}, [h|t] ->
-        {preprocess.(field, h, nil), t}
-      {field, count}, acc ->
-        case split_and_not_nil(acc, count, true, []) do
+      {:&, _, [_, fields]} = field, acc ->
+        case split_and_not_nil(acc, length(fields), true, []) do
           {nil, rest} -> {nil, rest}
           {val, rest} -> {preprocess.(field, val, nil), rest}
         end
+      field, [h|t] ->
+        {preprocess.(field, h, nil), t}
     end) |> elem(0)
   end
 

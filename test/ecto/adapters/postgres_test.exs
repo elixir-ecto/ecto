@@ -56,7 +56,7 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == ~s{SELECT m0."x" FROM "model" AS m0}
   end
 
-  test "from without model" do
+  test "from without schema" do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 

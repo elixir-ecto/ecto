@@ -491,71 +491,83 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(query, operation) do
-    cond do
-      operation in [:update_all, :delete_all] ->
-        query
-      select = query.select ->
-        %{query | select: normalize_fields(query, select)}
-      true ->
-        select = %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}
-        %{query | select: normalize_fields(query, select)}
-    end
+  defp normalize_select(query, operation) when operation in [:update_all, :delete_all] do
+    query
+  end
+  defp normalize_select(%{select: nil} = query, _operation) do
+    select = %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}
+    %{query | select: normalize_fields(query, select)}
+  end
+  defp normalize_select(%{select: select} = query, _operation) do
+    %{query | select: normalize_fields(query, select)}
   end
 
-  defp normalize_fields(%{assocs: [], preloads: []} = query, select) do
-    {fields, from?} = collect_fields(query, select.expr, false)
+  defp normalize_fields(%{assocs: [], preloads: [], sources: sources}, select) do
+    {fields, from} = collect_fields(sources, select.expr, :error)
 
     fields =
-      if from? do
-        [{:&, [], [0]}|fields]
-      else
-        fields
+      case from do
+        {:ok, from} -> [{:&, [], [0, from]}|fields]
+        :error -> fields
       end
 
     %{select | fields: fields}
   end
 
-  defp normalize_fields(%{assocs: assocs} = query, select) do
-    {fields, from?} = collect_fields(query, select.expr, false)
+  defp normalize_fields(%{assocs: assocs, sources: sources} = query, select) do
+    {fields, from} = collect_fields(sources, select.expr, :error)
 
-    unless from? do
-      error! query, "the binding used in `from` must be selected in `select` when using `preload`"
-    end
-
-    assocs = collect_assocs(assocs)
-    fields = [{:&, [], [0]}|assocs] ++ fields
-    %{select | fields: fields}
-  end
-
-  defp collect_fields(_query, {:&, _, [ix]} = expr, from?) do
-    if ix == 0 do
-      {[], true}
-    else
-      {[expr], from?}
+    case from do
+      {:ok, from} ->
+        assocs = collect_assocs(sources, assocs)
+        fields = [{:&, [], [0, from]}|assocs] ++ fields
+        %{select | fields: fields}
+      :error ->
+        error! query, "the binding used in `from` must be selected in `select` when using `preload`"
     end
   end
 
-  defp collect_fields(query, {left, right}, from?) do
-    {left, from?}  = collect_fields(query, left, from?)
-    {right, from?} = collect_fields(query, right, from?)
-    {left ++ right, from?}
+  defp collect_fields(sources, {:&, _, [0]}, :error) do
+    {[], {:ok, fields!(sources, 0)}}
   end
-  defp collect_fields(query, {:{}, _, elems}, from?),
-    do: collect_fields(query, elems, from?)
-  defp collect_fields(query, {:%{}, _, pairs}, from?),
-    do: collect_fields(query, pairs, from?)
-  defp collect_fields(query, list, from?) when is_list(list),
-    do: Enum.flat_map_reduce(list, from?, &collect_fields(query, &1, &2))
-  defp collect_fields(_query, expr, from?) when is_atom(expr) or is_binary(expr) or is_number(expr),
-    do: {[], from?}
-  defp collect_fields(_query, expr, from?),
-    do: {[expr], from?}
+  defp collect_fields(_sources, {:&, _, [0]}, from) do
+    {[], from}
+  end
+  defp collect_fields(sources, {:&, _, [ix]}, from) do
+    {[{:&, [], [ix, fields!(sources, ix)]}], from}
+  end
 
-  defp collect_assocs([{_assoc, {ix, children}}|tail]),
-    do: [{:&, [], [ix]}] ++ collect_assocs(children) ++ collect_assocs(tail)
-  defp collect_assocs([]),
-    do: []
+  defp collect_fields(sources, {left, right}, from) do
+    {left, from}  = collect_fields(sources, left, from)
+    {right, from} = collect_fields(sources, right, from)
+    {left ++ right, from}
+  end
+  defp collect_fields(sources, {:{}, _, elems}, from),
+    do: collect_fields(sources, elems, from)
+  defp collect_fields(sources, {:%{}, _, pairs}, from),
+    do: collect_fields(sources, pairs, from)
+  defp collect_fields(sources, list, from) when is_list(list),
+    do: Enum.flat_map_reduce(list, from, &collect_fields(sources, &1, &2))
+  defp collect_fields(_sources, expr, from) when is_atom(expr) or is_binary(expr) or is_number(expr),
+    do: {[], from}
+  defp collect_fields(_sources, expr, from),
+    do: {[expr], from}
+
+  defp collect_assocs(sources, [{_assoc, {ix, children}}|tail]) do
+    [{:&, [], [ix, fields!(sources, ix)]}] ++
+      collect_assocs(sources, children) ++
+      collect_assocs(sources, tail)
+  end
+  defp collect_assocs(_sources, []) do
+    []
+  end
+
+  defp fields!(sources, ix) do
+    case elem(sources, ix) do
+      {_, nil} -> nil
+      {_, schema} -> schema.__schema__(:fields)
+    end
+  end
 
   ## Helpers
 

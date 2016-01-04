@@ -36,7 +36,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [_] = TestRepo.all from p in Post, where: p.title in ^["1", "hello", "3"]
   end
 
-  test "fetch without model" do
+  test "fetch without schema" do
     %Post{} = TestRepo.insert!(%Post{title: "title1"})
     %Post{} = TestRepo.insert!(%Post{title: "title2"})
 
