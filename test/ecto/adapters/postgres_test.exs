@@ -538,6 +538,35 @@ defmodule Ecto.Adapters.PostgresTest do
     assert query == ~s{DELETE FROM "prefix"."model" WHERE "x" = $1 AND "y" = $2}
   end
 
+  defmodule Schema1ModelA do
+    use Ecto.Schema
+    @schema_prefix "schema1"
+    schema "model_a" do
+      field :name
+    end
+  end
+
+  defmodule Schema2ModelB do
+    use Ecto.Schema
+    @schema_prefix "schema2"
+    schema "model_b" do
+      field :name
+      belongs_to :a, Schema1ModelA
+    end
+  end
+
+  test "schema with schema prefix" do
+    query = Schema1ModelA |> select([r], r.name) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."name" FROM "schema1"."model_a" AS m0}
+
+    query = Schema2ModelB |> select([r], r.name) |> normalize
+    assert SQL.all(query) == ~s{SELECT m0."name" FROM "schema2"."model_b" AS m0}
+
+    query = Schema1ModelA |> join(:inner, [a], b in Schema2ModelB, a.id == b.a_id) 
+       |> select([], true) |> normalize
+    assert SQL.all(query) == ~s{SELECT TRUE FROM "schema1"."model_a" AS m0 INNER JOIN "schema2"."model_b" AS m1 ON m0."id" = m1."a_id"}
+  end
+
   # DDL
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, references: 2]
