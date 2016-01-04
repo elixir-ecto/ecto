@@ -1188,8 +1188,9 @@ defmodule Ecto.Schema do
     hash = :erlang.phash2({primary_key, fields})
 
     quote do
-      def __schema__(:prefix),      do: unquote(Macro.escape(prefix))
-      def __schema__(:source),      do: unquote(Macro.escape(source))
+      def __schema__(:query),       do: %Ecto.Query{from: {unquote(source), __MODULE__}, prefix: unquote(prefix)}
+      def __schema__(:prefix),      do: unquote(prefix)
+      def __schema__(:source),      do: unquote(source)
       def __schema__(:fields),      do: unquote(field_names)
       def __schema__(:primary_key), do: unquote(primary_key)
       def __schema__(:hash),        do: unquote(hash)

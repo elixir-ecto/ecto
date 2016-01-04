@@ -119,7 +119,7 @@ defmodule Ecto.SchemaTest do
   defmodule SchemaWithPrefix do
     use Ecto.Schema
 
-    @schema_prefix "tenant_001"
+    @schema_prefix "tenant"
     schema "company" do
       field :name
     end
@@ -127,15 +127,33 @@ defmodule Ecto.SchemaTest do
 
   test "schema prefix metadata" do
     assert SchemaWithPrefix.__schema__(:source) == "company"
-    assert SchemaWithPrefix.__schema__(:prefix) == "tenant_001"
-    assert %SchemaWithPrefix{}.__meta__.source == {"tenant_001", "company"}
+    assert SchemaWithPrefix.__schema__(:prefix) == "tenant"
+    assert %SchemaWithPrefix{}.__meta__.source == {"tenant", "company"}
+  end
+
+  test "schema prefix in queries" do
+    import Ecto.Query
+
+    query = from(SchemaWithPrefix, select: 1)
+    assert query.prefix == "tenant"
+
+    query = from({"another_company", SchemaWithPrefix}, select: 1)
+    assert query.prefix == "tenant"
+
+    from = SchemaWithPrefix
+    query = from(from, select: 1)
+    assert query.prefix == "tenant"
+
+    from = {"another_company", SchemaWithPrefix}
+    query = from(from, select: 1)
+    assert query.prefix == "tenant"
   end
 
   test "updates meta prefix with put_meta" do
     model = %SchemaWithPrefix{}
-    assert model.__meta__.source == {"tenant_001", "company"}
+    assert model.__meta__.source == {"tenant", "company"}
     model = Ecto.put_meta(model, source: "new_company")
-    assert model.__meta__.source == {"tenant_001", "new_company"}
+    assert model.__meta__.source == {"tenant", "new_company"}
     model = Ecto.put_meta(model, prefix: "prefix")
     assert model.__meta__.source == {"prefix", "new_company"}
     model = Ecto.put_meta(model, prefix: nil)

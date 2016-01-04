@@ -63,14 +63,6 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  test "string source query" do
-    assert %Query{from: {"posts", nil}} = from(p in "posts", []) |> select([p], p.title)
-  end
-
-  test "string source and atom query" do
-    assert %Query{from: {"user_posts", Post}} = from(p in {"user_posts", Post}, []) |> select([p], p.title)
-  end
-
   test "normalize from expression" do
     quote_and_eval(from("posts", []))
 
@@ -114,7 +106,6 @@ defmodule Ecto.QueryTest do
     # queries need to be on the same line or == wont work
     assert from(p in "posts", select: 1<2) == from(p in "posts", []) |> select([p], 1<2)
     assert from(p in "posts", where: 1<2)  == from(p in "posts", []) |> where([p], 1<2)
-    assert from(p in {"posts", Post}, where: 1<2)  == from(p in {"posts", Post}, []) |> where([p], 1<2)
 
     query = "posts"
     assert (query |> select([p], p.title)) == from(p in query, select: p.title)

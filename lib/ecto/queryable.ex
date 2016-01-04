@@ -21,7 +21,7 @@ end
 defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
     try do
-      %Ecto.Query{from: {module.__schema__(:source), module}}
+      module.__schema__(:query)
     rescue
       UndefinedFunctionError ->
         message = if :code.is_loaded(module) do
@@ -40,5 +40,5 @@ end
 
 defimpl Ecto.Queryable, for: Tuple do
   def to_query(from = {source, model}) when is_binary(source) and is_atom(model),
-    do: %Ecto.Query{from: from}
+    do: %Ecto.Query{from: from, prefix: model.__schema__(:prefix)}
 end

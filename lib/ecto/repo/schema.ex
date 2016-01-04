@@ -10,15 +10,12 @@ defmodule Ecto.Repo.Schema do
   Implementation for `Ecto.Repo.insert!/2`.
   """
   def insert_all(repo, adapter, schema, rows, opts) when is_atom(schema) do
-    do_insert_all(repo, adapter, schema, {nil, schema.__schema__(:source)}, rows, opts)
+    do_insert_all(repo, adapter, schema,
+                  {schema.__schema__(:prefix), schema.__schema__(:source)}, rows, opts)
   end
 
   def insert_all(repo, adapter, table, rows, opts) when is_binary(table) do
     do_insert_all(repo, adapter, nil, {nil, table}, rows, opts)
-  end
-
-  def insert_all(repo, adapter, {_, table} = source, rows, opts) when is_binary(table) do
-    do_insert_all(repo, adapter, nil, source, rows, opts)
   end
 
   defp do_insert_all(_repo, _adapter, _schema, _source, [], _opts) do
