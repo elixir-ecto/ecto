@@ -89,6 +89,7 @@ defmodule Ecto.Query.Planner do
   def prepare(query, operation, adapter) do
     query
     |> prepare_sources
+    |> prepare_assocs
     |> prepare_cache(operation, adapter)
   rescue
     e ->
@@ -350,6 +351,45 @@ defmodule Ecto.Query.Planner do
   # All others need to be incremented by the offset sources
   defp rewrite_ix(join_ix, _ix, _last_ix, _source_ix, inc_ix), do: join_ix + inc_ix
 
+  defp prepare_assocs(query) do
+    prepare_assocs(query, 0, query.assocs)
+    query
+  end
+
+  defp prepare_assocs(query, ix, assocs) do
+    # We validate the model exists when preparing joins above
+    {_, parent_model} = elem(query.sources, ix)
+
+    Enum.each assocs, fn {assoc, {child_ix, child_assocs}} ->
+      refl = parent_model.__schema__(:association, assoc)
+
+      unless refl do
+        error! query, "field `#{inspect parent_model}.#{assoc}` " <>
+                      "in preload is not an association"
+      end
+
+      case find_source_expr(query, child_ix) do
+        %JoinExpr{qual: qual} when qual in [:inner, :left] ->
+          :ok
+        %JoinExpr{qual: qual} ->
+          error! query, "association `#{inspect parent_model}.#{assoc}` " <>
+                        "in preload requires an inner or left join, got #{qual} join"
+        _ ->
+          :ok
+      end
+
+      prepare_assocs(query, child_ix, child_assocs)
+    end
+  end
+
+  defp find_source_expr(query, 0) do
+    query.from
+  end
+
+  defp find_source_expr(query, ix) do
+    Enum.find(query.joins, & &1.ix == ix)
+  end
+
   @doc """
   Normalizes the query.
 
@@ -373,7 +413,6 @@ defmodule Ecto.Query.Planner do
     |> traverse_exprs(operation, 0, &validate_and_increment(&1, &2, &3, &4, adapter))
     |> elem(0)
     |> normalize_select(operation)
-    |> validate_assocs
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -517,45 +556,6 @@ defmodule Ecto.Query.Planner do
     do: [{:&, [], [ix]}] ++ collect_assocs(children) ++ collect_assocs(tail)
   defp collect_assocs([]),
     do: []
-
-  defp validate_assocs(query) do
-    validate_assocs(query, 0, query.assocs)
-    query
-  end
-
-  defp validate_assocs(query, ix, assocs) do
-    # We validate the model exists when normalizing fields above
-    {_, parent_model} = elem(query.sources, ix)
-
-    Enum.each assocs, fn {assoc, {child_ix, child_assocs}} ->
-      refl = parent_model.__schema__(:association, assoc)
-
-      unless refl do
-        error! query, "field `#{inspect parent_model}.#{assoc}` " <>
-                      "in preload is not an association"
-      end
-
-      case find_source_expr(query, child_ix) do
-        %JoinExpr{qual: qual} when qual in [:inner, :left] ->
-          :ok
-        %JoinExpr{qual: qual} ->
-          error! query, "association `#{inspect parent_model}.#{assoc}` " <>
-                        "in preload requires an inner or left join, got #{qual} join"
-        _ ->
-          :ok
-      end
-
-      validate_assocs(query, child_ix, child_assocs)
-    end
-  end
-
-  defp find_source_expr(query, 0) do
-    query.from
-  end
-
-  defp find_source_expr(query, ix) do
-    Enum.find(query.joins, & &1.ix == ix)
-  end
 
   ## Helpers
 

@@ -61,8 +61,7 @@ defmodule Ecto.Query.PlannerTest do
         having: p.title == ^"4",
         order_by: [asc: fragment("?", ^"5")],
         limit: ^6,
-        offset: ^7,
-        preload: [post: d]
+        offset: ^7
 
     {_query, params, _key} = prepare(query)
     assert params == ["0", "1", "2", "3", "4", "5", 6, 7]
