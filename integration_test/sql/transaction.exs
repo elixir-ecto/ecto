@@ -168,7 +168,7 @@ defmodule Ecto.Integration.TransactionTest do
   test "log begin, commit and rollback" do
     Process.put(:on_log, &send(self(), &1))
     PoolRepo.transaction(fn ->
-      assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
+      assert_received %Ecto.LogEntry{params: nil, result: :ok} = entry
       assert is_integer(entry.query_time) and entry.query_time >= 0
       assert is_integer(entry.queue_time) and entry.queue_time >= 0
 
@@ -176,7 +176,7 @@ defmodule Ecto.Integration.TransactionTest do
       Process.put(:on_log, &send(self(), &1))
     end)
 
-    assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
+    assert_received %Ecto.LogEntry{params: nil, result: :ok} = entry
     assert is_integer(entry.query_time) and entry.query_time >= 0
     assert is_nil(entry.queue_time)
 
@@ -185,7 +185,7 @@ defmodule Ecto.Integration.TransactionTest do
       Process.put(:on_log, &send(self(), &1))
       PoolRepo.rollback(:log_rollback)
     end) == {:error, :log_rollback}
-    assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
+    assert_received %Ecto.LogEntry{params: nil, result: :ok} = entry
     assert is_integer(entry.query_time) and entry.query_time >= 0
     assert is_nil(entry.queue_time)
   end

@@ -124,6 +124,8 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
+  alias Ecto.LogProxy
+  alias Ecto.LogQuery
   alias Ecto.Adapters.SQL.Sandbox
 
   @doc """
@@ -212,8 +214,25 @@ defmodule Ecto.Adapters.SQL do
     query = connection.query(sql)
     opts =
       opts ++ default_opts
+      |> Keyword.put(:logger, &repo.log/1)
       |> Keyword.put(:encode_mapper, &connection.encode_mapper/1)
       |> Keyword.put(:decode_mapper, mapper)
+    do_query(conn, query, params, opts)
+  end
+
+  defp do_query(%DBConnection{proxy_mod: proxy} = conn, query, params, opts) do
+    do_query(proxy, conn, query, params, opts)
+  end
+  defp do_query(pool, query, params, opts) do
+    proxy = Keyword.get(opts, :proxy)
+    do_query(proxy, pool, query, params, opts)
+  end
+
+  defp do_query(LogProxy, conn, query, params, opts) do
+    log_query = %LogQuery{query: query, params: params}
+    DBConnection.query(conn, log_query, params, opts)
+  end
+  defp do_query(_, conn, query, params, opts) do
     DBConnection.query(conn, query, params, opts)
   end
 

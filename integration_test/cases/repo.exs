@@ -615,7 +615,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "log entry logged on query" do
     log = fn entry ->
-      assert %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
+      assert %Ecto.LogEntry{result: {:ok, _}} = entry
       assert is_integer(entry.query_time) and entry.query_time >= 0
       assert is_integer(entry.decode_time) and entry.query_time >= 0
       assert is_integer(entry.queue_time) and entry.queue_time >= 0
@@ -623,7 +623,7 @@ defmodule Ecto.Integration.RepoTest do
     end
     Process.put(:on_log, log)
 
-    _ = TestRepo.insert!(%Post{title: "1"})
+    _ = TestRepo.all(Post)
     assert_received :logged
   end
 

@@ -277,14 +277,14 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 end
 
 defimpl String.Chars, for: DBConnection.Query do
-  def to_string(%{request: :start}) do
-    "BEGIN; SAVEPOINT ecto_sandbox"
+  def to_string(%{request: :begin}) do
+    "BEGIN SANDBOX"
   end
   def to_string(%{request: :restart}) do
-    "ROLLBACK TO SAVEPOINT ecto_sandbox"
+    "RESTART SANDBOX"
   end
-  def to_string(%{request: :stop}) do
-    "ROLLBACK"
+  def to_string(%{request: :rollback}) do
+    "ROLLBACK SANDBOX"
   end
   def to_string(%{request: :mode}) do
     "SANDBOX MODE"
