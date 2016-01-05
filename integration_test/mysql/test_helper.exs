@@ -22,7 +22,7 @@ Code.require_file "../support/migration.exs", __DIR__
 pool =
   case System.get_env("ECTO_POOL") || "poolboy" do
     "poolboy"        -> DBConnection.Poolboy
-    "sojourn_broker" -> DBConnection.SojournBroker
+    "sojourn_broker" -> DBConnection.Sojourn
   end
 
 # Basic test repo

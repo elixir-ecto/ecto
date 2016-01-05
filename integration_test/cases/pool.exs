@@ -9,7 +9,7 @@ defmodule Ecto.Integration.PoolTest do
   pool =
     case System.get_env("ECTO_POOL") || "poolboy" do
       "poolboy"        -> DBConnection.Poolboy
-      "sojourn_broker" -> DBConnection.SojournBroker
+      "sojourn_broker" -> DBConnection.Sojourn
     end
 
   Application.put_env(:ecto, __MODULE__.MockRepo,
