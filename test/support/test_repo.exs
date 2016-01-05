@@ -6,8 +6,8 @@ defmodule Ecto.TestAdapter do
   defmacro __before_compile__(_opts), do: :ok
 
   def start_link(_repo, opts) do
-    Ecto.TestRepo.Pool = opts[:pool_name]
-    Ecto.Pools.Poolboy = opts[:pool]
+    Ecto.TestRepo.Pool = opts[:name]
+    Ecto.TestRepo.Pool = opts[:pool]
     Ecto.TestRepo      = opts[:repo]
 
     :ecto   = opts[:otp_app]

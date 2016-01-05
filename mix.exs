@@ -2,7 +2,7 @@ defmodule Ecto.Mixfile do
   use Mix.Project
 
   @version "2.0.0-dev"
-  @adapters [:pg, :mysql]
+  @adapters [:pg]
 
   def project do
     [app: :ecto,
@@ -35,13 +35,18 @@ defmodule Ecto.Mixfile do
 
   defp deps do
     [{:poolboy, "~> 1.5"},
-     {:sbroker, "~> 0.7"},
      {:decimal, "~> 1.0"},
-     {:connection, "~> 1.0.2", override: true},
-     {:db_connection, "~> 0.1.7", github: "fishcakez/db_connection", override: true},
+
+     # Drivers
+     # {:mariaex, "~> 0.6", optional: true},
      {:postgrex, "~> 0.10", github: "ericmj/postgrex", optional: true},
-     {:mariaex, "~> 0.6", optional: true},
+     {:db_connection, "~> 0.1.7", github: "fishcakez/db_connection", override: true},
+
+     # Optional
+     {:sbroker, "~> 0.7", optional: true},
      {:poison, "~> 1.0", optional: true},
+
+     # Docs
      {:ex_doc, "~> 0.10", only: :docs},
      {:earmark, "~> 0.1", only: :docs},
      {:inch_ex, only: :docs}]
