@@ -48,7 +48,9 @@ Application.put_env(:ecto, PoolRepo,
   adapter: Ecto.Adapters.Postgres,
   pool: pool,
   url: Application.get_env(:ecto, :pg_test_url) <> "/ecto_test",
-  pool_size: 10)
+  pool_size: 10,
+  max_restarts: 20,
+  max_seconds: 10)
 
 defmodule Ecto.Integration.PoolRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
