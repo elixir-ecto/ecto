@@ -3,12 +3,12 @@ if Code.ensure_loaded?(Postgrex.Connection) do
   defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false
 
-    @behaviour Ecto.Adapters.SQL.Query
     @default_port 5432
+    @behaviour Ecto.Adapters.SQL.Connection
 
     ## Module and Options
 
-    def mod_and_opts(opts) do
+    def connection(opts) do
       json = Application.get_env(:ecto, :json_library)
       extensions = [{Ecto.Adapters.Postgres.DateTime, []},
         {Postgrex.Extensions.JSON, library: json}]

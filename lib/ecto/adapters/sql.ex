@@ -9,10 +9,7 @@ defmodule Ecto.Adapters.SQL do
   Developers that use `Ecto.Adapters.SQL` should implement
   a connection module with specifics on how to connect
   to the database and also how to translate the queries
-  to SQL.
-
-  See `Ecto.Adapters.Connection` for connection processes and
-  `Ecto.Adapters.SQL.Query` for the query semantics.
+  to SQL. See `Ecto.Adapters.SQL.Connection` for more info.
   """
 
   @doc false
@@ -243,7 +240,6 @@ defmodule Ecto.Adapters.SQL do
   back in the pool with an open transaction. On every test, we restart
   the test transaction rolling back to the appropriate savepoint.
 
-
   **IMPORTANT:** Test transactions only work if the connection pool is
   `Ecto.Adapters.SQL.Sandbox`
 
@@ -369,9 +365,12 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    {mod, opts} = connection.mod_and_opts(opts)
+    {mod, opts} = connection.connection(opts)
 
     if function_exported?(repo, :after_connect, 1) do
+      IO.puts :stderr, "warning: #{inspect repo}.after_connect/1 is deprecated. If you want to " <>
+                       "perform some action after connecting, please set after_connect: {module, fun, args}" <>
+                       "in your repository configuration"
       opts = Keyword.put(opts, :after_connect, {repo, :after_connect, []})
     end
 
@@ -398,6 +397,7 @@ defmodule Ecto.Adapters.SQL do
 
   ## Query
 
+  @doc false
   def insert_all(repo, conn, prefix, source, header, rows, returning, opts) do
     {rows, params} = unzip_inserts(header, rows)
     sql = conn.insert(prefix, source, header, rows, returning)

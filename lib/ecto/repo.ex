@@ -209,7 +209,7 @@ defmodule Ecto.Repo do
   """
   @callback __pool__ :: {name :: atom, opts :: Keyword.t}
 
- @doc """
+  @doc """
   Returns the name of the ETS table used for query caching.
 
   The name can be configured with the `:query_cache` option.

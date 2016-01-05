@@ -1,14 +1,13 @@
-defmodule Ecto.Adapters.SQL.Query do
+defmodule Ecto.Adapters.SQL.Connection do
   @moduledoc """
-  Specifies the behaviour to be implemented by the
-  connection for handling all SQL queries.
+  Specifies the behaviour to be implemented by all SQL connections.
   """
 
   @doc """
-  Receives options and returns `DBConnection` module and options to use to
-  handle queries.
+  Receives options and returns `DBConnection` module and
+  options to use to handle queries.
   """
-  @callback mod_and_opts(Keyword.t) :: {module, Keyword.t}
+  @callback connection(Keyword.t) :: {module, Keyword.t}
 
   @doc """
   Receives the exception returned by `query/4`.
@@ -67,5 +66,4 @@ defmodule Ecto.Adapters.SQL.Query do
   Receives a DDL command and returns a query that executes it.
   """
   @callback execute_ddl(Ecto.Adapter.Migration.command) :: String.t
-
 end

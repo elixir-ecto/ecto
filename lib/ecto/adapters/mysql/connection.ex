@@ -4,8 +4,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     @moduledoc false
 
     @default_port 3306
-    @behaviour Ecto.Adapters.Connection
-    @behaviour Ecto.Adapters.SQL.Query
+    @behaviour Ecto.Adapters.SQL.Connection
 
     ## Connection
 

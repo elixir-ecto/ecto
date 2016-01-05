@@ -33,6 +33,7 @@ defmodule Ecto.Adapters.MySQL do
     * `:ssl` - Set to true if ssl should be used (default: false)
     * `:ssl_opts` - A list of ssl options, see ssl docs
     * `:connect_timeout` - The timeout in miliseconds for establishing new connections (default: 5000)
+    * `:after_connect` - A `{mod, fun, args}` to be invoked after a connection is established
 
   ### Storage options
 
