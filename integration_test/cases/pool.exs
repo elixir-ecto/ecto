@@ -13,7 +13,8 @@ defmodule Ecto.Integration.PoolTest do
     end
 
   Application.put_env(:ecto, __MODULE__.MockRepo,
-                      [pool: pool, pool_size: 1] ++ repo)
+                      [pool: pool, pool_size: 1,
+                       after_connect: {__MODULE__.MockRepo, :after_connect, []}] ++ repo)
 
   defmodule MockRepo do
     use Ecto.Repo, otp_app: :ecto

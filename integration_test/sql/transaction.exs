@@ -7,8 +7,10 @@ defmodule Ecto.Integration.TransactionTest do
   alias Ecto.Integration.PoolRepo
   alias Ecto.Integration.TestRepo
 
+  @moduletag :capture_log
+
   defmodule UniqueError do
-    defexception [:message]
+    defexception message: "unique error"
   end
 
   setup do

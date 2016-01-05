@@ -367,7 +367,7 @@ defmodule Ecto.Adapters.SQL do
 
     {mod, opts} = connection.connection(opts)
 
-    if function_exported?(repo, :after_connect, 1) do
+    if function_exported?(repo, :after_connect, 1) and not Keyword.has_key?(opts, :after_connect) do
       IO.puts :stderr, "warning: #{inspect repo}.after_connect/1 is deprecated. If you want to " <>
                        "perform some action after connecting, please set after_connect: {module, fun, args}" <>
                        "in your repository configuration"

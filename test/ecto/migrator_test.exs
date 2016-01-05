@@ -3,6 +3,8 @@ defmodule Ecto.MigratorTest do
 
   import Support.FileHelpers
   import Ecto.Migrator
+  import ExUnit.CaptureLog
+
   alias Ecto.TestRepo
   alias Ecto.Migration.SchemaMigration
 
@@ -293,13 +295,6 @@ defmodule Ecto.MigratorTest do
       up(TestRepo, 0, ChangeMigration)
       refute_received {:transaction, _}
     end
-  end
-
-  defp capture_log(fun) do
-    ExUnit.CaptureIO.capture_io(:user, fn ->
-      fun.()
-      Logger.flush()
-    end) |> String.strip
   end
 
   defp create_migration(name) do
