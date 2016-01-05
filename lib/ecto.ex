@@ -4,19 +4,19 @@ defmodule Ecto do
 
     * `Ecto.Repo` - repositories are wrappers around the database.
       Via the repository, we can create, update, destroy and query existing entries.
-      A repository needs an adapter and a URL to communicate to the database
+      A repository needs an adapter and credentials to communicate to the database
 
     * `Ecto.Schema` - schemas allow developers to define data structures
       that map to the underlying storage
 
     * `Ecto.Changeset` - changesets provide a way for developers to filter
       and cast external parameters, as well as a mechanism to track and
-      validate changes before they are sent to the database
+      validate changes before they are sent to the repository
 
     * `Ecto.Query` - written in Elixir syntax, queries are used to retrieve
       information from a given repository. Queries in Ecto are secure, avoiding
-      common problems like SQL Injection, and also provide type safety. Queries
-      are composable via the `Ecto.Queryable` protocol
+      common problems like SQL Injection, while still being composable, allowing
+      developers to build queries piece by piece instead of all at once
 
   In the following sections, we will provide an overview of those components and
   how they interact with each other. Feel free to access their respective module
@@ -229,8 +229,8 @@ defmodule Ecto do
       import Ecto.Query, only: [from: 2]
 
       query = from w in Weather,
-            where: w.prcp > 0 or is_nil(w.prcp),
-           select: w
+                where: w.prcp > 0 or is_nil(w.prcp),
+                select: w
 
       # Returns %Weather{} structs matching the query
       Repo.all(query)
@@ -262,9 +262,16 @@ defmodule Ecto do
         from w in Weather, where: w.prcp > ^min or is_nil(w.prcp)
       end
 
-  Besides `Repo.all/1`, which returns all entries, repositories also
-  provide `Repo.one/1`, which returns one entry or nil, and `Repo.one!/1`
-  which returns one entry or raises.
+  Besides `Repo.all/1` which returns all entries, repositories also
+  provide `Repo.one/1` which returns one entry or nil, `Repo.one!/1`
+  which returns one entry or raises and `Repo.get/2` which fetches
+  entries for a particular ID.
+
+  Finally, if you need a escape hatch, Ecto provides fragments
+  (see `Ecto.Query.API.fragment/1`) to inject SQL (and non-SQL)
+  fragments into queries. Also, most adapters provide direct
+  APIs for queries, like `Ecto.Adapters.SQL.query/4`, allowing
+  developers to completely bypass Ecto queries.
 
   ## Other topics
 

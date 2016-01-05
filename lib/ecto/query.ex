@@ -13,8 +13,8 @@ defmodule Ecto.Query do
 
       # Create a query
       query = from w in Weather,
-            where: w.prcp > 0,
-           select: w.city
+                where: w.prcp > 0,
+                select: w.city
 
       # Send the query to the repository
       Repo.all(query)
@@ -94,23 +94,58 @@ defmodule Ecto.Query do
   interpolated `^age` to integer. When a value cannot be cast,
   `Ecto.CastError` is raised.
 
-  In some situations, Ecto is unable to infer the type for interpolated
-  values (as a database would be unable) and you may need to explicitly
-  tag it with the type/2 function:
+  ## Fragments
 
-      type(^"1", :integer)
-      type(^<<0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15>>, Ecto.UUID)
+  If you need a escape hatch, Ecto provides fragments
+  (see `Ecto.Query.API.fragment/1`) to inject SQL (and non-SQL)
+  fragments into queries.
 
-  It is important to keep in mind that Ecto cannot cast nil values in
-  queries. Passing nil automatically causes the query to fail.
+  For example, to get all posts while running the "downcase(?)"
+  function in the database where `p.title` is interpolated
+  in place of `?`, one can write:
+
+      from p in Post,
+        where: is_nil(p.published_at) and
+               fragment("downcase(?)", p.title) == ^title
+
+  Also, most adapters provide direct APIs for queries, like
+  `Ecto.Adapters.SQL.query/4`, allowing developers to
+  completely bypass Ecto queries.
+
+  ## Macro API
+
+  In all examples so far we have used the **keywords query syntax** to
+  create a query:
+
+      import Ecto.Query
+      from w in Weather, where: w.prcp > 0, select: w.city
+
+  Remember that keywords is a syntax sugar in Elixir for passing a list
+  of two-item tuples where the first element is an atom. The code above
+  is equivalent to:
+
+      from(w in Weather, [{:where, w.prcp > 0}, {:select, w.city}])
+
+  Due to the prevalence of the pipe operator in Elixir, Ecto also supports
+  a pipe-based syntax:
+
+      from(w in Weather)
+      |> where([w], w.prcp > 0)
+      |> select([w], w.city)
+
+  The keyword-based and pipe-based examples are equivalent.
+
+  This module documents each of those macros, providing examples in
+  both the keywords query and pipe expression formats.
 
   ## Query Prefix
 
-  It is possible to set a prefix for the table name in queries.  For Postgres users,
-  this will specify the schema where the table is located, while for MySQL users this will
-  specify the database where the table is located.  When no prefix is set, Postgres queries
-  are assumed to be in the public schema, while MySQL queries are assumed to be in the
-  database set in the config for the repo.
+  It is possible to set a prefix for the table name in queries.
+  For Postgres users, this will specify the schema where the table
+  is located, while for MySQL users this will specify the database
+  where the table is located.  When no prefix is set, Postgres
+  queries are assumed to be in the public schema, while MySQL queries
+  are assumed to be in the database set in the config for the repo.
 
   Set the prefix on a query:
 
@@ -130,26 +165,6 @@ defmodule Ecto.Query do
   prefix, so operations like update and delete will be applied to the
   proper prefix. In case you want to manually set the prefix for new data,
   specially on insert, use `Ecto.put_meta/2`.
-
-  ## Macro API
-
-  In all examples so far we have used the **keywords query syntax** to
-  create a query:
-
-      import Ecto.Query
-      from w in Weather, where: w.prcp > 0, select: w.city
-
-  Behind the scenes, the query above expands to the set of macros defined
-  in this module:
-
-      from(w in Weather) |> where([w], w.prcp > 0) |> select([w], w.city)
-
-  which then expands to:
-
-      select(where(from(w in Weather), [w], w.prcp > 0), [w], w.city)
-
-  This module documents each of those macros, providing examples in both
-  the keywords query and query expression formats.
   """
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,
