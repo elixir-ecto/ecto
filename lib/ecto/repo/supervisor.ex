@@ -3,6 +3,9 @@ defmodule Ecto.Repo.Supervisor do
 
   use Supervisor
 
+  @pool_timeout 5_000
+  @timeout 15_000
+
   @doc """
   Starts the repo supervisor.
   """
@@ -52,6 +55,8 @@ defmodule Ecto.Repo.Supervisor do
       config
       |> Keyword.delete(:name)
       |> Keyword.put(:name, name)
+      |> Keyword.put_new(:pool_timeout, @pool_timeout)
+      |> Keyword.put_new(:timeout, @timeout)
       |> Keyword.put_new(:proxy, Ecto.LogProxy)
       |> Keyword.put(:logger, &repo.log/1)
     {name, config}
