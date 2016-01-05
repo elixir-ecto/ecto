@@ -207,10 +207,9 @@ defmodule Ecto.Repo do
   @doc """
   Returns the pool information this repository should run under.
   """
-  @callback __pool__ :: {pool :: module, name :: atom,
-                         pool_timeout :: timeout, op_timeout :: timeout}
+  @callback __pool__ :: {name :: atom, opts :: Keyword.t}
 
-  @doc """
+ @doc """
   Returns the name of the ETS table used for query caching.
 
   The name can be configured with the `:query_cache` option.

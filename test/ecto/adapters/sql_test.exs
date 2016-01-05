@@ -19,8 +19,12 @@ defmodule Ecto.Adapters.SQLTest do
   end
 
   test "stores __pool__ metadata" do
-    assert Repo.__pool__ == {Ecto.Pools.Poolboy, Repo.Pool, 5000, 15000}
-    assert RepoWithTimeout.__pool__ ==
-      {Ecto.Pools.Poolboy, RepoWithTimeout.Pool, 3000, 1500}
+    assert {DBConnection.Poolboy, opts} = Repo.__pool__
+    assert Keyword.fetch!(opts, :pool_timeout) == 5_000
+    assert Keyword.fetch!(opts, :timeout) == 15_000
+
+    assert {DBConnection.Poolboy, opts} = RepoWithTimeout.__pool__
+    assert Keyword.fetch!(opts, :pool_timeout) == 3_000
+    assert Keyword.fetch!(opts, :timeout) == 1_500
   end
 end

@@ -56,6 +56,17 @@ defmodule Ecto.LogEntry do
              time("queue", queue_time, false)]}
   end
 
+  @doc false
+  def new(query, params, result, times) do
+    now = System.monotonic_time()
+    lazy_query = fn(_) -> to_string(query) end
+    entry = %Ecto.LogEntry{query: lazy_query, params: params, result: result}
+    {_, entry} = Enum.reduce(times, {now, entry}, &put_time/2)
+    entry
+  end
+
+  ## Helpers
+
   defp ok_error({:ok, _}),    do: "OK"
   defp ok_error({:error, _}), do: "ERROR"
 
@@ -67,5 +78,19 @@ defmodule Ecto.LogEntry do
     else
       []
     end
+  end
+
+  defp put_time({:decode, decode}, {done, entry}) do
+    {decode, %{entry | decode_time: convert_time(done - decode)}}
+  end
+  defp put_time({:query, query}, {done, entry}) do
+    {query, %{entry | query_time: convert_time(done - query)}}
+  end
+  defp put_time({:init, init}, {done, entry}) do
+    {init, %{entry | queue_time: convert_time(done - init)}}
+  end
+
+  defp convert_time(time) do
+    System.convert_time_unit(time, :native, :micro_seconds)
   end
 end

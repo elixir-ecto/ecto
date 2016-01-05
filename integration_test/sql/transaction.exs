@@ -97,7 +97,8 @@ defmodule Ecto.Integration.TransactionTest do
         UniqueError -> :ok
       end
 
-      assert {:noconnect, _} = catch_exit(PoolRepo.insert!(%Trans{text: "5"}))
+      assert_raise DBConnection.Error, "transaction rolling back",
+        fn() -> PoolRepo.insert!(%Trans{text: "5"}) end
     end) == {:error, :rollback}
 
     assert TestRepo.all(Trans) == []
@@ -115,16 +116,16 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   test "manual rollback bubbles up on nested transaction" do
-    x = PoolRepo.transaction(fn ->
+    assert PoolRepo.transaction(fn ->
       e = PoolRepo.insert!(%Trans{text: "6"})
       assert [^e] = PoolRepo.all(Trans)
       assert {:error, :oops} = PoolRepo.transaction(fn ->
         PoolRepo.rollback(:oops)
       end)
-      assert {:noconnect, _} = catch_exit(PoolRepo.insert!(%Trans{text: "5"}))
-    end)
+      assert_raise DBConnection.Error, "transaction rolling back",
+        fn() -> PoolRepo.insert!(%Trans{text: "5"}) end
+    end) == {:error, :rollback}
 
-    assert x == {:error, :rollback}
     assert [] = TestRepo.all(Trans)
   end
 
@@ -167,7 +168,7 @@ defmodule Ecto.Integration.TransactionTest do
   test "log begin, commit and rollback" do
     Process.put(:on_log, &send(self(), &1))
     PoolRepo.transaction(fn ->
-      assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
+      assert_received %Ecto.LogEntry{params: nil, result: :ok} = entry
       assert is_integer(entry.query_time) and entry.query_time >= 0
       assert is_integer(entry.queue_time) and entry.queue_time >= 0
 
@@ -175,7 +176,7 @@ defmodule Ecto.Integration.TransactionTest do
       Process.put(:on_log, &send(self(), &1))
     end)
 
-    assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
+    assert_received %Ecto.LogEntry{params: nil, result: :ok} = entry
     assert is_integer(entry.query_time) and entry.query_time >= 0
     assert is_nil(entry.queue_time)
 
@@ -184,7 +185,7 @@ defmodule Ecto.Integration.TransactionTest do
       Process.put(:on_log, &send(self(), &1))
       PoolRepo.rollback(:log_rollback)
     end) == {:error, :log_rollback}
-    assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
+    assert_received %Ecto.LogEntry{params: nil, result: :ok} = entry
     assert is_integer(entry.query_time) and entry.query_time >= 0
     assert is_nil(entry.queue_time)
   end
