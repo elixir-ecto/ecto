@@ -42,7 +42,9 @@ defmodule Ecto do
         database: "ecto_simple",
         username: "postgres",
         password: "postgres",
-        hostname: "localhost"
+        hostname: "localhost",
+        # OR use a URL to connect instead
+        url: "postgres://postgres:postgres@localhost/ecto_simple"
 
   Each repository in Ecto defines a `start_link/0` function that needs to be invoked
   before using the repository. In general, this function is not called directly,
