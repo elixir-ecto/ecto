@@ -51,15 +51,7 @@ defmodule Ecto.Repo.Supervisor do
 
   defp pool(repo, config) do
     name = Keyword.get(config, :pool_name, default_pool_name(repo, config))
-    config =
-      config
-      |> Keyword.delete(:name)
-      |> Keyword.put(:name, name)
-      |> Keyword.put_new(:pool_timeout, @pool_timeout)
-      |> Keyword.put_new(:timeout, @timeout)
-      |> Keyword.put_new(:proxy, Ecto.LogProxy)
-      |> Keyword.put(:logger, &repo.log/1)
-    {name, config}
+    {name, [name: name] ++ Keyword.delete(config, :name)}
   end
 
   defp default_pool_name(repo, config) do

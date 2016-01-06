@@ -121,8 +121,6 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  alias Ecto.LogProxy
-  alias Ecto.LogQuery
   alias Ecto.Adapters.SQL.Sandbox
 
   @doc """
@@ -207,30 +205,12 @@ defmodule Ecto.Adapters.SQL do
   defp query(repo, sql, params, mapper, opts) do
     {pool, default_opts} = repo.__pool__
     conn = get_conn(pool) || pool
+
+    # TODO: Get rid of this concat
     connection = Module.concat(repo.__adapter__, Connection)
-    query = connection.query(sql)
-    opts =
-      opts ++ default_opts
-      |> Keyword.put(:logger, &repo.log/1)
-      |> Keyword.put(:encode_mapper, &connection.encode_mapper/1)
-      |> Keyword.put(:decode_mapper, mapper)
-    do_query(conn, query, params, opts)
-  end
 
-  defp do_query(%DBConnection{proxy_mod: proxy} = conn, query, params, opts) do
-    do_query(proxy, conn, query, params, opts)
-  end
-  defp do_query(pool, query, params, opts) do
-    proxy = Keyword.get(opts, :proxy)
-    do_query(proxy, pool, query, params, opts)
-  end
-
-  defp do_query(LogProxy, conn, query, params, opts) do
-    log_query = %LogQuery{query: query, params: params}
-    DBConnection.query(conn, log_query, params, opts)
-  end
-  defp do_query(_, conn, query, params, opts) do
-    DBConnection.query(conn, query, params, opts)
+    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts) ++ default_opts
+    connection.query(conn, sql, params, opts)
   end
 
   @doc ~S"""
@@ -473,12 +453,10 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def transaction(repo, opts, fun) do
    {pool, default_opts} = repo.__pool__
-    opts = opts ++ default_opts
+    opts = with_log(repo, [], opts) ++ default_opts
     case get_conn(pool) do
-      nil  ->
-        do_transaction(pool, opts, fun)
-      conn ->
-        DBConnection.transaction(conn, fn(_) -> fun.() end, opts)
+      nil  -> do_transaction(pool, opts, fun)
+      conn -> DBConnection.transaction(conn, fn(_) -> fun.() end, opts)
     end
   end
 
@@ -501,6 +479,22 @@ defmodule Ecto.Adapters.SQL do
       nil  -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)
     end
+  end
+
+  ## Log
+
+  defp with_log(repo, params, opts) do
+    case Keyword.pop(opts, :log, true) do
+      {true, opts}  -> [log: &log(repo, params, &1)] ++ opts
+      {false, opts} -> opts
+    end
+  end
+
+  defp log(repo, params, entry) do
+    %{connection_time: query_time, decode_time: decode_time,
+      pool_time: queue_time, result: result, query: query} = entry
+    repo.log(%Ecto.LogEntry{query_time: query_time, decode_time: decode_time, queue_time: queue_time,
+                            result: result, params: params, query: String.Chars.to_string(query)})
   end
 
   ## Connection helpers

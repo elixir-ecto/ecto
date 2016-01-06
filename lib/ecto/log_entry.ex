@@ -4,8 +4,8 @@ defmodule Ecto.LogEntry do
 
   It is composed of the following fields:
 
-    * query - the query as iodata or a function that when invoked
-      resolves to iodata;
+    * query - the query as string or a function that when invoked
+      resolves to string;
     * params - the query parameters;
     * result - the query result as an `:ok` or `:error` tuple;
     * query_time - the time spent executing the query in microseconds;
@@ -16,7 +16,7 @@ defmodule Ecto.LogEntry do
 
   alias Ecto.LogEntry
 
-  @type t :: %LogEntry{query: iodata | (t -> iodata), params: [term],
+  @type t :: %LogEntry{query: String.t | (t -> String.t), params: [term],
                        query_time: integer, decode_time: integer | nil,
                        queue_time: integer | nil, connection_pid: pid | nil,
                        result: {:ok, term} | {:error, Exception.t}}
@@ -56,15 +56,6 @@ defmodule Ecto.LogEntry do
              time("queue", queue_time, false)]}
   end
 
-  @doc false
-  def new(query, params, result, times) do
-    now = System.monotonic_time()
-    lazy_query = fn(_) -> to_string(query) end
-    entry = %Ecto.LogEntry{query: lazy_query, params: params, result: result}
-    {_, entry} = Enum.reduce(times, {now, entry}, &put_time/2)
-    entry
-  end
-
   ## Helpers
 
   defp ok_error({:ok, _}),    do: "OK"
@@ -78,19 +69,5 @@ defmodule Ecto.LogEntry do
     else
       []
     end
-  end
-
-  defp put_time({:decode, decode}, {done, entry}) do
-    {decode, %{entry | decode_time: convert_time(done - decode)}}
-  end
-  defp put_time({:query, query}, {done, entry}) do
-    {query, %{entry | query_time: convert_time(done - query)}}
-  end
-  defp put_time({:init, init}, {done, entry}) do
-    {init, %{entry | queue_time: convert_time(done - init)}}
-  end
-
-  defp convert_time(time) do
-    System.convert_time_unit(time, :native, :micro_seconds)
   end
 end

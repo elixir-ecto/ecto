@@ -11,13 +11,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     def connection(opts) do
       json = Application.get_env(:ecto, :json_library)
       extensions = [{Ecto.Adapters.Postgres.DateTime, []},
-        {Postgrex.Extensions.JSON, library: json}]
+                    {Postgrex.Extensions.JSON, library: json}]
 
       opts =
-       opts
-       |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
-       |> Keyword.update(:port, @default_port, &normalize_port/1)
-       |> Keyword.put(:types, true)
+        opts
+        |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
+        |> Keyword.update(:port, @default_port, &normalize_port/1)
+        |> Keyword.put(:types, true)
 
       {Postgrex.Protocol, opts}
     end
@@ -63,12 +63,21 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     ## Query
 
-    def query(statement) do
-      %Postgrex.Query{name: "", statement: statement}
+    def query(conn, sql, params, opts) do
+      params = Enum.map params, fn
+        %Ecto.Query.Tagged{value: value} -> value
+        value -> value
+      end
+      query = %Postgrex.Query{name: "", statement: sql}
+      DBConnection.query(conn, query, params, opts)
     end
 
-    def encode_mapper(%Ecto.Query.Tagged{value: value}), do: value
-    def encode_mapper(value), do: value
+    ## Sandbox
+    ## TODO: Deprecate three upcoming functions
+
+    def query(sql) do
+      %Postgrex.Query{name: "", statement: sql}
+    end
 
     def savepoint(savepoint) do
       "SAVEPOINT " <> savepoint
