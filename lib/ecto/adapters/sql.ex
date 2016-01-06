@@ -209,7 +209,7 @@ defmodule Ecto.Adapters.SQL do
     # TODO: Get rid of this concat
     connection = Module.concat(repo.__adapter__, Connection)
 
-    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts) ++ default_opts
+    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     connection.query(conn, sql, params, opts)
   end
 
@@ -453,7 +453,7 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def transaction(repo, opts, fun) do
    {pool, default_opts} = repo.__pool__
-    opts = with_log(repo, [], opts) ++ default_opts
+    opts = with_log(repo, [], opts ++ default_opts)
     case get_conn(pool) do
       nil  -> do_transaction(pool, opts, fun)
       conn -> DBConnection.transaction(conn, fn(_) -> fun.() end, opts)

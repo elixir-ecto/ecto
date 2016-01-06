@@ -51,7 +51,11 @@ defmodule Ecto.Repo.Supervisor do
 
   defp pool(repo, config) do
     name = Keyword.get(config, :pool_name, default_pool_name(repo, config))
-    {name, [name: name] ++ Keyword.delete(config, :name)}
+    {name,
+      config
+      |> Keyword.put(:name, name)
+      |> Keyword.put_new(:timeout, @timeout)
+      |> Keyword.put_new(:pool_timeout, @pool_timeout)}
   end
 
   defp default_pool_name(repo, config) do
