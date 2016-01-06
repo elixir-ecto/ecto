@@ -73,7 +73,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     ## Sandbox
-    ## TODO: Deprecate three upcoming functions
+    ## TODO: Deprecate or document the three upcoming functions
 
     def query(sql) do
       %Postgrex.Query{name: "", statement: sql}

@@ -10,6 +10,12 @@ defmodule Ecto.Adapters.SQL.Connection do
   @callback connection(Keyword.t) :: {module, Keyword.t}
 
   @doc """
+  Sends the given query to `DBConnection`.
+  """
+  @callback query(DBConnection.t, sql :: String.t, params :: [term], Keyword.t) ::
+            {:ok, term} | {:error, Exception.t}
+
+  @doc """
   Receives the exception returned by `query/4`.
 
   The constraints are in the keyword list and must return the

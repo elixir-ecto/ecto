@@ -2,14 +2,12 @@ defmodule Ecto.Adapters.SQL do
   @moduledoc """
   Behaviour and implementation for SQL adapters.
 
-  The implementation for SQL adapter provides a
-  pooled based implementation of SQL and also expose
-  a query function to developers.
+  The implementation for SQL adapter relies on `DBConnection`
+  to provide pooling, prepare, execute and more.
 
   Developers that use `Ecto.Adapters.SQL` should implement
-  a connection module with specifics on how to connect
-  to the database and also how to translate the queries
-  to SQL. See `Ecto.Adapters.SQL.Connection` for more info.
+  the callbacks required both by this module and the ones
+  from `Ecto.Adapters.SQL.Query` about building queries.
   """
 
   @doc false
@@ -26,7 +24,10 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       defmacro __before_compile__(_env) do
-        :ok
+        quote do
+          @doc false
+          def __sql__, do: unquote(@conn)
+        end
       end
 
       @doc false
@@ -205,12 +206,8 @@ defmodule Ecto.Adapters.SQL do
   defp query(repo, sql, params, mapper, opts) do
     {pool, default_opts} = repo.__pool__
     conn = get_conn(pool) || pool
-
-    # TODO: Get rid of this concat
-    connection = Module.concat(repo.__adapter__, Connection)
-
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
-    connection.query(conn, sql, params, opts)
+    repo.__sql__.query(conn, sql, params, opts)
   end
 
   @doc ~S"""
