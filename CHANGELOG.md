@@ -2,7 +2,7 @@
 
 ## v2.0.0
 
-This is a new major release of Ecto that removes previously deprecated features and introduces a series of improvements and features based on `db_connection`.
+This is a new major release of Ecto that removes previously deprecated features and introduces a series of improvements and features based on [`db_connection`](https://github.com/fishcakez/db_connection).
 
 ### Highlights
 
@@ -55,23 +55,25 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 
 ### Backwards incompatible changes
 
-* `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
-* Array fields no longer default to an empty list `[]`
-* Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
-* `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
+  * `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
+  * Array fields no longer default to an empty list `[]`. Previous behaviour can be achieved by passing `default: []` to the field definition
+  * Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
+  * `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
+  * `Ecto.Pools.Poolboy` and `Ecto.Pools.SojournBroker` have been removed in favor of `DBConnection.Poolboy` and `DBConnection.Sojourn`
+  * `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
 
 ### Enhancements
 
-* Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
-* Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
-* Allow dynamic and atom fields to be specified on `group_by` and `distinct`
-* Ensure adapters work on native types, guaranteeing adapters compose better with custom types
-* Allow the migration table name to be configured
+  * Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
+  * Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
+  * Allow dynamic and atom fields to be specified on `group_by` and `distinct`
+  * Ensure adapters work on native types, guaranteeing adapters compose better with custom types
+  * Allow the migration table name to be configured
 
 ### Bug fixes
 
-* The `:required` option on `cast_assoc`and `cast_embed` will now tag `has_many` and `embeds_many` relationships as missing if they contain an empty list
+  * The `:required` option on `cast_assoc`and `cast_embed` will now tag `has_many` and `embeds_many` relationships as missing if they contain an empty list
 
 ## v1.1
 
-* See the CHANGELOG.md in the v1.1 branch
+  * See the CHANGELOG.md in the v1.1 branch
