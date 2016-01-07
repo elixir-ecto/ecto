@@ -3,6 +3,8 @@ defmodule Ecto.Integration.StorageTest do
 
   alias Ecto.Adapters.Postgres
 
+  @moduletag :capture_log
+
   def correct_params do
     Ecto.Repo.Supervisor.parse_url(
       Application.get_env(:ecto, :pg_test_url) <> "/storage_mgt"
