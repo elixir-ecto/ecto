@@ -7,9 +7,7 @@ defmodule Ecto.MigrationTest do
   use Ecto.Migration
 
   alias Ecto.TestRepo
-  alias Ecto.Migration.Table
-  alias Ecto.Migration.Index
-  alias Ecto.Migration.Reference
+  alias Ecto.Migration.{Table, Index, Reference, Constraint}
   alias Ecto.Migration.Runner
 
   setup meta do
@@ -49,6 +47,13 @@ defmodule Ecto.MigrationTest do
            %Reference{table: :posts, column: :id, type: :serial}
     assert references(:posts, type: :uuid, column: :other) ==
            %Reference{table: :posts, column: :other, type: :uuid}
+  end
+
+  test "creates a constraint" do
+    assert constraint(:posts, :price_is_positive, check: "price > 0") ==
+           %Constraint{table: :posts, name: :price_is_positive, check: "price > 0"}
+    assert constraint(:posts, :exclude_price, exclude: "price") ==
+           %Constraint{table: :posts, name: :exclude_price, exclude: "price"}
   end
 
   test "chokes on alias types" do
@@ -156,10 +161,40 @@ defmodule Ecto.MigrationTest do
     assert {:create, %Index{}} = last_command()
   end
 
+  test "forward: creates a check constraint" do
+    create constraint(:posts, :price, check: "price > 0")
+    flush
+    assert {:create, %Constraint{}} = last_command()
+  end
+
+  test "forward: creates an exclude constraint" do
+    create constraint(:posts, :price, exclude: "price")
+    flush
+    assert {:create, %Constraint{}} = last_command()
+  end
+
+  test "forward: raises on invalid constraints" do
+    assert_raise ArgumentError, "a constraint must have either a check or exclude option", fn ->
+      create constraint(:posts, :price)
+      flush
+    end
+
+    assert_raise ArgumentError, "a constraint must not have both check and exclude options", fn ->
+      create constraint(:posts, :price, check: "price > 0", exclude: "price")
+      flush
+    end
+  end
+
   test "forward: drops an index" do
     drop index(:posts, [:title])
     flush
     assert {:drop, %Index{}} = last_command()
+  end
+
+  test "forward: drops a constraint" do
+    drop constraint(:posts, :price)
+    flush
+    assert {:drop, %Constraint{}} = last_command()
   end
 
   test "forward: renames a table" do

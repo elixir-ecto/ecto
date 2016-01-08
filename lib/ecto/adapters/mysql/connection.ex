@@ -472,9 +472,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## DDL
 
-    alias Ecto.Migration.Table
-    alias Ecto.Migration.Index
-    alias Ecto.Migration.Reference
+    alias Ecto.Migration.{Table, Index, Reference, Constraint}
 
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       engine  = engine_expr(table.engine)
@@ -500,7 +498,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       using  = if index.using, do: "USING #{index.using}", else: []
 
       if index.where do
-        error!(nil, "MySQL adapter does not where in indexes")
+        error!(nil, "MySQL adapter does not support where in indexes")
       end
 
       assemble([create,
@@ -515,12 +513,20 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def execute_ddl({:create_if_not_exists, %Index{}}),
       do: error!(nil, "MySQL adapter does not support create if not exists for index")
 
+    def execute_ddl({:create, %Constraint{check: check}}) when is_binary(check),
+      do: error!(nil, "MySQL adapter does not support check constraints")
+    def execute_ddl({:create, %Constraint{exclude: exclude}}) when is_binary(exclude),
+      do: error!(nil, "MySQL adapter does not support exclude constraints")
+
     def execute_ddl({:drop, %Index{}=index}) do
       assemble(["DROP INDEX",
                 quote_name(index.name),
                 "ON #{quote_table(index.prefix, index.table)}",
                 if_do(index.concurrently, "LOCK=NONE")])
     end
+
+    def execute_ddl({:drop, %Constraint{}}),
+      do: error!(nil, "MySQL adapter does not support constraints")
 
     def execute_ddl({:drop_if_exists, %Index{}}),
       do: error!(nil, "MySQL adapter does not support drop if exists for index")

@@ -156,42 +156,25 @@ defmodule Ecto.Migration do
     Defines a table struct used in migrations.
     """
     defstruct name: nil, prefix: nil, primary_key: true, engine: nil, options: nil
-    @type t :: %__MODULE__{name: atom, prefix: atom, primary_key: boolean, engine: atom}
+    @type t :: %__MODULE__{name: atom, prefix: atom | nil, primary_key: boolean,
+                           engine: atom, options: String.t}
   end
 
   defmodule Reference do
     @moduledoc """
     Defines a reference struct used in migrations.
     """
-    defstruct name: nil,
-              table: nil,
-              column: :id,
-              type: :serial,
-              on_delete: :nothing
-
-    @type t :: %__MODULE__{
-      table: atom,
-      column: atom,
-      type: atom,
-      on_delete: atom
-    }
+    defstruct name: nil, table: nil, column: :id, type: :serial, on_delete: :nothing
+    @type t :: %__MODULE__{table: atom, column: atom, type: atom, on_delete: atom}
   end
 
   defmodule Constraint do
     @moduledoc """
     Defines a Constraint struct used in migrations.
     """
-    defstruct name: nil,
-              table: nil,
-              check: nil,
-              exclude: nil
-
-    @type t :: %__MODULE__{
-      name: atom,
-      table: atom,
-      check: String.t | nil,
-      exclude: String.t | nil
-    }
+    defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil
+    @type t :: %__MODULE__{name: atom, table: atom, prefix: atom | nil,
+                           check: String.t | nil, exclude: String.t | nil}
   end
 
   alias Ecto.Migration.Runner
@@ -298,15 +281,17 @@ defmodule Ecto.Migration do
   """
   def create(%Index{} = index) do
     Runner.execute {:create, __prefix__(index)}
+    index
+  end
+
+  def create(%Constraint{} = constraint) do
+    Runner.execute {:create, __prefix__(constraint)}
+    constraint
   end
 
   def create(%Table{} = table) do
     do_create table, :create
     table
-  end
-
-  def create(%Constraint{} = constraint) do
-    Runner.execute {:create, constraint}
   end
 
   @doc """
@@ -352,13 +337,9 @@ defmodule Ecto.Migration do
       drop constraint(:products, name: "price_must_be_positive")
 
   """
-  def drop(%Constraint{} = constraint) do
-    Runner.execute {:drop, constraint}
-  end
-
-  def drop(%{} = index_or_table) do
-    Runner.execute {:drop, __prefix__(index_or_table)}
-    index_or_table
+  def drop(%{} = index_or_table_or_constraint) do
+    Runner.execute {:drop, __prefix__(index_or_table_or_constraint)}
+    index_or_table_or_constraint
   end
 
   @doc """

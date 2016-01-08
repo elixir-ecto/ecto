@@ -218,44 +218,42 @@ defmodule Ecto.Migration.Runner do
     do: "execute #{inspect ddl}"
 
   defp command({:create, %Table{} = table, _}),
-    do: "create table #{quote_table(table.prefix, table.name)}"
+    do: "create table #{quote_name(table.prefix, table.name)}"
   defp command({:create_if_not_exists, %Table{} = table, _}),
-    do: "create table if not exists #{quote_table(table.prefix, table.name)}"
+    do: "create table if not exists #{quote_name(table.prefix, table.name)}"
   defp command({:alter, %Table{} = table, _}),
-    do: "alter table #{quote_table(table.prefix, table.name)}"
+    do: "alter table #{quote_name(table.prefix, table.name)}"
   defp command({:drop, %Table{} = table}),
-    do: "drop table #{quote_table(table.prefix, table.name)}"
+    do: "drop table #{quote_name(table.prefix, table.name)}"
   defp command({:drop_if_exists, %Table{} = table}),
-    do: "drop table if exists #{quote_table(table.prefix, table.name)}"
+    do: "drop table if exists #{quote_name(table.prefix, table.name)}"
 
   defp command({:create, %Index{} = index}),
-    do: "create index #{quote_table(index.prefix, index.name)}"
+    do: "create index #{quote_name(index.prefix, index.name)}"
   defp command({:create_if_not_exists, %Index{} = index}),
-    do: "create index if not exists #{quote_table(index.prefix, index.name)}"
+    do: "create index if not exists #{quote_name(index.prefix, index.name)}"
   defp command({:drop, %Index{} = index}),
-    do: "drop index #{quote_table(index.prefix, index.name)}"
+    do: "drop index #{quote_name(index.prefix, index.name)}"
   defp command({:drop_if_exists, %Index{} = index}),
-    do: "drop index if exists #{quote_table(index.prefix, index.name)}"
+    do: "drop index if exists #{quote_name(index.prefix, index.name)}"
   defp command({:rename, %Table{} = current_table, %Table{} = new_table}),
-    do: "rename table #{quote_table(current_table.prefix, current_table.name)} to #{quote_table(new_table.prefix, new_table.name)}"
+    do: "rename table #{quote_name(current_table.prefix, current_table.name)} to #{quote_name(new_table.prefix, new_table.name)}"
   defp command({:rename, %Table{} = table, current_column, new_column}),
-    do: "rename column #{current_column} to #{new_column} on table #{quote_table(table.prefix, table.name)}"
+    do: "rename column #{current_column} to #{new_column} on table #{quote_name(table.prefix, table.name)}"
 
   defp command({:create, %Constraint{check: nil, exclude: nil}}),
     do: raise ArgumentError, "a constraint must have either a check or exclude option"
   defp command({:create, %Constraint{check: check, exclude: exclude}}) when is_binary(check) and is_binary(exclude),
     do: raise ArgumentError, "a constraint must not have both check and exclude options"
   defp command({:create, %Constraint{check: check} = constraint}) when is_binary(check),
-    do: "ALTER TABLE #{quote_table(constraint.table)} ADD CONSTRAINT #{constraint.name} CHECK (#{constraint.check})"
+    do: "create check constraint #{constraint.name} on table #{quote_name(constraint.prefix, constraint.table)}"
   defp command({:create, %Constraint{exclude: exclude} = constraint}) when is_binary(exclude),
-    do: "ALTER TABLE #{quote_table(constraint.table)} ADD CONSTRAINT #{constraint.name} EXCLUDE USING #{constraint.exclude})"
-
+    do: "create exclude constraint #{constraint.name} on table #{quote_name(constraint.prefix, constraint.table)}"
   defp command({:drop, %Constraint{} = constraint}),
-    do: "ALTER TABLE #{quote_table(constraint.table)} DROP CONSTRAINT #{constraint.name}"
+    do: "drop constraint #{constraint.name} from table #{quote_name(constraint.prefix, constraint.table)}"
 
-  defp quote_table(nil, name),    do: quote_table(name)
-  defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
-  defp quote_table(name) when is_atom(name),
-      do: quote_table(Atom.to_string(name))
-  defp quote_table(name), do: name
+  defp quote_name(nil, name), do: quote_name(name)
+  defp quote_name(prefix, name), do: quote_name(prefix) <> "." <> quote_name(name)
+  defp quote_name(name) when is_atom(name), do: quote_name(Atom.to_string(name))
+  defp quote_name(name), do: name
 end

@@ -456,7 +456,8 @@ defmodule Ecto.Adapters.MySQLTest do
 
   # DDL
 
-  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, references: 2]
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3,
+                                references: 1, references: 2, constraint: 3]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -606,9 +607,21 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "create unique index with condition" do
-    assert_raise ArgumentError, "MySQL adapter does not where in indexes", fn ->
+    assert_raise ArgumentError, "MySQL adapter does not support where in indexes", fn ->
       create = {:create, index(:posts, [:permalink], unique: true, where: "public IS TRUE")}
       SQL.execute_ddl(create)
+    end
+  end
+
+  test "create constraints" do
+    assert_raise ArgumentError, "MySQL adapter does not support check constraints", fn ->
+      create = {:create, constraint(:products, "foo", check: "price")}
+      assert SQL.execute_ddl(create)
+    end
+
+    assert_raise ArgumentError, "MySQL adapter does not support exclude constraints", fn ->
+      create = {:create, constraint(:products, "bar", exclude: "price")}
+      assert SQL.execute_ddl(create)
     end
   end
 

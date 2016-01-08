@@ -552,10 +552,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     # DDL
 
-    alias Ecto.Migration.Table
-    alias Ecto.Migration.Index
-    alias Ecto.Migration.Reference
-    alias Ecto.Migration.Constraint
+    alias Ecto.Migration.{Table, Index, Reference, Constraint}
 
     @drops [:drop, :drop_if_exists]
 
@@ -618,11 +615,11 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     def execute_ddl({:create, %Constraint{}=constraint}) do
-      "ALTER TABLE #{quote_table(constraint.table)} ADD #{new_constraint_expr(constraint)}"
+      "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}"
     end
 
     def execute_ddl({:drop, %Constraint{}=constraint}) do
-      "ALTER TABLE #{quote_table(constraint.table)} DROP CONSTRAINT #{quote_name(constraint.name)}"
+      "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} DROP CONSTRAINT #{quote_name(constraint.name)}"
     end
 
     def execute_ddl(string) when is_binary(string), do: string
@@ -704,10 +701,10 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     defp null_expr(true), do: "NULL"
     defp null_expr(_), do: []
 
-    defp new_constraint_expr(%Ecto.Migration.Constraint{check: check} = constraint) when is_binary(check) do
+    defp new_constraint_expr(%Constraint{check: check} = constraint) when is_binary(check) do
       "CONSTRAINT #{quote_name(constraint.name)} CHECK (#{check})"
     end
-    defp new_constraint_expr(%Ecto.Migration.Constraint{exclude: exclude} = constraint) when is_binary(exclude) do
+    defp new_constraint_expr(%Constraint{exclude: exclude} = constraint) when is_binary(exclude) do
       "CONSTRAINT #{quote_name(constraint.name)} EXCLUDE USING #{exclude}"
     end
 
