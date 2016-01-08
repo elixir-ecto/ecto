@@ -109,29 +109,37 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp run_query(opts, sql) do
-    opts = Keyword.put(opts, :database, "template1")
+    opts =
+      opts
+      |> Keyword.delete(:name)
+      |> Keyword.put(:database, "template1")
+      |> Keyword.put(:pool, DBConnection.Connection)
+      |> Keyword.put(:backoff_type, :stop)
 
     {:ok, pid} = Task.Supervisor.start_link
 
     task = Task.Supervisor.async_nolink(pid, fn ->
       {:ok, conn} = Postgrex.Connection.start_link(opts)
 
-      value = Ecto.Adapters.Postgres.Connection.query(conn, sql, [], [])
+      value = Ecto.Adapters.Postgres.Connection.query(conn, sql, [], opts)
       GenServer.stop(conn)
       value
     end)
 
     timeout = Keyword.get(opts, :timeout, 15_000)
 
-    case Task.yield(task, timeout) do
+    case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, {:ok, _}} ->
         :ok
       {:ok, {:error, error}} ->
         {:error, error}
-      {:exit, {error, _}}  ->
+      {:exit, {%Postgrex.Error{} = error, _}} ->
         {:error, error}
+      {:exit, {%DBConnection.Error{} = error, _}} ->
+        {:error, error}
+      {:exit, reason}  ->
+        {:error, RuntimeError.exception(Exception.format_exit(reason))}
       nil ->
-        Task.shutdown(task)
         {:error, RuntimeError.exception("command timed out")}
     end
   end

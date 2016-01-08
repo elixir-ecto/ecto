@@ -36,7 +36,8 @@ defmodule Ecto.Integration.StorageTest do
   end
 
   test "storage up (wrong credentials)" do
-    assert Postgres.storage_up(wrong_user) == {:error, "connection not available"}
+    assert {:error, msg} = Postgres.storage_up(wrong_user)
+    assert msg =~ "FATAL (invalid_password)"
   end
 
   test "storage down (twice in a row)" do
