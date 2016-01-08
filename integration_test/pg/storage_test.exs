@@ -3,6 +3,8 @@ defmodule Ecto.Integration.StorageTest do
 
   alias Ecto.Adapters.Postgres
 
+  @moduletag :capture_log
+
   def correct_params do
     Ecto.Repo.Supervisor.parse_url(
       Application.get_env(:ecto, :pg_test_url) <> "/storage_mgt"
@@ -15,12 +17,12 @@ defmodule Ecto.Integration.StorageTest do
         password: "password1234" ]
   end
 
-  def drop_database do
-    :os.cmd 'psql -U postgres -c "DROP DATABASE IF EXISTS storage_mgt;"'
-  end
-
   def create_database do
     :os.cmd 'psql -U postgres -c "CREATE DATABASE storage_mgt;"'
+  end
+
+  def drop_database do
+    :os.cmd 'psql -U postgres -c "DROP DATABASE IF EXISTS storage_mgt;"'
   end
 
   setup do
@@ -30,22 +32,17 @@ defmodule Ecto.Integration.StorageTest do
 
   test "storage up (twice in a row)" do
     assert Postgres.storage_up(correct_params) == :ok
-    assert Postgres.storage_up(correct_params) == {:error, :already_up}
+    assert Postgres.storage_up(correct_params) == :ok
   end
 
   test "storage up (wrong credentials)" do
-    refute Postgres.storage_up(wrong_user) == :ok
+    assert Postgres.storage_up(wrong_user) == {:error, "connection not available"}
   end
 
   test "storage down (twice in a row)" do
     create_database
 
     assert Postgres.storage_down(correct_params) == :ok
-    assert Postgres.storage_down(correct_params) == {:error, :already_down}
-  end
-
-  test "storage down (wrong credentials)" do
-    create_database
-    refute Postgres.storage_down(wrong_user) == :ok
+    assert Postgres.storage_down(correct_params) == :ok
   end
 end
