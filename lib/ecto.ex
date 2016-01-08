@@ -2,7 +2,7 @@ defmodule Ecto do
   @moduledoc ~S"""
   Ecto is split into 4 main components:
 
-    * `Ecto.Repo` - repositories are wrappers around the database.
+    * `Ecto.Repo` - repositories are wrappers around the data store.
       Via the repository, we can create, update, destroy and query existing entries.
       A repository needs an adapter and credentials to communicate to the database
 

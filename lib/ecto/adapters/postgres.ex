@@ -80,17 +80,32 @@ defmodule Ecto.Adapters.Postgres do
       extra = extra <> " LC_CTYPE='#{lc_ctype}'"
     end
 
-    command = "CREATE DATABASE #{database} " <>
+    command = "CREATE DATABASE \"#{database}\" " <>
               "ENCODING '#{encoding}'" <> extra
 
-    run_query(opts, command)
+    case run_query(opts, command) do
+      :ok ->
+        :ok
+      {:error, %Postgrex.Error{message: nil, postgres: %{code: :duplicate_database}}} ->
+        :already_up
+      {:error, error} ->
+        {:error, Exception.message(error)}
+    end
   end
 
   @doc false
   def storage_down(opts) do
-    command = "DROP DATABASE #{opts[:database]}"
+    database = Keyword.fetch!(opts, :database)
+    command = "DROP DATABASE \"#{database}\""
 
-    run_query(opts, command)
+    case run_query(opts, command) do
+      :ok ->
+        :ok
+      {:error, %Postgrex.Error{message: nil, postgres: %{code: :invalid_catalog_name}}} ->
+        :already_down
+      {:error, error} ->
+        {:error, Exception.message(error)}
+    end
   end
 
   defp run_query(opts, sql) do
@@ -106,20 +121,20 @@ defmodule Ecto.Adapters.Postgres do
       value
     end)
 
-    case Task.yield(task) do
-      {:ok, _} ->
+    timeout = Keyword.get(opts, :timeout, 15_000)
+
+    case Task.yield(task, timeout) do
+      {:ok, {:ok, _}} ->
         :ok
-      {:error, {error, _}} ->
-        {:error, get_message(error)}
+      {:ok, {:error, error}} ->
+        {:error, error}
       {:exit, {error, _}}  ->
-        {:error, get_message(error)}
+        {:error, error}
       nil ->
         Task.shutdown(task)
-        {:error, {nil, :timeout}}
+        {:error, RuntimeError.exception("command timed out")}
     end
   end
-
-  defp get_message(%DBConnection.Error{message: message}), do: message
 
   @doc false
   def supports_ddl_transaction? do

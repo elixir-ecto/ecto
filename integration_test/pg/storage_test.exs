@@ -13,8 +13,8 @@ defmodule Ecto.Integration.StorageTest do
 
   def wrong_user do
     Keyword.merge correct_params,
-      [ username: "randomuser",
-        password: "password1234" ]
+      [username: "randomuser",
+       password: "password1234"]
   end
 
   def create_database do
@@ -32,7 +32,7 @@ defmodule Ecto.Integration.StorageTest do
 
   test "storage up (twice in a row)" do
     assert Postgres.storage_up(correct_params) == :ok
-    assert Postgres.storage_up(correct_params) == :ok
+    assert Postgres.storage_up(correct_params) == :already_up
   end
 
   test "storage up (wrong credentials)" do
@@ -43,6 +43,6 @@ defmodule Ecto.Integration.StorageTest do
     create_database
 
     assert Postgres.storage_down(correct_params) == :ok
-    assert Postgres.storage_down(correct_params) == :ok
+    assert Postgres.storage_down(correct_params) == :already_down
   end
 end
