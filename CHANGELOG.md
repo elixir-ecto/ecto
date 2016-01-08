@@ -69,6 +69,8 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * Allow dynamic and atom fields to be specified on `group_by` and `distinct`
   * Ensure adapters work on native types, guaranteeing adapters compose better with custom types
   * Allow the migration table name to be configured
+  * Add migration support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)`
+  * Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
 
 ### Bug fixes
 
