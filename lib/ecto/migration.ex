@@ -177,6 +177,23 @@ defmodule Ecto.Migration do
     }
   end
 
+  defmodule Constraint do
+    @moduledoc """
+    Defines a Constraint struct used in migrations.
+    """
+    defstruct name: nil,
+              table: nil,
+              check: nil,
+              exclude: nil
+
+    @type t :: %__MODULE__{
+      name: atom,
+      table: atom,
+      check: String.t | nil,
+      exclude: String.t | nil
+    }
+  end
+
   alias Ecto.Migration.Runner
 
   @doc false
@@ -263,7 +280,11 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Creates an index or a table with only `:id` field.
+  Creates one of the following:
+
+    * an index
+    * a table with only an `:id` field
+    * a constraint
 
   When reversing (in `change` running backward) indexes are only dropped if they
   exist and no errors are raised. To enforce dropping an index use `drop/1`.
@@ -271,8 +292,8 @@ defmodule Ecto.Migration do
   ## Examples
 
       create index(:posts, [:name])
-
       create table(:version)
+      create constraint(:products, "price_must_be_positive", check: "price > 0")
 
   """
   def create(%Index{} = index) do
@@ -282,6 +303,10 @@ defmodule Ecto.Migration do
   def create(%Table{} = table) do
     do_create table, :create
     table
+  end
+
+  def create(%Constraint{} = constraint) do
+    Runner.execute {:create, constraint}
   end
 
   @doc """
@@ -314,14 +339,23 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Drops a table or index.
+  Drops one of the following:
+
+    * an index
+    * a table
+    * a constraint
 
   ## Examples
 
       drop index(:posts, [:name])
       drop table(:posts)
+      drop constraint(:products, name: "price_must_be_positive")
 
   """
+  def drop(%Constraint{} = constraint) do
+    Runner.execute {:drop, constraint}
+  end
+
   def drop(%{} = index_or_table) do
     Runner.execute {:drop, __prefix__(index_or_table)}
     index_or_table
@@ -654,6 +688,25 @@ defmodule Ecto.Migration do
     end
 
     reference
+  end
+
+  @doc ~S"""
+  Defines a constraint (either a check constraint or an exclude constraint) to be evaluated by the database when a row is inserted or updated.
+
+  ## Examples
+
+      create constraint(:users, :price_must_be_positive, check: "price > 0")
+      create constraint(:size_ranges, :no_overlap, exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|
+      drop   constraint(:products, "price_must_be_positive")
+
+  ## Options
+
+    * `:check` - The expression to evaluate on a row. Required when creating.
+    * `:name` - The name of the constraint - required.
+
+  """
+  def constraint(table, name, opts \\ [] ) do
+    struct(%Constraint{table: table, name: name}, opts)
   end
 
   @doc """

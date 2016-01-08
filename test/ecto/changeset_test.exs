@@ -828,6 +828,21 @@ defmodule Ecto.ChangesetTest do
   end
 
   ## Constraints
+  test "check_constraint/3" do
+    changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short)
+    assert changeset.constraints ==
+           [%{type: :check, field: :title, constraint: "title_must_be_short",
+              message: "violates check 'title_must_be_short'"}]
+
+    changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short, message: "cannot be more than 15 characters")
+    assert changeset.constraints ==
+           [%{type: :check, field: :title, constraint: "title_must_be_short",
+              message: "cannot be more than 15 characters"}]
+
+    assert_raise ArgumentError, ~r/supply the name/, fn ->
+      check_constraint(:title, message: "cannot be more than 15 characters")
+    end
+  end
 
   test "unique_constraint/3" do
     changeset = change(%Post{}) |> unique_constraint(:title)

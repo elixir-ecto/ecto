@@ -1,4 +1,4 @@
-defmodule Ecto.Integration.ConstraintTest do
+defmodule Ecto.Integration.ExclusionConstraintTest do
   use ExUnit.Case, async: true
 
   alias Ecto.Integration.TestRepo
@@ -7,61 +7,58 @@ defmodule Ecto.Integration.ConstraintTest do
   defmodule ExcludeConstraintMigration do
     use Ecto.Migration
 
-    @table table(:exclude_constraint_migration)
+    @table table(:non_overlapping_ranges)
 
-    def up do
+    def change do
       create @table do
         add :from, :integer
         add :to, :integer
       end
-      execute "ALTER TABLE exclude_constraint_migration " <>
-              "ADD CONSTRAINT overlapping_ranges EXCLUDE USING gist (int4range(\"from\", \"to\") WITH &&)"
-    end
-
-    def down do
-      drop @table
+      create constraint(@table.name, :cannot_overlap, exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)
     end
   end
 
   defmodule ExcludeConstraintModel do
     use Ecto.Integration.Schema
 
-    schema "exclude_constraint_migration" do
+    schema "non_overlapping_ranges" do
       field :from, :integer
       field :to, :integer
     end
   end
 
-  test "exclude constraint exception" do
+  test "creating, using, and dropping an exclude constraint" do
     assert :ok == up(TestRepo, 20050906120000, ExcludeConstraintMigration, log: false)
 
-    changeset = Ecto.Changeset.change(%ExcludeConstraintModel{}, from: 0, to: 1)
+    changeset = Ecto.Changeset.change(%ExcludeConstraintModel{}, from: 0, to: 10)
     {:ok, _} = TestRepo.insert(changeset)
+
+    non_overlapping_changeset = Ecto.Changeset.change(%ExcludeConstraintModel{}, from: 11, to: 12)
+    {:ok, _} = TestRepo.insert(non_overlapping_changeset)
+
+    overlapping_changeset = Ecto.Changeset.change(%ExcludeConstraintModel{}, from: 9, to: 12)
 
     exception =
       assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
-        changeset
+        overlapping_changeset
         |> TestRepo.insert()
       end
-
-    assert exception.message =~ "exclude: overlapping_ranges"
+    assert exception.message =~ "exclude: cannot_overlap"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     message = ~r/constraint error when attempting to insert model/
     exception =
       assert_raise Ecto.ConstraintError, message, fn ->
-        changeset
+        overlapping_changeset
         |> Ecto.Changeset.exclude_constraint(:from)
         |> TestRepo.insert()
       end
-
-    assert exception.message =~ "exclude: overlapping_ranges"
+    assert exception.message =~ "exclude: cannot_overlap"
 
     {:error, changeset} =
-      changeset
-      |> Ecto.Changeset.exclude_constraint(:from, name: :overlapping_ranges)
+      overlapping_changeset
+      |> Ecto.Changeset.exclude_constraint(:from, name: :cannot_overlap)
       |> TestRepo.insert()
-
     assert changeset.errors == [from: "violates an exclusion constraint"]
     assert changeset.model.__meta__.state == :built
 

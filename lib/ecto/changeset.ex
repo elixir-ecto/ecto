@@ -1395,6 +1395,25 @@ defmodule Ecto.Changeset do
   end
 
   ## Constraints
+  @doc """
+  Checks for a check constraint in the given field.
+
+  The check constraint works by relying on the database to check
+  if the check constraint has been violated or not and, if so,
+  Ecto converts it into a changeset error.
+
+  ## Options
+
+    * `:message` - the message in case the constraint check fails.
+      Defaults to something like "violates check 'products_price_check'"
+    * `:name` - the name of the constraint. Required.
+
+  """
+  def check_constraint(changeset, field, opts \\ []) do
+    constraint = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
+    message    = opts[:message] || "violates check '#{constraint}'"
+    add_constraint(changeset, :check, to_string(constraint), field, message)
+  end
 
   @doc """
   Checks for a unique constraint in the given field.

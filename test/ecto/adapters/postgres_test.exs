@@ -540,7 +540,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   # DDL
 
-  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, references: 2]
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, references: 2, constraint: 2, constraint: 3]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -716,6 +716,24 @@ defmodule Ecto.Adapters.PostgresTest do
   test "drop index concurrently" do
     drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
     assert SQL.execute_ddl(drop) == ~s|DROP INDEX CONCURRENTLY "posts$main"|
+  end
+
+  test "create check constraint" do
+    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0")}
+    assert SQL.execute_ddl(create) ==
+           ~s|ALTER TABLE "products" ADD CONSTRAINT "price_must_be_positive" CHECK (price > 0)|
+  end
+
+  test "create exclusion constraint" do
+    create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
+    assert SQL.execute_ddl(create) ==
+           ~s|ALTER TABLE "products" ADD CONSTRAINT "price_must_be_positive" EXCLUDE USING gist (int4range("from", "to", '[]') WITH &&)|
+  end
+
+  test "drop constraint" do
+    drop = {:drop, constraint(:products, "price_must_be_positive")}
+    assert SQL.execute_ddl(drop) ==
+    ~s|ALTER TABLE "products" DROP CONSTRAINT "price_must_be_positive"|
   end
 
   test "rename table" do
