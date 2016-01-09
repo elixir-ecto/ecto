@@ -805,8 +805,11 @@ defmodule Ecto.Changeset do
   @doc """
   Puts the given association as change in the changeset.
 
-  The association may either be the association struct or a
-  changeset for the given association.
+  The given value may either be the association struct, a
+  changeset for the given association or a map or keyword
+  list of changes to be applied to the current association.
+  If a map or keyword list are given are there is no
+  association, one will be created.
 
   If the association has no changes, it will be skipped.
   If the association is invalid, the changeset will be marked
@@ -820,8 +823,11 @@ defmodule Ecto.Changeset do
   @doc """
   Puts the given embed as change in the changeset.
 
-  The embed may either be the embed struct or a changeset
-  for the given embed.
+  The given value may either be the embed struct, a
+  changeset for the given embed or a map or keyword
+  list of changes to be applied to the current embed.
+  If a map or keyword list are given are there is no
+  embed, one will be created.
 
   If the embed has no changes, it will be skipped.
   If the embed is invalid, the changeset will be marked

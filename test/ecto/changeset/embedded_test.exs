@@ -423,6 +423,27 @@ defmodule Ecto.Changeset.EmbeddedTest do
       Relation.change(embed, %Profile{id: 1}, embed_with_id)
   end
 
+  test "change embeds_one with attributes" do
+    assoc = Author.__schema__(:embed, :profile)
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, %{name: "michal"}, nil)
+    assert changeset.action == :insert
+    assert changeset.changes == %{name: "michal"}
+
+    profile = %Profile{name: "other"} |> Ecto.put_meta(state: :loaded)
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, %{name: "michal"}, profile)
+    assert changeset.action == :update
+    assert changeset.changes == %{name: "michal"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, [name: "michal"], profile)
+    assert changeset.action == :update
+    assert changeset.changes == %{name: "michal"}
+  end
+
   test "change embeds_one with structs" do
     embed = Author.__schema__(:embed, :profile)
     profile = %Profile{name: "michal"}
@@ -528,6 +549,27 @@ defmodule Ecto.Changeset.EmbeddedTest do
     empty_changeset = Changeset.change(embed_model)
     assert {:ok, _, true, true} =
       Relation.change(embed, [empty_changeset], [embed_model])
+  end
+
+  test "change embeds_many with attributes" do
+    assoc = Author.__schema__(:embed, :posts)
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, [%{title: "hello"}], [])
+    assert changeset.action == :insert
+    assert changeset.changes == %{title: "hello"}
+
+    post = %Post{title: "other"} |> Ecto.put_meta(state: :loaded)
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, [%{title: "hello"}], [post])
+    assert changeset.action == :update
+    assert changeset.changes == %{title: "hello"}
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, [[title: "hello"]], [post])
+    assert changeset.action == :update
+    assert changeset.changes == %{title: "hello"}
   end
 
   test "change embeds_many with structs" do

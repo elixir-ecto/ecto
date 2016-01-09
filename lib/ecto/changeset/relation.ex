@@ -128,16 +128,9 @@ defmodule Ecto.Changeset.Relation do
   end
 
   # This may be an insert or an update, get all fields.
-  defp do_change(_relation, changeset_or_struct, nil, _allowed_actions) do
+  defp do_change(_relation, %{__struct__: _} = changeset_or_struct, nil, _allowed_actions) do
     changeset = Changeset.change(changeset_or_struct)
-    %{model: %{__meta__: %{state: state}}} = changeset
-    action =
-      case state do
-        :built   -> :insert
-        :loaded  -> :update
-        :deleted -> :delete
-      end
-    {:ok, put_new_action(changeset, action)}
+    {:ok, put_new_action(changeset, action_from_changeset(changeset))}
   end
 
   defp do_change(relation, nil, current, _allowed_actions) do
@@ -153,9 +146,24 @@ defmodule Ecto.Changeset.Relation do
           "embed/association than the one specified in the parent struct"
   end
 
-  defp do_change(%{field: field}, _struct, _current, _allowed_actions) do
+  defp do_change(%{field: field}, %{__struct__: _}, _current, _allowed_actions) do
     raise "cannot change `#{field}` with a struct because another " <>
           "embed/association is set in parent struct, use a changeset instead"
+  end
+
+  defp do_change(%{related: mod} = relation, changes, current, allowed_actions)
+      when is_list(changes) or is_map(changes) do
+    changeset = Ecto.Changeset.change(current || mod.__struct__, changes)
+    changeset = put_new_action(changeset, action_from_changeset(changeset))
+    do_change(relation, changeset, current, allowed_actions)
+  end
+
+  defp action_from_changeset(%{model: %{__meta__: %{state: state}}}) do
+    case state do
+      :built   -> :insert
+      :loaded  -> :update
+      :deleted -> :delete
+    end
   end
 
   @doc """
@@ -189,7 +197,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks,
-                      new_pks, fun) when is_map(value) or is_nil(value) do
+                      new_pks, fun) when is_map(value) or is_list(value) or is_nil(value) do
     single_change(relation, value, current_pks, new_pks, fun, current)
   end
 
@@ -241,7 +249,7 @@ defmodule Ecto.Changeset.Relation do
     reduce_delete_changesets(current_models, fun, Enum.reverse(acc), valid?, skip?)
   end
 
-  defp map_changes([map | rest], new_pks, fun, current, acc, valid?, skip?) when is_map(map) do
+  defp map_changes([map | rest], new_pks, fun, current, acc, valid?, skip?) when is_map(map) or is_list(map) do
     pk_values = new_pks.(map)
 
     {model, current, allowed_actions} =
@@ -310,7 +318,8 @@ defmodule Ecto.Changeset.Relation do
   defp struct_pk(_mod, pks) do
     fn
       %Changeset{model: model} -> Enum.map(pks, &Map.get(model, &1))
-      model -> Enum.map(pks, &Map.get(model, &1))
+      [_|_] = model -> Enum.map(pks, &Keyword.get(model, &1))
+      %{} = model -> Enum.map(pks, &Map.get(model, &1))
     end
   end
 

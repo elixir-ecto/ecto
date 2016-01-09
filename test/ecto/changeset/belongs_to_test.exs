@@ -280,6 +280,27 @@ defmodule Ecto.Changeset.BelongsToTest do
       Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
   end
 
+  test "change belongs_to with attributes" do
+    assoc = Author.__schema__(:association, :profile)
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, %{name: "michal"}, nil)
+    assert changeset.action == :insert
+    assert changeset.changes == %{name: "michal"}
+
+    profile = %Profile{name: "other"} |> Ecto.put_meta(state: :loaded)
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, %{name: "michal"}, profile)
+    assert changeset.action == :update
+    assert changeset.changes == %{name: "michal"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, [name: "michal"], profile)
+    assert changeset.action == :update
+    assert changeset.changes == %{name: "michal"}
+  end
+
   test "change belongs_to with struct" do
     assoc = Author.__schema__(:association, :profile)
     profile = %Profile{name: "michal"}
