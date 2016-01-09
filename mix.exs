@@ -41,7 +41,7 @@ defmodule Ecto.Mixfile do
      {:mariaex, "~> 0.6", optional: true},
      {:postgrex, "~> 0.10", github: "ericmj/postgrex", optional: true},
      {:connection, "~> 1.0.2", override: true},
-     {:db_connection, "~> 0.1.7", github: "fishcakez/db_connection", override: true},
+     {:db_connection, "~> 0.1.8", github: "fishcakez/db_connection", override: true},
 
      # Optional
      {:sbroker, "~> 0.7", optional: true},

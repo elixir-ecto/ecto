@@ -86,7 +86,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     transaction_handle(s, :handle_commit, opts, :run)
   end
   def handle_commit(_, %{status: :sandbox_transaction} = s) do
-    {:ok, %{s | status: :sandbox}}
+    {:ok, [], %{s | status: :sandbox}}
   end
 
   @doc false
@@ -107,17 +107,17 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     handle_request(request, opts, s)
   end
   def handle_execute(query, params, opts, s) do
-    handle(s, :handle_execute, [query, params, opts], :execute)
+    handle(s, :handle_execute, [query, params, opts], :result)
   end
 
   @doc false
   def handle_execute_close(query, params, opts, s) do
-    handle(s, :handle_execute_close, [query, params, opts], :execute)
+    handle(s, :handle_execute_close, [query, params, opts], :result)
   end
 
   @doc false
   def handle_close(query, opts, s) do
-    handle(s, :handle_close, [query, opts], :no_result)
+    handle(s, :handle_close, [query, opts], :result)
   end
 
   @doc false
@@ -145,10 +145,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     case apply(mod, callback, args ++ [state]) do
       {:ok, state} when return == :no_result ->
         {:ok, %{s | state: state}}
-      {:ok, result, state} when return in [:result, :execute] ->
+      {:ok, result, state} when return == :result ->
         {:ok, result, %{s | state: state}}
-      {:prepare, state} when return == :execute ->
-        {:prepare, %{s | state: state}}
       {error, err, state} when error in [:disconnect, :error] ->
         {error, err, %{s | state: state}}
       other ->
@@ -159,8 +157,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   defp transaction_handle(s, callback, opts, new_status) do
     %{mod: mod, state: state} = s
     case apply(mod, callback, [opts, state]) do
-      {:ok, state} ->
-        {:ok, %{s | status: new_status, state: state}}
+      {:ok, result, state} ->
+        {:ok, [result], %{s | status: new_status, state: state}}
       {:error, err, state} ->
         {:error, err, %{s | status: :run, state: state}}
       {:disconnect, err, state} ->
@@ -200,17 +198,17 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     sandbox_rollback(s, opts)
   end
   defp handle_request(:rollback, _, s) do
-    {:ok, %Result{value: :ok}, s}
+    {:ok, [], s}
   end
 
   defp sandbox_begin(s, opts) do
     case transaction_handle(s, :handle_begin, opts, :sandbox) do
-      {:ok, %{adapter: adapter} = s} ->
+      {:ok, results, %{adapter: adapter} = s} ->
         savepoint_query =
           "ecto_sandbox"
           |> adapter.savepoint()
           |> adapter.query()
-        sandbox_query(savepoint_query, opts, s, :disconnect)
+        sandbox_query(savepoint_query, opts, s, :disconnect, results)
       other ->
         other
     end
@@ -225,12 +223,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   end
 
   defp sandbox_rollback(s, opts) do
-    case transaction_handle(s, :handle_rollback, opts, :run) do
-      {:ok, s} ->
-        {:ok, %Result{value: :ok}, s}
-      other ->
-        other
-    end
+    transaction_handle(s, :handle_rollback, opts, :run)
   end
 
   def sandbox_transaction(s, callback, opts, new_status) do
@@ -239,8 +232,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       apply(adapter, callback, ["ecto_sandbox_transaction"])
       |> adapter.query()
     case sandbox_query(query, opts, s) do
-      {:ok, _, s} ->
-        {:ok, %{s | status: new_status}}
+      {:ok, results, s} ->
+        {:ok, results, %{s | status: new_status}}
       {:error, err, s} ->
         {:error, err, %{s | status: :sandbox}}
       other ->
@@ -248,25 +241,22 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
   end
 
-  defp sandbox_query(query, opts, s, error \\ :error) do
+  defp sandbox_query(query, opts, s, error \\ :error, results \\ []) do
     query = DBConnection.Query.parse(query, opts)
     case handle_prepare(query, opts, s) do
       {:ok, query, s} ->
         query = DBConnection.Query.describe(query, opts)
-        sandbox_execute(query, opts, s, error)
+        sandbox_execute(query, opts, s, error, results)
       other ->
         other
     end
   end
 
-  def sandbox_execute(query, opts, s, error) do
+  def sandbox_execute(query, opts, s, error, results) do
     params = DBConnection.Query.encode(query, [], opts)
     case handle_execute_close(query, params, opts, s) do
-      {:prepare, s} ->
-        err = RuntimeError.exception("query #{inspect query} was not prepared")
-        {:error, err, s}
-      {:ok, _, s} ->
-        {:ok, %Result{value: :ok}, s}
+      {:ok, result, s} ->
+        {:ok, results ++ [result], s}
       {:error, err, s} when error == :disconnect ->
         {:disconnect, err, s}
       other ->
@@ -296,4 +286,5 @@ defimpl DBConnection.Query, for: Ecto.Adapters.SQL.Sandbox.Query do
   def describe(query, _), do: query
   def encode(_ , [], _), do: []
   def decode(_, %Ecto.Adapters.SQL.Sandbox.Result{value: value}, _), do: value
+  def decode(_, list, _) when is_list(list), do: list
 end
