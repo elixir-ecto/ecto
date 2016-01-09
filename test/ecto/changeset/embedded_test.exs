@@ -124,6 +124,20 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert changeset.valid?
   end
 
+  test "cast embeds_one with existing model updating from atom params" do
+    # Emulate atom params from nested associations
+    changeset = Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}}, %{}, ~w(), ~w())
+    changeset = put_in changeset.params, %{"profile" => %{name: "new", id: "michal"}}
+
+    changeset = Changeset.cast_embed(changeset, :profile, [])
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new"}
+    assert profile.errors  == []
+    assert profile.action  == :update
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
   test "cast embeds_one with existing model replacing" do
     changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
                      %{"profile" => %{"name" => "new"}}, :profile)

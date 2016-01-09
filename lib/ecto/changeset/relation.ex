@@ -324,10 +324,10 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp param_pk(mod, pks) do
-    pks = Enum.map(pks, &{Atom.to_string(&1), mod.__schema__(:type, &1)})
+    pks = Enum.map(pks, &{&1, Atom.to_string(&1), mod.__schema__(:type, &1)})
     fn params ->
-      Enum.map pks, fn {key, type} ->
-        original = Map.get(params, key)
+      Enum.map pks, fn {atom_key, string_key, type} ->
+        original = Map.get(params, string_key) || Map.get(params, atom_key)
         case Ecto.Type.cast(type, original) do
           {:ok, value} -> value
           :error       -> original

@@ -144,6 +144,20 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
   end
 
+  test "cast has_one with existing model updating from atom params" do
+    # Emulate atom params from nested associations
+    changeset = Changeset.cast(%Author{profile: %Profile{name: "michal", id: 3}}, %{}, ~w(), ~w())
+    changeset = put_in changeset.params, %{"profile" => %{name: "new", id: 3}}
+
+    changeset = Changeset.cast_assoc(changeset, :profile, [])
+    profile = changeset.changes.profile
+    assert profile.changes == %{name: "new"}
+    assert profile.errors  == []
+    assert profile.action  == :update
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
   test "cast has_one without changes skips" do
     changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
                      %{"profile" => %{"id" => 1}}, :profile)
