@@ -249,8 +249,9 @@ defmodule Ecto.Changeset.Relation do
     reduce_delete_changesets(current_models, fun, Enum.reverse(acc), valid?, skip?)
   end
 
-  defp map_changes([map | rest], new_pks, fun, current, acc, valid?, skip?) when is_map(map) or is_list(map) do
-    pk_values = new_pks.(map)
+  defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?)
+      when is_map(changes) or is_list(changes) do
+    pk_values = new_pks.(changes)
 
     {model, current, allowed_actions} =
       case Map.fetch(current, pk_values) do
@@ -260,7 +261,7 @@ defmodule Ecto.Changeset.Relation do
           {nil, current, [:insert]}
       end
 
-    case fun.(map, model, allowed_actions) do
+    case fun.(changes, model, allowed_actions) do
       {:ok, changeset} ->
         map_changes(rest, new_pks, fun, current, [changeset | acc],
                     valid? && changeset.valid?, (model != nil) and skip? and skip?(changeset))
