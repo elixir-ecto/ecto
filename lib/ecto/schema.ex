@@ -557,9 +557,9 @@ defmodule Ecto.Schema do
       hd(post.comments).author #=> %Author{...}
 
   Finally, `:through` can be used with multiple associations (not only 2)
-  and with associations of any kind, including `belongs_to` and others
+  and with associations of any kind, including `belongs_to` and other
   `:through` associations. When the `:through` association is expected to
-  return one or no item, `has_one :through` should be used instead, as in
+  return one or zero items, `has_one :through` should be used instead, as in
   the example at the beginning of this section:
 
       # How we defined the association above
