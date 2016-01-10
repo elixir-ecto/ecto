@@ -117,7 +117,7 @@ defmodule Ecto.Query.PlannerTest do
                         value: <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>}]
 
     assert_raise Ecto.CastError,
-                 ~r/cannot dump cast value `"00010203-0405-0607-0809"` to type :binary_id/, fn ->
+                 ~r/cannot dump value `"00010203-0405-0607-0809"` to type :binary_id/, fn ->
       uuid = "00010203-0405-0607-0809"
       prepare(Comment |> where([c], c.uuid == ^uuid))
     end
@@ -279,14 +279,10 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: casts and dumps query expressions" do
-    query = normalize(from p in Post, where: p.id == "1-hello-world")
-    [where] = query.wheres
-    assert Macro.to_string(where.expr) == "&0.id() == 1"
-
-    query = normalize(from p in Post, where: "1-hello-world" in p.links)
-    [where] = query.wheres
-    assert Macro.to_string(where.expr) == "1 in &0.links()"
+  test "normalize: dumps in query expressions" do
+    assert_raise Ecto.QueryError, ~r"cannot dump value", fn ->
+      normalize(from p in Post, where: p.posted == "2014-04-17 00:00:00")
+    end
   end
 
   test "normalize: validate fields" do
@@ -301,8 +297,8 @@ defmodule Ecto.Query.PlannerTest do
     query = from(Post, []) |> where([p], p.id in [1, 2, 3])
     normalize(query)
 
-    message = ~r"value `1` in `where` cannot be cast to type :string in query"
-    assert_raise Ecto.CastError, message, fn ->
+    message = ~r"cannot dump value `1` to type :string"
+    assert_raise Ecto.QueryError, message, fn ->
       query = from(Comment, []) |> where([c], c.text in [1, 2, 3])
       normalize(query)
     end

@@ -194,17 +194,11 @@ defmodule Ecto.Query.Planner do
 
   defp cast_param(kind, query, expr, v, type, adapter) do
     {model, field, type} = type_for_param!(kind, query, expr, type)
-    cast = cast_param(kind, type, v)
 
     try do
-      case cast do
-        {:dump, type, v} ->
-          case Ecto.Type.adapter_dump(adapter, type, v) do
-            {:ok, v} -> v
-            :error   -> error! query, expr, "cannot dump cast value `#{inspect v}` to type #{inspect type}"
-          end
-        {:error, error} ->
-          error! query, expr, error
+      case cast_param(kind, type, v, adapter) do
+        {:ok, v} -> v
+        {:error, error} -> error! query, expr, error
       end
     catch
       :error, %Ecto.QueryError{} = e when not is_nil(model) ->
@@ -214,31 +208,15 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp cast_param(kind, {:in_array, {:array, type}}, value) do
-    cast_param(kind, type, value)
-  end
-
-  defp cast_param(kind, {:in_array, :any}, value) do
-    cast_param(kind, :any, value)
-  end
-
-  defp cast_param(kind, {:in_array, other}, value) do
-    {:error, "value `#{inspect value}` in `#{kind}` expected to be part of an array " <>
-             "but matched type is #{inspect other}"}
-  end
-
-  defp cast_param(kind, type, nil) when kind != :update do
+  defp cast_param(kind, type, nil, _adapter) when kind != :update do
     {:error, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
              " (if you want to check for nils, use is_nil/1 instead)"}
   end
 
-  defp cast_param(kind, type, v) do
-    case Ecto.Type.cast(type, v) do
-      {:ok, v} ->
-        {:dump, type, v}
-      :error ->
-        {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"}
-    end
+  defp cast_param(kind, type, v, adapter) do
+    with {:ok, type} <- normalize_param(kind, type, v),
+         {:ok, v} <- cast_param(kind, type, v),
+         do: dump_param(adapter, type, v)
   end
 
   defp unfold_in(%Ecto.Query.Tagged{value: value, type: {:array, type}}, acc),
@@ -483,11 +461,34 @@ defmodule Ecto.Query.Planner do
                             type: Ecto.Type.type(type)}, acc + 1}
 
       %Ecto.Query.Tagged{value: v, type: type}, acc ->
-        {cast_param(kind, query, expr, v, type, adapter), acc}
+        {dump_param(kind, query, expr, v, type, adapter), acc}
 
       other, acc ->
         {other, acc}
     end
+  end
+
+  defp dump_param(kind, query, expr, v, type, adapter) do
+    {model, field, type} = type_for_param!(kind, query, expr, type)
+
+    case dump_param(kind, type, v, adapter) do
+      {:ok, v} ->
+        v
+      {:error, error} ->
+        error = error <> " from `#{inspect model}.#{field}`. " <>
+                         "Or the value is incompatible or it must be interpolated " <>
+                         "(using ^) so it may be cast accordingly"
+        error! query, expr, error
+    end
+  end
+
+  # Exceptionally allow decimal casting for support on interval operations.
+  defp dump_param(kind, :decimal, v, adapter) do
+    cast_param(kind, :decimal, v, adapter)
+  end
+  defp dump_param(kind, type, v, adapter) do
+    with {:ok, type} <- normalize_param(kind, type, v),
+         do: dump_param(adapter, type, v)
   end
 
   defp validate_in(meta, expr, param, acc) do
@@ -631,14 +632,12 @@ defmodule Ecto.Query.Planner do
   end
 
   defp type!(_kind, _query, _expr, nil, _field), do: :any
-
   defp type!(kind, query, expr, source, field) when is_integer(source) do
     case elem(query.sources, source) do
       {_, model} -> type!(kind, query, expr, model, field)
       {:fragment, _, _} -> :any
     end
   end
-
   defp type!(kind, query, expr, model, field) when is_atom(model) do
     if type = model.__schema__(:type, field) do
       type
@@ -652,14 +651,42 @@ defmodule Ecto.Query.Planner do
     {_, model} = elem(query.sources, ix)
     {model, field, {composite, type!(kind, query, expr, model, field)}}
   end
-
   defp type_for_param!(kind, query, expr, {ix, field}) when is_integer(ix) do
     {_, model} = elem(query.sources, ix)
     {model, field, type!(kind, query, expr, model, field)}
   end
-
   defp type_for_param!(_kind, _query, _expr, type) do
     {nil, nil, type}
+  end
+
+  defp normalize_param(_kind, {:in_array, {:array, type}}, _value) do
+    {:ok, type}
+  end
+  defp normalize_param(_kind, {:in_array, :any}, _value) do
+    {:ok, :any}
+  end
+  defp normalize_param(kind, {:in_array, other}, value) do
+    {:error, "value `#{inspect value}` in `#{kind}` expected to be part of an array " <>
+             "but matched type is #{inspect other}"}
+  end
+  defp normalize_param(_kind, type, _value) do
+    {:ok, type}
+  end
+
+  defp cast_param(kind, type, v) do
+    case Ecto.Type.cast(type, v) do
+      {:ok, v} ->
+        {:ok, v}
+      :error ->
+        {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"}
+    end
+  end
+
+  defp dump_param(adapter, type, v) do
+    case Ecto.Type.adapter_dump(adapter, type, v) do
+      {:ok, v} -> {:ok, v}
+      :error   -> {:error, "cannot dump value `#{inspect v}` to type #{inspect type}"}
+    end
   end
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do

@@ -357,10 +357,6 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.update_all(query) ==
            ~s{UPDATE "model" AS m0 SET "x" = 0 WHERE (m0."x" = 123)}
 
-    query = from(m in Model, update: [set: [x: 0, y: "123"]]) |> normalize(:update_all)
-    assert SQL.update_all(query) ==
-           ~s{UPDATE "model" AS m0 SET "x" = 0, "y" = 123}
-
     query = from(m in Model, update: [set: [x: ^0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
            ~s{UPDATE "model" AS m0 SET "x" = $1}
