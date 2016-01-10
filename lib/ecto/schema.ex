@@ -532,7 +532,7 @@ defmodule Ecto.Schema do
   `:comments` in the same module (Post), which then points to `:author` in
   the next schema `Comment`.
 
-  This `:through` association will return all authors for all comments
+  This `:through` associations will return all authors for all comments
   that belongs to that post:
 
       # Get all comments for a given post
