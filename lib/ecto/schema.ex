@@ -526,13 +526,13 @@ defmodule Ecto.Schema do
       end
 
   In the example above, we have defined a `has_many :through` association
-  named `:comments_authors`. A `:through` association always expect a list
+  named `:comments_authors`. A `:through` association always expects a list
   and the first element of the list must be a previously defined association
   in the current module. For example, `:comments_authors` first points to
   `:comments` in the same module (Post), which then points to `:author` in
   the next schema `Comment`.
 
-  This `:through` associations will return all authors for all comments
+  This `:through` association will return all authors for all comments
   that belongs to that post:
 
       # Get all comments for a given post
@@ -557,9 +557,9 @@ defmodule Ecto.Schema do
       hd(post.comments).author #=> %Author{...}
 
   Finally, `:through` can be used with multiple associations (not only 2)
-  and with associations of any kind, including `belongs_to` and others
+  and with associations of any kind, including `belongs_to` and other
   `:through` associations. When the `:through` association is expected to
-  return one or no item, `has_one :through` should be used instead, as in
+  return one or zero items, `has_one :through` should be used instead, as in
   the example at the beginning of this section:
 
       # How we defined the association above
