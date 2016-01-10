@@ -526,7 +526,7 @@ defmodule Ecto.Schema do
       end
 
   In the example above, we have defined a `has_many :through` association
-  named `:comments_authors`. A `:through` association always expects a list
+  named `:comments_authors`. A `:through` association always expect a list
   and the first element of the list must be a previously defined association
   in the current module. For example, `:comments_authors` first points to
   `:comments` in the same module (Post), which then points to `:author` in
