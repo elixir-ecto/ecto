@@ -1,15 +1,19 @@
 defmodule Ecto.Adapters.SQL.Sandbox do
   @moduledoc ~S"""
-  TODO: Rewrite docs.
+  A pool for concurrent transactional tests.
 
-  Starts a transaction for test.
+  The sandbox pool is implemented on top of an ownership mechanism.
+  When started, the pool is in automatic mode, which means using
+  the repository will automatically check connections out as with
+  any other pool. The only difference is that connections are not
+  checked back in automatically but by explicitly calling `checkin/2`.
 
-  This function work by starting a transaction and storing the connection
-  back in the pool with an open transaction. On every test, we restart
-  the test transaction rolling back to the appropriate savepoint.
-
-  **IMPORTANT:** Test transactions only work if the connection pool is
-  `Ecto.Adapters.SQL.Sandbox`
+  The `mode/2` function can be used to change the pool mode to
+  `:manual`. In this case, each connection must be explicitly
+  checked out before use. This is useful when paired with
+  `checkout/2` which by default wraps the connection in a transaction.
+  This means developers have a safe mechanism for running concurrent
+  tests against the database.
 
   ## Example
 
@@ -30,50 +34,20 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   transactional tests:
 
       # At the end of your test_helper.exs
-      # From now, all tests happen inside a transaction
-      Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
+      # Set the pool mode to manual for explicitly checkouts
+      Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
 
       defmodule PostTest do
-        # Tests that use the shared repository cannot be async
-        use ExUnit.Case
+        # Once the model is manual, tests can also be async
+        use ExUnit.Case, async: true
 
         setup do
-          # Go back to a clean slate at the beginning of every test
-          Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-          :ok
+          # Explicitly get a connection before each test
+          :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
         end
 
         test "create comment" do
-          assert %Post{} = TestRepo.insert!(%Post{})
-        end
-      end
-
-  In some cases, you may want to start the test transaction only
-  for specific tests and then roll it back. You can do it as:
-
-      defmodule PostTest do
-        # Tests that use the shared repository cannot be async
-        use ExUnit.Case
-
-        setup_all do
-          # Wrap this case in a transaction
-          Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
-
-          # Roll it back once we are done
-          on_exit fn ->
-            Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-          end
-
-          :ok
-        end
-
-        setup do
-          # Go back to a clean slate at the beginning of every test
-          Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-          :ok
-        end
-
-        test "create comment" do
+          # Use the repository as usual
           assert %Post{} = TestRepo.insert!(%Post{})
         end
       end
@@ -205,26 +179,43 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
   end
 
-  def enable(repo) do
+  @doc """
+  Sets the mode for the `repo` pool.
+
+  The mode can be `:auto` or `:manual`.
+  """
+  def mode(repo, mode) when mode in [:auto, :manual] do
     {name, opts} = repo.__pool__
 
     if opts[:pool] != DBConnection.Ownership do
       raise """
-      cannot enable sandbox with pool #{inspect opts[:pool]}.
+      cannot configure sandbox with pool #{inspect opts[:pool]}.
       To use the SQL Sandbox, configure your repository pool as:
 
             pool: #{inspect __MODULE__}
       """
     end
 
-    # Check in any previous checked out connection from this process
-    _ = DBConnection.Ownership.ownership_checkin(name, opts)
-
-    DBConnection.Ownership.ownership_mode(name, :manual, opts)
+    DBConnection.Ownership.ownership_mode(name, mode, opts)
   end
 
-  def checkout(repo) do
-    {name, opts} = proxy_pool(repo)
+  @doc """
+  Checks a connection out for the given `repo`.
+
+  ## Options
+
+    * `:sandbox` - when true the connection is wrapped in
+      a transaction. Defaults to true.
+
+  """
+  def checkout(repo, opts \\ []) do
+    {name, opts} =
+      if Keyword.get(opts, :sandbox, true) do
+        proxy_pool(repo)
+      else
+        repo.__pool__
+      end
+
     DBConnection.Ownership.ownership_checkout(name, opts)
   end
 
