@@ -26,7 +26,6 @@ defmodule Ecto.Integration.PoolTest do
 
   defmodule MockPool do
     def start_link(_conn_mod, opts) do
-      assert opts[:name] == MockRepo.Alternative.Pool
       assert opts[:repo] == MockRepo
       assert opts[:foo] == :bar # Custom options are passed through
       Task.start_link(fn -> :timer.sleep(:infinity) end)
@@ -39,20 +38,14 @@ defmodule Ecto.Integration.PoolTest do
   end
 
   test "starts repo with after_connect" do
-    assert {:ok, _} = MockRepo.start_link(lazy: false, name: MockRepo.AfterConnect, query_cache_owner: false)
+    assert {:ok, pid} = MockRepo.start_link(lazy: false, query_cache_owner: false)
     assert_receive {:after_connect, %DBConnection{}}
-  end
-
-  test "starts repo with different names" do
-    assert {:ok, pool1} = MockRepo.start_link()
-    assert {:error, {:already_started, _}} = MockRepo.start_link()
-
-    assert {:ok, pool2} = MockRepo.start_link(name: MockRepo.Named, query_cache_owner: false)
-    assert pool1 != pool2
+    Supervisor.stop(pid)
   end
 
   test "starts repo with custom pool" do
-    assert {:ok, _} =
-      MockRepo.start_link(name: MockRepo.Alternative, pool: MockPool, foo: :bar, query_cache_owner: false)
+    assert {:ok, pid} =
+      MockRepo.start_link(pool: MockPool, foo: :bar, query_cache_owner: false)
+    Supervisor.stop(pid)
   end
 end

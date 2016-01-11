@@ -23,11 +23,8 @@ defmodule Ecto.Adapters.SQL do
       ## Worker
 
       @doc false
-      defmacro __before_compile__(_env) do
-        quote do
-          @doc false
-          def __sql__, do: unquote(@conn)
-        end
+      defmacro __before_compile__(env) do
+        Ecto.Adapters.SQL.__before_compile__(@conn, env)
       end
 
       @doc false
@@ -326,6 +323,32 @@ defmodule Ecto.Adapters.SQL do
 
   ## Worker
 
+  @pool_timeout 5_000
+  @timeout 15_000
+
+  @doc false
+  def __before_compile__(conn, env) do
+    config = Module.get_attribute(env.module, :config)
+    name   = Keyword.get(config, :pool_name, default_pool_name(env.module, config))
+    config =
+      config
+      |> Keyword.delete(:name)
+      |> Keyword.put_new(:timeout, @timeout)
+      |> Keyword.put_new(:pool_timeout, @pool_timeout)
+
+    quote do
+      @doc false
+      def __sql__, do: unquote(conn)
+
+      @doc false
+      def __pool__, do: {unquote(name), unquote(Macro.escape(config))}
+    end
+  end
+
+  defp default_pool_name(repo, config) do
+    Module.concat(Keyword.get(config, :name, repo), Pool)
+  end
+
   @doc false
   def start_link(connection, adapter, repo, opts) do
     unless Code.ensure_loaded?(connection) do
@@ -342,6 +365,8 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
+    {pool_name, pool_opts} = repo.__pool__
+    opts = [name: pool_name] ++ opts ++ pool_opts
     {mod, opts} = connection.connection(opts)
 
     if function_exported?(repo, :after_connect, 1) and not Keyword.has_key?(opts, :after_connect) do

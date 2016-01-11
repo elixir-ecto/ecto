@@ -1,17 +1,13 @@
 defmodule Ecto.Repo.Supervisor do
   @moduledoc false
-
   use Supervisor
-
-  @pool_timeout 5_000
-  @timeout 15_000
 
   @doc """
   Starts the repo supervisor.
   """
   def start_link(repo, otp_app, adapter, opts) do
-    name = opts[:name] || Application.get_env(otp_app, repo)[:name] || repo
-    Supervisor.start_link(__MODULE__, {name, repo, otp_app, adapter, opts}, [name: name])
+    opts = config(repo, otp_app, opts)
+    Supervisor.start_link(__MODULE__, {repo, otp_app, adapter, opts}, [name: repo])
   end
 
   @doc """
@@ -46,20 +42,7 @@ defmodule Ecto.Repo.Supervisor do
                            "ensure it is correct and it is included as a project dependency"
     end
 
-    {otp_app, adapter, pool(repo, config), config}
-  end
-
-  defp pool(repo, config) do
-    name = Keyword.get(config, :pool_name, default_pool_name(repo, config))
-    {name,
-      config
-      |> Keyword.put(:name, name)
-      |> Keyword.put_new(:timeout, @timeout)
-      |> Keyword.put_new(:pool_timeout, @pool_timeout)}
-  end
-
-  defp default_pool_name(repo, config) do
-    Module.concat(Keyword.get(config, :name, repo), Pool)
+    {otp_app, adapter, config}
   end
 
   @doc """
@@ -105,19 +88,8 @@ defmodule Ecto.Repo.Supervisor do
 
   ## Callbacks
 
-  def init({name, repo, otp_app, adapter, opts}) do
-    opts = config(repo, otp_app, opts)
-    {default_pool, _} = repo.__pool__
-
-    opts =
-      opts
-      |> Keyword.delete(:name)
-      |> Keyword.put_new(:pool, default_pool)
-      |> Keyword.put_new(:name, Module.concat(name, Pool))
-
-    children = [
-      supervisor(adapter, [repo, opts])
-    ]
+  def init({repo, _otp_app, adapter, opts}) do
+    children = [supervisor(adapter, [repo, opts])]
 
     if Keyword.get(opts, :query_cache_owner, repo == repo.__query_cache__) do
       :ets.new(repo.__query_cache__, [:set, :public, :named_table, read_concurrency: true])
