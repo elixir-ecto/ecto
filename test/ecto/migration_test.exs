@@ -7,7 +7,7 @@ defmodule Ecto.MigrationTest do
   use Ecto.Migration
 
   alias Ecto.TestRepo
-  alias Ecto.Migration.{Table, Index, Reference, Constraint}
+  alias Ecto.Migration.{Table, Index, Reference, Constraint, View}
   alias Ecto.Migration.Runner
 
   setup meta do
@@ -29,6 +29,15 @@ defmodule Ecto.MigrationTest do
     assert table(:posts) == %Table{name: :posts, primary_key: true}
     assert table(:posts, primary_key: false) == %Table{name: :posts, primary_key: false}
     assert table(:posts, prefix: :foo) == %Table{name: :posts, primary_key: true, prefix: :foo}
+  end
+
+  test "creates a view" do
+    assert view(:old_posts) ==
+      %View{name: :old_posts, materialized: false, with: nil}
+    assert view(:old_posts, materialized: true) ==
+      %View{name: :old_posts, materialized: true, with: nil}
+    assert view(:old_posts, with: :cascaded) ==
+      %View{name: :old_posts, materialized: false, with: :cascaded}
   end
 
   test "creates an index" do
