@@ -1,290 +1,236 @@
 defmodule Ecto.Adapters.SQL.Sandbox do
-  @moduledoc """
-  Start a pool with a single sandboxed SQL connection.
+  @moduledoc ~S"""
+  TODO: Rewrite docs.
+
+  Starts a transaction for test.
+
+  This function work by starting a transaction and storing the connection
+  back in the pool with an open transaction. On every test, we restart
+  the test transaction rolling back to the appropriate savepoint.
+
+  **IMPORTANT:** Test transactions only work if the connection pool is
+  `Ecto.Adapters.SQL.Sandbox`
+
+  ## Example
+
+  The first step is to configure your database to use the
+  `Ecto.Adapters.SQL.Sandbox` pool. You set those options in your
+  `config/config.exs`:
+
+      config :my_app, Repo,
+        pool: Ecto.Adapters.SQL.Sandbox
+
+  Since you don't want those options in your production database, we
+  typically recommend to create a `config/test.exs` and add the
+  following to the bottom of your `config/config.exs` file:
+
+      import_config "config/#{Mix.env}.exs"
+
+  Now with the test database properly configured, you can write
+  transactional tests:
+
+      # At the end of your test_helper.exs
+      # From now, all tests happen inside a transaction
+      Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
+
+      defmodule PostTest do
+        # Tests that use the shared repository cannot be async
+        use ExUnit.Case
+
+        setup do
+          # Go back to a clean slate at the beginning of every test
+          Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
+          :ok
+        end
+
+        test "create comment" do
+          assert %Post{} = TestRepo.insert!(%Post{})
+        end
+      end
+
+  In some cases, you may want to start the test transaction only
+  for specific tests and then roll it back. You can do it as:
+
+      defmodule PostTest do
+        # Tests that use the shared repository cannot be async
+        use ExUnit.Case
+
+        setup_all do
+          # Wrap this case in a transaction
+          Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
+
+          # Roll it back once we are done
+          on_exit fn ->
+            Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
+          end
+
+          :ok
+        end
+
+        setup do
+          # Go back to a clean slate at the beginning of every test
+          Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
+          :ok
+        end
+
+        test "create comment" do
+          assert %Post{} = TestRepo.insert!(%Post{})
+        end
+      end
+
   """
 
-  defmodule Query do
-    defstruct [:request]
-  end
+  @doc """
+  Retuns the begin transaction query for sandbox.
+  """
+  @callback begin_sandbox :: term
 
-  defmodule Result do
-    defstruct [:value]
-  end
+  @doc """
+  Retuns the rollback transaction query for sandbox.
+  """
+  @callback rollback_sandbox :: term
 
-  @behaviour DBConnection
-  @behaviour DBConnection.Pool
+  defmodule Connection do
+    @moduledoc false
+    @behaviour DBConnection
 
-  defstruct [:mod, :state, :status, :adapter]
+    def connect({conn_mod, state}) do
+      case conn_mod.init(state) do
+        {:ok, state} -> {:ok, {conn_mod, state}}
+        {:error, _} = err -> err
+      end
+    end
 
-  @doc false
-  def mode(pool) do
-    DBConnection.execute!(pool, %Query{request: :mode}, [], [pool: __MODULE__])
-  end
+    def disconnect(err, {conn_mod, state}) do
+      conn_mod.disconnect(err, state)
+    end
 
-  @doc false
-  def start_link(mod, opts) do
-    DBConnection.Connection.start_link(__MODULE__, opts(mod, opts))
-  end
+    def checkout(state), do: proxy(:checkout, state, [])
+    def checkin(state), do: proxy(:checkin, state, [])
+    def ping(state), do: proxy(:ping, state, [])
 
-  @doc false
-  def child_spec(mod, opts, child_opts \\ []) do
-    DBConnection.Connection.child_spec(__MODULE__, opts(mod, opts), child_opts)
-  end
+    def handle_begin(opts, state) do
+      opts = [mode: :savepoint] ++ opts
+      proxy(:handle_begin, state, [opts])
+    end
+    def handle_commit(opts, state) do
+      opts = [mode: :savepoint] ++ opts
+      proxy(:handle_commit, state, [opts])
+    end
+    def handle_rollback(opts, state) do
+      opts = [mode: :savepoint] ++ opts
+      proxy(:handle_rollback, state, [opts])
+    end
 
-  @doc false
-  def checkout(pool, opts) do
-    DBConnection.Connection.checkout(pool, opts(opts))
-  end
+    def handle_prepare(query, opts, state),
+      do: proxy(:handle_prepare, state, [query, opts])
+    def handle_execute(query, params, opts, state),
+      do: proxy(:handle_execute, state, [query, params, opts])
+    def handle_execute_close(query, params, opts, state),
+      do: proxy(:handle_execute_close, state, [query, params, opts])
+    def handle_close(query, opts, state),
+      do: proxy(:handle_close, state, [query, opts])
+    def handle_info(msg, state),
+      do: proxy(:handle_info, state, [msg])
 
-  @doc false
-  def checkin(pool, state, opts) do
-    DBConnection.Connection.checkin(pool, state, opts(opts))
-  end
-
-  @doc false
-  def disconnect(pool, err, state, opts) do
-    DBConnection.Connection.disconnect(pool, err, state, opts(opts))
-  end
-
-  @doc false
-  def stop(pool, reason, state, opts) do
-    DBConnection.Connection.stop(pool, reason, state, opts(opts))
-  end
-
-  @doc false
-  def connect(opts) do
-    mod     = Keyword.fetch!(opts, :sandbox)
-    adapter = Module.concat(Keyword.fetch!(opts, :adapter), Connection)
-    case apply(mod, :connect, [opts]) do
-      {:ok, state} ->
-        s = %__MODULE__{mod: mod, state: state, status: :run, adapter: adapter}
-        {:ok, s}
-      {:error, _} = error ->
-        error
+    defp proxy(fun, {conn_mod, state}, args) do
+      result = apply(conn_mod, fun, args ++ [state])
+      pos = :erlang.tuple_size(result)
+      :erlang.setelement(pos, result, {conn_mod, :erlang.element(pos, result)})
     end
   end
 
-  @doc false
-  def checkout(s), do: handle(s, :checkout, [], :no_result)
+  defmodule Pool do
+    @moduledoc false
+    @behaviour DBConnection.Pool
 
-  @doc false
-  def checkin(s), do: handle(s, :checkin, [], :no_result)
+    def start_link(_module, _opts) do
+      raise "should never be invoked"
+    end
 
-  @doc false
-  def ping(s), do: handle(s, :ping, [], :no_result)
+    def child_spec(_module, _opts, _child_opts) do
+      raise "should never be invoked"
+    end
 
-  @doc false
-  def handle_begin(opts, %{status: :run} = s) do
-    transaction_handle(s, :handle_begin, opts, :transaction)
-  end
-  def handle_begin(opts, %{status: :sandbox} = s) do
-    sandbox_transaction(s, :savepoint, opts, :sandbox_transaction)
-  end
+    def checkout(pool, opts) do
+      pool_mod = opts[:sandbox_pool]
 
-  @doc false
-  def handle_commit(opts, %{status: :transaction} = s) do
-    transaction_handle(s, :handle_commit, opts, :run)
-  end
-  def handle_commit(_, %{status: :sandbox_transaction} = s) do
-    {:ok, [], %{s | status: :sandbox}}
-  end
+      case pool_mod.checkout(pool, opts) do
+        {:ok, pool_ref, conn_mod, conn_state} ->
+          query = opts[:repo].__sql__.begin_sandbox
+          case sandbox_query(query, opts, conn_mod, conn_state) do
+            {:ok, _, conn_state} ->
+              {:ok, pool_ref, Connection, {conn_mod, conn_state}}
+            {_error_or_disconnect, err, conn_state} ->
+              pool_mod.disconnect(pool_ref, err, conn_state, opts)
+          end
+        :error ->
+          :error
+      end
+    end
 
-  @doc false
-  def handle_rollback(opts, %{status: :transaction} = s) do
-    transaction_handle(s, :handle_rollback, opts, :run)
-  end
-  def handle_rollback(opts, %{status: :sandbox_transaction} = s) do
-    sandbox_transaction(s, :rollback_to_savepoint, opts, :sandbox)
-  end
+    def checkin(pool_ref, {conn_mod, conn_state}, opts) do
+      pool_mod = opts[:sandbox_pool]
+      query = opts[:repo].__sql__.rollback_sandbox
+      case sandbox_query(query, opts, conn_mod, conn_state) do
+        {:ok, _, conn_state} ->
+          pool_mod.checkin(pool_ref, conn_state, opts)
+        {_error_or_disconnect, err, conn_state} ->
+          pool_mod.disconnect(pool_ref, err, conn_state, opts)
+      end
+    end
 
-  @doc false
-  def handle_prepare(query, opts, s) do
-    handle(s, :handle_prepare, [query, opts], :result)
-  end
+    def disconnect(owner, exception, state, opts) do
+      opts[:sandbox_pool].disconnect(owner, exception, state, opts)
+    end
 
-  @doc false
-  def handle_execute(%Query{request: request}, [], opts, s) do
-    handle_request(request, opts, s)
-  end
-  def handle_execute(query, params, opts, s) do
-    handle(s, :handle_execute, [query, params, opts], :result)
-  end
+    def stop(owner, reason, state, opts) do
+      opts[:sandbox_pool].stop(owner, reason, state, opts)
+    end
 
-  @doc false
-  def handle_execute_close(query, params, opts, s) do
-    handle(s, :handle_execute_close, [query, params, opts], :result)
-  end
+    defp sandbox_query(query, opts, conn_mod, conn_state) do
+      query = DBConnection.Query.parse(query, opts)
+      case conn_mod.handle_prepare(query, opts, conn_state) do
+        {:ok, query, conn_state} ->
+          query = DBConnection.Query.describe(query, opts)
+          sandbox_execute(query, opts, conn_mod, conn_state)
+        other ->
+          other
+      end
+    end
 
-  @doc false
-  def handle_close(query, opts, s) do
-    handle(s, :handle_close, [query, opts], :result)
-  end
-
-  @doc false
-  def handle_info(msg, s) do
-    handle(s, :handle_info, [msg], :no_result)
-  end
-
-  @doc false
-  def disconnect(err, %{mod: mod, status: status, state: state}) do
-    :ok = apply(mod, :disconnect, [err, state])
-    if status in [:sandbox, :sandbox_transaction] do
-      raise err
-    else
-      :ok
+    defp sandbox_execute(query, opts, conn_mod, conn_state) do
+      params = DBConnection.Query.encode(query, [], opts)
+      conn_mod.handle_execute_close(query, params, opts, conn_state)
     end
   end
 
-  ## Helpers
+  def enable(repo) do
+    {name, opts} = repo.__pool__
 
-  defp opts(mod, opts), do: [sandbox: mod] ++ opts(opts)
+    if opts[:pool] != DBConnection.Ownership do
+      raise """
+      cannot enable sandbox with pool #{inspect opts[:pool]}.
+      To use the SQL Sandbox, configure your repository pool as:
 
-  defp opts(opts), do: [pool: DBConnection.Connection] ++ opts
-
-  defp handle(%{mod: mod, state: state} = s, callback, args, return) do
-    case apply(mod, callback, args ++ [state]) do
-      {:ok, state} when return == :no_result ->
-        {:ok, %{s | state: state}}
-      {:ok, result, state} when return == :result ->
-        {:ok, result, %{s | state: state}}
-      {error, err, state} when error in [:disconnect, :error] ->
-        {error, err, %{s | state: state}}
-      other ->
-        other
+            pool: #{inspect __MODULE__}
+      """
     end
+
+    # Check in any previous checked out connection from this process
+    _ = DBConnection.Ownership.ownership_checkin(name, opts)
+
+    DBConnection.Ownership.ownership_mode(name, :manual, opts)
   end
 
-  defp transaction_handle(s, callback, opts, new_status) do
-    %{mod: mod, state: state} = s
-    case apply(mod, callback, [opts, state]) do
-      {:ok, result, state} ->
-        {:ok, [result], %{s | status: new_status, state: state}}
-      {:error, err, state} ->
-        {:error, err, %{s | status: :run, state: state}}
-      {:disconnect, err, state} ->
-        {:disconnect, err, %{s | state: state}}
-      other ->
-        other
-    end
+  def checkout(repo) do
+    {name, opts} = proxy_pool(repo)
+    DBConnection.Ownership.ownership_checkout(name, opts)
   end
 
-  defp handle_request(:mode, _, %{status: status} = s)
-  when status in [:run, :transaction] do
-    {:ok, %Result{value: :raw}, s}
+  defp proxy_pool(repo) do
+    {name, opts} = repo.__pool__
+    {pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)
+    {name, [repo: repo, sandbox_pool: pool, ownership_pool: Pool] ++ opts}
   end
-  defp handle_request(:mode, _, %{status: status} = s)
-  when status in [:sandbox, :sandbox_transaction] do
-    {:ok, %Result{value: :sandbox}, s}
-  end
-  defp handle_request(req, _, %{status: status} = s)
-  when status in [:transaction, :sandbox_transaction] do
-    err = RuntimeError.exception("cannot #{req} test transaction inside transaction")
-    {:error, err, s}
-  end
-  defp handle_request(:begin, opts, %{status: :run} = s) do
-    sandbox_begin(s, opts)
-  end
-  defp handle_request(:begin, _, s) do
-    err = RuntimeError.exception("cannot begin test transaction inside test transaction")
-    {:error, err, s}
-  end
-  defp handle_request(:restart, opts, %{status: :sandbox} = s) do
-    sandbox_restart(s, opts)
-  end
-  defp handle_request(:restart, opts, %{status: :run} = s) do
-    sandbox_begin(s, opts)
-  end
-  defp handle_request(:rollback, opts, %{status: :sandbox} = s) do
-    sandbox_rollback(s, opts)
-  end
-  defp handle_request(:rollback, _, s) do
-    {:ok, [], s}
-  end
-
-  defp sandbox_begin(s, opts) do
-    case transaction_handle(s, :handle_begin, opts, :sandbox) do
-      {:ok, results, %{adapter: adapter} = s} ->
-        savepoint_query =
-          "ecto_sandbox"
-          |> adapter.savepoint()
-          |> adapter.query()
-        sandbox_query(savepoint_query, opts, s, :disconnect, results)
-      other ->
-        other
-    end
-  end
-
-  defp sandbox_restart(%{adapter: adapter} = s, opts) do
-    restart_query =
-      "ecto_sandbox"
-      |> adapter.rollback_to_savepoint()
-      |> adapter.query()
-    sandbox_query(restart_query, opts, s)
-  end
-
-  defp sandbox_rollback(s, opts) do
-    transaction_handle(s, :handle_rollback, opts, :run)
-  end
-
-  def sandbox_transaction(s, callback, opts, new_status) do
-    %{adapter: adapter} = s
-    query =
-      apply(adapter, callback, ["ecto_sandbox_transaction"])
-      |> adapter.query()
-    case sandbox_query(query, opts, s) do
-      {:ok, results, s} ->
-        {:ok, results, %{s | status: new_status}}
-      {:error, err, s} ->
-        {:error, err, %{s | status: :sandbox}}
-      other ->
-        other
-    end
-  end
-
-  defp sandbox_query(query, opts, s, error \\ :error, results \\ []) do
-    query = DBConnection.Query.parse(query, opts)
-    case handle_prepare(query, opts, s) do
-      {:ok, query, s} ->
-        query = DBConnection.Query.describe(query, opts)
-        sandbox_execute(query, opts, s, error, results)
-      other ->
-        other
-    end
-  end
-
-  def sandbox_execute(query, opts, s, error, results) do
-    params = DBConnection.Query.encode(query, [], opts)
-    case handle_execute_close(query, params, opts, s) do
-      {:ok, result, s} ->
-        {:ok, results ++ [result], s}
-      {:error, err, s} when error == :disconnect ->
-        {:disconnect, err, s}
-      other ->
-        other
-    end
-  end
-
-end
-
-defimpl String.Chars, for: DBConnection.Query do
-  def to_string(%{request: :begin}) do
-    "BEGIN SANDBOX"
-  end
-  def to_string(%{request: :restart}) do
-    "RESTART SANDBOX"
-  end
-  def to_string(%{request: :rollback}) do
-    "ROLLBACK SANDBOX"
-  end
-  def to_string(%{request: :mode}) do
-    "SANDBOX MODE"
-  end
-end
-
-defimpl DBConnection.Query, for: Ecto.Adapters.SQL.Sandbox.Query do
-  def parse(query, _), do: query
-  def describe(query, _), do: query
-  def encode(_ , [], _), do: []
-  def decode(_, %Ecto.Adapters.SQL.Sandbox.Result{value: value}, _), do: value
-  def decode(_, list, _) when is_list(list), do: list
 end

@@ -59,15 +59,8 @@ end
 defmodule Ecto.Integration.Case do
   use ExUnit.CaseTemplate
 
-  setup_all do
-    Ecto.Adapters.SQL.begin_test_transaction(TestRepo, [])
-    on_exit fn -> Ecto.Adapters.SQL.rollback_test_transaction(TestRepo, []) end
-    :ok
-  end
-
   setup do
-    Ecto.Adapters.SQL.restart_test_transaction(TestRepo, [])
-    :ok
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
   end
 end
 
@@ -82,4 +75,5 @@ _   = Ecto.Storage.down(TestRepo)
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
 
+Ecto.Adapters.SQL.Sandbox.enable(TestRepo)
 Process.flag(:trap_exit, true)

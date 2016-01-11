@@ -119,8 +119,6 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  alias Ecto.Adapters.SQL.Sandbox
-
   @doc """
   Converts the given query to SQL according to its kind and the
   adapter in the given repository.
@@ -207,120 +205,6 @@ defmodule Ecto.Adapters.SQL do
     repo.__sql__.query(conn, sql, params, opts)
   end
 
-  @doc ~S"""
-  Starts a transaction for test.
-
-  This function work by starting a transaction and storing the connection
-  back in the pool with an open transaction. On every test, we restart
-  the test transaction rolling back to the appropriate savepoint.
-
-  **IMPORTANT:** Test transactions only work if the connection pool is
-  `Ecto.Adapters.SQL.Sandbox`
-
-  ## Example
-
-  The first step is to configure your database to use the
-  `Ecto.Adapters.SQL.Sandbox` pool. You set those options in your
-  `config/config.exs`:
-
-      config :my_app, Repo,
-        pool: Ecto.Adapters.SQL.Sandbox
-
-  Since you don't want those options in your production database, we
-  typically recommend to create a `config/test.exs` and add the
-  following to the bottom of your `config/config.exs` file:
-
-      import_config "config/#{Mix.env}.exs"
-
-  Now with the test database properly configured, you can write
-  transactional tests:
-
-      # At the end of your test_helper.exs
-      # From now, all tests happen inside a transaction
-      Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
-
-      defmodule PostTest do
-        # Tests that use the shared repository cannot be async
-        use ExUnit.Case
-
-        setup do
-          # Go back to a clean slate at the beginning of every test
-          Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-          :ok
-        end
-
-        test "create comment" do
-          assert %Post{} = TestRepo.insert!(%Post{})
-        end
-      end
-
-  In some cases, you may want to start the test transaction only
-  for specific tests and then roll it back. You can do it as:
-
-      defmodule PostTest do
-        # Tests that use the shared repository cannot be async
-        use ExUnit.Case
-
-        setup_all do
-          # Wrap this case in a transaction
-          Ecto.Adapters.SQL.begin_test_transaction(TestRepo)
-
-          # Roll it back once we are done
-          on_exit fn ->
-            Ecto.Adapters.SQL.rollback_test_transaction(TestRepo)
-          end
-
-          :ok
-        end
-
-        setup do
-          # Go back to a clean slate at the beginning of every test
-          Ecto.Adapters.SQL.restart_test_transaction(TestRepo)
-          :ok
-        end
-
-        test "create comment" do
-          assert %Post{} = TestRepo.insert!(%Post{})
-        end
-      end
-
-  """
-  @spec begin_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
-  def begin_test_transaction(repo, opts \\ []) do
-    test_transaction(:begin, repo, opts)
-  end
-
-  @doc """
-  Restarts a test transaction, see `begin_test_transaction/2`.
-  """
-  @spec restart_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
-  def restart_test_transaction(repo, opts \\ []) do
-    test_transaction(:restart, repo, opts)
-  end
-
-  @spec rollback_test_transaction(Ecto.Repo.t, Keyword.t) :: :ok
-  def rollback_test_transaction(repo, opts \\ []) do
-    test_transaction(:rollback, repo, opts)
-  end
-
-  defp test_transaction(req, repo, opts) do
-    {pool, defaults} = repo.__pool__
-    opts = opts ++ defaults
-    case Keyword.fetch!(opts, :pool) do
-      Sandbox ->
-        query = %Sandbox.Query{request: req}
-        DBConnection.execute!(pool, query, [], opts)
-      pool_mod ->
-        raise """
-        cannot #{req} test transaction with pool #{inspect pool_mod}.
-        In order to use test transactions with Ecto SQL, you need to
-        configure your repository to use #{inspect Sandbox}:
-
-            pool: #{inspect Sandbox}
-        """
-    end
-  end
-
   ## Worker
 
   @pool_timeout 5_000
@@ -329,10 +213,13 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def __before_compile__(conn, env) do
     config = Module.get_attribute(env.module, :config)
+    pool   = Keyword.get(config, :pool, DBConnection.Poolboy)
     name   = Keyword.get(config, :pool_name, default_pool_name(env.module, config))
+
     config =
       config
       |> Keyword.delete(:name)
+      |> Keyword.put(:pool, normalize_pool(pool))
       |> Keyword.put_new(:timeout, @timeout)
       |> Keyword.put_new(:pool_timeout, @pool_timeout)
 
@@ -344,6 +231,11 @@ defmodule Ecto.Adapters.SQL do
       def __pool__, do: {unquote(name), unquote(Macro.escape(config))}
     end
   end
+
+  defp normalize_pool(Ecto.Adapters.SQL.Sandbox),
+    do: DBConnection.Ownership
+  defp normalize_pool(pool),
+    do: pool
 
   defp default_pool_name(repo, config) do
     Module.concat(Keyword.get(config, :name, repo), Pool)
@@ -366,7 +258,7 @@ defmodule Ecto.Adapters.SQL do
     end
 
     {pool_name, pool_opts} = repo.__pool__
-    opts = [name: pool_name] ++ opts ++ pool_opts
+    opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
     {mod, opts} = connection.connection(opts)
 
     if function_exported?(repo, :after_connect, 1) and not Keyword.has_key?(opts, :after_connect) do
