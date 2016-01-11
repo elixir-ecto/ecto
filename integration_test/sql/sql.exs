@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.SQLTest do
-  use ExUnit.Case, async: true
+  use Ecto.Integration.Case, async: true
 
   alias Ecto.Integration.PoolRepo, as: Repo
   alias Ecto.Integration.Barebone

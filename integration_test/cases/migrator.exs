@@ -1,16 +1,16 @@
 Code.require_file "../support/file_helpers.exs", __DIR__
 
 defmodule Ecto.Integration.MigratorTest do
-  use ExUnit.Case
+  use Ecto.Integration.Case
 
   import Support.FileHelpers
   import Ecto.Migrator, only: [migrated_versions: 1]
 
-  alias Ecto.Integration.TestRepo
+  alias Ecto.Integration.PoolRepo
   alias Ecto.Migration.SchemaMigration
 
   setup do
-    TestRepo.delete_all(SchemaMigration)
+    PoolRepo.delete_all(SchemaMigration)
     :ok
   end
 
@@ -37,28 +37,28 @@ defmodule Ecto.Integration.MigratorTest do
   import Ecto.Migrator
 
   test "schema migration" do
-    up(TestRepo, 20100906120000, GoodMigration, log: false)
+    up(PoolRepo, 20100906120000, GoodMigration, log: false)
 
-    [migration] = TestRepo.all(SchemaMigration)
+    [migration] = PoolRepo.all(SchemaMigration)
     assert migration.version == 20100906120000
     assert migration.inserted_at
   end
 
   test "migrations up and down" do
-    assert migrated_versions(TestRepo) == []
-    assert up(TestRepo, 20100906120000, GoodMigration, log: false) == :ok
+    assert migrated_versions(PoolRepo) == []
+    assert up(PoolRepo, 20100906120000, GoodMigration, log: false) == :ok
 
-    assert migrated_versions(TestRepo) == [20100906120000]
-    assert up(TestRepo, 20100906120000, GoodMigration, log: false) == :already_up
-    assert migrated_versions(TestRepo) == [20100906120000]
-    assert down(TestRepo, 21100906120000, GoodMigration, log: false) == :already_down
-    assert migrated_versions(TestRepo) == [20100906120000]
-    assert down(TestRepo, 20100906120000, GoodMigration, log: false) == :ok
-    assert migrated_versions(TestRepo) == []
+    assert migrated_versions(PoolRepo) == [20100906120000]
+    assert up(PoolRepo, 20100906120000, GoodMigration, log: false) == :already_up
+    assert migrated_versions(PoolRepo) == [20100906120000]
+    assert down(PoolRepo, 21100906120000, GoodMigration, log: false) == :already_down
+    assert migrated_versions(PoolRepo) == [20100906120000]
+    assert down(PoolRepo, 20100906120000, GoodMigration, log: false) == :ok
+    assert migrated_versions(PoolRepo) == []
   end
 
   test "bad migration" do
-    assert catch_error(up(TestRepo, 20100906120000, BadMigration, log: false))
+    assert catch_error(up(PoolRepo, 20100906120000, BadMigration, log: false))
   end
 
   test "run up to/step migration" do
@@ -66,10 +66,10 @@ defmodule Ecto.Integration.MigratorTest do
       create_migration(47)
       create_migration(48)
 
-      assert [47] = run(TestRepo, path, :up, step: 1, log: false)
+      assert [47] = run(PoolRepo, path, :up, step: 1, log: false)
       assert count_entries() == 1
 
-      assert [48] = run(TestRepo, path, :up, to: 48, log: false)
+      assert [48] = run(PoolRepo, path, :up, to: 48, log: false)
     end
   end
 
@@ -80,14 +80,14 @@ defmodule Ecto.Integration.MigratorTest do
         create_migration(50),
       ]
 
-      assert [49, 50] = run(TestRepo, path, :up, all: true, log: false)
+      assert [49, 50] = run(PoolRepo, path, :up, all: true, log: false)
       purge migrations
 
-      assert [50] = run(TestRepo, path, :down, step: 1, log: false)
+      assert [50] = run(PoolRepo, path, :down, step: 1, log: false)
       purge migrations
 
       assert count_entries() == 1
-      assert [50] = run(TestRepo, path, :up, to: 50, log: false)
+      assert [50] = run(PoolRepo, path, :up, to: 50, log: false)
     end
   end
 
@@ -98,15 +98,15 @@ defmodule Ecto.Integration.MigratorTest do
         create_migration(54),
       ]
 
-      assert [53, 54] = run(TestRepo, path, :up, all: true, log: false)
-      assert [] = run(TestRepo, path, :up, all: true, log: false)
+      assert [53, 54] = run(PoolRepo, path, :up, all: true, log: false)
+      assert [] = run(PoolRepo, path, :up, all: true, log: false)
       purge migrations
 
-      assert [54, 53] = run(TestRepo, path, :down, all: true, log: false)
+      assert [54, 53] = run(PoolRepo, path, :down, all: true, log: false)
       purge migrations
 
       assert count_entries() == 0
-      assert [53, 54] = run(TestRepo, path, :up, all: true, log: false)
+      assert [53, 54] = run(PoolRepo, path, :up, all: true, log: false)
     end
   end
 

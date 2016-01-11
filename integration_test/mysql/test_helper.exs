@@ -35,14 +35,6 @@ Application.put_env(:ecto, TestRepo,
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
-
-  def create_prefix(prefix) do
-    "create database #{prefix}"
-  end
-
-  def drop_prefix(prefix) do
-    "drop database #{prefix}"
-  end
 end
 
 # Pool repo for transaction and lock tests
@@ -56,6 +48,14 @@ Application.put_env(:ecto, PoolRepo,
 
 defmodule Ecto.Integration.PoolRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
+
+  def create_prefix(prefix) do
+    "create database #{prefix}"
+  end
+
+  def drop_prefix(prefix) do
+    "drop database #{prefix}"
+  end
 end
 
 defmodule Ecto.Integration.Case do

@@ -1,11 +1,11 @@
 defmodule Ecto.Integration.TransactionTest do
   # We can keep this test async as long as it
   # is the only one access the transactions table
-  use ExUnit.Case, async: true
+  use Ecto.Integration.Case, async: true
 
   import Ecto.Query
-  alias Ecto.Integration.PoolRepo
-  alias Ecto.Integration.TestRepo
+  alias Ecto.Integration.PoolRepo # Used for writes
+  alias Ecto.Integration.TestRepo # Used for reads
 
   @moduletag :capture_log
 

@@ -21,7 +21,7 @@ pool =
     "sojourn_broker" -> DBConnection.Sojourn
   end
 
-# Basic test repo
+# Pool repo for async, safe tests
 alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
@@ -31,17 +31,9 @@ Application.put_env(:ecto, TestRepo,
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
-
-  def create_prefix(prefix) do
-    "create schema #{prefix}"
-  end
-
-  def drop_prefix(prefix) do
-    "drop schema #{prefix}"
-  end
 end
 
-# Pool repo for transaction and lock tests
+# Pool repo for non-async tests
 alias Ecto.Integration.PoolRepo
 
 Application.put_env(:ecto, PoolRepo,
@@ -54,6 +46,14 @@ Application.put_env(:ecto, PoolRepo,
 
 defmodule Ecto.Integration.PoolRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
+
+  def create_prefix(prefix) do
+    "create schema #{prefix}"
+  end
+
+  def drop_prefix(prefix) do
+    "drop schema #{prefix}"
+  end
 end
 
 defmodule Ecto.Integration.Case do
