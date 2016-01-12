@@ -37,7 +37,7 @@ defmodule Ecto.Changeset do
           field :age, :integer
         end
 
-        def changeset(user, params \\ :empty) do
+        def changeset(user, params \\ :invalid) do
           user
           |> cast(params, ~w(name email), ~w(age))
           |> validate_format(:email, ~r/@/)
@@ -278,14 +278,14 @@ defmodule Ecto.Changeset do
       iex> new_changeset.required
       [:title]
 
-  ## Empty parameters
+  ## Invalid parameters
 
-  The `params` argument can also be the atom `:empty`. In such cases, the
+  The `params` argument can also be the atom `:invalid`. In such cases, the
   changeset is automatically marked as invalid, with an empty `:changes` map.
   This is useful to run the changeset through all validation steps for
   introspection:
 
-      iex> changeset = cast(post, :empty, ~w(title), ~w())
+      iex> changeset = cast(post, :invalid, ~w(title), ~w())
       iex> changeset = validate_length(post, :title, min: 3)
       iex> changeset.validations
       [title: [min: 3]]
@@ -324,7 +324,7 @@ defmodule Ecto.Changeset do
     cast(model, %{}, params, required, optional)
   end
 
-  defp cast(%{__struct__: module} = model, %{} = changes, :empty, required, optional)
+  defp cast(%{__struct__: module} = model, %{} = changes, :invalid, required, optional)
       when is_list(required) and is_list(optional) do
     types = module.__changeset__
 
@@ -1339,7 +1339,7 @@ defmodule Ecto.Changeset do
           field :lock_version, :integer, default: 1
         end
 
-        def changeset(:update, struct, params \\ :empty) do
+        def changeset(:update, struct, params \\ :invalid) do
           struct
           |> Ecto.Changeset.cast(struct, params, ~w(:title))
           |> Ecto.Changeset.optimistic_lock(:lock_version)

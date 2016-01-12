@@ -190,14 +190,14 @@ defmodule Ecto.Changeset.BelongsToTest do
     end
   end
 
-  test "cast belongs_to with :empty parameters" do
-    changeset = cast(%Author{profile: nil}, :empty, :profile)
+  test "cast belongs_to with :invalid parameters" do
+    changeset = cast(%Author{profile: nil}, :invalid, :profile)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{}, :empty, :profile, required: true)
+    changeset = cast(%Author{}, :invalid, :profile, required: true)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{profile: %Profile{}}, :empty, :profile, required: true)
+    changeset = cast(%Author{profile: %Profile{}}, :invalid, :profile, required: true)
     assert changeset.changes == %{}
   end
 
