@@ -231,7 +231,13 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     DBConnection.Ownership.ownership_checkin(name, opts)
   end
 
-  # TODO: allow
+  @doc """
+  Allows the `allow` process to use the connection owned by `owner`.
+  """
+  def allow(repo, owner, allow, _opts \\ []) do
+    {name, opts} = repo.__pool__
+    DBConnection.Ownership.ownership_allow(name, owner, allow, opts)
+  end
 
   defp proxy_pool(repo) do
     {name, opts} = repo.__pool__
