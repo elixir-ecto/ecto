@@ -148,7 +148,7 @@ defmodule Ecto do
           field :age, :integer
         end
 
-        def changeset(user, params \\ :empty) do
+        def changeset(user, params \\ :invalid) do
           user
           |> cast(params, ~w(name email), ~w(age))
           |> validate_format(:email, ~r/@/)

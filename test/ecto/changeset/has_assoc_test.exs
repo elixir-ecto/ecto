@@ -228,14 +228,14 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
   end
 
-  test "cast has_one with :empty parameters" do
-    changeset = cast(%Author{profile: nil}, :empty, :profile)
+  test "cast has_one with :invalid parameters" do
+    changeset = cast(%Author{profile: nil}, :invalid, :profile)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{}, :empty, :profile, required: true)
+    changeset = cast(%Author{}, :invalid, :profile, required: true)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{profile: %Profile{}}, :empty, :profile, required: true)
+    changeset = cast(%Author{profile: %Profile{}}, :invalid, :profile, required: true)
     assert changeset.changes == %{}
   end
 
@@ -400,14 +400,14 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.errors == [posts: "is invalid"]
   end
 
-  test "cast has_many with :empty parameters" do
-    changeset = cast(%Author{posts: []}, :empty, :posts)
+  test "cast has_many with :invalid parameters" do
+    changeset = cast(%Author{posts: []}, :invalid, :posts)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{}, :empty, :posts)
+    changeset = cast(%Author{}, :invalid, :posts)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{posts: [%Post{}]}, :empty, :posts)
+    changeset = cast(%Author{posts: [%Post{}]}, :invalid, :posts)
     assert changeset.changes == %{}
   end
 

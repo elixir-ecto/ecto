@@ -104,7 +104,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: empty parameters is invalid" do
-    changeset = cast(%Post{}, :empty, ~w(title), ~w(body)a)
+    changeset = cast(%Post{}, :invalid, ~w(title), ~w(body)a)
     assert changeset.model == %Post{}
     assert changeset.params == nil
     assert changeset.changes == %{}
@@ -212,7 +212,7 @@ defmodule Ecto.ChangesetTest do
 
   test "cast/4: works when casting a changeset with empty parameters" do
     changeset = cast(%Post{}, %{"title" => "sample"}, ~w(title)a, ~w())
-    changeset = cast(changeset, :empty, ~w(), ~w(body)a)
+    changeset = cast(changeset, :invalid, ~w(), ~w(body)a)
     assert changeset.model == %Post{}
     assert changeset.params == %{"title" => "sample"}
     assert changeset.changes == %{title: "sample"}
@@ -289,7 +289,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "merge/2: merges parameters" do
-    empty = cast(%Post{}, :empty, ~w(title), ~w())
+    empty = cast(%Post{}, :invalid, ~w(title), ~w())
     cs1   = cast(%Post{}, %{body: "foo"}, ~w(body), ~w())
     cs2   = cast(%Post{}, %{body: "bar"}, ~w(body), ~w())
     assert merge(cs1, cs2).params == %{"body" => "bar"}
