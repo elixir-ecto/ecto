@@ -55,12 +55,12 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   """
 
   @doc """
-  Retuns the begin transaction query for sandbox.
+  Returns the begin transaction query for sandbox.
   """
   @callback begin_sandbox :: term
 
   @doc """
-  Retuns the rollback transaction query for sandbox.
+  Returns the rollback transaction query for sandbox.
   """
   @callback rollback_sandbox :: term
 
