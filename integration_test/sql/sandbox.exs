@@ -29,13 +29,9 @@ defmodule Ecto.Integration.SandboxTest do
       send parent, :allowed
       :timer.sleep(:infinity)
     end
-    assert_receive :allowed
 
+    assert_receive :allowed
     assert TestRepo.all(Post) == []
-    Sandbox.checkin(TestRepo)
-    assert_raise RuntimeError, ~r"cannot find ownership process", fn ->
-      TestRepo.all(Post)
-    end
   end
 
   test "runs inside a sandbox that is rolled back on checkin" do
