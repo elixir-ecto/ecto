@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.IntervalTest do
-  use Ecto.Integration.Case
+  use Ecto.Integration.Case, async: true
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.TestRepo

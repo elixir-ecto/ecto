@@ -60,11 +60,10 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter, pool, config} = Ecto.Repo.Supervisor.parse_config(__MODULE__, opts)
+      {otp_app, adapter, config} = Ecto.Repo.Supervisor.parse_config(__MODULE__, opts)
       @otp_app otp_app
       @adapter adapter
       @config  config
-      @pool pool
       @query_cache config[:query_cache] || __MODULE__
       @before_compile adapter
 
@@ -179,10 +178,6 @@ defmodule Ecto.Repo do
         true
       end
 
-      def __pool__ do
-        @pool
-      end
-
       def log(entry) do
         Logger.unquote(@log_level)(fn ->
           {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
@@ -190,7 +185,7 @@ defmodule Ecto.Repo do
         end, ecto_conn_pid: entry.connection_pid)
       end
 
-      defoverridable [log: 1, __pool__: 0]
+      defoverridable [log: 1]
     end
   end
 
@@ -203,11 +198,6 @@ defmodule Ecto.Repo do
   Simply returns true to mark this module as a repository.
   """
   @callback __repo__ :: true
-
-  @doc """
-  Returns the pool information this repository should run under.
-  """
-  @callback __pool__ :: {name :: atom, opts :: Keyword.t}
 
   @doc """
   Returns the name of the ETS table used for query caching.

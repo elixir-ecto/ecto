@@ -5,6 +5,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
 
     @default_port 5432
     @behaviour Ecto.Adapters.SQL.Connection
+    @behaviour Ecto.Adapters.SQL.Sandbox
 
     ## Module and Options
 
@@ -81,18 +82,13 @@ if Code.ensure_loaded?(Postgrex.Connection) do
     end
 
     ## Sandbox
-    ## TODO: Deprecate or document the three upcoming functions
 
-    def query(sql) do
-      %Postgrex.Query{name: "", statement: sql}
+    def begin_sandbox do
+      %Postgrex.Query{name: "", statement: "BEGIN TRANSACTION"}
     end
 
-    def savepoint(savepoint) do
-      "SAVEPOINT " <> savepoint
-    end
-
-    def rollback_to_savepoint(savepoint) do
-      "ROLLBACK TO SAVEPOINT " <> savepoint
+    def rollback_sandbox do
+      %Postgrex.Query{name: "", statement: "ROLLBACK"}
     end
 
     alias Ecto.Query

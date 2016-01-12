@@ -192,7 +192,7 @@ defmodule Ecto.Type do
   def base?(atom), do: atom in @base
 
   @doc """
-  Retrieves the underlying type of a given type.
+  Retrieves the underlying schema type for the given, possibly custom, type.
 
       iex> type(:string)
       :string

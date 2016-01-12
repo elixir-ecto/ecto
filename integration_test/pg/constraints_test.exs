@@ -1,7 +1,9 @@
 defmodule Ecto.Integration.ConstraintsTest do
+  # We can keep this test async as long as it
+  # is the only one access the constraints table
   use ExUnit.Case, async: true
 
-  alias Ecto.Integration.TestRepo
+  alias Ecto.Integration.PoolRepo
   import Ecto.Migrator, only: [up: 4, down: 4]
 
   defmodule ConstraintMigration do
@@ -31,21 +33,21 @@ defmodule Ecto.Integration.ConstraintsTest do
   end
 
   setup_all do
-    up(TestRepo, 20040906120000, ConstraintMigration, log: false)
+    up(PoolRepo, 20040906120000, ConstraintMigration, log: false)
   end
 
   test "creating, using, and dropping an exclude constraint" do
     changeset = Ecto.Changeset.change(%Constraint{}, from: 0, to: 10)
-    {:ok, _} = TestRepo.insert(changeset)
+    {:ok, _} = PoolRepo.insert(changeset)
 
     non_overlapping_changeset = Ecto.Changeset.change(%Constraint{}, from: 11, to: 12)
-    {:ok, _} = TestRepo.insert(non_overlapping_changeset)
+    {:ok, _} = PoolRepo.insert(non_overlapping_changeset)
 
     overlapping_changeset = Ecto.Changeset.change(%Constraint{}, from: 9, to: 12)
 
     exception =
       assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
-        TestRepo.insert(overlapping_changeset)
+        PoolRepo.insert(overlapping_changeset)
       end
     assert exception.message =~ "exclude: cannot_overlap"
     assert exception.message =~ "The changeset has not defined any constraint."
@@ -55,14 +57,14 @@ defmodule Ecto.Integration.ConstraintsTest do
       assert_raise Ecto.ConstraintError, message, fn ->
         overlapping_changeset
         |> Ecto.Changeset.exclude_constraint(:from)
-        |> TestRepo.insert()
+        |> PoolRepo.insert()
       end
     assert exception.message =~ "exclude: cannot_overlap"
 
     {:error, changeset} =
       overlapping_changeset
       |> Ecto.Changeset.exclude_constraint(:from, name: :cannot_overlap)
-      |> TestRepo.insert()
+      |> PoolRepo.insert()
     assert changeset.errors == [from: "violates an exclusion constraint"]
     assert changeset.model.__meta__.state == :built
   end
@@ -72,7 +74,7 @@ defmodule Ecto.Integration.ConstraintsTest do
     changeset = Ecto.Changeset.change(%Constraint{}, price: -10)
     exception =
       assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
-        TestRepo.insert(changeset)
+        PoolRepo.insert(changeset)
       end
 
     assert exception.message =~ "check: positive_price"
@@ -82,7 +84,7 @@ defmodule Ecto.Integration.ConstraintsTest do
     {:error, changeset} =
       changeset
       |> Ecto.Changeset.check_constraint(:price, name: :positive_price)
-      |> TestRepo.insert()
+      |> PoolRepo.insert()
     assert changeset.errors == [price: "violates check 'positive_price'"]
     assert changeset.model.__meta__.state == :built
 
@@ -91,7 +93,7 @@ defmodule Ecto.Integration.ConstraintsTest do
     {:error, changeset} =
       changeset
       |> Ecto.Changeset.check_constraint(:price, name: :positive_price, message: "price must be greater than 0")
-      |> TestRepo.insert()
+      |> PoolRepo.insert()
     assert changeset.errors == [price: "price must be greater than 0"]
     assert changeset.model.__meta__.state == :built
 
@@ -100,7 +102,7 @@ defmodule Ecto.Integration.ConstraintsTest do
     {:ok, changeset} =
       changeset
       |> Ecto.Changeset.check_constraint(:price, name: :positive_price, message: "price must be greater than 0")
-      |> TestRepo.insert()
+      |> PoolRepo.insert()
     assert is_integer(changeset.id)
   end
 end

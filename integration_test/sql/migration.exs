@@ -1,7 +1,8 @@
 defmodule Ecto.Integration.MigrationTest do
+  # Cannot be async as other tests may migrate
   use ExUnit.Case
 
-  alias Ecto.Integration.TestRepo
+  alias Ecto.Integration.PoolRepo
 
   defmodule CreateMigration do
     use Ecto.Migration
@@ -193,7 +194,7 @@ defmodule Ecto.Integration.MigrationTest do
     @prefix "ecto_prefix_test"
 
     def up do
-      execute TestRepo.create_prefix(@prefix)
+      execute PoolRepo.create_prefix(@prefix)
       create table(:first, prefix: @prefix)
       create table(:second, prefix: @prefix) do
         add :first_id, references(:first)
@@ -203,7 +204,7 @@ defmodule Ecto.Integration.MigrationTest do
     def down do
       drop table(:second, prefix: @prefix)
       drop table(:first, prefix: @prefix)
-      execute TestRepo.drop_prefix(@prefix)
+      execute PoolRepo.drop_prefix(@prefix)
     end
   end
 
@@ -265,112 +266,112 @@ defmodule Ecto.Integration.MigrationTest do
   import Ecto.Migrator, only: [up: 4, down: 4]
 
   test "create and drop table and indexes" do
-    assert :ok == up(TestRepo, 20050906120000, CreateMigration, log: false)
-    assert :ok == down(TestRepo, 20050906120000, CreateMigration, log: false)
+    assert :ok == up(PoolRepo, 20050906120000, CreateMigration, log: false)
+    assert :ok == down(PoolRepo, 20050906120000, CreateMigration, log: false)
   end
 
   test "correctly infers how to drop index" do
-    assert :ok == up(TestRepo, 20050906120000, InferredDropIndexMigration, log: false)
-    assert :ok == down(TestRepo, 20050906120000, InferredDropIndexMigration, log: false)
+    assert :ok == up(PoolRepo, 20050906120000, InferredDropIndexMigration, log: false)
+    assert :ok == down(PoolRepo, 20050906120000, InferredDropIndexMigration, log: false)
   end
 
   test "supports references" do
-    assert :ok == up(TestRepo, 20050906120000, OnDeleteMigration, log: false)
+    assert :ok == up(PoolRepo, 20050906120000, OnDeleteMigration, log: false)
 
-    parent1 = TestRepo.insert! Ecto.put_meta(%Parent{}, source: "parent1")
-    parent2 = TestRepo.insert! Ecto.put_meta(%Parent{}, source: "parent2")
+    parent1 = PoolRepo.insert! Ecto.put_meta(%Parent{}, source: "parent1")
+    parent2 = PoolRepo.insert! Ecto.put_meta(%Parent{}, source: "parent2")
 
     writer = "INSERT INTO ref_migration (parent1, parent2) VALUES (#{parent1.id}, #{parent2.id})"
-    Ecto.Adapters.SQL.query! TestRepo, writer, []
+    Ecto.Adapters.SQL.query! PoolRepo, writer, []
 
     reader = from r in "ref_migration", select: {r.parent1, r.parent2}
-    assert TestRepo.all(reader) == [{parent1.id, parent2.id}]
+    assert PoolRepo.all(reader) == [{parent1.id, parent2.id}]
 
-    TestRepo.delete!(parent1)
-    assert TestRepo.all(reader) == [{nil, parent2.id}]
+    PoolRepo.delete!(parent1)
+    assert PoolRepo.all(reader) == [{nil, parent2.id}]
 
-    TestRepo.delete!(parent2)
-    assert TestRepo.all(reader) == []
+    PoolRepo.delete!(parent2)
+    assert PoolRepo.all(reader) == []
 
-    assert :ok == down(TestRepo, 20050906120000, OnDeleteMigration, log: false)
+    assert :ok == down(PoolRepo, 20050906120000, OnDeleteMigration, log: false)
   end
 
   test "rolls back references in change/1" do
-    assert :ok == up(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
-    assert :ok == down(TestRepo, 19850423000000, ReferencesRollbackMigration, log: false)
+    assert :ok == up(PoolRepo, 19850423000000, ReferencesRollbackMigration, log: false)
+    assert :ok == down(PoolRepo, 19850423000000, ReferencesRollbackMigration, log: false)
   end
 
   test "create table if not exists and drop table if exists does not raise on failure" do
-    assert :ok == up(TestRepo, 19850423000001, NoErrorTableMigration, log: false)
+    assert :ok == up(PoolRepo, 19850423000001, NoErrorTableMigration, log: false)
   end
 
   @tag :create_index_if_not_exists
   test "create index if not exists and drop index if exists does not raise on failure" do
-    assert :ok == up(TestRepo, 19850423000002, NoErrorIndexMigration, log: false)
+    assert :ok == up(PoolRepo, 19850423000002, NoErrorIndexMigration, log: false)
   end
 
   test "raises on NoSQL migrations" do
     assert_raise ArgumentError, ~r"does not support keyword lists in :options", fn ->
-      up(TestRepo, 20150704120000, NoSQLMigration, log: false)
+      up(PoolRepo, 20150704120000, NoSQLMigration, log: false)
     end
   end
 
   @tag :add_column
   test "add column" do
-    assert :ok == up(TestRepo, 20070906120000, AddColumnMigration, log: false)
-    assert [2] == TestRepo.all from p in "add_col_migration", select: p.to_be_added
-    :ok = down(TestRepo, 20070906120000, AddColumnMigration, log: false)
+    assert :ok == up(PoolRepo, 20070906120000, AddColumnMigration, log: false)
+    assert [2] == PoolRepo.all from p in "add_col_migration", select: p.to_be_added
+    :ok = down(PoolRepo, 20070906120000, AddColumnMigration, log: false)
   end
 
   @tag :modify_column
   test "modify column" do
-    assert :ok == up(TestRepo, 20080906120000, AlterColumnMigration, log: false)
+    assert :ok == up(PoolRepo, 20080906120000, AlterColumnMigration, log: false)
 
     assert ["foo"] ==
-           TestRepo.all from p in "alter_col_migration", select: p.from_null_to_not_null
+           PoolRepo.all from p in "alter_col_migration", select: p.from_null_to_not_null
     assert [nil] ==
-           TestRepo.all from p in "alter_col_migration", select: p.from_not_null_to_null
+           PoolRepo.all from p in "alter_col_migration", select: p.from_not_null_to_null
     assert [nil] ==
-           TestRepo.all from p in "alter_col_migration", select: p.from_default_to_no_default
+           PoolRepo.all from p in "alter_col_migration", select: p.from_default_to_no_default
     assert [0] ==
-           TestRepo.all from p in "alter_col_migration", select: p.from_no_default_to_default
+           PoolRepo.all from p in "alter_col_migration", select: p.from_no_default_to_default
 
     query = "INSERT INTO alter_col_migration (from_not_null_to_null) VALUES ('foo')"
-    assert catch_error(Ecto.Adapters.SQL.query!(TestRepo, query, []))
+    assert catch_error(Ecto.Adapters.SQL.query!(PoolRepo, query, []))
 
-    :ok = down(TestRepo, 20080906120000, AlterColumnMigration, log: false)
+    :ok = down(PoolRepo, 20080906120000, AlterColumnMigration, log: false)
   end
 
   @tag :modify_foreign_key
   test "modify foreign key" do
-    assert :ok == up(TestRepo, 20130802170000, AlterForeignKeyMigration, log: false)
-    assert [nil] == TestRepo.all from p in "alter_fk_posts", select: p.alter_fk_user_id
-    :ok = down(TestRepo, 20130802170000, AlterForeignKeyMigration, log: false)
+    assert :ok == up(PoolRepo, 20130802170000, AlterForeignKeyMigration, log: false)
+    assert [nil] == PoolRepo.all from p in "alter_fk_posts", select: p.alter_fk_user_id
+    :ok = down(PoolRepo, 20130802170000, AlterForeignKeyMigration, log: false)
   end
 
   @tag :remove_column
   test "remove column" do
-    assert :ok == up(TestRepo, 20090906120000, DropColumnMigration, log: false)
-    assert catch_error(TestRepo.all from p in "drop_col_migration", select: p.to_be_removed)
-    :ok = down(TestRepo, 20090906120000, DropColumnMigration, log: false)
+    assert :ok == up(PoolRepo, 20090906120000, DropColumnMigration, log: false)
+    assert catch_error(PoolRepo.all from p in "drop_col_migration", select: p.to_be_removed)
+    :ok = down(PoolRepo, 20090906120000, DropColumnMigration, log: false)
   end
 
   @tag :rename_column
   test "rename column" do
-    assert :ok == up(TestRepo, 20150718120000, RenameColumnMigration, log: false)
-    assert [1] == TestRepo.all from p in "rename_col_migration", select: p.was_renamed
-    :ok = down(TestRepo, 20150718120000, RenameColumnMigration, log: false)
+    assert :ok == up(PoolRepo, 20150718120000, RenameColumnMigration, log: false)
+    assert [1] == PoolRepo.all from p in "rename_col_migration", select: p.was_renamed
+    :ok = down(PoolRepo, 20150718120000, RenameColumnMigration, log: false)
   end
 
   @tag :rename_table
   test "rename table" do
-    assert :ok == up(TestRepo, 20150712120000, RenameMigration, log: false)
-    assert :ok == down(TestRepo, 20150712120000, RenameMigration, log: false)
+    assert :ok == up(PoolRepo, 20150712120000, RenameMigration, log: false)
+    assert :ok == down(PoolRepo, 20150712120000, RenameMigration, log: false)
   end
 
   @tag :prefix
   test "prefix" do
-    assert :ok == up(TestRepo, 20151012120000, PrefixMigration, log: false)
-    assert :ok == down(TestRepo, 20151012120000, PrefixMigration, log: false)
+    assert :ok == up(PoolRepo, 20151012120000, PrefixMigration, log: false)
+    assert :ok == down(PoolRepo, 20151012120000, PrefixMigration, log: false)
   end
 end
