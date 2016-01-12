@@ -1,12 +1,28 @@
-# Changelog
-
-## v2.0.0
+# Changelog for v2.0
 
 This is a new major release of Ecto that removes previously deprecated features and introduces a series of improvements and features based on [`db_connection`](https://github.com/fishcakez/db_connection).
 
-### Highlights
+## Highlights
 
-#### Insert all
+### Concurrent transactional tests
+
+Ecto has reimplemented the `Ecto.Adapters.SQL.Sandbox` pool used for testing to use an ownership mechanism. This allows tests to safely run concurrently even when depending on the database. To use, declare sandbox as your pool in your repository configuration, as before:
+
+    pool: Ecto.Adapters.SQL.Sandbox
+
+Now at the end of your `test_helper.exs`, set the sandbox mode to `:manual`, forcing connections to be automatically checked out:
+
+    Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
+
+And now checkout the connection in the `setup` block of every test case that needs the database:
+
+    setup do
+      :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
+    end
+
+The previous sandbox API, which used `begin_test_transaction` and `restart_test_transaction`, is no longer supported.
+
+### Insert all
 
 Ecto now allows developers to insert multiple entries at once via `Ecto.Repo.insert_all/3`:
 
@@ -16,7 +32,7 @@ Similar to `update_all/3`, `insert_all/3` is meant to be closer to the datastore
 
     Ecto.Repo.insert_all "some_table", [%{hello: "foo"}, %{hello: "bar"}]
 
-#### Many to many
+### Many to many
 
 Ecto 2.0 supports `many_to_many` associations:
 
@@ -29,7 +45,7 @@ Ecto 2.0 supports `many_to_many` associations:
 
 The `join_through` option can be a string, representing a table that will have both `post_id` and `tag_id` columns, or a regular schema, like `PostTag`, which would also handle primary keys and autogenerate fields. This is an improvement over `has_many :through` as `has_many :through` relationships are read-only, while `many_to_many` supports also inserting, updating and deleting associated entries through changeset, as we will see next.
 
-#### Improved association support
+### Improved association support
 
 Ecto now supports `belongs_to` and `many_to_many` associations to be cast or changed via changesets, beyond `has_one`, `has_many` and embeds. Not only that, Ecto supports associations and embeds to be defined directly from the struct on insertion. For example, one can call:
 
@@ -53,7 +69,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
     |> Ecto.Changeset.put_assoc(:post, existing_post)
     |> Repo.update!
 
-### Backwards incompatible changes
+## Backwards incompatible changes
 
   * `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
   * Array fields no longer default to an empty list `[]`. Previous behaviour can be achieved by passing `default: []` to the field definition
@@ -61,8 +77,9 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
   * `Ecto.Pools.Poolboy` and `Ecto.Pools.SojournBroker` have been removed in favor of `DBConnection.Poolboy` and `DBConnection.Sojourn`
   * `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
+  * `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership based `Ecto.Adapters.SQL.Sandbox`
 
-### Enhancements
+## Enhancements
 
   * Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
   * Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
@@ -72,10 +89,10 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * Add migration support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)`
   * Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
 
-### Bug fixes
+## Bug fixes
 
   * The `:required` option on `cast_assoc`and `cast_embed` will now tag `has_many` and `embeds_many` relationships as missing if they contain an empty list
 
-## v1.1
+## Previous versions
 
   * See the CHANGELOG.md in the v1.1 branch
