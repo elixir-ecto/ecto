@@ -52,6 +52,12 @@ defmodule Ecto.Adapters.SQL.Sandbox do
         end
       end
 
+  ## Options
+
+  Because the sandbox is implemented on top of the
+  `DBConnection.Ownership` module, you can check the module
+  documentation to see which options available to configure
+  the ownership mode when desired.
   """
 
   @doc """
