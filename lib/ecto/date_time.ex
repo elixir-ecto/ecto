@@ -6,7 +6,8 @@ defmodule Ecto.DateTime.Utils do
   @doc "Pads with zero"
   def zero_pad(val, count) do
     num = Integer.to_string(val)
-    :binary.copy("0", count - byte_size(num)) <> num
+    pad_length = max(count - byte_size(num), 0)
+    :binary.copy("0", pad_length) <> num
   end
 
   @doc "Converts to integer if possible"
