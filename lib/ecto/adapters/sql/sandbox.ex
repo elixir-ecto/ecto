@@ -202,10 +202,14 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   @doc """
   Checks a connection out for the given `repo`.
 
+  The process calling `checkout/2` will own the connection
+  until it calls `checkin/2` or until it crashes when then
+  the connection will be automatically reclaimed by the pool.
+
   ## Options
 
     * `:sandbox` - when true the connection is wrapped in
-      a transaction. Defaults to true.
+      a transaction. Defaults to true. WHen
 
   """
   def checkout(repo, opts \\ []) do
@@ -218,6 +222,16 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     DBConnection.Ownership.ownership_checkout(name, opts)
   end
+
+  @doc """
+  Checks in the connection back into the sandbox pool.
+  """
+  def checkin(repo, _opts \\ []) do
+    {name, opts} = repo.__pool__
+    DBConnection.Ownership.ownership_checkin(name, opts)
+  end
+
+  # TODO: allow
 
   defp proxy_pool(repo) do
     {name, opts} = repo.__pool__
