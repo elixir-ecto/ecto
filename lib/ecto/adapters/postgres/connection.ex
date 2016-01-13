@@ -1,4 +1,4 @@
-if Code.ensure_loaded?(Postgrex.Connection) do
+if Code.ensure_loaded?(Postgrex) do
 
   defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false

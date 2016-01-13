@@ -119,7 +119,7 @@ defmodule Ecto.Adapters.Postgres do
     {:ok, pid} = Task.Supervisor.start_link
 
     task = Task.Supervisor.async_nolink(pid, fn ->
-      {:ok, conn} = Postgrex.Connection.start_link(opts)
+      {:ok, conn} = Postgrex.start_link(opts)
 
       value = Ecto.Adapters.Postgres.Connection.query(conn, sql, [], opts)
       GenServer.stop(conn)
