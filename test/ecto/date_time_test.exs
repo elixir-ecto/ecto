@@ -192,6 +192,7 @@ defmodule Ecto.DateTimeTest do
   use ExUnit.Case, async: true
 
   @datetime %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07, usec: 0}
+  @datetime_large %Ecto.DateTime{year: 10000, month: 1, day: 23, hour: 23, min: 50, sec: 07, usec: 0}
   @datetime_zero %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 0, usec: 0}
   @datetime_usec %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07, usec: 8000}
   @datetime_notime %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 0, min: 0, sec: 0, usec: 0}
@@ -295,6 +296,7 @@ defmodule Ecto.DateTimeTest do
   test "inspect protocol" do
     assert inspect(@datetime) == "#Ecto.DateTime<2015-01-23T23:50:07Z>"
     assert inspect(@datetime_usec) == "#Ecto.DateTime<2015-01-23T23:50:07.008000Z>"
+    assert inspect(@datetime_large) == "#Ecto.DateTime<10000-01-23T23:50:07Z>"
   end
 
   test "precision" do
