@@ -453,7 +453,7 @@ defmodule Ecto.Integration.PreloadTest do
     # Regular query
     query = from(p in Post, preload: [:comments], select: p)
 
-    assert [p1, p2, p3] = TestRepo.all(query)
+    assert [p1, p2, p3] = TestRepo.all(query) |> sort_by_id
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments |> sort_by_id
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments |> sort_by_id
     assert [] = p3.comments
@@ -471,7 +471,7 @@ defmodule Ecto.Integration.PreloadTest do
     query = from(p in Post, preload: ^comments, select: {0, [p], 1, 2})
 
     posts = TestRepo.all(query)
-    [p1, p2, p3] = Enum.map(posts, fn {0, [p], 1, 2} -> p end)
+    [p1, p2, p3] = Enum.map(posts, fn {0, [p], 1, 2} -> p end) |> sort_by_id
 
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments |> sort_by_id
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments |> sort_by_id
