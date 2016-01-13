@@ -144,8 +144,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
             {_error_or_disconnect, err, conn_state} ->
               pool_mod.disconnect(pool_ref, err, conn_state, opts)
           end
-        :error ->
-          :error
+        error ->
+          error
       end
     end
 
