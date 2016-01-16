@@ -86,7 +86,7 @@ defmodule Ecto.Adapters.Postgres do
     case run_query(opts, command) do
       :ok ->
         :ok
-      {:error, %Postgrex.Error{message: nil, postgres: %{code: :duplicate_database}}} ->
+      {:error, %{postgres: %{code: :duplicate_database}}} ->
         :already_up
       {:error, error} ->
         {:error, Exception.message(error)}
@@ -101,7 +101,7 @@ defmodule Ecto.Adapters.Postgres do
     case run_query(opts, command) do
       :ok ->
         :ok
-      {:error, %Postgrex.Error{message: nil, postgres: %{code: :invalid_catalog_name}}} ->
+      {:error, %{postgres: %{code: :invalid_catalog_name}}} ->
         :already_down
       {:error, error} ->
         {:error, Exception.message(error)}
@@ -133,9 +133,8 @@ defmodule Ecto.Adapters.Postgres do
         :ok
       {:ok, {:error, error}} ->
         {:error, error}
-      {:exit, {%Postgrex.Error{} = error, _}} ->
-        {:error, error}
-      {:exit, {%DBConnection.Error{} = error, _}} ->
+      {:exit, {%{__struct__: struct} = error, _}}
+          when struct in [Postgrex.Error, DBConnection.Error] ->
         {:error, error}
       {:exit, reason}  ->
         {:error, RuntimeError.exception(Exception.format_exit(reason))}
