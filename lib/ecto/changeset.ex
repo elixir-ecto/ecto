@@ -324,6 +324,12 @@ defmodule Ecto.Changeset do
     cast(model, %{}, params, required, optional)
   end
 
+  defp cast(%{__struct__: _} = model, %{} = changes, :empty, required, optional) do
+    IO.puts :stderr, "warning: passing :empty to Ecto.Changeset.cast/4 is deprecated, " <>
+                     "please pass :invalid instead\n" <> Exception.format_stacktrace
+    cast(model, changes, :invalid, required, optional)
+  end
+
   defp cast(%{__struct__: module} = model, %{} = changes, :invalid, required, optional)
       when is_list(required) and is_list(optional) do
     types = module.__changeset__
