@@ -140,6 +140,17 @@ defmodule Ecto.Adapter do
               {integer, [[term]] | nil} | no_return
 
   @doc """
+  Carries out any database preparation and executes a query.
+
+  It must return a tuple containing a term representing the prepared query and
+  a tuple containing the equivalent result to `execute/6`.
+
+  See `execute/6`.
+  """
+  @callback prepare_execute(repo, query_meta, prepared, params :: list(), preprocess | nil, options) ::
+              {any, {integer, [[term]] | nil}} | no_return
+
+  @doc """
   Inserts multiple entries into the data store.
   """
   @callback insert_all(repo, schema_meta, header :: [atom], [fields], returning, options) ::

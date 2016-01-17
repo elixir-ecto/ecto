@@ -59,6 +59,7 @@ defmodule Ecto.LogEntry do
   ## Helpers
 
   defp ok_error({:ok, _}),    do: "OK"
+  defp ok_error({:ok, _, _}), do: "OK"
   defp ok_error({:error, _}), do: "ERROR"
 
   defp time(_label, nil, _force), do: []

@@ -85,22 +85,41 @@ defmodule Ecto.Repo.Queryable do
   ## Helpers
 
   def execute(operation, repo, adapter, queryable, opts) when is_list(opts) do
-    {meta, prepared, params} =
-      queryable
-      |> Queryable.to_query()
-      |> Planner.query(operation, repo, adapter)
+    {execute, meta} = prepare(operation, repo, adapter, queryable)
 
     case meta do
       %{select: nil} ->
-        adapter.execute(repo, meta, prepared, params, nil, opts)
+        execute.(nil, opts)
       %{select: select, prefix: prefix, sources: sources, assocs: assocs, preloads: preloads} ->
         preprocess = preprocess(prefix, sources, adapter)
-        {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
+        {count, rows} = execute.(preprocess, opts)
         {count,
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
           |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select))}
     end
+  end
+
+  defp prepare(operation, repo, adapter, queryable) do
+    case plan(operation, repo, adapter, queryable) do
+      {:execute, meta, prepared, params} ->
+        {&adapter.execute(repo, meta, prepared, params, &1, &2), meta}
+      {:prepare_execute, meta, prepared, params, insert} ->
+        execute =
+          fn(preprocess, opts) ->
+            {prepared, result} =
+              adapter.prepare_execute(repo, meta, prepared, params, preprocess, opts)
+            insert.(prepared)
+            result
+          end
+        {execute, meta}
+    end
+  end
+
+  defp plan(operation, repo, adapter, queryable) do
+      queryable
+      |> Queryable.to_query()
+      |> Planner.query(operation, repo, adapter)
   end
 
   defp preprocess(prefix, sources, adapter) do

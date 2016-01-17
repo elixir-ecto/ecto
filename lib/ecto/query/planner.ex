@@ -38,19 +38,20 @@ defmodule Ecto.Query.Planner do
     {query, params, key} = prepare(query, operation, adapter)
     if key == :nocache do
       {_, select, prepared} = query_without_cache(query, operation, adapter)
-      {build_meta(query, select), prepared, params}
+      {:execute, build_meta(query, select), prepared, params}
     else
       table = repo.__query_cache__
       case cache_lookup(repo, table, key) do
         [{_, select, prepared}] ->
-          {build_meta(query, select), prepared, params}
+          {:execute, build_meta(query, select), prepared, params}
         [] ->
           case query_without_cache(query, operation, adapter) do
             {:cache, select, prepared} ->
-              :ets.insert(table, {key, select, prepared})
-              {build_meta(query, select), prepared, params}
+              meta =  build_meta(query, select)
+              insert = &:ets.insert(table, {key, select, &1})
+              {:prepare_execute, meta, prepared, params, insert}
             {:nocache, select, prepared} ->
-              {build_meta(query, select), prepared, params}
+              {:execute, build_meta(query, select), prepared, params}
           end
       end
     end

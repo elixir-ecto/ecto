@@ -58,6 +58,11 @@ defmodule Ecto.Adapters.SQL do
       def prepare(:delete_all, query), do: {:cache, @conn.delete_all(query)}
 
       @doc false
+      def prepare_execute(repo, meta, prepared, params, preprocess, opts) do
+        Ecto.Adapters.SQL.prepare_execute(repo, meta, prepared, params, preprocess, opts)
+      end
+
+      @doc false
       def execute(repo, meta, prepared, params, preprocess, opts) do
         Ecto.Adapters.SQL.execute(repo, meta, prepared, params, preprocess, opts)
       end
@@ -141,11 +146,17 @@ defmodule Ecto.Adapters.SQL do
   def to_sql(kind, repo, queryable) do
     adapter = repo.__adapter__
 
-    {_meta, prepared, params} =
+    plan =
       Ecto.Queryable.to_query(queryable)
       |> Ecto.Query.Planner.query(kind, repo, adapter)
-
-    {prepared, params}
+    case plan do
+      {:execute, _meta, %{statement: statement}, params} ->
+        {statement, params}
+      {:execute, _meta, prepared, params} ->
+        {prepared, params}
+      {:prepare_execute, _meta, prepared, params, _} ->
+        {prepared, params}
+    end
   end
 
   @doc """
@@ -199,10 +210,14 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp query(repo, sql, params, mapper, opts) do
+    sql_call(repo, :query, sql, params, mapper, opts)
+  end
+
+  defp sql_call(repo, callback, sql, params, mapper, opts) do
     {pool, default_opts} = repo.__pool__
     conn = get_conn(pool) || pool
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
-    repo.__sql__.query(conn, sql, params, opts)
+    apply(repo.__sql__, callback, [conn, sql, params, opts])
   end
 
   ## Worker
@@ -311,15 +326,48 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
+  def prepare_execute(repo, _meta, prepared, params, nil, opts) do
+    {query, result} = sql_call!(repo, :prepare_execute, prepared, params, nil, opts)
+    %{rows: rows, num_rows: num} = result
+    {query, {num, rows}}
+  end
+
+  def prepare_execute(repo, %{select: %{fields: fields}}, prepared, params, preprocess, opts) do
+    mapper = &process_row(&1, preprocess, fields)
+    {query, result} = sql_call!(repo, :prepare_execute, prepared, params, mapper, opts)
+    %{rows: rows, num_rows: num} = result
+    {query, {num, rows}}
+  end
+
+  @doc false
+  def execute(repo, _meta, %{} = prepared, params, nil, opts) do
+    %{rows: rows, num_rows: num} = sql_call!(repo, :execute, prepared, params, nil, opts)
+    {num, rows}
+  end
+
+  def execute(repo, %{select: %{fields: fields}}, %{} = prepared, params, preprocess, opts) do
+    mapper = &process_row(&1, preprocess, fields)
+    %{rows: rows, num_rows: num} = sql_call!(repo, :execute, prepared, params, mapper, opts)
+    {num, rows}
+  end
+
   def execute(repo, _meta, prepared, params, nil, opts) do
-    %{rows: rows, num_rows: num} = query!(repo, prepared, params, nil, opts)
+    %{rows: rows, num_rows: num} = sql_call!(repo, :query, prepared, params, nil, opts)
     {num, rows}
   end
 
   def execute(repo, %{select: %{fields: fields}}, prepared, params, preprocess, opts) do
     mapper = &process_row(&1, preprocess, fields)
-    %{rows: rows, num_rows: num} = query!(repo, prepared, params, mapper, opts)
+    %{rows: rows, num_rows: num} = sql_call!(repo, :query, prepared, params, mapper, opts)
     {num, rows}
+  end
+
+  defp sql_call!(repo, callback, sql, params, mapper, opts) do
+    case sql_call(repo, callback, sql, params, mapper, opts) do
+      {:ok, res}        -> res
+      {:ok, query, res} -> {query, res}
+      {:error, err}     -> raise err
+    end
   end
 
   @doc false

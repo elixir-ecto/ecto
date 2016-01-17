@@ -16,6 +16,18 @@ defmodule Ecto.Adapters.SQL.Connection do
             {:ok, term} | {:error, Exception.t}
 
   @doc """
+  Prepares and executes the given query with `DBConnection`.
+  """
+  @callback prepare_execute(DBConnection.t, sql :: String.t, params :: [term], Keyword.t) ::
+            {:ok, query :: map, term} | {:error, Exception.t}
+
+  @doc """
+  Executes the given prepared query with `DBConnection`.
+  """
+  @callback execute(DBConnection.t, query :: map, params :: [term], Keyword.t) ::
+            {:ok, term} | {:error, Exception.t}
+
+  @doc """
   Receives the exception returned by `query/4`.
 
   The constraints are in the keyword list and must return the

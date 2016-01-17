@@ -73,12 +73,29 @@ if Code.ensure_loaded?(Postgrex) do
     ## Query
 
     def query(conn, sql, params, opts) do
-      params = Enum.map params, fn
+      query = %Postgrex.Query{name: "", statement: sql}
+      DBConnection.query(conn, query, map_params(params), opts)
+    end
+
+    def prepare_execute(conn, sql, params, opts) do
+      name =
+        sql
+        |> :erlang.phash2()
+        |> Integer.to_string()
+
+      query = %Postgrex.Query{name: ["ecto_" | name], statement: sql}
+      DBConnection.prepare_execute(conn, query, map_params(params), opts)
+    end
+
+    def execute(conn, query, params, opts) do
+      DBConnection.execute(conn, query, map_params(params), opts)
+    end
+
+    defp map_params(params) do
+      Enum.map params, fn
         %Ecto.Query.Tagged{value: value} -> value
         value -> value
       end
-      query = %Postgrex.Query{name: "", statement: sql}
-      DBConnection.query(conn, query, params, opts)
     end
 
     ## Sandbox
