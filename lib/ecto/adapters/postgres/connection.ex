@@ -77,13 +77,8 @@ if Code.ensure_loaded?(Postgrex) do
       DBConnection.query(conn, query, map_params(params), opts)
     end
 
-    def prepare_execute(conn, sql, params, opts) do
-      name =
-        sql
-        |> :erlang.phash2()
-        |> Integer.to_string()
-
-      query = %Postgrex.Query{name: ["ecto_" | name], statement: sql}
+    def prepare_execute(conn, name, sql, params, opts) do
+      query = %Postgrex.Query{name: name, statement: sql}
       DBConnection.prepare_execute(conn, query, map_params(params), opts)
     end
 

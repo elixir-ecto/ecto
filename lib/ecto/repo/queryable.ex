@@ -104,12 +104,12 @@ defmodule Ecto.Repo.Queryable do
     case plan(operation, repo, adapter, queryable) do
       {:execute, meta, prepared, params} ->
         {&adapter.execute(repo, meta, prepared, params, &1, &2), meta}
-      {:prepare_execute, meta, prepared, params, insert} ->
+      {:prepare_execute, meta, id, prepared, params, update} ->
         execute =
           fn(preprocess, opts) ->
             {prepared, result} =
-              adapter.prepare_execute(repo, meta, prepared, params, preprocess, opts)
-            insert.(prepared)
+              adapter.prepare_execute(repo, meta, id, prepared, params, preprocess, opts)
+            update.(prepared)
             result
           end
         {execute, meta}

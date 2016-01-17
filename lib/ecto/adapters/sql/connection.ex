@@ -18,7 +18,7 @@ defmodule Ecto.Adapters.SQL.Connection do
   @doc """
   Prepares and executes the given query with `DBConnection`.
   """
-  @callback prepare_execute(DBConnection.t, sql :: String.t, params :: [term], Keyword.t) ::
+  @callback prepare_execute(DBConnection.t, name :: String.t, sql :: String.t, params :: [term], Keyword.t) ::
             {:ok, query :: map, term} | {:error, Exception.t}
 
   @doc """

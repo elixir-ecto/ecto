@@ -58,8 +58,8 @@ defmodule Ecto.Adapters.SQL do
       def prepare(:delete_all, query), do: {:cache, @conn.delete_all(query)}
 
       @doc false
-      def prepare_execute(repo, meta, prepared, params, preprocess, opts) do
-        Ecto.Adapters.SQL.prepare_execute(repo, meta, prepared, params, preprocess, opts)
+      def prepare_execute(repo, meta, id, prepared, params, preprocess, opts) do
+        Ecto.Adapters.SQL.prepare_execute(repo, meta, id, prepared, params, preprocess, opts)
       end
 
       @doc false
@@ -150,11 +150,11 @@ defmodule Ecto.Adapters.SQL do
       Ecto.Queryable.to_query(queryable)
       |> Ecto.Query.Planner.query(kind, repo, adapter)
     case plan do
-      {:execute, _meta, %{statement: statement}, params} ->
-        {statement, params}
+      {:execute, _meta, %{} = prepared, params} ->
+        {String.Chars.to_string(prepared), params}
       {:execute, _meta, prepared, params} ->
         {prepared, params}
-      {:prepare_execute, _meta, prepared, params, _} ->
+      {:prepare_execute, _meta, _id, prepared, params, _update} ->
         {prepared, params}
     end
   end
@@ -210,14 +210,15 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp query(repo, sql, params, mapper, opts) do
-    sql_call(repo, :query, sql, params, mapper, opts)
+    sql_call(repo, :query, [sql], params, mapper, opts)
   end
 
-  defp sql_call(repo, callback, sql, params, mapper, opts) do
+  defp sql_call(repo, callback, args, params, mapper, opts) do
     {pool, default_opts} = repo.__pool__
     conn = get_conn(pool) || pool
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
-    apply(repo.__sql__, callback, [conn, sql, params, opts])
+    args = args ++ [params, opts]
+    apply(repo.__sql__, callback, [conn | args])
   end
 
   ## Worker
@@ -326,46 +327,51 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def prepare_execute(repo, _meta, prepared, params, nil, opts) do
-    {query, result} = sql_call!(repo, :prepare_execute, prepared, params, nil, opts)
-    %{rows: rows, num_rows: num} = result
-    {query, {num, rows}}
+  def prepare_execute(repo, _meta, id, prepared, params, nil, opts) do
+    prepare_execute(repo, id, prepared, params, nil, opts)
   end
 
-  def prepare_execute(repo, %{select: %{fields: fields}}, prepared, params, preprocess, opts) do
+  def prepare_execute(repo, %{select: %{fields: fields}}, id, prepared, params, preprocess, opts) do
     mapper = &process_row(&1, preprocess, fields)
-    {query, result} = sql_call!(repo, :prepare_execute, prepared, params, mapper, opts)
-    %{rows: rows, num_rows: num} = result
-    {query, {num, rows}}
+    prepare_execute(repo, id, prepared, params, mapper, opts)
+  end
+
+  defp prepare_execute(repo, id, sql, params, mapper, opts) do
+    name = "ecto_" <> Integer.to_string(id)
+    case sql_call(repo, :prepare_execute, [name, sql], params, mapper, opts) do
+      {:ok, query, %{num_rows: num, rows: rows}} ->
+        {query, {num, rows}}
+      {:error, err} ->
+        raise err
+    end
   end
 
   @doc false
   def execute(repo, _meta, %{} = prepared, params, nil, opts) do
-    %{rows: rows, num_rows: num} = sql_call!(repo, :execute, prepared, params, nil, opts)
+    %{rows: rows, num_rows: num} = sql_call!(repo, :execute, [prepared], params, nil, opts)
     {num, rows}
   end
 
   def execute(repo, %{select: %{fields: fields}}, %{} = prepared, params, preprocess, opts) do
     mapper = &process_row(&1, preprocess, fields)
-    %{rows: rows, num_rows: num} = sql_call!(repo, :execute, prepared, params, mapper, opts)
+    %{rows: rows, num_rows: num} = sql_call!(repo, :execute, [prepared], params, mapper, opts)
     {num, rows}
   end
 
   def execute(repo, _meta, prepared, params, nil, opts) do
-    %{rows: rows, num_rows: num} = sql_call!(repo, :query, prepared, params, nil, opts)
+    %{rows: rows, num_rows: num} = sql_call!(repo, :query, [prepared], params, nil, opts)
     {num, rows}
   end
 
   def execute(repo, %{select: %{fields: fields}}, prepared, params, preprocess, opts) do
     mapper = &process_row(&1, preprocess, fields)
-    %{rows: rows, num_rows: num} = sql_call!(repo, :query, prepared, params, mapper, opts)
+    %{rows: rows, num_rows: num} = sql_call!(repo, :query, [prepared], params, mapper, opts)
     {num, rows}
   end
 
-  defp sql_call!(repo, callback, sql, params, mapper, opts) do
-    case sql_call(repo, callback, sql, params, mapper, opts) do
+  defp sql_call!(repo, callback, args, params, mapper, opts) do
+    case sql_call(repo, callback, args, params, mapper, opts) do
       {:ok, res}        -> res
-      {:ok, query, res} -> {query, res}
       {:error, err}     -> raise err
     end
   end

@@ -147,7 +147,7 @@ defmodule Ecto.Adapter do
 
   See `execute/6`.
   """
-  @callback prepare_execute(repo, query_meta, prepared, params :: list(), preprocess | nil, options) ::
+  @callback prepare_execute(repo, query_meta, id :: pos_integer, prepared, params :: list(), preprocess | nil, options) ::
               {any, {integer, [[term]] | nil}} | no_return
 
   @doc """
