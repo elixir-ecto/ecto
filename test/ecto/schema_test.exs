@@ -160,6 +160,58 @@ defmodule Ecto.SchemaTest do
     assert model.__meta__.source == {nil, "new_company"}
   end
 
+  ## Composite primary keys
+
+  defmodule SchemaCompositeKeys do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "composite_keys" do
+      field :a, :id, primary_key: true
+      field :b, :id, primary_key: true
+      field :name
+    end
+  end
+
+  # Associative_entity map example:
+  # https://en.wikipedia.org/wiki/Associative_entity
+  defmodule StudentCourse do
+    use Ecto.Schema
+
+    defmodule Student do
+      use Ecto.Schema
+      schema "students" do
+        field :name
+      end
+    end
+
+    defmodule Course do
+      use Ecto.Schema
+      schema "curses" do
+        field :name
+      end
+    end
+
+    @primary_key false
+    schema "student_course_registers" do
+      belongs_to :student, Student, primary_key: true
+      belongs_to :course, Course, foreign_key: :course_ref_id, primary_key: true
+    end
+
+  end
+
+  test "composite primary keys" do
+    assert SchemaCompositeKeys.__schema__(:primary_key) == [:a, :b]
+    assert StudentCourse.__schema__(:primary_key) == [:student_id, :course_ref_id]
+
+    c = %SchemaCompositeKeys{a: 1, b: 2}
+    assert Ecto.primary_key(c) == [a: 1, b: 2]
+    assert Ecto.primary_key!(c) == [a: 1, b: 2]
+
+    sc = %StudentCourse{student_id: 1, course_ref_id: 2}
+    assert Ecto.primary_key!(sc) == [student_id: 1, course_ref_id: 2]
+  end
+
   ## Errors
 
   test "complains when a schema is not defined" do

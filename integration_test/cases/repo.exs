@@ -13,6 +13,8 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.Custom
   alias Ecto.Integration.Barebone
+  alias Ecto.Integration.CompositePk
+  alias Ecto.Integration.UserPostCompositePk
 
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
@@ -354,6 +356,40 @@ defmodule Ecto.Integration.RepoTest do
     bid    = custom.bid
     assert %Custom{bid: ^bid, __meta__: %{source: {nil, "posts"}}} =
            TestRepo.get(from(c in {"posts", Custom}), bid)
+  end
+
+  test "get(!) composite primary keys" do
+    c1 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "first"})
+    c2 = TestRepo.insert!(%CompositePk{a: 1, b: 3, name: "second"})
+
+    assert c1 == TestRepo.get!(CompositePk, [1, 2])
+    assert c2 == TestRepo.get!(CompositePk, ["1", "3"])
+
+    changeset = Ecto.Changeset.cast(c1, %{name: "first change"}, ~w(name), ~w())
+
+    c1_updated = TestRepo.update!(changeset)
+    assert c1_updated == TestRepo.get!(CompositePk, [1, 2])
+
+    TestRepo.delete!(c2)
+    assert [c1_updated] == TestRepo.all(CompositePk)
+
+    assert_raise ArgumentError, "not enough values for multi-column primary key", fn ->
+      TestRepo.get!(CompositePk, [])
+    end
+    assert_raise ArgumentError, "not enough values for multi-column primary key", fn ->
+      TestRepo.get!(CompositePk, [1])
+    end
+    assert_raise ArgumentError, "too many values for multi-column primary key", fn ->
+      TestRepo.get!(CompositePk, [1, 2, 3])
+    end
+
+    user = TestRepo.insert!(%User{})
+    post = TestRepo.insert!(%Post{title: "post title", text: "post text"})
+
+    user_post = TestRepo.insert!(%UserPostCompositePk{user_id: user.id, post_id: post.id})
+    assert user_post == TestRepo.get!(UserPostCompositePk, [user.id, post.id])
+    TestRepo.delete!(user_post)
+    assert [] == TestRepo.all(UserPostCompositePk)
   end
 
   test "get_by(!)" do

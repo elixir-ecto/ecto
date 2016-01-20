@@ -83,5 +83,34 @@ defmodule Ecto.Integration.Migration do
         add :items, {:array, :map}
       end
     end
+
+    # TODO - support multiple primary keys in migration
+    # create table(:composite_pk, primary_key: false) do
+    #  add :a, :integer, primary_key: true
+    #  add :a, :integer, primary_key: true
+    # end
+
+    create table(:composite_pk, primary_key: false) do
+      add :a, :integer, null: false
+      add :b, :integer, null: false
+      add :name, :string
+    end
+    create unique_index(:composite_pk, [:a, :b], unique: true)
+
+    # TODO - support multiple primary keys in migration
+    # create table(:users_posts_composite_pk) do
+    #  add :user_id, references(:users), primary_key: true
+    #  add :post_id, references(:posts), primary_key: true
+    #  add :prefer_order, :integer
+    #  timestamps
+    # end
+
+    create table(:users_posts_composite_pk) do
+      add :user_id, references(:users)
+      add :post_id, references(:posts)
+      add :prefer_order, :integer
+      timestamps
+    end
+    create unique_index(:users_posts_composite_pk, [:user_id, :post_id], unique: true)
   end
 end
