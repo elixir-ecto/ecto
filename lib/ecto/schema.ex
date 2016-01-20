@@ -31,9 +31,10 @@ defmodule Ecto.Schema do
   Those attributes are:
 
     * `@primary_key` - configures the schema primary key. It expects
-      a tuple with the primary key name, type (:id or :binary_id) and
-      options. Defaults to `{:id, :id, autogenerate: true}`. When set to
-      false, does not define a primary key in the schema;
+      a tuple `{pk_field_name, type, options}` with the primary key field name,
+      type (:id, :binary_id, :string or Ecto/Custom.Type) and options.
+      Defaults to `{:id, :id, autogenerate: true}`. When set to
+      `false`, does not define a primary key in the schema;
 
     * `@schema_prefix` - configures the schema prefix. Defaults `nil`
       generate structs and queries without prefix. When set, the
