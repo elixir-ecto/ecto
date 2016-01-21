@@ -28,9 +28,8 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def start_link(repo, opts) do
-        {:ok, _} = Application.ensure_all_started(@adapter)
-        Ecto.Adapters.SQL.start_link(@conn, @adapter, repo, opts)
+      def child_spec(repo, opts) do
+        Ecto.Adapters.SQL.child_spec(@conn, @adapter, repo, opts)
       end
 
       ## Types
@@ -253,7 +252,9 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def start_link(connection, adapter, repo, opts) do
+  def child_spec(connection, adapter, repo, opts) do
+    {:ok, _} = Application.ensure_all_started(adapter)
+
     unless Code.ensure_loaded?(connection) do
       raise """
       could not find #{inspect connection}.
@@ -264,7 +265,7 @@ defmodule Ecto.Adapters.SQL do
 
       And remember to recompile Ecto afterwards by cleaning the current build:
 
-          mix deps.clean ecto
+          mix deps.clean --build ecto
       """
     end
 
@@ -279,7 +280,7 @@ defmodule Ecto.Adapters.SQL do
       opts = Keyword.put(opts, :after_connect, {repo, :after_connect, []})
     end
 
-    DBConnection.start_link(mod, opts)
+    DBConnection.child_spec(mod, opts)
   end
 
   ## Types

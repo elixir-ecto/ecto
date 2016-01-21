@@ -5,14 +5,14 @@ defmodule Ecto.TestAdapter do
 
   defmacro __before_compile__(_opts), do: :ok
 
-  def start_link(_repo, opts) do
+  def child_spec(_repo, opts) do
     :ecto   = opts[:otp_app]
     "user"  = opts[:username]
     "pass"  = opts[:password]
     "hello" = opts[:database]
     "local" = opts[:hostname]
 
-    Task.start_link(fn -> :timer.sleep(:infinity) end)
+    Supervisor.Spec.worker(Task, [fn -> :timer.sleep(:infinity) end])
   end
 
   ## Types

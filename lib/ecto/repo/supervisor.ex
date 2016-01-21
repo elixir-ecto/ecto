@@ -89,7 +89,7 @@ defmodule Ecto.Repo.Supervisor do
   ## Callbacks
 
   def init({repo, _otp_app, adapter, opts}) do
-    children = [supervisor(adapter, [repo, opts])]
+    children = [adapter.child_spec(repo, opts)]
 
     if Keyword.get(opts, :query_cache_owner, repo == repo.__query_cache__) do
       :ets.new(repo.__query_cache__, [:set, :public, :named_table, read_concurrency: true])
