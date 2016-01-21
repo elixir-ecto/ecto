@@ -38,30 +38,63 @@ defmodule Ecto.Query.Planner do
     {query, params, key} = prepare(query, operation, adapter)
     if key == :nocache do
       {_, select, prepared} = query_without_cache(query, operation, adapter)
-      {build_meta(query, select), prepared, params}
+      {:execute, build_meta(query, select), prepared, params}
     else
-      table = repo.__query_cache__
-      case cache_lookup(repo, table, key) do
-        [{_, select, prepared}] ->
-          {build_meta(query, select), prepared, params}
-        [] ->
-          case query_without_cache(query, operation, adapter) do
-            {:cache, select, prepared} ->
-              :ets.insert(table, {key, select, prepared})
-              {build_meta(query, select), prepared, params}
-            {:nocache, select, prepared} ->
-              {build_meta(query, select), prepared, params}
-          end
-      end
+      query_with_cache(query, operation, repo, adapter, key, params)
     end
   end
 
-  defp cache_lookup(repo, table, key) do
-    :ets.lookup(table, key)
-  rescue
-    ArgumentError ->
-      raise ArgumentError,
-        "repo #{inspect repo} is not started, please ensure it is part of your supervision tree"
+  defp query_with_cache(query, operation, repo, adapter, key, params) do
+    table = repo.__query_cache__
+    case query_lookup(query, operation, repo, adapter, table, key) do
+      {_, :execute, select, _, prepared} ->
+        {:execute, build_meta(query, select), prepared, params}
+      {_, :prepare_execute, select, id, prepared} ->
+        select = build_meta(query, select)
+        update = &cache_update(table, key, &1)
+        {:prepare_execute, select, id, prepared, params, update}
+    end
+  end
+
+  defp query_lookup(query, operation, repo, adapter, table, key) do
+    try do
+      :ets.lookup(table, key)
+    rescue
+      ArgumentError ->
+        raise ArgumentError,
+          "repo #{inspect repo} is not started, please ensure it is part of your supervision tree"
+    else
+      [term] ->
+        term
+      [] ->
+        query_prepare(query, operation, adapter, table, key)
+    end
+  end
+
+  defp query_prepare(query, operation, adapter, table, key) do
+    case query_without_cache(query, operation, adapter) do
+      {:cache, select, prepared} ->
+        id = System.unique_integer([:positive])
+        elem = {key, :prepare_execute, select, id, prepared}
+        cache_insert(table, key, elem)
+      {:nocache, select, prepared} ->
+        {:nocache, :execute, select, nil, prepared}
+    end
+  end
+
+  defp cache_insert(table, key, elem) do
+    case :ets.insert_new(table, elem) do
+      true ->
+        elem
+      false ->
+        [elem] = :ets.lookup(table, key)
+        elem
+    end
+  end
+
+  defp cache_update(table, key, prepared) do
+    _ = :ets.update_element(table, key, [{2, :execute}, {5, prepared}])
+    :ok
   end
 
   defp query_without_cache(query, operation, adapter) do
