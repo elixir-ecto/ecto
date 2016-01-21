@@ -3,6 +3,12 @@ defmodule Ecto.Adapters.SQL.Connection do
   Specifies the behaviour to be implemented by all SQL connections.
   """
 
+  @typedoc "The prepared query which is SQL command"
+  @type prepared :: String.t
+
+  @typedoc "The cache query which is a DBConnection Query"
+  @type cached :: map
+
   @doc """
   Receives options and returns `DBConnection` module and
   options to use to handle queries.
@@ -10,21 +16,15 @@ defmodule Ecto.Adapters.SQL.Connection do
   @callback connection(Keyword.t) :: {module, Keyword.t}
 
   @doc """
-  Sends the given query to `DBConnection`.
-  """
-  @callback query(DBConnection.t, sql :: String.t, params :: [term], Keyword.t) ::
-            {:ok, term} | {:error, Exception.t}
-
-  @doc """
   Prepares and executes the given query with `DBConnection`.
   """
-  @callback prepare_execute(DBConnection.t, name :: String.t, sql :: String.t, params :: [term], Keyword.t) ::
+  @callback prepare_execute(DBConnection.t, name :: String.t, prepared, params :: [term], Keyword.t) ::
             {:ok, query :: map, term} | {:error, Exception.t}
 
   @doc """
   Executes the given prepared query with `DBConnection`.
   """
-  @callback execute(DBConnection.t, query :: map, params :: [term], Keyword.t) ::
+  @callback execute(DBConnection.t, prepared | cached, params :: [term], Keyword.t) ::
             {:ok, term} | {:error, Exception.t}
 
   @doc """

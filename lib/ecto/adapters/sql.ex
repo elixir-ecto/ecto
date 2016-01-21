@@ -58,13 +58,8 @@ defmodule Ecto.Adapters.SQL do
       def prepare(:delete_all, query), do: {:cache, @conn.delete_all(query)}
 
       @doc false
-      def prepare_execute(repo, meta, id, prepared, params, preprocess, opts) do
-        Ecto.Adapters.SQL.prepare_execute(repo, meta, id, prepared, params, preprocess, opts)
-      end
-
-      @doc false
-      def execute(repo, meta, prepared, params, preprocess, opts) do
-        Ecto.Adapters.SQL.execute(repo, meta, prepared, params, preprocess, opts)
+      def execute(repo, meta, query, params, process, opts) do
+        Ecto.Adapters.SQL.execute(repo, meta, query, params, process, opts)
       end
 
       @doc false
@@ -146,15 +141,15 @@ defmodule Ecto.Adapters.SQL do
   def to_sql(kind, repo, queryable) do
     adapter = repo.__adapter__
 
-    plan =
-      Ecto.Queryable.to_query(queryable)
-      |> Ecto.Query.Planner.query(kind, repo, adapter)
-    case plan do
-      {:execute, _meta, %{} = prepared, params} ->
-        {String.Chars.to_string(prepared), params}
-      {:execute, _meta, prepared, params} ->
+    queryable
+    |> Ecto.Queryable.to_query()
+    |> Ecto.Query.Planner.query(kind, repo, adapter)
+    |> case do
+      {_meta, {:cached, cached}, params} ->
+        {String.Chars.to_string(cached), params}
+      {_meta, {:cache, _id, _update, prepared}, params} ->
         {prepared, params}
-      {:prepare_execute, _meta, _id, prepared, params, _update} ->
+      {_meta, {:nocache, prepared}, params} ->
         {prepared, params}
     end
   end
@@ -210,7 +205,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp query(repo, sql, params, mapper, opts) do
-    sql_call(repo, :query, [sql], params, mapper, opts)
+    sql_call(repo, :execute, [sql], params, mapper, opts)
   end
 
   defp sql_call(repo, callback, args, params, mapper, opts) do
@@ -327,46 +322,37 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def prepare_execute(repo, _meta, id, prepared, params, nil, opts) do
-    prepare_execute(repo, id, prepared, params, nil, opts)
+  def execute(repo, _meta, {:cache, id, update, prepared}, params, nil, opts) do
+    execute_and_cache(repo, id, update, prepared, params, nil, opts)
   end
 
-  def prepare_execute(repo, %{select: %{fields: fields}}, id, prepared, params, preprocess, opts) do
-    mapper = &process_row(&1, preprocess, fields)
-    prepare_execute(repo, id, prepared, params, mapper, opts)
+  def execute(repo, %{select: %{fields: fields}}, {:cache, id, update, prepared}, params, process, opts) do
+    mapper = &process_row(&1, process, fields)
+    execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
 
-  defp prepare_execute(repo, id, sql, params, mapper, opts) do
+  def execute(repo, _meta, {_, prepared_or_cached}, params, nil, opts) do
+    %{rows: rows, num_rows: num} =
+      sql_call!(repo, :execute, [prepared_or_cached], params, nil, opts)
+    {num, rows}
+  end
+
+  def execute(repo, %{select: %{fields: fields}}, {_, prepared_or_cached}, params, process, opts) do
+    mapper = &process_row(&1, process, fields)
+    %{rows: rows, num_rows: num} =
+      sql_call!(repo, :execute, [prepared_or_cached], params, mapper, opts)
+    {num, rows}
+  end
+
+  defp execute_and_cache(repo, id, update, prepared, params, mapper, opts) do
     name = "ecto_" <> Integer.to_string(id)
-    case sql_call(repo, :prepare_execute, [name, sql], params, mapper, opts) do
+    case sql_call(repo, :prepare_execute, [name, prepared], params, mapper, opts) do
       {:ok, query, %{num_rows: num, rows: rows}} ->
-        {query, {num, rows}}
+        update.(query)
+        {num, rows}
       {:error, err} ->
         raise err
     end
-  end
-
-  @doc false
-  def execute(repo, _meta, %{} = prepared, params, nil, opts) do
-    %{rows: rows, num_rows: num} = sql_call!(repo, :execute, [prepared], params, nil, opts)
-    {num, rows}
-  end
-
-  def execute(repo, %{select: %{fields: fields}}, %{} = prepared, params, preprocess, opts) do
-    mapper = &process_row(&1, preprocess, fields)
-    %{rows: rows, num_rows: num} = sql_call!(repo, :execute, [prepared], params, mapper, opts)
-    {num, rows}
-  end
-
-  def execute(repo, _meta, prepared, params, nil, opts) do
-    %{rows: rows, num_rows: num} = sql_call!(repo, :query, [prepared], params, nil, opts)
-    {num, rows}
-  end
-
-  def execute(repo, %{select: %{fields: fields}}, prepared, params, preprocess, opts) do
-    mapper = &process_row(&1, preprocess, fields)
-    %{rows: rows, num_rows: num} = sql_call!(repo, :query, [prepared], params, mapper, opts)
-    {num, rows}
   end
 
   defp sql_call!(repo, callback, args, params, mapper, opts) do

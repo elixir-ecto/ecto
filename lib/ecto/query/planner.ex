@@ -38,7 +38,7 @@ defmodule Ecto.Query.Planner do
     {query, params, key} = prepare(query, operation, adapter)
     if key == :nocache do
       {_, select, prepared} = query_without_cache(query, operation, adapter)
-      {:execute, build_meta(query, select), prepared, params}
+      {build_meta(query, select), {:nocache, prepared}, params}
     else
       query_with_cache(query, operation, repo, adapter, key, params)
     end
@@ -47,12 +47,13 @@ defmodule Ecto.Query.Planner do
   defp query_with_cache(query, operation, repo, adapter, key, params) do
     table = repo.__query_cache__
     case query_lookup(query, operation, repo, adapter, table, key) do
-      {_, :execute, select, _, prepared} ->
-        {:execute, build_meta(query, select), prepared, params}
-      {_, :prepare_execute, select, id, prepared} ->
-        select = build_meta(query, select)
+      {:nocache, select, prepared} ->
+        {build_meta(query, select), {:nocache, prepared}, params}
+      {_, :cached, select, _, cached} ->
+        {build_meta(query, select), {:cached, cached}, params}
+      {_, :cache, select, id, prepared} ->
         update = &cache_update(table, key, &1)
-        {:prepare_execute, select, id, prepared, params, update}
+        {build_meta(query, select), {:cache, id, update, prepared}, params}
     end
   end
 
@@ -64,10 +65,8 @@ defmodule Ecto.Query.Planner do
         raise ArgumentError,
           "repo #{inspect repo} is not started, please ensure it is part of your supervision tree"
     else
-      [term] ->
-        term
-      [] ->
-        query_prepare(query, operation, adapter, table, key)
+      [term] -> term
+      [] -> query_prepare(query, operation, adapter, table, key)
     end
   end
 
@@ -75,10 +74,10 @@ defmodule Ecto.Query.Planner do
     case query_without_cache(query, operation, adapter) do
       {:cache, select, prepared} ->
         id = System.unique_integer([:positive])
-        elem = {key, :prepare_execute, select, id, prepared}
+        elem = {key, :cache, select, id, prepared}
         cache_insert(table, key, elem)
-      {:nocache, select, prepared} ->
-        {:nocache, :execute, select, nil, prepared}
+      {:nocache, _, _} = nocache ->
+        nocache
     end
   end
 
@@ -92,8 +91,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp cache_update(table, key, prepared) do
-    _ = :ets.update_element(table, key, [{2, :execute}, {5, prepared}])
+  defp cache_update(table, key, cached) do
+    _ = :ets.update_element(table, key, [{2, :cached}, {5, cached}])
     :ok
   end
 

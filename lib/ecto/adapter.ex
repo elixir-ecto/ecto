@@ -18,7 +18,8 @@ defmodule Ecto.Adapter do
   @type constraints :: Keyword.t
   @type returning :: [atom]
   @type prepared :: term
-  @type preprocess :: (field :: Macro.t, value :: term, context :: term -> term)
+  @type cached :: term
+  @type process :: (field :: Macro.t, value :: term, context :: term -> term)
   @type autogenerate_id :: {field :: atom, type :: :id | :binary_id, value :: term} | nil
 
   @typep repo :: Ecto.Repo.t
@@ -131,24 +132,16 @@ defmodule Ecto.Adapter do
   The `meta` field is a map containing some of the fields found
   in the `Ecto.Query` struct.
 
-  It receives a preprocess function that should be invoked for each
+  It receives a process function that should be invoked for each
   selected field in the query result in order to convert them to the
-  expected Ecto type. The `preprocess` function will be nil if no
+  expected Ecto type. The `process` function will be nil if no
   result set is expected from the query.
   """
-  @callback execute(repo, query_meta, prepared, params :: list(), preprocess | nil, options) ::
-              {integer, [[term]] | nil} | no_return
-
-  @doc """
-  Carries out any database preparation and executes a query.
-
-  It must return a tuple containing a term representing the prepared query and
-  a tuple containing the equivalent result to `execute/6`.
-
-  See `execute/6`.
-  """
-  @callback prepare_execute(repo, query_meta, id :: pos_integer, prepared, params :: list(), preprocess | nil, options) ::
-              {any, {integer, [[term]] | nil}} | no_return
+  @callback execute(repo, query_meta, query, params :: list(), process | nil, options) :: result when
+              result: {integer, [[term]] | nil} | no_return,
+              query: {:nocache, prepared} |
+                     {:cached, cached} |
+                     {:cache, pos_integer, (cached -> :ok), prepared}
 
   @doc """
   Inserts multiple entries into the data store.

@@ -31,21 +31,21 @@ defmodule Ecto.TestAdapter do
 
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
-  def execute(_repo, _, {:all, %{from: {_, SchemaMigration}}}, _, _, _) do
+  def execute(_repo, _, {:nocache, {:all, %{from: {_, SchemaMigration}}}}, _, _, _) do
     {length(migrated_versions()),
      Enum.map(migrated_versions(), &List.wrap/1)}
-   end
+  end
 
-  def execute(_repo, _, {:all, _}, _, _, _) do
+  def execute(_repo, _, {:nocache, {:all, _}}, _, _, _) do
     {1, [[1]]}
   end
 
-  def execute(_repo, _meta, {:delete_all, %{from: {_, SchemaMigration}}}, [version], _, _) do
+  def execute(_repo, _meta, {:nocache, {:delete_all, %{from: {_, SchemaMigration}}}}, [version], _, _) do
     Process.put(:migrated_versions, List.delete(migrated_versions(), version))
     {1, nil}
   end
 
-  def execute(_repo, _meta, {op, %{from: {source, _}}}, _params, _preprocess, _opts) do
+  def execute(_repo, _meta, {:nocache, {op, %{from: {source, _}}}}, _params, _preprocess, _opts) do
     send self, {op, source}
     {1, nil}
   end
