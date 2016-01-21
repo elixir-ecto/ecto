@@ -52,9 +52,12 @@ defmodule Ecto.Adapters.SQL do
       ## Query
 
       @doc false
-      def prepare(:all, query),        do: {:cache, @conn.all(query)}
-      def prepare(:update_all, query), do: {:cache, @conn.update_all(query)}
-      def prepare(:delete_all, query), do: {:cache, @conn.delete_all(query)}
+      def prepare(:all, query),
+        do: {:cache, {System.unique_integer([:positive]), @conn.all(query)}}
+      def prepare(:update_all, query),
+        do: {:cache, {System.unique_integer([:positive]), @conn.update_all(query)}}
+      def prepare(:delete_all, query),
+        do: {:cache, {System.unique_integer([:positive]), @conn.delete_all(query)}}
 
       @doc false
       def execute(repo, meta, query, params, process, opts) do
@@ -144,11 +147,11 @@ defmodule Ecto.Adapters.SQL do
     |> Ecto.Queryable.to_query()
     |> Ecto.Query.Planner.query(kind, repo, adapter)
     |> case do
-      {_meta, {:cached, cached}, params} ->
+      {_meta, {:cached, {_id, cached}}, params} ->
         {String.Chars.to_string(cached), params}
-      {_meta, {:cache, _id, _update, prepared}, params} ->
+      {_meta, {:cache, _update, {_id, prepared}}, params} ->
         {prepared, params}
-      {_meta, {:nocache, prepared}, params} ->
+      {_meta, {:nocache, {_id, prepared}}, params} ->
         {prepared, params}
     end
   end
@@ -323,22 +326,22 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def execute(repo, _meta, {:cache, id, update, prepared}, params, nil, opts) do
+  def execute(repo, _meta, {:cache, update, {id, prepared}}, params, nil, opts) do
     execute_and_cache(repo, id, update, prepared, params, nil, opts)
   end
 
-  def execute(repo, %{select: %{fields: fields}}, {:cache, id, update, prepared}, params, process, opts) do
+  def execute(repo, %{select: %{fields: fields}}, {:cache, update, {id, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
 
-  def execute(repo, _meta, {_, prepared_or_cached}, params, nil, opts) do
+  def execute(repo, _meta, {_, {_id, prepared_or_cached}}, params, nil, opts) do
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared_or_cached], params, nil, opts)
     {num, rows}
   end
 
-  def execute(repo, %{select: %{fields: fields}}, {_, prepared_or_cached}, params, process, opts) do
+  def execute(repo, %{select: %{fields: fields}}, {_, {_id, prepared_or_cached}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared_or_cached], params, mapper, opts)
@@ -349,7 +352,7 @@ defmodule Ecto.Adapters.SQL do
     name = "ecto_" <> Integer.to_string(id)
     case sql_call(repo, :prepare_execute, [name, prepared], params, mapper, opts) do
       {:ok, query, %{num_rows: num, rows: rows}} ->
-        update.(query)
+        update.({0, query})
         {num, rows}
       {:error, err} ->
         raise err

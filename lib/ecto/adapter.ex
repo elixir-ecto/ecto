@@ -138,7 +138,7 @@ defmodule Ecto.Adapter do
               result: {integer, [[term]] | nil} | no_return,
               query: {:nocache, prepared} |
                      {:cached, cached} |
-                     {:cache, pos_integer, (cached -> :ok), prepared}
+                     {:cache, (cached -> :ok), prepared}
 
   @doc """
   Inserts multiple entries into the data store.

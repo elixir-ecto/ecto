@@ -49,11 +49,11 @@ defmodule Ecto.Query.Planner do
     case query_lookup(query, operation, repo, adapter, table, key) do
       {:nocache, select, prepared} ->
         {build_meta(query, select), {:nocache, prepared}, params}
-      {_, :cached, select, _, cached} ->
+      {_, :cached, select, cached} ->
         {build_meta(query, select), {:cached, cached}, params}
-      {_, :cache, select, id, prepared} ->
+      {_, :cache, select, prepared} ->
         update = &cache_update(table, key, &1)
-        {build_meta(query, select), {:cache, id, update, prepared}, params}
+        {build_meta(query, select), {:cache, update, prepared}, params}
     end
   end
 
@@ -73,8 +73,7 @@ defmodule Ecto.Query.Planner do
   defp query_prepare(query, operation, adapter, table, key) do
     case query_without_cache(query, operation, adapter) do
       {:cache, select, prepared} ->
-        id = System.unique_integer([:positive])
-        elem = {key, :cache, select, id, prepared}
+        elem = {key, :cache, select, prepared}
         cache_insert(table, key, elem)
       {:nocache, _, _} = nocache ->
         nocache
@@ -92,7 +91,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cache_update(table, key, cached) do
-    _ = :ets.update_element(table, key, [{2, :cached}, {5, cached}])
+    _ = :ets.update_element(table, key, [{2, :cached}, {4, cached}])
     :ok
   end
 
