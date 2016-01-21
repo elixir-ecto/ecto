@@ -20,11 +20,14 @@ defmodule Ecto.Adapters.SQL do
       @conn __MODULE__.Connection
       @adapter unquote(adapter)
 
-      ## Worker
-
       @doc false
       defmacro __before_compile__(env) do
         Ecto.Adapters.SQL.__before_compile__(@conn, env)
+      end
+
+      @doc false
+      def application do
+        @adapter
       end
 
       @doc false
@@ -256,8 +259,6 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def child_spec(connection, adapter, repo, opts) do
-    {:ok, _} = Application.ensure_all_started(adapter)
-
     unless Code.ensure_loaded?(connection) do
       raise """
       could not find #{inspect connection}.

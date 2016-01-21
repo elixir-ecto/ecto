@@ -5,6 +5,8 @@ defmodule Ecto.TestAdapter do
 
   defmacro __before_compile__(_opts), do: :ok
 
+  def application, do: :ecto
+
   def child_spec(_repo, opts) do
     :ecto   = opts[:otp_app]
     "user"  = opts[:username]

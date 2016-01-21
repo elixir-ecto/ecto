@@ -79,7 +79,7 @@ defmodule Ecto.Repo do
       end
 
       def stop(pid, timeout \\ 5000) do
-        Supervisor.stop(pid, timeout)
+        Supervisor.stop(pid, :normal, timeout)
       end
 
       def transaction(opts \\ [], fun) when is_list(opts) do
@@ -174,10 +174,6 @@ defmodule Ecto.Repo do
         @query_cache
       end
 
-      def __repo__ do
-        true
-      end
-
       def log(entry) do
         Logger.unquote(@log_level)(fn ->
           {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
@@ -193,11 +189,6 @@ defmodule Ecto.Repo do
   Returns the adapter tied to the repository.
   """
   @callback __adapter__ :: Ecto.Adapter.t
-
-  @doc """
-  Simply returns true to mark this module as a repository.
-  """
-  @callback __repo__ :: true
 
   @doc """
   Returns the name of the ETS table used for query caching.

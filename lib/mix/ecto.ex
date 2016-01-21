@@ -43,10 +43,6 @@ defmodule Mix.Ecto do
   @doc """
   Ensures the given module is a repository.
   """
-  def ensure_repo(repos, args) when is_list(repos) do
-    Enum.map repos, &ensure_repo(&1, args)
-  end
-
   @spec ensure_repo(module, list) :: Ecto.Repo.t | no_return
   def ensure_repo(repo, args) do
     Mix.Task.run "loadpaths", args
@@ -57,7 +53,7 @@ defmodule Mix.Ecto do
 
     case Code.ensure_compiled(repo) do
       {:module, _} ->
-        if function_exported?(repo, :__repo__, 0) do
+        if function_exported?(repo, :__adapter__, 0) do
           repo
         else
           Mix.raise "module #{inspect repo} is not a Ecto.Repo. " <>
@@ -75,6 +71,7 @@ defmodule Mix.Ecto do
   @spec ensure_started(Ecto.Repo.t) :: Ecto.Repo.t | no_return
   def ensure_started(repo) do
     {:ok, _} = Application.ensure_all_started(:ecto)
+    {:ok, _} = Application.ensure_all_started(repo.__adapter__.application)
 
     case repo.start_link do
       {:ok, pid} -> {:ok, pid}
@@ -90,7 +87,10 @@ defmodule Mix.Ecto do
   def ensure_stopped(repo, pid) do
     # Silence the logger to avoid application down messages.
     Logger.remove_backend(:console)
-    repo.stop(pid)
+    app = repo.__adapter__.application
+    pid && repo.stop(pid)
+    Application.stop(app)
+    Application.ensure_all_started(app)
   after
     Logger.add_backend(:console, flush: true)
   end

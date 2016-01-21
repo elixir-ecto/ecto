@@ -22,8 +22,8 @@ defmodule Mix.EctoTest do
       Process.get(:start_link)
     end
 
-    def __repo__ do
-      true
+    def __adapter__ do
+      Ecto.TestAdapter
     end
 
     def config do
@@ -35,8 +35,8 @@ defmodule Mix.EctoTest do
     def start_link do
     end
 
-    def __repo__ do
-      true
+    def __adapter__ do
+      Ecto.TestAdapter
     end
 
     def config do

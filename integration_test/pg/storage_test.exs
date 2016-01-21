@@ -32,7 +32,7 @@ defmodule Ecto.Integration.StorageTest do
 
   test "storage up (twice in a row)" do
     assert Postgres.storage_up(correct_params) == :ok
-    assert Postgres.storage_up(correct_params) == :already_up
+    assert Postgres.storage_up(correct_params) == {:error, :already_up}
   end
 
   test "storage up (wrong credentials)" do
@@ -44,6 +44,6 @@ defmodule Ecto.Integration.StorageTest do
     create_database
 
     assert Postgres.storage_down(correct_params) == :ok
-    assert Postgres.storage_down(correct_params) == :already_down
+    assert Postgres.storage_down(correct_params) == {:error, :already_down}
   end
 end

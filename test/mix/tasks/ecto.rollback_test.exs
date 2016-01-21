@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Ecto.RollbackTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   import Mix.Tasks.Ecto.Rollback, only: [run: 2]
 
@@ -18,8 +18,8 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
       :ok
     end
 
-    def __repo__ do
-      true
+    def __adapter__ do
+      Ecto.TestAdapter
     end
 
     def config do
@@ -36,8 +36,8 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
       raise "I should never be called"
     end
 
-    def __repo__ do
-      true
+    def __adapter__ do
+      Ecto.TestAdapter
     end
 
     def config do

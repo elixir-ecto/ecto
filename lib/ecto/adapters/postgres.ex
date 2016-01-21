@@ -87,7 +87,7 @@ defmodule Ecto.Adapters.Postgres do
       :ok ->
         :ok
       {:error, %{postgres: %{code: :duplicate_database}}} ->
-        :already_up
+        {:error, :already_up}
       {:error, error} ->
         {:error, Exception.message(error)}
     end
@@ -102,13 +102,15 @@ defmodule Ecto.Adapters.Postgres do
       :ok ->
         :ok
       {:error, %{postgres: %{code: :invalid_catalog_name}}} ->
-        :already_down
+        {:error, :already_down}
       {:error, error} ->
         {:error, Exception.message(error)}
     end
   end
 
   defp run_query(opts, sql) do
+    {:ok, _} = Application.ensure_all_started(:postgrex)
+
     opts =
       opts
       |> Keyword.delete(:name)

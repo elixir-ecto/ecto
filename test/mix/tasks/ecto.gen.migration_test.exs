@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
   @migrations_path Path.join(tmp_path, "migrations")
 
   defmodule Repo do
-    def __repo__ do
+    def __adapter__ do
       true
     end
 
