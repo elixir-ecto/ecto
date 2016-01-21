@@ -8,5 +8,5 @@
   "mariaex": {:hex, :mariaex, "0.6.1"},
   "poison": {:hex, :poison, "1.5.2"},
   "poolboy": {:hex, :poolboy, "1.5.1"},
-  "postgrex": {:git, "https://github.com/ericmj/postgrex.git", "e4bd1d01ff623fb84846f2440275a366605c8c96", []},
+  "postgrex": {:hex, :postgrex, "0.11.0"},
   "sbroker": {:hex, :sbroker, "0.7.0"}}
