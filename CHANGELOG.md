@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.3
+
+### Enhancements
+
+* Require Postgrex 0.11.0
+
 ## v1.1.2
 
 ### Bug fixes

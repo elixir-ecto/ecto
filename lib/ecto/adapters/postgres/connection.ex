@@ -1,4 +1,4 @@
-if Code.ensure_loaded?(Postgrex.Connection) do
+if Code.ensure_loaded?(Postgrex) do
 
   defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false
@@ -19,7 +19,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
         |> Keyword.update(:port, @default_port, &normalize_port/1)
 
-      Postgrex.Connection.start_link(opts)
+      Postgrex.start_link(opts)
     end
 
     def query(conn, sql, params, opts) do
@@ -28,7 +28,7 @@ if Code.ensure_loaded?(Postgrex.Connection) do
         value -> value
       end
 
-      case Postgrex.Connection.query(conn, sql, params, opts) do
+      case Postgrex.query(conn, sql, params, opts) do
         {:ok, res}        -> {:ok, Map.from_struct(res)}
         {:error, _} = err -> err
       end

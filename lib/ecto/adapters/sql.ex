@@ -238,7 +238,7 @@ defmodule Ecto.Adapters.SQL do
     {pool_mod, pool, pool_timeout, timeout} = repo.__pool__
     pool_timeout = Keyword.get(opts, :pool_timeout, pool_timeout)
     opts         = Keyword.put_new(opts, :timeout, timeout)
-    log?         = Keyword.get(opts, :log, true)
+    {log?, opts} = Keyword.pop(opts, :log, true)
 
     query_fun = fn({mod, conn}, inner_queue_time) ->
       query(mod, conn, inner_queue_time || outer_queue_time, sql, params, log?, opts)
