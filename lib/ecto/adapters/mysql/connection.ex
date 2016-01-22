@@ -478,9 +478,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       engine  = engine_expr(table.engine)
       options = options_expr(table.options)
       if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
+      # if more than one has primary_key: true then we alte table with %{table | primary_key: :composite}
+      {table, composite_pk_def} = composite_pk_definition(table, columns)
 
       "CREATE TABLE" <> if_not_exists <>
-        " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)})" <> engine <> options
+        " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)}#{composite_pk_def})" <> engine <> options
     end
 
     def execute_ddl({command, %Table{} = table}) when command in [:drop, :drop_if_exists] do
@@ -555,11 +557,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
       assemble([quote_name(name), reference_column_type(ref.type, opts),
-                column_options(name, opts), reference_expr(ref, table, name)])
+                column_options(table, name, opts), reference_expr(ref, table, name)])
     end
 
-    defp column_definition(_table, {:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type, opts), column_options(name, opts)])
+    defp column_definition(table, {:add, name, type, opts}) do
+      assemble([quote_name(name), column_type(type, opts), column_options(table, name, opts)])
     end
 
     defp column_changes(table, columns) do
@@ -568,36 +570,51 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
       assemble(["ADD", quote_name(name), reference_column_type(ref.type, opts),
-                column_options(name, opts), constraint_expr(ref, table, name)])
+                column_options(table, name, opts), constraint_expr(ref, table, name)])
     end
 
-    defp column_change(_table, {:add, name, type, opts}) do
-      assemble(["ADD", quote_name(name), column_type(type, opts), column_options(name, opts)])
+    defp column_change(table, {:add, name, type, opts}) do
+      assemble(["ADD", quote_name(name), column_type(type, opts), column_options(table, name, opts)])
     end
 
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
       assemble([
         "MODIFY", quote_name(name), reference_column_type(ref.type, opts),
-        column_options(name, opts), constraint_expr(ref, table, name)
+        column_options(table, name, opts), constraint_expr(ref, table, name)
       ])
     end
 
-    defp column_change(_table, {:modify, name, type, opts}) do
-      assemble(["MODIFY", quote_name(name), column_type(type, opts), column_options(name, opts)])
+    defp column_change(table, {:modify, name, type, opts}) do
+      assemble(["MODIFY", quote_name(name), column_type(type, opts), column_options(table, name, opts)])
     end
 
     defp column_change(_table, {:remove, name}), do: "DROP #{quote_name(name)}"
 
-    defp column_options(name, opts) do
+    defp column_options(table, name, opts) do
       default = Keyword.fetch(opts, :default)
       null    = Keyword.get(opts, :null)
-      pk      = Keyword.get(opts, :primary_key)
+      pk      = (table.primary_key != :composite) and Keyword.get(opts, :primary_key, false)
 
       [default_expr(default), null_expr(null), pk_expr(pk, name)]
     end
 
     defp pk_expr(true, name), do: ", PRIMARY KEY(#{quote_name(name)})"
     defp pk_expr(_, _), do: []
+
+    defp composite_pk_definition(%Table{}=table, columns) do
+      pks = Enum.reduce(columns, [], fn({_, name, _, opts}, pk_acc) ->
+        case Keyword.get(opts, :primary_key, false) do
+          true -> [name|pk_acc]
+          false -> pk_acc
+        end
+      end)
+      if length(pks)>1 do
+        composite_pk_expr = pks |> Enum.reverse |> Enum.map_join(", ", &quote_name/1)
+        {%{table | primary_key: :composite}, ", PRIMARY KEY (" <> composite_pk_expr <> ")"}
+      else
+        {table, ""}
+      end
+    end
 
     defp null_expr(false), do: "NOT NULL"
     defp null_expr(true), do: "NULL"

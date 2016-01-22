@@ -696,13 +696,13 @@ if Code.ensure_loaded?(Postgrex) do
     defp pk_expr(_), do: []
 
     defp composite_pk_definition(%Table{}=table, columns) do
-      {n, pks} = Enum.reduce(columns, {0, []}, fn({_, name, _, opts}, {n_acc, pk_acc}) ->
+      pks = Enum.reduce(columns, [], fn({_, name, _, opts}, pk_acc) ->
         case Keyword.get(opts, :primary_key, false) do
-          true -> {n_acc+1, [name|pk_acc]}
-          false -> {n_acc, pk_acc}
+          true -> [name|pk_acc]
+          false -> pk_acc
         end
       end)
-      if n>1 do
+      if length(pks)>1 do
         composite_pk_expr = pks |> Enum.reverse |> Enum.map_join(", ", &quote_name/1)
         {%{table | primary_key: :composite}, ", PRIMARY KEY (" <> composite_pk_expr <> ")"}
       else
