@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.2
+
+### Bug fixes
+
+* Be restrict on mariaex and postgrex dependencies
+
 ## v1.1.1
 
 ### Bug fixes
