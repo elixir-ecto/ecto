@@ -216,7 +216,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp primary_keys_where!(query, [], []), do: query
-  defp primary_keys_where!(query, p=[pk|pkt], v=[id|idt]) do
+  defp primary_keys_where!(query, [pk|pkt], [id|idt]) do
     Ecto.Query.where(query, [x], field(x, ^pk) == ^id)
       |> primary_keys_where!(pkt, idt)
   end
