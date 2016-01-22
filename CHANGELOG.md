@@ -4,6 +4,10 @@ This is a new major release of Ecto that removes previously deprecated features 
 
 ## Highlights
 
+### Take and dynamic fields
+
+TODO.
+
 ### Concurrent transactional tests
 
 Ecto has reimplemented the `Ecto.Adapters.SQL.Sandbox` pool used for testing to use an ownership mechanism. This allows tests to safely run concurrently even when depending on the database. To use, declare sandbox as your pool in your repository configuration, as before:
@@ -77,21 +81,30 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
   * `Ecto.Pools.Poolboy` and `Ecto.Pools.SojournBroker` have been removed in favor of `DBConnection.Poolboy` and `DBConnection.Sojourn`
   * `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
-  * `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership based `Ecto.Adapters.SQL.Sandbox`
+  * `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership-based `Ecto.Adapters.SQL.Sandbox`
+
+## Deprecations
+
+  * Deprecate `:empty` in `Ecto.Changeset.cast` in favor of the clearer `:invalid` atom
+  * `Repo.after_connect/1` is deprecated, please pass the `:after_connect` repository option instead
 
 ## Enhancements
 
+  * Support prepared queries in adapters
+  * Allow custom `select` field in preload queries
   * Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
   * Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
-  * Allow dynamic and atom fields to be specified on `group_by` and `distinct`
   * Ensure adapters work on native types, guaranteeing adapters compose better with custom types
   * Allow the migration table name to be configured
-  * Add migration support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)`
+  * Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
+  * Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
   * Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
 
 ## Bug fixes
 
   * The `:required` option on `cast_assoc`and `cast_embed` will now tag `has_many` and `embeds_many` relationships as missing if they contain an empty list
+  * Fix Date/DateTime serialization for years above 9999
+  * Switch pg storage management away from `psql` and use direct database connections, solving many issues like locale and database connection
 
 ## Previous versions
 

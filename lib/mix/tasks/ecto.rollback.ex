@@ -38,6 +38,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
     * `--step` / `-n` - rever n number of applied migrations
     * `--to` / `-v` - revert all migrations down to and including version
     * `--quiet` - do not log migration commands
+    * `--prefix` - the prefix to run migrations on
 
   """
 
@@ -46,7 +47,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
     repos = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, quiet: :boolean],
+      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, quiet: :boolean, prefix: :string],
       aliases: [n: :step, v: :to]
 
     unless opts[:to] || opts[:step] || opts[:all] do

@@ -83,12 +83,13 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   end
 
   test "runs the migrator yielding the repository and migrations path" do
-    run ["-r", to_string(Repo), "--quiet"], fn repo, path, direction, opts ->
+    run ["-r", to_string(Repo), "--quiet", "--prefix", "foo"], fn repo, path, direction, opts ->
       assert repo == Repo
       assert path == Application.app_dir(:ecto, "hello/migrations")
       assert direction == :up
       assert opts[:all] == true
       assert opts[:log] == false
+      assert opts[:prefix] == "foo"
     end
     assert Process.get(:started)
   end

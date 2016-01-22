@@ -37,6 +37,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
     * `--step` / `-n` - run n number of pending migrations
     * `--to` / `-v` - run all migrations up to and including version
     * `--quiet` - do not log migration commands
+    * `--prefix` - the prefix to run migrations on
 
   """
 
@@ -45,7 +46,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
     repos = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, quiet: :boolean],
+      switches: [all: :boolean, step: :integer, to: :integer, quiet: :boolean, prefix: :string],
       aliases: [n: :step, v: :to]
 
     unless opts[:to] || opts[:step] || opts[:all] do

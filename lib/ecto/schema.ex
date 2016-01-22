@@ -31,15 +31,17 @@ defmodule Ecto.Schema do
   Those attributes are:
 
     * `@primary_key` - configures the schema primary key. It expects
-      a tuple `{pk_field_name, type, options}` with the primary key field name,
-      type (:id, :binary_id, :string or Ecto/Custom.Type) and options.
-      Defaults to `{:id, :id, autogenerate: true}`. When set to
-      `false`, does not define a primary key in the schema;
+      a tuple `{field_name, type, options}` with the primary key field
+      name, type (typically :id or :binary_id but can be any type) and
+      options. Defaults to `{:id, :id, autogenerate: true}`. When set
+      to `false`, does not define a primary key in the schema;
 
     * `@schema_prefix` - configures the schema prefix. Defaults `nil`
       generate structs and queries without prefix. When set, the
       prefix will be used by every built struct as well as queries
-      where the `from` is the current schema;
+      where the `from` is the current schema. In PostgreSQL, the
+      prefix is called "SCHEMA" (typically set with schema search_path).
+      In MySQL the prefix points to databases.
 
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. Defaults to `:integer`;
