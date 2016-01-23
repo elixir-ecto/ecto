@@ -341,7 +341,7 @@ defmodule Ecto.Schema do
           false ->
             []
           {name, type, opts} ->
-            Ecto.Schema.__field__(__MODULE__, name, type, true, opts)
+            Ecto.Schema.__field__(__MODULE__, name, type, [primary_key: true] ++ opts)
             [name]
           other ->
             raise ArgumentError, "@primary_key must be false or {name, type, opts}"
@@ -403,9 +403,8 @@ defmodule Ecto.Schema do
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
-    primary_key = Keyword.get(opts, :primary_key, false)
     quote do
-      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(primary_key), unquote(opts))
+      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
   end
 
@@ -1073,8 +1072,9 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __field__(mod, name, type, pk?, opts) do
+  def __field__(mod, name, type, opts) do
     check_type!(name, type, opts[:virtual])
+    pk? = opts[:primary_key] || false
 
     default = default_for_type(type, opts)
     check_default!(name, type, default)
@@ -1142,7 +1142,7 @@ defmodule Ecto.Schema do
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
 
     if Keyword.get(opts, :define_field, true) do
-      __field__(mod, opts[:foreign_key], foreign_key_type, Keyword.get(opts, :primary_key, false), opts)
+      __field__(mod, opts[:foreign_key], foreign_key_type, opts)
     end
 
     struct =
@@ -1317,7 +1317,7 @@ defmodule Ecto.Schema do
     opts   = [cardinality: cardinality, related: schema] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
 
-    __field__(mod, name, {:embed, struct}, false, opts)
+    __field__(mod, name, {:embed, struct}, opts)
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
   end
 
