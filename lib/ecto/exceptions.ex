@@ -85,21 +85,21 @@ end
 defmodule Ecto.NoPrimaryKeyFieldError do
   @moduledoc """
   Raised at runtime when an operation that requires a primary key is invoked
-  with a model that does not define a primary key by using `@primary_key false`
+  with a schema that does not define a primary key by using `@primary_key false`
   """
-  defexception [:message, :model]
+  defexception [:message, :schema]
 
   def exception(opts) do
-    model   = Keyword.fetch!(opts, :model)
-    message = "model `#{inspect model}` has no primary key"
-    %__MODULE__{message: message, model: model}
+    schema  = Keyword.fetch!(opts, :schema)
+    message = "schema `#{inspect schema}` has no primary key"
+    %__MODULE__{message: message, schema: schema}
   end
 end
 
 defmodule Ecto.NoPrimaryKeyValueError do
   @moduledoc """
   Raised at runtime when an operation that requires a primary key is invoked
-  with a model missing value for its primary key
+  with a schema missing value for its primary key
   """
   defexception [:message, :struct]
 
@@ -109,7 +109,6 @@ defmodule Ecto.NoPrimaryKeyValueError do
     %__MODULE__{message: message, struct: struct}
   end
 end
-
 
 defmodule Ecto.ChangeError do
   defexception [:message]
@@ -188,7 +187,7 @@ defmodule Ecto.ConstraintError do
       end
 
     msg = """
-    constraint error when attempting to #{action} model:
+    constraint error when attempting to #{action} struct:
 
         * #{type}: #{constraint}
 

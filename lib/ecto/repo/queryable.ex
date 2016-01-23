@@ -188,15 +188,16 @@ defmodule Ecto.Repo.Queryable do
     raise ArgumentError, "cannot perform #{inspect repo}.get/2 because the given value is nil"
   end
 
-  defp query_for_get(_repo, queryable, id) do
+  defp query_for_get(repo, queryable, id) do
     query = Queryable.to_query(queryable)
-    model = assert_model!(query)
-    case model.__schema__(:primary_key) do
-      [] -> raise Ecto.NoPrimaryKeyFieldError, model: model
-      [primary_key] ->
-         Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
-       primary_keys ->
-         primary_keys_where!(query, primary_keys, id)
+    schema = assert_schema!(query)
+    case schema.__schema__(:primary_key) do
+      [pk] ->
+        Ecto.Query.from(x in query, where: field(x, ^pk) == ^id)
+      pks ->
+        raise ArgumentError,
+          "#{inspect repo}.get/2 requires the schema #{inspect schema} " <>
+          "to have exactly one primary key, got: #{inspect pks}"
     end
   end
 
@@ -204,29 +205,14 @@ defmodule Ecto.Repo.Queryable do
     Ecto.Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
-  defp assert_model!(query) do
+  defp assert_schema!(query) do
     case query.from do
-      {_source, model} when model != nil ->
-        model
+      {_source, schema} when schema != nil ->
+        schema
       _ ->
         raise Ecto.QueryError,
           query: query,
-          message: "expected a from expression with a model"
+          message: "expected a from expression with a schema"
     end
-  end
-
-  defp primary_keys_where!(query, [], []), do: query
-  defp primary_keys_where!(query, [pk|pkt], [id|idt]) do
-    Ecto.Query.where(query, [x], field(x, ^pk) == ^id)
-      |> primary_keys_where!(pkt, idt)
-  end
-  defp primary_keys_where!(_query, _pks, ids) when not is_list(ids) do
-    raise ArgumentError, "for multi-column primary key provide the list of values"
-  end
-  defp primary_keys_where!(_query, pks, ids) when length(pks) > length(ids) do
-    raise ArgumentError, "not enough values for multi-column primary key"
-  end
-  defp primary_keys_where!(_query, _pks, _ids) do
-    raise ArgumentError, "too many values for multi-column primary key"
   end
 end

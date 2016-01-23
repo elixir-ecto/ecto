@@ -46,13 +46,13 @@ defmodule Ecto.Integration.ConstraintsTest do
     overlapping_changeset = Ecto.Changeset.change(%Constraint{}, from: 9, to: 12)
 
     exception =
-      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert struct/, fn ->
         PoolRepo.insert(overlapping_changeset)
       end
     assert exception.message =~ "exclude: cannot_overlap"
     assert exception.message =~ "The changeset has not defined any constraint."
 
-    message = ~r/constraint error when attempting to insert model/
+    message = ~r/constraint error when attempting to insert struct/
     exception =
       assert_raise Ecto.ConstraintError, message, fn ->
         overlapping_changeset
@@ -73,7 +73,7 @@ defmodule Ecto.Integration.ConstraintsTest do
     # When the changeset doesn't expect the db error
     changeset = Ecto.Changeset.change(%Constraint{}, price: -10)
     exception =
-      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert struct/, fn ->
         PoolRepo.insert(changeset)
       end
 

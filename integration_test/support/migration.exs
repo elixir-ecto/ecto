@@ -29,7 +29,7 @@ defmodule Ecto.Integration.Migration do
       add :user_id, references(:users)
     end
 
-    create table(:users_posts) do
+    create table(:posts_users_pk) do
       add :post_id, references(:posts)
       add :user_id, references(:users)
       timestamps
@@ -90,10 +90,9 @@ defmodule Ecto.Integration.Migration do
       add :name, :string
     end
 
-    create table(:users_posts_composite_pk) do
-      add :user_id, references(:users), primary_key: true
+    create table(:posts_users_composite_pk) do
       add :post_id, references(:posts), primary_key: true
-      add :prefer_order, :integer
+      add :user_id, references(:users), primary_key: true
       timestamps
     end
   end

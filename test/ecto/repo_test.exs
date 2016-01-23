@@ -33,10 +33,6 @@ defmodule Ecto.RepoTest do
     assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
       TestRepo.delete!(model)
     end
-
-    assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
-      TestRepo.get(MyModelNoPK, 123)
-    end
   end
 
   test "works with primary key value" do
@@ -89,7 +85,7 @@ defmodule Ecto.RepoTest do
       TestRepo.get(MyModel, :atom)
     end
 
-    message = ~r"expected a from expression with a model in query"
+    message = ~r"expected a from expression with a schema in query"
     assert_raise Ecto.QueryError, message, fn ->
       TestRepo.get(%Ecto.Query{}, :atom)
     end

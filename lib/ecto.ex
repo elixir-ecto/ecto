@@ -417,8 +417,8 @@ defmodule Ecto do
   Returns the schema primary keys as a keyword list.
   """
   @spec primary_key(Ecto.Schema.t) :: Keyword.t
-  def primary_key(%{__struct__: module} = struct) do
-    Enum.map module.__schema__(:primary_key), fn(field) ->
+  def primary_key(%{__struct__: schema} = struct) do
+    Enum.map schema.__schema__(:primary_key), fn(field) ->
       {field, Map.fetch!(struct, field)}
     end
   end
@@ -430,9 +430,9 @@ defmodule Ecto do
   primary key field.
   """
   @spec primary_key!(Ecto.Schema.t) :: Keyword.t | no_return
-  def primary_key!(struct) do
+  def primary_key!(%{__struct__: schema} = struct) do
     case primary_key(struct) do
-      [] -> raise Ecto.NoPrimaryKeyFieldError, model: struct
+      [] -> raise Ecto.NoPrimaryKeyFieldError, schema: schema
       pk -> pk
     end
   end

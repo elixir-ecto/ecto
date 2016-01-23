@@ -337,9 +337,9 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  defp primary_keys!(module) do
-    case module.__schema__(:primary_key) do
-      []  -> raise Ecto.NoPrimaryKeyFieldError, model: module
+  defp primary_keys!(schema) do
+    case schema.__schema__(:primary_key) do
+      []  -> raise Ecto.NoPrimaryKeyFieldError, schema: schema
       pks -> pks
     end
   end

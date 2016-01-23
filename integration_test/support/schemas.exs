@@ -108,7 +108,7 @@ defmodule Ecto.Integration.Permalink do
   end
 end
 
-defmodule Ecto.Integration.UserPost do
+defmodule Ecto.Integration.PostUser do
   @moduledoc """
   This module is used to test:
 
@@ -117,7 +117,7 @@ defmodule Ecto.Integration.UserPost do
   """
   use Ecto.Integration.Schema
 
-  schema "users_posts" do
+  schema "posts_users_pk" do
     belongs_to :user, Ecto.Integration.User
     belongs_to :post, Ecto.Integration.Post
     timestamps
@@ -141,7 +141,7 @@ defmodule Ecto.Integration.User do
     has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all, on_replace: :nilify
     has_one :permalink, Ecto.Integration.Permalink, on_replace: :nilify
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
-    many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.UserPost
+    many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUser
     timestamps
   end
 end
@@ -241,7 +241,7 @@ defmodule Ecto.Integration.CompositePk do
   end
 end
 
-defmodule Ecto.Integration.UserPostCompositePk do
+defmodule Ecto.Integration.PostUserCompositePk do
   @moduledoc """
   This module is used to test:
 
@@ -251,10 +251,9 @@ defmodule Ecto.Integration.UserPostCompositePk do
   use Ecto.Integration.Schema
 
   @primary_key false
-  schema "users_posts_composite_pk" do
+  schema "posts_users_composite_pk" do
     belongs_to :user, Ecto.Integration.User, primary_key: true
     belongs_to :post, Ecto.Integration.Post, primary_key: true
-    field :prefer_order, :integer
     timestamps
   end
 end

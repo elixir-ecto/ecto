@@ -223,7 +223,7 @@ defmodule Ecto.Repo do
   given id.
 
   Returns `nil` if no result was found. If the struct in the queryable
-  has no primary key `Ecto.NoPrimaryKeyFieldError` will be raised.
+  has no or more than one primary key, it will raise an argument error.
 
   ## Options
 

@@ -14,7 +14,7 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Custom
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.CompositePk
-  alias Ecto.Integration.UserPostCompositePk
+  alias Ecto.Integration.PostUserCompositePk
 
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
@@ -50,7 +50,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "insert, update and delete" do
-    post = %Post{title: "create and delete single", text: "fetch empty"}
+    post = %Post{title: "insert, update, delete", text: "fetch empty"}
     meta = post.__meta__
 
     deleted_meta = put_in meta.state, :deleted
@@ -63,6 +63,37 @@ defmodule Ecto.Integration.RepoTest do
     post = TestRepo.one(Post)
     assert post.__meta__.state == :loaded
     assert post.inserted_at
+  end
+
+  test "insert, update and delete with composite pk" do
+    c1 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "first"})
+    c2 = TestRepo.insert!(%CompositePk{a: 1, b: 3, name: "second"})
+
+    changeset = Ecto.Changeset.cast(c1, %{name: "first change"}, ~w(name), ~w())
+
+    c1_updated = TestRepo.update!(changeset)
+    assert c1_updated == TestRepo.get_by!(CompositePk, %{a: 1, b: 2})
+
+    TestRepo.delete!(c2)
+    assert [c1_updated] == TestRepo.all(CompositePk)
+
+    assert_raise ArgumentError, ~r"to have exactly one primary key", fn ->
+      TestRepo.get(CompositePk, [])
+    end
+
+    assert_raise ArgumentError, ~r"to have exactly one primary key", fn ->
+      TestRepo.get!(CompositePk, [1, 2])
+    end
+  end
+
+  test "insert, update and delete with associated composite pk" do
+    user = TestRepo.insert!(%User{})
+    post = TestRepo.insert!(%Post{title: "post title", text: "post text"})
+
+    user_post = TestRepo.insert!(%PostUserCompositePk{user_id: user.id, post_id: post.id})
+    assert TestRepo.get_by!(PostUserCompositePk, [user_id: user.id, post_id: post.id]) == user_post
+    TestRepo.delete!(user_post)
+    assert TestRepo.all(PostUserCompositePk) == []
   end
 
   test "insert and update with changeset" do
@@ -188,7 +219,7 @@ defmodule Ecto.Integration.RepoTest do
     {:ok, _}  = TestRepo.insert(changeset)
 
     exception =
-      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert struct/, fn ->
         changeset
         |> TestRepo.insert()
       end
@@ -196,7 +227,7 @@ defmodule Ecto.Integration.RepoTest do
     assert exception.message =~ "unique: posts_uuid_index"
     assert exception.message =~ "The changeset has not defined any constraint."
 
-    message = ~r/constraint error when attempting to insert model/
+    message = ~r/constraint error when attempting to insert struct/
     exception =
       assert_raise Ecto.ConstraintError, message, fn ->
         changeset
@@ -233,7 +264,7 @@ defmodule Ecto.Integration.RepoTest do
     changeset = Ecto.Changeset.change(%Comment{post_id: 0})
 
     exception =
-      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert struct/, fn ->
         changeset
         |> TestRepo.insert()
       end
@@ -241,7 +272,7 @@ defmodule Ecto.Integration.RepoTest do
     assert exception.message =~ "foreign_key: comments_post_id_fkey"
     assert exception.message =~ "The changeset has not defined any constraint."
 
-    message = ~r/constraint error when attempting to insert model/
+    message = ~r/constraint error when attempting to insert struct/
     exception =
       assert_raise Ecto.ConstraintError, message, fn ->
         changeset
@@ -263,7 +294,7 @@ defmodule Ecto.Integration.RepoTest do
     changeset = Ecto.Changeset.change(%Comment{post_id: 0})
 
     exception =
-      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert model/, fn ->
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert struct/, fn ->
         changeset
         |> TestRepo.insert()
       end
@@ -271,7 +302,7 @@ defmodule Ecto.Integration.RepoTest do
     assert exception.message =~ "foreign_key: comments_post_id_fkey"
     assert exception.message =~ "The changeset has not defined any constraint."
 
-    message = ~r/constraint error when attempting to insert model/
+    message = ~r/constraint error when attempting to insert struct/
     exception =
       assert_raise Ecto.ConstraintError, message, fn ->
         changeset
@@ -294,7 +325,7 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert!(%Permalink{user_id: user.id})
 
     exception =
-      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to delete model/, fn ->
+      assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to delete struct/, fn ->
         TestRepo.delete!(user)
       end
 
@@ -307,7 +338,7 @@ defmodule Ecto.Integration.RepoTest do
     user = TestRepo.insert!(%User{})
     TestRepo.insert!(%Permalink{user_id: user.id})
 
-    message = ~r/constraint error when attempting to delete model/
+    message = ~r/constraint error when attempting to delete struct/
     exception =
       assert_raise Ecto.ConstraintError, message, fn ->
         user
@@ -356,40 +387,6 @@ defmodule Ecto.Integration.RepoTest do
     bid    = custom.bid
     assert %Custom{bid: ^bid, __meta__: %{source: {nil, "posts"}}} =
            TestRepo.get(from(c in {"posts", Custom}), bid)
-  end
-
-  test "get(!) composite primary keys" do
-    c1 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "first"})
-    c2 = TestRepo.insert!(%CompositePk{a: 1, b: 3, name: "second"})
-
-    assert c1 == TestRepo.get!(CompositePk, [1, 2])
-    assert c2 == TestRepo.get!(CompositePk, ["1", "3"])
-
-    changeset = Ecto.Changeset.cast(c1, %{name: "first change"}, ~w(name), ~w())
-
-    c1_updated = TestRepo.update!(changeset)
-    assert c1_updated == TestRepo.get!(CompositePk, [1, 2])
-
-    TestRepo.delete!(c2)
-    assert [c1_updated] == TestRepo.all(CompositePk)
-
-    assert_raise ArgumentError, "not enough values for multi-column primary key", fn ->
-      TestRepo.get!(CompositePk, [])
-    end
-    assert_raise ArgumentError, "not enough values for multi-column primary key", fn ->
-      TestRepo.get!(CompositePk, [1])
-    end
-    assert_raise ArgumentError, "too many values for multi-column primary key", fn ->
-      TestRepo.get!(CompositePk, [1, 2, 3])
-    end
-
-    user = TestRepo.insert!(%User{})
-    post = TestRepo.insert!(%Post{title: "post title", text: "post text"})
-
-    user_post = TestRepo.insert!(%UserPostCompositePk{user_id: user.id, post_id: post.id})
-    assert user_post == TestRepo.get!(UserPostCompositePk, [user.id, post.id])
-    TestRepo.delete!(user_post)
-    assert [] == TestRepo.all(UserPostCompositePk)
   end
 
   test "get_by(!)" do

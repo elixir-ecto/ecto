@@ -8,7 +8,7 @@ defmodule Ecto.Integration.AssocTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.User
-  alias Ecto.Integration.UserPost
+  alias Ecto.Integration.PostUser
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
 
@@ -314,7 +314,7 @@ defmodule Ecto.Integration.AssocTest do
     [p2] = user.schema_posts
     assert p2.title == "2"
 
-    [up2] = TestRepo.all(UserPost) |> Enum.sort_by(&(&1.id))
+    [up2] = TestRepo.all(PostUser) |> Enum.sort_by(&(&1.id))
     assert up2.post_id == p2.id
     assert up2.user_id == user.id
     assert up2.inserted_at
@@ -334,7 +334,7 @@ defmodule Ecto.Integration.AssocTest do
     assert p1.title == "11"
     assert p2.title == "22"
 
-    [_up2, up1] = TestRepo.all(UserPost) |> Enum.sort_by(&(&1.id))
+    [_up2, up1] = TestRepo.all(PostUser) |> Enum.sort_by(&(&1.id))
     assert up1.post_id == p1.id
     assert up1.user_id == user.id
     assert up1.inserted_at
