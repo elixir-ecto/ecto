@@ -580,12 +580,13 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :category_4, references(:categories, on_delete: :nilify_all), []}]}
 
     assert SQL.execute_ddl(create) == """
-    CREATE TABLE "posts" ("id" serial PRIMARY KEY,
+    CREATE TABLE "posts" ("id" serial,
     "category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
     "category_1" integer CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
     "category_2" integer CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
     "category_3" integer NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
-    "category_4" integer CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL)
+    "category_4" integer CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL,
+    PRIMARY KEY ("id"))
     """ |> remove_newlines
   end
 
@@ -594,7 +595,7 @@ defmodule Ecto.Adapters.PostgresTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE "posts" ("id" serial PRIMARY KEY, "created_at" timestamp) WITH FOO=BAR|
+           ~s|CREATE TABLE "posts" ("id" serial, "created_at" timestamp, PRIMARY KEY ("id")) WITH FOO=BAR|
   end
 
   test "create table with composite key" do

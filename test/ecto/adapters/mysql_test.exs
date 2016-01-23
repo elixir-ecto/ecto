@@ -488,7 +488,7 @@ defmodule Ecto.Adapters.MySQLTest do
     create = {:create, table(:posts, engine: :myisam),
                [{:add, :id, :serial, [primary_key: true]}]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`)) ENGINE = MYISAM|
+           ~s|CREATE TABLE `posts` (`id` serial, PRIMARY KEY (`id`)) ENGINE = MYISAM|
   end
 
   test "create table with references" do
@@ -501,7 +501,7 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :category_4, references(:categories, on_delete: :nilify_all), []}]}
 
     assert SQL.execute_ddl(create) == """
-    CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`),
+    CREATE TABLE `posts` (`id` serial,
     `category_0` BIGINT UNSIGNED ,
     CONSTRAINT `posts_category_0_fkey` FOREIGN KEY (`category_0`) REFERENCES `categories`(`id`),
     `category_1` BIGINT UNSIGNED ,
@@ -511,7 +511,8 @@ defmodule Ecto.Adapters.MySQLTest do
     `category_3` BIGINT UNSIGNED NOT NULL ,
     CONSTRAINT `posts_category_3_fkey` FOREIGN KEY (`category_3`) REFERENCES `categories`(`id`) ON DELETE CASCADE,
     `category_4` BIGINT UNSIGNED ,
-    CONSTRAINT `posts_category_4_fkey` FOREIGN KEY (`category_4`) REFERENCES `categories`(`id`) ON DELETE SET NULL) ENGINE = INNODB
+    CONSTRAINT `posts_category_4_fkey` FOREIGN KEY (`category_4`) REFERENCES `categories`(`id`) ON DELETE SET NULL,
+    PRIMARY KEY (`id`)) ENGINE = INNODB
     """ |> remove_newlines
   end
 
@@ -520,7 +521,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `created_at` datetime) ENGINE = INNODB WITH FOO=BAR|
+           ~s|CREATE TABLE `posts` (`id` serial, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = INNODB WITH FOO=BAR|
   end
 
   test "create table with both engine and options" do
@@ -528,7 +529,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `created_at` datetime) ENGINE = MYISAM WITH FOO=BAR|
+           ~s|CREATE TABLE `posts` (`id` serial, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = MYISAM WITH FOO=BAR|
   end
 
   test "create table with composite key" do
