@@ -285,8 +285,8 @@ defmodule Ecto.DateTimeTest do
   end
 
   test "to_iso8601" do
-    assert Ecto.DateTime.to_iso8601(@datetime) == "2015-01-23T23:50:07Z"
-    assert Ecto.DateTime.to_iso8601(@datetime_usec) == "2015-01-23T23:50:07.008000Z"
+    assert Ecto.DateTime.to_iso8601(@datetime) == "2015-01-23T23:50:07"
+    assert Ecto.DateTime.to_iso8601(@datetime_usec) == "2015-01-23T23:50:07.008000"
   end
 
   test "to_erl and from_erl" do
@@ -294,9 +294,9 @@ defmodule Ecto.DateTimeTest do
   end
 
   test "inspect protocol" do
-    assert inspect(@datetime) == "#Ecto.DateTime<2015-01-23T23:50:07Z>"
-    assert inspect(@datetime_usec) == "#Ecto.DateTime<2015-01-23T23:50:07.008000Z>"
-    assert inspect(@datetime_large) == "#Ecto.DateTime<10000-01-23T23:50:07Z>"
+    assert inspect(@datetime) == "#Ecto.DateTime<2015-01-23T23:50:07>"
+    assert inspect(@datetime_usec) == "#Ecto.DateTime<2015-01-23T23:50:07.008000>"
+    assert inspect(@datetime_large) == "#Ecto.DateTime<10000-01-23T23:50:07>"
   end
 
   test "precision" do

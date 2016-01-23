@@ -520,13 +520,8 @@ defmodule Ecto.DateTime do
   end
 
   @doc """
-  Converts `Ecto.DateTime` to its ISO 8601 UTC representation if the
-  `Ecto.DateTime` is UTC.
-
-  WARNING: This will produce an incorrect result unless the datetime is UTC!
-  Make sure that the datetime is UTC. `inserted_at` and `updated_at` fields
-  populated by the Ecto `timestamps` feature are UTC. But other `Ecto.DateTime`
-  fields are not always UTC.
+  Converts `Ecto.DateTime` to its ISO 8601 representation
+  without timezone specification.
   """
   def to_iso8601(%Ecto.DateTime{year: year, month: month, day: day,
                                 hour: hour, min: min, sec: sec, usec: usec}) do
@@ -534,9 +529,9 @@ defmodule Ecto.DateTime do
           zero_pad(hour, 2) <> ":" <> zero_pad(min, 2) <> ":" <> zero_pad(sec, 2)
 
     if is_nil(usec) or usec == 0 do
-      str <> "Z"
+      str
     else
-      str <> "." <> zero_pad(usec, 6) <> "Z"
+      str <> "." <> zero_pad(usec, 6)
     end
   end
 
