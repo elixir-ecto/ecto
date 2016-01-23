@@ -292,6 +292,7 @@ defmodule Ecto.Schema do
       @ecto_embedded false
       @schema_prefix nil
 
+      Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
@@ -353,6 +354,8 @@ defmodule Ecto.Schema do
         :ok
       end
 
+      primary_key_fields = @ecto_primary_keys |> Enum.reverse
+
       fields = @ecto_fields |> Enum.reverse
       assocs = @ecto_assocs |> Enum.reverse
       embeds = @ecto_embeds |> Enum.reverse
@@ -400,8 +403,9 @@ defmodule Ecto.Schema do
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
+    primary_key = Keyword.get(opts, :primary_key, false)
     quote do
-      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), false, unquote(opts))
+      Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(primary_key), unquote(opts))
     end
   end
 
@@ -1091,6 +1095,10 @@ defmodule Ecto.Schema do
         raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
       end
 
+      if pk? do
+        Module.put_attribute(mod, :ecto_primary_keys, name)
+      end
+
       Module.put_attribute(mod, :ecto_fields, {name, type})
     end
   end
@@ -1122,8 +1130,9 @@ defmodule Ecto.Schema do
       Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
-
-  @valid_belongs_to_options [:foreign_key, :references, :define_field, :type, :on_replace, :defaults]
+  # :primary_key is valid here to support associative entity
+  # https://en.wikipedia.org/wiki/Associative_entity
+  @valid_belongs_to_options [:foreign_key, :references, :define_field, :type, :on_replace, :defaults, :primary_key]
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
@@ -1133,7 +1142,7 @@ defmodule Ecto.Schema do
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
 
     if Keyword.get(opts, :define_field, true) do
-      __field__(mod, opts[:foreign_key], foreign_key_type, false, opts)
+      __field__(mod, opts[:foreign_key], foreign_key_type, Keyword.get(opts, :primary_key, false), opts)
     end
 
     struct =

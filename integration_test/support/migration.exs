@@ -83,5 +83,18 @@ defmodule Ecto.Integration.Migration do
         add :items, {:array, :map}
       end
     end
+
+    create table(:composite_pk, primary_key: false) do
+      add :a, :integer, primary_key: true
+      add :b, :integer, primary_key: true
+      add :name, :string
+    end
+
+    create table(:users_posts_composite_pk) do
+      add :user_id, references(:users), primary_key: true
+      add :post_id, references(:posts), primary_key: true
+      add :prefer_order, :integer
+      timestamps
+    end
   end
 end

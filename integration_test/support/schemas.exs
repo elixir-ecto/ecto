@@ -223,3 +223,38 @@ defmodule Ecto.Integration.Order do
     embeds_one :item, Ecto.Integration.Item
   end
 end
+
+defmodule Ecto.Integration.CompositePk do
+  @moduledoc """
+  This module is used to test:
+
+    * Composite primary keys
+
+  """
+  use Ecto.Integration.Schema
+
+  @primary_key false
+  schema "composite_pk" do
+    field :a, :integer, primary_key: true
+    field :b, :integer, primary_key: true
+    field :name, :string
+  end
+end
+
+defmodule Ecto.Integration.UserPostCompositePk do
+  @moduledoc """
+  This module is used to test:
+
+    * Composite primary keys for 2 belongs_to fields
+
+  """
+  use Ecto.Integration.Schema
+
+  @primary_key false
+  schema "users_posts_composite_pk" do
+    belongs_to :user, Ecto.Integration.User, primary_key: true
+    belongs_to :post, Ecto.Integration.Post, primary_key: true
+    field :prefer_order, :integer
+    timestamps
+  end
+end

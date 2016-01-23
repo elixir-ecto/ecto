@@ -191,8 +191,13 @@ defmodule Ecto.Repo.Queryable do
   defp query_for_get(_repo, queryable, id) do
     query = Queryable.to_query(queryable)
     model = assert_model!(query)
-    primary_key = primary_key_field!(model)
-    Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
+    case model.__schema__(:primary_key) do
+      [] -> raise Ecto.NoPrimaryKeyFieldError, model: model
+      [primary_key] ->
+         Ecto.Query.from(x in query, where: field(x, ^primary_key) == ^id)
+       primary_keys ->
+         primary_keys_where!(query, primary_keys, id)
+    end
   end
 
   defp query_for_get_by(_repo, queryable, clauses) do
@@ -210,10 +215,18 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp primary_key_field!(model) when is_atom(model) do
-    case model.__schema__(:primary_key) do
-      [field] -> field
-      _ -> raise Ecto.NoPrimaryKeyFieldError, model: model
-    end
+  defp primary_keys_where!(query, [], []), do: query
+  defp primary_keys_where!(query, [pk|pkt], [id|idt]) do
+    Ecto.Query.where(query, [x], field(x, ^pk) == ^id)
+      |> primary_keys_where!(pkt, idt)
+  end
+  defp primary_keys_where!(_query, _pks, ids) when not is_list(ids) do
+    raise ArgumentError, "for multi-column primary key provide the list of values"
+  end
+  defp primary_keys_where!(_query, pks, ids) when length(pks) > length(ids) do
+    raise ArgumentError, "not enough values for multi-column primary key"
+  end
+  defp primary_keys_where!(_query, _pks, _ids) do
+    raise ArgumentError, "too many values for multi-column primary key"
   end
 end

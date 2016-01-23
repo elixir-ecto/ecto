@@ -531,6 +531,17 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s|CREATE TABLE `posts` (`id` serial , PRIMARY KEY(`id`), `created_at` datetime) ENGINE = MYISAM WITH FOO=BAR|
   end
 
+  test "create table with composite key" do
+    create = {:create, table(:posts),
+               [{:add, :a, :integer, [primary_key: true]},
+                {:add, :b, :integer, [primary_key: true]},
+                {:add, :name, :string, []}]}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE `posts` (`a` integer, `b` integer, `name` varchar(255), PRIMARY KEY (`a`, `b`)) ENGINE = INNODB
+    """ |> remove_newlines
+  end
+
   test "drop table" do
     drop = {:drop, table(:posts)}
     assert SQL.execute_ddl(drop) == ~s|DROP TABLE `posts`|

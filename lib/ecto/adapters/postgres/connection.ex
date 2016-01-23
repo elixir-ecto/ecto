@@ -567,9 +567,11 @@ if Code.ensure_loaded?(Postgrex) do
     def execute_ddl({command, %Table{}=table, columns}) when command in [:create, :create_if_not_exists] do
       options       = options_expr(table.options)
       if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
+      # if more than one has primary_key: true then we alte table with %{table | primary_key: :composite}
+      {table, composite_pk_def} = composite_pk_definition(table, columns)
 
       "CREATE TABLE" <> if_not_exists <>
-        " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)})" <> options
+        " #{quote_table(table.prefix, table.name)} (#{column_definitions(table, columns)}#{composite_pk_def})" <> options
     end
 
     def execute_ddl({command, %Table{}=table}) when command in @drops do
@@ -642,12 +644,12 @@ if Code.ensure_loaded?(Postgrex) do
     defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
       assemble([
         quote_name(name), reference_column_type(ref.type, opts),
-        column_options(ref.type, opts), reference_expr(ref, table, name)
+        column_options(table, ref.type, opts), reference_expr(ref, table, name)
       ])
     end
 
-    defp column_definition(_table, {:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type, opts), column_options(type, opts)])
+    defp column_definition(table, {:add, name, type, opts}) do
+      assemble([quote_name(name), column_type(type, opts), column_options(table, type, opts)])
     end
 
     defp column_changes(table, columns) do
@@ -657,12 +659,12 @@ if Code.ensure_loaded?(Postgrex) do
     defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
       assemble([
         "ADD COLUMN", quote_name(name), reference_column_type(ref.type, opts),
-        column_options(ref.type, opts), reference_expr(ref, table, name)
+        column_options(table, ref.type, opts), reference_expr(ref, table, name)
       ])
     end
 
-    defp column_change(_table, {:add, name, type, opts}) do
-      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(type, opts)])
+    defp column_change(table, {:add, name, type, opts}) do
+      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(table, type, opts)])
     end
 
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
@@ -694,16 +696,31 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    defp column_options(type, opts) do
+    defp column_options(table, type, opts) do
       default = Keyword.fetch(opts, :default)
       null    = Keyword.get(opts, :null)
-      pk      = Keyword.get(opts, :primary_key)
+      pk      = (table.primary_key != :composite) and Keyword.get(opts, :primary_key, false)
 
       [default_expr(default, type), null_expr(null), pk_expr(pk)]
     end
 
     defp pk_expr(true), do: "PRIMARY KEY"
     defp pk_expr(_), do: []
+
+    defp composite_pk_definition(%Table{}=table, columns) do
+      pks = Enum.reduce(columns, [], fn({_, name, _, opts}, pk_acc) ->
+        case Keyword.get(opts, :primary_key, false) do
+          true -> [name|pk_acc]
+          false -> pk_acc
+        end
+      end)
+      if length(pks)>1 do
+        composite_pk_expr = pks |> Enum.reverse |> Enum.map_join(", ", &quote_name/1)
+        {%{table | primary_key: :composite}, ", PRIMARY KEY (" <> composite_pk_expr <> ")"}
+      else
+        {table, ""}
+      end
+    end
 
     defp null_expr(false), do: "NOT NULL"
     defp null_expr(true), do: "NULL"
