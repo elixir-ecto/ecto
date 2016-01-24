@@ -47,8 +47,8 @@ defmodule Ecto.Association do
 
     * `:owner_key` - the key in the owner with the association value
 
-    * `:relationship` - if the relationship to the specified entity is
-      of a child or a parent
+    * `:relationship` - if the relationship to the specified schema is
+      of a `:child` or a `:parent`
 
   """
   @callback struct(module, field :: atom, opts :: Keyword.t) :: t
@@ -294,6 +294,7 @@ defmodule Ecto.Association.Has do
     * `on_delete` - The action taken on associations when schema is deleted
     * `on_replace` - The action taken on associations when schema is replaced
     * `defaults` - Default fields used when building the association
+    * `relationship` - The relationship to the specified schema, default is `:child`
   """
 
   @behaviour Ecto.Association
@@ -471,6 +472,7 @@ defmodule Ecto.Association.HasThrough do
     * `owner` - The schema where the association was defined
     * `owner_key` - The key on the `owner` schema used for the association
     * `through` - The through associations
+    * `relationship` - The relationship to the specified schema, default `:child`
   """
 
   alias Ecto.Query.JoinExpr
@@ -618,6 +620,8 @@ defmodule Ecto.Association.BelongsTo do
     * `related_key` - The key on the `related` schema used for the association
     * `queryable` - The real query to use for querying association
     * `defaults` - Default fields used when building the association
+    * `relationship` - The relationship to the specified schema, default `:parent`
+    * `on_replace` - The action taken on associations when schema is replaced
   """
 
   @behaviour Ecto.Association
@@ -745,6 +749,10 @@ defmodule Ecto.Association.ManyToMany do
     * `on_delete` - The action taken on associations when schema is deleted
     * `on_replace` - The action taken on associations when schema is replaced
     * `defaults` - Default fields used when building the association
+    * `relationship` - The relationship to the specified schema, default `:child`
+    * `join_keys` - The keyword list with many to many join keys
+    * `join_through` - Atom (representing a schema) or a string (representing a table)
+      for many to many association
   """
 
   @behaviour Ecto.Association
