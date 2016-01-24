@@ -9,7 +9,7 @@ defmodule Ecto.PoisonTest do
     assert Poison.encode!(date) == ~s("2010-04-17")
 
     dt = %Ecto.DateTime{year: 2010, month: 4, day: 17, hour: 0, min: 0, sec: 0}
-    assert Poison.encode!(dt) == ~s("2010-04-17T00:00:00Z")
+    assert Poison.encode!(dt) == ~s("2010-04-17T00:00:00")
   end
 
   test "encodes decimal" do
