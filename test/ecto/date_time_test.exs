@@ -294,9 +294,9 @@ defmodule Ecto.DateTimeTest do
   end
 
   test "inspect protocol" do
-    assert inspect(@datetime) == "#Ecto.DateTime<2015-01-23T23:50:07>"
-    assert inspect(@datetime_usec) == "#Ecto.DateTime<2015-01-23T23:50:07.008000>"
-    assert inspect(@datetime_large) == "#Ecto.DateTime<10000-01-23T23:50:07>"
+    assert inspect(@datetime) == "#Ecto.DateTime<2015-01-23 23:50:07>"
+    assert inspect(@datetime_usec) == "#Ecto.DateTime<2015-01-23 23:50:07.008000>"
+    assert inspect(@datetime_large) == "#Ecto.DateTime<10000-01-23 23:50:07>"
   end
 
   test "precision" do

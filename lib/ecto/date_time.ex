@@ -590,6 +590,6 @@ defimpl Inspect, for: [Ecto.DateTime, Ecto.Date, Ecto.Time] do
   @inspected inspect(@for)
 
   def inspect(dt, _opts) do
-    "#" <> @inspected <> "<" <> @for.to_iso8601(dt) <> ">"
+    "#" <> @inspected <> "<" <> @for.to_string(dt) <> ">"
   end
 end
