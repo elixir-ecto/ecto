@@ -60,6 +60,9 @@ defmodule Ecto.Adapters.PostgresTest do
     query = "posts" |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 
+    query = "posts" |> select([:x]) |> normalize
+    assert SQL.all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
+
     assert_raise Ecto.QueryError, ~r"PostgreSQL requires a schema module", fn ->
       SQL.all from(p in "posts", select: p) |> normalize()
     end
@@ -290,7 +293,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "interpolated values" do
     query = "model"
-            |> select([], ^0)
+            |> select([m], {m.id, ^true})
             |> join(:inner, [], Model2, ^true)
             |> join(:inner, [], Model2, ^false)
             |> where([], fragment("?", ^true))
@@ -306,7 +309,7 @@ defmodule Ecto.Adapters.PostgresTest do
             |> normalize
 
     result =
-      "SELECT $1 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON $2 " <>
+      "SELECT m0.\"id\", $1 FROM \"model\" AS m0 INNER JOIN \"model2\" AS m1 ON $2 " <>
       "INNER JOIN \"model2\" AS m2 ON $3 WHERE ($4) AND ($5) " <>
       "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
       "ORDER BY $10, m0.\"x\" LIMIT $11 OFFSET $12"

@@ -594,9 +594,9 @@ defmodule Ecto.Integration.RepoTest do
   ## Query syntax
 
   test "query select take" do
-    TestRepo.insert!(%Post{title: "1"})
-    TestRepo.insert!(%Post{title: "1"})
-    TestRepo.insert!(%Post{title: "2"})
+    %{id: pid1} = TestRepo.insert!(%Post{title: "1"})
+    %{id: pid2} = TestRepo.insert!(%Post{title: "1"})
+    %{id: pid3} = TestRepo.insert!(%Post{title: "2"})
 
     [p1, p2, p3] = Post |> select([p], take(p, [:title])) |> TestRepo.all
     refute p1.id
@@ -606,13 +606,10 @@ defmodule Ecto.Integration.RepoTest do
     refute p3.id
     assert p3.title
 
-    [p1, p2, p3] = Post |> select([p], take(p, [:id])) |> TestRepo.all
-    assert p1.id
-    refute p1.title
-    assert p2.id
-    refute p2.title
-    assert p3.id
-    refute p3.title
+    [p1, p2, p3] = "posts" |> select([:id]) |> order_by([:id]) |> TestRepo.all
+    assert p1 == %{id: pid1}
+    assert p2 == %{id: pid2}
+    assert p3 == %{id: pid3}
   end
 
   test "query count distinct" do

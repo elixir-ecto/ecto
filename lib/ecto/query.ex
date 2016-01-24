@@ -417,13 +417,36 @@ defmodule Ecto.Query do
   There can only be one select expression in a query, if the select expression
   is omitted, the query will by default select the full schema.
 
+  `select` also accepts a list of atoms where each atom refers to a field in
+  source to be selected.
+
   ## Keywords examples
 
-      from(c in City, select: c) # selects the entire schema
+      from(c in City, select: c) # returns the schema as a struct
       from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
       from(c in City, select: {c.name, ^to_string(40 + 2), 43})
       from(c in City, select: %{n: c.name, answer: 42})
+
+  It is also possible to select a struct and limit the returned
+  fields at the same time:
+
+      from(City, select: [:name])
+
+  The syntax above is equivalent to:
+
+      from(city in City, select: take(city, [:name]))
+
+  `take/2` is more explicit as it may be invoked multiple times
+  to limit different structs:
+
+      from(city in City, join: country in assoc(city, :country),
+           select: {take(city, [:name]), take(country, [:population])}
+
+  For preloads, the taken fields may be specified from the parent:
+
+      from(city in City, preload: :country,
+           select: take(city, [:name, country: :population]))
 
   ## Expressions examples
 

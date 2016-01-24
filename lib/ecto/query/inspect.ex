@@ -78,8 +78,8 @@ defimpl Inspect, for: Ecto.Query do
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
-  defp join(%JoinExpr{qual: qual, source: source, params: params, on: on}, name, names) do
-    string = "#{name} in #{expr(source, names, params)}"
+  defp join(%JoinExpr{qual: qual, source: source, on: on} = part, name, names) do
+    string = "#{name} in #{expr(source, names, part)}"
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
@@ -108,20 +108,27 @@ defimpl Inspect, for: Ecto.Query do
   defp kw_inspect(_key, nil), do: []
   defp kw_inspect(key, val),  do: [{key, inspect(val)}]
 
-  defp expr(%{expr: expr, params: params}, names) do
-    expr(expr, names, params)
+  defp expr(%{expr: expr} = part, names) do
+    expr(expr, names, part)
   end
 
-  defp expr(expr, names, params) do
-    Macro.to_string(expr, &expr_to_string(&1, &2, names, params))
+  defp expr(expr, names, part) do
+    Macro.to_string(expr, &expr_to_string(&1, &2, names, part))
   end
 
   # For keyword and interpolated fragments use normal escaping
-  defp expr_to_string({:fragment, _, [{_, _}|_] = parts}, _, names, params) do
-    "fragment(" <> unmerge_fragments(parts, "", [], names, params) <> ")"
+  defp expr_to_string({:fragment, _, [{_, _}|_] = parts}, _, names, part) do
+    "fragment(" <> unmerge_fragments(parts, "", [], names, part) <> ")"
   end
 
   # Convert variables to proper names
+  defp expr_to_string({:&, _, [ix]}, _, names, %{take: take}) do
+    case take do
+      %{^ix => fields} -> "take(" <> elem(names, ix) <> ", " <> Kernel.inspect(fields) <> ")"
+      _ -> elem(names, ix)
+    end
+  end
+
   defp expr_to_string({:&, _, [ix]}, _, names, _) do
     elem(names, ix)
   end
@@ -130,11 +137,11 @@ defimpl Inspect, for: Ecto.Query do
   #
   # In case the query had its parameters removed,
   # we use ... to express the interpolated code.
-  defp expr_to_string({:^, _, [_ix, _len]}, _, _, _params) do
+  defp expr_to_string({:^, _, [_ix, _len]}, _, _, _part) do
     Macro.to_string {:^, [], [{:..., [], nil}]}
   end
 
-  defp expr_to_string({:^, _, [ix]}, _, _, params) do
+  defp expr_to_string({:^, _, [ix]}, _, _, %{params: params}) do
     escaped =
       case Enum.at(params || [], ix) do
         {value, _type} -> Macro.escape(value)
@@ -150,23 +157,23 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   # Tagged values
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: nil}, _, _names, _params) do
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: nil}, _, _names, _) do
     inspect value
   end
 
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: tag}, _, names, params) do
-    {:type, [], [value, tag]} |> expr(names, params)
+  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: tag}, _, names, part) do
+    {:type, [], [value, tag]} |> expr(names, part)
   end
 
   defp expr_to_string(_expr, string, _, _) do
     string
   end
 
-  defp unmerge_fragments([{:raw, s}, {:expr, v}|t], frag, args, names, params) do
-    unmerge_fragments(t, frag <> s <> "?", [expr(v, names, params)|args], names, params)
+  defp unmerge_fragments([{:raw, s}, {:expr, v}|t], frag, args, names, part) do
+    unmerge_fragments(t, frag <> s <> "?", [expr(v, names, part)|args], names, part)
   end
 
-  defp unmerge_fragments([{:raw, s}], frag, args, _names, _params) do
+  defp unmerge_fragments([{:raw, s}], frag, args, _names, _part) do
     Enum.join [inspect(frag <> s)|Enum.reverse(args)], ", "
   end
 

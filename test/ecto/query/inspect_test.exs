@@ -169,8 +169,24 @@ defmodule Ecto.Query.InspectTest do
            "from p in Inspect.Post, select: <<1, 2, 3>>"
 
     foo = <<1, 2, 3>>
-    assert i(from(Post, select: ^foo)) ==
-           "from p in Inspect.Post, select: ^<<1, 2, 3>>"
+    assert i(from(p in Post, select: {p, ^foo})) ==
+           "from p in Inspect.Post, select: {p, ^<<1, 2, 3>>}"
+  end
+
+  test "select" do
+    assert i(from(p in Post, select: p)) ==
+           ~s{from p in Inspect.Post, select: p}
+
+    assert i(from(p in Post, select: [:foo])) ==
+           ~s{from p in Inspect.Post, select: take(p, [:foo])}
+  end
+
+  test "select after planner" do
+    assert i(plan from(p in Post, select: p)) ==
+           ~s{from p in Inspect.Post, select: p}
+
+    assert i(plan from(p in Post, select: [:foo])) ==
+           ~s{from p in Inspect.Post, select: take(p, [:foo])}
   end
 
   test "params" do

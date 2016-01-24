@@ -108,9 +108,15 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp preprocess({:&, _, [ix, fields]}, value, prefix, context, sources, adapter) do
-    {source, schema} = elem(sources, ix)
-    Ecto.Schema.__load__(schema, prefix, source, context, {fields, value},
-                         &Ecto.Type.adapter_load(adapter, &1, &2))
+    case elem(sources, ix) do
+      {_source, nil} when is_map(value) ->
+        value
+      {_source, nil} when is_list(value) ->
+        load_schemaless(fields, value, %{})
+      {source, schema} ->
+        Ecto.Schema.__load__(schema, prefix, source, context, {fields, value},
+                             &Ecto.Type.adapter_load(adapter, &1, &2))
+    end
   end
 
   defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _context, _sources, adapter) do
@@ -127,6 +133,11 @@ defmodule Ecto.Repo.Queryable do
   defp preprocess(_key, value, _prefix, _context, _sources, _adapter) do
     value
   end
+
+  defp load_schemaless([field|fields], [value|values], acc),
+    do: load_schemaless(fields, values, Map.put(acc, field, value))
+  defp load_schemaless([], [], acc),
+    do: acc
 
   defp load!(type, value, adapter) do
     case Ecto.Type.adapter_load(adapter, type, value) do

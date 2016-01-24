@@ -13,6 +13,9 @@ defmodule Ecto.Query.Builder.SelectTest do
            escape(quote do x.y end, [x: 0], __ENV__)
 
     assert {Macro.escape(quote do &0 end), {%{}, %{0 => [:foo, :bar, baz: :bat]}}} ==
+           escape(quote do [:foo, :bar, baz: :bat] end, [x: 0], __ENV__)
+
+    assert {Macro.escape(quote do &0 end), {%{}, %{0 => [:foo, :bar, baz: :bat]}}} ==
            escape(quote do take(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
 
     assert {{:{}, [], [:{}, [], [0, 1, 2]]}, {%{}, %{}}} ==
@@ -27,11 +30,9 @@ defmodule Ecto.Query.Builder.SelectTest do
     assert {[Macro.escape(quote do &0.y end), Macro.escape(quote do &0.z end)], {%{}, %{}}} ==
            escape(quote do [x.y, x.z] end, [x: 0], __ENV__)
 
-    assert {{:{}, [], [:^, [], [0]]}, {%{0 => {{:+, _, [{:x, _, _}, {:y, _, _}]}, :any}}, %{}}} =
-            escape(quote do ^(x + y) end, [], __ENV__)
-
-    assert {{:{}, [], [:^, [], [0]]}, {%{0 => {quote do x.y end, :any}}, %{}}} ==
-            escape(quote do ^x.y end, [], __ENV__)
+    assert {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
+             {:{}, [], [:^, [], [0]]}], {%{0 => {1, :any}}, %{}}} ==
+            escape(quote do [x.y, ^1] end, [x: 0], __ENV__)
   end
 
   test "only one select is allowed" do
@@ -43,6 +44,7 @@ defmodule Ecto.Query.Builder.SelectTest do
 
   test "select interpolation" do
     fields = [:foo, :bar, :baz]
+    assert select("q", ^fields).select.take == %{0 => fields}
     assert select("q", [q], take(q, ^fields)).select.take == %{0 => fields}
   end
 end

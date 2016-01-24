@@ -317,8 +317,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     end
 
     defp expr({:&, _, [idx, fields]}, sources, query) do
-      {table, name, model} = elem(sources, idx)
-      unless model do
+      {table, name, schema} = elem(sources, idx)
+      if is_nil(schema) and is_nil(fields) do
         error!(query, "MySQL requires a schema module when using selector " <>
           "#{inspect name} but only the table #{inspect table} was given. " <>
           "Please specify a model or specify exactly which fields from " <>

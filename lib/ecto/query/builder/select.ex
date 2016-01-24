@@ -20,13 +20,19 @@ defmodule Ecto.Query.Builder.Select do
       iex> escape(quote(do: x), [x: 0], __ENV__)
       {{:{}, [], [:&, [], [0]]}, {%{}, %{}}}
 
-      iex> escape(quote(do: ^123), [], __ENV__)
-      {{:{}, [], [:^, [], [0]]}, {%{0 => {123, :any}}, %{}}}
-
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {%{}, %{}}}
+  def escape({:^, _, [interpolated]}, _vars, _env) do
+    fields = quote(do: Ecto.Query.Builder.Select.fields!(unquote(interpolated)))
+    {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => fields}}}
+  end
+
   def escape(other, vars, env) do
-    escape(other, {%{}, %{}}, vars, env)
+    if take?(other) do
+      {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => other}}}
+    else
+      escape(other, {%{}, %{}}, vars, env)
+    end
   end
 
   # Tuple
@@ -99,11 +105,21 @@ defmodule Ecto.Query.Builder.Select do
   @doc """
   Called at runtime to verify a field.
   """
-  def fields!(fields) when is_list(fields),
-    do: fields
-  def fields!(other) do
-    raise ArgumentError,
-      "expected a list of fields in `take/2` inside `select`, got: `#{inspect other}`"
+  def fields!(fields) do
+    if take?(fields) do
+      fields
+    else
+      raise ArgumentError,
+        "expected a list of fields in `take/2` inside `select`, got: `#{inspect fields}`"
+    end
+  end
+
+  defp take?(fields) do
+    is_list(fields) and Enum.all?(fields, fn
+      {k, v} when is_atom(k) -> take?(List.wrap(v))
+      k when is_atom(k) -> true
+      _ -> false
+    end)
   end
 
   @doc """

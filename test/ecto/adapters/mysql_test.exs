@@ -53,8 +53,11 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.all(query) == ~s{SELECT m0.`x` FROM `model` AS m0}
   end
 
-  test "from without model" do
+  test "from without schema" do
     query = "posts" |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT p0.`x` FROM `posts` AS p0}
+
+    query = "posts" |> select([:x]) |> normalize
     assert SQL.all(query) == ~s{SELECT p0.`x` FROM `posts` AS p0}
 
     assert_raise Ecto.QueryError, ~r"MySQL requires a schema module", fn ->
@@ -252,7 +255,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "interpolated values" do
     query = Model
-            |> select([], ^0)
+            |> select([m], {m.id, ^0})
             |> join(:inner, [], Model2, ^true)
             |> join(:inner, [], Model2, ^false)
             |> where([], fragment("?", ^true))
@@ -268,7 +271,7 @@ defmodule Ecto.Adapters.MySQLTest do
             |> normalize
 
     result =
-      "SELECT ? FROM `model` AS m0 INNER JOIN `model2` AS m1 ON ? " <>
+      "SELECT m0.`id`, ? FROM `model` AS m0 INNER JOIN `model2` AS m1 ON ? " <>
       "INNER JOIN `model2` AS m2 ON ? WHERE (?) AND (?) " <>
       "GROUP BY ?, ? HAVING (?) AND (?) " <>
       "ORDER BY ?, m0.`x` LIMIT ? OFFSET ?"

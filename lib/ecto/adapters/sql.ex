@@ -384,15 +384,15 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp process_row(row, preprocess, fields) do
+  defp process_row(row, process, fields) do
     Enum.map_reduce(fields, row, fn
       {:&, _, [_, fields]} = field, acc ->
         case split_and_not_nil(acc, length(fields), true, []) do
           {nil, rest} -> {nil, rest}
-          {val, rest} -> {preprocess.(field, val, nil), rest}
+          {val, rest} -> {process.(field, val, nil), rest}
         end
       field, [h|t] ->
-        {preprocess.(field, h, nil), t}
+        {process.(field, h, nil), t}
     end) |> elem(0)
   end
 
