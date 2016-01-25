@@ -4,8 +4,9 @@ defmodule Ecto.Storage do
   """
 
   @doc """
-  Create the storage in the data store and return `:ok` if it was created
-  successfully.
+  Creates the storage in the data store.
+
+  Returns `:ok` if it was created successfully.
 
   Returns `{:error, :already_up}` if the storage has already been created or
   `{:error, term}` in case anything else goes wrong.
@@ -16,8 +17,9 @@ defmodule Ecto.Storage do
   end
 
   @doc """
-  Drop the storage in the data store and return `:ok` if it was dropped
-  successfully.
+  Drops the storage in the data store.
+
+  Returns `:ok` if it was dropped successfully.
 
   Returns `{:error, :already_down}` if the storage has already been dropped or
   `{:error, term}` in case anything else goes wrong.

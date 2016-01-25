@@ -19,6 +19,63 @@ defmodule Ecto.Query do
       # Send the query to the repository
       Repo.all(query)
 
+  ## Query expressions
+
+  Ecto allows a limited set of expressions inside queries. In the
+  query below, for example, we use `w.prcp` to access a field, the
+  `>` comparison operator and the literal `0`:
+
+      query = from w in Weather, where: w.prcp > 0
+
+  You can find the full list of operations in `Ecto.Query.API`.
+  Besides the operations listed there, the following literals are
+  supported in queries:
+
+    * Integers: `1`, `2`, `3`
+    * Floats: `1.0`, `2.0`, `3.0`
+    * Booleans: `true`, `false`
+    * Binaries: `<<1, 2, 3>>`
+    * Strings: `"foo bar"`, `~s(this is a string)`
+    * Arrays: `[1, 2, 3]`, `~w(interpolate words)`
+
+  All other types and dynamic values must be passed as a parameter using
+  interpolation as explained below.
+
+  ## Interpolation
+
+  External values and Elixir expressions can be injected into a query
+  expression with `^`:
+
+      def with_minimum(age, height_ft) do
+        from u in User,
+          where: u.age > ^age and u.height > ^(height_ft * 3.28)
+      end
+
+      with_minimum(18, 5.0)
+
+  Interpolation can also be used with the `field/2` function which allows
+  developers to dynamically choose a field to query:
+
+      def has_four(doors_or_tires) do
+        from c in Car,
+          where: field(c, ^doors_or_tires) == 4
+      end
+
+  In the example above, both `has_four(:doors)` and `has_four(:tires)`
+  would be valid calls as the field is dynamically inserted.
+
+  ## Casting
+
+  Ecto is able to cast interpolated values in queries:
+
+      age = "1"
+      Repo.all(from u in User, where: u.age > ^age)
+
+  The example above works because `u.age` is tagged as an `:integer`
+  in the `User` schema and therefore Ecto will attempt to cast the
+  interpolated `^age` to integer. When a value cannot be cast,
+  `Ecto.CastError` is raised.
+
   ## Composition
 
   Ecto queries are composable. For example, the query above can
@@ -30,69 +87,94 @@ defmodule Ecto.Query do
       # Extend the query
       query = from w in query, select: w.city
 
-  Keep in mind though the variable names used on the left-hand
-  side of `in` are just a convenience, they are not taken into
-  account in the query generation.
+  Composing queries uses the same syntax as creating a query.
+  The difference is that, instead of passing a schema like `Weather`
+  on the right side of `in`, we passed the query itself.
 
-  Any value can be used on the right-side of `in` as long as it
-  implements the `Ecto.Queryable` protocol.
+  Any value can be used on the right-side of `in` as long as it implements
+  the `Ecto.Queryable` protocol. For example, the queryable protocol
+  is also implemented for strings, which allows a query to run directly
+  against a table, without defining an Ecto.Schema:
 
-  ## Query expressions
+      from w in "weather", where: w.prcp > 0, select: w.city
 
-  Ecto allows a limited set of expressions inside queries. In the
-  query below, for example, we use `w.prcp` to access a field, the
-  `>` comparison operator and the literal `0`:
+  When writing queries directly against a table, without a schema,
+  you need to consider two limitations:
 
-      query = from w in Weather, where: w.prcp > 0
+    1. You must always specify the `select` clause as Ecto requires
+       fields to be explicitly listed for schemaless queries. When
+       you have a schema, the fields are retrieved from the schema
 
-  You can find the full list of operations in `Ecto.Query.API`.
-  Besides the operations listed here, the following literals are
-  supported in queries:
+    2. Because there isn't a schema, Ecto can't automatically cast
+       interpolated values nor the values returned by the database
 
-    * Integers: `1`, `2`, `3`
-    * Floats: `1.0`, `2.0`, `3.0`
-    * Booleans: `true`, `false`
-    * Binaries: `<<1, 2, 3>>`
-    * Strings: `"foo bar"`, `~s(this is a string)`
-    * Arrays: `[1, 2, 3]`, `~w(interpolate words)`
+  In any case, regardless if a schema has been given or not, Ecto
+  queries are always composable thanks to its binding system.
 
-  All other types must be passed as a parameter using interpolation
-  as explained below.
+  ### Query bindings
 
-  ## Interpolation
+  On the left side of `in` we specify the query bindings. Bindings
+  in Ecto are positional, therefore the name we give them do not
+  matter. For example, the second query above could also be written
+  as:
 
-  External values and Elixir expressions can be injected into a query
-  expression with `^`:
+      query = from q in query, select: q.city
 
-      def with_minimum(age, height_ft) do
-          from u in User,
-        where: u.age > ^age and u.height > ^(height_ft * 3.28)
-      end
+  It would make no difference to Ecto. This is important because
+  it allows developers to compose queries without caring about
+  the initial query. When using joins, the bindings should be
+  matched in the order they are specified:
 
-      with_minimum(18, 5.0)
+      # Create a query
+      query = from p in Post,
+                join: c in Comment, where: c.post_id == p.id
 
-  Interpolation can also be used with the `field/2` function which allows
-  developers to dynamically choose a field to query:
+      # Extend the query
+      query = from [p, c] in query,
+                select: {p.title, c.body}
 
-      def at_least_four(doors_or_tires) do
-          from c in Car,
-        where: field(c, ^doors_or_tires) >= 4
-      end
+  You are not required to specify all bindings when composing.
+  For example, if we would like to order the results above by
+  post insertion date, we could further extend it as:
 
-  In the example above, both `at_least_four(:doors)` and `at_least_four(:tires)`
-  would be valid calls as the field is dynamically inserted.
+      query = from q in query, order_by: q.inserted_at
 
-  ## Casting
+  The example above will work if the query has 1 or 10 bindings.
+  As bindings are position based, we will always sort by the
+  `inserted_at` column from the `from` source.
 
-  Ecto is able to cast interpolated values in queries:
+  ### Bindingless operations
 
-      age = "1"
-      Repo.all(from u in User, where: u.age > ^age)
+  Although bindings are extremely useful when working with joins,
+  they are not necessary when the query has only the `from` clause.
+  For such cases, Ecto supports a way for building queries
+  without specifying the binding:
 
-  The example above works because `u.age` is tagged as an :integer
-  in the User schema and therefore Ecto will attempt to cast the
-  interpolated `^age` to integer. When a value cannot be cast,
-  `Ecto.CastError` is raised.
+      from Post,
+        where: [category: "fresh and new"],
+        order_by: [desc: :published_at],
+        select: [:id, :title, :body]
+
+  The query above will select all posts with category "fresh and new",
+  order by the most recently published, and return Post structs with
+  only the id, title and body fields set. It is equivalent to:
+
+      from p in Post,
+        where: p.category == "fresh and new",
+        order_by: [desc: p.published_at],
+        select: take(p, [:id, :title, :body])
+
+  One advantage of bindingless queries is that they are data-driven
+  and therefore useful for dynamically building queries. For example,
+  the query above could also be written as:
+
+      where = [category: "fresh and new"]
+      order_by = [desc: :published_at]
+      select = [:id, :title, :body]
+      from Post, where: ^where, order_by: ^order_by, select: ^select
+
+  This feature is very useful when queries need to be built based
+  on some user input, like web search forms, CLIs and so on.
 
   ## Fragments
 
@@ -140,23 +222,17 @@ defmodule Ecto.Query do
 
   ## Query Prefix
 
-  It is possible to set a prefix for the table name in queries.
-  For Postgres users, this will specify the schema where the table
-  is located, while for MySQL users this will specify the database
-  where the table is located.  When no prefix is set, Postgres
-  queries are assumed to be in the public schema, while MySQL queries
-  are assumed to be in the database set in the config for the repo.
+  It is possible to set a prefix for the queries. For Postgres users,
+  this will specify the schema where the table is located, while for
+  MySQL users this will specify the database where the table is
+  located.  When no prefix is set, Postgres queries are assumed to be
+  in the public schema, while MySQL queries are assumed to be in the
+  database set in the config for the repo.
 
-  Set the prefix on a query:
-
-      query = from u in User, select: u
-      queryable = %{query | prefix: "foo"}
-      results = Repo.all(queryable)
-
-  Set the prefix without the query syntax:
+  To set the prefix on a query:
 
       results =
-        User
+        query # May be User or an Ecto.Query itself
         |> Ecto.Queryable.to_query
         |> Map.put(:prefix, "foo")
         |> Repo.all
