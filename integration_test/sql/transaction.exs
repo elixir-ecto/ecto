@@ -27,12 +27,19 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   test "transaction returns value" do
-    x = PoolRepo.transaction(fn ->
-      PoolRepo.transaction(fn ->
-        42
-      end)
+    refute PoolRepo.in_transaction?
+    {:ok, val} = PoolRepo.transaction(fn ->
+      assert PoolRepo.in_transaction?
+      {:ok, val} =
+        PoolRepo.transaction(fn ->
+          assert PoolRepo.in_transaction?
+          42
+        end)
+      assert PoolRepo.in_transaction?
+      val
     end)
-    assert x == {:ok, {:ok, 42}}
+    refute PoolRepo.in_transaction?
+    assert val == 42
   end
 
   test "transaction re-raises" do

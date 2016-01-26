@@ -98,6 +98,10 @@ defmodule Ecto.Repo do
         @adapter.transaction(__MODULE__, opts, fun)
       end
 
+      def in_transaction? do
+        @adapter.in_transaction?(__MODULE__)
+      end
+
       def rollback(value) do
         @adapter.rollback(__MODULE__, value)
       end
@@ -620,6 +624,21 @@ defmodule Ecto.Repo do
 
   """
   @callback transaction(Keyword.t, fun) :: {:ok, any} | {:error, any}
+
+  @doc """
+  Returns true if the current process is inside a transaction.
+
+  ## Examples
+
+      MyRepo.in_transaction?
+      #=> false
+
+      MyRepo.transaction(fn ->
+        MyRepo.in_transaction? #=> true
+      end)
+
+  """
+  @callback in_transaction?() :: boolean
 
   @doc """
   Rolls back the current transaction.

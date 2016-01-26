@@ -102,6 +102,11 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
+      def in_transaction?(repo) do
+        Ecto.Adapters.SQL.in_transaction?(repo)
+      end
+
+      @doc false
       def rollback(repo, value) do
         Ecto.Adapters.SQL.rollback(repo, value)
       end
@@ -429,6 +434,12 @@ defmodule Ecto.Adapters.SQL do
       end
     end
     DBConnection.transaction(pool, run, opts)
+  end
+
+  @doc false
+  def in_transaction?(repo) do
+    {pool, _} = repo.__pool__
+    get_conn(pool)
   end
 
   @doc false

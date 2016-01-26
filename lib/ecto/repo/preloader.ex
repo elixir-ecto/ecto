@@ -108,7 +108,7 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  defp fetch_query([], _assoc, _repo, _query, _prefix, _related_key) do
+  defp fetch_query([], _assoc, _repo, _query, _prefix, _related_key, _opts) do
     {[], []}
   end
 
