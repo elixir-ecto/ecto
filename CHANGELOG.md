@@ -91,6 +91,8 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 ## Enhancements
 
   * Support prepared queries in adapters
+  * Support composite primary keys
+  * Support the `:force` option in preloads
   * Allow custom `select` field in preload queries
   * Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
   * Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
@@ -99,12 +101,15 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
   * Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
   * Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
+  * Allow the `:on` field to be specified with association joins
 
 ## Bug fixes
 
   * The `:required` option on `cast_assoc`and `cast_embed` will now tag `has_many` and `embeds_many` relationships as missing if they contain an empty list
   * Fix Date/DateTime serialization for years above 9999
   * Switch pg storage management away from `psql` and use direct database connections, solving many issues like locale and database connection
+  * Ensure nested preload works even if intermediate associations were already loaded
+  * Do not attempt to execute insert/update/delete statement for associations if a previous operation failed due to a constraint error
 
 ## Previous versions
 
