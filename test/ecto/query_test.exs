@@ -150,11 +150,6 @@ defmodule Ecto.QueryTest do
     assert_raise Ecto.Query.CompileError, message, fn ->
       quote_and_eval(from(c in "comments", on: c.text == "", select: c))
     end
-
-    message = ~r"cannot specify `on` on `inner_join` when using association join,"
-    assert_raise Ecto.Query.CompileError, message, fn ->
-      quote_and_eval(from(c in "comments", join: p in assoc(c, :post), on: true))
-    end
   end
 
   test "join queries adds binds" do

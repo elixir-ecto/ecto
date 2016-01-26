@@ -41,12 +41,19 @@ defmodule Ecto.Integration.JoinsTest do
   end
 
   test "joins" do
-    p1 = TestRepo.insert!(%Post{title: "1"})
+    _p = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
     c1 = TestRepo.insert!(%Permalink{url: "1", post_id: p2.id})
 
     query = from(p in Post, join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
     assert [{^p2, ^c1}] = TestRepo.all(query)
+  end
+
+  @tag :left_join
+  test "left joins with missing entries" do
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+    c1 = TestRepo.insert!(%Permalink{url: "1", post_id: p2.id})
 
     query = from(p in Post, left_join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
     assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
@@ -59,9 +66,9 @@ defmodule Ecto.Integration.JoinsTest do
 
     %Permalink{id: plid1} = TestRepo.insert!(%Permalink{url: "1", post_id: pid2})
 
-    %Comment{id: _} = TestRepo.insert!(%Comment{text: "1", post_id: pid1})
-    %Comment{id: _} = TestRepo.insert!(%Comment{text: "2", post_id: pid2})
-    %Comment{id: _} = TestRepo.insert!(%Comment{text: "3", post_id: nil})
+    TestRepo.insert!(%Comment{text: "1", post_id: pid1})
+    TestRepo.insert!(%Comment{text: "2", post_id: pid2})
+    TestRepo.insert!(%Comment{text: "3", post_id: nil})
 
     query = from(p in Post, right_join: c in assoc(p, :comments),
                  preload: :permalink, order_by: c.id)
@@ -103,21 +110,19 @@ defmodule Ecto.Integration.JoinsTest do
   end
 
   test "has_many through association join" do
-    %Post{id: pid1} = p1 = TestRepo.insert!(%Post{})
-    %Post{id: pid2} = p2 = TestRepo.insert!(%Post{})
+    p1 = TestRepo.insert!(%Post{})
+    p2 = TestRepo.insert!(%Post{})
 
-    %User{id: uid1} = TestRepo.insert!(%User{name: "zzz"})
-    %User{id: uid2} = TestRepo.insert!(%User{name: "aaa"})
+    u1 = TestRepo.insert!(%User{name: "zzz"})
+    u2 = TestRepo.insert!(%User{name: "aaa"})
 
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid2, author_id: uid2})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: p1.id, author_id: u1.id})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: p1.id, author_id: u1.id})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: p1.id, author_id: u2.id})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: p2.id, author_id: u2.id})
 
-    [u2, u1] = TestRepo.all Ecto.assoc([p1, p2], :comments_authors)
-                            |> order_by([a], a.name)
-    assert u1.id == uid1
-    assert u2.id == uid2
+    query = Ecto.assoc([p1, p2], :comments_authors) |> order_by([a], a.name)
+    assert [^u2, ^u1] = TestRepo.all(query)
   end
 
   test "many_to_many association join" do
@@ -139,89 +144,109 @@ defmodule Ecto.Integration.JoinsTest do
 
   test "has_many assoc selector" do
     p1 = TestRepo.insert!(%Post{title: "1"})
-    p2 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
 
-    %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
-    %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
-    %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
+    c1 = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
+    c2 = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
+    c3 = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
 
+    # Without on
     query = from(p in Post, join: c in assoc(p, :comments), preload: [comments: c])
-    assert [post1, post2] = TestRepo.all(query)
-    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = post1.comments
-    assert [%Comment{id: ^cid3}] = post2.comments
+    [p1, p2] = TestRepo.all(query)
+    assert p1.comments == [c1, c2]
+    assert p2.comments == [c3]
+
+    # Without on
+    query = from(p in Post, left_join: c in assoc(p, :comments),
+                            on: p.title == c.text, preload: [comments: c])
+    [p1, p2] = TestRepo.all(query)
+    assert p1.comments == [c1]
+    assert p2.comments == []
   end
 
   test "has_one assoc selector" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
 
-    %Permalink{id: pid1} = TestRepo.insert!(%Permalink{url: "1", post_id: p1.id})
-    %Permalink{}         = TestRepo.insert!(%Permalink{url: "2"})
-    %Permalink{id: pid3} = TestRepo.insert!(%Permalink{url: "3", post_id: p2.id})
+    pl1 = TestRepo.insert!(%Permalink{url: "1", post_id: p1.id})
+    _pl = TestRepo.insert!(%Permalink{url: "2"})
+    pl3 = TestRepo.insert!(%Permalink{url: "3", post_id: p2.id})
 
     query = from(p in Post, join: pl in assoc(p, :permalink), preload: [permalink: pl])
     assert [post1, post3] = TestRepo.all(query)
 
-    assert %Permalink{id: ^pid1} = post1.permalink
-    assert %Permalink{id: ^pid3} = post3.permalink
+    assert post1.permalink == pl1
+    assert post3.permalink == pl3
   end
 
   test "belongs_to assoc selector" do
-    %Post{id: pid1} = TestRepo.insert!(%Post{title: "1"})
-    %Post{id: pid2} = TestRepo.insert!(%Post{title: "2"})
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
 
-    TestRepo.insert!(%Permalink{url: "1", post_id: pid1})
+    TestRepo.insert!(%Permalink{url: "1", post_id: p1.id})
     TestRepo.insert!(%Permalink{url: "2"})
-    TestRepo.insert!(%Permalink{url: "3", post_id: pid2})
+    TestRepo.insert!(%Permalink{url: "3", post_id: p2.id})
 
     query = from(pl in Permalink, left_join: p in assoc(pl, :post), preload: [post: p], order_by: pl.id)
-    assert [p1, p2, p3] = TestRepo.all(query)
+    assert [pl1, pl2, pl3] = TestRepo.all(query)
 
-    assert %Post{id: ^pid1} = p1.post
-    refute p2.post
-    assert %Post{id: ^pid2} = p3.post
+    assert pl1.post == p1
+    refute pl2.post
+    assert pl3.post == p2
   end
 
   test "many_to_many assoc selector" do
-    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
-    p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})
-    _p = TestRepo.insert!(%Post{title: "3", text: "hello"})
-    u1 = TestRepo.insert!(%User{name: "john"})
-    u2 = TestRepo.insert!(%User{name: "mary"})
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+    _p = TestRepo.insert!(%Post{title: "3"})
+    u1 = TestRepo.insert!(%User{name: "1"})
+    u2 = TestRepo.insert!(%User{name: "2"})
 
     TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: u1.id],
                                         [post_id: p1.id, user_id: u2.id],
                                         [post_id: p2.id, user_id: u2.id]]
 
+    # Without on
     query = from(p in Post, left_join: u in assoc(p, :users), preload: [users: u], order_by: p.id)
     [p1, p2, p3] = TestRepo.all(query)
     assert p1.users == [u1, u2]
     assert p2.users == [u2]
     assert p3.users == []
+
+    # Without on
+    query = from(p in Post, left_join: u in assoc(p, :users), on: p.title == u.name,
+                            preload: [users: u], order_by: p.id)
+    [p1, p2, p3] = TestRepo.all(query)
+    assert p1.users == [u1]
+    assert p2.users == [u2]
+    assert p3.users == []
   end
 
   test "has_many through assoc selector" do
-    %Post{id: pid1} = TestRepo.insert!(%Post{})
-    %Post{id: pid2} = TestRepo.insert!(%Post{})
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
 
-    %User{id: uid1} = TestRepo.insert!(%User{})
-    %User{id: uid2} = TestRepo.insert!(%User{})
+    u1 = TestRepo.insert!(%User{name: "1"})
+    u2 = TestRepo.insert!(%User{name: "2"})
 
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid2, author_id: uid2})
+    TestRepo.insert!(%Comment{post_id: p1.id, author_id: u1.id})
+    TestRepo.insert!(%Comment{post_id: p1.id, author_id: u1.id})
+    TestRepo.insert!(%Comment{post_id: p1.id, author_id: u2.id})
+    TestRepo.insert!(%Comment{post_id: p2.id, author_id: u2.id})
 
+    # Without on
     query = from(p in Post, left_join: ca in assoc(p, :comments_authors),
                             preload: [comments_authors: ca])
     [p1, p2] = TestRepo.all(query)
+    assert p1.comments_authors == [u1, u2]
+    assert p2.comments_authors == [u2]
 
-    [u1, u2] = p1.comments_authors
-    assert u1.id == uid1
-    assert u2.id == uid2
-
-    [u2] = p2.comments_authors
-    assert u2.id == uid2
+    # With on
+    query = from(p in Post, left_join: ca in assoc(p, :comments_authors),
+                            on: ca.name == p.title, preload: [comments_authors: ca])
+    [p1, p2] = TestRepo.all(query)
+    assert p1.comments_authors == [u1]
+    assert p2.comments_authors == [u2]
   end
 
   test "has_many through-through assoc selector" do

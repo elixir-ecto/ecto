@@ -274,19 +274,19 @@ defmodule Ecto.Query.Planner do
     prepare_joins(query.joins, query, [], sources, [], 1, offset)
   end
 
-  defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual} = join|t],
+  defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on} = join|t],
                      query, joins, sources, tail_sources, counter, offset) do
     {source, model} = Enum.fetch!(Enum.reverse(sources), ix)
 
     unless model do
       error! query, join, "cannot perform association join on #{inspect source} " <>
-                          "because it does not have a model"
+                          "because it does not have a schema"
     end
 
     refl = model.__schema__(:association, assoc)
 
     unless refl do
-      error! query, join, "could not find association `#{assoc}` on model #{inspect model}"
+      error! query, join, "could not find association `#{assoc}` on schema #{inspect model}"
     end
 
     # If we have the following join:
@@ -322,7 +322,7 @@ defmodule Ecto.Query.Planner do
     [current_source|child_sources] = child_sources
     child_sources = child_tail ++ child_sources
 
-    prepare_joins(t, query, child_joins ++ joins, [current_source|sources],
+    prepare_joins(t, query, attach_on(child_joins, on) ++ joins, [current_source|sources],
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources))
   end
 
@@ -341,6 +341,18 @@ defmodule Ecto.Query.Planner do
 
   defp prepare_joins([], _query, joins, sources, tail_sources, _counter, _offset) do
     {joins, sources, tail_sources}
+  end
+
+  defp attach_on(joins, %{expr: true}) do
+    joins
+  end
+  defp attach_on([h|t], %{expr: expr}) do
+    h =
+      update_in h.on.expr, fn
+        true    -> expr
+        current -> {:and, [], [current, expr]}
+      end
+    [h|t]
   end
 
   defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do

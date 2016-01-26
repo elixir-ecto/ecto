@@ -116,11 +116,6 @@ defmodule Ecto.Query.Builder.Join do
       count_setter = quote(do: unquote(count_bind) = Builder.count_binds(query))
     end
 
-    if on && join_assoc do
-      Builder.error! "cannot specify `on` on `#{qual}_join` when using association join, " <>
-                     "add extra clauses with `where` instead"
-    end
-
     binding = binding ++ [{join_bind, count_bind}]
     join_on = escape_on(on || true, binding, env)
 

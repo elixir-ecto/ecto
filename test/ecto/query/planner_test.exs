@@ -219,9 +219,9 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(join3.on.expr) == "&2.id() == &0.post_id()"
   end
 
-  test "prepare: cannot associate without model" do
+  test "prepare: cannot associate without schema" do
     query   = from(p in "posts", join: assoc(p, :comments))
-    message = ~r"cannot perform association join on \"posts\" because it does not have a model"
+    message = ~r"cannot perform association join on \"posts\" because it does not have a schema"
 
     assert_raise Ecto.QueryError, message, fn ->
       prepare(query)
