@@ -99,7 +99,7 @@ defmodule Ecto.Repo.Queryable do
         {count,
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
-          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select))}
+          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select), opts)}
     end
   end
 

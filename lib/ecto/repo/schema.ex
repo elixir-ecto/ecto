@@ -164,7 +164,7 @@ defmodule Ecto.Repo.Schema do
     do_update(repo, adapter, changeset, opts)
   end
 
-  def update(repo, _adapter, _struct, opts) when is_list(opts) do
+  def update(repo, _adapter, %{__struct__: _}, opts) when is_list(opts) do
     raise ArgumentError, "giving a struct to #{inspect repo}.update/2 is not supported. " <>
                          "Ecto is unable to properly track changes when a struct is given, " <>
                          "an Ecto.Changeset must be given instead"
@@ -248,7 +248,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp get_state(%Changeset{model: model}), do: model.__meta__.state
-  defp get_state(%{__struct__: _model}) do
+  defp get_state(%{__struct__: _}) do
     raise ArgumentError, "giving a struct to Repo.insert_or_update/2 or " <>
                          "Repo.insert_or_update!/2 is not supported. " <>
                          "Please use an Ecto.Changeset"

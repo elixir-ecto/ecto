@@ -51,6 +51,18 @@ defmodule Ecto.Repo do
       config :my_app, Repo,
         url: {:system, "DATABASE_URL"}
 
+  ## Shared options
+
+  Almost all of the repository operations below accept the following
+  options:
+
+    * `:timeout` - The time in milliseconds to wait for the query call to
+      finish, `:infinity` will wait indefinitely (default: 15000);
+    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
+      to finish, `:infinity` will wait indefinitely (default: 5000);
+    * `:log` - When false, does not log the query
+
+  Such cases will be explicitly documented as well as any extra option.
   """
 
   @type t :: module
@@ -162,8 +174,8 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.delete!(__MODULE__, @adapter, struct, opts)
       end
 
-      def preload(struct_or_structs, preloads) do
-        Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads)
+      def preload(struct_or_structs, preloads, opts \\ []) do
+        Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads, opts)
       end
 
       def __adapter__ do
@@ -210,8 +222,8 @@ defmodule Ecto.Repo do
   started or `{:error, term}` in case anything else goes wrong.
   """
   @callback start_link() :: {:ok, pid} |
-                              {:error, {:already_started, pid}} |
-                              {:error, term}
+                            {:error, {:already_started, pid}} |
+                            {:error, term}
 
   @doc """
   Shuts down the repository represented by the given pid.
@@ -227,12 +239,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
-
+  See the "Shared options" section at the module documentation.
   """
   @callback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
@@ -241,12 +248,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
-
+  See the "Shared options" section at the module documentation.
   """
   @callback get!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
@@ -257,11 +259,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
+  See the "Shared options" section at the module documentation.
 
   ## Example
 
@@ -275,11 +273,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
+  See the "Shared options" section at the module documentation.
 
   ## Example
 
@@ -295,10 +289,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);;
-    * `:log` - When false, does not log the query
-
+  See the "Shared options" section at the module documentation.
   """
   @callback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
@@ -309,10 +300,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the call to finish,
-      `:infinity` will wait indefinitely (default: 5000);;
-    * `:log` - When false, does not log the query
-
+  See the "Shared options" section at the module documentation.
   """
   @callback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
@@ -326,6 +314,15 @@ defmodule Ecto.Repo do
   In case the association was already loaded, preload won't attempt
   to reload it.
 
+  ## Options
+
+  Besides the "Shared options" section at the module documentation,
+  it accepts:
+
+    * `:force` - By default, Ecto won't preload associations that
+      are already loaded. By setting this option to true, any existing
+      association will be discarded and reloaded.
+
   ## Examples
 
       posts = Repo.preload posts, :comments
@@ -333,8 +330,8 @@ defmodule Ecto.Repo do
       posts = Repo.preload posts, comments: from(c in Comment, order_by: c.published_at)
 
   """
-  @callback preload([Ecto.Schema.t] | Ecto.Schema.t, preloads :: term) ::
-                      [Ecto.Schema.t] | Ecto.Schema.t
+  @callback preload(struct_or_structs, preloads :: term, opts :: Keyword.t) ::
+                    struct_or_structs when struct_or_structs: [Ecto.Schema.t] | Ecto.Schema.t
 
   @doc """
   Fetches all entries from the data store matching the given query.
@@ -343,11 +340,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
+  See the "Shared options" section at the module documentation.
 
   ## Example
 
@@ -378,6 +371,10 @@ defmodule Ecto.Repo do
 
   If a source is given, without a schema, the given fields are passed
   as is to the adapter.
+
+  ## Options
+
+  See the "Shared options" section at the module documentation.
   """
   @callback insert_all(binary | {binary | nil, binary} | Ecto.Schema.t,
                        [map | Keyword.t], opts :: Keyword.t) :: {integer, nil} | no_return
@@ -398,11 +395,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
+  See the "Shared options" section at the module documentation.
 
   ## Examples
 
@@ -428,11 +421,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
+  See the "Shared options" section at the module documentation.
 
   ## Examples
 
@@ -458,11 +447,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
+  See the "Shared options" section at the module documentation.
 
   ## Example
 
@@ -490,15 +475,13 @@ defmodule Ecto.Repo do
 
   ## Options
 
+  Besides the "Shared options" section at the module documentation,
+  it accepts:
+
     * `:force` - By default, if there are no changes in the changeset,
       `update!/2` is a no-op. By setting this option to true, update
       callbacks will always be executed, even if there are no changes
       (including timestamps).
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
 
   ## Example
 
@@ -526,6 +509,10 @@ defmodule Ecto.Repo do
       struct = %Post{id: 'existing_id', ...}
       MyRepo.insert_or_update changeset
       # => {:error, "id already exists"}
+
+  ## Options
+
+  See the "Shared options" section at the module documentation.
 
   ## Example
 
@@ -557,11 +544,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log the query
+  See the "Shared options" section at the module documentation.
 
   ## Example
 
@@ -618,11 +601,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
-    * `:pool_timeout` - The time in milliseconds to wait for calls to the pool
-      to finish, `:infinity` will wait indefinitely (default: 5000);
-    * `:log` - When false, does not log begin/commit/rollback queries
+  See the "Shared options" section at the module documentation.
 
   ## Examples
 

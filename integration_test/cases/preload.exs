@@ -196,32 +196,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert l2.post.comments != []
   end
 
-  test "preload has_many through nested" do
-    %Post{id: pid1} = p1 = TestRepo.insert!(%Post{})
-    %Post{id: pid2} = p2 = TestRepo.insert!(%Post{})
-
-    %User{id: uid1} = TestRepo.insert!(%User{})
-    %User{id: uid2} = TestRepo.insert!(%User{})
-
-    %Comment{} = c1 = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = c2 = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = c3 = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
-    %Comment{} = c4 = TestRepo.insert!(%Comment{post_id: pid2, author_id: uid2})
-
-    [p1, p2] = TestRepo.preload([p1, p2], [:permalink, comments_authors: :comments])
-
-    # Through was preloaded
-    [u1, u2] = p1.comments_authors |> sort_by_id
-    assert u1.id == uid1
-    assert u2.id == uid2
-    assert [c1, c2] == u1.comments |> sort_by_id
-
-    [u2] = p2.comments_authors
-    assert u2.id == uid2
-    assert [c3, c4] == u2.comments |> sort_by_id
-  end
-
-  test "preload has_many through many to many" do
+  test "preload has_many through many_to_many" do
     %Post{} = p1 = TestRepo.insert!(%Post{})
     %Post{} = p2 = TestRepo.insert!(%Post{})
 
@@ -417,19 +392,57 @@ defmodule Ecto.Integration.PreloadTest do
     assert u.custom.bid == c.bid
   end
 
-  test "preload skips already loaded" do
+  test "preload skips already loaded for cardinality one" do
+    %Post{id: pid} = TestRepo.insert!(%Post{title: "1"})
+
+    c1 = %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: pid})
+    c2 = %Comment{id: _cid} = TestRepo.insert!(%Comment{text: "2", post_id: nil})
+
+    [c1, c2] = TestRepo.preload([c1, c2], :post)
+    assert %Post{id: ^pid} = c1.post
+    assert c2.post == nil
+
+    [c1, c2] = TestRepo.preload([c1, c2], post: :comments)
+    assert [%Comment{id: ^cid1}] = c1.post.comments
+
+    TestRepo.update_all Post, set: [title: "0"]
+    TestRepo.update_all Comment, set: [post_id: pid]
+
+    # Preloading once again shouldn't change the result
+    [c1, c2] = TestRepo.preload([c1, c2], :post)
+    assert %Post{id: ^pid, title: "1", comments: [_|_]} = c1.post
+    assert c2.post == nil
+
+    [c1, c2] = TestRepo.preload([c1, %{c2 | post_id: pid}], :post, force: true)
+    assert %Post{id: ^pid, title: "0", comments: %Ecto.Association.NotLoaded{}} = c1.post
+    assert %Post{id: ^pid, title: "0", comments: %Ecto.Association.NotLoaded{}} = c2.post
+  end
+
+  test "preload skips already loaded for cardinality many" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
 
-    %Comment{id: _}    = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
     %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p2.id})
 
-    assert %Ecto.Association.NotLoaded{} = p1.comments
-    p1 = %{p1 | comments: []}
-
-    assert [p1, p2] = TestRepo.preload([p1, p2], :comments)
-    assert [] = p1.comments
+    [p1, p2] = TestRepo.preload([p1, p2], :comments)
+    assert [%Comment{id: ^cid1}] = p1.comments
     assert [%Comment{id: ^cid2}] = p2.comments
+
+    [p1, p2] = TestRepo.preload([p1, p2], comments: :post)
+    assert hd(p1.comments).post.id == p1.id
+    assert hd(p2.comments).post.id == p2.id
+
+    TestRepo.update_all Comment, set: [text: "0"]
+
+    # Preloading once again shouldn't change the result
+    [p1, p2] = TestRepo.preload([p1, p2], :comments)
+    assert [%Comment{id: ^cid1, text: "1", post: %Post{}}] = p1.comments
+    assert [%Comment{id: ^cid2, text: "2", post: %Post{}}] = p2.comments
+
+    [p1, p2] = TestRepo.preload([p1, p2], :comments, force: true)
+    assert [%Comment{id: ^cid1, text: "0", post: %Ecto.Association.NotLoaded{}}] = p1.comments
+    assert [%Comment{id: ^cid2, text: "0", post: %Ecto.Association.NotLoaded{}}] = p2.comments
   end
 
   test "preload keyword query" do
