@@ -245,6 +245,22 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.model.__meta__.state == :built
   end
 
+  @tag :unique_constraint
+  test "unique constraint from association" do
+    uuid = Ecto.UUID.generate()
+    post = & %Post{} |> Ecto.Changeset.change(uuid: &1) |> Ecto.Changeset.unique_constraint(:uuid)
+
+    {:error, changeset} =
+      TestRepo.insert %User{
+        comments: [%Comment{}],
+        permalink: %Permalink{},
+        posts: [post.(uuid), post.(uuid), post.(Ecto.UUID.generate)]
+      }
+
+    [_, p2, _] = changeset.changes.posts
+    assert p2.errors == [uuid: "has already been taken"]
+  end
+
   @tag :id_type
   @tag :unique_constraint
   test "unique constraint with binary_id" do

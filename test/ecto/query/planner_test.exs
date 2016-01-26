@@ -190,6 +190,11 @@ defmodule Ecto.Query.PlannerTest do
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
     assert source == {"comments", Comment}
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
+
+    query = from(p in Post, left_join: c in assoc(p, :comments), on: p.title == c.text) |> prepare |> elem(0)
+    assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
+    assert source == {"comments", Comment}
+    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id() and &0.title() == &1.text()"
   end
 
   test "prepare: nested joins associations" do

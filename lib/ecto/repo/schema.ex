@@ -469,7 +469,8 @@ defmodule Ecto.Repo.Schema do
   defp process_children(changeset, assocs, user_changeset, opts) do
     case Ecto.Association.on_repo_change(changeset, assocs, opts) do
       {:ok, model} -> {:ok, model}
-      {:error, changes} -> {:error, %{user_changeset | valid?: false, changes: changes}}
+      {:error, changes} ->
+        {:error, %{user_changeset | valid?: false, changes: changes}}
     end
   end
 

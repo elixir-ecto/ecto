@@ -189,8 +189,8 @@ defmodule Ecto.Association do
   def on_repo_change(changeset, assocs, opts) do
     %{model: model, changes: changes, action: action} = changeset
 
-    {model, changes, valid?} =
-      Enum.reduce(assocs, {model, changes, true}, fn {refl, value}, acc ->
+    {model, changes, _halt, valid?} =
+      Enum.reduce(assocs, {model, changes, false, true}, fn {refl, value}, acc ->
         on_repo_change(refl, value, changeset, action, opts, acc)
       end)
 
@@ -201,55 +201,67 @@ defmodule Ecto.Association do
   end
 
   defp on_repo_change(%{cardinality: :one, field: field} = meta, nil, parent_changeset,
-                      _repo_action, opts, {parent, changes, valid?}) do
-    maybe_replace_one!(meta, nil, parent, parent_changeset, opts)
-    {Map.put(parent, field, nil), Map.put(changes, field, nil), valid?}
+                      _repo_action, opts, {parent, changes, halt, valid?}) do
+    if not halt, do: maybe_replace_one!(meta, nil, parent, parent_changeset, opts)
+    {Map.put(parent, field, nil), Map.put(changes, field, nil), halt, valid?}
   end
 
   defp on_repo_change(%{cardinality: :one, field: field, __struct__: mod} = meta,
                       %{action: action} = changeset, parent_changeset,
-                      repo_action, opts, {parent, changes, valid?}) do
+                      repo_action, opts, {parent, changes, halt, valid?}) do
     check_action!(meta, action, repo_action)
-    case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
+    case on_repo_change_unless_halted(halt, mod, meta, parent_changeset, changeset, opts) do
       {:ok, model} ->
         maybe_replace_one!(meta, model, parent, parent_changeset, opts)
-        {Map.put(parent, field, model), Map.put(changes, field, changeset), valid?}
-      {:error, changeset} ->
-        {parent, Map.put(changes, field, changeset), false}
+        {Map.put(parent, field, model), Map.put(changes, field, changeset), halt, valid?}
+      {:error, error_changeset} ->
+        {parent, Map.put(changes, field, error_changeset),
+         halted?(halt, changeset, error_changeset), false}
     end
   end
 
   defp on_repo_change(%{cardinality: :many, field: field, __struct__: mod} = meta,
                       changesets, parent_changeset, repo_action, opts,
-                      {parent, changes, valid?}) do
-    {changesets, models, models_valid?} =
-      Enum.reduce(changesets, {[], [], true}, fn
-        %{action: action} = changeset, {changesets, models, models_valid?} ->
+                      {parent, changes, halt, all_valid?}) do
+    {changesets, models, halt, valid?} =
+      Enum.reduce(changesets, {[], [], halt, true}, fn
+        %{action: action} = changeset, {changesets, models, halt, valid?} ->
           check_action!(meta, action, repo_action)
-          case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
+          case on_repo_change_unless_halted(halt, mod, meta, parent_changeset, changeset, opts) do
             {:ok, nil} ->
-              {[changeset|changesets], models, models_valid?}
+              {[changeset|changesets], models, halt, valid?}
             {:ok, model} ->
-              {[changeset|changesets], [model | models], models_valid?}
-            {:error, changeset} ->
-              {[changeset|changesets], models, false}
+              {[changeset|changesets], [model | models], halt, valid?}
+            {:error, error_changeset} ->
+              {[error_changeset|changesets], models, halted?(halt, changeset, error_changeset), false}
           end
       end)
 
-    if models_valid? do
+    if valid? do
       {Map.put(parent, field, Enum.reverse(models)),
        Map.put(changes, field, Enum.reverse(changesets)),
-       valid?}
+       halt, all_valid?}
     else
       {parent,
        Map.put(changes, field, Enum.reverse(changesets)),
-       false}
+       halt, false}
     end
   end
 
   defp check_action!(%{related: schema}, :delete, :insert),
     do: raise(ArgumentError, "got action :delete in changeset for associated #{inspect schema} while inserting")
   defp check_action!(_, _, _), do: :ok
+
+  defp halted?(true, _, _), do: true
+  defp halted?(_, %{valid?: true}, %{valid?: false}), do: true
+  defp halted?(_, _, _), do: false
+
+  defp on_repo_change_unless_halted(true, _mod, _meta, _parent, changeset, _opts) do
+    {:error, changeset}
+  end
+  defp on_repo_change_unless_halted(false, mod, meta, parent, changeset, opts) do
+    mod.on_repo_change(meta, parent, changeset, opts)
+  end
 
   defp maybe_replace_one!(%{field: field, __struct__: mod} = meta, current, parent,
                           parent_changeset, opts) do
