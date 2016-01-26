@@ -471,37 +471,40 @@ defmodule Ecto.AssociationTest do
   end
 
   defp expand(model, preloads) do
-    Preloader.expand(model, Preloader.normalize(preloads, [], preloads), [])
+    Preloader.expand(model, Preloader.normalize(preloads, [], preloads), {%{}, %{}})
   end
 
   test "preload: expand" do
-    assert [{:comments, {:assoc, %Ecto.Association.Has{}, {0, :post_id}}, {nil, []}},
-            {:permalink, {:assoc, %Ecto.Association.Has{}, {0, :post_id}}, {nil, []}}] =
+    assert {%{comments: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, []},
+              permalink: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, []}},
+            %{}} =
            expand(Post, [:comments, :permalink])
 
-    assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, {0, :id}},
-            {nil, [author: {nil, []}]}}] =
+    assert {%{post: {{:assoc, %Ecto.Association.BelongsTo{}, {0, :id}}, nil, [author: {nil, []}]}},
+            %{}} =
            expand(Comment, [post: :author])
 
-    assert [{:post, {:assoc, %Ecto.Association.BelongsTo{}, {0, :id}},
-            {nil, [author: {nil, []}, permalink: {nil, []}]}}] =
+    assert {%{post: {{:assoc, %Ecto.Association.BelongsTo{}, {0, :id}}, nil,
+              [author: {nil, []}, permalink: {nil, []}]}},
+            %{}} =
            expand(Comment, [:post, post: :author, post: :permalink])
 
-    assert [{:posts, {:assoc, %Ecto.Association.Has{}, {0, :author_id}}, {nil, [comments: {nil, [post: {nil, []}]}]}},
-            {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
+    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, [comments: {nil, [post: {nil, []}]}]}},
+            %{posts_comments: {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}}} =
            expand(Author, [posts_comments: :post])
 
-    assert [{:posts, {:assoc, %Ecto.Association.Has{}, {0, :author_id}}, {nil, [comments: _, comments: _]}},
-           {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
+    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, [comments: _, comments: _]}},
+            %{posts_comments: {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}}} =
            expand(Author, [:posts, posts_comments: :post, posts: [comments: :post]])
 
     query = from(c in Comment, limit: 1)
-    assert [{:permalink, {:assoc, %Ecto.Association.Has{}, {0, :post_id}}, {nil, []}},
-            {:comments, {:assoc, %Ecto.Association.Has{}, {0, :post_id}}, {^query, []}}] =
+    assert {%{permalink: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, []},
+              comments: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, ^query, []}},
+            %{}} =
            expand(Post, [:permalink, comments: query])
 
-    assert [{:posts, {:assoc, %Ecto.Association.Has{}, {0, :author_id}}, {nil, [comments: {^query, [post: {nil, []}]}]}},
-            {:posts_comments, {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}, {nil, []}}] =
+    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, [comments: {^query, [post: {nil, []}]}]}},
+            %{posts_comments: {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}}} =
            expand(Author, [posts_comments: {query, :post}])
   end
 

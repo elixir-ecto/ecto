@@ -57,25 +57,27 @@ defmodule Ecto.Repo.Preloader do
   defp preload_each([sample|_] = structs, repo, preloads, opts) do
     module      = sample.__struct__
     {prefix, _} = sample.__meta__.source
-    preloads    = expand(module, preloads, [])
+    {assocs, throughs} = expand(module, preloads, {%{}, %{}})
 
-    entries =
-      Enum.map preloads, fn
-        {_, {:assoc, assoc, related_key}, sub_preloads} ->
-          preload_assoc(structs, module, repo, prefix, assoc, related_key, sub_preloads, opts)
-        {_, {:through, _, _} = info, {nil, []}} ->
-          info
+    assocs =
+      for {{:assoc, assoc, related_key}, query, sub_preloads} <- Map.values(assocs) do
+        preload_assoc(structs, module, repo, prefix, assoc, related_key, query, sub_preloads, opts)
       end
 
+    throughs =
+      Map.values(throughs)
+
     for struct <- structs do
-      Enum.reduce entries, struct, &load/2
+      struct = Enum.reduce assocs, struct, &load_assoc/2
+      struct = Enum.reduce throughs, struct, &load_through/2
+      struct
     end
   end
 
   ## Association preloading
 
   defp preload_assoc(structs, module, repo, prefix,
-                     %{cardinality: card} = assoc, related_key, {query, preloads}, opts) do
+                     %{cardinality: card} = assoc, related_key, query, preloads, opts) do
     {fetch_ids, loaded_ids, loaded_structs} =
       fetch_ids(structs, module, assoc, opts)
     {fetch_ids, fetch_structs} =
@@ -190,7 +192,7 @@ defmodule Ecto.Repo.Preloader do
 
   ## Load preloaded data
 
-  defp load({:assoc, assoc, ids}, struct) do
+  defp load_assoc({:assoc, assoc, ids}, struct) do
     %{field: field, owner_key: owner_key, cardinality: cardinality} = assoc
     key = Map.fetch!(struct, owner_key)
 
@@ -204,7 +206,7 @@ defmodule Ecto.Repo.Preloader do
     Map.put(struct, field, loaded)
   end
 
-  defp load({:through, %{cardinality: cardinality} = assoc, [h|t]}, struct) do
+  defp load_through({:through, %{cardinality: cardinality} = assoc, [h|t]}, struct) do
     initial = struct |> Map.fetch!(h) |> List.wrap
     loaded  = Enum.reduce(t, initial, &recur_through/2)
 
@@ -282,36 +284,32 @@ defmodule Ecto.Repo.Preloader do
 
   ## Expand
 
-  def expand(model, preloads, acc) do
-    Enum.reduce(preloads, acc, fn {preload, sub_preloads}, acc ->
-      case List.keyfind(acc, preload, 0) do
-        {^preload, info, extra_preloads} ->
-          List.keyreplace(acc, preload, 0,
-                          {preload, info, merge_preloads(preload, sub_preloads, extra_preloads)})
-        nil ->
-          assoc = Ecto.Association.association_from_schema!(model, preload)
-          info  = assoc.__struct__.preload_info(assoc)
+  def expand(schema, preloads, acc) do
+    Enum.reduce(preloads, acc, fn {preload, {query, sub_preloads}}, {assocs, throughs} ->
+      assoc = Ecto.Association.association_from_schema!(schema, preload)
+      info  = assoc.__struct__.preload_info(assoc)
 
-          case info do
-            {:assoc, _, _} ->
-              [{preload, info, sub_preloads}|acc]
-            {:through, _, through} ->
-              through =
-                through
-                |> Enum.reverse
-                |> Enum.reduce(sub_preloads, &{nil, [{&1, &2}]})
-                |> elem(1)
-              List.keystore(expand(model, through, acc), preload, 0, {preload, info, {nil, []}})
-          end
+      case info do
+        {:assoc, _, _} ->
+          value  = {info, query, sub_preloads}
+          assocs = Map.update(assocs, preload, value, &merge_preloads(preload, value, &1))
+          {assocs, throughs}
+        {:through, _, through} ->
+          through =
+            through
+            |> Enum.reverse
+            |> Enum.reduce({query, sub_preloads}, &{nil, [{&1, &2}]})
+            |> elem(1)
+          expand(schema, through, {assocs, Map.put(throughs, preload, info)})
       end
     end)
   end
 
-  defp merge_preloads(_preload, {nil, left}, {query, right}),
-    do: {query, left ++ right}
-  defp merge_preloads(_preload, {query, left}, {nil, right}),
-    do: {query, left ++ right}
-  defp merge_preloads(preload, {left, _}, {right, _}) do
+  defp merge_preloads(_preload, {info, nil, left}, {info, query, right}),
+    do: {info, query, left ++ right}
+  defp merge_preloads(_preload, {info, query, left}, {info, nil, right}),
+    do: {info, query, left ++ right}
+  defp merge_preloads(preload, {info, left, _}, {info, right, _}) do
     raise ArgumentError, "cannot preload `#{preload}` as it has been supplied more than once " <>
                          "with different queries: #{inspect left} and #{inspect right}"
   end
