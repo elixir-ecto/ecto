@@ -75,41 +75,43 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 
 ## Backwards incompatible changes
 
-  * `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
-  * Array fields no longer default to an empty list `[]`. Previous behaviour can be achieved by passing `default: []` to the field definition
-  * Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
-  * `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
-  * `Ecto.Pools.Poolboy` and `Ecto.Pools.SojournBroker` have been removed in favor of `DBConnection.Poolboy` and `DBConnection.Sojourn`
-  * `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
-  * `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership-based `Ecto.Adapters.SQL.Sandbox`
+  * [Repo] `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
+  * [Repo] Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
+  * [Repo] `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
+  * [Repo] `Ecto.Pools.Poolboy` and `Ecto.Pools.SojournBroker` have been removed in favor of `DBConnection.Poolboy` and `DBConnection.Sojourn`
+  * [Repo] `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
+  * [Schema] Array fields no longer default to an empty list `[]`. Previous behaviour can be achieved by passing `default: []` to the field definition
+  * [SQL] `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership-based `Ecto.Adapters.SQL.Sandbox`
 
 ## Deprecations
 
-  * Deprecate `:empty` in `Ecto.Changeset.cast` in favor of the clearer `:invalid` atom
-  * `Repo.after_connect/1` is deprecated, please pass the `:after_connect` repository option instead
+  * [Changeset] Deprecate `:empty` in `Ecto.Changeset.cast` in favor of the clearer `:invalid` atom
+  * [Repo] `Repo.after_connect/1` is deprecated, please pass the `:after_connect` repository option instead
 
 ## Enhancements
 
-  * Support prepared queries in adapters
-  * Support composite primary keys
-  * Support the `:force` option in preloads
-  * Allow custom `select` field in preload queries
-  * Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
-  * Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
-  * Ensure adapters work on native types, guaranteeing adapters compose better with custom types
-  * Allow the migration table name to be configured
-  * Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
-  * Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
-  * Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
-  * Allow the `:on` field to be specified with association joins
+  * [Adapter] Ensure adapters work on native types, guaranteeing adapters compose better with custom types
+  * [Adapter] Support prepared queries in adapters
+  * [Migration] Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
+  * [Migration] Allow the migration table name to be configured in the repository via `:migration_source`
+  * [Postgres] Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
+  * [Postgres] Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
+  * [Query] Allow the `:on` field to be specified with association joins
+  * [Query] Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
+  * [Repo] Allow custom `select` field in preload queries
+  * [Repo] Support the `:force` option in preloads
+  * [Repo] Perform preloads in parallel by default
+  * [Repo] Add `Repo.in_transaction?` to know if the current process is in a transaction
+  * [Schema] Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
+  * [Schema] Support composite primary keys
 
 ## Bug fixes
 
-  * The `:required` option on `cast_assoc`and `cast_embed` will now tag `has_many` and `embeds_many` relationships as missing if they contain an empty list
-  * Fix Date/DateTime serialization for years above 9999
-  * Switch pg storage management away from `psql` and use direct database connections, solving many issues like locale and database connection
-  * Ensure nested preload works even if intermediate associations were already loaded
-  * Do not attempt to execute insert/update/delete statement for associations if a previous operation failed due to a constraint error
+  * [Changeset] The `:required` option on `cast_assoc` and `cast_embed` will now tag `has_many` and `embeds_many` relationships as missing if they contain an empty list
+  * [DateTime] Fix Date/DateTime serialization for years above 9999
+  * [Postgres] Switch pg storage management away from `psql` and use direct database connections, solving many issues like locale and database connection
+  * [Repo] Ensure nested preload works even if intermediate associations were already loaded
+  * [Repo] Do not attempt to execute insert/update/delete statement for associations if a previous operation failed due to a constraint error
 
 ## Previous versions
 

@@ -122,7 +122,7 @@ defmodule Ecto.Migration do
   Version numbers of migrations will be saved in `schema_migrations` table.
   But you can configure the table via:
 
-      config :app, App.Repo, migration_table: "my_migrations"
+      config :app, App.Repo, migration_source: "my_migrations"
 
   """
 

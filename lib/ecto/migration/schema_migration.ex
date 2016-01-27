@@ -19,23 +19,23 @@ defmodule Ecto.Migration.SchemaMigration do
   end
 
   def migrated_versions(repo, prefix) do
-    repo.all from(p in {get_table_name(repo), __MODULE__}, select: p.version) |> Map.put(:prefix, prefix), @opts
+    repo.all from(p in {get_source(repo), __MODULE__}, select: p.version) |> Map.put(:prefix, prefix), @opts
   end
 
   def up(repo, version, prefix) do
-    repo.insert! %__MODULE__{version: version} |> Ecto.put_meta(prefix: prefix, source: get_table_name(repo)), @opts
+    repo.insert! %__MODULE__{version: version} |> Ecto.put_meta(prefix: prefix, source: get_source(repo)), @opts
   end
 
   def down(repo, version, prefix) do
-    repo.delete_all from(p in {get_table_name(repo), __MODULE__}, where: p.version == ^version) |> Map.put(:prefix, prefix), @opts
+    repo.delete_all from(p in {get_source(repo), __MODULE__}, where: p.version == ^version) |> Map.put(:prefix, prefix), @opts
   end
 
-  def get_table_name(repo) do
-    Keyword.get(repo.config, :migration_table, "schema_migrations")
+  def get_source(repo) do
+    Keyword.get(repo.config, :migration_source, "schema_migrations")
   end
 
   defp create_migrations_table(adapter, repo, prefix) do
-    table_name = repo |> get_table_name |> String.to_atom
+    table_name = repo |> get_source |> String.to_atom
     table = %Ecto.Migration.Table{name: table_name, prefix: prefix}
 
     # DDL queries do not log, so we do not need to pass log: false here.

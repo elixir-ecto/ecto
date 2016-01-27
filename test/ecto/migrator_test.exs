@@ -76,7 +76,7 @@ defmodule Ecto.MigratorTest do
     use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
   end
 
-  Application.put_env(:ecto, TestSchemaRepo, [migration_table: "my_schema_migrations"])
+  Application.put_env(:ecto, TestSchemaRepo, [migration_source: "my_schema_migrations"])
 
   setup do
     Process.put(:migrated_versions, [1, 2, 3])
@@ -84,8 +84,8 @@ defmodule Ecto.MigratorTest do
   end
 
   test "custom schema migrations table is right" do
-    assert SchemaMigration.get_table_name(TestRepo) == "schema_migrations"
-    assert SchemaMigration.get_table_name(TestSchemaRepo) == "my_schema_migrations"
+    assert SchemaMigration.get_source(TestRepo) == "schema_migrations"
+    assert SchemaMigration.get_source(TestSchemaRepo) == "my_schema_migrations"
   end
 
   test "logs migrations" do
