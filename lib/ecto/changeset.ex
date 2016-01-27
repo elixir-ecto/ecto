@@ -306,7 +306,7 @@ defmodule Ecto.Changeset do
   "stronger" than optional fields.
   """
   @spec cast(Ecto.Schema.t | t,
-             %{binary => term} | %{atom => term} | nil,
+             %{binary => term} | %{atom => term} | nil | :invalid,
              [String.t | atom],
              [String.t | atom]) :: t | no_return
   def cast(model_or_changeset, params, required, optional)
