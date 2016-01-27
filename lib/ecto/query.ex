@@ -113,17 +113,31 @@ defmodule Ecto.Query do
 
   ### Query bindings
 
-  On the left side of `in` we specify the query bindings. Bindings
-  in Ecto are positional, therefore the name we give them do not
-  matter. For example, the second query above could also be written
-  as:
+  On the left side of `in` we specify the query bindings.  This is
+  done inside from and join clauses.  In the query below `w` is a
+  binding and `w.prcp` is a field access using this binding.
+
+      query = from w in Weather, where: w.prcp > 0
+
+  Bindings are not exposed from the query.  When composing queries you
+  must specify bindings again for each refinement query.  For example
+  to further narrow-down above query we again need to tell Ecto what
+  bindings to expect:
+
+      query = from w in query, select: w.city
+
+  Bindings in Ecto are positional, and the names do not have to be
+  consistent between input and refinement queries.  For example, the
+  query above could also be written as:
 
       query = from q in query, select: q.city
 
   It would make no difference to Ecto. This is important because
   it allows developers to compose queries without caring about
-  the initial query. When using joins, the bindings should be
-  matched in the order they are specified:
+  the bindings use in the initial query.
+
+  When using joins, the bindings should be matched in the order they
+  are specified:
 
       # Create a query
       query = from p in Post,
@@ -139,7 +153,7 @@ defmodule Ecto.Query do
 
       query = from q in query, order_by: q.inserted_at
 
-  The example above will work if the query has 1 or 10 bindings.
+  The example above will work if the input query has 1 or 10 bindings.
   As bindings are position based, we will always sort by the
   `inserted_at` column from the `from` source.
 
