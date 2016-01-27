@@ -60,8 +60,9 @@ defmodule Ecto.Repo.Preloader do
     {assocs, throughs} = expand(module, preloads, {%{}, %{}})
 
     assocs =
-      for {{:assoc, assoc, related_key}, query, sub_preloads} <- Map.values(assocs) do
-        preload_assoc(structs, module, repo, prefix, assoc, related_key, query, sub_preloads, opts)
+      maybe_pmap Map.values(assocs), repo, opts, fn
+        {{:assoc, assoc, related_key}, query, sub_preloads}, opts ->
+          preload_assoc(structs, module, repo, prefix, assoc, related_key, query, sub_preloads, opts)
       end
 
     throughs =
@@ -75,6 +76,18 @@ defmodule Ecto.Repo.Preloader do
   end
 
   ## Association preloading
+
+  defp maybe_pmap(assocs, repo, opts, fun) do
+    if match?([_,_|_], assocs) and not repo.in_transaction? and
+       Keyword.get(opts, :in_parallel, true) do
+      opts = [caller: self()] ++ opts
+      assocs
+      |> Enum.map(&Task.async(:erlang, :apply, [fun, [&1, opts]]))
+      |> Enum.map(&Task.await(&1, :infinity))
+    else
+      Enum.map(assocs, &fun.(&1, opts))
+    end
+  end
 
   defp preload_assoc(structs, module, repo, prefix,
                      %{cardinality: card} = assoc, related_key, query, preloads, opts) do

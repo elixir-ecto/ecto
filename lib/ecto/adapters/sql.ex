@@ -439,7 +439,7 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def in_transaction?(repo) do
     {pool, _} = repo.__pool__
-    get_conn(pool)
+    !!get_conn(pool)
   end
 
   @doc false

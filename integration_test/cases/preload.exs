@@ -337,6 +337,17 @@ defmodule Ecto.Integration.PreloadTest do
 
   ## Nested
 
+  test "preload many assocs" do
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+
+    assert [p2, p1] = TestRepo.preload([p2, p1], [:comments, :users])
+    assert p1.comments == []
+    assert p2.comments == []
+    assert p1.users == []
+    assert p2.users == []
+  end
+
   test "preload nested" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
