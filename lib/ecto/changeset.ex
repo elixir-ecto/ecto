@@ -1033,10 +1033,15 @@ defmodule Ecto.Changeset do
   @doc """
   Validates that one or more fields are present in the changeset.
 
-  If the value of a field is `nil`, an empty string `""`, or a string with only
-  white space `"   "` it will mark the changeset as invalid.
+  If the value of a field is `nil` or a string made only of whitespace,
+  the changeset is marked as invalid and an error is added.
 
-  You can pass a single field name or a list of field names that are required.
+  You can pass a single field name or a list of field names that
+  are required.
+
+  ## Options
+
+    * `:message` - the message on failure, defaults to "can't be blank"
 
   ## Examples
 
@@ -1044,24 +1049,25 @@ defmodule Ecto.Changeset do
       validate_required(changeset, [:title, :body])
 
   """
-  @spec validate_required(t, list()) :: t
-  def validate_required(changeset, fields) when is_list(fields) do
-    Enum.reduce fields, changeset, fn(field, changeset) ->
-      changeset |> validate_required(field)
-    end
+  @spec validate_required(t, list | atom, Keyword.t) :: t
+  def validate_required(changeset, fields, opts \\ [])
+
+  def validate_required(changeset, fields, opts) when is_list(fields) do
+    Enum.reduce fields, changeset, &validate_required(&2, &1, opts)
   end
 
   @spec validate_required(t, atom) :: t
-  def validate_required(changeset, field) do
-    value = case get_field(changeset, field) do
-      value when is_binary(value) -> String.strip(value)
-      value -> value
-    end
+  def validate_required(changeset, field, opts) when is_atom(field) do
+    value =
+      case get_field(changeset, field) do
+        value when is_binary(value) -> String.lstrip(value)
+        value -> value
+      end
 
-    case value do
-      nil -> add_error(changeset, field, "can't be blank")
-      "" -> add_error(changeset, field, "can't be blank")
-      _ -> changeset
+    if value in [nil, ""] do
+      add_error(changeset, field, message(opts, "can't be blank"))
+    else
+      changeset
     end
   end
 
