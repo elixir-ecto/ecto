@@ -249,4 +249,34 @@ defmodule Ecto.Integration.IntervalTest do
     assert [{{2013, 1, 1}, _}] =
            TestRepo.all(from p in Post, select: datetime_add(p.inserted_at, ^dec, "year"))
   end
+
+  test "from_now" do
+    current = Ecto.DateTime.utc.year
+    dec = Decimal.new(5)
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: from_now(5, "year"))
+    assert y > current
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: from_now(5.0, "year"))
+    assert y > current
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: from_now(^5, "year"))
+    assert y > current
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: from_now(^5.0, "year"))
+    assert y > current
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: from_now(^dec, "year"))
+    assert y > current
+  end
+
+  test "ago" do
+    current = Ecto.DateTime.utc.year
+    dec = Decimal.new(5)
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: ago(5, "year"))
+    assert y < current
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: ago(5.0, "year"))
+    assert y < current
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: ago(^5, "year"))
+    assert y < current
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: ago(^5.0, "year"))
+    assert y < current
+    assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: ago(^dec, "year"))
+    assert y < current
+  end
 end

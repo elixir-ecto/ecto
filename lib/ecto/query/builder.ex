@@ -89,6 +89,25 @@ defmodule Ecto.Query.Builder do
   end
 
   # interval
+
+  def escape({:from_now, meta, [count, interval]}, type, params, vars, env) do
+    utc = quote do: ^Ecto.DateTime.utc
+    escape({:datetime_add, meta, [utc, count, interval]}, type, params, vars, env)
+  end
+
+  def escape({:ago, meta, [count, interval]}, type, params, vars, env) do
+    utc = quote do: ^Ecto.DateTime.utc
+    count =
+      case count do
+        {:^, meta, [value]} ->
+          negate = quote do: Ecto.Query.Builder.negate!(unquote(value))
+          {:^, meta, [negate]}
+        value ->
+          {:-, [], [value]}
+      end
+    escape({:datetime_add, meta, [utc, count, interval]}, type, params, vars, env)
+  end
+
   def escape({:datetime_add, _, [datetime, count, interval]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :datetime)
     {datetime, params} = escape(datetime, :datetime, params, vars, env)
@@ -461,6 +480,16 @@ defmodule Ecto.Query.Builder do
     do: interval
   def interval!(other),
     do: error!("invalid interval: `#{inspect other}` (expected one of #{Enum.join(@interval, ", ")})")
+
+  @doc """
+  Negates the given number.
+  """
+  def negate!(%Decimal{} = decimal) do
+    Decimal.minus(decimal)
+  end
+  def negate!(number) when is_number(number) do
+    -number
+  end
 
   @doc """
   Returns the type of an expression at build time.

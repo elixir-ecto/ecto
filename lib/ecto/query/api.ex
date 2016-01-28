@@ -8,7 +8,7 @@ defmodule Ecto.Query.API do
     * Search functions: `like/2` and `ilike/2`
     * Null check functions: `is_nil/1`
     * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
-    * Date/time intervals: `datetime_add/3`, `date_add/3`
+    * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
     * General: `fragment/1`, `field/2`, `type/2` and `take/2`
 
   Note the functions in this module exist for documentation
@@ -167,6 +167,31 @@ defmodule Ecto.Query.API do
   See `datetime_add/3` for more information.
   """
   def date_add(date, count, interval), do: doc! [date, count, interval]
+
+  @doc """
+  Adds the given interval to the current time in UTC.
+
+  The current time in UTC is retrieved from Elixir and
+  not from the database.
+
+  ## Examples
+
+      from a in Account, where: p.expires_at < from_now(3, "months")
+
+  """
+  def from_now(count, interval), do: doc! [count, interval]
+
+  @doc """
+  Substracts the given interval from the current time in UTC.
+
+  The current time in UTC is retrieved from Elixir and
+  not from the database.
+
+  ## Examples
+
+      from p in Post, where: p.published_at > ago(3, "months")
+  """
+  def ago(count, interval), do: doc! [count, interval]
 
   @doc """
   Send fragments directly to the database.
