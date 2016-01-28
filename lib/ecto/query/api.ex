@@ -14,7 +14,7 @@ defmodule Ecto.Query.API do
   Note the functions in this module exist for documentation
   purposes and one should never need to invoke them directly.
   Furthermore, it is possible to define your own macros and
-  use them in Ecto queries.
+  use them in Ecto queries (see docs for `fragment/1`).
   """
 
   @doc """
@@ -207,6 +207,26 @@ defmodule Ecto.Query.API do
       from p in Post,
           where: fragment(title: ["$eq": ^some_value])
 
+  ## Defining custom functions using macros and fragment
+
+  You can add a custom Ecto query function using macros.  For example
+  to expose SQL's coalesce function you can define this macro:
+
+      defmodule CustomFunctions do
+        defmacro coalesce(left, right) do
+          quote do
+            fragment("coalesce(?, ?)", unquote(left), unquote(right))
+          end
+        end
+      end
+
+  To have coalesce/2 available, just import the module that defines it.
+
+      import CustomFunctions
+
+  The only downside is that it will show up as a fragment when
+  inspecting the Elixir query.  Other than that, it should be
+  equivalent to a built-in Ecto query function.
   """
   def fragment(fragments), do: doc! [fragments]
 
