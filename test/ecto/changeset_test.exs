@@ -30,6 +30,22 @@ defmodule Ecto.ChangesetTest do
     cast(model, params, ~w(), ~w(title body upvotes topics decimal))
   end
 
+  ## cast/3
+
+  test "cast/3: with valid string keys" do
+    params = %{"title" => "hello", "body" => "world"}
+    struct = %Post{}
+
+    changeset = cast(struct, params, ~w(title body)a)
+    assert changeset.params == params
+    assert changeset.model  == struct
+    assert changeset.changes == %{title: "hello", body: "world"}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == []
+    assert changeset.valid?
+  end
+
   ## cast/4
 
   test "cast/4: with valid string keys" do
@@ -569,13 +585,15 @@ defmodule Ecto.ChangesetTest do
   test "validate_required/2" do
     changeset = changeset(%{}) |> validate_required(:title)
     refute changeset.valid?
+    assert changeset.required == [:title]
     assert changeset.errors == [title: "can't be blank"]
 
     changeset =
       changeset(%{title: nil, body: "\n"})
       |> validate_required([:title, :body], message: "is blank")
     refute changeset.valid?
-    assert changeset.errors == [body: "is blank", title: "is blank"]
+    assert changeset.required == [:title, :body]
+    assert changeset.errors == [title: "is blank", body: "is blank"]
 
     changeset =
       changeset(%{"title" => "hello", "body" => "something"})

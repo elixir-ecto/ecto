@@ -4,6 +4,29 @@ This is a new major release of Ecto that removes previously deprecated features 
 
 ## Highlights
 
+### Revamped changesets
+
+Due to feedback, we have made three important changes to changesets:
+
+  1. `changeset.model` has been renamed to `changeset.source` (we no longer have "models" in Ecto)
+  2. Passing required and optional fields to `cast/4` is deprecated in favor of `cast/3` and `validate_required/3`
+  3. The `:empty` atom in `cast(source, :empty, required, optional)` has been replaced by `:invalid` to make it clear the resulting changeset is invalid
+
+To summarize those changes, instead of:
+
+    def changeset(user, params \\ :empty) do
+      user
+      |> cast(params, [:name], [:age])
+    end
+
+One should write:
+
+    def changeset(user, params \\ :invalid) do
+      user
+      |> cast(params, [:name, :age])
+      |> validate_required([:name])
+    end
+
 ### Take and dynamic fields
 
 TODO.
@@ -75,6 +98,8 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 
 ## Backwards incompatible changes
 
+  * [Changeset] `changeset.model` has been renamed to `changeset.source`
+  * [Changeset] `changeset.optional` has been removed
   * [Repo] `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
   * [Repo] Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
   * [Repo] `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
@@ -86,6 +111,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 ## Deprecations
 
   * [Changeset] Deprecate `:empty` in `Ecto.Changeset.cast` in favor of the clearer `:invalid` atom
+  * [Changeset] Deprecate `Ecto.Changeset.cast/4` in favor of `Ecto.Changeset.cast/3`
   * [Repo] `Repo.after_connect/1` is deprecated, please pass the `:after_connect` repository option instead
 
 ## Enhancements

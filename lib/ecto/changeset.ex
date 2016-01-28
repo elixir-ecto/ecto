@@ -5,7 +5,7 @@ defmodule Ecto.Changeset do
 
   There is an example of working with changesets in the
   introductory documentation in the `Ecto` module. The
-  functions `change/2` and `cast/4` are the usual entry
+  functions `change/2` and `cast/3` are the usual entry
   points for creating changesets, while the remaining
   functions are useful for manipulating them.
 
@@ -190,7 +190,7 @@ defmodule Ecto.Changeset do
   differ from the values in the model. If `changes` is an empty map, this
   function is a no-op.
 
-  See `cast/4` if you'd prefer to cast and validate external parameters.
+  See `cast/3` if you'd prefer to cast and validate external parameters.
 
   ## Examples
 
@@ -248,7 +248,7 @@ defmodule Ecto.Changeset do
 
   @doc """
   Converts the given `params` into a changeset for `model`
-  keeping only the set of `required` and `optional` keys.
+  allowing only the given set of keys.
 
   This function receives a model and some `params`, and casts the `params`
   according to the schema information from `model`. `params` is a map with
@@ -256,27 +256,24 @@ defmodule Ecto.Changeset do
 
   During casting, all valid parameters will have their key name converted to an
   atom and stored as a change in the `:changes` field of the changeset.
-  All parameters that are not listed in `required` or `optional` are ignored.
+  All parameters that are not explicitly allowed are ignored.
 
-  If casting of all fields is successful and all required fields
-  are present either in the model or in the given params, the
-  changeset is returned as valid.
+  If casting of all fields is successful, the changeset is returned
+  as valid.
 
   ## Examples
 
-      iex> changeset = cast(post, params, ~w(title), ~w())
+      iex> changeset = cast(post, params, ~w(title))
       iex> if changeset.valid? do
       ...>   Repo.update!(changeset)
       ...> end
 
   Passing a changeset as the first argument:
 
-      iex> changeset = cast(post, %{title: "Hello"}, ~w(), ~w(title))
-      iex> new_changeset = cast(changeset, %{title: "Foo", body: "Bar"}, ~w(title), ~w(body))
+      iex> changeset = cast(post, %{title: "Hello"}, ~w(title))
+      iex> new_changeset = cast(changeset, %{title: "Foo", body: "Bar"}, ~w(body))
       iex> new_changeset.params
       %{title: "Foo", body: "Bar"}
-      iex> new_changeset.required
-      [:title]
 
   ## Invalid parameters
 
@@ -285,25 +282,33 @@ defmodule Ecto.Changeset do
   This is useful to run the changeset through all validation steps for
   introspection:
 
-      iex> changeset = cast(post, :invalid, ~w(title), ~w())
+      iex> changeset = cast(post, :invalid, ~w(title))
       iex> changeset = validate_length(post, :title, min: 3)
       iex> changeset.validations
       [title: [min: 3]]
 
   ## Composing casts
 
-  `cast/4` also accepts a changeset instead of a model as its first argument.
-  In such cases, all the effects caused by the call to `cast/4` (additional and
+  `cast/3` also accepts a changeset instead of a model as its first argument.
+  In such cases, all the effects caused by the call to `cast/3` (additional and
   optional fields, errors and changes) are simply added to the ones already
   present in the argument changeset. Parameters are merged (**not deep-merged**)
-  and the ones passed to `cast/4` take precedence over the ones already in the
+  and the ones passed to `cast/3` take precedence over the ones already in the
   changeset.
+  """
+  # TODO: Effectively deprecate cast/4
+  @spec cast(Ecto.Schema.t | t,
+             %{binary => term} | %{atom => term} | :invalid,
+             [String.t | atom]) :: t | no_return
+  def cast(model_or_changeset, params, allowed) do
+    cast(model_or_changeset, params, [], allowed)
+  end
 
-  Note that if a field is marked both as *required* as well as *optional* (for
-  example by being in the `:required` field of the argument changeset and also
-  in the `optional` list passed to `cast/4`), then it will be marked as required
-  and not optional. This represents the fact that required fields are
-  "stronger" than optional fields.
+  @doc """
+  Converts the given `params` into a changeset for `model`
+  keeping only the set of `required` and `optional` keys.
+
+  This function is deprecated in favor of `cast/3` + `validate_required/3`.
   """
   @spec cast(Ecto.Schema.t | t,
              %{binary => term} | %{atom => term} | nil | :invalid,
@@ -325,7 +330,7 @@ defmodule Ecto.Changeset do
   end
 
   defp cast(%{__struct__: _} = model, %{} = changes, :empty, required, optional) do
-    IO.puts :stderr, "warning: passing :empty to Ecto.Changeset.cast/4 is deprecated, " <>
+    IO.puts :stderr, "warning: passing :empty to Ecto.Changeset.cast/3 is deprecated, " <>
                      "please pass :invalid instead\n" <> Exception.format_stacktrace
     cast(model, changes, :invalid, required, optional)
   end
@@ -389,7 +394,7 @@ defmodule Ecto.Changeset do
   defp type!(types, key) do
     case Map.fetch(types, key) do
       {:ok, {tag, _}} when tag in @relations ->
-        raise "casting #{tag}s with cast/4 is not supported, use cast_#{tag}/3 instead"
+        raise "casting #{tag}s with cast/3 is not supported, use cast_#{tag}/3 instead"
       {:ok, type} ->
         type
       :error ->
@@ -447,7 +452,7 @@ defmodule Ecto.Changeset do
   invoked may also be configured by using the `:with` option.
 
   The changeset must have been previously `cast` using
-  `cast/4` before this function is invoked.
+  `cast/3` before this function is invoked.
 
   ## Options
 
@@ -468,7 +473,7 @@ defmodule Ecto.Changeset do
   invoked may also be configured by using the `:with` option.
 
   The changeset must have been previously `cast` using
-  `cast/4` before this function is invoked.
+  `cast/3` before this function is invoked.
 
   ## Options
 
@@ -483,7 +488,7 @@ defmodule Ecto.Changeset do
   defp cast_relation(type, %Changeset{model: model, types: types}, _name, _opts)
       when model == nil or types == nil do
     raise ArgumentError, "cast_#{type}/3 expects the changeset to be cast. " <>
-                         "Please call cast/4 before calling cast_#{type}/3"
+                         "Please call cast/3 before calling cast_#{type}/3"
   end
 
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
@@ -738,7 +743,7 @@ defmodule Ecto.Changeset do
 
   The given `function` is invoked with the change value only if there
   is a change for the given `key`. Note that the value of the change
-  can still be `nil` (unless the field was marked as required on `cast/4`).
+  can still be `nil` (unless the field was marked as required on `cast/3`).
 
   ## Examples
 
@@ -1050,24 +1055,25 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_required(t, list | atom, Keyword.t) :: t
-  def validate_required(changeset, fields, opts \\ [])
+  def validate_required(%{required: required, errors: errors} = changeset, fields, opts \\ []) do
+    message = message(opts, "can't be blank")
+    fields  = List.wrap(fields)
 
-  def validate_required(changeset, fields, opts) when is_list(fields) do
-    Enum.reduce fields, changeset, &validate_required(&2, &1, opts)
+    new_errors =
+      for field <- fields,
+          missing?(changeset, field),
+          do: {field, message}
+
+    case new_errors do
+      [] -> %{changeset | required: fields ++ required}
+      _  -> %{changeset | required: fields ++ required, errors: new_errors ++ errors, valid?: false}
+    end
   end
 
-  @spec validate_required(t, atom) :: t
-  def validate_required(changeset, field, opts) when is_atom(field) do
-    value =
-      case get_field(changeset, field) do
-        value when is_binary(value) -> String.lstrip(value)
-        value -> value
-      end
-
-    if value in [nil, ""] do
-      add_error(changeset, field, message(opts, "can't be blank"))
-    else
-      changeset
+  defp missing?(changeset, field) when is_atom(field) do
+    case get_field(changeset, field) do
+      value when is_binary(value) -> String.lstrip(value) == ""
+      value -> value == nil
     end
   end
 

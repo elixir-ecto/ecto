@@ -150,13 +150,14 @@ defmodule Ecto do
 
         def changeset(user, params \\ :invalid) do
           user
-          |> cast(params, ~w(name email), ~w(age))
+          |> cast(params, [:name, :email, :age])
+          |> validate_required([:name, :email])
           |> validate_format(:email, ~r/@/)
           |> validate_inclusion(:age, 18..100)
         end
       end
 
-  The `changeset/2` function first invokes `Ecto.Changeset.cast/4` with
+  The `changeset/2` function first invokes `Ecto.Changeset.cast/3` with
   the struct, the parameters and a list of required and optional fields;
   this returns a changeset. The parameter is a map with binary keys and
   a value that will be cast based on the type defined on the schema.
