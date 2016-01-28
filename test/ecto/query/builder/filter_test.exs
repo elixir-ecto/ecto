@@ -36,7 +36,7 @@ defmodule Ecto.Query.Builder.FilterTest do
 
   test "nil filter" do
     assert_raise Ecto.Query.CompileError,
-                 ~r"nil given for :x, comparison with nil is forbidden as it always evaluates to false.", fn ->
+                 ~r"nil given for :x. Comparison with nil is forbidden as it always evaluates to false.", fn ->
       escape(:where, quote do [x: nil] end, [], __ENV__)
     end
   end
@@ -50,7 +50,7 @@ defmodule Ecto.Query.Builder.FilterTest do
 
   test "nil runtime filter" do
     assert_raise ArgumentError,
-                 ~r"nil given for :x, comparison with nil is forbidden as it always evaluates to false.", fn ->
+                 ~r"nil given for :x. Comparison with nil is forbidden as it always evaluates to false.", fn ->
       runtime!(:where, [x: nil])
     end
   end

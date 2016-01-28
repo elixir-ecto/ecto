@@ -148,7 +148,7 @@ defmodule Ecto.Query.Builder do
 
     if is_nil(left) or is_nil(right) do
       error! "comparison with nil is forbidden as it always evaluates to false. " <>
-             "If you want to check if a value is (not) nil, use is_nil/1 instead"
+             "If you want to check if a value is nil, use is_nil/1 instead"
     end
 
     ltype = quoted_type(right, vars)

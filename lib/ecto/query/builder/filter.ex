@@ -19,8 +19,8 @@ defmodule Ecto.Query.Builder.Filter do
     {parts, params} =
       Enum.map_reduce(expr, %{}, fn
         {field, nil}, _acc ->
-          Builder.error! "nil given for #{inspect field}, comparison with nil is forbidden as it always evaluates to false. " <>
-                         "Pass a full query expression and use is_nil/1 instead."
+          Builder.error! "nil given for #{inspect field}. Comparison with nil is forbidden as it is unsafe. " <>
+                         "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
         {field, value}, acc when is_atom(field) ->
           {value, params} = Builder.escape(value, {0, field}, acc, vars, env)
           {{:{}, [], [:==, [], [to_escaped_field(field), value]]}, params}
@@ -104,8 +104,8 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   defp runtime!([{field, nil}|_], _counter, _exprs, _params, _kind, _original) when is_atom(field) do
-    raise ArgumentError, "nil given for #{inspect field}, comparison with nil is forbidden as it always evaluates to false. " <>
-                         "Pass a full query expression and use is_nil/1 instead."
+    raise ArgumentError, "nil given for #{inspect field}. Comparison with nil is forbidden as it is unsafe. " <>
+                         "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
   end
 
   defp runtime!([{field, value}|t], counter, exprs, params, kind, original) when is_atom(field) do

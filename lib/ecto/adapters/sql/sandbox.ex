@@ -215,7 +215,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   ## Options
 
     * `:sandbox` - when true the connection is wrapped in
-      a transaction. Defaults to true. WHen
+      a transaction. Defaults to true.
 
   """
   def checkout(repo, opts \\ []) do
