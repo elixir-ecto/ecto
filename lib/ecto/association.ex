@@ -180,22 +180,22 @@ defmodule Ecto.Association do
 
   @doc """
   Performs the repository action in the related changeset,
-  returning `{:ok, model}` or `{:error, changes}`.
+  returning `{:ok, data}` or `{:error, changes}`.
   """
-  def on_repo_change(%{model: model}, [], _opts) do
-    {:ok, model}
+  def on_repo_change(%{data: struct}, [], _opts) do
+    {:ok, struct}
   end
 
   def on_repo_change(changeset, assocs, opts) do
-    %{model: model, changes: changes, action: action} = changeset
+    %{data: struct, changes: changes, action: action} = changeset
 
-    {model, changes, _halt, valid?} =
-      Enum.reduce(assocs, {model, changes, false, true}, fn {refl, value}, acc ->
+    {struct, changes, _halt, valid?} =
+      Enum.reduce(assocs, {struct, changes, false, true}, fn {refl, value}, acc ->
         on_repo_change(refl, value, changeset, action, opts, acc)
       end)
 
     case valid? do
-      true  -> {:ok, model}
+      true  -> {:ok, struct}
       false -> {:error, changes}
     end
   end
@@ -211,9 +211,9 @@ defmodule Ecto.Association do
                       repo_action, opts, {parent, changes, halt, valid?}) do
     check_action!(meta, action, repo_action)
     case on_repo_change_unless_halted(halt, mod, meta, parent_changeset, changeset, opts) do
-      {:ok, model} ->
-        maybe_replace_one!(meta, model, parent, parent_changeset, opts)
-        {Map.put(parent, field, model), Map.put(changes, field, changeset), halt, valid?}
+      {:ok, struct} ->
+        maybe_replace_one!(meta, struct, parent, parent_changeset, opts)
+        {Map.put(parent, field, struct), Map.put(changes, field, changeset), halt, valid?}
       {:error, error_changeset} ->
         {parent, Map.put(changes, field, error_changeset),
          halted?(halt, changeset, error_changeset), false}
@@ -223,22 +223,22 @@ defmodule Ecto.Association do
   defp on_repo_change(%{cardinality: :many, field: field, __struct__: mod} = meta,
                       changesets, parent_changeset, repo_action, opts,
                       {parent, changes, halt, all_valid?}) do
-    {changesets, models, halt, valid?} =
+    {changesets, structs, halt, valid?} =
       Enum.reduce(changesets, {[], [], halt, true}, fn
-        %{action: action} = changeset, {changesets, models, halt, valid?} ->
+        %{action: action} = changeset, {changesets, structs, halt, valid?} ->
           check_action!(meta, action, repo_action)
           case on_repo_change_unless_halted(halt, mod, meta, parent_changeset, changeset, opts) do
             {:ok, nil} ->
-              {[changeset|changesets], models, halt, valid?}
-            {:ok, model} ->
-              {[changeset|changesets], [model | models], halt, valid?}
+              {[changeset|changesets], structs, halt, valid?}
+            {:ok, struct} ->
+              {[changeset|changesets], [struct | structs], halt, valid?}
             {:error, error_changeset} ->
-              {[error_changeset|changesets], models, halted?(halt, changeset, error_changeset), false}
+              {[error_changeset|changesets], structs, halted?(halt, changeset, error_changeset), false}
           end
       end)
 
     if valid? do
-      {Map.put(parent, field, Enum.reverse(models)),
+      {Map.put(parent, field, Enum.reverse(structs)),
        Map.put(changes, field, Enum.reverse(changesets)),
        halt, all_valid?}
     else
@@ -405,14 +405,14 @@ defmodule Ecto.Association.Has do
       :delete -> %{changeset | action: :delete}
     end
 
-    case on_repo_change(refl, %{parent_changeset | model: nil}, changeset, opts) do
+    case on_repo_change(refl, %{parent_changeset | data: nil}, changeset, opts) do
       {:ok, _} -> {:ok, nil}
       {:error, changeset} -> {:error, changeset}
     end
   end
 
   def on_repo_change(assoc, parent_changeset, changeset, opts) do
-    %{model: parent, repo: repo} = parent_changeset
+    %{data: parent, repo: repo} = parent_changeset
     %{action: action, changes: changes} = changeset
 
     {key, value} = parent_key(assoc, parent)
@@ -888,7 +888,7 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   def on_repo_change(%{join_keys: join_keys, join_through: join_through},
-                     %{repo: repo, model: owner}, %{action: :delete, model: related}, opts) do
+                     %{repo: repo, data: owner}, %{action: :delete, data: related}, opts) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
 
     query =
@@ -901,7 +901,7 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys},
-                     %{repo: repo, model: owner} = parent_changeset,
+                     %{repo: repo, data: owner} = parent_changeset,
                      %{action: action} = changeset, opts) do
     case apply(repo, action, [changeset, opts]) do
       {:ok, child} ->
@@ -919,7 +919,7 @@ defmodule Ecto.Association.ManyToMany do
 
   defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true
   defp insert_join?(_, %{action: :insert}, _field, _related_key), do: true
-  defp insert_join?(%{model: owner}, %{model: related}, field, related_key) do
+  defp insert_join?(%{data: owner}, %{data: related}, field, related_key) do
     current_key = Map.fetch!(related, related_key)
     not Enum.any? Map.fetch!(owner, field), fn child ->
       Map.get(child, related_key) == current_key

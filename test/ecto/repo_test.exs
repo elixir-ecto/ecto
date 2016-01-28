@@ -146,7 +146,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert, update, insert_or_update and delete errors on invalid changeset" do
-    invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
+    invalid = %Ecto.Changeset{valid?: false, data: %MyModel{}}
 
     insert = %{invalid | action: :insert, repo: TestRepo}
     assert {:error, ^insert} = TestRepo.insert(invalid)
@@ -170,7 +170,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert!, update!, insert_or_update! and delete! fail on invalid changeset" do
-    invalid = %Ecto.Changeset{valid?: false, model: %MyModel{}}
+    invalid = %Ecto.Changeset{valid?: false, data: %MyModel{}}
 
     assert_raise Ecto.InvalidChangesetError,
                  ~r"could not perform insert because changeset is invalid", fn ->
@@ -193,24 +193,24 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "insert!, update! and delete! fail on changeset without model" do
-    invalid = %Ecto.Changeset{valid?: true, model: nil}
+  test "insert!, update! and delete! fail on changeset without data" do
+    invalid = %Ecto.Changeset{valid?: true, data: nil}
 
-    assert_raise ArgumentError, "cannot insert a changeset without a model", fn ->
+    assert_raise ArgumentError, "cannot insert a changeset without :data", fn ->
       TestRepo.insert!(invalid)
     end
 
-    assert_raise ArgumentError, "cannot update a changeset without a model", fn ->
+    assert_raise ArgumentError, "cannot update a changeset without :data", fn ->
       TestRepo.update!(invalid)
     end
 
-    assert_raise ArgumentError, "cannot delete a changeset without a model", fn ->
+    assert_raise ArgumentError, "cannot delete a changeset without :data", fn ->
       TestRepo.delete!(invalid)
     end
   end
 
   test "insert!, update!, insert_or_update! and delete! fail on changeset with wrong action" do
-    invalid = %Ecto.Changeset{valid?: true, model: %MyModel{}, action: :other}
+    invalid = %Ecto.Changeset{valid?: true, data: %MyModel{}, action: :other}
 
     assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.insert/2", fn ->
       TestRepo.insert!(invalid)

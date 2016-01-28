@@ -127,10 +127,10 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.insert(changeset)
     assert_received {:rollback, ^changeset}
-    assert changeset.model.__meta__.state == :built
-    assert %Ecto.Association.NotLoaded{} = changeset.model.assocs
+    assert changeset.data.__meta__.state == :built
+    assert %Ecto.Association.NotLoaded{} = changeset.data.assocs
     assert changeset.changes.assocs
-    refute hd(changeset.changes.assocs).model.id
+    refute hd(changeset.changes.assocs).data.id
     refute changeset.valid?
   end
 
@@ -145,10 +145,10 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assocs, [assoc])
     assert {:error, changeset} = TestRepo.insert(changeset)
-    assert changeset.model.__meta__.state == :built
-    assert %Ecto.Association.NotLoaded{} = changeset.model.assocs
+    assert changeset.data.__meta__.state == :built
+    assert %Ecto.Association.NotLoaded{} = changeset.data.assocs
     assert changeset.changes.assocs
-    refute hd(changeset.changes.assocs).model.id
+    refute hd(changeset.changes.assocs).data.id
     refute changeset.valid?
 
     # Just one transaction was used
@@ -358,11 +358,11 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.update(changeset)
     assert_received {:rollback, ^changeset}
-    assert changeset.model.assocs == []
+    assert changeset.data.assocs == []
     refute changeset.valid?
 
     [assoc] = changeset.changes.assocs
-    refute assoc.model.id
+    refute assoc.data.id
   end
 
   test "handles valid nested assocs on update" do

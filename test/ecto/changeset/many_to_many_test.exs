@@ -82,7 +82,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
     changeset = cast(%Author{posts: posts}, %{"posts" => params}, :posts)
     [first, new, second, third] = changeset.changes.posts
 
-    assert first.model.id == 1
+    assert first.data.id == 1
     assert first.required == [] # Check for not running changeset function
     assert first.action == :replace
     assert first.valid?
@@ -91,12 +91,12 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assert new.action == :insert
     assert new.valid?
 
-    assert second.model.id == 2
+    assert second.data.id == 2
     assert second.errors == [title: "can't be blank"]
     assert second.action == :update
     refute second.valid?
 
-    assert third.model.id == 3
+    assert third.data.id == 3
     assert third.action == :update
     assert third.valid?
 

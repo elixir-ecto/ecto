@@ -12,7 +12,7 @@ defmodule Ecto.Changeset.Relation do
                field: atom}
 
   @doc """
-  Builds the related model.
+  Builds the related data.
   """
   @callback build(t) :: Ecto.Schema.t
 
@@ -45,29 +45,29 @@ defmodule Ecto.Changeset.Relation do
 
   def apply_changes(%{cardinality: :many}, changesets) do
     for changeset <- changesets,
-      model = apply_changes(changeset),
-      do: model
+      struct = apply_changes(changeset),
+      do: struct
   end
 
   defp apply_changes(%Changeset{action: :delete}), do: nil
   defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
   @doc """
-  Loads the relation with the given model.
+  Loads the relation with the given struct.
 
-  Loading will fail if the asociation is not loaded but the model is.
+  Loading will fail if the asociation is not loaded but the struct is.
   """
   def load!(%{__meta__: %{state: :built}}, %NotLoaded{__cardinality__: cardinality}) do
     do_empty(cardinality)
   end
 
-  def load!(model, %NotLoaded{__field__: field}) do
+  def load!(struct, %NotLoaded{__field__: field}) do
     raise "attempting to cast or change association `#{field}` " <>
-          "from `#{inspect model.__struct__}` that was not loaded. Please preload your " <>
-          "associations before casting or changing the model"
+          "from `#{inspect struct.__struct__}` that was not loaded. Please preload your " <>
+          "associations before casting or changing the struct"
   end
 
-  def load!(_model, loaded), do: loaded
+  def load!(_struct, loaded), do: loaded
 
   @doc """
   Casts related according to the `on_cast` function.
@@ -112,7 +112,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   @doc """
-  Wraps related models in changesets.
+  Wraps related structs in changesets.
   """
   def change(%{cardinality: :one} = relation, nil, current) do
     case current && on_replace(relation, current) do
@@ -137,7 +137,7 @@ defmodule Ecto.Changeset.Relation do
     on_replace(relation, current)
   end
 
-  defp do_change(_relation, %Changeset{model: current} = changeset, current, allowed_actions) do
+  defp do_change(_relation, %Changeset{data: current} = changeset, current, allowed_actions) do
     {:ok, put_new_action(changeset, :update) |> check_action!(allowed_actions)}
   end
 
@@ -158,7 +158,7 @@ defmodule Ecto.Changeset.Relation do
     do_change(relation, changeset, current, allowed_actions)
   end
 
-  defp action_from_changeset(%{model: %{__meta__: %{state: state}}}) do
+  defp action_from_changeset(%{data: %{__meta__: %{state: state}}}) do
     case state do
       :built   -> :insert
       :loaded  -> :update
@@ -167,9 +167,9 @@ defmodule Ecto.Changeset.Relation do
   end
 
   @doc """
-  Handles the changeset or model when being replaced.
+  Handles the changeset or struct when being replaced.
   """
-  def on_replace(%{on_replace: :mark_as_invalid}, _changeset_or_model) do
+  def on_replace(%{on_replace: :mark_as_invalid}, _changeset_or_struct) do
     :error
   end
 
@@ -192,8 +192,8 @@ defmodule Ecto.Changeset.Relation do
     """
   end
 
-  def on_replace(_relation, changeset_or_model) do
-    {:ok, Changeset.change(changeset_or_model) |> put_new_action(:replace)}
+  def on_replace(_relation, changeset_or_struct) do
+    {:ok, Changeset.change(changeset_or_struct) |> put_new_action(:replace)}
   end
 
   defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks,
@@ -245,26 +245,26 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp map_changes([], _pks, fun, current, acc, valid?, skip?) do
-    current_models = Enum.map(current, &elem(&1, 1))
-    reduce_delete_changesets(current_models, fun, Enum.reverse(acc), valid?, skip?)
+    current_structs = Enum.map(current, &elem(&1, 1))
+    reduce_delete_changesets(current_structs, fun, Enum.reverse(acc), valid?, skip?)
   end
 
   defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?)
       when is_map(changes) or is_list(changes) do
     pk_values = new_pks.(changes)
 
-    {model, current, allowed_actions} =
+    {struct, current, allowed_actions} =
       case Map.fetch(current, pk_values) do
-        {:ok, model} ->
-          {model, Map.delete(current, pk_values), [:update, :delete]}
+        {:ok, struct} ->
+          {struct, Map.delete(current, pk_values), [:update, :delete]}
         :error ->
           {nil, current, [:insert]}
       end
 
-    case fun.(changes, model, allowed_actions) do
+    case fun.(changes, struct, allowed_actions) do
       {:ok, changeset} ->
         map_changes(rest, new_pks, fun, current, [changeset | acc],
-                    valid? && changeset.valid?, (model != nil) and skip? and skip?(changeset))
+                    valid? && changeset.valid?, (struct != nil) and skip? and skip?(changeset))
       :error ->
         :error
     end
@@ -278,8 +278,8 @@ defmodule Ecto.Changeset.Relation do
     {:ok, acc, valid?, skip?}
   end
 
-  defp reduce_delete_changesets([model | rest], fun, acc, valid?, _skip?) do
-    case fun.(nil, model, [:update, :delete]) do
+  defp reduce_delete_changesets([struct | rest], fun, acc, valid?, _skip?) do
+    case fun.(nil, struct, [:update, :delete]) do
       {:ok, changeset} ->
         reduce_delete_changesets(rest, fun, [changeset | acc],
                                  valid? && changeset.valid?, false)
@@ -297,10 +297,10 @@ defmodule Ecto.Changeset.Relation do
       action in allowed_actions ->
         changeset
       action == :insert ->
-        raise "cannot #{action} related #{inspect changeset.model} " <>
+        raise "cannot #{action} related #{inspect changeset.data} " <>
               "because it is already associated to the given struct"
       true ->
-        raise "cannot #{action} related #{inspect changeset.model} because " <>
+        raise "cannot #{action} related #{inspect changeset.data} because " <>
               "it already exists and it is not currently associated to the " <>
               "given struct. Ecto forbids casting existing records through " <>
               "the association field for security reasons. Instead, set " <>
@@ -311,16 +311,16 @@ defmodule Ecto.Changeset.Relation do
   defp process_current(nil, _get_pks),
     do: %{}
   defp process_current(current, get_pks) do
-    Enum.reduce(current, %{}, fn model, acc ->
-      Map.put(acc, get_pks.(model), model)
+    Enum.reduce(current, %{}, fn struct, acc ->
+      Map.put(acc, get_pks.(struct), struct)
     end)
   end
 
   defp struct_pk(_mod, pks) do
     fn
-      %Changeset{model: model} -> Enum.map(pks, &Map.get(model, &1))
-      [_|_] = model -> Enum.map(pks, &Keyword.get(model, &1))
-      %{} = model -> Enum.map(pks, &Map.get(model, &1))
+      %Changeset{data: struct} -> Enum.map(pks, &Map.get(struct, &1))
+      [_|_] = struct -> Enum.map(pks, &Keyword.get(struct, &1))
+      %{} = struct -> Enum.map(pks, &Map.get(struct, &1))
     end
   end
 

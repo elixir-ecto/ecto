@@ -168,8 +168,8 @@ defmodule Ecto.Changeset.BelongsToTest do
   test "cast belongs_to with custom changeset" do
     changeset = cast(%Author{}, %{"profile" => %{}}, :profile, with: &Profile.optional_changeset/2)
     profile = changeset.changes.profile
-    assert profile.model.name == "default"
-    assert profile.model.__meta__.source == {nil, "authors_profiles"}
+    assert profile.data.name == "default"
+    assert profile.data.__meta__.source == {nil, "authors_profiles"}
     assert profile.changes == %{}
     assert profile.errors  == []
     assert profile.action  == :insert
@@ -401,7 +401,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     changeset = Changeset.change(%Author{profile: profile})
     assert Changeset.get_field(changeset, :profile) == profile
-    assert Changeset.fetch_field(changeset, :profile) == {:model, profile}
+    assert Changeset.fetch_field(changeset, :profile) == {:data, profile}
   end
 
   test "on_replace: :nilify" do

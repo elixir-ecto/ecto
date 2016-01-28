@@ -242,7 +242,7 @@ defmodule Ecto.Integration.RepoTest do
       |> Ecto.Changeset.unique_constraint(:uuid)
       |> TestRepo.insert()
     assert changeset.errors == [uuid: "has already been taken"]
-    assert changeset.model.__meta__.state == :built
+    assert changeset.data.__meta__.state == :built
   end
 
   @tag :unique_constraint
@@ -272,7 +272,7 @@ defmodule Ecto.Integration.RepoTest do
       |> Ecto.Changeset.unique_constraint(:uuid)
       |> TestRepo.insert()
     assert changeset.errors == [uuid: "has already been taken"]
-    assert changeset.model.__meta__.state == :built
+    assert changeset.data.__meta__.state == :built
   end
 
   @tag :foreign_key_constraint

@@ -309,7 +309,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{posts: posts}, %{"posts" => params}, :posts)
     [first, new, second, third] = changeset.changes.posts
 
-    assert first.model.id == 1
+    assert first.data.id == 1
     assert first.required == [] # Check for not running chgangeset function
     assert first.action == :replace
     assert first.valid?
@@ -318,12 +318,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert new.action == :insert
     assert new.valid?
 
-    assert second.model.id == 2
+    assert second.data.id == 2
     assert second.errors == [title: "can't be blank"]
     assert second.action == :update
     refute second.valid?
 
-    assert third.model.id == 3
+    assert third.data.id == 3
     assert third.action == :update
     assert third.valid?
     refute changeset.valid?
@@ -657,7 +657,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.change(%Author{profile: profile})
     assert Changeset.get_field(changeset, :profile) == profile
-    assert Changeset.fetch_field(changeset, :profile) == {:model, profile}
+    assert Changeset.fetch_field(changeset, :profile) == {:data, profile}
 
     post = %Post{id: 1}
     post_changeset = %{Changeset.change(post) | action: :delete}

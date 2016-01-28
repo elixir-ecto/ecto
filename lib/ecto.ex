@@ -427,7 +427,7 @@ defmodule Ecto do
   @doc """
   Returns the schema primary keys as a keyword list.
 
-  Raises `Ecto.NoPrimaryKeyFieldError` if the model has no
+  Raises `Ecto.NoPrimaryKeyFieldError` if the schema has no
   primary key field.
   """
   @spec primary_key!(Ecto.Schema.t) :: Keyword.t | no_return
@@ -439,12 +439,12 @@ defmodule Ecto do
   end
 
   @doc """
-  Builds a struct from the given `assoc` in `model`.
+  Builds a struct from the given `assoc` in `struct`.
 
   ## Examples
 
   If the relationship is a `has_one` or `has_many` and
-  the key is set in the given model, the key will automatically
+  the key is set in the given struct, the key will automatically
   be set in the built association:
 
       iex> post = Repo.get(Post, 13)
@@ -474,13 +474,13 @@ defmodule Ecto do
       iex> build_assoc(post, :comments, post_id: 1)
       %Comment{id: nil, post_id: 13}
   """
-  def build_assoc(%{__struct__: model} = struct, assoc, attributes \\ %{}) do
-    assoc = Ecto.Association.association_from_schema!(model, assoc)
+  def build_assoc(%{__struct__: schema} = struct, assoc, attributes \\ %{}) do
+    assoc = Ecto.Association.association_from_schema!(schema, assoc)
     assoc.__struct__.build(assoc, struct, Dict.delete(attributes, :__meta__))
   end
 
   @doc """
-  Builds a query for the association in the given model or models.
+  Builds a query for the association in the given struct or structs.
 
   ## Examples
 
@@ -497,20 +497,20 @@ defmodule Ecto do
       Repo.all assoc(posts, :comments)
 
   """
-  def assoc(model_or_models, assoc) do
-    structs = List.wrap(model_or_models)
+  def assoc(struct_or_structs, assoc) do
+    structs = List.wrap(struct_or_structs)
 
     if structs == [] do
       raise ArgumentError, "cannot retrieve association #{inspect assoc} for empty list"
     end
 
-    model = hd(structs).__struct__
+    schema = hd(structs).__struct__
     assoc = %{owner_key: owner_key} =
-      Ecto.Association.association_from_schema!(model, assoc)
+      Ecto.Association.association_from_schema!(schema, assoc)
 
     values =
       Enum.uniq for(struct <- structs,
-        assert_struct!(model, struct),
+        assert_struct!(schema, struct),
         key = Map.fetch!(struct, owner_key),
         do: key)
 

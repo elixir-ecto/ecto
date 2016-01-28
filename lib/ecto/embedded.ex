@@ -43,7 +43,7 @@ defmodule Ecto.Embedded do
   loaded into the schema struct afterwards.
   """
   def prepare(changeset, adapter, repo_action) do
-    %{changes: changes, model: %{__struct__: schema}} = changeset
+    %{changes: changes, data: %{__struct__: schema}} = changeset
     prepare(changeset, Map.take(changes, schema.__schema__(:embeds)), adapter, repo_action)
   end
 
@@ -82,13 +82,13 @@ defmodule Ecto.Embedded do
                          "but the parent changeset was not marked as invalid"
   end
 
-  defp to_struct(%Changeset{model: %{__struct__: actual}}, _action,
+  defp to_struct(%Changeset{data: %{__struct__: actual}}, _action,
                  %{related: expected}, _adapter) when actual != expected do
     raise ArgumentError, "expected changeset for embedded schema `#{inspect expected}`, " <>
                          "got: #{inspect actual}"
   end
 
-  defp to_struct(%Changeset{changes: changes, model: model}, :update,
+  defp to_struct(%Changeset{changes: changes, data: model}, :update,
                  _embed, _adapter) when changes == %{} do
     model
   end
@@ -99,7 +99,7 @@ defmodule Ecto.Embedded do
 
   defp to_struct(%Changeset{types: types} = changeset, action,
                     %{related: schema}, adapter) do
-    %{model: struct, changes: changes} = prepare(changeset, adapter, action)
+    %{data: struct, changes: changes} = prepare(changeset, adapter, action)
 
     changes
     |> autogenerate_id(struct, action, schema, adapter)

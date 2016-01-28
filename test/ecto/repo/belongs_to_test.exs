@@ -115,10 +115,10 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.insert(changeset)
     assert_received {:rollback, ^changeset}
-    assert changeset.model.__meta__.state == :built
-    assert %Ecto.Association.NotLoaded{} = changeset.model.assoc
+    assert changeset.data.__meta__.state == :built
+    assert %Ecto.Association.NotLoaded{} = changeset.data.assoc
     assert changeset.changes.assoc
-    refute changeset.changes.assoc.model.id
+    refute changeset.changes.assoc.data.id
     refute changeset.valid?
   end
 
@@ -133,10 +133,10 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assoc, assoc_changeset)
     assert {:error, changeset} = TestRepo.insert(changeset)
-    assert changeset.model.__meta__.state == :built
-    assert %Ecto.Association.NotLoaded{} = changeset.model.assoc
+    assert changeset.data.__meta__.state == :built
+    assert %Ecto.Association.NotLoaded{} = changeset.data.assoc
     assert changeset.changes.assoc
-    refute changeset.changes.assoc.model.id
+    refute changeset.changes.assoc.data.id
     refute changeset.valid?
 
     # Just one transaction was used
@@ -371,9 +371,9 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.update(changeset)
     assert_received {:rollback, ^changeset}
-    refute changeset.model.assoc
+    refute changeset.data.assoc
     assert changeset.changes.assoc
-    refute changeset.changes.assoc.model.id
+    refute changeset.changes.assoc.data.id
     refute changeset.valid?
   end
 

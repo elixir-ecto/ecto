@@ -66,7 +66,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       |> Ecto.Changeset.exclude_constraint(:from, name: :cannot_overlap)
       |> PoolRepo.insert()
     assert changeset.errors == [from: "violates an exclusion constraint"]
-    assert changeset.model.__meta__.state == :built
+    assert changeset.data.__meta__.state == :built
   end
 
   test "creating, using, and dropping a check constraint" do
@@ -86,7 +86,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       |> Ecto.Changeset.check_constraint(:price, name: :positive_price)
       |> PoolRepo.insert()
     assert changeset.errors == [price: "violates check 'positive_price'"]
-    assert changeset.model.__meta__.state == :built
+    assert changeset.data.__meta__.state == :built
 
     # When the changeset does expect the db error and gives a custom message
     changeset = Ecto.Changeset.change(%Constraint{}, price: -10)
@@ -95,7 +95,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       |> Ecto.Changeset.check_constraint(:price, name: :positive_price, message: "price must be greater than 0")
       |> PoolRepo.insert()
     assert changeset.errors == [price: "price must be greater than 0"]
-    assert changeset.model.__meta__.state == :built
+    assert changeset.data.__meta__.state == :built
 
     # When the change does not violate the check constraint
     changeset = Ecto.Changeset.change(%Constraint{}, price: 10, from: 100, to: 200)

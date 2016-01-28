@@ -38,7 +38,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title body)a)
     assert changeset.params == params
-    assert changeset.model  == struct
+    assert changeset.data  == struct
     assert changeset.changes == %{title: "hello", body: "world"}
     assert changeset.errors == []
     assert changeset.validations == []
@@ -54,7 +54,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title)a, ~w(body))
     assert changeset.params == params
-    assert changeset.model  == struct
+    assert changeset.data  == struct
     assert changeset.changes == %{title: "hello", body: "world"}
     assert changeset.errors == []
     assert changeset.validations == []
@@ -68,7 +68,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title)a, ~w(body))
     assert changeset.params == %{"title" => "hello", "body" => "world"}
-    assert changeset.model  == struct
+    assert changeset.data  == struct
     assert changeset.changes == %{title: "hello", body: "world"}
     assert changeset.errors == []
     assert changeset.validations == []
@@ -89,7 +89,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title), ~w(body))
     assert changeset.params == params
-    assert changeset.model  == struct
+    assert changeset.data  == struct
     assert changeset.changes == %{title: "hello"}
     assert changeset.errors == []
     assert changeset.valid?
@@ -101,7 +101,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title), [])
     assert changeset.params == params
-    assert changeset.model  == struct
+    assert changeset.data  == struct
     assert changeset.changes == %{title: "hello"}
     assert changeset.errors == []
     assert changeset.valid?
@@ -113,7 +113,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title upvotes), ~w(body))
     assert changeset.params == params
-    assert changeset.model  == struct
+    assert changeset.data  == struct
     assert changeset.changes == %{body: "world"}
     assert changeset.errors == [title: "can't be blank"]
     refute changeset.valid?
@@ -121,7 +121,7 @@ defmodule Ecto.ChangesetTest do
 
   test "cast/4: empty parameters is invalid" do
     changeset = cast(%Post{}, :invalid, ~w(title), ~w(body)a)
-    assert changeset.model == %Post{}
+    assert changeset.data == %Post{}
     assert changeset.params == nil
     assert changeset.changes == %{}
     assert changeset.errors == []
@@ -229,7 +229,7 @@ defmodule Ecto.ChangesetTest do
   test "cast/4: works when casting a changeset with empty parameters" do
     changeset = cast(%Post{}, %{"title" => "sample"}, ~w(title)a, ~w())
     changeset = cast(changeset, :invalid, ~w(), ~w(body)a)
-    assert changeset.model == %Post{}
+    assert changeset.data == %Post{}
     assert changeset.params == %{"title" => "sample"}
     assert changeset.changes == %{title: "sample"}
     assert changeset.errors == []
@@ -245,7 +245,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(published_at), ~w())
     assert changeset.params == params
-    assert changeset.model  == struct
+    assert changeset.data  == struct
     assert changeset.changes == %{published_at: date}
     assert changeset.valid?
   end
@@ -349,7 +349,7 @@ defmodule Ecto.ChangesetTest do
     cs1 = cast(%Post{title: "foo"}, %{}, ~w(title), ~w())
     cs2 = cast(%Post{title: "bar"}, %{}, ~w(title), ~w())
 
-    assert_raise ArgumentError, "different models when merging changesets", fn ->
+    assert_raise ArgumentError, "different :data when merging changesets", fn ->
       merge(cs1, cs2)
     end
 
@@ -365,27 +365,27 @@ defmodule Ecto.ChangesetTest do
   test "change/2 with a model" do
     changeset = change(%Post{})
     assert changeset.valid?
-    assert changeset.model == %Post{}
+    assert changeset.data == %Post{}
     assert changeset.changes == %{}
 
     changeset = change(%Post{body: "bar"}, body: "bar")
     assert changeset.valid?
-    assert changeset.model == %Post{body: "bar"}
+    assert changeset.data == %Post{body: "bar"}
     assert changeset.changes == %{}
 
     changeset = change(%Post{body: "bar"}, %{body: "bar", title: "foo"})
     assert changeset.valid?
-    assert changeset.model == %Post{body: "bar"}
+    assert changeset.data == %Post{body: "bar"}
     assert changeset.changes == %{title: "foo"}
 
     changeset = change(%Post{}, body: "bar")
     assert changeset.valid?
-    assert changeset.model == %Post{}
+    assert changeset.data == %Post{}
     assert changeset.changes == %{body: "bar"}
 
     changeset = change(%Post{}, %{body: "bar"})
     assert changeset.valid?
-    assert changeset.model == %Post{}
+    assert changeset.data == %Post{}
     assert changeset.changes == %{body: "bar"}
   end
 
@@ -423,7 +423,7 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
 
     assert fetch_field(changeset, :title) == {:changes, "foo"}
-    assert fetch_field(changeset, :body) == {:model, "bar"}
+    assert fetch_field(changeset, :body) == {:data, "bar"}
     assert fetch_field(changeset, :other) == :error
   end
 
@@ -997,10 +997,10 @@ defmodule Ecto.ChangesetTest do
 
   test "inspects relevant data" do
     assert inspect(%Ecto.Changeset{}) ==
-           "#Ecto.Changeset<action: nil, changes: %{}, errors: [], model: nil, valid?: false>"
+           "#Ecto.Changeset<action: nil, changes: %{}, errors: [], data: nil, valid?: false>"
 
     assert inspect(changeset(%{"title" => "title", "body" => "hi"})) ==
            "#Ecto.Changeset<action: nil, changes: %{body: \"hi\", title: \"title\"}, " <>
-           "errors: [], model: #Ecto.ChangesetTest.Post<>, valid?: true>"
+           "errors: [], data: #Ecto.ChangesetTest.Post<>, valid?: true>"
   end
 end
