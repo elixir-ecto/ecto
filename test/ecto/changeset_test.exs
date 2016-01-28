@@ -114,7 +114,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: can't cast required field is marked as invalid" do
+  test "cast/4: required field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
 
@@ -564,6 +564,22 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [title: :oops]
+  end
+
+  test "validate_required/2" do
+    changeset = changeset(%{}) |> validate_required(:title)
+    refute changeset.valid?
+    assert changeset.errors == [title: "can't be blank"]
+
+    changeset = changeset(%{}) |> validate_required([:title, :body])
+    refute changeset.valid?
+    assert changeset.errors == [body: "can't be blank", title: "can't be blank"]
+
+    changeset =
+      changeset(%{"title" => "hello", "body" => "something"})
+      |> validate_required(:title)
+    assert changeset.valid?
+    assert changeset.errors == []
   end
 
   test "validate_format/3" do
