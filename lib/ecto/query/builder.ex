@@ -1,8 +1,6 @@
 defmodule Ecto.Query.Builder do
   @moduledoc false
 
-  @distinct ~w(count)a
-
   alias Ecto.Query
 
   @typedoc """
@@ -216,6 +214,12 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:in, [], [left, right]]}, params}
   end
 
+  def escape({:count, _, [arg, :distinct]}, type, params, vars, env) do
+    {arg, params} = escape(arg, type, params, vars, env)
+    expr = {:{}, [], [:count, [], [arg, :distinct]]}
+    {expr, params}
+  end
+
   # Other functions - no type casting
   def escape({name, _, args} = expr, type, params, vars, env) when is_atom(name) and is_list(args) do
     case call_type(name, length(args)) do
@@ -252,12 +256,6 @@ defmodule Ecto.Query.Builder do
   defp split_binary(<<??, rest :: binary >>, consumed), do: [consumed | split_binary(rest, "")]
   defp split_binary(<<?\\, ??, rest :: binary >>, consumed), do: split_binary(rest, consumed <> <<??>>)
   defp split_binary(<<first :: utf8, rest :: binary>>, consumed), do: split_binary(rest, consumed <> <<first>>)
-
-  defp escape_call({name, _, [arg, :distinct]}, type, params, vars, env) when name in @distinct do
-    {arg, params} = escape(arg, type, params, vars, env)
-    expr = {:{}, [], [name, [], [arg, :distinct]]}
-    {expr, params}
-  end
 
   defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
@@ -303,8 +301,7 @@ defmodule Ecto.Query.Builder do
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
 
-  defp call_type(agg, 1)  when agg in ~w(max count sum min avg)a, do: {:any, :any}
-  defp call_type(agg, 2)  when agg in @distinct,                  do: {:any, :any}
+  defp call_type(agg, 1)  when agg in ~w(avg count max min sum)a, do: {:any, :any}
   defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}
   defp call_type(like, 2) when like in ~w(like ilike)a,           do: {:string, :boolean}
   defp call_type(bool, 2) when bool in ~w(and or)a,               do: {:boolean, :boolean}
@@ -536,6 +533,13 @@ defmodule Ecto.Query.Builder do
   # Negative numbers
   def quoted_type({:-, _, [number]}, _vars) when is_integer(number), do: :integer
   def quoted_type({:-, _, [number]}, _vars) when is_float(number), do: :float
+
+  # Aggregates
+  def quoted_type({:count, _, [_, _]}, _vars), do: :integer
+  def quoted_type({:count, _, [_]}, _vars), do: :integer
+  def quoted_type({agg, _, [expr]}, vars) when agg in [:avg, :max, :min, :sum] do
+    quoted_type(expr, vars)
+  end
 
   # Literals
   def quoted_type(literal, _vars) when is_float(literal),   do: :float

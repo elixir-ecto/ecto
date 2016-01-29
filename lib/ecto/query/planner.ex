@@ -493,10 +493,6 @@ defmodule Ecto.Query.Planner do
       {:^, meta, [ix]}, acc when is_integer(ix) ->
         {{:^, meta, [acc]}, acc + 1}
 
-      {{:., _, [{:&, _, [source]}, field]} = dot, meta, []}, acc ->
-        type = type!(kind, query, expr, source, field)
-        {{dot, [ecto_type: type] ++ meta, []}, acc}
-
       {:type, _, [{:^, meta, [ix]}, _expr]}, acc when is_integer(ix) ->
         {_, t} = Enum.fetch!(expr.params, ix)
         {_, _, type} = type_for_param!(kind, query, expr, t)
@@ -555,9 +551,9 @@ defmodule Ecto.Query.Planner do
     %{query | select: normalize_fields(query, select)}
   end
 
-  defp normalize_fields(%{assocs: [], preloads: [], sources: sources},
+  defp normalize_fields(%{assocs: [], preloads: []} = query,
                         %{take: take, expr: expr} = select) do
-    {fields, from} = collect_fields(expr, sources, take, :error)
+    {fields, from} = collect_fields(expr, query, take, :error)
 
     fields =
       case from do
@@ -570,7 +566,7 @@ defmodule Ecto.Query.Planner do
 
   defp normalize_fields(%{assocs: assocs, sources: sources} = query,
                         %{take: take, expr: expr} = select) do
-    {fields, from} = collect_fields(expr, sources, take, :error)
+    {fields, from} = collect_fields(expr, query, take, :error)
 
     case from do
       {:ok, from} ->
@@ -582,7 +578,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp collect_fields({:&, _, [0]}, sources, take, :error) do
+  defp collect_fields({:&, _, [0]}, %{sources: sources}, take, :error) do
     fields =
       case Map.fetch(take, 0) do
         {:ok, value} -> value
@@ -590,10 +586,10 @@ defmodule Ecto.Query.Planner do
       end
     {[], {:ok, fields}}
   end
-  defp collect_fields({:&, _, [0]}, _sources, _take, from) do
+  defp collect_fields({:&, _, [0]}, _query, _take, from) do
     {[], from}
   end
-  defp collect_fields({:&, _, [ix]}, sources, take, from) do
+  defp collect_fields({:&, _, [ix]}, %{sources: sources}, take, from) do
     fields =
       case Map.fetch(take, ix) do
         {:ok, value} -> value
@@ -602,20 +598,32 @@ defmodule Ecto.Query.Planner do
     {[{:&, [], [ix, fields]}], from}
   end
 
-  defp collect_fields({left, right}, sources, take, from) do
-    {left, from}  = collect_fields(left, sources, take, from)
-    {right, from} = collect_fields(right, sources, take, from)
+  defp collect_fields({agg, meta, [{{:., _, [{:&, _, [source]}, field]}, _, []}] = args},
+                      %{select: select} = query, _take, from) when agg in ~w(avg min max sum)a do
+    type = type!(:select, query, select, source, field)
+    {[{agg, [ecto_type: type] ++ meta, args}], from}
+  end
+
+  defp collect_fields({{:., _, [{:&, _, [source]}, field]} = dot, meta, []},
+                      %{select: select} = query, _take, from) do
+    type = type!(:select, query, select, source, field)
+    {[{dot, [ecto_type: type] ++ meta, []}], from}
+  end
+
+  defp collect_fields({left, right}, query, take, from) do
+    {left, from}  = collect_fields(left, query, take, from)
+    {right, from} = collect_fields(right, query, take, from)
     {left ++ right, from}
   end
-  defp collect_fields({:{}, _, elems}, sources, take, from),
-    do: collect_fields(elems, sources, take, from)
-  defp collect_fields({:%{}, _, pairs}, sources, take, from),
-    do: collect_fields(pairs, sources, take, from)
-  defp collect_fields(list, sources, take, from) when is_list(list),
-    do: Enum.flat_map_reduce(list, from, &collect_fields(&1, sources, take, &2))
-  defp collect_fields(expr, _sources, _take, from) when is_atom(expr) or is_binary(expr) or is_number(expr),
+  defp collect_fields({:{}, _, elems}, query, take, from),
+    do: collect_fields(elems, query, take, from)
+  defp collect_fields({:%{}, _, pairs}, query, take, from),
+    do: collect_fields(pairs, query, take, from)
+  defp collect_fields(list, query, take, from) when is_list(list),
+    do: Enum.flat_map_reduce(list, from, &collect_fields(&1, query, take, &2))
+  defp collect_fields(expr, _query, _take, from) when is_atom(expr) or is_binary(expr) or is_number(expr),
     do: {[], from}
-  defp collect_fields(expr, _sources, _take, from),
+  defp collect_fields(expr, _query, _take, from),
     do: {[expr], from}
 
   defp collect_assocs(sources, [{_assoc, {ix, children}}|tail]) do

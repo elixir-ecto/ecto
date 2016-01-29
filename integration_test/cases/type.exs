@@ -53,6 +53,13 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
   end
 
+  test "aggregated types" do
+    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
+                              hour: 20, min: 26, sec: 51, usec: 0}
+    TestRepo.insert!(%Post{inserted_at: datetime})
+    assert [^datetime] = TestRepo.all(from p in Post, select: max(p.inserted_at))
+  end
+
   test "tagged types" do
     TestRepo.insert!(%Post{})
 
