@@ -234,12 +234,12 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       end
     end
 
-    def disconnect(owner, exception, state, opts) do
-      opts[:sandbox_pool].disconnect(owner, exception, state, opts)
+    def disconnect(owner, exception, {_conn_mod, conn_state}, opts) do
+      opts[:sandbox_pool].disconnect(owner, exception, conn_state, opts)
     end
 
-    def stop(owner, reason, state, opts) do
-      opts[:sandbox_pool].stop(owner, reason, state, opts)
+    def stop(owner, reason, {_conn_mod, conn_state}, opts) do
+      opts[:sandbox_pool].stop(owner, reason, conn_state, opts)
     end
  end
 
