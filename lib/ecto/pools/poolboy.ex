@@ -24,8 +24,10 @@ defmodule Ecto.Pools.Poolboy do
   """
   def start_link(conn_mod, opts) do
     {:ok, _} = Application.ensure_all_started(:poolboy)
-    {pool_opts, conn_opts} = split_opts(opts)
-    :poolboy.start_link(pool_opts, {conn_mod, conn_opts})
+    {name, pool_opts, conn_opts} = split_opts(opts)
+    children = [:poolboy.child_spec(:poolboy, pool_opts, {conn_mod, conn_opts})]
+    sup_opts = [strategy: :one_for_one, name: Module.concat(name, Supervisor)]
+    Supervisor.start_link(children, sup_opts)
   end
 
   @doc false
@@ -70,12 +72,13 @@ defmodule Ecto.Pools.Poolboy do
       conn_opts
       |> Keyword.put(:timeout, Keyword.get(opts, :connect_timeout, 5_000))
 
+    name = Keyword.fetch!(pool_opts, :pool_name)
+
     pool_opts = [worker_module: Worker,
-                 name: {:local, Keyword.fetch!(pool_opts, :pool_name)},
+                 name: {:local, name},
                  size: Keyword.get(pool_opts, :pool_size, 10),
                  max_overflow: Keyword.get(pool_opts, :max_overflow, 0)]
-
-    {pool_opts, conn_opts}
+    {name, pool_opts, conn_opts}
   end
 
   defp checkout(pool, fun, timeout) do
