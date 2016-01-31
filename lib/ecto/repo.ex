@@ -34,6 +34,17 @@ defmodule Ecto.Repo do
     * `:url` - an URL that specifies storage information. Read below
       for more information
 
+    * `:loggers` - a list of `{mod, fun, args}` tuples that are
+      invoked by adapters for logging queries and other events.
+      The given module and function will be called with a log
+      entry (see `Ecto.LogEntry`) and the given arguments. The
+      invoked function must return the `Ecto.LogEntry` as result.
+      The default value is: `[{Ecto.LogEntry, :log, []}]`, which
+      will call `Ecto.LogEntry.log/1` that will use Elixir's `Logger`
+      in `:debug` mode. You may pass any desired mod-fun-args
+      triplet or `[{Ecto.LogEntry, :log, [:info]}]` if you want to
+      keep the current behaviour but use another log level.
+
   ## URLs
 
   Repositories by default support URLs. For example, the configuration
@@ -76,11 +87,21 @@ defmodule Ecto.Repo do
       @otp_app otp_app
       @adapter adapter
       @config  config
-      @query_cache config[:query_cache] || __MODULE__
       @before_compile adapter
 
-      require Logger
-      @log_level config[:log_level] || :debug
+      loggers =
+        Enum.reduce(config[:loggers] || [{Ecto.LogEntry, :log, []}], quote(do: entry), fn
+          {mod, fun, args}, acc ->
+            quote do: unquote(mod).unquote(fun)(unquote(acc), unquote_splicing(args))
+        end)
+
+      def __adapter__ do
+        @adapter
+      end
+
+      def __log__(entry) do
+        unquote(loggers)
+      end
 
       def config do
         Ecto.Repo.Supervisor.config(__MODULE__, @otp_app, [])
@@ -181,23 +202,6 @@ defmodule Ecto.Repo do
       def preload(struct_or_structs, preloads, opts \\ []) do
         Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads, opts)
       end
-
-      def __adapter__ do
-        @adapter
-      end
-
-      def __query_cache__ do
-        @query_cache
-      end
-
-      def log(entry) do
-        Logger.unquote(@log_level)(fn ->
-          {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
-          iodata
-        end, ecto_conn_pid: entry.connection_pid)
-      end
-
-      defoverridable [log: 1]
     end
   end
 
@@ -207,11 +211,12 @@ defmodule Ecto.Repo do
   @callback __adapter__ :: Ecto.Adapter.t
 
   @doc """
-  Returns the name of the ETS table used for query caching.
+  A callback invoked by adapters that logs the given action.
 
-  The name can be configured with the `:query_cache` option.
+  See `Ecto.LogEntry` for more information and `Ecto.Repo` module
+  documentation on setting up your own loggers.
   """
-  @callback __query_cache__ :: atom
+  @callback __log__(Ecto.LogEntry.t) :: Ecto.LogEntry.t
 
   @doc """
   Returns the adapter configuration stored in the `:otp_app` environment.
@@ -649,23 +654,4 @@ defmodule Ecto.Repo do
   The transaction will return the value given as `{:error, value}`.
   """
   @callback rollback(any) :: no_return
-
-  @doc ~S"""
-  Enables logging of adapter actions such as sending queries to the database.
-
-  By default writes to Logger but can be overriden to customize behaviour.
-
-  ## Examples
-
-  The default implementation of the `log/1` function is shown below:
-
-      def log(entry) do
-        Logger.debug(fn ->
-          {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
-          iodata
-        end, ecto_conn_pid: entry.connection_pid)
-      end
-
-  """
-  @callback log(Ecto.LogEntry.t) :: any
 end

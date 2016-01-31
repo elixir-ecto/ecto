@@ -463,9 +463,9 @@ defmodule Ecto.Adapters.SQL do
   defp log(repo, params, entry) do
     %{connection_time: query_time, decode_time: decode_time,
       pool_time: queue_time, result: result, query: query} = entry
-    repo.log(%Ecto.LogEntry{query_time: log_time(query_time), decode_time: log_time(decode_time),
-                            queue_time: log_time(queue_time), result: log_result(result),
-                            params: params, query: String.Chars.to_string(query)})
+    repo.__log__(%Ecto.LogEntry{query_time: log_time(query_time), decode_time: log_time(decode_time),
+                                queue_time: log_time(queue_time), result: log_result(result),
+                                params: params, query: String.Chars.to_string(query)})
   end
 
   defp log_time(time) do

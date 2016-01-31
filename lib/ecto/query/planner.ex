@@ -45,53 +45,52 @@ defmodule Ecto.Query.Planner do
   end
 
   defp query_with_cache(query, operation, repo, adapter, key, params) do
-    table = repo.__query_cache__
-    case query_lookup(query, operation, repo, adapter, table, key) do
+    case query_lookup(query, operation, repo, adapter, repo, key) do
       {:nocache, select, prepared} ->
         {build_meta(query, select), {:nocache, prepared}, params}
       {_, :cached, select, cached} ->
         {build_meta(query, select), {:cached, cached}, params}
       {_, :cache, select, prepared} ->
-        update = &cache_update(table, key, &1)
+        update = &cache_update(repo, key, &1)
         {build_meta(query, select), {:cache, update, prepared}, params}
     end
   end
 
-  defp query_lookup(query, operation, repo, adapter, table, key) do
+  defp query_lookup(query, operation, repo, adapter, repo, key) do
     try do
-      :ets.lookup(table, key)
+      :ets.lookup(repo, key)
     rescue
       ArgumentError ->
         raise ArgumentError,
           "repo #{inspect repo} is not started, please ensure it is part of your supervision tree"
     else
       [term] -> term
-      [] -> query_prepare(query, operation, adapter, table, key)
+      [] -> query_prepare(query, operation, adapter, repo, key)
     end
   end
 
-  defp query_prepare(query, operation, adapter, table, key) do
+  defp query_prepare(query, operation, adapter, repo, key) do
     case query_without_cache(query, operation, adapter) do
       {:cache, select, prepared} ->
         elem = {key, :cache, select, prepared}
-        cache_insert(table, key, elem)
+        cache_insert(repo, key, elem)
       {:nocache, _, _} = nocache ->
         nocache
     end
   end
 
-  defp cache_insert(table, key, elem) do
-    case :ets.insert_new(table, elem) do
+  defp cache_insert(repo, key, elem) do
+    case :ets.insert_new(repo, elem) do
       true ->
         elem
       false ->
-        [elem] = :ets.lookup(table, key)
+        [elem] = :ets.lookup(repo, key)
         elem
     end
   end
 
-  defp cache_update(table, key, cached) do
-    _ = :ets.update_element(table, key, [{2, :cached}, {4, cached}])
+  defp cache_update(repo, key, cached) do
+    _ = :ets.update_element(repo, key, [{2, :cached}, {4, cached}])
     :ok
   end
 

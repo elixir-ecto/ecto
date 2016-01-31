@@ -30,7 +30,8 @@ defmodule Ecto.Repo.Supervisor do
   def parse_config(repo, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
     config  = Application.get_env(otp_app, repo, [])
-    adapter = opts[:adapter] || config[:adapter]
+    config  = Keyword.merge(config, opts)
+    adapter = config[:adapter]
 
     unless adapter do
       raise ArgumentError, "missing :adapter configuration in " <>
@@ -90,11 +91,7 @@ defmodule Ecto.Repo.Supervisor do
 
   def init({repo, _otp_app, adapter, opts}) do
     children = [adapter.child_spec(repo, opts)]
-
-    if Keyword.get(opts, :query_cache_owner, repo == repo.__query_cache__) do
-      :ets.new(repo.__query_cache__, [:set, :public, :named_table, read_concurrency: true])
-    end
-
+    :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
     supervise(children, strategy: :one_for_one)
   end
 end

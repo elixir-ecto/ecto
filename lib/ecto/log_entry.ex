@@ -23,17 +23,33 @@ defmodule Ecto.LogEntry do
   defstruct query: nil, params: [], query_time: nil, decode_time: nil,
             queue_time: nil, result: nil, connection_pid: nil
 
-  @doc """
-  Resolves a log entry.
+  require Logger
 
-  In case the query is represented by a function for lazy
-  computation, this function resolves it into iodata.
+  @doc """
+  Logs the given entry in debug mode.
+
+  The logger call will be removed at compile time if
+  `compile_time_purge_level` is set to higher than debug.
   """
-  def resolve(%LogEntry{query: fun} = entry) when is_function(fun) do
-    %{entry | query: fun.(entry)}
+  def log(entry) do
+    Logger.debug(fn ->
+      {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
+      iodata
+    end, ecto_conn_pid: entry.connection_pid)
+    entry
   end
 
-  def resolve(%LogEntry{} = entry) do
+  @doc """
+  Logs the given entry in the given level.
+
+  The logger call won't be removed at compile time as
+  custom level is given.
+  """
+  def log(entry, level) do
+    Logger.log(level, fn ->
+      {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
+      iodata
+    end, ecto_conn_pid: entry.connection_pid)
     entry
   end
 
@@ -44,7 +60,7 @@ defmodule Ecto.LogEntry do
   """
   def to_iodata(entry) do
     %{query_time: query_time, decode_time: decode_time, queue_time: queue_time,
-      params: params, query: query, result: result} = entry = resolve(entry)
+      params: params, query: query, result: result} = entry
 
     params = Enum.map params, fn
       %Ecto.Query.Tagged{value: value} -> value

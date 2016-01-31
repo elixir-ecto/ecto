@@ -29,7 +29,6 @@ defmodule Ecto.Adapters.Postgres do
     * `:pool` - The connection pool module, defaults to `Ecto.Pools.Poolboy`
     * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
     * `:timeout` - The default timeout to use on queries, defaults to `15000`
-    * `:log_level` - The level to use when logging queries (default: `:debug`)
 
   ### Connection options
 
