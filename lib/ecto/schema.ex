@@ -171,7 +171,7 @@ defmodule Ecto.Schema do
 
       # Now in your code
       %User{data: %{"foo" => "bar"}} |> Repo.insert!
-      %User{data: %{"foo" => value}} = Repo.one(User)
+      %User{data: %{"foo" => value}} = Repo.first(User)
       value #=> "bar"
 
   Keep in mind that we advise the map keys to be strings or integers

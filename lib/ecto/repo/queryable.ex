@@ -8,23 +8,14 @@ defmodule Ecto.Repo.Queryable do
 
   require Ecto.Query
 
-  @doc """
-  Implementation for `Ecto.Repo.all/2`
-  """
   def all(repo, adapter, queryable, opts) when is_list(opts) do
     execute(:all, repo, adapter, queryable, opts) |> elem(1)
   end
 
-  @doc """
-  Implementation for `Ecto.Repo.get/3`
-  """
   def get(repo, adapter, queryable, id, opts) do
     one(repo, adapter, query_for_get(repo, queryable, id), opts)
   end
 
-  @doc """
-  Implementation for `Ecto.Repo.get!/3`
-  """
   def get!(repo, adapter, queryable, id, opts) do
     one!(repo, adapter, query_for_get(repo, queryable, id), opts)
   end
@@ -37,12 +28,23 @@ defmodule Ecto.Repo.Queryable do
     one!(repo, adapter, query_for_get_by(repo, queryable, clauses), opts)
   end
 
-  @doc """
-  Implementation for `Ecto.Repo.one/2`
-  """
+  def first(repo, adapter, queryable, opts) do
+    one(repo, adapter, query_for_first(repo, queryable), opts)
+  end
+
+  def first!(repo, adapter, queryable, opts) do
+    one!(repo, adapter, query_for_first(repo, queryable), opts)
+  end
+
+  def last(repo, adapter, queryable, opts) do
+    one(repo, adapter, query_for_last(repo, queryable), opts)
+  end
+
+  def last!(repo, adapter, queryable, opts) do
+    one!(repo, adapter, query_for_last(repo, queryable), opts)
+  end
+
   def one(repo, adapter, queryable, opts) do
-    IO.puts :stderr, "warning: #{inspect repo}.one/2 is deprecated, " <>
-                     "please use all/2 or first/2 accordingly\n" <> Exception.format_stacktrace
     case all(repo, adapter, queryable, opts) do
       [one] -> one
       []    -> nil
@@ -50,12 +52,7 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  @doc """
-  Implementation for `Ecto.Repo.one!/2`
-  """
   def one!(repo, adapter, queryable, opts) do
-    IO.puts :stderr, "warning: #{inspect repo}.one/2 is deprecated, " <>
-                     "please use all/2 or first!/2 accordingly\n" <> Exception.format_stacktrace
     case all(repo, adapter, queryable, opts) do
       [one] -> one
       []    -> raise Ecto.NoResultsError, queryable: queryable
@@ -63,9 +60,6 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  @doc """
-  Runtime callback for `Ecto.Repo.update_all/3`
-  """
   def update_all(repo, adapter, queryable, [], opts) when is_list(opts) do
     update_all(repo, adapter, queryable, opts)
   end
@@ -79,9 +73,6 @@ defmodule Ecto.Repo.Queryable do
     execute(:update_all, repo, adapter, queryable, opts)
   end
 
-  @doc """
-  Implementation for `Ecto.Repo.delete_all/2`
-  """
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
     execute(:delete_all, repo, adapter, queryable, opts)
   end
@@ -209,10 +200,52 @@ defmodule Ecto.Repo.Queryable do
 
   defp query_for_get(repo, queryable, id) do
     query = Queryable.to_query(queryable)
+    Ecto.Query.from(x in query, where: field(x, ^assert_pk!(repo, query)) == ^id)
+  end
+
+  defp query_for_get_by(_repo, queryable, clauses) do
+    Ecto.Query.where(queryable, [], ^Enum.to_list(clauses))
+  end
+
+  defp query_for_first(repo, queryable) do
+    query = %{Queryable.to_query(queryable) | limit: limit()}
+    case query do
+      %{order_bys: []} ->
+        %{query | order_bys: [order_by_pk(repo, query, :asc)]}
+      %{} ->
+        query
+    end
+  end
+
+  defp query_for_last(repo, queryable) do
+    query = %{Queryable.to_query(queryable) | limit: limit()}
+    update_in query.order_bys, fn
+      [] ->
+        [order_by_pk(repo, query, :desc)]
+      order_bys ->
+        for %{expr: expr} = order_by <- order_bys do
+          %{order_by | expr:
+              Enum.map(expr, fn
+                {:desc, ast} -> {:asc, ast}
+                {:asc, ast} -> {:desc, ast}
+              end)}
+        end
+    end
+  end
+
+  defp limit do
+    %Ecto.Query.QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
+  end
+
+  defp order_by_pk(repo, query, dir) do
+    %Ecto.Query.QueryExpr{expr: [{dir, {{:., [], [{:&, [], [0]}, assert_pk!(repo, query)]}, [], []}}],
+                          params: [], file: __ENV__.file, line: __ENV__.line}
+  end
+
+  defp assert_pk!(repo, query) do
     schema = assert_schema!(query)
     case schema.__schema__(:primary_key) do
-      [pk] ->
-        Ecto.Query.from(x in query, where: field(x, ^pk) == ^id)
+      [pk] -> pk
       pks ->
         raise ArgumentError,
           "#{inspect repo}.get/2 requires the schema #{inspect schema} " <>
@@ -220,18 +253,10 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp query_for_get_by(_repo, queryable, clauses) do
-    Ecto.Query.where(queryable, [], ^Enum.to_list(clauses))
-  end
-
+  defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema
   defp assert_schema!(query) do
-    case query.from do
-      {_source, schema} when schema != nil ->
-        schema
-      _ ->
-        raise Ecto.QueryError,
-          query: query,
-          message: "expected a from expression with a schema"
-    end
+    raise Ecto.QueryError,
+      query: query,
+      message: "expected a from expression with a schema"
   end
 end

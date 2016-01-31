@@ -266,9 +266,9 @@ defmodule Ecto do
       end
 
   Besides `Repo.all/1` which returns all entries, repositories also
-  provide `Repo.one/1` which returns one entry or nil, `Repo.one!/1`
-  which returns one entry or raises and `Repo.get/2` which fetches
-  entries for a particular ID.
+  provide `Repo.first/1` which returns one entry or nil, `Repo.first!/1`
+  which returns one entry or raises, `Repo.get/2` which fetches
+  entries for a particular ID and more.
 
   Finally, if you need a escape hatch, Ecto provides fragments
   (see `Ecto.Query.API.fragment/1`) to inject SQL (and non-SQL)

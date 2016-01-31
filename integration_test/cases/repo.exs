@@ -60,7 +60,7 @@ defmodule Ecto.Integration.RepoTest do
     loaded_meta = put_in meta.state, :loaded
     assert %Post{__meta__: ^loaded_meta} = TestRepo.insert!(post)
 
-    post = TestRepo.one(Post)
+    post = TestRepo.first(Post)
     assert post.__meta__.state == :loaded
     assert post.inserted_at
   end
@@ -428,33 +428,26 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  test "one(!)" do
+  test "first(!) and last(!)" do
     post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert!(%Post{title: "2", text: "hai"})
 
-    assert post1 == TestRepo.one(from p in Post, where: p.id == ^post1.id)
-    assert post2 == TestRepo.one(from p in Post, where: p.id == ^to_string post2.id) # With casting
-    assert nil   == TestRepo.one(from p in Post, where: is_nil(p.id))
+    assert post1 == TestRepo.first(Post)
+    assert post2 == TestRepo.last(Post)
 
-    assert post1 == TestRepo.one!(from p in Post, where: p.id == ^post1.id)
-    assert post2 == TestRepo.one!(from p in Post, where: p.id == ^to_string post2.id) # With casting
+    query = from p in Post, order_by: p.title
+    assert post1 == TestRepo.first(query)
+    assert post2 == TestRepo.last(query)
 
-    assert_raise Ecto.NoResultsError, fn ->
-      TestRepo.one!(from p in Post, where: is_nil(p.id))
-    end
-  end
+    query = from p in Post, order_by: [desc: p.title], limit: 10
+    assert post2 == TestRepo.first(query)
+    assert post1 == TestRepo.last(query)
 
-  test "one(!) with multiple results" do
-    assert %Post{} = TestRepo.insert!(%Post{title: "hai"})
-    assert %Post{} = TestRepo.insert!(%Post{title: "hai"})
-
-    assert_raise Ecto.MultipleResultsError, fn ->
-      TestRepo.one(from p in Post, where: p.title == "hai")
-    end
-
-    assert_raise Ecto.MultipleResultsError, fn ->
-      TestRepo.one!(from p in Post, where: p.title == "hai")
-    end
+    query = from p in Post, where: is_nil(p.id)
+    refute TestRepo.first(query)
+    refute TestRepo.last(query)
+    assert_raise Ecto.NoResultsError, fn -> TestRepo.first!(query) end
+    assert_raise Ecto.NoResultsError, fn -> TestRepo.last!(query) end
   end
 
   test "insert all" do
