@@ -41,6 +41,8 @@ defmodule Ecto.Repo.Queryable do
   Implementation for `Ecto.Repo.one/2`
   """
   def one(repo, adapter, queryable, opts) do
+    IO.puts :stderr, "warning: #{inspect repo}.one/2 is deprecated, " <>
+                     "please use all/2 or first/2 accordingly\n" <> Exception.format_stacktrace
     case all(repo, adapter, queryable, opts) do
       [one] -> one
       []    -> nil
@@ -52,6 +54,8 @@ defmodule Ecto.Repo.Queryable do
   Implementation for `Ecto.Repo.one!/2`
   """
   def one!(repo, adapter, queryable, opts) do
+    IO.puts :stderr, "warning: #{inspect repo}.one/2 is deprecated, " <>
+                     "please use all/2 or first!/2 accordingly\n" <> Exception.format_stacktrace
     case all(repo, adapter, queryable, opts) do
       [one] -> one
       []    -> raise Ecto.NoResultsError, queryable: queryable

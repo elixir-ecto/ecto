@@ -105,6 +105,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Repo] `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
   * [Repo] `Ecto.Pools.Poolboy` and `Ecto.Pools.SojournBroker` have been removed in favor of `DBConnection.Poolboy` and `DBConnection.Sojourn`
   * [Repo] `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
+  * [Repo] Overriding `Repo.log/1` is no longer supported. Instead, provide custom loggers configuration via `:loggers`. The default is: `[{Ecto.LogEntry, :log, []}]`
   * [Schema] Array fields no longer default to an empty list `[]`. Previous behaviour can be achieved by passing `default: []` to the field definition
   * [SQL] `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership-based `Ecto.Adapters.SQL.Sandbox`
 
@@ -113,6 +114,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Changeset] Deprecate `:empty` in `Ecto.Changeset.cast` in favor of the clearer `:invalid` atom
   * [Changeset] Deprecate `Ecto.Changeset.cast/4` in favor of `Ecto.Changeset.cast/3`
   * [Repo] `Repo.after_connect/1` is deprecated, please pass the `:after_connect` repository option instead
+  * [Repo] `Repo.one/1` and `Repo.one!` are deprecated, please use `Repo.all` or `Repo.first` accordingly
 
 ## Enhancements
 
