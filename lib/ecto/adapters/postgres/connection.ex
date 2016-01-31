@@ -5,7 +5,6 @@ if Code.ensure_loaded?(Postgrex) do
 
     @default_port 5432
     @behaviour Ecto.Adapters.SQL.Connection
-    @behaviour Ecto.Adapters.SQL.Sandbox
 
     ## Module and Options
 
@@ -91,16 +90,6 @@ if Code.ensure_loaded?(Postgrex) do
         %Ecto.Query.Tagged{value: value} -> value
         value -> value
       end
-    end
-
-    ## Sandbox
-
-    def begin_sandbox do
-      %Postgrex.Query{name: "", statement: "BEGIN TRANSACTION"}
-    end
-
-    def rollback_sandbox do
-      %Postgrex.Query{name: "", statement: "ROLLBACK"}
     end
 
     alias Ecto.Query
