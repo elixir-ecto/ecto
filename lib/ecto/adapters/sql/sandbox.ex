@@ -146,16 +146,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   """
 
-  @doc """
-  Returns the begin transaction query for sandbox.
-  """
-  @callback begin_sandbox :: term
-
-  @doc """
-  Returns the rollback transaction query for sandbox.
-  """
-  @callback rollback_sandbox :: term
-
   defmodule Connection do
     @moduledoc false
     @behaviour DBConnection
@@ -223,8 +213,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
       case pool_mod.checkout(pool, opts) do
         {:ok, pool_ref, conn_mod, conn_state} ->
-          query = opts[:repo].__sql__.begin_sandbox
-          case sandbox_query(query, opts, conn_mod, conn_state) do
+          case conn_mod.handle_begin([mode: :transaction]++opts, conn_state) do
             {:ok, _, conn_state} ->
               {:ok, pool_ref, Connection, {conn_mod, conn_state}}
             {_error_or_disconnect, err, conn_state} ->
@@ -237,8 +226,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     def checkin(pool_ref, {conn_mod, conn_state}, opts) do
       pool_mod = opts[:sandbox_pool]
-      query = opts[:repo].__sql__.rollback_sandbox
-      case sandbox_query(query, opts, conn_mod, conn_state) do
+      case conn_mod.handle_rollback([mode: :transaction]++opts, conn_state) do
         {:ok, _, conn_state} ->
           pool_mod.checkin(pool_ref, conn_state, opts)
         {_error_or_disconnect, err, conn_state} ->
@@ -253,23 +241,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     def stop(owner, reason, state, opts) do
       opts[:sandbox_pool].stop(owner, reason, state, opts)
     end
-
-    defp sandbox_query(query, opts, conn_mod, conn_state) do
-      query = DBConnection.Query.parse(query, opts)
-      case conn_mod.handle_prepare(query, opts, conn_state) do
-        {:ok, query, conn_state} ->
-          query = DBConnection.Query.describe(query, opts)
-          sandbox_execute(query, opts, conn_mod, conn_state)
-        other ->
-          other
-      end
-    end
-
-    defp sandbox_execute(query, opts, conn_mod, conn_state) do
-      params = DBConnection.Query.encode(query, [], opts)
-      conn_mod.handle_execute_close(query, params, opts, conn_state)
-    end
-  end
+ end
 
   @doc """
   Sets the mode for the `repo` pool.
