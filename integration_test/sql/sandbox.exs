@@ -34,6 +34,23 @@ defmodule Ecto.Integration.SandboxTest do
     assert TestRepo.all(Post) == []
   end
 
+  test "can use the repository when shared from another process" do
+    assert_raise RuntimeError, ~r"cannot find ownership process", fn ->
+      TestRepo.all(Post)
+    end
+
+    parent = self()
+    Task.start_link fn ->
+      Sandbox.checkout(TestRepo)
+      Sandbox.mode(TestRepo, {:shared, self()})
+      send parent, :shared
+      :timer.sleep(:infinity)
+    end
+
+    assert_receive :shared
+    assert TestRepo.all(Post) == []
+  end
+
   test "runs inside a sandbox that is rolled back on checkin" do
     Sandbox.checkout(TestRepo)
     assert TestRepo.insert(%Post{})

@@ -9,11 +9,10 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   checked back in automatically but by explicitly calling `checkin/2`.
 
   The `mode/2` function can be used to change the pool mode to
-  `:manual`. In this case, each connection must be explicitly
-  checked out before use. This is useful when paired with
-  `checkout/2` which by default wraps the connection in a transaction.
-  This means developers have a safe mechanism for running concurrent
-  tests against the database.
+  manual or shared. In both modes, the connection must be explicitly
+  checked out before use. When explicit checkouts are made, the sandbox
+  will wrap the connection in a transaction by default. This means developers
+  have a safe mechanism for running concurrent tests against the database.
 
   ## Example
 
@@ -46,18 +45,105 @@ defmodule Ecto.Adapters.SQL.Sandbox do
           :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
         end
 
-        test "create comment" do
+        test "create post" do
           # Use the repository as usual
           assert %Post{} = TestRepo.insert!(%Post{})
         end
       end
 
-  ## Options
+  ## Collaborating processes
 
-  Because the sandbox is implemented on top of the
-  `DBConnection.Ownership` module, you can check the module
-  documentation to see which options available to configure
-  the ownership mode when desired.
+  The example above is straight-forward because we have only
+  a single process using the database connection. However,
+  sometimes a test may need to interact with multiple processes,
+  all using the same connection so they all belong to the same
+  transaction.
+
+  Before we discuss solutions, let's see what happens if we try
+  to use a connection from a new process without explicitly
+  checking it out first:
+
+      setup do
+        # Explicitly get a connection before each test
+        :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
+      end
+
+      test "create two posts, one sync, another async" do
+        task = Task.async(fn ->
+          TestRepo.insert!(%Post{title: "async"})
+        end)
+        assert %Post{} = TestRepo.insert!(%Post{title: "sync"})
+        assert %Post{} = Task.await(task)
+      end
+
+  The test above will fail with an error similar to:
+
+      ** (RuntimeError) cannot find ownership process for #PID<0.35.0>
+
+  That's because the `setup` block is checking out the connection only
+  for the test process. Once we spawn a Task, there is no connection
+  assigned to it and it will fail.
+
+  The sandbox module provides two ways of doing so, via allowances or
+  by running in shared mode.
+
+  ### Allowances
+
+  The idea behind allowances is that you can explicitly tell a process
+  which checked out connection it should use, allowing multiple processes
+  to collaborate over the same connection. Let's give it a try:
+
+      test "create two posts, one sync, another async" do
+        parent = self()
+        task = Task.async(fn ->
+          Ecto.Adapters.SQL.Sandbox.allow(TestRepo, parent, self())
+          TestRepo.insert!(%Post{title: "async"})
+        end)
+        assert %Post{} = TestRepo.insert!(%Post{title: "sync"})
+        assert %Post{} = Task.await(task)
+      end
+
+  And that's it, by calling `allow/3`, we are explicitly assigning
+  the parent's connection (i.e. the test process' connection) to
+  the task.
+
+  Because allowances uses an explicit mechanism, their advantage
+  is that you can still runs your tests in async mode. The downside
+  is that you need to explicitly control and allow every single
+  process. This is not always possible. In such cases, you will
+  want to use shared mode.
+
+  ### Shared mode
+
+  Shared mode allows a process to share its connection with any other
+  process automatically, without relying on explicit allowances.
+  Let's change the example above to use shared mode:
+
+      test "create two posts, one sync, another async" do
+        Ecto.Adapters.SQL.Sandbox.mode(TestRepo, {:shared, self()})
+        task = Task.async(fn ->
+          TestRepo.insert!(%Post{title: "async"})
+        end)
+        assert %Post{} = TestRepo.insert!(%Post{title: "sync"})
+        assert %Post{} = Task.await(task)
+      end
+
+  By calling `mode({:shared, self()})`, any process that needs
+  to talk to the database will now use the same connection as the
+  one checked out by the test process during the `setup` block.
+
+  The advantage of shared mode is that by calling a single function,
+  you will ensure all upcoming processes and operations will use that
+  shared connection, without a need to explicitly allow them. The
+  downside is that tests can no longer run concurrently in shared mode.
+
+  ### Summing up
+
+    * Using allowances - requires explicit allowances via `allow/3`.
+      Tests may run concurrently.
+    * Using shared mode - does not require explicit allowances.
+      Tests cannot run concurrently.
+
   """
 
   @doc """
@@ -188,9 +274,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   @doc """
   Sets the mode for the `repo` pool.
 
-  The mode can be `:auto` or `:manual`.
+  The mode can be `:auto`, `:manual` or `:shared`.
   """
-  def mode(repo, mode) when mode in [:auto, :manual] do
+  def mode(repo, mode)
+      when mode in [:auto, :manual]
+      when elem(mode, 0) == :shared and is_pid(elem(mode, 1)) do
     {name, opts} = repo.__pool__
 
     if opts[:pool] != DBConnection.Ownership do
