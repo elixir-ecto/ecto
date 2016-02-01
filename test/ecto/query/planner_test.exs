@@ -260,13 +260,42 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   # TODO: check all elem and Enum.at
-  # TODO: allow fields propagation on select
   # TODO: allow parameter shifting
+  # TODO: allow comparison with subquery fields
+  # TODO: allow chosing subquery fields
   test "prepare: subqueries" do
     {query, params, key} = prepare(from(subquery(Post), []))
-    assert %{query: %Ecto.Query{}, params: []} = query.from
+    assert %{query: %Ecto.Query{}, params: [], fields: %{}} = query.from
     assert params == []
     assert key == [:all, :all, {"posts", Ecto.Query.PlannerTest.Post, 112914533}]
+  end
+
+  test "prepare: subqueries validates select fields" do
+    query = prepare(from(subquery(Post), [])) |> elem(0)
+    assert %{code: 0, id: 0} = query.from.fields
+
+    query = from p in Post, select: p.code
+    query = prepare(from(subquery(query), [])) |> elem(0)
+    assert query.from.fields == %{code: 0}
+
+    query = from p in Post, join: c in assoc(p, :comments), select: {p.code, c}
+    query = prepare(from(subquery(query), [])) |> elem(0)
+    assert %{code: 0, text: 1} = query.from.fields
+
+    query = from p in Post, select: 1
+    assert_raise Ecto.SubQueryError, ~r/subquery must select at least one source or field/, fn ->
+      prepare(from(subquery(query), []))
+    end
+
+    query = from p in Post, select: fragment("? + ?", p.id, p.id)
+    assert_raise Ecto.SubQueryError, ~r/subquery can only select sources or fields/, fn ->
+      prepare(from(subquery(query), []))
+    end
+
+    query = from p in Post, join: c in assoc(p, :comments), select: {p, c}
+    assert_raise Ecto.SubQueryError, ~r/`id` is selected from two different sources in subquery/, fn ->
+      prepare(from(subquery(query), []))
+    end
   end
 
   test "prepare: wraps subquery errors" do

@@ -274,17 +274,44 @@ defmodule Ecto.Query.Planner do
   end
   defp prepare_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
     try do
-      prepare(inner_query, :all, adapter)
+      {inner_query, params, key} = prepare(inner_query, :all, adapter)
+      inner_query = normalize_select(inner_query, :all)
+      {%{subquery | query: inner_query, params: params,
+                    fields: subquery_fields(inner_query)}, key}
     rescue
       e ->
         raise Ecto.SubQueryError, query: query, exception: e
     else
-      {inner_query, params, key} ->
-        {%{query | from: %{subquery | query: inner_query, params: params}}, key}
+      {subquery, key} ->
+        {%{query | from: subquery}, key}
     end
   end
   defp prepare_from(%{from: {_, _} = source} = query, _adapter) do
     {query, [source_cache(source)]}
+  end
+
+  defp subquery_fields(%{select: %{fields: []}} = query) do
+    error!(query, "subquery must select at least one source or field")
+  end
+  defp subquery_fields(%{select: %{fields: fields}} = query) do
+    Enum.reduce fields, %{}, fn
+      {:&, _, [ix, [_|_] = fields]}, acc ->
+        Enum.reduce(fields, acc, &add_subfield(query, &1, ix, &2))
+      {{:., _, [{:&, _, [ix]}, field]}, _, []}, acc ->
+        add_subfield(query, field, ix, acc)
+      other, _acc ->
+        error!(query, "subquery can only select sources or fields, got: `#{Macro.to_string(other)}`")
+    end
+  end
+
+  defp add_subfield(query, field, ix, fields) do
+    Map.update(fields, field, ix, fn
+      ^ix -> ix
+      prev_ix ->
+        sources = query.sources
+        error!(query, "`#{field}` is selected from two different sources in subquery: " <>
+                      "`#{inspect elem(sources, prev_ix)}` and `#{inspect elem(sources, ix)}`")
+    end)
   end
 
   defp prepare_joins(query, sources, offset) do
