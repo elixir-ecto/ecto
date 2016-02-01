@@ -117,10 +117,11 @@ defmodule Ecto.Query.Planner do
   any cache mechanism.
   """
   def prepare(query, operation, adapter) do
+    {query, cache} = prepare_from(query, adapter)
     query
     |> prepare_sources
     |> prepare_assocs
-    |> prepare_cache(operation, adapter)
+    |> prepare_cache(operation, adapter, cache)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -130,9 +131,9 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_cache(query, operation, adapter) do
+  def prepare_cache(query, operation, adapter, cache) do
     {query, {cache, params}} =
-      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
+      traverse_exprs(query, operation, {cache, []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
     {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
   end
 
@@ -193,8 +194,8 @@ defmodule Ecto.Query.Planner do
     :nocache
   end
 
-  defp finalize_cache(%{assocs: assocs, prefix: prefix, lock: lock, from: from,
-                        select: select}, operation, cache) do
+  defp finalize_cache(%{assocs: assocs, prefix: prefix, lock: lock, select: select},
+                      operation, cache) do
     cache =
       case select do
         %{take: take} when take != %{} ->
@@ -215,7 +216,7 @@ defmodule Ecto.Query.Planner do
       cache = [lock: lock] ++ cache
     end
 
-    [operation, source_cache(from)|cache]
+    [operation|cache]
   end
 
   defp source_cache({_, nil} = source), do: source
@@ -262,11 +263,21 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare all sources, by traversing and expanding joins.
   """
-  def prepare_sources(query) do
-    from = query.from || error!(query, "query must have a from expression")
+  def prepare_sources(%{from: from} = query) do
     {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins))
     %{query | sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple(),
               joins: joins |> Enum.reverse}
+  end
+
+  defp prepare_from(%{from: nil} = query, _adapter) do
+    error!(query, "query must have a from expression")
+  end
+  defp prepare_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
+    {inner_query, params, key} = prepare(inner_query, :all, adapter)
+    {%{query | from: %{subquery | query: inner_query, params: params}}, key}
+  end
+  defp prepare_from(%{from: {_, _} = source} = query, _adapter) do
+    {query, [source_cache(source)]}
   end
 
   defp prepare_joins(query, sources, offset) do
@@ -275,17 +286,17 @@ defmodule Ecto.Query.Planner do
 
   defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on} = join|t],
                      query, joins, sources, tail_sources, counter, offset) do
-    {source, model} = Enum.fetch!(Enum.reverse(sources), ix)
+    {source, schema} = Enum.fetch!(Enum.reverse(sources), ix)
 
-    unless model do
+    unless schema do
       error! query, join, "cannot perform association join on #{inspect source} " <>
                           "because it does not have a schema"
     end
 
-    refl = model.__schema__(:association, assoc)
+    refl = schema.__schema__(:association, assoc)
 
     unless refl do
-      error! query, join, "could not find association `#{assoc}` on schema #{inspect model}"
+      error! query, join, "could not find association `#{assoc}` on schema #{inspect schema}"
     end
 
     # If we have the following join:
@@ -325,9 +336,9 @@ defmodule Ecto.Query.Planner do
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources))
   end
 
-  defp prepare_joins([%JoinExpr{source: {source, model}} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) when is_atom(model) and model != nil do
-    source = if is_binary(source), do: {source, model}, else: {model.__schema__(:source), model}
+  defp prepare_joins([%JoinExpr{source: {source, schema}} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) when is_atom(schema) and schema != nil do
+    source = if is_binary(source), do: {source, schema}, else: {schema.__schema__(:source), schema}
     join   = %{join | source: source, ix: counter}
     prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
   end
@@ -385,15 +396,16 @@ defmodule Ecto.Query.Planner do
     query
   end
 
+  defp prepare_assocs(_query, _ix, []), do: :ok
   defp prepare_assocs(query, ix, assocs) do
-    # We validate the model exists when preparing joins above
-    {_, parent_model} = elem(query.sources, ix)
+    # We validate the schema exists when preparing joins above
+    {_, parent_schema} = elem(query.sources, ix)
 
     Enum.each assocs, fn {assoc, {child_ix, child_assocs}} ->
-      refl = parent_model.__schema__(:association, assoc)
+      refl = parent_schema.__schema__(:association, assoc)
 
       unless refl do
-        error! query, "field `#{inspect parent_model}.#{assoc}` " <>
+        error! query, "field `#{inspect parent_schema}.#{assoc}` " <>
                       "in preload is not an association"
       end
 
@@ -401,7 +413,7 @@ defmodule Ecto.Query.Planner do
         %JoinExpr{qual: qual} when qual in [:inner, :left] ->
           :ok
         %JoinExpr{qual: qual} ->
-          error! query, "association `#{inspect parent_model}.#{assoc}` " <>
+          error! query, "association `#{inspect parent_schema}.#{assoc}` " <>
                         "in preload requires an inner or left join, got #{qual} join"
         _ ->
           :ok
@@ -507,13 +519,13 @@ defmodule Ecto.Query.Planner do
   end
 
   defp dump_param(kind, query, expr, v, type, adapter) do
-    {model, field, type} = type_for_param!(kind, query, expr, type)
+    {schema, field, type} = type_for_param!(kind, query, expr, type)
 
     case dump_param(kind, type, v, adapter) do
       {:ok, v} ->
         v
       {:error, error} ->
-        error = error <> " from `#{inspect model}.#{field}`. " <>
+        error = error <> " from `#{inspect schema}.#{field}`. " <>
                          "Or the value is incompatible or it must be interpolated " <>
                          "(using ^) so it may be cast accordingly"
         error! query, expr, error
@@ -546,8 +558,11 @@ defmodule Ecto.Query.Planner do
     select = %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}
     %{query | select: normalize_fields(query, select)}
   end
-  defp normalize_select(%{select: select} = query, _operation) do
+  defp normalize_select(%{select: %{fields: nil} = select} = query, _operation) do
     %{query | select: normalize_fields(query, select)}
+  end
+  defp normalize_select(query, _operation) do
+    query
   end
 
   defp normalize_fields(%{assocs: [], preloads: []} = query,
@@ -684,26 +699,26 @@ defmodule Ecto.Query.Planner do
   defp type!(_kind, _query, _expr, nil, _field), do: :any
   defp type!(kind, query, expr, source, field) when is_integer(source) do
     case elem(query.sources, source) do
-      {_, model} -> type!(kind, query, expr, model, field)
+      {_, schema} -> type!(kind, query, expr, schema, field)
       {:fragment, _, _} -> :any
     end
   end
-  defp type!(kind, query, expr, model, field) when is_atom(model) do
-    if type = model.__schema__(:type, field) do
+  defp type!(kind, query, expr, schema, field) when is_atom(schema) do
+    if type = schema.__schema__(:type, field) do
       type
     else
-      error! query, expr, "field `#{inspect model}.#{field}` in `#{kind}` " <>
+      error! query, expr, "field `#{inspect schema}.#{field}` in `#{kind}` " <>
                           "does not exist in the schema"
     end
   end
 
   defp type_for_param!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
-    {_, model} = elem(query.sources, ix)
-    {model, field, {composite, type!(kind, query, expr, model, field)}}
+    {_, schema} = elem(query.sources, ix)
+    {schema, field, {composite, type!(kind, query, expr, schema, field)}}
   end
   defp type_for_param!(kind, query, expr, {ix, field}) when is_integer(ix) do
-    {_, model} = elem(query.sources, ix)
-    {model, field, type!(kind, query, expr, model, field)}
+    {_, schema} = elem(query.sources, ix)
+    {schema, field, type!(kind, query, expr, schema, field)}
   end
   defp type_for_param!(_kind, _query, _expr, type) do
     {nil, nil, type}

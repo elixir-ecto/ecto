@@ -2,7 +2,7 @@ defmodule Ecto.SubQuery do
   @doc """
   Stores subquery information.
   """
-  defstruct query: nil
+  defstruct [:query, :params]
 end
 
 defmodule Ecto.Query do
@@ -276,7 +276,7 @@ defmodule Ecto.Query do
 
   defmodule SelectExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, fields: [], params: %{}, take: %{}]
+    defstruct [:expr, :file, :line, :fields, params: %{}, take: %{}]
   end
 
   defmodule JoinExpr do
