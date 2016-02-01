@@ -24,7 +24,12 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   @spec start_link(module, Keyword.t) :: {:ok, pid} | {:error, any}
   def start_link(conn_mod, opts) do
     {name, opts} = Keyword.pop(opts, :pool_name)
-    GenServer.start_link(__MODULE__, {conn_mod, opts}, [name: name])
+    args = [__MODULE__, {conn_mod, opts}, [name: name]]
+    child_opts =  [id: __MODULE__, modules: [__MODULE__]]
+    children = [Supervisor.Spec.worker(GenServer, args, child_opts)]
+    sup_name = Module.concat(name, Supervisor)
+    sup_opts = [strategy: :one_for_one, max_restarts: 0, name: sup_name]
+    Supervisor.start_link(children, sup_opts)
   end
 
   @doc false
