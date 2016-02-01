@@ -1,5 +1,6 @@
 defimpl Inspect, for: Ecto.Query do
   import Inspect.Algebra
+  import Kernel, except: [to_string: 1]
   alias Ecto.Query.JoinExpr
 
   @doc false
@@ -60,6 +61,9 @@ defimpl Inspect, for: Ecto.Query do
   defp unbound_from({nil, model}),  do: inspect model
   defp unbound_from(from = {source, model}) do
     inspect if(source == model.__schema__(:source), do: model, else: from)
+  end
+  defp unbound_from(%Ecto.SubQuery{query: query}) do
+    "subquery(#{to_string query})"
   end
 
   defp joins(joins, names) do
@@ -186,8 +190,9 @@ defimpl Inspect, for: Ecto.Query do
     from_sources(query.from) ++ join_sources(query.joins)
   end
 
+  defp from_sources(%Ecto.SubQuery{query: query}), do: from_sources(query.from)
   defp from_sources({source, model}), do: [model || source]
-  defp from_sources(nil),             do: ["query"]
+  defp from_sources(nil), do: ["query"]
 
   defp join_sources(joins) do
     Enum.map(joins, fn

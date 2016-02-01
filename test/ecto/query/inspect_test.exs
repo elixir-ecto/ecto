@@ -34,6 +34,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in {"user_posts", Post}, [])) ==
            ~s[from p in {"user_posts", Inspect.Post}]
+
+    assert i(from(subquery(Post), [])) ==
+           ~s{from p in subquery(from p in Inspect.Post)}
   end
 
   test "join" do
