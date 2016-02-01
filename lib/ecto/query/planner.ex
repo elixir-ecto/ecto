@@ -224,7 +224,7 @@ defmodule Ecto.Query.Planner do
   defp source_cache({:fragment, _, _} = source), do: source
 
   defp cast_param(kind, query, expr, v, type, adapter) do
-    {model, field, type} = type_for_param!(kind, query, expr, type)
+    type = type!(kind, query, expr, type)
 
     try do
       case cast_param(kind, type, v, adapter) do
@@ -232,16 +232,14 @@ defmodule Ecto.Query.Planner do
         {:error, error} -> error! query, expr, error
       end
     catch
-      :error, %Ecto.QueryError{} = e when not is_nil(model) ->
-        raise Ecto.CastError, schema: model, field: field, value: v, type: type,
-                              message: Exception.message(e) <>
-                                       "\nError when casting value to `#{inspect model}.#{field}`"
+      :error, %Ecto.QueryError{} = e ->
+        raise Ecto.CastError, value: v, type: type, message: Exception.message(e)
     end
   end
 
   defp cast_param(kind, type, nil, _adapter) when kind != :update do
     {:error, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
-             " (if you want to check for nils, use is_nil/1 instead)"}
+             "(if you want to check for nils, use is_nil/1 instead)"}
   end
 
   defp cast_param(kind, type, v, adapter) do
@@ -320,12 +318,16 @@ defmodule Ecto.Query.Planner do
 
   defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on} = join|t],
                      query, joins, sources, tail_sources, counter, offset) do
-    {source, schema} = Enum.fetch!(Enum.reverse(sources), ix)
-
-    unless schema do
-      error! query, join, "cannot perform association join on #{inspect source} " <>
-                          "because it does not have a schema"
-    end
+    schema =
+      case Enum.fetch!(Enum.reverse(sources), ix) do
+        {source, nil} ->
+          error! query, join, "cannot perform association join on #{inspect source} " <>
+                              "because it does not have a schema"
+        {_, schema} ->
+          schema
+        _ ->
+          error! query, join, "can only perform association joins on sources with a schema"
+      end
 
     refl = schema.__schema__(:association, assoc)
 
@@ -540,7 +542,7 @@ defmodule Ecto.Query.Planner do
 
       {:type, _, [{:^, meta, [ix]}, _expr]}, acc when is_integer(ix) ->
         {_, t} = Enum.fetch!(expr.params, ix)
-        {_, _, type} = type_for_param!(kind, query, expr, t)
+        type   = type!(kind, query, expr, t)
         {%Ecto.Query.Tagged{value: {:^, meta, [acc]}, tag: type,
                             type: Ecto.Type.type(type)}, acc + 1}
 
@@ -553,15 +555,14 @@ defmodule Ecto.Query.Planner do
   end
 
   defp dump_param(kind, query, expr, v, type, adapter) do
-    {schema, field, type} = type_for_param!(kind, query, expr, type)
+    type = type!(kind, query, expr, type)
 
     case dump_param(kind, type, v, adapter) do
       {:ok, v} ->
         v
       {:error, error} ->
-        error = error <> " from `#{inspect schema}.#{field}`. " <>
-                         "Or the value is incompatible or it must be interpolated " <>
-                         "(using ^) so it may be cast accordingly"
+        error = error <> ". Or the value is incompatible or it must be " <>
+                         "interpolated (using ^) so it may be cast accordingly"
         error! query, expr, error
     end
   end
@@ -646,15 +647,15 @@ defmodule Ecto.Query.Planner do
     {[{:&, [], [ix, fields]}], from}
   end
 
-  defp collect_fields({agg, meta, [{{:., _, [{:&, _, [source]}, field]}, _, []}] = args},
+  defp collect_fields({agg, meta, [{{:., _, [{:&, _, [ix]}, field]}, _, []}] = args},
                       %{select: select} = query, _take, from) when agg in ~w(avg min max sum)a do
-    type = type!(:select, query, select, source, field)
+    type = source_type!(:select, query, select, ix, field)
     {[{agg, [ecto_type: type] ++ meta, args}], from}
   end
 
-  defp collect_fields({{:., _, [{:&, _, [source]}, field]} = dot, meta, []},
+  defp collect_fields({{:., _, [{:&, _, [ix]}, field]} = dot, meta, []},
                       %{select: select} = query, _take, from) do
-    type = type!(:select, query, select, source, field)
+    type = source_type!(:select, query, select, ix, field)
     {[{dot, [ecto_type: type] ++ meta, []}], from}
   end
 
@@ -730,14 +731,20 @@ defmodule Ecto.Query.Planner do
     {%{query | offset: offset}, acc}
   end
 
-  defp type!(_kind, _query, _expr, nil, _field), do: :any
-  defp type!(kind, query, expr, source, field) when is_integer(source) do
-    case elem(query.sources, source) do
-      {_, schema} -> type!(kind, query, expr, schema, field)
-      {:fragment, _, _} -> :any
+  defp source_type!(_kind, _query, _expr, nil, _field), do: :any
+  defp source_type!(kind, query, expr, ix, field) when is_integer(ix) do
+    case elem(query.sources, ix) do
+      %Ecto.SubQuery{fields: %{^field => ix}, query: query} ->
+        source_type!(kind, query, expr, ix, field)
+      %Ecto.SubQuery{} ->
+        error!(query, expr, "field `#{field}` does not exist in subquery")
+      {_, schema} ->
+        source_type!(kind, query, expr, schema, field)
+      {:fragment, _, _} ->
+        :any
     end
   end
-  defp type!(kind, query, expr, schema, field) when is_atom(schema) do
+  defp source_type!(kind, query, expr, schema, field) when is_atom(schema) do
     if type = schema.__schema__(:type, field) do
       type
     else
@@ -746,16 +753,14 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp type_for_param!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
-    {_, schema} = elem(query.sources, ix)
-    {schema, field, {composite, type!(kind, query, expr, schema, field)}}
+  defp type!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
+    {composite, source_type!(kind, query, expr, ix, field)}
   end
-  defp type_for_param!(kind, query, expr, {ix, field}) when is_integer(ix) do
-    {_, schema} = elem(query.sources, ix)
-    {schema, field, type!(kind, query, expr, schema, field)}
+  defp type!(kind, query, expr, {ix, field}) when is_integer(ix) do
+    source_type!(kind, query, expr, ix, field)
   end
-  defp type_for_param!(_kind, _query, _expr, type) do
-    {nil, nil, type}
+  defp type!(_kind, _query, _expr, type) do
+    type
   end
 
   defp normalize_param(_kind, {:in_array, {:array, type}}, _value) do

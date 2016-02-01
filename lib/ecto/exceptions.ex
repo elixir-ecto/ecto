@@ -86,8 +86,8 @@ defmodule Ecto.CastError do
   defexception [:schema, :field, :type, :value, :message]
 
   def exception(opts) do
-    schema = Keyword.fetch!(opts, :schema)
-    field  = Keyword.fetch!(opts, :field)
+    schema = Keyword.get(opts, :schema)
+    field  = Keyword.get(opts, :field)
     value  = Keyword.fetch!(opts, :value)
     type   = Keyword.fetch!(opts, :type)
     msg    = Keyword.fetch!(opts, :message)

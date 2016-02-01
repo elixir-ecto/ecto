@@ -83,7 +83,6 @@ defmodule Ecto.Query.PlannerTest do
 
     assert Exception.message(exception) =~ "value `nil` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^nil"
-    assert Exception.message(exception) =~ "Error when casting value to `#{inspect Post}.title`"
 
     exception = assert_raise Ecto.CastError, fn ->
       prepare(Post |> where([p], p.title == ^1))
@@ -91,7 +90,6 @@ defmodule Ecto.Query.PlannerTest do
 
     assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^1"
-    assert Exception.message(exception) =~ "Error when casting value to `#{inspect Post}.title`"
   end
 
   test "prepare: casts and dumps custom types" do
@@ -259,15 +257,19 @@ defmodule Ecto.Query.PlannerTest do
     assert key == :nocache
   end
 
-  # TODO: check all elem and Enum.at
-  # TODO: allow parameter shifting
-  # TODO: allow comparison with subquery fields
-  # TODO: allow chosing subquery fields
+  # TODO: support parameter shifting
+  # TODO: allow choosing subquery fields
   test "prepare: subqueries" do
     {query, params, key} = prepare(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: [], fields: %{}} = query.from
     assert params == []
     assert key == [:all, :all, {"posts", Ecto.Query.PlannerTest.Post, 112914533}]
+  end
+
+  test "prepare: subqueries do not support association joins" do
+    assert_raise Ecto.QueryError, ~r/an only perform association joins on sources with a schema in query/, fn ->
+      prepare(from(p in subquery(Post), join: c in assoc(p, :comment)))
+    end
   end
 
   test "prepare: subqueries validates select fields" do
@@ -295,6 +297,27 @@ defmodule Ecto.Query.PlannerTest do
     query = from p in Post, join: c in assoc(p, :comments), select: {p, c}
     assert_raise Ecto.SubQueryError, ~r/`id` is selected from two different sources in subquery/, fn ->
       prepare(from(subquery(query), []))
+    end
+  end
+
+  test "prepare: allows type casting from subquery types" do
+    query = subquery(from p in Post, join: c in assoc(p, :comments),
+                                     select: {p.id, p.title, c.posted})
+
+    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
+    {_query, params, _key} = prepare(query |> where([c], c.posted == ^datetime))
+    assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
+
+    permalink = "1-hello-world"
+    {_query, params, _key} = prepare(query |> where([p], p.id == ^permalink))
+    assert params == [1]
+
+    assert_raise Ecto.CastError, ~r/value `1` in `where` cannot be cast to type :string in query/, fn ->
+      prepare(query |> where([p], p.title == ^1))
+    end
+
+    assert_raise Ecto.QueryError, ~r/field `unknown` does not exist in subquery in query/, fn ->
+      prepare(query |> where([p], p.unknown == ^1))
     end
   end
 
@@ -330,7 +353,7 @@ defmodule Ecto.Query.PlannerTest do
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
 
-    assert_raise Ecto.QueryError, fn ->
+    assert_raise Ecto.CastError, ~r/value `"1"` in `select` cannot be cast to type Ecto.DateTime/, fn ->
       from(Post, []) |> select([p], type(^"1", Ecto.DateTime)) |> normalize
     end
   end
