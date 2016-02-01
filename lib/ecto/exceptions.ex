@@ -29,6 +29,30 @@ defmodule Ecto.QueryError do
   end
 end
 
+defmodule Ecto.SubQueryError do
+  @moduledoc """
+  Raised at runtime when a subquery is invalid.
+  """
+  defexception [:message, :exception]
+
+  def exception(opts) do
+    exception = Keyword.fetch!(opts, :exception)
+    query     = Keyword.fetch!(opts, :query)
+
+    message = """
+    the following exception happened when compiling a subquery.
+
+        #{Exception.format(:error, exception, []) |> String.replace("\n", "\n    ")}
+
+    The subquery originated from the following query:
+
+    #{Inspect.Ecto.Query.to_string(query)}
+    """
+
+    %__MODULE__{message: message, exception: exception}
+  end
+end
+
 defmodule Ecto.InvalidChangesetError do
   @moduledoc """
   Raised when we cannot perform an action because the

@@ -273,8 +273,15 @@ defmodule Ecto.Query.Planner do
     error!(query, "query must have a from expression")
   end
   defp prepare_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
-    {inner_query, params, key} = prepare(inner_query, :all, adapter)
-    {%{query | from: %{subquery | query: inner_query, params: params}}, key}
+    try do
+      prepare(inner_query, :all, adapter)
+    rescue
+      e ->
+        raise Ecto.SubQueryError, query: query, exception: e
+    else
+      {inner_query, params, key} ->
+        {%{query | from: %{subquery | query: inner_query, params: params}}, key}
+    end
   end
   defp prepare_from(%{from: {_, _} = source} = query, _adapter) do
     {query, [source_cache(source)]}
