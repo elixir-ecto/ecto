@@ -312,7 +312,8 @@ defmodule Ecto.Query do
   If any other value is given, it is converted to a query via
   `Ecto.Queryable` and wrapped in the `Ecto.SubQuery` struct.
 
-  Subqueries are currently only supported in the `from` field.
+  Subqueries are currently only supported in the `from`
+  and `join` fields.
 
   ## Examples
 
