@@ -86,15 +86,16 @@ defmodule Ecto.Repo.Queryable do
       |> Planner.query(operation, repo, adapter)
 
     case meta do
-      %{select: nil} ->
+      %{fields: nil} ->
         adapter.execute(repo, meta, prepared, params, nil, opts)
-      %{select: select, prefix: prefix, sources: sources, assocs: assocs, preloads: preloads} ->
+      %{select: select, fields: fields, prefix: prefix,
+        sources: sources, assocs: assocs, preloads: preloads} ->
         preprocess = preprocess(prefix, sources, adapter)
         {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
         {count,
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
-          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select), opts)}
+          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select, fields), opts)}
     end
   end
 
@@ -102,7 +103,7 @@ defmodule Ecto.Repo.Queryable do
     &preprocess(&1, &2, prefix, &3, sources, adapter)
   end
 
-  defp preprocess({:&, _, [ix, fields]}, value, prefix, context, sources, adapter) do
+  defp preprocess({:&, _, [ix, fields, _]}, value, prefix, context, sources, adapter) do
     case elem(sources, ix) do
       {_source, nil} when is_map(value) ->
         value
@@ -111,6 +112,8 @@ defmodule Ecto.Repo.Queryable do
       {source, schema} ->
         Ecto.Schema.__load__(schema, prefix, source, context, {fields, value},
                              &Ecto.Type.adapter_load(adapter, &1, &2))
+      %Ecto.SubQuery{sources: sources, fields: fields, select: select} ->
+        postprocess(select, fields).(load_subquery(fields, value, prefix, context, sources, adapter))
     end
   end
 
@@ -133,6 +136,19 @@ defmodule Ecto.Repo.Queryable do
     value
   end
 
+  defp load_subquery([{:&, [], [_, _, counter]} = field|fields], values, prefix, context, sources, adapter) do
+    {value, values} = Enum.split(values, counter)
+    [preprocess(field, value, prefix, context, sources, adapter) |
+     load_subquery(fields, values, prefix, context, sources, adapter)]
+  end
+  defp load_subquery([field|fields], [value|values], prefix, context, sources, adapter) do
+    [preprocess(field, value, prefix, context, sources, adapter) |
+     load_subquery(fields, values, prefix, context, sources, adapter)]
+  end
+  defp load_subquery([], [], _prefix, _context, _sources, _adapter) do
+    []
+  end
+
   defp load_schemaless([field|fields], [value|values], acc),
     do: load_schemaless(fields, values, Map.put(acc, field, value))
   defp load_schemaless([], [], acc),
@@ -145,13 +161,13 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp postprocess(%{expr: expr, fields: fields}) do
+  defp postprocess(select, fields) do
     # The planner always put the from as the first
     # entry in the query, avoiding fetching it multiple
     # times even if it appears multiple times in the query.
     # So we always need to handle it specially.
-    from? = match?([{:&, _, [0, _]}|_], fields)
-    &postprocess(&1, expr, from?)
+    from? = match?([{:&, _, [0, _, _]}|_], fields)
+    &postprocess(&1, select, from?)
   end
 
   defp postprocess(row, expr, true),

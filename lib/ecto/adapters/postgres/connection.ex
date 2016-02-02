@@ -112,7 +112,7 @@ if Code.ensure_loaded?(Postgrex) do
       sources        = create_names(query)
       distinct_exprs = distinct_exprs(query, sources)
 
-      from     = from(sources)
+      from     = from(query, sources)
       select   = select(query, distinct_exprs, sources)
       join     = join(query, sources)
       where    = where(query, sources)
@@ -126,25 +126,25 @@ if Code.ensure_loaded?(Postgrex) do
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
-    def update_all(query) do
+    def update_all(%{from: from} = query) do
       sources = create_names(query)
-      {table, name, _schema} = elem(sources, 0)
+      {from, name} = get_source(query, sources, 0, from)
 
       fields = update_fields(query, sources)
       {join, wheres} = update_join(query, sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble(["UPDATE #{table} AS #{name} SET", fields, join, where])
+      assemble(["UPDATE #{from} AS #{name} SET", fields, join, where])
     end
 
-    def delete_all(query) do
+    def delete_all(%{from: from} = query) do
       sources = create_names(query)
-      {table, name, _schema} = elem(sources, 0)
+      {from, name} = get_source(query, sources, 0, from)
 
       join  = using(query, sources)
       where = delete_all_where(query.joins, query, sources)
 
-      assemble(["DELETE FROM #{table} AS #{name}", join, where])
+      assemble(["DELETE FROM #{from} AS #{name}", join, where])
     end
 
     def insert(prefix, table, header, rows, returning) do
@@ -235,17 +235,16 @@ if Code.ensure_loaded?(Postgrex) do
     defp distinct(%QueryExpr{expr: false}, _exprs), do: ""
     defp distinct(_query, exprs), do: "DISTINCT ON (" <> exprs <> ") "
 
-    defp from(sources) do
-      {table, name, _schema} = elem(sources, 0)
-      "FROM #{table} AS #{name}"
+    defp from(%{from: from} = query, sources) do
+      {from, name} = get_source(query, sources, 0, from)
+      "FROM #{from} AS #{name}"
     end
 
     defp using(%Query{joins: []}, _sources), do: []
     defp using(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{qual: :inner, on: %QueryExpr{expr: expr}, ix: ix, source: source} ->
-          {join, name, _schema} = elem(sources, ix)
-          join = join || "(" <> expr(source, sources, query) <> ")"
+          {join, name} = get_source(query, sources, ix, source)
           where = expr(expr, sources, query)
           "USING #{join} AS #{name} WHERE " <> where
         %JoinExpr{qual: qual} ->
@@ -288,8 +287,7 @@ if Code.ensure_loaded?(Postgrex) do
       froms =
         "FROM " <> Enum.map_join(joins, ", ", fn
           %JoinExpr{qual: :inner, ix: ix, source: source} ->
-            {join, name, _schema} = elem(sources, ix)
-            join = join || "(" <> expr(source, sources, query) <> ")"
+            {join, name} = get_source(query, sources, ix, source)
             join <> " AS " <> name
           %JoinExpr{qual: qual} ->
             error!(query, "PostgreSQL supports only inner joins on update_all, got: `#{qual}`")
@@ -307,9 +305,8 @@ if Code.ensure_loaded?(Postgrex) do
     defp join(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
-          {join, name, _schema} = elem(sources, ix)
+          {join, name} = get_source(query, sources, ix, source)
           qual = join_qual(qual)
-          join = join || "(" <> expr(source, sources, query) <> ")"
           "#{qual} JOIN " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
       end)
     end
@@ -401,7 +398,7 @@ if Code.ensure_loaded?(Postgrex) do
       "#{name}.#{quote_name(field)}"
     end
 
-    defp expr({:&, _, [idx, fields]}, sources, query) do
+    defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
       {table, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
         error!(query, "PostgreSQL requires a schema module when using selector " <>
@@ -436,6 +433,10 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp expr({:not, _, [expr]}, sources, query) do
       "NOT (" <> expr(expr, sources, query) <> ")"
+    end
+
+    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
+      all(query)
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
@@ -551,8 +552,8 @@ if Code.ensure_loaded?(Postgrex) do
             {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
             {nil, "f" <> Integer.to_string(pos), nil}
-          %Ecto.SubQuery{query: query} ->
-            {"(" <> all(query) <> ")", "s" <> Integer.to_string(pos), nil}
+          %Ecto.SubQuery{} ->
+            {nil, "s" <> Integer.to_string(pos), nil}
         end
       [current|create_names(prefix, sources, pos + 1, limit)]
     end
@@ -797,6 +798,11 @@ if Code.ensure_loaded?(Postgrex) do
     defp reference_on_delete(_), do: ""
 
     ## Helpers
+
+    defp get_source(query, sources, ix, source) do
+      {expr, name, _schema} = elem(sources, ix)
+      {expr || "(" <> expr(source, sources, query) <> ")", name}
+    end
 
     defp quote_name(name)
     defp quote_name(name) when is_atom(name),

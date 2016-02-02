@@ -260,7 +260,7 @@ defmodule Ecto.Query.PlannerTest do
   # TODO: support parameter shifting
   test "prepare: subqueries" do
     {query, params, key} = prepare(from(subquery(Post), []))
-    assert %{query: %Ecto.Query{}, params: [], fields: %{}} = query.from
+    assert %{query: %Ecto.Query{}, params: []} = query.from
     assert params == []
     assert key == [:all, :all, {"posts", Ecto.Query.PlannerTest.Post, 112914533}]
   end
@@ -271,29 +271,36 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "prepare: subqueries do not support preloads" do
+    query = from p in Post, join: c in assoc(p, :comments), preload: [comments: c]
+    assert_raise Ecto.SubQueryError, ~r/cannot preload associations in subquery/, fn ->
+      prepare(from(subquery(query), []))
+    end
+  end
+
   test "prepare: subqueries validates select fields" do
     query = prepare(from(subquery(Post), [])) |> elem(0)
-    assert %{code: 0, id: 0} = query.from.fields
+    assert [{:id, 0}, {:title, 0} | _] = query.from.types
 
     query = from p in "posts", select: p.code
     query = prepare(from(subquery(query), [])) |> elem(0)
-    assert query.from.fields == %{code: 0}
+    assert [code: 0] = query.from.types
 
     query = from p in Post, select: p.code
     query = prepare(from(subquery(query), [])) |> elem(0)
-    assert query.from.fields == %{code: 0}
+    assert [code: 0] = query.from.types
 
     query = from p in Post, join: c in assoc(p, :comments), select: {p.code, c}
     query = prepare(from(subquery(query), [])) |> elem(0)
-    assert %{code: 0, text: 1} = query.from.fields
+    assert [{:code, 0}, {:id, 1} | _] = query.from.types
 
     query = from p in Post, select: 1
-    assert_raise Ecto.SubQueryError, ~r/subquery must select at least one source or field/, fn ->
+    assert_raise Ecto.SubQueryError, ~r/subquery must select at least one source/, fn ->
       prepare(from(subquery(query), []))
     end
 
     query = from p in Post, select: fragment("? + ?", p.id, p.id)
-    assert_raise Ecto.SubQueryError, ~r/subquery can only select sources or fields/, fn ->
+    assert_raise Ecto.SubQueryError, ~r/subquery can only select sources/, fn ->
       prepare(from(subquery(query), []))
     end
 
@@ -424,16 +431,16 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select" do
     query = from(Post, []) |> normalize()
     assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]}]
+    assert query.select.fields == [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]}]
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query =
@@ -443,19 +450,19 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]},
-            {:&, [], [1, [:id, :text, :posted, :uuid, :post_id]]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
+            {:&, [], [1, [:id, :text, :posted, :uuid, :post_id], 5]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
   end
 
   test "normalize: select with take" do
     query = from(Post, []) |> select([p], take(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == [{:&, [], [0, [:id, :title]]}]
+    assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
 
     query = from(Post, []) |> select([p], {take(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title]]},
+           [{:&, [], [0, [:id, :title], 2]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query =
@@ -464,8 +471,8 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, take(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links]]},
-            {:&, [], [1, [:id, :text]]}]
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
+            {:&, [], [1, [:id, :text], 2]}]
   end
 
   test "normalize: preload" do
@@ -539,10 +546,15 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: merges subqueries fields when requests" do
     query = from p in Post, select: {p.id, p.title}
     query = normalize(from(subquery(query), []))
-    assert query.select.fields == [{:&, [], [0, [:id, :title]]}]
+    assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
 
     query = from p in Post, select: {p.id, p.title}
     query = normalize(from(p in subquery(query), select: p.title))
     assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+
+    query = from p in Post, select: {p.id, p.title}
+    assert_raise Ecto.QueryError, ~r/cannot take multiple fields on fragment or subquery sources in query/, fn ->
+      normalize(from(p in subquery(query), select: [:title]))
+    end
   end
 end

@@ -7,7 +7,8 @@ defmodule Ecto.Adapter do
   @type t :: module
 
   @typedoc "Ecto.Query metadata fields (stored in cache)"
-  @type query_meta :: %{prefix: binary | nil, sources: tuple, assocs: term, preloads: term, select: term}
+  @type query_meta :: %{prefix: binary | nil, sources: tuple, assocs: term,
+                        preloads: term, select: term, fields: [term]}
 
   @typedoc "Ecto.Schema metadata fields"
   @type schema_meta :: %{source: source, schema: atom, context: term, autogenerate_id: {atom, :id | :binary_id}}

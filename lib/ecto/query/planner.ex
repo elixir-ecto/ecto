@@ -97,13 +97,18 @@ defmodule Ecto.Query.Planner do
   defp query_without_cache(query, operation, adapter) do
     %{select: select} = query = normalize(query, operation, adapter)
     {cache, prepared} = adapter.prepare(operation, query)
-    {cache, select && %{select | file: nil, line: nil}, prepared}
+    {cache, select, prepared}
   end
 
-  defp build_meta(%{prefix: prefix, sources: sources,
-                    assocs: assocs, preloads: preloads}, select) do
-    %{prefix: prefix, sources: sources,
+  defp build_meta(%{prefix: prefix, sources: sources, assocs: assocs, preloads: preloads},
+                  %{expr: select, fields: fields}) do
+    %{prefix: prefix, sources: sources, fields: fields,
       assocs: assocs, preloads: preloads, select: select}
+  end
+  defp build_meta(%{prefix: prefix, sources: sources, assocs: assocs, preloads: preloads},
+                  nil) do
+    %{prefix: prefix, sources: sources, fields: nil,
+      assocs: assocs, preloads: preloads, select: nil}
   end
 
   @doc """
@@ -127,6 +132,187 @@ defmodule Ecto.Query.Planner do
       # Reraise errors so we ignore the planner inner stacktrace
       reraise e
   end
+
+  @doc """
+  Prepares the from field in queries, properly handling subqueries.
+  """
+  def prepare_from(%{from: nil} = query, _adapter) do
+    error!(query, "query must have a from expression")
+  end
+  def prepare_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
+    try do
+      {inner_query, params, key} = prepare(inner_query, :all, adapter)
+
+      # The only reason we call normalize_select here is because
+      # subquery_types validates a specific format in a way it
+      # won't need to be modified again when normalized later on.
+      inner_query = normalize_select(inner_query, :all)
+
+      %{select: %{fields: fields, expr: select}, sources: sources} = inner_query
+      {%{subquery | query: inner_query, params: params, select: select, fields: fields,
+                    sources: sources, types: subquery_types(inner_query)}, key}
+    rescue
+      e -> raise Ecto.SubQueryError, query: query, exception: e
+    else
+      {subquery, key} -> {%{query | from: subquery}, key}
+    end
+  end
+  def prepare_from(%{from: {_, _} = source} = query, _adapter) do
+    {query, [source_cache(source)]}
+  end
+
+  defp subquery_types(%{assocs: assocs, preloads: preloads} = query)
+      when assocs != [] or preloads != [] do
+    error!(query, "cannot preload associations in subquery")
+  end
+  defp subquery_types(%{select: %{fields: []}} = query) do
+    error!(query, "subquery must select at least one source (t) or one field (t.field)")
+  end
+  defp subquery_types(%{select: %{fields: fields}} = query) do
+    Enum.reduce(fields, [], fn
+      {:&, _, [ix, [_|_] = fields, _]}, acc ->
+        Enum.reduce(fields, acc, &add_subfield(query, &1, ix, &2))
+      {{:., _, [{:&, _, [ix]}, field]}, _, []}, acc ->
+        add_subfield(query, field, ix, acc)
+      other, _acc ->
+        error!(query, "subquery can only select sources (t) or fields (t.field), got: `#{Macro.to_string(other)}`")
+    end) |> Enum.reverse()
+  end
+
+  defp add_subfield(query, field, ix, fields) do
+    case Keyword.get(fields, field, ix) do
+      ^ix -> [{field, ix}|fields]
+      prev_ix ->
+        sources = query.sources
+        error!(query, "`#{field}` is selected from two different sources in subquery: " <>
+                      "`#{inspect elem(sources, prev_ix)}` and `#{inspect elem(sources, ix)}`")
+    end
+  end
+
+  @doc """
+  Prepare all sources, by traversing and expanding joins.
+  """
+  def prepare_sources(%{from: from} = query) do
+    {joins, sources, tail_sources} =
+      prepare_joins(query, [from], length(query.joins))
+    %{query | sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple(),
+              joins: joins |> Enum.reverse}
+  end
+
+  defp prepare_joins(query, sources, offset) do
+    prepare_joins(query.joins, query, [], sources, [], 1, offset)
+  end
+
+  defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) do
+    schema =
+      case Enum.fetch!(Enum.reverse(sources), ix) do
+        {source, nil} ->
+          error! query, join, "cannot perform association join on #{inspect source} " <>
+                              "because it does not have a schema"
+        {_, schema} ->
+          schema
+        _ ->
+          error! query, join, "can only perform association joins on sources with a schema"
+      end
+
+    refl = schema.__schema__(:association, assoc)
+
+    unless refl do
+      error! query, join, "could not find association `#{assoc}` on schema #{inspect schema}"
+    end
+
+    # If we have the following join:
+    #
+    #     from p in Post,
+    #       join: p in assoc(p, :comments)
+    #
+    # The callback below will return a query that contains only
+    # joins in a way it starts with the Post and ends in the
+    # Comment.
+    #
+    # This means we need to rewrite the joins below to properly
+    # shift the &... identifier in a way that:
+    #
+    #    &0         -> becomes assoc ix
+    #    &LAST_JOIN -> becomes counter
+    #
+    # All values in the middle should be shifted by offset,
+    # all values after join are already correct.
+    child = refl.__struct__.joins_query(refl)
+    last_ix = length(child.joins)
+    source_ix = counter
+
+    {child_joins, child_sources, child_tail} =
+      prepare_joins(child, [child.from], offset + last_ix - 1)
+
+    # Rewrite joins indexes as mentioned above
+    child_joins = Enum.map(child_joins, &rewrite_join(&1, qual, ix, last_ix, source_ix, offset))
+
+    # Drop the last resource which is the association owner (it is reversed)
+    child_sources = Enum.drop(child_sources, -1)
+
+    [current_source|child_sources] = child_sources
+    child_sources = child_tail ++ child_sources
+
+    prepare_joins(t, query, attach_on(child_joins, on) ++ joins, [current_source|sources],
+                  child_sources ++ tail_sources, counter + 1, offset + length(child_sources))
+  end
+
+  defp prepare_joins([%JoinExpr{source: {source, schema}} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) when is_atom(schema) and schema != nil do
+    source = if is_binary(source), do: {source, schema}, else: {schema.__schema__(:source), schema}
+    join   = %{join | source: source, ix: counter}
+    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
+  end
+
+  defp prepare_joins([%JoinExpr{source: source} = join|t],
+                     query, joins, sources, tail_sources, counter, offset) do
+    join = %{join | source: source, ix: counter}
+    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
+  end
+
+  defp prepare_joins([], _query, joins, sources, tail_sources, _counter, _offset) do
+    {joins, sources, tail_sources}
+  end
+
+  defp attach_on(joins, %{expr: true}) do
+    joins
+  end
+  defp attach_on([h|t], %{expr: expr}) do
+    h =
+      update_in h.on.expr, fn
+        true    -> expr
+        current -> {:and, [], [current, expr]}
+      end
+    [h|t]
+  end
+
+  defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
+    on = update_in on.expr, fn expr ->
+      Macro.prewalk expr, fn
+        {:&, meta, [join_ix]} ->
+          {:&, meta, [rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)]}
+        other ->
+          other
+      end
+    end
+
+    %{join | on: on, qual: qual,
+             ix: rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)}
+  end
+
+  # We need to replace the source by the one from the assoc
+  defp rewrite_ix(0, ix, _last_ix, _source_ix, _inc_x), do: ix
+
+  # The last entry will have the current source index
+  defp rewrite_ix(last_ix, _ix, last_ix, source_ix, _inc_x), do: source_ix
+
+  # All above last are already correct
+  defp rewrite_ix(join_ix, _ix, last_ix, _source_ix, _inc_ix) when join_ix > last_ix, do: join_ix
+
+  # All others need to be incremented by the offset sources
+  defp rewrite_ix(join_ix, _ix, _last_ix, _source_ix, inc_ix), do: join_ix + inc_ix
 
   @doc """
   Prepare the parameters by merging and casting them according to sources.
@@ -259,178 +445,9 @@ defmodule Ecto.Query.Planner do
     do: acc
 
   @doc """
-  Prepare all sources, by traversing and expanding joins.
+  Prepare association fields found in the query.
   """
-  def prepare_sources(%{from: from} = query) do
-    {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins))
-    %{query | sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple(),
-              joins: joins |> Enum.reverse}
-  end
-
-  defp prepare_from(%{from: nil} = query, _adapter) do
-    error!(query, "query must have a from expression")
-  end
-  defp prepare_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
-    try do
-      {inner_query, params, key} = prepare(inner_query, :all, adapter)
-      # The only reason we call normalize_select here is because
-      # subquery_fields validates a specific format in a way it
-      # won't need to be modified again when normalized later on.
-      inner_query = normalize_select(inner_query, :all)
-      {%{subquery | query: inner_query, params: params,
-                    fields: subquery_fields(inner_query)}, key}
-    rescue
-      e ->
-        raise Ecto.SubQueryError, query: query, exception: e
-    else
-      {subquery, key} ->
-        {%{query | from: subquery}, key}
-    end
-  end
-  defp prepare_from(%{from: {_, _} = source} = query, _adapter) do
-    {query, [source_cache(source)]}
-  end
-
-  defp subquery_fields(%{select: %{fields: []}} = query) do
-    error!(query, "subquery must select at least one source or field")
-  end
-  defp subquery_fields(%{select: %{fields: fields}} = query) do
-    Enum.reduce fields, %{}, fn
-      {:&, _, [ix, [_|_] = fields]}, acc ->
-        Enum.reduce(fields, acc, &add_subfield(query, &1, ix, &2))
-      {{:., _, [{:&, _, [ix]}, field]}, _, []}, acc ->
-        add_subfield(query, field, ix, acc)
-      other, _acc ->
-        error!(query, "subquery can only select sources or fields, got: `#{Macro.to_string(other)}`")
-    end
-  end
-
-  defp add_subfield(query, field, ix, fields) do
-    Map.update(fields, field, ix, fn
-      ^ix -> ix
-      prev_ix ->
-        sources = query.sources
-        error!(query, "`#{field}` is selected from two different sources in subquery: " <>
-                      "`#{inspect elem(sources, prev_ix)}` and `#{inspect elem(sources, ix)}`")
-    end)
-  end
-
-  defp prepare_joins(query, sources, offset) do
-    prepare_joins(query.joins, query, [], sources, [], 1, offset)
-  end
-
-  defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) do
-    schema =
-      case Enum.fetch!(Enum.reverse(sources), ix) do
-        {source, nil} ->
-          error! query, join, "cannot perform association join on #{inspect source} " <>
-                              "because it does not have a schema"
-        {_, schema} ->
-          schema
-        _ ->
-          error! query, join, "can only perform association joins on sources with a schema"
-      end
-
-    refl = schema.__schema__(:association, assoc)
-
-    unless refl do
-      error! query, join, "could not find association `#{assoc}` on schema #{inspect schema}"
-    end
-
-    # If we have the following join:
-    #
-    #     from p in Post,
-    #       join: p in assoc(p, :comments)
-    #
-    # The callback below will return a query that contains only
-    # joins in a way it starts with the Post and ends in the
-    # Comment.
-    #
-    # This means we need to rewrite the joins below to properly
-    # shift the &... identifier in a way that:
-    #
-    #    &0         -> becomes assoc ix
-    #    &LAST_JOIN -> becomes counter
-    #
-    # All values in the middle should be shifted by offset,
-    # all values after join are already correct.
-    child = refl.__struct__.joins_query(refl)
-    last_ix = length(child.joins)
-    source_ix = counter
-
-    {child_joins, child_sources, child_tail} =
-      prepare_joins(child, [child.from], offset + last_ix - 1)
-
-    # Rewrite joins indexes as mentioned above
-    child_joins = Enum.map(child_joins, &rewrite_join(&1, qual, ix, last_ix, source_ix, offset))
-
-    # Drop the last resource which is the association owner (it is reversed)
-    child_sources = Enum.drop(child_sources, -1)
-
-    [current_source|child_sources] = child_sources
-    child_sources = child_tail ++ child_sources
-
-    prepare_joins(t, query, attach_on(child_joins, on) ++ joins, [current_source|sources],
-                  child_sources ++ tail_sources, counter + 1, offset + length(child_sources))
-  end
-
-  defp prepare_joins([%JoinExpr{source: {source, schema}} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) when is_atom(schema) and schema != nil do
-    source = if is_binary(source), do: {source, schema}, else: {schema.__schema__(:source), schema}
-    join   = %{join | source: source, ix: counter}
-    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
-  end
-
-  defp prepare_joins([%JoinExpr{source: source} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) do
-    join = %{join | source: source, ix: counter}
-    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
-  end
-
-  defp prepare_joins([], _query, joins, sources, tail_sources, _counter, _offset) do
-    {joins, sources, tail_sources}
-  end
-
-  defp attach_on(joins, %{expr: true}) do
-    joins
-  end
-  defp attach_on([h|t], %{expr: expr}) do
-    h =
-      update_in h.on.expr, fn
-        true    -> expr
-        current -> {:and, [], [current, expr]}
-      end
-    [h|t]
-  end
-
-  defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
-    on = update_in on.expr, fn expr ->
-      Macro.prewalk expr, fn
-        {:&, meta, [join_ix]} ->
-          {:&, meta, [rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)]}
-        other ->
-          other
-      end
-    end
-
-    %{join | on: on, qual: qual,
-             ix: rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)}
-  end
-
-  # We need to replace the source by the one from the assoc
-  defp rewrite_ix(0, ix, _last_ix, _source_ix, _inc_x), do: ix
-
-  # The last entry will have the current source index
-  defp rewrite_ix(last_ix, _ix, last_ix, source_ix, _inc_x), do: source_ix
-
-  # All above last are already correct
-  defp rewrite_ix(join_ix, _ix, last_ix, _source_ix, _inc_ix) when join_ix > last_ix, do: join_ix
-
-  # All others need to be incremented by the offset sources
-  defp rewrite_ix(join_ix, _ix, _last_ix, _source_ix, inc_ix), do: join_ix + inc_ix
-
-  defp prepare_assocs(query) do
+  def prepare_assocs(query) do
     prepare_assocs(query, 0, query.assocs)
     query
   end
@@ -592,13 +609,11 @@ defmodule Ecto.Query.Planner do
 
   defp normalize_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
     try do
-      %{subquery | query: normalize(inner_query, :all, adapter)}
+      %{subquery | query: normalize(inner_query, :all, adapter), params: nil}
     rescue
-      e ->
-        raise Ecto.SubQueryError, query: query, exception: e
+      e -> raise Ecto.SubQueryError, query: query, exception: e
     else
-      subquery ->
-        %{query | from: subquery}
+      subquery -> %{query | from: subquery}
     end
   end
   defp normalize_from(query, _adapter) do
@@ -625,7 +640,7 @@ defmodule Ecto.Query.Planner do
 
     fields =
       case from do
-        {:ok, from} -> [{:&, [], [0, from]}|fields]
+        {:ok, from} -> [{:&, [], [0, from, from && length(from)]}|fields]
         :error -> fields
       end
 
@@ -639,31 +654,23 @@ defmodule Ecto.Query.Planner do
     case from do
       {:ok, from} ->
         assocs = collect_assocs(sources, assocs)
-        fields = [{:&, [], [0, from]}|assocs] ++ fields
+        fields = [{:&, [], [0, from, from && length(from)]}|assocs] ++ fields
         %{select | fields: fields}
       :error ->
         error! query, "the binding used in `from` must be selected in `select` when using `preload`"
     end
   end
 
-  defp collect_fields({:&, _, [0]}, %{sources: sources}, take, :error) do
-    fields =
-      case Map.fetch(take, 0) do
-        {:ok, value} -> value
-        :error -> source_fields!(sources, 0)
-      end
+  defp collect_fields({:&, _, [0]}, query, take, :error) do
+    fields = take!(query, take, 0)
     {[], {:ok, fields}}
   end
   defp collect_fields({:&, _, [0]}, _query, _take, from) do
     {[], from}
   end
-  defp collect_fields({:&, _, [ix]}, %{sources: sources}, take, from) do
-    fields =
-      case Map.fetch(take, ix) do
-        {:ok, value} -> value
-        :error -> source_fields!(sources, ix)
-      end
-    {[{:&, [], [ix, fields]}], from}
+  defp collect_fields({:&, _, [ix]}, query, take, from) do
+    fields = take!(query, take, ix)
+    {[{:&, [], [ix, fields, fields && length(fields)]}], from}
   end
 
   defp collect_fields({agg, meta, [{{:., _, [{:&, _, [ix]}, field]}, _, []}] = args},
@@ -695,7 +702,8 @@ defmodule Ecto.Query.Planner do
     do: {[expr], from}
 
   defp collect_assocs(sources, [{_assoc, {ix, children}}|tail]) do
-    [{:&, [], [ix, source_fields!(sources, ix)]}] ++
+    fields = source_fields!(elem(sources, ix))
+    [{:&, [], [ix, fields, fields && length(fields)]}] ++
       collect_assocs(sources, children) ++
       collect_assocs(sources, tail)
   end
@@ -703,9 +711,21 @@ defmodule Ecto.Query.Planner do
     []
   end
 
-  defp source_fields!(sources, ix) do
-    case elem(sources, ix) do
-      %Ecto.SubQuery{fields: fields} -> Map.keys(fields)
+  defp take!(%{sources: sources} = query, take, ix) do
+    source = elem(sources, ix)
+    case Map.fetch(take, ix) do
+      {:ok, value} when is_tuple(source) ->
+        value
+      {:ok, _} ->
+        error! query, "cannot take multiple fields on fragment or subquery sources"
+      :error ->
+        source_fields!(source)
+    end
+  end
+
+  defp source_fields!(source) do
+    case source do
+      %Ecto.SubQuery{types: types} -> Keyword.keys(types)
       {_, nil} -> nil
       {_, schema} -> schema.__schema__(:fields)
     end
@@ -754,14 +774,15 @@ defmodule Ecto.Query.Planner do
   defp source_type!(_kind, _query, _expr, nil, _field), do: :any
   defp source_type!(kind, query, expr, ix, field) when is_integer(ix) do
     case elem(query.sources, ix) do
-      %Ecto.SubQuery{fields: %{^field => ix}, query: query} ->
-        source_type!(kind, query, expr, ix, field)
-      %Ecto.SubQuery{} ->
-        error!(query, expr, "field `#{field}` does not exist in subquery")
       {_, schema} ->
         source_type!(kind, query, expr, schema, field)
       {:fragment, _, _} ->
         :any
+      %Ecto.SubQuery{types: types, query: inner_query} ->
+        case Keyword.fetch(types, field) do
+          {:ok, ix} -> source_type!(kind, inner_query, expr, ix, field)
+          :error    -> error!(query, expr, "field `#{field}` does not exist in subquery")
+        end
     end
   end
   defp source_type!(kind, query, expr, schema, field) when is_atom(schema) do
