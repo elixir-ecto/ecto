@@ -30,19 +30,19 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def first(repo, adapter, queryable, opts) do
-    one(repo, adapter, query_for_first(repo, queryable), opts)
+    one(repo, adapter, query_for_first(queryable), opts)
   end
 
   def first!(repo, adapter, queryable, opts) do
-    one!(repo, adapter, query_for_first(repo, queryable), opts)
+    one!(repo, adapter, query_for_first(queryable), opts)
   end
 
   def last(repo, adapter, queryable, opts) do
-    one(repo, adapter, query_for_last(repo, queryable), opts)
+    one(repo, adapter, query_for_last(queryable), opts)
   end
 
   def last!(repo, adapter, queryable, opts) do
-    one!(repo, adapter, query_for_last(repo, queryable), opts)
+    one!(repo, adapter, query_for_last(queryable), opts)
   end
 
   def aggregate(repo, adapter, queryable, aggregate, field, opts) do
@@ -239,29 +239,37 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp query_for_get(repo, queryable, id) do
-    query = Queryable.to_query(queryable)
-    Query.from(x in query, where: field(x, ^assert_pk!(repo, query)) == ^id)
+    query  = Queryable.to_query(queryable)
+    schema = assert_schema!(query)
+    case schema.__schema__(:primary_key) do
+      [pk] ->
+        Query.from(x in query, where: field(x, ^pk) == ^id)
+      pks ->
+        raise ArgumentError,
+          "#{inspect repo}.get/2 requires the schema #{inspect schema} " <>
+          "to have exactly one primary key, got: #{inspect pks}"
+    end
   end
 
   defp query_for_get_by(_repo, queryable, clauses) do
     Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
-  defp query_for_first(repo, queryable) do
+  defp query_for_first(queryable) do
     query = %{Queryable.to_query(queryable) | limit: limit()}
     case query do
       %{order_bys: []} ->
-        %{query | order_bys: [order_by_pk(repo, query, :asc)]}
+        %{query | order_bys: [order_by_pk(query, :asc)]}
       %{} ->
         query
     end
   end
 
-  defp query_for_last(repo, queryable) do
+  defp query_for_last(queryable) do
     query = %{Queryable.to_query(queryable) | limit: limit()}
     update_in query.order_bys, fn
       [] ->
-        [order_by_pk(repo, query, :desc)]
+        [order_by_pk(query, :desc)]
       order_bys ->
         for %{expr: expr} = order_by <- order_bys do
           %{order_by | expr:
@@ -281,20 +289,11 @@ defmodule Ecto.Repo.Queryable do
     {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
-  defp order_by_pk(repo, query, dir) do
-    %Query.QueryExpr{expr: [{dir, field(0, assert_pk!(repo, query))}],
-                     params: [], file: __ENV__.file, line: __ENV__.line}
-  end
-
-  defp assert_pk!(repo, query) do
+  defp order_by_pk(query, dir) do
     schema = assert_schema!(query)
-    case schema.__schema__(:primary_key) do
-      [pk] -> pk
-      pks ->
-        raise ArgumentError,
-          "#{inspect repo}.get/2 requires the schema #{inspect schema} " <>
-          "to have exactly one primary key, got: #{inspect pks}"
-    end
+    pks    = schema.__schema__(:primary_key)
+    expr   = for pk <- pks, do: {dir, field(0,pk)}
+    %Query.QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
   end
 
   defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema

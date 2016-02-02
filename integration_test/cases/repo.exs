@@ -69,13 +69,15 @@ defmodule Ecto.Integration.RepoTest do
     c1 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "first"})
     c2 = TestRepo.insert!(%CompositePk{a: 1, b: 3, name: "second"})
 
-    changeset = Ecto.Changeset.cast(c1, %{name: "first change"}, ~w(name), ~w())
+    assert TestRepo.first(CompositePk) == c1
+    assert TestRepo.last(CompositePk) == c2
 
-    c1_updated = TestRepo.update!(changeset)
-    assert c1_updated == TestRepo.get_by!(CompositePk, %{a: 1, b: 2})
+    changeset = Ecto.Changeset.cast(c1, %{name: "first change"}, ~w(name), ~w())
+    c1 = TestRepo.update!(changeset)
+    assert TestRepo.get_by!(CompositePk, %{a: 1, b: 2}) == c1
 
     TestRepo.delete!(c2)
-    assert [c1_updated] == TestRepo.all(CompositePk)
+    assert TestRepo.all(CompositePk) == [c1]
 
     assert_raise ArgumentError, ~r"to have exactly one primary key", fn ->
       TestRepo.get(CompositePk, [])
