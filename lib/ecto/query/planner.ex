@@ -509,7 +509,7 @@ defmodule Ecto.Query.Planner do
     query
     |> traverse_exprs(operation, 0, &validate_and_increment(&1, &2, &3, &4, adapter))
     |> elem(0)
-    |> normalize_from(adapter)
+    |> normalize_from(operation, adapter)
     |> normalize_select(operation)
   rescue
     e ->
@@ -607,7 +607,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
+  defp normalize_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, :all, adapter) do
     try do
       %{subquery | query: normalize(inner_query, :all, adapter), params: nil}
     rescue
@@ -616,7 +616,10 @@ defmodule Ecto.Query.Planner do
       subquery -> %{query | from: subquery}
     end
   end
-  defp normalize_from(query, _adapter) do
+  defp normalize_from(%{from: %Ecto.SubQuery{}} = query, kind, _adapter) do
+    error! query, "`#{kind}` does not allow subqueries in `from`"
+  end
+  defp normalize_from(query, _kind, _adapter) do
     query
   end
 

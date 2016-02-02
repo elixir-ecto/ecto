@@ -541,6 +541,11 @@ defmodule Ecto.Query.PlannerTest do
       query = from p in Post, update: [set: [title: nil]]
       normalize(from(subquery(query), []))
     end
+
+    assert_raise Ecto.QueryError, ~r/`update_all` does not allow subqueries in `from`/, fn ->
+      query = from p in Post
+      normalize(from(subquery(query), update: [set: [title: nil]]), :update_all)
+    end
   end
 
   test "normalize: merges subqueries fields when requests" do
