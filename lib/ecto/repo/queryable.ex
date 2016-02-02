@@ -46,25 +46,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def aggregate(repo, adapter, queryable, aggregate, field, opts) do
-    query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
-    ast   = field(0, field)
-
-    query =
-      case query do
-        %{group_bys: [_|_]} ->
-          raise ArgumentError, "cannot aggregate on query with group_by"
-        %{distinct: nil, limit: nil, offset: nil} ->
-          %{query | order_bys: []}
-        _ ->
-          select = %Query.SelectExpr{expr: ast, file: __ENV__.file, line: __ENV__.line}
-          %{query | select: select}
-          |> Query.subquery()
-          |> Queryable.Ecto.SubQuery.to_query()
-      end
-
-    select = %Query.SelectExpr{expr: {aggregate, [], [ast]},
-                               file: __ENV__.file, line: __ENV__.line}
-    one! repo, adapter, %{query | select: select}, opts
+    one!(repo, adapter, query_for_aggregate(queryable, aggregate, field), opts)
   end
 
   def one(repo, adapter, queryable, opts) do
@@ -279,6 +261,27 @@ defmodule Ecto.Repo.Queryable do
               end)}
         end
     end
+  end
+
+  defp query_for_aggregate(queryable, aggregate, field) do
+    query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
+    ast   = field(0, field)
+
+    query =
+      case query do
+        %{group_bys: [_|_]} ->
+          raise ArgumentError, "cannot aggregate on query with group_by"
+        %{distinct: nil, limit: nil, offset: nil} ->
+          %{query | order_bys: []}
+        _ ->
+          select = %Query.SelectExpr{expr: ast, file: __ENV__.file, line: __ENV__.line}
+          %{query | select: select}
+          |> Query.subquery()
+          |> Queryable.Ecto.SubQuery.to_query()
+      end
+
+    %{query | select: %Query.SelectExpr{expr: {aggregate, [], [ast]},
+                                        file: __ENV__.file, line: __ENV__.line}}
   end
 
   defp limit do
