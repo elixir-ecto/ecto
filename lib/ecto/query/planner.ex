@@ -122,11 +122,10 @@ defmodule Ecto.Query.Planner do
   any cache mechanism.
   """
   def prepare(query, operation, adapter) do
-    {query, cache} = prepare_from(query, adapter)
     query
-    |> prepare_sources
+    |> prepare_sources(adapter)
     |> prepare_assocs
-    |> prepare_cache(operation, adapter, cache)
+    |> prepare_cache(operation, adapter)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -134,12 +133,17 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
-  Prepares the from field in queries, properly handling subqueries.
+  Prepare all sources, by traversing and expanding joins.
   """
-  def prepare_from(%{from: nil} = query, _adapter) do
-    error!(query, "query must have a from expression")
+  def prepare_sources(%{from: from} = query, adapter) do
+    from = from || error!(query, "query must have a from expression")
+    from = prepare_source(query, from, adapter)
+    {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins))
+    %{query | from: from, joins: joins |> Enum.reverse,
+              sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
   end
-  def prepare_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
+
+  defp prepare_source(query, %Ecto.SubQuery{query: inner_query} = subquery, adapter) do
     try do
       {inner_query, params, key} = prepare(inner_query, :all, adapter)
 
@@ -149,16 +153,15 @@ defmodule Ecto.Query.Planner do
       inner_query = normalize_select(inner_query, :all)
 
       %{select: %{fields: fields, expr: select}, sources: sources} = inner_query
-      {%{subquery | query: inner_query, params: params, select: select, fields: fields,
-                    sources: sources, types: subquery_types(inner_query)}, key}
+      %{subquery | query: inner_query, params: params, select: select, fields: fields,
+                   sources: sources, types: subquery_types(inner_query), cache: key}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
-    else
-      {subquery, key} -> {%{query | from: subquery}, key}
     end
   end
-  def prepare_from(%{from: {_, _} = source} = query, _adapter) do
-    {query, [source_cache(source)]}
+  # TODO: Incorporate join normalization and fragment
+  defp prepare_source(_query, {_, _} = source, _adapter) do
+    source
   end
 
   defp subquery_types(%{assocs: assocs, preloads: preloads} = query)
@@ -187,16 +190,6 @@ defmodule Ecto.Query.Planner do
         error!(query, "`#{field}` is selected from two different sources in subquery: " <>
                       "`#{inspect elem(sources, prev_ix)}` and `#{inspect elem(sources, ix)}`")
     end
-  end
-
-  @doc """
-  Prepare all sources, by traversing and expanding joins.
-  """
-  def prepare_sources(%{from: from} = query) do
-    {joins, sources, tail_sources} =
-      prepare_joins(query, [from], length(query.joins))
-    %{query | sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple(),
-              joins: joins |> Enum.reverse}
   end
 
   defp prepare_joins(query, sources, offset) do
@@ -317,17 +310,15 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_cache(query, operation, adapter, cache) do
+  def prepare_cache(query, operation, adapter) do
     {query, {cache, params}} =
-      traverse_exprs(query, operation, {cache, []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
+      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
     {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
   end
 
   defp merge_cache(:from, _query, expr, {cache, params}, _adapter) do
-    case expr do
-      %Ecto.SubQuery{params: inner} -> {cache, Enum.reverse(inner, params)}
-      _ -> {cache, params}
-    end
+    {key, params} = source_cache(expr, params)
+    {merge_cache(key, cache, key != :nocache), params}
   end
 
   defp merge_cache(kind, query, expr, {cache, params}, adapter)
@@ -358,10 +349,11 @@ defmodule Ecto.Query.Planner do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn
         %JoinExpr{on: on, qual: qual, source: source} = join, {params, cacheable?} ->
+          {key, params} = source_cache(source, params)
           {params, join_cacheable?} = cast_and_merge_params(:join, query, join, params, adapter)
           {params, on_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
-          {{qual, source_cache(source), on.expr},
-           {params, cacheable? and join_cacheable? and on_cacheable?}}
+          {{qual, key, on.expr},
+           {params, cacheable? and join_cacheable? and on_cacheable? and key != :nocache}}
       end
 
     case expr_cache do
@@ -412,9 +404,14 @@ defmodule Ecto.Query.Planner do
     [operation|cache]
   end
 
-  defp source_cache({_, nil} = source), do: source
-  defp source_cache({bin, model}), do: {bin, model, model.__schema__(:hash)}
-  defp source_cache({:fragment, _, _} = source), do: source
+  defp source_cache({_, nil} = source, params),
+    do: {source, params}
+  defp source_cache({bin, model}, params),
+    do: {{bin, model, model.__schema__(:hash)}, params}
+  defp source_cache({:fragment, _, _} = source, params),
+    do: {source, params}
+  defp source_cache(%Ecto.SubQuery{params: inner, cache: key}, params),
+    do: {key, Enum.reverse(inner, params)}
 
   defp cast_param(kind, query, expr, v, type, adapter) do
     type = type!(kind, query, expr, type)

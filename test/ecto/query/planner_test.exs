@@ -246,11 +246,13 @@ defmodule Ecto.Query.PlannerTest do
     query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil),
                             join: c in Comment, preload: :comments)
     {_query, _params, key} = prepare(%{query | prefix: "foo"})
-    assert key == [:all] ++ [lock: "foo",
-                             prefix: "foo",
-                             where: [{:is_nil, [], [nil]}],
-                             join: [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 53730846}, true}],
-                             select: 1] ++ [{"posts", Ecto.Query.PlannerTest.Post, 112914533}]
+    assert key == [:all,
+                   {:lock, "foo"},
+                   {:prefix, "foo"},
+                   {:where, [{:is_nil, [], [nil]}]},
+                   {:join, [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 53730846}, true}]},
+                   {"posts", Ecto.Query.PlannerTest.Post, 112914533},
+                   {:select, 1}]
 
     query = from(p in Post, where: p.id in ^[1, 2, 3])
     {_query, _params, key} = prepare(query)
@@ -262,7 +264,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params, key} = prepare(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from
     assert params == []
-    assert key == [:all, :all, {"posts", Ecto.Query.PlannerTest.Post, 112914533}]
+    assert key == [:all, [:all, {"posts", Ecto.Query.PlannerTest.Post, 112914533}]]
   end
 
   test "prepare: subqueries do not support association joins" do
