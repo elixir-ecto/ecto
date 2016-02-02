@@ -273,6 +273,9 @@ defmodule Ecto.Query.Planner do
   defp prepare_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
     try do
       {inner_query, params, key} = prepare(inner_query, :all, adapter)
+      # The only reason we call normalize_select here is because
+      # subquery_fields validates a specific format in a way it
+      # won't need to be modified again when normalized later on.
       inner_query = normalize_select(inner_query, :all)
       {%{subquery | query: inner_query, params: params,
                     fields: subquery_fields(inner_query)}, key}
@@ -489,6 +492,7 @@ defmodule Ecto.Query.Planner do
     query
     |> traverse_exprs(operation, 0, &validate_and_increment(&1, &2, &3, &4, adapter))
     |> elem(0)
+    |> normalize_from(adapter)
     |> normalize_select(operation)
   rescue
     e ->
@@ -586,6 +590,21 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp normalize_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, adapter) do
+    try do
+      %{subquery | query: normalize(inner_query, :all, adapter)}
+    rescue
+      e ->
+        raise Ecto.SubQueryError, query: query, exception: e
+    else
+      subquery ->
+        %{query | from: subquery}
+    end
+  end
+  defp normalize_from(query, _adapter) do
+    query
+  end
+
   defp normalize_select(query, operation) when operation in [:update_all, :delete_all] do
     query
   end
@@ -631,7 +650,7 @@ defmodule Ecto.Query.Planner do
     fields =
       case Map.fetch(take, 0) do
         {:ok, value} -> value
-        :error -> fields!(sources, 0)
+        :error -> source_fields!(sources, 0)
       end
     {[], {:ok, fields}}
   end
@@ -642,7 +661,7 @@ defmodule Ecto.Query.Planner do
     fields =
       case Map.fetch(take, ix) do
         {:ok, value} -> value
-        :error -> fields!(sources, ix)
+        :error -> source_fields!(sources, ix)
       end
     {[{:&, [], [ix, fields]}], from}
   end
@@ -676,7 +695,7 @@ defmodule Ecto.Query.Planner do
     do: {[expr], from}
 
   defp collect_assocs(sources, [{_assoc, {ix, children}}|tail]) do
-    [{:&, [], [ix, fields!(sources, ix)]}] ++
+    [{:&, [], [ix, source_fields!(sources, ix)]}] ++
       collect_assocs(sources, children) ++
       collect_assocs(sources, tail)
   end
@@ -684,8 +703,9 @@ defmodule Ecto.Query.Planner do
     []
   end
 
-  defp fields!(sources, ix) do
+  defp source_fields!(sources, ix) do
     case elem(sources, ix) do
+      %Ecto.SubQuery{fields: fields} -> Map.keys(fields)
       {_, nil} -> nil
       {_, schema} -> schema.__schema__(:fields)
     end

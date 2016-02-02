@@ -258,7 +258,6 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   # TODO: support parameter shifting
-  # TODO: allow choosing subquery fields
   test "prepare: subqueries" do
     {query, params, key} = prepare(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: [], fields: %{}} = query.from
@@ -275,6 +274,10 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: subqueries validates select fields" do
     query = prepare(from(subquery(Post), [])) |> elem(0)
     assert %{code: 0, id: 0} = query.from.fields
+
+    query = from p in "posts", select: p.code
+    query = prepare(from(subquery(query), [])) |> elem(0)
+    assert query.from.fields == %{code: 0}
 
     query = from p in Post, select: p.code
     query = prepare(from(subquery(query), [])) |> elem(0)
@@ -524,5 +527,22 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.QueryError, message, fn ->
       from(p in Post, select: p) |> normalize(:delete_all)
     end
+  end
+
+  test "normalize: subqueries" do
+    assert_raise Ecto.SubQueryError, ~r/does not allow `update` expressions in query/, fn ->
+      query = from p in Post, update: [set: [title: nil]]
+      normalize(from(subquery(query), []))
+    end
+  end
+
+  test "normalize: merges subqueries fields when requests" do
+    query = from p in Post, select: {p.id, p.title}
+    query = normalize(from(subquery(query), []))
+    assert query.select.fields == [{:&, [], [0, [:id, :title]]}]
+
+    query = from p in Post, select: {p.id, p.title}
+    query = normalize(from(p in subquery(query), select: p.title))
+    assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
   end
 end

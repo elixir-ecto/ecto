@@ -128,7 +128,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     def update_all(query) do
       sources = create_names(query)
-      {table, name, _model} = elem(sources, 0)
+      {table, name, _schema} = elem(sources, 0)
 
       fields = update_fields(query, sources)
       {join, wheres} = update_join(query, sources)
@@ -139,7 +139,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     def delete_all(query) do
       sources = create_names(query)
-      {table, name, _model} = elem(sources, 0)
+      {table, name, _schema} = elem(sources, 0)
 
       join  = using(query, sources)
       where = delete_all_where(query.joins, query, sources)
@@ -236,17 +236,18 @@ if Code.ensure_loaded?(Postgrex) do
     defp distinct(_query, exprs), do: "DISTINCT ON (" <> exprs <> ") "
 
     defp from(sources) do
-      {table, name, _model} = elem(sources, 0)
+      {table, name, _schema} = elem(sources, 0)
       "FROM #{table} AS #{name}"
     end
 
     defp using(%Query{joins: []}, _sources), do: []
     defp using(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
-        %JoinExpr{qual: :inner, on: %QueryExpr{expr: expr}, ix: ix} ->
-          {table, name, _model} = elem(sources, ix)
+        %JoinExpr{qual: :inner, on: %QueryExpr{expr: expr}, ix: ix, source: source} ->
+          {join, name, _schema} = elem(sources, ix)
+          join = join || "(" <> expr(source, sources, query) <> ")"
           where = expr(expr, sources, query)
-          "USING #{table} AS #{name} WHERE " <> where
+          "USING #{join} AS #{name} WHERE " <> where
         %JoinExpr{qual: qual} ->
             error!(query, "PostgreSQL supports only inner joins on delete_all, got: `#{qual}`")
       end)
@@ -287,7 +288,7 @@ if Code.ensure_loaded?(Postgrex) do
       froms =
         "FROM " <> Enum.map_join(joins, ", ", fn
           %JoinExpr{qual: :inner, ix: ix, source: source} ->
-            {join, name, _model} = elem(sources, ix)
+            {join, name, _schema} = elem(sources, ix)
             join = join || "(" <> expr(source, sources, query) <> ")"
             join <> " AS " <> name
           %JoinExpr{qual: qual} ->
@@ -306,7 +307,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp join(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
-          {join, name, _model} = elem(sources, ix)
+          {join, name, _schema} = elem(sources, ix)
           qual = join_qual(qual)
           join = join || "(" <> expr(source, sources, query) <> ")"
           "#{qual} JOIN " <> join <> " AS " <> name <> " ON " <> expr(expr, sources, query)
@@ -405,7 +406,7 @@ if Code.ensure_loaded?(Postgrex) do
       if is_nil(schema) and is_nil(fields) do
         error!(query, "PostgreSQL requires a schema module when using selector " <>
           "#{inspect name} but only the table #{inspect table} was given. " <>
-          "Please specify a model or specify exactly which fields from " <>
+          "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
       Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
@@ -545,11 +546,13 @@ if Code.ensure_loaded?(Postgrex) do
     defp create_names(prefix, sources, pos, limit) when pos < limit do
       current =
         case elem(sources, pos) do
-          {table, model} ->
+          {table, schema} ->
             name = String.first(table) <> Integer.to_string(pos)
-            {quote_table(prefix, table), name, model}
+            {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
             {nil, "f" <> Integer.to_string(pos), nil}
+          %Ecto.SubQuery{query: query} ->
+            {"(" <> all(query) <> ")", "s" <> Integer.to_string(pos), nil}
         end
       [current|create_names(prefix, sources, pos + 1, limit)]
     end

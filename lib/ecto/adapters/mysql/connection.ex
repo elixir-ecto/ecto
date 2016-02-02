@@ -108,7 +108,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def update_all(query) do
       sources = create_names(query)
-      {table, name, _model} = elem(sources, 0)
+      {table, name, _schema} = elem(sources, 0)
 
       update = "UPDATE #{table} AS #{name}"
       fields = update_fields(query, sources)
@@ -120,7 +120,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def delete_all(query) do
       sources = create_names(query)
-      {_table, name, _model} = elem(sources, 0)
+      {_table, name, _schema} = elem(sources, 0)
 
       delete = "DELETE #{name}.*"
       from   = from(sources)
@@ -202,8 +202,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       do: Enum.map_join(fields, ", ", &expr(&1, sources, query))
 
     defp from(sources) do
-      {table, name, _model} = elem(sources, 0)
-      "FROM #{table} AS #{name}"
+      {expr, name, _schema} = elem(sources, 0)
+      "FROM #{expr} AS #{name}"
     end
 
     defp update_fields(%Query{updates: updates} = query, sources) do
@@ -230,7 +230,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp join(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
-          {join, name, _model} = elem(sources, ix)
+          {join, name, _schema} = elem(sources, ix)
           qual = join_qual(qual)
           join = join || "(" <> expr(source, sources, query) <> ")"
           "#{qual} JOIN " <> join <> " AS #{name} ON " <> expr(expr, sources, query)
@@ -321,7 +321,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       if is_nil(schema) and is_nil(fields) do
         error!(query, "MySQL requires a schema module when using selector " <>
           "#{inspect name} but only the table #{inspect table} was given. " <>
-          "Please specify a model or specify exactly which fields from " <>
+          "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
       Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
@@ -457,11 +457,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp create_names(prefix, sources, pos, limit) when pos < limit do
       current =
         case elem(sources, pos) do
-          {table, model} ->
+          {table, schema} ->
             name = String.first(table) <> Integer.to_string(pos)
-            {quote_table(prefix, table), name, model}
+            {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
             {nil, "f" <> Integer.to_string(pos), nil}
+          %Ecto.SubQuery{query: query} ->
+            {"(" <> all(query) <> ")", "s" <> Integer.to_string(pos), nil}
         end
       [current|create_names(prefix, sources, pos + 1, limit)]
     end

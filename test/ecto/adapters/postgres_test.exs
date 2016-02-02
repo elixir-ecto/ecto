@@ -68,6 +68,14 @@ defmodule Ecto.Adapters.PostgresTest do
     end
   end
 
+  test "from with subquery" do
+    query = subquery("posts" |> select([r], {r.x, r.y})) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT s0."x" FROM (SELECT p0."x", p0."y" FROM "posts" AS p0) AS s0}
+
+    query = subquery("posts" |> select([r], {r.x, r.y})) |> select([r], r) |> normalize
+    assert SQL.all(query) == ~s{SELECT s0."x", s0."y" FROM (SELECT p0."x", p0."y" FROM "posts" AS p0) AS s0}
+  end
+
   test "select" do
     query = Model |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
