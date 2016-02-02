@@ -138,7 +138,7 @@ defmodule Ecto.Query.Planner do
   def prepare_sources(%{from: from} = query, adapter) do
     from = from || error!(query, "query must have a from expression")
     from = prepare_source(query, from, adapter)
-    {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins))
+    {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins), adapter)
     %{query | from: from, joins: joins |> Enum.reverse,
               sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
   end
@@ -159,10 +159,13 @@ defmodule Ecto.Query.Planner do
       e -> raise Ecto.SubQueryError, query: query, exception: e
     end
   end
-  # TODO: Incorporate join normalization and fragment
-  defp prepare_source(_query, {_, _} = source, _adapter) do
-    source
-  end
+
+  defp prepare_source(_query, {nil, schema}, _adapter) when is_atom(schema) and schema != nil,
+    do: {schema.__schema__(:source), schema}
+  defp prepare_source(_query, {source, schema}, _adapter) when is_binary(source) and is_atom(schema),
+    do: {source, schema}
+  defp prepare_source(_query, {:fragment, _, _} = source, _adapter),
+    do: source
 
   defp subquery_types(%{assocs: assocs, preloads: preloads} = query)
       when assocs != [] or preloads != [] do
@@ -192,12 +195,12 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp prepare_joins(query, sources, offset) do
-    prepare_joins(query.joins, query, [], sources, [], 1, offset)
+  defp prepare_joins(query, sources, offset, adapter) do
+    prepare_joins(query.joins, query, [], sources, [], 1, offset, adapter)
   end
 
   defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) do
+                     query, joins, sources, tail_sources, counter, offset, adapter) do
     schema =
       case Enum.fetch!(Enum.reverse(sources), ix) do
         {source, nil} ->
@@ -237,7 +240,7 @@ defmodule Ecto.Query.Planner do
     source_ix = counter
 
     {child_joins, child_sources, child_tail} =
-      prepare_joins(child, [child.from], offset + last_ix - 1)
+      prepare_joins(child, [child.from], offset + last_ix - 1, adapter)
 
     # Rewrite joins indexes as mentioned above
     child_joins = Enum.map(child_joins, &rewrite_join(&1, qual, ix, last_ix, source_ix, offset))
@@ -249,23 +252,17 @@ defmodule Ecto.Query.Planner do
     child_sources = child_tail ++ child_sources
 
     prepare_joins(t, query, attach_on(child_joins, on) ++ joins, [current_source|sources],
-                  child_sources ++ tail_sources, counter + 1, offset + length(child_sources))
-  end
-
-  defp prepare_joins([%JoinExpr{source: {source, schema}} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) when is_atom(schema) and schema != nil do
-    source = if is_binary(source), do: {source, schema}, else: {schema.__schema__(:source), schema}
-    join   = %{join | source: source, ix: counter}
-    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
+                  child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
   end
 
   defp prepare_joins([%JoinExpr{source: source} = join|t],
-                     query, joins, sources, tail_sources, counter, offset) do
+                     query, joins, sources, tail_sources, counter, offset, adapter) do
+    source = prepare_source(query, source, adapter)
     join = %{join | source: source, ix: counter}
-    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset)
+    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
   end
 
-  defp prepare_joins([], _query, joins, sources, tail_sources, _counter, _offset) do
+  defp prepare_joins([], _query, joins, sources, tail_sources, _counter, _offset, _adapter) do
     {joins, sources, tail_sources}
   end
 
@@ -525,19 +522,11 @@ defmodule Ecto.Query.Planner do
                    &validate_and_increment(&1, &2, &3, &4, operation, adapter))
   end
 
-  defp validate_and_increment(:from, query, %Ecto.SubQuery{query: inner_query} = subquery, counter, :all, adapter) do
-    try do
-      {inner_query, counter} = normalize(inner_query, :all, adapter, counter)
-      {%{subquery | query: inner_query, params: nil}, counter}
-    rescue
-      e -> raise Ecto.SubQueryError, query: query, exception: e
-    end
-  end
-  defp validate_and_increment(:from, query, %Ecto.SubQuery{}, _counter, kind, _adapter) do
+  defp validate_and_increment(:from, query, %Ecto.SubQuery{}, _counter, kind, _adapter) when kind != :all do
     error! query, "`#{kind}` does not allow subqueries in `from`"
   end
-  defp validate_and_increment(:from, _query, expr, counter, _kind, _adapter) do
-    {expr, counter}
+  defp validate_and_increment(:from, query, expr, counter, _kind, adapter) do
+    validate_and_increment_each(:from, query, expr, expr, counter, adapter)
   end
 
   defp validate_and_increment(kind, query, expr, counter, _operation, adapter)
@@ -573,6 +562,16 @@ defmodule Ecto.Query.Planner do
   defp validate_and_increment_each(kind, query, expr, counter, adapter) do
     {inner, acc} = validate_and_increment_each(kind, query, expr, expr.expr, counter, adapter)
     {%{expr | expr: inner, params: nil}, acc}
+  end
+
+  defp validate_and_increment_each(_kind, query, _expr,
+                                   %Ecto.SubQuery{query: inner_query} = subquery, counter, adapter) do
+    try do
+      {inner_query, counter} = normalize(inner_query, :all, adapter, counter)
+      {%{subquery | query: inner_query, params: nil}, counter}
+    rescue
+      e -> raise Ecto.SubQueryError, query: query, exception: e
+    end
   end
 
   defp validate_and_increment_each(kind, query, expr, ast, counter, adapter) do

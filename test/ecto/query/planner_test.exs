@@ -259,12 +259,19 @@ defmodule Ecto.Query.PlannerTest do
     assert key == :nocache
   end
 
-  # TODO: support parameter shifting
   test "prepare: subqueries" do
     {query, params, key} = prepare(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from
     assert params == []
     assert key == [:all, [:all, {"posts", Ecto.Query.PlannerTest.Post, 112914533}]]
+
+    posts = from(p in Post, where: p.title == ^"hello")
+    query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
+    {query, params, key} = prepare(query, [])
+    assert {"comments", Ecto.Query.PlannerTest.Comment} = query.from
+    assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
+    assert params == ["hello"]
+    assert [[], {:join, [{:inner, [:all|_], _}]}, {"comments", _, _}] = key
   end
 
   test "prepare: subqueries do not support association joins" do
@@ -550,9 +557,15 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: subqueries with params" do
-    query = from p in Post, where: [title: ^"hello"], order_by: [asc: p.text == ^"world"]
-    query = from p in subquery(query), select: [p.title, ^"first"], where: p.text == ^"last"
+  test "normalize: subqueries with params in from" do
+    query = from p in Post,
+              where: [title: ^"hello"],
+              order_by: [asc: p.text == ^"world"]
+
+    query = from p in subquery(query),
+              where: p.text == ^"last",
+              select: [p.title, ^"first"]
+
     {query, params} = normalize_with_params(query)
     assert [_, {:^, _, [0]}] = query.select.expr
     assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = query.from.query.wheres
@@ -561,7 +574,25 @@ defmodule Ecto.Query.PlannerTest do
     assert params == ["first", "hello", "world", "last"]
   end
 
-  test "normalize: merges subqueries fields when requests" do
+  test "normalize: subqueries with params in join" do
+    query = from p in Post,
+              where: [title: ^"hello"],
+              order_by: [asc: p.text == ^"world"]
+
+    query = from c in Comment,
+              join: p in subquery(query),
+              on: p.text == ^"last",
+              select: [p.title, ^"first"]
+
+    {query, params} = normalize_with_params(query)
+    assert [_, {:^, _, [0]}] = query.select.expr
+    assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = hd(query.joins).source.query.wheres
+    assert [%{expr: [asc: {:==, [], [_, {:^, [], [2]}]}]}] = hd(query.joins).source.query.order_bys
+    assert {:==, [], [_, {:^, [], [3]}]} = hd(query.joins).on.expr
+    assert params == ["first", "hello", "world", "last"]
+  end
+
+  test "normalize: merges subqueries fields when requested" do
     query = from p in Post, select: {p.id, p.title}
     query = normalize(from(subquery(query), []))
     assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
@@ -569,6 +600,14 @@ defmodule Ecto.Query.PlannerTest do
     query = from p in Post, select: {p.id, p.title}
     query = normalize(from(p in subquery(query), select: p.title))
     assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+
+    query = from p in Post, select: {p.id, p.title}
+    query = normalize(from(c in Comment, join: p in subquery(query), select: p))
+    assert query.select.fields == [{:&, [], [1, [:id, :title], 2]}]
+
+    query = from p in Post, select: {p.id, p.title}
+    query = normalize(from(c in Comment, join: p in subquery(query), select: p.title))
+    assert query.select.fields == [{{:., [], [{:&, [], [1]}, :title]}, [ecto_type: :string], []}]
 
     query = from p in Post, select: {p.id, p.title}
     assert_raise Ecto.QueryError, ~r/cannot take multiple fields on fragment or subquery sources in query/, fn ->
