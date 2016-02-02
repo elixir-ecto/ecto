@@ -68,12 +68,13 @@ defmodule Mix.Ecto do
   @doc """
   Ensures the given repository is started and running.
   """
-  @spec ensure_started(Ecto.Repo.t) :: Ecto.Repo.t | no_return
-  def ensure_started(repo) do
+  @spec ensure_started(Ecto.Repo.t, Keyword.t) :: Ecto.Repo.t | no_return
+  def ensure_started(repo, opts) do
     {:ok, _} = Application.ensure_all_started(:ecto)
     {:ok, _} = Application.ensure_all_started(repo.__adapter__.application)
 
-    case repo.start_link do
+    pool_size = Keyword.get(opts, :pool_size, 1)
+    case repo.start_link(pool_size: pool_size) do
       {:ok, pid} -> {:ok, pid}
       {:error, {:already_started, _}} -> {:ok, nil}
       {:error, error} ->

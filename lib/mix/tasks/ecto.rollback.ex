@@ -39,6 +39,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
     * `--to` / `-v` - revert all migrations down to and including version
     * `--quiet` - do not log migration commands
     * `--prefix` - the prefix to run migrations on
+    * `--pool-size` - the pool size if the repository is started only for the task (defaults to 1)
 
   """
 
@@ -47,7 +48,8 @@ defmodule Mix.Tasks.Ecto.Rollback do
     repos = parse_repo(args)
 
     {opts, _, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean, quiet: :boolean, prefix: :string],
+      switches: [all: :boolean, step: :integer, to: :integer, start: :boolean,
+                 quiet: :boolean, prefix: :string, pool_size: :integer],
       aliases: [n: :step, v: :to]
 
     unless opts[:to] || opts[:step] || opts[:all] do
@@ -60,7 +62,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
     Enum.each repos, fn repo ->
       ensure_repo(repo, args)
-      {:ok, pid} = ensure_started(repo)
+      {:ok, pid} = ensure_started(repo, opts)
 
       migrator.(repo, migrations_path(repo), :down, opts)
       ensure_stopped(repo, pid)

@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   import Mix.Tasks.Ecto.Rollback, only: [run: 2]
 
   defmodule Repo do
-    def start_link do
+    def start_link(_) do
       Process.put(:started, true)
       Task.start_link fn ->
         Process.flag(:trap_exit, true)
@@ -28,7 +28,7 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   end
 
   defmodule StartedRepo do
-    def start_link do
+    def start_link(_) do
       {:error, {:already_started, :whatever}}
     end
 
