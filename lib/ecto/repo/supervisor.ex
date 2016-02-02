@@ -30,8 +30,7 @@ defmodule Ecto.Repo.Supervisor do
   def parse_config(repo, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
     config  = Application.get_env(otp_app, repo, [])
-    config  = Keyword.merge(config, opts)
-    adapter = config[:adapter]
+    adapter = opts[:adapter] || config[:adapter]
 
     unless adapter do
       raise ArgumentError, "missing :adapter configuration in " <>
