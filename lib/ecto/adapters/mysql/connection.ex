@@ -92,7 +92,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     def all(query) do
       sources = create_names(query)
 
-      from     = from(sources)
+      from     = from(query, sources)
       select   = select(query, sources)
       join     = join(query, sources)
       where    = where(query, sources)
@@ -106,11 +106,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
-    def update_all(query) do
+    def update_all(%{from: from} = query) do
       sources = create_names(query)
-      {table, name, _model} = elem(sources, 0)
+      {from, name} = get_source(query, sources, 0, from)
 
-      update = "UPDATE #{table} AS #{name}"
+      update = "UPDATE #{from} AS #{name}"
       fields = update_fields(query, sources)
       join   = join(query, sources)
       where  = where(query, sources)
@@ -120,10 +120,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     def delete_all(query) do
       sources = create_names(query)
-      {_table, name, _model} = elem(sources, 0)
+      {_, name, _} = elem(sources, 0)
 
       delete = "DELETE #{name}.*"
-      from   = from(sources)
+      from   = from(query, sources)
       join   = join(query, sources)
       where  = where(query, sources)
 
@@ -201,9 +201,9 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp select(fields, sources, query),
       do: Enum.map_join(fields, ", ", &expr(&1, sources, query))
 
-    defp from(sources) do
-      {table, name, _model} = elem(sources, 0)
-      "FROM #{table} AS #{name}"
+    defp from(%{from: from} = query, sources) do
+      {from, name} = get_source(query, sources, 0, from)
+      "FROM #{from} AS #{name}"
     end
 
     defp update_fields(%Query{updates: updates} = query, sources) do
@@ -230,9 +230,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp join(%Query{joins: joins} = query, sources) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
-          {join, name, _model} = elem(sources, ix)
+          {join, name} = get_source(query, sources, ix, source)
           qual = join_qual(qual)
-          join = join || "(" <> expr(source, sources, query) <> ")"
           "#{qual} JOIN " <> join <> " AS #{name} ON " <> expr(expr, sources, query)
       end)
     end
@@ -316,12 +315,12 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "#{name}.#{quote_name(field)}"
     end
 
-    defp expr({:&, _, [idx, fields]}, sources, query) do
+    defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
       {table, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
         error!(query, "MySQL requires a schema module when using selector " <>
           "#{inspect name} but only the table #{inspect table} was given. " <>
-          "Please specify a model or specify exactly which fields from " <>
+          "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
       Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
@@ -351,6 +350,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp expr({:not, _, [expr]}, sources, query) do
       "NOT (" <> expr(expr, sources, query) <> ")"
+    end
+
+    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
+      all(query)
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
@@ -457,11 +460,13 @@ if Code.ensure_loaded?(Mariaex.Connection) do
     defp create_names(prefix, sources, pos, limit) when pos < limit do
       current =
         case elem(sources, pos) do
-          {table, model} ->
+          {table, schema} ->
             name = String.first(table) <> Integer.to_string(pos)
-            {quote_table(prefix, table), name, model}
+            {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
             {nil, "f" <> Integer.to_string(pos), nil}
+          %Ecto.SubQuery{} ->
+            {nil, "s" <> Integer.to_string(pos), nil}
         end
       [current|create_names(prefix, sources, pos + 1, limit)]
     end
@@ -677,6 +682,11 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Helpers
 
+    defp get_source(query, sources, ix, source) do
+      {expr, name, _schema} = elem(sources, ix)
+      {expr || "(" <> expr(source, sources, query) <> ")", name}
+    end
+
     defp quote_name(name)
     defp quote_name(name) when is_atom(name),
       do: quote_name(Atom.to_string(name))
@@ -690,7 +700,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     defp quote_table(nil, name),    do: quote_table(name)
     defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
-
 
     defp quote_table(name) when is_atom(name),
       do: quote_table(Atom.to_string(name))

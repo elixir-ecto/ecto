@@ -68,6 +68,14 @@ defmodule Ecto.Adapters.PostgresTest do
     end
   end
 
+  test "from with subquery" do
+    query = subquery("posts" |> select([r], {r.x, r.y})) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT s0."x" FROM (SELECT p0."x", p0."y" FROM "posts" AS p0) AS s0}
+
+    query = subquery("posts" |> select([r], {r.x, r.y})) |> select([r], r) |> normalize
+    assert SQL.all(query) == ~s{SELECT s0."x", s0."y" FROM (SELECT p0."x", p0."y" FROM "posts" AS p0) AS s0}
+  end
+
   test "select" do
     query = Model |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT m0."x", m0."y" FROM "model" AS m0}
@@ -434,10 +442,24 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s{SELECT TRUE FROM "model" AS m0 INNER JOIN "model2" AS m1 ON m1."z" = m1."z"}
   end
 
-  test "join without model" do
+  test "join without schema" do
     query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], true) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT TRUE FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
+  end
+
+  test "join with subquery" do
+    posts = subquery("posts" |> where(title: ^"hello") |> select([r], {r.x, r.y}))
+
+    query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p.x) |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT s1."x" FROM "comments" AS c0 } <>
+           ~s{INNER JOIN (SELECT p0."x", p0."y" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
+
+    query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p) |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT s1."x", s1."y" FROM "comments" AS c0 } <>
+           ~s{INNER JOIN (SELECT p0."x", p0."y" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
   end
 
   test "join with prefix" do

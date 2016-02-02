@@ -13,6 +13,10 @@ defimpl Ecto.Queryable, for: Ecto.Query do
   def to_query(query), do: query
 end
 
+defimpl Ecto.Queryable, for: Ecto.SubQuery do
+  def to_query(subquery), do: %Ecto.Query{from: subquery}
+end
+
 defimpl Ecto.Queryable, for: BitString do
   def to_query(source) when is_binary(source),
     do: %Ecto.Query{from: {source, nil}}
@@ -25,15 +29,13 @@ defimpl Ecto.Queryable, for: Atom do
     rescue
       UndefinedFunctionError ->
         message = if :code.is_loaded(module) do
-          "the given module is not queryable"
+          "the given module does not provide a schema"
         else
           "the given module does not exist"
         end
 
         raise Protocol.UndefinedError,
-             protocol: @protocol,
-                value: module,
-          description: message
+          protocol: @protocol, value: module, description: message
     end
   end
 end

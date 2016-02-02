@@ -34,6 +34,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in {"user_posts", Post}, [])) ==
            ~s[from p in {"user_posts", Inspect.Post}]
+
+    assert i(from(subquery(Post), [])) ==
+           ~s{from p in subquery(from p in Inspect.Post)}
   end
 
   test "join" do
@@ -54,6 +57,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in Post, inner_join: y in fragment("foo ? and ?", x.id, ^1), on: y.id == x.id)) ==
            ~s{from p in Inspect.Post, join: f in fragment("foo ? and ?", p.id, ^1), on: f.id == p.id}
+
+    assert i(from(x in Post, join: y in subquery(Comment), on: x.id == y.id)) ==
+           ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), on: p.id == c.id}
   end
 
   test "where" do

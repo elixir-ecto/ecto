@@ -336,7 +336,7 @@ defmodule Ecto.Adapters.SQL do
     execute_and_cache(repo, id, update, prepared, params, nil, opts)
   end
 
-  def execute(repo, %{select: %{fields: fields}}, {:cache, update, {id, prepared}}, params, process, opts) do
+  def execute(repo, %{fields: fields}, {:cache, update, {id, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
@@ -347,7 +347,7 @@ defmodule Ecto.Adapters.SQL do
     {num, rows}
   end
 
-  def execute(repo, %{select: %{fields: fields}}, {_, {_id, prepared_or_cached}}, params, process, opts) do
+  def execute(repo, %{fields: fields}, {_, {_id, prepared_or_cached}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared_or_cached], params, mapper, opts)
@@ -391,8 +391,8 @@ defmodule Ecto.Adapters.SQL do
 
   defp process_row(row, process, fields) do
     Enum.map_reduce(fields, row, fn
-      {:&, _, [_, fields]} = field, acc ->
-        case split_and_not_nil(acc, length(fields), true, []) do
+      {:&, _, [_, _, counter]} = field, acc ->
+        case split_and_not_nil(acc, counter, true, []) do
           {nil, rest} -> {nil, rest}
           {val, rest} -> {process.(field, val, nil), rest}
         end

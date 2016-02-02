@@ -1,3 +1,10 @@
+defmodule Ecto.SubQuery do
+  @doc """
+  Stores subquery information.
+  """
+  defstruct [:query, :params, :types, :fields, :sources, :select, :cache]
+end
+
 defmodule Ecto.Query do
   @moduledoc ~S"""
   Provides the Query DSL.
@@ -269,7 +276,7 @@ defmodule Ecto.Query do
 
   defmodule SelectExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, fields: [], params: %{}, take: %{}]
+    defstruct [:expr, :file, :line, :fields, params: %{}, take: %{}]
   end
 
   defmodule JoinExpr do
@@ -297,6 +304,30 @@ defmodule Ecto.Query do
   alias Ecto.Query.Builder.Join
   alias Ecto.Query.Builder.Lock
   alias Ecto.Query.Builder.Update
+
+  @doc """
+  Converts a query into a subquery.
+
+  If a subquery is given, returns the subquery itself.
+  If any other value is given, it is converted to a query via
+  `Ecto.Queryable` and wrapped in the `Ecto.SubQuery` struct.
+
+  Subqueries are currently only supported in the `from`
+  and `join` fields.
+
+  ## Examples
+
+      # Get the average salary of the top 10 highest salaries
+      query = from Employee, order_by: [desc: :salary], limit: 10
+      from e in subquery(query), select: avg(e.salary)
+
+  """
+  def subquery(%Ecto.SubQuery{} = subquery),
+    do: subquery
+  def subquery(%Ecto.Query{} = query),
+    do: %Ecto.SubQuery{query: query}
+  def subquery(queryable),
+    do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
   @doc """
   Resets a previously set field on a query.

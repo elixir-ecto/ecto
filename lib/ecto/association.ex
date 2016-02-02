@@ -570,7 +570,7 @@ defmodule Ecto.Association.HasThrough do
     query =
       %{query | joins: query.joins ++ [join]}
       |> joins_query(t, position)
-      |> Ecto.Query.Planner.prepare_sources()
+      |> Ecto.Query.Planner.prepare_sources(:adapter_wont_be_needed)
 
     # Our source is going to be the last join after
     # traversing them all.

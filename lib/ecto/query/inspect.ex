@@ -1,5 +1,6 @@
 defimpl Inspect, for: Ecto.Query do
   import Inspect.Algebra
+  import Kernel, except: [to_string: 1]
   alias Ecto.Query.JoinExpr
 
   @doc false
@@ -61,6 +62,9 @@ defimpl Inspect, for: Ecto.Query do
   defp unbound_from(from = {source, model}) do
     inspect if(source == model.__schema__(:source), do: model, else: from)
   end
+  defp unbound_from(%Ecto.SubQuery{query: query}) do
+    "subquery(#{to_string query})"
+  end
 
   defp joins(joins, names) do
     joins
@@ -73,13 +77,13 @@ defimpl Inspect, for: Ecto.Query do
     [{join_qual(qual), string}]
   end
 
-  defp join(%JoinExpr{qual: qual, source: {source, model}, on: on}, name, names) do
-    string = "#{name} in #{unbound_from {source, model}}"
+  defp join(%JoinExpr{qual: qual, source: {:fragment, _, _} = source, on: on} = part, name, names) do
+    string = "#{name} in #{expr(source, names, part)}"
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
-  defp join(%JoinExpr{qual: qual, source: source, on: on} = part, name, names) do
-    string = "#{name} in #{expr(source, names, part)}"
+  defp join(%JoinExpr{qual: qual, source: source, on: on}, name, names) do
+    string = "#{name} in #{unbound_from source}"
     [{join_qual(qual), string}, on: expr(on, names)]
   end
 
@@ -183,20 +187,21 @@ defimpl Inspect, for: Ecto.Query do
   defp join_qual(:full),  do: :full_join
 
   defp collect_sources(query) do
-    from_sources(query.from) ++ join_sources(query.joins)
+    [from_sources(query.from) | join_sources(query.joins)]
   end
 
-  defp from_sources({source, model}), do: [model || source]
-  defp from_sources(nil),             do: ["query"]
+  defp from_sources(%Ecto.SubQuery{query: query}), do: from_sources(query.from)
+  defp from_sources({source, model}), do: model || source
+  defp from_sources(nil), do: "query"
 
   defp join_sources(joins) do
     Enum.map(joins, fn
       %JoinExpr{assoc: {_var, assoc}} ->
         assoc
-      %JoinExpr{source: {source, model}} ->
-        model || source
       %JoinExpr{source: {:fragment, _, _}} ->
         "fragment"
+      %JoinExpr{source: source} ->
+        from_sources(source)
     end)
   end
 
