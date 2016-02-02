@@ -450,6 +450,34 @@ defmodule Ecto.Integration.RepoTest do
     assert_raise Ecto.NoResultsError, fn -> TestRepo.last!(query) end
   end
 
+  test "aggregate" do
+    assert TestRepo.aggregate(Post, :max, :visits) == nil
+
+    TestRepo.insert!(%Post{visits: 10})
+    TestRepo.insert!(%Post{visits: 12})
+    TestRepo.insert!(%Post{visits: 14})
+    TestRepo.insert!(%Post{visits: 14})
+
+    # Barebones
+    assert TestRepo.aggregate(Post, :max, :visits) == 14
+    assert TestRepo.aggregate(Post, :min, :visits) == 10
+    assert TestRepo.aggregate(Post, :sum, :visits) == 50
+    assert TestRepo.aggregate(Post, :count, :visits) == 4
+    assert %Decimal{} = TestRepo.aggregate(Post, :avg, :visits)
+
+    # With order_by
+    query = from Post, order_by: [asc: :visits]
+    assert TestRepo.aggregate(query, :max, :visits) == 14
+
+    # With order_by and limit
+    query = from Post, order_by: [asc: :visits], limit: 2
+    assert TestRepo.aggregate(query, :max, :visits) == 12
+
+    # With distinct
+    query = from Post, order_by: [asc: :visits], distinct: true
+    assert TestRepo.aggregate(query, :count, :visits) == 3
+  end
+
   test "insert all" do
     assert {2, nil} = TestRepo.insert_all("comments", [[text: "1"], %{text: "2", lock_version: 2}])
     assert [%Comment{text: "1", lock_version: 1},

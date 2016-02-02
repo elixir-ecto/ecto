@@ -69,7 +69,7 @@ defmodule Ecto.Integration.SubQueryTest do
            TestRepo.all(from c in Comment, join: p in subquery(query), on: c.post_id == p.id, select: p)
   end
 
-  test "from: subqueries with parameters" do
+  test "join: subqueries with parameters" do
     TestRepo.insert!(%Post{visits: 10, text: "hello"})
     TestRepo.insert!(%Post{visits: 11, text: "hello"})
     TestRepo.insert!(%Post{visits: 13, text: "world"})

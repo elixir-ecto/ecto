@@ -159,6 +159,11 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
       end
 
+      def aggregate(queryable, aggregate, field, opts \\ [])
+          when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
+        Ecto.Repo.Queryable.aggregate(__MODULE__, @adapter, queryable, aggregate, field, opts)
+      end
+
       def first(queryable, opts \\ []) do
         Ecto.Repo.Queryable.first(__MODULE__, @adapter, queryable, opts)
       end
@@ -310,6 +315,34 @@ defmodule Ecto.Repo do
 
   """
   @callback get_by!(Ecto.Queryable.t, Keyword.t | Map.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
+
+  @doc """
+  Calculate the given `aggregate` over the given `field`.
+
+  If the query has a limit, offset or distinct set, it will be
+  automatically wrapped in a subquery in order to return the
+  proper result.
+
+  Any preload or select in the query will be ignored in favor of
+  the column being aggregated.
+
+  The aggregation will fail if any `group_by` field is set.
+
+  ## Options
+
+  See the "Shared options" section at the module documentation.
+
+  ## Examples
+
+      # Returns the number of visits per blog post
+      Repo.aggregate(Post, :avg, :visits)
+
+      # Returns the average number of visits for the top 10
+      query = from Post, limit: 10
+      Repo.aggregate(Post, :avg, :visits)
+  """
+  @callback aggregate(Ecto.Queryable.t, aggregate :: :avg | :count | :max | :min | :sum,
+                      field :: atom, Keyword.t) :: term | nil
 
   @doc """
   Fetches the first result from the query.

@@ -3,6 +3,7 @@ defmodule Ecto.Repo.Queryable do
   # for query related functionality.
   @moduledoc false
 
+  alias Ecto.Query
   alias Ecto.Queryable
   alias Ecto.Query.Planner
 
@@ -44,6 +45,28 @@ defmodule Ecto.Repo.Queryable do
     one!(repo, adapter, query_for_last(repo, queryable), opts)
   end
 
+  def aggregate(repo, adapter, queryable, aggregate, field, opts) do
+    query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
+    ast   = field(0, field)
+
+    query =
+      case query do
+        %{group_bys: [_|_]} ->
+          raise ArgumentError, "cannot aggregate on query with group_by"
+        %{distinct: nil, limit: nil, offset: nil} ->
+          %{query | order_bys: []}
+        _ ->
+          select = %Query.SelectExpr{expr: ast, file: __ENV__.file, line: __ENV__.line}
+          %{query | select: select}
+          |> Query.subquery()
+          |> Queryable.Ecto.SubQuery.to_query()
+      end
+
+    select = %Query.SelectExpr{expr: {aggregate, [], [ast]},
+                               file: __ENV__.file, line: __ENV__.line}
+    one! repo, adapter, %{query | select: select}, opts
+  end
+
   def one(repo, adapter, queryable, opts) do
     case all(repo, adapter, queryable, opts) do
       [one] -> one
@@ -65,7 +88,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def update_all(repo, adapter, queryable, updates, opts) when is_list(opts) do
-    query = Ecto.Query.from q in queryable, update: ^updates
+    query = Query.from q in queryable, update: ^updates
     update_all(repo, adapter, query, opts)
   end
 
@@ -79,11 +102,8 @@ defmodule Ecto.Repo.Queryable do
 
   ## Helpers
 
-  def execute(operation, repo, adapter, queryable, opts) when is_list(opts) do
-    {meta, prepared, params} =
-      queryable
-      |> Queryable.to_query()
-      |> Planner.query(operation, repo, adapter)
+  defp execute(operation, repo, adapter, %Ecto.Query{} = query, opts) when is_list(opts) do
+    {meta, prepared, params} = Planner.query(query, operation, repo, adapter)
 
     case meta do
       %{fields: nil} ->
@@ -97,6 +117,10 @@ defmodule Ecto.Repo.Queryable do
           |> Ecto.Repo.Assoc.query(assocs, sources)
           |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select, fields), opts)}
     end
+  end
+
+  defp execute(operation, repo, adapter, queryable, opts) when is_list(opts) do
+    execute(operation, repo, adapter, Queryable.to_query(queryable), opts)
   end
 
   defp preprocess(prefix, sources, adapter) do
@@ -128,7 +152,7 @@ defmodule Ecto.Repo.Queryable do
     load!(type, value, adapter)
   end
 
-  defp preprocess(%Ecto.Query.Tagged{tag: tag}, value, _prefix, _context, _sources, adapter) do
+  defp preprocess(%Query.Tagged{tag: tag}, value, _prefix, _context, _sources, adapter) do
     load!(tag, value, adapter)
   end
 
@@ -216,11 +240,11 @@ defmodule Ecto.Repo.Queryable do
 
   defp query_for_get(repo, queryable, id) do
     query = Queryable.to_query(queryable)
-    Ecto.Query.from(x in query, where: field(x, ^assert_pk!(repo, query)) == ^id)
+    Query.from(x in query, where: field(x, ^assert_pk!(repo, query)) == ^id)
   end
 
   defp query_for_get_by(_repo, queryable, clauses) do
-    Ecto.Query.where(queryable, [], ^Enum.to_list(clauses))
+    Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
   defp query_for_first(repo, queryable) do
@@ -250,12 +274,16 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp limit do
-    %Ecto.Query.QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
+    %Query.QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
+  end
+
+  defp field(ix, field) when is_integer(ix) and is_atom(field) do
+    {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
   defp order_by_pk(repo, query, dir) do
-    %Ecto.Query.QueryExpr{expr: [{dir, {{:., [], [{:&, [], [0]}, assert_pk!(repo, query)]}, [], []}}],
-                          params: [], file: __ENV__.file, line: __ENV__.line}
+    %Query.QueryExpr{expr: [{dir, field(0, assert_pk!(repo, query))}],
+                     params: [], file: __ENV__.file, line: __ENV__.line}
   end
 
   defp assert_pk!(repo, query) do
