@@ -14,7 +14,7 @@ defmodule Ecto.Integration.AssocTest do
 
   test "has_many assoc" do
     p1 = TestRepo.insert!(%Post{title: "1"})
-    p2 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
 
     %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
     %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
