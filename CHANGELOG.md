@@ -31,6 +31,27 @@ One should write:
 
 TODO.
 
+### Subqueries
+
+Ecto v2.0 introduces `Ecto.Query.subquery/1` that will convert any query into a subquery to be used either as part of a `from` or a `join`. For example, if you want to calculate the average number of visits per posts, you can write:
+
+    query = from p in Post, select: avg(p.visits)
+    TestRepo.all(query) #=> [#Decimal<1743>]
+
+However, if you want to calculate the average only across the top 10 most visited, you need subqueries:
+
+    query = from p in Post, select: [:visits], order_by: [desc: :visits], limit: 10
+    TestRepo.all(from p in subquery(query), select: max(p.visits)) #=> [#Decimal<4682>]
+
+Or alternatively, for the particular example where you are calculating aggregates, use the new `Repo.aggregate` function that handles those concerns automatically for you:
+
+    # Average across all
+    TestRepo.aggregate(Post, :avg, :visits) #=> #Decimal<1743>
+
+    # Average across top 10
+    query = from Post, order_by: [desc: :visits], limit: 10
+    TestRepo.aggregate(query, :avg, :visits) #=> #Decimal<4682>
+
 ### Concurrent transactional tests
 
 Ecto has reimplemented the `Ecto.Adapters.SQL.Sandbox` pool used for testing to use an ownership mechanism. This allows tests to safely run concurrently even when depending on the database. To use, declare sandbox as your pool in your repository configuration, as before:
@@ -122,14 +143,17 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Adapter] Support prepared queries in adapters
   * [Migration] Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
   * [Migration] Allow the migration table name to be configured in the repository via `:migration_source`
+  * [Migration] Use pool of 1 connection for `mix ecto.migrate/rollback`
   * [Postgres] Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
   * [Postgres] Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
   * [Query] Allow the `:on` field to be specified with association joins
   * [Query] Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
+  * [Repo] Add `Repo.aggregate/4` for easy aggregations
   * [Repo] Allow custom `select` field in preload queries
   * [Repo] Support the `:force` option in preloads
   * [Repo] Perform preloads in parallel by default
   * [Repo] Add `Repo.in_transaction?` to know if the current process is in a transaction
+  * [Repo] Add `Repo.first/2`, `Repo.first!/2`, `Repo.last/2`, `Repo.last!/2` and `Repo.aggregate/4`
   * [Schema] Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
   * [Schema] Support composite primary keys
 
