@@ -323,6 +323,13 @@ defmodule Ecto.Query.Planner do
     {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
   end
 
+  defp merge_cache(:from, _query, expr, {cache, params}, _adapter) do
+    case expr do
+      %Ecto.SubQuery{params: inner} -> {cache, Enum.reverse(inner, params)}
+      _ -> {cache, params}
+    end
+  end
+
   defp merge_cache(kind, query, expr, {cache, params}, adapter)
       when kind in ~w(select distinct limit offset)a do
     if expr do
@@ -495,6 +502,17 @@ defmodule Ecto.Query.Planner do
   its fields and associations exist and are valid.
   """
   def normalize(query, operation, adapter) do
+    query
+    |> normalize(operation, adapter, 0)
+    |> elem(0)
+    |> normalize_select(operation)
+  rescue
+    e ->
+      # Reraise errors so we ignore the planner inner stacktrace
+      reraise e
+  end
+
+  defp normalize(query, operation, adapter, counter) do
     case operation do
       :all ->
         assert_no_update!(query, operation)
@@ -506,18 +524,26 @@ defmodule Ecto.Query.Planner do
         assert_only_filter_expressions!(query, operation)
     end
 
-    query
-    |> traverse_exprs(operation, 0, &validate_and_increment(&1, &2, &3, &4, adapter))
-    |> elem(0)
-    |> normalize_from(operation, adapter)
-    |> normalize_select(operation)
-  rescue
-    e ->
-      # Reraise errors so we ignore the planner inner stacktrace
-      reraise e
+    traverse_exprs(query, operation, counter,
+                   &validate_and_increment(&1, &2, &3, &4, operation, adapter))
   end
 
-  defp validate_and_increment(kind, query, expr, counter, adapter)
+  defp validate_and_increment(:from, query, %Ecto.SubQuery{query: inner_query} = subquery, counter, :all, adapter) do
+    try do
+      {inner_query, counter} = normalize(inner_query, :all, adapter, counter)
+      {%{subquery | query: inner_query, params: nil}, counter}
+    rescue
+      e -> raise Ecto.SubQueryError, query: query, exception: e
+    end
+  end
+  defp validate_and_increment(:from, query, %Ecto.SubQuery{}, _counter, kind, _adapter) do
+    error! query, "`#{kind}` does not allow subqueries in `from`"
+  end
+  defp validate_and_increment(:from, _query, expr, counter, _kind, _adapter) do
+    {expr, counter}
+  end
+
+  defp validate_and_increment(kind, query, expr, counter, _operation, adapter)
       when kind in ~w(select distinct limit offset)a do
     if expr do
       validate_and_increment_each(kind, query, expr, counter, adapter)
@@ -526,7 +552,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp validate_and_increment(kind, query, exprs, counter, adapter)
+  defp validate_and_increment(kind, query, exprs, counter, _operation, adapter)
       when kind in ~w(where group_by having order_by update)a do
     {exprs, counter} =
       Enum.reduce(exprs, {[], counter}, fn
@@ -539,7 +565,7 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(exprs), counter}
   end
 
-  defp validate_and_increment(:join, query, exprs, counter, adapter) do
+  defp validate_and_increment(:join, query, exprs, counter, _operation, adapter) do
     Enum.map_reduce exprs, counter, fn join, acc ->
       {source, acc} = validate_and_increment_each(:join, query, join, join.source, acc, adapter)
       {on, acc} = validate_and_increment_each(:join, query, join.on, acc, adapter)
@@ -605,22 +631,6 @@ defmodule Ecto.Query.Planner do
       0 -> {[], acc}
       _ -> {{:^, meta, [acc, length]}, acc + length}
     end
-  end
-
-  defp normalize_from(%{from: %Ecto.SubQuery{query: inner_query} = subquery} = query, :all, adapter) do
-    try do
-      %{subquery | query: normalize(inner_query, :all, adapter), params: nil}
-    rescue
-      e -> raise Ecto.SubQueryError, query: query, exception: e
-    else
-      subquery -> %{query | from: subquery}
-    end
-  end
-  defp normalize_from(%{from: %Ecto.SubQuery{}} = query, kind, _adapter) do
-    error! query, "`#{kind}` does not allow subqueries in `from`"
-  end
-  defp normalize_from(query, _kind, _adapter) do
-    query
   end
 
   defp normalize_select(query, operation) when operation in [:update_all, :delete_all] do
@@ -748,6 +758,9 @@ defmodule Ecto.Query.Planner do
 
     {select, acc} = fun.(:select, original, original.select, acc)
     query = %{query | select: select}
+
+    {from, acc} = fun.(:from, original, original.from, acc)
+    query = %{query | from: from}
 
     {distinct, acc} = fun.(:distinct, original, original.distinct, acc)
     query = %{query | distinct: distinct}

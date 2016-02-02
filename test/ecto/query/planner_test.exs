@@ -548,6 +548,17 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: subqueries with params" do
+    query = from p in Post, where: [title: ^"hello"], order_by: [asc: p.text == ^"world"]
+    query = from p in subquery(query), select: [p.title, ^"first"], where: p.text == ^"last"
+    {query, params} = normalize_with_params(query)
+    assert [_, {:^, _, [0]}] = query.select.expr
+    assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = query.from.query.wheres
+    assert [%{expr: [asc: {:==, [], [_, {:^, [], [2]}]}]}] = query.from.query.order_bys
+    assert [%{expr: {:==, [], [_, {:^, [], [3]}]}}] = query.wheres
+    assert params == ["first", "hello", "world", "last"]
+  end
+
   test "normalize: merges subqueries fields when requests" do
     query = from p in Post, select: {p.id, p.title}
     query = normalize(from(subquery(query), []))

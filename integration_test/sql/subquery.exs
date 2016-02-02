@@ -46,4 +46,14 @@ defmodule Ecto.Integration.SubQueryTest do
     query = from p in Post, order_by: [asc: :visits], limit: 2
     assert [11] = TestRepo.all(from p in subquery(query), select: max(p.visits))
   end
+
+  test "subqueries with parameters" do
+    TestRepo.insert!(%Post{visits: 10, text: "hello"})
+    TestRepo.insert!(%Post{visits: 11, text: "hello"})
+    TestRepo.insert!(%Post{visits: 13, text: "world"})
+
+    query = from p in Post, where: p.visits >= ^11 and p.visits <= ^13
+    query = from p in subquery(query), where: p.text == ^"hello", select: fragment("? + ?", p.visits, ^1)
+    assert [12] = TestRepo.all(query)
+  end
 end
