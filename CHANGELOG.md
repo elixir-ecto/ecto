@@ -41,7 +41,7 @@ Ecto v2.0 introduces `Ecto.Query.subquery/1` that will convert any query into a 
 However, if you want to calculate the average only across the top 10 most visited, you need subqueries:
 
     query = from p in Post, select: [:visits], order_by: [desc: :visits], limit: 10
-    TestRepo.all(from p in subquery(query), select: max(p.visits)) #=> [#Decimal<4682>]
+    TestRepo.all(from p in subquery(query), select: avg(p.visits)) #=> [#Decimal<4682>]
 
 Or alternatively, for the particular example where you are calculating aggregates, use the new `Repo.aggregate` function that handles those concerns automatically for you:
 

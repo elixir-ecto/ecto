@@ -33,6 +33,7 @@ defmodule Ecto.Query.PlannerTest do
       field :visits, :integer
       field :links, {:array, Custom.Permalink}
       has_many :comments, Ecto.Query.PlannerTest.Comment
+      has_many :extra_comments, Ecto.Query.PlannerTest.Comment
     end
   end
 
@@ -465,23 +466,49 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: select with take" do
-    query = from(Post, []) |> select([p], take(p, [:id, :title])) |> normalize()
+    query = Post |> select([p], take(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
 
-    query = from(Post, []) |> select([p], {take(p, [:id, :title]), p.title}) |> normalize()
+    query = Post |> select([p], {take(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
            [{:&, [], [0, [:id, :title], 2]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query =
-      from(Post, [])
+      Post
       |> join(:inner, [_], c in Comment)
       |> select([p, c], {p, take(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
            [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
             {:&, [], [1, [:id, :text], 2]}]
+  end
+
+  test "normalize: select with take on assoc" do
+    query =
+      Post
+      |> join(:inner, [_], c in Comment)
+      |> select([p, c], take(p, [:id, :title, comments: [:id, :text]]))
+      |> preload([p, c], comments: c)
+      |> normalize()
+    assert query.select.expr == {:&, [], [0]}
+    assert query.select.fields ==
+           [{:&, [], [0, [:id, :title], 2]},
+            {:&, [], [1, [:id, :text], 2]}]
+
+    query =
+      Post
+      |> join(:inner, [_], c in Comment)
+      |> select([p, c], take(p, [:id, :title, comments: [:id, :text, post: :id], extra_comments: :id]))
+      |> preload([p, c], comments: {c, post: p}, extra_comments: c)
+      |> normalize()
+    assert query.select.expr == {:&, [], [0]}
+    assert query.select.fields ==
+           [{:&, [], [0, [:id, :title], 2]},
+            {:&, [], [1, [:id], 1]},
+            {:&, [], [1, [:id, :text], 2]},
+            {:&, [], [0, [:id], 1]}]
   end
 
   test "normalize: preload" do

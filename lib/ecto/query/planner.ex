@@ -649,21 +649,21 @@ defmodule Ecto.Query.Planner do
 
     fields =
       case from do
-        {:ok, from} -> [{:&, [], [0, from, from && length(from)]}|fields]
+        {:ok, from} -> [select_source(0, from)|fields]
         :error -> fields
       end
 
     %{select | fields: fields}
   end
 
-  defp normalize_fields(%{assocs: assocs, sources: sources} = query,
+  defp normalize_fields(%{assocs: assocs} = query,
                         %{take: take, expr: expr} = select) do
     {fields, from} = collect_fields(expr, query, take, :error)
 
     case from do
       {:ok, from} ->
-        assocs = collect_assocs(sources, assocs)
-        fields = [{:&, [], [0, from, from && length(from)]}|assocs] ++ fields
+        assocs = collect_assocs(query, Map.get(take, 0), assocs)
+        fields = [select_source(0, from)|assocs] ++ fields
         %{select | fields: fields}
       :error ->
         error! query, "the binding used in `from` must be selected in `select` when using `preload`"
@@ -671,15 +671,15 @@ defmodule Ecto.Query.Planner do
   end
 
   defp collect_fields({:&, _, [0]}, query, take, :error) do
-    fields = take!(query, take, 0)
+    fields = take!(query, take, 0, 0)
     {[], {:ok, fields}}
   end
   defp collect_fields({:&, _, [0]}, _query, _take, from) do
     {[], from}
   end
   defp collect_fields({:&, _, [ix]}, query, take, from) do
-    fields = take!(query, take, ix)
-    {[{:&, [], [ix, fields, fields && length(fields)]}], from}
+    fields = take!(query, take, ix, ix)
+    {[select_source(ix, fields)], from}
   end
 
   defp collect_fields({agg, meta, [{{:., _, [{:&, _, [ix]}, field]}, _, []}] = args},
@@ -710,33 +710,35 @@ defmodule Ecto.Query.Planner do
   defp collect_fields(expr, _query, _take, from),
     do: {[expr], from}
 
-  defp collect_assocs(sources, [{_assoc, {ix, children}}|tail]) do
-    fields = source_fields!(elem(sources, ix))
-    [{:&, [], [ix, fields, fields && length(fields)]}] ++
-      collect_assocs(sources, children) ++
-      collect_assocs(sources, tail)
+  defp collect_assocs(query, take, [{assoc, {ix, children}}|tail]) do
+    fields = take!(query, take, assoc, ix)
+    [select_source(ix, fields)] ++
+      collect_assocs(query, fields, children) ++
+      collect_assocs(query, take, tail)
   end
-  defp collect_assocs(_sources, []) do
+  defp collect_assocs(_query, _take, []) do
     []
   end
 
-  defp take!(%{sources: sources} = query, take, ix) do
+  defp select_source(ix, nil), do: {:&, [], [ix, nil, nil]}
+  defp select_source(ix, fields) when is_list(fields) do
+    fields = for field <- fields, is_atom(field), do: field
+    {:&, [], [ix, fields, length(fields)]}
+  end
+
+  defp take!(%{sources: sources} = query, take, field, ix) do
     source = elem(sources, ix)
-    case Map.fetch(take, ix) do
-      {:ok, value} when is_tuple(source) ->
-        value
+    case Access.fetch(take, field) do
+      {:ok, fields} when is_tuple(source) ->
+        List.wrap(fields)
       {:ok, _} ->
         error! query, "cannot take multiple fields on fragment or subquery sources"
       :error ->
-        source_fields!(source)
-    end
-  end
-
-  defp source_fields!(source) do
-    case source do
-      %Ecto.SubQuery{types: types} -> Keyword.keys(types)
-      {_, nil} -> nil
-      {_, schema} -> schema.__schema__(:fields)
+        case source do
+          %Ecto.SubQuery{types: types} -> Keyword.keys(types)
+          {_, nil} -> nil
+          {_, schema} -> schema.__schema__(:fields)
+        end
     end
   end
 
