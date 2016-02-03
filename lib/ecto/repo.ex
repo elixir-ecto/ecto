@@ -48,7 +48,7 @@ defmodule Ecto.Repo do
   ## URLs
 
   Repositories by default support URLs. For example, the configuration
-  above could be rewriten to:
+  above could be rewritten to:
 
       config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple"
@@ -252,7 +252,7 @@ defmodule Ecto.Repo do
   Starts any connection pooling or supervision and return `{:ok, pid}`
   or just `:ok` if nothing needs to be done.
 
-  Returns `{:error, {:already_started, pid}}` if the repo already
+  Returns `{:error, {:already_started, pid}}` if the repo is already
   started or `{:error, term}` in case anything else goes wrong.
   """
   @callback start_link() :: {:ok, pid} |
@@ -692,7 +692,7 @@ defmodule Ecto.Repo do
 
   If an unhandled error occurs the transaction will be rolled back
   and the error will bubble up from the transaction function.
-  If no error occurred the transaction will be commited when the
+  If no error occurred the transaction will be committed when the
   function returns. A transaction can be explicitly rolled back
   by calling `rollback/1`, this will immediately leave the function
   and return the value given to `rollback` as `{:error, value}`.
@@ -704,7 +704,7 @@ defmodule Ecto.Repo do
   is simply executed, without wrapping the new transaction call in any
   way. If there is an error in the inner transaction and the error is
   rescued, or the inner transaction is rolled back, the whole outer
-  transaction is marked as tainted, guaranteeing nothing will be comitted.
+  transaction is marked as tainted, guaranteeing nothing will be committed.
 
   ## Options
 
