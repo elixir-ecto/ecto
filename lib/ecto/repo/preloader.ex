@@ -136,7 +136,7 @@ defmodule Ecto.Repo.Preloader do
     field = related_key_to_field(query, related_key)
 
     # Normalize query
-    query = %{ensure_select(query, take) | prefix: prefix}
+    query = %{Ecto.Query.Planner.returning(query, take || true) | prefix: prefix}
 
     # Add the related key to the query results
     query = update_in query.select.expr, &{:{}, [], [field, &1]}
@@ -154,16 +154,6 @@ defmodule Ecto.Repo.Preloader do
       end
 
     unzip_ids repo.all(query, opts), [], []
-  end
-
-  defp ensure_select(%{select: nil} = query, fields) do
-    take = if fields, do: %{0 => fields}, else: %{}
-    select = %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take,
-                                    line: __ENV__.line, file: __ENV__.file}
-    %{query | select: select}
-  end
-  defp ensure_select(query, _fields) do
-    query
   end
 
   defp related_key_to_field(query, {pos, key}) do

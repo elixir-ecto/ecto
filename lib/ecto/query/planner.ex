@@ -2,8 +2,8 @@ defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
-  alias Ecto.Query.SelectExpr
   alias Ecto.Query.JoinExpr
+  alias Ecto.Query.SelectExpr
 
   if map_size(%Ecto.Query{}) != 17 do
     raise "Ecto.Query match out of date in builder"
@@ -150,7 +150,7 @@ defmodule Ecto.Query.Planner do
       # The only reason we call normalize_select here is because
       # subquery_types validates a specific format in a way it
       # won't need to be modified again when normalized later on.
-      inner_query = normalize_select(inner_query, :all)
+      inner_query = inner_query |> returning(true) |> normalize_select()
 
       %{select: %{fields: fields, expr: select}, sources: sources} = inner_query
       %{subquery | query: inner_query, params: params, select: select, fields: fields,
@@ -489,6 +489,23 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
+  Used for customizing the query returning result.
+  """
+  def returning(%{select: select} = query, _fields) when select != nil do
+    query
+  end
+  def returning(%{select: nil} = query, fields) when is_list(fields) do
+    %{query | select: %SelectExpr{expr: {:&, [], [0]}, take: %{0 => fields},
+                                  line: __ENV__.line, file: __ENV__.file}}
+  end
+  def returning(%{select: nil} = query, true) do
+    %{query | select: %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}}
+  end
+  def returning(%{select: nil} = query, false) do
+    query
+  end
+
+  @doc """
   Normalizes the query.
 
   After the query was prepared and there is no cache
@@ -499,7 +516,7 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize(operation, adapter, 0)
     |> elem(0)
-    |> normalize_select(operation)
+    |> normalize_select()
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -629,17 +646,10 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(query, operation) when operation in [:update_all, :delete_all] do
-    query
-  end
-  defp normalize_select(%{select: nil} = query, _operation) do
-    select = %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}
+  defp normalize_select(%{select: %{fields: nil} = select} = query) do
     %{query | select: normalize_fields(query, select)}
   end
-  defp normalize_select(%{select: %{fields: nil} = select} = query, _operation) do
-    %{query | select: normalize_fields(query, select)}
-  end
-  defp normalize_select(query, _operation) do
+  defp normalize_select(query) do
     query
   end
 
@@ -875,9 +885,8 @@ defmodule Ecto.Query.Planner do
 
   defp assert_only_filter_expressions!(query, operation) do
     case query do
-      %Ecto.Query{select: nil, order_bys: [], limit: nil, offset: nil,
-                  group_bys: [], havings: [], preloads: [], assocs: [],
-                  distinct: nil, lock: nil} ->
+      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
+                  havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         query
       _ ->
         error! query, "`#{operation}` allows only `where` and `join` expressions"

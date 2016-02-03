@@ -525,11 +525,46 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: "x"} = TestRepo.get(Post, id2)
     assert %Post{title: "x"} = TestRepo.get(Post, id3)
 
-    assert {3, nil} = TestRepo.update_all("posts", set: [title: nil])
+    assert {3, nil} = TestRepo.update_all("posts", [set: [title: nil]], returning: false)
 
     assert %Post{title: nil} = TestRepo.get(Post, id1)
     assert %Post{title: nil} = TestRepo.get(Post, id2)
     assert %Post{title: nil} = TestRepo.get(Post, id3)
+  end
+
+  @tag :returning
+  test "update all with returning" do
+    assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1"})
+    assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2"})
+    assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3"})
+
+    assert {3, posts} = TestRepo.update_all(Post, [set: [title: "x"]], returning: true)
+
+    [p1, p2, p3] = Enum.sort_by(posts, & &1.id)
+    assert %Post{id: ^id1, title: "x"} = p1
+    assert %Post{id: ^id2, title: "x"} = p2
+    assert %Post{id: ^id3, title: "x"} = p3
+
+    assert {3, posts} = TestRepo.update_all(Post, [set: [visits: 11]], returning: [:id, :visits])
+
+    [p1, p2, p3] = Enum.sort_by(posts, & &1.id)
+    assert %Post{id: ^id1, title: nil, visits: 11} = p1
+    assert %Post{id: ^id2, title: nil, visits: 11} = p2
+    assert %Post{id: ^id3, title: nil, visits: 11} = p3
+  end
+
+  @tag :returning
+  test "update all with returning without schema" do
+    assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1"})
+    assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2"})
+    assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3"})
+
+    assert {3, posts} = TestRepo.update_all("posts", [set: [title: "x"]], returning: [:id, :title])
+
+    [p1, p2, p3] = Enum.sort_by(posts, & &1.id)
+    assert p1 == %{id: id1, title: "x"}
+    assert p2 == %{id: id2, title: "x"}
+    assert p3 == %{id: id3, title: "x"}
   end
 
   test "update all with filter" do
@@ -599,8 +634,36 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{} = TestRepo.insert!(%Post{title: "2", text: "hai"})
     assert %Post{} = TestRepo.insert!(%Post{title: "3", text: "hai"})
 
-    assert {3, nil} = TestRepo.delete_all(Post)
+    assert {3, nil} = TestRepo.delete_all(Post, returning: false)
     assert [] = TestRepo.all(Post)
+  end
+
+  @tag :returning
+  test "delete all with returning" do
+    assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1", text: "hai"})
+    assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2", text: "hai"})
+    assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3", text: "hai"})
+
+    assert {3, posts} = TestRepo.delete_all(Post, returning: true)
+
+    [p1, p2, p3] = Enum.sort_by(posts, & &1.id)
+    assert %Post{id: ^id1, title: "1"} = p1
+    assert %Post{id: ^id2, title: "2"} = p2
+    assert %Post{id: ^id3, title: "3"} = p3
+  end
+
+  @tag :returning
+  test "delete all with returning without schema" do
+    assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1", text: "hai"})
+    assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2", text: "hai"})
+    assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3", text: "hai"})
+
+    assert {3, posts} = TestRepo.delete_all("posts", returning: [:id, :title])
+
+    [p1, p2, p3] = Enum.sort_by(posts, & &1.id)
+    assert p1 == %{id: id1, title: "1"}
+    assert p2 == %{id: id2, title: "2"}
+    assert p3 == %{id: id3, title: "3"}
   end
 
   test "delete all with filter" do

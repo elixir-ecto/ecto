@@ -93,7 +93,6 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     alias Ecto.Query
-    alias Ecto.Query.SelectExpr
     alias Ecto.Query.QueryExpr
     alias Ecto.Query.JoinExpr
 
@@ -123,7 +122,7 @@ if Code.ensure_loaded?(Postgrex) do
       {join, wheres} = update_join(query, sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble(["UPDATE #{from} AS #{name} SET", fields, join, where])
+      assemble(["UPDATE #{from} AS #{name} SET", fields, join, where, returning(query, sources)])
     end
 
     def delete_all(%{from: from} = query) do
@@ -133,7 +132,7 @@ if Code.ensure_loaded?(Postgrex) do
       join  = using(query, sources)
       where = delete_all_where(query.joins, query, sources)
 
-      assemble(["DELETE FROM #{from} AS #{name}", join, where])
+      assemble(["DELETE FROM #{from} AS #{name}", join, where, returning(query, sources)])
     end
 
     def insert(prefix, table, header, rows, returning) do
@@ -145,7 +144,7 @@ if Code.ensure_loaded?(Postgrex) do
           "VALUES " <> insert_all(rows, 1, "")
         end
 
-      "INSERT INTO #{quote_table(prefix, table)} " <> values <> returning(returning)
+      assemble(["INSERT INTO #{quote_table(prefix, table)}", values, returning(returning)])
     end
 
     defp insert_all([row|rows], counter, acc) do
@@ -172,9 +171,9 @@ if Code.ensure_loaded?(Postgrex) do
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "UPDATE #{quote_table(prefix, table)} SET " <> Enum.join(fields, ", ") <>
-        " WHERE " <> Enum.join(filters, " AND ") <>
-        returning(returning)
+      assemble(["UPDATE #{quote_table(prefix, table)} SET " <> Enum.join(fields, ", "),
+                "WHERE " <> Enum.join(filters, " AND "),
+                returning(returning)])
     end
 
     def delete(prefix, table, filters, returning) do
@@ -182,8 +181,8 @@ if Code.ensure_loaded?(Postgrex) do
         {"#{quote_name(field)} = $#{acc}", acc + 1}
       end
 
-      "DELETE FROM #{quote_table(prefix, table)} WHERE " <>
-        Enum.join(filters, " AND ") <> returning(returning)
+      assemble(["DELETE FROM #{quote_table(prefix, table)} WHERE " <> Enum.join(filters, " AND "),
+                returning(returning)])
     end
 
     ## Query generation
@@ -201,7 +200,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%Query{select: %SelectExpr{fields: fields}, distinct: distinct} = query,
+    defp select(%Query{select: %{fields: fields}, distinct: distinct} = query,
                 distinct_exprs, sources) do
       "SELECT " <>
         distinct(distinct, distinct_exprs) <>
@@ -391,7 +390,7 @@ if Code.ensure_loaded?(Postgrex) do
       {table, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
         error!(query, "PostgreSQL requires a schema module when using selector " <>
-          "#{inspect name} but only the table #{inspect table} was given. " <>
+          "#{inspect name} but only the table #{table} was given. " <>
           "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
@@ -524,10 +523,15 @@ if Code.ensure_loaded?(Postgrex) do
       expr(expr, sources, query)
     end
 
+    defp returning(%Query{select: nil}, _sources),
+      do: []
+    defp returning(%Query{select: %{fields: fields}} = query, sources),
+      do: "RETURNING " <> select_fields(fields, sources, query)
+
     defp returning([]),
-      do: ""
+      do: []
     defp returning(returning),
-      do: " RETURNING " <> Enum.map_join(returning, ", ", &quote_name/1)
+      do: "RETURNING " <> Enum.map_join(returning, ", ", &quote_name/1)
 
     defp create_names(%{prefix: prefix, sources: sources}) do
       create_names(prefix, sources, 0, tuple_size(sources)) |> List.to_tuple()

@@ -6,11 +6,17 @@ defmodule Ecto.Repo.Queryable do
   alias Ecto.Query
   alias Ecto.Queryable
   alias Ecto.Query.Planner
+  alias Ecto.Query.QueryExpr
+  alias Ecto.Query.SelectExpr
 
   require Ecto.Query
 
   def all(repo, adapter, queryable, opts) when is_list(opts) do
-    execute(:all, repo, adapter, queryable, opts) |> elem(1)
+    query =
+      queryable
+      |> Ecto.Queryable.to_query
+      |> Ecto.Query.Planner.returning(true)
+    execute(:all, repo, adapter, query, opts) |> elem(1)
   end
 
   def get(repo, adapter, queryable, id, opts) do
@@ -75,16 +81,36 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp update_all(repo, adapter, queryable, opts) do
-    execute(:update_all, repo, adapter, queryable, opts)
+    query =
+      queryable
+      |> Ecto.Queryable.to_query
+      |> assert_no_select!(:update_all)
+      |> Ecto.Query.Planner.returning(opts[:returning] || false)
+    execute(:update_all, repo, adapter, query, opts)
   end
 
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
-    execute(:delete_all, repo, adapter, queryable, opts)
+    query =
+      queryable
+      |> Ecto.Queryable.to_query
+      |> assert_no_select!(:delete_all)
+      |> Ecto.Query.Planner.returning(opts[:returning] || false)
+    execute(:delete_all, repo, adapter, query, opts)
   end
 
   ## Helpers
 
-  defp execute(operation, repo, adapter, %Ecto.Query{} = query, opts) when is_list(opts) do
+  defp assert_no_select!(%{select: nil} = query, _operation) do
+    query
+  end
+  defp assert_no_select!(%{select: _} = query, operation) do
+    raise Ecto.QueryError,
+      query: query,
+      message: "`select` clause is not supported in `#{operation}`, " <>
+               "please pass the :returning option instead"
+  end
+
+  defp execute(operation, repo, adapter, query, opts) when is_list(opts) do
     {meta, prepared, params} = Planner.query(query, operation, repo, adapter)
 
     case meta do
@@ -100,10 +126,6 @@ defmodule Ecto.Repo.Queryable do
           |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select, fields),
                                        [take: Map.get(take, 0)] ++ opts)}
     end
-  end
-
-  defp execute(operation, repo, adapter, queryable, opts) when is_list(opts) do
-    execute(operation, repo, adapter, Queryable.to_query(queryable), opts)
   end
 
   defp preprocess(prefix, sources, adapter) do
@@ -271,22 +293,22 @@ defmodule Ecto.Repo.Queryable do
     query =
       case query do
         %{group_bys: [_|_]} ->
-          raise ArgumentError, "cannot aggregate on query with group_by"
+          raise Ecto.QueryError, message: "cannot aggregate on query with group_by", query: query
         %{distinct: nil, limit: nil, offset: nil} ->
           %{query | order_bys: []}
         _ ->
-          select = %Query.SelectExpr{expr: ast, file: __ENV__.file, line: __ENV__.line}
+          select = %SelectExpr{expr: ast, file: __ENV__.file, line: __ENV__.line}
           %{query | select: select}
           |> Query.subquery()
           |> Queryable.Ecto.SubQuery.to_query()
       end
 
-    %{query | select: %Query.SelectExpr{expr: {aggregate, [], [ast]},
-                                        file: __ENV__.file, line: __ENV__.line}}
+    %{query | select: %SelectExpr{expr: {aggregate, [], [ast]},
+                                  file: __ENV__.file, line: __ENV__.line}}
   end
 
   defp limit do
-    %Query.QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
+    %QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
   end
 
   defp field(ix, field) when is_integer(ix) and is_atom(field) do
@@ -297,7 +319,7 @@ defmodule Ecto.Repo.Queryable do
     schema = assert_schema!(query)
     pks    = schema.__schema__(:primary_key)
     expr   = for pk <- pks, do: {dir, field(0,pk)}
-    %Query.QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
+    %QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
   end
 
   defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema

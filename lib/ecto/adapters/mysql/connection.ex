@@ -106,7 +106,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
-    def update_all(%{from: from} = query) do
+    def update_all(%{from: from, select: nil} = query) do
       sources = create_names(query)
       {from, name} = get_source(query, sources, 0, from)
 
@@ -117,8 +117,10 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
       assemble([update, join, "SET", fields, where])
     end
+    def update_all(_query),
+      do: error!(nil, "RETURNING is not supported in update_all by MySQL")
 
-    def delete_all(query) do
+    def delete_all(%{select: nil} = query) do
       sources = create_names(query)
       {_, name, _} = elem(sources, 0)
 
@@ -129,11 +131,15 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
       assemble([delete, from, join, where])
     end
+    def delete_all(_query),
+      do: error!(nil, "RETURNING is not supported in update_all by MySQL")
 
-    def insert(prefix, table, header, rows, _returning) do
+    def insert(prefix, table, header, rows, []) do
       fields = Enum.map_join(header, ",", &quote_name/1)
       "INSERT INTO #{quote_table(prefix, table)} (" <> fields <> ") VALUES " <> insert_all(rows)
     end
+    def insert(_prefix, _table, _header, _rows, _returning),
+      do: error!(nil, "RETURNING is not supported in insert_all by MySQL")
 
     defp insert_all(rows) do
       Enum.map_join(rows, ",", fn row ->
@@ -319,7 +325,7 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       {table, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
         error!(query, "MySQL requires a schema module when using selector " <>
-          "#{inspect name} but only the table #{inspect table} was given. " <>
+          "#{inspect name} but only the table #{table} was given. " <>
           "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end

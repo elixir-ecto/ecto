@@ -153,6 +153,7 @@ defmodule Ecto.Adapters.SQL do
 
     queryable
     |> Ecto.Queryable.to_query()
+    |> Ecto.Query.Planner.returning(kind == :all)
     |> Ecto.Query.Planner.query(kind, repo, adapter)
     |> case do
       {_meta, {:cached, {_id, cached}}, params} ->

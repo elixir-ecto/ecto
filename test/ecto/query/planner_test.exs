@@ -47,7 +47,9 @@ defmodule Ecto.Query.PlannerTest do
 
   defp normalize_with_params(query, operation \\ :all) do
     {query, params, _key} = prepare(query, operation)
-    {Planner.normalize(query, operation, Ecto.TestAdapter), params}
+    {query
+     |> Planner.returning(operation == :all)
+     |> Planner.normalize(operation, Ecto.TestAdapter), params}
   end
 
   test "prepare: merges all parameters" do
@@ -556,7 +558,7 @@ defmodule Ecto.Query.PlannerTest do
 
     message = ~r"`update_all` allows only `where` and `join` expressions in query"
     assert_raise Ecto.QueryError, message, fn ->
-      from(p in Post, select: p, update: [set: [title: "foo"]]) |> normalize(:update_all)
+      from(p in Post, order_by: p.title, update: [set: [title: "foo"]]) |> normalize(:update_all)
     end
   end
 
@@ -568,7 +570,7 @@ defmodule Ecto.Query.PlannerTest do
 
     message = ~r"`delete_all` allows only `where` and `join` expressions in query"
     assert_raise Ecto.QueryError, message, fn ->
-      from(p in Post, select: p) |> normalize(:delete_all)
+      from(p in Post, order_by: p.title) |> normalize(:delete_all)
     end
   end
 

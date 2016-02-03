@@ -203,7 +203,7 @@ defmodule Ecto.Query.InspectTest do
   test "params after planner" do
     query = plan from(x in Post, where: ^123 > ^(1 * 3) and x.id in ^[1, 2, 3])
     assert i(query) ==
-           ~s{from p in Inspect.Post, where: ^... > ^... and p.id in ^..., select: p}
+           ~s{from p in Inspect.Post, where: ^... > ^... and p.id in ^...}
   end
 
   test "tagged types" do

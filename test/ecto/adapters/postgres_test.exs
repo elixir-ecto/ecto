@@ -384,6 +384,12 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s{WHERE (m0."x" = m1."z") AND (m0."x" = 123)}
   end
 
+  test "update all with returning" do
+    query = from(m in Model, update: [set: [x: 0]]) |> select([m], m) |> normalize(:update_all)
+    assert SQL.update_all(query) ==
+           ~s{UPDATE "model" AS m0 SET "x" = 0 RETURNING m0."id", m0."x", m0."y", m0."z", m0."w"}
+  end
+
   test "update all array ops" do
     query = from(m in Model, update: [push: [w: 0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
@@ -415,6 +421,11 @@ defmodule Ecto.Adapters.PostgresTest do
     query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
     assert SQL.delete_all(query) ==
            ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z" AND (m0."x" = 123)}
+  end
+
+  test "delete all with returning" do
+    query = Model |> Queryable.to_query |> select([m], m) |> normalize
+    assert SQL.delete_all(query) == ~s{DELETE FROM "model" AS m0 RETURNING m0."id", m0."x", m0."y", m0."z", m0."w"}
   end
 
   test "delete all with prefix" do

@@ -440,7 +440,7 @@ defmodule Ecto.Repo do
            select: p.title
       MyRepo.all(query)
   """
-  @callback all(Ecto.Query.t, Keyword.t) :: [Ecto.Schema.t] | no_return
+  @callback all(queryable :: Ecto.Query.t, opts :: Keyword.t) :: [Ecto.Schema.t] | no_return
 
   @doc """
   Inserts all entries into the repository.
@@ -468,7 +468,7 @@ defmodule Ecto.Repo do
   See the "Shared options" section at the module documentation.
   """
   @callback insert_all(binary | {binary | nil, binary} | Ecto.Schema.t,
-                       [map | Keyword.t], opts :: Keyword.t) :: {integer, nil} | no_return
+                       [map | Keyword.t], opts :: Keyword.t) :: {integer, nil | [term]} | no_return
 
   @doc """
   Updates all entries matching the given query with the given values.
@@ -486,7 +486,14 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  See the "Shared options" section at the module documentation.
+    * `:returning` - selects which fields to return. When `true`,
+      returns all fields in the given struct. May be a list of
+      fields, where a struct is still returned but only with the
+      given fields. Or `false`, where nothing is returned (the default).
+      This option is not supported by all databases.
+
+  See the "Shared options" section at the module documentation for
+  remaining options.
 
   ## Examples
 
@@ -500,7 +507,8 @@ defmodule Ecto.Repo do
       from(p in Post, where: p.id < 10, update: [set: [title: "New title"]])
       |> MyRepo.update_all([])
   """
-  @callback update_all(Macro.t, Keyword.t, Keyword.t) :: {integer, nil} | no_return
+  @callback update_all(queryable :: Ecto.Queryable.t, updates :: Keyword.t, opts :: Keyword.t) ::
+                       {integer, nil | [term]} | no_return
 
   @doc """
   Deletes all entries matching the given query.
@@ -512,7 +520,14 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  See the "Shared options" section at the module documentation.
+    * `:returning` - selects which fields to return. When `true`,
+      returns all fields in the given struct. May be a list of
+      fields, where a struct is still returned but only with the
+      given fields. Or `false`, where nothing is returned (the default).
+      This option is not supported by all databases.
+
+  See the "Shared options" section at the module documentation for
+  remaining options.
 
   ## Examples
 
@@ -520,7 +535,8 @@ defmodule Ecto.Repo do
 
       from(p in Post, where: p.id < 10) |> MyRepo.delete_all
   """
-  @callback delete_all(Ecto.Queryable.t, Keyword.t) :: {integer, nil} | no_return
+  @callback delete_all(queryable :: Ecto.Queryable.t, options :: Keyword.t) ::
+                       {integer, nil | [term]} | no_return
 
   @doc """
   Inserts a struct or a changeset.
