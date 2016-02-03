@@ -335,6 +335,45 @@ defmodule Ecto.Integration.PreloadTest do
     [%{id: ^uid1}] = p1.comments_authors |> sort_by_id
   end
 
+  ## With take
+
+  test "preload with take" do
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+    _p = TestRepo.insert!(%Post{title: "3"})
+
+    %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "2", post_id: p2.id})
+    %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
+    %Comment{id: cid4} = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
+
+    assert %Ecto.Association.NotLoaded{} = p1.comments
+
+    posts = TestRepo.all(from Post, preload: [:comments], select: [:id, comments: [:id, :post_id]])
+    [p1, p2, p3] = sort_by_id(posts)
+    assert p1.title == nil
+    assert p2.title == nil
+    assert p3.title == nil
+
+    assert [%{id: ^cid1, text: nil}, %{id: ^cid2, text: nil}] = sort_by_id(p1.comments)
+    assert [%{id: ^cid3, text: nil}, %{id: ^cid4, text: nil}] = sort_by_id(p2.comments)
+    assert [] = sort_by_id(p3.comments)
+  end
+
+  test "preload through with take" do
+    %Post{id: pid1} = TestRepo.insert!(%Post{})
+
+    %User{id: uid1} = TestRepo.insert!(%User{name: "foo"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "bar"})
+
+    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
+
+    [p1] = TestRepo.all from Post, preload: [:comments_authors], select: [:id, comments_authors: :id]
+    [%{id: ^uid1, name: nil}, %{id: ^uid2, name: nil}] = p1.comments_authors |> sort_by_id
+  end
+
   ## Nested
 
   test "preload many assocs" do

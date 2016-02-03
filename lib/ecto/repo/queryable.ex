@@ -90,14 +90,15 @@ defmodule Ecto.Repo.Queryable do
     case meta do
       %{fields: nil} ->
         adapter.execute(repo, meta, prepared, params, nil, opts)
-      %{select: select, fields: fields, prefix: prefix,
+      %{select: select, fields: fields, prefix: prefix, take: take,
         sources: sources, assocs: assocs, preloads: preloads} ->
         preprocess = preprocess(prefix, sources, adapter)
         {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
         {count,
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
-          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select, fields), opts)}
+          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select, fields),
+                                       [take: Map.get(take, 0)] ++ opts)}
     end
   end
 

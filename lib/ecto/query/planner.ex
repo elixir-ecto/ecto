@@ -101,13 +101,13 @@ defmodule Ecto.Query.Planner do
   end
 
   defp build_meta(%{prefix: prefix, sources: sources, assocs: assocs, preloads: preloads},
-                  %{expr: select, fields: fields}) do
-    %{prefix: prefix, sources: sources, fields: fields,
+                  %{expr: select, fields: fields, take: take}) do
+    %{prefix: prefix, sources: sources, fields: fields, take: take,
       assocs: assocs, preloads: preloads, select: select}
   end
   defp build_meta(%{prefix: prefix, sources: sources, assocs: assocs, preloads: preloads},
                   nil) do
-    %{prefix: prefix, sources: sources, fields: nil,
+    %{prefix: prefix, sources: sources, fields: nil, take: nil,
       assocs: assocs, preloads: preloads, select: nil}
   end
 

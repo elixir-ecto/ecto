@@ -438,74 +438,106 @@ defmodule Ecto.AssociationTest do
   alias Ecto.Repo.Preloader
 
   test "preload: normalizer" do
-    assert Preloader.normalize(:foo, [], []) == [foo: {nil, []}]
-    assert Preloader.normalize([foo: :bar], [], []) == [foo: {nil, [bar: {nil, []}]}]
-    assert Preloader.normalize([foo: [:bar, baz: :bat], this: :that], [], []) ==
-           [this: {nil, [that: {nil, []}]},
-            foo: {nil, [baz: {nil, [bat: {nil, []}]},
-                        bar: {nil, []}]}]
+    assert Preloader.normalize(:foo, [], nil, []) ==
+           [foo: {nil, nil, []}]
+    assert Preloader.normalize([foo: :bar], [], nil, []) ==
+           [foo: {nil, nil, [bar: {nil, nil, []}]}]
+    assert Preloader.normalize([foo: [:bar, baz: :bat], this: :that], [], nil, []) ==
+           [this: {nil, nil, [that: {nil, nil, []}]},
+            foo: {nil, nil, [baz: {nil, nil, [bat: {nil, nil, []}]},
+                             bar: {nil, nil, []}]}]
+  end
 
+  test "preload: normalize with query" do
     query = from(p in Post, limit: 1)
-    assert Preloader.normalize([foo: query], [], []) ==
-           [foo: {query, []}]
-    assert Preloader.normalize([foo: {query, :bar}], [], []) ==
-           [foo: {query, [bar: {nil, []}]}]
-    assert Preloader.normalize([foo: {query, bar: :baz}], [], []) ==
-           [foo: {query, [bar: {nil, [baz: {nil, []}]}]}]
+    assert Preloader.normalize([foo: query], [], nil, []) ==
+           [foo: {nil, query, []}]
+    assert Preloader.normalize([foo: {query, :bar}], [], nil, []) ==
+           [foo: {nil, query, [bar: {nil, nil, []}]}]
+    assert Preloader.normalize([foo: {query, bar: :baz}], [], nil, []) ==
+           [foo: {nil, query, [bar: {nil, nil, [baz: {nil, nil, []}]}]}]
+  end
+
+  test "preload: normalize with take" do
+    assert Preloader.normalize([:foo], [], [foo: :id], []) ==
+           [foo: {[:id], nil, []}]
+    assert Preloader.normalize([foo: :bar], [], [foo: :id], []) ==
+           [foo: {[:id], nil, [bar: {nil, nil, []}]}]
+    assert Preloader.normalize([foo: :bar], [], [foo: [:id, bar: :id]], []) ==
+           [foo: {[:id, bar: :id], nil, [bar: {[:id], nil, []}]}]
+    assert Preloader.normalize([foo: [bar: :baz]], [], [foo: [:id, bar: :id]], []) ==
+           [foo: {[:id, bar: :id], nil, [bar: {[:id], nil, [baz: {nil, nil, []}]}]}]
   end
 
   test "preload: raises on assoc conflict" do
     assert_raise ArgumentError, ~r"cannot preload association `:foo`", fn ->
-      Preloader.normalize(:foo, [foo: []], [])
+      Preloader.normalize(:foo, [foo: []], nil, [])
     end
   end
 
   test "preload: raises on invalid preload" do
     assert_raise ArgumentError, ~r"invalid preload `123` in `123`", fn ->
-      Preloader.normalize(123, [], 123)
+      Preloader.normalize(123, [], nil, 123)
     end
 
     assert_raise ArgumentError, ~r"invalid preload `{:bar, :baz}` in", fn ->
-      Preloader.normalize([foo: {:bar, :baz}], [], []) == [foo: [bar: []]]
+      Preloader.normalize([foo: {:bar, :baz}], [], nil, []) == [foo: [bar: []]]
     end
   end
 
-  defp expand(model, preloads) do
-    Preloader.expand(model, Preloader.normalize(preloads, [], preloads), {%{}, %{}})
+  defp expand(model, preloads, take \\ nil) do
+    Preloader.expand(model, Preloader.normalize(preloads, [], take, preloads), {%{}, %{}})
   end
 
   test "preload: expand" do
-    assert {%{comments: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, []},
-              permalink: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, []}},
+    assert {%{comments: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, nil, []},
+              permalink: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, nil, []}},
             %{}} =
            expand(Post, [:comments, :permalink])
 
-    assert {%{post: {{:assoc, %Ecto.Association.BelongsTo{}, {0, :id}}, nil, [author: {nil, []}]}},
+    assert {%{post: {{:assoc, %Ecto.Association.BelongsTo{}, {0, :id}}, nil, nil, [author: {nil, nil, []}]}},
             %{}} =
            expand(Comment, [post: :author])
 
-    assert {%{post: {{:assoc, %Ecto.Association.BelongsTo{}, {0, :id}}, nil,
-              [author: {nil, []}, permalink: {nil, []}]}},
+    assert {%{post: {{:assoc, %Ecto.Association.BelongsTo{}, {0, :id}}, nil, nil,
+              [author: {nil, nil, []}, permalink: {nil, nil, []}]}},
             %{}} =
            expand(Comment, [:post, post: :author, post: :permalink])
 
-    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, [comments: {nil, [post: {nil, []}]}]}},
+    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, nil,
+                      [comments: {nil, nil, [post: {nil, nil, []}]}]}},
             %{posts_comments: {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}}} =
            expand(Author, [posts_comments: :post])
 
-    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, [comments: _, comments: _]}},
+    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, nil,
+                      [comments: _, comments: _]}},
             %{posts_comments: {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}}} =
            expand(Author, [:posts, posts_comments: :post, posts: [comments: :post]])
+  end
 
+  test "preload: expand with queries" do
     query = from(c in Comment, limit: 1)
-    assert {%{permalink: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, []},
-              comments: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, ^query, []}},
+    assert {%{permalink: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, nil, []},
+              comments: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, ^query, []}},
             %{}} =
            expand(Post, [:permalink, comments: query])
 
-    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, [comments: {^query, [post: {nil, []}]}]}},
+    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, nil,
+                      [comments: {nil, ^query, [post: {nil, nil, []}]}]}},
             %{posts_comments: {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}}} =
            expand(Author, [posts_comments: {query, :post}])
+  end
+
+  test "preload: expand with take" do
+    assert {%{permalink: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, [:id], nil, []},
+              comments: {{:assoc, %Ecto.Association.Has{}, {0, :post_id}}, nil, nil, []}},
+            %{}} =
+           expand(Post, [:permalink, :comments], [permalink: :id])
+
+    assert {%{posts: {{:assoc, %Ecto.Association.Has{}, {0, :author_id}}, nil, nil,
+                      [comments: {[:id], nil, [post: {nil, nil, []}]}]}},
+            %{posts_comments: {:through, %Ecto.Association.HasThrough{}, [:posts, :comments]}}} =
+           expand(Author, [posts_comments: :post], [posts_comments: :id])
   end
 
   test "preload: expand raises on duplicated entries" do
