@@ -109,6 +109,10 @@ defmodule Ecto.RepoTest do
     TestRepo.update_all(query, [])
 
     # Failures
+    assert_raise ArgumentError, ~r/:returning expects at least one field to be given/, fn ->
+      TestRepo.update_all MyModel, [set: [x: "321"]], returning: []
+    end
+
     assert_raise Ecto.QueryError, fn ->
       TestRepo.update_all from(e in MyModel, select: e), set: [x: "321"]
     end
@@ -126,6 +130,10 @@ defmodule Ecto.RepoTest do
     TestRepo.delete_all(query)
 
     # Failures
+    assert_raise ArgumentError, ~r/:returning expects at least one field to be given/, fn ->
+      TestRepo.delete_all MyModel, returning: []
+    end
+
     assert_raise Ecto.QueryError, fn ->
       TestRepo.delete_all from(e in MyModel, select: e)
     end

@@ -494,6 +494,9 @@ defmodule Ecto.Query.Planner do
   def returning(%{select: select} = query, _fields) when select != nil do
     query
   end
+  def returning(%{select: nil}, []) do
+    raise ArgumentError, ":returning expects at least one field to be given, got an empty list"
+  end
   def returning(%{select: nil} = query, fields) when is_list(fields) do
     %{query | select: %SelectExpr{expr: {:&, [], [0]}, take: %{0 => fields},
                                   line: __ENV__.line, file: __ENV__.file}}
@@ -739,10 +742,12 @@ defmodule Ecto.Query.Planner do
   defp take!(%{sources: sources} = query, take, field, ix) do
     source = elem(sources, ix)
     case Access.fetch(take, field) do
-      {:ok, fields} when is_tuple(source) ->
-        List.wrap(fields)
-      {:ok, _} ->
+      {:ok, _} when not is_tuple(source) ->
         error! query, "cannot take multiple fields on fragment or subquery sources"
+      {:ok, []} ->
+        error! query, "take expects at least one field to be taken, got an empty list"
+      {:ok, fields} ->
+        List.wrap(fields)
       :error ->
         case source do
           %Ecto.SubQuery{types: types} -> Keyword.keys(types)

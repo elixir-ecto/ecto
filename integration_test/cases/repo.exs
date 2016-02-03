@@ -491,6 +491,29 @@ defmodule Ecto.Integration.RepoTest do
     assert {0, nil} = TestRepo.insert_all("posts", [])
   end
 
+  test "insert all with returning with schema" do
+    assert {0, []} = TestRepo.insert_all(Comment, [], returning: true)
+    assert {0, nil} = TestRepo.insert_all(Comment, [], returning: false)
+
+    {2, [c1, c2]} = TestRepo.insert_all(Comment, [[text: "1"], [text: "2"]], returning: [:id, :text])
+    assert %Comment{text: "1", __meta__: %{state: :loaded}} = c1
+    assert %Comment{text: "2", __meta__: %{state: :loaded}} = c2
+
+    {2, [c1, c2]} = TestRepo.insert_all(Comment, [[text: "3"], [text: "4"]], returning: true)
+    assert %Comment{text: "3", __meta__: %{state: :loaded}} = c1
+    assert %Comment{text: "4", __meta__: %{state: :loaded}} = c2
+  end
+
+  test "insert all with returning without schema" do
+    {2, [c1, c2]} = TestRepo.insert_all("comments", [[text: "1"], [text: "2"]], returning: [:id, :text])
+    assert %{id: _, text: "1"} = c1
+    assert %{id: _, text: "2"} = c2
+
+    assert_raise ArgumentError, fn ->
+      TestRepo.insert_all("comments", [[text: "1"], [text: "2"]], returning: true)
+    end
+  end
+
   test "insert all with dumping" do
     date = Ecto.DateTime.utc
     assert {2, nil} = TestRepo.insert_all(Post, [%{inserted_at: date}, %{title: "date"}])
@@ -533,7 +556,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :returning
-  test "update all with returning" do
+  test "update all with returning with schema" do
     assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1"})
     assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2"})
     assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3"})
@@ -639,7 +662,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :returning
-  test "delete all with returning" do
+  test "delete all with returning with schema" do
     assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1", text: "hai"})
     assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2", text: "hai"})
     assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3", text: "hai"})

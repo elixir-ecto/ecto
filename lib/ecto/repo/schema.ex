@@ -18,15 +18,47 @@ defmodule Ecto.Repo.Schema do
     do_insert_all(repo, adapter, nil, {nil, table}, rows, opts)
   end
 
-  defp do_insert_all(_repo, _adapter, _schema, _source, [], _opts) do
-    {0, nil}
+  defp do_insert_all(_repo, _adapter, _schema, _source, [], opts) do
+    if opts[:returning] do
+      {0, []}
+    else
+      {0, nil}
+    end
   end
 
   defp do_insert_all(repo, adapter, schema, source, rows, opts) when is_list(rows) do
-    autogen  = schema && schema.__schema__(:autogenerate_id)
-    metadata = %{source: source, context: nil, schema: schema, autogenerate_id: autogen}
-    {rows, header} = extract_header_and_fields(rows, schema, autogen, adapter)
-    adapter.insert_all(repo, metadata, Map.keys(header), rows, [], opts)
+    returning = opts[:returning] || false
+    autogen   = schema && schema.__schema__(:autogenerate_id)
+    fields    = preprocess(returning, schema)
+    metadata  = %{source: source, context: nil, schema: schema, autogenerate_id: autogen}
+
+    {rows, header} =
+      extract_header_and_fields(rows, schema, autogen, adapter)
+    {count, rows} =
+      adapter.insert_all(repo, metadata, Map.keys(header), rows, fields || [], opts)
+    {count, postprocess(rows, fields, adapter, schema, source)}
+  end
+
+  defp preprocess([_|_] = fields, _schema),
+    do: fields
+  defp preprocess([], _schema),
+    do: raise ArgumentError, ":returning expects at least one field to be given, got an empty list"
+  defp preprocess(true, nil),
+    do: raise ArgumentError, ":returning option can only be set to true if a schema is given"
+  defp preprocess(true, schema),
+    do: schema.__schema__(:fields)
+  defp preprocess(false, _schema),
+    do: false
+
+  defp postprocess(nil, false, _adapter, _schema, _source), do: nil
+  defp postprocess(rows, fields, _adapter, nil, _source) do
+    Enum.map(rows, &Map.new(Enum.zip(fields, &1)))
+  end
+  defp postprocess(rows, fields, adapter, schema, {prefix, source}) do
+    Enum.map(rows, fn row ->
+      Ecto.Schema.__load__(schema, prefix, source, nil, {fields, row},
+                           &Ecto.Type.adapter_load(adapter, &1, &2))
+    end)
   end
 
   defp extract_header_and_fields(rows, schema, autogenerate_id, adapter) do
