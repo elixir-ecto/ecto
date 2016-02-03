@@ -27,10 +27,6 @@ One should write:
       |> validate_required([:name])
     end
 
-### Take and dynamic fields
-
-TODO.
-
 ### Subqueries
 
 Ecto v2.0 introduces `Ecto.Query.subquery/1` that will convert any query into a subquery to be used either as part of a `from` or a `join`. For example, if you want to calculate the average number of visits per posts, you can write:
@@ -148,6 +144,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Postgres] Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
   * [Query] Allow the `:on` field to be specified with association joins
   * [Query] Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
+  * [Query] Allow struct fields to be selected with `take/2`, including support for dynamic fields
   * [Repo] Add `Repo.aggregate/4` for easy aggregations
   * [Repo] Allow custom `select` field in preload queries
   * [Repo] Support the `:force` option in preloads

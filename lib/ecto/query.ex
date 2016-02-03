@@ -558,16 +558,7 @@ defmodule Ecto.Query do
 
       from(city in City, select: take(city, [:name]))
 
-  `take/2` is more explicit as it may be invoked multiple times
-  to limit different structs:
-
-      from(city in City, join: country in assoc(city, :country),
-           select: {take(city, [:name]), take(country, [:population])}
-
-  For preloads, the taken fields may be specified from the parent:
-
-      from(city in City, preload: :country,
-           select: take(city, [:name, country: :population]))
+  For more information, read the docs for `Ecto.Query.API.take/2`.
 
   ## Expressions examples
 

@@ -283,6 +283,27 @@ defmodule Ecto.Query.API do
       fields = [:title, :body]
       from p in Post, select: take(p, ^fields)
 
+  As a convenience, `select` allows developers to take fields
+  without an explicit call to `take/2`:
+
+      from p in Post, select: [:title, :body]
+
+  Or even dynamically:
+
+      fields = [:title, :body]
+      from p in Post, select: ^fields
+
+  However, `take/2` is still useful when you want to limit
+  the fields of different structs:
+
+      from(city in City, join: country in assoc(city, :country),
+           select: {take(city, [:name]), take(country, [:population])}
+
+  For preloads, the taken fields may be specified from the parent:
+
+      from(city in City, preload: :country,
+           select: take(city, [:name, country: :population]))
+
   """
   def take(source, fields), do: doc! [source, fields]
 
