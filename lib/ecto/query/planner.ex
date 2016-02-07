@@ -386,20 +386,17 @@ defmodule Ecto.Query.Planner do
           cache
       end
 
-    if assocs && assocs != [] do
-      cache = [assocs: assocs] ++ cache
-    end
-
-    if prefix do
-      cache = [prefix: prefix] ++ cache
-    end
-
-    if lock do
-      cache = [lock: lock] ++ cache
-    end
+    cache =
+      cache
+      |> prepend_if(assocs != [],  [assocs: assocs])
+      |> prepend_if(prefix != nil, [prefix: prefix])
+      |> prepend_if(lock != nil,   [lock: lock])
 
     [operation|cache]
   end
+
+  defp prepend_if(cache, true, prepend), do: prepend ++ cache
+  defp prepend_if(cache, false, _prepend), do: cache
 
   defp source_cache({_, nil} = source, params),
     do: {source, params}
@@ -759,45 +756,23 @@ defmodule Ecto.Query.Planner do
 
   ## Helpers
 
+  @exprs [distinct: :distinct, select: :select, from: :from, join: :joins,
+          where: :wheres, group_by: :group_bys, having: :havings,
+          order_by: :order_bys, limit: :limit, offset: :offset]
+
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
-  defp traverse_exprs(original, operation, acc, fun) do
-    query = original
+  defp traverse_exprs(query, operation, acc, fun) do
+    extra =
+      case operation do
+        :update_all -> [update: :updates]
+        _ -> []
+      end
 
-    if operation == :update_all do
-      {updates, acc} = fun.(:update, original, original.updates, acc)
-      query = %{query | updates: updates}
+    Enum.reduce extra ++ @exprs, {query, acc}, fn {kind, key}, {query, acc} ->
+      {traversed, acc} = fun.(kind, query, Map.fetch!(query, key), acc)
+      {Map.put(query, key, traversed), acc}
     end
-
-    {select, acc} = fun.(:select, original, original.select, acc)
-    query = %{query | select: select}
-
-    {from, acc} = fun.(:from, original, original.from, acc)
-    query = %{query | from: from}
-
-    {distinct, acc} = fun.(:distinct, original, original.distinct, acc)
-    query = %{query | distinct: distinct}
-
-    {joins, acc} = fun.(:join, original, original.joins, acc)
-    query = %{query | joins: joins}
-
-    {wheres, acc} = fun.(:where, original, original.wheres, acc)
-    query = %{query | wheres: wheres}
-
-    {group_bys, acc} = fun.(:group_by, original, original.group_bys, acc)
-    query = %{query | group_bys: group_bys}
-
-    {havings, acc} = fun.(:having, original, original.havings, acc)
-    query = %{query | havings: havings}
-
-    {order_bys, acc} = fun.(:order_by, original, original.order_bys, acc)
-    query = %{query | order_bys: order_bys}
-
-    {limit, acc} = fun.(:limit, original, original.limit, acc)
-    query = %{query | limit: limit}
-
-    {offset, acc} = fun.(:offset, original, original.offset, acc)
-    {%{query | offset: offset}, acc}
   end
 
   defp source_type!(_kind, _query, _expr, nil, _field), do: :any

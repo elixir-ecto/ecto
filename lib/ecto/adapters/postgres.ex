@@ -63,24 +63,13 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def storage_up(opts) do
     database = Keyword.fetch!(opts, :database)
-    encoding = Keyword.get(opts, :encoding, "UTF8")
+    encoding = opts[:encoding] || "UTF8"
 
-    extra = ""
-
-    if template = Keyword.get(opts, :template) do
-      extra = extra <> " TEMPLATE=#{template}"
-    end
-
-    if lc_collate = Keyword.get(opts, :lc_collate) do
-      extra = extra <> " LC_COLLATE='#{lc_collate}'"
-    end
-
-    if lc_ctype = Keyword.get(opts, :lc_ctype) do
-      extra = extra <> " LC_CTYPE='#{lc_ctype}'"
-    end
-
-    command = "CREATE DATABASE \"#{database}\" " <>
-              "ENCODING '#{encoding}'" <> extra
+    command =
+      ~s(CREATE DATABASE "#{database}" ENCODING '#{encoding}')
+      |> concat_if(opts[:template], &"TEMPLATE=#{&1}")
+      |> concat_if(opts[:lc_ctype], &"LC_CTYPE='#{&1}'")
+      |> concat_if(opts[:lc_collate], &"LC_COLLATE='#{&1}'")
 
     case run_query(opts, command) do
       :ok ->
@@ -91,6 +80,9 @@ defmodule Ecto.Adapters.Postgres do
         {:error, Exception.message(error)}
     end
   end
+
+  defp concat_if(content, nil, _fun),  do: content
+  defp concat_if(content, value, fun), do: content <> " " <> fun.(value)
 
   @doc false
   def storage_down(opts) do

@@ -110,17 +110,13 @@ defmodule Ecto.Adapters.MySQL do
   @doc false
   def storage_up(opts) do
     database  = Keyword.fetch!(opts, :database)
-    charset   = Keyword.get(opts, :charset, "utf8")
+    charset   = opts[:charset] || "utf8"
 
-    extra = ""
+    command =
+      ~s(CREATE DATABASE `#{database}` DEFAULT CHARACTER SET = #{charset})
+      |> concat_if(opts[:collation], &"DEFAULT COLLATE = #{&1}")
 
-    if collation = Keyword.get(opts, :collation) do
-      extra =  extra <> " DEFAULT COLLATE = #{collation}"
-    end
-
-    {output, status} =
-      run_with_mysql opts, "CREATE DATABASE `" <> database <>
-                           "` DEFAULT CHARACTER SET = #{charset} " <> extra
+    {output, status} = run_with_mysql command, opts
 
     cond do
       status == 0 -> :ok
@@ -129,9 +125,12 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
+  defp concat_if(content, nil, _fun),  do: content
+  defp concat_if(content, value, fun), do: content <> " " <> fun.(value)
+
   @doc false
   def storage_down(opts) do
-    {output, status} = run_with_mysql(opts, "DROP DATABASE `#{opts[:database]}`")
+    {output, status} = run_with_mysql("DROP DATABASE `#{opts[:database]}`", opts)
 
     cond do
       status == 0                               -> :ok
@@ -140,17 +139,18 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
-  defp run_with_mysql(database, sql_command) do
+  defp run_with_mysql(sql_command, database) do
     unless System.find_executable("mysql") do
       raise "could not find executable `mysql` in path, " <>
             "please guarantee it is available before running ecto commands"
     end
 
-    env = []
-
-    if password = database[:password] do
-      env = [{"MYSQL_PWD", password}|env]
-    end
+    env =
+      if password = database[:password] do
+        [{"MYSQL_PWD", password}]
+      else
+        []
+      end
 
     host = database[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
     port = database[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"

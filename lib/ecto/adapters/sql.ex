@@ -283,12 +283,15 @@ defmodule Ecto.Adapters.SQL do
     opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
     {mod, opts} = connection.connection(opts)
 
-    if function_exported?(repo, :after_connect, 1) and not Keyword.has_key?(opts, :after_connect) do
-      IO.puts :stderr, "warning: #{inspect repo}.after_connect/1 is deprecated. If you want to " <>
-                       "perform some action after connecting, please set after_connect: {module, fun, args}" <>
-                       "in your repository configuration"
-      opts = Keyword.put(opts, :after_connect, {repo, :after_connect, []})
-    end
+    opts =
+      if function_exported?(repo, :after_connect, 1) and not Keyword.has_key?(opts, :after_connect) do
+        IO.puts :stderr, "warning: #{inspect repo}.after_connect/1 is deprecated. If you want to " <>
+                         "perform some action after connecting, please set after_connect: {module, fun, args}" <>
+                         "in your repository configuration"
+        Keyword.put(opts, :after_connect, {repo, :after_connect, []})
+      else
+        opts
+      end
 
     DBConnection.child_spec(mod, opts)
   end

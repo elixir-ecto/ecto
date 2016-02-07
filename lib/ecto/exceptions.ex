@@ -20,10 +20,16 @@ defmodule Ecto.QueryError do
     #{Inspect.Ecto.Query.to_string(query)}
     """
 
-    if (file = opts[:file]) && (line = opts[:line]) do
-      relative = Path.relative_to_cwd(file)
-      message  = Exception.format_file_line(relative, line) <> " " <> message
-    end
+    file = opts[:file]
+    line = opts[:line]
+
+    message =
+      if file && line do
+        relative = Path.relative_to_cwd(file)
+        Exception.format_file_line(relative, line) <> " " <> message
+      else
+        message
+      end
 
     %__MODULE__{message: message}
   end

@@ -63,27 +63,29 @@ defmodule Ecto.Repo.Assoc do
         else
           Map.update(dict, parent_key, [item], &[item|&1])
         end
-    end
 
-    {{keys, dict, sub_dicts}, sub_structs}
+      {{keys, dict, sub_dicts}, sub_structs}
+    else
+      {{keys, dict, sub_dicts}, sub_structs}
+    end
   end
 
   defp load_assocs({child_key, struct}, sub_dicts, refls) do
     Enum.reduce :lists.zip(sub_dicts, refls), struct, fn
       {{_keys, dict, sub_dicts}, {refl, refls}}, acc ->
+        %{field: field, cardinality: cardinality} = refl
         loaded =
           dict
           |> Map.get(child_key, [])
           |> Enum.reverse()
           |> Enum.map(&load_assocs(&1, sub_dicts, refls))
-
-        if refl.cardinality == :one do
-          loaded = List.first(loaded)
-        end
-
-        Map.put(acc, refl.field, loaded)
+          |> maybe_first(cardinality)
+        Map.put(acc, field, loaded)
     end
   end
+
+  defp maybe_first(list, :one), do: List.first(list)
+  defp maybe_first(list, _), do: list
 
   defp create_refls(idx, fields, sources) do
     Enum.map(fields, fn {field, {child_idx, child_fields}} ->

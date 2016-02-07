@@ -218,13 +218,11 @@ defmodule Ecto.Repo.Preloader do
   defp load_through({:through, %{cardinality: cardinality} = assoc, [h|t]}, struct) do
     initial = struct |> Map.fetch!(h) |> List.wrap
     loaded  = Enum.reduce(t, initial, &recur_through/2)
-
-    if cardinality == :one do
-      loaded = List.first(loaded)
-    end
-
-    Map.put(struct, assoc.field, loaded)
+    Map.put(struct, assoc.field, maybe_first(loaded, cardinality))
   end
+
+  defp maybe_first(list, :one), do: List.first(list)
+  defp maybe_first(list, _), do: list
 
   defp recur_through(assoc, structs) do
     Enum.reduce(structs, {[], %{}}, fn struct, acc ->

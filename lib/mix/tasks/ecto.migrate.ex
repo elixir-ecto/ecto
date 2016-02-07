@@ -51,13 +51,15 @@ defmodule Mix.Tasks.Ecto.Migrate do
                  prefix: :string, pool_size: :integer],
       aliases: [n: :step, v: :to]
 
-    unless opts[:to] || opts[:step] || opts[:all] do
-      opts = Keyword.put(opts, :all, true)
-    end
+    opts =
+      if opts[:to] || opts[:step] || opts[:all],
+        do: opts,
+        else: Keyword.put(opts, :all, true)
 
-    if opts[:quiet] do
-      opts = Keyword.put(opts, :log, false)
-    end
+    opts =
+      if opts[:quiet],
+        do: Keyword.put(opts, :log, false),
+        else: opts
 
     Enum.each repos, fn repo ->
       ensure_repo(repo, args)
