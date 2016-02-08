@@ -423,7 +423,7 @@ defmodule Ecto.Association.Has do
         if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
         original = Map.get(changes, key)
-        {:error, update_in(changeset.changes, &Map.put(&1, key, original))}
+        {:error, put_in(changeset.changes[key], original)}
     end
   end
 

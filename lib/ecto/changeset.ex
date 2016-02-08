@@ -897,7 +897,7 @@ defmodule Ecto.Changeset do
         raise "changing #{tag}s with force_change/3 is not supported, " <>
               "please use put_#{tag}/4 instead"
       _ ->
-        update_in changeset.changes, &Map.put(&1, key, value)
+        put_in changeset.changes[key], value
     end
   end
 
@@ -1432,7 +1432,8 @@ defmodule Ecto.Changeset do
   def optimistic_lock(data_or_changeset, field, incrementer \\ &(&1 + 1)) do
     changeset = change(data_or_changeset, %{})
     current = Map.fetch!(changeset.data, field)
-    update_in(changeset.filters, &Map.put(&1, field, current))
+    changeset.filters[field]
+    |> put_in(current)
     |> force_change(field, incrementer.(current))
   end
 
