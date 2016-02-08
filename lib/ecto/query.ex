@@ -649,8 +649,9 @@ defmodule Ecto.Query do
   An order by query expression.
 
   Orders the fields based on one or more fields. It accepts a single field
-  or a list of fields. The direction can be specified in a keyword list as shown
-  in the examples. There can be several order by expressions in a query.
+  or a list of fields. The default direction is ascending (`:asc`) and can be
+  customized in a keyword list as shown in the examples.
+  There can be several order by expressions in a query.
 
   `order_by` also accepts a list of atoms where each atom refers to a field in
   source or a keyword list where the direction is given as key and the field
