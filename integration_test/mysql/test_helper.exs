@@ -25,7 +25,7 @@ pool =
     "sojourn_broker" -> DBConnection.Sojourn
   end
 
-# Basic test repo
+# Pool repo for async, safe tests
 alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
@@ -38,7 +38,7 @@ defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
 end
 
-# Pool repo for transaction and lock tests
+# Pool repo for non-async tests
 alias Ecto.Integration.PoolRepo
 
 Application.put_env(:ecto, PoolRepo,
@@ -62,17 +62,12 @@ end
 defmodule Ecto.Integration.Case do
   use ExUnit.CaseTemplate
 
-  setup_all do
-    Ecto.Adapters.SQL.begin_test_transaction(TestRepo, [])
-    on_exit fn -> Ecto.Adapters.SQL.rollback_test_transaction(TestRepo, []) end
-    :ok
-  end
-
   setup do
-    Ecto.Adapters.SQL.restart_test_transaction(TestRepo, [])
-    :ok
+    :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
   end
 end
+
+{:ok, _} = Application.ensure_all_started(:mariaex)
 
 # Load up the repository, start it, and run migrations
 _   = Ecto.Storage.down(TestRepo)
@@ -80,6 +75,6 @@ _   = Ecto.Storage.down(TestRepo)
 
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
-
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
+Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
 Process.flag(:trap_exit, true)

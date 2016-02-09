@@ -1,4 +1,4 @@
-if Code.ensure_loaded?(Mariaex.Connection) do
+if Code.ensure_loaded?(Mariaex) do
 
   defmodule Ecto.Adapters.MySQL.Connection do
     @moduledoc false
@@ -8,34 +8,35 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Connection
 
-    def connect(opts) do
+    def connection(opts) do
       opts = Keyword.update(opts, :port, @default_port, &normalize_port/1)
-      Mariaex.Connection.start_link(opts)
-    end
-
-    def query(conn, sql, params, opts \\ []) do
-      params = Enum.map params, fn
-        %Ecto.Query.Tagged{value: value} -> value
-        %{__struct__: _} = value -> value
-        %{} = value -> json_library.encode!(value)
-        value -> value
-      end
-
-      Mariaex.Connection.query(conn, sql, params, [decode: :manual] ++ opts)
-    end
-
-    def decode({:ok, res}, mapper) do
-      {:ok, Mariaex.Connection.decode(res, mapper) |> Map.from_struct}
-    end
-    def decode({:error, _} = err, _mapper) do
-      err
+      {Mariaex.Protocol, opts}
     end
 
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
     defp normalize_port(port) when is_integer(port), do: port
 
-    defp json_library do
-      Application.get_env(:ecto, :json_library)
+    ## Query
+
+    def prepare_execute(conn, name, sql, params, opts) do
+      query = %Mariaex.Query{name: name, statement: sql}
+      DBConnection.prepare_execute(conn, query, map_params(params), opts)
+    end
+
+    def execute(conn, sql, params, opts) when is_binary(sql) do
+      query = %Mariaex.Query{name: "", statement: sql}
+      DBConnection.query(conn, query, map_params(params), opts)
+    end
+
+    def execute(conn, %{} = query, params, opts) do
+      DBConnection.execute(conn, query, map_params(params), opts)
+    end
+
+    defp map_params(params) do
+      Enum.map params, fn
+        %Ecto.Query.Tagged{value: value} -> value
+        value -> value
+      end
     end
 
     def to_constraints(%Mariaex.Error{mariadb: %{code: 1062, message: message}}) do
@@ -58,28 +59,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       size = byte_size(quoted) - 2
       <<_, unquoted::binary-size(size), _>> = quoted
       unquoted
-    end
-
-    ## Transaction
-
-    def begin_transaction do
-      "BEGIN"
-    end
-
-    def rollback do
-      "ROLLBACK"
-    end
-
-    def commit do
-      "COMMIT"
-    end
-
-    def savepoint(savepoint) do
-      "SAVEPOINT " <> savepoint
-    end
-
-    def rollback_to_savepoint(savepoint) do
-      "ROLLBACK TO SAVEPOINT " <> savepoint
     end
 
     ## Query
