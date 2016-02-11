@@ -2,6 +2,14 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   use ExUnit.Case
 
   import Mix.Tasks.Ecto.Migrate, only: [run: 2]
+  import Support.FileHelpers
+
+  migrations_path = Path.join([tmp_path, inspect(Ecto.Migrate), "migrations"])
+
+  setup do
+    File.mkdir_p!(unquote(migrations_path))
+    :ok
+  end
 
   defmodule Repo do
     def start_link(_) do
@@ -23,7 +31,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
 
     def config do
-      [priv: "hello", otp_app: :ecto]
+      [priv: "tmp/#{inspect(Ecto.Migrate)}", otp_app: :ecto]
     end
   end
 
@@ -42,7 +50,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
 
     def config do
-      [priv: "howdy", otp_app: :ecto]
+      [priv: "tmp/#{inspect(Ecto.Migrate)}", otp_app: :ecto]
     end
   end
 
@@ -85,12 +93,20 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   test "runs the migrator yielding the repository and migrations path" do
     run ["-r", to_string(Repo), "--quiet", "--prefix", "foo"], fn repo, path, direction, opts ->
       assert repo == Repo
-      assert path == Application.app_dir(:ecto, "hello/migrations")
+      assert path == Application.app_dir(:ecto, "tmp/#{inspect(Ecto.Migrate)}/migrations")
       assert direction == :up
       assert opts[:all] == true
       assert opts[:log] == false
       assert opts[:prefix] == "foo"
     end
     assert Process.get(:started)
+  end
+
+  test "raises when migrations path does not exist" do
+    File.rm_rf!(unquote(migrations_path))
+    assert_raise Mix.Error, fn ->
+      run ["-r", to_string(Repo)], fn _, _, _, _ -> nil end
+    end
+    assert !Process.get(:started)
   end
 end
