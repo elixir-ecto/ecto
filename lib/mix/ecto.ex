@@ -23,7 +23,7 @@ defmodule Mix.Ecto do
   defp parse_repo([], []) do
     if app = Keyword.get(Mix.Project.config, :app) do
       case Application.get_env(app, :app_repo) do
-        nil -> 
+        nil ->
           case Application.get_env(app, :app_namespace, app) do
             ^app -> app |> to_string |> Mix.Utils.camelize
             mod  -> mod |> inspect
@@ -94,6 +94,19 @@ defmodule Mix.Ecto do
     Application.ensure_all_started(app)
   after
     Logger.add_backend(:console, flush: true)
+  end
+
+  @doc """
+  Ensures the given repository's migrations path exists on the filesystem.
+  """
+  @spec ensure_migrations_path(Ecto.Repo.t) :: Ecto.Repo.t | no_return
+  def ensure_migrations_path(repo) do
+    path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
+    if File.dir?(path) do
+      repo
+    else
+      Mix.raise "could not find migrations directory #{inspect path} for repo #{inspect repo}"
+    end
   end
 
   @doc """
