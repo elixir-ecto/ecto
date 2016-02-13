@@ -10,10 +10,10 @@ defmodule Ecto.Adapters.SQL.Connection do
   @type cached :: map
 
   @doc """
-  Receives options and returns `DBConnection` module and
-  options to use to handle queries.
+  Receives options and returns `DBConnection` supervisor child 
+  specification.
   """
-  @callback connection(Keyword.t) :: {module, Keyword.t}
+  @callback child_spec(Keyword.t) :: {module, Keyword.t}
 
   @doc """
   Prepares and executes the given query with `DBConnection`.

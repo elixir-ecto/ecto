@@ -281,7 +281,6 @@ defmodule Ecto.Adapters.SQL do
 
     {pool_name, pool_opts} = repo.__pool__
     opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
-    {mod, opts} = connection.connection(opts)
 
     opts =
       if function_exported?(repo, :after_connect, 1) and not Keyword.has_key?(opts, :after_connect) do
@@ -293,7 +292,7 @@ defmodule Ecto.Adapters.SQL do
         opts
       end
 
-    DBConnection.child_spec(mod, opts)
+    connection.child_spec(opts)
   end
 
   ## Types
