@@ -8,7 +8,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     ## Module and Options
 
-    def connection(opts) do
+    def child_spec(opts) do
       json = Application.get_env(:ecto, :json_library)
       extensions = [{Ecto.Adapters.Postgres.DateTime, []},
                     {Postgrex.Extensions.JSON, library: json}]
@@ -19,7 +19,7 @@ if Code.ensure_loaded?(Postgrex) do
         |> Keyword.update(:port, @default_port, &normalize_port/1)
         |> Keyword.put(:types, true)
 
-      {Postgrex.Protocol, opts}
+      Postgrex.child_spec(opts)
     end
 
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
