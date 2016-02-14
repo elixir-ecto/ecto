@@ -175,7 +175,8 @@ defmodule Ecto.MultiTest do
     assert {:ok, changes} = TestRepo.transaction(multi)
     assert_received {:transaction, _}
     assert {:messages, actions} = Process.info(self, :messages)
-    assert actions == [:insert, :update, :delete, :update_all, :delete_all]
+    assert actions == [:insert, :update, :delete,
+                       {:update_all, "comments"}, {:delete_all, "comments"}]
     assert %Comment{} = changes.insert
     assert %Comment{} = changes.update
     assert %Comment{} = changes.delete
@@ -205,7 +206,7 @@ defmodule Ecto.MultiTest do
 
   test "Repo.transaction rolling back from repo" do
     changeset = Changeset.change(%Comment{id: 1}, x: 1)
-    invalid   = put_in(changeset.model.__meta__.context, {:invalid, [unique: "comments_x_index"]})
+    invalid   = put_in(changeset.data.__meta__.context, {:invalid, [unique: "comments_x_index"]})
                 |> Changeset.unique_constraint(:x)
 
     multi =
@@ -230,7 +231,7 @@ defmodule Ecto.MultiTest do
     multi = Multi.new |> Multi.insert(:invalid, changeset)
 
     assert {:error, :invalid, invalid, %{}} = TestRepo.transaction(multi)
-    assert invalid.model == changeset.model
+    assert invalid.data == changeset.data
     refute_received {:transaction, _}
   end
 
