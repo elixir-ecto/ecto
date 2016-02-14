@@ -1075,6 +1075,10 @@ defmodule Ecto.Changeset do
     end
   end
 
+  defp missing?(_changeset, field) do
+    raise ArgumentError, "validate_required/3 expects field names to be atoms, got: `#{inspect field}`"
+  end
+
   @doc """
   Validates a change has the given format.
 
