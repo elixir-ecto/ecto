@@ -2,6 +2,8 @@
 
 This is a new major release of Ecto that removes previously deprecated features and introduces a series of improvements and features based on [`db_connection`](https://github.com/fishcakez/db_connection).
 
+Ecto 2.0 requires Elixir 1.2+.
+
 ## Highlights
 
 ### Revamped changesets
