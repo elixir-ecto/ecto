@@ -7,11 +7,12 @@ defmodule Ecto.Embedded do
                        on_replace: :raise | :mark_as_invalid | :delete,
                        field: atom,
                        owner: atom,
+                       on_cast: nil | fun,
                        related: atom}
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-  defstruct [:cardinality, :field, :owner, :related, on_replace: :raise]
+  defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise]
 
   @doc """
   Builds the embedded struct.

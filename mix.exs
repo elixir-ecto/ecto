@@ -1,7 +1,7 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "2.0.0-dev"
+  @version "2.0.0-beta.0"
   @adapters [:pg]
 
   def project do

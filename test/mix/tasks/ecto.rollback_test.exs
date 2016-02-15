@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
     end
 
     def stop(_) do
-      raise "I should never be called"
+      :ok
     end
 
     def __adapter__ do

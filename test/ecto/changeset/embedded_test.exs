@@ -203,6 +203,8 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "cast embeds_one with custom changeset" do
     changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, :profile,
                      with: &Profile.optional_changeset/2)
+
+    assert (changeset.types.profile |> elem(1)).on_cast == &Profile.optional_changeset/2
     profile = changeset.changes.profile
     assert profile.changes == %{name: "michal"}
     assert profile.errors  == []

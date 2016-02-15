@@ -506,19 +506,24 @@ defmodule Ecto.Changeset do
     on_cast = opts[:with] || &related.changeset(&1, &2)
     current = Relation.load!(data, Map.get(data, key))
 
-    case Map.fetch(params, param_key) do
-      {:ok, value} ->
-        case Relation.cast(relation, value, current, on_cast) do
-          {:ok, change, relation_valid?, false} when change != current ->
-            missing_relation(%{changeset | changes: Map.put(changes, key, change),
-                               valid?: changeset.valid? && relation_valid?}, key, current, required?, relation)
-          {:ok, _, _, _} ->
-            missing_relation(changeset, key, current, required?, relation)
-          :error ->
-            %{changeset | errors: [{key, "is invalid"} | changeset.errors], valid?: false}
-        end
-      :error ->
-        missing_relation(changeset, key, current, required?, relation)
+    changeset =
+      case Map.fetch(params, param_key) do
+        {:ok, value} ->
+          case Relation.cast(relation, value, current, on_cast) do
+            {:ok, change, relation_valid?, false} when change != current ->
+              missing_relation(%{changeset | changes: Map.put(changes, key, change),
+                                 valid?: changeset.valid? && relation_valid?}, key, current, required?, relation)
+            {:ok, _, _, _} ->
+              missing_relation(changeset, key, current, required?, relation)
+            :error ->
+              %{changeset | errors: [{key, "is invalid"} | changeset.errors], valid?: false}
+          end
+        :error ->
+          missing_relation(changeset, key, current, required?, relation)
+      end
+
+    update_in changeset.types[key], fn {type, relation} ->
+      {type, %{relation | on_cast: on_cast}}
     end
   end
 

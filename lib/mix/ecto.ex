@@ -76,7 +76,7 @@ defmodule Mix.Ecto do
     pool_size = Keyword.get(opts, :pool_size, 1)
     case repo.start_link(pool_size: pool_size) do
       {:ok, pid} -> {:ok, pid}
-      {:error, {:already_started, _}} -> {:ok, nil}
+      {:error, {:already_started, pid}} -> {:ok, pid}
       {:error, error} ->
         Mix.raise "could not start repo #{inspect repo}, error: #{inspect error}"
     end
@@ -89,7 +89,7 @@ defmodule Mix.Ecto do
     # Silence the logger to avoid application down messages.
     Logger.remove_backend(:console)
     app = repo.__adapter__.application
-    pid && repo.stop(pid)
+    repo.stop(pid)
     Application.stop(app)
     Application.ensure_all_started(app)
   after

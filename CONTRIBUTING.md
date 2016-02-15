@@ -2,7 +2,7 @@
 
 1. Do not post questions in the issues tracker. If you have any questions about Ecto, use the [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto) or Stack Overflow.
 
-2. Do a small search on the tracker before submitting opening an issue to see if it was already suggested, reported or fixed.
+2. Do a small search on the tracker before opening an issue to see if it was already suggested, reported or fixed.
 
 3. When reporting an issue, please include as much information as possible: which Elixir and Ecto versions as well as the database, adapter and their respective versions. If there is an error, include the code, error message and stacktrace. Issues that do not provide proper information will be closed.
 

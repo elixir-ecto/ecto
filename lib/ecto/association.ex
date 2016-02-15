@@ -25,6 +25,7 @@ defmodule Ecto.Association do
   @moduledoc false
 
   @type t :: %{__struct__: atom,
+               on_cast: nil | fun,
                cardinality: :one | :many,
                relationship: :parent | :child,
                owner: atom,
@@ -312,7 +313,7 @@ defmodule Ecto.Association.Has do
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :nilify_all, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
-  defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key,
+  defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
              :queryable, :on_delete, :on_replace, defaults: [], relationship: :child]
 
   @doc false
@@ -490,7 +491,8 @@ defmodule Ecto.Association.HasThrough do
   alias Ecto.Query.JoinExpr
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :owner_key, :through, relationship: :child]
+  defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
+             relationship: :child]
 
   @doc false
   def struct(module, name, opts) do
@@ -638,8 +640,8 @@ defmodule Ecto.Association.BelongsTo do
 
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
-  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_replace,
-             defaults: [], cardinality: :one, relationship: :parent]
+  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
+             :on_replace, defaults: [], cardinality: :one, relationship: :parent]
 
   @doc false
   def struct(module, name, opts) do
@@ -770,8 +772,8 @@ defmodule Ecto.Association.ManyToMany do
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
-  defstruct [:field, :owner, :related, :owner_key, :queryable,
-             :on_delete, :on_replace, :join_keys, :join_through,
+  defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
+             :on_replace, :join_keys, :join_through, :on_cast,
              defaults: [], relationship: :child, cardinality: :many]
 
   @doc false
