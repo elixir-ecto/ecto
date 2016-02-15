@@ -90,6 +90,15 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:fun, {:run, {__MODULE__, :ok, []}}}]
   end
 
+  test "insert_all" do
+    multi =
+      Multi.new
+      |> Multi.insert_all(:comments, Comment, [[x: 2]])
+
+    assert multi.names == MapSet.new([:comments])
+    assert [{:comments, {:insert_all, Comment, [[x: 2]], []}}] = multi.operations
+  end
+
   test "update_all" do
     multi =
       Multi.new
@@ -148,6 +157,7 @@ defmodule Ecto.MultiTest do
       |> Multi.run(:run, fn changes -> {:ok, changes} end)
       |> Multi.update(:update, changeset)
       |> Multi.delete(:delete, changeset)
+      |> Multi.insert_all(:insert_all, Comment, [[x: 1]])
       |> Multi.update_all(:update_all, Comment, set: [x: 1])
       |> Multi.delete_all(:delete_all, Comment)
 
@@ -156,6 +166,7 @@ defmodule Ecto.MultiTest do
       {:run,        {:run, _}},
       {:update,     {:update, _, []}},
       {:delete,     {:delete, _, []}},
+      {:insert_all, {:insert_all, _, _, []}},
       {:update_all, {:update_all, _, _, []}},
       {:delete_all, {:delete_all, _, []}},
     ] = Ecto.Multi.to_list(multi)
@@ -169,17 +180,19 @@ defmodule Ecto.MultiTest do
       |> Multi.run(:run, fn changes -> {:ok, changes} end)
       |> Multi.update(:update, changeset)
       |> Multi.delete(:delete, changeset)
+      |> Multi.insert_all(:insert_all, Comment, [[x: 1]])
       |> Multi.update_all(:update_all, Comment, set: [x: 1])
       |> Multi.delete_all(:delete_all, Comment)
 
     assert {:ok, changes} = TestRepo.transaction(multi)
     assert_received {:transaction, _}
     assert {:messages, actions} = Process.info(self, :messages)
-    assert actions == [:insert, :update, :delete,
+    assert actions == [:insert, :update, :delete, {:insert_all, "comments", [[x: 1]]},
                        {:update_all, "comments"}, {:delete_all, "comments"}]
     assert %Comment{} = changes.insert
     assert %Comment{} = changes.update
     assert %Comment{} = changes.delete
+    assert {1, nil}   = changes.insert_all
     assert {1, nil}   = changes.update_all
     assert {1, nil}   = changes.delete_all
     assert Map.has_key?(changes.run, :insert)
