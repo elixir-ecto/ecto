@@ -533,13 +533,8 @@ if Code.ensure_loaded?(Mariaex) do
       "RENAME TABLE #{quote_table(current_table.prefix, current_table.name)} TO #{quote_table(new_table.prefix, new_table.name)}"
     end
 
-    def execute_ddl({:rename, %Table{}=table, current_column, new_column}) do
-      [
-        "SELECT @column_type := COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '#{table.name}' AND COLUMN_NAME = '#{current_column}' LIMIT 1",
-        "SET @rename_stmt = concat('ALTER TABLE #{quote_table(table.prefix, table.name)} CHANGE COLUMN `#{current_column}` `#{new_column}` ', @column_type)",
-        "PREPARE rename_stmt FROM @rename_stmt",
-        "EXECUTE rename_stmt"
-      ]
+    def execute_ddl({:rename, _table, _current_column, _new_column}) do
+      error!(nil, "MySQL adapter does not support renaming columns")
     end
 
     def execute_ddl(string) when is_binary(string), do: string

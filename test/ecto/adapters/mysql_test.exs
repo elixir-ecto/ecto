@@ -689,28 +689,6 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.execute_ddl(rename) == ~s|RENAME TABLE `foo`.`posts` TO `foo`.`new_posts`|
   end
 
-  test "rename column" do
-    rename = {:rename, table(:posts), :given_name, :first_name}
-    assert SQL.execute_ddl(rename) ==
-      [
-        "SELECT @column_type := COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'posts' AND COLUMN_NAME = 'given_name' LIMIT 1",
-        "SET @rename_stmt = concat('ALTER TABLE `posts` CHANGE COLUMN `given_name` `first_name` ', @column_type)",
-        "PREPARE rename_stmt FROM @rename_stmt",
-        "EXECUTE rename_stmt"
-      ]
-  end
-
-  test "rename column in table with prefixes" do
-    rename = {:rename, table(:posts, prefix: :foo), :given_name, :first_name}
-    assert SQL.execute_ddl(rename) ==
-      [
-        "SELECT @column_type := COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'posts' AND COLUMN_NAME = 'given_name' LIMIT 1",
-        "SET @rename_stmt = concat('ALTER TABLE `foo`.`posts` CHANGE COLUMN `given_name` `first_name` ', @column_type)",
-        "PREPARE rename_stmt FROM @rename_stmt",
-        "EXECUTE rename_stmt"
-      ]
-  end
-
   # Unsupported types and clauses
 
   test "arrays" do
