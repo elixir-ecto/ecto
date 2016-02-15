@@ -22,7 +22,7 @@ defmodule Ecto.Multi do
   If Multi contains operations that accept changesets (like `insert/4`,
   `update/4` or `delete/4`) they will be checked before starting transaction
   if any of them isn't invalid. In case any has errors, the transaction won't
-  be even started and the error will be immediately returned.
+  even be started and the error will be immediately returned.
 
   ## Run
 
@@ -85,7 +85,10 @@ defmodule Ecto.Multi do
         ] = Ecto.Multi.to_list(multi)
 
         # We can introspect changesets and query to see if everything
-        # is as expected.
+        # is as expected, for example:
+        assert account_changeset.valid?
+        assert log_changeset.valid?
+        assert inspect(query) == "#Ecto.Query<from a in Session>"
       end
   """
 

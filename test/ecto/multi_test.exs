@@ -1,5 +1,6 @@
 defmodule Ecto.MultiTest do
   use ExUnit.Case, async: true
+  doctest Ecto.Multi
 
   alias Ecto.Multi
   alias Ecto.Changeset
