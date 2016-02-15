@@ -39,7 +39,7 @@ defmodule Ecto.Mixfile do
 
      # Drivers
      {:mariaex, "~> 0.6", optional: true},
-     {:postgrex, github: "ericmj/postgrex", optional: true},
+     {:postgrex, "~> 0.11.1", optional: true},
 
      # Optional
      {:sbroker, "~> 0.7", optional: true},

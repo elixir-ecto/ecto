@@ -151,6 +151,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Repo] Perform preloads in parallel by default
   * [Repo] Add `Repo.in_transaction?` to know if the current process is in a transaction
   * [Repo] Add `Repo.first/2`, `Repo.first!/2`, `Repo.last/2`, `Repo.last!/2` and `Repo.aggregate/4`
+  * [Repo] Support `:returning` option in `insert_all`, `update_all` and `delete_all`
   * [Schema] Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
   * [Schema] Support composite primary keys
 
