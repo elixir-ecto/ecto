@@ -463,9 +463,9 @@ defmodule Ecto.Integration.RepoTest do
     # Barebones
     assert TestRepo.aggregate(Post, :max, :visits) == 14
     assert TestRepo.aggregate(Post, :min, :visits) == 10
-    assert TestRepo.aggregate(Post, :sum, :visits) == 50
     assert TestRepo.aggregate(Post, :count, :visits) == 4
-    assert %Decimal{} = TestRepo.aggregate(Post, :avg, :visits)
+    assert "50" = to_string(TestRepo.aggregate(Post, :sum, :visits))
+    assert "12.5" <> _ = to_string(TestRepo.aggregate(Post, :avg, :visits))
 
     # With order_by
     query = from Post, order_by: [asc: :visits]
@@ -491,6 +491,7 @@ defmodule Ecto.Integration.RepoTest do
     assert {0, nil} = TestRepo.insert_all("posts", [])
   end
 
+  @tag :returning
   test "insert all with returning with schema" do
     assert {0, []} = TestRepo.insert_all(Comment, [], returning: true)
     assert {0, nil} = TestRepo.insert_all(Comment, [], returning: false)
@@ -504,6 +505,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Comment{text: "4", __meta__: %{state: :loaded}} = c2
   end
 
+  @tag :returning
   test "insert all with returning without schema" do
     {2, [c1, c2]} = TestRepo.insert_all("comments", [[text: "1"], [text: "2"]], returning: [:id, :text])
     assert %{id: _, text: "1"} = c1
