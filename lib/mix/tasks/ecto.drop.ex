@@ -22,6 +22,7 @@ defmodule Mix.Tasks.Ecto.Drop do
   @doc false
   def run(args) do
     repos = parse_repo(args)
+    ensure_repo(repos, args)
 
     Enum.all?(repos, &ensure_implements(&1.__adapter__, Ecto.Adapter.Storage,
                                         "to drop storage for #{inspect &1}"))
@@ -29,7 +30,6 @@ defmodule Mix.Tasks.Ecto.Drop do
     {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean]
 
     Enum.each repos, fn repo ->
-      ensure_repo(repo, args)
       if skip_safety_warnings?() or
          Mix.shell.yes?("Are you sure you want to drop the database for repo #{inspect repo}?") do
         drop_database(repo, opts)

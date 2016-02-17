@@ -44,6 +44,9 @@ defmodule Mix.Ecto do
   Ensures the given module is a repository.
   """
   @spec ensure_repo(module, list) :: Ecto.Repo.t | no_return
+  def ensure_repo(repos, args) when is_list(repos) do
+    Enum.map repos, &ensure_repo(&1, args)
+  end
   def ensure_repo(repo, args) do
     Mix.Task.run "loadpaths", args
 
