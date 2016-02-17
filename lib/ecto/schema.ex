@@ -287,7 +287,6 @@ defmodule Ecto.Schema do
       @primary_key {:id, :id, autogenerate: true}
       @timestamps_opts []
       @foreign_key_type :id
-      @before_compile Ecto.Schema
       @ecto_embedded false
       @schema_prefix nil
 
@@ -1041,7 +1040,7 @@ defmodule Ecto.Schema do
     Enum.reduce(fields, struct, fn
       {field, type}, acc ->
         case Map.fetch(map, Atom.to_string(field)) do
-          {:ok, value} -> Map.put(acc, field, load!(type, value, loader))
+          {:ok, value} -> Map.put(acc, field, load!(struct, type, value, loader))
           :error -> acc
         end
     end)
@@ -1054,7 +1053,7 @@ defmodule Ecto.Schema do
   defp do_load([field|fields], [value|values], struct, types, loader) do
     case :lists.keyfind(field, 1, types) do
       {^field, type} ->
-        value = load!(type, value, loader)
+        value = load!(struct, type, value, loader)
         do_load(fields, values, Map.put(struct, field, value), types, loader)
       false ->
         raise ArgumentError, "unknown field `#{field}` for struct #{inspect struct.__struct__}"
@@ -1063,10 +1062,10 @@ defmodule Ecto.Schema do
 
   defp do_load([], [], struct, _types, _loader), do: struct
 
-  defp load!(type, value, loader) do
+  defp load!(struct, type, value, loader) do
     case loader.(type, value) do
       {:ok, value} -> value
-      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type}"
+      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} in schema #{inspect struct.__struct__}"
     end
   end
 
@@ -1283,15 +1282,6 @@ defmodule Ecto.Schema do
       def __schema__(:autogenerate_id), do: unquote(id)
       def __schema__(:autogenerate, :insert), do: unquote(Macro.escape(insert))
       def __schema__(:autogenerate, :update), do: unquote(Macro.escape(update))
-    end
-  end
-
-  @doc false
-  def __before_compile__(env) do
-    unless Module.get_attribute(env.module, :struct_fields) do
-      raise "module #{inspect env.module} uses Ecto.Schema but it " <>
-            "does not define a schema. Please cherry pick the functionality you want " <>
-            "instead, for example, by importing Ecto.Query, Ecto.Schema or others"
     end
   end
 

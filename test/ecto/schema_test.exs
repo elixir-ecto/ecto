@@ -198,14 +198,6 @@ defmodule Ecto.SchemaTest do
 
   ## Errors
 
-  test "complains when a schema is not defined" do
-    assert_raise RuntimeError, ~r"does not define a schema", fn ->
-      defmodule Sample do
-        use Ecto.Schema
-      end
-    end
-  end
-
   test "field name clash" do
     assert_raise ArgumentError, "field/association :name is already set on schema", fn ->
       defmodule SchemaFieldNameClash do
