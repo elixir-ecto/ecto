@@ -104,11 +104,15 @@ defmodule Mix.Ecto do
   """
   @spec ensure_migrations_path(Ecto.Repo.t) :: Ecto.Repo.t | no_return
   def ensure_migrations_path(repo) do
-    path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
-    if File.dir?(path) do
-      repo
+    if Mix.Project.umbrella? do
+      true
     else
-      Mix.raise "could not find migrations directory #{inspect path} for repo #{inspect repo}"
+      path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
+      if File.dir?(path) do
+        repo
+      else
+        Mix.raise "could not find migrations directory #{inspect path} for repo #{inspect repo}"
+      end
     end
   end
 
