@@ -113,16 +113,16 @@ defmodule Ecto.Repo.Preloader do
       %{^owner_key => id, ^field => value} = struct
 
       cond do
-        is_nil(id) ->
-          {fetch_ids, loaded_ids, loaded_structs}
-        force? or not Ecto.assoc_loaded?(value) ->
-          {[id|fetch_ids], loaded_ids, loaded_structs}
-        card == :one ->
+        card == :one and not is_nil(value) and Ecto.assoc_loaded?(value) and not force? ->
           {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
-        card == :many ->
+        card == :many and not is_nil(value) and Ecto.assoc_loaded?(value) and not force? ->
           {fetch_ids,
            List.duplicate(id, length(value)) ++ loaded_ids,
            value ++ loaded_structs}
+        is_nil(id) ->
+          {fetch_ids, loaded_ids, loaded_structs}
+        true ->
+          {[id|fetch_ids], loaded_ids, loaded_structs}
       end
     end
   end
