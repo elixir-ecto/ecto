@@ -149,13 +149,13 @@ defmodule Ecto.Repo do
 
       def one(queryable, opts \\ []) do
         IO.puts :stderr, "warning: #{inspect __MODULE__}.one/2 is deprecated, " <>
-                         "please use all/2 or first/2 accordingly\n" <> Exception.format_stacktrace
+                         "please use all/2, aggregate/3 or first/2 accordingly\n" <> Exception.format_stacktrace
         Ecto.Repo.Queryable.one(__MODULE__, @adapter, queryable, opts)
       end
 
       def one!(queryable, opts \\ []) do
         IO.puts :stderr, "warning: #{inspect __MODULE__}.one!/2 is deprecated, " <>
-                         "please use all/2 or first!/2 accordingly\n" <> Exception.format_stacktrace
+                         "please use all/2, aggregate/3 or first!/2 accordingly\n" <> Exception.format_stacktrace
         Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
       end
 
