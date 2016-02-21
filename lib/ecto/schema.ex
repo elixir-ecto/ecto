@@ -853,7 +853,7 @@ defmodule Ecto.Schema do
 
       create table(:posts_tags, primary_key: false) do
         add :post_id, references(:posts)
-        add :tag_id, references(:tag)
+        add :tag_id, references(:tags)
       end
 
   However, if your `:join_through` is a schema, like `MyApp.PostTag`, your
@@ -862,7 +862,7 @@ defmodule Ecto.Schema do
 
       create table(:posts_tags) do
         add :post_id, references(:posts)
-        add :tag_id, references(:tag)
+        add :tag_id, references(:tags)
         timestamps
       end
 
