@@ -153,8 +153,8 @@ defmodule Ecto.Date do
     do: :error
 
   defp valid_date?(:error), do: :error
-  defp valid_date?({:ok, d}) do
-    if :calendar.valid_date({d.year, d.month, d.day}), do: {:ok, d}, else: :error
+  defp valid_date?({:ok, %{year: y, month: m, day: d} = date}) do
+    if :calendar.valid_date(y, m, d), do: {:ok, date}, else: :error
   end
 
   defp from_parts(year, month, day) when is_date(year, month, day) do
@@ -458,8 +458,8 @@ defmodule Ecto.DateTime do
   end
 
   defp valid_date?(:error), do: :error
-  defp valid_date?({:ok, dt}) do
-    if :calendar.valid_date({dt.year, dt.month, dt.day}), do: {:ok, dt}, else: :error
+  defp valid_date?({:ok, %{year: y, month: m, day: d} = datetime}) do
+    if :calendar.valid_date(y, m, d), do: {:ok, datetime}, else: :error
   end 
 
   defp from_parts(year, month, day, hour, min, sec, usec)
