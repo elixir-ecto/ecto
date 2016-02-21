@@ -51,7 +51,7 @@ defmodule Ecto.Type do
         def dump(_), do: :error
       end
 
-  Now, we can use our new field above as our primary key type in models:
+  Now we can use our new field above as our primary key type in models:
 
       defmodule Post do
         use Ecto.Schema
@@ -69,17 +69,21 @@ defmodule Ecto.Type do
   value stored in the struct and the database was always an integer.
 
   Ecto types also allow developers to create completely new types as
-  long as they can be encoded by the database. `Ecto.DateTime` and
-  `Ecto.UUID` are such examples.
+  long as they can be encoded by the database. `Ecto.DateTime` is such
+  an example.
 
-  In order for this to work, callbacks should take care of encoding your custom
-  Ecto type into its db representation, as well as decoding it from the db back
-  into the Ecto type. Each callback should behave as follows.
+  In order for this to work, callbacks should take care of encoding your
+  custom Ecto type into its DB representation, as well as decoding it
+  from the DB back into the Ecto type. Each callback should behave as follows:
 
-    * `type` should output the name of the db type
+    * `type` should output the name of the DB type
     * `cast` should receive any type and output your custom Ecto type
-    * `load` should receive the db type and output your custom Ecto type
-    * `dump` should receive your custom Ecto type and output the db type
+    * `load` should receive the DB type and output your custom Ecto type
+    * `dump` should receive your custom Ecto type and output the DB type
+
+  Finally, the `Ecto.DataType` protocol can be used to convert any Elixir
+  value into an DB type. This allows a custom value, like `Ecto.DateTime`,
+  to behave exactly as an Ecto's primitive type, like `:datetime`.
   """
 
   import Kernel, except: [match?: 2]
@@ -556,12 +560,6 @@ defmodule Ecto.Type do
       _         -> :error
     end
   end
-
-  # This would be equivalent to implementing Ecto.DataType
-  # for those types. We skip the protocol for performance.
-  def cast(:datetime, %{__struct__: Ecto.DateTime} = datetime), do: Ecto.DateTime.dump(datetime)
-  def cast(:date, %{__struct__: Ecto.Date} = date), do: Ecto.Date.dump(date)
-  def cast(:time, %{__struct__: Ecto.Time} = time), do: Ecto.Time.dump(time)
 
   def cast(type, term) do
     case try_cast(type, term) do

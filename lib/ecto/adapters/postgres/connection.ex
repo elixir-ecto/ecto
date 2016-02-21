@@ -87,8 +87,11 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp map_params(params) do
       Enum.map params, fn
-        %Ecto.Query.Tagged{value: value} -> value
-        value -> value
+        %{__struct__: _} = data_type ->
+          {:ok, value} = Ecto.DataType.dump(data_type)
+          value
+        value ->
+          value
       end
     end
 

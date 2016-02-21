@@ -6,6 +6,14 @@ defmodule Ecto.Integration.SQLTest do
   alias Ecto.Integration.Post
   import Ecto.Query, only: [from: 2]
 
+  test "fragmented types" do
+    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
+                              hour: 20, min: 26, sec: 51, usec: 0}
+    TestRepo.insert!(%Post{inserted_at: datetime})
+    query = from p in Post, where: fragment("? >= ?", p.inserted_at, ^datetime), select: p.inserted_at
+    assert [^datetime] = TestRepo.all(query)
+  end
+
   test "query!/4" do
     result = Ecto.Adapters.SQL.query!(TestRepo, "SELECT 1", [])
     assert result.rows == [[1]]

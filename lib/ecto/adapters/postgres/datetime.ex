@@ -51,6 +51,30 @@ if Code.ensure_loaded?(Postgrex) do
       <<secs * 1_000_000 + usec :: signed-64>>
     end
 
+    defp encode_timestamp(arg) do
+      raise ArgumentError, """
+      could not encode datetime: #{inspect arg}
+
+      This error happens when you are by-passing Ecto's Query API by
+      using either Ecto.Adapters.SQL.query/4 or Ecto fragments. This
+      makes Ecto unable to properly cast the type. For example:
+
+          now = Ecto.DateTime.utc |> Calecto.DateTimeUTC.cast
+          from u in User, where: fragment("(?).wall_time > ?", u.start_datetime, ^now)
+
+      In the query above, Ecto is unable to know the variable "now" is
+      being compared to a datetime due to the fragment and is therefore
+      unable to cast it. You can fix this by explicitly telling Ecto
+      which type must be used:
+
+          fragment("(?).wall_time > ?",
+            u.start_datetime,
+            type(^now, :datetime))
+
+      Or by implementing the Ecto.DataType protocol for the given value.
+      """
+    end
+
     ### DECODING ###
 
     def decode(%TypeInfo{send: "date_send"}, <<n :: signed-32>>, _, _),

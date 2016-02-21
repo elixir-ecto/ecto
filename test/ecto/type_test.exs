@@ -52,6 +52,9 @@ defmodule Ecto.TypeTest do
       def cast(_, _) do
         :error
       end
+      def dump(%Name{first: first, last: last}) do
+        {:ok, first <> " " <> last}
+      end
     end
 
     assert cast(:string, name) == {:ok, "john doe"}
