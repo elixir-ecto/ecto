@@ -115,7 +115,7 @@ defmodule Ecto.Repo.Preloader do
       cond do
         card == :one and not is_nil(value) and Ecto.assoc_loaded?(value) and not force? ->
           {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
-        card == :many and not is_nil(value) and Ecto.assoc_loaded?(value) and not force? ->
+        card == :many and Ecto.assoc_loaded?(value) and not force? ->
           {fetch_ids,
            List.duplicate(id, length(value)) ++ loaded_ids,
            value ++ loaded_structs}

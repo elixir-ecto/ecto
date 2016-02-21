@@ -949,6 +949,19 @@ defmodule Ecto.Schema do
 
       # Update the order
       changeset = Repo.update!(changeset)
+
+  ## Encoding and decoding
+
+  Because many databases do not support direct encoding and decoding
+  of embeds, it is often emulated by Ecto by using specific encoding
+  and decoding rules.
+
+  For example, PostgreSQL will store embeds on top of JSONB columns,
+  which means types in embedded schemas won't go through the usual
+  dump->DB->load cycle but rather encode->DB->decode->cast. This means
+  that, when using embedded schemas with databases like PG or MySQL,
+  make sure all of your types can be JSON encoded/decoded correctly.
+  Ecto provides this guarantee for all built-in types.
   """
   defmacro embeds_one(name, schema, opts \\ []) do
     quote do
@@ -967,6 +980,9 @@ defmodule Ecto.Schema do
   In fact, Ecto will automatically translate `nil` values from the
   database into empty lists for embeds many (this behaviour is specific
   to `embeds_many/3` fields in order to mimic `has_many/3`).
+
+  For encoding and decoding of embeds, please read the docs for
+  `embeds_one/3`.
 
   ## Options
 

@@ -442,7 +442,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert u.custom.bid == c.bid
   end
 
-  test "skip preloads with association set but without id set" do
+  test "preload skips with association set but without id" do
     c1 = TestRepo.insert!(%Comment{text: "1"})
     u1 = TestRepo.insert!(%User{name: "name"})
     p1 = TestRepo.insert!(%Post{title: "title"})
