@@ -2,6 +2,7 @@ defmodule Ecto.DateTest do
   use ExUnit.Case, async: true
 
   @date %Ecto.Date{year: 2015, month: 12, day: 31}
+  @leap_date %Ecto.Date{year: 2000, month: 2, day: 29}
 
   test "cast itself" do
     assert Ecto.Date.cast(@date) == {:ok, @date}
@@ -9,10 +10,13 @@ defmodule Ecto.DateTest do
 
   test "cast strings" do
     assert Ecto.Date.cast("2015-12-31") == {:ok, @date}
+    assert Ecto.Date.cast("2000-02-29") == {:ok, @leap_date}
     assert Ecto.Date.cast("2015-00-23") == :error
     assert Ecto.Date.cast("2015-13-23") == :error
     assert Ecto.Date.cast("2015-01-00") == :error
     assert Ecto.Date.cast("2015-01-32") == :error
+    assert Ecto.Date.cast("2015-02-29") == :error
+    assert Ecto.Date.cast("1900-02-29") == :error
 
     assert Ecto.Date.cast("2015-12-31 23:50:07") == {:ok, @date}
     assert Ecto.Date.cast("2015-12-31T23:50:07") == {:ok, @date}
@@ -196,10 +200,12 @@ defmodule Ecto.DateTimeTest do
   @datetime_zero %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 0, usec: 0}
   @datetime_usec %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07, usec: 8000}
   @datetime_notime %Ecto.DateTime{year: 2015, month: 1, day: 23, hour: 0, min: 0, sec: 0, usec: 0}
+  @datetime_leapyear %Ecto.DateTime{year: 2000, month: 2, day: 29, hour: 23, min: 50, sec: 07, usec: 0}
 
   test "cast itself" do
     assert Ecto.DateTime.cast(@datetime) == {:ok, @datetime}
     assert Ecto.DateTime.cast(@datetime_usec) == {:ok, @datetime_usec}
+    assert Ecto.DateTime.cast(@datetime_leapyear) == {:ok, @datetime_leapyear}
   end
 
   test "cast strings" do
@@ -207,6 +213,7 @@ defmodule Ecto.DateTimeTest do
     assert Ecto.DateTime.cast("2015-01-23T23:50:07") == {:ok, @datetime}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07Z") == {:ok, @datetime}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07.000Z") == {:ok, @datetime}
+    assert Ecto.DateTime.cast("2000-02-29T23:50:07") == {:ok, @datetime_leapyear}
     assert Ecto.DateTime.cast("2015-01-23P23:50:07") == :error
 
     assert Ecto.DateTime.cast("2015-01-23T23:50:07.008") == {:ok, @datetime_usec}

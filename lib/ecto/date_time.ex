@@ -124,21 +124,7 @@ defmodule Ecto.Date do
     * an `Ecto.Date` struct itself
 
   """
-  def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes>>),
-    do: from_parts(to_i(year), to_i(month), to_i(day))
-  def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
-             _hour::2-bytes, ?:, _min::2-bytes, ?:, _sec::2-bytes, _rest::binary>>) when sep in [?\s, ?T],
-    do: from_parts(to_i(year), to_i(month), to_i(day))
-  def cast(%Ecto.Date{} = d),
-    do: {:ok, d}
-  def cast(%{"year" => year, "month" => month, "day" => day}),
-    do: from_parts(to_i(year), to_i(month), to_i(day))
-  def cast(%{year: year, month: month, day: day}),
-    do: from_parts(to_i(year), to_i(month), to_i(day))
-  def cast({year, month, day}),
-    do: from_parts(to_i(year), to_i(month), to_i(day))
-  def cast(_),
-    do: :error
+  def cast(d), do: d |> do_cast |> valid_date?
 
   @doc """
   Same as `cast/1` but raises on invalid dates.
@@ -148,6 +134,27 @@ defmodule Ecto.Date do
       {:ok, date} -> date
       :error -> raise ArgumentError, "cannot cast #{inspect value} to date"
     end
+  end
+
+  defp do_cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes>>),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
+  defp do_cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
+             _hour::2-bytes, ?:, _min::2-bytes, ?:, _sec::2-bytes, _rest::binary>>) when sep in [?\s, ?T],
+    do: from_parts(to_i(year), to_i(month), to_i(day))
+  defp do_cast(%Ecto.Date{} = d),
+    do: {:ok, d}
+  defp do_cast(%{"year" => year, "month" => month, "day" => day}),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
+  defp do_cast(%{year: year, month: month, day: day}),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
+  defp do_cast({year, month, day}),
+    do: from_parts(to_i(year), to_i(month), to_i(day))
+  defp do_cast(_),
+    do: :error
+
+  defp valid_date?(:error), do: :error
+  defp valid_date?({:ok, d}) do
+    if :calendar.valid_date({d.year, d.month, d.day}), do: {:ok, d}, else: :error
   end
 
   defp from_parts(year, month, day) when is_date(year, month, day) do
@@ -398,45 +405,7 @@ defmodule Ecto.DateTime do
     * an `Ecto.DateTime` struct itself
 
   """
-  def cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
-             hour::2-bytes, ?:, min::2-bytes, ?:, sec::2-bytes, rest::binary>>) when sep in [?\s, ?T] do
-    if usec = usec(rest) do
-      from_parts(to_i(year), to_i(month), to_i(day),
-                 to_i(hour), to_i(min), to_i(sec), usec)
-    else
-      :error
-    end
-  end
-
-  def cast(%Ecto.DateTime{} = dt) do
-    {:ok, dt}
-  end
-
-  def cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "min" => min} = map) do
-    from_parts(to_i(year), to_i(month), to_i(day),
-               to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)),
-               to_i(Map.get(map, "usec", 0)))
-  end
-
-  def cast(%{year: year, month: month, day: day, hour: hour, min: min} = map) do
-    from_parts(to_i(year), to_i(month), to_i(day),
-               to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)),
-               to_i(Map.get(map, :usec, 0)))
-  end
-
-  def cast({{year, month, day}, {hour, min, sec}}) do
-    from_parts(to_i(year), to_i(month), to_i(day),
-               to_i(hour), to_i(min), to_i(sec), 0)
-  end
-
-  def cast({{year, month, day}, {hour, min, sec, usec}}) do
-    from_parts(to_i(year), to_i(month), to_i(day),
-               to_i(hour), to_i(min), to_i(sec), to_i(usec))
-  end
-
-  def cast(_) do
-    :error
-  end
+  def cast(dt), do: dt |> do_cast |> valid_date?
 
   @doc """
   Same as `cast/1` but raises on invalid datetimes.
@@ -447,6 +416,51 @@ defmodule Ecto.DateTime do
       :error -> raise ArgumentError, "cannot cast #{inspect value} to datetime"
     end
   end
+
+  defp do_cast(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep,
+             hour::2-bytes, ?:, min::2-bytes, ?:, sec::2-bytes, rest::binary>>) when sep in [?\s, ?T] do
+    if usec = usec(rest) do
+      from_parts(to_i(year), to_i(month), to_i(day),
+                 to_i(hour), to_i(min), to_i(sec), usec)
+    else
+      :error
+    end
+  end
+
+  defp do_cast(%Ecto.DateTime{} = dt) do
+    {:ok, dt}
+  end
+
+  defp do_cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "min" => min} = map) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)),
+               to_i(Map.get(map, "usec", 0)))
+  end
+
+  defp do_cast(%{year: year, month: month, day: day, hour: hour, min: min} = map) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)),
+               to_i(Map.get(map, :usec, 0)))
+  end
+
+  defp do_cast({{year, month, day}, {hour, min, sec}}) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(sec), 0)
+  end
+
+  defp do_cast({{year, month, day}, {hour, min, sec, usec}}) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(sec), to_i(usec))
+  end
+
+  defp do_cast(_) do
+    :error
+  end
+
+  defp valid_date?(:error), do: :error
+  defp valid_date?({:ok, dt}) do
+    if :calendar.valid_date({dt.year, dt.month, dt.day}), do: {:ok, dt}, else: :error
+  end 
 
   defp from_parts(year, month, day, hour, min, sec, usec)
       when is_date(year, month, day) and is_time(hour, min, sec, usec) do
