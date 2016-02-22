@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.4
+
+### Enhancements
+
+* Support Mariaex 0.5.x and 0.6.x
+* Wrap each pool in a supervisor
+
 ## v1.1.3
 
 ### Enhancements
