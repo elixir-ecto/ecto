@@ -109,7 +109,12 @@ We are currently looking for contributions to add support for other SQL database
 
 ## Contributing
 
-For overall guidelines, please see [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome! In particular, remember to:
+
+* Do not use the issues tracker for help or support requests (try Stack Overflow, IRC or mailing lists, etc).
+* For proposing a new feature, please start a discussion on [elixir-ecto](https://groups.google.com/forum/#!forum/elixir-ecto).
+* For bugs, do a quick search in the issues tracker and make sure the bug has not yet been reported.
+* Finally, be nice and have fun! Remember all interactions in this project follow the same [Code of Conduct as Elixir](https://github.com/elixir-lang/elixir/blob/master/CODE_OF_CONDUCT.md).
 
 ### Running tests
 
