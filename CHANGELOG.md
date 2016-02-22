@@ -139,9 +139,11 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 
   * [Adapter] Ensure adapters work on native types, guaranteeing adapters compose better with custom types
   * [Adapter] Support prepared queries in adapters
+  * [DateTime] Ensure the given date and datetimes are valid
   * [Migration] Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
   * [Migration] Allow the migration table name to be configured in the repository via `:migration_source`
   * [Migration] Use pool of 1 connection for `mix ecto.migrate/rollback`
+  * [Mix] Automatically reenable migration and repository management tasks after execution
   * [Postgres] Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
   * [Postgres] Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
   * [Query] Allow the `:on` field to be specified with association joins
