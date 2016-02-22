@@ -67,7 +67,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
       {:ok, pid} = ensure_started(repo, opts)
 
       migrator.(repo, migrations_path(repo), :up, opts)
-      ensure_stopped(repo, pid)
+      pid && repo.stop(pid)
     end
   end
 end
