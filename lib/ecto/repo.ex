@@ -115,8 +115,8 @@ defmodule Ecto.Repo do
         Supervisor.stop(pid, :normal, timeout)
       end
 
-      def transaction(opts \\ [], fun) when is_list(opts) do
-        @adapter.transaction(__MODULE__, opts, fun)
+      def transaction(fun_or_multi, opts \\ []) do
+        Ecto.Repo.Transaction.transaction(@adapter, __MODULE__, fun_or_multi, opts)
       end
 
       def in_transaction? do
@@ -688,7 +688,9 @@ defmodule Ecto.Repo do
   @callback delete!(Ecto.Schema.t, Keyword.t) :: Ecto.Schema.t | no_return
 
   @doc """
-  Runs the given function inside a transaction.
+  Runs the given function or `Ecto.Multi` inside a transaction.
+
+  ## Use with function
 
   If an unhandled error occurs the transaction will be rolled back
   and the error will bubble up from the transaction function.
@@ -705,6 +707,18 @@ defmodule Ecto.Repo do
   way. If there is an error in the inner transaction and the error is
   rescued, or the inner transaction is rolled back, the whole outer
   transaction is marked as tainted, guaranteeing nothing will be committed.
+
+  ## Use with Ecto.Multi
+
+  Besides functions transaction can be used with an Ecto.Multi struct.
+  Transaction will be started, all operations applied and in case of
+  success committed returning `{:ok, changes}`. In case of any errors
+  the transaction will be rolled back and
+  `{:error, failed_operation, failed_value, changes_so_far}` will be
+  returned.
+
+  You can read more about using transactions with `Ecto.Multi` as well as
+  see some examples in the `Ecto.Multi` documentation.
 
   ## Options
 
@@ -725,8 +739,14 @@ defmodule Ecto.Repo do
         end
       end)
 
+      # With Ecto.Multi
+      Ecto.Multi.new
+      |> Ecto.Multi.insert(%Post{})
+      |> MyRepo.transaction
+
   """
-  @callback transaction(Keyword.t, fun) :: {:ok, any} | {:error, any}
+  @callback transaction(fun | Ecto.Multi.t, Keyword.t) ::
+    {:ok, any} | {:error, any} | {:error, atom, any, %{atom => any}}
 
   @doc """
   Returns true if the current process is inside a transaction.
