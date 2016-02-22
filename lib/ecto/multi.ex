@@ -165,8 +165,8 @@ defmodule Ecto.Multi do
              operations: joiner.(lhs_ops, rhs_ops)}
     else
       common = MapSet.intersection(lhs_names, rhs_names) |> MapSet.to_list
-      raise """
-      when merging following Ecto.Multi:
+      raise ArgumentError, """
+      error when merging the following Ecto.Multi structs:
 
       #{inspect lhs}
 

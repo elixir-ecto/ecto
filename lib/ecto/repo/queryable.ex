@@ -11,6 +11,29 @@ defmodule Ecto.Repo.Queryable do
 
   require Ecto.Query
 
+  def transaction(adapter, repo, opts, fun_or_multi) when is_list(opts) do
+    IO.write :stderr, "warning: Ecto.Repo.transaction/2 with opts as first " <>
+      "argument is deprecated, please switch arguments\n" <>
+      Exception.format_stacktrace()
+    transaction(adapter, repo, fun_or_multi, opts)
+  end
+
+  def transaction(adapter, repo, fun, opts) when is_function(fun, 0) do
+    adapter.transaction(repo, opts, fun)
+  end
+
+  def transaction(adapter, repo, %Ecto.Multi{} = multi, opts) do
+    wrap   = &adapter.transaction(repo, opts, &1)
+    return = &adapter.rollback(repo, &1)
+
+    case Ecto.Multi.__apply__(multi, repo, wrap, return) do
+      {:ok, values} ->
+        {:ok, values}
+      {:error, {key, error_value, values}} ->
+        {:error, key, error_value, values}
+    end
+  end
+
   def all(repo, adapter, queryable, opts) when is_list(opts) do
     query =
       queryable

@@ -141,11 +141,11 @@ defmodule Ecto.MultiTest do
     fun   = fn _ -> {:ok, :ok} end
     multi = Multi.new |> Multi.run(:run, fun)
 
-    assert_raise RuntimeError, ~r"both declared operations: \[:run\]", fn ->
+    assert_raise ArgumentError, ~r"both declared operations: \[:run\]", fn ->
       Multi.append(multi, multi)
     end
 
-    assert_raise RuntimeError, ~r"both declared operations: \[:run\]", fn ->
+    assert_raise ArgumentError, ~r"both declared operations: \[:run\]", fn ->
       Multi.prepend(multi, multi)
     end
   end

@@ -116,7 +116,7 @@ defmodule Ecto.Repo do
       end
 
       def transaction(fun_or_multi, opts \\ []) do
-        Ecto.Repo.Transaction.transaction(@adapter, __MODULE__, fun_or_multi, opts)
+        Ecto.Repo.Queryable.transaction(@adapter, __MODULE__, fun_or_multi, opts)
       end
 
       def in_transaction? do
