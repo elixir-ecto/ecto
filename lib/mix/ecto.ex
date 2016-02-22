@@ -32,7 +32,8 @@ defmodule Mix.Ecto do
           repo
       end |> List.wrap
     else
-      Mix.raise "No repository available (project has no :app configured). Please pass a repo with the -r option."
+      Mix.raise "No repository available (project #{inspect Mix.Project.get} has no :app configured). " <>
+                "Please pass a repo with the -r option."
     end
   end
 
