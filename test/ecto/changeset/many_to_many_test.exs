@@ -152,14 +152,14 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assert changeset.errors == [posts: "is invalid"]
   end
 
-  test "cast many_to_many with :invalid parameters" do
-    changeset = cast(%Author{posts: []}, :invalid, :posts)
+  test "cast many_to_many with empty parameters" do
+    changeset = cast(%Author{posts: []}, %{}, :posts)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{}, :invalid, :posts)
+    changeset = cast(%Author{}, %{}, :posts)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{posts: [%Post{}]}, :invalid, :posts)
+    changeset = cast(%Author{posts: [%Post{}]}, %{}, :posts)
     assert changeset.changes == %{}
   end
 

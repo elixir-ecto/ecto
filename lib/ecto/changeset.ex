@@ -37,9 +37,10 @@ defmodule Ecto.Changeset do
           field :age, :integer
         end
 
-        def changeset(user, params \\ :invalid) do
+        def changeset(user, params \\ %{}) do
           user
-          |> cast(params, ~w(name email), ~w(age))
+          |> cast(params, ~w(name email age))
+          |> validate_required([:name, :email])
           |> validate_format(:email, ~r/@/)
           |> validate_inclusion(:age, 18..100)
           |> unique_constraint(:email)
@@ -275,18 +276,6 @@ defmodule Ecto.Changeset do
       iex> new_changeset.params
       %{title: "Foo", body: "Bar"}
 
-  ## Invalid parameters
-
-  The `params` argument can also be the atom `:invalid`. In such cases, the
-  changeset is automatically marked as invalid, with an empty `:changes` map.
-  This is useful to run the changeset through all validation steps for
-  introspection:
-
-      iex> changeset = cast(post, :invalid, ~w(title))
-      iex> changeset = validate_length(post, :title, min: 3)
-      iex> changeset.validations
-      [title: [min: 3]]
-
   ## Composing casts
 
   `cast/3` also accepts a changeset as its first argument. In such cases, all
@@ -296,7 +285,7 @@ defmodule Ecto.Changeset do
   take precedence over the ones already in the changeset.
   """
   @spec cast(Ecto.Schema.t | t,
-             %{binary => term} | %{atom => term} | :invalid,
+             %{binary => term} | %{atom => term},
              [String.t | atom]) :: t | no_return
   def cast(data, params, allowed) do
     cast(data, params, [], allowed)
@@ -310,7 +299,7 @@ defmodule Ecto.Changeset do
   """
   # TODO: Effectively deprecate cast/4
   @spec cast(Ecto.Schema.t | t,
-             %{binary => term} | %{atom => term} | :invalid,
+             %{binary => term} | %{atom => term},
              [String.t | atom],
              [String.t | atom]) :: t | no_return
   def cast(data, params, required, optional)
@@ -328,14 +317,10 @@ defmodule Ecto.Changeset do
     cast(data, %{}, params, required, optional)
   end
 
-  defp cast(%{__struct__: _} = data, %{} = changes, :empty, required, optional) do
-    IO.puts :stderr, "warning: passing :empty to Ecto.Changeset.cast/3 is deprecated, " <>
-                     "please pass :invalid instead\n" <> Exception.format_stacktrace
-    cast(data, changes, :invalid, required, optional)
-  end
-
-  defp cast(%{__struct__: module} = data, %{} = changes, :invalid, required, optional)
-      when is_list(required) and is_list(optional) do
+  defp cast(%{__struct__: module} = data, %{} = changes, atom, required, optional)
+      when atom in [:empty, :invalid] and is_list(required) and is_list(optional) do
+    IO.puts :stderr, "warning: passing :#{atom} to Ecto.Changeset.cast/3 is deprecated, " <>
+                     "please pass an empty map instead\n" <> Exception.format_stacktrace
     types = module.__changeset__
 
     _ = Enum.map(optional, &process_empty_fields(&1, types))
@@ -1399,7 +1384,7 @@ defmodule Ecto.Changeset do
           field :lock_version, :integer, default: 1
         end
 
-        def changeset(:update, struct, params \\ :invalid) do
+        def changeset(:update, struct, params \\ %{}) do
           struct
           |> Ecto.Changeset.cast(struct, params, ~w(:title))
           |> Ecto.Changeset.optimistic_lock(:lock_version)

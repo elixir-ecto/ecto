@@ -12,7 +12,7 @@ Due to feedback, we have made three important changes to changesets:
 
   1. `changeset.model` has been renamed to `changeset.data` (we no longer have "models" in Ecto)
   2. Passing required and optional fields to `cast/4` is deprecated in favor of `cast/3` and `validate_required/3`
-  3. The `:empty` atom in `cast(source, :empty, required, optional)` has been replaced by `:invalid` to make it clear the resulting changeset is invalid
+  3. The `:empty` atom in `cast(source, :empty, required, optional)` has been removed. An empty map can now be used
 
 To summarize those changes, instead of:
 
@@ -23,7 +23,7 @@ To summarize those changes, instead of:
 
 One should write:
 
-    def changeset(user, params \\ :invalid) do
+    def changeset(user, params \\ %{}) do
       user
       |> cast(params, [:name, :age])
       |> validate_required([:name])
@@ -130,7 +130,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 
 ## Deprecations
 
-  * [Changeset] Deprecate `:empty` in `Ecto.Changeset.cast` in favor of the clearer `:invalid` atom
+  * [Changeset] Deprecate `:empty` in `Ecto.Changeset.cast`
   * [Changeset] Deprecate `Ecto.Changeset.cast/4` in favor of `Ecto.Changeset.cast/3`
   * [Repo] `Repo.after_connect/1` is deprecated, please pass the `:after_connect` repository option instead
   * [Repo] `Repo.one/1` and `Repo.one!` are deprecated, please use `Repo.all` or `Repo.first` accordingly

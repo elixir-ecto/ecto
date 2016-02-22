@@ -119,17 +119,6 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: empty parameters is invalid" do
-    changeset = cast(%Post{}, :invalid, ~w(title), ~w(body)a)
-    assert changeset.data == %Post{}
-    assert changeset.params == nil
-    assert changeset.changes == %{}
-    assert changeset.errors == []
-    assert changeset.validations == []
-    assert changeset.required == [:title]
-    refute changeset.valid?
-  end
-
   test "cast/4: required field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
@@ -226,18 +215,6 @@ defmodule Ecto.ChangesetTest do
     assert length(changeset.constraints) == 1
   end
 
-  test "cast/4: works when casting a changeset with empty parameters" do
-    changeset = cast(%Post{}, %{"title" => "sample"}, ~w(title)a, ~w())
-    changeset = cast(changeset, :invalid, ~w(), ~w(body)a)
-    assert changeset.data == %Post{}
-    assert changeset.params == %{"title" => "sample"}
-    assert changeset.changes == %{title: "sample"}
-    assert changeset.errors == []
-    assert changeset.validations == []
-    assert changeset.required == [:title]
-    refute changeset.valid?
-  end
-
   test "cast/4: works on casting a datetime field" do
     date = %Ecto.DateTime{year: 2015, month: 5, day: 1, hour: 10, min: 8, sec: 0}
     params = %{"published_at" => date}
@@ -305,14 +282,14 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "merge/2: merges parameters" do
-    empty = cast(%Post{}, :invalid, ~w(title), ~w())
+    empty = cast(%Post{}, %{}, ~w(title), ~w())
     cs1   = cast(%Post{}, %{body: "foo"}, ~w(body), ~w())
     cs2   = cast(%Post{}, %{body: "bar"}, ~w(body), ~w())
     assert merge(cs1, cs2).params == %{"body" => "bar"}
 
     assert merge(cs1, empty).params == %{"body" => "foo"}
     assert merge(empty, cs2).params == %{"body" => "bar"}
-    assert merge(empty, empty).params == nil
+    assert merge(empty, empty).params == %{}
   end
 
   test "merge/2: gives required fields precedence over optional ones" do

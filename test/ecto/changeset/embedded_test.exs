@@ -226,11 +226,11 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
   end
 
-  test "cast embeds_one with :invalid parameters" do
-    changeset = cast(%Author{profile: nil}, :invalid, :profile)
+  test "cast embeds_one with empty parameters" do
+    changeset = cast(%Author{profile: nil}, %{}, :profile)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{profile: %Profile{}}, :invalid, :profile)
+    changeset = cast(%Author{profile: %Profile{}}, %{}, :profile)
     assert changeset.changes == %{}
   end
 
@@ -374,11 +374,11 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert changeset.errors == [posts: "is invalid"]
   end
 
-  test "cast embeds_many with :invalid parameters" do
-    changeset = cast(%Author{posts: []}, :invalid, :posts)
+  test "cast embeds_many with empty parameters" do
+    changeset = cast(%Author{posts: []}, %{}, :posts)
     assert changeset.changes == %{}
 
-    changeset = cast(%Author{posts: [%Post{}]}, :invalid, :posts)
+    changeset = cast(%Author{posts: [%Post{}]}, %{}, :posts)
     assert changeset.changes == %{}
   end
 

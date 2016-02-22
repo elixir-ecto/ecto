@@ -148,7 +148,7 @@ defmodule Ecto do
           field :age, :integer
         end
 
-        def changeset(user, params \\ :invalid) do
+        def changeset(user, params \\ %{}) do
           user
           |> cast(params, [:name, :email, :age])
           |> validate_required([:name, :email])
