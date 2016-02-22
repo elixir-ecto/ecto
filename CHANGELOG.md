@@ -56,7 +56,7 @@ Ecto has reimplemented the `Ecto.Adapters.SQL.Sandbox` pool used for testing to 
 
     pool: Ecto.Adapters.SQL.Sandbox
 
-Now at the end of your `test_helper.exs`, set the sandbox mode to `:manual`, forcing connections to be automatically checked out:
+Now at the end of your `test_helper.exs`, set the sandbox mode to `:manual` in order to disable the automatic checkout of connections:
 
     Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
 
