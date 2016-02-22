@@ -53,7 +53,7 @@ defmodule Mix.EctoTest do
     assert ensure_started(Repo, []) == {:ok, self}
 
     Process.put(:start_link, {:error, {:already_started, self}})
-    assert ensure_started(Repo, []) == {:ok, self}
+    assert ensure_started(Repo, []) == {:ok, nil}
 
     Process.put(:start_link, {:error, self})
     assert_raise Mix.Error, fn -> ensure_started(Repo, []) end

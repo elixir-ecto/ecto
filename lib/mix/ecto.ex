@@ -32,7 +32,7 @@ defmodule Mix.Ecto do
           repo
       end |> List.wrap
     else
-      Mix.raise "No repository available. Please pass a repo with the -r option."
+      Mix.raise "No repository available (project has no :app configured). Please pass a repo with the -r option."
     end
   end
 
@@ -44,9 +44,6 @@ defmodule Mix.Ecto do
   Ensures the given module is a repository.
   """
   @spec ensure_repo(module, list) :: Ecto.Repo.t | no_return
-  def ensure_repo(repos, args) when is_list(repos) do
-    Enum.map repos, &ensure_repo(&1, args)
-  end
   def ensure_repo(repo, args) do
     Mix.Task.run "loadpaths", args
 
@@ -59,11 +56,11 @@ defmodule Mix.Ecto do
         if function_exported?(repo, :__adapter__, 0) do
           repo
         else
-          Mix.raise "module #{inspect repo} is not a Ecto.Repo. " <>
+          Mix.raise "Module #{inspect repo} is not a Ecto.Repo. " <>
                     "Please pass a repo with the -r option."
         end
       {:error, error} ->
-        Mix.raise "could not load #{inspect repo}, error: #{inspect error}. " <>
+        Mix.raise "Could not load #{inspect repo}, error: #{inspect error}. " <>
                   "Please pass a repo with the -r option."
     end
   end
@@ -79,9 +76,9 @@ defmodule Mix.Ecto do
     pool_size = Keyword.get(opts, :pool_size, 1)
     case repo.start_link(pool_size: pool_size) do
       {:ok, pid} -> {:ok, pid}
-      {:error, {:already_started, pid}} -> {:ok, nil}
+      {:error, {:already_started, _pid}} -> {:ok, nil}
       {:error, error} ->
-        Mix.raise "could not start repo #{inspect repo}, error: #{inspect error}"
+        Mix.raise "Could not start repo #{inspect repo}, error: #{inspect error}"
     end
   end
 
@@ -93,7 +90,7 @@ defmodule Mix.Ecto do
     with false <- Mix.Project.umbrella?,
          path = Path.relative_to(migrations_path(repo), Mix.Project.app_path),
          false <- File.dir?(path),
-         do: Mix.raise "could not find migrations directory #{inspect path} for repo #{inspect repo}"
+         do: Mix.raise "Could not find migrations directory #{inspect path} for repo #{inspect repo}"
     repo
   end
 
@@ -135,7 +132,7 @@ defmodule Mix.Ecto do
   """
   def no_umbrella!(task) do
     if Mix.Project.umbrella? do
-      Mix.raise "cannot run task #{inspect task} from umbrella application"
+      Mix.raise "Cannot run task #{inspect task} from umbrella application"
     end
   end
 

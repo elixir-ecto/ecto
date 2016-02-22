@@ -70,5 +70,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
       migrator.(repo, migrations_path(repo), :down, opts)
       pid && repo.stop(pid)
     end
+
+    Mix.Task.reenable "ecto.rollback"
   end
 end

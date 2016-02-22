@@ -69,5 +69,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
       migrator.(repo, migrations_path(repo), :up, opts)
       pid && repo.stop(pid)
     end
+
+    Mix.Task.reenable "ecto.migrate"
   end
 end

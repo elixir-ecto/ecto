@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     end
 
     def stop(_) do
-      :ok
+      raise "should not be called"
     end
 
     def __adapter__ do

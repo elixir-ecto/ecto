@@ -44,5 +44,7 @@ defmodule Mix.Tasks.Ecto.Create do
           Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{inspect term}."
       end
     end
+
+    Mix.Task.reenable "ecto.create"
   end
 end
