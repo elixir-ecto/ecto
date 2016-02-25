@@ -228,15 +228,12 @@ defmodule Ecto.Repo.Preloader do
     Enum.reduce(structs, {[], %{}}, fn struct, acc ->
       children = struct |> Map.fetch!(assoc) |> List.wrap
 
-      Enum.reduce children, acc, fn child, {fresh, set} ->
-        [{_, pk}] = Ecto.primary_key!(child)
-        pk || raise Ecto.NoPrimaryKeyValueError, struct: child
-
+      Enum.reduce children, acc, fn child, {list, set} ->
         case set do
-          %{^pk => true} ->
-            {fresh, set}
+          %{^child => true} ->
+            {list, set}
           _ ->
-            {[child|fresh], Map.put(set, pk, true)}
+            {[child|list], Map.put(set, child, true)}
         end
       end
     end) |> elem(0) |> Enum.reverse()

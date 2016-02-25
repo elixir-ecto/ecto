@@ -331,8 +331,11 @@ defmodule Ecto.Integration.PreloadTest do
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
 
-    p1 = TestRepo.preload(p1, comments_authors: from(u in User, where: u.name == "foo"))
-    [%{id: ^uid1}] = p1.comments_authors |> sort_by_id
+    np1 = TestRepo.preload(p1, comments_authors: from(u in User, where: u.name == "foo"))
+    [%{id: ^uid1}] = np1.comments_authors
+
+    np1 = TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: u.id))
+    [^uid1, ^uid2] = np1.comments_authors
   end
 
   ## With take
