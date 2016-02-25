@@ -139,8 +139,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   ### Summing up
 
+  There are two mechanisms for explicit ownerships:
+
     * Using allowances - requires explicit allowances via `allow/3`.
       Tests may run concurrently.
+
     * Using shared mode - does not require explicit allowances.
       Tests cannot run concurrently.
 
@@ -298,11 +301,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   end
 
   @doc """
-  Allows the `allow` process to use the connection owned by `owner`.
+  Allows the `allow` process to use the same connection as `parent`.
   """
-  def allow(repo, owner, allow, _opts \\ []) do
+  def allow(repo, parent, allow, _opts \\ []) do
     {name, opts} = repo.__pool__
-    DBConnection.Ownership.ownership_allow(name, owner, allow, opts)
+    DBConnection.Ownership.ownership_allow(name, parent, allow, opts)
   end
 
   defp proxy_pool(repo) do

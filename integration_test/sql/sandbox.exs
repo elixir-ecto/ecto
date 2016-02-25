@@ -66,4 +66,18 @@ defmodule Ecto.Integration.SandboxTest do
     assert {1, _} = TestRepo.delete_all(Post)
     Sandbox.checkin(TestRepo)
   end
+
+  test "works when preloading associations from another process" do
+    Sandbox.checkout(TestRepo)
+    assert TestRepo.insert(%Post{})
+    parent = self()
+
+    Task.start_link fn ->
+      Sandbox.allow(TestRepo, parent, self())
+      assert [_] = TestRepo.all(Post) |> TestRepo.preload([:author, :comments])
+      send parent, :success
+    end
+
+    assert_receive :success
+  end
 end
