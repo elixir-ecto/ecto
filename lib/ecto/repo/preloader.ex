@@ -215,28 +215,45 @@ defmodule Ecto.Repo.Preloader do
     Map.put(struct, field, loaded)
   end
 
-  defp load_through({:through, %{cardinality: cardinality} = assoc, [h|t]}, struct) do
+  defp load_through({:through, assoc, [h|t]}, struct) do
+    %{cardinality: cardinality, field: field, owner: owner} = assoc
+    pks     = owner.__schema__(:primary_key)
     initial = struct |> Map.fetch!(h) |> List.wrap
-    loaded  = Enum.reduce(t, initial, &recur_through/2)
-    Map.put(struct, assoc.field, maybe_first(loaded, cardinality))
+    loaded  = Enum.reduce(t, initial, &recur_through(&2, &1, pks))
+    Map.put(struct, field, maybe_first(loaded, cardinality))
   end
 
   defp maybe_first(list, :one), do: List.first(list)
   defp maybe_first(list, _), do: list
 
-  defp recur_through(assoc, structs) do
+  defp recur_through(structs, assoc, pks) do
     Enum.reduce(structs, {[], %{}}, fn struct, acc ->
       children = struct |> Map.fetch!(assoc) |> List.wrap
 
-      Enum.reduce children, acc, fn child, {list, set} ->
+      Enum.reduce children, acc, fn child, {fresh, set} ->
+        keys = through_pks(child, pks)
+
         case set do
-          %{^child => true} ->
-            {list, set}
+          %{^keys => true} ->
+            {fresh, set}
           _ ->
-            {[child|list], Map.put(set, child, true)}
+            {[child|fresh], Map.put(set, keys, true)}
         end
       end
     end) |> elem(0) |> Enum.reverse()
+  end
+
+  defp through_pks(map, pks) do
+    Enum.map pks, fn pk ->
+      case map do
+        %{^pk => value} -> value
+        _ ->
+          raise RuntimeError,
+            "cannot preload through association because custom query did not return a map.\n\n" <>
+            "When preloading through associations, the custom query must always return a map " <>
+            "and the map must include all primary keys, got: `#{inspect map}`"
+      end
+    end
   end
 
   ## Normalizer

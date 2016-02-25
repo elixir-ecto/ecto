@@ -324,18 +324,22 @@ defmodule Ecto.Integration.PreloadTest do
   test "preload through with query" do
     %Post{id: pid1} = p1 = TestRepo.insert!(%Post{})
 
-    %User{id: uid1} = TestRepo.insert!(%User{name: "foo"})
-    %User{id: uid2} = TestRepo.insert!(%User{name: "bar"})
+    u1 = TestRepo.insert!(%User{name: "foo"})
+    u2 = TestRepo.insert!(%User{name: "bar"})
 
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: u1.id})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: u1.id})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: u2.id})
 
     np1 = TestRepo.preload(p1, comments_authors: from(u in User, where: u.name == "foo"))
-    [%{id: ^uid1}] = np1.comments_authors
+    assert np1.comments_authors == [u1]
 
-    np1 = TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: u.id))
-    [^uid1, ^uid2] = np1.comments_authors
+    assert_raise RuntimeError, ~r/custom query did not return a map/, fn ->
+      TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: u.id))
+    end
+
+    np1 = TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: %{id: u.id}))
+    assert np1.comments_authors == [%{id: u1.id}, %{id: u2.id}]
   end
 
   ## With take
