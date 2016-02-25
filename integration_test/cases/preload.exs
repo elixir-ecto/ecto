@@ -334,7 +334,7 @@ defmodule Ecto.Integration.PreloadTest do
     np1 = TestRepo.preload(p1, comments_authors: from(u in User, where: u.name == "foo"))
     assert np1.comments_authors == [u1]
 
-    assert_raise RuntimeError, ~r/custom query did not return a map/, fn ->
+    assert_raise ArgumentError, ~r/custom query did not return a map/, fn ->
       TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: u.id))
     end
 

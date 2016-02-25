@@ -219,19 +219,19 @@ defmodule Ecto.Repo.Preloader do
     %{cardinality: cardinality, field: field, owner: owner} = assoc
     pks     = owner.__schema__(:primary_key)
     initial = struct |> Map.fetch!(h) |> List.wrap
-    loaded  = Enum.reduce(t, initial, &recur_through(&2, &1, pks))
+    loaded  = Enum.reduce(t, initial, &recur_through(&2, &1, pks, assoc))
     Map.put(struct, field, maybe_first(loaded, cardinality))
   end
 
   defp maybe_first(list, :one), do: List.first(list)
   defp maybe_first(list, _), do: list
 
-  defp recur_through(structs, assoc, pks) do
+  defp recur_through(structs, field, pks, assoc) do
     Enum.reduce(structs, {[], %{}}, fn struct, acc ->
-      children = struct |> Map.fetch!(assoc) |> List.wrap
+      children = struct |> Map.fetch!(field) |> List.wrap
 
       Enum.reduce children, acc, fn child, {fresh, set} ->
-        keys = through_pks(child, pks)
+        keys = through_pks(child, pks, assoc)
 
         case set do
           %{^keys => true} ->
@@ -243,15 +243,16 @@ defmodule Ecto.Repo.Preloader do
     end) |> elem(0) |> Enum.reverse()
   end
 
-  defp through_pks(map, pks) do
+  defp through_pks(map, pks, assoc) do
     Enum.map pks, fn pk ->
       case map do
         %{^pk => value} -> value
         _ ->
-          raise RuntimeError,
-            "cannot preload through association because custom query did not return a map.\n\n" <>
+          raise ArgumentError,
+            "cannot preload through association `#{assoc.field}` on `#{inspect assoc.owner}` " <>
+            "because custom query did not return a map.\n\n" <>
             "When preloading through associations, the custom query must always return a map " <>
-            "and the map must include all primary keys, got: `#{inspect map}`"
+            "with at least all primary keys, got: `#{inspect map}`"
       end
     end
   end
