@@ -121,8 +121,8 @@ defmodule Ecto.Integration.JoinsTest do
     %Comment{} = TestRepo.insert!(%Comment{post_id: p1.id, author_id: u2.id})
     %Comment{} = TestRepo.insert!(%Comment{post_id: p2.id, author_id: u2.id})
 
-    query = Ecto.assoc([p1, p2], :comments_authors) |> order_by([a], a.name)
-    assert [^u2, ^u1] = TestRepo.all(query)
+    query = from p in Post, join: a in assoc(p, :comments_authors), select: {p, a}, order_by: [p.id, a.name]
+    assert [{^p1, ^u2}, {^p1, ^u1}, {^p1, ^u1}, {^p2, ^u2}] = TestRepo.all(query)
   end
 
   test "many_to_many association join" do
