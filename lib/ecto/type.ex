@@ -68,22 +68,23 @@ defmodule Ecto.Type do
   because we were keeping the underlying representation the same, the
   value stored in the struct and the database was always an integer.
 
-  Ecto types also allow developers to create completely new types as
-  long as they can be encoded by the database. `Ecto.DateTime` is such
-  an example.
-
+  Ecto types also allow developers to dump and load new types.
   In order for this to work, callbacks should take care of encoding your
   custom Ecto type into its DB representation, as well as decoding it
-  from the DB back into the Ecto type. Each callback should behave as follows:
+  from the DB back into the Ecto type. Each callback should behave
+  as follows:
 
     * `type` should output the name of the DB type
     * `cast` should receive any type and output your custom Ecto type
     * `load` should receive the DB type and output your custom Ecto type
     * `dump` should receive your custom Ecto type and output the DB type
 
-  Finally, the `Ecto.DataType` protocol can be used to convert any Elixir
-  value into an DB type. This allows a custom value, like `Ecto.DateTime`,
-  to behave exactly as an Ecto's primitive type, like `:datetime`.
+  `Ecto.DateTime` is an example of a custom type. Developers often use
+  `Ecto.DateTime` in their schemas and Ecto takes care of converting
+  between types whenever the schema information is available. Developers
+  may also implement `Ecto.DataType` for `Ecto.DateTime`, allowing
+  `Ecto.DateTime` to behave as the database `:datetime` even in the
+  absence of schema information.
   """
 
   import Kernel, except: [match?: 2]

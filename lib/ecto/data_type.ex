@@ -1,18 +1,19 @@
 defprotocol Ecto.DataType do
   @moduledoc """
-  Casts a given data type into an `Ecto.Type`.
+  Casts and dumps a given struct into an Ecto type.
 
   While `Ecto.Type` allows developers to cast/load/dump
   any value from the storage into the struct based on the
   schema, `Ecto.DataType` allows developers to convert
-  existing data types into existing Ecto types, be them
-  primitive or custom.
+  existing data types into existing Ecto types without
+  the schema information.
 
   For example, `Ecto.Date` is a custom type, represented
   by the `%Ecto.Date{}` struct that can be used in place
   of Ecto's primitive `:date` type. Therefore, we need to
-  tell Ecto how to convert `%Ecto.Date{}` into `:date` and
-  such is done with the `Ecto.DataType` protocol:
+  tell Ecto how to convert `%Ecto.Date{}` into `:date`,
+  even in the absence of schema information, and such is
+  done with the `Ecto.DataType` protocol:
 
       defimpl Ecto.DataType, for: Ecto.Date do
         # Dumps to the default representation. In this case, :date.
@@ -33,9 +34,16 @@ defprotocol Ecto.DataType do
   """
   @fallback_to_any true
 
+  @doc """
+  Invoked when the data structure has not been cast along the
+  way and must fallback to its database representation.
+  """
   @spec dump(term) :: {:ok, term} | :error
   def dump(value)
 
+  @doc """
+  Invoked when attempting to cast this data structure to another type.
+  """
   @spec cast(term, Ecto.Type.t) :: {:ok, term} | :error
   def cast(value, type)
 end
@@ -46,7 +54,9 @@ defimpl Ecto.DataType, for: Any do
     :error
   end
 
-  # The default representation is itself.
+  # The default representation is itself, which
+  # means we are delegating to the database. If
+  # the database does not support, it will raise.
   def dump(value) do
     {:ok, value}
   end
