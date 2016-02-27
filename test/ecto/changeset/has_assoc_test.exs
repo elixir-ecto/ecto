@@ -744,7 +744,7 @@ defmodule Ecto.Changeset.HasAssocTest do
       %Author{posts: [post]}
       |> Changeset.change
     assert Changeset.get_field(changeset, :posts) == [post]
-    assert Changeset.fetch_field(changeset, :posts) == {:field, [post]}
+    assert Changeset.fetch_field(changeset, :posts) == {:data, [post]}
 
     post_changeset = Changeset.change(post, title: "updated")
     changeset =
