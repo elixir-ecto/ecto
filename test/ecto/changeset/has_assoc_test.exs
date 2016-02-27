@@ -721,7 +721,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
-  test "get_field/3, fetch_field/2 with assocs" do
+  test "get_field/3, fetch_field/2 with has one" do
     profile_changeset = Changeset.change(%Profile{}, name: "michal")
     profile = Changeset.apply_changes(profile_changeset)
 
@@ -735,8 +735,25 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = Changeset.change(%Author{profile: profile})
     assert Changeset.get_field(changeset, :profile) == profile
     assert Changeset.fetch_field(changeset, :profile) == {:data, profile}
+  end
 
+  test "get_field/3, fetch_field/2 with has many" do
     post = %Post{id: 1}
+
+    changeset =
+      %Author{posts: [post]}
+      |> Changeset.change
+    assert Changeset.get_field(changeset, :posts) == [post]
+    assert Changeset.fetch_field(changeset, :posts) == {:field, [post]}
+
+    post_changeset = Changeset.change(post, title: "updated")
+    changeset =
+      %Author{posts: [post]}
+      |> Changeset.change
+      |> Changeset.put_assoc(:posts, [post_changeset])
+    assert Changeset.get_field(changeset, :posts) == [%{post | title: "updated"}]
+    assert Changeset.fetch_field(changeset, :posts) == {:changes, [%{post | title: "updated"}]}
+
     post_changeset = %{Changeset.change(post) | action: :delete}
     changeset =
       %Author{posts: [post]}
