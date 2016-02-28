@@ -112,9 +112,9 @@ defmodule Ecto.Date do
   It supports:
 
     * a binary in the "YYYY-MM-DD" format
-    * a binary in the "YYYY-MM-DD HH:MM:DD" format
+    * a binary in the "YYYY-MM-DD HH:MM:SS" format
       (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
-    * a binary in the "YYYY-MM-DD HH:MM:DD.USEC" format
+    * a binary in the "YYYY-MM-DD HH:MM:SS.USEC" format
       (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
     * a map with `"year"`, `"month"` and `"day"` keys
       with integer or binaries as values
@@ -392,9 +392,9 @@ defmodule Ecto.DateTime do
 
   It supports:
 
-    * a binary in the "YYYY-MM-DD HH:MM:DD" format
+    * a binary in the "YYYY-MM-DD HH:MM:SS" format
       (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
-    * a binary in the "YYYY-MM-DD HH:MM:DD.USEC" format
+    * a binary in the "YYYY-MM-DD HH:MM:SS.USEC" format
       (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
     * a map with `"year"`, `"month"`,`"day"`, `"hour"`, `"min"` keys
       with `"sec"` and `"usec"` as optional keys and values are integers or binaries
@@ -460,7 +460,7 @@ defmodule Ecto.DateTime do
   defp valid_date?(:error), do: :error
   defp valid_date?({:ok, %{year: y, month: m, day: d} = datetime}) do
     if :calendar.valid_date(y, m, d), do: {:ok, datetime}, else: :error
-  end 
+  end
 
   defp from_parts(year, month, day, hour, min, sec, usec)
       when is_date(year, month, day) and is_time(hour, min, sec, usec) do
