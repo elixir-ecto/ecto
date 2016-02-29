@@ -132,6 +132,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   to talk to the database will now use the same connection as the
   one checked out by the test process during the `setup` block.
 
+  Make sure to always check a connection out before setting the mode
+  to `{:shared, self()}`.
+
   The advantage of shared mode is that by calling a single function,
   you will ensure all upcoming processes and operations will use that
   shared connection, without a need to explicitly allow them. The
