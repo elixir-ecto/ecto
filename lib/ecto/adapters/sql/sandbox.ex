@@ -119,8 +119,14 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   process automatically, without relying on explicit allowances.
   Let's change the example above to use shared mode:
 
-      test "create two posts, one sync, another async" do
+      setup do
+        # Explicitly get a connection before each test
+        :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
+        # Setting the shared mode must be done only after checkout
         Ecto.Adapters.SQL.Sandbox.mode(TestRepo, {:shared, self()})
+      end
+
+      test "create two posts, one sync, another async" do
         task = Task.async(fn ->
           TestRepo.insert!(%Post{title: "async"})
         end)
