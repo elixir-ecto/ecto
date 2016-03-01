@@ -334,7 +334,7 @@ defmodule Ecto do
       Repo.all assoc(post, :comments)
 
       # Or build a query on top of the associated comments
-      query = from c in assoc(post, :comments), where: c.title != nil
+      query = from c in assoc(post, :comments), where: not is_nil(c.title)
       Repo.all(query)
 
   Another function in `Ecto` is `build_assoc/3`, which allows
