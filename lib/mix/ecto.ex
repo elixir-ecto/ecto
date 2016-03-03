@@ -96,6 +96,20 @@ defmodule Mix.Ecto do
   end
 
   @doc """
+  Restarts the app if there was any migration command.
+  """
+  def restart_app_if_migrated(_repo, []), do: :ok
+  def restart_app_if_migrated(repo, [_|_]) do
+    # Silence the logger to avoid application down messages.
+    Logger.remove_backend(:console)
+    app = repo.__adapter__.application
+    Application.stop(app)
+    Application.ensure_all_started(app)
+  after
+    Logger.add_backend(:console, flush: true)
+  end
+
+  @doc """
   Gets the migrations path from a repository.
   """
   @spec migrations_path(Ecto.Repo.t) :: String.t

@@ -67,8 +67,9 @@ defmodule Mix.Tasks.Ecto.Rollback do
       ensure_migrations_path(repo)
       {:ok, pid} = ensure_started(repo, opts)
 
-      migrator.(repo, migrations_path(repo), :down, opts)
+      migrated = migrator.(repo, migrations_path(repo), :down, opts)
       pid && repo.stop(pid)
+      restart_app_if_migrated(repo, migrated)
     end
 
     Mix.Task.reenable "ecto.rollback"

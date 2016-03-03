@@ -66,8 +66,9 @@ defmodule Mix.Tasks.Ecto.Migrate do
       ensure_migrations_path(repo)
       {:ok, pid} = ensure_started(repo, opts)
 
-      migrator.(repo, migrations_path(repo), :up, opts)
+      migrated = migrator.(repo, migrations_path(repo), :up, opts)
       pid && repo.stop(pid)
+      restart_app_if_migrated(repo, migrated)
     end
 
     Mix.Task.reenable "ecto.migrate"

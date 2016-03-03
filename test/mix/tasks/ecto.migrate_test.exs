@@ -58,6 +58,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
     Application.put_env(:ecto, :app_repo, Repo)
     run ["--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
+      []
     end
     assert Process.get(:migrated)
     assert Process.get(:started)
@@ -68,6 +69,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   test "runs the migrator after starting repo" do
     run ["-r", to_string(Repo), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
+      []
     end
     assert Process.get(:migrated)
     assert Process.get(:started)
@@ -76,6 +78,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   test "runs the migrator with the already started repo" do
     run ["-r", to_string(StartedRepo), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
+      []
     end
     assert Process.get(:migrated)
     assert Process.get(:already_started)
@@ -84,6 +87,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   test "runs the migrator with two repos" do
     run ["-r", to_string(Repo), "-r", to_string(StartedRepo), "--no-start"], fn _, _, _, _ ->
       Process.put(:migrated, true)
+      []
     end
     assert Process.get(:migrated)
     assert Process.get(:started)
@@ -98,6 +102,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
       assert opts[:all] == true
       assert opts[:log] == false
       assert opts[:prefix] == "foo"
+      []
     end
     assert Process.get(:started)
   end
@@ -105,7 +110,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   test "raises when migrations path does not exist" do
     File.rm_rf!(unquote(migrations_path))
     assert_raise Mix.Error, fn ->
-      run ["-r", to_string(Repo)], fn _, _, _, _ -> nil end
+      run ["-r", to_string(Repo)], fn _, _, _, _ -> [] end
     end
     assert !Process.get(:started)
   end
