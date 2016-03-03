@@ -277,9 +277,13 @@ defmodule Ecto.Query.PlannerTest do
     assert [[], {:join, [{:inner, [:all|_], _}]}, {"comments", _, _}] = key
   end
 
-  test "prepare: subqueries do not support association joins" do
-    assert_raise Ecto.QueryError, ~r/an only perform association joins on sources with a schema in query/, fn ->
-      prepare(from(p in subquery(Post), join: c in assoc(p, :comment)))
+  test "prepare: subqueries with association joins" do
+    {query, _, _} = prepare(from(p in subquery(Post), join: c in assoc(p, :comments)))
+    assert [%{source: {"comments", Ecto.Query.PlannerTest.Comment}}] = query.joins
+
+    message = ~r/can only perform association joins on subqueries that return a single source in select/
+    assert_raise Ecto.QueryError, message, fn ->
+      prepare(from(p in subquery(from p in Post, select: p.title), join: c in assoc(p, :comments)))
     end
   end
 

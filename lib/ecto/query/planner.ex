@@ -201,17 +201,7 @@ defmodule Ecto.Query.Planner do
 
   defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on} = join|t],
                      query, joins, sources, tail_sources, counter, offset, adapter) do
-    schema =
-      case Enum.fetch!(Enum.reverse(sources), ix) do
-        {source, nil} ->
-          error! query, join, "cannot perform association join on #{inspect source} " <>
-                              "because it does not have a schema"
-        {_, schema} ->
-          schema
-        _ ->
-          error! query, join, "can only perform association joins on sources with a schema"
-      end
-
+    schema = schema_for_association_join!(query, join, Enum.fetch!(Enum.reverse(sources), ix))
     refl = schema.__schema__(:association, assoc)
 
     unless refl do
@@ -303,6 +293,23 @@ defmodule Ecto.Query.Planner do
 
   # All others need to be incremented by the offset sources
   defp rewrite_ix(join_ix, _ix, _last_ix, _source_ix, inc_ix), do: join_ix + inc_ix
+
+  defp schema_for_association_join!(query, join, source) do
+    case source do
+      {source, nil} ->
+          error! query, join, "cannot perform association join on #{inspect source} " <>
+                              "because it does not have a schema"
+      {_, schema} ->
+        schema
+      %Ecto.SubQuery{select: {:&, _, [ix]}, sources: sources} when is_integer(ix) ->
+        schema_for_association_join!(query, join, elem(sources, ix))
+      %Ecto.SubQuery{} ->
+        error! query, join, "can only perform association joins on subqueries " <>
+                            "that return a single source in select"
+      _ ->
+        error! query, join, "can only perform association joins on sources with a schema"
+    end
+  end
 
   @doc """
   Prepare the parameters by merging and casting them according to sources.
