@@ -137,18 +137,31 @@ defmodule Ecto.Changeset.Relation do
     on_replace(relation, current)
   end
 
-  defp do_change(_relation, %Changeset{data: current} = changeset, current, allowed_actions) do
+  defp do_change(_relation, %Changeset{} = changeset, _current, allowed_actions) do
     {:ok, put_new_action(changeset, :update) |> check_action!(allowed_actions)}
   end
 
-  defp do_change(%{field: field}, %Changeset{}, _current, _allowed_actions) do
-    raise "cannot change `#{field}` because given changeset has a different " <>
-          "embed/association than the one specified in the parent struct"
-  end
-
   defp do_change(%{field: field}, %{__struct__: _}, _current, _allowed_actions) do
-    raise "cannot change `#{field}` with a struct because another " <>
-          "embed/association is set in parent struct, use a changeset instead"
+    raise """
+    cannot change `#{field}` with a struct because one is
+    already embedded/associated.
+
+    To solve this issue, you must explicitly transform such
+    structs into changesets, so Ecto can properly track how
+    and when each embed/association is changing.
+
+    For example, instead of
+
+        Ecto.Changeset.put_assoc(changeset, :children, children_structs)
+
+    do
+
+        children_changesets = Enum.map(children_structs, &Ecto.Changeset.change/1)
+        Ecto.Changeset.put_assoc(changeset, :children, children_changesets)
+
+    By giving changesets, Ecto knows exactly how to track changes
+    keeping your database operations efficient and safe.
+    """
   end
 
   defp do_change(%{related: mod} = relation, changes, current, allowed_actions)
