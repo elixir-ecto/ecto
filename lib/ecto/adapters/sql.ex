@@ -245,6 +245,13 @@ defmodule Ecto.Adapters.SQL do
       |> Keyword.put_new(:timeout, @timeout)
       |> Keyword.put_new(:pool_timeout, @pool_timeout)
 
+    if pool == Ecto.Adapters.SQL.Sandbox and config[:pool_size] == 1 do
+      IO.puts :stderr, "warning: setting the :pool_size to 1 for #{inspect env.module} " <>
+                       "when using the Ecto.Adapters.SQL.Sandbox pool is deprecated and " <>
+                       "won't work as expected. Please remove the :pool_size configuration " <>
+                       "or set it to a reasonable number like 10"
+    end
+
     quote do
       @doc false
       def __sql__, do: unquote(conn)

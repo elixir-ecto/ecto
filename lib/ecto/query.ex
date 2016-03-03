@@ -942,6 +942,11 @@ defmodule Ecto.Query do
   The query will be automatically ordered by the primary key
   unless `order_by` is given or `order_by` is set in the query.
   Limit is always set to 1.
+
+  ## Examples
+
+      Post |> first |> Repo.one
+      query |> first(:inserted_at) |> Repo.one
   """
   def first(queryable, order_by \\ nil)
 
@@ -964,6 +969,11 @@ defmodule Ecto.Query do
   columns becoming DESC columns (and vice-versa) and limit is set
   to 1. If there is no ordering, the query will be automatically
   ordered decreasingly by primary key.
+
+  ## Examples
+
+      Post |> last |> Repo.one
+      query |> last(:inserted_at) |> Repo.one
   """
   def last(queryable, order_by \\ nil)
 
