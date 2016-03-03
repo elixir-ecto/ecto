@@ -148,14 +148,10 @@ defmodule Ecto.Repo do
       end
 
       def one(queryable, opts \\ []) do
-        IO.puts :stderr, "warning: #{inspect __MODULE__}.one/2 is deprecated, " <>
-                         "please use all/2, aggregate/3 or first/2 accordingly\n" <> Exception.format_stacktrace
         Ecto.Repo.Queryable.one(__MODULE__, @adapter, queryable, opts)
       end
 
       def one!(queryable, opts \\ []) do
-        IO.puts :stderr, "warning: #{inspect __MODULE__}.one!/2 is deprecated, " <>
-                         "please use all/2, aggregate/3 or first!/2 accordingly\n" <> Exception.format_stacktrace
         Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
       end
 
@@ -165,19 +161,27 @@ defmodule Ecto.Repo do
       end
 
       def first(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.first(__MODULE__, @adapter, queryable, opts)
+        IO.puts :stderr, "warning: #{inspect __MODULE__}.first/2 is deprecated, " <>
+                         "please use Repo.one/2 or Ecto.Query.first/2 |> Repo.one/2 accordingly\n" <> Exception.format_stacktrace
+        one(Ecto.Query.first(queryable), opts)
       end
 
       def first!(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.first!(__MODULE__, @adapter, queryable, opts)
+        IO.puts :stderr, "warning: #{inspect __MODULE__}.first!/2 is deprecated, " <>
+                         "please use Repo.one!/2 or Ecto.Query.first/2 |> Repo.one!/2 accordingly\n" <> Exception.format_stacktrace
+        one!(Ecto.Query.first(queryable), opts)
       end
 
       def last(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.last(__MODULE__, @adapter, queryable, opts)
+        IO.puts :stderr, "warning: #{inspect __MODULE__}.last/2 is deprecated, " <>
+                         "please use Repo.one/2 or Ecto.Query.last/2 |> Repo.one/2 accordingly\n" <> Exception.format_stacktrace
+        one(Ecto.Query.last(queryable), opts)
       end
 
       def last!(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.last!(__MODULE__, @adapter, queryable, opts)
+        IO.puts :stderr, "warning: #{inspect __MODULE__}.last!/2 is deprecated, " <>
+                         "please use Repo.one!/2 or Ecto.Query.last/2 |> Repo.one!/2 accordingly\n" <> Exception.format_stacktrace
+        one!(Ecto.Query.last(queryable), opts)
       end
 
       def insert_all(schema_or_source, entries, opts \\ []) do
@@ -345,52 +349,26 @@ defmodule Ecto.Repo do
                       field :: atom, Keyword.t) :: term | nil
 
   @doc """
-  Fetches the first result from the query.
+  Fetches a single result from the query.
 
-  The query will be automatically ordered by the primary key
-  if there is no order_by statement. Limit is always set to 1.
-
-  Returns `nil` if no result was found.
+  Returns `nil` if no result was found. Raises if more than one entry.
 
   ## Options
 
   See the "Shared options" section at the module documentation.
   """
-  @callback first(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil
+  @callback one(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
-  Similar to `first/2` but raises `Ecto.NoResultsError` if no record was found.
+  Similar to `one/2` but raises `Ecto.NoResultsError` if no record was found.
+
+  Raises if more than one entry.
 
   ## Options
 
   See the "Shared options" section at the module documentation.
   """
-  @callback first!(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
-
-  @doc """
-  Fetches the last result from the query.
-
-  The query ordering will be automatically reversed, with ASC
-  columns becoming DESC columns (and vice-versa) and limit is set
-  to 1. If there is no ordering, it is ordered decreasingly by
-  primary key.
-
-  Returns `nil` if no result was found.
-
-  ## Options
-
-  See the "Shared options" section at the module documentation.
-  """
-  @callback last(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil
-
-  @doc """
-  Similar to `last/2` but raises `Ecto.NoResultsError` if no record was found.
-
-  ## Options
-
-  See the "Shared options" section at the module documentation.
-  """
-  @callback last!(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback one!(Ecto.Queryable.t, Keyword.t) :: Ecto.Schema.t | no_return
 
   @doc """
   Preloads all associations on the given struct or structs.

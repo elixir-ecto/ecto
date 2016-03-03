@@ -133,7 +133,6 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Changeset] Deprecate `:empty` in `Ecto.Changeset.cast`
   * [Changeset] Deprecate `Ecto.Changeset.cast/4` in favor of `Ecto.Changeset.cast/3`
   * [Repo] `Repo.after_connect/1` is deprecated, please pass the `:after_connect` repository option instead
-  * [Repo] `Repo.one/1` and `Repo.one!` are deprecated, please use `Repo.all` or `Repo.first` accordingly
 
 ## Enhancements
 
@@ -149,12 +148,12 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Query] Allow the `:on` field to be specified with association joins
   * [Query] Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
   * [Query] Allow struct fields to be selected with `take/2`, including support for dynamic fields
+  * [Query] Add `first/2` and `last/2`
   * [Repo] Add `Repo.aggregate/4` for easy aggregations
   * [Repo] Allow custom `select` field in preload queries
   * [Repo] Support the `:force` option in preloads
   * [Repo] Perform preloads in parallel by default
   * [Repo] Add `Repo.in_transaction?` to know if the current process is in a transaction
-  * [Repo] Add `Repo.first/2`, `Repo.first!/2`, `Repo.last/2`, `Repo.last!/2` and `Repo.aggregate/4`
   * [Repo] Support `:returning` option in `insert_all`, `update_all` and `delete_all`
   * [Schema] Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
   * [Schema] Support composite primary keys

@@ -169,9 +169,7 @@ defmodule Ecto.Schema do
       field :data, :map
 
       # Now in your code
-      %User{data: %{"foo" => "bar"}} |> Repo.insert!
-      %User{data: %{"foo" => value}} = Repo.first(User)
-      value #=> "bar"
+      user = Repo.insert! %User{data: %{"foo" => "bar"}}
 
   Keep in mind that we advise the map keys to be strings or integers
   instead of atoms. Atoms may be accepted depending on how maps are

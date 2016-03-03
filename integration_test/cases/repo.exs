@@ -60,7 +60,7 @@ defmodule Ecto.Integration.RepoTest do
     loaded_meta = put_in meta.state, :loaded
     assert %Post{__meta__: ^loaded_meta} = TestRepo.insert!(post)
 
-    post = TestRepo.first(Post)
+    post = TestRepo.one(Post)
     assert post.__meta__.state == :loaded
     assert post.inserted_at
   end
@@ -69,8 +69,8 @@ defmodule Ecto.Integration.RepoTest do
     c1 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "first"})
     c2 = TestRepo.insert!(%CompositePk{a: 1, b: 3, name: "second"})
 
-    assert TestRepo.first(CompositePk) == c1
-    assert TestRepo.last(CompositePk) == c2
+    assert CompositePk |> first |> TestRepo.one == c1
+    assert CompositePk |> last |> TestRepo.one == c2
 
     changeset = Ecto.Changeset.cast(c1, %{name: "first change"}, ~w(name), ~w())
     c1 = TestRepo.update!(changeset)
@@ -430,26 +430,26 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  test "first(!) and last(!)" do
+  test "first, last and one(!)" do
     post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert!(%Post{title: "2", text: "hai"})
 
-    assert post1 == TestRepo.first(Post)
-    assert post2 == TestRepo.last(Post)
+    assert post1 == Post |> first |> TestRepo.one
+    assert post2 == Post |> last |> TestRepo.one
 
     query = from p in Post, order_by: p.title
-    assert post1 == TestRepo.first(query)
-    assert post2 == TestRepo.last(query)
+    assert post1 == query |> first |> TestRepo.one
+    assert post2 == query |> last |> TestRepo.one
 
     query = from p in Post, order_by: [desc: p.title], limit: 10
-    assert post2 == TestRepo.first(query)
-    assert post1 == TestRepo.last(query)
+    assert post2 == query |> first |> TestRepo.one
+    assert post1 == query |> last |> TestRepo.one
 
     query = from p in Post, where: is_nil(p.id)
-    refute TestRepo.first(query)
-    refute TestRepo.last(query)
-    assert_raise Ecto.NoResultsError, fn -> TestRepo.first!(query) end
-    assert_raise Ecto.NoResultsError, fn -> TestRepo.last!(query) end
+    refute query |> first |> TestRepo.one
+    refute query |> first |> TestRepo.one
+    assert_raise Ecto.NoResultsError, fn -> query |> first |> TestRepo.one! end
+    assert_raise Ecto.NoResultsError, fn -> query |> last |> TestRepo.one! end
   end
 
   test "aggregate" do

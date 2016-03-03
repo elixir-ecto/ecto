@@ -6,15 +6,13 @@ defmodule Ecto.Repo.Queryable do
   alias Ecto.Query
   alias Ecto.Queryable
   alias Ecto.Query.Planner
-  alias Ecto.Query.QueryExpr
   alias Ecto.Query.SelectExpr
 
   require Ecto.Query
 
   def transaction(adapter, repo, opts, fun_or_multi) when is_list(opts) do
     IO.write :stderr, "warning: Ecto.Repo.transaction/2 with opts as first " <>
-      "argument is deprecated, please switch arguments\n" <>
-      Exception.format_stacktrace()
+                      "argument is deprecated, please switch arguments\n#{Exception.format_stacktrace()}"
     transaction(adapter, repo, fun_or_multi, opts)
   end
 
@@ -56,22 +54,6 @@ defmodule Ecto.Repo.Queryable do
 
   def get_by!(repo, adapter, queryable, clauses, opts) do
     one!(repo, adapter, query_for_get_by(repo, queryable, clauses), opts)
-  end
-
-  def first(repo, adapter, queryable, opts) do
-    one(repo, adapter, query_for_first(queryable), opts)
-  end
-
-  def first!(repo, adapter, queryable, opts) do
-    one!(repo, adapter, query_for_first(queryable), opts)
-  end
-
-  def last(repo, adapter, queryable, opts) do
-    one(repo, adapter, query_for_last(queryable), opts)
-  end
-
-  def last!(repo, adapter, queryable, opts) do
-    one!(repo, adapter, query_for_last(queryable), opts)
   end
 
   def aggregate(repo, adapter, queryable, aggregate, field, opts) do
@@ -283,32 +265,6 @@ defmodule Ecto.Repo.Queryable do
     Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
-  defp query_for_first(queryable) do
-    query = %{Queryable.to_query(queryable) | limit: limit()}
-    case query do
-      %{order_bys: []} ->
-        %{query | order_bys: [order_by_pk(query, :asc)]}
-      %{} ->
-        query
-    end
-  end
-
-  defp query_for_last(queryable) do
-    query = %{Queryable.to_query(queryable) | limit: limit()}
-    update_in query.order_bys, fn
-      [] ->
-        [order_by_pk(query, :desc)]
-      order_bys ->
-        for %{expr: expr} = order_by <- order_bys do
-          %{order_by | expr:
-              Enum.map(expr, fn
-                {:desc, ast} -> {:asc, ast}
-                {:asc, ast} -> {:desc, ast}
-              end)}
-        end
-    end
-  end
-
   defp query_for_aggregate(queryable, aggregate, field) do
     query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
     ast   = field(0, field)
@@ -330,19 +286,8 @@ defmodule Ecto.Repo.Queryable do
                                   file: __ENV__.file, line: __ENV__.line}}
   end
 
-  defp limit do
-    %QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
-  end
-
   defp field(ix, field) when is_integer(ix) and is_atom(field) do
     {{:., [], [{:&, [], [ix]}, field]}, [], []}
-  end
-
-  defp order_by_pk(query, dir) do
-    schema = assert_schema!(query)
-    pks    = schema.__schema__(:primary_key)
-    expr   = for pk <- pks, do: {dir, field(0,pk)}
-    %QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
   end
 
   defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema

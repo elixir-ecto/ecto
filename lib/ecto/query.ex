@@ -935,4 +935,73 @@ defmodule Ecto.Query do
   defmacro preload(query, bindings \\ [], expr) do
     Preload.build(query, bindings, expr, __CALLER__)
   end
+
+  @doc """
+  Restricts the query to return the first result ordered by primary key.
+
+  The query will be automatically ordered by the primary key
+  unless `order_by` is given or `order_by` is set in the query.
+  Limit is always set to 1.
+  """
+  def first(queryable, order_by \\ nil)
+
+  def first(%Ecto.Query{} = query, nil) do
+    query = %{query | limit: limit()}
+    case query do
+      %{order_bys: []} ->
+        %{query | order_bys: [order_by_pk(query, :asc)]}
+      %{} ->
+        query
+    end
+  end
+  def first(queryable, nil), do: first(Ecto.Queryable.to_query(queryable), nil)
+  def first(queryable, key), do: first(order_by(queryable, ^key), nil)
+
+  @doc """
+  Restricts the query to return the last result ordered by primary key.
+
+  The query ordering will be automatically reversed, with ASC
+  columns becoming DESC columns (and vice-versa) and limit is set
+  to 1. If there is no ordering, the query will be automatically
+  ordered decreasingly by primary key.
+  """
+  def last(queryable, order_by \\ nil)
+
+  def last(%Ecto.Query{} = query, nil) do
+    query = %{query | limit: limit()}
+    update_in query.order_bys, fn
+      [] ->
+        [order_by_pk(query, :desc)]
+      order_bys ->
+        for %{expr: expr} = order_by <- order_bys do
+          %{order_by | expr:
+              Enum.map(expr, fn
+                {:desc, ast} -> {:asc, ast}
+                {:asc, ast} -> {:desc, ast}
+              end)}
+        end
+    end
+  end
+  def last(queryable, nil), do: last(Ecto.Queryable.to_query(queryable), nil)
+  def last(queryable, key), do: last(order_by(queryable, ^key), nil)
+
+  defp limit do
+    %QueryExpr{expr: 1, params: [], file: __ENV__.file, line: __ENV__.line}
+  end
+
+  defp field(ix, field) when is_integer(ix) and is_atom(field) do
+    {{:., [], [{:&, [], [ix]}, field]}, [], []}
+  end
+
+  defp order_by_pk(query, dir) do
+    schema = assert_schema!(query)
+    pks    = schema.__schema__(:primary_key)
+    expr   = for pk <- pks, do: {dir, field(0, pk)}
+    %QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
+  end
+
+  defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema
+  defp assert_schema!(query) do
+    raise Ecto.QueryError, query: query, message: "expected a from expression with a schema"
+  end
 end
