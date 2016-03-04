@@ -391,6 +391,9 @@ defmodule Ecto.Repo do
     * `:in_parallel` - If the preloads must be done in parallel. It can
       only be performed when we have more than one preload and the
       repository is not in a transaction. Defaults to `true`.
+    * `:prefix` - the prefix to fetch preloads from. By default, queries
+      will use the same prefix as the one in the given collection. This
+      option allows the prefix to be changed.
 
   ## Examples
 

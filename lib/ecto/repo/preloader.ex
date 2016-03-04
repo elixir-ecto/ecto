@@ -55,8 +55,8 @@ defmodule Ecto.Repo.Preloader do
   defp preload_each(structs, _repo, [], _opts),   do: structs
   defp preload_each([], _repo, _preloads, _opts), do: []
   defp preload_each([sample|_] = structs, repo, preloads, opts) do
-    module      = sample.__struct__
-    {prefix, _} = sample.__meta__.source
+    module = sample.__struct__
+    prefix = preload_prefix(opts, sample)
     {assocs, throughs} = expand(module, preloads, {%{}, %{}})
 
     assocs =
@@ -73,6 +73,16 @@ defmodule Ecto.Repo.Preloader do
       struct = Enum.reduce assocs, struct, &load_assoc/2
       struct = Enum.reduce throughs, struct, &load_through/2
       struct
+    end
+  end
+
+  defp preload_prefix(opts, sample) do
+    case Keyword.fetch(opts, :prefix) do
+      {:ok, prefix} ->
+        prefix
+      :error ->
+        %{__meta__: %{source: {prefix, _}}} = sample
+        prefix
     end
   end
 
